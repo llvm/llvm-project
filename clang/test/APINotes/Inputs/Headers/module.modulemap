@@ -75,3 +75,12 @@ module WhereParametersSema {
   header "WhereParametersSema.h"
   export *
 }
+
+module RedeclDefinition {
+  header "RedeclDefinition.h"
+}
+
+module RedeclAnnotation {
+  header "RedeclAnnotation.h"
+  export *
+}

@@ -143,6 +143,7 @@ sampleprof_error SampleRecord::merge(const SampleRecord &Other,
                                      uint64_t Weight) {
   sampleprof_error Result;
   Result = addSamples(Other.getSamples(), Weight);
+  CallTargets.reserve(CallTargets.size() + Other.getCallTargets().size());
   for (const auto &I : Other.getCallTargets()) {
     mergeSampleProfErrors(Result, addCalledTarget(I.first, I.second, Weight));
   }
@@ -220,11 +221,9 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
   OS.indent(Indent);
   if (!BodySamples.empty()) {
     OS << "Samples collected in the function's body {\n";
-    SampleSorter<LineLocation, SampleRecord> SortedBodySamples(BodySamples);
-    for (const auto &SI : SortedBodySamples.get()) {
+    for (const auto &[Loc, Record] : BodySamples) {
       OS.indent(Indent + 2);
-      const auto &Loc = SI->first;
-      OS << SI->first << ": " << SI->second;
+      OS << Loc << ": " << Record;
       if (const TypeCountMap *TypeCountMap =
               this->findCallsiteTypeSamplesAt(Loc)) {
         OS.indent(Indent + 2);
@@ -240,11 +239,7 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
   OS.indent(Indent);
   if (!CallsiteSamples.empty()) {
     OS << "Samples collected in inlined callsites {\n";
-    SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
-        CallsiteSamples);
-    for (const auto *Element : SortedCallsiteSamples.get()) {
-      // Element is a pointer to a pair of LineLocation and FunctionSamplesMap.
-      const auto &[Loc, FunctionSampleMap] = *Element;
+    for (const auto &[Loc, FunctionSampleMap] : CallsiteSamples) {
       for (const FunctionSamples &FuncSample :
            llvm::make_second_range(FunctionSampleMap)) {
         OS.indent(Indent + 2);

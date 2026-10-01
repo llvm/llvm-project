@@ -254,9 +254,12 @@ let Class = ConstantMatrixType in {
   def : Property<"numColumns", UInt32> {
     let Read = [{ node->getNumColumns() }];
   }
+  def : Property<"layout", Optional<MatrixLayoutKind>> {
+    let Read = [{ node->getLayout() }];
+  }
 
   def : Creator<[{
-    return ctx.getConstantMatrixType(elementType, numRows, numColumns);
+    return ctx.getConstantMatrixType(elementType, numRows, numColumns, layout);
   }]>;
 }
 
@@ -531,9 +534,12 @@ let Class = AutoType in {
   def : Property<"keyword", AutoTypeKeyword> {
     let Read = [{ node->getKeyword() }];
   }
-  def : Property<"typeConstraintConcept", Optional<TemplateDeclRef>> {
-    let Read = [{ makeOptionalFromPointer(
-        node->getTypeConstraintConcept()) }];
+  def : Property<"isConstrained", Bool> {
+    let Read = [{ node->isConstrained() }];
+  }
+  def : Property<"typeConstraintConcept", TemplateName> {
+    let Conditional = [{ isConstrained }];
+    let Read = [{ node->getTypeConstraintConcept() }];
   }
   def : Property<"typeConstraintArguments", Array<TemplateArgument>> {
     let Read = [{ node->getTypeConstraintArguments() }];
@@ -541,7 +547,7 @@ let Class = AutoType in {
 
   def : Creator<[{
     return ctx.getAutoType(deducedKind, makeNullableFromOptional(deducedType), keyword,
-                           makePointerFromOptional(typeConstraintConcept),
+                           isConstrained ? *typeConstraintConcept : TemplateName(),
                            typeConstraintArguments);
   }]>;
 }
@@ -550,8 +556,8 @@ let Class = DeducedTemplateSpecializationType in {
   def : Property<"keyword", ElaboratedTypeKeyword> {
     let Read = [{ node->getKeyword() }];
   }
-  def : Property<"templateName", Optional<TemplateName>> {
-    let Read = [{ makeOptionalFromNullable(node->getTemplateName()) }];
+  def : Property<"templateName", TemplateName> {
+    let Read = [{ node->getTemplateName() }];
   }
   def : Property<"deducedKind", DeducedKind> {
     let Read = [{ node->getDeducedKind() }];
@@ -561,8 +567,7 @@ let Class = DeducedTemplateSpecializationType in {
   }
 
   def : Creator<[{
-    return ctx.getDeducedTemplateSpecializationType(deducedKind, deducedType, keyword,
-                                     makeNullableFromOptional(templateName));
+    return ctx.getDeducedTemplateSpecializationType(deducedKind, deducedType, keyword, templateName);
   }]>;
 }
 
@@ -693,14 +698,15 @@ let Class = HLSLAttributedResourceType in {
   def : Property<"isArray", Bool> {
     let Read = [{ node->getAttrs().IsArray }];
   }
-  def : Property<"isMultiSampled", Bool> {
-    let Read = [{ node->getAttrs().IsMultiSampled }];
+  def : Property<"sampleCountExpr", Optional<ExprRef>> {
+    let Read = [{ makeOptionalFromPointer(node->getSampleCountExpr()) }];
   }
   def : Creator<[{
     HLSLAttributedResourceType::Attributes attrs(
         static_cast<llvm::dxil::ResourceClass>(resClass),
         static_cast<llvm::dxil::ResourceDimension>(resDimension), isROV,
-        rawBuffer, isCounter, isArray, isMultiSampled);
+        rawBuffer, isCounter, isArray,
+        makePointerFromOptional(sampleCountExpr));
     return ctx.getHLSLAttributedResourceType(wrappedTy, containedTy, attrs);
   }]>;
 }
@@ -881,6 +887,14 @@ let Class = BuiltinType in {
 #define HLSL_INTANGIBLE_TYPE(NAME, ID, SINGLETON_ID) \
       case BuiltinType::ID: return ctx.SINGLETON_ID;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+
+#define HLSL_PACKED_TYPE(NAME, ID, SINGLETON_ID) \
+      case BuiltinType::ID: return ctx.SINGLETON_ID;
+#include "clang/Basic/HLSLPackedTypes.def"
+
+#define SPIRV_TYPE(NAME, ID, SINGLETON_ID) \
+      case BuiltinType::ID: return ctx.SINGLETON_ID;
+#include "clang/Basic/SPIRVTypes.def"
 
 #define BUILTIN_TYPE(ID, SINGLETON_ID) \
       case BuiltinType::ID: return ctx.SINGLETON_ID;

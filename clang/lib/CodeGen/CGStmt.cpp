@@ -241,6 +241,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OMPInterchangeDirectiveClass:
     EmitOMPInterchangeDirective(cast<OMPInterchangeDirective>(*S));
     break;
+  case Stmt::OMPFlattenDirectiveClass:
+    EmitOMPFlattenDirective(cast<OMPFlattenDirective>(*S));
+    break;
   case Stmt::OMPFuseDirectiveClass:
     EmitOMPFuseDirective(cast<OMPFuseDirective>(*S));
     break;
@@ -304,8 +307,11 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OMPScanDirectiveClass:
     EmitOMPScanDirective(cast<OMPScanDirective>(*S));
     break;
-  case Stmt::OMPOrderedDirectiveClass:
-    EmitOMPOrderedDirective(cast<OMPOrderedDirective>(*S));
+  case Stmt::OMPOrderedStandaloneDirectiveClass:
+    EmitOMPOrderedStandaloneDirective(cast<OMPOrderedStandaloneDirective>(*S));
+    break;
+  case Stmt::OMPOrderedBlockAssocDirectiveClass:
+    EmitOMPOrderedBlockAssocDirective(cast<OMPOrderedBlockAssocDirective>(*S));
     break;
   case Stmt::OMPAtomicDirectiveClass:
     EmitOMPAtomicDirective(cast<OMPAtomicDirective>(*S));
@@ -779,14 +785,13 @@ void CodeGenFunction::EmitLabelStmt(const LabelStmt &S) {
 }
 
 void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
-  bool nomerge = false;
-  bool noinline = false;
-  bool alwaysinline = false;
-  bool noconvergent = false;
-  StringRef amdgpuAVMode;
-  HLSLControlFlowHintAttr::Spelling flattenOrBranch =
-      HLSLControlFlowHintAttr::SpellingNotCalculated;
-  const CallExpr *musttail = nullptr;
+  bool nomerge = InNoMergeAttributedStmt;
+  bool noinline = InNoInlineAttributedStmt;
+  bool alwaysinline = InAlwaysInlineAttributedStmt;
+  bool noconvergent = InNoConvergentAttributedStmt;
+  StringRef amdgpuAVMode = AMDGPUAvailableVisibleMode;
+  HLSLControlFlowHintAttr::Spelling flattenOrBranch = HLSLControlFlowAttr;
+  const CallExpr *musttail = MustTailCall;
   const AtomicAttr *AA = nullptr;
 
   for (const auto *A : S.getAttrs()) {
@@ -798,9 +803,11 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
       break;
     case attr::NoInline:
       noinline = true;
+      alwaysinline = false;
       break;
     case attr::AlwaysInline:
       alwaysinline = true;
+      noinline = false;
       break;
     case attr::NoConvergent:
       noconvergent = true;
@@ -829,6 +836,10 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
     } break;
     }
   }
+
+  assert(!(alwaysinline && noinline) &&
+         "alwaysinline and noinline are mutually exclusive");
+
   SaveAndRestore save_nomerge(InNoMergeAttributedStmt, nomerge);
   SaveAndRestore save_noinline(InNoInlineAttributedStmt, noinline);
   SaveAndRestore save_alwaysinline(InAlwaysInlineAttributedStmt, alwaysinline);
@@ -846,6 +857,16 @@ void CodeGenFunction::EmitGotoStmt(const GotoStmt &S) {
   // "simple" statement path.
   if (HaveInsertPoint())
     EmitStopPoint(&S);
+
+  // Reinitialize the variables this goto bypasses, whose scope it re-enters.
+  // Backward gotos reinit here while forward gotos are recorded for
+  // EmitAutoVarAlloca to patch once the alloca exists. Skip when jump sources
+  // are unknown (computed goto); EmitAutoVarAlloca then uses function-scope
+  // init.
+  if (HaveInsertPoint() && !Bypasses.isAlwaysBypassed()) {
+    emitBypassedVarInitsForSource(&S);
+    BypassingForwardJumps.push_back({Builder.GetInsertBlock(), &S});
+  }
 
   ApplyAtomGroup Grp(getDebugInfo());
   EmitBranchThroughCleanup(getJumpDestForLabel(S.getLabel()));
@@ -1794,7 +1815,8 @@ void CodeGenFunction::EmitCaseStmtRange(const CaseStmt &S,
   Stmt::Likelihood LH = Stmt::getLikelihood(Attrs);
   llvm::APInt Range = RHS - LHS;
   // FIXME: parameters such as this should not be hardcoded.
-  if (Range.ult(llvm::APInt(Range.getBitWidth(), 64))) {
+  if (Range.getBitWidth() < 7 ||
+      Range.ult(llvm::APInt(Range.getBitWidth(), 64))) {
     // Range is small enough to add multiple switch instruction cases.
     uint64_t Total = getProfileCount(&S);
     unsigned NCases = Range.getZExtValue() + 1;
@@ -2433,6 +2455,17 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   // explicit case ranges tests can have a place to jump to on
   // failure.
   llvm::BasicBlock *DefaultBlock = createBasicBlock("sw.default");
+
+  // The dispatch is the jump that bypasses any declarations sitting between the
+  // switch and its case labels, so the initialization goes here, ahead of the
+  // switch instruction -- not at the case labels. A case label is also reached
+  // by falling through from the case above it, and that edge bypasses nothing;
+  // initializing there would clobber a variable the previous case had written.
+  // The declarations are inside the body and so have no alloca yet, hence the
+  // patch-it-in-later handling in EmitAutoVarAlloca.
+  if (!Bypasses.isAlwaysBypassed())
+    BypassingForwardJumps.push_back({Builder.GetInsertBlock(), &S});
+
   SwitchInsn = Builder.CreateSwitch(CondV, DefaultBlock);
   addInstToNewSourceAtom(SwitchInsn, CondV);
 

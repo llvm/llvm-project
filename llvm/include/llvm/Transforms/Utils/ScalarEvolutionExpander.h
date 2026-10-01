@@ -78,6 +78,14 @@ class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
   DenseMap<std::pair<SCEVUse, Instruction *>, TrackingVH<Value>>
       InsertedExpressions;
 
+  // InsertedOverflowChecks caches Values for reuse, so must track RAUW.
+  // The key is a tuple containing the trip count for the loop, the absolute
+  // value of the recurrence step, and the insert point. The stored pair values
+  // are the multiply result and a boolean value indicating overflow.
+  DenseMap<std::tuple<Value *, Value *, Instruction *>,
+           std::pair<TrackingVH<Value>, TrackingVH<Value>>>
+      InsertedOverflowChecks;
+
   // InsertedValues only flags inserted instructions so needs no RAUW.
   DenseSet<AssertingVH<Value>> InsertedValues;
   DenseSet<AssertingVH<Value>> InsertedPostIncValues;
@@ -211,6 +219,7 @@ public:
   /// places within the same BasicBlock can do so.
   void clear() {
     InsertedExpressions.clear();
+    InsertedOverflowChecks.clear();
     InsertedValues.clear();
     InsertedPostIncValues.clear();
     ReusedValues.clear();
@@ -464,7 +473,7 @@ private:
   /// avoid inserting an obviously redundant operation, and hoisting to an
   /// outer loop when the opportunity is there and it is safe.
   Value *InsertBinop(Instruction::BinaryOps Opcode, Value *LHS, Value *RHS,
-                     SCEV::NoWrapFlags Flags, bool IsSafeToHoist);
+                     SCEVFlags Flags, bool IsSafeToHoist);
 
   /// We want to cast \p V. What would be the best place for such a cast?
   BasicBlock::iterator GetOptimalInsertionPointForCastOf(Value *V) const;
@@ -481,7 +490,7 @@ private:
 
   /// Expand a SCEVAddExpr with a pointer type into a GEP instead of using
   /// ptrtoint+arithmetic+inttoptr.
-  Value *expandAddToGEP(const SCEV *Op, Value *V, SCEV::NoWrapFlags Flags);
+  Value *expandAddToGEP(SCEVUse Op, Value *V, SCEVFlags Flags);
 
   /// Find a previous Value in ExprValueMap for expand.
   /// DropPoisonGeneratingInsts is populated with instructions for which
@@ -489,6 +498,11 @@ private:
   Value *FindValueInExprValueMap(
       SCEVUse S, const Instruction *InsertPt,
       SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts);
+
+  /// Like FindValueInExprValueMap, but on a successful lookup also drops the
+  /// poison-generating flags that reusing the value requires.
+  Value *findExistingExpansionAndDropPoisonFlags(SCEVUse S,
+                                                 const Instruction *InsertPt);
 
   LLVM_ABI Value *expand(SCEVUse S);
   Value *expand(SCEVUse S, BasicBlock::iterator I) {

@@ -24,7 +24,6 @@ def TuneMOVIMMALUXqciFusion
                  CheckAny<[
                    CheckAll<[
                      CheckOpcode<[ADDI]>,
-                     CheckIsRegOperand<1>,
                      CheckRegOperand<1, X0>
                    ]>,
                    CheckOpcode<LoadImmOp>,
@@ -45,7 +44,6 @@ def TuneMOVIMMMULXqciFusion
                  CheckAny<[
                    CheckAll<[
                      CheckOpcode<[ADDI]>,
-                     CheckIsRegOperand<1>,
                      CheckRegOperand<1, X0>
                    ]>,
                    CheckOpcode<LoadImmOp>,
@@ -59,7 +57,6 @@ def TuneMOVIMMLoadStoreXqciFusion
                  CheckAny<[
                    CheckAll<[
                      CheckOpcode<[ADDI]>,
-                     CheckIsRegOperand<1>,
                      CheckRegOperand<1, X0>
                    ]>,
                    CheckOpcode<LoadImmOp>,
@@ -73,7 +70,6 @@ def TuneMOVIMMJumpXqciFusion
                  CheckAny<[
                    CheckAll<[
                      CheckOpcode<[ADDI]>,
-                     CheckIsRegOperand<1>,
                      CheckRegOperand<1, X0>
                    ]>,
                    CheckOpcode<LoadImmOp>,
@@ -90,7 +86,6 @@ def TuneMOVIMMLongAccumXciFusion
                  CheckAny<[
                    CheckAll<[
                      CheckOpcode<[ADDI]>,
-                     CheckIsRegOperand<1>,
                      CheckRegOperand<1, X0>
                    ]>,
                    CheckOpcode<LoadImmOp>,
@@ -104,7 +99,6 @@ def TuneMovALUXqciFusion
                  "Enable MOV + long accumulate macrofusion",
                  CheckAll<[
                    CheckOpcode<[ADDI]>,
-                   CheckIsImmOperand<2>,
                    CheckImmOperand<2, 0>,
                  ]>,
                  CheckOpcode<LongAccumXqciOp>,

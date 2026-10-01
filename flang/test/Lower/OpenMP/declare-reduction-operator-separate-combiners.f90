@@ -42,7 +42,7 @@ end module
 
 !--- call.use.f90
 ! The combiner region must lower to a call of the imported subroutine.
-! CHECK: omp.declare_reduction @[[RED:_QQ[A-Za-z0-9_.]*op\.remote\.[A-Za-z0-9_.]*]] : !fir.ref
+! CHECK: omp.declare_reduction @[[RED:_QQ[A-Za-z0-9_.]*op\.remote\.[A-Za-z0-9_.]*]] byref_element_type({{.*}}) : !fir.ref
 ! CHECK: combiner
 ! CHECK: fir.call @_QMred_callPcombine_sub
 ! CHECK: omp.wsloop
@@ -87,7 +87,7 @@ end module
 
 !--- asgn.use.f90
 ! The combiner region must lower a call to the imported defined assignment.
-! CHECK: omp.declare_reduction @[[RED:_QQ[A-Za-z0-9_.]*op\.remote\.[A-Za-z0-9_.]*]] : !fir.ref
+! CHECK: omp.declare_reduction @[[RED:_QQ[A-Za-z0-9_.]*op\.remote\.[A-Za-z0-9_.]*]] byref_element_type({{.*}}) : !fir.ref
 ! CHECK: combiner
 ! CHECK: fir.call @_QMred_asgnPassign_t
 ! CHECK: omp.wsloop

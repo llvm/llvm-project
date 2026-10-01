@@ -163,8 +163,7 @@ def BufferDeallocationSimplificationPass
     some memref isn't deallocated twice (double free).
   }];
 
-  let dependentDialects = ["mlir::bufferization::BufferizationDialect",
-                           "mlir::arith::ArithDialect",
+  let dependentDialects = ["mlir::arith::ArithDialect",
                            "mlir::memref::MemRefDialect"];
 }
 
@@ -517,9 +516,9 @@ def OneShotBufferizePass : Pass<"one-shot-bufferize", "ModuleOp"> {
        Option<"bufferizeFunctionBoundaries", "bufferize-function-boundaries",
               "bool", /*default=*/"0",
               "Bufferize function boundaries (experimental).">,
-       Option<"checkParallelRegions", "check-parallel-regions", "bool",
+       Option<"mayHaveParallelRegions", "may-have-parallel-regions", "bool",
               /*default=*/"true",
-              "Account for parallel regions in RaW analysis.">,
+              "Whether the IR may contain parallel regions.">,
        Option<"copyBeforeWrite", "copy-before-write", "bool",
               /*default=*/"false",
               "Skip the analysis. Make a buffer copy on every write.">,

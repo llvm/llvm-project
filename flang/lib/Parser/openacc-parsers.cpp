@@ -15,6 +15,8 @@
 #include "token-parsers.h"
 #include "type-parser-implementation.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/tools.h"
+#include "flang/Parser/user-state.h"
 
 // OpenACC Directives and Clauses
 namespace Fortran::parser {
@@ -163,6 +165,102 @@ TYPE_PARSER(sourced(construct<AccStandaloneDirective>(
         "SET" >> pure(llvm::acc::Directive::ACCD_set),
         "UPDATE" >> pure(llvm::acc::Directive::ACCD_update)))))
 
+// A non-block DO construct, e.g.
+//   do 10 i = 1, n
+//   10 continue
+// is parsed as a flat sequence of statements and is only turned into a
+// DoConstruct later, when the DO loops are canonicalized.  The DO loop
+// associated with an OpenACC loop or combined construct has to be recognized
+// while parsing the construct, otherwise the end directive that follows the
+// loop cannot be attached to the construct.  Build the DoConstruct here, the
+// same way the canonicalization of the DO loops would have built it.
+struct AccNonBlockDoConstruct {
+  using resultType = DoConstruct;
+  using LabelDoStatement = Statement<common::Indirection<LabelDoStmt>>;
+
+  std::optional<DoConstruct> Parse(ParseState &state) const {
+    if (auto doStmt{CapturedLabelDoStmt::Parse(state)}) {
+      if (auto loop{ParseLoop(state, std::move(*doStmt))}) {
+        return std::move(loop->construct);
+      }
+    }
+    return std::nullopt;
+  }
+
+private:
+  struct Loop {
+    DoConstruct construct;
+    Label label; // of the statement that terminated the loop
+  };
+
+  static LabelDoStatement *GetLabelDoStatement(ExecutionPartConstruct &epc) {
+    if (auto *executable{std::get_if<ExecutableConstruct>(&epc.u)}) {
+      return std::get_if<LabelDoStatement>(&executable->u);
+    }
+    return nullptr;
+  }
+
+  // Parse execution part constructs until the statement carrying the label of
+  // the DO statement has been seen, then build the DO construct.  Nested label
+  // DO statements are turned into DO constructs here as well; loops that share
+  // a label are all terminated by the same statement, which closes the
+  // innermost loop and, with it, all of the loops that enclose it.
+  std::optional<Loop> ParseLoop(
+      ParseState &state, LabelDoStatement &&doStmt) const {
+    const Label label{std::get<Label>(doStmt.statement.value().t)};
+    Block body;
+    bool terminated{false};
+    while (!terminated) {
+      auto epc{executionPartConstruct.Parse(state)};
+      if (!epc) {
+        return std::nullopt;
+      }
+      if (auto *nestedDoStmt{GetLabelDoStatement(*epc)}) {
+        auto nested{ParseLoop(state, std::move(*nestedDoStmt))};
+        if (!nested) {
+          return std::nullopt;
+        }
+        terminated = nested->label == label;
+        body.emplace_back(ExecutableConstruct{
+            common::Indirection<DoConstruct>{std::move(nested->construct)}});
+        continue;
+      }
+      std::optional<Label> epcLabel{GetStatementLabel(*epc)};
+      if (!epcLabel) {
+        if (auto *acc{Unwrap<OpenACCConstruct>(*epc)}) {
+          epcLabel = GetFinalLabel(*acc);
+        }
+      }
+      terminated = epcLabel && *epcLabel == label;
+      body.emplace_back(std::move(*epc));
+    }
+
+    // The terminating statement may be an END DO statement; the DO construct
+    // built below has its own synthetic one, so turn it into a CONTINUE
+    // statement to keep its label.
+    if (Unwrap<EndDoStmt>(body.back())) {
+      std::get<ExecutableConstruct>(body.back().u).u =
+          Statement<ActionStmt>{GetStatementLabel(body.back()), ContinueStmt{}};
+    }
+
+    Statement<NonLabelDoStmt> nonLabelDoStmt{std::move(doStmt.label),
+        NonLabelDoStmt{
+            std::make_tuple(std::optional<Name>{}, std::optional<Label>{},
+                std::move(std::get<std::optional<LoopControl>>(
+                    doStmt.statement.value().t)))}};
+    nonLabelDoStmt.source = doStmt.source;
+    DoConstruct doConstruct{
+        std::make_tuple(std::move(nonLabelDoStmt), std::move(body),
+            Statement<EndDoStmt>{
+                std::optional<Label>{}, EndDoStmt{std::optional<Name>{}}})};
+    return Loop{std::move(doConstruct), label};
+  }
+};
+
+// The DO loop associated with a loop or combined construct.
+constexpr auto accAssociatedDoConstruct{
+    Parser<DoConstruct>{} || AccNonBlockDoConstruct{}};
+
 // Loop directives
 TYPE_PARSER(sourced(construct<AccLoopDirective>(
     first("LOOP" >> pure(llvm::acc::Directive::ACCD_loop)))))
@@ -173,7 +271,8 @@ TYPE_PARSER(sourced(construct<AccBeginLoopDirective>(
 TYPE_PARSER(construct<AccEndLoop>("END LOOP"_tok))
 
 TYPE_PARSER(construct<OpenACCLoopConstruct>(
-    Parser<AccBeginLoopDirective>{} / endAccLine, maybe(Parser<DoConstruct>{}),
+    Parser<AccBeginLoopDirective>{} / endAccLine,
+    maybe(accAssociatedDoConstruct),
     maybe(startAccLine >> Parser<AccEndLoop>{} / endAccLine)))
 
 // 2.15.1 Routine directive
@@ -301,7 +400,7 @@ TYPE_PARSER(startAccLine >>
 
 TYPE_PARSER(sourced(construct<OpenACCCombinedConstruct>(
     Parser<AccBeginCombinedDirective>{} / endAccLine,
-    maybe(Parser<DoConstruct>{}),
+    maybe(accAssociatedDoConstruct),
     maybe(Parser<AccEndCombinedDirective>{} / endAccLine))))
 
 } // namespace Fortran::parser

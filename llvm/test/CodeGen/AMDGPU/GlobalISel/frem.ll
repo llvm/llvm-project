@@ -19,11 +19,11 @@ define amdgpu_kernel void @frem_f16(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; CI-NEXT:    ; implicit-def: $sgpr4
 ; CI-NEXT:    s_cbranch_scc0 .LBB0_2
 ; CI-NEXT:  ; %bb.1: ; %frem.else
-; CI-NEXT:    s_and_b32 s4, s2, 0xffff8000
+; CI-NEXT:    s_and_b32 s6, s2, 0xffff8000
 ; CI-NEXT:    v_cmp_eq_f32_e32 vcc, v1, v0
-; CI-NEXT:    s_or_b64 s[6:7], vcc, vcc
+; CI-NEXT:    s_or_b64 s[4:5], vcc, vcc
+; CI-NEXT:    s_cselect_b32 s4, s6, s2
 ; CI-NEXT:    s_mov_b32 s5, 0
-; CI-NEXT:    s_cselect_b32 s4, s4, s2
 ; CI-NEXT:  .LBB0_2: ; %Flow18
 ; CI-NEXT:    s_xor_b32 s5, s5, 1
 ; CI-NEXT:    s_cmp_lg_u32 s5, 0
@@ -141,8 +141,8 @@ define amdgpu_kernel void @frem_f16(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; VI-NEXT:    s_and_b32 s4, s2, 0xffff8000
 ; VI-NEXT:    v_cmp_eq_f32_e32 vcc, v1, v0
 ; VI-NEXT:    s_cmp_lg_u64 vcc, 0
-; VI-NEXT:    s_mov_b32 s5, 0
 ; VI-NEXT:    s_cselect_b32 s4, s4, s2
+; VI-NEXT:    s_mov_b32 s5, 0
 ; VI-NEXT:  .LBB0_2: ; %Flow18
 ; VI-NEXT:    s_xor_b32 s5, s5, 1
 ; VI-NEXT:    s_cmp_lg_u32 s5, 0
@@ -417,11 +417,11 @@ define amdgpu_kernel void @frem_f32(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; CI-NEXT:    s_cbranch_scc0 .LBB3_2
 ; CI-NEXT:  ; %bb.1: ; %frem.else
 ; CI-NEXT:    v_mov_b32_e32 v0, s3
-; CI-NEXT:    s_and_b32 s4, s2, 0x80000000
-; CI-NEXT:    v_cmp_eq_f32_e64 s[6:7], |s2|, |v0|
-; CI-NEXT:    s_or_b64 s[6:7], s[6:7], s[6:7]
+; CI-NEXT:    s_and_b32 s6, s2, 0x80000000
+; CI-NEXT:    v_cmp_eq_f32_e64 s[4:5], |s2|, |v0|
+; CI-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
+; CI-NEXT:    s_cselect_b32 s4, s6, s2
 ; CI-NEXT:    s_mov_b32 s5, 0
-; CI-NEXT:    s_cselect_b32 s4, s4, s2
 ; CI-NEXT:  .LBB3_2: ; %Flow16
 ; CI-NEXT:    s_xor_b32 s5, s5, 1
 ; CI-NEXT:    s_cmp_lg_u32 s5, 0
@@ -529,11 +529,11 @@ define amdgpu_kernel void @frem_f32(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; VI-NEXT:    s_cbranch_scc0 .LBB3_2
 ; VI-NEXT:  ; %bb.1: ; %frem.else
 ; VI-NEXT:    v_mov_b32_e32 v0, s3
-; VI-NEXT:    s_and_b32 s4, s2, 0x80000000
-; VI-NEXT:    v_cmp_eq_f32_e64 s[6:7], |s2|, |v0|
-; VI-NEXT:    s_cmp_lg_u64 s[6:7], 0
+; VI-NEXT:    s_and_b32 s6, s2, 0x80000000
+; VI-NEXT:    v_cmp_eq_f32_e64 s[4:5], |s2|, |v0|
+; VI-NEXT:    s_cmp_lg_u64 s[4:5], 0
+; VI-NEXT:    s_cselect_b32 s4, s6, s2
 ; VI-NEXT:    s_mov_b32 s5, 0
-; VI-NEXT:    s_cselect_b32 s4, s4, s2
 ; VI-NEXT:  .LBB3_2: ; %Flow16
 ; VI-NEXT:    s_xor_b32 s5, s5, 1
 ; VI-NEXT:    s_cmp_lg_u32 s5, 0
@@ -777,7 +777,7 @@ define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; CI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0xd
-; CI-NEXT:    s_mov_b32 s9, 1
+; CI-NEXT:    s_mov_b32 s8, 1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
 ; CI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
@@ -791,17 +791,15 @@ define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; CI-NEXT:  ; %bb.1: ; %frem.else
 ; CI-NEXT:    v_mov_b32_e32 v0, s4
 ; CI-NEXT:    v_mov_b32_e32 v1, s5
-; CI-NEXT:    v_cmp_eq_f64_e64 s[10:11], |s[2:3]|, |v[0:1]|
-; CI-NEXT:    s_mov_b64 s[8:9], 0
+; CI-NEXT:    v_cmp_eq_f64_e64 s[8:9], |s[2:3]|, |v[0:1]|
 ; CI-NEXT:    s_mov_b32 s6, 0
 ; CI-NEXT:    s_brev_b32 s7, 1
-; CI-NEXT:    s_mov_b32 s9, 0
 ; CI-NEXT:    s_and_b64 s[6:7], s[2:3], s[6:7]
-; CI-NEXT:    s_or_b64 s[6:7], s[8:9], s[6:7]
-; CI-NEXT:    s_or_b64 s[10:11], s[10:11], s[10:11]
+; CI-NEXT:    s_or_b64 s[8:9], s[8:9], s[8:9]
 ; CI-NEXT:    s_cselect_b64 s[6:7], s[6:7], s[2:3]
+; CI-NEXT:    s_mov_b32 s8, 0
 ; CI-NEXT:  .LBB6_2: ; %Flow16
-; CI-NEXT:    s_xor_b32 s8, s9, 1
+; CI-NEXT:    s_xor_b32 s8, s8, 1
 ; CI-NEXT:    s_cmp_lg_u32 s8, 0
 ; CI-NEXT:    s_cbranch_scc1 .LBB6_8
 ; CI-NEXT:  ; %bb.3: ; %frem.compute
@@ -906,7 +904,7 @@ define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
-; VI-NEXT:    s_mov_b32 s9, 1
+; VI-NEXT:    s_mov_b32 s8, 1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
 ; VI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
@@ -920,17 +918,15 @@ define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; VI-NEXT:  ; %bb.1: ; %frem.else
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
-; VI-NEXT:    v_cmp_eq_f64_e64 s[10:11], |s[2:3]|, |v[0:1]|
-; VI-NEXT:    s_mov_b64 s[8:9], 0
+; VI-NEXT:    v_cmp_eq_f64_e64 s[8:9], |s[2:3]|, |v[0:1]|
 ; VI-NEXT:    s_mov_b32 s6, 0
 ; VI-NEXT:    s_brev_b32 s7, 1
-; VI-NEXT:    s_mov_b32 s9, 0
 ; VI-NEXT:    s_and_b64 s[6:7], s[2:3], s[6:7]
-; VI-NEXT:    s_or_b64 s[6:7], s[8:9], s[6:7]
-; VI-NEXT:    s_cmp_lg_u64 s[10:11], 0
+; VI-NEXT:    s_cmp_lg_u64 s[8:9], 0
 ; VI-NEXT:    s_cselect_b64 s[6:7], s[6:7], s[2:3]
+; VI-NEXT:    s_mov_b32 s8, 0
 ; VI-NEXT:  .LBB6_2: ; %Flow16
-; VI-NEXT:    s_xor_b32 s8, s9, 1
+; VI-NEXT:    s_xor_b32 s8, s8, 1
 ; VI-NEXT:    s_cmp_lg_u32 s8, 0
 ; VI-NEXT:    s_cbranch_scc1 .LBB6_8
 ; VI-NEXT:  ; %bb.3: ; %frem.compute
@@ -1189,11 +1185,11 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:    ; implicit-def: $sgpr4
 ; CI-NEXT:    s_cbranch_scc0 .LBB9_2
 ; CI-NEXT:  ; %bb.1: ; %frem.else20
-; CI-NEXT:    s_and_b32 s4, s2, 0xffff8000
+; CI-NEXT:    s_and_b32 s6, s2, 0xffff8000
 ; CI-NEXT:    v_cmp_eq_f32_e32 vcc, v1, v0
-; CI-NEXT:    s_or_b64 s[6:7], vcc, vcc
+; CI-NEXT:    s_or_b64 s[4:5], vcc, vcc
+; CI-NEXT:    s_cselect_b32 s4, s6, s2
 ; CI-NEXT:    s_mov_b32 s5, 0
-; CI-NEXT:    s_cselect_b32 s4, s4, s2
 ; CI-NEXT:  .LBB9_2: ; %Flow57
 ; CI-NEXT:    s_xor_b32 s5, s5, 1
 ; CI-NEXT:    s_cmp_lg_u32 s5, 0
@@ -1285,9 +1281,9 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:  ; %bb.9: ; %frem.else
 ; CI-NEXT:    s_and_b32 s7, s5, 0xffff8000
 ; CI-NEXT:    v_cmp_eq_f32_e32 vcc, v1, v0
-; CI-NEXT:    s_or_b64 s[10:11], vcc, vcc
-; CI-NEXT:    s_mov_b32 s8, 0
+; CI-NEXT:    s_or_b64 s[8:9], vcc, vcc
 ; CI-NEXT:    s_cselect_b32 s7, s7, s5
+; CI-NEXT:    s_mov_b32 s8, 0
 ; CI-NEXT:  .LBB9_10: ; %Flow53
 ; CI-NEXT:    s_xor_b32 s8, s8, 1
 ; CI-NEXT:    s_cmp_lg_u32 s8, 0
@@ -1423,8 +1419,8 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    s_and_b32 s4, s2, 0xffff8000
 ; VI-NEXT:    v_cmp_eq_f32_e32 vcc, v1, v0
 ; VI-NEXT:    s_cmp_lg_u64 vcc, 0
-; VI-NEXT:    s_mov_b32 s5, 0
 ; VI-NEXT:    s_cselect_b32 s4, s4, s2
+; VI-NEXT:    s_mov_b32 s5, 0
 ; VI-NEXT:  .LBB9_2: ; %Flow57
 ; VI-NEXT:    s_xor_b32 s5, s5, 1
 ; VI-NEXT:    s_cmp_lg_u32 s5, 0
@@ -1517,8 +1513,8 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    s_and_b32 s7, s5, 0xffff8000
 ; VI-NEXT:    v_cmp_eq_f32_e32 vcc, v1, v0
 ; VI-NEXT:    s_cmp_lg_u64 vcc, 0
-; VI-NEXT:    s_mov_b32 s8, 0
 ; VI-NEXT:    s_cselect_b32 s7, s7, s5
+; VI-NEXT:    s_mov_b32 s8, 0
 ; VI-NEXT:  .LBB9_10: ; %Flow53
 ; VI-NEXT:    s_xor_b32 s8, s8, 1
 ; VI-NEXT:    s_cmp_lg_u32 s8, 0
@@ -1655,11 +1651,11 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:    ; implicit-def: $sgpr6
 ; CI-NEXT:    s_cbranch_scc0 .LBB10_2
 ; CI-NEXT:  ; %bb.1: ; %frem.else86
-; CI-NEXT:    s_and_b32 s6, s2, 0xffff8000
+; CI-NEXT:    s_and_b32 s8, s2, 0xffff8000
 ; CI-NEXT:    v_cmp_eq_f32_e32 vcc, v1, v0
-; CI-NEXT:    s_or_b64 s[8:9], vcc, vcc
+; CI-NEXT:    s_or_b64 s[6:7], vcc, vcc
+; CI-NEXT:    s_cselect_b32 s6, s8, s2
 ; CI-NEXT:    s_mov_b32 s7, 0
-; CI-NEXT:    s_cselect_b32 s6, s6, s2
 ; CI-NEXT:  .LBB10_2: ; %Flow135
 ; CI-NEXT:    s_xor_b32 s7, s7, 1
 ; CI-NEXT:    s_cmp_lg_u32 s7, 0
@@ -1751,9 +1747,9 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:  ; %bb.9: ; %frem.else53
 ; CI-NEXT:    s_and_b32 s9, s7, 0xffff8000
 ; CI-NEXT:    v_cmp_eq_f32_e32 vcc, v1, v0
-; CI-NEXT:    s_or_b64 s[12:13], vcc, vcc
-; CI-NEXT:    s_mov_b32 s10, 0
+; CI-NEXT:    s_or_b64 s[10:11], vcc, vcc
 ; CI-NEXT:    s_cselect_b32 s9, s9, s7
+; CI-NEXT:    s_mov_b32 s10, 0
 ; CI-NEXT:  .LBB10_10: ; %Flow131
 ; CI-NEXT:    s_xor_b32 s10, s10, 1
 ; CI-NEXT:    s_cmp_lg_u32 s10, 0
@@ -1841,11 +1837,11 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:    ; implicit-def: $sgpr10
 ; CI-NEXT:    s_cbranch_scc0 .LBB10_18
 ; CI-NEXT:  ; %bb.17: ; %frem.else20
-; CI-NEXT:    s_and_b32 s10, s3, 0xffff8000
+; CI-NEXT:    s_and_b32 s12, s3, 0xffff8000
 ; CI-NEXT:    v_cmp_eq_f32_e32 vcc, v1, v0
-; CI-NEXT:    s_or_b64 s[12:13], vcc, vcc
+; CI-NEXT:    s_or_b64 s[10:11], vcc, vcc
+; CI-NEXT:    s_cselect_b32 s10, s12, s3
 ; CI-NEXT:    s_mov_b32 s11, 0
-; CI-NEXT:    s_cselect_b32 s10, s10, s3
 ; CI-NEXT:  .LBB10_18: ; %Flow127
 ; CI-NEXT:    s_xor_b32 s11, s11, 1
 ; CI-NEXT:    s_cmp_lg_u32 s11, 0
@@ -1937,9 +1933,9 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:  ; %bb.25: ; %frem.else
 ; CI-NEXT:    s_and_b32 s13, s11, 0xffff8000
 ; CI-NEXT:    v_cmp_eq_f32_e32 vcc, v1, v0
-; CI-NEXT:    s_or_b64 s[16:17], vcc, vcc
-; CI-NEXT:    s_mov_b32 s14, 0
+; CI-NEXT:    s_or_b64 s[14:15], vcc, vcc
 ; CI-NEXT:    s_cselect_b32 s13, s13, s11
+; CI-NEXT:    s_mov_b32 s14, 0
 ; CI-NEXT:  .LBB10_26: ; %Flow123
 ; CI-NEXT:    s_xor_b32 s14, s14, 1
 ; CI-NEXT:    s_cmp_lg_u32 s14, 0
@@ -2104,8 +2100,8 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    s_and_b32 s6, s2, 0xffff8000
 ; VI-NEXT:    v_cmp_eq_f32_e32 vcc, v1, v0
 ; VI-NEXT:    s_cmp_lg_u64 vcc, 0
-; VI-NEXT:    s_mov_b32 s7, 0
 ; VI-NEXT:    s_cselect_b32 s6, s6, s2
+; VI-NEXT:    s_mov_b32 s7, 0
 ; VI-NEXT:  .LBB10_2: ; %Flow135
 ; VI-NEXT:    s_xor_b32 s7, s7, 1
 ; VI-NEXT:    s_cmp_lg_u32 s7, 0
@@ -2198,8 +2194,8 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    s_and_b32 s9, s7, 0xffff8000
 ; VI-NEXT:    v_cmp_eq_f32_e32 vcc, v1, v0
 ; VI-NEXT:    s_cmp_lg_u64 vcc, 0
-; VI-NEXT:    s_mov_b32 s10, 0
 ; VI-NEXT:    s_cselect_b32 s9, s9, s7
+; VI-NEXT:    s_mov_b32 s10, 0
 ; VI-NEXT:  .LBB10_10: ; %Flow131
 ; VI-NEXT:    s_xor_b32 s10, s10, 1
 ; VI-NEXT:    s_cmp_lg_u32 s10, 0
@@ -2290,8 +2286,8 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    s_and_b32 s10, s3, 0xffff8000
 ; VI-NEXT:    v_cmp_eq_f32_e32 vcc, v1, v0
 ; VI-NEXT:    s_cmp_lg_u64 vcc, 0
-; VI-NEXT:    s_mov_b32 s11, 0
 ; VI-NEXT:    s_cselect_b32 s10, s10, s3
+; VI-NEXT:    s_mov_b32 s11, 0
 ; VI-NEXT:  .LBB10_18: ; %Flow127
 ; VI-NEXT:    s_xor_b32 s11, s11, 1
 ; VI-NEXT:    s_cmp_lg_u32 s11, 0
@@ -2384,8 +2380,8 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    s_and_b32 s13, s11, 0xffff8000
 ; VI-NEXT:    v_cmp_eq_f32_e32 vcc, v1, v0
 ; VI-NEXT:    s_cmp_lg_u64 vcc, 0
-; VI-NEXT:    s_mov_b32 s14, 0
 ; VI-NEXT:    s_cselect_b32 s13, s13, s11
+; VI-NEXT:    s_mov_b32 s14, 0
 ; VI-NEXT:  .LBB10_26: ; %Flow123
 ; VI-NEXT:    s_xor_b32 s14, s14, 1
 ; VI-NEXT:    s_cmp_lg_u32 s14, 0
@@ -2547,11 +2543,11 @@ define amdgpu_kernel void @frem_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:    s_cbranch_scc0 .LBB11_2
 ; CI-NEXT:  ; %bb.1: ; %frem.else16
 ; CI-NEXT:    v_mov_b32_e32 v0, s4
-; CI-NEXT:    s_and_b32 s6, s2, 0x80000000
-; CI-NEXT:    v_cmp_eq_f32_e64 s[8:9], |s2|, |v0|
-; CI-NEXT:    s_or_b64 s[8:9], s[8:9], s[8:9]
+; CI-NEXT:    s_and_b32 s8, s2, 0x80000000
+; CI-NEXT:    v_cmp_eq_f32_e64 s[6:7], |s2|, |v0|
+; CI-NEXT:    s_or_b64 s[6:7], s[6:7], s[6:7]
+; CI-NEXT:    s_cselect_b32 s6, s8, s2
 ; CI-NEXT:    s_mov_b32 s7, 0
-; CI-NEXT:    s_cselect_b32 s6, s6, s2
 ; CI-NEXT:  .LBB11_2: ; %Flow53
 ; CI-NEXT:    s_xor_b32 s7, s7, 1
 ; CI-NEXT:    s_cmp_lg_u32 s7, 0
@@ -2639,10 +2635,10 @@ define amdgpu_kernel void @frem_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:  ; %bb.9: ; %frem.else
 ; CI-NEXT:    v_mov_b32_e32 v0, s5
 ; CI-NEXT:    s_and_b32 s7, s3, 0x80000000
-; CI-NEXT:    v_cmp_eq_f32_e64 s[10:11], |s3|, |v0|
-; CI-NEXT:    s_or_b64 s[10:11], s[10:11], s[10:11]
-; CI-NEXT:    s_mov_b32 s8, 0
+; CI-NEXT:    v_cmp_eq_f32_e64 s[8:9], |s3|, |v0|
+; CI-NEXT:    s_or_b64 s[8:9], s[8:9], s[8:9]
 ; CI-NEXT:    s_cselect_b32 s7, s7, s3
+; CI-NEXT:    s_mov_b32 s8, 0
 ; CI-NEXT:  .LBB11_10: ; %Flow49
 ; CI-NEXT:    s_xor_b32 s8, s8, 1
 ; CI-NEXT:    s_cmp_lg_u32 s8, 0
@@ -2757,11 +2753,11 @@ define amdgpu_kernel void @frem_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    s_cbranch_scc0 .LBB11_2
 ; VI-NEXT:  ; %bb.1: ; %frem.else16
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
-; VI-NEXT:    s_and_b32 s6, s2, 0x80000000
-; VI-NEXT:    v_cmp_eq_f32_e64 s[8:9], |s2|, |v0|
-; VI-NEXT:    s_cmp_lg_u64 s[8:9], 0
+; VI-NEXT:    s_and_b32 s8, s2, 0x80000000
+; VI-NEXT:    v_cmp_eq_f32_e64 s[6:7], |s2|, |v0|
+; VI-NEXT:    s_cmp_lg_u64 s[6:7], 0
+; VI-NEXT:    s_cselect_b32 s6, s8, s2
 ; VI-NEXT:    s_mov_b32 s7, 0
-; VI-NEXT:    s_cselect_b32 s6, s6, s2
 ; VI-NEXT:  .LBB11_2: ; %Flow53
 ; VI-NEXT:    s_xor_b32 s7, s7, 1
 ; VI-NEXT:    s_cmp_lg_u32 s7, 0
@@ -2849,10 +2845,10 @@ define amdgpu_kernel void @frem_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:  ; %bb.9: ; %frem.else
 ; VI-NEXT:    v_mov_b32_e32 v0, s5
 ; VI-NEXT:    s_and_b32 s7, s3, 0x80000000
-; VI-NEXT:    v_cmp_eq_f32_e64 s[10:11], |s3|, |v0|
-; VI-NEXT:    s_cmp_lg_u64 s[10:11], 0
-; VI-NEXT:    s_mov_b32 s8, 0
+; VI-NEXT:    v_cmp_eq_f32_e64 s[8:9], |s3|, |v0|
+; VI-NEXT:    s_cmp_lg_u64 s[8:9], 0
 ; VI-NEXT:    s_cselect_b32 s7, s7, s3
+; VI-NEXT:    s_mov_b32 s8, 0
 ; VI-NEXT:  .LBB11_10: ; %Flow49
 ; VI-NEXT:    s_xor_b32 s8, s8, 1
 ; VI-NEXT:    s_cmp_lg_u32 s8, 0
@@ -2975,11 +2971,11 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:    s_cbranch_scc0 .LBB12_2
 ; CI-NEXT:  ; %bb.1: ; %frem.else78
 ; CI-NEXT:    v_mov_b32_e32 v0, s8
-; CI-NEXT:    s_and_b32 s2, s4, 0x80000000
-; CI-NEXT:    v_cmp_eq_f32_e64 s[12:13], |s4|, |v0|
-; CI-NEXT:    s_or_b64 s[12:13], s[12:13], s[12:13]
+; CI-NEXT:    s_and_b32 s12, s4, 0x80000000
+; CI-NEXT:    v_cmp_eq_f32_e64 s[2:3], |s4|, |v0|
+; CI-NEXT:    s_or_b64 s[2:3], s[2:3], s[2:3]
+; CI-NEXT:    s_cselect_b32 s2, s12, s4
 ; CI-NEXT:    s_mov_b32 s3, 0
-; CI-NEXT:    s_cselect_b32 s2, s2, s4
 ; CI-NEXT:  .LBB12_2: ; %Flow127
 ; CI-NEXT:    s_xor_b32 s3, s3, 1
 ; CI-NEXT:    s_cmp_lg_u32 s3, 0
@@ -3067,10 +3063,10 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:  ; %bb.9: ; %frem.else47
 ; CI-NEXT:    v_mov_b32_e32 v0, s9
 ; CI-NEXT:    s_and_b32 s3, s5, 0x80000000
-; CI-NEXT:    v_cmp_eq_f32_e64 s[14:15], |s5|, |v0|
-; CI-NEXT:    s_or_b64 s[14:15], s[14:15], s[14:15]
-; CI-NEXT:    s_mov_b32 s12, 0
+; CI-NEXT:    v_cmp_eq_f32_e64 s[12:13], |s5|, |v0|
+; CI-NEXT:    s_or_b64 s[12:13], s[12:13], s[12:13]
 ; CI-NEXT:    s_cselect_b32 s3, s3, s5
+; CI-NEXT:    s_mov_b32 s12, 0
 ; CI-NEXT:  .LBB12_10: ; %Flow123
 ; CI-NEXT:    s_xor_b32 s12, s12, 1
 ; CI-NEXT:    s_cmp_lg_u32 s12, 0
@@ -3157,11 +3153,11 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:    s_cbranch_scc0 .LBB12_18
 ; CI-NEXT:  ; %bb.17: ; %frem.else16
 ; CI-NEXT:    v_mov_b32_e32 v0, s10
-; CI-NEXT:    s_and_b32 s12, s6, 0x80000000
-; CI-NEXT:    v_cmp_eq_f32_e64 s[14:15], |s6|, |v0|
-; CI-NEXT:    s_or_b64 s[14:15], s[14:15], s[14:15]
+; CI-NEXT:    s_and_b32 s14, s6, 0x80000000
+; CI-NEXT:    v_cmp_eq_f32_e64 s[12:13], |s6|, |v0|
+; CI-NEXT:    s_or_b64 s[12:13], s[12:13], s[12:13]
+; CI-NEXT:    s_cselect_b32 s12, s14, s6
 ; CI-NEXT:    s_mov_b32 s13, 0
-; CI-NEXT:    s_cselect_b32 s12, s12, s6
 ; CI-NEXT:  .LBB12_18: ; %Flow119
 ; CI-NEXT:    s_xor_b32 s13, s13, 1
 ; CI-NEXT:    s_cmp_lg_u32 s13, 0
@@ -3249,10 +3245,10 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:  ; %bb.25: ; %frem.else
 ; CI-NEXT:    v_mov_b32_e32 v0, s11
 ; CI-NEXT:    s_and_b32 s13, s7, 0x80000000
-; CI-NEXT:    v_cmp_eq_f32_e64 s[16:17], |s7|, |v0|
-; CI-NEXT:    s_or_b64 s[16:17], s[16:17], s[16:17]
-; CI-NEXT:    s_mov_b32 s14, 0
+; CI-NEXT:    v_cmp_eq_f32_e64 s[14:15], |s7|, |v0|
+; CI-NEXT:    s_or_b64 s[14:15], s[14:15], s[14:15]
 ; CI-NEXT:    s_cselect_b32 s13, s13, s7
+; CI-NEXT:    s_mov_b32 s14, 0
 ; CI-NEXT:  .LBB12_26: ; %Flow115
 ; CI-NEXT:    s_xor_b32 s14, s14, 1
 ; CI-NEXT:    s_cmp_lg_u32 s14, 0
@@ -3381,11 +3377,11 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    s_cbranch_scc0 .LBB12_2
 ; VI-NEXT:  ; %bb.1: ; %frem.else78
 ; VI-NEXT:    v_mov_b32_e32 v0, s8
-; VI-NEXT:    s_and_b32 s2, s4, 0x80000000
-; VI-NEXT:    v_cmp_eq_f32_e64 s[12:13], |s4|, |v0|
-; VI-NEXT:    s_cmp_lg_u64 s[12:13], 0
+; VI-NEXT:    s_and_b32 s12, s4, 0x80000000
+; VI-NEXT:    v_cmp_eq_f32_e64 s[2:3], |s4|, |v0|
+; VI-NEXT:    s_cmp_lg_u64 s[2:3], 0
+; VI-NEXT:    s_cselect_b32 s2, s12, s4
 ; VI-NEXT:    s_mov_b32 s3, 0
-; VI-NEXT:    s_cselect_b32 s2, s2, s4
 ; VI-NEXT:  .LBB12_2: ; %Flow127
 ; VI-NEXT:    s_xor_b32 s3, s3, 1
 ; VI-NEXT:    s_cmp_lg_u32 s3, 0
@@ -3473,10 +3469,10 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:  ; %bb.9: ; %frem.else47
 ; VI-NEXT:    v_mov_b32_e32 v0, s9
 ; VI-NEXT:    s_and_b32 s3, s5, 0x80000000
-; VI-NEXT:    v_cmp_eq_f32_e64 s[14:15], |s5|, |v0|
-; VI-NEXT:    s_cmp_lg_u64 s[14:15], 0
-; VI-NEXT:    s_mov_b32 s12, 0
+; VI-NEXT:    v_cmp_eq_f32_e64 s[12:13], |s5|, |v0|
+; VI-NEXT:    s_cmp_lg_u64 s[12:13], 0
 ; VI-NEXT:    s_cselect_b32 s3, s3, s5
+; VI-NEXT:    s_mov_b32 s12, 0
 ; VI-NEXT:  .LBB12_10: ; %Flow123
 ; VI-NEXT:    s_xor_b32 s12, s12, 1
 ; VI-NEXT:    s_cmp_lg_u32 s12, 0
@@ -3563,11 +3559,11 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    s_cbranch_scc0 .LBB12_18
 ; VI-NEXT:  ; %bb.17: ; %frem.else16
 ; VI-NEXT:    v_mov_b32_e32 v0, s10
-; VI-NEXT:    s_and_b32 s12, s6, 0x80000000
-; VI-NEXT:    v_cmp_eq_f32_e64 s[14:15], |s6|, |v0|
-; VI-NEXT:    s_cmp_lg_u64 s[14:15], 0
+; VI-NEXT:    s_and_b32 s14, s6, 0x80000000
+; VI-NEXT:    v_cmp_eq_f32_e64 s[12:13], |s6|, |v0|
+; VI-NEXT:    s_cmp_lg_u64 s[12:13], 0
+; VI-NEXT:    s_cselect_b32 s12, s14, s6
 ; VI-NEXT:    s_mov_b32 s13, 0
-; VI-NEXT:    s_cselect_b32 s12, s12, s6
 ; VI-NEXT:  .LBB12_18: ; %Flow119
 ; VI-NEXT:    s_xor_b32 s13, s13, 1
 ; VI-NEXT:    s_cmp_lg_u32 s13, 0
@@ -3655,10 +3651,10 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:  ; %bb.25: ; %frem.else
 ; VI-NEXT:    v_mov_b32_e32 v0, s11
 ; VI-NEXT:    s_and_b32 s13, s7, 0x80000000
-; VI-NEXT:    v_cmp_eq_f32_e64 s[16:17], |s7|, |v0|
-; VI-NEXT:    s_cmp_lg_u64 s[16:17], 0
-; VI-NEXT:    s_mov_b32 s14, 0
+; VI-NEXT:    v_cmp_eq_f32_e64 s[14:15], |s7|, |v0|
+; VI-NEXT:    s_cmp_lg_u64 s[14:15], 0
 ; VI-NEXT:    s_cselect_b32 s13, s13, s7
+; VI-NEXT:    s_mov_b32 s14, 0
 ; VI-NEXT:  .LBB12_26: ; %Flow115
 ; VI-NEXT:    s_xor_b32 s14, s14, 1
 ; VI-NEXT:    s_cmp_lg_u32 s14, 0
@@ -3783,7 +3779,7 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; CI-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0xd
-; CI-NEXT:    s_mov_b32 s13, 1
+; CI-NEXT:    s_mov_b32 s12, 1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x0
 ; CI-NEXT:    s_load_dwordx4 s[8:11], s[8:9], 0x10
@@ -3797,17 +3793,15 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:  ; %bb.1: ; %frem.else16
 ; CI-NEXT:    v_mov_b32_e32 v0, s8
 ; CI-NEXT:    v_mov_b32_e32 v1, s9
-; CI-NEXT:    v_cmp_eq_f64_e64 s[14:15], |s[4:5]|, |v[0:1]|
-; CI-NEXT:    s_mov_b64 s[12:13], 0
+; CI-NEXT:    v_cmp_eq_f64_e64 s[12:13], |s[4:5]|, |v[0:1]|
 ; CI-NEXT:    s_mov_b32 s2, 0
 ; CI-NEXT:    s_brev_b32 s3, 1
-; CI-NEXT:    s_mov_b32 s13, 0
 ; CI-NEXT:    s_and_b64 s[2:3], s[4:5], s[2:3]
-; CI-NEXT:    s_or_b64 s[2:3], s[12:13], s[2:3]
-; CI-NEXT:    s_or_b64 s[14:15], s[14:15], s[14:15]
+; CI-NEXT:    s_or_b64 s[12:13], s[12:13], s[12:13]
 ; CI-NEXT:    s_cselect_b64 s[2:3], s[2:3], s[4:5]
+; CI-NEXT:    s_mov_b32 s12, 0
 ; CI-NEXT:  .LBB13_2: ; %Flow53
-; CI-NEXT:    s_xor_b32 s12, s13, 1
+; CI-NEXT:    s_xor_b32 s12, s12, 1
 ; CI-NEXT:    s_cmp_lg_u32 s12, 0
 ; CI-NEXT:    s_cbranch_scc1 .LBB13_8
 ; CI-NEXT:  ; %bb.3: ; %frem.compute15
@@ -3894,24 +3888,22 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:    v_mov_b32_e32 v0, s10
 ; CI-NEXT:    v_mov_b32_e32 v1, s11
 ; CI-NEXT:    v_cmp_ngt_f64_e64 s[12:13], |s[6:7]|, |v[0:1]|
-; CI-NEXT:    s_mov_b32 s15, 1
+; CI-NEXT:    s_mov_b32 s14, 1
 ; CI-NEXT:    s_or_b64 s[12:13], s[12:13], s[12:13]
 ; CI-NEXT:    ; implicit-def: $sgpr12_sgpr13
 ; CI-NEXT:    s_cbranch_scc0 .LBB13_10
 ; CI-NEXT:  ; %bb.9: ; %frem.else
 ; CI-NEXT:    v_mov_b32_e32 v0, s10
 ; CI-NEXT:    v_mov_b32_e32 v1, s11
-; CI-NEXT:    v_cmp_eq_f64_e64 s[16:17], |s[6:7]|, |v[0:1]|
-; CI-NEXT:    s_mov_b64 s[14:15], 0
+; CI-NEXT:    v_cmp_eq_f64_e64 s[14:15], |s[6:7]|, |v[0:1]|
 ; CI-NEXT:    s_mov_b32 s12, 0
 ; CI-NEXT:    s_brev_b32 s13, 1
-; CI-NEXT:    s_mov_b32 s15, 0
 ; CI-NEXT:    s_and_b64 s[12:13], s[6:7], s[12:13]
-; CI-NEXT:    s_or_b64 s[12:13], s[14:15], s[12:13]
-; CI-NEXT:    s_or_b64 s[16:17], s[16:17], s[16:17]
+; CI-NEXT:    s_or_b64 s[14:15], s[14:15], s[14:15]
 ; CI-NEXT:    s_cselect_b64 s[12:13], s[12:13], s[6:7]
+; CI-NEXT:    s_mov_b32 s14, 0
 ; CI-NEXT:  .LBB13_10: ; %Flow49
-; CI-NEXT:    s_xor_b32 s14, s15, 1
+; CI-NEXT:    s_xor_b32 s14, s14, 1
 ; CI-NEXT:    s_cmp_lg_u32 s14, 0
 ; CI-NEXT:    s_cbranch_scc1 .LBB13_16
 ; CI-NEXT:  ; %bb.11: ; %frem.compute
@@ -4024,7 +4016,7 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x34
-; VI-NEXT:    s_mov_b32 s13, 1
+; VI-NEXT:    s_mov_b32 s12, 1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x0
 ; VI-NEXT:    s_load_dwordx4 s[8:11], s[8:9], 0x40
@@ -4038,17 +4030,15 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:  ; %bb.1: ; %frem.else16
 ; VI-NEXT:    v_mov_b32_e32 v0, s8
 ; VI-NEXT:    v_mov_b32_e32 v1, s9
-; VI-NEXT:    v_cmp_eq_f64_e64 s[14:15], |s[4:5]|, |v[0:1]|
-; VI-NEXT:    s_mov_b64 s[12:13], 0
+; VI-NEXT:    v_cmp_eq_f64_e64 s[12:13], |s[4:5]|, |v[0:1]|
 ; VI-NEXT:    s_mov_b32 s2, 0
 ; VI-NEXT:    s_brev_b32 s3, 1
-; VI-NEXT:    s_mov_b32 s13, 0
 ; VI-NEXT:    s_and_b64 s[2:3], s[4:5], s[2:3]
-; VI-NEXT:    s_or_b64 s[2:3], s[12:13], s[2:3]
-; VI-NEXT:    s_cmp_lg_u64 s[14:15], 0
+; VI-NEXT:    s_cmp_lg_u64 s[12:13], 0
 ; VI-NEXT:    s_cselect_b64 s[2:3], s[2:3], s[4:5]
+; VI-NEXT:    s_mov_b32 s12, 0
 ; VI-NEXT:  .LBB13_2: ; %Flow53
-; VI-NEXT:    s_xor_b32 s12, s13, 1
+; VI-NEXT:    s_xor_b32 s12, s12, 1
 ; VI-NEXT:    s_cmp_lg_u32 s12, 0
 ; VI-NEXT:    s_cbranch_scc1 .LBB13_8
 ; VI-NEXT:  ; %bb.3: ; %frem.compute15
@@ -4135,24 +4125,22 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    v_mov_b32_e32 v0, s10
 ; VI-NEXT:    v_mov_b32_e32 v1, s11
 ; VI-NEXT:    v_cmp_ngt_f64_e64 s[12:13], |s[6:7]|, |v[0:1]|
-; VI-NEXT:    s_mov_b32 s15, 1
+; VI-NEXT:    s_mov_b32 s14, 1
 ; VI-NEXT:    s_cmp_lg_u64 s[12:13], 0
 ; VI-NEXT:    ; implicit-def: $sgpr12_sgpr13
 ; VI-NEXT:    s_cbranch_scc0 .LBB13_10
 ; VI-NEXT:  ; %bb.9: ; %frem.else
 ; VI-NEXT:    v_mov_b32_e32 v0, s10
 ; VI-NEXT:    v_mov_b32_e32 v1, s11
-; VI-NEXT:    v_cmp_eq_f64_e64 s[16:17], |s[6:7]|, |v[0:1]|
-; VI-NEXT:    s_mov_b64 s[14:15], 0
+; VI-NEXT:    v_cmp_eq_f64_e64 s[14:15], |s[6:7]|, |v[0:1]|
 ; VI-NEXT:    s_mov_b32 s12, 0
 ; VI-NEXT:    s_brev_b32 s13, 1
-; VI-NEXT:    s_mov_b32 s15, 0
 ; VI-NEXT:    s_and_b64 s[12:13], s[6:7], s[12:13]
-; VI-NEXT:    s_or_b64 s[12:13], s[14:15], s[12:13]
-; VI-NEXT:    s_cmp_lg_u64 s[16:17], 0
+; VI-NEXT:    s_cmp_lg_u64 s[14:15], 0
 ; VI-NEXT:    s_cselect_b64 s[12:13], s[12:13], s[6:7]
+; VI-NEXT:    s_mov_b32 s14, 0
 ; VI-NEXT:  .LBB13_10: ; %Flow49
-; VI-NEXT:    s_xor_b32 s14, s15, 1
+; VI-NEXT:    s_xor_b32 s14, s14, 1
 ; VI-NEXT:    s_cmp_lg_u32 s14, 0
 ; VI-NEXT:    s_cbranch_scc1 .LBB13_16
 ; VI-NEXT:  ; %bb.11: ; %frem.compute

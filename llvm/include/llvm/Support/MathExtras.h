@@ -320,12 +320,6 @@ template <size_t kValue> constexpr size_t ConstantLog2() {
   return llvm::countr_zero_constexpr(kValue);
 }
 
-template <size_t kValue>
-LLVM_DEPRECATED("Use ConstantLog2 instead", "ConstantLog2")
-constexpr size_t CTLog2() {
-  return ConstantLog2<kValue>();
-}
-
 /// Return the floor log base 2 of the specified value, -1 if the value is zero.
 /// (32 bit edition.)
 /// Ex. Log2_32(32) == 5, Log2_32(1) == 0, Log2_32(0) == -1, Log2_32(6) == 2
@@ -723,7 +717,7 @@ AddOverflow(T X, T Y) {
 /// Add two signed integers, computing the two's complement truncated result,
 /// returning true if overflow occurred.
 template <typename T>
-std::enable_if_t<std::is_signed_v<T>, T> AddOverflow(T X, T Y, T &Result) {
+std::enable_if_t<std::is_signed_v<T>, bool> AddOverflow(T X, T Y, T &Result) {
 #if __has_builtin(__builtin_add_overflow)
   return __builtin_add_overflow(X, Y, &Result);
 #else
@@ -760,7 +754,7 @@ SubOverflow(T X, T Y) {
 /// Subtract two signed integers, computing the two's complement truncated
 /// result, returning true if an overflow occurred.
 template <typename T>
-std::enable_if_t<std::is_signed_v<T>, T> SubOverflow(T X, T Y, T &Result) {
+std::enable_if_t<std::is_signed_v<T>, bool> SubOverflow(T X, T Y, T &Result) {
 #if __has_builtin(__builtin_sub_overflow)
   return __builtin_sub_overflow(X, Y, &Result);
 #else
@@ -804,7 +798,7 @@ MulOverflow(T X, T Y) {
 /// Multiply two signed integers, computing the two's complement truncated
 /// result, returning true if an overflow occurred.
 template <typename T>
-std::enable_if_t<std::is_signed_v<T>, T> MulOverflow(T X, T Y, T &Result) {
+std::enable_if_t<std::is_signed_v<T>, bool> MulOverflow(T X, T Y, T &Result) {
 #if __has_builtin(__builtin_mul_overflow)
   return __builtin_mul_overflow(X, Y, &Result);
 #else

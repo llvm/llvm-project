@@ -240,9 +240,10 @@ void ModuleList::AppendImpl(const ModuleSP &module_sp, bool use_notifier) {
       // 0th element, and only if that's NOT an executable look at the
       // incoming ObjectFile.  That way in the normal case we only look at the
       // element 0 ObjectFile.
+      lldb_private::ObjectFile *elem_zero_obj = m_modules[0]->GetObjectFile();
       const bool elem_zero_is_executable =
-          m_modules[0]->GetObjectFile()->GetType() ==
-          ObjectFile::Type::eTypeExecutable;
+          elem_zero_obj &&
+          elem_zero_obj->GetType() == ObjectFile::Type::eTypeExecutable;
       lldb_private::ObjectFile *obj = module_sp->GetObjectFile();
       if (!elem_zero_is_executable && obj &&
           obj->GetType() == ObjectFile::Type::eTypeExecutable) {
@@ -1053,7 +1054,8 @@ size_t ModuleList::RemoveOrphanSharedModules(bool mandatory) {
 Status
 ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
                             llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
-                            bool *did_create_ptr, bool invoke_locate_callback) {
+                            bool *did_create_ptr, bool invoke_locate_callback,
+                            bool invoke_symbol_locators) {
   SharedModuleList &shared_module_list = GetSharedModuleList();
   std::lock_guard<std::recursive_mutex> guard(shared_module_list.GetMutex());
   char path[PATH_MAX];
@@ -1203,9 +1205,18 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
     }
   }
 
-  // Either the file didn't exist where at the path, or no path was given, so
-  // we now have to use more extreme measures to try and find the appropriate
-  // module.
+  // Either the file didn't exist where at the path, or no path was given, so we
+  // now either have to use more extreme measures to try and find the
+  // appropriate module or end our search here.
+  if (!invoke_symbol_locators) {
+    std::string uuid_str;
+    if (uuid_ptr && uuid_ptr->IsValid())
+      uuid_str = uuid_ptr->GetAsString();
+    if (!uuid_str.empty())
+      return Status::FromErrorStringWithFormatv(
+          "cannot locate module for UUID '{}'", uuid_str);
+    return Status::FromErrorString("cannot locate module");
+  }
 
   // Fixup the incoming path in case the path points to a valid file, yet the
   // arch or UUID (if one was passed in) don't match.

@@ -455,6 +455,12 @@ If your check relates to a published coding guideline (C++ Core Guidelines,
 SEI CERT, etc.) or style guide, provide links to the relevant guideline or
 style guide sections in your check documentation.
 
+Checks that directly reference MISRA or AUTOSAR guidelines are not accepted
+due to legal/license reasons; see
+`this Discourse thread <https://discourse.llvm.org/t/will-clang-frontend-plan-accept-misra-check-tools/84754>`_.
+Generic checks that happen to overlap with those guidelines are fine as long as
+they do not claim to implement or link to MISRA/AUTOSAR rules.
+
 Provide enough examples of the diagnostics and fix-its provided by the check so
 that a user can easily understand what will happen to their code when the check
 is run. If there are exceptions or limitations to your check, document them

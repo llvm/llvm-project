@@ -333,6 +333,12 @@
 #  define SANITIZER_SPIRV 0
 #endif
 
+#if SANITIZER_AMDGPU || SANITIZER_NVPTX || SANITIZER_SPIRV
+#  define SANITIZER_GPU 1
+#else
+#  define SANITIZER_GPU 0
+#endif
+
 // By default we allow to use SizeClassAllocator64 on 64-bit platform.
 // But in some cases SizeClassAllocator64 does not work well and we need to
 // fallback to SizeClassAllocator32.

@@ -41,6 +41,11 @@ struct LifetimeSafetyOpts {
 
   /// Whether to suggest lifetime annotations.
   bool SuggestAnnotations;
+
+  bool CheckNoescapeViolations;
+  bool CheckLifetimeboundViolations;
+  bool CheckMisplacedLifetimebound;
+  bool CheckInapplicableLifetimebound;
 };
 
 /// Enum to track functions visible across or within TU.
@@ -69,6 +74,8 @@ public:
                                    SourceLocation FreeLoc,
                                    llvm::ArrayRef<const Expr *> ExprChain) {}
 
+  // TODO: Pass the expiry location and aliasing chain like
+  // reportUseAfterScope.
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,
                                     const Expr *MovedExpr) {}
@@ -76,12 +83,14 @@ public:
   virtual void reportDanglingField(const Expr *IssueExpr,
                                    const FieldDecl *Field,
                                    const Expr *MovedExpr,
+                                   bool IsCapturedByLambda,
                                    SourceLocation ExpiryLoc) {}
 
   virtual void reportDanglingGlobal(const Expr *IssueExpr,
                                     const VarDecl *DanglingGlobal,
                                     const Expr *MovedExpr,
-                                    SourceLocation ExpiryLoc) {}
+                                    SourceLocation ExpiryLoc,
+                                    bool IsMain = false) {}
 
   // Reports when a reference/iterator is used after the container operation
   // that invalidated it.

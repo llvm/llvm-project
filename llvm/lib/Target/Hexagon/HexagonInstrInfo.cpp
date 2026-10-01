@@ -53,7 +53,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
-#include <cctype>
 #include <cstdint>
 #include <cstring>
 #include <iterator>
@@ -1672,6 +1671,13 @@ void HexagonInstrInfo::insertNoop(MachineBasicBlock &MBB,
 
 bool HexagonInstrInfo::isPostIncrement(const MachineInstr &MI) const {
   return getAddrMode(MI) == HexagonII::PostInc;
+}
+
+bool HexagonInstrInfo::isPostIncWithImmOffset(const MachineInstr &MI) const {
+  unsigned BasePos, OffsetPos;
+  if (!getBaseAndOffsetPosition(MI, BasePos, OffsetPos))
+    return false;
+  return isPostIncrement(MI) && MI.getOperand(OffsetPos).isImm();
 }
 
 // Returns true if an instruction is predicated irrespective of the predicate

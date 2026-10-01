@@ -1,9 +1,5 @@
 # Clang Language Extensions
 
-```{contents}
-:depth: 1
-:local: true
-```
 
 ```{toctree}
 :hidden: true
@@ -57,7 +53,7 @@ It can be used like this:
 ...
 ```
 
-```{note}
+:::{note}
 Prior to Clang 10, `__has_builtin` could not be used to detect most builtin
 pseudo-functions.
 
@@ -66,7 +62,7 @@ use `#ifdef` instead.
 
 When compiling with target offloading, `__has_builtin` only considers the
 currently active target.
-```
+:::
 
 ### `__has_constexpr_builtin`
 
@@ -1739,7 +1735,7 @@ mode.
 Use `__has_feature(modules)` to determine if Modules have been enabled.
 For example, compiling code with `-fmodules` enables the use of Modules.
 
-More information can be found [here](https://clang.llvm.org/docs/Modules.html).
+More information can be found [here](Modules.md).
 
 ## Language Extensions Back-ported to Previous Standards
 
@@ -1786,6 +1782,8 @@ More information can be found [here](https://clang.llvm.org/docs/Modules.html).
 | `= delete ("should have a reason");`          | \_\_cpp_deleted_function           | C++26         | C++03         |
 | Variadic Friends                              | \_\_cpp_variadic_friend            | C++26         | C++03         |
 | Trivial Relocatability                        | \_\_cpp_trivial_relocatability     | C++26         | C++03         |
+|``auto()`` cast                                | \_\_cpp_auto_cast                  | C++26         | C++03         |
+| Pack Indexing for Template Names              | \_\_cpp_pack_indexing >= 202606L   | C++2d         | C++03         |
 | Designated initializers (N494)                |                                    | C99           | C89           |
 | `_Complex` (N693)                             |                                    | C99           | C89, C++      |
 | `_Bool` (N815)                                |                                    | C99           | C89           |
@@ -1882,6 +1880,35 @@ template <typename...> struct TypeList;
 // The resulting type is TypeList<int, double, char>
 template <typename ...ExtraTypes>
 using MyTypeList = TypeList<__builtin_dedup_pack<int, double, int, char, double, ExtraTypes...>...>;
+```
+
+**Limitations**:
+
+- This builtin can only be used inside a template.
+- The resulting pack is currently only supported for expansion in template argument lists and base specifiers.
+- This builtin cannot be assigned to a template template parameter.
+
+### \_\_builtin_sort_pack
+
+```c++
+template <class... Ts>
+using __builtin_sort_pack = ...;
+```
+
+This alias takes a template parameter pack `Ts` and produces a new unexpanded pack containing the same types
+sorted by [`__builtin_type_order`](#builtin-type-order).
+
+The resulting pack can be expanded in contexts like template argument lists or base specifiers.
+
+**Example of Use**:
+
+```c++
+template <typename...> struct TypeList;
+
+// Combined with `__builtin_dedup_pack` to canonicalize a type list.
+template <typename ...ExtraTypes>
+using MyTypeList = TypeList<
+    __builtin_sort_pack<__builtin_dedup_pack<int, double, ExtraTypes...>...>...>;
 ```
 
 **Limitations**:
@@ -2058,6 +2085,11 @@ The following type trait primitives are supported by Clang. Those traits marked
 - `__builtin_lt_synthesizes_from_spaceship`, `__builtin_gt_synthesizes_from_spaceship`,
   `__builtin_le_synthesizes_from_spaceship`, `__builtin_ge_synthesizes_from_spaceship` (Clang):
   These builtins can be used to determine whether the corresponding operator is synthesized from a spaceship operator.
+- (builtin-type-order)=
+  `__builtin_type_order` (C++): Returns `std::strong_ordering::less` if `T` precedes `U` in an
+  implementation-defined total ordering of all types, `std::strong_ordering::greater` if `U` precedes `T`,
+  and `std::strong_ordering::equal` if they are the same type.
+  The order is stable across translation units for a given platform/ABI.
 
 In addition, the following expression traits are supported:
 
@@ -2565,6 +2597,8 @@ Further examples of these attributes are available in the static analyzer's
 Query for these features with `__has_attribute(ns_consumed)`,
 `__has_attribute(ns_returns_retained)`, etc.
 
+(langext-objective-c-available)=
+
 ### Objective-C @available
 
 It is possible to use the newest SDK but still build a program that can run on
@@ -2579,7 +2613,7 @@ and `-respondsToSelector:` or `+instancesRespondToSelector:` for
 Objective-C methods. If such a check was missed, the program would compile
 fine, run fine on newer systems, but crash on older systems.
 
-As of LLVM 5.0, `-Wunguarded-availability` uses the [availability attributes](https://clang.llvm.org/docs/AttributeReference.html#availability) together
+As of LLVM 5.0, `-Wunguarded-availability` uses the [availability attributes](AttributeReference.md#availability) together
 with the new `@available()` keyword to assist with this issue.
 When a method that's introduced in the OS newer than the target OS is called, a
 -Wunguarded-availability warning is emitted if that call is not guarded:
@@ -2621,7 +2655,7 @@ void my_fun(NSSomeClass* var) {
 ```
 
 If the caller of `my_fun()` already checks that `my_fun()` is only called
-on 10.12, then add an [availability attribute](https://clang.llvm.org/docs/AttributeReference.html#availability) to it,
+on 10.12, then add an [availability attribute](AttributeReference.md#availability) to it,
 which will also suppress the warning and require that calls to my_fun() are
 checked:
 
@@ -3030,6 +3064,44 @@ static __externref_t tableDst[0];
 // [dst, dst + nelem - 1] in tableDst
 void copy(int dst, int src, int nelem) {
   __builtin_wasm_table_copy(tableDst, tableSrc, dst, src, nelem);
+}
+```
+
+### `__builtin_wasm_memory_copy`
+
+This builtin function copies bytes from a source memory to a possibly
+overlapping destination region using the WebAssembly `memory.copy` instruction.
+It takes five arguments:
+1. Destination memory index (must be a constant integer)
+2. Source memory index (must be a constant integer)
+3. Destination pointer (`void *`)
+4. Source pointer (`const void *`)
+5. Number of bytes to copy (`size_t`)
+
+It returns nothing. Note that unlike C `memcpy` or `memmove`, `memory.copy`
+traps if either pointer is out of bounds even when the number of bytes is zero.
+
+```c++
+void copy(void *dst, const void *src, size_t n) {
+  __builtin_wasm_memory_copy(0, 0, dst, src, n);
+}
+```
+
+### `__builtin_wasm_memory_fill`
+
+This builtin function sets bytes in memory using the WebAssembly `memory.fill`
+instruction. It takes four arguments:
+1. Memory index (must be a constant integer)
+2. Destination pointer (`void *`)
+3. Byte value to set (passed as `int`, lowest 8 bits used)
+4. Number of bytes to set (`size_t`)
+
+It returns nothing. Note that unlike C `memset`, `memory.fill` traps if the
+pointer is out of bounds even when the number of bytes is zero.
+
+```c++
+void fill(void *dst, int val, size_t n) {
+  __builtin_wasm_memory_fill(0, dst, val, n);
 }
 ```
 
@@ -4674,7 +4746,7 @@ The effect of passing some other value to `__builtin_flt_rounds` is
 implementation-defined. `__builtin_set_flt_rounds` is currently only supported
 to work on x86, x86_64, powerpc, powerpc64, Arm and AArch64 targets. These builtins
 read and modify the floating-point environment, which is not always allowed and may
-have unexpected behavior. Please see the section on [Accessing the floating point environment](https://clang.llvm.org/docs/UsersManual.html#accessing-the-floating-point-environment) for more information.
+have unexpected behavior. Please see the section on [Accessing the floating point environment](UsersManual.md#accessing-the-floating-point-environment) for more information.
 
 ### String builtins
 
@@ -5016,10 +5088,10 @@ will be used.
 
 ### C++ Coroutines support builtins
 
-```{warning}
+:::{warning}
 This is a work in progress. Compatibility across Clang/LLVM releases is not
 guaranteed.
-```
+:::
 
 Clang provides experimental builtins to support C++ Coroutines as defined by
 <https://wg21.link/P0057>. The following four are intended to be used by the
@@ -5714,6 +5786,8 @@ commandline.
   - Enable frame pointers
 ```
 
+(langext-loop-hint-optimizations)=
+
 ## Extensions for loop hint optimizations
 
 The `#pragma clang loop` directive is used to specify hints for optimizing the
@@ -6086,6 +6160,8 @@ for(...) {
   a = b[i] * c[i] + e;
 }
 ```
+
+(langext-atomic-code-generation)=
 
 ## Extensions for controlling atomic code generation
 
@@ -6510,6 +6586,8 @@ When `#pragma comment(copyright, ...)` appears in a C++20 module interface
 unit, the copyright string is embedded only in the object file compiled from
 that interface unit. Importing TUs do not re-emit the string.
 
+(langext-evaluating-object-size)=
+
 ## Evaluating Object Size
 
 Clang supports the builtins `__builtin_object_size` and
@@ -6576,7 +6654,7 @@ more information about subobjects to be determined, so the `type & 1 == 1`
 case will often give imprecise results when used across a function call boundary
 even when optimization is enabled.
 
-[The pass_object_size and pass_dynamic_object_size attributes](https://clang.llvm.org/docs/AttributeReference.html#pass-object-size-pass-dynamic-object-size)
+[The pass_object_size and pass_dynamic_object_size attributes](AttributeReference.md#pass-object-size-pass-dynamic-object-size)
 can be used to invisibly pass the object size for a pointer parameter alongside
 the pointer in a function call. This allows more precise object sizes to be
 determined both when building without optimizations and in the `type & 1 == 1`

@@ -574,7 +574,6 @@ namespace {
   struct CallStackRestore final : EHScopeStack::Cleanup {
     Address Stack;
     CallStackRestore(Address Stack) : Stack(Stack) {}
-    bool isRedundantBeforeReturn() override { return true; }
     void Emit(CodeGenFunction &CGF, Flags flags) override {
       llvm::Value *V = CGF.Builder.CreateLoad(Stack);
       CGF.Builder.CreateStackRestore(V);
@@ -1179,7 +1178,7 @@ Address CodeGenModule::createUnnamedGlobalFrom(const VarDecl &D,
     GV->setAlignment(Align.getAsAlign());
     GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     CacheEntry = GV;
-  } else if (CacheEntry->getAlignment() < uint64_t(Align.getQuantity())) {
+  } else if (CacheEntry->getAlign().valueOrOne() < Align.getAsAlign()) {
     CacheEntry->setAlignment(Align.getAsAlign());
   }
 
@@ -1644,6 +1643,40 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       }
     }
 
+    // A variable whose declaration is bypassed by a goto or switch is not
+    // initialized by EmitAutoVarInit, which runs at the declaration. Emit the
+    // trivial-auto-var-init separately.
+    if (Bypasses.IsBypassed(&D) && !emission.IsEscapingByRef &&
+        !Ty->isVariablyModifiedType() &&
+        getAutoVarInitKind(Ty, D) !=
+            LangOptions::TrivialAutoVarInitKind::Uninitialized) {
+      if (!Bypasses.isAlwaysBypassed()) {
+        // The variable's lifetime restarts on each re-entry into its scope, so
+        // reinitialize at every bypassing jump. Backward gotos are emitted at
+        // the jump source, which comes after this alloca; forward gotos and the
+        // switch dispatch have already been emitted, so patch their init in
+        // before the jump.
+        BypassedVarInits.insert({&D, address});
+        for (const BypassingForwardJump &FG : BypassingForwardJumps) {
+          const auto *Vars = Bypasses.getBypassedVarsForSource(FG.Source);
+          if (!Vars || !Vars->contains(&D))
+            continue;
+          if (llvm::Instruction *Term = FG.Block->getTerminator()) {
+            llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
+            Builder.SetInsertPoint(Term);
+            emitZeroOrPatternForAutoVarInit(Ty, D, address);
+          }
+        }
+      } else {
+        // A computed goto can jump anywhere, so we can't identify the jumps
+        // that bypass this declaration. Fall back to initializing once, in the
+        // function's entry block.
+        llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
+        Builder.SetInsertPoint(getPostAllocaInsertPoint());
+        emitZeroOrPatternForAutoVarInit(Ty, D, address);
+      }
+    }
+
     if (D.hasAttr<StackProtectorIgnoreAttr>()) {
       if (auto *AI = dyn_cast<llvm::AllocaInst>(address.getBasePointer())) {
         llvm::LLVMContext &Ctx = Builder.getContext();
@@ -1841,6 +1874,35 @@ bool CodeGenFunction::isTrivialInitializer(const Expr *Init) {
   return false;
 }
 
+LangOptions::TrivialAutoVarInitKind
+CodeGenFunction::getAutoVarInitKind(QualType Ty, const VarDecl &D) {
+  auto hasNoTrivialAutoVarInitAttr = [](const Decl *D) {
+    return D && D->hasAttr<NoTrivialAutoVarInitAttr>();
+  };
+  if (D.isConstexpr() || D.getAttr<UninitializedAttr>() ||
+      hasNoTrivialAutoVarInitAttr(Ty->getAsTagDecl()) ||
+      hasNoTrivialAutoVarInitAttr(CurFuncDecl))
+    return LangOptions::TrivialAutoVarInitKind::Uninitialized;
+  return getContext().getLangOpts().getTrivialAutoVarInit();
+}
+
+void CodeGenFunction::emitBypassedVarInitsForSource(const Stmt *Source) {
+  // Scope-reentry reinit is only sound when jump sources are known. With a
+  // computed goto we can't tell whether a jump leaves a variable's scope, so
+  // EmitAutoVarAlloca falls back to a single function-scope init and we must
+  // not reinitialize here -- doing so could clobber a still-live variable.
+  if (Bypasses.isAlwaysBypassed())
+    return;
+  const auto *Vars = Bypasses.getBypassedVarsForSource(Source);
+  if (!Vars)
+    return;
+  for (const VarDecl *VD : *Vars) {
+    auto It = BypassedVarInits.find(VD);
+    if (It != BypassedVarInits.end())
+      emitZeroOrPatternForAutoVarInit(VD->getType(), *VD, It->second);
+  }
+}
+
 void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
                                                       const VarDecl &D,
                                                       Address Loc) {
@@ -2000,16 +2062,9 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   const Address Loc =
       locIsByrefHeader ? emission.getObjectAddress(*this) : emission.Addr;
 
-  auto hasNoTrivialAutoVarInitAttr = [&](const Decl *D) {
-    return D && D->hasAttr<NoTrivialAutoVarInitAttr>();
-  };
   // Note: constexpr already initializes everything correctly.
   LangOptions::TrivialAutoVarInitKind trivialAutoVarInit =
-      ((D.isConstexpr() || D.getAttr<UninitializedAttr>() ||
-        hasNoTrivialAutoVarInitAttr(type->getAsTagDecl()) ||
-        hasNoTrivialAutoVarInitAttr(CurFuncDecl))
-           ? LangOptions::TrivialAutoVarInitKind::Uninitialized
-           : getContext().getLangOpts().getTrivialAutoVarInit());
+      getAutoVarInitKind(type, D);
 
   auto initializeWhatIsTechnicallyUninitialized = [&](Address Loc) {
     if (trivialAutoVarInit ==
@@ -2348,7 +2403,8 @@ void CodeGenFunction::pushDestroyAndDeferDeactivation(
 }
 
 void CodeGenFunction::pushStackRestore(CleanupKind Kind, Address SPMem) {
-  EHStack.pushCleanup<CallStackRestore>(Kind, SPMem);
+  EHStack.pushCleanup<CallStackRestore>(
+      static_cast<CleanupKind>(Kind | StackRestore), SPMem);
 }
 
 void CodeGenFunction::pushKmpcAllocFree(
@@ -2856,7 +2912,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
        &D == CXXABIThisDecl)) {
     // We don't emit fake uses for coroutine parameters, other than `this`.
     if (auto *FnDecl = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
-        &D == CXXABIThisDecl || !FnDecl ||
+        &D == CXXABIThisDecl || !FnDecl || !FnDecl->getBody() ||
         FnDecl->getBody()->getStmtClass() != Stmt::CoroutineBodyStmtClass) {
       if (shouldExtendLifetime(getContext(), CurCodeDecl, D, CXXABIThisDecl))
         EHStack.pushCleanup<FakeUse>(NormalFakeUse, DeclPtr);
