@@ -1,8 +1,8 @@
 ! RUN: %python %S/../test_errors.py %s %flang_fc1
 !
 ! A host,device procedure has a host copy and a device copy. An unguarded
-! call must be valid in both. ON_DEVICE() selects the appropriate target for
-! calls that are only valid in one copy.
+! call must be valid in both. An ON_DEVICE() guard allows host and device
+! callees in either arm; checking the appropriate arm is deferred.
 
 module call_context
   interface host_generic
@@ -53,14 +53,12 @@ contains
     end if
   end function
 
-  attributes(host,device) integer function wrong_side(n)
+  attributes(host,device) integer function either_side(n)
     integer, value :: n
     if (on_device()) then
-      !ERROR: 'host_only' may not be called in device code
-      wrong_side = host_only(n)
+      either_side = host_only(n)
     else
-      !ERROR: 'device_only' may not be called in host code
-      wrong_side = device_only(n)
+      either_side = device_only(n)
     end if
   end function
 
@@ -107,6 +105,20 @@ contains
     guarded_one_line = both(n)
     if (on_device()) guarded_one_line = device_only(n)
     if (.not. on_device()) guarded_one_line = host_only(n)
+    ! Either callee is allowed under an ON_DEVICE check, regardless of polarity.
+    if (on_device()) guarded_one_line = host_only(n)
+    if (.not. on_device()) guarded_one_line = device_only(n)
+  end function
+
+  attributes(host,device) integer function ordinary_branch(n)
+    integer, value :: n
+    if (n > 0) then
+      !ERROR: 'host_only' may not be called in device code
+      ordinary_branch = host_only(n)
+    else
+      !ERROR: 'device_only' may not be called in host code
+      ordinary_branch = device_only(n)
+    end if
   end function
 
   attributes(host,device) integer function compound_and(n)
@@ -114,8 +126,6 @@ contains
     if (on_device() .and. n > 0) then
       compound_and = both(n)
     else
-      ! A device copy reaches ELSE when n <= 0.
-      !ERROR: 'host_only' may not be called in device code
       compound_and = host_only(n)
     end if
   end function
@@ -123,8 +133,6 @@ contains
   attributes(host,device) integer function compound_or(n)
     integer, value :: n
     if (on_device() .or. n > 0) then
-      ! A host copy reaches THEN when n > 0.
-      !ERROR: 'device_only' may not be called in host code
       compound_or = device_only(n)
     else
       compound_or = both(n)
@@ -207,8 +215,10 @@ contains
     call both_subroutine(n)
     if (on_device()) then
       call device_subroutine(n)
+      call host_subroutine(n)
     else
       call host_subroutine(n)
+      call device_subroutine(n)
     end if
   end subroutine
 
@@ -288,8 +298,10 @@ contains
     integer, intent(inout) :: n
     if (on_gpu()) then
       call device_only(n)
+      call host_only(n)
     else
       call host_only(n)
+      call device_only(n)
     end if
   end subroutine
 end module

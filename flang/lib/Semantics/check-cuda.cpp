@@ -18,7 +18,6 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/ADT/StringSet.h"
-#include <utility>
 
 // Once labeled DO constructs have been canonicalized and their parse subtrees
 // transformed into parser::DoConstructs, scan the parser::Blocks of the program
@@ -68,13 +67,11 @@ static const llvm::StringSet<> warpFunctions_ = {"match_all_syncjj",
     "match_any_syncjj", "match_any_syncjx", "match_any_syncjf",
     "match_any_syncjd"};
 
-static constexpr unsigned HostTarget{1};
-static constexpr unsigned DeviceTarget{2};
-static constexpr unsigned BothTargets{HostTarget | DeviceTarget};
+enum class CallContext { Device, HostDevice, GuardedHostDevice };
 
 // Match the BIND(C) intrinsic-module procedure intercepted by CUDA lowering,
 // including calls through a USE rename. A user procedure named ON_DEVICE is
-// an ordinary call and does not refine the execution target.
+// an ordinary call and does not allow host-only or device-only callees.
 static bool IsOnDevice(const evaluate::ProcedureDesignator &proc) {
   const Symbol *sym{proc.GetSymbol()};
   if (!sym) {
@@ -86,96 +83,19 @@ static bool IsOnDevice(const evaluate::ProcedureDesignator &proc) {
       module && module->attrs().test(Attr::INTRINSIC);
 }
 
-static constexpr unsigned FalseResult{1};
-static constexpr unsigned TrueResult{2};
-static constexpr unsigned EitherResult{FalseResult | TrueResult};
+struct FindOnDevice : public evaluate::AnyTraverse<FindOnDevice, bool> {
+  using Base = evaluate::AnyTraverse<FindOnDevice, bool>;
+  FindOnDevice() : Base(*this) {}
+  using Base::operator();
+  bool operator()(const evaluate::ProcedureDesignator &proc) const {
+    return IsOnDevice(proc);
+  }
+};
 
-// Compute possible values of a logical condition in one copy of a procedure.
-// Unknown expressions can be true or false; this keeps target refinement
-// conservative without losing the useful implications of AND, OR, and NOT.
-static unsigned PossibleTruth(
-    const evaluate::Expr<evaluate::LogicalResult> &expr, bool onDevice) {
-  if (const auto *call{
-          evaluate::UnwrapExpr<evaluate::FunctionRef<evaluate::LogicalResult>>(
-              expr)}) {
-    if (IsOnDevice(call->proc())) {
-      return onDevice ? TrueResult : FalseResult;
-    }
-  }
-  if (const auto *negation{
-          evaluate::UnwrapExpr<evaluate::Not<evaluate::LogicalResult::kind>>(
-              expr)}) {
-    unsigned result{PossibleTruth(negation->left(), onDevice)};
-    return ((result & FalseResult) ? TrueResult : 0) |
-        ((result & TrueResult) ? FalseResult : 0);
-  }
-  if (const auto *parens{
-          evaluate::UnwrapExpr<evaluate::Parentheses<evaluate::LogicalResult>>(
-              expr)}) {
-    return PossibleTruth(parens->left(), onDevice);
-  }
-  if (const auto *binary{evaluate::UnwrapExpr<
-          evaluate::LogicalOperation<evaluate::LogicalResult::kind>>(expr)}) {
-    unsigned left{PossibleTruth(binary->left(), onDevice)};
-    unsigned right{PossibleTruth(binary->right(), onDevice)};
-    unsigned result{0};
-    for (bool a : {false, true}) {
-      if (!(left & (a ? TrueResult : FalseResult))) {
-        continue;
-      }
-      for (bool b : {false, true}) {
-        if (!(right & (b ? TrueResult : FalseResult))) {
-          continue;
-        }
-        bool value;
-        switch (binary->logicalOperator) {
-        case common::LogicalOperator::And:
-          value = a && b;
-          break;
-        case common::LogicalOperator::Or:
-          value = a || b;
-          break;
-        case common::LogicalOperator::Eqv:
-          value = a == b;
-          break;
-        case common::LogicalOperator::Neqv:
-          value = a != b;
-          break;
-        default:
-          return EitherResult;
-        }
-        result |= value ? TrueResult : FalseResult;
-      }
-    }
-    return result;
-  }
-  return EitherResult;
-}
-
-static std::pair<unsigned, unsigned> BranchTargets(SemanticsContext &context,
-    const parser::ScalarLogicalExpr &condition, unsigned incoming) {
-  const auto *analyzed{GetExpr(context, condition)};
-  const auto *logical{analyzed
-          ? evaluate::UnwrapExpr<evaluate::Expr<evaluate::LogicalResult>>(
-                *analyzed)
-          : nullptr};
-  if (!logical) {
-    return {incoming, incoming};
-  }
-  unsigned trueTargets{0};
-  unsigned falseTargets{0};
-  for (unsigned target : {HostTarget, DeviceTarget}) {
-    if (incoming & target) {
-      unsigned possible{PossibleTruth(*logical, target == DeviceTarget)};
-      if (possible & TrueResult) {
-        trueTargets |= target;
-      }
-      if (possible & FalseResult) {
-        falseTargets |= target;
-      }
-    }
-  }
-  return {trueTargets, falseTargets};
+static bool ChecksOnDevice(
+    SemanticsContext &context, const parser::ScalarLogicalExpr &condition) {
+  const auto *expr{GetExpr(context, condition)};
+  return expr && FindOnDevice{}(*expr);
 }
 
 // Traverses an evaluate::Expr<> in search of unsupported operations
@@ -186,11 +106,11 @@ struct DeviceExprChecker
   using Result = MaybeMsg;
   using Base = evaluate::AnyTraverse<DeviceExprChecker, Result>;
   explicit DeviceExprChecker(
-      SemanticsContext &c, unsigned targets = DeviceTarget)
-      : Base(*this), context_{c}, targets_{targets} {}
+      SemanticsContext &c, CallContext callContext = CallContext::Device)
+      : Base(*this), context_{c}, callContext_{callContext} {}
   using Base::operator();
   Result operator()(const evaluate::ProcedureDesignator &x) const {
-    if (targets_ == 0 || IsOnDevice(x)) {
+    if (IsOnDevice(x)) {
       return {};
     }
     if (const Symbol * sym{x.GetInterfaceSymbol()}) {
@@ -211,7 +131,7 @@ struct DeviceExprChecker
                   "warp match function disabled"_err_en_US);
             }
             if (*attrs == common::CUDASubprogramAttrs::Device &&
-                (targets_ & HostTarget)) {
+                callContext_ == CallContext::HostDevice) {
               return parser::MessageFormattedText(
                   "'%s' may not be called in host code"_err_en_US, x.GetName());
             }
@@ -239,7 +159,7 @@ struct DeviceExprChecker
       return {};
     }
 
-    if (!(targets_ & DeviceTarget)) {
+    if (callContext_ == CallContext::GuardedHostDevice) {
       return {};
     }
     return parser::MessageFormattedText(
@@ -247,7 +167,7 @@ struct DeviceExprChecker
   }
 
   SemanticsContext &context_;
-  unsigned targets_{DeviceTarget};
+  CallContext callContext_{CallContext::Device};
 };
 
 static bool IsHostArray(const Symbol &symbol) {
@@ -426,19 +346,19 @@ static bool IsPlainScalar(const Symbol &symbol) {
 // ActionStmtChecker::WhyNotOk, a pattern Clang's use-tracking misses (see
 // llvm/llvm-project#218429). Remove once that is fixed upstream.
 template <typename A>
-[[maybe_unused]] static MaybeMsg CheckUnwrappedExpr(
-    SemanticsContext &context, const A &x, unsigned targets = DeviceTarget) {
+[[maybe_unused]] static MaybeMsg CheckUnwrappedExpr(SemanticsContext &context, const A &x,
+    CallContext callContext = CallContext::Device) {
   if (const auto *expr{parser::Unwrap<parser::Expr>(x)}) {
-    return DeviceExprChecker{context, targets}(expr->typedExpr);
+    return DeviceExprChecker{context, callContext}(expr->typedExpr);
   }
   return {};
 }
 
 template <typename A>
 static void CheckUnwrappedExpr(SemanticsContext &context, SourceName at,
-    const A &x, unsigned targets = DeviceTarget) {
+    const A &x, CallContext callContext = CallContext::Device) {
   if (const auto *expr{parser::Unwrap<parser::Expr>(x)}) {
-    if (auto msg{DeviceExprChecker{context, targets}(expr->typedExpr)}) {
+    if (auto msg{DeviceExprChecker{context, callContext}(expr->typedExpr)}) {
       context.Say(at, std::move(*msg));
     }
   }
@@ -446,16 +366,16 @@ static void CheckUnwrappedExpr(SemanticsContext &context, SourceName at,
 
 template <bool CUF_KERNEL> struct ActionStmtChecker {
   template <typename A>
-  static MaybeMsg WhyNotOk(
-      SemanticsContext &context, const A &x, unsigned targets = DeviceTarget) {
+  static MaybeMsg WhyNotOk(SemanticsContext &context, const A &x,
+      CallContext callContext = CallContext::Device) {
     if constexpr (ConstraintTrait<A>) {
-      return WhyNotOk(context, x.thing, targets);
+      return WhyNotOk(context, x.thing, callContext);
     } else if constexpr (WrapperTrait<A>) {
-      return WhyNotOk(context, x.v, targets);
+      return WhyNotOk(context, x.v, callContext);
     } else if constexpr (UnionTrait<A>) {
-      return WhyNotOk(context, x.u, targets);
+      return WhyNotOk(context, x.u, callContext);
     } else if constexpr (TupleTrait<A>) {
-      return WhyNotOk(context, x.t, targets);
+      return WhyNotOk(context, x.t, callContext);
     } else {
       return parser::MessageFormattedText{
           "Statement may not appear in device code"_err_en_US};
@@ -463,33 +383,36 @@ template <bool CUF_KERNEL> struct ActionStmtChecker {
   }
   template <typename A>
   static MaybeMsg WhyNotOk(SemanticsContext &context,
-      const common::Indirection<A> &x, unsigned targets = DeviceTarget) {
-    return WhyNotOk(context, x.value(), targets);
+      const common::Indirection<A> &x,
+      CallContext callContext = CallContext::Device) {
+    return WhyNotOk(context, x.value(), callContext);
   }
   template <typename... As>
   static MaybeMsg WhyNotOk(SemanticsContext &context,
-      const std::variant<As...> &x, unsigned targets = DeviceTarget) {
+      const std::variant<As...> &x,
+      CallContext callContext = CallContext::Device) {
     return common::visit(
-        [&context, targets](
-            const auto &x) { return WhyNotOk(context, x, targets); },
+        [&context, callContext](
+            const auto &x) { return WhyNotOk(context, x, callContext); },
         x);
   }
   template <std::size_t J = 0, typename... As>
   static MaybeMsg WhyNotOk(SemanticsContext &context,
-      const std::tuple<As...> &x, unsigned targets = DeviceTarget) {
+      const std::tuple<As...> &x,
+      CallContext callContext = CallContext::Device) {
     if constexpr (J == sizeof...(As)) {
       return {};
-    } else if (auto msg{WhyNotOk(context, std::get<J>(x), targets)}) {
+    } else if (auto msg{WhyNotOk(context, std::get<J>(x), callContext)}) {
       return msg;
     } else {
-      return WhyNotOk<(J + 1)>(context, x, targets);
+      return WhyNotOk<(J + 1)>(context, x, callContext);
     }
   }
   template <typename A>
   static MaybeMsg WhyNotOk(SemanticsContext &context, const std::list<A> &x,
-      unsigned targets = DeviceTarget) {
+      CallContext callContext = CallContext::Device) {
     for (const auto &y : x) {
-      if (MaybeMsg result{WhyNotOk(context, y, targets)}) {
+      if (MaybeMsg result{WhyNotOk(context, y, callContext)}) {
         return result;
       }
     }
@@ -497,75 +420,85 @@ template <bool CUF_KERNEL> struct ActionStmtChecker {
   }
   template <typename A>
   static MaybeMsg WhyNotOk(SemanticsContext &context, const std::optional<A> &x,
-      unsigned targets = DeviceTarget) {
+      CallContext callContext = CallContext::Device) {
     if (x) {
-      return WhyNotOk(context, *x, targets);
+      return WhyNotOk(context, *x, callContext);
     } else {
       return {};
     }
   }
   template <typename A>
   static MaybeMsg WhyNotOk(SemanticsContext &context,
-      const parser::UnlabeledStatement<A> &x, unsigned targets = DeviceTarget) {
-    return WhyNotOk(context, x.statement, targets);
+      const parser::UnlabeledStatement<A> &x,
+      CallContext callContext = CallContext::Device) {
+    return WhyNotOk(context, x.statement, callContext);
   }
   template <typename A>
   static MaybeMsg WhyNotOk(SemanticsContext &context,
-      const parser::Statement<A> &x, unsigned targets = DeviceTarget) {
-    return WhyNotOk(context, x.statement, targets);
+      const parser::Statement<A> &x,
+      CallContext callContext = CallContext::Device) {
+    return WhyNotOk(context, x.statement, callContext);
   }
   static MaybeMsg WhyNotOk(SemanticsContext &context,
-      const parser::AllocateStmt &, unsigned targets = DeviceTarget) {
+      const parser::AllocateStmt &,
+      CallContext callContext = CallContext::Device) {
     return {}; // AllocateObjects are checked elsewhere
   }
   static MaybeMsg WhyNotOk(SemanticsContext &context,
-      const parser::AllocateCoarraySpec &, unsigned targets = DeviceTarget) {
+      const parser::AllocateCoarraySpec &,
+      CallContext callContext = CallContext::Device) {
     return parser::MessageFormattedText(
         "A coarray may not be allocated on the device"_err_en_US);
   }
   static MaybeMsg WhyNotOk(SemanticsContext &context,
-      const parser::DeallocateStmt &, unsigned targets = DeviceTarget) {
+      const parser::DeallocateStmt &,
+      CallContext callContext = CallContext::Device) {
     return {}; // AllocateObjects are checked elsewhere
   }
   static MaybeMsg WhyNotOk(SemanticsContext &context,
-      const parser::AssignmentStmt &x, unsigned targets = DeviceTarget) {
-    return DeviceExprChecker{context, targets}(x.typedAssignment);
+      const parser::AssignmentStmt &x,
+      CallContext callContext = CallContext::Device) {
+    return DeviceExprChecker{context, callContext}(x.typedAssignment);
   }
   static MaybeMsg WhyNotOk(SemanticsContext &context, const parser::CallStmt &x,
-      unsigned targets = DeviceTarget) {
-    return DeviceExprChecker{context, targets}(x.typedCall);
+      CallContext callContext = CallContext::Device) {
+    return DeviceExprChecker{context, callContext}(x.typedCall);
   }
   static MaybeMsg WhyNotOk(SemanticsContext &context,
-      const parser::ContinueStmt &, unsigned targets = DeviceTarget) {
+      const parser::ContinueStmt &,
+      CallContext callContext = CallContext::Device) {
     return {};
   }
   static MaybeMsg WhyNotOk(SemanticsContext &, const parser::PauseStmt &,
-      unsigned targets = DeviceTarget) {
+      CallContext callContext = CallContext::Device) {
     return parser::MessageFormattedText{
         "device subprograms may not contain PAUSE statements"_err_en_US};
   }
   static MaybeMsg WhyNotOk(SemanticsContext &context, const parser::IfStmt &x,
-      unsigned targets = DeviceTarget) {
+      CallContext callContext = CallContext::Device) {
     if (auto result{CheckUnwrappedExpr(
-            context, std::get<parser::ScalarLogicalExpr>(x.t), targets)}) {
+            context, std::get<parser::ScalarLogicalExpr>(x.t), callContext)}) {
       return result;
     }
     return WhyNotOk(context,
         std::get<parser::UnlabeledStatement<parser::ActionStmt>>(x.t).statement,
-        targets);
+        callContext);
   }
   static MaybeMsg WhyNotOk(SemanticsContext &context,
-      const parser::NullifyStmt &x, unsigned targets = DeviceTarget) {
+      const parser::NullifyStmt &x,
+      CallContext callContext = CallContext::Device) {
     for (const auto &y : x.v) {
-      if (MaybeMsg result{DeviceExprChecker{context, targets}(y.typedExpr)}) {
+      if (MaybeMsg result{
+              DeviceExprChecker{context, callContext}(y.typedExpr)}) {
         return result;
       }
     }
     return {};
   }
   static MaybeMsg WhyNotOk(SemanticsContext &context,
-      const parser::PointerAssignmentStmt &x, unsigned targets = DeviceTarget) {
-    return DeviceExprChecker{context, targets}(x.typedAssignment);
+      const parser::PointerAssignmentStmt &x,
+      CallContext callContext = CallContext::Device) {
+    return DeviceExprChecker{context, callContext}(x.typedAssignment);
   }
 };
 
@@ -588,15 +521,13 @@ public:
         isHostDevice = subp->cudaSubprogramAttrs() &&
             subp->cudaSubprogramAttrs() ==
                 common::CUDASubprogramAttrs::HostDevice;
-        currentTargets_ = isHostDevice ? BothTargets : DeviceTarget;
+        callContext_ =
+            isHostDevice ? CallContext::HostDevice : CallContext::Device;
         Check(body);
       }
     }
   }
   void Check(const parser::Block &block) {
-    if (currentTargets_ == 0) {
-      return;
-    }
     for (const auto &epc : block) {
       Check(epc);
     }
@@ -709,9 +640,6 @@ private:
     }
   }
   void Check(const parser::ActionStmt &stmt, const parser::CharBlock &source) {
-    if (currentTargets_ == 0) {
-      return;
-    }
     common::visit(
         common::visitors{
             [&](const common::Indirection<parser::CycleStmt> &) {
@@ -770,13 +698,13 @@ private:
                 ErrorIfHostSymbol(assign->rhs, source);
               }
               if (auto msg{ActionStmtChecker<IsCUFKernelDo>::WhyNotOk(
-                      context_, x, currentTargets_)}) {
+                      context_, x, callContext_)}) {
                 context_.Say(source, std::move(*msg));
               }
             },
             [&](const auto &x) {
               if (auto msg{ActionStmtChecker<IsCUFKernelDo>::WhyNotOk(
-                      context_, x, currentTargets_)}) {
+                      context_, x, callContext_)}) {
                 context_.Say(source, std::move(*msg));
               }
             },
@@ -784,51 +712,43 @@ private:
         stmt.u);
   }
   void Check(const parser::IfConstruct &ic) {
-    const unsigned incoming{currentTargets_};
+    const CallContext incoming{callContext_};
     const auto &ifS{std::get<parser::Statement<parser::IfThenStmt>>(ic.t)};
     const auto &condition{std::get<parser::ScalarLogicalExpr>(ifS.statement.t)};
-    CheckUnwrappedExpr(context_, ifS.source, condition, incoming);
-    auto [thenTargets, remainingTargets]{isHostDevice
-            ? BranchTargets(context_, condition, incoming)
-            : std::pair<unsigned, unsigned>{incoming, incoming}};
-    currentTargets_ = thenTargets;
+    CheckUnwrappedExpr(context_, ifS.source, condition, callContext_);
+    AllowGuardedCalls(condition);
     Check(std::get<parser::Block>(ic.t));
     for (const auto &eib :
         std::get<std::list<parser::IfConstruct::ElseIfBlock>>(ic.t)) {
       const auto &eIfS{std::get<parser::Statement<parser::ElseIfStmt>>(eib.t)};
       const auto &elseIfCondition{
           std::get<parser::ScalarLogicalExpr>(eIfS.statement.t)};
-      currentTargets_ = remainingTargets;
-      if (remainingTargets != 0) {
-        CheckUnwrappedExpr(
-            context_, eIfS.source, elseIfCondition, remainingTargets);
-      }
-      auto [elseIfTargets, nextTargets]{isHostDevice
-              ? BranchTargets(context_, elseIfCondition, remainingTargets)
-              : std::pair<unsigned, unsigned>{
-                    remainingTargets, remainingTargets}};
-      currentTargets_ = elseIfTargets;
+      CheckUnwrappedExpr(context_, eIfS.source, elseIfCondition, callContext_);
+      AllowGuardedCalls(elseIfCondition);
       Check(std::get<parser::Block>(eib.t));
-      remainingTargets = nextTargets;
     }
     if (const auto &eb{
             std::get<std::optional<parser::IfConstruct::ElseBlock>>(ic.t)}) {
-      currentTargets_ = remainingTargets;
       Check(std::get<parser::Block>(eb->t));
     }
-    currentTargets_ = incoming;
+    callContext_ = incoming;
   }
   void Check(const parser::IfStmt &is) {
-    const unsigned incoming{currentTargets_};
+    const CallContext incoming{callContext_};
     const auto &uS{
         std::get<parser::UnlabeledStatement<parser::ActionStmt>>(is.t)};
     const auto &condition{std::get<parser::ScalarLogicalExpr>(is.t)};
-    CheckUnwrappedExpr(context_, uS.source, condition, incoming);
-    currentTargets_ = isHostDevice
-        ? BranchTargets(context_, condition, incoming).first
-        : incoming;
+    CheckUnwrappedExpr(context_, uS.source, condition, callContext_);
+    AllowGuardedCalls(condition);
     Check(uS.statement, uS.source);
-    currentTargets_ = incoming;
+    callContext_ = incoming;
+  }
+  void AllowGuardedCalls(const parser::ScalarLogicalExpr &condition) {
+    // Accept either kind of callee in either arm of an ON_DEVICE guard.
+    // Determining whether a call is on the appropriate side is deferred.
+    if (isHostDevice && ChecksOnDevice(context_, condition)) {
+      callContext_ = CallContext::GuardedHostDevice;
+    }
   }
   void Check(const parser::LoopControl::Bounds &bounds) {
     Check(bounds.Lower());
@@ -864,14 +784,14 @@ private:
   }
   void Check(const parser::Expr &expr) {
     if (MaybeMsg msg{
-            DeviceExprChecker{context_, currentTargets_}(expr.typedExpr)}) {
+            DeviceExprChecker{context_, callContext_}(expr.typedExpr)}) {
       context_.Say(expr.source, std::move(*msg));
     }
   }
 
   SemanticsContext &context_;
   bool isHostDevice{false};
-  unsigned currentTargets_{DeviceTarget};
+  CallContext callContext_{CallContext::Device};
 };
 
 void CUDAChecker::Enter(const parser::SubroutineSubprogram &x) {
