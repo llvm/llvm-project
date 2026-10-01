@@ -1011,9 +1011,10 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   `thread_limit` and `num_threads` clauses for OpenMP 6.1 or later.
 - Map-type-modifying modifiers applied to a list item with a user-defined mapper
   are now propagated onto the maps the mapper expands to.
-- Fixed a crash on an OpenMP loop directive in the body of an invalid function
-  template definition when its `collapse` or `ordered` count or a loop bound
-  depends on a template parameter. (#GH219354)
+- Fixed a crash on an OpenMP loop directive whose `collapse` or `ordered` count
+  or a loop bound depends on a template parameter outside of a dependent
+  context, e.g. in the body of an invalid function template definition.
+  (#GH219354)
 - Mapping of expressions with base-pointers through a user-defined mapper (e.g.
   `map(s.p[0:n])`) now conforms to OpenMP's conditional pointer-attachment,
   matching the behavior of such maps outside a mapper.
