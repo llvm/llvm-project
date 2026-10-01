@@ -799,8 +799,8 @@ public:
   }
 
   /// .cfi_llvm_def_cfa_address_scaled defines the CFA by
-  /// reading Register with DerefSize bytes, shifting the result left by Scale
-  /// bits, and interpreting it in AddressSpace.
+  /// reading Register with DerefSize bytes, multiplying the result by Scale,
+  /// and interpreting it in AddressSpace.
   static MCCFIInstruction
   createLLVMDefCfaAddressScaled(MCSymbol *L, unsigned Register,
                                 unsigned DerefSize, unsigned Scale,

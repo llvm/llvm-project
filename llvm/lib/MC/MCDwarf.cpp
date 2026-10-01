@@ -1652,8 +1652,12 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     raw_svector_ostream OSBlock(Block);
     encodeDwarfRegisterLocation(Fields.Register, OSBlock);
     OSBlock << uint8_t(dwarf::DW_OP_deref_size) << uint8_t(Fields.DerefSize);
-    encodeDwarfUnsignedConstant(Fields.Scale, OSBlock);
-    OSBlock << uint8_t(dwarf::DW_OP_shl);
+    if (Fields.Scale != 1) {
+      bool IsPowerOfTwo = isPowerOf2_32(Fields.Scale);
+      encodeDwarfUnsignedConstant(
+          IsPowerOfTwo ? Log2_32(Fields.Scale) : Fields.Scale, OSBlock);
+      OSBlock << uint8_t(IsPowerOfTwo ? dwarf::DW_OP_shl : dwarf::DW_OP_mul);
+    }
     encodeDwarfAspaceAddress(Fields.AddressSpace, OSBlock);
 
     Streamer.emitInt8(dwarf::DW_CFA_def_cfa_expression);

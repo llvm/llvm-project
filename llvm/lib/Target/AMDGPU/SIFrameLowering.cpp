@@ -60,10 +60,9 @@ static MCCFIInstruction createScaledCFAInPrivateWave(const GCNSubtarget &ST,
   // accurately and efficiently describe things like masked spills of vector
   // registers we want to define the CFA to be an address in the private_wave
   // DWARF address space (i.e. unswizzled). To achieve this we scale the stack
-  // pointer by the wavefront size, implemented as (SP << wave_size_log2).
-  const unsigned WavefrontSizeLog2 = ST.getWavefrontSizeLog2();
+  // pointer by the wavefront size.
   return MCCFIInstruction::createLLVMDefCfaAddressScaled(
-      nullptr, DwarfStackPtrReg, SGPRByteSize, WavefrontSizeLog2,
+      nullptr, DwarfStackPtrReg, SGPRByteSize, ST.getWavefrontSize(),
       dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave);
 }
 
