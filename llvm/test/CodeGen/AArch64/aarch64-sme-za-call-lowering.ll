@@ -31,7 +31,7 @@ define void @requires_za_save() nounwind "aarch64_inout_za" {
   ; CHECK-AFTER-SMEABI-NEXT:   BL @private_za_callee, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
   ; CHECK-AFTER-SMEABI-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-AFTER-SMEABI-NEXT:   MSRpstatesvcrImm1 2, 1
-  ; CHECK-AFTER-SMEABI-NEXT:   [[MRS:%[0-9]+]]:gpr64 = MRS 56965, implicit-def $nzcv
+  ; CHECK-AFTER-SMEABI-NEXT:   [[MRS:%[0-9]+]]:gpr64 = MRS 56965, implicit-def dead $nzcv
   ; CHECK-AFTER-SMEABI-NEXT:   $x0 = ADDXri %stack.0, 0, 0
   ; CHECK-AFTER-SMEABI-NEXT:   RestoreZAPseudo [[MRS]], $x0, &__arm_tpidr2_restore, csr_aarch64_sme_abi_support_routines_preservemost_from_x0
   ; CHECK-AFTER-SMEABI-NEXT:   MSR 56965, $xzr
@@ -69,7 +69,7 @@ define void @requires_za_save_streaming_mode_change() nounwind "aarch64_inout_za
   ; CHECK-AFTER-SMEABI-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-AFTER-SMEABI-NEXT:   MSRpstatesvcrImm1 1, 1, csr_aarch64_smstartstop, implicit $vg, implicit-def $vg, implicit-def $fpmr
   ; CHECK-AFTER-SMEABI-NEXT:   MSRpstatesvcrImm1 2, 1
-  ; CHECK-AFTER-SMEABI-NEXT:   [[MRS:%[0-9]+]]:gpr64 = MRS 56965, implicit-def $nzcv
+  ; CHECK-AFTER-SMEABI-NEXT:   [[MRS:%[0-9]+]]:gpr64 = MRS 56965, implicit-def dead $nzcv
   ; CHECK-AFTER-SMEABI-NEXT:   $x0 = ADDXri %stack.0, 0, 0
   ; CHECK-AFTER-SMEABI-NEXT:   RestoreZAPseudo [[MRS]], $x0, &__arm_tpidr2_restore, csr_aarch64_sme_abi_support_routines_preservemost_from_x0
   ; CHECK-AFTER-SMEABI-NEXT:   MSR 56965, $xzr
