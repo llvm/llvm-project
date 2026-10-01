@@ -2,13 +2,13 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-load("@rules_python//python:defs.bzl", "py_binary")
+exports_files([
+    "build.patch",
+    "generate_compile_commands.patch",
+])
 
-py_binary(
+alias(
     name = "compile_commands",
-    srcs = ["refresh.py"],
-    main = "refresh.py",
-    data = ["@wolfd_bazel_compile_commands//:generate_compile_commands"],
-    deps = ["@rules_python//python/runfiles"],
+    actual = "@wolfd_bazel_compile_commands//:generate_compile_commands",
 )
 
