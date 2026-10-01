@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL___SPIRV_SPIRV_TYPES_HPP
-#define _LIBSYCL___SPIRV_SPIRV_TYPES_HPP
+#ifndef _LIBSYCL___SPIRV_TYPES_HPP
+#define _LIBSYCL___SPIRV_TYPES_HPP
 
 #include <cstdint>
 
@@ -42,4 +42,4 @@ enum MemorySemanticsMask : std::int32_t {
 
 } // namespace __spirv
 
-#endif // _LIBSYCL___SPIRV_SPIRV_TYPES_HPP
+#endif // _LIBSYCL___SPIRV_TYPES_HPP

@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL___SPIRV_SPIRV_VARS_HPP
-#define _LIBSYCL___SPIRV_SPIRV_VARS_HPP
+#ifndef _LIBSYCL___SPIRV_VARS_HPP
+#define _LIBSYCL___SPIRV_VARS_HPP
 
 #include <__clang_spirv_builtins.h>
 
@@ -67,4 +67,4 @@ __SPIRV_DEFINE_INIT_AND_GET_HELPERS(BuiltInNumWorkgroups)
 
 } // namespace __spirv
 
-#endif // _LIBSYCL___SPIRV_SPIRV_VARS_HPP
+#endif // _LIBSYCL___SPIRV_VARS_HPP
