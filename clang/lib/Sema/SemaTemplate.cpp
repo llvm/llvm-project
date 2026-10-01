@@ -5025,8 +5025,6 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
   R.suppressDiagnostics();
 
   if (R.getAsSingle<ConceptDecl>()) {
-    assert(TemplateKWLoc.isInvalid() &&
-           "template keyword in front of a concept id?");
     return CheckConceptTemplateId(SS, TemplateKWLoc, R.getLookupNameInfo(),
                                   R.getRepresentativeDecl(),
                                   R.getAsSingle<ConceptDecl>(), TemplateArgs);

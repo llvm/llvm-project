@@ -1170,8 +1170,8 @@ struct IrregularPartialArrayDestroy final : EHScopeStack::Cleanup {
 } // namespace
 
 /// Push an EH cleanup to destroy already-constructed elements of the given
-/// array.  The cleanup may be popped with deactivateCleanupBlock or
-/// popCleanupBlock.
+/// array. The cleanup is deactivated when the enclosing
+/// CleanupDeactivationScope exits.
 ///
 /// \param elementType - the immediate element type of the array;
 ///   possibly still an array type
@@ -1180,7 +1180,7 @@ void CIRGenFunction::pushIrregularPartialArrayCleanup(mlir::Value arrayBegin,
                                                       QualType elementType,
                                                       CharUnits elementAlign,
                                                       Destroyer *destroyer) {
-  ehStack.pushCleanup<IrregularPartialArrayDestroy>(
+  pushCleanupAndDeferDeactivation<IrregularPartialArrayDestroy>(
       EHCleanup, arrayBegin, arrayEndPointer, elementType, elementAlign,
       destroyer);
 }

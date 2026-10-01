@@ -150,8 +150,7 @@ class SubtargetPredicate : Predicate<"Subtarget->" # NAME # "()">;
 
 def hasAtomAddF64 : SubtargetPredicate;
 def hasAtomScope : SubtargetPredicate;
-def hasAtomBitwise64 : SubtargetPredicate;
-def hasAtomMinMax64 : SubtargetPredicate;
+def hasAtomMinMaxAndOrXor : SubtargetPredicate;
 def hasAtomSwap128 : SubtargetPredicate;
 def hasClusters : SubtargetPredicate;
 def hasPTXASUnreachableBug : SubtargetPredicate;

@@ -2506,9 +2506,9 @@ private:
   uint64_t getNumScalarInsts(bool HasTreeLoop);
 
   /// Estimates the number of vector instructions (including buildvectors,
-  /// shuffles, and extracts) the tree produces, weighted like
-  /// getNumScalarInsts().
-  uint64_t getNumVectorInsts(bool HasTreeLoop);
+  /// shuffles, and, if \p CountExtracts is set, extracts) the tree produces,
+  /// weighted like getNumScalarInsts().
+  uint64_t getNumVectorInsts(bool HasTreeLoop, bool CountExtracts = true);
 
   /// Returns true if the instruction-count veto is skipped for a tree costed at
   /// \p TreeCost because it contains a poor-throughput operation whose real
@@ -2517,9 +2517,10 @@ private:
 
   /// \returns the fadd/fsub user of the single-use fmul \p I, which the
   /// backend fuses with \p I into an fmuladd in the scalar code, and the cost
-  /// of that fmuladd, or {nullptr, invalid cost}.
+  /// of that fmuladd, or {nullptr, invalid cost}. If \p InTree is set, the
+  /// users, whose fusion is accounted for by the tree, are not returned.
   std::pair<Instruction *, InstructionCost>
-  getFMulFusingUser(Instruction *I) const;
+  getFMulFusingUser(Instruction *I, bool InTree = true) const;
 
   /// \returns true if the fadd/fsub \p U, fused with its fmul operand by the
   /// backend, is a vectorized tree scalar whose lane is priced as fmuladd.
@@ -13223,7 +13224,7 @@ static InstructionCost getUnfusedBinOpCost(Instruction *I,
 }
 
 std::pair<Instruction *, InstructionCost>
-BoUpSLP::getFMulFusingUser(Instruction *I) const {
+BoUpSLP::getFMulFusingUser(Instruction *I, bool InTree) const {
   if (!match(I, m_OneUse(m_FMul(m_Value(), m_Value()))))
     return {nullptr, InstructionCost::getInvalid()};
   auto *U = cast<Instruction>(I->user_back());
@@ -13231,10 +13232,10 @@ BoUpSLP::getFMulFusingUser(Instruction *I) const {
   // reduction operations itself. The lanes of the combined fmuladd node are
   // fused with its own fmul operand node, not with the other operand.
   if (getFusableFMulOperand(U, *TTI) != I ||
-      (UserIgnoreList && UserIgnoreList->contains(U)) ||
-      any_of(getTreeEntries(U), [](const TreeEntry *TE) {
-        return TE->CombinedOp == TreeEntry::FMulAdd;
-      }))
+      (InTree && ((UserIgnoreList && UserIgnoreList->contains(U)) ||
+                  any_of(getTreeEntries(U), [](const TreeEntry *TE) {
+                    return TE->CombinedOp == TreeEntry::FMulAdd;
+                  }))))
     return {nullptr, InstructionCost::getInvalid()};
   // The target must actually prefer the fused form.
   InstructionCost FMACost =
@@ -13384,7 +13385,7 @@ uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
   return Total;
 }
 
-uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop) {
+uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop, bool CountExtracts) {
   uint64_t Total = 0;
   // Source vector -> max scale among the gather entries sharing it, so the
   // combined shufflevector is still weighted like an in-loop entry below.
@@ -13463,6 +13464,8 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop) {
   }
   for (const auto &VecAndScale : GatherExtractSourceVecs)
     Total = SaturatingAdd(Total, VecAndScale.second);
+  if (!CountExtracts)
+    return Total;
   // Count extract instructions from ExternalUses, skipping insertelements
   // (those get folded into shuffles, not real extracts).
   SmallPtrSet<Value *, 8> CountedExtracts;
@@ -20100,6 +20103,31 @@ template <typename T> struct ShuffledInsertData {
 };
 } // namespace
 
+/// \returns true if more values with the scalar type \p Ty than registers are
+/// live at some point of the block \p BB. The blocks larger than the scheduling
+/// budget are skipped to save compile time.
+static bool hasHighRegisterPressure(const BasicBlock &BB, Type *Ty,
+                                    const TargetTransformInfo &TTI) {
+  if (hasNItemsOrMore(BB, ScheduleRegionSizeBudget))
+    return false;
+  const unsigned NumRegs = TTI.getNumberOfRegisters(
+      TTI.getRegisterClassForType(/*Vector=*/false, Ty));
+  auto IsLiveCandidate = [&](const Value *V) {
+    return isa<Instruction, Argument>(V) && V->getType()->getScalarType() == Ty;
+  };
+  SmallPtrSet<const Value *, 32> Live;
+  for (const Instruction &I : reverse(BB)) {
+    // The operands of the PHIs are live in the predecessors.
+    if (isa<PHINode>(I))
+      break;
+    Live.erase(&I);
+    Live.insert_range(make_filter_range(I.operand_values(), IsLiveCandidate));
+    if (Live.size() > NumRegs)
+      return true;
+  }
+  return false;
+}
+
 InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
                                      ArrayRef<Value *> VectorizedVals,
                                      InstructionCost ReductionCost,
@@ -20121,6 +20149,18 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       TreeLoop = LI->getLoopFor(getRootNode().getMainOp()->getParent());
     uint64_t NumScalar = getNumScalarInsts(TreeLoop);
     uint64_t NumVector = getNumVectorInsts(TreeLoop);
+    // In loops, the extracts are not scaled by the trip count and just break
+    // the ties of the scaled counts. Ignore them under the high register
+    // pressure: the vector code holds several lanes per register.
+    if (NumVector > NumScalar && TreeLoop && !ExternalUses.empty()) {
+      const uint64_t NumNoExtracts =
+          getNumVectorInsts(TreeLoop, /*CountExtracts=*/false);
+      Instruction *Root = getRootNode().getMainOp();
+      if (NumNoExtracts <= NumScalar &&
+          hasHighRegisterPressure(*Root->getParent(),
+                                  getValueType(Root, SLPReVec), *TTI))
+        NumVector = NumNoExtracts;
+    }
     LLVM_DEBUG(dbgs() << "SLP: Inst count check: vector=" << NumVector
                       << " scalar=" << NumScalar << "\n");
     if (NumVector > NumScalar && !bypassesInstCountCheck(TreeCost)) {
@@ -25653,8 +25693,14 @@ bool BoUpSLP::canVersionForRuntimeChecks() {
   InstructionCost ScalarCost = 0;
   for (Instruction &I : make_filter_range(*BB, [](Instruction &I) {
          return !isa<PHINode>(&I) && !I.isTerminator();
-       }))
-    ScalarCost += TTI->getInstructionCost(&I, CostKind);
+       })) {
+    // The backend fuses the fmul into its fadd/fsub user, so the pair costs as
+    // the fmuladd.
+    auto [U, FMACost] = getFMulFusingUser(&I, /*InTree=*/false);
+    ScalarCost += U && U->getParent() == BB
+                      ? FMACost - TTI->getInstructionCost(U, CostKind)
+                      : TTI->getInstructionCost(&I, CostKind);
+  }
   InstructionCost CheckCost = getRuntimeChecksCost();
   if (!ScalarCost.isValid() || !CheckCost.isValid())
     return false;
@@ -25888,6 +25934,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
     // Need to generate insertion point for loads nodes of the bitcast/bswap
     // ops.
     if (TE->isGather() || DeletedNodes.contains(TE.get()) ||
+        TE->State == TreeEntry::SplitVectorize ||
         (TE->State == TreeEntry::CombinedVectorize &&
          (TE->CombinedOp == TreeEntry::ReducedBitcast ||
           TE->CombinedOp == TreeEntry::ReducedBitcastBSwap ||

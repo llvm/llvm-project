@@ -2253,11 +2253,10 @@ Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   const auto *MatrixTy = E->getBase()->getType()->castAs<ConstantMatrixType>();
   llvm::MatrixBuilder MB(Builder);
 
-  Value *Idx;
   unsigned NumCols = MatrixTy->getNumColumns();
   unsigned NumRows = MatrixTy->getNumRows();
-  Idx = MB.CreateIndex(RowIdx, ColumnIdx, NumRows, NumCols,
-                       /*IsRowMajor=*/false);
+  Value *Idx = MB.CreateIndex(RowIdx, ColumnIdx, NumRows, NumCols,
+                              /*IsRowMajor=*/false);
 
   if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0)
     MB.CreateIndexAssumption(Idx, MatrixTy->getNumElementsFlattened());
@@ -2589,8 +2588,6 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
            "Flattened type on RHS must have the same number or more elements "
            "than vector on LHS.");
 
-    bool IsRowMajor = isMatrixRowMajor(CGF.getLangOpts(), DestTy);
-
     llvm::Value *V = llvm::PoisonValue::get(CGF.ConvertType(DestTy));
     // V is an allocated temporary for constructing the matrix.
     for (unsigned Row = 0, RE = MatTy->getNumRows(); Row < RE; Row++) {
@@ -2604,7 +2601,7 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
         llvm::Value *Cast = CGF.EmitScalarConversion(
             RVal.getScalarVal(), LoadList[LoadIdx].getType(),
             MatTy->getElementType(), Loc);
-        unsigned MatrixIdx = MatTy->getFlattenedIndex(Row, Col, IsRowMajor);
+        unsigned MatrixIdx = MatTy->getColumnMajorFlattenedIndex(Row, Col);
         V = CGF.Builder.CreateInsertElement(V, Cast, MatrixIdx);
       }
     }

@@ -231,6 +231,12 @@ public:
   ///   not be provided.
   virtual Block *GetFrameBlock();
 
+  /// Let F be this frame's function. Returns true if \p addr points to code
+  /// inside F.
+  /// Note: if some other function F2 has been inlined into F, and \p
+  /// addr points to code of the inlined copy of F2, this returns false.
+  bool IsAddressInFrameScope(const Address &addr);
+
   /// Get the RegisterContext for this frame, if possible.
   ///
   /// Returns a shared pointer to the RegisterContext for this stack frame.

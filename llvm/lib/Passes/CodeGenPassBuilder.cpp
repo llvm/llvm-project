@@ -703,8 +703,8 @@ Error CodeGenPassBuilder::addMachinePasses(PassManagerWrapper &PMW) {
 
   addMachineFunctionPass(RemoveLoadsIntoFakeUsesPass(), PMW);
   addMachineFunctionPass(StackMapLivenessPass(), PMW);
-  addMachineFunctionPass(
-      LiveDebugValuesPass(TM.Options.ShouldEmitDebugEntryValues()), PMW);
+  addMachineFunctionPass(LiveDebugValuesPass(TM.shouldEmitDebugEntryValues()),
+                         PMW);
   addMachineFunctionPass(MachineSanitizerBinaryMetadataPass(), PMW);
 
   if (TM.Options.EnableMachineOutliner &&
