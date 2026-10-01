@@ -61,3 +61,49 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_firstprivate_pair
 ! CHECK: acc.firstprivate varPtr({{.*}}) recipe(@firstprivatization_ref_i32) name("x") -> !fir.ref<i32>
 ! CHECK-NOT: acc.firstprivate varPtr({{.*}}) recipe(@firstprivatization_ref_i32) name("x") -> !fir.ref<i32>
+
+! -----------------------------------------------------------------------
+! A contained private object is dropped in favor of its containing object.
+
+subroutine test_private_contained_after(i)
+  real :: a(10)
+  integer :: i
+  !$acc parallel loop private(a) private(a(1:5))
+  do i = 1, 10
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_private_contained_after
+! CHECK: acc.private varPtr({{.*}}) recipe(@privatization_ref_10xf32) name("a") -> !fir.ref<!fir.array<10xf32>>
+! CHECK-NOT: name("a(1:5)")
+
+! -----------------------------------------------------------------------
+! Source order does not affect which object is retained.
+
+subroutine test_private_contained_before(i)
+  real :: a(10)
+  integer :: i
+  !$acc parallel loop private(a(1:5)) private(a)
+  do i = 1, 10
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_private_contained_before
+! CHECK: acc.private varPtr({{.*}}) recipe(@privatization_ref_10xf32) name("a") -> !fir.ref<!fir.array<10xf32>>
+! CHECK-NOT: name("a(1:5)")
+
+! -----------------------------------------------------------------------
+! A trailing whole array subsumes multiple unknown selectors before those
+! selectors are diagnosed as distinct parts of the same array.
+
+subroutine test_private_container_last(a, i, j, k)
+  real :: a(10)
+  integer :: i, j, k
+  !$acc parallel loop private(a(i), a(j)) private(a)
+  do k = 1, 10
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_private_container_last
+! CHECK: acc.private varPtr({{.*}}) recipe(@privatization_ref_10xf32) name("a") -> !fir.ref<!fir.array<10xf32>>
+! CHECK-NOT: name("a({{.*}})")

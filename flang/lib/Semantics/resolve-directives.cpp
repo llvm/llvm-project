@@ -187,7 +187,9 @@ private:
     llvm::acc::Directive directive;
     Scope &scope;
     Symbol::Flag defaultDSA{Symbol::Flag::AccShared};
+    DesignatorPathMap<AccDataSharingEntry> clauseObjects;
     DesignatorPathMap<AccDataSharingEntry> objectsWithDSA;
+    bool clauseObjectsFinalized{false};
     bool withinConstruct{false};
     std::int64_t associatedLoopLevel{0};
   };
@@ -229,14 +231,14 @@ public:
   bool Pre(const parser::OpenACCCombinedConstruct &);
   void Post(const parser::OpenACCCombinedConstruct &) { PopAccContext(); }
   void Post(const parser::AccBeginCombinedDirective &) {
-    GetContext().withinConstruct = true;
+    FinishAccDirectiveHeader();
   }
 
   bool Pre(const parser::OpenACCDeclarativeConstruct &);
   void Post(const parser::OpenACCDeclarativeConstruct &) { PopAccContext(); }
 
   void Post(const parser::AccDeclarativeDirective &) {
-    GetContext().withinConstruct = true;
+    FinishAccDirectiveHeader();
   }
 
   bool Pre(const parser::OpenACCRoutineConstruct &);
@@ -244,14 +246,12 @@ public:
   void Post(const parser::OpenACCStandaloneDeclarativeConstruct &);
 
   void Post(const parser::AccBeginBlockDirective &) {
-    GetContext().withinConstruct = true;
+    FinishAccDirectiveHeader();
   }
 
   bool Pre(const parser::OpenACCLoopConstruct &);
   void Post(const parser::OpenACCLoopConstruct &) { PopAccContext(); }
-  void Post(const parser::AccLoopDirective &) {
-    GetContext().withinConstruct = true;
-  }
+  void Post(const parser::AccLoopDirective &) { FinishAccDirectiveHeader(); }
 
   // TODO: We should probably also privatize ConcurrentBounds.
   template <typename A>
@@ -259,7 +259,7 @@ public:
     if (!dirContext_.empty() && GetContext().withinConstruct) {
       if (auto *symbol{DeclareOrMarkOtherAccessEntity(
               x.Name().thing, Symbol::Flag::AccPrivate)}) {
-        CheckClauseConsistencyInCurrentConstruct(x.Name().thing,
+        CheckImplicitClauseConsistencyInCurrentConstruct(x.Name().thing,
             Symbol::Flag::AccPrivate, MakeBaseDesignatorPath(*symbol));
       }
     }
@@ -269,7 +269,7 @@ public:
   bool Pre(const parser::OpenACCStandaloneConstruct &);
   void Post(const parser::OpenACCStandaloneConstruct &) { PopAccContext(); }
   void Post(const parser::AccStandaloneDirective &) {
-    GetContext().withinConstruct = true;
+    FinishAccDirectiveHeader();
   }
 
   bool Pre(const parser::OpenACCWaitConstruct &);
@@ -401,6 +401,8 @@ private:
   void PushAccContext(const parser::CharBlock &, llvm::acc::Directive, Scope &);
   void PushAccContext(const parser::CharBlock &, llvm::acc::Directive);
   void PopAccContext();
+  void FinishAccDirectiveHeader();
+  void FinalizeAccClauseObjects();
   static DesignatorPath MakeBaseDesignatorPath(const Symbol &);
   bool IsObjectWithVisibleDSA(const DesignatorPath &) const;
   void AdjustAccSymbolReference(const parser::Name &);
@@ -444,13 +446,12 @@ private:
   Symbol *ResolveAccCommonBlockName(const parser::Name *);
   Symbol *DeclareOrMarkOtherAccessEntity(const parser::Name &, Symbol::Flag);
   Symbol *DeclareOrMarkOtherAccessEntity(Symbol &, Symbol::Flag);
-  // Called for explicit clause objects and implicit loop privatization.
-  // Returns true iff the occurrence remains effective in the current OpenACC
-  // construct; common-block processing uses false to stop expanding the block.
-  bool CheckClauseConsistencyInCurrentConstruct(const parser::Name &,
-      Symbol::Flag, DesignatorPath,
-      const parser::AccObject *occurrence = nullptr,
-      bool warnSameKindDuplicate = true);
+  void RecordAccClauseObject(
+      Symbol::Flag, DesignatorPath, const parser::AccObject *);
+  void RecordAccVisibleObject(
+      Symbol::Flag, DesignatorPath, const parser::AccObject *);
+  void CheckImplicitClauseConsistencyInCurrentConstruct(
+      const parser::Name &, Symbol::Flag, DesignatorPath);
   void AllowOnlyArrayAndSubArray(const parser::AccObjectList &objectList);
   void DoNotAllowAssumedSizedArray(const parser::AccObjectList &objectList);
   void AllowOnlyVariable(const parser::AccObject &object);
@@ -1934,7 +1935,13 @@ void AccAttributeVisitor::PushAccContext(
 
 void AccAttributeVisitor::PopAccContext() {
   CHECK(!dirContext_.empty());
+  FinalizeAccClauseObjects();
   dirContext_.pop_back();
+}
+
+void AccAttributeVisitor::FinishAccDirectiveHeader() {
+  FinalizeAccClauseObjects();
+  GetContext().withinConstruct = true;
 }
 
 DesignatorPath AccAttributeVisitor::MakeBaseDesignatorPath(
@@ -2248,8 +2255,8 @@ void AccAttributeVisitor::ResolveAccObject(
               if (canCheckMultipleAppearances) {
                 const parser::Name &baseName{parser::GetFirstName(designator)};
                 if (baseName.symbol && !designatorPath.empty()) {
-                  CheckClauseConsistencyInCurrentConstruct(
-                      baseName, accFlag, std::move(designatorPath), &accObject);
+                  RecordAccClauseObject(
+                      accFlag, std::move(designatorPath), &accObject);
                 }
               }
               return;
@@ -2272,17 +2279,15 @@ void AccAttributeVisitor::ResolveAccObject(
                 context_.NoteOpenACCDataMapping();
               }
               if (canCheckMultipleAppearances && !designatorPath.empty()) {
-                CheckClauseConsistencyInCurrentConstruct(
-                    baseName, accFlag, std::move(designatorPath), &accObject);
+                RecordAccClauseObject(
+                    accFlag, std::move(designatorPath), &accObject);
               }
             }
           },
           [&](const parser::Name &name) { // common block
             if (auto *symbol{ResolveAccCommonBlockName(&name)}) {
-              if (!CheckClauseConsistencyInCurrentConstruct(name, accFlag,
-                      MakeBaseDesignatorPath(*symbol), &accObject)) {
-                return;
-              }
+              RecordAccClauseObject(
+                  accFlag, MakeBaseDesignatorPath(*symbol), &accObject);
               // Members of a named COMMON listed in a data clause are not
               // recorded as device-mapped. Lowering does not create an
               // alternate device binding for them, so CUDA generic resolution
@@ -2291,7 +2296,7 @@ void AccAttributeVisitor::ResolveAccObject(
               for (auto &object : symbol->get<CommonBlockDetails>().objects()) {
                 if (auto *resolvedObject{
                         DeclareOrMarkOtherAccessEntity(*object, accFlag)}) {
-                  CheckClauseConsistencyInCurrentConstruct(name, accFlag,
+                  RecordAccVisibleObject(accFlag,
                       MakeBaseDesignatorPath(*resolvedObject), &accObject);
                 }
               }
@@ -2353,82 +2358,188 @@ static bool HaveSameAccDataSharingEntity(
   }
 }
 
-bool AccAttributeVisitor::CheckClauseConsistencyInCurrentConstruct(
-    const parser::Name &name, Symbol::Flag accFlag, DesignatorPath designator,
-    const parser::AccObject *occurrence, bool warnSameKindDuplicate) {
+void AccAttributeVisitor::RecordAccVisibleObject(Symbol::Flag accFlag,
+    DesignatorPath designator, const parser::AccObject *occurrence) {
   if (designator.empty()) {
-    return false;
+    return;
   }
-  const parser::CharBlock source{
-      occurrence ? parser::FindSourceLocation(*occurrence) : name.source};
-  const std::string displayName{source.ToString()};
-  auto &objectsWithDSA{GetContext().objectsWithDSA};
-  for (auto iter{objectsWithDSA.begin()}; iter != objectsWithDSA.end();) {
-    AccDataSharingEntry &entry{iter->value};
-    DesignatorRelation relation{iter->path.Compare(designator)};
-    if (relation == DesignatorRelation::Disjoint &&
-        !HaveSameAccDataSharingEntity(iter->path, designator)) {
-      ++iter;
+  GetContext().objectsWithDSA.push_back(
+      std::move(designator), {accFlag, occurrence});
+}
+
+void AccAttributeVisitor::RecordAccClauseObject(Symbol::Flag accFlag,
+    DesignatorPath designator, const parser::AccObject *occurrence) {
+  if (designator.empty()) {
+    return;
+  }
+  GetContext().clauseObjects.push_back(designator, {accFlag, occurrence});
+  RecordAccVisibleObject(accFlag, std::move(designator), occurrence);
+}
+
+void AccAttributeVisitor::FinalizeAccClauseObjects() {
+  AccDirContext &context{GetContext()};
+  if (context.clauseObjectsFinalized) {
+    return;
+  }
+  context.clauseObjectsFinalized = true;
+
+  auto &clauseObjects{context.clauseObjects};
+  const std::size_t count{static_cast<std::size_t>(
+      std::distance(clauseObjects.begin(), clauseObjects.end()))};
+  std::vector<std::optional<DesignatorRelation>> redundant(count);
+
+  // First find objects made redundant by an equal or containing object with
+  // the same data-sharing attribute. This pass sees the complete directive,
+  // so a later whole-object occurrence can subsume earlier unknown sections
+  // before those sections are compared with one another.
+  for (std::size_t i{0}; i < count; ++i) {
+    const auto &entry{*(clauseObjects.begin() + i)};
+    if (!dataSharingAttributeFlags.test(entry.value.flag) ||
+        entry.value.flag == Symbol::Flag::AccReduction) {
       continue;
     }
-
-    if (!(dataSharingAttributeFlags.test(entry.flag) &&
-            dataSharingAttributeFlags.test(accFlag))) {
-      ++iter;
-      continue;
-    }
-
-    // TODO: Record the reduction operator in AccDataSharingEntry so compatible
-    // reductions can use the ordinary same-kind duplicate handling. Also handle
-    // private/reduction interactions on loop constructs.
-    if (entry.flag != accFlag || accFlag == Symbol::Flag::AccReduction) {
-      auto &message{context_.Say(source,
-          "'%s' appears in more than one data-sharing clause on the same OpenACC directive"_err_en_US,
-          displayName)};
-      if (entry.occurrence) {
-        message.Attach(parser::FindSourceLocation(*entry.occurrence),
-            "previous data-sharing object appears here"_en_US);
+    for (std::size_t j{0}; j < count; ++j) {
+      if (i == j) {
+        continue;
       }
-      return false;
+      const auto &other{*(clauseObjects.begin() + j)};
+      if (entry.value.flag != other.value.flag) {
+        continue;
+      }
+      DesignatorRelation relation{entry.path.Compare(other.path)};
+      if (relation == DesignatorRelation::ContainedBy) {
+        redundant[i] = relation;
+        break;
+      }
+      if (relation == DesignatorRelation::Equal && j < i) {
+        redundant[i] = relation;
+      }
     }
+  }
 
-    switch (relation) {
-    case DesignatorRelation::Equal:
-      if (warnSameKindDuplicate && occurrence) {
+  for (std::size_t i{0}; i < count; ++i) {
+    if (!redundant[i]) {
+      continue;
+    }
+    const AccDataSharingEntry &entry{(clauseObjects.begin() + i)->value};
+    if (entry.occurrence) {
+      const parser::CharBlock source{
+          parser::FindSourceLocation(*entry.occurrence)};
+      if (*redundant[i] == DesignatorRelation::Equal) {
         context_.Warn(common::UsageWarning::OpenAccUsage, source,
             "'%s' appears more than once in the same kind of data-sharing clause on an OpenACC directive; duplicate ignored"_warn_en_US,
-            displayName);
-        context_.MarkAccObjectDuplicate(occurrence);
+            source.ToString());
+      } else {
+        context_.Warn(common::UsageWarning::OpenAccUsage, source,
+            "'%s' is contained in another object in the same kind of data-sharing clause on an OpenACC directive; contained object ignored"_warn_en_US,
+            source.ToString());
       }
-      return false;
-    case DesignatorRelation::Contains:
-    case DesignatorRelation::ContainedBy:
-    case DesignatorRelation::Overlaps: {
-      // TODO: Support non-identical same-kind objects once their containment
-      // and overlap semantics are defined.
-      auto &message{context_.Say(source,
-          "'%s' overlaps another object in the same kind of data-sharing clause on the same OpenACC directive"_err_en_US,
-          displayName)};
-      if (entry.occurrence) {
-        message.Attach(parser::FindSourceLocation(*entry.occurrence),
-            "previous data-sharing object appears here"_en_US);
-      }
-      return false;
-    }
-    case DesignatorRelation::Disjoint: {
-      auto &message{context_.Say(source,
-          "'%s' is a different part of an object that already appears in the same kind of data-sharing clause on the same OpenACC directive"_err_en_US,
-          displayName)};
-      if (entry.occurrence) {
-        message.Attach(parser::FindSourceLocation(*entry.occurrence),
-            "previous data-sharing object appears here"_en_US);
-      }
-      return false;
-    }
+      context_.MarkAccObjectDuplicate(entry.occurrence);
     }
   }
-  objectsWithDSA.push_back(std::move(designator), {accFlag, occurrence});
-  return true;
+
+  for (std::size_t i{count}; i-- > 0;) {
+    if (redundant[i]) {
+      clauseObjects.erase(clauseObjects.begin() + i);
+    }
+  }
+  for (auto iter{context.objectsWithDSA.begin()};
+      iter != context.objectsWithDSA.end();) {
+    if (iter->value.occurrence &&
+        context_.IsAccObjectDuplicate(iter->value.occurrence)) {
+      iter = context.objectsWithDSA.erase(iter);
+    } else {
+      ++iter;
+    }
+  }
+
+  // Diagnose only the maximal surviving paths. Any pair that was rendered
+  // harmless by a containing occurrence has already been removed above.
+  const std::size_t survivorCount{static_cast<std::size_t>(
+      std::distance(clauseObjects.begin(), clauseObjects.end()))};
+  for (std::size_t i{0}; i < survivorCount; ++i) {
+    const auto &entry{*(clauseObjects.begin() + i)};
+    if (!dataSharingAttributeFlags.test(entry.value.flag)) {
+      continue;
+    }
+    for (std::size_t j{0}; j < i; ++j) {
+      const auto &previous{*(clauseObjects.begin() + j)};
+      if (!dataSharingAttributeFlags.test(previous.value.flag)) {
+        continue;
+      }
+      DesignatorRelation relation{previous.path.Compare(entry.path)};
+      if (relation == DesignatorRelation::Disjoint &&
+          !HaveSameAccDataSharingEntity(previous.path, entry.path)) {
+        continue;
+      }
+
+      // TODO: Record the reduction operator in AccDataSharingEntry so
+      // compatible reductions can use ordinary same-kind duplicate handling.
+      // Also handle private/reduction interactions on loop constructs.
+      const parser::CharBlock source{
+          parser::FindSourceLocation(*entry.value.occurrence)};
+      auto emitError{[&](const parser::MessageFixedText &text) {
+        auto &message{context_.Say(source, text, source.ToString())};
+        if (previous.value.occurrence) {
+          message.Attach(parser::FindSourceLocation(*previous.value.occurrence),
+              "previous data-sharing object appears here"_en_US);
+        }
+      }};
+      if (previous.value.flag != entry.value.flag ||
+          entry.value.flag == Symbol::Flag::AccReduction) {
+        emitError(
+            "'%s' appears in more than one data-sharing clause on the same OpenACC directive"_err_en_US);
+      } else if (relation == DesignatorRelation::Overlaps) {
+        emitError(
+            "'%s' overlaps another object in the same kind of data-sharing clause on the same OpenACC directive"_err_en_US);
+      } else if (relation == DesignatorRelation::Disjoint) {
+        emitError(
+            "'%s' is a different part of an object that already appears in the same kind of data-sharing clause on the same OpenACC directive"_err_en_US);
+      } else {
+        llvm_unreachable("equal and contained same-kind objects were removed");
+      }
+      break;
+    }
+  }
+}
+
+void AccAttributeVisitor::CheckImplicitClauseConsistencyInCurrentConstruct(
+    const parser::Name &name, Symbol::Flag accFlag, DesignatorPath designator) {
+  if (designator.empty()) {
+    return;
+  }
+  CHECK(GetContext().clauseObjectsFinalized);
+  for (const auto &entry : GetContext().clauseObjects) {
+    DesignatorRelation relation{entry.path.Compare(designator)};
+    if (relation == DesignatorRelation::Disjoint &&
+        !HaveSameAccDataSharingEntity(entry.path, designator)) {
+      continue;
+    }
+    if (!(dataSharingAttributeFlags.test(entry.value.flag) &&
+            dataSharingAttributeFlags.test(accFlag))) {
+      continue;
+    }
+    auto emitError{[&](const parser::MessageFixedText &text) {
+      auto &message{context_.Say(name.source, text, name.ToString())};
+      if (entry.value.occurrence) {
+        message.Attach(parser::FindSourceLocation(*entry.value.occurrence),
+            "previous data-sharing object appears here"_en_US);
+      }
+    }};
+    if (entry.value.flag != accFlag || accFlag == Symbol::Flag::AccReduction) {
+      emitError(
+          "'%s' appears in more than one data-sharing clause on the same OpenACC directive"_err_en_US);
+    } else if (relation == DesignatorRelation::Overlaps) {
+      emitError(
+          "'%s' overlaps another object in the same kind of data-sharing clause on the same OpenACC directive"_err_en_US);
+    } else if (relation == DesignatorRelation::Disjoint) {
+      emitError(
+          "'%s' is a different part of an object that already appears in the same kind of data-sharing clause on the same OpenACC directive"_err_en_US);
+    }
+    return;
+  }
+  GetContext().clauseObjects.push_back(designator, {accFlag, nullptr});
+  RecordAccVisibleObject(accFlag, std::move(designator), nullptr);
 }
 
 #ifndef NDEBUG
