@@ -93,13 +93,13 @@ void f(int a) {
 })cpp";
   EXPECT_EQ(apply(ParameterCheckInput), ParameterCheckOutput);
 
-  // Check const qualifier: dropped for a by-value scalar.
+  // Check const qualifier
   std::string ConstCheckInput = R"cpp(
 void f(const int c) {
   [[while(c) {}]]
 })cpp";
   std::string ConstCheckOutput = R"cpp(
-void extracted(int c) {
+void extracted(const int c) {
 while(c) {}
 }
 void f(const int c) {
@@ -830,10 +830,11 @@ TEST_F(ExtractFunctionTest, ConstParameters) {
     void f(int x) { [[byValue(x);]] }
   )cpp"),
               HasSubstr("void extracted(int x)"));
-  // A scalar parameter that's already declared const drops that
-  // qualifier when passed by value: it'd be a no-op there.
+  // A scalar parameter that's already declared const keeps that
+  // qualifier when passed by value: It might be relevant for overload
+  // resolution.
   EXPECT_THAT(apply("void use(int); void f(const int x) { [[use(x);]] }"),
-              HasSubstr("void extracted(int x)"));
+              HasSubstr("void extracted(const int x)"));
   // A non-scalar parameter that's already declared const keeps that
   // qualifier, since it's still passed by reference.
   EXPECT_THAT(apply(R"cpp(

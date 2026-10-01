@@ -1019,12 +1019,9 @@ bool createParameters(NewFunction &ExtractedFunc,
     bool IsPassedByReference = true;
     if (!DeclInfo.IsPossiblyMutated) {
       // A scalar (arithmetic, pointer, enumeration, ...) is at least as
-      // cheap to copy as to pass by reference, and less noisy. Any
-      // pre-existing const is dropped: it's a no-op on a by-value
-      // parameter, not a signal worth keeping.
+      // cheap to copy as to pass by reference, and less noisy.
       if (TypeInfo->isScalarType() && !FullTypeInfo->isReferenceType()) {
         IsPassedByReference = false;
-        TypeInfo.removeLocalConst();
       } else if (!TypeInfo->isArrayType()) {
         // Still passed by reference to avoid a copy, but the reference
         // doesn't need to be mutable. Array types are never made const:
