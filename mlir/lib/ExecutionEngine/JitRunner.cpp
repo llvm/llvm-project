@@ -23,6 +23,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Support/FileUtilities.h"
+#include "mlir/Support/ToolUtilities.h"
 #include "mlir/Tools/ParseUtilities.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -111,6 +112,17 @@ struct Options {
       llvm::cl::desc(
           "Disable implicit addition of a top-level module op during parsing"),
       llvm::cl::init(false)};
+
+  llvm::cl::opt<std::string> splitInputFile{
+      "split-input-file", llvm::cl::ValueOptional,
+      llvm::cl::callback([&](const std::string &str) {
+        // Implicit value: use default marker if flag was used without value.
+        if (str.empty())
+          splitInputFile.setValue(kDefaultSplitMarker);
+      }),
+      llvm::cl::desc("Split the input file into chunks using the given or "
+                     "default marker and process each chunk independently"),
+      llvm::cl::init("")};
 };
 
 struct CompileAndExecuteConfig {
@@ -130,30 +142,6 @@ struct CompileAndExecuteConfig {
 };
 
 } // namespace
-
-static OwningOpRef<Operation *> parseMLIRInput(StringRef inputFilename,
-                                               bool insertImplicitModule,
-                                               MLIRContext *context) {
-  // Set up the input file.
-  std::string errorMessage;
-  auto file = openInputFile(inputFilename, &errorMessage);
-  if (!file) {
-    llvm::errs() << errorMessage << "\n";
-    return nullptr;
-  }
-
-  auto sourceMgr = std::make_shared<llvm::SourceMgr>();
-  sourceMgr->AddNewSourceBuffer(std::move(file), SMLoc());
-  OwningOpRef<Operation *> module =
-      parseSourceFileForTool(sourceMgr, context, insertImplicitModule);
-  if (!module)
-    return nullptr;
-  if (!module.get()->hasTrait<OpTrait::SymbolTable>()) {
-    llvm::errs() << "Error: top-level op must be a symbol table.\n";
-    return nullptr;
-  }
-  return module;
-}
 
 static inline Error makeStringError(const Twine &message) {
   return llvm::make_error<llvm::StringError>(message.str(),
@@ -303,6 +291,10 @@ static Error compileAndExecuteSingleReturnFunction(
   return Error::success();
 }
 
+static inline int asMainReturnCode(LogicalResult r) {
+  return r.succeeded() ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+
 /// Entry point for all CPU runners. Expects the common argc/argv arguments for
 /// standard C++ main functions.
 int mlir::JitRunnerMain(int argc, char **argv, const DialectRegistry &registry,
@@ -322,26 +314,8 @@ int mlir::JitRunnerMain(int argc, char **argv, const DialectRegistry &registry,
       llvm::outs() << "false\n";
       exitOnErr(j.takeError());
     }
-    return 0;
+    return EXIT_SUCCESS;
   }
-
-  std::optional<unsigned> optLevel = getCommandLineOptLevel(options);
-  SmallVector<std::reference_wrapper<llvm::cl::opt<bool>>, 4> optFlags{
-      options.optO0, options.optO1, options.optO2, options.optO3};
-
-  MLIRContext context(registry);
-
-  auto m = parseMLIRInput(options.inputFilename, !options.noImplicitModule,
-                          &context);
-  if (!m) {
-    llvm::errs() << "could not parse the input IR\n";
-    return 1;
-  }
-
-  JitRunnerOptions runnerOptions{options.mainFuncName, options.mainFuncType};
-  if (config.mlirTransformer)
-    if (failed(config.mlirTransformer(m.get(), runnerOptions)))
-      return EXIT_FAILURE;
 
   auto tmBuilderOrError = llvm::orc::JITTargetMachineBuilder::detectHost();
   if (!tmBuilderOrError) {
@@ -376,6 +350,7 @@ int mlir::JitRunnerMain(int argc, char **argv, const DialectRegistry &registry,
   });
 
   CompileAndExecuteConfig compileAndExecuteConfig;
+  std::optional<unsigned> optLevel = getCommandLineOptLevel(options);
   if (optLevel) {
     compileAndExecuteConfig.transformer = mlir::makeOptimizingTransformer(
         *optLevel, /*sizeLevel=*/0, /*targetMachine=*/tmOrError->get());
@@ -394,21 +369,68 @@ int mlir::JitRunnerMain(int argc, char **argv, const DialectRegistry &registry,
           .Case("f32", compileAndExecuteSingleReturnFunction<float>)
           .Case("void", compileAndExecuteVoidFunction)
           .Default(nullptr);
+  if (!compileAndExecuteFn) {
+    llvm::errs() << "unsupported function type\n";
+    return EXIT_FAILURE;
+  }
 
-  Error error = compileAndExecuteFn
-                    ? compileAndExecuteFn(
-                          options, m.get(), options.mainFuncName.getValue(),
-                          compileAndExecuteConfig, std::move(tmOrError.get()))
-                    : makeStringError("unsupported function type");
+  std::string errorMessage;
+  auto inputFile = openInputFile(options.inputFilename, &errorMessage);
+  if (!inputFile) {
+    llvm::errs() << errorMessage << "\n";
+    return EXIT_FAILURE;
+  }
 
-  int exitCode = EXIT_SUCCESS;
-  llvm::handleAllErrors(std::move(error),
-                        [&exitCode](const llvm::ErrorInfoBase &info) {
-                          llvm::errs() << "Error: ";
-                          info.log(llvm::errs());
-                          llvm::errs() << '\n';
-                          exitCode = EXIT_FAILURE;
-                        });
+  const auto parseAndRunChunk =
+      [&](std::unique_ptr<llvm::MemoryBuffer> chunkBuffer,
+          llvm::MemoryBufferRef sourceBuffer, [[maybe_unused]] raw_ostream &) {
+        // Tell sourceMgr about this buffer,
+        // which is what the parser will pick up.
+        auto sourceMgr = std::make_shared<llvm::SourceMgr>();
+        // Add the original buffer to the source manager to use for determining
+        // locations.
+        sourceMgr->AddNewSourceBuffer(
+            llvm::MemoryBuffer::getMemBuffer(sourceBuffer,
+                                             /*RequiresNullTerminator=*/false),
+            SMLoc());
+        sourceMgr->AddNewSourceBuffer(std::move(chunkBuffer), SMLoc());
 
-  return exitCode;
+        MLIRContext context{registry};
+        OwningOpRef<Operation *> m = parseSourceFileForTool(
+            sourceMgr, &context, !options.noImplicitModule);
+        if (!m) {
+          llvm::errs() << "could not parse the input IR\n";
+          return failure();
+        }
+        if (!m.get()->hasTrait<OpTrait::SymbolTable>()) {
+          llvm::errs() << "Error: top-level op must be a symbol table.\n";
+          return failure();
+        }
+
+        JitRunnerOptions runnerOptions{options.mainFuncName,
+                                       options.mainFuncType};
+        if (config.mlirTransformer)
+          if (failed(config.mlirTransformer(m.get(), runnerOptions)))
+            return failure();
+
+        Error error = compileAndExecuteFn(
+            options, m.get(), options.mainFuncName.getValue(),
+            compileAndExecuteConfig, std::move(tmOrError.get()));
+
+        auto chunkSuccess = success();
+        llvm::handleAllErrors(std::move(error),
+                              [&chunkSuccess](const llvm::ErrorInfoBase &info) {
+                                llvm::errs() << "Error: ";
+                                info.log(llvm::errs());
+                                llvm::errs() << '\n';
+                                chunkSuccess = failure();
+                              });
+        return chunkSuccess;
+      };
+
+  return asMainReturnCode(splitAndProcessBuffer(
+      llvm::MemoryBuffer::getMemBuffer(inputFile->getMemBufferRef(),
+                                       /*RequiresNullTerminator=*/false),
+      parseAndRunChunk, llvm::nulls(), options.splitInputFile,
+      options.splitInputFile));
 }
