@@ -273,8 +273,7 @@ void AMDGPUAsmPrinter::endFunction(const MachineFunction *MF) {
 
     const MCExpr *InstPrefSize;
     if (MFI.hasICachePrefetch()) {
-      InstPrefSize =
-          MCConstantExpr::create(MFI.getICachePrefetchLines() - 1, Ctx);
+      InstPrefSize = MCConstantExpr::create(MFI.getICachePrefetchLines(), Ctx);
     } else {
       const MCExpr *CodeSizeExpr = MCBinaryExpr::createSub(
           MCSymbolRefExpr::create(getFunctionEnd(), OutContext),

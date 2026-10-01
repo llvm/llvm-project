@@ -104,7 +104,8 @@ static ICachePrefetchConfig getICachePrefetchConfig(const GCNSubtarget &ST) {
 
   uint32_t Mask, Shift, Width, CacheLineSize;
   ST.getInstPrefSizeArgs(Mask, Shift, Width, CacheLineSize);
-  uint64_t DescriptorPrefetchCapacity = (uint64_t{1} << Width) * CacheLineSize;
+  uint64_t DescriptorPrefetchCapacity =
+      ((uint64_t{1} << Width) - 1) * CacheLineSize;
   uint64_t InitialSize = ICachePrefetchInitialSize.getNumOccurrences()
                              ? ICachePrefetchInitialSize
                              : ST.getInitialInstPrefSize();
