@@ -39,8 +39,14 @@ void struct_dest(int v) {
 
 void mismatched_orig_type(int v) {
   uint orig;
-  InterlockedMax(gs_i32, v, orig); // expected-error{{no matching function for call to 'InterlockedMax'}}
-  // expected-note@*:* 16 {{candidate function}}
+  InterlockedMax(gs_i32, v, orig);
+  // expected-warning@-1{{implicit conversion changes signedness: 'int' to 'uint'}}
+}
+
+void float_orig_type(int v) {
+  float orig;
+  InterlockedMax(gs_i32, v, orig);
+  // expected-warning@-1{{implicit conversion from 'int' to 'float' may lose precision}}
 }
 
 void direct_too_few() {

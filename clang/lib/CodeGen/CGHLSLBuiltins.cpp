@@ -347,6 +347,14 @@ static Address getHLSLAtomicDestAddr(CodeGenFunction &CGF,
   return CGF.Builder.CreateGEP(CGF, VecAddr.withElementType(ElemTy), Idx);
 }
 
+static LValue getHLSLAtomicOriginalValueLValue(CodeGenFunction &CGF,
+                                               const Expr *E,
+                                               CallArgList &Args) {
+  if (const auto *OutArg = dyn_cast<HLSLOutArgExpr>(E))
+    return CGF.EmitHLSLOutArgExpr(OutArg, Args, OutArg->getType());
+  return CGF.EmitLValue(E);
+}
+
 static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
                                   llvm::AtomicRMWInst::BinOp Op) {
   // Emit `atomicrmw <op>` directly — no intermediate intrinsic needed on
@@ -370,8 +378,10 @@ static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
   // The 3-arg overload writes the old value (the RMW's return value) into
   // the `original_value` reference parameter.
   if (E->getNumArgs() == 3) {
-    LValue OrigLV = CGF.EmitLValue(E->getArg(2));
+    CallArgList Args;
+    LValue OrigLV = getHLSLAtomicOriginalValueLValue(CGF, E->getArg(2), Args);
     CGF.EmitStoreThroughLValue(RValue::get(Call), OrigLV);
+    CGF.EmitWritebacks(Args);
   }
   return Call;
 }
@@ -411,8 +421,10 @@ static Value *handleInterlockedCompareOp(CodeGenFunction &CGF,
   Value *Original = CGF.Builder.CreateExtractValue(Pair, 0);
   if (FloatTy)
     Original = CGF.Builder.CreateBitCast(Original, FloatTy);
-  LValue OrigLV = CGF.EmitLValue(E->getArg(3));
+  CallArgList Args;
+  LValue OrigLV = getHLSLAtomicOriginalValueLValue(CGF, E->getArg(3), Args);
   CGF.EmitStoreThroughLValue(RValue::get(Original), OrigLV);
+  CGF.EmitWritebacks(Args);
   return Original;
 }
 

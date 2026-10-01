@@ -20,7 +20,9 @@ groupshared float gs_f32;
 // SPVCHECK-NEXT: [[PAIR:%.*]] = cmpxchg ptr addrspace(3) {{.*}}@gs_f32{{.*}}, i32 [[CMP]], i32 [[VAL]] syncscope("workgroup") monotonic monotonic
 // CHECK-NEXT: [[RES:%.*]] = extractvalue { i32, i1 } [[PAIR]], 0
 // CHECK-NEXT: [[ORIG:%.*]] = bitcast i32 [[RES]] to float
-// CHECK-NEXT: store float [[ORIG]], ptr %orig
+// CHECK-NEXT: store float [[ORIG]], ptr [[TMP:%.*]]
+// CHECK-NEXT: [[RESULT:%.*]] = load float, ptr [[TMP]]
+// CHECK-NEXT: store float [[RESULT]], ptr %orig
 export void test_float(float cmp, float v) {
   float orig;
   InterlockedCompareExchangeFloatBitwise(gs_f32, cmp, v, orig);
@@ -36,7 +38,9 @@ RWBuffer<float> Buf : register(u0);
 // SPVCHECK-NEXT: [[PAIR:%.*]] = cmpxchg ptr addrspace(11) %{{.*}}, i32 [[CMP]], i32 [[VAL]] syncscope("device") monotonic monotonic
 // CHECK-NEXT: [[RES:%.*]] = extractvalue { i32, i1 } [[PAIR]], 0
 // CHECK-NEXT: [[ORIG:%.*]] = bitcast i32 [[RES]] to float
-// CHECK-NEXT: store float [[ORIG]], ptr %orig
+// CHECK-NEXT: store float [[ORIG]], ptr [[TMP:%.*]]
+// CHECK-NEXT: [[RESULT:%.*]] = load float, ptr [[TMP]]
+// CHECK-NEXT: store float [[RESULT]], ptr %orig
 export void test_device(float cmp, float v) {
   float orig;
   InterlockedCompareExchangeFloatBitwise(Buf[0], cmp, v, orig);
