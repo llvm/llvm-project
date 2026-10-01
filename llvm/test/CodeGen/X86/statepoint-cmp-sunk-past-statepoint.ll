@@ -99,9 +99,9 @@ define void @test2(ptr addrspace(1) %this, i32 %0, ptr addrspace(1) %p0, ptr add
   ; CHECK-NEXT:   successors: %bb.6(0x04000000), %bb.1(0x7c000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:gr64 = COPY [[COPY6]]
-  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:gr64 = COPY killed [[COPY6]]
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:gr64 = COPY [[COPY6]]
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:gr64 = nuw ADD64ri32 [[COPY9]], 8, implicit-def dead $eflags
-  ; CHECK-NEXT:   TEST64rr killed [[COPY4]], [[COPY4]], implicit-def $eflags
+  ; CHECK-NEXT:   TEST64rr [[COPY4]], [[COPY4]], implicit-def $eflags
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY [[COPY9]]
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr64 = COPY [[COPY8]]
   ; CHECK-NEXT:   JCC_1 %bb.1, 5, implicit killed $eflags

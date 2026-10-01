@@ -151,7 +151,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   uint64_t ArrayElementCount =
       divideCeil((GlobalSize.getFixedValue() - ConstOffset.getZExtValue()),
                  Stride.getZExtValue());
-  if (ArrayElementCount > MaxArraySizeForCombine)
+  if (ArrayElementCount > CLOpts.maxarray_size)
     return nullptr;
 
   enum { Overdefined = -3, Undefined = -2 };
