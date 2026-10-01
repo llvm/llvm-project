@@ -84,9 +84,7 @@ define amdgpu_kernel void @memory_phi_no_clobber(ptr addrspace(1) %arg, i1 %cond
 ; GCN-NEXT:    s_mov_b64 s[2:3], 0
 ; GCN-NEXT:  .LBB1_2: ; %Flow
 ; GCN-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GCN-NEXT:    s_cselect_b32 s2, 1, 0
-; GCN-NEXT:    s_cmp_lg_u32 s2, 1
-; GCN-NEXT:    s_cbranch_scc1 .LBB1_4
+; GCN-NEXT:    s_cbranch_scc0 .LBB1_4
 ; GCN-NEXT:  ; %bb.3: ; %if.then
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_barrier
@@ -154,9 +152,7 @@ define amdgpu_kernel void @memory_phi_clobber1(ptr addrspace(1) %arg, i1 %cond) 
 ; GCN-NEXT:    s_mov_b64 s[2:3], 0
 ; GCN-NEXT:  .LBB2_2: ; %Flow
 ; GCN-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GCN-NEXT:    s_cselect_b32 s2, 1, 0
-; GCN-NEXT:    s_cmp_lg_u32 s2, 1
-; GCN-NEXT:    s_cbranch_scc1 .LBB2_4
+; GCN-NEXT:    s_cbranch_scc0 .LBB2_4
 ; GCN-NEXT:  ; %bb.3: ; %if.then
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 1
@@ -227,9 +223,7 @@ define amdgpu_kernel void @memory_phi_clobber2(ptr addrspace(1) %arg, i1 %cond) 
 ; GCN-NEXT:  .LBB3_2: ; %Flow
 ; GCN-NEXT:    s_load_dword s4, s[0:1], 0x0
 ; GCN-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GCN-NEXT:    s_cselect_b32 s2, 1, 0
-; GCN-NEXT:    s_cmp_lg_u32 s2, 1
-; GCN-NEXT:    s_cbranch_scc1 .LBB3_4
+; GCN-NEXT:    s_cbranch_scc0 .LBB3_4
 ; GCN-NEXT:  ; %bb.3: ; %if.then
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_barrier
@@ -294,13 +288,11 @@ define amdgpu_kernel void @no_clobbering_loop1(ptr addrspace(1) %arg, i1 %cc) {
 ; GCN-NEXT:    s_load_dword s5, s[0:1], 0x4
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_add_i32 s5, s5, s4
-; GCN-NEXT:    s_and_b64 s[6:7], s[2:3], exec
 ; GCN-NEXT:    v_mov_b32_e32 v1, s5
-; GCN-NEXT:    s_cselect_b32 s5, 1, 0
-; GCN-NEXT:    s_cmp_lg_u32 s5, 1
+; GCN-NEXT:    s_and_b64 s[6:7], s[2:3], exec
 ; GCN-NEXT:    global_store_dword v0, v1, s[0:1] offset:8
 ; GCN-NEXT:    ; wave barrier
-; GCN-NEXT:    s_cbranch_scc1 .LBB4_1
+; GCN-NEXT:    s_cbranch_scc0 .LBB4_1
 ; GCN-NEXT:  ; %bb.2: ; %end
 ; GCN-NEXT:    s_endpgm
 bb:
@@ -411,13 +403,11 @@ define amdgpu_kernel void @clobbering_loop(ptr addrspace(1) %arg, ptr addrspace(
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    global_load_dword v1, v0, s[0:1] offset:4
 ; GCN-NEXT:    s_and_b64 s[8:9], s[4:5], exec
-; GCN-NEXT:    s_cselect_b32 s7, 1, 0
-; GCN-NEXT:    s_cmp_lg_u32 s7, 1
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_add_u32_e32 v1, s6, v1
 ; GCN-NEXT:    global_store_dword v0, v1, s[2:3] offset:4
 ; GCN-NEXT:    ; wave barrier
-; GCN-NEXT:    s_cbranch_scc1 .LBB6_1
+; GCN-NEXT:    s_cbranch_scc0 .LBB6_1
 ; GCN-NEXT:  ; %bb.2: ; %end
 ; GCN-NEXT:    s_endpgm
 bb:

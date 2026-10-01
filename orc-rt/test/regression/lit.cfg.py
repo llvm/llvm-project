@@ -30,6 +30,12 @@ llvm_config.with_environment("PATH", test_tools_dir, append_path=True)
 
 llvm_config.use_default_substitutions()
 
+# split-file is required, like FileCheck and not: it's an LLVM utility, so it
+# is available wherever they are.
+llvm_config.add_tool_substitutions(
+    [ToolSubst("split-file", unresolved="fatal")], [config.llvm_tools_dir]
+)
+
 # %{obj-jit} runs JIT-loaded object files under ogre, with llvm-jitlink as the
 # controller. Tests that use it must be gated on the llvm-jitlink feature.
 ogre = os.path.join(config.orc_rt_obj_root, "tools", "ogre", "ogre")

@@ -65,11 +65,34 @@ public:
       if (mlir::failed(amendRISCVNontemporalDomain(op, instructions, attribute,
                                                    moduleTranslation)))
         return mlir::failure();
+    } else if (attribute.getName() == cir::CIRDialect::getSrcLocAttrName()) {
+      if (mlir::failed(amendSrcLoc(instructions, attribute, moduleTranslation)))
+        return mlir::failure();
     }
     return mlir::success();
   }
 
 private:
+  // Convert the raw-encoded clang::SourceLocation into !srcloc, so that
+  // dontcall-error/warn works.
+  mlir::LogicalResult
+  amendSrcLoc(llvm::ArrayRef<llvm::Instruction *> instructions,
+              mlir::NamedAttribute attribute,
+              mlir::LLVM::ModuleTranslation &moduleTranslation) const {
+    auto srcLoc = mlir::dyn_cast<mlir::IntegerAttr>(attribute.getValue());
+    if (!srcLoc)
+      return mlir::failure();
+
+    llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
+    llvm::MDNode *node = llvm::MDNode::get(
+        llvmContext, llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+                         llvm::Type::getInt64Ty(llvmContext),
+                         srcLoc.getValue().getZExtValue())));
+    for (llvm::Instruction *inst : instructions)
+      inst->setMetadata("srcloc", node);
+    return mlir::success();
+  }
+
   mlir::LogicalResult amendRISCVNontemporalDomain(
       mlir::Operation *op, llvm::ArrayRef<llvm::Instruction *> instructions,
       mlir::NamedAttribute attribute,
