@@ -336,6 +336,34 @@ define i32 @and_select_shl_prof_binop_on_false(i32 %x, i1 %cond) {
   ret i32 %r
 }
 
+define i32 @and_select_shl_unpredictable(i32 %x, i1 %cond) {
+; CHECK-LABEL: @and_select_shl_unpredictable(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -16777216
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[COND:%.*]], i32 [[TMP2]], i32 [[TMP1]], !unpredictable [[UNPREDICTABLE:![0-9]+]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %t0 = and i32 %x, 4294901760 ; 0xFFFF0000
+  %t1 = select i1 %cond, i32 %t0, i32 %x, !unpredictable !1
+  %r = shl i32 %t1, 8
+  ret i32 %r
+}
+
+define i32 @and_select_shl_unpredictable_binop_on_false(i32 %x, i1 %cond) {
+; CHECK-LABEL: @and_select_shl_unpredictable_binop_on_false(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -16777216
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[COND:%.*]], i32 [[TMP1]], i32 [[TMP2]], !unpredictable [[UNPREDICTABLE]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %t0 = and i32 %x, 4294901760 ; 0xFFFF0000
+  %t1 = select i1 %cond, i32 %x, i32 %t0, !unpredictable !1
+  %r = shl i32 %t1, 8
+  ret i32 %r
+}
+
 !0 = !{!"branch_weights", i32 1, i32 99}
+!1 = !{}
 
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 99}
+; CHECK: [[UNPREDICTABLE]] = !{}

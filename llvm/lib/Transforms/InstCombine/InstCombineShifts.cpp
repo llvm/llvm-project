@@ -994,10 +994,8 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
 
       Value *NewShift = Builder.CreateBinOp(I.getOpcode(), FalseVal, C1);
       Value *NewOp = Builder.CreateBinOp(TBO->getOpcode(), NewShift, NewRHS);
-      auto *NewSel = SelectInst::Create(Cond, NewOp, NewShift);
-      if (auto *SI = dyn_cast<SelectInst>(Op0))
-        NewSel->copyMetadata(*SI, {LLVMContext::MD_prof});
-      return NewSel;
+      return SelectInst::Create(Cond, NewOp, NewShift, "", nullptr,
+                                cast<SelectInst>(Op0));
     }
   }
 
@@ -1014,10 +1012,8 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
 
       Value *NewShift = Builder.CreateBinOp(I.getOpcode(), TrueVal, C1);
       Value *NewOp = Builder.CreateBinOp(FBO->getOpcode(), NewShift, NewRHS);
-      auto *NewSel = SelectInst::Create(Cond, NewShift, NewOp);
-      if (auto *SI = dyn_cast<SelectInst>(Op0))
-        NewSel->copyMetadata(*SI, {LLVMContext::MD_prof});
-      return NewSel;
+      return SelectInst::Create(Cond, NewShift, NewOp, "", nullptr,
+                                cast<SelectInst>(Op0));
     }
   }
 
