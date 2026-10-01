@@ -120,6 +120,10 @@ static cl::opt<int> VScaleUnrollLimit(
     cl::desc("Maximum vscale for which vector unrolling is allowed."),
     cl::Hidden, cl::init(64));
 
+static cl::opt<bool> DisableDAGKnownBits(
+    "dag-disable-known-bits", cl::Hidden, cl::init(false),
+    cl::desc("Disable SelectionDAG known bits analysis (always return unknown)"));
+
 static void NewSDValueDbgMsg(SDValue V, StringRef Msg, SelectionDAG *G) {
   LLVM_DEBUG(dbgs() << Msg; V.getNode()->dump(G););
 }
@@ -3351,6 +3355,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   unsigned BitWidth = Op.getScalarValueSizeInBits();
 
   KnownBits Known(BitWidth);   // Don't know anything.
+
+  if (DisableDAGKnownBits)
+    return Known;
 
   if (auto OptAPInt = Op->bitcastToAPInt()) {
     // We know all of the bits for a constant!
