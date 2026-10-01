@@ -3545,24 +3545,6 @@ public:
   ItaniumRTTIBuilder(const ItaniumCXXABI &ABI)
       : CGM(ABI.CGM), VMContext(CGM.getModule().getContext()), CXXABI(ABI) {}
 
-  // VMI type info flags.
-  enum {
-    /// VMI_NonDiamondRepeat - Class has non-diamond repeated inheritance.
-    VMI_NonDiamondRepeat = 0x1,
-
-    /// VMI_DiamondShaped - Class is diamond shaped.
-    VMI_DiamondShaped = 0x2
-  };
-
-  // Base class type info flags.
-  enum {
-    /// BCTI_Virtual - Base class is virtual.
-    BCTI_Virtual = 0x1,
-
-    /// BCTI_Public - Base class is public.
-    BCTI_Public = 0x2
-  };
-
   /// BuildTypeInfo - Build the RTTI type info struct for the given type, or
   /// link to an existing RTTI descriptor if one already exists.
   llvm::Constant *BuildTypeInfo(QualType Ty);
@@ -4380,64 +4362,6 @@ void ItaniumRTTIBuilder::BuildSIClassTypeInfo(const CXXRecordDecl *RD) {
   Fields.push_back(BaseTypeInfo);
 }
 
-namespace {
-  /// SeenBases - Contains virtual and non-virtual bases seen when traversing
-  /// a class hierarchy.
-  struct SeenBases {
-    llvm::SmallPtrSet<const CXXRecordDecl *, 16> NonVirtualBases;
-    llvm::SmallPtrSet<const CXXRecordDecl *, 16> VirtualBases;
-  };
-}
-
-/// ComputeVMIClassTypeInfoFlags - Compute the value of the flags member in
-/// abi::__vmi_class_type_info.
-///
-static unsigned ComputeVMIClassTypeInfoFlags(const CXXBaseSpecifier *Base,
-                                             SeenBases &Bases) {
-
-  unsigned Flags = 0;
-
-  auto *BaseDecl = Base->getType()->castAsCXXRecordDecl();
-  if (Base->isVirtual()) {
-    // Mark the virtual base as seen.
-    if (!Bases.VirtualBases.insert(BaseDecl).second) {
-      // If this virtual base has been seen before, then the class is diamond
-      // shaped.
-      Flags |= ItaniumRTTIBuilder::VMI_DiamondShaped;
-    } else {
-      if (Bases.NonVirtualBases.count(BaseDecl))
-        Flags |= ItaniumRTTIBuilder::VMI_NonDiamondRepeat;
-    }
-  } else {
-    // Mark the non-virtual base as seen.
-    if (!Bases.NonVirtualBases.insert(BaseDecl).second) {
-      // If this non-virtual base has been seen before, then the class has non-
-      // diamond shaped repeated inheritance.
-      Flags |= ItaniumRTTIBuilder::VMI_NonDiamondRepeat;
-    } else {
-      if (Bases.VirtualBases.count(BaseDecl))
-        Flags |= ItaniumRTTIBuilder::VMI_NonDiamondRepeat;
-    }
-  }
-
-  // Walk all bases.
-  for (const auto &I : BaseDecl->bases())
-    Flags |= ComputeVMIClassTypeInfoFlags(&I, Bases);
-
-  return Flags;
-}
-
-static unsigned ComputeVMIClassTypeInfoFlags(const CXXRecordDecl *RD) {
-  unsigned Flags = 0;
-  SeenBases Bases;
-
-  // Walk all bases.
-  for (const auto &I : RD->bases())
-    Flags |= ComputeVMIClassTypeInfoFlags(&I, Bases);
-
-  return Flags;
-}
-
 /// BuildVMIClassTypeInfo - Build an abi::__vmi_class_type_info, used for
 /// classes with bases that do not satisfy the abi::__si_class_type_info
 /// constraints, according ti the Itanium C++ ABI, 2.9.5p5c.
@@ -4449,7 +4373,7 @@ void ItaniumRTTIBuilder::BuildVMIClassTypeInfo(const CXXRecordDecl *RD) {
   //   __flags is a word with flags describing details about the class
   //   structure, which may be referenced by using the __flags_masks
   //   enumeration. These flags refer to both direct and indirect bases.
-  unsigned Flags = ComputeVMIClassTypeInfoFlags(RD);
+  unsigned Flags = CodeGenUtils::computeVMIClassTypeInfoFlags(RD);
   Fields.push_back(llvm::ConstantInt::get(UnsignedIntLTy, Flags));
 
   // Itanium C++ ABI 2.9.5p6c:
@@ -4516,9 +4440,9 @@ void ItaniumRTTIBuilder::BuildVMIClassTypeInfo(const CXXRecordDecl *RD) {
     // The low-order byte of __offset_flags contains flags, as given by the
     // masks from the enumeration __offset_flags_masks.
     if (Base.isVirtual())
-      OffsetFlags |= BCTI_Virtual;
+      OffsetFlags |= CodeGenUtils::BCTI_Virtual;
     if (Base.getAccessSpecifier() == AS_public)
-      OffsetFlags |= BCTI_Public;
+      OffsetFlags |= CodeGenUtils::BCTI_Public;
 
     Fields.push_back(llvm::ConstantInt::getSigned(OffsetFlagsLTy, OffsetFlags));
   }

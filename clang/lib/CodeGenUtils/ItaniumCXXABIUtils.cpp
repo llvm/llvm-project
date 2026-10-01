@@ -61,6 +61,60 @@ CharUnits computeOffsetHint(ASTContext &Ctx, const CXXRecordDecl *Src,
   return Offset;
 }
 
+namespace {
+/// Contains virtual and non-virtual bases seen when traversing a class
+/// hierarchy.
+struct SeenBases {
+  llvm::SmallPtrSet<const CXXRecordDecl *, 16> NonVirtualBases;
+  llvm::SmallPtrSet<const CXXRecordDecl *, 16> VirtualBases;
+};
+} // namespace
+
+static unsigned computeVMIClassTypeInfoFlags(const CXXBaseSpecifier *Base,
+                                             SeenBases &Bases) {
+  unsigned Flags = 0;
+
+  auto *BaseDecl = Base->getType()->castAsCXXRecordDecl();
+  if (Base->isVirtual()) {
+    // Mark the virtual base as seen.
+    if (!Bases.VirtualBases.insert(BaseDecl).second) {
+      // If this virtual base has been seen before, then the class is diamond
+      // shaped.
+      Flags |= VMI_DiamondShaped;
+    } else {
+      if (Bases.NonVirtualBases.count(BaseDecl))
+        Flags |= VMI_NonDiamondRepeat;
+    }
+  } else {
+    // Mark the non-virtual base as seen.
+    if (!Bases.NonVirtualBases.insert(BaseDecl).second) {
+      // If this non-virtual base has been seen before, then the class has non-
+      // diamond shaped repeated inheritance.
+      Flags |= VMI_NonDiamondRepeat;
+    } else {
+      if (Bases.VirtualBases.count(BaseDecl))
+        Flags |= VMI_NonDiamondRepeat;
+    }
+  }
+
+  // Walk all bases.
+  for (const auto &I : BaseDecl->bases())
+    Flags |= computeVMIClassTypeInfoFlags(&I, Bases);
+
+  return Flags;
+}
+
+unsigned computeVMIClassTypeInfoFlags(const CXXRecordDecl *RD) {
+  unsigned Flags = 0;
+  SeenBases Bases;
+
+  // Walk all bases.
+  for (const auto &I : RD->bases())
+    Flags |= computeVMIClassTypeInfoFlags(&I, Bases);
+
+  return Flags;
+}
+
 /// Returns whether the given record type is incomplete.
 static bool isIncompleteClassType(const RecordType *RecordTy) {
   return !RecordTy->getDecl()->getDefinitionOrSelf()->isCompleteDefinition();

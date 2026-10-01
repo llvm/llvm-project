@@ -638,26 +638,7 @@ public:
 };
 } // namespace
 
-// TODO(cir): Will be removed after sharing them with the classical codegen
 namespace {
-
-// VMI type info flags.
-enum {
-  /// VMI_NonDiamondRepeat - Class has non-diamond repeated inheritance.
-  VMI_NonDiamondRepeat = 0x1,
-
-  /// VMI_DiamondShaped - Class is diamond shaped.
-  VMI_DiamondShaped = 0x2
-};
-
-// Base class type info flags.
-enum {
-  /// BCTI_Virtual - Base class is virtual.
-  BCTI_Virtual = 0x1,
-
-  /// BCTI_Public - Base class is public.
-  BCTI_Public = 0x2
-};
 
 /// Given a builtin type, returns whether the type
 /// info for that type is defined in the standard library.
@@ -851,61 +832,6 @@ static bool shouldUseExternalRttiDescriptor(CIRGenModule &cgm, QualType ty) {
   }
 
   return false;
-}
-
-/// Contains virtual and non-virtual bases seen when traversing a class
-/// hierarchy.
-struct SeenBases {
-  llvm::SmallPtrSet<const CXXRecordDecl *, 16> nonVirtualBases;
-  llvm::SmallPtrSet<const CXXRecordDecl *, 16> virtualBases;
-};
-
-/// Compute the value of the flags member in abi::__vmi_class_type_info.
-///
-static unsigned computeVmiClassTypeInfoFlags(const CXXBaseSpecifier *base,
-                                             SeenBases &bases) {
-
-  unsigned flags = 0;
-  auto *baseDecl = base->getType()->castAsCXXRecordDecl();
-
-  if (base->isVirtual()) {
-    // Mark the virtual base as seen.
-    if (!bases.virtualBases.insert(baseDecl).second) {
-      // If this virtual base has been seen before, then the class is diamond
-      // shaped.
-      flags |= VMI_DiamondShaped;
-    } else {
-      if (bases.nonVirtualBases.count(baseDecl))
-        flags |= VMI_NonDiamondRepeat;
-    }
-  } else {
-    // Mark the non-virtual base as seen.
-    if (!bases.nonVirtualBases.insert(baseDecl).second) {
-      // If this non-virtual base has been seen before, then the class has non-
-      // diamond shaped repeated inheritance.
-      flags |= VMI_NonDiamondRepeat;
-    } else {
-      if (bases.virtualBases.count(baseDecl))
-        flags |= VMI_NonDiamondRepeat;
-    }
-  }
-
-  // Walk all bases.
-  for (const auto &bs : baseDecl->bases())
-    flags |= computeVmiClassTypeInfoFlags(&bs, bases);
-
-  return flags;
-}
-
-static unsigned computeVmiClassTypeInfoFlags(const CXXRecordDecl *rd) {
-  unsigned flags = 0;
-  SeenBases bases;
-
-  // Walk all bases.
-  for (const auto &bs : rd->bases())
-    flags |= computeVmiClassTypeInfoFlags(&bs, bases);
-
-  return flags;
 }
 
 // Return whether the given record decl has a "single,
@@ -1216,7 +1142,7 @@ void CIRGenItaniumRTTIBuilder::buildVMIClassTypeInfo(mlir::Location loc,
   //   __flags is a word with flags describing details about the class
   //   structure, which may be referenced by using the __flags_masks
   //   enumeration. These flags refer to both direct and indirect bases.
-  unsigned flags = computeVmiClassTypeInfoFlags(rd);
+  unsigned flags = CodeGenUtils::computeVMIClassTypeInfoFlags(rd);
   fields.push_back(cir::IntAttr::get(unsignedIntLTy, flags));
 
   // Itanium C++ ABI 2.9.5p6c:
@@ -1283,9 +1209,9 @@ void CIRGenItaniumRTTIBuilder::buildVMIClassTypeInfo(mlir::Location loc,
     // The low-order byte of __offset_flags contains flags, as given by the
     // masks from the enumeration __offset_flags_masks.
     if (base.isVirtual())
-      offsetFlags |= BCTI_Virtual;
+      offsetFlags |= CodeGenUtils::BCTI_Virtual;
     if (base.getAccessSpecifier() == AS_public)
-      offsetFlags |= BCTI_Public;
+      offsetFlags |= CodeGenUtils::BCTI_Public;
 
     fields.push_back(cir::IntAttr::get(offsetFlagsLTy, offsetFlags));
   }
