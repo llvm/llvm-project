@@ -29,7 +29,7 @@ TEXT_SECTION
 //
 // This is needed because `__riscv_save_<N>` could fallthrough to a later
 // `__riscv_save_<N>` tail.
-#define DEFINE_COMPILERRT_OVELAPPING_FUNCTION(name) \
+#define DEFINE_COMPILERRT_OVERLAPPING_FUNCTION(name) \
   DEFINE_CODE_STATE \
   .globl FUNC_SYMBOL(SYMBOL_NAME(name)) SEPARATOR \
   SYMBOL_IS_FUNC(SYMBOL_NAME(name)) SEPARATOR \
@@ -41,13 +41,13 @@ TEXT_SECTION
 
 #ifndef __riscv_abi_rve
 
-DEFINE_COMPILERRT_OVELAPPING_FUNCTION(__riscv_save_12)
+DEFINE_COMPILERRT_OVERLAPPING_FUNCTION(__riscv_save_12)
   addi   sp, sp, -64
   mv     t1, zero
   sw     s11, 12(sp)
   j      LOCAL_LABEL(riscv_save_11_8)
 
-DEFINE_COMPILERRT_OVELAPPING_FUNCTION(__riscv_save_11)
+DEFINE_COMPILERRT_OVERLAPPING_FUNCTION(__riscv_save_11)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__riscv_save_10, __riscv_save_11)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__riscv_save_9,  __riscv_save_11)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__riscv_save_8,  __riscv_save_11)
@@ -60,7 +60,7 @@ LOCAL_LABEL(riscv_save_11_8):
   sw     s7,  28(sp)
   j      LOCAL_LABEL(riscv_save_7_4)
 
-DEFINE_COMPILERRT_OVELAPPING_FUNCTION(__riscv_save_7)
+DEFINE_COMPILERRT_OVERLAPPING_FUNCTION(__riscv_save_7)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__riscv_save_6, __riscv_save_7)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__riscv_save_5, __riscv_save_7)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__riscv_save_4, __riscv_save_7)
@@ -84,7 +84,7 @@ END_COMPILERRT_FUNCTION(__riscv_save_7)
 // This function isn't overlapping, but we don't want to apply
 // `.subsections_via_symbols` to the whole file because of the prior
 // overlapping function.
-DEFINE_COMPILERRT_OVELAPPING_FUNCTION(__riscv_save_3)
+DEFINE_COMPILERRT_OVERLAPPING_FUNCTION(__riscv_save_3)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__riscv_save_2, __riscv_save_3)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__riscv_save_1, __riscv_save_3)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__riscv_save_0, __riscv_save_3)
@@ -125,13 +125,13 @@ END_COMPILERRT_FUNCTION(__riscv_save_0)
 
 #ifndef __riscv_abi_rve
 
-DEFINE_COMPILERRT_OVELAPPING_FUNCTION(__riscv_save_12)
+DEFINE_COMPILERRT_OVERLAPPING_FUNCTION(__riscv_save_12)
   addi   sp, sp, -112
   mv     t1, zero
   sd     s11, 8(sp)
   j      LOCAL_LABEL(riscv_save_11_10)
 
-DEFINE_COMPILERRT_OVELAPPING_FUNCTION(__riscv_save_11)
+DEFINE_COMPILERRT_OVERLAPPING_FUNCTION(__riscv_save_11)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__riscv_save_10, __riscv_save_11)
   addi   sp, sp, -112
   li     t1, 16
@@ -140,7 +140,7 @@ LOCAL_LABEL(riscv_save_11_10):
   sd     s9,  24(sp)
   j      LOCAL_LABEL(riscv_save_9_8)
 
-DEFINE_COMPILERRT_OVELAPPING_FUNCTION(__riscv_save_9)
+DEFINE_COMPILERRT_OVERLAPPING_FUNCTION(__riscv_save_9)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__riscv_save_8, __riscv_save_9)
   addi   sp, sp, -112
   li     t1, 32
@@ -149,7 +149,7 @@ LOCAL_LABEL(riscv_save_9_8):
   sd     s7,  40(sp)
   j      LOCAL_LABEL(riscv_save_7_6)
 
-DEFINE_COMPILERRT_OVELAPPING_FUNCTION(__riscv_save_7)
+DEFINE_COMPILERRT_OVERLAPPING_FUNCTION(__riscv_save_7)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__riscv_save_6, __riscv_save_7)
   addi   sp, sp, -112
   li     t1, 48
@@ -158,7 +158,7 @@ LOCAL_LABEL(riscv_save_7_6):
   sd     s5,  56(sp)
   j      LOCAL_LABEL(riscv_save_5_4)
 
-DEFINE_COMPILERRT_OVELAPPING_FUNCTION(__riscv_save_5)
+DEFINE_COMPILERRT_OVERLAPPING_FUNCTION(__riscv_save_5)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__riscv_save_4, __riscv_save_5)
   addi   sp, sp, -112
   li     t1, 64
@@ -167,7 +167,7 @@ LOCAL_LABEL(riscv_save_5_4):
   sd     s3, 72(sp)
   j      LOCAL_LABEL(riscv_save_3_2)
 
-DEFINE_COMPILERRT_OVELAPPING_FUNCTION(__riscv_save_3)
+DEFINE_COMPILERRT_OVERLAPPING_FUNCTION(__riscv_save_3)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__riscv_save_2, __riscv_save_3)
   addi   sp, sp, -112
   li     t1, 80
@@ -188,7 +188,7 @@ END_COMPILERRT_FUNCTION(__riscv_save_3)
 // This function isn't overlapping, but we don't want to apply
 // `.subsections_via_symbols` to the whole file because of the prior
 // overlapping function.
-DEFINE_COMPILERRT_OVELAPPING_FUNCTION(__riscv_save_1)
+DEFINE_COMPILERRT_OVERLAPPING_FUNCTION(__riscv_save_1)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__riscv_save_0, __riscv_save_1)
   addi   sp, sp, -16
   sd     s0, 0(sp)
