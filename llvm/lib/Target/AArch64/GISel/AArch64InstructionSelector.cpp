@@ -384,6 +384,8 @@ private:
   ComplexRendererFns selectShiftA_64(const MachineOperand &Root) const;
   ComplexRendererFns selectShiftB_64(const MachineOperand &Root) const;
 
+  template <unsigned ShiftWidth>
+  ComplexRendererFns selectShiftMask(MachineOperand &Root) const;
   ComplexRendererFns select12BitValueWithLeftShift(uint64_t Immed) const;
   ComplexRendererFns selectArithImmed(MachineOperand &Root) const;
   ComplexRendererFns selectNegArithImmed(MachineOperand &Root) const;
@@ -3920,6 +3922,7 @@ bool AArch64InstructionSelector::selectTLSGlobalValueMachO(
   }
 
   MIB.buildInstr(Opcode, {}, {Load})
+      .setOperandDead(1) // implicit-def $lr
       .addUse(AArch64::X0, RegState::Implicit)
       .addDef(AArch64::X0, RegState::Implicit)
       .addRegMask(TRI.getTLSCallPreservedMask());
@@ -4889,7 +4892,9 @@ bool AArch64InstructionSelector::selectOverflowOp(MachineInstr &I,
   Register CarryOutReg = CarryMI.getCarryOutReg();
 
   // Don't convert carry-out to VReg if it is never used
-  if (!MRI.use_nodbg_empty(CarryOutReg)) {
+  if (MRI.use_nodbg_empty(CarryOutReg)) {
+    OpAndCC.first->addRegisterDead(AArch64::NZCV, &TRI);
+  } else {
     // Now, put the overflow result in the register given by the first operand
     // to the overflow op. CSINC increments the result when the predicate is
     // false, so to get the increment when it's true, we need to use the
@@ -7301,6 +7306,42 @@ AArch64InstructionSelector::selectShiftB_64(const MachineOperand &Root) const {
     return std::nullopt;
   uint64_t Enc = 63 - *MaybeImmed;
   return {{[=](MachineInstrBuilder &MIB) { MIB.addImm(Enc); }}};
+}
+
+template <unsigned ShiftWidth>
+InstructionSelector::ComplexRendererFns
+AArch64InstructionSelector::selectShiftMask(MachineOperand &Root) const {
+  if (!Root.isReg())
+    return std::nullopt;
+
+  MachineRegisterInfo &MRI =
+      Root.getParent()->getParent()->getParent()->getRegInfo();
+
+  Register ShAmtReg = Root.getReg();
+
+  // Peek through zext for i32 shifts only. For i64 shifts the zext case
+  // is already handled by existing patterns in the Shift multiclass.
+  if (ShiftWidth == 32) {
+    Register ZExtSrcReg;
+    if (mi_match(ShAmtReg, MRI, m_GZExt(m_Reg(ZExtSrcReg))))
+      ShAmtReg = ZExtSrcReg;
+  }
+
+  // Remove AND if the mask covers at least the low log2(ShiftWidth) bits.
+  APInt AndMask;
+  Register AndSrcReg;
+  if (mi_match(ShAmtReg, MRI, m_GAnd(m_Reg(AndSrcReg), m_ICst(AndMask))) &&
+      MRI.getType(ShAmtReg).getSizeInBits() == ShiftWidth) {
+    if (AndMask.countr_one() >= Log2_32(ShiftWidth))
+      ShAmtReg = AndSrcReg;
+  }
+
+  // Only succeed if we changed the shift amount; otherwise let other
+  // patterns (e.g. zext GPR32 -> SUBREG_TO_REG) match instead.
+  if (ShAmtReg == Root.getReg())
+    return std::nullopt;
+
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(ShAmtReg); }}};
 }
 
 /// Helper to select an immediate value that can be represented as a 12-bit
