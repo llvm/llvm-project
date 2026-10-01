@@ -37,11 +37,12 @@ enum class AllocTokenMode {
   TypeHashPointerSplit,
 
   /// Token ID based on allocated type hash and containing function name hash.
-  /// The ID space is rounded down to the largest power of two <= MaxTokens.
+  /// Uses k bits if MaxTokens is 2^k-1 (e.g. SIZE_MAX), or
+  /// floor(log2(MaxTokens)) bits otherwise.
   TypeFuncHash,
 
   /// Like TypeFuncHash, but for MaxTokens > 1 the most significant bit of the
-  /// rounded-down ID space is set for types that contain pointers.
+  /// ID space is set for types that contain pointers.
   TypeFuncHashPointerSplit,
 };
 
