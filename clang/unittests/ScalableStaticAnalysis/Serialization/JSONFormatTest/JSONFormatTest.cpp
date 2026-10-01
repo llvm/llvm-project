@@ -123,7 +123,8 @@ bool JSONFormatTest::permissionsAreEnforced() const {
                  // silently suppressing the test.
   }
 
-  auto Buffer = llvm::MemoryBuffer::getFile(ProbePath, /*IsText=*/true);
+  auto Buffer =
+      llvm::MemoryBuffer::getFile(ProbePath, llvm::sys::fs::OF_TextWithCRLF);
   bool Enforced = !Buffer; // If open failed, permissions are enforced.
 
   // Restore permissions so TearDown can clean up the temp directory.
@@ -137,7 +138,8 @@ llvm::Expected<llvm::json::Value>
 JSONFormatTest::readJSONFromFile(llvm::StringRef FileName) const {
   PathString FilePath = makePath(FileName);
 
-  auto BufferOrError = llvm::MemoryBuffer::getFile(FilePath, /*IsText=*/true);
+  auto BufferOrError =
+      llvm::MemoryBuffer::getFile(FilePath, llvm::sys::fs::OF_TextWithCRLF);
   if (!BufferOrError) {
     return llvm::createStringError(BufferOrError.getError(),
                                    "Failed to read file: %s", FilePath.c_str());

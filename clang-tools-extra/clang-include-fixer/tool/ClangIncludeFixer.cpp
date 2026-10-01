@@ -19,6 +19,7 @@
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLTraits.h"
 
@@ -413,7 +414,8 @@ int includeFixerMain(int argc, const char **argv) {
       llvm::errs() << llvm::toString(InsertStyle.takeError()) << "\n";
       return 1;
     }
-    auto Buffer = llvm::MemoryBuffer::getFile(FilePath, /*IsText=*/true);
+    auto Buffer =
+        llvm::MemoryBuffer::getFile(FilePath, sys::fs::OF_TextWithCRLF);
     if (!Buffer) {
       errs() << "Couldn't open file: " + FilePath.str() + ": "
              << Buffer.getError().message() + "\n";

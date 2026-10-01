@@ -128,7 +128,7 @@ int llvm_debuginfod_find_main(int argc, char **argv,
   if (DumpToStdout) {
     // Print the contents of the artifact.
     ErrorOr<std::unique_ptr<MemoryBuffer>> Buf = MemoryBuffer::getFile(
-        Path, /*IsText=*/false, /*RequiresNullTerminator=*/false);
+        Path, sys::fs::OF_None, /*RequiresNullTerminator=*/false);
     ExitOnDebuginfodFindError(errorCodeToError(Buf.getError()));
     outs() << Buf.get()->getBuffer();
   } else

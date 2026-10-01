@@ -35,6 +35,7 @@
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -189,7 +190,7 @@ static SmallVector<std::string, 0> getHeaders() {
   if (!Filename)
     return {};
   ErrorOr<std::unique_ptr<MemoryBuffer>> HeadersFile =
-      MemoryBuffer::getFile(Filename, /*IsText=*/true);
+      MemoryBuffer::getFile(Filename, sys::fs::OF_TextWithCRLF);
   if (!HeadersFile)
     return {};
 

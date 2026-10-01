@@ -442,7 +442,8 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buffer = [&] {
     // FIXME(sandboxing): Make this a proper input file.
     auto BypassSandbox = sys::sandbox::scopedDisable();
-    return MemoryBuffer::getFileOrSTDIN(Opts.InputFile, /*IsText=*/true);
+    return MemoryBuffer::getFileOrSTDIN(Opts.InputFile,
+                                        sys::fs::OF_TextWithCRLF);
   }();
 
   if (std::error_code EC = Buffer.getError()) {

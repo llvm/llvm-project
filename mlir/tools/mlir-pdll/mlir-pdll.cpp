@@ -16,6 +16,7 @@
 #include "mlir/Tools/PDLL/ODS/Context.h"
 #include "mlir/Tools/PDLL/Parser/Parser.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -222,8 +223,8 @@ int main(int argc, char **argv) {
     // Only update the real output file if there are any differences. This
     // prevents recompilation of all the files depending on it if there aren't
     // any.
-    if (auto existingOrErr =
-            llvm::MemoryBuffer::getFile(outputFilename, /*IsText=*/true))
+    if (auto existingOrErr = llvm::MemoryBuffer::getFile(
+            outputFilename, llvm::sys::fs::OF_TextWithCRLF))
       if (std::move(existingOrErr.get())->getBuffer() == outputStr)
         shouldWriteOutput = false;
   }

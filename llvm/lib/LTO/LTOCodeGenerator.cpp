@@ -346,7 +346,7 @@ LTOCodeGenerator::compileOptimized() {
 
   // read .o file into memory buffer
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr = MemoryBuffer::getFile(
-      name, /*IsText=*/false, /*RequiresNullTerminator=*/false);
+      name, sys::fs::OF_None, /*RequiresNullTerminator=*/false);
   if (std::error_code EC = BufferOrErr.getError()) {
     emitError(EC.message());
     sys::fs::remove(NativeObjectPath);

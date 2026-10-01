@@ -82,7 +82,7 @@ static void collectFilesWithPrefix(StringRef Dir, StringRef Prefix,
 
 /// Read an entire file into a buffer.
 static bool readFileBytes(StringRef Path, SmallVectorImpl<char> &Buf) {
-  auto MBOrErr = MemoryBuffer::getFile(Path, /*IsText=*/false,
+  auto MBOrErr = MemoryBuffer::getFile(Path, /*Flags=*/sys::fs::OF_None,
                                        /*RequiresNullTerminator=*/false);
   if (!MBOrErr)
     return false;

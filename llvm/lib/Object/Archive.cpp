@@ -701,7 +701,8 @@ Expected<StringRef> Archive::Child::getBuffer() const {
     return FullNameOrErr.takeError();
   const std::string &FullName = *FullNameOrErr;
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
-      MemoryBuffer::getFile(FullName, false, /*RequiresNullTerminator=*/false);
+      MemoryBuffer::getFile(FullName, /*Flags=*/sys::fs::OF_None,
+                            /*RequiresNullTerminator=*/false);
   if (std::error_code EC = Buf.getError())
     return errorCodeToError(EC);
   Parent->ThinBuffers.push_back(std::move(*Buf));

@@ -22,6 +22,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/File.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include <cstddef>
 #include <cstdint>
@@ -86,8 +87,7 @@ public:
   /// Open the specified file as a MemoryBuffer, returning a new MemoryBuffer
   /// if successful, otherwise returning null.
   ///
-  /// \param IsText Set to true to indicate that the file should be read in
-  /// text mode.
+  /// \param Flags, e.g. \c sys::fs::OF_Text to open in text mode.
   ///
   /// \param IsVolatile Set to true to indicate that the contents of the file
   /// can change outside the user's control, e.g. when libclang tries to parse
@@ -96,7 +96,7 @@ public:
   /// \param Alignment Set to indicate that the buffer should be aligned to at
   /// least the specified alignment.
   static ErrorOr<std::unique_ptr<MemoryBuffer>>
-  getFile(const Twine &Filename, bool IsText = false,
+  getFile(const Twine &Filename, sys::fs::OpenFlags Flags = sys::fs::OF_None,
           bool RequiresNullTerminator = true, bool IsVolatile = false,
           std::optional<Align> Alignment = std::nullopt);
 
@@ -148,7 +148,8 @@ public:
   /// Open the specified file as a MemoryBuffer, or open stdin if the Filename
   /// is "-".
   static ErrorOr<std::unique_ptr<MemoryBuffer>>
-  getFileOrSTDIN(const Twine &Filename, bool IsText = false,
+  getFileOrSTDIN(const Twine &Filename,
+                 sys::fs::OpenFlags Flags = sys::fs::OF_None,
                  bool RequiresNullTerminator = true,
                  std::optional<Align> Alignment = std::nullopt);
 

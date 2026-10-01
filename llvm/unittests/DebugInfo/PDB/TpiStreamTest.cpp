@@ -36,7 +36,7 @@ static Expected<std::unique_ptr<PDBFile>>
 openSimplePdb(BumpPtrAllocator &Allocator) {
   std::string PdbPath = getPdbPath();
   ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorOrBuffer =
-      MemoryBuffer::getFile(PdbPath, /*IsText=*/false,
+      MemoryBuffer::getFile(PdbPath, /*Flags=*/sys::fs::OF_None,
                             /*RequiresNullTerminator=*/false);
   EXPECT_TRUE(ErrorOrBuffer);
   std::unique_ptr<llvm::MemoryBuffer> Buffer = std::move(*ErrorOrBuffer);

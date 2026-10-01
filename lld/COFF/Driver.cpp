@@ -164,7 +164,7 @@ static std::future<MBErrPair> createFutureForFile(std::string path,
   auto strategy = std::launch::deferred;
 #endif
   return std::async(strategy, [=]() {
-    auto mbOrErr = MemoryBuffer::getFile(path, /*IsText=*/false,
+    auto mbOrErr = MemoryBuffer::getFile(path, sys::fs::OF_None,
                                          /*RequiresNullTerminator=*/false);
     if (!mbOrErr)
       return MBErrPair{nullptr, mbOrErr.getError()};
@@ -422,7 +422,7 @@ void LinkerDriver::enqueuePath(StringRef path, bool lazy, InputOpt inputOpt) {
       // before something we can find with an architecture, we won't find the
       // winsysroot file.
       if (std::optional<StringRef> retryPath = findFileIfNew(pathStr)) {
-        auto retryMb = MemoryBuffer::getFile(*retryPath, /*IsText=*/false,
+        auto retryMb = MemoryBuffer::getFile(*retryPath, sys::fs::OF_None,
                                              /*RequiresNullTerminator=*/false);
         ec = retryMb.getError();
         if (!ec) {
@@ -1114,7 +1114,7 @@ void LinkerDriver::createImportLibrary(bool asLib) {
   // If the import library already exists, replace it only if the contents
   // have changed.
   ErrorOr<std::unique_ptr<MemoryBuffer>> oldBuf = MemoryBuffer::getFile(
-      path, /*IsText=*/false, /*RequiresNullTerminator=*/false);
+      path, sys::fs::OF_None, /*RequiresNullTerminator=*/false);
   if (!oldBuf) {
     checkError(writeImportLibrary(libName, path, exports, ctx.config.machine,
                                   ctx.config.mingw, nativeExports));
@@ -1135,7 +1135,7 @@ void LinkerDriver::createImportLibrary(bool asLib) {
   }
 
   std::unique_ptr<MemoryBuffer> newBuf = check(MemoryBuffer::getFile(
-      tmpName, /*IsText=*/false, /*RequiresNullTerminator=*/false));
+      tmpName, sys::fs::OF_None, /*RequiresNullTerminator=*/false));
   if ((*oldBuf)->getBuffer() != newBuf->getBuffer()) {
     oldBuf->reset();
     checkError(errorCodeToError(sys::fs::rename(tmpName, path)));
@@ -1181,7 +1181,7 @@ void LinkerDriver::parseOrderFile(StringRef arg) {
   // Open a file.
   StringRef path = arg.substr(1);
   std::unique_ptr<MemoryBuffer> mb =
-      CHECK(MemoryBuffer::getFile(path, /*IsText=*/false,
+      CHECK(MemoryBuffer::getFile(path, sys::fs::OF_None,
                                   /*RequiresNullTerminator=*/false,
                                   /*IsVolatile=*/true),
             "could not open " + path);
@@ -1209,7 +1209,7 @@ void LinkerDriver::parseOrderFile(StringRef arg) {
 
 void LinkerDriver::parseCallGraphFile(StringRef path) {
   std::unique_ptr<MemoryBuffer> mb =
-      CHECK(MemoryBuffer::getFile(path, /*IsText=*/false,
+      CHECK(MemoryBuffer::getFile(path, sys::fs::OF_None,
                                   /*RequiresNullTerminator=*/false,
                                   /*IsVolatile=*/true),
             "could not open " + path);

@@ -304,7 +304,7 @@ Error lto::DTLTO::addObjectFilesToLink() {
     // Load the native object from a file into a memory buffer
     // and store its contents in the output buffer.
     auto ObjFileMbOrErr =
-        MemoryBuffer::getFile(Job.NativeObjectPath, /*IsText=*/false,
+        MemoryBuffer::getFile(Job.NativeObjectPath, sys::fs::OF_None,
                               /*RequiresNullTerminator=*/false);
     if (std::error_code EC = ObjFileMbOrErr.getError())
       return make_error<StringError>(

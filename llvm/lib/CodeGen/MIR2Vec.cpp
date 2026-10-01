@@ -19,6 +19,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
 
@@ -483,7 +484,8 @@ Error MIR2VecVocabProvider::readVocabulary(VocabMap &OpcodeVocab,
         "MIR2Vec vocabulary file path not specified; set it "
         "using --mir2vec-vocab-path");
 
-  auto BufOrError = MemoryBuffer::getFileOrSTDIN(VocabFile, /*IsText=*/true);
+  auto BufOrError =
+      MemoryBuffer::getFileOrSTDIN(VocabFile, sys::fs::OF_TextWithCRLF);
   if (!BufOrError)
     return createFileError(VocabFile, BufOrError.getError());
 

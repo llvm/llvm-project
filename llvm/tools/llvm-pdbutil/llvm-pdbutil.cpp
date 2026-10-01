@@ -804,7 +804,7 @@ static ExitOnError ExitOnErr;
 static void yamlToPdb(StringRef Path, unsigned DocNum) {
   BumpPtrAllocator Allocator;
   ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorOrBuffer =
-      MemoryBuffer::getFileOrSTDIN(Path, /*IsText=*/false,
+      MemoryBuffer::getFileOrSTDIN(Path, sys::fs::OF_None,
                                    /*RequiresNullTerminator=*/false);
 
   if (ErrorOrBuffer.getError()) {
