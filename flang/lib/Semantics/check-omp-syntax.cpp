@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/Directive/Spelling.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Frontend/OpenMP/OMPDescriptors.h"
@@ -51,6 +52,42 @@ static llvm::omp::Version GetClosestVersion(
         intVer >= range.Min ? std::min(intVer, range.Max) : range.Min);
   }
   return llvm::omp::Version();
+}
+
+static llvm::omp::Version NextVersion(llvm::omp::Version version) {
+  auto versions{llvm::omp::getOpenMPVersions()};
+  for (auto [idx, ver] : llvm::enumerate(versions)) {
+    if (ver == version && idx + 1 < versions.size()) {
+      return versions[idx + 1];
+    }
+  }
+  return llvm::omp::Version();
+}
+
+static std::string EnumSetToString(
+    llvm::omp::Modifiers set, llvm::omp::Version version) {
+  llvm::SmallVector<std::string> names;
+  for (llvm::omp::Modifier m : set) {
+    names.emplace_back(llvm::omp::getDescriptor(m).getName().str());
+  }
+  if (names.size() == 1) {
+    return names.front();
+  }
+  return llvm::join(llvm::ArrayRef(names).drop_back(), ", ") + " or " +
+      names.back();
+}
+
+static std::string OneOfModifiers(
+    llvm::omp::ModifierSet set, llvm::omp::Version version) {
+  auto &sdesc{llvm::omp::getDescriptor(set)};
+  llvm::omp::Modifiers members{sdesc.getModifiers(version)};
+
+  if (size_t count{members.size()}; count == 1) {
+    return EnumSetToString(members, version) + " modifier";
+  } else if (count > 1) {
+    return "One of " + EnumSetToString(members, version) + " modifiers";
+  }
+  return "";
 }
 
 template < //
@@ -182,13 +219,13 @@ static ResultTy VerifyExclusive(
 
 template < //
     typename ElemTy, typename SetsSetTy, typename OwnerTy,
+    typename SetTy = typename SetsSetTy::value_type,
     typename ResultTy = llvm::DenseMap<ElemTy,
-        std::tuple<ElemTy, parser::CharBlock, parser::CharBlock>>>
+        std::tuple<ElemTy, SetTy, parser::CharBlock, parser::CharBlock>>>
 static ResultTy VerifyMutuallyExclusive(
     const AppliedElementInfo<ElemTy, SetsSetTy> &info, OwnerTy ownerId,
     llvm::omp::Version version) {
   using AppliedElementTy = AppliedElement<ElemTy, SetsSetTy>;
-  using SetTy = typename SetsSetTy::value_type;
 
   ResultTy result;
 
@@ -238,7 +275,7 @@ static ResultTy VerifyMutuallyExclusive(
           const AppliedElementTy *prev{where->second};
           if (prev->id.value != elem.id.value) {
             result.insert({elem.id.value,
-                {prev->id.value, elem.id.source, prev->id.source}});
+                {prev->id.value, s, elem.id.source, prev->id.source}});
             // Stop version traversal.
             break;
           }
@@ -298,25 +335,27 @@ bool OmpStructureChecker::VerifyModifierVersion(
   auto result = VerifyVersions(info, clause.value, version);
 
   for (auto &[m, svr] : result) {
-    std::string modName{llvm::omp::getDescriptor(m).getName().str()};
+    std::string modName{llvm::omp::getDescriptor(m).getName()};
     std::string clauseName{GetUpperName(clause.value, version)};
     llvm::omp::Version since(svr.second.Min);
     llvm::omp::Version until(svr.second.Max);
 
     if (since == maxVer && until == 0u) {
-      // This shouldn't really happen, but have it just in case.
+      // This shouldn't really happen because the set of allowed modifiers
+      // is specified in the AST node for the clause, but have this check
+      // just to cover all bases.
       context_.Say(svr.first,
-          "'%s' modifier is not supported on %s clause"_err_en_US, modName,
+          "'%s' modifier is not allowed on %s clause"_err_en_US, modName,
           clauseName);
     } else if (since != maxVer && version < since) {
-      context_.Say(svr.first,
-          "'%s' modifier is not supported on %s clause in %s, %s"_warn_en_US,
+      context_.Warn(common::UsageWarning::OpenMPFuture, svr.first,
+          "'%s' modifier is not allowed on %s clause in %s, %s"_warn_en_US,
           modName, clauseName, omp::ThisVersion(version),
           omp::TryVersion(since));
     } else if (until != 0u && version > until) {
-      context_.Say(svr.first,
-          "'%s' modifier is no longer supported on %s clause in %s"_warn_en_US,
-          modName, clauseName, omp::ThisVersion(version));
+      context_.Warn(common::UsageWarning::OpenMPDeprecated, svr.first,
+          "'%s' modifier is no longer allowed on %s clause since %s"_warn_en_US,
+          modName, clauseName, omp::ThisVersion(NextVersion(until)));
     }
   }
 
@@ -335,18 +374,8 @@ bool OmpStructureChecker::VerifyModifierRequired(
         clause.source, "'%s' modifier is required"_err_en_US, mdesc.getName());
   }
   for (llvm::omp::ModifierSet s : result.second) {
-    auto &sdesc{llvm::omp::getDescriptor(s)};
-    // If the group is required, at least one modifier from that group must
-    // be present.
-    if (llvm::omp::isModifierGroup(s)) {
-      context_.Say(clause.source,
-          "modifier from '%s' modifier group is required"_err_en_US,
-          sdesc.getName());
-    } else {
-      context_.Say(clause.source,
-          "modifier from the modifier set on %s clause is required"_err_en_US,
-          GetUpperName(clause.value, version));
-    }
+    context_.Say(clause.source, "%s is required on %s clause"_err_en_US,
+        OneOfModifiers(s, version), GetUpperName(clause.value, version));
   }
 
   return result.first.empty() && result.second.empty();
@@ -361,9 +390,10 @@ bool OmpStructureChecker::VerifyModifierUnique(
   for (auto [id, where] : result) {
     auto &mdesc{llvm::omp::getDescriptor(id)};
     context_
-        .Say(where.first, "'%s' modifier cannot occur multiple times"_err_en_US,
+        .Say(where.second,
+            "'%s' modifier cannot occur multiple times"_err_en_US,
             mdesc.getName())
-        .Attach(where.second, "previous occurrence of this modifier"_en_US);
+        .Attach(where.first, "previous occurrence of this modifier"_en_US);
   }
 
   return result.empty();
@@ -379,7 +409,7 @@ bool OmpStructureChecker::VerifyModifierExclusive(
     auto [otherId, source, otherSource] = wrong;
     context_
         .Say(source,
-            "An exclusive '%s' modifier cannot be specified together with a modifier of a different type"_err_en_US,
+            "'%s' modifier cannot be specified together with a modifier of a different type"_err_en_US,
             llvm::omp::getDescriptor(id).getName())
         .Attach(otherSource, "'%s' provided here"_en_US,
             llvm::omp::getDescriptor(otherId).getName());
@@ -388,12 +418,17 @@ bool OmpStructureChecker::VerifyModifierExclusive(
   auto resultMut = VerifyMutuallyExclusive(info, clause.value, version);
 
   for (auto [id, wrong] : resultMut) {
-    auto [otherId, source, otherSource] = wrong;
-    auto thisName{llvm::omp::getDescriptor(id).getName().str()};
+    auto [otherId, setId, source, otherSource] = wrong;
+    auto thisName{llvm::omp::getDescriptor(id).getName()};
+    std::string annot;
+    if (llvm::omp::isModifierGroup(setId)) {
+      auto &sdesc{llvm::omp::getDescriptor(setId)};
+      annot = " as members of '" + sdesc.getName().str() + "' modifier group";
+    }
     context_
         .Say(otherSource,
-            "The '%s' and '%s' modifiers are mutually exclusive"_err_en_US,
-            llvm::omp::getDescriptor(otherId).getName(), thisName)
+            "'%s' and '%s' modifiers are mutually exclusive%s"_err_en_US,
+            llvm::omp::getDescriptor(otherId).getName(), thisName, annot)
         .Attach(source, "'%s' modifier specified here"_en_US, thisName);
   }
 
@@ -431,6 +466,7 @@ template <typename UnionTy>
 AppliedModifierInfo GetAppliedModifiers(llvm::omp::Clause clauseId,
     llvm::omp::Version version,
     const std::optional<std::list<UnionTy>> &modifiers) {
+  using AppliedModifier = AppliedModifierInfo::ElementTy;
   AppliedModifierInfo info;
   if (modifiers) {
     auto cdesc{llvm::omp::getDescriptor(clauseId)};

@@ -509,7 +509,7 @@ use omp_lib
   !$omp taskwait depend(mutexinoutset: x)
   !ERROR: 'task-dependence-type' modifier is required
   !ERROR: The SINK and SOURCE dependence types can only be used with the ORDERED directive, used here in the TASKWAIT construct
-  !WARNING: 'dependence-type' modifier is no longer supported on DEPEND clause in OpenMP v5.2
+  !WARNING: 'dependence-type' modifier is no longer allowed on DEPEND clause since OpenMP v5.2 [-Wopenmp-deprecated]
   !$omp taskwait depend(source)
   ! !$omp taskwait depend(sink:i-1)
   ! !$omp target enter data map(to:arrayA) map(alloc:arrayB)
