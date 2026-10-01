@@ -284,8 +284,8 @@ struct FindDeviceDataReadOnHost
     for (std::size_t j{0}; j < x.arguments().size(); ++j) {
       const auto &arg{x.arguments()[j]};
       if (const auto *expr{arg ? arg->UnwrapExpr() : nullptr}) {
-        bool designated{evaluate::IsVariable(*expr) &&
-            (j == 0 || !onlyFirstArgDesignated)};
+        bool designated{
+            evaluate::IsVariable(*expr) && (j == 0 || !onlyFirstArgDesignated)};
         if (Result result{FindDeviceDataReadOnHost{
                 context_, onlyDesignated_ || designated}(*expr)}) {
           return result;
