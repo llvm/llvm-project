@@ -4207,8 +4207,7 @@ private:
   /// Common value among addresses
   Value *CommonValue = nullptr;
 
-  /// Deferred getter for the dominator tree, so that it is only computed
-  /// when it is actually needed.
+  /// Lazily computes the dominator tree.
   const std::function<const DominatorTree &()> getDTFn;
 
 public:
@@ -4398,12 +4397,10 @@ private:
       return nullptr;
     }
 
-    // New selects are inserted at the original selects' positions, so their
-    // operands must be available there. The addressing mode matcher only
-    // guarantees that a combined field dominates the memory instruction (e.g.
-    // when it reuses an IV increment), which may be defined after the original
-    // select in the same block. Reject the combination if any new select would
-    // use a value that does not dominate it.
+    // New selects are inserted at the original selects, but the matcher only
+    // guarantees that combined fields dominate the memory instruction (e.g. a
+    // reused IV increment). Give up if a new select uses a value that does not
+    // dominate it.
     const DominatorTree &DT = getDTFn();
     bool ValidSelects =
         all_of(ST.newSelectNodes(), [&DT](const SelectInst *SI) {
