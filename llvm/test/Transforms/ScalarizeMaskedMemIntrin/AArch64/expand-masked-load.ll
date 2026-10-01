@@ -221,6 +221,36 @@ define <2 x i48> @scalarize_v2i48(ptr %p, <2 x i1> %mask, <2 x i48> %passthru) {
   ret <2 x i48> %ret
 }
 
+define <1 x half> @scalarize_v1f16(ptr %p, <1 x i1> %mask, <1 x half> %passthru) vscale_range(2,2) {
+; CHECK-LE-COMMON-LABEL: @scalarize_v1f16(
+; CHECK-LE-COMMON-NEXT:    [[TMP1:%.*]] = extractelement <1 x i1> [[MASK:%.*]], i64 0
+; CHECK-LE-COMMON-NEXT:    br i1 [[TMP1]], label [[COND_LOAD:%.*]], label [[ELSE:%.*]]
+; CHECK-LE-COMMON:       cond.load:
+; CHECK-LE-COMMON-NEXT:    [[TMP2:%.*]] = getelementptr inbounds half, ptr [[P:%.*]], i32 0
+; CHECK-LE-COMMON-NEXT:    [[TMP3:%.*]] = load half, ptr [[TMP2]], align 2
+; CHECK-LE-COMMON-NEXT:    [[TMP4:%.*]] = insertelement <1 x half> [[PASSTHRU:%.*]], half [[TMP3]], i64 0
+; CHECK-LE-COMMON-NEXT:    br label [[ELSE]]
+; CHECK-LE-COMMON:       else:
+; CHECK-LE-COMMON-NEXT:    [[RES_PHI_ELSE:%.*]] = phi <1 x half> [ [[TMP4]], [[COND_LOAD]] ], [ [[PASSTHRU]], [[TMP0:%.*]] ]
+; CHECK-LE-COMMON-NEXT:    ret <1 x half> [[RES_PHI_ELSE]]
+;
+; CHECK-BE-LABEL: @scalarize_v1f16(
+; CHECK-BE-NEXT:    [[TMP1:%.*]] = extractelement <1 x i1> [[MASK:%.*]], i64 0
+; CHECK-BE-NEXT:    br i1 [[TMP1]], label [[COND_LOAD:%.*]], label [[ELSE:%.*]]
+; CHECK-BE:       cond.load:
+; CHECK-BE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds half, ptr [[P:%.*]], i32 0
+; CHECK-BE-NEXT:    [[TMP3:%.*]] = load half, ptr [[TMP2]], align 2
+; CHECK-BE-NEXT:    [[TMP4:%.*]] = insertelement <1 x half> [[PASSTHRU:%.*]], half [[TMP3]], i64 0
+; CHECK-BE-NEXT:    br label [[ELSE]]
+; CHECK-BE:       else:
+; CHECK-BE-NEXT:    [[RES_PHI_ELSE:%.*]] = phi <1 x half> [ [[TMP4]], [[COND_LOAD]] ], [ [[PASSTHRU]], [[TMP0:%.*]] ]
+; CHECK-BE-NEXT:    ret <1 x half> [[RES_PHI_ELSE]]
+;
+  %ret = call <1 x half> @llvm.masked.load.v1f16.p0(ptr %p, i32 2, <1 x i1> %mask, <1 x half> %passthru)
+  ret <1 x half> %ret
+}
+
+declare <1 x half> @llvm.masked.load.v1f16.p0(ptr, i32, <1 x i1>, <1 x half>)
 declare <2 x i24> @llvm.masked.load.v2i24.p0(ptr, i32, <2 x i1>, <2 x i24>)
 declare <2 x i48> @llvm.masked.load.v2i48.p0(ptr, i32, <2 x i1>, <2 x i48>)
 declare <2 x i64> @llvm.masked.load.v2i64.p0(ptr, i32, <2 x i1>, <2 x i64>)

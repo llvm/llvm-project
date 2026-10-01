@@ -321,6 +321,12 @@ public:
         return false; // Fall back to scalarization of masked operations.
     }
 
+    // Type legalization cannot scalarize the data of a masked load/store.
+    // Reject types that would be legalized to a scalar (e.g. <1 x half>).
+    if (isa<FixedVectorType>(DataType) &&
+        !getTypeLegalizationCost(DataType).second.isVector())
+      return false;
+
     return isElementTypeLegalForScalableVector(DataType->getScalarType());
   }
 
