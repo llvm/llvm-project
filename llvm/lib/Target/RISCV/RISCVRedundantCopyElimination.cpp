@@ -122,13 +122,11 @@ getRegImmediateBeforeTerminator(MachineBasicBlock &MBB, Register Reg,
       continue;
     // The last modification must define Reg itself to a known immediate.
     if (MI.getOpcode() == RISCV::ADDI && MI.getOperand(0).isReg() &&
-        MI.getOperand(0).getReg() == Reg &&
-        MI.getOperand(1).isReg() && MI.getOperand(1).getReg() == RISCV::X0 &&
-        MI.getOperand(2).isImm())
+        MI.getOperand(0).getReg() == Reg && MI.getOperand(1).isReg() &&
+        MI.getOperand(1).getReg() == RISCV::X0 && MI.getOperand(2).isImm())
       return MI.getOperand(2).getImm();
     if (MI.getOpcode() == RISCV::QC_LI && MI.getOperand(0).isReg() &&
-        MI.getOperand(0).getReg() == Reg &&
-        MI.getOperand(1).isImm())
+        MI.getOperand(0).getReg() == Reg && MI.getOperand(1).isImm())
       return MI.getOperand(1).getImm();
     return std::nullopt;
   }
@@ -158,8 +156,7 @@ bool RISCVRedundantCopyElimination::optimizeBlock(MachineBasicBlock &MBB) {
     return false;
 
   bool IsZeroCopy = guaranteesZeroRegInBlock(MBB, Cond, TBB);
-  bool IsImmCopy =
-      !IsZeroCopy && guaranteesRegEqualsImmInBlock(MBB, Cond, TBB);
+  bool IsImmCopy = !IsZeroCopy && guaranteesRegEqualsImmInBlock(MBB, Cond, TBB);
   int64_t CompareImm = IsImmCopy ? Cond[2].getImm() : 0;
   if (!IsZeroCopy && !IsImmCopy && Cond.size() == 3 &&
       (Cond[0].getImm() == RISCV::BEQ || Cond[0].getImm() == RISCV::BNE) &&
