@@ -625,6 +625,15 @@ namespace expect {
   }
   static_assert(__builtin_expect(a(),1) == 12, "");
   static_assert(__builtin_expect_with_probability(a(), 1, 1.0) == 12, "");
+  static_assert(__builtin_unpredictable(a()) == 12, "");
+
+  constexpr int b(int x) {
+    if (__builtin_unpredictable(x > 0))
+      return 1;
+    return 2;
+  }
+  static_assert(b(1) == 1, "");
+  static_assert(b(-1) == 2, "");
 }
 
 namespace rotateleft {
