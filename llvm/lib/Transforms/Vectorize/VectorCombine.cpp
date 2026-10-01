@@ -1375,11 +1375,11 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
                                    BO->getName() + ".scalar");
     }
   } else {
-    FMFSource FMFS;
-    if (isa<FPMathOperator>(I))
-      FMFS = &I;
+    FastMathFlags FMF;
+    if (auto *FPMO = dyn_cast<FPMathOperator>(&I))
+      FMF = FPMO->getFastMathFlags();
     Scalar = Builder.CreateIntrinsic(ScalarTy, II->getIntrinsicID(), ScalarOps,
-                                     FMFS, II->getName() + ".scalar");
+                                     FMF, II->getName() + ".scalar");
   }
 
   Value *Insert = Builder.CreateInsertElement(NewVecC, Scalar, *Index);
