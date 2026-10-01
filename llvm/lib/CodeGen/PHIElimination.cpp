@@ -15,8 +15,8 @@
 #include "llvm/CodeGen/PHIElimination.h"
 #include "PHIEliminationUtils.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/LiveInterval.h"
@@ -117,7 +117,7 @@ class PHIEliminationImpl {
 
   // PHI source registers whose subranges must be shrunk to their own uses once
   // all PHIs are gone.
-  SmallSetVector<Register, 8> PHISrcRegsToShrink;
+  SmallSet<Register, 8> PHISrcRegsToShrink;
 
   // Defs of PHI sources which are implicit_def.
   SmallPtrSet<MachineInstr *, 4> ImpDefs;
@@ -320,7 +320,6 @@ bool PHIEliminationImpl::run(MachineFunction &MF) {
     LiveInterval &LI = LIS->getInterval(Reg);
     for (LiveInterval::SubRange &SR : LI.subranges())
       LIS->shrinkToUses(SR, Reg);
-    LI.removeEmptySubRanges();
   }
   PHISrcRegsToShrink.clear();
 
