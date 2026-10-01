@@ -43,7 +43,7 @@ entry:
   ret i32 %v
 }
 ; CHECK-LABEL: @volatile_read(
-; CHECK: call void @__csan_read4(ptr %p, i32 8)
+; CHECK: call void @__csan_read4(ptr %p, i32 1)
 
 define void @unaligned_volatile_write(ptr %p) sanitize_concurrency {
 entry:
@@ -51,7 +51,11 @@ entry:
   ret void
 }
 ; CHECK-LABEL: @unaligned_volatile_write(
-; CHECK: call void @__csan_unaligned_write8(ptr %p, i32 8)
+; CHECK: %[[INT:.*]] = ptrtoint ptr %p to i64
+; CHECK: %[[LOW:.*]] = and i64 %[[INT]], 7
+; CHECK: %[[ALIGNED:.*]] = icmp eq i64 %[[LOW]], 0
+; CHECK: %[[FLAGS:.*]] = select i1 %[[ALIGNED]], i32 1, i32 0
+; CHECK: call void @__csan_unaligned_write8(ptr %p, i32 %[[FLAGS]])
 
 define i128 @large_volatile_read(ptr %p) sanitize_concurrency {
 entry:
@@ -59,7 +63,7 @@ entry:
   ret i128 %v
 }
 ; CHECK-LABEL: @large_volatile_read(
-; CHECK: call void @__csan_read16(ptr %p, i32 8)
+; CHECK: call void @__csan_read16(ptr %p, i32 0)
 
 define void @volatile_range(ptr %src, ptr %dst, i64 %n) sanitize_concurrency {
 entry:
