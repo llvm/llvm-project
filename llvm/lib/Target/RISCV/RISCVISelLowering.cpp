@@ -6539,8 +6539,7 @@ static SDValue lowerVECTOR_SHUFFLEAsPSlide1(ShuffleVectorSDNode *SVN,
                                DAG.getVectorIdxConstant(0, DL));
 
   if (SlideBits == Subtarget.getXLen())
-    return DAG.getNode(SlideUp ? RISCVISD::PSLIDE1UP
-                               : RISCVISD::PSLIDE1DOWN,
+    return DAG.getNode(SlideUp ? RISCVISD::PSLIDE1UP : RISCVISD::PSLIDE1DOWN,
                        DL, VT, V1, Scalar);
 
   // A 32-bit packed slide on RV64 is carried in the low word of a GPR. Expand
@@ -6548,8 +6547,8 @@ static SDValue lowerVECTOR_SHUFFLEAsPSlide1(ShuffleVectorSDNode *SVN,
   if (Subtarget.is64Bit()) {
     assert(SlideBits == 32 && "Unexpected RV64 packed slide width");
     if (ActiveElts == 2)
-      return DAG.getNode(SlideUp ? RISCVISD::PPAIRE : RISCVISD::PPAIROE, DL,
-                         VT, SlideUp ? V2 : V1, SlideUp ? V1 : V2);
+      return DAG.getNode(SlideUp ? RISCVISD::PPAIRE : RISCVISD::PPAIROE, DL, VT,
+                         SlideUp ? V2 : V1, SlideUp ? V1 : V2);
 
     SDValue Shamt = DAG.getConstant(EltBits, DL, MVT::i64);
     SDValue Bits = DAG.getBitcast(MVT::i64, V1);
@@ -6561,8 +6560,8 @@ static SDValue lowerVECTOR_SHUFFLEAsPSlide1(ShuffleVectorSDNode *SVN,
       SDValue Pair = DAG.getNode(RISCVISD::PPAIRE, DL, MVT::v2i32,
                                  DAG.getBitcast(MVT::v2i32, V1),
                                  DAG.getBitcast(MVT::v2i32, Scalar));
-      Bits = DAG.getNode(ISD::SRL, DL, MVT::i64,
-                         DAG.getBitcast(MVT::i64, Pair), Shamt);
+      Bits = DAG.getNode(ISD::SRL, DL, MVT::i64, DAG.getBitcast(MVT::i64, Pair),
+                         Shamt);
     }
     return DAG.getBitcast(VT, Bits);
   }
@@ -6586,8 +6585,7 @@ static SDValue lowerVECTOR_SHUFFLEAsPSlide1(ShuffleVectorSDNode *SVN,
     NewLo = DAG.getNode(ISD::FSHR, DL, MVT::i32, Hi, Lo, Shamt);
     NewHi = DAG.getNode(ISD::FSHR, DL, MVT::i32, Scalar, Hi, Shamt);
   }
-  return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT,
-                     DAG.getBitcast(HalfVT, NewLo),
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, DAG.getBitcast(HalfVT, NewLo),
                      DAG.getBitcast(HalfVT, NewHi));
 }
 
