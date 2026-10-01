@@ -2298,7 +2298,7 @@ public:
       salvageDebugInfo(*I);
       ArrayRef<TreeEntry *> Entries = getTreeEntries(I);
       for (Use &U : I->operands()) {
-        if (auto *OpI = dyn_cast_if_present<Instruction>(U.get());
+        if (auto *OpI = dyn_cast<Instruction>(U.get());
             OpI && !DeletedInstructions.contains(OpI) && OpI->hasOneUser() &&
             wouldInstructionBeTriviallyDead(OpI, TLI) &&
             !ExternalUseReplacements.contains(OpI) &&
@@ -2325,7 +2325,7 @@ public:
     // Process the dead instruction list until empty.
     while (!DeadInsts.empty()) {
       Value *V = DeadInsts.pop_back_val();
-      Instruction *VI = cast_if_present<Instruction>(V);
+      Instruction *VI = cast<Instruction>(V);
       if (!VI || !VI->getParent())
         continue;
       assert(isInstructionTriviallyDead(VI, TLI) &&
@@ -21081,8 +21081,9 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
   const BasicBlock *TEInsertBlock = nullptr;
   // Main node of PHI entries keeps the correct order of operands/incoming
   // blocks.
-  if (auto *PHI = dyn_cast_if_present<PHINode>(
-          TEUseEI.UserTE->hasState() ? TEUseEI.UserTE->getMainOp() : nullptr);
+  if (auto *PHI = TEUseEI.UserTE->hasState()
+                      ? dyn_cast<PHINode>(TEUseEI.UserTE->getMainOp())
+                      : nullptr;
       PHI && TEUseEI.UserTE->State != TreeEntry::SplitVectorize) {
     TEInsertBlock = PHI->getIncomingBlock(TEUseEI.EdgeIdx);
     TEInsertPt = TEInsertBlock->getTerminator();
