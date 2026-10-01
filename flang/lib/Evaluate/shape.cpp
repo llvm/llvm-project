@@ -310,7 +310,7 @@ public:
                 if (auto extent{
                         ToInt64(GetExtent(base, dimension_, invariantOnly_))}) {
                   if (*extent <= 0) {
-                    return Result{1};
+                    return MakeExtentExpr(1);
                   }
                   ok = true;
                 }
