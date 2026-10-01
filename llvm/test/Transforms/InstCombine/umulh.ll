@@ -187,9 +187,7 @@ define <32 x i16> @fold_umulh_v32i16() {
 
 define <8 x i64> @elts_umulh_v8i64(<8 x i64> %a0, <8 x i64> %a1) {
 ; CHECK-LABEL: @elts_umulh_v8i64(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i64> [[A0:%.*]], <8 x i64> poison, <8 x i32> <i32 0, i32 1, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i64> [[A1:%.*]], <8 x i64> poison, <8 x i32> <i32 0, i32 1, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
-; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i64> @llvm.umulh.v8i64(<8 x i64> [[TMP1]], <8 x i64> [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i64> @llvm.umulh.v8i64(<8 x i64> [[TMP1:%.*]], <8 x i64> [[TMP2:%.*]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i64> [[TMP3]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <8 x i64> [[TMP4]]
 ;
