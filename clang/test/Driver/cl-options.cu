@@ -25,3 +25,10 @@
 // Gd-NOT: "-fdefault-calling-conv=cdecl"
 // Gd: "-cc1" "-triple"
 // Gd: "-fdefault-calling-conv=cdecl"
+
+// Optimization options must continue to apply to both CUDA compilation jobs.
+// RUN: not %clang_cl /c /O2 -### -nocudalib -nocudainc -- %s 2>&1 | FileCheck -check-prefix=O2 %s
+// O2: "-cc1" "-triple" "nvptx{{(64)?}}-nvidia-cuda"
+// O2-SAME: "-O3"
+// O2: "-cc1" "-triple"
+// O2-SAME: "-O3"
