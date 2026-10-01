@@ -18,7 +18,7 @@
 #include <sycl/__impl/group.hpp>
 #include <sycl/__impl/memory_enums.hpp>
 #include <sycl/__impl/sub_group.hpp>
-#include <sycl/__spirv/spirv_types.hpp>
+#include <sycl/__spirv/types.hpp>
 
 #include <cstdint>
 #include <type_traits>

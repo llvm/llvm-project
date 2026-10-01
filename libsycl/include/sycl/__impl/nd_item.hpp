@@ -20,7 +20,7 @@
 #include <sycl/__impl/index_space_classes.hpp>
 #include <sycl/__impl/nd_range.hpp>
 #include <sycl/__impl/sub_group.hpp>
-#include <sycl/__spirv/spirv_vars.hpp>
+#include <sycl/__spirv/vars.hpp>
 
 #include <cstddef>
 

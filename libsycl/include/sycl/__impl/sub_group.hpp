@@ -17,7 +17,7 @@
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/index_space_classes.hpp>
 #include <sycl/__impl/memory_enums.hpp>
-#include <sycl/__spirv/spirv_vars.hpp>
+#include <sycl/__spirv/vars.hpp>
 
 #include <cstdint>
 

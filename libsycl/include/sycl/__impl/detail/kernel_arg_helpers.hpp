@@ -19,7 +19,7 @@
 
 #include <sycl/__impl/detail/config.hpp>
 
-#include <sycl/__spirv/spirv_vars.hpp>
+#include <sycl/__spirv/vars.hpp>
 
 #include <type_traits>
 #include <utility>
