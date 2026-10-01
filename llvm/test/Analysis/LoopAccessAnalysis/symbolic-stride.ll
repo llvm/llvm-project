@@ -919,8 +919,8 @@ exit:
   ret void
 }
 
-define void @dropped_predicates(ptr %a, ptr %b, i64 %c, i64 %d, i64 %n) {
-; CHECK-LABEL: 'dropped_predicates'
+define void @stray_predicates(ptr %a, ptr %b, i64 %c, i64 %d, i64 %n) {
+; CHECK-LABEL: 'stray_predicates'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:

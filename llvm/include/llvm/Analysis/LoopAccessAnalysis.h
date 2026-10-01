@@ -912,8 +912,8 @@ private:
 ///
 /// If necessary this method will version the stride of the pointer according
 /// to \p PtrToStride and therefore add further predicates to \p PSE, except
-/// when \p Predicates is given, in which case, it adds the fresh predicates
-/// there instead of to \p PSE directly.
+/// when \p Predicates is given, in which case, it adds predicates there instead
+/// of to \p PSE directly.
 ///
 /// \p PtrToStride provides the mapping between the pointer value and its
 /// stride as collected by LoopVectorizationLegality::collectStridedAccess.
