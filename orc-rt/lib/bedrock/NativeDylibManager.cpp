@@ -26,12 +26,13 @@ NativeDylibManager::Create(Session &S, SimpleSymbolTable &ST,
   SimpleSymbolTable NDMST;
   if (auto Err = AddInterface(NDMST))
     return Err;
-  std::pair<const char *, const void *> InstanceSym[] = {
-      {InstanceName, static_cast<const void *>(Instance.get())}};
+  std::pair<SymbolNameSpec, const void *> InstanceSym[] = {
+      {SymbolNameSpec::c(InstanceName),
+       static_cast<const void *>(Instance.get())}};
   if (auto Err = NDMST.addUnique(InstanceSym))
     return std::move(Err);
 
-  if (auto Err = ST.addUnique(NDMST))
+  if (auto Err = ST.addUnique(std::move(NDMST)))
     return std::move(Err);
 
   return std::move(Instance);
@@ -49,7 +50,7 @@ void NativeDylibManager::load(OnLoadCompleteFn &&OnComplete, std::string Path) {
 
   // Capture S by reference, rather than this, so that the callback remains
   // valid even if the NativeDylibManager is destroyed prior to shutdown.
-  S.addOnShutdown([&S = this->S, Handle = *H]() {
+  S.addOnShutdown([&S = this->S, Handle = *H]() noexcept {
     if (auto Err = sys::unloadLibrary(Handle))
       S.reportError(std::move(Err));
   });

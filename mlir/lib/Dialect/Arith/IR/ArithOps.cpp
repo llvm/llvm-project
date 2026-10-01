@@ -1396,9 +1396,10 @@ struct NarrowExtremum final : OpRewritePattern<TruncOp> {
         return failure();
     }
 
-    rewriter.replaceOpWithNewOp<ExtremumOp>(truncOp, TypeRange{narrowType},
-                                            ValueRange{lhs, rhs},
-                                            extremumOp->getAttrs());
+    rewriter.replaceOpWithNewOp<ExtremumOp>(
+        truncOp, TypeRange{narrowType}, ValueRange{lhs, rhs},
+        extremumOp.getProperties(),
+        extremumOp->getDiscardableAttrDictionary().getValue());
     return success();
   }
 };
@@ -1435,6 +1436,22 @@ OpFoldResult arith::MaxNumFOp::fold(FoldAdaptor adaptor) {
     return getLhs();
 
   return constFoldBinaryOp<FloatAttr>(adaptor.getOperands(), llvm::maxnum);
+}
+
+//===----------------------------------------------------------------------===//
+// MaximumNumFOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult arith::MaximumNumFOp::fold(FoldAdaptor adaptor) {
+  // maximumnumf(x,x) -> x
+  if (getLhs() == getRhs())
+    return getRhs();
+
+  // maximumnumf(x, NaN) -> x
+  if (matchPattern(adaptor.getRhs(), m_NaNFloat()))
+    return getLhs();
+
+  return constFoldBinaryOp<FloatAttr>(adaptor.getOperands(), llvm::maximumnum);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1513,6 +1530,22 @@ OpFoldResult arith::MinNumFOp::fold(FoldAdaptor adaptor) {
     return getLhs();
 
   return constFoldBinaryOp<FloatAttr>(adaptor.getOperands(), llvm::minnum);
+}
+
+//===----------------------------------------------------------------------===//
+// MinimumNumFOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult arith::MinimumNumFOp::fold(FoldAdaptor adaptor) {
+  // minimumnumf(x,x) -> x
+  if (getLhs() == getRhs())
+    return getRhs();
+
+  // minimumnumf(x, NaN) -> x
+  if (matchPattern(adaptor.getRhs(), m_NaNFloat()))
+    return getLhs();
+
+  return constFoldBinaryOp<FloatAttr>(adaptor.getOperands(), llvm::minimumnum);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2068,8 +2101,10 @@ void arith::TruncFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                   MLIRContext *context) {
   patterns.add<NarrowExtremum<TruncFOp, ExtFOp, MaximumFOp>,
                NarrowExtremum<TruncFOp, ExtFOp, MaxNumFOp>,
+               NarrowExtremum<TruncFOp, ExtFOp, MaximumNumFOp>,
                NarrowExtremum<TruncFOp, ExtFOp, MinimumFOp>,
                NarrowExtremum<TruncFOp, ExtFOp, MinNumFOp>,
+               NarrowExtremum<TruncFOp, ExtFOp, MinimumNumFOp>,
                TruncFSIToFPToSIToFP, TruncFUIToFPToUIToFP>(context);
 }
 
@@ -3113,7 +3148,7 @@ ParseResult SelectOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void arith::SelectOp::print(OpAsmPrinter &p) {
   p << " " << getOperands();
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
   p << " : ";
   if (ShapedType condType = dyn_cast<ShapedType>(getCondition().getType()))
     p << condType << ", ";

@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DbgVariableFragmentInfo.h"
@@ -320,6 +321,13 @@ public:
 class DIAssignID : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
+  friend class Instruction;
+  friend class DebugValueUser;
+
+  /// The instructions this ID is attached to and the dbg_assign records that
+  /// refer to it, maintained by Instruction and DebugValueUser.
+  TinyPtrVector<Instruction *> Instrs;
+  TinyPtrVector<DbgVariableRecord *> Records;
 
   DIAssignID(LLVMContext &C, StorageType Storage)
       : MDNode(C, DIAssignIDKind, Storage, {}) {}
@@ -335,9 +343,8 @@ public:
   // This node has no operands to replace.
   void replaceOperandWith(unsigned I, Metadata *New) = delete;
 
-  SmallVector<DbgVariableRecord *> getAllDbgVariableRecordUsers() {
-    return Context.getReplaceableUses()->getAllDbgVariableRecordUsers();
-  }
+  ArrayRef<Instruction *> getInstructions() const { return Instrs; }
+  ArrayRef<DbgVariableRecord *> getRecords() const { return Records; }
 
   static DIAssignID *getDistinct(LLVMContext &Context) {
     return getImpl(Context, Distinct);
@@ -4977,15 +4984,15 @@ public:
 
 /// List of ValueAsMetadata, to be used as an argument to a dbg.value
 /// intrinsic.
-class DIArgList : public Metadata, ReplaceableMetadataImpl {
-  friend class ReplaceableMetadataImpl;
+class DIArgList : public Metadata, ReplaceableUsesWithContext {
+  friend class ReplaceableUses;
   friend class LLVMContextImpl;
   using iterator = SmallVectorImpl<ValueAsMetadata *>::iterator;
 
   SmallVector<ValueAsMetadata *, 4> Args;
 
   DIArgList(LLVMContext &Context, ArrayRef<ValueAsMetadata *> Args)
-      : Metadata(DIArgListKind, Uniqued), ReplaceableMetadataImpl(Context),
+      : Metadata(DIArgListKind, Uniqued), ReplaceableUsesWithContext(Context),
         Args(Args) {
     track();
   }
@@ -5009,7 +5016,7 @@ public:
   }
 
   SmallVector<DbgVariableRecord *> getAllDbgVariableRecordUsers() {
-    return ReplaceableMetadataImpl::getAllDbgVariableRecordUsers();
+    return ReplaceableUses::getAllDbgVariableRecordUsers();
   }
 
   LLVM_ABI void handleChangedOperand(void *Ref, Metadata *New);

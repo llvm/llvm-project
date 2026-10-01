@@ -248,11 +248,6 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         return false;
       }
 
-      // MaskedCond may be used from blocks it don't dominate; the block will be
-      // linearized and it will dominate its users after linearization.
-      if (match(&R, m_VPInstruction<VPInstruction::MaskedCond>()))
-        continue;
-
       for (const VPUser *U : V->users()) {
         auto *UI = cast<VPRecipeBase>(U);
         if (isa<VPIRPhi>(UI) &&
@@ -293,7 +288,11 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
           if (RecipeNumbering[UI] >= RecipeNumbering[&R])
             continue;
         } else {
-          if (VPDT.dominates(VPBB, UI->getParent()))
+          // MaskedCond may be used from blocks it don't dominate; the block
+          // will be linearized and it will dominate its users after
+          // linearization.
+          if (match(&R, m_VPInstruction<VPInstruction::MaskedCond>()) ||
+              VPDT.dominates(VPBB, UI->getParent()))
             continue;
         }
 

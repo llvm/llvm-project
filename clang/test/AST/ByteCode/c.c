@@ -474,3 +474,15 @@ void AddrLabelDiffSub(void) {
                                                              // all-error {{use of undeclared label 'baz'}} \
                                                              // pedantic-warning 2{{use of GNU address-of-label extension}}
 }
+
+void *memset(void*, int, unsigned long);
+typedef struct Parse Parse;
+struct Parse {
+  int aTempReg;
+  int sLastToken;
+};
+
+Parse sqlite3Prepare_sParse;
+void sqlite3Prepare(void) {
+  memset( ((char *)&sqlite3Prepare_sParse) + sizeof(int), 0, sizeof(int));
+}

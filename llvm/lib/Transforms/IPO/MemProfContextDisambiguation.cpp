@@ -4062,9 +4062,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
                         return true;
 
                       if (A->AllocTypes == B->AllocTypes)
-                        // Use the first context id for each edge as a
+                        // Use the caller node id as a deterministic
                         // tie-breaker.
-                        return *A->ContextIds.begin() < *B->ContextIds.begin();
+                        return A->Caller->NodeId < B->Caller->NodeId;
                       return AllocTypeCloningPriority[A->AllocTypes] <
                              AllocTypeCloningPriority[B->AllocTypes];
                     });
@@ -4577,8 +4577,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
   }
 
   // Helper for callee edge sorting below. Return true if A's callee has fewer
-  // caller edges than B, or if A is a clone and B is not, or if A's first
-  // context id is smaller than B's.
+  // caller edges than B, or if A is a clone and B is not, or if A's callee
+  // node id is smaller than B's.
   auto CalleeCallerEdgeLessThan = [](const std::shared_ptr<ContextEdge> &A,
                                      const std::shared_ptr<ContextEdge> &B) {
     if (A->Callee->CallerEdges.size() != B->Callee->CallerEdges.size())
@@ -4587,9 +4587,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
       return true;
     else if (!A->Callee->CloneOf && B->Callee->CloneOf)
       return false;
-    // Use the first context id for each edge as a
-    // tie-breaker.
-    return *A->ContextIds.begin() < *B->ContextIds.begin();
+    // Use the callee node id as a deterministic tie-breaker.
+    return A->Callee->NodeId < B->Callee->NodeId;
   };
 
   // Process each set of callee clones called by Node, performing the needed
@@ -5713,12 +5712,12 @@ bool MemProfContextDisambiguation::initializeIndirectCallPromotionInfo(
   // when they both have the same root name with "." suffixes stripped.
   // If we pick the wrong one then this could lead to incorrect ICP and calling
   // a memprof clone that we don't actually create (resulting in linker unsats).
-  // What this means is that the GUID of the function (or its PGOFuncName
-  // metadata) *must* match that in the VP metadata to allow promotion.
-  // In practice this should not be a limitation, since local functions should
-  // have PGOFuncName metadata and global function names shouldn't need any
-  // special handling (they should not get the ".llvm.*" suffix that the
-  // canonicalization handling is attempting to strip).
+  // What this means is that the GUID of the function *must* match that in the
+  // VP metadata to allow promotion. In practice this should not be a
+  // limitation, since local functions have a GUID from before they were
+  // promoted and global function names shouldn't need any special handling
+  // (they should not get the ".llvm.*" suffix that the canonicalization
+  // handling is attempting to strip).
   if (Error E = Symtab->create(M, /*InLTO=*/true, /*AddCanonical=*/false)) {
     std::string SymtabFailure = toString(std::move(E));
     M.getContext().emitError("Failed to create symtab: " + SymtabFailure);

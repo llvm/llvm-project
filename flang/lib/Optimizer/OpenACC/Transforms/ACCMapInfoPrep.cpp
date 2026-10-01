@@ -78,14 +78,29 @@ using namespace mlir;
 
 namespace {
 
-/// Returns the pointer slot holding the address of \p mapVar, which the runtime
-/// rewrites once the pointee has a device copy. Such a slot exists only when
-/// the clause maps a pointee obtained by dereferencing it; mapping the slot
-/// itself has no second indirection and therefore no attach point. Only slots
-/// reached through a Fortran descriptor are recognized here.
+/// True when \p boxValue is the descriptor of a POINTER or an ALLOCATABLE.
+/// OpenACC 3.4 §2.6.4 names Fortran pointers and allocatables alike as
+/// pointers: an attach action updates the device pointer to the device copy of
+/// the data and, for Fortran array pointers and allocatable arrays, copies any
+/// associated descriptor. Flang gives a descriptor to further entities -
+/// assumed-shape, assumed-rank and polymorphic among them - for which the
+/// specification prescribes no descriptor management, so the runtime keeps no
+/// device copy of one to attach. See
+/// flang/docs/OpenACC-descriptor-management.md.
+static bool isPointerOrAllocatableBox(Value boxValue) {
+  auto boxTy = dyn_cast<fir::BaseBoxType>(boxValue.getType());
+  return boxTy && boxTy.isPointerOrAllocatable();
+}
+
+/// Returns the pointer slot holding the address of \p mapVar, which the attach
+/// action rewrites once the pointee has a device copy. Such a slot exists only
+/// when the clause maps a pointee obtained by dereferencing it; mapping the
+/// slot itself has no second indirection and therefore no attach point. Only
+/// slots reached through a Fortran descriptor are recognized here.
 static Value findAttachPoint(Value mapVar) {
   if (auto boxAddr = mapVar.getDefiningOp<fir::BoxAddrOp>()) {
-    if (auto load = boxAddr.getVal().getDefiningOp<fir::LoadOp>())
+    auto load = boxAddr.getVal().getDefiningOp<fir::LoadOp>();
+    if (load && isPointerOrAllocatableBox(boxAddr.getVal()))
       return load.getMemref();
   }
   if (fir::isa_box_type(fir::unwrapRefType(mapVar.getType()))) {
@@ -130,12 +145,19 @@ findDescriptorFacts(Value mapVar, Type mappedObjectType, bool isImplicit) {
   if (fir::isa_box_type(fir::unwrapRefType(mapTy)))
     return {acc::DataDescKind::cfi, mapVar};
   // box_addr of a loaded box can be either the pointee of a nested descriptor
-  // map or a host data-base address derived from an already-mapped box. The
-  // latter is always an implicit clause; only treat the explicit case as CFI.
+  // map or a data base address derived from an already-mapped box. The latter
+  // is always an implicit clause; only treat the explicit case as CFI.
+  //
+  // Naming a descriptor asserts that it describes the mapped object wherever
+  // that object is used, so name only one that OpenACC 3.4 §2.6.4 requires to
+  // be maintained on the device: that of a POINTER or an ALLOCATABLE. Flang
+  // also forms descriptors for entities whose descriptor the specification
+  // leaves unmanaged, and those describe the object on the host alone. See
+  // flang/docs/OpenACC-descriptor-management.md.
   if (!isImplicit) {
     if (auto boxAddr = mapVar.getDefiningOp<fir::BoxAddrOp>()) {
       Value boxVal = boxAddr.getVal();
-      if (fir::isa_box_type(boxVal.getType()) &&
+      if (isPointerOrAllocatableBox(boxVal) &&
           boxVal.getDefiningOp<fir::LoadOp>())
         return {acc::DataDescKind::cfi, boxVal};
     }
@@ -195,7 +217,44 @@ static Value loadRecordTypeSizeFromTypeDesc(
   return fir::LoadOp::create(builder, loc, addr);
 }
 
-static Value materializeMapSize(acc::OpenACCSupport &support,
+/// Materialize the storage size of \p type. FIR's layout utility handles the
+/// recursively statically-sized case. Recurse through a sequence when its
+/// element instead needs a runtime size, and obtain that leaf size from a
+/// derived type's type descriptor.
+static Value materializeTypeSizeBytes(acc::OpenACCSupport &support,
+                                      ModuleOp module, Location loc, Type type,
+                                      Operation *entryOp,
+                                      std::optional<SymbolTable> &symbolTable,
+                                      OpBuilder &builder) {
+  type = fir::unwrapRefType(type);
+  if (std::optional<int64_t> staticSize =
+          computeTypeSizeBytes(support, module, type))
+    return arith::ConstantIntOp::create(builder, loc, builder.getI64Type(),
+                                        *staticSize);
+
+  if (auto sequenceType = dyn_cast<fir::SequenceType>(type)) {
+    if (sequenceType.hasUnknownShape() || sequenceType.hasDynamicExtents())
+      return {};
+    Value elementSize =
+        materializeTypeSizeBytes(support, module, loc, sequenceType.getEleTy(),
+                                 entryOp, symbolTable, builder);
+    if (!elementSize)
+      return {};
+    int64_t elementCount = sequenceType.getConstantArraySize();
+    if (elementCount == 1)
+      return elementSize;
+    Value count = arith::ConstantIntOp::create(
+        builder, loc, elementSize.getType(), elementCount);
+    return arith::MulIOp::create(builder, loc, elementSize, count);
+  }
+
+  if (auto recordType = dyn_cast<fir::RecordType>(type))
+    return loadRecordTypeSizeFromTypeDesc(loc, recordType, entryOp, symbolTable,
+                                          builder);
+  return {};
+}
+
+static Value materializeMapSize(acc::OpenACCSupport &support, ModuleOp module,
                                 Operation *entryOp, Value var, Type varType,
                                 acc::DataDescKind descKind, ValueRange bounds,
                                 acc::MapFlags mapFlags,
@@ -219,14 +278,10 @@ static Value materializeMapSize(acc::OpenACCSupport &support,
 
   // Derived types with descriptor fields often have no compile-time layout
   // size; load the type descriptor's size-in-bytes field instead.
-  if (staticSize < 0) {
-    if (auto recordType =
-            dyn_cast<fir::RecordType>(fir::unwrapRefType(varType))) {
-      if (Value dynamicSize = loadRecordTypeSizeFromTypeDesc(
-              loc, recordType, entryOp, symbolTable, builder))
-        return dynamicSize;
-    }
-  }
+  if (staticSize < 0)
+    if (Value dynamicSize = materializeTypeSizeBytes(
+            support, module, loc, varType, entryOp, symbolTable, builder))
+      return dynamicSize;
 
   // An implicit present of an object whose size is not recoverable is only an
   // address lookup. Size 0 matches the present-table entry whatever its
@@ -298,29 +353,11 @@ static Value materializePrivateStorageSize(
     staticTy = fir::SequenceType::get(staticExtents, elementType);
   }
 
-  Value size;
-  if (std::optional<int64_t> staticBytes =
-          computeTypeSizeBytes(support, module, staticTy)) {
-    size = arith::ConstantIntOp::create(builder, loc, builder.getI64Type(),
-                                        *staticBytes);
-  } else if (auto recordType = dyn_cast<fir::RecordType>(elementType)) {
-    // A derived type whose layout is not computable here carries its padded
-    // size in the Fortran type descriptor.
-    size = loadRecordTypeSizeFromTypeDesc(
-        loc, recordType, privatizeOp.getOperation(), symbolTable, builder);
-    if (!size)
-      return {};
-    int64_t staticExtent = 1;
-    for (int64_t extent : staticExtents)
-      staticExtent *= extent;
-    if (staticExtent != 1) {
-      Value extentVal = arith::ConstantIntOp::create(
-          builder, loc, size.getType(), staticExtent);
-      size = arith::MulIOp::create(builder, loc, size, extentVal);
-    }
-  } else {
+  Value size = materializeTypeSizeBytes(support, module, loc, staticTy,
+                                        privatizeOp.getOperation(), symbolTable,
+                                        builder);
+  if (!size)
     return {};
-  }
 
   for (Value dynamicSize : dynamicSizes) {
     Value extentVal =
@@ -418,8 +455,9 @@ buildMapInfo(acc::OpenACCSupport &support, ModuleOp module, Operation *entryOp,
     acc::populateSourceExtents(bounds, seqTy.getShape(), builder);
 
   Location loc = entryOp->getLoc();
-  Value size = materializeMapSize(support, entryOp, var, varType, descKind,
-                                  bounds, mapFlags, symbolTable, builder);
+  Value size =
+      materializeMapSize(support, module, entryOp, var, varType, descKind,
+                         bounds, mapFlags, symbolTable, builder);
 
   return acc::MapInfoOp::create(builder, loc, entryOp->getResult(0).getType(),
                                 var, varType, mapFlags, attachPoint, desc,
