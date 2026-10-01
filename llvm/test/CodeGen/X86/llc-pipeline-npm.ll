@@ -71,7 +71,7 @@
 ; O0-NEXT:     funclet-layout
 ; O0-NEXT:     remove-loads-into-fake-uses
 ; O0-NEXT:     StackMapLivenessPass
-; O0-NEXT:     live-debug-values<emit-debug-entry-values>
+; O0-NEXT:     live-debug-values
 ; O0-NEXT:     machine-sanmd
 ; O0-NEXT:     stack-frame-layout
 ; O0-NEXT:     x86-seses
@@ -204,7 +204,7 @@
 ; O2-NEXT:     funclet-layout
 ; O2-NEXT:     remove-loads-into-fake-uses
 ; O2-NEXT:     StackMapLivenessPass
-; O2-NEXT:     live-debug-values<emit-debug-entry-values>
+; O2-NEXT:     live-debug-values
 ; O2-NEXT:     machine-sanmd
 ; O2-NEXT:     stack-frame-layout
 ; O2-NEXT:     x86-seses
@@ -281,7 +281,7 @@
 ; O0-WINDOWS-NEXT:     funclet-layout
 ; O0-WINDOWS-NEXT:     remove-loads-into-fake-uses
 ; O0-WINDOWS-NEXT:     StackMapLivenessPass
-; O0-WINDOWS-NEXT:     live-debug-values<emit-debug-entry-values>
+; O0-WINDOWS-NEXT:     live-debug-values
 ; O0-WINDOWS-NEXT:     machine-sanmd
 ; O0-WINDOWS-NEXT:     stack-frame-layout
 ; O0-WINDOWS-NEXT:     x86-seses
@@ -419,7 +419,7 @@
 ; O3-WINDOWS-NEXT:     funclet-layout
 ; O3-WINDOWS-NEXT:     remove-loads-into-fake-uses
 ; O3-WINDOWS-NEXT:     StackMapLivenessPass
-; O3-WINDOWS-NEXT:     live-debug-values<emit-debug-entry-values>
+; O3-WINDOWS-NEXT:     live-debug-values
 ; O3-WINDOWS-NEXT:     machine-sanmd
 ; O3-WINDOWS-NEXT:     stack-frame-layout
 ; O3-WINDOWS-NEXT:     x86-seses
