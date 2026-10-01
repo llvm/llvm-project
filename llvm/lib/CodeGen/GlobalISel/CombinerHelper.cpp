@@ -6084,6 +6084,13 @@ bool CombinerHelper::matchFsubToFneg(MachineInstr &MI) const {
   if (!LHSCst)
     return false;
 
+  // Skip fsub_to_fneg when both LHS and RHS are scalar constants (vector FP
+  // binop constant folding is not supported yet), so constant_fold_fp_binop
+  // folds these cases.
+  if (!Ty.isVector() && getConstantFPVRegVal(LHS, MRI) &&
+      getConstantFPVRegVal(MI.getOperand(2).getReg(), MRI))
+    return false;
+
   // -0.0 is always allowed
   if (LHSCst->Value.isNegZero())
     return true;
