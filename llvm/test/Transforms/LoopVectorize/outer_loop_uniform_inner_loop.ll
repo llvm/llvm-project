@@ -571,8 +571,8 @@ exit:
   ret void
 }
 
-; The inner latch compares floating-point values, which are not SCEVable, so
-; the loop is rejected even though it is uniform.
+; The inner latch is an fcmp. Only icmp latch conditions are checked for
+; uniformity with SCEV, so the loop is rejected even though it is uniform.
 ; for (i = 0; i < N; i++)
 ;   for (float x = 0; x < X; x += 1)
 ;     A[i] = x;
