@@ -53,7 +53,7 @@ void test_read_digits() {
     assert(result.__digits_read == c.count);
     assert(result.__overflow == c.overflow);
     assert(state == std::ios_base::goodbit); // Reporting failure is the caller's responsibility.
-    assert(stream.peek() == c.next);
+    assert(stream.peek() == std::char_traits<CharT>::to_int_type(c.next));
   }
 }
 
