@@ -253,8 +253,8 @@ class SPIRVLegalizePointerCastImpl {
     for (const APInt &Index : Indices)
       Args.push_back(ConstantInt::get(B.getContext(), Index));
 
-    std::array<Type *, 2> Types = {Ptr->getType(), BasePtr->getType()};
-    return B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
+    return B.CreateIntrinsic(Intrinsic::spv_gep,
+                             {Ptr->getType(), BasePtr->getType()}, {Args});
   }
 
   Value *gepByteOffset(IRBuilder<> &B, Value *BasePtr, unsigned ByteOffset) {
