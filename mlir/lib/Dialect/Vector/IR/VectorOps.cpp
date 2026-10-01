@@ -7157,21 +7157,15 @@ public:
     if (!broadcastOp)
       return failure();
 
-    auto srcVectorType = dyn_cast<VectorType>(broadcastOp.getSourceType());
-    bool srcIsScalar = !srcVectorType;
-
     // Replace Y = ShapeCast(Broadcast(X)) with Y = Broadcast(X)
     // Example
     // %0 = vector.broadcast %in : vector<3xf32> to vector<2x4x3xf32>
     // %1 = vector.shape_cast %0 : vector<2x4x3xf32> to vector<8x3xf32>
     // to
     // %1 = vector.broadcast %in : vector<3xf32> to vector<8x3xf32>
+    auto srcVectorType = dyn_cast<VectorType>(broadcastOp.getSourceType());
+    bool srcIsScalar = !srcVectorType;
     VectorType dstVectorType = shapeCastOp.getResultVectorType();
-    ArrayRef<int64_t> dstShape = dstVectorType.getShape();
-    ArrayRef<int64_t> srcShape =
-        srcIsScalar ? ArrayRef<int64_t>{} : srcVectorType.getShape();
-    ArrayRef<int64_t> broadcastShape =
-        broadcastOp.getResultVectorType().getShape();
 
     if (!srcIsScalar) {
       if (isBroadcastableTo(srcVectorType, dstVectorType) !=
@@ -7184,39 +7178,44 @@ public:
       // every non-unit dimension of `src` has the same linear stride in both
       // `broadcastShape` and `dstShape`.
       //
-      // In physical memory, a scalable dimension of static size D has runtime
-      // size D * vscale. A linear stride through trailing dimensions is thus:
+      // A scalable dimension of static size D has runtime size D * vscale.
+      // A linear stride through trailing dimensions is thus:
       //   stride = staticStride * (vscale ^ numScalableDims)
       // Since vscale is an unknown runtime quantity (vscale >= 1), both
       // staticStride and numScalableDims must match to guarantee stride
       // equivalence across all targets.
-      struct Stride {
-        int64_t staticStride = 1;
-        int numScalableDims = 0;
-
-        bool operator==(const Stride &other) const {
-          return staticStride == other.staticStride &&
-                 numScalableDims == other.numScalableDims;
-        }
-        bool operator!=(const Stride &other) const { return !(*this == other); }
-      };
-
-      Stride bcastStride, dstStride;
       VectorType broadcastVectorType = broadcastOp.getResultVectorType();
+      SmallVector<int64_t> bcastStrides =
+          computeStrides(broadcastVectorType.getShape());
+      SmallVector<int64_t> dstStrides =
+          computeStrides(dstVectorType.getShape());
       ArrayRef<bool> bcastScalable = broadcastVectorType.getScalableDims();
       ArrayRef<bool> dstScalable = dstVectorType.getScalableDims();
       ArrayRef<bool> srcScalable = srcVectorType.getScalableDims();
 
-      for (size_t i = 1, e = srcShape.size(); i <= e; ++i) {
-        bool isUnitDim = srcShape[e - i] == 1 && !srcScalable[e - i];
-        if (!isUnitDim && bcastStride != dstStride)
+      // Iterate from the innermost (trailing) dimension outward. `llvm::zip`
+      // stops once all `src` dimensions are visited, aligning each `src`
+      // dimension with the corresponding trailing dimension of `broadcast` and
+      // `dst`.
+      for (auto [idx, dims] : llvm::enumerate(llvm::zip(
+               llvm::reverse(srcVectorType.getShape()),
+               llvm::reverse(srcScalable), llvm::reverse(bcastStrides),
+               llvm::reverse(dstStrides)))) {
+        auto [srcDim, isSrcScalable, bcastStride, dstStride] = dims;
+        // Unit dimensions (fixed size 1; `[1]` has runtime size `vscale` and is
+        // not unit) only ever have index 0, so their stride does not contribute
+        // to the linear element offset.
+        bool isUnitDim = srcDim == 1 && !isSrcScalable;
+        if (isUnitDim)
+          continue;
+        // For the dimension at reverse index `idx`, its stride is the product
+        // of the `idx` more minor (trailing) dimensions. Verify that both the
+        // static stride factor and the `vscale` exponent (the number of
+        // scalable dimensions in the trailing `idx` dimensions) match.
+        if (bcastStride != dstStride ||
+            llvm::count(bcastScalable.take_back(idx), true) !=
+                llvm::count(dstScalable.take_back(idx), true))
           return failure();
-        bcastStride.staticStride *= broadcastShape[broadcastShape.size() - i];
-        if (bcastScalable[broadcastShape.size() - i])
-          bcastStride.numScalableDims++;
-        dstStride.staticStride *= dstShape[dstShape.size() - i];
-        if (dstScalable[dstShape.size() - i])
-          dstStride.numScalableDims++;
       }
     }
 
