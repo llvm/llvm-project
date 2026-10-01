@@ -49,15 +49,24 @@ bool arrayElemPtrOpaque(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                         APSInt &&Index, bool AllowReplace = true);
 
 /// Checks if a pointer is in range.
-template <typename T>
-bool CheckRange(InterpState &S, CodePtr OpPC, T Ptr, AccessKinds AK) {
+inline bool CheckRange(InterpState &S, CodePtr OpPC, PtrView Ptr,
+                       AccessKinds AK) {
   if (!Ptr.isOnePastEnd() && !Ptr.isZeroSizeArray())
     return true;
-  if (S.getLangOpts().CPlusPlus) {
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.FFDiag(Loc, diag::note_constexpr_access_past_end)
+  if (S.getLangOpts().CPlusPlus)
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_past_end)
         << AK << S.Current->getRange(OpPC);
-  }
+
+  return false;
+}
+inline bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                       AccessKinds AK) {
+  if (!Ptr.isOnePastEnd() && !Ptr.isZeroSizeArray())
+    return true;
+  if (S.getLangOpts().CPlusPlus)
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_past_end)
+        << AK << S.Current->getRange(OpPC);
+
   return false;
 }
 
@@ -126,14 +135,15 @@ static inline llvm::RoundingMode getRoundingMode(FPOptions FPO) {
 }
 
 inline bool Invalid(InterpState &S, CodePtr OpPC) {
-  const SourceLocation &Loc = S.Current->getLocation(OpPC);
-  S.FFDiag(Loc, diag::note_invalid_subexpr_in_const_expr)
-      << S.Current->getRange(OpPC);
+  if (S.diagnosing())
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_invalid_subexpr_in_const_expr)
+        << S.Current->getRange(OpPC);
   return false;
 }
 
 template <typename SizeT>
-bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT *NumElements,
+bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT NumElements,
                     unsigned ElemSize, bool IsNoThrow) {
 
   if (ElemSize == 0)
@@ -144,7 +154,7 @@ bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT *NumElements,
 
   // Can't be too many elements if the bitwidth of NumElements is lower than
   // that of Descriptor::MaxArrayElemBytes.
-  if ((NumElements->bitWidth() - NumElements->isSigned()) <
+  if ((NumElements.bitWidth() - NumElements.isSigned()) <
       (sizeof(Descriptor::MaxArrayElemBytes) * 8))
     return true;
 
@@ -154,18 +164,16 @@ bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT *NumElements,
   // constructing the array, we catch this here.
   SizeT MaxElements = SizeT::from(Descriptor::MaxArrayElemBytes / ElemSize);
   assert(MaxElements.isPositive());
-  if (NumElements->toAPSInt().getActiveBits() >
+  if (NumElements.toAPSInt().getActiveBits() >
           ConstantArrayType::getMaxSizeBits(S.getASTContext()) ||
-      *NumElements > MaxElements) {
+      NumElements > MaxElements) {
     if (!IsNoThrow) {
-      const SourceInfo &Loc = S.Current->getSource(OpPC);
-
-      if (NumElements->isSigned() && NumElements->isNegative()) {
-        S.FFDiag(Loc, diag::note_constexpr_new_negative)
-            << NumElements->toDiagnosticString(S.getASTContext());
+      if (NumElements.isSigned() && NumElements.isNegative()) {
+        S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_negative)
+            << NumElements.toDiagnosticString(S.getASTContext());
       } else {
-        S.FFDiag(Loc, diag::note_constexpr_new_too_large)
-            << NumElements->toDiagnosticString(S.getASTContext());
+        S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_too_large)
+            << NumElements.toDiagnosticString(S.getASTContext());
       }
     }
     return false;

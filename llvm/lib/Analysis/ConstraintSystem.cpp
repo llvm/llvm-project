@@ -279,6 +279,21 @@ ConstraintSystem::getSubSystem(ArrayRef<Entry> R) const {
   return {std::move(SubSystem), std::move(NewR)};
 }
 
+bool ConstraintSystem::isImpliedBySingleRow(ArrayRef<Entry> R) const {
+  int64_t C = getConstant(R);
+  if (hasConstantEntry(R))
+    R = R.drop_front();
+  return any_of(Constraints, [&](ArrayRef<Entry> Row) {
+    if (getConstant(Row) > C)
+      return false;
+    if (hasConstantEntry(Row))
+      Row = Row.drop_front();
+    return equal(Row, R, [](const Entry &A, const Entry &B) {
+      return A.Id == B.Id && A.Coefficient == B.Coefficient;
+    });
+  });
+}
+
 bool ConstraintSystem::isConditionImplied(RowTy R) const {
   // If all variable coefficients are 0, we have 'C >= 0'. If the constant is >=
   // 0, R is always true, regardless of the system.
