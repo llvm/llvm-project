@@ -572,7 +572,7 @@ bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clauseId,
           "%s clause is not allowed on %s directive in %s, %s"_warn_en_US,
           GetUpperName(clauseId, version), GetUpperName(dirId, version),
           ThisVersion(version), TryVersion(allowedInVersion));
-      SetAllowedClauseOverride(clauseId, dirId);
+      SetAllowedClauseOverride(clauseId, dirId, allowedInVersion);
     } else {
       context_.Say(clauseSource,
           "%s clause is not allowed on %s directive"_err_en_US,
@@ -584,17 +584,25 @@ bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clauseId,
   return true;
 }
 
-void OmpStructureChecker::SetAllowedClauseOverride(
-    llvm::omp::Clause clauseId, llvm::omp::Directive dirId) {
+// Mark clauseId as allowed on dirId. If dirId is a compound directive,
+// identify all leafs that allow the clause in version "since" or later,
+// and mark the clause as allowed on these leafs as well.
+// If dirId is not a compound directive, the "since" argument is ignored.
+void OmpStructureChecker::SetAllowedClauseOverride(llvm::omp::Clause clauseId,
+    llvm::omp::Directive dirId, llvm::omp::Version since) {
   SemanticOverrides &overrides{context_.GetOmpSemanticOverrides()};
   overrides.allowedClauses[clauseId].set(dirId);
 
   auto leafs{llvm::omp::getLeafConstructsOrSelf(dirId)};
   if (leafs.size() > 1) {
     llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+    assert(since > version && "\"since\" should be a future version");
     for (llvm::omp::Directive leaf : leafs) {
-      if (AllowedInFutureVersion(clauseId, leaf, version, &context_)) {
-        overrides.allowedClauses[clauseId].set(leaf);
+      if (auto allowedInVersion{
+              AllowedInFutureVersion(clauseId, leaf, version, &context_)}) {
+        if (allowedInVersion <= since) {
+          overrides.allowedClauses[clauseId].set(leaf);
+        }
       }
     }
   }
@@ -2846,7 +2854,7 @@ void OmpStructureChecker::Leave(const parser::OmpDeclareTargetDirective &x) {
       context_.Warn(common::UsageWarning::OpenMPDeprecated, toClause->source,
           "The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead."_warn_en_US);
       SetAllowedClauseOverride(llvm::omp::Clause::OMPC_to,
-          llvm::omp::Directive::OMPD_declare_target);
+          llvm::omp::Directive::OMPD_declare_target, /*ignored*/ version);
     }
   }
 
