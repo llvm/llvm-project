@@ -237,10 +237,6 @@ public:
   bool Pre(const parser::OpenACCDeclarativeConstruct &);
   void Post(const parser::OpenACCDeclarativeConstruct &) { PopAccContext(); }
 
-  void Post(const parser::AccDeclarativeDirective &) {
-    FinishAccDirectiveHeader();
-  }
-
   bool Pre(const parser::OpenACCRoutineConstruct &);
   bool Pre(const parser::AccBindClause &);
   void Post(const parser::OpenACCStandaloneDeclarativeConstruct &);
@@ -251,7 +247,9 @@ public:
 
   bool Pre(const parser::OpenACCLoopConstruct &);
   void Post(const parser::OpenACCLoopConstruct &) { PopAccContext(); }
-  void Post(const parser::AccLoopDirective &) { FinishAccDirectiveHeader(); }
+  void Post(const parser::AccBeginLoopDirective &) {
+    FinishAccDirectiveHeader();
+  }
 
   // TODO: We should probably also privatize ConcurrentBounds.
   template <typename A>
@@ -267,9 +265,9 @@ public:
   }
 
   bool Pre(const parser::OpenACCStandaloneConstruct &);
-  void Post(const parser::OpenACCStandaloneConstruct &) { PopAccContext(); }
-  void Post(const parser::AccStandaloneDirective &) {
+  void Post(const parser::OpenACCStandaloneConstruct &) {
     FinishAccDirectiveHeader();
+    PopAccContext();
   }
 
   bool Pre(const parser::OpenACCWaitConstruct &);
@@ -1334,6 +1332,7 @@ static const parser::AccObjectList &GetAccObjectList(
 
 void AccAttributeVisitor::Post(
     const parser::OpenACCStandaloneDeclarativeConstruct &x) {
+  FinishAccDirectiveHeader();
   const auto &clauseList = std::get<parser::AccClauseList>(x.t);
   for (const auto &clause : clauseList.v) {
     // Restriction - line 2414
