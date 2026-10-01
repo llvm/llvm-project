@@ -6488,7 +6488,7 @@ def warn_attr_abi_tag_namespace : Warning<
   InGroup<IgnoredAttributes>;
 def warn_abi_tag_ignored_different : Warning<
   "%select{no 'abi_tag'|'abi_tag' %1}0 prevents applying 'abi_tag' %2 later">,
-  InGroup<IgnoredAbiTagAttr>;
+  InGroup<DiagGroup<"abi-tag-redeclaration">>;
 def err_abi_tag_on_redeclaration : Error<
   "cannot add 'abi_tag' attribute in a redeclaration">;
 def err_new_abi_tag_on_redeclaration : Error<
