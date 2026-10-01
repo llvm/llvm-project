@@ -355,7 +355,7 @@ public:
     InsertPointGuard &operator=(const InsertPointGuard &) = delete;
 
     ~InsertPointGuard() {
-      Builder.restoreIP(InsertPoint(Point));
+      Builder.restoreIP(Point);
       Builder.SetCurrentDebugLocation(DbgLoc);
     }
   };

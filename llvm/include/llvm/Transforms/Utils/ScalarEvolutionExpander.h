@@ -171,7 +171,7 @@ class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
       // ScalarEvolutionExpander.
       assert(SE->InsertPointGuards.back() == this);
       SE->InsertPointGuards.pop_back();
-      Builder.restoreIP(IRBuilderBase::InsertPoint(Point));
+      Builder.restoreIP(Point);
       Builder.SetCurrentDebugLocation(DbgLoc);
     }
 
