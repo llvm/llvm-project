@@ -468,16 +468,14 @@ define void @severalPromotions(ptr %addr1, ptr %addr2, i8 %a, i32 %b) {
 ; OPT-LABEL: define void @severalPromotions(
 ; OPT-SAME: ptr [[ADDR1:%.*]], ptr [[ADDR2:%.*]], i8 [[A:%.*]], i32 [[B:%.*]]) {
 ; OPT-NEXT:    [[LD:%.*]] = load i8, ptr [[ADDR1]], align 1
-; OPT-NEXT:    [[PROMOTED9:%.*]] = zext i8 [[LD]] to i64
 ; OPT-NEXT:    [[PROMOTED6:%.*]] = zext i8 [[LD]] to i64
 ; OPT-NEXT:    [[LD2:%.*]] = load i32, ptr [[ADDR2]], align 4
 ; OPT-NEXT:    [[PROMOTED:%.*]] = sext i32 [[LD2]] to i64
-; OPT-NEXT:    [[PROMOTED2:%.*]] = zext i8 [[LD]] to i64
-; OPT-NEXT:    [[ADD:%.*]] = add nsw i64 [[PROMOTED]], [[PROMOTED2]]
+; OPT-NEXT:    [[ADD:%.*]] = add nsw i64 [[PROMOTED]], [[PROMOTED6]]
 ; OPT-NEXT:    [[PROMOTED5:%.*]] = zext i8 [[A]] to i64
 ; OPT-NEXT:    [[ADDZA:%.*]] = add nsw i64 [[PROMOTED5]], [[PROMOTED6]]
 ; OPT-NEXT:    [[PROMOTED7:%.*]] = sext i32 [[B]] to i64
-; OPT-NEXT:    [[ADDB:%.*]] = add nsw i64 [[PROMOTED7]], [[PROMOTED9]]
+; OPT-NEXT:    [[ADDB:%.*]] = add nsw i64 [[PROMOTED7]], [[PROMOTED6]]
 ; OPT-NEXT:    call void @dummy(i64 [[ADD]], i64 [[ADDZA]], i64 [[ADDB]])
 ; OPT-NEXT:    ret void
 ;
@@ -570,7 +568,7 @@ define void @promoteTwoArgZextWithSourceExtendedTwice(ptr %p, ptr %q, i32 %b, pt
 ; OPT-NEXT:  [[ENTRY:.*:]]
 ; OPT-NEXT:    [[T:%.*]] = load i8, ptr [[P]], align 1
 ; OPT-NEXT:    [[PROMOTED1:%.*]] = zext i8 [[T]] to i64
-; OPT-NEXT:    [[ZEXTT:%.*]] = zext i8 [[T]] to i32
+; OPT-NEXT:    [[ZEXTT:%.*]] = trunc i64 [[PROMOTED1]] to i32
 ; OPT-NEXT:    [[ADD:%.*]] = add nuw i32 [[ZEXTT]], [[B]]
 ; OPT-NEXT:    [[ADD2:%.*]] = add nuw i64 [[PROMOTED1]], 12
 ; OPT-NEXT:    store i32 [[ADD]], ptr [[ADDR]], align 4
