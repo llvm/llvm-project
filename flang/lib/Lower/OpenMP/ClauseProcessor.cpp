@@ -1804,7 +1804,14 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result,
 
     for (const omp::Object &object : objects) {
       semantics::Symbol *sym = object.sym();
-      const mlir::Value variable = converter.getSymbolAddress(*sym);
+      mlir::Value variable = converter.getSymbolAddress(*sym);
+      // Pass an allocatable's data address so it matches linear_var_types.
+      if (!isDeclareSimd && semantics::IsAllocatable(sym->GetUltimate())) {
+        fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+        mlir::Location loc = converter.getCurrentLocation();
+        mlir::Value box = fir::LoadOp::create(firOpBuilder, loc, variable);
+        variable = fir::BoxAddrOp::create(firOpBuilder, loc, box);
+      }
       result.linearVars.push_back(variable);
       mlir::Type ty = converter.genType(*sym);
       typeAttrs.push_back(mlir::TypeAttr::get(ty));
