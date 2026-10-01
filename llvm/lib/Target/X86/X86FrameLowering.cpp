@@ -2877,6 +2877,10 @@ void X86FrameLowering::emitWin64ReserveExit(
   const bool HasFP = hasFP(MF);
   const int64_t R = -X86FI->getTCReturnAddrDelta();
   const int64_t Off = FPDiff + R;
+  // A return that pops too many bytes for ret's 16-bit immediate: FPDiff is
+  // that number of bytes, and the return address is moved up past them instead.
+  const bool IsLargePopReturn =
+      Terminator->getOpcode() == X86::RET && FPDiff != 0;
   const int64_t StackSize = MFI.getStackSize();
   const DebugLoc DL = Terminator->getDebugLoc();
   const Register FramePtr = TRI->getFrameRegister(MF);
@@ -2955,7 +2959,7 @@ void X86FrameLowering::emitWin64ReserveExit(
           .setMIFlag(MachineInstr::FrameDestroy);
     }
 
-    if (NumPopped != 0) {
+    if (NumPopped != 0 || IsLargePopReturn) {
       MCRegister Scratch = findDeadScratchReg(
           MBB, Terminator, TRI, X86::GR64_NOSPRegClass, Deferred.LiveSources);
       if (!Scratch)
@@ -2965,6 +2969,22 @@ void X86FrameLowering::emitWin64ReserveExit(
       auto Disp = [&](int64_t EntryOff) {
         return EntryOff + StackSize - (HasFP ? (int64_t)SEHFrameOffset : 0);
       };
+      if (IsLargePopReturn) {
+        // The return address goes just past the bytes this function pops, where
+        // a plain ret takes it from. Those bytes are the caller's arguments,
+        // which are dead once the function returns.
+        if (!isInt<32>(Disp(FPDiff)))
+          report_fatal_error("Stack argument area too large for a return under "
+                             "win64");
+        addRegOffset(
+            BuildMI(MBB, Terminator, DL, TII.get(X86::MOV64rm), Scratch), Base,
+            false, Disp(0))
+            .setMIFlag(MachineInstr::FrameDestroy);
+        addRegOffset(BuildMI(MBB, Terminator, DL, TII.get(X86::MOV64mr)), Base,
+                     false, Disp(FPDiff))
+            .addReg(Scratch, RegState::Kill)
+            .setMIFlag(MachineInstr::FrameDestroy);
+      }
       // Copy each popped register to where the epilogue will pop it from. The
       // copy that lands on the return address slot goes last, so that slot is
       // overwritten by the final instruction before the epilogue.
@@ -3020,9 +3040,12 @@ void X86FrameLowering::emitWin64ReserveExit(
   if (MF.hasWinCFI())
     BuildMI(MBB, Terminator, DL, TII.get(X86::SEH_EndEpilogue));
 
-  // The adjustment is done here, so expanding the tail call must add nothing.
+  // The adjustment is done here, so expanding the tail call must add nothing,
+  // and the return no longer pops anything.
   if (isTailCallOpcode(Terminator->getOpcode()))
     getTCReturnStackAdjust(*Terminator).setImm(-R);
+  else if (IsLargePopReturn)
+    Terminator->getOperand(0).setImm(0);
 }
 
 void X86FrameLowering::emitEpilogue(MachineFunction &MF,
@@ -3125,16 +3148,25 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   bool SinkStores = false;
   if (NeedsWin64CFI && !IsFunclet && Terminator != MBB.end() &&
       isWin64ReserveExitTerminator(*Terminator)) {
-    int64_t FPDiff = isTailCallOpcode(Terminator->getOpcode())
-                         ? getTCReturnStackAdjust(*Terminator).getImm()
-                         : 0;
+    int64_t FPDiff = 0;
+    bool IsLargePopReturn = false;
+    if (isTailCallOpcode(Terminator->getOpcode())) {
+      FPDiff = getTCReturnStackAdjust(*Terminator).getImm();
+    } else if (Terminator->getOpcode() == X86::RET &&
+               !isUInt<16>(Terminator->getOperand(0).getImm())) {
+      FPDiff = Terminator->getOperand(0).getImm();
+      IsLargePopReturn = true;
+    }
     if (FPDiff + (int64_t)TailCallArgReserveSize != 0) {
       if (IsWin64UnwindV3 ||
           MF.getFunction().getParent()->getWinX64EHUnwindMode() ==
               WinX64EHUnwindMode::V2Required)
-        report_fatal_error("Can't handle guaranteed tail calls that change the "
-                           "stack argument size with Windows x64 unwind v2 or "
-                           "v3 yet");
+        report_fatal_error(
+            IsLargePopReturn
+                ? "Can't handle a return that pops more than 65535 bytes with "
+                  "Windows x64 unwind v2 or v3 yet"
+                : "Can't handle guaranteed tail calls that change the stack "
+                  "argument size with Windows x64 unwind v2 or v3 yet");
       emitWin64ReserveExit(MF, MBB, Terminator, FPDiff, SEHFrameOffset);
       return;
     }
