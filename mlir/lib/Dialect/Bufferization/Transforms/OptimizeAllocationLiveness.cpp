@@ -154,19 +154,31 @@ public:
           }
         }
       }
-      if (lastUser == nullptr) {
-        LDBG() << "Last user not found ";
-        LDBG() << "Moved dealloc op after alloc: " << *allocOp;
-        deallocOp->moveAfter(allocOp);
-        return WalkResult::advance();
-      }
-      LDBG() << "Last user found: " << *lastUser;
-      assert(lastUser->getBlock() == allocOp->getBlock());
-      assert(lastUser->getBlock() == deallocOp->getBlock());
-      // Move the dealloc op after the last user.
-      deallocOp->moveAfter(lastUser);
-      LDBG() << "Moved dealloc op after: " << *lastUser;
 
+      Operation *lastDeallocOperandDef = nullptr;
+      for (auto operand : deallocOp->getOperands()) {
+        auto *operandDefOp = operand.getDefiningOp();
+        if (!operandDefOp)
+          continue;
+        auto *topUser =
+            allocOp->getBlock()->findAncestorOpInBlock(*operandDefOp);
+        if (!lastDeallocOperandDef ||
+            happensBefore(lastDeallocOperandDef, topUser)) {
+          lastDeallocOperandDef = topUser;
+        }
+      }
+
+      Operation *target = lastUser;
+      if (!target || (lastDeallocOperandDef &&
+                      happensBefore(target, lastDeallocOperandDef)))
+        target = lastDeallocOperandDef;
+
+      if (!target)
+        target = allocOp;
+
+      LDBG() << "Moving dealloc op after: " << *target;
+
+      deallocOp->moveAfter(target);
       return WalkResult::advance();
     });
   }
