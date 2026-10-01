@@ -36,8 +36,9 @@ verifyCoopMatrixAccess(Operation *op, Type pointer, Type coopMatrix,
   // Per the SPIR-V spec, Stride is required for the RowMajor and ColumnMajor
   // layouts.
   if (!stride &&
-      (matrixLayout == spirv::CooperativeMatrixLayoutKHR::RowMajor ||
-       matrixLayout == spirv::CooperativeMatrixLayoutKHR::ColumnMajor)) {
+      llvm::is_contained({spirv::CooperativeMatrixLayoutKHR::RowMajor,
+                          spirv::CooperativeMatrixLayoutKHR::ColumnMajor},
+                         matrixLayout)) {
     return op->emitOpError("Stride is required for '")
            << stringifyCooperativeMatrixLayoutKHR(matrixLayout) << "'";
   }
