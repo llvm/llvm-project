@@ -38,9 +38,9 @@ def CastOpInterface : OpInterface<"CastOpInterface"> {
 
   let extraTraitClassDeclaration = [{
     /// Attempt to fold the given cast operation.
-    static LogicalResult foldTrait(Operation *op, ArrayRef<Attribute> operands,
-                                   SmallVectorImpl<OpFoldResult> &results) {
-      return impl::foldCastInterfaceOp(op, operands, results);
+    static OpFoldResults foldTrait(Operation *op,
+                                   ArrayRef<Attribute> operands) {
+      return impl::foldCastInterfaceOp(op, operands);
     }
   }];
   let verify = [{
