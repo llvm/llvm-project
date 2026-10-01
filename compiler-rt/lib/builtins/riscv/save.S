@@ -190,8 +190,6 @@ END_COMPILERRT_FUNCTION(__riscv_save_3)
 // overlapping function.
 DEFINE_COMPILERRT_OVELAPPING_FUNCTION(__riscv_save_1)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__riscv_save_0, __riscv_save_1)
-__riscv_save_1:
-__riscv_save_0:
   addi   sp, sp, -16
   sd     s0, 0(sp)
   sd     ra, 8(sp)
