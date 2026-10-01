@@ -12,11 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Interpreter/ErrorRecovery.h"
+
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclContextInternals.h"
-#include "clang/Interpreter/ErrorRecovery.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/Sema/Sema.h"
 
 namespace clang {

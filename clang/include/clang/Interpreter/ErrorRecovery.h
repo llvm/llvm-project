@@ -19,6 +19,8 @@
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 #include "llvm/ADT/BitVector.h"
 #include <variant>
 
@@ -193,8 +195,6 @@ private:
     using RedeclarableTemplateDecl::Common;
   };
 
-  // Common is `mutable`, so this is legal to call through a const
-  // reference too -- no const_cast needed at any call site.
   static void clearCommonPtr(const RedeclarableTemplateDecl &RT) {
     static_cast<const TemplateCommonAccess &>(RT).Common = nullptr;
   }
@@ -287,7 +287,7 @@ protected:
   }
 
   // True if CanonInjectedTST could still be cached later. Only valid to
-  // call once Common itself is confirmed to exist (see needToTrackCommonPtr).
+  // call once Common itself is confirmed to exist.
   static bool isTemplateCanonInjectedTSTValid(const ClassTemplateDecl *CTD) {
     auto *Ptr =
         static_cast<const ClassTemplateCommonAccess *>(CTD)->getCommonPtr();

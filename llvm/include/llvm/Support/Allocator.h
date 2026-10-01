@@ -250,39 +250,27 @@ public:
   size_t GetNumSlabs() const { return Slabs.size() + CustomSizedSlabs.size(); }
 
   SlabCheckPoint CheckPoint() const {
-    return {static_cast<unsigned int>(Slabs.empty() ? 0u : (Slabs.size() - 1)),
+    return {Slabs.empty() ? 0u : static_cast<unsigned int>(Slabs.size() - 1),
             CurPtr, static_cast<unsigned int>(CustomSizedSlabs.size())};
   }
 
   bool isAfterCheckpoint(const void *Ptr, const SlabCheckPoint &CP) const {
     const char *P = static_cast<const char *>(Ptr);
 
-    // Regular (shared, bump-allocated) slabs.
-    if (!CP.CurPtr) {
-      // Checkpoint predates this allocator's first regular slab -- every
-      // regular slab that exists now was allocated after it.
-      for (unsigned I = 0; I < Slabs.size(); ++I) {
-        const char *Start = static_cast<const char *>(Slabs[I]);
-        if (P >= Start && P < Start + computeSlabSize(I))
-          return true;
-      }
-    } else {
-      if (CP.SlabIdx < Slabs.size()) {
-        const char *Start = static_cast<const char *>(Slabs[CP.SlabIdx]);
-        if (P >= CP.CurPtr && P < Start + computeSlabSize(CP.SlabIdx))
-          return true;
-      }
-      for (unsigned I = CP.SlabIdx + 1; I < Slabs.size(); ++I) {
-        const char *Start = static_cast<const char *>(Slabs[I]);
-        if (P >= Start && P < (Start + computeSlabSize(I)))
-          return true;
-      }
+    // From the checkpoint's slab onward, memory after CurPtr is new.
+    // All later slabs are new. If CurPtr is null, slab 0 is all new.
+    for (unsigned I = CP.SlabIdx, E = Slabs.size(); I < E; ++I) {
+      const char *S = static_cast<const char *>(Slabs[I]);
+      const char *Lo = (I == CP.SlabIdx && CP.CurPtr) ? CP.CurPtr : S;
+      if (P >= Lo && P < S + computeSlabSize(I))
+        return true;
     }
 
-    for (unsigned I = CP.CustomSlabCount; I < CustomSizedSlabs.size(); ++I) {
-      const char *Start = static_cast<const char *>(CustomSizedSlabs[I].first);
-      size_t Size = CustomSizedSlabs[I].second;
-      if (P >= Start && P < Start + Size)
+    // Custom-sized slabs are allocated whole, so the index alone decides.
+    for (unsigned I = CP.CustomSlabCount, E = CustomSizedSlabs.size(); I < E;
+         ++I) {
+      const char *S = static_cast<const char *>(CustomSizedSlabs[I].first);
+      if (P >= S && P < S + CustomSizedSlabs[I].second)
         return true;
     }
 
