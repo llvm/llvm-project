@@ -15,6 +15,23 @@ def DialectFoldInterface : DialectInterface<"DialectFoldInterface"> {
         Registered fallback fold for the dialect. Like the fold hook of each
         operation, it attempts to fold the operation with the specified constant
         operand values - the elements in "operands" will correspond directly to
+        the operands of the operation, but may be null if non-constant. The
+        result has the same contract as the fold hook of an operation. The
+        default implementation calls the `fold` method with a `results` vector,
+        with its strict contract.
+      }],
+      "::mlir::OpFoldResults", "fold",
+      (ins "::mlir::Operation *":$op,
+           "::mlir::ArrayRef<::mlir::Attribute>":$operands),
+      [{
+        return ::mlir::detail::foldWithLegacyDialectFoldInterface(
+            this, op, operands);
+      }]
+    >,
+    InterfaceMethod<[{
+        Registered fallback fold for the dialect. Like the fold hook of each
+        operation, it attempts to fold the operation with the specified constant
+        operand values - the elements in "operands" will correspond directly to
         the operands of the operation, but may be null if non-constant.  If
         folding is successful, this fills in the `results` vector.  If not, this
         returns failure and `results` is unspecified.
