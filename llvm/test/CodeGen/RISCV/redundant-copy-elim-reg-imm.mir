@@ -23,13 +23,13 @@ body:             |
   ; CHECK-NEXT:   liveins: $x10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $x11 = ADDI $x0, 7
-  ; CHECK-NEXT:   BEQ $x11, killed $x10, %bb.1
+  ; CHECK-NEXT:   BEQ $x11, $x10, %bb.1
   ; CHECK-NEXT:   PseudoBR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT:   liveins: $x10
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $x10 = ADDI $x0, 7
   ; CHECK-NEXT:   PseudoRET implicit $x10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -59,11 +59,12 @@ body:             |
   ; CHECK-NEXT:   liveins: $x10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $x11 = QC_LI 9
-  ; CHECK-NEXT:   BNE killed $x10, $x11, %bb.2
+  ; CHECK-NEXT:   BNE $x10, $x11, %bb.2
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   $x10 = ADDI $x0, 9
+  ; CHECK-NEXT:   liveins: $x10
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   PseudoRET implicit $x10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -274,14 +275,13 @@ body:             |
   ; CHECK-NEXT:   liveins: $x10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $x11 = ADDI $x0, 7
-  ; CHECK-NEXT:   BEQ killed $x10, $x11, %bb.1
+  ; CHECK-NEXT:   BEQ $x10, $x11, %bb.1
   ; CHECK-NEXT:   PseudoBR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $x10
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $x12 = ADDI killed $x10, 1
-  ; CHECK-NEXT:   $x10 = ADDI $x0, 7
+  ; CHECK-NEXT:   $x12 = ADDI $x10, 1
   ; CHECK-NEXT:   PseudoRET implicit $x10, implicit $x12
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -314,11 +314,12 @@ body:             |
   ; CHECK-NEXT:   liveins: $x10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $x11 = ADDI $x0, 9
-  ; CHECK-NEXT:   BNE $x11, killed $x10, %bb.2
+  ; CHECK-NEXT:   BNE $x11, $x10, %bb.2
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   $x10 = ADDI $x0, 9
+  ; CHECK-NEXT:   liveins: $x10
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   PseudoRET implicit $x10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
