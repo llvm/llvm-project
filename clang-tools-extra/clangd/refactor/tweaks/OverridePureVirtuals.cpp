@@ -92,7 +92,8 @@ namespace clang {
 namespace clangd {
 namespace {
 
-// This function removes the "virtual" and the "= 0" at the end;
+// This function removes the "virtual" and the "= 0" at the end while
+// preserving original formatting and attributes.
 // e.g.:
 //   "virtual void foo(int var = 0) = 0"  // input.
 //   "void foo(int var = 0)"              // output.
@@ -101,30 +102,63 @@ std::string removePureVirtualSyntax(const std::string &MethodDecl,
   assert(!MethodDecl.empty());
 
   TokenStream TS = lex(MethodDecl, LangOpts);
+  auto Tokens = TS.tokens();
 
-  std::string DeclString;
-  for (const clangd::Token &Tk : TS.tokens()) {
-    if (Tk.Kind == clang::tok::raw_identifier && Tk.text() == "virtual")
+  // Find the pure-specifier (= 0) by searching backwards.
+  size_t PureEqualIndex = Tokens.size();
+  for (int J = static_cast<int>(Tokens.size()) - 1; J >= 1; --J) {
+    auto Kind = Tokens[J].Kind;
+    if (Kind == tok::eof || Kind == tok::semi || Kind == tok::comment)
       continue;
 
-    // If the ending two tokens are "= 0", we break here and we already have the
-    // method's string without the pure virtual syntax.
-    const auto &Next = Tk.next();
-    if (Next.next().Kind == tok::eof && Tk.Kind == clang::tok::equal &&
-        Next.text() == "0")
+    if (Tokens[J].text() == "0" && Tokens[J - 1].Kind == tok::equal)
+      PureEqualIndex = J - 1;
+
+    break;
+  }
+
+  std::string Result;
+  const char *Pos = MethodDecl.data();
+  const char *End = MethodDecl.data() + MethodDecl.size();
+
+  // Build the cleaned declaration by iterating through tokens:
+  // 1. Skip 'virtual' keyword;
+  // 2. Skip pure-specifier (= 0) and trailing semicolon;
+  // 3. Preserve all other tokens and their trivia (whitespace/comments).
+  for (size_t I = 0; I < Tokens.size(); ++I) {
+    const auto &Tk = Tokens[I];
+    if (Tk.Kind == tok::eof)
       break;
 
-    DeclString += Tk.text();
-    if (Tk.Kind != tok::l_paren && Next.Kind != tok::comma &&
-        Next.Kind != tok::r_paren && Next.Kind != tok::l_paren &&
-        Tk.Kind != tok::coloncolon && Next.Kind != tok::coloncolon)
-      DeclString += ' ';
-  }
-  // Trim the last whitespace.
-  if (DeclString.back() == ' ')
-    DeclString.pop_back();
+    // Skip 'virtual' keyword.
+    if (Tk.Kind == tok::raw_identifier && Tk.text() == "virtual") {
+      if (Tk.text().begin() > Pos)
+        Result.append(Pos, Tk.text().begin() - Pos);
+      Pos = Tk.text().end();
+      while (Pos < End && (*Pos == ' ' || *Pos == '\t'))
+        ++Pos;
+      continue;
+    }
 
-  return DeclString;
+    // Skip pure-specifier (= 0).
+    if (I == PureEqualIndex) {
+      if (Tk.text().begin() > Pos)
+        Result.append(Pos, Tk.text().begin() - Pos);
+      Pos = Tokens[I + 1].text().end();
+      if (I + 2 < Tokens.size() && Tokens[I + 1].Kind == tok::semi)
+        Pos = Tokens[I + 2].text().end();
+      continue;
+    }
+
+    // Keep token and its trivia.
+    if (Tk.text().end() > Pos) {
+      Result.append(Pos, Tk.text().end() - Pos);
+      Pos = Tk.text().end();
+    }
+  }
+
+  // trim() handles any trailing spaces left behind by skipping "= 0".
+  return llvm::StringRef(Result).trim().str();
 }
 
 class OverridePureVirtuals final : public Tweak {
@@ -266,9 +300,20 @@ void OverridePureVirtuals::collectMissingPureVirtuals() {
 
 std::string generateOverrideString(const CXXMethodDecl *Method,
                                    const LangOptions &LangOpts) {
-  std::string MethodDecl;
-  auto OS = llvm::raw_string_ostream(MethodDecl);
-  Method->print(OS);
+  // Try to get the original source text first to preserve original formatting,
+  // comments, and attributes (e.g., [[nodiscard]]). This is important because
+  // printing the declaration via AST can lose formatting and some attributes.
+  const SourceManager &SM = Method->getASTContext().getSourceManager();
+  auto Range = CharSourceRange::getTokenRange(Method->getSourceRange());
+  std::string MethodDecl = Lexer::getSourceText(Range, SM, LangOpts).str();
+
+  // Fallback to printing if source text is unavailable (e.g., for
+  // macro-generated methods that have no source location).
+  if (MethodDecl.empty()) {
+    PrintingPolicy Policy(LangOpts);
+    auto OS = llvm::raw_string_ostream(MethodDecl);
+    Method->print(OS, Policy);
+  }
 
   return llvm::formatv(
              "\n  {0} override {{\n"
