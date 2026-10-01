@@ -129,7 +129,10 @@ public:
   const char *getName() const override { return GETNAME(TARGET_NAME); }
 
   Expected<bool> isELFCompatible(uint32_t DeviceId,
-                                 StringRef Image) const override;
+                                 StringRef Image) const override {
+    // ELF images are not supported. Images must be SPIR-V or OffloadBinary.
+    return false;
+  }
 
   Error flushQueueImpl(omp_interop_val_t *Interop) override;
   Error syncBarrierImpl(omp_interop_val_t *Interop) override;
