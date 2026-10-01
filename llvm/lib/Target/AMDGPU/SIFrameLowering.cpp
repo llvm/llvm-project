@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/Target/TargetMachine.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -53,7 +54,7 @@ static MCRegister findUnusedRegister(MachineRegisterInfo &MRI,
 static MCCFIInstruction createScaledCFAInPrivateWave(const GCNSubtarget &ST,
                                                      int64_t DwarfStackPtrReg) {
   assert(ST.hasFlatScratchEnabled());
-  assert(DwarfStackPtrReg >= 0);
+  assert(isUInt<32>(DwarfStackPtrReg) && "invalid DWARF register");
 
   // When flat scratch is enabled, the stack pointer is an address in the
   // private_lane DWARF address space (i.e. swizzled), but in order to
@@ -61,9 +62,11 @@ static MCCFIInstruction createScaledCFAInPrivateWave(const GCNSubtarget &ST,
   // registers we want to define the CFA to be an address in the private_wave
   // DWARF address space (i.e. unswizzled). To achieve this we scale the stack
   // pointer by the wavefront size.
-  return MCCFIInstruction::createLLVMDefCfaAddressScaled(
-      nullptr, DwarfStackPtrReg, SGPRByteSize, ST.getWavefrontSize(),
-      dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave);
+  return MCCFIInstruction::createLLVMDefCfaAddressLinear(
+      nullptr,
+      MCCFIInstruction::CfaRegisterTerm{static_cast<unsigned>(DwarfStackPtrReg),
+                                        SGPRByteSize, ST.getWavefrontSize()},
+      0, dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave);
 }
 
 void SIFrameLowering::emitDefCFA(MachineBasicBlock &MBB,
@@ -748,8 +751,9 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     // On entry the SP/FP are not set up, so we need to define the CFA in terms
     // of a literal location expression.
     buildCFI(MBB, I, DL,
-             MCCFIInstruction::createLLVMDefCfaAddressConstant(
-                 nullptr, 0, dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave));
+             MCCFIInstruction::createLLVMDefCfaAddressLinear(
+                 nullptr, std::nullopt, 0,
+                 dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave));
     // Unwinding halts when the return address (PC) is undefined.
     buildCFI(MBB, I, DL,
              MCCFIInstruction::createUndefined(

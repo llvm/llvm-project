@@ -166,8 +166,7 @@ dwarf::CFIProgram DWARFCFIState::convert(MCCFIInstruction Directive) {
     CFIP.addInstruction(dwarf::DW_CFA_val_offset, Directive.getRegister(),
                         Directive.getOffset());
     break;
-  case MCCFIInstruction::OpLLVMDefCfaAddressConstant:
-  case MCCFIInstruction::OpLLVMDefCfaAddressScaled:
+  case MCCFIInstruction::OpLLVMDefCfaAddressLinear:
   case MCCFIInstruction::OpLLVMRegisterPair:
   case MCCFIInstruction::OpLLVMVectorRegisters:
   case MCCFIInstruction::OpLLVMVectorOffset:

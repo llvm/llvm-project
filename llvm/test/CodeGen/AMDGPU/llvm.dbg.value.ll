@@ -22,7 +22,7 @@ entry:
 
 ; GCN-LABEL: {{^}}only_undef_dbg_value:
 ; NOOPT: ;DEBUG_VALUE: test_debug_value:globalptr_arg <- undef
-; NOOPT-NEXT: .cfi_llvm_def_cfa_address_constant 0, 6
+; NOOPT-NEXT: .cfi_llvm_def_cfa_address_linear noreg, 0, 0, 0, 6
 ; NOOPT-NEXT: .cfi_undefined 16
 ; NOOPT-NEXT: s_endpgm
 

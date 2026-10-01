@@ -414,8 +414,7 @@ class SFrameEmitterImpl {
       // This is a string of bytes that contains an arbitrary dwarf-expression
       // that may or may not affect unwind info.
       return isCFIEscapeSafe(FDE, FRE, CFI);
-    case MCCFIInstruction::OpLLVMDefCfaAddressConstant:
-    case MCCFIInstruction::OpLLVMDefCfaAddressScaled:
+    case MCCFIInstruction::OpLLVMDefCfaAddressLinear:
       Streamer.getContext().reportWarning(
           CFI.getLoc(),
           "skipping SFrame FDE; CFA expression is not representable");

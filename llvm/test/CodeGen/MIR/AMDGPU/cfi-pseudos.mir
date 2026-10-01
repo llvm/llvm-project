@@ -5,12 +5,15 @@
 # Verify we can parse and emit these CFI pseudos.
 
 # CHECK-LABEL: name: test
-# CHECK: CFI_INSTRUCTION llvm_def_cfa_address_constant 0, 6
-# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_scaled $sgpr32, 4, 64, 6
-# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_scaled $sgpr32, 4, 0, 6
-# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_scaled $sgpr32, 4, 1, 6
-# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_scaled $sgpr32, 4, 3, 6
-# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_scaled $sgpr32, 4, 4294967295, 6
+# CHECK: CFI_INSTRUCTION llvm_def_cfa_address_linear $noreg, 0, 0, 0, 6
+# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_linear $sgpr32, 4, 64, 0, 6
+# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_linear $sgpr32, 4, 4294967295, 0, 6
+# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_linear $noreg, 0, 0, -17, 6
+# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_linear $noreg, 0, 0, 9223372036854775807, 6
+# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_linear $noreg, 0, 0, -9223372036854775808, 6
+# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_linear $sgpr32, 4, 32, -17, 6
+# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_linear $sgpr0, 1, 1, 0, 0
+# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_linear $sgpr32, 255, 2147483648, 0, 4294967295
 # CHECK-NEXT: CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
 # CHECK-NEXT: CFI_INSTRUCTION llvm_vector_registers $sgpr4, $vgpr3, 0, 32
 # CHECK-NEXT: CFI_INSTRUCTION llvm_vector_registers $pc_reg, $vgpr62, 0, 32, $vgpr62, 1, 32
@@ -20,12 +23,15 @@
 name: test
 body: |
   bb.0:
-    CFI_INSTRUCTION llvm_def_cfa_address_constant 0, 6
-    CFI_INSTRUCTION llvm_def_cfa_address_scaled $sgpr32, 4, 64, 6
-    CFI_INSTRUCTION llvm_def_cfa_address_scaled $sgpr32, 4, 0, 6
-    CFI_INSTRUCTION llvm_def_cfa_address_scaled $sgpr32, 4, 1, 6
-    CFI_INSTRUCTION llvm_def_cfa_address_scaled $sgpr32, 4, 3, 6
-    CFI_INSTRUCTION llvm_def_cfa_address_scaled $sgpr32, 4, 4294967295, 6
+    CFI_INSTRUCTION llvm_def_cfa_address_linear $noreg, 0, 0, 0, 6
+    CFI_INSTRUCTION llvm_def_cfa_address_linear $sgpr32, 4, 64, 0, 6
+    CFI_INSTRUCTION llvm_def_cfa_address_linear $sgpr32, 4, 4294967295, 0, 6
+    CFI_INSTRUCTION llvm_def_cfa_address_linear $noreg, 0, 0, -17, 6
+    CFI_INSTRUCTION llvm_def_cfa_address_linear $noreg, 0, 0, 9223372036854775807, 6
+    CFI_INSTRUCTION llvm_def_cfa_address_linear $noreg, 0, 0, -9223372036854775808, 6
+    CFI_INSTRUCTION llvm_def_cfa_address_linear $sgpr32, 4, 32, -17, 6
+    CFI_INSTRUCTION llvm_def_cfa_address_linear $sgpr0, 1, 1, 0, 0
+    CFI_INSTRUCTION llvm_def_cfa_address_linear $sgpr32, 255, 2147483648, 0, 4294967295
     CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     CFI_INSTRUCTION llvm_vector_registers $sgpr4, $vgpr3, 0, 32
     CFI_INSTRUCTION llvm_vector_registers $pc_reg, $vgpr62, 0, 32, $vgpr62, 1, 32
