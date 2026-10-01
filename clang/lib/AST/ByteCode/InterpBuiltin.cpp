@@ -4600,21 +4600,6 @@ static bool interp_builtin_ia32_cvt_vector_to_int(InterpState &S, CodePtr OpPC,
 
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
-  const ASTContext &ASTCtx = S.getASTContext();
-
-  // BuiltinID is the raw ID baked into the bytecode. The "is constant
-  // evaluated" gate needs the raw ID so that auxiliary-target IDs resolve into
-  // the correct (aux-target) builtin records.
-  if (!ASTCtx.BuiltinInfo.isConstantEvaluated(BuiltinID))
-    return Invalid(S, OpPC);
-
-  // Convert an auxiliary x86 target builtin ID to its canonical X86::BI* value
-  // so the target-specific cases below (and the handlers they call) match. This
-  // is a cheap integer operation (a single comparison for the common,
-  // target-independent case); we deliberately avoid re-deriving the ID from the
-  // call expression, which is comparatively slow.
-  BuiltinID = ConvertBuiltinIDToX86BuiltinID(ASTCtx, BuiltinID);
-
   const InterpFrame *Frame = S.Current;
   switch (BuiltinID) {
   case Builtin::BI__builtin_is_constant_evaluated:
@@ -6723,11 +6708,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_cvttps2dq256:
     return interp_builtin_ia32_cvt_vector_to_int(S, OpPC, Call);
   default:
-    S.FFDiag(S.Current->getLocation(OpPC),
-             diag::note_invalid_subexpr_in_const_expr)
-        << S.Current->getRange(OpPC);
-
-    return false;
+    return Invalid(S, OpPC);
   }
 
   llvm_unreachable("Unhandled builtin ID");

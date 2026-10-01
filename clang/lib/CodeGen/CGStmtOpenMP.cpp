@@ -56,6 +56,15 @@ getEffectiveDirectiveKind(const OMPExecutableDirective &S);
 static bool canEmitGPUFusedDistSchedule(const CodeGenModule &CGM,
                                         const OMPLoopDirective &S,
                                         OpenMPDirectiveKind DKind) {
+  // 'teams loop' is always emitted as 'distribute', and 'target teams loop'
+  // only becomes 'distribute parallel for' if canBeParallelFor() holds.
+  // Without the inner worksharing loop, there is nothing that would schedule
+  // the iteration space if the outer distribute loop is omitted.
+  if (DKind == OMPD_teams_loop)
+    return false;
+  if (const auto *TTLD = dyn_cast<OMPTargetTeamsGenericLoopDirective>(&S);
+      TTLD && !TTLD->canBeParallelFor())
+    return false;
   // Reduction-only for now. Non-reduction cases might follow in the future, but
   // need more analysis for maximum profit.
   return CGM.getLangOpts().OpenMPIsTargetDevice && CGM.getTriple().isGPU() &&
@@ -7542,11 +7551,13 @@ static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
     CGM.getDiags().Report(diag::err_missing_mandatory_offloading);
   }
 
-  assert(CGF.CurFuncDecl && "No parent declaration for target region!");
   StringRef ParentName;
   // In case we have Ctors/Dtors we use the complete type variant to produce
-  // the mangling of the device outlined kernel.
-  if (const auto *D = dyn_cast<CXXConstructorDecl>(CGF.CurFuncDecl))
+  // the mangling of the device outlined kernel. Lambdas and blocks at
+  // namespace scope have no parent function.
+  if (!CGF.CurFuncDecl)
+    ParentName = CGF.CurFn->getName();
+  else if (const auto *D = dyn_cast<CXXConstructorDecl>(CGF.CurFuncDecl))
     ParentName = CGM.getMangledName(GlobalDecl(D, Ctor_Complete));
   else if (const auto *D = dyn_cast<CXXDestructorDecl>(CGF.CurFuncDecl))
     ParentName = CGM.getMangledName(GlobalDecl(D, Dtor_Complete));

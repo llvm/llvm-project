@@ -565,7 +565,7 @@ bool InstructionsState::isCopyableElement(Value *V) const {
     return !isa<PoisonValue>(V);
   // For a GEP main op only single-index GEPs with the same source element
   // type can be matching lanes; GEPs with a different shape are copyable.
-  if (MainOp->getOpcode() == Instruction::GetElementPtr)
+  if (getOpcode() == Instruction::GetElementPtr)
     if (auto *GEP = dyn_cast<GetElementPtrInst>(I);
         GEP && (GEP->getNumOperands() != 2 ||
                 GEP->getSourceElementType() !=
