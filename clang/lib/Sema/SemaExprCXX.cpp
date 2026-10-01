@@ -1647,7 +1647,7 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
       return CXXFunctionalCastExpr::Create(
           Context, Ty.getUnqualifiedType(), VK_PRValue, TInfo, CK_ToVoid,
           Exprs[0], /*Path=*/nullptr, CurFPFeatureOverrides(),
-          Exprs[0]->getBeginLoc(), Exprs[0]->getEndLoc());
+          SourceLocation(), Exprs[0]->getEndLoc());
     }
   } else if (RequireCompleteType(TyBeginLoc, ElemTy,
                                  diag::err_invalid_incomplete_type_use,
