@@ -843,6 +843,12 @@ TEST_F(TargetDeclTest, BuiltinTemplates) {
     using dedup_types = Templ<[[__builtin_dedup_pack]]<Types...>...>;
   )cpp";
   EXPECT_DECLS("TemplateSpecializationTypeLoc", );
+
+  Code = R"cpp(
+    template <template <class...> class Templ, class... Types>
+    using sort_types = Templ<[[__builtin_sort_pack]]<Types...>...>;
+  )cpp";
+  EXPECT_DECLS("TemplateSpecializationTypeLoc", );
 }
 
 TEST_F(TargetDeclTest, MemberOfTemplate) {

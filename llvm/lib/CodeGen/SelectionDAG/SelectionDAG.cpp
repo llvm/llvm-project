@@ -4164,7 +4164,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::FABS:
     // fabs clears the sign bit
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    Known.makeNonNegative();
+    Known.Zero.setSignBit();
+    Known.One.clearSignBit();
     break;
   case ISD::FGETSIGN:
     // All bits are zero except the low bit.
