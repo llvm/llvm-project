@@ -994,7 +994,8 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
 
       Value *NewShift = Builder.CreateBinOp(I.getOpcode(), FalseVal, C1);
       Value *NewOp = Builder.CreateBinOp(TBO->getOpcode(), NewShift, NewRHS);
-      return SelectInst::Create(Cond, NewOp, NewShift);
+      return SelectInst::Create(Cond, NewOp, NewShift, "", nullptr,
+                                cast<SelectInst>(Op0));
     }
   }
 
@@ -1011,7 +1012,8 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
 
       Value *NewShift = Builder.CreateBinOp(I.getOpcode(), TrueVal, C1);
       Value *NewOp = Builder.CreateBinOp(FBO->getOpcode(), NewShift, NewRHS);
-      return SelectInst::Create(Cond, NewShift, NewOp);
+      return SelectInst::Create(Cond, NewShift, NewOp, "", nullptr,
+                                cast<SelectInst>(Op0));
     }
   }
 
