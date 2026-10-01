@@ -77,8 +77,8 @@ func.func @test_regions(%arg0: tensor<1x2xi32>, %arg1: tensor<1xi32>, %arg2: ten
 
 // CHECK-LABEL: test_cond_if_i64_yield_with_call
 module {
-  func.func @m0() -> () {
-    return
+  func.func @m0(%arg0: tensor<4xi64>) -> tensor<4xi64> {
+    return %arg0 : tensor<4xi64>
   }
   func.func @test_cond_if_i64_yield_with_call(%arg0: tensor<1xi1>, %arg1: tensor<4xi64>, %arg2: tensor<4xi64>) -> () {
     %0 = tosa.cond_if %arg0 (%arg3 = %arg1) : tensor<1xi1> (tensor<4xi64>) -> tensor<4xi64> {
@@ -89,7 +89,7 @@ module {
       tosa.yield %arg3 : tensor<4xi64>
     }
     // expected-error @+1 {{failed to legalize operation 'func.call'}}
-    call @m0() : () -> ()
+    %1 = call @m0(%arg1) : (tensor<4xi64>) -> tensor<4xi64>
     return
   }
 }
@@ -254,3 +254,12 @@ func.func @test_dense_ressource_i64() -> tensor<1x2xi64> {
     }
   }
 #-}
+
+// -----
+
+// CHECK-LABEL: test_preserve_unknown_dialect_op
+func.func @test_preserve_unknown_dialect_op() -> i32 {
+  // COMMON: arith.constant 1 : i32
+  %0 = arith.constant 1 : i32
+  return %0 : i32
+}

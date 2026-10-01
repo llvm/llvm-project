@@ -703,15 +703,15 @@ Error CodeGenPassBuilder::addMachinePasses(PassManagerWrapper &PMW) {
 
   addMachineFunctionPass(RemoveLoadsIntoFakeUsesPass(), PMW);
   addMachineFunctionPass(StackMapLivenessPass(), PMW);
-  addMachineFunctionPass(
-      LiveDebugValuesPass(TM.Options.ShouldEmitDebugEntryValues()), PMW);
+  addMachineFunctionPass(LiveDebugValuesPass(TM.shouldEmitDebugEntryValues()),
+                         PMW);
   addMachineFunctionPass(MachineSanitizerBinaryMetadataPass(), PMW);
 
   if (TM.Options.EnableMachineOutliner &&
       getOptLevel() != CodeGenOptLevel::None &&
       Opt.EnableMachineOutliner != RunOutliner::NeverOutline) {
     if (Opt.EnableMachineOutliner != RunOutliner::TargetDefault ||
-        TM.Options.SupportsDefaultOutlining) {
+        TM.supportsDefaultOutlining()) {
       flushFPMsToMPM(PMW);
       addModulePass(MachineOutlinerPass(Opt.EnableMachineOutliner), PMW);
     }
@@ -875,10 +875,12 @@ Error CodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
       RequireAnalysisPass<MachineLoopAnalysis, MachineFunction>(), PMW);
   addMachineFunctionPass(PHIEliminationPass(), PMW);
 
-  // Eventually, we want to run LiveIntervals before PHI elimination.
-  if (Opt.EarlyLiveIntervals)
-    addMachineFunctionPass(
-        RequireAnalysisPass<LiveIntervalsAnalysis, MachineFunction>(), PMW);
+  // LiveIntervals is computed unconditionally before TwoAddressInstruction so
+  // that pass can rely on it instead of LiveVariables. This is a step toward
+  // removing LiveVariables entirely.
+  // FIXME: Eventually, we want to run LiveIntervals before PHI elimination.
+  addMachineFunctionPass(
+      RequireAnalysisPass<LiveIntervalsAnalysis, MachineFunction>(), PMW);
 
   addMachineFunctionPass(TwoAddressInstructionPass(), PMW);
   addMachineFunctionPass(RegisterCoalescerPass(), PMW);

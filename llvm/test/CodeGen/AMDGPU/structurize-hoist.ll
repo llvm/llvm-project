@@ -87,8 +87,8 @@ define amdgpu_kernel void @test_loop_with_if( ptr %ptr, i1 %cond) #0 {
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; GFX900-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
-; GFX900-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX900-NEXT:    s_mov_b64 s[0:1], 0
+; GFX900-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX900-NEXT:    s_movk_i32 s10, 0xfe
 ; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX900-NEXT:    s_bitcmp1_b32 s2, 0
@@ -111,11 +111,9 @@ define amdgpu_kernel void @test_loop_with_if( ptr %ptr, i1 %cond) #0 {
 ; GFX900-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX900-NEXT:    flat_load_dwordx2 v[3:4], v[1:2]
 ; GFX900-NEXT:    s_and_b64 s[6:7], s[2:3], exec
-; GFX900-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX900-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX900-NEXT:    s_mov_b64 s[8:9], s[4:5]
 ; GFX900-NEXT:    s_mov_b64 s[6:7], 0
-; GFX900-NEXT:    s_cbranch_scc1 .LBB2_4
+; GFX900-NEXT:    s_cbranch_scc0 .LBB2_4
 ; GFX900-NEXT:  ; %bb.3: ; %if
 ; GFX900-NEXT:    ; in Loop: Header=BB2_2 Depth=1
 ; GFX900-NEXT:    v_cmp_gt_i32_e32 vcc, 11, v5

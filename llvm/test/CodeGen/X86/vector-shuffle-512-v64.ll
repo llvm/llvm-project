@@ -1851,7 +1851,7 @@ define <512 x i8> @PR153457(<512 x i8> %a0, <512 x i8> %a1) nounwind {
 ; AVX512F-NEXT:    vpblendd {{.*#+}} ymm6 = ymm6[0,1,2,3,4,5],ymm9[6,7]
 ; AVX512F-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm6[0,1,2,3],zmm0[4,5,6,7]
 ; AVX512F-NEXT:    vpsrlq $56, %xmm7, %xmm6
-; AVX512F-NEXT:    vmovdqa %ymm6, 416(%rdi)
+; AVX512F-NEXT:    vmovdqa %xmm6, 416(%rdi)
 ; AVX512F-NEXT:    vmovdqa %ymm3, 384(%rdi)
 ; AVX512F-NEXT:    vmovdqa64 %zmm0, (%rdi)
 ; AVX512F-NEXT:    vmovdqa64 %zmm5, 320(%rdi)
@@ -1987,7 +1987,7 @@ define <512 x i8> @PR153457(<512 x i8> %a0, <512 x i8> %a1) nounwind {
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm6 = ymm6[0,1,2,3,4,5],ymm9[6,7]
 ; AVX512DQ-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm6[0,1,2,3],zmm0[4,5,6,7]
 ; AVX512DQ-NEXT:    vpsrlq $56, %xmm7, %xmm6
-; AVX512DQ-NEXT:    vmovdqa %ymm6, 416(%rdi)
+; AVX512DQ-NEXT:    vmovdqa %xmm6, 416(%rdi)
 ; AVX512DQ-NEXT:    vmovdqa %ymm3, 384(%rdi)
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm0, (%rdi)
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm5, 320(%rdi)

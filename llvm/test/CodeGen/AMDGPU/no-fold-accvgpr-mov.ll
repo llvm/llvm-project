@@ -6,16 +6,16 @@ define amdgpu_kernel void @matmul_kernel(i32 %a0, i32 %a1) {
 ; GFX942-LABEL: matmul_kernel:
 ; GFX942:       ; %bb.0: ; %entry
 ; GFX942-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x0
-; GFX942-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX942-NEXT:    s_mov_b32 s0, 0
-; GFX942-NEXT:    v_mov_b32_e32 v0, v1
+; GFX942-NEXT:    v_mov_b32_e32 v0, 0
+; GFX942-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX942-NEXT:    s_mov_b32 s6, 0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX942-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX942-NEXT:    s_branch .LBB0_3
+; GFX942-NEXT:    s_branch .LBB0_2
 ; GFX942-NEXT:  .LBB0_1: ; %bb2
-; GFX942-NEXT:    ; in Loop: Header=BB0_3 Depth=1
+; GFX942-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; GFX942-NEXT:    s_mov_b32 s1, s0
 ; GFX942-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v1
@@ -27,23 +27,18 @@ define amdgpu_kernel void @matmul_kernel(i32 %a0, i32 %a1) {
 ; GFX942-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX942-NEXT:    s_nop 4
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v2
-; GFX942-NEXT:  .LBB0_2: ; %Flow
-; GFX942-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; GFX942-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX942-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX942-NEXT:    s_cmp_lg_u32 s1, 1
-; GFX942-NEXT:    s_cbranch_scc0 .LBB0_5
-; GFX942-NEXT:  .LBB0_3: ; %bb
+; GFX942-NEXT:    s_cbranch_scc1 .LBB0_4
+; GFX942-NEXT:  .LBB0_2: ; %bb
 ; GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX942-NEXT:    s_and_b64 s[4:5], s[2:3], exec
-; GFX942-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX942-NEXT:    s_cmp_lg_u32 s1, 1
-; GFX942-NEXT:    s_cbranch_scc0 .LBB0_1
-; GFX942-NEXT:  ; %bb.4: ; in Loop: Header=BB0_3 Depth=1
+; GFX942-NEXT:    s_cbranch_scc1 .LBB0_1
+; GFX942-NEXT:  ; %bb.3: ; in Loop: Header=BB0_2 Depth=1
 ; GFX942-NEXT:    s_mov_b64 s[4:5], -1
 ; GFX942-NEXT:    ; implicit-def: $sgpr6
-; GFX942-NEXT:    s_branch .LBB0_2
-; GFX942-NEXT:  .LBB0_5: ; %common.ret
+; GFX942-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; GFX942-NEXT:    s_cbranch_scc0 .LBB0_2
+; GFX942-NEXT:  .LBB0_4: ; %common.ret
 ; GFX942-NEXT:    s_endpgm
 ;
 ; GFX908-LABEL: matmul_kernel:
@@ -56,10 +51,10 @@ define amdgpu_kernel void @matmul_kernel(i32 %a0, i32 %a1) {
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX908-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX908-NEXT:    s_branch .LBB0_3
+; GFX908-NEXT:    s_branch .LBB0_2
 ; GFX908-NEXT:  .LBB0_1: ; %bb2
-; GFX908-NEXT:    ; in Loop: Header=BB0_3 Depth=1
-; GFX908-NEXT:    s_nop 1
+; GFX908-NEXT:    ; in Loop: Header=BB0_2 Depth=1
+; GFX908-NEXT:    s_nop 5
 ; GFX908-NEXT:    v_accvgpr_read_b32 v3, a2
 ; GFX908-NEXT:    s_or_b32 s4, s1, 1
 ; GFX908-NEXT:    s_ashr_i32 s5, s1, 31
@@ -74,24 +69,19 @@ define amdgpu_kernel void @matmul_kernel(i32 %a0, i32 %a1) {
 ; GFX908-NEXT:    v_accvgpr_write_b32 a3, v3
 ; GFX908-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX908-NEXT:    v_mfma_f32_16x16x16f16 a[2:5], v[1:2], v[1:2], a[0:3]
-; GFX908-NEXT:  .LBB0_2: ; %Flow
-; GFX908-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; GFX908-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX908-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX908-NEXT:    s_cmp_lg_u32 s4, 1
-; GFX908-NEXT:    s_cbranch_scc0 .LBB0_5
-; GFX908-NEXT:  .LBB0_3: ; %bb
+; GFX908-NEXT:    s_cbranch_scc1 .LBB0_4
+; GFX908-NEXT:  .LBB0_2: ; %bb
 ; GFX908-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX908-NEXT:    s_and_b64 s[4:5], s[2:3], exec
-; GFX908-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX908-NEXT:    s_cmp_lg_u32 s4, 1
-; GFX908-NEXT:    s_cbranch_scc0 .LBB0_1
-; GFX908-NEXT:  ; %bb.4: ; in Loop: Header=BB0_3 Depth=1
+; GFX908-NEXT:    s_cbranch_scc1 .LBB0_1
+; GFX908-NEXT:  ; %bb.3: ; in Loop: Header=BB0_2 Depth=1
 ; GFX908-NEXT:    s_mov_b64 s[4:5], -1
 ; GFX908-NEXT:    ; implicit-def: $sgpr1
 ; GFX908-NEXT:    ; implicit-def: $agpr2
-; GFX908-NEXT:    s_branch .LBB0_2
-; GFX908-NEXT:  .LBB0_5: ; %common.ret
+; GFX908-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; GFX908-NEXT:    s_cbranch_scc0 .LBB0_2
+; GFX908-NEXT:  .LBB0_4: ; %common.ret
 ; GFX908-NEXT:    s_endpgm
 entry:
   br label %bb

@@ -151,17 +151,16 @@ public:
         Insert = false;
       }
     }
-    if (Insert && NVPTX::isPackedVectorTy(VT) && VT.is32BitVector()) {
-      // Can be built in a single 32-bit mov (64-bit regs are emulated in SASS
-      // with 2x 32-bit regs)
-      Cost += 1;
-      Insert = false;
-    }
     if (Insert && VT == MVT::v4i8) {
-      InstructionCost Cost = 3; // 3 x PRMT
+      Cost += 3; // 3 x PRMT
       for (auto Idx : seq(NumElements))
         if (DemandedElts[Idx])
           Cost += 1; // zext operand to i32
+      Insert = false;
+    } else if (Insert && NVPTX::isPackedVectorTy(VT) && VT.is32BitVector()) {
+      // Can be built in a single 32-bit mov (64-bit regs are emulated in SASS
+      // with 2x 32-bit regs)
+      Cost += 1;
       Insert = false;
     }
     return Cost + BaseT::getScalarizationOverhead(InTy, DemandedElts, Insert,
@@ -230,6 +229,8 @@ public:
     // Self-referential globals are not supported.
     return false;
   }
+
+  bool shouldBuildLookupTablesForConstant(Constant *C) const override;
 
   InstructionCost getPartialReductionCost(
       unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
