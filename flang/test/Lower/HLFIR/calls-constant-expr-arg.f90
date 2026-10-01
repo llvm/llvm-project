@@ -84,9 +84,10 @@ end subroutine
 ! CHECK:           %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_18]] {{.*}}
 ! CHECK:           %[[VAL_25:.*]] = hlfir.designate %[[VAL_19]]#0 {{.*}}
 ! CHECK:           %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_25]] {uniq_name = "_QFtest_associateEb"} : (!fir.box<!fir.array<1xf32>>) -> (!fir.box<!fir.array<1xf32>>, !fir.box<!fir.array<1xf32>>)
-! CHECK:           %[[VAL_27:.*]] = hlfir.as_expr %[[VAL_26]]#0 : (!fir.box<!fir.array<1xf32>>) -> !hlfir.expr<1xf32>
-! CHECK:           %[[VAL_30:.*]]:3 = hlfir.associate %[[VAL_27]]({{.*}}) {adapt.valuebyref} : (!hlfir.expr<1xf32>, !fir.shape<1>) -> (!fir.ref<!fir.array<1xf32>>, !fir.ref<!fir.array<1xf32>>, i1)
-! CHECK:           %[[VAL_31:.*]] = fir.embox %[[VAL_30]]
-! CHECK:           %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (!fir.box<!fir.array<1xf32>>) -> !fir.box<!fir.array<?xf32>>
-! CHECK:           fir.call @_QPfoo(%[[VAL_32]]) {{.*}} : (!fir.box<!fir.array<?xf32>>) -> ()
-! CHECK:           hlfir.end_associate %[[VAL_30]]#1, %[[VAL_30]]#2 : !fir.ref<!fir.array<1xf32>>, i1
+! No copy: the dummy argument is assumed shape, so the (possibly discontiguous)
+! descriptor over the named constant's storage is passed directly, and there is
+! no copy-out because the actual argument is not definable.
+! CHECK-NOT:       hlfir.as_expr
+! CHECK:           %[[VAL_27:.*]] = fir.convert %[[VAL_26]]#0 : (!fir.box<!fir.array<1xf32>>) -> !fir.box<!fir.array<?xf32>>
+! CHECK:           fir.call @_QPfoo(%[[VAL_27]]) {{.*}} : (!fir.box<!fir.array<?xf32>>) -> ()
+! CHECK-NOT:       hlfir.copy_out
