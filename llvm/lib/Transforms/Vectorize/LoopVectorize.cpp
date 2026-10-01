@@ -829,13 +829,11 @@ public:
   };
 
 #ifndef NDEBUG
-  void debugWideningDecision(Instruction *I, ElementCount VF, InstWidening W) {
-    const char *WideningStr[] = {
+  static constexpr StringLiteral getInstWideningStr(InstWidening W) {
+    constexpr StringLiteral WideningStr[] = {
         "Unknown",       "Widen",     "Widen_Reverse",      "Interleave",
         "GatherScatter", "Scalarize", "InvalidatedDecision"};
-    LLVM_DEBUG(dbgs() << "LV: Setting widening decision to " << WideningStr[W]
-                      << " for VF " << VF << " and instruction: " << *I
-                      << '\n');
+    return WideningStr[W];
   }
 #endif
 
@@ -844,9 +842,9 @@ public:
   void setWideningDecision(Instruction *I, ElementCount VF, InstWidening W,
                            InstructionCost Cost) {
     assert(VF.isVector() && "Expected VF >=2");
-#ifndef NDEBUG
-    debugWideningDecision(I, VF, W);
-#endif
+    LLVM_DEBUG(dbgs() << "LV: Setting widening decision to "
+                      << getInstWideningStr(W) << " for VF " << VF
+                      << " and instruction: " << *I << '\n');
     WideningDecisions[{I, VF}] = {W, Cost};
   }
 
@@ -867,9 +865,9 @@ public:
       OtherMemberCost = InsertPosCost = Cost / Grp->getNumMembers();
     ;
     for (auto *I : Grp->members()) {
-#ifndef NDEBUG
-      debugWideningDecision(I, VF, W);
-#endif
+      LLVM_DEBUG(dbgs() << "LV: Setting widening decision to "
+                        << getInstWideningStr(W) << " for VF " << VF
+                        << " and instruction: " << *I << '\n');
       if (Grp->getInsertPos() == I)
         WideningDecisions[{I, VF}] = {W, InsertPosCost};
       else
