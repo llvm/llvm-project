@@ -74,8 +74,7 @@ bool cuf::isCUDADeviceContext(mlir::Region &region,
 bool cuf::isExecutingOnDevice(mlir::Operation *op) {
   if (!op)
     return false;
-  if (op->getParentOfType<cuf::KernelOp>() ||
-      op->getParentOfType<mlir::acc::OffloadRegionOpInterface>() ||
+  if (fir::isInOffloadRegion(op) ||
       op->getParentOfType<mlir::gpu::GPUModuleOp>() ||
       op->getParentOfType<mlir::gpu::LaunchOp>() ||
       op->getParentOfType<mlir::gpu::GPUFuncOp>())
