@@ -107,4 +107,6 @@ end module
 
 program p
   real, unified :: um ! ok
+  !ERROR: Object 'pc' with ATTRIBUTES(CONSTANT) may not be declared in a main program
+  complex, constant :: pc = (1.0, 2.0)
 end program
