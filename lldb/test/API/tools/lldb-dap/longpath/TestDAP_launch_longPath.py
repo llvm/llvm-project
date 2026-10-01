@@ -14,7 +14,7 @@ from lldbsuite.test.tools.lldb_dap.types import ExitedEvent, LaunchArgs, Termina
 MAX_PATH = 260
 
 
-@requireWindows
+@requireWindows()
 class TestDAP_launch_longPath(DAPTestCaseBase):
     def _long_path(self, path):
         return lldbutil.get_extended_windows_path(path)

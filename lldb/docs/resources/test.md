@@ -152,7 +152,7 @@ decorator you pick says which:
   keeps them visible as work still to be done.
 
 ```python
-@requireDarwin      # inherently Darwin-only: reported UNSUPPORTED elsewhere
+@requireDarwin()    # inherently Darwin-only: reported UNSUPPORTED elsewhere
 @skipIfWindows      # ought to work on Windows, currently broken: reported SKIPPED
 ```
 
@@ -162,11 +162,24 @@ The `require*` decorators mirror the `skip*` ones one-for-one:
 `requireNotWasm`, `requireDarwinHost`, `requireClang`, and the general
 `requirePlatform(oslist)` / `requireNotPlatform(oslist)`.
 
+All of them take a reason saying what about the test ties it to the platform,
+which is printed next to the requirement when the test is reported
+UNSUPPORTED. It is optional on the positive decorators, whose name already
+carries most of the story, and required on the negative ones, because
+"unsupported on windows" on its own says nothing about the test. Either way
+they are always called with parentheses:
+
+```python
+@requireDarwin("parses a Mach-O debug map")
+@requireNotWindows("calls fork()")
+@requireDarwin()    # also fine: the requirement alone is the whole story
+```
+
 Reach for `require*` when the test is tied to a platform-specific file format,
 API, or OS feature, or to a specific compiler. If the test is merely untested
 or broken somewhere, keep `skipIf*` so nobody mistakes a bug for a design
 decision. For example, a test that only uses Clang-specific debug info
-options belongs behind `@requireClang` rather than
+options belongs behind `@requireClang()` rather than
 `@skipIf(compiler=no_match("clang"))`.
 
 In addition to providing a lot more flexibility when it comes to writing the

@@ -11,7 +11,7 @@ import lldbgdbserverutils
 from lldbsuite.support import seven
 
 
-@requireSocketPermission  # setUp binds a listening socket for the proxy server
+@requireSocketPermission("setUp binds a listening socket for the proxy server")
 class GDBProxyTestBase(TestBase):
     """
     Base class for gdbserver proxy tests.

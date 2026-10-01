@@ -10,7 +10,7 @@ from lldbsuite.test import configuration
 
 class TestJitBreakpoint(TestBase):
     @skipUnlessArch("x86_64")
-    @requireClang
+    @requireClang()
     @expectedFailureAll(oslist=["windows"])
     def test_jit_breakpoints(self):
         self.build()

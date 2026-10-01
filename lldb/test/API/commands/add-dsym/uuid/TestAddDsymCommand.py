@@ -9,7 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@requireDarwin
+@requireDarwin()
 class AddDsymCommandCase(TestBase):
     SHARED_BUILD_TESTCASE = False
 

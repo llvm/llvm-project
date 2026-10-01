@@ -10,7 +10,7 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 
 
-@requireExpressionEvaluation
+@requireExpressionEvaluation()
 class TestRerunExpr(TestBase):
     SHARED_BUILD_TESTCASE = False
 

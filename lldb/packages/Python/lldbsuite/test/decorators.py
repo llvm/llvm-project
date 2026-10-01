@@ -1152,10 +1152,20 @@ def skipUnlessPlatform(oslist):
 # an OS feature that simply doesn't exist elsewhere. If the test is merely
 # untested or broken somewhere, keep using skipIf / skipUnless so it stays
 # visible as work to be done.
+#
+# Every one of them is called with parentheses, and takes a `reason` explaining
+# what about the test ties it to the platform; it is printed alongside the
+# requirement when the test is reported UNSUPPORTED. The reason is optional on
+# the positive decorators, whose name already carries most of the story, and
+# required on the negative ones, where "unsupported on windows" on its own says
+# nothing about the test.
+#
+#   @requireDarwin()
+#   @requireDarwin("parses a Mach-O debug map")
 ##############################################################################
 
 
-def requirePlatform(oslist):
+def requirePlatform(oslist, reason: Optional[str] = None):
     """Mark the item as runnable only on the listed target platforms.
 
     Unlike `skipUnlessPlatform`, other platforms are reported as UNSUPPORTED
@@ -1163,7 +1173,7 @@ def requirePlatform(oslist):
     """
     return unittest.skipUnless(
         lldbplatformutil.getPlatform() in oslist,
-        UnsupportedReason("requires one of %s" % (", ".join(oslist))),
+        UnsupportedReason("requires one of %s" % (", ".join(oslist)), reason),
     )
 
 
@@ -1173,23 +1183,16 @@ def requireNotPlatform(oslist: list, reason: Optional[str] = None):
     Unlike `skipIfPlatform`, the listed platforms are reported as UNSUPPORTED
     rather than SKIPPED.
     """
-    assert isinstance(
-        reason, (str, type(None))
-    ), f"expects 'str' or 'None' got {type(reason).__name__!r}"
-
-    skip_reason = f"unsupported on {', '.join(oslist)}"
-    if reason:
-        skip_reason += f": {reason}"
-
     return unittest.skipIf(
-        lldbplatformutil.getPlatform() in oslist, UnsupportedReason(skip_reason)
+        lldbplatformutil.getPlatform() in oslist,
+        UnsupportedReason(f"unsupported on {', '.join(oslist)}", reason),
     )
 
 
-def requireDarwin(func):
+def requireDarwin(reason: Optional[str] = None):
     """Mark the item as inherently Darwin-only (Mach-O, debug maps, Darwin
     kernel/runtime APIs, ...). Non-Darwin targets report UNSUPPORTED."""
-    return requirePlatform(lldbplatform.translate(lldbplatform.darwin_all))(func)
+    return requirePlatform(lldbplatform.translate(lldbplatform.darwin_all), reason)
 
 
 def requireNotDarwin(reason: str):
@@ -1199,10 +1202,10 @@ def requireNotDarwin(reason: str):
     )
 
 
-def requireLinux(func):
+def requireLinux(reason: Optional[str] = None):
     """Mark the item as inherently Linux-only (procfs, Linux-specific syscalls,
     ...). Other targets report UNSUPPORTED."""
-    return requirePlatform(["linux"])(func)
+    return requirePlatform(["linux"], reason)
 
 
 def requireNotLinux(reason: str):
@@ -1210,10 +1213,10 @@ def requireNotLinux(reason: str):
     return requireNotPlatform(["linux"], reason=reason)
 
 
-def requireWindows(func):
+def requireWindows(reason: Optional[str] = None):
     """Mark the item as inherently Windows-only (PE/COFF, Win32 APIs, ...).
     Other targets report UNSUPPORTED."""
-    return requirePlatform(["windows"])(func)
+    return requirePlatform(["windows"], reason)
 
 
 def requireNotWindows(reason: str):
@@ -1225,31 +1228,33 @@ def requireNotWindows(reason: str):
     return requireNotPlatform(["windows"], reason=reason)
 
 
-def requirePOSIX(func):
+def requirePOSIX(reason: Optional[str] = None):
     """Mark the item as requiring a POSIX target.
 
     A shorthand for `requireNotWindows` that reads better on tests whose
     dependency is POSIX semantics generally rather than anything about
     Windows specifically.
     """
-    return requireNotPlatform(["windows"], reason="uses the posix API.")(func)
+    return requireNotPlatform(["windows"], reason=reason or "uses the posix API")
 
 
-def requireMacOS(func):
+def requireMacOS(reason: Optional[str] = None):
     """Mark the item as inherently macOS-only, as opposed to other Darwin
     platforms (iOS, tvOS, watchOS, ...).
     """
-    return requirePlatform(["macosx"])(func)
+    return requirePlatform(["macosx"], reason)
 
 
-def requireSignals(func):
+def requireSignals(reason: Optional[str] = None):
     """Mark the item as requiring POSIX signal support on the target."""
-    return requireNotPlatform(["windows", "wasip1", "wasi"])(func)
+    return requireNotPlatform(
+        ["windows", "wasip1", "wasi"], reason=reason or "requires POSIX signals"
+    )
 
 
-def requireExpressionEvaluation(func):
+def requireExpressionEvaluation(reason: Optional[str] = None):
     """Mark the item as requiring expression evaluation."""
-    return requireNotWasm(reason="needs expression evaluation support")(func)
+    return requireNotWasm(reason=reason or "needs expression evaluation support")
 
 
 def requireNotWasm(reason: str):
@@ -1262,32 +1267,32 @@ def requireNotWasm(reason: str):
     return requireNotPlatform(["wasip1", "wasi"], reason=reason)
 
 
-def requireHostPlatform(oslist):
+def requireHostPlatform(oslist, reason: Optional[str] = None):
     """Mark the item as runnable only on the listed *host* platforms."""
     return unittest.skipUnless(
         lldbplatformutil.getHostPlatform() in oslist,
-        UnsupportedReason("requires one of %s as host" % (", ".join(oslist))),
+        UnsupportedReason("requires one of %s as host" % (", ".join(oslist)), reason),
     )
 
 
-def requireDarwinHost(func):
+def requireDarwinHost(reason: Optional[str] = None):
     """Mark the item as requiring a Darwin host, regardless of target.
 
     Use for tests that drive host-side Darwin facilities: `xcrun`, the
     simulator runtimes, dsymutil, the LLDB.framework layout, and so on.
     """
-    return requireHostPlatform(lldbplatform.translate(lldbplatform.darwin_all))(func)
+    return requireHostPlatform(lldbplatform.translate(lldbplatform.darwin_all), reason)
 
 
-def requireThreadSupport(func):
+def requireThreadSupport(reason: Optional[str] = None):
     """Mark the item as requiring thread support (e.g. pthreads) on the target."""
     platform = lldbplatformutil.getPlatform()
     return unittest.skipIf(
         # WASI targets ending in "-threads" (e.g. wasip1-threads) support threads;
         # other WASI targets (e.g. wasip1, wasip2) do not.
         platform.startswith("wasi") and not platform.endswith("threads"),
-        UnsupportedReason(f"threads are not supported on {platform}"),
-    )(func)
+        UnsupportedReason(f"threads are not supported on {platform}", reason),
+    )
 
 
 @lru_cache(maxsize=None)
@@ -1307,19 +1312,19 @@ def _socketPermissionError() -> Optional[str]:
     return None
 
 
-def requireSocketPermission(func):
+def requireSocketPermission(reason: Optional[str] = None):
     """Mark the item as requiring permission to open a listening socket."""
     error = _socketPermissionError()
-    return unittest.skipIf(error is not None, UnsupportedReason(error or ""))(func)
+    return unittest.skipIf(error is not None, UnsupportedReason(error or "", reason))
 
 
-def requireClang(func):
+def requireClang(reason: Optional[str] = None):
     """Mark the item as inherently Clang-only (Clang-specific debug info,
     diagnostics, or command-line flags)."""
     compiler = os.path.basename(lldbplatformutil.getCompiler())
     return unittest.skipUnless(
-        compiler.startswith("clang"), UnsupportedReason("requires clang")
-    )(func)
+        compiler.startswith("clang"), UnsupportedReason("requires clang", reason)
+    )
 
 
 def skipIfTargetDoesNotSupportSharedLibraries():

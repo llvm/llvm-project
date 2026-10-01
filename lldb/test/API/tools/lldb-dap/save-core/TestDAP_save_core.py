@@ -14,7 +14,7 @@ class TestDAP_save_core(DAPTestCaseBase):
     SHARED_BUILD_TESTCASE = False
 
     @skipUnlessArch("x86_64")
-    @requireLinux
+    @requireLinux()
     def test_save_and_reload_core(self):
         """Save minidump cores in every supported `--style` from a single
         live stop, then re-attach to each and verify the frame, thread

@@ -112,7 +112,7 @@ class TestDAP_module(DAPTestCaseBase):
             "a.out", expect_debug_info_size=platform.system() != "Darwin"
         )
 
-    @requireDarwin
+    @requireDarwin()
     def test_modules_dsym(self):
         """
         Darwin only test with dSYM file.

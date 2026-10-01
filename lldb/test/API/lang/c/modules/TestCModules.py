@@ -9,7 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@requireExpressionEvaluation
+@requireExpressionEvaluation()
 class CModulesTestCase(TestBase):
     @expectedFailureAll(
         oslist=["freebsd", "linux"],

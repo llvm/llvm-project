@@ -19,7 +19,7 @@ class MemoryHistoryTestCase(TestBase):
         self.build(make_targets=["compiler_rt-asan"])
         self.compiler_rt_asan_tests()
 
-    @requireDarwin
+    @requireDarwin()
     @skipIf(macos_version=["<", "15.5"])
     def test_libsanitizers_traces(self):
         self.build(make_targets=["libsanitizers-traces"])

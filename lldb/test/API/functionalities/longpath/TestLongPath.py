@@ -14,7 +14,7 @@ from lldbsuite.test import lldbutil
 MAX_PATH = 260
 
 
-@requireWindows
+@requireWindows()
 class LongPathTargetTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

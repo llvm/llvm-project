@@ -9,7 +9,7 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
     @add_test_categories(["libc++"])
-    @requireClang
+    @requireClang()
     @skipIf(compiler="clang", compiler_version=["<", "22.0"])
     @skipIf(macos_version=["<", "15.0"])
     @skipIf(macos_sdk_version=["<", "16.0"])
@@ -30,7 +30,7 @@ class TestCase(TestBase):
         self.expect_expr("move_begin + 3 == move_end", result_value="true")
 
     @add_test_categories(["libc++"])
-    @requireClang
+    @requireClang()
     @skipIf(compiler="clang", compiler_version=["<", "22.0"])
     @expectedFailureAll(bugnumber="https://github.com/llvm/llvm-project/issues/149477")
     @skipIf(macos_sdk_version=["<", "16.0"])

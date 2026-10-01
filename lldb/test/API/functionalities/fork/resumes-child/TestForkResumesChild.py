@@ -13,7 +13,7 @@ from lldbsuite.test.decorators import *
 class TestForkResumesChild(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @requirePOSIX
+    @requirePOSIX()
     def test_step_over_fork(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

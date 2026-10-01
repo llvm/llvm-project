@@ -15,7 +15,7 @@ from subprocess import Popen
 from typing import Tuple
 
 
-@requireSocketPermission  # every test starts lldb-dap in listening server mode
+@requireSocketPermission("every test starts lldb-dap in listening server mode")
 class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
     def start_server(
         self, connection, connection_timeout=30
@@ -77,7 +77,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         self.run_debug_session(connection, "Alice")
         self.run_debug_session(connection, "Bob")
 
-    @requirePOSIX
+    @requirePOSIX()
     def test_server_unix_socket(self):
         """
         Test launching a binary with a lldb-dap in server mode on a unix socket.

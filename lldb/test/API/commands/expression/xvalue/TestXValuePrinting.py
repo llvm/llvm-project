@@ -4,7 +4,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@requireExpressionEvaluation
+@requireExpressionEvaluation()
 class ExprXValuePrintingTestCase(TestBase):
     def test(self):
         """Printing an xvalue should work."""

@@ -19,7 +19,7 @@ class ChangeProcessGroupTestCase(TestBase):
         self.line = line_number("main.c", "// Set breakpoint here")
 
     @skipIfFreeBSD  # Times out on FreeBSD llvm.org/pr23731
-    @requirePOSIX  # setpgid call does not exist on Windows
+    @requirePOSIX("setpgid call does not exist on Windows")
     @expectedFailureAndroid("http://llvm.org/pr23762", api_levels=[16])
     @expectedFailureNetBSD
     @skipIftvOS  # fork not available on tvOS.

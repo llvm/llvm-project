@@ -15,7 +15,7 @@ from lldbsuite.test import lldbutil
 
 class STLTestCase(TestBase):
     @add_test_categories(["libc++"])
-    @requireClang
+    @requireClang()
     @skipIf(macos_sdk_version=["<", "16.0"])
     def test(self):
         self.build()

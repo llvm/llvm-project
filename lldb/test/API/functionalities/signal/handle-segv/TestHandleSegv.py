@@ -7,7 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@requireSignals
+@requireSignals()
 class HandleSegvTestCase(TestBase):
     @skipIfDarwin
     @expectedFailureNetBSD
