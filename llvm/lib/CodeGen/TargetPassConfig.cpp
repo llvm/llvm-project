@@ -136,6 +136,10 @@ cl::opt<bool>
 static cl::opt<cl::boolOrDefault>
     VerifyMachineCode("verify-machineinstrs", cl::Hidden,
                       cl::desc("Verify generated machine code"));
+static cl::opt<bool> DisableMIROutputVerify(
+    "disable-mir-output-verify", cl::Hidden,
+    cl::desc("Do not verify machine code at the end of a pipeline that stops "
+             "before code emission"));
 static cl::opt<cl::boolOrDefault>
     DebugifyAndStripAll("debugify-and-strip-all-safe", cl::Hidden,
                         cl::desc("Debugify MIR before and Strip debug after "
@@ -518,6 +522,7 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_OPTION(EnableFastISelOption)
   SET_OPTION(EnableGlobalISelOption)
   SET_OPTION(VerifyMachineCode)
+  SET_OPTION(DisableMIROutputVerify)
   SET_OPTION(DisableAtExitBasedGlobalDtorLowering)
   SET_OPTION(DisableExpandReductions)
   SET_OPTION(PrintAfterISel)
@@ -635,6 +640,12 @@ TargetPassConfig::TargetPassConfig(TargetMachine &TM, PassManagerBase &PM)
 
   if (EnableGlobalISelAbort.getNumOccurrences())
     TM.Options.GlobalISelAbort = EnableGlobalISelAbort;
+
+  VerifyEachMachinePass = VerifyMachineCode == cl::boolOrDefault::BOU_TRUE;
+#ifdef EXPENSIVE_CHECKS
+  if (VerifyMachineCode == cl::boolOrDefault::BOU_UNSET)
+    VerifyEachMachinePass = TM.isMachineVerifierClean();
+#endif
 
   setStartStopPasses();
 }
@@ -807,12 +818,7 @@ void TargetPassConfig::addPrintPass(const std::string &Banner) {
 }
 
 void TargetPassConfig::addVerifyPass(const std::string &Banner) {
-  bool Verify = VerifyMachineCode == cl::boolOrDefault::BOU_TRUE;
-#ifdef EXPENSIVE_CHECKS
-  if (VerifyMachineCode == cl::boolOrDefault::BOU_UNSET)
-    Verify = TM->isMachineVerifierClean();
-#endif
-  if (Verify)
+  if (VerifyEachMachinePass)
     PM->add(createMachineVerifierPass(Banner));
 }
 
