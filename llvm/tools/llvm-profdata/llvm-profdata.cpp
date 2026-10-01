@@ -2954,11 +2954,11 @@ static void showValueSitesStats(raw_fd_ostream &OS, uint32_t VK,
   }
 }
 
-static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
+static Error showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Json)
-    exitWithError("JSON output is not supported for instr profiles");
+    return makeError("JSON output is not supported for instr profiles");
   if (SFormat == ShowFormat::Yaml)
-    exitWithError("YAML output is not supported for instr profiles");
+    return makeError("YAML output is not supported for instr profiles");
   auto FS = vfs::getRealFileSystem();
   auto ReaderOrErr = InstrProfReader::create(Filename, *FS);
   std::vector<uint32_t> Cutoffs = std::move(DetailedSummaryCutoffs);
@@ -2966,7 +2966,7 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
     Cutoffs = ProfileSummaryBuilder::DefaultCutoffs;
   InstrProfSummaryBuilder Builder(std::move(Cutoffs));
   if (Error E = ReaderOrErr.takeError())
-    exitWithError(std::move(E), Filename);
+    return makeError(std::move(E), Filename);
 
   auto Reader = std::move(ReaderOrErr.get());
   bool IsIRInstr = Reader->isIRLevelProfile();
@@ -3119,10 +3119,10 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
     }
   }
   if (Reader->hasError())
-    exitWithError(Reader->getError(), Filename);
+    return makeError(Reader->getError(), Filename);
 
   if (TextFormat || ShowCovered)
-    return 0;
+    return Error::success();
   std::unique_ptr<ProfileSummary> PS(Builder.getSummary());
   bool IsIR = Reader->isIRLevelProfile();
   OS << "Instrumentation level: " << (IsIR ? "IR" : "Front-end");
@@ -3185,7 +3185,7 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
 
   if (ShowBinaryIds)
     if (Error E = Reader->printBinaryIds(OS))
-      exitWithError(std::move(E), Filename);
+      return makeError(std::move(E), Filename);
 
   if (ShowProfileVersion)
     OS << "Profile version: " << Reader->getVersion() << "\n";
@@ -3202,7 +3202,7 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
     }
   }
 
-  return 0;
+  return Error::success();
 }
 
 static void showSectionInfo(sampleprof::SampleProfileReader *Reader,
@@ -3349,12 +3349,12 @@ static int showHotFunctionList(const sampleprof::SampleProfileMap &Profiles,
   return 0;
 }
 
-static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
+static Error showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Yaml)
-    exitWithError("YAML output is not supported for sample profiles");
+    return makeError("YAML output is not supported for sample profiles");
   if (ShowSectionInfoOnly && ShowCompositeInfoOnly)
-    exitWithError("-show-sec-info-only and "
-                  "-show-composite-info-only cannot be used together");
+    return makeError("-show-sec-info-only and "
+                     "-show-composite-info-only cannot be used together");
 
   using namespace sampleprof;
   LLVMContext Context;
@@ -3362,28 +3362,28 @@ static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   auto ReaderOrErr = SampleProfileReader::create(Filename, Context, *FS,
                                                  FSDiscriminatorPassOption);
   if (std::error_code EC = ReaderOrErr.getError())
-    exitWithErrorCode(EC, Filename);
+    return makeError(EC, Filename);
 
   auto Reader = std::move(ReaderOrErr.get());
   if (ShowSectionInfoOnly) {
     showSectionInfo(Reader.get(), OS);
-    return 0;
+    return Error::success();
   }
 
   if (ShowCompositeInfoOnly) {
     if (!Reader->hasCompositeProfileSection()) {
       WithColor::warning() << "no composite profile section; nothing to show\n";
-      return 0;
+      return Error::success();
     }
     if (std::error_code EC = Reader->dumpProfileTypeInfo(OS)) {
       OS.flush();
-      exitWithErrorCode(EC, Filename);
+      return makeError(EC, Filename);
     }
-    return 0;
+    return Error::success();
   }
 
   if (std::error_code EC = Reader->read())
-    exitWithErrorCode(EC, Filename);
+    return makeError(EC, Filename);
 
   if (ShowAllFunctions || FuncNameFilter.empty()) {
     if (SFormat == ShowFormat::Json)
@@ -3392,7 +3392,7 @@ static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
       Reader->dump(OS);
   } else {
     if (SFormat == ShowFormat::Json)
-      exitWithError(
+      return makeError(
           "the JSON format is supported only when all functions are to "
           "be printed");
 
@@ -3417,12 +3417,12 @@ static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
     showHotFunctionList(Reader->getProfiles(), Reader->getSummary(),
                         TopNFunctions, OS);
 
-  return 0;
+  return Error::success();
 }
 
-static int showMemProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
+static Error showMemProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Json)
-    exitWithError("JSON output is not supported for MemProf");
+    return makeError("JSON output is not supported for MemProf");
 
   // Show the raw profile in YAML.
   if (memprof::RawMemProfReader::hasFormat(Filename)) {
@@ -3432,21 +3432,21 @@ static int showMemProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
       // Since the error can be related to the profile or the binary we do not
       // pass whence. Instead additional context is provided where necessary in
       // the error message.
-      exitWithError(std::move(E), /*Whence*/ "");
+      return makeError(std::move(E), /*Whence*/ "");
     }
 
     std::unique_ptr<llvm::memprof::RawMemProfReader> Reader(
         ReaderOr.get().release());
 
     Reader->printYAML(OS);
-    return 0;
+    return Error::success();
   }
 
   // Show the indexed MemProf profile in YAML.
   auto FS = vfs::getRealFileSystem();
   auto ReaderOrErr = IndexedInstrProfReader::create(Filename, *FS);
   if (Error E = ReaderOrErr.takeError())
-    exitWithError(std::move(E), Filename);
+    return makeError(std::move(E), Filename);
 
   auto Reader = std::move(ReaderOrErr.get());
   memprof::AllMemProfData Data = Reader->getAllMemProfData();
@@ -3467,31 +3467,31 @@ static int showMemProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   yaml::Output Yout(OS, nullptr, 80);
   Yout << Data;
 
-  return 0;
+  return Error::success();
 }
 
-static int showDebugInfoCorrelation(const std::string &Filename,
-                                    ShowFormat SFormat, raw_fd_ostream &OS) {
+static Error showDebugInfoCorrelation(const std::string &Filename,
+                                      ShowFormat SFormat, raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Json)
-    exitWithError("JSON output is not supported for debug info correlation");
+    return makeError("JSON output is not supported for debug info correlation");
   std::unique_ptr<InstrProfCorrelator> Correlator;
   if (auto Err =
           InstrProfCorrelator::get(Filename, InstrProfCorrelator::DEBUG_INFO)
               .moveInto(Correlator))
-    exitWithError(std::move(Err), Filename);
+    return makeError(std::move(Err), Filename);
   if (SFormat == ShowFormat::Yaml) {
     if (auto Err = Correlator->dumpYaml(MaxDbgCorrelationWarnings, OS))
-      exitWithError(std::move(Err), Filename);
-    return 0;
+      return makeError(std::move(Err), Filename);
+    return Error::success();
   }
 
   if (auto Err = Correlator->correlateProfileData(MaxDbgCorrelationWarnings))
-    exitWithError(std::move(Err), Filename);
+    return makeError(std::move(Err), Filename);
 
   InstrProfSymtab Symtab;
   if (auto Err = Symtab.create(
           StringRef(Correlator->getNamesPointer(), Correlator->getNamesSize())))
-    exitWithError(std::move(Err), Filename);
+    return makeError(std::move(Err), Filename);
 
   if (ShowProfileSymbolList)
     Symtab.dumpNames(OS);
@@ -3502,28 +3502,26 @@ static int showDebugInfoCorrelation(const std::string &Filename,
        << Twine::utohexstr(Correlator->getCountersSectionSize()) << " bytes\n";
   OS << "Found " << Correlator->getDataSize() << " functions\n";
 
-  return 0;
+  return Error::success();
 }
 
-static int show_main(StringRef ProgName) {
+static Error show_main(StringRef ProgName) {
   if (Filename.empty() && DebugInfoFilename.empty())
-    exitWithError(
+    return makeError(
         "the positional argument '<profdata-file>' is required unless '--" +
         DebugInfoFilename.ArgStr + "' is provided");
 
-  if (Filename == OutputFilename) {
-    errs() << ProgName
-           << " show: Input file name cannot be the same as the output file "
-              "name!\n";
-    return 1;
-  }
+  if (Filename == OutputFilename)
+    return makeError(
+        "Input file name cannot be the same as the output file name!",
+        (ProgName + " show").str());
   if (JsonFormat)
     SFormat = ShowFormat::Json;
 
   std::error_code EC;
   raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_TextWithCRLF);
   if (EC)
-    exitWithErrorCode(EC, OutputFilename);
+    return makeError(EC, OutputFilename);
 
   if (ShowAllFunctions && !FuncNameFilter.empty())
     WithColor::warning() << "-function argument ignored: showing all functions\n";
@@ -3617,7 +3615,7 @@ int main(int argc, const char *argv[]) {
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data\n");
 
   if (ShowSubcommand)
-    return show_main(ProgName);
+    return reportError(show_main(ProgName));
 
   if (OrderSubcommand)
     return reportError(order_main());
