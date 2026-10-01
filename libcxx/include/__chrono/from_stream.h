@@ -25,7 +25,6 @@
 #  include <__chrono/month.h>
 #  include <__chrono/monthday.h>
 #  include <__chrono/parser_data.h>
-#  include <__chrono/statically_widen.h>
 #  include <__chrono/system_clock.h>
 #  include <__chrono/tai_clock.h>
 #  include <__chrono/time_point.h>
@@ -478,9 +477,10 @@ public:
       _CharT __c{};
       if (!__peek(__c) || !_Traits::eq(__c, __expected)) {
         __state_ |= ios_base::failbit;
-        return;
+        return false;
       }
       __consume();
+      return !__fail();
     };
 
     // Accept repeated fields only when their values agree.
@@ -623,15 +623,28 @@ public:
         break;
 
       case 'D':
-        __parse(_LIBCPP_STATICALLY_WIDEN(_CharT, "%m/%d/%y"), __f, __abbrev, __options);
+        __read_unsigned(2, __value);
+        if (__fail() || !__assign(__f.__month_, __value, __fields_set::__month) || !__match(_CharT('/')))
+          break;
+        __read_unsigned(2, __value);
+        if (__fail() || !__assign(__f.__day_, __value, __fields_set::__day) || !__match(_CharT('/')))
+          break;
+        __read_unsigned(2, __value);
+        if (!__fail())
+          __assign(__f.__year_of_century_, __value, __fields_set::__year_of_century);
         break;
 
       case 'F':
         // A width on %F applies only to %Y.
         __read_signed(__has_width ? __width : 4, __value);
-        if (!__fail() && __assign(__f.__year_, __value, __fields_set::__year)) {
-          __parse(_LIBCPP_STATICALLY_WIDEN(_CharT, "-%m-%d"), __f, __abbrev, __options);
-        }
+        if (__fail() || !__assign(__f.__year_, __value, __fields_set::__year) || !__match(_CharT('-')))
+          break;
+        __read_unsigned(2, __value);
+        if (__fail() || !__assign(__f.__month_, __value, __fields_set::__month) || !__match(_CharT('-')))
+          break;
+        __read_unsigned(2, __value);
+        if (!__fail())
+          __assign(__f.__day_, __value, __fields_set::__day);
         break;
 
       case 'g':
@@ -710,13 +723,20 @@ public:
         break;
       }
 
-      case 'R':
-        __parse(_LIBCPP_STATICALLY_WIDEN(_CharT, "%H:%M"), __f, __abbrev, __options);
-        break;
-
-      case 'T':
-        __parse(_LIBCPP_STATICALLY_WIDEN(_CharT, "%H:%M:%S"), __f, __abbrev, __options);
-        break;
+      case 'R': // %H:%M
+      case 'T': // %H:%M:%S
+        __read_unsigned(2, __value);
+        if (__fail() || !__assign(__f.__hours_, __value, __fields_set::__hours) || !__match(_CharT(':')))
+          break;
+        __read_unsigned(2, __value);
+        if (__fail() || !__assign(__f.__minutes_, __value, __fields_set::__minutes))
+          break;
+        if (__spec == 'R')
+          break;
+        if (!__match(_CharT(':')))
+          break;
+        // %T has no width or modifier; parse its seconds as an ordinary %S.
+        [[fallthrough]];
 
       case 'S': {
         // The target type determines whether fractions are allowed; the width only
