@@ -147,11 +147,11 @@ define <8 x i16> @trn2.v8i16(<8 x i16> %v0, <8 x i16> %v1) {
 
 define <2 x i32> @trn1.v2i32(<2 x i32> %v0, <2 x i32> %v1) {
 ; CHECK-LABEL: 'trn1.v2i32'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %tmp0 = shufflevector <2 x i32> %v0, <2 x i32> %v1, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %tmp0 = shufflevector <2 x i32> %v0, <2 x i32> %v1, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %tmp0
 ;
 ; SIZE-LABEL: 'trn1.v2i32'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %tmp0 = shufflevector <2 x i32> %v0, <2 x i32> %v1, <2 x i32> <i32 0, i32 2>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %tmp0 = shufflevector <2 x i32> %v0, <2 x i32> %v1, <2 x i32> <i32 0, i32 2>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i32> %tmp0
 ;
 ; ZVZIP-LABEL: 'trn1.v2i32'
@@ -164,11 +164,11 @@ define <2 x i32> @trn1.v2i32(<2 x i32> %v0, <2 x i32> %v1) {
 
 define <2 x i32> @trn2.v2i32(<2 x i32> %v0, <2 x i32> %v1) {
 ; CHECK-LABEL: 'trn2.v2i32'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %tmp0 = shufflevector <2 x i32> %v0, <2 x i32> %v1, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %tmp0 = shufflevector <2 x i32> %v0, <2 x i32> %v1, <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %tmp0
 ;
 ; SIZE-LABEL: 'trn2.v2i32'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %tmp0 = shufflevector <2 x i32> %v0, <2 x i32> %v1, <2 x i32> <i32 1, i32 3>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %tmp0 = shufflevector <2 x i32> %v0, <2 x i32> %v1, <2 x i32> <i32 1, i32 3>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i32> %tmp0
 ;
 ; ZVZIP-LABEL: 'trn2.v2i32'
@@ -215,11 +215,11 @@ define <4 x i32> @trn2.v4i32(<4 x i32> %v0, <4 x i32> %v1) {
 
 define <2 x i64> @trn1.v2i64(<2 x i64> %v0, <2 x i64> %v1) {
 ; CHECK-LABEL: 'trn1.v2i64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %tmp0 = shufflevector <2 x i64> %v0, <2 x i64> %v1, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %tmp0 = shufflevector <2 x i64> %v0, <2 x i64> %v1, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %tmp0
 ;
 ; SIZE-LABEL: 'trn1.v2i64'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %tmp0 = shufflevector <2 x i64> %v0, <2 x i64> %v1, <2 x i32> <i32 0, i32 2>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %tmp0 = shufflevector <2 x i64> %v0, <2 x i64> %v1, <2 x i32> <i32 0, i32 2>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %tmp0
 ;
 ; ZVZIP-LABEL: 'trn1.v2i64'
@@ -232,11 +232,11 @@ define <2 x i64> @trn1.v2i64(<2 x i64> %v0, <2 x i64> %v1) {
 
 define <2 x i64> @trn2.v2i64(<2 x i64> %v0, <2 x i64> %v1) {
 ; CHECK-LABEL: 'trn2.v2i64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %tmp0 = shufflevector <2 x i64> %v0, <2 x i64> %v1, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %tmp0 = shufflevector <2 x i64> %v0, <2 x i64> %v1, <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %tmp0
 ;
 ; SIZE-LABEL: 'trn2.v2i64'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %tmp0 = shufflevector <2 x i64> %v0, <2 x i64> %v1, <2 x i32> <i32 1, i32 3>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %tmp0 = shufflevector <2 x i64> %v0, <2 x i64> %v1, <2 x i32> <i32 1, i32 3>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %tmp0
 ;
 ; ZVZIP-LABEL: 'trn2.v2i64'
@@ -249,11 +249,11 @@ define <2 x i64> @trn2.v2i64(<2 x i64> %v0, <2 x i64> %v1) {
 
 define <2 x float> @trn1.v2f32(<2 x float> %v0, <2 x float> %v1) {
 ; CHECK-LABEL: 'trn1.v2f32'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %tmp0 = shufflevector <2 x float> %v0, <2 x float> %v1, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %tmp0 = shufflevector <2 x float> %v0, <2 x float> %v1, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x float> %tmp0
 ;
 ; SIZE-LABEL: 'trn1.v2f32'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %tmp0 = shufflevector <2 x float> %v0, <2 x float> %v1, <2 x i32> <i32 0, i32 2>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %tmp0 = shufflevector <2 x float> %v0, <2 x float> %v1, <2 x i32> <i32 0, i32 2>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x float> %tmp0
 ;
 ; ZVZIP-LABEL: 'trn1.v2f32'
@@ -266,11 +266,11 @@ define <2 x float> @trn1.v2f32(<2 x float> %v0, <2 x float> %v1) {
 
 define <2 x float> @trn2.v2f32(<2 x float> %v0, <2 x float> %v1) {
 ; CHECK-LABEL: 'trn2.v2f32'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %tmp0 = shufflevector <2 x float> %v0, <2 x float> %v1, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %tmp0 = shufflevector <2 x float> %v0, <2 x float> %v1, <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x float> %tmp0
 ;
 ; SIZE-LABEL: 'trn2.v2f32'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %tmp0 = shufflevector <2 x float> %v0, <2 x float> %v1, <2 x i32> <i32 1, i32 3>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %tmp0 = shufflevector <2 x float> %v0, <2 x float> %v1, <2 x i32> <i32 1, i32 3>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x float> %tmp0
 ;
 ; ZVZIP-LABEL: 'trn2.v2f32'
@@ -317,11 +317,11 @@ define <4 x float> @trn2.v4f32(<4 x float> %v0, <4 x float> %v1) {
 
 define <2 x double> @trn1.v2f64(<2 x double> %v0, <2 x double> %v1) {
 ; CHECK-LABEL: 'trn1.v2f64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %tmp0 = shufflevector <2 x double> %v0, <2 x double> %v1, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %tmp0 = shufflevector <2 x double> %v0, <2 x double> %v1, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x double> %tmp0
 ;
 ; SIZE-LABEL: 'trn1.v2f64'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %tmp0 = shufflevector <2 x double> %v0, <2 x double> %v1, <2 x i32> <i32 0, i32 2>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %tmp0 = shufflevector <2 x double> %v0, <2 x double> %v1, <2 x i32> <i32 0, i32 2>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x double> %tmp0
 ;
 ; ZVZIP-LABEL: 'trn1.v2f64'
@@ -334,11 +334,11 @@ define <2 x double> @trn1.v2f64(<2 x double> %v0, <2 x double> %v1) {
 
 define <2 x double> @trn2.v2f64(<2 x double> %v0, <2 x double> %v1) {
 ; CHECK-LABEL: 'trn2.v2f64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %tmp0 = shufflevector <2 x double> %v0, <2 x double> %v1, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %tmp0 = shufflevector <2 x double> %v0, <2 x double> %v1, <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x double> %tmp0
 ;
 ; SIZE-LABEL: 'trn2.v2f64'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %tmp0 = shufflevector <2 x double> %v0, <2 x double> %v1, <2 x i32> <i32 1, i32 3>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %tmp0 = shufflevector <2 x double> %v0, <2 x double> %v1, <2 x i32> <i32 1, i32 3>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x double> %tmp0
 ;
 ; ZVZIP-LABEL: 'trn2.v2f64'
