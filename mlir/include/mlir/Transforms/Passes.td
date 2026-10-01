@@ -142,6 +142,9 @@ def RemoveDeadValuesPass : Pass<"remove-dead-values"> {
     (D) Removes simple and region branch ops that have all non-live results and
     don't affect memory in any way.
 
+    The pass applies only to nested operations. It preserves the root
+    operation, including its operands, results, and function signature.
+
     Here, a "simple op" refers to an op that isn't a symbol op, symbol-user op,
     region branch op, branch op, region branch terminator op, or return-like.
 

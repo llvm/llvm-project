@@ -484,11 +484,9 @@ class RegisterOperandsCollector {
     for (ConstMIBundleOperands OperI(MI); OperI.isValid(); ++OperI)
       collectOperandLanes(*OperI);
 
-    // A register unit is dead if any def covering it is dead; subtract the
-    // dead defs from the live defs so overlapping defs do not leave a unit
-    // counted as live. See collectInstr.
-    for (const VRegMaskOrUnit &P : RegOpers.DeadDefs)
-      removeRegLanes(RegOpers.Defs, P);
+    // Remove redundant physreg dead defs.
+    for (const VRegMaskOrUnit &P : RegOpers.Defs)
+      removeRegLanes(RegOpers.DeadDefs, P);
   }
 
   /// Push this operand's register onto the correct vectors.

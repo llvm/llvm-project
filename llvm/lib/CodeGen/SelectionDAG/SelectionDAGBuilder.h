@@ -617,6 +617,9 @@ private:
   void visitGetElementPtr(const User &I);
   void visitSelect(const User &I);
 
+  void visitBitInsert(const User &I);
+  void visitBitExtract(const User &I);
+
   void visitAlloca(const AllocaInst &I);
   void visitLoad(const LoadInst &I);
   void visitStore(const StoreInst &I);
@@ -624,6 +627,7 @@ private:
   void visitMaskedStore(const CallInst &I, bool IsCompressing = false);
   void visitMaskedGather(const CallInst &I);
   void visitMaskedScatter(const CallInst &I);
+  void visitSpeculativeLoad(const CallInst &I);
   void visitAtomicCmpXchg(const AtomicCmpXchgInst &I);
   void visitAtomicRMW(const AtomicRMWInst &I);
   void visitFence(const FenceInst &I);

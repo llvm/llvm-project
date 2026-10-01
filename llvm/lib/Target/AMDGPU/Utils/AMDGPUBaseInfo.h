@@ -460,7 +460,8 @@ const MIMGG16MappingInfo *getMIMGG16MappingInfo(unsigned G);
 
 LLVM_READONLY
 int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
-                  unsigned VDataDwords, unsigned VAddrDwords);
+                  unsigned VDataDwords, unsigned VAddrDwords,
+                  bool IndexedRsrc = false, bool IndexedSamp = false);
 
 LLVM_READONLY
 int getMaskedMIMGOp(unsigned Opc, unsigned NewChannels);
@@ -477,6 +478,8 @@ struct MIMGInfo {
   uint8_t VDataDwords;
   uint8_t VAddrDwords;
   uint8_t VAddrOperands;
+  bool IndexedRsrc;
+  bool IndexedSamp;
 };
 
 LLVM_READONLY
@@ -1758,10 +1761,6 @@ inline bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned DC) {
   return false;
 }
 
-/// \returns true if an instruction may have a 64-bit VGPR operand.
-bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
-                             const MCSubtargetInfo &ST);
-
 /// \returns true if an instruction is a DP ALU DPP without any 64-bit operands.
 bool isDPALU_DPP32BitOpc(unsigned Opc);
 
@@ -1808,11 +1807,6 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc);
 
 /// \returns true if a memory instruction supports scale_offset modifier.
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode);
-
-/// \returns lds block size in terms of dwords. \p
-/// This is used to calculate the lds size encoded for PAL metadata 3.0+ which
-/// must be defined in terms of bytes.
-unsigned getLdsDwGranularity(const MCSubtargetInfo &ST);
 
 class ClusterDimsAttr {
 public:

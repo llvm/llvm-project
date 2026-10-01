@@ -41,6 +41,11 @@ SparcInstrInfo::SparcInstrInfo(const SparcSubtarget &ST)
     : SparcGenInstrInfo(ST, RI, SP::ADJCALLSTACKDOWN, SP::ADJCALLSTACKUP),
       RI(ST), Subtarget(ST) {}
 
+const TargetRegisterClass *SparcInstrInfo::getInlineAsmMemoryOperandRegClass(
+    InlineAsm::ConstraintCode C) const {
+  return Subtarget.is64Bit() ? &SP::I64RegsRegClass : &SP::IntRegsRegClass;
+}
+
 /// isLoadFromStackSlot - If the specified machine instruction is a direct
 /// load from a stack slot, return the virtual or physical register number of
 /// the destination along with the FrameIndex of the loaded stack slot.  If
@@ -651,7 +656,8 @@ Register SparcInstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
 
   DebugLoc dl;
 
-  BuildMI(FirstMBB, MBBI, dl, get(SP::GETPCX), GlobalBaseReg);
+  BuildMI(FirstMBB, MBBI, dl, get(SP::GETPCX), GlobalBaseReg)
+      .setOperandDead(1); // implicit-def $o7
   SparcFI->setGlobalBaseReg(GlobalBaseReg);
   return GlobalBaseReg;
 }

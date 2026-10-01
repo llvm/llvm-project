@@ -36,6 +36,7 @@ struct CallLifetimeEnd final : EHScopeStack::Cleanup {
   // than an Address.
   mlir::Value addr;
   CallLifetimeEnd(mlir::Value addr) : addr(addr) {}
+  bool isRedundantBeforeReturn() override { return true; }
   void emit(CIRGenFunction &cgf, Flags flags) override {
     cgf.emitLifetimeEndOp(addr.getLoc(), addr);
   }
@@ -527,7 +528,6 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   std::string name = getStaticDeclName(*this, d);
 
   mlir::Type lty = getTypes().convertTypeForMem(ty);
-  assert(!cir::MissingFeatures::addressSpace());
 
   // OpenCL variables in local address space and CUDA shared
   // variables cannot have an initializer.
@@ -538,8 +538,12 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   else
     init = builder.getZeroInitAttr(convertType(ty));
 
-  cir::GlobalOp gv = builder.createVersionedGlobal(
-      getModule(), getLoc(d.getLocation()), name, lty, false, linkage);
+  mlir::ptr::MemorySpaceAttrInterface addrSpace = cir::toCIRAddressSpaceAttr(
+      getMLIRContext(), getGlobalVarAddressSpace(&d));
+
+  cir::GlobalOp gv =
+      builder.createVersionedGlobal(getModule(), getLoc(d.getLocation()), name,
+                                    lty, false, linkage, addrSpace);
   insertGlobalSymbol(gv);
   // TODO(cir): infer visibility from linkage in global op builder.
   gv.setVisibility(getMLIRVisibilityFromCIRLinkage(linkage));
@@ -1084,6 +1088,7 @@ struct DestroyNRVOVariableCXX final
 struct CallStackRestore final : EHScopeStack::Cleanup {
   Address stack;
   CallStackRestore(Address stack) : stack(stack) {}
+  bool isRedundantBeforeReturn() override { return true; }
   void emit(CIRGenFunction &cgf, Flags flags) override {
     mlir::Location loc = stack.getPointer().getLoc();
     mlir::Value v = cgf.getBuilder().createLoad(loc, stack);

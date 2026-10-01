@@ -160,23 +160,6 @@ PPCRegisterInfo::PPCRegisterInfo(const PPCTargetMachine &TM)
   ImmToIdxMap[PPC::PSTXVP] = PPC::STXVPX;
 }
 
-/// getPointerRegClass - Return the register class to use to hold pointers.
-/// This is used for addressing modes.
-const TargetRegisterClass *
-PPCRegisterInfo::getPointerRegClass(unsigned Kind) const {
-  // Note that PPCInstrInfo::foldImmediate also directly uses this Kind value
-  // when it checks for ZERO folding.
-  if (Kind == 1) {
-    if (TM.isPPC64())
-      return &PPC::G8RC_NOX0RegClass;
-    return &PPC::GPRC_NOR0RegClass;
-  }
-
-  if (TM.isPPC64())
-    return &PPC::G8RCRegClass;
-  return &PPC::GPRCRegClass;
-}
-
 const MCPhysReg*
 PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const PPCSubtarget &Subtarget = MF->getSubtarget<PPCSubtarget>();
