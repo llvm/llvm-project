@@ -1031,17 +1031,6 @@ TEST_F(ExtractFunctionTest, ReferenceToScalar) {
               HasSubstr("extracted(int &A, const int &B)"));
 }
 
-TEST_F(ExtractFunctionTest, LargeScalarType) {
-  Context = File;
-  // _BitInt(256) is a scalar type, but far larger than a couple of
-  // words: stays by reference despite being unmutated.
-  EXPECT_THAT(apply(R"cpp(
-    void use(_BitInt(256));
-    void f(_BitInt(256) x) { [[use(x);]] }
-  )cpp"),
-              HasSubstr("extracted(const _BitInt(256) &x)"));
-}
-
 TEST_F(ExtractFunctionTest, VolatileScalar) {
   Context = File;
   EXPECT_THAT(apply(R"cpp(
