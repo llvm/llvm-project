@@ -329,6 +329,8 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
         Triple.isGNUEnvironment() ? "llvm.arm.gnu.eabi.mcount" : "\01mcount";
 
   SoftFloatABI = llvm::is_contained(Opts.FeaturesAsWritten, "+soft-float-abi");
+  if (!SoftFloatABI)
+    HasStrictFP = true;
 }
 
 StringRef ARMTargetInfo::getABI() const { return ABI; }
