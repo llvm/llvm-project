@@ -363,7 +363,6 @@ entry:
   ret void
 }
 
-; Regression test for https://github.com/llvm/llvm-project/issues/227064.
 ; A constant workgroup array index can become an i8 GEP followed by a ptrcast.
 ; Rebuild its byte offset as logical indices instead of byte-wise accesses.
 

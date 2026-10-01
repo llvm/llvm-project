@@ -2,8 +2,6 @@
 ; RUN:   -mtriple=spirv1.6-unknown-vulkan1.3-compute %s -o - | FileCheck %s
 
 ; Verify that the replacement llvm.spv.gep remains after its pointer operand.
-; Regression test for https://github.com/llvm/llvm-project/issues/226608.
-
 %struct.MaskStruct = type { [4 x i32] }
 
 define void @logical_access_chain(
