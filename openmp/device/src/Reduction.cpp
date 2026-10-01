@@ -235,14 +235,19 @@ int32_t __kmpc_gpu_xteam_reduce_nowait(IdentTy *Loc, void *reduce_data,
   uint32_t ThreadId;
   uint32_t NumThreads;
 
-  if (mapping::isSPMDMode()) {
+  // In SPMD mode, we're dealing with full warps unless the kernel was SPMD-ized
+  // without parallel regions: then, only the main thread is alive (see
+  // OpenMPOpt).
+  bool AllThreads =
+      mapping::isSPMDMode() && utils::popc(mapping::activemask()) > 1;
+  if (AllThreads) {
     // In SPMD mode all workers participate in the teams reduction.
     ThreadId = mapping::getThreadIdInBlock();
     NumThreads = mapping::getNumberOfThreadsInBlock();
   } else {
     // In generic mode, only the team master participates in the teams
     // reduction because the workers are waiting for parallel work.
-    if (!mapping::isMainThreadInGenericMode())
+    if (mapping::isGenericMode() && !mapping::isMainThreadInGenericMode())
       return 0;
     ThreadId = 0;
     NumThreads = 1;
@@ -273,7 +278,7 @@ int32_t __kmpc_gpu_xteam_reduce_nowait(IdentTy *Loc, void *reduce_data,
 
   // This sync is needed so that all threads from last team see the shared teams
   // done counter value and know that they are in the last team.
-  if (mapping::isSPMDMode())
+  if (AllThreads)
     synchronize::threadsAligned(atomic::acq_rel);
 
   // If teams done counter reaches NumTeams-1, this is the last team.
@@ -287,15 +292,22 @@ int32_t __kmpc_gpu_xteam_reduce_nowait(IdentTy *Loc, void *reduce_data,
 
   // Make sure that global buffer is fresh.
   fence::kernel(atomic::acquire);
+
+  // Use a loop with a constant stride for the single-thread case, so that it
+  // can be unrolled.
+  if (NumThreads == 1) {
+    glcpyFct(GlobalBuffer, 0, reduce_data);
+    for (uint32_t I = 1; I < NumTeams; ++I)
+      glredFct(GlobalBuffer, I, reduce_data);
+    return 1;
+  }
+
   // Get the team values from the global buffer.
   glcpyFct(GlobalBuffer, ThreadId, reduce_data);
   // In case we have more teams than threads, we need to iterate over the
   // remaining teams.
   for (uint32_t I = NumThreads + ThreadId; I < NumTeams; I += NumThreads)
     glredFct(GlobalBuffer, I, reduce_data);
-
-  if (NumThreads == 1)
-    return 1;
 
   return gpu_block_reduce<false>(reduce_data, shflFct, cpyFct, NumThreads,
                                  ThreadId);
