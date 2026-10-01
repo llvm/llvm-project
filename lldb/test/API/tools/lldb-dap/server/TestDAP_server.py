@@ -6,8 +6,6 @@ import os
 import signal
 import tempfile
 import time
-from concurrent import futures
-from typing import List
 
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -26,7 +24,9 @@ class TestDAP_server(DAPTestCaseBase):
         """
         self.build()
         adapter = self.start_server(connection="listen://localhost:0")
-        self.run_concurrent_debug_sessions(adapter, ["Alice", "Bob"])
+        for name in ["Alice", "Bob"]:
+            session = self.create_session(adapter, disconnect_automatically=False)
+            self.run_debug_session(session, name)
 
     @requirePOSIX
     def test_server_unix_socket(self):
@@ -45,7 +45,9 @@ class TestDAP_server(DAPTestCaseBase):
         self.addTearDownHook(temp_dir.cleanup)
 
         adapter = self.start_server(connection="accept://" + socket_path)
-        self.run_concurrent_debug_sessions(adapter, ["Alice", "Bob"])
+        for name in ["Alice", "Bob"]:
+            session = self.create_session(adapter, disconnect_automatically=False)
+            self.run_debug_session(session, name)
 
     @skipIfWindows
     def test_server_interrupt(self):
@@ -200,19 +202,3 @@ class TestDAP_server(DAPTestCaseBase):
         if sleep_seconds_in_middle:
             time.sleep(sleep_seconds_in_middle)
         self.continue_to_exit_and_disconnect(session, name)
-
-    def run_concurrent_debug_sessions(self, adapter: DebugAdapter, names: List[str]):
-        # create_session() is not called in the executor since it is not thread-safe
-        # because it calls addTearDownHook() and create_connection().
-        sessions = [
-            self.create_session(adapter, disconnect_automatically=False) for _ in names
-        ]
-        with futures.ThreadPoolExecutor(max_workers=len(names)) as executor:
-            session_futures = {
-                executor.submit(self.run_debug_session, session, name): name
-                for session, name in zip(sessions, names)
-            }
-
-            for fut in futures.as_completed(session_futures):
-                with self.subTest(session=session_futures[fut]):
-                    fut.result()
