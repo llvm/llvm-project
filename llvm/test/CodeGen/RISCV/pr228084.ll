@@ -2,7 +2,6 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s | FileCheck %s
 
 ;; Check that stack alignment >= 2^32 works correctly.
-; FIXME: sp is realigned with `andi sp, sp, 0`, which sets it to zero.
 
 define void @f() {
 ; CHECK-LABEL: f:
@@ -19,7 +18,8 @@ define void @f() {
 ; CHECK-NEXT:    slli a0, a0, 33
 ; CHECK-NEXT:    addi a0, a0, -2032
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    andi sp, sp, 0
+; CHECK-NEXT:    srli a0, sp, 32
+; CHECK-NEXT:    slli sp, a0, 32
 ; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    slli a0, a0, 32
 ; CHECK-NEXT:    add a0, sp, a0
