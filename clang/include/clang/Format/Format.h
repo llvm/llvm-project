@@ -2838,6 +2838,20 @@ struct FormatStyle {
   /// \version 19
   BreakTemplateDeclarationsStyle BreakTemplateDeclarations;
 
+  /// Keep the break keyword and the following case label on the same line.
+  ///
+  /// \code
+  ///    false:                         true:
+  ///    switch (n) {                 switch (n) {
+  ///      case 1:                      case 1:
+  ///        foo();                       foo();
+  ///        break;                     break; case 2:
+  ///      case 2:                        bar();
+  ///        bar();                   }
+  ///    }
+  /// \endcode
+  bool CompactCaseLabels;
+
   /// If `true`, consecutive namespace declarations will be on the same
   /// line. If `false`, each namespace is declared on a new line.
   /// \code
@@ -3800,20 +3814,6 @@ struct FormatStyle {
   /// www.gnu.org/prep/standards/html_node/Formatting.html#:~:text=formfeed.)
   /// \version 20
   bool KeepFormFeed;
-
-  /// Keep the break keyword and the following case label on the same line.
-  ///
-  /// \code
-  ///    false:                         true:
-  ///    switch (foo) {                 switch (foo) {
-  ///      case 1:                        case 1:
-  ///        bar();                        bar();
-  ///        break;                        break; case 2:
-  ///      case 2:                         bar();
-  ///        bar();                       }
-  ///    }
-  /// \endcode
-  bool KwBreakBeforeCaseLabel;
 
   /// Indentation logic for lambda bodies.
   enum LambdaBodyIndentationKind : int8_t {
@@ -6244,6 +6244,7 @@ struct FormatStyle {
            BreakStringLiterals == R.BreakStringLiterals &&
            BreakTemplateDeclarations == R.BreakTemplateDeclarations &&
            ColumnLimit == R.ColumnLimit && CommentPragmas == R.CommentPragmas &&
+           CompactCaseLabels == R.CompactCaseLabels &&
            CompactNamespaces == R.CompactNamespaces &&
            ConstructorInitializerIndentWidth ==
                R.ConstructorInitializerIndentWidth &&
@@ -6283,7 +6284,6 @@ struct FormatStyle {
            JavaScriptWrapImports == R.JavaScriptWrapImports &&
            KeepEmptyLines == R.KeepEmptyLines &&
            KeepFormFeed == R.KeepFormFeed && Language == R.Language &&
-           KwBreakBeforeCaseLabel == R.KwBreakBeforeCaseLabel &&
            LambdaBodyIndentation == R.LambdaBodyIndentation &&
            LineEnding == R.LineEnding && MacroBlockBegin == R.MacroBlockBegin &&
            MacroBlockEnd == R.MacroBlockEnd && Macros == R.Macros &&

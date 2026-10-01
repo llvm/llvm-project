@@ -281,8 +281,8 @@ private:
         return MergedLines;
     }
 
-    // Handle case labels preceded by a break statement
-    if (Style.KwBreakBeforeCaseLabel &&
+    // Handle case labels preceded by a break statement.
+    if (Style.CompactCaseLabels &&
         NextLine.First->isOneOf(tok::kw_case, tok::kw_default) &&
         TheLine->endsWith(tok::semi, tok::kw_break) &&
         TheLine->Level <= NextLine.Level) {

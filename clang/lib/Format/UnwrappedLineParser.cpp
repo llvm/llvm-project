@@ -3483,7 +3483,7 @@ void UnwrappedLineParser::parseLabel(bool IsGotoLabel) {
   const auto OldLineLevel = Line->Level;
   auto &Level = Line->Level;
 
-  if (!IsGotoLabel && Style.KwBreakBeforeCaseLabel && linePrecededByKwBreak()) {
+  if (!IsGotoLabel && Style.CompactCaseLabels && linePrecededByKwBreak()) {
     assert(OldLineLevel > 0);
     Lines.back().Level = OldLineLevel - 1;
   }
@@ -3505,7 +3505,7 @@ void UnwrappedLineParser::parseLabel(bool IsGotoLabel) {
     if (FormatTok->is(tok::kw_break)) {
       if (Style.BraceWrapping.AfterControlStatement ==
               FormatStyle::BWACS_Always ||
-          Style.KwBreakBeforeCaseLabel) {
+          Style.CompactCaseLabels) {
         addUnwrappedLine();
         if (!Style.IndentCaseBlocks &&
             Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths) {

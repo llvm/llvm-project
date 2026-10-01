@@ -1377,6 +1377,7 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.BreakTemplateDeclarations);
     IO.mapOptional("ColumnLimit", Style.ColumnLimit);
     IO.mapOptional("CommentPragmas", Style.CommentPragmas);
+    IO.mapOptional("CompactCaseLabels ", Style.CompactCaseLabels);
     IO.mapOptional("CompactNamespaces", Style.CompactNamespaces);
     IO.mapOptional("ConstructorInitializerIndentWidth",
                    Style.ConstructorInitializerIndentWidth);
@@ -1419,7 +1420,6 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("JavaScriptWrapImports", Style.JavaScriptWrapImports);
     IO.mapOptional("KeepEmptyLines", Style.KeepEmptyLines);
     IO.mapOptional("KeepFormFeed", Style.KeepFormFeed);
-    IO.mapOptional("KwBreakBeforeCaseLabel", Style.KwBreakBeforeCaseLabel);
     IO.mapOptional("LambdaBodyIndentation", Style.LambdaBodyIndentation);
     IO.mapOptional("LineEnding", Style.LineEnding);
     IO.mapOptional("MacroBlockBegin", Style.MacroBlockBegin);
@@ -1955,6 +1955,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakStringLiterals = true;
   LLVMStyle.BreakTemplateDeclarations = FormatStyle::BTDS_MultiLine;
   LLVMStyle.ColumnLimit = 80;
+  LLVMStyle.CompactCaseLabels = false;
   LLVMStyle.CommentPragmas = "^ IWYU pragma:";
   LLVMStyle.CompactNamespaces = false;
   LLVMStyle.ConstructorInitializerIndentWidth = 4;
@@ -2001,7 +2002,6 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
       /*AtStartOfFile=*/true,
   };
   LLVMStyle.KeepFormFeed = false;
-  LLVMStyle.KwBreakBeforeCaseLabel = false;
   LLVMStyle.LambdaBodyIndentation = FormatStyle::LBI_Signature;
   LLVMStyle.Language = Language;
   LLVMStyle.LineEnding = FormatStyle::LE_DeriveLF;
