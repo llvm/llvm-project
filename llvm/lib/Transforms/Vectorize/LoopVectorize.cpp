@@ -5342,7 +5342,6 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
 void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   CM->collectValuesToIgnore();
   Config.collectElementTypesForWidening(&CM->ValuesToIgnore);
-
   FixedScalableVFPair MaxFactors = CM->computeMaxVF(UserVF, UserIC);
   if (!MaxFactors) // Cases that should not to be vectorized nor interleaved.
     return;
@@ -7955,11 +7954,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   bool VectorizeLoop = true, InterleaveLoop = true;
   if (VF.Width.isScalar()) {
     if (LVP.hasVectorPlan())
-      LLVM_DEBUG(dbgs() << "LV: Vectorization is not possible. Failed to "
-                           "create any vector vplans.\n");
-    else
       LLVM_DEBUG(
           dbgs() << "LV: Vectorization is possible but not beneficial.\n");
+    else
+      LLVM_DEBUG(dbgs() << "LV: Vectorization is not possible. Failed to "
+                           "create any vector vplans.\n");
     VecDiagMsg = {
         "VectorizationNotBeneficial",
         "the cost-model indicates that vectorization is not beneficial"};

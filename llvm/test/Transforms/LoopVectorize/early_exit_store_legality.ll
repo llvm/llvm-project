@@ -895,7 +895,7 @@ define i32 @uncountable_exit_with_masked_ldst_separate_condition(ptr dereference
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_with_masked_ldst_separate_condition'
 ; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
 ; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with side effects contains unsupported conditional memory operations
-; CHECK-DEBUG:       LV: Vectorization is possible but not beneficial.
+; CHECK-DEBUG:       LV: Vectorization is not possible. Failed to create any vector vplans.
 ; CHECK-REMARK:      foo.c:290:3: loop not vectorized: Early exit loop with side effects contains unsupported conditional memory operations
 entry:
   br label %for.body, !dbg !67
