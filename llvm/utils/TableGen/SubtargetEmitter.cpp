@@ -2119,12 +2119,9 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
      << "    const unsigned *OC, const unsigned *FP) :\n"
      << "      MCSubtargetInfo(TT, CPU, TuneCPU, FS, PN, PF, PD, PA, PSM,\n"
      << "                      WPR, WL, RA, IS, OC, FP) { }\n\n"
-     << "  MCSubtargetInfo *copyTo(MCSubtargetInfo *Mem) const final {\n"
-     << "    static_assert(sizeof(" << Target
-     << "GenMCSubtargetInfo) == sizeof(MCSubtargetInfo) &&\n"
-     << "                  alignof(" << Target
-     << "GenMCSubtargetInfo) == alignof(MCSubtargetInfo));\n"
-     << "    return new (Mem) " << Target << "GenMCSubtargetInfo(*this);\n"
+     << "  std::unique_ptr<MCSubtargetInfo> clone() const final {\n"
+     << "    return std::make_unique<" << Target
+     << "GenMCSubtargetInfo>(*this);\n"
      << "  }\n\n"
      << "  unsigned resolveVariantSchedClass(unsigned SchedClass,\n"
      << "      const MCInst *MI, const MCInstrInfo *MCII,\n"
