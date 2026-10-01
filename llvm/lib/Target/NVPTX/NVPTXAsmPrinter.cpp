@@ -920,6 +920,9 @@ void NVPTXAsmPrinter::emitFunctionBodyEnd() {
   VRegMapping.clear();
 }
 
+// PTX permits these directives only between the .func directive and the
+// function body, so they are emitted here, after the parameter list and before
+// the opening brace.
 void NVPTXAsmPrinter::emitFunctionDirectives(const Function &F,
                                              raw_ostream &O) const {
   if (shouldEmitPTXNoReturn(F))

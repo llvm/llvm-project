@@ -1,6 +1,12 @@
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_80 -mattr=+ptx83 | FileCheck %s
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_80 -mattr=+ptx83 | %ptxas-verify -arch=sm_80 %}
 
+; The directives require both sm_80 and PTX ISA 8.3, and are omitted when
+; either is missing.
+; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_70 -mattr=+ptx83 | FileCheck %s --check-prefix=NOABI
+; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_80 -mattr=+ptx82 | FileCheck %s --check-prefix=NOABI
+; NOABI-NOT: abi_preserve
+
 target datalayout = "e-p:64:64:64-p3:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-i128:128:128-f32:32:32-f64:64:64-f128:128:128-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
 
