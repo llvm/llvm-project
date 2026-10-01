@@ -7813,13 +7813,8 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     case 32:
       return ExpansionKind;
     case 64:
-<<<<<<< HEAD
-      if (STI.hasAtomMinMax64())
-        return ExpansionKind;
-=======
       if (STI.hasAtomMinMaxAndOrXor())
         return AtomicExpansionKind::None;
->>>>>>> origin/main
       return AtomicExpansionKind::CmpXChg;
     case 128:
       return AtomicExpansionKind::CmpXChg;
