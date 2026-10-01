@@ -71,6 +71,7 @@ from ctypes import (
     byref,
     c_char_p,
     c_int,
+    c_long,
     c_longlong,
     c_uint,
     c_ulong,
@@ -82,6 +83,7 @@ from ctypes import (
 )
 
 import os
+import platform
 import sys
 from enum import Enum
 import warnings
@@ -2041,6 +2043,16 @@ class Cursor(Structure):
 
     @property
     @cursor_null_guard
+    def unary_operator(self) -> UnaryOperator:
+        """Retrieves the unary operator if this cursor has one."""
+
+        if not hasattr(self, "_unopcode"):
+            self._unopcode = conf.lib.clang_getCursorUnaryOperatorKind(self)
+
+        return UnaryOperator.from_id(self._unopcode)
+
+    @property
+    @cursor_null_guard
     def access_specifier(self) -> AccessSpecifier:
         """
         Retrieves the access specifier (if any) of the entity pointed at by the
@@ -2476,6 +2488,32 @@ class BinaryOperator(BaseEnumeration):
     XorAssign = 31
     OrAssign = 32
     Comma = 33
+
+
+class UnaryOperator(BaseEnumeration):
+    """Describes the kind of unary operators."""
+
+    def is_postfix(self):
+        return self in {
+            UnaryOperator.PostDec,
+            UnaryOperator.PostInc,
+        }
+
+    Invalid = 0
+    PostInc = 1
+    PostDec = 2
+    PreInc = 3
+    PreDec = 4
+    AddrOf = 5
+    Deref = 6
+    Plus = 7
+    Minus = 8
+    Not = 9
+    LNot = 10
+    Real = 11
+    Imag = 12
+    Extension = 13
+    Coawait = 14
 
 
 class StorageClass(BaseEnumeration):
@@ -4121,8 +4159,16 @@ class PrintingPolicy(ClangObject):
 translation_unit_includes_callback = CFUNCTYPE(
     None, c_object_p, POINTER(SourceLocation), c_uint, py_object
 )
-cursor_visit_callback = CFUNCTYPE(c_int, Cursor, Cursor, py_object)
-fields_visit_callback = CFUNCTYPE(c_int, Cursor, py_object)
+# On s390x the visitor callbacks must return a full register word (c_long)
+# rather than c_int. ctypes does not sign/zero-extend a narrow closure return
+# to the full 64-bit return register the s390x ELF ABI requires, leaving
+# garbage in the high bytes. libclang reads the full register and faults with
+# a SIGFPE.
+# TODO: Remove once the ctypes fix (https://github.com/python/cpython/issues/156933)
+# has propagated.
+_visitor_result = c_long if platform.machine() == "s390x" else c_int
+cursor_visit_callback = CFUNCTYPE(_visitor_result, Cursor, Cursor, py_object)
+fields_visit_callback = CFUNCTYPE(_visitor_result, Cursor, py_object)
 
 # Functions strictly alphabetical order.
 FUNCTION_LIST: list[LibFunc] = [
@@ -4349,6 +4395,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_Cursor_getTemplateArgumentValue", [Cursor, c_uint], c_longlong),
     ("clang_Cursor_getTemplateArgumentUnsignedValue", [Cursor, c_uint], c_ulonglong),
     ("clang_getCursorBinaryOperatorKind", [Cursor], c_int),
+    ("clang_getCursorUnaryOperatorKind", [Cursor], c_int),
     ("clang_Cursor_getBriefCommentText", [Cursor], _CXString),
     ("clang_Cursor_getRawCommentText", [Cursor], _CXString),
     ("clang_Cursor_getOffsetOfField", [Cursor], c_longlong),
@@ -4554,4 +4601,5 @@ __all__ = [
     "TranslationUnit",
     "TypeKind",
     "Type",
+    "UnaryOperator",
 ]

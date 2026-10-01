@@ -1045,7 +1045,8 @@ public:
 
   /// Build a new matrix type given the element type and dimensions.
   QualType RebuildConstantMatrixType(QualType ElementType, unsigned NumRows,
-                                     unsigned NumColumns);
+                                     unsigned NumColumns,
+                                     SourceLocation AttributeLoc);
 
   /// Build a new matrix type given the type and dependently-defined
   /// dimensions.
@@ -5466,7 +5467,7 @@ bool TreeTransform<Derived>::PreparePackForExpansion(TemplateArgumentLoc In,
       // that required a substituion first.
       bool SawPackTypes =
           llvm::any_of(Unexpanded, [](UnexpandedParameterPack P) {
-            return P.first.dyn_cast<const SubstBuiltinTemplatePackType *>();
+            return isa<const SubstBuiltinTemplatePackType *>(P.first);
           });
       if (!SawPackTypes) {
         Info.Expand = false;
@@ -6297,7 +6298,7 @@ TreeTransform<Derived>::TransformConstantMatrixType(TypeLocBuilder &TLB,
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() || ElementType != T->getElementType()) {
     Result = getDerived().RebuildConstantMatrixType(
-        ElementType, T->getNumRows(), T->getNumColumns());
+        ElementType, T->getNumRows(), T->getNumColumns(), TL.getAttrNameLoc());
     if (Result.isNull())
       return QualType();
   }
@@ -7855,6 +7856,15 @@ QualType TreeTransform<Derived>::TransformAttributedType(TypeLocBuilder &TLB,
           getDerived().TransformType(AuxiliaryTLB, TL.getEquivalentTypeLoc());
       if (equivalentType.isNull())
         return QualType();
+    }
+
+    if (SemaRef.getLangOpts().HLSL) {
+      if (oldType->getAttrKind() == attr::HLSLRowMajor)
+        equivalentType = SemaRef.Context.getMatrixTypeWithLayout(
+            equivalentType, MatrixType::LayoutKind::RowMajor);
+      else if (oldType->getAttrKind() == attr::HLSLColumnMajor)
+        equivalentType = SemaRef.Context.getMatrixTypeWithLayout(
+            equivalentType, MatrixType::LayoutKind::ColumnMajor);
     }
 
     // Check whether we can add nullability; it is only represented as
@@ -18204,9 +18214,17 @@ TreeTransform<Derived>::RebuildDependentSizedExtVectorType(QualType ElementType,
 
 template <typename Derived>
 QualType TreeTransform<Derived>::RebuildConstantMatrixType(
-    QualType ElementType, unsigned NumRows, unsigned NumColumns) {
-  return SemaRef.Context.getConstantMatrixType(ElementType, NumRows,
-                                               NumColumns);
+    QualType ElementType, unsigned NumRows, unsigned NumColumns,
+    SourceLocation AttributeLoc) {
+  ASTContext &Ctx = SemaRef.Context;
+  QualType SizeTy = Ctx.getSizeType();
+  unsigned SizeWidth = Ctx.getIntWidth(SizeTy);
+  IntegerLiteral *RowExpr = IntegerLiteral::Create(
+      Ctx, llvm::APInt(SizeWidth, NumRows), SizeTy, AttributeLoc);
+  IntegerLiteral *ColumnExpr = IntegerLiteral::Create(
+      Ctx, llvm::APInt(SizeWidth, NumColumns), SizeTy, AttributeLoc);
+  return SemaRef.BuildMatrixType(ElementType, RowExpr, ColumnExpr,
+                                 AttributeLoc);
 }
 
 template <typename Derived>

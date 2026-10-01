@@ -365,9 +365,9 @@ private:
       const AppliedModifierInfo &info);
   bool VerifyModifierUltimate(parser::omp::WithSource<llvm::omp::Clause> clause,
       const AppliedModifierInfo &info);
-  bool VerifyModifiers(parser::omp::WithSource<llvm::omp::Clause> clause,
+  bool VerifyModifierSyntax(parser::omp::WithSource<llvm::omp::Clause> clause,
       const AppliedModifierInfo &info);
-  void VerifyModifiers(const parser::OmpClause &x);
+  void VerifyModifierSyntax(const parser::OmpClause &x);
 
   // check-omp-structure.cpp
   using ClauseIterator =

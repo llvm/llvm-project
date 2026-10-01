@@ -56,6 +56,15 @@ const MCExpr *RISCVELFTargetObjectFile::getIndirectSymViaGOTPCRel(
   return MCSpecifierExpr::create(Res, ELF::R_RISCV_GOT32_PCREL, Ctx);
 }
 
+bool RISCVELFTargetObjectFile::shouldPutJumpTableInFunctionSection(
+    bool UsesLabelDifference, const Function &F) const {
+  // With the large code model, keep the jump table in the function's section.
+  if (TM->getCodeModel() == CodeModel::Large)
+    return true;
+  return TargetLoweringObjectFileELF::shouldPutJumpTableInFunctionSection(
+      UsesLabelDifference, F);
+}
+
 // A address must be loaded from a small section if its size is less than the
 // small section size threshold. Data in this section could be addressed by
 // using gp_rel operator.

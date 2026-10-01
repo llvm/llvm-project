@@ -80,11 +80,26 @@ public:
   /// store a derived object and return that as an ABICompatInfo reference.
   virtual const ABICompatInfo &getABICompatInfo() const = 0;
 
+  /// Address space in which indirect arguments are allocated (the target's
+  /// alloca/stack space).
+  virtual unsigned getAllocaAddrSpace() const { return 0; }
+
+  /// Whether the target has a 128-bit integer type. Default true.
+  virtual bool hasInt128Type() const { return true; }
+
+  /// Width of `long long` in bits. Default 64.
+  virtual unsigned getLongLongWidth() const { return 64; }
+
 protected:
   LLVM_ABI RecordArgABI getRecordArgABI(const RecordType *RT) const;
   LLVM_ABI RecordArgABI getRecordArgABI(const Type *Ty) const;
   LLVM_ABI bool isPromotableInteger(const IntegerType *IT) const;
-  LLVM_ABI ArgInfo getNaturalAlignIndirect(const Type *Ty,
+
+  /// Bit width above which a _BitInt cannot stay in registers.
+  unsigned getBitIntRegThreshold() const {
+    return hasInt128Type() ? 128 : getLongLongWidth();
+  }
+  LLVM_ABI ArgInfo getNaturalAlignIndirect(const Type *Ty, unsigned AddrSpace,
                                            bool ByVal = true) const;
   LLVM_ABI bool isAggregateTypeForABI(const Type *Ty) const;
 
@@ -130,6 +145,10 @@ protected:
 
 LLVM_ABI std::unique_ptr<TargetInfo> createBPFTargetInfo(TypeBuilder &TB);
 
+LLVM_ABI std::unique_ptr<TargetInfo>
+createAMDGPUTargetInfo(TypeBuilder &TB,
+                       bool CoerceGenericPtrArgToGlobal = false);
+
 /// The AVX ABI level for X86 targets.
 enum class X86AVXABILevel {
   None,
@@ -156,6 +175,9 @@ struct AArch64ABIOptions {
   AArch64ABIKind Kind = AArch64ABIKind::AAPCS;
   bool IsILP32 = false;
   bool IsCXX = false;
+  bool IsMachO = false;
+  bool IsAndroidOrOHOS = false;
+  bool IsWindowsArm64EC = false;
   bool IsMicrosoftCXXABI = false;
   ABICompatInfo CompatInfo;
 

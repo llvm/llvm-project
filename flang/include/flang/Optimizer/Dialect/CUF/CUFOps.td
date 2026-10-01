@@ -396,6 +396,38 @@ def cuf_SharedMemoryOp
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
 }
 
+def cuf_OnDeviceOp : cuf_Op<"on_device", [Pure]> {
+  let summary = "Query whether execution is on the device";
+
+  let description = [{
+    CUDA Fortran `on_device()` intrinsic. Produces true when this operation
+    is compiled into device code and false on the host. Folding is delayed so
+    a host copy of an OpenACC routine can be cloned for the device before each
+    copy is folded in its own context.
+  }];
+
+  let results = (outs I1:$res);
+
+  let assemblyFormat = "attr-dict `:` type($res)";
+}
+
+def cuf_DeviceIsActiveOp : cuf_Op<"device_is_active", []> {
+  let summary = "Query whether the CUDA device context is still active";
+
+  let description = [{
+    Returns true if the CUDA device's primary context is alive. Used to
+    guard host-side scope-exit deallocation against a user cudaDeviceReset().
+
+    Converted to a `_FortranACUFDeviceIsActive` runtime call on the host and
+    to `false` in device code, so host-only cleanup is DCE'd from GPU
+    functions.
+  }];
+
+  let results = (outs I1:$res);
+
+  let assemblyFormat = "attr-dict `:` type($res)";
+}
+
 def cuf_StreamCastOp : cuf_Op<"stream_cast", [NoMemoryEffect]> {
   let summary = "Adapt a stream value to a GPU async token";
 

@@ -270,6 +270,21 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
                              << "' attribute to be attached to '"
                              << mlir::ModuleOp::getOperationName() << "'";
 
+  // LoweringPrepare uses this attribute directly as the fatbin global's
+  // initializer, so it must be a valid #cir.const_array payload for its type.
+  if (attrName == getCUDADeviceBinaryAttrName()) {
+    auto bytes = mlir::dyn_cast<mlir::StringAttr>(attr.getValue());
+    auto arrayTy =
+        bytes ? mlir::dyn_cast<cir::ArrayType>(bytes.getType()) : nullptr;
+    if (!arrayTy || arrayTy.getSize() != bytes.size())
+      return op->emitOpError()
+             << "expects '" << getCUDADeviceBinaryAttrName()
+             << "' to be a string typed as an array of its length";
+    return cir::ConstArrayAttr::verify([&] { return op->emitOpError(); },
+                                       arrayTy, bytes,
+                                       /*trailingZerosNum=*/0);
+  }
+
   return success();
 }
 
@@ -759,8 +774,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
   }
 
   if (isa<cir::ZeroAttr>(attrType)) {
-    if (isa<cir::RecordType, cir::ArrayType, cir::VectorType, cir::ComplexType>(
-            opType))
+    if (isa<cir::RecordType, cir::ArrayType, cir::MatrixType, cir::VectorType,
+            cir::ComplexType>(opType))
       return success();
     return op->emitOpError(
         "zero expects struct, array, vector, or complex type");
@@ -1543,25 +1558,36 @@ void cir::CallOp::print(mlir::OpAsmPrinter &p) {
 static LogicalResult
 verifyCallCommInSymbolUses(mlir::Operation *op,
                            SymbolTableCollection &symbolTable) {
+  auto callIf = cast<cir::CIRCallOpInterface>(op);
+
+  // An indirect call is checked against the function type its callee pointer
+  // points to, and a direct call against its callee's declaration.
+  cir::FuncType fnType;
+  bool hasPrototype = true;
   auto fnAttr =
       op->getAttrOfType<FlatSymbolRefAttr>(CIRDialect::getCalleeAttrName());
   if (!fnAttr) {
-    // This is an indirect call, thus we don't have to check the symbol uses.
-    return mlir::success();
+    if (op->getNumOperands() == 0)
+      return op->emitOpError("indirect call requires a callee operand");
+    mlir::Type calleeTy = callIf.getIndirectCall().getType();
+    if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(calleeTy))
+      fnType = mlir::dyn_cast<cir::FuncType>(ptrTy.getPointee());
+    if (!fnType)
+      return op->emitOpError()
+             << "indirect callee must be a pointer to a function, but has type "
+             << calleeTy;
+  } else {
+    auto fn = symbolTable.lookupNearestSymbolFrom<cir::FuncOp>(op, fnAttr);
+    if (!fn)
+      return op->emitOpError() << "'" << fnAttr.getValue()
+                               << "' does not reference a valid function";
+    fnType = fn.getFunctionType();
+    hasPrototype = !fn.getNoProto();
   }
 
-  auto fn = symbolTable.lookupNearestSymbolFrom<cir::FuncOp>(op, fnAttr);
-  if (!fn)
-    return op->emitOpError() << "'" << fnAttr.getValue()
-                             << "' does not reference a valid function";
-
-  auto callIf = dyn_cast<cir::CIRCallOpInterface>(op);
-  assert(callIf && "expected CIR call interface to be always available");
-
-  // Verify that the operand and result types match the callee. Note that
-  // argument-checking is disabled for functions without a prototype.
-  auto fnType = fn.getFunctionType();
-  if (!fn.getNoProto()) {
+  // Verify that the operand and result types match the callee.  Operands are
+  // not checked for a direct call to a function declared no_proto.
+  if (hasPrototype) {
     unsigned numCallOperands = callIf.getNumArgOperands();
     unsigned numFnOpOperands = fnType.getNumInputs();
 
@@ -1574,7 +1600,8 @@ verifyCallCommInSymbolUses(mlir::Operation *op,
       if (callIf.getArgOperand(i).getType() != fnType.getInput(i))
         return op->emitOpError("operand type mismatch: expected operand type ")
                << fnType.getInput(i) << ", but provided "
-               << op->getOperand(i).getType() << " for operand number " << i;
+               << callIf.getArgOperand(i).getType() << " for operand number "
+               << i;
   }
 
   assert(!cir::MissingFeatures::opCallCallConv());
@@ -2708,8 +2735,17 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   if (parser.parseOptionalKeyword(noProtoNameAttr).succeeded())
     state.addAttribute(noProtoNameAttr, parser.getBuilder().getUnitAttr());
 
-  if (parser.parseOptionalKeyword(comdatNameAttr).succeeded())
-    state.addAttribute(comdatNameAttr, parser.getBuilder().getUnitAttr());
+  if (parser.parseOptionalKeyword(comdatNameAttr).succeeded()) {
+    std::string comdatKey;
+    if (mlir::succeeded(parser.parseOptionalLParen())) {
+      if (parser.parseString(&comdatKey).failed())
+        return failure();
+      if (parser.parseRParen().failed())
+        return failure();
+    }
+    state.addAttribute(comdatNameAttr,
+                       parser.getBuilder().getStringAttr(comdatKey));
+  }
 
   auto parseAlignmentBody = [&](int64_t &value) {
     if (parser.parseLParen().failed() || parser.parseInteger(value).failed() ||
@@ -3043,8 +3079,11 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (getNoProto())
     p << " no_proto";
 
-  if (getComdat())
+  if (std::optional<StringRef> comdatKey = getComdat()) {
     p << " comdat";
+    if (!comdatKey->empty())
+      p << "(\"" << *comdatKey << "\")";
+  }
 
   if (getAlignment())
     p << " alignment(" << *getAlignment() << ')';
@@ -4154,6 +4193,27 @@ OpFoldResult cir::VecTernaryOp::fold(FoldAdaptor adaptor) {
   cir::VectorType vecTy = getLhs().getType();
   return cir::ConstVectorAttr::get(
       vecTy, mlir::ArrayAttr::get(getContext(), elements));
+}
+
+//===----------------------------------------------------------------------===//
+// MatrixTransposeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::MatrixTransposeOp::verify() {
+  cir::MatrixType valueTy = getValue().getType();
+  cir::MatrixType resultTy = getResult().getType();
+
+  if ((valueTy.getElementType() != resultTy.getElementType()) ||
+      (valueTy.getRowNum() != resultTy.getColumnNum()) ||
+      (valueTy.getColumnNum() != resultTy.getRowNum())) {
+    auto expectedTy = cir::MatrixType::get(
+        valueTy.getElementType(), valueTy.getColumnNum(), valueTy.getRowNum());
+    emitOpError() << "operand type " << valueTy << " expects result type of "
+                  << expectedTy << " but got " << resultTy;
+    return failure();
+  }
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
