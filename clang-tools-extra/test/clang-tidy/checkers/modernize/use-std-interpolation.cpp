@@ -2,6 +2,10 @@
 // RUN:   -- -format-style="{BasedOnStyle: LLVM, IncludeBlocks: Regroup}"
 // RUN: %check_clang_tidy -std=c++20-or-later -check-suffixes=,PRESENT %s modernize-use-std-interpolation %t-present \
 // RUN:   -- -- -DINCLUDES_PRESENT
+// RUN: %check_clang_tidy -std=c++20-or-later -check-suffixes=,MISSING %s modernize-use-std-interpolation %t-x86 \
+// RUN:   -- -format-style="{BasedOnStyle: LLVM, IncludeBlocks: Regroup}" -- -target x86_64-unknown-linux-gnu
+// RUN: %check_clang_tidy -std=c++20-or-later -check-suffixes=,MISSING %s modernize-use-std-interpolation %t-aarch64 \
+// RUN:   -- -format-style="{BasedOnStyle: LLVM, IncludeBlocks: Regroup}" -- -target aarch64-unknown-linux-gnu
 // RUN: clang-tidy %s -checks=-*,modernize-use-std-interpolation -allow-no-checks -- -std=c++11 2>&1 | count 0
 // RUN: clang-tidy %s -checks=-*,modernize-use-std-interpolation -allow-no-checks -- -std=c++14 2>&1 | count 0
 // RUN: clang-tidy %s -checks=-*,modernize-use-std-interpolation -allow-no-checks -- -std=c++17 2>&1 | count 0
@@ -287,7 +291,18 @@ void long_double_calculations(long double a, long double b, long double t) {
   auto lerp_weighted_reverse_sum = t * b + (1 - t) * a;
   // CHECK-MESSAGES: :[[@LINE-1]]:36: warning: use 'std::lerp' instead of manual linear interpolation
   // CHECK-FIXES: auto lerp_weighted_reverse_sum = std::lerp(a, b, t);
+
+  auto floating_complement = (1.0L - t) * a + t * b;
+  // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: use 'std::lerp' instead of manual linear interpolation
+  // CHECK-FIXES: auto floating_complement = std::lerp(a, b, t);
 }
+
+void long_double_near_misses(long double a, long double b, long double t) {
+  (void)((a + b) / 2.01L);
+  (void)((a + b) * 0.51L);
+  (void)((1.01L - t) * a + t * b);
+}
+
 using Real = double;
 typedef int Integer;
 

@@ -23,6 +23,10 @@ AST_MATCHER(Expr, hasSideEffects) {
   return Node.HasSideEffects(Finder->getASTContext());
 }
 
+AST_MATCHER_P(FloatingLiteral, hasExactValue, double, Value) {
+  return Node.getValue().isExactlyValue(Value);
+}
+
 AST_MATCHER(Expr, isMacroExpanded) {
   if (Node.getBeginLoc().isMacroID() || Node.getEndLoc().isMacroID())
     return true;
@@ -72,10 +76,10 @@ static InterpolationMatchers makeInterpolationMatchers() {
   const auto RepeatedFactor = ignoringParenImpCasts(
       expr(matchers::isStatementIdenticalToBoundNode("factor")));
   const auto Two = ignoringParenImpCasts(
-      expr(anyOf(integerLiteral(equals(2)), floatLiteral(equals(2.0)))));
-  const auto Half = ignoringParenImpCasts(floatLiteral(equals(0.5)));
+      expr(anyOf(integerLiteral(equals(2)), floatLiteral(hasExactValue(2.0)))));
+  const auto Half = ignoringParenImpCasts(floatLiteral(hasExactValue(0.5)));
   const auto One = ignoringParenImpCasts(
-      expr(anyOf(integerLiteral(equals(1)), floatLiteral(equals(1.0)))));
+      expr(anyOf(integerLiteral(equals(1)), floatLiteral(hasExactValue(1.0)))));
 
   // Midpoints: (a + b) / 2 and a + (b - a) / 2, also using * 0.5.
   const auto Sum = ignoringParenImpCasts(binaryOperator(
