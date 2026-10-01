@@ -6725,6 +6725,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoopTarget(
   // encounters it, including threads that execute no iterations.
   if (NeedsBarrier) {
     Builder.SetInsertPoint(CLI->getExit()->getTerminator());
+    // Standalone distribute loops never request a barrier. For both regular
+    // worksharing loops and combined distribute/for loops, the barrier is
+    // associated with the worksharing loop, hence OMPD_for.
     InsertPointOrErrorTy BarrierIP =
         createBarrier(LocationDescription(Builder.saveIP(), DL), OMPD_for,
                       /*ForceSimpleCall=*/false, /*CheckCancelFlag=*/false);
