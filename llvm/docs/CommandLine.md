@@ -1575,7 +1575,7 @@ include "llvm/Option/LibraryOptions.td"
 
 def FooOptions : OptionsStruct;
 
-defm : BoolField<"enable-foo", "1", "Enable foo">;
+defm : BoolField<"enable-foo", "true", "Enable foo">;
 defm threshold : ValueField<"foo-threshold", "unsigned", "8", "The threshold">;
 defm : ValueField<"foo-path", "StringRef", "\"-\"", "The input path">;
 ```
