@@ -4,8 +4,8 @@
 
 # REQUIRES: amdgpu-registered-target
 
-# ASM: .cfi_llvm_def_cfa_constant_address 0, 6
-# ASM: .cfi_llvm_def_cfa_register_address_transform 64, 4, 6, 6
+# ASM: .cfi_llvm_def_cfa_address_constant 0, 6
+# ASM: .cfi_llvm_def_cfa_address_scaled 64, 4, 6, 6
 
 .text
 .cfi_sections .debug_frame
@@ -13,7 +13,7 @@
 constant_address:
   .cfi_startproc
   s_nop 0
-  .cfi_llvm_def_cfa_constant_address 0, 6
+  .cfi_llvm_def_cfa_address_constant 0, 6
   s_nop 0
   .cfi_endproc
 
@@ -22,7 +22,7 @@ constant_address:
 register_address_transform:
   .cfi_startproc
   s_nop 0
-  .cfi_llvm_def_cfa_register_address_transform 64, 4, 6, 6
+  .cfi_llvm_def_cfa_address_scaled 64, 4, 6, 6
   s_nop 0
   .cfi_endproc
 

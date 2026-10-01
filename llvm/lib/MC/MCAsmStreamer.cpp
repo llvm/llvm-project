@@ -479,13 +479,11 @@ public:
   void emitCFIDefCfaRegister(int64_t Register, SMLoc Loc) override;
   void emitCFILLVMDefAspaceCfa(int64_t Register, int64_t Offset,
                                int64_t AddressSpace, SMLoc Loc) override;
-  void emitCFILLVMDefCfaConstantAddress(uint64_t Value, int64_t AddressSpace,
+  void emitCFILLVMDefCfaAddressConstant(uint64_t Value, int64_t AddressSpace,
                                         SMLoc Loc) override;
-  void emitCFILLVMDefCfaRegisterAddressTransform(int64_t Register,
-                                                 int64_t DerefSize,
-                                                 int64_t Scale,
-                                                 int64_t AddressSpace,
-                                                 SMLoc Loc) override;
+  void emitCFILLVMDefCfaAddressScaled(int64_t Register, int64_t DerefSize,
+                                      int64_t Scale, int64_t AddressSpace,
+                                      SMLoc Loc) override;
   void emitCFIOffset(int64_t Register, int64_t Offset, SMLoc Loc) override;
   void emitCFIPersonality(const MCSymbol *Sym, unsigned Encoding) override;
   void emitCFILsda(const MCSymbol *Sym, unsigned Encoding) override;
@@ -2201,21 +2199,23 @@ void MCAsmStreamer::emitCFILLVMDefAspaceCfa(int64_t Register, int64_t Offset,
   EmitEOL();
 }
 
-void MCAsmStreamer::emitCFILLVMDefCfaConstantAddress(uint64_t Value,
+void MCAsmStreamer::emitCFILLVMDefCfaAddressConstant(uint64_t Value,
                                                      int64_t AddressSpace,
                                                      SMLoc Loc) {
-  MCStreamer::emitCFILLVMDefCfaConstantAddress(Value, AddressSpace, Loc);
-  OS << "\t.cfi_llvm_def_cfa_constant_address " << Value << ", "
+  MCStreamer::emitCFILLVMDefCfaAddressConstant(Value, AddressSpace, Loc);
+  OS << "\t.cfi_llvm_def_cfa_address_constant " << Value << ", "
      << AddressSpace;
   EmitEOL();
 }
 
-void MCAsmStreamer::emitCFILLVMDefCfaRegisterAddressTransform(
-    int64_t Register, int64_t DerefSize, int64_t Scale, int64_t AddressSpace,
-    SMLoc Loc) {
-  MCStreamer::emitCFILLVMDefCfaRegisterAddressTransform(
-      Register, DerefSize, Scale, AddressSpace, Loc);
-  OS << "\t.cfi_llvm_def_cfa_register_address_transform ";
+void MCAsmStreamer::emitCFILLVMDefCfaAddressScaled(int64_t Register,
+                                                   int64_t DerefSize,
+                                                   int64_t Scale,
+                                                   int64_t AddressSpace,
+                                                   SMLoc Loc) {
+  MCStreamer::emitCFILLVMDefCfaAddressScaled(Register, DerefSize, Scale,
+                                             AddressSpace, Loc);
+  OS << "\t.cfi_llvm_def_cfa_address_scaled ";
   EmitRegisterName(Register);
   OS << ", " << DerefSize << ", " << Scale << ", " << AddressSpace;
   EmitEOL();

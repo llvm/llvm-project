@@ -1312,8 +1312,8 @@ void MCCFIInstruction::replaceRegister(unsigned FromReg, unsigned ToReg) {
         ReplaceReg(F.Register2);
       },
       [](EscapeFields &) {}, [](LabelFields &) {},
-      [](CfaConstantAddressFields &) {},
-      [=](CfaRegisterAddressTransformFields &F) { ReplaceReg(F.Register); },
+      [](CfaAddressConstantFields &) {},
+      [=](CfaAddressScaledFields &F) { ReplaceReg(F.Register); },
       [=](RegisterPairFields &F) {
         ReplaceReg(F.Register);
         ReplaceReg(F.Reg1);
@@ -1632,9 +1632,9 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     }
     return;
   }
-  case MCCFIInstruction::OpLLVMDefCfaConstantAddress: {
+  case MCCFIInstruction::OpLLVMDefCfaAddressConstant: {
     const auto &Fields =
-        Instr.getExtraFields<MCCFIInstruction::CfaConstantAddressFields>();
+        Instr.getExtraFields<MCCFIInstruction::CfaAddressConstantFields>();
     SmallString<8> Block;
     raw_svector_ostream OSBlock(Block);
     encodeDwarfUnsignedConstant(Fields.Value, OSBlock);
@@ -1645,9 +1645,9 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     Streamer.emitBinaryData(StringRef(Block.data(), Block.size()));
     return;
   }
-  case MCCFIInstruction::OpLLVMDefCfaRegisterAddressTransform: {
-    const auto &Fields = Instr.getExtraFields<
-        MCCFIInstruction::CfaRegisterAddressTransformFields>();
+  case MCCFIInstruction::OpLLVMDefCfaAddressScaled: {
+    const auto &Fields =
+        Instr.getExtraFields<MCCFIInstruction::CfaAddressScaledFields>();
     SmallString<16> Block;
     raw_svector_ostream OSBlock(Block);
     encodeDwarfRegisterLocation(Fields.Register, OSBlock);

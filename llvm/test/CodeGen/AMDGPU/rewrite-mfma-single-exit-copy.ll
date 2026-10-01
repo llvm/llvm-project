@@ -21,7 +21,7 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    .cfi_sections .debug_frame
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0: ; %entry
-; CHECK-NEXT:    .cfi_llvm_def_cfa_constant_address 0, 6
+; CHECK-NEXT:    .cfi_llvm_def_cfa_address_constant 0, 6
 ; CHECK-NEXT:    .cfi_undefined 16
 ; CHECK-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x0
 ; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x20

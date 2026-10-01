@@ -26,7 +26,7 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: kern1
-    ; CHECK: frame-setup CFI_INSTRUCTION llvm_def_cfa_constant_address 0, 6
+    ; CHECK: frame-setup CFI_INSTRUCTION llvm_def_cfa_address_constant 0, 6
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; CHECK-NEXT: S_ENDPGM 0
     S_ENDPGM 0

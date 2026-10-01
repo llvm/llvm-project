@@ -302,8 +302,8 @@ void CFIInstrInserterImpl::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
         CSRRestored.set(CFI.getRegister());
         break;
       case MCCFIInstruction::OpLLVMDefAspaceCfa:
-      case MCCFIInstruction::OpLLVMDefCfaConstantAddress:
-      case MCCFIInstruction::OpLLVMDefCfaRegisterAddressTransform:
+      case MCCFIInstruction::OpLLVMDefCfaAddressConstant:
+      case MCCFIInstruction::OpLLVMDefCfaAddressScaled:
         // TODO: Add support for handling cfi_def_aspace_cfa.
 #ifndef NDEBUG
         report_fatal_error(

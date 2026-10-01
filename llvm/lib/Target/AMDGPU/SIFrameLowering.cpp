@@ -62,7 +62,7 @@ static MCCFIInstruction createScaledCFAInPrivateWave(const GCNSubtarget &ST,
   // DWARF address space (i.e. unswizzled). To achieve this we scale the stack
   // pointer by the wavefront size, implemented as (SP << wave_size_log2).
   const unsigned WavefrontSizeLog2 = ST.getWavefrontSizeLog2();
-  return MCCFIInstruction::createLLVMDefCfaRegisterAddressTransform(
+  return MCCFIInstruction::createLLVMDefCfaAddressScaled(
       nullptr, DwarfStackPtrReg, SGPRByteSize, WavefrontSizeLog2,
       dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave);
 }
@@ -749,7 +749,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     // On entry the SP/FP are not set up, so we need to define the CFA in terms
     // of a literal location expression.
     buildCFI(MBB, I, DL,
-             MCCFIInstruction::createLLVMDefCfaConstantAddress(
+             MCCFIInstruction::createLLVMDefCfaAddressConstant(
                  nullptr, 0, dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave));
     // Unwinding halts when the return address (PC) is undefined.
     buildCFI(MBB, I, DL,
