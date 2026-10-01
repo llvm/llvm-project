@@ -1,5 +1,5 @@
 ; RUN: opt < %s -passes='function(csan)' -S -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
-; RUN: opt < %s -passes='function(csan)' -S -mtriple=amdgcn-amd-amdhsa | FileCheck %s
+; RUN: opt < %s -passes='function(csan)' -S -mtriple=amdgpu-amd-amdhsa | FileCheck %s
 
 define i32 @atomic_load(ptr %a) sanitize_concurrency {
 entry:
