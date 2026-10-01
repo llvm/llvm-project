@@ -818,8 +818,6 @@ struct VectorContractToAMXDotProduct
     Operation *accReadOp =
         traceToVectorReadLikeParentOperation(contractOp.getAcc());
 
-    bool isAccZeroVectorConstant = isZeroVectorConstant(accReadOp);
-
     Operation *accWrite =
         traceToVectorWriteLikeUserOperation(contractOp.getResult());
 
@@ -833,6 +831,8 @@ struct VectorContractToAMXDotProduct
           contractOp, "The ACC operand of the vector.contract should be a "
                       "transfer_read or a load. And, the result should have a "
                       "single-use chain to its consumer.");
+
+    bool isAccZeroVectorConstant = isZeroVectorConstant(accReadOp);
 
     Block *resultBlock = resultChainEnd.user_begin()->getBlock();
 
