@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "StackArrays.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
@@ -791,14 +792,17 @@ void StackArraysPass::runOnOperation() {
     return;
   }
 
-  if (candidateOps->empty())
-    return;
-  runCount += candidateOps->size();
-
+  // An offload region runs on the device stack, which is far smaller than the
+  // host one, so its allocations stay on the heap like in a device procedure.
   llvm::SmallVector<mlir::Operation *> opsToConvert;
   opsToConvert.reserve(candidateOps->size());
   for (auto [op, _] : *candidateOps)
-    opsToConvert.push_back(op);
+    if (!cuf::isExecutingOnDevice(op))
+      opsToConvert.push_back(op);
+
+  if (opsToConvert.empty())
+    return;
+  runCount += opsToConvert.size();
 
   mlir::MLIRContext &context = getContext();
   mlir::RewritePatternSet patterns(&context);

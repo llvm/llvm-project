@@ -6989,6 +6989,11 @@ void RewriteInstance::writeEHFrameHeader() {
     EHFrameHdrSec.setOutputName(getEHFrameHdrSectionName());
   }
 
+  // Byte 3 of the header is the table encoding.
+  if (NewEHFrameHdr[3] == (dwarf::DW_EH_PE_datarel | dwarf::DW_EH_PE_sdata8))
+    BC->outs() << "BOLT-INFO: using DW_EH_PE_sdata8 encoding in "
+               << getEHFrameHdrSectionName() << '\n';
+
   Out->os().seek(EHFrameHdrFileOffset);
   Out->os().write(NewEHFrameHdr.data(), NewEHFrameHdr.size());
 
