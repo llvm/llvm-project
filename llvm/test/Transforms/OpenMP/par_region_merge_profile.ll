@@ -7,6 +7,8 @@
 ; maximum function_entry_count of the merged callbacks.
 ; The callback counts intentionally differ (435 vs 392). Since sample PGO
 ; profiles are approximate, unlike InstrProf, the wrapper uses the maximum.
+; Both direct calls get that count too, otherwise sample PGO treats them
+; as cold.
 
 %struct.ident_t = type { i32, i32, i32, i32, ptr }
 
@@ -108,10 +110,10 @@ declare void @__kmpc_barrier(ptr, i32) local_unnamed_addr
 ; CHECK:       [[OMP_PAR_REGION]]:
 ; CHECK-NEXT:    br label %[[OMP_PAR_MERGED:.*]]
 ; CHECK:       [[OMP_PAR_MERGED]]:
-; CHECK-NEXT:    call void (ptr, ptr, ...) @merge_profile.omp_outlined(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nonnull [[LOADGEP_COND_ADDR]], ptr nonnull [[LOADGEP_A_ADDR]])
+; CHECK-NEXT:    call void (ptr, ptr, ...) @merge_profile.omp_outlined(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nonnull [[LOADGEP_COND_ADDR]], ptr nonnull [[LOADGEP_A_ADDR]]), !prof [[PROF16:![0-9]+]]
 ; CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 ; CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM]])
-; CHECK-NEXT:    call void (ptr, ptr, ...) @merge_profile.omp_outlined.1(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nonnull [[LOADGEP_COND_ADDR]], ptr nonnull [[LOADGEP_A_ADDR]])
+; CHECK-NEXT:    call void (ptr, ptr, ...) @merge_profile.omp_outlined.1(ptr [[TID_ADDR]], ptr [[ZERO_ADDR]], ptr nonnull [[LOADGEP_COND_ADDR]], ptr nonnull [[LOADGEP_A_ADDR]]), !prof [[PROF16]]
 ; CHECK-NEXT:    br label %[[OMP_PAR_REGION_SPLIT:.*]]
 ; CHECK:       [[OMP_PAR_REGION_SPLIT]]:
 ; CHECK-NEXT:    br label %[[OMP_PAR_PRE_FINALIZE:.*]]
@@ -134,12 +136,12 @@ declare void @__kmpc_barrier(ptr, i32) local_unnamed_addr
 ;
 ;
 ; CHECK-LABEL: define internal void @merge_profile.omp_outlined.1(
-; CHECK-SAME: ptr noalias readnone captures(none) [[TMP0:%.*]], ptr noalias readnone captures(none) [[TMP1:%.*]], ptr noundef nonnull readonly align 4 dereferenceable(4) [[COND:%.*]], ptr noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) !prof [[PROF16:![0-9]+]] {
+; CHECK-SAME: ptr noalias readnone captures(none) [[TMP0:%.*]], ptr noalias readnone captures(none) [[TMP1:%.*]], ptr noundef nonnull readonly align 4 dereferenceable(4) [[COND:%.*]], ptr noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) !prof [[PROF17:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C:%.*]] = load i32, ptr [[COND]], align 4
 ; CHECK-NEXT:    [[T:%.*]] = icmp eq i32 [[C]], 0
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    [[OFF:%.*]] = select i1 [[T]], i32 3, i32 2, !prof [[PROF17:![0-9]+]]
+; CHECK-NEXT:    [[OFF:%.*]] = select i1 [[T]], i32 3, i32 2, !prof [[PROF18:![0-9]+]]
 ; CHECK-NEXT:    [[SUM:%.*]] = add nsw i32 [[V]], [[OFF]]
 ; CHECK-NEXT:    tail call void @use(i32 noundef [[SUM]])
 ; CHECK-NEXT:    ret void
@@ -148,6 +150,7 @@ declare void @__kmpc_barrier(ptr, i32) local_unnamed_addr
 ; CHECK: [[PROF13]] = !{!"function_entry_count", i64 2}
 ; CHECK: [[PROF14]] = !{!"function_entry_count", i64 435}
 ; CHECK: [[META15]] = !{i64 4}
-; CHECK: [[PROF16]] = !{!"function_entry_count", i64 392}
-; CHECK: [[PROF17]] = !{!"branch_weights", i32 205, i32 187}
+; CHECK: [[PROF16]] = !{!"branch_weights", i32 435}
+; CHECK: [[PROF17]] = !{!"function_entry_count", i64 392}
+; CHECK: [[PROF18]] = !{!"branch_weights", i32 205, i32 187}
 ;.

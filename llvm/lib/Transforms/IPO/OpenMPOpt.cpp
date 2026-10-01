@@ -52,6 +52,8 @@
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/ProfDataUtils.h"
+#include "llvm/IR/ProfileSummary.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -60,6 +62,8 @@
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 
 #include <algorithm>
+#include <limits>
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -998,12 +1002,12 @@ private:
   }
 };
 
-/// Copy the max outlined-callback entry count onto the merged wrapper.
-/// \p CallbackOpNo is the callback argument (for __kmpc_fork_call's
-/// microtask).
-static void setMergedWrapperEntryCount(Function &WrapperFn,
-                                       ArrayRef<CallInst *> ForkCalls,
-                                       unsigned CallbackOpNo) {
+// Use the max outlined entry count. Instrumentation counts should already
+// match across merged callbacks, but sample profiles can differ. Returns
+// nullopt when no callback entry count is available.
+static std::optional<uint64_t>
+getMergedWrapperEntryCount(ArrayRef<CallInst *> ForkCalls,
+                           unsigned CallbackOpNo) {
   std::optional<uint64_t> EntryCount;
   for (CallInst *CI : ForkCalls) {
     auto *Callback = dyn_cast<Function>(
@@ -1015,9 +1019,13 @@ static void setMergedWrapperEntryCount(Function &WrapperFn,
       // The Sample profiles can disagree slightly, so take the largest.
       EntryCount = EntryCount ? std::max(*EntryCount, *EC) : *EC;
   }
-  // Leave the wrapper unprofiled if none of the callbacks have a count.
-  if (EntryCount)
-    WrapperFn.setEntryCount(*EntryCount);
+  return EntryCount;
+}
+
+static bool moduleHasSampleProfile(const Module &M) {
+  std::unique_ptr<ProfileSummary> Summary(
+      ProfileSummary::getFromMD(M.getProfileSummary(/*IsCS=*/false)));
+  return Summary && Summary->getKind() == ProfileSummary::PSK_Sample;
 }
 
 struct OpenMPOpt {
@@ -1358,8 +1366,15 @@ private:
       OMPInfoCache.OMPBuilder.finalize(OriginalFn);
 
       Function *OutlinedFn = MergableCIs.front()->getCaller();
-      setMergedWrapperEntryCount(*OutlinedFn, MergableCIs,
-                                 CallbackCalleeOperand);
+      std::optional<uint64_t> WrapperCount =
+          getMergedWrapperEntryCount(MergableCIs, CallbackCalleeOperand);
+      // Leave the wrapper unprofiled when no callback has an entry count.
+      if (WrapperCount)
+        OutlinedFn->setEntryCount(*WrapperCount);
+      // Only sample PGO treats a profiled caller with no callsite weight as
+      // cold. Instrumentation profiles derive that count from the entry count.
+      const bool SampleProfile =
+          moduleHasSampleProfile(*OriginalFn->getParent());
 
       // Replace the __kmpc_fork_call calls with direct calls to the outlined
       // callbacks.
@@ -1378,6 +1393,15 @@ private:
             CallInst::Create(FT, Callee, Args, "", CI->getIterator());
         if (CI->getDebugLoc())
           NewCI->setDebugLoc(CI->getDebugLoc());
+        // Each body runs once per wrapper entry. Without a callsite weight,
+        // sample PGO treats these calls as cold.
+        if (WrapperCount && SampleProfile) {
+          uint64_t Count = *WrapperCount;
+          uint32_t Weight = Count > std::numeric_limits<uint32_t>::max()
+                                ? std::numeric_limits<uint32_t>::max()
+                                : static_cast<uint32_t>(Count);
+          setBranchWeights(*NewCI, {Weight}, /*IsExpected=*/false);
+        }
 
         // Forward parameter attributes from the callback to the callee.
         for (unsigned U = CallbackFirstArgOperand, E = CI->arg_size(); U < E;
