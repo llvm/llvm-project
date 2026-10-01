@@ -1,20 +1,30 @@
-// RUN: mlir-opt %s --affine-super-vectorize="virtual-vector-size=4" | FileCheck %s
+// RUN: mlir-opt %s --affine-super-vectorize="virtual-vector-size=4" | FileCheck %s --check-prefix=MASKED
+// RUN: mlir-opt %s --affine-super-vectorize="virtual-vector-size=4" \
+// RUN:   --eliminate-vector-masks --canonicalize | FileCheck %s
 // RUN: mlir-opt %s \
 // RUN:   --convert-linalg-to-affine-loops \
 // RUN:   --affine-loop-tile="tile-sizes=16,16,16" \
 // RUN:   --affine-super-vectorize="virtual-vector-size=4" \
+// RUN:   --eliminate-vector-masks \
 // RUN:   --canonicalize \
 // RUN:   | FileCheck %s --check-prefix=MATMUL
 // RUN: mlir-opt %s \
 // RUN:   --affine-super-vectorize="virtual-vector-size=4" \
+// RUN:   --eliminate-vector-masks --canonicalize \
 // RUN:   --convert-vector-to-llvm='enable-gep-inbounds-nuw=1' \
 // RUN:   --finalize-memref-to-llvm \
 // RUN:   --convert-func-to-llvm \
 // RUN:   | FileCheck %s --check-prefix=LLVM
 
+// The vectorizer masks each transfer by the memref bounds.
+// MASKED-LABEL: func.func @copy
+// MASKED:       vector.mask %{{.*}} { vector.transfer_read
+// MASKED:       vector.mask %{{.*}} { vector.transfer_write
+
 // CHECK-LABEL: func.func @copy
-// Verify that transfer_read and transfer_write carry {in_bounds = [true]} when
-// the memref is static and its dimension is divisible by the vector width.
+// When the memref is static and its dimension is divisible by the vector
+// width, the masks are proven all-true and removed.
+// CHECK-NOT: vector.mask
 // CHECK:     vector.transfer_read {{.*}} {in_bounds = [true]} : memref<512x512xf32>, vector<4xf32>
 // CHECK-NOT: vector.transfer_read
 // CHECK:     vector.transfer_write {{.*}} {in_bounds = [true]} : vector<4xf32>, memref<512x512xf32>
@@ -41,8 +51,9 @@ func.func @copy(%A: memref<512x512xf32>, %B: memref<512x512xf32>) {
 
 
 // MATMUL-LABEL: func.func @matmul
-// Verify all three transfer_read ops carry in_bounds=[true] after the full
-// linalg-to-affine + tiling + vectorization pipeline.
+// Verify all three transfer_read ops are unmasked and carry in_bounds=[true]
+// after the full linalg-to-affine + tiling + vectorization pipeline.
+// MATMUL-NOT:     vector.mask
 // MATMUL-COUNT-3: vector.transfer_read {{.*}} {in_bounds = [true]
 // MATMUL-NOT:     vector.transfer_read
 func.func @matmul(%A: memref<512x512xf32>,

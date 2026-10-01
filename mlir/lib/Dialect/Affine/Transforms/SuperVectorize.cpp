@@ -111,6 +111,11 @@ using namespace vector;
 ///     %v_a = vector.transfer_read A[%i] : memref<?xf32>, vector<128xf32>
 ///   }
 /// ```
+/// Each transfer is emitted under a `vector.mask` that enables the lanes inside
+/// the memref. The examples in this file leave the mask out. Run
+/// `-eliminate-vector-masks` to remove the masks that are provably all-true and
+/// `-lower-vector-mask` to lower the rest.
+///
 /// It is the responsibility of the implementation of vector.transfer_read to
 /// materialize vector registers from the original scalar memrefs. A later (more
 /// target-dependent) lowering pass will materialize to actual HW vector sizes.
@@ -1275,7 +1280,7 @@ static Operation *vectorizeAffineLoad(AffineLoadOp loadOp,
 
   Value transferVal = createReadOrMaskedRead(
       state.builder, loadOp.getLoc(), loadOp.getMemRef(), vectorType,
-      /*padValue=*/std::nullopt, /*useInBoundsInsteadOfMasking=*/true, indices,
+      /*padValue=*/std::nullopt, /*useInBoundsInsteadOfMasking=*/false, indices,
       permutationMap);
   Operation *transfer = transferVal.getDefiningOp();
 
@@ -1334,7 +1339,7 @@ static Operation *vectorizeAffineStore(AffineStoreOp storeOp,
   Operation *transfer = createWriteOrMaskedWrite(
       state.builder, storeOp.getLoc(), vectorValue, storeOp.getMemRef(),
       SmallVector<Value>(indices.begin(), indices.end()),
-      /*useInBoundsInsteadOfMasking=*/true, permutationMap);
+      /*useInBoundsInsteadOfMasking=*/false, permutationMap);
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ vectorized store: " << *transfer);
 
   // Register replacement for future uses in the scope.
