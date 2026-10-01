@@ -107,9 +107,8 @@ static Value getNumRecords(ConversionPatternRewriter &rewriter, Location loc,
                            MemRefDescriptor &memrefDescriptor,
                            ArrayRef<int64_t> strides, int64_t elementByteWidth,
                            unsigned numRecordsWidth, bool boundsCheck) {
-  if (numRecordsWidth > 32 && !boundsCheck) {
+  if (numRecordsWidth > 32 && !boundsCheck)
     return createI64Constant(rewriter, loc, llvm::maxUIntN(numRecordsWidth));
-  }
   if (memrefType.hasStaticShape() &&
       !llvm::any_of(strides, ShapedType::isDynamic)) {
     int64_t size = memrefType.getRank() == 0 ? 1 : 0;

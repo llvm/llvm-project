@@ -7,15 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
+#include "llvm/Support/Compiler.h"
 #include "gtest/gtest.h"
 
 // Chipset is deprecated in favour of ROCDL::TargetInfo, but stays covered for
 // as long as it ships.
-#ifdef __clang__
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#elif defined(__GNUC__)
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
 
 namespace mlir::amdgpu {
 namespace {
@@ -68,3 +65,5 @@ TEST(ChipsetTest, Comparison) {
 
 } // namespace
 } // namespace mlir::amdgpu
+
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP

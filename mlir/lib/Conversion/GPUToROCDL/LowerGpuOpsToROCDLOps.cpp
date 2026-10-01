@@ -759,9 +759,8 @@ struct LowerGpuOpsToROCDLOpsPass final
     FailureOr<ROCDL::TargetInfo> targetInfo = ROCDL::TargetInfo::get(
         ROCDL::resolveArchOption(arch, chipset), waveSize,
         [&] { return emitError(UnknownLoc::get(ctx)); });
-    if (failed(targetInfo)) {
+    if (failed(targetInfo))
       return signalPassFailure();
-    }
 
     /// Customize the bitwidth used for the device side index computations.
     LowerToLLVMOptions options(

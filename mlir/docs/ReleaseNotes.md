@@ -26,14 +26,15 @@ default rules, `attr-dict` contains only discardable attributes. See
   which describes a target by its triple, subarch, and the resolved set of
   target features from LLVM's own tables. Lowerings should ask whether a target
   has a feature rather than inaccurately compare chipset versions.
-  `TargetInfo` also represents generic targets such as `gfx9-4-generic` and, unlike
-  `Chipset`, explicitly stores the wavesize for targets where it is configurable.
-- The `chipset` option in AMDGPU passes is renamed to an `arch` option, which uses
-  Clang target naming syntax. It accepts a GPU name with optional
+  `TargetInfo` also represents generic targets such as `gfx9-4-generic` and,
+  unlike `Chipset`, explicitly stores the wavesize for targets where it is
+  configurable.
+- The `chipset` option in AMDGPU passes is renamed to an `arch` option, which
+  uses Clang target naming syntax. It accepts a GPU name with optional
   modifiers (`gfx942`, `gfx942:xnack+`, `gfx9-4-generic`), a triple
   (`amdgpu9.42-amd-amdhsa`), or a full target ID
-  (`amdgpu9.42-amd-amdhsa--gfx90a:sramecc+:xnack-`, which is what `rocminfo` prints
-  for a device's ISA). `chipset` or `chip` remain as compatibility names.
+  (`amdgpu9.0a-amd-amdhsa--gfx90a:sramecc+:xnack-`, which is what `rocminfo`
+  prints for a device's ISA). `chipset` or `chip` remain as compatibility names.
   The default arch is `invalid`, so a target must be passed
   explicitly, removing the old "fallback" `gfx000` GPU.
 - Wavefront size is not a target-ID feature, so `convert-gpu-to-rocdl` takes it
@@ -48,8 +49,8 @@ default rules, `attr-dict` contains only discardable attributes. See
   call `migrateArchFeaturesToModuleFlags` to lower these attributes in custom
   pipelines.
 - `rocdl-attach-target` gains `arch` alongside its existing `triple`, `chip` and
-  `features`. When `arch` is given, it overrides `triple` and `chip`, and handles
-  xnack/sramecc modifier migration.
+  `features`. When `arch` is given, it overrides `triple` and `chip`, and
+  handles xnack/sramecc modifier migration.
 
 ## LLVM 21
 

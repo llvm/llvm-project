@@ -133,7 +133,12 @@ def ConvertAMDGPUToROCDLPass : Pass<"convert-amdgpu-to-rocdl"> {
   let options = [
     Option<"arch", "arch", "std::string",
            /*default=*/"\"invalid\"",
-           "Target architecture, as in Clang, with optional target-ID modifiers. New-style triples such as amdgpu9.42-amd-amdhsa are preferred, and can be extended to a full target ID like amdgpu9.42-amd-amdhsa--gfx942:xnack+:sramecc-. Bare chip names like gfx1250 or gfx942:xnack- are also supported. Defaults to an invalid target so that one must be given explicitly">,
+           "Target architecture, as in Clang, with optional target-ID "
+           "modifiers. New-style triples such as amdgpu9.42-amd-amdhsa are "
+           "preferred, and can be extended to a full target ID like "
+           "amdgpu9.42-amd-amdhsa--gfx942:xnack+:sramecc-. Bare chip names "
+           "like gfx1250 or gfx942:xnack- are also supported. Defaults to an "
+           "invalid target so that one must be given explicitly">,
     Option<"chipset", "chipset", "std::string", /*default=*/"\"\"",
            "Deprecated alias for 'arch'.">,
   ];
@@ -156,7 +161,12 @@ def ArithToAMDGPUConversionPass : Pass<"convert-arith-to-amdgpu"> {
   let options = [
     Option<"arch", "arch", "std::string",
            /*default=*/"\"invalid\"",
-           "Target architecture, as in Clang, with optional target-ID modifiers. New-style triples such as amdgpu9.42-amd-amdhsa are preferred, and can be extended to a full target ID like amdgpu9.42-amd-amdhsa--gfx942:xnack+:sramecc-. Bare chip names like gfx1250 or gfx942:xnack- are also supported. Defaults to an invalid target so that one must be given explicitly">,
+           "Target architecture, as in Clang, with optional target-ID "
+           "modifiers. New-style triples such as amdgpu9.42-amd-amdhsa are "
+           "preferred, and can be extended to a full target ID like "
+           "amdgpu9.42-amd-amdhsa--gfx942:xnack+:sramecc-. Bare chip names "
+           "like gfx1250 or gfx942:xnack- are also supported. Defaults to an "
+           "invalid target so that one must be given explicitly">,
     Option<"chipset", "chipset", "std::string", /*default=*/"\"\"",
            "Deprecated alias for 'arch'.">,
     Option<"saturateFP8Truncf", "saturate-fp8-truncf", "bool",
@@ -692,7 +702,12 @@ def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl", "gpu::GPUModuleOp"> {
   let options = [
     Option<"arch", "arch", "std::string",
            /*default=*/"\"invalid\"",
-           "Target architecture, as in Clang, with optional target-ID modifiers. New-style triples such as amdgpu9.42-amd-amdhsa are preferred, and can be extended to a full target ID like amdgpu9.42-amd-amdhsa--gfx942:xnack+:sramecc-. Bare chip names like gfx1250 or gfx942:xnack- are also supported. Defaults to an invalid target so that one must be given explicitly">,
+           "Target architecture, as in Clang, with optional target-ID "
+           "modifiers. New-style triples such as amdgpu9.42-amd-amdhsa are "
+           "preferred, and can be extended to a full target ID like "
+           "amdgpu9.42-amd-amdhsa--gfx942:xnack+:sramecc-. Bare chip names "
+           "like gfx1250 or gfx942:xnack- are also supported. Defaults to an "
+           "invalid target so that one must be given explicitly">,
     Option<"chipset", "chipset", "std::string", /*default=*/"\"\"",
            "Deprecated alias for 'arch'.">,
     Option<"waveSize", "wavesize", "unsigned", /*default=*/"0",
@@ -862,9 +877,9 @@ def ConvertMathToROCDL : Pass<"convert-math-to-rocdl", "ModuleOp"> {
   let description = [{
     This pass converts supported Math ops to ROCDL library calls.
 
-    The triple option specifies the target AMDGPU architecture. If it is empty,
+    The `arch` option specifies the target AMDGPU architecture. If it is empty,
     none of the target-dependent patterns are added and the pass does not
-    resolve a target; a chip or feature list without a triple is rejected.
+    resolve a target.
   }];
   let dependentDialects = [
     "arith::ArithDialect",
@@ -874,8 +889,8 @@ def ConvertMathToROCDL : Pass<"convert-math-to-rocdl", "ModuleOp"> {
   ];
   let options = [
     Option<"arch", "arch", "std::string", /*default=*/"\"\"",
-           "Target architecture, as in Clang, with optional target-ID modifiers "
-           "(e.g. amdgpu9.42-amd-amdhsa, gfx942, gfx942:xnack-). "
+           "Target architecture, as in Clang, with optional target-ID "
+           "modifiers (e.g. amdgpu9.42-amd-amdhsa, gfx942, gfx942:xnack-). "
            "If empty, no target-dependent patterns are added">,
     Option<"chipset", "chipset", "std::string", /*default=*/"\"\"",
            "Deprecated alias for 'arch'.">,
