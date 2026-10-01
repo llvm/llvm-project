@@ -14,7 +14,6 @@
 #include <vector>
 
 #include "lldb/Core/AddressRange.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RegisterInfo.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-private.h"
@@ -489,7 +488,7 @@ public:
 
   const UnwindPlan::Row *GetLastRow() const;
 
-  lldb_private::ConstString GetSourceName() const;
+  llvm::StringRef GetSourceName() const;
 
   void SetSourceName(const char *);
 
@@ -533,7 +532,7 @@ public:
     m_row_list.clear();
     m_plan_valid_ranges.clear();
     m_register_kind = lldb::eRegisterKindDWARF;
-    m_source_name.Clear();
+    m_source_name.clear();
     m_plan_is_sourced_from_compiler = eLazyBoolCalculate;
     m_plan_is_valid_at_all_instruction_locations = eLazyBoolCalculate;
     m_plan_is_for_signal_trap = eLazyBoolCalculate;
@@ -550,7 +549,7 @@ private:
   uint32_t m_return_addr_register; // The register that has the return address
                                    // for the caller frame
                                    // e.g. the lr on arm
-  lldb_private::ConstString
+  std::string
       m_source_name; // for logging, where this UnwindPlan originated from
   lldb_private::LazyBool m_plan_is_sourced_from_compiler;
   lldb_private::LazyBool m_plan_is_valid_at_all_instruction_locations;
