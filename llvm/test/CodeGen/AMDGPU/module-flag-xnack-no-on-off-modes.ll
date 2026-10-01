@@ -16,8 +16,8 @@
 ; RUN: llc -mtriple=amdgpu12.51-amd-amdhsa < %t/off.ll | FileCheck --check-prefix=CHECK %s
 ; RUN: llc -mtriple=amdgpu12.51-amd-amdhsa < %t/absent.ll | FileCheck --check-prefix=CHECK %s
 
-; In code object V6, the XNACK mode bits are zero even though XNACK is enabled.
-; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa --amdhsa-code-object-version=6 -filetype=obj < %t/absent.ll | llvm-readobj --file-headers - | FileCheck --check-prefix=ELF %s
+; The ELF XNACK mode bits must be zero even though XNACK is always enabled.
+; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa --amdhsa-code-object-version=5 -filetype=obj < %t/absent.ll | llvm-readobj --file-headers - | FileCheck --check-prefix=ELF %s
 
 ; ELF: Flags [ (0x449)
 

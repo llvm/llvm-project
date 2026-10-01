@@ -904,8 +904,7 @@ enum : unsigned {
   //
   // Only valid for ELFOSABI_AMDGPU_HSA and ELFABIVERSION_AMDGPU_HSA_V4.
   EF_AMDGPU_FEATURE_XNACK_V4 = 0x300,
-  // For code object V4/V5, XNACK is not supported.
-  // For code object V6 and later, XNACK mode selection is not supported.
+  // XNACK mode selection is not supported.
   EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4 = 0x000,
   // XNACK is any/default/unspecified.
   EF_AMDGPU_FEATURE_XNACK_ANY_V4 = 0x100,

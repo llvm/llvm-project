@@ -933,7 +933,12 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsV4() {
   EFlagsV4 |= getElfMach(STI.getCPU());
 
   // xnack.
-  switch (getTargetID()->getXnackSetting()) {
+  // Hardwired-on XNACK is implied by the processor, not an ELF mode selection.
+  AMDGPU::TargetIDSetting XnackSetting =
+      STI.hasFeature(AMDGPU::FeatureXNACKOnOffModes)
+          ? getTargetID()->getXnackSetting()
+          : AMDGPU::TargetIDSetting::Unsupported;
+  switch (XnackSetting) {
   case AMDGPU::TargetIDSetting::Unsupported:
     break;
   case AMDGPU::TargetIDSetting::Any:
@@ -967,10 +972,6 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsV4() {
 
 unsigned AMDGPUTargetELFStreamer::getEFlagsV6() {
   unsigned Flags = getEFlagsV4();
-
-  // Only encode selectable XNACK modes in code object V6 and later.
-  if (!STI.hasFeature(AMDGPU::FeatureXNACKOnOffModes))
-    Flags &= ~ELF::EF_AMDGPU_FEATURE_XNACK_V4;
 
   unsigned Version = ForceGenericVersion;
   if (!Version) {
