@@ -425,12 +425,12 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
               if (Latch && PN->getParent() == IVLoop->getHeader() &&
                   PN->getIncomingValueForBlock(Latch) == &Inst &&
                   programUndefinedIfPoison(&Inst)) {
-                SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
+                llvm::SCEVFlags Flags = SCEV::FlagNone;
                 if (Inst.hasNoUnsignedWrap())
                   Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNUW);
                 if (Inst.hasNoSignedWrap())
                   Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNSW);
-                if (Flags != SCEV::FlagAnyWrap) {
+                if (Flags != SCEV::FlagNone) {
                   auto SetFlags = [&](Value *V) {
                     if (auto *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(V))) {
                       if (AR->getLoop() == IVLoop)
