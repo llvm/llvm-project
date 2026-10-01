@@ -542,6 +542,7 @@ if config.include_examples:
     config.available_features.add("examples")
 
 if config.linked_bye_extension:
+    config.available_features.add("linked-bye")
     config.substitutions.append(("%llvmcheckext", "CHECK-EXT"))
     config.substitutions.append(("%loadbye", ""))
 else:
