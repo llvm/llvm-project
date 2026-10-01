@@ -146,7 +146,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["projects_to_build"],
-            "clang;clang-tools-extra;cross-project-tests;lld;lldb;llvm;mlir",
+            "clang;clang-tools-extra;cross-project-tests;lld;lldb;llvm",
         )
         self.assertEqual(
             env_variables["project_check_targets"],
@@ -171,7 +171,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["projects_to_build"],
-            "clang;clang-tools-extra;lld;llvm;mlir",
+            "clang;clang-tools-extra;lld;llvm",
         )
         self.assertEqual(
             env_variables["project_check_targets"],
