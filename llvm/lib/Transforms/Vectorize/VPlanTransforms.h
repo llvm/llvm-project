@@ -172,7 +172,7 @@ struct VPlanTransforms {
   /// recurrence cannot be handled.
   LLVM_ABI_FOR_TEST static bool createHeaderPhiRecipes(
       VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &OrigLoop,
-      const VPDominatorTree &VPDT,
+      OptimizationRemarkEmitter *ORE, const VPDominatorTree &VPDT,
       const MapVector<PHINode *, InductionDescriptor> &Inductions,
       const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
       const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
