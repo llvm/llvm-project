@@ -2785,7 +2785,7 @@ bool HexagonInstrInfo::isValidAutoIncImm(const EVT VT, int Offset) const {
 }
 
 bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
-      const TargetRegisterInfo *TRI, bool Extend) const {
+                                     bool Extend) const {
   // This function is to check whether the "Offset" is in the correct range of
   // the given "Opcode". If "Offset" is not in the correct range, "A2_addi" is
   // inserted to calculate the final address. Due to this reason, the function
@@ -2848,7 +2848,7 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::V6_vgathermhq_pseudo:
   case Hexagon::V6_vgathermwq_pseudo:
   case Hexagon::V6_vgathermhwq_pseudo: {
-    unsigned VectorSize = TRI->getSpillSize(Hexagon::HvxVRRegClass);
+    unsigned VectorSize = RegInfo.getSpillSize(Hexagon::HvxVRRegClass);
     assert(isPowerOf2_32(VectorSize));
     if (Offset & (VectorSize-1))
       return false;
