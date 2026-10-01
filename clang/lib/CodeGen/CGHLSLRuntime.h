@@ -35,13 +35,13 @@
 
 // Function generator macros for picking the right intrinsic
 // for the target backend.
-#define _GEN_INTRIN_CHOOSER(_1, _2, _3, NAME, ...) NAME
+#define HLSL_INTRINSIC_FUNCTION_CHOOSER(_1, _2, _3, NAME, ...) NAME
 
 #define GENERATE_HLSL_INTRINSIC_FUNCTION(...)                                  \
-  _GEN_INTRIN_CHOOSER(__VA_ARGS__, GENERATE_HLSL_INTRINSIC_FUNCTION3,          \
-                      GENERATE_HLSL_INTRINSIC_FUNCTION2,                       \
-                      /* dummy to solve pre-C++20 errors */ ignored)(          \
-      __VA_ARGS__)
+  HLSL_INTRINSIC_FUNCTION_CHOOSER(                                             \
+      __VA_ARGS__, GENERATE_HLSL_INTRINSIC_FUNCTION3,                          \
+      GENERATE_HLSL_INTRINSIC_FUNCTION2,                                       \
+      /* dummy to solve pre-C++20 errors */ ignored)(__VA_ARGS__)
 
 // 2-arg form: same postfix for both backends (uses the identity)
 #define GENERATE_HLSL_INTRINSIC_FUNCTION2(FunctionName, IntrinsicPostfix)      \
