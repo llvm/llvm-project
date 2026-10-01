@@ -918,9 +918,8 @@ DataFlowSanitizer::getCustomFunctionType(FunctionType *T,
     ArgTypes.push_back(ParamType);
   }
   for (unsigned I = 0, E = T->getNumParams(); I != E; ++I) {
-    if (ShadowParamExtAttr != Attribute::AttrKind::None)
-      NewParamAttrs = NewParamAttrs.addParamAttribute(*Ctx, ArgTypes.size(),
-                                                      ShadowParamExtAttr);
+    NewParamAttrs = NewParamAttrs.maybeAddParamAttribute(*Ctx, ArgTypes.size(),
+                                                         ShadowParamExtAttr);
     ArgTypes.push_back(PrimitiveShadowTy);
   }
   if (T->isVarArg())
@@ -931,9 +930,8 @@ DataFlowSanitizer::getCustomFunctionType(FunctionType *T,
 
   if (shouldTrackOrigins()) {
     for (unsigned I = 0, E = T->getNumParams(); I != E; ++I) {
-      if (OriginParamExtAttr != Attribute::AttrKind::None)
-        NewParamAttrs = NewParamAttrs.addParamAttribute(*Ctx, ArgTypes.size(),
-                                                        OriginParamExtAttr);
+      NewParamAttrs = NewParamAttrs.maybeAddParamAttribute(
+          *Ctx, ArgTypes.size(), OriginParamExtAttr);
       ArgTypes.push_back(OriginTy);
     }
     if (T->isVarArg())
