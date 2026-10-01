@@ -1039,17 +1039,38 @@ static void DiagnoseIfStmtRedundantDeferBody(Sema &S, SourceLocation IfLoc,
       return;
   }
 
+  // The following is responsible for preparing a fix-it hint to replace
+  // occurrances of `if (X) _Defer Y` with `_Defer if (X) Y` or similar.
+
+  SmallVector<FixItHint, 2> DeferBraceRemoval;
+  CompoundStmt *DeferBody = dyn_cast_or_null<CompoundStmt>(Defer->getBody());
+
+  // Remove surrounding `{}` from the defer statement body if it is not needed,
+  // for example: `if (X) _Defer { foo(); }` -> `_Defer if (X) foo();`
+  // This can also apply when the if statement body is already a CompoundStmt,
+  // meaning that the original `{}` around the defer substatement would be
+  // redundant after applying the fix-it.
+  if (DeferBody && (DeferBody->size() == 1 ||
+                    (isa<CompoundStmt>(thenStmt) && DeferBody->size() != 0))) {
+    DeferBraceRemoval.push_back(FixItHint::CreateRemoval(SourceRange(
+        DeferBody->getLBracLoc(),
+        DeferBody->body_front()->getBeginLoc().getLocWithOffset(-1))));
+
+    DeferBraceRemoval.push_back(FixItHint::CreateRemoval(
+        SourceRange(DeferBody->body_back()->getEndLoc().getLocWithOffset(2),
+                    DeferBody->getRBracLoc())));
+  }
+
   SourceLocation DeferLoc = Defer->getBeginLoc();
   StringRef DeferSpelling = GetDeferKeywordSpelling(S, DeferLoc);
 
-  // Offer a fix-it hint to replace `if (X) _Defer Y;` with `_Defer if (X) Y;`.
-  // This must preserve the `{}` if the `if` body is a CompoundStmt.
   S.Diag(DeferLoc, diag::note_redundant_defer_if)
       << DeferSpelling
       << FixItHint::CreateInsertion(IfLoc, std::string(DeferSpelling) + " ")
       << FixItHint::CreateRemoval(SourceRange(
              DeferLoc,
-             SourceLocation(DeferLoc.getLocWithOffset(DeferSpelling.size()))));
+             SourceLocation(DeferLoc.getLocWithOffset(DeferSpelling.size()))))
+      << DeferBraceRemoval;
 }
 
 StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc,
