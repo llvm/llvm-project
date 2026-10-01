@@ -1310,24 +1310,17 @@ cc_library(
 )
 
 cc_library(
-    name = "PluginDynamicLoaderPosixDYLDHeaders",
-    hdrs = glob(["DynamicLoader/POSIX-DYLD/*.h"]),
-    features = ["-parse_headers"],  # Would otherwise have circular dependencies
-    includes = [".."],
-)
-
-cc_library(
     name = "PluginDynamicLoaderPosixDYLD",
     srcs = glob(["DynamicLoader/POSIX-DYLD/*.cpp"]),
+    hdrs = glob(["DynamicLoader/POSIX-DYLD/*.h"]),
     includes = [".."],
     deps = [
-        ":PluginDynamicLoaderPosixDYLDHeaders",
         ":PluginObjectFileELF",
         ":PluginObjectFilePlaceholder",
-        ":PluginProcessElfCore",
         ":PluginProcessUtility",
         "//lldb:Breakpoint",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
@@ -2423,7 +2416,6 @@ cc_library(
         ":PluginDynamicLoaderMacOSXDYLD",
         ":PluginDynamicLoaderStatic",
         ":PluginObjectFileMachO",
-        ":PluginPlatformMacOSX",
         ":PluginProcessUtility",
         "//lldb:Breakpoint",
         "//lldb:Core",
@@ -2444,7 +2436,7 @@ cc_library(
     hdrs = glob(["Process/elf-core/*.h"]),
     includes = [".."],
     deps = [
-        ":PluginDynamicLoaderPosixDYLDHeaders",
+        ":PluginDynamicLoaderPosixDYLD",
         ":PluginDynamicLoaderStatic",
         ":PluginObjectFileELF",
         ":PluginObjectFilePlaceholder",
@@ -2508,7 +2500,6 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginDynamicLoaderPosixDYLD",
-        ":PluginDynamicLoaderPosixDYLDHeaders",
         ":PluginObjectFilePlaceholder",
         ":PluginProcessElfCore",
         ":PluginProcessUtility",
