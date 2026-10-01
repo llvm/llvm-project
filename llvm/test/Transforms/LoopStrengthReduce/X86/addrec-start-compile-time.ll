@@ -1,5 +1,4 @@
 ; RUN: opt -passes=loop-reduce -S < %s | FileCheck %s
-; REQUIRES: x86-registered-target
 ;
 ; A sequence of loops whose recurrence starts depend on earlier loops.
 ; Proving comparisons of the starts must not recursively branch into full
