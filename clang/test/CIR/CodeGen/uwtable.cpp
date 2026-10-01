@@ -49,5 +49,5 @@ void normal() {}
 // LLVM-SYNC: attributes #[[NORM_ATTR]] ={{.*}}uwtable(sync)
 // LLVM-SYNC-NOT: attributes #[[SUPP_ATTR]] ={{.*}}uwtable
 
-// LLVM-SYNC-NOT: attributes #[[NORM_ATTR]] ={{.*}}uwtable
-// LLVM-SYNC-NOT: attributes #[[SUPP_ATTR]] ={{.*}}uwtable
+// LLVM-NONE-NOT: attributes #[[NORM_ATTR]] ={{.*}}uwtable
+// LLVM-NONE-NOT: attributes #[[SUPP_ATTR]] ={{.*}}uwtable
