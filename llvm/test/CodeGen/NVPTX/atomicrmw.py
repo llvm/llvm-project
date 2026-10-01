@@ -3,7 +3,7 @@
 from string import Template
 from itertools import product
 
-TEST_SM_ARCH_PAIRS = [(60, 50), (70, 63), (90, 87)]
+TEST_SM_ARCH_PAIRS = [(60, 50), (70, 63), (90, 94)]
 
 SCOPE_LLVM_TO_PTX = {"": "sys", "block": "cta", "cluster": "cluster", "device": "gpu"}
 
@@ -57,20 +57,20 @@ atomicrmw_func = Template(
 # atomicrmw fadd's lowering depends on the function's FTZ (denormal) mode, so we
 # check codegen both with and without it. Lines common to both runs collapse to
 # the SM${sm} prefix; only the FTZ-sensitive ops diverge into SM${sm}-NOFTZ /
-# SM${sm}-FTZ. (-nvptx-allow-ftz-atomics is covered separately in
-# atomicrmw-allow-ftz-atomics.ll.)
+# SM${sm}-FTZ. (-nvptx-ftz-atomics is covered separately in
+# atomicrmw-ftz.ll.)
 run_statement = Template(
-    """; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -nvptx-allow-ftz-atomics=false | FileCheck %s --check-prefixes=SM${sm},SM${sm}-NOFTZ-DISALLOW
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -nvptx-allow-ftz-atomics=true | FileCheck %s --check-prefixes=SM${sm},SM${sm}-NOFTZ-ALLOW
+    """; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -nvptx-ftz-atomics=strict | FileCheck %s --check-prefixes=SM${sm},SM${sm}-NOFTZ-DISALLOW
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -nvptx-ftz-atomics=fast | FileCheck %s --check-prefixes=SM${sm},SM${sm}-NOFTZ-ALLOW
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | FileCheck %s --check-prefixes=SM${sm},SM${sm}-NOFTZ-ALLOW
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -denormal-fp-math-f32=preserve-sign -nvptx-allow-ftz-atomics=false | FileCheck %s --check-prefixes=SM${sm},SM${sm}-FTZ-DISALLOW
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -denormal-fp-math-f32=preserve-sign -nvptx-allow-ftz-atomics=true | FileCheck %s --check-prefixes=SM${sm},SM${sm}-FTZ-ALLOW
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -denormal-fp-math-f32=preserve-sign -nvptx-ftz-atomics=strict | FileCheck %s --check-prefixes=SM${sm},SM${sm}-FTZ-DISALLOW
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -denormal-fp-math-f32=preserve-sign -nvptx-ftz-atomics=fast | FileCheck %s --check-prefixes=SM${sm},SM${sm}-FTZ-ALLOW
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -denormal-fp-math-f32=preserve-sign | FileCheck %s --check-prefixes=SM${sm},SM${sm}-FTZ-ALLOW
-; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -nvptx-allow-ftz-atomics=false | %ptxas-verify -arch=sm_${sm} %}
-; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -nvptx-allow-ftz-atomics=true | %ptxas-verify -arch=sm_${sm} %}
+; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -nvptx-ftz-atomics=strict | %ptxas-verify -arch=sm_${sm} %}
+; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -nvptx-ftz-atomics=fast | %ptxas-verify -arch=sm_${sm} %}
 ; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | %ptxas-verify -arch=sm_${sm} %}
-; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -denormal-fp-math-f32=preserve-sign -nvptx-allow-ftz-atomics=false | %ptxas-verify -arch=sm_${sm} %}
-; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -denormal-fp-math-f32=preserve-sign -nvptx-allow-ftz-atomics=true | %ptxas-verify -arch=sm_${sm} %}
+; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -denormal-fp-math-f32=preserve-sign -nvptx-ftz-atomics=strict | %ptxas-verify -arch=sm_${sm} %}
+; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -denormal-fp-math-f32=preserve-sign -nvptx-ftz-atomics=fast | %ptxas-verify -arch=sm_${sm} %}
 ; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -denormal-fp-math-f32=preserve-sign | %ptxas-verify -arch=sm_${sm} %}
 """
 )
