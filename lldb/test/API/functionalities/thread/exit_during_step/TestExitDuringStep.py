@@ -44,6 +44,11 @@ class ExitDuringStepTestCase(TestBase):
 
     def exit_during_step_base(self, step_cmd, step_stop_reason, by_instruction):
         """Test thread exit during step handling."""
+        if self.getArchitecture().lower() == "arm":
+            # We require a separate debug info file to be able to backtrace starting
+            # from a libc function. This file is provided by libc6-dbg on Linux.
+            self.runCmd("settings set symbols.enable-external-lookup true")
+
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
