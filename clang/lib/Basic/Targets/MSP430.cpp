@@ -29,5 +29,7 @@ void MSP430TargetInfo::getTargetDefines(const LangOptions &Opts,
                                         MacroBuilder &Builder) const {
   Builder.defineMacro("MSP430");
   Builder.defineMacro("__MSP430__");
+  if (CPU == "msp430x")
+    Builder.defineMacro("__MSP430X__");
   // FIXME: defines for different 'flavours' of MCU
 }
