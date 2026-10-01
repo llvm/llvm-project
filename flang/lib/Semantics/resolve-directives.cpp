@@ -2477,7 +2477,7 @@ void AccAttributeVisitor::FinalizeAccClauseObjects() {
       // compatible reductions can use ordinary same-kind duplicate handling.
       // Also handle private/reduction interactions on loop constructs.
       const parser::CharBlock source{
-          parser::FindSourceLocation(*entry.value.occurrence)};
+          parser::FindSourceLocation(DEREF(entry.value.occurrence))};
       auto emitError{[&](const parser::MessageFixedText &text) {
         auto &message{context_.Say(source, text, source.ToString())};
         if (previous.value.occurrence) {
