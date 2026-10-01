@@ -187,15 +187,388 @@ exit:
   ret void
 }
 
+; The fmul and fadd pairs, fused by the backend, cost as the fmuladd in the
+; scalar region cost, so the tighter bound rejects the versioning.
+define void @vectorized_loop_contract(ptr %m, ptr %in, ptr %out, i64 %n) {
+; CHECK-LABEL: define void @vectorized_loop_contract(
+; CHECK-SAME: ptr [[M:%.*]], ptr [[IN:%.*]], ptr [[OUT:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[M16:%.*]] = ptrtoaddr ptr [[M]] to i64
+; CHECK-NEXT:    [[M1_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 4
+; CHECK-NEXT:    [[M2_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 8
+; CHECK-NEXT:    [[M3_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 12
+; CHECK-NEXT:    [[M4_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 16
+; CHECK-NEXT:    [[M5_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 20
+; CHECK-NEXT:    [[M6_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 24
+; CHECK-NEXT:    [[M7_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 28
+; CHECK-NEXT:    [[M8_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 32
+; CHECK-NEXT:    [[M9_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 36
+; CHECK-NEXT:    [[M10_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 40
+; CHECK-NEXT:    [[M11_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 44
+; CHECK-NEXT:    [[M12_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 48
+; CHECK-NEXT:    [[M13_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 52
+; CHECK-NEXT:    [[M14_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 56
+; CHECK-NEXT:    [[M15_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 60
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[M16]], 64
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT_RTMERGE:%.*]], %[[EXIT:.*]] ]
+; CHECK-NEXT:    [[SRC:%.*]] = phi ptr [ [[IN]], %[[ENTRY]] ], [ [[SRC_NEXT_RTMERGE:%.*]], %[[EXIT]] ]
+; CHECK-NEXT:    [[DST:%.*]] = phi ptr [ [[OUT]], %[[ENTRY]] ], [ [[DST_NEXT_RTMERGE:%.*]], %[[EXIT]] ]
+; CHECK-NEXT:    [[DST17:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[DST17]], 16
+; CHECK-NEXT:    [[RT_BOUND0:%.*]] = icmp ult i64 [[DST17]], [[TMP0]]
+; CHECK-NEXT:    [[RT_BOUND1:%.*]] = icmp ult i64 [[M16]], [[TMP1]]
+; CHECK-NEXT:    [[RT_CONFLICT:%.*]] = and i1 [[RT_BOUND0]], [[RT_BOUND1]]
+; CHECK-NEXT:    [[RT_GUARD:%.*]] = freeze i1 [[RT_CONFLICT]]
+; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[LOOP_RTSCALAR:.*]], label %[[LOOP_RTVEC:.*]], !prof [[PROF2:![0-9]+]]
+; CHECK:       [[EXIT1:.*]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[LOOP_RTVEC]]:
+; CHECK-NEXT:    [[R:%.*]] = load float, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[G_P:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 4
+; CHECK-NEXT:    [[G:%.*]] = load float, ptr [[G_P]], align 4
+; CHECK-NEXT:    [[B_P:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 8
+; CHECK-NEXT:    [[B:%.*]] = load float, ptr [[B_P]], align 4
+; CHECK-NEXT:    [[A_P:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 12
+; CHECK-NEXT:    [[A:%.*]] = load float, ptr [[A_P]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[M]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[R]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul contract <4 x float> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x float>, ptr [[M4_P]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> poison, float [[G]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x float> [[TMP7]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul contract <4 x float> [[TMP6]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd contract <4 x float> [[TMP9]], [[TMP5]]
+; CHECK-NEXT:    [[TMP11:%.*]] = load <4 x float>, ptr [[M8_P]], align 4
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x float> poison, float [[B]], i64 0
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x float> [[TMP12]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = fmul contract <4 x float> [[TMP11]], [[TMP13]]
+; CHECK-NEXT:    [[TMP15:%.*]] = fadd contract <4 x float> [[TMP10]], [[TMP14]]
+; CHECK-NEXT:    [[TMP16:%.*]] = load <4 x float>, ptr [[M12_P]], align 4
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x float> poison, float [[A]], i64 0
+; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <4 x float> [[TMP17]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP19:%.*]] = fmul contract <4 x float> [[TMP16]], [[TMP18]]
+; CHECK-NEXT:    [[TMP20:%.*]] = fadd contract <4 x float> [[TMP15]], [[TMP19]]
+; CHECK-NEXT:    store <4 x float> [[TMP20]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[SRC_NEXT1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 16
+; CHECK-NEXT:    [[DST_NEXT1:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 16
+; CHECK-NEXT:    [[IV_NEXT1:%.*]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[DONE1:%.*]] = icmp eq i64 [[IV_NEXT1]], [[N]]
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[LOOP_RTSCALAR]]:
+; CHECK-NEXT:    [[R_SCALAR:%.*]] = load float, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[G_P_SCALAR:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 4
+; CHECK-NEXT:    [[G_SCALAR:%.*]] = load float, ptr [[G_P_SCALAR]], align 4
+; CHECK-NEXT:    [[B_P_SCALAR:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 8
+; CHECK-NEXT:    [[B_SCALAR:%.*]] = load float, ptr [[B_P_SCALAR]], align 4
+; CHECK-NEXT:    [[A_P_SCALAR:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 12
+; CHECK-NEXT:    [[A_SCALAR:%.*]] = load float, ptr [[A_P_SCALAR]], align 4
+; CHECK-NEXT:    [[M0:%.*]] = load float, ptr [[M]], align 4
+; CHECK-NEXT:    [[R0:%.*]] = fmul contract float [[M0]], [[R_SCALAR]]
+; CHECK-NEXT:    [[M4:%.*]] = load float, ptr [[M4_P]], align 4
+; CHECK-NEXT:    [[G0:%.*]] = fmul contract float [[M4]], [[G_SCALAR]]
+; CHECK-NEXT:    [[S0:%.*]] = fadd contract float [[G0]], [[R0]]
+; CHECK-NEXT:    [[M8:%.*]] = load float, ptr [[M8_P]], align 4
+; CHECK-NEXT:    [[B0:%.*]] = fmul contract float [[M8]], [[B_SCALAR]]
+; CHECK-NEXT:    [[T0:%.*]] = fadd contract float [[S0]], [[B0]]
+; CHECK-NEXT:    [[M12:%.*]] = load float, ptr [[M12_P]], align 4
+; CHECK-NEXT:    [[A0:%.*]] = fmul contract float [[M12]], [[A_SCALAR]]
+; CHECK-NEXT:    [[X0:%.*]] = fadd contract float [[T0]], [[A0]]
+; CHECK-NEXT:    store float [[X0]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[M1:%.*]] = load float, ptr [[M1_P]], align 4
+; CHECK-NEXT:    [[R1:%.*]] = fmul contract float [[M1]], [[R_SCALAR]]
+; CHECK-NEXT:    [[M5:%.*]] = load float, ptr [[M5_P]], align 4
+; CHECK-NEXT:    [[G1:%.*]] = fmul contract float [[M5]], [[G_SCALAR]]
+; CHECK-NEXT:    [[S1:%.*]] = fadd contract float [[G1]], [[R1]]
+; CHECK-NEXT:    [[M9:%.*]] = load float, ptr [[M9_P]], align 4
+; CHECK-NEXT:    [[B1:%.*]] = fmul contract float [[M9]], [[B_SCALAR]]
+; CHECK-NEXT:    [[T1:%.*]] = fadd contract float [[S1]], [[B1]]
+; CHECK-NEXT:    [[M13:%.*]] = load float, ptr [[M13_P]], align 4
+; CHECK-NEXT:    [[A1:%.*]] = fmul contract float [[M13]], [[A_SCALAR]]
+; CHECK-NEXT:    [[X1:%.*]] = fadd contract float [[T1]], [[A1]]
+; CHECK-NEXT:    [[DST1:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 4
+; CHECK-NEXT:    store float [[X1]], ptr [[DST1]], align 4
+; CHECK-NEXT:    [[M2:%.*]] = load float, ptr [[M2_P]], align 4
+; CHECK-NEXT:    [[R2:%.*]] = fmul contract float [[M2]], [[R_SCALAR]]
+; CHECK-NEXT:    [[M6:%.*]] = load float, ptr [[M6_P]], align 4
+; CHECK-NEXT:    [[G2:%.*]] = fmul contract float [[M6]], [[G_SCALAR]]
+; CHECK-NEXT:    [[S2:%.*]] = fadd contract float [[G2]], [[R2]]
+; CHECK-NEXT:    [[M10:%.*]] = load float, ptr [[M10_P]], align 4
+; CHECK-NEXT:    [[B2:%.*]] = fmul contract float [[M10]], [[B_SCALAR]]
+; CHECK-NEXT:    [[T2:%.*]] = fadd contract float [[S2]], [[B2]]
+; CHECK-NEXT:    [[M14:%.*]] = load float, ptr [[M14_P]], align 4
+; CHECK-NEXT:    [[A2:%.*]] = fmul contract float [[M14]], [[A_SCALAR]]
+; CHECK-NEXT:    [[X2:%.*]] = fadd contract float [[T2]], [[A2]]
+; CHECK-NEXT:    [[DST2:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 8
+; CHECK-NEXT:    store float [[X2]], ptr [[DST2]], align 4
+; CHECK-NEXT:    [[M3:%.*]] = load float, ptr [[M3_P]], align 4
+; CHECK-NEXT:    [[R3:%.*]] = fmul contract float [[M3]], [[R_SCALAR]]
+; CHECK-NEXT:    [[M7:%.*]] = load float, ptr [[M7_P]], align 4
+; CHECK-NEXT:    [[G3:%.*]] = fmul contract float [[M7]], [[G_SCALAR]]
+; CHECK-NEXT:    [[S3:%.*]] = fadd contract float [[G3]], [[R3]]
+; CHECK-NEXT:    [[M11:%.*]] = load float, ptr [[M11_P]], align 4
+; CHECK-NEXT:    [[B3:%.*]] = fmul contract float [[M11]], [[B_SCALAR]]
+; CHECK-NEXT:    [[T3:%.*]] = fadd contract float [[S3]], [[B3]]
+; CHECK-NEXT:    [[M15:%.*]] = load float, ptr [[M15_P]], align 4
+; CHECK-NEXT:    [[A3:%.*]] = fmul contract float [[M15]], [[A_SCALAR]]
+; CHECK-NEXT:    [[X3:%.*]] = fadd contract float [[T3]], [[A3]]
+; CHECK-NEXT:    [[DST3:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 12
+; CHECK-NEXT:    store float [[X3]], ptr [[DST3]], align 4
+; CHECK-NEXT:    [[SRC_NEXT:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 16
+; CHECK-NEXT:    [[DST_NEXT:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 16
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[SRC_NEXT_RTMERGE]] = phi ptr [ [[SRC_NEXT1]], %[[LOOP_RTVEC]] ], [ [[SRC_NEXT]], %[[LOOP_RTSCALAR]] ]
+; CHECK-NEXT:    [[DST_NEXT_RTMERGE]] = phi ptr [ [[DST_NEXT1]], %[[LOOP_RTVEC]] ], [ [[DST_NEXT]], %[[LOOP_RTSCALAR]] ]
+; CHECK-NEXT:    [[IV_NEXT_RTMERGE]] = phi i64 [ [[IV_NEXT1]], %[[LOOP_RTVEC]] ], [ [[IV_NEXT]], %[[LOOP_RTSCALAR]] ]
+; CHECK-NEXT:    [[DONE_RTMERGE:%.*]] = phi i1 [ [[DONE1]], %[[LOOP_RTVEC]] ], [ [[DONE]], %[[LOOP_RTSCALAR]] ]
+; CHECK-NEXT:    br i1 [[DONE_RTMERGE]], label %[[EXIT1]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+;
+; VER-LABEL: define void @vectorized_loop_contract(
+; VER-SAME: ptr [[M:%.*]], ptr [[IN:%.*]], ptr [[OUT:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; VER-NEXT:  [[ENTRY:.*]]:
+; VER-NEXT:    [[M16:%.*]] = ptrtoaddr ptr [[M]] to i64
+; VER-NEXT:    [[M1_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 4
+; VER-NEXT:    [[M2_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 8
+; VER-NEXT:    [[M3_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 12
+; VER-NEXT:    [[M4_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 16
+; VER-NEXT:    [[M5_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 20
+; VER-NEXT:    [[M6_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 24
+; VER-NEXT:    [[M7_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 28
+; VER-NEXT:    [[M8_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 32
+; VER-NEXT:    [[M9_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 36
+; VER-NEXT:    [[M10_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 40
+; VER-NEXT:    [[M11_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 44
+; VER-NEXT:    [[M12_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 48
+; VER-NEXT:    [[M13_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 52
+; VER-NEXT:    [[M14_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 56
+; VER-NEXT:    [[M15_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 60
+; VER-NEXT:    [[TMP0:%.*]] = add i64 [[M16]], 64
+; VER-NEXT:    br label %[[LOOP:.*]]
+; VER:       [[LOOP]]:
+; VER-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT_RTMERGE:%.*]], %[[LOOP_RTCONT:.*]] ]
+; VER-NEXT:    [[SRC:%.*]] = phi ptr [ [[IN]], %[[ENTRY]] ], [ [[SRC_NEXT_RTMERGE:%.*]], %[[LOOP_RTCONT]] ]
+; VER-NEXT:    [[DST:%.*]] = phi ptr [ [[OUT]], %[[ENTRY]] ], [ [[DST_NEXT_RTMERGE:%.*]], %[[LOOP_RTCONT]] ]
+; VER-NEXT:    [[DST17:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; VER-NEXT:    [[TMP1:%.*]] = add i64 [[DST17]], 16
+; VER-NEXT:    [[RT_BOUND0:%.*]] = icmp ult i64 [[DST17]], [[TMP0]]
+; VER-NEXT:    [[RT_BOUND1:%.*]] = icmp ult i64 [[M16]], [[TMP1]]
+; VER-NEXT:    [[RT_CONFLICT:%.*]] = and i1 [[RT_BOUND0]], [[RT_BOUND1]]
+; VER-NEXT:    [[RT_GUARD:%.*]] = freeze i1 [[RT_CONFLICT]]
+; VER-NEXT:    br i1 [[RT_GUARD]], label %[[LOOP_RTSCALAR:.*]], label %[[LOOP_RTVEC:.*]], !prof [[PROF0]]
+; VER:       [[EXIT:.*]]:
+; VER-NEXT:    ret void
+; VER:       [[LOOP_RTVEC]]:
+; VER-NEXT:    [[R:%.*]] = load float, ptr [[SRC]], align 4
+; VER-NEXT:    [[G_P:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 4
+; VER-NEXT:    [[G:%.*]] = load float, ptr [[G_P]], align 4
+; VER-NEXT:    [[B_P:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 8
+; VER-NEXT:    [[B:%.*]] = load float, ptr [[B_P]], align 4
+; VER-NEXT:    [[A_P:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 12
+; VER-NEXT:    [[A:%.*]] = load float, ptr [[A_P]], align 4
+; VER-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[M]], align 4
+; VER-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[R]], i64 0
+; VER-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <4 x i32> zeroinitializer
+; VER-NEXT:    [[TMP5:%.*]] = fmul contract <4 x float> [[TMP2]], [[TMP4]]
+; VER-NEXT:    [[TMP6:%.*]] = load <4 x float>, ptr [[M4_P]], align 4
+; VER-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> poison, float [[G]], i64 0
+; VER-NEXT:    [[TMP8:%.*]] = shufflevector <4 x float> [[TMP7]], <4 x float> poison, <4 x i32> zeroinitializer
+; VER-NEXT:    [[TMP9:%.*]] = fmul contract <4 x float> [[TMP6]], [[TMP8]]
+; VER-NEXT:    [[TMP10:%.*]] = fadd contract <4 x float> [[TMP9]], [[TMP5]]
+; VER-NEXT:    [[TMP11:%.*]] = load <4 x float>, ptr [[M8_P]], align 4
+; VER-NEXT:    [[TMP12:%.*]] = insertelement <4 x float> poison, float [[B]], i64 0
+; VER-NEXT:    [[TMP13:%.*]] = shufflevector <4 x float> [[TMP12]], <4 x float> poison, <4 x i32> zeroinitializer
+; VER-NEXT:    [[TMP14:%.*]] = fmul contract <4 x float> [[TMP11]], [[TMP13]]
+; VER-NEXT:    [[TMP15:%.*]] = fadd contract <4 x float> [[TMP10]], [[TMP14]]
+; VER-NEXT:    [[TMP16:%.*]] = load <4 x float>, ptr [[M12_P]], align 4
+; VER-NEXT:    [[TMP17:%.*]] = insertelement <4 x float> poison, float [[A]], i64 0
+; VER-NEXT:    [[TMP18:%.*]] = shufflevector <4 x float> [[TMP17]], <4 x float> poison, <4 x i32> zeroinitializer
+; VER-NEXT:    [[TMP19:%.*]] = fmul contract <4 x float> [[TMP16]], [[TMP18]]
+; VER-NEXT:    [[TMP20:%.*]] = fadd contract <4 x float> [[TMP15]], [[TMP19]]
+; VER-NEXT:    store <4 x float> [[TMP20]], ptr [[DST]], align 4
+; VER-NEXT:    [[SRC_NEXT:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 16
+; VER-NEXT:    [[DST_NEXT:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 16
+; VER-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
+; VER-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; VER-NEXT:    br label %[[LOOP_RTCONT]]
+; VER:       [[LOOP_RTSCALAR]]:
+; VER-NEXT:    [[R_SCALAR:%.*]] = load float, ptr [[SRC]], align 4
+; VER-NEXT:    [[G_P_SCALAR:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 4
+; VER-NEXT:    [[G_SCALAR:%.*]] = load float, ptr [[G_P_SCALAR]], align 4
+; VER-NEXT:    [[B_P_SCALAR:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 8
+; VER-NEXT:    [[B_SCALAR:%.*]] = load float, ptr [[B_P_SCALAR]], align 4
+; VER-NEXT:    [[A_P_SCALAR:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 12
+; VER-NEXT:    [[A_SCALAR:%.*]] = load float, ptr [[A_P_SCALAR]], align 4
+; VER-NEXT:    [[M0_SCALAR:%.*]] = load float, ptr [[M]], align 4
+; VER-NEXT:    [[R0_SCALAR:%.*]] = fmul contract float [[M0_SCALAR]], [[R_SCALAR]]
+; VER-NEXT:    [[M4_SCALAR:%.*]] = load float, ptr [[M4_P]], align 4
+; VER-NEXT:    [[G0_SCALAR:%.*]] = fmul contract float [[M4_SCALAR]], [[G_SCALAR]]
+; VER-NEXT:    [[S0_SCALAR:%.*]] = fadd contract float [[G0_SCALAR]], [[R0_SCALAR]]
+; VER-NEXT:    [[M8_SCALAR:%.*]] = load float, ptr [[M8_P]], align 4
+; VER-NEXT:    [[B0_SCALAR:%.*]] = fmul contract float [[M8_SCALAR]], [[B_SCALAR]]
+; VER-NEXT:    [[T0_SCALAR:%.*]] = fadd contract float [[S0_SCALAR]], [[B0_SCALAR]]
+; VER-NEXT:    [[M12_SCALAR:%.*]] = load float, ptr [[M12_P]], align 4
+; VER-NEXT:    [[A0_SCALAR:%.*]] = fmul contract float [[M12_SCALAR]], [[A_SCALAR]]
+; VER-NEXT:    [[X0_SCALAR:%.*]] = fadd contract float [[T0_SCALAR]], [[A0_SCALAR]]
+; VER-NEXT:    store float [[X0_SCALAR]], ptr [[DST]], align 4
+; VER-NEXT:    [[M1_SCALAR:%.*]] = load float, ptr [[M1_P]], align 4
+; VER-NEXT:    [[R1_SCALAR:%.*]] = fmul contract float [[M1_SCALAR]], [[R_SCALAR]]
+; VER-NEXT:    [[M5_SCALAR:%.*]] = load float, ptr [[M5_P]], align 4
+; VER-NEXT:    [[G1_SCALAR:%.*]] = fmul contract float [[M5_SCALAR]], [[G_SCALAR]]
+; VER-NEXT:    [[S1_SCALAR:%.*]] = fadd contract float [[G1_SCALAR]], [[R1_SCALAR]]
+; VER-NEXT:    [[M9_SCALAR:%.*]] = load float, ptr [[M9_P]], align 4
+; VER-NEXT:    [[B1_SCALAR:%.*]] = fmul contract float [[M9_SCALAR]], [[B_SCALAR]]
+; VER-NEXT:    [[T1_SCALAR:%.*]] = fadd contract float [[S1_SCALAR]], [[B1_SCALAR]]
+; VER-NEXT:    [[M13_SCALAR:%.*]] = load float, ptr [[M13_P]], align 4
+; VER-NEXT:    [[A1_SCALAR:%.*]] = fmul contract float [[M13_SCALAR]], [[A_SCALAR]]
+; VER-NEXT:    [[X1_SCALAR:%.*]] = fadd contract float [[T1_SCALAR]], [[A1_SCALAR]]
+; VER-NEXT:    [[DST1_SCALAR:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 4
+; VER-NEXT:    store float [[X1_SCALAR]], ptr [[DST1_SCALAR]], align 4
+; VER-NEXT:    [[M2_SCALAR:%.*]] = load float, ptr [[M2_P]], align 4
+; VER-NEXT:    [[R2_SCALAR:%.*]] = fmul contract float [[M2_SCALAR]], [[R_SCALAR]]
+; VER-NEXT:    [[M6_SCALAR:%.*]] = load float, ptr [[M6_P]], align 4
+; VER-NEXT:    [[G2_SCALAR:%.*]] = fmul contract float [[M6_SCALAR]], [[G_SCALAR]]
+; VER-NEXT:    [[S2_SCALAR:%.*]] = fadd contract float [[G2_SCALAR]], [[R2_SCALAR]]
+; VER-NEXT:    [[M10_SCALAR:%.*]] = load float, ptr [[M10_P]], align 4
+; VER-NEXT:    [[B2_SCALAR:%.*]] = fmul contract float [[M10_SCALAR]], [[B_SCALAR]]
+; VER-NEXT:    [[T2_SCALAR:%.*]] = fadd contract float [[S2_SCALAR]], [[B2_SCALAR]]
+; VER-NEXT:    [[M14_SCALAR:%.*]] = load float, ptr [[M14_P]], align 4
+; VER-NEXT:    [[A2_SCALAR:%.*]] = fmul contract float [[M14_SCALAR]], [[A_SCALAR]]
+; VER-NEXT:    [[X2_SCALAR:%.*]] = fadd contract float [[T2_SCALAR]], [[A2_SCALAR]]
+; VER-NEXT:    [[DST2_SCALAR:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 8
+; VER-NEXT:    store float [[X2_SCALAR]], ptr [[DST2_SCALAR]], align 4
+; VER-NEXT:    [[M3_SCALAR:%.*]] = load float, ptr [[M3_P]], align 4
+; VER-NEXT:    [[R3_SCALAR:%.*]] = fmul contract float [[M3_SCALAR]], [[R_SCALAR]]
+; VER-NEXT:    [[M7_SCALAR:%.*]] = load float, ptr [[M7_P]], align 4
+; VER-NEXT:    [[G3_SCALAR:%.*]] = fmul contract float [[M7_SCALAR]], [[G_SCALAR]]
+; VER-NEXT:    [[S3_SCALAR:%.*]] = fadd contract float [[G3_SCALAR]], [[R3_SCALAR]]
+; VER-NEXT:    [[M11_SCALAR:%.*]] = load float, ptr [[M11_P]], align 4
+; VER-NEXT:    [[B3_SCALAR:%.*]] = fmul contract float [[M11_SCALAR]], [[B_SCALAR]]
+; VER-NEXT:    [[T3_SCALAR:%.*]] = fadd contract float [[S3_SCALAR]], [[B3_SCALAR]]
+; VER-NEXT:    [[M15_SCALAR:%.*]] = load float, ptr [[M15_P]], align 4
+; VER-NEXT:    [[A3_SCALAR:%.*]] = fmul contract float [[M15_SCALAR]], [[A_SCALAR]]
+; VER-NEXT:    [[X3_SCALAR:%.*]] = fadd contract float [[T3_SCALAR]], [[A3_SCALAR]]
+; VER-NEXT:    [[DST3_SCALAR:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 12
+; VER-NEXT:    store float [[X3_SCALAR]], ptr [[DST3_SCALAR]], align 4
+; VER-NEXT:    [[SRC_NEXT_SCALAR:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 16
+; VER-NEXT:    [[DST_NEXT_SCALAR:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 16
+; VER-NEXT:    [[IV_NEXT_SCALAR:%.*]] = add nuw nsw i64 [[IV]], 1
+; VER-NEXT:    [[DONE_SCALAR:%.*]] = icmp eq i64 [[IV_NEXT_SCALAR]], [[N]]
+; VER-NEXT:    br label %[[LOOP_RTCONT]]
+; VER:       [[LOOP_RTCONT]]:
+; VER-NEXT:    [[SRC_NEXT_RTMERGE]] = phi ptr [ [[SRC_NEXT]], %[[LOOP_RTVEC]] ], [ [[SRC_NEXT_SCALAR]], %[[LOOP_RTSCALAR]] ]
+; VER-NEXT:    [[DST_NEXT_RTMERGE]] = phi ptr [ [[DST_NEXT]], %[[LOOP_RTVEC]] ], [ [[DST_NEXT_SCALAR]], %[[LOOP_RTSCALAR]] ]
+; VER-NEXT:    [[IV_NEXT_RTMERGE]] = phi i64 [ [[IV_NEXT]], %[[LOOP_RTVEC]] ], [ [[IV_NEXT_SCALAR]], %[[LOOP_RTSCALAR]] ]
+; VER-NEXT:    [[DONE_RTMERGE:%.*]] = phi i1 [ [[DONE]], %[[LOOP_RTVEC]] ], [ [[DONE_SCALAR]], %[[LOOP_RTSCALAR]] ]
+; VER-NEXT:    br i1 [[DONE_RTMERGE]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+;
+entry:
+  %m1.p = getelementptr inbounds i8, ptr %m, i64 4
+  %m2.p = getelementptr inbounds i8, ptr %m, i64 8
+  %m3.p = getelementptr inbounds i8, ptr %m, i64 12
+  %m4.p = getelementptr inbounds i8, ptr %m, i64 16
+  %m5.p = getelementptr inbounds i8, ptr %m, i64 20
+  %m6.p = getelementptr inbounds i8, ptr %m, i64 24
+  %m7.p = getelementptr inbounds i8, ptr %m, i64 28
+  %m8.p = getelementptr inbounds i8, ptr %m, i64 32
+  %m9.p = getelementptr inbounds i8, ptr %m, i64 36
+  %m10.p = getelementptr inbounds i8, ptr %m, i64 40
+  %m11.p = getelementptr inbounds i8, ptr %m, i64 44
+  %m12.p = getelementptr inbounds i8, ptr %m, i64 48
+  %m13.p = getelementptr inbounds i8, ptr %m, i64 52
+  %m14.p = getelementptr inbounds i8, ptr %m, i64 56
+  %m15.p = getelementptr inbounds i8, ptr %m, i64 60
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %src = phi ptr [ %in, %entry ], [ %src.next, %loop ]
+  %dst = phi ptr [ %out, %entry ], [ %dst.next, %loop ]
+  %r = load float, ptr %src, align 4
+  %g.p = getelementptr inbounds i8, ptr %src, i64 4
+  %g = load float, ptr %g.p, align 4
+  %b.p = getelementptr inbounds i8, ptr %src, i64 8
+  %b = load float, ptr %b.p, align 4
+  %a.p = getelementptr inbounds i8, ptr %src, i64 12
+  %a = load float, ptr %a.p, align 4
+  %m0 = load float, ptr %m, align 4
+  %r0 = fmul contract float %m0, %r
+  %m4 = load float, ptr %m4.p, align 4
+  %g0 = fmul contract float %m4, %g
+  %s0 = fadd contract float %g0, %r0
+  %m8 = load float, ptr %m8.p, align 4
+  %b0 = fmul contract float %m8, %b
+  %t0 = fadd contract float %s0, %b0
+  %m12 = load float, ptr %m12.p, align 4
+  %a0 = fmul contract float %m12, %a
+  %x0 = fadd contract float %t0, %a0
+  store float %x0, ptr %dst, align 4
+  %m1 = load float, ptr %m1.p, align 4
+  %r1 = fmul contract float %m1, %r
+  %m5 = load float, ptr %m5.p, align 4
+  %g1 = fmul contract float %m5, %g
+  %s1 = fadd contract float %g1, %r1
+  %m9 = load float, ptr %m9.p, align 4
+  %b1 = fmul contract float %m9, %b
+  %t1 = fadd contract float %s1, %b1
+  %m13 = load float, ptr %m13.p, align 4
+  %a1 = fmul contract float %m13, %a
+  %x1 = fadd contract float %t1, %a1
+  %dst1 = getelementptr inbounds i8, ptr %dst, i64 4
+  store float %x1, ptr %dst1, align 4
+  %m2 = load float, ptr %m2.p, align 4
+  %r2 = fmul contract float %m2, %r
+  %m6 = load float, ptr %m6.p, align 4
+  %g2 = fmul contract float %m6, %g
+  %s2 = fadd contract float %g2, %r2
+  %m10 = load float, ptr %m10.p, align 4
+  %b2 = fmul contract float %m10, %b
+  %t2 = fadd contract float %s2, %b2
+  %m14 = load float, ptr %m14.p, align 4
+  %a2 = fmul contract float %m14, %a
+  %x2 = fadd contract float %t2, %a2
+  %dst2 = getelementptr inbounds i8, ptr %dst, i64 8
+  store float %x2, ptr %dst2, align 4
+  %m3 = load float, ptr %m3.p, align 4
+  %r3 = fmul contract float %m3, %r
+  %m7 = load float, ptr %m7.p, align 4
+  %g3 = fmul contract float %m7, %g
+  %s3 = fadd contract float %g3, %r3
+  %m11 = load float, ptr %m11.p, align 4
+  %b3 = fmul contract float %m11, %b
+  %t3 = fadd contract float %s3, %b3
+  %m15 = load float, ptr %m15.p, align 4
+  %a3 = fmul contract float %m15, %a
+  %x3 = fadd contract float %t3, %a3
+  %dst3 = getelementptr inbounds i8, ptr %dst, i64 12
+  store float %x3, ptr %dst3, align 4
+  %src.next = getelementptr inbounds i8, ptr %src, i64 16
+  %dst.next = getelementptr inbounds i8, ptr %dst, i64 16
+  %iv.next = add nuw nsw i64 %iv, 1
+  %done = icmp eq i64 %iv.next, %n
+  br i1 %done, label %exit, label %loop, !llvm.loop !2
+
+exit:
+  ret void
+}
+
 declare float @llvm.fmuladd.f32(float, float, float)
 
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.isvectorized", i32 1}
+!2 = distinct !{!2, !1}
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[PROF2]] = !{!"branch_weights", i32 1, i32 1048575}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
 ;.
 ; VER: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
 ; VER: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]]}
 ; VER: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
+; VER: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]]}
 ;.
