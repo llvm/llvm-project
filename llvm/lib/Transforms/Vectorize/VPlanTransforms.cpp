@@ -3054,14 +3054,13 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
   //   EMIT ir<%uncountable.addr> = getelementptr inbounds nuw ir<%pred>,ir<%iv>
   //   EMIT ir<%uncountable.val> = load ir<%uncountable.addr>
   //   EMIT ir<%uncountable.cond> = icmp sgt ir<%uncountable.val>, ir<500>
-  //   EMIT vp<%3> = masked-cond ir<%uncountable.cond>
   // Successor(s): for.inc
   //
   // for.inc:
   //   EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
   //   EMIT ir<%countable.cond> = icmp eq ir<%iv.next>, ir<20>
   //   EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
-  //   EMIT vp<%freeze> = freeze ir<%3>
+  //   EMIT vp<%freeze> = freeze ir<%uncountable.cond>
   //   EMIT vp<%4> = any-of ir<%freeze>
   //   EMIT vp<%5> = icmp eq vp<%index.next>, vp<%1>
   //   EMIT branch-on-two-conds vp<%4>, vp<%5>
@@ -3115,12 +3114,9 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
         return nullptr;
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
       Recipes.push_back(cast<VPInstruction>(GepR));
-    } else if (match(V, m_Freeze(m_VPValue(
-                            Op1, m_VPInstruction<VPInstruction::MaskedCond>(
-                                     m_VPValue(Op2)))))) {
-      Worklist.push_back(Op2);
+    } else if (match(V, m_Freeze(m_VPValue(Op1)))) {
+      Worklist.push_back(Op1);
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
-      Recipes.push_back(cast<VPInstruction>(Op1->getDefiningRecipe()));
     } else
       return nullptr;
   }
@@ -3151,7 +3147,6 @@ struct EarlyExitInfo {
 ///   EMIT ir<%arrayidx> = getelementptr inbounds nuw ir<@c>, ir<%indvars.iv>
 ///   EMIT-SCALAR ir<%0> = load ir<%arrayidx>
 ///   EMIT ir<%cmp1> = icmp sgt ir<%0>, ir<5>
-///   EMIT vp<%1> = masked-cond ir<%cmp1>
 /// Successor(s): if.end
 ///
 /// if.end:
@@ -3390,20 +3385,12 @@ bool VPlanTransforms::handleUncountableEarlyExits(
               m_BranchOnCond(m_VPValue(CondOfEarlyExitingVPBB)));
     assert(Matched && "Terminator must be BranchOnCond");
 
-    // Insert the MaskedCond in the EarlyExitingVPBB so the predicator adds
-    // the correct block mask.
     VPBuilder EarlyExitingBuilder(EarlyExitingVPBB->getTerminator());
-    auto *CondToEarlyExit = EarlyExitingBuilder.createNaryOp(
-        VPInstruction::MaskedCond,
+    auto *CondToEarlyExit =
         TrueSucc == ExitBlock
             ? CondOfEarlyExitingVPBB
-            : EarlyExitingBuilder.createNot(CondOfEarlyExitingVPBB));
-    assert((isa<VPIRValue>(CondOfEarlyExitingVPBB) ||
-            !VPDT.properlyDominates(EarlyExitingVPBB, LatchVPBB) ||
-            VPDT.properlyDominates(
-                CondOfEarlyExitingVPBB->getDefiningRecipe()->getParent(),
-                LatchVPBB)) &&
-           "exit condition must dominate the latch");
+            : EarlyExitingBuilder.createNot(CondOfEarlyExitingVPBB);
+
     Exits.push_back({
         EarlyExitingVPBB,
         ExitBlock,
@@ -3433,6 +3420,44 @@ bool VPlanTransforms::handleUncountableEarlyExits(
                                      Exits[I].EarlyExitingVPBB) &&
              "RPO sort must place dominating exits before dominated ones");
 #endif
+
+  if (Style == UncountableExitStyle::ReadOnly) {
+    // Branch from each exiting block to the latch.
+    SmallVector<unsigned> ExitingEdges;
+    for (EarlyExitInfo &Exit : Exits) {
+      VPBasicBlock *EarlyExitingVPBB = Exit.EarlyExitingVPBB;
+      VPBuilder ExitingBuilder(
+          EarlyExitingVPBB, EarlyExitingVPBB->getTerminator()->getIterator());
+      VPValue *FirstExitLane =
+          ExitingBuilder.createFirstActiveLane(ExitingBuilder.createNaryOp(
+              VPInstruction::MaskedCond, Exit.CondToExit));
+      VPValue *ExitMask = ExitingBuilder.createICmp(
+          CmpInst::ICMP_ULT,
+          ExitingBuilder.createNaryOp(VPInstruction::StepVector, {},
+                                      FirstExitLane->getScalarType()),
+          FirstExitLane);
+      EarlyExitingVPBB->getTerminator()->setOperand(0, ExitMask);
+      VPBlockUtils::connectBlocks(EarlyExitingVPBB, LatchVPBB);
+      ExitingEdges.push_back(LatchVPBB->getNumPredecessors() - 1);
+    }
+
+    // Repair the exit condition so it's false on any path that didn't go
+    // through the exiting block.
+    for (auto [Idx, Exit] : enumerate(Exits)) {
+      auto &[EarlyExitingVPBB, EarlyExitVPBB, CondToExit] = Exit;
+      DenseMap<VPBasicBlock *, VPValue *> Defs = {
+          {HeaderVPBB, Plan.getFalse()}};
+      Defs[EarlyExitingVPBB] = CondToExit;
+      CondToExit = vputils::reconstructSSA(LatchVPBB, Defs);
+      // Any exiting lane from a earlier exit can't reach this exit, so the
+      // incoming value is poison for that edge.
+      if (auto *Phi = dyn_cast<VPPhi>(CondToExit);
+          Phi && Phi->getParent() == LatchVPBB)
+        for (unsigned ExitingEdge : ArrayRef(ExitingEdges).take_front(Idx))
+          Phi->setOperand(ExitingEdge,
+                          Plan.getPoison(CondToExit->getScalarType()));
+    }
+  }
 
   // Build the AnyOf condition for the latch terminator using logical OR
   // to avoid poison propagation from later exit conditions when an earlier
@@ -3554,9 +3579,27 @@ bool VPlanTransforms::handleUncountableEarlyExits(
       ExitIRI->addIncoming(NewIncoming);
     }
 
-    EarlyExitingVPBB->getTerminator()->eraseFromParent();
     VPBlockUtils::disconnectBlocks(EarlyExitingVPBB, EarlyExitVPBB);
     VPBlockUtils::connectBlocks(VectorEarlyExitVPBB, EarlyExitVPBB);
+  }
+
+  // Repair SSA for any live outs.
+  SmallVector<VPBasicBlock *> LiveOutVPBBs(VectorEarlyExitVPBBs);
+  LiveOutVPBBs.push_back(MiddleVPBB);
+  for (VPBasicBlock *VPBB : LiveOutVPBBs) {
+    for (VPRecipeBase &R : *VPBB) {
+      VPValue *X;
+      if (!match(&R, m_CombineOr(m_ExtractLastPart(m_VPValue(X)),
+                                 m_ExtractLane(m_VPValue(), m_VPValue(X)))))
+        continue;
+      VPBasicBlock *DefVPBB = X->getDefiningRecipe()->getParent();
+      assert(VPDT.dominates(HeaderVPBB, DefVPBB) &&
+             "Live-out defined outside of vector body?");
+      DenseMap<VPBasicBlock *, VPValue *> Defs = {
+          {HeaderVPBB, Plan.getPoison(X->getScalarType())}};
+      Defs[DefVPBB] = X;
+      R.replaceUsesOfWith(X, vputils::reconstructSSA(LatchVPBB, Defs));
+    }
   }
 
   // Chain through exits: for each exit, check if its condition is true at

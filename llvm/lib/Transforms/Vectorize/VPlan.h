@@ -1405,6 +1405,8 @@ public:
     /// is the value of the last lane of the induction increment (i.e. its
     /// backedge value). Has the wide induction recipe as operand.
     ExitingIVValue,
+    /// Logically-ands the mask operand with the block in-mask for the block
+    /// this recipe is located in.
     MaskedCond,
     /// Scale the first operand (vector step) by the second operand
     /// (scalar-step).  Casts both operands to the result type if needed.
