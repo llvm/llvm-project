@@ -147,9 +147,9 @@ ret:
 define i32 @sgt_stride_3_variable_bound(i32 %n, i32 %m) {
 ; CHECK-LABEL: 'sgt_stride_3_variable_bound'
 ; CHECK-NEXT:  Determining loop execution counts for: @sgt_stride_3_variable_bound
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((((-1 * (1 umin ((-1 * (%n smin %m)) + %n)))<nuw><nsw> + (-1 * (%n smin %m)) + %n) /u 3) + (1 umin ((-1 * (%n smin %m)) + %n)))
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((2 + (-1 * %m) + %n) /u 3)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 1431655765
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((((-1 * (1 umin ((-1 * (%n smin %m)) + %n)))<nuw><nsw> + (-1 * (%n smin %m)) + %n) /u 3) + (1 umin ((-1 * (%n smin %m)) + %n)))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((2 + (-1 * %m) + %n) /u 3)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
