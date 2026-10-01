@@ -3286,11 +3286,15 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_FEATURE_SRAMECC_V4``             0xc00 SRAMECC selection mask for
                                                         ``EF_AMDGPU_FEATURE_SRAMECC_*_V4``
                                                         values.
-     ``EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4`` 0x000 SRAMECC unsupported.
+     ``EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4`` 0x000 SRAMECC mode selection unsupported.
      ``EF_AMDGPU_FEATURE_SRAMECC_ANY_V4``         0x400 SRAMECC can have any value.
      ``EF_AMDGPU_FEATURE_SRAMECC_OFF_V4``         0x800 SRAMECC disabled,
      ``EF_AMDGPU_FEATURE_SRAMECC_ON_V4``          0xc00 SRAMECC enabled.
      ============================================ ===== ===================================
+
+  Processors with SRAMECC hardwired on do not support mode selection and use
+  ``EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4``. SRAMECC is implied by
+  ``EF_AMDGPU_MACH``.
 
   .. table:: AMDGPU ELF Header ``e_flags`` for Code Object V6 and After
      :name: amdgpu-elf-header-e_flags-table-v6-onwards
@@ -3313,7 +3317,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_FEATURE_SRAMECC_V4``             0xc00      SRAMECC selection mask for
                                                              ``EF_AMDGPU_FEATURE_SRAMECC_*_V4``
                                                              values.
-     ``EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4`` 0x000      SRAMECC unsupported.
+     ``EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4`` 0x000      SRAMECC mode selection unsupported.
      ``EF_AMDGPU_FEATURE_SRAMECC_ANY_V4``         0x400      SRAMECC can have any value.
      ``EF_AMDGPU_FEATURE_SRAMECC_OFF_V4``         0x800      SRAMECC disabled,
      ``EF_AMDGPU_FEATURE_SRAMECC_ON_V4``          0xc00      SRAMECC enabled.
