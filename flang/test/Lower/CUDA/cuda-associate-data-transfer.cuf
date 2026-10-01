@@ -51,3 +51,18 @@ end subroutine
 ! CHECK: hlfir.assign %{{.*}} to %{{.*}} : f64, !fir.ref<f64>
 ! CHECK-NOT: cuf.data_transfer
 ! CHECK: return
+
+! An associate name designating a managed object is managed data, but its
+! device component is device data: the element assignment is a transfer.
+subroutine baz(g)
+  type :: t
+    real, allocatable, device :: d(:)
+  end type
+  type(t), managed :: g
+  associate(p => g)
+    p%d(1) = 1.0
+  end associate
+end subroutine
+
+! CHECK-LABEL: func.func @_QPbaz(
+! CHECK: cuf.data_transfer %{{.*}} to %{{.*}} {hasManagedOrUnifedSymbols, transfer_kind = #cuf.cuda_transfer<host_device>} : f32, !fir.ref<f32>
