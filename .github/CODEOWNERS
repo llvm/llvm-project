@@ -31,7 +31,6 @@
 /llvm/lib/Transforms/Scalar/LoopIdiomRecognize.cpp @artagnon
 /llvm/lib/Transforms/Scalar/MemCpyOptimizer.cpp @nikic
 /llvm/lib/Transforms/InstCombine/ @nikic
-/llvm/lib/Transforms/Vectorize/VPlan* @artagnon
 
 # AMDGPU buffer pointer lowerings
 /llvm/lib/Target/AMDGPU/AMDGPULowerBufferFatPointers.cpp @krzysz00
