@@ -1363,12 +1363,19 @@ MDNode *MDNode::getMergedAllocTokenMetadata(const MDNode *A, const MDNode *B) {
   // Join different names with '|'.
   LLVMContext &Ctx = A->getContext();
   auto MergeNames = [&](unsigned Idx) -> Metadata * {
-    MDString *NameA = dyn_cast<MDString>(A->getOperand(Idx));
-    MDString *NameB = dyn_cast<MDString>(B->getOperand(Idx));
+    auto *NameA = dyn_cast_or_null<MDString>(A->getOperand(Idx));
+    auto *NameB = dyn_cast_or_null<MDString>(B->getOperand(Idx));
     if (!NameA || !NameB)
       return nullptr;
     if (NameA == NameB)
       return NameA;
+    // An empty string denotes an unknown type, which must be preserved.
+    if (Idx == 0) {
+      if (NameA->getString().empty())
+        return NameA;
+      if (NameB->getString().empty())
+        return NameB;
+    }
     return MDString::get(Ctx,
                          (NameA->getString() + "|" + NameB->getString()).str());
   };
