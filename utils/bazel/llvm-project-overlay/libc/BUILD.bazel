@@ -1484,17 +1484,28 @@ libc_support_library(
 libc_support_library(
     name = "types_struct_mmsghdr",
     hdrs = ["hdr/types/struct_mmsghdr.h"],
+    deps = select({
+        ":full_build": [],
+        "//conditions:default": [":hdr_sys_socket_overlay"],
+    }),
 )
 
 libc_support_library(
     name = "types_struct_msghdr",
     hdrs = ["hdr/types/struct_msghdr.h"],
+    deps = select({
+        ":full_build": [],
+        "//conditions:default": [":hdr_sys_socket_overlay"],
+    }),
 )
 
 libc_support_library(
     name = "types_struct_cmsghdr",
     hdrs = ["hdr/types/struct_cmsghdr.h"],
-    deps = [":llvm_libc_types_struct_cmsghdr"],
+    deps = select({
+        ":full_build": [":llvm_libc_types_struct_cmsghdr"],
+        "//conditions:default": [":hdr_sys_socket_overlay"],
+    }),
 )
 
 libc_support_library(
