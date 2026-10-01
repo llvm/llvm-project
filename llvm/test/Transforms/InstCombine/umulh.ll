@@ -185,49 +185,19 @@ define <32 x i16> @fold_umulh_v32i16() {
 ; Demanded Elts
 ;
 
-define <8 x i16> @elts_umulh_v8i16(<8 x i16> %a0, <8 x i16> %a1) {
-; CHECK-LABEL: @elts_umulh_v8i16(
-; CHECK-NEXT:    [[A0:%.*]] = shufflevector <8 x i16> [[A2:%.*]], <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2>
-; CHECK-NEXT:    [[A1:%.*]] = shufflevector <8 x i16> [[A3:%.*]], <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.umulh.v8i16(<8 x i16> [[A0]], <8 x i16> [[A1]])
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    ret <8 x i16> [[TMP2]]
+define <8 x i64> @elts_umulh_v8i64(<8 x i64> %a0, <8 x i64> %a1) {
+; CHECK-LABEL: @elts_umulh_v8i64(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i64> [[A0:%.*]], <8 x i64> poison, <8 x i32> <i32 0, i32 1, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i64> [[A1:%.*]], <8 x i64> poison, <8 x i32> <i32 0, i32 1, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i64> @llvm.umulh.v8i64(<8 x i64> [[TMP1]], <8 x i64> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i64> [[TMP3]], <8 x i64> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    ret <8 x i64> [[TMP4]]
 ;
-  %1 = shufflevector <8 x i16> %a0, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2>
-  %2 = shufflevector <8 x i16> %a1, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
-  %3 = call <8 x i16> @llvm.umulh.v8i16(<8 x i16> %1, <8 x i16> %2)
-  %4 = shufflevector <8 x i16> %3, <8 x i16> poison, <8 x i32> zeroinitializer
-  ret <8 x i16> %4
-}
-
-define <16 x i16> @elts_umulh_v16i16(<16 x i16> %a0, <16 x i16> %a1) {
-; CHECK-LABEL: @elts_umulh_v16i16(
-; CHECK-NEXT:    [[A0:%.*]] = shufflevector <16 x i16> [[A2:%.*]], <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[A1:%.*]] = shufflevector <16 x i16> [[A3:%.*]], <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i16> @llvm.umulh.v16i16(<16 x i16> [[A0]], <16 x i16> [[A1]])
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i16> [[TMP1]], <16 x i16> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    ret <16 x i16> [[TMP2]]
-;
-  %1 = shufflevector <16 x i16> %a0, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %2 = shufflevector <16 x i16> %a1, <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %3 = call <16 x i16> @llvm.umulh.v16i16(<16 x i16> %1, <16 x i16> %2)
-  %4 = shufflevector <16 x i16> %3, <16 x i16> poison, <16 x i32> zeroinitializer
-  ret <16 x i16> %4
-}
-
-define <32 x i16> @elts_umulh_v32i16(<32 x i16> %a0, <32 x i16> %a1) {
-; CHECK-LABEL: @elts_umulh_v32i16(
-; CHECK-NEXT:    [[A0:%.*]] = shufflevector <32 x i16> [[A2:%.*]], <32 x i16> poison, <32 x i32> <i32 0, i32 1, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[A1:%.*]] = shufflevector <32 x i16> [[A3:%.*]], <32 x i16> poison, <32 x i32> <i32 0, i32 1, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i16> @llvm.umulh.v32i16(<32 x i16> [[A0]], <32 x i16> [[A1]])
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <32 x i16> [[TMP1]], <32 x i16> poison, <32 x i32> zeroinitializer
-; CHECK-NEXT:    ret <32 x i16> [[TMP2]]
-;
-  %1 = shufflevector <32 x i16> %a0, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-  %2 = shufflevector <32 x i16> %a1, <32 x i16> undef, <32 x i32> <i32 0, i32 1, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-  %3 = call <32 x i16> @llvm.umulh.v32i16(<32 x i16> %1, <32 x i16> %2)
-  %4 = shufflevector <32 x i16> %3, <32 x i16> poison, <32 x i32> zeroinitializer
-  ret <32 x i16> %4
+  %1 = shufflevector <8 x i64> %a0, <8 x i64> undef, <8 x i32> <i32 0, i32 1, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2>
+  %2 = shufflevector <8 x i64> %a1, <8 x i64> undef, <8 x i32> <i32 0, i32 1, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+  %3 = call <8 x i64> @llvm.umulh.v8i64(<8 x i64> %1, <8 x i64> %2)
+  %4 = shufflevector <8 x i64> %3, <8 x i64> poison, <8 x i32> zeroinitializer
+  ret <8 x i64> %4
 }
 
 ;
@@ -243,26 +213,4 @@ define <8 x i16> @known_umulh_v8i16(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> %a2)
   %m = tail call <8 x i16> @llvm.umulh.v8i16(<8 x i16> %x0, <8 x i16> %x1)
   %r = add <8 x i16> %m, %a2
   ret <8 x i16> %r
-}
-
-define <16 x i16> @known_umulh_v16i16(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> %a2) {
-; CHECK-LABEL: @known_umulh_v16i16(
-; CHECK-NEXT:    ret <16 x i16> [[A2:%.*]]
-;
-  %x0 = lshr <16 x i16> %a0, <i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
-  %x1 = and <16 x i16> %a1, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
-  %m = tail call <16 x i16> @llvm.umulh.v16i16(<16 x i16> %x0, <16 x i16> %x1)
-  %r = add <16 x i16> %m, %a2
-  ret <16 x i16> %r
-}
-
-define <32 x i16> @known_umulh_v32i16(<32 x i16> %a0, <32 x i16> %a1, <32 x i16> %a2) {
-; CHECK-LABEL: @known_umulh_v32i16(
-; CHECK-NEXT:    ret <32 x i16> [[A2:%.*]]
-;
-  %x0 = lshr <32 x i16> %a0, <i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
-  %x1 = and <32 x i16> %a1, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
-  %m = tail call <32 x i16> @llvm.umulh.v32i16(<32 x i16> %x0, <32 x i16> %x1)
-  %r = add <32 x i16> %m, %a2
-  ret <32 x i16> %r
 }
