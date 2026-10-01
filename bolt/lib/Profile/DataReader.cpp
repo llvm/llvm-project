@@ -275,8 +275,6 @@ Error DataReader::preprocessProfile(BinaryContext &BC) {
       FuncData->setEntryCounts(Function);
       FuncData->Used = true;
     }
-    // Seed the execution count from basic samples so that lite mode can
-    // identify functions that have no branch profile data.
     if (NoLBRMode) {
       if (FuncBasicSampleData *SampleData =
               getFuncBasicSampleData(Function.getNames())) {
