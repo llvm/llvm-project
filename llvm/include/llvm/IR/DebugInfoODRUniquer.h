@@ -35,18 +35,12 @@ struct DISubprogramODRKey {
   }
 
   static bool isEqual(const DISubprogramODRKey &LHS, const DISubprogram *RHS) {
-    if (LHS.LinkageName.empty() || LHS.ScopeIdentifier.empty())
-      return false;
-
-    auto *CT = dyn_cast_or_null<DICompositeType>(RHS->getRawScope());
-    if (!CT || !CT->getRawIdentifier())
-      return false;
-
-    if (!RHS->getRawLinkageName())
-      return false;
+    StringRef RHSIdentifier;
+    if (auto *CT = dyn_cast_or_null<DICompositeType>(RHS->getRawScope()))
+      RHSIdentifier = CT->getIdentifier();
 
     return LHS.LinkageName == RHS->getLinkageName() &&
-           LHS.ScopeIdentifier == CT->getIdentifier();
+           LHS.ScopeIdentifier == RHSIdentifier;
   }
 
   static bool isEqual(const DISubprogram *LHS, const DISubprogram *RHS) {
