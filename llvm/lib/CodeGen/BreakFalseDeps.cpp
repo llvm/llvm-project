@@ -213,7 +213,7 @@ void BreakFalseDeps::processDefs(MachineInstr *MI) {
     if (!MO.isReg() || !MO.getReg() || !MO.isUse() || !MO.isUndef())
       continue;
 
-    unsigned Pref = TII->getUndefRegClearance(*MI, i, TRI);
+    unsigned Pref = TII->getUndefRegClearance(*MI, i);
     if (Pref) {
       bool HadTrueDependency = pickBestRegisterForUndef(MI, i, Pref);
       // We don't need to bother trying to break a dependency if this
@@ -238,9 +238,9 @@ void BreakFalseDeps::processDefs(MachineInstr *MI) {
     if (MO.isUse())
       continue;
     // Check clearance before partial register updates.
-    unsigned Pref = TII->getPartialRegUpdateClearance(*MI, i, TRI);
+    unsigned Pref = TII->getPartialRegUpdateClearance(*MI, i);
     if (Pref && shouldBreakDependence(MI, i, Pref)) {
-      TII->breakPartialRegDependency(*MI, i, TRI);
+      TII->breakPartialRegDependency(*MI, i);
       Changed = true;
     }
   }
@@ -270,7 +270,7 @@ void BreakFalseDeps::processUndefReads(MachineBasicBlock *MBB) {
 
     if (UndefMI == &I) {
       if (!LiveRegSet.contains(UndefMI->getOperand(OpIdx).getReg())) {
-        TII->breakPartialRegDependency(*UndefMI, OpIdx, TRI);
+        TII->breakPartialRegDependency(*UndefMI, OpIdx);
         Changed = true;
       }
 

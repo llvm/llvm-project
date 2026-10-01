@@ -314,8 +314,7 @@ public:
   static void suppressLdStPair(MachineInstr &MI);
 
   std::optional<ExtAddrMode>
-  getAddrModeFromMemoryOp(const MachineInstr &MemI,
-                          const TargetRegisterInfo *TRI) const override;
+  getAddrModeFromMemoryOp(const MachineInstr &MemI) const override;
 
   bool canFoldIntoAddrMode(const MachineInstr &MemI, Register Reg,
                            const MachineInstr &AddrI,
@@ -326,8 +325,8 @@ public:
 
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
-      int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
-      const TargetRegisterInfo *TRI) const override;
+      int64_t &Offset, bool &OffsetIsScalable,
+      LocationSize &Width) const override;
 
   /// If \p OffsetIsScalable is set to 'true', the offset is scaled by `vscale`.
   /// This is true for some SVE instructions like ldr/str that have a

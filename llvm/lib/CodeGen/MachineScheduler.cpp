@@ -2211,7 +2211,7 @@ void BaseMemOpClusterMutation::collectMemOpRecords(
     bool OffsetIsScalable;
     LocationSize Width = LocationSize::precise(0);
     if (TII->getMemOperandsWithOffsetWidth(MI, BaseOps, Offset,
-                                           OffsetIsScalable, Width, TRI)) {
+                                           OffsetIsScalable, Width)) {
       if (!Width.hasValue())
         continue;
 
