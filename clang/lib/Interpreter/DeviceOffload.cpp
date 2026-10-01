@@ -53,9 +53,13 @@ llvm::Expected<llvm::StringRef> IncrementalCUDADeviceParser::GeneratePTX() {
     return llvm::make_error<llvm::StringError>(std::move(Error),
                                                std::error_code());
   llvm::TargetOptions TO = llvm::TargetOptions();
-  llvm::TargetMachine *TargetMachine = Target->createTargetMachine(
-      PTU.TheModule->getTargetTriple(), TargetOpts.CPU, "", TO,
-      llvm::Reloc::Model::PIC_);
+  std::unique_ptr<llvm::TargetMachine> TargetMachine(
+      Target->createTargetMachine(PTU.TheModule->getTargetTriple(),
+                                  TargetOpts.CPU, "", TO,
+                                  llvm::Reloc::Model::PIC_));
+  if (!TargetMachine)
+    return llvm::make_error<llvm::StringError>(
+        "Failed to create TargetMachine.", llvm::inconvertibleErrorCode());
 
   PTXCode.clear();
   llvm::raw_svector_ostream dest(PTXCode);
