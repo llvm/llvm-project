@@ -7542,11 +7542,13 @@ static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
     CGM.getDiags().Report(diag::err_missing_mandatory_offloading);
   }
 
-  assert(CGF.CurFuncDecl && "No parent declaration for target region!");
   StringRef ParentName;
   // In case we have Ctors/Dtors we use the complete type variant to produce
-  // the mangling of the device outlined kernel.
-  if (const auto *D = dyn_cast<CXXConstructorDecl>(CGF.CurFuncDecl))
+  // the mangling of the device outlined kernel. Lambdas and blocks at
+  // namespace scope have no parent function.
+  if (!CGF.CurFuncDecl)
+    ParentName = CGF.CurFn->getName();
+  else if (const auto *D = dyn_cast<CXXConstructorDecl>(CGF.CurFuncDecl))
     ParentName = CGM.getMangledName(GlobalDecl(D, Ctor_Complete));
   else if (const auto *D = dyn_cast<CXXDestructorDecl>(CGF.CurFuncDecl))
     ParentName = CGM.getMangledName(GlobalDecl(D, Dtor_Complete));

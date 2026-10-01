@@ -207,7 +207,7 @@ static void RegisterPassPlugins(const Config &Conf, PassBuilder &PB) {
 
   // Load requested pass plugins and let them register pass builder callbacks
   for (auto &PluginFN : Conf.PassPluginFilenames) {
-    auto PassPlugin = PassPlugin::Load(PluginFN);
+    auto PassPlugin = PassPlugin::load(PluginFN);
     if (!PassPlugin)
       reportFatalUsageError(PassPlugin.takeError());
     PassPlugin->registerPassBuilderCallbacks(PB);

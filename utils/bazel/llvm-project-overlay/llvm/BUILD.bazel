@@ -253,7 +253,10 @@ exports_files([
 
 td_library(
     name = "OptParserTdFiles",
-    srcs = ["include/llvm/Option/OptParser.td"],
+    srcs = [
+        "include/llvm/Option/LibraryOptions.td",
+        "include/llvm/Option/OptParser.td",
+    ],
     includes = ["include"],
 )
 
@@ -652,6 +655,7 @@ cc_library(
     hdrs = glob(["include/llvm/DebugInfo/*.h"]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
         ":BinaryFormatELF",
         ":Object",
         ":Support",
@@ -1807,6 +1811,17 @@ td_library(
     ]),
 )
 
+gentbl_cc_library(
+    name = "InstCombineCLOptionsTableGen",
+    strip_include_prefix = "lib/Transforms/InstCombine",
+    tbl_outs = {
+        "lib/Transforms/InstCombine/InstCombineCLOptions.inc": ["-gen-opt-parser-defs"],
+    },
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Transforms/InstCombine/InstCombineCLOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "InstCombine",
     srcs = glob([
@@ -1818,6 +1833,8 @@ cc_library(
     deps = [
         ":Analysis",
         ":Core",
+        ":InstCombineCLOptionsTableGen",
+        ":Option",
         ":Support",
         ":Target",
         ":TransformUtils",
@@ -2361,9 +2378,21 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "CGDataOptionsTableGen",
+    strip_include_prefix = "lib/CGData",
+    tbl_outs = {"lib/CGData/CGDataOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/CGData/CGDataOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "CGData",
-    srcs = glob(["lib/CGData/**/*.cpp"]),
+    srcs = glob([
+        "lib/CGData/**/*.cpp",
+        "lib/CGData/**/*.h",
+    ]),
     hdrs = glob([
         "include/llvm/CGData/**/*.h",
         "include/llvm/CGData/**/*.inc",
@@ -2372,9 +2401,11 @@ cc_library(
     deps = [
         ":BitReader",
         ":BitWriter",
+        ":CGDataOptionsTableGen",
         ":Core",
         ":Object",
         ":ObjectYAML",
+        ":Option",
         ":Support",
         ":TargetParser",
     ],
@@ -3366,6 +3397,9 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/Sparc/SparcGenSDNodeInfo.inc",
             ),
         ],
+        "tbl_deps": [
+            ":SparcOptionsTableGen",
+        ],
     },
     {
         "name": "SPIRV",
@@ -3901,6 +3935,15 @@ gentbl_cc_library(
         ":CommonTargetTdFiles",
         ":RISCVTargetTdFiles",
     ],
+)
+
+gentbl_cc_library(
+    name = "SparcOptionsTableGen",
+    strip_include_prefix = "lib/Target/Sparc",
+    tbl_outs = {"lib/Target/Sparc/SparcOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/Sparc/SparcOptions.td",
+    deps = [":OptParserTdFiles"],
 )
 
 gentbl_cc_library(

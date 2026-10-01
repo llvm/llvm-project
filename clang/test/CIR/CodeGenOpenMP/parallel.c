@@ -153,6 +153,29 @@ void if_parallel() {
   // CHECK-NEXT: %[[INVALID_CONDITION_DIRECTIVE_U1:.*]] = cir.cast bool_to_int %[[INVALID_CONDITION_DIRECTIVE_BOOL]]
   // CHECK-NEXT: %[[INVALID_CONDITION_DIRECTIVE_I1:.*]] = cir.builtin_int_cast %[[INVALID_CONDITION_DIRECTIVE_U1]]
   // CHECK-NEXT: omp.parallel if(%[[INVALID_CONDITION_DIRECTIVE_I1]]) {
+}
+
+void num_threads_parallel() {
+  // CHECK: cir.func{{.*}}@num_threads_parallel
+
+  int numThreads = 4;
+
+  // CHECK-NEXT: %[[NUM_THREADS_ADDR:.*]] = cir.alloca "numThreads"
+  // CHECK-NEXT: %[[CONST_4:.*]] = cir.const #cir.int<4>
+  // CHECK-NEXT: cir.store align(4) %[[CONST_4]], %[[NUM_THREADS_ADDR]]
+  #pragma omp parallel num_threads(16)
+  {}
+  // CHECK-NEXT: %[[CONST_16:.*]] = cir.const #cir.int<16>
+  // CHECK-NEXT: %[[CONST_16_I32:.*]] = cir.builtin_int_cast %[[CONST_16]]
+  // CHECK-NEXT: omp.parallel num_threads(%[[CONST_16_I32]] : i32) {
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+
+  #pragma omp parallel num_threads(numThreads) 
+  {}
+  // CHECK-NEXT: %[[NUM_THREADS_PTR:.*]] = cir.load align(4) %[[NUM_THREADS_ADDR]]
+  // CHECK-NEXT: %[[NUM_THREADS_I32:.*]] = cir.builtin_int_cast %[[NUM_THREADS_PTR]]
+  // CHECK-NEXT: omp.parallel num_threads(%[[NUM_THREADS_I32]] : i32) {
   // CHECK-NEXT: omp.terminator
   // CHECK-NEXT: }
 }

@@ -234,6 +234,16 @@ WrapperFunctionBuffer SocketSimpleRemoteCA::IncomingMessage::take() {
 Expected<std::shared_ptr<SocketSimpleRemoteCA>>
 SocketSimpleRemoteCA::Create(Session &S, SocketHandle Sock) {
   // Sock is owned here, so every early return below closes it.
+
+  // This class assumes a byte stream, so check that this is a SOCK_STREAM.
+  int Type;
+  socklen_t TypeLen = sizeof(Type);
+  if (::getsockopt(Sock.get(), SOL_SOCKET, SO_TYPE, &Type, &TypeLen) != 0)
+    return makeError("getsockopt(SO_TYPE)", errno);
+  if (Type != SOCK_STREAM)
+    return make_error<StringError>(
+        "SimpleRemote over a socket requires a stream socket");
+
   if (auto Err = setNonBlocking(Sock.get()))
     return std::move(Err);
 

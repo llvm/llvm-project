@@ -338,12 +338,29 @@ TEST(SessionTest, TrivialConstructionAndDestruction) {
 TEST(SessionTest, ReportError) {
   Error E = Error::success();
   cantFail(std::move(E)); // Force error into checked state.
+  Session *Reporter = nullptr;
 
   Session S(mockExecutorProcessInfo(), noDispatch,
-            [&](Error Err) noexcept { E = std::move(Err); });
+            [&](Session &RS, Error Err) noexcept {
+              Reporter = &RS;
+              E = std::move(Err);
+            });
   S.reportError(make_error<StringError>("foo"));
 
+  // The reporter should be passed the reporting Session.
+  EXPECT_EQ(Reporter, &S);
   EXPECT_THAT_ERROR(std::move(E), FailedWithMessage("foo"));
+}
+
+TEST(SessionTest, LogErrors) {
+#if ORC_RT_LOG_ENABLED(Error)
+  // Check that Session::logErrors can be used as an error reporter, and
+  // consumes the reported error (an unchecked Error would abort).
+  Session S(mockExecutorProcessInfo(), noDispatch, Session::logErrors);
+  S.reportError(make_error<StringError>("foo"));
+#else
+  GTEST_SKIP() << "Test requires ORC_RT_LOG_ENABLED(Error)";
+#endif // ORC_RT_LOG_ENABLED(Error)
 }
 
 TEST(SessionTest, ReportErrorsViaSession) {
@@ -352,7 +369,7 @@ TEST(SessionTest, ReportErrorsViaSession) {
 
   // Check that the ReportErrorsViaSession utility works as advertised.
   Session S(mockExecutorProcessInfo(), noDispatch,
-            [&](Error Err) noexcept { E = std::move(Err); });
+            [&](Session &, Error Err) noexcept { E = std::move(Err); });
   (ReportErrorsViaSession(S))(make_error<StringError>("foo"));
 
   EXPECT_THAT_ERROR(std::move(E), FailedWithMessage("foo"));
@@ -854,10 +871,11 @@ TEST(ControllerAccessTest, FailConnect) {
   // Simulate failure to connect.
   bool GotError = false;
   std::string ErrMsg = "failed to connect";
-  Session S(mockExecutorProcessInfo(), noDispatch, [&](Error Err) noexcept {
-    GotError = true;
-    EXPECT_THAT_ERROR(std::move(Err), FailedWithMessage(ErrMsg));
-  });
+  Session S(mockExecutorProcessInfo(), noDispatch,
+            [&](Session &, Error Err) noexcept {
+              GotError = true;
+              EXPECT_THAT_ERROR(std::move(Err), FailedWithMessage(ErrMsg));
+            });
   BootstrapInfo BI(S);
   S.attach<MockControllerAccess>(
       std::move(BI), MockControllerAccess::PostFn{},

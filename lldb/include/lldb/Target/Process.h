@@ -99,6 +99,7 @@ public:
   void SetVirtualAddressableBits(uint32_t bits);
   uint32_t GetHighmemVirtualAddressableBits() const;
   void SetHighmemVirtualAddressableBits(uint32_t bits);
+  void AddressMaskChangedCallback();
   void SetPythonOSPluginPath(const FileSpec &file);
   bool GetIgnoreBreakpointsInExpressions() const;
   void SetIgnoreBreakpointsInExpressions(bool ignore);

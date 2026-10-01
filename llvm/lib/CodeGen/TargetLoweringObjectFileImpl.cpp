@@ -2042,7 +2042,6 @@ void TargetLoweringObjectFileCOFF::emitLinkerDirectives(
 void TargetLoweringObjectFileCOFF::Initialize(MCContext &Ctx,
                                               const TargetMachine &TM) {
   TargetLoweringObjectFile::Initialize(Ctx, TM);
-  this->TM = &TM;
   const Triple &T = TM.getTargetTriple();
   if (T.isWindowsMSVCEnvironment() || T.isWindowsItaniumEnvironment()) {
     StaticCtorSection =
@@ -2914,11 +2913,11 @@ MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
                    GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0, 0},
       static_cast<MCSectionGOFF *>(TextSection)->getParent());
   WSA->setAlignment(Align(4)); // Fullword
-  return getContext().getGOFFSection(SectionKind::getData(), Name,
-                                     GOFF::PRAttr{true, GOFF::ESD_EXE_DATA,
-                                                  GOFF::ESD_LT_XPLink,
-                                                  GOFF::ESD_BSC_Section, 0},
-                                     WSA);
+  return getContext().getGOFFSection(
+      SectionKind::getData(), Name,
+      GOFF::PRAttr{true, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
+                   GOFF::ESD_LT_XPLink, GOFF::ESD_BSC_Section, 0},
+      WSA);
 }
 
 MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
@@ -2951,8 +2950,8 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
     ED->setAlignment(Alignment.value_or(llvm::Align(8)));
     MCSectionGOFF *PR = getContext().getGOFFSection(
         Kind, Symbol->getName(),
-        GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_LT_XPLink,
-                     PRBindingScope, 0},
+        GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
+                     GOFF::ESD_LT_XPLink, PRBindingScope, 0},
         ED);
     // The binder rejects zero-length PR sections. Mark the PR so the writer
     // inflates it to a valid length if needed.
@@ -2988,8 +2987,8 @@ TargetLoweringObjectFileGOFF::getStaticXtorSection(unsigned Priority) const {
 
   MCSectionGOFF *Xtor = Ctx.getGOFFSection(
       SectionKind::getData(), Name,
-      GOFF::PRAttr{true, GOFF::ESD_EXE_DATA, GOFF::ESD_LT_XPLink,
-                   GOFF::ESD_BSC_Section, Prio},
+      GOFF::PRAttr{true, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
+                   GOFF::ESD_LT_XPLink, GOFF::ESD_BSC_Section, Prio},
       SInit);
   return Xtor;
 }

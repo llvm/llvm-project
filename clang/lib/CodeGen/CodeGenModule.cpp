@@ -49,6 +49,7 @@
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/ModuleUtils.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ABI/IRTypeMapper.h"
 #include "llvm/ABI/TargetInfo.h"
@@ -433,6 +434,9 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
 
     Opts.IsILP32 = T.getArch() == llvm::Triple::aarch64_32;
     Opts.IsCXX = getLangOpts().CPlusPlus;
+    Opts.IsMachO = T.isOSBinFormatMachO();
+    Opts.IsAndroidOrOHOS = T.isAndroid() || T.isOHOSFamily();
+    Opts.IsWindowsArm64EC = T.isWindowsArm64EC();
     Opts.IsMicrosoftCXXABI = getTarget().getCXXABI().isMicrosoft();
 
     initializeCommonABICompatInfo(Opts.CompatInfo,
@@ -4863,7 +4867,7 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
     if (FD->hasAttr<AnnotateAttr>()) {
       StringRef MangledName = getMangledName(GD);
       if (GetGlobalValue(MangledName))
-        DeferredAnnotations[MangledName] = FD;
+        DeferredAnnotations[MangledName.str()] = FD;
     }
 
     // Forward declarations are emitted lazily on first use.
@@ -5784,7 +5788,7 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
   // Store the declaration associated with this function so it is potentially
   // updated by further declarations or definitions and emitted at the end.
   if (D && D->hasAttr<AnnotateAttr>())
-    DeferredAnnotations[MangledName] = cast<ValueDecl>(D);
+    DeferredAnnotations[MangledName.str()] = cast<ValueDecl>(D);
 
   // If we already created a function with the same mangled name (but different
   // type) before, take its name and add it to the list of functions to be
@@ -6520,38 +6524,13 @@ void CodeGenModule::MaybeHandleStaticInExternC(const SomeDecl *D,
     R.first->second = nullptr;
 }
 
-static bool shouldBeInCOMDAT(CodeGenModule &CGM, const Decl &D) {
-  if (!CGM.supportsCOMDAT())
-    return false;
-
-  if (D.hasAttr<SelectAnyAttr>())
-    return true;
-
-  GVALinkage Linkage;
-  if (auto *VD = dyn_cast<VarDecl>(&D))
-    Linkage = CGM.getContext().GetGVALinkageForVariable(VD);
-  else
-    Linkage = CGM.getContext().GetGVALinkageForFunction(cast<FunctionDecl>(&D));
-
-  switch (Linkage) {
-  case GVA_Internal:
-  case GVA_AvailableExternally:
-  case GVA_StrongExternal:
-    return false;
-  case GVA_DiscardableODR:
-  case GVA_StrongODR:
-    return true;
-  }
-  llvm_unreachable("No such linkage");
-}
-
 bool CodeGenModule::supportsCOMDAT() const {
   return getTriple().supportsCOMDAT();
 }
 
 void CodeGenModule::maybeSetTrivialComdat(const Decl &D,
                                           llvm::GlobalObject &GO) {
-  if (!shouldBeInCOMDAT(*this, D))
+  if (!CodeGenUtils::shouldBeInCOMDAT(getContext(), D))
     return;
   GO.setComdat(TheModule.getOrInsertComdat(GO.getName()));
 }
@@ -6860,81 +6839,6 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
       DI->EmitGlobalVariable(GV, D);
 }
 
-static bool isVarDeclStrongDefinition(const ASTContext &Context,
-                                      CodeGenModule &CGM, const VarDecl *D,
-                                      bool NoCommon) {
-  // Don't give variables common linkage if -fno-common was specified unless it
-  // was overridden by a NoCommon attribute.
-  if ((NoCommon || D->hasAttr<NoCommonAttr>()) && !D->hasAttr<CommonAttr>())
-    return true;
-
-  // C11 6.9.2/2:
-  //   A declaration of an identifier for an object that has file scope without
-  //   an initializer, and without a storage-class specifier or with the
-  //   storage-class specifier static, constitutes a tentative definition.
-  if (D->getInit() || D->hasExternalStorage())
-    return true;
-
-  // A variable cannot be both common and exist in a section.
-  if (D->hasAttr<SectionAttr>())
-    return true;
-
-  // A variable cannot be both common and exist in a section.
-  // We don't try to determine which is the right section in the front-end.
-  // If no specialized section name is applicable, it will resort to default.
-  if (D->hasAttr<PragmaClangBSSSectionAttr>() ||
-      D->hasAttr<PragmaClangDataSectionAttr>() ||
-      D->hasAttr<PragmaClangRelroSectionAttr>() ||
-      D->hasAttr<PragmaClangRodataSectionAttr>())
-    return true;
-
-  // Thread local vars aren't considered common linkage.
-  if (D->getTLSKind())
-    return true;
-
-  // Tentative definitions marked with WeakImportAttr are true definitions.
-  if (D->hasAttr<WeakImportAttr>())
-    return true;
-
-  // A variable cannot be both common and exist in a comdat.
-  if (shouldBeInCOMDAT(CGM, *D))
-    return true;
-
-  // Declarations with a required alignment do not have common linkage in MSVC
-  // mode.
-  if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
-    if (D->hasAttr<AlignedAttr>())
-      return true;
-    QualType VarType = D->getType();
-    if (Context.isAlignmentRequired(VarType))
-      return true;
-
-    if (const auto *RD = VarType->getAsRecordDecl()) {
-      for (const FieldDecl *FD : RD->fields()) {
-        if (FD->isBitField())
-          continue;
-        if (FD->hasAttr<AlignedAttr>())
-          return true;
-        if (Context.isAlignmentRequired(FD->getType()))
-          return true;
-      }
-    }
-  }
-
-  // Microsoft's link.exe doesn't support alignments greater than 32 bytes for
-  // common symbols, so symbols with greater alignment requirements cannot be
-  // common.
-  // Other COFF linkers (ld.bfd and LLD) support arbitrary power-of-two
-  // alignments for common symbols via the aligncomm directive, so this
-  // restriction only applies to MSVC environments.
-  if (Context.getTargetInfo().getTriple().isKnownWindowsMSVCEnvironment() &&
-      Context.getTypeAlignIfKnown(D->getType()) >
-          Context.toBits(CharUnits::fromQuantity(32)))
-    return true;
-
-  return false;
-}
-
 llvm::GlobalValue::LinkageTypes
 CodeGenModule::getLLVMLinkageForDeclarator(const DeclaratorDecl *D,
                                            GVALinkage Linkage) {
@@ -6991,8 +6895,8 @@ CodeGenModule::getLLVMLinkageForDeclarator(const DeclaratorDecl *D,
   // C++ doesn't have tentative definitions and thus cannot have common
   // linkage.
   if (!getLangOpts().CPlusPlus && isa<VarDecl>(D) &&
-      !isVarDeclStrongDefinition(Context, *this, cast<VarDecl>(D),
-                                 CodeGenOpts.NoCommon))
+      !CodeGenUtils::isVarDeclStrongDefinition(Context, cast<VarDecl>(D),
+                                               CodeGenOpts.NoCommon))
     return llvm::GlobalVariable::CommonLinkage;
 
   // selectany symbols are externally visible, so use weak instead of

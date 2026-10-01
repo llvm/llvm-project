@@ -1,15 +1,15 @@
 ; RUN: llc < %s -mtriple=mips -mcpu=mips32 | \
-; RUN:    FileCheck %s -check-prefixes=ALL,32-C
+; RUN:    FileCheck %s -check-prefixes=ALL,32-C,MIPS32
 ; RUN: llc < %s -mtriple=mips -mcpu=mips32r2 | \
-; RUN:    FileCheck %s -check-prefixes=ALL,32-C
+; RUN:    FileCheck %s -check-prefixes=ALL,32-C,MIPS32R2
 ; RUN: llc < %s -mtriple=mips -mcpu=mips32r6 | \
 ; RUN:    FileCheck %s -check-prefixes=ALL,32-CMP
 ; RUN: llc < %s -mtriple=mips64 -mcpu=mips4 | \
 ; RUN:    FileCheck %s -check-prefixes=ALL,64-C
 ; RUN: llc < %s -mtriple=mips64 -mcpu=mips64 | \
-; RUN:    FileCheck %s -check-prefixes=ALL,64-C
+; RUN:    FileCheck %s -check-prefixes=ALL,64-C,MIPS64
 ; RUN: llc < %s -mtriple=mips64 -mcpu=mips64r2 | \
-; RUN:    FileCheck %s -check-prefixes=ALL,64-C
+; RUN:    FileCheck %s -check-prefixes=ALL,64-C,MIPS64R2
 ; RUN: llc < %s -mtriple=mips64 -mcpu=mips64r6 | \
 ; RUN:    FileCheck %s -check-prefixes=ALL,64-CMP
 ; RUN: llc < %s -mtriple=mips -mcpu=mips32r3 -mattr=+micromips | FileCheck %s \
@@ -1142,41 +1142,57 @@ entry:
 ; ALL-LABEL: bug1_f64:
 
 ; 32-C-DAG:      add.d    $[[T0:f[0-9]+]], $f14, $f12
-; 32-C-DAG:      ldc1     $[[T1:f[0-9]+]], %lo($CPI33_0)(
+; MIPS32-DAG:    ldc1     $[[T1:f[0-9]+]], %lo($CPI33_0)(
+; MIPS32R2-DAG:  lui      $[[T2:[0-9]+]], 16368
+; MIPS32R2-DAG:  mtc1     $zero, $[[T1:f[0-9]+]]
+; MIPS32R2-DAG:  mthc1    $[[T2]], $[[T1]]
 ; 32-C-DAG:      c.ole.d  $[[T0]], $[[T1]]
 ; 32-C-DAG:      bc1t
 
-; 32-CMP-DAG:    add.d    $[[T0:f[0-9]+]], $f14, $f12
-; 32-CMP-DAG:    ldc1     $[[T1:f[0-9]+]], %lo($CPI33_0)(
-; 32-CMP-DAG:    cmp.le.d $[[T2:f[0-9]+]], $[[T0]], $[[T1]]
-; 32-CMP-DAG:    mfc1     $[[T3:[0-9]+]], $[[T2]]
+; 32-CMP-DAG:    lui      $[[T0:[0-9]+]], 16368
+; 32-CMP-DAG:    mtc1     $zero, $[[T1:f[0-9]+]]
+; 32-CMP-DAG:    mthc1    $[[T0]], $[[T1]]
+; 32-CMP-DAG:    add.d    $[[T2:f[0-9]+]], $f14, $f12
+; 32-CMP-DAG:    cmp.le.d $[[T3:f[0-9]+]], $[[T2]], $[[T1]]
+; 32-CMP-DAG:    mfc1     $[[T4:[0-9]+]], $[[T3]]
 ; FIXME: This instruction is redundant.
-; 32-CMP-DAG:    andi     $[[T4:[0-9]+]], $[[T3]], 1
-; 32-CMP-DAG:    bnezc    $[[T4]],
+; 32-CMP-DAG:    andi     $[[T5:[0-9]+]], $[[T4]], 1
+; 32-CMP-DAG:    bnezc    $[[T5]],
 
-; 64-C-DAG:      add.d    $[[T0:f[0-9]+]], $f13, $f12
-; 64-C-DAG:      ldc1     $[[T1:f[0-9]+]], %lo(.LCPI33_0)(
-; 64-C-DAG:      c.ole.d  $[[T0]], $[[T1]]
-; 64-C-DAG:      bc1t
+; MIPS64-DAG:      add.d    $[[T0:f[0-9]+]], $f13, $f12
+; MIPS64-DAG:      ldc1     $[[T1:f[0-9]+]], %lo(.LCPI33_0)(
+; MIPS64-DAG:      c.ole.d  $[[T0]], $[[T1]]
+; MIPS64-DAG:      bc1t
 
-; 64-CMP-DAG:    add.d    $[[T0:f[0-9]+]], $f13, $f12
-; 64-CMP-DAG:    ldc1     $[[T1:f[0-9]+]], %lo(.LCPI33_0)(
-; 64-CMP-DAG:    cmp.le.d $[[T2:f[0-9]+]], $[[T0]], $[[T1]]
-; 64-CMP-DAG:    mfc1     $[[T3:[0-9]+]], $[[T2]]
+; MIPS64R2-DAG:      add.d    $[[T0:f[0-9]+]], $f13, $f12
+; MIPS64R2-DAG:      lui      $[[T1:[0-9]+]], 16368
+; MIPS64R2-DAG:      mtc1     $zero, $[[T2:f[0-9]+]]
+; MIPS64R2-DAG:      mthc1    $[[T1]], $[[T2]]
+; MIPS64R2-DAG:      c.ole.d  $[[T0]], $[[T2]]
+; MIPS64R2-DAG:      bc1t
+
+; 64-CMP-DAG:    lui      $[[T0:[0-9]+]], 16368
+; 64-CMP-DAG:    mtc1     $zero, $[[T1:f[0-9]+]]
+; 64-CMP-DAG:    mthc1    $[[T0]], $[[T1]]
+; 64-CMP-DAG:    add.d    $[[T2:f[0-9]+]], $f13, $f12
+; 64-CMP-DAG:    cmp.le.d $[[T3:f[0-9]+]], $[[T2]], $[[T1]]
+; 64-CMP-DAG:    mfc1     $[[T4:[0-9]+]], $[[T3]]
 ; FIXME: This instruction is redundant.
-; 64-CMP-DAG:    andi     $[[T4:[0-9]+]], $[[T3]], 1
-; 64-CMP-DAG:    bnezc    $[[T4]],
+; 64-CMP-DAG:    andi     $[[T5:[0-9]+]], $[[T4]], 1
+; 64-CMP-DAG:    bnezc    $[[T5]],
 
 ; MM32R3-DAG:    add.d    $[[T0:f[0-9]+]], $f14, $f12
-; MM32R3-DAG:    lui      $[[T1:[0-9]+]], %hi($CPI33_0)
-; MM32R3-DAG:    ldc1     $[[T2:f[0-9]+]], %lo($CPI33_0)($[[T1]])
+; MM32R3-DAG:    lui      $[[T1:[0-9]+]], 16368
+; MM32R3-DAG:    mtc1     $zero, $[[T2:f[0-9]+]]
+; MM32R3-DAG:    mthc1    $[[T1]], $[[T2]]
 ; MM32R3-DAG:    c.ole.d  $[[T0]], $[[T2]]
 ; MM32R3-DAG:    bc1t
 
-; MM32R6-DAG:    add.d    $[[T0:f[0-9]+]], $f14, $f12
-; MM32R6-DAG:    lui      $[[T1:[0-9]+]], %hi($CPI33_0)
-; MM32R6-DAG:    ldc1     $[[T2:f[0-9]+]], %lo($CPI33_0)($[[T1]])
-; MM32R6-DAG:    cmp.le.d $[[T3:f[0-9]+]], $[[T0]], $[[T2]]
+; MM32R6-DAG:    lui      $[[T0:[0-9]+]], 16368
+; MM32R6-DAG:    mtc1     $zero, $[[T1:f[0-9]+]]
+; MM32R6-DAG:    mthc1    $[[T0]], $[[T1]]
+; MM32R6-DAG:    add.d    $[[T2:f[0-9]+]], $f14, $f12
+; MM32R6-DAG:    cmp.le.d $[[T3:f[0-9]+]], $[[T2]], $[[T1]]
 ; MM32R6-DAG:    mfc1     $[[T4:[0-9]+]], $[[T3]]
 ; MM32R6-DAG:    andi16   $[[T5:[0-9]+]], $[[T4]], 1
 ; MM32R6-DAG:    bnezc    $[[T5]],
