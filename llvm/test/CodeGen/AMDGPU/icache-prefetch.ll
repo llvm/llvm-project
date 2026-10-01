@@ -161,6 +161,10 @@ define amdgpu_kernel void @postdominated_prefetch() {
 ; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(64, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset23-postdominated_prefetch), null, prefetchcachelines(64, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset23-postdominated_prefetch)
 ; GFX1250-NEXT:  .Lpref_inst_offset24:
 ; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(96, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset24-postdominated_prefetch), null, prefetchcachelines(96, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset24-postdominated_prefetch)
+; GFX1250-NEXT:  .Lpref_inst_offset25:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(128, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset25-postdominated_prefetch), null, prefetchcachelines(128, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset25-postdominated_prefetch)
+; GFX1250-NEXT:  .Lpref_inst_offset26:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(160, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset26-postdominated_prefetch), null, prefetchcachelines(160, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset26-postdominated_prefetch)
 ; GFX1250-NEXT:    s_bfe_u32 s0, ttmp6, 0x4000c
 ; GFX1250-NEXT:    s_and_b32 s1, ttmp6, 15
 ; GFX1250-NEXT:    s_add_co_i32 s0, s0, 1
@@ -172,29 +176,18 @@ define amdgpu_kernel void @postdominated_prefetch() {
 ; GFX1250-NEXT:    s_cselect_b32 s0, ttmp9, s1
 ; GFX1250-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX1250-NEXT:    s_mov_b32 s0, 0
-; GFX1250-NEXT:    s_cbranch_scc0 .LBB3_2
+; GFX1250-NEXT:    s_cbranch_scc0 .LBB3_4
 ; GFX1250-NEXT:  ; %bb.1: ; %else
 ; GFX1250-NEXT:    ;;#ASMSTART
 ; GFX1250-NEXT:    .space 8000
 ; GFX1250-NEXT:    ;;#ASMEND
-; GFX1250-NEXT:    s_branch .LBB3_3
-; GFX1250-NEXT:  .LBB3_2:
-; GFX1250-NEXT:    s_mov_b32 s0, -1
-; GFX1250-NEXT:  .LBB3_3: ; %Flow
-; GFX1250-NEXT:  .Lpref_inst_offset25:
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(128, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset25-postdominated_prefetch), null, prefetchcachelines(128, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset25-postdominated_prefetch)
-; GFX1250-NEXT:  .Lpref_inst_offset26:
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(160, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset26-postdominated_prefetch), null, prefetchcachelines(160, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset26-postdominated_prefetch)
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_and_b32 s0, s0, exec_lo
-; GFX1250-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX1250-NEXT:    s_cmp_lg_u32 s0, 1
-; GFX1250-NEXT:    s_cbranch_scc1 .LBB3_5
-; GFX1250-NEXT:  ; %bb.4: ; %then
+; GFX1250-NEXT:    s_cbranch_scc0 .LBB3_3
+; GFX1250-NEXT:  .LBB3_2: ; %then
 ; GFX1250-NEXT:    ;;#ASMSTART
 ; GFX1250-NEXT:    .space 8000
 ; GFX1250-NEXT:    ;;#ASMEND
-; GFX1250-NEXT:  .LBB3_5: ; %join
+; GFX1250-NEXT:  .LBB3_3: ; %join
 ; GFX1250-NEXT:  .Lpref_inst_offset27:
 ; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(192, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset27-postdominated_prefetch), null, prefetchcachelines(192, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset27-postdominated_prefetch)
 ; GFX1250-NEXT:  .Lpref_inst_offset28:
@@ -213,6 +206,12 @@ define amdgpu_kernel void @postdominated_prefetch() {
 ; GFX1250-NEXT:    .space 32000
 ; GFX1250-NEXT:    ;;#ASMEND
 ; GFX1250-NEXT:    s_endpgm
+; GFX1250-NEXT:  .LBB3_4:
+; GFX1250-NEXT:    s_mov_b32 s0, -1
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    s_and_b32 s0, s0, exec_lo
+; GFX1250-NEXT:    s_cbranch_scc1 .LBB3_2
+; GFX1250-NEXT:    s_branch .LBB3_3
 ; GFX1250-NEXT:  .Lpref_func_end2:
 entry:
   %id = call i32 @llvm.amdgcn.workgroup.id.x()
