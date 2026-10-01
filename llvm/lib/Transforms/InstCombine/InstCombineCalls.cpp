@@ -53,6 +53,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -995,6 +996,13 @@ static bool inputDenormalIsIEEE(const Function &F, const Type *Ty) {
 static bool inputDenormalIsDAZ(const Function &F, const Type *Ty) {
   Ty = Ty->getScalarType();
   return F.getDenormalMode(Ty->getFltSemantics()).inputsAreZero();
+}
+
+/// Flushing a denormal to +0.0 breaks f(-x) = -f(x) for odd f.
+static bool mayFlushDenormalsToPositiveZero(const CallInst *CI) {
+  DenormalMode Mode = CI->getFunction()->getDenormalMode(
+      CI->getType()->getScalarType()->getFltSemantics());
+  return Mode.inputsMayBePositiveZero() || Mode.outputsMayBePositiveZero();
 }
 
 /// \returns the compare predicate type if the test performed by
@@ -2556,8 +2564,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         X->getType()->isIntOrIntVectorTy(1)) {
       Type *Ty = II->getType();
       APInt SignBit = APInt::getSignMask(Ty->getScalarSizeInBits());
-      return SelectInst::Create(X, ConstantInt::get(Ty, SignBit),
-                                ConstantInt::getNullValue(Ty));
+      SelectInst *SI = SelectInst::Create(X, ConstantInt::get(Ty, SignBit),
+                                          ConstantInt::getNullValue(Ty));
+      // Mark the branch weights explicitly unknown as in the general case we
+      // cannot infer the probability of the condition without additional value
+      // profiling.
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE, &F);
+      return SI;
     }
 
     if (Instruction *crossLogicOpFold =
@@ -3429,7 +3442,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::tan:
   case Intrinsic::tanh: {
     Value *X;
-    if (match(II->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X))))) {
+    if (match(II->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X)))) &&
+        !mayFlushDenormalsToPositiveZero(II)) {
       // f(-x) --> -f(x)
       // for f in {sin, sinh, tan, tanh}
       Value *NewFunc = Builder.CreateUnaryIntrinsic(IID, X, II);
