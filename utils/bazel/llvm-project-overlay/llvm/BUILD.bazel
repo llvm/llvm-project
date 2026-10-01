@@ -3397,6 +3397,9 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/Sparc/SparcGenSDNodeInfo.inc",
             ),
         ],
+        "tbl_deps": [
+            ":SparcOptionsTableGen",
+        ],
     },
     {
         "name": "SPIRV",
@@ -3932,6 +3935,15 @@ gentbl_cc_library(
         ":CommonTargetTdFiles",
         ":RISCVTargetTdFiles",
     ],
+)
+
+gentbl_cc_library(
+    name = "SparcOptionsTableGen",
+    strip_include_prefix = "lib/Target/Sparc",
+    tbl_outs = {"lib/Target/Sparc/SparcOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/Sparc/SparcOptions.td",
+    deps = [":OptParserTdFiles"],
 )
 
 gentbl_cc_library(

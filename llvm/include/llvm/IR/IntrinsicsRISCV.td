@@ -2132,9 +2132,7 @@ class RVPBinaryIntrinsic
   def int_riscv_pzext_h : RVPExtIntrinsic;
 
   // Packed Multiply High.
-  def int_riscv_pmulh    : RVPBinaryIntrinsic;
   def int_riscv_pmulhr   : RVPBinaryIntrinsic;
-  def int_riscv_pmulhu   : RVPBinaryIntrinsic;
   def int_riscv_pmulhru  : RVPBinaryIntrinsic;
   def int_riscv_pmulhsu  : RVPBinaryIntrinsic;
   def int_riscv_pmulhrsu : RVPBinaryIntrinsic;
