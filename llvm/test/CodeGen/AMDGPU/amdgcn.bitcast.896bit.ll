@@ -47322,13 +47322,11 @@ define inreg <56 x i16> @bitcast_v56f16_to_v56i16_scalar(<56 x half> inreg %a, i
 ; SI-NEXT:    v_lshlrev_b32_e32 v19, 16, v36
 ; SI-NEXT:    v_or_b32_e32 v18, v18, v19
 ; SI-NEXT:    v_and_b32_e32 v19, 0xffff, v21
-; SI-NEXT:    v_and_b32_e32 v21, 0xffff, v29
-; SI-NEXT:    buffer_load_dword v29, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
-; SI-NEXT:    buffer_load_dword v30, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
 ; SI-NEXT:    v_lshlrev_b32_e32 v20, 16, v63
 ; SI-NEXT:    v_or_b32_e32 v19, v19, v20
 ; SI-NEXT:    v_and_b32_e32 v20, 0xffff, v35
 ; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v34
+; SI-NEXT:    v_and_b32_e32 v21, 0xffff, v29
 ; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v22
 ; SI-NEXT:    v_or_b32_e32 v20, v20, v26
 ; SI-NEXT:    v_or_b32_e32 v21, v21, v22
@@ -47341,14 +47339,15 @@ define inreg <56 x i16> @bitcast_v56f16_to_v56i16_scalar(<56 x half> inreg %a, i
 ; SI-NEXT:    v_and_b32_e32 v24, 0xffff, v58
 ; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v61
 ; SI-NEXT:    v_or_b32_e32 v24, v24, v26
-; SI-NEXT:    v_and_b32_e32 v25, 0xffff, v32
 ; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v27
+; SI-NEXT:    buffer_load_dword v27, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
+; SI-NEXT:    v_and_b32_e32 v25, 0xffff, v32
 ; SI-NEXT:    v_or_b32_e32 v25, v25, v26
 ; SI-NEXT:    v_and_b32_e32 v26, 0xffff, v40
-; SI-NEXT:    s_waitcnt vmcnt(4)
+; SI-NEXT:    s_waitcnt vmcnt(3)
 ; SI-NEXT:    v_lshlrev_b32_e32 v28, 16, v28
-; SI-NEXT:    s_waitcnt vmcnt(1)
-; SI-NEXT:    v_lshlrev_b32_e32 v27, 16, v29
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_lshlrev_b32_e32 v27, 16, v27
 ; SI-NEXT:    v_or_b32_e32 v26, v26, v27
 ; SI-NEXT:    v_and_b32_e32 v27, 0xffff, v42
 ; SI-NEXT:    buffer_load_dword v63, off, s[0:3], s32 ; 4-byte Folded Reload

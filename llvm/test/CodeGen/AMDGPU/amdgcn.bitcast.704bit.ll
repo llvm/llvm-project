@@ -35041,17 +35041,13 @@ define inreg <44 x half> @bitcast_v44i16_to_v44f16_scalar(<44 x i16> inreg %a, i
 ; SI-NEXT:    ; implicit-def: $sgpr4
 ; SI-NEXT:  .LBB57_3: ; %Flow
 ; SI-NEXT:    s_and_b64 s[58:59], s[30:31], exec
-; SI-NEXT:    v_readlane_b32 s30, v23, 4
-; SI-NEXT:    v_readlane_b32 s31, v23, 5
-; SI-NEXT:    s_mov_b32 vcc_lo, s30
-; SI-NEXT:    v_readlane_b32 s30, v23, 6
-; SI-NEXT:    v_readlane_b32 s31, v23, 7
 ; SI-NEXT:    s_cselect_b32 s58, 1, 0
-; SI-NEXT:    s_mov_b32 s60, s30
-; SI-NEXT:    v_readlane_b32 s30, v23, 8
 ; SI-NEXT:    s_cmp_lg_u32 s58, 1
-; SI-NEXT:    s_mov_b32 s58, s30
-; SI-NEXT:    v_readlane_b32 s31, v23, 9
+; SI-NEXT:    v_readlane_b32 s58, v23, 4
+; SI-NEXT:    s_mov_b32 vcc_lo, s58
+; SI-NEXT:    v_readlane_b32 s58, v23, 6
+; SI-NEXT:    s_mov_b32 s60, s58
+; SI-NEXT:    v_readlane_b32 s58, v23, 8
 ; SI-NEXT:    s_cbranch_scc1 .LBB57_5
 ; SI-NEXT:  ; %bb.4: ; %cmp.true
 ; SI-NEXT:    s_add_i32 s4, s66, 3

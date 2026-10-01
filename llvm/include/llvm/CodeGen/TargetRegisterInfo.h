@@ -244,6 +244,15 @@ public:
   /// Returns 0(no-op sub-register) if no matching index exists.
   unsigned getSubRegIdxFromOffsetSize(unsigned Offset, unsigned Size) const;
 
+  /// Finds a subreg index which completly covers the given LaneBitmask from
+  /// lowest set bit, to highest set bit (both inclusive). If \p AnchorAtZero is
+  /// true, returns a subreg index which covers \p CoveringLanes from bit zero
+  /// till highest set bit. eg:
+  /// getCoveringSubRegIdx(0001010, false) -> sub1_sub2_sub3
+  /// getCoveringSubRegIdx(0001010, true) -> sub0_sub1_sub2_sub3
+  unsigned getCoveringSubRegIdx(LaneBitmask CoveringLanes,
+                                bool AnchorAtZero) const;
+
   /// Return a bitmask representing the parts of a register that are covered by
   /// SubIdx \see LaneBitmask.
   ///
@@ -1061,6 +1070,9 @@ public:
                                           const LiveInterval &VirtReg) const {
     return true;
   }
+
+  /// Check if the given subreg index can be reloaded by the target.
+  virtual bool isReloadableSubRegIdx(unsigned SubReg) const { return false; }
 
   /// When prioritizing live ranges in register allocation, if this hook returns
   /// true then the AllocationPriority of the register class will be treated as

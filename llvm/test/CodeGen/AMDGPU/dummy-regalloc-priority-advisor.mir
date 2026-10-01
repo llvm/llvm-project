@@ -27,7 +27,7 @@ body:             |
     ; DEFAULT-NEXT: SI_SPILL_V128_SAVE $vgpr1_vgpr2_vgpr3_vgpr4, %stack.0, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.0, align 4, addrspace 5)
     ; DEFAULT-NEXT: SI_SPILL_V32_SAVE $vgpr0, %stack.1, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.1, addrspace 5)
     ; DEFAULT-NEXT: S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3
-    ; DEFAULT-NEXT: renamable $vgpr2_vgpr3_vgpr4_vgpr5 = SI_SPILL_V128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
+    ; DEFAULT-NEXT: renamable $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
     ; DEFAULT-NEXT: renamable $vgpr3 = SI_SPILL_V32_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.1, addrspace 5)
     ; DEFAULT-NEXT: renamable $vgpr3 = V_ADD_U32_e32 killed $vgpr2, killed $vgpr3, implicit $exec
     ; DEFAULT-NEXT: SI_RETURN implicit $vgpr3, implicit $vgpr0, implicit $vgpr1
@@ -39,7 +39,7 @@ body:             |
     ; DUMMY-NEXT: SI_SPILL_V32_SAVE $vgpr0, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
     ; DUMMY-NEXT: S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3
     ; DUMMY-NEXT: renamable $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
-    ; DUMMY-NEXT: renamable $vgpr3_vgpr4_vgpr5_vgpr6 = SI_SPILL_V128_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.1, align 4, addrspace 5)
+    ; DUMMY-NEXT: renamable $vgpr3 = SI_SPILL_V32_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.1, addrspace 5)
     ; DUMMY-NEXT: renamable $vgpr3 = V_ADD_U32_e32 killed $vgpr3, killed $vgpr2, implicit $exec
     ; DUMMY-NEXT: SI_RETURN implicit $vgpr3, implicit $vgpr0, implicit $vgpr1
     undef %1.sub0:vreg_128 = COPY $vgpr1

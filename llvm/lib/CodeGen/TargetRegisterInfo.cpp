@@ -615,6 +615,26 @@ unsigned TargetRegisterInfo::getSubRegIdxFromOffsetSize(unsigned Offset,
   return 0;
 }
 
+unsigned TargetRegisterInfo::getCoveringSubRegIdx(LaneBitmask CoveringLanes,
+                                                  bool AnchorAtZero) const {
+  if (CoveringLanes.none())
+    return 0;
+
+  unsigned SubReg = 0;
+  LaneBitmask Best = LaneBitmask::getAll();
+  unsigned NumIdx = getNumSubRegIndices();
+  for (unsigned Idx = 1; Idx < NumIdx; Idx++) {
+    LaneBitmask SubBitMask = getSubRegIndexLaneMask(Idx);
+    if ((SubBitMask & CoveringLanes) == CoveringLanes &&
+        SubBitMask.getNumLanes() < Best.getNumLanes() &&
+        (!AnchorAtZero || getSubRegIdxOffset(Idx) == 0)) {
+      Best = SubBitMask;
+      SubReg = Idx;
+    }
+  }
+  return SubReg;
+}
+
 Register
 TargetRegisterInfo::lookThruCopyLike(Register SrcReg,
                                      const MachineRegisterInfo *MRI) const {
