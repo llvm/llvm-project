@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -Wno-missing-module-prefix -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -Wno-portability -emit-hlfir %s -o - | FileCheck %s
 
 ! A local procedure in beta hides alpha's interface only in beta and its
 ! descendants. The sibling submodule may still implement alpha's public

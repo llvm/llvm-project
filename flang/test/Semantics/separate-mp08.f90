@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -Wno-missing-module-prefix
+! RUN: %python %S/test_errors.py %s %flang_fc1 -Wno-portability
 ! The default diagnostic may be suppressed without enabling the extension.
 module m
   interface

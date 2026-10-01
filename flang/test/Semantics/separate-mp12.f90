@@ -9,7 +9,7 @@ end module m
 
 submodule(m) sm
 contains
-  !WARNING: 'implementation' is a local procedure that hides the separate module procedure interface 'm:implementation'; a call to that interface will fail to link with this local procedure. If this procedure is supposed to implement the interface, add the MODULE keyword or enable -fimplicit-module-prefix. [-Wmissing-module-prefix]
+  !PORTABILITY: Subprogram 'implementation' in this submodule is missing the MODULE prefix to implement the module procedure interface from its parent; did you mean 'MODULE SUBROUTINE'? [-Wportability]
   subroutine implementation
   end subroutine implementation
 end submodule sm

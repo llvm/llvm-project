@@ -5,7 +5,7 @@
 ! RUN: %t-reenabled | FileCheck %s --check-prefix=REPAIRED
 ! RUN: %flang -c %s -o %t-default.o
 ! RUN: not %flang %t-default.o -o %t-default
-! RUN: %flang -Wno-missing-module-prefix -c %s -o %t-suppressed.o
+! RUN: %flang -Wno-portability -c %s -o %t-suppressed.o
 ! RUN: not %flang %t-suppressed.o -o %t-suppressed
 ! RUN: %flang -Wimplicit-module-prefix -c %s -o %t-warning-only.o
 ! RUN: not %flang %t-warning-only.o -o %t-warning-only
