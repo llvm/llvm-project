@@ -2902,8 +2902,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     unsigned BitWidth = II->getType()->getScalarSizeInBits();
 
     // Multiply by one.
-    if (match(Arg0, m_One()))
-      return replaceInstUsesWith(CI, Builder.CreateAShr(Arg1, BitWidth - 1));
     if (match(Arg1, m_One()))
       return replaceInstUsesWith(CI, Builder.CreateAShr(Arg0, BitWidth - 1));
     break;
