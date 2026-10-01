@@ -445,7 +445,7 @@ enum class WebKitAnnotation : uint8_t {
   NoDelete,
 };
 
-static WebKitAnnotation annotationType(const StringRef &Annotation) {
+static WebKitAnnotation annotationType(StringRef Annotation) {
   if (Annotation == "webkit.pointerconversion")
     return WebKitAnnotation::PointerConversion;
   if (Annotation == "webkit.nodelete")
