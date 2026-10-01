@@ -28,14 +28,17 @@ half4x4 test_select_half4x4(bool4x4 cond, half4x4 tVals, half4x4 fVals) {
 }
 
 // CHECK-LABEL: test_select_bool2x2
-// CHECK-COUNT-3: icmp ne <4 x i32> {{%.*}}, zeroinitializer
-// CHECK: select <4 x i1> {{%.*}}, <4 x i1> {{%.*}}, <4 x i1> {{%.*}}
+// CHECK: [[COND:%.*]] = icmp ne <4 x i32> {{%.*}}, zeroinitializer
+// CHECK: [[TVALS:%.*]] = icmp ne <4 x i32> {{%.*}}, zeroinitializer
+// CHECK: [[FVALS:%.*]] = icmp ne <4 x i32> {{%.*}}, zeroinitializer
+// CHECK: select <4 x i1> [[COND]], <4 x i1> [[TVALS]], <4 x i1> [[FVALS]]
 bool2x2 test_select_bool2x2(bool2x2 cond, bool2x2 tVals, bool2x2 fVals) {
   return select(cond, tVals, fVals);
 }
 
 // CHECK-LABEL: test_select_matrix_scalar_matrix
-// CHECK: [[SPLAT_SRC:%.*]] = insertelement <4 x float> poison, float {{%.*}}, i64 0
+// CHECK: [[TVAL:%.*]] = load float, ptr %tVal.addr
+// CHECK: [[SPLAT_SRC:%.*]] = insertelement <4 x float> poison, float [[TVAL]], i64 0
 // CHECK: [[SPLAT:%.*]] = shufflevector <4 x float> [[SPLAT_SRC]], <4 x float> poison, <4 x i32> zeroinitializer
 // CHECK: select {{.*}}<4 x i1> {{%.*}}, <4 x float> [[SPLAT]], <4 x float> {{%.*}}
 float2x2 test_select_matrix_scalar_matrix(bool2x2 cond, float tVal,
@@ -44,7 +47,8 @@ float2x2 test_select_matrix_scalar_matrix(bool2x2 cond, float tVal,
 }
 
 // CHECK-LABEL: test_select_matrix_matrix_scalar
-// CHECK: [[SPLAT_SRC:%.*]] = insertelement <4 x float> poison, float {{%.*}}, i64 0
+// CHECK: [[FVAL:%.*]] = load float, ptr %fVal.addr
+// CHECK: [[SPLAT_SRC:%.*]] = insertelement <4 x float> poison, float [[FVAL]], i64 0
 // CHECK: [[SPLAT:%.*]] = shufflevector <4 x float> [[SPLAT_SRC]], <4 x float> poison, <4 x i32> zeroinitializer
 // CHECK: select {{.*}}<4 x i1> {{%.*}}, <4 x float> {{%.*}}, <4 x float> [[SPLAT]]
 float2x2 test_select_matrix_matrix_scalar(bool2x2 cond, float2x2 tVals,
@@ -53,9 +57,11 @@ float2x2 test_select_matrix_matrix_scalar(bool2x2 cond, float2x2 tVals,
 }
 
 // CHECK-LABEL: test_select_matrix_scalar_scalar
-// CHECK: [[SPLAT_SRC1:%.*]] = insertelement <4 x float> poison, float {{%.*}}, i64 0
+// CHECK: [[TVAL:%.*]] = load float, ptr %tVal.addr
+// CHECK: [[FVAL:%.*]] = load float, ptr %fVal.addr
+// CHECK: [[SPLAT_SRC1:%.*]] = insertelement <4 x float> poison, float [[TVAL]], i64 0
 // CHECK: [[SPLAT1:%.*]] = shufflevector <4 x float> [[SPLAT_SRC1]], <4 x float> poison, <4 x i32> zeroinitializer
-// CHECK: [[SPLAT_SRC2:%.*]] = insertelement <4 x float> poison, float {{%.*}}, i64 0
+// CHECK: [[SPLAT_SRC2:%.*]] = insertelement <4 x float> poison, float [[FVAL]], i64 0
 // CHECK: [[SPLAT2:%.*]] = shufflevector <4 x float> [[SPLAT_SRC2]], <4 x float> poison, <4 x i32> zeroinitializer
 // CHECK: select {{.*}}<4 x i1> {{%.*}}, <4 x float> [[SPLAT1]], <4 x float> [[SPLAT2]]
 float2x2 test_select_matrix_scalar_scalar(bool2x2 cond, float tVal,
