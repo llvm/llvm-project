@@ -80,16 +80,15 @@ void SPIRVAuxDataHandler::prepareModuleOutput(const SPIRVSubtarget &ST,
     MAI.ExtInstSetMap[NonSemanticAuxDataSet] = MAI.getNextIDRegister();
 
   // Instruction metadata forward-references its target, so it needs
-  // OpExtInstWithForwardRefsKHR.
-  if (!MAI.InstrAuxDataRecords.empty()) {
-    if (!ST.canUseExtension(
-            SPIRV::Extension::SPV_KHR_relaxed_extended_instruction))
-      report_fatal_error("-spirv-preserve-auxdata with atomic instruction "
-                         "metadata requires the "
-                         "SPV_KHR_relaxed_extended_instruction extension.");
+  // OpExtInstWithForwardRefsKHR; drop it if that extension is not allowed.
+  if (MAI.InstrAuxDataRecords.empty())
+    return;
+  if (ST.canUseExtension(
+          SPIRV::Extension::SPV_KHR_relaxed_extended_instruction))
     MAI.Reqs.addExtension(
         SPIRV::Extension::SPV_KHR_relaxed_extended_instruction);
-  }
+  else
+    MAI.InstrAuxDataRecords.clear();
 }
 
 MCRegister

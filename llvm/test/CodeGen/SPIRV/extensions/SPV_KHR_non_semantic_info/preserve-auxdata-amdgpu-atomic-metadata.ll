@@ -25,6 +25,20 @@
 ; RUN:   -spirv-preserve-auxdata \
 ; RUN:   %s -o - -filetype=obj | spirv-val %}
 
+; Without SPV_KHR_relaxed_extended_instruction, instruction metadata is dropped.
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa \
+; RUN:   --spirv-ext=-SPV_KHR_relaxed_extended_instruction \
+; RUN:   -spirv-preserve-auxdata %s -o - | FileCheck %s --check-prefix=NORELAXED
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa \
+; RUN:   --spirv-ext=-SPV_KHR_relaxed_extended_instruction \
+; RUN:   -spirv-preserve-auxdata %s -o - -filetype=obj | spirv-val %}
+
+; NORELAXED-NOT: SPV_KHR_relaxed_extended_instruction
+; NORELAXED-NOT: amdgpu.no.fine.grained.memory
+; NORELAXED-NOT: amdgpu.no.remote.memory
+; NORELAXED-NOT: atomic.ignore.denormal.mode
+; NORELAXED-NOT: OpExtInstWithForwardRefsKHR
+
 ; CHECK-DAG: OpExtension "SPV_KHR_relaxed_extended_instruction"
 ; CHECK-DAG: %[[#auxset:]] = OpExtInstImport "NonSemantic.AuxData"
 ; CHECK-DAG: %[[#md_nfg:]] = OpString "amdgpu.no.fine.grained.memory"
