@@ -2961,13 +2961,11 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
         AA->getDeprecated(), AA->getObsoleted(), AA->getUnavailable(),
         AA->getMessage(), AA->getStrict(), AA->getReplacement(), AMK,
         AA->getPriority(), AA->getEnvironment(), InferredPlatformII);
-  } else if (const auto *VA = dyn_cast<VisibilityAttr>(Attr)) {
-    if (!isa<NamespaceDecl>(D))
-      NewAttr = S.mergeVisibilityAttr(D, *VA, VA->getVisibility());
-  } else if (const auto *VA = dyn_cast<TypeVisibilityAttr>(Attr)) {
-    if (!isa<NamespaceDecl>(D))
-      NewAttr = S.mergeTypeVisibilityAttr(D, *VA, VA->getVisibility());
-  } else if (const auto *ImportA = dyn_cast<DLLImportAttr>(Attr))
+  } else if (const auto *VA = dyn_cast<VisibilityAttr>(Attr))
+    NewAttr = S.mergeVisibilityAttr(D, *VA, VA->getVisibility());
+  else if (const auto *VA = dyn_cast<TypeVisibilityAttr>(Attr))
+    NewAttr = S.mergeTypeVisibilityAttr(D, *VA, VA->getVisibility());
+  else if (const auto *ImportA = dyn_cast<DLLImportAttr>(Attr))
     NewAttr = S.mergeDLLImportAttr(D, *ImportA);
   else if (const auto *ExportA = dyn_cast<DLLExportAttr>(Attr))
     NewAttr = S.mergeDLLExportAttr(D, *ExportA);
@@ -3370,45 +3368,20 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
     }
   }
 
-  if (isa<NamespaceDecl>(New)) {
-    Decl *ComparedOld = Old->getCanonicalDecl();
-    if (const auto *NewAbiTagAttr = New->getAttr<AbiTagAttr>()) {
-      if (const auto *OldAbiTagAttr = ComparedOld->getAttr<AbiTagAttr>()) {
-        bool Diff = NewAbiTagAttr->tags_size() != OldAbiTagAttr->tags_size();
-        if (!Diff)
-          Diff = !llvm::all_of(
-              NewAbiTagAttr->tags(), [OldAbiTagAttr](StringRef NewTag) {
-                return llvm::is_contained(OldAbiTagAttr->tags(), NewTag);
-              });
-        if (Diff) {
-          Diag(OldAbiTagAttr->getLocation(),
-               diag::warn_abi_tag_ignored_different)
-              << true << llvm::join(OldAbiTagAttr->tags(), ", ")
-              << llvm::join(NewAbiTagAttr->tags(), ", ");
-          Diag(NewAbiTagAttr->getLocation(), diag::note_declared_at);
+  // Re-declaration cannot add abi_tag's.
+  if (const auto *NewAbiTagAttr = New->getAttr<AbiTagAttr>()) {
+    if (const auto *OldAbiTagAttr = Old->getAttr<AbiTagAttr>()) {
+      for (const auto &NewTag : NewAbiTagAttr->tags()) {
+        if (!llvm::is_contained(OldAbiTagAttr->tags(), NewTag)) {
+          Diag(NewAbiTagAttr->getLocation(),
+               diag::err_new_abi_tag_on_redeclaration)
+              << NewTag;
+          Diag(OldAbiTagAttr->getLocation(), diag::note_previous_declaration);
         }
-      } else {
-        Diag(ComparedOld->getLocation(), diag::warn_abi_tag_ignored_different)
-            << false << "" << llvm::join(NewAbiTagAttr->tags(), ", ");
-        Diag(NewAbiTagAttr->getLocation(), diag::note_declared_at);
       }
-    }
-  } else {
-    // Re-declaration cannot add abi_tag's.
-    if (const auto *NewAbiTagAttr = New->getAttr<AbiTagAttr>()) {
-      if (const auto *OldAbiTagAttr = Old->getAttr<AbiTagAttr>()) {
-        for (const auto &NewTag : NewAbiTagAttr->tags()) {
-          if (!llvm::is_contained(OldAbiTagAttr->tags(), NewTag)) {
-            Diag(NewAbiTagAttr->getLocation(),
-                 diag::err_new_abi_tag_on_redeclaration)
-                << NewTag;
-            Diag(OldAbiTagAttr->getLocation(), diag::note_previous_declaration);
-          }
-        }
-      } else {
-        Diag(NewAbiTagAttr->getLocation(), diag::err_abi_tag_on_redeclaration);
-        Diag(Old->getLocation(), diag::note_previous_declaration);
-      }
+    } else {
+      Diag(NewAbiTagAttr->getLocation(), diag::err_abi_tag_on_redeclaration);
+      Diag(Old->getLocation(), diag::note_previous_declaration);
     }
   }
 
