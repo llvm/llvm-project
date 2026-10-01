@@ -163,7 +163,7 @@ define <4 x float> @pow_fmf_preserved(float %x) {
 ; CHECK-NEXT:    ret <4 x float> [[V]]
 ;
   %x.insert = insertelement <4 x float> splat (float 1.0), float %x, i64 0
-  %v = call arcp contract afn <4 x float> @llvm.pow(<4 x float> %x.insert, <4 x float> splat (float 2.0))
+  %v = call arcp contract afn <4 x float> @llvm.pow.v4f32(<4 x float> %x.insert, <4 x float> splat (float 2.0))
   ret <4 x float> %v
 }
 
