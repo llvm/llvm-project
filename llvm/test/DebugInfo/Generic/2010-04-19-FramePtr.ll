@@ -1,7 +1,8 @@
 ; XFAIL: target={{.*}}-aix{{.*}}
-; RUN: %llc_dwarf -debugger-tune=lldb -asm-verbose -O1 -o - < %s | FileCheck %s
-; RUN: %llc_dwarf -debugger-tune=gdb -asm-verbose -O1 -o - < %s | FileCheck %s --check-prefix=DISABLE
-; RUN: %llc_dwarf -frame-pointer=all -debugger-tune=lldb -asm-verbose -O1 -o - < %s | FileCheck %s --check-prefix=DISABLE
+; RUN: %llc_dwarf -asm-verbose -O1 -o - < %s | FileCheck %s
+; RUN: sed 's/TUNE_PLACEHOLDER/gdb/' %s | \
+; RUN:   %llc_dwarf -asm-verbose -O1 -o - | FileCheck %s --check-prefix=DISABLE
+; RUN: %llc_dwarf -frame-pointer=all -asm-verbose -O1 -o - < %s | FileCheck %s --check-prefix=DISABLE
 
 ; CHECK: DW_AT_APPLE_omit_frame_ptr
 ; DISABLE-NOT: DW_AT_APPLE_omit_frame_ptr
@@ -23,7 +24,7 @@ return:                                           ; preds = %entry
 }
 
 !llvm.dbg.cu = !{!3}
-!llvm.module.flags = !{!12}
+!llvm.module.flags = !{!12, !13}
 !9 = !{!1}
 
 !0 = !DILocation(line: 2, scope: !1)
@@ -38,3 +39,4 @@ return:                                           ; preds = %entry
 !10 = !DIFile(filename: "a.c", directory: "/tmp")
 !11 = !{}
 !12 = !{i32 1, !"Debug Info Version", i32 3}
+!13 = !{i32 2, !"debugger-tuning", !"TUNE_PLACEHOLDER"}

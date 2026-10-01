@@ -1,9 +1,12 @@
 ;; This test checks for emission of DW_OP_implicit_value operation
 ;; for double type.
 
-; RUN: llc -O0 -debugger-tune=gdb -filetype=obj %s -o -  | llvm-dwarfdump - | FileCheck %s --check-prefixes=CHECK,BOTH
+; RUN: sed 's/TUNE_PLACEHOLDER/lldb/' %s > %t.lldb.ll
+; RUN: sed 's/TUNE_PLACEHOLDER/sce/' %s > %t.sce.ll
 
-; RUN: llc -O0 -debugger-tune=lldb -filetype=obj %s -o - | llvm-dwarfdump - | FileCheck %s --check-prefixes=CHECK,BOTH
+; RUN: llc -O0 -filetype=obj %s -o -  | llvm-dwarfdump - | FileCheck %s --check-prefixes=CHECK,BOTH
+
+; RUN: llc -O0 -filetype=obj %t.lldb.ll -o - | llvm-dwarfdump - | FileCheck %s --check-prefixes=CHECK,BOTH
 
 ; CHECK: .debug_info contents:
 ; CHECK: DW_TAG_variable
@@ -11,7 +14,7 @@
 ; CHECK-NEXT:                     [{{.*}}): DW_OP_implicit_value 0x8 0x1f 0x85 0xeb 0x51 0xb8 0x1e 0x09 0x40)
 ; CHECK-NEXT:  DW_AT_name    ("d")
 
-; RUN: llc -O0 -debugger-tune=sce -filetype=obj %s -o -  | llvm-dwarfdump - | FileCheck %s -check-prefixes=SCE-CHECK,BOTH
+; RUN: llc -O0 -filetype=obj %t.sce.ll -o -  | llvm-dwarfdump - | FileCheck %s -check-prefixes=SCE-CHECK,BOTH
 
 ; SCE-CHECK: .debug_info contents:
 ; SCE-CHECK: DW_TAG_variable
@@ -54,7 +57,7 @@ attributes #1 = { nounwind readnone speculatable willreturn }
 attributes #2 = { nofree nounwind }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5}
+!llvm.module.flags = !{!3, !4, !5, !100}
 !llvm.ident = !{!6}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 11.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
@@ -63,6 +66,7 @@ attributes #2 = { nofree nounwind }
 !3 = !{i32 7, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"wchar_size", i32 4}
+!100 = !{i32 2, !"debugger-tuning", !"TUNE_PLACEHOLDER"}
 !6 = !{!"clang version 11.0.0"}
 !7 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 1, type: !8, scopeLine: 1, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !11)
 !8 = !DISubroutineType(types: !9)

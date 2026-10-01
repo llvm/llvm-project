@@ -3,17 +3,17 @@
 ; debug_names should be emitted regardless of the target and debugger tuning
 ; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj < %s \
 ; RUN:   | llvm-readobj --sections - | FileCheck --check-prefix=DEBUG_NAMES %s
-; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj -debugger-tune=gdb < %s \
+; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj < %s \
 ; RUN:   | llvm-readobj --sections - | FileCheck --check-prefix=DEBUG_NAMES %s
 ; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj < %s \
 ; RUN:   | llvm-readobj --sections - | FileCheck --check-prefix=DEBUG_NAMES %s
-; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -debugger-tune=lldb < %s \
+; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj < %s \
 ; RUN:   | llvm-readobj --sections - | FileCheck --check-prefix=DEBUG_NAMES %s
 
 ; But not if also type units are enabled.
 ; TODO: This is the case because we currently don't generate DWARF v5-compatible
 ; type units. Change this once DWARF v5 type units are implemented.
-; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -generate-type-units -debugger-tune=lldb < %s \
+; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -generate-type-units < %s \
 ; RUN:   | llvm-readobj --sections - | FileCheck --check-prefix=NONE %s
 
 ; Debug types are ignored for non-ELF targets which means it shouldn't affect

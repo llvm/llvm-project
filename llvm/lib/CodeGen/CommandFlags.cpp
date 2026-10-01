@@ -98,7 +98,6 @@ CGOPT_EXP(bool, EnableTLSDESC)
 CGOPT(bool, UniqueSectionNames)
 CGOPT(bool, UniqueBasicBlockSectionNames)
 CGOPT(bool, SeparateNamedSections)
-CGOPT(DebuggerKind, DebuggerTuningOpt)
 CGOPT(VectorLibrary, VectorLibrary)
 CGOPT(bool, EnableStackSizeSection)
 CGOPT(bool, EnableAddrsig)
@@ -370,16 +369,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(SeparateNamedSections);
 
-  static cl::opt<DebuggerKind> DebuggerTuningOpt(
-      "debugger-tune", cl::desc("Tune debug info for a particular debugger"),
-      cl::init(DebuggerKind::Default),
-      cl::values(
-          clEnumValN(DebuggerKind::GDB, "gdb", "gdb"),
-          clEnumValN(DebuggerKind::LLDB, "lldb", "lldb"),
-          clEnumValN(DebuggerKind::DBX, "dbx", "dbx"),
-          clEnumValN(DebuggerKind::SCE, "sce", "SCE targets (e.g. PS4)")));
-  CGBINDOPT(DebuggerTuningOpt);
-
   static cl::opt<VectorLibrary> VectorLibrary(
       "vector-library", cl::Hidden, cl::desc("Vector functions library"),
       cl::init(VectorLibrary::NoLibrary),
@@ -555,7 +544,6 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
 
   Options.MCOptions = mc::InitMCTargetOptionsFromFlags();
 
-  Options.DebuggerTuning = getDebuggerTuningOpt();
   Options.SwiftAsyncFramePointer = getSwiftAsyncFramePointer();
   return Options;
 }

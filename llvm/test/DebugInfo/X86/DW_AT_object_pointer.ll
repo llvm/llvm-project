@@ -1,10 +1,11 @@
-; RUN: llc -mtriple=x86_64-apple-darwin -debugger-tune=gdb -dwarf-version=5 -filetype=obj < %s | \
+; RUN: sed 's/TUNE_PLACEHOLDER/gdb/' %s | \
+; RUN:   llc -mtriple=x86_64-apple-darwin -dwarf-version=5 -filetype=obj | \
 ; RUN:      llvm-dwarfdump -v -debug-info - | FileCheck %s --check-prefixes=CHECK,CHECK-GDB
 
-; RUN: llc -mtriple=x86_64-apple-darwin -debugger-tune=lldb -dwarf-version=4 -filetype=obj < %s | \
+; RUN: llc -mtriple=x86_64-apple-darwin -dwarf-version=4 -filetype=obj < %s | \
 ; RUN:      llvm-dwarfdump -v -debug-info - | FileCheck %s --check-prefixes=CHECK,CHECK-LLDB-DWARF4
 
-; RUN: llc -mtriple=x86_64-apple-darwin -debugger-tune=lldb -dwarf-version=5 -filetype=obj < %s | \
+; RUN: llc -mtriple=x86_64-apple-darwin -dwarf-version=5 -filetype=obj < %s | \
 ; RUN:      llvm-dwarfdump -v -debug-info - | FileCheck %s --check-prefixes=CHECK,CHECK-LLDB-DWARF5
 
 ; CHECK: DW_TAG_formal_parameter [
@@ -63,7 +64,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!38}
+!llvm.module.flags = !{!38, !100}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.2 (trunk 163586) (llvm/trunk 163570)", isOptimized: false, emissionKind: FullDebug, file: !37, enums: !1, retainedTypes: !1, globals: !1, imports:  !1)
 !1 = !{}
@@ -99,3 +100,4 @@ entry:
 !36 = !DILocalVariable(name: "", line: 7, arg: 1, scope: !5, file: !6, type: !9)
 !37 = !DIFile(filename: "bar.cpp", directory: "/Users/echristo/debug-tests")
 !38 = !{i32 1, !"Debug Info Version", i32 3}
+!100 = !{i32 2, !"debugger-tuning", !"TUNE_PLACEHOLDER"}

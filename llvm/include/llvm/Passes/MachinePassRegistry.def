@@ -90,6 +90,7 @@ MACHINE_FUNCTION_PASS("ir-translator", IRTranslatorPass(TM->getOptLevel()))
 MACHINE_FUNCTION_PASS("kcfi", MachineKCFIPass())
 MACHINE_FUNCTION_PASS("gc-empty-basic-blocks", GCEmptyBasicBlocksPass())
 MACHINE_FUNCTION_PASS("legalizer", LegalizerPass())
+MACHINE_FUNCTION_PASS("live-debug-values", LiveDebugValuesPass())
 MACHINE_FUNCTION_PASS("load-store-opt", LoadStoreOptPass())
 MACHINE_FUNCTION_PASS("localizer", LocalizerPass())
 MACHINE_FUNCTION_PASS("localstackalloc", LocalStackSlotAllocationPass())
@@ -192,17 +193,6 @@ MACHINE_FUNCTION_PASS_WITH_PARAMS(
                                    "BranchFolderPass");
     },
     "enable-tail-merge")
-
-MACHINE_FUNCTION_PASS_WITH_PARAMS(
-    "live-debug-values", "LiveDebugValuesPass",
-    [](bool ShouldEmitDebugEntryValues) {
-      return LiveDebugValuesPass(ShouldEmitDebugEntryValues);
-    },
-    [](StringRef Params) {
-      return parseSinglePassOption(Params, "emit-debug-entry-values",
-                                   "LiveDebugValuesPass");
-    },
-    "emit-debug-entry-values")
 
 MACHINE_FUNCTION_PASS_WITH_PARAMS(
     "machine-sink", "MachineSinkingPass",

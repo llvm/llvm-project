@@ -1,21 +1,24 @@
 ; Verify the emission of accelerator tables for various targets for the DWARF<=4 case
 
+; RUN: sed 's/TUNE_PLACEHOLDER/gdb/' %s > %t.gdb.ll
+; RUN: sed 's/TUNE_PLACEHOLDER/lldb/' %s > %t.lldb.ll
+
 ; Darwin has the apple tables unless we specifically tune for gdb
 ; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj < %s > %t
 ; RUN: llvm-readobj --sections %t | FileCheck --check-prefix=APPLE %s
 ; RUN: llvm-dwarfdump -apple-names %t | FileCheck --check-prefix=APPLE-NAMES %s
-; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj -debugger-tune=gdb < %s \
+; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj < %t.gdb.ll \
 ; RUN:   | llvm-readobj --sections - | FileCheck --check-prefix=GNU %s
 
 ; Linux does has debug_names tables only if we explicitly tune for lldb
 ; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj < %s \
 ; RUN:   | llvm-readobj --sections - | FileCheck --check-prefix=GNU %s
-; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -debugger-tune=lldb < %s \
+; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj < %t.lldb.ll \
 ; RUN:   | llvm-readobj --sections - | FileCheck --check-prefix=GNU %s
 
 ; No accelerator tables if type units are enabled, as DWARF v4 type units are
 ; not compatible with accelerator tables.
-; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -generate-type-units -debugger-tune=lldb < %s \
+; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -generate-type-units < %t.lldb.ll \
 ; RUN:   | llvm-readobj --sections - | FileCheck --check-prefix=NONE %s
 
 ; Debug types are ignored for non-ELF targets which means it shouldn't affect
@@ -57,7 +60,7 @@ attributes #0 = { norecurse nounwind readnone uwtable }
 attributes #1 = { norecurse uwtable }
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!7, !8, !9}
+!llvm.module.flags = !{!7, !8, !9, !100}
 !llvm.ident = !{!10}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -70,6 +73,7 @@ attributes #1 = { norecurse uwtable }
 !7 = !{i32 2, !"Dwarf Version", i32 4}
 !8 = !{i32 2, !"Debug Info Version", i32 3}
 !9 = !{i32 1, !"wchar_size", i32 4}
+!100 = !{i32 2, !"debugger-tuning", !"TUNE_PLACEHOLDER"}
 !10 = !{!"clang version 7.0.0 (trunk 322268) (llvm/trunk 322267)"}
 !11 = distinct !DISubprogram(name: "fun", linkageName: "_Z3funv", scope: !3, file: !3, line: 2, type: !12, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !2, retainedNodes: !4)
 !12 = !DISubroutineType(types: !13)

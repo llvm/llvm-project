@@ -174,12 +174,11 @@ std::string llvm::computeLTOCacheKey(
   AddString(Conf.CPU);
   // FIXME: Hash more of Options. For now all clients initialize Options from
   // command-line flags (which is unsupported in production), but may set
-  // X86RelaxRelocations. The clang driver can also pass FunctionSections,
-  // DataSections and DebuggerTuning via command line flags.
+  // X86RelaxRelocations. The clang driver can also pass FunctionSections and
+  // DataSections via command line flags.
   AddUnsigned(Conf.Options.MCOptions.X86RelaxRelocations);
   AddUnsigned(Conf.Options.FunctionSections);
   AddUnsigned(Conf.Options.DataSections);
-  AddUnsigned((unsigned)Conf.Options.DebuggerTuning);
   for (auto &A : Conf.MAttrs)
     AddString(A);
   if (Conf.RelocModel)

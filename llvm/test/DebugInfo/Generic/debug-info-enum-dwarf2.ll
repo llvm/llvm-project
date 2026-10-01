@@ -9,7 +9,7 @@
 
 ; UNSUPPORTED: target=powerpc64{{.*}}-aix{{.*}}
 
-; RUN: llc -debugger-tune=gdb -dwarf-version=2 -filetype=obj -o %t.o < %S/debug-info-enum.ll
+; RUN: llc -dwarf-version=2 -filetype=obj -o %t.o < %S/debug-info-enum.ll
 ; RUN: llvm-dwarfdump -debug-info %t.o | FileCheck %S/debug-info-enum.ll --check-prefixes=CHECK,CHECK-TYPE
-; RUN: llc -debugger-tune=gdb -dwarf-version=2 -strict-dwarf=true -filetype=obj -o %t.o < %S/debug-info-enum.ll
+; RUN: llc -dwarf-version=2 -strict-dwarf=true -filetype=obj -o %t.o < %S/debug-info-enum.ll
 ; RUN: llvm-dwarfdump -debug-info %t.o | FileCheck %S/debug-info-enum.ll --check-prefixes=CHECK,CHECK-DW2-STRICT

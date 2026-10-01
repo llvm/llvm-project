@@ -1,6 +1,6 @@
 ; Test set representation in DWARF debug info:
 
-; RUN: llc -debugger-tune=gdb -dwarf-version=4 -filetype=obj -o %t.o < %s
+; RUN: llc -dwarf-version=4 -filetype=obj -o %t.o < %s
 ; RUN: llvm-dwarfdump -debug-info %t.o | FileCheck %s --check-prefix=CHECK
 
 ; ModuleID = 'Main.mb'

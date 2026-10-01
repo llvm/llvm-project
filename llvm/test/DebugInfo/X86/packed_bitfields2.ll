@@ -1,4 +1,4 @@
-; RUN: llc -dwarf-version=5 -debugger-tune=lldb -mtriple x86_64-unknown-linux-gnu -O0 -filetype=obj -o %t_2_le.o %s
+; RUN: llc -dwarf-version=5 -mtriple x86_64-unknown-linux-gnu -O0 -filetype=obj -o %t_2_le.o %s
 ; RUN: llvm-dwarfdump -v -debug-info %t_2_le.o | FileCheck %s
 
 ; Produced at -O0 from:
@@ -29,7 +29,7 @@ target triple = "x86_64-pc-linux-gnu"
 @bitfield = dso_local global %struct.bitfield zeroinitializer, align 1, !dbg !0
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!11, !12, !13, !14, !15}
+!llvm.module.flags = !{!11, !12, !13, !14, !15, !17}
 !llvm.ident = !{!16}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -49,3 +49,4 @@ target triple = "x86_64-pc-linux-gnu"
 !14 = !{i32 7, !"PIC Level", i32 2}
 !15 = !{i32 7, !"PIE Level", i32 2}
 !16 = !{!"clang version 11.0.1"}
+!17 = !{i32 2, !"debugger-tuning", !"lldb"}

@@ -1,6 +1,6 @@
 
-; RUN: llc -debugger-tune=gdb -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff -function-sections \
-; RUN:   < %s | FileCheck %s
+; RUN: llc -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff -function-sections < %s \
+; RUN:   | FileCheck %s
 
 source_filename = "1.c"
 target datalayout = "E-m:a-p:32:32-i64:64-n32"
@@ -18,7 +18,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5, !6}
+!llvm.module.flags = !{!3, !4, !5, !6, !100}
 !llvm.ident = !{!7}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 13.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
@@ -28,6 +28,7 @@ entry:
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"wchar_size", i32 2}
 !6 = !{i32 7, !"PIC Level", i32 2}
+!100 = !{i32 2, !"debugger-tuning", !"gdb"}
 !7 = !{!"clang version 13.0.0"}
 !8 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !9, scopeLine: 2, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
 !9 = !DISubroutineType(types: !10)

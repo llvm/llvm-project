@@ -2,7 +2,7 @@
 # tuning.
 
 RUN: rm -rf %t && split-file %s %t && cd %t
-RUN: llc -debugger-tune=sce -filetype=obj foo.ll -o foo.o
+RUN: llc -filetype=obj foo.ll -o foo.o
 RUN: llvm-dwarfdump -debug-aranges foo.o | FileCheck %s
 
 CHECK:      .debug_aranges contents:
@@ -24,7 +24,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @foo = dso_local global i32 0, align 4, !dbg !0
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!6, !7, !8, !9, !10, !11, !12}
+!llvm.module.flags = !{!6, !7, !8, !9, !10, !11, !12, !13}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "foo", scope: !2, file: !3, line: 1, type: !5, isLocal: false, isDefinition: true)
@@ -39,3 +39,4 @@ target triple = "x86_64-unknown-linux-gnu"
 !10 = !{i32 7, !"PIE Level", i32 2}
 !11 = !{i32 7, !"uwtable", i32 2}
 !12 = !{i32 7, !"frame-pointer", i32 2}
+!13 = !{i32 2, !"debugger-tuning", !"sce"}

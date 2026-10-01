@@ -51,7 +51,7 @@
 ; CHECK-NEXT:     funclet-layout
 ; CHECK-NEXT:     remove-loads-into-fake-uses
 ; CHECK-NEXT:     StackMapLivenessPass
-; CHECK-NEXT:     live-debug-values<emit-debug-entry-values>
+; CHECK-NEXT:     live-debug-values
 ; CHECK-NEXT:     machine-sanmd
 ; CHECK-NEXT:     stack-frame-layout
 ; CHECK-NEXT:     riscv-expand-pseudo-pre-emit
