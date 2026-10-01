@@ -121,6 +121,9 @@ static systemz::EdgeKind_systemz getRelEdgeKind(uint64_t RelType) {
 
   switch (RldRefType) {
   case GOFF::RLD_RT_RAddress:
+  case GOFF::RLD_RT_RTypeConstant:
+    // T-type constant value encoded as the R-symbol's address.
+    // The fixup semantics are identical to A-type RLD_RT_RAddress.
     switch (RldBitWidth) {
     case 64:
       if (RldFetch == GOFF::RLD_FS_Fetch)
