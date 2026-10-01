@@ -85,7 +85,7 @@ TEST_F(MipsBenchmarkResultTest, WriteToAndReadFromDisk) {
     ExitOnErr(ToDisk.writeYamlTo(State, FileOstr));
   }
   const std::unique_ptr<MemoryBuffer> Buffer =
-      std::move(*MemoryBuffer::getFile(Filename));
+      std::move(*MemoryBuffer::getFile(Filename, llvm::sys::fs::OF_Text));
 
   {
     // One-element version.
