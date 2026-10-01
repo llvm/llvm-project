@@ -277,6 +277,26 @@ func.func @_QPsub_cst_bcast() {
 // CHECK: fir.call @_FortranACUFGetDeviceAddress(%[[GBL_CONV]], %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
 // CHECK: fir.call @_FortranACUFDataTransferCstDesc(
 
+func.func @_QPsub_cst_bcast_alloc() {
+  %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "e", uniq_name = "_QFsub_cst_bcast_allocEe"}
+  %1:2 = hlfir.declare %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub_cst_bcast_allocEe"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+  %2 = fir.address_of(@_QMmscalEc0) : !fir.ref<i32>
+  %3 = fir.declare %2 {data_attr = #cuf.cuda<constant>, uniq_name = "_QMmscalEc0"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  cuf.data_transfer %3 to %1#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<i32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+  return
+}
+
+// A scalar constant broadcast into an allocatable host array goes through the
+// descriptor path, but the source is still resolved to the device copy with
+// _FortranACUFGetDeviceAddress before being broadcast by
+// _FortranACUFDataTransferCstDesc.
+// CHECK-LABEL: func.func @_QPsub_cst_bcast_alloc()
+// CHECK: fir.address_of(@_QMmscalEc0) : !fir.ref<i32>
+// CHECK: %[[GBL:.*]] = fir.address_of(@_QMmscalEc0) : !fir.ref<i32>
+// CHECK: %[[GBL_CONV:.*]] = fir.convert %[[GBL]] : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
+// CHECK: fir.call @_FortranACUFGetDeviceAddress(%[[GBL_CONV]], %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
+// CHECK: fir.call @_FortranACUFDataTransferCstDesc(
+
 fir.global @_QMmod1Ea {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?xi32>>> {
   %c0 = arith.constant 0 : index
   %0 = fir.zero_bits !fir.heap<!fir.array<?xi32>>
