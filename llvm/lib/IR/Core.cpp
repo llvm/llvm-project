@@ -1911,19 +1911,23 @@ LLVMValueRef LLVMConstXor(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
 
 LLVMValueRef LLVMConstGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
                            LLVMValueRef *ConstantIndices, unsigned NumIndices) {
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   ArrayRef<Constant *> IdxList(unwrap<Constant>(ConstantIndices, NumIndices),
                                NumIndices);
   Constant *Val = unwrap<Constant>(ConstantVal);
   return wrap(ConstantExpr::getGetElementPtr(unwrap(Ty), Val, IdxList));
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 }
 
 LLVMValueRef LLVMConstInBoundsGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
                                    LLVMValueRef *ConstantIndices,
                                    unsigned NumIndices) {
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   ArrayRef<Constant *> IdxList(unwrap<Constant>(ConstantIndices, NumIndices),
                                NumIndices);
   Constant *Val = unwrap<Constant>(ConstantVal);
   return wrap(ConstantExpr::getInBoundsGetElementPtr(unwrap(Ty), Val, IdxList));
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 }
 
 LLVMValueRef LLVMConstGEPWithNoWrapFlags(LLVMTypeRef Ty,
@@ -1931,11 +1935,13 @@ LLVMValueRef LLVMConstGEPWithNoWrapFlags(LLVMTypeRef Ty,
                                          LLVMValueRef *ConstantIndices,
                                          unsigned NumIndices,
                                          LLVMGEPNoWrapFlags NoWrapFlags) {
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   ArrayRef<Constant *> IdxList(unwrap<Constant>(ConstantIndices, NumIndices),
                                NumIndices);
   Constant *Val = unwrap<Constant>(ConstantVal);
   return wrap(ConstantExpr::getGetElementPtr(
       unwrap(Ty), Val, IdxList, mapFromLLVMGEPNoWrapFlags(NoWrapFlags)));
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 }
 
 LLVMValueRef LLVMConstTrunc(LLVMValueRef ConstantVal, LLVMTypeRef ToType) {
@@ -4515,6 +4521,20 @@ LLVMValueRef LLVMBuildInsertValue(LLVMBuilderRef B, LLVMValueRef AggVal,
 LLVMValueRef LLVMBuildFreeze(LLVMBuilderRef B, LLVMValueRef Val,
                              const char *Name) {
   return wrap(unwrap(B)->CreateFreeze(unwrap(Val), Name));
+}
+
+LLVMValueRef LLVMBuildBitInsert(LLVMBuilderRef B, LLVMValueRef Base,
+                                LLVMValueRef Val, LLVMValueRef Offset,
+                                const char *Name) {
+  return wrap(unwrap(B)->CreateBitInsert(unwrap(Base), unwrap(Val),
+                                         unwrap(Offset), Name));
+}
+
+LLVMValueRef LLVMBuildBitExtract(LLVMBuilderRef B, LLVMTypeRef Ty,
+                                 LLVMValueRef Src, LLVMValueRef Offset,
+                                 const char *Name) {
+  return wrap(unwrap(B)->CreateBitExtract(unwrap(Ty), unwrap(Src),
+                                          unwrap(Offset), Name));
 }
 
 LLVMValueRef LLVMBuildIsNull(LLVMBuilderRef B, LLVMValueRef Val,

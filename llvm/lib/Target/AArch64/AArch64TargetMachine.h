@@ -70,8 +70,9 @@ public:
                                 SMRange &SourceRange) const override;
 
   /// Returns true if a cast between SrcAS and DestAS is a noop.
-  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
-    return getPointerSize(SrcAS) == getPointerSize(DestAS);
+  bool isNoopAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
+                           unsigned DestAS) const override {
+    return DL.getPointerSize(SrcAS) == DL.getPointerSize(DestAS);
   }
   ScheduleDAGInstrs *
   createMachineScheduler(MachineSchedContext *C) const override;
