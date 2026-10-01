@@ -120,9 +120,12 @@ static cl::opt<int> VScaleUnrollLimit(
     cl::desc("Maximum vscale for which vector unrolling is allowed."),
     cl::Hidden, cl::init(64));
 
-static cl::opt<bool> DisableDAGKnownBits(
+namespace llvm {
+cl::opt<bool> DisableDAGKnownBits(
     "dag-disable-known-bits", cl::Hidden, cl::init(false),
-    cl::desc("Disable SelectionDAG known bits analysis (always return unknown)"));
+    cl::desc("Disable SelectionDAG known bits, num sign bits and demanded bits "
+             "analyses (always return unknown / no simplification)"));
+} // namespace llvm
 
 static void NewSDValueDbgMsg(SDValue V, StringRef Msg, SelectionDAG *G) {
   LLVM_DEBUG(dbgs() << Msg; V.getNode()->dump(G););
@@ -4944,6 +4947,9 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
 
   assert((!VT.isScalableVector() || NumElts == 1) &&
          "DemandedElts for scalable vectors must be 1 to represent all lanes");
+
+  if (DisableDAGKnownBits)
+    return 1;
 
   if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
     const APInt &Val = C->getAPIntValue();

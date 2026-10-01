@@ -47,7 +47,8 @@ using namespace MIPatternMatch;
 
 static cl::opt<bool> DisableGISelKnownBits(
     "gisel-disable-known-bits", cl::Hidden, cl::init(false),
-    cl::desc("Disable GlobalISel known bits analysis (always return unknown)"));
+    cl::desc("Disable GlobalISel known bits and num sign bits analyses "
+             "(always return unknown)"));
 
 char llvm::GISelValueTrackingAnalysisLegacy::ID = 0;
 
@@ -2464,6 +2465,9 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
                                                 unsigned Depth) {
   MachineInstr &MI = *MRI.getVRegDef(R);
   unsigned Opcode = MI.getOpcode();
+
+  if (DisableGISelKnownBits)
+    return 1;
 
   if (Opcode == TargetOpcode::G_CONSTANT)
     return MI.getOperand(1).getCImm()->getValue().getNumSignBits();
