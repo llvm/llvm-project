@@ -12319,12 +12319,8 @@ static unsigned getRVScalarMulHighOpcode(unsigned IntNo) {
   switch (IntNo) {
   default:
     llvm_unreachable("Unexpected RISC-V scalar multiply high intrinsic");
-  case Intrinsic::riscv_mulh_i32:
-    return ISD::MULHS;
   case Intrinsic::riscv_mulhr_i32:
     return RISCVISD::MULHR;
-  case Intrinsic::riscv_mulhu_u32:
-    return ISD::MULHU;
   case Intrinsic::riscv_mulhru_u32:
     return RISCVISD::MULHRU;
   case Intrinsic::riscv_mulhsu_i32:
@@ -13276,9 +13272,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     return DAG.getNode(Opc, DL, VT, Op.getOperand(1), Op.getOperand(2));
   }
-  case Intrinsic::riscv_mulh_i32:
   case Intrinsic::riscv_mulhr_i32:
-  case Intrinsic::riscv_mulhu_u32:
   case Intrinsic::riscv_mulhru_u32:
   case Intrinsic::riscv_mulhsu_i32:
   case Intrinsic::riscv_mulhrsu_i32: {
@@ -17883,9 +17877,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
       return;
     }
-    case Intrinsic::riscv_mulh_i32:
     case Intrinsic::riscv_mulhr_i32:
-    case Intrinsic::riscv_mulhu_u32:
     case Intrinsic::riscv_mulhru_u32:
     case Intrinsic::riscv_mulhsu_i32:
     case Intrinsic::riscv_mulhrsu_i32: {

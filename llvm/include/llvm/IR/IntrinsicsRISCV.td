@@ -2142,9 +2142,7 @@ class RVPBinaryIntrinsic
   class RVPScalarMulHighIntrinsic
       : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
                               [IntrNoMem, IntrSpeculatable]>;
-  def int_riscv_mulh_i32    : RVPScalarMulHighIntrinsic;
   def int_riscv_mulhr_i32   : RVPScalarMulHighIntrinsic;
-  def int_riscv_mulhu_u32   : RVPScalarMulHighIntrinsic;
   def int_riscv_mulhru_u32  : RVPScalarMulHighIntrinsic;
   def int_riscv_mulhsu_i32  : RVPScalarMulHighIntrinsic;
   def int_riscv_mulhrsu_i32 : RVPScalarMulHighIntrinsic;

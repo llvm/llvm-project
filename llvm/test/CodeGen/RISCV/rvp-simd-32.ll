@@ -3932,9 +3932,10 @@ define i32 @test_mulh_i32(i32 %rs1, i32 %rs2) {
 ;
 ; RV64-LABEL: test_mulh_i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    pmulh.w a0, a0, a1
+; RV64-NEXT:    mul.w00 a0, a0, a1
+; RV64-NEXT:    srli a0, a0, 32
 ; RV64-NEXT:    ret
-  %res = call i32 @llvm.riscv.mulh.i32(i32 %rs1, i32 %rs2)
+  %res = call i32 @llvm.smulh.i32(i32 %rs1, i32 %rs2)
   ret i32 %res
 }
 
@@ -3960,9 +3961,10 @@ define i32 @test_mulhu_u32(i32 %rs1, i32 %rs2) {
 ;
 ; RV64-LABEL: test_mulhu_u32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    pmulhu.w a0, a0, a1
+; RV64-NEXT:    mulu.w00 a0, a0, a1
+; RV64-NEXT:    srli a0, a0, 32
 ; RV64-NEXT:    ret
-  %res = call i32 @llvm.riscv.mulhu.u32(i32 %rs1, i32 %rs2)
+  %res = call i32 @llvm.umulh.i32(i32 %rs1, i32 %rs2)
   ret i32 %res
 }
 
