@@ -1,7 +1,15 @@
 ! RUN: %flang_fc1 -fopenmp -fopenmp-version=52 -emit-hlfir %s -o - | \
-! RUN:   FileCheck %s --implicit-check-not='fir.call @_QMloop_contextPparallel_count'
+! RUN:   FileCheck %s --check-prefixes=CHECK,TARGET,HOST \
+! RUN:     --implicit-check-not='fir.call @_QMloop_contextPparallel_count'
 ! RUN: %flang_fc1 -fopenmp -fopenmp-version=52 -emit-fir %s -o - | \
-! RUN:   FileCheck %s --implicit-check-not='fir.call @_QMloop_contextPparallel_count'
+! RUN:   FileCheck %s --check-prefixes=CHECK,TARGET,HOST \
+! RUN:     --implicit-check-not='fir.call @_QMloop_contextPparallel_count'
+! RUN: %flang_fc1 -fopenmp -fopenmp-version=52 -emit-hlfir \
+! RUN:   -fopenmp-is-target-device %s -o - | \
+! RUN:   FileCheck %s --check-prefixes=TARGET,DEVICE
+! RUN: %flang_fc1 -fopenmp -fopenmp-version=52 -emit-fir \
+! RUN:   -fopenmp-is-target-device %s -o - | \
+! RUN:   FileCheck %s --check-prefixes=TARGET,DEVICE
 
 module loop_context
 contains
@@ -406,4 +414,163 @@ contains
     !$omp end parallel
   end subroutine
 
+end module
+
+! Host-evaluated bounds and lastprivate copy-back must use the same source
+! context, before the first loop-associated constituent.
+module host_bounds
+contains
+  pure integer function target_bound(n)
+    integer, intent(in) :: n
+    target_bound = n + 2
+  end function
+
+  pure integer function parallel_bound(n)
+    integer, intent(in) :: n
+    parallel_bound = n + 1
+  end function
+
+  pure integer function teams_bound(n)
+    integer, intent(in) :: n
+    teams_bound = n + 3
+  end function
+
+  pure integer function do_bound(n)
+    integer, intent(in) :: n
+    do_bound = n + 10
+  end function
+
+  pure integer function bound(n)
+    integer, intent(in) :: n
+    !$omp declare variant(target_bound) match(construct={target})
+    !$omp declare variant(parallel_bound) match(construct={target, parallel})
+    !$omp declare variant(teams_bound) match(construct={target, teams})
+    !$omp declare variant(do_bound) match(construct={target, parallel, do})
+    bound = n
+  end function
+
+  pure integer function parallel_depth(n)
+    integer, intent(in) :: n
+    parallel_depth = n + 1
+  end function
+
+  pure integer function scored_depth(n)
+    integer, intent(in) :: n
+    scored_depth = n
+  end function
+
+  pure integer function depth_bound(n)
+    integer, intent(in) :: n
+    !$omp declare variant(parallel_depth) match(construct={parallel})
+    !$omp declare variant(scored_depth) &
+    !$omp& match(implementation={vendor(score(6): llvm)})
+    depth_bound = n
+  end function
+
+  ! Bounds see TARGET and PARALLEL before DO.
+  ! TARGET-LABEL: func.func @_QMhost_boundsPcombined(
+  ! HOST: fir.call @_QMhost_boundsPparallel_bound(
+  ! TARGET: omp.target
+  ! TARGET: omp.parallel
+  ! DEVICE: fir.call @_QMhost_boundsPparallel_bound(
+  ! TARGET: omp.wsloop
+  ! TARGET: %[[UB:.*]] = fir.call @_QMhost_boundsPparallel_bound(
+  ! TARGET: arith.cmpi sgt, %{{[^,]+}}, %[[UB]]
+  ! TARGET: fir.if
+  ! TARGET: {{hlfir.assign|fir.store}}
+  ! TARGET: return
+  subroutine combined(n, x)
+    integer :: n, x, i
+    !$omp target parallel do lastprivate(x) map(tofrom: x)
+    do i = 1, bound(n)
+      x = i
+    end do
+  end subroutine
+
+  ! Bounds see the enclosing TARGET and the combined directive's PARALLEL.
+  ! TARGET-LABEL: func.func @_QMhost_boundsPpartial_nest(
+  ! HOST: fir.call @_QMhost_boundsPparallel_bound(
+  ! TARGET: omp.target
+  ! TARGET: omp.parallel
+  ! DEVICE: fir.call @_QMhost_boundsPparallel_bound(
+  ! TARGET: omp.wsloop
+  ! TARGET: %[[UB:.*]] = fir.call @_QMhost_boundsPparallel_bound(
+  ! TARGET: arith.cmpi sgt, %{{[^,]+}}, %[[UB]]
+  ! TARGET: fir.if
+  ! TARGET: {{hlfir.assign|fir.store}}
+  ! TARGET: return
+  subroutine partial_nest(n, x)
+    integer :: n, x, i
+    !$omp target map(tofrom: x)
+      !$omp parallel do lastprivate(x)
+      do i = 1, bound(n)
+        x = i
+      end do
+    !$omp end target
+  end subroutine
+
+  ! Bounds see both source ancestors while host evaluation has TARGET current.
+  ! TARGET-LABEL: func.func @_QMhost_boundsPexplicit_nest(
+  ! HOST: fir.call @_QMhost_boundsPparallel_bound(
+  ! TARGET: omp.target
+  ! TARGET: omp.parallel
+  ! DEVICE: fir.call @_QMhost_boundsPparallel_bound(
+  ! TARGET: omp.wsloop
+  ! TARGET: %[[UB:.*]] = fir.call @_QMhost_boundsPparallel_bound(
+  ! TARGET: arith.cmpi sgt, %{{[^,]+}}, %[[UB]]
+  ! TARGET: fir.if
+  ! TARGET: {{hlfir.assign|fir.store}}
+  ! TARGET: return
+  subroutine explicit_nest(n, x)
+    integer :: n, x, i
+    !$omp target map(tofrom: x)
+      !$omp parallel
+        !$omp do lastprivate(x)
+        do i = 1, bound(n)
+          x = i
+        end do
+      !$omp end parallel
+    !$omp end target
+  end subroutine
+
+  ! Bounds see TARGET and TEAMS before DISTRIBUTE.
+  ! TARGET-LABEL: func.func @_QMhost_boundsPcomposite(
+  ! HOST: fir.call @_QMhost_boundsPteams_bound(
+  ! TARGET: omp.target
+  ! TARGET: omp.teams
+  ! TARGET: omp.parallel
+  ! DEVICE: fir.call @_QMhost_boundsPteams_bound(
+  ! TARGET: omp.distribute
+  ! TARGET: omp.wsloop
+  ! TARGET: return
+  subroutine composite(n, a)
+    integer :: n, a(:), i
+    !$omp target teams distribute parallel do map(tofrom: a)
+    do i = 1, bound(n)
+      a(i) = i
+    end do
+  end subroutine
+
+  ! PARALLEL scores 5 and the vendor scores 7 in TARGET, PARALLEL.
+  ! Counting PARALLEL twice raises its score to 9 and selects the wrong variant.
+  ! TARGET-LABEL: func.func @_QMhost_boundsPprefix_depth(
+  ! HOST: fir.call @_QMhost_boundsPscored_depth(
+  ! TARGET: omp.target
+  ! TARGET: omp.parallel
+  ! DEVICE: fir.call @_QMhost_boundsPscored_depth(
+  ! TARGET: omp.wsloop
+  ! TARGET: %[[UB:.*]] = fir.call @_QMhost_boundsPscored_depth(
+  ! TARGET: arith.cmpi sgt, %{{[^,]+}}, %[[UB]]
+  ! TARGET: fir.if
+  ! TARGET: {{hlfir.assign|fir.store}}
+  ! TARGET: return
+  subroutine prefix_depth(n, x)
+    integer :: n, x, i
+    !$omp target map(tofrom: x)
+      !$omp parallel do lastprivate(x)
+      do i = 1, depth_bound(n)
+        x = i
+      end do
+    !$omp end target
+  end subroutine
 end module
