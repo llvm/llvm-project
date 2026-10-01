@@ -16,6 +16,9 @@ namespace fir {
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
 
+// FIR version of Canonicalizer::initialize that excludes cf dialect patterns
+// under an option and also provides a way to filter patterns for given
+// operations via a callback
 void fir::populateCanonicalizationPatterns(
     mlir::RewritePatternSet &patterns, bool includeCFPatterns,
     llvm::function_ref<bool(mlir::RegisteredOperationName)> shouldCollect) {
