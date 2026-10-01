@@ -117,6 +117,7 @@ struct DeviceTy {
   // Launch the kernel identified by \p TgtEntryPtr with the given arguments.
   int32_t launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
                        ptrdiff_t *TgtOffsets, KernelArgsTy &KernelArgs,
+                       KernelReplayOutcomeTy *ReplayOutcome,
                        AsyncInfoTy &AsyncInfo);
 
   /// Synchronize device/queue/event based on \p AsyncInfo and return
@@ -184,9 +185,6 @@ struct DeviceTy {
   }
 
 private:
-  /// Deinitialize the device (and plugin).
-  void deinit();
-
   /// All offload entries available on this device.
   using DeviceOffloadEntriesMapTy =
       llvm::DenseMap<llvm::StringRef, OffloadEntryTy>;

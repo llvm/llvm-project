@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -fsycl-is-host -fcxx-exceptions -verify %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -fsycl-is-device -fcxx-exceptions -verify %s
+// RUN: %clang_cc1 -triple spirv64-unknown-unknown -std=c++17 -fsyntax-only -fsycl-is-device -fcxx-exceptions -verify %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fsyntax-only -fsycl-is-host -fcxx-exceptions -verify %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fsyntax-only -fsycl-is-device -fcxx-exceptions -verify %s
+// RUN: %clang_cc1 -triple spirv64-unknown-unknown -std=c++20 -fsyntax-only -fsycl-is-device -fcxx-exceptions -verify %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -fsyntax-only -fsycl-is-host -fcxx-exceptions -verify %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -fsyntax-only -fsycl-is-device -fcxx-exceptions -verify %s
+// RUN: %clang_cc1 -triple spirv64-unknown-unknown -std=c++23 -fsyntax-only -fsycl-is-device -fcxx-exceptions -verify %s
 
 // These tests validate appertainment for the sycl_kernel_entry_point attribute.
 
@@ -286,10 +286,12 @@ consteval void bad25() {}
 [[clang::sycl_kernel_entry_point(BADKN<26>)]]
 [[noreturn]] void bad26();
 
+#if !defined(__SYCL_DEVICE_ONLY__)
 // expected-error@+3 {{attribute 'target' multiversioning cannot be combined with attribute 'clang::sycl_kernel_entry_point'}}
 __attribute__((target("avx"))) void bad27();
 [[clang::sycl_kernel_entry_point(BADKN<27>)]]
 __attribute__((target("sse4.2"))) void bad27();
+#endif
 
 template<typename KNT>
 struct B28 {

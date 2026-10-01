@@ -303,12 +303,12 @@ body:             |
 
 ...
 ---
-name:            ctlz_zero_undef_i8
+name:            ctlz_zero_poison_i8
 body:             |
   bb.1:
     liveins: $x10
 
-    ; RV32I-LABEL: name: ctlz_zero_undef_i8
+    ; RV32I-LABEL: name: ctlz_zero_poison_i8
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
@@ -348,7 +348,7 @@ body:             |
     ; RV32I-NEXT: $x10 = COPY [[SUB1]](s32)
     ; RV32I-NEXT: PseudoRET implicit $x10
     ;
-    ; RV32ZBB-LABEL: name: ctlz_zero_undef_i8
+    ; RV32ZBB-LABEL: name: ctlz_zero_poison_i8
     ; RV32ZBB: liveins: $x10
     ; RV32ZBB-NEXT: {{  $}}
     ; RV32ZBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
@@ -362,19 +362,19 @@ body:             |
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
     %1:_(s32) = COPY $x10
     %0:_(s8) = G_TRUNC %1(s32)
-    %2:_(s8) = G_CTLZ_ZERO_UNDEF %0(s8)
+    %2:_(s8) = G_CTLZ_ZERO_POISON %0(s8)
     %3:_(s32) = G_ANYEXT %2(s8)
     $x10 = COPY %3(s32)
     PseudoRET implicit $x10
 
 ...
 ---
-name:            ctlz_zero_undef_i16
+name:            ctlz_zero_poison_i16
 body:             |
   bb.1:
     liveins: $x10
 
-    ; RV32I-LABEL: name: ctlz_zero_undef_i16
+    ; RV32I-LABEL: name: ctlz_zero_poison_i16
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
@@ -419,7 +419,7 @@ body:             |
     ; RV32I-NEXT: $x10 = COPY [[SUB1]](s32)
     ; RV32I-NEXT: PseudoRET implicit $x10
     ;
-    ; RV32ZBB-LABEL: name: ctlz_zero_undef_i16
+    ; RV32ZBB-LABEL: name: ctlz_zero_poison_i16
     ; RV32ZBB: liveins: $x10
     ; RV32ZBB-NEXT: {{  $}}
     ; RV32ZBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
@@ -433,19 +433,19 @@ body:             |
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
     %1:_(s32) = COPY $x10
     %0:_(s16) = G_TRUNC %1(s32)
-    %2:_(s16) = G_CTLZ_ZERO_UNDEF %0(s16)
+    %2:_(s16) = G_CTLZ_ZERO_POISON %0(s16)
     %3:_(s32) = G_ANYEXT %2(s16)
     $x10 = COPY %3(s32)
     PseudoRET implicit $x10
 
 ...
 ---
-name:            ctlz_zero_undef_i32
+name:            ctlz_zero_poison_i32
 body:             |
   bb.1:
     liveins: $x10
 
-    ; RV32I-LABEL: name: ctlz_zero_undef_i32
+    ; RV32I-LABEL: name: ctlz_zero_poison_i32
     ; RV32I: liveins: $x10
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
@@ -486,7 +486,7 @@ body:             |
     ; RV32I-NEXT: $x10 = COPY [[SUB1]](s32)
     ; RV32I-NEXT: PseudoRET implicit $x10
     ;
-    ; RV32ZBB-LABEL: name: ctlz_zero_undef_i32
+    ; RV32ZBB-LABEL: name: ctlz_zero_poison_i32
     ; RV32ZBB: liveins: $x10
     ; RV32ZBB-NEXT: {{  $}}
     ; RV32ZBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
@@ -494,18 +494,18 @@ body:             |
     ; RV32ZBB-NEXT: $x10 = COPY [[CTLZ]](s32)
     ; RV32ZBB-NEXT: PseudoRET implicit $x10
     %0:_(s32) = COPY $x10
-    %1:_(s32) = G_CTLZ_ZERO_UNDEF %0(s32)
+    %1:_(s32) = G_CTLZ_ZERO_POISON %0(s32)
     $x10 = COPY %1(s32)
     PseudoRET implicit $x10
 
 ...
 ---
-name:            ctlz_zero_undef_i64
+name:            ctlz_zero_poison_i64
 body:             |
   bb.1:
     liveins: $x10, $x11
 
-    ; RV32I-LABEL: name: ctlz_zero_undef_i64
+    ; RV32I-LABEL: name: ctlz_zero_poison_i64
     ; RV32I: liveins: $x10, $x11
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
@@ -575,7 +575,7 @@ body:             |
     ; RV32I-NEXT: $x11 = COPY [[C]](s32)
     ; RV32I-NEXT: PseudoRET implicit $x10, implicit $x11
     ;
-    ; RV32ZBB-LABEL: name: ctlz_zero_undef_i64
+    ; RV32ZBB-LABEL: name: ctlz_zero_poison_i64
     ; RV32ZBB: liveins: $x10, $x11
     ; RV32ZBB-NEXT: {{  $}}
     ; RV32ZBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
@@ -593,7 +593,7 @@ body:             |
     %1:_(s32) = COPY $x10
     %2:_(s32) = COPY $x11
     %0:_(s64) = G_MERGE_VALUES %1(s32), %2(s32)
-    %3:_(s64) = G_CTLZ_ZERO_UNDEF %0(s64)
+    %3:_(s64) = G_CTLZ_ZERO_POISON %0(s64)
     %4:_(s32), %5:_(s32) = G_UNMERGE_VALUES %3(s64)
     $x10 = COPY %4(s32)
     $x11 = COPY %5(s32)

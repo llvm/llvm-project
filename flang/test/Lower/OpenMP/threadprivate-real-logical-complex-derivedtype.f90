@@ -15,11 +15,6 @@ module test
 
   !$omp threadprivate(x, y, z, t)
 
-!CHECK-DAG: fir.global @_QMtestEt : !fir.type<_QMtestTmy_type{t_i:i32,t_arr:!fir.array<5xf32>}> {
-!CHECK-DAG: fir.global @_QMtestEx : f32 {
-!CHECK-DAG: fir.global @_QMtestEy : complex<f32> {
-!CHECK-DAG: fir.global @_QMtestEz : !fir.logical<4> {
-
 contains
 !CHECK-LABEL: func.func @_QMtestPsub
   subroutine sub()
@@ -64,6 +59,10 @@ print *, x, y, z, t%t_i
 !CHECK-DAG:  %{{.*}} = fir.load %[[OMP_Y_DECL]]#0 : !fir.ref<complex<f32>>
 !CHECK-DAG:  %{{.*}} = fir.load %[[OMP_Z_DECL]]#0 : !fir.ref<!fir.logical<4>>
 !CHECK-DAG:  %{{.*}} = hlfir.designate %[[OMP_T_DECL]]#0{"t_i"}   : (!fir.ref<!fir.type<_QMtestTmy_type{t_i:i32,t_arr:!fir.array<5xf32>}>>) -> !fir.ref<i32>
+!CHECK-DAG: fir.global @_QMtestEt : !fir.type<_QMtestTmy_type{t_i:i32,t_arr:!fir.array<5xf32>}> {
+!CHECK-DAG: fir.global @_QMtestEx : f32 {
+!CHECK-DAG: fir.global @_QMtestEy : complex<f32> {
+!CHECK-DAG: fir.global @_QMtestEz : !fir.logical<4> {
     print *, x, y, z, t%t_i
 
   end

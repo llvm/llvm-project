@@ -91,6 +91,9 @@ public:
             (IsIntentIn(sym) && !IsOptional(sym) &&
                 !sym.attrs().test(semantics::Attr::VALUE)));
   }
+  bool operator()(const RankOneBoundElement &x) const {
+    return (*this)(x.base());
+  }
 
   bool operator()(const ImpliedDoIndex &ido) const {
     return acImpliedDos_.find(ido.name) != acImpliedDos_.end() || !context_ ||
@@ -363,6 +366,9 @@ public:
         IsConstantExpr(x.upper(), context_) && (*this)(x.parent());
   }
   bool operator()(const DescriptorInquiry &) const { return false; }
+  bool operator()(const RankOneBoundElement &x) const {
+    return false;
+  } // unreachable
   template <typename T> bool operator()(const ArrayConstructor<T> &) const {
     return false;
   }
@@ -574,6 +580,7 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
       }
     }
     if (converted) {
+      auto restorer{context.WithConstantContext()};
       auto folded{Fold(context, std::move(*converted))};
       if (IsActuallyConstant(folded)) {
         InexactLiteralConversionFlagClearer{}(folded);
@@ -796,6 +803,10 @@ public:
     } else {
       return "non-constant descriptor inquiry not allowed for local object";
     }
+  }
+
+  Result operator()(const RankOneBoundElement &x) const {
+    return (*this)(x.base());
   }
 
   Result operator()(const TypeParamInquiry &inq) const {
@@ -1632,6 +1643,40 @@ private:
 // perspective, meaning that for copy-in the caller need to do the copy
 // before calling the callee. Similarly, for copy-out the caller is expected
 // to do the copy after the callee returns.
+bool IsNamedConstantDesignator(const Expr<SomeType> &expr) {
+  if (auto dataRef{ExtractDataRef(
+          expr, /*intoSubstring=*/true, /*intoComplexPart=*/true)}) {
+    return semantics::IsNamedConstant(dataRef->GetFirstSymbol().GetUltimate());
+  }
+  return false;
+}
+
+bool AnyNamedConstantActualArguments(const ActualArguments &arguments) {
+  for (const auto &arg : arguments) {
+    if (arg && !arg->isAlternateReturn()) {
+      if (const Expr<SomeType> *expr{arg->UnwrapExpr()}) {
+        if (IsNamedConstantDesignator(*expr)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+void FoldNamedConstantActualArguments(
+    FoldingContext &context, ActualArguments &arguments) {
+  for (auto &arg : arguments) {
+    if (arg && !arg->isAlternateReturn()) {
+      if (Expr<SomeType> * expr{arg->UnwrapExpr()}) {
+        if (IsNamedConstantDesignator(*expr)) {
+          *expr = Fold(context, std::move(*expr));
+        }
+      }
+    }
+  }
+}
+
 std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     const characteristics::DummyArgument *dummy, FoldingContext &fc,
     bool forCopyOut) {
@@ -1646,10 +1691,40 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
           : nullptr};
   const bool forCopyIn{!forCopyOut};
   if (!evaluate::IsVariable(*actual)) {
-    // Expressions are copy-in, but not copy-out.
-    return forCopyIn;
+    // A designator whose base object is a named constant is not a variable,
+    // but it still designates an object with storage.  It never needs
+    // copy-out, since a named constant is not definable; whether it needs
+    // copy-in depends on its contiguity, like a variable, so fall through
+    // to the analysis below.  Other expressions are copy-in, but not
+    // copy-out.
+    const Expr<SomeType> *expr{actual->UnwrapExpr()};
+    if (!expr || !IsNamedConstantDesignator(*expr)) {
+      return forCopyIn;
+    }
+    if (forCopyOut) {
+      return false;
+    }
   }
-  auto maybeContigActual{IsContiguous(*actual, fc)};
+  if (forCopyOut) {
+    // F2023 8.5.10 C846/p2/p6: a nonpointer INTENT(IN) dummy and its
+    // subobjects may not be defined. Suppress copy-out when the actual
+    // argument is a subobject of a nonpointer INTENT(IN) dummy.
+    // Exception: a data-ref that goes through a pointer component defines the
+    // pointer's target, which is not a subobject of the dummy (F2023 9.4.2
+    // p5), so copy-out is still needed in that case.
+    if (const auto dataRef{ExtractDataRef(*actual)}) {
+      const Symbol &firstSym{dataRef->GetFirstSymbol()};
+      if (semantics::IsIntentIn(firstSym) && !IsPointer(firstSym) &&
+          !GetLastPointerSymbol(*dataRef)) {
+        return false;
+      }
+    }
+  }
+  // Copy decisions depend on the actual argument's physical contiguity,
+  // so do not let sections of named constants be presumed contiguous here
+  // (they are for IS_CONTIGUOUS(), but their storage is what it is).
+  auto maybeContigActual{
+      IsContiguous(*actual, fc, /*namedConstantSectionsAreContiguous=*/false)};
   if (dummyObj) { // Explict interface
     CopyInOutExplicitInterface check{fc, *actual, *dummyObj};
     if (forCopyOut && check.HasIntentIn()) {
@@ -1781,6 +1856,9 @@ public:
   }
   Result operator()(const DescriptorInquiry &) const {
     return {}; // doesn't count as a use
+  }
+  Result operator()(const RankOneBoundElement &x) const {
+    return {}; // unreachable
   }
 
   template <typename T> Result operator()(const ConditionalExpr<T> &condExpr) {

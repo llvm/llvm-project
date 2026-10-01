@@ -31,63 +31,97 @@ using namespace llvm;
 
 void CallLowering::anchor() {}
 
-/// Helper function which updates \p Flags when \p AttrFn returns true.
-static void
-addFlagsUsingAttrFn(ISD::ArgFlagsTy &Flags,
-                    const std::function<bool(Attribute::AttrKind)> &AttrFn) {
+/// Helper function which updates \p Flags based on the contents of \p Attrs.
+static void addFlagsFromAttrSet(ISD::ArgFlagsTy &Flags, AttributeSet Attrs) {
+  if (!Attrs.hasAttributes())
+    return;
+
   // TODO: There are missing flags. Add them here.
-  if (AttrFn(Attribute::SExt))
-    Flags.setSExt();
-  if (AttrFn(Attribute::ZExt))
-    Flags.setZExt();
-  if (AttrFn(Attribute::InReg))
-    Flags.setInReg();
-  if (AttrFn(Attribute::StructRet))
-    Flags.setSRet();
-  if (AttrFn(Attribute::Nest))
-    Flags.setNest();
-  if (AttrFn(Attribute::ByVal))
-    Flags.setByVal();
-  if (AttrFn(Attribute::ByRef))
-    Flags.setByRef();
-  if (AttrFn(Attribute::Preallocated))
-    Flags.setPreallocated();
-  if (AttrFn(Attribute::InAlloca))
-    Flags.setInAlloca();
-  if (AttrFn(Attribute::Returned))
-    Flags.setReturned();
-  if (AttrFn(Attribute::SwiftSelf))
-    Flags.setSwiftSelf();
-  if (AttrFn(Attribute::SwiftAsync))
-    Flags.setSwiftAsync();
-  if (AttrFn(Attribute::SwiftError))
-    Flags.setSwiftError();
+  for (Attribute Attr : Attrs) {
+    if (Attr.isStringAttribute())
+      continue;
+
+    switch (Attr.getKindAsEnum()) {
+    case Attribute::SExt:
+      Flags.setSExt();
+      break;
+    case Attribute::ZExt:
+      Flags.setZExt();
+      break;
+    case Attribute::InReg:
+      Flags.setInReg();
+      break;
+    case Attribute::StructRet:
+      Flags.setSRet();
+      break;
+    case Attribute::Nest:
+      Flags.setNest();
+      break;
+    case Attribute::ByVal:
+      Flags.setByVal();
+      break;
+    case Attribute::ByRef:
+      Flags.setByRef();
+      break;
+    case Attribute::InAlloca:
+      Flags.setInAlloca();
+      // Set the byval flag for CCAssignFn callbacks that don't know about
+      // inalloca.  This way we can know how many bytes we should've allocated
+      // and how many bytes a callee cleanup function will pop.  If we port
+      // inalloca to more targets, we'll have to add custom inalloca handling
+      // in the various CC lowering callbacks.
+      Flags.setByVal();
+      break;
+    case Attribute::Preallocated:
+      Flags.setPreallocated();
+      // Set the byval flag for CCAssignFn callbacks that don't know about
+      // preallocated.  This way we can know how many bytes we should've
+      // allocated and how many bytes a callee cleanup function will pop.  If
+      // we port preallocated to more targets, we'll have to add custom
+      // preallocated handling in the various CC lowering callbacks.
+      Flags.setByVal();
+      break;
+    case Attribute::Returned:
+      Flags.setReturned();
+      break;
+    case Attribute::SwiftSelf:
+      Flags.setSwiftSelf();
+      break;
+    case Attribute::SwiftAsync:
+      Flags.setSwiftAsync();
+      break;
+    case Attribute::SwiftError:
+      Flags.setSwiftError();
+      break;
+    default:
+      break;
+    }
+  }
 }
 
 ISD::ArgFlagsTy CallLowering::getAttributesForArgIdx(const CallBase &Call,
                                                      unsigned ArgIdx) const {
   ISD::ArgFlagsTy Flags;
-  addFlagsUsingAttrFn(Flags, [&Call, &ArgIdx](Attribute::AttrKind Attr) {
-    return Call.paramHasAttr(ArgIdx, Attr);
-  });
+  const AttributeList &Attrs = Call.getAttributes();
+  addFlagsFromAttrSet(Flags, Attrs.getParamAttrs(ArgIdx));
+  if (const Function *F = Call.getCalledFunction())
+    addFlagsFromAttrSet(Flags, F->getAttributes().getParamAttrs(ArgIdx));
   return Flags;
 }
 
 ISD::ArgFlagsTy
 CallLowering::getAttributesForReturn(const CallBase &Call) const {
   ISD::ArgFlagsTy Flags;
-  addFlagsUsingAttrFn(Flags, [&Call](Attribute::AttrKind Attr) {
-    return Call.hasRetAttr(Attr);
-  });
+  addFlagsFromAttrSet(Flags, Call.getAttributes().getRetAttrs());
+  if (const Function *F = Call.getCalledFunction())
+    addFlagsFromAttrSet(Flags, F->getAttributes().getRetAttrs());
   return Flags;
 }
 
 void CallLowering::addArgFlagsFromAttributes(ISD::ArgFlagsTy &Flags,
                                              const AttributeList &Attrs,
                                              unsigned OpIdx) const {
-  addFlagsUsingAttrFn(Flags, [&Attrs, &OpIdx](Attribute::AttrKind Attr) {
-    return Attrs.hasAttributeAtIndex(OpIdx, Attr);
-  });
+  addFlagsFromAttrSet(Flags, Attrs.getAttributes(OpIdx));
 }
 
 bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
@@ -438,7 +472,7 @@ void CallLowering::buildCopyFromRegs(MachineIRBuilder &B,
     if (SrcSize == OrigTy.getSizeInBits())
       B.buildMergeValues(OrigRegs[0], Regs);
     else {
-      auto Widened = B.buildMergeLikeInstr(LLT::scalar(SrcSize), Regs);
+      auto Widened = B.buildMergeLikeInstr(LLT::integer(SrcSize), Regs);
       B.buildTrunc(OrigRegs[0], Widened);
     }
 
@@ -504,7 +538,7 @@ void CallLowering::buildCopyFromRegs(MachineIRBuilder &B,
     SmallVector<Register, 8> EltMerges;
     int PartsPerElt =
         divideCeil(DstEltTy.getSizeInBits(), PartLLT.getSizeInBits());
-    LLT ExtendedPartTy = LLT::scalar(PartLLT.getSizeInBits() * PartsPerElt);
+    LLT ExtendedPartTy = LLT::integer(PartLLT.getSizeInBits() * PartsPerElt);
 
     for (int I = 0, NumElts = LLTy.getNumElements(); I != NumElts; ++I) {
       auto Merge =
@@ -614,8 +648,8 @@ void CallLowering::buildCopyToRegs(MachineIRBuilder &B,
       SrcTy.getScalarSizeInBits() > PartTy.getSizeInBits()) {
     LLT ExtTy =
         LLT::vector(SrcTy.getElementCount(),
-                    LLT::scalar(PartTy.getScalarSizeInBits() * DstRegs.size() /
-                                SrcTy.getNumElements()));
+                    LLT::integer(PartTy.getScalarSizeInBits() * DstRegs.size() /
+                                 SrcTy.getNumElements()));
     auto Ext = B.buildAnyExt(ExtTy, SrcReg);
     B.buildUnmerge(DstRegs, Ext);
     return;
@@ -625,8 +659,7 @@ void CallLowering::buildCopyToRegs(MachineIRBuilder &B,
   LLT DstTy = MRI.getType(DstRegs[0]);
   LLT CoverTy = getCoverTy(SrcTy, PartTy);
   if (SrcTy.isVector() && DstRegs.size() > 1) {
-    TypeSize FullCoverSize =
-        DstTy.getSizeInBits().multiplyCoefficientBy(DstRegs.size());
+    TypeSize FullCoverSize = DstTy.getSizeInBits() * DstRegs.size();
 
     LLT EltTy = SrcTy.getElementType();
     TypeSize EltSize = EltTy.getSizeInBits();
@@ -653,7 +686,7 @@ void CallLowering::buildCopyToRegs(MachineIRBuilder &B,
     // For scalars, it's common to be able to use a simple extension.
     if (SrcTy.isScalar() && DstTy.isScalar()) {
       CoveringSize = alignTo(SrcSize, DstSize);
-      LLT CoverTy = LLT::scalar(CoveringSize);
+      LLT CoverTy = LLT::integer(CoveringSize);
       UnmergeSrc = B.buildInstr(ExtendOp, {CoverTy}, {SrcReg}).getReg(0);
     } else {
       // Widen to the common type.
@@ -1347,6 +1380,7 @@ Register CallLowering::ValueHandler::extendRegister(Register ValReg,
     break;
   case CCValAssign::Full:
   case CCValAssign::BCvt:
+  case CCValAssign::Indirect:
     // FIXME: bitconverting between vector types may or may not be a
     // nop in big-endian situations.
     return ValReg;

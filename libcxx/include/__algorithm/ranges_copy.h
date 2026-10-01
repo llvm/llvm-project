@@ -41,16 +41,14 @@ struct __copy {
     requires indirectly_copyable<_InIter, _OutIter>
   _LIBCPP_HIDE_FROM_ABI constexpr copy_result<_InIter, _OutIter>
   operator()(_InIter __first, _Sent __last, _OutIter __result) const {
-    auto __ret = std::__copy(std::move(__first), std::move(__last), std::move(__result));
-    return {std::move(__ret.first), std::move(__ret.second)};
+    return std::__copy(std::move(__first), std::move(__last), std::move(__result));
   }
 
   template <input_range _Range, weakly_incrementable _OutIter>
     requires indirectly_copyable<iterator_t<_Range>, _OutIter>
   _LIBCPP_HIDE_FROM_ABI constexpr copy_result<borrowed_iterator_t<_Range>, _OutIter>
   operator()(_Range&& __r, _OutIter __result) const {
-    auto __ret = std::__copy(ranges::begin(__r), ranges::end(__r), std::move(__result));
-    return {std::move(__ret.first), std::move(__ret.second)};
+    return std::__copy(ranges::begin(__r), ranges::end(__r), std::move(__result));
   }
 };
 

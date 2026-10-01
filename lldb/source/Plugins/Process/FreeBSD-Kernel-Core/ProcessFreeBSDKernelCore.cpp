@@ -9,11 +9,16 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandObjectMultiword.h"
+#include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+
+#include "llvm/Support/Error.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 #include "Plugins/DynamicLoader/FreeBSD-Kernel/DynamicLoaderFreeBSDKernel.h"
 #include "ProcessFreeBSDKernelCore.h"
@@ -60,11 +65,59 @@ static PluginProperties &GetGlobalPluginProperties() {
   return g_settings;
 }
 
+class CommandObjectProcessFreeBSDKernelCoreRefreshThreads
+    : public CommandObjectParsed {
+public:
+  CommandObjectProcessFreeBSDKernelCoreRefreshThreads(
+      CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "process plugin refresh-threads",
+            "Refresh the thread list from the FreeBSD kernel core. The thread "
+            "list and related data structures may be being read from live "
+            "memory (/dev/mem), which may have changed since the last refresh. "
+            "This command clears LLDB's thread list and memory cache then "
+            "re-reads the kernel's allproc/zombie lists to rebuild the thread "
+            "list from scratch.",
+            "process plugin refresh-threads",
+            eCommandRequiresProcess | eCommandTryTargetAPILock) {}
+
+  ~CommandObjectProcessFreeBSDKernelCoreRefreshThreads() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    // TODO: Return early for elf-core based implementation.
+
+    auto process = static_cast<ProcessFreeBSDKernelCore *>(
+        m_interpreter.GetExecutionContext().GetProcessPtr());
+
+    // Clear the memory cache so DoUpdateThreadList() will re-read allproc,
+    // zombproc, and all thread/proc structures fresh from the core dump instead
+    // of getting stale cached values.
+    process->m_memory_cache.Clear();
+
+    // Clear both thread lists to guarantee that UpdateThreadListIfNeeded() sees
+    // size == 0 and enters the rebuild path regardless of stop-ID state.
+    // UpdateThreadListIfNeeded() passes m_thread_list_real as old_thread_list
+    // to DoUpdateThreadList(), and DoUpdateThreadList() only rebuilds from
+    // scratch when old_thread_list is empty. m_thread_list is the public copy
+    // that is sync'd from m_thread_list_real afterwards.
+    process->m_thread_list_real.Clear();
+    process->m_thread_list.Clear();
+
+    // This calls UpdateThreadListIfNeeded() to rebuild the process thread list.
+    const uint32_t num_threads =
+        process->GetThreadList().GetSize(/*can_update=*/true);
+    result.AppendMessageWithFormatv(
+        "Thread list refreshed, {0} thread{1} found.", num_threads,
+        num_threads == 1 ? "" : "s");
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+};
+
 ProcessFreeBSDKernelCore::ProcessFreeBSDKernelCore(lldb::TargetSP target_sp,
                                                    ListenerSP listener_sp,
-                                                   kvm_t *kvm,
                                                    const FileSpec &core_file)
-    : PostMortemProcess(target_sp, listener_sp, core_file), m_kvm(kvm) {}
+    : PostMortemProcess(target_sp, listener_sp, core_file) {}
 
 ProcessFreeBSDKernelCore::~ProcessFreeBSDKernelCore() {
   m_thread_list.Clear();
@@ -81,12 +134,14 @@ lldb::ProcessSP ProcessFreeBSDKernelCore::CreateInstance(
     const FileSpec *crash_file, bool can_connect) {
   ModuleSP executable = target_sp->GetExecutableModule();
   if (crash_file && !can_connect && executable) {
-    kvm_t *kvm =
-        kvm_open2(executable->GetFileSpec().GetPath().c_str(),
-                  crash_file->GetPath().c_str(), O_RDONLY, nullptr, nullptr);
-    if (kvm)
+    char errbuf[_POSIX2_LINE_MAX];
+    kvm_t *kvm = OpenKVM(executable, *crash_file, O_RDONLY, errbuf);
+    if (kvm) {
+      kvm_close(kvm);
       return std::make_shared<ProcessFreeBSDKernelCore>(target_sp, listener_sp,
-                                                        kvm, *crash_file);
+                                                        *crash_file);
+    }
+    LLDB_LOGF(GetLog(LLDBLog::Process), "FreeBSD-Kernel-Core: %s", errbuf);
   }
   return nullptr;
 }
@@ -117,8 +172,42 @@ bool ProcessFreeBSDKernelCore::CanDebug(lldb::TargetSP target_sp,
   return true;
 }
 
+CommandObject *ProcessFreeBSDKernelCore::GetPluginCommandObject() {
+  if (!m_command_sp) {
+    CommandInterpreter &interp =
+        GetTarget().GetDebugger().GetCommandInterpreter();
+    m_command_sp = std::make_unique<CommandObjectMultiword>(
+        interp, "process plugin",
+        "Commands for the FreeBSD kernel process plug-in.",
+        "process plugin <subcommand> [<subcommand-options>]");
+    m_command_sp->LoadSubCommand(
+        "refresh-threads",
+        CommandObjectSP(
+            new CommandObjectProcessFreeBSDKernelCoreRefreshThreads(interp)));
+  }
+  return m_command_sp.get();
+}
+
 Status ProcessFreeBSDKernelCore::DoLoadCore() {
-  // The core is already loaded by CreateInstance().
+  ModuleSP executable = GetTarget().GetExecutableModule();
+  if (!executable)
+    return Status::FromErrorString(
+        "ProcessFreeBSDKernelCore: no executable module set on target");
+
+  char errbuf[_POSIX2_LINE_MAX];
+  const int flags =
+      GetGlobalPluginProperties().GetReadOnly() ? O_RDONLY : O_RDWR;
+  m_kvm = OpenKVM(executable, GetCoreFile(), flags, errbuf);
+
+  if (!m_kvm) {
+    LLDB_LOGF(GetLog(LLDBLog::Process), "FreeBSD-Kernel-Core: %s", errbuf);
+    return Status::FromErrorStringWithFormat(
+        "ProcessFreeBSDKernelCore: kvm_open2 failed for core '%s' "
+        "with kernel '%s'",
+        GetCoreFile().GetPath().c_str(),
+        executable->GetFileSpec().GetPath().c_str());
+  }
+
   SetKernelDisplacement();
 
   return Status();
@@ -191,25 +280,52 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
 
     // struct field offsets are written as symbols so that we don't have
     // to figure them out ourselves
+    // Process-related offsets:
     int32_t offset_p_list = ReadSignedIntegerFromMemory(
         FindSymbol("proc_off_p_list"), 4, -1, error);
+    if (error.Fail())
+      return false;
+
     int32_t offset_p_pid =
         ReadSignedIntegerFromMemory(FindSymbol("proc_off_p_pid"), 4, -1, error);
+    if (error.Fail())
+      return false;
+
     int32_t offset_p_threads = ReadSignedIntegerFromMemory(
         FindSymbol("proc_off_p_threads"), 4, -1, error);
+    if (error.Fail())
+      return false;
+
     int32_t offset_p_comm = ReadSignedIntegerFromMemory(
         FindSymbol("proc_off_p_comm"), 4, -1, error);
+    if (error.Fail())
+      return false;
 
+    // Thread-related offsets:
     int32_t offset_td_tid = ReadSignedIntegerFromMemory(
         FindSymbol("thread_off_td_tid"), 4, -1, error);
+    if (error.Fail())
+      return false;
+
     int32_t offset_td_plist = ReadSignedIntegerFromMemory(
         FindSymbol("thread_off_td_plist"), 4, -1, error);
+    if (error.Fail())
+      return false;
+
     int32_t offset_td_pcb = ReadSignedIntegerFromMemory(
         FindSymbol("thread_off_td_pcb"), 4, -1, error);
+    if (error.Fail())
+      return false;
+
     int32_t offset_td_oncpu = ReadSignedIntegerFromMemory(
         FindSymbol("thread_off_td_oncpu"), 4, -1, error);
+    if (error.Fail())
+      return false;
+
     int32_t offset_td_name = ReadSignedIntegerFromMemory(
         FindSymbol("thread_off_td_name"), 4, -1, error);
+    if (error.Fail())
+      return false;
 
     // Fail if we were not able to read any of the offsets.
     if (offset_p_list == -1 || offset_p_pid == -1 || offset_p_threads == -1 ||
@@ -221,13 +337,33 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
     // dumppcb contains its PCB
     int32_t dumptid =
         ReadSignedIntegerFromMemory(FindSymbol("dumptid"), 4, -1, error);
+    if (error.Fail())
+      return false;
+
     lldb::addr_t dumppcb = FindSymbol("dumppcb");
 
     // stoppcbs is an array of PCBs on all CPUs.
     // Each element is of size pcb_size.
     int32_t pcbsize =
         ReadSignedIntegerFromMemory(FindSymbol("pcb_size"), 4, -1, error);
+    if (error.Fail())
+      return false;
+
     lldb::addr_t stoppcbs = FindSymbol("stoppcbs");
+    // In later FreeBSD versions stoppcbs is a pointer to the array.
+    int32_t osreldate =
+        ReadSignedIntegerFromMemory(FindSymbol("osreldate"), 4, -1, error);
+    if (stoppcbs != LLDB_INVALID_ADDRESS && osreldate >= 1400089) {
+      llvm::Expected<lldb::addr_t> stoppcbs_or_err =
+          ReadPointerFromMemory(stoppcbs);
+      if (!stoppcbs_or_err || *stoppcbs_or_err == 0) {
+        LLDB_LOGF(GetLog(LLDBLog::Process),
+                  "FreeBSD-Kernel-Core: Could not find stoppcbs");
+        return false;
+      }
+
+      stoppcbs = *stoppcbs_or_err;
+    }
 
     // Read stopped_cpus bitmask and mp_maxid for CPU validation.
     lldb::addr_t stopped_cpus = FindSymbol("stopped_cpus");
@@ -258,47 +394,76 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
     // https://cgit.freebsd.org/src/tree/sys/sys/param.h
     constexpr size_t fbsd_maxcomlen = 19;
 
-    // Iterate through a linked list of all processes. New processes are added
-    // to the head of this list. Which means that earlier PIDs are actually at
-    // the end of the list, so we have to walk it backwards. First collect all
-    // the processes in the list order.
-    std::vector<lldb::addr_t> process_addrs;
-    if (lldb::addr_t allproc_addr = FindSymbol("allproc");
-        allproc_addr != LLDB_INVALID_ADDRESS) {
-      for (lldb::addr_t proc = ReadPointerFromMemory(allproc_addr, error);
-           proc != 0 && proc != LLDB_INVALID_ADDRESS && error.Success();
-           proc = ReadPointerFromMemory(proc + offset_p_list, error))
-        process_addrs.push_back(proc);
-    }
+    // Iterate through a linked list of all processes then order incrementally
+    // by pid. Though new processes are added to the head of this list, process
+    // ids may be reused as well. So we cannot rely on it being in a particular
+    // order.
+    const lldb::addr_t allproc_addr = FindSymbol("allproc");
+    if (allproc_addr == LLDB_INVALID_ADDRESS)
+      return false;
 
-    // Processes are in the linked list in descending PID order, so we must walk
-    // them in reverse to get ascending PID order.
-    for (auto proc_it = process_addrs.rbegin(); proc_it != process_addrs.rend();
-         ++proc_it) {
-      lldb::addr_t proc = *proc_it;
+    std::vector<std::pair<lldb::addr_t, int32_t>> process_addrs;
+    llvm::Expected<lldb::addr_t> proc_or_err =
+        ReadPointerFromMemory(allproc_addr);
+    for (; proc_or_err && *proc_or_err != 0;
+         proc_or_err = ReadPointerFromMemory(*proc_or_err + offset_p_list)) {
+      lldb::addr_t proc = *proc_or_err;
       int32_t pid =
           ReadSignedIntegerFromMemory(proc + offset_p_pid, 4, -1, error);
+      if (error.Fail())
+        return false;
+      process_addrs.emplace_back(proc, pid);
+    }
+
+    if (!proc_or_err) {
+      llvm::consumeError(proc_or_err.takeError());
+      return false;
+    }
+
+    std::sort(process_addrs.begin(), process_addrs.end(),
+              [](const auto &a, const auto &b) { return a.second < b.second; });
+
+    for (auto [proc, pid] : process_addrs) {
       // process' command-line string
       char comm[fbsd_maxcomlen + 1];
       ReadCStringFromMemory(proc + offset_p_comm, comm, sizeof(comm), error);
+      if (error.Fail())
+        continue;
 
       // Iterate through a linked list of all process' threads
       // the initial thread is found in process' p_threads, subsequent
-      // elements are linked via td_plist field
-      for (lldb::addr_t td =
-               ReadPointerFromMemory(proc + offset_p_threads, error);
-           td != 0; td = ReadPointerFromMemory(td + offset_td_plist, error)) {
+      // elements are linked via td_plist field.
+      // If reading memory fails, skip to the next thread.
+      llvm::Expected<lldb::addr_t> td_or_err =
+          ReadPointerFromMemory(proc + offset_p_threads);
+      for (; td_or_err && *td_or_err != 0;
+           td_or_err = ReadPointerFromMemory(*td_or_err + offset_td_plist)) {
+        lldb::addr_t td = *td_or_err;
         int32_t tid =
             ReadSignedIntegerFromMemory(td + offset_td_tid, 4, -1, error);
-        lldb::addr_t pcb_addr =
-            ReadPointerFromMemory(td + offset_td_pcb, error);
+        if (error.Fail())
+          continue;
+
+        llvm::Expected<lldb::addr_t> pcb_addr_or_err =
+            ReadPointerFromMemory(td + offset_td_pcb);
+        if (!pcb_addr_or_err) {
+          llvm::consumeError(pcb_addr_or_err.takeError());
+          continue;
+        }
+        lldb::addr_t pcb_addr = *pcb_addr_or_err;
+
         // whether process was on CPU (-1 if not, otherwise CPU number)
         int32_t oncpu =
             ReadSignedIntegerFromMemory(td + offset_td_oncpu, 4, -2, error);
+        if (error.Fail())
+          continue;
+
         // thread name
         char thread_name[fbsd_maxcomlen + 1];
         ReadCStringFromMemory(td + offset_td_name, thread_name,
                               sizeof(thread_name), error);
+        if (error.Fail())
+          continue;
 
         // If we failed to read TID, ignore this thread.
         if (tid == -1)
@@ -351,6 +516,12 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
 
         new_thread_list.AddThread(static_cast<ThreadSP>(thread));
       }
+
+      // If reading thread list has failed, return with false.
+      if (!td_or_err) {
+        llvm::consumeError(td_or_err.takeError());
+        return false;
+      }
     }
   } else {
     const uint32_t num_threads = old_thread_list.GetSize(false);
@@ -360,8 +531,10 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
   return new_thread_list.GetSize(false) > 0;
 }
 
-size_t ProcessFreeBSDKernelCore::DoReadMemory(lldb::addr_t addr, void *buf,
-                                              size_t size, Status &error) {
+size_t
+ProcessFreeBSDKernelCore::DoReadMemory(const ProcessAddress &process_addr,
+                                       void *buf, size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   ssize_t rd = 0;
   rd = kvm_read2(m_kvm, addr, buf, size);
   if (rd < 0 || static_cast<size_t>(rd) != size) {
@@ -378,11 +551,36 @@ lldb::addr_t ProcessFreeBSDKernelCore::FindSymbol(const char *name) {
   return sym ? sym->GetLoadAddress(&GetTarget()) : LLDB_INVALID_ADDRESS;
 }
 
+int ProcessFreeBSDKernelCore::ResolveKVMSymbol(const char *name,
+                                               kvaddr_t *value) {
+  if (!g_kvm_kernel_module)
+    return 1;
+
+  const Symbol *symbol =
+      g_kvm_kernel_module->FindFirstSymbolWithNameAndType(ConstString(name));
+  if (!symbol)
+    return 1;
+
+  lldb::addr_t address = symbol->GetFileAddress();
+  if (address == LLDB_INVALID_ADDRESS)
+    return 1;
+
+  *value = address;
+  return 0;
+}
+
+kvm_t *ProcessFreeBSDKernelCore::OpenKVM(const ModuleSP &kernel_module,
+                                         const FileSpec &core_file, int flags,
+                                         char *errbuf) {
+  llvm::SaveAndRestore resolver_module(g_kvm_kernel_module,
+                                       kernel_module.get());
+  return kvm_open2(kernel_module->GetFileSpec().GetPath().c_str(),
+                   core_file.GetPath().c_str(), flags, errbuf,
+                   ResolveKVMSymbol);
+}
+
 void ProcessFreeBSDKernelCore::SetKernelDisplacement() {
   kssize_t displacement = kvm_kerndisp(m_kvm);
-
-  if (displacement == 0)
-    return;
 
   Target &target = GetTarget();
   lldb::ModuleSP kernel_module_sp = target.GetExecutableModule();
@@ -413,9 +611,13 @@ void ProcessFreeBSDKernelCore::PrintUnreadMessage() {
     return;
 
   // Read the pointer value
-  lldb::addr_t msgbufp = ReadPointerFromMemory(msgbufp_addr, error);
-  if (!error.Success() || msgbufp == LLDB_INVALID_ADDRESS)
+  llvm::Expected<lldb::addr_t> msgbufp_or_err =
+      ReadPointerFromMemory(msgbufp_addr);
+  if (!msgbufp_or_err) {
+    llvm::consumeError(msgbufp_or_err.takeError());
     return;
+  }
+  lldb::addr_t msgbufp = *msgbufp_or_err;
 
   // Get the type information for struct msgbuf from DWARF
   TypeQuery query("msgbuf");
@@ -458,7 +660,7 @@ void ProcessFreeBSDKernelCore::PrintUnreadMessage() {
 
     if (field_found != 4) {
       LLDB_LOGF(
-          GetLog(LLDBLog::Object),
+          GetLog(LLDBLog::Process),
           "FreeBSD-Kernel-Core: Could not find all required fields for msgbuf");
       return;
     }
@@ -478,23 +680,27 @@ void ProcessFreeBSDKernelCore::PrintUnreadMessage() {
   }
 
   // Read struct msgbuf fields
-  lldb::addr_t bufp = ReadPointerFromMemory(msgbufp + offset_msg_ptr, error);
-  if (!error.Success() || bufp == LLDB_INVALID_ADDRESS)
+  llvm::Expected<lldb::addr_t> bufp_or_err =
+      ReadPointerFromMemory(msgbufp + offset_msg_ptr);
+  if (!bufp_or_err) {
+    llvm::consumeError(bufp_or_err.takeError());
     return;
+  }
+  lldb::addr_t bufp = *bufp_or_err;
 
   uint32_t size =
       ReadUnsignedIntegerFromMemory(msgbufp + offset_msg_size, 4, 0, error);
-  if (!error.Success() || size == 0)
+  if (error.Fail() || size == 0)
     return;
 
   uint32_t wseq =
       ReadUnsignedIntegerFromMemory(msgbufp + offset_msg_wseq, 4, 0, error);
-  if (!error.Success())
+  if (error.Fail())
     return;
 
   uint32_t rseq =
       ReadUnsignedIntegerFromMemory(msgbufp + offset_msg_rseq, 4, 0, error);
-  if (!error.Success())
+  if (error.Fail())
     return;
 
   // Convert sequences to positions

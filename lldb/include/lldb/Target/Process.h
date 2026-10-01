@@ -40,17 +40,22 @@
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/InstrumentationRuntime.h"
 #include "lldb/Target/Memory.h"
+#include "lldb/Target/MemoryRegionInfoCache.h"
 #include "lldb/Target/MemoryTagManager.h"
 #include "lldb/Target/QueueList.h"
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Target/Trace.h"
+#include "lldb/Utility/AddressSpace.h"
 #include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/Listener.h"
 #include "lldb/Utility/NameMatches.h"
+#include "lldb/Utility/Policy.h"
+#include "lldb/Utility/ProcessAddress.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
@@ -83,6 +88,9 @@ public:
   ~ProcessProperties() override;
 
   bool GetDisableMemoryCache() const;
+#ifndef NDEBUG
+  bool GetVerifyMemoryReads() const;
+#endif
   uint64_t GetMemoryCacheLineSize() const;
   Args GetExtraStartupCommands() const;
   void SetExtraStartupCommands(const Args &args);
@@ -91,6 +99,7 @@ public:
   void SetVirtualAddressableBits(uint32_t bits);
   uint32_t GetHighmemVirtualAddressableBits() const;
   void SetHighmemVirtualAddressableBits(uint32_t bits);
+  void AddressMaskChangedCallback();
   void SetPythonOSPluginPath(const FileSpec &file);
   bool GetIgnoreBreakpointsInExpressions() const;
   void SetIgnoreBreakpointsInExpressions(bool ignore);
@@ -111,12 +120,17 @@ public:
   bool GetOSPluginReportsAllThreads() const;
   void SetOSPluginReportsAllThreads(bool does_report);
   bool GetSteppingRunsAllThreads() const;
+  Args GetAlwaysRunThreadNames() const;
   FollowForkMode GetFollowForkMode() const;
   bool TrackMemoryCacheChanges() const;
+  bool GetUseDelayedBreakpoints() const;
 
 protected:
   Process *m_process; // Can be nullptr for global ProcessProperties
   std::unique_ptr<ProcessExperimentalProperties> m_experimental_properties_up;
+
+private:
+  OptionValueProperties *GetExperimentalProperties() const;
 };
 
 // ProcessAttachInfo
@@ -359,6 +373,7 @@ class Process : public std::enable_shared_from_this<Process>,
   friend class StopInfo;
   friend class Target;
   friend class ThreadList;
+  friend class MemoryCache;
 
 public:
   /// Broadcaster event bits definitions.
@@ -1027,10 +1042,12 @@ public:
   virtual void DoDidExec() {}
 
   /// Called after a reported fork.
-  virtual void DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {}
+  virtual void DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid,
+                       bool is_expression_fork = false) {}
 
   /// Called after a reported vfork.
-  virtual void DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {}
+  virtual void DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid,
+                        bool is_expression_fork = false) {}
 
   /// Called after reported vfork completion.
   virtual void DidVForkDone() {}
@@ -1276,10 +1293,10 @@ public:
 
   lldb::ExpressionResults
   RunThreadPlan(ExecutionContext &exe_ctx, lldb::ThreadPlanSP &thread_plan_sp,
-                const EvaluateExpressionOptions &options,
+                const EvaluateExpressionOptions &requested_options,
                 DiagnosticManager &diagnostic_manager);
 
-  void GetStatus(Stream &ostrm);
+  void GetStatus(Stream &ostrm, bool is_verbose = false);
 
   size_t GetThreadStatus(Stream &ostrm, bool only_threads_with_stop_reason,
                          uint32_t start_frame, uint32_t num_frames,
@@ -1332,16 +1349,47 @@ public:
     return StructuredData::ObjectSP();
   }
 
-  // On macOS 10.12, tvOS 10, iOS 10, watchOS 3 and newer, debugserver can
-  // return the full list of loaded shared libraries without needing any input.
+  /// Retrieve a StructuredData dictionary about all of the binaries
+  /// loaded in the process at this time.
+  /// A Darwin target specific behavior, only supported by debugserver,
+  /// response will include load address, filepath, uuid, and may also
+  /// include the fully parsed mach header and load commands.
+  ///
+  /// \param [in] information_level
+  ///     How much information about each binary should be returned;
+  ///     there may be performance reasons to retrieve a minimal set
+  ///     of information about all binaries, and then retrieve the
+  ///     full information for a subset of the whole group.
+  ///
+  /// \return
+  ///     A StructuredData object with the information that could be
+  ///     retrieved.
   virtual lldb_private::StructuredData::ObjectSP
-  GetLoadedDynamicLibrariesInfos() {
+  GetLoadedDynamicLibrariesInfos(lldb::BinaryInformationLevel info_level) {
     return StructuredData::ObjectSP();
   }
 
-  // On macOS 10.12, tvOS 10, iOS 10, watchOS 3 and newer, debugserver can
-  // return information about binaries given their load addresses.
+  /// Retrieve a StructuredData dictionary about the binaries at
+  /// the provided load addresses.
+  /// A Darwin target specific behavior, only supported by debugserver,
+  /// response will include load address, filepath, uuid, fully parsed
+  /// mach header and load commands.
+  ///
+  /// \param [in] information_level
+  ///     How much information about each binary should be returned;
+  ///     there may be performance reasons to retrieve a minimal set
+  ///     of information about all binaries, and then retrieve the
+  ///     full information for a subset of the whole group.
+  ///
+  /// \param [in] load_addresses
+  ///     The virtual address of the start of binaries to fetch
+  ///     information.
+  ///
+  /// \return
+  ///     A StructuredData object with the information that could be
+  ///     retrieved..
   virtual lldb_private::StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos(
+      lldb::BinaryInformationLevel info_level,
       const std::vector<lldb::addr_t> &load_addresses) {
     return StructuredData::ObjectSP();
   }
@@ -1384,7 +1432,18 @@ public:
 
   virtual bool GetProcessInfo(ProcessInstanceInfo &info);
 
-  virtual lldb_private::UUID FindModuleUUID(const llvm::StringRef path);
+  /// Given a module spec, try to find the UUID information.
+  ///
+  /// \param [in,out] spec
+  ///     A module specification with as much detail as possible about the
+  ///     module for which we are trying to find a UUID. The
+  ///     ModuleSpec.m_file should be filled in. If a dynamic loader is
+  ///     calling this, the load address of the module can be filled in as
+  ///     well. Sometimes the file path for a library can be a symlink and
+  ///     the load address can help resolve the module.
+  ///
+  /// \return True if the UUID was added, false otherwise.
+  virtual bool FindModuleUUID(ModuleSpec &spec);
 
   /// Get the exit status for a process.
   ///
@@ -1505,6 +1564,37 @@ public:
   ///     File path to the core file.
   virtual FileSpec GetCoreFile() const { return {}; }
 
+  class CoreArgs {
+    std::string m_cmd;
+    bool m_might_be_truncated;
+
+  public:
+    CoreArgs() = default;
+    CoreArgs(const std::string &args, bool might_be_truncated)
+        : m_cmd(args), m_might_be_truncated(might_be_truncated) {}
+
+    void Format(Stream &stream) const {
+      if (m_cmd.empty())
+        return;
+      stream << "Core was generated by '" << m_cmd << "'";
+      if (this->m_might_be_truncated)
+        stream << " (command might be truncated)";
+      stream << ".\n";
+    }
+
+    bool empty() const { return m_cmd.empty(); }
+
+    Args as_args() const { return Args(m_cmd); }
+  };
+
+  /// Provide arguments of a command that triggered a core dump.
+  ///
+  /// \return
+  ///   The arguments that created the core dump.
+  ///   If this process is a live debug session, or the core dump contained no
+  ///   arguments, returns a std::nullopt.
+  virtual std::optional<CoreArgs> GetCoreFileArgs() { return std::nullopt; }
+
   /// Before lldb detaches from a process, it warns the user that they are
   /// about to lose their debug session. In some cases, this warning doesn't
   /// need to be emitted -- for instance, with core file debugging where the
@@ -1522,8 +1612,8 @@ public:
   /// and remove any traps that may have been inserted into the memory.
   ///
   /// This function is not meant to be overridden by Process subclasses, the
-  /// subclasses should implement Process::DoReadMemory (lldb::addr_t, size_t,
-  /// void *).
+  /// subclasses should implement Process::DoReadMemory(const ProcessAddress &,
+  /// void *, size_t, Status &).
   ///
   /// \param[in] vm_addr
   ///     A virtual load address that indicates where to start reading
@@ -1548,13 +1638,10 @@ public:
   ///     size, then this function will get called again with \a
   ///     vm_addr, \a buf, and \a size updated appropriately. Zero is
   ///     returned in the case of an error.
-  virtual size_t ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                            Status &error);
+  virtual size_t ReadMemory(const ProcessAddress &process_addr, void *buf,
+                            size_t size, Status &error);
 
   /// Read from multiple memory ranges and write the results into buffer.
-  /// This calls ReadMemoryFromInferior multiple times, once per range,
-  /// bypassing the read cache. Process implementations that can perform this
-  /// operation more efficiently should override this.
   ///
   /// \param[in] ranges
   ///     A collection of ranges (base address + size) to read from.
@@ -1569,7 +1656,7 @@ public:
   ///     of the slice indicates how many bytes were read successfully. Partial
   ///     reads are always performed from the start of the requested range,
   ///     never from the middle or end.
-  virtual llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
   ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
                    llvm::MutableArrayRef<uint8_t> buffer);
 
@@ -1604,59 +1691,13 @@ public:
   size_t ReadMemoryFromInferior(lldb::addr_t vm_addr, void *buf, size_t size,
                                 Status &error);
 
-  // Callback definition for read Memory in chunks
-  //
-  // Status, the status returned from ReadMemoryFromInferior
-  // addr_t, the bytes_addr, start + bytes read so far.
-  // void*, pointer to the bytes read
-  // bytes_size, the count of bytes read for this chunk
-  typedef std::function<IterationAction(
-      lldb_private::Status &error, lldb::addr_t bytes_addr, const void *bytes,
-      lldb::offset_t bytes_size)>
-      ReadMemoryChunkCallback;
-
-  /// Read of memory from a process in discrete chunks, terminating
-  /// either when all bytes are read, or the supplied callback returns
-  /// IterationAction::Stop
+  /// Read a null-terminated C string from memory
   ///
-  /// \param[in] vm_addr
-  ///     A virtual load address that indicates where to start reading
-  ///     memory from.
-  ///
-  /// \param[in] buf
-  ///    If NULL, a buffer of \a chunk_size will be created and used for the
-  ///    callback. If non NULL, this buffer must be at least \a chunk_size bytes
-  ///    and will be used for storing chunked memory reads.
-  ///
-  /// \param[in] chunk_size
-  ///     The minimum size of the byte buffer, and the chunk size of memory
-  ///     to read.
-  ///
-  /// \param[in] total_size
-  ///     The total number of bytes to read.
-  ///
-  /// \param[in] callback
-  ///     The callback to invoke when a chunk is read from memory.
-  ///
-  /// \return
-  ///     The number of bytes that were actually read into \a buf and
-  ///     written to the provided callback.
-  ///     If the returned number is greater than zero, yet less than \a
-  ///     size, then this function will get called again with \a
-  ///     vm_addr, \a buf, and \a size updated appropriately. Zero is
-  ///     returned in the case of an error.
-  lldb::offset_t ReadMemoryInChunks(lldb::addr_t vm_addr, void *buf,
-                                    lldb::addr_t chunk_size,
-                                    lldb::offset_t total_size,
-                                    ReadMemoryChunkCallback callback);
-
-  /// Read a NULL terminated C string from memory
-  ///
-  /// This function will read a cache page at a time until the NULL
-  /// C string terminator is found. It will stop reading if the NULL
-  /// termination byte isn't found before reading \a cstr_max_len bytes, and
-  /// the results are always guaranteed to be NULL terminated (at most
-  /// cstr_max_len - 1 bytes will be read).
+  /// This function will read a cache page at a time until the null
+  /// terminator is found. It will stop reading if the null terminator isn't
+  /// found before reading \a cstr_max_len bytes, and the results are always
+  /// guaranteed to be null-terminated (at most cstr_max_len - 1 bytes will be
+  /// read).
   size_t ReadCStringFromMemory(lldb::addr_t vm_addr, char *cstr,
                                size_t cstr_max_len, Status &error);
 
@@ -1704,7 +1745,7 @@ public:
   int64_t ReadSignedIntegerFromMemory(lldb::addr_t load_addr, size_t byte_size,
                                       int64_t fail_value, Status &error);
 
-  lldb::addr_t ReadPointerFromMemory(lldb::addr_t vm_addr, Status &error);
+  llvm::Expected<lldb::addr_t> ReadPointerFromMemory(lldb::addr_t vm_addr);
 
   /// Use Process::ReadMemoryRanges to efficiently read multiple pointers from
   /// memory at once.
@@ -1980,6 +2021,12 @@ public:
   virtual Status
   GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list);
 
+  llvm::Expected<AddressSpaceInfo>
+  GetAddressSpaceInfo(llvm::StringRef address_space_name);
+
+  llvm::Expected<AddressSpaceInfo>
+  GetAddressSpaceInfo(lldb::addr_space_t address_space_id);
+
   /// Get the number of watchpoints supported by this target.
   ///
   /// We may be able to determine the number of watchpoints available
@@ -2212,6 +2259,9 @@ public:
   // Process Breakpoints
   size_t GetSoftwareBreakpointTrapOpcode(BreakpointSite *bp_site);
 
+  enum class BreakpointAction { Enable, Disable };
+
+protected:
   virtual Status EnableBreakpointSite(BreakpointSite *bp_site) {
     return Status::FromErrorStringWithFormatv(
         "error: {0} does not support enabling breakpoints", GetPluginName());
@@ -2221,6 +2271,28 @@ public:
     return Status::FromErrorStringWithFormatv(
         "error: {0} does not support disabling breakpoints", GetPluginName());
   }
+
+  /// Compare BreakpointSiteSPs by ID, so that iteration order is independent
+  /// of pointer addresses.
+  struct SiteIDCmp {
+    bool operator()(const lldb::BreakpointSiteSP &lhs,
+                    const lldb::BreakpointSiteSP &rhs) const {
+      return lhs->GetID() < rhs->GetID();
+    }
+  };
+  using BreakpointSiteToActionMap =
+      std::map<lldb::BreakpointSiteSP, BreakpointAction, SiteIDCmp>;
+
+  virtual llvm::Error
+  UpdateBreakpointSites(const BreakpointSiteToActionMap &site_to_action);
+
+public:
+  /// Performs `action` on `site`. If `forbid_delay` is true, the action is
+  /// performed immediately, otherwise the method will delay the breakpoint if
+  /// it is correct to do so.
+  llvm::Error ExecuteBreakpointSiteAction(BreakpointSite &site,
+                                          Process::BreakpointAction action,
+                                          bool forbid_delay);
 
   // This is implemented completely using the lldb::Process API. Subclasses
   // don't need to implement this function unless the standard flow of read
@@ -2249,6 +2321,17 @@ public:
   Status DisableBreakpointSiteByID(lldb::user_id_t break_id);
 
   Status EnableBreakpointSiteByID(lldb::user_id_t break_id);
+
+  bool IsBreakpointSiteEnabled(const BreakpointSite &site);
+
+  bool IsBreakpointSitePhysicallyEnabled(const BreakpointSite &site);
+
+  /// Reports whether this process should delay physically enabling/disabling
+  /// breakpoints until the process is about to resume. The default honors the
+  /// user-facing `target.process.use-delayed-breakpoints` setting.
+  virtual bool ShouldUseDelayedBreakpoints() const {
+    return GetUseDelayedBreakpoints();
+  }
 
   // BreakpointLocations use RemoveConstituentFromBreakpointSite to remove
   // themselves from the constituent's list of this breakpoint sites.
@@ -2614,10 +2697,6 @@ void PruneThreadPlans();
 
   ProcessRunLock &GetRunLock();
 
-  bool CurrentThreadIsPrivateStateThread();
-
-  bool CurrentThreadPosesAsPrivateStateThread();
-
   virtual Status SendEventData(const char *data) {
     return Status::FromErrorString(
         "Sending an event is not supported for this process.");
@@ -2941,8 +3020,15 @@ protected:
   /// \return
   ///     The number of bytes that were actually read into \a buf.
   ///     Zero is returned in the case of an error.
-  virtual size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                              Status &error) = 0;
+  virtual size_t DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                              size_t size, Status &error) = 0;
+
+  /// Reads each range individually via ReadMemoryFromInferior, bypassing the
+  /// memory cache. Subclasses may override it to batch the reads more
+  /// efficiently.
+  virtual llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+  DoReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
+                     llvm::MutableArrayRef<uint8_t> buffer);
 
   virtual void DoFindInMemory(lldb::addr_t start_addr, lldb::addr_t end_addr,
                               const uint8_t *buf, size_t size,
@@ -3197,11 +3283,21 @@ protected:
   /// private state thread that we spin up when we need to run an expression on
   /// the private state thread.
   struct PrivateStateThread {
+    /// Why this PST exists. RunPrivateStateThread reads this directly to
+    /// decide which Policy to push, rather than re-deriving it from a
+    /// generic "is this an override PST" flag. This is the same enum
+    /// Policy::CreatePrivateState()/PolicyStack::PushPrivateState() take, so
+    /// there's a single purpose value flowing from PST creation through to
+    /// the policy it pushes.
+    using Purpose = Policy::PrivateStatePurpose;
+
     PrivateStateThread(Process &process, lldb::StateType public_state,
                        lldb::StateType private_state,
-                       llvm::StringRef thread_name)
+                       llvm::StringRef thread_name,
+                       Purpose purpose = Purpose::Default)
         : m_process(process), m_public_state(public_state),
-          m_private_state(private_state), m_thread_name(thread_name) {}
+          m_private_state(private_state), m_purpose(purpose),
+          m_thread_name(thread_name) {}
     // This returns false if we couldn't start up the thread.  If that happens,
     // you won't be doing any debugging today.
     bool StartupThread();
@@ -3218,6 +3314,8 @@ protected:
     }
 
     bool IsRunning() { return m_is_running; }
+
+    bool IsOverride() const { return m_purpose != Purpose::Default; }
 
     void SetThreadName(llvm::StringRef new_name) { m_thread_name = new_name; }
 
@@ -3263,12 +3361,7 @@ protected:
       return m_private_run_lock.SetStopped();
     }
 
-    ProcessRunLock &GetRunLock() {
-      if (IsOnThread(Host::GetCurrentThread()))
-        return m_private_run_lock;
-      else
-        return m_public_run_lock;
-    }
+    ProcessRunLock &GetRunLock();
 
     Process &m_process;
     ///< The process state that we show to client code.  This will often differ
@@ -3288,6 +3381,7 @@ protected:
     ProcessRunLock m_public_run_lock;
     ProcessRunLock m_private_run_lock;
     bool m_is_running = false;
+    Purpose m_purpose;
     ///< This will be the thread name given to the Private State HostThread when
     ///< it gets spun up.
     std::string m_thread_name;
@@ -3391,6 +3485,9 @@ protected:
   ThreadList
       m_extended_thread_list; ///< Constituent for extended threads that may be
                               /// generated, cleared on natural stops
+  /// A list of address spaces for this process. Empty for single address space
+  /// processes.
+  std::vector<AddressSpaceInfo> m_address_spaces;
   lldb::RunDirection m_base_direction; ///< ThreadPlanBase run direction
   uint32_t m_extended_thread_stop_id; ///< The natural stop id when
                                       ///extended_thread_list was last updated
@@ -3431,6 +3528,7 @@ protected:
   std::vector<std::string> m_profile_data;
   Predicate<uint32_t> m_iohandler_sync;
   MemoryCache m_memory_cache;
+  MemoryRegionInfoCache m_memory_region_infos_cache;
   AllocatedMemoryCache m_allocated_memory_cache;
   bool m_should_detach; /// Should we detach if the process object goes away
                         /// with an explicit call to Kill or Detach?
@@ -3500,8 +3598,27 @@ protected:
   /// GetExtendedCrashInformation.
   StructuredData::DictionarySP m_crash_info_dict_sp;
 
-  size_t RemoveBreakpointOpcodesFromBuffer(lldb::addr_t addr, size_t size,
-                                           uint8_t *buf) const;
+  struct DelayedBreakpointCache {
+    void Enqueue(lldb::BreakpointSiteSP site, BreakpointAction action);
+    void RemoveSite(lldb::BreakpointSiteSP site) {
+      m_site_to_action.erase(site);
+    }
+    void Clear() { m_site_to_action.clear(); }
+
+    BreakpointSiteToActionMap m_site_to_action;
+  };
+
+  DelayedBreakpointCache m_delayed_breakpoints;
+  std::recursive_mutex m_delayed_breakpoints_mutex;
+
+  llvm::Error FlushDelayedBreakpoints();
+
+  void RemoveBreakpointOpcodesFromBuffer(lldb::addr_t addr, size_t size,
+                                         uint8_t *buf) const;
+
+  /// Cache memory, restoring the original bytes under any breakpoint.
+  void AddCacheData(lldb::addr_t addr,
+                    const lldb::WritableDataBufferSP &data_buffer_sp);
 
   void SynchronouslyNotifyStateChanged(lldb::StateType state);
 
@@ -3530,7 +3647,8 @@ private:
   // Starts up the private state thread that will watch for events from the
   // debugee.
 
-  lldb::thread_result_t RunPrivateStateThread();
+  lldb::thread_result_t
+  RunPrivateStateThread(PrivateStateThread::Purpose purpose);
 
 protected:
   void HandlePrivateEvent(lldb::EventSP &event_sp);
@@ -3581,8 +3699,22 @@ protected:
 
   void SetAddressableBitMasks(AddressableBits bit_masks);
 
+  // Updates the state of site.
+  // This should be used by derived Process classes after they have changed the
+  // state of a site.
+  void SetBreakpointSiteEnabled(BreakpointSite &site, bool is_enabled = true) {
+    site.SetEnabled(is_enabled);
+  }
+
 private:
   Status DestroyImpl(bool force_kill);
+
+#ifndef NDEBUG
+  /// Re-read \a size bytes at \a addr and assert they match the cache.
+  void VerifyMemoryRead(lldb::addr_t addr, const void *cache_buf,
+                        size_t cache_bytes_read, size_t size,
+                        const Status &cache_error);
+#endif
 
   /// This is the part of the event handling that for a process event. It
   /// decides what to do with the event and returns true if the event needs to

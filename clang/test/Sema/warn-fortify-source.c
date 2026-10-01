@@ -9,6 +9,17 @@
 // RUN: %clang_cc1 -xc++ -triple x86_64-apple-macosx10.14.0 %s -verify -DUSE_BUILTINS -fexperimental-new-constant-interpreter
 
 typedef unsigned long size_t;
+typedef long ssize_t;
+typedef unsigned int socklen_t;
+struct sockaddr;
+struct pollfd {
+  int fd;
+  short events;
+  short revents;
+};
+struct timespec;
+typedef unsigned long sigset_t;
+typedef unsigned long sigset64_t;
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,15 +29,30 @@ extern int sprintf(char *str, const char *format, ...);
 
 #if defined(USE_BUILTINS)
 #define memcpy(x,y,z) __builtin_memcpy(x,y,z)
+// Also test the Windows winsock2.h signature where len is a signed int.
+int recv(int, char *, int, int);
+int recvfrom(int, char *, int, int, struct sockaddr *, int *);
+typedef unsigned int nfds_t;
 #else
 void *memcpy(void *dst, const void *src, size_t c);
+ssize_t recv(int, void *, size_t, int);
+ssize_t recvfrom(int, void *, size_t, int, struct sockaddr *, socklen_t *);
+typedef unsigned long nfds_t;
 #endif
+int poll(struct pollfd *, nfds_t, int);
+int ppoll(struct pollfd *, nfds_t, const struct timespec *, const sigset_t *);
+int ppoll64(struct pollfd *, nfds_t, const struct timespec *,
+            const sigset64_t *);
 void bcopy(const void *src, void *dst, size_t n);
 void bzero(void *dst, size_t n);
 
 #ifdef __cplusplus
 }
 #endif
+
+// umask is recognized as a builtin by name; this header just supplies a
+// realistic system-header declaration and the mode_t typedef used below.
+#include "Inputs/warn-fortify-source-umask.h"
 
 void call_memcpy(void) {
   char dst[10];
@@ -65,6 +91,18 @@ void call_stpncpy(void) {
   __builtin_stpncpy(s1, s2, 20); // expected-warning {{'stpncpy' size argument is too large; destination buffer has size 10, but size argument is 20}}
 }
 
+void call_strlcat(void) {
+  char s1[10], s2[20];
+  __builtin_strlcat(s2, s1, 20);
+  __builtin_strlcat(s1, s2, 20); // expected-warning {{'strlcat' size argument is too large; destination buffer has size 10, but size argument is 20}}
+}
+
+void call_strlcpy(void) {
+  char s1[10], s2[20];
+  __builtin_strlcpy(s2, s1, 20);
+  __builtin_strlcpy(s1, s2, 20); // expected-warning {{'strlcpy' size argument is too large; destination buffer has size 10, but size argument is 20}}
+}
+
 void call_strcpy(void) {
   const char *const src = "abcd";
   char dst[4];
@@ -96,7 +134,7 @@ void call_stpcpy(void) {
 
 void call_memmove(void) {
   char s1[10], s2[20];
-  __builtin_memmove(s2, s1, 20);
+  __builtin_memmove(s2, s1, 20); // expected-warning {{'memmove' reading 20 bytes from a region of size 10}}
   __builtin_memmove(s1, s2, 20); // expected-warning {{'memmove' will always overflow; destination buffer has size 10, but size argument is 20}}
 }
 
@@ -242,6 +280,76 @@ void call_sprintf(void) {
   sprintf(buf, "5%.1e", 9.f); // expected-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 8}}
 }
 
+void call_umask(mode_t runtime_mode) {
+  umask(0);
+  umask(022);
+  umask(0644);
+  umask(0777);
+  umask(01000);   // expected-warning {{'umask' argument sets non-file-permission bits (01000); those bits are ignored}}
+  umask(0xFFFF);  // expected-warning {{'umask' argument sets non-file-permission bits (0177000); those bits are ignored}}
+  umask(7777);    // expected-warning {{'umask' argument sets non-file-permission bits (017000); those bits are ignored}}
+  umask(-1);      // expected-warning {{'umask' argument sets non-file-permission bits (}}
+  umask(runtime_mode); // no warning, not a constant
+}
+
+void call_recv(int fd) {
+  char buf[10];
+  recv(fd, buf, 10, 0);
+  recv(fd, buf, 11, 0); // expected-warning {{'recv' size argument is too large; destination buffer has size 10, but size argument is 11}}
+  recv(fd, buf, -1, 0); // expected-warning {{'recv' size argument is too large; destination buffer has size 10, but size argument is 18446744073709551615}}
+}
+
+void call_recvfrom(int fd) {
+  char buf[10];
+  recvfrom(fd, buf, 10, 0, (struct sockaddr *)0, 0);
+  recvfrom(fd, buf, 11, 0, (struct sockaddr *)0, 0); // expected-warning {{'recvfrom' size argument is too large; destination buffer has size 10, but size argument is 11}}
+  recvfrom(fd, buf, -1, 0, (struct sockaddr *)0, 0); // expected-warning {{'recvfrom' size argument is too large; destination buffer has size 10, but size argument is 18446744073709551615}}
+}
+
+void call_recv_subobject(int fd) {
+  struct {
+    char first[10];
+    char second[20];
+  } s;
+  recv(fd, s.first, 35, 0); // expected-warning {{'recv' size argument is too large; destination buffer has size 30, but size argument is 35}}
+}
+
+void call_recv_runtime(int fd, int n) {
+  char buf[10];
+  recv(fd, buf, n, 0);
+  recvfrom(fd, buf, n, 0, (struct sockaddr *)0, 0);
+}
+
+void call_poll(void) {
+  struct pollfd fds[2];
+  struct pollfd single_fd;
+  poll(fds, 2, 0);
+  poll(fds, 3, 0); // expected-warning {{'poll' size argument is too large; destination buffer has size 16, but size argument is 24}}
+  poll(fds, -1, 0); // expected-warning-re {{'poll' size argument is too large; destination buffer has size 16, but size argument is {{34359738360|147573952589676412920}}}}
+#if !defined(USE_BUILTINS)
+  poll(fds, ((nfds_t)1 << 61) + 1, 0); // expected-warning {{'poll' size argument is too large; destination buffer has size 16, but size argument is 18446744073709551624}}
+#endif
+  poll(&single_fd, 1, 0);
+  poll(&single_fd, 2, 0); // expected-warning {{'poll' size argument is too large; destination buffer has size 8, but size argument is 16}}
+}
+
+void call_ppoll(void) {
+  struct pollfd fds[2];
+  ppoll(fds, 2, (const struct timespec *)0, (const sigset_t *)0);
+  ppoll(fds, 3, (const struct timespec *)0, (const sigset_t *)0); // expected-warning {{'ppoll' size argument is too large; destination buffer has size 16, but size argument is 24}}
+  ppoll(fds, -1, (const struct timespec *)0, (const sigset_t *)0); // expected-warning-re {{'ppoll' size argument is too large; destination buffer has size 16, but size argument is {{34359738360|147573952589676412920}}}}
+  ppoll64(fds, 2, (const struct timespec *)0, (const sigset64_t *)0);
+  ppoll64(fds, 3, (const struct timespec *)0, (const sigset64_t *)0); // expected-warning {{'ppoll64' size argument is too large; destination buffer has size 16, but size argument is 24}}
+  ppoll64(fds, -1, (const struct timespec *)0, (const sigset64_t *)0); // expected-warning-re {{'ppoll64' size argument is too large; destination buffer has size 16, but size argument is {{34359738360|147573952589676412920}}}}
+}
+
+void call_poll_runtime(nfds_t n) {
+  struct pollfd fds[2];
+  poll(fds, n, 0);
+  ppoll(fds, n, (const struct timespec *)0, (const sigset_t *)0);
+  ppoll64(fds, n, (const struct timespec *)0, (const sigset64_t *)0);
+}
+
 #ifdef __cplusplus
 template <class> struct S {
   void mf() const {
@@ -255,11 +363,13 @@ template <int A, int B>
 void call_memcpy_dep() {
   char bufferA[A];
   char bufferB[B];
-  memcpy(bufferA, bufferB, 10); // expected-warning{{'memcpy' will always overflow; destination buffer has size 9, but size argument is 10}}
+  memcpy(bufferA, bufferB, 10);
 }
 
 void call_call_memcpy() {
-  call_memcpy_dep<10, 9>();
+  call_memcpy_dep<10, 9>(); // expected-note {{in instantiation of function template specialization 'call_memcpy_dep<10, 9>' requested here}}
+                            // expected-warning@-5 {{'memcpy' reading 10 bytes from a region of size 9}}
   call_memcpy_dep<9, 10>(); // expected-note {{in instantiation of function template specialization 'call_memcpy_dep<9, 10>' requested here}}
+                            // expected-warning@-7 {{'memcpy' will always overflow; destination buffer has size 9, but size argument is 10}}
 }
 #endif

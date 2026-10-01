@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64 -mattr=+mte -run-pass=prologepilog %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64 -mattr=+mte -run-pass=prolog-epilog %s -o - | FileCheck %s
 
 --- |
   declare void @llvm.aarch64.settag(ptr nocapture writeonly, i64) argmemonly nounwind writeonly "target-features"="+mte"

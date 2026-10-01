@@ -299,8 +299,6 @@ end
 ! Check the layout of the binding table. This is easier to do in FIR than in
 ! LLVM IR.
 
-! BT-LABEL: fir.type_info @_QMdispatch1Tty_kindK10K20
-! BT-LABEL: fir.type_info @_QMdispatch1Tty_kind_exK10K20 {{.*}}extends !fir.type<_QMdispatch1Tty_kindK10K20{{.*}}>
 
 ! BT-LABEL: fir.type_info @_QMdispatch1Tp1
 ! BT: fir.dt_entry "aproc", @_QMdispatch1Paproc
@@ -311,14 +309,6 @@ end
 ! BT: fir.dt_entry "proc_pass", @_QMdispatch1Pproc_pass_p1
 ! BT: fir.dt_entry "proc_with_values", @_QMdispatch1Pproc_p1
 ! BT: fir.dt_entry "z_proc_nopass_bindc", @proc_nopass_bindc_p1
-! BT: }
-
-! BT-LABEL: fir.type_info @_QMdispatch1Ta1
-! BT: fir.dt_entry "a1_proc", @_QMdispatch1Pa1_proc
-! BT: }
-
-! BT-LABEL: fir.type_info @_QMdispatch1Ta2 {{.*}}extends !fir.type<_QMdispatch1Ta1{{.*}}>
-! BT:  fir.dt_entry "a1_proc", @_QMdispatch1Pa2_proc
 ! BT: }
 
 ! BT-LABEL: fir.type_info @_QMdispatch1Tp2 {{.*}}extends !fir.type<_QMdispatch1Tp1{{.*}}>
@@ -332,3 +322,15 @@ end
 ! BT:  fir.dt_entry "z_proc_nopass_bindc", @proc_nopass_bindc_p2
 ! BT:  fir.dt_entry "display3", @_QMdispatch1Pdisplay3
 ! BT: }
+
+! BT-LABEL: fir.type_info @_QMdispatch1Ta1
+! BT: fir.dt_entry "a1_proc", @_QMdispatch1Pa1_proc
+! BT: }
+
+! BT-LABEL: fir.type_info @_QMdispatch1Ta2 {{.*}}extends !fir.type<_QMdispatch1Ta1{{.*}}>
+! BT:  fir.dt_entry "a1_proc", @_QMdispatch1Pa2_proc
+! BT: }
+! BT-LABEL: fir.type_info @_QMdispatch1Tty_kindK10K20
+! BT-LABEL: fir.type_info @_QMdispatch1Tty_kind_exK10K20 {{.*}}extends !fir.type<_QMdispatch1Tty_kindK10K20{{.*}}>
+
+

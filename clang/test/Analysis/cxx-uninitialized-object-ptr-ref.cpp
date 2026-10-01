@@ -2,10 +2,23 @@
 // RUN:   -analyzer-config optin.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
 // RUN:   -analyzer-config optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
 // RUN:   -std=c++11 -verify  %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,optin.cplusplus.UninitializedObject \
+// RUN:   -analyzer-config optin.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
+// RUN:   -analyzer-config optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
+// RUN:   -std=c++11 -verify  %s -DHEAP_ALLOCATION
 
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,optin.cplusplus.UninitializedObject \
 // RUN:   -analyzer-config optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
 // RUN:   -std=c++11 -verify  %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,optin.cplusplus.UninitializedObject \
+// RUN:   -analyzer-config optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
+// RUN:   -std=c++11 -verify  %s -DHEAP_ALLOCATION
+
+#ifdef HEAP_ALLOCATION
+#define INIT(CLS, ARGS) new CLS ARGS
+#else
+#define INIT(CLS, ARGS) (void) CLS ARGS
+#endif
 
 //===----------------------------------------------------------------------===//
 // Concrete location tests.
@@ -18,7 +31,7 @@ struct ConcreteIntLocTest {
 };
 
 void fConcreteIntLocTest() {
-  ConcreteIntLocTest();
+  INIT(ConcreteIntLocTest, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -36,7 +49,7 @@ struct LocAsIntegerTest {
 
 void fLocAsIntegerTest() {
   char c;
-  LocAsIntegerTest t(&c);
+  INIT(LocAsIntegerTest, (&c));
 }
 
 //===----------------------------------------------------------------------===//
@@ -60,7 +73,7 @@ public:
 };
 
 void fNullPtrTest() {
-  NullPtrTest();
+  INIT(NullPtrTest, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -140,7 +153,7 @@ public:
 };
 
 void fHeapPointerTest1() {
-  HeapPointerTest1();
+  INIT(HeapPointerTest1, ());
 }
 
 class HeapPointerTest2 {
@@ -160,7 +173,7 @@ public:
 };
 
 void fHeapPointerTest2() {
-  HeapPointerTest2();
+  INIT(HeapPointerTest2, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -187,7 +200,7 @@ public:
 void fStackPointerTest1() {
   int ok_a = 28;
   StackPointerTest1::RecordType ok_rec{29, 30};
-  StackPointerTest1(&ok_a, &ok_rec); // 'a', 'rec.x', 'rec.y' uninitialized
+  INIT(StackPointerTest1, (&ok_a, &ok_rec)); // 'a', 'rec.x', 'rec.y' uninitialized
 }
 
 #ifdef PEDANTIC
@@ -210,7 +223,7 @@ public:
 void fStackPointerTest2() {
   int a;
   StackPointerTest2::RecordType rec;
-  StackPointerTest2(&a, &rec); // 'a', 'rec.x', 'rec.y' uninitialized
+  INIT(StackPointerTest2, (&a, &rec)); // 'a', 'rec.x', 'rec.y' uninitialized
 }
 #else
 class StackPointerTest2 {
@@ -232,7 +245,7 @@ public:
 void fStackPointerTest2() {
   int a;
   StackPointerTest2::RecordType rec;
-  StackPointerTest2(&a, &rec); // 'a', 'rec.x', 'rec.y' uninitialized
+  INIT(StackPointerTest2, (&a, &rec)); // 'a', 'rec.x', 'rec.y' uninitialized
 }
 #endif // PEDANTIC
 
@@ -251,7 +264,7 @@ public:
 };
 
 void fUninitPointerTest() {
-  UninitPointerTest();
+  INIT(UninitPointerTest, ());
 }
 
 struct CharPointerTest {
@@ -262,7 +275,7 @@ struct CharPointerTest {
 };
 
 void fCharPointerTest() {
-  CharPointerTest();
+  INIT(CharPointerTest, ());
 }
 
 struct VectorSizePointer {
@@ -272,7 +285,7 @@ struct VectorSizePointer {
 };
 
 void __vector_size__PointerTest() {
-  VectorSizePointer v;
+  INIT(VectorSizePointer, ());
 }
 
 struct VectorSizePointee {
@@ -285,7 +298,7 @@ struct VectorSizePointee {
 void __vector_size__PointeeTest() {
   VectorSizePointee::MyVectorType i;
   // TODO: Report v.x's pointee.
-  VectorSizePointee v(&i);
+  INIT(VectorSizePointee, (&i));
 }
 
 struct CyclicPointerTest1 {
@@ -296,7 +309,7 @@ struct CyclicPointerTest1 {
 };
 
 void fCyclicPointerTest1() {
-  CyclicPointerTest1();
+  INIT(CyclicPointerTest1, ());
 }
 
 struct CyclicPointerTest2 {
@@ -307,7 +320,7 @@ struct CyclicPointerTest2 {
 };
 
 void fCyclicPointerTest2() {
-  CyclicPointerTest2();
+  INIT(CyclicPointerTest2, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -332,7 +345,7 @@ public:
 
 void fVoidPointerTest1() {
   void *vptr = calloc(1, sizeof(int));
-  VoidPointerTest1(vptr, char());
+  INIT(VoidPointerTest1, (vptr, char()));
   free(vptr);
 }
 
@@ -347,7 +360,7 @@ public:
 
 void fVoidPointerTest2() {
   void *vptr = calloc(1, sizeof(int));
-  VoidPointerTest2(&vptr, char());
+  INIT(VoidPointerTest2, (&vptr, char()));
   free(vptr);
 }
 
@@ -413,7 +426,7 @@ struct CyclicVoidPointerTest {
 };
 
 void fCyclicVoidPointerTest() {
-  CyclicVoidPointerTest();
+  INIT(CyclicVoidPointerTest, ());
 }
 
 struct IntDynTypedVoidPointerTest1 {
@@ -425,7 +438,7 @@ struct IntDynTypedVoidPointerTest1 {
 
 void fIntDynTypedVoidPointerTest1() {
   int a;
-  IntDynTypedVoidPointerTest1 tmp(&a);
+  INIT(IntDynTypedVoidPointerTest1, (&a));
 }
 
 struct RecordDynTypedVoidPointerTest {
@@ -442,7 +455,7 @@ struct RecordDynTypedVoidPointerTest {
 
 void fRecordDynTypedVoidPointerTest() {
   RecordDynTypedVoidPointerTest::RecordType a;
-  RecordDynTypedVoidPointerTest tmp(&a);
+  INIT(RecordDynTypedVoidPointerTest, (&a));
 }
 
 struct NestedNonVoidDynTypedVoidPointerTest {
@@ -463,7 +476,7 @@ struct NestedNonVoidDynTypedVoidPointerTest {
 void fNestedNonVoidDynTypedVoidPointerTest() {
   NestedNonVoidDynTypedVoidPointerTest::RecordType a;
   char c;
-  NestedNonVoidDynTypedVoidPointerTest tmp(&a, &c);
+  INIT(NestedNonVoidDynTypedVoidPointerTest, (&a, &c));
 }
 
 //===----------------------------------------------------------------------===//
@@ -489,7 +502,7 @@ public:
 void fMultiPointerTest1() {
   MultiPointerTest1::RecordType *p1;
   MultiPointerTest1::RecordType **mptr = &p1;
-  MultiPointerTest1(mptr, int()); // '*mptr' uninitialized
+  INIT(MultiPointerTest1, (mptr, int())); // '*mptr' uninitialized
 }
 #else
 class MultiPointerTest1 {
@@ -509,7 +522,7 @@ public:
 void fMultiPointerTest1() {
   MultiPointerTest1::RecordType *p1;
   MultiPointerTest1::RecordType **mptr = &p1;
-  MultiPointerTest1(mptr, int()); // '*mptr' uninitialized
+  INIT(MultiPointerTest1, (mptr, int())); // '*mptr' uninitialized
 }
 #endif // PEDANTIC
 
@@ -533,7 +546,7 @@ void fMultiPointerTest2() {
   MultiPointerTest2::RecordType i;
   MultiPointerTest2::RecordType *p1 = &i;
   MultiPointerTest2::RecordType **mptr = &p1;
-  MultiPointerTest2(mptr, int()); // '**mptr' uninitialized
+  INIT(MultiPointerTest2, (mptr, int())); // '**mptr' uninitialized
 }
 #else
 class MultiPointerTest2 {
@@ -555,7 +568,7 @@ void fMultiPointerTest2() {
   MultiPointerTest2::RecordType i;
   MultiPointerTest2::RecordType *p1 = &i;
   MultiPointerTest2::RecordType **mptr = &p1;
-  MultiPointerTest2(mptr, int()); // '**mptr' uninitialized
+  INIT(MultiPointerTest2, (mptr, int())); // '**mptr' uninitialized
 }
 #endif // PEDANTIC
 
@@ -579,7 +592,7 @@ void fMultiPointerTest3() {
   MultiPointerTest3::RecordType i{31, 32};
   MultiPointerTest3::RecordType *p1 = &i;
   MultiPointerTest3::RecordType **mptr = &p1;
-  MultiPointerTest3(mptr, int()); // '**mptr' uninitialized
+  INIT(MultiPointerTest3, (mptr, int())); // '**mptr' uninitialized
 }
 
 //===----------------------------------------------------------------------===//
@@ -596,7 +609,7 @@ struct IncompletePointeeTypeTest {
 };
 
 void fIncompletePointeeTypeTest(void *ptr) {
-  IncompletePointeeTypeTest(reinterpret_cast<IncompleteType *>(ptr));
+  INIT(IncompletePointeeTypeTest, (reinterpret_cast<IncompleteType *>(ptr)));
 }
 
 //===----------------------------------------------------------------------===//
@@ -633,7 +646,7 @@ struct PointerToMemberFunctionTest1 {
 };
 
 void fPointerToMemberFunctionTest1() {
-  PointerToMemberFunctionTest1(); // expected-warning{{1 uninitialized field}}
+  INIT(PointerToMemberFunctionTest1, ()); // expected-warning{{1 uninitialized field}}
 }
 
 struct PointerToMemberFunctionTest2 {
@@ -645,7 +658,7 @@ struct PointerToMemberFunctionTest2 {
 
 void fPointerToMemberFunctionTest2() {
   void (UsefulFunctions::*f)(void) = &UsefulFunctions::print;
-  PointerToMemberFunctionTest2 a(f);
+  INIT(PointerToMemberFunctionTest2, (f));
 }
 
 struct MultiPointerToMemberFunctionTest1 {
@@ -654,7 +667,7 @@ struct MultiPointerToMemberFunctionTest1 {
 };
 
 void fMultiPointerToMemberFunctionTest1() {
-  MultiPointerToMemberFunctionTest1(); // expected-warning{{1 uninitialized field}}
+  INIT(MultiPointerToMemberFunctionTest1, ()); // expected-warning{{1 uninitialized field}}
 }
 
 struct MultiPointerToMemberFunctionTest2 {
@@ -666,7 +679,7 @@ struct MultiPointerToMemberFunctionTest2 {
 
 void fMultiPointerToMemberFunctionTest2() {
   void (UsefulFunctions::*f)(void) = &UsefulFunctions::print;
-  MultiPointerToMemberFunctionTest2 a(&f);
+  INIT(MultiPointerToMemberFunctionTest2, (&f));
 }
 
 struct PointerToMemberDataTest1 {
@@ -675,7 +688,7 @@ struct PointerToMemberDataTest1 {
 };
 
 void fPointerToMemberDataTest1() {
-  PointerToMemberDataTest1(); // expected-warning{{1 uninitialized field}}
+  INIT(PointerToMemberDataTest1, ()); // expected-warning{{1 uninitialized field}}
 }
 
 struct PointerToMemberDataTest2 {
@@ -687,7 +700,7 @@ struct PointerToMemberDataTest2 {
 
 void fPointerToMemberDataTest2() {
   int UsefulFunctions::*d = &UsefulFunctions::a;
-  PointerToMemberDataTest2 a(d);
+  INIT(PointerToMemberDataTest2, (d));
 }
 
 struct MultiPointerToMemberDataTest1 {
@@ -696,7 +709,7 @@ struct MultiPointerToMemberDataTest1 {
 };
 
 void fMultiPointerToMemberDataTest1() {
-  MultiPointerToMemberDataTest1(); // expected-warning{{1 uninitialized field}}
+  INIT(MultiPointerToMemberDataTest1, ()); // expected-warning{{1 uninitialized field}}
 }
 
 struct MultiPointerToMemberDataTest2 {
@@ -708,7 +721,7 @@ struct MultiPointerToMemberDataTest2 {
 
 void fMultiPointerToMemberDataTest2() {
   int UsefulFunctions::*d = &UsefulFunctions::a;
-  MultiPointerToMemberDataTest2 a(&d);
+  INIT(MultiPointerToMemberDataTest2, (&d));
 }
 #endif // PEDANTIC
 
@@ -733,7 +746,7 @@ public:
 };
 
 void fListTest1() {
-  ListTest1();
+  INIT(ListTest1, ());
 }
 
 class ListTest2 {
@@ -753,7 +766,7 @@ public:
 
 void fListTest2() {
   ListTest2::Node n;
-  ListTest2(&n, int());
+  INIT(ListTest2, (&n, int()));
 }
 
 class CyclicList {
@@ -787,7 +800,7 @@ void fCyclicList() {
   n3.i = 50;
   n1.next = &n3;
   // note that n1.i is uninitialized
-  CyclicList(&n1, int());
+  INIT(CyclicList, (&n1, int()));
 }
 
 struct RingListTest {
@@ -796,7 +809,7 @@ struct RingListTest {
 };
 
 void fRingListTest() {
-  RingListTest();
+  INIT(RingListTest, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -822,7 +835,7 @@ public:
 
 void fReferenceTest1() {
   ReferenceTest1::RecordType d{33, 34};
-  ReferenceTest1(d, d);
+  INIT(ReferenceTest1, (d, d));
 }
 
 #ifdef PEDANTIC
@@ -845,7 +858,7 @@ public:
 
 void fReferenceTest2() {
   ReferenceTest2::RecordType c;
-  ReferenceTest2(c, c);
+  INIT(ReferenceTest2, (c, c));
 }
 #else
 class ReferenceTest2 {
@@ -867,7 +880,7 @@ public:
 
 void fReferenceTest2() {
   ReferenceTest2::RecordType c;
-  ReferenceTest2(c, c);
+  INIT(ReferenceTest2, (c, c));
 }
 #endif // PEDANTIC
 
@@ -890,7 +903,7 @@ public:
 
 void fReferenceTest3() {
   ReferenceTest3::RecordType c, d{35, 36};
-  ReferenceTest3(c, d);
+  INIT(ReferenceTest3, (c, d));
 }
 
 class ReferenceTest4 {
@@ -912,7 +925,7 @@ public:
 
 void fReferenceTest5() {
   ReferenceTest4::RecordType c, d{37, 38};
-  ReferenceTest4(d, c);
+  INIT(ReferenceTest4, (d, c));
 }
 
 //===----------------------------------------------------------------------===//
@@ -930,7 +943,7 @@ struct IntMultipleReferenceToSameObjectTest {
 
 void fIntMultipleReferenceToSameObjectTest() {
   int a;
-  IntMultipleReferenceToSameObjectTest Test(&a);
+  INIT(IntMultipleReferenceToSameObjectTest, (&a));
 }
 
 struct IntReferenceWrapper1 {
@@ -951,7 +964,6 @@ struct IntReferenceWrapper2 {
 
 void fMultipleObjectsReferencingTheSameObjectTest() {
   int a;
-
-  IntReferenceWrapper1 T1(a);
-  IntReferenceWrapper2 T2(a);
+  INIT(IntReferenceWrapper1, (a));
+  INIT(IntReferenceWrapper2, (a));
 }

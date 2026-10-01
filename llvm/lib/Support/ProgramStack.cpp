@@ -20,6 +20,8 @@
 
 #include "llvm/Support/thread.h"
 
+#include <cstdlib>
+
 using namespace llvm;
 
 uintptr_t llvm::getStackPointer() {

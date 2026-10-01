@@ -32,6 +32,7 @@ typedef lldb::ABISP (*ABICreateInstance)(lldb::ProcessSP process_sp,
                                          const ArchSpec &arch);
 typedef std::unique_ptr<Architecture> (*ArchitectureCreateInstance)(
     const ArchSpec &arch);
+typedef std::unique_ptr<BugReporter> (*BugReporterCreateInstance)();
 typedef lldb::DisassemblerSP (*DisassemblerCreateInstance)(
     const ArchSpec &arch, const char *flavor, const char *cpu,
     const char *features);

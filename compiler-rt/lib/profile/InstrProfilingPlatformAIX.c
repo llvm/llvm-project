@@ -181,7 +181,7 @@ void __llvm_profile_register_names_function(void *NamesStart,
 // reference symbols from the profile library (for example when no files were
 // compiled with -fprofile-generate). That's because these symbols are kept
 // alive through references in constructor functions that are always live in the
-// default linking model on AIX (-bcdtors:all). The __start_SECNAME and
+// `-bcdtors:all` linking model on AIX. The __start_SECNAME and
 // __stop_SECNAME symbols are only resolved by the linker when the SECNAME
 // section exists. So for the scenario where the user objects have no such
 // section (i.e. when they are compiled with -fno-profile-generate), we always

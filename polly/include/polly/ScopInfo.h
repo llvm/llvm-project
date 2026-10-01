@@ -31,6 +31,7 @@
 #include <cassert>
 #include <cstddef>
 #include <forward_list>
+#include <list>
 #include <optional>
 
 namespace polly {
@@ -49,9 +50,10 @@ using llvm::LoadInst;
 using llvm::make_range;
 using llvm::MapVector;
 using llvm::MemIntrinsic;
-using llvm::PassInfoMixin;
+using llvm::OptionalPassInfoMixin;
 using llvm::PHINode;
 using llvm::RegionNode;
+using llvm::RequiredPassInfoMixin;
 using llvm::SetVector;
 using llvm::SmallPtrSetImpl;
 using llvm::SmallVector;

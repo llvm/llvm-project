@@ -355,23 +355,24 @@ static bool NameInfoEquals(const DemangledNameInfo &lhs,
 
 TEST(MangledTest, DemangledNameInfo_SetMangledResets) {
   Mangled mangled;
-  EXPECT_EQ(mangled.GetDemangledInfo(), std::nullopt);
+  EXPECT_EQ(mangled.GetDemangledInfo(), nullptr);
 
   mangled.SetMangledName(ConstString("_Z3foov"));
   ASSERT_TRUE(mangled);
 
-  auto info1 = mangled.GetDemangledInfo();
-  EXPECT_NE(info1, std::nullopt);
-  EXPECT_TRUE(info1->hasBasename());
+  ASSERT_NE(mangled.GetDemangledInfo(), nullptr);
+  // Keep a copy of the original demangled info.
+  DemangledNameInfo info1 = *mangled.GetDemangledInfo();
+  EXPECT_TRUE(info1.hasBasename());
 
   mangled.SetMangledName(ConstString("_Z4funcv"));
 
   // Should have re-calculated demangled-info since mangled name changed.
-  auto info2 = mangled.GetDemangledInfo();
-  ASSERT_NE(info2, std::nullopt);
-  EXPECT_TRUE(info2->hasBasename());
+  ASSERT_NE(mangled.GetDemangledInfo(), nullptr);
+  DemangledNameInfo info2 = *mangled.GetDemangledInfo();
+  EXPECT_TRUE(info2.hasBasename());
 
-  EXPECT_FALSE(NameInfoEquals(info1.value(), info2.value()));
+  EXPECT_FALSE(NameInfoEquals(info1, info2));
   EXPECT_EQ(mangled.GetDemangledName(), "func()");
 }
 
@@ -383,45 +384,46 @@ TEST(MangledTest, DemangledNameInfo_SetDemangledResets) {
 
   // Mangled name hasn't changed, so GetDemangledInfo causes re-demangling
   // of previously set mangled name.
-  EXPECT_NE(mangled.GetDemangledInfo(), std::nullopt);
+  EXPECT_NE(mangled.GetDemangledInfo(), nullptr);
   EXPECT_EQ(mangled.GetDemangledName(), "foo()");
 }
 
 TEST(MangledTest, DemangledNameInfo_Clear) {
   Mangled mangled("_Z3foov");
   ASSERT_TRUE(mangled);
-  EXPECT_NE(mangled.GetDemangledInfo(), std::nullopt);
+  EXPECT_NE(mangled.GetDemangledInfo(), nullptr);
 
   mangled.Clear();
 
-  EXPECT_EQ(mangled.GetDemangledInfo(), std::nullopt);
+  EXPECT_EQ(mangled.GetDemangledInfo(), nullptr);
 }
 
 TEST(MangledTest, DemangledNameInfo_SetValue) {
   Mangled mangled("_Z4funcv");
   ASSERT_TRUE(mangled);
 
-  auto demangled_func = mangled.GetDemangledInfo();
+  ASSERT_NE(mangled.GetDemangledInfo(), nullptr);
+  // Keep a copy of the original demangled info.
+  DemangledNameInfo demangled_func = *mangled.GetDemangledInfo();
 
   // SetValue(mangled) resets demangled-info
   mangled.SetValue(ConstString("_Z3foov"));
-  auto demangled_foo = mangled.GetDemangledInfo();
-  EXPECT_NE(demangled_foo, std::nullopt);
-  EXPECT_FALSE(NameInfoEquals(demangled_foo.value(), demangled_func.value()));
+  ASSERT_NE(mangled.GetDemangledInfo(), nullptr);
+  DemangledNameInfo demangled_foo = *mangled.GetDemangledInfo();
+  EXPECT_FALSE(NameInfoEquals(demangled_foo, demangled_func));
 
   // SetValue(demangled) resets demangled-info
   mangled.SetValue(ConstString("_Z4funcv"));
-  EXPECT_TRUE(NameInfoEquals(mangled.GetDemangledInfo().value(),
-                             demangled_func.value()));
+  EXPECT_TRUE(NameInfoEquals(*mangled.GetDemangledInfo(), demangled_func));
 
   // SetValue(empty) resets demangled-info
   mangled.SetValue(ConstString());
-  EXPECT_EQ(mangled.GetDemangledInfo(), std::nullopt);
+  EXPECT_EQ(mangled.GetDemangledInfo(), nullptr);
 
   // Demangling invalid mangled name will set demangled-info
   // (without a valid basename).
   mangled.SetValue(ConstString("_Zinvalid"));
-  ASSERT_NE(mangled.GetDemangledInfo(), std::nullopt);
+  ASSERT_NE(mangled.GetDemangledInfo(), nullptr);
   EXPECT_FALSE(mangled.GetDemangledInfo()->hasBasename());
 }
 
@@ -836,77 +838,78 @@ DemanglingInfoCorrectnessTestCase g_demangling_correctness_test_cases[] = {
 #include "llvm/Testing/Demangle/DemangleTestCases.inc"
 };
 
-struct DemanglingInfoCorrectnessTestFixutre
-    : public ::testing::TestWithParam<DemanglingInfoCorrectnessTestCase> {};
+TEST(MangledTest, DemanglingInfoCorrectness) {
+  for (const auto &[mangled, demangled] : g_demangling_correctness_test_cases) {
+    SCOPED_TRACE(mangled);
 
-TEST_P(DemanglingInfoCorrectnessTestFixutre, Correctness) {
-  auto [mangled, demangled] = GetParam();
+    llvm::itanium_demangle::ManglingParser<TestAllocator> Parser(
+        mangled, mangled + ::strlen(mangled));
 
-  llvm::itanium_demangle::ManglingParser<TestAllocator> Parser(
-      mangled, mangled + ::strlen(mangled));
+    const auto *Root = Parser.parse();
 
-  const auto *Root = Parser.parse();
+    EXPECT_NE(nullptr, Root);
+    if (!Root)
+      continue;
 
-  ASSERT_NE(nullptr, Root);
+    auto OB =
+        std::unique_ptr<TrackingOutputBuffer, TrackingOutputBufferDeleter>(
+            new TrackingOutputBuffer());
+    Root->print(*OB);
 
-  auto OB = std::unique_ptr<TrackingOutputBuffer, TrackingOutputBufferDeleter>(
-      new TrackingOutputBuffer());
-  Root->print(*OB);
+    // Filter out cases which would never show up in frames. We only care
+    // about function names.
+    if (Root->getKind() !=
+            llvm::itanium_demangle::Node::Kind::KFunctionEncoding &&
+        Root->getKind() != llvm::itanium_demangle::Node::Kind::KDotSuffix)
+      continue;
 
-  // Filter out cases which would never show up in frames. We only care about
-  // function names.
-  if (Root->getKind() !=
-          llvm::itanium_demangle::Node::Kind::KFunctionEncoding &&
-      Root->getKind() != llvm::itanium_demangle::Node::Kind::KDotSuffix)
-    return;
+    EXPECT_TRUE(OB->NameInfo.hasBasename());
+    if (!OB->NameInfo.hasBasename())
+      continue;
 
-  ASSERT_TRUE(OB->NameInfo.hasBasename());
+    auto tracked_name = llvm::StringRef(*OB);
 
-  auto tracked_name = llvm::StringRef(*OB);
+    std::string reconstructed_name;
 
-  std::string reconstructed_name;
+    auto return_left = CPlusPlusLanguage::GetDemangledReturnTypeLHS(
+        tracked_name, OB->NameInfo);
+    EXPECT_THAT_EXPECTED(return_left, llvm::Succeeded());
+    reconstructed_name += *return_left;
 
-  auto return_left =
-      CPlusPlusLanguage::GetDemangledReturnTypeLHS(tracked_name, OB->NameInfo);
-  EXPECT_THAT_EXPECTED(return_left, llvm::Succeeded());
-  reconstructed_name += *return_left;
+    auto scope =
+        CPlusPlusLanguage::GetDemangledScope(tracked_name, OB->NameInfo);
+    EXPECT_THAT_EXPECTED(scope, llvm::Succeeded());
+    reconstructed_name += *scope;
 
-  auto scope = CPlusPlusLanguage::GetDemangledScope(tracked_name, OB->NameInfo);
-  EXPECT_THAT_EXPECTED(scope, llvm::Succeeded());
-  reconstructed_name += *scope;
+    auto basename =
+        CPlusPlusLanguage::GetDemangledBasename(tracked_name, OB->NameInfo);
+    reconstructed_name += basename;
 
-  auto basename =
-      CPlusPlusLanguage::GetDemangledBasename(tracked_name, OB->NameInfo);
-  reconstructed_name += basename;
+    auto template_args = CPlusPlusLanguage::GetDemangledTemplateArguments(
+        tracked_name, OB->NameInfo);
+    EXPECT_THAT_EXPECTED(template_args, llvm::Succeeded());
+    reconstructed_name += *template_args;
 
-  auto template_args = CPlusPlusLanguage::GetDemangledTemplateArguments(
-      tracked_name, OB->NameInfo);
-  EXPECT_THAT_EXPECTED(template_args, llvm::Succeeded());
-  reconstructed_name += *template_args;
+    auto args = CPlusPlusLanguage::GetDemangledFunctionArguments(tracked_name,
+                                                                 OB->NameInfo);
+    EXPECT_THAT_EXPECTED(args, llvm::Succeeded());
+    reconstructed_name += *args;
 
-  auto args = CPlusPlusLanguage::GetDemangledFunctionArguments(tracked_name,
-                                                               OB->NameInfo);
-  EXPECT_THAT_EXPECTED(args, llvm::Succeeded());
-  reconstructed_name += *args;
+    auto return_right = CPlusPlusLanguage::GetDemangledReturnTypeRHS(
+        tracked_name, OB->NameInfo);
+    EXPECT_THAT_EXPECTED(return_right, llvm::Succeeded());
+    reconstructed_name += *return_right;
 
-  auto return_right =
-      CPlusPlusLanguage::GetDemangledReturnTypeRHS(tracked_name, OB->NameInfo);
-  EXPECT_THAT_EXPECTED(return_right, llvm::Succeeded());
-  reconstructed_name += *return_right;
+    auto qualifiers = CPlusPlusLanguage::GetDemangledFunctionQualifiers(
+        tracked_name, OB->NameInfo);
+    EXPECT_THAT_EXPECTED(qualifiers, llvm::Succeeded());
+    reconstructed_name += *qualifiers;
 
-  auto qualifiers = CPlusPlusLanguage::GetDemangledFunctionQualifiers(
-      tracked_name, OB->NameInfo);
-  EXPECT_THAT_EXPECTED(qualifiers, llvm::Succeeded());
-  reconstructed_name += *qualifiers;
+    auto suffix = CPlusPlusLanguage::GetDemangledFunctionSuffix(tracked_name,
+                                                                OB->NameInfo);
+    EXPECT_THAT_EXPECTED(suffix, llvm::Succeeded());
+    reconstructed_name += *suffix;
 
-  auto suffix =
-      CPlusPlusLanguage::GetDemangledFunctionSuffix(tracked_name, OB->NameInfo);
-  EXPECT_THAT_EXPECTED(suffix, llvm::Succeeded());
-  reconstructed_name += *suffix;
-
-  EXPECT_EQ(reconstructed_name, demangled);
+    EXPECT_EQ(reconstructed_name, demangled);
+  }
 }
-
-INSTANTIATE_TEST_SUITE_P(
-    DemanglingInfoCorrectnessTests, DemanglingInfoCorrectnessTestFixutre,
-    ::testing::ValuesIn(g_demangling_correctness_test_cases));

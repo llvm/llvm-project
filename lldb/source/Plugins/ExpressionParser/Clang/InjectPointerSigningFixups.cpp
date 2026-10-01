@@ -38,6 +38,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -45,31 +46,65 @@
 using namespace llvm;
 
 namespace {
-struct PtrAuthFixup {
+struct ExprStep {
+  ConstantExpr *CE;
+  unsigned OperandIdx;
+};
+
+/// Used to keep track of ConstantPtrAuth expressions in global initializers.
+struct GlobalInitPtrAuthFixup {
   GlobalVariable *GV;
   ConstantPtrAuth *CPA;
-  SmallVector<unsigned> Indices;
-  PtrAuthFixup(GlobalVariable *GV, ConstantPtrAuth *CPA,
-               const SmallVectorImpl<unsigned> &Indices)
-      : GV(GV), CPA(CPA), Indices(Indices.begin(), Indices.end()) {}
+  /// ConstantAggregate types are walekd via GEP indices.
+  SmallVector<unsigned> GEPPath;
+  /// ConstantExpr types are traversed via ExprStep (ConstantExpr + Operand
+  /// index).
+  SmallVector<ExprStep> ExprPath;
+  GlobalInitPtrAuthFixup(GlobalVariable *GV, ConstantPtrAuth *CPA,
+                         const SmallVectorImpl<unsigned> &GEPPath,
+                         const SmallVectorImpl<ExprStep> &ExprPath)
+      : GV(GV), CPA(CPA), GEPPath(GEPPath.begin(), GEPPath.end()),
+        ExprPath(ExprPath.begin(), ExprPath.end()) {}
+};
+
+/// Used to keep track of extern_weak ConstantPtrAuth expressions inlined in
+/// instructions.
+struct WeakInlinePtrAuthFixup {
+  Instruction *Inst;
+  unsigned OperandIdx;
+  ConstantPtrAuth *CPA;
 };
 } // namespace
 
-/// Recursively walk a constant looking for ConstantPtrAuth expressions.
-/// When found, record the global variable containing the ConstantPtrAuth and
-/// the index path to reach it within the initializer.
-static void findPtrAuth(Constant *C, GlobalVariable &GV,
-                        SmallVectorImpl<unsigned> &Indices,
-                        SmallVectorImpl<PtrAuthFixup> &Fixups) {
+/// Recursively walk a constant looking for ConstantPtrAuth expressions in
+/// global initializers.
+static void
+findGlobalInitPtrAuth(Constant *C, GlobalVariable &GV,
+                      SmallVectorImpl<unsigned> &GEPPath,
+                      SmallVectorImpl<ExprStep> &ExprPath,
+                      SmallVectorImpl<GlobalInitPtrAuthFixup> &Fixups) {
   if (auto *CPA = dyn_cast<ConstantPtrAuth>(C)) {
-    Fixups.emplace_back(&GV, CPA, Indices);
+    Fixups.emplace_back(&GV, CPA, GEPPath, ExprPath);
     return;
   }
-  for (unsigned I = 0, E = C->getNumOperands(); I != E; ++I) {
-    if (auto *COp = dyn_cast<Constant>(C->getOperand(I))) {
-      Indices.push_back(I);
-      findPtrAuth(COp, GV, Indices, Fixups);
-      Indices.pop_back();
+  if (isa<ConstantAggregate>(C)) {
+    for (unsigned I = 0, E = C->getNumOperands(); I != E; ++I) {
+      if (auto *COp = dyn_cast<Constant>(C->getOperand(I))) {
+        GEPPath.push_back(I);
+        findGlobalInitPtrAuth(COp, GV, GEPPath, ExprPath, Fixups);
+        GEPPath.pop_back();
+      }
+    }
+    return;
+  }
+
+  if (auto *CE = dyn_cast<ConstantExpr>(C)) {
+    for (unsigned I = 0, E = C->getNumOperands(); I != E; ++I) {
+      if (auto *COp = dyn_cast<Constant>(C->getOperand(I))) {
+        ExprPath.push_back({CE, I});
+        findGlobalInitPtrAuth(COp, GV, GEPPath, ExprPath, Fixups);
+        ExprPath.pop_back();
+      }
     }
   }
 }
@@ -89,15 +124,37 @@ Error InjectPointerSigningFixupCode(llvm::Module &M,
     return Error::success();
 
   // Collect all ConstantPtrAuth expressions in global initializers.
-  SmallVector<PtrAuthFixup> Fixups;
+  SmallVector<GlobalInitPtrAuthFixup> GlobalInitFixups;
   for (auto &G : M.globals()) {
     if (!G.hasInitializer())
       continue;
-    SmallVector<unsigned> Indices;
-    findPtrAuth(G.getInitializer(), G, Indices, Fixups);
+    SmallVector<unsigned> GEPPath;
+    SmallVector<ExprStep> ExprPath;
+    findGlobalInitPtrAuth(G.getInitializer(), G, GEPPath, ExprPath,
+                          GlobalInitFixups);
   }
 
-  if (Fixups.empty())
+  // Collect all inline ConstantPtrAuth expressions for extern_weak globals in
+  // functions.
+  SmallVector<WeakInlinePtrAuthFixup> WeakInlineFixups;
+  for (auto &F : M.functions()) {
+    for (auto &BB : F) {
+      for (auto &Inst : BB) {
+        for (unsigned OpIdx = 0, E = Inst.getNumOperands(); OpIdx != E;
+             OpIdx++) {
+          auto *CPA = dyn_cast<ConstantPtrAuth>(Inst.getOperand(OpIdx));
+          if (!CPA)
+            continue;
+          auto *GV = dyn_cast<GlobalValue>(CPA->getPointer());
+          if (!GV || !GV->hasExternalWeakLinkage())
+            continue;
+          WeakInlineFixups.push_back({&Inst, OpIdx, CPA});
+        }
+      }
+    }
+  }
+
+  if (GlobalInitFixups.empty() && WeakInlineFixups.empty())
     return Error::success();
 
   // Set up types and intrinsics.
@@ -116,7 +173,7 @@ Error InjectPointerSigningFixupCode(llvm::Module &M,
   FixupFn->insert(FixupFn->end(), BasicBlock::Create(Ctx));
   IRBuilder<> B(&FixupFn->back());
 
-  for (auto &Fixup : Fixups) {
+  for (auto &Fixup : GlobalInitFixups) {
     GlobalVariable *GV = Fixup.GV;
     ConstantPtrAuth *CPA = Fixup.CPA;
 
@@ -126,22 +183,20 @@ Error InjectPointerSigningFixupCode(llvm::Module &M,
       continue;
     }
 
-    // Build a GEP to the location of the ConstantPtrAuth within the global.
+    // Build a GEP to the location of the ConstantPtrAuth (or the expression
+    // path to the ConstantPtrAuth) within the global.
     Value *Loc;
-    if (Fixup.Indices.empty()) {
+    if (Fixup.GEPPath.empty()) {
       Loc = GV;
     } else {
-      SmallVector<Value *> GEPIndices;
-      GEPIndices.push_back(ConstantInt::get(Int32Ty, 0));
-      for (unsigned Idx : Fixup.Indices)
-        GEPIndices.push_back(ConstantInt::get(Int32Ty, Idx));
-      Loc = B.CreateGEP(GV->getValueType(), GV, GEPIndices);
+      SmallVector<Value *> GEPValues;
+      GEPValues.push_back(ConstantInt::get(Int32Ty, 0));
+      for (unsigned Idx : Fixup.GEPPath)
+        GEPValues.push_back(ConstantInt::get(Int32Ty, Idx));
+      Loc = B.CreateGEP(GV->getValueType(), GV, GEPValues);
     }
 
     Type *PtrTy = CPA->getType();
-
-    // Load the raw (unsigned) pointer.
-    Value *RawPtr = B.CreateLoad(PtrTy, Loc);
 
     // Compute the discriminator, blending with the address if needed.
     Value *Disc = CPA->getDiscriminator();
@@ -149,20 +204,59 @@ Error InjectPointerSigningFixupCode(llvm::Module &M,
       Disc = B.CreateCall(BlendIntrinsic,
                           {B.CreatePointerCast(Loc, IntPtrTy), Disc});
 
-    // Sign the pointer.
-    Value *SignedPtr =
-        B.CreateCall(SignIntrinsic, {B.CreatePointerCast(RawPtr, IntPtrTy),
-                                     CPA->getKey(), Disc});
+    if (!Fixup.ExprPath.empty()) {
+      // The CPA is wrapped in a ConstantExpr chain. Sign the CPA's pointer
+      // directly and re-evaluate the expr chain.
+      Value *SignedPtr = B.CreateCall(
+          SignIntrinsic, {B.CreatePointerCast(CPA->getPointer(), IntPtrTy),
+                          CPA->getKey(), Disc});
+      Value *Result = B.CreateIntToPtr(SignedPtr, PtrTy);
 
-    // Store the signed pointer back.
-    B.CreateStore(B.CreateBitOrPointerCast(SignedPtr, PtrTy), Loc);
-
+      for (auto &Step : llvm::reverse(Fixup.ExprPath)) {
+        Instruction *I = Step.CE->getAsInstruction();
+        I->setOperand(Step.OperandIdx, Result);
+        B.Insert(I);
+        Result = I;
+      }
+      B.CreateStore(Result, Loc);
+    } else {
+      // There is no expression chain. Load and sign the pointer directly.
+      Value *RawPtr = B.CreateLoad(PtrTy, Loc);
+      Value *SignedPtr =
+          B.CreateCall(SignIntrinsic, {B.CreatePointerCast(RawPtr, IntPtrTy),
+                                       CPA->getKey(), Disc});
+      B.CreateStore(B.CreateBitOrPointerCast(SignedPtr, PtrTy), Loc);
+    }
     // Replace the ConstantPtrAuth in the initializer with the unsigned pointer.
     CPA->replaceAllUsesWith(CPA->getPointer());
   }
 
   // Close off the fixup function.
   B.CreateRetVoid();
+
+  // Rewrite extern_weak inline CPA operands.
+  for (auto &Fixup : WeakInlineFixups) {
+    IRBuilder<> B(Fixup.Inst);
+    ConstantPtrAuth *CPA = Fixup.CPA;
+    Type *PtrTy = CPA->getType();
+
+    Value *Disc = CPA->getDiscriminator();
+    if (CPA->hasAddressDiscriminator()) {
+      Value *AddrDisc =
+          B.CreatePointerCast(CPA->getAddrDiscriminator(), IntPtrTy);
+      Disc = B.CreateCall(BlendIntrinsic, {AddrDisc, Disc});
+    }
+
+    // Signing a pointer value of `0x0` yields a non-null but invalid pointer.
+    // We'll emit a runtime guard around signing the pointer.
+    Value *RawPtr = B.CreatePtrToInt(CPA->getPointer(), IntPtrTy);
+    Value *NullCheck = B.CreateIsNull(RawPtr);
+    Value *SignedPtr =
+        B.CreateCall(SignIntrinsic, {RawPtr, CPA->getKey(), Disc});
+    Value *Result =
+        B.CreateSelect(NullCheck, Constant::getNullValue(IntPtrTy), SignedPtr);
+    Fixup.Inst->setOperand(Fixup.OperandIdx, B.CreateIntToPtr(Result, PtrTy));
+  }
 
   // Update the global ctors list to call the pointer fixup function first.
   auto *UInt8PtrTy = PointerType::getUnqual(Ctx);

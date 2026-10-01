@@ -38,10 +38,6 @@ def SDTX86VFCMP : SDTypeProfile<1, 3, [SDTCisFP<0>, SDTCisVec<0>,
                                        SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>,
                                        SDTCisVT<3, i8>]>;
 
-// Floating point max and min.
-def X86fmin    : SDNode<"X86ISD::FMIN",      SDTFPBinOp>;
-def X86fmax    : SDNode<"X86ISD::FMAX",      SDTFPBinOp>;
-
 // Scalar intrinsic floating point max and min.
 def X86fmins   : SDNode<"X86ISD::FMINS",     SDTFPBinOp>;
 def X86fmaxs   : SDNode<"X86ISD::FMAXS",     SDTFPBinOp>;
@@ -52,20 +48,12 @@ def X86fminc    : SDNode<"X86ISD::FMINC", SDTFPBinOp,
 def X86fmaxc    : SDNode<"X86ISD::FMAXC", SDTFPBinOp,
     [SDNPCommutative, SDNPAssociative]>;
 
-let IsStrictFP = true in {
-  // Floating point max and min.
-  def X86strict_fmin : SDNode<"X86ISD::STRICT_FMIN", SDTFPBinOp,
-                              [SDNPHasChain]>;
-  def X86strict_fmax : SDNode<"X86ISD::STRICT_FMAX", SDTFPBinOp,
-                              [SDNPHasChain]>;
-}
-
 def X86any_fmin : PatFrags<(ops node:$src1, node:$src2),
-                           [(X86strict_fmin node:$src1, node:$src2),
-                            (X86fmin node:$src1, node:$src2)]>;
+                           [(strict_pseudo_fmin node:$src1, node:$src2),
+                            (pseudo_fmin node:$src1, node:$src2)]>;
 def X86any_fmax : PatFrags<(ops node:$src1, node:$src2),
-                           [(X86strict_fmax node:$src1, node:$src2),
-                            (X86fmax node:$src1, node:$src2)]>;
+                           [(strict_pseudo_fmax node:$src1, node:$src2),
+                            (pseudo_fmax node:$src1, node:$src2)]>;
 
 // Bitwise logical AND of floating point values. This corresponds
 // to X86::ANDPS or X86::ANDPD.
@@ -214,6 +202,9 @@ def X86vtrunc    : SDNode<"X86ISD::VTRUNC",   SDTVtrunc>;
 def X86vtruncs   : SDNode<"X86ISD::VTRUNCS",  SDTVtrunc>;
 def X86vtruncus  : SDNode<"X86ISD::VTRUNCUS", SDTVtrunc>;
 
+// Vector integer truncate with symmetric signed saturation.
+def X86vtruncss  : SDNode<"X86ISD::VTRUNCSS", SDTVtrunc>;
+
 // Masked version of the above. Used when less than a 128-bit result is
 // produced since the mask only applies to the lower elements and can't
 // be represented by a select.
@@ -221,6 +212,7 @@ def X86vtruncus  : SDNode<"X86ISD::VTRUNCUS", SDTVtrunc>;
 def X86vmtrunc   : SDNode<"X86ISD::VMTRUNC",   SDTVmtrunc>;
 def X86vmtruncs  : SDNode<"X86ISD::VMTRUNCS",  SDTVmtrunc>;
 def X86vmtruncus : SDNode<"X86ISD::VMTRUNCUS", SDTVmtrunc>;
+def X86vmtruncss : SDNode<"X86ISD::VMTRUNCSS", SDTVmtrunc>;
 
 // Vector FP extend.
 def X86vfpext  : SDNode<"X86ISD::VFPEXT",
@@ -1211,6 +1203,63 @@ def X86vmcvtph2hf8 : SDNode<"X86ISD::VMCVTPH2HF8",
 def X86vmcvtph2hf8s : SDNode<"X86ISD::VMCVTPH2HF8S",
                         SDTAVX10CONVERT_I8F16_MASK>;
 
+// AVX10 V2 AUX convert SDTypeProfiles
+def SDTAVX10CONVERT_I8F32 : SDTypeProfile<1, 1, [
+  SDTCVecEltisVT<0, i8>, SDTCVecEltisVT<1, f32>
+]>;
+
+def SDTAVX10CONVERT_I8F32_MASK : SDTypeProfile<1, 3, [
+  SDTCVecEltisVT<0, i8>, SDTCVecEltisVT<1, f32>,
+  SDTCisSameAs<0, 2>, SDTCVecEltisVT<3, i1>,
+  SDTCisSameNumEltsAs<1, 3>
+]>;
+
+def SDTAVX10CONVERT_I8I32F32 : SDTypeProfile<1, 2, [
+  SDTCVecEltisVT<0, i8>, SDTCVecEltisVT<1, i32>, SDTCVecEltisVT<2, f32>
+]>;
+
+def SDTAVX10CONVERT_I8I32F32_MASK : SDTypeProfile<1, 4, [
+  SDTCVecEltisVT<0, i8>, SDTCVecEltisVT<1, i32>,
+  SDTCVecEltisVT<2, f32>, SDTCisSameAs<0, 3>, SDTCVecEltisVT<4, i1>,
+  SDTCisSameNumEltsAs<2, 4>
+]>;
+
+def SDTAVX10CONVERT_F32I8 : SDTypeProfile<1, 1, [
+  SDTCVecEltisVT<0, f32>, SDTCVecEltisVT<1, i8>
+]>;
+
+// AVX10 V2 AUX convert SDNodes
+// Group A: PS->8bit truncating (single source)
+def X86vcvtps2bf8  : SDNode<"X86ISD::VCVTPS2BF8",  SDTAVX10CONVERT_I8F32>;
+def X86vcvtps2bf8s : SDNode<"X86ISD::VCVTPS2BF8S", SDTAVX10CONVERT_I8F32>;
+def X86vcvtps2hf8  : SDNode<"X86ISD::VCVTPS2HF8",  SDTAVX10CONVERT_I8F32>;
+def X86vcvtps2hf8s : SDNode<"X86ISD::VCVTPS2HF8S", SDTAVX10CONVERT_I8F32>;
+def X86vcvtrops2hf8  : SDNode<"X86ISD::VCVTROPS2HF8",  SDTAVX10CONVERT_I8F32>;
+def X86vcvtrops2hf8s : SDNode<"X86ISD::VCVTROPS2HF8S", SDTAVX10CONVERT_I8F32>;
+
+// Masked variants
+def X86vmcvtps2bf8  : SDNode<"X86ISD::VMCVTPS2BF8",  SDTAVX10CONVERT_I8F32_MASK>;
+def X86vmcvtps2bf8s : SDNode<"X86ISD::VMCVTPS2BF8S", SDTAVX10CONVERT_I8F32_MASK>;
+def X86vmcvtps2hf8  : SDNode<"X86ISD::VMCVTPS2HF8",  SDTAVX10CONVERT_I8F32_MASK>;
+def X86vmcvtps2hf8s : SDNode<"X86ISD::VMCVTPS2HF8S", SDTAVX10CONVERT_I8F32_MASK>;
+def X86vmcvtrops2hf8  : SDNode<"X86ISD::VMCVTROPS2HF8",  SDTAVX10CONVERT_I8F32_MASK>;
+def X86vmcvtrops2hf8s : SDNode<"X86ISD::VMCVTROPS2HF8S", SDTAVX10CONVERT_I8F32_MASK>;
+
+// Group B: Bias PS->8bit (3 operand)
+def X86vcvtbiasps2bf8  : SDNode<"X86ISD::VCVTBIASPS2BF8",  SDTAVX10CONVERT_I8I32F32>;
+def X86vcvtbiasps2bf8s : SDNode<"X86ISD::VCVTBIASPS2BF8S", SDTAVX10CONVERT_I8I32F32>;
+def X86vcvtbiasps2hf8  : SDNode<"X86ISD::VCVTBIASPS2HF8",  SDTAVX10CONVERT_I8I32F32>;
+def X86vcvtbiasps2hf8s : SDNode<"X86ISD::VCVTBIASPS2HF8S", SDTAVX10CONVERT_I8I32F32>;
+
+def X86vmcvtbiasps2bf8  : SDNode<"X86ISD::VMCVTBIASPS2BF8",  SDTAVX10CONVERT_I8I32F32_MASK>;
+def X86vmcvtbiasps2bf8s : SDNode<"X86ISD::VMCVTBIASPS2BF8S", SDTAVX10CONVERT_I8I32F32_MASK>;
+def X86vmcvtbiasps2hf8  : SDNode<"X86ISD::VMCVTBIASPS2HF8",  SDTAVX10CONVERT_I8I32F32_MASK>;
+def X86vmcvtbiasps2hf8s : SDNode<"X86ISD::VMCVTBIASPS2HF8S", SDTAVX10CONVERT_I8I32F32_MASK>;
+
+// Group C: 8bit->PS expanding
+def X86vcvtbf82ps  : SDNode<"X86ISD::VCVTBF82PS",  SDTAVX10CONVERT_F32I8>;
+def X86vcvthf82ps  : SDNode<"X86ISD::VCVTHF82PS",  SDTAVX10CONVERT_F32I8>;
+
 //===----------------------------------------------------------------------===//
 // SSE pattern fragments
 //===----------------------------------------------------------------------===//
@@ -1254,84 +1303,83 @@ def extloadv4f16 : PatFrag<(ops node:$ptr), (extloadvf16 node:$ptr)>;
 def extloadv8f16 : PatFrag<(ops node:$ptr), (extloadvf16 node:$ptr)>;
 def extloadv16f16 : PatFrag<(ops node:$ptr), (extloadvf16 node:$ptr)>;
 
-// Like 'store', but always requires vector size alignment.
-def alignedstore : PatFrag<(ops node:$val, node:$ptr),
-                           (store node:$val, node:$ptr), [{
-  auto *St = cast<StoreSDNode>(N);
-  return St->getAlign() >= St->getMemoryVT().getStoreSize();
-}]> {
-  let GISelPredicateCode = [{
-    auto &LdSt = cast<GLoadStore>(MI);
-    return LdSt.getAlign() >= LdSt.getMemSize().getValue();
-  }];
+// Like 'store' or 'atomic_store', but always requires vector size alignment.
+class alignedstore_frag<int Alignment>
+    : PatFrags<(ops node:$val, node:$ptr),
+               [(store node:$val, node:$ptr),
+                (atomic_store node:$val, node:$ptr)]> {
+  let IsStore = true;
+  let MinAlignment = Alignment;
 }
+def alignedstore128 : alignedstore_frag<16>;
+def alignedstore256 : alignedstore_frag<32>;
+def alignedstore512 : alignedstore_frag<64>;
 
 // Like 'load', but always requires vector size alignment.
-def alignedload : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  auto *Ld = cast<LoadSDNode>(N);
-  return Ld->getAlign() >= Ld->getMemoryVT().getStoreSize();
-}]> {
-  let GISelPredicateCode = [{
-    auto &LdSt = cast<GLoadStore>(MI);
-    return LdSt.getAlign() >= LdSt.getMemSize().getValue();
-  }];
+class alignedload_frag<int Alignment>
+    : PatFrag<(ops node:$ptr), (load node:$ptr)> {
+  let IsLoad = true;
+  let MinAlignment = Alignment;
 }
+def alignedload128 : alignedload_frag<16>;
+def alignedload256 : alignedload_frag<32>;
+def alignedload512 : alignedload_frag<64>;
 
 // 128-bit aligned load pattern fragments
 // NOTE: all 128-bit integer vector loads are promoted to v2i64
 def alignedloadv8f16 : PatFrag<(ops node:$ptr),
-                               (v8f16 (alignedload node:$ptr))>;
+                               (v8f16 (alignedload128 node:$ptr))>;
 def alignedloadv8bf16 : PatFrag<(ops node:$ptr),
-                                (v8bf16 (alignedload node:$ptr))>;
+                                (v8bf16 (alignedload128 node:$ptr))>;
 def alignedloadv4f32 : PatFrag<(ops node:$ptr),
-                               (v4f32 (alignedload node:$ptr))>;
+                               (v4f32 (alignedload128 node:$ptr))>;
 def alignedloadv2f64 : PatFrag<(ops node:$ptr),
-                               (v2f64 (alignedload node:$ptr))>;
+                               (v2f64 (alignedload128 node:$ptr))>;
 def alignedloadv2i64 : PatFrag<(ops node:$ptr),
-                               (v2i64 (alignedload node:$ptr))>;
+                               (v2i64 (alignedload128 node:$ptr))>;
 def alignedloadv4i32 : PatFrag<(ops node:$ptr),
-                               (v4i32 (alignedload node:$ptr))>;
+                               (v4i32 (alignedload128 node:$ptr))>;
 def alignedloadv8i16 : PatFrag<(ops node:$ptr),
-                               (v8i16 (alignedload node:$ptr))>;
+                               (v8i16 (alignedload128 node:$ptr))>;
 def alignedloadv16i8 : PatFrag<(ops node:$ptr),
-                               (v16i8 (alignedload node:$ptr))>;
+                               (v16i8 (alignedload128 node:$ptr))>;
 
 // 256-bit aligned load pattern fragments
 // NOTE: all 256-bit integer vector loads are promoted to v4i64
 def alignedloadv16f16 : PatFrag<(ops node:$ptr),
-                                (v16f16 (alignedload node:$ptr))>;
+                                (v16f16 (alignedload256 node:$ptr))>;
 def alignedloadv16bf16 : PatFrag<(ops node:$ptr),
-                                 (v16bf16 (alignedload node:$ptr))>;
+                                 (v16bf16 (alignedload256 node:$ptr))>;
 def alignedloadv8f32  : PatFrag<(ops node:$ptr),
-                                (v8f32  (alignedload node:$ptr))>;
+                                (v8f32  (alignedload256 node:$ptr))>;
 def alignedloadv4f64  : PatFrag<(ops node:$ptr),
-                                (v4f64  (alignedload node:$ptr))>;
+                                (v4f64  (alignedload256 node:$ptr))>;
 def alignedloadv4i64  : PatFrag<(ops node:$ptr),
-                                (v4i64  (alignedload node:$ptr))>;
+                                (v4i64  (alignedload256 node:$ptr))>;
 def alignedloadv8i32  : PatFrag<(ops node:$ptr),
-                                (v8i32  (alignedload node:$ptr))>;
+                                (v8i32  (alignedload256 node:$ptr))>;
 def alignedloadv16i16 : PatFrag<(ops node:$ptr),
-                                (v16i16 (alignedload node:$ptr))>;
+                                (v16i16 (alignedload256 node:$ptr))>;
 def alignedloadv32i8  : PatFrag<(ops node:$ptr),
-                                (v32i8  (alignedload node:$ptr))>;
+                                (v32i8  (alignedload256 node:$ptr))>;
 
 // 512-bit aligned load pattern fragments
 def alignedloadv32f16 : PatFrag<(ops node:$ptr),
-                                (v32f16 (alignedload node:$ptr))>;
+                                (v32f16 (alignedload512 node:$ptr))>;
 def alignedloadv32bf16 : PatFrag<(ops node:$ptr),
-                                 (v32bf16 (alignedload node:$ptr))>;
+                                 (v32bf16 (alignedload512 node:$ptr))>;
 def alignedloadv16f32 : PatFrag<(ops node:$ptr),
-                                (v16f32 (alignedload node:$ptr))>;
+                                (v16f32 (alignedload512 node:$ptr))>;
 def alignedloadv8f64  : PatFrag<(ops node:$ptr),
-                                (v8f64  (alignedload node:$ptr))>;
+                                (v8f64  (alignedload512 node:$ptr))>;
 def alignedloadv8i64  : PatFrag<(ops node:$ptr),
-                                (v8i64  (alignedload node:$ptr))>;
+                                (v8i64  (alignedload512 node:$ptr))>;
 def alignedloadv16i32 : PatFrag<(ops node:$ptr),
-                                (v16i32 (alignedload node:$ptr))>;
+                                (v16i32 (alignedload512 node:$ptr))>;
 def alignedloadv32i16 : PatFrag<(ops node:$ptr),
-                                (v32i16 (alignedload node:$ptr))>;
+                                (v32i16 (alignedload512 node:$ptr))>;
 def alignedloadv64i8  : PatFrag<(ops node:$ptr),
-                                (v64i8  (alignedload node:$ptr))>;
+                                (v64i8  (alignedload512 node:$ptr))>;
 
 // Like 'load', but uses special alignment checks suitable for use in
 // memory operands in most SSE instructions, which are required to
@@ -1377,6 +1425,24 @@ def bc_v16i32 : PatFrag<(ops node:$in), (v16i32 (bitconvert node:$in))>;
 def bc_v8i64 : PatFrag<(ops node:$in), (v8i64 (bitconvert node:$in))>;
 def bc_v8f64 : PatFrag<(ops node:$in), (v8f64 (bitconvert node:$in))>;
 def bc_v16f32 : PatFrag<(ops node:$in), (v16f32 (bitconvert node:$in))>;
+
+// Match node if each vector elements' upper half bits are zero.
+class X86upperzero <ValueType vt, RegisterClass rc> : PatLeaf<(vt rc:$src), [{
+  unsigned EltBits = Op.getScalarValueSizeInBits();
+  APInt UpperMask = APInt::getHighBitsSet(EltBits, EltBits / 2);
+  return CurDAG->MaskedValueIsZero(Op, UpperMask);
+}]> {
+  let GISelPredicateCode = [{return false;}]; // TODO
+}
+
+// Match node that has known zeros in every element except the lowest.
+class X86vzelts <ValueType vt, RegisterClass rc> : PatLeaf<(vt rc:$src), [{
+  unsigned NumElts = Op.getValueType().getVectorNumElements();
+  APInt UpperMask = APInt::getHighBitsSet(NumElts, NumElts - 1);
+  return CurDAG->MaskedVectorIsZero(Op, UpperMask);
+}]> {
+  let GISelPredicateCode = [{return false;}]; // TODO
+}
 
 def X86vzload16 : PatFrag<(ops node:$src),
                           (X86vzld node:$src), [{
@@ -1451,19 +1517,19 @@ def sse_load_f64 : PatFrags<(ops node:$ptr),
                              (v2f64 (scalar_to_vector (loadf64 node:$ptr)))]>;
 
 def fp16imm0 : PatLeaf<(f16 fpimm), [{
-  return N->isExactlyValue(+0.0);
+  return N->isPosZero();
 }]>;
 
 def fp32imm0 : PatLeaf<(f32 fpimm), [{
-  return N->isExactlyValue(+0.0);
+  return N->isPosZero();
 }]>;
 
 def fp64imm0 : PatLeaf<(f64 fpimm), [{
-  return N->isExactlyValue(+0.0);
+  return N->isPosZero();
 }]>;
 
 def fp128imm0 : PatLeaf<(f128 fpimm), [{
-  return N->isExactlyValue(+0.0);
+  return N->isPosZero();
 }]>;
 
 // EXTRACT_get_vextract128_imm xform function: convert extract_subvector index
@@ -1605,6 +1671,14 @@ def X86MTruncSStore : SDNode<"X86ISD::VMTRUNCSTORES",  SDTX86MaskedStore,
 def X86MTruncUSStore : SDNode<"X86ISD::VMTRUNCSTOREUS",  SDTX86MaskedStore,
                        [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
+// Vector truncating store with symmetric signed saturation
+def X86TruncSSStore : SDNode<"X86ISD::VTRUNCSTORESS",  SDTStore,
+                       [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+// Vector truncating masked store with symmetric signed saturation
+def X86MTruncSSStore : SDNode<"X86ISD::VMTRUNCSTORESS",  SDTX86MaskedStore,
+                       [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
 def truncstore_s_vi8 : PatFrag<(ops node:$val, node:$ptr),
                                (X86TruncSStore node:$val, node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
@@ -1612,6 +1686,11 @@ def truncstore_s_vi8 : PatFrag<(ops node:$val, node:$ptr),
 
 def truncstore_us_vi8 : PatFrag<(ops node:$val, node:$ptr),
                                (X86TruncUSStore node:$val, node:$ptr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
+}]>;
+
+def truncstore_ss_vi8 : PatFrag<(ops node:$val, node:$ptr),
+                               (X86TruncSSStore node:$val, node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
 }]>;
 
@@ -1642,6 +1721,11 @@ def masked_truncstore_s_vi8 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
 
 def masked_truncstore_us_vi8 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
                                (X86MTruncUSStore node:$src1, node:$src2, node:$src3), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
+}]>;
+
+def masked_truncstore_ss_vi8 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
+                               (X86MTruncSSStore node:$src1, node:$src2, node:$src3), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
 }]>;
 
@@ -1712,6 +1796,9 @@ def select_truncs : PatFrag<(ops node:$src, node:$src0, node:$mask),
 def select_truncus : PatFrag<(ops node:$src, node:$src0, node:$mask),
                              (vselect_mask node:$mask,
                                            (X86vtruncus node:$src), node:$src0)>;
+def select_truncss : PatFrag<(ops node:$src, node:$src0, node:$mask),
+                             (vselect_mask node:$mask,
+                                           (X86vtruncss node:$src), node:$src0)>;
 
 def X86Vpshufbitqmb_su : PatFrag<(ops node:$src1, node:$src2),
                                  (X86Vpshufbitqmb node:$src1, node:$src2), [{
@@ -1773,3 +1860,7 @@ def X86vpmaddwd_su : PatFrag<(ops node:$lhs, node:$rhs),
                              (X86vpmaddwd node:$lhs, node:$rhs), [{
   return N->hasOneUse();
 }]>;
+
+// BMM matrix multiplication operations
+def x86vbmacor  : SDNode<"X86ISD::VBMACOR",  SDTVnni>;
+def x86vbmacxor : SDNode<"X86ISD::VBMACXOR", SDTVnni>;

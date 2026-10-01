@@ -1,4 +1,11 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,optin.cplusplus.UninitializedObject -std=c++11 -fblocks -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,optin.cplusplus.UninitializedObject -std=c++11 -fblocks -verify %s -DHEAP_ALLOCATION
+
+#ifdef HEAP_ALLOCATION
+#define INIT(CLS, ARGS) new CLS ARGS
+#else
+#define INIT(CLS, ARGS) (void) CLS ARGS
+#endif
 
 typedef void (^myBlock) ();
 
@@ -14,11 +21,11 @@ struct StructWithBlock {
 };
 
 void warnOnUninitializedBlock() {
-  StructWithBlock a(10);
+  INIT(StructWithBlock, (10));
 }
 
 void noWarningWhenInitialized() {
-  StructWithBlock a;
+  INIT(StructWithBlock, ());
 }
 
 struct StructWithId {
@@ -28,5 +35,5 @@ struct StructWithId {
 };
 
 void warnOnUninitializedId() {
-  StructWithId s;
+  INIT(StructWithId, ());
 }

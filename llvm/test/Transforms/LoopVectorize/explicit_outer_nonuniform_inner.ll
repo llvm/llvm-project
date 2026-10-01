@@ -20,7 +20,7 @@
 ; Case 1 (for (j = i; j < M; j++)): Inner loop with divergent IV start.
 
 ; CHECK-LABEL: iv_start
-; CHECK: LV: Not vectorizing: Outer loop contains divergent loops.
+; CHECK: LV: Not vectorizing: Outer loop contains divergent conditional branch.
 ; CHECK: LV: Not vectorizing: Unsupported outer loop.
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -49,10 +49,10 @@ inner.body:
   %indvars.iv35 = phi i64 [ %indvars.iv38, %inner.ph ], [ %indvars.iv.next36, %inner.body ]
   %2 = add nsw i64 %indvars.iv35, %1
   %arrayidx = getelementptr inbounds i32, ptr %b, i64 %2
-  %3 = load i32, ptr %arrayidx, align 4, !tbaa !2
+  %3 = load i32, ptr %arrayidx, align 4
   %mul8 = mul nsw i32 %3, %3
   %arrayidx12 = getelementptr inbounds i32, ptr %a, i64 %2
-  store i32 %mul8, ptr %arrayidx12, align 4, !tbaa !2
+  store i32 %mul8, ptr %arrayidx12, align 4
   %indvars.iv.next36 = add nuw nsw i64 %indvars.iv35, 1
   %exitcond = icmp eq i64 %indvars.iv.next36, %wide.trip.count
   br i1 %exitcond, label %outer.inc, label %inner.body
@@ -70,7 +70,7 @@ for.end15:
 ; Case 2 (for (j = 0; j < i; j++)): Inner loop with divergent upper-bound.
 
 ; CHECK-LABEL: loop_ub
-; CHECK: LV: Not vectorizing: Outer loop contains divergent loops.
+; CHECK: LV: Not vectorizing: Outer loop contains divergent conditional branch.
 ; CHECK: LV: Not vectorizing: Unsupported outer loop.
 
 define void @loop_ub(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) {
@@ -96,10 +96,10 @@ inner.body:
   %indvars.iv = phi i64 [ 0, %inner.ph ], [ %indvars.iv.next, %inner.body ]
   %2 = add nsw i64 %indvars.iv, %1
   %arrayidx = getelementptr inbounds i32, ptr %b, i64 %2
-  %3 = load i32, ptr %arrayidx, align 4, !tbaa !2
+  %3 = load i32, ptr %arrayidx, align 4
   %mul8 = mul nsw i32 %3, %3
   %arrayidx12 = getelementptr inbounds i32, ptr %a, i64 %2
-  store i32 %mul8, ptr %arrayidx12, align 4, !tbaa !2
+  store i32 %mul8, ptr %arrayidx12, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %indvars.iv38
   br i1 %exitcond, label %outer.inc, label %inner.body
@@ -116,7 +116,7 @@ for.end15:
 ; Case 3 (for (j = 0; j < M; j+=i)): Inner loop with divergent step.
 
 ; CHECK-LABEL: iv_step
-; CHECK: LV: Not vectorizing: Outer loop contains divergent loops.
+; CHECK: LV: Not vectorizing: Outer loop contains divergent conditional branch.
 ; CHECK: LV: Not vectorizing: Unsupported outer loop.
 
 define void @iv_step(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) {
@@ -142,10 +142,10 @@ inner.body:
   %indvars.iv36 = phi i64 [ 0, %inner.ph ], [ %indvars.iv.next37, %inner.body ]
   %2 = add nsw i64 %indvars.iv36, %1
   %arrayidx = getelementptr inbounds i32, ptr %b, i64 %2
-  %3 = load i32, ptr %arrayidx, align 4, !tbaa !2
+  %3 = load i32, ptr %arrayidx, align 4
   %mul8 = mul nsw i32 %3, %3
   %arrayidx12 = getelementptr inbounds i32, ptr %a, i64 %2
-  store i32 %mul8, ptr %arrayidx12, align 4, !tbaa !2
+  store i32 %mul8, ptr %arrayidx12, align 4
   %indvars.iv.next37 = add nuw nsw i64 %indvars.iv36, %indvars.iv39
   %cmp2 = icmp slt i64 %indvars.iv.next37, %0
   br i1 %cmp2, label %inner.body, label %for.inc14
@@ -159,15 +159,6 @@ for.end15:
   ret void
 }
 
-!llvm.module.flags = !{!0}
-!llvm.ident = !{!1}
-
-!0 = !{i32 1, !"wchar_size", i32 4}
-!1 = !{!"clang version 6.0.0"}
-!2 = !{!3, !3, i64 0}
-!3 = !{!"int", !4, i64 0}
-!4 = !{!"omnipotent char", !5, i64 0}
-!5 = !{!"Simple C/C++ TBAA"}
 !6 = distinct !{!6, !7, !8}
 !7 = !{!"llvm.loop.vectorize.width", i32 8}
-!8 = !{!"llvm.loop.vectorize.enable", i1 true}
+!8 = !{!"llvm.loop.vectorize.enable"}

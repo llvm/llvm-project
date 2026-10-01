@@ -1,9 +1,14 @@
 header: string.h
+public_includes:
+  # Needed for compatibility with glibc which provides these symbols by default.
+  - strings.h
 standards:
   - stdc
 macros:
   - macro_name: "NULL"
     macro_header: null-macro.h
+  - macro_name: LIBC_HAS_ANNEX_K
+    macro_header: annex-k-macros.h
 types:
   - type_name: errno_t
   - type_name: locale_t
@@ -47,7 +52,7 @@ functions:
       - type: size_t
   - name: memmem
     standards:
-      - GNUExtensions
+      - gnu
     return_type: void *
     arguments:
       - type: const void *
@@ -72,7 +77,7 @@ functions:
       - type: size_t
   - name: memrchr
     standards:
-      - GNUExtensions
+      - gnu
     return_type: void *
     arguments:
       - type: const void *
@@ -111,7 +116,7 @@ functions:
       - type: size_t
   - name: strcasestr
     standards:
-      - GNUExtensions
+      - gnu
     return_type: char *
     arguments:
       - type: const char *
@@ -132,7 +137,7 @@ functions:
       - type: int
   - name: strchrnul
     standards:
-      - GNUExtensions
+      - gnu
     return_type: char *
     arguments:
       - type: const char *
@@ -185,7 +190,7 @@ functions:
       - type: int
   - name: strerror_r
     standards:
-      - GNUExtensions
+      - gnu
     return_type: char *
     arguments:
       - type: int
@@ -193,7 +198,7 @@ functions:
       - type: size_t
   - name: strlcat
     standards:
-      - BSDExtensions
+      - bsd
     return_type: size_t
     arguments:
       - type: char *__restrict
@@ -201,7 +206,7 @@ functions:
       - type: size_t
   - name: strlcpy
     standards:
-      - BSDExtensions
+      - bsd
     return_type: size_t
     arguments:
       - type: char *__restrict
@@ -251,6 +256,14 @@ functions:
     arguments:
       - type: const char *
       - type: size_t
+  - name: strnlen_s
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: const char *
+      - type: size_t
+    guard: LIBC_HAS_ANNEX_K
   - name: strpbrk
     standards:
       - stdc
@@ -267,7 +280,7 @@ functions:
       - type: int
   - name: strsep
     standards:
-      - BSDExtensions
+      - bsd
     return_type: char *
     arguments:
       - type: char **__restrict

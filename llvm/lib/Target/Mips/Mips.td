@@ -81,9 +81,9 @@ def FeatureNoOddSPReg  : SubtargetFeature<"nooddspreg", "UseOddSPReg", "false",
 def FeatureVFPU        : SubtargetFeature<"vfpu", "HasVFPU",
                                 "true", "Enable vector FPU instructions">;
 def FeatureMips1       : SubtargetFeature<"mips1", "MipsArchVersion", "Mips1",
-                                "Mips I ISA Support [highly experimental]">;
+                                "Mips I ISA Support">;
 def FeatureMips2       : SubtargetFeature<"mips2", "MipsArchVersion", "Mips2",
-                                "Mips II ISA Support [highly experimental]",
+                                "Mips II ISA Support",
                                 [FeatureMips1]>;
 def FeatureMips3_32    : SubtargetFeature<"mips3_32", "HasMips3_32", "true",
                                 "Subset of MIPS-III that is also in MIPS32 "
@@ -92,7 +92,7 @@ def FeatureMips3_32r2  : SubtargetFeature<"mips3_32r2", "HasMips3_32r2", "true",
                                 "Subset of MIPS-III that is also in MIPS32r2 "
                                 "[highly experimental]">;
 def FeatureMips3       : SubtargetFeature<"mips3", "MipsArchVersion", "Mips3",
-                                "MIPS III ISA Support [highly experimental]",
+                                "MIPS III ISA Support",
                                 [FeatureMips2, FeatureMips3_32,
                                  FeatureMips3_32r2, FeatureGP64Bit,
                                  FeatureFP64Bit]>;
@@ -247,11 +247,15 @@ def MIPS64 : HwMode<[IsPTR64bit]>;
 //===----------------------------------------------------------------------===//
 
 include "MipsRegisterInfo.td"
-include "MipsSchedule.td"
 include "MipsInstrInfo.td"
 include "MipsCallingConv.td"
 include "MipsRegisterBanks.td"
 include "MipsCombine.td"
+
+foreach i = {1-31} in
+  def FeatureReserveGPR#i :
+      SubtargetFeature<"reserve-gpr"#i, "UserReservedGPR["#i#"]", "true",
+                       "Reserve MIPS GPR "#i>;
 
 // Avoid forward declaration issues.
 include "MipsScheduleI6400.td"
@@ -309,7 +313,8 @@ def : ProcessorModel<"i6400", MipsI6400Model, [ImplI6400]>;
 def : ProcessorModel<"i6500", MipsI6400Model, [ImplI6500]>;
 
 def MipsAsmParser : AsmParser {
-  let ShouldEmitMatchRegisterName = 0;
+  let ShouldEmitMatchRegisterAltNameWithIndex = 1;
+  let AllowDuplicateRegisterNames = 1;
 }
 
 def MipsAsmParserVariant : AsmParserVariant {

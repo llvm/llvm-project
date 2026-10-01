@@ -664,6 +664,11 @@ protected:
       }
     }
     self()->printSExpr(E->record(), SS, Prec_Postfix);
+    // A projection through an anonymous struct/union has no source-level name;
+    // to avoid stray dots ("x..y") just print the underlying record.
+    if (const auto *FD = dyn_cast<FieldDecl>(E->clangDecl()))
+      if (FD->isAnonymousStructOrUnion())
+        return;
     if (CStyle && E->isArrow())
       SS << "->";
     else

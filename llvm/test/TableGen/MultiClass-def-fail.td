@@ -1,5 +1,4 @@
 // RUN: not llvm-tblgen %s 2>&1 | FileCheck %s
-// XFAIL: vg_leak
 
 // This test checks that using def instead of defm gives a meaningful error
 multiclass M2 {

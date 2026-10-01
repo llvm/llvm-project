@@ -2,10 +2,10 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck %s
 
-declare <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %src, i1 %is_zero_undef)
-declare <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %src, i1 %is_zero_undef)
-declare <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %src, i1 %is_zero_undef)
-declare <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %src, i1 %is_zero_undef)
+declare <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %src, i1 %is_zero_poison)
+declare <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %src, i1 %is_zero_poison)
+declare <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %src, i1 %is_zero_poison)
+declare <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %src, i1 %is_zero_poison)
 
 define <16 x i8> @f1(<16 x i8> %a) {
 ; CHECK-LABEL: f1:

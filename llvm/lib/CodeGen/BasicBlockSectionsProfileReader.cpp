@@ -101,6 +101,15 @@ BasicBlockSectionsProfileReader::getPrefetchTargetsForFunction(
                                                : SmallVector<CallsiteID>();
 }
 
+SmallVector<PrefetchHint>
+BasicBlockSectionsProfileReader::getPrefetchHintsForFunction(
+    StringRef FuncName) const {
+  StringMap<FunctionOptimizationProfile>::const_iterator It =
+      ProgramOptimizationProfile.find(getAliasName(FuncName));
+  return It != ProgramOptimizationProfile.end() ? It->second.PrefetchHints
+                                                : SmallVector<PrefetchHint>();
+}
+
 // Reads the version 1 basic block sections profile. Profile for each function
 // is encoded as follows:
 //   m <module_name>
@@ -157,7 +166,10 @@ BasicBlockSectionsProfileReader::getPrefetchTargetsForFunction(
 //                                ....
 // ****************************************************************************
 // This profile can also specify prefetch targets (starting with 't') which
-// instruct the compiler to emit a prefetch symbol for the given target.
+// instruct the compiler to emit a prefetch symbol for the given target and
+// prefetch hints (starting with 'i') which instruct the compiler to insert a
+// prefetch hint instruction at the given site for the given target.
+//
 // A prefetch target is specified by a pair "<bbid>,<subblock_index>" where
 // bbid specifies the target basic block and subblock_index is a zero-based
 // index. Subblock 0 refers to the region at the beginning of the block up to
@@ -167,13 +179,18 @@ BasicBlockSectionsProfileReader::getPrefetchTargetsForFunction(
 // This is the beginning of the basic block for `i = 0` and immediately after
 // the `i`-th call for every `i > 0`.
 //
+// A prefetch hint is specified by a pair "site target", where site is
+// specified as a pair "<bbid>,<callsite_index>" similar to prefetch
+// targets, and target is specified as a triple
+// "<function_name>,<bbid>,<callsite_index>".
+//
 // Example: A basic block in function "foo" with BBID 10 and two call
 // instructions (call_A, call_B). This block is conceptually split into
-// subblocks, with the prefetch target symbol emitted at the beginning of each
-// subblock.
+// subblocks, with the prefetch target symbol emitted at the beginning of
+// each subblock.
 //
 // +----------------------------------+
-// | __llvm_prefetch_target_foo_10_0: | <- Subblock 0 (before call_A)
+// | __llvm_prefetch_target_foo_10_0: | <--- Subblock 0 (before call_A)
 // |  Instruction 1                   |
 // |  Instruction 2                   |
 // |  call_A (Callsite 0)             |
@@ -185,6 +202,18 @@ BasicBlockSectionsProfileReader::getPrefetchTargetsForFunction(
 // |                                  |                  before call_C)
 // |  Instruction 4                   |
 // +----------------------------------+
+//
+// A prefetch hint specified in function "bar" as "120,1 foo,10,2" results
+// in a hint inserted after the first call in block #120 of bar targeting the
+// address immediately after the second call in block #10 of function foo.
+//
+// B
+// +----------------------------------------------------+
+// | Instruction 1                                      |
+// | call_C (Callsite 1)                                |
+// | code_prefetch __llvm_prefetch_target_foo_10         |
+// | Instruction 2                                      |
+// +----------------------------------------------------+
 //
 Error BasicBlockSectionsProfileReader::ReadV1Profile() {
   auto FI = ProgramOptimizationProfile.end();
@@ -365,6 +394,51 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
                                        PrefetchTargetStr[1]);
       FI->second.PrefetchTargets.push_back(
           CallsiteID{*TargetBBID, static_cast<unsigned>(CallsiteIndex)});
+      continue;
+    }
+
+    case 'i': { // Prefetch hint specifier.
+      // Skip the profile when the profile iterator (FI) refers to the
+      // past-the-end element.
+      if (FI == ProgramOptimizationProfile.end())
+        continue;
+      if (Values.size() != 2)
+        return createProfileParseError(
+            Twine("Prefetch hint expected of format '<prefetch-site> "
+                  "<prefetch-target>': " +
+                  S));
+      SmallVector<StringRef, 2> PrefetchSiteStr;
+      Values[0].split(PrefetchSiteStr, ',');
+      if (PrefetchSiteStr.size() != 2)
+        return createProfileParseError(Twine("Prefetch site expected of format "
+                                             "'<block-id>,<callsite-id>': ") +
+                                       Values[0]);
+      auto SiteBBID = parseUniqueBBID(PrefetchSiteStr[0]);
+      if (!SiteBBID)
+        return SiteBBID.takeError();
+      unsigned long long SiteCallsiteIndex;
+      if (getAsUnsignedInteger(PrefetchSiteStr[1], 10, SiteCallsiteIndex))
+        return createProfileParseError(Twine("unsigned integer expected: '") +
+                                       PrefetchSiteStr[1]);
+
+      SmallVector<StringRef, 3> PrefetchTargetStr;
+      Values[1].split(PrefetchTargetStr, ',');
+      if (PrefetchTargetStr.size() != 3)
+        return createProfileParseError(
+            Twine("Prefetch target expected of format "
+                  "'<function-name>,<block-id>,<callsite-id>': ") +
+            Values[1]);
+      auto TargetBBID = parseUniqueBBID(PrefetchTargetStr[1]);
+      if (!TargetBBID)
+        return TargetBBID.takeError();
+      unsigned long long TargetCallsiteIndex;
+      if (getAsUnsignedInteger(PrefetchTargetStr[2], 10, TargetCallsiteIndex))
+        return createProfileParseError(Twine("unsigned integer expected: '") +
+                                       PrefetchTargetStr[2]);
+      FI->second.PrefetchHints.push_back(PrefetchHint{
+          CallsiteID{*SiteBBID, static_cast<unsigned>(SiteCallsiteIndex)},
+          PrefetchTargetStr[0],
+          CallsiteID{*TargetBBID, static_cast<unsigned>(TargetCallsiteIndex)}});
       continue;
     }
     default:
@@ -583,6 +657,12 @@ SmallVector<CallsiteID>
 BasicBlockSectionsProfileReaderWrapperPass::getPrefetchTargetsForFunction(
     StringRef FuncName) const {
   return BBSPR.getPrefetchTargetsForFunction(FuncName);
+}
+
+SmallVector<PrefetchHint>
+BasicBlockSectionsProfileReaderWrapperPass::getPrefetchHintsForFunction(
+    StringRef FuncName) const {
+  return BBSPR.getPrefetchHintsForFunction(FuncName);
 }
 
 BasicBlockSectionsProfileReader &

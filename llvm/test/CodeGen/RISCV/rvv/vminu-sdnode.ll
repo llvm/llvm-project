@@ -1059,11 +1059,11 @@ define <vscale x 2 x i64> @sub_if_uge_C_nxv2i64(<vscale x 2 x i64> %x) nounwind 
 ; RV32-LABEL: sub_if_uge_C_nxv2i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    li a0, -2
-; RV32-NEXT:    lui a1, 876449
-; RV32-NEXT:    addi a1, a1, -513
-; RV32-NEXT:    sw a1, 8(sp)
-; RV32-NEXT:    sw a0, 12(sp)
+; RV32-NEXT:    lui a0, 876449
+; RV32-NEXT:    addi a0, a0, -513
+; RV32-NEXT:    li a1, -2
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
 ; RV32-NEXT:    vlse64.v v10, (a0), zero

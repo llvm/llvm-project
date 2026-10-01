@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InterpState.h"
+#include "EvalSettings.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
 #include "Program.h"
@@ -17,30 +18,45 @@
 using namespace clang;
 using namespace clang::interp;
 
-InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
+InterpState::InterpState(const EvalSettings &Settings, Program &P,
+                         InterpStack &Stk, FrameAllocator &FrameAlloc,
                          Context &Ctx, SourceMapper *M)
-    : State(Ctx.getASTContext(), Parent.getEvalStatus()), M(M), P(P), Stk(Stk),
-      Ctx(Ctx), BottomFrame(*this), Current(&BottomFrame),
-      StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
+    : State(Ctx.getASTContext(), Settings.EvalStatus), M(M),
+      FrameAlloc(FrameAlloc), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
+      Current(&BottomFrame), StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
       InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
-  InConstantContext = Parent.InConstantContext;
+  InConstantContext = Settings.InConstantContext;
   CheckingPotentialConstantExpression =
-      Parent.CheckingPotentialConstantExpression;
-  CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
-  EvalMode = Parent.EvalMode;
+      Settings.CheckingPotentialConstantExpression;
+  CheckingForUndefinedBehavior = Settings.CheckingForUndefinedBehavior;
+  EvalMode = Settings.EvalMode;
 }
 
-InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
+InterpState::InterpState(const EvalSettings &Settings, Program &P,
+                         InterpStack &Stk, FrameAllocator &FrameAlloc,
                          Context &Ctx, const Function *Func)
-    : State(Ctx.getASTContext(), Parent.getEvalStatus()), M(nullptr), P(P),
+    : State(Ctx.getASTContext(), Settings.EvalStatus), M(nullptr),
+      FrameAlloc(FrameAlloc), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
+      Current(&BottomFrame), StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
+      InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
+  InConstantContext = Settings.InConstantContext;
+  CheckingPotentialConstantExpression =
+      Settings.CheckingPotentialConstantExpression;
+  CheckingForUndefinedBehavior = Settings.CheckingForUndefinedBehavior;
+  EvalMode = Settings.EvalMode;
+}
+
+InterpState::InterpState(Expr::EvalStatus &Status, Program &P, InterpStack &Stk,
+                         FrameAllocator &FrameAlloc, Context &Ctx,
+                         SourceMapper *M)
+    : State(Ctx.getASTContext(), Status), M(M), FrameAlloc(FrameAlloc), P(P),
       Stk(Stk), Ctx(Ctx), BottomFrame(*this), Current(&BottomFrame),
       StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
       InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
-  InConstantContext = Parent.InConstantContext;
-  CheckingPotentialConstantExpression =
-      Parent.CheckingPotentialConstantExpression;
-  CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
-  EvalMode = Parent.EvalMode;
+  InConstantContext = true;
+  CheckingPotentialConstantExpression = false;
+  CheckingForUndefinedBehavior = true;
+  EvalMode = EvaluationMode::ConstantExpression;
 }
 
 bool InterpState::inConstantContext() const {
@@ -51,12 +67,7 @@ bool InterpState::inConstantContext() const {
 }
 
 InterpState::~InterpState() {
-  while (Current && !Current->isBottomFrame()) {
-    InterpFrame *Next = Current->Caller;
-    delete Current;
-    Current = Next;
-  }
-  BottomFrame.destroyScopes();
+  assert(Current->isBottomFrame());
 
   while (DeadBlocks) {
     DeadBlock *Next = DeadBlocks->Next;
@@ -149,7 +160,7 @@ StdAllocatorCaller InterpState::getStdAllocatorCaller(StringRef Name) const {
     if (CTSD->isInStdNamespace() && ClassII && ClassII->isStr("allocator") &&
         TAL.size() >= 1 && TAL[0].getKind() == TemplateArgument::Type) {
       QualType ElemType = TAL[0].getAsType();
-      const auto *NewCall = cast<CallExpr>(F->Caller->getExpr(F->getRetPC()));
+      const auto *NewCall = cast<CallExpr>(F->Caller->getExpr(F->getRetOpPC()));
       return {NewCall, ElemType};
     }
   }
@@ -157,14 +168,9 @@ StdAllocatorCaller InterpState::getStdAllocatorCaller(StringRef Name) const {
   return {};
 }
 
-bool InterpState::noteStep(CodePtr OpPC) {
-  if (InfiniteSteps)
-    return true;
-
-  --StepsLeft;
-  if (StepsLeft != 0)
-    return true;
-
-  FFDiag(Current->getSource(OpPC), diag::note_constexpr_step_limit_exceeded);
+bool InterpState::diagnoseStepLimitExceeded(CodePtr OpPC) {
+  FFDiag(Current->getSource(OpPC), diag::note_constexpr_step_limit_exceeded, 1)
+      << getLangOpts().ConstexprStepLimit;
+  Note(Current->getSource(OpPC), diag::note_constexpr_steps);
   return false;
 }

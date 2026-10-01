@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -acc-specialize-for-device | FileCheck %s
+// RUN: mlir-opt %s -acc-specialize-for-device=the-device-types=3,4 -allow-unregistered-dialect | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // Data entry ops in specialized routines
@@ -228,5 +228,76 @@ func.func @dev_routine_declare() attributes {acc.specialized_routine = #acc.spec
   %c = acc.create varPtr(%var : memref<f32>) -> memref<f32>
   %t = acc.declare_enter dataOperands(%c : memref<f32>)
   acc.declare_exit token(%t) dataOperands(%c : memref<f32>)
+  return
+}
+
+//===----------------------------------------------------------------------===//
+// acc.on_device folding
+//===----------------------------------------------------------------------===//
+
+acc.routine @acc_routine_on_device_host func(@fold_on_device_host) seq
+// CHECK-LABEL: func.func @fold_on_device_host
+// CHECK-NOT:   acc.on_device
+// CHECK:       %[[FALSE:.*]] = arith.constant false
+// CHECK:       "test.test"(%[[FALSE]]) : (i1) -> ()
+func.func @fold_on_device_host() attributes {acc.specialized_routine = #acc.specialized_routine<@acc_routine_on_device_host, <seq>, "fold_on_device_host">} {
+  %host = arith.constant 2 : i32
+  %on_host = acc.on_device %host : i32 -> i1
+  "test.test"(%on_host) : (i1) -> ()
+  return
+}
+
+acc.routine @acc_routine_on_device_not_host func(@fold_on_device_not_host) seq
+// CHECK-LABEL: func.func @fold_on_device_not_host
+// CHECK-NOT:   acc.on_device
+// CHECK:       %[[TRUE:.*]] = arith.constant true
+// CHECK:       "test.test"(%[[TRUE]]) : (i1) -> ()
+func.func @fold_on_device_not_host() attributes {acc.specialized_routine = #acc.specialized_routine<@acc_routine_on_device_not_host, <seq>, "fold_on_device_not_host">} {
+  %not_host = arith.constant 3 : i32
+  %on_not_host = acc.on_device %not_host : i32 -> i1
+  "test.test"(%on_not_host) : (i1) -> ()
+  return
+}
+
+// CHECK-LABEL: func.func @fold_on_device_inside_parallel
+// CHECK:       acc.parallel
+// CHECK-NOT:   acc.on_device
+// CHECK:       %[[FALSE:.*]] = arith.constant false
+// CHECK:       "test.test"(%[[FALSE]]) : (i1) -> ()
+func.func @fold_on_device_inside_parallel() {
+  %host = arith.constant 2 : i32
+  acc.parallel {
+    %on_host = acc.on_device %host : i32 -> i1
+    "test.test"(%on_host) : (i1) -> ()
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @fold_on_device_inside_parallel_alt
+// CHECK:       acc.parallel
+// CHECK-NOT:   acc.on_device
+// CHECK:       %[[TRUE:.*]] = arith.constant true
+// CHECK:       "test.test"(%[[TRUE]]) : (i1) -> ()
+func.func @fold_on_device_inside_parallel_alt() {
+  %nvidia = arith.constant 4 : i32
+  acc.parallel {
+    %on_nvidia = acc.on_device %nvidia : i32 -> i1
+    "test.test"(%on_nvidia) : (i1) -> ()
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @on_device_outside_parallel
+// CHECK:       acc.on_device
+// CHECK:       acc.parallel
+func.func @on_device_outside_parallel() {
+  %host = arith.constant 2 : i32
+  %on_host = acc.on_device %host : i32 -> i1
+  "test.test"(%on_host) : (i1) -> ()
+  acc.parallel {
+    acc.yield
+  }
   return
 }

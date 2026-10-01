@@ -6,22 +6,22 @@ define void @test_strict_fcmp(float %a, float %b) strictfp {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $s0, $s1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $s0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $s1
-  ; CHECK-NEXT:   [[STRICT_FCMP:%[0-9]+]]:_(s1) = G_STRICT_FCMP floatpred(oeq), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMP1:%[0-9]+]]:_(s1) = G_STRICT_FCMP floatpred(ogt), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMP2:%[0-9]+]]:_(s1) = G_STRICT_FCMP floatpred(oge), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMP3:%[0-9]+]]:_(s1) = G_STRICT_FCMP floatpred(olt), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMP4:%[0-9]+]]:_(s1) = G_STRICT_FCMP floatpred(ole), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMP5:%[0-9]+]]:_(s1) = G_STRICT_FCMP floatpred(one), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMP6:%[0-9]+]]:_(s1) = G_STRICT_FCMP floatpred(ord), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMP7:%[0-9]+]]:_(s1) = G_STRICT_FCMP floatpred(uno), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMP8:%[0-9]+]]:_(s1) = G_STRICT_FCMP floatpred(ueq), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMP9:%[0-9]+]]:_(s1) = G_STRICT_FCMP floatpred(ugt), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMP10:%[0-9]+]]:_(s1) = G_STRICT_FCMP floatpred(uge), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMP11:%[0-9]+]]:_(s1) = G_STRICT_FCMP floatpred(ult), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMP12:%[0-9]+]]:_(s1) = G_STRICT_FCMP floatpred(ule), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMP13:%[0-9]+]]:_(s1) = G_STRICT_FCMP floatpred(une), [[COPY]](s32), [[COPY1]]
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(f32) = COPY $s0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(f32) = COPY $s1
+  ; CHECK-NEXT:   [[STRICT_FCMP:%[0-9]+]]:_(i1) = G_STRICT_FCMP floatpred(oeq), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMP1:%[0-9]+]]:_(i1) = G_STRICT_FCMP floatpred(ogt), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMP2:%[0-9]+]]:_(i1) = G_STRICT_FCMP floatpred(oge), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMP3:%[0-9]+]]:_(i1) = G_STRICT_FCMP floatpred(olt), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMP4:%[0-9]+]]:_(i1) = G_STRICT_FCMP floatpred(ole), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMP5:%[0-9]+]]:_(i1) = G_STRICT_FCMP floatpred(one), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMP6:%[0-9]+]]:_(i1) = G_STRICT_FCMP floatpred(ord), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMP7:%[0-9]+]]:_(i1) = G_STRICT_FCMP floatpred(uno), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMP8:%[0-9]+]]:_(i1) = G_STRICT_FCMP floatpred(ueq), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMP9:%[0-9]+]]:_(i1) = G_STRICT_FCMP floatpred(ugt), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMP10:%[0-9]+]]:_(i1) = G_STRICT_FCMP floatpred(uge), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMP11:%[0-9]+]]:_(i1) = G_STRICT_FCMP floatpred(ult), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMP12:%[0-9]+]]:_(i1) = G_STRICT_FCMP floatpred(ule), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMP13:%[0-9]+]]:_(i1) = G_STRICT_FCMP floatpred(une), [[COPY]](f32), [[COPY1]]
   ; CHECK-NEXT:   RET_ReallyLR
   %r0 = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %b, metadata !"oeq", metadata !"fpexcept.strict")
   %r1 = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %b, metadata !"ogt", metadata !"fpexcept.strict")
@@ -45,22 +45,22 @@ define void @test_strict_fcmps(float %a, float %b) strictfp {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $s0, $s1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $s0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $s1
-  ; CHECK-NEXT:   [[STRICT_FCMPS:%[0-9]+]]:_(s1) = G_STRICT_FCMPS floatpred(oeq), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMPS1:%[0-9]+]]:_(s1) = G_STRICT_FCMPS floatpred(ogt), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMPS2:%[0-9]+]]:_(s1) = G_STRICT_FCMPS floatpred(oge), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMPS3:%[0-9]+]]:_(s1) = G_STRICT_FCMPS floatpred(olt), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMPS4:%[0-9]+]]:_(s1) = G_STRICT_FCMPS floatpred(ole), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMPS5:%[0-9]+]]:_(s1) = G_STRICT_FCMPS floatpred(one), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMPS6:%[0-9]+]]:_(s1) = G_STRICT_FCMPS floatpred(ord), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMPS7:%[0-9]+]]:_(s1) = G_STRICT_FCMPS floatpred(uno), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMPS8:%[0-9]+]]:_(s1) = G_STRICT_FCMPS floatpred(ueq), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMPS9:%[0-9]+]]:_(s1) = G_STRICT_FCMPS floatpred(ugt), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMPS10:%[0-9]+]]:_(s1) = G_STRICT_FCMPS floatpred(uge), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMPS11:%[0-9]+]]:_(s1) = G_STRICT_FCMPS floatpred(ult), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMPS12:%[0-9]+]]:_(s1) = G_STRICT_FCMPS floatpred(ule), [[COPY]](s32), [[COPY1]]
-  ; CHECK-NEXT:   [[STRICT_FCMPS13:%[0-9]+]]:_(s1) = G_STRICT_FCMPS floatpred(une), [[COPY]](s32), [[COPY1]]
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(f32) = COPY $s0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(f32) = COPY $s1
+  ; CHECK-NEXT:   [[STRICT_FCMPS:%[0-9]+]]:_(i1) = G_STRICT_FCMPS floatpred(oeq), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMPS1:%[0-9]+]]:_(i1) = G_STRICT_FCMPS floatpred(ogt), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMPS2:%[0-9]+]]:_(i1) = G_STRICT_FCMPS floatpred(oge), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMPS3:%[0-9]+]]:_(i1) = G_STRICT_FCMPS floatpred(olt), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMPS4:%[0-9]+]]:_(i1) = G_STRICT_FCMPS floatpred(ole), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMPS5:%[0-9]+]]:_(i1) = G_STRICT_FCMPS floatpred(one), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMPS6:%[0-9]+]]:_(i1) = G_STRICT_FCMPS floatpred(ord), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMPS7:%[0-9]+]]:_(i1) = G_STRICT_FCMPS floatpred(uno), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMPS8:%[0-9]+]]:_(i1) = G_STRICT_FCMPS floatpred(ueq), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMPS9:%[0-9]+]]:_(i1) = G_STRICT_FCMPS floatpred(ugt), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMPS10:%[0-9]+]]:_(i1) = G_STRICT_FCMPS floatpred(uge), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMPS11:%[0-9]+]]:_(i1) = G_STRICT_FCMPS floatpred(ult), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMPS12:%[0-9]+]]:_(i1) = G_STRICT_FCMPS floatpred(ule), [[COPY]](f32), [[COPY1]]
+  ; CHECK-NEXT:   [[STRICT_FCMPS13:%[0-9]+]]:_(i1) = G_STRICT_FCMPS floatpred(une), [[COPY]](f32), [[COPY1]]
   ; CHECK-NEXT:   RET_ReallyLR
   %r0 = call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float %b, metadata !"oeq", metadata !"fpexcept.strict")
   %r1 = call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float %b, metadata !"ogt", metadata !"fpexcept.strict")

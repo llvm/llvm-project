@@ -55,7 +55,7 @@
 
 # RUN: not ld.lld -shared -z memtag-mode=asymm -z memtag-heap --android-memtag-note 2>&1 | \
 # RUN:    FileCheck %s --check-prefix=BAD-MODE
-# BAD-MODE: error: unknown -z memtag-mode= value: asymm
+# BAD-MODE: error: unknown -z memtag-mode= value 'asymm'
 
 # RUN: ld.lld -static -z memtag-mode=sync -z memtag-heap \
 # RUN:    -z memtag-stack --android-memtag-note %t.o -o %t

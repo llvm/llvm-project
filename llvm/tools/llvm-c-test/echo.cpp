@@ -38,14 +38,6 @@ struct CAPIDenseMap {};
 template<typename T>
 struct CAPIDenseMap<T*> {
   struct CAPIDenseMapInfo {
-    static inline T* getEmptyKey() {
-      uintptr_t Val = static_cast<uintptr_t>(-1);
-      return reinterpret_cast<T*>(Val);
-    }
-    static inline T* getTombstoneKey() {
-      uintptr_t Val = static_cast<uintptr_t>(-2);
-      return reinterpret_cast<T*>(Val);
-    }
     static unsigned getHashValue(const T *PtrVal) {
       return hash_value(PtrVal);
     }
@@ -1000,6 +992,20 @@ struct FunCloner {
       case LLVMFreeze: {
         LLVMValueRef Arg = CloneValue(LLVMGetOperand(Src, 0));
         Dst = LLVMBuildFreeze(Builder, Arg, Name);
+        break;
+      }
+      case LLVMBitInsert: {
+        LLVMValueRef Base = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMValueRef Val = CloneValue(LLVMGetOperand(Src, 1));
+        LLVMValueRef Offset = CloneValue(LLVMGetOperand(Src, 2));
+        Dst = LLVMBuildBitInsert(Builder, Base, Val, Offset, Name);
+        break;
+      }
+      case LLVMBitExtract: {
+        LLVMTypeRef Type = CloneType(LLVMTypeOf(Src));
+        LLVMValueRef SrcV = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMValueRef Offset = CloneValue(LLVMGetOperand(Src, 1));
+        Dst = LLVMBuildBitExtract(Builder, Type, SrcV, Offset, Name);
         break;
       }
       case LLVMFence: {

@@ -14,5 +14,6 @@
 
 void add_uint64(std::vector<uint8_t> &buf, uint64_t val);
 void add_uint32(std::vector<uint8_t> &buf, uint32_t val);
+void add_uint16(std::vector<uint8_t> &buf, uint16_t val);
 
 #endif

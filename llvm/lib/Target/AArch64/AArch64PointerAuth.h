@@ -9,11 +9,17 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64POINTERAUTH_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64POINTERAUTH_H
 
-#include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/Register.h"
+#include "Utils/AArch64BaseInfo.h"
 
 namespace llvm {
 namespace AArch64PAuth {
+
+/// PAuth key to be used with function pointers in .init_array and .fini_array.
+constexpr AArch64PACKey::ID InitFiniKey = AArch64PACKey::IA;
+
+/// Constant discriminator to be used with function pointers in .init_array and
+/// .fini_array. The value is ptrauth_string_discriminator("init_fini")
+constexpr unsigned InitFiniPointerConstantDiscriminator = 0xD9D4;
 
 /// Variants of check performed on an authenticated pointer.
 ///

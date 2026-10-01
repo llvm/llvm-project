@@ -16,6 +16,9 @@
 extern "C" {
 #endif
 
+#define __riscv_intrinsic_xandesbfhcvt 1
+#define __riscv_intrinsic_xandesperf 1
+
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
 
 #if defined(__riscv_xandesperf)

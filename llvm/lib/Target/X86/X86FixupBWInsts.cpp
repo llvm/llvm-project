@@ -459,7 +459,8 @@ void X86FixupBWInstImpl::processBasicBlock(MachineFunction &MF,
       MIReplacements.push_back(std::make_pair(&MI, NewMI));
 
     // We're done with this instruction, update liveness for the next one.
-    LiveUnits.stepBackward(MI);
+    if (!MI.isDebugInstr())
+      LiveUnits.stepBackward(MI);
   }
 
   while (!MIReplacements.empty()) {

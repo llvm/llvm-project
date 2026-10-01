@@ -31,5 +31,5 @@ if_false:
 ; CHECK-LABEL: test_cmp_bcc_fusion:
 ; CHECK: str {{w[0-9]}}, [{{x[0-9]}}]
 ; CHECK-NEXT: subs {{w[0-9]}}, {{w[0-9]}}, {{w[0-9]}}
-; CHECK-NEXT: b.ne .LBB0_2
-; CHECK-NEXT: b .LBB0_1
+; CHECK-NEXT: b.eq .LBB0_1
+; CHECK-NEXT: b .LBB0_2

@@ -45,11 +45,11 @@ define <8 x double> @load_fadd_transpose(ptr %A.Ptr, <8 x double> %b) {
 ; CHECK-LABEL: @load_fadd_transpose(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[A_PTR:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A_PTR]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[A_PTR]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr [[A_PTR]], i64 4
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds double, ptr [[A_PTR]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <2 x double>, ptr [[VEC_GEP2]], align 8
-; CHECK-NEXT:    [[VEC_GEP4:%.*]] = getelementptr double, ptr [[A_PTR]], i64 6
+; CHECK-NEXT:    [[VEC_GEP4:%.*]] = getelementptr inbounds double, ptr [[A_PTR]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <2 x double>, ptr [[VEC_GEP4]], align 8
 ; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <8 x double> [[B:%.*]], <8 x double> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[SPLIT6:%.*]] = shufflevector <8 x double> [[B]], <8 x double> poison, <2 x i32> <i32 2, i32 3>
@@ -91,11 +91,11 @@ define <8 x double> @load_fneg_transpose(ptr %A.Ptr) {
 ; CHECK-LABEL: @load_fneg_transpose(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[A_PTR:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A_PTR]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[A_PTR]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr [[A_PTR]], i64 4
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds double, ptr [[A_PTR]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <2 x double>, ptr [[VEC_GEP2]], align 8
-; CHECK-NEXT:    [[VEC_GEP4:%.*]] = getelementptr double, ptr [[A_PTR]], i64 6
+; CHECK-NEXT:    [[VEC_GEP4:%.*]] = getelementptr inbounds double, ptr [[A_PTR]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <2 x double>, ptr [[VEC_GEP4]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = fneg <2 x double> [[COL_LOAD]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg <2 x double> [[COL_LOAD1]]

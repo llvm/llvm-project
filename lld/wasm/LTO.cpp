@@ -250,7 +250,8 @@ SmallVector<InputFile *, 0> BitcodeCompiler::compile() {
   }
 
   if (!ctx.arg.thinLTOCacheDir.empty())
-    pruneCache(ctx.arg.thinLTOCacheDir, ctx.arg.thinLTOCachePolicy, files);
+    check(
+        pruneCache(ctx.arg.thinLTOCacheDir, ctx.arg.thinLTOCachePolicy, files));
 
   SmallVector<InputFile *, 0> ret;
   for (unsigned i = 0; i != maxTasks; ++i) {

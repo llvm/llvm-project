@@ -1,5 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefix=FUNC -check-prefix=SI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=FUNC -check-prefix=SI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=FUNC -check-prefix=SI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu8.02 < %s | FileCheck -check-prefix=FUNC -check-prefix=SI %s
 
 ; FUNC-LABEL: {{^}}fmul_f64:
 ; SI: v_mul_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}

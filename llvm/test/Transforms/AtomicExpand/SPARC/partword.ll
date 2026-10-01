@@ -25,7 +25,7 @@ define i8 @test_cmpxchg_i8(ptr %arg, i8 %old, i8 %new) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i8 [[OLD:%.*]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP5]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] monotonic, align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], [[INV_MASK]]
 ; CHECK-NEXT:    br label [[PARTWORD_CMPXCHG_LOOP:%.*]]
 ; CHECK:       partword.cmpxchg.loop:
@@ -71,7 +71,7 @@ define i16 @test_cmpxchg_i16(ptr %arg, i16 %old, i16 %new) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i16 [[OLD:%.*]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP5]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] monotonic, align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], [[INV_MASK]]
 ; CHECK-NEXT:    br label [[PARTWORD_CMPXCHG_LOOP:%.*]]
 ; CHECK:       partword.cmpxchg.loop:
@@ -115,7 +115,7 @@ define i16 @test_add_i16(ptr %arg, i16 %val) {
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VAL:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -152,7 +152,7 @@ define i16 @test_xor_i16(ptr %arg, i16 %val) {
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VAL:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -186,7 +186,7 @@ define i16 @test_or_i16(ptr %arg, i16 %val) {
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VAL:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -221,7 +221,7 @@ define i16 @test_and_i16(ptr %arg, i16 %val) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VAL:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -253,7 +253,7 @@ define i16 @test_min_i16(ptr %arg, i16 %val) {
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -291,7 +291,7 @@ define half @test_atomicrmw_fadd_f16(ptr %ptr, half %value) {
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP3]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]

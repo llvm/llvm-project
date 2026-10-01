@@ -91,7 +91,7 @@ static const std::array<RegisterInfo, 33> g_register_infos = {
      DEFINE_GENERIC_REGISTER_STUB(ra, nullptr, LLDB_REGNUM_GENERIC_RA),
      DEFINE_GENERIC_REGISTER_STUB(sp, nullptr, LLDB_REGNUM_GENERIC_SP),
      DEFINE_REGISTER_STUB(gp, nullptr),
-     DEFINE_REGISTER_STUB(tp, nullptr),
+     DEFINE_GENERIC_REGISTER_STUB(tp, nullptr, LLDB_REGNUM_GENERIC_TP),
      DEFINE_REGISTER_STUB(t0, nullptr),
      DEFINE_REGISTER_STUB(t1, nullptr),
      DEFINE_REGISTER_STUB(t2, nullptr),
@@ -178,7 +178,7 @@ static bool UpdateRegister(RegisterContext *reg_ctx,
 
   const RegisterInfo *reg_info = reg_ctx->GetRegisterInfo(reg_kind, reg_num);
 
-  LLDB_LOG(log, "Writing {0}: 0x{1:x}", reg_info->name,
+  LLDB_LOG(log, "Writing {0}: {1:x}", reg_info->name,
            static_cast<uint64_t>(value));
   if (!reg_ctx->WriteRegisterFromUnsigned(reg_info, value)) {
     LLDB_LOG(log, "Writing {0}: failed", reg_info->name);
@@ -224,11 +224,11 @@ bool ABISysV_riscv::PrepareTrivialCall(Thread &thread, addr_t sp,
   for (auto [idx, arg] : enumerate(args)) {
     const RegisterInfo *reg_info = reg_ctx_sp->GetRegisterInfo(
         eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1 + idx);
-    LLDB_LOG(log, "About to write arg{0} (0x{1:x}) into {2}", idx, arg,
+    LLDB_LOG(log, "About to write arg{0} ({1:x}) into {2}", idx, arg,
              reg_info->name);
 
     if (!reg_ctx_sp->WriteRegisterFromUnsigned(reg_info, arg)) {
-      LLDB_LOG(log, "Failed to write arg{0} (0x{1:x}) into {2}", idx, arg,
+      LLDB_LOG(log, "Failed to write arg{0} ({1:x}) into {2}", idx, arg,
                reg_info->name);
       return false;
     }
@@ -753,6 +753,7 @@ UnwindPlanSP ABISysV_riscv::CreateDefaultUnwindPlan() {
   // have been spilled to stack already.
   row.SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, reg_size * -2, true);
   row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, reg_size * -1, true);
+  row.SetUnspecifiedRegistersAreUndefined(true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindGeneric);
   plan_sp->AppendRow(std::move(row));
@@ -819,7 +820,8 @@ static uint32_t GetGenericNum(llvm::StringRef name) {
       .Case("pc", LLDB_REGNUM_GENERIC_PC)
       .Cases({"ra", "x1"}, LLDB_REGNUM_GENERIC_RA)
       .Cases({"sp", "x2"}, LLDB_REGNUM_GENERIC_SP)
-      .Cases({"fp", "s0"}, LLDB_REGNUM_GENERIC_FP)
+      .Cases({"fp", "s0", "x8"}, LLDB_REGNUM_GENERIC_FP)
+      .Cases({"tp", "x4"}, LLDB_REGNUM_GENERIC_TP)
       .Case("a0", LLDB_REGNUM_GENERIC_ARG1)
       .Case("a1", LLDB_REGNUM_GENERIC_ARG2)
       .Case("a2", LLDB_REGNUM_GENERIC_ARG3)
@@ -845,9 +847,10 @@ void ABISysV_riscv::AugmentRegisterInfo(
       it.value().alt_name.SetCString("x2");
     else if (it.value().name == "gp")
       it.value().alt_name.SetCString("x3");
-    else if (it.value().name == "fp")
-      it.value().alt_name.SetCString("s0");
-    else if (it.value().name == "tp")
+    else if (it.value().name == "fp") {
+      it.value().name.SetCString("s0");
+      it.value().alt_name.SetCString("x8");
+    } else if (it.value().name == "tp")
       it.value().alt_name.SetCString("x4");
     else if (it.value().name == "s0")
       it.value().alt_name.SetCString("x8");

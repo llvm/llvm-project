@@ -414,7 +414,7 @@ define i1 @ctpop32_ne_one_nonzero(i32 %x) {
 ; CHECK-CSSC-LABEL: ctpop32_ne_one_nonzero:
 ; CHECK-CSSC:       // %bb.0: // %entry
 ; CHECK-CSSC-NEXT:    sub w8, w0, #1
-; CHECK-CSSC-NEXT:    and	w8, w0, w8
+; CHECK-CSSC-NEXT:    and w8, w0, w8
 ; CHECK-CSSC-NEXT:    umin w0, w8, #1
 ; CHECK-CSSC-NEXT:    ret
 ;

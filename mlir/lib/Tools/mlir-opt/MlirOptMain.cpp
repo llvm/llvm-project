@@ -34,6 +34,7 @@
 #include "mlir/Tools/ParseUtilities.h"
 #include "mlir/Tools/Plugins/DialectPlugin.h"
 #include "mlir/Tools/Plugins/PassPlugin.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Support/CommandLine.h"
@@ -580,6 +581,12 @@ performActions(raw_ostream &os,
     break;
   }
   }
+  // Emit the remarks the policy deferred on every exit, while the caller's
+  // diagnostic handlers are still registered; ~MLIRContext would be too late.
+  llvm::scope_exit finalizeRemarks([&ctx] {
+    if (remark::detail::RemarkEngine *engine = ctx.getRemarkEngine())
+      engine->getRemarkEmittingPolicy()->finalize();
+  });
 
   // Prepare the pass manager, applying command-line and reproducer options.
   PassManager pm(op.get()->getName(), PassManager::Nesting::Implicit);
@@ -621,15 +628,14 @@ performActions(raw_ostream &os,
   if (config.bytecodeVersionToEmit().has_value())
     return emitError(UnknownLoc::get(pm.getContext()))
            << "bytecode version while not emitting bytecode";
-  AsmState asmState(op.get(), OpPrintingFlags(), /*locationMap=*/nullptr,
-                    &fallbackResourceMap);
+
+  // Don't re-run the verifier if we already ran the verifier at the end of the
+  // pass pipeline.
+  AsmState asmState(op.get(),
+                    OpPrintingFlags().assumeVerified(
+                        config.shouldVerifyPasses() && !pm.empty()),
+                    /*locationMap=*/nullptr, &fallbackResourceMap);
   os << OpWithState(op.get(), asmState) << '\n';
-
-  // This is required if the remark policy is final. Otherwise, the remarks are
-  // not emitted.
-  if (remark::detail::RemarkEngine *engine = ctx.getRemarkEngine())
-    engine->getRemarkEmittingPolicy()->finalize();
-
   return success();
 }
 
@@ -656,8 +662,10 @@ processBuffer(raw_ostream &os, std::unique_ptr<MemoryBuffer> ownedBuffer,
   MLIRContext context(registry, MLIRContext::Threading::DISABLED);
   if (threadPool)
     context.setThreadPool(*threadPool);
+  // Keep the registration within the lifetimes of the context and verifier.
+  std::unique_ptr<ScopedDiagnosticHandler> verifierRegistration;
   if (verifyHandler)
-    verifyHandler->registerInContext(&context);
+    verifierRegistration = verifyHandler->registerInContext(&context);
 
   StringRef irdlFile = config.getIrdlFile();
   if (!irdlFile.empty() && failed(loadIRDLDialects(irdlFile, context)))
@@ -702,7 +710,7 @@ std::string mlir::registerCLIOptions(llvm::StringRef toolName,
   std::string helpHeader = (toolName + "\nAvailable Dialects: ").str();
   {
     llvm::raw_string_ostream os(helpHeader);
-    interleaveComma(registry.getDialectNames(), os,
+    interleaveComma(registry.getRegisteredDialectNames(), os,
                     [&](auto name) { os << name; });
   }
   return helpHeader;
@@ -730,7 +738,7 @@ mlir::registerAndParseCLIOptions(int argc, char **argv,
 
 static LogicalResult printRegisteredDialects(DialectRegistry &registry) {
   llvm::outs() << "Available Dialects: ";
-  interleave(registry.getDialectNames(), llvm::outs(), ",");
+  interleave(registry.getRegisteredDialectNames(), llvm::outs(), ",");
   llvm::outs() << "\n";
   return success();
 }

@@ -4,6 +4,8 @@ standards:
 macros:
   - macro_name: ONCE_FLAG_INIT
     macro_value: '{0}'
+  - macro_name: TSS_DTOR_ITERATIONS
+    macro_header: threads-macros.h
 types:
   - type_name: once_flag
   - type_name: __call_once_func_t
@@ -13,6 +15,7 @@ types:
   - type_name: thrd_t
   - type_name: tss_t
   - type_name: tss_dtor_t
+  - type_name: struct_timespec
 enums:
   - name: mtx_plain
     value: null
@@ -63,6 +66,14 @@ functions:
     return_type: int
     arguments:
       - type: cnd_t *
+  - name: cnd_timedwait
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: cnd_t *__restrict
+      - type: mtx_t *__restrict
+      - type: const struct timespec *__restrict
   - name: cnd_wait
     standards:
       - stdc
@@ -84,6 +95,12 @@ functions:
       - type: mtx_t *
       - type: int
   - name: mtx_lock
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: mtx_t *
+  - name: mtx_trylock
     standards:
       - stdc
     return_type: int

@@ -7,10 +7,7 @@ define void @vavg_b(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vand.v $vr2, $vr0, $vr1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vsrai.b $vr0, $vr0, 1
-; CHECK-NEXT:    vadd.b $vr0, $vr2, $vr0
+; CHECK-NEXT:    vavg.b $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -30,10 +27,7 @@ define void @vavg_h(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vand.v $vr2, $vr0, $vr1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vsrai.h $vr0, $vr0, 1
-; CHECK-NEXT:    vadd.h $vr0, $vr2, $vr0
+; CHECK-NEXT:    vavg.h $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -53,10 +47,7 @@ define void @vavg_w(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vand.v $vr2, $vr0, $vr1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vsrai.w $vr0, $vr0, 1
-; CHECK-NEXT:    vadd.w $vr0, $vr2, $vr0
+; CHECK-NEXT:    vavg.w $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -76,10 +67,7 @@ define void @vavg_d(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vand.v $vr2, $vr0, $vr1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vsrai.d $vr0, $vr0, 1
-; CHECK-NEXT:    vadd.d $vr0, $vr2, $vr0
+; CHECK-NEXT:    vavg.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -99,10 +87,7 @@ define void @vavg_bu(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vand.v $vr2, $vr0, $vr1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vsrli.b $vr0, $vr0, 1
-; CHECK-NEXT:    vadd.b $vr0, $vr2, $vr0
+; CHECK-NEXT:    vavg.bu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -122,10 +107,7 @@ define void @vavg_hu(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vand.v $vr2, $vr0, $vr1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vsrli.h $vr0, $vr0, 1
-; CHECK-NEXT:    vadd.h $vr0, $vr2, $vr0
+; CHECK-NEXT:    vavg.hu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -145,10 +127,7 @@ define void @vavg_wu(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vand.v $vr2, $vr0, $vr1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vsrli.w $vr0, $vr0, 1
-; CHECK-NEXT:    vadd.w $vr0, $vr2, $vr0
+; CHECK-NEXT:    vavg.wu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -168,10 +147,7 @@ define void @vavg_du(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vand.v $vr2, $vr0, $vr1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vsrli.d $vr0, $vr0, 1
-; CHECK-NEXT:    vadd.d $vr0, $vr2, $vr0
+; CHECK-NEXT:    vavg.du $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -191,10 +167,7 @@ define void @vavgr_b(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vor.v $vr2, $vr0, $vr1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vsrai.b $vr0, $vr0, 1
-; CHECK-NEXT:    vsub.b $vr0, $vr2, $vr0
+; CHECK-NEXT:    vavgr.b $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -215,10 +188,7 @@ define void @vavgr_h(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vor.v $vr2, $vr0, $vr1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vsrai.h $vr0, $vr0, 1
-; CHECK-NEXT:    vsub.h $vr0, $vr2, $vr0
+; CHECK-NEXT:    vavgr.h $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -239,10 +209,7 @@ define void @vavgr_w(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vor.v $vr2, $vr0, $vr1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vsrai.w $vr0, $vr0, 1
-; CHECK-NEXT:    vsub.w $vr0, $vr2, $vr0
+; CHECK-NEXT:    vavgr.w $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -263,10 +230,7 @@ define void @vavgr_d(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vor.v $vr2, $vr0, $vr1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vsrai.d $vr0, $vr0, 1
-; CHECK-NEXT:    vsub.d $vr0, $vr2, $vr0
+; CHECK-NEXT:    vavgr.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -287,10 +251,7 @@ define void @vavgr_bu(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vor.v $vr2, $vr0, $vr1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vsrli.b $vr0, $vr0, 1
-; CHECK-NEXT:    vsub.b $vr0, $vr2, $vr0
+; CHECK-NEXT:    vavgr.bu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -311,10 +272,7 @@ define void @vavgr_hu(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vor.v $vr2, $vr0, $vr1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vsrli.h $vr0, $vr0, 1
-; CHECK-NEXT:    vsub.h $vr0, $vr2, $vr0
+; CHECK-NEXT:    vavgr.hu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -335,10 +293,7 @@ define void @vavgr_wu(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vor.v $vr2, $vr0, $vr1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vsrli.w $vr0, $vr0, 1
-; CHECK-NEXT:    vsub.w $vr0, $vr2, $vr0
+; CHECK-NEXT:    vavgr.wu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -359,10 +314,7 @@ define void @vavgr_du(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vor.v $vr2, $vr0, $vr1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vsrli.d $vr0, $vr0, 1
-; CHECK-NEXT:    vsub.d $vr0, $vr2, $vr0
+; CHECK-NEXT:    vavgr.du $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:

@@ -13,7 +13,7 @@ define double @f_acos() {
 declare float @asinf(float) #0
 define float @f_asinf() {
 ; CHECK-LABEL: @f_asinf(
-; CHECK-NEXT:    ret float 0x3FF921FB{{.+}}
+; CHECK-NEXT:    ret float f0x3FC90FD{{.+}}
 ;
   %res = tail call fast float @asinf(float 1.0)
   ret float %res
@@ -22,7 +22,7 @@ define float @f_asinf() {
 declare double @atan(double) #0
 define double @f_atan() {
 ; CHECK-LABEL: @f_atan(
-; CHECK-NEXT:    ret double 0x3FE921FB
+; CHECK-NEXT:    ret double f0x3FE921FB{{.+}}
 ;
   %res = tail call fast double @atan(double 1.0)
   ret double %res
@@ -31,7 +31,7 @@ define double @f_atan() {
 declare float @cosf(float) #0
 define float @f_cosf() {
 ; CHECK-LABEL: @f_cosf(
-; CHECK-NEXT:    ret float 0x3FE14A2{{.+}}
+; CHECK-NEXT:    ret float f0x3F0A514{{.+}}
 ;
   %res = tail call fast float @cosf(float 1.0)
   ret float %res
@@ -40,7 +40,7 @@ define float @f_cosf() {
 declare float @llvm.cos.f32(float)
 define float @i_cosf() {
 ; CHECK-LABEL: @i_cosf(
-; CHECK-NEXT:    ret float 0x3FE14A2
+; CHECK-NEXT:    ret float f0x3F0A514{{.+}}
 ;
   %res = tail call fast float @llvm.cos.f32(float 1.0)
   ret float %res
@@ -49,7 +49,7 @@ define float @i_cosf() {
 declare double @cosh(double) #0
 define double @f_cosh() {
 ; CHECK-LABEL: @f_cosh(
-; CHECK-NEXT:    ret double 0x3FF8B075{{.+}}
+; CHECK-NEXT:    ret double f0x3FF8B075{{.+}}
 ;
   %res = tail call fast double @cosh(double 1.0)
   ret double %res
@@ -58,7 +58,7 @@ define double @f_cosh() {
 declare float @expf(float) #0
 define float @f_expf() {
 ; CHECK-LABEL: @f_expf(
-; CHECK-NEXT:    ret float 0x4005BF0A{{.+}}
+; CHECK-NEXT:    ret float f0x402DF85{{.+}}
 ;
   %res = tail call fast float @expf(float 1.0)
   ret float %res
@@ -67,7 +67,7 @@ define float @f_expf() {
 declare float @llvm.exp.f32(float)
 define float @i_expf() {
 ; CHECK-LABEL: @i_expf(
-; CHECK-NEXT:    ret float 0x4005BF0A{{.+}}
+; CHECK-NEXT:    ret float f0x402DF85{{.+}}
 ;
   %res = tail call fast float @llvm.exp.f32(float 1.0)
   ret float %res
@@ -150,7 +150,7 @@ define double @f_log10() {
 declare float @sinf(float) #0
 define float @f_sinf() {
 ; CHECK-LABEL: @f_sinf(
-; CHECK-NEXT:    ret float 0x3FEAED54{{.+}}
+; CHECK-NEXT:    ret float f0x3F576AA{{.+}}
 ;
   %res = tail call fast float @sinf(float 1.0)
   ret float %res
@@ -159,7 +159,7 @@ define float @f_sinf() {
 declare double @sinh(double) #0
 define double @f_sinh() {
 ; CHECK-LABEL: @f_sinh(
-; CHECK-NEXT:    ret double 0x3FF2CD9F{{.+}}
+; CHECK-NEXT:    ret double f0x3FF2CD9F{{.+}}
 ;
   %res = tail call fast double @sinh(double 1.0)
   ret double %res
@@ -177,7 +177,7 @@ define float @f_sqrtf() {
 declare double @tan(double) #0
 define double @f_tan() {
 ; CHECK-LABEL: @f_tan(
-; CHECK-NEXT:    ret double 0x3FF8EB24{{.+}}
+; CHECK-NEXT:    ret double f0x3FF8EB24{{.+}}
 ;
   %res = tail call fast double @tan(double 1.0)
   ret double %res
@@ -187,7 +187,7 @@ declare float @tanhf(float) #0
 define float @f_tanhf() {
 ; CHECK-LABEL: @f_tanhf(
 ; CHECK-NEXT:    [[RES:%.*]] = tail call fast float @tanhf(float 1.000000e+00)
-; CHECK-NEXT:    ret float 0x3FE85EFA{{.+}}
+; CHECK-NEXT:    ret float f0x3F42F7D{{.+}}
 ;
   %res = tail call fast float @tanhf(float 1.0)
   ret float %res

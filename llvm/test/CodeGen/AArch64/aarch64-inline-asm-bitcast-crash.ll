@@ -12,8 +12,7 @@ define void @f(<2 x i8> %1) {
 ; LE-NEXT:    mov s1, v0.s[1]
 ; LE-NEXT:    str b0, [sp, #12]
 ; LE-NEXT:    stur b1, [sp, #13]
-; LE-NEXT:    ldrh w8, [sp, #12]
-; LE-NEXT:    fmov s0, w8
+; LE-NEXT:    ldr h0, [sp, #12]
 ; LE-NEXT:    //APP
 ; LE-NEXT:    //NO_APP
 ; LE-NEXT:    add sp, sp, #16
@@ -27,8 +26,7 @@ define void @f(<2 x i8> %1) {
 ; BE-NEXT:    mov s1, v0.s[1]
 ; BE-NEXT:    str b0, [sp, #12]
 ; BE-NEXT:    stur b1, [sp, #13]
-; BE-NEXT:    ldrh w8, [sp, #12]
-; BE-NEXT:    fmov s0, w8
+; BE-NEXT:    ldr h0, [sp, #12]
 ; BE-NEXT:    //APP
 ; BE-NEXT:    //NO_APP
 ; BE-NEXT:    add sp, sp, #16

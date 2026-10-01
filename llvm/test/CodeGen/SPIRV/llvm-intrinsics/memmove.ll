@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-SPIRV-NOT: llvm.memmove
+; CHECK-NOT: llvm.memmove
 
 ; CHECK-DAG: %[[#Int8:]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[#Int32:]] = OpTypeInt 32 0
@@ -31,6 +31,10 @@
 ; CHECK: %[[#Phi:]] = OpPhi %[[#Ptr_Generic_32]] %[[#Op1:]] %[[#Lbl1:]] %[[#Op2:]] %[[#Lbl2:]]
 ; CHECK: %[[#Cast:]] = OpPtrCastToGeneric %[[#]] %[[#]]
 ; CHECK: OpCopyMemorySized %[[#Cast]] %[[#Phi]] %[[#Const_32_64]] Aligned 8
+
+; CHECK: OpFunction
+; CHECK-NOT: OpCopyMemorySized
+; CHECK: OpFunctionEnd
 
 %struct.SomeStruct = type { <16 x float>, i32, [60 x i8] }
 %class.kfunc = type <{ i32, i32, i32, [4 x i8] }>
@@ -78,6 +82,11 @@ merge:                                            ; preds = %entry.merge_crit_ed
   %phi = phi ptr addrspace(4) [ %3, %entry.merge_crit_edge ], [ %4, %leader ]
   %5 = addrspacecast ptr addrspace(3) @"func_object1" to ptr addrspace(4)
   call void @llvm.memmove.p4.p4.i64(ptr addrspace(4) align 8 dereferenceable(32) %5, ptr addrspace(4) align 8 dereferenceable(32) %phi, i64 32, i1 false)
+  ret void
+}
+
+define spir_kernel void @test_zero_move(ptr addrspace(1) %in, ptr addrspace(1) %out) {
+  call void @llvm.memmove.p1.p1.i32(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 0, i1 false)
   ret void
 }
 

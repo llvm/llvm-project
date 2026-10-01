@@ -1,4 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64 < %s 2>&1 | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64 < %s -o - -filetype=obj | spirv-val %}
 
 ; Variadics lowering will introduce a buffer that will be accessed through GEP.
 ; We don't lower SPIR-V builtins or printf, but make sure these functions aren't

@@ -1389,6 +1389,32 @@ define i32 @PR185467(i32 range(i32 0, 2147483647) %v) {
   ret i32 %absx
 }
 
+define i32 @abs_add_known_positive(i32 %a) {
+; X86-LABEL: abs_add_known_positive:
+; X86:       # %bb.0:
+; X86-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    incl %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    cmovsl %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: abs_add_known_positive:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    andl $2147483647, %edi # imm = 0x7FFFFFFF
+; X64-NEXT:    leal 1(%rdi), %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    cmovsl %ecx, %eax
+; X64-NEXT:    retq
+  %x = and i32 %a, 2147483647
+  %add = add i32 %x, 1
+  %abs = call i32 @llvm.abs.i32(i32 %add, i1 false)
+  ret i32 %abs
+}
+
 declare i8 @llvm.abs.i8(i8, i1)
 declare i16 @llvm.abs.i16(i16, i1)
 declare i32 @llvm.abs.i32(i32, i1)

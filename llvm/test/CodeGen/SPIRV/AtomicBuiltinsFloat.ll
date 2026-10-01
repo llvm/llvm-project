@@ -1,14 +1,27 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ;; Types:
 ; CHECK:         %[[#F32:]] = OpTypeFloat 32
+; CHECK:         %[[#I32:]] = OpTypeInt 32 0
 ;; Constants:
-; CHECK:         %[[#CONST:]] = OpConstant %[[#F32]] 1
+; CHECK-DAG:     %[[#CONST:]] = OpConstant %[[#F32]] 1
+; CHECK-DAG:     %[[#RELAXED:]] = OpConstant %[[#I32]] 768
+; CHECK-DAG:     %[[#DEVICE:]] = OpConstant %[[#I32]] 1{{$}}
+; CHECK-DAG:     %[[#WORKGROUP:]] = OpConstant %[[#I32]] 2{{$}}
+; CHECK-DAG:     %[[#SEQCST:]] = OpConstant %[[#I32]] 784
+; CHECK-DAG:     %[[#NONE:]] = OpConstantNull %[[#I32]]
 ;; Atomic instructions:
 ; CHECK:         OpStore %[[#]] %[[#CONST]]
-; CHECK-COUNT-3: OpAtomicStore
-; CHECK-COUNT-3: OpAtomicLoad
-; CHECK-COUNT-3: OpAtomicExchange
+; CHECK:         OpAtomicStore %[[#]] %[[#DEVICE]] %[[#SEQCST]] %[[#CONST]]
+; CHECK:         OpAtomicStore %[[#]] %[[#DEVICE]] %[[#RELAXED]] %[[#CONST]]
+; CHECK:         OpAtomicStore %[[#]] %[[#WORKGROUP]] %[[#RELAXED]] %[[#CONST]]
+; CHECK:         OpAtomicLoad %[[#]] %[[#]] %[[#DEVICE]] %[[#SEQCST]]
+; CHECK:         OpAtomicLoad %[[#]] %[[#]] %[[#DEVICE]] %[[#RELAXED]]
+; CHECK:         OpAtomicLoad %[[#]] %[[#]] %[[#WORKGROUP]] %[[#RELAXED]]
+; CHECK:         OpAtomicExchange %[[#]] %[[#]] %[[#WORKGROUP]] %[[#NONE]] %[[#CONST]]
+; CHECK:         OpAtomicExchange %[[#]] %[[#]] %[[#WORKGROUP]] %[[#RELAXED]] %[[#CONST]]
+; CHECK:         OpAtomicExchange %[[#]] %[[#]] %[[#WORKGROUP]] %[[#RELAXED]] %[[#CONST]]
 
 define spir_kernel void @test_atomic_kernel(ptr addrspace(3) %ff) local_unnamed_addr #0 !kernel_arg_addr_space !3 !kernel_arg_access_qual !4 !kernel_arg_type !5 !kernel_arg_base_type !6 !kernel_arg_type_qual !7 {
 entry:

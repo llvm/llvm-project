@@ -635,3 +635,22 @@ namespace PR155416 {
     Ct() : St{0} {}
   };
 }
+
+namespace gh192510 {
+  template<typename T>
+  struct C {
+
+  };
+
+  struct Base {  
+    int x;
+  };
+
+  template<typename T>
+  class X: public Base {
+    using INT = C<T>;
+
+    X(INT i) : INT(i) {} // no crash
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: constructor does not initialize these bases: Base
+  };
+}

@@ -49,7 +49,7 @@ RunInTerminalMessageError::RunInTerminalMessageError(StringRef error)
     : RunInTerminalMessage(eRunInTerminalMessageKindError), error(error) {}
 
 json::Value RunInTerminalMessageError::ToJSON() const {
-  return json::Object{{"kind", "error"}, {"value", error}};
+  return json::Object{{"kind", "error"}, {"error", error}};
 }
 
 RunInTerminalMessageDidAttach::RunInTerminalMessageDidAttach()
@@ -171,7 +171,7 @@ Expected<std::shared_ptr<FifoFile>> CreateRunInTerminalCommFile() {
   SmallString<256> comm_file;
 #if _WIN32
   char pipe_name[MAX_PATH];
-  sprintf(pipe_name, "\\\\.\\pipe\\lldb-dap-run-in-terminal-comm-%d",
+  sprintf(pipe_name, "\\\\.\\pipe\\lldb-dap-run-in-terminal-comm-%lu",
           GetCurrentProcessId());
   return CreateFifoFile(pipe_name);
 #else

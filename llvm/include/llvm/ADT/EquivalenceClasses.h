@@ -27,11 +27,11 @@
 
 namespace llvm {
 
-/// EquivalenceClasses - This represents a collection of equivalence classes and
-/// supports three efficient operations: insert an element into a class of its
-/// own, union two classes, and find the class for a given element.  In
-/// addition to these modification methods, it is possible to iterate over all
-/// of the equivalence classes and all of the elements in a class.
+/// This represents a collection of equivalence classes and supports three
+/// efficient operations: insert an element into a class of its own, union two
+/// classes, and find the class for a given element. In addition to these
+/// modification methods, it is possible to iterate over all of the equivalence
+/// classes and all of the elements in a class.
 ///
 /// This implementation is an efficient implementation that only stores one copy
 /// of the element being indexed per entry in the set, and allows any arbitrary
@@ -61,7 +61,7 @@ namespace llvm {
 ///
 template <class ElemTy> class EquivalenceClasses {
 public:
-  /// ECValue - The EquivalenceClasses data structure is just a set of these.
+  /// The EquivalenceClasses data structure is just a set of these.
   /// Each of these represents a relation for a value.  First it stores the
   /// value itself. Next, it provides a "next pointer", which is used to
   /// enumerate all of the elements in the unioned set.  Finally, it defines
@@ -124,8 +124,8 @@ public:
   };
 
 private:
-  /// TheMapping - This implicitly provides a mapping from ElemTy values to the
-  /// ECValues, it just keeps the key as part of the value.
+  /// This implicitly provides a mapping from ElemTy values to the ECValues, it
+  /// just keeps the key as part of the value.
   DenseMap<ElemTy, ECValue *> TheMapping;
 
   /// List of all members, used to provide a deterministic iteration order.
@@ -184,26 +184,25 @@ public:
     return TheMapping.contains(V);
   }
 
-  /// getLeaderValue - Return the leader for the specified value that is in the
-  /// set.  It is an error to call this method for a value that is not yet in
-  /// the set.  For that, call getOrInsertLeaderValue(V).
+  /// Return the leader for the specified value that is in the set. It is an
+  /// error to call this method for a value that is not yet in the set. For
+  /// that, call getOrInsertLeaderValue(V).
   const ElemTy &getLeaderValue(const ElemTy &V) const {
     member_iterator MI = findLeader(V);
     assert(MI != member_end() && "Value is not in the set!");
     return *MI;
   }
 
-  /// getOrInsertLeaderValue - Return the leader for the specified value that is
-  /// in the set.  If the member is not in the set, it is inserted, then
-  /// returned.
+  /// Return the leader for the specified value that is in the set.  If the
+  /// member is not in the set, it is inserted, then returned.
   const ElemTy &getOrInsertLeaderValue(const ElemTy &V) {
     member_iterator MI = findLeader(insert(V));
     assert(MI != member_end() && "Value is not in the set!");
     return *MI;
   }
 
-  /// getNumClasses - Return the number of equivalence classes in this set.
-  /// Note that this is a linear time operation.
+  /// Return the number of equivalence classes in this set. Note that this is a
+  /// linear time operation.
   unsigned getNumClasses() const {
     unsigned NC = 0;
     for (const auto &E : *this)
@@ -215,8 +214,8 @@ public:
   //===--------------------------------------------------------------------===//
   // Mutation methods
 
-  /// insert - Insert a new value into the union/find set, ignoring the request
-  /// if the value already exists.
+  /// Insert a new value into the union/find set, ignoring the request if the
+  /// value already exists.
   const ECValue &insert(const ElemTy &Data) {
     auto [I, Inserted] = TheMapping.try_emplace(Data);
     if (!Inserted)
@@ -228,8 +227,8 @@ public:
     return *ECV;
   }
 
-  /// erase - Erase a value from the union/find set, return "true" if erase
-  /// succeeded, or "false" when the value was not found.
+  /// Erase a value from the union/find set, return true if erase succeeded, or
+  /// false when the value was not found.
   bool erase(const ElemTy &V) {
     if (!TheMapping.contains(V))
       return false;
@@ -281,7 +280,7 @@ public:
     return true;
   }
 
-  /// findLeader - Given a value in the set, return a member iterator for the
+  /// Given a value in the set, return a member iterator for the
   /// equivalence class it is in.  This does the path-compression part that
   /// makes union-find "union findy".  This returns an end iterator if the value
   /// is not in the equivalence class.
@@ -312,7 +311,7 @@ public:
     }
   }
 
-  /// union - Merge the two equivalence sets for the specified values, inserting
+  /// Merge the two equivalence sets for the specified values, inserting
   /// them if they do not already exist in the equivalence set.
   member_iterator unionSets(const ElemTy &V1, const ElemTy &V2) {
     const ECValue &V1I = insert(V1), &V2I = insert(V2);

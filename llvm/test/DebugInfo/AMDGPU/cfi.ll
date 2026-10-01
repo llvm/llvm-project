@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=gfx900 -mtriple=amdgcn-amd-amdhsa -filetype=obj -o - %s | llvm-dwarfdump -debug-frame - | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -filetype=obj -o - %s | llvm-dwarfdump -debug-frame - | FileCheck %s
 
 ; CHECK: .debug_frame contents:
 ; CHECK: 00000000 0000000c ffffffff CIE
@@ -15,6 +15,9 @@
 ; CHECK-EMPTY:
 ; CHECK: 00000010 {{[0-9]+}} 00000000 FDE cie=00000000 pc=00000000...{{[0-9]+}}
 ; CHECK-NEXT: Format:       DWARF32
+; CHECK-NEXT: DW_CFA_LLVM_def_aspace_cfa: SGPR32 +0 in addrspace6
+; CHECK-NEXT: DW_CFA_expression: PC_REG DW_OP_regx SGPR30, DW_OP_piece 0x4, DW_OP_regx SGPR31, DW_OP_piece 0x4
+; CHECK-NEXT: DW_CFA_nop:
 ; CHECK-EMPTY:
 ; CHECK: .eh_frame contents:
 ; CHECK-NOT: CIE

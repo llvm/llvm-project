@@ -29,9 +29,9 @@ end program
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,3>>>
 ! CHECK:           %[[VAL_7:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_8:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
+! CHECK:           %[[VAL_8:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFEi"}>
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_10:.*]] = fir.alloca !fir.char<1,3> {bindc_name = "nonvolatile_string", uniq_name = "_QFEnonvolatile_string"}
+! CHECK:           %[[VAL_10:.*]] = fir.alloca !fir.char<1,3> <{bindc_name = "nonvolatile_string", uniq_name = "_QFEnonvolatile_string"}>
 ! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] typeparams %[[VAL_5]] {uniq_name = "_QFEnonvolatile_string"} : (!fir.ref<!fir.char<1,3>>, index) -> (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>)
 ! CHECK:           %[[VAL_12:.*]] = fir.address_of(@_QFEstring) : !fir.ref<!fir.char<1,3>>
 ! CHECK:           %[[VAL_13:.*]] = fir.volatile_cast %[[VAL_12]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<!fir.char<1,3>, volatile>
@@ -56,9 +56,8 @@ end program
 ! CHECK:           %[[VAL_32:.*]] = fir.convert %[[VAL_28]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:           fir.call @_FortranAAdjustl(%[[VAL_29]], %[[VAL_31]], %[[VAL_32]], %[[VAL_1]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 ! CHECK:           %[[VAL_33:.*]] = fir.load %[[VAL_6]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,3>>>>
-! CHECK:           %[[VAL_34:.*]] = fir.box_elesize %[[VAL_33]] : (!fir.box<!fir.heap<!fir.char<1,3>>>) -> index
 ! CHECK:           %[[VAL_35:.*]] = fir.box_addr %[[VAL_33]] : (!fir.box<!fir.heap<!fir.char<1,3>>>) -> !fir.heap<!fir.char<1,3>>
-! CHECK:           %[[VAL_36:.*]]:2 = hlfir.declare %[[VAL_35]] typeparams %[[VAL_34]] {uniq_name = ".tmp.intrinsic_result"} : (!fir.heap<!fir.char<1,3>>, index) -> (!fir.heap<!fir.char<1,3>>, !fir.heap<!fir.char<1,3>>)
+! CHECK:           %[[VAL_36:.*]]:2 = hlfir.declare %[[VAL_35]] typeparams %[[VAL_5]] {uniq_name = ".tmp.intrinsic_result"} : (!fir.heap<!fir.char<1,3>>, index) -> (!fir.heap<!fir.char<1,3>>, !fir.heap<!fir.char<1,3>>)
 ! CHECK:           %[[VAL_37:.*]] = hlfir.as_expr %[[VAL_36]]#0 move %[[VAL_0]] : (!fir.heap<!fir.char<1,3>>, i1) -> !hlfir.expr<!fir.char<1,3>>
 ! CHECK:           hlfir.assign %[[VAL_37]] to %[[VAL_14]]#0 : !hlfir.expr<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>, volatile>
 ! CHECK:           hlfir.destroy %[[VAL_37]] : !hlfir.expr<!fir.char<1,3>>

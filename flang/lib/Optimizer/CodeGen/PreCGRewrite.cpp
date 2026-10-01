@@ -12,13 +12,15 @@
 
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 
-#include "flang/Optimizer/Builder/Todo.h" // remove when TODO's are done
 #include "flang/Optimizer/Dialect/FIRCG/CGOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/IR/Iterators.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
@@ -55,6 +57,40 @@ static void populateShift(llvm::SmallVectorImpl<mlir::Value> &vec,
   vec.append(shift.getOrigins().begin(), shift.getOrigins().end());
 }
 
+// Helper to emit embox/rebox for OPTIONAL input inside a block
+// guarded by a runtime presence check and to return an absent
+// box when the input is not present.
+template <typename OP>
+static mlir::Value
+emitOptionalBoxGuard(mlir::PatternRewriter &rewriter, OP op,
+                     llvm::function_ref<mlir::Value()> buildPresent) {
+  mlir::Location loc = op.getLoc();
+  mlir::Type boxType = op.getResult().getType();
+  mlir::Value isPresent = fir::IsPresentOp::create(
+      rewriter, loc, rewriter.getI1Type(), op->getOperand(0));
+  mlir::Block *condBlock = op->getBlock();
+  mlir::Block *mergeBlock = rewriter.splitBlock(condBlock, op->getIterator());
+  mergeBlock->addArgument(boxType, loc);
+
+  mlir::Block *thenBlock = rewriter.createBlock(mergeBlock);
+  rewriter.setInsertionPointToStart(thenBlock);
+  mlir::Value present = buildPresent();
+  mlir::cf::BranchOp::create(rewriter, loc, mergeBlock,
+                             mlir::ValueRange{present});
+
+  mlir::Block *elseBlock = rewriter.createBlock(mergeBlock);
+  rewriter.setInsertionPointToStart(elseBlock);
+  mlir::Value absent = fir::AbsentOp::create(rewriter, loc, boxType);
+  mlir::cf::BranchOp::create(rewriter, loc, mergeBlock,
+                             mlir::ValueRange{absent});
+
+  rewriter.setInsertionPointToEnd(condBlock);
+  mlir::cf::CondBranchOp::create(rewriter, loc, isPresent, thenBlock,
+                                 elseBlock);
+  rewriter.setInsertionPointToStart(mergeBlock);
+  return mergeBlock->getArgument(0);
+}
+
 namespace {
 
 /// Convert fir.embox to the extended form where necessary.
@@ -80,24 +116,60 @@ class EmboxConversion : public mlir::OpRewritePattern<fir::EmboxOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
-  llvm::LogicalResult
-  matchAndRewrite(fir::EmboxOp embox,
-                  mlir::PatternRewriter &rewriter) const override {
-    // If the embox does not include a shape, then do not convert it
+  enum class RewriteKind { Dynamic, Static, DropOptional };
+
+  static llvm::FailureOr<RewriteKind> getRewriteKind(fir::EmboxOp embox) {
     if (auto shapeVal = embox.getShape())
-      return rewriteDynamicShape(embox, rewriter, shapeVal);
-    if (mlir::isa<fir::ClassType>(embox.getType()))
-      TODO(embox.getLoc(), "embox conversion for fir.class type");
+      return RewriteKind::Dynamic;
     if (auto boxTy = mlir::dyn_cast<fir::BoxType>(embox.getType()))
       if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(boxTy.getEleTy()))
         if (!seqTy.hasDynamicExtents())
-          return rewriteStaticShape(embox, rewriter, seqTy);
-    return mlir::failure();
+          return RewriteKind::Static;
+    if (embox.getOptional())
+      return RewriteKind::DropOptional;
+    return llvm::failure();
   }
 
-  llvm::LogicalResult rewriteStaticShape(fir::EmboxOp embox,
-                                         mlir::PatternRewriter &rewriter,
-                                         fir::SequenceType seqTy) const {
+  llvm::LogicalResult
+  matchAndRewrite(fir::EmboxOp embox,
+                  mlir::PatternRewriter &rewriter) const override {
+    llvm::FailureOr<RewriteKind> rewriteKind = getRewriteKind(embox);
+    if (llvm::failed(rewriteKind))
+      return llvm::failure();
+    if (embox.getOptional()) {
+      mlir::Value newBox = emitOptionalBoxGuard(rewriter, embox, [&] {
+        return matchAndRewriteImpl(embox, rewriter, *rewriteKind)->getResult(0);
+      });
+      rewriter.replaceOp(embox, newBox);
+      return mlir::success();
+    }
+    mlir::Operation *newOp = matchAndRewriteImpl(embox, rewriter, *rewriteKind);
+    rewriter.replaceOp(embox, newOp);
+    return mlir::success();
+  }
+  mlir::Operation *matchAndRewriteImpl(fir::EmboxOp embox,
+                                       mlir::PatternRewriter &rewriter,
+                                       RewriteKind rewriteKind) const {
+    switch (rewriteKind) {
+    case RewriteKind::Dynamic:
+      return rewriteDynamicShape(embox, rewriter, embox.getShape());
+    case RewriteKind::Static:
+      return rewriteStaticShape(embox, rewriter,
+                                fir::unwrapUntilSeqType(embox.getType()));
+    case RewriteKind::DropOptional: {
+      auto newEmbox =
+          llvm::cast<fir::EmboxOp>(rewriter.clone(*embox.getOperation()));
+      newEmbox.setOptional(false);
+      return newEmbox.getOperation();
+    }
+    }
+    llvm_unreachable("all cases covered");
+    return nullptr;
+  }
+
+  mlir::Operation *rewriteStaticShape(fir::EmboxOp embox,
+                                      mlir::PatternRewriter &rewriter,
+                                      fir::SequenceType seqTy) const {
     auto loc = embox.getLoc();
     llvm::SmallVector<mlir::Value> shapeOpers;
     auto idxTy = rewriter.getIndexType();
@@ -113,13 +185,12 @@ public:
         mlir::ValueRange{}, embox.getTypeparams(), embox.getSourceBox(),
         embox.getAllocatorIdxAttr());
     LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
-    rewriter.replaceOp(embox, xbox.getOperation()->getResults());
-    return mlir::success();
+    return xbox.getOperation();
   }
 
-  llvm::LogicalResult rewriteDynamicShape(fir::EmboxOp embox,
-                                          mlir::PatternRewriter &rewriter,
-                                          mlir::Value shapeVal) const {
+  mlir::Operation *rewriteDynamicShape(fir::EmboxOp embox,
+                                       mlir::PatternRewriter &rewriter,
+                                       mlir::Value shapeVal) const {
     auto loc = embox.getLoc();
     llvm::SmallVector<mlir::Value> shapeOpers;
     llvm::SmallVector<mlir::Value> shiftOpers;
@@ -150,8 +221,7 @@ public:
         embox.getTypeparams(), embox.getSourceBox(),
         embox.getAllocatorIdxAttr());
     LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
-    rewriter.replaceOp(embox, xbox.getOperation()->getResults());
-    return mlir::success();
+    return xbox.getOperation();
   }
 };
 
@@ -174,20 +244,34 @@ public:
   llvm::LogicalResult
   matchAndRewrite(fir::ReboxOp rebox,
                   mlir::PatternRewriter &rewriter) const override {
+    if (rebox.getOptional()) {
+      mlir::Value newBox = emitOptionalBoxGuard(rewriter, rebox, [&] {
+        return matchAndRewriteImpl(rebox, rewriter)->getResult(0);
+      });
+      rewriter.replaceOp(rebox, newBox);
+      return mlir::success();
+    }
+    mlir::Operation *newOp = matchAndRewriteImpl(rebox, rewriter);
+    rewriter.replaceOp(rebox, newOp);
+    return mlir::success();
+  }
+
+  mlir::Operation *matchAndRewriteImpl(fir::ReboxOp rebox,
+                                       mlir::PatternRewriter &rewriter) const {
     auto loc = rebox.getLoc();
     llvm::SmallVector<mlir::Value> shapeOpers;
     llvm::SmallVector<mlir::Value> shiftOpers;
     if (auto shapeVal = rebox.getShape()) {
       if (auto shapeOp = mlir::dyn_cast<fir::ShapeOp>(shapeVal.getDefiningOp()))
         populateShape(shapeOpers, shapeOp);
-      else if (auto shiftOp =
+      else if (auto shapeShiftOp =
                    mlir::dyn_cast<fir::ShapeShiftOp>(shapeVal.getDefiningOp()))
-        populateShapeAndShift(shapeOpers, shiftOpers, shiftOp);
-      else if (auto shiftOp =
-                   mlir::dyn_cast<fir::ShiftOp>(shapeVal.getDefiningOp()))
+        populateShapeAndShift(shapeOpers, shiftOpers, shapeShiftOp);
+      else {
+        auto shiftOp = mlir::dyn_cast<fir::ShiftOp>(shapeVal.getDefiningOp());
+        assert(shiftOp && "unexpected shape operand type");
         populateShift(shiftOpers, shiftOp);
-      else
-        return mlir::failure();
+      }
     }
     llvm::SmallVector<mlir::Value> sliceOpers;
     llvm::SmallVector<mlir::Value> subcompOpers;
@@ -208,8 +292,7 @@ public:
         sliceOpers, subcompOpers, substrOpers);
     LLVM_DEBUG(llvm::dbgs()
                << "rewriting " << rebox << " to " << xRebox << '\n');
-    rewriter.replaceOp(rebox, xRebox.getOperation()->getResults());
-    return mlir::success();
+    return xRebox.getOperation();
   }
 };
 
@@ -306,12 +389,12 @@ public:
     mlir::IntegerAttr dummyArgNoAttr;
     if (auto attr = declareOp->getAttrOfType<mlir::IntegerAttr>("dummy_arg_no"))
       dummyArgNoAttr = attr;
-    // FIXME: Add FortranAttrs and CudaAttrs
+    // FIXME: Add FortranAttrs
     auto xDeclOp = fir::cg::XDeclareOp::create(
         rewriter, loc, declareOp.getType(), declareOp.getMemref(), shapeOpers,
         shiftOpers, declareOp.getTypeparams(), declareOp.getDummyScope(),
         declareOp.getStorage(), declareOp.getStorageOffset(),
-        declareOp.getUniqName(), dummyArgNoAttr);
+        declareOp.getUniqName(), declareOp.getDataAttrAttr(), dummyArgNoAttr);
     LLVM_DEBUG(llvm::dbgs()
                << "rewriting " << declareOp << " to " << xDeclOp << '\n');
     rewriter.replaceOp(declareOp, xDeclOp.getOperation()->getResults());
@@ -352,6 +435,119 @@ static void simpleDCE(mlir::RewriterBase &rewriter, mlir::Operation *op) {
       });
 }
 
+/// A fir.shape, fir.shape_shift, fir.shift or fir.slice only describes an
+/// array at compile time. The rewrites above read it through its defining op
+/// and fold it into the code-gen form, so such a value never reaches codegen
+/// and none of these types has an LLVM lowering.
+static bool isCompileTimeOnly(mlir::Type type) {
+  return mlir::isa<fir::ShapeType, fir::ShapeShiftType, fir::ShiftType,
+                   fir::SliceType>(type);
+}
+
+/// Return the op \p value is built by, if this pass can rebuild it elsewhere
+/// from its operands. A fir.slice naming components is excluded: its fields
+/// are fir.field values, which are themselves compile-time only and so cannot
+/// be passed along a branch.
+static mlir::Operation *getRebuildableDefiningOp(mlir::Value value) {
+  mlir::Operation *def = value.getDefiningOp();
+  if (!def)
+    return nullptr;
+  if (auto slice = mlir::dyn_cast<fir::SliceOp>(def))
+    return slice.getFields().empty() ? def : nullptr;
+  if (mlir::isa<fir::ShapeOp, fir::ShapeShiftOp, fir::ShiftOp>(def))
+    return def;
+  return nullptr;
+}
+
+/// True if \p lhs and \p rhs can be rebuilt by one op taking one operand list.
+static bool haveSameShape(mlir::Operation *lhs, mlir::Operation *rhs) {
+  if (lhs->getName() != rhs->getName() ||
+      lhs->getNumOperands() != rhs->getNumOperands())
+    return false;
+  return llvm::equal(lhs->getOperandTypes(), rhs->getOperandTypes());
+}
+
+/// Rebuild the compile-time-only block argument \p argIndex of \p block from
+/// its operands, so the rewrites above find a defining op again.
+///
+/// Every branch into the block passes a value of one of those types. The
+/// operands behind it are integers, which can be block arguments, so they are
+/// appended to the block and forwarded along each branch instead, and the
+/// value is rebuilt from them at the top of the block.
+static void rebuildBlockArgument(mlir::Block *block, unsigned argIndex) {
+  mlir::BlockArgument arg = block->getArgument(argIndex);
+
+  // Collect one incoming edge per branch, keeping the operands each carries.
+  // A branch can name the block twice, so each edge is held separately.
+  struct Edge {
+    mlir::BranchOpInterface branch;
+    unsigned successorIndex;
+  };
+  llvm::SmallVector<Edge> edges;
+  mlir::Operation *model = nullptr;
+  for (auto it = block->pred_begin(), e = block->pred_end(); it != e; ++it) {
+    auto branch =
+        mlir::dyn_cast<mlir::BranchOpInterface>((*it)->getTerminator());
+    if (!branch)
+      return;
+    unsigned successorIndex = it.getSuccessorIndex();
+    mlir::SuccessorOperands operands =
+        branch.getSuccessorOperands(successorIndex);
+    // An operand the branch itself produces has no value to read here.
+    if (operands.isOperandProduced(argIndex))
+      return;
+    mlir::Operation *def = getRebuildableDefiningOp(operands[argIndex]);
+    if (!def)
+      return;
+    if (!model)
+      model = def;
+    else if (!haveSameShape(model, def))
+      return;
+    edges.push_back({branch, successorIndex});
+  }
+  if (edges.empty())
+    return;
+
+  // Take the operands as block arguments and forward them along each branch.
+  unsigned firstNewArg = block->getNumArguments();
+  for (auto [type, value] :
+       llvm::zip_equal(model->getOperandTypes(), model->getOperands()))
+    block->addArgument(type, value.getLoc());
+  for (Edge &edge : edges) {
+    mlir::SuccessorOperands operands =
+        edge.branch.getSuccessorOperands(edge.successorIndex);
+    operands.append(
+        getRebuildableDefiningOp(operands[argIndex])->getOperands());
+  }
+
+  // Rebuild the value at the top of the block and drop the old argument.
+  mlir::OpBuilder builder(block, block->begin());
+  mlir::Operation *rebuilt =
+      builder.create(model->getLoc(), model->getName().getIdentifier(),
+                     block->getArguments().drop_front(firstNewArg),
+                     model->getResultTypes(), model->getAttrs());
+  arg.replaceAllUsesWith(rebuilt->getResult(0));
+  for (Edge &edge : edges)
+    edge.branch.getSuccessorOperands(edge.successorIndex).erase(argIndex);
+  block->eraseArgument(argIndex);
+}
+
+/// Rebuild every compile-time-only block argument in \p op.
+static void rebuildCompileTimeOnlyBlockArguments(mlir::Operation *op) {
+  llvm::SmallVector<mlir::Block *> blocks;
+  op->walk([&](mlir::Block *block) {
+    if (!block->isEntryBlock() &&
+        llvm::any_of(block->getArgumentTypes(), isCompileTimeOnly))
+      blocks.push_back(block);
+  });
+  for (mlir::Block *block : blocks)
+    // Rebuilding drops an argument, so work back to front to keep the
+    // indices of the arguments still to be looked at.
+    for (unsigned i = block->getNumArguments(); i > 0; --i)
+      if (isCompileTimeOnly(block->getArgument(i - 1).getType()))
+        rebuildBlockArgument(block, i - 1);
+}
+
 class CodeGenRewrite : public fir::impl::CodeGenRewriteBase<CodeGenRewrite> {
 public:
   using CodeGenRewriteBase<CodeGenRewrite>::CodeGenRewriteBase;
@@ -359,18 +555,19 @@ public:
   void runOnOperation() override final {
     mlir::ModuleOp mod = getOperation();
 
+    rebuildCompileTimeOnlyBlockArguments(mod.getOperation());
+
     auto &context = getContext();
     mlir::ConversionTarget target(context);
     target.addLegalDialect<mlir::arith::ArithDialect, fir::FIROpsDialect,
-                           fir::FIRCodeGenDialect, mlir::func::FuncDialect>();
+                           fir::FIRCodeGenDialect, mlir::func::FuncDialect,
+                           mlir::cf::ControlFlowDialect>();
     target.addIllegalOp<fir::ArrayCoorOp>();
     target.addIllegalOp<fir::ReboxOp>();
     target.addIllegalOp<fir::DeclareOp>();
     target.addIllegalOp<fir::DummyScopeOp>();
     target.addDynamicallyLegalOp<fir::EmboxOp>([](fir::EmboxOp embox) {
-      return !(embox.getShape() ||
-               mlir::isa<fir::SequenceType>(
-                   mlir::cast<fir::BaseBoxType>(embox.getType()).getEleTy()));
+      return llvm::failed(EmboxConversion::getRewriteKind(embox));
     });
     mlir::RewritePatternSet patterns(&context);
     fir::populatePreCGRewritePatterns(patterns, preserveDeclare);

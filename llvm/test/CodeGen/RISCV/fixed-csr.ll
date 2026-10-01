@@ -4,8 +4,8 @@
 define noundef signext i32 @foo() {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li s8, 321
 ; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    li s8, 321
 ; CHECK-NEXT:    ret
   tail call void @llvm.write_register.i64(metadata !0, i64 321)
   ret i32 0
@@ -16,10 +16,10 @@ define noundef signext i32 @bar() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sd s9, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    li s8, 321
-; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ld s9, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret

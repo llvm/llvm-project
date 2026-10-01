@@ -137,6 +137,36 @@ TEST_F(DefinitionBlockSeparatorTest, Basic) {
                "}",
                Style);
 
+  // There should not be an extra line when formatting is disabled.
+  verifyFormat("// clang-format off\n"
+               "void function()\n"
+               "{\n"
+               "\n"
+               "}\n"
+               "// clang-format on",
+               Style,
+               "// clang-format off\n"
+               "void function()\n"
+               "{\n"
+               "\n"
+               "}\n"
+               "// clang-format on",
+               /*Inverse=*/false);
+  verifyFormat("class X {\n"
+               "  // clang-format off\n"
+               "#pragma warning(suppress : 4373)\n"
+               "  void foo() {}\n"
+               "  // clang-format on\n"
+               "};\n",
+               Style,
+               "class X {\n"
+               "  // clang-format off\n"
+               "#pragma warning(suppress : 4373)\n"
+               "  void foo() {}\n"
+               "  // clang-format on\n"
+               "};\n",
+               /*Inverse=*/false);
+
   verifyFormat("enum Foo { FOO, BAR };\n"
                "\n"
                "enum Bar { FOOBAR, BARFOO };",
@@ -291,6 +321,22 @@ TEST_F(DefinitionBlockSeparatorTest, Always) {
                "struct E {};",
                Style);
 
+  constexpr StringRef Code("// NOLINTBEGIN\n"
+                           "int x = 1;\n"
+                           "int y = 2;\n"
+                           "// NOLINTEND\n"
+                           "\n"
+                           "void some_function() {}");
+  verifyFormat(Code, Style, Code);
+
+  constexpr StringRef Code2("int x = 0;\n"
+                            "int y = 0;\n"
+                            "// trailing comment 1\n"
+                            "// trailing comment 2\n"
+                            "\n"
+                            "void some_function() {}");
+  verifyFormat(Code2, Style, Code2);
+
   std::string Prefix = "namespace {\n";
   std::string Infix = "\n"
                       "// Enum test1\n"
@@ -343,6 +389,35 @@ TEST_F(DefinitionBlockSeparatorTest, Always) {
                         "} // namespace T";
   verifyFormat(Prefix + removeEmptyLines(Infix) + removeEmptyLines(Postfix),
                Style, Prefix + Infix + Postfix);
+}
+
+TEST_F(DefinitionBlockSeparatorTest, AlwaysMaxEmptyLinesZeroAllman) {
+  FormatStyle Style = getLLVMStyle();
+  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
+  Style.MaxEmptyLinesToKeep = 0;
+  Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::ShortFunctionStyle();
+
+  verifyFormat("int my_function(int a)\n"
+               "\n"
+               "{\n"
+               "  return a;\n"
+               "}\n"
+               "int other_function(int a)\n"
+               "\n"
+               "{\n"
+               "  return a;\n"
+               "}",
+               Style,
+               "int my_function(int a)\n"
+               "{\n"
+               "  return a;\n"
+               "}\n"
+               "\n"
+               "int other_function(int a)\n"
+               "{\n"
+               "  return a;\n"
+               "}");
 }
 
 TEST_F(DefinitionBlockSeparatorTest, Never) {
@@ -462,8 +537,24 @@ TEST_F(DefinitionBlockSeparatorTest, OpeningBracketOwnsLine) {
 
 TEST_F(DefinitionBlockSeparatorTest, TryBlocks) {
   FormatStyle Style = getLLVMStyle();
-  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
   Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
+  verifyFormat("void foo() try {\n"
+               "  // do something\n"
+               "} catch (const std::exception &) {\n"
+               "  // handle exception\n"
+               "}",
+               Style, "", /*Inverse=*/false);
+  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
+  verifyFormat("void foo()\n"
+               "try\n"
+               "{\n"
+               "  // do something\n"
+               "}\n"
+               "catch (const std::exception &)\n"
+               "{\n"
+               "  // handle exception\n"
+               "}",
+               Style, "", /*Inverse=*/false);
   verifyFormat("void FunctionWithInternalTry()\n"
                "{\n"
                "  try\n"

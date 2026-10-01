@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
 
 ; Check an already declared function
@@ -64,6 +65,6 @@ define float @sinf(float %x) {
 
 ; CHECK: declare void @truncl(...)
 
-; CHECK: attributes [[CALLOC_ATTRS]] = { mustprogress nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; CHECK: attributes [[FREE_ATTRS]] = { mustprogress nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; CHECK: attributes [[MALLOC_ATTRS]] = { mustprogress nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; CHECK: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
+; CHECK: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
+; CHECK: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }

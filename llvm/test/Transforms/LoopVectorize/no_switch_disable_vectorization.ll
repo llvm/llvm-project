@@ -64,7 +64,6 @@ for.end:
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8}
-!llvm.ident = !{!9}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0", isOptimized: true, runtimeVersion: 6, emissionKind: LineTablesOnly, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "source.cpp", directory: ".")
@@ -74,11 +73,10 @@ for.end:
 !6 = !DISubroutineType(types: !2)
 !7 = !{i32 2, !"Dwarf Version", i32 2}
 !8 = !{i32 2, !"Debug Info Version", i32 3}
-!9 = !{!"clang version 3.5.0"}
 !10 = !DILocation(line: 3, column: 8, scope: !11)
 !11 = distinct !DILexicalBlock(line: 3, column: 3, file: !1, scope: !4)
 !12 = !{!12, !13, !13}
-!13 = !{!"llvm.loop.vectorize.enable", i1 false}
+!13 = !{!"llvm.loop.vectorize.disable"}
 !14 = !DILocation(line: 4, column: 5, scope: !15)
 !15 = distinct !DILexicalBlock(line: 3, column: 36, file: !1, scope: !11)
 !16 = !{!17, !17, i64 0}

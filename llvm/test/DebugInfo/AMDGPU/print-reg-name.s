@@ -1,4 +1,4 @@
-; RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=asm %s | FileCheck %s
+; RUN: llvm-mc -triple=amdgpu9.00-amd-amdhsa -filetype=asm %s | FileCheck %s
 
 ; FIXME: Currently we can't print register names in CFI directives
 ; without extending MC to support DWARF register names that are distinct

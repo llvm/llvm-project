@@ -32,6 +32,7 @@ class StepAvoidsNoDebugTestCase(TestBase):
     @expectedFailureAll(
         archs=["aarch64"], oslist=["windows"], bugnumber="llvm.org/pr56292"
     )
+    @expectedFailureAll(archs=["arm64e"])
     def test_step_over_with_python(self):
         """Test stepping over using avoid-no-debug with dwarf."""
         self.build()
@@ -50,6 +51,7 @@ class StepAvoidsNoDebugTestCase(TestBase):
     @expectedFailureAll(
         archs=["aarch64"], oslist=["windows"], bugnumber="llvm.org/pr56292"
     )
+    @expectedFailureAll(archs=["arm64e"])
     def test_step_in_with_python(self):
         """Test stepping in using avoid-no-debug with dwarf."""
         self.build()

@@ -2,9 +2,10 @@
 
 import sys
 
-config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
+config.llvm_tools_dir = lit_config.substitute(path("@LLVM_TOOLS_DIR@"))
 config.llvm_build_mode = lit_config.substitute("@LLVM_BUILD_MODE@")
-config.mlir_obj_root = "@MLIR_BINARY_DIR@"
+config.mlir_obj_root = path("@MLIR_BINARY_DIR@")
 
 # Let the main config do the real work.
-lit_config.load_config(config, "@MLIR_SOURCE_DIR@/test/Unit/lit.cfg.py")
+lit_config.load_config(
+    config, os.path.join(path(r"@MLIR_SOURCE_DIR@"), "test/Unit/lit.cfg.py"))

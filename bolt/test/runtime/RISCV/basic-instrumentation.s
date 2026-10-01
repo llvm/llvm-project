@@ -2,6 +2,9 @@
 
 # RUN: %clang %cflags -Wl,-q -o %t.exe %s
 # RUN: llvm-bolt --instrument --instrumentation-file=%t.fdata -o %t.instr %t.exe
+# RUN: llvm-objdump -d --no-show-raw-insn --disassemble-symbols=main %t.instr \
+# RUN:   | FileCheck %s --check-prefix=INSTR
+# INSTR: amoadd.d zero, a1, (a0)
 
 ## Run the profiled binary and check that the profile reports at least that `f`
 ## has been called.

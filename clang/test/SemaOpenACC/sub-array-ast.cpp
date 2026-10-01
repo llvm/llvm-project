@@ -528,6 +528,7 @@ void Templ(int i){
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'const int *' <ArrayToPointerDecay>
   // CHECK-NEXT: SubstNonTypeTemplateParmExpr{{.*}} 'const int[5]' lvalue
   // CHECK-NEXT: NonTypeTemplateParmDecl{{.*}} 'auto &' depth 0 index 2 CEArray
+  // CHECK-NEXT: ParenExpr
   // CHECK-NEXT: DeclRefExpr{{.*}} 'const int[5]' lvalue Var{{.*}}'CEArray' 'const int[5]'
   // CHECK-NEXT: BinaryOperator{{.*}} 'int' '-'
   // CHECK-NEXT: CallExpr{{.*}} 'int'
@@ -548,6 +549,7 @@ void Templ(int i){
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'const int *' <ArrayToPointerDecay>
   // CHECK-NEXT: SubstNonTypeTemplateParmExpr{{.*}} 'const int[5]' lvalue
   // CHECK-NEXT: NonTypeTemplateParmDecl{{.*}} 'auto &' depth 0 index 2 CEArray
+  // CHECK-NEXT: ParenExpr
   // CHECK-NEXT: DeclRefExpr{{.*}} 'const int[5]' lvalue Var{{.*}}'CEArray' 'const int[5]'
   // CHECK-NEXT: <<<NULL>>>
   // CHECK-NEXT: SubstNonTypeTemplateParmExpr{{.*}} 'unsigned int'

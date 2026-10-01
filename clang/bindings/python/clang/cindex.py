@@ -71,6 +71,7 @@ from ctypes import (
     byref,
     c_char_p,
     c_int,
+    c_long,
     c_longlong,
     c_uint,
     c_ulong,
@@ -82,6 +83,7 @@ from ctypes import (
 )
 
 import os
+import platform
 import sys
 from enum import Enum
 import warnings
@@ -1261,8 +1263,8 @@ class CursorKind(BaseEnumeration):
     # Windows Structured Exception Handling's leave statement.
     SEH_LEAVE_STMT = 247
 
-    # OpenMP ordered directive.
-    OMP_ORDERED_DIRECTIVE = 248
+    # OpenMP ordered-standalone directive.
+    OMP_ORDERED_STANDALONE_DIRECTIVE = 248
 
     # OpenMP atomic directive.
     OMP_ATOMIC_DIRECTIVE = 249
@@ -1452,6 +1454,15 @@ class CursorKind(BaseEnumeration):
 
     # OpenMP fuse directive.
     OMP_FUSE_DIRECTIVE = 311
+
+    # OpenMP split directive.
+    OMP_SPLIT_DIRECTIVE = 312
+
+    # OpenMP ordered-blockassoc directive.
+    OMP_ORDERED_BLOCK_ASSOC_DIRECTIVE = 313
+
+    # OpenMP flatten directive.
+    OMP_FLATTEN_DIRECTIVE = 314
 
     # OpenACC Compute Construct.
     OPEN_ACC_COMPUTE_DIRECTIVE = 320
@@ -2032,6 +2043,16 @@ class Cursor(Structure):
 
     @property
     @cursor_null_guard
+    def unary_operator(self) -> UnaryOperator:
+        """Retrieves the unary operator if this cursor has one."""
+
+        if not hasattr(self, "_unopcode"):
+            self._unopcode = conf.lib.clang_getCursorUnaryOperatorKind(self)
+
+        return UnaryOperator.from_id(self._unopcode)
+
+    @property
+    @cursor_null_guard
     def access_specifier(self) -> AccessSpecifier:
         """
         Retrieves the access specifier (if any) of the entity pointed at by the
@@ -2141,6 +2162,7 @@ class Cursor(Structure):
             if underlying_type.kind == TypeKind.ENUM:
                 underlying_type = underlying_type.get_declaration().enum_type
             if underlying_type.kind in (
+                TypeKind.BOOL,
                 TypeKind.CHAR_U,
                 TypeKind.UCHAR,
                 TypeKind.CHAR16,
@@ -2468,6 +2490,32 @@ class BinaryOperator(BaseEnumeration):
     Comma = 33
 
 
+class UnaryOperator(BaseEnumeration):
+    """Describes the kind of unary operators."""
+
+    def is_postfix(self):
+        return self in {
+            UnaryOperator.PostDec,
+            UnaryOperator.PostInc,
+        }
+
+    Invalid = 0
+    PostInc = 1
+    PostDec = 2
+    PreInc = 3
+    PreDec = 4
+    AddrOf = 5
+    Deref = 6
+    Plus = 7
+    Minus = 8
+    Not = 9
+    LNot = 10
+    Real = 11
+    Imag = 12
+    Extension = 13
+    Coawait = 14
+
+
 class StorageClass(BaseEnumeration):
     """
     Describes the storage class of a declaration
@@ -2650,6 +2698,7 @@ class TypeKind(BaseEnumeration):
     HLSLRESOURCE = 179
     HLSLATTRIBUTEDRESOURCE = 180
     HLSLINLINESPIRV = 181
+    PREDEFINEDSUGAR = 182
 
 class RefQualifierKind(BaseEnumeration):
     """Describes a specific ref-qualifier of a type."""
@@ -3028,26 +3077,6 @@ class CompletionChunkKind(BaseEnumeration):
     Describes a single piece of text within a code-completion string.
     """
 
-    def __str__(self) -> str:
-        """
-        Converts enum value to string in the old camelCase format.
-        This is a temporary measure that will be changed in the future release
-        to return string in ALL_CAPS format, like for other enums.
-        """
-
-        warnings.warn(
-            "String representation of 'CompletionChunkKind' will be "
-            "changed in a future release from 'camelCase' to 'ALL_CAPS' to "
-            "match other enums. 'CompletionChunkKind's can be "
-            "compared to one another without conversion to string.",
-            DeprecationWarning,
-        )
-        # Remove underscores
-        components = self.name.split("_")
-        # Upper-camel case each split component
-        components = [component.lower().capitalize() for component in components]
-        return "".join(components)
-
     OPTIONAL = 0
     TYPED_TEXT = 1
     TEXT = 2
@@ -3097,32 +3126,6 @@ class _CXUnsavedFile(UnsavedFile):
 
 
 class CompletionChunk:
-    class SpellingCacheAlias:
-        """
-        A temporary utility that acts as an alias to CompletionChunk.SPELLING_CACHE.
-        This will be removed without deprecation warning in a future release.
-        Please do not use it directly!
-        """
-
-        deprecation_message = (
-            "'SPELLING_CACHE' has been moved into the scope of 'CompletionChunk' "
-            "and adapted to use 'CompletionChunkKind's as keys instead of their "
-            "enum values. Please adapt all uses of 'SPELLING_CACHE' to use "
-            "'CompletionChunk.SPELLING_CACHE' instead. The old 'SPELLING_CACHE' "
-            "will be removed in a future release."
-        )
-
-        def __getattr__(self, _: Any) -> NoReturn:
-            raise AttributeError(self.deprecation_message)
-
-        def __getitem__(self, value: int) -> str:
-            warnings.warn(self.deprecation_message, DeprecationWarning)
-            return CompletionChunk.SPELLING_CACHE[CompletionChunkKind.from_id(value)]
-
-        def __contains__(self, value: int) -> bool:
-            warnings.warn(self.deprecation_message, DeprecationWarning)
-            return CompletionChunkKind.from_id(value) in CompletionChunk.SPELLING_CACHE
-
     # Functions calls through the python interface are rather slow. Fortunately,
     # for most symbols, we do not need to perform a function call. Their spelling
     # never changes and is consequently provided by this spelling cache.
@@ -3180,108 +3183,8 @@ class CompletionChunk:
             return None
         return CompletionString(res)
 
-    __deprecation_message = (
-        "'CompletionChunk.{}' will be removed in a future release. "
-        "All uses of 'CompletionChunk.{}' should be replaced by checking "
-        "if 'CompletionChunk.kind` is equal to 'CompletionChunkKind.{}'."
-    )
-
-    def isKindOptional(self) -> bool:
-        deprecation_message = self.__deprecation_message.format(
-            "isKindOptional",
-            "isKindOptional",
-            "OPTIONAL",
-        )
-        warnings.warn(deprecation_message, DeprecationWarning)
-        return self.kind == CompletionChunkKind.OPTIONAL
-
-    def isKindTypedText(self) -> bool:
-        deprecation_message = self.__deprecation_message.format(
-            "isKindTypedText",
-            "isKindTypedText",
-            "TYPED_TEXT",
-        )
-        warnings.warn(deprecation_message, DeprecationWarning)
-        return self.kind == CompletionChunkKind.TYPED_TEXT
-
-    def isKindPlaceHolder(self) -> bool:
-        deprecation_message = self.__deprecation_message.format(
-            "isKindPlaceHolder",
-            "isKindPlaceHolder",
-            "PLACEHOLDER",
-        )
-        warnings.warn(deprecation_message, DeprecationWarning)
-        return self.kind == CompletionChunkKind.PLACEHOLDER
-
-    def isKindInformative(self) -> bool:
-        deprecation_message = self.__deprecation_message.format(
-            "isKindInformative",
-            "isKindInformative",
-            "INFORMATIVE",
-        )
-        warnings.warn(deprecation_message, DeprecationWarning)
-        return self.kind == CompletionChunkKind.INFORMATIVE
-
-    def isKindResultType(self) -> bool:
-        deprecation_message = self.__deprecation_message.format(
-            "isKindResultType",
-            "isKindResultType",
-            "RESULT_TYPE",
-        )
-        warnings.warn(deprecation_message, DeprecationWarning)
-        return self.kind == CompletionChunkKind.RESULT_TYPE
-
-
-SPELLING_CACHE = CompletionChunk.SpellingCacheAlias()
-
 
 class CompletionString(ClangObject):
-    # AvailabilityKindCompat is an exact copy of AvailabilityKind, except for __str__.
-    # This is a temporary measure to keep the string representation the same
-    # until we change CompletionString.availability to return AvailabilityKind,
-    # like Cursor.availability does.
-    # Note that deriving from AvailabilityKind directly is not possible.
-    class AvailabilityKindCompat(BaseEnumeration):
-        """
-        Describes the availability of an entity.
-        It is deprecated in favor of AvailabilityKind.
-        """
-
-        # Ensure AvailabilityKindCompat is comparable with AvailabilityKind
-        def __eq__(self, other: object) -> bool:
-            if isinstance(
-                other, (AvailabilityKind, CompletionString.AvailabilityKindCompat)
-            ):
-                return self.value == other.value
-            else:
-                return NotImplemented
-
-        def __str__(self) -> str:
-            """
-            Converts enum value to string in the old camelCase format.
-            This is a temporary measure that will be changed in the future release
-            to return string in ALL_CAPS format, like for other enums.
-            """
-
-            warnings.warn(
-                "String representation of 'CompletionString.availability' will be "
-                "changed in a future release from 'camelCase' to 'ALL_CAPS' to "
-                "match other enums. 'CompletionString.availability' can be "
-                "compared to 'AvailabilityKind' directly, "
-                "without conversion to string.",
-                DeprecationWarning,
-            )
-            # Remove underscores
-            components = self.name.split("_")
-            # Upper-camel case each split component
-            components = [component.lower().capitalize() for component in components]
-            return "".join(components)
-
-        AVAILABLE = 0
-        DEPRECATED = 1
-        NOT_AVAILABLE = 2
-        NOT_ACCESSIBLE = 3
-
     def __len__(self) -> int:
         return self.num_chunks
 
@@ -3306,9 +3209,9 @@ class CompletionString(ClangObject):
         return conf.lib.clang_getCompletionPriority(self.obj)  # type: ignore [no-any-return]
 
     @property
-    def availability(self) -> AvailabilityKindCompat:
+    def availability(self) -> AvailabilityKind:
         res = conf.lib.clang_getCompletionAvailability(self.obj)
-        return CompletionString.AvailabilityKindCompat.from_id(res)
+        return AvailabilityKind.from_id(res)
 
     @property
     def briefComment(self) -> str:
@@ -4256,8 +4159,16 @@ class PrintingPolicy(ClangObject):
 translation_unit_includes_callback = CFUNCTYPE(
     None, c_object_p, POINTER(SourceLocation), c_uint, py_object
 )
-cursor_visit_callback = CFUNCTYPE(c_int, Cursor, Cursor, py_object)
-fields_visit_callback = CFUNCTYPE(c_int, Cursor, py_object)
+# On s390x the visitor callbacks must return a full register word (c_long)
+# rather than c_int. ctypes does not sign/zero-extend a narrow closure return
+# to the full 64-bit return register the s390x ELF ABI requires, leaving
+# garbage in the high bytes. libclang reads the full register and faults with
+# a SIGFPE.
+# TODO: Remove once the ctypes fix (https://github.com/python/cpython/issues/156933)
+# has propagated.
+_visitor_result = c_long if platform.machine() == "s390x" else c_int
+cursor_visit_callback = CFUNCTYPE(_visitor_result, Cursor, Cursor, py_object)
+fields_visit_callback = CFUNCTYPE(_visitor_result, Cursor, py_object)
 
 # Functions strictly alphabetical order.
 FUNCTION_LIST: list[LibFunc] = [
@@ -4484,6 +4395,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_Cursor_getTemplateArgumentValue", [Cursor, c_uint], c_longlong),
     ("clang_Cursor_getTemplateArgumentUnsignedValue", [Cursor, c_uint], c_ulonglong),
     ("clang_getCursorBinaryOperatorKind", [Cursor], c_int),
+    ("clang_getCursorUnaryOperatorKind", [Cursor], c_int),
     ("clang_Cursor_getBriefCommentText", [Cursor], _CXString),
     ("clang_Cursor_getRawCommentText", [Cursor], _CXString),
     ("clang_Cursor_getOffsetOfField", [Cursor], c_longlong),
@@ -4689,4 +4601,5 @@ __all__ = [
     "TranslationUnit",
     "TypeKind",
     "Type",
+    "UnaryOperator",
 ]

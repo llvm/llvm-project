@@ -71,15 +71,16 @@ public:
 
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
 
-  Error buildCodeGenPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
-                             raw_pwrite_stream *DwoOut,
+  Error buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
+                             raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
                              CodeGenFileType FileType,
                              const CGPassBuilderOption &Opt, MCContext &Ctx,
                              PassInstrumentationCallbacks *PIC) override;
 
   bool isJIT() const { return IsJIT; }
 
-  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
+  bool isNoopAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
+                           unsigned DestAS) const override;
   ScheduleDAGInstrs *
   createMachineScheduler(MachineSchedContext *C) const override;
   ScheduleDAGInstrs *

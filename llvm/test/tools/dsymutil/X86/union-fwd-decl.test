@@ -45,17 +45,23 @@ $ clang++ use.o container.o -o a.out
 
 Note that the link order in the last command matters for this test.
 
-RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/union/a.out -o %t.dSYM
-RUN: llvm-dwarfdump %t.dSYM | FileCheck %s
+RUN: dsymutil --linker classic -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/union/a.out -o %t.dSYM
+RUN: llvm-dwarfdump %t.dSYM | FileCheck %s --check-prefixes=CHECK,CLASSIC
+RUN: dsymutil --linker parallel -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/union/a.out -o %t.dSYM
+RUN: llvm-dwarfdump %t.dSYM | FileCheck %s --check-prefix=CHECK
 
-CHECK: DW_TAG_compile_unit
+# The linker must resolve use.cpp's forward declaration of
+# Container_ivars to the full definition provided by container.cpp, not
+# drop the definition. In either linker the full definition must exist.
+# The classic linker additionally preserves the forward declaration DIE
+# (DW_AT_declaration=true) from use.cpp; the parallel linker consolidates
+# the full definition into an artificial type unit, so the forward-decl
+# DIE does not survive there.
 
-CHECK:          DW_AT_name      ("Container_ivars")
-CHECK-NEXT:     DW_AT_declaration       (true)
+# CLASSIC:     DW_AT_name      ("Container_ivars")
+# CLASSIC-NEXT:     DW_AT_declaration       (true)
 
-CHECK: DW_TAG_compile_unit
-
-CHECK:          DW_AT_name      ("Container_ivars")
-CHECK-NEXT:     DW_AT_byte_size (0x01)
-CHECK-NEXT:     DW_AT_decl_file ("{{.*}}container.cpp")
-CHECK-NEXT:     DW_AT_decl_line (4)
+# CHECK: DW_AT_name      ("Container_ivars")
+# CHECK-DAG: DW_AT_byte_size (0x01)
+# CHECK-DAG: DW_AT_decl_file ("{{.*}}container.cpp")
+# CHECK-DAG: DW_AT_decl_line (4)

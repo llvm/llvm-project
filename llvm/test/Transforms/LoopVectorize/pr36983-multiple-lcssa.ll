@@ -18,7 +18,7 @@ define i16 @duplicate_lcssa(i16 %val) {
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw <4 x i16> [[VEC_IND]], splat (i16 1)
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI1:%.*]] = extractelement <4 x i16> [[TMP0]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI1:%.*]] = extractelement <4 x i16> [[TMP0]], i64 2
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i16 [[VECTOR_RECUR_EXTRACT_FOR_PHI1]]

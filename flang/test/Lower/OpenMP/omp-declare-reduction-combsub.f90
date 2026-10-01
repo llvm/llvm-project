@@ -17,7 +17,7 @@ function func(x, n)
        integer out, in
      end subroutine combine_me
   end interface
-!CHECK:  omp.declare_reduction @red_add : i32 init {
+!CHECK:  omp.declare_reduction @_QQFfuncred_add_i32 : i32 init {
 !CHECK: ^bb0(%[[OMP_ORIG_ARG_I:.*]]: i32):
 !CHECK:    %[[OMP_PRIV:.*]] = fir.alloca i32
 !CHECK:    %[[OMP_ORIG:.*]] = fir.alloca i32
@@ -57,4 +57,3 @@ function func(x, n)
   enddo
   func=res
 end function func
-

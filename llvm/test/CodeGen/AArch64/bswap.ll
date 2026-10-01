@@ -184,8 +184,7 @@ define <2 x i16> @bswap_v2i16(<2 x i16> %a){
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    rev16 v0.8b, v0.8b
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
 entry:
   %res = call <2 x i16> @llvm.bswap.v2i16(<2 x i16> %a)

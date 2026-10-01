@@ -17,6 +17,7 @@ static_library("Host") {
   public_deps = [ "//llvm/utils/gn/build/libs/xml" ]
   sources = [
     "common/DiagnosticsRendering.cpp",
+    "common/DomainSocket.cpp",
     "common/File.cpp",
     "common/FileAction.cpp",
     "common/FileCache.cpp",
@@ -28,7 +29,6 @@ static_library("Host") {
     "common/HostProcess.cpp",
     "common/HostThread.cpp",
     "common/JSONTransport.cpp",
-    "common/LZMA.cpp",
     "common/LockFileBase.cpp",
     "common/MainLoopBase.cpp",
     "common/MemoryMonitor.cpp",
@@ -42,6 +42,8 @@ static_library("Host") {
     "common/ProcessLaunchInfo.cpp",
     "common/ProcessRunLock.cpp",
     "common/PseudoTerminal.cpp",
+    "common/PythonRuntimeLoader.cpp",
+    "common/ScriptInterpreterRuntimeLoader.cpp",
     "common/Socket.cpp",
     "common/SocketAddress.cpp",
     "common/StreamFile.cpp",
@@ -65,9 +67,12 @@ static_library("Host") {
 
   if (current_os == "win") {
     sources += [
+      "windows/ConPTYUtils.cpp",
       "windows/ConnectionConPTYWindows.cpp",
       "windows/ConnectionGenericFileWindows.cpp",
+      "windows/DomainSocketWindows.cpp",
       "windows/FileSystem.cpp",
+      "windows/FileWindows.cpp",
       "windows/Host.cpp",
       "windows/HostInfoWindows.cpp",
       "windows/HostProcessWindows.cpp",
@@ -78,11 +83,13 @@ static_library("Host") {
       "windows/ProcessLauncherWindows.cpp",
       "windows/ProcessRunLock.cpp",
       "windows/PseudoConsole.cpp",
+      "windows/PythonRuntimeLoaderWindows.cpp",
       "windows/WindowsFileAction.cpp",
     ]
   } else {
     sources += [
-      "posix/DomainSocket.cpp",
+      "posix/DomainSocketPosix.cpp",
+      "posix/FilePosix.cpp",
       "posix/FileSystemPosix.cpp",
       "posix/HostInfoPosix.cpp",
       "posix/HostProcessPosix.cpp",
@@ -90,9 +97,12 @@ static_library("Host") {
       "posix/LockFilePosix.cpp",
       "posix/MainLoopPosix.cpp",
       "posix/PipePosix.cpp",
-      "posix/ProcessLauncherPosixFork.cpp",
       "posix/Support.cpp",
     ]
+
+    if (current_os != "emscripten") {
+      sources += [ "posix/ProcessLauncherPosixFork.cpp" ]
+    }
   }
 
   if (current_os == "aix") {
@@ -105,6 +115,7 @@ static_library("Host") {
 
   if (current_os == "mac") {
     sources += [
+      "macosx/PythonRuntimeLoaderDarwin.cpp",
       "macosx/cfcpp/CFCBundle.cpp",
       "macosx/cfcpp/CFCData.cpp",
       "macosx/cfcpp/CFCMutableArray.cpp",
@@ -117,12 +128,20 @@ static_library("Host") {
     # FIXME: Maybe define NO_XPC_SERVICES
   }
 
+  if (current_os == "emscripten") {
+    sources += [
+      "emscripten/Host.cpp",
+      "emscripten/HostInfoEmscripten.cpp",
+    ]
+  }
+
   if (current_os == "linux" || current_os == "android") {
     sources += [
       "linux/AbstractSocket.cpp",
       "linux/Host.cpp",
       "linux/HostInfoLinux.cpp",
       "linux/LibcGlue.cpp",
+      "linux/PythonRuntimeLoaderLinux.cpp",
       "linux/Support.cpp",
     ]
   }
@@ -159,9 +178,6 @@ static_library("Host") {
   # endif()
   # if (LLDB_ENABLE_LIBEDIT)
   #   list(APPEND EXTRA_LIBS LibEdit::LibEdit)
-  # endif()
-  # if (LLDB_ENABLE_LZMA)
-  #   list(APPEND EXTRA_LIBS ${LIBLZMA_LIBRARIES})
   # endif()
   # if (WIN32)
   #   list(APPEND LLDB_SYSTEM_LIBS psapi)

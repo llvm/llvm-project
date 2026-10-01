@@ -125,6 +125,7 @@ void CodeGenFunction::EmitDecl(const Decl &D, bool EvaluateConditionDecl) {
   case Decl::Function:     // void X();
   case Decl::EnumConstant: // enum ? { X = ? }
   case Decl::StaticAssert: // static_assert(X, ""); [C++0x]
+  case Decl::ExplicitInstantiation:
   case Decl::Label:        // __label__ x;
   case Decl::Import:
   case Decl::MSGuid:    // __declspec(uuid("..."))
@@ -142,6 +143,13 @@ void CodeGenFunction::EmitDecl(const Decl &D, bool EvaluateConditionDecl) {
   case Decl::RequiresExprBody:
     // None of these decls require codegen support.
     return;
+
+  case Decl::CXXExpansionStmt: {
+    const auto *ESD = cast<CXXExpansionStmtDecl>(&D);
+    assert(ESD->getInstantiations() && "expansion statement not expanded?");
+    EmitStmt(ESD->getInstantiations());
+    return;
+  }
 
   case Decl::NamespaceAlias:
     if (CGDebugInfo *DI = getDebugInfo())
@@ -566,7 +574,6 @@ namespace {
   struct CallStackRestore final : EHScopeStack::Cleanup {
     Address Stack;
     CallStackRestore(Address Stack) : Stack(Stack) {}
-    bool isRedundantBeforeReturn() override { return true; }
     void Emit(CodeGenFunction &CGF, Flags flags) override {
       llvm::Value *V = CGF.Builder.CreateLoad(Stack);
       CGF.Builder.CreateStackRestore(V);
@@ -1171,7 +1178,7 @@ Address CodeGenModule::createUnnamedGlobalFrom(const VarDecl &D,
     GV->setAlignment(Align.getAsAlign());
     GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     CacheEntry = GV;
-  } else if (CacheEntry->getAlignment() < uint64_t(Align.getQuantity())) {
+  } else if (CacheEntry->getAlign().valueOrOne() < Align.getAsAlign()) {
     CacheEntry->setAlignment(Align.getAsAlign());
   }
 
@@ -1636,6 +1643,40 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       }
     }
 
+    // A variable whose declaration is bypassed by a goto or switch is not
+    // initialized by EmitAutoVarInit, which runs at the declaration. Emit the
+    // trivial-auto-var-init separately.
+    if (Bypasses.IsBypassed(&D) && !emission.IsEscapingByRef &&
+        !Ty->isVariablyModifiedType() &&
+        getAutoVarInitKind(Ty, D) !=
+            LangOptions::TrivialAutoVarInitKind::Uninitialized) {
+      if (!Bypasses.isAlwaysBypassed()) {
+        // The variable's lifetime restarts on each re-entry into its scope, so
+        // reinitialize at every bypassing jump. Backward gotos are emitted at
+        // the jump source, which comes after this alloca; forward gotos and the
+        // switch dispatch have already been emitted, so patch their init in
+        // before the jump.
+        BypassedVarInits.insert({&D, address});
+        for (const BypassingForwardJump &FG : BypassingForwardJumps) {
+          const auto *Vars = Bypasses.getBypassedVarsForSource(FG.Source);
+          if (!Vars || !Vars->contains(&D))
+            continue;
+          if (llvm::Instruction *Term = FG.Block->getTerminator()) {
+            llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
+            Builder.SetInsertPoint(Term);
+            emitZeroOrPatternForAutoVarInit(Ty, D, address);
+          }
+        }
+      } else {
+        // A computed goto can jump anywhere, so we can't identify the jumps
+        // that bypass this declaration. Fall back to initializing once, in the
+        // function's entry block.
+        llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
+        Builder.SetInsertPoint(getPostAllocaInsertPoint());
+        emitZeroOrPatternForAutoVarInit(Ty, D, address);
+      }
+    }
+
     if (D.hasAttr<StackProtectorIgnoreAttr>()) {
       if (auto *AI = dyn_cast<llvm::AllocaInst>(address.getBasePointer())) {
         llvm::LLVMContext &Ctx = Builder.getContext();
@@ -1833,6 +1874,35 @@ bool CodeGenFunction::isTrivialInitializer(const Expr *Init) {
   return false;
 }
 
+LangOptions::TrivialAutoVarInitKind
+CodeGenFunction::getAutoVarInitKind(QualType Ty, const VarDecl &D) {
+  auto hasNoTrivialAutoVarInitAttr = [](const Decl *D) {
+    return D && D->hasAttr<NoTrivialAutoVarInitAttr>();
+  };
+  if (D.isConstexpr() || D.getAttr<UninitializedAttr>() ||
+      hasNoTrivialAutoVarInitAttr(Ty->getAsTagDecl()) ||
+      hasNoTrivialAutoVarInitAttr(CurFuncDecl))
+    return LangOptions::TrivialAutoVarInitKind::Uninitialized;
+  return getContext().getLangOpts().getTrivialAutoVarInit();
+}
+
+void CodeGenFunction::emitBypassedVarInitsForSource(const Stmt *Source) {
+  // Scope-reentry reinit is only sound when jump sources are known. With a
+  // computed goto we can't tell whether a jump leaves a variable's scope, so
+  // EmitAutoVarAlloca falls back to a single function-scope init and we must
+  // not reinitialize here -- doing so could clobber a still-live variable.
+  if (Bypasses.isAlwaysBypassed())
+    return;
+  const auto *Vars = Bypasses.getBypassedVarsForSource(Source);
+  if (!Vars)
+    return;
+  for (const VarDecl *VD : *Vars) {
+    auto It = BypassedVarInits.find(VD);
+    if (It != BypassedVarInits.end())
+      emitZeroOrPatternForAutoVarInit(VD->getType(), *VD, It->second);
+  }
+}
+
 void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
                                                       const VarDecl &D,
                                                       Address Loc) {
@@ -1992,16 +2062,9 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   const Address Loc =
       locIsByrefHeader ? emission.getObjectAddress(*this) : emission.Addr;
 
-  auto hasNoTrivialAutoVarInitAttr = [&](const Decl *D) {
-    return D && D->hasAttr<NoTrivialAutoVarInitAttr>();
-  };
   // Note: constexpr already initializes everything correctly.
   LangOptions::TrivialAutoVarInitKind trivialAutoVarInit =
-      ((D.isConstexpr() || D.getAttr<UninitializedAttr>() ||
-        hasNoTrivialAutoVarInitAttr(type->getAsTagDecl()) ||
-        hasNoTrivialAutoVarInitAttr(CurFuncDecl))
-           ? LangOptions::TrivialAutoVarInitKind::Uninitialized
-           : getContext().getLangOpts().getTrivialAutoVarInit());
+      getAutoVarInitKind(type, D);
 
   auto initializeWhatIsTechnicallyUninitialized = [&](Address Loc) {
     if (trivialAutoVarInit ==
@@ -2229,8 +2292,6 @@ void CodeGenFunction::EmitAutoVarCleanups(const AutoVarEmission &emission) {
   // Check the type for a cleanup.
   if (QualType::DestructionKind dtorKind = D.needsDestruction(getContext())) {
     // Check if we're in a SEH block with /EH, prevent it
-    // TODO: /EHs* differs from /EHa, the former may not be executed to this
-    // point.
     if (getLangOpts().CXXExceptions && currentFunctionUsesSEHTry())
       getContext().getDiagnostics().Report(D.getLocation(),
                                            diag::err_seh_object_unwinding);
@@ -2342,7 +2403,8 @@ void CodeGenFunction::pushDestroyAndDeferDeactivation(
 }
 
 void CodeGenFunction::pushStackRestore(CleanupKind Kind, Address SPMem) {
-  EHStack.pushCleanup<CallStackRestore>(Kind, SPMem);
+  EHStack.pushCleanup<CallStackRestore>(
+      static_cast<CleanupKind>(Kind | StackRestore), SPMem);
 }
 
 void CodeGenFunction::pushKmpcAllocFree(
@@ -2715,9 +2777,6 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
   if (Arg.isIndirect()) {
     DeclPtr = Arg.getIndirectAddress();
     DeclPtr = DeclPtr.withElementType(ConvertTypeForMem(Ty));
-    // Indirect argument is in alloca address space, which may be different
-    // from the default address space.
-    auto AllocaAS = CGM.getASTAllocaAddressSpace();
     auto *V = DeclPtr.emitRawPointer(*this);
     AllocaPtr = RawAddress(V, DeclPtr.getElementType(), DeclPtr.getAlignment());
 
@@ -2728,18 +2787,15 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
       UseIndirectDebugAddress = !ArgInfo.getIndirectByVal();
     if (UseIndirectDebugAddress) {
       auto PtrTy = getContext().getPointerType(Ty);
-      AllocaPtr = CreateMemTemp(PtrTy, getContext().getTypeAlignInChars(PtrTy),
-                                D.getName() + ".indirect_addr");
+      AllocaPtr = CreateMemTempWithoutCast(
+          PtrTy, getContext().getTypeAlignInChars(PtrTy),
+          D.getName() + ".indirect_addr");
       EmitStoreOfScalar(V, AllocaPtr, /* Volatile */ false, PtrTy);
     }
 
-    auto SrcLangAS = getLangOpts().OpenCL ? LangAS::opencl_private : AllocaAS;
-    auto DestLangAS =
-        getLangOpts().OpenCL ? LangAS::opencl_private : LangAS::Default;
-    if (SrcLangAS != DestLangAS) {
-      assert(getContext().getTargetAddressSpace(SrcLangAS) ==
-             CGM.getDataLayout().getAllocaAddrSpace());
-      auto DestAS = getContext().getTargetAddressSpace(DestLangAS);
+    LangAS DestLangAS = Ty.getAddressSpace();
+    unsigned DestAS = getContext().getTargetAddressSpace(DestLangAS);
+    if (DeclPtr.getAddressSpace() != DestAS) {
       auto *T = llvm::PointerType::get(getLLVMContext(), DestAS);
       DeclPtr = DeclPtr.withPointer(performAddrSpaceCast(V, T),
                                     DeclPtr.isKnownNonNull());
@@ -2770,7 +2826,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
       DeclPtr = OpenMPLocalAddr;
       AllocaPtr = DeclPtr;
     } else {
-      // Otherwise, create a temporary to hold the value.
+      // Otherwise, create a casted temporary to hold the value.
       DeclPtr = CreateMemTemp(Ty, getContext().getDeclAlign(&D),
                               D.getName() + ".addr", &AllocaPtr);
     }
@@ -2854,8 +2910,13 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
       (CGM.getCodeGenOpts().getExtendVariableLiveness() ==
            CodeGenOptions::ExtendVariableLivenessKind::This &&
        &D == CXXABIThisDecl)) {
-    if (shouldExtendLifetime(getContext(), CurCodeDecl, D, CXXABIThisDecl))
-      EHStack.pushCleanup<FakeUse>(NormalFakeUse, DeclPtr);
+    // We don't emit fake uses for coroutine parameters, other than `this`.
+    if (auto *FnDecl = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
+        &D == CXXABIThisDecl || !FnDecl || !FnDecl->getBody() ||
+        FnDecl->getBody()->getStmtClass() != Stmt::CoroutineBodyStmtClass) {
+      if (shouldExtendLifetime(getContext(), CurCodeDecl, D, CXXABIThisDecl))
+        EHStack.pushCleanup<FakeUse>(NormalFakeUse, DeclPtr);
+    }
   }
 
   // Emit debug info for param declarations in non-thunk functions.

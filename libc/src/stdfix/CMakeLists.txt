@@ -88,13 +88,27 @@ foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
   )
 endforeach()
 
-foreach(suffix IN ITEMS r)
+foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
   add_entrypoint_object(
     ${suffix}divi
     HDRS
       ${suffix}divi.h
     SRCS
       ${suffix}divi.cpp
+    COMPILE_OPTIONS
+      ${libc_opt_high_flag}
+    DEPENDS
+      libc.src.__support.fixed_point.fx_bits
+  )
+endforeach()
+
+foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
+  add_entrypoint_object(
+    divi${suffix}
+    HDRS
+      divi${suffix}.h
+    SRCS
+      divi${suffix}.cpp
     COMPILE_OPTIONS
       ${libc_opt_high_flag}
     DEPENDS

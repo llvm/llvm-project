@@ -26,7 +26,8 @@ void JITLinkRedirectableSymbolManager::emitRedirectableSymbols(
   auto &ES = ObjLinkingLayer.getExecutionSession();
   auto G = std::make_unique<jitlink::LinkGraph>(
       ("<indirect stubs graph #" + Twine(++StubGraphIdx) + ">").str(),
-      ES.getSymbolStringPool(), ES.getTargetTriple(), SubtargetFeatures(),
+      ES.getSymbolStringPool(), ES.getTargetTriple(),
+      ES.getTargetTriple().getArchPointerBitWidth() / 8, SubtargetFeatures(),
       jitlink::getGenericEdgeKindName);
   auto &PointerSection =
       G->createSection(StubPtrSectionName, MemProt::Write | MemProt::Read);
@@ -86,8 +87,5 @@ Error JITLinkRedirectableSymbolManager::redirect(JITDylib &JD,
     PtrWrites.push_back({PtrSym.getAddress(), DestSym.getAddress()});
   }
 
-  return ObjLinkingLayer.getExecutionSession()
-      .getExecutorProcessControl()
-      .getMemoryAccess()
-      .writePointers(PtrWrites);
+  return MemAccess.writePointers(PtrWrites);
 }

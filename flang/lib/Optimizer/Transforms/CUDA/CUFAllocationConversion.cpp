@@ -15,16 +15,15 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/DataLayout.h"
+#include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Runtime/CUDA/allocatable.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/CUDA/descriptor.h"
 #include "flang/Runtime/CUDA/memory.h"
 #include "flang/Runtime/CUDA/pointer.h"
 #include "flang/Runtime/allocatable.h"
-#include "flang/Runtime/allocator-registry-consts.h"
-#include "flang/Support/Fortran.h"
+#include "flang/Runtime/pointer.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
@@ -147,12 +146,36 @@ static mlir::LogicalResult convertOpToCall(OpTy op,
   return mlir::success();
 }
 
+static mlir::func::FuncOp getDescriptorAllocFunc(mlir::Location loc,
+                                                 fir::FirOpBuilder &builder,
+                                                 llvm::StringRef customName) {
+  using RuntimeEntry = mkRTKey(CUFAllocDescriptor);
+  llvm::StringRef name = customName.empty() ? RuntimeEntry::name : customName;
+  if (auto func = builder.getNamedFunction(name))
+    return func;
+  auto funTy = RuntimeEntry::getTypeModel()(builder.getContext());
+  return builder.createRuntimeFunction(loc, name, funTy);
+}
+
+static mlir::func::FuncOp getDescriptorFreeFunc(mlir::Location loc,
+                                                fir::FirOpBuilder &builder,
+                                                llvm::StringRef customName) {
+  using RuntimeEntry = mkRTKey(CUFFreeDescriptor);
+  llvm::StringRef name = customName.empty() ? RuntimeEntry::name : customName;
+  if (auto func = builder.getNamedFunction(name))
+    return func;
+  auto funTy = RuntimeEntry::getTypeModel()(builder.getContext());
+  return builder.createRuntimeFunction(loc, name, funTy);
+}
+
 struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
   using OpRewritePattern::OpRewritePattern;
 
   CUFAllocOpConversion(mlir::MLIRContext *context, mlir::DataLayout *dl,
-                       const fir::LLVMTypeConverter *typeConverter)
-      : OpRewritePattern(context), dl{dl}, typeConverter{typeConverter} {}
+                       const fir::LLVMTypeConverter *typeConverter,
+                       llvm::StringRef descriptorAllocFunction)
+      : OpRewritePattern(context), dl{dl}, typeConverter{typeConverter},
+        descriptorAllocFunction{descriptorAllocFunction.str()} {}
 
   mlir::LogicalResult
   matchAndRewrite(cuf::AllocOp op,
@@ -205,6 +228,16 @@ struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
                 rewriter, loc, nbElem,
                 builder.loadIfRef(loc, op.getShape()[i]));
           }
+          fir::SequenceType::Extent constSize = 1;
+          for (auto extent : seqTy.getShape()) {
+            if (extent != fir::SequenceType::getUnknownExtent())
+              constSize *= extent;
+          }
+          if (constSize != 1)
+            nbElem = mlir::arith::MulIOp::create(
+                rewriter, loc, nbElem,
+                builder.createIntegerConstant(loc, builder.getIndexType(),
+                                              constSize));
         } else {
           nbElem = builder.createIntegerConstant(loc, builder.getIndexType(),
                                                  seqTy.getConstantArraySize());
@@ -243,7 +276,7 @@ struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
     // Convert descriptor allocations to function call.
     auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(op.getInType());
     mlir::func::FuncOp func =
-        fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocDescriptor)>(loc, builder);
+        getDescriptorAllocFunc(loc, builder, descriptorAllocFunction);
     auto fTy = func.getFunctionType();
     mlir::Value sourceLine =
         fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
@@ -266,10 +299,16 @@ struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
 private:
   mlir::DataLayout *dl;
   const fir::LLVMTypeConverter *typeConverter;
+  const std::string descriptorAllocFunction;
 };
 
 struct CUFFreeOpConversion : public mlir::OpRewritePattern<cuf::FreeOp> {
   using OpRewritePattern::OpRewritePattern;
+
+  CUFFreeOpConversion(mlir::MLIRContext *context,
+                      llvm::StringRef descriptorFreeFunction)
+      : OpRewritePattern(context),
+        descriptorFreeFunction{descriptorFreeFunction.str()} {}
 
   mlir::LogicalResult
   matchAndRewrite(cuf::FreeOp op,
@@ -305,7 +344,7 @@ struct CUFFreeOpConversion : public mlir::OpRewritePattern<cuf::FreeOp> {
 
     // Convert cuf.free on descriptors.
     mlir::func::FuncOp func =
-        fir::runtime::getRuntimeFunc<mkRTKey(CUFFreeDescriptor)>(loc, builder);
+        getDescriptorFreeFunc(loc, builder, descriptorFreeFunction);
     auto fTy = func.getFunctionType();
     mlir::Value sourceLine =
         fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
@@ -316,6 +355,9 @@ struct CUFFreeOpConversion : public mlir::OpRewritePattern<cuf::FreeOp> {
     rewriter.eraseOp(op);
     return mlir::success();
   }
+
+private:
+  const std::string descriptorFreeFunction;
 };
 
 struct CUFAllocateOpConversion
@@ -383,12 +425,17 @@ struct CUFDeallocateOpConversion
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
 
+    bool isPointer = op.getPointer();
+
     if (op.getHasDoubleDescriptor()) {
       // Deallocation for module variable are done with custom runtime entry
       // point so the descriptors can be synchronized.
       mlir::func::FuncOp func =
-          fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableDeallocate)>(
-              loc, builder);
+          isPointer
+              ? fir::runtime::getRuntimeFunc<mkRTKey(CUFPointerDeallocate)>(
+                    loc, builder)
+              : fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableDeallocate)>(
+                    loc, builder);
       return convertOpToCall<cuf::DeallocateOp>(op, rewriter, func);
     }
 
@@ -396,8 +443,11 @@ struct CUFDeallocateOpConversion
     // AllocatableDeallocate as the dedicated deallocator is set in the
     // descriptor before the call.
     mlir::func::FuncOp func =
-        fir::runtime::getRuntimeFunc<mkRTKey(AllocatableDeallocate)>(loc,
-                                                                     builder);
+        isPointer
+            ? fir::runtime::getRuntimeFunc<mkRTKey(PointerDeallocate)>(loc,
+                                                                       builder)
+            : fir::runtime::getRuntimeFunc<mkRTKey(AllocatableDeallocate)>(
+                  loc, builder);
     return convertOpToCall<cuf::DeallocateOp>(op, rewriter, func);
   }
 };
@@ -405,6 +455,8 @@ struct CUFDeallocateOpConversion
 class CUFAllocationConversion
     : public fir::impl::CUFAllocationConversionBase<CUFAllocationConversion> {
 public:
+  using CUFAllocationConversionBase::CUFAllocationConversionBase;
+
   void runOnOperation() override {
     auto *ctx = &getContext();
     mlir::RewritePatternSet patterns(ctx);
@@ -423,8 +475,9 @@ public:
     target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithDialect,
                            mlir::gpu::GPUDialect>();
     target.addLegalOp<cuf::StreamCastOp>();
-    cuf::populateCUFAllocationConversionPatterns(typeConverter, *dl, symtab,
-                                                 patterns);
+    cuf::populateCUFAllocationConversionPatterns(
+        typeConverter, *dl, symtab, patterns, descriptorAllocFunction,
+        descriptorFreeFunction);
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
                                                   std::move(patterns)))) {
       mlir::emitError(mlir::UnknownLoc::get(ctx),
@@ -438,8 +491,13 @@ public:
 
 void cuf::populateCUFAllocationConversionPatterns(
     const fir::LLVMTypeConverter &converter, mlir::DataLayout &dl,
-    const mlir::SymbolTable &symtab, mlir::RewritePatternSet &patterns) {
-  patterns.insert<CUFAllocOpConversion>(patterns.getContext(), &dl, &converter);
-  patterns.insert<CUFFreeOpConversion, CUFAllocateOpConversion,
-                  CUFDeallocateOpConversion>(patterns.getContext());
+    const mlir::SymbolTable &symtab, mlir::RewritePatternSet &patterns,
+    llvm::StringRef descriptorAllocFunction,
+    llvm::StringRef descriptorFreeFunction) {
+  patterns.insert<CUFAllocOpConversion>(patterns.getContext(), &dl, &converter,
+                                        descriptorAllocFunction);
+  patterns.insert<CUFFreeOpConversion>(patterns.getContext(),
+                                       descriptorFreeFunction);
+  patterns.insert<CUFAllocateOpConversion, CUFDeallocateOpConversion>(
+      patterns.getContext());
 }

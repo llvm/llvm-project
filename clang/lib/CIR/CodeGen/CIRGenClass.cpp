@@ -14,12 +14,13 @@
 #include "CIRGenFunction.h"
 #include "CIRGenValue.h"
 
-#include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/ClassUtils.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -154,12 +155,6 @@ static void emitMemberInitializer(CIRGenFunction &cgf,
   cgf.emitInitializerForField(field, lhs, memberInit->getInit());
 }
 
-static bool isInitializerOfDynamicClass(const CXXCtorInitializer *baseInit) {
-  const Type *baseType = baseInit->getBaseClass();
-  const auto *baseClassDecl = baseType->castAsCXXRecordDecl();
-  return baseClassDecl->isDynamicClass();
-}
-
 namespace {
 /// Call the destructor for a direct base class.
 struct CallBaseDtor final : EHScopeStack::Cleanup {
@@ -178,8 +173,8 @@ struct CallBaseDtor final : EHScopeStack::Cleanup {
     QualType thisTy = d->getFunctionObjectParameterType();
     assert(cgf.currSrcLoc && "expected source location");
     Address addr = cgf.getAddressOfDirectBaseInCompleteClass(
-        *cgf.currSrcLoc, cgf.loadCXXThisAddress(), derivedClass, baseClass,
-        baseIsVirtual);
+        cgf.getLoc(*cgf.currSrcLoc), cgf.loadCXXThisAddress(), derivedClass,
+        baseClass, baseIsVirtual);
     cgf.emitCXXDestructorCall(d, Dtor_Base, baseIsVirtual,
                               /*delegating=*/false, addr, thisTy);
   }
@@ -204,30 +199,7 @@ struct CallDelegatingCtorDtor final : EHScopeStack::Cleanup {
   }
 };
 
-/// A visitor which checks whether an initializer uses 'this' in a
-/// way which requires the vtable to be properly set.
-struct DynamicThisUseChecker
-    : ConstEvaluatedExprVisitor<DynamicThisUseChecker> {
-  using super = ConstEvaluatedExprVisitor<DynamicThisUseChecker>;
-
-  bool usesThis = false;
-
-  DynamicThisUseChecker(const ASTContext &c) : super(c) {}
-
-  // Black-list all explicit and implicit references to 'this'.
-  //
-  // Do we need to worry about external references to 'this' derived
-  // from arbitrary code? If so, then anything which runs arbitrary
-  // external code might potentially access the vtable.
-  void VisitCXXThisExpr(const CXXThisExpr *e) { usesThis = true; }
-};
 } // end anonymous namespace
-
-static bool baseInitializerUsesThis(ASTContext &c, const Expr *init) {
-  DynamicThisUseChecker checker(c);
-  checker.Visit(init);
-  return checker.usesThis;
-}
 
 /// Gets the address of a direct base class within a complete object.
 /// This should only be used for (1) non-virtual bases or (2) virtual bases
@@ -271,7 +243,7 @@ void CIRGenFunction::emitBaseInitializer(mlir::Location loc,
   // If the initializer for the base (other than the constructor
   // itself) accesses 'this' in any way, we need to initialize the
   // vtables.
-  if (baseInitializerUsesThis(getContext(), baseInit->getInit()))
+  if (CodeGenUtils::baseInitializerUsesThis(getContext(), baseInit->getInit()))
     initializeVTablePointers(loc, classDecl);
 
   // We can pretend to be a complete class because it only matters for
@@ -285,7 +257,9 @@ void CIRGenFunction::emitBaseInitializer(mlir::Location loc,
 
   emitAggExpr(baseInit->getInit(), aggSlot);
 
-  assert(!cir::MissingFeatures::requiresCleanups());
+  if (cgm.getLangOpts().Exceptions && !baseClassDecl->hasTrivialDestructor())
+    ehStack.pushCleanup<CallBaseDtor>(EHCleanup, baseClassDecl,
+                                      /*baseIsVirtual=*/isBaseVirtual);
 }
 
 /// This routine generates necessary code to initialize base classes and
@@ -342,7 +316,7 @@ void CIRGenFunction::emitCtorPrologue(const CXXConstructorDecl *cd,
   auto emitInitializer = [&](CXXCtorInitializer *baseInit) {
     if (cgm.getCodeGenOpts().StrictVTablePointers &&
         cgm.getCodeGenOpts().OptimizationLevel > 0 &&
-        isInitializerOfDynamicClass(baseInit)) {
+        CodeGenUtils::isInitializerOfDynamicClass(baseInit)) {
       // It's OK to continue after emitting the error here. The missing code
       // just "launders" the 'this' pointer.
       cgm.errorNYI(cd->getSourceRange(),
@@ -397,10 +371,14 @@ static Address applyNonVirtualAndVirtualOffset(
   mlir::Value baseOffset;
   if (!nonVirtualOffset.isZero()) {
     if (virtualOffset) {
-      cgf.cgm.errorNYI(
-          loc,
-          "applyNonVirtualAndVirtualOffset: virtual and non-virtual offset");
-      return Address::invalid();
+      mlir::Type offsetType =
+          (cgf.cgm.getTarget().getCXXABI().isItaniumFamily() &&
+           cgf.cgm.getLangOpts().RelativeCXXABIVTables)
+              ? cgf.sInt32Ty
+              : cgf.ptrDiffTy;
+      baseOffset = cgf.getBuilder().getConstInt(loc, offsetType,
+                                                nonVirtualOffset.getQuantity());
+      baseOffset = cgf.getBuilder().createAdd(loc, virtualOffset, baseOffset);
     } else {
       assert(baseValueTy && "expected base type");
       // If no virtualOffset is present this is the final stop.
@@ -618,8 +596,7 @@ void CIRGenFunction::emitInitializerForField(FieldDecl *field, LValue lhs,
   // Ensure that we destroy this object if an exception is thrown later in the
   // constructor.
   QualType::DestructionKind dtorKind = fieldType.isDestructedType();
-  (void)dtorKind;
-  assert(!cir::MissingFeatures::requiresCleanups());
+  pushEHDestroyIfNeeded(dtorKind, lhs.getAddress(), fieldType);
 }
 
 Address CIRGenFunction::emitCXXMemberDataPointerAddress(
@@ -714,7 +691,8 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   QualType elementType;
   mlir::Value numElements = emitArrayLength(arrayType, elementType, arrayBegin);
   emitCXXAggrConstructorCall(ctor, numElements, arrayBegin, e,
-                             newPointerIsChecked, zeroInitialize);
+                             newPointerIsChecked, zeroInitialize,
+                             /*endOfInit=*/Address::invalid());
 }
 
 /// Emit a loop to call a particular constructor for each of several members
@@ -726,9 +704,16 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
 /// \param arrayBase a T*, where T is the type constructed by ctor
 /// \param zeroInitialize true if each element should be
 ///   zero-initialized before it is constructed
+/// \param endOfInit if valid, an alloca holding the upper bound of an
+///   already-pushed irregular partial-array EH cleanup. When valid, the
+///   loop body will update this slot before each constructor call so the
+///   caller's cleanup covers loop-constructed elements, and no
+///   partial-destruction region is attached to the resulting
+///   cir::ArrayCtor op.
 void CIRGenFunction::emitCXXAggrConstructorCall(
     const CXXConstructorDecl *ctor, mlir::Value numElements, Address arrayBase,
-    const CXXConstructExpr *e, bool newPointerIsChecked, bool zeroInitialize) {
+    const CXXConstructExpr *e, bool newPointerIsChecked, bool zeroInitialize,
+    Address endOfInit) {
   // It's legal for numElements to be zero.  This can happen both
   // dynamically, because x can be zero in 'new A[x]', and statically,
   // because of GCC extensions that permit zero-length arrays.  There
@@ -766,68 +751,77 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   CharUnits eltAlignment = arrayBase.getAlignment().alignmentOfArrayElement(
       getContext().getTypeSizeInChars(type));
 
-  mlir::Location loc = *currSrcLoc;
+  mlir::Location loc = getLoc(*currSrcLoc);
 
   mlir::Value dynamicElPtr;
   if (useDynamicArrayCtor)
     dynamicElPtr =
         builder.createPtrBitcast(arrayBase.getPointer(), elementType);
 
-  // C++ [class.temporary]p4:
-  // There are two contexts in which temporaries are destroyed at a different
-  // point than the end of the full-expression. The first context is when a
-  // default constructor is called to initialize an element of an array.
-  // If the constructor has one or more default arguments, the destruction of
-  // every temporary created in a default argument expression is sequenced
-  // before the construction of the next array element, if any.
-  {
-    RunCleanupsScope scope(*this);
+  // When the caller has already pushed an irregular partial-array cleanup
+  // (signalled by a valid endOfInit), our loop body will keep that cleanup's
+  // upper bound up to date, so we don't need a separate per-element
+  // partial-destruction region on the cir::ArrayCtor op.
+  bool needsPartialArrayCleanup = getLangOpts().Exceptions &&
+                                  !ctor->getParent()->hasTrivialDestructor() &&
+                                  !endOfInit.isValid();
 
-    bool needsPartialArrayCleanup =
-        getLangOpts().Exceptions && !ctor->getParent()->hasTrivialDestructor();
-
-    auto emitCtorBody = [&](mlir::OpBuilder &b, mlir::Location l) {
-      mlir::BlockArgument arg =
-          b.getInsertionBlock()->addArgument(ptrToElmType, l);
-      Address curAddr = Address(arg, elementType, eltAlignment);
-      assert(!cir::MissingFeatures::sanitizers());
-      if (zeroInitialize)
-        emitNullInitialization(l, curAddr, type);
-      auto currAVS = AggValueSlot::forAddr(
-          curAddr, type.getQualifiers(), AggValueSlot::IsDestructed,
-          AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap,
-          AggValueSlot::IsNotZeroed);
+  auto emitCtorBody = [&](mlir::OpBuilder &b, mlir::Location l) {
+    mlir::BlockArgument arg =
+        b.getInsertionBlock()->addArgument(ptrToElmType, l);
+    Address curAddr = Address(arg, elementType, eltAlignment);
+    // Extend the caller's irregular partial-array cleanup to cover the
+    // element we're about to construct. If this constructor throws, the
+    // cleanup will destroy every element strictly below this one.
+    if (endOfInit.isValid())
+      builder.createStore(l, arg, endOfInit);
+    assert(!cir::MissingFeatures::sanitizers());
+    if (zeroInitialize)
+      emitNullInitialization(l, curAddr, type);
+    auto currAVS = AggValueSlot::forAddr(
+        curAddr, type.getQualifiers(), AggValueSlot::IsDestructed,
+        AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap,
+        AggValueSlot::IsNotZeroed);
+    // C++ [class.temporary]p4:
+    // There are two contexts in which temporaries are destroyed at a
+    // different point than the end of the full-expression. The first context
+    // is when a default constructor is called to initialize an element of an
+    // array. If the constructor has one or more default arguments, the
+    // destruction of every temporary created in a default argument expression
+    // is sequenced before the construction of the next array element, if any.
+    {
+      RunCleanupsScope scope(*this);
       emitCXXConstructorCall(ctor, Ctor_Complete,
                              /*ForVirtualBase=*/false,
                              /*Delegating=*/false, currAVS, e);
-      cir::YieldOp::create(b, l);
-    };
-
-    llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>
-        emitPartialDtorBody = nullptr;
-    auto partialDtorBuilder = [&](mlir::OpBuilder &b, mlir::Location l) {
-      mlir::BlockArgument arg =
-          b.getInsertionBlock()->addArgument(ptrToElmType, l);
-      Address curAddr = Address(arg, elementType, eltAlignment);
-      emitCXXDestructorCall(ctor->getParent()->getDestructor(), Dtor_Complete,
-                            /*forVirtualBase=*/false,
-                            /*delegating=*/false, curAddr, type);
-      cir::YieldOp::create(b, l);
-    };
-    if (needsPartialArrayCleanup)
-      emitPartialDtorBody = partialDtorBuilder;
-
-    if (useDynamicArrayCtor) {
-      cir::ArrayCtor::create(builder, loc, dynamicElPtr, numElements,
-                             emitCtorBody, emitPartialDtorBody);
-    } else {
-      cir::ArrayType arrayTy =
-          cir::ArrayType::get(elementType, constElementCount);
-      mlir::Value arrayOp =
-          builder.createPtrBitcast(arrayBase.getPointer(), arrayTy);
-      cir::ArrayCtor::create(builder, loc, arrayOp, emitCtorBody,
-                             emitPartialDtorBody);
     }
+    cir::YieldOp::create(b, l);
+  };
+
+  llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>
+      emitPartialDtorBody = nullptr;
+  auto partialDtorBuilder = [&](mlir::OpBuilder &b, mlir::Location l) {
+    mlir::BlockArgument arg =
+        b.getInsertionBlock()->addArgument(ptrToElmType, l);
+    Address curAddr = Address(arg, elementType, eltAlignment);
+    emitCXXDestructorCall(ctor->getParent()->getDestructor(), Dtor_Complete,
+                          /*forVirtualBase=*/false,
+                          /*delegating=*/false, curAddr, type);
+    cir::YieldOp::create(b, l);
+  };
+  if (needsPartialArrayCleanup)
+    emitPartialDtorBody = partialDtorBuilder;
+
+  if (useDynamicArrayCtor) {
+    cir::ArrayCtor::create(builder, loc, dynamicElPtr, numElements,
+                           emitCtorBody, emitPartialDtorBody);
+  } else {
+    cir::ArrayType arrayTy =
+        cir::ArrayType::get(elementType, constElementCount);
+    mlir::Value arrayOp =
+        builder.createPtrBitcast(arrayBase.getPointer(), arrayTy);
+    cir::ArrayCtor::create(builder, loc, arrayOp, emitCtorBody,
+                           emitPartialDtorBody);
   }
 }
 
@@ -873,7 +867,7 @@ void CIRGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &args) {
          "Body of an implicit assignment operator should be compound stmt.");
   const auto *rootCS = cast<CompoundStmt>(rootS);
 
-  cgm.setCXXSpecialMemberAttr(cast<cir::FuncOp>(curFn), assignOp);
+  cgm.setFuncInfoAttr(cast<cir::FuncOp>(curFn), assignOp);
 
   assert(!cir::MissingFeatures::incrementProfileCounter());
   assert(!cir::MissingFeatures::runCleanupsScope());
@@ -904,6 +898,15 @@ void CIRGenFunction::emitForwardingCallToLambda(
       callOperator->getType()->castAs<FunctionProtoType>();
   QualType resultType = fpt->getReturnType();
   ReturnValueSlot returnSlot;
+  // This should also be tracking volatile, unused, and externally destructed.
+  assert(!cir::MissingFeatures::returnValueSlotFeatures());
+  // For aggregate returns, write the callee's result directly into the
+  // static invoker's return slot.  Otherwise emitReturnOfRValue below would
+  // aggregate-copy a temporary into returnValue, which is incorrect for
+  // types without a trivial copy/move (e.g. std::string) -- and trips an
+  // assertion in emitAggregateCopy.
+  if (!resultType->isVoidType() && hasAggregateEvaluationKind(resultType))
+    returnSlot = ReturnValueSlot(returnValue);
 
   // We don't need to separately arrange the call arguments because
   // the call can't be variadic anyway --- it's impossible to forward
@@ -912,17 +915,18 @@ void CIRGenFunction::emitForwardingCallToLambda(
   // Now emit our call.
   CIRGenCallee callee =
       CIRGenCallee::forDirect(calleePtr, GlobalDecl(callOperator));
-  RValue rv = emitCall(calleeFnInfo, callee, returnSlot, callArgs);
+  RValue rv = emitCall(calleeFnInfo, callee, returnSlot, callArgs,
+                       /*isMustTail=*/false);
 
-  // If necessary, copy the returned value into the slot.
-  if (!resultType->isVoidType() && returnSlot.isNull()) {
-    if (getLangOpts().ObjCAutoRefCount && resultType->isObjCRetainableType())
+  // Forward the returned value through the function's return slot.
+  if (!resultType->isVoidType()) {
+    if (returnSlot.isNull() && getLangOpts().ObjCAutoRefCount &&
+        resultType->isObjCRetainableType())
       cgm.errorNYI(callOperator->getSourceRange(),
                    "emitForwardingCallToLambda: ObjCAutoRefCount");
-    emitReturnOfRValue(*currSrcLoc, rv, resultType);
+    emitReturnOfRValue(getLoc(*currSrcLoc), rv, resultType);
   } else {
-    cgm.errorNYI(callOperator->getSourceRange(),
-                 "emitForwardingCallToLambda: return slot is not null");
+    cir::ReturnOp::create(builder, getLoc(*currSrcLoc));
   }
 }
 
@@ -950,9 +954,9 @@ void CIRGenFunction::emitLambdaDelegatingInvokeBody(const CXXMethodDecl *md) {
     const TemplateArgumentList *tal = md->getTemplateSpecializationArgs();
     FunctionTemplateDecl *callOpTemplate =
         callOp->getDescribedFunctionTemplate();
-    void *InsertPos = nullptr;
+    llvm::FoldingSetInsertToken InsertToken;
     FunctionDecl *correspondingCallOpSpecialization =
-        callOpTemplate->findSpecialization(tal->asArray(), InsertPos);
+        callOpTemplate->findSpecialization(tal->asArray(), InsertToken);
     assert(correspondingCallOpSpecialization);
     callOp = cast<CXXMethodDecl>(correspondingCallOpSpecialization);
   }
@@ -1263,17 +1267,49 @@ Address CIRGenFunction::getAddressOfBaseClass(
 
   assert(!cir::MissingFeatures::sanitizers());
 
+  mlir::Location mlirLoc = getLoc(loc);
+
+  // Computing the virtual offset requires reading the vtable, which is only
+  // safe to do once we know the pointer isn't null. Guard the whole
+  // computation, mirroring classic CodeGen's cast.notnull/cast.end split.
+  if (vBase && nullCheckValue) {
+    CharUnits alignment =
+        cgm.getVBaseAlignment(value.getAlignment(), derived, vBase)
+            .alignmentAtOffset(nonVirtualOffset);
+    mlir::Type basePtrTy = builder.getPointerTo(baseValueTy);
+    mlir::Value ptrIsNull = builder.createPtrIsNull(value.getPointer());
+    mlir::Value result =
+        cir::TernaryOp::create(
+            builder, mlirLoc, ptrIsNull,
+            [&](mlir::OpBuilder &, mlir::Location) {
+              builder.createYield(
+                  mlirLoc, builder.getNullPtr(basePtrTy, mlirLoc).getResult());
+            },
+            [&](mlir::OpBuilder &, mlir::Location) {
+              mlir::Value virtualOffset =
+                  cgm.getCXXABI().getVirtualBaseClassOffset(
+                      mlirLoc, *this, value, derived, vBase);
+              Address adjusted = applyNonVirtualAndVirtualOffset(
+                  mlirLoc, *this, value, nonVirtualOffset, virtualOffset,
+                  derived, vBase, baseValueTy, /*assumeNotNull=*/true);
+              adjusted = adjusted.withElementType(builder, baseValueTy);
+              builder.createYield(mlirLoc, adjusted.getPointer());
+            })
+            .getResult();
+    return Address(result, baseValueTy, alignment);
+  }
+
   // Compute the virtual offset.
   mlir::Value virtualOffset = nullptr;
   if (vBase) {
     virtualOffset = cgm.getCXXABI().getVirtualBaseClassOffset(
-        getLoc(loc), *this, value, derived, vBase);
+        mlirLoc, *this, value, derived, vBase);
   }
 
   // Apply both offsets.
   value = applyNonVirtualAndVirtualOffset(
-      getLoc(loc), *this, value, nonVirtualOffset, virtualOffset, derived,
-      vBase, baseValueTy, not nullCheckValue);
+      mlirLoc, *this, value, nonVirtualOffset, virtualOffset, derived, vBase,
+      baseValueTy, not nullCheckValue);
 
   // Cast to the destination type.
   value = value.withElementType(builder, baseValueTy);
@@ -1344,12 +1380,130 @@ void CIRGenFunction::emitCXXConstructorCall(const clang::CXXConstructorDecl *d,
 
   assert(!cir::MissingFeatures::opCallArgEvaluationOrder());
 
-  emitCallArgs(args, fpt, e->arguments(), e->getConstructor(),
-               /*ParamsToSkip=*/0);
+  if (auto inherited = d->getInheritedConstructor();
+      !inherited || cgm.getTypes().inheritingCtorHasParams(inherited, type))
+    emitCallArgs(args, fpt, e->arguments(), e->getConstructor(),
+                 /*ParamsToSkip=*/0);
 
   assert(!cir::MissingFeatures::sanitizers());
   emitCXXConstructorCall(d, type, forVirtualBase, delegating, thisAddr, args,
                          e->getExprLoc());
+}
+
+static bool canEmitDelegateCallArgs(CIRGenModule &cgm, ASTContext &ctx,
+                                    const CXXConstructorDecl *d,
+                                    CXXCtorType type) {
+  // We can't forward a variadic call.
+  if (d->isVariadic())
+    return false;
+
+  if (ctx.getTargetInfo().getCXXABI().areArgsDestroyedLeftToRightInCallee()) {
+    // FIXME(CIR): It isn't clear to me that this is the right answer here,
+    // classic-codegen decides the answer is 'false' if there is an inalloca
+    // argument or if there is a param that needs destruction.
+    // When we get an understanding of what the the calling-convention code
+    // needs here, we should be able to replace this with either a 'return
+    // false' or 'return true'.
+    // Perhaps we should be checking isParamDestroyedInCallee?
+    cgm.errorNYI(d->getSourceRange(),
+                 "canEmitDelegateCallArgs: args-destroyed-L-to-R in callee");
+  }
+
+  return true;
+}
+
+void CIRGenFunction::emitInheritedCXXConstructorCall(
+    const CXXConstructorDecl *d, bool forVirtualBase, Address thisAddr,
+    bool inheritedFromVBase, const CXXInheritedCtorInitExpr *e) {
+
+  CallArgList ctorArgs;
+  CallArg thisArg(RValue::get(getAsNaturalPointerTo(
+                      thisAddr, d->getThisType()->getPointeeType())),
+                  d->getThisType());
+
+  if (inheritedFromVBase &&
+      cgm.getTarget().getCXXABI().hasConstructorVariants()) {
+    cgm.errorNYI(e->getSourceRange(), "emitInheritedCXXConstructorCall "
+                                      "inheritedFromVBase with ctor variants");
+    return;
+  } else if (!cxxInheritedCtorInitExprArgs.empty()) {
+    // The inheriting constructor was inlined; just inject its arguments.
+    assert(cxxInheritedCtorInitExprArgs.size() >= d->getNumParams() &&
+           "wrong number of parameters for inherited constructor call");
+    ctorArgs = cxxInheritedCtorInitExprArgs;
+    ctorArgs[0] = thisArg;
+  } else {
+    ctorArgs.push_back(thisArg);
+    const auto *outerCtor = cast<CXXConstructorDecl>(curCodeDecl);
+    assert(outerCtor->getNumParams() == d->getNumParams());
+    assert(!outerCtor->isVariadic() && "should have been inlined");
+
+    for (const ParmVarDecl *param : outerCtor->parameters()) {
+      assert(getContext().hasSameUnqualifiedType(
+          outerCtor->getParamDecl(param->getFunctionScopeIndex())->getType(),
+          param->getType()));
+      emitDelegateCallArg(ctorArgs, param, e->getLocation());
+
+      if (param->hasAttr<PassObjectSizeAttr>())
+        cgm.errorNYI(
+            e->getLocation(),
+            "emitInheritedCXXConstructorCall: pass object size attr argument");
+    }
+  }
+
+  emitCXXConstructorCall(d, Ctor_Base, forVirtualBase, /*delegating=*/false,
+                         thisAddr, ctorArgs, e->getLocation());
+}
+
+void CIRGenFunction::emitInlinedInheritingCXXConstructorCall(
+    SourceLocation loc, const CXXConstructorDecl *d, CXXCtorType ctorType,
+    bool forVirtualBase, bool delegating, CallArgList &args) {
+  GlobalDecl gd(d, ctorType);
+  assert(!cir::MissingFeatures::generateDebugInfo());
+  InlinedInheritingConstructorScope scope(*this, gd);
+  RunCleanupsScope RunCleanups(*this);
+
+  // Save the arguments to be passed to the inherited constructor.
+  cxxInheritedCtorInitExprArgs = args;
+
+  FunctionArgList params;
+  QualType retTy = buildFunctionArgList(gd, params);
+  // FIXME(cir): When we get to the !isVoidType NYI below, this probably is
+  // going to be important.  In the meantime, this is likely not really doing
+  // anything.
+  fnRetTy = retTy;
+
+  cgm.getCXXABI().addImplicitConstructorArgs(*this, d, ctorType, forVirtualBase,
+                                             delegating, args);
+
+  // Emit a simplified prolog. We only need to emit the implicit params.
+  assert(args.size() >= params.size() && "too few arguments for call");
+  for (auto [idx, arg, parm] :
+       llvm::zip_longest(llvm::index_range{0, args.size()}, args, params)) {
+    if (idx < params.size() && isa<ImplicitParamDecl>(*parm)) {
+      mlir::Location parmLoc = getLoc((*parm)->getSourceRange());
+      RValue argVal = arg->getRValue(*this, parmLoc);
+
+      LValue allocaVal = makeAddrLValue(
+          createTempAlloca(convertType((*parm)->getType()),
+                           getContext().getDeclAlign(*parm), parmLoc),
+          (*parm)->getType());
+
+      emitStoreThroughLValue(argVal, allocaVal, /*isInit=*/true);
+
+      setAddrOfLocalVar((*parm), allocaVal.getAddress());
+    }
+  }
+
+  // FIXME(cir): it isn't clear what it takes to get here with a constructor?
+  // Leave as an NYI until we come across a reproducer.
+  if (!retTy->isVoidType())
+    cgm.errorNYI(d->getSourceRange(),
+                 "emitInlinedInheritingCXXConstructorCall: non-void return");
+
+  cgm.getCXXABI().emitInstanceFunctionProlog(loc, *this);
+  cxxThisValue = cxxabiThisValue;
+  emitCtorPrologue(d, ctorType, params);
 }
 
 void CIRGenFunction::emitCXXConstructorCall(
@@ -1370,10 +1524,14 @@ void CIRGenFunction::emitCXXConstructorCall(
   bool passPrototypeArgs = true;
 
   // Check whether we can actually emit the constructor before trying to do so.
-  if (d->getInheritedConstructor()) {
-    cgm.errorNYI(d->getSourceRange(),
-                 "emitCXXConstructorCall: inherited constructor");
-    return;
+  if (auto inherited = d->getInheritedConstructor()) {
+    passPrototypeArgs = getTypes().inheritingCtorHasParams(inherited, type);
+    if (passPrototypeArgs &&
+        !canEmitDelegateCallArgs(cgm, cgm.getASTContext(), d, type)) {
+      emitInlinedInheritingCXXConstructorCall(loc, d, type, forVirtualBase,
+                                              delegating, args);
+      return;
+    }
   }
 
   // Insert any ABI-specific implicit constructor arguments.
@@ -1387,7 +1545,8 @@ void CIRGenFunction::emitCXXConstructorCall(
       args, d, type, extraArgs.prefix, extraArgs.suffix, passPrototypeArgs);
   CIRGenCallee callee = CIRGenCallee::forDirect(calleePtr, GlobalDecl(d, type));
   cir::CIRCallOpInterface c;
-  emitCall(info, callee, ReturnValueSlot(), args, &c, getLoc(loc));
+  emitCall(info, callee, ReturnValueSlot(), args, &c, /*isMustTail=*/false,
+           loc);
 
   if (cgm.getCodeGenOpts().OptimizationLevel != 0 && !crd->isDynamicClass() &&
       type != Ctor_Base && cgm.getCodeGenOpts().StrictVTablePointers)

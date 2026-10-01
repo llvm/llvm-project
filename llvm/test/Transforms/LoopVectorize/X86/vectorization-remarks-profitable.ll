@@ -22,7 +22,7 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.10.0"
 
-define void @do_not_interleave(ptr noalias nocapture readonly %in, ptr noalias nocapture %out, i32 %size) #0 !dbg !4 {
+define void @do_not_interleave(ptr noalias nocapture readonly %in, ptr noalias nocapture %out, i32 %size) !dbg !4 {
 entry:
   %cmp.4 = icmp eq i32 %size, 0, !dbg !10
   br i1 %cmp.4, label %for.end, label %for.body.preheader, !dbg !11
@@ -70,11 +70,8 @@ for.end:
   ret void, !dbg !27
 }
 
-attributes #0 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+mmx,+sse,+sse2" "use-soft-float"="false" }
-
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8}
-!llvm.ident = !{!9}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 250016)", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2)
 !1 = !DIFile(filename: "vectorization-remarks-profitable.c", directory: "")
@@ -84,7 +81,6 @@ attributes #0 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "fra
 !6 = distinct !DISubprogram(name: "interleave_not_profitable", scope: !1, file: !1, line: 8, type: !5, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !7 = !{i32 2, !"Dwarf Version", i32 4}
 !8 = !{i32 2, !"Debug Info Version", i32 3}
-!9 = !{!"clang version 3.8.0 (trunk 250016)"}
 !10 = !DILocation(line: 4, column: 23, scope: !4)
 !11 = !DILocation(line: 4, column: 3, scope: !4)
 !12 = !DILocation(line: 5, column: 17, scope: !4)

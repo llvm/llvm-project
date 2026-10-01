@@ -9,17 +9,17 @@
 // CHECK-C-LABEL: define dso_local void @test_svst1_hor_za8(
 // CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-C-NEXT:  entry:
-// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1b.horiz(<vscale x 16 x i1> [[PG]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1b.horiz.p0(<vscale x 16 x i1> [[PG]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
 // CHECK-C-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE]], 15
-// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1b.horiz(<vscale x 16 x i1> [[PG]], ptr [[PTR]], i32 0, i32 [[ADD]])
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1b.horiz.p0(<vscale x 16 x i1> [[PG]], ptr [[PTR]], i32 0, i32 [[ADD]])
 // CHECK-C-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z18test_svst1_hor_za8ju10__SVBool_tPv(
 // CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-CXX-NEXT:  entry:
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1b.horiz(<vscale x 16 x i1> [[PG]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1b.horiz.p0(<vscale x 16 x i1> [[PG]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
 // CHECK-CXX-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE]], 15
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1b.horiz(<vscale x 16 x i1> [[PG]], ptr [[PTR]], i32 0, i32 [[ADD]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1b.horiz.p0(<vscale x 16 x i1> [[PG]], ptr [[PTR]], i32 0, i32 [[ADD]])
 // CHECK-CXX-NEXT:    ret void
 //
 void test_svst1_hor_za8(uint32_t slice_base, svbool_t pg, void *ptr) __arm_streaming __arm_in("za") {
@@ -31,18 +31,18 @@ void test_svst1_hor_za8(uint32_t slice_base, svbool_t pg, void *ptr) __arm_strea
 // CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-C-NEXT:  entry:
 // CHECK-C-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
-// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1h.horiz(<vscale x 8 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1h.horiz.p0(<vscale x 8 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
 // CHECK-C-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE]], 7
-// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1h.horiz(<vscale x 8 x i1> [[TMP0]], ptr [[PTR]], i32 1, i32 [[ADD]])
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1h.horiz.p0(<vscale x 8 x i1> [[TMP0]], ptr [[PTR]], i32 1, i32 [[ADD]])
 // CHECK-C-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z19test_svst1_hor_za16ju10__SVBool_tPv(
 // CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1h.horiz(<vscale x 8 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1h.horiz.p0(<vscale x 8 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
 // CHECK-CXX-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE]], 7
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1h.horiz(<vscale x 8 x i1> [[TMP0]], ptr [[PTR]], i32 1, i32 [[ADD]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1h.horiz.p0(<vscale x 8 x i1> [[TMP0]], ptr [[PTR]], i32 1, i32 [[ADD]])
 // CHECK-CXX-NEXT:    ret void
 //
 void test_svst1_hor_za16(uint32_t slice_base, svbool_t pg, void *ptr) __arm_streaming __arm_in("za") {
@@ -54,18 +54,18 @@ void test_svst1_hor_za16(uint32_t slice_base, svbool_t pg, void *ptr) __arm_stre
 // CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-C-NEXT:  entry:
 // CHECK-C-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
-// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1w.horiz(<vscale x 4 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1w.horiz.p0(<vscale x 4 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
 // CHECK-C-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE]], 3
-// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1w.horiz(<vscale x 4 x i1> [[TMP0]], ptr [[PTR]], i32 3, i32 [[ADD]])
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1w.horiz.p0(<vscale x 4 x i1> [[TMP0]], ptr [[PTR]], i32 3, i32 [[ADD]])
 // CHECK-C-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z19test_svst1_hor_za32ju10__SVBool_tPv(
 // CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1w.horiz(<vscale x 4 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1w.horiz.p0(<vscale x 4 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
 // CHECK-CXX-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE]], 3
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1w.horiz(<vscale x 4 x i1> [[TMP0]], ptr [[PTR]], i32 3, i32 [[ADD]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1w.horiz.p0(<vscale x 4 x i1> [[TMP0]], ptr [[PTR]], i32 3, i32 [[ADD]])
 // CHECK-CXX-NEXT:    ret void
 //
 void test_svst1_hor_za32(uint32_t slice_base, svbool_t pg, void *ptr) __arm_streaming __arm_in("za") {
@@ -77,18 +77,18 @@ void test_svst1_hor_za32(uint32_t slice_base, svbool_t pg, void *ptr) __arm_stre
 // CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-C-NEXT:  entry:
 // CHECK-C-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
-// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1d.horiz(<vscale x 2 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1d.horiz.p0(<vscale x 2 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
 // CHECK-C-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE]], 1
-// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1d.horiz(<vscale x 2 x i1> [[TMP0]], ptr [[PTR]], i32 7, i32 [[ADD]])
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1d.horiz.p0(<vscale x 2 x i1> [[TMP0]], ptr [[PTR]], i32 7, i32 [[ADD]])
 // CHECK-C-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z19test_svst1_hor_za64ju10__SVBool_tPv(
 // CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1d.horiz(<vscale x 2 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1d.horiz.p0(<vscale x 2 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
 // CHECK-CXX-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE]], 1
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1d.horiz(<vscale x 2 x i1> [[TMP0]], ptr [[PTR]], i32 7, i32 [[ADD]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1d.horiz.p0(<vscale x 2 x i1> [[TMP0]], ptr [[PTR]], i32 7, i32 [[ADD]])
 // CHECK-CXX-NEXT:    ret void
 //
 void test_svst1_hor_za64(uint32_t slice_base, svbool_t pg, void *ptr) __arm_streaming __arm_in("za") {
@@ -100,16 +100,16 @@ void test_svst1_hor_za64(uint32_t slice_base, svbool_t pg, void *ptr) __arm_stre
 // CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-C-NEXT:  entry:
 // CHECK-C-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG]])
-// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
-// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> [[TMP0]], ptr [[PTR]], i32 15, i32 [[SLICE_BASE]])
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1q.horiz.p0(<vscale x 1 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1q.horiz.p0(<vscale x 1 x i1> [[TMP0]], ptr [[PTR]], i32 15, i32 [[SLICE_BASE]])
 // CHECK-C-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z20test_svst1_hor_za128ju10__SVBool_tPv(
 // CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG]])
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1q.horiz(<vscale x 1 x i1> [[TMP0]], ptr [[PTR]], i32 15, i32 [[SLICE_BASE]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1q.horiz.p0(<vscale x 1 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1q.horiz.p0(<vscale x 1 x i1> [[TMP0]], ptr [[PTR]], i32 15, i32 [[SLICE_BASE]])
 // CHECK-CXX-NEXT:    ret void
 //
 void test_svst1_hor_za128(uint32_t slice_base, svbool_t pg, void *ptr) __arm_streaming __arm_in("za") {
@@ -120,17 +120,17 @@ void test_svst1_hor_za128(uint32_t slice_base, svbool_t pg, void *ptr) __arm_str
 // CHECK-C-LABEL: define dso_local void @test_svst1_ver_za8(
 // CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-C-NEXT:  entry:
-// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1b.vert(<vscale x 16 x i1> [[PG]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1b.vert.p0(<vscale x 16 x i1> [[PG]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
 // CHECK-C-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE]], 15
-// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1b.vert(<vscale x 16 x i1> [[PG]], ptr [[PTR]], i32 0, i32 [[ADD]])
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1b.vert.p0(<vscale x 16 x i1> [[PG]], ptr [[PTR]], i32 0, i32 [[ADD]])
 // CHECK-C-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z18test_svst1_ver_za8ju10__SVBool_tPv(
 // CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1b.vert(<vscale x 16 x i1> [[PG]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1b.vert.p0(<vscale x 16 x i1> [[PG]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
 // CHECK-CXX-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE]], 15
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1b.vert(<vscale x 16 x i1> [[PG]], ptr [[PTR]], i32 0, i32 [[ADD]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1b.vert.p0(<vscale x 16 x i1> [[PG]], ptr [[PTR]], i32 0, i32 [[ADD]])
 // CHECK-CXX-NEXT:    ret void
 //
 void test_svst1_ver_za8(uint32_t slice_base, svbool_t pg, void *ptr) __arm_streaming __arm_in("za") {
@@ -142,18 +142,18 @@ void test_svst1_ver_za8(uint32_t slice_base, svbool_t pg, void *ptr) __arm_strea
 // CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-C-NEXT:  entry:
 // CHECK-C-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
-// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1h.vert(<vscale x 8 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1h.vert.p0(<vscale x 8 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
 // CHECK-C-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE]], 7
-// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1h.vert(<vscale x 8 x i1> [[TMP0]], ptr [[PTR]], i32 1, i32 [[ADD]])
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1h.vert.p0(<vscale x 8 x i1> [[TMP0]], ptr [[PTR]], i32 1, i32 [[ADD]])
 // CHECK-C-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z19test_svst1_ver_za16ju10__SVBool_tPv(
 // CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1h.vert(<vscale x 8 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1h.vert.p0(<vscale x 8 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
 // CHECK-CXX-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE]], 7
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1h.vert(<vscale x 8 x i1> [[TMP0]], ptr [[PTR]], i32 1, i32 [[ADD]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1h.vert.p0(<vscale x 8 x i1> [[TMP0]], ptr [[PTR]], i32 1, i32 [[ADD]])
 // CHECK-CXX-NEXT:    ret void
 //
 void test_svst1_ver_za16(uint32_t slice_base, svbool_t pg, void *ptr) __arm_streaming __arm_in("za") {
@@ -165,18 +165,18 @@ void test_svst1_ver_za16(uint32_t slice_base, svbool_t pg, void *ptr) __arm_stre
 // CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-C-NEXT:  entry:
 // CHECK-C-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
-// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1w.vert(<vscale x 4 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1w.vert.p0(<vscale x 4 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
 // CHECK-C-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE]], 3
-// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1w.vert(<vscale x 4 x i1> [[TMP0]], ptr [[PTR]], i32 3, i32 [[ADD]])
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1w.vert.p0(<vscale x 4 x i1> [[TMP0]], ptr [[PTR]], i32 3, i32 [[ADD]])
 // CHECK-C-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z19test_svst1_ver_za32ju10__SVBool_tPv(
 // CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1w.vert(<vscale x 4 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1w.vert.p0(<vscale x 4 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
 // CHECK-CXX-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE]], 3
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1w.vert(<vscale x 4 x i1> [[TMP0]], ptr [[PTR]], i32 3, i32 [[ADD]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1w.vert.p0(<vscale x 4 x i1> [[TMP0]], ptr [[PTR]], i32 3, i32 [[ADD]])
 // CHECK-CXX-NEXT:    ret void
 //
 void test_svst1_ver_za32(uint32_t slice_base, svbool_t pg, void *ptr) __arm_streaming __arm_in("za") {
@@ -188,18 +188,18 @@ void test_svst1_ver_za32(uint32_t slice_base, svbool_t pg, void *ptr) __arm_stre
 // CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-C-NEXT:  entry:
 // CHECK-C-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
-// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1d.vert.p0(<vscale x 2 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
 // CHECK-C-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE]], 1
-// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1> [[TMP0]], ptr [[PTR]], i32 7, i32 [[ADD]])
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1d.vert.p0(<vscale x 2 x i1> [[TMP0]], ptr [[PTR]], i32 7, i32 [[ADD]])
 // CHECK-C-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z19test_svst1_ver_za64ju10__SVBool_tPv(
 // CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1d.vert.p0(<vscale x 2 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
 // CHECK-CXX-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE]], 1
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1d.vert(<vscale x 2 x i1> [[TMP0]], ptr [[PTR]], i32 7, i32 [[ADD]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1d.vert.p0(<vscale x 2 x i1> [[TMP0]], ptr [[PTR]], i32 7, i32 [[ADD]])
 // CHECK-CXX-NEXT:    ret void
 //
 void test_svst1_ver_za64(uint32_t slice_base, svbool_t pg, void *ptr) __arm_streaming __arm_in("za") {
@@ -211,16 +211,16 @@ void test_svst1_ver_za64(uint32_t slice_base, svbool_t pg, void *ptr) __arm_stre
 // CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-C-NEXT:  entry:
 // CHECK-C-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG]])
-// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
-// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> [[TMP0]], ptr [[PTR]], i32 15, i32 [[SLICE_BASE]])
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1q.vert.p0(<vscale x 1 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
+// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.st1q.vert.p0(<vscale x 1 x i1> [[TMP0]], ptr [[PTR]], i32 15, i32 [[SLICE_BASE]])
 // CHECK-C-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z20test_svst1_ver_za128ju10__SVBool_tPv(
 // CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG]])
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1q.vert(<vscale x 1 x i1> [[TMP0]], ptr [[PTR]], i32 15, i32 [[SLICE_BASE]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1q.vert.p0(<vscale x 1 x i1> [[TMP0]], ptr [[PTR]], i32 0, i32 [[SLICE_BASE]])
+// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.st1q.vert.p0(<vscale x 1 x i1> [[TMP0]], ptr [[PTR]], i32 15, i32 [[SLICE_BASE]])
 // CHECK-CXX-NEXT:    ret void
 //
 void test_svst1_ver_za128(uint32_t slice_base, svbool_t pg, void *ptr) __arm_streaming __arm_in("za") {

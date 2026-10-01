@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 ; This test only intends to check the vstoren builtin name resolution.
 ; The calls to the OpenCL builtins are not valid and will not pass SPIR-V validation.
 

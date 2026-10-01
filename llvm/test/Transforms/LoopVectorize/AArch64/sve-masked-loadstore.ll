@@ -1,12 +1,12 @@
-; RUN: opt -passes=loop-vectorize,dce,instcombine -mtriple aarch64-linux-gnu -mattr=+sve \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -S %s -o - | FileCheck %s
+; RUN: opt -passes=loop-vectorize -mtriple aarch64-linux-gnu -mattr=+sve \
+; RUN:   -tail-folding-policy=dont-fold-tail -S %s -o - | FileCheck %s
 
 define void @mloadstore_f32(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) {
 ; CHECK-LABEL: @mloadstore_f32
 ; CHECK: vector.body:
 ; CHECK:       %[[LOAD1:.*]] = load <vscale x 4 x float>, ptr
 ; CHECK-NEXT:  %[[MASK:.*]] = fcmp ogt <vscale x 4 x float> %[[LOAD1]],
-; CHECK-NEXT:  %[[GEPA:.*]] = getelementptr [4 x i8], ptr %a,
+; CHECK-NEXT:  %[[GEPA:.*]] = getelementptr float, ptr %a,
 ; CHECK-NEXT:  %[[LOAD2:.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 4 %[[GEPA]], <vscale x 4 x i1> %[[MASK]]
 ; CHECK-NEXT:  %[[FADD:.*]] = fadd <vscale x 4 x float> %[[LOAD1]], %[[LOAD2]]
 ; CHECK-NEXT:  call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> %[[FADD]], ptr align 4 %[[GEPA]], <vscale x 4 x i1> %[[MASK]])
@@ -41,7 +41,7 @@ define void @mloadstore_i32(ptr noalias nocapture %a, ptr noalias nocapture read
 ; CHECK: vector.body:
 ; CHECK:       %[[LOAD1:.*]] = load <vscale x 4 x i32>, ptr
 ; CHECK-NEXT:  %[[MASK:.*]] = icmp ne <vscale x 4 x i32> %[[LOAD1]],
-; CHECK-NEXT:  %[[GEPA:.*]] = getelementptr [4 x i8], ptr %a,
+; CHECK-NEXT:  %[[GEPA:.*]] = getelementptr i32, ptr %a,
 ; CHECK-NEXT:  %[[LOAD2:.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 %[[GEPA]], <vscale x 4 x i1> %[[MASK]]
 ; CHECK-NEXT:  %[[FADD:.*]] = add <vscale x 4 x i32> %[[LOAD1]], %[[LOAD2]]
 ; CHECK-NEXT:  call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> %[[FADD]], ptr align 4 %[[GEPA]], <vscale x 4 x i1> %[[MASK]])
@@ -74,6 +74,6 @@ exit:
 !0 = distinct !{!0, !1, !2, !3, !4, !5}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}
-!3 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.scalable.enable"}
 !4 = !{!"llvm.loop.interleave.count", i32 1}
-!5 = !{!"llvm.loop.vectorize.enable", i1 true}
+!5 = !{!"llvm.loop.vectorize.enable"}

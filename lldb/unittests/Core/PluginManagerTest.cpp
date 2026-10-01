@@ -381,7 +381,8 @@ TEST_F(PluginManagerTest, UnRegisterSystemRuntimePluginChangesOrder) {
 }
 
 TEST_F(PluginManagerTest, MatchPluginName) {
-  PluginNamespace Foo{"foo", nullptr, nullptr};
+  auto TmpFn = [](llvm::StringRef, bool) -> bool { return true; };
+  PluginNamespace Foo{"foo", nullptr, TmpFn};
   RegisteredPluginInfo Bar{"bar", "bar plugin ", true};
   RegisteredPluginInfo Baz{"baz", "baz plugin ", true};
 

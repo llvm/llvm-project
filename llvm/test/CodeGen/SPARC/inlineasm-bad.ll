@@ -1,9 +1,9 @@
 ; RUN: not llc -mtriple=sparc <%s 2>&1 | FileCheck %s
 ; RUN: not llc -mtriple=sparcv9 <%s 2>&1 | FileCheck %s
 
-; CHECK: error: couldn't allocate input reg for constraint '{f32}'
-; CHECK: error: couldn't allocate input reg for constraint '{f21}'
-; CHECK: error: couldn't allocate input reg for constraint '{f38}'
+; CHECK: error: could not allocate input reg for constraint '{f32}'
+; CHECK: error: could not allocate input reg for constraint '{f21}'
+; CHECK: error: could not allocate input reg for constraint '{f38}'
 define void @test_constraint_float_reg() {
 entry:
   tail call void asm sideeffect "fadds $0,$1,$2", "{f32},{f0},{f0}"(float 6.0, float 7.0, float 8.0)

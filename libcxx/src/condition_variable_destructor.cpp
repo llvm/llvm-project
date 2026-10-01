@@ -19,6 +19,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #ifdef NEEDS_CONDVAR_DESTRUCTOR
 
@@ -37,4 +38,5 @@ public:
 condition_variable::~condition_variable() { __libcpp_condvar_destroy(&__cv_); }
 #endif
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

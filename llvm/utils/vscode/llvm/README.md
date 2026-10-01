@@ -20,7 +20,7 @@ sudo npm install -g typescript npx vsce
 ### Install From Source
 ```sh
 cd <extensions-installation-folder>
-cp -r llvm/utils/vscode/llvm .
+cp -R llvm/utils/vscode/llvm .
 cd llvm
 npm install
 npm run vscode:prepublish

@@ -39,10 +39,10 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/WithColor.h"
@@ -59,24 +59,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Opts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "Opts.inc"
-#undef OPTION
-};
-
-class ReadobjOptTable : public opt::GenericOptTable {
+class ReadobjOptTable : public opt::OptTable {
 public:
-  ReadobjOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
+  ReadobjOptTable() : opt::OptTable(optionTables()) {
     setGroupedShortOptions(true);
   }
 };
@@ -123,6 +111,7 @@ static std::vector<std::string> StringDump;
 static bool StringTable;
 static bool Symbols;
 static bool UnwindInfo;
+bool UnwindShowWODPool;
 static cl::boolOrDefault SectionMapping;
 static SmallVector<SortSymbolKeyTy> SortKeys;
 
@@ -149,6 +138,7 @@ static bool MachOIndirectSymbols;
 static bool MachOLinkerOptions;
 static bool MachOSegment;
 static bool MachOVersionMin;
+static bool MachOTargetTriple;
 
 // PE/COFF specific options.
 static bool CodeView;
@@ -242,17 +232,18 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::SectionRelocations = Args.hasArg(OPT_section_relocations);
   opts::SectionSymbols = Args.hasArg(OPT_section_symbols);
   if (Args.hasArg(OPT_section_mapping))
-    opts::SectionMapping = cl::BOU_TRUE;
+    opts::SectionMapping = cl::boolOrDefault::BOU_TRUE;
   else if (Args.hasArg(OPT_section_mapping_EQ_false))
-    opts::SectionMapping = cl::BOU_FALSE;
+    opts::SectionMapping = cl::boolOrDefault::BOU_FALSE;
   else
-    opts::SectionMapping = cl::BOU_UNSET;
+    opts::SectionMapping = cl::boolOrDefault::BOU_UNSET;
   opts::PrintStackSizes = Args.hasArg(OPT_stack_sizes);
   opts::PrintStackMap = Args.hasArg(OPT_stackmap);
   opts::StringDump = Args.getAllArgValues(OPT_string_dump_EQ);
   opts::StringTable = Args.hasArg(OPT_string_table);
   opts::Symbols = Args.hasArg(OPT_symbols);
   opts::UnwindInfo = Args.hasArg(OPT_unwind);
+  opts::UnwindShowWODPool = Args.hasArg(OPT_unwind_show_wod_pool);
 
   // ELF specific options.
   opts::DynamicTable = Args.hasArg(OPT_dynamic_table);
@@ -303,6 +294,7 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::MachOLinkerOptions = Args.hasArg(OPT_macho_linker_options);
   opts::MachOSegment = Args.hasArg(OPT_macho_segment);
   opts::MachOVersionMin = Args.hasArg(OPT_macho_version_min);
+  opts::MachOTargetTriple = Args.hasArg(OPT_macho_target_triple);
 
   // PE/COFF specific options.
   opts::CodeView = Args.hasArg(OPT_codeview);
@@ -438,7 +430,8 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
 
   if (opts::HashSymbols)
     Dumper->printHashSymbols();
-  if (opts::ProgramHeaders || opts::SectionMapping == cl::BOU_TRUE)
+  if (opts::ProgramHeaders ||
+      opts::SectionMapping == cl::boolOrDefault::BOU_TRUE)
     Dumper->printProgramHeaders(opts::ProgramHeaders, opts::SectionMapping);
   if (opts::DynamicTable)
     Dumper->printDynamicTable();
@@ -534,6 +527,8 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
       Dumper->printMachOSegment();
     if (opts::MachOVersionMin)
       Dumper->printMachOVersionMin();
+    if (opts::MachOTargetTriple)
+      Dumper->printMachOTargetTriple();
     if (opts::MachODysymtab)
       Dumper->printMachODysymtab();
     if (opts::CGProfile)
@@ -602,11 +597,16 @@ static void dumpCOFFObject(COFFObjectFile *Obj, ScopedPrinter &Writer) {
   dumpObject(*Obj, Writer);
 
   // Dump a hybrid object when available.
-  std::unique_ptr<MemoryBuffer> HybridView = Obj->getHybridObjectView();
-  if (!HybridView)
+  MemoryBufferRef HybridView;
+  std::unique_ptr<MemoryBuffer> HybridViewBuf;
+  if (std::optional<MemoryBufferRef> HybridSec = Obj->findHybridObjectSection())
+    HybridView = *HybridSec;
+  else if ((HybridViewBuf = Obj->getHybridObjectView()))
+    HybridView = HybridViewBuf->getMemBufferRef();
+  else
     return;
   Expected<std::unique_ptr<COFFObjectFile>> HybridObjOrErr =
-      COFFObjectFile::create(*HybridView);
+      COFFObjectFile::create(HybridView);
   if (!HybridObjOrErr)
     reportError(HybridObjOrErr.takeError(), Obj->getFileName().str());
   DictScope D(Writer, "HybridObject");
