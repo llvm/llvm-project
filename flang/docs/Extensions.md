@@ -599,9 +599,10 @@ end program
   when its name matches a separate module procedure interface in an ancestor
   module [-fimplicit-module-prefix]. This extension is disabled by default
   because the unprefixed subprogram can instead be a conforming local
-  procedure. By default, that likely mistake is diagnosed with
-  `-Wmissing-module-prefix` without changing the program. When the extension
-  is enabled, `-Wimplicit-module-prefix` reports each repaired prefix.
+  procedure. Without this extension, `-pedantic` or `-Wportability` diagnoses
+  a likely missing prefix without changing the program. When the extension
+  is enabled, `-Wimplicit-module-prefix` or `-pedantic` reports each repaired
+  prefix.
 * Old-style `PARAMETER pi=3.14` statement without parentheses
   [-falternative-parameter-statement]
 * `UNSIGNED` type (-funsigned)

@@ -5942,23 +5942,17 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
       }
     }
   } else if (isValid && !inInterfaceBlock() && currScope().IsSubmodule() &&
+      context().IsEnabled(common::LanguageFeature::ImplicitModulePrefix) &&
       (moduleInterface = FindSeparateModuleProcedureInterface(
            name, /*emitError=*/false))) {
-    if (context().IsEnabled(common::LanguageFeature::ImplicitModulePrefix)) {
-      context().Warn(common::LanguageFeature::ImplicitModulePrefix, name.source,
-          "Assuming a missing MODULE prefix on '%s' to repair the separate module procedure interface '%s:%s'"_port_en_US,
-          name.source, moduleInterface->owner().GetName().value(),
-          moduleInterface->name());
-    } else {
-      context().Warn(common::UsageWarning::MissingModulePrefix, name.source,
-          "'%s' is a local procedure that hides the separate module procedure "
-          "interface '%s:%s'; a call to that interface will fail to link with "
-          "this local procedure. "
-          "If this procedure is supposed to implement the interface, add the MODULE keyword or enable -fimplicit-module-prefix."_warn_en_US,
-          name.source, moduleInterface->owner().GetName().value(),
-          moduleInterface->name());
-      moduleInterface = nullptr;
-    }
+    // As with the missing-prefix diagnostic below, imported parent scopes
+    // must not suppress a warning for a definition in the current source.
+    context().messages().Warn(/*isInModuleFile=*/InModuleFile(),
+        context().languageFeatures(),
+        common::LanguageFeature::ImplicitModulePrefix, name.source,
+        "Assuming a missing MODULE prefix on '%s' to repair the separate module procedure interface '%s:%s'"_port_en_US,
+        name.source, moduleInterface->owner().GetName().value(),
+        moduleInterface->name());
   }
   Symbol *newSymbol{
       PushSubprogramScope(name, subpFlag, bindingSpec, hasModulePrefix)};
@@ -6086,7 +6080,8 @@ const Symbol *SubprogramVisitor::CheckExtantProc(
 Symbol *SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
     Symbol::Flag subpFlag, const parser::LanguageBindingSpec *bindingSpec,
     bool hasModulePrefix) {
-  if (!inInterfaceBlock() && currScope().IsSubmodule() && !hasModulePrefix) {
+  if (!inInterfaceBlock() && currScope().IsSubmodule() && !hasModulePrefix &&
+      !context().IsEnabled(common::LanguageFeature::ImplicitModulePrefix)) {
     const Scope &parent{currScope().parent()};
     if (parent.IsModule() || parent.IsSubmodule()) {
       if (const Symbol *host{parent.FindSymbol(name.source)}) {
