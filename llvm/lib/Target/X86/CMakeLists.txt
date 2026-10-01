@@ -69,6 +69,7 @@ set(sources
   X86InstrFoldTables.cpp
   X86InstrInfo.cpp
   X86CompressEVEX.cpp
+  X86LFIRewritePass.cpp
   X86LoadValueInjectionLoadHardening.cpp
   X86LoadValueInjectionRetHardening.cpp
   X86MCInstLower.cpp

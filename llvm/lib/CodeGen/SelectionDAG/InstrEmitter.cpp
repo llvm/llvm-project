@@ -1369,6 +1369,19 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
     // Remember registers that are part of early-clobber defs.
     SmallVector<Register, 8> ECRegs;
 
+    // A glued CopyFromReg may read a clobbered register, e.g. a flag output
+    // like X86 "={@ccz}" reads EFLAGS defined only by "~{flags}".
+    SmallVector<Register, 2> GluedUses;
+    if (Node->getValueType(Node->getNumValues() - 1) == MVT::Glue) {
+      for (SDNode *G = Node->getGluedUser(); G; G = G->getGluedUser()) {
+        if (G->getOpcode() != ISD::CopyFromReg)
+          continue;
+        Register Reg = cast<RegisterSDNode>(G->getOperand(1))->getReg();
+        if (Reg.isPhysical())
+          GluedUses.push_back(Reg);
+      }
+    }
+
     // Add all of the operand registers to the instruction.
     for (unsigned i = InlineAsm::Op_FirstOperand; i != NumOps;) {
       unsigned Flags = Node->getConstantOperandVal(i);
@@ -1393,7 +1406,12 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
       case InlineAsm::Kind::Clobber:
         for (unsigned j = 0; j != NumVals; ++j, ++i) {
           Register Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
+          bool IsDead =
+              F.isClobberKind() && none_of(GluedUses, [&](Register U) {
+                return TRI->regsOverlap(U, Reg);
+              });
           MIB.addReg(Reg, RegState::Define | RegState::EarlyClobber |
+                              getDeadRegState(IsDead) |
                               getImplRegState(Reg.isPhysical()));
           ECRegs.push_back(Reg);
         }

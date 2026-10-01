@@ -28,8 +28,8 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=spirv-prelegalizer 2>&1 | FileCheck %s  --check-prefix=CHECK-PRE
 ; Internal service instructions are consumed.
 ; CHECK-PRE: G_UADDO
-; CHECK-PRE-NO: llvm.spv.value.md
-; CHECK-PRE-NO: FAKE_USE
+; CHECK-PRE-NOT: llvm.spv.value.md
+; CHECK-PRE-NOT: FAKE_USE
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=instruction-select 2>&1 | FileCheck %s  --check-prefix=CHECK-ISEL
 ; Names and types are restored and correctly encoded. Correct instruction selection is completed.

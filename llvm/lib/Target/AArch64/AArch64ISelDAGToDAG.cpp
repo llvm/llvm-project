@@ -23,6 +23,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
+#include "llvm/Support/AArch64MemoryHints.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -89,6 +90,9 @@ public:
   bool SelectLogicalShiftedRegister(SDValue N, SDValue &Reg, SDValue &Shift) {
     return SelectShiftedRegister(N, true, Reg, Shift);
   }
+  template <unsigned ShiftWidth>
+  bool SelectShiftMask(SDValue N, SDValue &ShAmt);
+
   bool SelectAddrModeIndexed7S8(SDValue N, SDValue &Base, SDValue &OffImm) {
     return SelectAddrModeIndexed7S(N, 1, Base, OffImm);
   }
@@ -516,6 +520,10 @@ private:
 
   bool SelectCMP_SWAP(SDNode *N);
 
+  AArch64MemoryHint decodeMemoryHintFlags(MachineMemOperand *MMO) const;
+  bool isAtomicSTSHH_KEEP(SDNode *N) const;
+  bool isAtomicSTSHH_STRM(SDNode *N) const;
+
   bool SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift,
                           bool Negate);
   bool SelectSVEAddSubImm(SDLoc DL, APInt Value, MVT VT, SDValue &Imm,
@@ -764,6 +772,24 @@ bool AArch64DAGToDAGISel::SelectInlineAsmMemoryOperand(
     return false;
   }
   return true;
+}
+
+template <unsigned ShiftWidth>
+bool AArch64DAGToDAGISel::SelectShiftMask(SDValue N, SDValue &ShAmt) {
+  // AArch64 shift instructions only use the low log2(ShiftWidth) bits of the
+  // shift amount. If the shift amount has a redundant AND mask that covers
+  // those bits, we can remove it. Return false if nothing was combined so
+  // other patterns (e.g. zext/sext GPR32 → SUBREG_TO_REG) can match.
+  if (N.getOpcode() == ISD::AND && isa<ConstantSDNode>(N.getOperand(1)) &&
+      N.getValueType() == (ShiftWidth == 32 ? MVT::i32 : MVT::i64)) {
+    uint64_t Mask = N.getConstantOperandVal(1);
+    // Remove AND if the mask covers at least the low log2(ShiftWidth) bits.
+    if ((unsigned)llvm::countr_one(Mask) >= Log2_32(ShiftWidth)) {
+      ShAmt = N.getOperand(0);
+      return true;
+    }
+  }
+  return false;
 }
 
 /// SelectArithImmed - Select an immediate value that can be represented as
@@ -4612,6 +4638,34 @@ bool AArch64DAGToDAGISel::SelectCMP_SWAP(SDNode *N) {
   CurDAG->RemoveDeadNode(N);
 
   return true;
+}
+
+AArch64MemoryHint
+AArch64DAGToDAGISel::decodeMemoryHintFlags(MachineMemOperand *MMO) const {
+  int MemoryHint = -1;
+  const MDNode *MemCacheHint = MMO->getMemCacheHint();
+  if (!MemCacheHint)
+    return AArch64MemoryHint::NONE;
+
+  for (unsigned I = 0; I + 1 < MemCacheHint->getNumOperands(); I += 2) {
+    if (MemCacheHint->getOperand(I).equalsStr("aarch64.mem_hint")) {
+      const Metadata *Val = MemCacheHint->getOperand(I + 1).get();
+      MemoryHint = cast<ConstantInt>(cast<ConstantAsMetadata>(Val)->getValue())
+                       ->getZExtValue();
+    }
+  }
+
+  return toAArch64MemoryHint(MemoryHint);
+}
+
+bool AArch64DAGToDAGISel::isAtomicSTSHH_KEEP(SDNode *N) const {
+  return decodeMemoryHintFlags(cast<MemSDNode>(N)->getMemOperand()) ==
+         AArch64MemoryHint::STSHH_KEEP;
+}
+
+bool AArch64DAGToDAGISel::isAtomicSTSHH_STRM(SDNode *N) const {
+  return decodeMemoryHintFlags(cast<MemSDNode>(N)->getMemOperand()) ==
+         AArch64MemoryHint::STSHH_STRM;
 }
 
 bool AArch64DAGToDAGISel::SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm,
