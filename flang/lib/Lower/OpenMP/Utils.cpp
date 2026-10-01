@@ -1492,9 +1492,8 @@ void collectEnclosingConstructTraits(
     llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits) {
   const auto *loopControl =
       converter.getStateStack().getStackTop<LoopControlContext>();
-  // Lastprivate can re-evaluate bounds after lowering the loop body, leaving
-  // a body evaluation current. Use the owning directive's ancestors so the
-  // loop itself is not added before filtering its entered constituents below.
+  // Use the loop owner's ancestors: host evaluation may have TARGET current
+  // while evaluating a nested loop's bounds.
   if (loopControl)
     evaluation = &loopControl->evaluation;
 
@@ -1540,25 +1539,38 @@ void collectEnclosingConstructTraits(
     }
   }
 
-  // Include entered constituents while their own evaluation is current, e.g.
-  // PARALLEL when lowering the bounds of PARALLEL DO. A selected directive
-  // contributes here only through its entered constituents, so its own clause
-  // expressions have the same context as a directly written directive's.
-  bool insideLoop = false;
+  // Use entered frames for clauses. Loop bounds use the source prefix below,
+  // which is available even before the owner's frames are entered.
   for (auto [index, frame] : llvm::enumerate(frames)) {
     if (usedFrames[index] || frame->isReplacement)
       continue;
-    if (loopControl && &frame->evaluation == &loopControl->evaluation) {
-      // Keep the prefix before the first loop-associated constituent. For
-      // TEAMS DISTRIBUTE PARALLEL DO this is TEAMS, even though the emitted
-      // PARALLEL region already surrounds the bound calculation. Frames for
-      // genuinely enclosing directives are unaffected.
-      insideLoop |= llvm::omp::getDirectiveAssociation(frame->directive) ==
-                    llvm::omp::Association::LoopNest;
-      if (insideLoop)
-        continue;
-    }
+    if (loopControl && &frame->evaluation == evaluation)
+      continue;
     append(frame->directive);
+  }
+
+  if (!loopControl)
+    return;
+  const auto *omp = evaluation->getIf<parser::OpenMPConstruct>();
+  if (!omp)
+    return;
+  llvm::omp::Directive directive = parser::omp::GetOmpDirectiveName(*omp).v;
+  if (directive == llvm::omp::Directive::OMPD_metadirective) {
+    for (const OpenMPContextFrame *frame : frames) {
+      if (&frame->evaluation == evaluation && frame->isReplacement) {
+        directive = frame->directive;
+        break;
+      }
+    }
+  }
+  // Bounds precede the first loop-associated constituent in source order.
+  // TARGET TEAMS DISTRIBUTE PARALLEL DO therefore retains TARGET and TEAMS.
+  for (llvm::omp::Directive leaf :
+       llvm::omp::getLeafConstructsOrSelf(directive)) {
+    if (llvm::omp::getDirectiveAssociation(leaf) ==
+        llvm::omp::Association::LoopNest)
+      break;
+    append(leaf);
   }
 }
 
