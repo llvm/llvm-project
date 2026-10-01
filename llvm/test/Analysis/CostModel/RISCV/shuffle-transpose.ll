@@ -14,7 +14,7 @@ define <8 x i8> @trn1.v8i8(<8 x i8> %v0, <8 x i8> %v1) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i8> %tmp0
 ;
 ; SIZE-LABEL: 'trn1.v8i8'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %tmp0 = shufflevector <8 x i8> %v0, <8 x i8> %v1, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4.25 for instruction: %tmp0 = shufflevector <8 x i8> %v0, <8 x i8> %v1, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i8> %tmp0
 ;
   %tmp0 = shufflevector <8 x i8> %v0, <8 x i8> %v1, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
@@ -27,7 +27,7 @@ define <8 x i8> @trn2.v8i8(<8 x i8> %v0, <8 x i8> %v1) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i8> %tmp0
 ;
 ; SIZE-LABEL: 'trn2.v8i8'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %tmp0 = shufflevector <8 x i8> %v0, <8 x i8> %v1, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4.25 for instruction: %tmp0 = shufflevector <8 x i8> %v0, <8 x i8> %v1, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i8> %tmp0
 ;
   %tmp0 = shufflevector <8 x i8> %v0, <8 x i8> %v1, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
@@ -40,7 +40,7 @@ define <16 x i8> @trn1.v16i8(<16 x i8> %v0, <16 x i8> %v1) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i8> %tmp0
 ;
 ; SIZE-LABEL: 'trn1.v16i8'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %tmp0 = shufflevector <16 x i8> %v0, <16 x i8> %v1, <16 x i32> <i32 0, i32 16, i32 2, i32 18, i32 4, i32 20, i32 6, i32 22, i32 8, i32 24, i32 10, i32 26, i32 12, i32 28, i32 14, i32 30>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4.5 for instruction: %tmp0 = shufflevector <16 x i8> %v0, <16 x i8> %v1, <16 x i32> <i32 0, i32 16, i32 2, i32 18, i32 4, i32 20, i32 6, i32 22, i32 8, i32 24, i32 10, i32 26, i32 12, i32 28, i32 14, i32 30>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %tmp0
 ;
   %tmp0 = shufflevector <16 x i8> %v0, <16 x i8> %v1, <16 x i32> <i32 0, i32 16, i32 2, i32 18, i32 4, i32 20, i32 6, i32 22, i32 8, i32 24, i32 10, i32 26, i32 12, i32 28, i32 14, i32 30>
@@ -53,7 +53,7 @@ define <16 x i8> @trn2.v16i8(<16 x i8> %v0, <16 x i8> %v1) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i8> %tmp0
 ;
 ; SIZE-LABEL: 'trn2.v16i8'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %tmp0 = shufflevector <16 x i8> %v0, <16 x i8> %v1, <16 x i32> <i32 1, i32 17, i32 3, i32 19, i32 5, i32 21, i32 7, i32 23, i32 9, i32 25, i32 11, i32 27, i32 13, i32 29, i32 15, i32 31>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4.5 for instruction: %tmp0 = shufflevector <16 x i8> %v0, <16 x i8> %v1, <16 x i32> <i32 1, i32 17, i32 3, i32 19, i32 5, i32 21, i32 7, i32 23, i32 9, i32 25, i32 11, i32 27, i32 13, i32 29, i32 15, i32 31>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %tmp0
 ;
   %tmp0 = shufflevector <16 x i8> %v0, <16 x i8> %v1, <16 x i32> <i32 1, i32 17, i32 3, i32 19, i32 5, i32 21, i32 7, i32 23, i32 9, i32 25, i32 11, i32 27, i32 13, i32 29, i32 15, i32 31>
@@ -66,7 +66,7 @@ define <4 x i16> @trn1.v4i16(<4 x i16> %v0, <4 x i16> %v1) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i16> %tmp0
 ;
 ; SIZE-LABEL: 'trn1.v4i16'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %tmp0 = shufflevector <4 x i16> %v0, <4 x i16> %v1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4.25 for instruction: %tmp0 = shufflevector <4 x i16> %v0, <4 x i16> %v1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i16> %tmp0
 ;
   %tmp0 = shufflevector <4 x i16> %v0, <4 x i16> %v1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
@@ -79,7 +79,7 @@ define <4 x i16> @trn2.v4i16(<4 x i16> %v0, <4 x i16> %v1) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i16> %tmp0
 ;
 ; SIZE-LABEL: 'trn2.v4i16'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %tmp0 = shufflevector <4 x i16> %v0, <4 x i16> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4.25 for instruction: %tmp0 = shufflevector <4 x i16> %v0, <4 x i16> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i16> %tmp0
 ;
   %tmp0 = shufflevector <4 x i16> %v0, <4 x i16> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
@@ -92,7 +92,7 @@ define <8 x i16> @trn1.v8i16(<8 x i16> %v0, <8 x i16> %v1) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %tmp0
 ;
 ; SIZE-LABEL: 'trn1.v8i16'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %tmp0 = shufflevector <8 x i16> %v0, <8 x i16> %v1, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4.25 for instruction: %tmp0 = shufflevector <8 x i16> %v0, <8 x i16> %v1, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i16> %tmp0
 ;
   %tmp0 = shufflevector <8 x i16> %v0, <8 x i16> %v1, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
@@ -105,7 +105,7 @@ define <8 x i16> @trn2.v8i16(<8 x i16> %v0, <8 x i16> %v1) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %tmp0
 ;
 ; SIZE-LABEL: 'trn2.v8i16'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %tmp0 = shufflevector <8 x i16> %v0, <8 x i16> %v1, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4.25 for instruction: %tmp0 = shufflevector <8 x i16> %v0, <8 x i16> %v1, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i16> %tmp0
 ;
   %tmp0 = shufflevector <8 x i16> %v0, <8 x i16> %v1, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
@@ -118,7 +118,7 @@ define <2 x i32> @trn1.v2i32(<2 x i32> %v0, <2 x i32> %v1) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %tmp0
 ;
 ; SIZE-LABEL: 'trn1.v2i32'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %tmp0 = shufflevector <2 x i32> %v0, <2 x i32> %v1, <2 x i32> <i32 0, i32 2>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 15.25 for instruction: %tmp0 = shufflevector <2 x i32> %v0, <2 x i32> %v1, <2 x i32> <i32 0, i32 2>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i32> %tmp0
 ;
   %tmp0 = shufflevector <2 x i32> %v0, <2 x i32> %v1, <2 x i32> <i32 0, i32 2>
@@ -131,7 +131,7 @@ define <2 x i32> @trn2.v2i32(<2 x i32> %v0, <2 x i32> %v1) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %tmp0
 ;
 ; SIZE-LABEL: 'trn2.v2i32'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %tmp0 = shufflevector <2 x i32> %v0, <2 x i32> %v1, <2 x i32> <i32 1, i32 3>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 15.25 for instruction: %tmp0 = shufflevector <2 x i32> %v0, <2 x i32> %v1, <2 x i32> <i32 1, i32 3>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i32> %tmp0
 ;
   %tmp0 = shufflevector <2 x i32> %v0, <2 x i32> %v1, <2 x i32> <i32 1, i32 3>
@@ -144,7 +144,7 @@ define <4 x i32> @trn1.v4i32(<4 x i32> %v0, <4 x i32> %v1) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %tmp0
 ;
 ; SIZE-LABEL: 'trn1.v4i32'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %tmp0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4.25 for instruction: %tmp0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %tmp0
 ;
   %tmp0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
@@ -157,7 +157,7 @@ define <4 x i32> @trn2.v4i32(<4 x i32> %v0, <4 x i32> %v1) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %tmp0
 ;
 ; SIZE-LABEL: 'trn2.v4i32'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %tmp0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4.25 for instruction: %tmp0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %tmp0
 ;
   %tmp0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
@@ -170,7 +170,7 @@ define <2 x i64> @trn1.v2i64(<2 x i64> %v0, <2 x i64> %v1) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %tmp0
 ;
 ; SIZE-LABEL: 'trn1.v2i64'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %tmp0 = shufflevector <2 x i64> %v0, <2 x i64> %v1, <2 x i32> <i32 0, i32 2>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 13.25 for instruction: %tmp0 = shufflevector <2 x i64> %v0, <2 x i64> %v1, <2 x i32> <i32 0, i32 2>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %tmp0
 ;
   %tmp0 = shufflevector <2 x i64> %v0, <2 x i64> %v1, <2 x i32> <i32 0, i32 2>
@@ -183,7 +183,7 @@ define <2 x i64> @trn2.v2i64(<2 x i64> %v0, <2 x i64> %v1) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %tmp0
 ;
 ; SIZE-LABEL: 'trn2.v2i64'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %tmp0 = shufflevector <2 x i64> %v0, <2 x i64> %v1, <2 x i32> <i32 1, i32 3>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 13.25 for instruction: %tmp0 = shufflevector <2 x i64> %v0, <2 x i64> %v1, <2 x i32> <i32 1, i32 3>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %tmp0
 ;
   %tmp0 = shufflevector <2 x i64> %v0, <2 x i64> %v1, <2 x i32> <i32 1, i32 3>
@@ -196,7 +196,7 @@ define <2 x float> @trn1.v2f32(<2 x float> %v0, <2 x float> %v1) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x float> %tmp0
 ;
 ; SIZE-LABEL: 'trn1.v2f32'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %tmp0 = shufflevector <2 x float> %v0, <2 x float> %v1, <2 x i32> <i32 0, i32 2>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 15.25 for instruction: %tmp0 = shufflevector <2 x float> %v0, <2 x float> %v1, <2 x i32> <i32 0, i32 2>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x float> %tmp0
 ;
   %tmp0 = shufflevector <2 x float> %v0, <2 x float> %v1, <2 x i32> <i32 0, i32 2>
@@ -209,7 +209,7 @@ define <2 x float> @trn2.v2f32(<2 x float> %v0, <2 x float> %v1) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x float> %tmp0
 ;
 ; SIZE-LABEL: 'trn2.v2f32'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %tmp0 = shufflevector <2 x float> %v0, <2 x float> %v1, <2 x i32> <i32 1, i32 3>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 15.25 for instruction: %tmp0 = shufflevector <2 x float> %v0, <2 x float> %v1, <2 x i32> <i32 1, i32 3>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x float> %tmp0
 ;
   %tmp0 = shufflevector <2 x float> %v0, <2 x float> %v1, <2 x i32> <i32 1, i32 3>
@@ -222,7 +222,7 @@ define <4 x float> @trn1.v4f32(<4 x float> %v0, <4 x float> %v1) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x float> %tmp0
 ;
 ; SIZE-LABEL: 'trn1.v4f32'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %tmp0 = shufflevector <4 x float> %v0, <4 x float> %v1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4.25 for instruction: %tmp0 = shufflevector <4 x float> %v0, <4 x float> %v1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x float> %tmp0
 ;
   %tmp0 = shufflevector <4 x float> %v0, <4 x float> %v1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
@@ -235,7 +235,7 @@ define <4 x float> @trn2.v4f32(<4 x float> %v0, <4 x float> %v1) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x float> %tmp0
 ;
 ; SIZE-LABEL: 'trn2.v4f32'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %tmp0 = shufflevector <4 x float> %v0, <4 x float> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4.25 for instruction: %tmp0 = shufflevector <4 x float> %v0, <4 x float> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x float> %tmp0
 ;
   %tmp0 = shufflevector <4 x float> %v0, <4 x float> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
@@ -248,7 +248,7 @@ define <2 x double> @trn1.v2f64(<2 x double> %v0, <2 x double> %v1) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x double> %tmp0
 ;
 ; SIZE-LABEL: 'trn1.v2f64'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %tmp0 = shufflevector <2 x double> %v0, <2 x double> %v1, <2 x i32> <i32 0, i32 2>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 13.25 for instruction: %tmp0 = shufflevector <2 x double> %v0, <2 x double> %v1, <2 x i32> <i32 0, i32 2>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x double> %tmp0
 ;
   %tmp0 = shufflevector <2 x double> %v0, <2 x double> %v1, <2 x i32> <i32 0, i32 2>
@@ -261,7 +261,7 @@ define <2 x double> @trn2.v2f64(<2 x double> %v0, <2 x double> %v1) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x double> %tmp0
 ;
 ; SIZE-LABEL: 'trn2.v2f64'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %tmp0 = shufflevector <2 x double> %v0, <2 x double> %v1, <2 x i32> <i32 1, i32 3>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 13.25 for instruction: %tmp0 = shufflevector <2 x double> %v0, <2 x double> %v1, <2 x i32> <i32 1, i32 3>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x double> %tmp0
 ;
   %tmp0 = shufflevector <2 x double> %v0, <2 x double> %v1, <2 x i32> <i32 1, i32 3>
@@ -274,7 +274,7 @@ define <4 x half> @trn1.v4f16(<4 x half> %v0, <4 x half> %v1) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x half> %tmp0
 ;
 ; SIZE-LABEL: 'trn1.v4f16'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %tmp0 = shufflevector <4 x half> %v0, <4 x half> %v1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4.25 for instruction: %tmp0 = shufflevector <4 x half> %v0, <4 x half> %v1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x half> %tmp0
 ;
   %tmp0 = shufflevector <4 x half> %v0, <4 x half> %v1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
@@ -287,7 +287,7 @@ define <4 x half> @trn2.v4f16(<4 x half> %v0, <4 x half> %v1) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x half> %tmp0
 ;
 ; SIZE-LABEL: 'trn2.v4f16'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %tmp0 = shufflevector <4 x half> %v0, <4 x half> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4.25 for instruction: %tmp0 = shufflevector <4 x half> %v0, <4 x half> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x half> %tmp0
 ;
   %tmp0 = shufflevector <4 x half> %v0, <4 x half> %v1, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
@@ -300,7 +300,7 @@ define <8 x half> @trn1.v8f16(<8 x half> %v0, <8 x half> %v1) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x half> %tmp0
 ;
 ; SIZE-LABEL: 'trn1.v8f16'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %tmp0 = shufflevector <8 x half> %v0, <8 x half> %v1, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4.25 for instruction: %tmp0 = shufflevector <8 x half> %v0, <8 x half> %v1, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x half> %tmp0
 ;
   %tmp0 = shufflevector <8 x half> %v0, <8 x half> %v1, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
@@ -313,7 +313,7 @@ define <8 x half> @trn2.v8f16(<8 x half> %v0, <8 x half> %v1) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x half> %tmp0
 ;
 ; SIZE-LABEL: 'trn2.v8f16'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %tmp0 = shufflevector <8 x half> %v0, <8 x half> %v1, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4.25 for instruction: %tmp0 = shufflevector <8 x half> %v0, <8 x half> %v1, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x half> %tmp0
 ;
   %tmp0 = shufflevector <8 x half> %v0, <8 x half> %v1, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
