@@ -39,6 +39,7 @@
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
 #include <optional>
 
@@ -55,8 +56,7 @@ using namespace mlir;
 using namespace mlir::affine;
 
 namespace {
-/// Loop unroll jam pass. Currently, this just unroll jams the first
-/// outer loop in a Function.
+/// Unroll and jam the affine loops in the function entry block.
 struct LoopUnrollAndJam
     : public affine::impl::AffineLoopUnrollAndJamBase<LoopUnrollAndJam> {
   explicit LoopUnrollAndJam(
@@ -80,10 +80,15 @@ void LoopUnrollAndJam::runOnOperation() {
   if (getOperation().isExternal())
     return;
 
-  // Currently, just the outermost loop from the first loop nest is
-  // unroll-and-jammed by this pass. However, runOnAffineForOp can be called on
-  // any for operation.
-  auto &entryBlock = getOperation().front();
-  if (auto forOp = dyn_cast<AffineForOp>(entryBlock.front()))
+  // Collect entry-block loops before rewriting: the utility can erase a
+  // selected loop or create cleanup loops, which must not be revisited.
+  SmallVector<AffineForOp> loops;
+  for (Operation &op : getOperation().front()) {
+    if (auto forOp = dyn_cast<AffineForOp>(op))
+      loops.push_back(forOp);
+    if (!unrollJamAllLoops)
+      break;
+  }
+  for (auto forOp : loops)
     (void)loopUnrollJamByFactor(forOp, unrollJamFactor);
 }
