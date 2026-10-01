@@ -442,18 +442,24 @@ static Stmt *GetInnermostStatement(Stmt *Outer) {
   return Outer;
 }
 
+static StringRef GetDeferKeywordSpelling(Sema &S, SourceLocation DeferLoc) {
+  StringRef DeferSpelling =
+      S.PP.getLastMacroWithSpelling(DeferLoc, {tok::kw__Defer});
+  if (DeferSpelling.empty())
+    DeferSpelling = "_Defer";
+
+  return DeferSpelling;
+}
+
 // Diagnose if the given statement is a redundant _Defer statement.
 static void CheckRedundantDeferStmt(Sema &S, Stmt *Body) {
   Stmt *Inner = GetInnermostStatement(Body);
 
   if (isa<DeferStmt>(Inner)) {
-    SourceLocation InnerLoc = Inner->getBeginLoc();
-    StringRef DeferSpelling =
-        S.PP.getLastMacroWithSpelling(InnerLoc, {tok::kw__Defer});
+    SourceLocation DeferLoc = Inner->getBeginLoc();
 
-    S.Diag(InnerLoc, diag::warn_redundant_defer)
-        << Inner->getSourceRange()
-        << (DeferSpelling.empty() ? "_Defer" : DeferSpelling);
+    S.Diag(DeferLoc, diag::warn_redundant_defer)
+        << Inner->getSourceRange() << GetDeferKeywordSpelling(S, DeferLoc);
   }
 }
 
@@ -1015,6 +1021,37 @@ public:
 };
 }
 
+static void DiagnoseIfStmtRedundantDeferBody(Sema &S, SourceLocation IfLoc,
+                                             Stmt *thenStmt) {
+  DeferStmt *Defer = dyn_cast_or_null<DeferStmt>(thenStmt);
+  if (Defer)
+    CheckRedundantDeferStmt(S, Defer);
+  else {
+    // If the body is a CompoundStmt, CheckRedundantDeferStmt() has
+    // already been called by Sema::ActOnCompoundStmt; the only
+    // thing left to do here is to issue the fix-it hint below.
+    CompoundStmt *Body = dyn_cast_or_null<CompoundStmt>(thenStmt);
+    if (Body && Body->size() == 1)
+      Defer = dyn_cast_or_null<DeferStmt>(Body->body_back());
+
+    if (!Defer)
+      // All good; no redundant defer statement to check.
+      return;
+  }
+
+  SourceLocation DeferLoc = Defer->getBeginLoc();
+  StringRef DeferSpelling = GetDeferKeywordSpelling(S, DeferLoc);
+
+  // Offer a fix-it hint to replace `if (X) _Defer Y;` with `_Defer if (X) Y;`.
+  // This must preserve the `{}` if the `if` body is a CompoundStmt.
+  S.Diag(DeferLoc, diag::note_redundant_defer_if)
+      << DeferSpelling
+      << FixItHint::CreateInsertion(IfLoc, std::string(DeferSpelling) + " ")
+      << FixItHint::CreateRemoval(SourceRange(
+             DeferLoc,
+             SourceLocation(DeferLoc.getLocWithOffset(DeferSpelling.size()))));
+}
+
 StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc,
                              IfStatementKind StatementKind,
                              SourceLocation LParenLoc, Stmt *InitStmt,
@@ -1039,7 +1076,7 @@ StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc,
   if (!ConstevalOrNegatedConsteval && !elseStmt)
     DiagnoseEmptyStmtBody(RParenLoc, thenStmt, diag::warn_empty_if_body);
 
-  CheckRedundantDeferStmt(*this, thenStmt);
+  DiagnoseIfStmtRedundantDeferBody(*this, IfLoc, thenStmt);
   if (elseStmt)
     CheckRedundantDeferStmt(*this, elseStmt);
 

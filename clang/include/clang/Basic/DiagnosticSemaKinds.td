@@ -11359,7 +11359,9 @@ def note_empty_body_on_separate_line : Note<
 
 def warn_redundant_defer: Warning<
   "redundant use of '%0'; the deferred statement is executed immediately">,
-  InGroup<DiagGroup<"redundant-defer">>;
+  InGroup<RedundantDefer>;
+def note_redundant_defer_if : Note<
+  "did you mean to use '%0 if'?">, InGroup<RedundantDefer>;
 
 def err_va_start_captured_stmt : Error<
   "'va_start' cannot be used in a captured statement">;

@@ -1,6 +1,12 @@
-// RUN: %clang_cc1 -std=c23 -fdefer-ts -fsyntax-only -verify %s -Wredundant-defer
+// RUN: %clang_cc1 -std=c23 -fdefer-ts -fsyntax-only -verify -Wredundant-defer %s
+// RUN: %clang_cc1 -std=c23 -fdefer-ts -fsyntax-only -fdiagnostics-parseable-fixits -Wredundant-defer %s 2>&1 | FileCheck %s
 
 void f1() {
+  if (true) _Defer {} // expected-warning {{redundant use of '_Defer'}} \
+                      // expected-note {{did you mean to use '_Defer if'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:3-[[@LINE-2]]:3}:"_Defer "
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:13-[[@LINE-3]]:20}:""
+
   _Defer {} // expected-warning {{redundant use of '_Defer'}}
 }
 
@@ -80,12 +86,28 @@ void f3() {
     f1();
   }
 
+  if (true) defer {} // expected-warning {{redundant use of 'defer'}} \
+                     // expected-note {{did you mean to use 'defer if'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:3-[[@LINE-2]]:3}:"defer "
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:13-[[@LINE-3]]:19}:""
+
   if (true)
-    defer {} // expected-warning {{redundant use of 'defer'}}
+    defer {} // expected-warning {{redundant use of 'defer'}} \
+             // expected-note {{did you mean to use 'defer if'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:3-[[@LINE-3]]:3}:"defer "
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:5-[[@LINE-3]]:11}:""
+
+  if (true) { defer {} } // expected-warning {{redundant use of 'defer'}} \
+                         // expected-note {{did you mean to use 'defer if'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:3-[[@LINE-2]]:3}:"defer "
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:15-[[@LINE-3]]:21}:""
 
   if (true) {
-    defer {} // expected-warning {{redundant use of 'defer'}}
+    defer {} // expected-warning {{redundant use of 'defer'}} \
+             // expected-note {{did you mean to use 'defer if'}}
   }
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:3-[[@LINE-4]]:3}:"defer "
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:5-[[@LINE-4]]:11}:""
 
   for (;;) {
     defer {} // OK
