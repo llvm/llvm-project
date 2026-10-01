@@ -620,23 +620,23 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
       return std::move(E);
 
     ISAInfo->Exts[std::string(1, Baseline)] = {Major, Minor};
-    break;
-  case 'y': {
-    // If the first character is 'y', this is equivalent to "iy".
-    // TODO: arch string syntax for RVE+RVY (and y in non-first position) will
-    // be included following conclusion of "long base name" syntax
-    // https://lists.riscv.org/g/tech-unprivileged/message/1134
+    Arch = Arch.drop_front(ConsumeLength);
+    ConsumeLength = 0;
+    // Allow 'y' immediately after 'i' or 'e' (e.g. rv64iy0p910, rv32ey0p910,
+    // or normalized strings such as rv64i2p1_y0p910).
+    if (!Arch.consume_front("y") && !Arch.consume_front("_y"))
+      break;
+    [[fallthrough]];
+  case 'y':
+    // If the first character is 'y', this is a shorthand for "iy" ('i' will be
+    // added by updateImplication()).
     if (auto E = getExtensionVersion("y", Arch, Major, Minor, ConsumeLength,
                                      EnableExperimentalExtension,
                                      ExperimentalExtensionVersionCheck))
       return std::move(E);
 
     ISAInfo->Exts["y"] = {Major, Minor};
-    auto IVersion = findDefaultVersion("i");
-    assert(IVersion && "Default 'i' extension version not found?");
-    ISAInfo->Exts["i"] = {IVersion->Major, IVersion->Minor};
     break;
-  }
   case 'g':
     // g expands to extensions in RISCVGImplications.
     if (!Arch.empty() && isDigit(Arch.front()))
