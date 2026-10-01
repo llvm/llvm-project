@@ -234,3 +234,18 @@ func.func private @test_alloc_with_multiple_results() -> () {
   memref.dealloc %alloc2 : memref<64xf32>
   return
 }
+
+// -----
+func.func private @work()
+// CHECK-LABEL:   func.func private @test_alloc_with_no_uses() {
+// CHECK:           %[[ALLOC_0:.*]] = memref.alloc() : memref<1048576xi32>
+// CHECK:           memref.dealloc %[[ALLOC_0]] : memref<1048576xi32>
+// CHECK:           call @work() : () -> ()
+// CHECK:           return
+// CHECK:         }
+func.func private @test_alloc_with_no_uses() -> () {
+    %alloc = memref.alloc() : memref<1048576xi32>
+    call @work() : () -> ()
+    memref.dealloc %alloc : memref<1048576xi32>
+    return
+}

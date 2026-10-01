@@ -155,6 +155,9 @@ public:
         }
       }
       if (lastUser == nullptr) {
+        LDBG() << "Last user not found ";
+        LDBG() << "Moved dealloc op after alloc: " << *allocOp;
+        deallocOp->moveAfter(allocOp);
         return WalkResult::advance();
       }
       LDBG() << "Last user found: " << *lastUser;
