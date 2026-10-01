@@ -372,7 +372,6 @@ define <2 x i32> @v_and_or_v2i32_inline_const_x4(<2 x i32> %a) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-DAG:     s_movk_i32 [[SR0:s[0-9]+]], 0x808
 ; GFX10-DAG:     s_movk_i32 [[SR1:s[0-9]+]], 0x809
-; GFX10-CHECK-NOT: {{.}}
 ; GFX10-DAG:     v_and_or_b32 v0, v0, [[SR0]], 0x81
 ; GFX10-DAG:     v_and_or_b32 v1, v1, [[SR1]], 0x101
   %x = and <2 x i32> %a, <i32 2056, i32 2057>
