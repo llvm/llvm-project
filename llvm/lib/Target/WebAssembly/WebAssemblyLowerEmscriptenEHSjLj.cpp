@@ -536,8 +536,7 @@ Value *WebAssemblyLowerEmscriptenEHSjLjImpl::wrapInvoke(CallBase *CI) {
   Module *M = CI->getModule();
   LLVMContext &C = M->getContext();
 
-  IRBuilder<> IRB(C);
-  IRB.SetInsertPoint(CI);
+  IRBuilder<> IRB(CI);
 
   // Pre-invoke
   // __THREW__ = 0;
@@ -730,11 +729,10 @@ void WebAssemblyLowerEmscriptenEHSjLjImpl::wrapTestSetjmp(
   Function *F = BB->getParent();
   Module *M = F->getParent();
   LLVMContext &C = M->getContext();
-  IRBuilder<> IRB(C);
+  IRBuilder<> IRB(BB);
   IRB.SetCurrentDebugLocation(DL);
 
   // if (%__THREW__.val != 0 & %__threwValue.val != 0)
-  IRB.SetInsertPoint(BB);
   BasicBlock *ThenBB1 = BasicBlock::Create(C, "if.then1", F);
   BasicBlock *ElseBB1 = BasicBlock::Create(C, "if.else1", F);
   BasicBlock *EndBB1 = BasicBlock::Create(C, "if.end", F);
