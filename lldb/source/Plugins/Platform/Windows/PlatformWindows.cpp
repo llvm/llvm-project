@@ -51,9 +51,13 @@ LLDB_PLUGIN_DEFINE(PlatformWindows)
 static uint32_t g_initialize_count = 0;
 
 // Upper bound on the timeout used when running a utility expression with
-// only one thread allowed to run.
+// only one thread allowed to run. On expiry, RunThreadPlan retries with all
+// threads, so this does not shorten the overall timeout.
 static std::chrono::microseconds GetLoaderOneThreadTimeout(Process *process) {
-  return std::chrono::microseconds(process->GetUtilityExpressionTimeout()) / 2;
+  constexpr std::chrono::seconds preferred(5);
+  return std::min<std::chrono::microseconds>(
+      preferred,
+      std::chrono::microseconds(process->GetUtilityExpressionTimeout()) / 2);
 }
 
 namespace {
@@ -628,6 +632,7 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
     return nullptr;
 
   process_sp->HijackProcessEvents(launch_info.GetHijackListener());
+  process_sp->SetShadowListener(launch_info.GetShadowListener());
 
   // We need to launch and attach to the process.
   launch_info.GetFlags().Set(eLaunchFlagDebug);
@@ -674,9 +679,11 @@ lldb::ProcessSP PlatformWindows::Attach(ProcessAttachInfo &attach_info,
       target->CreateProcess(attach_info.GetListenerForProcess(debugger),
                             attach_info.GetProcessPluginName(), nullptr, false);
 
-  process_sp->HijackProcessEvents(attach_info.GetHijackListener());
-  if (process_sp)
+  if (process_sp) {
+    process_sp->HijackProcessEvents(attach_info.GetHijackListener());
+    process_sp->SetShadowListener(attach_info.GetShadowListener());
     error = process_sp->Attach(attach_info);
+  }
 
   return process_sp;
 }

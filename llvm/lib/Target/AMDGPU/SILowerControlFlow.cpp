@@ -173,11 +173,16 @@ char SILowerControlFlowLegacy::ID = 0;
 INITIALIZE_PASS(SILowerControlFlowLegacy, DEBUG_TYPE, "SI lower control flow",
                 false, false)
 
-static void setImpSCCDefDead(MachineInstr &MI, bool IsDead) {
+static void setImpSCCDefDead(MachineInstr &MI, bool IsDead = true) {
   MachineOperand &ImpDefSCC = MI.getOperand(3);
   assert(ImpDefSCC.getReg() == AMDGPU::SCC && ImpDefSCC.isDef());
 
   ImpDefSCC.setIsDead(IsDead);
+}
+
+static void copySCCDefDead(MachineInstr &MI, const MachineOperand &OrigSCCDef) {
+  assert(OrigSCCDef.getReg() == AMDGPU::SCC && OrigSCCDef.isDef());
+  setImpSCCDefDead(MI, OrigSCCDef.isDead());
 }
 
 char &llvm::SILowerControlFlowLegacyID = SILowerControlFlowLegacy::ID;
@@ -221,9 +226,6 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   MachineOperand& Cond = MI.getOperand(1);
   assert(Cond.getSubReg() == AMDGPU::NoSubRegister);
 
-  MachineOperand &ImpDefSCC = MI.getOperand(4);
-  assert(ImpDefSCC.getReg() == AMDGPU::SCC && ImpDefSCC.isDef());
-
   // If there is only one use of save exec register and that use is SI_END_CF,
   // we can optimize SI_IF by returning the full saved exec mask instead of
   // just cleared bits.
@@ -249,17 +251,17 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
 
   MachineInstr *And =
       BuildMI(MBB, I, DL, TII->get(LMC.AndOpc), Tmp).addReg(CopyReg).add(Cond);
+  setImpSCCDefDead(*And);
+
   if (LV)
     LV->replaceKillInstruction(Cond.getReg(), MI, *And);
-
-  setImpSCCDefDead(*And, true);
 
   MachineInstr *Xor = nullptr;
   if (!SimpleIf) {
     Xor = BuildMI(MBB, I, DL, TII->get(LMC.XorOpc), SaveExecReg)
               .addReg(Tmp)
               .addReg(CopyReg);
-    setImpSCCDefDead(*Xor, ImpDefSCC.isDead());
+    copySCCDefDead(*Xor, MI.getOperand(4));
   }
 
   // Use a copy that is a terminator to get correct spill code placement it with
@@ -321,6 +323,7 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   MachineInstr *OrSaveExec =
       BuildMI(MBB, Start, DL, TII->get(LMC.OrSaveExecOpc), SaveReg)
           .add(MI.getOperand(1)); // Saved EXEC
+  setImpSCCDefDead(*OrSaveExec, /*IsDead=*/true);
   if (LV)
     LV->replaceKillInstruction(SrcReg, MI, *OrSaveExec);
 
@@ -333,11 +336,13 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   MachineInstr *And = BuildMI(MBB, ElsePt, DL, TII->get(LMC.AndOpc), DstReg)
                           .addReg(LMC.ExecReg)
                           .addReg(SaveReg);
+  setImpSCCDefDead(*And, /*IsDead=*/true);
 
   MachineInstr *Xor =
       BuildMI(MBB, ElsePt, DL, TII->get(LMC.XorTermOpc), LMC.ExecReg)
           .addReg(LMC.ExecReg)
           .addReg(DstReg);
+  copySCCDefDead(*Xor, MI.getOperand(4));
 
   // Skip ahead to the unconditional branch in case there are other terminators
   // present.
@@ -392,6 +397,7 @@ void SILowerControlFlow::emitIfBreak(MachineInstr &MI) {
     And = BuildMI(MBB, &MI, DL, TII->get(LMC.AndOpc), AndReg)
               .addReg(LMC.ExecReg)
               .add(MI.getOperand(1));
+    setImpSCCDefDead(*And, /*IsDead=*/true);
     if (LV)
       LV->replaceKillInstruction(MI.getOperand(1).getReg(), MI, *And);
     Or = BuildMI(MBB, &MI, DL, TII->get(LMC.OrOpc), Dst)
@@ -404,6 +410,9 @@ void SILowerControlFlow::emitIfBreak(MachineInstr &MI) {
     if (LV)
       LV->replaceKillInstruction(MI.getOperand(1).getReg(), MI, *Or);
   }
+
+  copySCCDefDead(*Or, MI.getOperand(3));
+
   if (LV)
     LV->replaceKillInstruction(MI.getOperand(2).getReg(), MI, *Or);
 
@@ -428,6 +437,8 @@ void SILowerControlFlow::emitLoop(MachineInstr &MI) {
       BuildMI(MBB, &MI, DL, TII->get(LMC.AndN2TermOpc), LMC.ExecReg)
           .addReg(LMC.ExecReg)
           .add(MI.getOperand(0));
+  copySCCDefDead(*AndN2, MI.getOperand(3));
+
   if (LV)
     LV->replaceKillInstruction(MI.getOperand(0).getReg(), MI, *AndN2);
 
@@ -518,6 +529,8 @@ MachineBasicBlock *SILowerControlFlow::emitEndCf(MachineInstr &MI) {
   MachineInstr *NewMI = BuildMI(MBB, InsPt, DL, TII->get(Opcode), LMC.ExecReg)
                             .addReg(LMC.ExecReg)
                             .add(MI.getOperand(0));
+  copySCCDefDead(*NewMI, MI.getOperand(2));
+
   if (LV) {
     LV->replaceKillInstruction(DataReg, MI, *NewMI);
 

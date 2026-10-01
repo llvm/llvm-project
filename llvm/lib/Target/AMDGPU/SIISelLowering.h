@@ -403,7 +403,8 @@ public:
 
   static bool isNonGlobalAddrSpace(unsigned AS);
 
-  bool isFreeAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
+  bool isFreeAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
+                           unsigned DestAS) const override;
 
   TargetLoweringBase::LegalizeTypeAction
   getPreferredVectorAction(MVT VT) const override;
@@ -625,7 +626,9 @@ public:
                                             bool isDivergent) const override;
   bool requiresUniformRegister(MachineFunction &MF,
                                const Value *V) const override;
-  Align getPrefLoopAlignment(MachineLoop *ML) const override;
+  Align
+  getPrefLoopAlignment(MachineLoop *ML,
+                       const MachineBasicBlock *BlockToAlign) const override;
   unsigned
   getMaxPermittedBytesForAlignment(MachineBasicBlock *MBB) const override;
 

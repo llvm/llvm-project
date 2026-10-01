@@ -2126,6 +2126,9 @@ cc_library(
     deps = [
         ":ast",
         ":basic",
+        "//llvm:CodeGen",
+        "//llvm:Core",
+        "//llvm:Demangle",
         "//llvm:Support",
     ],
 )
@@ -2458,6 +2461,10 @@ cc_binary(
     copts = [
         "-Wno-uninitialized",
     ],
+    local_defines = select({
+        "//third-party:llvm_libxml2_enabled": ["CLANG_HAVE_LIBXML=1"],
+        "//conditions:default": [],
+    }),
     stamp = 0,
     deps = [
         ":ast",
@@ -2474,6 +2481,7 @@ cc_binary(
         "//llvm:Core",
         "//llvm:MC",
         "//llvm:Support",
+        "//third-party:libxml2",
     ],
 )
 
@@ -2749,7 +2757,6 @@ cc_binary(
         "//llvm:Object",
         "//llvm:Option",
         "//llvm:Passes",
-        "//llvm:Plugins",
         "//llvm:Remarks",
         "//llvm:Support",
         "//llvm:Target",
@@ -3151,6 +3158,7 @@ cc_library(
         ":cir_dialect",
         "//llvm:Support",
         "//mlir:Analysis",
+        "//mlir:DataLayoutInterfaces",
         "//mlir:IR",
         "//mlir:SideEffectInterfaces",
     ],
@@ -3389,6 +3397,7 @@ cc_library(
         ":cir_lowering_common",
         ":cir_lowering_direct_to_llvm",
         ":codegen",
+        ":codegen_utils",
         ":frontend",
         "//llvm:Core",
         "//llvm:FrontendOffloading",
