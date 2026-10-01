@@ -19,6 +19,7 @@
 #include "RISCVRegisterInfo.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "RISCVSubtarget.h"
+#include "RISCVVectorUtils.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -5495,54 +5496,6 @@ static bool isElementRotate(const std::array<std::pair<int, int>, 2> &SrcInfo,
     return true;
   return SrcInfo[0].second < 0 && SrcInfo[1].second > 0 &&
          SrcInfo[1].second - SrcInfo[0].second == (int)NumElts;
-}
-
-static bool isAlternating(const std::array<std::pair<int, int>, 2> &SrcInfo,
-                          ArrayRef<int> Mask, unsigned Factor,
-                          bool RequiredPolarity) {
-  int NumElts = Mask.size();
-  for (const auto &[Idx, M] : enumerate(Mask)) {
-    if (M < 0)
-      continue;
-    int Src = M >= NumElts;
-    int Diff = (int)Idx - (M % NumElts);
-    bool C = Src == SrcInfo[1].first && Diff == SrcInfo[1].second;
-    assert(C != (Src == SrcInfo[0].first && Diff == SrcInfo[0].second) &&
-           "Must match exactly one of the two slides");
-    if (RequiredPolarity != (C == (Idx / Factor) % 2))
-      return false;
-  }
-  return true;
-}
-
-/// Given a shuffle which can be represented as a pair of two slides,
-/// see if it is a pair-even idiom.
-/// Pair-even is:
-/// vs2: a0 a1 a2 a3
-/// vs1: b0 b1 b2 b3
-/// vd:  a0 b0 a2 b2
-static bool isPairEven(const std::array<std::pair<int, int>, 2> &SrcInfo,
-                       ArrayRef<int> Mask, unsigned &Factor) {
-  Factor = SrcInfo[1].second;
-  return SrcInfo[0].second == 0 && isPowerOf2_32(Factor) &&
-         Mask.size() % Factor == 0 &&
-         isAlternating(SrcInfo, Mask, Factor, true);
-}
-
-/// Given a shuffle which can be represented as a pair of two slides,
-/// see if it is a pair-odd idiom.
-/// Pair-odd is:
-/// vs2: a0 a1 a2 a3
-/// vs1: b0 b1 b2 b3
-/// vd:  a1 b1 a3 b3
-/// Note that the operand order is swapped due to the way we canonicalize
-/// the slides, so SrCInfo[0] is vs1, and SrcInfo[1] is vs2.
-static bool isPairOdd(const std::array<std::pair<int, int>, 2> &SrcInfo,
-                      ArrayRef<int> Mask, unsigned &Factor) {
-  Factor = -SrcInfo[1].second;
-  return SrcInfo[0].second == 0 && isPowerOf2_32(Factor) &&
-         Mask.size() % Factor == 0 &&
-         isAlternating(SrcInfo, Mask, Factor, false);
 }
 
 // Lower a deinterleave shuffle to SRL and TRUNC.  Factor must be
@@ -12351,12 +12304,8 @@ static unsigned getRVPMulHighOpcode(unsigned IntNo) {
   switch (IntNo) {
   default:
     llvm_unreachable("Unexpected RISC-V packed multiply high intrinsic");
-  case Intrinsic::riscv_pmulh:
-    return ISD::MULHS;
   case Intrinsic::riscv_pmulhr:
     return RISCVISD::MULHR;
-  case Intrinsic::riscv_pmulhu:
-    return ISD::MULHU;
   case Intrinsic::riscv_pmulhru:
     return RISCVISD::MULHRU;
   case Intrinsic::riscv_pmulhsu:
@@ -12370,12 +12319,8 @@ static unsigned getRVScalarMulHighOpcode(unsigned IntNo) {
   switch (IntNo) {
   default:
     llvm_unreachable("Unexpected RISC-V scalar multiply high intrinsic");
-  case Intrinsic::riscv_mulh_i32:
-    return ISD::MULHS;
   case Intrinsic::riscv_mulhr_i32:
     return RISCVISD::MULHR;
-  case Intrinsic::riscv_mulhu_u32:
-    return ISD::MULHU;
   case Intrinsic::riscv_mulhru_u32:
     return RISCVISD::MULHRU;
   case Intrinsic::riscv_mulhsu_i32:
@@ -13294,9 +13239,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32, AbdsumauId, Lo,
                        Rs1Hi, Rs2Hi);
   }
-  case Intrinsic::riscv_pmulh:
   case Intrinsic::riscv_pmulhr:
-  case Intrinsic::riscv_pmulhu:
   case Intrinsic::riscv_pmulhru:
   case Intrinsic::riscv_pmulhsu:
   case Intrinsic::riscv_pmulhrsu: {
@@ -13329,9 +13272,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     return DAG.getNode(Opc, DL, VT, Op.getOperand(1), Op.getOperand(2));
   }
-  case Intrinsic::riscv_mulh_i32:
   case Intrinsic::riscv_mulhr_i32:
-  case Intrinsic::riscv_mulhu_u32:
   case Intrinsic::riscv_mulhru_u32:
   case Intrinsic::riscv_mulhsu_i32:
   case Intrinsic::riscv_mulhrsu_i32: {
@@ -13472,6 +13413,30 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
 
     return SDValue();
+  }
+  case Intrinsic::riscv_pmqwacc_i32x2:
+  case Intrinsic::riscv_pmqrwacc_i32x2: {
+    EVT VT = Op.getValueType();
+    SDValue Acc = Op.getOperand(1);
+    SDValue Rs1 = Op.getOperand(2);
+    SDValue Rs2 = Op.getOperand(3);
+
+    if (!Subtarget.is64Bit()) {
+      unsigned Opc = IntNo == Intrinsic::riscv_pmqwacc_i32x2
+                         ? RISCVISD::PMQWACC_H
+                         : RISCVISD::PMQRWACC_H;
+      return DAG.getNode(Opc, DL, VT, Acc, Rs1, Rs2);
+    }
+
+    Rs1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16, Rs1,
+                      DAG.getUNDEF(MVT::v2i16));
+    Rs2 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16, Rs2,
+                      DAG.getUNDEF(MVT::v2i16));
+    SDValue Zip = DAG.getNode(RISCVISD::PZIP, DL, MVT::v4i16, Rs1, Rs2);
+    unsigned Opc = IntNo == Intrinsic::riscv_pmqwacc_i32x2
+                       ? RISCVISD::PMQACC_W_H01
+                       : RISCVISD::PMQRACC_W_H01;
+    return DAG.getNode(Opc, DL, VT, Acc, Zip, Zip);
   }
   case Intrinsic::riscv_mulh_h0:
   case Intrinsic::riscv_mulh_h1:
@@ -17868,9 +17833,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     case Intrinsic::riscv_pmerge:
     case Intrinsic::riscv_pmulq:
     case Intrinsic::riscv_pmulqr:
-    case Intrinsic::riscv_pmulh:
     case Intrinsic::riscv_pmulhr:
-    case Intrinsic::riscv_pmulhu:
     case Intrinsic::riscv_pmulhru:
     case Intrinsic::riscv_pmulhsu:
     case Intrinsic::riscv_pmulhrsu:
@@ -17910,9 +17873,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       case Intrinsic::riscv_pmulqr:
         Opc = RISCVISD::MULQR;
         break;
-      case Intrinsic::riscv_pmulh:
       case Intrinsic::riscv_pmulhr:
-      case Intrinsic::riscv_pmulhu:
       case Intrinsic::riscv_pmulhru:
       case Intrinsic::riscv_pmulhsu:
       case Intrinsic::riscv_pmulhrsu:
@@ -17940,9 +17901,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
       return;
     }
-    case Intrinsic::riscv_mulh_i32:
     case Intrinsic::riscv_mulhr_i32:
-    case Intrinsic::riscv_mulhu_u32:
     case Intrinsic::riscv_mulhru_u32:
     case Intrinsic::riscv_mulhsu_i32:
     case Intrinsic::riscv_mulhrsu_i32: {
@@ -17952,11 +17911,11 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       if (!Subtarget.is64Bit() || VT != MVT::i32)
         return;
       unsigned Opc = getRVScalarMulHighOpcode(IntNo);
-      SDValue Rd =
+      SDValue Rs1 =
           DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(1));
-      SDValue Rs =
+      SDValue Rs2 =
           DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(2));
-      SDValue Res = DAG.getNode(Opc, DL, MVT::v2i32, Rd, Rs);
+      SDValue Res = DAG.getNode(Opc, DL, MVT::v2i32, Rs1, Rs2);
       Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
       return;
     }
