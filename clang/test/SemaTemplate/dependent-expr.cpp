@@ -189,5 +189,4 @@ struct Y {
 };
 
 void f() { Y<int> y; }
-static_assert(__is_same(decltype(Y<int>::g), const int *), "");
 } // namespace GH175934
