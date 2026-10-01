@@ -19,12 +19,13 @@
 // friend constexpr bool operator==(const iterator<OtherConst>& x, const sentinel& y);
 
 #include <cassert>
-#include <compare>
+#include <concepts>
 #include <ranges>
-#include <tuple>
+#include <type_traits>
 #include <utility>
 
 #include "../../range_adaptor_types.h"
+#include "../types.h"
 #include "test_iterators.h"
 #include "test_range.h"
 
@@ -76,12 +77,124 @@ constexpr bool test() {
     static_assert(!std::ranges::common_range<View>);
     static_assert(simple_view<View>);
 
+    static_assert(weakly_equality_comparable_with<std::ranges::iterator_t<View>, std::ranges::sentinel_t<View>>);
+
     View ev{SimpleNonCommon(buffer)};
 
     assert(ev.begin() != ev.end());
     assert(ev.begin() + 1 != ev.end());
     assert(ev.begin() + 2 != ev.end());
     assert(ev.begin() + 3 != ev.end());
+    assert(ev.begin() + 10 == ev.end());
+  }
+
+  {
+    // !simple-view: const and non-const have different iterator/sentinel types
+    using View = std::ranges::enumerate_view<NonSimpleNonCommon>;
+    static_assert(!std::ranges::common_range<View>);
+    static_assert(!simple_view<View>);
+
+    using Iter      = std::ranges::iterator_t<View>;
+    using ConstIter = std::ranges::iterator_t<const View>;
+    static_assert(!std::is_same_v<Iter, ConstIter>);
+
+    using Sentinel      = std::ranges::sentinel_t<View>;
+    using ConstSentinel = std::ranges::sentinel_t<const View>;
+    static_assert(!std::is_same_v<Sentinel, ConstSentinel>);
+
+    static_assert(weakly_equality_comparable_with<Iter, Sentinel>);
+    static_assert(!weakly_equality_comparable_with<ConstIter, Sentinel>);
+    static_assert(weakly_equality_comparable_with<Iter, ConstSentinel>);
+    static_assert(weakly_equality_comparable_with<ConstIter, ConstSentinel>);
+
+    View ev{NonSimpleNonCommon(buffer)};
+
+    assert(ev.begin() != ev.end());
+    assert(ev.begin() + 10 == ev.end());
+
+    assert(ev.begin() != std::as_const(ev).end());
+    assert(ev.begin() + 10 == std::as_const(ev).end());
+    // the above works because
+    static_assert(std::convertible_to<Iter, ConstIter>);
+
+    assert(std::as_const(ev).begin() != std::as_const(ev).end());
+    assert(std::as_const(ev).begin() + 10 == std::as_const(ev).end());
+  }
+
+  {
+    // underlying const/non-const sentinel can be compared with both const/non-const iterator
+    using View = std::ranges::enumerate_view<ComparableView>;
+    static_assert(!std::ranges::common_range<View>);
+    static_assert(!simple_view<View>);
+
+    using Iter      = std::ranges::iterator_t<View>;
+    using ConstIter = std::ranges::iterator_t<const View>;
+    static_assert(!std::is_same_v<Iter, ConstIter>);
+
+    using Sentinel      = std::ranges::sentinel_t<View>;
+    using ConstSentinel = std::ranges::sentinel_t<const View>;
+    static_assert(!std::is_same_v<Sentinel, ConstSentinel>);
+
+    static_assert(weakly_equality_comparable_with<Iter, Sentinel>);
+    static_assert(weakly_equality_comparable_with<ConstIter, Sentinel>);
+    static_assert(weakly_equality_comparable_with<Iter, ConstSentinel>);
+    static_assert(weakly_equality_comparable_with<ConstIter, ConstSentinel>);
+
+    View ev{ComparableView(buffer)};
+
+    assert(ev.begin() != ev.end());
+    assert(ev.begin() + 10 == ev.end());
+
+    static_assert(!std::convertible_to<Iter, ConstIter>);
+
+    assert(ev.begin() != std::as_const(ev).end());
+    assert(ev.begin() + 10 == std::as_const(ev).end());
+
+    assert(std::as_const(ev).begin() != ev.end());
+    assert(std::as_const(ev).begin() + 10 == ev.end());
+
+    assert(std::as_const(ev).begin() != std::as_const(ev).end());
+    assert(std::as_const(ev).begin() + 10 == std::as_const(ev).end());
+  }
+
+  {
+    // underlying const/non-const sentinel cannot be compared with non-const/const iterator
+
+    using View = std::ranges::enumerate_view<ComparableView>;
+    static_assert(!std::ranges::common_range<View>);
+    static_assert(!simple_view<View>);
+
+    using Iter      = std::ranges::iterator_t<View>;
+    using ConstIter = std::ranges::iterator_t<const View>;
+    static_assert(!std::is_same_v<Iter, ConstIter>);
+
+    using Sentinel      = std::ranges::sentinel_t<View>;
+    using ConstSentinel = std::ranges::sentinel_t<const View>;
+    static_assert(!std::is_same_v<Sentinel, ConstSentinel>);
+
+    static_assert(weakly_equality_comparable_with<Iter, Sentinel>);
+    static_assert(weakly_equality_comparable_with<ConstIter, Sentinel>);
+    static_assert(weakly_equality_comparable_with<Iter, ConstSentinel>);
+    static_assert(weakly_equality_comparable_with<ConstIter, ConstSentinel>);
+
+    View ev{ComparableView(buffer)};
+
+    assert(ev.begin() != ev.end());
+    assert(ev.begin() + 10 == ev.end());
+
+    assert(std::as_const(ev).begin() != std::as_const(ev).end());
+    assert(std::as_const(ev).begin() + 10 == std::as_const(ev).end());
+  }
+
+  {
+    // input_iterator
+
+    using InputIterator = cpp20_input_iterator<int*>;
+    using View          = MinimalView<InputIterator>;
+    View mv{InputIterator(std::to_address(base(buffer.begin()))), Sentinel(InputIterator(std::to_address(base(buffer.end()))))};
+    std::ranges::enumerate_view ev(std::move(mv));
+
+    assert(ev.begin() != ev.end());
     assert(ev.begin() + 10 == ev.end());
   }
 
