@@ -35,17 +35,8 @@ template <TypeCategory CAT, int KIND, bool IS_MAXVAL, typename Enable = void>
 struct MaxOrMinIdentity {
   using Type = CppTypeFor<CAT, KIND>;
   static constexpr RT_API_ATTRS Type Value() {
-    return IS_MAXVAL ? std::numeric_limits<Type>::lowest()
-                     : std::numeric_limits<Type>::max();
-  }
-};
-
-// std::numeric_limits<> may not know int128_t
-template <bool IS_MAXVAL>
-struct MaxOrMinIdentity<TypeCategory::Integer, 16, IS_MAXVAL> {
-  using Type = CppTypeFor<TypeCategory::Integer, 16>;
-  static constexpr RT_API_ATTRS Type Value() {
-    return IS_MAXVAL ? Type{1} << 127 : ~Type{0} >> 1;
+    return IS_MAXVAL ? common::numeric_limits<Type>::lowest()
+                     : common::numeric_limits<Type>::max();
   }
 };
 
@@ -90,7 +81,7 @@ struct MaxOrMinIdentity<TypeCategory::Real, 16, IS_MAXVAL,
 // Minimum finite representable value.
 // For floating-point types, returns minimum positive normalized value.
 template <int PREC, typename T> struct MinValue {
-  static RT_API_ATTRS T get() { return std::numeric_limits<T>::min(); }
+  static RT_API_ATTRS T get() { return common::numeric_limits<T>::min(); }
 };
 template <typename T> struct MinValue<11, T> {
   // TINY(0._2)
@@ -160,7 +151,7 @@ template <typename T> struct LDEXPTy {
 
 template <typename T> struct MAXTy {
   static constexpr RT_API_ATTRS T compute() {
-    return std::numeric_limits<T>::max();
+    return common::numeric_limits<T>::max();
   }
 };
 
@@ -178,7 +169,7 @@ template <int PREC, typename T> struct MINTy {
 
 template <typename T> struct QNANTy {
   static constexpr RT_API_ATTRS T compute() {
-    return std::numeric_limits<T>::quiet_NaN();
+    return common::numeric_limits<T>::quiet_NaN();
   }
 };
 
@@ -224,8 +215,8 @@ template <typename T> inline RT_API_ATTRS T SetExponent(T x, std::int64_t p) {
     int expo{ILOGBTy<T>::compute(x) + 1};
     auto ip{static_cast<int>(p - expo)};
     if (ip != p - expo) {
-      ip = p < 0 ? std::numeric_limits<int>::min()
-                 : std::numeric_limits<int>::max();
+      ip = p < 0 ? common::numeric_limits<int>::min()
+                 : common::numeric_limits<int>::max();
     }
     return LDEXPTy<T>::compute(x, ip); // x*2**(p-e)
   }

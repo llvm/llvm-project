@@ -53,9 +53,9 @@ private:
       64 - common::LeadingZeroBitCount(uint64Radix)};
   using Digit = common::HostUnsignedIntType<minDigitBits>;
   static constexpr Digit radix{uint64Radix};
-  static_assert(radix < std::numeric_limits<Digit>::max() / 1000,
+  static_assert(radix < common::numeric_limits<Digit>::max() / 1000,
       "radix is somehow too big");
-  static_assert(radix > std::numeric_limits<Digit>::max() / 10000,
+  static_assert(radix > common::numeric_limits<Digit>::max() / 10000,
       "radix is somehow too small");
 
   // The base-2 logarithm of the least significant bit that can arise

@@ -39,7 +39,7 @@ template <typename T> inline RT_API_ATTRS T ErfcScaled(T arg) {
 
   constexpr T sqrtpi{1.7724538509078120380404576221783883301349L};
   constexpr T rsqrtpi{0.5641895835477562869480794515607725858440L};
-  constexpr T epsilonby2{std::numeric_limits<T>::epsilon() * 0.5};
+  constexpr T epsilonby2{common::numeric_limits<T>::epsilon() * 0.5};
   constexpr T xneg{-26.628e0};
   constexpr T xhuge{6.71e7};
   constexpr T thresh{0.46875e0};
@@ -47,7 +47,7 @@ template <typename T> inline RT_API_ATTRS T ErfcScaled(T arg) {
   constexpr T one{1.0};
   constexpr T four{4.0};
   constexpr T sixteen{16.0};
-  constexpr T xmax{1.0 / (sqrtpi * std::numeric_limits<T>::min())};
+  constexpr T xmax{1.0 / (sqrtpi * common::numeric_limits<T>::min())};
   static_assert(xmax > xhuge, "xmax must be greater than xhuge");
 
   T ysq;
@@ -106,7 +106,7 @@ template <typename T> inline RT_API_ATTRS T ErfcScaled(T arg) {
   //  fix up for negative argument, erf, etc.
   if (x < zero) {
     if (x < xneg) {
-      result = std::numeric_limits<T>::max();
+      result = common::numeric_limits<T>::max();
     } else {
       ysq = trunc(x * sixteen) / sixteen;
       del = (x - ysq) * (x + ysq);

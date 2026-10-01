@@ -22,30 +22,39 @@
 #include "api-attrs.h"
 #include "leading-zero-bit-count.h"
 #include <cstdint>
+#include <limits>
 #include <type_traits>
 
 namespace Fortran::common {
+namespace detail {
+template <typename T> class numeric_limits;
+}
+
+/// Same as std::numeric_limits, but also defined for
+/// UnsignedInt128/SignedInt128.
+/// While std::numeric_limits is allowed to be extended for user-defined types
+/// (C++ [namespace.std]), it is not for the MSVC STL __int128/__uint128
+/// workaround below.
+template <typename T>
+using numeric_limits = std::conditional_t<std::is_arithmetic_v<T>,
+    std::numeric_limits<T>, detail::numeric_limits<T>>;
 
 template <bool IS_SIGNED = false> class Int128 {
+  friend class detail::numeric_limits<Int128>;
+
 public:
   constexpr Int128() {}
   // This means of definition provides some portability for
   // "size_t" operands.
-  constexpr Int128(unsigned n) : low_{n} {}
-  constexpr Int128(unsigned long n) : low_{n} {}
-  constexpr Int128(unsigned long long n) : low_{n} {}
-  constexpr Int128(int n) {
+  template <typename T,
+      typename = std::enable_if_t<std::is_integral_v<T> && sizeof(T) <= 8>>
+  constexpr Int128(T n) {
     low_ = static_cast<std::uint64_t>(n);
-    high_ = -static_cast<std::uint64_t>(n < 0);
+    if constexpr (std::is_signed_v<T>) {
+      high_ = -static_cast<std::uint64_t>(n < 0);
+    }
   }
-  constexpr Int128(long n) {
-    low_ = static_cast<std::uint64_t>(n);
-    high_ = -static_cast<std::uint64_t>(n < 0);
-  }
-  constexpr Int128(long long n) {
-    low_ = static_cast<std::uint64_t>(n);
-    high_ = -static_cast<std::uint64_t>(n < 0);
-  }
+
   constexpr Int128(const Int128 &) = default;
   constexpr Int128(Int128 &&) = default;
   constexpr Int128 &operator=(const Int128 &) = default;
@@ -61,9 +70,12 @@ public:
   constexpr Int128 operator-() const { return ~*this + 1; }
   constexpr bool operator!() const { return !low_ && !high_; }
   constexpr explicit operator bool() const { return low_ || high_; }
-  constexpr explicit operator std::uint64_t() const { return low_; }
-  constexpr explicit operator std::int64_t() const { return low_; }
-  constexpr explicit operator int() const { return static_cast<int>(low_); }
+
+  template <typename T,
+      typename = std::enable_if_t<std::is_integral_v<T> && sizeof(T) <= 8>>
+  constexpr explicit operator T() const {
+    return static_cast<T>(low_);
+  }
 
   constexpr std::uint64_t high() const { return high_; }
   constexpr std::uint64_t low() const { return low_; }
@@ -304,5 +316,72 @@ using HostUnsignedIntType = typename HostUnsignedIntTypeHelper<BITS>::type;
 template <int BITS>
 using HostSignedIntType = typename HostSignedIntTypeHelper<BITS>::type;
 
+namespace detail {
+
+template <> class numeric_limits<Fortran::common::UnsignedInt128> {
+public:
+  using T = Fortran::common::UnsignedInt128;
+
+  static constexpr bool is_specialized{true};
+  static constexpr bool is_signed{false};
+  static constexpr bool is_integer{true};
+
+  static constexpr T min() { return T{0, 0}; }
+  static constexpr T max() { return T{UINT64_MAX, UINT64_MAX}; }
+  static constexpr T lowest() { return min(); }
+};
+
+template <> class numeric_limits<Fortran::common::SignedInt128> {
+public:
+  using T = Fortran::common::SignedInt128;
+
+  static constexpr bool is_specialized{true};
+  static constexpr bool is_signed{true};
+  static constexpr bool is_integer{true};
+
+  static constexpr T min() {
+    return T{static_cast<std::uint64_t>(INT64_MIN), 0};
+  }
+  static constexpr T max() {
+    return T{static_cast<std::uint64_t>(INT64_MAX), UINT64_MAX};
+  }
+  static constexpr T lowest() { return min(); }
+};
+
+#if defined(__SIZEOF_INT128__) && defined(_MSVC_STL_VERSION)
+// clang-cl knows __int128 and will be used for (u)int128_t, but the MSVC STL
+// does not define stl::numeric_limits for it.
+
+template <> class numeric_limits<unsigned __int128> {
+public:
+  using T = unsigned __int128;
+
+  static constexpr bool is_specialized{true};
+  static constexpr bool is_signed{false};
+  static constexpr bool is_integer{true};
+
+  static constexpr T min() { return static_cast<T>(0); }
+  static constexpr T max() { return ~static_cast<T>(0); }
+  static constexpr T lowest() { return min(); }
+};
+
+template <> class numeric_limits<__int128> {
+public:
+  using T = __int128;
+
+  static constexpr bool is_specialized{true};
+  static constexpr bool is_signed{true};
+  static constexpr bool is_integer{true};
+
+  static constexpr T min() {
+    return static_cast<T>(static_cast<unsigned __int128>(1) << 127u);
+  }
+  static constexpr T max() {
+    return static_cast<T>(~(static_cast<unsigned __int128>(1) << 127u));
+  }
+  static constexpr T lowest() { return min(); }
+};
+#endif
+} // namespace detail
 } // namespace Fortran::common
 #endif
