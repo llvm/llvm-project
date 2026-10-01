@@ -600,6 +600,26 @@ static bool areInnerBoundsInvariant(scf::ForOp forOp) {
   return !walkResult.wasInterrupted();
 }
 
+/// Return true if unroll-and-jam does not reorder any effects or if all
+/// reordered effects are reads. Operations without a memory effect interface
+/// are treated conservatively.
+static bool hasSafeEffectsForUnrollAndJam(scf::ForOp forOp) {
+  // Without a directly nested loop, unroll-and-jam degenerates to ordinary
+  // unrolling and preserves the original order of operation instances.
+  if (llvm::none_of(forOp.getBody()->without_terminator(),
+                    [](Operation &op) { return isa<scf::ForOp>(op); }))
+    return true;
+
+  std::optional<SmallVector<MemoryEffects::EffectInstance>> effects =
+      getEffectsRecursively(forOp);
+  if (!effects)
+    return false;
+
+  return llvm::all_of(*effects, [](const MemoryEffects::EffectInstance &effect) {
+    return isa<MemoryEffects::Read>(effect.getEffect());
+  });
+}
+
 /// Unrolls and jams this loop by the specified factor.
 LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
                                           uint64_t unrollJamFactor) {
@@ -646,6 +666,17 @@ LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
   // Nothing in the loop body other than the terminator.
   if (llvm::hasSingleElement(forOp.getBody()->getOperations()))
     return success();
+
+  // Jamming changes the relative order of operations from different outer
+  // loop iterations. Reject effects that may not commute unless no inner loop
+  // is actually jammed. This check is intentionally conservative: a more
+  // precise analysis can admit writes after proving that accesses do not
+  // conflict across the reordered iterations.
+  if (unrollJamFactor > 1 && !hasSafeEffectsForUnrollAndJam(forOp)) {
+    LDBG() << "failed to unroll and jam: loop has effects that may be "
+              "reordered";
+    return failure();
+  }
 
   // Gather all sub-blocks to jam upon the loop being unrolled.
   JamBlockGatherer<scf::ForOp> jbg;
