@@ -55,6 +55,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APFixedPoint.h"
@@ -784,6 +785,10 @@ namespace {
     /// initialized after CurrentCall and CallStackDepth.
     CallStackFrame BottomFrame;
 
+    /// Runs recursive constexpr function calls on a fresh stack when needed
+    /// and emits at most one stack exhaustion warning per evaluation.
+    StackExhaustionHandler StackHandler;
+
     /// A stack of values whose lifetimes end at the end of some surrounding
     /// evaluation frame.
     llvm::SmallVector<Cleanup, 16> CleanupStack;
@@ -887,6 +892,7 @@ namespace {
           BottomFrame(*this, SourceLocation(), /*Callee=*/nullptr,
                       /*This=*/nullptr,
                       /*CallExpr=*/nullptr, CallRef()),
+          StackHandler(C.getDiagnostics()),
           EvaluatingDecl((const ValueDecl *)nullptr),
           EvaluatingDeclValue(nullptr) {
       EvalMode = Mode;
@@ -978,6 +984,13 @@ namespace {
       }
       --StepsLeft;
       return true;
+    }
+
+    bool runWithSufficientStackSpace(SourceLocation Loc,
+                                     llvm::function_ref<bool()> Fn) {
+      bool Result = false;
+      StackHandler.runWithSufficientStackSpace(Loc, [&] { Result = Fn(); });
+      return Result;
     }
 
     APValue *createHeapAlloc(const Expr *E, QualType T, LValue &LV);
@@ -7138,12 +7151,12 @@ static bool handleTrivialCopy(EvalInfo &Info, const ParmVarDecl *Param,
 }
 
 /// Evaluate a function call.
-static bool HandleFunctionCall(SourceLocation CallLoc,
-                               const FunctionDecl *Callee,
-                               const LValue *ObjectArg, const Expr *E,
-                               ArrayRef<const Expr *> Args, CallRef Call,
-                               const Stmt *Body, EvalInfo &Info,
-                               APValue &Result, const LValue *ResultSlot) {
+static bool HandleFunctionCallImpl(SourceLocation CallLoc,
+                                   const FunctionDecl *Callee,
+                                   const LValue *ObjectArg, const Expr *E,
+                                   ArrayRef<const Expr *> Args, CallRef Call,
+                                   const Stmt *Body, EvalInfo &Info,
+                                   APValue &Result, const LValue *ResultSlot) {
   if (!Info.CheckCallLimit(CallLoc))
     return false;
 
@@ -7202,6 +7215,18 @@ static bool HandleFunctionCall(SourceLocation CallLoc,
     Info.FFDiag(Callee->getEndLoc(), diag::note_constexpr_no_return);
   }
   return ESR == ESR_Returned;
+}
+
+static bool HandleFunctionCall(SourceLocation CallLoc,
+                               const FunctionDecl *Callee,
+                               const LValue *ObjectArg, const Expr *E,
+                               ArrayRef<const Expr *> Args, CallRef Call,
+                               const Stmt *Body, EvalInfo &Info,
+                               APValue &Result, const LValue *ResultSlot) {
+  return Info.runWithSufficientStackSpace(CallLoc, [&] {
+    return HandleFunctionCallImpl(CallLoc, Callee, ObjectArg, E, Args, Call,
+                                  Body, Info, Result, ResultSlot);
+  });
 }
 
 static bool HandleConstructorCall(const Expr *E, const LValue &This,
@@ -16364,6 +16389,8 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/SPIRVTypes.def"
       return GCCTypeClass::None;
@@ -22894,7 +22921,7 @@ EvaluateCPlusPlus11IntegralConstantExpr(const ASTContext &Ctx, const Expr *E,
     return false;
 
   APValue Result;
-  if (!E->isCXX11ConstantExpr(Ctx, &Result, AllowRelaxedEval))
+  if (!E->isCXX11ConstantExpr(Ctx, Result, AllowRelaxedEval))
     return false;
 
   if (!Result.isInt())
@@ -22971,7 +22998,7 @@ bool Expr::isCXX98IntegralConstantExpr(const ASTContext &Ctx) const {
   return CheckICE(this, Ctx).Kind == IK_ICE;
 }
 
-bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result,
+bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue &Result,
                                bool AllowRelaxedEval) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
@@ -22981,12 +23008,8 @@ bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result,
   assert(Ctx.getLangOpts().CPlusPlus);
 
   bool IsConst;
-  APValue Scratch;
-  if (FastEvaluateAsRValue(this, Scratch, Ctx, IsConst) && Scratch.hasValue()) {
-    if (Result)
-      *Result = std::move(Scratch);
+  if (FastEvaluateAsRValue(this, Result, Ctx, IsConst) && Result.hasValue())
     return true;
-  }
 
   bool IsConstExpr;
   Expr::EvalStatus Status;
@@ -22995,13 +23018,13 @@ bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result,
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
     interp::EvalSettings Settings(EvaluationMode::ConstantExpression, Status);
-    IsConstExpr = Ctx.getInterpContext().evaluateAsRValue(
-        Settings, this, Result ? *Result : Scratch);
+    IsConstExpr =
+        Ctx.getInterpContext().evaluateAsRValue(Settings, this, Result);
   } else {
     // Build evaluation settings.
     EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpression);
     IsConstExpr =
-        ::EvaluateAsRValue(Info, this, Result ? *Result : Scratch) &&
+        ::EvaluateAsRValue(Info, this, Result) &&
         // NOTE: We don't produce a diagnostic for this, but the callers that
         // call us on arbitrary full-expressions should generally not care.
         Info.discardCleanups() && !Status.HasSideEffects;
