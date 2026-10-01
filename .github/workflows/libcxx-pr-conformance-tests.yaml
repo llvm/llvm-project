@@ -68,9 +68,10 @@ jobs:
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
         shell: bash
         run: |
+          git config --global --add safe.directory '*'
           python3 -m venv --system-site-packages .venv
           source .venv/bin/activate
-          pip install --ignore-installed -r libcxx/test/requirements.txt
+          pip install -r libcxx/test/requirements.txt
           libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
           CC: ${{ matrix.cc }}
@@ -123,9 +124,10 @@ jobs:
       - name: ${{ matrix.config }}
         shell: bash
         run: |
+          git config --global --add safe.directory '*'
           python3 -m venv --system-site-packages .venv
           source .venv/bin/activate
-          pip install --ignore-installed -r libcxx/test/requirements.txt
+          pip install -r libcxx/test/requirements.txt
           libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
           CC: ${{ matrix.cc }}
@@ -188,9 +190,10 @@ jobs:
       - name: ${{ matrix.config }}
         shell: bash
         run: |
+          git config --global --add safe.directory '*'
           python3 -m venv --system-site-packages .venv
           source .venv/bin/activate
-          pip install --ignore-installed -r libcxx/test/requirements.txt
+          pip install -r libcxx/test/requirements.txt
           libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
           CC: clang-23
