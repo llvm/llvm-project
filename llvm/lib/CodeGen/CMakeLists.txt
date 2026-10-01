@@ -1,15 +1,16 @@
-if (LLVM_HAVE_MLIR_LOWERING)
-  include(MLGOLower)
-  mlgo_lower_models(
-    "${LLVM_MLGO_MODELS}"
-    "${LLVM_MLGO_MLIR_OPT}"
-    "${LLVM_MLGO_MLIR_TRANSLATE}"
-    regalloc
-    llvm/CodeGen
-    RegAllocEvictModels
-    MLDeps
-  )
-elseif (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
+include(MLGOLower)
+mlgo_lower_models(
+  "${LLVM_MLGO_MODELS}"
+  "${LLVM_MLGO_MLIR_OPT}"
+  "${LLVM_MLGO_MLIR_TRANSLATE}"
+  regalloc
+  llvm/CodeGen
+  RegAllocEvictModels
+  "../Analysis/models/regalloc-eviction-test-model.inc"
+  "${LLVM_MAIN_SRC_DIR}/../mlir/test/Integration/Dialect/EmitC/regalloc-eviction-test-model-tosa.mlir"
+  MLDeps
+)
+if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   include(TensorFlowCompile)
   set(LLVM_RAEVICT_MODEL_PATH_DEFAULT "models/regalloc-eviction")
 
