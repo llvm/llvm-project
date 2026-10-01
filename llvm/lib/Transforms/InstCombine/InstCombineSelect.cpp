@@ -1886,7 +1886,7 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
              m_CombineAnd(m_AnyIntegralConstant(), m_Constant(C0))))
     return nullptr;
 
-  if (!isa<SelectInst>(Sel1)) {
+  if (!match(Sel1, m_SelectLike(m_Value(), m_Value(), m_Value()))) {
     Pred0 = ICmpInst::getInversePredicate(Pred0);
     std::swap(X, Sel1);
   }
@@ -1944,8 +1944,8 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
   CmpPredicate Pred1;
   Constant *C2;
   Value *ReplacementLow, *ReplacementHigh;
-  if (!match(Sel1, m_Select(m_Value(Cmp1), m_Value(ReplacementLow),
-                            m_Value(ReplacementHigh))) ||
+  if (!match(Sel1, m_SelectLike(m_Value(Cmp1), m_Value(ReplacementLow),
+                                m_Value(ReplacementHigh))) ||
       !match(Cmp1,
              m_ICmp(Pred1, m_Specific(X),
                     m_CombineAnd(m_AnyIntegralConstant(), m_Constant(C2)))))
@@ -2462,7 +2462,8 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     return &SI;
   }
 
-  if (Value *V = foldSelectICmpMinMax(ICI, TrueVal, FalseVal, Builder, SQ))
+  if (Value *V = foldSelectICmpMinMax(ICI, TrueVal, FalseVal, Builder,
+                                      SQ.getWithInstruction(&SI)))
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldSelectICmpAndZeroShl(ICI, TrueVal, FalseVal, Builder))
