@@ -117,7 +117,7 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    ## =>This Loop Header: Depth=1
 ; CHECK-NEXT:    ## Child Loop BB0_28 Depth 2
 ; CHECK-NEXT:    ## Child Loop BB0_38 Depth 2
-; CHECK-NEXT:    leal -268(%rbp), %eax
+; CHECK-NEXT:    leal -268(%rbx), %eax
 ; CHECK-NEXT:    cmpl $105, %eax
 ; CHECK-NEXT:    ja LBB0_14
 ; CHECK-NEXT:  ## %bb.56: ## %while.body200
@@ -212,11 +212,11 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    jb LBB0_38
 ; CHECK-NEXT:  LBB0_35: ## %if.end517
 ; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=1
-; CHECK-NEXT:    cmpl $11, %r15d
+; CHECK-NEXT:    cmpl $11, %r13d
 ; CHECK-NEXT:    je LBB0_38
 ; CHECK-NEXT:  ## %bb.36: ## %if.end517
 ; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=1
-; CHECK-NEXT:    cmpl $24, %r15d
+; CHECK-NEXT:    cmpl $24, %r13d
 ; CHECK-NEXT:    je LBB0_38
 ; CHECK-NEXT:  ## %bb.37: ## %if.then532
 ; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=1
@@ -249,12 +249,12 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:  LBB0_11:
 ; CHECK-NEXT:    movl $0, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Folded Spill
 ; CHECK-NEXT:  LBB0_21: ## %while.end1465
-; CHECK-NEXT:    incl %ebp
-; CHECK-NEXT:    cmpl $16, %ebp
+; CHECK-NEXT:    incl %ebx
+; CHECK-NEXT:    cmpl $16, %ebx
 ; CHECK-NEXT:    ja LBB0_50
 ; CHECK-NEXT:  ## %bb.22: ## %while.end1465
 ; CHECK-NEXT:    movl $83969, %eax ## imm = 0x14801
-; CHECK-NEXT:    btl %ebp, %eax
+; CHECK-NEXT:    btl %ebx, %eax
 ; CHECK-NEXT:    jae LBB0_50
 ; CHECK-NEXT:  ## %bb.23:
 ; CHECK-NEXT:    xorl %ebx, %ebx
@@ -306,7 +306,7 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    movq (%rbx), %rdi
 ; CHECK-NEXT:    callq _fileno
 ; CHECK-NEXT:    incl %ebp
-; CHECK-NEXT:    testb %bl, %bl
+; CHECK-NEXT:    testb %r14b, %r14b
 ; CHECK-NEXT:    jne LBB0_53
 ; CHECK-NEXT:  LBB0_54: ## %while.cond1683.preheader
 ; CHECK-NEXT:    testb %al, %al
