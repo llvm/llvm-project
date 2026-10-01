@@ -5334,6 +5334,7 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
 void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   CM->collectValuesToIgnore();
   Config.collectElementTypesForWidening(&CM->ValuesToIgnore);
+
   FixedScalableVFPair MaxFactors = CM->computeMaxVF(UserVF, UserIC);
   if (!MaxFactors) // Cases that should not to be vectorized nor interleaved.
     return;
@@ -6416,7 +6417,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   // Create recipes for header phis. For outer loops, reductions, recurrences
   // and in-loop reductions are empty since legality doesn't detect them.
   if (!RUN_VPLAN_PASS(
-          VPlanTransforms::createHeaderPhiRecipes, *VPlan0, PSE, *OrigLoop,
+          VPlanTransforms::createHeaderPhiRecipes, *VPlan0, PSE, *OrigLoop, ORE,
           VPDT, Legal->getInductionVars(), Legal->getReductionVars(),
           Legal->getFixedOrderRecurrences(), Config.getInLoopReductions(),
           Config.getHints().allowReordering())) {
