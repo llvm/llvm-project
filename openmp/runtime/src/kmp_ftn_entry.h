@@ -598,7 +598,7 @@ FTN_GET_DYN_GPRIVATE_MEMSPACE(omp_access_t *access_group) {
 #endif
 }
 
- size_t FTN_STDCALL FTN_GET_GPRIVATE_LIMIT(int *device_num,
+size_t FTN_STDCALL FTN_GET_GPRIVATE_LIMIT(int *device_num,
                                           omp_access_t *access_group) {
 #if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
   return 0;
