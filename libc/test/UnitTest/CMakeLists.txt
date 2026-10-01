@@ -132,6 +132,7 @@ endif()
 if(LIBC_TEST_SUBPROCESS_TESTS)
   set(libc_death_test_deps
     libc.hdr.stdint_proxy
+    libc.src.__support.CPP.scope
     libc.src.__support.libc_assert
   )
   if(LLVM_LIBC_FULL_BUILD)

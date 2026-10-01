@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/scope.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
 #include "test/UnitTest/ExecuteFunction.h"
@@ -28,8 +29,8 @@
 #include "src/unistd/fork.h"
 #include "src/unistd/pipe.h"
 #ifdef __linux__
-#include <linux/prctl.h>
 #include "src/sys/prctl/prctl.h"
+#include <linux/prctl.h>
 #endif
 
 #define LIBC_IMPL LIBC_NAMESPACE
@@ -91,23 +92,21 @@ ProcessStatus invoke_in_subprocess(FunctionCaller *func, int timeout_ms) {
     LIBC_IMPL::exit(0);
   }
   LIBC_IMPL::close(pipe_fds[1]);
+  cpp::scope_exit cleanup_pipe([&] { LIBC_IMPL::close(pipe_fds[0]); });
 
   pollfd poll_fd{pipe_fds[0], POLLIN, 0};
   // No events requested so this call will only return after the timeout or if
   // the pipes peer was closed, signaling the process exited.
   if (LIBC_IMPL::poll(&poll_fd, 1, timeout_ms) == -1) {
-    LIBC_IMPL::close(pipe_fds[0]);
     delete func;
     return ProcessStatus::error("poll(2) failed");
   }
   // If the pipe wasn't closed by the child yet then timeout has expired.
   if (!(poll_fd.revents & POLLHUP)) {
-    LIBC_IMPL::close(pipe_fds[0]);
     LIBC_IMPL::kill(pid, SIGKILL);
     delete func;
     return ProcessStatus::timed_out_ps();
   }
-  LIBC_IMPL::close(pipe_fds[0]);
 
   int wstatus = 0;
   // Wait on the pid of the subprocess here so it gets collected by the system
