@@ -15,6 +15,7 @@
 #include "SparcTargetMachine.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
@@ -24,6 +25,9 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
 #include "SparcGenSubtargetInfo.inc"
+
+#define OPTIONS_STRUCT_DEFS
+#include "SparcOptions.inc"
 
 void SparcSubtarget::anchor() { }
 
