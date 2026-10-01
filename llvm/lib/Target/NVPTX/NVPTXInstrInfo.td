@@ -150,8 +150,7 @@ class SubtargetPredicate : Predicate<"Subtarget->" # NAME # "()">;
 
 def hasAtomAddF64 : SubtargetPredicate;
 def hasAtomScope : SubtargetPredicate;
-def hasAtomBitwise64 : SubtargetPredicate;
-def hasAtomMinMax64 : SubtargetPredicate;
+def hasAtomMinMaxAndOrXor : SubtargetPredicate;
 def hasAtomSwap128 : SubtargetPredicate;
 def hasClusters : SubtargetPredicate;
 def hasPTXASUnreachableBug : SubtargetPredicate;
@@ -2061,9 +2060,9 @@ foreach is_convergent = [0, 1] in {
   let isCall = 1, isConvergent = is_convergent in {
     def CALL # convergent_suffix :
       NVPTXInst<(outs),
-                (ins ADDR_base:$addr, CallOperand:$rets, CallOperand:$params, 
+                (ins ADDR_base:$addr, CallOperand:$rets, CallOperand:$params,
                      i32imm:$proto),
-                "call${rets:RetList} $addr, (${params:ParamList}), prototype_$proto;">;
+                "call${rets:RetList} $addr, (${params:ParamList}), $proto;">;
 
     def CALL_UNI # convergent_suffix :
       NVPTXInst<(outs),
@@ -2072,10 +2071,10 @@ foreach is_convergent = [0, 1] in {
   }
 
   defvar call_inst = !cast<NVPTXInst>("CALL" # convergent_suffix);
-  def : Pat<(call is_convergent, 1, imm:$rets, imm:$params, i32:$addr, imm:$proto),
-            (call_inst $addr, imm:$rets, imm:$params, imm:$proto)>;
-  def : Pat<(call is_convergent, 1, imm:$rets, imm:$params, i64:$addr, imm:$proto),
-            (call_inst $addr, imm:$rets, imm:$params, imm:$proto)>;
+  def : Pat<(call is_convergent, 1, imm:$rets, imm:$params, i32:$addr, mcsym:$proto),
+            (call_inst $addr, imm:$rets, imm:$params, mcsym:$proto)>;
+  def : Pat<(call is_convergent, 1, imm:$rets, imm:$params, i64:$addr, mcsym:$proto),
+            (call_inst $addr, imm:$rets, imm:$params, mcsym:$proto)>;
 
   defvar call_uni_inst = !cast<NVPTXInst>("CALL_UNI" # convergent_suffix);
   def : Pat<(call is_convergent, 0, imm:$rets, imm:$params, globaladdr:$addr, 0),
