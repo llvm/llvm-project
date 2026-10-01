@@ -13,12 +13,12 @@
 
 // Test that AMDGPU builtins are available on AMDGCN-flavored SPIR-V.
 
-// FIXME: CIR doesn't propagate the 'contract' fast-math flag to LLVM IR yet,
-// so the LLVM check lines use call{{.*}} to tolerate the difference between
-// CIR (no flags) and classic codegen ('contract').
+// FIXME: CIR doesn't propagate the 'contract' fast-math flag to LLVM IR yet.
+// The LLVM checks match the flag-free form and fail once it lands.
 
-// FIXME: CIR doesn't cast allocas to the generic address space yet, so the
-// LLVM output lacks the addrspacecast that classic codegen emits.
+// FIXME: CIR lowers the Default address space to 0 rather than generic on
+// SPIR-V, so the LLVM output lacks the addrspacecast that classic codegen
+// emits. The LLVM checks fail once it lands.
 
 #define __device__ __attribute__((device))
 
@@ -30,6 +30,7 @@ __device__ int test_readfirstlane(int x) {
 // CIR: cir.call_llvm_intrinsic "amdgcn.readfirstlane" {{.*}} : (!s32i) -> !s32i
 
 // LLVM-LABEL: define spir_func noundef i32 @_Z18test_readfirstlanei
+// LLVM-NOT: addrspacecast
 // LLVM: call{{.*}} @llvm.amdgcn.readfirstlane.i32
 
 // OGCG-LABEL: define spir_func noundef i32 @_Z18test_readfirstlanei
@@ -44,7 +45,7 @@ __device__ float test_rcp(float x) {
 // CIR: cir.call_llvm_intrinsic "amdgcn.rcp" {{.*}} : (!cir.float) -> !cir.float
 
 // LLVM-LABEL: define spir_func noundef float @_Z8test_rcpf
-// LLVM: call{{.*}} @llvm.amdgcn.rcp.f32
+// LLVM: call addrspace(4) float @llvm.amdgcn.rcp.f32
 
 // OGCG-LABEL: define spir_func noundef float @_Z8test_rcpf
 // OGCG: call contract{{.*}} @llvm.amdgcn.rcp.f32
@@ -75,11 +76,13 @@ __device__ float test_logb(float x) {
 // CIR-LABEL: cir.func no_inline @_Z9test_logbf
 // CIR: cir.call_llvm_intrinsic "frexp" %{{.*}} : (!cir.float) -> !rec_anon_struct
 
+// FIXME: CIR emits 'add' without 'nsw' and 'fcmp une' instead of 'fcmp one'.
+
 // LLVM-LABEL: define spir_func noundef float @_Z9test_logbf
 // LLVM: call{{.*}} @llvm.frexp.f32.i32
-// LLVM: add nsw i32 %{{.*}}, -1
-// LLVM: call{{.*}} @llvm.fabs.f32
-// LLVM: fcmp one float %{{.*}}, +inf
+// LLVM: add i32 %{{.*}}, -1
+// LLVM: call addrspace(4) float @llvm.fabs.f32
+// LLVM: fcmp une float %{{.*}}, +inf
 
 // OGCG-LABEL: define spir_func noundef float @_Z9test_logbf
 // OGCG: call{{.*}} @llvm.frexp.f32.i32

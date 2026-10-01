@@ -3368,8 +3368,6 @@ emitTargetArchBuiltinExpr(CIRGenFunction *cgf, unsigned builtinID,
   case llvm::Triple::spirv64:
     if (cgf->getTarget().getTriple().getOS() == llvm::Triple::OSType::AMDHSA)
       return cgf->emitAMDGPUBuiltinExpr(builtinID, e);
-    [[fallthrough]];
-  case llvm::Triple::spirv:
     return std::nullopt;
   default:
     return std::nullopt;
