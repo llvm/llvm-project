@@ -11,6 +11,21 @@
 
 typedef global int *global_int_ptr;
 
+constant int const_gv = 42;
+global int global_gv = 7;
+global int tentative_gv;
+const sampler_t sampler_gv = 0;
+
+// CIR-DAG: cir.global constant external lang_address_space(offload_constant) @const_gv = #cir.int<42> : !s32i
+// CIR-DAG: cir.global external lang_address_space(offload_global) @global_gv = #cir.int<7> : !s32i
+// CIR-DAG: cir.global external lang_address_space(offload_global) @tentative_gv = #cir.int<0> : !s32i
+// CIR-NOT: @sampler_gv
+
+// LLVM-DAG: @const_gv = addrspace(2) constant i32 42
+// LLVM-DAG: @global_gv = addrspace(1) global i32 7
+// LLVM-DAG: @tentative_gv = addrspace(1) global i32 0
+// LLVM-NOT: @sampler_gv
+
 void pointer_types(
     private int *private_ptr, local int *local_ptr, global int *global_ptr,
     constant int *constant_ptr, generic int *generic_ptr,
