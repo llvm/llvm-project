@@ -29,23 +29,78 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
       }
     llvm.return
   }
+
+  llvm.func @target_nowait_wsloop() attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = to>} {
+      %loop_ub = llvm.mlir.constant(9 : i32) : i32
+      %loop_lb = llvm.mlir.constant(0 : i32) : i32
+      %loop_step = llvm.mlir.constant(1 : i32) : i32
+      omp.wsloop nowait {
+        omp.loop_nest (%loop_cnt) : i32 = (%loop_lb) to (%loop_ub) inclusive step (%loop_step) {
+          omp.yield
+        }
+      }
+    llvm.return
+  }
+
+  llvm.func @target_zero_trip_wsloop() attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = to>} {
+      %loop_ub = llvm.mlir.constant(-1 : i32) : i32
+      %loop_lb = llvm.mlir.constant(0 : i32) : i32
+      %loop_step = llvm.mlir.constant(1 : i32) : i32
+      omp.wsloop {
+        omp.loop_nest (%loop_cnt) : i32 = (%loop_lb) to (%loop_ub) inclusive step (%loop_step) {
+          omp.yield
+        }
+      }
+    llvm.return
+  }
 }
 
-// CHECK: define hidden void @[[FUNC0:.*]](ptr %[[ARG0:.*]])
+// CHECK-LABEL: define hidden void @target_wsloop(
+// CHECK-SAME: ptr %[[ARG0:.*]])
 // CHECK:   %[[STRUCTARG:.*]] = alloca { ptr }, align 8, addrspace(5)
 // CHECK:   %[[STRUCTARG_ASCAST:.*]] = addrspacecast ptr addrspace(5) %[[STRUCTARG]] to ptr
 // CHECK:   %[[GEP:.*]] = getelementptr { ptr }, ptr addrspace(5) %[[STRUCTARG]], i32 0, i32 0
 // CHECK:   store ptr %[[ARG0]], ptr addrspace(5) %[[GEP]], align 8
 // CHECK:   %[[NUM_THREADS:.*]] = call i32 @omp_get_num_threads()
 // CHECK:   call void @__kmpc_for_static_loop_4u(ptr addrspacecast (ptr addrspace(1) @[[GLOB1:[0-9]+]] to ptr), ptr @[[LOOP_BODY_FN:.*]], ptr %[[STRUCTARG_ASCAST]], i32 10, i32 %[[NUM_THREADS]], i32 0, i8 0)
+// CHECK-NEXT: br label %[[LOOP_EXIT:[^ ]+]]
+// CHECK: [[LOOP_EXIT]]:
+// CHECK:   call void @__kmpc_barrier(
+// CHECK:   ret void
 
 // CHECK: define internal void @[[LOOP_BODY_FN]](i32 %[[LOOP_CNT:.*]], ptr %[[LOOP_BODY_ARG:.*]])
 // CHECK:   %[[GEP2:.*]] = getelementptr { ptr }, ptr %[[LOOP_BODY_ARG]], i32 0, i32 0
 // CHECK:   %[[LOADGEP:.*]] = load ptr, ptr %[[GEP2]], align 8
 // CHECK:   %[[GEP3:.*]] = getelementptr [10 x i32], ptr %[[LOADGEP]], i32 0, i32 %[[TMP2:.*]]
 // CHECK:   store i32 %[[VAL0:.*]], ptr %[[GEP3]], align 4
+// CHECK:   ret void
 
-// CHECK: define hidden void @[[FUNC_EMPTY_WSLOOP:.*]]()
+// CHECK-LABEL: define hidden void @target_empty_wsloop()
 // CHECK:   call void @__kmpc_for_static_loop_4u(ptr addrspacecast (ptr addrspace(1) @[[GLOB2:[0-9]+]] to ptr), ptr @[[LOOP_EMPTY_BODY_FN:.*]], ptr null, i32 10, i32 %[[NUM_THREADS:.*]], i32 0, i8 0)
+// CHECK:   call void @__kmpc_barrier(
+// CHECK:   ret void
 
 // CHECK: define internal void @[[LOOP_EMPTY_BODY_FN]](i32 %[[LOOP_CNT:.*]])
+// CHECK-NOT: @__kmpc{{.*}}barrier
+// CHECK:   ret void
+
+// A nowait loop must not synchronize in either the caller or outlined body.
+// CHECK-LABEL: define hidden void @target_nowait_wsloop()
+// CHECK-NOT: @__kmpc{{.*}}barrier
+// CHECK:   call void @__kmpc_for_static_loop_4u({{.*}}, ptr @[[NOWAIT_BODY:[^,]+]], ptr null, i32 10,
+// CHECK-NOT: @__kmpc{{.*}}barrier
+// CHECK:   ret void
+// CHECK: define internal void @[[NOWAIT_BODY]](
+// CHECK-NOT: @__kmpc{{.*}}barrier
+// CHECK:   ret void
+
+// All threads must reach the implicit barrier even when no iterations execute.
+// CHECK-LABEL: define hidden void @target_zero_trip_wsloop()
+// CHECK:   call void @__kmpc_for_static_loop_4u({{.*}}, ptr @[[ZERO_TRIP_BODY:[^,]+]], ptr null, i32 0,
+// CHECK-NEXT: br label %[[ZERO_TRIP_EXIT:[^ ]+]]
+// CHECK: [[ZERO_TRIP_EXIT]]:
+// CHECK:   call void @__kmpc_barrier(
+// CHECK:   ret void
+// CHECK: define internal void @[[ZERO_TRIP_BODY]](
+// CHECK-NOT: @__kmpc{{.*}}barrier
+// CHECK:   ret void

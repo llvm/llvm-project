@@ -2895,6 +2895,18 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return &CI;
     break;
   }
+
+  case Intrinsic::smulh: {
+    Value *Arg0 = II->getArgOperand(0);
+    Value *Arg1 = II->getArgOperand(1);
+    unsigned BitWidth = II->getType()->getScalarSizeInBits();
+
+    // Multiply by one.
+    if (match(Arg1, m_One()))
+      return replaceInstUsesWith(CI, Builder.CreateAShr(Arg0, BitWidth - 1));
+    break;
+  }
+
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::sadd_with_overflow: {
     if (Instruction *I = foldIntrinsicWithOverflowCommon(II))
@@ -5049,12 +5061,12 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
     if (V->getType()->isPointerTy()) {
       // Simplify the nonnull operand if the parameter is known to be nonnull.
       // Otherwise, try to infer nonnull for it.
-      bool HasDereferenceable = Call.getParamDereferenceableBytes(ArgNo) > 0;
-      if (Call.paramHasAttr(ArgNo, Attribute::NonNull) ||
-          (HasDereferenceable &&
-           !NullPointerIsDefined(Call.getFunction(),
-                                 V->getType()->getPointerAddressSpace()))) {
-        if (Value *Res = simplifyNonNullOperand(V, HasDereferenceable)) {
+      bool UseProvenance =
+          Call.getParamDereferenceableBytes(ArgNo) > 0 &&
+          !NullPointerIsDefined(Call.getFunction(),
+                                V->getType()->getPointerAddressSpace());
+      if (Call.paramHasAttr(ArgNo, Attribute::NonNull) || UseProvenance) {
+        if (Value *Res = simplifyNonNullOperand(V, UseProvenance)) {
           replaceOperand(Call, ArgNo, Res);
           Changed = true;
         }
