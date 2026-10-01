@@ -134,10 +134,9 @@ protected:
 
 public:
   IRBuilderBase(LLVMContext &context, const IRBuilderFolder &Folder,
-                const IRBuilderDefaultInserter &Inserter, MDNode *FPMathTag,
-                ArrayRef<OperandBundleDef> OpBundles)
+                const IRBuilderDefaultInserter &Inserter, MDNode *FPMathTag)
       : Context(context), Folder(Folder), Inserter(Inserter),
-        DefaultFPMathTag(FPMathTag), DefaultOperandBundles(OpBundles) {
+        DefaultFPMathTag(FPMathTag) {
     ClearInsertionPoint();
   }
 
@@ -2926,57 +2925,49 @@ private:
 
 public:
   IRBuilder(LLVMContext &C, FolderTy Folder, InserterTy Inserter,
-            MDNode *FPMathTag = nullptr,
-            ArrayRef<OperandBundleDef> OpBundles = {})
-      : IRBuilderBase(C, this->Folder, this->Inserter, FPMathTag, OpBundles),
+            MDNode *FPMathTag = nullptr)
+      : IRBuilderBase(C, this->Folder, this->Inserter, FPMathTag),
         Folder(Folder), Inserter(Inserter) {}
 
-  IRBuilder(LLVMContext &C, FolderTy Folder, MDNode *FPMathTag = nullptr,
-            ArrayRef<OperandBundleDef> OpBundles = {})
-      : IRBuilderBase(C, this->Folder, this->Inserter, FPMathTag, OpBundles),
+  IRBuilder(LLVMContext &C, FolderTy Folder, MDNode *FPMathTag = nullptr)
+      : IRBuilderBase(C, this->Folder, this->Inserter, FPMathTag),
         Folder(Folder) {}
 
-  explicit IRBuilder(LLVMContext &C, MDNode *FPMathTag = nullptr,
-                     ArrayRef<OperandBundleDef> OpBundles = {})
-      : IRBuilderBase(C, this->Folder, this->Inserter, FPMathTag, OpBundles) {}
+  explicit IRBuilder(LLVMContext &C, MDNode *FPMathTag = nullptr)
+      : IRBuilderBase(C, this->Folder, this->Inserter, FPMathTag) {}
 
   explicit IRBuilder(BasicBlock *TheBB, FolderTy Folder,
-                     MDNode *FPMathTag = nullptr,
-                     ArrayRef<OperandBundleDef> OpBundles = {})
+                     MDNode *FPMathTag = nullptr)
       : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter,
-                      FPMathTag, OpBundles),
+                      FPMathTag),
         Folder(Folder) {
     SetInsertPoint(TheBB);
   }
 
-  explicit IRBuilder(BasicBlock *TheBB, MDNode *FPMathTag = nullptr,
-                     ArrayRef<OperandBundleDef> OpBundles = {})
+  explicit IRBuilder(BasicBlock *TheBB, MDNode *FPMathTag = nullptr)
       : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter,
-                      FPMathTag, OpBundles) {
+                      FPMathTag) {
     SetInsertPoint(TheBB);
   }
 
-  explicit IRBuilder(Instruction *IP, MDNode *FPMathTag = nullptr,
-                     ArrayRef<OperandBundleDef> OpBundles = {})
-      : IRBuilderBase(IP->getContext(), this->Folder, this->Inserter, FPMathTag,
-                      OpBundles) {
+  explicit IRBuilder(Instruction *IP, MDNode *FPMathTag = nullptr)
+      : IRBuilderBase(IP->getContext(), this->Folder, this->Inserter,
+                      FPMathTag) {
     SetInsertPoint(IP);
   }
 
   IRBuilder(BasicBlock *TheBB, BasicBlock::iterator IP, FolderTy Folder,
-            MDNode *FPMathTag = nullptr,
-            ArrayRef<OperandBundleDef> OpBundles = {})
+            MDNode *FPMathTag = nullptr)
       : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter,
-                      FPMathTag, OpBundles),
+                      FPMathTag),
         Folder(Folder) {
     SetInsertPoint(TheBB, IP);
   }
 
   IRBuilder(BasicBlock *TheBB, BasicBlock::iterator IP,
-            MDNode *FPMathTag = nullptr,
-            ArrayRef<OperandBundleDef> OpBundles = {})
+            MDNode *FPMathTag = nullptr)
       : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter,
-                      FPMathTag, OpBundles) {
+                      FPMathTag) {
     SetInsertPoint(TheBB, IP);
   }
 
@@ -2989,20 +2980,17 @@ public:
 };
 
 template <typename FolderTy, typename InserterTy>
-IRBuilder(LLVMContext &, FolderTy, InserterTy, MDNode *,
-          ArrayRef<OperandBundleDef>) -> IRBuilder<FolderTy, InserterTy>;
-IRBuilder(LLVMContext &, MDNode *, ArrayRef<OperandBundleDef>) -> IRBuilder<>;
+IRBuilder(LLVMContext &, FolderTy, InserterTy, MDNode *)
+    -> IRBuilder<FolderTy, InserterTy>;
+IRBuilder(LLVMContext &, MDNode *) -> IRBuilder<>;
 template <typename FolderTy>
-IRBuilder(BasicBlock *, FolderTy, MDNode *, ArrayRef<OperandBundleDef>)
+IRBuilder(BasicBlock *, FolderTy, MDNode *) -> IRBuilder<FolderTy>;
+IRBuilder(BasicBlock *, MDNode *) -> IRBuilder<>;
+IRBuilder(Instruction *, MDNode *) -> IRBuilder<>;
+template <typename FolderTy>
+IRBuilder(BasicBlock *, BasicBlock::iterator, FolderTy, MDNode *)
     -> IRBuilder<FolderTy>;
-IRBuilder(BasicBlock *, MDNode *, ArrayRef<OperandBundleDef>) -> IRBuilder<>;
-IRBuilder(Instruction *, MDNode *, ArrayRef<OperandBundleDef>) -> IRBuilder<>;
-template <typename FolderTy>
-IRBuilder(BasicBlock *, BasicBlock::iterator, FolderTy, MDNode *,
-          ArrayRef<OperandBundleDef>) -> IRBuilder<FolderTy>;
-IRBuilder(BasicBlock *, BasicBlock::iterator, MDNode *,
-          ArrayRef<OperandBundleDef>) -> IRBuilder<>;
-
+IRBuilder(BasicBlock *, BasicBlock::iterator, MDNode *) -> IRBuilder<>;
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(IRBuilder<>, LLVMBuilderRef)
