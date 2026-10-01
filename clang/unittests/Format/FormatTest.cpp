@@ -24960,8 +24960,11 @@ TEST_F(FormatTest, IndentAccessModifiersAfterFirst) {
                "    int last;\n"
                "};",
                Style);
+}
 
-  // Also cover the Allman layout from issue #61631.
+TEST_F(FormatTest, IndentAccessModifiersAfterFirstAllman) {
+  FormatStyle Style = getLLVMStyle();
+  Style.IndentAccessModifiers = FormatStyle::IAMS_AfterFirstAccessModifier;
   Style.IndentWidth = 4;
   Style.EmptyLineBeforeAccessModifier = FormatStyle::ELBAMS_Never;
   Style.BreakBeforeBraces = FormatStyle::BS_Allman;
@@ -25000,7 +25003,13 @@ TEST_F(FormatTest, IndentAccessModifiersAfterFirst) {
                "        void changed();\n"
                "};",
                Style);
+}
 
+TEST_F(FormatTest, IndentAccessModifiersAfterFirstWhitesmiths) {
+  FormatStyle Style = getLLVMStyle();
+  Style.IndentAccessModifiers = FormatStyle::IAMS_AfterFirstAccessModifier;
+  Style.IndentWidth = 4;
+  Style.EmptyLineBeforeAccessModifier = FormatStyle::ELBAMS_Never;
   Style.BreakBeforeBraces = FormatStyle::BS_Whitesmiths;
   verifyFormat("struct S\n"
                "    {\n"
