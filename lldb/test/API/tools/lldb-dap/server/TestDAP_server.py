@@ -167,10 +167,10 @@ class TestDAP_server(DAPTestCaseBase):
         session2.continue_to_exit()
 
     def start_server(self, connection: str, connection_timeout: int = 30):
-        adapter = self.create_server_debug_adapter(
+        options = DebugAdapterOptions(
             connection=connection, connection_timeout=connection_timeout
         )
-        return adapter
+        return self.create_server_debug_adapter(options)
 
     def launch_to_breakpoint(self, session: DAPTestSession, name: str):
         program = self.getBuildArtifact("a.out")
