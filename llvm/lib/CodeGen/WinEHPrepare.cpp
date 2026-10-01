@@ -104,6 +104,10 @@ static bool isMalformedCatchpad(const CatchPadInst *CPI,
 
     return false;
   }
+  case EHPersonality::Wasm_D: {
+    // TODO: what properties should be checked for the Wasm_D personality?
+    return false;
+  }
   default:
     llvm_unreachable("Unsupported Personality for WinEH");
   }
@@ -1009,6 +1013,9 @@ bool WinEHPrepareImpl::removeMalformedCatchswitch(Value *FuncletToken) {
         break;
       case EHPersonality::CoreCLR:
         args = {constantZero};
+        break;
+      case EHPersonality::Wasm_D:
+        // TODO: how do we encode a catch all for the Wasm_D personality?
         break;
       default:
         llvm_unreachable("Unsupported Personality for WinEH");
