@@ -128,7 +128,7 @@ set(LIBC_TEST_HERMETIC_ONLY "" OFF CACHE BOOL "Only enable hermetic tests.")
 list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT ${LIBC_COMMON_TUNE_OPTIONS})
 
 # Find the compiler resource dir for compilers that support it.
-if(NOT DEFINED COMPILER_RESOURCE_DIR OR "${COMPILER_RESOURCE_DIR}" STREQUAL "")
+if(NOT COMPILER_RESOURCE_DIR)
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     execute_process(
       COMMAND ${CMAKE_CXX_COMPILER} --print-resource-dir
