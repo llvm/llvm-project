@@ -1503,6 +1503,10 @@ bool CursorVisitor::VisitTemplateName(TemplateName Name, SourceLocation NameLoc,
         Name.getAsSubstTemplateTemplateParmPack()->getParameterPack(), NameLoc,
         TU));
 
+  case TemplateName::PackIndexingTemplate:
+    return VisitTemplateName(Name.getAsPackIndexingTemplate()->getPattern(),
+                             NameLoc, NNS);
+
   case TemplateName::DeducedTemplate:
     llvm_unreachable("DeducedTemplate shouldn't appear in source");
   }
@@ -1593,6 +1597,8 @@ bool CursorVisitor::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/SPIRVTypes.def"
 #define BUILTIN_TYPE(Id, SingletonId)
@@ -2172,6 +2178,7 @@ public:
   void VisitOMPUnrollDirective(const OMPUnrollDirective *D);
   void VisitOMPReverseDirective(const OMPReverseDirective *D);
   void VisitOMPInterchangeDirective(const OMPInterchangeDirective *D);
+  void VisitOMPFlattenDirective(const OMPFlattenDirective *D);
   void VisitOMPCanonicalLoopSequenceTransformationDirective(
       const OMPCanonicalLoopSequenceTransformationDirective *D);
   void VisitOMPFuseDirective(const OMPFuseDirective *D);
@@ -2393,6 +2400,10 @@ void OMPClauseEnqueue::VisitOMPPartialClause(const OMPPartialClause *C) {
 void OMPClauseEnqueue::VisitOMPLoopRangeClause(const OMPLoopRangeClause *C) {
   Visitor->AddStmt(C->getFirst());
   Visitor->AddStmt(C->getCount());
+}
+
+void OMPClauseEnqueue::VisitOMPDepthClause(const OMPDepthClause *C) {
+  Visitor->AddStmt(C->getDepth());
 }
 
 void OMPClauseEnqueue::VisitOMPAllocatorClause(const OMPAllocatorClause *C) {
@@ -3375,6 +3386,10 @@ void EnqueueVisitor::VisitOMPReverseDirective(const OMPReverseDirective *D) {
 
 void EnqueueVisitor::VisitOMPInterchangeDirective(
     const OMPInterchangeDirective *D) {
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
+}
+
+void EnqueueVisitor::VisitOMPFlattenDirective(const OMPFlattenDirective *D) {
   VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
@@ -6356,6 +6371,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPReverseDirective");
   case CXCursor_OMPInterchangeDirective:
     return cxstring::createRef("OMPInterchangeDirective");
+  case CXCursor_OMPFlattenDirective:
+    return cxstring::createRef("OMPFlattenDirective");
   case CXCursor_OMPFuseDirective:
     return cxstring::createRef("OMPFuseDirective");
   case CXCursor_OMPSplitDirective:

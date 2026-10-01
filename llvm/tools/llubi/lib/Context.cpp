@@ -1106,7 +1106,7 @@ Context::allocate(uint64_t Size, uint64_t Align, StringRef Name, unsigned AS,
   // Even if the memory object is zero-sized, it still occupies a byte to obtain
   // a unique address.
   uint64_t AllocateSize = std::max(Size, (uint64_t)1);
-  if (MaxMem != 0 && SaturatingAdd(UsedMem, AllocateSize) >= MaxMem)
+  if (SaturatingAdd(UsedMem, AllocateSize) >= MaxMem)
     return nullptr;
   uint64_t AlignedAddr = alignTo(AllocationBase, Align);
   auto MemObj = makeIntrusiveRefCnt<MemoryObject>(

@@ -120,7 +120,8 @@ def CallOp : Func_Op<"call",
   }];
 
   let assemblyFormat = [{
-    $callee `(` $operands `)` attr-dict `:` functional-type($operands, results)
+    $callee `(` $operands `)` prop-dict attr-dict `:`
+    functional-type($operands, results)
   }];
 }
 
@@ -197,7 +198,12 @@ def CallIndirectOp : Func_Op<"call_indirect", [
 
   let hasCanonicalizeMethod = 1;
   let assemblyFormat = [{
-    $callee `(` $callee_operands `)` attr-dict `:` type($callee)
+    $callee `(` $callee_operands `)`
+    oilist<`,`>(
+        `arg_attrs` `=` $arg_attrs
+      | `res_attrs` `=` $res_attrs
+    )
+    attr-dict `:` type($callee)
   }];
 }
 
@@ -249,7 +255,8 @@ def ConstantOp : Func_Op<"constant",
 
 def FuncOp : Func_Op<"func", [
   AffineScope, AutomaticAllocationScope,
-  FunctionOpInterface, IsolatedFromAbove, OpAsmOpInterface
+  SymbolName, SymbolVisibility, FunctionOpInterface, IsolatedFromAbove,
+  OpAsmOpInterface
 ]> {
   let summary = "An operation with a name containing a single `SSACFG` region";
   let description = [{

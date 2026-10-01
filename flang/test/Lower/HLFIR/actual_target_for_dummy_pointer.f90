@@ -22,7 +22,7 @@ end subroutine integer_scalar
 ! CHECK-LABEL:   func.func @_QPinteger_scalar() {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.class<!fir.ptr<none>>
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<i32>>
-! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "i", fir.target, uniq_name = "_QFinteger_scalarEi"}
+! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFinteger_scalarEi"}> {fir.target}
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFinteger_scalarEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_4:.*]] = fir.embox %[[VAL_3]]#0 : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
 ! CHECK:           fir.store %[[VAL_4]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
@@ -77,7 +77,7 @@ end subroutine integer_explicit_shape_array
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.array<?xnone>>>
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>>
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 100 : index
-! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.array<100xi32> {bindc_name = "i", fir.target, uniq_name = "_QFinteger_explicit_shape_arrayEi"}
+! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.array<100xi32> <{bindc_name = "i", uniq_name = "_QFinteger_explicit_shape_arrayEi"}> {fir.target}
 ! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_4]]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFinteger_explicit_shape_arrayEi"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
@@ -113,7 +113,7 @@ end subroutine char_scalar
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.char<1,?>>>
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.char<1,2>>>
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 2 : index
-! CHECK:           %[[VAL_4:.*]] = fir.alloca !fir.char<1,2> {bindc_name = "a", fir.target, uniq_name = "_QFchar_scalarEa"}
+! CHECK:           %[[VAL_4:.*]] = fir.alloca !fir.char<1,2> <{bindc_name = "a", uniq_name = "_QFchar_scalarEa"}> {fir.target}
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] typeparams %[[VAL_3]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFchar_scalarEa"} : (!fir.ref<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>)
 ! CHECK:           %[[VAL_6:.*]] = fir.embox %[[VAL_5]]#0 : (!fir.ref<!fir.char<1,2>>) -> !fir.box<!fir.ptr<!fir.char<1,2>>>
 ! CHECK:           fir.store %[[VAL_6]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,2>>>>
@@ -213,7 +213,7 @@ end subroutine char_explicit_shape_array
 ! CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,2>>>>
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 2 : index
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 100 : index
-! CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.array<100x!fir.char<1,2>> {bindc_name = "a1", fir.target, uniq_name = "_QFchar_explicit_shape_arrayEa1"}
+! CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.array<100x!fir.char<1,2>> <{bindc_name = "a1", uniq_name = "_QFchar_explicit_shape_arrayEa1"}> {fir.target}
 ! CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_8]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]](%[[VAL_10]]) typeparams %[[VAL_7]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFchar_explicit_shape_arrayEa1"} : (!fir.ref<!fir.array<100x!fir.char<1,2>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<100x!fir.char<1,2>>>, !fir.ref<!fir.array<100x!fir.char<1,2>>>)
 ! CHECK:           %[[VAL_12:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
@@ -277,7 +277,7 @@ end subroutine type_scalar
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.class<!fir.ptr<none>>
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMtarget_to_pointer_typesTt1>>>
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.type<_QMtarget_to_pointer_typesTt1>>>
-! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.type<_QMtarget_to_pointer_typesTt1> {bindc_name = "t", fir.target, uniq_name = "_QFtype_scalarEt"}
+! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.type<_QMtarget_to_pointer_typesTt1> <{bindc_name = "t", uniq_name = "_QFtype_scalarEt"}> {fir.target}
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtype_scalarEt"} : (!fir.ref<!fir.type<_QMtarget_to_pointer_typesTt1>>) -> (!fir.ref<!fir.type<_QMtarget_to_pointer_typesTt1>>, !fir.ref<!fir.type<_QMtarget_to_pointer_typesTt1>>)
 ! CHECK:           %[[VAL_5:.*]] = fir.embox %[[VAL_4]]#0 : (!fir.ref<!fir.type<_QMtarget_to_pointer_typesTt1>>) -> !fir.box<!fir.ptr<!fir.type<_QMtarget_to_pointer_typesTt1>>>
 ! CHECK:           fir.store %[[VAL_5]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMtarget_to_pointer_typesTt1>>>>
@@ -356,7 +356,7 @@ end subroutine type_explicit_shape_array
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMtarget_to_pointer_typesTt1>>>>
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMtarget_to_pointer_typesTt1>>>>
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 100 : index
-! CHECK:           %[[VAL_4:.*]] = fir.alloca !fir.array<100x!fir.type<_QMtarget_to_pointer_typesTt1>> {bindc_name = "t", fir.target, uniq_name = "_QFtype_explicit_shape_arrayEt"}
+! CHECK:           %[[VAL_4:.*]] = fir.alloca !fir.array<100x!fir.type<_QMtarget_to_pointer_typesTt1>> <{bindc_name = "t", uniq_name = "_QFtype_explicit_shape_arrayEt"}> {fir.target}
 ! CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_4]](%[[VAL_5]]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtype_explicit_shape_arrayEt"} : (!fir.ref<!fir.array<100x!fir.type<_QMtarget_to_pointer_typesTt1>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100x!fir.type<_QMtarget_to_pointer_typesTt1>>>, !fir.ref<!fir.array<100x!fir.type<_QMtarget_to_pointer_typesTt1>>>)
 ! CHECK:           %[[VAL_7:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>

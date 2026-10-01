@@ -688,6 +688,17 @@ m_SpecificInt_ICMP(ICmpInst::Predicate Predicate, const APInt &Threshold) {
   return P;
 }
 
+/// Match an integer or vector with every element comparing 'pred' (eg/ne/...)
+/// to Threshold. For vectors, this includes constants with undefined elements.
+inline cst_pred_ty<icmp_pred_with_threshold, false>
+m_SpecificInt_ICMP_ForbidPoison(ICmpInst::Predicate Predicate,
+                                const APInt &Threshold) {
+  cst_pred_ty<icmp_pred_with_threshold, false> P;
+  P.Pred = Predicate;
+  P.Thr = &Threshold;
+  return P;
+}
+
 struct is_nan {
   bool isValue(const APFloat &C) const { return C.isNaN(); }
 };
@@ -2982,6 +2993,12 @@ template <typename LHS, typename RHS>
 inline CmpClass_match<LHS, RHS, ICmpInst, true> m_c_ICmp(const LHS &L,
                                                          const RHS &R) {
   return CmpClass_match<LHS, RHS, ICmpInst, true>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline CmpClass_match<LHS, RHS, CmpInst, true> m_c_Cmp(const LHS &L,
+                                                       const RHS &R) {
+  return CmpClass_match<LHS, RHS, CmpInst, true>(L, R);
 }
 
 /// Matches a specific opcode with LHS and RHS in either order.

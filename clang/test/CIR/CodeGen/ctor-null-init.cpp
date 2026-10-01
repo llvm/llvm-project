@@ -19,7 +19,7 @@ void test_empty_base_null_init() {
 
 // CIR: cir.func {{.*}} @_Z25test_empty_base_null_initv()
 // CIR-NEXT:   %[[B_ADDR:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} : !cir.ptr<!rec_B>
-// CIR-NEXT:   %[[A_ADDR:.*]] = cir.base_class_addr %[[B_ADDR]] : !cir.ptr<!rec_B> nonnull [0] -> !cir.ptr<!rec_A>
+// CIR-NEXT:   %[[A_ADDR:.*]] = cir.base_class_addr nonnull %[[B_ADDR]] [0] : !cir.ptr<!rec_B> -> !cir.ptr<!rec_A>
 
 // LLVM: define{{.*}} @_Z25test_empty_base_null_initv()
 // LLVM-NEXT:   %[[B:.*]] = alloca %struct.B
@@ -46,7 +46,7 @@ void test_non_empty_base_null_init() {
 
 // CIR: cir.func {{.*}} @_Z29test_non_empty_base_null_initv()
 // CIR:   %[[TMP:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} : !cir.ptr<!rec_D>
-// CIR:   %[[BASE:.*]] = cir.base_class_addr %[[TMP]] : !cir.ptr<!rec_D> nonnull [0] -> !cir.ptr<!rec_C>
+// CIR:   %[[BASE:.*]] = cir.base_class_addr nonnull %[[TMP]] [0] : !cir.ptr<!rec_D> -> !cir.ptr<!rec_C>
 // CIR:   %[[ZERO:.*]] = cir.const #cir.const_record<{#cir.int<0> : !s32i}> : !rec_C
 // CIR:   cir.store{{.*}} %[[ZERO]], %[[BASE]]
 
@@ -77,7 +77,7 @@ void test_base_chain_null_init() {
 
 // CIR: cir.func {{.*}} @_Z25test_base_chain_null_initv()
 // CIR:   %[[TMP:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} : !cir.ptr<!rec_G>
-// CIR:   %[[BASE:.*]] = cir.base_class_addr %[[TMP]] : !cir.ptr<!rec_G> nonnull [0] -> !cir.ptr<!rec_F>
+// CIR:   %[[BASE:.*]] = cir.base_class_addr nonnull %[[TMP]] [0] : !cir.ptr<!rec_G> -> !cir.ptr<!rec_F>
 // CIR:   %[[ZERO:.*]] = cir.const #cir.const_record<{#cir.zero : !rec_E}> : !rec_F
 // CIR:   cir.store{{.*}} %[[ZERO]], %[[BASE]]
 
@@ -103,10 +103,10 @@ VDerived::VDerived() : VBase() {}
 // OGCG: %[[ADDR:.*]] = getelementptr inbounds i8, ptr %[[THIS:.*]],
 // OGCG: call void @llvm.memset.p0.i64(ptr align 8 %[[ADDR]], i8 0, i64 8, i1 false)
 // OGCG: call void @_ZN5VBaseC2Ev(ptr noundef nonnull align 8 dereferenceable(8) %[[THIS]])
-// OGCG: store ptr getelementptr inbounds inrange(-16, 16) ({ [4 x ptr] }, ptr @_ZTV8VDerived, i32 0, i32 0, i32 2), ptr %[[THIS]], align 8
+// OGCG: store ptr getelementptr inbounds inrange(-16, 16) (i8, ptr @_ZTV8VDerived, i64 16), ptr %[[THIS]], align 8
 
 // CIR-LABEL: cir.func {{.*}}@_ZN8VDerivedC2Ev
-// CIR: %[[BASE:.*]] = cir.base_class_addr {{.*}} : !cir.ptr<!rec_VDerived> nonnull [0] -> !cir.ptr<!rec_VBase>
+// CIR: %[[BASE:.*]] = cir.base_class_addr nonnull {{.*}} [0] : !cir.ptr<!rec_VDerived> -> !cir.ptr<!rec_VBase>
 // CIR: %[[ZERO:.*]] = cir.const #cir.const_record<{#cir.zero : !cir.vptr}> : !rec_VBase 
 // CIR: cir.store align(8) %[[ZERO]], %[[BASE]] : !rec_VBase, !cir.ptr<!rec_VBase>
 // CIR: cir.call @_ZN5VBaseC2Ev(%[[BASE]])
@@ -125,4 +125,4 @@ VDerived::VDerived() : VBase() {}
 // LLVM-LABEL: define {{.*}}@_ZN5VBaseC2Ev
 // LLVM: store ptr getelementptr inbounds nuw (i8, ptr @_ZTV5VBase, i64 16), ptr %
 // OGCG-LABEL: define {{.*}}@_ZN5VBaseC2Ev
-// OGCG: store ptr getelementptr inbounds inrange(-16, 16) ({ [4 x ptr] }, ptr @_ZTV5VBase, i32 0, i32 0, i32 2), ptr %
+// OGCG: store ptr getelementptr inbounds inrange(-16, 16) (i8, ptr @_ZTV5VBase, i64 16), ptr %
