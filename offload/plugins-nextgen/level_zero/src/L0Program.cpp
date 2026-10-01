@@ -67,6 +67,43 @@ Error L0ProgramTy::deinit() {
   return Plugin::success();
 }
 
+/// Print the contents of a module build or link log. Unless \p FullLog is set,
+/// only the first few lines are printed.
+static void printBuildLog(ze_module_build_log_handle_t Log, const char *Title,
+                          bool FullLog) {
+  constexpr size_t MaxLines = 10;
+
+  MESSAGE("%s:", Title);
+  size_t LogSize = 0;
+  ze_result_t RC;
+  CALL_ZE(RC, zeModuleBuildLogGetString, Log, &LogSize, /*LogString=*/nullptr);
+  if (RC != ZE_RESULT_SUCCESS) {
+    MESSAGE0("  <failed to get build log>");
+    return;
+  }
+  if (LogSize <= 1) {
+    MESSAGE0("  <empty>");
+    return;
+  }
+  std::string LogString(LogSize, '\0');
+  CALL_ZE(RC, zeModuleBuildLogGetString, Log, &LogSize, LogString.data());
+  if (RC != ZE_RESULT_SUCCESS) {
+    MESSAGE0("  <failed to get build log>");
+    return;
+  }
+
+  StringRef Rest(LogString.c_str());
+  for (size_t NumLines = 0; !Rest.empty(); ++NumLines) {
+    if (!FullLog && NumLines >= MaxLines) {
+      MESSAGE0("  (suppressed remaining log)");
+      break;
+    }
+    StringRef Line;
+    std::tie(Line, Rest) = Rest.split('\n');
+    MESSAGE("  '%.*s'", static_cast<int>(Line.size()), Line.data());
+  }
+}
+
 Error L0ProgramBuilderTy::addModule(size_t Size, const uint8_t *Image,
                                     const std::string_view CommonBuildOptions,
                                     ze_module_format_t Format) {
@@ -96,8 +133,19 @@ Error L0ProgramBuilderTy::addModule(size_t Size, const uint8_t *Image,
   ze_result_t RC;
   CALL_ZE(RC, zeModuleCreate, getZeContext(), L0Device.getZeDevice(),
           &ModuleDesc, &Module, &BuildLog);
-  if (BuildLog)
+  if (BuildLog) {
+    const bool BuildFailed = RC != ZE_RESULT_SUCCESS;
+    const bool ShowBuildLog =
+        L0Device.getPlugin().getOptions().Flags.ShowBuildLog;
+    // Only show the log of library modules (-library-compilation) if their
+    // build failed.
+    if (BuildFailed || (ShowBuildLog && !IsLibModule)) {
+      if (BuildFailed)
+        MESSAGE0("Error: module creation failed");
+      printBuildLog(BuildLog, "Target build log", ShowBuildLog);
+    }
     zeModuleBuildLogDestroy(BuildLog);
+  }
   if (RC != ZE_RESULT_SUCCESS) {
     // zeModuleCreate compiles/loads the provided image, so a build failure here
     // means the image itself could not be loaded for this device (e.g. a
@@ -142,9 +190,25 @@ Error L0ProgramBuilderTy::linkModules() {
                          "Invalid number of modules when linking modules");
 
   ze_module_build_log_handle_t LinkLog = nullptr;
-  CALL_ZE_RET_ERROR(zeModuleDynamicLink,
-                    static_cast<uint32_t>(L0Device.getNumGlobalModules()),
-                    L0Device.getGlobalModulesArray(), &LinkLog);
+  ze_result_t RC;
+  CALL_ZE(RC, zeModuleDynamicLink,
+          static_cast<uint32_t>(L0Device.getNumGlobalModules()),
+          L0Device.getGlobalModulesArray(), &LinkLog);
+  if (LinkLog) {
+    const bool LinkFailed = RC != ZE_RESULT_SUCCESS;
+    const bool ShowBuildLog =
+        L0Device.getPlugin().getOptions().Flags.ShowBuildLog;
+    if (LinkFailed || ShowBuildLog) {
+      if (LinkFailed)
+        MESSAGE0("Error: module link failed");
+      printBuildLog(LinkLog, "Target link log", ShowBuildLog);
+    }
+    zeModuleBuildLogDestroy(LinkLog);
+  }
+  if (RC != ZE_RESULT_SUCCESS)
+    return Plugin::error(getOffloadErrorCode(RC),
+                         "zeModuleDynamicLink failed with error %d, %s", RC,
+                         getZeErrorName(RC));
   return Plugin::success();
 }
 
