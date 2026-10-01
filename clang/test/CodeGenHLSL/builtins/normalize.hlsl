@@ -100,3 +100,16 @@ float4 test_normalize_float4(float4 p0)
 {
     return normalize(p0);
 }
+
+// CHECK-LABEL: test_normalize_float5
+// DXCHECK: [[DOT:%.*]] = call reassoc nnan ninf nsz arcp afn float @llvm.dx.fdot.v5f32(<5 x float> %{{.*}}, <5 x float> %{{.*}})
+// DXCHECK-NEXT: [[LEN:%.*]] = call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) float @llvm.sqrt.f32(float [[DOT]])
+// SPVCHECK: [[LEN:%.*]] = call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) float @llvm.spv.length.v5f32(<5 x float> %{{.*}})
+// CHECK-NEXT: [[SPLATINSERT:%.*]] = insertelement <5 x float> poison, float [[LEN]], i64 0
+// CHECK-NEXT: [[SPLAT:%.*]] = shufflevector <5 x float> [[SPLATINSERT]], <5 x float> poison, <5 x i32> zeroinitializer
+// CHECK-NEXT: [[RET:%.*]] = fdiv reassoc nnan ninf nsz arcp afn <5 x float> %{{.*}}, [[SPLAT]]
+// CHECK-NEXT: ret <5 x float> [[RET]]
+vector<float, 5> test_normalize_float5(vector<float, 5> p0)
+{
+    return normalize(p0);
+}
