@@ -210,8 +210,8 @@ struct DeleteTrivialRem : public OpRewritePattern<RemOp> {
                                 PatternRewriter &rewriter) const override {
     Value lhs = op.getOperand(0);
     Value rhs = op.getOperand(1);
-    // Index has a target-dependent bitwidth, but the inferred range does not
-    // capture every possible target-specific computation.
+    // TODO: Support index types once integer range inference can use the target
+    // index bitwidth, e.g. from DLTI.
     if (isa<IndexType>(getElementTypeOrSelf(lhs.getType())))
       return failure();
     APInt modulus;
