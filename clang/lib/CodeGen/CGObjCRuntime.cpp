@@ -150,9 +150,9 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
   if (S.getNumCatchStmts())
     Cont = CGF.getJumpDestInCurrentScope("eh.cont");
 
-  bool useFunclets = EHPersonality::get(CGF).usesFuncletPads();
-  bool IsWasm = EHPersonality::get(CGF).isWasmPersonality();
-  bool IsMSVC = EHPersonality::get(CGF).isMSVCPersonality();
+  bool useFunclets = getEHPersonality(CGF).usesFuncletPads();
+  bool IsWasm = getEHPersonality(CGF).isWasmPersonality();
+  bool IsMSVC = getEHPersonality(CGF).isMSVCPersonality();
 
   CodeGenFunction::FinallyInfo FinallyInfo;
   if (const ObjCAtFinallyStmt *Finally = S.getFinallyStmt()) {
