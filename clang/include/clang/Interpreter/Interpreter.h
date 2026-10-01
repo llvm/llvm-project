@@ -130,6 +130,9 @@ class Interpreter {
   // printing happens, it's in an invalid state.
   Value LastValue;
 
+  /// See setCaptureValueOfExprStmts().
+  bool CaptureValueOfExprStmts = false;
+
   /// Compiler instance performing the incremental compilation.
   std::unique_ptr<CompilerInstance> CI;
 
@@ -177,6 +180,16 @@ public:
 
   /// Undo N previous incremental inputs.
   llvm::Error Undo(unsigned N = 1);
+
+  /// By default, only the value of an expression statement without a trailing
+  /// semicolon (`x`) is captured. Also capture it for expression statements
+  /// with a semicolon (`x;`), so that clients get the value of an input like
+  /// `&f;` from ParseAndExecute(). Removing the semicolon instead can change
+  /// how an input is parsed.
+  void setCaptureValueOfExprStmts(bool Capture) {
+    CaptureValueOfExprStmts = Capture;
+  }
+  bool capturesValueOfExprStmts() const { return CaptureValueOfExprStmts; }
 
   /// Link a dynamic library
   llvm::Error LoadDynamicLibrary(const char *name);

@@ -688,4 +688,35 @@ TEST_F(InterpreterTest, EmscriptenExceptionHandling) {
       Interp->ParseAndExecute("try { throw 1; } catch (...) { 0; }"));
 }
 
+TEST_F(InterpreterTest, CaptureValueOfExprStmts) {
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+  cantFail(Interp->ParseAndExecute("int x = 42;"));
+
+  Value V;
+  cantFail(Interp->ParseAndExecute("x;", &V));
+  EXPECT_FALSE(V.isValid());
+
+  Interp->setCaptureValueOfExprStmts(true);
+  cantFail(Interp->ParseAndExecute("x;", &V));
+  ASSERT_TRUE(V.isValid());
+  EXPECT_EQ(V.getInt(), 42);
+
+  Value Addr;
+  cantFail(Interp->ParseAndExecute("&x;", &Addr));
+  ASSERT_TRUE(Addr.isValid());
+  EXPECT_TRUE(Addr.getType()->isPointerType());
+  EXPECT_EQ(*static_cast<int *>(Addr.getPtr()), 42);
+
+  // Statements that are not expressions have no value; declarations are
+  // unaffected.
+  Value None;
+  cantFail(
+      Interp->ParseAndExecute("for (int i = 0; i < 2; ++i) x += i;", &None));
+  EXPECT_FALSE(None.isValid());
+  cantFail(Interp->ParseAndExecute("int y = x;", &None));
+  EXPECT_FALSE(None.isValid());
+  cantFail(Interp->ParseAndExecute("y;", &V));
+  EXPECT_EQ(V.getInt(), 43);
+}
+
 } // end anonymous namespace
