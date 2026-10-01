@@ -5769,7 +5769,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
         if (Op1SI->getCondition() == A)
           MDFrom = Op1SI;
       }
-      return MDFrom == nullptr
+      return MDFrom == nullptr || ProfcheckDisableMetadataFixes
                  ? createSelectInstWithUnknownProfile(A, NotB, C)
                  : SelectInst::Create(A, NotB, C, "", nullptr, MDFrom);
     }
