@@ -4771,12 +4771,13 @@ public:
     return true;
   }
 
-  /// Always returns true on the AArch64 architecture.
-  /// In RISCV architecture, if N0.hasOneUse() is true, returns true. Otherwise,
-  /// returns false.
-  virtual bool isProfitableToFoldVScaleAdd(const SDValue N) const {
-    return true;
-  }
+  /// fold (A + vscale(C1)) + vscale(C2) -> A + vscale(C1+C2)
+  /// If (A + vscale(C1)) is used multiple times, the fold results in a
+  /// redundant addition instruction on the RISC-V architecture, whereas it
+  /// does not have this effect on other architectures (e.g. AArch64).
+  /// By default, it returns true. In RISC-V architecture, returns
+  /// N.hasOneUse().
+  virtual bool isProfitableToFoldVScaleAdd(SDValue N) const { return true; }
 
   /// GlobalISel - return true if it is profitable to move this shift by a
   /// constant amount through its operand, adjusting any immediate operands as

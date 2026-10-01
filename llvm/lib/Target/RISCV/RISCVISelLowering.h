@@ -613,7 +613,7 @@ private:
   bool shouldExpandGetVectorLength(EVT TripCountVT, unsigned VF,
                                    bool IsScalable) const override;
 
-  bool isProfitableToFoldVScaleAdd(const SDValue N) const override;
+  bool isProfitableToFoldVScaleAdd(SDValue N) const override;
 
   /// RVV code generation for fixed length vectors does not lower all
   /// BUILD_VECTORs. This makes BUILD_VECTOR legalisation a source of stores to
