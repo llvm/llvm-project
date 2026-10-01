@@ -6261,9 +6261,19 @@ static void handleClusterDimsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       !AL.checkAtMostNumArgs(S, /*Num=*/3))
     return;
 
-  S.addClusterDimsAttr(D, AL, AL.getArgAsExpr(0),
-                       AL.getNumArgs() > 1 ? AL.getArgAsExpr(1) : nullptr,
-                       AL.getNumArgs() > 2 ? AL.getArgAsExpr(2) : nullptr);
+  // Convert all arguments to rvalues.
+  ExprResult Converted1 = S.DefaultLvalueConversion(AL.getArgAsExpr(0));
+  assert(!Converted1.isInvalid());
+  ExprResult Converted2 = AL.getNumArgs() > 1
+                              ? S.DefaultLvalueConversion(AL.getArgAsExpr(1))
+                              : ExprResult();
+  ExprResult Converted3 = AL.getNumArgs() > 2
+                              ? S.DefaultLvalueConversion(AL.getArgAsExpr(2))
+                              : ExprResult();
+
+  S.addClusterDimsAttr(D, AL, Converted1.get(),
+                       Converted2.isInvalid() ? nullptr : Converted2.get(),
+                       Converted3.isInvalid() ? nullptr : Converted3.get());
 }
 
 static void handleNoClusterAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
