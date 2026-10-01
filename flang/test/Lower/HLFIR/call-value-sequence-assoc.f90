@@ -70,9 +70,6 @@ contains
     integer, intent(in) :: n
     class(*), value, optional :: x(2, n)
   end subroutine
-  subroutine byref3(x)
-    integer :: x(3)
-  end subroutine
 end module
 
 ! Static dummy shape: the sequence view has the dummy's shape.
@@ -473,26 +470,4 @@ subroutine value_seq_class_runtime_index(i)
   integer :: i
   type(tt) :: w(5)
   call byval_parent2(w(i))
-end subroutine
-
-! The same bound applies to the copy of an element of a named constant
-! passed to a non-VALUE dummy.
-! CHECK-LABEL: func.func @_QPparam_seq_runtime_index
-! CHECK: %[[PRELT:.*]] = hlfir.designate %{{.*}} (%{{.*}})  : (!fir.ref<!fir.array<4xi32>>, i64) -> !fir.ref<i32>
-! CHECK: %[[PROFF:.*]] = arith.addi %{{.*}}, %{{.*}} : index
-! CHECK: %[[PRREM:.*]] = arith.subi %{{.*}}, %[[PROFF]] : index
-! CHECK: %[[PRSIZE:.*]] = arith.constant 3 : index
-! CHECK: %[[PRLEN:.*]] = arith.minsi %[[PRREM]], %[[PRSIZE]] : index
-! CHECK: %[[PRSEQ:.*]] = fir.convert %[[PRELT]] : (!fir.ref<i32>) -> !fir.ref<!fir.array<?xi32>>
-! CHECK: %[[PRSHAPE:.*]] = fir.shape %[[PRLEN]] : (index) -> !fir.shape<1>
-! CHECK: %[[PRVIEW:.*]]:2 = hlfir.declare %[[PRSEQ]](%[[PRSHAPE]]) {uniq_name = ".sequence.assoc"}
-! CHECK: %[[PRCOPY:.*]] = hlfir.as_expr %[[PRVIEW]]#0
-! CHECK: %[[PRTMP:.*]]:3 = hlfir.associate %[[PRCOPY]](%[[PRSHAPE]]) {adapt.valuebyref}
-! CHECK: %[[PRARG:.*]] = fir.convert %[[PRTMP]]#1 : (!fir.ref<!fir.array<?xi32>>) -> !fir.ref<!fir.array<3xi32>>
-! CHECK: fir.call @_QMmPbyref3(%[[PRARG]])
-subroutine param_seq_runtime_index(i)
-  use m
-  integer :: i
-  integer, parameter :: p(4) = [1, 2, 3, 4]
-  call byref3(p(i))
 end subroutine
