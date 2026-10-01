@@ -3,13 +3,11 @@ set_property(DIRECTORY PROPERTY LLDB_PLUGIN_KIND ProcessUtility)
 
 add_lldb_library(lldbPluginProcessUtility
   AuxVector.cpp
-  FreeBSDSignals.cpp
   GDBRemoteSignals.cpp
   HistoryThread.cpp
   HistoryUnwind.cpp
   InferiorCallPOSIX.cpp
   LinuxProcMaps.cpp
-  LinuxSignals.cpp
   MemoryTagManagerAArch64MTE.cpp
   NativeProcessSoftwareSingleStep.cpp
   NativeRegisterContextDBReg.cpp
@@ -18,8 +16,6 @@ add_lldb_library(lldbPluginProcessUtility
   NativeRegisterContextDBReg_loongarch.cpp
   NativeRegisterContextDBReg_x86.cpp
   NativeRegisterContextRegisterInfo.cpp
-  NetBSDSignals.cpp
-  OpenBSDSignals.cpp
   RegisterContext_x86.cpp
   RegisterContextDarwin_arm.cpp
   RegisterContextDarwin_arm64.cpp

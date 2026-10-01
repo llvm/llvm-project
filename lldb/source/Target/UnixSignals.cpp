@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/UnixSignals.h"
-#include "Plugins/Process/Utility/FreeBSDSignals.h"
-#include "Plugins/Process/Utility/LinuxSignals.h"
-#include "Plugins/Process/Utility/NetBSDSignals.h"
-#include "Plugins/Process/Utility/OpenBSDSignals.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Target/FreeBSDSignals.h"
+#include "lldb/Target/LinuxSignals.h"
+#include "lldb/Target/NetBSDSignals.h"
+#include "lldb/Target/OpenBSDSignals.h"
 #include "lldb/Utility/ArchSpec.h"
 #include <optional>
 #include <sstream>

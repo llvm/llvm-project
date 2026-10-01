@@ -14,13 +14,13 @@
 #include <sys/utsname.h>
 #endif
 
-#include "Plugins/Process/Utility/LinuxSignals.h"
 #include "Plugins/Process/Utility/lldb-riscv-register-enums.h"
 #include "Utility/ARM64_DWARF_Registers.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/UnwindPlan.h"
+#include "lldb/Target/LinuxSignals.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"

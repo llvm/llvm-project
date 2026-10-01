@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "NetBSDSignals.h"
+#include "lldb/Target/NetBSDSignals.h"
 
 #ifdef __NetBSD__
 #include <csignal>

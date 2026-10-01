@@ -8,9 +8,9 @@
 
 #include "Plugins/Process/gdb-remote/GDBRemoteClientBase.h"
 #include "GDBRemoteTestUtils.h"
-#include "Plugins/Process/Utility/LinuxSignals.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServer.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
+#include "lldb/Target/LinuxSignals.h"
 #include "lldb/Utility/GDBRemote.h"
 #include "lldb/Utility/Listener.h"
 #include "llvm/ADT/StringRef.h"

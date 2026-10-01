@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FreeBSDSignals.h"
+#include "lldb/Target/FreeBSDSignals.h"
 
 #ifdef __FreeBSD__
 #include <csignal>
