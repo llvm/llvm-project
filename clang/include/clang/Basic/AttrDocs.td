@@ -8443,7 +8443,7 @@ alternatives, though the attribute can be used even when the fix can't be automa
 
   Unlike the general `[[clang::unsafe_buffer_usage]]` attribute, which warns on
   every call, this form suppresses the warning when the argument pair is
-  provably safe—for example, when constructing from `c.data(), c.size()` or
+  provably safe -- for example, when constructing from `c.data(), c.size()` or
   `c.begin(), c.end()` on the same container object `c`, a constant-sized array
   with a matching bound, `&var, 1`, or a `0` size:
 

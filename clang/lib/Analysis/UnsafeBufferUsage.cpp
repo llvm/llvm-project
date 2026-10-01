@@ -669,8 +669,7 @@ static bool isSafeTwoParamContainerConstruct(const CallOrConstructExpr &Node,
   auto IsMethodCallToSizedObject = [](const Stmt *Node, StringRef MethodName) {
     if (const auto *MC = dyn_cast<CXXMemberCallExpr>(Node)) {
       const auto *MD = MC->getMethodDecl();
-      if (MD && MD->getName() == MethodName)
-        return true;
+      return MD && MD->getName() == MethodName;
     }
     return false;
   };
@@ -2004,7 +2003,7 @@ public:
     const auto *Attr = Callee->getAttr<UnsafeBufferUsageAttr>();
     if (!Attr || Attr->getCategory() != "container")
       return false;
-    return Node.getNumArgs() != 2 ||
+    return Node.getNumArgs() == 2 &&
            !isSafeTwoParamContainerConstruct(Node, Ctx);
   }
 

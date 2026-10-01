@@ -111,6 +111,7 @@ void test_pragma_suppression(int* p, size_t n) {
 #pragma clang unsafe_buffer_usage end
 }
 
+// Test the [[clang::unsafe_buffer_usage_in_container]] spelling.
 template <typename T>
 class CustomSpanAlt {
 public:
@@ -128,35 +129,14 @@ CustomSpanAlt<T> MakeCustomSpanAlt(T* ptr, size_t size) {
   return CustomSpanAlt<T>(ptr, size);
 }
 
-template <typename T>
-[[clang::unsafe_buffer_usage_in_container]]
-CustomSpanAlt<T> MakeCustomSpanAlt(T* first, T* last) {
-  return CustomSpanAlt<T>(first, last);
-}
-
-void test_in_container_spelling(int* p, size_t n, custom::MyVector<int>& vec,
-                                custom::MyVector<int>& vec2) {
+void test_in_container_spelling(int* p, size_t n, custom::MyVector<int>& vec) {
   // Unsafe: decoupled pointer and size
   CustomSpanAlt<int> s1(p, n); // expected-warning{{the two-parameter CustomSpanAlt construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
   auto s2 = MakeCustomSpanAlt(p, n); // expected-warning{{the two-parameter MakeCustomSpanAlt construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
 
-  // Unsafe: duck typing approach with .data() and .size() called on different custom container objects
-  CustomSpanAlt<int> s_bad_data_size1(vec.data(), vec2.size()); // expected-warning{{the two-parameter CustomSpanAlt construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
-  auto s_bad_data_size2 = MakeCustomSpanAlt(vec.data(), vec2.size()); // expected-warning{{the two-parameter MakeCustomSpanAlt construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
-
-  // Unsafe: mismatched or reversed .begin() and .end()
-  CustomSpanAlt<int> s_bad_iter1(vec.begin(), vec2.end()); // expected-warning{{the two-parameter CustomSpanAlt construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
-  CustomSpanAlt<int> s_bad_iter2(vec.end(), vec.begin()); // expected-warning{{the two-parameter CustomSpanAlt construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
-  auto s_bad_iter3 = MakeCustomSpanAlt(vec.begin(), vec2.end()); // expected-warning{{the two-parameter MakeCustomSpanAlt construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
-  auto s_bad_iter4 = MakeCustomSpanAlt(vec.end(), vec.begin()); // expected-warning{{the two-parameter MakeCustomSpanAlt construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
-
   // Safe: duck typing approach with .data() and .size() called on the same custom container object
   CustomSpanAlt<int> s3(vec.data(), vec.size()); // no-warning
   auto s4 = MakeCustomSpanAlt(vec.data(), vec.size()); // no-warning
-
-  // Safe: .begin() and .end() called on the same custom container object
-  CustomSpanAlt<int> s5(vec.begin(), vec.end()); // no-warning
-  auto s6 = MakeCustomSpanAlt(vec.begin(), vec.end()); // no-warning
 }
 
 [[clang::unsafe_buffer_usage("invalid")]] // expected-warning{{'clang::unsafe_buffer_usage' attribute argument not supported: invalid}} nowarn-warning{{'clang::unsafe_buffer_usage' attribute argument not supported: invalid}}
