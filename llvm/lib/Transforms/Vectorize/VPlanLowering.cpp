@@ -140,7 +140,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
 //   branch-on-cond %Negated
 //
 static VPActiveLaneMaskPHIRecipe *
-addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan, bool IVUpdateMayOverflow) {
+addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *EB = TopRegion->getExitingBasicBlock();
   VPValue *StartV = Plan.getZero(TopRegion->getCanonicalIVType());
@@ -170,7 +170,7 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan, bool IVUpdateMayOverflow) {
   // If the canonical IV increment could overflow, adjust the trip count (TC)
   // to TC - VF * UF.
   VPValue *IncrementValue = CanonicalIVIncrement;
-  if (IVUpdateMayOverflow) {
+  if (!TopRegion->hasCanonicalIVNUW()) {
     IncrementValue = TopRegion->getCanonicalIV();
     VPValue &VFxUF = Plan.getVFxUF();
     VPValue *Sub = Builder.createSub(TC, &VFxUF);
@@ -200,16 +200,14 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan, bool IVUpdateMayOverflow) {
 }
 
 void VPlanTransforms::materializeHeaderMask(
-    VPlan &Plan, bool UseActiveLaneMask, bool UseActiveLaneMaskForControlFlow,
-    bool IVUpdateMayOverflow) {
+    VPlan &Plan, bool UseActiveLaneMask, bool UseActiveLaneMaskForControlFlow) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPValue *HeaderMask = LoopRegion->getUsedHeaderMask();
   if (!HeaderMask)
     return;
 
   if (UseActiveLaneMaskForControlFlow) {
-    HeaderMask->replaceAllUsesWith(
-        addVPLaneMaskPhiAndUpdateExitBranch(Plan, IVUpdateMayOverflow));
+    HeaderMask->replaceAllUsesWith(addVPLaneMaskPhiAndUpdateExitBranch(Plan));
     return;
   }
 
