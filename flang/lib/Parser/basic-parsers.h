@@ -249,10 +249,7 @@ public:
 private:
   const MessageFixedText text_;
   const PA parser_;
-  // When true (the default), a failure that matched no tokens reports the
-  // message at the location where this parser started rather than where it
-  // stopped. Opt out with withMessageAtFailure() where a start-anchored
-  // message would collide with and outrank a more specific diagnostic.
+  // If no tokens matched, report the message where this parser started.
   const bool emitAtStart_{true};
 };
 
