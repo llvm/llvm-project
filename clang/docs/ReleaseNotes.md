@@ -942,6 +942,8 @@ features cannot lower the translation-unit ABI level;
 - Added `--cuda-emit-nvcc-abi` to emit the NVCC-compatible host registration ABI
   (`__cudaRegisterLinkedBinary`).
 
+- Fixed CUDA built-in variables such as `threadIdx` and `blockDim` being incorrectly treated as having side effects in assumptions. (#GH181340)
+
 - Clang now provides device-side definitions of `__cxa_pure_virtual()` and
   `__cxa_deleted_virtual()`; previously, any (potential) call to a pure/deleted
   virtual function that could not be optimised out would cause the program to
@@ -1041,6 +1043,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 ### OpenMP Support
 
+- Fixed an OpenMP `requires` directive read from a PCH or module losing its effect on
+  semantic checks, which caused spurious `reverse_offload` errors.
 - Added the OpenMP 6.1 `#pragma omp flatten` loop transformation and the
   `depth` clause. Flatten combines perfectly nested canonical loops into one
   loop. `depth(k)` selects how many outermost loops to combine (default 2).

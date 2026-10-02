@@ -352,7 +352,20 @@ static void emitOptionsStruct(const Record &Struct,
   for (const Record *R : Fields) {
     OS << "  case OPT_" << getStructOptionID(*R) << ":\n";
     std::string Member = getMemberName(*R, Prefix);
-    if (!R->getValue("FieldValue"))
+    if (!isa<UnsetInit>(R->getValueInit("NormalizedValues"))) {
+      SmallVector<StringRef> Values;
+      R->getValueAsString("Values").split(Values, ',');
+      std::vector<StringRef> Enumerators =
+          R->getValueAsListOfStrings("NormalizedValues");
+      if (Values.size() != Enumerators.size())
+        PrintFatalError(R->getLoc(), "an EnumField needs one enumerator per "
+                                     "value");
+      OS << "    {\n      llvm::StringRef V = A.getValue();\n";
+      for (auto [Value, Enumerator] : llvm::zip_equal(Values, Enumerators))
+        OS << "      if (V == \"" << Value << "\") {\n        " << Member
+           << " = " << Enumerator << ";\n        return true;\n      }\n";
+      OS << "      return false;\n    }\n";
+    } else if (!R->getValue("FieldValue"))
       OS << "    return llvm::opt::parseArgValue(A.getValue(), " << Member
          << ");\n";
     else
