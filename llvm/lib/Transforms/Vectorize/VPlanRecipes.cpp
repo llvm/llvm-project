@@ -1758,10 +1758,11 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   }
 }
 
-bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
+bool VPInstruction::usesFirstLaneOnly(
+    const VPValue *Op, SmallPtrSetImpl<const VPValue *> &Visited) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
   if (Instruction::isBinaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
-    return vputils::onlyFirstLaneUsed(this);
+    return vputils::onlyFirstLaneUsed(this, Visited);
 
   switch (getOpcode()) {
   default:
@@ -1781,7 +1782,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case Instruction::Freeze:
   case VPInstruction::Not:
     // TODO: Cover additional opcodes.
-    return vputils::onlyFirstLaneUsed(this);
+    return vputils::onlyFirstLaneUsed(this, Visited);
   case Instruction::Load:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::WideActiveLaneMask:
@@ -1802,7 +1803,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
     // Before replicating, it will have only a single operand.
     return getNumOperands() > 1;
   case VPInstruction::PtrAdd:
-    return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
+    return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this, Visited);
   case VPInstruction::WidePtrAdd:
     // WidePtrAdd supports scalar and vector base addresses.
     return false;
@@ -2244,7 +2245,7 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
     if (!VFTy->getParamType(I.index())->isVectorTy())
       Arg = State.get(I.value(), VPLane(0));
     else
-      Arg = State.get(I.value(), usesFirstLaneOnly(I.value()));
+      Arg = State.get(I.value(), VPUser::usesFirstLaneOnly(I.value()));
     Args.push_back(Arg);
   }
 
@@ -2276,7 +2277,8 @@ InstructionCost VPWidenCallRecipe::computeCallCost(Function *Variant,
                                   Ctx.CostKind);
 }
 
-bool VPWidenCallRecipe::usesFirstLaneOnly(const VPValue *Op) const {
+bool VPWidenCallRecipe::usesFirstLaneOnly(
+    const VPValue *Op, SmallPtrSetImpl<const VPValue *> &Visited) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
   assert(Variant && "Variant not set");
   FunctionType *VFTy = Variant->getFunctionType();
@@ -2340,7 +2342,7 @@ CallInst *VPWidenIntrinsicRecipe::createVectorCall(VPTransformState &State) {
                                            State.TTI))
       Arg = State.get(I.value(), VPLane(0));
     else
-      Arg = State.get(I.value(), usesFirstLaneOnly(I.value()));
+      Arg = State.get(I.value(), VPUser::usesFirstLaneOnly(I.value()));
     if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, I.index(),
                                                State.TTI))
       TysForDecl.push_back(Arg->getType());
@@ -2433,7 +2435,8 @@ StringRef VPWidenIntrinsicRecipe::getIntrinsicName() const {
   return Intrinsic::getBaseName(VectorIntrinsicID);
 }
 
-bool VPWidenIntrinsicRecipe::usesFirstLaneOnly(const VPValue *Op) const {
+bool VPWidenIntrinsicRecipe::usesFirstLaneOnly(
+    const VPValue *Op, SmallPtrSetImpl<const VPValue *> &Visited) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
   return all_of(enumerate(operands()), [this, &Op](const auto &X) {
     auto [Idx, V] = X;
@@ -3327,7 +3330,8 @@ void VPScalarIVStepsRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-bool VPWidenGEPRecipe::usesFirstLaneOnly(const VPValue *Op) const {
+bool VPWidenGEPRecipe::usesFirstLaneOnly(
+    const VPValue *Op, SmallPtrSetImpl<const VPValue *> &Visited) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
   return vputils::isSingleScalar(Op);
 }
@@ -5158,9 +5162,10 @@ void VPReductionPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-bool VPBlendRecipe::usesFirstLaneOnly(const VPValue *Op) const {
+bool VPBlendRecipe::usesFirstLaneOnly(
+    const VPValue *Op, SmallPtrSetImpl<const VPValue *> &Visited) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
-  return vputils::onlyFirstLaneUsed(this);
+  return vputils::onlyFirstLaneUsed(this, Visited);
 }
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {

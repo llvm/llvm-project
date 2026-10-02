@@ -21,6 +21,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_VALUE_H
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
@@ -484,10 +485,18 @@ public:
 
   /// Returns true if the VPUser only uses the first lane of operand \p Op.
   /// Conservatively returns false.
-  virtual bool usesFirstLaneOnly(const VPValue *Op) const {
+  virtual bool
+  usesFirstLaneOnly(const VPValue *Op,
+                    SmallPtrSetImpl<const VPValue *> &Visited) const {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return false;
+  }
+
+  /// Convenience wrapper that creates a fresh Visited set.
+  bool usesFirstLaneOnly(const VPValue *Op) const {
+    SmallPtrSet<const VPValue *, 8> Visited;
+    return usesFirstLaneOnly(Op, Visited);
   }
 
   /// Returns true if the VPUser only uses the first part of operand \p Op.

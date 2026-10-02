@@ -33,8 +33,17 @@ using namespace llvm::VPlanPatternMatch;
 using namespace llvm::SCEVPatternMatch;
 
 bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
-  return all_of(Def->users(),
-                [Def](const VPUser *U) { return U->usesFirstLaneOnly(Def); });
+  SmallPtrSet<const VPValue *, 8> Visited;
+  return onlyFirstLaneUsed(Def, Visited);
+}
+
+bool vputils::onlyFirstLaneUsed(const VPValue *Def,
+                                SmallPtrSetImpl<const VPValue *> &Visited) {
+  if (!Visited.insert(Def).second)
+    return true;
+  return all_of(Def->users(), [Def, &Visited](const VPUser *U) {
+    return U->usesFirstLaneOnly(Def, Visited);
+  });
 }
 
 bool vputils::onlyFirstPartUsed(const VPValue *Def) {
