@@ -161,6 +161,14 @@ static mlir::Value getShapeFromDecl(mlir::Value src) {
   return mlir::Value{};
 }
 
+static llvm::SmallVector<mlir::Value> getTypeParamsFromDecl(mlir::Value val) {
+  if (auto declareOp = val.getDefiningOp<fir::DeclareOp>())
+    return declareOp.getTypeparams();
+  if (auto declareOp = val.getDefiningOp<hlfir::DeclareOp>())
+    return declareOp.getTypeparams();
+  return {};
+}
+
 // hlfir.assign rejects a raw !fir.ref<!fir.array<?xT>> because a dynamic-size
 // array is not an HLFIR variable unless it is boxed. Use the transfer shape
 // (or a declare's shape) to build a descriptor.
@@ -173,7 +181,10 @@ static mlir::Value asHLFIREntity(mlir::PatternRewriter &rewriter,
   if (!shape)
     shape = getShapeFromDecl(val);
   auto boxTy = fir::BoxType::get(unwrapped);
-  return fir::EmboxOp::create(rewriter, loc, boxTy, val, shape);
+  return fir::EmboxOp::create(rewriter, loc, boxTy, val, shape,
+                              /*slice=*/mlir::Value{},
+                              fir::factory::elideLengthsAlreadyInType(
+                                  unwrapped, getTypeParamsFromDecl(val)));
 }
 
 static mlir::Value emboxSrc(mlir::PatternRewriter &rewriter,
@@ -212,7 +223,7 @@ static mlir::Value emboxSrc(mlir::PatternRewriter &rewriter,
   } else {
     addr = op.getSrc();
   }
-  llvm::SmallVector<mlir::Value> lenParams;
+  llvm::SmallVector<mlir::Value> lenParams = getTypeParamsFromDecl(op.getSrc());
   mlir::Type boxTy = fir::BoxType::get(srcTy);
   mlir::Value box =
       builder.createBox(loc, boxTy, addr, getShapeFromDecl(op.getSrc()),
@@ -232,7 +243,7 @@ static mlir::Value emboxDst(mlir::PatternRewriter &rewriter,
   mlir::Type dstTy = fir::unwrapRefType(op.getDst().getType());
   mlir::Value dstAddr = op.getDst();
   mlir::Type dstBoxTy = fir::BoxType::get(dstTy);
-  llvm::SmallVector<mlir::Value> lenParams;
+  llvm::SmallVector<mlir::Value> lenParams = getTypeParamsFromDecl(op.getDst());
   mlir::Value dstBox =
       builder.createBox(loc, dstBoxTy, dstAddr, getShapeFromDecl(op.getDst()),
                         /*slice=*/nullptr, lenParams,

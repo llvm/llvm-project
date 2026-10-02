@@ -284,9 +284,7 @@ define amdgpu_kernel void @reserved_wwm_vgpr_not_in_alloc_order(i32 %arg6, i1 %a
 ; CHECK-NEXT:    v_mov_b32_e32 v16, s68
 ; CHECK-NEXT:    buffer_load_dwordx4 v[16:19], v16, s[24:27], 0 offen
 ; CHECK-NEXT:    s_and_b64 s[66:67], s[22:23], exec
-; CHECK-NEXT:    s_cselect_b32 s16, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s16, 1
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_1
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %bbl290
 ; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[20:21], 0x80
 ; CHECK-NEXT:    s_and_b64 s[0:1], s[60:61], exec

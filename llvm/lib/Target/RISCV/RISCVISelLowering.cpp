@@ -12304,12 +12304,8 @@ static unsigned getRVPMulHighOpcode(unsigned IntNo) {
   switch (IntNo) {
   default:
     llvm_unreachable("Unexpected RISC-V packed multiply high intrinsic");
-  case Intrinsic::riscv_pmulh:
-    return ISD::MULHS;
   case Intrinsic::riscv_pmulhr:
     return RISCVISD::MULHR;
-  case Intrinsic::riscv_pmulhu:
-    return ISD::MULHU;
   case Intrinsic::riscv_pmulhru:
     return RISCVISD::MULHRU;
   case Intrinsic::riscv_pmulhsu:
@@ -12323,12 +12319,8 @@ static unsigned getRVScalarMulHighOpcode(unsigned IntNo) {
   switch (IntNo) {
   default:
     llvm_unreachable("Unexpected RISC-V scalar multiply high intrinsic");
-  case Intrinsic::riscv_mulh_i32:
-    return ISD::MULHS;
   case Intrinsic::riscv_mulhr_i32:
     return RISCVISD::MULHR;
-  case Intrinsic::riscv_mulhu_u32:
-    return ISD::MULHU;
   case Intrinsic::riscv_mulhru_u32:
     return RISCVISD::MULHRU;
   case Intrinsic::riscv_mulhsu_i32:
@@ -13247,9 +13239,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32, AbdsumauId, Lo,
                        Rs1Hi, Rs2Hi);
   }
-  case Intrinsic::riscv_pmulh:
   case Intrinsic::riscv_pmulhr:
-  case Intrinsic::riscv_pmulhu:
   case Intrinsic::riscv_pmulhru:
   case Intrinsic::riscv_pmulhsu:
   case Intrinsic::riscv_pmulhrsu: {
@@ -13282,9 +13272,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     return DAG.getNode(Opc, DL, VT, Op.getOperand(1), Op.getOperand(2));
   }
-  case Intrinsic::riscv_mulh_i32:
   case Intrinsic::riscv_mulhr_i32:
-  case Intrinsic::riscv_mulhu_u32:
   case Intrinsic::riscv_mulhru_u32:
   case Intrinsic::riscv_mulhsu_i32:
   case Intrinsic::riscv_mulhrsu_i32: {
@@ -17821,9 +17809,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     case Intrinsic::riscv_pmerge:
     case Intrinsic::riscv_pmulq:
     case Intrinsic::riscv_pmulqr:
-    case Intrinsic::riscv_pmulh:
     case Intrinsic::riscv_pmulhr:
-    case Intrinsic::riscv_pmulhu:
     case Intrinsic::riscv_pmulhru:
     case Intrinsic::riscv_pmulhsu:
     case Intrinsic::riscv_pmulhrsu:
@@ -17863,9 +17849,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       case Intrinsic::riscv_pmulqr:
         Opc = RISCVISD::MULQR;
         break;
-      case Intrinsic::riscv_pmulh:
       case Intrinsic::riscv_pmulhr:
-      case Intrinsic::riscv_pmulhu:
       case Intrinsic::riscv_pmulhru:
       case Intrinsic::riscv_pmulhsu:
       case Intrinsic::riscv_pmulhrsu:
@@ -17893,9 +17877,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
       return;
     }
-    case Intrinsic::riscv_mulh_i32:
     case Intrinsic::riscv_mulhr_i32:
-    case Intrinsic::riscv_mulhu_u32:
     case Intrinsic::riscv_mulhru_u32:
     case Intrinsic::riscv_mulhsu_i32:
     case Intrinsic::riscv_mulhrsu_i32: {

@@ -2895,6 +2895,18 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return &CI;
     break;
   }
+
+  case Intrinsic::smulh: {
+    Value *Arg0 = II->getArgOperand(0);
+    Value *Arg1 = II->getArgOperand(1);
+    unsigned BitWidth = II->getType()->getScalarSizeInBits();
+
+    // Multiply by one.
+    if (match(Arg1, m_One()))
+      return replaceInstUsesWith(CI, Builder.CreateAShr(Arg0, BitWidth - 1));
+    break;
+  }
+
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::sadd_with_overflow: {
     if (Instruction *I = foldIntrinsicWithOverflowCommon(II))

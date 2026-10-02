@@ -48,16 +48,12 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:  .LBB0_1: ; %Flow9
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    s_and_b64 s[6:7], s[26:27], exec
-; CHECK-NEXT:    s_cselect_b32 s6, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s6, 1
-; CHECK-NEXT:    s_cbranch_scc0 .LBB0_17
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_17
 ; CHECK-NEXT:  .LBB0_2: ; %._crit_edge1942.i.i.i3548
 ; CHECK-NEXT:    ; =>This Loop Header: Depth=1
 ; CHECK-NEXT:    ; Child Loop BB0_7 Depth 2
 ; CHECK-NEXT:    s_and_b64 s[6:7], exec, s[18:19]
-; CHECK-NEXT:    s_cselect_b32 s6, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s6, 1
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_10
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_10
 ; CHECK-NEXT:  ; %bb.3: ; %.preheader1868.i.i.i3244
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    s_mov_b64 vcc, s[0:1]
