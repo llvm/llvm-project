@@ -444,6 +444,7 @@
 // RUN:     /constexpr:depth1000 /constexpr:backtrace1000 /constexpr:steps1000 \
 // RUN:     /AIfoo \
 // RUN:     /AI foo_does_not_exist \
+// RUN:     /BE \
 // RUN:     /Bt \
 // RUN:     /Bt+ \
 // RUN:     /clr:pure \
