@@ -10,7 +10,7 @@
 @jt = constant [2 x ptr] [ptr @jt_target_0, ptr @jt_target_1]
 
 ;; Note: these functions intentionally do NOT have !guid metadata,
-;; forcing the pass to compute GUIDs via getIRPGOFuncName.
+;; forcing the pass to compute GUIDs via getIRPGOObjectName.
 define i32 @jt_target_0() {
 ; CHECK-LABEL: define i32 @jt_target_0() {
 ; CHECK-NEXT:    ret i32 10

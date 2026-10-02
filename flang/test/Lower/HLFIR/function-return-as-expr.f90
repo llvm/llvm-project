@@ -14,7 +14,7 @@ contains
   end function inner
 end subroutine test1
 ! CHECK-LABEL:   func.func @_QPtest1() {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<i32>> {bindc_name = ".result"}
+! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<i32>> <{bindc_name = ".result"}>
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
 ! CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:           %[[VAL_6:.*]] = fir.box_addr %[[VAL_5]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>

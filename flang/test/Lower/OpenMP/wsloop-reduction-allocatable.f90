@@ -66,12 +66,12 @@ end program
 ! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "REDUCE"} {
 ! CHECK:           %[[VAL_0:.*]] = fir.address_of(@_QFEi) : !fir.ref<i32>
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.heap<i32>> {bindc_name = "r", uniq_name = "_QFEr"}
+! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.heap<i32>> <{bindc_name = "r", uniq_name = "_QFEr"}>
 ! CHECK:           %[[VAL_3:.*]] = fir.zero_bits !fir.heap<i32>
 ! CHECK:           %[[VAL_4:.*]] = fir.embox %[[VAL_3]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
 ! CHECK:           fir.store %[[VAL_4]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFEr"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
-! CHECK:           %[[VAL_6:.*]] = fir.allocmem i32 {fir.must_be_heap = true, uniq_name = "_QFEr.alloc"}
+! CHECK:           %[[VAL_6:.*]] = fir.allocmem i32 <{uniq_name = "_QFEr.alloc"}> {fir.must_be_heap = true}
 ! CHECK:           %[[VAL_7:.*]] = fir.embox %[[VAL_6]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
 ! CHECK:           fir.store %[[VAL_7]] to %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 0 : i32
