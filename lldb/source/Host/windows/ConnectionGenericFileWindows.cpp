@@ -180,8 +180,8 @@ size_t ConnectionGenericFile::Read(void *dst, size_t dst_len,
     return finish(0, eConnectionStatusError, read_error);
   }
 
-  if ((!read_result || m_read_pending) &&
-      !(m_read_pending && HasOverlappedIoCompleted(&m_overlapped))) {
+  if ((!m_read_pending && !read_result) ||
+      (m_read_pending && !HasOverlappedIoCompleted(&m_overlapped))) {
     // The expected return path. The operation is pending. Wait for the
     // operation to complete or be interrupted. A pending read that already
     // completed skips the wait: finish() may have reset its event.
