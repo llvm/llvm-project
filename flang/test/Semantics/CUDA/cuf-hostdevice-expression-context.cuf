@@ -315,3 +315,33 @@ contains
     header_b = 'x'
   end function
 end module
+
+! Pin the expression checks in device, global, and CUF kernel contexts.
+module device_contexts
+contains
+  pure integer function h(i)
+    integer, value :: i
+    h = i
+  end function
+  attributes(device) subroutine device_bound(n)
+    integer, value :: n
+    !ERROR: 'h' may not be called in device code
+    real :: a(h(n))
+    a = 0.0
+  end subroutine
+  attributes(global) subroutine global_print(n)
+    integer, value :: n
+    !ERROR: 'h' may not be called in device code
+    print *, h(n)
+  end subroutine
+  subroutine kernel_print(a, n)
+    integer :: n, i
+    integer, device :: a(n)
+    !$cuf kernel do <<<*,*>>>
+    do i = 1, n
+      !ERROR: 'h' may not be called in device code
+      print *, h(i)
+      a(i) = i
+    end do
+  end subroutine
+end module

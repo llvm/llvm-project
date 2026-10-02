@@ -165,6 +165,136 @@ contains
     !ERROR: 'host_only' may not be called in device code
     call host_only()
   end subroutine
+  attributes(host,device) subroutine reset_between_branches(choose, other)
+    logical :: choose, other
+    if (choose) then
+      if (on_device()) return
+      call host_only()
+    else if (other) then
+      !ERROR: 'host_only' may not be called in device code
+      call host_only()
+    else
+      !ERROR: 'device_only' may not be called in host code
+      call device_only()
+    end if
+    !ERROR: 'host_only' may not be called in device code
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine reset_after_guarded_else_if(choose, other)
+    logical :: choose, other
+    if (choose) then
+      call both()
+    else if (on_device()) then
+      call device_only()
+    else if (other) then
+      !ERROR: 'host_only' may not be called in device code
+      call host_only()
+      return
+    else
+      !ERROR: 'device_only' may not be called in host code
+      call device_only()
+    end if
+    !ERROR: 'host_only' may not be called in device code
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine preserve_inherited_guard(choose)
+    logical :: choose
+    if (on_device()) return
+    if (choose) then
+      call host_only()
+    else
+      call device_only()
+    end if
+    call host_only()
+    call device_only()
+  end subroutine
+  attributes(host,device) subroutine ordinary_block_return(choose)
+    logical, intent(in) :: choose
+    if (choose) then
+      return
+    else
+      call both()
+    end if
+    !ERROR: 'host_only' may not be called in device code
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine ordinary_else_return(choose)
+    logical, intent(in) :: choose
+    if (choose) then
+      call both()
+    else
+      return
+    end if
+    !ERROR: 'device_only' may not be called in host code
+    call device_only()
+  end subroutine
+  attributes(host,device) subroutine unrelated_arm_returns(choose)
+    logical, intent(in) :: choose
+    if (on_device()) then
+      call device_only()
+    else if (choose) then
+      return
+    end if
+    ! The returning arm does not test ON_DEVICE.
+    !ERROR: 'host_only' may not be called in device code
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine return_before_guard_arm(choose)
+    logical, intent(in) :: choose
+    if (choose) then
+      return
+    else if (on_device()) then
+      call device_only()
+    end if
+    !ERROR: 'host_only' may not be called in device code
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine else_if_guard_else_returns(choose)
+    logical, intent(in) :: choose
+    if (choose) then
+      call both()
+    else if (on_device()) then
+      call device_only()
+    else
+      return
+    end if
+    call host_only()
+    call device_only()
+  end subroutine
+  attributes(host,device) subroutine deferred_direction()
+    ! TODO: Direction checking belongs to the separate guard-analysis extension.
+    if (on_device()) return
+    call device_only()
+  end subroutine
+  attributes(host,device) subroutine deferred_negated_direction()
+    ! TODO: The device copy reaches this host-only call.
+    if (.not. on_device()) return
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine deferred_compound_guard(n)
+    integer :: n
+    ! TODO: The device copy can reach the call when n <= 0.
+    if (on_device() .and. n > 0) return
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine deferred_exit_bypass(skip)
+    logical :: skip
+    ! TODO: EXIT can bypass the RETURN; control-flow checking is deferred.
+    guard: if (on_device()) then
+      if (skip) exit guard
+      return
+    end if guard
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine deferred_block_exit(skip)
+    logical :: skip
+    ! TODO: EXIT can bypass the guard; control-flow checking is deferred.
+    outer: block
+      if (skip) exit outer
+      if (on_device()) return
+    end block outer
+    call host_only()
+  end subroutine
   attributes(host,device) subroutine ordinary_return(choose)
     logical, intent(in) :: choose
     if (choose) return
