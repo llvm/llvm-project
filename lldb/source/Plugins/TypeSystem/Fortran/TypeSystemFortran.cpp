@@ -70,8 +70,9 @@ bool TypeSystemFortran::Verify(lldb::opaque_compiler_type_t type) {
 bool TypeSystemFortran::IsFloatingPointType(opaque_compiler_type_t type) {
   if (!type)
     return false;
+  int kind = static_cast<FortranType *>(type)->GetKind();
 
-  if (static_cast<FortranType *>(type)->GetKind() == FortranType::KIND_REAL)
+  if (kind == FortranType::KIND_REAL || kind == FortranType::KIND_COMPLEX)
     return true;
 
   return false;
@@ -81,12 +82,12 @@ bool TypeSystemFortran::IsIntegerType(opaque_compiler_type_t type,
                                       bool &is_signed) {
   if (!type)
     return false;
-
-  if (static_cast<FortranType *>(type)->GetKind() ==
-      FortranType::KIND_INTEGER) {
-    is_signed = true;
+  int kind = static_cast<FortranType *>(type)->GetKind();
+  if (kind == FortranType::KIND_INTEGER || kind == FortranType::KIND_UNSIGNED) {
+    is_signed = (kind == FortranType::KIND_INTEGER);
     return true;
   }
+
   return false;
 }
 
@@ -106,6 +107,7 @@ ConstString TypeSystemFortran::GetTypeName(opaque_compiler_type_t type,
   case FortranType::KIND_LOGICAL:
   case FortranType::KIND_REAL:
   case FortranType::KIND_COMPLEX:
+  case FortranType::KIND_UNSIGNED:
     return fortran_type->GetName();
   case FortranType::KIND_UNKNOWN:
     return ConstString("Unsupported");
@@ -132,6 +134,11 @@ TypeSystemFortran::CreateBaseType(llvm::dwarf::TypeKind dwarf_encoding,
   case dwarf::DW_ATE_signed_char:
     underlying_kind = FortranType::KIND_INTEGER;
     default_name = "INTEGER";
+    break;
+  // Flang allows for unsigned types if the program is compiled with -funsigned.
+  case dwarf::DW_ATE_unsigned:
+    underlying_kind = FortranType::KIND_UNSIGNED;
+    default_name = "UNSIGNED";
     break;
   case dwarf::DW_ATE_complex_float:
     underlying_kind = FortranType::KIND_COMPLEX;
@@ -204,6 +211,21 @@ TypeSystemFortran::GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) {
     default:
       return eBasicTypeInvalid;
     }
+  case FortranType::KIND_UNSIGNED:
+    switch (fortran_type->GetBitSize()) {
+    case 8:
+      return eBasicTypeUnsignedChar;
+    case 16:
+      return eBasicTypeUnsignedShort;
+    case 32:
+      return eBasicTypeUnsignedInt;
+    case 64:
+      return eBasicTypeUnsignedLongLong;
+    case 128:
+      return eBasicTypeUnsignedInt128;
+    default:
+      return eBasicTypeInvalid;
+    }
   case FortranType::KIND_LOGICAL:
     return eBasicTypeBool;
   case FortranType::KIND_COMPLEX:
@@ -240,6 +262,9 @@ CompilerType TypeSystemFortran::GetBasicTypeFromAST(BasicType basic_type) {
   case eBasicTypeInt:
     return GetOrCreateFortranBaseType(FortranType::KIND_INTEGER, 32,
                                       ConstString("INTEGER"));
+  case eBasicTypeUnsignedInt:
+    return GetOrCreateFortranBaseType(FortranType::KIND_UNSIGNED, 32,
+                                      ConstString("UNSIGNED"));
   case eBasicTypeFloat:
     return GetOrCreateFortranBaseType(FortranType::KIND_REAL, 32,
                                       ConstString("REAL"));
@@ -270,6 +295,9 @@ TypeSystemFortran::GetBuiltinTypeForEncodingAndBitSize(Encoding encoding,
   case eEncodingSint:
     return GetOrCreateFortranBaseType(FortranType::KIND_INTEGER, bit_size,
                                       ConstString("INTEGER"));
+  case eEncodingUint:
+    return GetOrCreateFortranBaseType(FortranType::KIND_UNSIGNED, bit_size,
+                                      ConstString("UNSIGNED"));
   case eEncodingIEEE754:
     return GetOrCreateFortranBaseType(FortranType::KIND_REAL, bit_size,
                                       ConstString("REAL"));

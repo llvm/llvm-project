@@ -102,6 +102,51 @@ TEST_F(TestTypeSystemFortran, TestBaseTypes) {
   EXPECT_EQ(m_ast->GetBasicTypeEnumeration(int128_type.GetOpaqueQualType()),
             eBasicTypeInt128);
 
+  CompilerType uint8_type =
+      m_ast->CreateBaseType(llvm::dwarf::DW_ATE_unsigned, 8, ConstString());
+  EXPECT_TRUE(uint8_type.IsValid());
+  bitsize_or_err = uint8_type.GetBitSize(nullptr);
+  ASSERT_THAT_EXPECTED(bitsize_or_err, llvm::Succeeded());
+  EXPECT_EQ(*bitsize_or_err, 8U);
+  EXPECT_EQ(m_ast->GetBasicTypeEnumeration(uint8_type.GetOpaqueQualType()),
+            eBasicTypeUnsignedChar);
+
+  CompilerType uint16_type =
+      m_ast->CreateBaseType(llvm::dwarf::DW_ATE_unsigned, 16, ConstString());
+  EXPECT_TRUE(uint16_type.IsValid());
+  bitsize_or_err = uint16_type.GetBitSize(nullptr);
+  ASSERT_THAT_EXPECTED(bitsize_or_err, llvm::Succeeded());
+  EXPECT_EQ(*bitsize_or_err, 16U);
+  EXPECT_EQ(m_ast->GetBasicTypeEnumeration(uint16_type.GetOpaqueQualType()),
+            eBasicTypeUnsignedShort);
+
+  CompilerType uint32_type =
+      m_ast->CreateBaseType(llvm::dwarf::DW_ATE_unsigned, 32, ConstString());
+  EXPECT_TRUE(uint32_type.IsValid());
+  bitsize_or_err = uint32_type.GetBitSize(nullptr);
+  ASSERT_THAT_EXPECTED(bitsize_or_err, llvm::Succeeded());
+  EXPECT_EQ(*bitsize_or_err, 32U);
+  EXPECT_EQ(m_ast->GetBasicTypeEnumeration(uint32_type.GetOpaqueQualType()),
+            eBasicTypeUnsignedInt);
+
+  CompilerType uint64_type =
+      m_ast->CreateBaseType(llvm::dwarf::DW_ATE_unsigned, 64, ConstString());
+  EXPECT_TRUE(uint64_type.IsValid());
+  bitsize_or_err = uint64_type.GetBitSize(nullptr);
+  ASSERT_THAT_EXPECTED(bitsize_or_err, llvm::Succeeded());
+  EXPECT_EQ(*bitsize_or_err, 64U);
+  EXPECT_EQ(m_ast->GetBasicTypeEnumeration(uint64_type.GetOpaqueQualType()),
+            eBasicTypeUnsignedLongLong);
+
+  CompilerType uint128_type =
+      m_ast->CreateBaseType(llvm::dwarf::DW_ATE_unsigned, 128, ConstString());
+  EXPECT_TRUE(uint128_type.IsValid());
+  bitsize_or_err = uint128_type.GetBitSize(nullptr);
+  ASSERT_THAT_EXPECTED(bitsize_or_err, llvm::Succeeded());
+  EXPECT_EQ(*bitsize_or_err, 128U);
+  EXPECT_EQ(m_ast->GetBasicTypeEnumeration(uint128_type.GetOpaqueQualType()),
+            eBasicTypeUnsignedInt128);
+
   CompilerType real16_type =
       m_ast->CreateBaseType(llvm::dwarf::DW_ATE_float, 16, ConstString());
   EXPECT_TRUE(real16_type.IsValid());
@@ -176,6 +221,8 @@ TEST_F(TestTypeSystemFortran, TestTypeClassifications) {
       m_ast->CreateBaseType(llvm::dwarf::DW_ATE_boolean, 32, ConstString());
   CompilerType int_type =
       m_ast->CreateBaseType(llvm::dwarf::DW_ATE_signed, 32, ConstString());
+  CompilerType uint_type =
+      m_ast->CreateBaseType(llvm::dwarf::DW_ATE_unsigned, 32, ConstString());
   CompilerType real_type =
       m_ast->CreateBaseType(llvm::dwarf::DW_ATE_float, 32, ConstString());
   CompilerType complex_type = m_ast->CreateBaseType(
@@ -185,14 +232,17 @@ TEST_F(TestTypeSystemFortran, TestTypeClassifications) {
 
   EXPECT_TRUE(int_type.IsIntegerType(is_signed));
   EXPECT_TRUE(is_signed);
+  EXPECT_TRUE(uint_type.IsIntegerType(is_signed));
+  EXPECT_FALSE(is_signed);
   EXPECT_FALSE(logical_type.IsIntegerType(is_signed));
   EXPECT_FALSE(real_type.IsIntegerType(is_signed));
   EXPECT_FALSE(complex_type.IsIntegerType(is_signed));
 
   EXPECT_TRUE(real_type.IsFloatingPointType());
   EXPECT_FALSE(int_type.IsFloatingPointType());
+  EXPECT_FALSE(uint_type.IsFloatingPointType());
   EXPECT_FALSE(logical_type.IsFloatingPointType());
-  EXPECT_FALSE(complex_type.IsFloatingPointType());
+  EXPECT_TRUE(complex_type.IsFloatingPointType());
 }
 
 TEST_F(TestTypeSystemFortran, TestTypeNameGeneration) {
@@ -202,6 +252,8 @@ TEST_F(TestTypeSystemFortran, TestTypeNameGeneration) {
       m_ast->CreateBaseType(llvm::dwarf::DW_ATE_boolean, 64, ConstString());
   CompilerType int32 =
       m_ast->CreateBaseType(llvm::dwarf::DW_ATE_signed, 32, ConstString());
+  CompilerType uint32 =
+      m_ast->CreateBaseType(llvm::dwarf::DW_ATE_unsigned, 32, ConstString());
   CompilerType real32 =
       m_ast->CreateBaseType(llvm::dwarf::DW_ATE_float, 32, ConstString());
   CompilerType complex64 = m_ast->CreateBaseType(
@@ -210,6 +262,7 @@ TEST_F(TestTypeSystemFortran, TestTypeNameGeneration) {
   EXPECT_STREQ(logical32.GetTypeName().GetCString(), "LOGICAL");
   EXPECT_STREQ(logical64.GetTypeName().GetCString(), "LOGICAL");
   EXPECT_STREQ(int32.GetTypeName().GetCString(), "INTEGER");
+  EXPECT_STREQ(uint32.GetTypeName().GetCString(), "UNSIGNED");
   EXPECT_STREQ(real32.GetTypeName().GetCString(), "REAL");
   EXPECT_STREQ(complex64.GetTypeName().GetCString(), "COMPLEX");
 }
