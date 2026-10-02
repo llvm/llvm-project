@@ -1926,16 +1926,20 @@ def riscv_pm2waddu
 def riscv_pm2waddsu
     : RVSDNode<"PM2WADDSU", SDT_RISCVPackedWideningHorizontalAdd>;
 
-// Packed multiplication with widening horizontal addition and accumulate.
-def SDT_RISCVPackedWideningHorizontalAddAcc
+// Packed widening multiply-accumulate operations.
+def SDT_RISCVPackedWideningAcc
     : SDTypeProfile<1, 3, [SDTCisVT<0, v2i32>, SDTCisSameAs<0, 1>,
                            SDTCisVT<2, v2i16>, SDTCisSameAs<2, 3>]>;
+def riscv_pmqwacc_h
+    : RVSDNode<"PMQWACC_H", SDT_RISCVPackedWideningAcc>;
+def riscv_pmqrwacc_h
+    : RVSDNode<"PMQRWACC_H", SDT_RISCVPackedWideningAcc>;
 def riscv_pm2wadda
-    : RVSDNode<"PM2WADDA", SDT_RISCVPackedWideningHorizontalAddAcc>;
+    : RVSDNode<"PM2WADDA", SDT_RISCVPackedWideningAcc>;
 def riscv_pm2waddau
-    : RVSDNode<"PM2WADDAU", SDT_RISCVPackedWideningHorizontalAddAcc>;
+    : RVSDNode<"PM2WADDAU", SDT_RISCVPackedWideningAcc>;
 def riscv_pm2waddasu
-    : RVSDNode<"PM2WADDASU", SDT_RISCVPackedWideningHorizontalAddAcc>;
+    : RVSDNode<"PM2WADDASU", SDT_RISCVPackedWideningAcc>;
 
 def SDT_RISCVPM2Halfword
     : SDTypeProfile<1, 2, [SDTCisVT<0, v2i32>,
@@ -2716,6 +2720,14 @@ let append Predicates = [IsRV32] in {
             (PWMULSU_B GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (riscv_pwmulsu (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
             (PWMULSU_H GPR:$rs1, GPR:$rs2)>;
+
+  // Packed Q-format widening multiply-accumulate patterns.
+  def : Pat<(v2i32 (riscv_pmqwacc_h (v2i32 GPRPair:$rd),
+                                    (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PMQWACC_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pmqrwacc_h (v2i32 GPRPair:$rd),
+                                     (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PMQRWACC_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // Packed multiplication with widening horizontal addition patterns.
   def : Pat<(v2i32 (riscv_pm2wadd (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),

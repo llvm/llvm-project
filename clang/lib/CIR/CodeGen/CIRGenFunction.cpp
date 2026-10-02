@@ -1301,8 +1301,7 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
                                "emitLValue: MatrixElementExpr");
     return LValue();
   case Expr::CXXThisExprClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: CXXThisExpr");
-    return LValue();
+    return makeAddrLValue(loadCXXThisAddress(), e->getType());
   case Expr::MemberExprClass:
     return emitMemberExpr(cast<MemberExpr>(e));
   case Expr::CompoundLiteralExprClass:
