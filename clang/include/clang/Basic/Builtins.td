@@ -3570,6 +3570,11 @@ def Fwrite : LibBuiltin<"stdio.h"> {
   let Prototype = "size_t(void const*, size_t, size_t, FILE*)";
 }
 
+def Fgets : LibBuiltin<"stdio.h"> {
+  let Spellings = ["fgets"];
+  let Prototype = "char*(char*, int, FILE*)";
+}
+
 // C99 ctype.h
 
 def IsAlNum : LibBuiltin<"ctype.h"> {
@@ -5604,6 +5609,30 @@ def HLSLInterlockedAdd : LangBuiltin<"HLSL_LANG"> {
 def HLSLInterlockedAnd : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_interlocked_and"];
   let Attributes = [NoThrow];
+  let Prototype = "void (...)";
+}
+
+def HLSLInterlockedCompareExchange : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_compare_exchange"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void (...)";
+}
+
+def HLSLInterlockedCompareExchangeFloatBitwise : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_compare_exchange_float_bitwise"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void (...)";
+}
+
+def HLSLInterlockedCompareStore : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_compare_store"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void (...)";
+}
+
+def HLSLInterlockedCompareStoreFloatBitwise : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_compare_store_float_bitwise"];
+  let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void (...)";
 }
 
