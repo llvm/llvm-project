@@ -15,6 +15,11 @@
 #if defined(__aarch64__) || defined(__arm64ec__)
 // AArch64 GCC overrides libgcc_cmp_return to use int instead of long.
 typedef int CMP_RESULT;
+#elif defined(__i386__) || defined(__x86_64__)
+// x86 targets always use an i32 for smaller encoding. Note that as of 2026-04
+// this does not match libgcc, but the needed comparisons to 0 are compatible
+// across sizes.
+typedef int CMP_RESULT;
 #elif defined(__wasm__)
 // Both wasm32 and wasm64 use i32
 typedef int CMP_RESULT;
