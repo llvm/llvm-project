@@ -140,7 +140,7 @@ void gh228290(int i) {
 // CHECK: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CHECK: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
 // CHECK: %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
-// CHECK: %[[TWO_CAST:.*]] = cir.builtin_int_cast %[[TWO_CAST]] : !s32i -> si32
+// CHECK: %[[TWO_CAST:.*]] = cir.builtin_int_cast %[[TWO]] : !s32i -> si32
 // CHECK: acc.enter_data wait(%[[ONE_CAST]], %[[TWO_CAST]] : si32, si32) dataOperands({{.*}})
 }
 
