@@ -65,7 +65,14 @@ def my_node_3 : SDNode<
 // CHECK-NEXT:    "MyTargetISD::NODE_3\0"
 // CHECK-NEXT:    ;
 
-// CHECK:       static const VTByHwModePair MyTargetVTByHwModeTable[] = {
+// CHECK:       static const SDNodeDesc MyTargetSDNodeDescs[] = {
+// CHECK-NEXT:      {1, 0, 0}, // NODE_1
+// CHECK-NEXT:      {21, 42, 0|1<<SDNFIsMemOperand}, // NODE_2
+// CHECK-NEXT:      {41, 24, 0|1<<SDNFIsStrictFP}, // NODE_3
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT:  #ifndef NDEBUG
+// CHECK-NEXT:  static const VTByHwModePair MyTargetVTByHwModeTable[] = {
 // CHECK-NEXT:   /* dummy */ {0, MVT::INVALID_SIMPLE_VALUE_TYPE}
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
@@ -87,12 +94,23 @@ def my_node_3 : SDNode<
 // CHECK-SAME:            {SDTCisVT, 0, 0, 0, MVT::i1},
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
-// CHECK-NEXT:  static const SDNodeDesc MyTargetSDNodeDescs[] = {
-// CHECK-NEXT:          {1, 1, 0|1<<SDNPHasChain, 0, 0, 1, 0, 2}, // NODE_1
-// CHECK-NEXT:          {3, 1, 0|1<<SDNPVariadic|1<<SDNPMemOperand, 0, 42, 21, 11, 4}, // NODE_2
-// CHECK-NEXT:          {2, -1, 0|1<<SDNPHasChain|1<<SDNPOutGlue|1<<SDNPInGlue|1<<SDNPOptInGlue, 0|1<<SDNFIsStrictFP, 24, 41, 2, 13}, // NODE_3
+// CHECK-NEXT:  static const SDNodeVerifyDesc MyTargetSDNodeVerifyDescs[] = {
+// CHECK-NEXT:      {1, 1, 0|1<<SDNPHasChain, 0, 2}, // NODE_1
+// CHECK-NEXT:      {3, 1, 0|1<<SDNPVariadic|1<<SDNPMemOperand, 11, 4}, // NODE_2
+// CHECK-NEXT:      {2, -1, 0|1<<SDNPHasChain|1<<SDNPOutGlue|1<<SDNPInGlue|1<<SDNPOptInGlue, 2, 13}, // NODE_3
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
-// CHECK-NEXT: static const SDNodeInfo MyTargetGenSDNodeInfo(
-// CHECK-NEXT:     /*NumOpcodes=*/3, MyTargetSDNodeDescs, MyTargetSDNodeNames,
-// CHECK-NEXT:     MyTargetVTByHwModeTable, MyTargetSDTypeConstraints);
+// CHECK-NEXT:  static const SDNodeVerifyInfo MyTargetSDNodeVerifyInfo = {
+// CHECK-NEXT:      MyTargetSDNodeVerifyDescs, MyTargetVTByHwModeTable,
+// CHECK-NEXT:      MyTargetSDTypeConstraints};
+// CHECK-NEXT:  #endif // NDEBUG
+// CHECK-EMPTY:
+// CHECK-NEXT:  #ifndef NDEBUG
+// CHECK-NEXT:  static const SDNodeInfo MyTargetGenSDNodeInfo(
+// CHECK-NEXT:      /*NumOpcodes=*/3, MyTargetSDNodeDescs, MyTargetSDNodeNames,
+// CHECK-NEXT:      &MyTargetSDNodeVerifyInfo);
+// CHECK-NEXT:  #else
+// CHECK-NEXT:  static const SDNodeInfo MyTargetGenSDNodeInfo(
+// CHECK-NEXT:      /*NumOpcodes=*/3, MyTargetSDNodeDescs, MyTargetSDNodeNames,
+// CHECK-NEXT:      nullptr);
+// CHECK-NEXT:  #endif // NDEBUG
