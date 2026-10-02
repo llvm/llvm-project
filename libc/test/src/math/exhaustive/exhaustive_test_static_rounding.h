@@ -12,10 +12,12 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_TEST_SRC_MATH_EXHAUSTIVE_EXHAUSTIVE_TEST_STATIC_ROUNDING_H
+#define LLVM_LIBC_TEST_SRC_MATH_EXHAUSTIVE_EXHAUSTIVE_TEST_STATIC_ROUNDING_H
+
 // This file is modeled after exhaustive_test.h, modified for testing statically
 // rounded math functions.
 
-#include "exhaustive_test.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/properties/types.h"
@@ -23,6 +25,7 @@
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
 #include "test/UnitTest/TestLogger.h"
+#include "test/src/math/exhaustive/exhaustive_test.h"
 
 #include <atomic>
 #include <iostream>
@@ -234,3 +237,5 @@ template <typename FloatType, UnaryOp<FloatType> BaselineFunc,
 using LlvmLibcStaticallyRoundedUnaryOpExhaustiveMathTest =
     LlvmLibcExhaustiveStaticallyRoundedMathTest<StaticallyRoundedUnaryOpChecker<
         FloatType, FloatType, BaselineFunc, Func>>;
+
+#endif // LLVM_LIBC_TEST_SRC_MATH_EXHAUSTIVE_EXHAUSTIVE_TEST_STATIC_ROUNDING_H

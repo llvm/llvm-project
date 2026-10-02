@@ -165,3 +165,58 @@ HFAMatrix2 ret_hfa_matrix2() {
   return r;
 }
 // CHECK: define{{.*}} %struct.HFAMatrix2 @ret_hfa_matrix2
+
+// Empty records and zero-size types are ignored as returns (void).
+typedef struct {
+} Empty;
+Empty ret_empty(void) {
+  Empty e;
+  return e;
+}
+// CHECK: define{{.*}} void @ret_empty()
+
+typedef union {
+} EmptyUnion;
+EmptyUnion ret_empty_union(void) {
+  EmptyUnion u;
+  return u;
+}
+// CHECK: define{{.*}} void @ret_empty_union()
+
+typedef struct {
+  int arr[0];
+} ZeroSize;
+ZeroSize ret_zerosize(void) {
+  ZeroSize z;
+  return z;
+}
+// CHECK: define{{.*}} void @ret_zerosize()
+
+typedef struct {
+  ZeroSize inner;
+} NestedZeroSize;
+NestedZeroSize ret_nested_zerosize(void) {
+  NestedZeroSize z;
+  return z;
+}
+// CHECK: define{{.*}} void @ret_nested_zerosize()
+
+typedef float v2f32 __attribute__((vector_size(8)));
+v2f32 ret_v2f32(void) { return (v2f32){1.0f, 2.0f}; }
+// CHECK: define{{.*}} <2 x float> @ret_v2f32
+
+typedef float v4f32 __attribute__((vector_size(16)));
+v4f32 ret_v4f32(void) { return (v4f32){1.0f, 2.0f, 3.0f, 4.0f}; }
+// CHECK: define{{.*}} <4 x float> @ret_v4f32
+
+typedef char v16i8 __attribute__((vector_size(16)));
+v16i8 ret_v16i8(void) { return (v16i8){0}; }
+// CHECK: define{{.*}} <16 x i8> @ret_v16i8
+
+typedef float v8f32 __attribute__((vector_size(32)));
+v8f32 ret_v8f32(void) { return (v8f32){0}; }
+// CHECK: define{{.*}} void @ret_v8f32(ptr dead_on_unwind noalias writable sret(<8 x float>) align 16 %{{.*}})
+
+typedef char v17i8 __attribute__((vector_size(17)));
+v17i8 ret_v17i8(void) { return (v17i8){0}; }
+// CHECK: define{{.*}} void @ret_v17i8(ptr dead_on_unwind noalias writable sret(<17 x i8>) align 16 %{{.*}})

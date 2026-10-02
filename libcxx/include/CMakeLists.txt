@@ -538,6 +538,7 @@ set(files
   __iterator/size.h
   __iterator/sortable.h
   __iterator/static_bounded_iter.h
+  __iterator/static_packed_bounded_iter.h
   __iterator/unreachable_sentinel.h
   __iterator/wrap_iter.h
   __locale_dir/check_grouping.h
@@ -710,6 +711,7 @@ set(files
   __pstl/cpu_algos/search.h
   __pstl/cpu_algos/search_n.h
   __pstl/cpu_algos/stable_sort.h
+  __pstl/cpu_algos/swap_ranges.h
   __pstl/cpu_algos/transform.h
   __pstl/cpu_algos/transform_reduce.h
   __pstl/cpu_algos/uninitialized_algorithms.h

@@ -299,33 +299,34 @@ define void @test(ptr %a, ptr %b, ptr %out) nounwind {
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %r15
 ; X64-NEXT:    pushq %r14
+; X64-NEXT:    pushq %r12
 ; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    movq %rdx, %rcx
 ; X64-NEXT:    movq (%rdi), %rbx
 ; X64-NEXT:    movq 8(%rdi), %r11
-; X64-NEXT:    movq 16(%rdi), %r10
+; X64-NEXT:    movq 16(%rdi), %r12
 ; X64-NEXT:    movq 16(%rsi), %r8
 ; X64-NEXT:    movq (%rsi), %r9
 ; X64-NEXT:    movq 8(%rsi), %r14
-; X64-NEXT:    movq 24(%rdi), %r15
-; X64-NEXT:    imulq %r9, %r15
+; X64-NEXT:    movq 24(%rdi), %rdi
+; X64-NEXT:    imulq %r9, %rdi
 ; X64-NEXT:    movq %r9, %rax
-; X64-NEXT:    mulq %r10
-; X64-NEXT:    movq %rax, %rdi
-; X64-NEXT:    imulq %r14, %r10
-; X64-NEXT:    addq %rdx, %r10
-; X64-NEXT:    addq %r15, %r10
-; X64-NEXT:    movq %r8, %r15
-; X64-NEXT:    imulq %r11, %r15
+; X64-NEXT:    mulq %r12
+; X64-NEXT:    movq %rax, %r10
+; X64-NEXT:    imulq %r14, %r12
+; X64-NEXT:    addq %rdx, %r12
+; X64-NEXT:    addq %rdi, %r12
+; X64-NEXT:    movq %r8, %rdi
+; X64-NEXT:    imulq %r11, %rdi
 ; X64-NEXT:    movq %r8, %rax
 ; X64-NEXT:    mulq %rbx
 ; X64-NEXT:    movq %rax, %r8
-; X64-NEXT:    addq %r15, %rdx
+; X64-NEXT:    addq %rdi, %rdx
 ; X64-NEXT:    movq 24(%rsi), %r15
 ; X64-NEXT:    imulq %rbx, %r15
 ; X64-NEXT:    addq %rdx, %r15
-; X64-NEXT:    addq %rdi, %r8
-; X64-NEXT:    adcq %r10, %r15
+; X64-NEXT:    addq %r10, %r8
+; X64-NEXT:    adcq %r12, %r15
 ; X64-NEXT:    movq %rbx, %rax
 ; X64-NEXT:    mulq %r9
 ; X64-NEXT:    movq %rdx, %rsi
@@ -355,6 +356,7 @@ define void @test(ptr %a, ptr %b, ptr %out) nounwind {
 ; X64-NEXT:    movq %rax, 16(%rcx)
 ; X64-NEXT:    movq %rdx, 24(%rcx)
 ; X64-NEXT:    popq %rbx
+; X64-NEXT:    popq %r12
 ; X64-NEXT:    popq %r14
 ; X64-NEXT:    popq %r15
 ; X64-NEXT:    retq
