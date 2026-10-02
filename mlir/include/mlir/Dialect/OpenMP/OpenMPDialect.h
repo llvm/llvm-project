@@ -61,6 +61,15 @@ std::tuple<NewCliOp, OpOperand *, OpOperand *> decodeCli(mlir::Value cli);
 /// OpenMP dialect enum. The LLVM 'default' and 'unknown' kinds have no dialect
 /// counterpart and are not valid inputs.
 ClauseProcBindKind convertProcBindKind(llvm::omp::ProcBindKind kind);
+
+/// Models shared OpenMP runtime bookkeeping used to manage threadprivate
+/// variables including caches.
+struct ThreadprivateRuntimeResource
+    : SideEffects::Resource::Base<ThreadprivateRuntimeResource> {
+  StringRef getName() const final { return "OpenMPThreadprivateRuntime"; }
+
+  bool isAddressable() const override { return false; }
+};
 } // namespace mlir::omp
 
 #endif // MLIR_DIALECT_OPENMP_OPENMPDIALECT_H_
