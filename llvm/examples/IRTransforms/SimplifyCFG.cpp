@@ -32,6 +32,7 @@
 //  * Add implementation using reachability to discover dead blocks.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -39,21 +40,13 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Plugins/PassPlugin.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace PatternMatch;
 
 enum TutorialVersion { V1, V2, V3 };
-static cl::opt<TutorialVersion>
-    Version("tut-simplifycfg-version", cl::desc("Select tutorial version"),
-            cl::Hidden, cl::ValueOptional, cl::init(V1),
-            cl::values(clEnumValN(V1, "v1", "version 1"),
-                       clEnumValN(V2, "v2", "version 2"),
-                       clEnumValN(V3, "v3", "version 3"),
-                       // Sentinel value for unspecified option.
-                       clEnumValN(V3, "", "")));
+static TutorialVersion Version = V1;
 
 #define DEBUG_TYPE "tut-simplifycfg"
 
@@ -392,8 +385,20 @@ struct SimplifyCFGPass : public OptionalPassInfoMixin<SimplifyCFGPass> {
 };
 } // namespace
 
+// Selects the tutorial version with -plugin-arg=SimplifyCFG,v1 (or v2, v3).
 static Error parseArguments(ArrayRef<const char *> Args) {
-  return parsePassPluginCommandLine("SimplifyCFG", Args);
+  std::optional<TutorialVersion> V;
+  if (Args.size() == 1)
+    V = StringSwitch<std::optional<TutorialVersion>>(Args[0])
+            .Case("v1", V1)
+            .Case("v2", V2)
+            .Case("v3", V3)
+            .Default(std::nullopt);
+  if (!V)
+    return createStringError(
+        "SimplifyCFG: expected one argument, v1, v2 or v3");
+  Version = *V;
+  return Error::success();
 }
 
 /* New PM Registration */

@@ -20,8 +20,8 @@
 // This pass should be run after register allocation and is based on the
 // earliest versions of AArch64RedundantCopyElimination.
 //
-// FIXME: Support compare with non-zero immediates where the immediate is stored
-// in a register.
+// The pass also handles register-register branches when one operand is
+// materialized as a non-zero immediate in the predecessor block.
 //
 //===----------------------------------------------------------------------===//
 
@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -108,6 +109,30 @@ guaranteesRegEqualsImmInBlock(MachineBasicBlock &MBB,
   return false;
 }
 
+static std::optional<int64_t>
+getRegImmediateBeforeTerminator(MachineBasicBlock &MBB, Register Reg,
+                                const TargetRegisterInfo *TRI) {
+  // A write to X0 is discarded, so it cannot establish a nonzero value.
+  if (Reg == RISCV::X0)
+    return std::nullopt;
+
+  for (auto I = MBB.getFirstTerminator(); I != MBB.begin();) {
+    MachineInstr &MI = *--I;
+    if (!MI.modifiesRegister(Reg, TRI))
+      continue;
+    // The last modification must define Reg itself to a known immediate.
+    if (MI.getOpcode() == RISCV::ADDI && MI.getOperand(0).isReg() &&
+        MI.getOperand(0).getReg() == Reg && MI.getOperand(1).isReg() &&
+        MI.getOperand(1).getReg() == RISCV::X0 && MI.getOperand(2).isImm())
+      return MI.getOperand(2).getImm();
+    if (MI.getOpcode() == RISCV::QC_LI && MI.getOperand(0).isReg() &&
+        MI.getOperand(0).getReg() == Reg && MI.getOperand(1).isImm())
+      return MI.getOperand(1).getImm();
+    return std::nullopt;
+  }
+  return std::nullopt;
+}
+
 bool RISCVRedundantCopyElimination::optimizeBlock(MachineBasicBlock &MBB) {
   // Check if the current basic block has a single predecessor.
   if (MBB.pred_size() != 1)
@@ -131,8 +156,34 @@ bool RISCVRedundantCopyElimination::optimizeBlock(MachineBasicBlock &MBB) {
     return false;
 
   bool IsZeroCopy = guaranteesZeroRegInBlock(MBB, Cond, TBB);
+  bool IsImmCopy = !IsZeroCopy && guaranteesRegEqualsImmInBlock(MBB, Cond, TBB);
+  int64_t CompareImm = IsImmCopy ? Cond[2].getImm() : 0;
+  if (!IsZeroCopy && !IsImmCopy && Cond.size() == 3 &&
+      (Cond[0].getImm() == RISCV::BEQ || Cond[0].getImm() == RISCV::BNE) &&
+      Cond[2].isReg()) {
+    // One branch operand may have been materialized with ADDI or QC_LI.
+    // The other operand is known to have the same value on the equality edge,
+    // irrespective of the operand order.
+    std::optional<int64_t> Imm =
+        getRegImmediateBeforeTerminator(*PredMBB, Cond[2].getReg(), TRI);
+    if (Imm && *Imm != 0) {
+      TargetReg = Cond[1].getReg();
+      CompareImm = *Imm;
+      IsImmCopy = true;
+    } else {
+      Imm = getRegImmediateBeforeTerminator(*PredMBB, Cond[1].getReg(), TRI);
+      if (Imm && *Imm != 0) {
+        TargetReg = Cond[2].getReg();
+        CompareImm = *Imm;
+        IsImmCopy = true;
+      }
+    }
+    // For BEQ, equality is guaranteed on the taken edge. For BNE, it is
+    // guaranteed on the fallthrough edge.
+    IsImmCopy &= (Cond[0].getImm() == RISCV::BEQ) == (TBB == &MBB);
+  }
 
-  if (!IsZeroCopy && !guaranteesRegEqualsImmInBlock(MBB, Cond, TBB))
+  if (!IsZeroCopy && !IsImmCopy)
     return false;
 
   bool Changed = false;
@@ -161,14 +212,14 @@ bool RISCVRedundantCopyElimination::optimizeBlock(MachineBasicBlock &MBB) {
         Register SrcReg = MI->getOperand(1).getReg();
         int64_t Imm = MI->getOperand(2).getImm();
         if (SrcReg == RISCV::X0 && !MRI->isReserved(DefReg) &&
-            TargetReg == DefReg && Imm == Cond[2].getImm())
+            TargetReg == DefReg && Imm == CompareImm)
           RemoveMI = true;
       } else if (MI->getOpcode() == RISCV::QC_LI && MI->getOperand(0).isReg() &&
                  MI->getOperand(1).isImm()) {
         Register DefReg = MI->getOperand(0).getReg();
         int64_t Imm = MI->getOperand(1).getImm();
         if (!MRI->isReserved(DefReg) && TargetReg == DefReg &&
-            Imm == Cond[2].getImm())
+            Imm == CompareImm)
           RemoveMI = true;
       }
     }
@@ -203,7 +254,9 @@ bool RISCVRedundantCopyElimination::optimizeBlock(MachineBasicBlock &MBB) {
           CondBr->getOpcode() == RISCV::NDS_BEQC ||
           CondBr->getOpcode() == RISCV::NDS_BNEC) &&
          "Unexpected opcode");
-  assert(CondBr->getOperand(0).getReg() == TargetReg && "Unexpected register");
+  assert((CondBr->getOperand(0).getReg() == TargetReg ||
+          CondBr->getOperand(1).getReg() == TargetReg) &&
+         "Unexpected register");
 
   // Otherwise, we have to fixup the use-def chain, starting with the
   // BEQ(I)/BNE(I). Conservatively mark as much as we can live.

@@ -41,3 +41,29 @@ cir.func @negative_column_number() {
   cir.return
 
 }
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @builtin_tranpose_different_element_type() {
+  %0 = cir.alloca "a" align(4) : !cir.ptr<!cir.matrix<3 x 2 x !cir.float>>
+  %1 = cir.alloca "b" align(4) init : !cir.ptr<!cir.matrix<2 x 3 x !cir.float>>
+  %2 = cir.load align(4) %0 : !cir.ptr<!cir.matrix<3 x 2 x !cir.float>>, !cir.matrix<3 x 2 x !cir.float>
+  // expected-error@+1 {{op operand type '!cir.matrix<3 x 2 x !cir.float>' expects result type of '!cir.matrix<2 x 3 x !cir.float>' but got '!cir.matrix<2 x 3 x !cir.int<s, 32>>}}
+  %3 = cir.matrix.transpose %2 : <3 x 2 x !cir.float>, !cir.matrix<2 x 3 x !s32i>
+  cir.return
+} 
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @builtin_tranpose_different_sizes() {
+  %0 = cir.alloca "a" align(4) : !cir.ptr<!cir.matrix<3 x 2 x !cir.float>>
+  %1 = cir.alloca "b" align(4) init : !cir.ptr<!cir.matrix<2 x 3 x !cir.float>>
+  %2 = cir.load align(4) %0 : !cir.ptr<!cir.matrix<3 x 2 x !cir.float>>, !cir.matrix<3 x 2 x !cir.float>
+  // expected-error@+1 {{op operand type '!cir.matrix<3 x 2 x !cir.float>' expects result type of '!cir.matrix<2 x 3 x !cir.float>' but got '!cir.matrix<3 x 3 x !cir.float>}}
+  %3 = cir.matrix.transpose %2 : <3 x 2 x !cir.float>, !cir.matrix<3 x 3 x !cir.float>
+  cir.return
+} 

@@ -21,6 +21,25 @@ contains
 ! CHECK-NEXT: cuf.free %[[DECL]]#0 : !fir.ref<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}>> {data_attr = #cuf.cuda<managed>}
 ! CHECK-NEXT: }
 
+  function mk() result(r)
+    type(ty_device) :: r
+  end function
+
+! CHECK-LABEL: func.func @_QMm1Pmk()
+! CHECK: %[[ALLOC:.*]] = fir.alloca !fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}> <{bindc_name = "r", uniq_name = "_QMm1FmkEr"}>
+! CHECK-NOT: cuf.alloc
+! CHECK-NOT: cuf.free
+! CHECK: return
+
+  function mkarr() result(r)
+    type(ty_device) :: r(2)
+  end function
+
+! CHECK-LABEL: func.func @_QMm1Pmkarr()
+! CHECK-NOT: cuf.alloc
+! CHECK-NOT: cuf.free
+! CHECK: return
+
 end module
 
 program main
