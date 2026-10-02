@@ -213,8 +213,42 @@ static unsigned hashCallInst(CallInst *CI) {
                       hash_combine_range(CI->operand_values()));
 }
 
+static bool matchOverflowResultOrBinaryOp(Instruction *Inst, unsigned &Opcode,
+                                          Value *&LHS, Value *&RHS,
+                                          BinaryOperator *&MatchedBinOp) {
+  MatchedBinOp = nullptr;
+  if (auto *BinOp = dyn_cast<BinaryOperator>(Inst)) {
+    Opcode = BinOp->getOpcode();
+    if (Opcode != Instruction::Add && Opcode != Instruction::Sub &&
+        Opcode != Instruction::Mul)
+      return false;
+    MatchedBinOp = BinOp;
+    LHS = BinOp->getOperand(0);
+    RHS = BinOp->getOperand(1);
+  } else if (auto *EVI = dyn_cast<ExtractValueInst>(Inst)) {
+    auto *WO = dyn_cast<WithOverflowInst>(EVI->getAggregateOperand());
+    if (!WO || EVI->getNumIndices() != 1 || *EVI->idx_begin() != 0)
+      return false;
+    Opcode = WO->getBinaryOp();
+    LHS = WO->getLHS();
+    RHS = WO->getRHS();
+  } else {
+    return false;
+  }
+
+  if (Instruction::isCommutative(Opcode) && LHS > RHS)
+    std::swap(LHS, RHS);
+  return true;
+}
+
 static unsigned getHashValueImpl(SimpleValue Val) {
   Instruction *Inst = Val.Inst;
+  unsigned Opcode;
+  Value *LHS, *RHS;
+  BinaryOperator *BinOp;
+  if (matchOverflowResultOrBinaryOp(Inst, Opcode, LHS, RHS, BinOp))
+    return hash_combine(Opcode, LHS, RHS);
+
   // Hash in all of the operands as pointers.
   if (BinaryOperator *BinOp = dyn_cast<BinaryOperator>(Inst)) {
     Value *LHS = BinOp->getOperand(0);
@@ -336,6 +370,25 @@ unsigned DenseMapInfo<SimpleValue>::getHashValue(SimpleValue Val) {
 
 static bool isEqualImpl(SimpleValue LHS, SimpleValue RHS) {
   Instruction *LHSI = LHS.Inst, *RHSI = RHS.Inst;
+
+  unsigned LOpcode, ROpcode;
+  Value *LLHS, *LRHS, *RLHS, *RRHS;
+  BinaryOperator *LBinOp, *RBinOp;
+  bool LMatched =
+      matchOverflowResultOrBinaryOp(LHSI, LOpcode, LLHS, LRHS, LBinOp);
+  bool RMatched =
+      matchOverflowResultOrBinaryOp(RHSI, ROpcode, RLHS, RRHS, RBinOp);
+  if (LMatched && RMatched && (!LBinOp || !RBinOp)) {
+    // The overflow intrinsics return a wrapped result, so do not replace one
+    // with a no-wrap binary operator that may produce poison.
+    if (LBinOp && LBinOp->hasPoisonGeneratingFlags())
+      return false;
+    if (RBinOp && RBinOp->hasPoisonGeneratingFlags())
+      return false;
+    return LOpcode == ROpcode && LLHS == RLHS && LRHS == RRHS;
+  }
+  if (LMatched != RMatched)
+    return false;
 
   if (LHSI->getOpcode() != RHSI->getOpcode())
     return false;
