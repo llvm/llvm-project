@@ -17,10 +17,8 @@
 #include "AMDGPUHWEvents.h"
 #include "AMDGPUWaitcntUtils.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
-#include <memory>
 
 namespace llvm {
 class raw_ostream;
@@ -138,39 +136,16 @@ public:
   /// continuing execution of the program (and recording more events).
   /// This affects the count of \p T, and removes all records that have a height
   /// greater than or equal to \p N.
-  /// If \p N is zero, then \p T will no longer be in an indeterminate or
-  /// out-of-order state afterwards if it previously was in such a state.
   void wait(InstCounterType T, unsigned N = 0);
 
-  /// Mark the counter \p T as being in an indeterminate state. This means that
-  /// we no longer accurately track \p T because there may be more records we do
-  /// not know about. This primarily affects \ref getPendingEvents and
-  /// \ref count.
-  /// Implies \ref markOutOfOrder for \p T as well.
-  void markIndeterminate(InstCounterType T);
+  /// \returns the current value of the counter \p T at this point in time
+  unsigned count(InstCounterType T) const;
 
-  /// Mark the counter \p T as being "out-of-order", meaning records may retire
-  /// in any order. This sets the height of all records to zero.
-  void markOutOfOrder(InstCounterType T);
-
-  /// \returns the current value of the counter \p T at this point in time, or
-  /// std::nullopt if \p T is in the indeterminate state.
-  std::optional<unsigned> count(InstCounterType T) const;
-
-  /// \returns true if the counter \p T is in an indeterminate state.
-  bool isIndeterminate(InstCounterType T) const;
-
-  /// \returns true if the counter \p T is out-of-order
-  bool isOutOfOrder(InstCounterType T) const;
-
-  /// \returns the set of pending HWEvents for \p T. If \p T is in an
-  /// indeterminate state, returns a conservative set of pending events instead.
+  /// \returns the set of pending HWEvents for \p T
   HWEvents getPendingEvents(InstCounterType T) const;
 
   /// \returns the set of live records recorded for \p T. This is the list of
   /// all instructions in-flight for that counter.
-  /// Note that if \p T is indeterminate, then this set is non-exhaustive. It
-  /// only contains the records this class knows about.
   ArrayRef<EventTrackerRecord> getLiveRecords(InstCounterType T) const;
 
   /// Prints a dump of the internal tracking state of this class for \p T to the
@@ -181,11 +156,6 @@ public:
   /// \p OS. If \p IgnoreEmpty is true, do not print counters with a count of 0.
   void print(raw_ostream &OS, bool IgnoreEmpty = false,
              unsigned Indent = 0) const;
-
-  /// \returns true if the option to mimic legacy (SIInsertWaitcnts
-  ///          scoreboard-style) tracking of counters and pending events.
-  /// TODO: Remove in the future when legacy tracking is no longer needed.
-  static bool mimicsLegacyTracking();
 
 #if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
   /// Verifies invariants of this class are respected.
@@ -209,21 +179,6 @@ private:
     /// FIXME: We shouldn't need it for correctness so perhaps it should be
     /// removed entirely.
     uint32_t Count = 0;
-    /// An upper bound that persists across fixpoint iterations. This is only
-    /// used when \ref mimicsLegacyTracking returns true.
-    uint32_t PersistentUpperBound = 0;
-    /// Whether this counter is in an indeterminate state, which means that both
-    /// the set of LiveRecords and the Count are imprecise. This implies that
-    /// the counter is out-of-order as well.
-    bool IsIndeterminate = false;
-    /// Whether this counter is out-of-order, meaning records may retire in any
-    /// order and they all exist at a height of zero.
-    bool IsOutOfOrder = false;
-    /// Legacy-style tracking of pending events that is coarse and does not
-    /// leverage the live set of records. Only used when
-    /// \ref mimicsLegacyTracking returns true and not cleared between
-    /// iterations.
-    HWEvents LegacyPendingEvents;
 
     // TODO: We could imagine storing the per-predecessor height for incoming
     // events. We could achieve that by storing that as a map of ((ID, Pred),

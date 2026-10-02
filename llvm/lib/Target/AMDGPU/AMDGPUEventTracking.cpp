@@ -15,15 +15,10 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <algorithm>
-#include <optional>
 
 #define DEBUG_TYPE "amdgpu-event-tracking"
 
 namespace llvm {
-
-/// Mimic legacy (coarse) tracking of counter state.
-static cl::opt<bool> MimicLegacyTracking("amdgpu-event-legacy-tracking",
-                                         cl::init(false));
 
 #ifndef NDEBUG
 static cl::opt<bool> EventTrackerPrintAll(
@@ -110,28 +105,24 @@ void EventTracker::record(MachineInstr &MI, SingleHWEvent Event) {
 
     FoundMatch = true;
     ++CD.Count;
-    CD.LegacyPendingEvents |= Event;
 
-    // Do not age records if we are out-of-order.
-    if (!CD.IsOutOfOrder) {
-      // NB: There is an intentional tradeoff here. We could avoid this loop by
-      // instead storing a timestamp in each record, and having a
-      // constantly-increasing clock to infer the height (clock-timestamp is
-      // height). However, it'd:
-      //  - Complexify fetching the height (`EventTrackerRecord` cannot answer
-      //  it
-      //    on its own anymore and we need a separate query/wrapper).
-      //  - Make merge of incoming records a bit more annoying (we'd need to
-      //    rebase the `clock`).
-      //  - Potentially demand (much) more space in EventTrackerRecord to store
-      //    bigger numbers.
-      //
-      // All in all, I think this small loop is fine for now, but we can still
-      // change the system if we have data backed up by profiling to
-      // justify the change.
-      for (auto &Live : CD.LiveRecords)
-        Live.setHeight(Live.getHeight() + 1);
-    }
+    // NB: There is an intentional tradeoff here. We could avoid this loop by
+    // instead storing a timestamp in each record, and having a
+    // constantly-increasing clock to infer the height (clock-timestamp is
+    // height). However, it'd:
+    //  - Complexify fetching the height (`EventTrackerRecord` cannot answer
+    //  it
+    //    on its own anymore and we need a separate query/wrapper).
+    //  - Make merge of incoming records a bit more annoying (we'd need to
+    //    rebase the `clock`).
+    //  - Potentially demand (much) more space in EventTrackerRecord to store
+    //    bigger numbers.
+    //
+    // All in all, I think this small loop is fine for now, but we can still
+    // change the system if we have data backed up by profiling to
+    // justify the change.
+    for (auto &Live : CD.LiveRecords)
+      Live.setHeight(Live.getHeight() + 1);
 
     // NOTE: We do not merge with a previous record that has the same (MI+Kind),
     // unlike in recordIncomings. We are okay with having 2 separate records
@@ -163,23 +154,16 @@ void EventTracker::wait(InstCounterType T, unsigned N) {
   if (N == 0) {
     CD.LiveRecords.clear();
     CD.Count = 0;
-    CD.IsIndeterminate = false;
-    CD.IsOutOfOrder = false;
-    CD.LegacyPendingEvents = HWEvents();
   } else {
     CD.Count = std::min(CD.Count, N);
 
-    // Don't bother erasing stuff if we are out-of-order. All records have a
-    // height of zero in such cases.
-    if (!CD.IsOutOfOrder) {
-      auto *RmIt = remove_if(CD.LiveRecords, [&](EventTrackerRecord &E) {
-        if (E.getHeight() < N)
-          return false;
-        LLVM_DEBUG(dbgs() << "  | Removing "; E.print(dbgs()));
-        return true;
-      });
-      CD.LiveRecords.erase(RmIt, CD.LiveRecords.end());
-    }
+    auto *RmIt = remove_if(CD.LiveRecords, [&](EventTrackerRecord &E) {
+      if (E.getHeight() < N)
+        return false;
+      LLVM_DEBUG(dbgs() << "  | Removing "; E.print(dbgs()));
+      return true;
+    });
+    CD.LiveRecords.erase(RmIt, CD.LiveRecords.end());
 
     LLVM_DEBUG(dbgs() << "  | => Updated Count:" << CD.Count << '\n');
 
@@ -196,46 +180,11 @@ void EventTracker::wait(InstCounterType T, unsigned N) {
 #endif
 }
 
-void EventTracker::markIndeterminate(InstCounterType T) {
-  LLVM_DEBUG(dbgs() << "[EventTracker] Marking " << getInstCounterName(T)
-                    << " as indeterminate!\n");
-  CounterData &CD = Counters[T];
-  CD.IsIndeterminate = true;
-  markOutOfOrder(T);
-}
-
-void EventTracker::markOutOfOrder(InstCounterType T) {
-  LLVM_DEBUG(dbgs() << "[EventTracker] Marking " << getInstCounterName(T)
-                    << " as out-of-order!\n");
-  CounterData &CD = Counters[T];
-  CD.IsOutOfOrder = true;
-  for (auto &Rec : CD.LiveRecords)
-    Rec.setHeight(0);
-}
-
-std::optional<unsigned> EventTracker::count(InstCounterType T) const {
-  const CounterData &CD = Counters[T];
-  if (CD.IsIndeterminate)
-    return std::nullopt;
+unsigned EventTracker::count(InstCounterType T) const {
   return Counters[T].Count;
 }
 
-bool EventTracker::isIndeterminate(InstCounterType T) const {
-  return Counters[T].IsIndeterminate;
-}
-
-bool EventTracker::isOutOfOrder(InstCounterType T) const {
-  return Counters[T].IsOutOfOrder;
-}
-
 HWEvents EventTracker::getPendingEvents(InstCounterType T) const {
-  const CounterData &CD = Counters[T];
-  if (CD.IsIndeterminate)
-    return CD.CI->Events; // return all events
-
-  if (MimicLegacyTracking)
-    return CD.LegacyPendingEvents;
-
   HWEvents Res;
   for (const auto &E : Counters[T].LiveRecords)
     Res |= E.getKind();
@@ -251,8 +200,6 @@ void EventTracker::print(raw_ostream &OS, InstCounterType T) const {
   print(OS, Counters[T]);
 }
 
-bool EventTracker::mimicsLegacyTracking() { return MimicLegacyTracking; }
-
 #if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
 void EventTracker::verify() const {
   if (!MBB)
@@ -263,22 +210,6 @@ void EventTracker::verify() const {
       dbgs() << "EventTracker verification error\n";
       print(dbgs(), C);
     };
-
-    if (C.IsIndeterminate) {
-      if (!C.IsOutOfOrder) {
-        OnError();
-        llvm_unreachable("IsIndeterminate but not IsOutOfOrder");
-      }
-      continue;
-    }
-
-    if (C.IsOutOfOrder) {
-      if (!all_of(C.LiveRecords, [](auto &R) { return R.getHeight() == 0; })) {
-        OnError();
-        llvm_unreachable(
-            "IsOutOfOrder but some records do not have a height of 0!");
-      }
-    }
 
     // Check some basic invariants
     //  - Height of a record cannot exceed the value of the counter
@@ -376,8 +307,6 @@ void EventTracker::clear() {
   for (CounterData &C : Counters) {
     C.LiveRecords.clear();
     C.Count = 0;
-    C.IsIndeterminate = false;
-    C.IsOutOfOrder = false;
   }
 }
 
@@ -401,12 +330,6 @@ void EventTracker::recordIncomings(ArrayRef<EventTracker *> Preds) {
 
       // Merge domain for the count value:
       CData.Count = std::max(CData.Count, PredCData.Count);
-      // Merge domain for the legacy pending events.
-      CData.LegacyPendingEvents |= PredCData.LegacyPendingEvents;
-      // Merge domain for the indeterminate state.
-      CData.IsIndeterminate |= PredCData.IsIndeterminate;
-      // Merge domain for the out-of-order state.
-      CData.IsOutOfOrder |= PredCData.IsOutOfOrder;
 
       for (EventTrackerRecord &PredEntry : PredCData.LiveRecords) {
         // At a join, we collapse records from all predecessors with the same
@@ -420,12 +343,6 @@ void EventTracker::recordIncomings(ArrayRef<EventTracker *> Preds) {
         } else
           Acc.insert({Identity, PredEntry});
       }
-    }
-
-    if (MimicLegacyTracking) {
-      CData.PersistentUpperBound =
-          std::max(CData.PersistentUpperBound, CData.Count);
-      CData.Count = CData.PersistentUpperBound;
     }
 
     auto AccVals = Acc.values();
@@ -449,10 +366,7 @@ void EventTracker::print(raw_ostream &OS, const CounterData &CD,
                          unsigned Indent) {
   OS.indent(Indent) << getInstCounterName(CD.CI->CounterT)
                     << " (Count=" << CD.Count
-                    << ", PersistentUpperBound=" << CD.PersistentUpperBound
-                    << ", LiveRecords=" << CD.LiveRecords.size()
-                    << ", IsOutOfOrder=" << CD.IsOutOfOrder
-                    << ", IsIndeterminate=" << CD.IsIndeterminate << ")\n";
+                    << ", LiveRecords=" << CD.LiveRecords.size() << ")\n";
   for (const EventTrackerRecord &E : CD.LiveRecords) {
     OS.indent(Indent + 2);
     E.print(OS);
