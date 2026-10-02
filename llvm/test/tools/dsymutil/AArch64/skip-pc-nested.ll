@@ -1,6 +1,6 @@
 ; RUN: rm -rf %t && split-file %s %t
 
-; RUN: %llc_dwarf -filetype=obj %t/input.ll -o %t/input.o
+; RUN: %llc_dwarf -mtriple=arm64-apple-darwin -filetype=obj %t/input.ll -o %t/input.o
 
 ; RUN: dsymutil -f --linker=classic -oso-prepend-path=%t -y %t/input.map -o %t/classic.dwarf
 ; RUN: llvm-dwarfdump --show-parents --name=child %t/classic.dwarf | FileCheck %s --implicit-check-not=DW_TAG_
