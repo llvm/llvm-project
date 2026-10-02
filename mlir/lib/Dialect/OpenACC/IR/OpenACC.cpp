@@ -4570,20 +4570,29 @@ void EnterDataOp::addAsyncOperand(
 void EnterDataOp::addWaitOnly(MLIRContext *context,
                               llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
   assert(effectiveDeviceTypes.empty());
-  assert(!getWaitAttr());
-  assert(getWaitOperands().empty());
-  assert(!getWaitDevnum());
+
+  if (getWaitAttr())
+    return;
 
   setWaitAttr(mlir::UnitAttr::get(context));
+
+  getWaitDevnumMutable().clear();
+  getWaitOperandsMutable().clear();
 }
 
 void EnterDataOp::addWaitOperands(
     MLIRContext *context, bool hasDevnum, mlir::ValueRange newValues,
     llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
   assert(effectiveDeviceTypes.empty());
-  assert(!getWaitAttr());
-  assert(getWaitOperands().empty());
-  assert(!getWaitDevnum());
+
+  if (getWaitAttr())
+    return;
+
+  // FIXME: At one point we need to figure out how to support multiple devnums
+  // here.  For now, assert.  Eventually we probably want to make dev-num and
+  // operands work in 'lock-step', so that getWaitDevnum().size() ==
+  // getWaitOperandsMutable().size().
+  assert(getWaitDevnum().empty() && "Merging devnum not yet implemented");
 
   // if hasDevnum, the first value is the devnum. The 'rest' go into the
   // operands list.
