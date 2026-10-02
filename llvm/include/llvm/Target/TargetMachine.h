@@ -124,6 +124,9 @@ protected: // Can only create subclasses.
   /// Set if the target supports default outlining behaviour.
   unsigned SupportsDefaultOutlining : 1;
 
+  /// Set if the target supports the debug entry values by default.
+  unsigned SupportsDebugEntryValues : 1;
+
   // PGO related tunables.
   std::optional<PGOOptions> PGOOption;
 
@@ -277,6 +280,10 @@ public:
     SupportsDefaultOutlining = Enable;
   }
 
+  /// NOTE: There are targets that still do not support the debug entry values
+  /// production.
+  bool shouldEmitDebugEntryValues() const;
+
   /// Returns the code generation relocation model. The choices are static, PIC,
   /// and dynamic-no-pic, and target default.
   Reloc::Model getRelocationModel() const;
@@ -325,7 +332,7 @@ public:
     Options.EnableMachineOutliner = Enable;
   }
   void setSupportsDebugEntryValues(bool Enable) {
-    Options.SupportsDebugEntryValues = Enable;
+    SupportsDebugEntryValues = Enable;
   }
   void setEnableDefaultMachineVerifier(bool Enable) {
     Options.EnableDefaultMachineVerifier = Enable;

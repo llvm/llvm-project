@@ -3633,6 +3633,47 @@ static bool CheckVectorSelect(Sema *S, CallExpr *TheCall) {
   return false;
 }
 
+static bool CheckMatrixSelect(Sema *S, CallExpr *TheCall) {
+  assert(TheCall->getNumArgs() == 3);
+  Expr *Arg1 = TheCall->getArg(1);
+  QualType Arg1Ty = Arg1->getType();
+  Expr *Arg2 = TheCall->getArg(2);
+  QualType Arg2Ty = Arg2->getType();
+
+  QualType Arg1ScalarTy = Arg1Ty;
+  if (auto MTy = Arg1ScalarTy->getAs<ConstantMatrixType>())
+    Arg1ScalarTy = MTy->getElementType();
+
+  QualType Arg2ScalarTy = Arg2Ty;
+  if (auto MTy = Arg2ScalarTy->getAs<ConstantMatrixType>())
+    Arg2ScalarTy = MTy->getElementType();
+
+  if (!S->Context.hasSameUnqualifiedType(Arg1ScalarTy, Arg2ScalarTy))
+    S->Diag(Arg1->getBeginLoc(), diag::err_hlsl_builtin_scalar_vector_mismatch)
+        << /* second and third */ 1 << TheCall->getCallee() << Arg1Ty << Arg2Ty;
+
+  QualType Arg0Ty = TheCall->getArg(0)->getType();
+  auto *Arg0MatTy = Arg0Ty->getAs<ConstantMatrixType>();
+  unsigned Arg0Rows = Arg0MatTy->getNumRows();
+  unsigned Arg0Cols = Arg0MatTy->getNumColumns();
+
+  for (Expr *Arg : {Arg1, Arg2}) {
+    auto *MTy = Arg->getType()->getAs<ConstantMatrixType>();
+    if (MTy &&
+        (MTy->getNumRows() != Arg0Rows || MTy->getNumColumns() != Arg0Cols)) {
+      S->Diag(TheCall->getBeginLoc(),
+              diag::err_typecheck_vector_lengths_not_equal)
+          << Arg0Ty << Arg->getType() << TheCall->getArg(0)->getSourceRange()
+          << Arg->getSourceRange();
+      return true;
+    }
+  }
+
+  TheCall->setType(
+      S->Context.getConstantMatrixType(Arg1ScalarTy, Arg0Rows, Arg0Cols));
+  return false;
+}
+
 static QualType getVectorOrScalarType(Sema &S, QualType BaseType,
                                       unsigned Count) {
   return Count > 1 ? S.Context.getExtVectorType(BaseType, Count) : BaseType;
@@ -4488,7 +4529,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_select: {
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;
-    if (CheckScalarOrVector(&SemaRef, TheCall, getASTContext().BoolTy, 0))
+    if (CheckScalarOrVectorOrMatrix(&SemaRef, TheCall, getASTContext().BoolTy,
+                                    0))
       return true;
     QualType ArgTy = TheCall->getArg(0)->getType();
     if (ArgTy->isBooleanType() && CheckBoolSelect(&SemaRef, TheCall))
@@ -4496,6 +4538,10 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     auto *VTy = ArgTy->getAs<VectorType>();
     if (VTy && VTy->getElementType()->isBooleanType() &&
         CheckVectorSelect(&SemaRef, TheCall))
+      return true;
+    auto *MTy = ArgTy->getAs<ConstantMatrixType>();
+    if (MTy && MTy->getElementType()->isBooleanType() &&
+        CheckMatrixSelect(&SemaRef, TheCall))
       return true;
     break;
   }
@@ -5274,6 +5320,19 @@ bool SemaHLSL::CanPerformElementwiseCast(Expr *Src, QualType DestTy) {
       return false;
   }
   return true;
+}
+
+bool SemaHLSL::CanPerformPackedTypeCast(Expr *Src, QualType DestTy) {
+  ASTContext &Ctx = SemaRef.getASTContext();
+  QualType UIntTy = Ctx.UnsignedIntTy;
+  QualType SrcTy = Src->getType();
+
+  return (SrcTy->isHLSLBuiltinPackedType() &&
+          DestTy->isHLSLBuiltinPackedType()) ||
+         (SrcTy->isHLSLBuiltinPackedType() &&
+          Ctx.hasSameUnqualifiedType(DestTy, UIntTy)) ||
+         (DestTy->isHLSLBuiltinPackedType() &&
+          Ctx.hasSameUnqualifiedType(SrcTy, UIntTy));
 }
 
 ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {

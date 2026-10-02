@@ -24,6 +24,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AlignOf.h"
@@ -1052,7 +1053,7 @@ static bool matchesSquareSum(BinaryOperator &I, Mul2Rhs M2Rhs, Value *&A,
 
   // (a * a) + (((a * 2) + b) * b)
   if (match(&I, m_c_BinOp(
-                    AddOp, m_OneUse(m_BinOp(MulOp, m_Value(A), m_Deferred(A))),
+                    AddOp, m_BinOp(MulOp, m_Value(A), m_Deferred(A)),
                     m_OneUse(m_c_BinOp(
                         MulOp,
                         m_c_BinOp(AddOp, m_BinOp(Mul2Op, m_Deferred(A), M2Rhs),
@@ -2627,12 +2628,22 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
 
   if (Constant *C = dyn_cast<Constant>(Op0)) {
     Value *X;
-    if (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))
+    if (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
       // C - (zext bool) --> bool ? C - 1 : C
-      return SelectInst::Create(X, InstCombiner::SubOne(C), C);
-    if (match(Op1, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))
+      SelectInst *SI = SelectInst::Create(X, InstCombiner::SubOne(C), C);
+      // We know nothing about the distribution of the condition, so mark the
+      // branch weights as unknown.
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE, &F);
+      return SI;
+    }
+    if (match(Op1, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
       // C - (sext bool) --> bool ? C + 1 : C
-      return SelectInst::Create(X, InstCombiner::AddOne(C), C);
+      SelectInst *SI = SelectInst::Create(X, InstCombiner::AddOne(C), C);
+      // We know nothing about the distribution of the condition, so mark the
+      // branch weights as unknown.
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE, &F);
+      return SI;
+    }
 
     // C - ~X == X + (1+C)
     if (match(Op1, m_Not(m_Value(X))))
