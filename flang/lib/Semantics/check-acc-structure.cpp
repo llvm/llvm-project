@@ -318,7 +318,7 @@ void AccStructureChecker::CheckLoopLevelClauseValue(
           &context_.FindScope(GetContext().clauseSource))) {
     context_.Say(GetContext().clauseSource,
         "'%s(value)' not allowed in subprogram compiled with ROUTINE directive"_err_en_US,
-        clauseName.str());
+        clauseName);
     return;
   }
 
@@ -333,7 +333,7 @@ void AccStructureChecker::CheckLoopLevelClauseValue(
     }
   }
   context_.Say(GetContext().clauseSource,
-      "'%s(value)' not allowed in %s directive"_err_en_US, clauseName.str(),
+      "'%s(value)' not allowed in %s directive"_err_en_US, clauseName,
       parser::ToUpperCaseLetters(getDirectiveName(dir).str()));
 }
 
