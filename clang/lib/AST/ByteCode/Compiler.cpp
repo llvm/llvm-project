@@ -4245,8 +4245,10 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitCXXInheritedCtorInitExpr(
     const CXXInheritedCtorInitExpr *E) {
   const CXXConstructorDecl *Ctor = E->getConstructor();
-  assert(!Ctor->isTrivial() &&
-         "Trivial CXXInheritedCtorInitExpr, implement. (possible?)");
+
+  if (Ctor->isTrivial())
+    return true;
+
   const Function *F = this->getFunction(Ctor);
   if (!F)
     return false;
