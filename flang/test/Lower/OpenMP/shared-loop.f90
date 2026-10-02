@@ -51,9 +51,8 @@ end subroutine
 ! CHECK-LABEL:  func.func @_QPomploop2()
 ! CHECK:    %[[ALLOC_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFomploop2Ei"}>
 ! CHECK:    %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOC_I]] {uniq_name = "_QFomploop2Ei"} :
-! CHECK:    omp.parallel {
-! CHECK:      %[[ALLOC_PRIV_I:.*]] = fir.alloca i32 <{bindc_name = "i", pinned}>
-! CHECK:      %[[DECL_PRIV_I:.*]]:2 = hlfir.declare %[[ALLOC_PRIV_I]]
+! CHECK:    omp.parallel private(@_QFomploop2Ei_private_i32 %[[DECL_I]]#0 -> %[[PRIV_I:[^ ]*]] : !fir.ref<i32>) {
+! CHECK:      %[[DECL_PRIV_I:.*]]:2 = hlfir.declare %[[PRIV_I]]
 ! CHECK:      omp.sections {
 ! CHECK:        omp.section {
 ! CHECK:          fir.do_loop %[[ARG0:.*]] = %[[LB:.*]] to %[[UB:.*]] step %[[STEP:.*]] : i32 {
@@ -100,9 +99,8 @@ end subroutine
 ! CHECK-LABEL:  func.func @_QPomploop3()
 ! CHECK:    %[[ALLOC_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFomploop3Ei"}>
 ! CHECK:    %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOC_I]] {uniq_name = "_QFomploop3Ei"} :
-! CHECK:    omp.parallel {
-! CHECK:      %[[ALLOC_PRIV_I:.*]] = fir.alloca i32 <{bindc_name = "i", pinned}>
-! CHECK:      %[[DECL_PRIV_I:.*]]:2 = hlfir.declare %[[ALLOC_PRIV_I]]
+! CHECK:    omp.parallel private(@_QFomploop3Ei_private_i32 %[[DECL_I]]#0 -> %[[PRIV_I:[^ ]*]] : !fir.ref<i32>) {
+! CHECK:      %[[DECL_PRIV_I:.*]]:2 = hlfir.declare %[[PRIV_I]]
 ! CHECK:      omp.sections {
 ! CHECK:        omp.section {
 ! CHECK:          fir.do_loop %[[ARG0:.*]] = %[[LB:.*]] to %[[UB:.*]] step %[[STEP:.*]] : i32 {

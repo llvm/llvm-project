@@ -1695,14 +1695,7 @@ private:
   mlir::Value genLoopVariableAddress(mlir::Location loc,
                                      const Fortran::semantics::Symbol &sym,
                                      bool isUnordered) {
-    if (!shallowLookupSymbol(sym) &&
-        (isUnordered ||
-         GetSymbolDSA(sym).test(Fortran::semantics::Symbol::Flag::OmpPrivate) ||
-         GetSymbolDSA(sym).test(
-             Fortran::semantics::Symbol::Flag::OmpFirstPrivate) ||
-         GetSymbolDSA(sym).test(
-             Fortran::semantics::Symbol::Flag::OmpLastPrivate) ||
-         GetSymbolDSA(sym).test(Fortran::semantics::Symbol::Flag::OmpLinear))) {
+    if (!shallowLookupSymbol(sym) && isUnordered) {
       // Do concurrent loop variables are not mapped yet since they are
       // local to the Do concurrent scope (same for OpenMP loops).
       mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
