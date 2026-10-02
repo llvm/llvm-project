@@ -1922,6 +1922,52 @@ bool TypeEvaluationHelper::canEvaluateSExtdPred(Value *V, Type *Ty) {
   return false;
 }
 
+/// Fold
+///   sext (binop nsw (trunc nsw X to iN), C) to iM
+/// to
+///   binop nsw X, sext(C)
+/// when X already has type iM. trunc nsw means X fits in iN, and nsw on the
+/// narrow binop means the result also fits in iN, so the sign-extended value
+/// is that same operation on X and the sign-extended other operand. The wide
+/// binop is nsw because its result fits in iN.
+///
+/// EvaluateInDifferentType rebuilds the binop without overflow flags. The
+/// sign-bit check then fails and visitSExt emits a shl/ashr pair, which SCEV
+/// cannot treat as a non-wrapping recurrence.
+static Instruction *foldSExtOfNSWBinOpOfTrunc(SExtInst &Sext,
+                                              const DataLayout &DL) {
+  auto *BinOp = dyn_cast<OverflowingBinaryOperator>(Sext.getOperand(0));
+  if (!BinOp || !BinOp->hasNoSignedWrap())
+    return nullptr;
+
+  auto Opc = static_cast<Instruction::BinaryOps>(BinOp->getOpcode());
+  if (Opc != Instruction::Add && Opc != Instruction::Sub &&
+      Opc != Instruction::Mul)
+    return nullptr;
+
+  Type *DestTy = Sext.getType();
+  bool SawNSWTrunc = false;
+  auto widenOperand = [&](Value *V) -> Value * {
+    Value *X;
+    if (match(V, m_NSWTrunc(m_Value(X))) && X->getType() == DestTy) {
+      SawNSWTrunc = true;
+      return X;
+    }
+    if (auto *C = dyn_cast<Constant>(V))
+      return ConstantFoldIntegerCast(C, DestTy, /*IsSigned=*/true, DL);
+    return nullptr;
+  };
+
+  Value *LHS = widenOperand(BinOp->getOperand(0));
+  Value *RHS = widenOperand(BinOp->getOperand(1));
+  if (!LHS || !RHS || !SawNSWTrunc)
+    return nullptr;
+
+  auto *Wide = BinaryOperator::Create(Opc, LHS, RHS);
+  Wide->setHasNoSignedWrap(true);
+  return Wide;
+}
+
 Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
   // If this sign extend is only used by a truncate, let the truncate be
   // eliminated before we try to optimize this sext.
@@ -1929,6 +1975,11 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     return nullptr;
 
   if (Instruction *I = commonCastTransforms(Sext))
+    return I;
+
+  // Do this before EvaluateInDifferentType, which drops nsw and may emit
+  // shl/ashr.
+  if (Instruction *I = foldSExtOfNSWBinOpOfTrunc(Sext, DL))
     return I;
 
   Value *Src = Sext.getOperand(0);
