@@ -1,4 +1,4 @@
-## Test that on windows, members are case insensitive.
+## Test that on non-Windows, members are case-sensitive.
 # UNSUPPORTED: system-windows
 
 # RUN: mkdir -p %t
