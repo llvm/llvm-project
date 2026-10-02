@@ -5941,18 +5941,22 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
         EraseSymbol(name);
       }
     }
-  } else if (isValid && !inInterfaceBlock() && currScope().IsSubmodule() &&
-      context().IsEnabled(common::LanguageFeature::ImplicitModulePrefix) &&
-      (moduleInterface = FindSeparateModuleProcedureInterface(
-           name, /*emitError=*/false))) {
-    // As with the missing-prefix diagnostic below, imported parent scopes
-    // must not suppress a warning for a definition in the current source.
-    context().messages().Warn(/*isInModuleFile=*/InModuleFile(),
-        context().languageFeatures(),
-        common::LanguageFeature::ImplicitModulePrefix, name.source,
-        "Assuming a missing MODULE prefix on '%s' to repair the separate module procedure interface '%s:%s'"_port_en_US,
-        name.source, moduleInterface->owner().GetName().value(),
-        moduleInterface->name());
+  } else if (isValid && !inInterfaceBlock() && !InModuleFile() &&
+      currScope().IsSubmodule() &&
+      context().IsEnabled(common::LanguageFeature::ImplicitModulePrefix)) {
+    // Repair only definitions in the current source: a module file already
+    // records whether its producer treated the subprogram as MODULE.
+    if (Symbol *iface{
+            FindSeparateModuleProcedureInterface(name, /*emitError=*/false)};
+        iface && &iface->owner() != &currScope()) {
+      moduleInterface = iface;
+      context().messages().Warn(/*isInModuleFile=*/false,
+          context().languageFeatures(),
+          common::LanguageFeature::ImplicitModulePrefix, name.source,
+          "Assuming a missing MODULE prefix on '%s' to repair the separate module procedure interface '%s:%s'"_port_en_US,
+          name.source, moduleInterface->owner().GetName().value(),
+          moduleInterface->name());
+    }
   }
   Symbol *newSymbol{
       PushSubprogramScope(name, subpFlag, bindingSpec, hasModulePrefix)};
