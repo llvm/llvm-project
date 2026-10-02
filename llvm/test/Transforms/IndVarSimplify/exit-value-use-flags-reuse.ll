@@ -15,12 +15,11 @@ define void @flagged_first(i64 %n, i64 %a, i64 %c, i64 %b) {
 ; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[B]], [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[B]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i64 [[A]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[B]], [[TMP0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[C]], [[TMP3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[C]], [[TMP1]]
 ; CHECK-NEXT:    call void @use(i64 [[TMP2]])
-; CHECK-NEXT:    call void @use(i64 [[TMP4]])
+; CHECK-NEXT:    call void @use(i64 [[TMP3]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -56,10 +55,9 @@ define void @flagged_second(i64 %n, i64 %a, i64 %c, i64 %b) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[B]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[C]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[B]], [[TMP0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add nuw i64 [[A]], [[TMP3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw i64 [[A]], [[TMP1]]
 ; CHECK-NEXT:    call void @use(i64 [[TMP2]])
-; CHECK-NEXT:    call void @use(i64 [[TMP4]])
+; CHECK-NEXT:    call void @use(i64 [[TMP3]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -96,12 +94,11 @@ define void @canonical_entry_survives_flagged_expansion(i64 %n, i64 %a, i64 %c, 
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[B]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[C]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[B]], [[TMP0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add nuw i64 [[A]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[D]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw i64 [[A]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[D]], [[TMP1]]
 ; CHECK-NEXT:    call void @use(i64 [[TMP2]])
+; CHECK-NEXT:    call void @use(i64 [[TMP3]])
 ; CHECK-NEXT:    call void @use(i64 [[TMP4]])
-; CHECK-NEXT:    call void @use(i64 [[TMP5]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
