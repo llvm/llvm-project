@@ -2298,7 +2298,7 @@ public:
       salvageDebugInfo(*I);
       ArrayRef<TreeEntry *> Entries = getTreeEntries(I);
       for (Use &U : I->operands()) {
-        if (auto *OpI = dyn_cast_if_present<Instruction>(U.get());
+        if (auto *OpI = dyn_cast<Instruction>(U.get());
             OpI && !DeletedInstructions.contains(OpI) && OpI->hasOneUser() &&
             wouldInstructionBeTriviallyDead(OpI, TLI) &&
             !ExternalUseReplacements.contains(OpI) &&
@@ -2325,7 +2325,7 @@ public:
     // Process the dead instruction list until empty.
     while (!DeadInsts.empty()) {
       Value *V = DeadInsts.pop_back_val();
-      Instruction *VI = cast_or_null<Instruction>(V);
+      Instruction *VI = cast<Instruction>(V);
       if (!VI || !VI->getParent())
         continue;
       assert(isInstructionTriviallyDead(VI, TLI) &&
@@ -6704,7 +6704,7 @@ static bool areTwoInsertFromSameBuildVector(
       if ((IE1 != VU && !IE1->hasOneUse()) || IsReusedIdx)
         IE1 = nullptr;
       else
-        IE1 = dyn_cast_or_null<InsertElementInst>(GetBaseOperand(IE1));
+        IE1 = dyn_cast_if_present<InsertElementInst>(GetBaseOperand(IE1));
     }
     if (IE2 && IE2 != VU) {
       unsigned Idx2 = getElementIndex(IE2).value_or(*Idx1);
@@ -6713,7 +6713,7 @@ static bool areTwoInsertFromSameBuildVector(
       if ((IE2 != V && !IE2->hasOneUse()) || IsReusedIdx)
         IE2 = nullptr;
       else
-        IE2 = dyn_cast_or_null<InsertElementInst>(GetBaseOperand(IE2));
+        IE2 = dyn_cast_if_present<InsertElementInst>(GetBaseOperand(IE2));
     }
   } while (!IsReusedIdx && (IE1 || IE2));
   return false;
@@ -20471,7 +20471,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     // If found user is an insertelement, do not calculate extract cost but try
     // to detect it as a final shuffled/identity match.
     // TODO: what if a user is insertvalue when REVEC is enabled?
-    if (auto *VU = dyn_cast_or_null<InsertElementInst>(EU.User);
+    if (auto *VU = dyn_cast_if_present<InsertElementInst>(EU.User);
         VU && VU->getOperand(1) == EU.Scalar) {
       if (auto *FTy = dyn_cast<FixedVectorType>(VU->getType())) {
         if (!UsedInserts.insert(VU).second)
@@ -20749,7 +20749,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       }
     } else {
       ExtraCost = ScaleCost(ExtraCost, *Entry, EU.Scalar,
-                            cast_or_null<Instruction>(EU.User));
+                            cast_if_present<Instruction>(EU.User));
     }
 
     ExtractCost += ExtraCost;
@@ -21199,8 +21199,9 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
   const BasicBlock *TEInsertBlock = nullptr;
   // Main node of PHI entries keeps the correct order of operands/incoming
   // blocks.
-  if (auto *PHI = dyn_cast_or_null<PHINode>(
-          TEUseEI.UserTE->hasState() ? TEUseEI.UserTE->getMainOp() : nullptr);
+  if (auto *PHI = TEUseEI.UserTE->hasState()
+                      ? dyn_cast<PHINode>(TEUseEI.UserTE->getMainOp())
+                      : nullptr;
       PHI && TEUseEI.UserTE->State != TreeEntry::SplitVectorize) {
     TEInsertBlock = PHI->getIncomingBlock(TEUseEI.EdgeIdx);
     TEInsertPt = TEInsertBlock->getTerminator();
@@ -22151,7 +22152,7 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
     Res = FindLastInst();
     if (ArrayRef<TreeEntry *> Entries = getTreeEntries(Res); !Entries.empty()) {
       for (auto *E : Entries) {
-        auto *I = dyn_cast_or_null<Instruction>(E->VectorizedValue);
+        auto *I = dyn_cast_if_present<Instruction>(E->VectorizedValue);
         if (!I)
           I = &getLastInstructionInBundle(E);
         if (Res->getParent() == I->getParent() && Res->comesBefore(I))
@@ -22445,7 +22446,7 @@ Value *BoUpSLP::gather(
   SmallVector<int> Mask(VL.size());
   std::iota(Mask.begin(), Mask.end(), 0);
   Value *OriginalRoot = Root;
-  if (auto *SV = dyn_cast_or_null<ShuffleVectorInst>(Root);
+  if (auto *SV = dyn_cast_if_present<ShuffleVectorInst>(Root);
       SV && isa<PoisonValue>(SV->getOperand(1)) &&
       SV->getOperand(0)->getType() == VecTy) {
     Root = SV->getOperand(0);
@@ -24271,8 +24272,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             if (!Ins->hasOneUse())
               break;
             Op = Ins;
-            Ins =
-                dyn_cast_or_null<Instruction>(Ins->getUniqueUndroppableUser());
+            Ins = dyn_cast_if_present<Instruction>(
+                Ins->getUniqueUndroppableUser());
           } while (Ins && Ins->getOperand(0) == Op);
           SmallBitVector UseMask =
               buildUseMask(NumElts, InsertMask, UseMask::UndefsAsMask);
