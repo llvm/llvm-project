@@ -2708,22 +2708,31 @@ static MCRegister getStoreSourceReg(const MachineInstr &MI) {
 }
 
 // Find a register of class RC that is dead before Terminator, caller-saved, and
-// not in ExtraLive.
-static MCRegister findDeadScratchReg(MachineBasicBlock &MBB,
-                                     MachineBasicBlock::iterator Terminator,
-                                     const TargetRegisterInfo *TRI,
-                                     const TargetRegisterClass &RC,
-                                     ArrayRef<MCRegister> ExtraLive) {
+// not in ExtraLive. If From is given, the register must also not be read or
+// written by any instruction in [From, Terminator), so that it can hold a value
+// from From on.
+static MCRegister findDeadScratchReg(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator Terminator,
+    const TargetRegisterInfo *TRI, const TargetRegisterClass &RC,
+    ArrayRef<MCRegister> ExtraLive,
+    MachineBasicBlock::iterator From = MachineBasicBlock::iterator()) {
   MachineFunction &MF = *MBB.getParent();
   LiveRegUnits LRU(*TRI);
   LRU.addLiveOuts(MBB);
   LRU.stepBackward(*Terminator);
   for (MCRegister R : ExtraLive)
     LRU.addReg(R);
-  for (MCRegister R : RC)
-    if (LRU.available(R) && !MF.getRegInfo().isReserved(R) &&
-        !TRI->isCalleeSavedPhysReg(R, MF))
-      return R;
+  for (MCRegister R : RC) {
+    if (!LRU.available(R) || MF.getRegInfo().isReserved(R) ||
+        TRI->isCalleeSavedPhysReg(R, MF))
+      continue;
+    if (From != MachineBasicBlock::iterator() &&
+        any_of(make_range(From, Terminator), [&](const MachineInstr &MI) {
+          return MI.readsRegister(R, TRI) || MI.modifiesRegister(R, TRI);
+        }))
+      continue;
+    return R;
+  }
   return MCRegister();
 }
 
@@ -2786,20 +2795,59 @@ static OldReturnAddressStores detachOldReturnAddressStores(
     // The source must still hold the stored value where the store will go. The
     // callee-saved restores are not a problem: the epilogue is arranged so that
     // they happen after the store.
+    const MachineInstr *Redefinition = nullptr;
     for (MachineInstr &Later :
          make_range(std::next(MachineBasicBlock::iterator(MI)), Terminator))
       if (!Later.getFlag(MachineInstr::FrameDestroy) &&
           Later.modifiesRegister(Src, TRI)) {
+        Redefinition = &Later;
+        break;
+      }
+    if (Redefinition) {
+      // The register allocator can split the live range of the value, so the
+      // store still reads the register that the tail call setup then reuses
+      // (for example a swiftasync context in r14 that is also passed on the
+      // stack). Keep the value in a scratch register from here to the store.
+      unsigned Bits = 0;
+      const TargetRegisterClass *RC = nullptr;
+      if (X86::VR128RegClass.contains(Src)) {
+        RC = &X86::VR128RegClass;
+      } else {
+        if (X86::GR64RegClass.contains(Src))
+          Bits = 64;
+        else if (X86::GR32RegClass.contains(Src))
+          Bits = 32;
+        else if (X86::GR16RegClass.contains(Src))
+          Bits = 16;
+        else if (X86::GR8RegClass.contains(Src))
+          Bits = 8;
+        if (Bits)
+          RC = &X86::GR64RegClass;
+      }
+      MCRegister Tmp;
+      if (RC)
+        Tmp = findDeadScratchReg(MBB, Terminator, TRI, *RC, Result.LiveSources,
+                                 MachineBasicBlock::iterator(MI));
+      if (!Tmp) {
         std::string Msg;
         raw_string_ostream OS(Msg);
         OS << "Can't move the store of a tail call argument that overwrites "
               "the return address under win64 (in function '"
            << MF.getName() << "', the source register " << printReg(Src, TRI)
-           << " is redefined before the tail call)\n  store: " << *MI
-           << "  redefined by: " << Later << "block:\n";
+           << " is redefined before the tail call and there is no scratch "
+              "register)\n  store: "
+           << *MI << "  redefined by: " << *Redefinition << "block:\n";
         MBB.print(OS);
         report_fatal_error(Twine(Msg));
       }
+      if (Bits)
+        Tmp = getX86SubSuperRegister(Tmp, Bits);
+      TII.copyPhysReg(MBB, MachineBasicBlock::iterator(MI), MI->getDebugLoc(),
+                      Tmp, Src, /*KillSrc=*/false);
+      MI->getOperand(X86::AddrNumOperands).setReg(Tmp);
+      MI->getOperand(X86::AddrNumOperands).setIsKill(false);
+      Src = Tmp;
+    }
 
     if (TRI->isCalleeSavedPhysReg(Src, MF)) {
       if (X86::VR128RegClass.contains(Src)) {
