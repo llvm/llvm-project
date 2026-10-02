@@ -797,7 +797,7 @@ gentbl_cc_library(
     name = "MCCLOptionsTableGen",
     strip_include_prefix = "lib/MC",
     tbl_outs = {"lib/MC/MCCLOptions.inc": ["-gen-opt-parser-defs"]},
-    tblgen = ":llvm-tblgen",
+    tblgen = ":llvm-min-tblgen",
     td_file = "lib/MC/MCCLOptions.td",
     deps = [":OptParserTdFiles"],
 )
@@ -935,6 +935,8 @@ cc_binary(
         "utils/TableGen/Basic/CodeGenIntrinsics.cpp",
         "utils/TableGen/Basic/DirectiveEmitter.cpp",
         "utils/TableGen/Basic/IntrinsicEmitter.cpp",
+        "utils/TableGen/Basic/OptEmitter.cpp",
+        "utils/TableGen/Basic/OptionParserEmitter.cpp",
         "utils/TableGen/Basic/PredicateExpanderDag.cpp",
         "utils/TableGen/Basic/RISCVTargetDefEmitter.cpp",
         "utils/TableGen/Basic/RuntimeLibcalls.cpp",
@@ -1829,7 +1831,7 @@ gentbl_cc_library(
     tbl_outs = {
         "lib/Transforms/InstCombine/InstCombineCLOptions.inc": ["-gen-opt-parser-defs"],
     },
-    tblgen = ":llvm-tblgen",
+    tblgen = ":llvm-min-tblgen",
     td_file = "lib/Transforms/InstCombine/InstCombineCLOptions.td",
     deps = [":OptParserTdFiles"],
 )
@@ -2397,7 +2399,7 @@ gentbl_cc_library(
     name = "CGDataOptionsTableGen",
     strip_include_prefix = "lib/CGData",
     tbl_outs = {"lib/CGData/CGDataOptions.inc": ["-gen-opt-parser-defs"]},
-    tblgen = ":llvm-tblgen",
+    tblgen = ":llvm-min-tblgen",
     td_file = "lib/CGData/CGDataOptions.td",
     deps = [":OptParserTdFiles"],
 )

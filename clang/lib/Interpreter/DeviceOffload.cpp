@@ -68,9 +68,7 @@ llvm::Expected<llvm::StringRef> IncrementalCUDADeviceParser::GeneratePTX() {
         llvm::inconvertibleErrorCode());
   }
 
-  if (!PM.run(*PTU.TheModule))
-    return llvm::make_error<llvm::StringError>("Failed to emit PTX code.",
-                                               llvm::inconvertibleErrorCode());
+  PM.run(*PTU.TheModule);
 
   PTXCode += '\0';
   while (PTXCode.size() % 8)

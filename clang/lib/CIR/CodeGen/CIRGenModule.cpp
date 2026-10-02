@@ -1849,7 +1849,8 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *e) {
   SmallVector<mlir::Attribute> elements;
   elements.reserve(arraySize);
   for (unsigned i = 0; i < literalSize; ++i)
-    elements.push_back(cir::IntAttr::get(arrayEltTy, e->getCodeUnit(i)));
+    elements.push_back(cir::IntAttr::get(
+        arrayEltTy, llvm::APInt(arrayEltTy.getWidth(), e->getCodeUnit(i))));
 
   auto elementsAttr = mlir::ArrayAttr::get(&getMLIRContext(), elements);
   return builder.getConstArray(elementsAttr, arrayTy);
@@ -2191,12 +2192,14 @@ static cir::GlobalOp
 generateStringLiteral(mlir::Location loc, mlir::TypedAttr c,
                       cir::GlobalLinkageKind lt, CIRGenModule &cgm,
                       StringRef globalName, CharUnits alignment) {
-  assert(!cir::MissingFeatures::addressSpace());
+  mlir::ptr::MemorySpaceAttrInterface addrSpace = cir::toCIRAddressSpaceAttr(
+      cgm.getMLIRContext(), cgm.getGlobalConstantAddressSpace());
 
   // Create a global variable for this string
   // FIXME(cir): check for insertion point in module level.
-  cir::GlobalOp gv = cgm.createGlobalOp(loc, globalName, c.getType(),
-                                        !cgm.getLangOpts().WritableStrings);
+  cir::GlobalOp gv =
+      cgm.createGlobalOp(loc, globalName, c.getType(),
+                         !cgm.getLangOpts().WritableStrings, addrSpace);
 
   // Set up extra information and add to the module
   gv.setAlignmentAttr(cgm.getSize(alignment));
@@ -2289,10 +2292,24 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *s,
   cir::GlobalOp gv = getGlobalForStringLiteral(s, name);
   auto arrayTy = mlir::dyn_cast<cir::ArrayType>(gv.getSymType());
   assert(arrayTy && "String literal must be array");
-  assert(!cir::MissingFeatures::addressSpace());
-  cir::PointerType ptrTy = getBuilder().getPointerTo(arrayTy.getElementType());
+  cir::PointerType ptrTy = getBuilder().getPointerTo(
+      arrayTy.getElementType(),
+      getTypes().getPointerAddressSpace(s->getType()));
 
   return builder.getGlobalViewAttr(ptrTy, gv);
+}
+
+LangAS CIRGenModule::getGlobalConstantAddressSpace() const {
+  LangAS as =
+      CodeGenUtils::getGlobalConstantAddressSpace(langOpts, getTarget());
+  // CIR cannot represent SYCL address spaces yet.
+  /// TODO: Remove this wrapper once CIR supports the global constant address
+  /// space for SYCL.
+  if (as == LangAS::sycl_global) {
+    errorNYI("SYCL global constant address space");
+    return LangAS::Default;
+  }
+  return as;
 }
 
 // TODO(cir): this could be a common AST helper for both CIR and LLVM codegen.
