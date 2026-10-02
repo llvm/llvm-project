@@ -64,11 +64,28 @@
 #else
 #include <io.h>
 #endif
+#include <mutex>
 
 using namespace llvm;
 using namespace ThinLTOCodeGeneratorImpl;
 
 #define DEBUG_TYPE "thinlto"
+
+namespace {
+/// Serialize remarks / diagnostics printed to errs() from parallel ThinLTO
+/// backends (each creates its own LLVMContext without an external handler).
+struct SerializingDiagHandler : DiagnosticHandler {
+  bool handleDiagnostics(const DiagnosticInfo &DI) override {
+    static std::mutex DiagMutex;
+    std::lock_guard<std::mutex> Lock(DiagMutex);
+    DiagnosticPrinterRawOStream DP(errs());
+    errs() << LLVMContext::getDiagnosticMessagePrefix(DI.getSeverity()) << ": ";
+    DI.print(DP);
+    errs() << '\n';
+    return true;
+  }
+};
+} // namespace
 
 namespace llvm {
 // Flags -discard-value-names, defined in LTOCodeGenerator.cpp
@@ -1177,6 +1194,10 @@ void ThinLTOCodeGenerator::run() {
         LLVMContext Context;
         Context.setDiscardValueNames(LTODiscardValueNames);
         Context.enableDebugTypeODRUniquing();
+        // Parallel ThinLTO backends share errs() for remarks when no custom
+        // remark file is set. Serialize diagnostic printing (TSan).
+        Context.setDiagnosticHandler(std::make_unique<SerializingDiagHandler>(),
+                                     /*RespectFilters=*/true);
         auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
             Context, RemarksFilename, RemarksPasses, RemarksFormat,
             RemarksWithHotness, RemarksHotnessThreshold, count);

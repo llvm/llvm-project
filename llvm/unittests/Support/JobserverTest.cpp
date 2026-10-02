@@ -297,24 +297,34 @@ protected:
   // with initial tokens and then recycles tokens released by clients.
   void startMakeProxy(int NumInitialJobs) {
     MakeThread = std::thread([this, NumInitialJobs]() {
-      LLVM_DEBUG(dbgs() << "[MakeProxy] Thread started.\n");
+      // LLVM_DEBUG writes to a shared raw_ostream; serialize with the test
+      // thread and pool workers to avoid TSan races when debug is enabled.
+      auto Dbg = [this](auto &&Msg) {
+        std::lock_guard<std::mutex> Lock(DebugMutex);
+        LLVM_DEBUG(dbgs() << Msg);
+      };
+      Dbg("[MakeProxy] Thread started.\n");
       // Open the FIFO for reading and writing. This call does not block.
       int RWFd = open(TheFifo->c_str(), O_RDWR);
-      LLVM_DEBUG(dbgs() << "[MakeProxy] Opened FIFO " << TheFifo->c_str()
-                        << " with O_RDWR, FD=" << RWFd << "\n");
+      {
+        std::lock_guard<std::mutex> Lock(DebugMutex);
+        LLVM_DEBUG(dbgs() << "[MakeProxy] Opened FIFO " << TheFifo->c_str()
+                          << " with O_RDWR, FD=" << RWFd << "\n");
+      }
       if (RWFd == -1) {
-        LLVM_DEBUG(
-            dbgs()
-            << "[MakeProxy] ERROR: Failed to open FIFO with O_RDWR. Errno: "
-            << errno << "\n");
+        Dbg("[MakeProxy] ERROR: Failed to open FIFO with O_RDWR.\n");
         return;
       }
 
       // Populate with initial jobs.
-      LLVM_DEBUG(dbgs() << "[MakeProxy] Writing " << NumInitialJobs
-                        << " initial tokens.\n");
+      {
+        std::lock_guard<std::mutex> Lock(DebugMutex);
+        LLVM_DEBUG(dbgs() << "[MakeProxy] Writing " << NumInitialJobs
+                          << " initial tokens.\n");
+      }
       for (int i = 0; i < NumInitialJobs; ++i) {
         if (write(RWFd, "+", 1) != 1) {
+          std::lock_guard<std::mutex> Lock(DebugMutex);
           LLVM_DEBUG(dbgs()
                      << "[MakeProxy] ERROR: Failed to write initial token " << i
                      << ".\n");
@@ -322,7 +332,7 @@ protected:
           return;
         }
       }
-      LLVM_DEBUG(dbgs() << "[MakeProxy] Finished writing initial tokens.\n");
+      Dbg("[MakeProxy] Finished writing initial tokens.\n");
 
       // Make the read non-blocking so we can periodically check StopMakeThread.
       int flags = fcntl(RWFd, F_GETFL, 0);
@@ -332,8 +342,11 @@ protected:
         char Token;
         ssize_t Ret = read(RWFd, &Token, 1);
         if (Ret == 1) {
-          LLVM_DEBUG(dbgs() << "[MakeProxy] Read token '" << Token
-                            << "' to recycle.\n");
+          {
+            std::lock_guard<std::mutex> Lock(DebugMutex);
+            LLVM_DEBUG(dbgs() << "[MakeProxy] Read token '" << Token
+                              << "' to recycle.\n");
+          }
           // A client released a token, 'make' makes it available again.
           std::this_thread::sleep_for(std::chrono::microseconds(100));
           ssize_t WRet;
@@ -341,22 +354,26 @@ protected:
             WRet = write(RWFd, &Token, 1);
           } while (WRet < 0 && errno == EINTR);
           if (WRet <= 0) {
-            LLVM_DEBUG(
-                dbgs()
-                << "[MakeProxy] ERROR: Failed to write recycled token.\n");
+            Dbg("[MakeProxy] ERROR: Failed to write recycled token.\n");
             break; // Error, stop the proxy.
           }
-          LLVM_DEBUG(dbgs()
-                     << "[MakeProxy] Wrote token '" << Token << "' back.\n");
+          {
+            std::lock_guard<std::mutex> Lock(DebugMutex);
+            LLVM_DEBUG(dbgs()
+                       << "[MakeProxy] Wrote token '" << Token << "' back.\n");
+          }
         } else if (Ret < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
-          LLVM_DEBUG(dbgs() << "[MakeProxy] ERROR: Read failed with errno "
-                            << errno << ".\n");
+          {
+            std::lock_guard<std::mutex> Lock(DebugMutex);
+            LLVM_DEBUG(dbgs() << "[MakeProxy] Read failed with errno " << errno
+                              << ".\n");
+          }
           break; // Error, stop the proxy.
         }
         // Yield to prevent this thread from busy-waiting.
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
       }
-      LLVM_DEBUG(dbgs() << "[MakeProxy] Thread stopping.\n");
+      Dbg("[MakeProxy] Thread stopping.\n");
       close(RWFd);
     });
 
@@ -365,6 +382,8 @@ protected:
     // before the initial tokens are in the pipe.
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
   }
+
+  std::mutex DebugMutex;
 };
 
 TEST_F(JobserverStrategyTest, ThreadPoolConcurrencyIsLimited) {
@@ -374,10 +393,24 @@ TEST_F(JobserverStrategyTest, ThreadPoolConcurrencyIsLimited) {
   const int ConcurrencyLimit = NumExplicitJobs + 1; // +1 for the implicit slot
   const int NumTasks = 8; // More tasks than available slots.
 
-  LLVM_DEBUG(dbgs() << "Calling startMakeProxy with " << NumExplicitJobs
-                    << " jobs.\n");
+  // Jobserver and MakeProxy both use LLVM_DEBUG from concurrent threads.
+  // dbgs() is not thread-safe, so disable debug logging for this test.
+  struct ScopedDisableDebug {
+    bool Prev;
+    ScopedDisableDebug() : Prev(DebugFlag) { DebugFlag = false; }
+    ~ScopedDisableDebug() { DebugFlag = Prev; }
+  } DisableDebug;
+
+  {
+    std::lock_guard<std::mutex> Lock(DebugMutex);
+    LLVM_DEBUG(dbgs() << "Calling startMakeProxy with " << NumExplicitJobs
+                      << " jobs.\n");
+  }
   startMakeProxy(NumExplicitJobs);
-  LLVM_DEBUG(dbgs() << "MakeProxy is running.\n");
+  {
+    std::lock_guard<std::mutex> Lock(DebugMutex);
+    LLVM_DEBUG(dbgs() << "MakeProxy is running.\n");
+  }
 
   // Create the thread pool. Its constructor will call jobserver_concurrency()
   // and create a client that reads from our pre-loaded FIFO.
@@ -395,8 +428,11 @@ TEST_F(JobserverStrategyTest, ThreadPoolConcurrencyIsLimited) {
     Pool.async([&, i] {
       // Track the number of concurrently running tasks.
       int CurrentActive = ++ActiveTasks;
-      LLVM_DEBUG(dbgs() << "Task " << i << ": Active tasks: " << CurrentActive
-                        << "\n");
+      {
+        std::lock_guard<std::mutex> Lock(DebugMutex);
+        LLVM_DEBUG(dbgs() << "Task " << i << ": Active tasks: " << CurrentActive
+                          << "\n");
+      }
       (void)i;
       int OldMax = MaxActiveTasks.load();
       while (CurrentActive > OldMax)
@@ -416,8 +452,11 @@ TEST_F(JobserverStrategyTest, ThreadPoolConcurrencyIsLimited) {
   std::unique_lock<std::mutex> Lock(M);
   CV.wait(Lock, [&] { return CompletedTasks == NumTasks; });
 
-  LLVM_DEBUG(dbgs() << "Test finished. Max active tasks was " << MaxActiveTasks
-                    << ".\n");
+  {
+    std::lock_guard<std::mutex> Lock(DebugMutex);
+    LLVM_DEBUG(dbgs() << "Test finished. Max active tasks was "
+                      << MaxActiveTasks << ".\n");
+  }
   // The key assertion: the maximum number of concurrent tasks should
   // not have exceeded the limit imposed by the jobserver.
   EXPECT_LE(MaxActiveTasks, ConcurrencyLimit);

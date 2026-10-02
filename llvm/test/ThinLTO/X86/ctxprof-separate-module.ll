@@ -16,6 +16,7 @@
 
 ; RUN: llvm-ctxprof-util fromYAML --input %t/ctxprof.yaml --output %t/ctxprof.bitstream
 ; RUN: llvm-lto2 run %t/m1.bc %t/m2.bc %t/m3.bc %t/6019442868614718803.bc -thinlto-move-ctxprof-trees \
+; RUN:  -thinlto-threads=1 \
 ; RUN:  -o %t/result.o -save-temps \
 ; RUN:  -use-ctx-profile=%t/ctxprof.bitstream \
 ; RUN:  -r %t/m1.bc,m1_f1,plx \
@@ -25,6 +26,7 @@
 
 ; also add the move semantics for the root:
 ; RUN: llvm-lto2 run %t/m1.bc %t/m2.bc %t/m3.bc %t/6019442868614718803.bc -thinlto-move-ctxprof-trees \
+; RUN:  -thinlto-threads=1 \
 ; RUN:  -thinlto-move-symbols=6019442868614718803 \
 ; RUN:  -o %t/result-with-move.o -save-temps \
 ; RUN:  -use-ctx-profile=%t/ctxprof.bitstream \
