@@ -15,20 +15,28 @@ target triple = "dxil-pc-shadermodel6.0-compute"
 ; CHECK-LABEL: define void @main()
 ; An integer allocation already agrees with the value, so it gets no cast.
 ; CHECK-NEXT: atomicrmw add i32 addrspace(3)* @gsm, i32 1 monotonic
-; CHECK-NEXT: atomicrmw add i32 addrspace(3)* getelementptr {{.*}}@gsm_arr{{.*}}, i32 6 monotonic
+; CHECK-NEXT: [[INDEX:%.*]] = load i32, i32 addrspace(3)* @gsm, align 4
+; CHECK-NEXT: [[INT_MUL:%.*]] = mul i32 [[INDEX]], 1
+; CHECK-NEXT: [[INT_INDEX:%.*]] = add i32 0, [[INT_MUL]]
+; CHECK-NEXT: [[INT_GEP:%.*]] = getelementptr [4 x i32], [4 x i32] addrspace(3)* @gsm_arr, i32 0, i32 [[INT_INDEX]]
+; CHECK-NEXT: atomicrmw add i32 addrspace(3)* [[INT_GEP]], i32 6 monotonic
 ; CHECK-NEXT: [[P0:%.*]] = bitcast float addrspace(3)* @gsm_float to i32 addrspace(3)*
 ; CHECK-NEXT: atomicrmw xchg i32 addrspace(3)* [[P0]], i32 2 monotonic
-; CHECK-NEXT: [[P1:%.*]] = bitcast float addrspace(3)* getelementptr {{.*}}@gsm_farr{{.*}} to i32 addrspace(3)*
+; CHECK-NEXT: [[FLOAT_MUL:%.*]] = mul i32 [[INDEX]], 1
+; CHECK-NEXT: [[FLOAT_INDEX:%.*]] = add i32 0, [[FLOAT_MUL]]
+; CHECK-NEXT: [[FLOAT_GEP:%.*]] = getelementptr [4 x float], [4 x float] addrspace(3)* @gsm_farr, i32 0, i32 [[FLOAT_INDEX]]
+; CHECK-NEXT: [[P1:%.*]] = bitcast float addrspace(3)* [[FLOAT_GEP]] to i32 addrspace(3)*
 ; CHECK-NEXT: atomicrmw xchg i32 addrspace(3)* [[P1]], i32 3 monotonic
 ; CHECK-NEXT: [[P2:%.*]] = bitcast float addrspace(3)* @gsm_float to i32 addrspace(3)*
 ; CHECK-NEXT: cmpxchg i32 addrspace(3)* [[P2]], i32 4, i32 5 monotonic monotonic
 
 define void @main() #0 {
   %old = atomicrmw add ptr addrspace(3) @gsm, i32 1 monotonic
-  %int_gep = getelementptr [4 x i32], ptr addrspace(3) @gsm_arr, i32 0, i32 1
+  %index = load i32, ptr addrspace(3) @gsm, align 4
+  %int_gep = getelementptr [4 x i32], ptr addrspace(3) @gsm_arr, i32 0, i32 %index
   %arr = atomicrmw add ptr addrspace(3) %int_gep, i32 6 monotonic
   %f = atomicrmw xchg ptr addrspace(3) @gsm_float, i32 2 monotonic
-  %gep = getelementptr [4 x float], ptr addrspace(3) @gsm_farr, i32 0, i32 1
+  %gep = getelementptr [4 x float], ptr addrspace(3) @gsm_farr, i32 0, i32 %index
   %g = atomicrmw xchg ptr addrspace(3) %gep, i32 3 monotonic
   %c = cmpxchg ptr addrspace(3) @gsm_float, i32 4, i32 5 monotonic monotonic
   ret void
