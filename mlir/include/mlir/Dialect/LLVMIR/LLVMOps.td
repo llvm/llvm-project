@@ -393,7 +393,8 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
               DefaultValuedAttr<
                 AtomicOrdering, "AtomicOrdering::not_atomic">:$ordering,
               OptionalAttr<StrAttr>:$syncscope,
-              OptionalAttr<LLVM_DereferenceableAttr>:$dereferenceable);
+              OptionalAttr<LLVM_DereferenceableAttr>:$dereferenceable,
+              UnitAttr:$noundef);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs LLVM_LoadableType:$res);
@@ -414,6 +415,9 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     // A nontemporal load of a float variable.
     %0 = llvm.load %ptr <nontemporal> : !llvm.ptr -> f32
 
+    // A load of a value that is neither undef nor poison.
+    %0 = llvm.load %ptr noundef : !llvm.ptr -> i32
+
     // An atomic load of an integer variable.
     %0 = llvm.load %ptr atomic monotonic <alignment = 8>
         : !llvm.ptr -> i64
@@ -428,6 +432,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     (`invariant` $invariant^)?
     (`invariant_group` $invariantGroup^)?
     (`dereferenceable` `` $dereferenceable^)?
+    (`noundef` $noundef^)?
     prop-dict
     attr-dict `:` qualified(type($addr)) `->` type($res)
   }];
@@ -440,6 +445,10 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     }
     if ($dereferenceable)
       moduleTranslation.setDereferenceableMetadata(op, inst);
+    if ($noundef) {
+      llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(), {});
+      inst->setMetadata(llvm::LLVMContext::MD_noundef, metadata);
+    }
   }] # setOrderingCode
      # setSyncScopeCode
      # setAlignmentCode
@@ -450,13 +459,15 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
   string mlirBuilder = [{
     auto *loadInst = cast<llvm::LoadInst>(inst);
     unsigned alignment = loadInst->getAlign().value();
-    $res = LLVM::LoadOp::create($_builder, $_location, $_resultType, $addr,
-        alignment, loadInst->isVolatile(),
+    auto loadOp = LLVM::LoadOp::create($_builder, $_location, $_resultType,
+        $addr, alignment, loadInst->isVolatile(),
         loadInst->hasMetadata(llvm::LLVMContext::MD_nontemporal),
         loadInst->hasMetadata(llvm::LLVMContext::MD_invariant_load),
         loadInst->hasMetadata(llvm::LLVMContext::MD_invariant_group),
         convertAtomicOrderingFromLLVM(loadInst->getOrdering()),
         getLLVMSyncScope(loadInst));
+    loadOp.setNoundef(loadInst->hasMetadata(llvm::LLVMContext::MD_noundef));
+    $res = loadOp;
   }];
   let builders = [
     OpBuilder<(ins "Type":$type, "Value":$addr,

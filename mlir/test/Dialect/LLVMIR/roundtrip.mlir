@@ -598,6 +598,13 @@ func.func @invariant_load(%ptr : !llvm.ptr) -> i32 {
   func.return %0 : i32
 }
 
+// CHECK-LABEL: @noundef_load
+func.func @noundef_load(%ptr : !llvm.ptr) -> i32 {
+  // CHECK: llvm.load %{{.+}} noundef <alignment = 4> : !llvm.ptr -> i32
+  %0 = llvm.load %ptr noundef <alignment = 4> : !llvm.ptr -> i32
+  func.return %0 : i32
+}
+
 // CHECK-LABEL: @invariant_group_load
 func.func @invariant_group_load(%ptr : !llvm.ptr) -> i32 {
   // CHECK: llvm.load %{{.+}} invariant_group <alignment = 4> : !llvm.ptr -> i32

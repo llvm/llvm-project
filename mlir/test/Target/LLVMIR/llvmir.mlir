@@ -2135,6 +2135,17 @@ llvm.func @nontemporal_store_and_load(%ptr : !llvm.ptr) -> i32 {
 
 // -----
 
+// CHECK-LABEL: @noundef_load
+llvm.func @noundef_load(%ptr : !llvm.ptr) -> i32 {
+  // CHECK: load i32, ptr %{{.*}}, align 4, !noundef ![[NODE:[0-9]+]]
+  %0 = llvm.load %ptr noundef : !llvm.ptr -> i32
+  llvm.return %0 : i32
+}
+
+// CHECK: ![[NODE]] = !{}
+
+// -----
+
 // Check that invariant group attribute is exported as metadata node.
 llvm.func @nontemporal_store_and_load(%ptr : !llvm.ptr) -> i32 {
   %val = llvm.mlir.constant(42 : i32) : i32
