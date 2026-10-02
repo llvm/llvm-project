@@ -1040,39 +1040,6 @@ struct TestVectorLinearize final
   }
 };
 
-struct TestEliminateVectorMasks
-    : public PassWrapper<TestEliminateVectorMasks,
-                         OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestEliminateVectorMasks)
-
-  TestEliminateVectorMasks() = default;
-  TestEliminateVectorMasks(const TestEliminateVectorMasks &pass)
-      : PassWrapper(pass) {}
-
-  Option<unsigned> vscaleMin{
-      *this, "vscale-min", llvm::cl::desc("Minimum possible value of vscale."),
-      llvm::cl::init(1)};
-  Option<unsigned> vscaleMax{
-      *this, "vscale-max", llvm::cl::desc("Maximum possible value of vscale."),
-      llvm::cl::init(16)};
-  Option<bool> fixedSize{
-      *this, "fixed-size",
-      llvm::cl::desc("Run without a vscale range, as fixed-size code would."),
-      llvm::cl::init(false)};
-
-  StringRef getArgument() const final { return "test-eliminate-vector-masks"; }
-  StringRef getDescription() const final {
-    return "Test eliminating vector masks";
-  }
-  void runOnOperation() override {
-    IRRewriter rewriter(&getContext());
-    std::optional<VscaleRange> vscaleRange;
-    if (!fixedSize)
-      vscaleRange = VscaleRange{vscaleMin, vscaleMax};
-    eliminateVectorMasks(rewriter, getOperation(), vscaleRange);
-  }
-};
-
 struct TestVectorShuffleLowering
     : public PassWrapper<TestVectorShuffleLowering,
                          OperationPass<func::FuncOp>> {
@@ -1136,8 +1103,6 @@ void registerTestVectorLowerings() {
   PassRegistration<TestVectorLinearize>();
 
   PassRegistration<TestVectorBitWidthLinearize>();
-
-  PassRegistration<TestEliminateVectorMasks>();
 }
 } // namespace test
 } // namespace mlir
