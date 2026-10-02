@@ -4374,23 +4374,17 @@ Status Target::StopHookScripted::SetScriptCallback(
   return {};
 }
 
-/// Report a failing scripted hook callback to the user, the way a
-/// command-based hook reports a failing command. \a what names the hook, e.g.
-/// "stop hook 1".
+/// Hook callbacks have no caller to return an error to, so report a failure
+/// as a debugger diagnostic. \a what names the hook, e.g. "stop hook 1".
 static void ReportScriptedHookError(llvm::Error error, llvm::StringRef what,
-                                    Debugger &debugger, StreamSP output_sp) {
+                                    Debugger &debugger) {
   if (!error)
     return;
 
-  // Stringify before logging: LLDB_LOG doesn't evaluate its arguments when the
-  // channel is disabled, which would leave the error unchecked.
-  std::string err_msg = llvm::toString(std::move(error));
-  LLDB_LOG(GetLog(LLDBLog::Target), "{0} failed: {1}", what, err_msg);
-
-  CommandReturnObject result(debugger.GetUseColor());
-  result.SetImmediateOutputStream(output_sp);
-  result.SetImmediateErrorStream(output_sp);
-  result.AppendErrorWithFormatv("{0} failed: {1}", what, err_msg);
+  Debugger::ReportError(
+      llvm::formatv("{0} failed: {1}", what, llvm::toString(std::move(error)))
+          .str(),
+      debugger.GetID());
 }
 
 Target::StopHook::StopHookResult
@@ -4409,7 +4403,7 @@ Target::StopHookScripted::HandleStop(ExecutionContext &exc_ctx,
   if (!should_stop_or_err) {
     ReportScriptedHookError(should_stop_or_err.takeError(),
                             llvm::formatv("stop hook {0}", GetID()).str(),
-                            exc_ctx.GetTargetPtr()->GetDebugger(), output_sp);
+                            exc_ctx.GetTargetPtr()->GetDebugger());
     return StopHookResult::KeepStopped;
   }
 
@@ -4728,7 +4722,7 @@ void Target::HookScripted::HandleModuleLoaded(StreamSP output_sp) {
   output_sp->PutCString(static_cast<StreamString *>(stream.get())->GetData());
   ReportScriptedHookError(std::move(error),
                           llvm::formatv("hook {0}", GetID()).str(),
-                          target_sp->GetDebugger(), output_sp);
+                          target_sp->GetDebugger());
 }
 
 void Target::HookScripted::HandleModuleUnloaded(StreamSP output_sp) {
@@ -4744,7 +4738,7 @@ void Target::HookScripted::HandleModuleUnloaded(StreamSP output_sp) {
   output_sp->PutCString(static_cast<StreamString *>(stream.get())->GetData());
   ReportScriptedHookError(std::move(error),
                           llvm::formatv("hook {0}", GetID()).str(),
-                          target_sp->GetDebugger(), output_sp);
+                          target_sp->GetDebugger());
 }
 
 Target::StopHook::StopHookResult
@@ -4762,7 +4756,7 @@ Target::HookScripted::HandleStop(ExecutionContext &exc_ctx,
   if (!should_stop_or_err) {
     ReportScriptedHookError(should_stop_or_err.takeError(),
                             llvm::formatv("hook {0}", GetID()).str(),
-                            exc_ctx.GetTargetPtr()->GetDebugger(), output_sp);
+                            exc_ctx.GetTargetPtr()->GetDebugger());
     return StopHook::StopHookResult::KeepStopped;
   }
 

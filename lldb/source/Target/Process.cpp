@@ -1256,7 +1256,8 @@ bool Process::PruneThreadPlansForTID(lldb::tid_t tid) {
 }
 
 void Process::PruneThreadPlans() {
-  m_thread_plans.Update(GetThreadList(), true, false);
+  UpdateThreadListIfNeeded();
+  m_thread_plans.Update(m_thread_list, true, false);
 }
 
 bool Process::DumpThreadPlansForTID(Stream &strm, lldb::tid_t tid,
