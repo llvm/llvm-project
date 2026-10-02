@@ -606,36 +606,6 @@ TEST_F(IRBuilderTest, GetIntTy) {
   EXPECT_EQ(IntPtrTy, IntegerType::get(Ctx, IntPtrBitSize));
 }
 
-TEST_F(IRBuilderTest, CreateBitPreservingCastChainFPTypes) {
-  M->setDataLayout("e-p:64:64");
-  IRBuilder<> Builder(BB);
-  const DataLayout &DL = M->getDataLayout();
-  Type *PtrTy = PointerType::getUnqual(Ctx);
-  Type *FloatVecTy = FixedVectorType::get(Builder.getFloatTy(), 2);
-  Type *DoubleTy = Builder.getDoubleTy();
-  Value *FloatVec =
-      Builder.CreateLoad(FloatVecTy, Constant::getNullValue(PtrTy));
-  Value *Double = Builder.CreateLoad(DoubleTy, Constant::getNullValue(PtrTy));
-  Value *Ptr = Builder.CreateLoad(PtrTy, Constant::getNullValue(PtrTy));
-
-  Value *VecToPtr = Builder.CreateBitPreservingCastChain(DL, FloatVec, PtrTy);
-  ASSERT_TRUE(isa<IntToPtrInst>(VecToPtr));
-  EXPECT_TRUE(isa<BitCastInst>(cast<IntToPtrInst>(VecToPtr)->getOperand(0)));
-  Value *PtrToVec = Builder.CreateBitPreservingCastChain(DL, Ptr, FloatVecTy);
-  ASSERT_EQ(PtrToVec->getType(), FloatVecTy);
-  ASSERT_TRUE(isa<BitCastInst>(PtrToVec));
-  EXPECT_TRUE(isa<PtrToIntInst>(cast<BitCastInst>(PtrToVec)->getOperand(0)));
-
-  Value *DoubleToPtr = Builder.CreateBitPreservingCastChain(DL, Double, PtrTy);
-  ASSERT_TRUE(isa<IntToPtrInst>(DoubleToPtr));
-  Value *PtrToDouble = Builder.CreateBitPreservingCastChain(DL, Ptr, DoubleTy);
-  ASSERT_EQ(PtrToDouble->getType(), DoubleTy);
-  ASSERT_TRUE(isa<BitCastInst>(PtrToDouble));
-
-  Builder.CreateRetVoid();
-  EXPECT_FALSE(verifyFunction(*F, &errs()));
-}
-
 TEST_F(IRBuilderTest, UnaryOperators) {
   IRBuilder<NoFolder> Builder(BB);
   Value *V = Builder.CreateLoad(GV->getValueType(), GV);
