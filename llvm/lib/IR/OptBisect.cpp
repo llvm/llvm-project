@@ -92,8 +92,9 @@ static cl::list<std::string> OptBisectFuncsList(
       getOptBisector().setEnabledFunc(FuncName);
     }),
     cl::Hidden,
-    cl::desc("Only perform opt bisect for functions that are included in this "
-             "list and if empty, apply to all functions."));
+    cl::desc(
+        "Only perform opt bisect on functions in this list. Passes on all "
+        "other functions run as usual. If empty, apply to all functions."));
 
 static void printPassMessage(StringRef Name, int PassNum, StringRef TargetDesc,
                              bool Running) {
@@ -118,11 +119,11 @@ bool OptBisect::shouldRunPass(StringRef PassName, StringRef IRDescription,
   // Also check if the pass is disabled via -opt-disable.
   ShouldRun = ShouldRun && !DisabledPasses.contains(PassName);
 
-  // If passed a function name, check if the function is enabled for bisection
-  // via opt-bisect-funcs.
-  bool SkipGate = !FuncName.empty() && !OptBisectFuncNames.empty() &&
-                  !OptBisectFuncNames.contains(FuncName);
-  ShouldRun = ShouldRun && !SkipGate;
+  // -opt-bisect-funcs restricts bisection to the listed functions. Excluded
+  // passes behave as if bisection were off, i.e. always run.
+  bool ExcludedFromBisect = !FuncName.empty() && !OptBisectFuncNames.empty() &&
+                            !OptBisectFuncNames.contains(FuncName);
+  ShouldRun = ShouldRun || ExcludedFromBisect;
 
   if (OptBisectVerbose)
     printPassMessage(PassName, CurBisectNum, IRDescription, ShouldRun);
