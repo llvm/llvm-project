@@ -746,15 +746,35 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depth &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Ordered &x) {
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  parser::CharBlock source{GetContext().clauseSource};
+  std::string clauseName{
+      parser::omp::GetUpperName(llvm::omp::Clause::OMPC_ordered, version)};
+
   // the parameter of ordered clause is optional
   if (const auto &expr{x.v}) {
     RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_ordered, *expr);
-    // 2.8.3 Loop SIMD Construct Restriction
+
+    // ORDERED(n) cannot be present on composite directive with SIMD.
+    // Ref: [5.1:139:21]
     if (llvm::omp::allDoSimdSet.test(GetContext().directive)) {
-      context_.Say(GetContext().clauseSource,
-          "No ORDERED clause with a parameter can be specified "
-          "on the %s directive"_err_en_US,
-          ContextDirectiveAsFortran());
+      context_.Say(source,
+          "%s clause with an argument is not allowed on a compound directive with %s as a constituent"_err_en_US,
+          clauseName,
+          parser::omp::GetUpperName(llvm::omp::Directive::OMPD_simd, version));
+    }
+
+    // If ORDERED(n) is present no LINEAR may be present.
+    // Ref: [5.2:94:28], [6.0:514:7-8] (expressed in a different way).
+    for (const parser::OmpClause &clause : dirStack_.back()->Clauses().v) {
+      llvm::omp::Clause clauseId{clause.Id()};
+      if (clauseId == llvm::omp::Clause::OMPC_linear) {
+        context_
+            .Say(clause.source,
+                "%s clause is not allowed when %s clause with an argument is present"_err_en_US,
+                parser::omp::GetUpperName(clauseId, version), clauseName)
+            .Attach(source, "%s clause specified here"_en_US, clauseName);
+      }
     }
   }
 }
@@ -775,7 +795,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
       auto &desc{llvm::omp::getDescriptor(llvm::omp::Modifier::LinearModifier)};
       context_.Say(source,
           "The list item '%s' specified without the REF '%s' must be of INTEGER type"_err_en_US,
-          symbol->name(), desc.getName().str());
+          symbol->name(), desc.getName());
     }
   }};
 
@@ -800,7 +820,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
         if (dir != llvm::omp::Directive::OMPD_declare_simd) {
           context_.Say(modSource,
               "A REF or UVAL '%s' may not be specified in a LINEAR clause on the %s directive"_err_en_US,
-              desc.getName().str(), parser::omp::GetUpperName(dir, version));
+              desc.getName(), parser::omp::GetUpperName(dir, version));
           valid = false;
         }
       }
@@ -820,7 +840,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
               !IsPolymorphic(*symbol)) {
             context_.Say(source,
                 "The list item `%s` specified with the REF '%s' must be polymorphic variable, assumed-shape array, or a variable with the `ALLOCATABLE` attribute"_err_en_US,
-                symbol->name(), desc.getName().str());
+                symbol->name(), desc.getName());
           }
         }
         if (linearMod->v == parser::OmpLinearModifier::Value::Ref ||
@@ -828,7 +848,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
           if (!IsDummy(*symbol) || IsValue(*symbol)) {
             context_.Say(source,
                 "If the `%s` is REF or UVAL, the list item '%s' must be a dummy argument without the VALUE attribute"_err_en_US,
-                desc.getName().str(), symbol->name());
+                desc.getName(), symbol->name());
           }
         }
       } // for (symbol, source)

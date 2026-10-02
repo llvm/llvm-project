@@ -7,15 +7,15 @@
 
 !CHECK: func @_QQmain() attributes {fir.bindc_name = "SAMPLE"} {
 !CHECK:   %[[COUNT:.*]] = fir.address_of(@_QFEcount) : !fir.ref<i32>
-!CHECK:   %[[COUNT_DECL:.*]]:2 = hlfir.declare %[[COUNT]] {uniq_name = "_QFEcount"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:   %[[COUNT_DECL:.*]]:2 = hlfir.declare %[[COUNT]] uniq_name("_QFEcount") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:   %[[ETA:.*]] = fir.alloca f32 <{bindc_name = "eta", uniq_name = "_QFEeta"}>
 !CHECK:   %[[CONST_1:.*]] = arith.constant 4 : i64
 !CHECK:   %[[PRIVATE_ETA:.*]] = fir.alloca f32 <{bindc_name = "eta", pinned, uniq_name = "_QFEeta"}>
-!CHECK:   %[[PRIVATE_ETA_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_ETA]] {uniq_name = "_QFEeta"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!CHECK:   %[[PRIVATE_ETA_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_ETA]] uniq_name("_QFEeta") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK:   %[[PRIVATE_COUNT:.*]] = fir.alloca i32 <{bindc_name = "count", pinned, uniq_name = "_QFEcount"}>
-!CHECK:   %[[PRIVATE_COUNT_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_COUNT]] {uniq_name = "_QFEcount"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:   %[[PRIVATE_COUNT_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_COUNT]] uniq_name("_QFEcount") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:   %[[PRIVATE_DOUBLE_COUNT:.*]] = fir.alloca i32 <{bindc_name = "double_count", pinned, uniq_name = "_QFEdouble_count"}>
-!CHECK:   %[[PRIVATE_DOUBLE_COUNT_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_DOUBLE_COUNT]] {uniq_name = "_QFEdouble_count"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:   %[[PRIVATE_DOUBLE_COUNT_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_DOUBLE_COUNT]] uniq_name("_QFEdouble_count") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:   omp.sections allocate(%[[CONST_1]] : i64 -> %[[COUNT_DECL]]#0 : !fir.ref<i32>)  {
 !CHECK:     omp.section {
 !CHECK:       %[[CONST5:.*]] = arith.constant 5 : i32
@@ -81,9 +81,9 @@ program sample
 end program sample
 
 !CHECK: func @_QPfirstprivate(%[[ARG:.*]]: !fir.ref<f32> {fir.bindc_name = "alpha"}) {
-!CHECK:   %[[ARG_DECL:.*]]:2 = hlfir.declare %[[ARG]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFfirstprivateEalpha"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+!CHECK:   %[[ARG_DECL:.*]]:2 = hlfir.declare %[[ARG]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFfirstprivateEalpha") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK:   %[[PRIVATE_ALPHA:.*]] = fir.alloca f32 <{bindc_name = "alpha", pinned, uniq_name = "_QFfirstprivateEalpha"}>
-!CHECK:   %[[PRIVATE_ALPHA_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_ALPHA]] {uniq_name = "_QFfirstprivateEalpha"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!CHECK:   %[[PRIVATE_ALPHA_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_ALPHA]] uniq_name("_QFfirstprivateEalpha") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK:   %[[TEMP:.*]] = fir.load %[[ARG_DECL]]#0 : !fir.ref<f32>
 !CHECK:   hlfir.assign %[[TEMP]] to %[[PRIVATE_ALPHA_DECL]]#0 : f32, !fir.ref<f32>
 !CHECK:   omp.sections {
@@ -119,9 +119,9 @@ end subroutine
 subroutine lastprivate()
         integer :: x
 !CHECK: %[[X:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFlastprivateEx"}>
-!CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFlastprivateEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] uniq_name("_QFlastprivateEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRIVATE_X:.*]] = fir.alloca i32 <{bindc_name = "x", pinned, uniq_name = "_QFlastprivateEx"}>
-!CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] {uniq_name = "_QFlastprivateEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] uniq_name("_QFlastprivateEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.sections   {
 	!$omp sections lastprivate(x)
 !CHECK: omp.section {
@@ -150,7 +150,7 @@ subroutine lastprivate()
     !$omp end sections
 
 !CHECK: %[[PRIVATE_X:.*]] = fir.alloca i32 <{bindc_name = "x", pinned, uniq_name = "_QFlastprivateEx"}>
-!CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] {uniq_name = "_QFlastprivateEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] uniq_name("_QFlastprivateEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[TEMP:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<i32>
 !CHECK: hlfir.assign %[[TEMP]] to %[[PRIVATE_X_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK: omp.barrier
@@ -181,7 +181,7 @@ subroutine lastprivate()
     !$omp end sections
 
 !CHECK: %[[PRIVATE_X:.*]] = fir.alloca i32 <{bindc_name = "x", pinned, uniq_name = "_QFlastprivateEx"}>
-!CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] {uniq_name = "_QFlastprivateEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] uniq_name("_QFlastprivateEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[TEMP:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<i32>
 !CHECK: hlfir.assign %[[TEMP]] to %[[PRIVATE_X_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK: omp.barrier
@@ -213,7 +213,7 @@ subroutine lastprivate()
      !$omp end sections nowait
 
 !CHECK: %[[PRIVATE_X:.*]] = fir.alloca i32 <{bindc_name = "x", pinned, uniq_name = "_QFlastprivateEx"}>
-!CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] {uniq_name = "_QFlastprivateEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] uniq_name("_QFlastprivateEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.sections {
 !CHECK: omp.section {
 !CHECK: cf.br ^bb1
@@ -239,13 +239,13 @@ end subroutine
 
 !CHECK-LABEL: func @_QPlastprivate2
 !CHECK: %[[X:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFlastprivate2Ex"}>
-!CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFlastprivate2Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] uniq_name("_QFlastprivate2Ex") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[Y:.*]] = fir.alloca i32 <{bindc_name = "y", uniq_name = "_QFlastprivate2Ey"}>
-!CHECK: %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]] {uniq_name = "_QFlastprivate2Ey"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]] uniq_name("_QFlastprivate2Ey") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRIVATE_X:.*]] = fir.alloca i32 <{bindc_name = "x", pinned, uniq_name = "_QFlastprivate2Ex"}>
-!CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] {uniq_name = "_QFlastprivate2Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] uniq_name("_QFlastprivate2Ex") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRIVATE_Y:.*]] = fir.alloca i32 <{bindc_name = "y", pinned, uniq_name = "_QFlastprivate2Ey"}>
-!CHECK: %[[PRIVATE_Y_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_Y]] {uniq_name = "_QFlastprivate2Ey"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[PRIVATE_Y_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_Y]] uniq_name("_QFlastprivate2Ey") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.sections {
 !CHECK:   omp.section {
 !CHECK:     %[[TEMP:.*]] = fir.load %[[PRIVATE_X_DECL]]#0 : !fir.ref<i32>
@@ -266,8 +266,8 @@ subroutine lastprivate2()
 end subroutine
 
 !CHECK-LABEL: func @_QPlastprivate_common
-!CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} storage(%{{.*}}[0]) {uniq_name = "_QFlastprivate_commonEi"} : (!fir.ref<i32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[I_PRIV:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFlastprivate_commonEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} storage(%{{.*}}[0]) uniq_name("_QFlastprivate_commonEi") : (!fir.ref<i32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[I_PRIV:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFlastprivate_commonEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.sections
 !CHECK: omp.section
 !CHECK: %[[TMP:.*]] = fir.load %[[I_PRIV]]#0 : !fir.ref<i32>
@@ -285,9 +285,9 @@ end subroutine
 !CHECK-LABEL: func @_QPunstructured_sections_privatization
 subroutine unstructured_sections_privatization()
 !CHECK: %[[X:.*]] = fir.alloca f32 <{bindc_name = "x", uniq_name = "_QFunstructured_sections_privatizationEx"}>
-!CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFunstructured_sections_privatizationEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] uniq_name("_QFunstructured_sections_privatizationEx") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK: %[[PRIVATE_X:.*]] = fir.alloca f32 <{bindc_name = "x", pinned, uniq_name = "_QFunstructured_sections_privatizationEx"}>
-!CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] {uniq_name = "_QFunstructured_sections_privatizationEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] uniq_name("_QFunstructured_sections_privatizationEx") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK: omp.sections {
 !CHECK: omp.section {
 !CHECK: cf.br ^bb1
@@ -306,7 +306,7 @@ subroutine unstructured_sections_privatization()
         40  x = x + 1
     !$omp end sections
 !CHECK: %[[PRIVATE_X:.*]] = fir.alloca f32 <{bindc_name = "x", pinned, uniq_name = "_QFunstructured_sections_privatizationEx"}>
-!CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] {uniq_name = "_QFunstructured_sections_privatizationEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] uniq_name("_QFunstructured_sections_privatizationEx") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK: %[[TEMP:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<f32>
 !CHECK: hlfir.assign %[[TEMP]] to %[[PRIVATE_X_DECL]]#0 : f32, !fir.ref<f32>
 !CHECK: omp.sections {
