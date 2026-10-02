@@ -978,10 +978,10 @@ foreach vt = Reg32Types.types in {
 let isReMaterializable = 1 in {
 defm V_BFM_B32 : VOP2Inst <"v_bfm_b32", VOP_I32_I32_I32>;
 defm V_BCNT_U32_B32 : VOP2Inst <"v_bcnt_u32_b32", VOP_I32_I32_I32, add_ctpop>;
-let IsNeverUniform = 1 in {
+let IsNeverUniform = 1, isAsCheapAsAMove = 1 in {
 defm V_MBCNT_LO_U32_B32 : VOP2Inst <"v_mbcnt_lo_u32_b32", VOP_I32_I32_I32, int_amdgcn_mbcnt_lo>;
 defm V_MBCNT_HI_U32_B32 : VOP2Inst <"v_mbcnt_hi_u32_b32", VOP_I32_I32_I32, int_amdgcn_mbcnt_hi>;
-} // End IsNeverUniform = 1
+} // End IsNeverUniform = 1, isAsCheapAsAMove = 1
 defm V_LDEXP_F32 : VOP2Inst <"v_ldexp_f32", VOP_F32_F32_I32, any_fldexp>;
 
 let ReadsModeReg = 0, mayRaiseFPException = 0, SubtargetPredicate = HasCvtPkNormVOP2Insts in {
