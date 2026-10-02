@@ -550,8 +550,7 @@ define amdgpu_kernel void @xor_cf(ptr addrspace(1) %out, ptr addrspace(1) %in, i
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b64 s[8:9], 0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_cmp_ne_u64_e64 s[10:11], s[4:5], 0
-; SI-NEXT:    s_and_b64 vcc, exec, s[10:11]
+; SI-NEXT:    v_cmp_ne_u64_e64 vcc, s[4:5], 0
 ; SI-NEXT:    s_cbranch_vccz .LBB14_4
 ; SI-NEXT:  ; %bb.1: ; %else
 ; SI-NEXT:    s_mov_b32 s15, 0xf000

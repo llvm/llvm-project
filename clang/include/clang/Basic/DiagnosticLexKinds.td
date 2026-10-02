@@ -280,15 +280,16 @@ def warn_unprefixed_octal_deprecated : Warning<
   "octal literals without a '0o' prefix are deprecated">,
   InGroup<DeprecatedOctalLiterals>, SuppressInSystemMacro;
 def ext_binary_literal : Extension<
-  "binary integer literals are a C23 extension">, InGroup<C23>;
+  "binary integer literals are a C23 extension">, InGroup<C23>, SuppressInSystemMacro;
 def warn_c23_compat_binary_literal : Warning<
   "binary integer literals are incompatible with C standards before C23">,
-  InGroup<CPre23Compat>, DefaultIgnore;
+  InGroup<CPre23Compat>, DefaultIgnore, SuppressInSystemMacro;
 def ext_binary_literal_cxx14 : Extension<
-  "binary integer literals are a C++14 extension">, InGroup<CXX14BinaryLiteral>;
+  "binary integer literals are a C++14 extension">,
+  InGroup<CXX14BinaryLiteral>, SuppressInSystemMacro;
 def warn_cxx11_compat_binary_literal : Warning<
   "binary integer literals are incompatible with C++ standards before C++14">,
-  InGroup<CXXPre14CompatBinaryLiteral>, DefaultIgnore;
+  InGroup<CXXPre14CompatBinaryLiteral>, DefaultIgnore, SuppressInSystemMacro;
 def err_pascal_string_too_long : Error<"Pascal string is too long">;
 def err_escape_too_large : Error<
   "%select{hex|octal}0 escape sequence out of range">;

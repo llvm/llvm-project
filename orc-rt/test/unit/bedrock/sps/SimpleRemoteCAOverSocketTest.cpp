@@ -39,6 +39,7 @@
 #include <string>
 #include <string_view>
 #include <thread>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -92,7 +93,8 @@ public:
 
   /// Creates a CA over Near and attaches it, the way a connector would.
   Error attachOverSocket() {
-    auto CA = createSimpleRemoteCAOverSocket(S, std::move(Near));
+    auto CA = createSimpleRemoteCAOverSocket(
+        S, VettedPeer<SocketHandle>::unchecked(std::move(Near)));
     if (!CA)
       return CA.takeError();
     S.attach(std::move(*CA), BootstrapInfo(S));
@@ -284,6 +286,11 @@ void outOfBandErrorWrapper(orc_rt_SessionRef S,
 
 } // namespace
 
+// Starting a conversation means deciding to trust the peer, so the factory
+// takes only a VettedPeer, never a bare socket.
+static_assert(!std::is_invocable_v<decltype(createSimpleRemoteCAOverSocket),
+                                   Session &, SocketHandle>);
+
 TEST_F(SimpleRemoteCAOverSocketTest, RejectsANonStreamSocket) {
   // The framing reads a message in as many parts as the stream delivers it, so
   // a socket that preserves message boundaries would truncate one.
@@ -291,7 +298,8 @@ TEST_F(SimpleRemoteCAOverSocketTest, RejectsANonStreamSocket) {
   ASSERT_TRUE(H.has_value()) << "could not create a socket for the test";
 
   EXPECT_THAT_EXPECTED(
-      createSimpleRemoteCAOverSocket(S, SocketHandle(*H)),
+      createSimpleRemoteCAOverSocket(
+          S, VettedPeer<SocketHandle>::unchecked(SocketHandle(*H))),
       FailedWithMessage(HasSubstr("requires a stream socket")));
   EXPECT_FALSE(isNativeSocketOpen(*H))
       << "a rejected socket is still owned, and must be closed";
