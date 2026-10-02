@@ -1,4 +1,3 @@
-! REQUIRES: native
 ! UNSUPPORTED: offload-cuda
 ! RUN: %flang %isysroot -L"%libdir" -fimplicit-module-prefix %s -o %t-enabled
 ! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" %t-enabled | FileCheck %s --check-prefix=REPAIRED
