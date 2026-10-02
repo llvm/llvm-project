@@ -277,7 +277,7 @@ struct LoweringPreparePass
       const llvm::Triple &triple = getTargetInfo().getTriple();
       if (!isLocalVarDecl && comdat.has_value() &&
           (triple.isOSBinFormatELF() || triple.isOSBinFormatWasm())) {
-        guard.setComdat(globalOp.getSymName());
+        guard.setComdat(comdat->empty() ? globalOp.getSymName() : *comdat);
       } else if (comdat.has_value() && globalOp.isWeakForLinker()) {
         guard.setSelfComdat();
       }
