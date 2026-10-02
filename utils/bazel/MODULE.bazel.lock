@@ -331,41 +331,6 @@
   },
   "selectedYankedVersions": {},
   "moduleExtensions": {
-    "//:extensions.bzl%llvm_repos_extension": {
-      "general": {
-        "bzlTransitiveDigest": "WRH8TXJA/9+bdJ2N+h0EcRGjV/fPZ0z8DZBJAHox+6U=",
-        "usagesDigest": "X0yUkkWyxQ2Y5oZVDkRSE/K4YkDWo1IjhHsL+1weKyU=",
-        "recordedInputs": [
-          "REPO_MAPPING:,bazel_tools bazel_tools"
-        ],
-        "generatedRepoSpecs": {
-          "llvm-raw": {
-            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:local.bzl%new_local_repository",
-            "attributes": {
-              "build_file_content": "# empty",
-              "path": "../../"
-            }
-          },
-          "vulkan_sdk": {
-            "repoRuleId": "@@//:vulkan_sdk.bzl%vulkan_sdk_setup",
-            "attributes": {}
-          },
-          "linux_uapi": {
-            "repoRuleId": "@@//:linux_uapi.bzl%linux_uapi_setup",
-            "attributes": {}
-          },
-          "pyyaml": {
-            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
-            "attributes": {
-              "url": "https://github.com/yaml/pyyaml/archive/refs/tags/5.1.zip",
-              "sha256": "f0a35d7f282a6d6b1a4f3f3965ef5c124e30ed27a0088efb97c0977268fd671f",
-              "strip_prefix": "pyyaml-5.1/lib3",
-              "build_file_content": "load(\"@rules_python//python:defs.bzl\", \"py_library\")\n\npackage(\n    default_visibility = [\"//visibility:public\"],\n    # BSD/MIT-like license (for PyYAML)\n    licenses = [\"notice\"],\n)\n\npy_library(\n    name = \"yaml\",\n    srcs = glob([\"yaml/*.py\"]),\n)\n"
-            }
-          }
-        }
-      }
-    },
     "@@emsdk+//:emscripten_cache.bzl%emscripten_cache": {
       "general": {
         "bzlTransitiveDigest": "GMscy7c4sDbvbf9dMSrtUvyJJBuxYpJBT/Lg+2ob6dk=",
