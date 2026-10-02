@@ -156,7 +156,7 @@ define <2 x i64> @vmlalu32(<2 x i64> %A, <2 x i32> %B, <2 x i32> %C) nounwind {
 define <8 x i16> @vmlala8(<8 x i16> %A, <8 x i8> %B, <8 x i8> %C) nounwind {
 ; CHECK-LABEL: vmlala8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmlal.u8 q0, d2, d3
+; CHECK-NEXT:    vmlal.s8 q0, d2, d3
 ; CHECK-NEXT:    vbic.i16 q0, #0xff00
 ; CHECK-NEXT:    bx lr
   %tmp4 = zext <8 x i8> %B to <8 x i16>
@@ -170,7 +170,7 @@ define <8 x i16> @vmlala8(<8 x i16> %A, <8 x i8> %B, <8 x i8> %C) nounwind {
 define <4 x i32> @vmlala16(<4 x i32> %A, <4 x i16> %B, <4 x i16> %C) nounwind {
 ; CHECK-LABEL: vmlala16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmlal.u16 q0, d2, d3
+; CHECK-NEXT:    vmlal.s16 q0, d2, d3
 ; CHECK-NEXT:    vmov.i32 q8, #0xffff
 ; CHECK-NEXT:    vand q0, q0, q8
 ; CHECK-NEXT:    bx lr
@@ -185,7 +185,7 @@ define <4 x i32> @vmlala16(<4 x i32> %A, <4 x i16> %B, <4 x i16> %C) nounwind {
 define <2 x i64> @vmlala32(<2 x i64> %A, <2 x i32> %B, <2 x i32> %C) nounwind {
 ; CHECK-LABEL: vmlala32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmlal.u32 q0, d2, d3
+; CHECK-NEXT:    vmlal.s32 q0, d2, d3
 ; CHECK-NEXT:    vmov.i64 q8, #0xffffffff
 ; CHECK-NEXT:    vand q0, q0, q8
 ; CHECK-NEXT:    bx lr
@@ -256,7 +256,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @test_vmlal_lanea16(<4 x i32> %arg0_uint32x4_t, <4 x i16> %arg1_uint16x4_t, <4 x i16> %arg2_uint16x4_t) nounwind readnone {
 ; CHECK-LABEL: test_vmlal_lanea16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmlal.u16 q0, d2, d3[1]
+; CHECK-NEXT:    vmlal.s16 q0, d2, d3[1]
 ; CHECK-NEXT:    vmov.i32 q8, #0xffff
 ; CHECK-NEXT:    vand q0, q0, q8
 ; CHECK-NEXT:    bx lr
@@ -273,7 +273,7 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @test_vmlal_lanea32(<2 x i64> %arg0_uint64x2_t, <2 x i32> %arg1_uint32x2_t, <2 x i32> %arg2_uint32x2_t) nounwind readnone {
 ; CHECK-LABEL: test_vmlal_lanea32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmlal.u32 q0, d2, d3[1]
+; CHECK-NEXT:    vmlal.s32 q0, d2, d3[1]
 ; CHECK-NEXT:    vmov.i64 q8, #0xffffffff
 ; CHECK-NEXT:    vand q0, q0, q8
 ; CHECK-NEXT:    bx lr
