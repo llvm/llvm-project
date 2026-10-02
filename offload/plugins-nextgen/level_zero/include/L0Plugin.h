@@ -44,9 +44,10 @@ public:
 
   llvm::Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
                                   void *HostPtr, TargetAllocTy Kind,
-                                  size_t Alignment) override;
-  llvm::Error deallocate(GenericDeviceTy &Device, void *Ptr,
-                         TargetAllocTy Kind) override;
+                                  size_t Alignment,
+                                  GenericProfilerTy *ProfilerPtr) override;
+  llvm::Error deallocate(GenericDeviceTy &Device, void *Ptr, TargetAllocTy Kind,
+                         GenericProfilerTy *ProfilerPtr) override;
   Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override;
 
   /// Initialize per-plugin-context memory allocators. Runs the pool
