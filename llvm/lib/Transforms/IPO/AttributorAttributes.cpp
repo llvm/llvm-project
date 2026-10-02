@@ -12250,6 +12250,11 @@ struct AAGlobalValueInfoFloating : public AAGlobalValueInfo {
                 SmallVectorImpl<const Value *> &Worklist) {
     Instruction *UInst = dyn_cast<Instruction>(U.getUser());
     if (!UInst) {
+      // Outside a closed world, code outside the module can read an
+      // externally visible global, so the value escapes through it.
+      if (auto *GV = dyn_cast<GlobalValue>(U.getUser()))
+        if (!GV->hasLocalLinkage() && !A.isClosedWorldModule())
+          return false;
       Follow = true;
       return true;
     }

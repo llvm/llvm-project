@@ -16,16 +16,23 @@
 #include <detail/program_manager.hpp>
 
 #include <algorithm>
+#include <cassert>
 #include <cstdint>
+#include <string>
+#include <tuple>
+#include <utility>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
 
+namespace {
+
 thread_local bool NestedCallsDetector = false;
+
 class NestedCallsTracker {
 public:
-  NestedCallsTracker(ContextImpl &QueueContext) {
+  explicit NestedCallsTracker(ContextImpl &QueueContext) {
     if (NestedCallsDetectorRef)
       throw sycl::exception(
           createSyclObjFromImpl<context>(QueueContext),
@@ -42,11 +49,13 @@ private:
   bool &NestedCallsDetectorRef = NestedCallsDetector;
 };
 
-QueueImpl::QueueImpl(const std::shared_ptr<ContextImpl> &contextImpl,
-                     DeviceImpl &deviceImpl, const async_handler &asyncHandler,
-                     const property_list &propList, PrivateTag)
-    : MIsInorder(false), MAsyncHandler(asyncHandler), MPropList(propList),
-      MDevice(deviceImpl), MContext(contextImpl) {
+} // namespace
+
+QueueImpl::QueueImpl(const std::shared_ptr<ContextImpl> &Context,
+                     DeviceImpl &Device, const async_handler &AsyncHandler,
+                     const property_list &PropList, PrivateTag)
+    : MIsInOrder(false), MAsyncHandler(AsyncHandler), MPropList(PropList),
+      MDevice(Device), MContext(Context) {
   assert(MContext && "Context impl ptr can't be nullptr");
 
   ol_result_t Err = callNoCheck(olCreateQueue, MContext->getOLHandleRef(),
@@ -131,7 +140,7 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
   ol_symbol_handle_t Kernel =
       detail::ProgramAndKernelManager::getInstance().getOrCreateKernel(
           KernelInfo, MContext, MDevice);
-  assert(Kernel);
+  assert(Kernel && "Kernel symbol can't be nullptr");
 
   handleEventDependencies(MCurrentSubmitInfo.DepEvents);
 
@@ -142,25 +151,25 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
   size_t ArgSizes[] = {ArgSize};
   auto Result =
       olLaunchKernel(MOffloadQueue, MDevice.getOLHandle(), Kernel,
-                     &MCurrentSubmitInfo.Range, NULL, 1, ArgPtrs, ArgSizes);
+                     &MCurrentSubmitInfo.Range, nullptr, 1, ArgPtrs, ArgSizes);
 
   if (isFailed(Result))
     throw sycl::exception(createSyclObjFromImpl<context>(*MContext),
                           sycl::make_error_code(sycl::errc::runtime),
-                          std::string("Kernel submission (") +
-                              KernelInfo.getName().data() + ") failed with " +
-                              formatCodeString(Result));
+                          "Kernel submission (" +
+                              std::string(KernelInfo.getName()) +
+                              ") failed with " + formatCodeString(Result));
 
   MCurrentSubmitInfo.LastEvent =
       createEvent(std::move(MCurrentSubmitInfo.DepEvents));
 }
 
 static ol_device_handle_t getAllocDevice(ContextImpl &Context,
-                                         const void *ptr) {
+                                         const void *Ptr) {
   // TODO: consider caching this information to avoid querying it every time.
   ol_device_handle_t Device{};
-  [[maybe_unused]] ol_result_t Result =
-      callNoCheck(olGetMemInfo, Context.getOLHandleRef(), ptr,
+  ol_result_t Result =
+      callNoCheck(olGetMemInfo, Context.getOLHandleRef(), Ptr,
                   OL_MEM_INFO_DEVICE, sizeof(ol_device_handle_t), &Device);
   if (detail::isFailed(Result)) {
     // NOT_FOUND: the pointer isn't a liboffload allocation at all (plain host
@@ -173,13 +182,13 @@ static ol_device_handle_t getAllocDevice(ContextImpl &Context,
     checkAndThrow(Context, Result);
   }
 
-  assert(Device);
+  assert(Device && "Device handle can't be nullptr");
   return Device;
 }
 
-std::shared_ptr<EventImpl>
-QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
-                  const std::vector<EventImplPtr> &DepEvents) {
+EventImplPtr QueueImpl::memcpy(void *Dest, const void *Src,
+                               std::size_t NumBytes,
+                               const std::vector<EventImplPtr> &DepEvents) {
   assert(MContext && "Context impl ptr can't be nullptr");
   checkEventsPlatformMatch(DepEvents, *MContext);
   if (NumBytes == 0)
@@ -276,7 +285,7 @@ EventImplPtr QueueImpl::submitWithHandler(const TypelessCGF &CGF) {
   detail::HandlerImpl HandlerImplVal(*this);
   handler Handler(HandlerImplVal);
   {
-    NestedCallsTracker tracker(*MContext);
+    NestedCallsTracker Tracker(*MContext);
     CGF(Handler);
   }
 

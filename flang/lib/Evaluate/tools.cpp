@@ -1138,12 +1138,20 @@ bool IsNullPointerOrAllocatable(const Expr<SomeType> *x) {
 }
 
 // GetSymbolVector()
-auto GetSymbolVectorHelper::operator()(const Symbol &x) const -> Result {
-  if (const auto *details{x.detailsIf<semantics::AssocEntityDetails>()}) {
-    if (IsVariable(details->expr()) && !UnwrapProcedureRef(*details->expr())) {
-      // associate(x => variable that is not a pointer returned by a function)
-      return (*this)(details->expr());
+const Expr<SomeType> *GetVariableSelector(const Symbol &sym) {
+  if (const auto *details{
+          sym.GetUltimate().detailsIf<semantics::AssocEntityDetails>()}) {
+    if (const auto &expr{details->expr()};
+        expr && IsVariable(*expr) && !UnwrapProcedureRef(*expr)) {
+      return &*expr;
     }
+  }
+  return nullptr;
+}
+
+auto GetSymbolVectorHelper::operator()(const Symbol &x) const -> Result {
+  if (const auto *selector{GetVariableSelector(x)}) {
+    return (*this)(*selector);
   }
   return {x.GetUltimate()};
 }
@@ -1221,6 +1229,22 @@ template semantics::UnorderedSymbolSet CollectCudaSymbols(
     const Expr<SomeInteger> &);
 template semantics::UnorderedSymbolSet CollectCudaSymbols(
     const Expr<SubscriptInteger> &);
+
+semantics::UnorderedSymbolSet ExpandCudaAssociations(
+    semantics::UnorderedSymbolSet &&symbols) {
+  semantics::UnorderedSymbolSet result;
+  for (SymbolRef sym : symbols) {
+    if (const auto *selector{GetVariableSelector(*sym)}) {
+      for (SymbolRef selectorSym :
+          ExpandCudaAssociations(CollectCudaSymbols(*selector))) {
+        result.insert(selectorSym);
+      }
+    } else {
+      result.insert(sym);
+    }
+  }
+  return result;
+}
 
 std::vector<SymbolVector> GetSymbolVectors(const Expr<SomeType> &expr) {
   SymbolVector symbols{GetSymbolVector(expr)};
@@ -1331,6 +1355,33 @@ bool IsCUDADeviceSymbol(const Symbol &sym) {
     return GetNbOfCUDADeviceSymbols(details->expr()) > 0;
   }
   return false;
+}
+
+static std::optional<common::CUDADataAttr> GetDesignatedCUDADataAttr(
+    const Symbol &sym) {
+  const Symbol &ultimate{sym.GetUltimate()};
+  if (const auto *details{
+          ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {
+    return details->cudaDataAttr();
+  }
+  if (const auto *selector{GetVariableSelector(ultimate)}) {
+    // The attribute of a component prevails over the one of its base.
+    SymbolVector symbols{GetSymbolVector(*selector)};
+    for (auto it{symbols.rbegin()}; it != symbols.rend(); ++it) {
+      if (auto attr{GetDesignatedCUDADataAttr(*it)}) {
+        return attr;
+      }
+      if (!it->get().owner().IsDerivedType()) {
+        break;
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+bool IsCUDADataAttrSymbol(const Symbol &sym, common::CUDADataAttr attr) {
+  auto symAttr{GetDesignatedCUDADataAttr(sym)};
+  return symAttr && *symAttr == attr;
 }
 
 bool IsCUDADeviceOnlySymbol(const Symbol &sym) {
