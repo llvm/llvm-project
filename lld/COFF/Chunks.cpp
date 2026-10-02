@@ -319,9 +319,13 @@ static void applySecRelLdr(const SectionChunk *sec, uint8_t *off,
 }
 
 void applyArm64Branch26(uint8_t *off, int64_t v) {
-  if (!isInt<28>(v))
+  int32_t contents = read32le(off);
+  // Original lower 26 bits must be extracted, preserving signed-int-ness, and
+  // fixup value must be shifted right 2.
+  int64_t value = SignExtend64<26>(contents) + (v >> 2);
+  if (!isInt<26>(value))
     error("relocation out of range");
-  or32(off, (v & 0x0FFFFFFC) >> 2);
+  write32le(off, (contents & 0xFC000000u) | (value & 0x03FFFFFFu));
 }
 
 static void applyArm64Branch19(uint8_t *off, int64_t v) {
