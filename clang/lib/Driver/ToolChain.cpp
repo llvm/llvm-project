@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/ToolChain.h"
+#include "ClangCLArgs.h"
 #include "ToolChains/Arch/AArch64.h"
 #include "ToolChains/Arch/AMDGPU.h"
 #include "ToolChains/Arch/ARM.h"
@@ -2074,6 +2075,12 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
     }
     XOpenMPTargetArg->setBaseArg(A);
     A = XOpenMPTargetArg.release();
+    if (A->getOption().matches(options::OPT_D) &&
+        (getDriver().IsCLMode() ||
+         llvm::Triple(llvm::Triple::normalize(getDriver().getTargetTriple()))
+             .isWindowsMSVCEnvironment()))
+      A->getValues()[0] =
+          ClangCLArgs::translateMacroDefinition(A->getValue(), Args);
     AllocatedArgs.push_back(A);
     DAL->append(A);
     Modified = true;
@@ -2154,6 +2161,14 @@ void ToolChain::TranslateXarchArgs(
     DAL->AddSynthesizedArg(A);
   else
     AllocatedArgs->push_back(A);
+
+  // Forwarded macros are parsed after the shared input translation.
+  if (A->getOption().matches(options::OPT_D) &&
+      (getDriver().IsCLMode() ||
+       llvm::Triple(llvm::Triple::normalize(getDriver().getTargetTriple()))
+           .isWindowsMSVCEnvironment()))
+    A->getValues()[0] =
+        ClangCLArgs::translateMacroDefinition(A->getValue(), Args);
 }
 
 /// Match any triple recognized arch aliases.

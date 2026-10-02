@@ -22,7 +22,7 @@ class DerivedArgList;
 
 namespace clang::driver {
 
-/// Translate clang-cl options before host and device arguments are split.
+/// Translate clang-cl options before and after offload argument filtering.
 class LLVM_LIBRARY_VISIBILITY ClangCLArgs {
   const char *ExpandChar = nullptr;
   bool SupportsForcingFramePointer;
@@ -31,9 +31,25 @@ public:
   /// The argument values must outlive this translator.
   ClangCLArgs(const llvm::opt::ArgList &Args, const llvm::Triple &HostTriple);
 
-  /// Append A and its canonical expansion to DAL. Return false without
-  /// modifying DAL if A is not handled.
-  bool translateArg(llvm::opt::Arg *A, llvm::opt::DerivedArgList &DAL) const;
+  /// Append the canonical translation of A to DAL. Return false without
+  /// modifying DAL if A is not handled. If supplied, Owner owns synthesized
+  /// arguments instead of DAL and must outlive its consumers.
+  bool translateArg(llvm::opt::Arg *A, llvm::opt::DerivedArgList &DAL,
+                    const llvm::opt::DerivedArgList *Owner = nullptr) const;
+
+  /// Translate a filtered list that may contain new clang-cl options, replacing
+  /// earlier /O expansions. The caller owns the returned list; Owner owns its
+  /// synthesized arguments and must outlive its consumers.
+  static llvm::opt::DerivedArgList *
+  translateArgs(const llvm::opt::DerivedArgList &Args,
+                const llvm::Triple &HostTriple,
+                const llvm::opt::DerivedArgList &Owner);
+
+  /// Normalize MSVC's '#' macro separator, also used by Clang targeting MSVC
+  /// and by arguments parsed after host/device filtering. Any replacement
+  /// string has the lifetime of Args; otherwise return Value unchanged.
+  static const char *translateMacroDefinition(const char *Value,
+                                              const llvm::opt::ArgList &Args);
 };
 
 } // namespace clang::driver

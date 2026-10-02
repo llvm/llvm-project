@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Compilation.h"
+#include "ClangCLArgs.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/CommonArgs.h"
@@ -89,6 +90,17 @@ Compilation::getArgsForToolChain(const ToolChain *TC, BoundArch BA,
         NewDAL = OpenMPArgs;
       else
         delete OpenMPArgs;
+    }
+
+    if (NewDAL && DeviceOffloadKind == Action::OFK_OpenMP &&
+        (TheDriver.IsCLMode() ||
+         DefaultToolChain.getTriple().isWindowsMSVCEnvironment())) {
+      // OpenMP forwarding can introduce clang-cl options after the shared
+      // translation. Keep synthesized arguments in the compilation-owned list.
+      auto *DAL = ClangCLArgs::translateArgs(
+          *NewDAL, DefaultToolChain.getTriple(), *TranslatedArgs);
+      delete NewDAL;
+      NewDAL = DAL;
     }
 
     if (!NewDAL) {

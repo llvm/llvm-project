@@ -1023,59 +1023,6 @@ SanitizerMask MSVCToolChain::getSupportedSanitizers(
   return Res;
 }
 
-static void TranslateDArg(Arg *A, llvm::opt::DerivedArgList &DAL,
-                          const OptTable &Opts) {
-  assert(A->getOption().matches(options::OPT_D));
-
-  StringRef Val = A->getValue();
-  size_t Hash = Val.find('#');
-  if (Hash == StringRef::npos || Hash > Val.find('=')) {
-    DAL.append(A);
-    return;
-  }
-
-  std::string NewVal = std::string(Val);
-  NewVal[Hash] = '=';
-  DAL.AddJoinedArg(A, Opts.getOption(options::OPT_D), NewVal);
-}
-
-static void TranslatePermissive(Arg *A, llvm::opt::DerivedArgList &DAL,
-                                const OptTable &Opts) {
-  DAL.AddFlagArg(A, Opts.getOption(options::OPT__SLASH_Zc_twoPhase_));
-  DAL.AddFlagArg(A, Opts.getOption(options::OPT_fno_operator_names));
-}
-
-static void TranslatePermissiveMinus(Arg *A, llvm::opt::DerivedArgList &DAL,
-                                     const OptTable &Opts) {
-  DAL.AddFlagArg(A, Opts.getOption(options::OPT__SLASH_Zc_twoPhase));
-  DAL.AddFlagArg(A, Opts.getOption(options::OPT_foperator_names));
-}
-
-llvm::opt::DerivedArgList *
-MSVCToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
-                             BoundArch BA, Action::OffloadKind OFK) const {
-  DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
-  const OptTable &Opts = getDriver().getOpts();
-
-  for (Arg *A : Args) {
-    if (A->getOption().matches(options::OPT_D)) {
-      // Translate -Dfoo#bar into -Dfoo=bar.
-      TranslateDArg(A, *DAL, Opts);
-    } else if (A->getOption().matches(options::OPT__SLASH_permissive)) {
-      // Expand /permissive
-      TranslatePermissive(A, *DAL, Opts);
-    } else if (A->getOption().matches(options::OPT__SLASH_permissive_)) {
-      // Expand /permissive-
-      TranslatePermissiveMinus(A, *DAL, Opts);
-    } else if (OFK != Action::OFK_HIP) {
-      // HIP Toolchain translates input args by itself.
-      DAL->append(A);
-    }
-  }
-
-  return DAL;
-}
-
 void MSVCToolChain::addClangTargetOptions(
     const ArgList &DriverArgs, ArgStringList &CC1Args, BoundArch BA,
     Action::OffloadKind DeviceOffloadKind) const {

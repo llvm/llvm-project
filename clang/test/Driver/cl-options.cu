@@ -32,3 +32,19 @@
 // O2-SAME: "-O3"
 // O2: "-cc1" "-triple"
 // O2-SAME: "-O3"
+
+// Shared macros and language settings also reach CUDA without reintroducing
+// the original macro alongside its translated value.
+// RUN: not %clang_cl --target=x86_64-pc-windows-msvc -### /c \
+// RUN:   --cuda-gpu-arch=sm_35 -nocudainc -nocudalib \
+// RUN:   /DFOO#7 /permissive- -- %s 2>&1 | FileCheck %s --check-prefix=CL-COMMON
+// CL-COMMON: "-cc1" "-triple" "nvptx64-nvidia-cuda"
+// CL-COMMON-SAME: "-D" "FOO=7"
+// CL-COMMON-NOT: "FOO#7"
+// CL-COMMON-NOT: "-fno-operator-names"
+// CL-COMMON-NOT: "-fdelayed-template-parsing"
+// CL-COMMON: "-cc1" "-triple" "x86_64-pc-windows-msvc{{[^"]*}}"
+// CL-COMMON-SAME: "-D" "FOO=7"
+// CL-COMMON-NOT: "FOO#7"
+// CL-COMMON-NOT: "-fno-operator-names"
+// CL-COMMON-NOT: "-fdelayed-template-parsing"
