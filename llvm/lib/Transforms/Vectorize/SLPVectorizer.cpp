@@ -3617,9 +3617,7 @@ private:
   unsigned NumCanonicalSplatSubtreeEntries = 0;
 
   /// Maps compress entries to their mask data for the final codegen.
-  SmallDenseMap<const TreeEntry *,
-                std::tuple<SmallVector<int>, VectorType *, unsigned, bool>>
-      CompressEntryToData;
+  SmallDenseMap<const TreeEntry *, CompressedLoadInfo> CompressEntryToData;
 
   /// The loop nest, used to check if only a single loop nest is vectorized, not
   /// multiple, to avoid side-effects from the loop-aware cost model.
@@ -14871,7 +14869,7 @@ void BoUpSLP::transformNodes() {
       if (PreferStridedOverCompressed()) {
         E->State = TreeEntry::StridedVectorize;
         TreeEntryToStridedPtrInfoMap[E.get()] = SPtrInfo;
-        CompressEntryToData.erase(E);
+        CompressEntryToData.erase(E.get());
       }
     }
   }
@@ -17452,9 +17450,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             *TLI, CostKind, [](Value *) { return true; }, SLPReVec,
             CompressInfo);
         assert(IsVectorized && "Expected compressed load candidate.");
-        CompressEntryToData.try_emplace(
-            E, CompressInfo.CompressMask, CompressInfo.LoadVecTy,
-            CompressInfo.InterleaveFactor, CompressInfo.IsMasked);
+        CompressEntryToData.try_emplace(E, CompressInfo);
         VecLdCost = getCompressedLoadCost(*TTI, LI0, CompressInfo, CostKind);
         break;
       }
@@ -24646,7 +24642,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (E->State == TreeEntry::Vectorize) {
         NewLI = Builder.CreateAlignedLoad(VecTy, PO, LI->getAlign());
       } else if (E->State == TreeEntry::CompressVectorize) {
-        auto [CompressMask, LoadVecTy, InterleaveFactor, IsMasked] =
+        auto [IsMasked, InterleaveFactor, CompressMask, LoadVecTy] =
             CompressEntryToData.at(E);
         Align CommonAlignment = LI->getAlign();
         if (IsMasked) {
