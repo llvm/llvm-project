@@ -793,10 +793,20 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "MCCLOptionsTableGen",
+    strip_include_prefix = "lib/MC",
+    tbl_outs = {"lib/MC/MCCLOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/MC/MCCLOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "MC",
     srcs = glob([
         "lib/MC/*.cpp",
+        "lib/MC/*.h",
     ]),
     hdrs = glob([
         "include/llvm/MC/*.h",
@@ -807,6 +817,8 @@ cc_library(
         ":BinaryFormat",
         ":DebugInfoCodeView",
         ":DebugInfoDWARFLowLevel",
+        ":MCCLOptionsTableGen",
+        ":Option",
         ":Support",
         ":TargetParser",
         ":config",
@@ -1811,6 +1823,17 @@ td_library(
     ]),
 )
 
+gentbl_cc_library(
+    name = "InstCombineCLOptionsTableGen",
+    strip_include_prefix = "lib/Transforms/InstCombine",
+    tbl_outs = {
+        "lib/Transforms/InstCombine/InstCombineCLOptions.inc": ["-gen-opt-parser-defs"],
+    },
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Transforms/InstCombine/InstCombineCLOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "InstCombine",
     srcs = glob([
@@ -1822,6 +1845,8 @@ cc_library(
     deps = [
         ":Analysis",
         ":Core",
+        ":InstCombineCLOptionsTableGen",
+        ":Option",
         ":Support",
         ":Target",
         ":TransformUtils",
@@ -2232,6 +2257,9 @@ genrule(
     srcs = ["include/llvm/Transforms/IPO/InstrumentorRuntimeHelper.h"],
     outs = ["include/llvm/Transforms/IPO/InstrumentorVariables.inc"],
     cmd = "printf 'constexpr char InstrumentorRuntimeHelper[] = R\"(' > $@ && cat $(SRCS) >> $@ && echo ')\";' >> $@",
+    # `set /p` writes its prompt without a newline, like printf; it also returns
+    # errorlevel 1 on empty input, hence the single `&` after it.
+    cmd_bat = ">$@ <nul set /p =constexpr char InstrumentorRuntimeHelper[] = R^\"(& >>$@ type $(SRCS)&& >>$@ echo ^)^\";",
 )
 
 cc_library(
@@ -3384,6 +3412,9 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/Sparc/SparcGenSDNodeInfo.inc",
             ),
         ],
+        "tbl_deps": [
+            ":SparcOptionsTableGen",
+        ],
     },
     {
         "name": "SPIRV",
@@ -3922,6 +3953,15 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "SparcOptionsTableGen",
+    strip_include_prefix = "lib/Target/Sparc",
+    tbl_outs = {"lib/Target/Sparc/SparcOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/Sparc/SparcOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
     name = "webassembly_isel_target_gen",
     strip_include_prefix = "lib/Target/WebAssembly",
     tbl_outs = {
@@ -3973,11 +4013,7 @@ gentbl_cc_library(
         srcs = ["lib/Target/" + target["name"] + "/TargetInfo/" + target["name"] + "TargetInfo.cpp"],
         hdrs = glob(["lib/Target/" + target["name"] + "/TargetInfo/*.h"]),
         copts = llvm_copts,
-        # Workaround for https://github.com/bazelbuild/bazel/issues/3828
-        # TODO(gcmn): Remove this when upgrading to a Bazel version containing
-        # https://github.com/bazelbuild/bazel/commit/e3b7e17b05f1
         includes = ["lib/Target/" + target["name"]],
-        strip_include_prefix = "lib/Target/" + target["name"],
         deps = [
             ":" + target["name"] + "CommonTableGen",
             ":MC",
@@ -3997,8 +4033,8 @@ gentbl_cc_library(
                 # We have to include these headers here as well as in the `hdrs`
                 # below to allow the `.cpp` files to use file-relative-inclusion to
                 # find them, even though consumers of this library use inclusion
-                # relative to the target with the `strip_includes_prefix` of this
-                # library. This mixture is likely incompatible with header modules.
+                # relative to the target directory via `includes`. This mixture is
+                # likely incompatible with header modules.
                 "lib/Target/" + target["name"] + "/MCTargetDesc/*.h",
                 "lib/Target/" + target["name"] + "/Utils/*.h",
             ],
@@ -4018,9 +4054,9 @@ gentbl_cc_library(
                 "lib/Target/" + target["name"] + "/*.h",
 
                 # FIXME: The entries below should be `textual_hdrs` instead of
-                # `hdrs`, but unfortunately that doesn't work with
-                # `strip_include_prefix`:
-                # https://github.com/bazelbuild/bazel/issues/12424
+                # `hdrs`. That was blocked by `strip_include_prefix`
+                # (https://github.com/bazelbuild/bazel/issues/12424), which this
+                # rule no longer uses.
                 #
                 # Once that issue is fixed and released, we can switch this to
                 # `textual_hdrs` and remove the feature disabling the various Bazel
@@ -4038,7 +4074,13 @@ gentbl_cc_library(
             "-header_modules",
             "-layering_check",
         ],
-        strip_include_prefix = "lib/Target/" + target["name"],
+        # `includes` rather than `strip_include_prefix`: the prefix exposes the
+        # headers through a `_virtual_includes` copy, and when a header includes
+        # one from its parent directory (MCTargetDesc/RISCVTargetStreamer.h
+        # -> "RISCV.h") clang-cl's Microsoft include rule finds the real file,
+        # sees the ordinary lookup land on the copy, and rejects the mismatch
+        # under -Wmicrosoft-include. With `includes` both lookups agree.
+        includes = ["lib/Target/" + target["name"]],
         deps = [
             ":BinaryFormat",
             ":CodeGen",
@@ -4087,7 +4129,8 @@ gentbl_cc_library(
             "-layering_check",
             "-parse_headers",
         ],
-        strip_include_prefix = "lib/Target/" + target["name"],
+        # See the `includes` note on the `UtilsAndDesc` rule above.
+        includes = ["lib/Target/" + target["name"]],
         textual_hdrs = glob(
             [
                 "lib/Target/" + target["name"] + "/*.def",
