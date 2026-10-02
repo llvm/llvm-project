@@ -1086,8 +1086,8 @@ define amdgpu_kernel void @v_usubo_clamp_bit(ptr addrspace(1) %out, ptr addrspac
 ; SI-NEXT:    buffer_load_dword v2, off, s[8:11], 0
 ; SI-NEXT:    s_mov_b64 s[8:9], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
 ; SI-NEXT:    v_sub_i32_e64 v0, s[0:1], v1, v2
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
 ; SI-NEXT:    s_cbranch_vccnz .LBB9_2
 ; SI-NEXT:  ; %bb.1: ; %if
 ; SI-NEXT:    s_xor_b64 s[8:9], s[0:1], -1
@@ -1118,8 +1118,8 @@ define amdgpu_kernel void @v_usubo_clamp_bit(ptr addrspace(1) %out, ptr addrspac
 ; VI-NEXT:    flat_load_dword v1, v[0:1]
 ; VI-NEXT:    flat_load_dword v2, v[2:3]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
 ; VI-NEXT:    v_sub_u32_e64 v0, s[0:1], v1, v2
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
 ; VI-NEXT:    s_cbranch_vccnz .LBB9_2
 ; VI-NEXT:  ; %bb.1: ; %if
 ; VI-NEXT:    s_xor_b64 s[2:3], s[0:1], -1
@@ -1144,8 +1144,8 @@ define amdgpu_kernel void @v_usubo_clamp_bit(ptr addrspace(1) %out, ptr addrspac
 ; GFX9-NEXT:    global_load_dword v2, v0, s[12:13]
 ; GFX9-NEXT:    global_load_dword v3, v0, s[14:15]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; GFX9-NEXT:    v_sub_co_u32_e64 v1, s[0:1], v2, v3
+; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; GFX9-NEXT:    s_cbranch_vccnz .LBB9_2
 ; GFX9-NEXT:  ; %bb.1: ; %if
 ; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], -1
