@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Dialect/CUDAKernelOpInterface.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/Support/CommandLine.h"
@@ -67,10 +68,13 @@ bool fir::shouldUseStackForCopyin(mlir::Location loc, mlir::Type sequenceType,
 
 bool fir::isInOffloadRegion(mlir::Operation *op) {
   for (mlir::Operation *cur = op ? op->getParentOp() : nullptr; cur;
-       cur = cur->getParentOp())
+       cur = cur->getParentOp()) {
     if (mlir::isa<mlir::acc::OffloadRegionOpInterface,
-                  fir::CUDAKernelOpInterface>(cur))
+                  fir::CUDAKernelOpInterface, mlir::gpu::LaunchOp,
+                  mlir::gpu::GPUFuncOp, mlir::gpu::GPUModuleOp>(cur) ||
+        mlir::acc::isSpecializedAccRoutine(cur))
       return true;
+  }
   return false;
 }
 

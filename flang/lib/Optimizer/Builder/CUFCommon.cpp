@@ -74,14 +74,9 @@ bool cuf::isCUDADeviceContext(mlir::Region &region,
 bool cuf::isExecutingOnDevice(mlir::Operation *op) {
   if (!op)
     return false;
-  if (fir::isInOffloadRegion(op) ||
-      op->getParentOfType<mlir::gpu::GPUModuleOp>() ||
-      op->getParentOfType<mlir::gpu::LaunchOp>() ||
-      op->getParentOfType<mlir::gpu::GPUFuncOp>())
+  if (fir::isInOffloadRegion(op))
     return true;
   if (auto funcOp = op->getParentOfType<mlir::func::FuncOp>()) {
-    if (mlir::acc::isSpecializedAccRoutine(funcOp))
-      return true;
     if (auto cudaProcAttr =
             funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
                 cuf::getProcAttrName())) {

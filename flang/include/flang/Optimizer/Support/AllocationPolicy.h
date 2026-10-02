@@ -114,9 +114,10 @@ struct AllocationInfo : PendingAllocationInfo {
   bool isCurrentlyOnStack = false;
 };
 
-/// Return true if \p op is nested in a region that is offloaded to a device:
-/// an OpenACC compute construct or a CUDA Fortran kernel loop. Code there runs
-/// on the device stack, which is far smaller than the host one.
+/// Return true if \p op is nested in code that is offloaded to a device: an
+/// OpenACC compute construct or specialized routine, a CUDA Fortran kernel
+/// loop, a gpu.launch, a gpu.func or a gpu.module. Code there runs on the
+/// device stack, which is far smaller than the host one.
 bool isInOffloadRegion(mlir::Operation *op);
 
 /// Size-based placement policy, usable before the allocation is created.
