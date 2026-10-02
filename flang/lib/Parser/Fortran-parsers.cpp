@@ -734,8 +734,7 @@ TYPE_PARSER(
         "nonstandard usage: ',' in place of '::'"_port_en_US,
         construct<TypeDeclarationStmt>(declarationTypeSpec,
             defaulted("," >> nonemptyList(Parser<AttrSpec>{})),
-            // Anchor at the failure point so this nonstandard-path message does
-            // not tie with and outrank the standard "expected '::'".
+            // Start-anchoring would tie with and outrank "expected '::'".
             withMessageAtFailure("expected entity declarations"_err_en_US,
                 "," >> nonemptyList(entityDecl)))))
 
