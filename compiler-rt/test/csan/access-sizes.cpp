@@ -3,6 +3,7 @@
 // RUN: env CSAN_OPTIONS=skip_watch=0:udelay=1000 %run %t 2 2>&1 | FileCheck %s --check-prefix=SIZE2
 // RUN: env CSAN_OPTIONS=skip_watch=0:udelay=1000 %run %t 8 2>&1 | FileCheck %s --check-prefix=SIZE8
 // RUN: env CSAN_OPTIONS=skip_watch=0:udelay=1000 %run %t 16 2>&1 | FileCheck %s --check-prefix=SIZE16
+// RUN: env CSAN_OPTIONS=skip_watch=0:udelay=1000 %run %t 0 2>&1 | FileCheck %s --check-prefix=UNALIGNED
 
 #include "AMDGPU/race.h"
 #include <pthread.h>
@@ -30,10 +31,29 @@ TEST_SIZE(Global2, short)
 TEST_SIZE(Global8, long)
 TEST_SIZE(Global16, Vec16)
 
+struct __attribute__((packed, aligned(4))) Packed {
+  char Pad;
+  int Value;
+};
+volatile Packed Unaligned;
+static void *UnalignedThread(void *) {
+  RACE_UNTIL_FOUND(I) Unaligned.Value = 0;
+  return nullptr;
+}
+static void UnalignedTest() {
+  pthread_t T;
+  pthread_create(&T, nullptr, UnalignedThread, nullptr);
+  RACE_UNTIL_FOUND(I) Unaligned.Value = 0;
+  pthread_join(T, nullptr);
+}
+
 int main(int Argc, char **Argv) {
   if (Argc != 2)
     return 1;
   switch (atoi(Argv[1])) {
+  case 0:
+    UnalignedTest();
+    break;
   case 1:
     Global1Test();
     break;
@@ -60,3 +80,5 @@ int main(int Argc, char **Argv) {
 // SIZE8: Write of size 8
 // SIZE16: WARNING: ConcurrencySanitizer: data race
 // SIZE16: Write of size 16
+// UNALIGNED: WARNING: ConcurrencySanitizer: data race
+// UNALIGNED: Write of size 4
