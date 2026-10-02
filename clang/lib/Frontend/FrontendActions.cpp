@@ -884,12 +884,12 @@ void PrintPreambleAction::ExecuteAction() {
   case Language::CUDA:
   case Language::HIP:
   case Language::HLSL:
-  case Language::CIR:
     break;
 
   case Language::Unknown:
   case Language::Asm:
   case Language::LLVM_IR:
+  case Language::CIR:
     // We can't do anything with these.
     return;
   }
