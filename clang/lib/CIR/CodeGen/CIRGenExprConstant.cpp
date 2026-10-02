@@ -338,7 +338,8 @@ mlir::Attribute buildRecordHelper(ConstantEmitter &emitter,
                                    apOp.getNameAttr(), indices);
     }
 
-    for (auto [idx, base] : llvm::enumerate(cxxrd->bases())) {
+    unsigned baseNo = 0;
+    for (const CXXBaseSpecifier &base : cxxrd->bases()) {
       // Our init-list implementation here just skips bases because classic
       // compiler does (see the comment in buildRecord). We perhaps COULD do
       // this, but for now we'll skip them.
@@ -350,10 +351,12 @@ mlir::Attribute buildRecordHelper(ConstantEmitter &emitter,
 
       const auto *baseDecl = base.getType()->castAsCXXRecordDecl();
 
+      unsigned curBaseNo = baseNo++;
+
       if (!cirLayout.hasNonVirtualBaseCIRField(baseDecl))
         continue;
 
-      APValue baseValue = inits.getBase(idx);
+      APValue baseValue = inits.getBase(curBaseNo);
 
       const ASTRecordLayout &derivedLayout =
           cgm.getASTContext().getASTRecordLayout(cxxrd);
@@ -1586,6 +1589,9 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
   case APValue::Matrix:
     cgm.errorNYI("ConstExprEmitter::tryEmitPrivate matrix");
     return {};
+
+  case APValue::Reflection:
+    llvm_unreachable("std::meta::info is consteval-only type");
   }
   llvm_unreachable("Unknown APValue kind");
 }

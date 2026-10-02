@@ -198,10 +198,6 @@ static cl::opt<unsigned> TinyTripCountVectorThreshold(
              "value are vectorized only if no scalar iteration overheads "
              "are incurred."));
 
-static cl::opt<unsigned> VectorizeMemoryCheckThreshold(
-    "vectorize-memory-check-threshold", cl::init(128), cl::Hidden,
-    cl::desc("The maximum allowed number of runtime memory checks"));
-
 static cl::opt<bool> ForcePartialAliasingVectorization(
     "force-partial-aliasing-vectorization", cl::init(false), cl::Hidden,
     cl::desc("Replace pointer diff checks with alias masks."));
@@ -557,10 +553,9 @@ public:
 
   virtual ~InnerLoopVectorizer() = default;
 
-  /// Creates a basic block for the scalar preheader. Both
-  /// EpilogueVectorizerMainLoop and EpilogueVectorizerEpilogueLoop overwrite
-  /// the method to create additional blocks and checks needed for epilogue
-  /// vectorization.
+  /// Creates a basic block for the scalar preheader.
+  /// EpilogueVectorizerEpilogueLoop overrides the method to create additional
+  /// blocks and checks needed for epilogue vectorization.
   virtual BasicBlock *createVectorizedLoopSkeleton();
 
   /// Fix the vectorized code, taking care of header phi's, and more.
@@ -572,11 +567,6 @@ protected:
   /// Create and return a new IR basic block for the scalar preheader whose name
   /// is prefixed with \p Prefix.
   BasicBlock *createScalarPreheader(StringRef Prefix);
-
-  /// Allow subclasses to override and print debug traces before/after vplan
-  /// execution, when trace information is requested.
-  virtual void printDebugTracesAtStart() {}
-  virtual void printDebugTracesAtEnd() {}
 
   /// The original loop.
   Loop *OrigLoop;
@@ -636,59 +626,15 @@ struct EpilogueLoopVectorizationInfo {
       : MainLoopVF(MVF), MainLoopUF(MUF), EpilogueVF(EVF) {}
 };
 
-/// An extension of the inner loop vectorizer that creates a skeleton for a
-/// vectorized loop that has its epilogue (residual) also vectorized.
-/// The idea is to run the vplan on a given loop twice, firstly to setup the
-/// skeleton and vectorize the main loop, and secondly to complete the skeleton
-/// from the first step and vectorize the epilogue.  This is achieved by
-/// deriving two concrete strategy classes from this base class and invoking
-/// them in succession from the loop vectorizer planner.
-class InnerLoopAndEpilogueVectorizer : public InnerLoopVectorizer {
-public:
-  InnerLoopAndEpilogueVectorizer(Loop *OrigLoop, PredicatedScalarEvolution &PSE,
-                                 LoopInfo *LI, DominatorTree *DT,
-                                 const TargetTransformInfo *TTI,
-                                 AssumptionCache *AC,
-                                 EpilogueLoopVectorizationInfo &EPI,
-                                 GeneratedRTChecks &Checks, VPlan &Plan,
-                                 ElementCount VecWidth, unsigned UnrollFactor)
-      : InnerLoopVectorizer(OrigLoop, PSE, LI, DT, TTI, AC, VecWidth,
-                            UnrollFactor, Checks, Plan),
-        EPI(EPI) {}
-
-  /// Holds and updates state information required to vectorize the main loop
-  /// and its epilogue in two separate passes. This setup helps us avoid
-  /// regenerating and recomputing runtime safety checks. It also helps us to
-  /// shorten the iteration-count-check path length for the cases where the
-  /// iteration count of the loop is so small that the main vector loop is
-  /// completely skipped.
-  EpilogueLoopVectorizationInfo &EPI;
-};
-
 /// A specialized derived class of inner loop vectorizer that performs
-/// vectorization of *main* loops in the process of vectorizing loops and their
-/// epilogues.
-class EpilogueVectorizerMainLoop : public InnerLoopAndEpilogueVectorizer {
-public:
-  EpilogueVectorizerMainLoop(Loop *OrigLoop, PredicatedScalarEvolution &PSE,
-                             LoopInfo *LI, DominatorTree *DT,
-                             const TargetTransformInfo *TTI,
-                             AssumptionCache *AC,
-                             EpilogueLoopVectorizationInfo &EPI,
-                             GeneratedRTChecks &Check, VPlan &Plan)
-      : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TTI, AC, EPI,
-                                       Check, Plan, EPI.MainLoopVF,
-                                       EPI.MainLoopUF) {}
-
-protected:
-  void printDebugTracesAtStart() override;
-  void printDebugTracesAtEnd() override;
-};
-
-// A specialized derived class of inner loop vectorizer that performs
-// vectorization of *epilogue* loops in the process of vectorizing loops and
-// their epilogues.
-class EpilogueVectorizerEpilogueLoop : public InnerLoopAndEpilogueVectorizer {
+/// vectorization of *epilogue* loops in the process of vectorizing loops and
+/// their epilogues. The idea is to run the vplan on a given loop twice, firstly
+/// to vectorize the main loop, and secondly to complete the skeleton from the
+/// first step and vectorize the epilogue. This helps us avoid regenerating and
+/// recomputing runtime safety checks, and shortens the iteration-count-check
+/// path length for loops whose iteration count is so small that the main vector
+/// loop is completely skipped.
+class EpilogueVectorizerEpilogueLoop : public InnerLoopVectorizer {
   VPlan &MainPlan;
 
 public:
@@ -697,21 +643,16 @@ public:
   EpilogueVectorizerEpilogueLoop(Loop *OrigLoop, PredicatedScalarEvolution &PSE,
                                  LoopInfo *LI, DominatorTree *DT,
                                  const TargetTransformInfo *TTI,
-                                 AssumptionCache *AC,
-                                 EpilogueLoopVectorizationInfo &EPI,
+                                 AssumptionCache *AC, ElementCount VecWidth,
+                                 unsigned UnrollFactor,
                                  GeneratedRTChecks &Checks, VPlan &Plan,
                                  VPlan &MainPlan)
-      : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TTI, AC, EPI,
-                                       Checks, Plan, EPI.EpilogueVF,
-                                       /*UnrollFactor=*/1),
+      : InnerLoopVectorizer(OrigLoop, PSE, LI, DT, TTI, AC, VecWidth,
+                            UnrollFactor, Checks, Plan),
         MainPlan(MainPlan) {}
   /// Implements the interface for creating a vectorized skeleton using the
   /// *epilogue loop* strategy (i.e., the second pass of VPlan execution).
   BasicBlock *createVectorizedLoopSkeleton() final;
-
-protected:
-  void printDebugTracesAtStart() override;
-  void printDebugTracesAtEnd() override;
 };
 } // end namespace llvm
 
@@ -887,11 +828,23 @@ public:
     CM_InvalidatedDecision
   };
 
+#ifndef NDEBUG
+  static constexpr StringLiteral getInstWideningStr(InstWidening W) {
+    constexpr StringLiteral WideningStr[] = {
+        "Unknown",       "Widen",     "Widen_Reverse",      "Interleave",
+        "GatherScatter", "Scalarize", "InvalidatedDecision"};
+    return WideningStr[W];
+  }
+#endif
+
   /// Save vectorization decision \p W and \p Cost taken by the cost model for
   /// instruction \p I and vector width \p VF.
   void setWideningDecision(Instruction *I, ElementCount VF, InstWidening W,
                            InstructionCost Cost) {
     assert(VF.isVector() && "Expected VF >=2");
+    LLVM_DEBUG(dbgs() << "LV: Setting widening decision to "
+                      << getInstWideningStr(W) << " for VF " << VF
+                      << " and instruction: " << *I << '\n');
     WideningDecisions[{I, VF}] = {W, Cost};
   }
 
@@ -912,6 +865,9 @@ public:
       OtherMemberCost = InsertPosCost = Cost / Grp->getNumMembers();
     ;
     for (auto *I : Grp->members()) {
+      LLVM_DEBUG(dbgs() << "LV: Setting widening decision to "
+                        << getInstWideningStr(W) << " for VF " << VF
+                        << " and instruction: " << *I << '\n');
       if (Grp->getInsertPos() == I)
         WideningDecisions[{I, VF}] = {W, InsertPosCost};
       else
@@ -1586,8 +1542,8 @@ public:
     // runtime checks needs to be generated.
     // TODO: Skip cutoff if the loop is guaranteed to execute, e.g. due to
     // profile info.
-    CostTooHigh =
-        LAI.getNumRuntimePointerChecks() > VectorizeMemoryCheckThreshold;
+    CostTooHigh = LAI.getNumRuntimePointerChecks() >
+                  VectorizerParams::VectorizeMemoryCheckThreshold;
     if (CostTooHigh) {
       // Mark runtime checks as never succeeding when they exceed the threshold.
       MemRuntimeCheckCond = ConstantInt::getTrue(L->getHeader()->getContext());
@@ -2724,8 +2680,24 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     if (Legal->hasUncountableEarlyExit() && TheLoop->getLoopLatch() != E)
       continue;
     auto *Cmp = dyn_cast<Instruction>(E->getTerminator()->getOperand(0));
-    if (Cmp && TheLoop->contains(Cmp) && Cmp->hasOneUse())
-      AddToWorklistIfAllowed(Cmp);
+    if (!Cmp || !TheLoop->contains(Cmp) || !Cmp->hasOneUse())
+      continue;
+
+    // If we have an exit condition that is actually two conditions (one
+    // countable and the other uncountable) combined via an or, only add the
+    // countable comparison as a uniform value.
+    if (Legal->hasUncountableExitWithSideEffects() &&
+        TheLoop->getLoopLatch() == E) {
+      if (Instruction *Countable =
+              Legal->findCountableComparisonInCombinedCondition(Cmp)) {
+        if (Countable->hasOneUse())
+          AddToWorklistIfAllowed(Countable);
+        continue;
+      }
+    }
+
+    // Normal exit comparisons are uniform.
+    AddToWorklistIfAllowed(Cmp);
   }
 
   auto PrevVF = VF.divideCoefficientBy(2);
@@ -4561,6 +4533,8 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       if (!Ptr)
         continue;
 
+      LLVM_DEBUG(dbgs() << "LV: Memory widening: calculating best strategy for "
+                        << I << '\n');
       if (isUniformMemOp(I, VF)) {
         auto IsLegalToScalarize = [&]() {
           if (!VF.isScalable())
@@ -4600,6 +4574,10 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         // Choose better solution for the current VF,  Note that Invalid
         // costs compare as maximumal large.  If both are invalid, we get
         // scalable invalid which signals a failure and a vectorization abort.
+        LLVM_DEBUG(dbgs() << "LV: Memory widening: uniform memory op has "
+                             "GatherScatterCost =  "
+                          << GatherScatterCost << ", ScalarizationCost = "
+                          << ScalarizationCost << '\n');
         if (GatherScatterCost < ScalarizationCost)
           setWideningDecision(&I, VF, CM_GatherScatter, GatherScatterCost);
         else
@@ -4610,8 +4588,11 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       // We assume that widening is the best solution when possible.
       if (std::optional<InstWidening> Decision =
               memoryInstructionCanBeWidened(&I, VF)) {
-        setWideningDecision(&I, VF, *Decision,
-                            getConsecutiveMemOpCost(&I, VF, *Decision));
+        InstructionCost WidenCost = getConsecutiveMemOpCost(&I, VF, *Decision);
+        LLVM_DEBUG(
+            dbgs() << "LV: Memory widening: can be widened normally with cost "
+                   << WidenCost << '\n');
+        setWideningDecision(&I, VF, *Decision, WidenCost);
         continue;
       }
 
@@ -4654,6 +4635,11 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         Decision = CM_Scalarize;
         Cost = ScalarizationCost;
       }
+      LLVM_DEBUG(
+          dbgs() << "LV: Memory widening: InterleaveCost = " << InterleaveCost
+                 << ", GatherScatterCost = " << GatherScatterCost
+                 << ", ScalarizationCost = " << ScalarizationCost << '\n');
+
       // If the instructions belongs to an interleave group, the whole group
       // receives the same decision. The whole group receives the cost, but
       // the cost will actually be assigned to one instruction.
@@ -4710,8 +4696,12 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         continue;
       if (getWideningDecision(cast<Instruction>(U), VF) != CM_Scalarize)
         continue;
+      auto UI = cast<Instruction>(U);
+      LLVM_DEBUG(
+          dbgs() << "LV: Memory widening: updating decision for load user "
+                 << *UI << '\n');
       setWideningDecision(
-          cast<Instruction>(U), VF, CM_Scalarize,
+          UI, VF, CM_Scalarize,
           getMemInstScalarizationCost(cast<Instruction>(U), VF));
     }
   };
@@ -4727,6 +4717,8 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
            (!isUniformMemOp(*I, VF) && Decision == CM_Scalarize))) {
         // Scalarize a widened load of address or update the cost of a scalar
         // load of an address.
+        LLVM_DEBUG(dbgs() << "LV: Memory widening: updating decision for load "
+                          << *I << '\n');
         setWideningDecision(
             I, VF, CM_Scalarize,
             (VF.getKnownMinValue() *
@@ -4742,6 +4734,10 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
                                         getMemoryInstructionCost(
                                             Member, ElementCount::getFixed(1)))
                                      : getMemInstScalarizationCost(Member, VF);
+          LLVM_DEBUG(
+              dbgs()
+              << "LV: Memory widening: updating decision for interleave member "
+              << *Member << '\n');
           setWideningDecision(Member, VF, CM_Scalarize, Cost);
           UpdateMemOpUserCost(cast<LoadInst>(Member));
         }
@@ -5600,13 +5596,20 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
   VPCostContext CostCtx(*TLI, Plan, *CM, Config,
                         /*ReusePrintingSlotTracker=*/true);
   InstructionCost Cost = precomputeCosts(Plan, VF, CostCtx);
+  LLVM_DEBUG(dbgs() << "Precomputed costs for VF " << VF << ": " << Cost
+                    << '\n');
 
   // Now compute and add the VPlan-based cost.
   Cost += Plan.cost(VF, CostCtx);
 
   // Add the cost of spills due to excess register usage
-  if (RU && Config.shouldConsiderRegPressureForVF(VF))
-    Cost += RU->spillCost(TTI, Config.CostKind, ForceTargetNumVectorRegs);
+  if (RU && Config.shouldConsiderRegPressureForVF(VF)) {
+    InstructionCost SpillCost =
+        RU->spillCost(TTI, Config.CostKind, ForceTargetNumVectorRegs);
+    LLVM_DEBUG(dbgs() << "Spill costs for VF " << VF << ": " << SpillCost
+                      << '\n');
+    Cost += SpillCost;
+  }
 
 #ifndef NDEBUG
   unsigned EstimatedWidth =
@@ -5923,8 +5926,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   SE.forgetLoop(OrigLoop);
   SE.forgetBlockAndLoopDispositions();
 
-  ILV.printDebugTracesAtStart();
-
   //===------------------------------------------------===//
   //
   // Notice: any optimization or new instruction that go
@@ -5963,8 +5964,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   //    predication, updating analyses.
   ILV.fixVectorizedLoop(State);
 
-  ILV.printDebugTracesAtEnd();
-
   // Wrap the generated blocks in VPIRBasicBlocks, so they can be used in the
   // epilogue plan.
   if (EpilogueVecKind == EpilogueVectorizationKind::MainLoop)
@@ -5974,27 +5973,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
         replaceVPBBWithIRVPBB(VPBB, State.CFG.VPBB2IRBB.at(VPBB), &BestVPlan);
 
   return ExpandedSCEVs;
-}
-
-//===--------------------------------------------------------------------===//
-// EpilogueVectorizerMainLoop
-//===--------------------------------------------------------------------===//
-
-void EpilogueVectorizerMainLoop::printDebugTracesAtStart() {
-  LLVM_DEBUG({
-    dbgs() << "Create Skeleton for epilogue vectorized loop (first pass)\n"
-           << "Main Loop VF:" << EPI.MainLoopVF
-           << ", Main Loop UF:" << EPI.MainLoopUF
-           << ", Epilogue Loop VF:" << EPI.EpilogueVF
-           << ", Epilogue Loop UF:1\n";
-  });
-}
-
-void EpilogueVectorizerMainLoop::printDebugTracesAtEnd() {
-  DEBUG_WITH_TYPE(VerboseDebug, {
-    dbgs() << "intermediate fn:\n"
-           << *OrigLoop->getHeader()->getParent() << "\n";
-  });
 }
 
 //===--------------------------------------------------------------------===//
@@ -6027,19 +6005,6 @@ BasicBlock *EpilogueVectorizerEpilogueLoop::createVectorizedLoopSkeleton() {
                  NewEntry);
 
   return OriginalScalarPH;
-}
-
-void EpilogueVectorizerEpilogueLoop::printDebugTracesAtStart() {
-  LLVM_DEBUG({
-    dbgs() << "Create Skeleton for epilogue vectorized loop (second pass)\n"
-           << "Epilogue Loop VF:" << EPI.EpilogueVF << ", Epilogue Loop UF:1\n";
-  });
-}
-
-void EpilogueVectorizerEpilogueLoop::printDebugTracesAtEnd() {
-  DEBUG_WITH_TYPE(VerboseDebug, {
-    dbgs() << "final fn:\n" << *OrigLoop->getHeader()->getParent() << "\n";
-  });
 }
 
 bool VPRecipeBuilder::isPredicatedInst(Instruction *I) const {
@@ -6488,6 +6453,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   //       the presence of an uncountable exit and the presence of stores in
   //       the loop inside handleUncountableEarlyExits itself.
   if (Legal->hasUncountableEarlyExit()) {
+    if (!RUN_VPLAN_PASS(VPlanTransforms::splitCombinedExits, *VPlan0, PSE,
+                        OrigLoop))
+      return nullptr;
+
     // TODO: Check target preference for style.
     UncountableExitStyle EEStyle =
         Legal->hasUncountableExitWithSideEffects()
@@ -7212,7 +7181,7 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   // would lead to a divide by 0. Fall back to hard threshold.
   if (VF.Width.isScalar()) {
     // TODO: Should we rename VectorizeMemoryCheckThreshold?
-    if (RtC > VectorizeMemoryCheckThreshold) {
+    if (RtC > VectorizerParams::VectorizeMemoryCheckThreshold) {
       LLVM_DEBUG(
           dbgs()
           << "LV: Interleaving only is not profitable due to runtime checks\n");
@@ -8163,12 +8132,22 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         L, HasBranchWeights ? MinItersBypassWeights : nullptr,
         L->getLoopPredecessor()->getTerminator()->getDebugLoc(), PSE);
 
-    EpilogueVectorizerMainLoop MainILV(L, PSE, LI, DT, TTI, AC, EPI, Checks,
-                                       BestMainPlan);
+    LLVM_DEBUG({
+      dbgs() << "Create Skeleton for epilogue vectorized loop (first pass)\n"
+             << "Main Loop VF:" << EPI.MainLoopVF
+             << ", Main Loop UF:" << EPI.MainLoopUF
+             << ", Epilogue Loop VF:" << EPI.EpilogueVF
+             << ", Epilogue Loop UF:1\n";
+    });
+    InnerLoopVectorizer MainILV(L, PSE, LI, DT, TTI, AC, EPI.MainLoopVF,
+                                EPI.MainLoopUF, Checks, BestMainPlan);
     auto ExpandedSCEVs = LVP.executePlan(
         EPI.MainLoopVF, EPI.MainLoopUF, BestMainPlan, MainILV, DT,
         LoopVectorizationPlanner::EpilogueVectorizationKind::MainLoop);
     ++LoopsVectorized;
+    DEBUG_WITH_TYPE(VerboseDebug, {
+      dbgs() << "intermediate fn:\n" << *L->getHeader()->getParent() << "\n";
+    });
 
     BasicBlock *EntryBB =
         cast<VPIRBasicBlock>(BestMainPlan.getEntry())->getIRBasicBlock();
@@ -8176,15 +8155,24 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
     // Second pass vectorizes the epilogue and adjusts the control flow
     // edges from the first pass.
-    EpilogueVectorizerEpilogueLoop EpilogILV(L, PSE, LI, DT, TTI, AC, EPI,
+    EpilogueVectorizerEpilogueLoop EpilogILV(L, PSE, LI, DT, TTI, AC,
+                                             EPI.EpilogueVF, /*UnrollFactor=*/1,
                                              Checks, BestEpiPlan, BestMainPlan);
     SmallVector<Instruction *> InstsToMove = preparePlanForEpilogueVectorLoop(
         BestMainPlan, BestEpiPlan, L, ExpandedSCEVs, EPI, LVP, Config,
         *PSE.getSE(), ResumeValues);
     RUN_VPLAN_PASS(VPlanTransforms::simplifyLiveInsWithSCEV, BestEpiPlan, PSE);
+    LLVM_DEBUG({
+      dbgs() << "Create Skeleton for epilogue vectorized loop (second pass)\n"
+             << "Epilogue Loop VF:" << EPI.EpilogueVF
+             << ", Epilogue Loop UF:1\n";
+    });
     LVP.executePlan(
         EPI.EpilogueVF, /*BestUF=*/1, BestEpiPlan, EpilogILV, DT,
         LoopVectorizationPlanner::EpilogueVectorizationKind::Epilogue);
+    DEBUG_WITH_TYPE(VerboseDebug, {
+      dbgs() << "final fn:\n" << *L->getHeader()->getParent() << "\n";
+    });
     connectEpilogueVectorLoop(BestEpiPlan, DT,
                               EpilogILV.VecEpilogueIterationCountCheck,
                               InstsToMove, ResumeValues);
