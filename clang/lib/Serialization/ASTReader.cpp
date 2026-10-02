@@ -26,6 +26,7 @@
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
@@ -81,6 +82,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/Weak.h"
 #include "clang/Serialization/ASTBitCodes.h"
@@ -4474,6 +4476,11 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
         DeclsWithEffectsToVerify.push_back(ReadDeclID(F, Record, I));
       break;
 
+    case OMP_REQUIRES_DECLS:
+      for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
+        OpenMPRequiresDecls.push_back(ReadDeclID(F, Record, I));
+      break;
+
     case OPENCL_EXTENSIONS:
       for (unsigned I = 0, E = Record.size(); I != E; ) {
         auto Name = ReadString(Record, I);
@@ -8068,6 +8075,9 @@ QualType ASTReader::GetType(TypeID ID) {
     case PREDEF_TYPE_NULLPTR_ID:
       T = Context.NullPtrTy;
       break;
+    case PREDEF_TYPE_META_INFO_ID:
+      T = Context.MetaInfoTy;
+      break;
     case PREDEF_TYPE_CHAR8_ID:
       T = Context.Char8Ty;
       break;
@@ -9291,6 +9301,12 @@ void ASTReader::InitializeSema(Sema &S) {
 
 void ASTReader::UpdateSema() {
   assert(SemaObj && "no Sema to update");
+
+  // UpdateSema() runs after each AST file is loaded, not only the first, so a
+  // 'requires' directive from a module is registered too.
+  for (GlobalDeclID ID : OpenMPRequiresDecls)
+    SemaObj->OpenMP().addRequiresDecl(cast<OMPRequiresDecl>(GetDecl(ID)));
+  OpenMPRequiresDecls.clear();
 
   // Load the offsets of the declarations that Sema references.
   // They will be lazily deserialized when needed.

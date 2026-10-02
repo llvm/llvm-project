@@ -828,11 +828,23 @@ public:
     CM_InvalidatedDecision
   };
 
+#ifndef NDEBUG
+  static constexpr StringLiteral getInstWideningStr(InstWidening W) {
+    constexpr StringLiteral WideningStr[] = {
+        "Unknown",       "Widen",     "Widen_Reverse",      "Interleave",
+        "GatherScatter", "Scalarize", "InvalidatedDecision"};
+    return WideningStr[W];
+  }
+#endif
+
   /// Save vectorization decision \p W and \p Cost taken by the cost model for
   /// instruction \p I and vector width \p VF.
   void setWideningDecision(Instruction *I, ElementCount VF, InstWidening W,
                            InstructionCost Cost) {
     assert(VF.isVector() && "Expected VF >=2");
+    LLVM_DEBUG(dbgs() << "LV: Setting widening decision to "
+                      << getInstWideningStr(W) << " for VF " << VF
+                      << " and instruction: " << *I << '\n');
     WideningDecisions[{I, VF}] = {W, Cost};
   }
 
@@ -853,6 +865,9 @@ public:
       OtherMemberCost = InsertPosCost = Cost / Grp->getNumMembers();
     ;
     for (auto *I : Grp->members()) {
+      LLVM_DEBUG(dbgs() << "LV: Setting widening decision to "
+                        << getInstWideningStr(W) << " for VF " << VF
+                        << " and instruction: " << *I << '\n');
       if (Grp->getInsertPos() == I)
         WideningDecisions[{I, VF}] = {W, InsertPosCost};
       else
@@ -4518,6 +4533,8 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       if (!Ptr)
         continue;
 
+      LLVM_DEBUG(dbgs() << "LV: Memory widening: calculating best strategy for "
+                        << I << '\n');
       if (isUniformMemOp(I, VF)) {
         auto IsLegalToScalarize = [&]() {
           if (!VF.isScalable())
@@ -4557,6 +4574,10 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         // Choose better solution for the current VF,  Note that Invalid
         // costs compare as maximumal large.  If both are invalid, we get
         // scalable invalid which signals a failure and a vectorization abort.
+        LLVM_DEBUG(dbgs() << "LV: Memory widening: uniform memory op has "
+                             "GatherScatterCost =  "
+                          << GatherScatterCost << ", ScalarizationCost = "
+                          << ScalarizationCost << '\n');
         if (GatherScatterCost < ScalarizationCost)
           setWideningDecision(&I, VF, CM_GatherScatter, GatherScatterCost);
         else
@@ -4567,8 +4588,11 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       // We assume that widening is the best solution when possible.
       if (std::optional<InstWidening> Decision =
               memoryInstructionCanBeWidened(&I, VF)) {
-        setWideningDecision(&I, VF, *Decision,
-                            getConsecutiveMemOpCost(&I, VF, *Decision));
+        InstructionCost WidenCost = getConsecutiveMemOpCost(&I, VF, *Decision);
+        LLVM_DEBUG(
+            dbgs() << "LV: Memory widening: can be widened normally with cost "
+                   << WidenCost << '\n');
+        setWideningDecision(&I, VF, *Decision, WidenCost);
         continue;
       }
 
@@ -4611,6 +4635,11 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         Decision = CM_Scalarize;
         Cost = ScalarizationCost;
       }
+      LLVM_DEBUG(
+          dbgs() << "LV: Memory widening: InterleaveCost = " << InterleaveCost
+                 << ", GatherScatterCost = " << GatherScatterCost
+                 << ", ScalarizationCost = " << ScalarizationCost << '\n');
+
       // If the instructions belongs to an interleave group, the whole group
       // receives the same decision. The whole group receives the cost, but
       // the cost will actually be assigned to one instruction.
@@ -4667,8 +4696,12 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         continue;
       if (getWideningDecision(cast<Instruction>(U), VF) != CM_Scalarize)
         continue;
+      auto UI = cast<Instruction>(U);
+      LLVM_DEBUG(
+          dbgs() << "LV: Memory widening: updating decision for load user "
+                 << *UI << '\n');
       setWideningDecision(
-          cast<Instruction>(U), VF, CM_Scalarize,
+          UI, VF, CM_Scalarize,
           getMemInstScalarizationCost(cast<Instruction>(U), VF));
     }
   };
@@ -4684,6 +4717,8 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
            (!isUniformMemOp(*I, VF) && Decision == CM_Scalarize))) {
         // Scalarize a widened load of address or update the cost of a scalar
         // load of an address.
+        LLVM_DEBUG(dbgs() << "LV: Memory widening: updating decision for load "
+                          << *I << '\n');
         setWideningDecision(
             I, VF, CM_Scalarize,
             (VF.getKnownMinValue() *
@@ -4699,6 +4734,10 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
                                         getMemoryInstructionCost(
                                             Member, ElementCount::getFixed(1)))
                                      : getMemInstScalarizationCost(Member, VF);
+          LLVM_DEBUG(
+              dbgs()
+              << "LV: Memory widening: updating decision for interleave member "
+              << *Member << '\n');
           setWideningDecision(Member, VF, CM_Scalarize, Cost);
           UpdateMemOpUserCost(cast<LoadInst>(Member));
         }

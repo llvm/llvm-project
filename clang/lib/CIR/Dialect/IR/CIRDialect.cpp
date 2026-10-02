@@ -3961,6 +3961,9 @@ LogicalResult cir::GetMemberOp::verify() {
   if (pointeeTy != getType().getPointee())
     return emitError() << "member type mismatch";
 
+  if (getAddrTy().getAddrSpace() != getType().getAddrSpace())
+    return emitError() << "address space mismatch";
+
   return mlir::success();
 }
 
