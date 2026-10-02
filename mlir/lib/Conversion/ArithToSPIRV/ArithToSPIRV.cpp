@@ -739,7 +739,7 @@ struct IntToFPPattern final : public OpConversionPattern<ArithOp> {
     }
 
     unsigned convertedBitwidth =
-        getElementTypeOrSelf(srcType).getIntOrFloatBitWidth();
+        srcElemType .getIntOrFloatBitWidth();
 
     if (originalBitwidth >= convertedBitwidth) {
       rewriter.replaceOpWithNewOp<SPIRVOp>(op, dstType, adaptor.getOperands());
