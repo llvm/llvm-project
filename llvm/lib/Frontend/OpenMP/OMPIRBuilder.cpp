@@ -4825,7 +4825,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   BasicBlock *ContinuationBlock = nullptr;
   if (ReductionGenCBKind != ReductionGenCBKind::Clang) {
     // Copied code from createReductions
-    BasicBlock *InsertBlock = const_cast<BasicBlock *>(Loc.IP.getNodeParent());
+    BasicBlock *InsertBlock = Loc.IP.getNodeParent();
     ContinuationBlock = InsertBlock->splitBasicBlock(Loc.IP, "reduce.finalize");
     InsertBlock->getTerminator()->eraseFromParent();
     Builder.SetInsertPoint(InsertBlock, InsertBlock->end());
@@ -5267,7 +5267,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductions(
   if (ReductionInfos.size() == 0)
     return Builder.saveIP();
 
-  BasicBlock *InsertBlock = const_cast<BasicBlock *>(Loc.IP.getNodeParent());
+  BasicBlock *InsertBlock = Loc.IP.getNodeParent();
   BasicBlock *ContinuationBlock =
       InsertBlock->splitBasicBlock(Loc.IP, "reduce.finalize");
   InsertBlock->getTerminator()->eraseFromParent();
@@ -5880,7 +5880,7 @@ Expected<CanonicalLoopInfo *>
 OpenMPIRBuilder::createCanonicalLoop(const LocationDescription &Loc,
                                      LoopBodyGenCallbackTy BodyGenCB,
                                      Value *TripCount, const Twine &Name) {
-  BasicBlock *BB = const_cast<BasicBlock *>(Loc.IP.getNodeParent());
+  BasicBlock *BB = Loc.IP.getNodeParent();
   BasicBlock *NextBB = BB->getNextNode();
 
   CanonicalLoopInfo *CL = createLoopSkeleton(Loc.DL, TripCount, BB->getParent(),
