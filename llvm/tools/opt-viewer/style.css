@@ -29,7 +29,7 @@ pre {
 }
 .centered {
   display: table;
-  margin-left: left;
+  margin-left: auto;
   margin-right: auto;
   border: 1px solid #dbdbdb;
   border-radius: 3px;
