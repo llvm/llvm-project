@@ -1013,7 +1013,6 @@ function Install-VisualStudio {
     # Components required by LLVM:
     #   - VCTools workload: core C++ compiler, linker, libs
     #   - ATL: required by llvm/include/llvm/DebugInfo/PDB/DIA/DIASupport.h (<atlbase.h>)
-    #   - MFC: commonly needed alongside ATL
     #   - DIA SDK: PDB debug info reader, checked by cmake/config-ix.cmake (LLVM_ENABLE_DIA_SDK)
     #     The DIA SDK is part of the "Visual Studio C++ core features" component.
     #
@@ -1026,8 +1025,6 @@ function Install-VisualStudio {
         "Microsoft.VisualStudio.Component.VC.Tools.ARM64"
         "Microsoft.VisualStudio.Component.VC.ATL"
         "Microsoft.VisualStudio.Component.VC.ATL.ARM64"
-        "Microsoft.VisualStudio.Component.VC.ATLMFC"
-        "Microsoft.VisualStudio.Component.VC.ATLMFC.ARM64"
         "Microsoft.VisualStudio.Component.VC.DiagnosticTools"  # includes DIA SDK
         # The latest Windows SDK is included automatically via --includeRecommended
     )
