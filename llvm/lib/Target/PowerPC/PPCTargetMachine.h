@@ -77,7 +77,8 @@ public:
     return (TT.getArch() == Triple::ppc64 || TT.getArch() == Triple::ppc64le);
   };
 
-  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
+  bool isNoopAddrSpaceCast(const DataLayout &, unsigned SrcAS,
+                           unsigned DestAS) const override {
     // Addrspacecasts are always noops.
     return true;
   }

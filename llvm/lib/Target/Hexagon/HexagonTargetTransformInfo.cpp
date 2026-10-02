@@ -234,7 +234,7 @@ InstructionCost HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 InstructionCost HexagonTTIImpl::getShuffleCost(
     TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
     TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
-    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CtxI,
     TTI::VectorInstrContext VIC) const {
   return 1;
 }
@@ -269,11 +269,11 @@ InstructionCost HexagonTTIImpl::getCmpSelInstrCost(
 InstructionCost HexagonTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info, Args, CxtI);
+                                         Op2Info, Args, CtxI);
 
   if (Ty->isVectorTy()) {
     if (!isHVXVectorType(Ty) && Ty->isFPOrFPVectorTy())
@@ -283,7 +283,7 @@ InstructionCost HexagonTTIImpl::getArithmeticInstrCost(
       return LT.first + FloatFactor * getTypeNumElements(Ty);
   }
   return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                       Args, CxtI);
+                                       Args, CtxI);
 }
 
 InstructionCost HexagonTTIImpl::getCastInstrCost(unsigned Opcode, Type *DstTy,
@@ -457,19 +457,14 @@ bool HexagonTTIImpl::shouldBuildLookupTables() const {
 
 bool HexagonTTIImpl::areInlineCompatible(const Function *Caller,
                                          const Function *Callee) const {
-  // The hardware provides a fixed number of HVX contexts. Software that mixes
-  // the two engines dedicates some threads to HVX, and those threads hold the
-  // contexts for as long as they run. A thread dedicated to HMX needs no
-  // context at all, until HVX code reaches it. Then it has to wait for one
-  // that the HVX threads are still holding, and if the two groups later meet
-  // at a barrier, neither side can make progress.
-  //
-  // Inlining is one way HVX code reaches a thread that was never meant to run
-  // it, in either direction: an HVX body merged into an HMX function, or an
-  // HMX body merged into a function whose other callers are HVX threads. So
-  // the attribute has to match on both sides.
+  // HVX contexts are a fixed hardware resource, held by threads dedicated to
+  // HVX. HVX reaching a thread without one stalls, and deadlocks if the two
+  // then meet at a barrier.
   if (Caller->hasFnAttribute("hexagon_hmx") !=
       Callee->hasFnAttribute("hexagon_hmx"))
+    return false;
+  if (Callee->hasFnAttribute("hexagon_hvx") &&
+      !Caller->hasFnAttribute("hexagon_hvx"))
     return false;
   return BaseT::areInlineCompatible(Caller, Callee);
 }

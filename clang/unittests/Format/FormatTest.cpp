@@ -169,7 +169,6 @@ TEST_F(FormatTest, RemovesEmptyLines) {
   auto CustomStyle = getLLVMStyle();
   CustomStyle.BreakBeforeBraces = FormatStyle::BS_Custom;
   CustomStyle.BraceWrapping.AfterNamespace = true;
-  CustomStyle.KeepEmptyLines.AtStartOfBlock = false;
   verifyFormat("namespace N\n"
                "{\n"
                "\n"
@@ -396,7 +395,6 @@ TEST_F(FormatTest, RemovesEmptyLines) {
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterClass = true;
   Style.BraceWrapping.AfterFunction = true;
-  Style.KeepEmptyLines.AtStartOfBlock = false;
 
   verifyFormat("class Foo\n"
                "{\n"
@@ -7691,6 +7689,16 @@ TEST_F(FormatTest, BreakingBeforeNonAssignmentOperators) {
   verifyFormat("int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa =\n"
                "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                "    + bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb;",
+               Style);
+}
+
+TEST_F(FormatTest, EnumAssignmentContinuationIndentation) {
+  FormatStyle Style = getLLVMStyleWithColumns(30);
+  Style.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
+  verifyFormat("enum Flag {\n"
+               "  VeryLongFlagNameThatForcesBreak =\n"
+               "          1 << 2 << 3,\n"
+               "};",
                Style);
 }
 
@@ -25607,6 +25615,39 @@ TEST_F(FormatTest, KeepEmptyLinesAtEOF) {
   constexpr StringRef Code("int i;\n\n");
   verifyNoChange(Code, Style);
   verifyFormat(Code, "int i;\n\n\n", Style);
+}
+
+TEST_F(FormatTest, KeepEmptyLinesAtEndOfBlock) {
+  FormatStyle Style = getLLVMStyle();
+  Style.AllowShortFunctionsOnASingleLine =
+      FormatStyle::ShortFunctionStyle::setEmptyAndInline();
+  Style.KeepEmptyLines.AtEndOfBlock = true;
+  Style.MaxEmptyLinesToKeep = 2;
+
+  verifyFormat("void foo() {\n"
+               "  int i;\n"
+               "\n"
+               "\n"
+               "}",
+               "void foo() {\n"
+               "  int i;\n"
+               "\n"
+               "\n"
+               "\n"
+               "}",
+               Style);
+  verifyFormat("foo([]() {\n"
+               "  int i;\n"
+               "\n"
+               "\n"
+               "});",
+               "foo([]() {\n"
+               "  int i;\n"
+               "\n"
+               "\n"
+               "\n"
+               "});",
+               Style);
 }
 
 TEST_F(FormatTest, SpaceAfterUDL) {
