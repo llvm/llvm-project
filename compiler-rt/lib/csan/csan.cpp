@@ -170,11 +170,11 @@ static u64 ReadInstrumented(const volatile void *Ptr, uptr Size) {
   case 1:
     return *(const volatile u8 *)Ptr;
   case 2:
-    return *(const volatile u16 *)Ptr;
+    return *(const volatile uu16 *)Ptr;
   case 4:
-    return *(const volatile u32 *)Ptr;
+    return *(const volatile uu32 *)Ptr;
   case 8:
-    return *(const volatile u64 *)Ptr;
+    return *(const volatile uu64 *)Ptr;
   default:
     return ReadRange((const volatile u8 *)Ptr, Size);
   }
