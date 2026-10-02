@@ -7806,7 +7806,7 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   case AtomicRMWInst::BinOp::Max:
   case AtomicRMWInst::BinOp::Min:
   case AtomicRMWInst::BinOp::UMax:
-  case AtomicRMWInst::BinOp::UMin: {
+  case AtomicRMWInst::BinOp::UMin:
     switch (BitWidth) {
     case 8:
     case 16:
@@ -7822,7 +7822,6 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     default:
       llvm_unreachable("unsupported width encountered");
     }
-  }
   case AtomicRMWInst::BinOp::UIncWrap:
   case AtomicRMWInst::BinOp::UDecWrap:
     switch (BitWidth) {
