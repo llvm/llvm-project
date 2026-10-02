@@ -21,7 +21,7 @@ __attribute__((malloc, always_inline)) inline void *wrapper(size_t size) {
 // CHECK: call void @external_void_helper()
 // CHECK: call{{.*}} @__alloc_token_malloc(i64 noundef 4, i64 2689373973731826898){{.*}} !alloc_token [[META_INT:![0-9]+]]
 // TYPEFUNC-LABEL: @test_inlined_wrapper(
-// TYPEFUNC: call{{.*}} @__alloc_token_malloc(i64 noundef 4, i64 3043217740861139695){{.*}} !alloc_token [[TYPEFUNC_META_INT:![0-9]+]]
+// TYPEFUNC: call{{.*}} @__alloc_token_malloc(i64 noundef 4, i64 6086435482222324463){{.*}} !alloc_token [[TYPEFUNC_META_INT:![0-9]+]]
 void test_inlined_wrapper(void) {
   sink = wrapper(sizeof(int));
 }
