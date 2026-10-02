@@ -4,8 +4,6 @@
 // RUN:   -fsycl-is-device -emit-llvm -o - %s | FileCheck --check-prefix=SSE2 %s
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown -aux-triple x86_64-pc-windows-msvc \
 // RUN:   -fsycl-is-device -emit-llvm -o - %s | FileCheck --check-prefix=SSE2 %s
-// RUN: %clang_cc1 -triple spirv64-unknown-unknown -aux-triple arm64ec-pc-windows-msvc \
-// RUN:   -fsycl-is-device -emit-llvm -o - %s | FileCheck --check-prefix=SSE2 %s
 // RUN: %clang_cc1 -triple spir-unknown-unknown -aux-triple x86_64-pc-windows-msvc \
 // RUN:   -fsycl-is-device -emit-llvm -o - %s | FileCheck --check-prefix=SSE2 %s
 // RUN: %clang_cc1 -triple spirv32-unknown-unknown -aux-triple x86_64-pc-windows-msvc \
@@ -20,6 +18,8 @@
 
 /// No sse/sse2 unless the host is 64-bit x86 MSVC
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown -aux-triple aarch64-pc-windows-msvc \
+// RUN:   -fsycl-is-device -emit-llvm -o - %s | FileCheck --check-prefix=NO-SSE2 %s
+// RUN: %clang_cc1 -triple spirv64-unknown-unknown -aux-triple arm64ec-pc-windows-msvc \
 // RUN:   -fsycl-is-device -emit-llvm -o - %s | FileCheck --check-prefix=NO-SSE2 %s
 // RUN: %clang_cc1 -triple spirv32-unknown-unknown -aux-triple i386-pc-windows-msvc \
 // RUN:   -fsycl-is-device -emit-llvm -o - %s | FileCheck --check-prefix=NO-SSE2 %s

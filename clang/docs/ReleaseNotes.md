@@ -1092,8 +1092,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 #### Improvements
 
 - SPIR and SPIR-V targets now enable `sse` and `sse2` by default when the host
-  target is x86-64 or ARM64EC in an MSVC environment, as the MSVC STL headers
-  declare `always_inline` `_mm_*` intrinsics that require them. An explicit
+  target is x86-64 in an MSVC environment, as the MSVC STL headers declare
+  `always_inline` `_mm_*` intrinsics that require them. An explicit
   `-target-feature` still overrides the default.
 
 ## Additional Information
