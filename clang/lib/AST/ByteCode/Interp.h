@@ -104,8 +104,7 @@ bool CheckDynamicMemoryAllocation(InterpState &S, CodePtr OpPC);
 
 /// Check the source of the pointer passed to delete/delete[] has actually
 /// been heap allocated by us.
-bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
-                       const Pointer &Ptr);
+bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
 /// Sets the given integral value to the pointer, which is of
 /// a std::{weak,partial,strong}_ordering type.

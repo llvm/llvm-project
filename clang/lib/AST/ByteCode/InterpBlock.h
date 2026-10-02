@@ -80,7 +80,12 @@ public:
   /// Checks if the block is temporary.
   bool isTemporary() const { return Desc->IsTemporary; }
   bool isWeak() const { return AccessFlags & WeakFlag; }
-  bool isDynamic() const { return (DynAllocId != std::nullopt); }
+  bool isDynamic() const {
+    bool Result = (DynAllocId != std::nullopt);
+    assert((Result == Desc->isDynAlloc()) &&
+           "Inconsistent block/descriptor dynamic alloc state");
+    return Result;
+  }
   bool isDead() const { return AccessFlags & DeadFlag; }
   /// Returns the size of the block, including metadata.
   unsigned getSize() const { return Desc->getAllocSize() + MDSize; }
