@@ -9,6 +9,12 @@ enum E : long { X };
 
 static_assert(_Generic(0L, enum A : l { B } : 1, int: 0), ""); // expected-error {{'A' cannot be defined in a type specifier}}
 
+enum X { Y };
+void f()
+{
+    static_assert(_Generic(0L, enum X : int {Y}, long: 1), "'int {Y}' parses as an expression");
+}
+
 #else
 // expected-no-diagnostics
 
