@@ -2789,9 +2789,17 @@ static OldReturnAddressStores detachOldReturnAddressStores(
     for (MachineInstr &Later :
          make_range(std::next(MachineBasicBlock::iterator(MI)), Terminator))
       if (!Later.getFlag(MachineInstr::FrameDestroy) &&
-          Later.modifiesRegister(Src, TRI))
-        report_fatal_error("Can't move the store of a tail call argument that "
-                           "overwrites the return address under win64");
+          Later.modifiesRegister(Src, TRI)) {
+        std::string Msg;
+        raw_string_ostream OS(Msg);
+        OS << "Can't move the store of a tail call argument that overwrites "
+              "the return address under win64 (in function '"
+           << MF.getName() << "', the source register " << printReg(Src, TRI)
+           << " is redefined before the tail call)\n  store: " << *MI
+           << "  redefined by: " << Later << "block:\n";
+        MBB.print(OS);
+        report_fatal_error(Twine(Msg));
+      }
 
     if (TRI->isCalleeSavedPhysReg(Src, MF)) {
       if (X86::VR128RegClass.contains(Src)) {
