@@ -2261,6 +2261,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::sameKind:
       if (!sameArg) {
         sameArg = arg;
+        sameArgName = d.keyword;
       }
       argOk = type->IsTkCompatibleWith(sameArg->GetType().value());
       break;
@@ -2296,6 +2297,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::sameAtom:
       if (!sameArg) {
         sameArg = arg;
+        sameArgName = d.keyword;
         argOk = CheckAtomicKind(DEREF(arg), builtinsScope, messages, d.keyword);
       } else {
         argOk = type->IsTkCompatibleWith(sameArg->GetType().value());
