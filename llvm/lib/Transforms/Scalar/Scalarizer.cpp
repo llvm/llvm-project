@@ -426,7 +426,7 @@ Value *Scatterer::operator[](unsigned Frag) {
         return CV[Frag];
       }
 
-      if (VS.NumPacked == 1 && !CV[J]) {
+      if (VS.NumPacked == 1 && CV.size() > J && !CV[J]) {
         // Only cache the first entry we find for each index we're not actively
         // searching for. This prevents us from going too far up the chain and
         // caching incorrect entries.
