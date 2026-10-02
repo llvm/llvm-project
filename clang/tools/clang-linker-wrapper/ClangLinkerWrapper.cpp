@@ -34,7 +34,6 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
-#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileOutputBuffer.h"
@@ -90,10 +89,6 @@ static cl::opt<std::string> RemarksFormat(
     "pass-remarks-format",
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
-
-static cl::list<std::string>
-    PassPlugins("load-pass-plugin",
-                cl::desc("Load passes from plugin library"));
 
 static cl::opt<std::string> PassPipeline(
     "passes",
@@ -179,7 +174,7 @@ enum ID {
 
 class WrapperOptTable : public opt::OptTable {
 public:
-  WrapperOptTable() : opt::OptTable(OptionTables) {}
+  WrapperOptTable() : opt::OptTable(optionTables()) {}
 };
 
 const OptTable &getOptTable() {
@@ -423,28 +418,6 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
 
 namespace amdgcn {
 
-// Constructs a triple string for clang offload bundler.
-// NOTE: copied from HIPUtility.cpp.
-static std::string normalizeForBundler(const llvm::Triple &T,
-                                       bool HasTargetID) {
-  // FIXME: Short-term hack, mirrors HIPUtility.cpp. The HIP runtime (CLR)
-  // hardcodes the legacy "amdgcn-amd-amdhsa" spelling when parsing the target
-  // IDs embedded in the fatbin bundle. The new amdgpu subarch triples (e.g.
-  // "amdgpu9.00-amd-amdhsa"), and the plain canonical "amdgpu" arch name, do
-  // not match, producing hipErrorInvalidImage at load time. Force the legacy
-  // "amdgcn-amd-amdhsa" spelling in the bundle entry until CLR stops
-  // hardcoding this.
-  if (HasTargetID && T.isAMDGCN())
-    return ("amdgcn-" + T.getVendorName() + "-" + T.getOSName() + "-" +
-            T.getEnvironmentName())
-        .str();
-
-  return HasTargetID ? (T.getArchName() + "-" + T.getVendorName() + "-" +
-                        T.getOSName() + "-" + T.getEnvironmentName())
-                           .str()
-                     : T.normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
-}
-
 Expected<StringRef>
 fatbinary(ArrayRef<std::tuple<StringRef, StringRef, StringRef>> InputFiles,
           const ArgList &Args) {
@@ -481,7 +454,7 @@ fatbinary(ArrayRef<std::tuple<StringRef, StringRef, StringRef>> InputFiles,
       Saver.save("-targets=host-" + HostTriple.normalize())};
   for (const auto &[File, TripleRef, Arch] : InputFiles) {
     std::string NormalizedTriple =
-        normalizeForBundler(Triple(TripleRef), !Arch.empty());
+        clang::normalizeForBundler(Triple(TripleRef), Arch);
     Targets.push_back(Saver.save("hip-" + NormalizedTriple + "-" + Arch));
   }
   CmdArgs.push_back(Saver.save(llvm::join(Targets, ",")));
@@ -1554,13 +1527,6 @@ int main(int Argc, char **Argv) {
     NewArgv.push_back(Arg->getValue());
   for (const opt::Arg *Arg : Args.filtered(OPT_offload_opt_eq_minus))
     NewArgv.push_back(Arg->getValue());
-  SmallVector<PassPlugin, 1> PluginList;
-  PassPlugins.setCallback([&](const std::string &PluginPath) {
-    auto Plugin = PassPlugin::Load(PluginPath);
-    if (!Plugin)
-      reportFatalUsageError(Plugin.takeError());
-    PluginList.emplace_back(Plugin.get());
-  });
   cl::ParseCommandLineOptions(NewArgv.size(), &NewArgv[0]);
 
   Verbose = Args.hasArg(OPT_verbose);

@@ -61,7 +61,6 @@ struct CGPassBuilderOption {
   /// Enable LoopTermFold immediately after LSR.
   bool EnableLoopTermFold = false;
   bool MISchedPostRA = false;
-  bool EarlyLiveIntervals = false;
   bool EnableGCEmptyBlocks = false;
 
   bool DisableLSR = false;

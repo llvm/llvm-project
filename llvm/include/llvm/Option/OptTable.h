@@ -17,6 +17,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/StringSaver.h"
 #include <cassert>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -73,6 +74,23 @@ public:
     StringTable::Offset HelpTextOffset;
   };
 
+  /// Fields that are rarely set or take few distinct values, shared by the
+  /// options with equal values. Row 0 is all zero.
+  struct InfoExtra {
+    StringTable::Offset MetaVarOffset;
+    StringTable::Offset AliasArgsOffset;
+    /// The possible values as a comma separated list, empty for an option whose
+    /// values only getOptionValuesCode() knows.
+    StringTable::Offset ValuesOffset;
+    unsigned Flags;
+    uint16_t Visibility;
+    // Offset into OptTable's HelpTextVariantsTable; 0 for none.
+    uint16_t HelpTextVariantsOffset;
+    // Offset into OptTable's SubCommandIDsTable.
+    uint16_t SubCommandIDsOffset;
+    uint8_t Param;
+  };
+
   /// Entry for a single option instance in the option data table. An option's
   /// ID is its 1-based position in the table.
   struct Info {
@@ -80,23 +98,13 @@ public:
     /// Offset 0 means the .td supplied no HelpText. A HelpText<""> maps to a
     /// distinct empty string, marking the option deliberately undocumented.
     StringTable::Offset HelpTextOffset;
-    StringTable::Offset MetaVarOffset;
-    StringTable::Offset AliasArgsOffset;
-    /// The possible values as a comma separated list, empty for an option whose
-    /// values only getOptionValuesCode() knows.
-    StringTable::Offset ValuesOffset;
-    unsigned Flags;
-    unsigned Visibility;
+    uint16_t GroupID;
+    uint16_t AliasID;
+    // Offset into OptTable's InfoExtrasTable.
+    uint16_t ExtraOffset;
     // Offset into OptTable's PrefixesTable.
-    unsigned short PrefixesOffset;
-    unsigned short GroupID;
-    unsigned short AliasID;
-    // Offset into OptTable's HelpTextVariantsTable; 0 for none.
-    unsigned short HelpTextVariantsOffset;
-    // Offset into OptTable's SubCommandIDsTable.
-    unsigned short SubCommandIDsOffset;
-    unsigned char Kind;
-    unsigned char Param;
+    uint8_t PrefixesOffset;
+    uint8_t Kind;
 
     bool hasNoPrefix() const { return PrefixesOffset == 0; }
 
@@ -113,22 +121,6 @@ public:
     }
 
     bool hasHelpText() const { return HelpTextOffset.value() != 0; }
-    bool hasAliasArgs() const { return AliasArgsOffset.value() != 0; }
-
-    bool hasSubCommands() const { return SubCommandIDsOffset != 0; }
-
-    unsigned getNumSubCommandIDs(ArrayRef<unsigned> SubCommandIDsTable) const {
-      // We embed the number of subcommand IDs in the value of the first offset.
-      return SubCommandIDsTable[SubCommandIDsOffset];
-    }
-
-    ArrayRef<unsigned>
-    getSubCommandIDs(ArrayRef<unsigned> SubCommandIDsTable) const {
-      return hasSubCommands() ? SubCommandIDsTable.slice(
-                                    SubCommandIDsOffset + 1,
-                                    getNumSubCommandIDs(SubCommandIDsTable))
-                              : ArrayRef<unsigned>();
-    }
 
     void appendPrefixes(const StringTable &StrTable,
                         ArrayRef<StringTable::Offset> PrefixesTable,
@@ -157,10 +149,10 @@ public:
 
   /// The tables TableGen emits for an option set under OPTTABLE_CODE.
   struct Tables {
-    const StringTable &StrTable;
+    StringTable StrTable;
     ArrayRef<StringTable::Offset> PrefixesTable;
-    ArrayRef<StringTable::Offset> PrefixesUnion;
     ArrayRef<Info> Infos;
+    ArrayRef<InfoExtra> InfoExtras;
     ArrayRef<HelpTextVariant> HelpTextVariants;
     ArrayRef<SubCommand> SubCommands;
     ArrayRef<unsigned> SubCommandIDs;
@@ -175,7 +167,7 @@ public:
         SubCommands, [&](const auto &C) { return SubCommand == C.Name; });
     assert(SCIT != SubCommands.end() &&
            "This helper is only for valid registered subcommands.");
-    auto SubCommandIDs = CandidateInfo->getSubCommandIDs(SubCommandIDsTable);
+    auto SubCommandIDs = getSubCommandIDs(*CandidateInfo);
     unsigned CurrentSubCommandID = SCIT - &SubCommands[0];
     return llvm::is_contained(SubCommandIDs, CurrentSubCommandID);
   }
@@ -183,7 +175,7 @@ public:
 private:
   // A unified string table for these options. Individual strings are stored as
   // null terminated C-strings at offsets within this table.
-  const StringTable *StrTable;
+  StringTable StrTable;
 
   // A table of different sets of prefixes. Each set starts with the number of
   // prefixes in that set followed by that many offsets into the string table
@@ -193,6 +185,8 @@ private:
 
   /// The option information table.
   ArrayRef<Info> OptionInfos;
+
+  ArrayRef<InfoExtra> InfoExtrasTable;
 
   bool IgnoreCase;
 
@@ -232,20 +226,25 @@ private:
 
   StringTable::Offset getHelpTextOffset(const Info &I,
                                         Visibility VisibilityMask) const {
-    if (I.HelpTextVariantsOffset)
-      for (const HelpTextVariant *V =
-               &HelpTextVariantsTable[I.HelpTextVariantsOffset];
-           V->Visibility; ++V)
-        if (VisibilityMask & V->Visibility)
-          return V->HelpTextOffset;
+    for (const HelpTextVariant *V =
+             &HelpTextVariantsTable[getExtra(I).HelpTextVariantsOffset];
+         V->Visibility; ++V)
+      if (VisibilityMask & V->Visibility)
+        return V->HelpTextOffset;
     return I.HelpTextOffset;
   }
 
   StringRef getOptionValues(const Info &I) const {
-    StringRef Values = (*StrTable)[I.ValuesOffset];
+    StringRef Values = StrTable[getExtra(I).ValuesOffset];
     if (Values.empty() && ValuesCodeFn)
       Values = ValuesCodeFn(getOptionID(I));
     return Values;
+  }
+
+  ArrayRef<unsigned> getSubCommandIDs(const Info &I) const {
+    // A set starts with its size.
+    unsigned Offset = getExtra(I).SubCommandIDsOffset;
+    return SubCommandIDsTable.slice(Offset + 1, SubCommandIDsTable[Offset]);
   }
 
   std::unique_ptr<Arg> parseOneArgGrouped(InputArgList &Args,
@@ -260,7 +259,7 @@ public:
   virtual ~OptTable();
 
   /// Return the string table used for option names.
-  const StringTable &getStrTable() const { return *StrTable; }
+  const StringTable &getStrTable() const { return StrTable; }
 
   ArrayRef<SubCommand> getSubCommands() const { return SubCommands; }
 
@@ -284,25 +283,29 @@ public:
 
   /// Lookup the name of the given option.
   StringRef getOptionName(OptSpecifier id) const {
-    return getInfo(id).getName(*StrTable, PrefixesTable);
+    return getInfo(id).getName(StrTable, PrefixesTable);
   }
 
   /// Lookup the prefix of the given option.
   StringRef getOptionPrefix(OptSpecifier id) const {
     const Info &I = getInfo(id);
     return I.hasNoPrefix() ? StringRef()
-                           : I.getPrefix(*StrTable, PrefixesTable, 0);
+                           : I.getPrefix(StrTable, PrefixesTable, 0);
   }
 
   void appendOptionPrefixes(OptSpecifier id,
                             SmallVectorImpl<StringRef> &Prefixes) const {
     const Info &I = getInfo(id);
-    I.appendPrefixes(*StrTable, PrefixesTable, Prefixes);
+    I.appendPrefixes(StrTable, PrefixesTable, Prefixes);
   }
 
   /// Lookup the prefixed name of the given option.
   StringRef getOptionPrefixedName(OptSpecifier id) const {
-    return getInfo(id).getPrefixedName(*StrTable);
+    return getInfo(id).getPrefixedName(StrTable);
+  }
+
+  const InfoExtra &getExtra(const Info &I) const {
+    return InfoExtrasTable[I.ExtraOffset];
   }
 
   /// Get the kind of the given option.
@@ -325,13 +328,18 @@ public:
   // visibility mask, use that text instead of the generic text.
   StringRef getOptionHelpText(OptSpecifier id,
                               Visibility VisibilityMask) const {
-    return (*StrTable)[getHelpTextOffset(getInfo(id), VisibilityMask)];
+    return StrTable[getHelpTextOffset(getInfo(id), VisibilityMask)];
   }
 
   /// Get the meta-variable name to use when describing
   /// this options values in the help text.
   StringRef getOptionMetaVar(OptSpecifier id) const {
-    return (*StrTable)[getInfo(id).MetaVarOffset];
+    return StrTable[getExtra(getInfo(id)).MetaVarOffset];
+  }
+
+  /// Get the alias arguments as a \0 separated list, e.g. "foo\0bar\0".
+  const char *getOptionAliasArgs(OptSpecifier id) const {
+    return StrTable.getCString(getExtra(getInfo(id)).AliasArgsOffset);
   }
 
   /// Specify the environment variable where initial options should be read.

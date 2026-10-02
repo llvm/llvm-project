@@ -45,7 +45,7 @@ using namespace llvm::opt;
 
 class DwarfutilOptTable : public opt::OptTable {
 public:
-  DwarfutilOptTable() : opt::OptTable(OptionTables) {}
+  DwarfutilOptTable() : opt::OptTable(optionTables()) {}
 };
 } // namespace
 

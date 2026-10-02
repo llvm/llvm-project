@@ -38,6 +38,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  secure_getenv
+  SRCS
+    secure_getenv.cpp
+  HDRS
+    ../secure_getenv.h
+  DEPENDS
+    libc.hdr.sys_auxv_macros
+    libc.src.__support.OSUtil.linux.auxv
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.stdlib.environ_internal
+)
+
+add_entrypoint_object(
   setenv
   SRCS
     setenv.cpp

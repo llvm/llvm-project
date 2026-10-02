@@ -59,7 +59,9 @@ enum ID {
 
 class ScanDepsOptTable : public llvm::opt::OptTable {
 public:
-  ScanDepsOptTable() : OptTable(OptionTables) { setGroupedShortOptions(true); }
+  ScanDepsOptTable() : OptTable(optionTables()) {
+    setGroupedShortOptions(true);
+  }
 };
 
 enum ResourceDirRecipeKind {

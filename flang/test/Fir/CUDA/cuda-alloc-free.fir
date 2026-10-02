@@ -81,7 +81,7 @@ gpu.module @cuda_device_mod {
 }
 
 // CHECK-LABEL: gpu.func @_QMalloc() kernel
-// CHECK: fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", cuf.data_attr = #cuf.cuda<device>, uniq_name = "_QMallocEa"}
+// CHECK: fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> <{bindc_name = "a", uniq_name = "_QMallocEa"}> {cuf.data_attr = #cuf.cuda<device>}
 
 func.func @_QQalloc_char() attributes {fir.bindc_name = "alloc_char"} {
   %c1 = arith.constant 1 : index

@@ -46,7 +46,7 @@ namespace objcopy_opt {
 
 class ObjcopyOptTable : public opt::OptTable {
 public:
-  ObjcopyOptTable() : opt::OptTable(objcopy_opt::OptionTables) {
+  ObjcopyOptTable() : opt::OptTable(objcopy_opt::optionTables()) {
     setGroupedShortOptions(true);
     setDashDashParsing(true);
   }
@@ -67,7 +67,7 @@ namespace install_name_tool {
 
 class InstallNameToolOptTable : public opt::OptTable {
 public:
-  InstallNameToolOptTable() : OptTable(install_name_tool::OptionTables) {}
+  InstallNameToolOptTable() : OptTable(install_name_tool::optionTables()) {}
 };
 
 enum BitcodeStripID {
@@ -85,7 +85,7 @@ namespace bitcode_strip {
 
 class BitcodeStripOptTable : public opt::OptTable {
 public:
-  BitcodeStripOptTable() : opt::OptTable(bitcode_strip::OptionTables) {}
+  BitcodeStripOptTable() : opt::OptTable(bitcode_strip::optionTables()) {}
 };
 
 enum StripID {
@@ -102,7 +102,7 @@ namespace strip {
 
 class StripOptTable : public opt::OptTable {
 public:
-  StripOptTable() : OptTable(strip::OptionTables) {
+  StripOptTable() : OptTable(strip::optionTables()) {
     setGroupedShortOptions(true);
   }
 };
@@ -122,7 +122,8 @@ namespace extract_bundle_entry {
 
 class ExtractBundleEntryOptTable : public opt::OptTable {
 public:
-  ExtractBundleEntryOptTable() : OptTable(extract_bundle_entry::OptionTables) {
+  ExtractBundleEntryOptTable()
+      : OptTable(extract_bundle_entry::optionTables()) {
     setGroupedShortOptions(true);
   }
 };

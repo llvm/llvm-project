@@ -1295,7 +1295,7 @@ bool Sema::CheckConstraintSatisfaction(
     OutSatisfaction.IsSatisfied = true;
     return false;
   }
-  const auto *Template = Entity.dyn_cast<const NamedDecl *>();
+  const auto *Template = dyn_cast_if_present<const NamedDecl *>(Entity);
   if (!Template) {
     return ::CheckConstraintSatisfaction(
         *this, nullptr, AssociatedConstraints, TemplateArgsLists,
@@ -2009,9 +2009,7 @@ static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
 static void diagnoseUnsatisfiedConstraintExpr(
     Sema &S, const UnsatisfiedConstraintRecord &Record, SourceLocation Loc,
     bool First, concepts::NestedRequirement *Req) {
-  if (auto *Diag =
-          Record
-              .template dyn_cast<const ConstraintSubstitutionDiagnostic *>()) {
+  if (auto *Diag = dyn_cast<const ConstraintSubstitutionDiagnostic *>(Record)) {
     if (Req)
       S.Diag(Diag->first, diag::note_nested_requirement_substitution_error)
           << (int)First << Req->getInvalidConstraintEntity() << Diag->second;
@@ -2529,25 +2527,35 @@ const NormalizedConstraint *Sema::getNormalizedAssociatedConstraints(
   }
 
   // FIXME: ConstrainedDeclOrNestedReq is never a NestedRequirement!
-  const NamedDecl *ND =
-      ConstrainedDeclOrNestedReq.dyn_cast<const NamedDecl *>();
-  auto CacheEntry = NormalizationCache.find(ConstrainedDeclOrNestedReq);
-  if (CacheEntry == NormalizationCache.end()) {
-    auto *Normalized = NormalizedConstraint::fromAssociatedConstraints(
-        *this, ND, AssociatedConstraints);
-    if (!Normalized) {
-      NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, nullptr);
-      return nullptr;
+  const NamedDecl *ND = dyn_cast<const NamedDecl *>(ConstrainedDeclOrNestedReq);
+  // The normal form only depends on the constraint expressions, and the
+  // members of all specializations of a class template share the
+  // (uninstantiated) constraint expressions of the member they were
+  // instantiated from. Cache the normal form of each expression to not
+  // normalize the same expression once per class template specialization.
+  NormalizedConstraint *Normalized = nullptr;
+  for (const AssociatedConstraint &AC : AssociatedConstraints) {
+    std::pair<const Expr *, unsigned> Key(
+        AC.ConstraintExpr, AC.ArgPackSubstIndex.toInternalRepresentation());
+    NormalizedConstraint *Next;
+    if (auto It = NormalizedConstraintExprCache.find(Key);
+        It != NormalizedConstraintExprCache.end()) {
+      Next = It->second;
+    } else {
+      Next = NormalizedConstraint::fromAssociatedConstraints(*this, ND, AC);
+      // substitute() can invalidate iterators of NormalizedConstraintExprCache.
+      if (Next && SubstituteParameterMappings(*this).substitute(*Next))
+        Next = nullptr;
+      NormalizedConstraintExprCache.try_emplace(Key, Next);
     }
-    // substitute() can invalidate iterators of NormalizationCache.
-    bool Failed = SubstituteParameterMappings(*this).substitute(*Normalized);
-    CacheEntry =
-        NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, Normalized)
-            .first;
-    if (Failed)
+    if (!Next)
       return nullptr;
+    Normalized =
+        Normalized
+            ? CompoundConstraint::CreateConjunction(Context, Normalized, Next)
+            : Next;
   }
-  return CacheEntry->second;
+  return Normalized;
 }
 
 bool FoldExpandedConstraint::AreCompatibleForSubsumption(

@@ -88,16 +88,38 @@ option(ORC_RT_ENABLE_EXCEPTIONS "Enable exceptions." ON)
 
 # Derive the compile flags implied by the language-runtime options.
 set(ORC_RT_COMPILE_FLAGS)
-if(ORC_RT_ENABLE_RTTI)
-  list(APPEND ORC_RT_COMPILE_FLAGS -frtti)
+if(MSVC OR CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+  if(ORC_RT_ENABLE_RTTI)
+    list(APPEND ORC_RT_COMPILE_FLAGS /GR)
+  else()
+    list(APPEND ORC_RT_COMPILE_FLAGS /GR-)
+  endif()
+
+  if(ORC_RT_ENABLE_EXCEPTIONS)
+    list(APPEND ORC_RT_COMPILE_FLAGS /EHsc)
+  else()
+    list(APPEND ORC_RT_COMPILE_FLAGS /EHs-c-)
+  endif()
 else()
-  list(APPEND ORC_RT_COMPILE_FLAGS -fno-rtti)
+  if(ORC_RT_ENABLE_RTTI)
+    list(APPEND ORC_RT_COMPILE_FLAGS -frtti)
+  else()
+    list(APPEND ORC_RT_COMPILE_FLAGS -fno-rtti)
+  endif()
+
+  if(ORC_RT_ENABLE_EXCEPTIONS)
+    list(APPEND ORC_RT_COMPILE_FLAGS -fexceptions)
+  else()
+    list(APPEND ORC_RT_COMPILE_FLAGS -fno-exceptions)
+  endif()
 endif()
 
-if(ORC_RT_ENABLE_EXCEPTIONS)
-  list(APPEND ORC_RT_COMPILE_FLAGS -fexceptions)
-else()
-  list(APPEND ORC_RT_COMPILE_FLAGS -fno-exceptions)
+# --- Windows compatibility ---
+if(WIN32)
+  add_compile_definitions(
+    NOMINMAX
+    WIN32_LEAN_AND_MEAN
+  )
 endif()
 
 # --- Logging ---

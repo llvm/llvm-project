@@ -31,10 +31,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 
 // CHECK: gpu.module @cuda_device_mod
 
-// MARKER: llvm.mlir.global external @Mcuda_compiled
 // NOMARKER-NOT: Mcuda_compiled
+// MARKER-NOT: Mcuda_compiled
 // CHECK: llvm.func internal @__cudaFortranConstructor() {
-// MARKER-DAG: llvm.mlir.addressof @Mcuda_compiled
 // NOUNIFIED-DAG: %[[MODULE:.*]] = cuf.register_module @cuda_device_mod -> !llvm.ptr
 // NOUNIFIED-DAG: %[[VAR_NAME:.*]] = fir.address_of(@_QQ{{.*}}) : !fir.ref<!fir.char<1,12>>
 // NOUNIFIED-DAG: %[[VAR_ADDR:.*]] = fir.address_of(@_QMmtestsEn) : !fir.ref<!fir.array<5xi32>>
@@ -147,8 +146,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
   }
 }
 
-// Pointer global should be created with section attribute.
-// CHECK: fir.global internal @_QMtestEmanx.managed.ptr {section = "__nv_managed_data__"} : !fir.llvm_ptr<i8>
+// The defining unit emits the pointer as an external definition with the
+// section attribute, so the whole program shares a single pointer.
+// CHECK: fir.global external @_QMtestEmanx.managed.ptr <{section = "__nv_managed_data__"}> : !fir.llvm_ptr<i8>
 // CHECK:   fir.zero_bits !fir.llvm_ptr<i8>
 
 // Constructor should register with CUFRegisterManagedVariable then init module.
@@ -178,10 +178,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 }
 
 // CHECK: llvm.func internal @__cudaFortranConstructor()
-// NOMARKER-NEXT: llvm.return
-// MARKER-NEXT: llvm.mlir.addressof @Mcuda_compiled
-// MARKER-NEXT: llvm.load volatile
-// MARKER-NEXT: llvm.return
+// CHECK-NEXT: llvm.return
 // CHECK: llvm.mlir.global_ctors ctors = [@__cudaFortranConstructor]
 
 // -----
@@ -430,3 +427,58 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // NOUNIFIED-DAG: %[[SZ12I64:.*]] = fir.convert %[[SZ12]] : (index) -> i64
 // NOUNIFIED-DAG: fir.call @_FortranACUFRegisterVariable(%{{.*}}, %[[TPPKDEV2]], %{{.*}}, %[[SZ12I64]])
 // UNIFIED: cuf.register_variable_static @_QMtestEtp_packed_dev("_QMtestEtp_packed_dev", 12) {deviceResident}
+
+// -----
+
+// Mcuda_compiled is emitted only for the program unit (_QQmain).
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data_layout = "e-m:e-i64:64-i128:128-n8:16:32:64-S128"} {
+  func.func @_QQmain() {
+    return
+  }
+}
+
+// MARKER: llvm.mlir.global external @Mcuda_compiled
+// NOMARKER-NOT: Mcuda_compiled
+// CHECK: llvm.func internal @__cudaFortranConstructor() {
+// MARKER: llvm.mlir.addressof @Mcuda_compiled
+// MARKER: llvm.load volatile
+// CHECK: llvm.return
+
+
+// -----
+
+// A unit that only USEs a non-allocatable managed variable declares the
+// companion pointer and does not register it. The runtime populates only the
+// first registration made for a given variable name, so a pointer per unit
+// would leave every unit but one loading through null.
+//
+// Fortran source:
+//   subroutine sub
+//     use test   ! test declares integer*4, managed :: manx(100)
+//     manx(1) = 1
+//   end subroutine
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f32, dense<32> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
+
+  // No body: the variable is defined by another translation unit.
+  fir.global @_QMuseronlyEmanx {data_attr = #cuf.cuda<managed>} : !fir.array<100xi32>
+
+  gpu.module @cuda_device_mod {
+    gpu.func @_QMuseronlyPkernel() kernel {
+      gpu.return
+    }
+    fir.global @_QMuseronlyEmanx {data_attr = #cuf.cuda<managed>} : !fir.array<100xi32>
+  }
+}
+
+// The companion pointer is a declaration: external linkage, no section, and no
+// initializer body.
+// CHECK: fir.global external @_QMuseronlyEmanx.managed.ptr : !fir.llvm_ptr<i8>
+// CHECK-NOT: __nv_managed_data__
+// CHECK-NOT: fir.zero_bits !fir.llvm_ptr<i8>
+
+// Neither the registration nor the module init is emitted here.
+// CHECK: llvm.func internal @__cudaFortranConstructor()
+// CHECK-NOT: fir.call @_FortranACUFRegisterManagedVariable
+// CHECK-NOT: fir.call @_FortranACUFInitModule

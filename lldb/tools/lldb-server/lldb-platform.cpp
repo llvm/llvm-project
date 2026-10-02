@@ -73,7 +73,7 @@ enum ID {
 
 class PlatformOptTable : public opt::OptTable {
 public:
-  PlatformOptTable() : opt::OptTable(OptionTables) {}
+  PlatformOptTable() : opt::OptTable(optionTables()) {}
 
   void PrintHelp(llvm::StringRef Name) {
     std::string Usage =
