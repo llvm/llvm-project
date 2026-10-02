@@ -21,7 +21,6 @@ using namespace llvm::ELF;
 using namespace llvm::object;
 
 namespace lld::elf {
-
 // This class encapsulates states needed to scan relocations for one
 // InputSectionBase.
 class RelocScan {
