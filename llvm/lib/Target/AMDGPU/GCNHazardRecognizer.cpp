@@ -1476,6 +1476,14 @@ getDstSelForwardingOperand(const MachineInstr &MI, const GCNSubtarget &ST) {
          SISrcMods::DST_OP_SEL))
       return TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
 
+    // Type 2b: VOP3P mix instructions with a tied destination (MIXLO/MIXHI)
+    // write only one half of vdst and preserve the other half, so treat them
+    // like a VOP3 destination op_sel write regardless of their source
+    // op_sel_hi bits.
+    if (SIInstrInfo::isVOP3P(MI) &&
+        AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::vdst_in))
+      return TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
+
     // Type 3: FP8DstSelInst with op_sel[3:2] != 0)
     if (IsFP4OrFP8ConvOpc == AMDGPU::FPType::FP8 &&
         (TII->getNamedImmOperand(MI, AMDGPU::OpName::src2_modifiers) &
