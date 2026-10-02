@@ -26,6 +26,7 @@ namespace cir {
 struct MissingFeatures {
   // Address space related
   static bool addressSpace() { return false; }
+  static bool spirvDefaultIsGenericAddrSpace() { return false; }
 
   // Unhandled global/linkage information.
   static bool opGlobalThreadLocal() { return false; }

@@ -3433,7 +3433,7 @@ LogicalResult acc::HostDataOp::verify() {
   llvm::SmallPtrSet<mlir::Value, 4> seenVars;
   for (mlir::Value operand : getDataClauseOperands()) {
     auto useDeviceOp =
-        mlir::dyn_cast<acc::UseDeviceOp>(operand.getDefiningOp());
+        mlir::dyn_cast_if_present<acc::UseDeviceOp>(operand.getDefiningOp());
     if (!useDeviceOp)
       return emitError("expect data entry operation as defining op");
 
