@@ -3215,10 +3215,10 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-static mlir::SymbolRefAttr getComdatAttrHelper(mlir::ModuleOp modOp,
-                                               mlir::OpBuilder &builder,
-                                               StringRef symName,
-                                               mlir::LLVM::ComdatOp &comdatOp) {
+static mlir::SymbolRefAttr
+getComdatAttrHelper(mlir::ModuleOp modOp, mlir::OpBuilder &builder,
+                    StringRef symName, mlir::LLVM::ComdatOp &comdatOp,
+                    mlir::SymbolTableCollection &symbolTables) {
   mlir::OpBuilder::InsertionGuard guard(builder);
   StringRef comdatName = "__llvm_comdat";
   if (!comdatOp) {
@@ -3235,8 +3235,11 @@ static mlir::SymbolRefAttr getComdatAttrHelper(mlir::ModuleOp modOp,
         mlir::LLVM::ComdatOp::create(builder, modOp.getLoc(), comdatName);
   }
 
+  // Cached, and shared by both patterns: a linear scan of the comdat region
+  // per symbol is quadratic in the number of comdats.
+  mlir::SymbolTable &selectors = symbolTables.getSymbolTable(comdatOp);
   if (auto comdatSelector =
-          comdatOp.lookupSymbol<mlir::LLVM::ComdatSelectorOp>(symName)) {
+          selectors.lookup<mlir::LLVM::ComdatSelectorOp>(symName)) {
     return mlir::SymbolRefAttr::get(
         builder.getContext(), comdatName,
         mlir::FlatSymbolRefAttr::get(comdatSelector.getSymNameAttr()));
@@ -3246,6 +3249,7 @@ static mlir::SymbolRefAttr getComdatAttrHelper(mlir::ModuleOp modOp,
   auto selectorOp = mlir::LLVM::ComdatSelectorOp::create(
       builder, comdatOp.getLoc(), symName, mlir::LLVM::comdat::Comdat::Any,
       /*sym_visibility=*/nullptr);
+  selectors.insert(selectorOp);
   return mlir::SymbolRefAttr::get(
       builder.getContext(), comdatName,
       mlir::FlatSymbolRefAttr::get(selectorOp.getSymNameAttr()));
@@ -3257,7 +3261,7 @@ CIRToLLVMGlobalOpLowering::getComdatAttr(cir::GlobalOp &op,
   if (!op.getComdat())
     return mlir::SymbolRefAttr{};
   return getComdatAttrHelper(op->getParentOfType<mlir::ModuleOp>(), builder,
-                             op.getSymName(), comdatOp);
+                             op.getSymName(), comdatOp, symbolTables);
 }
 
 mlir::SymbolRefAttr
@@ -3268,7 +3272,7 @@ CIRToLLVMFuncOpLowering::getComdatAttr(cir::FuncOp &op,
     return mlir::SymbolRefAttr{};
   llvm::StringRef comdatKey = comdat->empty() ? op.getSymName() : *comdat;
   return getComdatAttrHelper(op->getParentOfType<mlir::ModuleOp>(), builder,
-                             comdatKey, comdatOp);
+                             comdatKey, comdatOp, symbolTables);
 }
 
 mlir::LogicalResult CIRToLLVMSwitchFlatOpLowering::matchAndRewrite(

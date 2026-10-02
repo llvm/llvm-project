@@ -15232,24 +15232,28 @@ SDValue SelectionDAG::getPartialReduceMLS(unsigned Opc, const SDLoc &DL,
 /// \param LibFunc Reference to library function (value of RTLIB::Libcall).
 /// \param Ptr Pointer used to save/load state.
 /// \param InChain Ingoing token chain.
+/// \param Node Node being legalized
 /// \returns Outgoing chain token.
 SDValue SelectionDAG::makeStateFunctionCall(unsigned LibFunc, SDValue Ptr,
-                                            SDValue InChain,
-                                            const SDLoc &DLoc) {
+                                            SDValue InChain, SDNode *Node) {
   assert(InChain.getValueType() == MVT::Other && "Expected token chain");
-  TargetLowering::ArgListTy Args;
-  Args.emplace_back(Ptr, Ptr.getValueType().getTypeForEVT(*getContext()));
   RTLIB::LibcallImpl LibcallImpl =
       Libcalls->getLibcallImpl(static_cast<RTLIB::Libcall>(LibFunc));
-  if (LibcallImpl == RTLIB::Unsupported)
-    reportFatalUsageError("emitting call to unsupported libcall");
+  if (LibcallImpl == RTLIB::Unsupported) {
+    getContext()->emitError(Twine("no libcall available for ") +
+                            Node->getOperationName(this));
+    return InChain;
+  }
 
+  TargetLowering::ArgListTy Args;
+  Args.emplace_back(Ptr, Ptr.getValueType().getTypeForEVT(*getContext()));
   SDValue Callee =
       getExternalSymbol(LibcallImpl, TLI->getPointerTy(getDataLayout()));
   TargetLowering::CallLoweringInfo CLI(*this);
-  CLI.setDebugLoc(DLoc).setChain(InChain).setLibCallee(
-      Libcalls->getLibcallImplCallingConv(LibcallImpl),
-      Type::getVoidTy(*getContext()), Callee, std::move(Args));
+  CLI.setDebugLoc(SDLoc(Node))
+      .setChain(InChain)
+      .setLibCallee(Libcalls->getLibcallImplCallingConv(LibcallImpl),
+                    Type::getVoidTy(*getContext()), Callee, std::move(Args));
   return TLI->LowerCallTo(CLI).second;
 }
 
