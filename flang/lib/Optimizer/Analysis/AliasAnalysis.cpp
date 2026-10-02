@@ -238,10 +238,9 @@ static fir::AliasAnalysis::Source mergeRegionBranchPredecessorSources(
   // Every predecessor is a null address, so the join is too. Distinct nulls
   // and differing attributes still name no object, whether or not the null
   // is defined inside this branch.
-  bool allNull =
-      llvm::all_of(sources, [](const fir::AliasAnalysis::Source &s) {
-        return s.kind == fir::AliasAnalysis::SourceKind::Null;
-      });
+  bool allNull = llvm::all_of(sources, [](const fir::AliasAnalysis::Source &s) {
+    return s.kind == fir::AliasAnalysis::SourceKind::Null;
+  });
   if (allNull) {
     mergedKind = fir::AliasAnalysis::SourceKind::Null;
     mergedAttrs = allAttrsSame ? sources[0].attributes
