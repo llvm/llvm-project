@@ -786,21 +786,23 @@ function Invoke-ElevatedPrerequisiteInstallation {
     if ($arm64) { $invocation += ' -arm64' }
     if ($ForceMSVC) { $invocation += ' -ForceMSVC' }
     # Keep the elevated window open so the user can review the result.
-    $workerLines = @(
-        '$exitCode = 0'
-        'try {'
-        "    $invocation"
-        '} catch {'
-        '    Write-Host "Prerequisite installation failed:" -ForegroundColor Red'
-        '    Write-Host ($_ | Out-String) -ForegroundColor Red'
-        '    $exitCode = 1'
-        '}'
-    )
-    if (-not $Unattended) {
-        $workerLines += "Read-Host 'Press Enter to close this window' | Out-Null"
+    $pauseCommand = if (-not $Unattended) {
+        "Read-Host 'Press Enter to close this window' | Out-Null"
+    } else {
+        ''
     }
-    $workerLines += 'exit $exitCode'
-    $workerCommand = $workerLines -join "`n"
+    $workerCommand = @"
+`$exitCode = 0
+try {
+    $invocation
+} catch {
+    Write-Host "Prerequisite installation failed:" -ForegroundColor Red
+    Write-Host (`$_ | Out-String) -ForegroundColor Red
+    `$exitCode = 1
+}
+$pauseCommand
+exit `$exitCode
+"@
     $encodedCommand = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($workerCommand))
 
     Write-SubStep 'Requesting administrator access to install prerequisites...'
