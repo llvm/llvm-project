@@ -31,7 +31,7 @@ define i32 @call_use_s128(i32 %p1, i128 %p2, i32 %p3, i32 %p4, i32 %p5, i128 %p6
   ; CHECK-NEXT:   $x1 = COPY [[UV1]](i64)
   ; CHECK-NEXT:   $x2 = COPY [[UV2]](i64)
   ; CHECK-NEXT:   $x3 = COPY [[UV3]](i64)
-  ; CHECK-NEXT:   BL @use_s128, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3
+  ; CHECK-NEXT:   BL @use_s128, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $w0 = COPY [[C]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0

@@ -96,6 +96,12 @@ if ubsan_lit_test_mode in ["AddressSanitizer", "MemorySanitizer", "ThreadSanitiz
     if config.target_os == "NetBSD":
         config.substitutions.insert(0, ("%run", config.netbsd_noaslr_prefix))
 
+# The host offloading runtime is optional, see lib/ubsan/offload.
+if os.path.exists(
+    os.path.join(config.compiler_rt_libdir, "libclang_rt.ubsan_offload.a")
+):
+    config.available_features.add("ubsan-offload")
+
 # Device tests need this suite's GPU runtime, not just a usable machine.
 if ubsan_lit_test_mode == "Standalone" and "ubsan_standalone" in config.gpu_runtimes:
     if "hip" in config.available_features:

@@ -29,6 +29,7 @@ namespace llvm {
 /// below for details.
 class ValueHandleBase {
   friend class Value;
+  friend struct ValueHandleHead;
   template <typename ValueTy> friend class PoisoningVH;
 
 protected:

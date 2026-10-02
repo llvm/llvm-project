@@ -25,6 +25,7 @@
 
 #include "orc-rt-c/config.h"
 #include "orc-rt-c/support/CoreTypes.h"
+#include "orc-rt-c/support/LogLevel.h"
 #include "orc-rt-c/support/WrapperFunction.h"
 
 #include <cassert>

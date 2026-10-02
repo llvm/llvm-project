@@ -92,12 +92,14 @@ Address CIRGenFunction::emitAddrOfFieldStorage(Address base,
   // For unions, all fields map to index 0, so we use the field's declared type
   // directly instead of looking up the member type from the layout.
   mlir::Type fieldType = convertType(field->getType());
-  auto fieldPtr = cir::PointerType::get(fieldType);
+  // A member lives in the same address space as its record.
+  mlir::ptr::MemorySpaceAttrInterface addrSpace = base.getAddressSpace();
+  auto fieldPtr = cir::PointerType::get(fieldType, addrSpace);
   bool needsBitcast = false;
 
   if (!rec->isUnion() && field->isPotentiallyOverlapping()) {
     mlir::Type memberType = layout.getCIRType().getMembers()[idx];
-    fieldPtr = cir::PointerType::get(memberType);
+    fieldPtr = cir::PointerType::get(memberType, addrSpace);
     needsBitcast = true;
   }
 
@@ -550,7 +552,8 @@ Address CIRGenFunction::getAddrOfBitFieldStorage(LValue base,
                                                  mlir::Type fieldType,
                                                  unsigned index) {
   mlir::Location loc = getLoc(field->getLocation());
-  cir::PointerType fieldPtr = cir::PointerType::get(fieldType);
+  cir::PointerType fieldPtr =
+      cir::PointerType::get(fieldType, base.getAddress().getAddressSpace());
   auto rec = cast<cir::RecordType>(base.getAddress().getElementType());
   cir::GetMemberOp sea = getBuilder().createGetMember(
       loc, fieldPtr, base.getPointer(), field->getName(),
@@ -725,11 +728,6 @@ mlir::Value CIRGenFunction::emitFromMemory(mlir::Value value, QualType ty) {
 
 void CIRGenFunction::emitStoreOfScalar(mlir::Value value, LValue lvalue,
                                        bool isInit) {
-  if (lvalue.getType()->isConstantMatrixType()) {
-    cgm.errorNYI("emitStoreOfScalar constant matrix type");
-    return;
-  }
-
   emitStoreOfScalar(value, lvalue.getAddress(), lvalue.isVolatile(),
                     lvalue.getType(), lvalue.getBaseInfo(), isInit,
                     lvalue.isNontemporal());
@@ -779,6 +777,18 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(LValue lvalue,
                           lvalue.isNontemporal());
 }
 
+static RValue emitLoadOfMatrixLValue(LValue lv, SourceLocation loc,
+                                     CIRGenFunction &cgf) {
+  if (cgf.getLangOpts().HLSL &&
+      lv.getType().getAddressSpace() == LangAS::hlsl_constant) {
+    cgf.cgm.errorNYI(
+        loc, "emitLoadOfMatrixLValue: HLSL & hlsl_constant address space");
+    return {};
+  }
+
+  return RValue::get(cgf.emitLoadOfScalar(lv, loc));
+}
+
 /// Given an expression that represents a value lvalue, this
 /// method emits the address of the lvalue, then loads the result as an rvalue,
 /// returning the rvalue.
@@ -789,10 +799,8 @@ RValue CIRGenFunction::emitLoadOfLValue(LValue lv, SourceLocation loc) {
     return emitLoadOfBitfieldLValue(lv, loc);
 
   if (lv.isSimple()) {
-    if (lv.getType()->isConstantMatrixType()) {
-      cgm.errorNYI(loc, "emitLoadOfLValue: constant matrix type");
-      return RValue::get(nullptr);
-    }
+    if (lv.getType()->isConstantMatrixType())
+      return emitLoadOfMatrixLValue(lv, loc, *this);
 
     return RValue::get(emitLoadOfScalar(lv, loc));
   }
@@ -1138,7 +1146,8 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
       auto getGlob = getGlobVal.getDefiningOp<cir::GetGlobalOp>();
       getGlob.setStaticLocal(var.getStaticLocalGuard().has_value());
       getGlob.setTls(vd->getTLSKind() != VarDecl::TLS_None);
-      addr = Address(getGlob, convertTypeForMem(vd->getType()),
+      addr = Address(cgm.castGlobalToDeclAddrSpace(getGlob, *vd),
+                     convertTypeForMem(vd->getType()),
                      getContext().getDeclAlign(vd));
     } else {
       llvm_unreachable("DeclRefExpr for Decl not entered in localDeclMap?");
