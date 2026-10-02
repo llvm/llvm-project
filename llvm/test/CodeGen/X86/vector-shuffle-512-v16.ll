@@ -994,7 +994,7 @@ define void @ispc_1864(ptr %arg) {
 ; ALL-NEXT:    movq %rsp, %rbp
 ; ALL-NEXT:    .cfi_def_cfa_register %rbp
 ; ALL-NEXT:    andq $-64, %rsp
-; ALL-NEXT:    subq $4864, %rsp # imm = 0x1300
+; ALL-NEXT:    subq $4800, %rsp # imm = 0x12C0
 ; ALL-NEXT:    vbroadcastss {{.*#+}} ymm0 = [-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0]
 ; ALL-NEXT:    vmulps 32(%rdi), %ymm0, %ymm0
 ; ALL-NEXT:    vcvtps2pd %ymm0, %zmm0
