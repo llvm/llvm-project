@@ -22,13 +22,13 @@ program p
   use ieee_arithmetic
   character(12) :: tag
 
-  ! CHECK:     %[[V_16:[0-9]+]] = fir.alloca f32 {bindc_name = "a", uniq_name = "_QFEa"}
+  ! CHECK:     %[[V_16:[0-9]+]] = fir.alloca f32 <{bindc_name = "a", uniq_name = "_QFEa"}>
   ! CHECK:     %[[V_17:[0-9]+]] = fir.declare %[[V_16]] {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
-  ! CHECK:     %[[V_18:[0-9]+]] = fir.alloca f32 {bindc_name = "b", uniq_name = "_QFEb"}
+  ! CHECK:     %[[V_18:[0-9]+]] = fir.alloca f32 <{bindc_name = "b", uniq_name = "_QFEb"}>
   ! CHECK:     %[[V_19:[0-9]+]] = fir.declare %[[V_18]] {uniq_name = "_QFEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
-  ! CHECK:     %[[V_20:[0-9]+]] = fir.alloca !fir.logical<4> {bindc_name = "flag_value", uniq_name = "_QFEflag_value"}
+  ! CHECK:     %[[V_20:[0-9]+]] = fir.alloca !fir.logical<4> <{bindc_name = "flag_value", uniq_name = "_QFEflag_value"}>
   ! CHECK:     %[[V_21:[0-9]+]] = fir.declare %[[V_20]] {uniq_name = "_QFEflag_value"} : (!fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>>
-  ! CHECK:     %[[V_82:[0-9]+]] = fir.alloca f32 {bindc_name = "r", uniq_name = "_QFEr"}
+  ! CHECK:     %[[V_82:[0-9]+]] = fir.alloca f32 <{bindc_name = "r", uniq_name = "_QFEr"}>
   ! CHECK:     %[[V_83:[0-9]+]] = fir.declare %[[V_82]] {uniq_name = "_QFEr"} : (!fir.ref<f32>) -> !fir.ref<f32>
   logical :: flag_value
   real(4) :: x(22), a, b, r

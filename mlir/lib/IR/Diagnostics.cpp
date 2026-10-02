@@ -84,8 +84,9 @@ void DiagnosticArgument::print(raw_ostream &os) const {
 
 /// Convert a Twine to a StringRef. Memory used for generating the StringRef is
 /// stored in 'strings'.
-static StringRef twineToStrRef(const Twine &val,
-                               std::vector<std::unique_ptr<char[]>> &strings) {
+static StringRef
+twineToStrRef(const Twine &val,
+              SmallVectorImpl<std::unique_ptr<char[]>> &strings) {
   // Allocate memory to hold this string.
   SmallString<64> data;
   auto strRef = val.toStringRef(data);
@@ -878,7 +879,10 @@ SourceMgrDiagnosticVerifierHandler::SourceMgrDiagnosticVerifierHandler(
   for (unsigned i = 0, e = mgr.getNumBuffers(); i != e; ++i)
     (void)impl->computeExpectedDiags(out, mgr, mgr.getMemoryBuffer(i + 1));
 
-  registerInContext(ctx);
+  // The base class registered a handler that prints every diagnostic. The
+  // verifier takes its place: it consumes diagnostics and reports unexpected
+  // ones itself.
+  setHandler([this](Diagnostic &diag) { process(diag); });
 }
 
 SourceMgrDiagnosticVerifierHandler::SourceMgrDiagnosticVerifierHandler(
@@ -911,21 +915,18 @@ LogicalResult SourceMgrDiagnosticVerifierHandler::verify() {
   return impl->status;
 }
 
-void SourceMgrDiagnosticVerifierHandler::registerInContext(MLIRContext *ctx) {
-  ctx->getDiagEngine().registerHandler([&](Diagnostic &diag) {
-    // Process the main diagnostics.
-    process(diag);
-
-    // Process each of the notes.
-    for (auto &note : diag.getNotes())
-      process(note);
-  });
+std::unique_ptr<ScopedDiagnosticHandler>
+SourceMgrDiagnosticVerifierHandler::registerInContext(MLIRContext *ctx) {
+  return std::make_unique<ScopedDiagnosticHandler>(
+      ctx, [this](Diagnostic &diag) { process(diag); });
 }
 
-/// Process a single diagnostic.
+/// Process a diagnostic and its notes.
 void SourceMgrDiagnosticVerifierHandler::process(Diagnostic &diag) {
   for (const std::string &str : diag.strs())
     process(diag.getLocation(), str, diag.getSeverity());
+  for (auto &note : diag.getNotes())
+    process(note);
 }
 
 /// Process a diagnostic at a certain location.

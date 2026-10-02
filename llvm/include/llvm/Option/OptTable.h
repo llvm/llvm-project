@@ -17,6 +17,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/StringSaver.h"
 #include <cassert>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -73,18 +74,21 @@ public:
     StringTable::Offset HelpTextOffset;
   };
 
-  /// Fields few options set. Row 0 is all zero and serves the options that set
-  /// none.
+  /// Fields that are rarely set or take few distinct values, shared by the
+  /// options with equal values. Row 0 is all zero.
   struct InfoExtra {
     StringTable::Offset MetaVarOffset;
     StringTable::Offset AliasArgsOffset;
     /// The possible values as a comma separated list, empty for an option whose
     /// values only getOptionValuesCode() knows.
     StringTable::Offset ValuesOffset;
+    unsigned Flags;
+    uint16_t Visibility;
     // Offset into OptTable's HelpTextVariantsTable; 0 for none.
-    unsigned short HelpTextVariantsOffset;
+    uint16_t HelpTextVariantsOffset;
     // Offset into OptTable's SubCommandIDsTable.
-    unsigned short SubCommandIDsOffset;
+    uint16_t SubCommandIDsOffset;
+    uint8_t Param;
   };
 
   /// Entry for a single option instance in the option data table. An option's
@@ -94,16 +98,13 @@ public:
     /// Offset 0 means the .td supplied no HelpText. A HelpText<""> maps to a
     /// distinct empty string, marking the option deliberately undocumented.
     StringTable::Offset HelpTextOffset;
-    unsigned Flags;
-    unsigned short Visibility;
-    // Offset into OptTable's PrefixesTable.
-    unsigned short PrefixesOffset;
-    unsigned short GroupID;
-    unsigned short AliasID;
+    uint16_t GroupID;
+    uint16_t AliasID;
     // Offset into OptTable's InfoExtrasTable.
-    unsigned short ExtraOffset;
-    unsigned char Kind;
-    unsigned char Param;
+    uint16_t ExtraOffset;
+    // Offset into OptTable's PrefixesTable.
+    uint8_t PrefixesOffset;
+    uint8_t Kind;
 
     bool hasNoPrefix() const { return PrefixesOffset == 0; }
 
@@ -223,10 +224,6 @@ private:
     return OptionInfos[id - 1];
   }
 
-  const InfoExtra &getExtra(const Info &I) const {
-    return InfoExtrasTable[I.ExtraOffset];
-  }
-
   StringTable::Offset getHelpTextOffset(const Info &I,
                                         Visibility VisibilityMask) const {
     for (const HelpTextVariant *V =
@@ -305,6 +302,10 @@ public:
   /// Lookup the prefixed name of the given option.
   StringRef getOptionPrefixedName(OptSpecifier id) const {
     return getInfo(id).getPrefixedName(StrTable);
+  }
+
+  const InfoExtra &getExtra(const Info &I) const {
+    return InfoExtrasTable[I.ExtraOffset];
   }
 
   /// Get the kind of the given option.

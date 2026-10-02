@@ -15,6 +15,8 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/OpImplementation.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/SHA1.h"
 #include <numeric>
 #include <optional>
@@ -26,6 +28,50 @@ void mlir::detail::appendAttributeProperty(
     Attribute attr) {
   if (attr)
     attrs.emplace_back(name, attr);
+}
+
+ParseResult mlir::detail::parseOptionalOperandInto(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands) {
+  OpAsmParser::UnresolvedOperand operand;
+  OptionalParseResult result = parser.parseOptionalOperand(operand);
+  if (!result.has_value())
+    return success();
+  if (failed(*result))
+    return failure();
+  operands.push_back(operand);
+  return success();
+}
+
+ParseResult mlir::detail::parseOptionalTypeInto(AsmParser &parser,
+                                                SmallVectorImpl<Type> &types) {
+  Type type;
+  OptionalParseResult result = parser.parseOptionalType(type);
+  if (!result.has_value())
+    return success();
+  if (failed(*result))
+    return failure();
+  types.push_back(type);
+  return success();
+}
+
+void mlir::detail::splitPropertiesAndDiscardableAttributes(
+    OperationState &state, ArrayRef<NamedAttribute> attributes,
+    ArrayRef<StringRef> inherentNames,
+    llvm::function_ref<LogicalResult(DictionaryAttr)> setProperties) {
+  SmallVector<NamedAttribute> inherentAttributes;
+  for (const NamedAttribute &attr : attributes) {
+    StringRef name = attr.getName().getValue();
+    if (llvm::is_contained(inherentNames, name))
+      inherentAttributes.push_back(attr);
+    else
+      state.addAttribute(attr.getName(), attr.getValue());
+  }
+  if (inherentAttributes.empty())
+    return;
+  if (failed(setProperties(
+          DictionaryAttr::get(state.getContext(), inherentAttributes))))
+    llvm::report_fatal_error("Property conversion failed.");
 }
 
 //===----------------------------------------------------------------------===//

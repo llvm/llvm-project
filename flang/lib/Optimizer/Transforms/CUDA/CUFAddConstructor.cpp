@@ -83,12 +83,23 @@ static constexpr llvm::StringRef cudaFortranCtorName{
 static constexpr llvm::StringRef managedPtrSuffix{".managed.ptr"};
 static constexpr llvm::StringRef cudaCompiledSymbolName{"Mcuda_compiled"};
 
-/// Create an 8-byte pointer global in the __nv_managed_data__ section.
-/// The CUDA runtime populates this pointer with the unified memory address
-/// when the module is initialized via __cudaInitModule.
+/// Create the 8-byte companion pointer global holding the unified memory
+/// address of \p globalOp, which the CUDA runtime populates when the module is
+/// initialized via __cudaInitModule.
+///
+/// The pointer has external linkage so that the whole program shares a single
+/// one. Only the translation unit that defines the variable emits a definition
+/// (zero-initialized, in the __nv_managed_data__ section, and registered);
+/// every other translation unit emits a declaration and resolves to that same
+/// definition at link time.
+///
+/// A pointer per translation unit does not work: the runtime populates only
+/// the registration it performs first for a given variable name, so any other
+/// unit would be left loading through a null pointer.
 static fir::GlobalOp createManagedPointerGlobal(fir::FirOpBuilder &builder,
                                                 mlir::ModuleOp mod,
-                                                fir::GlobalOp globalOp) {
+                                                fir::GlobalOp globalOp,
+                                                bool isDefinition) {
   mlir::MLIRContext *ctx = mod.getContext();
   std::string ptrGlobalName = (globalOp.getSymName() + managedPtrSuffix).str();
   auto ptrTy = fir::LLVMPointerType::get(ctx, mlir::IntegerType::get(ctx, 8));
@@ -100,7 +111,13 @@ static fir::GlobalOp createManagedPointerGlobal(fir::FirOpBuilder &builder,
   auto ptrGlobal = fir::GlobalOp::create(
       builder, globalOp.getLoc(), ptrGlobalName, /*isConstant=*/false,
       /*isTarget=*/false, ptrTy, initAttr,
-      /*linkage=*/builder.createInternalLinkage());
+      /*linkage=*/builder.createExternalLinkage());
+
+  // Leaving the region empty makes this a declaration of the definition
+  // emitted by the defining translation unit.
+  if (!isDefinition)
+    return ptrGlobal;
+
   ptrGlobal.setSectionAttr(builder.getStringAttr("__nv_managed_data__"));
 
   mlir::Region &region = ptrGlobal.getRegion();
@@ -262,8 +279,8 @@ static bool hasRegisteredGlobals(mlir::ModuleOp mod,
     }
     if (!gpuSymTable.lookup(globalOp.getSymName()))
       continue;
-    // Non-allocatable managed globals register a companion pointer local to
-    // this translation unit, so they register even when defined elsewhere.
+    // Non-allocatable managed globals still need a companion pointer
+    // declaration when defined elsewhere, so they count here too.
     if (attr.getValue() == cuf::DataAttribute::Managed &&
         !mlir::isa<fir::BaseBoxType>(globalOp.getType()))
       return true;
@@ -431,9 +448,9 @@ struct CUFAddConstructor
               attr.getValue() == cuf::DataAttribute::Managed &&
               !mlir::isa<fir::BaseBoxType>(globalOp.getType());
 
-          // Non-allocatable managed globals register a companion pointer local
-          // to this translation unit, so they register even when defined
-          // elsewhere.
+          // Non-allocatable managed globals are still visited when defined
+          // elsewhere: such a unit emits no registration, but it does need a
+          // declaration of the companion pointer to load through.
           if (!definesGlobal(globalOp) && !isNonAllocManagedGlobal)
             continue;
 
@@ -442,12 +459,18 @@ struct CUFAddConstructor
           case cuf::DataAttribute::Constant:
           case cuf::DataAttribute::Managed: {
             if (isNonAllocManagedGlobal) {
-              hasNonAllocManagedGlobal = true;
               // Non-allocatable managed globals use pointer indirection:
               // a companion pointer in __nv_managed_data__ holds the unified
               // memory address, registered via __cudaRegisterManagedVar.
-              fir::GlobalOp ptrGlobal =
-                  createManagedPointerGlobal(builder, mod, globalOp);
+              // The pointer is shared across the program, so it is defined and
+              // registered only by the unit that defines the variable; other
+              // units just declare it.
+              bool definesVariable = definesGlobal(globalOp);
+              fir::GlobalOp ptrGlobal = createManagedPointerGlobal(
+                  builder, mod, globalOp, definesVariable);
+              if (!definesVariable)
+                break;
+              hasNonAllocManagedGlobal = true;
               auto func = fir::runtime::getRuntimeFunc<mkRTKey(
                   CUFRegisterManagedVariable)>(loc, builder);
               emitCUFRegistrationCall(builder, loc, idxTy, *dl, kindMap,

@@ -44,6 +44,18 @@ static bool isSingleLine(SourceRange Range, const SourceManager &SM) {
          SM.getExpansionLineNumber(Range.getEnd());
 }
 
+static bool isPreprocessorDirectiveToken(const Token &Tok,
+                                         const SourceManager &SM,
+                                         const LangOptions &LangOpts) {
+  if (Tok.is(tok::hash))
+    return true;
+  const std::optional<Token> Prev = Lexer::findPreviousToken(
+      Tok.getLocation(), SM, LangOpts, /*IncludeComments=*/false);
+  return Prev && Prev->is(tok::hash) &&
+         SM.getExpansionLineNumber(Prev->getLocation()) ==
+             SM.getExpansionLineNumber(Tok.getLocation());
+}
+
 namespace {
 
 AST_POLYMORPHIC_MATCHER(isMacro,
@@ -110,10 +122,14 @@ void TrailingCommaCheck::checkEnumDecl(const EnumDecl *Enum,
   if (Policy == CommaPolicyKind::Ignore)
     return;
 
-  const std::optional<Token> LastTok =
-      Lexer::findPreviousToken(Enum->getBraceRange().getEnd(),
-                               *Result.SourceManager, getLangOpts(), false);
+  const std::optional<Token> LastTok = Lexer::findPreviousToken(
+      Enum->getBraceRange().getEnd(), *Result.SourceManager, getLangOpts(),
+      /*IncludeComments=*/false);
   if (!LastTok)
+    return;
+
+  if (isPreprocessorDirectiveToken(*LastTok, *Result.SourceManager,
+                                   getLangOpts()))
     return;
 
   emitDiag(LastTok->getLocation(), LastTok, DiagKind::Enum, Result, Policy);

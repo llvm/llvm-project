@@ -38,11 +38,11 @@ define dso_local void @test() personality ptr @__gxx_personality_v0 {
   ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(i32) = G_PTRTOINT [[COPY1]](p0)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[GV]](p0)
-  ; CHECK-NEXT:   BL @printf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0
+  ; CHECK-NEXT:   BL @printf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
-  ; CHECK-NEXT:   BL @_Unwind_Resume, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0
+  ; CHECK-NEXT:   BL @_Unwind_Resume, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
 entry:
 
@@ -88,7 +88,7 @@ define void @test2() #0 personality ptr @__gcc_personality_v0 {
   ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(i32) = G_PTRTOINT [[COPY2]](p0)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[COPY1]](p0)
-  ; CHECK-NEXT:   BL @_Unwind_Resume, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0
+  ; CHECK-NEXT:   BL @_Unwind_Resume, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   invoke void asm sideeffect "", "r"(ptr undef) to label %a unwind label %b
 a:

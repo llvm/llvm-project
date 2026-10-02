@@ -117,11 +117,33 @@ static std::optional<TypeSize> getObjectSize(const Value *V,
   return std::nullopt;
 }
 
+/// Return the minimal extent from \p V to the end of the underlying object,
+/// assuming the result is used in an aliasing query. E.g., we do use the query
+/// location size and the fact that null pointers cannot alias here.
+static TypeSize getMinimalExtentFrom(const Value &V,
+                                     const LocationSize &LocSize,
+                                     const DataLayout &DL,
+                                     bool NullIsValidLoc) {
+  // If we have dereferenceability information we know a lower bound for the
+  // extent as accesses for a lower offset would be valid. We need to exclude
+  // the "or null" part if null is a valid pointer. We can ignore frees, as an
+  // access after free would be undefined behavior.
+  bool CanBeNull;
+  uint64_t DerefBytes =
+      V.getPointerDereferenceableBytes(DL, CanBeNull, /*CanBeFreed=*/nullptr);
+  DerefBytes = (CanBeNull && NullIsValidLoc) ? 0 : DerefBytes;
+  // If queried with a precise location size, we assume that location size to be
+  // accessed, thus valid.
+  if (LocSize.isPrecise())
+    DerefBytes = std::max(DerefBytes, LocSize.getValue().getKnownMinValue());
+  return TypeSize::getFixed(DerefBytes);
+}
+
 /// Returns true if we can prove that the object specified by V is smaller than
-/// Size. Bails out early unless the root object is passed as the first
-/// parameter.
-static bool isObjectSmallerThan(const Value *V, TypeSize Size,
-                                const DataLayout &DL,
+/// the minimal extent accessed from OtherV with size OtherSize. Bails out early
+/// unless the root object is passed as the first parameter.
+static bool isObjectSmallerThan(const Value *V, const Value &OtherV,
+                                LocationSize OtherSize, const DataLayout &DL,
                                 const TargetLibraryInfo &TLI,
                                 bool NullIsValidLoc) {
   // Note that the meanings of the "object" are slightly different in the
@@ -151,30 +173,11 @@ static bool isObjectSmallerThan(const Value *V, TypeSize Size,
   // reads a bit past the end given sufficient alignment.
   std::optional<TypeSize> ObjectSize = getObjectSize(V, DL, TLI, NullIsValidLoc,
                                                      /*RoundToAlign*/ true);
+  if (!ObjectSize)
+    return false;
 
-  return ObjectSize && TypeSize::isKnownLT(*ObjectSize, Size);
-}
-
-/// Return the minimal extent from \p V to the end of the underlying object,
-/// assuming the result is used in an aliasing query. E.g., we do use the query
-/// location size and the fact that null pointers cannot alias here.
-static TypeSize getMinimalExtentFrom(const Value &V,
-                                     const LocationSize &LocSize,
-                                     const DataLayout &DL,
-                                     bool NullIsValidLoc) {
-  // If we have dereferenceability information we know a lower bound for the
-  // extent as accesses for a lower offset would be valid. We need to exclude
-  // the "or null" part if null is a valid pointer. We can ignore frees, as an
-  // access after free would be undefined behavior.
-  bool CanBeNull;
-  uint64_t DerefBytes =
-      V.getPointerDereferenceableBytes(DL, CanBeNull, /*CanBeFreed=*/nullptr);
-  DerefBytes = (CanBeNull && NullIsValidLoc) ? 0 : DerefBytes;
-  // If queried with a precise location size, we assume that location size to be
-  // accessed, thus valid.
-  if (LocSize.isPrecise())
-    DerefBytes = std::max(DerefBytes, LocSize.getValue().getKnownMinValue());
-  return TypeSize::getFixed(DerefBytes);
+  TypeSize Size = getMinimalExtentFrom(OtherV, OtherSize, DL, NullIsValidLoc);
+  return TypeSize::isKnownLT(*ObjectSize, Size);
 }
 
 /// Returns true if we can prove that the object specified by V has size Size.
@@ -535,7 +538,7 @@ struct VariableGEPIndex {
   APInt Scale;
 
   // Context instruction to use when querying information about this index.
-  const Instruction *CxtI;
+  const Instruction *CtxI;
 
   /// True if all operations in this expression are NSW.
   bool IsNSW;
@@ -617,7 +620,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
   // Limit recursion depth to limit compile time in crazy cases.
   unsigned MaxLookup = MaxLookupSearchDepth;
   SearchTimes++;
-  const Instruction *CxtI = dyn_cast<Instruction>(V);
+  const Instruction *CtxI = dyn_cast<Instruction>(V);
 
   unsigned IndexSize = DL.getIndexTypeSizeInBits(V->getType());
   DecomposedGEP Decomposed;
@@ -764,7 +767,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       }
 
       if (!!Scale) {
-        VariableGEPIndex Entry = {LE.Val, Scale, CxtI, LE.IsNSW,
+        VariableGEPIndex Entry = {LE.Val, Scale, CtxI, LE.IsNSW,
                                   /* IsNegated */ false};
         Decomposed.VarIndices.push_back(Entry);
       }
@@ -1615,12 +1618,8 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   // If the size of one access is larger than the entire object on the other
   // side, then we know such behavior is undefined and can assume no alias.
   bool NullIsValidLocation = NullPointerIsDefined(&F);
-  if ((isObjectSmallerThan(
-          O2, getMinimalExtentFrom(*V1, V1Size, DL, NullIsValidLocation), DL,
-          TLI, NullIsValidLocation)) ||
-      (isObjectSmallerThan(
-          O1, getMinimalExtentFrom(*V2, V2Size, DL, NullIsValidLocation), DL,
-          TLI, NullIsValidLocation)))
+  if (isObjectSmallerThan(O2, *V1, V1Size, DL, TLI, NullIsValidLocation) ||
+      isObjectSmallerThan(O1, *V2, V2Size, DL, TLI, NullIsValidLocation))
     return AliasResult::NoAlias;
 
   if (EnableSeparateStorageAnalysis) {
@@ -1923,7 +1922,7 @@ void BasicAAResult::subtractDecomposedGEPs(DecomposedGEP &DestGEP,
 
     // If we didn't consume this entry, add it to the end of the Dest list.
     if (!Found) {
-      VariableGEPIndex Entry = {Src.Val, Src.Scale, Src.CxtI, Src.IsNSW,
+      VariableGEPIndex Entry = {Src.Val, Src.Scale, Src.CtxI, Src.IsNSW,
                                 /* IsNegated */ true};
       DestGEP.VarIndices.push_back(Entry);
 
@@ -1945,7 +1944,7 @@ BasicAAResult::analyzeVariableOffsets(const DecomposedGEP &GEP,
     const VariableGEPIndex &Index = GEP.VarIndices[I];
     const APInt &Scale = Index.Scale;
 
-    SimplifyQuery SQ(DL, DT, &AC, Index.CxtI, /*UseInstrInfo=*/true);
+    SimplifyQuery SQ(DL, DT, &AC, Index.CtxI, /*UseInstrInfo=*/true);
     KnownBits Known = computeKnownBits(Index.Val.V, SQ);
     VarIndexKnownBits.emplace_back(Known);
 
@@ -2018,7 +2017,7 @@ std::optional<APInt> BasicAAResult::computeMinAbsVarOffset(
     // VarIndex = Scale*V.
     const VariableGEPIndex &Var = VarIndices[0];
     if (Var.Val.TruncBits == 0 &&
-        isKnownNonZero(Var.Val.V, SimplifyQuery(DL, DT, &AC, Var.CxtI))) {
+        isKnownNonZero(Var.Val.V, SimplifyQuery(DL, DT, &AC, Var.CtxI))) {
       // Refine MinAbsVarIndex, if abs(Scale*V) >= abs(Scale) holds in the
       // presence of potentially wrapping math.
       if (MultiplyByScaleNoWrap(Var)) {
@@ -2046,9 +2045,9 @@ std::optional<APInt> BasicAAResult::computeMinAbsVarOffset(
 
     if (Var0.hasNegatedScaleOf(Var1)) {
       if (isKnownNonEqual(Var0.Val.V, Var1.Val.V,
-                          SimplifyQuery(DL, DT, &AC, /*CxtI=*/Var0.CxtI
-                                                         ? Var0.CxtI
-                                                         : Var1.CxtI)))
+                          SimplifyQuery(DL, DT, &AC, /*CtxI=*/Var0.CtxI
+                                                         ? Var0.CtxI
+                                                         : Var1.CtxI)))
         return Var0.Scale.abs();
       // Equal scales would imply the GCD equals the scale itself, leading
       // the generalized path below not to do better than isKnownNonEqual.
