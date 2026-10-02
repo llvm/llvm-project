@@ -1615,7 +1615,8 @@ public:
   const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
 
   /// Returns the incoming value for \p VPBB. \p VPBB must be an incoming block.
-  VPValue *getIncomingValueForBlock(const VPBasicBlock *VPBB) const;
+  LLVM_ABI_FOR_TEST VPValue *
+  getIncomingValueForBlock(const VPBasicBlock *VPBB) const;
 
   /// Sets the incoming value for \p VPBB to \p V. \p VPBB must be an incoming
   /// block.
