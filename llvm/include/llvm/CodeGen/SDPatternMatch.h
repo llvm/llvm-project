@@ -100,6 +100,10 @@ struct Opcode_match {
   bool match(SDValue N) { return N->getOpcode() == Opcode; }
 };
 
+template <unsigned Opcode> struct FixedOpcode_match {
+  bool match(SDValue N) { return N->getOpcode() == Opcode; }
+};
+
 // === Patterns combinators ===
 template <typename... Preds> struct And {
   bool match(SDValue N) { return true; }
@@ -150,6 +154,10 @@ template <typename... Preds> Or<Preds...> m_AnyOf(const Preds &...preds) {
 
 template <typename... Preds> auto m_NoneOf(const Preds &...preds) {
   return m_Unless(m_AnyOf(preds...));
+}
+
+template <unsigned Opcode> inline auto m_SpecificOpc() {
+  return FixedOpcode_match<Opcode>();
 }
 
 inline Opcode_match m_SpecificOpc(unsigned Opcode) {
@@ -391,6 +399,12 @@ struct Operands_match<OpIdx, OpndPred, OpndPreds...>
     return false;
   }
 };
+
+template <unsigned Opcode, typename... OpndPreds>
+auto m_Node(const OpndPreds &...Preds) {
+  return m_AllOf(m_SpecificOpc<Opcode>(),
+                 Operands_match<0, OpndPreds...>(Preds...));
+}
 
 template <typename... OpndPreds>
 auto m_Node(unsigned Opcode, const OpndPreds &...preds) {
