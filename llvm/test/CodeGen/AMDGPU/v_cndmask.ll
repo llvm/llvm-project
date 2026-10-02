@@ -1084,16 +1084,16 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i64(ptr addrspace(1) %o
 ; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX10-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
+; GFX10-NEXT:    v_lshlrev_b32_e32 v5, 3, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    global_load_dwordx2 v[0:1], v4, s[2:3] glc dlc
+; GFX10-NEXT:    global_load_dwordx2 v[0:1], v5, s[2:3] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    global_load_dwordx2 v[2:3], v4, s[6:7] glc dlc
+; GFX10-NEXT:    global_load_dwordx2 v[2:3], v5, s[6:7] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_cmp_lt_i32_e32 vcc, -1, v1
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0, v3, vcc
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, 2, v2, vcc
-; GFX10-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
+; GFX10-NEXT:    global_store_dwordx2 v5, v[0:1], s[0:1]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: icmp_vgprX_k0_select_k1_vgprZ_i64:
@@ -1103,16 +1103,16 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i64(ptr addrspace(1) %o
 ; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
+; GFX11-NEXT:    v_lshlrev_b32_e32 v5, 3, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    global_load_b64 v[0:1], v4, s[2:3] glc dlc
+; GFX11-NEXT:    global_load_b64 v[0:1], v5, s[2:3] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    global_load_b64 v[2:3], v4, s[4:5] glc dlc
+; GFX11-NEXT:    global_load_b64 v[2:3], v5, s[4:5] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_cmp_lt_i32_e32 vcc, -1, v1
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, 0, v3, vcc
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 2, v2, vcc
-; GFX11-NEXT:    global_store_b64 v4, v[0:1], s[0:1]
+; GFX11-NEXT:    global_store_b64 v5, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: icmp_vgprX_k0_select_k1_vgprZ_i64:
@@ -1122,16 +1122,16 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i64(ptr addrspace(1) %o
 ; GFX12-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
 ; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
+; GFX12-NEXT:    v_lshlrev_b32_e32 v5, 3, v0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    global_load_b64 v[0:1], v4, s[2:3] scope:SCOPE_SYS
+; GFX12-NEXT:    global_load_b64 v[0:1], v5, s[2:3] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_load_b64 v[2:3], v4, s[4:5] scope:SCOPE_SYS
+; GFX12-NEXT:    global_load_b64 v[2:3], v5, s[4:5] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_cmp_lt_i32_e32 vcc, -1, v1
 ; GFX12-NEXT:    v_cndmask_b32_e32 v1, 0, v3, vcc
 ; GFX12-NEXT:    v_cndmask_b32_e32 v0, 2, v2, vcc
-; GFX12-NEXT:    global_store_b64 v4, v[0:1], s[0:1]
+; GFX12-NEXT:    global_store_b64 v5, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -1620,9 +1620,9 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i1(ptr addrspace(1) %ou
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x34
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
+; GFX11-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    global_load_b32 v1, v1, s[10:11] glc dlc
+; GFX11-NEXT:    global_load_b32 v1, v3, s[10:11] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_load_u8 v2, v0, s[0:1] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -1642,9 +1642,9 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i1(ptr addrspace(1) %ou
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x34
 ; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
+; GFX12-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    global_load_b32 v1, v1, s[10:11] scope:SCOPE_SYS
+; GFX12-NEXT:    global_load_b32 v1, v3, s[10:11] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_load_u8 v2, v0, s[0:1] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0

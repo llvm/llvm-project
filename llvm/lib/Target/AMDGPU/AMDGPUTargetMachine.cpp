@@ -19,6 +19,7 @@
 #include "AMDGPUAliasAnalysis.h"
 #include "AMDGPUAsmPrinter.h"
 #include "AMDGPUBarrierLatency.h"
+#include "AMDGPUBreakLoadClusterDeps.h"
 #include "AMDGPUCoExecSchedStrategy.h"
 #include "AMDGPUCtorDtorLowering.h"
 #include "AMDGPUExportClustering.h"
@@ -759,6 +760,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUImageIntrinsicOptimizerPass(*PR);
   initializeAMDGPUPrintfRuntimeBindingPass(*PR);
   initializeAMDGPUResourceUsageAnalysisWrapperPassPass(*PR);
+  initializeAMDGPUBreakLoadClusterDepsLegacyPass(*PR);
   initializeGCNNSAReassignLegacyPass(*PR);
   initializeGCNPreRAOptimizationsLegacyPass(*PR);
   initializeGCNPreRALongBranchRegLegacyPass(*PR);
@@ -2022,6 +2024,10 @@ void GCNPassConfig::addPostRegAlloc() {
 }
 
 void GCNPassConfig::addPreSched2() {
+  // Break false anti-dependencies on load-address chains before the post-RA
+  // scheduler so its load-clustering mutation can burst the loads.
+  if (TM->getOptLevel() > CodeGenOptLevel::None)
+    addPass(&AMDGPUBreakLoadClusterDepsID);
   if (TM->getOptLevel() > CodeGenOptLevel::None)
     addPass(createSIShrinkInstructionsLegacyPass());
   addPass(&SIPostRABundlerLegacyID);
@@ -2757,6 +2763,10 @@ void AMDGPUCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
 }
 
 void AMDGPUCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) {
+  // Break false anti-dependencies on load-address chains before the post-RA
+  // scheduler so its load-clustering mutation can burst the loads.
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addMachineFunctionPass(AMDGPUBreakLoadClusterDepsPass(), PMW);
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addMachineFunctionPass(SIShrinkInstructionsPass(), PMW);
   addMachineFunctionPass(SIPostRABundlerPass(), PMW);

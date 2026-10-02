@@ -235,9 +235,9 @@ define amdgpu_kernel void @fadd_a_a_b_f64(ptr addrspace(1) %out, ptr addrspace(1
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    flat_load_dwordx2 v[2:3], v[0:1] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v4, vcc, 8, v0
-; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_dwordx2 v[4:5], v[4:5] glc
+; VI-NEXT:    v_add_u32_e32 v6, vcc, 8, v0
+; VI-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; VI-NEXT:    flat_load_dwordx2 v[4:5], v[6:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_f64 v[2:3], v[2:3], v[2:3]
 ; VI-NEXT:    v_add_f64 v[2:3], v[2:3], v[4:5]
@@ -288,9 +288,9 @@ define amdgpu_kernel void @fadd_b_a_a_f64(ptr addrspace(1) %out, ptr addrspace(1
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    flat_load_dwordx2 v[2:3], v[0:1] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v4, vcc, 8, v0
-; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_dwordx2 v[4:5], v[4:5] glc
+; VI-NEXT:    v_add_u32_e32 v6, vcc, 8, v0
+; VI-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; VI-NEXT:    flat_load_dwordx2 v[4:5], v[6:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_f64 v[2:3], v[2:3], v[2:3]
 ; VI-NEXT:    v_add_f64 v[2:3], v[4:5], v[2:3]
@@ -343,11 +343,11 @@ define amdgpu_kernel void @mad_sub_f64(ptr addrspace(1) noalias nocapture %out, 
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s2, v6
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    v_add_u32_e32 v2, vcc, 8, v0
-; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
+; VI-NEXT:    v_add_u32_e32 v8, vcc, 8, v0
+; VI-NEXT:    v_addc_u32_e32 v9, vcc, 0, v1, vcc
 ; VI-NEXT:    flat_load_dwordx2 v[4:5], v[0:1] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    flat_load_dwordx2 v[2:3], v[2:3] glc
+; VI-NEXT:    flat_load_dwordx2 v[2:3], v[8:9] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 16, v0
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -408,9 +408,9 @@ define amdgpu_kernel void @fadd_a_a_b_f64_fast_add0(ptr addrspace(1) %out, ptr a
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    flat_load_dwordx2 v[2:3], v[0:1] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v4, vcc, 8, v0
-; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_dwordx2 v[4:5], v[4:5] glc
+; VI-NEXT:    v_add_u32_e32 v6, vcc, 8, v0
+; VI-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; VI-NEXT:    flat_load_dwordx2 v[4:5], v[6:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_f64 v[2:3], v[2:3], v[2:3]
 ; VI-NEXT:    v_add_f64 v[2:3], v[2:3], v[4:5]
@@ -461,9 +461,9 @@ define amdgpu_kernel void @fadd_a_a_b_f64_fast_add1(ptr addrspace(1) %out, ptr a
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    flat_load_dwordx2 v[2:3], v[0:1] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v4, vcc, 8, v0
-; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_dwordx2 v[4:5], v[4:5] glc
+; VI-NEXT:    v_add_u32_e32 v6, vcc, 8, v0
+; VI-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; VI-NEXT:    flat_load_dwordx2 v[4:5], v[6:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_f64 v[2:3], v[2:3], v[2:3]
 ; VI-NEXT:    v_add_f64 v[2:3], v[2:3], v[4:5]
@@ -508,11 +508,11 @@ define amdgpu_kernel void @fadd_a_a_b_f64_fast(ptr addrspace(1) %out, ptr addrsp
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    v_add_u32_e32 v2, vcc, 8, v0
-; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
+; VI-NEXT:    v_add_u32_e32 v6, vcc, 8, v0
+; VI-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
 ; VI-NEXT:    flat_load_dwordx2 v[4:5], v[0:1] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    flat_load_dwordx2 v[2:3], v[2:3] glc
+; VI-NEXT:    flat_load_dwordx2 v[2:3], v[6:7] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_fma_f64 v[2:3], v[4:5], 2.0, v[2:3]
 ; VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]

@@ -111,67 +111,67 @@ define amdgpu_kernel void @fmuladd_f32(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX9-FLUSH-MAD-LABEL: fmuladd_f32:
 ; GFX9-FLUSH-MAD:       ; %bb.0:
 ; GFX9-FLUSH-MAD-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
-; GFX9-FLUSH-MAD-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-FLUSH-MAD-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-FLUSH-MAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-FLUSH-MAD-NEXT:    global_load_dword v1, v0, s[10:11]
-; GFX9-FLUSH-MAD-NEXT:    global_load_dword v2, v0, s[12:13]
-; GFX9-FLUSH-MAD-NEXT:    global_load_dword v3, v0, s[14:15]
+; GFX9-FLUSH-MAD-NEXT:    global_load_dword v1, v5, s[10:11]
+; GFX9-FLUSH-MAD-NEXT:    global_load_dword v2, v5, s[12:13]
+; GFX9-FLUSH-MAD-NEXT:    global_load_dword v3, v5, s[14:15]
 ; GFX9-FLUSH-MAD-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-FLUSH-MAD-NEXT:    v_mac_f32_e32 v3, v1, v2
-; GFX9-FLUSH-MAD-NEXT:    global_store_dword v0, v3, s[8:9]
+; GFX9-FLUSH-MAD-NEXT:    global_store_dword v5, v3, s[8:9]
 ; GFX9-FLUSH-MAD-NEXT:    s_endpgm
 ;
 ; GFX9-DENORM-FASTFMA-MAD-LABEL: fmuladd_f32:
 ; GFX9-DENORM-FASTFMA-MAD:       ; %bb.0:
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
-; GFX9-DENORM-FASTFMA-MAD-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-DENORM-FASTFMA-MAD-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DENORM-FASTFMA-MAD-NEXT:    global_load_dword v1, v0, s[10:11]
-; GFX9-DENORM-FASTFMA-MAD-NEXT:    global_load_dword v2, v0, s[12:13]
-; GFX9-DENORM-FASTFMA-MAD-NEXT:    global_load_dword v3, v0, s[14:15]
+; GFX9-DENORM-FASTFMA-MAD-NEXT:    global_load_dword v1, v5, s[10:11]
+; GFX9-DENORM-FASTFMA-MAD-NEXT:    global_load_dword v2, v5, s[12:13]
+; GFX9-DENORM-FASTFMA-MAD-NEXT:    global_load_dword v3, v5, s[14:15]
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    v_fma_f32 v1, v1, v2, v3
-; GFX9-DENORM-FASTFMA-MAD-NEXT:    global_store_dword v0, v1, s[8:9]
+; GFX9-DENORM-FASTFMA-MAD-NEXT:    global_store_dword v5, v1, s[8:9]
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    s_endpgm
 ;
 ; GFX9-FLUSH-FMAC-LABEL: fmuladd_f32:
 ; GFX9-FLUSH-FMAC:       ; %bb.0:
 ; GFX9-FLUSH-FMAC-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
-; GFX9-FLUSH-FMAC-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-FLUSH-FMAC-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v1, v0, s[10:11]
-; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v2, v0, s[12:13]
-; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v3, v0, s[14:15]
+; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v1, v5, s[10:11]
+; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v2, v5, s[12:13]
+; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v3, v5, s[14:15]
 ; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-FLUSH-FMAC-NEXT:    v_fmac_f32_e32 v3, v1, v2
-; GFX9-FLUSH-FMAC-NEXT:    global_store_dword v0, v3, s[8:9]
+; GFX9-FLUSH-FMAC-NEXT:    global_store_dword v5, v3, s[8:9]
 ; GFX9-FLUSH-FMAC-NEXT:    s_endpgm
 ;
 ; GFX9-DENORM-FASTFMA-FMAC-LABEL: fmuladd_f32:
 ; GFX9-DENORM-FASTFMA-FMAC:       ; %bb.0:
 ; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
-; GFX9-DENORM-FASTFMA-FMAC-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v1, v0, s[10:11]
-; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v2, v0, s[12:13]
-; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v3, v0, s[14:15]
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v1, v5, s[10:11]
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v2, v5, s[12:13]
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v3, v5, s[14:15]
 ; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-DENORM-FASTFMA-FMAC-NEXT:    v_fmac_f32_e32 v3, v1, v2
-; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_store_dword v0, v3, s[8:9]
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_store_dword v5, v3, s[8:9]
 ; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: fmuladd_f32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x24
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_clause 0x2
-; GFX10-NEXT:    global_load_dword v1, v0, s[2:3]
-; GFX10-NEXT:    global_load_dword v2, v0, s[4:5]
-; GFX10-NEXT:    global_load_dword v3, v0, s[6:7]
+; GFX10-NEXT:    global_load_dword v1, v5, s[2:3]
+; GFX10-NEXT:    global_load_dword v2, v5, s[4:5]
+; GFX10-NEXT:    global_load_dword v3, v5, s[6:7]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_fmac_f32_e32 v3, v1, v2
-; GFX10-NEXT:    global_store_dword v0, v3, s[0:1]
+; GFX10-NEXT:    global_store_dword v5, v3, s[0:1]
 ; GFX10-NEXT:    s_endpgm
   %r0 = load float, ptr addrspace(1) %in1
   %r1 = load float, ptr addrspace(1) %in2
@@ -277,63 +277,63 @@ define amdgpu_kernel void @fmul_fadd_f32(ptr addrspace(1) %out, ptr addrspace(1)
 ; GFX9-FLUSH-LABEL: fmul_fadd_f32:
 ; GFX9-FLUSH:       ; %bb.0:
 ; GFX9-FLUSH-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
-; GFX9-FLUSH-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-FLUSH-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-FLUSH-NEXT:    global_load_dword v1, v0, s[10:11] glc
+; GFX9-FLUSH-NEXT:    global_load_dword v1, v5, s[10:11] glc
 ; GFX9-FLUSH-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FLUSH-NEXT:    global_load_dword v2, v0, s[12:13] glc
+; GFX9-FLUSH-NEXT:    global_load_dword v2, v5, s[12:13] glc
 ; GFX9-FLUSH-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FLUSH-NEXT:    global_load_dword v3, v0, s[14:15] glc
+; GFX9-FLUSH-NEXT:    global_load_dword v3, v5, s[14:15] glc
 ; GFX9-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-FLUSH-NEXT:    v_mac_f32_e32 v3, v1, v2
-; GFX9-FLUSH-NEXT:    global_store_dword v0, v3, s[8:9]
+; GFX9-FLUSH-NEXT:    global_store_dword v5, v3, s[8:9]
 ; GFX9-FLUSH-NEXT:    s_endpgm
 ;
 ; GFX9-DENORM-LABEL: fmul_fadd_f32:
 ; GFX9-DENORM:       ; %bb.0:
 ; GFX9-DENORM-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
-; GFX9-DENORM-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-DENORM-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DENORM-NEXT:    global_load_dword v1, v0, s[10:11] glc
+; GFX9-DENORM-NEXT:    global_load_dword v1, v5, s[10:11] glc
 ; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-DENORM-NEXT:    global_load_dword v2, v0, s[12:13] glc
+; GFX9-DENORM-NEXT:    global_load_dword v2, v5, s[12:13] glc
 ; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-DENORM-NEXT:    global_load_dword v3, v0, s[14:15] glc
+; GFX9-DENORM-NEXT:    global_load_dword v3, v5, s[14:15] glc
 ; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-DENORM-NEXT:    v_mul_f32_e32 v1, v1, v2
 ; GFX9-DENORM-NEXT:    v_add_f32_e32 v1, v1, v3
-; GFX9-DENORM-NEXT:    global_store_dword v0, v1, s[8:9]
+; GFX9-DENORM-NEXT:    global_store_dword v5, v1, s[8:9]
 ; GFX9-DENORM-NEXT:    s_endpgm
 ;
 ; GFX10-FLUSH-LABEL: fmul_fadd_f32:
 ; GFX10-FLUSH:       ; %bb.0:
 ; GFX10-FLUSH-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x24
-; GFX10-FLUSH-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-FLUSH-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX10-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-FLUSH-NEXT:    global_load_dword v1, v0, s[2:3] glc dlc
+; GFX10-FLUSH-NEXT:    global_load_dword v1, v5, s[2:3] glc dlc
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-FLUSH-NEXT:    global_load_dword v2, v0, s[4:5] glc dlc
+; GFX10-FLUSH-NEXT:    global_load_dword v2, v5, s[4:5] glc dlc
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-FLUSH-NEXT:    global_load_dword v3, v0, s[6:7] glc dlc
+; GFX10-FLUSH-NEXT:    global_load_dword v3, v5, s[6:7] glc dlc
 ; GFX10-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLUSH-NEXT:    v_mac_f32_e32 v3, v1, v2
-; GFX10-FLUSH-NEXT:    global_store_dword v0, v3, s[0:1]
+; GFX10-FLUSH-NEXT:    global_store_dword v5, v3, s[0:1]
 ; GFX10-FLUSH-NEXT:    s_endpgm
 ;
 ; GFX10-DENORM-LABEL: fmul_fadd_f32:
 ; GFX10-DENORM:       ; %bb.0:
 ; GFX10-DENORM-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x24
-; GFX10-DENORM-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-DENORM-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX10-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-DENORM-NEXT:    global_load_dword v1, v0, s[2:3] glc dlc
+; GFX10-DENORM-NEXT:    global_load_dword v1, v5, s[2:3] glc dlc
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-NEXT:    global_load_dword v2, v0, s[4:5] glc dlc
+; GFX10-DENORM-NEXT:    global_load_dword v2, v5, s[4:5] glc dlc
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-NEXT:    global_load_dword v3, v0, s[6:7] glc dlc
+; GFX10-DENORM-NEXT:    global_load_dword v3, v5, s[6:7] glc dlc
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DENORM-NEXT:    v_mul_f32_e32 v1, v1, v2
 ; GFX10-DENORM-NEXT:    v_add_f32_e32 v1, v1, v3
-; GFX10-DENORM-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-DENORM-NEXT:    global_store_dword v5, v1, s[0:1]
 ; GFX10-DENORM-NEXT:    s_endpgm
   %r0 = load volatile float, ptr addrspace(1) %in1
   %r1 = load volatile float, ptr addrspace(1) %in2
@@ -439,76 +439,76 @@ define amdgpu_kernel void @fmul_fadd_contract_f32(ptr addrspace(1) %out, ptr add
 ; GFX9-FLUSH-MAD-LABEL: fmul_fadd_contract_f32:
 ; GFX9-FLUSH-MAD:       ; %bb.0:
 ; GFX9-FLUSH-MAD-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
-; GFX9-FLUSH-MAD-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-FLUSH-MAD-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-FLUSH-MAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-FLUSH-MAD-NEXT:    global_load_dword v1, v0, s[10:11] glc
+; GFX9-FLUSH-MAD-NEXT:    global_load_dword v1, v5, s[10:11] glc
 ; GFX9-FLUSH-MAD-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FLUSH-MAD-NEXT:    global_load_dword v2, v0, s[12:13] glc
+; GFX9-FLUSH-MAD-NEXT:    global_load_dword v2, v5, s[12:13] glc
 ; GFX9-FLUSH-MAD-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FLUSH-MAD-NEXT:    global_load_dword v3, v0, s[14:15] glc
+; GFX9-FLUSH-MAD-NEXT:    global_load_dword v3, v5, s[14:15] glc
 ; GFX9-FLUSH-MAD-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-FLUSH-MAD-NEXT:    v_mac_f32_e32 v3, v1, v2
-; GFX9-FLUSH-MAD-NEXT:    global_store_dword v0, v3, s[8:9]
+; GFX9-FLUSH-MAD-NEXT:    global_store_dword v5, v3, s[8:9]
 ; GFX9-FLUSH-MAD-NEXT:    s_endpgm
 ;
 ; GFX9-DENORM-FASTFMA-MAD-LABEL: fmul_fadd_contract_f32:
 ; GFX9-DENORM-FASTFMA-MAD:       ; %bb.0:
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
-; GFX9-DENORM-FASTFMA-MAD-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-DENORM-FASTFMA-MAD-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DENORM-FASTFMA-MAD-NEXT:    global_load_dword v1, v0, s[10:11] glc
+; GFX9-DENORM-FASTFMA-MAD-NEXT:    global_load_dword v1, v5, s[10:11] glc
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-DENORM-FASTFMA-MAD-NEXT:    global_load_dword v2, v0, s[12:13] glc
+; GFX9-DENORM-FASTFMA-MAD-NEXT:    global_load_dword v2, v5, s[12:13] glc
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-DENORM-FASTFMA-MAD-NEXT:    global_load_dword v3, v0, s[14:15] glc
+; GFX9-DENORM-FASTFMA-MAD-NEXT:    global_load_dword v3, v5, s[14:15] glc
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    v_fma_f32 v1, v1, v2, v3
-; GFX9-DENORM-FASTFMA-MAD-NEXT:    global_store_dword v0, v1, s[8:9]
+; GFX9-DENORM-FASTFMA-MAD-NEXT:    global_store_dword v5, v1, s[8:9]
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    s_endpgm
 ;
 ; GFX9-FLUSH-FMAC-LABEL: fmul_fadd_contract_f32:
 ; GFX9-FLUSH-FMAC:       ; %bb.0:
 ; GFX9-FLUSH-FMAC-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
-; GFX9-FLUSH-FMAC-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-FLUSH-FMAC-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v1, v0, s[10:11] glc
+; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v1, v5, s[10:11] glc
 ; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v2, v0, s[12:13] glc
+; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v2, v5, s[12:13] glc
 ; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v3, v0, s[14:15] glc
+; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v3, v5, s[14:15] glc
 ; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-FLUSH-FMAC-NEXT:    v_fmac_f32_e32 v3, v1, v2
-; GFX9-FLUSH-FMAC-NEXT:    global_store_dword v0, v3, s[8:9]
+; GFX9-FLUSH-FMAC-NEXT:    global_store_dword v5, v3, s[8:9]
 ; GFX9-FLUSH-FMAC-NEXT:    s_endpgm
 ;
 ; GFX9-DENORM-FASTFMA-FMAC-LABEL: fmul_fadd_contract_f32:
 ; GFX9-DENORM-FASTFMA-FMAC:       ; %bb.0:
 ; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
-; GFX9-DENORM-FASTFMA-FMAC-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v1, v0, s[10:11] glc
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v1, v5, s[10:11] glc
 ; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v2, v0, s[12:13] glc
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v2, v5, s[12:13] glc
 ; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v3, v0, s[14:15] glc
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v3, v5, s[14:15] glc
 ; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-DENORM-FASTFMA-FMAC-NEXT:    v_fmac_f32_e32 v3, v1, v2
-; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_store_dword v0, v3, s[8:9]
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_store_dword v5, v3, s[8:9]
 ; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: fmul_fadd_contract_f32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x24
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    global_load_dword v1, v0, s[2:3] glc dlc
+; GFX10-NEXT:    global_load_dword v1, v5, s[2:3] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    global_load_dword v2, v0, s[4:5] glc dlc
+; GFX10-NEXT:    global_load_dword v2, v5, s[4:5] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    global_load_dword v3, v0, s[6:7] glc dlc
+; GFX10-NEXT:    global_load_dword v3, v5, s[6:7] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_fmac_f32_e32 v3, v1, v2
-; GFX10-NEXT:    global_store_dword v0, v3, s[0:1]
+; GFX10-NEXT:    global_store_dword v5, v3, s[0:1]
 ; GFX10-NEXT:    s_endpgm
   %r0 = load volatile float, ptr addrspace(1) %in1
   %r1 = load volatile float, ptr addrspace(1) %in2

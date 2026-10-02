@@ -686,15 +686,15 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_unaligned(ptr addrspace(1) noalias
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    v_add_u32_e32 v2, vcc, 1, v0
-; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; VI-NEXT:    v_add_u32_e32 v4, vcc, 2, v0
-; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    v_add_u32_e32 v8, vcc, 1, v0
+; VI-NEXT:    v_addc_u32_e32 v9, vcc, 0, v1, vcc
+; VI-NEXT:    v_add_u32_e32 v10, vcc, 2, v0
+; VI-NEXT:    v_addc_u32_e32 v11, vcc, 0, v1, vcc
 ; VI-NEXT:    v_add_u32_e32 v6, vcc, 3, v0
 ; VI-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_ubyte v2, v[2:3]
+; VI-NEXT:    flat_load_ubyte v2, v[8:9]
 ; VI-NEXT:    flat_load_ubyte v3, v[6:7]
-; VI-NEXT:    flat_load_ubyte v4, v[4:5]
+; VI-NEXT:    flat_load_ubyte v4, v[10:11]
 ; VI-NEXT:    flat_load_ubyte v0, v[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    s_waitcnt vmcnt(3)
@@ -1164,15 +1164,15 @@ define amdgpu_kernel void @v4i8_zext_v4i32_to_v4f32(ptr addrspace(1) noalias %ou
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    v_add_u32_e32 v2, vcc, 1, v0
-; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; VI-NEXT:    v_add_u32_e32 v4, vcc, 2, v0
-; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    v_add_u32_e32 v8, vcc, 1, v0
+; VI-NEXT:    v_addc_u32_e32 v9, vcc, 0, v1, vcc
+; VI-NEXT:    v_add_u32_e32 v10, vcc, 2, v0
+; VI-NEXT:    v_addc_u32_e32 v11, vcc, 0, v1, vcc
 ; VI-NEXT:    v_add_u32_e32 v6, vcc, 3, v0
 ; VI-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_ubyte v2, v[2:3]
+; VI-NEXT:    flat_load_ubyte v2, v[8:9]
 ; VI-NEXT:    flat_load_ubyte v3, v[6:7]
-; VI-NEXT:    flat_load_ubyte v4, v[4:5]
+; VI-NEXT:    flat_load_ubyte v4, v[10:11]
 ; VI-NEXT:    flat_load_ubyte v0, v[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    s_waitcnt vmcnt(3)

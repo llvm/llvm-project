@@ -259,31 +259,29 @@ define amdgpu_kernel void @simple_write2_two_val_subreg2_mixed_f32(ptr addrspace
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, 0
-; CI-NEXT:    v_lshlrev_b32_e32 v1, 3, v0
-; CI-NEXT:    v_mov_b32_e32 v2, 0
+; CI-NEXT:    v_lshlrev_b32_e32 v7, 3, v0
+; CI-NEXT:    v_mov_b32_e32 v8, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    buffer_load_dwordx2 v[3:4], v[1:2], s[0:3], 0 addr64 glc
+; CI-NEXT:    buffer_load_dwordx2 v[3:4], v[7:8], s[0:3], 0 addr64 glc
 ; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    buffer_load_dwordx2 v[1:2], v[1:2], s[0:3], 0 addr64 offset:8 glc
+; CI-NEXT:    buffer_load_dwordx2 v[5:6], v[7:8], s[0:3], 0 addr64 offset:8 glc
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    s_mov_b32 m0, -1
-; CI-NEXT:    ds_write2_b32 v0, v3, v2 offset1:8
+; CI-NEXT:    ds_write2_b32 v0, v3, v6 offset1:8
 ; CI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: simple_write2_two_val_subreg2_mixed_f32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x8
-; GFX9-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 3, v0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-NEXT:    ; kill: killed $vgpr4
-; GFX9-NEXT:    ; kill: killed $sgpr0_sgpr1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dwordx2 v[1:2], v4, s[0:1] glc
+; GFX9-NEXT:    global_load_dwordx2 v[1:2], v3, s[0:1] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    global_load_dwordx2 v[2:3], v4, s[0:1] offset:8 glc
+; GFX9-NEXT:    global_load_dwordx2 v[6:7], v3, s[0:1] offset:8 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    ds_write2_b32 v0, v1, v3 offset1:8
+; GFX9-NEXT:    ds_write2_b32 v0, v1, v7 offset1:8
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: simple_write2_two_val_subreg2_mixed_f32:
@@ -1036,13 +1034,13 @@ define amdgpu_kernel void @simple_write2_two_val_f64(ptr addrspace(1) %C, ptr ad
 ; GFX9-LABEL: simple_write2_two_val_f64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x8
-; GFX9-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v5, 3, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dwordx2 v[0:1], v4, s[0:1] glc
+; GFX9-NEXT:    global_load_dwordx2 v[0:1], v5, s[0:1] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    global_load_dwordx2 v[2:3], v4, s[0:1] offset:8 glc
+; GFX9-NEXT:    global_load_dwordx2 v[2:3], v5, s[0:1] offset:8 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    ds_write2_b64 v4, v[0:1], v[2:3] offset1:8
+; GFX9-NEXT:    ds_write2_b64 v5, v[0:1], v[2:3] offset1:8
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: simple_write2_two_val_f64:
@@ -1054,13 +1052,13 @@ define amdgpu_kernel void @simple_write2_two_val_f64(ptr addrspace(1) %C, ptr ad
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_and_b32_e32 v4, 0x1ff8, v0
+; GFX1250-NEXT:    v_and_b32_e32 v5, 0x1ff8, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scope:SCOPE_SYS
+; GFX1250-NEXT:    global_load_b64 v[0:1], v5, s[0:1] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    global_load_b64 v[2:3], v4, s[0:1] offset:8 scope:SCOPE_SYS
+; GFX1250-NEXT:    global_load_b64 v[2:3], v5, s[0:1] offset:8 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    ds_store_2addr_b64 v4, v[0:1], v[2:3] offset1:8
+; GFX1250-NEXT:    ds_store_2addr_b64 v5, v[0:1], v[2:3] offset1:8
 ; GFX1250-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in.gep.0 = getelementptr double, ptr addrspace(1) %in, i32 %x.i

@@ -479,15 +479,15 @@ define amdgpu_kernel void @dword_from_v16i16(ptr addrspace(1) %out, ptr addrspac
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 5, v0
-; GCN-NEXT:    v_mov_b32_e32 v4, 8
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v1, s3
 ; GCN-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
 ; GCN-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GCN-NEXT:    v_add_u32_e32 v2, vcc, 20, v0
-; GCN-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; GCN-NEXT:    flat_load_dword v2, v[2:3]
+; GCN-NEXT:    v_add_u32_e32 v4, vcc, 20, v0
+; GCN-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GCN-NEXT:    flat_load_dword v2, v[4:5]
 ; GCN-NEXT:    flat_load_dword v3, v[0:1]
+; GCN-NEXT:    v_mov_b32_e32 v4, 8
 ; GCN-NEXT:    s_mov_b32 s2, 0xc0c0500
 ; GCN-NEXT:    s_mov_b32 s3, 0x4020c0c
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0

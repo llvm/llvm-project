@@ -6390,13 +6390,13 @@ define <32 x float> @global_extload_v32bf16_to_v32f32(ptr addrspace(1) %ptr) #0 
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 16, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
+; GFX8-NEXT:    v_add_u32_e32 v8, vcc, 32, v0
+; GFX8-NEXT:    v_addc_u32_e32 v9, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dwordx4 v[4:7], v[0:1]
 ; GFX8-NEXT:    flat_load_dwordx4 v[12:15], v[2:3]
-; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 32, v0
-; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 48, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_dwordx4 v[20:23], v[2:3]
+; GFX8-NEXT:    flat_load_dwordx4 v[20:23], v[8:9]
 ; GFX8-NEXT:    flat_load_dwordx4 v[28:31], v[0:1]
 ; GFX8-NEXT:    s_waitcnt vmcnt(3)
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 16, v4
@@ -13441,7 +13441,7 @@ define bfloat @v_fadd_bf16_fpimm_0(bfloat %arg0) #0 {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_pk_add_bf16 v0, v0, 1.0
+; GFX1250-NEXT:    v_pk_add_bf16 v0, v0, 1.0 op_sel:[0,1]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %add = fadd bfloat %arg0, 1.0
   ret bfloat %add
