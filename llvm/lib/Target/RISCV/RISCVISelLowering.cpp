@@ -6817,8 +6817,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
       NumElts != 2)
     return DAG.getNode(ISD::VECTOR_REVERSE, DL, VT, V1);
 
-  // If this is a deinterleave(2), try using vunzip{e,o}. This mostly catches
-  // e64 which can't match above.
+  // Try using vunzip{e,o} from Zvzip to lower deinterleave2.
   unsigned Index = 0;
   if (Subtarget.hasStdExtZvzip() &&
       ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 2, Index) &&
