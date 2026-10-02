@@ -9,9 +9,9 @@ define dso_local void @double_memset(ptr nocapture %p, ptr noalias nocapture %q,
 ; CHECK-NEXT:    br i1 [[CMP4]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[Q:%.*]], i8 0, i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[Q:%.*]], i8 0, i64 range(i64 0, 2147483648) [[TMP0]], i1 false)
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[N]] to i64
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P:%.*]], i8 0, i64 [[TMP1]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P:%.*]], i8 0, i64 range(i64 0, 2147483648) [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]

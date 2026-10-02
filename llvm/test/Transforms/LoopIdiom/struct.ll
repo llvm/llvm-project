@@ -22,7 +22,7 @@ define void @bar1(ptr %f, i32 %n) nounwind ssp {
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[F:%.*]], i8 0, i64 [[TMP1]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[F:%.*]], i8 0, i64 range(i64 0, 34359738361) [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -76,7 +76,7 @@ define void @bar2(ptr %f, i32 %n) nounwind ssp {
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[F:%.*]], i8 0, i64 [[TMP1]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[F:%.*]], i8 0, i64 range(i64 0, 34359738361) [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -135,7 +135,7 @@ define void @bar3(ptr nocapture %f, i32 %n) nounwind ssp {
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP1]], [[TMP4]]
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[F:%.*]], i64 [[TMP5]]
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[UGLYGEP]], i8 0, i64 [[TMP1]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[UGLYGEP]], i8 0, i64 range(i64 0, 34359738361) [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -299,7 +299,7 @@ define void @bar6(ptr nocapture %f, i32 %n) nounwind ssp {
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[F:%.*]], i8 0, i64 [[TMP1]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[F:%.*]], i8 0, i64 range(i64 0, 34359738361) [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]

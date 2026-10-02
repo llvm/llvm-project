@@ -15,7 +15,7 @@ define dso_local void @arm_fill_q7(i8 signext %value, ptr %pDst, i32 %blockSize)
 ; CHECK-NEXT:    br i1 [[CMP_NOT14]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
 ; CHECK:       while.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[BLOCKSIZE]], -4
-; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr align 1 [[PDST:%.*]], i8 [[VALUE:%.*]], i32 [[TMP0]], i1 false), !tbaa [[TBAA3:![0-9]+]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr align 1 [[PDST:%.*]], i8 [[VALUE:%.*]], i32 range(i32 0, -3) [[TMP0]], i1 false), !tbaa [[TBAA3:![0-9]+]]
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[TMP0]]
 ; CHECK-NEXT:    br label [[WHILE_END]]
 ; CHECK:       while.end:
@@ -24,7 +24,7 @@ define dso_local void @arm_fill_q7(i8 signext %value, ptr %pDst, i32 %blockSize)
 ; CHECK-NEXT:    [[CMP14_NOT17:%.*]] = icmp eq i32 [[REM]], 0
 ; CHECK-NEXT:    br i1 [[CMP14_NOT17]], label [[WHILE_END18:%.*]], label [[WHILE_BODY16_PREHEADER:%.*]]
 ; CHECK:       while.body16.preheader:
-; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr align 1 [[PDST_ADDR_0_LCSSA]], i8 [[VALUE]], i32 [[REM]], i1 false), !tbaa [[TBAA3]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr align 1 [[PDST_ADDR_0_LCSSA]], i8 [[VALUE]], i32 range(i32 0, 4) [[REM]], i1 false), !tbaa [[TBAA3]]
 ; CHECK-NEXT:    br label [[WHILE_END18]]
 ; CHECK:       while.end18:
 ; CHECK-NEXT:    ret void
