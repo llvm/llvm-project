@@ -1239,7 +1239,8 @@ std::vector<SymbolVector> GetSymbolVectors(const Expr<SomeType> &expr) {
   return symbolVectors;
 }
 
-int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr) {
+static semantics::UnorderedSymbolSet CollectUniqueCUDADeviceSymbols(
+    const Expr<SomeType> &expr) {
   std::vector<SymbolVector> symbolVectors{evaluate::GetSymbolVectors(expr)};
   semantics::UnorderedSymbolSet symbols;
   semantics::UnorderedSymbolSet cudaSymbols{CollectCudaSymbols(expr)};
@@ -1253,7 +1254,21 @@ int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr) {
       }
     }
   }
-  return symbols.size();
+  return symbols;
+}
+
+int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr) {
+  return CollectUniqueCUDADeviceSymbols(expr).size();
+}
+
+int GetNbOfUniqueCUDAManagedOrUnifiedSymbols(const Expr<SomeType> &expr) {
+  int count{0};
+  for (const Symbol &sym : CollectUniqueCUDADeviceSymbols(expr)) {
+    if (IsCUDAManagedOrUnifiedSymbol(sym)) {
+      ++count;
+    }
+  }
+  return count;
 }
 
 std::pair<semantics::UnorderedSymbolSet, semantics::UnorderedSymbolSet>

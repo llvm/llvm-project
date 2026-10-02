@@ -115,12 +115,14 @@ class LldbGdbServerTestCase(
         context = self.expect_gdbremote_sequence()
         self.assertEqual(context.get("thread_id_QC"), context.get("thread_id_?"))
 
-    # This test is flaky on Windows. Sometimes returns 'Exception 0x80000003'.
-    @skipIf(oslist=["windows"], bugnumber="github.com/llvm/llvm-project/issues/138085")
     def test_attach_commandline_continue_app_exits(self):
         self.build()
         self.set_inferior_startup_attach()
-        procs = self.prep_debug_monitor_and_inferior()
+        attached_file = lldbutil.append_to_process_working_directory(self, "attached")
+        procs = self.prep_debug_monitor_and_inferior(
+            inferior_args=["waitfile:" + attached_file], inferior_sleep_seconds=0
+        )
+        lldbutil.create_file_on_target(self, attached_file)
         self.test_sequence.add_log_lines(
             ["read packet: $vCont;c#a8", "send packet: $W00#00"], True
         )

@@ -5086,6 +5086,7 @@ ConvertF32x2ToF4x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF4x2Op op,
   llvm::SmallVector<llvm::Value *> args;
   args.push_back(mt.lookupValue(op.getA()));
   args.push_back(mt.lookupValue(op.getB()));
+  args.push_back(builder.getInt1(false));
 
   bool hasRelu = op.getRelu();
 
@@ -5130,6 +5131,7 @@ ConvertF16x2ToF4x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF16x2ToF4x2Op &op,
 
   llvm::SmallVector<llvm::Value *> args;
   args.push_back(mt.lookupValue(op.getSrc()));
+  args.push_back(builder.getInt1(false));
 
   return {intId, std::move(args)};
 }
@@ -5149,6 +5151,7 @@ ConvertBF16x2ToF4x2Op::getIntrinsicIDAndArgs(NVVM::ConvertBF16x2ToF4x2Op &op,
 
   llvm::SmallVector<llvm::Value *> args;
   args.push_back(mt.lookupValue(op.getSrc()));
+  args.push_back(builder.getInt1(false));
 
   return {intId, std::move(args)};
 }
