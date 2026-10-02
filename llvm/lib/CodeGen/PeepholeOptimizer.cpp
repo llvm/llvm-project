@@ -932,8 +932,8 @@ bool PeepholeOptimizer::optimizeExtInstr(
       [[maybe_unused]] auto Copy = BuildMI(*UseMBB, UseMI, UseMI->getDebugLoc(),
                                            TII->get(TargetOpcode::COPY), NewVR)
                                        .addReg(DstReg, {}, SubIdx);
-      LLVM_DEBUG(dbgs() << "  Build new copy: " << *Copy);
-      LLVM_DEBUG(dbgs() << "  Changing: " << *UseMI);
+      LLVM_DEBUG(dbgs() << "  Build new copy: " << *Copy
+                        << "  Changing: " << *UseMI);
       if (UseSrcSubIdx)
         UseMO->setSubReg(0);
 
