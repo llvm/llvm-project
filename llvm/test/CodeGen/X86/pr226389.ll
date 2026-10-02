@@ -7,15 +7,11 @@
 define i8 @cmp_v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, <2 x float> %d, <2 x float> %e, <2 x float> %f) nounwind {
 ; CHECK-LABEL: cmp_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcmpltps %xmm0, %xmm1, %k0
-; CHECK-NEXT:    vcmpltps %xmm0, %xmm2, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    vcmpltps %xmm0, %xmm3, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    vcmpltps %xmm0, %xmm4, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    vcmpltps %xmm0, %xmm5, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
+; CHECK-NEXT:    vcmpltps %xmm0, %xmm1, %k1
+; CHECK-NEXT:    vcmpltps %xmm0, %xmm2, %k1 {%k1}
+; CHECK-NEXT:    vcmpltps %xmm0, %xmm3, %k1 {%k1}
+; CHECK-NEXT:    vcmpltps %xmm0, %xmm4, %k1 {%k1}
+; CHECK-NEXT:    vcmpltps %xmm0, %xmm5, %k0 {%k1}
 ; CHECK-NEXT:    kshiftlb $6, %k0, %k0
 ; CHECK-NEXT:    kshiftrb $6, %k0, %k0
 ; CHECK-NEXT:    kmovb %k0, -{{[0-9]+}}(%rsp)
@@ -40,15 +36,11 @@ define i8 @cmp_v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, <2 x float>
 define i8 @cmp_v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> %d, <2 x i32> %e, <2 x i32> %f) nounwind {
 ; CHECK-LABEL: cmp_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpcmpgtd %xmm1, %xmm0, %k0
-; CHECK-NEXT:    vpcmpgtd %xmm2, %xmm0, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    vpcmpgtd %xmm3, %xmm0, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    vpcmpgtd %xmm4, %xmm0, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    vpcmpgtd %xmm5, %xmm0, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
+; CHECK-NEXT:    vpcmpgtd %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vpcmpgtd %xmm2, %xmm0, %k1 {%k1}
+; CHECK-NEXT:    vpcmpgtd %xmm3, %xmm0, %k1 {%k1}
+; CHECK-NEXT:    vpcmpgtd %xmm4, %xmm0, %k1 {%k1}
+; CHECK-NEXT:    vpcmpgtd %xmm5, %xmm0, %k0 {%k1}
 ; CHECK-NEXT:    kshiftlb $6, %k0, %k0
 ; CHECK-NEXT:    kshiftrb $6, %k0, %k0
 ; CHECK-NEXT:    kmovb %k0, -{{[0-9]+}}(%rsp)
@@ -73,15 +65,11 @@ define i8 @cmp_v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> %d, <2 
 define i8 @cmp_v2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x i16> %d, <2 x i16> %e, <2 x i16> %f) nounwind {
 ; CHECK-LABEL: cmp_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpcmpgtw %xmm1, %xmm0, %k0
-; CHECK-NEXT:    vpcmpgtw %xmm2, %xmm0, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    vpcmpgtw %xmm3, %xmm0, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    vpcmpgtw %xmm4, %xmm0, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    vpcmpgtw %xmm5, %xmm0, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
+; CHECK-NEXT:    vpcmpgtw %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vpcmpgtw %xmm2, %xmm0, %k1 {%k1}
+; CHECK-NEXT:    vpcmpgtw %xmm3, %xmm0, %k1 {%k1}
+; CHECK-NEXT:    vpcmpgtw %xmm4, %xmm0, %k1 {%k1}
+; CHECK-NEXT:    vpcmpgtw %xmm5, %xmm0, %k0 {%k1}
 ; CHECK-NEXT:    kshiftlb $6, %k0, %k0
 ; CHECK-NEXT:    kshiftrb $6, %k0, %k0
 ; CHECK-NEXT:    kmovb %k0, -{{[0-9]+}}(%rsp)
@@ -106,15 +94,11 @@ define i8 @cmp_v2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x i16> %d, <2 
 define i8 @cmp_v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16> %d, <4 x i16> %e, <4 x i16> %f) nounwind {
 ; CHECK-LABEL: cmp_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpcmpgtw %xmm1, %xmm0, %k0
-; CHECK-NEXT:    vpcmpgtw %xmm2, %xmm0, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    vpcmpgtw %xmm3, %xmm0, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    vpcmpgtw %xmm4, %xmm0, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    vpcmpgtw %xmm5, %xmm0, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
+; CHECK-NEXT:    vpcmpgtw %xmm1, %xmm0, %k1
+; CHECK-NEXT:    vpcmpgtw %xmm2, %xmm0, %k1 {%k1}
+; CHECK-NEXT:    vpcmpgtw %xmm3, %xmm0, %k1 {%k1}
+; CHECK-NEXT:    vpcmpgtw %xmm4, %xmm0, %k1 {%k1}
+; CHECK-NEXT:    vpcmpgtw %xmm5, %xmm0, %k0 {%k1}
 ; CHECK-NEXT:    kshiftlb $4, %k0, %k0
 ; CHECK-NEXT:    kshiftrb $4, %k0, %k0
 ; CHECK-NEXT:    kmovb %k0, -{{[0-9]+}}(%rsp)
@@ -167,11 +151,9 @@ define i8 @cmp_v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float>
 define i2 @cmp_v4f32_extract(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d) nounwind {
 ; CHECK-LABEL: cmp_v4f32_extract:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcmpltps %xmm0, %xmm1, %k0
-; CHECK-NEXT:    vcmpltps %xmm0, %xmm2, %k1
-; CHECK-NEXT:    vcmpltps %xmm0, %xmm3, %k2
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    kandw %k2, %k0, %k0
+; CHECK-NEXT:    vcmpltps %xmm0, %xmm1, %k1
+; CHECK-NEXT:    vcmpltps %xmm0, %xmm2, %k1 {%k1}
+; CHECK-NEXT:    vcmpltps %xmm0, %xmm3, %k0 {%k1}
 ; CHECK-NEXT:    kmovd %k0, %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
@@ -189,9 +171,8 @@ define i2 @cmp_v4f32_extract(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 
 define <2 x i1> @cmp_v2f32_mask(ptr %p, <2 x float> %a, <2 x float> %b) nounwind {
 ; CHECK-LABEL: cmp_v2f32_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    kmovb (%rdi), %k0
-; CHECK-NEXT:    vcmpltps %xmm0, %xmm1, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
+; CHECK-NEXT:    kmovb (%rdi), %k1
+; CHECK-NEXT:    vcmpltps %xmm0, %xmm1, %k0 {%k1}
 ; CHECK-NEXT:    vpmovm2q %k0, %xmm0
 ; CHECK-NEXT:    retq
   %mask = load <2 x i1>, ptr %p
