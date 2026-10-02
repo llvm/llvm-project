@@ -3258,6 +3258,100 @@ LogicalResult SectionsOp::verifyRegions() {
   return success();
 }
 
+/// Return whether all operations in the op's regions are memory-effect-free.
+static bool areRegionsMemoryEffectFree(Operation *op) {
+  for (Region &region : op->getRegions())
+    for (Operation &nestedOp : region.getOps())
+      if (!isMemoryEffectFree(&nestedOp))
+        return false;
+  return true;
+}
+
+/// Model private storage and the effects of referenced privatisation recipes.
+template <typename OpType>
+static void getPrivatisationEffects(
+    OpType op, SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  std::optional<ArrayAttr> privateSyms = op.getPrivateSyms();
+  if (!privateSyms)
+    return;
+
+  MutableOperandRange privateVars = op.getPrivateVarsMutable();
+  auto iface = cast<BlockArgOpenMPOpInterface>(op.getOperation());
+  Block::BlockArgListType privateArgs = iface.getPrivateBlockArgs();
+  for (auto entry : llvm::zip_equal(privateVars, privateArgs, *privateSyms)) {
+    OpOperand &original = std::get<0>(entry);
+    BlockArgument privateCopy = std::get<1>(entry);
+
+    effects.emplace_back(MemoryEffects::Allocate::get(), privateCopy);
+    effects.emplace_back(MemoryEffects::Free::get(), privateCopy);
+    // private variables may read the original as a mold
+    effects.emplace_back(MemoryEffects::Read::get(), &original);
+
+    auto privateSym = cast<SymbolRefAttr>(std::get<2>(entry));
+    auto privatiser =
+        SymbolTable::lookupNearestSymbolFrom<PrivateClauseOp>(op, privateSym);
+    // RecursiveMemoryEffects only covers regions nested in the directive, not
+    // symbol-referenced regions, user defined types have arbitrary recipe bodies.
+    // Default to a conservative model of read and write to arbitrary memory.
+    if (!privatiser || !areRegionsMemoryEffectFree(privatiser)) {
+      effects.emplace_back(MemoryEffects::Read::get());
+      effects.emplace_back(MemoryEffects::Write::get());
+    }
+  }
+}
+
+void SectionsOp::getEffects(
+    llvm::SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  // TODO: Nowait does not eliminate an implicit barrier if the reduction clause
+  // is also present
+  if (!getNowait() || (!getReductionVarsMutable().empty() && getNowait())) {
+    effects.emplace_back(MemoryEffects::Read::get());
+    effects.emplace_back(MemoryEffects::Write::get());
+  }
+
+  getPrivatisationEffects(*this, effects);
+  auto iface = cast<BlockArgOpenMPOpInterface>(getOperation());
+  // We cannot determine if the variable is lastprivate, so assume all privates
+  // are.
+  for (auto entry :
+       llvm::zip_equal(getPrivateVarsMutable(), iface.getPrivateBlockArgs())) {
+    effects.emplace_back(MemoryEffects::Read::get(), std::get<1>(entry));
+    effects.emplace_back(MemoryEffects::Write::get(), &std::get<0>(entry));
+  }
+
+  Block::BlockArgListType reductionArgs = iface.getReductionBlockArgs();
+  MutableOperandRange reductionVars = getReductionVarsMutable();
+
+  for (auto entry : llvm::zip_equal(reductionVars, reductionArgs)) {
+    OpOperand &original = std::get<0>(entry);
+    BlockArgument privateAccumulator = std::get<1>(entry);
+
+    effects.emplace_back(MemoryEffects::Allocate::get(), privateAccumulator);
+    effects.emplace_back(MemoryEffects::Free::get(), privateAccumulator);
+
+    effects.emplace_back(MemoryEffects::Read::get(), privateAccumulator);
+
+    effects.emplace_back(MemoryEffects::Read::get(), &original);
+    effects.emplace_back(MemoryEffects::Write::get(), &original);
+  }
+
+  if (auto reductionSyms = getReductionSyms()) {
+    for (Attribute attr : *reductionSyms) {
+      auto recipe = SymbolTable::lookupNearestSymbolFrom<DeclareReductionOp>(
+          *this, cast<SymbolRefAttr>(attr));
+      if (recipe && areRegionsMemoryEffectFree(recipe))
+        continue;
+      // RecursiveMemoryEffects only covers operations nested in this directive.
+      // Reduction recipes are separate declarations referenced by symbol, so
+      // their effects must be accounted for explicitly.
+      effects.emplace_back(MemoryEffects::Read::get());
+      effects.emplace_back(MemoryEffects::Write::get());
+      break;
+    }
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // ScopeOp
 //===----------------------------------------------------------------------===//
