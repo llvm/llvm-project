@@ -12,16 +12,18 @@
 define ptr @preceding_index(i8 %x) {
 ; SPLIT-LABEL: define ptr @preceding_index(
 ; SPLIT-SAME: i8 [[X:%.*]]) {
-; SPLIT-NEXT:    [[INDEX:%.*]] = sext i8 [[X]] to i64
+; SPLIT-NEXT:    [[SUM:%.*]] = add i8 [[X]], 1
+; SPLIT-NEXT:    [[INDEX:%.*]] = sext i8 [[SUM]] to i64
 ; SPLIT-NEXT:    [[TMP1:%.*]] = getelementptr [128 x i8], ptr @array, i64 0, i64 [[INDEX]]
-; SPLIT-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 129
+; SPLIT-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 128
 ; SPLIT-NEXT:    ret ptr [[P1]]
 ;
 ; LOWER-LABEL: define ptr @preceding_index(
 ; LOWER-SAME: i8 [[X:%.*]]) {
-; LOWER-NEXT:    [[INDEX:%.*]] = sext i8 [[X]] to i64
+; LOWER-NEXT:    [[SUM:%.*]] = add i8 [[X]], 1
+; LOWER-NEXT:    [[INDEX:%.*]] = sext i8 [[SUM]] to i64
 ; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr @array, i64 [[INDEX]]
-; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 129
+; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 128
 ; LOWER-NEXT:    ret ptr [[UGLYGEP1]]
 ;
   %sum = add i8 %x, 1
@@ -33,19 +35,12 @@ define ptr @preceding_index(i8 %x) {
 ; The second index has stride 1, not 256. For x = -128, signed underflow gives
 ; a valid offset of 127 into this object. Distributing sext would give -129.
 define ptr @negative_offset(i8 %x) {
-; SPLIT-LABEL: define ptr @negative_offset(
-; SPLIT-SAME: i8 [[X:%.*]]) {
-; SPLIT-NEXT:    [[TMP1:%.*]] = sext i8 [[X]] to i64
-; SPLIT-NEXT:    [[TMP2:%.*]] = getelementptr [256 x i8], ptr @array, i64 0, i64 [[TMP1]]
-; SPLIT-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[TMP2]], i64 -1
-; SPLIT-NEXT:    ret ptr [[P2]]
-;
-; LOWER-LABEL: define ptr @negative_offset(
-; LOWER-SAME: i8 [[X:%.*]]) {
-; LOWER-NEXT:    [[TMP1:%.*]] = sext i8 [[X]] to i64
-; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr @array, i64 [[TMP1]]
-; LOWER-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 -1
-; LOWER-NEXT:    ret ptr [[UGLYGEP2]]
+; CHECK-LABEL: define ptr @negative_offset(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[SUM:%.*]] = add i8 [[X]], -1
+; CHECK-NEXT:    [[INDEX:%.*]] = sext i8 [[SUM]] to i64
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [256 x i8], ptr @array, i64 0, i64 [[INDEX]]
+; CHECK-NEXT:    ret ptr [[P]]
 ;
   %sum = add i8 %x, -1
   %index = sext i8 %sum to i64
@@ -59,16 +54,18 @@ define ptr @negative_offset(i8 %x) {
 define ptr @interior_base(i8 %x) {
 ; SPLIT-LABEL: define ptr @interior_base(
 ; SPLIT-SAME: i8 [[X:%.*]]) {
-; SPLIT-NEXT:    [[INDEX:%.*]] = sext i8 [[X]] to i64
+; SPLIT-NEXT:    [[SUM:%.*]] = add i8 [[X]], 1
+; SPLIT-NEXT:    [[INDEX:%.*]] = sext i8 [[SUM]] to i64
 ; SPLIT-NEXT:    [[TMP1:%.*]] = getelementptr [256 x i8], ptr @array, i64 0, i64 [[INDEX]]
-; SPLIT-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 129
+; SPLIT-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 128
 ; SPLIT-NEXT:    ret ptr [[P1]]
 ;
 ; LOWER-LABEL: define ptr @interior_base(
 ; LOWER-SAME: i8 [[X:%.*]]) {
-; LOWER-NEXT:    [[INDEX:%.*]] = sext i8 [[X]] to i64
+; LOWER-NEXT:    [[SUM:%.*]] = add i8 [[X]], 1
+; LOWER-NEXT:    [[INDEX:%.*]] = sext i8 [[SUM]] to i64
 ; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr @array, i64 [[INDEX]]
-; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 129
+; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 128
 ; LOWER-NEXT:    ret ptr [[UGLYGEP1]]
 ;
   %base = getelementptr i8, ptr @array, i64 128
@@ -85,20 +82,22 @@ define ptr @interior_base(i8 %x) {
 define ptr @repeated_index(i8 %x) {
 ; SPLIT-LABEL: define ptr @repeated_index(
 ; SPLIT-SAME: i8 [[X:%.*]]) {
-; SPLIT-NEXT:    [[TMP1:%.*]] = sext i8 [[X]] to i64
+; SPLIT-NEXT:    [[SUM:%.*]] = add i8 [[X]], -1
+; SPLIT-NEXT:    [[TMP1:%.*]] = sext i8 [[SUM]] to i64
 ; SPLIT-NEXT:    [[TMP2:%.*]] = sext i8 [[X]] to i64
 ; SPLIT-NEXT:    [[TMP3:%.*]] = getelementptr [256 x i8], ptr @array, i64 [[TMP2]], i64 [[TMP1]]
-; SPLIT-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[TMP3]], i64 -257
+; SPLIT-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[TMP3]], i64 -256
 ; SPLIT-NEXT:    ret ptr [[P2]]
 ;
 ; LOWER-LABEL: define ptr @repeated_index(
 ; LOWER-SAME: i8 [[X:%.*]]) {
-; LOWER-NEXT:    [[TMP1:%.*]] = sext i8 [[X]] to i64
+; LOWER-NEXT:    [[SUM:%.*]] = add i8 [[X]], -1
+; LOWER-NEXT:    [[TMP1:%.*]] = sext i8 [[SUM]] to i64
 ; LOWER-NEXT:    [[TMP3:%.*]] = sext i8 [[X]] to i64
 ; LOWER-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP3]], 8
 ; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr @array, i64 [[TMP2]]
 ; LOWER-NEXT:    [[UGLYGEP4:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 [[TMP1]]
-; LOWER-NEXT:    [[UGLYGEP3:%.*]] = getelementptr i8, ptr [[UGLYGEP4]], i64 -257
+; LOWER-NEXT:    [[UGLYGEP3:%.*]] = getelementptr i8, ptr [[UGLYGEP4]], i64 -256
 ; LOWER-NEXT:    ret ptr [[UGLYGEP3]]
 ;
   %sum = add i8 %x, -1
@@ -106,5 +105,3 @@ define ptr @repeated_index(i8 %x) {
   %p = getelementptr inbounds [256 x i8], ptr @array, i64 %index, i64 %index
   ret ptr %p
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK: {{.*}}
