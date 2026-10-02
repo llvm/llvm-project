@@ -159,7 +159,6 @@ constexpr bool test() {
 
   {
     // underlying const/non-const sentinel cannot be compared with non-const/const iterator
-
     using View = std::ranges::enumerate_view<ComparableView>;
     static_assert(!std::ranges::common_range<View>);
     static_assert(!simple_view<View>);
@@ -187,16 +186,26 @@ constexpr bool test() {
   }
 
   {
-    // input_iterator
-
+    // sentinel comparison with input move-only iterator must work without copying the iterator
     using InputIterator = cpp20_input_iterator<int*>;
-    using View          = MinimalView<InputIterator>;
-    View mv{InputIterator(std::to_address(base(buffer.begin()))),
-            Sentinel(InputIterator(std::to_address(base(buffer.end()))))};
+    using Sentinel      = sentinel_wrapper<InputIterator>;
+    using View          = MinimalView<InputIterator, Sentinel>;
+    static_assert(simple_view<View>);
+
+    View mv{InputIterator(buffer), Sentinel(InputIterator(buffer + 10))};
     std::ranges::enumerate_view ev(std::move(mv));
 
-    assert(ev.begin() != ev.end());
-    assert(ev.begin() + 10 == ev.end());
+    auto it = ev.begin();
+    assert(it != ev.end());
+    assert(ev.end() != it);
+
+    // enumerate_view iterator only has operator+ when the underlying range is random-access.
+    // for input_iterator we increment it explicitly.
+    for (int i = 0; i != 10; ++i)
+      ++it;
+
+    assert(it == ev.end());
+    assert(ev.end() == it);
   }
 
   return true;
