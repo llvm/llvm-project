@@ -718,7 +718,6 @@ static DiffVec &diffEncode(DiffVec &V, unsigned InitVal, Iter Begin, Iter End) {
 static void printDiff16(raw_ostream &OS, int16_t Val) { OS << Val; }
 
 static void printMask(raw_ostream &OS, LaneBitmask Val) {
-  constexpr unsigned NumWords = Bitset<LaneBitmask::BitWidth>::getNumWords64();
   // Check if all upper words beyond the first 64 bits are zero.
   LaneBitmask UpperWords = ~LaneBitmask(~0ULL) & Val;
   if (UpperWords.none()) {
@@ -726,8 +725,9 @@ static void printMask(raw_ostream &OS, LaneBitmask Val) {
   } else {
     // Emit the explicit std::array constructor for multi-word values.
     // Extract each 64-bit word by shifting and masking.
-    OS << "LaneBitmask(std::array<uint64_t, " << NumWords << ">{";
-    for (unsigned I = 0; I < NumWords; ++I) {
+    OS << "LaneBitmask(std::array<uint64_t, " << LaneBitmask::NumWords64
+       << ">{";
+    for (unsigned I = 0; I < LaneBitmask::NumWords64; ++I) {
       if (I > 0)
         OS << ", ";
       LaneBitmask Word = (Val >> (I * 64)) & LaneBitmask(~0ULL);

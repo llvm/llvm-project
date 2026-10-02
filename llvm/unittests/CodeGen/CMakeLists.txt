@@ -32,8 +32,8 @@ add_llvm_unittest(CodeGenTests
   GCMetadata.cpp
   InstrRefLDVTest.cpp
   LaneBitmaskTest.cpp
-  LexicalScopesTest.cpp
   LowLevelTypeTest.cpp
+  LexicalScopesTest.cpp
   MachineBasicBlockTest.cpp
   MachineDomTreeUpdaterTest.cpp
   MachineInstrBundleIteratorTest.cpp

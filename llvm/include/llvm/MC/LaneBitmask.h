@@ -29,10 +29,9 @@
 #ifndef LLVM_MC_LANEBITMASK_H
 #define LLVM_MC_LANEBITMASK_H
 
-#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/Bitset.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
 #include <array>
@@ -41,15 +40,15 @@
 namespace llvm::detail {
 template <unsigned NumBits> struct LaneBitmaskImpl {
   static constexpr unsigned BitWidth = NumBits;
+  /// Number of 64-bit words needed to hold all lanes.
+  static constexpr unsigned NumWords64 = Bitset<NumBits>::getNumWords64();
 
   constexpr LaneBitmaskImpl() = default;
   constexpr LaneBitmaskImpl(const LaneBitmaskImpl &) = default;
   explicit constexpr LaneBitmaskImpl(uint64_t V)
-      : Storage(std::array<uint64_t, (NumBits + 63) / 64>{V}) {}
-  explicit constexpr LaneBitmaskImpl(
-      const std::array<uint64_t, (NumBits + 63) / 64> &B)
+      : Storage(std::array<uint64_t, NumWords64>{V}) {}
+  explicit constexpr LaneBitmaskImpl(const std::array<uint64_t, NumWords64> &B)
       : Storage(B) {}
-  explicit LaneBitmaskImpl(const APInt &N) : Storage(convertAPIntToArray(N)) {}
   // Delete the initializer_list constructor to avoid ambiguity with the
   // std::array constructor.
   LaneBitmaskImpl(std::initializer_list<unsigned>) = delete;
@@ -64,9 +63,9 @@ template <unsigned NumBits> struct LaneBitmaskImpl {
   /// Compare as unsigned integers (most-significant word first). This differs
   /// from Bitset::operator< which compares bit-by-bit from LSB.
   constexpr bool operator<(const LaneBitmaskImpl &Other) const {
-    for (int I = Storage.getNumWords64() - 1; I >= 0; --I) {
-      if (Storage.getWord(I) != Other.Storage.getWord(I))
-        return Storage.getWord(I) < Other.Storage.getWord(I);
+    for (int I = NumWords64 - 1; I >= 0; --I) {
+      if (Storage.getWord64(I) != Other.Storage.getWord64(I))
+        return Storage.getWord64(I) < Other.Storage.getWord64(I);
     }
     return false;
   }
@@ -101,7 +100,9 @@ template <unsigned NumBits> struct LaneBitmaskImpl {
 
   /// Return the I-th 64-bit word of the bitmask from least significant to most
   /// significant.
-  constexpr uint64_t getWord(unsigned I) const { return Storage.getWord(I); }
+  constexpr uint64_t getWord64(unsigned I) const {
+    return Storage.getWord64(I);
+  }
 
   constexpr size_t getNumLanes() const { return Storage.count(); }
 
@@ -154,22 +155,6 @@ template <unsigned NumBits> struct LaneBitmaskImpl {
 
 private:
   Bitset<NumBits> Storage;
-
-  /// Helper to convert APInt to array format for Bitset constructor.
-  static std::array<uint64_t, (NumBits + 63) / 64>
-  convertAPIntToArray(const APInt &N) {
-    static_assert(std::is_same_v<APInt::WordType, uint64_t>,
-                  "APInt::WordType needs to be uint64_t for word-level copy.");
-    assert(N.getBitWidth() <= NumBits &&
-           "Cannot convert to LaneBitmask. The input APInt has "
-           "more bits than LaneBitmask can hold.");
-    std::array<uint64_t, (NumBits + 63) / 64> Result{};
-    const uint64_t *RawData = N.getRawData();
-    const size_t NumWords = N.getNumWords();
-    for (size_t I = 0; I < NumWords && I < Result.size(); ++I)
-      Result[I] = RawData[I];
-    return Result;
-  }
 };
 
 } // end namespace llvm::detail
@@ -177,41 +162,32 @@ private:
 namespace llvm {
 using LaneBitmask = detail::LaneBitmaskImpl<64>;
 
-template <unsigned NumBits>
-struct format_provider<detail::LaneBitmaskImpl<NumBits>> {
-  using T = detail::LaneBitmaskImpl<NumBits>;
-  static void format(const T &V, raw_ostream &Stream, StringRef Style) {
-    // Print as hex using 64-bit words from most significant to least.
-    // Only print the first 64 bits if all upper words are zero.
-    constexpr unsigned HexWidth = 16; // 16 hex digits per 64-bit word.
-    constexpr unsigned NumWords = Bitset<NumBits>::getNumWords64();
-    T UpperWords = ~T(~0ULL) & V;
-    if (UpperWords.none())
-      Stream << format_hex_no_prefix(V.getWord(0), HexWidth, true);
-    else
-      for (int I = NumWords - 1; I >= 0; --I)
-        Stream << format_hex_no_prefix(V.getWord(I), HexWidth, true);
-  }
-};
-
 /// Create Printable object to print LaneBitmasks on a \ref raw_ostream.
 template <unsigned NumBits>
 inline Printable PrintLaneMask(detail::LaneBitmaskImpl<NumBits> LaneMask) {
-  return Printable(
-      [LaneMask](raw_ostream &OS) { OS << formatv("{0}", LaneMask); });
+  return Printable([LaneMask](raw_ostream &OS) {
+    using T = detail::LaneBitmaskImpl<NumBits>;
+    // Print as hex using 64-bit words from most significant to least.
+    // Only print the first 64 bits if all upper words are zero.
+    constexpr unsigned HexWidth = 64 / 4; // One hex digit per 4 bits.
+    bool UpperWordsZero = (~T(~0ULL) & LaneMask).none();
+    for (int I = UpperWordsZero ? 0 : T::NumWords64 - 1; I >= 0; --I)
+      OS << format_hex_no_prefix(LaneMask.getWord64(I), HexWidth,
+                                 /*Upper=*/true);
+  });
 }
 
 template <unsigned NumBits>
 inline hash_code hash_value(const detail::LaneBitmaskImpl<NumBits> &LM) {
-  constexpr unsigned NumWords = Bitset<NumBits>::getNumWords64();
+  constexpr unsigned NumWords = detail::LaneBitmaskImpl<NumBits>::NumWords64;
   if constexpr (NumWords == 1)
-    return hash_value(LM.getWord(0));
+    return hash_value(LM.getWord64(0));
   else if constexpr (NumWords == 2)
-    return hash_combine(LM.getWord(0), LM.getWord(1));
+    return hash_combine(LM.getWord64(0), LM.getWord64(1));
   else {
-    hash_code H = hash_value(LM.getWord(0));
+    hash_code H = hash_value(LM.getWord64(0));
     for (unsigned I = 1; I < NumWords; ++I)
-      H = hash_combine(H, LM.getWord(I));
+      H = hash_combine(H, LM.getWord64(I));
     return H;
   }
 }

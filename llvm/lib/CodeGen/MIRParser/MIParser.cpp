@@ -894,6 +894,18 @@ bool MIParser::parseBasicBlockDefinitions(
   return Token.isError();
 }
 
+/// Convert \p A to a lane mask. Returns true if \p A does not fit.
+static bool getLaneMask(const APInt &A, LaneBitmask &Mask) {
+  if (A.getActiveBits() > LaneBitmask::BitWidth)
+    return true;
+  std::array<uint64_t, LaneBitmask::NumWords64> Words{};
+  for (unsigned I = 0, E = std::min<unsigned>(A.getNumWords(), Words.size());
+       I != E; ++I)
+    Words[I] = A.getRawData()[I];
+  Mask = LaneBitmask(Words);
+  return false;
+}
+
 bool MIParser::parseBasicBlockLiveins(MachineBasicBlock &MBB) {
   assert(Token.is(MIToken::kw_liveins));
   lex();
@@ -924,9 +936,8 @@ bool MIParser::parseBasicBlockLiveins(MachineBasicBlock &MBB) {
       } else {
         // Parse as hex literal (may be > 64 bits).
         APInt A;
-        if (getHexUint(A))
+        if (getHexUint(A) || getLaneMask(A, Mask))
           return error("invalid lane mask value");
-        Mask = LaneBitmask(A);
       }
       lex();
     }
@@ -3112,9 +3123,8 @@ bool MIParser::parseLaneMaskOperand(MachineOperand &Dest) {
   } else {
     // Parse as hex literal (may be > 64 bits).
     APInt A;
-    if (getHexUint(A))
+    if (getHexUint(A) || getLaneMask(A, LaneMask))
       return error("invalid lane mask value");
-    LaneMask = LaneBitmask(A);
   }
   lex();
 

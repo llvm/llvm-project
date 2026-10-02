@@ -13,7 +13,6 @@ using namespace llvm;
 
 namespace {
 
-// Type aliases for clarity.
 using LaneMask64 = detail::LaneBitmaskImpl<64>;
 using LaneMask128 = detail::LaneBitmaskImpl<128>;
 
@@ -86,6 +85,9 @@ TEST(LaneBitmaskTest, ConstructorAndAssignment) {
   }
 
   // Constexpr tests.
+  static_assert(LaneMask64::NumWords64 == 1);
+  static_assert(LaneMask128::NumWords64 == 2);
+  static_assert(detail::LaneBitmaskImpl<65>::NumWords64 == 2);
   static_assert(LaneMask64::getNone().none());
   static_assert(LaneMask64::getAll().all());
   static_assert(LaneMask64::getAll().getNumLanes() == LaneMask64::BitWidth);
@@ -281,7 +283,7 @@ TEST(LaneBitmaskTest, RotateOperators) {
     EXPECT_EQ(C.rotateLeft(37).rotateRight(37), C);
 
     LaneMask64 HighBit = LaneMask64::getLane(LaneMask64::BitWidth - 1);
-    EXPECT_TRUE(HighBit.rotateLeft(1).any());
+    EXPECT_EQ(HighBit.rotateLeft(1), LaneMask64::getLane(0));
   }
 
   // Test 128-bit version.
@@ -312,63 +314,55 @@ TEST(LaneBitmaskTest, RotateOperators) {
                 LaneMask128(0xff));
 }
 
-TEST(LaneBitmaskTest, GetWord) {
+TEST(LaneBitmaskTest, GetWord64) {
   // Test 64-bit version.
   {
     LaneMask64 M(0xdeadbeefcafe1234);
-    EXPECT_EQ(M.getWord(0), 0xdeadbeefcafe1234ULL);
+    EXPECT_EQ(M.getWord64(0), 0xdeadbeefcafe1234ULL);
   }
 
   // Test 128-bit version.
   {
     std::array<uint64_t, 2> Arr = {0x1111222233334444, 0xaaaabbbbccccdddd};
     LaneMask128 M(Arr);
-    EXPECT_EQ(M.getWord(0), 0x1111222233334444ULL);
-    EXPECT_EQ(M.getWord(1), 0xaaaabbbbccccddddULL);
+    EXPECT_EQ(M.getWord64(0), 0x1111222233334444ULL);
+    EXPECT_EQ(M.getWord64(1), 0xaaaabbbbccccddddULL);
   }
 
   // Empty mask.
-  EXPECT_EQ(LaneMask64().getWord(0), 0ULL);
-  EXPECT_EQ(LaneMask128().getWord(0), 0ULL);
-  EXPECT_EQ(LaneMask128().getWord(1), 0ULL);
+  EXPECT_EQ(LaneMask64().getWord64(0), 0ULL);
+  EXPECT_EQ(LaneMask128().getWord64(0), 0ULL);
+  EXPECT_EQ(LaneMask128().getWord64(1), 0ULL);
 
-  static_assert(LaneMask64(0xff).getWord(0) == 0xff);
-  static_assert(LaneMask128::getAll().getWord(0) == ~0ULL);
-  static_assert(LaneMask128::getAll().getWord(1) == ~0ULL);
+  static_assert(LaneMask64(0xff).getWord64(0) == 0xff);
+  static_assert(LaneMask128::getAll().getWord64(0) == ~0ULL);
+  static_assert(LaneMask128::getAll().getWord64(1) == ~0ULL);
 }
 
-TEST(LaneBitmaskTest, APIntConstructor) {
-  APInt Empty(64, 0);
-  LaneMask64 MEmpty(Empty);
-  EXPECT_TRUE(MEmpty.none());
-
-  APInt Full(64, ~0ull);
-  LaneMask64 MFull(Full);
-  EXPECT_EQ(MFull.getNumLanes(), 64u);
-  EXPECT_TRUE(MFull.all());
-
-  APInt A64(64, 0x123456789abcdef0, false);
-  LaneMask64 M64(A64);
-  EXPECT_EQ(M64.getHighestLane(), 60u);
-
-  APInt Small(16, 0xff);
-  LaneMask64 MSmall(Small);
-  EXPECT_EQ(MSmall.getNumLanes(), 8u);
-
-  APInt A128(128, {0xff, 0xff00});
-  LaneMask128 M128(A128);
-  EXPECT_EQ(M128.getNumLanes(), 16u);
+template <unsigned NumBits>
+static std::string printToString(detail::LaneBitmaskImpl<NumBits> M) {
+  std::string Str;
+  raw_string_ostream OS(Str);
+  OS << PrintLaneMask(M);
+  return Str;
 }
 
 TEST(LaneBitmaskTest, Printing) {
-  std::string Str;
-  raw_string_ostream OS(Str);
+  // MIR output relies on masks that fit in 64 bits printing as "%016llX".
+  EXPECT_EQ(printToString(LaneBitmask(0xABCD)), "000000000000ABCD");
+  EXPECT_EQ(printToString(LaneBitmask::getNone()), "0000000000000000");
+  EXPECT_EQ(printToString(LaneMask64::getAll()), "FFFFFFFFFFFFFFFF");
 
-  LaneBitmask M(0xABCD);
-  OS << PrintLaneMask(M);
-  OS.flush();
+  // Wider masks print only the low word if all upper words are zero.
+  EXPECT_EQ(printToString(LaneMask128(0xABCD)), "000000000000ABCD");
+  EXPECT_EQ(printToString(LaneMask128::getLane(64)),
+            "00000000000000010000000000000000");
+  EXPECT_EQ(printToString(LaneMask128::getAll()),
+            "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
 
-  EXPECT_TRUE(Str.find("ABCD") != std::string::npos);
+  // Unused high bits of the last word are never printed as set.
+  EXPECT_EQ(printToString(detail::LaneBitmaskImpl<96>::getAll()),
+            "00000000FFFFFFFFFFFFFFFFFFFFFFFF");
 }
 
 TEST(LaneBitmaskTest, Hashing) {
@@ -391,6 +385,68 @@ TEST(LaneBitmaskTest, Hashing) {
     EXPECT_EQ(std::hash<LaneMask128>{}(A), std::hash<LaneMask128>{}(B));
     EXPECT_NE(std::hash<LaneMask128>{}(A), std::hash<LaneMask128>{}(C));
   }
+
+  // hash_value is used by MachineOperand hashing.
+  EXPECT_EQ(hash_value(LaneMask64(0x1234)), hash_value(LaneMask64(0x1234)));
+  EXPECT_NE(hash_value(LaneMask64(0x1234)), hash_value(LaneMask64(0x5678)));
+  EXPECT_EQ(hash_value(LaneMask128::getLane(100)),
+            hash_value(LaneMask128::getLane(100)));
+  // Same bit position within a different word.
+  EXPECT_NE(hash_value(LaneMask128::getLane(100)),
+            hash_value(LaneMask128::getLane(36)));
+}
+
+TEST(LaneBitmaskTest, ShiftOperators) {
+  LaneMask64 A(0xff);
+  EXPECT_EQ(A << 0, A);
+  EXPECT_EQ(A >> 0, A);
+  EXPECT_EQ(A << 8, LaneMask64(0xff00));
+  EXPECT_EQ(LaneMask64(0xff00) >> 8, A);
+  // Bits shifted out are dropped and zeroes are shifted in.
+  EXPECT_EQ(LaneMask64::getAll() << 60, LaneMask64(0xF000000000000000));
+  EXPECT_EQ(LaneMask64::getAll() >> 60, LaneMask64(0xF));
+  EXPECT_TRUE((A << LaneMask64::BitWidth).none());
+  EXPECT_TRUE((A >> LaneMask64::BitWidth).none());
+
+  // Shifts cross 64-bit word boundaries.
+  EXPECT_EQ(LaneMask128::getLane(63) << 1, LaneMask128::getLane(64));
+  EXPECT_EQ(LaneMask128::getLane(64) >> 1, LaneMask128::getLane(63));
+  EXPECT_EQ(LaneMask128::getLane(0) << 127, LaneMask128::getLane(127));
+  EXPECT_TRUE((LaneMask128::getAll() << LaneMask128::BitWidth).none());
+
+  static_assert((LaneMask64(0xff) << 8) == LaneMask64(0xff00));
+  static_assert((LaneMask128::getLane(63) << 1) == LaneMask128::getLane(64));
+}
+
+TEST(LaneBitmaskTest, RotateEdgeCases) {
+  // Rotation amounts are taken modulo the bit width.
+  LaneMask64 A(0xff);
+  EXPECT_EQ(A.rotateLeft(LaneMask64::BitWidth + 8), LaneMask64(0xff00));
+  EXPECT_EQ(A.rotateRight(LaneMask64::BitWidth + 8),
+            LaneMask64(0xFF00000000000000));
+
+  // Rotations cross 64-bit word boundaries.
+  EXPECT_EQ(LaneMask128::getLane(63).rotateLeft(1), LaneMask128::getLane(64));
+  EXPECT_EQ(LaneMask128::getLane(64).rotateRight(1), LaneMask128::getLane(63));
+  EXPECT_EQ(LaneMask128::getLane(0).rotateRight(1), LaneMask128::getLane(127));
+}
+
+TEST(LaneBitmaskTest, NonMultipleOf64Width) {
+  using LaneMask96 = detail::LaneBitmaskImpl<96>;
+  static_assert(LaneMask96::NumWords64 == 2);
+
+  // Unused high bits of the last word stay clear.
+  EXPECT_EQ(LaneMask96::getAll().getNumLanes(), 96u);
+  EXPECT_TRUE(LaneMask96::getAll().all());
+  EXPECT_EQ(LaneMask96::getAll().getWord64(1), 0xFFFFFFFFULL);
+  EXPECT_EQ(~LaneMask96(), LaneMask96::getAll());
+  EXPECT_TRUE((~LaneMask96::getAll()).none());
+  EXPECT_EQ(LaneMask96::getAll().getHighestLane(), 95u);
+
+  // Rotations wrap at bit 96, not at the end of the storage word.
+  EXPECT_EQ(LaneMask96::getLane(95).rotateLeft(1), LaneMask96::getLane(0));
+  EXPECT_EQ(LaneMask96::getLane(0).rotateRight(1), LaneMask96::getLane(95));
+  EXPECT_EQ(LaneMask96::getLane(0) << 96, LaneMask96());
 }
 
 TEST(LaneBitmaskTest, MultiWordOperations) {
@@ -410,7 +466,6 @@ TEST(LaneBitmaskTest, MultiWordOperations) {
   EXPECT_EQ(And.getHighestLane(), 64u);
 
   LaneMask128 NotA = ~A;
-  EXPECT_FALSE(NotA.any() && NotA.none()); // sanity
   EXPECT_EQ(NotA.getNumLanes(), LaneMask128::BitWidth - 3);
 }
 
