@@ -77,17 +77,6 @@ llvm.func @sections_allocate(%x : !llvm.ptr) {
 
 // -----
 
-llvm.func @scope_allocate(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.scope operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.scope}}
-  omp.scope allocate(%x : !llvm.ptr -> %x : !llvm.ptr) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 omp.private {type = private} @x.privatizer : i32 init {
 ^bb0(%mold: !llvm.ptr, %private: !llvm.ptr):
   %c0 = llvm.mlir.constant(0 : i32) : i32
@@ -622,17 +611,6 @@ llvm.func @taskloop_reduction_two_arg_init(%lb : i32, %ub : i32, %step : i32, %x
     }
     omp.terminator
   } {omp.combined}
-  llvm.return
-}
-
-// -----
-
-llvm.func @taskwait_nowait() {
-  // expected-error@below {{not yet implemented: Unhandled clause nowait in omp.taskwait operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskwait}}
-  omp.taskwait nowait {
-    omp.terminator
-  }
   llvm.return
 }
 

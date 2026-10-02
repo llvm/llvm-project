@@ -2053,6 +2053,14 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
         I1->applyMergedLocation(I1->getDebugLoc(), I2->getDebugLoc());
         I2->eraseFromParent();
       }
+      // I1 now executes before the instructions we skipped.
+      unsigned SkippedFlags = 0;
+      for (const SuccIterPair &P : SuccIterPairs)
+        SkippedFlags |= P.second;
+      if (SkippedFlags & SkipImplicitControlFlow) {
+        // One of them may throw or not return, so I1 is speculated.
+        I1->dropUBImplyingAttrsAndMetadata();
+      }
       if (!Changed)
         NumHoistCommonCode += SuccIterPairs.size();
       Changed = true;
@@ -3149,7 +3157,7 @@ static bool validateAndCostRequiredSelects(BasicBlock *BB, BasicBlock *ThenBB,
       continue;
 
     Cost += TTI.getCmpSelInstrCost(Instruction::Select, PN.getType(),
-                                   CmpInst::makeCmpResultType(PN.getType()),
+                                   Type::getInt1Ty(PN.getContext()),
                                    CmpInst::BAD_ICMP_PREDICATE, CostKind);
 
     // Don't convert to selects if we could remove undefined behavior instead.

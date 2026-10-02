@@ -308,6 +308,8 @@ Makes programs 10x faster by doing Special New Thing.
 * Removed the `size_of` and `align_of` functions. Create a constant based on
   the result of `DataLayout.abi_size` or `DataLayout.abi_align` instead.
 
+* `DataLayout` has been moved from `Llvm_target` to `Llvm`.
+
 ### Changes to the Python bindings
 
 ### Changes to the C API
@@ -315,6 +317,9 @@ Makes programs 10x faster by doing Special New Thing.
 * `LLVMAlignOf()` and `LLVMSizeOf()` have been deprecated. Create a constant
   based on the result of `LLVMABIAlignmentOfType()` or `LLVMABISizeOfType()`
   instead.
+
+* Bindings operating on data layout (`LLVMTargetDataRef`) have been moved
+  from `Target.h` (`Target` library) to `Core.h` (`IR` library).
 
 ### Changes to the CodeGen infrastructure
 
@@ -335,6 +340,15 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to the Debug Info
 
 ### Changes to the LLVM tools
+
+* `opt` and `llc` accept `-plugin-arg=<plugin>,<arg>`, which passes `<arg>` to the new `PassPluginLibraryInfo::ParseArguments` callback of the pass plugin named `<plugin>`.
+  A plugin that defines `cl::opt` has to call `cl::ParseCommandLineOptions` itself inside `ParseArguments`.
+  `LLVM_PLUGIN_API_VERSION` is now 3.
+
+* `opt` and `llc` load `-load-pass-plugin` plugins after parsing the command line, so a loaded plugin's options are no longer accepted as ordinary options.
+  Pass them with `-plugin-arg=<plugin>,<arg>`.
+
+* llvm-offload-binary can now compress packaged binaries using zstd or zlib.
 
 * llvm-mca no longer defaults -mcpu to "native"
 

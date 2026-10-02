@@ -1309,8 +1309,10 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
         !Current.MatchingParen->Children.empty()) {
       // lambdas and arrow functions are expressions, thus their r_brace is not
       // on its own line, and thus not covered by UnwrappedLineFormatter's logic
-      // about removing empty lines on closing blocks. Special case them here.
-      MaxEmptyLinesToKeep = 1;
+      // about removing empty lines on closing blocks. Special case them here
+      // with an exception if the KeepEmptyLines.AtEndOfBlock is used.
+      if (!Style.KeepEmptyLines.AtEndOfBlock)
+        MaxEmptyLinesToKeep = 1;
     }
     const unsigned Newlines =
         std::max(1u, std::min(Current.NewlinesBefore, MaxEmptyLinesToKeep));

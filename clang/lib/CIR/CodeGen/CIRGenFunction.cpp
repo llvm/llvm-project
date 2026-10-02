@@ -1301,8 +1301,7 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
                                "emitLValue: MatrixElementExpr");
     return LValue();
   case Expr::CXXThisExprClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: CXXThisExpr");
-    return LValue();
+    return makeAddrLValue(loadCXXThisAddress(), e->getType());
   case Expr::MemberExprClass:
     return emitMemberExpr(cast<MemberExpr>(e));
   case Expr::CompoundLiteralExprClass:
@@ -1341,9 +1340,7 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: CoyieldExpr");
     return LValue();
   case Expr::PackIndexingExprClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(),
-                               "emitLValue: PackIndexingExpr");
-    return LValue();
+    return emitLValue(cast<PackIndexingExpr>(e)->getSelectedExpr());
   case Expr::HLSLOutArgExprClass:
     llvm_unreachable("cannot emit a HLSL out argument directly");
   }
