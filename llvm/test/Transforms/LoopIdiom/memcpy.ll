@@ -109,7 +109,7 @@ define dso_local void @memcpy_loop(ptr noalias nocapture %p, ptr noalias nocaptu
 ; CHECK-NEXT:    br i1 [[CMP4]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[P:%.*]], ptr align 1 [[Q:%.*]], i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[P:%.*]], ptr align 1 [[Q:%.*]], i64 range(i64 0, 2147483648) [[TMP0]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
