@@ -203,6 +203,7 @@ void lowerOpenCLModuleMetadataAttrs(mlir::ModuleOp module) {
   const OpenCLModuleMetadataMapping moduleMetadataMappings[] = {
       {cir::CIRDialect::getOpenCLVersionAttrName(), "opencl.ocl.version"},
       {cir::CIRDialect::getOpenCLCXXVersionAttrName(), "opencl.cxx.version"},
+      {cir::CIRDialect::getOpenCLSPIRVersionAttrName(), "opencl.spir.version"},
   };
 
   for (const OpenCLModuleMetadataMapping &mapping : moduleMetadataMappings) {
