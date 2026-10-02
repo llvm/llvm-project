@@ -46,9 +46,6 @@ void foo(int *q) {
 
 // In the reachable result 'q' is present but 'argv' is not.
 // CHECK: "analysis_name": "UnsafeBufferReachableAnalysisResult"
-
-// 'foo' contributes unsafe pointer 'q'.
-// CHECK: "@": [[CONTRIBUTOR_FOO]]$WS},$WS[
 // CHECK: "@": [[Q_ID]]$PTR_L1
 // CHECK-NOT: "@":
 

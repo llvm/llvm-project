@@ -28,50 +28,72 @@
 # CHECK-NEXT:  1      4     0.50                        fmlsl2	v0.4s, v0.4h, v0.4h
 
 # CHECK:      Resources:
-# CHECK-NEXT: [0.0] - C1PUnitB
-# CHECK-NEXT: [0.1] - C1PUnitB
-# CHECK-NEXT: [0.2] - C1PUnitB
-# CHECK-NEXT: [1]   - C1PUnitCME
-# CHECK-NEXT: [2.0] - C1PUnitD
-# CHECK-NEXT: [2.1] - C1PUnitD
-# CHECK-NEXT: [3.0] - C1PUnitFlg
-# CHECK-NEXT: [3.1] - C1PUnitFlg
-# CHECK-NEXT: [3.2] - C1PUnitFlg
-# CHECK-NEXT: [3.3] - C1PUnitFlg
-# CHECK-NEXT: [4.0] - C1PUnitL23
-# CHECK-NEXT: [4.1] - C1PUnitL23
-# CHECK-NEXT: [5]   - C1PUnitLS0
-# CHECK-NEXT: [6]   - C1PUnitLS1
-# CHECK-NEXT: [7]   - C1PUnitM0
-# CHECK-NEXT: [8]   - C1PUnitM1
-# CHECK-NEXT: [9]   - C1PUnitS0
-# CHECK-NEXT: [10]  - C1PUnitS1
-# CHECK-NEXT: [11]  - C1PUnitS2
-# CHECK-NEXT: [12]  - C1PUnitS3
-# CHECK-NEXT: [13]  - C1PUnitS4
-# CHECK-NEXT: [14]  - C1PUnitS5
-# CHECK-NEXT: [15]  - C1PUnitV0
-# CHECK-NEXT: [16]  - C1PUnitV1
+# CHECK-NEXT: [0.0] - C1PUnit5CMEVXALU
+# CHECK-NEXT: [0.1] - C1PUnit5CMEVXALU
+# CHECK-NEXT: [0.2] - C1PUnit5CMEVXALU
+# CHECK-NEXT: [0.3] - C1PUnit5CMEVXALU
+# CHECK-NEXT: [0.4] - C1PUnit5CMEVXALU
+# CHECK-NEXT: [1.0] - C1PUnitB
+# CHECK-NEXT: [1.1] - C1PUnitB
+# CHECK-NEXT: [1.2] - C1PUnitB
+# CHECK-NEXT: [2]   - C1PUnitCME
+# CHECK-NEXT: [3]   - C1PUnitCMELD
+# CHECK-NEXT: [4]   - C1PUnitCMEMC
+# CHECK-NEXT: [5]   - C1PUnitCMEMML0
+# CHECK-NEXT: [6]   - C1PUnitCMEMML1
+# CHECK-NEXT: [7]   - C1PUnitCMEPERMF
+# CHECK-NEXT: [8]   - C1PUnitCMEPERMS
+# CHECK-NEXT: [9]   - C1PUnitCMEPF
+# CHECK-NEXT: [10.0] - C1PUnitCMERNMRET
+# CHECK-NEXT: [10.1] - C1PUnitCMERNMRET
+# CHECK-NEXT: [10.2] - C1PUnitCMERNMRET
+# CHECK-NEXT: [11]  - C1PUnitCMEST
+# CHECK-NEXT: [12]  - C1PUnitCMEVX0ALU
+# CHECK-NEXT: [13]  - C1PUnitCMEVX0FPDOT
+# CHECK-NEXT: [14]  - C1PUnitCMEVX0MUL
+# CHECK-NEXT: [15]  - C1PUnitCMEVX1ALU
+# CHECK-NEXT: [16]  - C1PUnitCMEVX1FPDOT
+# CHECK-NEXT: [17]  - C1PUnitCMEVX1MUL
+# CHECK-NEXT: [18.0] - C1PUnitD
+# CHECK-NEXT: [18.1] - C1PUnitD
+# CHECK-NEXT: [19.0] - C1PUnitFlg
+# CHECK-NEXT: [19.1] - C1PUnitFlg
+# CHECK-NEXT: [19.2] - C1PUnitFlg
+# CHECK-NEXT: [19.3] - C1PUnitFlg
+# CHECK-NEXT: [20.0] - C1PUnitL23
+# CHECK-NEXT: [20.1] - C1PUnitL23
+# CHECK-NEXT: [21]  - C1PUnitLS0
+# CHECK-NEXT: [22]  - C1PUnitLS1
+# CHECK-NEXT: [23]  - C1PUnitM0
+# CHECK-NEXT: [24]  - C1PUnitM1
+# CHECK-NEXT: [25]  - C1PUnitS0
+# CHECK-NEXT: [26]  - C1PUnitS1
+# CHECK-NEXT: [27]  - C1PUnitS2
+# CHECK-NEXT: [28]  - C1PUnitS3
+# CHECK-NEXT: [29]  - C1PUnitS4
+# CHECK-NEXT: [30]  - C1PUnitS5
+# CHECK-NEXT: [31]  - C1PUnitV0
+# CHECK-NEXT: [32]  - C1PUnitV1
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2.0]  [2.1]  [3.0]  [3.1]  [3.2]  [3.3]  [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     8.00   8.00
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [0.3]  [0.4]  [1.0]  [1.1]  [1.2]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10.0] [10.1] [10.2] [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18.0] [18.1] [19.0] [19.1] [19.2] [19.3] [20.0] [20.1] [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     8.00   8.00
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2.0]  [2.1]  [3.0]  [3.1]  [3.2]  [3.3]  [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlal	v0.2s, v0.2h, v0.h[1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlal	v0.4s, v0.4h, v0.h[3]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlal	v0.2s, v0.2h, v0.2h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlal	v0.4s, v0.4h, v0.4h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlal2	v0.2s, v0.2h, v0.h[1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlal2	v0.4s, v0.4h, v0.h[3]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlal2	v0.2s, v0.2h, v0.2h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlal2	v0.4s, v0.4h, v0.4h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlsl	v0.2s, v0.2h, v0.h[1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlsl	v0.4s, v0.4h, v0.h[3]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlsl	v0.2s, v0.2h, v0.2h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlsl	v0.4s, v0.4h, v0.4h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlsl2	v0.2s, v0.2h, v0.h[1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlsl2	v0.4s, v0.4h, v0.h[3]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlsl2	v0.2s, v0.2h, v0.2h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlsl2	v0.4s, v0.4h, v0.4h
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [0.3]  [0.4]  [1.0]  [1.1]  [1.2]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10.0] [10.1] [10.2] [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18.0] [18.1] [19.0] [19.1] [19.2] [19.3] [20.0] [20.1] [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlal	v0.2s, v0.2h, v0.h[1]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlal	v0.4s, v0.4h, v0.h[3]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlal	v0.2s, v0.2h, v0.2h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlal	v0.4s, v0.4h, v0.4h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlal2	v0.2s, v0.2h, v0.h[1]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlal2	v0.4s, v0.4h, v0.h[3]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlal2	v0.2s, v0.2h, v0.2h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlal2	v0.4s, v0.4h, v0.4h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlsl	v0.2s, v0.2h, v0.h[1]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlsl	v0.4s, v0.4h, v0.h[3]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlsl	v0.2s, v0.2h, v0.2h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlsl	v0.4s, v0.4h, v0.4h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlsl2	v0.2s, v0.2h, v0.h[1]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlsl2	v0.4s, v0.4h, v0.h[3]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlsl2	v0.2s, v0.2h, v0.2h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmlsl2	v0.4s, v0.4h, v0.4h

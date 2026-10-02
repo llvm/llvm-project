@@ -34,11 +34,11 @@ static bool is_aligned_to(void* ptr, size_t align) {
 class _LIBCPP_HIDDEN __new_delete_memory_resource_imp : public memory_resource {
   void* do_allocate(size_t bytes, size_t align) override {
 #if _LIBCPP_HAS_ALIGNED_ALLOCATION
-    return std::__libcpp_allocate<std::byte>(__element_count(bytes), align);
+    return ::operator new(bytes, std::align_val_t(align));
 #else
-    if (bytes == 0)
-      bytes = 1;
-    std::byte* result = std::__libcpp_allocate<std::byte>(__element_count(bytes), align);
+    if (bytes < align)
+      bytes = align;
+    std::byte* result = ::operator new(bytes);
     if (!is_aligned_to(result, align)) {
       std::__libcpp_deallocate<std::byte>(result, __element_count(bytes), align);
       std::__throw_bad_alloc();
@@ -48,7 +48,11 @@ class _LIBCPP_HIDDEN __new_delete_memory_resource_imp : public memory_resource {
   }
 
   void do_deallocate(void* p, size_t bytes, size_t align) override {
-    std::__libcpp_deallocate<std::byte>(static_cast<std::byte*>(p), __element_count(bytes), align);
+#if _LIBCPP_HAS_ALIGNED_ALLOCATION
+    ::operator delete(p, bytes, align_val_t(align));
+#else
+    ::operator delete(p, bytes);
+#endif
   }
 
   bool do_is_equal(const memory_resource& other) const noexcept override { return &other == this; }

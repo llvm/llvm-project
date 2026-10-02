@@ -1705,7 +1705,7 @@ struct Attributor {
     AAPtr = &AA;
 
     // Register AA with the synthetic root only before the manifest stage.
-    if (Phase == AttributorPhase::SEEDING || Phase == AttributorPhase::UPDATE)
+    if (isDuringDeduction())
       DG.SyntheticRoot.Deps.insert(
           AADepGraphNode::DepTy(&AA, unsigned(DepClassTy::REQUIRED)));
 
@@ -1745,7 +1745,7 @@ struct Attributor {
   template <typename AAType> bool shouldUpdateAA(const IRPosition &IRP) {
     // If this is queried in the manifest stage, we force the AA to indicate
     // pessimistic fixpoint immediately.
-    if (Phase == AttributorPhase::MANIFEST || Phase == AttributorPhase::CLEANUP)
+    if (!isDuringDeduction())
       return false;
 
     Function *AssociatedFn = IRP.getAssociatedFunction();
@@ -1819,6 +1819,12 @@ struct Attributor {
   bool isFunctionIPOAmendable(const Function &F) {
     return F.hasExactDefinition() || InfoCache.InlineableFunctions.count(&F) ||
            (Configuration.IPOAmendableCB && Configuration.IPOAmendableCB(F));
+  }
+
+  /// Return whether attributes can participate in fixed-point deduction.
+  bool isDuringDeduction() const {
+    return Phase == AttributorPhase::SEEDING ||
+           Phase == AttributorPhase::UPDATE;
   }
 
   /// Mark the internal function \p F as live.
@@ -4940,12 +4946,6 @@ struct AAValueConstantRange
   virtual ConstantRange
   getAssumedConstantRange(Attributor &A,
                           const Instruction *CtxI = nullptr) const = 0;
-
-  /// Return a known range for the associated value at a program point \p CtxI.
-  /// If \p I is nullptr, simply return a known range.
-  virtual ConstantRange
-  getKnownConstantRange(Attributor &A,
-                        const Instruction *CtxI = nullptr) const = 0;
 
   /// Return an assumed constant for the associated value a program point \p
   /// CtxI.

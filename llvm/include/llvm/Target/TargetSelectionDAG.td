@@ -936,6 +936,10 @@ def vector_insert_subvec : SDNode<"ISD::INSERT_SUBVECTOR",
 def extract_subvector : SDNode<"ISD::EXTRACT_SUBVECTOR", SDTSubVecExtract, []>;
 def insert_subvector : SDNode<"ISD::INSERT_SUBVECTOR", SDTSubVecInsert, []>;
 
+def vector_repeat : SDNode<"ISD::VECTOR_REPEAT",
+    SDTypeProfile<1, 1, [SDTCisVec<1>, SDTCisVec<0>]>,
+    []>;
+
 def find_last_active
     : SDNode<"ISD::VECTOR_FIND_LAST_ACTIVE",
              SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>]>, []>;
@@ -1346,19 +1350,26 @@ def immAllZerosV : SDPatternOperator; // ISD::isConstantSplatVectorAllZeros
 
 // Other helper fragments.
 
-// An 'fmul' node which has contract flag
-def fmul_contract : PatFrag<(ops node:$a, node:$b), (fmul node:$a, node:$b),[{
+// A node that carries the contract fast-math flag
+class ContractablePatFrag<dag ops, dag frag> : PatFrag<ops, frag, [{
   return N->getFlags().hasAllowContract();
-}]>;
+}]> {
+  let GISelPredicateCode = [{
+    return MI.getFlag(MachineInstr::FmContract);
+  }];
+}
 
-// An 'fadd' node which can be contracted with fmul_contract into a fma or other relaxed instruction
-def fadd_contract : PatFrag<(ops node:$a, node:$b), (fadd node:$a, node:$b),[{
-  return N->getFlags().hasAllowContract();
-}]>;
+// An 'fmul' node the target may contract
+def fmul_contract : ContractablePatFrag<(ops node:$a, node:$b),
+                                        (fmul node:$a, node:$b)>;
 
-def fsub_contract : PatFrag<(ops node:$a, node:$b), (fsub node:$a, node:$b),[{
-  return N->getFlags().hasAllowContract();
-}]>;
+// An 'fadd' node the target may contract
+def fadd_contract : ContractablePatFrag<(ops node:$a, node:$b),
+                                        (fadd node:$a, node:$b)>;
+
+// An 'fsub' node the target may contract
+def fsub_contract : ContractablePatFrag<(ops node:$a, node:$b),
+                                        (fsub node:$a, node:$b)>;
 
 def not  : PatFrag<(ops node:$in), (xor node:$in, -1)>;
 def vnot : PatFrag<(ops node:$in), (xor node:$in, immAllOnesV)>;

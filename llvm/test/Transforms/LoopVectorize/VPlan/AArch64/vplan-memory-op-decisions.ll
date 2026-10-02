@@ -583,9 +583,11 @@ define void @sdiv_with_nonnegative_operands_address(ptr noalias %A) {
 ; CHECK-NEXT:      EMIT ir<%mul> = mul nuw nsw ir<%iv>, ir<4>
 ; CHECK-NEXT:      EMIT ir<%div> = sdiv ir<%mul>, ir<4>
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%div>
-; CHECK-NEXT:      EMIT-SCALAR ir<%lv> = load ir<%gep>
+; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT ir<%add> = add ir<%lv>, ir<1>
-; CHECK-NEXT:      EMIT store ir<%add>, ir<%gep>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep>, ir<1>
+; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%add>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv>, ir<100>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>

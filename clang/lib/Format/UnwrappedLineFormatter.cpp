@@ -519,9 +519,14 @@ private:
       } else if (TheLine->Last->is(TT_CompoundRequirementLBrace)) {
         ShouldMerge = Style.AllowShortCompoundRequirementOnASingleLine;
       } else if (TheLine->Last->isOneOf(TT_ClassLBrace, TT_StructLBrace,
-                                        TT_UnionLBrace) ||
-                 (TheLine->Last->is(TT_RecordLBrace) && Style.isJava())) {
+                                        TT_UnionLBrace)) {
         return tryMergeRecord(I, E, Limit);
+      } else if (TheLine->Last->is(TT_RecordLBrace) && Style.isJava()) {
+        // Java `interface` and `record` have no dedicated `BraceWrapping.After`
+        // option and are not governed by `AllowShortRecordOnASingleLine`.
+        ShouldMerge = !Style.BraceWrapping.AfterClass ||
+                      (NextLine.First->is(tok::r_brace) &&
+                       !Style.BraceWrapping.SplitEmptyRecord);
       } else if (TheLine->InPPDirective ||
                  TheLine->First->isNoneOf(tok::kw_class, tok::kw_enum,
                                           tok::kw_struct, tok::kw_union)) {
@@ -1652,7 +1657,7 @@ static auto computeNewlines(const AnnotatedLine &Line,
       (!RootToken.Next ||
        (RootToken.Next->is(tok::semi) && !RootToken.Next->Next)) &&
       // Do not remove empty lines before namespace closing "}".
-      !getNamespaceToken(&Line, Lines)) {
+      !getNamespaceToken(&Line, Lines) && !Style.KeepEmptyLines.AtEndOfBlock) {
     Newlines = std::min(Newlines, 1u);
   }
   // Remove empty lines at the start of nested blocks (lambdas/arrow functions)

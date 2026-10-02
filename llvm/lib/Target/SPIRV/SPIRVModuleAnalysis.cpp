@@ -36,7 +36,7 @@ using namespace llvm;
 static cl::opt<bool>
     SPVDumpDeps("spv-dump-deps",
                 cl::desc("Dump MIR with SPIR-V dependencies info"),
-                cl::Optional, cl::init(false));
+                cl::init(false));
 
 static cl::list<SPIRV::Capability::Capability>
     AvoidCapabilities("avoid-spirv-capabilities",
@@ -1052,6 +1052,11 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::StorageImageMultisample,
                     Capability::ImageMSArray});
 
+  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 3)) ||
+      ST.canUseExtension(Extension::SPV_KHR_variable_pointers))
+    addAvailableCaps({Capability::VariablePointersStorageBuffer,
+                      Capability::VariablePointers});
+
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
     addAvailableCaps(
@@ -1633,6 +1638,12 @@ void addInstrRequirements(const MachineInstr &MI,
     unsigned NumComponents = MI.getOperand(2).getImm();
     if (NumComponents == 8 || NumComponents == 16)
       Reqs.addCapability(SPIRV::Capability::Vector16);
+    else if (requiresLongVectorEXT(NumComponents))
+      // Such widths are only expressible as OpTypeVectorIdEXT.
+      reportFatalUsageError(
+          "OpTypeVector with " + Twine(NumComponents) +
+          " components requires the following SPIR-V extension: "
+          "SPV_EXT_long_vector");
 
     maybeAddScatterGatherReq(MI, Reqs, ST);
     break;

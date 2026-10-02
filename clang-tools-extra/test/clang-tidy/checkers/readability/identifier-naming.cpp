@@ -512,6 +512,8 @@ void Global_Fun(TYPE_parameters... PARAMETER_PACK) {
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: invalid case style for global function 'Global_Fun'
 // CHECK-MESSAGES: :[[@LINE-2]]:36: warning: invalid case style for parameter pack 'PARAMETER_PACK'
 // CHECK-FIXES: void GlobalFun(typeParameters_t... parameterPack) {
+    (void)sizeof...(PARAMETER_PACK);
+// CHECK-FIXES: (void)sizeof...(parameterPack);
     global_function(1, 2);
 // CHECK-FIXES: GlobalFunction(1, 2);
     FOO_bar = Global_variable;
@@ -834,3 +836,11 @@ Some_struct g_s1{ .SomeMember = 1 };
 // CHECK-FIXES: Some_struct g_s1{ .some_member = 1 };
 Some_struct g_s2{.SomeMember=1};
 // CHECK-FIXES: Some_struct g_s2{.some_member=1};
+
+template<class t_t>
+struct X {
+  struct B;
+  struct A : public B {
+    virtual void v_Foo() { }
+  };
+};

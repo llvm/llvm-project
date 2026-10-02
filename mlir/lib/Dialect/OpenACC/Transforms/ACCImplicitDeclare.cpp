@@ -185,6 +185,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -244,12 +245,50 @@ bool isValidForAccDeclare(Operation *globalOp) {
   return !isa<FunctionOpInterface>(globalOp);
 }
 
+/// Collect remaining symbol uses with a single walk. Asking whether each
+/// recipe is referenced via getSymbolUses walks the whole module again, and
+/// recipes are generated per type, so there can be many of them. A recipe
+/// referring only to its own symbol is not a "relevant" use (it does not
+/// mean the recipe is attached to a compute construct).
+static std::optional<llvm::DenseSet<StringAttr>>
+collectUsedSymbolsExcludingRecipeSelfUses(ModuleOp mod) {
+  // The module region, not the module op, is the symbol table scope: asking
+  // for the uses on the op itself would not walk into the body.
+  std::optional<SymbolTable::UseRange> uses =
+      SymbolTable::getSymbolUses(&mod.getBodyRegion());
+  if (!uses)
+    return std::nullopt;
+
+  llvm::DenseSet<StringAttr> usedSymbols;
+  auto isRecipeSelfUse = [](Operation *user, StringAttr name) {
+    if (auto recipe = dyn_cast<acc::PrivateRecipeOp>(user))
+      return recipe.getNameAttr() == name;
+    if (auto recipe = dyn_cast<acc::FirstprivateRecipeOp>(user))
+      return recipe.getNameAttr() == name;
+    if (auto recipe = dyn_cast<acc::ReductionRecipeOp>(user))
+      return recipe.getNameAttr() == name;
+    return false;
+  };
+  for (const SymbolTable::SymbolUse &use : *uses) {
+    StringAttr name = use.getSymbolRef().getLeafReference();
+    if (!isRecipeSelfUse(use.getUser(), name))
+      usedSymbols.insert(name);
+  }
+  return usedSymbols;
+}
+
 /// Checks whether a recipe operation has meaningful use of its symbol that
 /// justifies processing its regions for global references. Returns false if:
 /// 1. The recipe has no symbol uses at all, or
 /// 2. The only symbol use is the recipe's own symbol definition
 template <typename RecipeOpT>
-static bool hasRelevantRecipeUse(RecipeOpT &recipeOp, ModuleOp &mod) {
+static bool hasRelevantRecipeUse(
+    RecipeOpT &recipeOp, ModuleOp &mod,
+    const std::optional<llvm::DenseSet<StringAttr>> &usedSymbols) {
+  auto recipeName = recipeOp.getNameAttr();
+  if (usedSymbols)
+    return usedSymbols->contains(recipeName);
+
   std::optional<SymbolTable::UseRange> symbolUses = recipeOp.getSymbolUses(mod);
 
   // No recipe symbol uses.
@@ -366,6 +405,8 @@ public:
     // attribute.
     SymbolTable symTab(mod);
     GlobalOpSetT globalsToAccDeclare;
+    std::optional<llvm::DenseSet<StringAttr>> usedSymbols =
+        collectUsedSymbolsExcludingRecipeSelfUses(mod);
     mod.walk([&](Operation *op) {
       TypeSwitch<Operation *, void>(op)
           .Case<ACC_COMPUTE_CONSTRUCT_OPS, acc::ComputeRegionOp>(
@@ -388,7 +429,7 @@ public:
                                                accSupport, symTab);
           })
           .Case([&](acc::PrivateRecipeOp privateRecipe) {
-            if (hasRelevantRecipeUse(privateRecipe, mod)) {
+            if (hasRelevantRecipeUse(privateRecipe, mod, usedSymbols)) {
               collectGlobalsFromDeviceRegion(privateRecipe.getInitRegion(),
                                              globalsToAccDeclare, accSupport,
                                              symTab);
@@ -398,7 +439,7 @@ public:
             }
           })
           .Case([&](acc::FirstprivateRecipeOp firstprivateRecipe) {
-            if (hasRelevantRecipeUse(firstprivateRecipe, mod)) {
+            if (hasRelevantRecipeUse(firstprivateRecipe, mod, usedSymbols)) {
               collectGlobalsFromDeviceRegion(firstprivateRecipe.getInitRegion(),
                                              globalsToAccDeclare, accSupport,
                                              symTab);
@@ -411,7 +452,7 @@ public:
             }
           })
           .Case([&](acc::ReductionRecipeOp reductionRecipe) {
-            if (hasRelevantRecipeUse(reductionRecipe, mod)) {
+            if (hasRelevantRecipeUse(reductionRecipe, mod, usedSymbols)) {
               collectGlobalsFromDeviceRegion(reductionRecipe.getInitRegion(),
                                              globalsToAccDeclare, accSupport,
                                              symTab);
