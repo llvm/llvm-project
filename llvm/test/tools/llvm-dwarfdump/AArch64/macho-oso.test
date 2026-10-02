@@ -1,0 +1,36 @@
+# REQUIRES: aarch64-registered-target
+
+## Test that llvm-dwarfdump follows N_OSO references in Mach-O binaries
+## to dump DWARF from referenced object files.
+
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: yaml2obj %p/Inputs/macho-oso-obj.yaml -o %t/test.o
+# RUN: yaml2obj %p/Inputs/macho-oso-exe.yaml -o %t/test
+
+## N_OSO following should dump DWARF from the referenced .o file.
+# RUN: cd %t && llvm-dwarfdump test 2>&1 | FileCheck %s --check-prefix=OSO
+# OSO: test:{{.*}}file format Mach-O arm64
+# OSO: test.o:{{.*}}file format Mach-O arm64
+# OSO: .debug_info contents:
+# OSO: DW_TAG_compile_unit
+# OSO: DW_AT_name	("oso-test.c")
+
+## --no-debug-map suppresses debug map following.
+# RUN: cd %t && llvm-dwarfdump --no-debug-map test 2>&1 | FileCheck %s --check-prefix=NO-OSO
+# NO-OSO:     test:{{.*}}file format Mach-O arm64
+# NO-OSO-NOT: test.o
+# NO-OSO-NOT: DW_TAG_compile_unit
+
+## N_OSO references to archive members are followed.
+# RUN: llvm-ar rcs %t/test.a %t/test.o
+# RUN: yaml2obj %p/Inputs/macho-oso-archive-exe.yaml -o %t/test-ar
+# RUN: cd %t && llvm-dwarfdump test-ar 2>&1 | FileCheck %s --check-prefix=ARCHIVE
+# ARCHIVE: test-ar:{{.*}}file format Mach-O arm64
+# ARCHIVE: test.a(test.o):{{.*}}file format Mach-O arm64
+# ARCHIVE: DW_TAG_compile_unit
+# ARCHIVE: DW_AT_name	("oso-test.c")
+
+## When the .o file is missing, a warning is emitted.
+# RUN: rm %t/test.o
+# RUN: cd %t && llvm-dwarfdump test 2>&1 | FileCheck %s --check-prefix=MISSING
+# MISSING: warning: test.o:
