@@ -1,0 +1,189 @@
+# RUN: llc -mtriple=nvptx64 -mcpu=sm_100 -run-pass=machine-cse -o - %s | FileCheck %s
+# Special-register reads are single moves, so MachineCSE must only eliminate
+# them locally (or from an immediate predecessor), not across blocks.
+
+---
+name:            keep_ctaid_reads
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: keep_ctaid_reads
+  ; CHECK-COUNT-2: INT_PTX_SREG_CTAID_x
+  bb.0:
+    %0:b32 = INT_PTX_SREG_CTAID_x
+    INLINEASM &"", sideeffect attdialect, reguse:B32, %0
+    GOTO %bb.1
+
+  bb.1:
+    INLINEASM &"", sideeffect attdialect
+    GOTO %bb.2
+
+  bb.2:
+    %1:b32 = INT_PTX_SREG_CTAID_x
+    INLINEASM &"", sideeffect attdialect, reguse:B32, %1
+    Return
+
+...
+---
+name:            keep_tid_reads
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: keep_tid_reads
+  ; CHECK-COUNT-2: INT_PTX_SREG_TID_x
+  bb.0:
+    %0:b32 = INT_PTX_SREG_TID_x
+    INLINEASM &"", sideeffect attdialect, reguse:B32, %0
+    GOTO %bb.1
+
+  bb.1:
+    INLINEASM &"", sideeffect attdialect
+    GOTO %bb.2
+
+  bb.2:
+    %1:b32 = INT_PTX_SREG_TID_x
+    INLINEASM &"", sideeffect attdialect, reguse:B32, %1
+    Return
+
+...
+---
+name:            keep_ntid_reads
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: keep_ntid_reads
+  ; CHECK-COUNT-2: INT_PTX_SREG_NTID_x
+  bb.0:
+    %0:b32 = INT_PTX_SREG_NTID_x
+    INLINEASM &"", sideeffect attdialect, reguse:B32, %0
+    GOTO %bb.1
+
+  bb.1:
+    INLINEASM &"", sideeffect attdialect
+    GOTO %bb.2
+
+  bb.2:
+    %1:b32 = INT_PTX_SREG_NTID_x
+    INLINEASM &"", sideeffect attdialect, reguse:B32, %1
+    Return
+
+...
+---
+name:            keep_nctaid_reads
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: keep_nctaid_reads
+  ; CHECK-COUNT-2: INT_PTX_SREG_NCTAID_x
+  bb.0:
+    %0:b32 = INT_PTX_SREG_NCTAID_x
+    INLINEASM &"", sideeffect attdialect, reguse:B32, %0
+    GOTO %bb.1
+
+  bb.1:
+    INLINEASM &"", sideeffect attdialect
+    GOTO %bb.2
+
+  bb.2:
+    %1:b32 = INT_PTX_SREG_NCTAID_x
+    INLINEASM &"", sideeffect attdialect, reguse:B32, %1
+    Return
+
+...
+---
+name:            keep_laneid_reads
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: keep_laneid_reads
+  ; CHECK-COUNT-2: SREG_LANEID
+  bb.0:
+    %0:b32 = SREG_LANEID
+    INLINEASM &"", sideeffect attdialect, reguse:B32, %0
+    GOTO %bb.1
+
+  bb.1:
+    INLINEASM &"", sideeffect attdialect
+    GOTO %bb.2
+
+  bb.2:
+    %1:b32 = SREG_LANEID
+    INLINEASM &"", sideeffect attdialect, reguse:B32, %1
+    Return
+
+...
+---
+name:            keep_clusterid_reads
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: keep_clusterid_reads
+  ; CHECK-COUNT-2: INT_PTX_SREG_CLUSTERID_x
+  bb.0:
+    %0:b32 = INT_PTX_SREG_CLUSTERID_x
+    INLINEASM &"", sideeffect attdialect, reguse:B32, %0
+    GOTO %bb.1
+
+  bb.1:
+    INLINEASM &"", sideeffect attdialect
+    GOTO %bb.2
+
+  bb.2:
+    %1:b32 = INT_PTX_SREG_CLUSTERID_x
+    INLINEASM &"", sideeffect attdialect, reguse:B32, %1
+    Return
+
+...
+---
+name:            keep_warpsize_reads
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: keep_warpsize_reads
+  ; CHECK-COUNT-2: INT_PTX_SREG_WARPSIZE
+  bb.0:
+    %0:b32 = INT_PTX_SREG_WARPSIZE
+    INLINEASM &"", sideeffect attdialect, reguse:B32, %0
+    GOTO %bb.1
+
+  bb.1:
+    INLINEASM &"", sideeffect attdialect
+    GOTO %bb.2
+
+  bb.2:
+    %1:b32 = INT_PTX_SREG_WARPSIZE
+    INLINEASM &"", sideeffect attdialect, reguse:B32, %1
+    Return
+
+...
+---
+name:            keep_envreg_reads
+tracksRegLiveness: true
+liveins:
+  - { reg: '$envreg0' }
+body: |
+  ; CHECK-LABEL: name: keep_envreg_reads
+  ; CHECK-COUNT-2: MOV_SPECIAL
+  bb.0:
+    liveins: $envreg0
+    %0:b32 = MOV_SPECIAL $envreg0
+    INLINEASM &"", sideeffect attdialect, reguse:B32, %0
+    GOTO %bb.1
+
+  bb.1:
+    INLINEASM &"", sideeffect attdialect
+    GOTO %bb.2
+
+  bb.2:
+    %1:b32 = MOV_SPECIAL $envreg0
+    INLINEASM &"", sideeffect attdialect, reguse:B32, %1
+    Return
+
+...
+---
+name:            cse_ctaid_reads_locally
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: cse_ctaid_reads_locally
+  ; CHECK-COUNT-1: INT_PTX_SREG_CTAID_x
+  bb.0:
+    %0:b32 = INT_PTX_SREG_CTAID_x
+    %1:b32 = INT_PTX_SREG_CTAID_x
+    INLINEASM &"", sideeffect attdialect, reguse:B32, %0
+    INLINEASM &"", sideeffect attdialect, reguse:B32, %1
+    Return
+
+...
