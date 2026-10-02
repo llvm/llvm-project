@@ -324,38 +324,12 @@ ModuleDepCollector::getInvocationAdjustedForModuleBuildWithoutOutputs(
   CI.getMutFrontendOpts().Inputs.emplace_back(Deps.ClangModuleMapFile,
                                               ModuleMapInputKind);
 
-  auto CurrentModuleMapEntry =
-      ScanInstance.getFileManager().getOptionalFileRef(Deps.ClangModuleMapFile);
-  assert(CurrentModuleMapEntry && "module map file entry not found");
-
   // Remove directly passed modulemap files. They will get added back if they
   // were actually used.
   CI.getMutFrontendOpts().ModuleMapFiles.clear();
 
-  auto DepModuleMapFiles = collectModuleMapFiles(Deps.ClangModuleDeps);
-  for (StringRef ModuleMapFile : Deps.ModuleMapFileDeps) {
-    // TODO: Track these as `FileEntryRef` to simplify the equality check below.
-    auto ModuleMapEntry =
-        ScanInstance.getFileManager().getOptionalFileRef(ModuleMapFile);
-    assert(ModuleMapEntry && "module map file entry not found");
-
-    // Don't report module maps describing eagerly-loaded dependency. This
-    // information will be deserialized from the PCM.
-    // TODO: Verify this works fine when modulemap for module A is eagerly
-    // loaded from A.pcm, and module map passed on the command line contains
-    // definition of a submodule: "explicit module A.Private { ... }".
-    if (Service.getOpts().EagerLoadModules &&
-        DepModuleMapFiles.contains(*ModuleMapEntry))
-      continue;
-
-    // Don't report module map file of the current module unless it also
-    // describes a dependency (for symmetry).
-    if (*ModuleMapEntry == *CurrentModuleMapEntry &&
-        !DepModuleMapFiles.contains(*ModuleMapEntry))
-      continue;
-
+  for (const std::string &ModuleMapFile : Deps.ModuleMapFileDeps)
     CI.getMutFrontendOpts().ModuleMapFiles.emplace_back(ModuleMapFile);
-  }
 
   // Report the prebuilt modules this module uses.
   for (const auto &PrebuiltModule : Deps.PrebuiltModuleDeps)
@@ -378,9 +352,28 @@ ModuleDepCollector::getInvocationAdjustedForModuleBuildWithoutOutputs(
   return CI;
 }
 
-llvm::DenseSet<const FileEntry *> ModuleDepCollector::collectModuleMapFiles(
+static void
+collectModuleMap(std::vector<std::string> &ModuleMapFiles,
+                 llvm::SmallDenseSet<const FileEntry *, 16> &SeenModuleMapFiles,
+                 FileEntryRef ModuleMapFile, StringRef Path,
+                 const bool Report) {
+  if (!SeenModuleMapFiles.insert(ModuleMapFile).second)
+    return;
+  // Conditionalize reporting for modes like eager module loading.
+  // That mode will have this information deserialized from the PCM instead.
+  // TODO: Verify this works fine when modulemap for module A is eagerly
+  // loaded from A.pcm, and module map passed on the command line contains
+  // definition of a submodule: "explicit module A.Private { ... }".
+  if (Report)
+    ModuleMapFiles.emplace_back(Path);
+}
+
+void ModuleDepCollector::collectModuleMapFiles(
+    std::vector<std::string> &ModuleMapFiles,
+    llvm::SmallDenseSet<const FileEntry *, 16> &SeenModuleMapFiles,
     ArrayRef<ModuleID> ClangModuleDeps) const {
-  llvm::DenseSet<const FileEntry *> ModuleMapFiles;
+  // Add each dependency's module map, in the order the PCM recorded its
+  // imports. This is expected to be a stable order across runs and workers.
   for (const ModuleID &MID : ClangModuleDeps) {
     ModuleDeps *MD = ModuleDepsByID.lookup(MID);
     assert(MD && "Inconsistent dependency info");
@@ -388,20 +381,12 @@ llvm::DenseSet<const FileEntry *> ModuleDepCollector::collectModuleMapFiles(
     auto FE = ScanInstance.getFileManager().getOptionalFileRef(
         MD->ClangModuleMapFile);
     assert(FE && "Missing module map file that was previously found");
-    ModuleMapFiles.insert(*FE);
-  }
-  return ModuleMapFiles;
-}
+    if (!FE)
+      continue;
 
-void ModuleDepCollector::addModuleMapFiles(
-    CompilerInvocation &CI, ArrayRef<ModuleID> ClangModuleDeps) const {
-  if (Service.getOpts().EagerLoadModules)
-    return; // Only pcm is needed for eager load.
-
-  for (const ModuleID &MID : ClangModuleDeps) {
-    ModuleDeps *MD = ModuleDepsByID.lookup(MID);
-    assert(MD && "Inconsistent dependency info");
-    CI.getFrontendOpts().ModuleMapFiles.push_back(MD->ClangModuleMapFile);
+    collectModuleMap(ModuleMapFiles, SeenModuleMapFiles, *FE,
+                     MD->ClangModuleMapFile,
+                     /*Report=*/!Service.getOpts().EagerLoadModules);
   }
 }
 
@@ -454,26 +439,29 @@ void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
 
   if (llvm::any_of(CI.getFrontendOpts().Inputs, needsModules)) {
     Preprocessor &PP = ScanInstance.getPreprocessor();
-    if (Module *CurrentModule = PP.getCurrentModuleImplementation())
-      if (OptionalFileEntryRef CurrentModuleMap =
-              PP.getHeaderSearchInfo()
-                  .getModuleMap()
-                  .getModuleMapFileForUniquing(CurrentModule))
-        CI.getFrontendOpts().ModuleMapFiles.emplace_back(
-            CurrentModuleMap->getNameAsRequested());
 
     SmallVector<ModuleID> DirectDeps;
     for (const auto &KV : ModularDeps)
       if (DirectModularDeps.contains(KV.first))
         DirectDeps.push_back(KV.second->ID);
 
-    // TODO: Report module maps the same way it's done for modular dependencies.
-    addModuleMapFiles(CI, DirectDeps);
-
     addModuleFiles(CI, DirectDeps);
 
     for (const auto &KV : DirectPrebuiltModularDeps)
       CI.getFrontendOpts().ModuleFiles.push_back(KV.second.PCMFile);
+
+    llvm::SmallDenseSet<const FileEntry *, 16> SeenModuleMapFiles;
+    const ModuleMap &ModMapInfo = PP.getHeaderSearchInfo().getModuleMap();
+    if (Module *CurrentModule = PP.getCurrentModuleImplementation())
+      if (OptionalFileEntryRef CurrentModuleMap =
+              ModMapInfo.getModuleMapFileForUniquing(CurrentModule))
+        collectModuleMap(CI.getFrontendOpts().ModuleMapFiles,
+                         SeenModuleMapFiles, *CurrentModuleMap,
+                         CurrentModuleMap->getNameAsRequested(),
+                         /*Report=*/true);
+
+    collectModuleMapFiles(CI.getFrontendOpts().ModuleMapFiles,
+                          SeenModuleMapFiles, DirectDeps);
   }
 }
 
@@ -762,8 +750,10 @@ ModuleDepCollector::handleTopLevelModule(serialization::ModuleFile *MF) {
   ModuleMap &ModMapInfo =
       MDC.ScanInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
 
-  if (auto ModuleMap = ModMapInfo.getModuleMapFileForUniquing(M)) {
-    SmallString<128> Path = ModuleMap->getNameAsRequested();
+  OptionalFileEntryRef CurrentModuleMapEntry =
+      ModMapInfo.getModuleMapFileForUniquing(M);
+  if (CurrentModuleMapEntry) {
+    SmallString<128> Path = CurrentModuleMapEntry->getNameAsRequested();
     ModMapInfo.canonicalizeModuleMapPath(Path);
     MD.ClangModuleMapFile = std::string(Path);
   }
@@ -786,6 +776,11 @@ ModuleDepCollector::handleTopLevelModule(serialization::ModuleFile *MF) {
 
   addAllModuleDeps(*MF, MD);
 
+  // Capture module map file dependencies.
+  llvm::SmallDenseSet<const FileEntry *, 16> SeenModuleMapFiles;
+  MDC.collectModuleMapFiles(MD.ModuleMapFileDeps, SeenModuleMapFiles,
+                            MD.ClangModuleDeps);
+
   SmallString<0> PathBuf;
   PathBuf.reserve(256);
   MDC.ScanInstance.getASTReader()->visitInputFileInfos(
@@ -805,7 +800,29 @@ ModuleDepCollector::handleTopLevelModule(serialization::ModuleFile *MF) {
         auto ResolvedFilenameAsRequested = ASTReader::ResolveImportedPath(
             PathBuf, IFI.UnresolvedImportedFilenameAsRequested,
             MF->BaseDirectory);
-        MD.ModuleMapFileDeps.emplace_back(*ResolvedFilenameAsRequested);
+
+        // TODO: Track these as `FileEntryRef` to simplify the equality check
+        // below.
+        auto ModuleMapEntry =
+            MDC.ScanInstance.getFileManager().getOptionalFileRef(
+                *ResolvedFilenameAsRequested);
+        assert(ModuleMapEntry && "module map file entry not found");
+        if (!ModuleMapEntry)
+          return;
+
+        // Don't report module map file of the current module unless it also
+        // describes a dependency in ModuleMapFileDeps (for symmetry).
+        if (CurrentModuleMapEntry && *ModuleMapEntry == *CurrentModuleMapEntry)
+          return;
+
+        // Add additional modulemaps for input files the module
+        // dependencies did not already cover. e.g. A modulemap that only
+        // declares a submodule is recorded only as an input file.
+        // FIXME: It is not guaranteed to be in a stable order across runs or
+        // workers.
+        collectModuleMap(MD.ModuleMapFileDeps, SeenModuleMapFiles,
+                         *ModuleMapEntry, *ResolvedFilenameAsRequested,
+                         /*Report=*/true);
       });
 
   bool IgnoreCWD = false;
