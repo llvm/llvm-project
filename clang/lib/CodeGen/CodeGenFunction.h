@@ -302,6 +302,19 @@ public:
   // because of jumps.
   VarBypassDetector Bypasses;
 
+  // Addresses of bypassed variables, for re-emitting their
+  // trivial-auto-var-init at a jump that re-enters their scope.
+  llvm::SmallDenseMap<const VarDecl *, Address, 4> BypassedVarInits;
+
+  // Jumps, like gotos or switches, that may bypass a declaration that has not
+  // been emitted yet. EmitAutoVarAlloca patches the init in before the jump
+  // once the alloca exists.
+  struct BypassingForwardJump {
+    llvm::AssertingVH<llvm::BasicBlock> Block;
+    const Stmt *Source;
+  };
+  llvm::SmallVector<BypassingForwardJump, 4> BypassingForwardJumps;
+
   /// List of recently emitted OMPCanonicalLoops.
   ///
   /// Since OMPCanonicalLoops are nested inside other statements (in particular
@@ -3592,6 +3605,11 @@ public:
   void emitAutoVarTypeCleanup(const AutoVarEmission &emission,
                               QualType::DestructionKind dtorKind);
 
+  /// Re-emit trivial-auto-var-init stores for variables bypassed by the jump
+  /// Source. No-op in a function containing a computed goto, where jump sources
+  /// are unknown and a single function-scope init is used instead.
+  void emitBypassedVarInitsForSource(const Stmt *Source);
+
   void MaybeEmitDeferredVarDeclInit(const VarDecl *var);
 
   /// Emits the alloca and debug information for the size expressions for each
@@ -5625,6 +5643,8 @@ private:
 
   void emitZeroOrPatternForAutoVarInit(QualType type, const VarDecl &D,
                                        Address Loc);
+  LangOptions::TrivialAutoVarInitKind getAutoVarInitKind(QualType Ty,
+                                                         const VarDecl &D);
 
 public:
   enum class EvaluationOrder {

@@ -75,8 +75,8 @@ public:
     return nullptr;
   }
 
-  Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                 GEPNoWrapFlags NW) const override {
+  Value *FoldGEP(const DataLayout &, Type *Ty, Value *Ptr,
+                 ArrayRef<Value *> IdxList, GEPNoWrapFlags NW) const override {
     return nullptr;
   }
 
