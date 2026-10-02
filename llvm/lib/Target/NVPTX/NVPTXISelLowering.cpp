@@ -7782,26 +7782,7 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
       return AtomicExpansionKind::None;
     [[fallthrough]];
   case AtomicRMWInst::BinOp::Add:
-  case AtomicRMWInst::BinOp::Sub:
-    switch (BitWidth) {
-    case 8:
-    case 16:
-      return AtomicExpansionKind::CmpXChg;
-    case 32:
-    case 64:
-      return AtomicExpansionKind::None;
-    case 128:
-      return AtomicExpansionKind::CmpXChg;
-    default:
-      llvm_unreachable("unsupported width encountered");
-    }
-  case AtomicRMWInst::BinOp::And:
-  case AtomicRMWInst::BinOp::Or:
-  case AtomicRMWInst::BinOp::Xor:
-  case AtomicRMWInst::BinOp::Max:
-  case AtomicRMWInst::BinOp::Min:
-  case AtomicRMWInst::BinOp::UMax:
-  case AtomicRMWInst::BinOp::UMin: {
+  case AtomicRMWInst::BinOp::Sub: {
     AtomicExpansionKind ExpansionKind =
         AI->getOperation() == AtomicRMWInst::BinOp::Sub
             ? AtomicExpansionKind::Expand
@@ -7811,7 +7792,27 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     case 16:
       return AtomicExpansionKind::CmpXChg;
     case 32:
+    case 64:
       return ExpansionKind;
+    case 128:
+      return AtomicExpansionKind::CmpXChg;
+    default:
+      llvm_unreachable("unsupported width encountered");
+    }
+  }
+  case AtomicRMWInst::BinOp::And:
+  case AtomicRMWInst::BinOp::Or:
+  case AtomicRMWInst::BinOp::Xor:
+  case AtomicRMWInst::BinOp::Max:
+  case AtomicRMWInst::BinOp::Min:
+  case AtomicRMWInst::BinOp::UMax:
+  case AtomicRMWInst::BinOp::UMin: {
+    switch (BitWidth) {
+    case 8:
+    case 16:
+      return AtomicExpansionKind::CmpXChg;
+    case 32:
+      return AtomicExpansionKind::None;
     case 64:
       if (STI.hasAtomMinMaxAndOrXor())
         return AtomicExpansionKind::None;

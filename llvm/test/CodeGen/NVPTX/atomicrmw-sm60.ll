@@ -1890,9 +1890,11 @@ define float @fsub_acq_rel_float_global_cta(ptr addrspace(1) %addr, float %val) 
 ; SM60-NOFTZ-ALLOW-EMPTY:
 ; SM60-NOFTZ-ALLOW-NEXT:  // %bb.0:
 ; SM60-NOFTZ-ALLOW-NEXT:    ld.param.b64 %rd1, [fsub_acq_rel_float_global_cta_param_0];
+; SM60-NOFTZ-ALLOW-NEXT:    membar.cta;
 ; SM60-NOFTZ-ALLOW-NEXT:    ld.param.b32 %r1, [fsub_acq_rel_float_global_cta_param_1];
 ; SM60-NOFTZ-ALLOW-NEXT:    neg.f32 %r2, %r1;
 ; SM60-NOFTZ-ALLOW-NEXT:    atom.cta.global.add.f32 %r3, [%rd1], %r2;
+; SM60-NOFTZ-ALLOW-NEXT:    membar.cta;
 ; SM60-NOFTZ-ALLOW-NEXT:    st.param.b32 [func_retval0], %r3;
 ; SM60-NOFTZ-ALLOW-NEXT:    ret;
 ;
@@ -1903,9 +1905,11 @@ define float @fsub_acq_rel_float_global_cta(ptr addrspace(1) %addr, float %val) 
 ; SM60-FTZ-DISALLOW-EMPTY:
 ; SM60-FTZ-DISALLOW-NEXT:  // %bb.0:
 ; SM60-FTZ-DISALLOW-NEXT:    ld.param.b64 %rd1, [fsub_acq_rel_float_global_cta_param_0];
+; SM60-FTZ-DISALLOW-NEXT:    membar.cta;
 ; SM60-FTZ-DISALLOW-NEXT:    ld.param.b32 %r1, [fsub_acq_rel_float_global_cta_param_1];
 ; SM60-FTZ-DISALLOW-NEXT:    neg.ftz.f32 %r2, %r1;
 ; SM60-FTZ-DISALLOW-NEXT:    atom.cta.global.add.f32 %r3, [%rd1], %r2;
+; SM60-FTZ-DISALLOW-NEXT:    membar.cta;
 ; SM60-FTZ-DISALLOW-NEXT:    st.param.b32 [func_retval0], %r3;
 ; SM60-FTZ-DISALLOW-NEXT:    ret;
 ;
@@ -1916,9 +1920,11 @@ define float @fsub_acq_rel_float_global_cta(ptr addrspace(1) %addr, float %val) 
 ; SM60-FTZ-ALLOW-EMPTY:
 ; SM60-FTZ-ALLOW-NEXT:  // %bb.0:
 ; SM60-FTZ-ALLOW-NEXT:    ld.param.b64 %rd1, [fsub_acq_rel_float_global_cta_param_0];
+; SM60-FTZ-ALLOW-NEXT:    membar.cta;
 ; SM60-FTZ-ALLOW-NEXT:    ld.param.b32 %r1, [fsub_acq_rel_float_global_cta_param_1];
 ; SM60-FTZ-ALLOW-NEXT:    neg.ftz.f32 %r2, %r1;
 ; SM60-FTZ-ALLOW-NEXT:    atom.cta.global.add.f32 %r3, [%rd1], %r2;
+; SM60-FTZ-ALLOW-NEXT:    membar.cta;
 ; SM60-FTZ-ALLOW-NEXT:    st.param.b32 [func_retval0], %r3;
 ; SM60-FTZ-ALLOW-NEXT:    ret;
         %retval = atomicrmw fsub ptr  addrspace(1) %addr, float %val syncscope("block") acq_rel
@@ -2381,9 +2387,11 @@ define double @fsub_acq_rel_double_global_cta(ptr addrspace(1) %addr, double %va
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd1, [fsub_acq_rel_double_global_cta_param_0];
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    ld.param.b64 %rd2, [fsub_acq_rel_double_global_cta_param_1];
 ; SM60-NEXT:    neg.f64 %rd3, %rd2;
 ; SM60-NEXT:    atom.cta.global.add.f64 %rd4, [%rd1], %rd3;
+; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; SM60-NEXT:    ret;
         %retval = atomicrmw fsub ptr  addrspace(1) %addr, double %val syncscope("block") acq_rel
