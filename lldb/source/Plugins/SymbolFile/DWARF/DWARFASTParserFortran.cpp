@@ -49,7 +49,7 @@ TypeSP DWARFASTParserFortran::UpdateSymbolContextScopeForType(
   if (sc_parent_tag == DW_TAG_compile_unit ||
       sc_parent_tag == DW_TAG_partial_unit) {
     symbol_context_scope = sc.comp_unit;
-  } else if (sc.function != nullptr && sc_parent_die) {
+  } else if (!sc.function && sc_parent_die) {
     symbol_context_scope =
         sc.function->GetBlock(true).FindBlockByID(sc_parent_die.GetID());
     if (symbol_context_scope == nullptr)
@@ -69,89 +69,98 @@ lldb::TypeSP DWARFASTParserFortran::ParseTypeFromDWARF(
   TypeSP type_sp;
   if (type_is_new_ptr)
     *type_is_new_ptr = false;
+
   Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
 
-  if (die) {
-    SymbolFileDWARF *dwarf = die.GetDWARF();
+  if (!die)
+    return type_sp;
+  SymbolFileDWARF *dwarf = die.GetDWARF();
+  if (log) {
+    dwarf->GetObjectFile()->GetModule()->LogMessage(
+        log,
+        "DWARFASTParserFortran::ParseTypeFromDWARF (die = 0x%8.8x) %s name"
+        "= "
+        "'%s')",
+        die.GetOffset(), plugin::dwarf::DW_TAG_value_to_name(die.Tag()),
+        die.GetName());
+  }
+
+  Type *type_ptr = dwarf->GetDIEToType().lookup(die.GetDIE());
+
+  if (type_ptr) {
+    if (type_ptr != DIE_IS_BEING_PARSED)
+      return type_ptr->shared_from_this();
+    else
+      return TypeSP();
+  }
+
+  if (type_is_new_ptr)
+    *type_is_new_ptr = true;
+
+  ConstString type_name;
+  const char *type_name_cstr = nullptr;
+  CompilerType compiler_type;
+  DWARFAttributes attributes;
+  DWARFFormValue form_value;
+  Declaration decl;
+  // We use 0xFF as a sentinel value, it doesn't map to any DW_ATE attribute
+  llvm::dwarf::TypeKind encoding = static_cast<llvm::dwarf::TypeKind>(0xff);
+
+  switch (const dw_tag_t tag = die.Tag()) {
+  case DW_TAG_base_type: {
+    dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
+    attributes = die.GetAttributes();
+    uint64_t bit_size = 0;
+    for (size_t idx = 0; idx < attributes.Size(); idx++) {
+      if (attributes.ExtractFormValueAtIndex(idx, form_value)) {
+
+        switch (attributes.AttributeAtIndex(idx)) {
+        case DW_AT_name:
+          type_name_cstr = form_value.AsCString();
+          if (type_name_cstr &&
+              type_name_cstr[0]) { // Check for null AND empty string
+            type_name.SetString(llvm::StringRef(type_name_cstr).upper());
+          } else {
+            type_name.SetCString("UNKNOWN_FORTRAN_TYPE");
+          }
+
+          break;
+        case DW_AT_encoding:
+          encoding = static_cast<llvm::dwarf::TypeKind>(form_value.Unsigned());
+          break;
+        case DW_AT_byte_size:
+          bit_size = form_value.Unsigned() * 8;
+          break;
+        case DW_AT_bit_size:
+          bit_size = form_value.Unsigned();
+          break;
+        default:
+          break;
+        }
+      }
+    }
+
+    compiler_type = m_ast.CreateBaseType(encoding, bit_size, type_name);
+    type_sp = dwarf->MakeType(die.GetID(), type_name, (bit_size + 7) / 8,
+                              nullptr, LLDB_INVALID_UID, Type::eEncodingIsUID,
+                              decl, compiler_type, Type::ResolveState::Full);
+    break;
+  }
+
+  default:
     if (log) {
       dwarf->GetObjectFile()->GetModule()->LogMessage(
-          log,
-          "DWARFASTParserFortran::ParseTypeFromDWARF (die = 0x%8.8x) %s name"
-          "= "
-          "'%s')",
-          die.GetOffset(), plugin::dwarf::DW_TAG_value_to_name(die.Tag()),
-          die.GetName());
+          log, "[{0:x16}]: unhandled type tag {1:x4} ({2})", die.GetOffset(),
+          tag, DW_TAG_value_to_name(tag));
     }
-    Type *type_ptr = dwarf->GetDIEToType().lookup(die.GetDIE());
-    if (!type_ptr) {
-      if (type_is_new_ptr)
-        *type_is_new_ptr = true;
 
-      const dw_tag_t tag = die.Tag();
-      ConstString type_name;
-      const char *type_name_cstr = nullptr;
-      CompilerType compiler_type;
-      DWARFAttributes attributes;
-      DWARFFormValue form_value;
-      Declaration decl;
-      // Unsigned is not a type in Fortran, so it serves as a safe default for
-      // malformed DIEs missing DW_AT_encoding.
-      llvm::dwarf::TypeKind encoding = llvm::dwarf::DW_ATE_unsigned;
-      switch (tag) {
-      case DW_TAG_base_type: {
-        dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
-        attributes = die.GetAttributes();
-        uint64_t bit_size = 0;
-        for (size_t idx = 0; idx < attributes.Size(); idx++) {
-          if (attributes.ExtractFormValueAtIndex(idx, form_value)) {
-            switch (attributes.AttributeAtIndex(idx)) {
-            case DW_AT_name:
-              type_name_cstr = form_value.AsCString();
-              if (type_name_cstr &&
-                  type_name_cstr[0]) { // Check for null AND empty string
-                type_name.SetString(llvm::StringRef(type_name_cstr).upper());
-              } else {
-                type_name.SetCString("UNKNOWN_FORTRAN_TYPE");
-              }
-              break;
-            case DW_AT_encoding:
-              encoding =
-                  static_cast<llvm::dwarf::TypeKind>(form_value.Unsigned());
-              break;
-            case DW_AT_byte_size:
-              bit_size = form_value.Unsigned() * 8;
-              break;
-            case DW_AT_bit_size:
-              bit_size = form_value.Unsigned();
-              break;
-            default:
-              break;
-            }
-          }
-        }
-        compiler_type = m_ast.CreateBaseType(encoding, bit_size, type_name);
-        type_sp =
-            dwarf->MakeType(die.GetID(), type_name, (bit_size + 7) / 8, nullptr,
-                            LLDB_INVALID_UID, Type::eEncodingIsUID, decl,
-                            compiler_type, Type::ResolveState::Full);
-        break;
-      }
-      default:
-        if (log) {
-          dwarf->GetObjectFile()->GetModule()->LogMessage(
-              log, "[{0:x16}]: unhandled type tag {1:x4} ({2})",
-              die.GetOffset(), tag, DW_TAG_value_to_name(tag));
-        }
-        break;
-      }
-      UpdateSymbolContextScopeForType(sc, die, type_sp);
-      if (type_sp.get())
-        dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
-
-    } else if (type_ptr != DIE_IS_BEING_PARSED) {
-      type_sp = type_ptr->shared_from_this();
-    }
+    break;
   }
+
+  UpdateSymbolContextScopeForType(sc, die, type_sp);
+  if (type_sp.get())
+    dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
+
   return type_sp;
 }
 
