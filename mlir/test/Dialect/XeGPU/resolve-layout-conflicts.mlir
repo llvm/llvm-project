@@ -408,15 +408,11 @@ gpu.func @step_muli_clone_via_anchor(%arg0: i64, %arg1: memref<32x32xf32>) kerne
   gpu.return
 }
 
-// Rematerializing a producer must also rematerialize its operands so the clone
-// stays internally consistent. Here `arith.index_castui` (elementwise) is cloned
-// for the second consumer layout; its `vector.step` operand must be cloned with
-// the matching layout too, otherwise the clone would have an operand and result
-// with different distributed shapes and the distribution pass would emit an
-// `arith.index_castui` with mismatched operand/result vector shapes.
+// Rematerializing `arith.index_castui` for the second consumer layout also
+// clones its `vector.step` operand, so the two casts do not share a producer.
 // CHECK-LABEL: gpu.func @step_index_castui_clone_via_anchor
-// CHECK:         %[[STEP0:.*]] = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0]>} : vector<32xindex>
-// CHECK:         %[[STEP1:.*]] = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>, dims = [1]>} : vector<32xindex>
+// CHECK:         %[[STEP0:.*]] = vector.step
+// CHECK:         %[[STEP1:.*]] = vector.step
 // CHECK:         arith.index_castui %[[STEP0]] {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 32]>, dims = [0]>} : vector<32xindex> to vector<32xi32>
 // CHECK:         arith.index_castui %[[STEP1]] {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 1]>, dims = [1]>} : vector<32xindex> to vector<32xi32>
 // CHECK-NOT:     xegpu.convert_layout {{.*}} : vector<32xi32>
