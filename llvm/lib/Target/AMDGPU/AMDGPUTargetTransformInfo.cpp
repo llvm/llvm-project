@@ -1805,10 +1805,13 @@ bool GCNTTIImpl::areInlineCompatible(const Function *Caller,
 
   // FIXME: dx10_clamp can just take the caller setting, but there seems to be
   // no way to support merge for backend defined attributes.
-  SIModeRegisterDefaults CallerMode(*Caller, *CallerST);
-  SIModeRegisterDefaults CalleeMode(*Callee, *CalleeST);
-  if (!CallerMode.isInlineCompatible(CalleeMode))
-    return false;
+  // Targets without the DX10Clamp and IEEE mode bits ignore these attributes.
+  if (CallerST->hasFeature(AMDGPU::FeatureDX10ClampAndIEEEMode)) {
+    SIModeRegisterDefaults CallerMode(*Caller, *CallerST);
+    SIModeRegisterDefaults CalleeMode(*Callee, *CalleeST);
+    if (!CallerMode.isInlineCompatible(CalleeMode))
+      return false;
+  }
 
   if (Callee->hasFnAttribute(Attribute::AlwaysInline) ||
       Callee->hasFnAttribute(Attribute::InlineHint))
