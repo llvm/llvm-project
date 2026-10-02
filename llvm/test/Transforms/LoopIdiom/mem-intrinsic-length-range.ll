@@ -220,6 +220,48 @@ exit:
   ret void
 }
 
+; Byte stores with an unbounded trip count: the max length, 2^64 - 1, fits in
+; the length's type, but the exclusive end of the range doesn't.
+;
+; void unbounded_bytes(char *p, unsigned long n) {
+;   for (unsigned long i = 0; i < n; ++i)
+;     p[i] = 0;
+; }
+
+define void @unbounded_bytes(ptr %p, i64 %n) {
+; CHECK-LABEL: define void @unbounded_bytes(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[NONZERO:%.*]] = icmp ne i64 [[N]], 0
+; CHECK-NEXT:    br i1 [[NONZERO]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 0, i64 [[N]], i1 false)
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[I]]
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i64 [[I]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
+; CHECK:       [[EXIT_LOOPEXIT]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %nonzero = icmp ne i64 %n, 0
+  br i1 %nonzero, label %loop, label %exit
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
+  %gep = getelementptr inbounds i8, ptr %p, i64 %i
+  store i8 0, ptr %gep, align 1
+  %i.next = add nuw i64 %i, 1
+  %cmp = icmp ult i64 %i.next, %n
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret void
+}
+
 ; void constant_trip_count(int *p) {
 ;   for (unsigned long i = 0; i < 4; ++i)
 ;     p[i] = -1;
