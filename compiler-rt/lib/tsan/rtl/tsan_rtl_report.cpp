@@ -168,13 +168,9 @@ ScopedReportBase::ScopedReportBase(ReportType typ, uptr tag) {
   rep_ = New<ReportDesc>();
   rep_->typ = typ;
   rep_->tag = tag;
-  ctx->report_mtx.Lock();
 }
 
-ScopedReportBase::~ScopedReportBase() {
-  ctx->report_mtx.Unlock();
-  DestroyAndFree(rep_);
-}
+ScopedReportBase::~ScopedReportBase() { DestroyAndFree(rep_); }
 
 void ScopedReportBase::AddStack(StackTrace stack, bool suppressable) {
   ReportStack **rs = rep_->stacks.PushBack();
