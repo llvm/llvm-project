@@ -115,6 +115,12 @@ static cl::opt<unsigned> MaxEvictionCount(
              "evicted before preventing it from being evicted"),
     cl::init(100));
 
+static cl::opt<unsigned> NumAllocatableRegs(
+    "mlregalloc-num-allocatable-regs", cl::Hidden,
+    cl::desc("The number of eviction candidates the model sees. The model has "
+             "one more column, for the live range seeking allocation"),
+    cl::init(32));
+
 // Options that only make sense in development mode
 #ifdef LLVM_HAVE_TFLITE
 #include "RegAllocScore.h"
@@ -279,7 +285,7 @@ struct LIFeatureComponents {
   bool IsRemat = false;
 };
 
-// Inline capacity hint only, the real width is target-derived.
+// Inline capacity hint only, the real width comes from NumAllocatableRegs.
 static constexpr unsigned ExpectedMaxColumns = 40;
 
 using CandidateRegList =
@@ -389,34 +395,6 @@ private:
 #define _DECL_FEATURES(type, name, shape, _)                                   \
   TensorSpec::createSpec<type>(#name, shape),
 
-// AllocationOrder walks RegisterClassInfo::getOrder and hints are drawn from
-// it, so the widest order bounds the candidates. Plus one for the virt reg
-// itself.
-static int64_t getRequiredNumColumns(const MachineFunction &MF,
-                                     const RegisterClassInfo &RegClassInfo) {
-  unsigned MaxRegs = 32;
-  for (const TargetRegisterClass &RC :
-       MF.getSubtarget().getRegisterInfo()->regclasses())
-    if (RC.isAllocatable())
-      MaxRegs = std::max(MaxRegs, RegClassInfo.getNumAllocatableRegs(&RC));
-  return MaxRegs + 1;
-}
-
-// The width is fixed once per runner, so a later function with a wider
-// subtarget may not fit. Such a function gets the default policy.
-static bool fitsNumColumns(const MachineFunction &MF, const RAGreedy &RA,
-                           ArrayRef<TensorSpec> InputFeatures) {
-  const int64_t Required = getRequiredNumColumns(MF, RA.getRegClassInfo());
-  const int64_t Available = InputFeatures[FeatureIDs::mask].shape()[1];
-  if (Required <= Available)
-    return true;
-  MF.getFunction().getContext().emitError(
-      "Regalloc eviction model has " + Twine(Available) + " columns, but '" +
-      MF.getName() + "' needs " + Twine(Required) +
-      ". Using the default eviction advisor.");
-  return false;
-}
-
 // ===================================
 // Release (AOT) - specifics
 // ===================================
@@ -425,7 +403,10 @@ class ReleaseModeEvictionAdvisorProvider final
     : public RegAllocEvictionAdvisorProvider {
 public:
   ReleaseModeEvictionAdvisorProvider(LLVMContext &Ctx)
-      : RegAllocEvictionAdvisorProvider(AdvisorMode::Release, Ctx) {}
+      : RegAllocEvictionAdvisorProvider(AdvisorMode::Release, Ctx) {
+    const std::vector<int64_t> PerLiveRangeShape{1, NumAllocatableRegs + 1};
+    InputFeatures = {RA_EVICT_FEATURES_LIST(_DECL_FEATURES)};
+  }
   // support for isa<> and dyn_cast.
   static bool classof(const RegAllocEvictionAdvisorProvider *R) {
     return R->getAdvisorMode() == AdvisorMode::Release;
@@ -434,32 +415,23 @@ public:
   std::unique_ptr<RegAllocEvictionAdvisor>
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
              MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *Loops) override {
-    initializeOnce(MF, RA);
+    if (!Initialized) {
+      Initialized = true;
+      Runner = createReleaseModeModelRunner<CompiledModelType,
+                                            HaveMLIRLoweringRegAlloc>(
+          MF.getFunction().getContext(), InputFeatures, DecisionName,
+          InteractiveChannelBaseName, DecisionSpec,
+          createMLGORegAllocModelRunner);
+    }
     assert(MBFI && Loops &&
            "Invalid provider state: must have analysis available");
-    if (!Runner || !fitsNumColumns(MF, RA, InputFeatures))
+    if (!Runner)
       return std::make_unique<DefaultEvictionAdvisor>(MF, RA);
     return std::make_unique<MLEvictAdvisor>(MF, RA, Runner.get(), InputFeatures,
                                             *MBFI, *Loops);
   }
 
 private:
-  // The tensor width is target-derived, so it waits for a MachineFunction.
-  void initializeOnce(const MachineFunction &MF, const RAGreedy &RA) {
-    if (Initialized)
-      return;
-    Initialized = true;
-    // Picked up by RA_EVICT_FEATURES_LIST.
-    const std::vector<int64_t> PerLiveRangeShape{
-        1, getRequiredNumColumns(MF, RA.getRegClassInfo())};
-    InputFeatures = {RA_EVICT_FEATURES_LIST(_DECL_FEATURES)};
-    Runner = createReleaseModeModelRunner<CompiledModelType,
-                                          HaveMLIRLoweringRegAlloc>(
-        MF.getFunction().getContext(), InputFeatures, DecisionName,
-        InteractiveChannelBaseName, DecisionSpec,
-        createMLGORegAllocModelRunner);
-  }
-
   std::vector<TensorSpec> InputFeatures;
   std::unique_ptr<MLModelRunner> Runner;
   bool Initialized = false;
@@ -530,28 +502,19 @@ class DevelopmentModeEvictionAdvisorProvider final
 public:
   DevelopmentModeEvictionAdvisorProvider(LLVMContext &Ctx)
       : RegAllocEvictionAdvisorProvider(AdvisorMode::Development, Ctx) {
-    if (ModelUnderTraining.empty() && TrainingLog.empty())
-      Ctx.emitError("Regalloc development mode should be requested with at "
-                    "least logging enabled and/or a training model");
-  }
-
-private:
-  // The tensor width is target-derived, so it waits for a MachineFunction.
-  void initializeOnce(const MachineFunction &MF, const RAGreedy &RA) {
-    if (Initialized)
-      return;
-    Initialized = true;
     // Picked up by RA_EVICT_FEATURES_LIST.
-    const std::vector<int64_t> PerLiveRangeShape{
-        1, getRequiredNumColumns(MF, RA.getRegClassInfo())};
+    const std::vector<int64_t> PerLiveRangeShape{1, NumAllocatableRegs + 1};
     InputFeatures = {RA_EVICT_FEATURES_LIST(_DECL_FEATURES)};
     TrainingInputFeatures = {
         RA_EVICT_FEATURES_LIST(_DECL_TRAIN_FEATURES)
             TensorSpec::createSpec<float>("action_discount", {1}),
         TensorSpec::createSpec<int32_t>("action_step_type", {1}),
         TensorSpec::createSpec<float>("action_reward", {1})};
-    if (ModelUnderTraining.empty() && TrainingLog.empty())
+    if (ModelUnderTraining.empty() && TrainingLog.empty()) {
+      Ctx.emitError("Regalloc development mode should be requested with at "
+                    "least logging enabled and/or a training model");
       return;
+    }
     if (ModelUnderTraining.empty())
       Runner = std::make_unique<NoInferenceModelRunner>(Ctx, InputFeatures);
     else
@@ -582,7 +545,6 @@ private:
     return;
   }
 
-public:
   // support for isa<> and dyn_cast.
   static bool classof(const RegAllocEvictionAdvisorProvider *R) {
     return R->getAdvisorMode() == AdvisorMode::Development;
@@ -607,9 +569,8 @@ public:
   std::unique_ptr<RegAllocEvictionAdvisor>
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
              MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *Loops) override {
-    initializeOnce(MF, RA);
-    if (!Runner || !fitsNumColumns(MF, RA, InputFeatures))
-      return std::make_unique<DefaultEvictionAdvisor>(MF, RA);
+    if (!Runner)
+      return nullptr;
     if (Log)
       Log->switchContext(MF.getName());
     assert(MBFI && Loops &&
@@ -621,7 +582,6 @@ public:
 private:
   std::vector<TensorSpec> InputFeatures;
   std::vector<TensorSpec> TrainingInputFeatures;
-  bool Initialized = false;
 
   std::unique_ptr<MLModelRunner> Runner;
   std::unique_ptr<Logger> Log;
