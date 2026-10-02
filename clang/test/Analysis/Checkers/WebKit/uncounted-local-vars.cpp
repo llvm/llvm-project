@@ -704,6 +704,37 @@ namespace vardecl_in_if_condition {
       return obj->next();
   }
 
+  RefCountable* trivialProvide() { return nullptr; }
+
+  void local_in_non_trivial_else() {
+    if (auto* obj = provide())
+      obj->trivial();
+    else {
+      auto* other = provide(); // expected-warning{{Local variable 'other' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+      someFunction();
+      other->method();
+    }
+  }
+
+  void local_in_non_trivial_else_if(bool flag) {
+    if (auto* obj = provide())
+      obj->trivial();
+    else if (flag) {
+      auto* other = provide(); // expected-warning{{Local variable 'other' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+      someFunction();
+      other->method();
+    }
+  }
+
+  void local_in_trivial_else() {
+    if (auto* obj = provide())
+      obj->trivial();
+    else {
+      auto* other = trivialProvide(); // no warning
+      other->trivial();
+    }
+  }
+
 }
 
 namespace delete_unresolved_type {
@@ -791,6 +822,13 @@ namespace binding_raw_ptr {
   void bind_temp_with_safe_ptr() {
     auto [a, b] = pair<RefCountable*, RefPtr<RefCountable>> { provide(), provide() };
     // expected-warning@-1{{Local variable 'a' is a raw reference to RefPtr-capable type 'binding_raw_ptr::pair<RefCountable *, RefPtr<RefCountable>>' [alpha.webkit.UncountedLocalVarsChecker]}}
+    a->method();
+  }
+
+  void bind_temp_from_guarded(RefPtr<RefCountable> owner) {
+    auto [a, b] = pair<RefCountable*, RefCountable*> { owner.get(), owner.get() };
+    // expected-warning@-1{{Local variable 'a' is a raw reference to RefPtr-capable type 'binding_raw_ptr::pair<RefCountable *, RefCountable *>' [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-2{{Local variable 'b' is a raw reference to RefPtr-capable type 'binding_raw_ptr::pair<RefCountable *, RefCountable *>' [alpha.webkit.UncountedLocalVarsChecker]}}
     a->method();
   }
 

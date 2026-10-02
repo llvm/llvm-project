@@ -155,6 +155,7 @@
 ; O2-NEXT:     require<live-vars>
 ; O2-NEXT:     require<machine-loops>
 ; O2-NEXT:     phi-node-elimination
+; O2-NEXT:     require<live-intervals>
 ; O2-NEXT:     two-address-instruction
 ; O2-NEXT:     register-coalescer
 ; O2-NEXT:     rename-independent-subregs
@@ -358,6 +359,7 @@
 ; O3-WINDOWS-NEXT:     require<live-vars>
 ; O3-WINDOWS-NEXT:     require<machine-loops>
 ; O3-WINDOWS-NEXT:     phi-node-elimination
+; O3-WINDOWS-NEXT:     require<live-intervals>
 ; O3-WINDOWS-NEXT:     two-address-instruction
 ; O3-WINDOWS-NEXT:     register-coalescer
 ; O3-WINDOWS-NEXT:     rename-independent-subregs

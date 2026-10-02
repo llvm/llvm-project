@@ -58,7 +58,7 @@
 // CHECK:     hlfir.assign %{{.*}} to %{{.*}} : i32, !fir.ref<i32>
 // CHECK:   }
 // CHECK: } else {
-// CHECK:   %[[ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} {bindc_name = ".tmp", uniq_name = ""}
+// CHECK:   %[[ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} <{bindc_name = ".tmp", uniq_name = ""}>
 // CHECK:   %[[TEMP:.*]]:2 = hlfir.declare %[[ALLOC]](%{{.*}}) {uniq_name = ".tmp"}
 // CHECK:   fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
 // CHECK:     hlfir.designate

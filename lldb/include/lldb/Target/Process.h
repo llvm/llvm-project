@@ -99,6 +99,7 @@ public:
   void SetVirtualAddressableBits(uint32_t bits);
   uint32_t GetHighmemVirtualAddressableBits() const;
   void SetHighmemVirtualAddressableBits(uint32_t bits);
+  void AddressMaskChangedCallback();
   void SetPythonOSPluginPath(const FileSpec &file);
   bool GetIgnoreBreakpointsInExpressions() const;
   void SetIgnoreBreakpointsInExpressions(bool ignore);
@@ -1292,7 +1293,7 @@ public:
 
   lldb::ExpressionResults
   RunThreadPlan(ExecutionContext &exe_ctx, lldb::ThreadPlanSP &thread_plan_sp,
-                const EvaluateExpressionOptions &options,
+                const EvaluateExpressionOptions &requested_options,
                 DiagnosticManager &diagnostic_manager);
 
   void GetStatus(Stream &ostrm, bool is_verbose = false);

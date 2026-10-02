@@ -57,9 +57,14 @@ jobs:
             cc: 'gcc-16'
             cxx: 'g++-16'
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+        # TODO(#226230): Remove this once we have resolved the underlying issue
+        # causing actions/checkout to be prematurely killed.
+        env:
+          GIT_TRACE: "true"
+          GIT_CURL_VERBOSE: "true"
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
         shell: bash
         run: |
@@ -112,7 +117,7 @@ jobs:
             cc: 'clang-21'
             cxx: 'clang++-21'
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: ${{ matrix.config }}
@@ -177,7 +182,7 @@ jobs:
           'bootstrapping-build'
         ]
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: ${{ matrix.config }}
@@ -209,13 +214,13 @@ jobs:
       matrix:
         include:
         - config: generic-cxx03
-          xcode-version: '26.5'
+          xcode-version: '26.6'
         - config: generic-cxx23
-          xcode-version: '26.5'
+          xcode-version: '26.6'
         - config: generic-modules
-          xcode-version: '26.5'
+          xcode-version: '26.6'
         - config: apple-configuration
-          xcode-version: '26.5'
+          xcode-version: '26.6'
         # TODO: These jobs are intended to test back-deployment (building against ToT libc++ but running against an
         #       older system-provided libc++.dylib). Doing this properly would require building the test suite on a
         #       recent macOS using a recent Clang (hence recent Xcode), and then running the actual test suite on an
@@ -227,12 +232,12 @@ jobs:
         #       macOS versions as a way to avoid rotting that configuration, but it doesn't provide a lot of additional
         #       coverage.
         - config: apple-system
-          xcode-version: '26.5'
+          xcode-version: '26.6'
         - config: apple-system-hardened
-          xcode-version: '26.5'
-    runs-on: ["self-hosted", "macOS", "apple-runners"]
+          xcode-version: '26.6'
+    runs-on: ["self-hosted", "macOS", "apple-runners", "26.6.2"] # macOS 26.6.2, which has Xcode 26.6
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Select Xcode
@@ -280,7 +285,7 @@ jobs:
         - { config: mingw-static,             mingw: true,  cc: cc,       cxx: c++, runner: windows-11-arm }
     runs-on: ${{ matrix.runner != '' && matrix.runner || 'windows-2022' }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Install dependencies
