@@ -25,38 +25,30 @@ namespace mlir {
 class RewriterBase;
 namespace dataflow {
 
-/// This lattice element represents the integer value range of an SSA value.
-///
-/// `join` overrides the base behaviour to apply per-state widening: once
-/// the lattice has absorbed enough strictly-increasing merges the range is
-/// forced to its max as a sound over-approximation. This is the sole
-/// convergence guarantee for `IntegerRangeAnalysis` on loop-carried
-/// values; without it, `scf.while` loops with dynamic bounds and nested
-/// region ops can keep the solver ratcheting a loop-carried range by +1
-/// per worklist visit for up to 2^31 iterations on i32. The budget is
-/// sized to be much larger than realistic merge counts on naturally
-/// bounded accumulators (e.g. `arith.minsi`/`arith.andi`-clamped iter
-/// args) so the analysis still converges to a tight range on those.
-///
-/// Note that only the `(const AbstractSparseLattice &)` overload is
-/// overridden, so the widening fires only at framework merge sites
-/// (block-arg / region-successor / callable-arg joins) —
-/// transfer-function updates that go through the non-virtual
-/// `join(const ValueT &)` overload are unaffected.
-class IntegerValueRangeLattice : public Lattice<IntegerValueRange> {
+/// Number of strict refinements `IntegerValueRangeLattice` is allowed to
+/// absorb at framework merge sites before `WidenableLattice::join` forces
+/// the range to its max as a sound over-approximation. Sized to be much
+/// larger than realistic merge counts on naturally bounded accumulators
+/// (e.g. `arith.minsi`/`arith.andi`-clamped iter args) but still a tight
+/// ceiling on the +1 ratchet pathology this widening exists to cut off
+/// (loop-carried ranges growing by one per worklist visit on `scf.while`
+/// loops with dynamic bounds and nested region ops, which can otherwise
+/// take up to ~2^31 iterations on i32 to converge).
+inline constexpr unsigned kIntegerRangeWideningBudget = 128;
+
+/// Lattice element for `IntegerRangeAnalysis`, with a per-state widening
+/// budget supplied by `WidenableLattice` to guarantee convergence on
+/// loop-carried values. See the comment on `WidenableLattice` for the
+/// merge-path / transfer-function distinction; integer ranges' top
+/// element here is `IntegerValueRange::getMaxRange(anchor)`.
+class IntegerValueRangeLattice
+    : public WidenableLattice<IntegerValueRange, kIntegerRangeWideningBudget> {
 public:
-  using Lattice::Lattice;
-  // The override below would otherwise hide the inherited
-  // `join(const ValueT &)` overload that callers (e.g. transfer functions)
-  // rely on for direct-value joins.
-  using Lattice::join;
+  using WidenableLattice::WidenableLattice;
 
-  ChangeResult join(const AbstractSparseLattice &rhs) override;
-
-private:
-  /// Per-state merge-site change counter. Drives the widening budget in
-  /// `join`.
-  unsigned mergeChangeCount = 0;
+  IntegerValueRange getWidenedValue() const override {
+    return IntegerValueRange::getMaxRange(cast<Value>(getAnchor()));
+  }
 };
 
 /// Integer range analysis determines the integer value range of SSA values
