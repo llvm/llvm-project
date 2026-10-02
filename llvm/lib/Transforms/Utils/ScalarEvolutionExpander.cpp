@@ -1738,10 +1738,32 @@ Value *SCEVExpander::expand(SCEVUse S) {
     }
   }
 
-  // Check to see if we already expanded this here.
-  auto I = InsertedExpressions.find(std::make_pair(S, &*InsertPt));
-  if (I != InsertedExpressions.end())
-    return I->second;
+  // Check to see if we already expanded this or its canonical form here.
+  // Canonical entries populated by a flagged expansion drop poison-generating
+  // flags before re-use.
+  auto LookupCached = [&](SCEVUse Key) -> Value * {
+    auto It = InsertedExpressions.find({Key, &*InsertPt});
+    if (It == InsertedExpressions.end())
+      return nullptr;
+    auto &[CachedV, NeedsDropPoisonFlags] = It->second;
+    auto *CachedI = dyn_cast<Instruction>(&*CachedV);
+    if (!NeedsDropPoisonFlags || !CachedI)
+      return CachedV;
+    SmallVector<Instruction *> DropPoisonGeneratingInsts;
+    if (!SE.canReuseInstruction(Key, CachedI, DropPoisonGeneratingInsts))
+      return nullptr;
+    for (Instruction *I : DropPoisonGeneratingInsts) {
+      rememberFlags(I);
+      dropPoisonGeneratingAnnotationsAndReinfer(SE, I);
+    }
+    NeedsDropPoisonFlags = false;
+    return CachedV;
+  };
+  if (Value *V = LookupCached(S))
+    return V;
+  if (!S.isCanonical())
+    if (Value *V = LookupCached(S.getCanonical()))
+      return V;
 
   SCEVInsertPointGuard Guard(Builder, this);
   Builder.SetInsertPoint(InsertPt);
@@ -1767,7 +1789,10 @@ Value *SCEVExpander::expand(SCEVUse S) {
   // the expression at this insertion point. If the mapped value happened to be
   // a postinc expansion, it could be reused by a non-postinc user, but only if
   // its insertion point was already at the head of the loop.
-  InsertedExpressions[std::make_pair(S, &*CacheAt)] = V;
+  InsertedExpressions[{S, &*CacheAt}] = {V, false};
+  // Also make this expansion available for the canonical SCEV.
+  if (!S.isCanonical())
+    InsertedExpressions.try_emplace({S.getCanonical(), &*CacheAt}, V, true);
   return V;
 }
 
