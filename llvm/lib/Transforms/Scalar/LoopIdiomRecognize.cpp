@@ -1074,7 +1074,8 @@ static void addRangeAttrFromTripCount(CallInst *NewCall, unsigned ArgNo,
                                       const SCEV *BECount, Loop *L,
                                       ScalarEvolution *SE) {
   Value *Len = NewCall->getArgOperand(ArgNo);
-  if (isa<Constant>(Len)) return;
+  if (isa<Constant>(Len))
+    return;
 
   // Two upper bounds:
   // (1) constant max backedge-taken count
@@ -1089,17 +1090,26 @@ static void addRangeAttrFromTripCount(CallInst *NewCall, unsigned ArgNo,
   unsigned MaxWidth = std::max(Max1->getBitWidth(), Max2.getBitWidth());
   APInt MaxBTC = APIntOps::umin(Max1->zext(MaxWidth), Max2.zext(MaxWidth));
 
-  // Bail if bound beyond bitwidth, overflows, or is MaxValue
+  // The length is in [0, (MaxBTC + 1) * ElemsPerIter]. Bail if that doesn't
+  // fit in the length's type.
   unsigned BW = Len->getType()->getIntegerBitWidth();
-  if (MaxBTC.getActiveBits() >= BW) return;
-  APInt MaxTripCount = MaxBTC.zext(BW) + 1;
+  if (MaxBTC.getActiveBits() > BW)
+    return;
   bool Overflow;
+  APInt MaxTripCount = MaxBTC.zextOrTrunc(BW).uadd_ov(APInt(BW, 1), Overflow);
+  if (Overflow)
+    return;
   APInt MaxLen = MaxTripCount.umul_ov(APInt(BW, ElemsPerIter), Overflow);
-  if (Overflow || MaxLen.isMaxValue()) return;
+  if (Overflow)
+    return;
+  // ConstantRange's upper end is exclusive, so the range ends at MaxLen + 1.
+  APInt RangeEnd = MaxLen.uadd_ov(APInt(BW, 1), Overflow);
+  if (Overflow)
+    return;
 
   NewCall->addParamAttr(
       ArgNo, Attribute::get(NewCall->getContext(), Attribute::Range,
-                            ConstantRange(APInt::getZero(BW), MaxLen + 1)));
+                            ConstantRange(APInt::getZero(BW), RangeEnd)));
 }
 
 /// processLoopStridedStore - We see a strided store of some value.  If we can
@@ -1188,9 +1198,8 @@ bool LoopIdiomRecognize::processLoopStridedStore(
       return Changed;
     Value *TripCount = Expander.expandCodeFor(TripCountS, IntIdxTy,
                                               Preheader->getTerminator());
-    PatternRepsPerTrip =
-        (ConstStoreSize->getValue()->getZExtValue() * 8) /
-        DL->getTypeSizeInBits(PatternValue->getType());
+    PatternRepsPerTrip = (ConstStoreSize->getValue()->getZExtValue() * 8) /
+                         DL->getTypeSizeInBits(PatternValue->getType());
     // If ConstStoreSize is not equal to the width of PatternValue, then
     // MemsetArg is TripCount * (ConstStoreSize/PatternValueWidth). Else
     // MemSetArg is just TripCount.
