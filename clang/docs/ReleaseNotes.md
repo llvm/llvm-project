@@ -801,6 +801,8 @@ features cannot lower the translation-unit ABI level;
   take effect, causing them to be dropped from llvm.used and omitted from
   the object file. (#GH226572)
 
+- Fixed a crash with generic lambdas in default arguments of functions with `auto` parameters. (#GH48768)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made

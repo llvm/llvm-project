@@ -3123,6 +3123,9 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
   InventedTemplateParam->setImplicit();
   Info.TemplateParams.push_back(InventedTemplateParam);
 
+  if (AutoParameterPosition == 0)
+    S.getCurScope()->EnterTemplateParameterScope();
+
   // Attach type constraints to the new parameter.
   if (Auto->isConstrained()) {
     if (TrailingTSI) {
