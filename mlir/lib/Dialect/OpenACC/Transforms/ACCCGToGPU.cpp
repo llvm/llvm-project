@@ -3530,21 +3530,6 @@ void ACCCGToGPULowering::constructAtomicAccumulation(
   assert(!memref.getDefiningOp<memref::AllocaOp>() &&
          "cannot lower atomic accumulation on an stack variable");
 
-  // An i1 has no atomic form, but or/and onto it are idempotent: every writer
-  // stores the same absorbing value, so a guarded plain store suffices.
-  if (input.getType().isInteger(1) && (kind == arith::AtomicRMWKind::ori ||
-                                       kind == arith::AtomicRMWKind::andi)) {
-    Value absorbing = arith::ConstantOp::create(
-        rewriter, loc, rewriter.getBoolAttr(kind == arith::AtomicRMWKind::ori));
-    Value hit = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::eq,
-                                      input, absorbing);
-    auto ifOp = scf::IfOp::create(rewriter, loc, hit, /*withElseRegion=*/false);
-    rewriter.setInsertionPoint(ifOp.thenBlock()->getTerminator());
-    memref::StoreOp::create(rewriter, loc, absorbing, memref, indices);
-    rewriter.setInsertionPointAfter(ifOp);
-    return;
-  }
-
   // acc.atomic.update derives the element address from the memref descriptor's
   // base pointer and offset field; it has no subscript operand. When the store
   // being lowered targets a specific array element (e.g. result(idx) =

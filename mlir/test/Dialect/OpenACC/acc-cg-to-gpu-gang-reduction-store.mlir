@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --pass-pipeline="builtin.module(func.func(acc-cg-to-gpu))" --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --pass-pipeline="builtin.module(func.func(acc-cg-to-gpu))" | FileCheck %s
 
 // A gang-only reduction stored to memory outside the kernel runs the store
 // once per block, so it must become a cross-block atomic. The identity is
@@ -54,56 +54,3 @@ module attributes {gpu.container_module} {
   }
 }
 
-// -----
-
-// An i1 has no atomic form; a logical or is lowered to a guarded store of
-// true instead.
-
-// CHECK-LABEL: func.func @gang_lor_store
-// CHECK-SAME:    %{{.*}}: memref<3xi1>, %[[RES:.*]]: memref<i1>
-// CHECK:       gpu.launch
-// CHECK:         memref.store %false, %[[RES]][] : memref<i1>
-// CHECK:       gpu.launch
-// CHECK-NOT:     acc.atomic.update
-// CHECK:         %[[HIT:.*]] = arith.cmpi eq, %{{.*}}, %[[TRUE:.*]] : i1
-// CHECK-NEXT:    scf.if %[[HIT]] {
-// CHECK-NEXT:      memref.store %[[TRUE]], %[[RES]][] : memref<i1>
-// CHECK-NOT:     acc.atomic.update
-// CHECK:         gpu.terminator
-
-module attributes {gpu.container_module} {
-  gpu.module @cuda_device_mod {
-    gpu.func @gang_lor_store_kernel() kernel {
-      gpu.return
-    }
-  }
-
-  func.func @gang_lor_store(%arg_in: memref<3xi1>, %arg_res: memref<i1>) {
-    %bx = acc.par_width par_dim(#acc.par_dim<block_x>)
-    acc.compute_region launch(%kbx = %bx) ins(%a_in = %arg_in, %a_res = %arg_res) : (memref<3xi1>, memref<i1>) {
-      %c0 = arith.constant 0 : index
-      %c1 = arith.constant 1 : index
-      %c3 = arith.constant 3 : index
-      %false = arith.constant false
-      %acc = memref.alloca() : memref<i1>
-      scf.parallel (%bx_iv) = (%c0) to (%kbx) step (%c1) {
-        %red = scf.parallel (%i) = (%bx_iv) to (%c3) step (%kbx) init (%false) -> i1 {
-          %v = memref.load %a_in[%i] : memref<3xi1>
-          scf.reduce(%v : i1) {
-          ^bb0(%lhs: i1, %rhs: i1):
-            %or = arith.ori %lhs, %rhs : i1
-            scf.reduce.return %or : i1
-          }
-        } {acc.par_dims = #acc<par_dims[sequential]>}
-        acc.reduction_accumulate %red to %acc <lor> par_dims(#acc<par_dims[block_x]>) : i1 -> memref<i1>
-        scf.reduce
-      } {acc.par_dims = #acc<par_dims[block_x]>}
-      %r = memref.load %acc[] : memref<i1>
-      acc.predicate_region {
-        memref.store %r, %a_res[] : memref<i1>
-      }
-      acc.yield
-    } <{kernel_func_name = @gang_lor_store_kernel, kernel_module_name = @cuda_device_mod, origin = "acc.kernels"}>
-    return
-  }
-}
