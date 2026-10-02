@@ -1967,4 +1967,55 @@ TEST(BootstrapJITDylibTest, EmptyBootstrapSymbols) {
   cantFail(ES.endSession());
 }
 
+TEST_F(CoreAPIsStandardTest, LookupResolvedInitSymbolsSkipsUnmaterialized) {
+  // Symbol whose materialize() must never run: represents an emitted-
+  // but-never-materialized deinit thunk.
+  std::atomic<unsigned> MaterializeCount{0};
+  auto MU = std::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Foo, JITSymbolFlags::Exported}}),
+      [this,
+       &MaterializeCount](std::unique_ptr<MaterializationResponsibility> R) {
+        ++MaterializeCount;
+        cantFail(R->notifyResolved(
+            {{Foo, ExecutorSymbolDef(ExecutorAddr(0xfeed),
+                                     JITSymbolFlags::Exported)}}));
+        cantFail(R->notifyEmitted({}));
+      });
+  cantFail(JD.define(std::move(MU)));
+
+  DenseMap<JITDylib *, SymbolLookupSet> InitSyms;
+  InitSyms[&JD].add(Foo, SymbolLookupFlags::WeaklyReferencedSymbol);
+
+  auto ResolvedResult = Platform::lookupResolvedInitSymbols(ES, InitSyms);
+  ASSERT_THAT_EXPECTED(ResolvedResult, Succeeded());
+  EXPECT_EQ(MaterializeCount.load(), 0u)
+      << "lookupResolvedInitSymbols must not materialize";
+  auto It = ResolvedResult->find(&JD);
+  EXPECT_TRUE(It == ResolvedResult->end() || It->second.empty());
+
+  // Baseline: lookupInitSymbols DOES trigger materialization.
+  auto LegacyResult = Platform::lookupInitSymbols(ES, InitSyms);
+  ASSERT_THAT_EXPECTED(LegacyResult, Succeeded());
+  EXPECT_EQ(MaterializeCount.load(), 1u);
+}
+
+TEST_F(CoreAPIsStandardTest, LookupResolvedInitSymbolsReturnsResolved) {
+  cantFail(JD.define(
+      absoluteSymbols({{Foo, ExecutorSymbolDef(ExecutorAddr(0xbeef),
+                                               JITSymbolFlags::Exported)}})));
+
+  // Drive Foo to Ready (absoluteSymbols defines it but a real lookup is
+  // required to reach materialized state).
+  cantFail(ES.lookup({&JD}, Foo));
+
+  DenseMap<JITDylib *, SymbolLookupSet> InitSyms;
+  InitSyms[&JD].add(Foo);
+
+  auto Result = Platform::lookupResolvedInitSymbols(ES, InitSyms);
+  ASSERT_THAT_EXPECTED(Result, Succeeded());
+  ASSERT_EQ(Result->count(&JD), 1u);
+  ASSERT_EQ((*Result)[&JD].count(Foo), 1u);
+  EXPECT_EQ((*Result)[&JD][Foo].getAddress().getValue(), 0xbeefULL);
+}
+
 } // namespace

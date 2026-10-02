@@ -374,7 +374,7 @@ private:
         dbgs() << "  \"" << KV.first->getName() << "\": " << KV.second << "\n";
     });
 
-    auto LookupResult = Platform::lookupInitSymbols(ES, LookupSymbols);
+    auto LookupResult = Platform::lookupResolvedInitSymbols(ES, LookupSymbols);
 
     if (!LookupResult)
       return LookupResult.takeError();
@@ -382,8 +382,10 @@ private:
     std::vector<ExecutorAddr> DeInitializers;
     for (auto &NextJD : DFSLinkOrder) {
       auto DeInitsItr = LookupResult->find(NextJD.get());
-      assert(DeInitsItr != LookupResult->end() &&
-             "Every JD should have at least __lljit_run_atexits");
+      // lookupResolvedInitSymbols may legitimately drop a JD whose
+      // deinit funcs (and __lljit_run_atexits) are all unmaterialized.
+      if (DeInitsItr == LookupResult->end())
+        continue;
 
       auto RunAtExitsItr = DeInitsItr->second.find(LLJITRunAtExits);
       if (RunAtExitsItr != DeInitsItr->second.end())
