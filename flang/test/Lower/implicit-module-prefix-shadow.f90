@@ -1,4 +1,5 @@
 ! RUN: %flang_fc1 -Wno-portability -emit-hlfir %s -o - | FileCheck %s
+! RUN: not %flang_fc1 -fimplicit-module-prefix -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix=IMPLICIT
 
 ! A local procedure in beta hides alpha's interface only in beta and its
 ! descendants. The sibling submodule may still implement alpha's public
@@ -41,3 +42,6 @@ program main
   ! CHECK: fir.call @_QMalphaPthird() {{.*}}
   call third
 end program main
+
+! IMPLICIT: error: Module procedure 'second' in 'alpha' has multiple definitions
+! IMPLICIT: Previous definition of 'second'
