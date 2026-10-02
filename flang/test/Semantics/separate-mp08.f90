@@ -1,5 +1,5 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1 -fimplicit-module-prefix -pedantic -Wno-implicit-module-prefix -Werror
-! The repair still applies when its diagnostic is suppressed.
+! The implicit-prefix diagnostic may be suppressed while the extension is enabled.
 module m
   interface
     module subroutine implementation
