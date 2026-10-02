@@ -1856,10 +1856,10 @@ void CIRGenModule::maybeSetTrivialComdat(const Decl &d, mlir::Operation *op) {
   if (!CodeGenUtils::shouldBeInCOMDAT(getASTContext(), d))
     return;
   if (auto globalOp = dyn_cast_or_null<cir::GlobalOp>(op)) {
-    globalOp.setComdat(true);
+    globalOp.setSelfComdat();
   } else {
     auto funcOp = cast<cir::FuncOp>(op);
-    funcOp.setComdat(true);
+    funcOp.setSelfComdat();
   }
 }
 
@@ -1959,7 +1959,7 @@ cir::GlobalOp CIRGenModule::createOrReplaceCXXRuntimeVariable(
 
   if (supportsCOMDAT() && cir::isWeakForLinker(linkage) &&
       !gv.hasAvailableExternallyLinkage()) {
-    gv.setComdat(true);
+    gv.setSelfComdat();
   }
 
   gv.setAlignmentAttr(getSize(alignment));
@@ -2202,7 +2202,7 @@ generateStringLiteral(mlir::Location loc, mlir::TypedAttr c,
   CIRGenModule::setInitializer(gv, c);
   if (gv.isWeakForLinker()) {
     assert(cgm.supportsCOMDAT() && "Only COFF uses weak string literals");
-    gv.setComdat(true);
+    gv.setSelfComdat();
   }
   cgm.setDSOLocal(static_cast<mlir::Operation *>(gv));
   return gv;
@@ -4297,7 +4297,7 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
 
   gv.setAlignment(align.getAsAlign().value());
   if (supportsCOMDAT() && gv.isWeakForLinker())
-    gv.setComdat(true);
+    gv.setSelfComdat();
   if (varDecl->getTLSKind())
     setTLSMode(gv, *varDecl, /*isExtendingDecl=*/true);
   mlir::Operation *cv = gv;
@@ -4396,8 +4396,8 @@ CIRGenModule::getAddrOfTemplateParamObject(const TemplateParamObjectDecl *tpo) {
                                  typedInit.getType(), /*is_constant=*/true);
   globalOp.setLinkage(linkage);
   globalOp.setAlignment(alignment.getAsAlign().value());
-  globalOp.setComdat(supportsCOMDAT() &&
-                     linkage == cir::GlobalLinkageKind::LinkOnceODRLinkage);
+  if (supportsCOMDAT() && linkage == cir::GlobalLinkageKind::LinkOnceODRLinkage)
+    globalOp.setSelfComdat();
 
   CIRGenModule::setInitializer(globalOp, init);
   emitter.finalize(globalOp);
