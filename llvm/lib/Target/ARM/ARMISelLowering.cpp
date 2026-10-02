@@ -1718,7 +1718,7 @@ ARMTargetLowering::getEffectiveCallingConv(CallingConv::ID CC,
         return CallingConv::Fast;
       return CallingConv::ARM_APCS;
     } else if (Subtarget->hasFPRegs() && !Subtarget->isThumb1Only() &&
-               !isVarArg)
+               !Subtarget->useSoftFloat() && !isVarArg)
       return CallingConv::ARM_AAPCS_VFP;
     else
       return CallingConv::ARM_AAPCS;
