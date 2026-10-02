@@ -137,6 +137,19 @@ class ReportDesc {
 void PrintReport(const ReportDesc *rep);
 void PrintStack(const ReportStack *stack);
 
+// Write an uncolored, single-line (newline-free) description of a report
+// component into `s`. These are the formatting cores shared with the PrintX
+// functions; they perform no decoration, add no trailing newline, and print no
+// stack trace, so they can be reused to obtain the raw description string.
+//
+// DescribeLocation and DescribeThread return whether a stack trace logically
+// follows the description (e.g. false for non-heap locations and GCD worker
+// threads).
+void DescribeMop(const ReportMop* mop, bool first, InternalScopedString& s);
+bool DescribeLocation(const ReportLocation* loc, InternalScopedString& s);
+void DescribeMutex(const ReportMutex* rm, InternalScopedString& s);
+bool DescribeThread(const ReportThread* rt, InternalScopedString& s);
+
 }  // namespace __tsan
 
 #endif  // TSAN_REPORT_H

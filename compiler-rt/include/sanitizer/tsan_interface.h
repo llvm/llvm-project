@@ -309,6 +309,58 @@ int SANITIZER_CDECL __tsan_get_report_unique_tid(void *report,
 /// \returns An opaque pointer to the current report. Otherwise returns NULL.
 void *SANITIZER_CDECL __tsan_get_current_report();
 
+/// Writes a single-line, uncolored description of a memory operation in the
+/// report into <c>out</c> (e.g. <c>"  Write of size 4 at 0x... by thread
+/// T1"</c>).
+///
+/// The output is null-terminated and truncated to fit <c>outlen</c> bytes
+/// (including the terminator).
+///
+/// \param report Opaque pointer to the current report.
+/// \param idx Index of the memory operation (same indexing as
+///            __tsan_get_report_mop).
+/// \param out Buffer to write the description into.
+/// \param outlen Capacity of <c>out</c> in bytes.
+/// \returns Returns 1 on success, 0 on failure.
+int SANITIZER_CDECL __tsan_describe_mop(void *report, unsigned long idx,
+                                        char *out, unsigned long outlen);
+
+/// Writes a single-line, uncolored description of a location in the report
+/// into <c>out</c>.
+///
+/// \param report Opaque pointer to the current report.
+/// \param idx Index of the location (same indexing as __tsan_get_report_loc).
+/// \param out Buffer to write the description into.
+/// \param outlen Capacity of <c>out</c> in bytes.
+/// \returns Returns 1 if a stack trace logically follows this description
+///          (true for heap and file-descriptor locations), 0 otherwise.
+int SANITIZER_CDECL __tsan_describe_loc(void *report, unsigned long idx,
+                                        char *out, unsigned long outlen);
+
+/// Writes a single-line, uncolored description of a mutex in the report
+/// into <c>out</c>.
+///
+/// \param report Opaque pointer to the current report.
+/// \param idx Index of the mutex (same indexing as __tsan_get_report_mutex).
+/// \param out Buffer to write the description into.
+/// \param outlen Capacity of <c>out</c> in bytes.
+/// \returns Returns 1 on success, 0 on failure.
+int SANITIZER_CDECL __tsan_describe_mutex(void *report, unsigned long idx,
+                                          char *out, unsigned long outlen);
+
+/// Writes a single-line, uncolored description of a thread in the report
+/// into <c>out</c>.
+///
+/// \param report Opaque pointer to the current report.
+/// \param idx Index of the thread (same indexing as __tsan_get_report_thread).
+/// \param out Buffer to write the description into.
+/// \param outlen Capacity of <c>out</c> in bytes.
+/// \returns Returns 1 if a stack trace logically follows this description
+///          (creation stack of the thread), 0 otherwise (e.g. main thread,
+///          GCD worker thread).
+int SANITIZER_CDECL __tsan_describe_thread(void *report, unsigned long idx,
+                                           char *out, unsigned long outlen);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif
