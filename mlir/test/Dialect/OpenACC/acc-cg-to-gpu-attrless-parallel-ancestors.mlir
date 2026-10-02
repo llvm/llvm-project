@@ -10,7 +10,7 @@ func.func @attrless_parallel_in_compute_region() {
   acc.compute_region {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
-    // expected-error@+1 {{requires an 'acc.par_dims' attribute before acc-cg-to-gpu}}
+    // expected-error@+1 {{requires an 'acc.par_dims' attribute}}
     scf.parallel (%i) = (%c0) to (%c1) step (%c1) {
     }
   } <{origin = "acc.parallel"}>
@@ -29,7 +29,7 @@ func.func @attrless_parallel_nested_in_if() {
     %true = arith.constant true
     scf.parallel (%i) = (%c0) to (%c1) step (%c1) {
       scf.if %true {
-        // expected-error@+1 {{requires an 'acc.par_dims' attribute before acc-cg-to-gpu}}
+        // expected-error@+1 {{requires an 'acc.par_dims' attribute}}
         scf.parallel (%j) = (%c0) to (%c1) step (%c1) {
         }
       }
@@ -48,7 +48,7 @@ module attributes {gpu.container_module} {
       acc.compute_region {
         %c0 = arith.constant 0 : index
         %c1 = arith.constant 1 : index
-        // expected-error@+1 {{requires an 'acc.par_dims' attribute before acc-cg-to-gpu}}
+        // expected-error@+1 {{requires an 'acc.par_dims' attribute}}
         scf.parallel (%i) = (%c0) to (%c1) step (%c1) {
         }
       } <{origin = "acc.routine"}>

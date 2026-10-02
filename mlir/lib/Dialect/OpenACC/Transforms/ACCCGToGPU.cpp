@@ -4335,8 +4335,7 @@ public:
       if (!loop->getParentOfType<acc::ComputeRegionOp>() ||
           mlir::acc::hasParDimsAttr(loop))
         return WalkResult::advance();
-      loop.emitOpError(
-          "requires an 'acc.par_dims' attribute before acc-cg-to-gpu");
+      loop.emitOpError("requires an 'acc.par_dims' attribute");
       return WalkResult::interrupt();
     });
     if (result.wasInterrupted()) {
