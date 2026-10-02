@@ -21,7 +21,7 @@
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCFDialect.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -475,13 +475,9 @@ public:
 
     SymbolTable::setSymbolVisibility(newFuncOp,
                                      SymbolTable::getSymbolVisibility(op));
-    // Copy over all attributes other than the name.
-    for (const auto &namedAttr :
-         op->getDiscardableAttrDictionary().getValue()) {
-      if (namedAttr.getName() != SymbolTable::getSymbolAttrName())
-        newFuncOp->setDiscardableAttr(namedAttr.getName(),
-                                      namedAttr.getValue());
-    }
+    // Copy over the discardable attributes.
+    for (const auto &namedAttr : op->getDiscardableAttrDictionary().getValue())
+      newFuncOp->setDiscardableAttr(namedAttr.getName(), namedAttr.getValue());
 
     rewriter.inlineRegionBefore(op.getBody(), newFuncOp.getBody(),
                                 newFuncOp.end());

@@ -29,7 +29,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
       %5 = llvm.mlir.constant(1.000000e+00 : f32) : f32 loc(#loc3)
       llvm.intr.dbg.declare #var2 = %arg0 : !llvm.ptr loc(#loc3)
       %6 = llvm.load %arg0 : !llvm.ptr -> f32 loc(#loc3)
-      %7 = llvm.fadd %6, %5 {fastmathFlags = #llvm.fastmath<contract>} : f32 loc(#loc3)
+      %7 = llvm.fadd %6, %5 fastmath<contract> : f32 loc(#loc3)
       llvm.store %7, %arg0 : f32, !llvm.ptr loc(#loc3)
       omp.terminator loc(#loc3)
     } loc(#loc4)

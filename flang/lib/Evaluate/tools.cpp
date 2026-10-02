@@ -693,24 +693,19 @@ Expr<LogicalResult> PromoteAndRelate(
 }
 
 std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &expr) {
-  if (auto type{expr.GetType()}) {
-    if (const auto *derived{GetDerivedTypeSpec(*type)}) {
-      if (derived->IsEnumerationType()) {
-        if (const auto *scope{derived->GetScope()}) {
-          auto iter{scope->find(semantics::SourceName{
-              semantics::DerivedTypeDetails::ordinalComponentName,
-              sizeof(semantics::DerivedTypeDetails::ordinalComponentName) -
-                  1})};
-          if (iter != scope->end()) {
-            const semantics::Symbol &ordSym{*iter->second};
-            if (auto *constant{UnwrapConstantValue<SomeDerived>(expr)}) {
-              if (auto sc{constant->GetScalarValue()}) {
-                return sc->Find(ordSym);
-              }
-            } else if (auto *sc{UnwrapExpr<StructureConstructor>(expr)}) {
-              return sc->Find(ordSym);
-            }
+  if (const auto *derived{GetEnumerationTypeSpec(expr.GetType())}) {
+    if (const auto *scope{derived->GetScope()}) {
+      auto iter{scope->find(semantics::SourceName{
+          semantics::DerivedTypeDetails::ordinalComponentName,
+          sizeof(semantics::DerivedTypeDetails::ordinalComponentName) - 1})};
+      if (iter != scope->end()) {
+        const semantics::Symbol &ordSym{*iter->second};
+        if (auto *constant{UnwrapConstantValue<SomeDerived>(expr)}) {
+          if (auto sc{constant->GetScalarValue()}) {
+            return sc->Find(ordSym);
           }
+        } else if (auto *sc{UnwrapExpr<StructureConstructor>(expr)}) {
+          return sc->Find(ordSym);
         }
       }
     }
@@ -1004,7 +999,21 @@ bool IsProcedurePointer(const Expr<SomeType> &expr) {
 }
 
 bool IsProcedure(const Expr<SomeType> &expr) {
-  return IsProcedureDesignator(expr) || IsProcedurePointer(expr);
+  if (IsProcedureDesignator(expr) || IsProcedurePointer(expr)) {
+    return true;
+  }
+  // Also look through a reference to a function whose result is a
+  // procedure, mirroring the function-reference handling in
+  // IsProcedurePointer() above. (Matters for expressions produced
+  // during error recovery.)
+  if (const auto *funcRef{UnwrapProcedureRef(expr)}) {
+    if (const Symbol *proc{funcRef->proc().GetSymbol()}) {
+      if (const Symbol *result{FindFunctionResult(*proc)}) {
+        return IsProcedure(*result);
+      }
+    }
+  }
+  return false;
 }
 
 bool IsProcedurePointerTarget(const Expr<SomeType> &expr) {
@@ -1129,12 +1138,20 @@ bool IsNullPointerOrAllocatable(const Expr<SomeType> *x) {
 }
 
 // GetSymbolVector()
-auto GetSymbolVectorHelper::operator()(const Symbol &x) const -> Result {
-  if (const auto *details{x.detailsIf<semantics::AssocEntityDetails>()}) {
-    if (IsVariable(details->expr()) && !UnwrapProcedureRef(*details->expr())) {
-      // associate(x => variable that is not a pointer returned by a function)
-      return (*this)(details->expr());
+const Expr<SomeType> *GetVariableSelector(const Symbol &sym) {
+  if (const auto *details{
+          sym.GetUltimate().detailsIf<semantics::AssocEntityDetails>()}) {
+    if (const auto &expr{details->expr()};
+        expr && IsVariable(*expr) && !UnwrapProcedureRef(*expr)) {
+      return &*expr;
     }
+  }
+  return nullptr;
+}
+
+auto GetSymbolVectorHelper::operator()(const Symbol &x) const -> Result {
+  if (const auto *selector{GetVariableSelector(x)}) {
+    return (*this)(*selector);
   }
   return {x.GetUltimate()};
 }
@@ -1213,6 +1230,22 @@ template semantics::UnorderedSymbolSet CollectCudaSymbols(
 template semantics::UnorderedSymbolSet CollectCudaSymbols(
     const Expr<SubscriptInteger> &);
 
+semantics::UnorderedSymbolSet ExpandCudaAssociations(
+    semantics::UnorderedSymbolSet &&symbols) {
+  semantics::UnorderedSymbolSet result;
+  for (SymbolRef sym : symbols) {
+    if (const auto *selector{GetVariableSelector(*sym)}) {
+      for (SymbolRef selectorSym :
+          ExpandCudaAssociations(CollectCudaSymbols(*selector))) {
+        result.insert(selectorSym);
+      }
+    } else {
+      result.insert(sym);
+    }
+  }
+  return result;
+}
+
 std::vector<SymbolVector> GetSymbolVectors(const Expr<SomeType> &expr) {
   SymbolVector symbols{GetSymbolVector(expr)};
   std::reverse(symbols.begin(), symbols.end());
@@ -1230,7 +1263,8 @@ std::vector<SymbolVector> GetSymbolVectors(const Expr<SomeType> &expr) {
   return symbolVectors;
 }
 
-int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr) {
+static semantics::UnorderedSymbolSet CollectUniqueCUDADeviceSymbols(
+    const Expr<SomeType> &expr) {
   std::vector<SymbolVector> symbolVectors{evaluate::GetSymbolVectors(expr)};
   semantics::UnorderedSymbolSet symbols;
   semantics::UnorderedSymbolSet cudaSymbols{CollectCudaSymbols(expr)};
@@ -1244,7 +1278,21 @@ int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr) {
       }
     }
   }
-  return symbols.size();
+  return symbols;
+}
+
+int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr) {
+  return CollectUniqueCUDADeviceSymbols(expr).size();
+}
+
+int GetNbOfUniqueCUDAManagedOrUnifiedSymbols(const Expr<SomeType> &expr) {
+  int count{0};
+  for (const Symbol &sym : CollectUniqueCUDADeviceSymbols(expr)) {
+    if (IsCUDAManagedOrUnifiedSymbol(sym)) {
+      ++count;
+    }
+  }
+  return count;
 }
 
 std::pair<semantics::UnorderedSymbolSet, semantics::UnorderedSymbolSet>
@@ -1307,6 +1355,33 @@ bool IsCUDADeviceSymbol(const Symbol &sym) {
     return GetNbOfCUDADeviceSymbols(details->expr()) > 0;
   }
   return false;
+}
+
+static std::optional<common::CUDADataAttr> GetDesignatedCUDADataAttr(
+    const Symbol &sym) {
+  const Symbol &ultimate{sym.GetUltimate()};
+  if (const auto *details{
+          ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {
+    return details->cudaDataAttr();
+  }
+  if (const auto *selector{GetVariableSelector(ultimate)}) {
+    // The attribute of a component prevails over the one of its base.
+    SymbolVector symbols{GetSymbolVector(*selector)};
+    for (auto it{symbols.rbegin()}; it != symbols.rend(); ++it) {
+      if (auto attr{GetDesignatedCUDADataAttr(*it)}) {
+        return attr;
+      }
+      if (!it->get().owner().IsDerivedType()) {
+        break;
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+bool IsCUDADataAttrSymbol(const Symbol &sym, common::CUDADataAttr attr) {
+  auto symAttr{GetDesignatedCUDADataAttr(sym)};
+  return symAttr && *symAttr == attr;
 }
 
 bool IsCUDADeviceOnlySymbol(const Symbol &sym) {
@@ -1402,6 +1477,10 @@ struct HasConversionHelper : public AnyTraverse<HasConversionHelper> {
   using Base = AnyTraverse<HasConversionHelper>;
   HasConversionHelper() : Base{*this} {}
   using Base::operator();
+  // Subscript conversions belong to the array designator and are preserved
+  // when reassociating the surrounding numeric expression. In particular,
+  // implicit conversions to SubscriptInteger must not inhibit reassociation.
+  bool operator()(const Subscript &) const { return false; }
   template <typename TO, common::TypeCategory FROM>
   bool operator()(const Convert<TO, FROM> &) const {
     return true;
@@ -1513,7 +1592,7 @@ static std::optional<NumericExpr<CAT, KIND>> tryBuildSplitSumExpressionTree(
   SignedNumericExpr<CAT, KIND> headExpr = buildRightAssociatedSignedFold(head);
   SignedNumericExpr<CAT, KIND> tailExpr = buildRightAssociatedSignedFold(tail);
   SignedNumericExpr<CAT, KIND> result =
-      buildSignedAdd(std::move(tailExpr), std::move(headExpr));
+      buildSignedAdd(std::move(headExpr), std::move(tailExpr));
   assert(result.isPositive &&
       "the first flattened term and therefore the split sum are positive");
   return std::move(result.expr);

@@ -93,7 +93,7 @@ func.func @fat_raw_buffer_cast_reset_offset(%buf: memref<?xi32, strided<[1], off
   // CHECK-DAG: %[[maxVals:.*]] = llvm.mul %[[size0]], %[[stride0]]
   // CHECK-DAG: %[[byteSize:.*]] = llvm.mlir.constant(4 : i64) : i64
   // CHECK-DAG: %[[numRecords:.*]] = llvm.mul %[[maxVals]], %[[byteSize]]
-  // CHECK-DAG: %[[zeroOff:.*]] = llvm.mlir.constant(0 : index) : i64
+  // CHECK-DAG: %[[zeroOff:.*]] = llvm.mlir.constant(0 : i64) : i64
   // CHECK-DAG: %[[strideArg:.*]] = llvm.mlir.constant(0 : i16) : i16
   // GFX9:  %[[flags:.*]] = llvm.mlir.constant(159744 : i32)
   // RDNA:  %[[flags:.*]] = llvm.mlir.constant(822243328 : i32)

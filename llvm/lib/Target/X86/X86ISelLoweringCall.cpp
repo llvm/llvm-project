@@ -1160,8 +1160,7 @@ SDValue X86TargetLowering::LowerCallResult(
   CCInfo.AnalyzeCallResult(Ins, RetCC_X86);
 
   // Copy all of the result registers out of their specified physreg.
-  for (unsigned I = 0, InsIndex = 0, E = RVLocs.size(); I != E;
-       ++I, ++InsIndex) {
+  for (unsigned I = 0, E = RVLocs.size(); I != E; ++I) {
     CCValAssign &VA = RVLocs[I];
     EVT CopyVT = VA.getLocVT();
 

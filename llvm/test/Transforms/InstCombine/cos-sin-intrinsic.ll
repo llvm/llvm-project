@@ -3,7 +3,9 @@
 
 declare double    @llvm.cos.f64(double %Val)
 declare float     @llvm.cos.f32(float %Val)
+declare bfloat    @llvm.cos.bf16(bfloat %Val)
 declare <2 x float> @llvm.cos.v2f32(<2 x float> %Val)
+declare <2 x bfloat> @llvm.cos.v2bf16(<2 x bfloat> %Val)
 
 declare float @llvm.fabs.f32(float %Val)
 declare <2 x float> @llvm.fabs.v2f32(<2 x float> %Val)
@@ -90,6 +92,16 @@ define <2 x float> @unary_fneg_cos_fmf(<2 x float> %x){
   ret <2 x float> %r
 }
 
+define <2 x float> @unary_fneg_cos_positivezero(<2 x float> %x) denormal_fpenv(positivezero|positivezero) {
+; CHECK-LABEL: @unary_fneg_cos_positivezero(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.cos.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %negx = fneg <2 x float> %x
+  %r = call <2 x float> @llvm.cos.v2f32(<2 x float> %negx)
+  ret <2 x float> %r
+}
+
 define float @fabs_f32(float %x) {
 ; CHECK-LABEL: @fabs_f32(
 ; CHECK-NEXT:    [[COS:%.*]] = call float @llvm.cos.f32(float [[X:%.*]])
@@ -144,9 +156,27 @@ define <2 x float> @fabs_unary_fneg_v2f32(<2 x float> %x) {
   ret <2 x float> %cos
 }
 
+define bfloat @constant_fold_cos_bf16() {
+; CHECK-LABEL: @constant_fold_cos_bf16(
+; CHECK-NEXT:    ret bfloat 8.789060e-01
+;
+  %r = call bfloat @llvm.cos.bf16(bfloat 0.5)
+  ret bfloat %r
+}
+
+define <2 x bfloat> @constant_fold_cos_v2bf16() {
+; CHECK-LABEL: @constant_fold_cos_v2bf16(
+; CHECK-NEXT:    ret <2 x bfloat> splat (bfloat 8.789060e-01)
+;
+  %r = call <2 x bfloat> @llvm.cos.v2bf16(<2 x bfloat> <bfloat 0.5, bfloat 0.5>)
+  ret <2 x bfloat> %r
+}
+
 ; Negate is canonicalized after sin.
 
+declare bfloat @llvm.sin.bf16(bfloat)
 declare <2 x float> @llvm.sin.v2f32(<2 x float>)
+declare <2 x bfloat> @llvm.sin.v2bf16(<2 x bfloat> %Val)
 
 define <2 x float> @fneg_sin(<2 x float> %x){
 ; CHECK-LABEL: @fneg_sin(
@@ -192,4 +222,66 @@ define <2 x float> @unary_fneg_sin_fmf(<2 x float> %x){
   %negx = fneg fast <2 x float> %x
   %r = call nnan arcp afn <2 x float> @llvm.sin.v2f32(<2 x float> %negx)
   ret <2 x float> %r
+}
+
+; sin(-x) -> -sin(x) is invalid if denormals may be flushed to +0.0.
+
+define <2 x float> @unary_fneg_sin_dapz(<2 x float> %x) denormal_fpenv(ieee|positivezero) {
+; CHECK-LABEL: @unary_fneg_sin_dapz(
+; CHECK-NEXT:    [[NEGX:%.*]] = fneg <2 x float> [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.sin.v2f32(<2 x float> [[NEGX]])
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %negx = fneg <2 x float> %x
+  %r = call <2 x float> @llvm.sin.v2f32(<2 x float> %negx)
+  ret <2 x float> %r
+}
+
+define <2 x float> @unary_fneg_sin_ftpz(<2 x float> %x) denormal_fpenv(positivezero|ieee) {
+; CHECK-LABEL: @unary_fneg_sin_ftpz(
+; CHECK-NEXT:    [[NEGX:%.*]] = fneg <2 x float> [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.sin.v2f32(<2 x float> [[NEGX]])
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %negx = fneg <2 x float> %x
+  %r = call <2 x float> @llvm.sin.v2f32(<2 x float> %negx)
+  ret <2 x float> %r
+}
+
+define <2 x float> @unary_fneg_sin_dynamic(<2 x float> %x) denormal_fpenv(dynamic|dynamic) {
+; CHECK-LABEL: @unary_fneg_sin_dynamic(
+; CHECK-NEXT:    [[NEGX:%.*]] = fneg <2 x float> [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.sin.v2f32(<2 x float> [[NEGX]])
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %negx = fneg <2 x float> %x
+  %r = call <2 x float> @llvm.sin.v2f32(<2 x float> %negx)
+  ret <2 x float> %r
+}
+
+define <2 x float> @unary_fneg_sin_ftz_daz(<2 x float> %x) denormal_fpenv(preservesign|preservesign) {
+; CHECK-LABEL: @unary_fneg_sin_ftz_daz(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.sin.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fneg <2 x float> [[TMP1]]
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %negx = fneg <2 x float> %x
+  %r = call <2 x float> @llvm.sin.v2f32(<2 x float> %negx)
+  ret <2 x float> %r
+}
+
+define bfloat @constant_fold_sin_bf16() {
+; CHECK-LABEL: @constant_fold_sin_bf16(
+; CHECK-NEXT:    ret bfloat 4.785160e-01
+;
+  %r = call bfloat @llvm.sin.bf16(bfloat 0.5)
+  ret bfloat %r
+}
+
+define <2 x bfloat> @constant_fold_sin_v2bf16() {
+; CHECK-LABEL: @constant_fold_sin_v2bf16(
+; CHECK-NEXT:    ret <2 x bfloat> splat (bfloat 4.785160e-01)
+;
+  %r = call <2 x bfloat> @llvm.sin.v2bf16(<2 x bfloat> <bfloat 0.5, bfloat 0.5>)
+  ret <2 x bfloat> %r
 }

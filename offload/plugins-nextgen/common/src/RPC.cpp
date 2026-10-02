@@ -279,7 +279,7 @@ void RPCServerTy::registerCallback(RPCServerCallbackTy FnPtr) {
 
 void RPCServerTy::setSleepFunction(std::function<void()> Sleep,
                                    std::function<void()> Wake) {
-  std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
+  // Only called from 'initDevice', already under the BufferMutex lock.
   Thread->SleepFunction = std::move(Sleep);
   Thread->WakeFunction = std::move(Wake);
 }

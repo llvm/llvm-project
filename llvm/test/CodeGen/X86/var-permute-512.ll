@@ -97,7 +97,7 @@ define <32 x i16> @var_shuffle_v32i16(<32 x i16> %v, <32 x i16> %indices) nounwi
 ; AVX512F-NEXT:    pushq %rbp
 ; AVX512F-NEXT:    movq %rsp, %rbp
 ; AVX512F-NEXT:    andq $-64, %rsp
-; AVX512F-NEXT:    subq $128, %rsp
+; AVX512F-NEXT:    addq $-128, %rsp
 ; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX512F-NEXT:    vextracti32x4 $2, %zmm1, %xmm3
 ; AVX512F-NEXT:    vextracti32x4 $3, %zmm1, %xmm4
@@ -326,7 +326,7 @@ define <64 x i8> @var_shuffle_v64i8(<64 x i8> %v, <64 x i8> %indices) nounwind {
 ; AVX512F-NEXT:    pushq %rbp
 ; AVX512F-NEXT:    movq %rsp, %rbp
 ; AVX512F-NEXT:    andq $-64, %rsp
-; AVX512F-NEXT:    subq $128, %rsp
+; AVX512F-NEXT:    addq $-128, %rsp
 ; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX512F-NEXT:    vextracti32x4 $2, %zmm1, %xmm3
 ; AVX512F-NEXT:    vextracti32x4 $3, %zmm1, %xmm4
@@ -551,7 +551,7 @@ define <64 x i8> @var_shuffle_v64i8(<64 x i8> %v, <64 x i8> %indices) nounwind {
 ; AVX512BW-NEXT:    pushq %rbp
 ; AVX512BW-NEXT:    movq %rsp, %rbp
 ; AVX512BW-NEXT:    andq $-64, %rsp
-; AVX512BW-NEXT:    subq $128, %rsp
+; AVX512BW-NEXT:    addq $-128, %rsp
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX512BW-NEXT:    vextracti32x4 $2, %zmm1, %xmm3
 ; AVX512BW-NEXT:    vextracti32x4 $3, %zmm1, %xmm4
@@ -1064,7 +1064,7 @@ define void @var_cvt_shuffle_v64f32_v64i8_idx(ptr %dst, <64 x i8> %src, i32 %b) 
 ; AVX512F-NEXT:    pushq %rbp
 ; AVX512F-NEXT:    movq %rsp, %rbp
 ; AVX512F-NEXT:    andq $-64, %rsp
-; AVX512F-NEXT:    subq $128, %rsp
+; AVX512F-NEXT:    addq $-128, %rsp
 ; AVX512F-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX512F-NEXT:    vpbroadcastd %esi, %zmm2
 ; AVX512F-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm1 # [10,9,8,7,6,5,4,3,2,1,u,4294967295,4294967294,4294967293,4294967292,4294967291]
@@ -1315,7 +1315,7 @@ define void @var_cvt_shuffle_v64f32_v64i8_idx(ptr %dst, <64 x i8> %src, i32 %b) 
 ; AVX512BW-NEXT:    pushq %rbp
 ; AVX512BW-NEXT:    movq %rsp, %rbp
 ; AVX512BW-NEXT:    andq $-64, %rsp
-; AVX512BW-NEXT:    subq $128, %rsp
+; AVX512BW-NEXT:    addq $-128, %rsp
 ; AVX512BW-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX512BW-NEXT:    vpbroadcastd %esi, %zmm2
 ; AVX512BW-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm1 # [10,9,8,7,6,5,4,3,2,1,u,4294967295,4294967294,4294967293,4294967292,4294967291]
@@ -1566,7 +1566,7 @@ define void @var_cvt_shuffle_v64f32_v64i8_idx(ptr %dst, <64 x i8> %src, i32 %b) 
 ; AVX512VBMI-NEXT:    pushq %rbp
 ; AVX512VBMI-NEXT:    movq %rsp, %rbp
 ; AVX512VBMI-NEXT:    andq $-64, %rsp
-; AVX512VBMI-NEXT:    subq $128, %rsp
+; AVX512VBMI-NEXT:    addq $-128, %rsp
 ; AVX512VBMI-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX512VBMI-NEXT:    vpbroadcastd %esi, %zmm1
 ; AVX512VBMI-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm2 # [10,9,8,7,6,5,4,3,2,1,u,4294967295,4294967294,4294967293,4294967292,4294967291]

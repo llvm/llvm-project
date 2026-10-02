@@ -28,7 +28,7 @@ func.func @map_nested_forall_to_threads_excessive_threads(%x: memref<2 x 32 x f3
         %5 = memref.load %y[%i, %j] : memref<2 x 32 x f32>
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i, %j] : memref<2 x 32 x f32>
-     }  { mapping = [#gpu.thread<y>, #gpu.thread<x>] }
+     }  {mapping = [#gpu.thread<y>, #gpu.thread<x>]}
     gpu.terminator
   }
 
@@ -40,7 +40,7 @@ func.func @map_nested_forall_to_threads_excessive_threads(%x: memref<2 x 32 x f3
         %5 = memref.load %y[%i, %j] : memref<2 x 32 x f32>
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i, %j] : memref<2 x 32 x f32>
-     }  { mapping = [#gpu.thread<y>, #gpu.thread<x>] }
+     }  {mapping = [#gpu.thread<y>, #gpu.thread<x>]}
     gpu.terminator
   }
 
@@ -72,7 +72,7 @@ func.func @map_nested_forall_to_threads_fewer_threads(%x: memref<2 x 32 x f32>, 
         %5 = memref.load %y[%i, %j] : memref<2 x 32 x f32>
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i, %j] : memref<2 x 32 x f32>
-     }  { mapping = [#gpu.thread<y>, #gpu.thread<x>] }
+     }  {mapping = [#gpu.thread<y>, #gpu.thread<x>]}
     gpu.terminator
   }
 
@@ -84,7 +84,7 @@ func.func @map_nested_forall_to_threads_fewer_threads(%x: memref<2 x 32 x f32>, 
         %5 = memref.load %y[%i, %j] : memref<2 x 32 x f32>
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i, %j] : memref<2 x 32 x f32>
-     }  { mapping = [#gpu.thread<y>, #gpu.thread<x>] }
+     }  {mapping = [#gpu.thread<y>, #gpu.thread<x>]}
     gpu.terminator
   }
 
@@ -113,7 +113,7 @@ func.func @map_nested_forall_to_threads_dynamic_trip_count(%x: memref<2 x 32 x f
         %5 = memref.load %y[%i, %j] : memref<2 x 32 x f32>
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i, %j] : memref<2 x 32 x f32>
-     }  { mapping = [#gpu.thread<y>, #gpu.thread<x>] }
+     }  {mapping = [#gpu.thread<y>, #gpu.thread<x>]}
     gpu.terminator
   }
   return %y : memref<2 x 32 x f32>
@@ -187,14 +187,14 @@ func.func @map_forall_to_blocks_not_unique(%x: memref<2 x 32 x f32>, %y: memref<
         %5 = memref.load %y[%i, %j] : memref<2 x 32 x f32>
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i, %j] : memref<2 x 32 x f32>
-     }  { mapping = [#gpu.thread<y>, #gpu.thread<x>] }
+     }  {mapping = [#gpu.thread<y>, #gpu.thread<x>]}
 
     scf.forall (%i, %j) in (%c7, %c9) {
         %4 = memref.load %x[%i, %j] : memref<2 x 32 x f32>
         %5 = memref.load %y[%i, %j] : memref<2 x 32 x f32>
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i, %j] : memref<2 x 32 x f32>
-     }  { mapping = [#gpu.thread<y>, #gpu.thread<x>] }
+     }  {mapping = [#gpu.thread<y>, #gpu.thread<x>]}
     gpu.terminator
   }
 
@@ -224,14 +224,14 @@ func.func @map_forall_to_blocks_large_loop(%x: memref<2 x 32 x f32>, %y: memref<
       %5 = memref.load %y[%i, %j] : memref<2 x 32 x f32>
       %6 = math.fma %alpha, %4, %5 : f32
       memref.store %6, %y[%i, %j] : memref<2 x 32 x f32>
-  }  { mapping = [#gpu.thread<x>, #gpu.thread<y>] }
+  }  {mapping = [#gpu.thread<x>, #gpu.thread<y>]}
 
   scf.forall (%i, %j) in (%c7, %c9) {
       %4 = memref.load %x[%i, %j] : memref<2 x 32 x f32>
       %5 = memref.load %y[%i, %j] : memref<2 x 32 x f32>
       %6 = math.fma %alpha, %4, %5 : f32
       memref.store %6, %y[%i, %j] : memref<2 x 32 x f32>
-  }  { mapping = [#gpu.thread<y>, #gpu.thread<x>] }
+  }  {mapping = [#gpu.thread<y>, #gpu.thread<x>]}
 
   return %y : memref<2 x 32 x f32>
 }
@@ -240,7 +240,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %funcop = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     // expected-error @below {{could not find a unique topLevel scf.forall}}
-    %1 = transform.gpu.map_forall_to_blocks %funcop { generate_gpu_launch } : (!transform.any_op) -> !transform.any_op
+    %1 = transform.gpu.map_forall_to_blocks %funcop generate_gpu_launch : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -255,7 +255,7 @@ func.func @map_forall_to_blocks_large_loop(%x: memref<2 x 32 x f32>, %y: memref<
       %5 = memref.load %y[%i, %j] : memref<2 x 32 x f32>
       %6 = math.fma %alpha, %4, %5 : f32
       memref.store %6, %y[%i, %j] : memref<2 x 32 x f32>
-  }  { mapping = [#gpu.block<x>, #gpu.block<y>] }
+  }  {mapping = [#gpu.block<x>, #gpu.block<y>]}
   return %y : memref<2 x 32 x f32>
 }
 
@@ -282,7 +282,7 @@ func.func @saxpy2d_singleloop(%x: !type, %y: !type, %stream : !gpu.async.token) 
         %5 = memref.load %y[%i, %j] : !type
         %6 = arith.mulf %4, %5 : f32
         memref.store %6, %y[%i, %j] : !type
-     }  { mapping = [#gpu.thread<x>, #gpu.warp<y>] }
+     }  {mapping = [#gpu.thread<x>, #gpu.warp<y>]}
     gpu.terminator
   }
   return %y : !type
@@ -311,7 +311,7 @@ func.func @saxpy2d_singleloop(%x: !type, %y: !type, %stream : !gpu.async.token) 
         %5 = memref.load %y[%i, %j] : !type
         %6 = arith.mulf %4, %5 : f32
         memref.store %6, %y[%i, %j] : !type
-     }  { mapping = [#gpu.thread<x>, #gpu.thread<x>] }
+     }  {mapping = [#gpu.thread<x>, #gpu.thread<x>]}
     gpu.terminator
   }
   return %y : !type
@@ -340,7 +340,7 @@ func.func @saxpy2d_singleloop(%x: !type, %y: !type, %stream : !gpu.async.token) 
         %5 = memref.load %y[%i, %j] : !type
         %6 = arith.mulf %4, %5 : f32
         memref.store %6, %y[%i, %j] : !type
-     }  { mapping = [#gpu.thread<x>, #gpu.thread<linear_dim_0>] }
+     }  {mapping = [#gpu.thread<x>, #gpu.thread<linear_dim_0>]}
     gpu.terminator
   }
   return %y : !type
@@ -418,7 +418,7 @@ func.func @masking_mapping_attribute_requires_linear_mapping(
         %5 = memref.load %y[%i] : memref<32xf32>
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i] : memref<32xf32>
-     }  { mapping = [#gpu.warp<x>, #gpu.mask<0x33>] }
+     }  {mapping = [#gpu.warp<x>, #gpu.mask<0x33>]}
     gpu.terminator
   }
 
@@ -448,7 +448,7 @@ func.func @masking_mapping_attribute_requires_linear_mapping(
         %5 = memref.load %y[%i] : memref<32xf32>
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i] : memref<32xf32>
-     }  { mapping = [#gpu.thread<linear_dim_0>, #gpu.mask<0xff>] }
+     }  {mapping = [#gpu.thread<linear_dim_0>, #gpu.mask<0xff>]}
     gpu.terminator
   }
 
@@ -497,7 +497,7 @@ func.func @not_a_thread_or_warp_mapping_attribute(%x: memref<2 x 32 x f32>, %y: 
         %5 = memref.load %y[%i, %j] : memref<2 x 32 x f32>
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i, %j] : memref<2 x 32 x f32>
-     }  { mapping = [#gpu.block<y>, #gpu.block<x>] }
+     }  {mapping = [#gpu.block<y>, #gpu.block<x>]}
     gpu.terminator
   }
 
@@ -527,7 +527,7 @@ func.func @map_nested_forall_to_threads_invalid_block_dims(%x: memref<2 x 32 x f
         %5 = memref.load %y[%i, %j] : memref<2 x 32 x f32>
         %6 = math.fma %alpha, %4, %5 : f32
         memref.store %6, %y[%i, %j] : memref<2 x 32 x f32>
-     }  { mapping = [#gpu.thread<y>, #gpu.thread<x>] }
+     }  {mapping = [#gpu.thread<y>, #gpu.thread<x>]}
     gpu.terminator
   }
   return %y : memref<2 x 32 x f32>
@@ -541,4 +541,3 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
-

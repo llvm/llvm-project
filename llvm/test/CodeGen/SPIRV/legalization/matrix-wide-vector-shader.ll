@@ -4,6 +4,9 @@
 @Ints9    = internal addrspace(10) global [9 x i32] poison
 @Ints9B   = internal addrspace(10) global [9 x i32] poison
 @Bools9   = internal addrspace(10) global [9 x i32] poison
+@Ints8    = internal addrspace(10) global [8 x i32] poison
+@Ints8B   = internal addrspace(10) global [8 x i32] poison
+@Bools8   = internal addrspace(10) global [8 x i32] poison
 @Floats9  = internal addrspace(10) global [9 x float] poison
 @Floats9B = internal addrspace(10) global [9 x float] poison
 @Ints12   = internal addrspace(10) global [12 x i32] poison
@@ -12,7 +15,11 @@
 @Floats12 = internal addrspace(10) global [12 x float] poison
 @Floats12B = internal addrspace(10) global [12 x float] poison
 @Ints16   = internal addrspace(10) global [16 x i32] poison
+@Ints16B  = internal addrspace(10) global [16 x i32] poison
 @Bools16  = internal addrspace(10) global [16 x i32] poison
+@Floats16 = internal addrspace(10) global [16 x float] poison
+@Floats16B = internal addrspace(10) global [16 x float] poison
+@BoolBits16 = internal addrspace(10) global [16 x i1] poison
 
 ; CHECK-DAG: %[[Bool:[0-9]+]] = OpTypeBool
 ; CHECK-DAG: %[[Int32:[0-9]+]] = OpTypeInt 32 0
@@ -196,6 +203,18 @@ define internal void @narrow_12elem_zext() {
   ret void
 }
 
+; Standalone G_ZEXT regression: the wide result must be split before the
+; Cartesian-product legality rule accepts it.
+; CHECK-LABEL: ; -- Begin function zext_16elem
+; CHECK-COUNT-16: OpSelect %[[Int32]]
+; CHECK-NOT: OpSelect %[[Int32]]
+define internal void @zext_16elem() {
+  %bits = load <16 x i1>, ptr addrspace(10) @BoolBits16
+  %ext = zext <16 x i1> %bits to <16 x i32>
+  store <16 x i32> %ext, ptr addrspace(10) @Bools16
+  ret void
+}
+
 ; CHECK-LABEL: ; -- Begin function narrow_16elem_sext
 ; CHECK: %[[Shl0:[0-9]+]] = OpShiftLeftLogical %[[Vec4Int32]]
 ; CHECK-NEXT: %{{[0-9]+}} = OpShiftRightArithmetic %[[Vec4Int32]] %[[Shl0]]
@@ -215,6 +234,32 @@ define internal void @narrow_16elem_sext() {
 }
 
 ;--- G_ICMP/G_FCMP: split the flattened matrix into 4-lane comparisons ---
+
+; CHECK-LABEL: ; -- Begin function icmp_8elem
+; CHECK-COUNT-2: OpIEqual %[[Vec4Bool]]
+; CHECK-COUNT-2: OpSelect %[[Vec4Int32]]
+; CHECK-NOT: OpIEqual
+define internal void @icmp_8elem() {
+  %a = load <8 x i32>, ptr addrspace(10) @Ints8
+  %b = load <8 x i32>, ptr addrspace(10) @Ints8B
+  %cmp = icmp eq <8 x i32> %a, %b
+  %ext = zext <8 x i1> %cmp to <8 x i32>
+  store <8 x i32> %ext, ptr addrspace(10) @Bools8
+  ret void
+}
+
+; CHECK-LABEL: ; -- Begin function fcmp_16elem
+; CHECK-COUNT-4: OpFOrdEqual %[[Vec4Bool]]
+; CHECK-COUNT-4: OpSelect %[[Vec4Int32]]
+; CHECK-NOT: OpFOrdEqual
+define internal void @fcmp_16elem() {
+  %a = load <16 x float>, ptr addrspace(10) @Floats16
+  %b = load <16 x float>, ptr addrspace(10) @Floats16B
+  %cmp = fcmp oeq <16 x float> %a, %b
+  %ext = zext <16 x i1> %cmp to <16 x i32>
+  store <16 x i32> %ext, ptr addrspace(10) @Bools16
+  ret void
+}
 
 ; CHECK-LABEL: ; -- Begin function icmp_3x3
 ; CHECK-COUNT-8: OpLoad %[[Int32]]
@@ -312,6 +357,9 @@ define void @main() #0 {
   call void @bool4x4_sext()
   call void @narrow_12elem_zext()
   call void @narrow_16elem_sext()
+  call void @zext_16elem()
+  call void @icmp_8elem()
+  call void @fcmp_16elem()
   call void @icmp_3x3()
   call void @icmp_12elem()
   call void @fcmp_3x3()

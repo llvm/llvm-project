@@ -68,7 +68,7 @@ std::pair<Value, Value> getRawPtrAndSize(const Location loc,
   Value resPtr =
       LLVM::GEPOp::create(rewriter, loc, ptrType, elType, dataPtr, offset);
   Value size = LLVM::ConstantOp::create(rewriter, loc, i32Type,
-                                        rewriter.getIndexAttr(1));
+                                        rewriter.getI32IntegerAttr(1));
   if (descriptorType.getBody().size() > 3) {
     for (int64_t i = 0; i < rank; ++i) {
       Value dim = LLVM::ExtractValueOp::create(rewriter, loc, memRef,

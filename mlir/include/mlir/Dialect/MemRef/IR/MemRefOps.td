@@ -1190,7 +1190,7 @@ def MemRef_GetGlobalOp : MemRef_Op<"get_global",
 // GlobalOp
 //===----------------------------------------------------------------------===//
 
-def MemRef_GlobalOp : MemRef_Op<"global", [Symbol,
+def MemRef_GlobalOp : MemRef_Op<"global", [SymbolName, SymbolVisibility, Symbol,
     DeclareOpInterfaceMethods<AlignmentAttrOpInterface>]> {
   let summary = "declare or define a global memref variable";
   let description = [{
@@ -2027,9 +2027,11 @@ def MemRef_CollapseShapeOp : MemRef_ReassociativeReshapeOp<"collapse_shape", [
       "ArrayRef<ReassociationIndices>":$reassociation,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
     [{
-      $_state.addAttribute("reassociation",
-                          getReassociationIndicesAttribute($_builder, reassociation));
-      build($_builder, $_state, resultType, src, attrs);
+      buildPropertiesAndDiscardableAttributes($_state, attrs);
+      $_state.getOrAddProperties<Properties>().reassociation =
+          getReassociationIndicesAttribute($_builder, reassociation);
+      $_state.addOperands(src);
+      $_state.addTypes(resultType);
     }]>,
     OpBuilder<(ins "Type":$resultType, "Value":$src,
       "ArrayRef<ReassociationExprs>":$reassociation,

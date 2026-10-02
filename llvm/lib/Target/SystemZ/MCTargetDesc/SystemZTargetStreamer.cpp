@@ -18,7 +18,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCGOFFStreamer.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/Support/ConvertEBCDIC.h"
 
@@ -31,6 +30,7 @@ void SystemZTargetStreamer::emitConstantPools() {
   // Switch to the .text section.
   const MCObjectFileInfo &OFI = *Streamer.getContext().getObjectFileInfo();
   Streamer.switchSection(OFI.getTextSection());
+  Streamer.emitValueToAlignment(Align(2));
   for (auto &I : EXRLTargets2Sym) {
     Streamer.emitLabel(I.second);
     const MCInstSTIPair &MCI_STI = I.first;
@@ -158,6 +158,7 @@ void SystemZTargetzOSStreamer::emitPPA1(PPA1Info &Info) {
   assert(PPA2Sym != nullptr && "PPA2 Symbol not defined");
   MCStreamer &OutStreamer = getStreamer();
   MCContext &OutContext = OutStreamer.getContext();
+  OutStreamer.emitValueToAlignment(Align(2));
 
   // Optional Argument Area Length.
   // Note: This represents the length of the argument area that we reserve

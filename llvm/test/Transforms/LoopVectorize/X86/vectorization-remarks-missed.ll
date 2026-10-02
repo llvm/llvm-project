@@ -48,6 +48,15 @@
 
 ; YAML:       --- !Analysis
 ; YAML-NEXT: Pass:            loop-vectorize
+; YAML-NEXT: Name:            NoCountableConditionInLatchBlock
+; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 5, Column: 9 }
+; YAML-NEXT: Function:        _Z4testPii
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'loop not vectorized: '
+; YAML-NEXT:   - String:          Latch block does not have a countable exit condition
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Analysis
+; YAML-NEXT: Pass:            loop-vectorize
 ; YAML-NEXT: Name:            UnsupportedUncountableLoop
 ; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 5, Column: 9 }
 ; YAML-NEXT: Function:        _Z4testPii
@@ -134,6 +143,15 @@
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'loop not vectorized: '
 ; YAML-NEXT:   - String:          loop induction variable could not be identified
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Analysis
+; YAML-NEXT: Pass:            loop-vectorize
+; YAML-NEXT: Name:            RecurrencesInEarlyExitLoop
+; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 27, Column: 3 }
+; YAML-NEXT: Function:        test_multiple_failures
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'loop not vectorized: '
+; YAML-NEXT:   - String:          Cannot vectorize early exit loop with reductions or recurrences
 ; YAML-NEXT: ...
 ; YAML-NEXT: --- !Analysis
 ; YAML-NEXT: Pass:            loop-vectorize

@@ -208,9 +208,9 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
   if (resultStructType) {
     // Allocate the struct on the stack and pass the pointer.
     Type resultType = cast<LLVM::LLVMFunctionType>(wrapperType).getParamType(0);
-    Value one = LLVM::ConstantOp::create(
-        builder, loc, typeConverter.convertType(builder.getIndexType()),
-        builder.getIntegerAttr(builder.getIndexType(), 1));
+    Type indexType = typeConverter.convertType(builder.getIndexType());
+    Value one = LLVM::ConstantOp::create(builder, loc, indexType,
+                                         builder.getIntegerAttr(indexType, 1));
     Value result =
         LLVM::AllocaOp::create(builder, loc, resultType, resultStructType, one);
     args.push_back(result);
@@ -236,9 +236,9 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
                     wrapperArgsRange.take_front(numToDrop));
 
       auto ptrTy = LLVM::LLVMPointerType::get(builder.getContext());
+      Type indexType = typeConverter.convertType(builder.getIndexType());
       Value one = LLVM::ConstantOp::create(
-          builder, loc, typeConverter.convertType(builder.getIndexType()),
-          builder.getIntegerAttr(builder.getIndexType(), 1));
+          builder, loc, indexType, builder.getIntegerAttr(indexType, 1));
       Value allocated = LLVM::AllocaOp::create(
           builder, loc, ptrTy, packed.getType(), one, /*alignment=*/0);
       LLVM::StoreOp::create(builder, loc, packed, allocated);
@@ -600,16 +600,18 @@ struct CallOpInterfaceLowering : public ConvertOpToLLVMPattern<CallOpType> {
     auto promoted = this->getTypeConverter()->promoteOperands(
         callOp.getLoc(), /*opOperands=*/callOp->getOperands(),
         adaptor.getOperands(), rewriter, useBarePtrCallConv);
+    LLVM::CallOp::Properties properties{};
+    LLVM::CallOp::populateDefaultProperties(
+        OperationName(LLVM::CallOp::getOperationName(), rewriter.getContext()),
+        properties);
+    properties.operandSegmentSizes = {static_cast<int32_t>(promoted.size()), 0};
+    properties.op_bundle_sizes = rewriter.getDenseI32ArrayAttr({});
     auto newOp = LLVM::CallOp::create(
         rewriter, callOp.getLoc(),
         packedResult ? TypeRange(packedResult) : TypeRange(), promoted,
-        callOp->getDiscardableAttrDictionary().getValue());
+        properties, callOp->getDiscardableAttrDictionary().getValue());
     if constexpr (std::is_same_v<CallOpType, func::CallOp>)
       newOp.setCalleeAttr(callOp.getCalleeAttr());
-
-    newOp.getProperties().operandSegmentSizes = {
-        static_cast<int32_t>(promoted.size()), 0};
-    newOp.getProperties().op_bundle_sizes = rewriter.getDenseI32ArrayAttr({});
 
     // Helper function that extracts an individual result from the return value
     // of the new call op. llvm.call ops support only 0 or 1 result. In case of

@@ -31,7 +31,6 @@
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/HashBuilder.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -692,8 +691,8 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
             OptimizationRemarkEmitter &ORE, uint64_t MaxColdSize,
             DenseSet<uint64_t> &SeenStacks, DenseSet<uint64_t> &SeenFrames) {
   auto &Ctx = M.getContext();
-  // Previously we used getIRPGOFuncName() here. If F is local linkage,
-  // getIRPGOFuncName() returns FuncName with prefix 'FileName;'. But
+  // Previously we used getIRPGOObjectName() here. If F is local linkage,
+  // getIRPGOObjectName() returns FuncName with prefix 'FileName;'. But
   // llvm-profdata uses FuncName in dwarf to create GUID which doesn't
   // contain FileName's prefix. It caused local linkage function can't
   // find MemProfRecord. So we use getName() now.

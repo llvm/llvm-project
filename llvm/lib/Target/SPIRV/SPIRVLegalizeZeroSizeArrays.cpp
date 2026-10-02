@@ -20,7 +20,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "spirv-legalize-zero-size-arrays"
 
@@ -115,7 +114,7 @@ Type *SPIRVLegalizeZeroSizeArraysImpl::legalizeType(Type *Ty) {
 
   Type *LegalizedTy = Ty;
 
-  if (isa<ArrayType>(Ty)) {
+  if (shouldLegalizeInstType(Ty)) {
     LegalizedTy = PointerType::get(
         Ty->getContext(),
         storageClassToAddressSpace(SPIRV::StorageClass::Generic));

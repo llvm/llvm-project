@@ -125,6 +125,13 @@ public:
     const unsigned ValueMask = NoNaNs | NoInfs | NoSignedZeros;
     return FastMathFlags(ValueMask & (LHS.Flags | RHS.Flags));
   }
+
+  /// Intersect value flags
+  static inline FastMathFlags intersectValue(FastMathFlags LHS,
+                                             FastMathFlags RHS) {
+    const unsigned ValueMask = NoNaNs | NoInfs | NoSignedZeros;
+    return FastMathFlags(ValueMask & LHS.Flags & RHS.Flags);
+  }
 };
 
 inline FastMathFlags operator|(FastMathFlags LHS, FastMathFlags RHS) {

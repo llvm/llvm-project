@@ -10,4 +10,4 @@
 
 #include "src/math/fmull.h"
 
-LIST_MUL_TESTS(float, long double, LIBC_NAMESPACE::fmull)
+LIST_MUL_TESTS(Fmull, float, long double, LIBC_NAMESPACE::fmull)
