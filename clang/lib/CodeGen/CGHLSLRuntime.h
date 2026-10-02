@@ -214,6 +214,10 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(DdyCoarse, ddy_coarse)
   GENERATE_HLSL_INTRINSIC_FUNCTION(DdxFine, ddx_fine)
   GENERATE_HLSL_INTRINSIC_FUNCTION(DdyFine, ddy_fine)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(UnpackU8U16, unpack_u8u16)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(UnpackU8U32, unpack_u8u32)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(UnpackS8S16, unpack_s8s16)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(UnpackS8S32, unpack_s8s32)
 
   //===----------------------------------------------------------------------===//
   // End of reserved area for HLSL intrinsic getters.

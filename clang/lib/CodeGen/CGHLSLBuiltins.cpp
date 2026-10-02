@@ -416,6 +416,42 @@ static Value *handleInterlockedCompareOp(CodeGenFunction &CGF,
   return Original;
 }
 
+static Value *handleHLSLUnpackOp(CodeGenFunction &CGF, const CallExpr *E,
+                                 unsigned BuiltinID, const Twine &Name,
+                                 const bool Short) {
+  Value *Op0 = CGF.EmitScalarExpr(E->getArg(0));
+  IntegerType *IntSizeType =
+      Short ? CGF.Builder.getInt16Ty() : CGF.Builder.getInt32Ty();
+
+  if (CGF.CGM.getTarget().getTriple().isDXIL()) {
+    // DXIL Intrinsic returns struct of 4 i32 or i16
+    // We have to call intrinsic then reassemble these to a vector
+    StructType *StructType =
+        StructType::get(CGF.getLLVMContext(),
+                        {IntSizeType, IntSizeType, IntSizeType, IntSizeType});
+    Value *StructVal = CGF.Builder.CreateIntrinsic(
+        /*ReturnType=*/StructType, BuiltinID, {Op0}, nullptr, Name);
+
+    llvm::Type *VecType = FixedVectorType::get(IntSizeType, 4);
+    Value *VecVal = PoisonValue::get(VecType);
+    for (unsigned I = 0; I < 4; ++I) {
+      Value *Elt = CGF.Builder.CreateExtractValue(StructVal, I);
+      VecVal =
+          CGF.Builder.CreateInsertElement(VecVal, Elt, CGF.Builder.getInt32(I));
+    }
+
+    return VecVal;
+  }
+
+  if (CGF.CGM.getTarget().getTriple().isSPIRV()) {
+    FixedVectorType *RetTy = FixedVectorType::get(IntSizeType, 4);
+    return CGF.Builder.CreateIntrinsic(/*ReturnType=*/RetTy, BuiltinID, {Op0},
+                                       nullptr, Name);
+  }
+
+  llvm_unreachable("Unpack_ is only supported for DXIL and SPIRV targets");
+}
+
 static Value *emitBufferStride(CodeGenFunction *CGF, const Expr *HandleExpr,
                                LValue &Stride) {
   // Figure out the stride of the buffer elements from the handle type.
@@ -1802,6 +1838,26 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateIntrinsic(/*ReturnType=*/Op0->getType(), ID,
                                    ArrayRef<Value *>{Op0}, nullptr,
                                    "hlsl.ddy.fine");
+  }
+  case Builtin::BI__builtin_hlsl_unpack_u8u16: {
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getUnpackU8U16Intrinsic();
+    return handleHLSLUnpackOp(*this, E, ID, "hlsl.unpack.u8u16",
+                              /*Short=*/true);
+  }
+  case Builtin::BI__builtin_hlsl_unpack_u8u32: {
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getUnpackU8U32Intrinsic();
+    return handleHLSLUnpackOp(*this, E, ID, "hlsl.unpack.u8u32",
+                              /*Short=*/false);
+  }
+  case Builtin::BI__builtin_hlsl_unpack_s8s16: {
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getUnpackS8S16Intrinsic();
+    return handleHLSLUnpackOp(*this, E, ID, "hlsl.unpack.s8s16",
+                              /*Short=*/true);
+  }
+  case Builtin::BI__builtin_hlsl_unpack_s8s32: {
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getUnpackS8S32Intrinsic();
+    return handleHLSLUnpackOp(*this, E, ID, "hlsl.unpack.s8s32",
+                              /*Short=*/false);
   }
   case Builtin::BI__builtin_get_spirv_spec_constant_bool:
   case Builtin::BI__builtin_get_spirv_spec_constant_short:
