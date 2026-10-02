@@ -117,6 +117,7 @@ TEST(AllocatorTest, TestPlacementNew) {
   auto *B0 = new (Alloc) S32;
   auto *B1 = new (Alloc) S32;
   EXPECT_EQ(uintptr_t(B0) + sizeof(S32), uintptr_t(B1));
+  EXPECT_EQ(uintptr_t(B0) % alignof(S32), 0u);
   auto *C0 = new (Alloc) S48;
   auto *C1 = new (Alloc) S48;
   EXPECT_EQ(uintptr_t(C0) + sizeof(S48), uintptr_t(C1));
