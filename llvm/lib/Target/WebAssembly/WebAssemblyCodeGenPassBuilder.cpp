@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/RemoveLoadsIntoFakeUses.h"
 #include "llvm/CodeGen/ShrinkWrap.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
+#include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
@@ -151,6 +152,9 @@ void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
 }
 
 void WebAssemblyCodeGenPassBuilder::addISelPrepare(PassManagerWrapper &PMW) {
+  if (TM.Options.ExceptionModel == ExceptionHandling::Wasm)
+    addFunctionPass(WasmEHPreparePass(), PMW);
+
   // We need to move reference type allocas to WASM_ADDRESS_SPACE_VAR so that
   // loads and stores are promoted to local.gets/local.sets.
   addFunctionPass(WebAssemblyRefTypeMem2LocalPass(), PMW);

@@ -3,17 +3,17 @@
 ! CHECK-LABEL: c.func @_QQmain
   use ieee_arithmetic, only: ieee_rem
 
-  ! CHECK:     %[[V_0:[0-9]+]] = fir.alloca f16 {bindc_name = "x2", uniq_name = "_QFEx2"}
+  ! CHECK:     %[[V_0:[0-9]+]] = fir.alloca f16 <{bindc_name = "x2", uniq_name = "_QFEx2"}>
   ! CHECK:     %[[V_1:[0-9]+]]:2 = hlfir.declare %[[V_0]] {uniq_name = "_QFEx2"} : (!fir.ref<f16>) -> (!fir.ref<f16>, !fir.ref<f16>)
-  ! CHECK:     %[[V_2:[0-9]+]] = fir.alloca f32 {bindc_name = "x4", uniq_name = "_QFEx4"}
+  ! CHECK:     %[[V_2:[0-9]+]] = fir.alloca f32 <{bindc_name = "x4", uniq_name = "_QFEx4"}>
   ! CHECK:     %[[V_3:[0-9]+]]:2 = hlfir.declare %[[V_2]] {uniq_name = "_QFEx4"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-  ! CHECK:     %[[V_4:[0-9]+]] = fir.alloca f64 {bindc_name = "x8", uniq_name = "_QFEx8"}
+  ! CHECK:     %[[V_4:[0-9]+]] = fir.alloca f64 <{bindc_name = "x8", uniq_name = "_QFEx8"}>
   ! CHECK:     %[[V_5:[0-9]+]]:2 = hlfir.declare %[[V_4]] {uniq_name = "_QFEx8"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
-  ! CHECK:     %[[V_6:[0-9]+]] = fir.alloca f16 {bindc_name = "y2", uniq_name = "_QFEy2"}
+  ! CHECK:     %[[V_6:[0-9]+]] = fir.alloca f16 <{bindc_name = "y2", uniq_name = "_QFEy2"}>
   ! CHECK:     %[[V_7:[0-9]+]]:2 = hlfir.declare %[[V_6]] {uniq_name = "_QFEy2"} : (!fir.ref<f16>) -> (!fir.ref<f16>, !fir.ref<f16>)
-  ! CHECK:     %[[V_8:[0-9]+]] = fir.alloca f32 {bindc_name = "y4", uniq_name = "_QFEy4"}
+  ! CHECK:     %[[V_8:[0-9]+]] = fir.alloca f32 <{bindc_name = "y4", uniq_name = "_QFEy4"}>
   ! CHECK:     %[[V_9:[0-9]+]]:2 = hlfir.declare %[[V_8]] {uniq_name = "_QFEy4"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-  ! CHECK:     %[[V_10:[0-9]+]] = fir.alloca f64 {bindc_name = "y8", uniq_name = "_QFEy8"}
+  ! CHECK:     %[[V_10:[0-9]+]] = fir.alloca f64 <{bindc_name = "y8", uniq_name = "_QFEy8"}>
   ! CHECK:     %[[V_11:[0-9]+]]:2 = hlfir.declare %[[V_10]] {uniq_name = "_QFEy8"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
   real(2) :: x2, y2
   real(4) :: x4, y4

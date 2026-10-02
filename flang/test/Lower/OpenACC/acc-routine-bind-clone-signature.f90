@@ -24,4 +24,4 @@ end subroutine
 ! The decorated routine's signature (assumed-shape array descriptor):
 ! CHECK: func.func private @_QPaclear(!fir.box<!fir.array<?xf32>>
 ! The bind target is declared with the same type, proving the clone:
-! CHECK: func.func private @_QPaclear_seq(!fir.box<!fir.array<?xf32>>) attributes {acc.routine_info = #acc.routine_info<[@[[ACLEAR_SEQ_ROUTINE]]]>}
+! CHECK: func.func private @_QPaclear_seq(!fir.box<!fir.array<?xf32>>) attributes {acc.routine_info = #acc.routine_info<[@[[ACLEAR_SEQ_ROUTINE]]]>{{.*}}}

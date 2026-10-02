@@ -27,7 +27,7 @@ func.func @concat(%arg0: !fir.boxchar<1>, %arg1: !fir.boxchar<1>, %arg2: !fir.bo
 // CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]]#0 typeparams %[[VAL_7]]#1 {uniq_name = "c3"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:           %[[VAL_9:.*]] = arith.addi %[[VAL_5]]#1, %[[VAL_7]]#1 : index
 // CHECK:           %[[VAL_10:.*]] = arith.addi %[[VAL_5]]#1, %[[VAL_7]]#1 : index
-// CHECK:           %[[VAL_11:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_10]] : index) {bindc_name = ".chrtmp"}
+// CHECK:           %[[VAL_11:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_10]] : index) <{bindc_name = ".chrtmp"}>
 // CHECK:           %[[VAL_12:.*]] = arith.constant 1 : i64
 // CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_5]]#1 : (index) -> i64
 // CHECK:           %[[VAL_14:.*]] = arith.muli %[[VAL_12]], %[[VAL_13]] : i64
@@ -87,7 +87,7 @@ func.func @concat_chained(%arg0: !fir.boxchar<1>, %arg1: !fir.boxchar<1>, %arg2:
 // CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]]#0 typeparams %[[VAL_10]]#1 {uniq_name = "c4"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:           %[[VAL_12:.*]] = arith.addi %[[VAL_6]]#1, %[[VAL_8]]#1 : index
 // CHECK:           %[[VAL_13:.*]] = arith.addi %[[VAL_6]]#1, %[[VAL_8]]#1 : index
-// CHECK:           %[[VAL_14:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_13]] : index) {bindc_name = ".chrtmp"}
+// CHECK:           %[[VAL_14:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_13]] : index) <{bindc_name = ".chrtmp"}>
 // CHECK:           %[[VAL_15:.*]] = arith.constant 1 : i64
 // CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_6]]#1 : (index) -> i64
 // CHECK:           %[[VAL_17:.*]] = arith.muli %[[VAL_15]], %[[VAL_16]] : i64
@@ -112,7 +112,7 @@ func.func @concat_chained(%arg0: !fir.boxchar<1>, %arg1: !fir.boxchar<1>, %arg2:
 // CHECK:           %[[VAL_33:.*]] = fir.insert_value %[[VAL_32]], %[[VAL_29]]#0, [0 : index] : (tuple<!fir.boxchar<1>, i1>, !fir.boxchar<1>) -> tuple<!fir.boxchar<1>, i1>
 // CHECK:           %[[VAL_34:.*]] = arith.addi %[[VAL_12]], %[[VAL_10]]#1 : index
 // CHECK:           %[[VAL_35:.*]] = arith.addi %[[VAL_13]], %[[VAL_10]]#1 : index
-// CHECK:           %[[VAL_36:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_35]] : index) {bindc_name = ".chrtmp"}
+// CHECK:           %[[VAL_36:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_35]] : index) <{bindc_name = ".chrtmp"}>
 // CHECK:           %[[VAL_37:.*]] = arith.constant 1 : i64
 // CHECK:           %[[VAL_38:.*]] = fir.convert %[[VAL_13]] : (index) -> i64
 // CHECK:           %[[VAL_39:.*]] = arith.muli %[[VAL_37]], %[[VAL_38]] : i64

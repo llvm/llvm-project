@@ -13,7 +13,7 @@ interface
 end interface
 
   ival = 1
-  ! CHECK: %[[VAL_1:.*]] = fir.alloca i32 {bindc_name = "ival", uniq_name = "_QFsubstring_mainEival"}
+  ! CHECK: %[[VAL_1:.*]] = fir.alloca i32 <{bindc_name = "ival", uniq_name = "_QFsubstring_mainEival"}>
   ! CHECK: %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFsubstring_mainEival"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK: %[[VAL_6:.*]] = fir.address_of(@_QFsubstring_mainEstring) : !fir.ref<!fir.array<2x!fir.char<1,7>>>
   ! CHECK: %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]](%{{.*}}) typeparams %{{.*}} {uniq_name = "_QFsubstring_mainEstring"} : (!fir.ref<!fir.array<2x!fir.char<1,7>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<2x!fir.char<1,7>>>, !fir.ref<!fir.array<2x!fir.char<1,7>>>)
