@@ -47,9 +47,9 @@ namespace memprof {
 // list of call sites, each of the form {LineLocation, CalleeGUID}.
 LLVM_ABI DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> extractCallsFromIR(
     Module &M, const TargetLibraryInfo &TLI,
-    function_ref<bool(uint64_t)> IsPresentInProfile = [](uint64_t) {
-      return true;
-    });
+    function_ref<bool(uint64_t)> IsPresentInProfile =
+        [](uint64_t) { return true; },
+    bool UseModuleId = true);
 
 using LocToLocMap = DenseMap<LineLocation, LineLocation>;
 
@@ -57,7 +57,7 @@ using LocToLocMap = DenseMap<LineLocation, LineLocation>;
 // map that maps source locations in the profile to those in the current IR.
 LLVM_ABI DenseMap<uint64_t, LocToLocMap>
 computeUndriftMap(Module &M, IndexedInstrProfReader *MemProfReader,
-                  const TargetLibraryInfo &TLI);
+                  const TargetLibraryInfo &TLI, bool UseModuleId = true);
 
 } // namespace memprof
 } // namespace llvm

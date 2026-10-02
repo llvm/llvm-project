@@ -25,6 +25,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableObjectFile.h"
@@ -283,15 +284,32 @@ std::string getBuildIdString(const SegmentEntry &Entry) {
   return Str;
 }
 
-GlobalValue::GUID getModuleGUID(StringRef FunctionName,
-                                ArrayRef<uint8_t> BuildId) {
-  StringRef CanonicalName =
-      sampleprof::FunctionSamples::getCanonicalFnName(FunctionName);
-  MD5 Hash;
-  Hash.update("MemProf module GUID");
-  Hash.update(BuildId);
-  Hash.update(CanonicalName);
-  return Hash.final().low();
+Expected<SmallVector<uint8_t, 16>>
+getMemProfModuleId(const object::ELF64LEFile &ElfFile) {
+  auto SectionsOr = ElfFile.sections();
+  if (!SectionsOr)
+    return SectionsOr.takeError();
+
+  for (const auto &Section : *SectionsOr) {
+    if (Section.sh_type != ELF::SHT_NOTE)
+      continue;
+
+    Error Err = Error::success();
+    for (const auto &Note : ElfFile.notes(Section, Err)) {
+      if (Note.getName() != "LLVM" ||
+          Note.getType() != ELF::NT_LLVM_MEMPROF_MODULE_ID)
+        continue;
+      ArrayRef<uint8_t> Id = Note.getDesc(Section.sh_addralign);
+      if (Id.size() != 16)
+        return createStringError(inconvertibleErrorCode(),
+                                 "invalid MemProf module ID size: %zu",
+                                 Id.size());
+      return SmallVector<uint8_t, 16>(Id);
+    }
+    if (Err)
+      return std::move(Err);
+  }
+  return SmallVector<uint8_t, 16>();
 }
 } // namespace
 
@@ -424,6 +442,10 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer,
   // Open each profiled binary and perform the ELF and executable-segment sanity
   // checks needed to translate runtime PCs for symbolization.
   StringSet<> SeenBuildIds;
+  StringSet<> SeenModuleIds;
+  const bool UseModuleIds =
+      llvm::count_if(ProfiledBinaries,
+                     [](StringRef Path) { return !Path.empty(); }) > 1;
   for (StringRef BinaryPath : ProfiledBinaries) {
     if (BinaryPath.empty())
       continue;
@@ -500,6 +522,23 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer,
           Twine("Duplicate profiled binary build id: ") + BuildIdString,
           inconvertibleErrorCode());
     Module->BuildId.assign(BinaryId.begin(), BinaryId.end());
+
+    if (UseModuleIds) {
+      auto ModuleIdOr = getMemProfModuleId(ElfFile);
+      if (!ModuleIdOr)
+        return report(ModuleIdOr.takeError(), FileName);
+      if (ModuleIdOr->empty())
+        return make_error<StringError>(
+            Twine("No MemProf module ID found in binary ") + FileName,
+            inconvertibleErrorCode());
+      std::string ModuleIdString = toHex(*ModuleIdOr, /*LowerCase=*/true);
+      if (!SeenModuleIds.insert(ModuleIdString).second)
+        return make_error<StringError>(
+            Twine("Duplicate profiled binary MemProf module id: ") +
+                ModuleIdString,
+            inconvertibleErrorCode());
+      Module->ModuleId = std::move(*ModuleIdOr);
+    }
     ProfiledModules.push_back(std::move(Module));
   }
 
@@ -696,15 +735,13 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
            I++) {
         const auto &DIFrame = DI.getFrame(I);
         // The PC identified its module, but the normal MemProf GUID only hashes
-        // the linkage name. Qualify it with the build ID when multiple binaries
-        // are supplied so equal external symbols in different DSOs remain
-        // distinct. Keep single-binary GUIDs unchanged for compatibility.
-        // Build-ID-qualified GUIDs describe the exact profiled DSOs; applying
-        // such a profile to rebuilt DSOs additionally requires a compiler-side
-        // mechanism capable of reproducing the same module identity.
+        // the linkage name. Qualify it with the stable MemProf module ID when
+        // multiple binaries are supplied so equal external symbols in
+        // different DSOs remain distinct. Keep single-binary GUIDs unchanged
+        // for compatibility.
         const uint64_t Guid =
             Module && ProfiledModules.size() > 1
-                ? getModuleGUID(DIFrame.FunctionName, Module->BuildId)
+                ? memprof::getGUID(DIFrame.FunctionName, Module->ModuleId)
                 : memprof::getGUID(DIFrame.FunctionName);
         // Compiler generated code, e.g. the forwarding call in a C++
         // non-virtual thunk, has line 0. Record such frames with offset 0

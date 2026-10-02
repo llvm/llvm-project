@@ -173,8 +173,11 @@ private:
     object::OwningBinary<object::Binary> Binary;
     // Symbolizer created from this module's object file and DWARF context.
     std::unique_ptr<symbolize::SymbolizableModule> Symbolizer;
-    // Build ID used to distinguish equal function names in different modules.
+    // Build ID used to match this module to its raw-profile segment.
     llvm::SmallVector<uint8_t, 20> BuildId;
+    // Stable module ID used to distinguish equal function names when multiple
+    // profiled modules are supplied.
+    llvm::SmallVector<uint8_t, 16> ModuleId;
     // Preferred address of the executable segment in the ELF file.
     uint64_t PreferredTextSegmentAddress = 0;
     // Runtime address range of this module's executable segment, recovered

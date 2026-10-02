@@ -3,10 +3,10 @@
 // Only the two shared libraries are MemProf-instrumented. -Bsymbolic ensures
 // each DSO calls its own externally visible shared_allocate definition.
 // RUN: split-file %s %t
-// RUN: %clangxx_memprof -O1 -g -fPIC -shared -Wl,--build-id \
-// RUN:     -Wl,-Bsymbolic %t/lib1.cpp -o %t.lib1.so
-// RUN: %clangxx_memprof -O1 -g -fPIC -shared -Wl,--build-id \
-// RUN:     -Wl,-Bsymbolic %t/lib2.cpp -o %t.lib2.so
+// RUN: %clangxx_memprof -O1 -g -fPIC -shared -fuse-ld=lld -Wl,--build-id \
+// RUN:     -Wl,-z,separate-code -Wl,-Bsymbolic %t/lib1.cpp -o %t.lib1.so
+// RUN: %clangxx_memprof -O1 -g -fPIC -shared -fuse-ld=lld -Wl,--build-id \
+// RUN:     -Wl,-z,separate-code -Wl,-Bsymbolic %t/lib2.cpp -o %t.lib2.so
 // RUN: %clangxx -O1 %t/main.cpp %t.lib1.so %t.lib2.so -Wl,-rpath,%T \
 // RUN:     -o %t.main
 // RUN: rm -f %t.raw.*
