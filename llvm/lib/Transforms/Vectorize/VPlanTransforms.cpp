@@ -5514,7 +5514,6 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
       PhiToChain;
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   SmallVector<VPReductionPHIRecipe *, 4> UnorderedReductions;
-  SmallVector<VPReductionPHIRecipe *, 4> UnorderedReductions;
   for (VPReductionPHIRecipe &RedPhiR :
        make_isa_range<VPReductionPHIRecipe>(HeaderVPBB->phis())) {
     if (auto Chain = getScaledReductionChain(&RedPhiR))
