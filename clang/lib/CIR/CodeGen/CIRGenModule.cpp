@@ -146,6 +146,14 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
     if (langOpts.OpenCLCPlusPlus)
       setOpenCLVersionAttr(cir::CIRDialect::getOpenCLCXXVersionAttrName(),
                            langOpts.OpenCLCPlusPlusVersion);
+    // SPIR v2.0 s2.12 requires opencl.spir.version.
+    if (getTriple().isSPIR()) {
+      unsigned spirMajor = version / 100;
+      theModule->setAttr(cir::CIRDialect::getOpenCLSPIRVersionAttrName(),
+                         cir::OpenCLVersionAttr::get(&getMLIRContext(),
+                                                     spirMajor,
+                                                     spirMajor > 1 ? 0 : 2));
+    }
   }
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));

@@ -114,7 +114,8 @@ Operation *cir::CIRDialect::materializeConstant(mlir::OpBuilder &builder,
 
 static bool isOpenCLVersionAttrName(StringRef attrName) {
   return attrName == CIRDialect::getOpenCLVersionAttrName() ||
-         attrName == CIRDialect::getOpenCLCXXVersionAttrName();
+         attrName == CIRDialect::getOpenCLCXXVersionAttrName() ||
+         attrName == CIRDialect::getOpenCLSPIRVersionAttrName();
 }
 
 static LogicalResult verifyOpenCLVersionAttrPlacement(Operation *op,
