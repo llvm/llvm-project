@@ -1746,7 +1746,7 @@ def TargetOp : OpenMP_Op<"target", traits = [
 // 2.16 master Construct
 //===----------------------------------------------------------------------===//
 def MasterOp : OpenMP_Op<"master", traits = [
-    DeclareOpInterfaceMethods<ComposableOpInterface>
+    DeclareOpInterfaceMethods<ComposableOpInterface>, RecursiveMemoryEffects
   ], singleRegion = true> {
   let summary = "master construct";
   let description = [{
