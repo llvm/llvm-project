@@ -1297,6 +1297,7 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   LaunchArgs.UserNumBlocks[0] = LaunchSizeArgs->NumGroups.x;
   LaunchArgs.UserNumBlocks[1] = LaunchSizeArgs->NumGroups.y;
   LaunchArgs.UserNumBlocks[2] = LaunchSizeArgs->NumGroups.z;
+  LaunchArgs.KernelLaunchInfo.RequestedNumBlocks = LaunchSizeArgs->NumGroups.x;
   LaunchArgs.UserThreadLimit[0] = LaunchSizeArgs->GroupSize.x;
   LaunchArgs.UserThreadLimit[1] = LaunchSizeArgs->GroupSize.y;
   LaunchArgs.UserThreadLimit[2] = LaunchSizeArgs->GroupSize.z;

@@ -536,6 +536,9 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   LaunchArgs.Tripcount = KernelArgs.Tripcount;
   LaunchArgs.DynCGroupMem = KernelArgs.DynCGroupMem;
   llvm::copy(KernelArgs.UserNumBlocks, LaunchArgs.UserNumBlocks);
+  // Save the requested value before computing the effective number of blocks so
+  // it can be used by record-replay mechanisms.
+  LaunchArgs.KernelLaunchInfo.RequestedNumBlocks = KernelArgs.UserNumBlocks[0];
   llvm::copy(KernelArgs.UserThreadLimit, LaunchArgs.UserThreadLimit);
   LaunchArgs.Flags.Cooperative = KernelArgs.Flags.Cooperative;
   LaunchArgs.Flags.DynCGroupMemFallback = KernelArgs.Flags.DynCGroupMemFallback;
