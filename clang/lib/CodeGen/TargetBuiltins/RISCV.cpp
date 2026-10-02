@@ -1661,6 +1661,15 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     break;
   }
 
+  // Packed "Q-format" Multiply with Widening Accumulate
+  case RISCV::BI__builtin_riscv_pmqwacc_i32x2:
+  case RISCV::BI__builtin_riscv_pmqrwacc_i32x2: {
+    ID = BuiltinID == RISCV::BI__builtin_riscv_pmqwacc_i32x2
+             ? Intrinsic::riscv_pmqwacc_i32x2
+             : Intrinsic::riscv_pmqrwacc_i32x2;
+    break;
+  }
+
   // Packed Multiplication with Horizontal Addition
   case RISCV::BI__builtin_riscv_pm4add_i8x4:
   case RISCV::BI__builtin_riscv_pm4add_i8x8:

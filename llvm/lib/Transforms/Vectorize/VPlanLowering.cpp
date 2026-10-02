@@ -527,6 +527,13 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       VPBuilder Builder(&R);
+      // !prof is only supported on scalar selects.
+      if (auto *Widen = dyn_cast<VPWidenRecipe>(&R)) {
+        if (Widen->getOpcode() == Instruction::Select &&
+            !vputils::isSingleScalar(Widen->getOperand(0)))
+          Widen->eraseMetadata(LLVMContext::MD_prof);
+      }
+
       if (auto *WidenIVR = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
         expandVPWidenIntOrFpInduction(WidenIVR);
         WidenIVR->eraseFromParent();
