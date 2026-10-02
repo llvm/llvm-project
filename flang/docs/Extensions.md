@@ -602,7 +602,10 @@ end program
   procedure. Without this extension, `-pedantic` or `-Wportability` diagnoses
   a likely missing prefix without changing the program. When the extension
   is enabled, `-Wimplicit-module-prefix` or `-pedantic` reports each repaired
-  prefix.
+  prefix. Since the extension cannot distinguish a missing prefix from an
+  intentionally local procedure with the same name as an ancestor interface,
+  it can reject a conforming program when that interface is implemented in a
+  different submodule. This behavior is compatible with gfortran.
 * Old-style `PARAMETER pi=3.14` statement without parentheses
   [-falternative-parameter-statement]
 * `UNSIGNED` type (-funsigned)
