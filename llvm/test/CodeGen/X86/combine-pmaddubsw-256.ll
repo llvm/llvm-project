@@ -16,7 +16,7 @@ define <16 x i16> @combine_pmaddubsw_add_u8_s6(<32 x i8> %a0, <32 x i8> %a1) {
 ; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm1
 ; AVX512-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
-  %and = and <32 x i8> %a1, <i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63>
+  %and = and <32 x i8> %a1, splat (i8 63)
   %even0 = shufflevector <32 x i8> %a0, <32 x i8> zeroinitializer, <32 x i32> <i32 0, i32 32, i32 2, i32 32, i32 4, i32 32, i32 6, i32 32, i32 8, i32 32, i32 10, i32 32, i32 12, i32 32, i32 14, i32 32, i32 16, i32 32, i32 18, i32 32, i32 20, i32 32, i32 22, i32 32, i32 24, i32 32, i32 26, i32 32, i32 28, i32 32, i32 30, i32 32>
   %even1 = shufflevector <32 x i8> %and, <32 x i8> zeroinitializer, <32 x i32> <i32 0, i32 32, i32 2, i32 32, i32 4, i32 32, i32 6, i32 32, i32 8, i32 32, i32 10, i32 32, i32 12, i32 32, i32 14, i32 32, i32 16, i32 32, i32 18, i32 32, i32 20, i32 32, i32 22, i32 32, i32 24, i32 32, i32 26, i32 32, i32 28, i32 32, i32 30, i32 32>
   %odd0 = shufflevector <32 x i8> %a0, <32 x i8> zeroinitializer, <32 x i32> <i32 1, i32 32, i32 3, i32 32, i32 5, i32 32, i32 7, i32 32, i32 9, i32 32, i32 11, i32 32, i32 13, i32 32, i32 15, i32 32, i32 17, i32 32, i32 19, i32 32, i32 21, i32 32, i32 23, i32 32, i32 25, i32 32, i32 27, i32 32, i32 29, i32 32, i32 31, i32 32>
@@ -40,7 +40,7 @@ define <16 x i16> @combine_pmaddubsw_add_u8_s6_commuted(<32 x i8> %a0, <32 x i8>
 ; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm1
 ; AVX512-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
-  %and = and <32 x i8> %a1, <i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63>
+  %and = and <32 x i8> %a1, splat (i8 63)
   %even0 = shufflevector <32 x i8> %a0, <32 x i8> zeroinitializer, <32 x i32> <i32 0, i32 32, i32 2, i32 32, i32 4, i32 32, i32 6, i32 32, i32 8, i32 32, i32 10, i32 32, i32 12, i32 32, i32 14, i32 32, i32 16, i32 32, i32 18, i32 32, i32 20, i32 32, i32 22, i32 32, i32 24, i32 32, i32 26, i32 32, i32 28, i32 32, i32 30, i32 32>
   %even1 = shufflevector <32 x i8> %and, <32 x i8> zeroinitializer, <32 x i32> <i32 0, i32 32, i32 2, i32 32, i32 4, i32 32, i32 6, i32 32, i32 8, i32 32, i32 10, i32 32, i32 12, i32 32, i32 14, i32 32, i32 16, i32 32, i32 18, i32 32, i32 20, i32 32, i32 22, i32 32, i32 24, i32 32, i32 26, i32 32, i32 28, i32 32, i32 30, i32 32>
   %odd0 = shufflevector <32 x i8> %a0, <32 x i8> zeroinitializer, <32 x i32> <i32 1, i32 32, i32 3, i32 32, i32 5, i32 32, i32 7, i32 32, i32 9, i32 32, i32 11, i32 32, i32 13, i32 32, i32 15, i32 32, i32 17, i32 32, i32 19, i32 32, i32 21, i32 32, i32 23, i32 32, i32 25, i32 32, i32 27, i32 32, i32 29, i32 32, i32 31, i32 32>
@@ -83,7 +83,7 @@ define <16 x i16> @combine_pmaddubsw_add_positive_overflow(<32 x i8> %a0, <32 x 
 ; AVX512-NEXT:    vpaddw %ymm0, %ymm2, %ymm0
 ; AVX512-NEXT:    retq
   %and0 = and <32 x i8> %a0, <i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 -1, i8 -1>
-  %and1 = and <32 x i8> %a1, <i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127>
+  %and1 = and <32 x i8> %a1, splat (i8 127)
   %even0 = shufflevector <32 x i8> %and0, <32 x i8> zeroinitializer, <32 x i32> <i32 0, i32 32, i32 2, i32 32, i32 4, i32 32, i32 6, i32 32, i32 8, i32 32, i32 10, i32 32, i32 12, i32 32, i32 14, i32 32, i32 16, i32 32, i32 18, i32 32, i32 20, i32 32, i32 22, i32 32, i32 24, i32 32, i32 26, i32 32, i32 28, i32 32, i32 30, i32 32>
   %even1 = shufflevector <32 x i8> %and1, <32 x i8> zeroinitializer, <32 x i32> <i32 0, i32 32, i32 2, i32 32, i32 4, i32 32, i32 6, i32 32, i32 8, i32 32, i32 10, i32 32, i32 12, i32 32, i32 14, i32 32, i32 16, i32 32, i32 18, i32 32, i32 20, i32 32, i32 22, i32 32, i32 24, i32 32, i32 26, i32 32, i32 28, i32 32, i32 30, i32 32>
   %odd0 = shufflevector <32 x i8> %and0, <32 x i8> zeroinitializer, <32 x i32> <i32 1, i32 32, i32 3, i32 32, i32 5, i32 32, i32 7, i32 32, i32 9, i32 32, i32 11, i32 32, i32 13, i32 32, i32 15, i32 32, i32 17, i32 32, i32 19, i32 32, i32 21, i32 32, i32 23, i32 32, i32 25, i32 32, i32 27, i32 32, i32 29, i32 32, i32 31, i32 32>
@@ -121,7 +121,7 @@ define <16 x i16> @combine_pmaddubsw_add_negative_overflow(<32 x i8> %a0, <32 x 
 ; AVX512-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpaddw %ymm0, %ymm2, %ymm0
 ; AVX512-NEXT:    retq
-  %or = or <32 x i8> %a1, <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>
+  %or = or <32 x i8> %a1, splat (i8 -128)
   %even0 = shufflevector <32 x i8> %a0, <32 x i8> zeroinitializer, <32 x i32> <i32 0, i32 32, i32 2, i32 32, i32 4, i32 32, i32 6, i32 32, i32 8, i32 32, i32 10, i32 32, i32 12, i32 32, i32 14, i32 32, i32 16, i32 32, i32 18, i32 32, i32 20, i32 32, i32 22, i32 32, i32 24, i32 32, i32 26, i32 32, i32 28, i32 32, i32 30, i32 32>
   %even1 = shufflevector <32 x i8> %or, <32 x i8> zeroinitializer, <32 x i32> <i32 0, i32 32, i32 2, i32 32, i32 4, i32 32, i32 6, i32 32, i32 8, i32 32, i32 10, i32 32, i32 12, i32 32, i32 14, i32 32, i32 16, i32 32, i32 18, i32 32, i32 20, i32 32, i32 22, i32 32, i32 24, i32 32, i32 26, i32 32, i32 28, i32 32, i32 30, i32 32>
   %odd0 = shufflevector <32 x i8> %a0, <32 x i8> zeroinitializer, <32 x i32> <i32 1, i32 32, i32 3, i32 32, i32 5, i32 32, i32 7, i32 32, i32 9, i32 32, i32 11, i32 32, i32 13, i32 32, i32 15, i32 32, i32 17, i32 32, i32 19, i32 32, i32 21, i32 32, i32 23, i32 32, i32 25, i32 32, i32 27, i32 32, i32 29, i32 32, i32 31, i32 32>
@@ -160,10 +160,11 @@ define <16 x i16> @combine_pmaddubsw_add_independent_inputs(<32 x i8> %a0, <32 x
 ; AVX512-NEXT:    vpmaddubsw %ymm2, %ymm1, %ymm1
 ; AVX512-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
-  %and0 = and <32 x i8> %a0, <i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0>
-  %and1 = and <32 x i8> %a1, <i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127>
-  %and2 = and <32 x i8> %a2, <i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0, i8 127, i8 0>
-  %and3 = and <32 x i8> %a3, <i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127>
+  %mask = bitcast <16 x i16> splat (i16 127) to <32 x i8>
+  %and0 = and <32 x i8> %a0, %mask
+  %and1 = and <32 x i8> %a1, splat (i8 127)
+  %and2 = and <32 x i8> %a2, %mask
+  %and3 = and <32 x i8> %a3, splat (i8 127)
   %m0 = call <16 x i16> @llvm.x86.avx2.pmadd.ub.sw(<32 x i8> %and0, <32 x i8> %and1)
   %m1 = call <16 x i16> @llvm.x86.avx2.pmadd.ub.sw(<32 x i8> %and2, <32 x i8> %and3)
   %res = add <16 x i16> %m0, %m1
