@@ -35,6 +35,7 @@ set(CLANG_REPL_TEST_SOURCES
   InterpreterTest.cpp
   InterpreterExtensionsTest.cpp
   CodeCompletionTest.cpp
+  DeviceOffloadTest.cpp
 )
 
 if(TARGET compiler-rt AND LLVM_ON_UNIX)

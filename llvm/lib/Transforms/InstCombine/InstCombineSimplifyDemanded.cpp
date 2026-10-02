@@ -1995,6 +1995,12 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       PoisonElts = PoisonElts2 & PoisonElts3;
       break;
     }
+    case Intrinsic::smulh:
+    case Intrinsic::umulh:
+      simplifyAndSetOp(II, 0, DemandedElts, PoisonElts);
+      simplifyAndSetOp(II, 1, DemandedElts, PoisonElts);
+      PoisonElts = PoisonElts2 | PoisonElts3;
+      break;
     default: {
       // Handle target specific intrinsics
       std::optional<Value *> V = targetSimplifyDemandedVectorEltsIntrinsic(

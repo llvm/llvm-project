@@ -3885,6 +3885,25 @@ def RecvFrom : LibBuiltin<"sys/socket.h"> {
   let Prototype = "";
 }
 
+// POSIX poll.h
+
+def Poll : LibBuiltin<"poll.h"> {
+  let Spellings = ["poll"];
+  let Attributes = [IgnoreSignature];
+  // int(struct pollfd*, nfds_t, int); struct pollfd and nfds_t are
+  // target-specific
+  let Prototype = "";
+}
+
+def PPoll : LibBuiltin<"poll.h"> {
+  let Spellings = ["ppoll", "ppoll64"];
+  let Attributes = [IgnoreSignature];
+  // int(struct pollfd*, nfds_t, const struct timespec*, const sigset_t*);
+  // struct pollfd, nfds_t, struct timespec, and sigset_t/sigset64_t are
+  // target-specific
+  let Prototype = "";
+}
+
 // POSIX pthread.h
 
 def PthreadCreate : GNULibBuiltin<"pthread.h"> {
@@ -5585,6 +5604,30 @@ def HLSLInterlockedAdd : LangBuiltin<"HLSL_LANG"> {
 def HLSLInterlockedAnd : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_interlocked_and"];
   let Attributes = [NoThrow];
+  let Prototype = "void (...)";
+}
+
+def HLSLInterlockedCompareExchange : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_compare_exchange"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void (...)";
+}
+
+def HLSLInterlockedCompareExchangeFloatBitwise : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_compare_exchange_float_bitwise"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void (...)";
+}
+
+def HLSLInterlockedCompareStore : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_compare_store"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void (...)";
+}
+
+def HLSLInterlockedCompareStoreFloatBitwise : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_compare_store_float_bitwise"];
+  let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void (...)";
 }
 
