@@ -60,6 +60,7 @@ cc_library(
         "//mlir:ComplexToROCDLLibraryCalls",
         "//mlir:ComplexToStandard",
         "//mlir:ControlFlowDialect",
+        "//mlir:ControlFlowInterfaces",
         "//mlir:ControlFlowToLLVM",
         "//mlir:DLTIDialect",
         "//mlir:FromLLVMIRTranslation",
