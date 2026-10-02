@@ -3,11 +3,7 @@
 ;
 ; Forked from llvm/test/CodeGen/AArch64/fp8-neon-fdot.ll
 ;
-; Strictly handled:
-; - llvm.aarch64.neon.fp8.fdot2.lane(<4 x half>, <8 x i8>, <16 x i8>, i32)
-; - llvm.aarch64.neon.fp8.fdot2.lane(<8 x half>, <16 x i8>, <16 x i8>, i32)
-; - llvm.aarch64.neon.fp8.fdot4.lane(<2 x float>, <8 x i8>, <16 x i8>, i32)
-; - llvm.aarch64.neon.fp8.fdot4.lane(<4 x float>, <16 x i8>, <16 x i8>, i32)
+; Strictly handled: (none)
 ;
 ; Heuristically handled: (none)
 
