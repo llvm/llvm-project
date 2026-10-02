@@ -788,10 +788,8 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   if (noAliasBasedOnType(lhs, rhs))
     return AliasResult::NoAlias;
 
-  // A null pointer in the default address space is associated with no
-  // address, so it aliases nothing
-  // (https://llvm.org/docs/LangRef.html#pointer-aliasing-rules).
-  // Same-value pairs already returned MustAlias above.
+  // A null address aliases nothing. Same-value pairs already returned
+  // MustAlias above.
   if (lhsSrc.kind == SourceKind::Null || rhsSrc.kind == SourceKind::Null) {
     LLVM_DEBUG(llvm::dbgs() << "  no alias: null address\n");
     return AliasResult::NoAlias;
@@ -1094,9 +1092,7 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
   fir::AliasAnalysis::Source varSrc =
       getSource(var, /*getLastInstantiationPoint=*/true,
                 /*collectScopedOrigins=*/false);
-  // A null pointer in the default address space is associated with no
-  // address, so a call cannot read or write it
-  // (https://llvm.org/docs/LangRef.html#pointer-aliasing-rules).
+  // A null address names no object, so a call cannot read or write it.
   // This includes an absent optional passed as an actual argument: the
   // corresponding dummy must not be referenced.
   if (varSrc.kind == fir::AliasAnalysis::SourceKind::Null)
@@ -1624,18 +1620,14 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
           approximateSource = true;
         })
         .Case([&](fir::AbsentOp op) {
-          // fir.absent lowers to a null pointer. The LLVM language reference
-          // associates that null with no address
-          // (https://llvm.org/docs/LangRef.html#pointer-aliasing-rules).
-          // Distinct fir.absent values do not alias each other.
+          // fir.absent lowers to a null pointer. Distinct fir.absent values
+          // do not alias each other.
           type = SourceKind::Null;
           breakFromLoop = true;
         })
         .Case([&](fir::ZeroOp op) {
-          // Address-typed fir.zero_bits lowers to a null pointer. The LLVM
-          // language reference associates that null with no address
-          // (https://llvm.org/docs/LangRef.html#pointer-aliasing-rules).
-          // A zero value of any other type is not an address.
+          // Address-typed fir.zero_bits lowers to a null pointer. A zero
+          // value of any other type is not an address.
           if (fir::isa_ref_type(op.getType())) {
             type = SourceKind::Null;
             breakFromLoop = true;
