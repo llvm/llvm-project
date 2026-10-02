@@ -1709,7 +1709,6 @@ bool ClusteredRelaxation::run() {
   const uint64_t Margin = LongestJumpSpan - opts::MaxClusterSize;
   for (size_t I = 0; I < Clusters.size(); ++I) {
     const uint64_t ThunkBytes = Clusters[I].ThunkBytes;
-    // Check alignment before subtracting it from the remaining range.
     if (BC.AlignText > Margin || ThunkBytes > Margin - BC.AlignText)
       BC.errs() << "BOLT-WARNING: cluster " << I << ": " << ThunkBytes
                 << " thunk bytes plus " << BC.AlignText
