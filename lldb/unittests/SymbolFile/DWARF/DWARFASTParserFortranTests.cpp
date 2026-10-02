@@ -40,10 +40,10 @@ class DWARFASTParserFortranTests : public testing::Test {
 };
 
 /// Helper structure for DWARFASTParserFortran tests that want to parse DWARF
-/// generated using yaml2obj. On construction parses the supplied YAML data
-/// into a DWARF module and thereafter vends a DWARFASTParserFortran and
-/// TypeSystemFortran that are guaranteed to live for the duration of this
-/// object.
+/// generated using yaml2obj. On construction, parses the supplied YAML data
+/// into a DWARF module. Thereafter vends a DWARFASTParserFortran and
+/// TypeSystemFortran instances that are guaranteed to live for the duration of
+/// this object.
 class DWARFASTParserFortranYAMLTester {
 public:
   DWARFASTParserFortranYAMLTester(llvm::StringRef yaml_data)
