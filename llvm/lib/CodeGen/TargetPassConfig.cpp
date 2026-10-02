@@ -314,6 +314,14 @@ static cl::boolOrDefault toBoolOrDefault(BoolOrDefault B) {
                                   : cl::boolOrDefault::BOU_FALSE;
 }
 
+static MachineVerifierMode
+computeMachineVerifierMode(const CodeGenOptions &Opts, bool VerifyEach) {
+  if (VerifyEach)
+    return MachineVerifierMode::Each;
+  return Opts.disable_mir_output_verify ? MachineVerifierMode::None
+                                        : MachineVerifierMode::End;
+}
+
 CGPassBuilderOption llvm::getCGPassBuilderOption() {
   const CodeGenOptions &Opts = CodeGenOptions::Global;
   CGPassBuilderOption Opt;
@@ -323,8 +331,8 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   Opt.EnableFastISelOption = toBoolOrDefault(Opts.fast_isel);
   Opt.EnableRegAllocFastTied = toBoolOrDefault(Opts.regalloc_fast_tied);
   Opt.EnableGlobalISelOption = toBoolOrDefault(Opts.global_isel);
-  Opt.VerifyMachineCode = toBoolOrDefault(Opts.verify_machineinstrs);
-  Opt.DisableMIROutputVerify = Opts.disable_mir_output_verify;
+  Opt.VerifyMachineCode = computeMachineVerifierMode(
+      Opts, valueOr(Opts.verify_machineinstrs, false));
   Opt.DisableAtExitBasedGlobalDtorLowering =
       Opts.disable_atexit_based_global_dtor_lowering;
   Opt.DisableExpandReductions = Opts.disable_expand_reductions;
@@ -450,11 +458,12 @@ TargetPassConfig::TargetPassConfig(TargetMachine &TM, PassManagerBase &PM)
   if (Opts.global_isel_abort)
     TM.Options.GlobalISelAbort = *Opts.global_isel_abort;
 
-  VerifyEachMachinePass = valueOr(Opts.verify_machineinstrs, false);
+  bool VerifyEach = valueOr(Opts.verify_machineinstrs, false);
 #ifdef EXPENSIVE_CHECKS
   if (Opts.verify_machineinstrs == BoolOrDefault::Default)
-    VerifyEachMachinePass = TM.isMachineVerifierClean();
+    VerifyEach = TM.isMachineVerifierClean();
 #endif
+  VerifyMode = computeMachineVerifierMode(Opts, VerifyEach);
 
   if (Opts.function_splitting)
     TM.Options.FunctionSplitting = *Opts.function_splitting;
@@ -633,7 +642,7 @@ void TargetPassConfig::addPrintPass(const std::string &Banner) {
 }
 
 void TargetPassConfig::addVerifyPass(const std::string &Banner) {
-  if (VerifyEachMachinePass)
+  if (VerifyMode == MachineVerifierMode::Each)
     PM->add(createMachineVerifierPass(Banner));
 }
 
