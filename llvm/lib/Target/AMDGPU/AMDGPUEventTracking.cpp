@@ -35,18 +35,17 @@ static cl::opt<bool> EventTrackerPrintAll(
 namespace AMDGPU {
 namespace eventtracking {
 
-EventTrackerRecord::EventTrackerRecord(EventTrackingContext &Ctx,
-                                       MachineInstr *MI, SingleHWEvent Kind,
-                                       uint32_t Score)
-    : EventTrackerRecord(Ctx.nextDynamicInstanceID(), MI, Kind, Score) {}
-
 void EventTrackerRecord::print(raw_ostream &OS, bool PrintMI,
                                unsigned Indent) const {
-  OS.indent(Indent) << "#" << ID << " " << Kind << " (Score=" << Score << "): ";
+  OS.indent(Indent) << "Record Kind=" << Kind << " Height=" << Height << ": ";
   if (PrintMI && MI)
     OS << *MI;
   else
     OS << "MI@" << (void *)MI << '\n';
+}
+
+hash_code EventTrackerRecord::getIdentity() const {
+  return hash_combine((void *)MI, Kind.rawValue());
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -57,14 +56,15 @@ LLVM_DUMP_METHOD void EventTrackerRecord::dump() const {
 }
 #endif
 
-EventTracker::EventTracker(MachineBasicBlock &MBB, EventTrackingContext &ETC)
-    : MBB(&MBB), Ctx(&ETC) {
-  Counters.resize(ETC.counters().size());
-  for (const CounterInfo &Info : ETC.counters())
+EventTracker::EventTracker(const MachineBasicBlock &MBB,
+                           ArrayRef<CounterInfo> CounterInfos)
+    : MBB(&MBB) {
+  Counters.resize(CounterInfos.size());
+  for (const CounterInfo &Info : CounterInfos)
     Counters[Info.CounterT].CI = &Info;
 }
 
-void EventTracker::enterBlock() {
+void EventTracker::enterBlock(GetEventTrackerFn EventTrackerGetter) {
   LLVM_DEBUG(dbgs() << "\n[EventTracker] Entering ";
              MBB->printAsOperand(dbgs()); dbgs() << '\n');
 
@@ -79,7 +79,7 @@ void EventTracker::enterBlock() {
       if (Pred == MBB)
         IsSelfPred = true;
       else
-        Preds.push_back(&(*Ctx)[Pred]);
+        Preds.push_back(&EventTrackerGetter(*Pred));
     }
   }
 
@@ -87,10 +87,10 @@ void EventTracker::enterBlock() {
     EventTracker SelfCopy = *this;
     Preds.push_back(&SelfCopy);
     clear();
-    recordIncomings(*Ctx, Preds);
+    recordIncomings(Preds);
   } else {
     clear();
-    recordIncomings(*Ctx, Preds);
+    recordIncomings(Preds);
   }
 }
 
@@ -102,7 +102,7 @@ void EventTracker::leaveBlock() {
 void EventTracker::record(MachineInstr &MI, SingleHWEvent Event) {
   LLVM_DEBUG(dbgs() << "[EventTracker] Recording " << Event << ": " << MI);
 
-  EventTrackerRecord Rec = EventTrackerRecord(*Ctx, &MI, Event);
+  EventTrackerRecord Rec = EventTrackerRecord(&MI, Event);
   [[maybe_unused]] bool FoundMatch = false;
   for (CounterData &CD : Counters) {
     if (!CD.CI->Events.contains(Event))
@@ -116,9 +116,10 @@ void EventTracker::record(MachineInstr &MI, SingleHWEvent Event) {
     if (!CD.IsOutOfOrder) {
       // NB: There is an intentional tradeoff here. We could avoid this loop by
       // instead storing a timestamp in each record, and having a
-      // constantly-increasing clock to infer the score (clock-timestamp is
-      // score). However, it'd:
-      //  - Complexify fetching the score (`EventTrackerRecord` cannot answer it
+      // constantly-increasing clock to infer the height (clock-timestamp is
+      // height). However, it'd:
+      //  - Complexify fetching the height (`EventTrackerRecord` cannot answer
+      //  it
       //    on its own anymore and we need a separate query/wrapper).
       //  - Make merge of incoming records a bit more annoying (we'd need to
       //    rebase the `clock`).
@@ -129,9 +130,13 @@ void EventTracker::record(MachineInstr &MI, SingleHWEvent Event) {
       // change the system if we have data backed up by profiling to
       // justify the change.
       for (auto &Live : CD.LiveRecords)
-        Live.setScore(Live.getScore() + 1); // Age all existing events.
+        Live.setHeight(Live.getHeight() + 1);
     }
 
+    // NOTE: We do not merge with a previous record that has the same (MI+Kind),
+    // unlike in recordIncomings. We are okay with having 2 separate records
+    // with the same identity (MI+Kind), if one is carried over from a backedge
+    // and one is from a more recent iteration.
     CD.LiveRecords.push_back(Rec);
 
 #ifndef NDEBUG
@@ -143,6 +148,10 @@ void EventTracker::record(MachineInstr &MI, SingleHWEvent Event) {
   }
 
   assert(FoundMatch && "Event has no matching InstCounterType!");
+
+#ifdef EXPENSIVE_CHECKS
+  verify();
+#endif
 }
 
 void EventTracker::wait(InstCounterType T, unsigned N) {
@@ -157,30 +166,33 @@ void EventTracker::wait(InstCounterType T, unsigned N) {
     CD.IsIndeterminate = false;
     CD.IsOutOfOrder = false;
     CD.LegacyPendingEvents = HWEvents();
-    return;
-  }
+  } else {
+    CD.Count = std::min(CD.Count, N);
 
-  CD.Count = std::min(CD.Count, N);
+    // Don't bother erasing stuff if we are out-of-order. All records have a
+    // height of zero in such cases.
+    if (!CD.IsOutOfOrder) {
+      auto *RmIt = remove_if(CD.LiveRecords, [&](EventTrackerRecord &E) {
+        if (E.getHeight() < N)
+          return false;
+        LLVM_DEBUG(dbgs() << "  | Removing "; E.print(dbgs()));
+        return true;
+      });
+      CD.LiveRecords.erase(RmIt, CD.LiveRecords.end());
+    }
 
-  // Don't bother erasing stuff if we are out-of-order. All records have a score
-  // of zero in such cases.
-  if (!CD.IsOutOfOrder) {
-    auto *RmIt = remove_if(CD.LiveRecords, [&](EventTrackerRecord &E) {
-      if (E.getScore() < N)
-        return false;
-      LLVM_DEBUG(dbgs() << "  | Removing "; E.print(dbgs()));
-      return true;
-    });
-    CD.LiveRecords.erase(RmIt, CD.LiveRecords.end());
-  }
-
-  LLVM_DEBUG(dbgs() << "  | => Updated Count:" << CD.Count << '\n');
+    LLVM_DEBUG(dbgs() << "  | => Updated Count:" << CD.Count << '\n');
 
 #ifndef NDEBUG
-  LLVM_DEBUG(if (EventTrackerPrintAll) {
-    dbgs().indent(2) << "Updated Timeline:\n";
-    print(dbgs(), CD, /*Indent=*/4);
-  });
+    LLVM_DEBUG(if (EventTrackerPrintAll) {
+      dbgs().indent(2) << "Updated Timeline:\n";
+      print(dbgs(), CD, /*Indent=*/4);
+    });
+#endif
+  }
+
+#ifdef EXPENSIVE_CHECKS
+  verify();
 #endif
 }
 
@@ -198,7 +210,7 @@ void EventTracker::markOutOfOrder(InstCounterType T) {
   CounterData &CD = Counters[T];
   CD.IsOutOfOrder = true;
   for (auto &Rec : CD.LiveRecords)
-    Rec.setScore(0);
+    Rec.setHeight(0);
 }
 
 std::optional<unsigned> EventTracker::count(InstCounterType T) const {
@@ -243,7 +255,8 @@ bool EventTracker::mimicsLegacyTracking() { return MimicLegacyTracking; }
 
 #if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
 void EventTracker::verify() const {
-  assert(MBB && Ctx && "Invalid internal state!");
+  if (!MBB)
+    llvm_unreachable("EventTracker has no MBB!");
 
   for (const CounterData &C : Counters) {
     const auto OnError = [&]() {
@@ -260,30 +273,42 @@ void EventTracker::verify() const {
     }
 
     if (C.IsOutOfOrder) {
-      if (!all_of(C.LiveRecords, [](auto &R) { return R.getScore() == 0; })) {
+      if (!all_of(C.LiveRecords, [](auto &R) { return R.getHeight() == 0; })) {
         OnError();
         llvm_unreachable(
-            "IsOutOfOrder but some records do not have a score of 0!");
+            "IsOutOfOrder but some records do not have a height of 0!");
       }
     }
 
-    if (C.Count > C.LiveRecords.size() && !mimicsLegacyTracking()) {
-      OnError();
-      llvm_unreachable(
-          "'Count' is inconsistent with the number of live records");
-    }
-
+    // Check some basic invariants
+    //  - Height of a record cannot exceed the value of the counter
+    //  - We cannot have two records with same "identity" at the same height.
+    //    e.g. We can't have 2 VMEM_READ_ACCESS at the same instruction at
+    //    the same height. This is because `recordIncomings` merges based on
+    //    identity, and unless there is a bug, `record` should increment all
+    //    pre-existing records when a new one is inserted.
+    DenseSet<std::pair<hash_code, unsigned>> RecIdentityCheck;
     for (const EventTrackerRecord &E : C.LiveRecords) {
-      if (E.getScore() > C.Count) {
+      if (E.getHeight() > C.Count) {
         OnError();
         dbgs() << "Concerning Record:";
         E.print(dbgs());
-        llvm_unreachable("record score is out of range");
+        llvm_unreachable("record height is out of range");
+      }
+
+      auto [It, Inserted] =
+          RecIdentityCheck.insert({E.getIdentity(), E.getHeight()});
+      if (!Inserted) {
+        OnError();
+        dbgs() << "Concerning Record:";
+        E.print(dbgs());
+        llvm_unreachable("The timeline cannot have two records with the same "
+                         "MachineInstr, Kind and Height at the same time!");
       }
     }
 
     // Check live records are sorted
-    if (!is_sorted(C.LiveRecords, EventTrackerRecord::isScoreGreaterThan)) {
+    if (!is_sorted(C.LiveRecords, compareRecords)) {
       OnError();
       llvm_unreachable("live records are not sorted!");
     }
@@ -319,6 +344,34 @@ LLVM_DUMP_METHOD void EventTracker::dump() const {
 }
 #endif
 
+bool EventTracker::compareRecords(const EventTrackerRecord &A,
+                                  const EventTrackerRecord &B) {
+  // Different height
+  if (A.getHeight() != B.getHeight())
+    return A.getHeight() > B.getHeight();
+
+  // Same height but different kind.
+  unsigned AKindV = A.getKind().rawValue();
+  unsigned BKindV = B.getKind().rawValue();
+  if (AKindV != BKindV)
+    return AKindV > BKindV;
+
+  const MachineInstr *AMI = A.getMI();
+  const MachineInstr *BMI = B.getMI();
+  if (AMI == BMI)
+    return false;
+
+  // Same height/kind but MIs are in different BBs:
+  // The one in the earlier BB comes first.
+  const MachineBasicBlock *Bbb = BMI->getParent();
+  const MachineBasicBlock *Abb = AMI->getParent();
+  if (Abb != Bbb)
+    return Abb->getNumber() < Bbb->getNumber();
+
+  llvm_unreachable("We cannot have two distinct instructions from the same "
+                   "MBB, at the same height and with the same event kind!");
+}
+
 void EventTracker::clear() {
   for (CounterData &C : Counters) {
     C.LiveRecords.clear();
@@ -328,8 +381,7 @@ void EventTracker::clear() {
   }
 }
 
-void EventTracker::recordIncomings(EventTrackingContext &ETC,
-                                   ArrayRef<EventTracker *> Preds) {
+void EventTracker::recordIncomings(ArrayRef<EventTracker *> Preds) {
   LLVM_DEBUG(if (!Preds.empty()) {
     dbgs() << "[EventTracker] Recording incoming events (merge) from "
               "predecessors:\n";
@@ -339,14 +391,13 @@ void EventTracker::recordIncomings(EventTrackingContext &ETC,
   });
 
   /// Iterate over all counters that are available to us.
-  for (const CounterInfo &CI : ETC.counters()) {
-    auto &CData = Counters[CI.CounterT];
+  for (CounterData &CData : Counters) {
     assert(CData.LiveRecords.empty());
 
-    DenseMap<EventTrackerRecord::DynamicInstanceID, EventTrackerRecord> Acc;
+    DenseMap<hash_code, EventTrackerRecord> Acc;
 
     for (EventTracker *Pred : Preds) {
-      auto &PredCData = Pred->Counters[CI.CounterT];
+      auto &PredCData = Pred->Counters[CData.CI->CounterT];
 
       // Merge domain for the count value:
       CData.Count = std::max(CData.Count, PredCData.Count);
@@ -358,18 +409,16 @@ void EventTracker::recordIncomings(EventTrackingContext &ETC,
       CData.IsOutOfOrder |= PredCData.IsOutOfOrder;
 
       for (EventTrackerRecord &PredEntry : PredCData.LiveRecords) {
-        EventTrackerRecord::DynamicInstanceID ID = PredEntry.getID();
-        auto It = Acc.find(ID);
+        // At a join, we collapse records from all predecessors with the same
+        // MI+Kind to a single entry with the Height of the entry being the
+        // minimum across predecessors.
+        hash_code Identity = PredEntry.getIdentity();
+        auto It = Acc.find(Identity);
         if (It != Acc.end()) {
           auto &AccVal = It->second;
-          AccVal.setScore(std::min(AccVal.getScore(), PredEntry.getScore()));
-          assert(
-              PredEntry.getMI() == AccVal.getMI() &&
-              PredEntry.getKind() == AccVal.getKind() &&
-              "EventTrackerRecord have same DynamicInstanceID, but different "
-              "MachineInstr/HWEvent kind, which should not be possible");
+          AccVal.setHeight(std::min(AccVal.getHeight(), PredEntry.getHeight()));
         } else
-          Acc.insert({ID, PredEntry});
+          Acc.insert({Identity, PredEntry});
       }
     }
 
@@ -382,9 +431,13 @@ void EventTracker::recordIncomings(EventTrackingContext &ETC,
     auto AccVals = Acc.values();
     CData.LiveRecords.append(AccVals.begin(), AccVals.end());
 
-    // Sort records by Score (descending) for consistent iteration.
-    stable_sort(CData.LiveRecords, EventTrackerRecord::isScoreGreaterThan);
+    // Sort records by Height (descending) for consistent iteration.
+    stable_sort(CData.LiveRecords, compareRecords);
   }
+
+#ifdef EXPENSIVE_CHECKS
+  verify();
+#endif
 
   LLVM_DEBUG(if (!Preds.empty()) {
     dbgs() << "[EventTracker] Timeline after recording incomings:\n";
@@ -405,64 +458,6 @@ void EventTracker::print(raw_ostream &OS, const CounterData &CD,
     E.print(OS);
   }
 }
-
-EventTrackingContext::EventTrackingContext(MachineFunction &MF,
-                                           ArrayRef<CounterInfo> Counters)
-    : CounterInfos(Counters) {
-  LLVM_DEBUG(dbgs() << "\n[EventTrackingContext] CounterInfos for "
-                    << MF.getName() << '\n';
-             for (const auto &CI
-                  : CounterInfos) {
-               dbgs().indent(2)
-                   << AMDGPU::getInstCounterName(CI.CounterT) << " ";
-               if (CI.Events.none()) {
-                 dbgs() << " (unused - no HWEvents assigned)\n";
-               } else {
-                 dbgs() << "(Limit=" << CI.Limit << ") " << CI.Events << '\n';
-               }
-             });
-
-  Trackers.reserve(MF.size());
-  for (MachineBasicBlock &MBB : MF)
-    Trackers[&MBB] = std::make_unique<EventTracker>(MBB, *this);
-}
-
-EventTracker &EventTrackingContext::operator[](MachineBasicBlock *MBB) {
-  assert(MBB);
-  return *Trackers.at(MBB);
-}
-
-#if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
-void EventTrackingContext::verify() const {
-  for (const auto &[MBB, Tracker] : Trackers) {
-    assert(MBB && "Unexpected nullptr entry!");
-    Tracker->verify();
-  }
-
-  // Check CounterInfos is sane.
-  for (auto [Idx, CI] : enumerate(CounterInfos)) {
-    assert(Idx == CI.CounterT && "CounterInfo is in wrong position!");
-    assert(CI.Events.any() &&
-           "InstCounterType has no event associated with it!");
-  }
-}
-#endif
-
-void EventTrackingContext::print(raw_ostream &OS) const {
-  for (const auto &[MBB, Tracker] : Trackers) {
-    MBB->printAsOperand(OS);
-    OS << ":\n";
-    Tracker->print(OS, /*Indent=*/2);
-  }
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void EventTrackingContext::dump() const {
-  dbgs() << '\n';
-  print(dbgs());
-  dbgs() << '\n';
-}
-#endif
 
 } // namespace eventtracking
 } // namespace AMDGPU

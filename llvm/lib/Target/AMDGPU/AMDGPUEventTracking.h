@@ -36,6 +36,8 @@ class EventTracker;
 
 /// FIXME: Make this a generic util?
 struct CounterInfo {
+  CounterInfo() = default;
+
   constexpr CounterInfo(InstCounterType T, HWEvents Events, unsigned Limit)
       : CounterT(T), Events(Events), Limit(Limit) {}
 
@@ -49,29 +51,14 @@ struct CounterInfo {
   unsigned Limit;
 };
 
-/// Records are all uniquely identified by a \ref DynamicInstanceID. For each
-/// unique \ref DynamicInstanceID value, all \ref EventTrackerRecord that use
-/// that ID should have the same MI and Kind. This is enforced by exposing these
-/// as read-only, and making the constructor assign a new \ref DynamicInstanceID
-/// every time. Only the score can change as it may be unique to each instance
-/// of \ref EventTracker that carry it.
+/// Represent a record within the \ref EventTracker's timeline for one
+/// \ref InstCounterType.
 class EventTrackerRecord {
 public:
-  /// An always-increasing counter used to represent a dynamic instance of a
-  /// record. Whenever we add a new \ref EventTrackerRecord, even if it's one we
-  /// already have seen in a previous dataflow iteration, this counter is
-  /// increased so that the new record has a unique `DynamicInstanceID`.
-  using DynamicInstanceID = uint32_t;
-
-  EventTrackerRecord(EventTrackingContext &Ctx, MachineInstr *MI,
-                     SingleHWEvent Kind, uint32_t Score = 0);
-
-  /// \returns the ID uniquely identifying this record across an entire
-  /// EventTrackingContext. Whenever we revisit an instruction (when iterating
-  /// until a fixpoint is reached), we give it a new ID. This is used to
-  /// represent records carried over from previous iterations of the same basic
-  /// block.
-  DynamicInstanceID getID() const { return ID; }
+  EventTrackerRecord(MachineInstr *MI, SingleHWEvent Kind, uint32_t Height = 0)
+      : MI(MI), Kind(Kind) {
+    setHeight(Height);
+  }
 
   /// \returns the MachineInstr that originated this record.
   MachineInstr *getMI() const { return MI; }
@@ -79,13 +66,13 @@ public:
   /// \returns the kind of record this is, as a \ref SingleHWEvent.
   SingleHWEvent getKind() const { return Kind; }
 
-  /// \returns the score of this record.
-  uint32_t getScore() const { return Score; }
+  /// \returns the height of this record.
+  uint32_t getHeight() const { return Height; }
 
-  /// Sets the score of this record to \p NewScore.
-  void setScore(uint32_t NewScore) {
-    Score = NewScore;
-    assert(Score == NewScore && "Score overflow!");
+  /// Sets the height of this record to \p NewHeight.
+  void setHeight(uint32_t NewHeight) {
+    Height = NewHeight;
+    assert(Height == NewHeight && "Height overflow!");
   }
 
   void print(raw_ostream &OS, bool PrintMI = true, unsigned Indent = 0) const;
@@ -94,25 +81,18 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 #endif
 
-  static bool isScoreGreaterThan(const EventTrackerRecord &A,
-                                 const EventTrackerRecord &B) {
-    return A.getScore() > B.getScore();
-  }
+  /// \returns the "identity" of a this record which is a hash of its kind and
+  /// MI.
+  hash_code getIdentity() const;
 
 private:
-  EventTrackerRecord(DynamicInstanceID ID, MachineInstr *MI, SingleHWEvent Kind,
-                     uint32_t Score = 0)
-      : MI(MI), ID(ID), Kind(Kind) {
-    setScore(Score);
-  }
-
   MachineInstr *MI;
-  DynamicInstanceID ID;
   SingleHWEvent Kind;
-  // Score should already never exceed uint8_t limit in normal circumstances as
+  // Height should never exceed uint8_t limit in normal circumstances as
   // most counter types only use up to 6 bits encoding for the waitcnts. 16 bit
-  // is a very generous limit, we can probably shrink that at some point.
-  uint16_t Score;
+  // is a very generous limit, we can probably shrink that at some point once we
+  // refine how we handle overflowing inst counters.
+  uint16_t Height;
 };
 
 /// This assert serves as a reminder to be mindful of the size of the object.
@@ -129,24 +109,34 @@ static_assert(sizeof(EventTrackerRecord) == 16,
 /// are for utils/wrappers/users of the class.
 class EventTracker {
 public:
-  EventTracker(MachineBasicBlock &MBB, EventTrackingContext &ET);
+  using GetEventTrackerFn =
+      function_ref<EventTracker &(const MachineBasicBlock &)>;
 
-  /// Notify this EventTracker that we are going to begin recording events.
-  /// In case this is not the first time we are going through this block, this
-  /// clears the internal state of the tracker and re-imports all incoming
-  /// tracking state from the predecessors.
-  void enterBlock();
+  EventTracker(const MachineBasicBlock &MBB,
+               ArrayRef<CounterInfo> CounterInfos);
 
-  /// Notify this EventTracker that we are done recording events.
+  /// Prepare this EventTracker for iteration through its basic block.
+  ///
+  /// When entering a block, we merge state from the EventTrackers of
+  /// incoming MBBs. Records from incoming MBBs are merged using the `identity`
+  /// of the \ref EventTrackerRecord and only the record with the lowest height
+  /// is kept.
+  ///
+  /// \param EventTrackerGetter Is a function that map a MachimeBasicBlock to
+  /// the EventTracker used for that MachineBasicBlock.
+  void enterBlock(GetEventTrackerFn EventTrackerGetter);
+
+  /// End iteration through the basic block.
+  /// FIXME: Currently does nothing, it's just for symmetry and debug logs.
   void leaveBlock();
 
   /// Record an event of type \p Event at a MachineInstr \p MI, which will
   /// affect all counters that have \p Event in their event set.
   void record(MachineInstr &MI, SingleHWEvent Event);
 
-  /// Notify that we waited until the counter \p T reached the value \p N before
+  /// Wait until the counter \p T reaches the value \p N before
   /// continuing execution of the program (and recording more events).
-  /// This affects the count of \p T, an removes all records that have a score
+  /// This affects the count of \p T, and removes all records that have a height
   /// greater than or equal to \p N.
   /// If \p N is zero, then \p T will no longer be in an indeterminate or
   /// out-of-order state afterwards if it previously was in such a state.
@@ -160,7 +150,7 @@ public:
   void markIndeterminate(InstCounterType T);
 
   /// Mark the counter \p T as being "out-of-order", meaning records may retire
-  /// in any order. This sets the score of all records to zero.
+  /// in any order. This sets the height of all records to zero.
   void markOutOfOrder(InstCounterType T);
 
   /// \returns the current value of the counter \p T at this point in time, or
@@ -215,6 +205,9 @@ private:
     /// The current value of the counter. This is a max (upper bound) across
     /// all possible execution paths at runtime. It cannot be inferred from the
     /// LiveRecords alone and is thus a separate tracking domain.
+    ///
+    /// FIXME: We shouldn't need it for correctness so perhaps it should be
+    /// removed entirely.
     uint32_t Count = 0;
     /// An upper bound that persists across fixpoint iterations. This is only
     /// used when \ref mimicsLegacyTracking returns true.
@@ -224,7 +217,7 @@ private:
     /// the counter is out-of-order as well.
     bool IsIndeterminate = false;
     /// Whether this counter is out-of-order, meaning records may retire in any
-    /// order and they all exist at a score of zero.
+    /// order and they all exist at a height of zero.
     bool IsOutOfOrder = false;
     /// Legacy-style tracking of pending events that is coarse and does not
     /// leverage the live set of records. Only used when
@@ -232,74 +225,33 @@ private:
     /// iterations.
     HWEvents LegacyPendingEvents;
 
-    // TODO: We could imagine storing the per-predecessor score for incoming
+    // TODO: We could imagine storing the per-predecessor height for incoming
     // events. We could achieve that by storing that as a map of ((ID, Pred),
     // Score). This would allow identifying events that are "deep" in one branch
     // but "shallow" in another, e.g. an event needing a waitcnt 1 for one pred,
     // but a waitcnt 8 for another. Not sure if we can exploit that though?
   };
 
+  /// Compare records in order to achieve stable sorting by descending height.
+  static bool compareRecords(const EventTrackerRecord &A,
+                             const EventTrackerRecord &B);
+
   /// Clears the tracked data, used when entering a block.
   void clear();
 
   /// Import all events from the incoming basic blocks in \p Preds and reconcile
   /// divergence at joints.
-  void recordIncomings(EventTrackingContext &ETC,
-                       ArrayRef<EventTracker *> Preds);
+  void recordIncomings(ArrayRef<EventTracker *> Preds);
 
   static void print(raw_ostream &OS, const CounterData &CD,
                     unsigned Indent = 0);
 
-  MachineBasicBlock *MBB;
-  EventTrackingContext *Ctx;
+  const MachineBasicBlock *MBB;
 
   // NB: This, combined with the inline storage of LiveRecords, can lead to this
   // class becoming quite big - verify the size of this object whenever a change
   // is made.
   SmallVector<CounterData, InstCounterType::NUM_INST_CNTS> Counters;
-};
-
-/// Per-MF Tracking Context.
-/// This owns all \ref EventTrackers and keeps track of state that persists
-/// across dataflow analysis iterations, such as the current value of
-/// \ref DynamicInstanceID.
-class EventTrackingContext {
-public:
-  /// \param MF Machine Function
-  /// \param Counters The counters available to \p MF on this target.
-  EventTrackingContext(MachineFunction &MF, ArrayRef<CounterInfo> Counters);
-
-  /// Fetch the \ref MBBEventTracker of \p MBB.
-  EventTracker &operator[](MachineBasicBlock *MBB);
-
-  /// \returns the list of counters available to the current target.
-  ArrayRef<CounterInfo> counters() const { return CounterInfos; }
-
-#if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
-  /// Verifies invariants of this class are respected.
-  void verify() const;
-#endif
-
-  void print(raw_ostream &OS) const;
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  LLVM_DUMP_METHOD void dump() const;
-#endif
-
-private:
-  friend class EventTrackerRecord;
-
-  /// \returns a new, unique \ref DynamicInstanceID - only for use by
-  /// \ref EventTrackerRecord.
-  EventTrackerRecord::DynamicInstanceID nextDynamicInstanceID() {
-    assert(NextDynID + 1 > NextDynID && "DynamicInstanceIDs overflow!");
-    return ++NextDynID;
-  }
-
-  SmallVector<CounterInfo> CounterInfos;
-
-  EventTrackerRecord::DynamicInstanceID NextDynID = 0;
-  DenseMap<MachineBasicBlock *, std::unique_ptr<EventTracker>> Trackers;
 };
 
 } // namespace eventtracking
