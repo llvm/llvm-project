@@ -206,6 +206,10 @@ void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
     case SDTCisPtrTy:
       break;
     case SDTCisInt:
+      if (!VT.isInteger()) {
+        SS << Val << " must have integer type, but has type " << VT;
+        reportNodeError(DAG, N, SS.str());
+      }
       break;
     case SDTCisFP:
       if (!VT.isFloatingPoint()) {
