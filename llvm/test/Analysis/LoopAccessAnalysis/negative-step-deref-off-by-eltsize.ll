@@ -124,3 +124,88 @@ exit.early:
 exit.done:
   ret void
 }
+
+; Reverse inner loop whose AddRec start is an AddRec of the outer loop.
+; getPointerBase() looks through the outer AddRec, so deref(64) describes the
+; region at %A, while the inner loop reads A[i, i + 16) for every i.
+;
+; Only the first outer iteration stays inside that region: at i = 16 the inner
+; loop already reads A[16, 32), i.e. bytes [64, 128). A deref-based bound would
+; therefore be wrong, and LAA must keep the conservative Low: null instead.
+;
+; Pseudocode:
+;   // A: at least 16 i32s dereferenceable
+;   for (i64 i = 0; i < n; i += 16)
+;     for (i64 j = 15; j >= 0; --j) {
+;       i32 l = A[i + j];
+;       B[j] = l;
+;       if (l == 0) break;
+;     }
+
+define void @reverse_inner_start_is_outer_addrec(ptr dereferenceable(64) %A, ptr %B, i64 %n) {
+; CHECK-LABEL: 'reverse_inner_start_is_outer_addrec'
+; CHECK-NEXT:    inner.header:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %base, i64 %iv
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: null High: (64 + %B))
+; CHECK-NEXT:            Member: {(60 + %B),+,-4}<nw><%inner.header>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: null High: {(64 + %A)<nuw>,+,64}<nw><%outer.header>)
+; CHECK-NEXT:            Member: {{\{\{}}(60 + %A)<nuw>,+,64}<nuw><%outer.header>,+,-4}<nw><%inner.header>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+; CHECK-NEXT:    outer.header:
+; CHECK-NEXT:      Report: loop is not the innermost loop
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
+  %base = getelementptr inbounds i32, ptr %A, i64 %i
+  br label %inner.header
+
+inner.header:
+  %iv = phi i64 [ 15, %outer.header ], [ %iv.dec, %inner.latch ]
+  %gep.A = getelementptr inbounds i32, ptr %base, i64 %iv
+  %l = load i32, ptr %gep.A, align 4
+  %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
+  store i32 %l, ptr %gep.B, align 4
+  %uncntable = icmp eq i32 %l, 0
+  br i1 %uncntable, label %exit.early, label %inner.latch
+
+inner.latch:
+  %iv.dec = add nsw i64 %iv, -1
+  %ec = icmp sgt i64 %iv, 0
+  br i1 %ec, label %inner.header, label %outer.latch
+
+outer.latch:
+  %i.next = add nuw nsw i64 %i, 16
+  %outer.ec = icmp ult i64 %i.next, %n
+  br i1 %outer.ec, label %outer.header, label %exit.done
+
+exit.early:
+  ret void
+
+exit.done:
+  ret void
+}
