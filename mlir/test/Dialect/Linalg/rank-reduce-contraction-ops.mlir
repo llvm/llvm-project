@@ -268,6 +268,20 @@ func.func @matmul_to_vecmat_signed_cast(
 
 // -----
 
+func.func @batch_matmul_to_batch_vecmat_signed_cast(
+    %arg0: tensor<2x1x8xi16>, %arg1: tensor<2x8x6xi64>,
+    %arg2: tensor<2x1x6xi32>) -> tensor<2x1x6xi32> {
+  // CHECK-LABEL: @batch_matmul_to_batch_vecmat_signed_cast
+  // CHECK:       linalg.batch_vecmat
+  // CHECK-NOT:   linalg.batch_matmul
+  %0 = linalg.batch_matmul {cast = #linalg.type_fn<cast_signed>}
+      ins(%arg0, %arg1 : tensor<2x1x8xi16>, tensor<2x8x6xi64>)
+      outs(%arg2 : tensor<2x1x6xi32>) -> tensor<2x1x6xi32>
+  return %0 : tensor<2x1x6xi32>
+}
+
+// -----
+
 func.func @matvec_to_dot(%arg0: memref<1x?xf32>, %arg1: memref<?xf32>, %arg2: memref<1xf32>) {
   // CHECK-LABEL: @matvec_to_dot
   //  CHECK-SAME:     %[[LHS:[a-zA-Z0-9]+]]: memref<1x?xf32>

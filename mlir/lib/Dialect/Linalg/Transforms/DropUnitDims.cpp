@@ -964,10 +964,10 @@ struct RankReduceContractionOps : OpRewritePattern<FromOpTy> {
           contractionOp, "ops with user-defined maps are not supported");
     }
     // linalg.matmul is the only target op with a `cast` attribute.
-    if constexpr (!std::is_same_v<ToOpTy, MatmulOp>) {
-      auto castAttr = dyn_cast_if_present<TypeFnAttr>(
-          contractionOp->getInherentAttr("cast").value_or(Attribute()));
-      if (castAttr && castAttr.getValue() != TypeFn::cast_signed)
+    if constexpr ((std::is_same_v<FromOpTy, MatmulOp> ||
+                   std::is_same_v<FromOpTy, BatchMatmulOp>) &&
+                  !std::is_same_v<ToOpTy, MatmulOp>) {
+      if (contractionOp.getCast() != TypeFn::cast_signed)
         return rewriter.notifyMatchFailure(
             contractionOp, "target op cannot represent a non-signed cast");
     }
