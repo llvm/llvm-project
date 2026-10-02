@@ -269,19 +269,16 @@ if(CLANG_ENABLE_CIR)
       )
   endif()
 
-  # add_lit_testsuites creates no targets when LLVM_ENABLE_IDE is on.
-  if(NOT LLVM_ENABLE_IDE)
-    add_lit_target(check-clang-cir "Running the CIR regression tests"
-      ${CMAKE_CURRENT_SOURCE_DIR}/CIR
-      DEPENDS ${CLANG_CIR_TEST_DEPS}
-      )
-    set_target_properties(check-clang-cir PROPERTIES FOLDER "Clang tests/Suites")
+  add_lit_target(check-clang-cir "Running the CIR regression tests"
+    ${CMAKE_CURRENT_SOURCE_DIR}/CIR
+    DEPENDS ${CLANG_CIR_TEST_DEPS}
+    )
+  set_target_properties(check-clang-cir PROPERTIES FOLDER "Clang tests/Suites")
 
-    add_lit_testsuites(CLANG-CIR ${CMAKE_CURRENT_SOURCE_DIR}/CIR
-      DEPENDS ${CLANG_CIR_TEST_DEPS}
-      FOLDER "Clang tests/Suites"
-      )
-  endif()
+  add_lit_testsuites(CLANG-CIR ${CMAKE_CURRENT_SOURCE_DIR}/CIR
+    DEPENDS ${CLANG_CIR_TEST_DEPS}
+    FOLDER "Clang tests/Suites"
+    )
 endif()
 
 # Add a legacy target spelling: clang-test
