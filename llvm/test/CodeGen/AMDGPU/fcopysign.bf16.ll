@@ -3089,9 +3089,6 @@ define amdgpu_ps i16 @s_copysign_out_bf16_mag_f32_sign_bf16(float inreg %mag, bf
 ; GFX11TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11TRUE16-NEXT:    s_and_b32 s0, s0, 0x7fff
 ; GFX11TRUE16-NEXT:    s_or_b32 s0, s0, s1
-; GFX11TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
-; GFX11TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX11FAKE16-LABEL: s_copysign_out_bf16_mag_f32_sign_bf16:

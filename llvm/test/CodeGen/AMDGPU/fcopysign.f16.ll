@@ -43,11 +43,8 @@ define amdgpu_ps i16 @s_copysign_f16(half inreg %mag, half inreg %sign) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_and_b32 s1, s1, 0x8000
 ; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, 0x7fff
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    s_or_b32 s0, s0, s1
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-FAKE16-LABEL: s_copysign_f16:
@@ -78,18 +75,10 @@ define amdgpu_ps i16 @s_test_copysign_f16_0(half inreg %mag) {
 ; GFX9-NEXT:    s_and_b32 s0, s0, 0x7fff
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
-; GFX11-TRUE16-LABEL: s_test_copysign_f16_0:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, 0x7fff
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FAKE16-LABEL: s_test_copysign_f16_0:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, 0x7fff
-; GFX11-FAKE16-NEXT:    ; return to shader part epilog
+; GFX11-LABEL: s_test_copysign_f16_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_and_b32 s0, s0, 0x7fff
+; GFX11-NEXT:    ; return to shader part epilog
   %result = call half @llvm.copysign.f16(half %mag, half 0.0)
   %cast = bitcast half %result to i16
   ret i16 %cast
@@ -111,18 +100,10 @@ define amdgpu_ps i16 @s_test_copysign_f16_1(half inreg %mag) {
 ; GFX9-NEXT:    s_and_b32 s0, s0, 0x7fff
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
-; GFX11-TRUE16-LABEL: s_test_copysign_f16_1:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, 0x7fff
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FAKE16-LABEL: s_test_copysign_f16_1:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, 0x7fff
-; GFX11-FAKE16-NEXT:    ; return to shader part epilog
+; GFX11-LABEL: s_test_copysign_f16_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_and_b32 s0, s0, 0x7fff
+; GFX11-NEXT:    ; return to shader part epilog
   %result = call half @llvm.copysign.f16(half %mag, half 1.0)
   %cast = bitcast half %result to i16
   ret i16 %cast
@@ -144,18 +125,10 @@ define amdgpu_ps i16 @s_test_copysign_f16_10.0(half inreg %mag) {
 ; GFX9-NEXT:    s_and_b32 s0, s0, 0x7fff
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
-; GFX11-TRUE16-LABEL: s_test_copysign_f16_10.0:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, 0x7fff
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FAKE16-LABEL: s_test_copysign_f16_10.0:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, 0x7fff
-; GFX11-FAKE16-NEXT:    ; return to shader part epilog
+; GFX11-LABEL: s_test_copysign_f16_10.0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_and_b32 s0, s0, 0x7fff
+; GFX11-NEXT:    ; return to shader part epilog
   %result = call half @llvm.copysign.f16(half %mag, half 10.0)
   %cast = bitcast half %result to i16
   ret i16 %cast
@@ -177,18 +150,10 @@ define amdgpu_ps i16 @s_test_copysign_f16_neg1(half inreg %mag) {
 ; GFX9-NEXT:    s_bitset1_b32 s0, 15
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
-; GFX11-TRUE16-LABEL: s_test_copysign_f16_neg1:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_bitset1_b32 s0, 15
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FAKE16-LABEL: s_test_copysign_f16_neg1:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    s_bitset1_b32 s0, 15
-; GFX11-FAKE16-NEXT:    ; return to shader part epilog
+; GFX11-LABEL: s_test_copysign_f16_neg1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_bitset1_b32 s0, 15
+; GFX11-NEXT:    ; return to shader part epilog
   %result = call half @llvm.copysign.f16(half %mag, half -1.0)
   %cast = bitcast half %result to i16
   ret i16 %cast
@@ -210,18 +175,10 @@ define amdgpu_ps i16 @s_test_copysign_f16_neg10(half inreg %mag) {
 ; GFX9-NEXT:    s_bitset1_b32 s0, 15
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
-; GFX11-TRUE16-LABEL: s_test_copysign_f16_neg10:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_bitset1_b32 s0, 15
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11-FAKE16-LABEL: s_test_copysign_f16_neg10:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    s_bitset1_b32 s0, 15
-; GFX11-FAKE16-NEXT:    ; return to shader part epilog
+; GFX11-LABEL: s_test_copysign_f16_neg10:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_bitset1_b32 s0, 15
+; GFX11-NEXT:    ; return to shader part epilog
   %result = call half @llvm.copysign.f16(half %mag, half -10.0)
   %cast = bitcast half %result to i16
   ret i16 %cast
@@ -1311,11 +1268,8 @@ define amdgpu_ps i16 @s_copysign_out_f16_mag_f64_sign_f16(double inreg %mag, hal
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s0, s0, s1
 ; GFX11-TRUE16-NEXT:    s_and_b32 s1, s2, 0x8000
 ; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, 0x7fff
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    s_or_b32 s0, s0, s1
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-FAKE16-LABEL: s_copysign_out_f16_mag_f64_sign_f16:

@@ -8135,7 +8135,9 @@ static Register createLo16ToVReg32(MachineInstr &MI, const SIInstrInfo *TII) {
   MachineBasicBlock *MBB = MI.getParent();
   MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
   // check dst reg size
-  if (!MRI.constrainRegClass(DstReg, &AMDGPU::VGPR_16RegClass))
+  const TargetRegisterClass *CurrRC = MRI.getRegClass(DstReg);
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+  if (!TRI->getCommonSubClass(CurrRC, &AMDGPU::VGPR_16RegClass))
     return DstReg;
   const DebugLoc &DL = MI.getDebugLoc();
   Register NewDstReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);

@@ -266,6 +266,9 @@ static bool tryChangeVGPRtoSGPRinCopy(MachineInstr &MI,
     // For SGPR to VGPR copy in true16, we could have subregidx on user
     // lo/hi16:vgprXX which get transformed to illegal lo/hi16:sgprXX.
     // Reject hi16, and collect lo16 MO
+    // TODO. The check above do not check for subregister.
+    // And thus composed sub0_lo/hi16 will not reach here. Fix it if this is
+    // changed.
     unsigned SubRegIdx = MO.getSubReg();
     if (ST.useRealTrue16Insts()) {
       if (SubRegIdx == AMDGPU::lo16)

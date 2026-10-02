@@ -6731,7 +6731,7 @@ define <4 x i8> @test_s_unsigned_v4f32_v4i8(<4 x float> inreg %f) {
 ; GFX12-TRUE16-NEXT:    s_or_b32 s0, s0, s1
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-TRUE16-NEXT:    s_or_b32 s1, s1, s3
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-TRUE16-NEXT:    s_lshr_b32 s0, s1, 8
 ; GFX12-TRUE16-NEXT:    s_lshr_b32 s1, s3, 24
