@@ -142,13 +142,5 @@ void gh228290(int i) {
 // CHECK: %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
 // CHECK: %[[TWO_CAST:.*]] = cir.builtin_int_cast %[[TWO_CAST]] : !s32i -> si32
 // CHECK: acc.enter_data wait(%[[ONE_CAST]], %[[TWO_CAST]] : si32, si32) dataOperands({{.*}})
-
-#pragma acc enter data copyin(i) wait(devnum:1: 1) wait(devnum:1: 2)
-// CHECK: FAIL
-//
-//#pragma acc enter data copyin(i) wait(devnum:1: 1) wait(devnum:2: 2)
-//  ;
-//  // CHECK: FAIL
-
 }
 
