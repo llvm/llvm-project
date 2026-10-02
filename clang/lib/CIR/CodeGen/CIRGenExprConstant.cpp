@@ -300,6 +300,29 @@ mlir::Attribute asBaseSubobject(CIRGenBuilderTy &builder, mlir::Attribute attr,
   mlir::ArrayAttr members = recordAttr.getMembers();
   llvm::SmallVector<mlir::Attribute> baseMembers(
       members.begin(), members.begin() + baseSubobjTy.getNumElements());
+
+  // The base-subobject type is assumed to be a prefix of the complete-object
+  // type (i.e. the complete type minus tail padding). Verify that assumption
+  // holds so a layout change doesn't silently produce a wrong initializer.
+  //
+  // ConstRecordAttr's members skip zero-width bit-fields and store a
+  // bit-field's storage type rather than the bit-field type itself (see
+  // ConstRecordAttr::verify), so baseSubobjTy's raw member list has to be
+  // filtered the same way before comparing against baseMembers index-for-
+  // index.
+  assert(llvm::all_of(
+             llvm::zip_equal(baseMembers,
+                             llvm::map_range(llvm::make_filter_range(
+                                                 baseSubobjTy.getMembers(),
+                                                 cir::memberOwnsBytes),
+                                             cir::memberStorageType)),
+             [](const auto &pair) {
+               auto &[member, baseTy] = pair;
+               return mlir::cast<mlir::TypedAttr>(member).getType() == baseTy;
+             }) &&
+         "base-subobject member type does not match complete-object member "
+         "type at the same index");
+
   return cir::ConstRecordAttr::get(baseSubobjTy,
                                    builder.getArrayAttr(baseMembers));
 }
