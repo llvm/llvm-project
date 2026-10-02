@@ -52,7 +52,6 @@ struct CGPassBuilderOption {
   std::optional<bool> EnableIPRA;
   bool DebugPM = false;
   bool DisableVerify = false;
-  bool DisableMIROutputVerify = false;
   bool EnableImplicitNullChecks = false;
   bool EnableBlockPlacementStats = false;
   bool EnableGlobalMergeFunc = false;
@@ -84,7 +83,8 @@ struct CGPassBuilderOption {
   std::string FSProfileFile;
   std::string FSRemappingFile;
 
-  cl::boolOrDefault VerifyMachineCode = cl::boolOrDefault::BOU_UNSET;
+  MachineVerifierMode VerifyMachineCode = MachineVerifierMode::End;
+
   cl::boolOrDefault EnableFastISelOption = cl::boolOrDefault::BOU_UNSET;
   cl::boolOrDefault EnableGlobalISelOption = cl::boolOrDefault::BOU_UNSET;
   cl::boolOrDefault DebugifyAndStripAll = cl::boolOrDefault::BOU_UNSET;
