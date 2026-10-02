@@ -295,6 +295,8 @@ auto isOptionalValueOrConversionConstructor() {
 }
 
 // `optional(allocator_arg_t, allocator, value, ...)`.
+// Used only for BDE components (`bsl::optional`, `bdlb::NullableValue`)
+// which support allocators.
 auto isOptionalAllocatorExtendedValueOrConversionConstructor() {
   return cxxConstructExpr(
       unless(hasDeclaration(
