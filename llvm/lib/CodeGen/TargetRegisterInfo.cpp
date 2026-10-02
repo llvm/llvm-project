@@ -14,7 +14,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/LiveInterval.h"
@@ -399,7 +398,7 @@ float TargetRegisterInfo::getSpillWeightScaleFactor(
 // Compute target-independent register allocator hints to help eliminate copies.
 bool TargetRegisterInfo::getRegAllocationHints(
     Register VirtReg, ArrayRef<MCPhysReg> Order,
-    SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
+    SmallSetVector<MCPhysReg, 16> &Hints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const std::pair<unsigned, SmallVector<Register, 4>> *Hints_MRI =
@@ -408,7 +407,6 @@ bool TargetRegisterInfo::getRegAllocationHints(
   if (!Hints_MRI)
     return false;
 
-  SmallSet<Register, 32> HintedRegs;
   // First hint may be a target hint.
   bool Skip = (Hints_MRI->first != 0);
   for (auto Reg : Hints_MRI->second) {
@@ -422,10 +420,6 @@ bool TargetRegisterInfo::getRegAllocationHints(
     if (VRM && Phys.isVirtual())
       Phys = VRM->getPhys(Phys);
 
-    // Don't add the same reg twice (Hints_MRI may contain multiple virtual
-    // registers allocated to the same physreg).
-    if (!HintedRegs.insert(Phys).second)
-      continue;
     // Check that Phys is a valid hint in VirtReg's register class.
     if (!Phys.isPhysical())
       continue;
@@ -438,7 +432,7 @@ bool TargetRegisterInfo::getRegAllocationHints(
       continue;
 
     // All clear, tell the register allocator to prefer this register.
-    Hints.push_back(Phys.id());
+    Hints.insert(Phys);
   }
   return false;
 }
