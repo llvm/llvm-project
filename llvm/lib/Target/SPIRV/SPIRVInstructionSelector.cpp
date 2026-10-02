@@ -488,6 +488,8 @@ private:
                    MachineInstr &I) const;
   bool selectDerivativeInst(Register ResVReg, SPIRVTypeInst ResType,
                             MachineInstr &I, const unsigned DPdOpCode) const;
+  bool selectUnpackInst(Register ResVReg, SPIRVTypeInst ResType,
+                        MachineInstr &I, const bool Signed) const;
   // Utilities
   Register buildI32ConstantInEntryBlock(uint32_t Val, MachineInstr &I,
                                         SPIRVTypeInst ResType = nullptr) const;
@@ -5427,6 +5429,24 @@ bool SPIRVInstructionSelector::selectDerivativeInst(
   return true;
 }
 
+bool SPIRVInstructionSelector::selectUnpackInst(Register ResVReg,
+                                                SPIRVTypeInst ResType,
+                                                MachineInstr &I,
+                                                const bool Signed) const {
+  MachineIRBuilder MIRBuilder(I);
+  SPIRVTypeInst I8Type = GR.getOrCreateSPIRVIntegerType(8, MIRBuilder);
+  SPIRVTypeInst I8x4Type =
+      GR.getOrCreateSPIRVVectorType(I8Type, 4, MIRBuilder, true);
+
+  Register I8x4Reg = MRI->createVirtualRegister(GR.getRegClass(I8x4Type));
+  if (!selectOpWithSrcs(I8x4Reg, I8x4Type, I, {I.getOperand(2).getReg()},
+                        SPIRV::OpBitcast))
+    return false;
+
+  unsigned ConvertOpcode = Signed ? SPIRV::OpSConvert : SPIRV::OpUConvert;
+  return selectOpWithSrcs(ResVReg, ResType, I, {I8x4Reg}, ConvertOpcode);
+}
+
 bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
                                                SPIRVTypeInst ResType,
                                                MachineInstr &I) const {
@@ -6053,6 +6073,12 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     MIB.constrainAllUses(TII, TRI, RBI);
     return true;
   }
+  case Intrinsic::spv_unpack_u8u16:
+  case Intrinsic::spv_unpack_u8u32:
+    return selectUnpackInst(ResVReg, ResType, I, false);
+  case Intrinsic::spv_unpack_s8s16:
+  case Intrinsic::spv_unpack_s8s32:
+    return selectUnpackInst(ResVReg, ResType, I, true);
   default:
     return diagnoseUnsupported(I, "intrinsic selection not implemented.");
   }
