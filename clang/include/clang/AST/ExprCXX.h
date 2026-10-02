@@ -1869,6 +1869,11 @@ public:
   static CXXFunctionalCastExpr *
   CreateEmpty(const ASTContext &Context, unsigned PathSize, bool HasFPFeatures);
 
+  static CXXFunctionalCastExpr *
+  CreateListInitializer(const ASTContext &Context, QualType T, ExprValueKind VK,
+                        TypeSourceInfo *Written, CastKind Kind, Expr *Op,
+                        const CXXCastPath *Path, FPOptionsOverride FPO);
+
   SourceLocation getLParenLoc() const { return LParenLoc; }
   void setLParenLoc(SourceLocation L) { LParenLoc = L; }
   SourceLocation getRParenLoc() const { return RParenLoc; }
