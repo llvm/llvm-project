@@ -4925,7 +4925,7 @@ bool AMDGPUDAGToDAGISel::Legalize16BitExtractSubReg(SDNode *N) {
       SDValue SubIdxConst =
           CurDAG->getTargetConstant(AMDGPU::sub0, DL, MVT::i32);
       SReg32 = SDValue(CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL,
-                                              VT, SDValue(Src, 0), SubIdxConst),
+                                              MVT::i32, SDValue(Src, 0), SubIdxConst),
                        0);
     } else {
       SReg32 = SDValue(Src, 0);
@@ -4949,7 +4949,7 @@ bool AMDGPUDAGToDAGISel::Legalize16BitExtractSubReg(SDNode *N) {
         NewValue = SReg32;
       } else {
         SDValue SHRBits = CurDAG->getTargetConstant(16, DL, MVT::i32);
-        SDVTList VTs = CurDAG->getVTList(MVT::i32, MVT::i32);
+        SDVTList VTs = CurDAG->getVTList(MVT::i32);
         NewValue = SDValue(CurDAG->getMachineNode(AMDGPU::S_LSHR_B32, DL, VTs,
                                                   {SReg32, SHRBits}),
                            0);
@@ -4976,7 +4976,7 @@ bool AMDGPUDAGToDAGISel::Legalize16BitExtractSubReg(SDNode *N) {
       SDValue SubIdxConst =
           CurDAG->getTargetConstant(AMDGPU::sub0, DL, MVT::i32);
       VReg32 = SDValue(CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL,
-                                              VT, SDValue(Src, 0), SubIdxConst),
+                                              MVT::i32, SDValue(Src, 0), SubIdxConst),
                        0);
     } else
       VReg32 = SDValue(Src, 0);
