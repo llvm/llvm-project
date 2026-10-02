@@ -277,7 +277,8 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
       case RISCV::SRL:
       case RISCV::ROL:
       case RISCV::ROR:
-        // Operand 2 is the shift amount which uses 6 bits.
+      case RISCV::BEXT:
+        // Operand 2 is the shift amount or bit index, using log2(XLEN) bits.
         if (OpIdx == 2 && Bits >= Log2_32(ST.getXLen()))
           break;
         return false;
