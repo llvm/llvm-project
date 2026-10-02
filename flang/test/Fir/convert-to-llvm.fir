@@ -326,6 +326,26 @@ func.func @test_unreachable() {
 
 // -----
 
+// Verify that fir.assert is transformed to an LLVM conditional branch that
+// reports the message and aborts when the condition is false.
+
+func.func @test_assert(%condition: i1) {
+  fir.assert %condition, "expected condition to hold"
+  return
+}
+
+// CHECK: llvm.mlir.global private constant @assert_msg
+// CHECK: llvm.func @test_assert(%[[CONDITION:.*]]: i1) {
+// CHECK:   llvm.cond_br %[[CONDITION]], ^[[CONTINUE:.*]], ^[[FAILURE:.*]]
+// CHECK: ^[[CONTINUE]]:
+// CHECK:   llvm.return
+// CHECK: ^[[FAILURE]]:
+// CHECK:   llvm.call @puts
+// CHECK:   llvm.call @abort()
+// CHECK:   llvm.unreachable
+
+// -----
+
 // Test fir.extract_value operation conversion with derived type.
 
 func.func @extract_derived_type() -> f32 {
