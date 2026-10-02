@@ -2718,7 +2718,7 @@ bool Compiler<Emitter>::visitCallArgs(ArrayRef<const Expr *> Args,
       }
 
       UnsignedOrNone LocalIndex =
-          allocateLocal(std::move(Source), Arg->getType(), ScopeKind::Call);
+          allocateLocal(Source, Arg->getType(), ScopeKind::Call);
       if (!LocalIndex)
         return false;
 
