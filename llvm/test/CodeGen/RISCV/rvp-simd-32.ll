@@ -4229,7 +4229,6 @@ define <2 x i16> @test_pslide1up_v2i16(<2 x i16> %rd, i16 %rs1) {
 ;
 ; RV64-LABEL: test_pslide1up_v2i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    pmv.hs a1, a1
 ; RV64-NEXT:    ppaire.h a0, a1, a0
 ; RV64-NEXT:    ret
   %scalar = insertelement <2 x i16> poison, i16 %rs1, i64 0
@@ -4245,7 +4244,6 @@ define <2 x i16> @test_pslide1down_v2i16(<2 x i16> %rd, i16 %rs1) {
 ;
 ; RV64-LABEL: test_pslide1down_v2i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    pmv.hs a1, a1
 ; RV64-NEXT:    ppairoe.h a0, a0, a1
 ; RV64-NEXT:    ret
   %scalar = insertelement <2 x i16> poison, i16 %rs1, i64 0

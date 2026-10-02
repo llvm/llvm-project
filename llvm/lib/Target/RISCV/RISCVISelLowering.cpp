@@ -6535,21 +6535,35 @@ static SDValue lowerVECTOR_SHUFFLEAsPSlide1(ShuffleVectorSDNode *SVN,
   unsigned EltBits = VT.getScalarSizeInBits();
   unsigned SlideBits = ActiveElts * EltBits;
   MVT XLenVT = Subtarget.getXLenVT();
-  SDValue Scalar = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, XLenVT, V2,
-                               DAG.getVectorIdxConstant(0, DL));
+  SDValue Scalar = DAG.getExtractVectorElt(DL, XLenVT, V2, 0);
 
-  if (SlideBits == Subtarget.getXLen())
-    return DAG.getNode(SlideUp ? RISCVISD::PSLIDE1UP : RISCVISD::PSLIDE1DOWN,
-                       DL, VT, V1, Scalar);
+  // A two-element slide is exactly a packed pair operation.
+  if (ActiveElts == 2) {
+    SDValue ScalarVec = DAG.getBitcast(VT, Scalar);
+    return DAG.getNode(SlideUp ? RISCVISD::PPAIRE : RISCVISD::PPAIROE, DL, VT,
+                       SlideUp ? ScalarVec : V1,
+                       SlideUp ? V1 : ScalarVec);
+  }
+
+  // Lower a full-register slide to the funnel shift instruction that
+  // implements it.
+  if (SlideBits == Subtarget.getXLen()) {
+    SDValue Bits = DAG.getBitcast(XLenVT, V1);
+    SDValue Shamt = DAG.getConstant(EltBits, DL, XLenVT);
+    if (SlideUp) {
+      Scalar = DAG.getNode(ISD::SHL, DL, XLenVT, Scalar,
+                           DAG.getConstant(SlideBits - EltBits, DL, XLenVT));
+      Bits = DAG.getNode(ISD::FSHL, DL, XLenVT, Bits, Scalar, Shamt);
+    } else {
+      Bits = DAG.getNode(ISD::FSHR, DL, XLenVT, Scalar, Bits, Shamt);
+    }
+    return DAG.getBitcast(VT, Bits);
+  }
 
   // A 32-bit packed slide on RV64 is carried in the low word of a GPR. Expand
   // it using XLEN operations or packed pair instructions.
   if (Subtarget.is64Bit()) {
     assert(SlideBits == 32 && "Unexpected RV64 packed slide width");
-    if (ActiveElts == 2)
-      return DAG.getNode(SlideUp ? RISCVISD::PPAIRE : RISCVISD::PPAIROE, DL, VT,
-                         SlideUp ? V2 : V1, SlideUp ? V1 : V2);
-
     SDValue Shamt = DAG.getConstant(EltBits, DL, MVT::i64);
     SDValue Bits = DAG.getBitcast(MVT::i64, V1);
     if (SlideUp) {
