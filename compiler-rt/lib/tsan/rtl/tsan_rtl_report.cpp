@@ -815,8 +815,8 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
 
   // Use alloca, because malloc during signal handling deadlocks
   ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
-  // Take a new scope as Apple platforms require the below locks released
-  // before symbolizing in order to avoid a deadlock
+  // Release locks before symbolizing and outputting the report to avoid
+  // deadlocks.
   {
     // We need to lock the slot during RestoreStack because it protects
     // the slot journal.
@@ -876,17 +876,11 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
         s[1].epoch() <= thr->last_sleep_clock.Get(s[1].sid()))
       rep->AddSleep(thr->last_sleep_stack_id);
 #endif
-
-#if SANITIZER_APPLE
-  }  // Close this scope to release the locks
-#endif
-    OutputReport(thr, *rep);
-
-    // Need to manually destroy this because we used placement new to allocate
-    rep->~ScopedReport();
-#if !SANITIZER_APPLE
   }
-#endif
+  OutputReport(thr, *rep);
+
+  // Need to manually destroy this because we used placement new to allocate
+  rep->~ScopedReport();
 }
 
 void PrintCurrentStack(ThreadState *thr, uptr pc) {
