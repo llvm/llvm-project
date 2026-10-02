@@ -1,7 +1,7 @@
-// Exercise FIR alias analysis for values rooted at fir.absent.
-// Each fir.absent is classified like a distinct allocation so it
-// does not alias real storage, another absent, or a global; it only
-// aliases itself.
+// Exercise FIR alias analysis for null addresses. fir.absent and an
+// address-typed fir.zero_bits are nulls: each is associated with no
+// address, so it does not alias real storage, another null, or a global.
+// It aliases only itself.
 
 // RUN: fir-opt %s -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' \
 // RUN:   -split-input-file --mlir-disable-threading 2>&1 | FileCheck %s
@@ -56,5 +56,37 @@ func.func @_QPtest_absent_vs_global() {
   %gaddr = fir.address_of(@_QPtest_absent_vs_global_g) : !fir.ref<!fir.array<10xf32>>
   %g = fir.declare %gaddr(%shape) {uniq_name = "_QPtest_absent_vs_globalEg", test.ptr = "global"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
   %abs = fir.absent !fir.ref<!fir.array<10xf32>> {test.ptr = "absent_g"}
+  return
+}
+
+// -----
+
+// An address-typed fir.zero_bits is a null address. It does not alias an
+// allocation, and two distinct nulls do not alias each other.
+// CHECK-LABEL: Testing : "test_null_zero_bits"
+// CHECK-DAG: null_a#0 <-> heap#0: NoAlias
+// CHECK-DAG: null_a#0 <-> null_b#0: NoAlias
+
+func.func @test_null_zero_bits() {
+  %z1 = fir.zero_bits !fir.ref<i32>
+  %n1 = fir.convert %z1 {test.ptr = "null_a"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %z2 = fir.zero_bits !fir.ref<i32>
+  %n2 = fir.convert %z2 {test.ptr = "null_b"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %a = fir.alloca i32 {uniq_name = "_QFEnull_heap"}
+  %d = fir.declare %a {uniq_name = "_QFEnull_heap", test.ptr = "heap"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  return
+}
+
+// -----
+
+// Two zero-offset views of one address-typed fir.zero_bits. The test harness
+// compares distinct values, so each view is a fir.convert of the same null.
+// CHECK-LABEL: Testing : "test_null_same_value"
+// CHECK-DAG: null_view_a#0 <-> null_view_b#0: MustAlias
+
+func.func @test_null_same_value() {
+  %z = fir.zero_bits !fir.ref<i32>
+  %a = fir.convert %z {test.ptr = "null_view_a"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %b = fir.convert %z {test.ptr = "null_view_b"} : (!fir.ref<i32>) -> !fir.ref<i32>
   return
 }
