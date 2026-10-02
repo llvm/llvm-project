@@ -207,6 +207,98 @@ struct FindHostArray
   }
 };
 
+// Intrinsics that only use the address or the descriptor of their arguments.
+static const llvm::StringSet<> hostAddressIntrinsics_ = {
+    "__builtin_c_devloc", "__builtin_c_loc", "c_sizeof", "loc", "sizeof"};
+
+// Inquiry intrinsics whose arguments are all inquired objects. Other inquiry
+// intrinsics only inquire about their first argument and read the values of
+// the others (DIM=, KIND=).
+static const llvm::StringSet<> allArgsInquiryIntrinsics_ = {
+    "associated", "extends_type_of", "same_type_as"};
+
+// Traverses an expression evaluated by host code in search of device data
+// whose value would have to be read from the host. Device data that is only
+// designated (actual argument to a procedure, argument of an inquiry
+// intrinsic) is not read; the subscripts of its designator still are.
+struct FindDeviceDataReadOnHost
+    : public evaluate::AnyTraverse<FindDeviceDataReadOnHost, const Symbol *> {
+  using Result = const Symbol *;
+  using Base = evaluate::AnyTraverse<FindDeviceDataReadOnHost, Result>;
+  explicit FindDeviceDataReadOnHost(
+      SemanticsContext &c, bool onlyDesignated = false)
+      : Base(*this), context_{c}, onlyDesignated_{onlyDesignated} {}
+  using Base::operator();
+  Result operator()(const Symbol &symbol) const {
+    if (!onlyDesignated_ &&
+        evaluate::IsCUDADeviceOnlySymbol(GetAssociationRoot(symbol))) {
+      return &symbol;
+    }
+    return nullptr;
+  }
+  Result operator()(const evaluate::Component &x) const {
+    const Symbol &component{x.GetLastSymbol()};
+    if (evaluate::HasCUDADataAttr(component)) {
+      if (Result result{(*this)(component)}) {
+        return result;
+      }
+      // The attribute of the component hides the one of the base.
+      return FindDeviceDataReadOnHost{context_, /*onlyDesignated=*/true}(
+          x.base());
+    }
+    return (*this)(x.base());
+  }
+  Result operator()(const evaluate::ArrayRef &x) const {
+    if (Result result{(*this)(x.base())}) {
+      return result;
+    }
+    return FindDeviceDataReadOnHost{context_}(x.subscript());
+  }
+  Result operator()(const evaluate::Substring &x) const {
+    if (Result result{(*this)(x.parent())}) {
+      return result;
+    }
+    FindDeviceDataReadOnHost readChecker{context_};
+    if (Result result{readChecker(x.lower())}) {
+      return result;
+    }
+    return readChecker(x.upper());
+  }
+  Result operator()(const evaluate::DescriptorInquiry &) const {
+    return nullptr;
+  }
+  Result operator()(const evaluate::TypeParamInquiry &) const {
+    return nullptr;
+  }
+  Result operator()(const evaluate::ProcedureRef &x) const {
+    bool onlyFirstArgDesignated{false};
+    if (const auto *intrinsic{x.proc().GetSpecificIntrinsic()}) {
+      if (context_.intrinsics().GetIntrinsicClass(intrinsic->name) !=
+              evaluate::IntrinsicClass::inquiryFunction &&
+          !hostAddressIntrinsics_.contains(intrinsic->name)) {
+        return (*this)(x.arguments());
+      }
+      onlyFirstArgDesignated =
+          !allArgsInquiryIntrinsics_.contains(intrinsic->name);
+    }
+    for (std::size_t j{0}; j < x.arguments().size(); ++j) {
+      const auto &arg{x.arguments()[j]};
+      if (const auto *expr{arg ? arg->UnwrapExpr() : nullptr}) {
+        bool designated{
+            evaluate::IsVariable(*expr) && (j == 0 || !onlyFirstArgDesignated)};
+        if (Result result{FindDeviceDataReadOnHost{
+                context_, onlyDesignated_ || designated}(*expr)}) {
+          return result;
+        }
+      }
+    }
+    return nullptr;
+  }
+
+  SemanticsContext &context_;
+  bool onlyDesignated_{false};
+};
+
 template <typename A>
 static MaybeMsg CheckUnwrappedExpr(
     SemanticsContext &context, const A &x, bool allowHostCallees = false) {
@@ -855,6 +947,47 @@ void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
     }
     context_.Say(lhsLoc, "Unsupported CUDA data transfer"_err_en_US);
   }
+}
+
+template <typename A> void CUDAChecker::EnterHostScalarExpr(const A &x) {
+  if (hostScalarExprDepth_++ > 0) {
+    return; // Checked with the enclosing expression.
+  }
+  const auto &expr{DEREF(parser::Unwrap<parser::Expr>(x))};
+  const Scope &progUnit{
+      GetProgramUnitContaining(context_.FindScope(expr.source))};
+  if (IsCUDADeviceContext(&progUnit) || deviceConstructDepth_ > 0) {
+    return;
+  }
+  if (const auto *typedExpr{GetExpr(context_, expr)}) {
+    if (const Symbol *deviceData{
+            FindDeviceDataReadOnHost{context_}(*typedExpr)}) {
+      context_.Say(expr.source,
+          "Device data '%s' may not be referenced in host code outside of a data transfer or an actual argument"_err_en_US,
+          deviceData->name());
+    }
+  }
+}
+
+void CUDAChecker::Enter(const parser::Scalar<parser::Expr> &x) {
+  EnterHostScalarExpr(x);
+}
+void CUDAChecker::Leave(const parser::Scalar<parser::Expr> &) {
+  --hostScalarExprDepth_;
+}
+void CUDAChecker::Enter(const parser::ScalarExpr &x) { EnterHostScalarExpr(x); }
+void CUDAChecker::Leave(const parser::ScalarExpr &) { --hostScalarExprDepth_; }
+void CUDAChecker::Enter(const parser::ScalarIntExpr &x) {
+  EnterHostScalarExpr(x);
+}
+void CUDAChecker::Leave(const parser::ScalarIntExpr &) {
+  --hostScalarExprDepth_;
+}
+void CUDAChecker::Enter(const parser::ScalarLogicalExpr &x) {
+  EnterHostScalarExpr(x);
+}
+void CUDAChecker::Leave(const parser::ScalarLogicalExpr &) {
+  --hostScalarExprDepth_;
 }
 
 void CUDAChecker::Enter(const parser::PrintStmt &x) {
