@@ -139,6 +139,11 @@ struct JumpInstrMod {
 void printLocation(ELFSyncStream &s, InputSectionBase &sec, const Symbol &sym,
                    uint64_t off);
 
+// TLS relocations can only reference symbols with type STT_TLS (gABI).
+// Report an error and return true if `sym` does not have type STT_TLS.
+bool checkTlsSym(Ctx &ctx, InputSectionBase &sec, uint64_t offset, Symbol &sym,
+                 RelType type);
+
 // This function writes undefined symbol diagnostics to an internal buffer.
 // Call reportUndefinedSymbols() after calling scanRelocations() to emit
 // the diagnostics.

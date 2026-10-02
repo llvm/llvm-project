@@ -215,8 +215,10 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     // the switch to reach rs.process(). Types that need special handling
     // (fast-path helpers, TLS) call a handler and use `continue`.
 
-    auto handleTlsDescAuth = [&sym, &sec, type, offset,
+    auto handleTlsDescAuth = [this, &sym, &sec, type, offset,
                               addend](RelExpr tlsdescExpr) {
+      if (checkTlsSym(ctx, sec, offset, sym, type))
+        return;
       if (sym.isUndefined() && !sym.isPreemptible) {
         // Resolves to `addend`. Handle in
         // relaxAuthTlsDescForNonPreemptibleUndefined
@@ -375,6 +377,8 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
       rs.handleTlsDesc(R_TLSDESC, R_GOT, type, offset, addend, sym);
       continue;
     case R_AARCH64_TLSDESC_CALL:
+      // The symbol type is checked by the associated ADR/LD64/ADD relocations;
+      // the rewritten instruction does not materialize the symbol value.
       if (!ctx.arg.shared)
         sec.addReloc({R_TPREL, type, offset, addend, &sym});
       continue;
@@ -390,6 +394,7 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
       handleTlsDescAuth(R_TLSDESC);
       continue;
     case R_AARCH64_AUTH_TLSDESC_CALL:
+      // The symbol type is checked by the associated AUTH_TLSDESC relocations.
       if (sym.isUndefined() && !sym.isPreemptible)
         sec.addReloc({R_TPREL, type, offset, addend, &sym});
       else

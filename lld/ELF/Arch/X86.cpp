@@ -269,6 +269,8 @@ void X86::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
         ++it;
       continue;
     case R_386_TLS_LDO_32:
+      if (checkTlsSym(ctx, sec, offset, sym, type))
+        continue;
       sec.addReloc(
           {ctx.arg.shared ? R_DTPREL : R_TPREL, type, offset, addend, &sym});
       continue;
@@ -277,6 +279,7 @@ void X86::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
       rs.handleTlsDesc(R_TLSDESC_GOTPLT, R_GOTPLT, type, offset, addend, sym);
       continue;
     case R_386_TLS_DESC_CALL:
+      // The symbol type is checked by the associated GOTDESC relocation.
       // For executables, TLSDESC is optimized to IE or LE. Use R_TPREL as the
       // rewrites for this relocation are identical.
       if (!ctx.arg.shared)

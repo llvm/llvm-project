@@ -1250,6 +1250,8 @@ void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
       rs.handleTlsIe(R_GOT_PC, type, offset, addend, sym);
       continue;
     case R_PPC64_TLS:
+      if (checkTlsSym(ctx, sec, offset, sym, type))
+        continue;
       if (!ctx.arg.shared && !sym.isPreemptible)
         sec.addReloc({R_TPREL, type, offset, addend, &sym});
       continue;
@@ -1260,6 +1262,8 @@ void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     case R_PPC64_GOT_TLSGD16_HI:
     case R_PPC64_GOT_TLSGD16_LO:
     case R_PPC64_GOT_TLSGD_PCREL34: {
+      if (checkTlsSym(ctx, sec, offset, sym, type))
+        continue;
       bool isPCRel = type == R_PPC64_GOT_TLSGD_PCREL34;
       if (optimizeTlsGdLd) {
         if (sym.isPreemptible) {
@@ -1283,6 +1287,8 @@ void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     // __tls_get_addr being defined.
     case R_PPC64_TLSGD:
     case R_PPC64_TLSLD: {
+      if (checkTlsSym(ctx, sec, offset, sym, type))
+        continue;
       auto it1 = it;
       ++it1;
       if (it1 == rels.end()) {
@@ -1310,6 +1316,8 @@ void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     case R_PPC64_GOT_TLSLD16_HI:
     case R_PPC64_GOT_TLSLD16_LO:
     case R_PPC64_GOT_TLSLD_PCREL34:
+      if (checkTlsSym(ctx, sec, offset, sym, type))
+        continue;
       if (optimizeTlsGdLd) {
         sec.addReloc({R_TPREL, type, offset, addend, &sym});
       } else {
@@ -1331,12 +1339,16 @@ void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     case R_PPC64_DTPREL16_LO_DS:
     case R_PPC64_DTPREL64:
     case R_PPC64_DTPREL34:
+      if (checkTlsSym(ctx, sec, offset, sym, type))
+        continue;
       sec.addReloc({R_DTPREL, type, offset, addend, &sym});
       continue;
     case R_PPC64_GOT_DTPREL16_HA:
     case R_PPC64_GOT_DTPREL16_LO_DS:
     case R_PPC64_GOT_DTPREL16_DS:
     case R_PPC64_GOT_DTPREL16_HI:
+      if (checkTlsSym(ctx, sec, offset, sym, type))
+        continue;
       sym.setFlags(NEEDS_GOT_DTPREL);
       sec.addReloc({R_TLSLD_GOT_OFF, type, offset, addend, &sym});
       continue;

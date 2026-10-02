@@ -693,7 +693,29 @@ bool RelocScan::maybeReportUndefined(Undefined &sym, uint64_t offset) {
   return elf::maybeReportUndefined(ctx, sym, *sec, offset);
 }
 
+bool elf::checkTlsSym(Ctx &ctx, InputSectionBase &sec, uint64_t offset,
+                      Symbol &sym, RelType type) {
+  // TLS relocations can only reference symbols with type STT_TLS (gABI).
+  // Symbols whose type cannot be validated against the gABI invariant are
+  // exempt:
+  // * script-defined symbols have no ELF type,
+  // * section symbols and undefined symbols are accepted by GNU ld, and some
+  //   assemblers (LoongArch, MIPS) emit them for TLS relocations, e.g.
+  //   `.dtprelword .tdata+1` in debug info.
+  // Defined non-TLS symbols are rejected; this is stricter than GNU ld, which
+  // only warns.
+  if (sym.isTls() || sym.scriptDefined || sym.isSection() || sym.isUndefined())
+    return false;
+  auto diag = Err(ctx);
+  diag << "relocation " << type << " against " << &sym
+       << " cannot be used with a non-STT_TLS symbol";
+  printLocation(diag, sec, sym, offset);
+  return true;
+}
+
 bool RelocScan::checkTlsLe(uint64_t offset, Symbol &sym, RelType type) {
+  if (checkTlsSym(ctx, *sec, offset, sym, type))
+    return true;
   if (!ctx.arg.shared)
     return false;
   auto diag = Err(ctx);
@@ -933,6 +955,11 @@ bool RelocScan::isStaticLinkTimeConstant(RelExpr e, RelType type,
 // space for the extra PT_LOAD even if we end up not using it.
 void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
                         Symbol &sym, int64_t addend) const {
+  // Some TLS relocations are routed here directly, e.g. R_DTPREL.
+  if (LLVM_UNLIKELY(isTlsExpr(expr) &&
+                    checkTlsSym(ctx, *sec, offset, sym, type)))
+    return;
+
   // If non-ifunc non-preemptible, change PLT to direct call and optimize GOT
   // indirection.
   const bool isIfunc = sym.isGnuIFunc();

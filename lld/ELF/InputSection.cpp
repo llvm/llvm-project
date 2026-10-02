@@ -10,6 +10,7 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "OutputSections.h"
+#include "RelocScan.h"
 #include "Relocations.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
@@ -1079,6 +1080,9 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
     Symbol &sym = f->getRelocTargetSym(rel);
     RelExpr expr = target.getRelExpr(type, sym, bufLoc);
     if (expr == R_NONE)
+      continue;
+    if (LLVM_UNLIKELY(isTlsExpr(expr) &&
+                      checkTlsSym(ctx, *this, offset, sym, type)))
       continue;
     auto *ds = dyn_cast<Defined>(&sym);
 

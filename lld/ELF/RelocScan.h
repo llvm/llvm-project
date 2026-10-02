@@ -45,6 +45,19 @@ template <RelExpr... Exprs> bool oneof(RelExpr expr) {
   return (uint64_t(1) << expr) & buildMask(Exprs...);
 }
 
+// TLS relocations can only reference symbols with type STT_TLS (gABI).
+// A target classifying a TLS relocation with a non-TLS expr must call
+// checkTlsSym explicitly.
+inline bool isTlsExpr(RelExpr expr) {
+  // RE_LOONGARCH_GOT* are also used for non-TLS GOT relocations and
+  // therefore excluded.
+  return oneof<R_TPREL, R_TPREL_NEG, R_DTPREL, R_TLSDESC, R_TLSDESC_PC,
+               R_TLSDESC_GOTPLT, R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC,
+               R_TLSLD_GOT, R_TLSLD_GOTPLT, R_TLSLD_GOT_OFF, R_TLSLD_PC,
+               RE_AARCH64_TLSDESC_PAGE, RE_MIPS_TLSGD, RE_MIPS_TLSLD,
+               RE_LOONGARCH_TLSGD_PAGE_PC, RE_LOONGARCH_TLSDESC_PAGE_PC>(expr);
+}
+
 // This class encapsulates states needed to scan relocations for one
 // InputSectionBase.
 class RelocScan {
@@ -107,6 +120,8 @@ public:
   template <bool enableIeToLe = true>
   void handleTlsIe(RelExpr ieExpr, RelType type, uint64_t offset,
                    int64_t addend, Symbol &sym) {
+    if (checkTlsSym(ctx, *sec, offset, sym, type))
+      return;
     if (enableIeToLe && !ctx.arg.shared && !sym.isPreemptible) {
       // Optimize to Local Exec.
       sec->addReloc({R_TPREL, type, offset, addend, &sym});
@@ -128,6 +143,8 @@ public:
   // call should be skipped (i.e., caller should ++it).
   bool handleTlsLd(RelExpr sharedExpr, RelType type, uint64_t offset,
                    int64_t addend, Symbol &sym) {
+    if (checkTlsSym(ctx, *sec, offset, sym, type))
+      return true;
     if (ctx.arg.shared) {
       ctx.needsTlsLd.store(true, std::memory_order_relaxed);
       sec->addReloc({sharedExpr, type, offset, addend, &sym});
@@ -143,6 +160,8 @@ public:
   // ieExpr/leExpr to disable GD-to-IE/LE optimization (e.g. ARM, RISC-V).
   bool handleTlsGd(RelExpr sharedExpr, RelExpr ieExpr, RelExpr leExpr,
                    RelType type, uint64_t offset, int64_t addend, Symbol &sym) {
+    if (checkTlsSym(ctx, *sec, offset, sym, type))
+      return true;
     if (!ctx.arg.shared && ieExpr != R_NONE) {
       if (sym.isPreemptible) {
         // Optimize to Initial Exec.
@@ -162,6 +181,8 @@ public:
   // Handle TLSDESC relocation.
   void handleTlsDesc(RelExpr sharedExpr, RelExpr ieExpr, RelType type,
                      uint64_t offset, int64_t addend, Symbol &sym) {
+    if (checkTlsSym(ctx, *sec, offset, sym, type))
+      return;
     if (ctx.arg.shared) {
       sym.setFlags(NEEDS_TLSDESC);
       sec->addReloc({sharedExpr, type, offset, addend, &sym});

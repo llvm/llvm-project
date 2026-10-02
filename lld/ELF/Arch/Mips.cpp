@@ -729,13 +729,22 @@ void MIPS<ELFT>::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     }
 
     if (expr == RE_MIPS_TLSLD) {
+      if (checkTlsSym(ctx, sec, offset, sym, type))
+        continue;
       ctx.in.mipsGot->addTlsIndex(*sec.file);
       sec.addReloc({expr, type, offset, addend, &sym});
     } else if (expr == RE_MIPS_TLSGD) {
+      if (checkTlsSym(ctx, sec, offset, sym, type))
+        continue;
       ctx.in.mipsGot->addDynTlsEntry(*sec.file, sym);
       sec.addReloc({expr, type, offset, addend, &sym});
     } else {
       if (expr == R_TPREL && rs.checkTlsLe(offset, sym, type))
+        continue;
+      // GOTTPREL relocations are classified RE_MIPS_GOT_OFF, which is shared
+      // with non-TLS GOT relocations, so check the symbol type here.
+      if ((type == R_MIPS_TLS_GOTTPREL || type == R_MICROMIPS_TLS_GOTTPREL) &&
+          checkTlsSym(ctx, sec, offset, sym, type))
         continue;
       rs.process(expr, type, offset, sym, addend);
     }
