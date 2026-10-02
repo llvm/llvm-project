@@ -1575,13 +1575,14 @@ include "llvm/Option/LibraryOptions.td"
 
 def FooOptions : OptionsStruct;
 
-defm : BoolField<"enable-foo", "1", "Enable foo">;
+defm : BoolField<"enable-foo", "true", "Enable foo">;
 defm threshold : ValueField<"foo-threshold", "unsigned", "8", "The threshold">;
 defm : ValueField<"foo-path", "StringRef", "\"-\"", "The input path">;
 ```
 
 The struct is in namespace `llvm` unless the def names another, as in `OptionsStruct<"mlir">`.
 A member is named after its option, `enable_foo` for `-enable-foo`; a named `defm` such as `defm threshold` names it `threshold`.
+`OptionsStruct<prefix = "foo-">` drops that prefix from member names, so `-foo-path` sets `path`.
 
 The `BoolField` is set by `-enable-foo` or `-enable-foo=true|false|1|0`.
 A `ValueField`, of an integer type, `double`, or `StringRef`, is set by `-foo-threshold=8` or `-foo-threshold 8`.

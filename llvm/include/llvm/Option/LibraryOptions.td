@@ -16,7 +16,11 @@
 
 include "llvm/Option/OptParser.td"
 
-class OptionsStruct<string namespace = "llvm"> { string Namespace = namespace; }
+// A row whose spelling starts with prefix names its member without it.
+class OptionsStruct<string namespace = "llvm", string prefix = ""> {
+  string Namespace = namespace;
+  string MemberPrefix = prefix;
+}
 
 // The member a row sets, the member's type and default value, and the value a
 // Flag assigns. Other kinds parse their argument.
