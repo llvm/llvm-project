@@ -17447,7 +17447,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         for (auto [I, V] : enumerate(Scalars))
           PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
         CompressedLoadInfo CompressInfo;
-        bool IsVectorized = isMaskedLoadCompress(
+        [[maybe_unused]] bool IsVectorized = isMaskedLoadCompress(
             Scalars, PointerOps, E->ReorderIndices, *TTI, *DL, *SE, *AC, *DT,
             *TLI, CostKind, [](Value *) { return true; }, SLPReVec,
             CompressInfo);
