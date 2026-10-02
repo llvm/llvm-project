@@ -8294,12 +8294,13 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitCommonDirectiveExit(
     FinalizationInfo Fi = FinalizationStack.pop_back_val();
     assert(Fi.DK == OMPD && "Unexpected Directive for Finalization call!");
 
-    if (Error Err = Fi.mergeFiniBB(Builder, FinIP.getNodeParent()))
+    BasicBlock *FinBB = FinIP.getNodeParent();
+    if (Error Err = Fi.mergeFiniBB(Builder, FinBB))
       return std::move(Err);
 
     // Exit condition: insertion point is before the terminator of the new Fini
     // block
-    Builder.SetInsertPoint(FinIP.getNodeParent()->getTerminator());
+    Builder.SetInsertPoint(FinBB->getTerminator());
   }
 
   if (!ExitCall)
