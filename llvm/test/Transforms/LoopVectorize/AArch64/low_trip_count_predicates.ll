@@ -461,7 +461,7 @@ define i32 @tc4(ptr noundef readonly captures(none) %tmp) vscale_range(1,16) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> zeroinitializer, [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> zeroinitializer, <4 x i32> [[WIDE_LOAD]])
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP3]])

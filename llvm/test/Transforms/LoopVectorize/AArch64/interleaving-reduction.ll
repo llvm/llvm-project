@@ -36,10 +36,10 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-4-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i32>, ptr [[TMP1]], align 1
 ; INTERLEAVE-4-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i32>, ptr [[TMP2]], align 1
 ; INTERLEAVE-4-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i32>, ptr [[TMP3]], align 1
-; INTERLEAVE-4-NEXT:    [[TMP4]] = add <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
-; INTERLEAVE-4-NEXT:    [[TMP5]] = add <4 x i32> [[VEC_PHI2]], [[WIDE_LOAD5]]
-; INTERLEAVE-4-NEXT:    [[TMP6]] = add <4 x i32> [[VEC_PHI3]], [[WIDE_LOAD6]]
-; INTERLEAVE-4-NEXT:    [[TMP7]] = add <4 x i32> [[VEC_PHI4]], [[WIDE_LOAD7]]
+; INTERLEAVE-4-NEXT:    [[TMP4]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]])
+; INTERLEAVE-4-NEXT:    [[TMP5]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[VEC_PHI2]], <4 x i32> [[WIDE_LOAD5]])
+; INTERLEAVE-4-NEXT:    [[TMP6]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[VEC_PHI3]], <4 x i32> [[WIDE_LOAD6]])
+; INTERLEAVE-4-NEXT:    [[TMP7]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[VEC_PHI4]], <4 x i32> [[WIDE_LOAD7]])
 ; INTERLEAVE-4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; INTERLEAVE-4-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; INTERLEAVE-4-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -65,7 +65,7 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-4-NEXT:    [[VEC_PHI13:%.*]] = phi <4 x i32> [ [[TMP10]], [[VEC_EPILOG_PH]] ], [ [[TMP12:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; INTERLEAVE-4-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[INDEX12]]
 ; INTERLEAVE-4-NEXT:    [[WIDE_LOAD14:%.*]] = load <4 x i32>, ptr [[TMP11]], align 1
-; INTERLEAVE-4-NEXT:    [[TMP12]] = add <4 x i32> [[VEC_PHI13]], [[WIDE_LOAD14]]
+; INTERLEAVE-4-NEXT:    [[TMP12]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[VEC_PHI13]], <4 x i32> [[WIDE_LOAD14]])
 ; INTERLEAVE-4-NEXT:    [[INDEX_NEXT15]] = add nuw i64 [[INDEX12]], 4
 ; INTERLEAVE-4-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT15]], [[N_VEC11]]
 ; INTERLEAVE-4-NEXT:    br i1 [[TMP13]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -115,10 +115,10 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-2-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP1]], align 1
 ; INTERLEAVE-2-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i32>, ptr [[TMP5]], align 1
 ; INTERLEAVE-2-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i32>, ptr [[TMP8]], align 1
-; INTERLEAVE-2-NEXT:    [[TMP2]] = add <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
-; INTERLEAVE-2-NEXT:    [[TMP3]] = add <4 x i32> [[VEC_PHI1]], [[WIDE_LOAD2]]
-; INTERLEAVE-2-NEXT:    [[TMP6]] = add <4 x i32> [[VEC_PHI3]], [[WIDE_LOAD6]]
-; INTERLEAVE-2-NEXT:    [[TMP7]] = add <4 x i32> [[VEC_PHI4]], [[WIDE_LOAD7]]
+; INTERLEAVE-2-NEXT:    [[TMP2]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]])
+; INTERLEAVE-2-NEXT:    [[TMP3]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[VEC_PHI1]], <4 x i32> [[WIDE_LOAD2]])
+; INTERLEAVE-2-NEXT:    [[TMP6]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[VEC_PHI3]], <4 x i32> [[WIDE_LOAD6]])
+; INTERLEAVE-2-NEXT:    [[TMP7]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[VEC_PHI4]], <4 x i32> [[WIDE_LOAD7]])
 ; INTERLEAVE-2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; INTERLEAVE-2-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; INTERLEAVE-2-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -144,7 +144,7 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-2-NEXT:    [[VEC_PHI13:%.*]] = phi <4 x i32> [ [[TMP10]], [[VEC_EPILOG_PH]] ], [ [[TMP12:%.*]], [[LOOP]] ]
 ; INTERLEAVE-2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[INDEX12]]
 ; INTERLEAVE-2-NEXT:    [[WIDE_LOAD14:%.*]] = load <4 x i32>, ptr [[TMP11]], align 1
-; INTERLEAVE-2-NEXT:    [[TMP12]] = add <4 x i32> [[VEC_PHI13]], [[WIDE_LOAD14]]
+; INTERLEAVE-2-NEXT:    [[TMP12]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[VEC_PHI13]], <4 x i32> [[WIDE_LOAD14]])
 ; INTERLEAVE-2-NEXT:    [[INDEX_NEXT15]] = add nuw i64 [[INDEX12]], 4
 ; INTERLEAVE-2-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT15]], [[N_VEC11]]
 ; INTERLEAVE-2-NEXT:    br i1 [[TMP13]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]

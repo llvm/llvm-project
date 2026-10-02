@@ -171,10 +171,10 @@ define double @sum_reduction(ptr nocapture readonly %a, i64 %n) {
 ; A320-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x double>, ptr [[TMP6]], align 8
 ; A320-NEXT:    [[WIDE_LOAD5:%.*]] = load <2 x double>, ptr [[TMP5]], align 8
 ; A320-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x double>, ptr [[TMP11]], align 8
-; A320-NEXT:    [[TMP2]] = fadd fast <2 x double> [[VEC_PHI]], [[WIDE_LOAD]]
-; A320-NEXT:    [[TMP4]] = fadd fast <2 x double> [[VEC_PHI1]], [[WIDE_LOAD2]]
-; A320-NEXT:    [[TMP10]] = fadd fast <2 x double> [[VEC_PHI2]], [[WIDE_LOAD5]]
-; A320-NEXT:    [[TMP7]] = fadd fast <2 x double> [[VEC_PHI3]], [[WIDE_LOAD6]]
+; A320-NEXT:    [[TMP2]] = call fast <2 x double> @llvm.vector.partial.reduce.fadd.v2f64.v2f64(<2 x double> [[VEC_PHI]], <2 x double> [[WIDE_LOAD]])
+; A320-NEXT:    [[TMP4]] = call fast <2 x double> @llvm.vector.partial.reduce.fadd.v2f64.v2f64(<2 x double> [[VEC_PHI1]], <2 x double> [[WIDE_LOAD2]])
+; A320-NEXT:    [[TMP10]] = call fast <2 x double> @llvm.vector.partial.reduce.fadd.v2f64.v2f64(<2 x double> [[VEC_PHI2]], <2 x double> [[WIDE_LOAD5]])
+; A320-NEXT:    [[TMP7]] = call fast <2 x double> @llvm.vector.partial.reduce.fadd.v2f64.v2f64(<2 x double> [[VEC_PHI3]], <2 x double> [[WIDE_LOAD6]])
 ; A320-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP1]], 8
 ; A320-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; A320-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -274,10 +274,10 @@ define double @dot_product(ptr nocapture readonly %a, ptr nocapture readonly %b,
 ; A320-NEXT:    [[TMP10:%.*]] = fmul fast <2 x double> [[WIDE_LOAD2]], [[WIDE_LOAD4]]
 ; A320-NEXT:    [[TMP19:%.*]] = fmul fast <2 x double> [[WIDE_LOAD5]], [[WIDE_LOAD9]]
 ; A320-NEXT:    [[TMP11:%.*]] = fmul fast <2 x double> [[WIDE_LOAD6]], [[WIDE_LOAD10]]
-; A320-NEXT:    [[TMP6]] = fadd fast <2 x double> [[VEC_PHI]], [[TMP4]]
-; A320-NEXT:    [[TMP7]] = fadd fast <2 x double> [[VEC_PHI1]], [[TMP10]]
-; A320-NEXT:    [[TMP16]] = fadd fast <2 x double> [[VEC_PHI2]], [[TMP19]]
-; A320-NEXT:    [[TMP15]] = fadd fast <2 x double> [[VEC_PHI3]], [[TMP11]]
+; A320-NEXT:    [[TMP6]] = call fast <2 x double> @llvm.vector.partial.reduce.fadd.v2f64.v2f64(<2 x double> [[VEC_PHI]], <2 x double> [[TMP4]])
+; A320-NEXT:    [[TMP7]] = call fast <2 x double> @llvm.vector.partial.reduce.fadd.v2f64.v2f64(<2 x double> [[VEC_PHI1]], <2 x double> [[TMP10]])
+; A320-NEXT:    [[TMP16]] = call fast <2 x double> @llvm.vector.partial.reduce.fadd.v2f64.v2f64(<2 x double> [[VEC_PHI2]], <2 x double> [[TMP19]])
+; A320-NEXT:    [[TMP15]] = call fast <2 x double> @llvm.vector.partial.reduce.fadd.v2f64.v2f64(<2 x double> [[VEC_PHI3]], <2 x double> [[TMP11]])
 ; A320-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP1]], 8
 ; A320-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; A320-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
