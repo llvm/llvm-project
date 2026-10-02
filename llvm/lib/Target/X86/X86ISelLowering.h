@@ -590,6 +590,10 @@ namespace llvm {
     /// supported.
     bool shouldScalarizeBinop(SDValue) const override;
 
+    /// Pre-SSE42 vXi64 comparisons have to be emulated with multiple vXi32
+    /// comparisons and shuffles, which is slower than scalar code.
+    bool shouldUnrollVectorCMP(EVT OpVT) const override;
+
     /// Extract of a scalar FP value from index 0 of a vector is free.
     bool isExtractVecEltCheap(EVT VT, unsigned Index) const override {
       EVT EltVT = VT.getScalarType();
