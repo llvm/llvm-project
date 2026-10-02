@@ -104,3 +104,23 @@ void EnumWithAttributes3Fn(void) {
   // move to this use of the variable.
   void *p = EnumWithAttributes3Ptr;
 }
+
+// CHECK:      struct Recursive {
+// CHECK-NEXT:     struct obj *(*next)(struct Recursive *);
+// CHECK-NEXT: };
+struct Recursive {
+  struct obj *(*next)(struct Recursive *q);
+};
+
+// CHECK:      struct A {
+// CHECK-NEXT:     int x;
+// CHECK-NEXT: };
+// CHECK-NEXT: struct Foo {
+// CHECK-NEXT:     struct obj *(*next)(struct A *);
+// CHECK-NEXT: ;
+struct A {
+  int x;
+};
+struct Foo {
+  struct obj *(*next)(struct A *q);
+};
