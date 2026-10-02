@@ -566,6 +566,8 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
 
     // Builds `exit`: coro.end(/*unwind*/ false) followed by the actual return
     // to the caller.
+    
+    assert(!cir::MissingFeatures::coroutineGroManager());
     auto exitBuilder = [&]() {
       cir::ConstantOp nullHandler =
           builder.getNullPtr(builder.getVoidPtrTy(), openCurlyLoc);

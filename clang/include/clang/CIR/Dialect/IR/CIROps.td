@@ -792,7 +792,6 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
     UnitAttr:$init,
     UnitAttr:$constant,
     UnitAttr:$cleanup_dest_slot,
-    UnitAttr:$coroutine_suspend_point,
     ConfinedAttr<I64Attr, [IntMinValue<1>]>:$alignment,
     OptionalAttr<CIR_AnnotationArrayAttr>:$annotations
   );
@@ -831,8 +830,7 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
     `align` `(` $alignment `)`
     oilist( `init`              $init
           | `const`             $constant
-          | `cleanup_dest_slot` $cleanup_dest_slot
-          | `coroutine_suspend_point` $coroutine_suspend_point)
+          | `cleanup_dest_slot` $cleanup_dest_slot)
     (`size` `(` $dynAllocSize^ `)`)? `:` qualified(type($addr))
     ($annotations^)? attr-dict
   }];
@@ -4394,7 +4392,7 @@ def CIR_FuncOp : CIR_Op<"func", [
     UnitAttr:$builtin,
     UnitAttr:$coroutine,
     UnitAttr:$flattened_coroutine,
-    OptionalAttr<CIR_InlineKind>:$inline_kind,
+    OptionalAttr<CIR_InlineKindAttr>:$inline_kind,
     UnitAttr:$lambda,
     UnitAttr:$no_proto,
     UnitAttr:$dso_local,

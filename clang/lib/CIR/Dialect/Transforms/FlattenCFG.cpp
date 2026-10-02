@@ -2139,25 +2139,7 @@ static mlir::Block *getOrCreateBlockForSuspendPoint(
     cir::FuncOp funcOp, mlir::PatternRewriter &rewriter, mlir::Location loc) {
   mlir::Block &entryBlock = funcOp.getBody().front();
 
-  auto it = llvm::find_if(entryBlock, [](auto &op) {
-    return mlir::isa<AllocaOp>(&op) &&
-           mlir::cast<AllocaOp>(&op).getCoroutineSuspendPoint();
-  });
-
-  assert(it->hasOneUse() &&
-         "coroutine suspend point alloca must have exactly one use");
-  auto storeOp = cast<cir::StoreOp>(*it->getUses().begin()->getOwner());
-  auto suspendPoint = cast<cir::ConstantOp>(storeOp.getValue().getDefiningOp());
-  mlir::Block *suspendBlock = suspendPoint->getBlock();
-  if (&suspendBlock->front() == suspendPoint)
-    return suspendBlock;
-
-  mlir::OpBuilder::InsertionGuard guard(rewriter);
-  mlir::Block *remainingBlock =
-      rewriter.splitBlock(suspendBlock, suspendPoint->getIterator());
-  rewriter.setInsertionPointToEnd(suspendBlock);
-  cir::BrOp::create(rewriter, loc, remainingBlock);
-  return remainingBlock;
+return {};
 }
 
 class CIRAwaitOpFlattening : public mlir::OpRewritePattern<cir::AwaitOp> {
@@ -2330,58 +2312,12 @@ public:
   }
 };
 
-class CIRCoroBodyOpFlattening : public mlir::OpRewritePattern<cir::CoroBodyOp> {
-public:
-  using OpRewritePattern<cir::CoroBodyOp>::OpRewritePattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::CoroBodyOp coroBodyOp,
-                  mlir::PatternRewriter &rewriter) const override {
-
-    if (hasNestedOpsToFlatten(coroBodyOp.getBody()))
-      return mlir::failure();
-
-    llvm::SmallVector<cir::CoReturnOp> coReturns;
-    coroBodyOp.getBody().walk<mlir::WalkOrder::PreOrder>(
-        [&](cir::CoReturnOp op) {
-          coReturns.push_back(op);
-          return mlir::WalkResult::advance();
-        });
-
-    mlir::OpBuilder::InsertionGuard guard(rewriter);
-    mlir::Location loc = coroBodyOp.getLoc();
-
-    mlir::Block *currentBlock = rewriter.getInsertionBlock();
-    mlir::Block *continueBlock =
-        rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
-
-    // Inline body region.
-    mlir::Block *beforeBody = &coroBodyOp.getBody().front();
-    rewriter.inlineRegionBefore(coroBodyOp.getBody(), continueBlock);
-
-    rewriter.setInsertionPointToEnd(currentBlock);
-    cir::BrOp::create(rewriter, loc, mlir::ValueRange(), beforeBody);
-
-    // In CIR CodeGen, the operation following CoroBodyOp is always the
-    // final-suspend path. Therefore, the continuation block created by the
-    // split corresponds to the final suspend point.
-    for (cir::CoReturnOp &coReturn : coReturns) {
-      rewriter.setInsertionPoint(coReturn);
-      rewriter.replaceOpWithNewOp<cir::BrOp>(coReturn, continueBlock);
-    }
-
-    rewriter.replaceOp(coroBodyOp, continueBlock->getArguments());
-
-    return mlir::success();
-  }
-};
-
 void populateFlattenCFGPatterns(RewritePatternSet &patterns) {
   patterns
       .add<CIRIfFlattening, CIRLoopOpInterfaceFlattening, CIRScopeOpFlattening,
            CIRSwitchOpFlattening, CIRTernaryOpFlattening,
            CIRCleanupScopeOpFlattening, CIRTryOpFlattening,
-           CIRAwaitOpFlattening, CIRCoroBodyOpFlattening>(
+           CIRAwaitOpFlattening>(
           patterns.getContext());
 }
 
