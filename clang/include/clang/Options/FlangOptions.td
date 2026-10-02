@@ -72,6 +72,12 @@ defm real_8_real_16 : BooleanFFlag<"real-8-real-16">, Group<gfortran_Group>;
 defm real_8_real_4 : BooleanFFlag<"real-8-real-4">, Group<gfortran_Group>;
 defm recursive : BooleanFFlag<"recursive">, Group<gfortran_Group>;
 defm second_underscore : BooleanFFlag<"second-underscore">, Group<gfortran_Group>;
+def fimplicit_default_mapper_allocatable_members : Flag<["-"], "fimplicit-default-mapper-allocatable-members">,
+  Group<f_Group>, Visibility<[FlangOption, FC1Option]>,
+  HelpText<"Enable implicit allocatable member maps in compiler-generated OpenMP default mappers">;
+def fno_implicit_default_mapper_allocatable_members : Flag<["-"], "fno-implicit-default-mapper-allocatable-members">,
+  Group<f_Group>, Visibility<[FlangOption, FC1Option]>,
+  HelpText<"Disable implicit allocatable member maps in compiler-generated OpenMP default mappers">;
 defm sign_zero : BooleanFFlag<"sign-zero">, Group<gfortran_Group>;
 defm whole_file : BooleanFFlag<"whole-file">, Group<gfortran_Group>;
 

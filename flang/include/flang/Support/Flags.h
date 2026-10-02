@@ -13,5 +13,6 @@
 
 extern llvm::cl::opt<bool> enableDelayedPrivatization;
 extern llvm::cl::opt<bool> enableDelayedPrivatizationStaging;
+extern bool enableImplicitDefaultMapperAllocatableMembers;
 
 #endif // FORTRAN_SUPPORT_FLAGS_H_

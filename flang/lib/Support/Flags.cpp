@@ -18,3 +18,5 @@ llvm::cl::opt<bool> enableDelayedPrivatizationStaging(
     llvm::cl::desc("For partially supported constructs, emit private/local "
                    "variables as clauses/specifiers on MLIR ops."),
     llvm::cl::init(false));
+
+bool enableImplicitDefaultMapperAllocatableMembers = true;

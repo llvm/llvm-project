@@ -386,6 +386,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
        options::OPT_fstack_repack_arrays, options::OPT_fno_stack_repack_arrays,
        options::OPT_ftime_report, options::OPT_ftime_report_EQ,
        options::OPT_funroll_loops, options::OPT_fno_unroll_loops,
+       options::OPT_fimplicit_default_mapper_allocatable_members,
+       options::OPT_fno_implicit_default_mapper_allocatable_members,
        options::OPT_relaxed_c_loc});
 
   Args.addOptOutFlag(CmdArgs, options::OPT_foptimize_sibling_calls,
