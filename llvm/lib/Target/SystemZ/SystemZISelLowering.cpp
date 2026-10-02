@@ -4216,6 +4216,7 @@ SDValue SystemZTargetLowering::lowerTR(SDValue Op,
   SDValue Src   = Op.getOperand(2);
   SDValue Len   = Op.getOperand(3);
   SDValue Tbl   = Op.getOperand(4);
+  SmallVector<SDValue, 4> Ops;
 
   // For compile-time constant lengths, validate range [1, 256].
   // Variable lengths are handled (or rejected) by the instruction at runtime.
@@ -4226,15 +4227,20 @@ SDValue SystemZTargetLowering::lowerTR(SDValue Op,
           "TRANSLATE length must be a compile-time constant between 1 and 256");
       return DAG.getUNDEF(MVT::Other);
     }
+    
+    // Direct invocation of TR instruction doesn't require the
+    // length to be subtracted by 1, and will accepts ops as-is.
+    Ops = { Chain, Src, Len, Tbl };
+
+  } else {
+    // Adjust the provided length to encode length-1 as 
+    // EXRL the instruction requires pre-adjusted length.
+    SDValue AdjLen = DAG.getNode(ISD::ADD, DL, MVT::i64,
+                                  DAG.getZExtOrTrunc(Len, DL, MVT::i64),
+                                  DAG.getSignedConstant(-1, DL, MVT::i64));
+    Ops = { Chain, Src, AdjLen, Tbl };    
   }
 
- // Adjust the provided length to encode length-1. Both TR and EXRL
- // instructions must carry the adjusted value.
- SDValue AdjLen = DAG.getNode(ISD::ADD, DL, MVT::i64,
-                              DAG.getZExtOrTrunc(Len, DL, MVT::i64),
-                              DAG.getSignedConstant(-1, DL, MVT::i64));
-
-  SDValue Ops[] = { Chain, Src, AdjLen, Tbl };
   return DAG.getNode(SystemZISD::TR, DL, MVT::Other, Ops);
 }
 

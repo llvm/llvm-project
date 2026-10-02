@@ -6,7 +6,7 @@ declare void @llvm.s390.translate(ptr, i64, ptr)
 define void @tr_len_five(ptr %src, ptr %table) {
 ; CHECK-LABEL: tr_len_five:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    tr 0(4,%r2), 0(%r3)
+; CHECK-NEXT:    tr 0(5,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.s390.translate(ptr %src, i64 5, ptr %table)
   ret void
@@ -15,7 +15,7 @@ define void @tr_len_five(ptr %src, ptr %table) {
 define void @tr_len_one(ptr %src, ptr %table) {
 ; CHECK-LABEL: tr_len_one:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    tr 0(0,%r2), 0(%r3)
+; CHECK-NEXT:    tr 0(1,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.s390.translate(ptr %src, i64 1, ptr %table)
   ret void
@@ -24,7 +24,7 @@ define void @tr_len_one(ptr %src, ptr %table) {
 define void @tr_len_256(ptr %src, ptr %table) {
 ; CHECK-LABEL: tr_len_256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    tr 0(255,%r2), 0(%r3)
+; CHECK-NEXT:    tr 0(256,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.s390.translate(ptr %src, i64 256, ptr %table)
   ret void
