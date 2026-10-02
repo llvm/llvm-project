@@ -8138,16 +8138,18 @@ bool TargetLowering::expandMUL_LOHI(unsigned Opcode, EVT VT, const SDLoc &dl,
   unsigned OuterBitSize = VT.getScalarSizeInBits();
   unsigned InnerBitSize = HiLoVT.getScalarSizeInBits();
 
-  // Check if both operands are zero-extended.
-  bool BothZeroExtended = false;
+  // Check if one or both operands are zero-extended.
+  bool LHSZeroExtended = false, RHSZeroExtended = false;
   if (isOperationLegalOrCustom(ISD::TRUNCATE, HiLoVT)) {
     APInt HighMask = APInt::getHighBitsSet(OuterBitSize, InnerBitSize);
-    BothZeroExtended = DAG.MaskedValueIsZero(LHS, HighMask) &&
-                       DAG.MaskedValueIsZero(RHS, HighMask);
+    LHSZeroExtended = DAG.MaskedValueIsZero(LHS, HighMask);
+    RHSZeroExtended = DAG.MaskedValueIsZero(RHS, HighMask);
   }
+  bool BothZeroExtended = LHSZeroExtended && RHSZeroExtended;
+  bool EitherZeroExtended = LHSZeroExtended || RHSZeroExtended;
 
   if (!HasMULHU && !HasMULHS && !HasUMUL_LOHI && !HasSMUL_LOHI &&
-      !BothZeroExtended)
+      !BothZeroExtended && !(Opcode == ISD::MUL && EitherZeroExtended))
     return false;
 
   // LL, LH, RL, and RH must be either all NULL or all set to a value.
@@ -8221,11 +8223,21 @@ bool TargetLowering::expandMUL_LOHI(unsigned Opcode, EVT VT, const SDLoc &dl,
     RH = DAG.getNode(ISD::TRUNCATE, dl, HiLoVT, RH);
   }
 
+  if (LHSZeroExtended)
+    LH = DAG.getConstant(0, dl, HiLoVT);
+  if (RHSZeroExtended)
+    RH = DAG.getConstant(0, dl, HiLoVT);
+
   if (!LH.getNode())
     return false;
 
-  if (!MakeMUL_LOHI(LL, RL, Lo, Hi, false))
-    return false;
+  if (!MakeMUL_LOHI(LL, RL, Lo, Hi, false)) {
+    if (Opcode == ISD::MUL && EitherZeroExtended) {
+      forceExpandMultiply(DAG, dl, /*Signed=*/false, Lo, Hi, LL, RL);
+    } else {
+      return false;
+    }
+  }
 
   Result.push_back(Lo);
 
