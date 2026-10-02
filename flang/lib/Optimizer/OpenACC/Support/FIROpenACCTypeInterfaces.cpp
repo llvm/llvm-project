@@ -775,9 +775,8 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
   // Reduction init yields only the private variable, so its destroy reloads
   // that descriptor. Private and firstprivate also yield the allocation.
   bool preserveNullAllocation =
-      bounds.empty() &&
-      (fir::isPointerType(inputVar.getType()) ||
-       fir::isAllocatableType(inputVar.getType()));
+      bounds.empty() && (fir::isPointerType(inputVar.getType()) ||
+                         fir::isAllocatableType(inputVar.getType()));
   mlir::Type pointerAllocationType;
   if (preserveNullAllocation)
     pointerAllocationType =
