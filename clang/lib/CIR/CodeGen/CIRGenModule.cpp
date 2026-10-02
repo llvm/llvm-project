@@ -37,6 +37,7 @@
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/ModuleUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -412,8 +413,8 @@ CIRGenModule::getAddrOfGlobal(GlobalDecl gd, ForDefinition_t isForDefinition) {
                              isForDefinition);
   }
 
-  return getAddrOfGlobalVar(cast<VarDecl>(d), /*ty=*/nullptr, isForDefinition)
-      .getDefiningOp();
+  return getOrCreateCIRGlobal(cast<VarDecl>(d), /*ty=*/nullptr,
+                              isForDefinition);
 }
 
 void CIRGenModule::emitGlobalDecl(const clang::GlobalDecl &d) {
@@ -1435,10 +1436,25 @@ mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty,
   bool tlsAccess = d->getTLSKind() != VarDecl::TLS_None;
   cir::GlobalOp g = getOrCreateCIRGlobal(d, ty, isForDefinition);
   mlir::Type ptrTy = builder.getPointerTo(g.getSymType(), g.getAddrSpaceAttr());
-  return cir::GetGlobalOp::create(
+  mlir::Value addr = cir::GetGlobalOp::create(
       builder, getLoc(d->getSourceRange()), ptrTy, g.getSymNameAttr(),
       tlsAccess,
       /*static_local=*/g.getStaticLocalGuard().has_value());
+  return castGlobalToDeclAddrSpace(addr, *d);
+}
+
+mlir::Value CIRGenModule::castGlobalToDeclAddrSpace(mlir::Value addr,
+                                                    const VarDecl &vd) {
+  // A global may live in a different address space than its declared type,
+  // e.g. a CUDA __shared__ variable. Like classic CodeGen, cast once where
+  // the address is formed so every user sees the declared type.
+  auto ptrTy = mlir::cast<cir::PointerType>(addr.getType());
+  mlir::ptr::MemorySpaceAttrInterface declAS =
+      getTypes().getPointerAddressSpace(vd.getType());
+  if (ptrTy.getAddrSpace() == declAS)
+    return addr;
+  return builder.createAddrSpaceCast(
+      addr, builder.getPointerTo(ptrTy.getPointee(), declAS));
 }
 
 cir::GlobalViewAttr CIRGenModule::getAddrOfGlobalVarAttr(const VarDecl *d) {
@@ -1830,34 +1846,8 @@ bool CIRGenModule::supportsCOMDAT() const {
   return getTriple().supportsCOMDAT();
 }
 
-static bool shouldBeInCOMDAT(CIRGenModule &cgm, const Decl &d) {
-  if (!cgm.supportsCOMDAT())
-    return false;
-
-  if (d.hasAttr<SelectAnyAttr>())
-    return true;
-
-  GVALinkage linkage;
-  if (auto *vd = dyn_cast<VarDecl>(&d))
-    linkage = cgm.getASTContext().GetGVALinkageForVariable(vd);
-  else
-    linkage =
-        cgm.getASTContext().GetGVALinkageForFunction(cast<FunctionDecl>(&d));
-
-  switch (linkage) {
-  case clang::GVA_Internal:
-  case clang::GVA_AvailableExternally:
-  case clang::GVA_StrongExternal:
-    return false;
-  case clang::GVA_DiscardableODR:
-  case clang::GVA_StrongODR:
-    return true;
-  }
-  llvm_unreachable("No such linkage");
-}
-
 void CIRGenModule::maybeSetTrivialComdat(const Decl &d, mlir::Operation *op) {
-  if (!shouldBeInCOMDAT(*this, d))
+  if (!CodeGenUtils::shouldBeInCOMDAT(getASTContext(), d))
     return;
   if (auto globalOp = dyn_cast_or_null<cir::GlobalOp>(op)) {
     globalOp.setComdat(true);
@@ -1971,82 +1961,6 @@ cir::GlobalOp CIRGenModule::createOrReplaceCXXRuntimeVariable(
   return gv;
 }
 
-// TODO(CIR): this could be a common method between LLVM codegen.
-static bool isVarDeclStrongDefinition(const ASTContext &astContext,
-                                      CIRGenModule &cgm, const VarDecl *vd,
-                                      bool noCommon) {
-  // Don't give variables common linkage if -fno-common was specified unless it
-  // was overridden by a NoCommon attribute.
-  if ((noCommon || vd->hasAttr<NoCommonAttr>()) && !vd->hasAttr<CommonAttr>())
-    return true;
-
-  // C11 6.9.2/2:
-  //   A declaration of an identifier for an object that has file scope without
-  //   an initializer, and without a storage-class specifier or with the
-  //   storage-class specifier static, constitutes a tentative definition.
-  if (vd->getInit() || vd->hasExternalStorage())
-    return true;
-
-  // A variable cannot be both common and exist in a section.
-  if (vd->hasAttr<SectionAttr>())
-    return true;
-
-  // A variable cannot be both common and exist in a section.
-  // We don't try to determine which is the right section in the front-end.
-  // If no specialized section name is applicable, it will resort to default.
-  if (vd->hasAttr<PragmaClangBSSSectionAttr>() ||
-      vd->hasAttr<PragmaClangDataSectionAttr>() ||
-      vd->hasAttr<PragmaClangRelroSectionAttr>() ||
-      vd->hasAttr<PragmaClangRodataSectionAttr>())
-    return true;
-
-  // Thread local vars aren't considered common linkage.
-  if (vd->getTLSKind())
-    return true;
-
-  // Tentative definitions marked with WeakImportAttr are true definitions.
-  if (vd->hasAttr<WeakImportAttr>())
-    return true;
-
-  // A variable cannot be both common and exist in a comdat.
-  if (shouldBeInCOMDAT(cgm, *vd))
-    return true;
-
-  // Declarations with a required alignment do not have common linkage in MSVC
-  // mode.
-  if (astContext.getTargetInfo().getCXXABI().isMicrosoft()) {
-    if (vd->hasAttr<AlignedAttr>())
-      return true;
-    QualType varType = vd->getType();
-    if (astContext.isAlignmentRequired(varType))
-      return true;
-
-    if (const auto *rd = varType->getAsRecordDecl()) {
-      for (const FieldDecl *fd : rd->fields()) {
-        if (fd->isBitField())
-          continue;
-        if (fd->hasAttr<AlignedAttr>())
-          return true;
-        if (astContext.isAlignmentRequired(fd->getType()))
-          return true;
-      }
-    }
-  }
-
-  // Microsoft's link.exe doesn't support alignments greater than 32 bytes for
-  // common symbols, so symbols with greater alignment requirements cannot be
-  // common.
-  // Other COFF linkers (ld.bfd and LLD) support arbitrary power-of-two
-  // alignments for common symbols via the aligncomm directive, so this
-  // restriction only applies to MSVC environments.
-  if (astContext.getTargetInfo().getTriple().isKnownWindowsMSVCEnvironment() &&
-      astContext.getTypeAlignIfKnown(vd->getType()) >
-          astContext.toBits(CharUnits::fromQuantity(32)))
-    return true;
-
-  return false;
-}
-
 cir::GlobalLinkageKind
 CIRGenModule::getCIRLinkageForDeclarator(const DeclaratorDecl *dd,
                                          GVALinkage linkage) {
@@ -2105,8 +2019,8 @@ CIRGenModule::getCIRLinkageForDeclarator(const DeclaratorDecl *dd,
   // C++ doesn't have tentative definitions and thus cannot have common
   // linkage.
   if (!getLangOpts().CPlusPlus && isa<VarDecl>(dd) &&
-      !isVarDeclStrongDefinition(astContext, *this, cast<VarDecl>(dd),
-                                 getCodeGenOpts().NoCommon))
+      !CodeGenUtils::isVarDeclStrongDefinition(astContext, cast<VarDecl>(dd),
+                                               getCodeGenOpts().NoCommon))
     return cir::GlobalLinkageKind::CommonLinkage;
 
   // selectany symbols are externally visible, so use weak instead of

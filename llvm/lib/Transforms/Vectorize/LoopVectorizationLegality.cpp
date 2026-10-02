@@ -22,6 +22,7 @@
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -535,6 +536,42 @@ bool LoopVectorizationLegality::isUniformMemOp(
   return isUniform(Ptr, VF) && !blockNeedsPredication(I.getParent());
 }
 
+/// Returns true if the type produced by \p I can be widened. Casts from vector
+/// types and extractelement instructions cannot be widened. Struct results are
+/// only supported if \p AllowStructCalls is set, for calls whose users are all
+/// extractvalue instructions and whose struct element types can be widened.
+static bool canWidenResultType(const Instruction &I, bool AllowStructCalls) {
+  if (isa<ExtractElementInst>(I) ||
+      (isa<CastInst>(I) &&
+       !VectorType::isValidElementType(I.getOperand(0)->getType())))
+    return false;
+  Type *Ty = I.getType();
+  if (!isa<StructType>(Ty))
+    return canVectorizeTy(Ty);
+  return AllowStructCalls && isa<CallInst>(I) && canVectorizeTy(Ty) &&
+         all_of(I.users(), IsaPred<ExtractValueInst>);
+}
+
+/// Returns true if the types produced and stored by \p I can be widened,
+/// otherwise reports a vectorization failure for \p TheLoop and returns false.
+static bool canWidenTypes(Instruction &I, bool AllowStructCalls,
+                          OptimizationRemarkEmitter *ORE, Loop *TheLoop) {
+  if (!canWidenResultType(I, AllowStructCalls)) {
+    reportVectorizationFailure("Found unvectorizable type",
+                               "instruction return type cannot be vectorized",
+                               "CantVectorizeInstructionReturnType", ORE,
+                               TheLoop, &I);
+    return false;
+  }
+  auto *SI = dyn_cast<StoreInst>(&I);
+  if (SI && !VectorType::isValidElementType(SI->getValueOperand()->getType())) {
+    reportVectorizationFailure("Store instruction cannot be vectorized",
+                               "CantVectorizeStore", ORE, TheLoop, SI);
+    return false;
+  }
+  return true;
+}
+
 bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   assert(!TheLoop->isInnermost() && "We are not vectorizing an outer loop.");
   // Store the result and return it at the end instead of exiting early, in case
@@ -543,6 +580,16 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   bool DoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
 
   for (BasicBlock *BB : TheLoop->blocks()) {
+    // Instructions in the loop nest are widened, so the types they produce and
+    // store must be widenable. Struct-returning calls are not supported yet.
+    for (Instruction &I : *BB) {
+      if (canWidenTypes(I, /*AllowStructCalls=*/false, ORE, TheLoop))
+        continue;
+      if (!DoExtraAnalysis)
+        return false;
+      Result = false;
+    }
+
     // Don't try to vectorize outer loops with atomic or volatile accesses.
     for (Instruction &I : *BB) {
       if (!I.isAtomic() && !I.isVolatile())
@@ -910,46 +957,17 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
   if (CI && !VFDatabase::getMappings(*CI).empty())
     VecCallVariantsFound = true;
 
-  auto CanWidenInstructionTy = [](Instruction const &Inst) {
-    Type *InstTy = Inst.getType();
-    if (!isa<StructType>(InstTy))
-      return canVectorizeTy(InstTy);
-
-    // For now, we only recognize struct values returned from calls where
-    // all users are extractvalue as vectorizable. All element types of the
-    // struct must be types that can be widened.
-    return isa<CallInst>(Inst) && canVectorizeTy(InstTy) &&
-           all_of(Inst.users(), IsaPred<ExtractValueInst>);
-  };
-
-  // Check that the instruction return type is vectorizable.
-  // We can't vectorize casts from vector type to scalar type.
-  // Also, we can't vectorize extractelement instructions.
-  if (!CanWidenInstructionTy(I) ||
-      (isa<CastInst>(I) &&
-       !VectorType::isValidElementType(I.getOperand(0)->getType())) ||
-      isa<ExtractElementInst>(I)) {
-    reportVectorizationFailure("Found unvectorizable type",
-                               "instruction return type cannot be vectorized",
-                               "CantVectorizeInstructionReturnType", ORE,
-                               TheLoop, &I);
+  // Check that the instruction return and stored types are vectorizable.
+  if (!canWidenTypes(I, /*AllowStructCalls=*/true, ORE, TheLoop))
     return false;
-  }
 
-  // Check that the stored type is vectorizable.
   if (auto *ST = dyn_cast<StoreInst>(&I)) {
-    Type *T = ST->getValueOperand()->getType();
-    if (!VectorType::isValidElementType(T)) {
-      reportVectorizationFailure("Store instruction cannot be vectorized",
-                                 "CantVectorizeStore", ORE, TheLoop, ST);
-      return false;
-    }
-
     // For nontemporal stores, check that a nontemporal vector version is
     // supported on the target.
     if (ST->getMetadata(LLVMContext::MD_nontemporal)) {
       // Arbitrarily try a vector of 2 elements.
-      auto *VecTy = FixedVectorType::get(T, /*NumElts=*/2);
+      auto *VecTy =
+          FixedVectorType::get(ST->getValueOperand()->getType(), /*NumElts=*/2);
       assert(VecTy && "did not find vectorized version of stored type");
       if (!TTI->isLegalNTStore(VecTy, ST->getAlign())) {
         reportVectorizationFailure(
@@ -1567,6 +1585,69 @@ bool LoopVectorizationLegality::canVectorizeLoopNestCFG(
   return Result;
 }
 
+/// Matches an exit condition formed by comparing a value loaded from memory
+/// with another term. Binds the pointer, load, and the other comparison term.
+static bool matchUncountableExitCondition(Value *Cond, Value *&Ptr,
+                                          Instruction *&Load, Value *&Other) {
+  return match(Cond, m_OneUse(m_c_Cmp(
+                         m_OneUse(m_Instruction(Load, m_Load(m_Value(Ptr)))),
+                         m_Value(Other))));
+}
+
+/// Matches an exit condition formed by comparing the current value of an
+/// affine add recurrence in the given loop with a stride of 1 against a
+/// loop-invariant term.
+static bool matchCountableExitCondition(Value *Cond, ScalarEvolution &SE,
+                                        Loop *TheLoop) {
+  using namespace llvm::SCEVPatternMatch;
+  Value *IVUpdate, *Limit;
+  return match(Cond, m_c_ICmp(m_Value(IVUpdate, m_Add(m_Value(), m_Value())),
+                              m_Value(Limit))) &&
+         TheLoop->isLoopInvariant(Limit) &&
+         SCEVPatternMatch::match(SE.getSCEV(IVUpdate),
+                                 m_scev_AffineAddRec(m_SCEV(), m_scev_One(),
+                                                     m_SpecificLoop(TheLoop)));
+}
+
+/// Matches a combined exit condition consisting of an uncountable condition and
+/// a countable condition, combined by an or.  Binds the pointer, load, the
+/// second comparison term for the uncountable condition, and the comparison for
+/// the countable condition.
+static bool matchCombinedExitCondition(Value *Cond, Instruction *&CountableCond,
+                                       Value *&Ptr, Instruction *&Load,
+                                       Value *&Other, ScalarEvolution &SE,
+                                       Loop *TheLoop) {
+  Value *L, *R;
+  if (!match(Cond, m_OneUse(m_LogicalOr(m_Value(L), m_Value(R)))))
+    return false;
+
+  if (matchCountableExitCondition(L, SE, TheLoop) &&
+      matchUncountableExitCondition(R, Ptr, Load, Other)) {
+    CountableCond = cast<Instruction>(L);
+    return true;
+  }
+
+  if (matchCountableExitCondition(R, SE, TheLoop) &&
+      matchUncountableExitCondition(L, Ptr, Load, Other)) {
+    CountableCond = cast<Instruction>(R);
+    return true;
+  }
+
+  return false;
+}
+
+Instruction *
+LoopVectorizationLegality::findCountableComparisonInCombinedCondition(
+    Value *Cond) const {
+  Value *Ptr, *Other;
+  Instruction *Load, *CountableCmp;
+  if (matchCombinedExitCondition(Cond, CountableCmp, Ptr, Load, Other,
+                                 *PSE.getSE(), TheLoop))
+    return CountableCmp;
+
+  return nullptr;
+}
+
 bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   BasicBlock *LatchBB = TheLoop->getLoopLatch();
   if (!LatchBB) {
@@ -1618,16 +1699,27 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   }
 
   // The latch block must have a countable exit.
-  if (isa<SCEVCouldNotCompute>(
-          PSE.getSE()->getPredicatedExitCount(TheLoop, LatchBB, &Predicates))) {
+  if (isa<SCEVCouldNotCompute>(PSE.getSE()->getPredicatedExitCount(
+          TheLoop, LatchBB, &Predicates, ScalarEvolution::SymbolicMaximum))) {
     reportVectorizationFailure(
-        "Cannot determine exact exit count for latch block",
+        "Cannot determine symbolic max exit count for latch block",
         "Cannot vectorize early exit loop",
         "UnknownLatchExitCountEarlyExitLoop", ORE, TheLoop);
     return false;
   }
-  assert(llvm::is_contained(CountableExitingBlocks, LatchBB) &&
-         "Latch block not found in list of countable exits!");
+
+  if (!is_contained(CountableExitingBlocks, LatchBB)) {
+    // If not a separate counted exit in the latch, then check for a combined
+    // countable and uncountable exit.
+    auto *Br = dyn_cast<CondBrInst>(LatchBB->getTerminator());
+    if (!Br ||
+        !findCountableComparisonInCombinedCondition(Br->getCondition())) {
+      reportVectorizationFailure(
+          "Latch block does not have a countable exit condition",
+          "NoCountableConditionInLatchBlock", ORE, TheLoop);
+      return false;
+    }
+  }
 
   // Check to see if there are instructions that could potentially generate
   // exceptions or have side-effects.
@@ -1705,6 +1797,13 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     }
   }
 
+  // We're only handling combined exit conditions via masking at present, which
+  // is used for loops with side effects.
+  // TODO: Support readonly loops with combined exit conditions.
+  // TODO: Decouple style from the presence of side effects.
+  if (!llvm::is_contained(CountableExitingBlocks, LatchBB) && !HasSideEffects)
+    return false;
+
   [[maybe_unused]] const SCEV *SymbolicMaxBTC =
       PSE.getSymbolicMaxBackedgeTakenCount();
   // Since we have an exact exit count for the latch and the early exit
@@ -1731,20 +1830,26 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
   auto *Br = cast<CondBrInst>(ExitingBlock->getTerminator());
 
   using namespace llvm::PatternMatch;
-  Instruction *L = nullptr;
-  Value *Ptr = nullptr;
-  Value *R = nullptr;
-  // The exit-condition load can appear on either side of the icmp.
-  if (!match(Br->getCondition(),
-             m_OneUse(m_c_ICmp(m_OneUse(m_Instruction(L, m_Load(m_Value(Ptr)))),
-                               m_Value(R))))) {
+  Value *Ptr, *Other;
+  Instruction *L, *CountableCond;
+  // We want to match either an uncounted condition (loaded value compared
+  // against a loop invariant value) or the combination (via logical or) of
+  // an uncounted condition with a counted condition (integer comparison of
+  // an induction variable for which we can identify an add recurrence within
+  // this loop).
+  if (!matchUncountableExitCondition(Br->getCondition(), Ptr, L, Other) &&
+      !matchCombinedExitCondition(Br->getCondition(), CountableCond, Ptr, L,
+                                  Other, *PSE.getSE(), TheLoop)) {
     reportVectorizationFailure(
         "Early exit loop with store but no supported condition load",
         "NoConditionLoadForEarlyExitLoop", ORE, TheLoop);
     return false;
   }
 
-  if (!TheLoop->isLoopInvariant(R)) {
+  // Bail if the uncountable exit load is compared against a non-invariant
+  // value.
+  // TODO: Remove this restriction.
+  if (!TheLoop->isLoopInvariant(Other)) {
     reportVectorizationFailure(
         "Early exit loop with store but no supported condition load",
         "NoConditionLoadForEarlyExitLoop", ORE, TheLoop);
@@ -1862,24 +1967,17 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
-  if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount())) {
-    if (TheLoop->getExitingBlock()) {
+  if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount()) &&
+      !isVectorizableEarlyExitLoop()) {
+    assert(UncountableExitType == UncountableExitTrait::None &&
+           "Must be false without vectorizable early-exit loop");
+    if (TheLoop->getExitingBlock())
       reportVectorizationFailure("Cannot vectorize uncountable loop",
                                  "UnsupportedUncountableLoop", ORE, TheLoop);
-      if (DoExtraAnalysis)
-        Result = false;
-      else
-        return false;
-    } else {
-      if (!isVectorizableEarlyExitLoop()) {
-        assert(UncountableExitType == UncountableExitTrait::None &&
-               "Must be false without vectorizable early-exit loop");
-        if (DoExtraAnalysis)
-          Result = false;
-        else
-          return false;
-      }
-    }
+    if (DoExtraAnalysis)
+      Result = false;
+    else
+      return false;
   }
 
   // Go over each instruction and look at memory deps.
@@ -1926,6 +2024,13 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
     LLVM_DEBUG(
         dbgs()
         << "LV: Cannot fold tail by masking. Requires a singe latch exit\n");
+    return false;
+  }
+
+  // TODO: Support tail folding with uncountable exits.
+  if (hasUncountableEarlyExit()) {
+    LLVM_DEBUG(dbgs() << "LV: Cannot tail fold by masking. Loop contains an "
+                         "uncountable early exit.\n");
     return false;
   }
 
