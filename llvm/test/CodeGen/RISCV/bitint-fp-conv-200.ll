@@ -1009,10 +1009,10 @@ define void @test_float_to_bitint_200(ptr %in, ptr %out) nounwind {
 ; RV64-NEXT:    mv s0, a1
 ; RV64-NEXT:    bgeu a0, a3, .LBB2_2
 ; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    li a0, 0
+; RV64-NEXT:    li a1, 0
 ; RV64-NEXT:    li s7, 0
 ; RV64-NEXT:    li s8, 0
-; RV64-NEXT:    li a1, 0
+; RV64-NEXT:    li a0, 0
 ; RV64-NEXT:    j .LBB2_5
 ; RV64-NEXT:  .LBB2_2: # %fp-to-i-if-check.exp.size
 ; RV64-NEXT:    slli a1, a2, 41
@@ -1027,48 +1027,63 @@ define void @test_float_to_bitint_200(ptr %in, ptr %out) nounwind {
 ; RV64-NEXT:    li a2, 150
 ; RV64-NEXT:    sub a2, a2, a0
 ; RV64-NEXT:    srlw s3, a1, a2
-; RV64-NEXT:    srli a1, s1, 32
+; RV64-NEXT:    srli s4, s1, 32
 ; RV64-NEXT:    mv a0, s3
+; RV64-NEXT:    mv a1, s4
 ; RV64-NEXT:    call __muldi3
-; RV64-NEXT:    mv s4, a0
-; RV64-NEXT:    slli a1, s1, 32
-; RV64-NEXT:    srli a1, a1, 32
+; RV64-NEXT:    mv s5, a0
+; RV64-NEXT:    slli a0, s1, 32
+; RV64-NEXT:    srli s6, a0, 32
 ; RV64-NEXT:    mv a0, s3
+; RV64-NEXT:    mv a1, s6
 ; RV64-NEXT:    call __muldi3
 ; RV64-NEXT:    srli a1, a0, 32
-; RV64-NEXT:    add s5, s4, a1
+; RV64-NEXT:    add s7, s5, a1
 ; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    slli a1, s5, 32
+; RV64-NEXT:    slli a1, s7, 32
 ; RV64-NEXT:    srli a0, a0, 32
-; RV64-NEXT:    or s6, a0, a1
+; RV64-NEXT:    or s8, a0, a1
 ; RV64-NEXT:    srli a1, s2, 32
 ; RV64-NEXT:    mv a0, s3
 ; RV64-NEXT:    call __muldi3
-; RV64-NEXT:    mv s4, a0
+; RV64-NEXT:    mv s5, a0
 ; RV64-NEXT:    slli a1, s2, 32
 ; RV64-NEXT:    srli a1, a1, 32
 ; RV64-NEXT:    mv a0, s3
 ; RV64-NEXT:    call __muldi3
 ; RV64-NEXT:    mv s2, a0
-; RV64-NEXT:    srli a0, s5, 32
+; RV64-NEXT:    srli a0, s7, 32
 ; RV64-NEXT:    srli a1, s2, 32
-; RV64-NEXT:    add s4, s4, a1
-; RV64-NEXT:    srli s7, s4, 32
-; RV64-NEXT:    add s7, s6, s7
-; RV64-NEXT:    sltu a1, s7, s6
-; RV64-NEXT:    add s5, a0, a1
+; RV64-NEXT:    add s5, s5, a1
+; RV64-NEXT:    srli s7, s5, 32
+; RV64-NEXT:    add s7, s8, s7
+; RV64-NEXT:    sltu a1, s7, s8
+; RV64-NEXT:    add s9, a0, a1
+; RV64-NEXT:    mv a0, s4
+; RV64-NEXT:    mv a1, s3
+; RV64-NEXT:    call __muldi3
+; RV64-NEXT:    mv s4, a0
+; RV64-NEXT:    mv a0, s6
+; RV64-NEXT:    mv a1, s3
+; RV64-NEXT:    call __muldi3
+; RV64-NEXT:    srli a1, a0, 32
+; RV64-NEXT:    add a1, s4, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    slli a2, a1, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    or a0, a0, a2
+; RV64-NEXT:    add s8, s9, a0
+; RV64-NEXT:    sltu s4, s8, s9
+; RV64-NEXT:    srli s6, a1, 32
 ; RV64-NEXT:    mv a0, s1
-; RV64-NEXT:    mv a1, s1
-; RV64-NEXT:    mv a2, s3
-; RV64-NEXT:    li a3, 0
-; RV64-NEXT:    call __multi3
-; RV64-NEXT:    add s8, s5, a0
+; RV64-NEXT:    mv a1, s3
+; RV64-NEXT:    call __muldi3
 ; RV64-NEXT:    slli s2, s2, 32
-; RV64-NEXT:    sltu a0, s8, s5
-; RV64-NEXT:    slli s4, s4, 32
-; RV64-NEXT:    srli a2, s2, 32
-; RV64-NEXT:    add a1, a1, a0
-; RV64-NEXT:    or a0, a2, s4
+; RV64-NEXT:    add a0, s6, a0
+; RV64-NEXT:    slli s5, s5, 32
+; RV64-NEXT:    srli a1, s2, 32
+; RV64-NEXT:    add a0, a0, s4
+; RV64-NEXT:    or a1, a1, s5
 ; RV64-NEXT:    j .LBB2_5
 ; RV64-NEXT:  .LBB2_4: # %fp-to-i-if-exp.large
 ; RV64-NEXT:    addi a0, a0, -150
@@ -1269,15 +1284,15 @@ define void @test_float_to_bitint_200(ptr %in, ptr %out) nounwind {
 ; RV64-NEXT:    add a0, a0, a2
 ; RV64-NEXT:    ld a2, 16(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    slli a2, a2, 32
-; RV64-NEXT:    srli a3, a1, 32
-; RV64-NEXT:    ld a1, 40(sp) # 8-byte Folded Reload
-; RV64-NEXT:    add a1, a0, a1
-; RV64-NEXT:    or a0, a3, a2
+; RV64-NEXT:    srli a1, a1, 32
+; RV64-NEXT:    ld a3, 40(sp) # 8-byte Folded Reload
+; RV64-NEXT:    add a0, a0, a3
+; RV64-NEXT:    or a1, a1, a2
 ; RV64-NEXT:  .LBB2_5: # %fp-to-i-cleanup
-; RV64-NEXT:    sd a0, 0(s0)
+; RV64-NEXT:    sd a1, 0(s0)
 ; RV64-NEXT:    sd s7, 8(s0)
 ; RV64-NEXT:    sd s8, 16(s0)
-; RV64-NEXT:    sb a1, 24(s0)
+; RV64-NEXT:    sb a0, 24(s0)
 ; RV64-NEXT:    ld ra, 232(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 224(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s1, 216(sp) # 8-byte Folded Reload
@@ -1523,10 +1538,8 @@ define void @test_float_to_bitint_200(ptr %in, ptr %out) nounwind {
 ; RV32-NEXT:    add a0, a0, s0
 ; RV32-NEXT:    add s4, a0, s4
 ; RV32-NEXT:    lw a0, 244(sp) # 4-byte Folded Reload
-; RV32-NEXT:    li a1, 0
-; RV32-NEXT:    lw a2, 212(sp) # 4-byte Folded Reload
-; RV32-NEXT:    # implicit-def: $x13
-; RV32-NEXT:    call __muldi3
+; RV32-NEXT:    lw a1, 212(sp) # 4-byte Folded Reload
+; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    lw a1, 236(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    slli a1, a1, 16
 ; RV32-NEXT:    add a0, a0, s8

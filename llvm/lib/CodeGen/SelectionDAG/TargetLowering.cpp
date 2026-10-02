@@ -8138,16 +8138,18 @@ bool TargetLowering::expandMUL_LOHI(unsigned Opcode, EVT VT, const SDLoc &dl,
   unsigned OuterBitSize = VT.getScalarSizeInBits();
   unsigned InnerBitSize = HiLoVT.getScalarSizeInBits();
 
-  // Check if both operands are zero-extended.
-  bool BothZeroExtended = false;
+  // Check if one or both operands are zero-extended.
+  bool LHSZeroExtended = false, RHSZeroExtended = false;
   if (isOperationLegalOrCustom(ISD::TRUNCATE, HiLoVT)) {
     APInt HighMask = APInt::getHighBitsSet(OuterBitSize, InnerBitSize);
-    BothZeroExtended = DAG.MaskedValueIsZero(LHS, HighMask) &&
-                       DAG.MaskedValueIsZero(RHS, HighMask);
+    LHSZeroExtended = DAG.MaskedValueIsZero(LHS, HighMask);
+    RHSZeroExtended = DAG.MaskedValueIsZero(RHS, HighMask);
   }
+  bool BothZeroExtended = LHSZeroExtended && RHSZeroExtended;
+  bool EitherZeroExtended = LHSZeroExtended || RHSZeroExtended;
 
   if (!HasMULHU && !HasMULHS && !HasUMUL_LOHI && !HasSMUL_LOHI &&
-      !BothZeroExtended)
+      !BothZeroExtended && !(Opcode == ISD::MUL && EitherZeroExtended))
     return false;
 
   // LL, LH, RL, and RH must be either all NULL or all set to a value.
@@ -8156,6 +8158,10 @@ bool TargetLowering::expandMUL_LOHI(unsigned Opcode, EVT VT, const SDLoc &dl,
 
   auto MakeMUL_LOHI = [&](SDValue L, SDValue R, SDValue &Lo, SDValue &Hi,
                           bool Signed) -> bool {
+    if (isNullConstant(L) || isNullConstant(R)) {
+      Lo = Hi = DAG.getConstant(0, dl, HiLoVT);
+      return true;
+    }
     if ((Signed && HasSMUL_LOHI) || (!Signed && HasUMUL_LOHI)) {
       SDVTList VTs = DAG.getVTList(HiLoVT, HiLoVT);
       Lo = DAG.getNode(Signed ? ISD::SMUL_LOHI : ISD::UMUL_LOHI, dl, VTs, L, R);
@@ -8215,25 +8221,43 @@ bool TargetLowering::expandMUL_LOHI(unsigned Opcode, EVT VT, const SDLoc &dl,
   if (!LH.getNode() && !RH.getNode() &&
       isOperationLegalOrCustom(ISD::SRL, VT) &&
       isOperationLegalOrCustom(ISD::TRUNCATE, HiLoVT)) {
-    LH = DAG.getNode(ISD::SRL, dl, VT, LHS, Shift);
-    LH = DAG.getNode(ISD::TRUNCATE, dl, HiLoVT, LH);
-    RH = DAG.getNode(ISD::SRL, dl, VT, RHS, Shift);
-    RH = DAG.getNode(ISD::TRUNCATE, dl, HiLoVT, RH);
+    if (!LHSZeroExtended) {
+      LH = DAG.getNode(ISD::SRL, dl, VT, LHS, Shift);
+      LH = DAG.getNode(ISD::TRUNCATE, dl, HiLoVT, LH);
+    }
+    if (!RHSZeroExtended) {
+      RH = DAG.getNode(ISD::SRL, dl, VT, RHS, Shift);
+      RH = DAG.getNode(ISD::TRUNCATE, dl, HiLoVT, RH);
+    }
   }
 
-  if (!LH.getNode())
+  if (LHSZeroExtended)
+    LH = DAG.getConstant(0, dl, HiLoVT);
+  if (RHSZeroExtended)
+    RH = DAG.getConstant(0, dl, HiLoVT);
+
+  if (!LH.getNode() || !RH.getNode())
     return false;
 
-  if (!MakeMUL_LOHI(LL, RL, Lo, Hi, false))
-    return false;
+  if (!MakeMUL_LOHI(LL, RL, Lo, Hi, false)) {
+    if (Opcode == ISD::MUL && EitherZeroExtended) {
+      forceExpandMultiply(DAG, dl, /*Signed=*/false, Lo, Hi, LL, RL);
+    } else {
+      return false;
+    }
+  }
 
   Result.push_back(Lo);
 
   if (Opcode == ISD::MUL) {
-    RH = DAG.getNode(ISD::MUL, dl, HiLoVT, LL, RH);
-    LH = DAG.getNode(ISD::MUL, dl, HiLoVT, LH, RL);
-    Hi = DAG.getNode(ISD::ADD, dl, HiLoVT, Hi, RH);
-    Hi = DAG.getNode(ISD::ADD, dl, HiLoVT, Hi, LH);
+    if (!RHSZeroExtended) {
+      RH = DAG.getNode(ISD::MUL, dl, HiLoVT, LL, RH);
+      Hi = DAG.getNode(ISD::ADD, dl, HiLoVT, Hi, RH);
+    }
+    if (!LHSZeroExtended) {
+      LH = DAG.getNode(ISD::MUL, dl, HiLoVT, LH, RL);
+      Hi = DAG.getNode(ISD::ADD, dl, HiLoVT, Hi, LH);
+    }
     Result.push_back(Hi);
     return true;
   }
@@ -8258,6 +8282,18 @@ bool TargetLowering::expandMUL_LOHI(unsigned Opcode, EVT VT, const SDLoc &dl,
     return false;
 
   SDValue Zero = DAG.getConstant(0, dl, HiLoVT);
+  if (Opcode == ISD::UMUL_LOHI && EitherZeroExtended) {
+    // When one operand is zero-extended, at least one of (LL * RH) or (LH * RL)
+    // is zero, and (LH * RH) is zero, so the sum fits in VT without overflow
+    // and the highest word is zero.
+    Next = DAG.getNode(ISD::ADD, dl, VT, Next, Merge(Lo, Hi));
+    Result.push_back(DAG.getNode(ISD::TRUNCATE, dl, HiLoVT, Next));
+    Next = DAG.getNode(ISD::SRL, dl, VT, Next, Shift);
+    Result.push_back(DAG.getNode(ISD::TRUNCATE, dl, HiLoVT, Next));
+    Result.push_back(Zero);
+    return true;
+  }
+
   EVT BoolType = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
 
   bool UseGlue = (isOperationLegalOrCustom(ISD::ADDC, VT) &&

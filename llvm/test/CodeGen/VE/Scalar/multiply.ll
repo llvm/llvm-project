@@ -159,14 +159,20 @@ define i64 @funci64(i64 %a) {
 
 define i128 @funci128(i128 %a) {
 ; CHECK-LABEL: funci128:
-; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    lea %s2, __multi3@lo
-; CHECK-NEXT:    and %s2, %s2, (32)0
-; CHECK-NEXT:    lea.sl %s12, __multi3@hi(, %s2)
-; CHECK-NEXT:    or %s2, 5, (0)1
-; CHECK-NEXT:    or %s3, 0, (0)1
-; CHECK-NEXT:    bsic %s10, (, %s12)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srl %s2, %s0, 32
+; CHECK-NEXT:    muls.l %s2, 5, %s2
+; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    muls.l %s0, 5, %s0
+; CHECK-NEXT:    srl %s3, %s0, 32
+; CHECK-NEXT:    adds.l %s2, %s2, %s3
+; CHECK-NEXT:    sll %s3, %s2, 32
+; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    or %s0, %s0, %s3
+; CHECK-NEXT:    srl %s2, %s2, 32
+; CHECK-NEXT:    muls.l %s1, 5, %s1
+; CHECK-NEXT:    adds.l %s1, %s2, %s1
+; CHECK-NEXT:    b.l.t (, %s10)
   %r = mul nsw i128 %a, 5
   ret i128 %r
 }
@@ -212,14 +218,20 @@ define i64 @funci64z(i64 %a) {
 
 define i128 @funci128z(i128 %a) {
 ; CHECK-LABEL: funci128z:
-; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    lea %s2, __multi3@lo
-; CHECK-NEXT:    and %s2, %s2, (32)0
-; CHECK-NEXT:    lea.sl %s12, __multi3@hi(, %s2)
-; CHECK-NEXT:    or %s2, 5, (0)1
-; CHECK-NEXT:    or %s3, 0, (0)1
-; CHECK-NEXT:    bsic %s10, (, %s12)
-; CHECK-NEXT:    or %s11, 0, %s9
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srl %s2, %s0, 32
+; CHECK-NEXT:    muls.l %s2, 5, %s2
+; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    muls.l %s0, 5, %s0
+; CHECK-NEXT:    srl %s3, %s0, 32
+; CHECK-NEXT:    adds.l %s2, %s2, %s3
+; CHECK-NEXT:    sll %s3, %s2, 32
+; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    or %s0, %s0, %s3
+; CHECK-NEXT:    srl %s2, %s2, 32
+; CHECK-NEXT:    muls.l %s1, 5, %s1
+; CHECK-NEXT:    adds.l %s1, %s2, %s1
+; CHECK-NEXT:    b.l.t (, %s10)
   %r = mul i128 %a, 5
   ret i128 %r
 }

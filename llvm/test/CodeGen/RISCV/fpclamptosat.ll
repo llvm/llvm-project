@@ -3365,81 +3365,108 @@ define i64 @stest_f32i64(float %x) {
 ; RV32-NEXT:    lui a2, 2048
 ; RV32-NEXT:    li a3, 149
 ; RV32-NEXT:    or a0, a0, a2
-; RV32-NEXT:    ori s1, s0, 1
 ; RV32-NEXT:    bltu a3, a1, .LBB21_4
 ; RV32-NEXT:  # %bb.3: # %fp-to-i-if-exp.small
 ; RV32-NEXT:    li a2, 150
 ; RV32-NEXT:    sub a2, a2, a1
-; RV32-NEXT:    lui s8, 16
-; RV32-NEXT:    srl s3, a0, a2
-; RV32-NEXT:    addi s8, s8, -1
-; RV32-NEXT:    and s4, s0, s8
-; RV32-NEXT:    srli s2, s3, 16
-; RV32-NEXT:    mv a0, s2
-; RV32-NEXT:    mv a1, s4
-; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    mv s5, a0
-; RV32-NEXT:    and s6, s3, s8
-; RV32-NEXT:    mv a0, s6
-; RV32-NEXT:    mv a1, s4
-; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    mv s4, a0
-; RV32-NEXT:    srli a0, a0, 16
-; RV32-NEXT:    add a0, s5, a0
-; RV32-NEXT:    srli s7, a0, 16
-; RV32-NEXT:    and s9, a0, s8
-; RV32-NEXT:    srli s5, s0, 16
-; RV32-NEXT:    mv a0, s6
+; RV32-NEXT:    lui s10, 16
+; RV32-NEXT:    srl s1, a0, a2
+; RV32-NEXT:    sw s1, 36(sp) # 4-byte Folded Spill
+; RV32-NEXT:    addi s10, s10, -1
+; RV32-NEXT:    and s5, s0, s10
+; RV32-NEXT:    srli s4, s1, 16
+; RV32-NEXT:    mv a0, s4
 ; RV32-NEXT:    mv a1, s5
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    mv s6, a0
+; RV32-NEXT:    and s7, s1, s10
+; RV32-NEXT:    mv a0, s7
+; RV32-NEXT:    mv a1, s5
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    mv s2, a0
+; RV32-NEXT:    srli a0, a0, 16
+; RV32-NEXT:    add a0, s6, a0
+; RV32-NEXT:    srli s9, a0, 16
+; RV32-NEXT:    and s8, a0, s10
+; RV32-NEXT:    srli s6, s0, 16
+; RV32-NEXT:    mv a0, s7
+; RV32-NEXT:    mv a1, s6
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    add s11, a0, s8
+; RV32-NEXT:    srli s1, s11, 16
+; RV32-NEXT:    mv a0, s4
+; RV32-NEXT:    mv a1, s6
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    ori s3, s0, 1
+; RV32-NEXT:    and s8, s3, s10
+; RV32-NEXT:    add a0, a0, s9
+; RV32-NEXT:    add a0, a0, s1
+; RV32-NEXT:    sw a0, 28(sp) # 4-byte Folded Spill
+; RV32-NEXT:    mv a0, s4
+; RV32-NEXT:    mv a1, s8
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    mv s9, a0
+; RV32-NEXT:    mv a0, s7
+; RV32-NEXT:    mv a1, s8
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    sw a0, 32(sp) # 4-byte Folded Spill
+; RV32-NEXT:    srli a1, a0, 16
+; RV32-NEXT:    add a0, s9, a1
+; RV32-NEXT:    srli s8, a0, 16
+; RV32-NEXT:    and s9, a0, s10
+; RV32-NEXT:    srli s1, s3, 16
+; RV32-NEXT:    mv a0, s7
+; RV32-NEXT:    mv a1, s1
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    add s9, a0, s9
-; RV32-NEXT:    srli s10, s9, 16
-; RV32-NEXT:    mv a0, s2
-; RV32-NEXT:    mv a1, s5
-; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    and s5, s1, s8
-; RV32-NEXT:    add a0, a0, s7
-; RV32-NEXT:    add s10, a0, s10
-; RV32-NEXT:    mv a0, s2
-; RV32-NEXT:    mv a1, s5
-; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    mv s7, a0
-; RV32-NEXT:    mv a0, s6
-; RV32-NEXT:    mv a1, s5
-; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    mv s5, a0
-; RV32-NEXT:    srli a0, a0, 16
-; RV32-NEXT:    add a0, s7, a0
-; RV32-NEXT:    srli s7, a0, 16
-; RV32-NEXT:    and s11, a0, s8
-; RV32-NEXT:    srli s1, s1, 16
-; RV32-NEXT:    mv a0, s6
+; RV32-NEXT:    srli s3, s9, 16
+; RV32-NEXT:    mv a0, s4
 ; RV32-NEXT:    mv a1, s1
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    add s11, a0, s11
-; RV32-NEXT:    srli s6, s11, 16
-; RV32-NEXT:    mv a0, s2
-; RV32-NEXT:    mv a1, s1
-; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    slli s9, s9, 16
-; RV32-NEXT:    add a0, a0, s7
-; RV32-NEXT:    and a1, s4, s8
-; RV32-NEXT:    add a0, a0, s6
-; RV32-NEXT:    or a1, a1, s9
+; RV32-NEXT:    slli s11, s11, 16
+; RV32-NEXT:    add a0, a0, s8
+; RV32-NEXT:    and a1, s2, s10
+; RV32-NEXT:    add a0, a0, s3
+; RV32-NEXT:    or a1, a1, s11
 ; RV32-NEXT:    add s2, a1, a0
 ; RV32-NEXT:    sltu a0, s2, a1
-; RV32-NEXT:    add s10, s10, a0
+; RV32-NEXT:    lw s3, 28(sp) # 4-byte Folded Reload
+; RV32-NEXT:    add s3, s3, a0
+; RV32-NEXT:    mv a0, s5
+; RV32-NEXT:    mv a1, s7
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    mv s1, a0
+; RV32-NEXT:    srli s8, a0, 16
+; RV32-NEXT:    mv a0, s6
+; RV32-NEXT:    mv a1, s7
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    add s8, a0, s8
+; RV32-NEXT:    and s7, s8, s10
+; RV32-NEXT:    mv a0, s5
+; RV32-NEXT:    mv a1, s4
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    and a1, s1, s10
+; RV32-NEXT:    add a0, a0, s7
+; RV32-NEXT:    slli a2, a0, 16
+; RV32-NEXT:    or a1, a1, a2
+; RV32-NEXT:    add s1, s3, a1
+; RV32-NEXT:    sltu s3, s1, s3
+; RV32-NEXT:    srli s5, a0, 16
+; RV32-NEXT:    srli s7, s8, 16
+; RV32-NEXT:    mv a0, s6
+; RV32-NEXT:    mv a1, s4
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    add s7, a0, s7
 ; RV32-NEXT:    mv a0, s0
-; RV32-NEXT:    mv a1, s0
-; RV32-NEXT:    mv a2, s3
-; RV32-NEXT:    li a3, 0
-; RV32-NEXT:    call __muldi3
-; RV32-NEXT:    add s1, s10, a0
-; RV32-NEXT:    sltu a0, s1, s10
-; RV32-NEXT:    slli s11, s11, 16
-; RV32-NEXT:    and a2, s5, s8
-; RV32-NEXT:    add a1, a1, a0
-; RV32-NEXT:    or a0, a2, s11
+; RV32-NEXT:    lw a1, 36(sp) # 4-byte Folded Reload
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    slli s9, s9, 16
+; RV32-NEXT:    add a0, s7, a0
+; RV32-NEXT:    add a0, a0, s5
+; RV32-NEXT:    lw a1, 32(sp) # 4-byte Folded Reload
+; RV32-NEXT:    and a2, a1, s10
+; RV32-NEXT:    add a1, a0, s3
+; RV32-NEXT:    or a0, a2, s9
 ; RV32-NEXT:    j .LBB21_5
 ; RV32-NEXT:  .LBB21_4: # %fp-to-i-if-exp.large
 ; RV32-NEXT:    addi a1, a1, -150
@@ -3474,46 +3501,46 @@ define i64 @stest_f32i64(float %x) {
 ; RV32-NEXT:    srli a0, a5, 1
 ; RV32-NEXT:    sll a2, a2, a1
 ; RV32-NEXT:    srl a0, a0, a4
-; RV32-NEXT:    or s4, a2, a0
-; RV32-NEXT:    sw s4, 24(sp) # 4-byte Folded Spill
+; RV32-NEXT:    or s1, a2, a0
+; RV32-NEXT:    sw s1, 24(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    lui s7, 16
-; RV32-NEXT:    sll s9, a5, a1
+; RV32-NEXT:    sll s3, a5, a1
 ; RV32-NEXT:    addi s7, s7, -1
-; RV32-NEXT:    srli s3, s4, 16
-; RV32-NEXT:    and s8, s1, s7
-; RV32-NEXT:    mv a0, s3
-; RV32-NEXT:    sw s3, 36(sp) # 4-byte Folded Spill
+; RV32-NEXT:    srli s6, s1, 16
+; RV32-NEXT:    ori s4, s0, 1
+; RV32-NEXT:    and s8, s4, s7
+; RV32-NEXT:    mv a0, s6
+; RV32-NEXT:    sw s6, 36(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    mv a1, s8
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    mv s2, a0
-; RV32-NEXT:    and s4, s4, s7
-; RV32-NEXT:    mv a0, s4
-; RV32-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    and s9, s1, s7
+; RV32-NEXT:    mv a0, s9
 ; RV32-NEXT:    mv a1, s8
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    mv s10, a0
 ; RV32-NEXT:    srli a0, a0, 16
 ; RV32-NEXT:    add a0, s2, a0
-; RV32-NEXT:    srli s5, a0, 16
+; RV32-NEXT:    srli s1, a0, 16
 ; RV32-NEXT:    and s2, a0, s7
-; RV32-NEXT:    srli s11, s1, 16
-; RV32-NEXT:    mv a0, s4
+; RV32-NEXT:    srli s11, s4, 16
+; RV32-NEXT:    mv a0, s9
 ; RV32-NEXT:    mv a1, s11
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    add s1, a0, s2
-; RV32-NEXT:    srli s6, s1, 16
-; RV32-NEXT:    mv a0, s3
+; RV32-NEXT:    add s4, a0, s2
+; RV32-NEXT:    srli s5, s4, 16
+; RV32-NEXT:    mv a0, s6
 ; RV32-NEXT:    mv a1, s11
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    sw s9, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    srli s2, s9, 16
-; RV32-NEXT:    add a0, a0, s5
-; RV32-NEXT:    add s4, a0, s6
+; RV32-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    srli s2, s3, 16
+; RV32-NEXT:    add a0, a0, s1
+; RV32-NEXT:    add s1, a0, s5
 ; RV32-NEXT:    mv a0, s2
 ; RV32-NEXT:    mv a1, s8
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    mv s5, a0
-; RV32-NEXT:    and s6, s9, s7
+; RV32-NEXT:    and s6, s3, s7
 ; RV32-NEXT:    mv a0, s6
 ; RV32-NEXT:    mv a1, s8
 ; RV32-NEXT:    call __mulsi3
@@ -3531,15 +3558,15 @@ define i64 @stest_f32i64(float %x) {
 ; RV32-NEXT:    mv a0, s2
 ; RV32-NEXT:    mv a1, s11
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    slli s1, s1, 16
+; RV32-NEXT:    slli s4, s4, 16
 ; RV32-NEXT:    add a0, a0, s5
 ; RV32-NEXT:    and a1, s10, s7
 ; RV32-NEXT:    add a0, a0, s8
-; RV32-NEXT:    or a1, a1, s1
-; RV32-NEXT:    add s1, a1, a0
-; RV32-NEXT:    sltu s8, s1, a1
-; RV32-NEXT:    add s8, s4, s8
-; RV32-NEXT:    sw s8, 4(sp) # 4-byte Folded Spill
+; RV32-NEXT:    or a1, a1, s4
+; RV32-NEXT:    add s4, a1, a0
+; RV32-NEXT:    sltu s8, s4, a1
+; RV32-NEXT:    add s1, s1, s8
+; RV32-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    and s5, s0, s7
 ; RV32-NEXT:    mv a0, s2
 ; RV32-NEXT:    mv a1, s5
@@ -3551,7 +3578,7 @@ define i64 @stest_f32i64(float %x) {
 ; RV32-NEXT:    mv s11, a0
 ; RV32-NEXT:    srli a0, a0, 16
 ; RV32-NEXT:    add a0, s10, a0
-; RV32-NEXT:    srli s4, a0, 16
+; RV32-NEXT:    srli s8, a0, 16
 ; RV32-NEXT:    and s3, a0, s7
 ; RV32-NEXT:    srli s10, s0, 16
 ; RV32-NEXT:    mv a0, s6
@@ -3565,33 +3592,32 @@ define i64 @stest_f32i64(float %x) {
 ; RV32-NEXT:    slli s3, s3, 16
 ; RV32-NEXT:    and a1, s11, s7
 ; RV32-NEXT:    or a1, a1, s3
-; RV32-NEXT:    add a0, a0, s4
-; RV32-NEXT:    add s2, a1, s1
+; RV32-NEXT:    add a0, a0, s8
+; RV32-NEXT:    add s2, a1, s4
 ; RV32-NEXT:    add a0, a0, s6
 ; RV32-NEXT:    sltu a1, s2, a1
 ; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    add s4, s8, a0
+; RV32-NEXT:    add s3, s1, a0
 ; RV32-NEXT:    lw a0, 36(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    mv a1, s5
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    mv s6, a0
-; RV32-NEXT:    lw s3, 8(sp) # 4-byte Folded Reload
-; RV32-NEXT:    mv a0, s3
+; RV32-NEXT:    mv a0, s9
 ; RV32-NEXT:    mv a1, s5
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    mv s5, a0
 ; RV32-NEXT:    srli a0, a0, 16
 ; RV32-NEXT:    add s6, s6, a0
 ; RV32-NEXT:    and s1, s6, s7
-; RV32-NEXT:    mv a0, s3
+; RV32-NEXT:    mv a0, s9
 ; RV32-NEXT:    mv a1, s10
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    and a1, s5, s7
 ; RV32-NEXT:    add s9, a0, s1
 ; RV32-NEXT:    slli a0, s9, 16
 ; RV32-NEXT:    or s11, a1, a0
-; RV32-NEXT:    mv s5, s4
-; RV32-NEXT:    add s3, s11, s4
+; RV32-NEXT:    mv s5, s3
+; RV32-NEXT:    add s3, s11, s3
 ; RV32-NEXT:    ori a0, s0, 1
 ; RV32-NEXT:    mv a1, s0
 ; RV32-NEXT:    lw a2, 32(sp) # 4-byte Folded Reload
@@ -3609,7 +3635,7 @@ define i64 @stest_f32i64(float %x) {
 ; RV32-NEXT:    add s0, a0, s1
 ; RV32-NEXT:    sltu s11, s3, s11
 ; RV32-NEXT:    add s1, s3, s0
-; RV32-NEXT:    lw a0, 4(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    sltu s5, s5, a0
 ; RV32-NEXT:    sltu s3, s1, s3
 ; RV32-NEXT:    srli s6, s6, 16
@@ -3877,81 +3903,108 @@ define i64 @ustest_f32i64(float %x) {
 ; RV32-NEXT:    lui a2, 2048
 ; RV32-NEXT:    li a3, 149
 ; RV32-NEXT:    or a0, a0, a2
-; RV32-NEXT:    ori s1, s0, 1
 ; RV32-NEXT:    bltu a3, a1, .LBB23_5
 ; RV32-NEXT:  # %bb.3: # %fp-to-i-if-exp.small
 ; RV32-NEXT:    li a2, 150
 ; RV32-NEXT:    sub a2, a2, a1
-; RV32-NEXT:    lui s8, 16
-; RV32-NEXT:    srl s2, a0, a2
-; RV32-NEXT:    addi s8, s8, -1
-; RV32-NEXT:    and s4, s0, s8
-; RV32-NEXT:    srli s3, s2, 16
+; RV32-NEXT:    lui s11, 16
+; RV32-NEXT:    srl s1, a0, a2
+; RV32-NEXT:    sw s1, 36(sp) # 4-byte Folded Spill
+; RV32-NEXT:    addi s11, s11, -1
+; RV32-NEXT:    and s4, s0, s11
+; RV32-NEXT:    srli s3, s1, 16
 ; RV32-NEXT:    mv a0, s3
 ; RV32-NEXT:    mv a1, s4
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    mv s5, a0
-; RV32-NEXT:    and s6, s2, s8
+; RV32-NEXT:    and s6, s1, s11
 ; RV32-NEXT:    mv a0, s6
 ; RV32-NEXT:    mv a1, s4
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    mv s4, a0
+; RV32-NEXT:    mv s8, a0
 ; RV32-NEXT:    srli a0, a0, 16
 ; RV32-NEXT:    add a0, s5, a0
-; RV32-NEXT:    srli s7, a0, 16
-; RV32-NEXT:    and s9, a0, s8
+; RV32-NEXT:    srli s9, a0, 16
+; RV32-NEXT:    and s7, a0, s11
 ; RV32-NEXT:    srli s5, s0, 16
 ; RV32-NEXT:    mv a0, s6
 ; RV32-NEXT:    mv a1, s5
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    add s9, a0, s9
-; RV32-NEXT:    srli s10, s9, 16
+; RV32-NEXT:    add s10, a0, s7
+; RV32-NEXT:    srli s1, s10, 16
 ; RV32-NEXT:    mv a0, s3
 ; RV32-NEXT:    mv a1, s5
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    and s5, s1, s8
-; RV32-NEXT:    add a0, a0, s7
-; RV32-NEXT:    add s11, a0, s10
+; RV32-NEXT:    ori s2, s0, 1
+; RV32-NEXT:    and s7, s2, s11
+; RV32-NEXT:    add a0, a0, s9
+; RV32-NEXT:    add a0, a0, s1
+; RV32-NEXT:    sw a0, 28(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    mv a0, s3
-; RV32-NEXT:    mv a1, s5
+; RV32-NEXT:    mv a1, s7
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    mv s7, a0
+; RV32-NEXT:    mv s9, a0
 ; RV32-NEXT:    mv a0, s6
-; RV32-NEXT:    mv a1, s5
+; RV32-NEXT:    mv a1, s7
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    mv s5, a0
-; RV32-NEXT:    srli a0, a0, 16
-; RV32-NEXT:    add a0, s7, a0
+; RV32-NEXT:    sw a0, 32(sp) # 4-byte Folded Spill
+; RV32-NEXT:    srli a1, a0, 16
+; RV32-NEXT:    add a0, s9, a1
 ; RV32-NEXT:    srli s7, a0, 16
-; RV32-NEXT:    and s10, a0, s8
-; RV32-NEXT:    srli s1, s1, 16
+; RV32-NEXT:    and s9, a0, s11
+; RV32-NEXT:    srli s1, s2, 16
 ; RV32-NEXT:    mv a0, s6
 ; RV32-NEXT:    mv a1, s1
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    add s6, a0, s10
-; RV32-NEXT:    srli s10, s6, 16
+; RV32-NEXT:    add s9, a0, s9
+; RV32-NEXT:    srli s2, s9, 16
 ; RV32-NEXT:    mv a0, s3
 ; RV32-NEXT:    mv a1, s1
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    slli s9, s9, 16
+; RV32-NEXT:    slli s10, s10, 16
 ; RV32-NEXT:    add a0, a0, s7
-; RV32-NEXT:    and a1, s4, s8
-; RV32-NEXT:    add a0, a0, s10
-; RV32-NEXT:    or a1, a1, s9
+; RV32-NEXT:    and a1, s8, s11
+; RV32-NEXT:    add a0, a0, s2
+; RV32-NEXT:    or a1, a1, s10
 ; RV32-NEXT:    add s10, a1, a0
 ; RV32-NEXT:    sltu a0, s10, a1
-; RV32-NEXT:    add s11, s11, a0
+; RV32-NEXT:    lw s2, 28(sp) # 4-byte Folded Reload
+; RV32-NEXT:    add s2, s2, a0
+; RV32-NEXT:    mv a0, s4
+; RV32-NEXT:    mv a1, s6
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    mv s1, a0
+; RV32-NEXT:    srli s7, a0, 16
+; RV32-NEXT:    mv a0, s5
+; RV32-NEXT:    mv a1, s6
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    add s7, a0, s7
+; RV32-NEXT:    and s6, s7, s11
+; RV32-NEXT:    mv a0, s4
+; RV32-NEXT:    mv a1, s3
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    and a1, s1, s11
+; RV32-NEXT:    add a0, a0, s6
+; RV32-NEXT:    slli a2, a0, 16
+; RV32-NEXT:    or a1, a1, a2
+; RV32-NEXT:    add s1, s2, a1
+; RV32-NEXT:    sltu s2, s1, s2
+; RV32-NEXT:    srli s4, a0, 16
+; RV32-NEXT:    srli s6, s7, 16
+; RV32-NEXT:    mv a0, s5
+; RV32-NEXT:    mv a1, s3
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    add s6, a0, s6
 ; RV32-NEXT:    mv a0, s0
-; RV32-NEXT:    mv a1, s0
-; RV32-NEXT:    mv a2, s2
-; RV32-NEXT:    li a3, 0
-; RV32-NEXT:    call __muldi3
-; RV32-NEXT:    add s1, s11, a0
-; RV32-NEXT:    sltu a0, s1, s11
-; RV32-NEXT:    slli s6, s6, 16
-; RV32-NEXT:    and a2, s5, s8
-; RV32-NEXT:    add a1, a1, a0
-; RV32-NEXT:    or a0, a2, s6
+; RV32-NEXT:    lw a1, 36(sp) # 4-byte Folded Reload
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    slli s9, s9, 16
+; RV32-NEXT:    add a0, s6, a0
+; RV32-NEXT:    add a0, a0, s4
+; RV32-NEXT:    lw a1, 32(sp) # 4-byte Folded Reload
+; RV32-NEXT:    and a2, a1, s11
+; RV32-NEXT:    add a1, a0, s2
+; RV32-NEXT:    or a0, a2, s9
 ; RV32-NEXT:    bnez a1, .LBB23_6
 ; RV32-NEXT:  .LBB23_4:
 ; RV32-NEXT:    seqz a2, s1
@@ -3989,46 +4042,46 @@ define i64 @ustest_f32i64(float %x) {
 ; RV32-NEXT:    srli a0, a5, 1
 ; RV32-NEXT:    sll a2, a2, a1
 ; RV32-NEXT:    srl a0, a0, a4
-; RV32-NEXT:    or s3, a2, a0
-; RV32-NEXT:    sw s3, 24(sp) # 4-byte Folded Spill
+; RV32-NEXT:    or s1, a2, a0
+; RV32-NEXT:    sw s1, 24(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    lui s6, 16
-; RV32-NEXT:    sll s8, a5, a1
+; RV32-NEXT:    sll s2, a5, a1
 ; RV32-NEXT:    addi s6, s6, -1
-; RV32-NEXT:    srli s2, s3, 16
-; RV32-NEXT:    and s7, s1, s6
-; RV32-NEXT:    mv a0, s2
-; RV32-NEXT:    sw s2, 36(sp) # 4-byte Folded Spill
+; RV32-NEXT:    srli s5, s1, 16
+; RV32-NEXT:    ori s3, s0, 1
+; RV32-NEXT:    and s7, s3, s6
+; RV32-NEXT:    mv a0, s5
+; RV32-NEXT:    sw s5, 36(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    mv a1, s7
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    mv s10, a0
-; RV32-NEXT:    and s3, s3, s6
-; RV32-NEXT:    mv a0, s3
-; RV32-NEXT:    sw s3, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    and s8, s1, s6
+; RV32-NEXT:    mv a0, s8
 ; RV32-NEXT:    mv a1, s7
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    mv s9, a0
 ; RV32-NEXT:    srli a0, a0, 16
 ; RV32-NEXT:    add a0, s10, a0
-; RV32-NEXT:    srli s4, a0, 16
-; RV32-NEXT:    and s5, a0, s6
-; RV32-NEXT:    srli s11, s1, 16
-; RV32-NEXT:    mv a0, s3
+; RV32-NEXT:    srli s1, a0, 16
+; RV32-NEXT:    and s4, a0, s6
+; RV32-NEXT:    srli s11, s3, 16
+; RV32-NEXT:    mv a0, s8
 ; RV32-NEXT:    mv a1, s11
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    add s1, a0, s5
-; RV32-NEXT:    srli s5, s1, 16
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    add s3, a0, s4
+; RV32-NEXT:    srli s4, s3, 16
+; RV32-NEXT:    mv a0, s5
 ; RV32-NEXT:    mv a1, s11
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    sw s8, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    srli s10, s8, 16
-; RV32-NEXT:    add a0, a0, s4
-; RV32-NEXT:    add s3, a0, s5
+; RV32-NEXT:    sw s2, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    srli s10, s2, 16
+; RV32-NEXT:    add a0, a0, s1
+; RV32-NEXT:    add s1, a0, s4
 ; RV32-NEXT:    mv a0, s10
 ; RV32-NEXT:    mv a1, s7
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    mv s4, a0
-; RV32-NEXT:    and s5, s8, s6
+; RV32-NEXT:    and s5, s2, s6
 ; RV32-NEXT:    mv a0, s5
 ; RV32-NEXT:    mv a1, s7
 ; RV32-NEXT:    call __mulsi3
@@ -4046,15 +4099,15 @@ define i64 @ustest_f32i64(float %x) {
 ; RV32-NEXT:    mv a0, s10
 ; RV32-NEXT:    mv a1, s11
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    slli s1, s1, 16
+; RV32-NEXT:    slli s3, s3, 16
 ; RV32-NEXT:    add a0, a0, s4
 ; RV32-NEXT:    and a1, s9, s6
 ; RV32-NEXT:    add a0, a0, s7
-; RV32-NEXT:    or a1, a1, s1
-; RV32-NEXT:    add s1, a1, a0
-; RV32-NEXT:    sltu s7, s1, a1
-; RV32-NEXT:    add s7, s3, s7
-; RV32-NEXT:    sw s7, 4(sp) # 4-byte Folded Spill
+; RV32-NEXT:    or a1, a1, s3
+; RV32-NEXT:    add s3, a1, a0
+; RV32-NEXT:    sltu s7, s3, a1
+; RV32-NEXT:    add s1, s1, s7
+; RV32-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    and s4, s0, s6
 ; RV32-NEXT:    mv a0, s10
 ; RV32-NEXT:    mv a1, s4
@@ -4066,7 +4119,7 @@ define i64 @ustest_f32i64(float %x) {
 ; RV32-NEXT:    mv s11, a0
 ; RV32-NEXT:    srli a0, a0, 16
 ; RV32-NEXT:    add a0, s9, a0
-; RV32-NEXT:    srli s3, a0, 16
+; RV32-NEXT:    srli s7, a0, 16
 ; RV32-NEXT:    and s2, a0, s6
 ; RV32-NEXT:    srli s9, s0, 16
 ; RV32-NEXT:    mv a0, s5
@@ -4080,33 +4133,32 @@ define i64 @ustest_f32i64(float %x) {
 ; RV32-NEXT:    slli s2, s2, 16
 ; RV32-NEXT:    and a1, s11, s6
 ; RV32-NEXT:    or a1, a1, s2
-; RV32-NEXT:    add a0, a0, s3
-; RV32-NEXT:    add s10, a1, s1
+; RV32-NEXT:    add a0, a0, s7
+; RV32-NEXT:    add s10, a1, s3
 ; RV32-NEXT:    add a0, a0, s5
 ; RV32-NEXT:    sltu a1, s10, a1
 ; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    add s3, s7, a0
+; RV32-NEXT:    add s2, s1, a0
 ; RV32-NEXT:    lw a0, 36(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    mv a1, s4
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    mv s5, a0
-; RV32-NEXT:    lw s2, 8(sp) # 4-byte Folded Reload
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s8
 ; RV32-NEXT:    mv a1, s4
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    mv s4, a0
 ; RV32-NEXT:    srli a0, a0, 16
 ; RV32-NEXT:    add s5, s5, a0
 ; RV32-NEXT:    and s1, s5, s6
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s8
 ; RV32-NEXT:    mv a1, s9
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    and a1, s4, s6
 ; RV32-NEXT:    add s8, a0, s1
 ; RV32-NEXT:    slli a0, s8, 16
 ; RV32-NEXT:    or s11, a1, a0
-; RV32-NEXT:    mv s4, s3
-; RV32-NEXT:    add s2, s11, s3
+; RV32-NEXT:    mv s4, s2
+; RV32-NEXT:    add s2, s11, s2
 ; RV32-NEXT:    ori a0, s0, 1
 ; RV32-NEXT:    mv a1, s0
 ; RV32-NEXT:    lw a2, 32(sp) # 4-byte Folded Reload
@@ -4124,7 +4176,7 @@ define i64 @ustest_f32i64(float %x) {
 ; RV32-NEXT:    add s0, a0, s1
 ; RV32-NEXT:    sltu s11, s2, s11
 ; RV32-NEXT:    add s1, s2, s0
-; RV32-NEXT:    lw a0, 4(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    sltu s4, s4, a0
 ; RV32-NEXT:    sltu s2, s1, s2
 ; RV32-NEXT:    srli s5, s5, 16
@@ -7752,81 +7804,108 @@ define i64 @stest_f32i64_mm(float %x) {
 ; RV32-NEXT:    lui a2, 2048
 ; RV32-NEXT:    li a3, 149
 ; RV32-NEXT:    or a0, a0, a2
-; RV32-NEXT:    ori s1, s0, 1
 ; RV32-NEXT:    bltu a3, a1, .LBB48_4
 ; RV32-NEXT:  # %bb.3: # %fp-to-i-if-exp.small
 ; RV32-NEXT:    li a2, 150
 ; RV32-NEXT:    sub a2, a2, a1
-; RV32-NEXT:    lui s8, 16
-; RV32-NEXT:    srl s3, a0, a2
-; RV32-NEXT:    addi s8, s8, -1
-; RV32-NEXT:    and s4, s0, s8
-; RV32-NEXT:    srli s2, s3, 16
-; RV32-NEXT:    mv a0, s2
-; RV32-NEXT:    mv a1, s4
-; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    mv s5, a0
-; RV32-NEXT:    and s6, s3, s8
-; RV32-NEXT:    mv a0, s6
-; RV32-NEXT:    mv a1, s4
-; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    mv s4, a0
-; RV32-NEXT:    srli a0, a0, 16
-; RV32-NEXT:    add a0, s5, a0
-; RV32-NEXT:    srli s7, a0, 16
-; RV32-NEXT:    and s9, a0, s8
-; RV32-NEXT:    srli s5, s0, 16
-; RV32-NEXT:    mv a0, s6
+; RV32-NEXT:    lui s10, 16
+; RV32-NEXT:    srl s1, a0, a2
+; RV32-NEXT:    sw s1, 36(sp) # 4-byte Folded Spill
+; RV32-NEXT:    addi s10, s10, -1
+; RV32-NEXT:    and s5, s0, s10
+; RV32-NEXT:    srli s4, s1, 16
+; RV32-NEXT:    mv a0, s4
 ; RV32-NEXT:    mv a1, s5
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    mv s6, a0
+; RV32-NEXT:    and s7, s1, s10
+; RV32-NEXT:    mv a0, s7
+; RV32-NEXT:    mv a1, s5
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    mv s2, a0
+; RV32-NEXT:    srli a0, a0, 16
+; RV32-NEXT:    add a0, s6, a0
+; RV32-NEXT:    srli s9, a0, 16
+; RV32-NEXT:    and s8, a0, s10
+; RV32-NEXT:    srli s6, s0, 16
+; RV32-NEXT:    mv a0, s7
+; RV32-NEXT:    mv a1, s6
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    add s11, a0, s8
+; RV32-NEXT:    srli s1, s11, 16
+; RV32-NEXT:    mv a0, s4
+; RV32-NEXT:    mv a1, s6
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    ori s3, s0, 1
+; RV32-NEXT:    and s8, s3, s10
+; RV32-NEXT:    add a0, a0, s9
+; RV32-NEXT:    add a0, a0, s1
+; RV32-NEXT:    sw a0, 28(sp) # 4-byte Folded Spill
+; RV32-NEXT:    mv a0, s4
+; RV32-NEXT:    mv a1, s8
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    mv s9, a0
+; RV32-NEXT:    mv a0, s7
+; RV32-NEXT:    mv a1, s8
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    sw a0, 32(sp) # 4-byte Folded Spill
+; RV32-NEXT:    srli a1, a0, 16
+; RV32-NEXT:    add a0, s9, a1
+; RV32-NEXT:    srli s8, a0, 16
+; RV32-NEXT:    and s9, a0, s10
+; RV32-NEXT:    srli s1, s3, 16
+; RV32-NEXT:    mv a0, s7
+; RV32-NEXT:    mv a1, s1
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    add s9, a0, s9
-; RV32-NEXT:    srli s10, s9, 16
-; RV32-NEXT:    mv a0, s2
-; RV32-NEXT:    mv a1, s5
-; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    and s5, s1, s8
-; RV32-NEXT:    add a0, a0, s7
-; RV32-NEXT:    add s10, a0, s10
-; RV32-NEXT:    mv a0, s2
-; RV32-NEXT:    mv a1, s5
-; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    mv s7, a0
-; RV32-NEXT:    mv a0, s6
-; RV32-NEXT:    mv a1, s5
-; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    mv s5, a0
-; RV32-NEXT:    srli a0, a0, 16
-; RV32-NEXT:    add a0, s7, a0
-; RV32-NEXT:    srli s7, a0, 16
-; RV32-NEXT:    and s11, a0, s8
-; RV32-NEXT:    srli s1, s1, 16
-; RV32-NEXT:    mv a0, s6
+; RV32-NEXT:    srli s3, s9, 16
+; RV32-NEXT:    mv a0, s4
 ; RV32-NEXT:    mv a1, s1
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    add s11, a0, s11
-; RV32-NEXT:    srli s6, s11, 16
-; RV32-NEXT:    mv a0, s2
-; RV32-NEXT:    mv a1, s1
-; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    slli s9, s9, 16
-; RV32-NEXT:    add a0, a0, s7
-; RV32-NEXT:    and a1, s4, s8
-; RV32-NEXT:    add a0, a0, s6
-; RV32-NEXT:    or a1, a1, s9
+; RV32-NEXT:    slli s11, s11, 16
+; RV32-NEXT:    add a0, a0, s8
+; RV32-NEXT:    and a1, s2, s10
+; RV32-NEXT:    add a0, a0, s3
+; RV32-NEXT:    or a1, a1, s11
 ; RV32-NEXT:    add s2, a1, a0
 ; RV32-NEXT:    sltu a0, s2, a1
-; RV32-NEXT:    add s10, s10, a0
+; RV32-NEXT:    lw s3, 28(sp) # 4-byte Folded Reload
+; RV32-NEXT:    add s3, s3, a0
+; RV32-NEXT:    mv a0, s5
+; RV32-NEXT:    mv a1, s7
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    mv s1, a0
+; RV32-NEXT:    srli s8, a0, 16
+; RV32-NEXT:    mv a0, s6
+; RV32-NEXT:    mv a1, s7
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    add s8, a0, s8
+; RV32-NEXT:    and s7, s8, s10
+; RV32-NEXT:    mv a0, s5
+; RV32-NEXT:    mv a1, s4
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    and a1, s1, s10
+; RV32-NEXT:    add a0, a0, s7
+; RV32-NEXT:    slli a2, a0, 16
+; RV32-NEXT:    or a1, a1, a2
+; RV32-NEXT:    add s1, s3, a1
+; RV32-NEXT:    sltu s3, s1, s3
+; RV32-NEXT:    srli s5, a0, 16
+; RV32-NEXT:    srli s7, s8, 16
+; RV32-NEXT:    mv a0, s6
+; RV32-NEXT:    mv a1, s4
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    add s7, a0, s7
 ; RV32-NEXT:    mv a0, s0
-; RV32-NEXT:    mv a1, s0
-; RV32-NEXT:    mv a2, s3
-; RV32-NEXT:    li a3, 0
-; RV32-NEXT:    call __muldi3
-; RV32-NEXT:    add s1, s10, a0
-; RV32-NEXT:    sltu a0, s1, s10
-; RV32-NEXT:    slli s11, s11, 16
-; RV32-NEXT:    and a2, s5, s8
-; RV32-NEXT:    add a1, a1, a0
-; RV32-NEXT:    or a0, a2, s11
+; RV32-NEXT:    lw a1, 36(sp) # 4-byte Folded Reload
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    slli s9, s9, 16
+; RV32-NEXT:    add a0, s7, a0
+; RV32-NEXT:    add a0, a0, s5
+; RV32-NEXT:    lw a1, 32(sp) # 4-byte Folded Reload
+; RV32-NEXT:    and a2, a1, s10
+; RV32-NEXT:    add a1, a0, s3
+; RV32-NEXT:    or a0, a2, s9
 ; RV32-NEXT:    j .LBB48_5
 ; RV32-NEXT:  .LBB48_4: # %fp-to-i-if-exp.large
 ; RV32-NEXT:    addi a1, a1, -150
@@ -7861,46 +7940,46 @@ define i64 @stest_f32i64_mm(float %x) {
 ; RV32-NEXT:    srli a0, a5, 1
 ; RV32-NEXT:    sll a2, a2, a1
 ; RV32-NEXT:    srl a0, a0, a4
-; RV32-NEXT:    or s4, a2, a0
-; RV32-NEXT:    sw s4, 24(sp) # 4-byte Folded Spill
+; RV32-NEXT:    or s1, a2, a0
+; RV32-NEXT:    sw s1, 24(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    lui s7, 16
-; RV32-NEXT:    sll s9, a5, a1
+; RV32-NEXT:    sll s3, a5, a1
 ; RV32-NEXT:    addi s7, s7, -1
-; RV32-NEXT:    srli s3, s4, 16
-; RV32-NEXT:    and s8, s1, s7
-; RV32-NEXT:    mv a0, s3
-; RV32-NEXT:    sw s3, 36(sp) # 4-byte Folded Spill
+; RV32-NEXT:    srli s6, s1, 16
+; RV32-NEXT:    ori s4, s0, 1
+; RV32-NEXT:    and s8, s4, s7
+; RV32-NEXT:    mv a0, s6
+; RV32-NEXT:    sw s6, 36(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    mv a1, s8
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    mv s2, a0
-; RV32-NEXT:    and s4, s4, s7
-; RV32-NEXT:    mv a0, s4
-; RV32-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    and s9, s1, s7
+; RV32-NEXT:    mv a0, s9
 ; RV32-NEXT:    mv a1, s8
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    mv s10, a0
 ; RV32-NEXT:    srli a0, a0, 16
 ; RV32-NEXT:    add a0, s2, a0
-; RV32-NEXT:    srli s5, a0, 16
+; RV32-NEXT:    srli s1, a0, 16
 ; RV32-NEXT:    and s2, a0, s7
-; RV32-NEXT:    srli s11, s1, 16
-; RV32-NEXT:    mv a0, s4
+; RV32-NEXT:    srli s11, s4, 16
+; RV32-NEXT:    mv a0, s9
 ; RV32-NEXT:    mv a1, s11
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    add s1, a0, s2
-; RV32-NEXT:    srli s6, s1, 16
-; RV32-NEXT:    mv a0, s3
+; RV32-NEXT:    add s4, a0, s2
+; RV32-NEXT:    srli s5, s4, 16
+; RV32-NEXT:    mv a0, s6
 ; RV32-NEXT:    mv a1, s11
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    sw s9, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    srli s2, s9, 16
-; RV32-NEXT:    add a0, a0, s5
-; RV32-NEXT:    add s4, a0, s6
+; RV32-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    srli s2, s3, 16
+; RV32-NEXT:    add a0, a0, s1
+; RV32-NEXT:    add s1, a0, s5
 ; RV32-NEXT:    mv a0, s2
 ; RV32-NEXT:    mv a1, s8
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    mv s5, a0
-; RV32-NEXT:    and s6, s9, s7
+; RV32-NEXT:    and s6, s3, s7
 ; RV32-NEXT:    mv a0, s6
 ; RV32-NEXT:    mv a1, s8
 ; RV32-NEXT:    call __mulsi3
@@ -7918,15 +7997,15 @@ define i64 @stest_f32i64_mm(float %x) {
 ; RV32-NEXT:    mv a0, s2
 ; RV32-NEXT:    mv a1, s11
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    slli s1, s1, 16
+; RV32-NEXT:    slli s4, s4, 16
 ; RV32-NEXT:    add a0, a0, s5
 ; RV32-NEXT:    and a1, s10, s7
 ; RV32-NEXT:    add a0, a0, s8
-; RV32-NEXT:    or a1, a1, s1
-; RV32-NEXT:    add s1, a1, a0
-; RV32-NEXT:    sltu s8, s1, a1
-; RV32-NEXT:    add s8, s4, s8
-; RV32-NEXT:    sw s8, 4(sp) # 4-byte Folded Spill
+; RV32-NEXT:    or a1, a1, s4
+; RV32-NEXT:    add s4, a1, a0
+; RV32-NEXT:    sltu s8, s4, a1
+; RV32-NEXT:    add s1, s1, s8
+; RV32-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    and s5, s0, s7
 ; RV32-NEXT:    mv a0, s2
 ; RV32-NEXT:    mv a1, s5
@@ -7938,7 +8017,7 @@ define i64 @stest_f32i64_mm(float %x) {
 ; RV32-NEXT:    mv s11, a0
 ; RV32-NEXT:    srli a0, a0, 16
 ; RV32-NEXT:    add a0, s10, a0
-; RV32-NEXT:    srli s4, a0, 16
+; RV32-NEXT:    srli s8, a0, 16
 ; RV32-NEXT:    and s3, a0, s7
 ; RV32-NEXT:    srli s10, s0, 16
 ; RV32-NEXT:    mv a0, s6
@@ -7952,33 +8031,32 @@ define i64 @stest_f32i64_mm(float %x) {
 ; RV32-NEXT:    slli s3, s3, 16
 ; RV32-NEXT:    and a1, s11, s7
 ; RV32-NEXT:    or a1, a1, s3
-; RV32-NEXT:    add a0, a0, s4
-; RV32-NEXT:    add s2, a1, s1
+; RV32-NEXT:    add a0, a0, s8
+; RV32-NEXT:    add s2, a1, s4
 ; RV32-NEXT:    add a0, a0, s6
 ; RV32-NEXT:    sltu a1, s2, a1
 ; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    add s4, s8, a0
+; RV32-NEXT:    add s3, s1, a0
 ; RV32-NEXT:    lw a0, 36(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    mv a1, s5
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    mv s6, a0
-; RV32-NEXT:    lw s3, 8(sp) # 4-byte Folded Reload
-; RV32-NEXT:    mv a0, s3
+; RV32-NEXT:    mv a0, s9
 ; RV32-NEXT:    mv a1, s5
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    mv s5, a0
 ; RV32-NEXT:    srli a0, a0, 16
 ; RV32-NEXT:    add s6, s6, a0
 ; RV32-NEXT:    and s1, s6, s7
-; RV32-NEXT:    mv a0, s3
+; RV32-NEXT:    mv a0, s9
 ; RV32-NEXT:    mv a1, s10
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    and a1, s5, s7
 ; RV32-NEXT:    add s9, a0, s1
 ; RV32-NEXT:    slli a0, s9, 16
 ; RV32-NEXT:    or s11, a1, a0
-; RV32-NEXT:    mv s5, s4
-; RV32-NEXT:    add s3, s11, s4
+; RV32-NEXT:    mv s5, s3
+; RV32-NEXT:    add s3, s11, s3
 ; RV32-NEXT:    ori a0, s0, 1
 ; RV32-NEXT:    mv a1, s0
 ; RV32-NEXT:    lw a2, 32(sp) # 4-byte Folded Reload
@@ -7996,7 +8074,7 @@ define i64 @stest_f32i64_mm(float %x) {
 ; RV32-NEXT:    add s0, a0, s1
 ; RV32-NEXT:    sltu s11, s3, s11
 ; RV32-NEXT:    add s1, s3, s0
-; RV32-NEXT:    lw a0, 4(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    sltu s5, s5, a0
 ; RV32-NEXT:    sltu s3, s1, s3
 ; RV32-NEXT:    srli s6, s6, 16
@@ -8261,81 +8339,108 @@ define i64 @ustest_f32i64_mm(float %x) {
 ; RV32-NEXT:    lui a2, 2048
 ; RV32-NEXT:    li a3, 149
 ; RV32-NEXT:    or a0, a0, a2
-; RV32-NEXT:    ori s1, s0, 1
 ; RV32-NEXT:    bltu a3, a1, .LBB50_5
 ; RV32-NEXT:  # %bb.3: # %fp-to-i-if-exp.small
 ; RV32-NEXT:    li a2, 150
 ; RV32-NEXT:    sub a2, a2, a1
-; RV32-NEXT:    lui s8, 16
-; RV32-NEXT:    srl s2, a0, a2
-; RV32-NEXT:    addi s8, s8, -1
-; RV32-NEXT:    and s4, s0, s8
-; RV32-NEXT:    srli s3, s2, 16
+; RV32-NEXT:    lui s11, 16
+; RV32-NEXT:    srl s1, a0, a2
+; RV32-NEXT:    sw s1, 36(sp) # 4-byte Folded Spill
+; RV32-NEXT:    addi s11, s11, -1
+; RV32-NEXT:    and s4, s0, s11
+; RV32-NEXT:    srli s3, s1, 16
 ; RV32-NEXT:    mv a0, s3
 ; RV32-NEXT:    mv a1, s4
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    mv s5, a0
-; RV32-NEXT:    and s6, s2, s8
+; RV32-NEXT:    and s6, s1, s11
 ; RV32-NEXT:    mv a0, s6
 ; RV32-NEXT:    mv a1, s4
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    mv s4, a0
+; RV32-NEXT:    mv s8, a0
 ; RV32-NEXT:    srli a0, a0, 16
 ; RV32-NEXT:    add a0, s5, a0
-; RV32-NEXT:    srli s7, a0, 16
-; RV32-NEXT:    and s9, a0, s8
+; RV32-NEXT:    srli s9, a0, 16
+; RV32-NEXT:    and s7, a0, s11
 ; RV32-NEXT:    srli s5, s0, 16
 ; RV32-NEXT:    mv a0, s6
 ; RV32-NEXT:    mv a1, s5
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    add s9, a0, s9
-; RV32-NEXT:    srli s10, s9, 16
+; RV32-NEXT:    add s10, a0, s7
+; RV32-NEXT:    srli s1, s10, 16
 ; RV32-NEXT:    mv a0, s3
 ; RV32-NEXT:    mv a1, s5
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    and s5, s1, s8
-; RV32-NEXT:    add a0, a0, s7
-; RV32-NEXT:    add s11, a0, s10
+; RV32-NEXT:    ori s2, s0, 1
+; RV32-NEXT:    and s7, s2, s11
+; RV32-NEXT:    add a0, a0, s9
+; RV32-NEXT:    add a0, a0, s1
+; RV32-NEXT:    sw a0, 28(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    mv a0, s3
-; RV32-NEXT:    mv a1, s5
+; RV32-NEXT:    mv a1, s7
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    mv s7, a0
+; RV32-NEXT:    mv s9, a0
 ; RV32-NEXT:    mv a0, s6
-; RV32-NEXT:    mv a1, s5
+; RV32-NEXT:    mv a1, s7
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    mv s5, a0
-; RV32-NEXT:    srli a0, a0, 16
-; RV32-NEXT:    add a0, s7, a0
+; RV32-NEXT:    sw a0, 32(sp) # 4-byte Folded Spill
+; RV32-NEXT:    srli a1, a0, 16
+; RV32-NEXT:    add a0, s9, a1
 ; RV32-NEXT:    srli s7, a0, 16
-; RV32-NEXT:    and s10, a0, s8
-; RV32-NEXT:    srli s1, s1, 16
+; RV32-NEXT:    and s9, a0, s11
+; RV32-NEXT:    srli s1, s2, 16
 ; RV32-NEXT:    mv a0, s6
 ; RV32-NEXT:    mv a1, s1
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    add s6, a0, s10
-; RV32-NEXT:    srli s10, s6, 16
+; RV32-NEXT:    add s9, a0, s9
+; RV32-NEXT:    srli s2, s9, 16
 ; RV32-NEXT:    mv a0, s3
 ; RV32-NEXT:    mv a1, s1
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    slli s9, s9, 16
+; RV32-NEXT:    slli s10, s10, 16
 ; RV32-NEXT:    add a0, a0, s7
-; RV32-NEXT:    and a1, s4, s8
-; RV32-NEXT:    add a0, a0, s10
-; RV32-NEXT:    or a1, a1, s9
+; RV32-NEXT:    and a1, s8, s11
+; RV32-NEXT:    add a0, a0, s2
+; RV32-NEXT:    or a1, a1, s10
 ; RV32-NEXT:    add s10, a1, a0
 ; RV32-NEXT:    sltu a0, s10, a1
-; RV32-NEXT:    add s11, s11, a0
+; RV32-NEXT:    lw s2, 28(sp) # 4-byte Folded Reload
+; RV32-NEXT:    add s2, s2, a0
+; RV32-NEXT:    mv a0, s4
+; RV32-NEXT:    mv a1, s6
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    mv s1, a0
+; RV32-NEXT:    srli s7, a0, 16
+; RV32-NEXT:    mv a0, s5
+; RV32-NEXT:    mv a1, s6
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    add s7, a0, s7
+; RV32-NEXT:    and s6, s7, s11
+; RV32-NEXT:    mv a0, s4
+; RV32-NEXT:    mv a1, s3
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    and a1, s1, s11
+; RV32-NEXT:    add a0, a0, s6
+; RV32-NEXT:    slli a2, a0, 16
+; RV32-NEXT:    or a1, a1, a2
+; RV32-NEXT:    add s1, s2, a1
+; RV32-NEXT:    sltu s2, s1, s2
+; RV32-NEXT:    srli s4, a0, 16
+; RV32-NEXT:    srli s6, s7, 16
+; RV32-NEXT:    mv a0, s5
+; RV32-NEXT:    mv a1, s3
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    add s6, a0, s6
 ; RV32-NEXT:    mv a0, s0
-; RV32-NEXT:    mv a1, s0
-; RV32-NEXT:    mv a2, s2
-; RV32-NEXT:    li a3, 0
-; RV32-NEXT:    call __muldi3
-; RV32-NEXT:    add s1, s11, a0
-; RV32-NEXT:    sltu a0, s1, s11
-; RV32-NEXT:    slli s6, s6, 16
-; RV32-NEXT:    and a2, s5, s8
-; RV32-NEXT:    add a1, a1, a0
-; RV32-NEXT:    or a0, a2, s6
+; RV32-NEXT:    lw a1, 36(sp) # 4-byte Folded Reload
+; RV32-NEXT:    call __mulsi3
+; RV32-NEXT:    slli s9, s9, 16
+; RV32-NEXT:    add a0, s6, a0
+; RV32-NEXT:    add a0, a0, s4
+; RV32-NEXT:    lw a1, 32(sp) # 4-byte Folded Reload
+; RV32-NEXT:    and a2, a1, s11
+; RV32-NEXT:    add a1, a0, s2
+; RV32-NEXT:    or a0, a2, s9
 ; RV32-NEXT:    bnez a1, .LBB50_6
 ; RV32-NEXT:  .LBB50_4:
 ; RV32-NEXT:    seqz a2, s1
@@ -8373,46 +8478,46 @@ define i64 @ustest_f32i64_mm(float %x) {
 ; RV32-NEXT:    srli a0, a5, 1
 ; RV32-NEXT:    sll a2, a2, a1
 ; RV32-NEXT:    srl a0, a0, a4
-; RV32-NEXT:    or s3, a2, a0
-; RV32-NEXT:    sw s3, 24(sp) # 4-byte Folded Spill
+; RV32-NEXT:    or s1, a2, a0
+; RV32-NEXT:    sw s1, 24(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    lui s6, 16
-; RV32-NEXT:    sll s8, a5, a1
+; RV32-NEXT:    sll s2, a5, a1
 ; RV32-NEXT:    addi s6, s6, -1
-; RV32-NEXT:    srli s2, s3, 16
-; RV32-NEXT:    and s7, s1, s6
-; RV32-NEXT:    mv a0, s2
-; RV32-NEXT:    sw s2, 36(sp) # 4-byte Folded Spill
+; RV32-NEXT:    srli s5, s1, 16
+; RV32-NEXT:    ori s3, s0, 1
+; RV32-NEXT:    and s7, s3, s6
+; RV32-NEXT:    mv a0, s5
+; RV32-NEXT:    sw s5, 36(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    mv a1, s7
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    mv s10, a0
-; RV32-NEXT:    and s3, s3, s6
-; RV32-NEXT:    mv a0, s3
-; RV32-NEXT:    sw s3, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    and s8, s1, s6
+; RV32-NEXT:    mv a0, s8
 ; RV32-NEXT:    mv a1, s7
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    mv s9, a0
 ; RV32-NEXT:    srli a0, a0, 16
 ; RV32-NEXT:    add a0, s10, a0
-; RV32-NEXT:    srli s4, a0, 16
-; RV32-NEXT:    and s5, a0, s6
-; RV32-NEXT:    srli s11, s1, 16
-; RV32-NEXT:    mv a0, s3
+; RV32-NEXT:    srli s1, a0, 16
+; RV32-NEXT:    and s4, a0, s6
+; RV32-NEXT:    srli s11, s3, 16
+; RV32-NEXT:    mv a0, s8
 ; RV32-NEXT:    mv a1, s11
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    add s1, a0, s5
-; RV32-NEXT:    srli s5, s1, 16
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    add s3, a0, s4
+; RV32-NEXT:    srli s4, s3, 16
+; RV32-NEXT:    mv a0, s5
 ; RV32-NEXT:    mv a1, s11
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    sw s8, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    srli s10, s8, 16
-; RV32-NEXT:    add a0, a0, s4
-; RV32-NEXT:    add s3, a0, s5
+; RV32-NEXT:    sw s2, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    srli s10, s2, 16
+; RV32-NEXT:    add a0, a0, s1
+; RV32-NEXT:    add s1, a0, s4
 ; RV32-NEXT:    mv a0, s10
 ; RV32-NEXT:    mv a1, s7
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    mv s4, a0
-; RV32-NEXT:    and s5, s8, s6
+; RV32-NEXT:    and s5, s2, s6
 ; RV32-NEXT:    mv a0, s5
 ; RV32-NEXT:    mv a1, s7
 ; RV32-NEXT:    call __mulsi3
@@ -8430,15 +8535,15 @@ define i64 @ustest_f32i64_mm(float %x) {
 ; RV32-NEXT:    mv a0, s10
 ; RV32-NEXT:    mv a1, s11
 ; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    slli s1, s1, 16
+; RV32-NEXT:    slli s3, s3, 16
 ; RV32-NEXT:    add a0, a0, s4
 ; RV32-NEXT:    and a1, s9, s6
 ; RV32-NEXT:    add a0, a0, s7
-; RV32-NEXT:    or a1, a1, s1
-; RV32-NEXT:    add s1, a1, a0
-; RV32-NEXT:    sltu s7, s1, a1
-; RV32-NEXT:    add s7, s3, s7
-; RV32-NEXT:    sw s7, 4(sp) # 4-byte Folded Spill
+; RV32-NEXT:    or a1, a1, s3
+; RV32-NEXT:    add s3, a1, a0
+; RV32-NEXT:    sltu s7, s3, a1
+; RV32-NEXT:    add s1, s1, s7
+; RV32-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    and s4, s0, s6
 ; RV32-NEXT:    mv a0, s10
 ; RV32-NEXT:    mv a1, s4
@@ -8450,7 +8555,7 @@ define i64 @ustest_f32i64_mm(float %x) {
 ; RV32-NEXT:    mv s11, a0
 ; RV32-NEXT:    srli a0, a0, 16
 ; RV32-NEXT:    add a0, s9, a0
-; RV32-NEXT:    srli s3, a0, 16
+; RV32-NEXT:    srli s7, a0, 16
 ; RV32-NEXT:    and s2, a0, s6
 ; RV32-NEXT:    srli s9, s0, 16
 ; RV32-NEXT:    mv a0, s5
@@ -8464,33 +8569,32 @@ define i64 @ustest_f32i64_mm(float %x) {
 ; RV32-NEXT:    slli s2, s2, 16
 ; RV32-NEXT:    and a1, s11, s6
 ; RV32-NEXT:    or a1, a1, s2
-; RV32-NEXT:    add a0, a0, s3
-; RV32-NEXT:    add s10, a1, s1
+; RV32-NEXT:    add a0, a0, s7
+; RV32-NEXT:    add s10, a1, s3
 ; RV32-NEXT:    add a0, a0, s5
 ; RV32-NEXT:    sltu a1, s10, a1
 ; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    add s3, s7, a0
+; RV32-NEXT:    add s2, s1, a0
 ; RV32-NEXT:    lw a0, 36(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    mv a1, s4
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    mv s5, a0
-; RV32-NEXT:    lw s2, 8(sp) # 4-byte Folded Reload
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s8
 ; RV32-NEXT:    mv a1, s4
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    mv s4, a0
 ; RV32-NEXT:    srli a0, a0, 16
 ; RV32-NEXT:    add s5, s5, a0
 ; RV32-NEXT:    and s1, s5, s6
-; RV32-NEXT:    mv a0, s2
+; RV32-NEXT:    mv a0, s8
 ; RV32-NEXT:    mv a1, s9
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    and a1, s4, s6
 ; RV32-NEXT:    add s8, a0, s1
 ; RV32-NEXT:    slli a0, s8, 16
 ; RV32-NEXT:    or s11, a1, a0
-; RV32-NEXT:    mv s4, s3
-; RV32-NEXT:    add s2, s11, s3
+; RV32-NEXT:    mv s4, s2
+; RV32-NEXT:    add s2, s11, s2
 ; RV32-NEXT:    ori a0, s0, 1
 ; RV32-NEXT:    mv a1, s0
 ; RV32-NEXT:    lw a2, 32(sp) # 4-byte Folded Reload
@@ -8508,7 +8612,7 @@ define i64 @ustest_f32i64_mm(float %x) {
 ; RV32-NEXT:    add s0, a0, s1
 ; RV32-NEXT:    sltu s11, s2, s11
 ; RV32-NEXT:    add s1, s2, s0
-; RV32-NEXT:    lw a0, 4(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    sltu s4, s4, a0
 ; RV32-NEXT:    sltu s2, s1, s2
 ; RV32-NEXT:    srli s5, s5, 16
