@@ -8,11 +8,6 @@
 
 # Fortran Extensions supported by Flang
 
-```{contents}
----
-local:
----
-```
 
 As a general principle, this compiler will accept by default and
 without complaint many legacy features, extensions to the standard
@@ -276,7 +271,14 @@ end
 * Outside a character literal, a comment after a continuation marker (&)
   need not begin with a comment marker (!).
 * Classic C-style `/*comments*/` are skipped, so multi-language header
-  files are easier to write and use.
+  files are easier to write and use. In fixed source form label fields, C
+  comments are skipped only when preprocessing is enabled. Otherwise, valid
+  Fortran programs could be rejected. For example:
+```fortran
+      x = x
+     /* 2                           ! fixed-form continuation line
+      print *, x, 'tail */ text'
+```
 * $ and \ edit descriptors are supported in FORMAT to suppress newline
   output on user prompts.
 * Tabs in format strings (not `FORMAT` statements) are allowed on output.
@@ -695,6 +697,15 @@ end program
   assignment statements as no-ops, and the rest crash during compilation.)
   The compiler flags this case as an error.
 
+* F2023 12.6.3 restricts enumeration types in I/O only for list-directed
+  transfers (prohibited) and formatted transfers (which must use an `I`, `B`,
+  `O`, or `Z` edit descriptor); it places no restriction on unformatted I/O.
+  Flang is currently stricter than the standard here and rejects an
+  enumeration type -- whether a bare item or reached as a component of a
+  derived type not processed by defined I/O -- in unformatted I/O with an
+  error.  This can be a temporary flang limitation while enumeration-type
+  support is incomplete, not a standard requirement.
+
 ## Standard features that might as well not be
 
 * Flang supports designators with constant expressions, properly
@@ -1080,6 +1091,26 @@ print *, [(j,j=1,10)]
 * Some expression errors, like out-of-range known subscript values,
   are noted only as warnings when they appear in code known to be
   dead anyway at compilation time.
+
+* A reference with a constant subscript that is out of range is accepted
+  with a warning rather than rejected with an error.  A subscript value is
+  required to be within its bounds only when the reference is executed
+  (F'2023 9.5.3.1 paragraph 2), so a reference that never runs does not
+  render a program nonconforming; that case cannot be recognized in general
+  -- consider a procedure whose only call site is in dead code, or one that
+  is never called at all.  Note that the warning, not an error, is also what
+  appears when the reference *is* executed.  The endpoints of array sections
+  get the same treatment.  Cosubscripts do not: their requirement is F'2023
+  9.6 paragraph 2 and a cosubscript list determines an image index, so an
+  out-of-cobounds constant cosubscript remains an error.  Neither do an
+  out-of-range subscript in a reference to a named constant array, an
+  out-of-range `DATA` statement designator, or an out-of-range substring;
+  those remain errors as well.
+  Use `-fno-out-of-bounds-subscripts` to make these references errors again,
+  or `-Wno-out-of-bounds-subscripts` to silence the warning entirely.
+  Note that a module file compiled with the warning may produce errors in a
+  dependent compilation that uses `-fno-out-of-bounds-subscripts`, since the
+  interface is re-analyzed there; those errors point into the module file.
 
 ## Behavior in cases where the standard is clear but disputed
 

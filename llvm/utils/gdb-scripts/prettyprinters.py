@@ -188,11 +188,12 @@ class DenseMapPrinter:
 
     def children(self):
         t = self.val.type.template_argument(3).pointer()
-        buckets = self.val["Buckets"].cast(t)
-        return self._iterator(buckets, self.val["Used"], int(self.val["NumBuckets"]))
+        storage = self.val["Storage"]
+        buckets = storage["Buckets"].cast(t)
+        return self._iterator(buckets, storage["Used"], int(storage["NumBuckets"]))
 
     def to_string(self):
-        return "llvm::DenseMap with %d elements" % (self.val["NumEntries"])
+        return "llvm::DenseMap with %d elements" % (self.val["Storage"]["NumEntries"])
 
     def display_hint(self):
         return "map"

@@ -447,8 +447,8 @@ mlir::intrange::inferRemS(ArrayRef<ConstantIntRanges> argRanges) {
         APInt minRem = lhsMin.srem(maxDivisor);
         APInt maxRem = lhsMax.srem(maxDivisor);
         if (minRem.sle(maxRem)) {
-          smin = minRem;
-          smax = maxRem;
+          smin = std::move(minRem);
+          smax = std::move(maxRem);
         }
       }
     }
@@ -478,8 +478,8 @@ mlir::intrange::inferRemU(ArrayRef<ConstantIntRanges> argRanges) {
         APInt minRem = lhsMin.urem(rhsMax);
         APInt maxRem = lhsMax.urem(rhsMax);
         if (minRem.ule(maxRem)) {
-          umin = minRem;
-          umax = maxRem;
+          umin = std::move(minRem);
+          umax = std::move(maxRem);
         }
       }
     }
@@ -552,8 +552,9 @@ mlir::intrange::inferAnd(ArrayRef<ConstantIntRanges> argRanges) {
   auto andi = [](const APInt &a, const APInt &b) -> std::optional<APInt> {
     return a & b;
   };
-  return minMaxBy(andi, {lhsZeros, lhsOnes}, {rhsZeros, rhsOnes},
-                  /*isSigned=*/false);
+  std::array<APInt, 2> lhsBounds = {std::move(lhsZeros), std::move(lhsOnes)};
+  std::array<APInt, 2> rhsBounds = {std::move(rhsZeros), std::move(rhsOnes)};
+  return minMaxBy(andi, lhsBounds, rhsBounds, /*isSigned=*/false);
 }
 
 ConstantIntRanges
@@ -563,8 +564,9 @@ mlir::intrange::inferOr(ArrayRef<ConstantIntRanges> argRanges) {
   auto ori = [](const APInt &a, const APInt &b) -> std::optional<APInt> {
     return a | b;
   };
-  return minMaxBy(ori, {lhsZeros, lhsOnes}, {rhsZeros, rhsOnes},
-                  /*isSigned=*/false);
+  std::array<APInt, 2> lhsBounds = {std::move(lhsZeros), std::move(lhsOnes)};
+  std::array<APInt, 2> rhsBounds = {std::move(rhsZeros), std::move(rhsOnes)};
+  return minMaxBy(ori, lhsBounds, rhsBounds, /*isSigned=*/false);
 }
 
 /// Get bitmask of all bits which can change while iterating in

@@ -580,7 +580,7 @@ define i1 @issue63316(i64 %arg) {
 ; CHECK-NEXT:    ret i1 [[FCMP]]
 ;
   %sitofp = sitofp i64 %arg to float
-  %fmul = fmul float %sitofp, 0x7FF0000000000000
+  %fmul = fmul float %sitofp, +inf
   %fcmp = fcmp uno float %fmul, 0.000000e+00
   ret i1 %fcmp
 }

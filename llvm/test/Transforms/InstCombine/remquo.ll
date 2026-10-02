@@ -95,7 +95,7 @@ define float @remquo_f32_nan_x(ptr %quo) {
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 entry:
-  %call = call float @remquof(float 0x7FF8000000000000, float 1.000000e+00, ptr %quo)
+  %call = call float @remquof(float +qnan, float 1.000000e+00, ptr %quo)
   ret float %call
 }
 
@@ -107,7 +107,7 @@ define float @remquo_f32_nan_y(ptr %quo) {
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 entry:
-  %call = call float @remquof(float 1.000000e+00, float 0x7FF8000000000000, ptr %quo)
+  %call = call float @remquof(float 1.000000e+00, float +qnan, ptr %quo)
   ret float %call
 }
 

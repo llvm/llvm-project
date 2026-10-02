@@ -65,6 +65,8 @@ def IntTy    : HLSLType<"int">;
 def UIntTy   : HLSLType<"uint">;
 def Int64Ty  : HLSLType<"int64_t">;
 def UInt64Ty : HLSLType<"uint64_t">;
+def Int8PackedTy : HLSLType<"int8_t4_packed">;
+def UInt8PackedTy : HLSLType<"uint8_t4_packed">;
 
 //===----------------------------------------------------------------------===//
 // Element type groups
@@ -326,7 +328,6 @@ def hlsl_abs : HLSLOneArgBuiltin<"abs", "__builtin_elementwise_abs"> {
 }];
   let VaryingTypes = SignedTypes;
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Unsigned abs is a constexpr identity - unsigned values are already non-negative.
@@ -344,7 +345,6 @@ function returns its input unchanged.
   let IsConstexpr = 1;
   let VaryingTypes = UnsignedIntTypes;
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Returns the arccosine of the input value, Val.
@@ -427,6 +427,7 @@ def hlsl_asdouble : HLSLTwoArgBuiltin<"asdouble", "__builtin_hlsl_asdouble"> {
 }];
   let ReturnType = VaryingShape<DoubleTy>;
   let VaryingTypes = [UIntTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -600,6 +601,7 @@ the screen-space x-coordinate.
 }];
   let ParamNames = ["input"];
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -649,6 +651,7 @@ the screen-space y-coordinate.
 }];
   let ParamNames = ["input"];
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -955,7 +958,7 @@ value, \a Val.
   let VaryingLongVector = 1;
 }
 
-// Returns the floating-point remainder of x/y (scalar overloads).
+// Returns the floating-point remainder of x/y.
 def hlsl_fmod : HLSLBuiltin<"fmod"> {
   let Doc = [{
 \fn T fmod(T x, T y)
@@ -972,17 +975,8 @@ parameter.
   let ReturnType = Varying;
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingScalar = 1;
-  let VaryingMatDims = [];
-}
-
-// Returns the floating-point remainder of x/y (vector overloads).
-def hlsl_fmod_vec : HLSLBuiltin<"fmod"> {
-  let DetailFunc = "fmod_vec_impl";
-  let ParamNames = ["X", "Y"];
-  let Args = [Varying, Varying];
-  let ReturnType = Varying;
-  let VaryingTypes = [HalfTy, FloatTy];
   let VaryingVecSizes = [2, 3, 4];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -1141,6 +1135,7 @@ This function uses the following formula: X * 2^Exp
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingScalar = 1;
   let VaryingVecSizes = [2, 3, 4];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -1264,6 +1259,7 @@ def hlsl_mad : HLSLThreeArgBuiltin<"mad", "__builtin_hlsl_mad"> {
 }];
   let VaryingTypes = AllNumericTypes;
   let VaryingMatDims = [];
+   let VaryingLongVector = 1;
 }
 
 // Returns the greater of X and Y.
@@ -1916,4 +1912,18 @@ the specified wave.
   let IsConvergent = 1;
   let Availability = SM6_0;
   let VaryingMatDims = [];
+}
+
+// Reads the value from the first active lane in the wave.
+def hlsl_wave_read_lane_first :
+    HLSLOneArgBuiltin<"WaveReadLaneFirst",
+                      "__builtin_hlsl_wave_read_lane_first"> {
+  let Doc = [{
+\brief Returns the value from the active lane with the smallest index.
+\param Val The value to read.
+}];
+  let VaryingTypes = AllTypesWithBool;
+let VaryingLongVector = 1;
+let IsConvergent = 1;
+let Availability = SM6_0;
 }

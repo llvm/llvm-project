@@ -471,54 +471,54 @@ public:
   }
 };
 
-#define LIST_FROMFP_TESTS(T, func)                                             \
-  using LlvmLibcFromfpTest = FromfpTestTemplate<T>;                            \
-  TEST_F(LlvmLibcFromfpTest, SpecialNumbersNonzeroWidth) {                     \
+#define LIST_FROMFP_TESTS(Name, T, func)                                       \
+  using LlvmLibc##Name##Test = FromfpTestTemplate<T>;                          \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbersNonzeroWidth) {                   \
     testSpecialNumbersNonzeroWidth(&func);                                     \
   }                                                                            \
-  TEST_F(LlvmLibcFromfpTest, SpecialNumbersZeroWidth) {                        \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbersZeroWidth) {                      \
     testSpecialNumbersZeroWidth(&func);                                        \
   }                                                                            \
-  TEST_F(LlvmLibcFromfpTest, RoundedNumbersWithinRange) {                      \
+  TEST_F(LlvmLibc##Name##Test, RoundedNumbersWithinRange) {                    \
     testRoundedNumbersWithinRange(&func);                                      \
   }                                                                            \
-  TEST_F(LlvmLibcFromfpTest, RoundedNumbersOutsideRange) {                     \
+  TEST_F(LlvmLibc##Name##Test, RoundedNumbersOutsideRange) {                   \
     testRoundedNumbersOutsideRange(&func);                                     \
   }                                                                            \
-  TEST_F(LlvmLibcFromfpTest, FractionsUpwardWithinRange) {                     \
+  TEST_F(LlvmLibc##Name##Test, FractionsUpwardWithinRange) {                   \
     testFractionsUpwardWithinRange(&func);                                     \
   }                                                                            \
-  TEST_F(LlvmLibcFromfpTest, FractionsUpwardOutsideRange) {                    \
+  TEST_F(LlvmLibc##Name##Test, FractionsUpwardOutsideRange) {                  \
     testFractionsUpwardOutsideRange(&func);                                    \
   }                                                                            \
-  TEST_F(LlvmLibcFromfpTest, FractionsDownwardWithinRange) {                   \
+  TEST_F(LlvmLibc##Name##Test, FractionsDownwardWithinRange) {                 \
     testFractionsDownwardWithinRange(&func);                                   \
   }                                                                            \
-  TEST_F(LlvmLibcFromfpTest, FractionsDownwardOutsideRange) {                  \
+  TEST_F(LlvmLibc##Name##Test, FractionsDownwardOutsideRange) {                \
     testFractionsDownwardOutsideRange(&func);                                  \
   }                                                                            \
-  TEST_F(LlvmLibcFromfpTest, FractionsTowardZeroWithinRange) {                 \
+  TEST_F(LlvmLibc##Name##Test, FractionsTowardZeroWithinRange) {               \
     testFractionsTowardZeroWithinRange(&func);                                 \
   }                                                                            \
-  TEST_F(LlvmLibcFromfpTest, FractionsTowardZeroOutsideRange) {                \
+  TEST_F(LlvmLibc##Name##Test, FractionsTowardZeroOutsideRange) {              \
     testFractionsTowardZeroOutsideRange(&func);                                \
   }                                                                            \
-  TEST_F(LlvmLibcFromfpTest, FractionsToNearestFromZeroWithinRange) {          \
+  TEST_F(LlvmLibc##Name##Test, FractionsToNearestFromZeroWithinRange) {        \
     testFractionsToNearestFromZeroWithinRange(&func);                          \
   }                                                                            \
-  TEST_F(LlvmLibcFromfpTest, FractionsToNearestFromZeroOutsideRange) {         \
+  TEST_F(LlvmLibc##Name##Test, FractionsToNearestFromZeroOutsideRange) {       \
     testFractionsToNearestFromZeroOutsideRange(&func);                         \
   }                                                                            \
-  TEST_F(LlvmLibcFromfpTest, FractionsToNearestWithinRange) {                  \
+  TEST_F(LlvmLibc##Name##Test, FractionsToNearestWithinRange) {                \
     testFractionsToNearestWithinRange(&func);                                  \
   }                                                                            \
-  TEST_F(LlvmLibcFromfpTest, FractionsToNearestOutsideRange) {                 \
+  TEST_F(LlvmLibc##Name##Test, FractionsToNearestOutsideRange) {               \
     testFractionsToNearestOutsideRange(&func);                                 \
   }                                                                            \
-  TEST_F(LlvmLibcFromfpTest, FractionsToNearestFallbackWithinRange) {          \
+  TEST_F(LlvmLibc##Name##Test, FractionsToNearestFallbackWithinRange) {        \
     testFractionsToNearestFallbackWithinRange(&func);                          \
   }                                                                            \
-  TEST_F(LlvmLibcFromfpTest, FractionsToNearestFallbackOutsideRange) {         \
+  TEST_F(LlvmLibc##Name##Test, FractionsToNearestFallbackOutsideRange) {       \
     testFractionsToNearestFallbackOutsideRange(&func);                         \
   }
 

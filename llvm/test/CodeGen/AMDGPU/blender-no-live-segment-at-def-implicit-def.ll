@@ -40,14 +40,12 @@ define amdgpu_kernel void @blender_no_live_segment_at_def_error(<4 x float> %ext
 ; CHECK-NEXT:    s_mov_b32 s15, 1.0
 ; CHECK-NEXT:    s_mov_b32 s12, 0x7fc00000
 ; CHECK-NEXT:  .LBB0_6: ; %Flow
-; CHECK-NEXT:    s_and_b32 s17, s17, exec_lo
 ; CHECK-NEXT:    s_mov_b32 s48, 1.0
-; CHECK-NEXT:    s_cselect_b32 s17, 1, 0
+; CHECK-NEXT:    s_and_b32 s17, s17, exec_lo
 ; CHECK-NEXT:    s_mov_b32 s49, s48
 ; CHECK-NEXT:    s_mov_b32 s50, s48
-; CHECK-NEXT:    s_cmp_lg_u32 s17, 1
 ; CHECK-NEXT:    s_mov_b32 s51, s48
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_8
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_8
 ; CHECK-NEXT:  ; %bb.7: ; %if.end273.i.i
 ; CHECK-NEXT:    s_add_u32 s18, s8, 40
 ; CHECK-NEXT:    s_addc_u32 s19, s9, 0
@@ -108,7 +106,7 @@ if.then263.i.i:                                   ; preds = %if.else251.i.i
 
 if.end273.i.i:                                    ; preds = %if.then263.i.i, %if.else251.i.i
   %i = phi float [ 1.000000e+00, %if.then263.i.i ], [ 0.000000e+00, %if.else251.i.i ]
-  %i1 = phi float [ 0x7FF8000000000000, %if.then263.i.i ], [ 0.000000e+00, %if.else251.i.i ]
+  %i1 = phi float [ +qnan, %if.then263.i.i ], [ 0.000000e+00, %if.else251.i.i ]
   %extractVec278.i.i = insertelement <3 x float> zeroinitializer, float %i1, i64 0
   %extractVec3.i.i.i = insertelement <3 x float> zeroinitializer, float %i, i64 0
   %i3.i = fadd <3 x float> %extractVec278.i.i, %extractVec3.i.i.i

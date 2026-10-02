@@ -200,7 +200,7 @@ define { float, i32 } @frexp_qnan() {
 ; CHECK-LABEL: define { float, i32 } @frexp_qnan() {
 ; CHECK-NEXT:    ret { float, i32 } { float +qnan, i32 0 }
 ;
-  %ret = call { float, i32 } @llvm.frexp.f32.i32(float 0x7FF8000000000000)
+  %ret = call { float, i32 } @llvm.frexp.f32.i32(float +qnan)
   ret { float, i32 } %ret
 }
 
@@ -264,7 +264,7 @@ define { <2 x float>, <2 x i32> } @frexp_splat_qnan() {
 ; CHECK-LABEL: define { <2 x float>, <2 x i32> } @frexp_splat_qnan() {
 ; CHECK-NEXT:    ret { <2 x float>, <2 x i32> } { <2 x float> splat (float +qnan), <2 x i32> zeroinitializer }
 ;
-  %ret = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>)
+  %ret = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> <float +qnan, float +qnan>)
   ret { <2 x float>, <2 x i32> } %ret
 }
 

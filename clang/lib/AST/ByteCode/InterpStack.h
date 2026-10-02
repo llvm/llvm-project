@@ -125,10 +125,30 @@ private:
     return Object;
   }
 
+  void *peekDataSlow(size_t Size) const;
   /// Returns a pointer from the top of the stack.
-  void *peekData(size_t Size) const;
+  void *peekData(size_t Size) const {
+    assert(Chunk && "Stack is empty!");
+    if (LLVM_LIKELY(Size <= Chunk->size()))
+      return reinterpret_cast<void *>(Chunk->start() + Chunk->Size - Size);
+
+    return peekDataSlow(Size);
+  }
+
+  void shrinkSlow(size_t Size);
   /// Shrinks the stack.
-  void shrink(size_t Size);
+  void shrink(size_t Size) {
+    assert(Chunk && "Chunk is empty!");
+
+    // Likely case is that we simply remove something from the current chunk.
+    if (LLVM_LIKELY(Size <= Chunk->size())) {
+      Chunk->Size -= Size;
+      StackSize -= Size;
+      return;
+    }
+
+    shrinkSlow(Size);
+  }
 
   /// Allocate stack space in 1Mb chunks.
   static constexpr size_t ChunkSize = 1024 * 1024;

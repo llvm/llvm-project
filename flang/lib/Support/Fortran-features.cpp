@@ -135,6 +135,9 @@ LanguageFeatureControl::LanguageFeatureControl() {
   disable_.set(LanguageFeature::CudaManaged);
   disable_.set(LanguageFeature::CudaUnified);
   disable_.set(LanguageFeature::CudaPinned);
+  // Spelled only in module files, by the compiler itself; enabled just for
+  // parsing them, so that user code cannot write it.
+  disable_.set(LanguageFeature::CUDAImplicitDataAttrSpelling);
   disable_.set(LanguageFeature::CUDAInit);
   disable_.set(LanguageFeature::ImplicitNoneTypeNever);
   disable_.set(LanguageFeature::ImplicitNoneTypeAlways);
@@ -228,6 +231,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnLanguage_.set(LanguageFeature::OpenAccDefaultNoneScalarsStrict);
   warnLanguage_.set(LanguageFeature::OpenACCMultipleNamesInRoutine);
   warnLanguage_.set(LanguageFeature::MultipleCommonBlockInit);
+  warnLanguage_.set(LanguageFeature::OutOfBoundsSubscripts);
 }
 
 std::optional<LanguageControlFlag> LanguageFeatureControl::FindWarning(

@@ -1,3 +1,4 @@
+; REQUIRES: asserts
 ; RUN: opt -vectorizer-maximize-bandwidth -mcpu=pwr8 -S -passes=loop-vectorize -disable-output -debug-only=loop-vectorize < %s 2>&1 | FileCheck --check-prefix=P8COST %s
 ; NOTE: P9 uses 2x 64-bit vector units, P8 and P10 use 1x 128-bit vector unit
 ; RUN: opt -vectorizer-maximize-bandwidth -mcpu=pwr9 -S -passes=loop-vectorize -disable-output -debug-only=loop-vectorize < %s 2>&1 | FileCheck --check-prefix=P9COST %s

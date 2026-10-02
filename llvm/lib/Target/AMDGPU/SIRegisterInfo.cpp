@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SIRegisterInfo.h"
+#include "AMDGPU.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
@@ -20,6 +22,10 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
+
+#define DEBUG_TYPE "amdgpu-si-register-info"
 
 using namespace llvm;
 
@@ -35,7 +41,7 @@ static cl::opt<bool> EnableSpillSGPRToVGPR(
 static cl::opt<bool> EnableSpillCFISavedRegs(
     "amdgpu-spill-cfi-saved-regs",
     cl::desc("Enable spilling the registers required for CFI emission"),
-    cl::ReallyHidden, cl::init(false), cl::ZeroOrMore);
+    cl::ReallyHidden, cl::init(false));
 
 static cl::opt<unsigned> StressVGPRLimit(
     "amdgpu-stress-vgpr", cl::Hidden, cl::init(0),
@@ -1138,14 +1144,6 @@ bool SIRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
 
   return TII->isLegalFLATOffset(NewOffset, AMDGPUAS::PRIVATE_ADDRESS,
                                 AMDGPU::FlatAddrSpace::FlatScratch);
-}
-
-const TargetRegisterClass *
-SIRegisterInfo::getPointerRegClass(unsigned Kind) const {
-  // This is inaccurate. It depends on the instruction and address space. The
-  // only place where we should hit this is for dealing with frame indexes /
-  // private accesses, so this is correct in that case.
-  return &AMDGPU::VGPR_32RegClass;
 }
 
 const TargetRegisterClass *
@@ -2549,6 +2547,13 @@ static bool foldingOffsetChangesCarry(const MachineOperand &OtherOp,
                          : FrameReg.isValid();
 }
 
+// Is SCC live into MI, so that frame index lowering must not clobber it?
+static bool isSCCLiveInto(const RegScavenger &RS, const MachineInstr &MI) {
+  return (RS.isRegUsed(AMDGPU::SCC) &&
+          !MI.definesRegister(AMDGPU::SCC, /*TRI=*/nullptr)) ||
+         MI.readsRegister(AMDGPU::SCC, /*TRI=*/nullptr);
+}
+
 bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                         int SPAdj, unsigned FIOperandNum,
                                         RegScavenger *RS) const {
@@ -3275,9 +3280,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         return false;
       }
 
-      bool NeedSaveSCC = (RS->isRegUsed(AMDGPU::SCC) &&
-                          !MI->definesRegister(AMDGPU::SCC, /*TRI=*/nullptr)) ||
-                         MI->readsRegister(AMDGPU::SCC, /*TRI=*/nullptr);
+      bool NeedSaveSCC = isSCCLiveInto(*RS, *MI);
 
       Register TmpSReg =
           UseSGPR ? TmpReg
@@ -3411,19 +3414,48 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       // Convert to a swizzled stack address by scaling by the wave size.
       // In an entry function/kernel the offset is already swizzled.
       bool IsSALU = isSGPRClass(TII->getRegClass(MI->getDesc(), FIOperandNum));
-      bool LiveSCC = RS->isRegUsed(AMDGPU::SCC) &&
-                     !MI->definesRegister(AMDGPU::SCC, /*TRI=*/nullptr);
+      bool LiveSCC = isSCCLiveInto(*RS, *MI);
+      // The scavenger is positioned at the liveness state immediately after MI,
+      // so we need only check if SCC is used.
+      bool SCCLiveAfterMI = RS->isRegUsed(AMDGPU::SCC);
       const TargetRegisterClass *RC = IsSALU && !LiveSCC
                                           ? &AMDGPU::SReg_32RegClass
                                           : &AMDGPU::VGPR_32RegClass;
       bool IsCopy = MI->getOpcode() == AMDGPU::V_MOV_B32_e32 ||
                     MI->getOpcode() == AMDGPU::V_MOV_B32_e64 ||
                     MI->getOpcode() == AMDGPU::S_MOV_B32;
-      Register ResultReg =
-          IsCopy ? MI->getOperand(0).getReg()
-                 : RS->scavengeRegisterBackwards(*RC, MI, false, 0);
 
       int64_t Offset = FrameInfo.getObjectOffset(Index);
+
+      // Scaling FrameReg in place is the last resort when there is nothing to
+      // scavenge. It has to be undone after MI, which is only possible while MI
+      // does not use FrameReg for anything besides the frame index.
+      bool CanUseFrameRegAsSGPRScratch = IsSALU && FrameReg &&
+                                         !MI->readsRegister(FrameReg, this) &&
+                                         !MI->modifiesRegister(FrameReg, this);
+      // ResultReg is a VGPR while SCC is live, so FrameReg cannot stand in for
+      // it there.
+      bool CanUseFrameRegAsScratch = CanUseFrameRegAsSGPRScratch && !LiveSCC;
+
+      bool RestoreFrameReg = false;
+
+      Register ResultReg;
+      if (IsCopy) {
+        ResultReg = MI->getOperand(0).getReg();
+      } else {
+        ResultReg = RS->scavengeRegisterBackwards(*RC, MI, false, 0,
+                                                  /*AllowSpill=*/false);
+        if (!ResultReg) {
+          if (CanUseFrameRegAsScratch) {
+            // Spilling an SGPR here instead would flip EXEC with S_NOT, and
+            // that clobbers the SCC MI may be defining for a later use.
+            ResultReg = FrameReg;
+            RestoreFrameReg = true;
+          } else {
+            ResultReg = RS->scavengeRegisterBackwards(*RC, MI, false, 0);
+          }
+        }
+      }
 
       // The carry-out lane of Add is unused, so it is safe to write with
       // S_MOV_B32 even into a VGPR.
@@ -3460,8 +3492,25 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
             assert(ResultReg.isPhysical());
             NewDest = ResultReg;
           } else {
+            // Spilling an SGPR here would flip EXEC with S_NOT, and that
+            // clobbers the SCC this path exists to preserve, so scale FrameReg
+            // in place instead.
             NewDest = RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass,
-                                                    Shift, false, 0);
+                                                    Shift, false, 0,
+                                                    /*AllowSpill=*/false);
+            if (!NewDest) {
+              if (CanUseFrameRegAsSGPRScratch) {
+                NewDest = FrameReg;
+                RestoreFrameReg = true;
+              } else {
+                // Nothing is left to scale in place, so fall back to the SGPR
+                // spill even though it clobbers SCC.
+                emitUnsupportedError(MF->getFunction(), *MI,
+                                     "unhandled SGPR spill to memory");
+                NewDest = RS->scavengeRegisterBackwards(
+                    AMDGPU::SReg_32_XM0RegClass, Shift, false, 0);
+              }
+            }
           }
           BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), NewDest)
               .addReg(TmpResultReg);
@@ -3512,7 +3561,11 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                       : RS->scavengeRegisterBackwards(
                                             AMDGPU::SReg_32_XM0RegClass, MI,
                                             false, 0, /*AllowSpill=*/false);
-          Register ScaledReg = TmpScaledReg.isValid() ? TmpScaledReg : FrameReg;
+          // A scalar result is already materialized in ResultReg, which holds
+          // the scavenged register, or FrameReg itself if nothing was free.
+          Register ScaledReg = TmpScaledReg;
+          if (!ScaledReg.isValid())
+            ScaledReg = IsSALU ? ResultReg : FrameReg;
           Register TmpResultReg = ScaledReg;
 
           if (!LiveSCC) {
@@ -3577,9 +3630,22 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
             if (IsCopy) {
               NewDest = ResultReg;
             } else {
+              // As above, an SGPR spill here would clobber the live SCC.
               NewDest = RS->scavengeRegisterBackwards(
                   AMDGPU::SReg_32_XM0RegClass, *Add, false, 0,
-                  /*AllowSpill=*/true);
+                  /*AllowSpill=*/false);
+              if (!NewDest) {
+                if (CanUseFrameRegAsSGPRScratch) {
+                  NewDest = FrameReg;
+                  RestoreFrameReg = true;
+                } else {
+                  // As above, fall back to the SCC-clobbering SGPR spill.
+                  emitUnsupportedError(MF->getFunction(), *MI,
+                                       "unhandled SGPR spill to memory");
+                  NewDest = RS->scavengeRegisterBackwards(
+                      AMDGPU::SReg_32_XM0RegClass, *Add, false, 0);
+                }
+              }
             }
 
             BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32),
@@ -3587,17 +3653,51 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                 .addReg(TmpResultReg);
             ResultReg = NewDest;
           }
-          if (!IsSALU)
+          // A scalar result still reads FrameReg at MI, so FrameReg is
+          // restored after MI instead.
+          if (!IsSALU) {
             BuildMI(*MBB, MI, DL, TII->get(AMDGPU::COPY), ResultReg)
                 .addReg(TmpResultReg, RegState::Kill);
-          // If there were truly no free SGPRs, we need to undo everything.
-          if (!TmpScaledReg.isValid()) {
-            BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), ScaledReg)
-                .addReg(ScaledReg, RegState::Kill)
-                .addImm(-Offset);
-            BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_LSHL_B32), ScaledReg)
+            // If there were truly no free SGPRs, we need to undo everything.
+            if (!TmpScaledReg.isValid()) {
+              BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), ScaledReg)
+                  .addReg(ScaledReg, RegState::Kill)
+                  .addImm(-Offset);
+              BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_LSHL_B32), ScaledReg)
+                  .addReg(FrameReg)
+                  .addImm(ST.getWavefrontSizeLog2());
+            }
+          }
+        }
+      }
+
+      if (RestoreFrameReg) {
+        // Put FrameReg back now that MI has consumed the scaled address.
+        // S_MUL_I32 undoes the scaling without writing SCC, which S_LSHL_B32
+        // would. When MI leaves SCC live, fold the offset back with the carry
+        // sequence that smuggles SCC through bit 0, which the scaling has just
+        // cleared.
+        MachineBasicBlock::iterator InsPt = std::next(MI);
+        BuildMI(*MBB, InsPt, DL, TII->get(AMDGPU::S_MUL_I32), FrameReg)
+            .addReg(FrameReg)
+            .addImm(ST.getWavefrontSize());
+
+        if (Offset) {
+          int64_t ScaledOffset = -Offset * ST.getWavefrontSize();
+          if (!SCCLiveAfterMI) {
+            BuildMI(*MBB, InsPt, DL, TII->get(AMDGPU::S_ADD_I32), FrameReg)
                 .addReg(FrameReg)
-                .addImm(ST.getWavefrontSizeLog2());
+                .addImm(ScaledOffset);
+          } else {
+            BuildMI(*MBB, InsPt, DL, TII->get(AMDGPU::S_ADDC_U32), FrameReg)
+                .addReg(FrameReg)
+                .addImm(ScaledOffset);
+            BuildMI(*MBB, InsPt, DL, TII->get(AMDGPU::S_BITCMP1_B32))
+                .addReg(FrameReg)
+                .addImm(0);
+            BuildMI(*MBB, InsPt, DL, TII->get(AMDGPU::S_BITSET0_B32), FrameReg)
+                .addImm(0)
+                .addReg(FrameReg);
           }
         }
       }
@@ -3607,7 +3707,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         MI->eraseFromParent();
         return true;
       }
-      FIOp->ChangeToRegister(ResultReg, false, false, true);
+      // FrameReg is restored after MI, so MI does not kill it.
+      FIOp->ChangeToRegister(ResultReg, false, false, !RestoreFrameReg);
       return false;
     }
 
@@ -3986,6 +4087,10 @@ SIRegisterInfo::getEquivalentVGPRClass(const TargetRegisterClass *SRC) const {
   switch (SRC->getID()) {
   default:
     break;
+  case AMDGPU::VS_16_Lo128RegClassID:
+    return getAllocatableClass(&AMDGPU::VGPR_16_Lo128RegClass);
+  case AMDGPU::VS_32_Lo128RegClassID:
+    return getAllocatableClass(&AMDGPU::VGPR_32_Lo128RegClass);
   case AMDGPU::VS_32_Lo256RegClassID:
   case AMDGPU::VS_64_Lo256RegClassID:
     return getAllocatableClass(getAlignedLo256VGPRClassForBitWidth(Size));
@@ -4232,6 +4337,147 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
     return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
                                                      VRM);
   }
+}
+
+bool SIRegisterInfo::shouldApplyAntiHints(
+    const MachineFunction &MF, unsigned NumAllocatedVGPRs,
+    unsigned &MaxVGPRsForCurrentOccupancy) const {
+
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  unsigned DynamicVGPRBlockSize = MFI->getDynamicVGPRBlockSize();
+  unsigned RecordedMaxOccupancy = MFI->getOccupancy();
+  unsigned CurrentOccupancy =
+      ST.getOccupancyWithNumVGPRs(NumAllocatedVGPRs, DynamicVGPRBlockSize);
+  MaxVGPRsForCurrentOccupancy =
+      ST.getMaxNumVGPRs(CurrentOccupancy, DynamicVGPRBlockSize);
+
+  LLVM_DEBUG(dbgs() << "anti-hints: VGPRs allocated = " << NumAllocatedVGPRs
+                    << ", RecordedMaxOccupancy = " << RecordedMaxOccupancy
+                    << ", current occupancy = " << CurrentOccupancy << '\n');
+
+  // If we are already at lowest occupancy, then there is no need to protect
+  // against occupancy regression.
+  if (CurrentOccupancy == 1)
+    return true;
+
+  // Do not apply anti-hints if we are reaching close to the VGPR budget. For
+  // recorded max occupancy, the 80% cutoff is a conservative: anti-hints are
+  // disabled early enough that later registers still have headroom to stay at
+  // recorded max occupancy. For current occupancy, the 95% cutoff margin is
+  // used to not apply anti-hints close to the limit of the current occupancy
+  // budget.
+  unsigned MaxVGPRsCutOffForRecordedMaxOccupancy =
+      (ST.getMaxNumVGPRs(RecordedMaxOccupancy, DynamicVGPRBlockSize) * 80) /
+      100;
+  unsigned MaxVGPRsCutOffForCurrentOccupancy =
+      (MaxVGPRsForCurrentOccupancy * 95) / 100;
+
+  if (NumAllocatedVGPRs >= MaxVGPRsCutOffForRecordedMaxOccupancy) {
+    LLVM_DEBUG(dbgs() << "anti-hints: not applied, at or above the "
+                      << MaxVGPRsCutOffForRecordedMaxOccupancy
+                      << " VGPR cutoff for RecordedMaxOccupancy\n");
+    return false;
+  }
+
+  if (NumAllocatedVGPRs >= MaxVGPRsCutOffForCurrentOccupancy) {
+    LLVM_DEBUG(dbgs() << "anti-hints: not applied, at or above the "
+                      << MaxVGPRsCutOffForCurrentOccupancy
+                      << " VGPR cutoff for current occupancy\n");
+    return false;
+  }
+
+  return true;
+}
+
+// Returns true if Reg fits within the current occupancy VGPR budget.
+bool SIRegisterInfo::isRegWithinOccupancyBudget(
+    MCPhysReg Reg, unsigned NumVGPRs, unsigned NumAGPRs,
+    unsigned MaxVGPRsForCurrentOccupancy) const {
+  const TargetRegisterClass *RC = getPhysRegBaseClass(Reg);
+
+  // No VGPR or AGPR usage.
+  if (!RC || !hasVectorRegisters(RC))
+    return true;
+
+  unsigned RegEndIndex =
+      getHWRegIndex(Reg) + divideCeil(getRegSizeInBits(*RC), 32);
+
+  unsigned MaxVGPR = NumVGPRs;
+  unsigned MaxAGPR = NumAGPRs;
+
+  if (isAGPRClass(RC))
+    MaxAGPR = std::max(MaxAGPR, RegEndIndex);
+  else
+    MaxVGPR = std::max(MaxVGPR, RegEndIndex);
+
+  return static_cast<unsigned>(
+             AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), MaxAGPR, MaxVGPR)) <=
+         MaxVGPRsForCurrentOccupancy;
+}
+
+void SIRegisterInfo::filterAndSortForAntiHintedRegs(
+    Register VirtReg, MutableArrayRef<MCPhysReg> CustomOrder,
+    const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
+    const LiveRegMatrix *Matrix, const RegisterClassInfo *RegClassInfo) const {
+
+  if (none_of(CustomOrder, [&](MCPhysReg Reg) {
+        return isAntiHintedReg(Reg, AntiHintedRegUnits);
+      }))
+    return;
+
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  assert(hasVectorRegisters(MRI.getRegClass(VirtReg)) &&
+         "SGPR anti-hints are not handled");
+  unsigned NumVGPRs = 0;
+  unsigned NumAGPRs = 0;
+
+  assert(Matrix && "LiveRegMatrix required to compute occupancy");
+  assert(RegClassInfo && "RegClassInfo required to compute occupancy");
+  for (MCPhysReg Reg : RegClassInfo->getOrder(&AMDGPU::VGPR_32RegClass)) {
+    if (Matrix->isPhysRegUsed(Reg) ||
+        MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/true))
+      NumVGPRs = std::max(NumVGPRs, getHWRegIndex(Reg) + 1);
+  }
+
+  for (MCPhysReg Reg : RegClassInfo->getOrder(&AMDGPU::AGPR_32RegClass)) {
+    if (Matrix->isPhysRegUsed(Reg) ||
+        MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/true))
+      NumAGPRs = std::max(NumAGPRs, getHWRegIndex(Reg) + 1);
+  }
+
+  unsigned NumAllocatedVGPRs =
+      AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), NumAGPRs, NumVGPRs);
+
+  // Early exit if we should not apply anti-hints.
+  unsigned MaxVGPRsForCurrentOccupancy = 0;
+  if (!shouldApplyAntiHints(MF, NumAllocatedVGPRs, MaxVGPRsForCurrentOccupancy))
+    return;
+
+  // Reorder all in-budget first so the anti-hinted partition covers
+  // both VGPRs and AGPRs.
+  auto *BeyondBudgetStart = std::stable_partition(
+      CustomOrder.begin(), CustomOrder.end(), [&](MCPhysReg Reg) {
+        return isRegWithinOccupancyBudget(Reg, NumVGPRs, NumAGPRs,
+                                          MaxVGPRsForCurrentOccupancy);
+      });
+
+  [[maybe_unused]] auto *PartitionPoint = std::stable_partition(
+      CustomOrder.begin(), BeyondBudgetStart,
+      [&](MCPhysReg Reg) { return !isAntiHintedReg(Reg, AntiHintedRegUnits); });
+
+  LLVM_DEBUG({
+    size_t NonAntiHintedCount =
+        std::distance(CustomOrder.begin(), PartitionPoint);
+    size_t AntiHintedCount = std::distance(PartitionPoint, BeyondBudgetStart);
+    size_t BeyondBudgetCount =
+        std::distance(BeyondBudgetStart, CustomOrder.end());
+    dbgs() << "Added " << NonAntiHintedCount
+           << " non-anti-hinted registers first\n"
+           << "Added " << AntiHintedCount
+           << " anti-hinted registers at the end\n"
+           << "Beyond current occupancy budget, left: " << BeyondBudgetCount
+           << '\n';
+  });
 }
 
 MCRegister SIRegisterInfo::getReturnAddressReg(const MachineFunction &MF) const {

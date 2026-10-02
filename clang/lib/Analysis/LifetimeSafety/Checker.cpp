@@ -73,9 +73,9 @@ private:
 
   static SourceLocation
   GetFactLoc(llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> F) {
-    if (const auto *UF = F.dyn_cast<const UseFact *>())
+    if (const auto *UF = dyn_cast<const UseFact *>(F))
       return UF->getUseExpr()->getExprLoc();
-    if (const auto *OEF = F.dyn_cast<const OriginEscapesFact *>()) {
+    if (const auto *OEF = dyn_cast<const OriginEscapesFact *>(F)) {
       if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
         return ReturnEsc->getReturnExpr()->getExprLoc();
       if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF))
@@ -105,10 +105,14 @@ public:
           checkAnnotations(OEF);
     issuePendingWarnings();
     suggestAnnotations();
-    reportNoescapeViolations();
-    reportLifetimeboundViolations();
-    reportMisplacedLifetimebound();
-    reportInapplicableLifetimebound();
+    if (LSOpts.CheckNoescapeViolations)
+      reportNoescapeViolations();
+    if (LSOpts.CheckLifetimeboundViolations)
+      reportLifetimeboundViolations();
+    if (LSOpts.CheckMisplacedLifetimebound)
+      reportMisplacedLifetimebound();
+    if (LSOpts.CheckInapplicableLifetimebound)
+      reportInapplicableLifetimebound();
     //  Annotation inference is currently guarded by a frontend flag. In the
     //  future, this might be replaced by a design that differentiates between
     //  explicit and inferred findings with separate warning groups.
@@ -149,8 +153,12 @@ public:
         if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
           AnnotationWarningsMap.try_emplace(PVD, ReturnEsc->getReturnExpr());
         else if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF);
-                 FieldEsc && isa<CXXConstructorDecl>(FD))
-          AnnotationWarningsMap.try_emplace(PVD, FieldEsc->getFieldDecl());
+                 FieldEsc && isa<CXXConstructorDecl>(FD)) {
+          // Disable inference for pointers being captured by an owner type,
+          // as owners typically consume these pointers rather than borrow them.
+          if (!isOwnerPtrCtor(dyn_cast<CXXConstructorDecl>(FD), PVD))
+            AnnotationWarningsMap.try_emplace(PVD, FieldEsc->getFieldDecl());
+        }
       }
       // TODO: Suggest lifetime_capture_by(this) for parameter escaping to a
       // field!
@@ -254,6 +262,7 @@ public:
   }
 
   void issuePendingWarnings() {
+    llvm::TimeTraceScope TimeTrace("IssuePendingWarnings");
     if (!SemaHelper)
       return;
     for (const auto &[LID, Warning] : FinalWarningsMap) {
@@ -424,10 +433,10 @@ public:
       return;
     llvm::TimeTraceScope TimeTrace("SuggestAnnotations");
     for (auto [Target, EscapeTarget] : AnnotationWarningsMap) {
-      if (const auto *PVD = Target.dyn_cast<const ParmVarDecl *>())
+      if (const auto *PVD = dyn_cast<const ParmVarDecl *>(Target))
         suggestWithScopeForParmVar(PVD, EscapeTarget);
-      else if (const auto *MD = Target.dyn_cast<const CXXMethodDecl *>()) {
-        if (const auto *EscapeExpr = EscapeTarget.dyn_cast<const Expr *>())
+      else if (const auto *MD = dyn_cast<const CXXMethodDecl *>(Target)) {
+        if (const auto *EscapeExpr = dyn_cast<const Expr *>(EscapeTarget))
           suggestWithScopeForImplicitThis(MD, EscapeExpr);
         else
           llvm_unreachable("Implicit this can only escape via Expr (return)");
@@ -436,12 +445,13 @@ public:
   }
 
   void reportNoescapeViolations() {
+    llvm::TimeTraceScope TimeTrace("ReportNoescapeViolations");
     for (auto [PVD, EscapeTarget] : NoescapeWarningsMap) {
-      if (const auto *E = EscapeTarget.dyn_cast<const Expr *>())
+      if (const auto *E = dyn_cast<const Expr *>(EscapeTarget))
         SemaHelper->reportNoescapeViolation(PVD, E);
-      else if (const auto *FD = EscapeTarget.dyn_cast<const FieldDecl *>())
+      else if (const auto *FD = dyn_cast<const FieldDecl *>(EscapeTarget))
         SemaHelper->reportNoescapeViolation(PVD, FD);
-      else if (const auto *G = EscapeTarget.dyn_cast<const VarDecl *>())
+      else if (const auto *G = dyn_cast<const VarDecl *>(EscapeTarget))
         SemaHelper->reportNoescapeViolation(PVD, G);
       else
         llvm_unreachable("Unhandled EscapingTarget type");
@@ -449,6 +459,7 @@ public:
   }
 
   void reportLifetimeboundViolations() {
+    llvm::TimeTraceScope TimeTrace("ReportLifetimeboundViolations");
     if (!isa<FunctionDecl>(FD))
       return;
     if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
@@ -471,6 +482,7 @@ public:
   // Reports lifetimebound attributes that are placed on a function definition
   // but not on the corresponding declaration.
   void reportMisplacedLifetimebound() {
+    llvm::TimeTraceScope TimeTrace("ReportMisplacedLifetimebound");
     const FunctionDecl *FDef = dyn_cast<FunctionDecl>(FD);
     if (!FDef)
       return;
@@ -501,6 +513,7 @@ public:
   }
 
   void reportInapplicableLifetimebound() {
+    llvm::TimeTraceScope TimeTrace("ReportInapplicableLifetimebound");
     const auto *FDef = dyn_cast<FunctionDecl>(FD);
     if (!FDef)
       return;
@@ -520,10 +533,10 @@ public:
 
   void inferAnnotations() {
     for (auto [Target, EscapeTarget] : AnnotationWarningsMap) {
-      if (const auto *MD = Target.dyn_cast<const CXXMethodDecl *>()) {
+      if (const auto *MD = dyn_cast<const CXXMethodDecl *>(Target)) {
         if (!implicitObjectParamIsLifetimeBound(MD))
           SemaHelper->addLifetimeBoundToImplicitThis(cast<CXXMethodDecl>(MD));
-      } else if (const auto *PVD = Target.dyn_cast<const ParmVarDecl *>()) {
+      } else if (const auto *PVD = dyn_cast<const ParmVarDecl *>(Target)) {
         const auto *FD = dyn_cast<FunctionDecl>(PVD->getDeclContext());
         if (!FD)
           continue;

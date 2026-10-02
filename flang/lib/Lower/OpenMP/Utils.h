@@ -29,6 +29,7 @@ class RecordType;
 namespace Fortran {
 
 namespace semantics {
+class SemanticsContext;
 class Symbol;
 namespace omp {
 class OmpVariantMatchContext;
@@ -235,9 +236,8 @@ mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
 /// Resolve the declare mapper symbol to attach to a mapped object.
 ///
 /// The default mapper path first looks for a user-defined mapper. If none
-/// exists, it may synthesize a compiler-generated mapper, except for mapped
-/// members whose parent object is also mapped and for target enter data,
-/// target exit data, and target update directives.
+/// exists, it may synthesize a compiler-generated mapper, except for target
+/// enter data, target exit data, and target update directives.
 ///
 /// \param converter The converter used to query and generate mapper symbols.
 /// \param loc The location to use when generating an implicit mapper.
@@ -247,15 +247,12 @@ mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
 /// \param mapTypeBits The map flags used when deciding whether an implicit
 ///        mapper should be generated.
 /// \param directive The enclosing OpenMP directive.
-/// \param hasParentObj True if a mapped parent object already owns this object.
 /// \return A symbol reference to the resolved mapper, or a null attribute when
 ///         no mapper applies.
-mlir::FlatSymbolRefAttr
-resolveMapperId(Fortran::lower::AbstractConverter &converter,
-                mlir::Location loc, const omp::Object &object,
-                llvm::StringRef mapperIdName,
-                mlir::omp::ClauseMapFlags mapTypeBits,
-                llvm::omp::Directive directive, bool hasParentObj);
+mlir::FlatSymbolRefAttr resolveMapperId(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const omp::Object &object, llvm::StringRef mapperIdName,
+    mlir::omp::ClauseMapFlags mapTypeBits, llvm::omp::Directive directive);
 
 std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
     Fortran::lower::AbstractConverter &converter, const omp::Object &object,
@@ -268,6 +265,15 @@ std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
 void collectEnclosingConstructTraits(
     mlir::Operation *op,
     llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits);
+
+/// Return true when \p module is being compiled for an AMDGPU device or all of
+/// its offload targets are AMDGPU devices.
+bool hasOnlyAMDGCNTargets(mlir::ModuleOp module);
+
+/// Return true when unified shared memory is required by either the OpenMP
+/// module attributes or a source-level `requires` directive.
+bool requiresUnifiedSharedMemory(mlir::ModuleOp module,
+                                 semantics::SemanticsContext &semaCtx);
 
 /// Build the OpenMP variant-matching context for \p module. The device flag,
 /// host triple, offload triple, and target features are read from the module;
