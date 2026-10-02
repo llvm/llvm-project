@@ -249,7 +249,7 @@ define void @expand_truncated_ptrtoaddr(ptr %A, ptr %B) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[INDVAR_LCSSA]], -1
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP5]] to i64
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[SCEVGEP]], i8 0, i64 [[TMP6]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[SCEVGEP]], i8 0, i64 range(i64 0, 2147483649) [[TMP6]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP_2:.*]]
 ; CHECK:       [[LOOP_2]]:
 ; CHECK-NEXT:    [[P_1:%.*]] = phi ptr [ [[B]], %[[MIDDLE]] ], [ [[P_1_NEXT:%.*]], %[[LOOP_2]] ]
