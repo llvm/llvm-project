@@ -738,8 +738,7 @@ struct IntToFPPattern final : public OpConversionPattern<ArithOp> {
                                          "unsupported type for uitofp/sitofp");
     }
 
-    unsigned convertedBitwidth =
-        srcElemType.getIntOrFloatBitWidth();
+    unsigned convertedBitwidth = srcElemType.getIntOrFloatBitWidth();
 
     if (originalBitwidth >= convertedBitwidth) {
       rewriter.replaceOpWithNewOp<SPIRVOp>(op, dstType, adaptor.getOperands());
