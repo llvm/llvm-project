@@ -1752,6 +1752,7 @@ public:
   /// copy indicates whether we need to copy the underlying memory
   /// for the input Name.
   void add(StringRef Name, bool Copy = false) {
+    assert(!IsMD5 && "Adding string to MD5 ProfileSymbolList is not supported");
     if (!Copy) {
       Syms.insert(Name);
       return;
@@ -1760,39 +1761,61 @@ public:
   }
 
   bool contains(StringRef Name) const {
-    return IsMD5 ? ColdGUIDTable.contains(llvm::MD5Hash(Name))
-                 : Syms.count(Name);
+    if (!IsMD5)
+      return Syms.contains(Name);
+    uint64_t GUID = llvm::MD5Hash(Name);
+    return !ColdGUIDTable.empty() ? ColdGUIDTable.contains(GUID)
+                                  : GUIDs.contains(GUID);
   }
 
   void merge(const ProfileSymbolList &List) {
-    assert(!List.IsMD5 &&
-           "Merging pre-hashed MD5 ProfileSymbolList not yet implemented");
-    for (auto Sym : List.Syms)
-      add(Sym, true);
+    if (List.size() == 0)
+      return;
+    if (!List.IsMD5) {
+      assert(!IsMD5 &&
+             "Merging string and MD5 ProfileSymbolLists is not supported");
+      for (auto Sym : List.Syms)
+        add(Sym, true);
+      return;
+    }
+    assert(Syms.empty() && ColdGUIDTable.empty() &&
+           "Merging into non-empty string or ColdGUIDTable ProfileSymbolList "
+           "is not supported");
+    IsMD5 = true;
+    GUIDs.insert_range(List.ColdGUIDTable);
+    GUIDs.insert_range(List.GUIDs);
   }
 
-  unsigned size() const { return IsMD5 ? ColdGUIDTable.size() : Syms.size(); }
+  unsigned size() const {
+    if (!IsMD5)
+      return Syms.size();
+    return !ColdGUIDTable.empty() ? ColdGUIDTable.size() : GUIDs.size();
+  }
   void reserve(size_t Size) { Syms.reserve(Size); }
 
   std::vector<uint64_t> collectGUIDs() const {
-    assert(!IsMD5 &&
-           "Collecting GUIDs from existing MD5 table not yet implemented");
     std::vector<uint64_t> Keys;
-    Keys.reserve(Syms.size());
-    llvm::append_range(Keys, llvm::map_range(Syms, llvm::MD5Hash));
+    Keys.reserve(size());
+    if (!IsMD5)
+      llvm::append_range(Keys, llvm::map_range(Syms, llvm::MD5Hash));
+    else if (!ColdGUIDTable.empty())
+      llvm::append_range(Keys, ColdGUIDTable);
+    else
+      llvm::append_range(Keys, GUIDs);
     llvm::sort(Keys);
     Keys.erase(llvm::unique(Keys), Keys.end());
     return Keys;
   }
 
   void setColdGUIDTable(EytzingerTableSpan<support::ulittle64_t> Table) {
-    assert(Syms.empty() &&
-           "Setting ColdGUIDTable shadows existing strings in Syms");
+    assert(Syms.empty() && GUIDs.empty() &&
+           "Setting ColdGUIDTable shadows existing entries");
     ColdGUIDTable = Table;
     IsMD5 = true;
   }
   EytzingerTableSpan<support::ulittle64_t> getColdGUIDTable() const {
-    assert(IsMD5 && "Retrieving ColdGUIDTable from non-MD5 ProfileSymbolList");
+    assert(IsMD5 && GUIDs.empty() &&
+           "Retrieving ColdGUIDTable from non-table-backed ProfileSymbolList");
     return ColdGUIDTable;
   }
   bool isMD5() const { return IsMD5; }
@@ -1802,9 +1825,17 @@ public:
   LLVM_ABI void dump(raw_ostream &OS = dbgs()) const;
 
 private:
+  // Whether symbols are stored as 64-bit MD5 hashes (in ColdGUIDTable or
+  // GUIDs) rather than plain strings (in Syms). At most one of Syms,
+  // ColdGUIDTable, or GUIDs is non-empty at any given time.
   bool IsMD5 = false;
+  // Symbol names for string-based symbol lists (!IsMD5).
   DenseSet<StringRef> Syms;
+  // Non-owning view of Eytzinger-ordered MD5 hashes backed by the profile
+  // reader's buffer, used for zero-copy lookups during compilation.
   EytzingerTableSpan<support::ulittle64_t> ColdGUIDTable;
+  // Owning set of MD5 hashes populated when merging MD5 symbol lists.
+  DenseSet<uint64_t> GUIDs;
   BumpPtrAllocator Allocator;
 };
 

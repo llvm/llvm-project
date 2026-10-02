@@ -1044,11 +1044,12 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
           CapturingArgIdx == LifetimeCaptureByAttr::Unknown ||
           CapturingArgIdx == LifetimeCaptureByAttr::Invalid)
         continue;
-      ArrayRef<const Expr *> CallArgs = IsInstance ? Args.drop_front() : Args;
-      const Expr *CapturedByArg =
-          (CapturingArgIdx == LifetimeCaptureByAttr::This)
-              ? Args[0]
-              : CallArgs[CapturingArgIdx];
+      // FIXME: Diagnose bad CapturingArgIdx.
+      if (CapturingArgIdx != LifetimeCaptureByAttr::This &&
+          (CapturingArgIdx < 0 ||
+           static_cast<size_t>(CapturingArgIdx) >= Args.size()))
+        continue;
+      const Expr *CapturedByArg = Args[CapturingArgIdx];
       assert(CapturedByArg && "Capturer expression must be valid");
 
       OriginList *Dest = readValue(CapturedByArg);

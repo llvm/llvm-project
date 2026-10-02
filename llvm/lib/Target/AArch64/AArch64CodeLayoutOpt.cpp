@@ -56,11 +56,7 @@ static cl::opt<unsigned> FunctionAlignBytes(
     "aarch64-code-layout-opt-align-functions", cl::Hidden,
     cl::desc("Function alignment in bytes for code layout optimization "
              "(must be a power of 2)"),
-    cl::init(64), cl::callback([](const unsigned &Val) {
-      if (!isPowerOf2_32(Val))
-        report_fatal_error(
-            "aarch64-code-layout-opt-align must be a power of 2");
-    }));
+    cl::init(64));
 
 STATISTIC(NumFunctionsAligned,
           "Number of functions with aligned (to 64-bytes by default)");
@@ -267,6 +263,9 @@ bool AArch64CodeLayoutOpt::optimizeForCodeLayout(MachineFunction &MF,
   if (!Changed)
     return false;
 
+  if (!isPowerOf2_32(FunctionAlignBytes))
+    reportFatalUsageError(
+        "aarch64-code-layout-opt-align-functions must be a power of 2");
   if (MF.getAlignment() < Align(FunctionAlignBytes)) {
     MF.setAlignment(Align(FunctionAlignBytes));
     ++NumFunctionsAligned;

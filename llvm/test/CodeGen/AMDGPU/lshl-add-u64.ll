@@ -225,7 +225,7 @@ define <4 x i64> @lshl_add_u64_vvv_and_2_v4(<4 x i64> %v, <4 x i64> %a, <4 x i64
 ; GFX1250-GISEL-DAG: v_and_b32_e32 [[AND2:v[0-9:]+]], 2, v{{[0-9:]+}}
 ; GFX1250-GISEL-DAG: v_and_b32_e32 [[AND1:v[0-9:]+]], 3, v{{[0-9:]+}}
 ; GFX1250-GISEL-DAG: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], [[AND1]], v[{{[0-9:]+}}]
-; GFX1250-GISEL-DAG v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], [[AND2]], v[{{[0-9:]+}}]
+; GFX1250-GISEL-DAG: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], [[AND2]], v[{{[0-9:]+}}]
 ; GFX1250-GISEL: v_add_nc_u64_e32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], v[{{[0-9:]+}}]
   %and = and <4 x i64> %s, <i64 1, i64 2, i64 3, i64 5>
   %shl = shl <4 x i64> %v, %and
@@ -252,11 +252,11 @@ define amdgpu_ps <2 x i32> @lshl_add_u64_sss_and_4(i32 inreg %v, i32 inreg %a, i
 
 define amdgpu_ps <2 x i32> @lshl_add_u64_svs_and_4(i32 inreg %v, i64 %a, i32 inreg %s) {
 ; GCN-LABEL: lshl_add_u64_svs_and_4
-; GFX-1250: v_lshl_add_u64 v[{{[0-9:]+}}], s{{[0-9:]+}}, s{{[0-9:]+}}, v[{{[0-9:]+}}]
-; GFX-942: v_lshl_add_u64 v[{{[0-9:]+}}], s[{{[0-9:]+}}], 0, v[{{[0-9:]+}}]
+; GFX1250: v_lshl_add_u64 v[{{[0-9:]+}}], s[{{[0-9:]+}}], s{{[0-9:]+}}, v[{{[0-9:]+}}]
+; GFX942: v_lshl_add_u64 v[{{[0-9:]+}}], s[{{[0-9:]+}}], 0, v[{{[0-9:]+}}]
 ; GISEL-LABEL: lshl_add_u64_svs_and_4
 ; GFX942-GISEL: v_add_co_u32_e32 v{{[0-9:]+}}, vcc, s{{[0-9:]+}}, v{{[0-9:]+}}
-; GFX-1250-GISEL: v_lshl_add_u64 v[{{[0-9:]+}}], s{{[0-9:]+}}], s{{[0-9:]+}}, v[{{[0-9:]+}}]
+; GFX1250-GISEL: v_add_nc_u64_e32 v[{{[0-9:]+}}], s[{{[0-9:]+}}], v[{{[0-9:]+}}]
   %and = and i32 %s, 4
   %zext_and = zext i32 %and to i64
   %zext_v = zext i32 %and to i64
@@ -271,7 +271,7 @@ define amdgpu_ps <2 x i32> @lshl_add_u64_vvs_and_4(i64 %v, i64 %a, i32 inreg %s)
 ; GCN: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s{{[0-9:]+}}, v[{{[0-9:]+}}]
 ; GISEL-LABEL: lshl_add_u64_vvs_and_4
 ; GFX942-GISEL: v_add_co_u32_e32 v{{[0-9:]+}}, vcc, v{{[0-9:]+}}, v{{[0-9:]+}}
-; GFX-1250-GISEL: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s{{[0-9:]+}}, v[{{[0-9:]+}}]
+; GFX1250-GISEL: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s{{[0-9:]+}}, v[{{[0-9:]+}}]
   %and = and i32 %s, 4
   %zext_and = zext i32 %and to i64
   %shl = shl i64 %v, %zext_and

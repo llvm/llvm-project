@@ -1475,7 +1475,7 @@ void ARMLowOverheadLoops::RevertLoopEndDec(MachineInstr *MI) const {
   MIB.add(MI->getOperand(1));
   MIB.addImm(1);
   MIB.addImm(ARMCC::AL);
-  MIB.addReg(ARM::NoRegister);
+  MIB.addReg(Register());
   MIB.addReg(ARM::CPSR);
   MIB->getOperand(5).setIsDef(true);
 
