@@ -435,16 +435,16 @@ bb:
 define amdgpu_kernel void @dword_from_v16i16_combine_loop(ptr addrspace(1) %out) {
 ; GCN-LABEL: dword_from_v16i16_combine_loop:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    v_and_b32_e32 v1, 3, v0
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
-; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_and_b32_e32 v0, 3, v0
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GCN-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v2, s1
-; GCN-NEXT:    v_mov_b32_e32 v1, s0
-; GCN-NEXT:    flat_store_byte v[1:2], v0
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-NEXT:    flat_store_byte v[0:1], v2
 ; GCN-NEXT:    s_endpgm
 entry:
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x()

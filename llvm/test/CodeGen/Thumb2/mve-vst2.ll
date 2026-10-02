@@ -483,13 +483,13 @@ define void @vst2_v2f16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst2_v2f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldrd r0, r2, [r0]
-; CHECK-NEXT:    vmov.32 q0[0], r2
 ; CHECK-NEXT:    vmov.32 q1[0], r0
-; CHECK-NEXT:    vmovx.f16 s1, s4
+; CHECK-NEXT:    vmov.32 q0[0], r2
+; CHECK-NEXT:    vmovx.f16 s5, s4
 ; CHECK-NEXT:    vins.f16 s4, s0
 ; CHECK-NEXT:    vmovx.f16 s0, s0
-; CHECK-NEXT:    vins.f16 s1, s0
-; CHECK-NEXT:    vmov r0, r2, d0
+; CHECK-NEXT:    vins.f16 s5, s0
+; CHECK-NEXT:    vmov r0, r2, d2
 ; CHECK-NEXT:    str r2, [r1, #4]
 ; CHECK-NEXT:    str r0, [r1]
 ; CHECK-NEXT:    bx lr
