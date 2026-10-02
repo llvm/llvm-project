@@ -561,10 +561,12 @@ public:
   /// Returns the current epoch.
   unsigned getEpoch() const { return Epoch; }
 
-  /// Bumps the epoch to \p NewEpoch, which must be higher than the current one.
-  void bumpEpoch(unsigned NewEpoch) {
-    assert(Epoch < NewEpoch && "epoch must increase");
+  /// Sets the epoch to \p NewEpoch, returning whether the epoch changed.
+  bool setEpoch(unsigned NewEpoch) {
+    assert(Epoch <= NewEpoch && "epoch must not decrease");
+    const bool SameEpoch = Epoch == NewEpoch;
     Epoch = NewEpoch;
+    return SameEpoch;
   }
 
   bool operator<(const OptRegCandidate &Other) const;
@@ -1394,42 +1396,48 @@ void MaxHeap::reorderIfExists(const OptReg &Reg) {
 }
 
 bool MaxHeap::siftUp(unsigned HeapIdx) {
-  unsigned S = HeapToSlot[HeapIdx];
+  const unsigned SlotIdx = HeapToSlot[HeapIdx];
   bool Moved = false;
   while (HeapIdx != 0) {
-    unsigned Parent = (HeapIdx - 1) / 2;
-    if (!(Slots[HeapToSlot[Parent]].Cand < Slots[S].Cand))
+    const unsigned Parent = (HeapIdx - 1) / 2;
+    if (!(Slots[HeapToSlot[Parent]].Cand < Slots[SlotIdx].Cand))
       break;
     place(HeapIdx, HeapToSlot[Parent]);
     HeapIdx = Parent;
     Moved = true;
   }
   if (Moved)
-    place(HeapIdx, S);
+    place(HeapIdx, SlotIdx);
   return Moved;
 }
 
 bool MaxHeap::siftDown(unsigned HeapIdx) {
-  unsigned S = HeapToSlot[HeapIdx];
-  unsigned N = HeapToSlot.size();
+  const unsigned HeapSize = HeapToSlot.size();
+  const unsigned SlotIdx = HeapToSlot[HeapIdx];
   bool Moved = false;
   while (true) {
-    unsigned Left = 2 * HeapIdx + 1;
-    unsigned Right = Left + 1;
-    unsigned Largest = HeapIdx;
-    if (Left < N && Slots[S].Cand < Slots[HeapToSlot[Left]].Cand)
-      Largest = Left;
-    if (Right < N &&
-        Slots[HeapToSlot[Largest]].Cand < Slots[HeapToSlot[Right]].Cand)
-      Largest = Right;
-    if (Largest == HeapIdx)
+    const unsigned Left = 2 * HeapIdx + 1;
+    const unsigned Right = Left + 1;
+
+    unsigned LargestHeapIdx = HeapIdx;
+    unsigned LargestSlotIdx = SlotIdx;
+    if (Left < HeapSize &&
+        Slots[LargestSlotIdx].Cand < Slots[HeapToSlot[Left]].Cand) {
+      LargestHeapIdx = Left;
+      LargestSlotIdx = HeapToSlot[Left];
+    }
+    if (Right < HeapSize &&
+        Slots[LargestSlotIdx].Cand < Slots[HeapToSlot[Right]].Cand)
+      LargestHeapIdx = Right;
+
+    if (LargestHeapIdx == HeapIdx)
       break;
-    place(HeapIdx, HeapToSlot[Largest]);
-    HeapIdx = Largest;
+    place(HeapIdx, HeapToSlot[LargestHeapIdx]);
+    HeapIdx = LargestHeapIdx;
     Moved = true;
   }
   if (Moved)
-    place(HeapIdx, S);
+    place(HeapIdx, SlotIdx);
   return Moved;
 }
 
@@ -1559,13 +1567,12 @@ bool AMDGPUOptimizeVGPREncoding::run(MachineFunction &MF) {
           dbgs() << "    " << NeighborReg->print(VRM) << '\n';
       });
 
-      // The epoch check catches a second evaluation of the same candidate under
-      // the same exact conditions, which would fail again.
-      if (Candidate->getEpoch() == Epoch) {
+      // This catches a second evaluation of the same candidate under the same
+      // exact conditions, which would fail again.
+      if (Candidate->setEpoch(Epoch)) {
         LLVM_DEBUG(dbgs() << "  | No more useful candidates!\n");
         break;
       }
-      Candidate->bumpEpoch(Epoch);
       ScoreChanged.reset();
 
       // The candidate's epoch changed.
