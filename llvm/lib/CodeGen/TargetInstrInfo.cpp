@@ -870,20 +870,44 @@ TargetInstrInfo::foldMemoryOperand(MachineInstr &MI, ArrayRef<unsigned> Ops,
 /// replacement instructions immediately precede it.  Copy any implicit
 /// operands from MI to the replacement instruction.
 static void transferImplicitOperands(MachineInstr *MI,
+                                     MachineBasicBlock::instr_iterator FirstMI,
                                      const TargetRegisterInfo *TRI) {
-  MachineBasicBlock::iterator CopyMI = MI;
-  --CopyMI;
+  MachineBasicBlock::instr_iterator LastMI = MI->getIterator();
+  --LastMI;
 
   Register DstReg = MI->getOperand(0).getReg();
   for (const MachineOperand &MO : MI->implicit_operands()) {
-    CopyMI->addOperand(MO);
+    // If an implicit-def of a super-register left on the last
+    // instruction fully covers a subreg def and no later instruction reads
+    // it to keep it live, it would make that def look dead. So we transfert the
+    // implicit def to the first instruction to keep it alive.
+    if (MO.isDef() && TRI->regsOverlap(DstReg, MO.getReg())) {
+      bool WouldKillEarlierDef =
+          any_of(make_range(FirstMI, LastMI), [&](MachineInstr &Repl) {
+            const MachineOperand &Def = Repl.getOperand(0);
+            if (!Def.isReg() || !Def.getReg() ||
+                !TRI->isSubRegisterEq(MO.getReg(), Def.getReg()))
+              return false;
+            return none_of(
+                make_range(std::next(Repl.getIterator()), MI->getIterator()),
+                [&](const MachineInstr &Later) {
+                  return Later.readsRegister(Def.getReg(), TRI);
+                });
+          });
+      if (WouldKillEarlierDef) {
+        FirstMI->addOperand(MO);
+        continue;
+      }
+    }
+
+    LastMI->addOperand(MO);
 
     // Be conservative about preserving kills when subregister defs are
     // involved. If there was implicit kill of a super-register overlapping the
     // copy result, we would kill the subregisters previous copies defined.
 
     if (MO.isKill() && TRI->regsOverlap(DstReg, MO.getReg()))
-      CopyMI->getOperand(CopyMI->getNumOperands() - 1).setIsKill(false);
+      LastMI->getOperand(LastMI->getNumOperands() - 1).setIsKill(false);
   }
 }
 
@@ -912,13 +936,23 @@ void TargetInstrInfo::lowerCopy(
     return;
   }
 
-  copyPhysReg(*MI->getParent(), MI, MI->getDebugLoc(), DstMO.getReg(),
-              SrcMO.getReg(), SrcMO.isKill(),
+  MachineBasicBlock &MBB = *MI->getParent();
+  MachineBasicBlock::instr_iterator It = MI->getIterator();
+  // Record the position just before the expansion so we can find the first
+  // instruction inserted by copyPhysReg.
+  MachineBasicBlock::instr_iterator Anchor =
+      (It == MBB.instr_begin()) ? MBB.instr_end() : std::prev(It);
+
+  copyPhysReg(MBB, MI, MI->getDebugLoc(), DstMO.getReg(), SrcMO.getReg(),
+              SrcMO.isKill(),
               DstMO.getReg().isPhysical() ? DstMO.isRenamable() : false,
               SrcMO.getReg().isPhysical() ? SrcMO.isRenamable() : false);
 
-  if (MI->getNumOperands() > 2)
-    transferImplicitOperands(MI, &TRI);
+  if (MI->getNumOperands() > 2) {
+    MachineBasicBlock::instr_iterator FirstMI =
+        (Anchor == MBB.instr_end()) ? MBB.instr_begin() : std::next(Anchor);
+    transferImplicitOperands(MI, FirstMI, &TRI);
+  }
   MI->eraseFromParent();
 }
 
