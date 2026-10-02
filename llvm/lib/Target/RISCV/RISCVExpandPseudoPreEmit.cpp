@@ -594,8 +594,7 @@ bool RISCVExpandPseudoPreEmitImpl::expandPseudoReadVLENBViaVSETVLIX0(
   unsigned VTypeImm = RISCVVType::encodeVTYPE(
       VLMUL, /*SEW=*/8, /*TailAgnostic=*/true, /*MaskAgnostic=*/true);
 
-  BuildMI(MBB, MBBI, DL, TII->get(RISCV::PseudoVSETVLIX0))
-      .addReg(Dst, RegState::Define)
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::PseudoVSETVLIX0), Dst)
       .addReg(RISCV::X0, RegState::Kill)
       .addImm(VTypeImm);
 

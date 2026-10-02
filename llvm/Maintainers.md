@@ -28,8 +28,8 @@ flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub)
 
 #### Attributor, OpenMPOpt
 
-Johannes Doerfert \
-jdoerfert@llnl.gov (email), [jdoerfert](https://github.com/jdoerfert) (GitHub)
+Shilei Tian \
+<i@tianshilei.me>, <Shilei.Tian@amd.com> (email), [shiltian](https://github.com/shiltian) (GitHub)
 
 #### ConstraintElimination
 

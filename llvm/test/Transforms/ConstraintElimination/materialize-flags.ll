@@ -147,6 +147,63 @@ exit:
   ret i32 0
 }
 
+; 0 <=s %b <=s %a, which implies nuw nsw.
+define i32 @sub_nsw_relational(i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @sub_nsw_relational(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C_0:%.*]] = icmp sge i32 [[B]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i32 [[A]], [[B]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+entry:
+  %c.0 = icmp sge i32 %b, 0
+  call void @llvm.assume(i1 %c.0)
+  %c.1 = icmp sge i32 %a, %b
+  call void @llvm.assume(i1 %c.1)
+  %sub = sub i32 %a, %b
+  ret i32 %sub
+}
+
+define i32 @sub_nuw_gains_nsw(i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @sub_nuw_gains_nsw(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C_0:%.*]] = icmp sge i32 [[B]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i32 [[A]], [[B]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+entry:
+  %c.0 = icmp sge i32 %b, 0
+  call void @llvm.assume(i1 %c.0)
+  %c.1 = icmp sge i32 %a, %b
+  call void @llvm.assume(i1 %c.1)
+  %sub = sub nuw i32 %a, %b
+  ret i32 %sub
+}
+
+define i32 @sub_nsw_constant_operand(i32 %a) {
+; CHECK-LABEL: define i32 @sub_nsw_constant_operand(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C:%.*]] = icmp sle i32 [[A]], 100
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[A]], -5
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+entry:
+  %c = icmp sle i32 %a, 100
+  call void @llvm.assume(i1 %c)
+  %sub = sub i32 %a, -5
+  ret i32 %sub
+}
+
 define ptr @gep_nuw_transitive(ptr %p, i64 %i, i64 %j) {
 ; CHECK-LABEL: define ptr @gep_nuw_transitive(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[I:%.*]], i64 [[J:%.*]]) {

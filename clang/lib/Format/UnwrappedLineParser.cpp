@@ -95,13 +95,17 @@ std::ostream &operator<<(std::ostream &Stream, const UnwrappedLine &Line) {
 
 class ScopedLineState {
 public:
+  // With \c DiscardLines, the lines added while in scope are discarded.
   ScopedLineState(UnwrappedLineParser &Parser,
-                  bool SwitchToPreprocessorLines = false)
-      : Parser(Parser), OriginalLines(Parser.CurrentLines) {
+                  bool SwitchToPreprocessorLines = false,
+                  bool DiscardLines = false)
+      : Parser(Parser), OriginalLines(Parser.CurrentLines),
+        DiscardLines(DiscardLines) {
     if (SwitchToPreprocessorLines)
       Parser.CurrentLines = &Parser.PreprocessorDirectives;
     else if (!Parser.Line->Tokens.empty())
       Parser.CurrentLines = &Parser.Line->Tokens.back().Children;
+    OriginalNumLines = Parser.CurrentLines->size();
     PreBlockLine = std::move(Parser.Line);
     Parser.Line = std::make_unique<UnwrappedLine>();
     Parser.Line->Level = PreBlockLine->Level;
@@ -115,9 +119,11 @@ public:
     if (!Parser.Line->Tokens.empty())
       Parser.addUnwrappedLine();
     assert(Parser.Line->Tokens.empty());
+    if (DiscardLines)
+      Parser.CurrentLines->truncate(OriginalNumLines);
     Parser.Line = std::move(PreBlockLine);
     if (Parser.CurrentLines == &Parser.PreprocessorDirectives)
-      Parser.AtEndOfPPLine = true;
+      Parser.PP.AtEndOfPPLine = true;
     Parser.CurrentLines = OriginalLines;
   }
 
@@ -126,6 +132,8 @@ private:
 
   std::unique_ptr<UnwrappedLine> PreBlockLine;
   SmallVectorImpl<UnwrappedLine> *OriginalLines;
+  size_t OriginalNumLines;
+  bool DiscardLines;
 };
 
 class CompoundStatementIndenter {
@@ -157,30 +165,30 @@ UnwrappedLineParser::UnwrappedLineParser(
     ArrayRef<FormatToken *> Tokens, UnwrappedLineConsumer &Callback,
     llvm::SpecificBumpPtrAllocator<FormatToken> &Allocator,
     IdentifierTable &IdentTable)
-    : Line(new UnwrappedLine), AtEndOfPPLine(false), CurrentLines(&Lines),
-      Style(Style), IsCpp(Style.isCpp()),
-      LangOpts(getFormattingLangOpts(Style)), Keywords(Keywords),
-      CommentPragmasRegex(Style.CommentPragmas), Tokens(nullptr),
-      Callback(Callback), AllTokens(Tokens), PPBranchLevel(-1),
-      IncludeGuard(getIncludeGuardState(Style.IndentPPDirectives)),
-      IncludeGuardToken(nullptr), FirstStartColumn(FirstStartColumn),
+    : Line(new UnwrappedLine), CurrentLines(&Lines), Style(Style),
+      IsCpp(Style.isCpp()), LangOpts(getFormattingLangOpts(Style)),
+      Keywords(Keywords), CommentPragmasRegex(Style.CommentPragmas),
+      Tokens(nullptr), Callback(Callback), AllTokens(Tokens),
+      PP(getIncludeGuardState(Style.IndentPPDirectives)),
+      FirstStartColumn(FirstStartColumn),
       Macros(Style.Macros, SourceMgr, Style, Allocator, IdentTable) {}
 
 void UnwrappedLineParser::reset() {
-  PPBranchLevel = -1;
-  IncludeGuard = getIncludeGuardState(Style.IndentPPDirectives);
-  IncludeGuardToken = nullptr;
+  PP.BranchLevel = -1;
+  PP.IncludeGuard = getIncludeGuardState(Style.IndentPPDirectives);
+  PP.IncludeGuardToken = nullptr;
+  ParsedPPDirectives.clear();
   Line.reset(new UnwrappedLine);
   CommentsBeforeNextToken.clear();
   FormatTok = nullptr;
-  AtEndOfPPLine = false;
+  PP.AtEndOfPPLine = false;
   IsDecltypeAutoFunction = false;
   PreprocessorDirectives.clear();
   CurrentLines = &Lines;
   DeclarationScopeStack.clear();
   NestedTooDeep.clear();
   NestedLambdas.clear();
-  PPStack.clear();
+  PP.Stack.clear();
   Line->FirstStartColumn = FirstStartColumn;
 
   if (!Unexpanded.empty())
@@ -207,7 +215,7 @@ void UnwrappedLineParser::parse() {
 
     // If we found an include guard then all preprocessor directives (other than
     // the guard) are over-indented by one.
-    if (IncludeGuard == IG_Found) {
+    if (PP.IncludeGuard == IG_Found) {
       for (auto &Line : Lines)
         if (Line.InPPDirective && Line.Level > 0)
           --Line.Level;
@@ -246,17 +254,17 @@ void UnwrappedLineParser::parse() {
     }
     Callback.finishRun();
     Lines.clear();
-    while (!PPLevelBranchIndex.empty() &&
-           PPLevelBranchIndex.back() + 1 >= PPLevelBranchCount.back()) {
-      PPLevelBranchIndex.resize(PPLevelBranchIndex.size() - 1);
-      PPLevelBranchCount.resize(PPLevelBranchCount.size() - 1);
+    while (!PP.LevelBranchIndex.empty() &&
+           PP.LevelBranchIndex.back() + 1 >= PP.LevelBranchCount.back()) {
+      PP.LevelBranchIndex.resize(PP.LevelBranchIndex.size() - 1);
+      PP.LevelBranchCount.resize(PP.LevelBranchCount.size() - 1);
     }
-    if (!PPLevelBranchIndex.empty()) {
-      ++PPLevelBranchIndex.back();
-      assert(PPLevelBranchIndex.size() == PPLevelBranchCount.size());
-      assert(PPLevelBranchIndex.back() <= PPLevelBranchCount.back());
+    if (!PP.LevelBranchIndex.empty()) {
+      ++PP.LevelBranchIndex.back();
+      assert(PP.LevelBranchIndex.size() == PP.LevelBranchCount.size());
+      assert(PP.LevelBranchIndex.back() <= PP.LevelBranchCount.back());
     }
-  } while (!PPLevelBranchIndex.empty());
+  } while (!PP.LevelBranchIndex.empty());
 }
 
 void UnwrappedLineParser::parseFile() {
@@ -666,7 +674,7 @@ static inline void hash_combine(std::size_t &seed, const T &v) {
 
 size_t UnwrappedLineParser::computePPHash() const {
   size_t h = 0;
-  for (const auto &i : PPStack) {
+  for (const auto &i : PP.Stack) {
     hash_combine(h, size_t(i.Kind));
     hash_combine(h, i.Line);
   }
@@ -1056,49 +1064,50 @@ void UnwrappedLineParser::conditionalCompilationCondition(bool Unreachable) {
     Line += Lines.size();
 
   if (Unreachable ||
-      (!PPStack.empty() && PPStack.back().Kind == PP_Unreachable)) {
-    PPStack.push_back({PP_Unreachable, Line});
+      (!PP.Stack.empty() && PP.Stack.back().Kind == PP_Unreachable)) {
+    PP.Stack.push_back({PP_Unreachable, Line});
   } else {
-    PPStack.push_back({PP_Conditional, Line});
+    PP.Stack.push_back({PP_Conditional, Line});
   }
 }
 
 void UnwrappedLineParser::conditionalCompilationStart(bool Unreachable) {
-  ++PPBranchLevel;
-  assert(PPBranchLevel >= 0 && PPBranchLevel <= (int)PPLevelBranchIndex.size());
-  if (PPBranchLevel == (int)PPLevelBranchIndex.size()) {
-    PPLevelBranchIndex.push_back(0);
-    PPLevelBranchCount.push_back(0);
+  ++PP.BranchLevel;
+  assert(PP.BranchLevel >= 0 &&
+         PP.BranchLevel <= (int)PP.LevelBranchIndex.size());
+  if (PP.BranchLevel == (int)PP.LevelBranchIndex.size()) {
+    PP.LevelBranchIndex.push_back(0);
+    PP.LevelBranchCount.push_back(0);
   }
-  PPChainBranchIndex.push(Unreachable ? -1 : 0);
-  bool Skip = PPLevelBranchIndex[PPBranchLevel] > 0;
+  PP.ChainBranchIndex.push(Unreachable ? -1 : 0);
+  bool Skip = PP.LevelBranchIndex[PP.BranchLevel] > 0;
   conditionalCompilationCondition(Unreachable || Skip);
 }
 
 void UnwrappedLineParser::conditionalCompilationAlternative() {
-  if (!PPStack.empty())
-    PPStack.pop_back();
-  assert(PPBranchLevel < (int)PPLevelBranchIndex.size());
-  if (!PPChainBranchIndex.empty())
-    ++PPChainBranchIndex.top();
+  if (!PP.Stack.empty())
+    PP.Stack.pop_back();
+  assert(PP.BranchLevel < (int)PP.LevelBranchIndex.size());
+  if (!PP.ChainBranchIndex.empty())
+    ++PP.ChainBranchIndex.top();
   conditionalCompilationCondition(
-      PPBranchLevel >= 0 && !PPChainBranchIndex.empty() &&
-      PPLevelBranchIndex[PPBranchLevel] != PPChainBranchIndex.top());
+      PP.BranchLevel >= 0 && !PP.ChainBranchIndex.empty() &&
+      PP.LevelBranchIndex[PP.BranchLevel] != PP.ChainBranchIndex.top());
 }
 
 void UnwrappedLineParser::conditionalCompilationEnd() {
-  assert(PPBranchLevel < (int)PPLevelBranchIndex.size());
-  if (PPBranchLevel >= 0 && !PPChainBranchIndex.empty()) {
-    if (PPChainBranchIndex.top() + 1 > PPLevelBranchCount[PPBranchLevel])
-      PPLevelBranchCount[PPBranchLevel] = PPChainBranchIndex.top() + 1;
+  assert(PP.BranchLevel < (int)PP.LevelBranchIndex.size());
+  if (PP.BranchLevel >= 0 && !PP.ChainBranchIndex.empty()) {
+    if (PP.ChainBranchIndex.top() + 1 > PP.LevelBranchCount[PP.BranchLevel])
+      PP.LevelBranchCount[PP.BranchLevel] = PP.ChainBranchIndex.top() + 1;
   }
   // Guard against #endif's without #if.
-  if (PPBranchLevel > -1)
-    --PPBranchLevel;
-  if (!PPChainBranchIndex.empty())
-    PPChainBranchIndex.pop();
-  if (!PPStack.empty())
-    PPStack.pop_back();
+  if (PP.BranchLevel > -1)
+    --PP.BranchLevel;
+  if (!PP.ChainBranchIndex.empty())
+    PP.ChainBranchIndex.pop();
+  if (!PP.Stack.empty())
+    PP.Stack.pop_back();
 }
 
 void UnwrappedLineParser::parsePPIf(bool IfDef) {
@@ -1114,36 +1123,36 @@ void UnwrappedLineParser::parsePPIf(bool IfDef) {
   // If there's a #ifndef on the first line, and the only lines before it are
   // comments, it could be an include guard.
   bool MaybeIncludeGuard = IfNDef;
-  if (IncludeGuard == IG_Inited && MaybeIncludeGuard) {
+  if (PP.IncludeGuard == IG_Inited && MaybeIncludeGuard) {
     for (auto &Line : Lines) {
       if (Line.Tokens.front().Tok->isNot(tok::comment)) {
         MaybeIncludeGuard = false;
-        IncludeGuard = IG_Rejected;
+        PP.IncludeGuard = IG_Rejected;
         break;
       }
     }
   }
-  --PPBranchLevel;
+  --PP.BranchLevel;
   parsePPUnknown();
-  ++PPBranchLevel;
-  if (IncludeGuard == IG_Inited && MaybeIncludeGuard) {
-    IncludeGuard = IG_IfNdefed;
-    IncludeGuardToken = IfCondition;
+  ++PP.BranchLevel;
+  if (PP.IncludeGuard == IG_Inited && MaybeIncludeGuard) {
+    PP.IncludeGuard = IG_IfNdefed;
+    PP.IncludeGuardToken = IfCondition;
   }
 }
 
 void UnwrappedLineParser::parsePPElse() {
   // If a potential include guard has an #else, it's not an include guard.
-  if (IncludeGuard == IG_Defined && PPBranchLevel == 0)
-    IncludeGuard = IG_Rejected;
+  if (PP.IncludeGuard == IG_Defined && PP.BranchLevel == 0)
+    PP.IncludeGuard = IG_Rejected;
   // Don't crash when there is an #else without an #if.
-  assert(PPBranchLevel >= -1);
-  if (PPBranchLevel == -1)
+  assert(PP.BranchLevel >= -1);
+  if (PP.BranchLevel == -1)
     conditionalCompilationStart(/*Unreachable=*/true);
   conditionalCompilationAlternative();
-  --PPBranchLevel;
+  --PP.BranchLevel;
   parsePPUnknown();
-  ++PPBranchLevel;
+  ++PP.BranchLevel;
 }
 
 void UnwrappedLineParser::parsePPEndIf() {
@@ -1155,24 +1164,24 @@ void UnwrappedLineParser::parsePPDefine() {
   nextToken();
 
   if (!FormatTok->Tok.getIdentifierInfo()) {
-    IncludeGuard = IG_Rejected;
-    IncludeGuardToken = nullptr;
+    PP.IncludeGuard = IG_Rejected;
+    PP.IncludeGuardToken = nullptr;
     parsePPUnknown();
     return;
   }
 
   bool MaybeIncludeGuard = false;
-  if (IncludeGuard == IG_IfNdefed &&
-      IncludeGuardToken->TokenText == FormatTok->TokenText) {
-    IncludeGuard = IG_Defined;
-    IncludeGuardToken = nullptr;
+  if (PP.IncludeGuard == IG_IfNdefed &&
+      PP.IncludeGuardToken->TokenText == FormatTok->TokenText) {
+    PP.IncludeGuard = IG_Defined;
+    PP.IncludeGuardToken = nullptr;
     for (auto &Line : Lines) {
       if (Line.Tokens.front().Tok->isNoneOf(tok::comment, tok::hash)) {
-        IncludeGuard = IG_Rejected;
+        PP.IncludeGuard = IG_Rejected;
         break;
       }
     }
-    MaybeIncludeGuard = IncludeGuard == IG_Defined;
+    MaybeIncludeGuard = PP.IncludeGuard == IG_Defined;
   }
 
   // In the context of a define, even keywords should be treated as normal
@@ -1186,16 +1195,16 @@ void UnwrappedLineParser::parsePPDefine() {
 
   // IncludeGuard can't have a non-empty macro definition.
   if (MaybeIncludeGuard && !eof())
-    IncludeGuard = IG_Rejected;
+    PP.IncludeGuard = IG_Rejected;
 
   if (FormatTok->is(tok::l_paren) && !FormatTok->hasWhitespaceBefore())
     parseParens();
   if (Style.IndentPPDirectives != FormatStyle::PPDIS_None)
-    Line->Level += PPBranchLevel + 1;
+    Line->Level += PP.BranchLevel + 1;
   addUnwrappedLine();
   ++Line->Level;
 
-  Line->PPLevel = PPBranchLevel + (IncludeGuard == IG_Defined ? 0 : 1);
+  Line->PPLevel = PP.BranchLevel + (PP.IncludeGuard == IG_Defined ? 0 : 1);
   assert((int)Line->PPLevel >= 0);
 
   if (eof())
@@ -1233,7 +1242,7 @@ void UnwrappedLineParser::parsePPUnknown() {
   while (!eof())
     nextToken();
   if (Style.IndentPPDirectives != FormatStyle::PPDIS_None)
-    Line->Level += PPBranchLevel + 1;
+    Line->Level += PP.BranchLevel + 1;
   addUnwrappedLine();
 }
 
@@ -4766,7 +4775,7 @@ void UnwrappedLineParser::addUnwrappedLine(LineLevel AdjustLevel) {
   } else {
     // At the top level we only get here when no unexpansion is going on, or
     // when conditional formatting led to unfinished macro reconstructions.
-    assert(!Reconstruct || (CurrentLines != &Lines) || !PPStack.empty());
+    assert(!Reconstruct || (CurrentLines != &Lines) || !PP.Stack.empty());
     CurrentLines->push_back(std::move(*Line));
   }
   Line->Tokens.clear();
@@ -5051,10 +5060,15 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
       }
       distributeComments(Comments, FormatTok);
       Comments.clear();
+      // If the directive was parsed before the token stream was rewound (see
+      // parseMacroCall()), its lines were kept. Parse it again only for its
+      // effect on the preprocessor bookkeeping and discard the new lines.
+      const bool ParsedBefore = !ParsedPPDirectives.insert(FormatTok).second;
       // If there is an unfinished unwrapped line, we flush the preprocessor
       // directives only after that unwrapped line was finished later.
       bool SwitchToPreprocessorLines = !Line->Tokens.empty();
-      ScopedLineState BlockState(*this, SwitchToPreprocessorLines);
+      ScopedLineState BlockState(*this, SwitchToPreprocessorLines,
+                                 /*DiscardLines=*/ParsedBefore);
       assert((LevelDifference >= 0 ||
               static_cast<unsigned>(-LevelDifference) <= Line->Level) &&
              "LevelDifference makes Line->Level negative");
@@ -5063,8 +5077,8 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
       // before the preprocessor directive, at the same level as the
       // preprocessor directive, as we consider them to apply to the directive.
       if (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHash &&
-          PPBranchLevel > 0) {
-        Line->Level += PPBranchLevel;
+          PP.BranchLevel > 0) {
+        Line->Level += PP.BranchLevel;
       }
       assert(Line->Level >= Line->UnbracedBodyLevel);
       Line->Level -= Line->UnbracedBodyLevel;
@@ -5076,16 +5090,16 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
           FirstNonCommentOnLine, *FormatTok, PreviousWasComment);
       // If the #endif of a potential include guard is the last thing in the
       // file, then we found an include guard.
-      if (IsEndIf && IncludeGuard == IG_Defined && PPBranchLevel == -1 &&
+      if (IsEndIf && PP.IncludeGuard == IG_Defined && PP.BranchLevel == -1 &&
           getIncludeGuardState(Style.IndentPPDirectives) == IG_Inited &&
           (eof() ||
            (PreviousWasComment &&
             Tokens->peekNextToken(/*SkipComment=*/true)->is(tok::eof)))) {
-        IncludeGuard = IG_Found;
+        PP.IncludeGuard = IG_Found;
       }
     }
 
-    if (!PPStack.empty() && (PPStack.back().Kind == PP_Unreachable) &&
+    if (!PP.Stack.empty() && (PP.Stack.back().Kind == PP_Unreachable) &&
         !Line->InPPDirective) {
       continue;
     }
@@ -5096,6 +5110,11 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
         !Line->InPPDirective) {
       FormatToken *ID = FormatTok;
       unsigned Position = Tokens->getPosition();
+      // Parsing the arguments of the call may parse preprocessor directives,
+      // which are parsed again if the token stream is rewound because the
+      // arguments are discarded. The preprocessor bookkeeping is restored
+      // whenever that happens.
+      const auto SavedPPState = PP;
 
       // To correctly parse the code, we need to replace the tokens of the macro
       // call with its expansion.
@@ -5104,7 +5123,7 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
       bool OldInExpansion = InExpansion;
       InExpansion = true;
       // We parse the macro call into a new line.
-      auto Args = parseMacroCall();
+      auto Args = parseMacroCall(SavedPPState);
       InExpansion = OldInExpansion;
       assert(Line->Tokens.front().Tok == ID);
       // And remember the unexpanded macro call tokens.
@@ -5139,6 +5158,7 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
         Tokens->setPosition(Position);
         // Not nextToken(), which would push the stale FormatTok onto the line.
         FormatTok = Tokens->getNextToken();
+        PP = SavedPPState;
         assert(!Args && Macros.objectLike(ID->TokenText));
       }
       if ((!Args && Macros.objectLike(ID->TokenText)) ||
@@ -5169,6 +5189,7 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
         });
         Tokens->setPosition(Position);
         FormatTok = ID;
+        PP = SavedPPState;
       }
     }
 
@@ -5198,7 +5219,7 @@ void pushTokens(Iterator Begin, Iterator End,
 } // namespace
 
 std::optional<llvm::SmallVector<llvm::SmallVector<FormatToken *, 8>, 1>>
-UnwrappedLineParser::parseMacroCall() {
+UnwrappedLineParser::parseMacroCall(const PPState &SavedPPState) {
   std::optional<llvm::SmallVector<llvm::SmallVector<FormatToken *, 8>, 1>> Args;
   assert(Line->Tokens.empty());
   // Not nextToken(), which would already expand a directly following macro
@@ -5257,17 +5278,18 @@ UnwrappedLineParser::parseMacroCall() {
   Line->Tokens.resize(1);
   Tokens->setPosition(Position);
   FormatTok = Tok;
+  PP = SavedPPState;
   return {};
 }
 
 void UnwrappedLineParser::pushToken(FormatToken *Tok) {
   Line->Tokens.push_back(UnwrappedLineNode(Tok));
-  if (AtEndOfPPLine) {
+  if (PP.AtEndOfPPLine) {
     auto &Tok = *Line->Tokens.back().Tok;
     Tok.MustBreakBefore = true;
     Tok.MustBreakBeforeFinalized = true;
     Tok.FirstAfterPPLine = true;
-    AtEndOfPPLine = false;
+    PP.AtEndOfPPLine = false;
   }
 }
 
