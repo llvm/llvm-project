@@ -22,5 +22,5 @@ define i8 @test(ptr writable dereferenceable(1) noalias %dst) {
 
 !0 = !{!1}
 !1 = !{!1, !2}
-!2 = !{!2}
+!2 = !{!2, i1 false}
 

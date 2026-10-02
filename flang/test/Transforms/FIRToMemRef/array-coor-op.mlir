@@ -38,7 +38,7 @@ func.func @slice(%arg0: !fir.ref<!fir.array<8xi32>>){
   %c8 = arith.constant 8 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.shape %c8 : (index) -> !fir.shape<1>
-  %2 = fir.declare %arg0(%1) dummy_scope %0 {uniq_name = "_QFsliceEa"} : (!fir.ref<!fir.array<8xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<8xi32>>
+  %2 = fir.declare %arg0(%1) dummy_scope %0 uniq_name("_QFsliceEa") : (!fir.ref<!fir.array<8xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<8xi32>>
   %3 = fir.array_coor %2(%1) %c1 : (!fir.ref<!fir.array<8xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
   %4 = fir.convert %3 : (!fir.ref<i32>) -> !fir.ref<!fir.array<4xi32>>
   %5 = fir.array_coor %2(%1) %c5 : (!fir.ref<!fir.array<8xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
