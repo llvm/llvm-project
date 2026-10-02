@@ -267,7 +267,8 @@ struct FindDeviceDataReadOnHost
   Result operator()(const evaluate::DescriptorInquiry &x) const {
     // Accessing descriptor metadata is allowed, but selecting the descriptor
     // may require reading device data in subscripts.
-    return FindDeviceDataReadOnHost{context_, /*onlyDesignated=*/true}(x.base());
+    return FindDeviceDataReadOnHost{context_, /*onlyDesignated=*/true}(
+        x.base());
   }
   Result operator()(const evaluate::TypeParamInquiry &) const {
     return nullptr;
