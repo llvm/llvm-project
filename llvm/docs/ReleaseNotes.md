@@ -310,6 +310,10 @@ Makes programs 10x faster by doing Special New Thing.
 
 * `DataLayout` has been moved from `Llvm_target` to `Llvm`.
 
+* `data_layout` now returns a `DataLayout` instead of a `string`. Similarly
+  `set_data_layout` now accepts a `DataLayout` instead of a `string`. You can
+  use `DataLayout.of_string` and `DataLayout.as_string` to convert between them.
+
 ### Changes to the Python bindings
 
 ### Changes to the C API
