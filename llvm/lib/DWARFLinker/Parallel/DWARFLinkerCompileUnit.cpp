@@ -1214,6 +1214,22 @@ void CompileUnit::cloneDieAttrExpression(
   DWARFUnit &OrigUnit = getOrigUnit();
   uint8_t OrigAddressByteSize = OrigUnit.getAddressByteSize();
 
+  // VarAddressAdjustment belongs to the owner of the expression, such as
+  // the function whose code a location list covers. An entry of
+  // .debug_addr may refer to a symbol that moved by a different amount,
+  // so relocate it by the adjustment of its own relocation, if it has one.
+  auto GetAddrIndexRelocAdjustment =
+      [&](const DWARFExpression::Operation &Op) -> int64_t {
+    if (std::optional<uint64_t> AddrOffset =
+            OrigUnit.getIndexedAddressOffset(Op.getRawOperand(0)))
+      if (std::optional<int64_t> RelocAdjustment =
+              getContainingFile().Addresses->getExprOpAddressRelocAdjustment(
+                  OrigUnit, Op, *AddrOffset, *AddrOffset + OrigAddressByteSize,
+                  false))
+        return *RelocAdjustment;
+    return VarAddressAdjustment.value_or(0);
+  };
+
   uint64_t OpOffset = 0;
   for (auto &Op : InputExpression) {
     if (Op.isError()) {
@@ -1296,7 +1312,7 @@ void CompileUnit::cloneDieAttrExpression(
         // Argument of DW_OP_addrx should be relocated here as it is not
         // processed by applyValidRelocs.
         OutputExpression.push_back(dwarf::DW_OP_addr);
-        uint64_t LinkedAddress = SA->Address + VarAddressAdjustment.value_or(0);
+        uint64_t LinkedAddress = SA->Address + GetAddrIndexRelocAdjustment(Op);
         if (getEndianness() != llvm::endianness::native)
           sys::swapByteOrder(LinkedAddress);
         ArrayRef<uint8_t> AddressBytes(
@@ -1333,7 +1349,7 @@ void CompileUnit::cloneDieAttrExpression(
         if (OutOperandKind) {
           OutputExpression.push_back(*OutOperandKind);
           uint64_t LinkedAddress =
-              SA->Address + VarAddressAdjustment.value_or(0);
+              SA->Address + GetAddrIndexRelocAdjustment(Op);
           if (getEndianness() != llvm::endianness::native)
             sys::swapByteOrder(LinkedAddress);
           ArrayRef<uint8_t> AddressBytes(
