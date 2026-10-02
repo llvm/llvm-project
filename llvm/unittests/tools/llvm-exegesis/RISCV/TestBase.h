@@ -32,7 +32,6 @@ protected:
     LLVMInitializeRISCVTargetInfo();
     LLVMInitializeRISCVTargetMC();
     LLVMInitializeRISCVTarget();
-    LLVMInitializeRISCVAsmPrinter();
     InitializeRISCVExegesisTarget();
   }
 

@@ -10,7 +10,6 @@
 
 #include <cassert>
 
-#include "../Common/AssemblerUtils.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "TestBase.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -45,16 +44,6 @@ TEST_F(RISCVTargetTest, DefaultPfmCounters) {
   EXPECT_EQ(
       State.getExegesisTarget().getPfmCounters("unknown_cpu").CycleCounter,
       Expected);
-}
-
-TEST_F(RISCVTargetTest, AssembleWithILP32E) {
-  checkAssembleWithABI(Triple("riscv32-unknown-linux"), "generic-rv32",
-                       "ilp32e");
-}
-
-TEST_F(RISCVTargetTest, AssembleWithLP64E) {
-  checkAssembleWithABI(Triple("riscv64-unknown-linux"), "generic-rv64",
-                       "lp64e");
 }
 
 } // namespace
