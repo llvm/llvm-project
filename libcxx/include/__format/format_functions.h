@@ -351,15 +351,15 @@ private:
   friend struct basic_format_string;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __dynamic_format_string(basic_string_view<_CharT> __s) noexcept : __str_(__s) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __dynamic_format_string(basic_string_view<_CharT> __s) noexcept : __str_(__s) {}
 
   __dynamic_format_string(const __dynamic_format_string&)            = delete;
   __dynamic_format_string& operator=(const __dynamic_format_string&) = delete;
 };
 
-_LIBCPP_HIDE_FROM_ABI inline __dynamic_format_string<char> dynamic_format(string_view __fmt) noexcept { return __fmt; }
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 inline __dynamic_format_string<char> dynamic_format(string_view __fmt) noexcept { return __fmt; }
 #    if _LIBCPP_HAS_WIDE_CHARACTERS
-_LIBCPP_HIDE_FROM_ABI inline __dynamic_format_string<wchar_t> dynamic_format(wstring_view __fmt) noexcept {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 inline __dynamic_format_string<wchar_t> dynamic_format(wstring_view __fmt) noexcept {
   return __fmt;
 }
 #    endif
