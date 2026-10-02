@@ -995,6 +995,8 @@ VPlanTransforms::materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheckVPBB,
 
   VPValue *AliasMask = nullptr;
   for (const PointerDiffInfo &Check : DiffChecks) {
+    assert(Check.AccessSize == Check.AbsCommonStrideInBytes &&
+           "Don't know how to handle that!");
     VPValue *Src = vputils::getOrCreateVPValueForSCEVExpr(Plan, Check.SrcStart);
     VPValue *Sink =
         vputils::getOrCreateVPValueForSCEVExpr(Plan, Check.SinkStart);
