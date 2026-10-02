@@ -14274,6 +14274,21 @@ void BoUpSLP::transformNodes() {
     }
     ~GraphTransformModeRAAI() { SavedIsGraphTransformMode = false; }
   } TransformContext(IsGraphTransformMode);
+
+  // Perform transformations that modify nodes in-place last.
+  llvm::scope_exit PreferStridedLoads([&] {
+    for (std::unique_ptr<TreeEntry> &E : VectorizableTree) {
+      if (!E->hasState())
+        continue;
+      if (DeletedNodes.contains(E.get()))
+        continue;
+      if (E->getOpcode() == Instruction::Load &&
+          E->State == TreeEntry::CompressVectorize) {
+        convertCompressedLoadToStrided(*E.get());
+      }
+    }
+  });
+
   // Operands are profitable if they are:
   // 1. At least one constant
   // or
@@ -14865,18 +14880,6 @@ void BoUpSLP::transformNodes() {
     }
     default:
       break;
-    }
-  }
-
-  // Perform transformations that modify nodes in-place last.
-  for (std::unique_ptr<TreeEntry> &E : VectorizableTree) {
-    if (!E->hasState())
-      continue;
-    if (DeletedNodes.contains(E.get()))
-      continue;
-    if (E->getOpcode() == Instruction::Load &&
-        E->State == TreeEntry::CompressVectorize) {
-      convertCompressedLoadToStrided(*E.get());
     }
   }
 
