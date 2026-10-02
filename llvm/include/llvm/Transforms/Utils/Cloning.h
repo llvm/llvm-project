@@ -262,15 +262,17 @@ public:
       function_ref<AssumptionCache &(Function &)> GetAssumptionCache = nullptr,
       ProfileSummaryInfo *PSI = nullptr,
       BlockFrequencyInfo *CallerBFI = nullptr,
-      BlockFrequencyInfo *CalleeBFI = nullptr, bool UpdateProfile = true)
+      BlockFrequencyInfo *CalleeBFI = nullptr, bool UpdateProfile = true,
+      DomTreeUpdater *DTU = nullptr)
       : GetAssumptionCache(GetAssumptionCache), PSI(PSI), CallerBFI(CallerBFI),
-        CalleeBFI(CalleeBFI), UpdateProfile(UpdateProfile) {}
+        CalleeBFI(CalleeBFI), DTU(DTU), UpdateProfile(UpdateProfile) {}
 
   /// If non-null, InlineFunction will update the callgraph to reflect the
   /// changes it makes.
   function_ref<AssumptionCache &(Function &)> GetAssumptionCache;
   ProfileSummaryInfo *PSI;
   BlockFrequencyInfo *CallerBFI, *CalleeBFI;
+  DomTreeUpdater *DTU;
 
   /// InlineFunction fills this in with all static allocas that get copied into
   /// the caller.
