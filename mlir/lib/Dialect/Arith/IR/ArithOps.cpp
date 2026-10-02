@@ -1396,9 +1396,10 @@ struct NarrowExtremum final : OpRewritePattern<TruncOp> {
         return failure();
     }
 
-    rewriter.replaceOpWithNewOp<ExtremumOp>(truncOp, TypeRange{narrowType},
-                                            ValueRange{lhs, rhs},
-                                            extremumOp->getAttrs());
+    rewriter.replaceOpWithNewOp<ExtremumOp>(
+        truncOp, TypeRange{narrowType}, ValueRange{lhs, rhs},
+        extremumOp.getProperties(),
+        extremumOp->getDiscardableAttrDictionary().getValue());
     return success();
   }
 };
@@ -3113,7 +3114,7 @@ ParseResult SelectOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void arith::SelectOp::print(OpAsmPrinter &p) {
   p << " " << getOperands();
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
   p << " : ";
   if (ShapedType condType = dyn_cast<ShapedType>(getCondition().getType()))
     p << condType << ", ";

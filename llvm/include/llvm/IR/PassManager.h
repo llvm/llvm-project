@@ -39,6 +39,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
@@ -48,7 +49,6 @@
 #include "llvm/Support/TypeName.h"
 #include <cassert>
 #include <cstring>
-#include <list>
 #include <memory>
 #include <tuple>
 #include <type_traits>
@@ -282,22 +282,22 @@ private:
 
   /// List of analysis pass IDs and associated concept pointers.
   ///
-  /// Requires iterators to be valid across appending new entries and arbitrary
-  /// erases. Provides the analysis ID to enable finding iterators to a given
-  /// entry in maps below, and provides the storage for the actual result
-  /// concept.
+  /// Requires result pointers to stay valid across appending new entries and
+  /// arbitrary erases (results are heap allocated behind unique_ptrs).
+  /// Provides the analysis ID to enable finding results for a given entry in
+  /// the map below, and provides the storage for the actual result concept.
   using AnalysisResultListT =
-      std::list<std::pair<AnalysisKey *, typename ResultConceptT::unique_ptr>>;
+      SmallVector<std::pair<AnalysisKey *, typename ResultConceptT::unique_ptr>,
+                  8>;
 
   /// Map type from IRUnitT pointer to our custom list type.
   using AnalysisResultListMapT = DenseMap<IRUnitT *, AnalysisResultListT>;
 
-  /// Map type from a pair of analysis ID and IRUnitT pointer to an
-  /// iterator into a particular result list (which is where the actual analysis
-  /// result is stored).
+  /// Map type from a pair of analysis ID and IRUnitT pointer to the result in
+  /// a particular result list (which is where the actual analysis result is
+  /// stored).
   using AnalysisResultMapT =
-      DenseMap<std::pair<AnalysisKey *, IRUnitT *>,
-               typename AnalysisResultListT::iterator>;
+      DenseMap<std::pair<AnalysisKey *, IRUnitT *>, ResultConceptT *>;
 
 public:
   /// API to communicate dependencies between analyses during invalidation.
@@ -364,7 +364,7 @@ public:
              "manager's cache is always an error, likely due to a stale result "
              "handle!");
 
-      auto &Result = static_cast<ResultT &>(*RI->second->second);
+      auto &Result = static_cast<ResultT &>(*RI->second);
 
       // Insert into the map whether the result should be invalidated and return
       // that. Note that we cannot reuse IMapI and must do a fresh insert here,
@@ -515,7 +515,10 @@ public:
   /// sure you want to *only* clear this analysis without asking if it is
   /// invalid.
   template <typename AnalysisT> void clearAnalysis(IRUnitT &IR) {
-    AnalysisResultListT &ResultsList = AnalysisResultLists[&IR];
+    auto ResultsListI = AnalysisResultLists.find(&IR);
+    assert(ResultsListI != AnalysisResultLists.end() &&
+           "Analysis must be available");
+    AnalysisResultListT &ResultsList = ResultsListI->second;
     AnalysisKey *ID = AnalysisT::ID();
 
     auto I =
@@ -550,7 +553,7 @@ private:
   ResultConceptT *getCachedResultImpl(AnalysisKey *ID, IRUnitT &IR) const {
     typename AnalysisResultMapT::const_iterator RI =
         AnalysisResults.find({ID, &IR});
-    return RI == AnalysisResults.end() ? nullptr : &*RI->second->second;
+    return RI == AnalysisResults.end() ? nullptr : RI->second;
   }
 
   /// Map type from analysis pass ID to pass concept pointer.

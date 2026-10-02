@@ -503,7 +503,8 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
   }
 
   assert(currSrcLoc && "must pass in source location");
-  builder.createStore(*currSrcLoc, value, addr, isVolatile, isNontemporal);
+  builder.createStore(getLoc(*currSrcLoc), value, addr, isVolatile,
+                      isNontemporal);
 
   assert(!cir::MissingFeatures::opTBAA());
 }
@@ -521,7 +522,7 @@ mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
 
   assert(currSrcLoc && "must pass in source location");
 
-  return builder.createSetBitfield(*currSrcLoc, resLTy, ptr,
+  return builder.createSetBitfield(getLoc(*currSrcLoc), resLTy, ptr,
                                    ptr.getElementType(), src.getValue(), info,
                                    dst.isVolatileQualified(), useVoaltile);
 }
@@ -2172,7 +2173,7 @@ LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
     RValue rv = emitAnyExpr(e->getRHS());
     LValue lv = emitLValue(e->getLHS());
 
-    SourceLocRAIIObject loc{*this, getLoc(e->getSourceRange())};
+    SourceLocRAIIObject loc{*this, e->getSourceRange()};
     if (lv.isBitField())
       emitStoreThroughBitfieldLValue(rv, lv);
     else
@@ -2414,7 +2415,7 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
 
   cir::CIRCallOpInterface callOp;
   RValue callResult = emitCall(funcInfo, callee, returnValue, args, &callOp,
-                               e == mustTailCall, getLoc(e->getExprLoc()));
+                               e == mustTailCall, e->getSourceRange());
 
   assert(!cir::MissingFeatures::generateDebugInfo());
 

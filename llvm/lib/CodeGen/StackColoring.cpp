@@ -927,7 +927,7 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
   // Keep a list of allocas which has been affected by the remap.
   SmallPtrSet<const AllocaInst*, 32> MergedAllocas;
 
-  for (const std::pair<int, int> &SI : SlotRemap) {
+  for (const auto &SI : SlotRemap) {
     const AllocaInst *From = MFI->getObjectAllocation(SI.first);
     const AllocaInst *To = MFI->getObjectAllocation(SI.second);
     assert(To && From && "Invalid allocation object");

@@ -743,6 +743,7 @@ cc_test(
         "//llvm:Support",
         "//llvm:Symbolize",
         "//llvm:TestingSupport",
+        "//llvm:config",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",

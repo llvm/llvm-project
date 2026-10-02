@@ -122,6 +122,7 @@ def : DemangledBuiltin<"__spirv_DotAccSat", OpenCL_std, IntegerDot, 3, 3>;
 def : DemangledBuiltin<"read_imagei", OpenCL_std, ReadImage, 2, 4>;
 def : DemangledBuiltin<"read_imageui", OpenCL_std, ReadImage, 2, 4>;
 def : DemangledBuiltin<"read_imagef", OpenCL_std, ReadImage, 2, 4>;
+def : DemangledBuiltin<"read_imageh", OpenCL_std, ReadImage, 2, 4>;
 def : DemangledBuiltin<"__spirv_ImageRead", OpenCL_std, ReadImage, 2, 0>;
 
 def : DemangledBuiltin<"write_imagef", OpenCL_std, WriteImage, 3, 4>;

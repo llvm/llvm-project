@@ -24,6 +24,7 @@
 #include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -949,6 +950,10 @@ public:
   /// and are referenced from BinaryFunction.
   std::list<std::pair<BinaryFunction *, uint64_t>> InterproceduralReferences;
 
+  /// Invalid external branch targets discovered during validation.
+  DenseSet<std::pair<BinaryFunction *, uint64_t>>
+      InvalidInterproceduralReferences;
+
   /// DWARF encoding. Available encoding types defined in BinaryFormat/Dwarf.h
   /// enum Constants, e.g. DW_EH_PE_omit.
   unsigned LSDAEncoding = dwarf::DW_EH_PE_omit;
@@ -1061,8 +1066,9 @@ public:
   /// point.
   ///
   /// This function also performs validations: If \p Address points to an
-  /// invalid instruction or lies within a constant island, return nullptr and
-  /// mark both \p Source and \p Target as ignored.
+  /// invalid instruction or lies within a constant island, return nullptr. The
+  /// caller is responsible for marking \p Source and \p Target as ignored
+  /// after all relevant references have been validated.
   MCSymbol *handleExternalBranchTarget(uint64_t Address, BinaryFunction &Source,
                                        BinaryFunction &Target);
 

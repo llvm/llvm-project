@@ -534,6 +534,10 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
     but not checked for consistency). When the source language's arrays are
     not zero-based, the `startIdx` must specify the zero-position index.
 
+    `sourceExtent` is the extent of the corresponding dimension in the
+    original array. It may differ from `extent`, which describes the selected
+    section. When absent, the source extent is the same as `extent`.
+
     The `stride` represents the distance between consecutive elements. For
     multi-dimensional arrays, the `stride` for each outer dimension must account
     for the complete size of all inner dimensions.
@@ -570,6 +574,7 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
   let arguments = (ins Optional<IntOrIndex>:$lowerbound,
                        Optional<IntOrIndex>:$upperbound,
                        Optional<IntOrIndex>:$extent,
+                       Optional<IntOrIndex>:$sourceExtent,
                        Optional<IntOrIndex>:$stride,
                        DefaultValuedAttr<BoolAttr, "false">:$strideInBytes,
                        Optional<IntOrIndex>:$startIdx);
@@ -580,6 +585,7 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
         `lowerbound` `(` $lowerbound `:` type($lowerbound) `)`
       | `upperbound` `(` $upperbound `:` type($upperbound) `)`
       | `extent` `(` $extent `:` type($extent) `)`
+      | `sourceExtent` `(` $sourceExtent `:` type($sourceExtent) `)`
       | `stride` `(` $stride `:` type($stride) `)`
       | `startIdx` `(` $startIdx `:` type($startIdx) `)`
     ) (`strideInBytes` `(` $strideInBytes^ `)`)? attr-dict
@@ -592,7 +598,8 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
         build($_builder, $_state,
           ::mlir::acc::DataBoundsType::get($_builder.getContext()),
           /*lowerbound=*/{}, /*upperbound=*/{}, extent,
-          /*stride=*/{}, /*strideInBytes=*/$_builder.getBoolAttr(false),
+          /*sourceExtent=*/{}, /*stride=*/{},
+          /*strideInBytes=*/$_builder.getBoolAttr(false),
           /*startIdx=*/{});
       }]
     >,
@@ -601,10 +608,21 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
         build($_builder, $_state,
           ::mlir::acc::DataBoundsType::get($_builder.getContext()),
           lowerbound, upperbound, /*extent=*/{},
-          /*stride=*/{}, /*strideInBytes=*/$_builder.getBoolAttr(false),
+          /*sourceExtent=*/{}, /*stride=*/{},
+          /*strideInBytes=*/$_builder.getBoolAttr(false),
           /*startIdx=*/{});
       }]
-    >
+    >,
+    OpBuilder<(ins "::mlir::Type":$resultType,
+                   "::mlir::Value":$lowerbound,
+                   "::mlir::Value":$upperbound,
+                   "::mlir::Value":$extent,
+                   "::mlir::Value":$stride,
+                   "bool":$strideInBytes,
+                   "::mlir::Value":$startIdx), [{
+        build($_builder, $_state, resultType, lowerbound, upperbound, extent,
+              /*sourceExtent=*/{}, stride, strideInBytes, startIdx);
+      }]>
   ];
 }
 
@@ -3808,6 +3826,7 @@ def OpenACC_OnDeviceOp : OpenACC_Op<"on_device"> {
   }];
 }
 
+include "mlir/Dialect/OpenACC/OpenACCCGEnums.td"
 include "mlir/Dialect/OpenACC/OpenACCCGAttributes.td"
 include "mlir/Dialect/OpenACC/OpenACCCGOps.td"
 

@@ -26,7 +26,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -647,6 +646,10 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
       Size = alignTo(Size, 4);
     return Size;
   }
+  case ARM::Int_eh_sjlj_longjmp:
+    return Subtarget.isTargetDarwin() || Subtarget.isTargetWindows() ? 16 : 20;
+  case ARM::tInt_eh_sjlj_longjmp:
+    return Subtarget.isTargetDarwin() || Subtarget.isTargetWindows() ? 10 : 12;
   }
 }
 

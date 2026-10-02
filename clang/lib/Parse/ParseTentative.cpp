@@ -858,6 +858,13 @@ Parser::TPResult Parser::TryParseOperatorId() {
     }
     break;
 
+  case tok::lesslessless:
+    // In CUDA/HIP mode the lexer merges <<< into a single token. Inside
+    // operator<<<T> this can only be operator<< followed by a template-arg <,
+    // so treat it as a valid operator-function-id during tentative parsing.
+    ConsumeToken();
+    return TPResult::True;
+
   default:
     break;
   }

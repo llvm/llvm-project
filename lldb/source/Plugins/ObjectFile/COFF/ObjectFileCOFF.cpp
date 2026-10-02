@@ -145,6 +145,7 @@ ObjectFileCOFF::GetModuleSpecifications(const FileSpec &file,
       unique_dyn_cast<COFFObjectFile>(std::move(*binary));
   ModuleSpecList specs;
   switch (static_cast<COFF::MachineTypes>(object->getMachine())) {
+  case COFF::IMAGE_FILE_MACHINE_I386:
     specs.Append(ModuleSpec(file, ArchSpec("i686-unknown-windows-msvc")));
     return specs;
   case COFF::IMAGE_FILE_MACHINE_AMD64:

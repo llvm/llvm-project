@@ -22,6 +22,7 @@ def Func_Dialect : Dialect {
   let name = "func";
   let cppNamespace = "::mlir::func";
   let hasConstantMaterializer = 1;
+  let useStrictPropertiesInAssemblyFormat = 1;
 }
 
 // Base class for Func dialect ops.
@@ -120,7 +121,8 @@ def CallOp : Func_Op<"call",
   }];
 
   let assemblyFormat = [{
-    $callee `(` $operands `)` attr-dict `:` functional-type($operands, results)
+    $callee `(` $operands `)` prop-dict attr-dict `:`
+    functional-type($operands, results)
   }];
 }
 
@@ -197,7 +199,12 @@ def CallIndirectOp : Func_Op<"call_indirect", [
 
   let hasCanonicalizeMethod = 1;
   let assemblyFormat = [{
-    $callee `(` $callee_operands `)` attr-dict `:` type($callee)
+    $callee `(` $callee_operands `)`
+    oilist<`,`>(
+        `arg_attrs` `=` $arg_attrs
+      | `res_attrs` `=` $res_attrs
+    )
+    attr-dict `:` type($callee)
   }];
 }
 

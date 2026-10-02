@@ -138,6 +138,8 @@ private:
 
   bool handleConstantAddresses(const Value *V, X86AddressMode &AM);
 
+  Register emitMOV32r0();
+
   Register X86MaterializeInt(const ConstantInt *CI, MVT VT);
   Register X86MaterializeFP(const ConstantFP *CFP, MVT VT);
   Register X86MaterializeGV(const GlobalValue *GV, MVT VT);
@@ -249,9 +251,9 @@ bool X86FastISel::foldX86XALUIntrinsic(X86::CondCode &CC, const Instruction *I,
   switch (II->getIntrinsicID()) {
   default: return false;
   case Intrinsic::sadd_with_overflow:
-  case Intrinsic::ssub_with_overflow:
+  case Intrinsic::ssub_with_overflow: TmpCC = X86::COND_O; break;
   case Intrinsic::smul_with_overflow:
-  case Intrinsic::umul_with_overflow: TmpCC = X86::COND_O; break;
+  case Intrinsic::umul_with_overflow:
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::usub_with_overflow: TmpCC = X86::COND_B; break;
   }
@@ -1455,9 +1457,7 @@ bool X86FastISel::X86SelectCmp(const Instruction *I) {
   switch (Predicate) {
   default: break;
   case CmpInst::FCMP_FALSE: {
-    ResultReg = createResultReg(&X86::GR32RegClass);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(X86::MOV32r0),
-            ResultReg);
+    ResultReg = emitMOV32r0();
     ResultReg = fastEmitInst_extractsubreg(MVT::i8, ResultReg, X86::sub_8bit);
     if (!ResultReg)
       return false;
@@ -1971,9 +1971,7 @@ bool X86FastISel::X86SelectDivRem(const Instruction *I) {
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
               TII.get(OpEntry.OpSignExtend));
     else {
-      Register Zero32 = createResultReg(&X86::GR32RegClass);
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-              TII.get(X86::MOV32r0), Zero32);
+      Register Zero32 = emitMOV32r0();
 
       // Copy the zero into the appropriate sub/super/identical physical
       // register. Unfortunately the operations needed are not uniform enough
@@ -2861,9 +2859,9 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     case Intrinsic::usub_with_overflow:
       BaseOpc = ISD::SUB; CondCode = X86::COND_B; break;
     case Intrinsic::smul_with_overflow:
-      BaseOpc = X86ISD::SMUL; CondCode = X86::COND_O; break;
+      BaseOpc = X86ISD::SMUL; CondCode = X86::COND_B; break;
     case Intrinsic::umul_with_overflow:
-      BaseOpc = X86ISD::UMUL; CondCode = X86::COND_O; break;
+      BaseOpc = X86ISD::UMUL; CondCode = X86::COND_B; break;
     }
 
     Register LHSReg = getRegForValue(LHS);
@@ -3714,13 +3712,21 @@ X86FastISel::fastSelectInstruction(const Instruction *I)  {
   return false;
 }
 
+Register X86FastISel::emitMOV32r0() {
+  Register ResultReg = createResultReg(&X86::GR32RegClass);
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(X86::MOV32r0),
+          ResultReg)
+      .setOperandDead(1);
+  return ResultReg;
+}
+
 Register X86FastISel::X86MaterializeInt(const ConstantInt *CI, MVT VT) {
   if (VT > MVT::i64)
     return Register();
 
   uint64_t Imm = CI->getZExtValue();
   if (Imm == 0) {
-    Register SrcReg = fastEmitInst_(X86::MOV32r0, &X86::GR32RegClass);
+    Register SrcReg = emitMOV32r0();
     switch (VT.SimpleTy) {
     default: llvm_unreachable("Unexpected value type");
     case MVT::i1:

@@ -34,8 +34,9 @@
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SharedMemoryMapperSPSCI.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
 
@@ -115,20 +116,23 @@ Expected<std::unique_ptr<llvm::jitlink::JITLinkMemoryManager>>
 createSharedMemoryManager(llvm::orc::ExecutorProcessControl &EPC,
                           unsigned SlabAllocateSize) {
   llvm::orc::SharedMemoryMapper::SymbolAddrs SAs;
-  if (auto Err = EPC.getBootstrapSymbols(
-          {{SAs.Instance,
-            llvm::orc::rt::ExecutorSharedMemoryMapperServiceInstanceName},
-           {SAs.Reserve,
-            llvm::orc::rt::ExecutorSharedMemoryMapperServiceReserveWrapperName},
-           {SAs.Initialize,
-            llvm::orc::rt::
-                ExecutorSharedMemoryMapperServiceInitializeWrapperName},
-           {SAs.Deinitialize,
-            llvm::orc::rt::
-                ExecutorSharedMemoryMapperServiceDeinitializeWrapperName},
-           {SAs.Release,
-            llvm::orc::rt::
-                ExecutorSharedMemoryMapperServiceReleaseWrapperName}}))
+  if (auto Err = llvm::orc::lookupAndApply(
+          EPC.getExecutionSession().getBootstrapJITDylib(),
+          {llvm::orc::recordAddr(
+               llvm::orc::rt::sps_ci::SharedMemoryMapperInstanceName,
+               &SAs.Instance),
+           llvm::orc::recordAddr(
+               llvm::orc::rt::sps_ci::SharedMemoryMapperReserve::Name,
+               &SAs.Reserve),
+           llvm::orc::recordAddr(
+               llvm::orc::rt::sps_ci::SharedMemoryMapperInitialize::Name,
+               &SAs.Initialize),
+           llvm::orc::recordAddr(
+               llvm::orc::rt::sps_ci::SharedMemoryMapperDeinitialize::Name,
+               &SAs.Deinitialize),
+           llvm::orc::recordAddr(
+               llvm::orc::rt::sps_ci::SharedMemoryMapperRelease::Name,
+               &SAs.Release)}))
     return std::move(Err);
 
   size_t SlabSize;

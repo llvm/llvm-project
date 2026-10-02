@@ -172,6 +172,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
                                       ///< functions.
   bool NSWOnLoopVarInc = true; ///< Add nsw flag to loop variable increments.
   bool EnableOpenACC = false; ///< Enable OpenACC lowering.
+  bool EnableCUDA = false; ///< Enable CUDA Fortran lowering.
   bool EnableOpenMP = false; ///< Enable OpenMP lowering.
   bool EnableOpenMPIsTargetDevice =
       false; ///< Compiling for an OpenMP target device.

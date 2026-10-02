@@ -1,5 +1,5 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -S -o -
+// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -S -o - -Werror
 #define __MM_MALLOC_H
 
 #include <x86intrin.h>
@@ -70,8 +70,6 @@ void verifyfeaturestrings(void) {
   (void)__builtin_cpu_supports("avx512cd");
   (void)__builtin_cpu_supports("avx512vbmi");
   (void)__builtin_cpu_supports("avx512ifma");
-  (void)__builtin_cpu_supports("avx5124vnniw");
-  (void)__builtin_cpu_supports("avx5124fmaps");
   (void)__builtin_cpu_supports("avx512vpopcntdq");
   (void)__builtin_cpu_supports("avx512vbmi2");
   (void)__builtin_cpu_supports("gfni");
@@ -83,7 +81,6 @@ void verifyfeaturestrings(void) {
   (void)__builtin_cpu_supports("avx512vp2intersect");
   (void)__builtin_cpu_supports("f16c");
   (void)__builtin_cpu_supports("avx512fp16");
-  (void)__builtin_cpu_supports("3dnow");
   (void)__builtin_cpu_supports("adx");
   (void)__builtin_cpu_supports("cldemote");
   (void)__builtin_cpu_supports("clflushopt");
@@ -100,7 +97,6 @@ void verifyfeaturestrings(void) {
   (void)__builtin_cpu_supports("mwaitx");
   (void)__builtin_cpu_supports("pconfig");
   (void)__builtin_cpu_supports("pku");
-  (void)__builtin_cpu_supports("prefetchwt1");
   (void)__builtin_cpu_supports("prfchw");
   (void)__builtin_cpu_supports("ptwrite");
   (void)__builtin_cpu_supports("rdpid");

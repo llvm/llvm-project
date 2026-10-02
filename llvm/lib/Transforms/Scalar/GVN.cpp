@@ -357,16 +357,7 @@ GVNPass::Expression GVNPass::ValueTable::createExpr(Instruction *I) {
     E.Commutative = true;
   }
 
-  if (auto *C = dyn_cast<CmpInst>(I)) {
-    // Sort the operand value numbers so x<y and y>x get the same value number.
-    CmpInst::Predicate Predicate = C->getPredicate();
-    if (E.VarArgs[0] > E.VarArgs[1]) {
-      std::swap(E.VarArgs[0], E.VarArgs[1]);
-      Predicate = CmpInst::getSwappedPredicate(Predicate);
-    }
-    E.Opcode = (C->getOpcode() << 8) | Predicate;
-    E.Commutative = true;
-  } else if (auto *IVI = dyn_cast<InsertValueInst>(I)) {
+  if (auto *IVI = dyn_cast<InsertValueInst>(I)) {
     E.VarArgs.append(IVI->idx_begin(), IVI->idx_end());
   } else if (auto *SVI = dyn_cast<ShuffleVectorInst>(I)) {
     ArrayRef<int> ShuffleMask = SVI->getShuffleMask();
@@ -398,7 +389,7 @@ GVNPass::Expression GVNPass::ValueTable::createCmpExpr(
 }
 
 GVNPass::Expression
-GVNPass::ValueTable::createExtractvalueExpr(ExtractValueInst *EI) {
+GVNPass::ValueTable::createExtractValueExpr(ExtractValueInst *EI) {
   assert(EI && "Not an ExtractValueInst?");
   Expression E;
   E.Ty = EI->getType();
@@ -697,8 +688,6 @@ uint32_t GVNPass::ValueTable::lookupOrAdd(Value *V) {
     case Instruction::And:
     case Instruction::Or:
     case Instruction::Xor:
-    case Instruction::ICmp:
-    case Instruction::FCmp:
     case Instruction::Trunc:
     case Instruction::ZExt:
     case Instruction::SExt:
@@ -721,11 +710,16 @@ uint32_t GVNPass::ValueTable::lookupOrAdd(Value *V) {
     case Instruction::InsertValue:
       Exp = createExpr(I);
       break;
+    case Instruction::ICmp:
+    case Instruction::FCmp:
+      Exp = createCmpExpr(I->getOpcode(), cast<CmpInst>(I)->getPredicate(),
+                          I->getOperand(0), I->getOperand(1));
+      break;
     case Instruction::GetElementPtr:
       Exp = createGEPExpr(cast<GetElementPtrInst>(I));
       break;
     case Instruction::ExtractValue:
-      Exp = createExtractvalueExpr(cast<ExtractValueInst>(I));
+      Exp = createExtractValueExpr(cast<ExtractValueInst>(I));
       break;
     case Instruction::PHI:
       ValueNumbering[V] = NextValueNumber;
@@ -2122,7 +2116,10 @@ bool GVNPass::processNonLocalLoad(LoadInst *Load,
     if (GetElementPtrInst *GEP =
             dyn_cast<GetElementPtrInst>(Load->getOperand(0))) {
       for (Use &U : GEP->indices())
-        if (Instruction *I = dyn_cast<Instruction>(U.get()))
+        // Instructions inserted by GVN during this iteration (e.g. coercion
+        // casts from MaterializeAdjustedValue) may not have value numbers yet,
+        // so they are skipped.
+        if (Instruction *I = dyn_cast<Instruction>(U.get()); I && VN.exists(I))
           Changed |= performScalarPRE(I);
     }
   }

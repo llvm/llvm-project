@@ -451,8 +451,10 @@ CodeExtractor::findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock) {
 }
 
 Instruction *CodeExtractor::allocateVar(IRBuilder<>::InsertPoint AllocaIP,
-                                        Type *VarType, const Twine &Name,
+                                        DebugLoc, Type *VarType,
+                                        const Twine &Name,
                                         AddrSpaceCastInst **CastedAlloc) {
+  // An alloca needs no debug location, so the one passed in goes unused here.
   const DataLayout &DL = AllocaIP.getBlock()->getModule()->getDataLayout();
   Instruction *Alloca = new AllocaInst(VarType, DL.getAllocaAddrSpace(),
                                        nullptr, Name, AllocaIP.getPoint());
@@ -466,8 +468,8 @@ Instruction *CodeExtractor::allocateVar(IRBuilder<>::InsertPoint AllocaIP,
   return Alloca;
 }
 
-Instruction *CodeExtractor::deallocateVar(IRBuilder<>::InsertPoint, Value *,
-                                          Type *) {
+Instruction *CodeExtractor::deallocateVar(IRBuilder<>::InsertPoint, DebugLoc,
+                                          Value *, Type *) {
   // Default alloca instructions created by allocateVar are released implicitly.
   return nullptr;
 }
@@ -1874,6 +1876,13 @@ CallInst *CodeExtractor::emitReplacerCall(
   BasicBlock *AllocaBlock =
       AllocationBlock ? AllocationBlock : &oldFunction->getEntryBlock();
 
+  // If the original function has debug info, the terminator of the entry block
+  // of the extracted function contains the first debug location of the
+  // extracted function, set in extractCodeRegion.
+  DebugLoc DL;
+  if (oldFunction->getSubprogram())
+    DL = newFunction->getEntryBlock().getTerminator()->getDebugLoc();
+
   // Update the entry count of the function.
   if (BFI)
     BFI->setBlockFreq(codeReplacer, EntryFreq);
@@ -1897,7 +1906,7 @@ CallInst *CodeExtractor::emitReplacerCall(
     Value *OutAlloc =
         allocateVar(IRBuilder<>::InsertPoint(
                         AllocaBlock, AllocaBlock->getFirstInsertionPt()),
-                    output->getType(), output->getName() + ".loc");
+                    DL, output->getType(), output->getName() + ".loc");
     params.push_back(OutAlloc);
     ReloadOutputs.push_back(OutAlloc);
   }
@@ -1907,7 +1916,7 @@ CallInst *CodeExtractor::emitReplacerCall(
     AddrSpaceCastInst *StructSpaceCast = nullptr;
     Struct = allocateVar(IRBuilder<>::InsertPoint(
                              AllocaBlock, AllocaBlock->getFirstInsertionPt()),
-                         StructArgTy, "structArg", &StructSpaceCast);
+                         DL, StructArgTy, "structArg", &StructSpaceCast);
     if (StructSpaceCast)
       params.push_back(StructSpaceCast);
     else
@@ -1949,13 +1958,9 @@ CallInst *CodeExtractor::emitReplacerCall(
   }
 
   // Add debug location to the new call, if the original function has debug
-  // info. In that case, the terminator of the entry block of the extracted
-  // function contains the first debug location of the extracted function,
-  // set in extractCodeRegion.
-  if (codeReplacer->getParent()->getSubprogram()) {
-    if (auto DL = newFunction->getEntryBlock().getTerminator()->getDebugLoc())
-      call->setDebugLoc(DL);
-  }
+  // info.
+  if (DL)
+    call->setDebugLoc(DL);
 
   // Reload the outputs passed in by reference, use the struct if output is in
   // the aggregate or reload from the scalar argument.
@@ -2060,13 +2065,13 @@ CallInst *CodeExtractor::emitReplacerCall(
     int Index = 0;
     for (Value *Output : outputs) {
       if (!StructValues.contains(Output))
-        deallocateVar(IRBuilder<>::InsertPoint(DeallocBlock, DeallocIP),
+        deallocateVar(IRBuilder<>::InsertPoint(DeallocBlock, DeallocIP), DL,
                       ReloadOutputs[Index++], Output->getType());
     }
 
     if (Struct)
-      deallocateVar(IRBuilder<>::InsertPoint(DeallocBlock, DeallocIP), Struct,
-                    StructArgTy);
+      deallocateVar(IRBuilder<>::InsertPoint(DeallocBlock, DeallocIP), DL,
+                    Struct, StructArgTy);
   };
 
   if (DeallocationBlocks.empty()) {

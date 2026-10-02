@@ -1265,15 +1265,14 @@ define amdgpu_gs void @s_fptrunc_round_v2f32_to_v2f16_upward_multiple_calls(<2 x
 ; GFX12-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 2
 ; GFX12-GISEL-NEXT:    s_cvt_f16_f32 s2, s2
 ; GFX12-GISEL-NEXT:    s_cvt_f16_f32 s3, s3
-; GFX12-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 3, 1), 0
-; GFX12-GISEL-NEXT:    s_add_f16 s0, s0, s4
-; GFX12-GISEL-NEXT:    s_add_f16 s1, s1, s5
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(SALU_CYCLE_2)
-; GFX12-GISEL-NEXT:    s_add_f16 s0, s2, s0
-; GFX12-GISEL-NEXT:    s_add_f16 s1, s3, s1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; GFX12-GISEL-NEXT:    s_pack_ll_b32_b16 s1, s4, s5
+; GFX12-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 3, 1), 0
+; GFX12-GISEL-NEXT:    v_pk_add_f16 v2, s0, s1
+; GFX12-GISEL-NEXT:    s_pack_ll_b32_b16 s0, s2, s3
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_pk_add_f16 v2, s0, v2
 ; GFX12-GISEL-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX12-GISEL-NEXT:    s_endpgm
   %res1 = call <2 x half> @llvm.fptrunc.round.v2f16.v2f32(<2 x float> %a, metadata !"round.upward")

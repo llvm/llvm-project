@@ -1204,6 +1204,106 @@ exit:
   ret void
 }
 
+; Two predicated stores guarded by the same condition. The first branch is
+; always taken (so it needs no weights of its own), while the second is
+; rarely taken. The merged region fires whenever either original region did,
+; i.e. (near) always, so it must not keep the second region's low frequency.
+define void @merged_replicate_regions_first_always_taken(ptr noalias %a, ptr noalias %b, i32 %n) {
+; VF4IC1-LABEL: define void @merged_replicate_regions_first_always_taken(
+; VF4IC1-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i32 [[N:%.*]]) {
+; VF4IC1:  [[ENTRY:.*:]]
+; VF4IC1:    br i1 [[MIN_ITERS_CHECK:%.*]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !prof [[PROF0]]
+; VF4IC1:  [[VECTOR_PH]]:
+; VF4IC1:  [[VECTOR_BODY:.*]]:
+; VF4IC1:    br i1 [[TMP3:%.*]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; VF4IC1:  [[PRED_STORE_IF]]:
+; VF4IC1:  [[PRED_STORE_CONTINUE]]:
+; VF4IC1:    br i1 [[TMP5:%.*]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
+; VF4IC1:  [[PRED_STORE_IF1]]:
+; VF4IC1:  [[PRED_STORE_CONTINUE2]]:
+; VF4IC1:    br i1 [[TMP9:%.*]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
+; VF4IC1:  [[PRED_STORE_IF3]]:
+; VF4IC1:  [[PRED_STORE_CONTINUE4]]:
+; VF4IC1:    br i1 [[TMP13:%.*]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
+; VF4IC1:  [[PRED_STORE_IF5]]:
+; VF4IC1:  [[PRED_STORE_CONTINUE6]]:
+; VF4IC1:    br i1 [[TMP17:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF2]], !llvm.loop [[LOOP48:![0-9]+]]
+; VF4IC1:  [[MIDDLE_BLOCK]]:
+; VF4IC1:    br i1 [[CMP_N:%.*]], label %[[EXIT:.*]], label %[[SCALAR_PH]], !prof [[PROF7]]
+; VF4IC1:  [[SCALAR_PH]]:
+; VF4IC1:  [[LOOP:.*]]:
+; VF4IC1:    br i1 [[CMP:%.*]], label %[[IF_THEN_1:.*]], label %[[MERGE:.*]], !prof [[PROF8]]
+; VF4IC1:  [[IF_THEN_1]]:
+; VF4IC1:  [[MERGE]]:
+; VF4IC1:    br i1 [[CMP]], label %[[IF_THEN_2:.*]], label %[[LATCH:.*]], !prof [[PROF42]]
+; VF4IC1:  [[IF_THEN_2]]:
+; VF4IC1:  [[LATCH]]:
+; VF4IC1:    br i1 [[EXITCOND:%.*]], label %[[EXIT]], label %[[LOOP]], !prof [[PROF8]], !llvm.loop [[LOOP49:![0-9]+]]
+; VF4IC1:  [[EXIT]]:
+;
+; VF2IC2-LABEL: define void @merged_replicate_regions_first_always_taken(
+; VF2IC2-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i32 [[N:%.*]]) {
+; VF2IC2:  [[ENTRY:.*:]]
+; VF2IC2:    br i1 [[MIN_ITERS_CHECK:%.*]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !prof [[PROF0]]
+; VF2IC2:  [[VECTOR_PH]]:
+; VF2IC2:  [[VECTOR_BODY:.*]]:
+; VF2IC2:    br i1 [[TMP5:%.*]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; VF2IC2:  [[PRED_STORE_IF]]:
+; VF2IC2:  [[PRED_STORE_CONTINUE]]:
+; VF2IC2:    br i1 [[TMP7:%.*]], label %[[PRED_STORE_IF2:.*]], label %[[PRED_STORE_CONTINUE3:.*]]
+; VF2IC2:  [[PRED_STORE_IF2]]:
+; VF2IC2:  [[PRED_STORE_CONTINUE3]]:
+; VF2IC2:    br i1 [[TMP11:%.*]], label %[[PRED_STORE_IF4:.*]], label %[[PRED_STORE_CONTINUE5:.*]]
+; VF2IC2:  [[PRED_STORE_IF4]]:
+; VF2IC2:  [[PRED_STORE_CONTINUE5]]:
+; VF2IC2:    br i1 [[TMP15:%.*]], label %[[PRED_STORE_IF6:.*]], label %[[PRED_STORE_CONTINUE7:.*]]
+; VF2IC2:  [[PRED_STORE_IF6]]:
+; VF2IC2:  [[PRED_STORE_CONTINUE7]]:
+; VF2IC2:    br i1 [[TMP19:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF2]], !llvm.loop [[LOOP48:![0-9]+]]
+; VF2IC2:  [[MIDDLE_BLOCK]]:
+; VF2IC2:    br i1 [[CMP_N:%.*]], label %[[EXIT:.*]], label %[[SCALAR_PH]], !prof [[PROF7]]
+; VF2IC2:  [[SCALAR_PH]]:
+; VF2IC2:  [[LOOP:.*]]:
+; VF2IC2:    br i1 [[CMP:%.*]], label %[[IF_THEN_1:.*]], label %[[MERGE:.*]], !prof [[PROF8]]
+; VF2IC2:  [[IF_THEN_1]]:
+; VF2IC2:  [[MERGE]]:
+; VF2IC2:    br i1 [[CMP]], label %[[IF_THEN_2:.*]], label %[[LATCH:.*]], !prof [[PROF42]]
+; VF2IC2:  [[IF_THEN_2]]:
+; VF2IC2:  [[LATCH]]:
+; VF2IC2:    br i1 [[EXITCOND:%.*]], label %[[EXIT]], label %[[LOOP]], !prof [[PROF8]], !llvm.loop [[LOOP49:![0-9]+]]
+; VF2IC2:  [[EXIT]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %latch ]
+  %gep.a = getelementptr inbounds i32, ptr %a, i32 %iv
+  %val = load i32, ptr %gep.a, align 4
+  %cmp = icmp sgt i32 %val, 0
+  br i1 %cmp, label %if.then.1, label %merge, !prof !9
+
+if.then.1:
+  store i32 0, ptr %gep.a, align 4
+  br label %merge
+
+merge:
+  br i1 %cmp, label %if.then.2, label %latch, !prof !0
+
+if.then.2:
+  %gep.b = getelementptr inbounds i32, ptr %b, i32 %iv
+  store i32 0, ptr %gep.b, align 4
+  br label %latch
+
+latch:
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop, !prof !0
+
+exit:
+  ret void
+}
+
 !0 = !{!"branch_weights", i32 1, i32 1000}
 !1 = !{!"branch_weights", i32 1, i32 7}
 !2 = !{!"branch_weights", i32 1, i32 1}
@@ -1213,6 +1313,7 @@ exit:
 !6 = !{!"branch_weights", i32 1, i32 100000}
 !7 = !{!"branch_weights", i32 4, i32 1, i32 2, i32 1}
 !8 = !{!"branch_weights", i32 4294967295, i32 1}
+!9 = !{!"branch_weights", i32 1, i32 0}
 ;.
 ; VF4IC1: [[PROF0]] = !{!"branch_weights", i32 1, i32 127}
 ; VF4IC1: [[PROF1]] = !{!"branch_weights", i32 1, i32 7}
@@ -1262,6 +1363,8 @@ exit:
 ; VF4IC1: [[LOOP45]] = distinct !{[[LOOP45]], [[META4]], [[META5]], [[META6]]}
 ; VF4IC1: [[PROF46]] = !{!"branch_weights", i32 -1, i32 1}
 ; VF4IC1: [[LOOP47]] = distinct !{[[LOOP47]], [[META5]], [[META4]], [[META10]]}
+; VF4IC1: [[LOOP48]] = distinct !{[[LOOP48]], [[META4]], [[META5]], [[META6]]}
+; VF4IC1: [[LOOP49]] = distinct !{[[LOOP49]], [[META5]], [[META4]], [[META10]]}
 ;.
 ; VF2IC2: [[PROF0]] = !{!"branch_weights", i32 1, i32 127}
 ; VF2IC2: [[PROF1]] = !{!"branch_weights", i32 1, i32 7}
@@ -1311,4 +1414,6 @@ exit:
 ; VF2IC2: [[LOOP45]] = distinct !{[[LOOP45]], [[META4]], [[META5]], [[META6]]}
 ; VF2IC2: [[PROF46]] = !{!"branch_weights", i32 -1, i32 1}
 ; VF2IC2: [[LOOP47]] = distinct !{[[LOOP47]], [[META5]], [[META4]], [[META10]]}
+; VF2IC2: [[LOOP48]] = distinct !{[[LOOP48]], [[META4]], [[META5]], [[META6]]}
+; VF2IC2: [[LOOP49]] = distinct !{[[LOOP49]], [[META5]], [[META4]], [[META10]]}
 ;.

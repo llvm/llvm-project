@@ -66,6 +66,11 @@ public:
     // Run the main analysis.
     LifetimeSafetyOpts LSOpts;
     LSOpts.MaxCFGBlocks = 0;
+    LSOpts.SuggestAnnotations = true;
+    LSOpts.CheckNoescapeViolations = true;
+    LSOpts.CheckLifetimeboundViolations = true;
+    LSOpts.CheckMisplacedLifetimebound = true;
+    LSOpts.CheckInapplicableLifetimebound = true;
     Analysis =
         std::make_unique<LifetimeSafetyAnalysis>(*AnalysisCtx, nullptr, LSOpts);
     Analysis->run();

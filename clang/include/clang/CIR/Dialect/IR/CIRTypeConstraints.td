@@ -297,8 +297,8 @@ def CIR_PtrToArray : CIR_PtrToType<CIR_AnyArrayType>;
 def CIR_AnyVectorType : CIR_TypeBase<"::cir::VectorType", "vector type">;
 
 def CIR_VectorElementType
-    : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyIntOrFloatType, CIR_AnyPtrType],
-                "any cir boolean, integer, floating point or pointer type"> {
+    : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyIntOrFloatType],
+                "any cir boolean, integer, floating point"> {
   let cppFunctionName = "isValidVectorTypeElementType";
 }
 

@@ -579,12 +579,12 @@ public:
   void forEachSummary(Functor Callback) {
     if (ModuleToSummariesForIndex) {
       for (auto &M : *ModuleToSummariesForIndex)
-        for (auto &Summary : M.second) {
-          Callback(Summary, false);
+        for (auto &[GUID, GVS] : M.second) {
+          Callback({GUID, GVS}, false);
           // Ensure aliasee is handled, e.g. for assigning a valueId,
           // even if we are not importing the aliasee directly (the
           // imported alias will contain a copy of aliasee).
-          if (auto *AS = dyn_cast<AliasSummary>(Summary.getSecond()))
+          if (auto *AS = dyn_cast<AliasSummary>(GVS))
             Callback({AS->getAliaseeGUID(), &AS->getAliasee()}, true);
         }
     } else {

@@ -1,4 +1,4 @@
-// RUN: not %clang_cc1 -fopenmp -emit-cir -fclangir %s -o - | FileCheck %s
+// RUN: not %clang_cc1 -fopenmp -triple x86_64-linux-gnu -emit-cir -fclangir %s -o - | FileCheck %s
 
 void before(int);
 void during(int);

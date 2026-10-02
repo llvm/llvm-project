@@ -18,10 +18,13 @@ call to `common_conf`, they should be modified/appended to, as in:
 """
 
 import sys
-from typing import Any, Dict, TYPE_CHECKING
+from pathlib import Path
+from typing import Any, Dict, Iterable, Optional
 from enum import Enum, auto
 from sphinx.util.tags import Tags
 from llvm_sphinx.help import venv_help
+
+_SHARED_STATIC_DIR = Path(__file__).parent / "_static"
 
 
 class Markdown(Enum):
@@ -63,6 +66,45 @@ def common_conf(tags: Tags, markdown=Markdown.ALWAYS) -> Dict[str, Any]:
     numfig = False
 
     return locals()
+
+
+def _append_unique(target, entries):
+    for entry in entries:
+        if entry not in target:
+            target.append(entry)
+
+
+def configure_furo(
+    conf: Dict[str, Any],
+    *,
+    source_directory: str,
+    html_title: str,
+    html_logo: Optional[str] = None,
+    local_static_path: Iterable[str] = (),
+    extra_css_files: Iterable[str] = (),
+    extra_js_files: Iterable[str] = (),
+) -> None:
+    """Configure the shared Furo theme setup for LLVM Sphinx projects."""
+    extensions = conf.setdefault("extensions", [])
+    _append_unique(extensions, ["llvm_sphinx.ext.furo"])
+
+    conf["html_theme"] = "furo"
+    conf["html_theme_options"] = {
+        "source_repository": "https://github.com/llvm/llvm-project",
+        "source_branch": "main",
+        "source_directory": source_directory,
+    }
+    conf["html_title"] = html_title
+    if html_logo is not None:
+        conf["html_logo"] = html_logo
+    conf["html_static_path"] = list(local_static_path)
+    conf["html_css_files"] = list(extra_css_files)
+    conf["html_js_files"] = list(extra_js_files)
+
+
+def shared_static_asset(filename: str) -> str:
+    """Return an absolute path to a shared LLVM Sphinx static asset."""
+    return str(_SHARED_STATIC_DIR / filename)
 
 
 # Some of our markdown documentation numbers section titles

@@ -746,4 +746,126 @@ def OpenACC_PredicateRegionOp
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// acc.map_info
+//===----------------------------------------------------------------------===//
+
+def OpenACC_MapInfoOp : OpenACC_Op<"map_info", [AttrSizedOperandSegments,
+    AllTypesMatch<["var", "accVar"]>]> {
+  let summary = "OpenACC map metadata for offload lowering";
+  let description = [{
+    Captures the runtime allocation or mapping contract for one object,
+    including attach points, descriptor facts, bounds, byte size, and offload
+    map-type flags. This operation does not itself allocate or map the object.
+    `accVar` is a result token of the same type as `var`; a construct consumes
+    the token to issue the corresponding runtime operation.
+
+    Data clauses use the token as a data operand of a data, compute, declare,
+    or update construct. When `var` is an `acc.privatize` result, the token is
+    used as the kernel argument and its `private` and parallel-level map flags
+    request the runtime allocation with the required replication.
+
+    - `var`: Mapped variable (pointer-like or mappable, same as data-entry
+      `var`).
+    - `varType`: Type of the mapped object (same role as data-entry `varType`).
+    - `varPtrPtr`: Optional attach point (host address of the pointer slot).
+    - `desc`: Optional base descriptor when it differs from `var`. Omitted when
+      `var` itself is that descriptor; consumers then use `var` whenever
+      `descKind` is not `none`.
+    - `descKind`: Which descriptor layouts describe the mapped object, as a
+      bitfield so that a nested descriptor can name each level. `none` means
+      the object is described by its address and `size` alone.
+    - `mapFlags`: Offload map-type flags (`to`/`from`/`ptr_and_obj`/`private`/
+      ...), combining enter and exit clause effects or describing a
+      privatized allocation.
+    - `elementSize`: Optional byte size of one element of the mapped object.
+      `bounds` and descriptor extents count elements rather than bytes, so
+      this is what converts them into byte strides. It is stated explicitly
+      because `varType` does not always determine it: a character or
+      derived-type element takes its length from the descriptor.
+    - `size`: Optional total mapped byte size. A constant `0` means the size is
+      carried by `bounds` or by a descriptor instead of being stated here, a
+      constant `-1` means it is not known at compile time, and a non-constant
+      value supplies the size at run time (e.g. loaded from a type
+      descriptor).
+    - `exitLoc`: Optional source location of the exit effects, which for a
+      structured construct is its end directive rather than the location of
+      this operation. Reported by the runtime for the region end.
+    - `accVar`: Result token. Its use by a construct causes that construct to
+      issue the runtime mapping or allocation described here.
+  }];
+
+  let arguments = (ins OpenACC_AnyPointerOrMappableType:$var,
+                       TypeAttr:$varType,
+                       Optional<OpenACC_PointerLikeTypeInterface>:$varPtrPtr,
+                       Optional<OpenACC_AnyPointerOrMappableType>:$desc,
+                       DefaultValuedAttr<OpenACC_DataDescKindAttr,
+                         "mlir::acc::DataDescKind::none">:$descKind,
+                       Variadic<OpenACC_DataBoundsType>:$bounds,
+                       Optional<IntOrIndex>:$size,
+                       DefaultValuedAttr<OpenACC_MapFlagsAttr,
+                         "mlir::acc::MapFlags::none">:$mapFlags,
+                       OptionalAttr<StrAttr>:$name,
+                       OptionalAttr<ConfinedAttr<I64Attr, [IntNonNegative]>>:$elementSize,
+                       OptionalAttr<LocationAttr>:$exitLoc);
+
+  let results = (outs OpenACC_AnyPointerOrMappableType:$accVar);
+
+  let extraClassDeclaration = [{
+    mlir::TypedValue<mlir::acc::PointerLikeType> getVarPtr() {
+      return mlir::dyn_cast<mlir::TypedValue<mlir::acc::PointerLikeType>>(
+          getVar());
+    }
+    mlir::TypedValue<mlir::acc::PointerLikeType> getAccPtr() {
+      return mlir::dyn_cast<mlir::TypedValue<mlir::acc::PointerLikeType>>(
+          getAccVar());
+    }
+  }];
+
+  let assemblyFormat = [{
+    custom<Var>($var) `:` custom<VarPtrType>(type($var), $varType)
+    oilist(
+        `varPtrPtr` `(` $varPtrPtr `:` type($varPtrPtr) `)`
+      | `desc` `(` $desc `:` type($desc) `)`
+      | `bounds` `(` $bounds `)`
+      | `size` `(` $size `:` type($size) `)`
+      | `elementSize` `(` $elementSize `)`
+      | `name` `(` $name `)`
+      | `exitLoc` `(` custom<SourceLocation>($exitLoc) `)`
+    )
+    `descKind` `(` enum($descKind) `)`
+    `mapFlags` `(` enum($mapFlags) `)`
+    `->` type($accVar) attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "::mlir::Type":$accVarType, "::mlir::Value":$var,
+                   "::mlir::Type":$varType,
+                   "::mlir::acc::MapFlags":$mapFlags,
+                   CArg<"::mlir::Value", "{}">:$varPtrPtr,
+                   CArg<"::mlir::Value", "{}">:$desc,
+                   CArg<"::mlir::acc::DataDescKind",
+                        "::mlir::acc::DataDescKind::none">:$descKind,
+                   CArg<"::mlir::ValueRange", "{}">:$bounds,
+                   CArg<"std::optional<::llvm::StringRef>",
+                        "std::nullopt">:$name,
+                   CArg<"std::optional<int64_t>", "std::nullopt">:$elementSize,
+                   CArg<"::mlir::Value", "{}">:$size,
+                   CArg<"::mlir::LocationAttr", "{}">:$exitLoc),
+      [{
+        ::mlir::acc::DataDescKind kind = descKind;
+        if (!bounds.empty())
+          kind = kind | ::mlir::acc::DataDescKind::openacc;
+        build($_builder, $_state, accVarType, var, varType, varPtrPtr, desc,
+              kind, bounds, size, mapFlags,
+              name ? $_builder.getStringAttr(*name) : ::mlir::StringAttr{},
+              elementSize ? $_builder.getI64IntegerAttr(*elementSize)
+                          : ::mlir::IntegerAttr{},
+              exitLoc);
+      }]>,
+  ];
+
+  let hasVerifier = 1;
+}
+
 #endif // OPENACC_CG_OPS

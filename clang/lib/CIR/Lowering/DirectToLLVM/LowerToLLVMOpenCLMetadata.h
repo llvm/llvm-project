@@ -32,6 +32,8 @@ private:
   llvm::SmallVector<mlir::Attribute> functionMetadata;
 };
 
+void lowerOpenCLModuleMetadataAttrs(mlir::ModuleOp module);
+
 } // namespace direct
 } // namespace cir
 

@@ -1024,7 +1024,19 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       BuildMI(MBB, II, DL, TII->get(X86::MOV64ri), ScratchReg).addImm(Offset);
 
       MI.getOperand(FIOperandNum + 3).setImm(0);
-      MI.getOperand(FIOperandNum + 2).setReg(ScratchReg);
+      if (MI.getOperand(FIOperandNum + 2).getReg() == X86::NoRegister) {
+        MI.getOperand(FIOperandNum + 2).setReg(ScratchReg);
+      } else {
+        // The index register slot is already in use, fold the offset into
+        // the base register instead. LEA does not clobber EFLAGS.
+        BuildMI(MBB, II, DL, TII->get(X86::LEA64r), ScratchReg)
+            .addReg(MachineBasePtr)
+            .addImm(1)
+            .addReg(ScratchReg)
+            .addImm(0)
+            .addReg(X86::NoRegister);
+        MI.getOperand(FIOperandNum).setReg(ScratchReg);
+      }
 
       return false;
     }

@@ -800,10 +800,9 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
     report("MBB has more than one landing pad successor", MBB);
 
   // Call analyzeBranch. If it succeeds, there several more conditions to check.
-  MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+  const MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
   SmallVector<MachineOperand, 4> Cond;
-  if (!TII->analyzeBranch(*const_cast<MachineBasicBlock *>(MBB), TBB, FBB,
-                          Cond)) {
+  if (!TII->analyzeBranch(*MBB, TBB, FBB, Cond)) {
     // Ok, analyzeBranch thinks it knows what's going on with this block. Let's
     // check whether its answers match up with reality.
     if (!TBB && !FBB) {

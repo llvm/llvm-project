@@ -253,6 +253,11 @@ std::optional<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
 
   class P1689ActionController : public DependencyActionController {
   public:
+    void initializeScanInvocation(CompilerInvocation &ScanInvocation) override {
+      ScanInvocation.getPreprocessorOpts().DependencyScanningModuleMapImports =
+          true;
+    }
+
     // The lookupModuleOutput is for clang modules. P1689 format don't need it.
     std::string lookupModuleOutput(const ModuleDeps &,
                                    ModuleOutputKind Kind) override {

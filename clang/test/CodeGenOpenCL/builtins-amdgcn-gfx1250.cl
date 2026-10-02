@@ -1362,8 +1362,8 @@ void test_s_cluster_barrier()
 // CHECK-NEXT:    [[BAR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    store ptr [[BAR:%.*]], ptr addrspace(5) [[BAR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[BAR_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[TMP0]] to ptr addrspace(3)
-// CHECK-NEXT:    call void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(3) [[TMP1]])
+// CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[TMP0]] to ptr addrspace(15)
+// CHECK-NEXT:    call void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(15) [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_s_wakeup_barrier(void *bar)

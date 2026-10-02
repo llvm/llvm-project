@@ -44,7 +44,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/SystemUtils.h"
@@ -401,8 +400,6 @@ static bool shouldForceLegacyPM() {
 extern "C" int
 optMain(int argc, char **argv,
         ArrayRef<std::function<void(PassBuilder &)>> PassBuilderCallbacks) {
-  InitLLVM X(argc, argv);
-
   // Enable debug stream buffering.
   EnableDebugBuffering = true;
 

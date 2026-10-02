@@ -39,6 +39,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Assign.h"
 #include "flang/Optimizer/Builder/Runtime/CUDA/Descriptor.h"
+#include "flang/Optimizer/Builder/Runtime/CUDA/Support.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/EnvironmentDefaults.h"
@@ -52,6 +53,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/Support/AllocationPolicy.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
@@ -2004,7 +2006,10 @@ private:
         mlir::Value active =
             fir::runtime::cuda::genDeviceIsActive(*builder, loc);
         builder->genIfThen(loc, active)
-            .genThen([&]() { bridge.cudaCleanupCtx().finalizeAndKeep(); })
+            .genThen([&]() {
+              fir::runtime::cuda::genCUDADeviceSynchronize(*builder, loc);
+              bridge.cudaCleanupCtx().finalizeAndKeep();
+            })
             .end();
       }
       bridge.fctCtx().finalizeAndKeep();
@@ -6944,6 +6949,8 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   fir::setIdent(*module, Fortran::common::getFlangFullVersion());
   fir::setRelocationModel(*module, cgOpts.getRelocationModel());
   fir::setIsPIE(*module, cgOpts.IsPIE);
+  fir::setAllocationPolicy(
+      *module, fir::getCommandLineAllocationPolicy(cgOpts.StackArrays));
   if (cgOpts.RecordCommandLine)
     fir::setCommandline(*module, *cgOpts.RecordCommandLine);
   // Under -gpu=mem:unified|managed, host heap allocations use the matching

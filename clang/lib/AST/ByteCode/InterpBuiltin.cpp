@@ -165,6 +165,9 @@ static QualType getElemType(const Pointer &P) {
         ->getElementType();
   }
 
+  if (P.isOpaquePointer() || P.isIntegralPointer())
+    return P.getType();
+
   const Descriptor *Desc = P.getFieldDesc();
   QualType T = Desc->getType();
   if (Desc->isPrimitive())
@@ -409,7 +412,7 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   if (!StrPtr.isBlockPointer())
     return false;
 
-  if (!CheckDummy(S, OpPC, StrPtr.block(), AK_Read))
+  if (!CheckDummy(S, OpPC, StrPtr, AK_Read))
     return false;
 
   if (!StrPtr.getFieldDesc()->isPrimitiveArray())
@@ -1318,13 +1321,13 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
   }
   assert(FirstArgT == PT_Ptr);
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!Ptr.isBlockPointer()) {
+  if (!Ptr.isBlockPointer() && !Ptr.isOpaquePointer()) {
     S.FFDiag(Call->getArg(0), diag::note_constexpr_alignment_compute)
         << Alignment;
     return false;
   }
 
-  const ValueDecl *PtrDecl = Ptr.getDeclDesc()->asValueDecl();
+  const VarDecl *PtrDecl = Ptr.getRootVarDecl();
   // We need a pointer for a declaration here.
   if (!PtrDecl) {
     if (BuiltinOp == Builtin::BI__builtin_is_aligned)
@@ -1336,10 +1339,19 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  // For one-past-end pointers, we can't call getIndex() since it asserts.
-  // Use getNumElems() instead which gives the correct index for past-end.
-  unsigned PtrOffset =
-      Ptr.isElementPastEnd() ? Ptr.getNumElems() : Ptr.getIndex();
+  unsigned PtrOffset;
+  if (Ptr.isBlockPointer()) {
+    // For one-past-end pointers, we can't call getIndex() since it asserts.
+    // Use getNumElems() instead which gives the correct index for past-end.
+    PtrOffset = Ptr.isElementPastEnd() ? Ptr.getNumElems() : Ptr.getIndex();
+  } else {
+    if (std::optional<size_t> PtrOff =
+            Ptr.computeLayoutOffset(S.getASTContext()))
+      PtrOffset = *PtrOff;
+    else
+      return false;
+  }
+
   CharUnits BaseAlignment = S.getASTContext().getDeclAlign(PtrDecl);
   CharUnits PtrAlign =
       BaseAlignment.alignmentAtOffset(CharUnits::fromQuantity(PtrOffset));
@@ -1388,8 +1400,18 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
                                     ? llvm::alignDown(PtrOffset, Alignment64)
                                     : llvm::alignTo(PtrOffset, Alignment64));
 
-    S.Stk.push<Pointer>(Ptr.atIndex(NewOffset.getQuantity()));
-    return true;
+    if (Ptr.isBlockPointer()) {
+      S.Stk.push<Pointer>(Ptr.atIndex(NewOffset.getQuantity()));
+      return true;
+    }
+
+    assert(Ptr.isOpaquePointer());
+
+    APSInt APOffset =
+        APSInt(APInt(64, NewOffset.getQuantity(), /*IsSigned=*/true),
+               /*IsUnsigned=*/false);
+    return arrayElemPtrOpaque(S, OpPC, Ptr, std::move(APOffset),
+                              /*AllocReplace=*/true);
   }
 
   // Otherwise, we cannot constant-evaluate the result.
@@ -1420,9 +1442,9 @@ static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
   CharUnits Align = CharUnits::fromQuantity(Alignment.getZExtValue());
 
   // If there is a base object, then it must have the correct alignment.
-  if (Ptr.isBlockPointer()) {
+  if (Ptr.isBlockPointer() || Ptr.isOpaquePointer()) {
     CharUnits BaseAlignment;
-    if (const auto *VD = Ptr.getDeclDesc()->asValueDecl())
+    if (const auto *VD = Ptr.getRootVarDecl())
       BaseAlignment = ASTCtx.getDeclAlign(VD);
     else if (const auto *E = Ptr.getRootExpr())
       BaseAlignment = GetAlignOfExpr(ASTCtx, E, UETT_AlignOf);
@@ -1443,7 +1465,7 @@ static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
   if (ExtraOffset)
     AVOffset -= CharUnits::fromQuantity(ExtraOffset->getZExtValue());
   if (AVOffset.alignTo(Align) != AVOffset) {
-    if (Ptr.isBlockPointer())
+    if (Ptr.isBlockPointer() || Ptr.isOpaquePointer())
       S.CCEDiag(Call->getArg(0),
                 diag::note_constexpr_baa_insufficient_alignment)
           << 1 << AVOffset.getQuantity() << Align.getQuantity();
@@ -2123,10 +2145,6 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
     pushInteger(S, 0, Call->getType());
     return true;
   }
-
-  if (!PtrA.isReadablePointerType() || !PtrB.isReadablePointerType())
-    return false;
-
   bool IsWide =
       (ID == Builtin::BIwmemcmp || ID == Builtin::BI__builtin_wmemcmp);
 
@@ -2143,6 +2161,9 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
         << PtrB.getType();
     return false;
   }
+
+  if (!PtrA.isReadablePointerType() || !PtrB.isReadablePointerType())
+    return false;
 
   if (!CheckLoad(S, OpPC, PtrA, AK_Read) || !CheckLoad(S, OpPC, PtrB, AK_Read))
     return false;
@@ -2423,14 +2444,14 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
       return false;
     if (!CheckMutable(S, OpPC, Ptr))
       return false;
-    if (!CheckDummy(S, OpPC, Ptr.block(), AK_Read))
+    if (!CheckDummy(S, OpPC, Ptr, AK_Read))
       return false;
   }
 
   // Check if we're currently running an initializer.
   if (S.initializingBlock(Ptr.block()))
     return Error(2);
-  if (S.EvaluatingDecl && Ptr.getDeclDesc()->asVarDecl() == S.EvaluatingDecl)
+  if (S.EvaluatingDecl && Ptr.getRootVarDecl() == S.EvaluatingDecl)
     return Error(2);
 
   pushInteger(S, Result, Call->getType());
@@ -5264,18 +5285,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return APInt(Src.getBitWidth(), Src.countTrailingZeros());
         });
 
-  case clang::X86::BI__builtin_ia32_pdep_si:
-  case clang::X86::BI__builtin_ia32_pdep_di:
-  case Builtin::BI__builtin_elementwise_pdep:
-    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
-                                                 llvm::APIntOps::pdep);
-
-  case clang::X86::BI__builtin_ia32_pext_si:
-  case clang::X86::BI__builtin_ia32_pext_di:
-  case Builtin::BI__builtin_elementwise_pext:
-    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
-                                                 llvm::APIntOps::pext);
-
   case clang::X86::BI__builtin_ia32_addcarryx_u32:
   case clang::X86::BI__builtin_ia32_addcarryx_u64:
     return interp__builtin_ia32_addcarry_subborrow(S, OpPC, Frame, Call,
@@ -5379,6 +5388,15 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
           return LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
         });
+
+  case Builtin::BI__builtin_elementwise_pdep:
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
+                                                 llvm::APIntOps::pdep);
+
+  case Builtin::BI__builtin_elementwise_pext:
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
+                                                 llvm::APIntOps::pext);
+
   case X86::BI__builtin_ia32_extract128i256:
   case X86::BI__builtin_ia32_vextractf128_pd256:
   case X86::BI__builtin_ia32_vextractf128_ps256:
@@ -6867,7 +6885,7 @@ static bool copyRecord(InterpState &S, CodePtr OpPC, PtrView Src, PtrView Dest,
 
   auto copyField = [&](const Record::Field &F, bool Activate) -> bool {
     PtrView DestField = Dest.atField(F.Offset);
-    if (OptPrimType FT = S.Ctx.classify(F.Decl->getType())) {
+    if (OptPrimType FT = F.T) {
       TYPE_SWITCH(*FT, {
         DestField.deref<T>() = Src.atField(F.Offset).deref<T>();
         if (Src.atField(F.Offset).isInitialized())

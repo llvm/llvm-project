@@ -14,9 +14,12 @@
 #include "llvm/Frontend/HLSL/SemanticSignatures.h"
 #include "llvm/ADT/Enum.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <cassert>
 
 using namespace llvm;
 using namespace llvm::hlsl;
@@ -52,6 +55,125 @@ dxbc::PSV::SemanticKind hlsl::getSemanticKind(StringRef SemanticName) {
       return Kind.value();
 
   return dxbc::PSV::SemanticKind::Invalid;
+}
+
+ArrayRef<SemanticStageInfo>
+hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
+  switch (SemanticKind) {
+  case dxbc::PSV::SemanticKind::Arbitrary: {
+    static constexpr IOType OutOrPatchConstant =
+        IOType::Out | IOType::PatchConstantOrPrimitive;
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Vertex, IOType::InOut, SemanticInterpretation::Arbitrary},
+        {Triple::Geometry, IOType::InOut, SemanticInterpretation::Arbitrary},
+        {Triple::Hull, IOType::All, SemanticInterpretation::Arbitrary},
+        {Triple::Domain, IOType::All, SemanticInterpretation::Arbitrary},
+        {Triple::Pixel, IOType::In, SemanticInterpretation::Arbitrary},
+        {Triple::Mesh, OutOrPatchConstant, SemanticInterpretation::Arbitrary},
+    };
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::DispatchThreadID:
+  case dxbc::PSV::SemanticKind::GroupID:
+  case dxbc::PSV::SemanticKind::GroupIndex:
+  case dxbc::PSV::SemanticKind::GroupThreadID: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Compute, IOType::In, SemanticInterpretation::NotAllocated},
+        {Triple::Mesh, IOType::In, SemanticInterpretation::NotAllocated},
+        {Triple::Amplification, IOType::In,
+         SemanticInterpretation::NotAllocated},
+    };
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::ViewID: {
+    static constexpr IOType InOrPatchConstant =
+        IOType::In | IOType::PatchConstantOrPrimitive;
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Vertex, IOType::In, SemanticInterpretation::NotAllocated},
+        {Triple::Hull, InOrPatchConstant, SemanticInterpretation::NotAllocated},
+        {Triple::Domain, InOrPatchConstant,
+         SemanticInterpretation::NotAllocated},
+        {Triple::Geometry, IOType::In, SemanticInterpretation::NotAllocated},
+        {Triple::Pixel, IOType::In, SemanticInterpretation::NotAllocated},
+        {Triple::Mesh, InOrPatchConstant, SemanticInterpretation::NotAllocated},
+        {Triple::Amplification, IOType::In,
+         SemanticInterpretation::NotAllocated},
+    };
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::Target: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Pixel, IOType::Out, SemanticInterpretation::Target}};
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::VertexID: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Vertex, IOType::In, SemanticInterpretation::SV}};
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::IsFrontFace: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Geometry, IOType::Out, SemanticInterpretation::SGV},
+        {Triple::Pixel, IOType::In, SemanticInterpretation::SGV}};
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::Position: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Vertex, IOType::In, SemanticInterpretation::Arbitrary},
+        {Triple::Vertex, IOType::Out, SemanticInterpretation::SV},
+        {Triple::Hull, IOType::InOut, SemanticInterpretation::SV},
+        {Triple::Hull, IOType::PatchConstantOrPrimitive,
+         SemanticInterpretation::Arbitrary},
+        {Triple::Domain, IOType::InOut, SemanticInterpretation::SV},
+        {Triple::Domain, IOType::PatchConstantOrPrimitive,
+         SemanticInterpretation::Arbitrary},
+        {Triple::Geometry, IOType::InOut, SemanticInterpretation::SV},
+        {Triple::Pixel, IOType::In, SemanticInterpretation::SV},
+        {Triple::Mesh, IOType::Out, SemanticInterpretation::SV},
+    };
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::ClipDistance:
+  case dxbc::PSV::SemanticKind::CullDistance: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Vertex, IOType::In, SemanticInterpretation::Arbitrary},
+        {Triple::Vertex, IOType::Out, SemanticInterpretation::ClipCull},
+        {Triple::Hull, IOType::InOut, SemanticInterpretation::ClipCull},
+        {Triple::Hull, IOType::PatchConstantOrPrimitive,
+         SemanticInterpretation::Arbitrary},
+        {Triple::Domain, IOType::InOut, SemanticInterpretation::ClipCull},
+        {Triple::Domain, IOType::PatchConstantOrPrimitive,
+         SemanticInterpretation::Arbitrary},
+        {Triple::Geometry, IOType::InOut, SemanticInterpretation::ClipCull},
+        {Triple::Pixel, IOType::In, SemanticInterpretation::ClipCull},
+        {Triple::Mesh, IOType::Out, SemanticInterpretation::ClipCull},
+    };
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::TessFactor:
+  case dxbc::PSV::SemanticKind::InsideTessFactor: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Hull, IOType::PatchConstantOrPrimitive,
+         SemanticInterpretation::TessFactor},
+        {Triple::Domain, IOType::PatchConstantOrPrimitive,
+         SemanticInterpretation::TessFactor},
+    };
+    return Stages;
+  }
+  default:
+    return {};
+  }
+}
+
+SemanticInterpretation
+hlsl::getInterpretationKind(dxbc::PSV::SemanticKind SemanticKind,
+                            Triple::EnvironmentType ShaderStage, IOType IOTy) {
+  assert(llvm::has_single_bit(static_cast<unsigned>(IOTy)) &&
+         "a single IOType is expected, not a mask of IOTypes");
+  for (const SemanticStageInfo &Info : getAvailableStages(SemanticKind))
+    if (Info.Stage == ShaderStage && any(Info.AllowedIOTypesMask & IOTy))
+      return Info.Interpretation;
+  return SemanticInterpretation::Invalid;
 }
 
 Expected<SemanticSignatureElement>

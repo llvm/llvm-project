@@ -1938,6 +1938,80 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     break;
   }
 
+  // Packed Multiply Parts Accumulate.
+  case RISCV::BI__builtin_riscv_macc_h00_i32:
+  case RISCV::BI__builtin_riscv_pmacc_h00_i32x2:
+  case RISCV::BI__builtin_riscv_macc_w00_i64:
+  case RISCV::BI__builtin_riscv_macc_h01_i32:
+  case RISCV::BI__builtin_riscv_pmacc_h01_i32x2:
+  case RISCV::BI__builtin_riscv_macc_w01_i64:
+  case RISCV::BI__builtin_riscv_macc_h11_i32:
+  case RISCV::BI__builtin_riscv_pmacc_h11_i32x2:
+  case RISCV::BI__builtin_riscv_macc_w11_i64:
+  case RISCV::BI__builtin_riscv_maccu_h00_u32:
+  case RISCV::BI__builtin_riscv_pmaccu_h00_u32x2:
+  case RISCV::BI__builtin_riscv_maccu_w00_u64:
+  case RISCV::BI__builtin_riscv_maccu_h01_u32:
+  case RISCV::BI__builtin_riscv_pmaccu_h01_u32x2:
+  case RISCV::BI__builtin_riscv_maccu_w01_u64:
+  case RISCV::BI__builtin_riscv_maccu_h11_u32:
+  case RISCV::BI__builtin_riscv_pmaccu_h11_u32x2:
+  case RISCV::BI__builtin_riscv_maccu_w11_u64:
+  case RISCV::BI__builtin_riscv_maccsu_h00_i32:
+  case RISCV::BI__builtin_riscv_pmaccsu_h00_i32x2:
+  case RISCV::BI__builtin_riscv_maccsu_w00_i64:
+  case RISCV::BI__builtin_riscv_maccsu_h11_i32:
+  case RISCV::BI__builtin_riscv_pmaccsu_h11_i32x2:
+  case RISCV::BI__builtin_riscv_maccsu_w11_i64: {
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    case RISCV::BI__builtin_riscv_macc_h00_i32:
+    case RISCV::BI__builtin_riscv_pmacc_h00_i32x2:
+    case RISCV::BI__builtin_riscv_macc_w00_i64:
+      ID = Intrinsic::riscv_macc_00;
+      break;
+    case RISCV::BI__builtin_riscv_macc_h01_i32:
+    case RISCV::BI__builtin_riscv_pmacc_h01_i32x2:
+    case RISCV::BI__builtin_riscv_macc_w01_i64:
+      ID = Intrinsic::riscv_macc_01;
+      break;
+    case RISCV::BI__builtin_riscv_macc_h11_i32:
+    case RISCV::BI__builtin_riscv_pmacc_h11_i32x2:
+    case RISCV::BI__builtin_riscv_macc_w11_i64:
+      ID = Intrinsic::riscv_macc_11;
+      break;
+    case RISCV::BI__builtin_riscv_maccu_h00_u32:
+    case RISCV::BI__builtin_riscv_pmaccu_h00_u32x2:
+    case RISCV::BI__builtin_riscv_maccu_w00_u64:
+      ID = Intrinsic::riscv_maccu_00;
+      break;
+    case RISCV::BI__builtin_riscv_maccu_h01_u32:
+    case RISCV::BI__builtin_riscv_pmaccu_h01_u32x2:
+    case RISCV::BI__builtin_riscv_maccu_w01_u64:
+      ID = Intrinsic::riscv_maccu_01;
+      break;
+    case RISCV::BI__builtin_riscv_maccu_h11_u32:
+    case RISCV::BI__builtin_riscv_pmaccu_h11_u32x2:
+    case RISCV::BI__builtin_riscv_maccu_w11_u64:
+      ID = Intrinsic::riscv_maccu_11;
+      break;
+    case RISCV::BI__builtin_riscv_maccsu_h00_i32:
+    case RISCV::BI__builtin_riscv_pmaccsu_h00_i32x2:
+    case RISCV::BI__builtin_riscv_maccsu_w00_i64:
+      ID = Intrinsic::riscv_maccsu_00;
+      break;
+    case RISCV::BI__builtin_riscv_maccsu_h11_i32:
+    case RISCV::BI__builtin_riscv_pmaccsu_h11_i32x2:
+    case RISCV::BI__builtin_riscv_maccsu_w11_i64:
+      ID = Intrinsic::riscv_maccsu_11;
+      break;
+    }
+
+    IntrinsicTypes = {ResultType, Ops[1]->getType()};
+    break;
+  }
+
   // Zk builtins
 
   // Zknh

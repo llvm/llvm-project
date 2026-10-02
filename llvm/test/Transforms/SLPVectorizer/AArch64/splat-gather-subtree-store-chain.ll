@@ -12,25 +12,20 @@ define void @test(ptr %matrix, double %0) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP0]], double 0.000000e+00, double 0.000000e+00)
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd double [[TMP1]], 0.000000e+00
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP10]], double 0.000000e+00, double 0.000000e+00)
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i8, ptr [[MATRIX]], i64 832
-; CHECK-NEXT:    store double [[TMP3]], ptr [[GEP0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP0]], double 0.000000e+00, double 0.000000e+00)
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd double [[TMP1]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP0]], double 0.000000e+00, double [[TMP2]])
-; CHECK-NEXT:    [[TMP11:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP4]], double 0.000000e+00, double 0.000000e+00)
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[MATRIX]], i64 840
-; CHECK-NEXT:    store double [[TMP11]], ptr [[GEP1]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP4]], double [[TMP2]], double 0.000000e+00)
 ; CHECK-NEXT:    [[TMP6:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP1]], double 0.000000e+00, double [[TMP5]])
-; CHECK-NEXT:    [[TMP9:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP6]], double 0.000000e+00, double 0.000000e+00)
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[MATRIX]], i64 848
-; CHECK-NEXT:    store double [[TMP9]], ptr [[GEP2]], align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP4]], double 0.000000e+00, double 0.000000e+00)
 ; CHECK-NEXT:    [[TMP8:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP1]], double 0.000000e+00, double [[TMP7]])
-; CHECK-NEXT:    [[TMP12:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP8]], double 0.000000e+00, double 0.000000e+00)
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[MATRIX]], i64 856
-; CHECK-NEXT:    store double [[TMP12]], ptr [[GEP3]], align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> poison, double [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x double> [[TMP9]], double [[TMP4]], i64 1
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x double> [[TMP10]], double [[TMP6]], i64 2
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x double> [[TMP11]], double [[TMP8]], i64 3
+; CHECK-NEXT:    [[TMP13:%.*]] = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> [[TMP12]], <4 x double> zeroinitializer, <4 x double> zeroinitializer)
+; CHECK-NEXT:    store <4 x double> [[TMP13]], ptr [[GEP0]], align 8
 ; CHECK-NEXT:    br label %[[LOOP]]
 ;
 entry:
@@ -61,3 +56,95 @@ loop:
 }
 
 declare double @llvm.fmuladd.f64(double, double, double)
+
+; The splat subtree for the splatted adds also forces extracts for their
+; scalar store uses; keeping it would reject the whole tree, so it must be
+; dropped and the splat gathers emitted as insertion sequences.
+define void @splat_subtree_with_scalar_uses(ptr noalias %out, ptr noalias %in) {
+; CHECK-LABEL: define void @splat_subtree_with_scalar_uses(
+; CHECK-SAME: ptr noalias [[OUT:%.*]], ptr noalias [[IN:%.*]]) {
+; CHECK-NEXT:  [[ENTRY_RTVEC:.*:]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 8
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 12
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 16
+; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 20
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 24
+; CHECK-NEXT:    [[XOR24:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[IN]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX7]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[ADD25:%.*]] = add i32 [[XOR24]], [[TMP3]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[TMP2]], [[TMP16]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x i32>, ptr [[ARRAYIDX8]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[ADD1]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = add <4 x i32> [[TMP6]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> poison, i32 [[ADD25]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = xor <4 x i32> [[TMP9]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> poison, i32 [[ADD]], i64 0
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> [[TMP13]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP15:%.*]] = add <4 x i32> [[TMP12]], [[TMP14]]
+; CHECK-NEXT:    store <4 x i32> [[TMP15]], ptr [[OUT]], align 4
+; CHECK-NEXT:    [[ARRAYIDX27_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 16
+; CHECK-NEXT:    store i32 [[ADD1]], ptr [[ARRAYIDX27_SCALAR]], align 4
+; CHECK-NEXT:    [[ARRAYIDX28_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 24
+; CHECK-NEXT:    store i32 [[ADD25]], ptr [[ARRAYIDX28_SCALAR]], align 4
+; CHECK-NEXT:    [[ARRAYIDX29_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 32
+; CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX29_SCALAR]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load i32, ptr %in, align 4
+  %arrayidx1 = getelementptr inbounds nuw i8, ptr %in, i64 4
+  %1 = load i32, ptr %arrayidx1, align 4
+  %add = add i32 %1, %0
+  %arrayidx2 = getelementptr inbounds nuw i8, ptr %in, i64 8
+  %2 = load i32, ptr %arrayidx2, align 4
+  %arrayidx3 = getelementptr inbounds nuw i8, ptr %in, i64 12
+  %3 = load i32, ptr %arrayidx3, align 4
+  %add4 = add i32 %3, %2
+  %arrayidx5 = getelementptr inbounds nuw i8, ptr %in, i64 16
+  %4 = load i32, ptr %arrayidx5, align 4
+  %arrayidx6 = getelementptr inbounds nuw i8, ptr %in, i64 20
+  %5 = load i32, ptr %arrayidx6, align 4
+  %add7 = add i32 %5, %4
+  %arrayidx8 = getelementptr inbounds nuw i8, ptr %in, i64 24
+  %6 = load i32, ptr %arrayidx8, align 4
+  %add9 = add i32 %6, %add
+  %xor = xor i32 %add9, %add4
+  %add10 = add i32 %xor, %add7
+  store i32 %add10, ptr %out, align 4
+  %arrayidx12 = getelementptr inbounds nuw i8, ptr %in, i64 28
+  %7 = load i32, ptr %arrayidx12, align 4
+  %add13 = add i32 %7, %add
+  %xor14 = xor i32 %add13, %add4
+  %add15 = add i32 %xor14, %add7
+  %arrayidx16 = getelementptr inbounds nuw i8, ptr %out, i64 4
+  store i32 %add15, ptr %arrayidx16, align 4
+  %arrayidx17 = getelementptr inbounds nuw i8, ptr %in, i64 32
+  %8 = load i32, ptr %arrayidx17, align 4
+  %add18 = add i32 %8, %add
+  %xor19 = xor i32 %add18, %add4
+  %add20 = add i32 %xor19, %add7
+  %arrayidx21 = getelementptr inbounds nuw i8, ptr %out, i64 8
+  store i32 %add20, ptr %arrayidx21, align 4
+  %arrayidx22 = getelementptr inbounds nuw i8, ptr %in, i64 36
+  %9 = load i32, ptr %arrayidx22, align 4
+  %add23 = add i32 %9, %add
+  %xor24 = xor i32 %add23, %add4
+  %add25 = add i32 %xor24, %add7
+  %arrayidx26 = getelementptr inbounds nuw i8, ptr %out, i64 12
+  store i32 %add25, ptr %arrayidx26, align 4
+  %arrayidx27 = getelementptr inbounds nuw i8, ptr %out, i64 16
+  store i32 %add, ptr %arrayidx27, align 4
+  %arrayidx28 = getelementptr inbounds nuw i8, ptr %out, i64 24
+  store i32 %add4, ptr %arrayidx28, align 4
+  %arrayidx29 = getelementptr inbounds nuw i8, ptr %out, i64 32
+  store i32 %add7, ptr %arrayidx29, align 4
+  ret void
+}

@@ -660,6 +660,15 @@ static bool checkDenormalAttributeConsistency(const Module &M,
   });
 }
 
+// Returns true if any function definition in the module has the strictfp
+// attribute, which taints the whole module: such code may change the FP
+// rounding mode at run time.
+static bool checkModuleHasStrictFP(const Module &M) {
+  return any_of(M, [](const Function &F) {
+    return !F.isDeclaration() && F.isStrictFP();
+  });
+}
+
 // Returns true if all functions have different denormal modes.
 static bool checkDenormalAttributeInconsistency(const Module &M) {
   auto F = M.functions().begin();
@@ -787,9 +796,9 @@ void ARMAsmPrinter::emitAttributes() {
   else {
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_exceptions, ARMBuildAttrs::Allowed);
 
-    // If the user has permitted this code to choose the IEEE 754
-    // rounding at run-time, emit the rounding attribute.
-    if (TM.Options.HonorSignDependentRoundingFPMathOption)
+    // If any function may change the FP rounding mode at run time the code
+    // cannot assume the default rounding, so emit the rounding attribute.
+    if (checkModuleHasStrictFP(*MMI->getModule()))
       ATS.emitAttribute(ARMBuildAttrs::ABI_FP_rounding, ARMBuildAttrs::Allowed);
   }
 

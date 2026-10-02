@@ -23,6 +23,8 @@ namespace {
 
 class CustomError : public ErrorExtends<CustomError, ErrorInfoBase> {
 public:
+  static constexpr const char *RTTIName = "::CustomError";
+
   CustomError(int Info) : Info(Info) {}
   std::string toString() const noexcept override {
     return "CustomError (" + std::to_string(Info) + ")";
@@ -35,6 +37,8 @@ protected:
 
 class CustomSubError : public ErrorExtends<CustomSubError, CustomError> {
 public:
+  static constexpr const char *RTTIName = "::CustomSubError";
+
   CustomSubError(int Info, std::string ExtraInfo)
       : ErrorExtends<CustomSubError, CustomError>(Info),
         ExtraInfo(std::move(ExtraInfo)) {}

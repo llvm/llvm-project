@@ -151,6 +151,7 @@
 #include "llvm/CodeGen/MachineLICM.h"
 #include "llvm/CodeGen/MachineLateInstrsCleanup.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/MachinePipeliner.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegionInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -895,6 +896,11 @@ Expected<bool> parseFunctionPropertiesStatisticsOptions(StringRef Params) {
 /// Parser of parameters for InstCount pass.
 Expected<bool> parseInstCountOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "pre-opt", "InstCountPass");
+}
+
+Expected<bool> parseInferAddressSpacesPassOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(
+      Params, "assume-default-is-flat-addrspace", "InferAddressSpacesPass");
 }
 
 /// Parser of parameters for LoopUnroll pass.

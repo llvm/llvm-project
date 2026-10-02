@@ -10,7 +10,7 @@
 
 program main
   integer :: x, y
-  integer :: z(10)
+  integer :: z(5)
   character c
   real :: r
   complex :: cmplx
@@ -35,17 +35,17 @@ end program
 ! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X_ALLOC]] {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[Y_ALLOC:.*]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFEy"}
 ! CHECK: %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y_ALLOC]] {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK: %[[Z_REF:.*]] = fir.address_of(@_QFEz) : !fir.ref<!fir.array<10xi32>>
-! CHECK: %[[Z_DECL:.*]]:2 = hlfir.declare %[[Z_REF]]({{.*}}) {uniq_name = "_QFEz"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+! CHECK: %[[Z_ALLOC:.*]] = fir.alloca !fir.array<5xi32> {bindc_name = "z", uniq_name = "_QFEz"}
+! CHECK: %[[Z_DECL:.*]]:2 = hlfir.declare %[[Z_ALLOC]]({{.*}}) {uniq_name = "_QFEz"} : (!fir.ref<!fir.array<5xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<5xi32>>, !fir.ref<!fir.array<5xi32>>)
 ! CHECK: omp.allocate_dir(%[[X_DECL]]#0 : !fir.ref<i32>) align(16)
 ! CHECK: %[[ALLOC1:.*]] = arith.constant 1 : i32
 ! CHECK: omp.allocate_dir(%[[Y_DECL]]#0 : !fir.ref<i32>) allocator(%[[ALLOC1]] : i32)
 ! CHECK: %[[ALLOC6:.*]] = arith.constant 6 : i32
-! CHECK: omp.allocate_dir(%[[Z_DECL]]#0 : !fir.ref<!fir.array<10xi32>>) align(64) allocator(%[[ALLOC6]] : i32)
+! CHECK: omp.allocate_dir(%[[Z_DECL]]#0 : !fir.ref<!fir.array<5xi32>>) align(64) allocator(%[[ALLOC6]] : i32)
 ! CHECK: %[[ALLOC3:.*]] = arith.constant 3 : i32
 ! CHECK: omp.allocate_dir(%[[C_DECL]]#0, %[[R_DECL]]#0, %[[CMPLX_DECL]]#0 : !fir.ref<!fir.char<1>>, !fir.ref<f32>, !fir.ref<complex<f32>>) align(32) allocator(%[[ALLOC3]] : i32)
 ! CHECK: omp.allocate_free(%[[C_DECL]]#0, %[[R_DECL]]#0, %[[CMPLX_DECL]]#0 : !fir.ref<!fir.char<1>>, !fir.ref<f32>, !fir.ref<complex<f32>>) allocator(%[[ALLOC3]] : i32)
-! CHECK: omp.allocate_free(%[[Z_DECL]]#0 : !fir.ref<!fir.array<10xi32>>) allocator(%[[ALLOC6]] : i32)
+! CHECK: omp.allocate_free(%[[Z_DECL]]#0 : !fir.ref<!fir.array<5xi32>>) allocator(%[[ALLOC6]] : i32)
 ! CHECK: omp.allocate_free(%[[Y_DECL]]#0 : !fir.ref<i32>) allocator(%[[ALLOC1]] : i32)
 ! CHECK: omp.allocate_free(%[[X_DECL]]#0 : !fir.ref<i32>)
 ! CHECK: return

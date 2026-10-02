@@ -2111,6 +2111,13 @@ multiclass VOP3Only_ScaleSel_Real_gfx1250_gfx13<bits<10> preGFX13, bits<10> op =
     VOP3a_ScaleSel_gfx1250_gfx13<op, ps.Pfl>;
 }
 
+multiclass VOP3Only_ScaleSel_Real_gfx13<bits<10> op> {
+  defvar ps = !cast<VOP_Pseudo>(NAME#"_e64");
+  def _e64_gfx13 :
+    VOP3_Real_Gen<ps, GFX13Gen>,
+    VOP3a_ScaleSel_gfx1250_gfx13<op, ps.Pfl>;
+}
+
 multiclass VOP3Only_Realtriple_t16_gfx11_gfx12_not_gfx1250_gfx13<bits<10> preGFX13Op, bits<10> op, string asmName, string opName = NAME,
                                                        string pseudo_mnemonic = "", bit isSingle = 0> :
   VOP3_Realtriple_with_name<GFX11Gen, preGFX13Op, opName, asmName, pseudo_mnemonic, isSingle>,

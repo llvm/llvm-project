@@ -214,6 +214,12 @@ struct __min_element;
 // operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Compare __comp) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __minmax_element;
+// template <class _Policy, class _ForwardIterator, class _Compare>
+// optional<pair<_ForwardIterator, _ForwardIterator>>
+// operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Compare __comp) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __search_n;
 // template <class _Policy, class _ForwardIterator, class _Size, class _T, class _Predicate>
 // optional<_ForwardIterator>
@@ -351,9 +357,16 @@ struct __reduce;
 //                       _Tp __init, _BinaryOperation __op) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
-struct __is_heap_until;
+struct __is_heap;
 // template <class _Policy, class _RandomAccessIterator, class _Comp>
 // optional<bool>
+// operator()(_Policy&& __policy, _RandomAccessIterator __first, _RandomAccessIterator __last,
+//                                _Comp __comp) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __is_heap_until;
+// template <class _Policy, class _RandomAccessIterator, class _Comp>
+// optional<_RandomAccessIterator>
 // operator()(_Policy&& __policy, _RandomAccessIterator __first, _RandomAccessIterator __last,
 //                                _Comp __comp) const noexcept;
 

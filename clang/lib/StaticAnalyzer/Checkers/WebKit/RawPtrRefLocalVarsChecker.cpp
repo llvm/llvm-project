@@ -412,6 +412,8 @@ public:
     assert(V);
     if (isa<ImplicitParamDecl>(V))
       return true;
+    if (V->isInitCapture())
+      return true;
     return BR->getSourceManager().isInSystemHeader(V->getLocation());
   }
 

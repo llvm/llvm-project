@@ -114,7 +114,7 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
   const MachineRegisterInfo &MRI = MF->getRegInfo();
   // Literals also count against scalar bus limit
   SmallVector<const MachineOperand *> UniqueLiterals;
-  auto addLiteral = [&](const MachineOperand &Op) {
+  auto AddLiteral = [&](const MachineOperand &Op) {
     for (auto &Literal : UniqueLiterals) {
       if (Literal->isIdenticalTo(Op))
         return;
@@ -143,14 +143,14 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
     } else if (!TII.isInlineConstant(Src0)) {
       if (IsVOPD3)
         return false;
-      addLiteral(Src0);
+      AddLiteral(Src0);
     }
 
     // V_FMAMK_F32 (src1) and V_FMAAK_F32 (src2) have a mandatory literal.
     // VOPD3 instructions don't set MandatoryLiteralIdx.
     if (InstInfo[CompIdx].hasMandatoryLiteral()) {
       auto CompOprIdx = InstInfo[CompIdx].getMandatoryLiteralCompOperandIndex();
-      addLiteral(MI.getOperand(CompOprIdx));
+      AddLiteral(MI.getOperand(CompOprIdx));
     }
 
     // VOPD only. Affects V_CNDMASK_B32_e32.
@@ -209,7 +209,7 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
   if ((UniqueLiterals.size() + UniqueScalarRegs.size()) > 2)
     return false;
 
-  auto getVRegIdx = [&](unsigned OpcodeIdx, unsigned OperandIdx) {
+  auto GetVRegIdx = [&](unsigned OpcodeIdx, unsigned OperandIdx) {
     const MachineInstr &MI = (OpcodeIdx == VOPD::X) ? MIX : MIY;
     const MachineOperand &Operand = MI.getOperand(OperandIdx);
     if (Operand.isReg() && TRI->isVectorRegister(MRI, Operand.getReg()))
@@ -224,7 +224,7 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
                  MIY.getOpcode() == AMDGPU::V_MOV_B32_e32;
 
   // Check VGPR bank constraints for operand registers across both instructions.
-  if (InstInfo.hasInvalidOperand(getVRegIdx, *TRI, SkipSrc, AllowSameVGPR,
+  if (InstInfo.hasInvalidOperand(GetVRegIdx, *TRI, SkipSrc, AllowSameVGPR,
                                  IsVOPD3))
     return false;
 
@@ -305,12 +305,12 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
   if (!FirstMI) {
     unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(ST);
     unsigned Opc2 = SecondMI.getOpcode();
-    auto checkCanBeVOPD = [&](bool VOPD3) {
+    auto CheckCanBeVOPD = [&](bool VOPD3) {
       AMDGPU::CanBeVOPD CanBeVOPD =
           AMDGPU::getCanBeVOPD(Opc2, EncodingFamily, VOPD3);
       return CanBeVOPD.Y || CanBeVOPD.X;
     };
-    return checkCanBeVOPD(false) || (ST.hasVOPD3() && checkCanBeVOPD(true));
+    return CheckCanBeVOPD(false) || (ST.hasVOPD3() && CheckCanBeVOPD(true));
   }
 
 #ifdef EXPENSIVE_CHECKS

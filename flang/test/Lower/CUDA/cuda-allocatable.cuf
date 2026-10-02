@@ -183,7 +183,7 @@ attributes(global) subroutine sub8()
   deallocate(a)
 end subroutine
 
-! CHECK-LABEL: func.func @_QPsub8() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
+! CHECK-LABEL: func.func @_QPsub8() attributes {cuf.proc_attr = #cuf.cuda_proc<global>{{.*}}}
 ! CHECK: %[[DESC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", uniq_name = "_QFsub8Ea"}
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %[[DESC]] {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub8Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
 ! CHECK: %[[HEAP:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} {alignment = 64 : i64, fir.must_be_heap = true, uniq_name = "_QFsub8Ea.alloc"}

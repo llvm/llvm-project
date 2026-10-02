@@ -461,10 +461,6 @@ bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
       continue;
     }
     for (EhSectionPiece *fde : rec->fdes) {
-      // Discard zero-range FDE, otherwise it would displace the FDE of the
-      // next function, which shares its address.
-      if (hasZeroPcRange(ctx, *fde, enc))
-        continue;
       // The FDE has passed `isFdeLive`, so the first relocation's symbol is a
       // live Defined.
       auto *isec = cast<EhInputSection>(fde->sec);
@@ -4421,6 +4417,38 @@ size_t MemtagGlobalDescriptors::getSize() const {
   return createMemtagGlobalDescriptors(ctx, symbols);
 }
 
+DynamicDebugSection::DynamicDebugSection(Ctx &ctx)
+    : SyntheticSection(ctx, dynDbgSecName, SHT_LLVM_DYNDBG_ELF, 0, 8) {
+  assert(ctx.dynDbgOutput);
+}
+
+size_t DynamicDebugSection::getSize() const {
+  return ctx.dynDbgOutput->getBufferSize();
+}
+
+void DynamicDebugSection::writeTo(uint8_t *buf) {
+  memcpy(buf, ctx.dynDbgOutput->getBufferStart(),
+         ctx.dynDbgOutput->getBufferSize());
+}
+
+constexpr char dynDbgNoteName[] = "LLVM";
+
+DynamicDebugNote::DynamicDebugNote(Ctx &ctx)
+    : SyntheticSection(ctx, ".note.llvm.dyndbg", SHT_NOTE, 0, 4) {}
+
+size_t DynamicDebugNote::getSize() const {
+  return sizeof(llvm::ELF::Elf64_Nhdr) + alignTo(sizeof(dynDbgNoteName), 4) +
+         /*descsz=*/sizeof(uint32_t);
+}
+
+void DynamicDebugNote::writeTo(uint8_t *buf) {
+  write32(ctx, buf, sizeof(dynDbgNoteName));        // Name size
+  write32(ctx, buf + 4, sizeof(uint32_t));          // Content size
+  write32(ctx, buf + 8, NT_LLVM_DYNAMIC_DEBUGGING); // Type
+  memcpy(buf + 12, dynDbgNoteName, sizeof(dynDbgNoteName));
+  write32(ctx, buf + 12 + alignTo(sizeof(dynDbgNoteName), 4), 0); // Version
+}
+
 static OutputSection *findSection(Ctx &ctx, StringRef name) {
   for (SectionCommand *cmd : ctx.script->sectionCommands)
     if (auto *osd = dyn_cast<OutputDesc>(cmd))
@@ -4645,6 +4673,15 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
     add(*ctx.in.shStrTab);
   if (ctx.in.strTab)
     add(*ctx.in.strTab);
+
+  if (ctx.dynDbgOutput) {
+    ctx.in.dynDbg = std::make_unique<DynamicDebugSection>(ctx);
+    add(*ctx.in.dynDbg);
+    if (!ctx.arg.relocatable) {
+      ctx.in.dynDbgNote = std::make_unique<DynamicDebugNote>(ctx);
+      add(*ctx.in.dynDbgNote);
+    }
+  }
 }
 
 template void elf::splitSections<ELF32LE>(Ctx &);

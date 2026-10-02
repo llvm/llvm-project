@@ -307,24 +307,35 @@ class Scheduler {
   /// The dependency graph is used by the scheduler to determine the legal
   /// ordering of instructions.
   DependencyGraph DAG;
-  friend class SchedulerInternalsAttorney; // For DAG.
+  friend class SchedulerInternalsAttorney; // For DAG and ReadyList.
   Context &Ctx;
   /// This is the top of the schedule during bottom-up scheduling and the bottom
   /// of the schedule during top-down. It points to the position of the last
   /// top-most/bottom-most instruction scheduled. It may get updated after every
   /// trySchedule() attempt, regardless of whether scheduling succeeded or not.
   /// It is nullopt if we have not scheduled before.
-  std::optional<SchedulingPoint> ScheduleTopItOpt;
+  std::optional<SchedulingPoint> ScheduleFrontierOpt;
   // TODO: This is wasting memory in exchange for fast removal using a raw ptr.
   DenseMap<SchedBundle *, std::unique_ptr<SchedBundle>> Bndls;
   /// The BB that we are currently scheduling.
   BasicBlock *ScheduledBB = nullptr;
-  /// The ID of the callback we register with Sandbox IR.
+  /// The IDs of the callbacks we register with Sandbox IR.
   std::optional<Context::CallbackID> CreateInstrCB;
+  std::optional<Context::CallbackID> EraseInstrCB;
+  std::optional<Context::CallbackID> MoveInstrCB;
+  std::optional<Context::CallbackID> SetUseCB;
   /// Called by Sandbox IR's callback system, after \p I has been created.
   /// NOTE: This should run after DAG's callback has run.
   // TODO: Perhaps call DAG's notify function from within this one?
   LLVM_ABI void notifyCreateInstr(Instruction *I);
+  /// Called by the callbacks when instruction \p I is about to get
+  /// deleted.
+  LLVM_ABI void notifyEraseInstr(Instruction *I);
+  /// Called by the callbacks when instruction \p I is about to be moved to
+  /// \p To.
+  LLVM_ABI void notifyMoveInstr(Instruction *I, const BBIterator &To);
+  /// Called by the callbacks when \p U's source is about to be set to \p NewSrc
+  LLVM_ABI void notifySetUse(const Use &U, Value *NewSrc);
 
   /// \Returns a scheduling bundle containing \p Instrs.
   SchedBundle *createBundle(ArrayRef<Instruction *> Instrs);
@@ -368,12 +379,27 @@ public:
       : DAG(Dir, AA, Ctx), Ctx(Ctx), Dir(Dir) {
     // NOTE: The scheduler's callback depends on the DAG's callback running
     // before it and updating the DAG accordingly.
+    EraseInstrCB = Ctx.registerEraseInstrCallback(
+        [this](Instruction *I) { notifyEraseInstr(I); },
+        /*BeforeCB=*/DAG.getEraseInstrCB());
     CreateInstrCB = Ctx.registerCreateInstrCallback(
         [this](Instruction *I) { notifyCreateInstr(I); });
+    MoveInstrCB = Ctx.registerMoveInstrCallback(
+        [this](Instruction *I, const BBIterator &To) {
+          notifyMoveInstr(I, To);
+        });
+    SetUseCB = Ctx.registerSetUseCallback(
+        [this](const Use &U, Value *NewSrc) { notifySetUse(U, NewSrc); });
   }
   ~Scheduler() {
     if (CreateInstrCB)
       Ctx.unregisterCreateInstrCallback(*CreateInstrCB);
+    if (EraseInstrCB)
+      Ctx.unregisterEraseInstrCallback(*EraseInstrCB);
+    if (MoveInstrCB)
+      Ctx.unregisterMoveInstrCallback(*MoveInstrCB);
+    if (SetUseCB)
+      Ctx.unregisterSetUseCallback(*SetUseCB);
   }
   /// Tries to build a schedule that includes all of \p Instrs scheduled at the
   /// same scheduling cycle. This essentially checks that there are no
@@ -387,10 +413,10 @@ public:
     // TODO: clear view once it lands.
     DAG.clear();
     ReadyList.clear();
-    ScheduleTopItOpt = std::nullopt;
+    ScheduleFrontierOpt = std::nullopt;
     ScheduledBB = nullptr;
     assert(Bndls.empty() && DAG.empty() && ReadyList.empty() &&
-           !ScheduleTopItOpt && ScheduledBB == nullptr &&
+           !ScheduleFrontierOpt && ScheduledBB == nullptr &&
            "Expected empty state!");
   }
 
@@ -409,6 +435,9 @@ public:
   static BndlSchedState getBndlSchedState(const Scheduler &Sched,
                                           ArrayRef<Instruction *> Instrs) {
     return Sched.getBndlSchedState(Instrs);
+  }
+  static const ReadyListContainer &getReadyList(const Scheduler &Sched) {
+    return Sched.ReadyList;
   }
 };
 

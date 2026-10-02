@@ -2095,7 +2095,8 @@ supplies its key through `getKey()`; a lookup builds the same key from what it
 already holds and hashes it inline with `DenseMapInfo`, and `lookup` returns the
 matching node or an insertion token for `insert`.  Growth and removal use the
 hash cached in each node and never call `getKey`.  An `Info` template argument
-can override the key type or the hash.
+can override the key type (`getKey`), the hash (`getHashValue`), or the
+comparison (`isEqual`).
 
 ```cpp
 std::tuple<unsigned, const Value *, const Value *> FooNode::getKey() const {
@@ -2109,11 +2110,12 @@ if (FooNode *N = Pool.lookup({Opcode, LHS, RHS}, Token))
 Pool.insert(new (Allocator) FooNode(Opcode, LHS, RHS), Token);
 ```
 
-Prefer `UniquingSet` when a key can be read out of a node in O(1) and the lookup
-key is built next to `getKey`.  Keep `FoldingSet` for keys that are wide,
-polymorphic, or assembled at many call sites: one `Profile` helper then keeps
-both sides consistent, whereas `getKey` and a lookup site can silently disagree.
-`insert` asserts that a node hashes as its lookup did.
+Prefer `UniquingSet` when a node can yield its key in O(1), or when a key can
+cheaply alias storage owned by the node (such as an `ArrayRef` or `StringRef`).
+Keep `FoldingSet` when nodes are polymorphic, or when keys must be assembled
+from recursive data structures.  `getKey` and a lookup site are two
+hand-maintained sides that can disagree, though `insert` asserts that a node
+hashes as its lookup did.
 
 (dss_set)=
 

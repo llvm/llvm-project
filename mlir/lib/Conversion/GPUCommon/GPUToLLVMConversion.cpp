@@ -1225,14 +1225,6 @@ static Value genConstInt32From(OpBuilder &builder, Location loc, T tValue) {
                                   static_cast<int32_t>(tValue));
 }
 
-template <typename T>
-static Value genConstFloat32From(OpBuilder &builder, Location loc, T tValue) {
-  Type llvmFloat32Type = builder.getF32Type();
-  return LLVM::ConstantOp::create(
-      builder, loc, llvmFloat32Type,
-      builder.getF32FloatAttr(static_cast<float>(tValue)));
-}
-
 LogicalResult ConvertCreateDnTensorOpToGpuRuntimeCallPattern::matchAndRewrite(
     gpu::CreateDnTensorOp op, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {

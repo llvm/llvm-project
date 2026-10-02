@@ -182,11 +182,11 @@ namespace {
     /// ReduceOpcodeMap - Maps wide opcode to index of entry in ReduceTable.
     DenseMap<unsigned, unsigned> ReduceOpcodeMap;
 
-    bool canAddPseudoFlagDep(MachineInstr *Use, bool IsSelfLoop);
+    bool canAddPseudoFlagDep(const MachineInstr *Use, bool IsSelfLoop);
 
-    bool VerifyPredAndCC(MachineInstr *MI, const ReduceEntry &Entry,
-                         bool is2Addr, ARMCC::CondCodes Pred,
-                         bool LiveCPSR, bool &HasCC, bool &CCDead);
+    bool VerifyPredAndCC(const MachineInstr *MI, const ReduceEntry &Entry,
+                         bool is2Addr, ARMCC::CondCodes Pred, bool LiveCPSR,
+                         bool &HasCC, bool &CCDead);
 
     bool ReduceLoadStore(MachineBasicBlock &MBB, MachineInstr *MI,
                          const ReduceEntry &Entry);
@@ -258,8 +258,8 @@ static bool HasImplicitCPSRDef(const MCInstrDesc &MCID) {
 }
 
 // Check for a likely high-latency flag def.
-static bool isHighLatencyCPSR(MachineInstr *Def) {
-  switch(Def->getOpcode()) {
+static bool isHighLatencyCPSR(const MachineInstr *Def) {
+  switch (Def->getOpcode()) {
   case ARM::FMSTAT:
   case ARM::tMUL:
     return true;
@@ -284,8 +284,8 @@ static bool isHighLatencyCPSR(MachineInstr *Def) {
 ///    = mul.w r1
 /// In this case it would have been ok to narrow the mul.w to muls since there
 /// are indirect RAW dependency between the muls and the mul.w
-bool
-Thumb2SizeReduce::canAddPseudoFlagDep(MachineInstr *Use, bool FirstInSelfLoop) {
+bool Thumb2SizeReduce::canAddPseudoFlagDep(const MachineInstr *Use,
+                                           bool FirstInSelfLoop) {
   // Disable the check for -Oz (aka OptimizeForSizeHarder).
   if (MinimizeSize || !STI->avoidCPSRPartialUpdate())
     return false;
@@ -327,10 +327,10 @@ Thumb2SizeReduce::canAddPseudoFlagDep(MachineInstr *Use, bool FirstInSelfLoop) {
   return true;
 }
 
-bool
-Thumb2SizeReduce::VerifyPredAndCC(MachineInstr *MI, const ReduceEntry &Entry,
-                                  bool is2Addr, ARMCC::CondCodes Pred,
-                                  bool LiveCPSR, bool &HasCC, bool &CCDead) {
+bool Thumb2SizeReduce::VerifyPredAndCC(const MachineInstr *MI,
+                                       const ReduceEntry &Entry, bool is2Addr,
+                                       ARMCC::CondCodes Pred, bool LiveCPSR,
+                                       bool &HasCC, bool &CCDead) {
   if ((is2Addr  && Entry.PredCC2 == 0) ||
       (!is2Addr && Entry.PredCC1 == 0)) {
     if (Pred == ARMCC::AL) {
@@ -370,7 +370,7 @@ Thumb2SizeReduce::VerifyPredAndCC(MachineInstr *MI, const ReduceEntry &Entry,
   return true;
 }
 
-static bool VerifyLowRegs(MachineInstr *MI) {
+static bool VerifyLowRegs(const MachineInstr *MI) {
   unsigned Opc = MI->getOpcode();
   bool isPCOk = (Opc == ARM::t2LDMIA_RET || Opc == ARM::t2LDMIA_UPD);
   bool isLROk = (Opc == ARM::t2STMDB_UPD);

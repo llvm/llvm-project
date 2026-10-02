@@ -12,6 +12,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/getpid.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/mprotect.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
@@ -20,6 +21,7 @@
 #include "src/__support/OSUtil/linux/syscall_wrappers/sched_getparam.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/sched_getscheduler.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/sched_setscheduler.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/tgkill.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/write.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/common.h"
@@ -27,6 +29,7 @@
 #include "src/__support/libc_errno.h" // For error macros
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/futex_utils.h" // For FutexWordType
+#include "src/__support/threads/thread_attributes.h"
 
 #ifdef LIBC_TARGET_ARCH_IS_AARCH64
 #include <arm_acle.h>
@@ -35,6 +38,7 @@
 #include "hdr/errno_macros.h"
 #include "hdr/fcntl_macros.h"
 #include "hdr/sched_macros.h" // For CLONE_* flags.
+#include "hdr/signal_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "hdr/sys_mman_macros.h" // For PROT_* and MAP_* definitions.
 #include <linux/param.h> // For EXEC_PAGESIZE.
@@ -223,6 +227,10 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
     else
       stack = alloc.value();
     owned_stack = true;
+  } else {
+    // The user is responsible for setting up the stack guard (or not) for the
+    // provided stack.
+    guardsize = 0;
   }
 
   // Validate that stack/stacksize are validly aligned.
@@ -513,6 +521,42 @@ ErrorOr<SchedParameters> Thread::getschedparam() const {
     return Error(param_result.error());
 
   return SchedParameters{pol_result.value(), param};
+}
+
+ErrorOr<void> Thread::kill(int sig) {
+  auto state = static_cast<DetachState>(
+      attrib->detach_state.load(cpp::MemoryOrder::RELAXED));
+  switch (state) {
+  case DetachState::EXITING:
+    // The thread is exiting, or has already exited. POSIX.1-2024 requires that
+    // pthread_kill does not return ESRCH because the pthread_t (unlike the OS
+    // TID) is still valid. Calling tgkill would return ESRCH (or target a
+    // recycled TID), so we return success directly. We only need to "request
+    // that a signal be delivered", and not actually make sure it has been
+    // handled. A zombie thread cannot handle signals.
+    return {};
+  case DetachState::JOINABLE:
+  case DetachState::DETACHED:
+    // A thread in these states can handle a signal. Note that a JOINABLE thread
+    // can transition to the EXITING state at any moment (and a DETACHED thread
+    // can disappear), but we're not allowed to take any locks to prevent that
+    // from happening (this function needs to be async-signal-safe).
+    break;
+  }
+
+  pid_t pid = linux_syscalls::getpid();
+  auto result = linux_syscalls::tgkill(pid, attrib->tid, sig);
+
+  if (!result.has_value()) {
+    if (result.error() == ESRCH) {
+      // Either the thread has exited since we've checked its state, or this
+      // object is corrupted. The latter is UB, so we're going to assume the
+      // former.
+      return {};
+    }
+    return Error(result.error());
+  }
+  return {};
 }
 
 void thread_exit(ThreadReturnValue retval, ThreadStyle style) {

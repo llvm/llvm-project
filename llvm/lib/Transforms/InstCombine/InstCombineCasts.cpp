@@ -1236,18 +1236,16 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
       APInt Threshold = APInt(C->getType()->getScalarSizeInBits(), DestWidth);
       if (match(C, m_SpecificInt_ICMP(ICmpInst::ICMP_ULT, Threshold))) {
         // If neither the wide shift nor the truncate wrap, propagate the wrap
-        // flags on the new truncate.
+        // flags on the new truncate and shift.
         auto *WideShl = cast<OverflowingBinaryOperator>(Src);
         bool NUW = Trunc.hasNoUnsignedWrap() && WideShl->hasNoUnsignedWrap();
         bool NSW = Trunc.hasNoSignedWrap() && WideShl->hasNoSignedWrap();
         Value *NewTrunc = Builder.CreateTrunc(A, DestTy, A->getName() + ".tr",
                                               /*IsNUW=*/NUW, /*IsNSW=*/NSW);
-        // The original flags from the truncate can be propagated directly to
-        // the shift.
         auto *NewShl = BinaryOperator::Create(
             Instruction::Shl, NewTrunc, ConstantExpr::getTrunc(C, DestTy));
-        NewShl->setHasNoUnsignedWrap(Trunc.hasNoUnsignedWrap());
-        NewShl->setHasNoSignedWrap(Trunc.hasNoSignedWrap());
+        NewShl->setHasNoUnsignedWrap(NUW);
+        NewShl->setHasNoSignedWrap(NSW);
         return NewShl;
       }
     }
@@ -2632,6 +2630,26 @@ Instruction *InstCombinerImpl::visitUIToFP(CastInst &CI) {
     CI.setNonNeg();
     return &CI;
   }
+
+  // uitofp (and (trunc X), Mask) --> uitofp (and X, zext(Mask))
+  Value *Src = CI.getOperand(0);
+  Value *X;
+  Constant *Mask;
+  if (match(Src, m_OneUse(m_And(m_OneUse(m_Trunc(m_Value(X))),
+                                m_ImmConstant(Mask))))) {
+    unsigned SourceWidth = Src->getType()->getScalarSizeInBits();
+    unsigned InputWidth = X->getType()->getScalarSizeInBits();
+    if (!DL.isLegalInteger(SourceWidth) &&
+        shouldChangeType(SourceWidth, InputWidth)) {
+      Value *MaskedX =
+          Builder.CreateAnd(X, Builder.CreateZExt(Mask, X->getType()));
+      auto *NewUIToFP =
+          CastInst::Create(Instruction::UIToFP, MaskedX, CI.getType());
+      NewUIToFP->setNonNeg(CI.hasNonNeg());
+      return NewUIToFP;
+    }
+  }
+
   return nullptr;
 }
 
@@ -2642,6 +2660,11 @@ Instruction *InstCombinerImpl::visitSIToFP(CastInst &CI) {
     auto *UI =
         CastInst::Create(Instruction::UIToFP, CI.getOperand(0), CI.getType());
     UI->setNonNeg(true);
+    // nnan/afn/reassoc/contract/arcp carry no meaning for a value-preserving
+    // cast, but ninf/nsz are semantically meaningful for {u,s}itofp and
+    // remain valid after reinterpreting the operand as unsigned.
+    UI->setHasNoInfs(CI.hasNoInfs());
+    UI->setHasNoSignedZeros(CI.hasNoSignedZeros());
     return UI;
   }
   return nullptr;

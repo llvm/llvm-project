@@ -29,8 +29,6 @@ using namespace LoopVectorizationUtils;
 
 #define DEBUG_TYPE "loop-vectorize"
 
-extern cl::opt<bool> VPlanBuildOuterloopStressTest;
-
 static cl::opt<bool> MaximizeBandwidth(
     "vectorizer-maximize-bandwidth", cl::init(false), cl::Hidden,
     cl::desc("Maximize bandwidth when selecting vectorization factor which "
@@ -51,10 +49,15 @@ static cl::opt<bool> ForceTargetSupportsScalableVectors(
         "Pretend that scalable vectors are supported, even if the target does "
         "not support them. This flag should only be used for testing."));
 
-cl::opt<bool> llvm::PreferInLoopReductions(
-    "prefer-inloop-reductions", cl::init(false), cl::Hidden,
-    cl::desc("Prefer in-loop vector reductions, "
-             "overriding the targets preference."));
+static cl::opt<bool>
+    PreferInLoopReductions("prefer-inloop-reductions", cl::init(false),
+                           cl::Hidden,
+                           cl::desc("Prefer in-loop vector reductions, "
+                                    "overriding the targets preference."));
+
+namespace llvm {
+extern cl::opt<bool> VPlanBuildOuterloopStressTest;
+} // namespace llvm
 
 /// Note: This currently only applies to `llvm.masked.load` and
 /// `llvm.masked.store`. TODO: Extend this to cover other operations as needed.
@@ -147,19 +150,13 @@ bool VFSelectionContext::isLegalMaskedLoadOrStore(bool IsLoad, Type *ScalarTy,
                  : TTI.isLegalMaskedStore(ScalarTy, Alignment, AddressSpace));
 }
 
-bool VFSelectionContext::isLegalGatherOrScatter(Value *V,
+bool VFSelectionContext::isLegalGatherOrScatter(bool IsLoad, Type *ScalarTy,
+                                                Align Alignment,
                                                 ElementCount VF) const {
-  bool LI = isa<LoadInst>(V);
-  bool SI = isa<StoreInst>(V);
-  if (!LI && !SI)
-    return false;
-  auto *Ty = getLoadStoreType(V);
-  Align Align = getLoadStoreAlignment(V);
-  if (VF.isVector())
-    Ty = VectorType::get(Ty, VF);
+  Type *VectorTy = toVectorTy(ScalarTy, VF);
   return ForceTargetSupportsGatherScatterOps ||
-         (LI && TTI.isLegalMaskedGather(Ty, Align)) ||
-         (SI && TTI.isLegalMaskedScatter(Ty, Align));
+         (IsLoad ? TTI.isLegalMaskedGather(VectorTy, Alignment)
+                 : TTI.isLegalMaskedScatter(VectorTy, Alignment));
 }
 
 bool VFSelectionContext::supportsScalableVectors() const {

@@ -10,7 +10,7 @@
 #define ORC_RT_SUPPORT_ERROR_H
 
 #include "orc-rt-c/config.h"
-#include "orc-rt-c/support/CoreTypes.h"
+#include "orc-rt-c/support/Error.h"
 #include "orc-rt/support/CallableTraitsHelper.h"
 #include "orc-rt/support/Compiler.h"
 #include "orc-rt/support/RTTI.h"
@@ -20,6 +20,7 @@
 #include <cstdlib>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <type_traits>
 
 #if ORC_RT_ENABLE_EXCEPTIONS
@@ -33,6 +34,8 @@ class Error;
 /// Base class for all errors.
 class ErrorInfoBase : public RTTIExtends<ErrorInfoBase, RTTIRoot> {
 public:
+  static constexpr const char *RTTIName = "orc_rt::ErrorInfoBase";
+
   virtual std::string toString() const noexcept = 0;
 
 private:
@@ -53,18 +56,17 @@ public:
   static_assert(std::is_base_of_v<ErrorInfoBase, ParentT>,
                 "ErrorExtends must extend ErrorInfoBase derivatives");
 
-  // Inherit constructors and isA methods from ParentT.
-  using ParentT::isA;
+  // Inherit constructors from ParentT.
   using ParentT::ParentT;
 
-  static char ID;
-
-  static const void *classID() noexcept { return &ThisT::ID; }
-
-  const void *dynamicClassID() const noexcept override { return &ThisT::ID; }
-
-  bool isA(const void *const ClassID) const noexcept override {
-    return ClassID == classID() || ParentT::isA(ClassID);
+  const char *dynamicRTTIName() const noexcept override {
+    static_assert(std::string_view(ThisT::RTTIName) !=
+                      std::string_view(ParentT::RTTIName),
+                  "ThisT must define its own RTTIName, distinct from "
+                  "ParentT::RTTIName (did you forget to shadow it, or copy "
+                  "the parent's string literal instead of writing a new "
+                  "one?)");
+    return ThisT::RTTIName;
   }
 
   static bool classof(const RTTIRoot *R) noexcept { return R->isA<ThisT>(); }
@@ -76,10 +78,17 @@ public:
 
   Error restoreError() noexcept override;
 #endif // ORC_RT_ENABLE_EXCEPTIONS
-};
 
-template <typename ThisT, typename ParentT>
-char ErrorExtends<ThisT, ParentT>::ID = 0;
+protected:
+  bool sameDylibIsA(const char *const ClassName) const noexcept override {
+    return ClassName == ThisT::RTTIName || ParentT::sameDylibIsA(ClassName);
+  }
+
+  bool differentDylibIsA(const char *const ClassName) const noexcept override {
+    return strcmp(ClassName, ThisT::RTTIName) == 0 ||
+           ParentT::differentDylibIsA(ClassName);
+  }
+};
 
 /// Represents an environmental error.
 class [[nodiscard]] Error {
@@ -603,6 +612,8 @@ inline std::string toString(Error Err) noexcept {
 /// Simple string error type.
 class StringError : public ErrorExtends<StringError, ErrorInfoBase> {
 public:
+  static constexpr const char *RTTIName = "orc_rt::StringError";
+
   StringError(std::string ErrMsg) noexcept : ErrMsg(std::move(ErrMsg)) {}
   std::string toString() const noexcept override { return ErrMsg; }
 
@@ -615,6 +626,8 @@ private:
 
 class ExceptionError : public ErrorExtends<ExceptionError, ErrorInfoBase> {
 public:
+  static constexpr const char *RTTIName = "orc_rt::ExceptionError";
+
   ExceptionError(std::exception_ptr E) noexcept : E(std::move(E)) {}
   std::string toString() const noexcept override;
   void throwAsException() override { std::rethrow_exception(E); }

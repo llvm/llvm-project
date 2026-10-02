@@ -2446,6 +2446,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   // determining valid cases).
 
   enum { Enter, Import, Skip, IncludeLimitReached } Action = Enter;
+  bool DependencyScanModuleImport = false;
 
   if (PPOpts.SingleFileParseMode)
     Action = IncludeLimitReached;
@@ -2510,41 +2511,49 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     if (!IsImportDecl)
       diagnoseAutoModuleImport(*this, StartLoc, IncludeTok, Path, CharEnd);
 
-    // Load the module to import its macros. We'll make the declarations
-    // visible when the parser gets here.
-    // FIXME: Pass ModuleToImport in here rather than converting it to a path
-    // and making the module loader convert it back again.
-    ModuleLoadResult Imported = TheModuleLoader.loadModule(
-        IncludeTok.getLocation(), Path, Module::Hidden,
-        /*IsInclusionDirective=*/true);
-    assert((Imported == nullptr || Imported == ModuleToImport) &&
-           "the imported module is different than the suggested one");
-
-    if (Imported) {
-      Action = Import;
-    } else if (Imported.isMissingExpected()) {
-      markClangModuleAsAffecting(
-          static_cast<Module *>(Imported)->getTopLevelModule());
-      // We failed to find a submodule that we assumed would exist (because it
-      // was in the directory of an umbrella header, for instance), but no
-      // actual module containing it exists (because the umbrella header is
-      // incomplete).  Treat this as a textual inclusion.
-      ModuleToImport = nullptr;
-      UsableClangHeaderModule = false;
-    } else if (Imported.isConfigMismatch()) {
-      // On a configuration mismatch, enter the header textually. We still know
-      // that it's part of the corresponding module.
+    if (PPOpts.DependencyScanningModuleMapImports &&
+        ModuleToImport->Kind == Module::ModuleMapModule) {
+      // Dependency scanning only needs the module name. Avoid requiring the
+      // module file, which may not have been built yet.
+      Action = Skip;
+      DependencyScanModuleImport = true;
     } else {
-      // We hit an error processing the import. Bail out.
-      if (hadModuleLoaderFatalFailure()) {
-        // With a fatal failure in the module loader, we abort parsing.
-        Token &Result = IncludeTok;
-        assert(CurLexer && "#include but no current lexer set!");
-        Result.startToken();
-        CurLexer->FormTokenWithChars(Result, CurLexer->BufferEnd, tok::eof);
-        CurLexer->cutOffLexing();
+      // Load the module to import its macros. We'll make the declarations
+      // visible when the parser gets here.
+      // FIXME: Pass ModuleToImport in here rather than converting it to a path
+      // and making the module loader convert it back again.
+      ModuleLoadResult Imported = TheModuleLoader.loadModule(
+          IncludeTok.getLocation(), Path, Module::Hidden,
+          /*IsInclusionDirective=*/true);
+      assert((Imported == nullptr || Imported == ModuleToImport) &&
+             "the imported module is different than the suggested one");
+
+      if (Imported) {
+        Action = Import;
+      } else if (Imported.isMissingExpected()) {
+        markClangModuleAsAffecting(
+            static_cast<Module *>(Imported)->getTopLevelModule());
+        // We failed to find a submodule that we assumed would exist (because it
+        // was in the directory of an umbrella header, for instance), but no
+        // actual module containing it exists (because the umbrella header is
+        // incomplete).  Treat this as a textual inclusion.
+        ModuleToImport = nullptr;
+        UsableClangHeaderModule = false;
+      } else if (Imported.isConfigMismatch()) {
+        // On a configuration mismatch, enter the header textually. We still
+        // know that it's part of the corresponding module.
+      } else {
+        // We hit an error processing the import. Bail out.
+        if (hadModuleLoaderFatalFailure()) {
+          // With a fatal failure in the module loader, we abort parsing.
+          Token &Result = IncludeTok;
+          assert(CurLexer && "#include but no current lexer set!");
+          Result.startToken();
+          CurLexer->FormTokenWithChars(Result, CurLexer->BufferEnd, tok::eof);
+          CurLexer->cutOffLexing();
+        }
+        return {ImportAction::None};
       }
-      return {ImportAction::None};
     }
   }
 
@@ -2605,10 +2614,10 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   if (Callbacks && !IsImportDecl) {
     // Notify the callback object that we've seen an inclusion directive.
     // FIXME: Use a different callback for a pp-import?
-    Callbacks->InclusionDirective(HashLoc, IncludeTok, LookupFilename, isAngled,
-                                  FilenameRange, File, SearchPath, RelativePath,
-                                  SuggestedModule.getModule(), Action == Import,
-                                  FileCharacter);
+    Callbacks->InclusionDirective(
+        HashLoc, IncludeTok, LookupFilename, isAngled, FilenameRange, File,
+        SearchPath, RelativePath, SuggestedModule.getModule(),
+        Action == Import || DependencyScanModuleImport, FileCharacter);
     if (Action == Skip && File)
       Callbacks->FileSkipped(*File, FilenameTok, FileCharacter);
   }

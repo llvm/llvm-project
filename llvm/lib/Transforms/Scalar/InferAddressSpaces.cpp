@@ -121,7 +121,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -140,11 +139,6 @@
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
-
-static cl::opt<bool> AssumeDefaultIsFlatAddressSpace(
-    "assume-default-is-flat-addrspace", cl::init(false), cl::ReallyHidden,
-    cl::desc("The default address space is assumed as the flat address space. "
-             "This is mainly for test purpose."));
 
 static const unsigned UninitializedAddressSpace =
     std::numeric_limits<unsigned>::max();
@@ -195,6 +189,11 @@ class InferAddressSpacesImpl {
   /// Target specific address space which uses of should be replaced if
   /// possible.
   unsigned FlatAddrSpace = 0;
+
+  /// The default address space is assumed as the flat address space. This is
+  /// mainly for test purpose.
+  const bool AssumeDefaultIsFlatAddressSpace = false;
+
   DenseMap<const Value *, Value *> PtrIntCastPairs;
 
   // Tries to find if the inttoptr instruction is derived from an pointer have
@@ -294,8 +293,10 @@ class InferAddressSpacesImpl {
 
 public:
   InferAddressSpacesImpl(AssumptionCache &AC, const DominatorTree *DT,
-                         const TargetTransformInfo *TTI, unsigned FlatAddrSpace)
-      : AC(AC), DT(DT), TTI(TTI), FlatAddrSpace(FlatAddrSpace) {}
+                         const TargetTransformInfo *TTI, unsigned FlatAddrSpace,
+                         bool AssumeDefaultIsFlatAddressSpace)
+      : AC(AC), DT(DT), TTI(TTI), FlatAddrSpace(FlatAddrSpace),
+        AssumeDefaultIsFlatAddressSpace(AssumeDefaultIsFlatAddressSpace) {}
   bool run(Function &F);
 };
 
@@ -1661,8 +1662,12 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
     }
   }
 
-  for (Instruction *I : DeadInstructions)
-    RecursivelyDeleteTriviallyDeadInstructions(I);
+  // Deleting one instruction may recursively delete another queued
+  // instruction. Create handles before the first deletion so overlapping
+  // entries are nulled instead of leaving dangling pointers.
+  auto DeadInstructionHandles =
+      to_vector_of<WeakTrackingVH, 16>(DeadInstructions);
+  RecursivelyDeleteTriviallyDeadInstructions(DeadInstructionHandles);
 
   return true;
 }
@@ -1676,7 +1681,7 @@ bool InferAddressSpaces::runOnFunction(Function &F) {
   return InferAddressSpacesImpl(
              getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F), DT,
              &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F),
-             FlatAddrSpace)
+             FlatAddrSpace, /*AssumeDefaultIsFlatAddressSpace=*/false)
       .run(F);
 }
 
@@ -1684,17 +1689,22 @@ FunctionPass *llvm::createInferAddressSpacesPass(unsigned AddressSpace) {
   return new InferAddressSpaces(AddressSpace);
 }
 
-InferAddressSpacesPass::InferAddressSpacesPass()
-    : FlatAddrSpace(UninitializedAddressSpace) {}
-InferAddressSpacesPass::InferAddressSpacesPass(unsigned AddressSpace)
-    : FlatAddrSpace(AddressSpace) {}
+InferAddressSpacesPass::InferAddressSpacesPass(
+    bool AssumeDefaultIsFlatAddressSpace)
+    : FlatAddrSpace(UninitializedAddressSpace),
+      AssumeDefaultIsFlatAddressSpace(AssumeDefaultIsFlatAddressSpace) {}
+InferAddressSpacesPass::InferAddressSpacesPass(
+    unsigned AddressSpace, bool AssumeDefaultIsFlatAddressSpace)
+    : FlatAddrSpace(AddressSpace),
+      AssumeDefaultIsFlatAddressSpace(AssumeDefaultIsFlatAddressSpace) {}
 
 PreservedAnalyses InferAddressSpacesPass::run(Function &F,
                                               FunctionAnalysisManager &AM) {
   bool Changed =
       InferAddressSpacesImpl(AM.getResult<AssumptionAnalysis>(F),
                              AM.getCachedResult<DominatorTreeAnalysis>(F),
-                             &AM.getResult<TargetIRAnalysis>(F), FlatAddrSpace)
+                             &AM.getResult<TargetIRAnalysis>(F), FlatAddrSpace,
+                             AssumeDefaultIsFlatAddressSpace)
           .run(F);
   if (Changed) {
     PreservedAnalyses PA;
@@ -1702,4 +1712,12 @@ PreservedAnalyses InferAddressSpacesPass::run(Function &F,
     return PA;
   }
   return PreservedAnalyses::all();
+}
+
+void InferAddressSpacesPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<InferAddressSpacesPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  if (AssumeDefaultIsFlatAddressSpace)
+    OS << "<assume-default-is-flat-addrspace>";
 }

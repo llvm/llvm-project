@@ -1650,6 +1650,9 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
     return std::pair{size, alignment};
   }
   if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty)) {
+    // Dynamic / unknown shapes have no compile-time byte size.
+    if (seqTy.hasDynamicExtents() || seqTy.hasUnknownShape())
+      return std::nullopt;
     auto result = getTypeSizeAndAlignment(loc, seqTy.getEleTy(), dl, kindMap);
     if (!result)
       return result;

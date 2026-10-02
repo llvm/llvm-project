@@ -20,7 +20,7 @@ define i1 @wrapping_add_known_1(i8 %a) {
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp eq i8 [[A:%.*]], 1
 ; CHECK-NEXT:    br i1 [[PRE]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[SUB_1:%.*]] = add i8 [[A]], -1
+; CHECK-NEXT:    [[SUB_1:%.*]] = add nsw i8 [[A]], -1
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    [[SUB_2:%.*]] = add i8 [[A]], -1
@@ -48,9 +48,8 @@ define i1 @wrapping_add_unknown_2(i8 %a) {
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp eq i8 [[A:%.*]], 0
 ; CHECK-NEXT:    br i1 [[PRE]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[SUB_1:%.*]] = add i8 [[A]], -1
-; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i8 [[SUB_1]], 0
-; CHECK-NEXT:    ret i1 [[C_1]]
+; CHECK-NEXT:    [[SUB_1:%.*]] = add nuw nsw i8 [[A]], -1
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
 ; CHECK-NEXT:    [[SUB_2:%.*]] = add i8 [[A]], -1
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i8 [[SUB_2]], 0
@@ -272,8 +271,8 @@ define i1 @wrapping_add_known_1_add_nuw(i8 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp eq i8 [[A:%.*]], 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
-; CHECK-NEXT:    [[SUB_1:%.*]] = add i8 [[A]], -1
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[SUB_1]], 10
+; CHECK-NEXT:    [[SUB_1:%.*]] = add nsw i8 [[A]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i8 [[SUB_1]], 10
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], false
 ; CHECK-NEXT:    ret i1 [[RES_2]]
@@ -296,8 +295,8 @@ define i1 @add_nuw_wrapping_add_known_1(i8 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp eq i8 [[A:%.*]], 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[A]], 10
-; CHECK-NEXT:    [[SUB_1:%.*]] = add i8 [[ADD]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i8 [[A]], 10
+; CHECK-NEXT:    [[SUB_1:%.*]] = add nsw i8 [[ADD]], -1
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], false
 ; CHECK-NEXT:    ret i1 [[RES_2]]

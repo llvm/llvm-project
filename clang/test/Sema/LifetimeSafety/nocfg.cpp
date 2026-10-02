@@ -310,11 +310,11 @@ std::string_view danglingRefToOptionalFromTemp4() {
 void danglingReferenceFromTempOwner() {
   int &&r = *std::optional<int>();          // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
                                             // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
-                                            // cfg-note {{expression aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
+                                            // cfg-note {{result of call to 'operator*' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
   // https://github.com/llvm/llvm-project/issues/175893
   int &&r2 = *std::optional<int>(5);        // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
                                               // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
-                                              // cfg-note {{expression aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
+                                              // cfg-note {{result of call to 'operator*' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
 
   // https://github.com/llvm/llvm-project/issues/175893
   int &&r3 = std::optional<int>(5).value(); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
@@ -331,7 +331,7 @@ void danglingReferenceFromTempOwner() {
 
   std::string_view sv = *getTempOptStr();  // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
                                            // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
-                                           // cfg-note {{expression aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
+                                           // cfg-note {{result of call to 'operator*' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
   use(sv);                                 // cfg-note {{later used here}}
 }
 
@@ -343,7 +343,7 @@ void testLoops() {
     ;
   for (auto i : *getTempOptVec()) // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
                                   // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} cfg-note {{later used here}} \
-                                  // cfg-note {{expression aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
+                                  // cfg-note {{result of call to 'operator*' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
     ;
 }
 
@@ -1050,15 +1050,15 @@ void operator_star_arrow_reference() {
   auto temporary = []() { return std::vector<std::string>{{"1"}}; };
   const char* x = temporary().begin()->data();    // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
                                                   // cfg-note {{result of call to 'begin' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}} \
-  // cfg-note {{expression aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}} \
+  // cfg-note {{result of call to 'operator->' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}} \
   // cfg-note {{result of call to 'data' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
   const char* y = (*temporary().begin()).data();  // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
                                                   // cfg-note {{result of call to 'begin' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}} \
-  // cfg-note {{expression aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}} \
+  // cfg-note {{result of call to 'operator*' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}} \
   // cfg-note {{result of call to 'data' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
   const std::string& z = (*temporary().begin());  // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
                                                   // cfg-note {{result of call to 'begin' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}} \
-                                                   // cfg-note {{expression aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
+                                                   // cfg-note {{result of call to 'operator*' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
 
   use(p, q, r, x, y, z); // cfg-note 3 {{later used here}}
 }
@@ -1072,15 +1072,15 @@ void operator_star_arrow_of_iterators_false_positive_no_cfg_analysis() {
   auto temporary = []() { return std::vector<std::pair<int, std::string>>{{1, "1"}}; };
   const char* x = temporary().begin()->second.data();   // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
                                                         // cfg-note {{result of call to 'begin' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}} \
-                                                        // cfg-note {{expression aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}} \
+                                                        // cfg-note {{result of call to 'operator->' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}} \
                                                         // cfg-note {{result of call to 'data' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
   const char* y = (*temporary().begin()).second.data(); // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
                                                         // cfg-note {{result of call to 'begin' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}} \
-                                                        // cfg-note {{expression aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}} \
+                                                        // cfg-note {{result of call to 'operator*' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}} \
                                                         // cfg-note {{result of call to 'data' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
   const std::string& z = (*temporary().begin()).second; // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
                                                        // cfg-note {{result of call to 'begin' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}} \
-                                                        // cfg-note {{expression aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
+                                                        // cfg-note {{result of call to 'operator*' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
 
   use(p, q, r, x, y, z); // cfg-note 3 {{later used here}}
 }
@@ -1131,23 +1131,23 @@ void test1() {
   std::string_view k1 = S().sv; // OK
   std::string_view k2 = S().s; // expected-warning {{object backing the pointer will}} \
                                // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
-                               // cfg-note {{expression aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
+                               // cfg-note {{result of call to 'operator basic_string_view' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
 
   std::string_view k3 = Q().get()->sv; // OK
   std::string_view k4  = Q().get()->s; // expected-warning {{object backing the pointer will}} \
                                        // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
                                        // cfg-note {{result of call to 'get' aliases the storage of temporary object because the implicit object parameter is marked as lifetimebound}} \
-                                       // cfg-note {{expression aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
+                                       // cfg-note {{result of call to 'operator basic_string_view' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
 
 
   std::string_view lb1 = foo(S().s); // expected-warning {{object backing the pointer will}} \
                                      // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
-                                     // cfg-note {{expression aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}} \
+                                     // cfg-note {{result of call to 'operator basic_string_view' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}} \
                                      // cfg-note {{result of call to 'foo' aliases the storage of temporary object because parameter 'sv' is marked as lifetimebound}}
   std::string_view lb2 = foo(Q().get()->s); // expected-warning {{object backing the pointer will}} \
                                             // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
                                             // cfg-note {{result of call to 'get' aliases the storage of temporary object because the implicit object parameter is marked as lifetimebound}} \
-                                            // cfg-note {{expression aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}} \
+                                            // cfg-note {{result of call to 'operator basic_string_view' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}} \
                                             // cfg-note {{result of call to 'foo' aliases the storage of temporary object because parameter 'sv' is marked as lifetimebound}}
 
   use(k1, k2, k3, k4, lb1, lb2);  // cfg-note 4 {{later used here}}

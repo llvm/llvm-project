@@ -5008,7 +5008,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     LLT SrcTy = MRI.getType(SrcReg);
     LLT DstTy = MRI.getType(DstReg);
 
-    if (SrcTy.isScalable() || DstTy.isScalable())
+    if (SrcTy.isScalable())
       return UnableToLegalize;
 
     if (SrcTy.getScalarType() != DstTy.getScalarType())
@@ -6169,7 +6169,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorReductions(
           PartialResults.emplace_back(
               MIRBuilder
                   .buildInstr(ScalarOpc, {NarrowTy},
-                              {SplitSrcs[Idx], SplitSrcs[Idx + 1]})
+                              {SplitSrcs[Idx], SplitSrcs[Idx + 1]},
+                              MI.getFlags())
                   .getReg(0));
         }
         SplitSrcs = PartialResults;
@@ -6184,7 +6185,9 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorReductions(
     // If we can't generate a tree, then just do sequential operations.
     Register Acc = SplitSrcs[0];
     for (unsigned Idx = 1; Idx < NumParts; ++Idx)
-      Acc = MIRBuilder.buildInstr(ScalarOpc, {NarrowTy}, {Acc, SplitSrcs[Idx]})
+      Acc = MIRBuilder
+                .buildInstr(ScalarOpc, {NarrowTy}, {Acc, SplitSrcs[Idx]},
+                            MI.getFlags())
                 .getReg(0);
     MIRBuilder.buildCopy(DstReg, Acc);
     MI.eraseFromParent();
@@ -6192,9 +6195,11 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorReductions(
   }
   SmallVector<Register> PartialReductions;
   for (unsigned Part = 0; Part < NumParts; ++Part) {
-    PartialReductions.push_back(
-        MIRBuilder.buildInstr(RdxMI.getOpcode(), {DstTy}, {SplitSrcs[Part]})
-            .getReg(0));
+    PartialReductions.push_back(MIRBuilder
+                                    .buildInstr(RdxMI.getOpcode(), {DstTy},
+                                                {SplitSrcs[Part]},
+                                                MI.getFlags())
+                                    .getReg(0));
   }
 
   // If the types involved are powers of 2, we can generate intermediate vector
@@ -6207,11 +6212,12 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorReductions(
   Register Acc = PartialReductions[0];
   for (unsigned Part = 1; Part < NumParts; ++Part) {
     if (Part == NumParts - 1) {
-      MIRBuilder.buildInstr(ScalarOpc, {DstReg},
-                            {Acc, PartialReductions[Part]});
+      MIRBuilder.buildInstr(ScalarOpc, {DstReg}, {Acc, PartialReductions[Part]},
+                            MI.getFlags());
     } else {
       Acc = MIRBuilder
-                .buildInstr(ScalarOpc, {DstTy}, {Acc, PartialReductions[Part]})
+                .buildInstr(ScalarOpc, {DstTy}, {Acc, PartialReductions[Part]},
+                            MI.getFlags())
                 .getReg(0);
     }
   }
@@ -6241,7 +6247,9 @@ LegalizerHelper::fewerElementsVectorSeqReductions(MachineInstr &MI,
   extractParts(SrcReg, NarrowTy, NumParts, SplitSrcs, MIRBuilder, MRI);
   Register Acc = ScalarReg;
   for (unsigned i = 0; i < NumParts; i++)
-    Acc = MIRBuilder.buildInstr(ScalarOpc, {NarrowTy}, {Acc, SplitSrcs[i]})
+    Acc = MIRBuilder
+              .buildInstr(ScalarOpc, {NarrowTy}, {Acc, SplitSrcs[i]},
+                          MI.getFlags())
               .getReg(0);
 
   MIRBuilder.buildCopy(DstReg, Acc);
@@ -6267,7 +6275,9 @@ LegalizerHelper::tryNarrowPow2Reduction(MachineInstr &MI, Register SrcReg,
       Register RHS = SplitSrcs[Idx + 1];
       // Create the intermediate vector op.
       Register Res =
-          MIRBuilder.buildInstr(ScalarOpc, {NarrowTy}, {LHS, RHS}).getReg(0);
+          MIRBuilder
+              .buildInstr(ScalarOpc, {NarrowTy}, {LHS, RHS}, MI.getFlags())
+              .getReg(0);
       PartialRdxs.push_back(Res);
     }
     SplitSrcs = std::move(PartialRdxs);
@@ -6603,7 +6613,7 @@ Register LegalizerHelper::buildVariableShiftPart(unsigned Opcode,
   // so carry bits aren't needed.
   LLT ShiftAmtTy = MRI.getType(ShiftAmt);
   auto ZeroConst = MIRBuilder.buildConstant(ShiftAmtTy, 0);
-  LLT BoolTy = LLT::scalar(1);
+  LLT BoolTy = LLT::integer(1);
   auto IsZeroBitShift =
       MIRBuilder.buildICmp(ICmpInst::ICMP_EQ, BoolTy, ShiftAmt, ZeroConst);
 
@@ -6727,7 +6737,7 @@ LegalizerHelper::narrowScalarShiftMultiway(MachineInstr &MI, LLT TargetTy) {
 
   // Shifting by zero should be a no-op.
   auto ZeroAmtConst = MIRBuilder.buildConstant(ShiftAmtTy, 0);
-  LLT BoolTy = LLT::scalar(1);
+  LLT BoolTy = LLT::integer(1);
   auto IsZeroShift =
       MIRBuilder.buildICmp(ICmpInst::ICMP_EQ, BoolTy, AmtReg, ZeroAmtConst);
 

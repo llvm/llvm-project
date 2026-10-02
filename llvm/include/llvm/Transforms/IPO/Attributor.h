@@ -4941,12 +4941,6 @@ struct AAValueConstantRange
   getAssumedConstantRange(Attributor &A,
                           const Instruction *CtxI = nullptr) const = 0;
 
-  /// Return a known range for the associated value at a program point \p CtxI.
-  /// If \p I is nullptr, simply return a known range.
-  virtual ConstantRange
-  getKnownConstantRange(Attributor &A,
-                        const Instruction *CtxI = nullptr) const = 0;
-
   /// Return an assumed constant for the associated value a program point \p
   /// CtxI.
   std::optional<Constant *>

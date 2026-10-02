@@ -396,6 +396,17 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 
   switch (MI->getOpcode()) {
+  case RISCV::PseudoTAILX7: {
+    // Lower to PseudoTAILReg with X7 as the register operand.
+    MCOperand SymOp;
+    lowerOperand(MI->getOperand(0), SymOp);
+    MCInst TmpInst;
+    TmpInst.setOpcode(RISCV::PseudoTAILReg);
+    TmpInst.addOperand(SymOp);
+    TmpInst.addOperand(MCOperand::createReg(RISCV::X7));
+    EmitToStreamer(*OutStreamer, TmpInst);
+    return;
+  }
   case RISCV::HWASAN_CHECK_MEMACCESS_SHORTGRANULES:
     LowerHWASAN_CHECK_MEMACCESS(*MI);
     return;
@@ -1331,6 +1342,13 @@ MaybeAlign
 RISCVAsmPrinter::getRequiredGlobalAlignmentGranule(const GlobalVariable &GV) {
   const MCSubtargetInfo &MCSTI = TM.getMCSubtargetInfo();
   if (!GV.getValueType()->isSized())
+    return std::nullopt;
+
+  // When the alignment granule is determined by a CHERI requirement,
+  // don't increase alignment if a custom section has been specified,
+  // as doing so can break existing code that relies on the lack of
+  // padding (e.g. linker sets).
+  if (GV.hasSection())
     return std::nullopt;
 
   uint64_t Size = GV.getGlobalSize(getDataLayout());

@@ -29,6 +29,9 @@
 #define PTHREAD_PROCESS_PRIVATE 0
 #define PTHREAD_PROCESS_SHARED 1
 
+#define PTHREAD_SCOPE_SYSTEM 0
+#define PTHREAD_SCOPE_PROCESS 1
+
 #ifdef __linux__
 #define PTHREAD_MUTEX_INITIALIZER                                              \
   {                                                                            \

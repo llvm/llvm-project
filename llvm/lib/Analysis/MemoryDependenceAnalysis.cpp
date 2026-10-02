@@ -868,8 +868,9 @@ void MemoryDependenceResults::getNonLocalPointerDependency(
     auto NonLocalDefIt = NonLocalDefsCache.find(QueryInst);
     if (NonLocalDefIt != NonLocalDefsCache.end()) {
       Result.push_back(NonLocalDefIt->second);
-      ReverseNonLocalDefsCache[NonLocalDefIt->second.getResult().getInst()]
-          .erase(QueryInst);
+      RemoveFromReverseMap<const Value *>(
+          ReverseNonLocalDefsCache, NonLocalDefIt->second.getResult().getInst(),
+          QueryInst);
       NonLocalDefsCache.erase(NonLocalDefIt);
       return;
     }
@@ -1504,8 +1505,10 @@ void MemoryDependenceResults::removeCachedNonLocalPointerDependencies(
     if (auto *I = dyn_cast<Instruction>(P.getPointer())) {
       auto toRemoveIt = ReverseNonLocalDefsCache.find(I);
       if (toRemoveIt != ReverseNonLocalDefsCache.end()) {
-        for (const auto *entry : toRemoveIt->second)
-          NonLocalDefsCache.erase(entry);
+        for (const auto *Entry : toRemoveIt->second) {
+          [[maybe_unused]] bool Removed = NonLocalDefsCache.erase(Entry);
+          assert(Removed && "Reverse non-local def map out of sync?");
+        }
         ReverseNonLocalDefsCache.erase(toRemoveIt);
       }
     }
@@ -1587,10 +1590,20 @@ void MemoryDependenceResults::removeInstruction(Instruction *RemInst) {
     if (toRemoveIt != NonLocalDefsCache.end()) {
       assert(isa<LoadInst>(RemInst) &&
              "only load instructions should be added directly");
-      const Instruction *DepV = toRemoveIt->second.getResult().getInst();
-      ReverseNonLocalDefsCache.find(DepV)->second.erase(RemInst);
+      Instruction *DepV = toRemoveIt->second.getResult().getInst();
+      RemoveFromReverseMap<const Value *>(ReverseNonLocalDefsCache, DepV,
+                                          RemInst);
       NonLocalDefsCache.erase(toRemoveIt);
     }
+  }
+
+  auto ReverseNonLocalDefIt = ReverseNonLocalDefsCache.find(RemInst);
+  if (ReverseNonLocalDefIt != ReverseNonLocalDefsCache.end()) {
+    for (const Value *QueryInst : ReverseNonLocalDefIt->second) {
+      [[maybe_unused]] bool Removed = NonLocalDefsCache.erase(QueryInst);
+      assert(Removed && "Reverse non-local def map out of sync?");
+    }
+    ReverseNonLocalDefsCache.erase(ReverseNonLocalDefIt);
   }
 
   // Loop over all of the things that depend on the instruction we're removing.

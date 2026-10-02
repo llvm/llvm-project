@@ -350,7 +350,7 @@ func.func @cast_away_masked_transfer_read_leading_one_dims(%arg0: memref<1x4x8x1
   %c0 = arith.constant 0 : index
   // CHECK: %[[F0:.+]] = arith.constant 0.000000e+00 : f16
   %f0 = arith.constant 0. : f16
-  // CHECK: %[[MASK_CAST:.+]] = vector.extract %{{.*}}[0] : vector<4xi1> from vector<1x4xi1>
+  // CHECK: %[[MASK_CAST:.+]] = vector.shape_cast %{{.*}} : vector<1x4xi1> to vector<4xi1>
   // CHECK: %[[READ:.+]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C0]], %[[C0]], %[[C0]]], %[[F0]], %[[MASK_CAST]] {in_bounds = [true]} : memref<1x4x8x16xf16>, vector<4xf16>
   // CHECK: %[[CAST:.+]] = vector.broadcast %[[READ]] : vector<4xf16> to vector<1x4xf16>
   %0 = vector.transfer_read %arg0[%c0, %c0, %c0, %c0], %f0, %arg1 {in_bounds = [true, true]} : memref<1x4x8x16xf16>, vector<1x4xf16>
@@ -410,7 +410,7 @@ func.func @not_insert_cast_fo4_transfer_read_under_mask(%arg0: memref<1x1x4xf16>
 func.func @cast_away_transfer_write_leading_one_dims(%arg0: memref<1x4x8x16xf16>, %arg1: vector<1x4xf16>) {
   // CHECK: %[[C0:.+]] = arith.constant 0 : index
   %c0 = arith.constant 0 : index
-  // CHECK: %[[CAST:.+]] = vector.extract %{{.*}}[0] : vector<4xf16> from vector<1x4xf16>
+  // CHECK: %[[CAST:.+]] = vector.shape_cast %{{.*}} : vector<1x4xf16> to vector<4xf16>
   // CHECK: vector.transfer_write %[[CAST]], %{{.*}}[%[[C0]], %[[C0]], %[[C0]], %[[C0]]] {in_bounds = [true]} : vector<4xf16>, memref<1x4x8x16xf16>
 
   vector.transfer_write %arg1, %arg0[%c0, %c0, %c0, %c0] {in_bounds = [true, true]} : vector<1x4xf16>, memref<1x4x8x16xf16>
@@ -421,8 +421,8 @@ func.func @cast_away_transfer_write_leading_one_dims(%arg0: memref<1x4x8x16xf16>
 func.func @cast_away_masked_transfer_write_leading_one_dims(%arg0: memref<1x4x8x16xf16>, %arg1: vector<1x4xf16>, %arg2: vector<1x4xi1>) {
   // CHECK: %[[C0:.+]] = arith.constant 0 : index
   %c0 = arith.constant 0 : index
-  // CHECK: %[[CAST:.+]] = vector.extract %{{.*}}[0] : vector<4xf16> from vector<1x4xf16>
-  // CHECK: %[[MASK_CAST:.+]] = vector.extract %{{.*}}[0] : vector<4xi1> from vector<1x4xi1>
+  // CHECK: %[[CAST:.+]] = vector.shape_cast %{{.*}} : vector<1x4xf16> to vector<4xf16>
+  // CHECK: %[[MASK_CAST:.+]] = vector.shape_cast %{{.*}} : vector<1x4xi1> to vector<4xi1>
   // CHECK: vector.transfer_write %[[CAST]], %{{.*}}[%[[C0]], %[[C0]], %[[C0]], %[[C0]]], %[[MASK_CAST]] {in_bounds = [true]} : vector<4xf16>, memref<1x4x8x16xf16>
 
   vector.transfer_write %arg1, %arg0[%c0, %c0, %c0, %c0], %arg2 {in_bounds = [true, true]} : vector<1x4xf16>, memref<1x4x8x16xf16>
@@ -432,7 +432,7 @@ func.func @cast_away_masked_transfer_write_leading_one_dims(%arg0: memref<1x4x8x
 // CHECK-LABEL: func @cast_away_transfer_write_leading_one_dims_one_element
 func.func @cast_away_transfer_write_leading_one_dims_one_element(%arg0: memref<1x1x1x1xf16>, %arg1: vector<1x1xf16>) {
   %c0 = arith.constant 0 : index
-  // CHECK: vector.extract %{{.+}}[0] : vector<1xf16> from vector<1x1xf16>
+  // CHECK: vector.shape_cast %{{.+}} : vector<1x1xf16> to vector<1xf16>
   vector.transfer_write %arg1, %arg0[%c0, %c0, %c0, %c0] {in_bounds = [true, true]} : vector<1x1xf16>, memref<1x1x1x1xf16>
   return
 }
@@ -461,7 +461,7 @@ func.func @not_insert_cast_for_transfer_write_under_mask(%arg0: memref<1x1x4xf16
 func.func @cast_away_nontrivial_map_masked_transfer_write(%arg0: memref<1x4x8xf16>, %arg1: vector<1x1x4xf16>, %arg2: vector<1x4x1xi1>) {
   // CHECK: %[[C0:.+]] = arith.constant 0 : index
   %c0 = arith.constant 0 : index
-  // CHECK: %[[CAST:.+]] = vector.extract %{{.*}}[0, 0] : vector<4xf16> from vector<1x1x4xf16>
+  // CHECK: %[[CAST:.+]] = vector.shape_cast %{{.*}} : vector<1x1x4xf16> to vector<4xf16>
   // CHECK: %[[MASK_CAST:.+]] = vector.shape_cast %{{.*}} : vector<1x4x1xi1> to vector<4xi1>
   // CHECK: vector.transfer_write %[[CAST]], %{{.*}}[%[[C0]], %[[C0]], %[[C0]]], %[[MASK_CAST]] {in_bounds = [true]
   // CHECK-SAME: permutation_map = #[[$MAP]]} : vector<4xf16>, memref<1x4x8xf16>
@@ -480,9 +480,9 @@ func.func @cast_away_elementwise_leading_one_dims(
   (vector<1x1x8xf32>, vector<1x4xi1>, vector<1x4xf32>, vector<1x4xf32>) {
   // CHECK:  vector.extract %{{.*}}[0, 0] : vector<8xf32> from vector<1x1x8xf32>
   // CHECK:  vector.extract %{{.*}}[0, 0] : vector<8xf32> from vector<1x1x8xf32>
-  // CHECK:  arith.addf %{{.*}}, %{{.*}} : vector<8xf32>
+  // CHECK:  arith.addf %{{.*}}, %{{.*}} fastmath<nnan> {test.marker} : vector<8xf32>
   // CHECK:  vector.broadcast %{{.*}} : vector<8xf32> to vector<1x1x8xf32>
-  %0 = arith.addf %arg0, %arg0 : vector<1x1x8xf32>
+  %0 = arith.addf %arg0, %arg0 fastmath<nnan> {test.marker} : vector<1x1x8xf32>
   // CHECK:  vector.extract %{{.*}}[0] : vector<4xf32> from vector<1x4xf32>
   // CHECK:  vector.extract %{{.*}}[0] : vector<4xf32> from vector<1x4xf32>
   // CHECK:  arith.cmpf ogt, %{{.*}}, %{{.*}} : vector<4xf32>

@@ -17,9 +17,9 @@ attributes(device) subroutine sub2()
   call devsub()
 end
 
-! CHECK-LABEL: func.func @_QPsub2() attributes {cuf.proc_attr = #cuf.cuda_proc<device>}
+! CHECK-LABEL: func.func @_QPsub2() attributes {cuf.proc_attr = #cuf.cuda_proc<device>{{.*}}}
 ! CHECK: fir.call @_QMcuf_modPdevsub()
 
 ! CHECK-LABEL: fir.global @_QMcuf_modEmd {data_attr = #cuf.cuda<device>} : f32
 
-! CHECK-LABEL: func.func private @_QMcuf_modPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<device>}
+! CHECK-LABEL: func.func private @_QMcuf_modPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<device>{{.*}}}

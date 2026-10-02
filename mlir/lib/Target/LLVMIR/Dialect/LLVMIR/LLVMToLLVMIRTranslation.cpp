@@ -607,6 +607,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
         moduleTranslation.lookupValues(inlineAsmOp.getOperands()));
     inst->setTailCallKind(convertTailCallKindToLLVM(
         inlineAsmOp.getTailCallKindAttr().getTailCallKind()));
+    if (inlineAsmOp.getConvergent())
+      inst->addFnAttr(llvm::Attribute::Convergent);
     if (auto maybeOperandAttrs = inlineAsmOp.getOperandAttrs()) {
       llvm::AttributeList attrList;
       for (const auto &it : llvm::enumerate(*maybeOperandAttrs)) {

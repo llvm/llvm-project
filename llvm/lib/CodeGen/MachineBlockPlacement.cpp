@@ -3044,11 +3044,8 @@ void MachineBlockPlacement::alignBlocks() {
         if (S == nullptr)
           continue;
         if (S->getString() == "llvm.loop.align") {
-          assert(MD->getNumOperands() == 2 &&
-                 "per-loop align metadata should have two operands.");
           MDAlign =
               mdconst::extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
-          assert(MDAlign >= 1 && "per-loop align value must be positive.");
         }
       }
     }

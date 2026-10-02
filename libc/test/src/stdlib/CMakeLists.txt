@@ -418,6 +418,29 @@ add_libc_test(
 )
 
 add_libc_test(
+  mkdtemp_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    mkdtemp_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.struct_stat
+    libc.hdr.unistd_macros
+    libc.src.__support.CPP.scope
+    libc.src.__support.CPP.string_view
+    libc.src.stdlib.mkdtemp
+    libc.src.string.strdup
+    libc.src.string.strlen
+    libc.src.sys.stat.stat
+    libc.src.unistd.access
+    libc.src.unistd.rmdir
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   mkstemp_test
   SUITE
     libc-stdlib-tests

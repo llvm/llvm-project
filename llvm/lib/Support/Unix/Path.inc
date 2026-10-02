@@ -125,7 +125,8 @@ namespace fs {
 
 const file_t kInvalidFile = -1;
 
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||     \
+#if defined(__FreeBSD__) || defined(__NetBSD__) ||                             \
+    (defined(__OpenBSD__) && !defined(HAVE_GETEXECPATH)) ||                    \
     defined(__FreeBSD_kernel__) || defined(__linux__) ||                       \
     defined(__CYGWIN__) || defined(__DragonFly__) || defined(_AIX) ||          \
     defined(__GNU__) ||                                                        \
@@ -287,7 +288,16 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   // Fall back to the classical detection.
   if (getprogpath(exe_path, argv0))
     return exe_path;
-#elif defined(__OpenBSD__) || defined(__HAIKU__)
+#elif defined(__OpenBSD__)
+  char exe_path[PATH_MAX];
+#ifdef HAVE_GETEXECPATH
+  if (getexecpath(exe_path, sizeof(exe_path)) == 0)
+    return exe_path;
+#else
+  if (getprogpath(exe_path, argv0) != NULL)
+    return exe_path;
+#endif
+#elif defined(__HAIKU__)
   char exe_path[PATH_MAX];
   // argv[0] only
   if (getprogpath(exe_path, argv0) != NULL)

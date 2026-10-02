@@ -9771,7 +9771,7 @@ define void @store_i32_stride6_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512-NEXT:    vmovdqu64 %zmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512-NEXT:    vpermi2d %zmm13, %zmm15, %zmm21
 ; AVX512-NEXT:    vpermt2d %zmm13, %zmm0, %zmm15
-; AVX512-NEXT:    vmovdqa 128(%rdx), %ymm0
+; AVX512-NEXT:    vmovdqa64 128(%rdx), %ymm0
 ; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [3,11,0,8,7,15,4,12]
 ; AVX512-NEXT:    vpermt2d (%rcx), %ymm2, %ymm14
 ; AVX512-NEXT:    movb $36, %al
@@ -9786,7 +9786,7 @@ define void @store_i32_stride6_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512-NEXT:    vpermt2d %zmm4, %zmm29, %zmm14
 ; AVX512-NEXT:    vpermt2d 128(%rcx), %ymm2, %ymm0
 ; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm14 {%k1} = zmm0[0,1,0,1,2,3,6,7]
-; AVX512-NEXT:    vmovdqa 192(%rdx), %ymm0
+; AVX512-NEXT:    vmovdqa64 192(%rdx), %ymm0
 ; AVX512-NEXT:    vpermt2d 192(%rcx), %ymm2, %ymm0
 ; AVX512-NEXT:    vmovdqa64 192(%rdi), %zmm12
 ; AVX512-NEXT:    vmovdqa64 192(%rsi), %zmm7
@@ -9876,10 +9876,10 @@ define void @store_i32_stride6_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512-NEXT:    vmovdqa 64(%rdi), %ymm1
 ; AVX512-NEXT:    vpunpckhdq {{.*#+}} ymm1 = ymm1[2],mem[2],ymm1[3],mem[3],ymm1[6],mem[6],ymm1[7],mem[7]
 ; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm22 {%k1} = zmm1[2,3,2,3,2,3,2,3]
-; AVX512-NEXT:    vmovdqa 128(%rdi), %ymm1
+; AVX512-NEXT:    vmovdqa64 128(%rdi), %ymm1
 ; AVX512-NEXT:    vpunpckhdq {{.*#+}} ymm1 = ymm1[2],mem[2],ymm1[3],mem[3],ymm1[6],mem[6],ymm1[7],mem[7]
 ; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm18 {%k1} = zmm1[2,3,2,3,2,3,2,3]
-; AVX512-NEXT:    vmovdqa 192(%rdi), %ymm1
+; AVX512-NEXT:    vmovdqa64 192(%rdi), %ymm1
 ; AVX512-NEXT:    vpunpckhdq {{.*#+}} ymm1 = ymm1[2],mem[2],ymm1[3],mem[3],ymm1[6],mem[6],ymm1[7],mem[7]
 ; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm21 {%k1} = zmm1[2,3,2,3,2,3,2,3]
 ; AVX512-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [0,1,21,0,4,5,6,7,22,0,10,11,12,13,23,0]
@@ -10338,7 +10338,7 @@ define void @store_i32_stride6_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-NEXT:    vpermi2d %zmm13, %zmm15, %zmm21
 ; AVX512DQ-NEXT:    vpermt2d %zmm13, %zmm0, %zmm15
-; AVX512DQ-NEXT:    vmovdqa 128(%rdx), %ymm0
+; AVX512DQ-NEXT:    vmovdqa64 128(%rdx), %ymm0
 ; AVX512DQ-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [3,11,0,8,7,15,4,12]
 ; AVX512DQ-NEXT:    vpermt2d (%rcx), %ymm2, %ymm14
 ; AVX512DQ-NEXT:    movb $36, %al
@@ -10353,7 +10353,7 @@ define void @store_i32_stride6_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512DQ-NEXT:    vpermt2d %zmm4, %zmm29, %zmm14
 ; AVX512DQ-NEXT:    vpermt2d 128(%rcx), %ymm2, %ymm0
 ; AVX512DQ-NEXT:    vshufi64x2 {{.*#+}} zmm14 {%k1} = zmm0[0,1,0,1,2,3,6,7]
-; AVX512DQ-NEXT:    vmovdqa 192(%rdx), %ymm0
+; AVX512DQ-NEXT:    vmovdqa64 192(%rdx), %ymm0
 ; AVX512DQ-NEXT:    vpermt2d 192(%rcx), %ymm2, %ymm0
 ; AVX512DQ-NEXT:    vmovdqa64 192(%rdi), %zmm12
 ; AVX512DQ-NEXT:    vmovdqa64 192(%rsi), %zmm7
@@ -10443,10 +10443,10 @@ define void @store_i32_stride6_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512DQ-NEXT:    vmovdqa 64(%rdi), %ymm1
 ; AVX512DQ-NEXT:    vpunpckhdq {{.*#+}} ymm1 = ymm1[2],mem[2],ymm1[3],mem[3],ymm1[6],mem[6],ymm1[7],mem[7]
 ; AVX512DQ-NEXT:    vshufi64x2 {{.*#+}} zmm22 {%k1} = zmm1[2,3,2,3,2,3,2,3]
-; AVX512DQ-NEXT:    vmovdqa 128(%rdi), %ymm1
+; AVX512DQ-NEXT:    vmovdqa64 128(%rdi), %ymm1
 ; AVX512DQ-NEXT:    vpunpckhdq {{.*#+}} ymm1 = ymm1[2],mem[2],ymm1[3],mem[3],ymm1[6],mem[6],ymm1[7],mem[7]
 ; AVX512DQ-NEXT:    vshufi64x2 {{.*#+}} zmm18 {%k1} = zmm1[2,3,2,3,2,3,2,3]
-; AVX512DQ-NEXT:    vmovdqa 192(%rdi), %ymm1
+; AVX512DQ-NEXT:    vmovdqa64 192(%rdi), %ymm1
 ; AVX512DQ-NEXT:    vpunpckhdq {{.*#+}} ymm1 = ymm1[2],mem[2],ymm1[3],mem[3],ymm1[6],mem[6],ymm1[7],mem[7]
 ; AVX512DQ-NEXT:    vshufi64x2 {{.*#+}} zmm21 {%k1} = zmm1[2,3,2,3,2,3,2,3]
 ; AVX512DQ-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [0,1,21,0,4,5,6,7,22,0,10,11,12,13,23,0]
@@ -10905,7 +10905,7 @@ define void @store_i32_stride6_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512BW-NEXT:    vmovdqu64 %zmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512BW-NEXT:    vpermi2d %zmm13, %zmm15, %zmm21
 ; AVX512BW-NEXT:    vpermt2d %zmm13, %zmm0, %zmm15
-; AVX512BW-NEXT:    vmovdqa 128(%rdx), %ymm0
+; AVX512BW-NEXT:    vmovdqa64 128(%rdx), %ymm0
 ; AVX512BW-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [3,11,0,8,7,15,4,12]
 ; AVX512BW-NEXT:    vpermt2d (%rcx), %ymm2, %ymm14
 ; AVX512BW-NEXT:    movb $36, %al
@@ -10920,7 +10920,7 @@ define void @store_i32_stride6_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512BW-NEXT:    vpermt2d %zmm4, %zmm29, %zmm14
 ; AVX512BW-NEXT:    vpermt2d 128(%rcx), %ymm2, %ymm0
 ; AVX512BW-NEXT:    vshufi64x2 {{.*#+}} zmm14 {%k1} = zmm0[0,1,0,1,2,3,6,7]
-; AVX512BW-NEXT:    vmovdqa 192(%rdx), %ymm0
+; AVX512BW-NEXT:    vmovdqa64 192(%rdx), %ymm0
 ; AVX512BW-NEXT:    vpermt2d 192(%rcx), %ymm2, %ymm0
 ; AVX512BW-NEXT:    vmovdqa64 192(%rdi), %zmm12
 ; AVX512BW-NEXT:    vmovdqa64 192(%rsi), %zmm7
@@ -11010,10 +11010,10 @@ define void @store_i32_stride6_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512BW-NEXT:    vmovdqa 64(%rdi), %ymm1
 ; AVX512BW-NEXT:    vpunpckhdq {{.*#+}} ymm1 = ymm1[2],mem[2],ymm1[3],mem[3],ymm1[6],mem[6],ymm1[7],mem[7]
 ; AVX512BW-NEXT:    vshufi64x2 {{.*#+}} zmm22 {%k1} = zmm1[2,3,2,3,2,3,2,3]
-; AVX512BW-NEXT:    vmovdqa 128(%rdi), %ymm1
+; AVX512BW-NEXT:    vmovdqa64 128(%rdi), %ymm1
 ; AVX512BW-NEXT:    vpunpckhdq {{.*#+}} ymm1 = ymm1[2],mem[2],ymm1[3],mem[3],ymm1[6],mem[6],ymm1[7],mem[7]
 ; AVX512BW-NEXT:    vshufi64x2 {{.*#+}} zmm18 {%k1} = zmm1[2,3,2,3,2,3,2,3]
-; AVX512BW-NEXT:    vmovdqa 192(%rdi), %ymm1
+; AVX512BW-NEXT:    vmovdqa64 192(%rdi), %ymm1
 ; AVX512BW-NEXT:    vpunpckhdq {{.*#+}} ymm1 = ymm1[2],mem[2],ymm1[3],mem[3],ymm1[6],mem[6],ymm1[7],mem[7]
 ; AVX512BW-NEXT:    vshufi64x2 {{.*#+}} zmm21 {%k1} = zmm1[2,3,2,3,2,3,2,3]
 ; AVX512BW-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [0,1,21,0,4,5,6,7,22,0,10,11,12,13,23,0]
@@ -11472,7 +11472,7 @@ define void @store_i32_stride6_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-BW-NEXT:    vpermi2d %zmm13, %zmm15, %zmm21
 ; AVX512DQ-BW-NEXT:    vpermt2d %zmm13, %zmm0, %zmm15
-; AVX512DQ-BW-NEXT:    vmovdqa 128(%rdx), %ymm0
+; AVX512DQ-BW-NEXT:    vmovdqa64 128(%rdx), %ymm0
 ; AVX512DQ-BW-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [3,11,0,8,7,15,4,12]
 ; AVX512DQ-BW-NEXT:    vpermt2d (%rcx), %ymm2, %ymm14
 ; AVX512DQ-BW-NEXT:    movb $36, %al
@@ -11487,7 +11487,7 @@ define void @store_i32_stride6_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512DQ-BW-NEXT:    vpermt2d %zmm4, %zmm29, %zmm14
 ; AVX512DQ-BW-NEXT:    vpermt2d 128(%rcx), %ymm2, %ymm0
 ; AVX512DQ-BW-NEXT:    vshufi64x2 {{.*#+}} zmm14 {%k1} = zmm0[0,1,0,1,2,3,6,7]
-; AVX512DQ-BW-NEXT:    vmovdqa 192(%rdx), %ymm0
+; AVX512DQ-BW-NEXT:    vmovdqa64 192(%rdx), %ymm0
 ; AVX512DQ-BW-NEXT:    vpermt2d 192(%rcx), %ymm2, %ymm0
 ; AVX512DQ-BW-NEXT:    vmovdqa64 192(%rdi), %zmm12
 ; AVX512DQ-BW-NEXT:    vmovdqa64 192(%rsi), %zmm7
@@ -11577,10 +11577,10 @@ define void @store_i32_stride6_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512DQ-BW-NEXT:    vmovdqa 64(%rdi), %ymm1
 ; AVX512DQ-BW-NEXT:    vpunpckhdq {{.*#+}} ymm1 = ymm1[2],mem[2],ymm1[3],mem[3],ymm1[6],mem[6],ymm1[7],mem[7]
 ; AVX512DQ-BW-NEXT:    vshufi64x2 {{.*#+}} zmm22 {%k1} = zmm1[2,3,2,3,2,3,2,3]
-; AVX512DQ-BW-NEXT:    vmovdqa 128(%rdi), %ymm1
+; AVX512DQ-BW-NEXT:    vmovdqa64 128(%rdi), %ymm1
 ; AVX512DQ-BW-NEXT:    vpunpckhdq {{.*#+}} ymm1 = ymm1[2],mem[2],ymm1[3],mem[3],ymm1[6],mem[6],ymm1[7],mem[7]
 ; AVX512DQ-BW-NEXT:    vshufi64x2 {{.*#+}} zmm18 {%k1} = zmm1[2,3,2,3,2,3,2,3]
-; AVX512DQ-BW-NEXT:    vmovdqa 192(%rdi), %ymm1
+; AVX512DQ-BW-NEXT:    vmovdqa64 192(%rdi), %ymm1
 ; AVX512DQ-BW-NEXT:    vpunpckhdq {{.*#+}} ymm1 = ymm1[2],mem[2],ymm1[3],mem[3],ymm1[6],mem[6],ymm1[7],mem[7]
 ; AVX512DQ-BW-NEXT:    vshufi64x2 {{.*#+}} zmm21 {%k1} = zmm1[2,3,2,3,2,3,2,3]
 ; AVX512DQ-BW-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [0,1,21,0,4,5,6,7,22,0,10,11,12,13,23,0]

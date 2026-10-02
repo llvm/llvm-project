@@ -48,6 +48,7 @@
 #include "llvm/ABI/FunctionInfo.h"
 #include "llvm/ABI/TargetInfo.h"
 #include "llvm/ABI/Types.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/CallingConv.h"
@@ -73,15 +74,17 @@ namespace {
 // Maps CIR types to llvm::abi::Type, runs the LLVM ABI Lowering Library's SysV
 // x86_64 classifier, and converts the result back into the dialect-agnostic
 // mlir::abi::FunctionClassification that CIRABIRewriteContext consumes.
-// Integer (including `_BitInt` up to 128 bits) / pointer / vtable pointer /
-// bool / floating-point scalars are handled, as are struct / union / array
-// aggregates, `_Complex`, and a fixed-width vector whose width is a power
-// of two.  Other vectors, a padded record reached through a named bit-field
-// access unit, a record holding an empty-for-ABI member that occupies bytes
-// or a zero-sized one off its own alignment, a union no member of which spans
-// its declared size, and a union with a bit-field access unit no spanning
-// member of which supplies data are reported NYI by classifyX86_64Function
-// so an unsupported signature fails the pass instead of being misclassified.
+// Integer (including `_BitInt` of any width and `__int128`) / pointer /
+// vtable pointer / bool / floating-point scalars are handled, as are struct /
+// union / array aggregates, `_Complex`, and a fixed-width vector whose width
+// is a power of two.  Other vectors, a record holding an empty-for-ABI member
+// that occupies bytes or a zero-sized one off its own alignment, a union no
+// member of which spans its declared size (a single-declaration bit-field
+// member counting as far as its declared type extends, and only for a union
+// of one eightbyte or less), and a union with a named bit-field access unit no
+// spanning member of which supplies data are reported NYI by
+// classifyX86_64Function so an unsupported signature fails the pass instead of
+// being misclassified.
 //===----------------------------------------------------------------------===//
 
 /// Whether a struct's declared argument-passing kind (from the module's
@@ -131,12 +134,12 @@ static bool hasIncompleteRecordByValue(mlir::Type ty) {
 }
 
 /// The CIR types the x86_64 bridge handles.  Scalars: an integer up to 128
-/// bits (including `_BitInt` and `__int128`), pointer, vtable pointer, bool,
-/// void, or any floating-point type.  Aggregates: a complete struct or union
-/// whose members are all themselves supported, or an array of a supported
-/// element type.  Also a `_Complex`, or a fixed-width vector, of a supported
-/// element type.  Everything else is reported NYI at the reject() choke point
-/// in classifyX86_64Function.
+/// bits (including `__int128`), a `_BitInt` of any width, pointer, vtable
+/// pointer, bool, void, or any floating-point type.  Aggregates: a complete
+/// struct or union whose members are all themselves supported, or an array
+/// of a supported element type.  Also a `_Complex`, or a fixed-width vector,
+/// of a supported element type.  Everything else is reported NYI at the
+/// reject() choke point in classifyX86_64Function.
 static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
   // A pointer is only handled in the default address space (null) or an
   // already-lowered target address space.  A LangAddressSpaceAttr must be
@@ -158,18 +161,15 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
   if (isa<cir::FPTypeInterface>(ty))
     return true;
   if (auto intTy = dyn_cast<cir::IntType>(ty)) {
-    // Integers up to 64 bits, __int128, and _BitInt up to 128 bits are
+    // Integers up to 64 bits, __int128, and _BitInt of any width are
     // handled: the classifier extends a width below 32, widens 33 through 63
     // to i64, coerces 65 through 127 to a {i64, i64} pair, and passes 32, 64,
-    // and 128 in the natural type.  A wider _BitInt classifies Indirect,
-    // where at a multiple of 8 the byval attributes the rewriter appends
-    // duplicate the llvm.noundef CIRGen already emitted and trip the
-    // uniqueness assertion on the merged dictionary.  The bound is a blanket
-    // 128 because the widths that do not collide reach that same untested
-    // Indirect path.  Non-_BitInt intermediate widths (65..127) do not arise
-    // from C.  Both stay rejected.
+    // and 128 in the natural type.  A _BitInt wider than 128 bits classifies
+    // Indirect, the same path an oversized aggregate already takes.
+    // Non-_BitInt intermediate widths (65..127) do not arise from C and stay
+    // rejected.
     if (intTy.getIsBitInt())
-      return intTy.getWidth() <= 128;
+      return true;
     return intTy.getWidth() <= 64 || intTy.getWidth() == 128;
   }
   if (auto complexTy = dyn_cast<cir::ComplexType>(ty))
@@ -183,8 +183,7 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
     // an element is only usable where that width is the one clang gives it.
     // It is not for bool (a bit to clang, a byte here), for a _BitInt narrower
     // than a byte (clang rounds to the storage container), or for x87 long
-    // double (80 bits here against clang's 128).  A pointer is excluded for a
-    // different reason, its pointee being what abiTypeToCIR drops.
+    // double (80 bits here against clang's 128).
     mlir::Type elemTy = vecTy.getElementType();
     if (auto elemInt = dyn_cast<cir::IntType>(elemTy)) {
       if (elemInt.getWidth() % 8)
@@ -234,8 +233,22 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
         if (recordBits > 128)
           return false;
       } else {
+        // A declared type may reach past its unit and overshoot the union,
+        // which stored bytes never do, hence the inequality.  It counts only
+        // within the first eightbyte: past that reduceUnionForX8664 picks the
+        // coerce basis from the fields the union stores.
+        const bool declaredExtentCounts = recordBits <= 64;
         auto spansRecord = [&](mlir::Type m) {
-          return dl.getTypeSizeInBits(m).getFixedValue() == recordBits;
+          if (dl.getTypeSizeInBits(m).getFixedValue() == recordBits)
+            return true;
+          if (!declaredExtentCounts)
+            return false;
+          auto bfTy = dyn_cast<cir::BitFieldType>(m);
+          if (!bfTy)
+            return false;
+          std::optional<uint64_t> extentBits =
+              bfTy.getSoleDeclaredExtentInBits(dl);
+          return extentBits && *extentBits >= recordBits;
         };
         if (!llvm::any_of(members, spansRecord))
           return false;
@@ -511,33 +524,32 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
 /// CIRABIRewriteContext.
 ///
 /// Direct: the value passes in register(s).  A coercion is forwarded in the
-/// three cases where the value has to be rebuilt on the wire: an aggregate
+/// four cases where the value has to be rebuilt on the wire: an aggregate
 /// unpacked into the register(s) holding it, a scalar too wide for one register
-/// split into a tuple of them, and a scalar the classifier widens to fill its
-/// eightbyte.  getDirect keeps canFlatten set so the rewriter can split a
-/// multi-field coerced struct into individual wire arguments.  Any other scalar
-/// passes in its natural CIR type, which a null coercion denotes.  A coercion
-/// this bridge cannot represent yields std::nullopt so the caller reports NYI
-/// rather than silently passing the value unchanged.
+/// split into a tuple of them, a scalar the classifier widens to fill its
+/// eightbyte, and a value whose live bytes start partway into its storage
+/// because a leading eightbyte holds no field (getDirectOffset).  getDirect
+/// keeps canFlatten set so the rewriter can split a multi-field coerced
+/// struct into individual wire arguments.  Any other scalar passes in its
+/// natural CIR type, which a null coercion denotes.  A coercion this bridge
+/// cannot represent yields std::nullopt so the caller reports NYI rather than
+/// silently passing the value unchanged.
 ///
 /// Extend: bool or a sub-register integer needs a signext/zeroext attribute.
 /// The x86_64 classifier (llvm/lib/ABI/Targets/X86.cpp) only returns Extend
 /// for an integer or bool operand, so any other origTy is asserted rather
 /// than silently handled.
 ///
-/// Indirect: an aggregate that does not fit in registers is passed via a
-/// pointer (sret for returns, byval for arguments).
+/// Indirect: an aggregate that does not fit in registers, or a scalar too
+/// wide to fit (a `_BitInt` over 128 bits), is passed via a pointer (sret
+/// for returns, byval for arguments).
 ///
 /// Ignore: a void return, or an empty record dropped from the signature.
 static std::optional<ArgClassification>
 convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
                   mlir::Type origTy) {
   if (info.isDirect()) {
-    // The rewriter reads a coercion from the start of the value's storage, so a
-    // classification naming an offset into it has no representation here.  The
-    // classifier names one when the low eightbyte holds no field.
-    if (info.getDirectOffset())
-      return std::nullopt;
+    unsigned offset = info.getDirectOffset();
     // The classifier names a coerce type even where it matches the natural
     // type, so a non-null coerce does not by itself mean a rewrite is needed.
     const llvm::abi::Type *coerceAbi = info.getCoerceToType();
@@ -548,6 +560,10 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
         coerceAbi && isa_and_present<cir::ComplexType, cir::VectorType>(origTy);
     bool coerceIsRegisterTuple =
         isa_and_present<llvm::abi::RecordType>(coerceAbi);
+    // A tuple coercion cannot be read at an offset, so refuse the pair rather
+    // than emit a read of the wrong bytes.
+    if (offset && coerceIsRegisterTuple)
+      return std::nullopt;
     // Compare widths rather than identity: a coerce no wider than the natural
     // type carries the same value and needs no rewrite.
     auto origInt = dyn_cast_if_present<cir::IntType>(origTy);
@@ -558,19 +574,27 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
         coerceInt->getSizeInBits().getFixedValue() > origInt.getWidth();
     // Leaving the rest alone also avoids a lossy round trip: abiTypeToCIR
     // drops the LongDoubleType wrapper and a pointer's pointee, so comparing a
-    // scalar against its own coerce would report a difference that is not one.
-    if (!isAggregate && !comparesAgainstCoerce && !coerceIsRegisterTuple &&
-        !coerceWidensScalar)
-      return ArgClassification::getDirect(nullptr);
+    // scalar against its own coerce would report a difference that is not
+    // one.  Passing a value through reads it from byte 0, so one living at
+    // an offset cannot take this path.
+    if (!offset && !isAggregate && !comparesAgainstCoerce &&
+        !coerceIsRegisterTuple && !coerceWidensScalar)
+      return ArgClassification::getDirect();
     mlir::Type coerced = abiTypeToCIR(coerceAbi, ctx);
     if (!coerced)
+      return std::nullopt;
+    // An offset would be lost here, since a coercion to the value's own type
+    // is indistinguishable from no coercion at all.
+    if (offset && coerced == origTy)
       return std::nullopt;
     // Coercing a value to the type it already has would add a memory round
     // trip for nothing.
     if (comparesAgainstCoerce && coerced == origTy)
-      return ArgClassification::getDirect(nullptr);
-    return ArgClassification::getDirect(coerced);
+      return ArgClassification::getDirect();
+    return ArgClassification::getDirect(coerced, offset);
   }
+  // An extended value is always read from byte 0 of its own storage, so
+  // there is no offset to honor here.
   if (info.isExtend()) {
     if (isa_and_present<cir::BoolType>(origTy))
       return ArgClassification::getExtend(nullptr, info.isSignExt());
@@ -864,6 +888,12 @@ void CallConvLoweringPass::runOnOperation() {
 
   DataLayout dl(moduleOp);
   CIRABIRewriteContext rewriteCtx(moduleOp, dl);
+  // A non-byval indirect parameter's slot outlives the rewrite that retypes
+  // the parameter, so that a call forwarding the parameter can still recognise
+  // it.  Draining on scope exit collapses those slots whichever way this
+  // function returns.
+  llvm::scope_exit drainParamSlots(
+      [&] { rewriteCtx.finalizeParameterSlots(); });
   SymbolTable symbolTable(moduleOp);
 
   // A per-function target attribute can raise the AVX level, so one classifier
@@ -1001,6 +1031,15 @@ void CallConvLoweringPass::runOnOperation() {
     auto callee = cast<cir::FuncOp>(symbolTable.lookup(getGlobal.getName()));
     addressTakers[callee].push_back(getGlobal);
   });
+
+  // Restate every non-byval indirect parameter's slot alignment as the one the
+  // ABI promises for that parameter, before anything reads a slot.  A call is
+  // rewritten together with its callee rather than with the function
+  // containing it, so a call forwarding such a parameter can be reached before
+  // the parameter's own function is rewritten.  Doing this up front makes the
+  // forwarding decision independent of the order the two were declared in.
+  for (auto &kv : classifications)
+    rewriteCtx.normalizeParameterSlotAlignments(kv.first, kv.second);
 
   // Rewrite each function together with every direct call to it and every op
   // holding its address.  By the time we move on to function F+1, F's

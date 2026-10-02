@@ -1022,6 +1022,11 @@ def FeatureLimited64bitVectorMulBandwidth : SubtargetFeature<
     "Has limited 64bit vector multiply bandwidth compared to scalar multiply",
     [], InlineIgnore>;
 
+def FeatureUseReciprocalFDivCombineThreshold2 : SubtargetFeature<
+    "use-reciprocal-fdiv-combine-threshold-2", "UseReciprocalFDivCombineThreshold2", "true",
+    "Set the reciprocal FDiv combine threshold to 2 (from the default 3)",
+    [], InlineIgnore>;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //

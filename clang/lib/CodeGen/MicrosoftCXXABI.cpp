@@ -3819,10 +3819,6 @@ llvm::GlobalVariable *MSRTTIBuilder::getClassHierarchyDescriptor() {
   }
   if ((Flags & HasBranchingHierarchy) && RD->getNumVBases() != 0)
     Flags |= HasVirtualBranchingHierarchy;
-  // These gep indices are used to get the address of the first element of the
-  // base class array.
-  llvm::Value *GEPIndices[] = {llvm::ConstantInt::get(CGM.IntTy, 0),
-                               llvm::ConstantInt::get(CGM.IntTy, 0)};
 
   // Forward-declare the class hierarchy descriptor
   auto Type = ABI.getClassHierarchyDescriptorType();
@@ -3839,9 +3835,7 @@ llvm::GlobalVariable *MSRTTIBuilder::getClassHierarchyDescriptor() {
       llvm::ConstantInt::get(CGM.IntTy, 0), // reserved by the runtime
       llvm::ConstantInt::get(CGM.IntTy, Flags),
       llvm::ConstantInt::get(CGM.IntTy, Classes.size()),
-      ABI.getImageRelativeConstant(llvm::ConstantExpr::getInBoundsGetElementPtr(
-          Bases->getValueType(), Bases,
-          llvm::ArrayRef<llvm::Value *>(GEPIndices))),
+      ABI.getImageRelativeConstant(Bases)
   };
   CHD->setInitializer(llvm::ConstantStruct::get(Type, Fields));
   return CHD;

@@ -28,8 +28,8 @@ static void add_via_function(orc_rt::move_only_function<void(int32_t)> Return,
 // Note: This macro use has been deliberately moved above the
 // "using namespace orc_rt;" statement below to check that its expansion works
 // from other namespaces.
-ORC_RT_SPS_WRAPPER(add_via_function_sps_wrapper, int32_t(int32_t, int32_t),
-                   add_via_function);
+ORC_RT_SPS_WRAPPER_IMPL(add_via_function_sps_wrapper, int32_t(int32_t, int32_t),
+                        add_via_function);
 
 using namespace orc_rt;
 

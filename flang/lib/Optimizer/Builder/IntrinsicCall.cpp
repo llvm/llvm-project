@@ -1113,7 +1113,7 @@ mlir::Value genMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
     LLVM_DEBUG(llvm::dbgs() << "Generating '" << mathLibFuncName
                             << "' operation with type ";
                mathLibFuncType.dump(); llvm::dbgs() << "\n");
-    result = T::create(builder, loc, args);
+    result = T::create(builder, loc, args, typename T::Properties{});
   }
   LLVM_DEBUG(result.dump(); llvm::dbgs() << "\n");
   return result;
@@ -1151,12 +1151,13 @@ mlir::Value genComplexMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
   // the argument types for an operation
   if constexpr (T::template hasTrait<
                     mlir::OpTrait::SameOperandsAndResultType>()) {
-    result = T::create(builder, loc, args);
+    result = T::create(builder, loc, args, typename T::Properties{});
     result = builder.createConvert(loc, mathLibFuncType.getResult(0), result);
   } else {
     auto complexTy = mlir::cast<mlir::ComplexType>(mathLibFuncType.getInput(0));
     auto realTy = complexTy.getElementType();
-    result = T::create(builder, loc, realTy, args);
+    result = T::create(builder, loc, mlir::TypeRange{realTy}, args,
+                       typename T::Properties{});
     result = builder.createConvert(loc, mathLibFuncType.getResult(0), result);
   }
 

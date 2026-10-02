@@ -307,11 +307,7 @@ private:
   // If needed, replace G with an alias to F if possible, or a thunk to F if
   // profitable. Returns false if neither is the case. If \p G is not needed
   // (i.e. it is discardable and not used), \p G is removed directly.
-  // If \p MergeAnnotations is true, annotations on G such as profiling
-  // information and poison-generating flags are merged into F before G is
-  // erased or rewritten.
-  bool writeThunkOrAliasIfNeeded(Function *F, Function *G,
-                                 bool MergeAnnotations);
+  bool writeThunkOrAliasIfNeeded(Function *F, Function *G);
 
   /// Replace function F with function G in the function tree.
   void replaceFunctionInTree(const FunctionNode &FN, Function *G);
@@ -914,8 +910,7 @@ static void mergeEntryCountsAndImportsInto(Function &F, Function &G) {
   F.setEntryCount(Sum, AllImports.empty() ? nullptr : &AllImports);
 }
 
-bool MergeFunctions::writeThunkOrAliasIfNeeded(Function *F, Function *G,
-                                               bool MergeAnnotations) {
+bool MergeFunctions::writeThunkOrAliasIfNeeded(Function *F, Function *G) {
   bool ShouldErase =
       G->isDiscardableIfUnused() && G->use_empty() && !MergeFunctionsPDI;
   bool ShouldAlias = canCreateAliasFor(G);
@@ -923,11 +918,6 @@ bool MergeFunctions::writeThunkOrAliasIfNeeded(Function *F, Function *G,
 
   if (!ShouldErase && !ShouldAlias && !ShouldThunk)
     return false;
-
-  if (MergeAnnotations) {
-    mergeInstrAnnotations(F, G);
-    mergeEntryCountsAndImportsInto(*F, *G);
-  }
 
   if (ShouldErase) {
     G->eraseFromParent();
@@ -1164,13 +1154,16 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     const MaybeAlign NewFAlign = NewF->getAlign();
     const MaybeAlign GAlign = G->getAlign();
 
-    // Merge !prof, while G still has its body.
-    writeThunkOrAliasIfNeeded(F, G, /*MergeAnnotations=*/true);
+    // Merge annotations, while G still has its body.
+    mergeInstrAnnotations(F, G);
+    mergeEntryCountsAndImportsInto(*F, *G);
+
+    writeThunkOrAliasIfNeeded(F, G);
     if (FEntryCount)
       NewF->setEntryCount(*FEntryCount);
     // NewF becomes thunk/alias to the shared body F, it has no annotations to
     // be merged.
-    writeThunkOrAliasIfNeeded(F, NewF, /*MergeAnnotations=*/false);
+    writeThunkOrAliasIfNeeded(F, NewF);
 
     if (NewFAlign || GAlign)
       F->setAlignment(std::max(NewFAlign.valueOrOne(), GAlign.valueOrOne()));
@@ -1200,18 +1193,19 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
       }
     }
 
+    mergeInstrAnnotations(F, G);
+    mergeEntryCountsAndImportsInto(*F, *G);
+
     // If G was internal then we may have replaced all uses of G with F. If so,
     // stop here and delete G. There's no need for a thunk. (See note on
     // MergeFunctionsPDI above).
     if (G->isDiscardableIfUnused() && G->use_empty() && !MergeFunctionsPDI) {
-      mergeInstrAnnotations(F, G);
-      mergeEntryCountsAndImportsInto(*F, *G);
       G->eraseFromParent();
       ++NumFunctionsMerged;
       return;
     }
 
-    if (writeThunkOrAliasIfNeeded(F, G, /*MergeAnnotations=*/true))
+    if (writeThunkOrAliasIfNeeded(F, G))
       ++NumFunctionsMerged;
   }
 }

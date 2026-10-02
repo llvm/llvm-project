@@ -245,4 +245,6 @@ inline _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __asprintf(
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
 
+#define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE 0
+
 #endif // _LIBCPP___LOCALE_DIR_SUPPORT_NEWLIB_H

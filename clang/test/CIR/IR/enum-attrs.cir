@@ -127,6 +127,17 @@ cir.func @side_effect_attr() {
                           #cir.side_effect<const>]}
 }
 
+// A bit enum, so a value can name several flags.
+
+// CHECK-LABEL: cir.func @fp_class_attr() {
+cir.func @fp_class_attr() {
+  // CHECK: cir.return {cir.test = [#cir.fp_class<fcNone>, #cir.fp_class<fcSNan>, #cir.fp_class<fcInf>, #cir.fp_class<fcSNan|fcNegInf>]}
+  cir.return {cir.test = [#cir.fp_class<fcNone>,
+                          #cir.fp_class<fcSNan>,
+                          #cir.fp_class<fcInf>,
+                          #cir.fp_class<fcSNan|fcNegInf>]}
+}
+
 // The operations themselves keep printing a bare keyword.
 
 // CHECK-LABEL: cir.func @mem_order_sync_scope_ops(%arg0: !cir.ptr<!s32i>) {
@@ -135,6 +146,15 @@ cir.func @mem_order_sync_scope_ops(%arg0: !cir.ptr<!s32i>) {
   %0 = cir.load syncscope(system) atomic(seq_cst) %arg0 : !cir.ptr<!s32i>, !s32i
   // CHECK: cir.atomic.fence syncscope(system) seq_cst
   cir.atomic.fence syncscope(system) seq_cst
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @fp_class_ops(%arg0: !cir.float) {
+cir.func @fp_class_ops(%arg0: !cir.float) {
+  // CHECK: %0 = cir.is_fp_class %arg0, fcInf : (!cir.float) -> !cir.bool
+  %0 = cir.is_fp_class %arg0, fcInf : (!cir.float) -> !cir.bool
+  // CHECK: %1 = cir.is_fp_class %arg0, fcSNan|fcNegInf : (!cir.float) -> !cir.bool
+  %1 = cir.is_fp_class %arg0, fcSNan|fcNegInf : (!cir.float) -> !cir.bool
   cir.return
 }
 

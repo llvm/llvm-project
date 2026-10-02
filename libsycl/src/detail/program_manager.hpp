@@ -25,6 +25,7 @@
 
 #include <OffloadAPI.h>
 
+#include <memory>
 #include <mutex>
 #include <unordered_map>
 #include <vector>
@@ -86,9 +87,10 @@ public:
   /// \param Device the device for which this kernel must be compiled.
   /// \return a liboffload kernel handle that is ready to be passed to kernel
   /// execution methods.
-  ol_symbol_handle_t getOrCreateKernel(DeviceKernelInfo &KernelInfo,
-                                       ContextImpl &Context,
-                                       DeviceImpl &Device);
+  ol_symbol_handle_t
+  getOrCreateKernel(DeviceKernelInfo &KernelInfo,
+                    const std::shared_ptr<ContextImpl> &Context,
+                    DeviceImpl &Device);
 
   /// \return kernel info for the kernel with the specified name.
   DeviceKernelInfo &getDeviceKernelInfo(std::string_view KernelName);
@@ -106,6 +108,12 @@ protected:
   ProgramAndKernelManager(ProgramAndKernelManager const &) = delete;
   ProgramAndKernelManager &operator=(ProgramAndKernelManager const &) = delete;
 
+  /// Adds the specified context to MContextsWithPrograms unless it is already
+  /// tracked, and drops the entries of contexts that have been destroyed.
+  /// MDataCollectionMutex must be held by the caller.
+  /// \param Context the context that is about to cache a program.
+  void trackContext(const std::shared_ptr<ContextImpl> &Context);
+
   // Filled by registerFatBin(...).
   // Map for storing device kernel information. Runtime lookup should be avoided
   // by caching the pointers when possible.
@@ -120,6 +128,16 @@ protected:
       std::vector<std::unique_ptr<DeviceImageManager>>;
   std::unordered_map<BinaryStartKey, DeviceImageManagerVec>
       MDeviceImageManagers;
+
+  // Contexts that may hold programs created from the device images above. A
+  // context is the sole owner of its programs, and it must destroy them before
+  // the images they were created from are destroyed.
+  //
+  // Entries are weak and pruned lazily: a context can be destroyed at any point
+  // and ~ContextImpl must not call back into this class, because that would
+  // take MDataCollectionMutex while holding ContextImpl::MProgramCacheMutex and
+  // invert the lock order used everywhere else.
+  std::vector<std::weak_ptr<ContextImpl>> MContextsWithPrograms;
 
   // All work with device images and data related to it must be wrapped with a
   // lock of this mutex.

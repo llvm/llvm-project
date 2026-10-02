@@ -630,9 +630,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, {Src0, Src1, Src2, Src3ToBool});
   }
 
-  case AMDGPU::BI__builtin_amdgcn_ds_swizzle:
-    return emitBuiltinWithOneOverloadedType<2>(*this, E,
-                                               Intrinsic::amdgcn_ds_swizzle);
   case AMDGPU::BI__builtin_amdgcn_mov_dpp8:
   case AMDGPU::BI__builtin_amdgcn_mov_dpp:
   case AMDGPU::BI__builtin_amdgcn_update_dpp: {
@@ -783,9 +780,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_fracth:
     return emitBuiltinWithOneOverloadedType<1>(*this, E,
                                                Intrinsic::amdgcn_fract);
-  case AMDGPU::BI__builtin_amdgcn_lerp:
-    return emitBuiltinWithOneOverloadedType<3>(*this, E,
-                                               Intrinsic::amdgcn_lerp);
   case AMDGPU::BI__builtin_amdgcn_ubfe:
     return emitBuiltinWithOneOverloadedType<3>(*this, E,
                                                Intrinsic::amdgcn_ubfe);

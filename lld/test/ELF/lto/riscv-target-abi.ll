@@ -4,7 +4,7 @@
 ;; so we print a warning and ignore the module flag.
 ; RUN: llvm-as %s -o %t.bc
 ; RUN: ld.lld -shared %t.bc -o %t.so 2>&1 | FileCheck %s --check-prefix=WARN --implicit-check-not="ignoring target-abi"
-; WARN: Hard-float 'd' ABI can't be used for a target that doesn't support the D instruction set extension (ignoring target-abi)
+; WARN: note: hard-float 'd' ABI can't be used for a target that doesn't support the D instruction set extension (ignoring target-abi)
 
 ;; TODO: This is inconsistent: RISCVAsmPrinter::emitStartOfAsmFile sets e_flags
 ;; based on the raw module flag not the ABI actually used for codegen.

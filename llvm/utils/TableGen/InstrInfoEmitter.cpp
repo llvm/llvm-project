@@ -663,6 +663,16 @@ void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS,
     OS << "class MCInst;\n";
     OS << "class FeatureBitset;\n\n";
 
+    const CodeGenTarget &Target = CDP.getTargetInfo();
+    ArrayRef<const Record *> RegClassByHwMode = Target.getAllRegClassByHwMode();
+    if (!RegClassByHwMode.empty()) {
+      const CodeGenHwModes &CGH = Target.getHwModes();
+      unsigned NumModes = CGH.getNumModeIds();
+      unsigned NumClassesByHwMode = RegClassByHwMode.size();
+      OS << "extern const int16_t " << TargetName << "RegClassByHwModeTables["
+         << NumModes << "][" << NumClassesByHwMode << "];\n\n";
+    }
+
     NamespaceEmitter TargetNS(OS, (TargetName + "_MC").str());
     for (const Record *Rec : TIIPredicates)
       OS << "bool " << Rec->getValueAsString("FunctionName")

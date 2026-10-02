@@ -85,25 +85,24 @@ private:
 };
 
 CWrapperFunctionBuffer testReserve(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<rt::SPSSimpleExecutorMemoryManagerReserveSignature>::
-      handle(ArgData, ArgSize,
+  return WrapperFunction<rt::sps_ci::MemMgrReserve::SPSSig>::handle(
+             ArgData, ArgSize,
              makeMethodWrapperHandler(&SimpleAllocator::reserve))
-          .release();
+      .release();
 }
 
 CWrapperFunctionBuffer testInitialize(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<
-             rt::SPSSimpleExecutorMemoryManagerInitializeSignature>::
-      handle(ArgData, ArgSize,
+  return WrapperFunction<rt::sps_ci::MemMgrInitialize::SPSSig>::handle(
+             ArgData, ArgSize,
              makeMethodWrapperHandler(&SimpleAllocator::initialize))
-          .release();
+      .release();
 }
 
 CWrapperFunctionBuffer testRelease(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<rt::SPSSimpleExecutorMemoryManagerReleaseSignature>::
-      handle(ArgData, ArgSize,
+  return WrapperFunction<rt::sps_ci::MemMgrRelease::SPSSig>::handle(
+             ArgData, ArgSize,
              makeMethodWrapperHandler(&SimpleAllocator::release))
-          .release();
+      .release();
 }
 
 TEST(EPCGenericJITLinkMemoryManagerTest, AllocFinalizeFree) {

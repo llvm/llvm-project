@@ -51,7 +51,7 @@ Wrapper makeWrapper() {
 // CIR:       cir.call @_ZNSt10unique_ptrI4BaseEC1EPS0_(%[[AGG_TMP0]], %[[SOURCE]])
 // CIR:       %[[TRUE:.*]] = cir.const #true
 // CIR:       cir.store %[[TRUE]], %[[CLEANUP_COND]]
-// CIR:       cir.call @_ZN7WrapperC1ESt10unique_ptrI4BaseE(%[[RETVAL]], %[[AGG_TMP0]]) : ({{.*}}, !cir.ptr<!rec_std3A3Aunique_ptr3CBase3E> {llvm.align = 1 : i64, llvm.byref = !rec_std3A3Aunique_ptr3CBase3E}) -> ()
+// CIR:       cir.call @_ZN7WrapperC1ESt10unique_ptrI4BaseE(%[[RETVAL]], %[[AGG_TMP0]]) : ({{.*}}, !cir.ptr<!rec_std3A3Aunique_ptr3CBase3E> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 // CIR:     } else {
 // CIR:       cir.call @_ZN7Wrapper5emptyEv(%[[RETVAL]])
 // CIR:     }
@@ -89,7 +89,7 @@ Wrapper makeWrapper() {
 // LLVM:                       to label %[[INVOKE_CONTINUE_2:.*]] unwind label %[[INVOKE_CLEANUP:.*]]
 // LLVM: [[INVOKE_CONTINUE_2]]:
 // LLVM:   store i8 1, ptr %[[CLEANUP_COND]]
-// LLVM:   invoke void @_ZN7WrapperC1ESt10unique_ptrI4BaseE(ptr {{.*}} %[[RETVAL]], ptr byref(%"struct.std::unique_ptr<Base>") align 1 %[[AGG_TMP0]])
+// LLVM:   invoke void @_ZN7WrapperC1ESt10unique_ptrI4BaseE(ptr {{.*}} %[[RETVAL]], ptr nofreeobj noundef align 1 dereferenceable(1) %[[AGG_TMP0]])
 // LLVM:                       to label %[[INVOKE_CONTINUE_3:.*]] unwind label %[[INVOKE_CLEANUP:.*]]
 // LLVM: [[INVOKE_CONTINUE_3]]:
 // LLVM:   br label %[[CONSTRUCT_CONTINUE:.*]]
@@ -136,7 +136,7 @@ Wrapper makeWrapper() {
 // OGCG:   %[[SOURCE:.*]] = call {{.*}} ptr @_Z9getSourcev()
 // OGCG:   call void @_ZNSt10unique_ptrI4BaseEC1EPS0_(ptr {{.*}} %[[AGG_TMP]], {{.*}} %[[SOURCE]])
 // OGCG:   store i1 true, ptr %[[CLEANUP_COND]]
-// OGCG:   invoke void @_ZN7WrapperC1ESt10unique_ptrI4BaseE(ptr {{.*}} %[[RETVAL]], ptr {{.*}} %[[AGG_TMP]])
+// OGCG:   invoke void @_ZN7WrapperC1ESt10unique_ptrI4BaseE(ptr {{.*}} %[[RETVAL]], ptr nofreeobj noundef align 1 dereferenceable(1) %[[AGG_TMP]])
 // OGCG:           to label %[[INVOKE_CONTINUE:.*]] unwind label %[[INVOKE_CLEANUP:.*]]
 // OGCG: [[INVOKE_CONTINUE]]:
 // OGCG:   br label %[[COND_END:.*]]
@@ -361,7 +361,7 @@ void makeEntry() {
 // CIR:         %{{.*}} = cir.get_global @g_path
 // CIR:         %[[TRUE:.*]] = cir.const #true
 // CIR:         cir.store %[[TRUE]], %[[CLEANUP_COND]]
-// CIR:         cir.call @_ZN5EntryC1E4Path(%[[ENSURED_F]], %[[AGG_TMP0]]) : ({{.*}}, !cir.ptr<!rec_Path> {llvm.align = 1 : i64, llvm.byref = !rec_Path}) -> ()
+// CIR:         cir.call @_ZN5EntryC1E4Path(%[[ENSURED_F]], %[[AGG_TMP0]]) : ({{.*}}, !cir.ptr<!rec_Path> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 // CIR:       }
 // CIR:       cir.yield
 // CIR:     } cleanup all {
@@ -395,7 +395,7 @@ void makeEntry() {
 // LLVM:   br label %[[COND_END:.*]]
 // LLVM: [[FALSE_BB]]:
 // LLVM:   store i8 1, ptr %[[CLEANUP_COND]]
-// LLVM:   invoke void @_ZN5EntryC1E4Path(ptr {{.*}} %[[ENSURED_F]], ptr byref(%struct.Path) align 1 %[[AGG_TMP0]])
+// LLVM:   invoke void @_ZN5EntryC1E4Path(ptr {{.*}} %[[ENSURED_F]], ptr nofreeobj noundef align 1 dereferenceable(1) %[[AGG_TMP0]])
 // LLVM:                     to label %[[FALSE_CONT:.*]] unwind label %[[LPAD]]
 // LLVM: [[FALSE_CONT]]:
 // LLVM:   br label %[[COND_END]]
@@ -455,7 +455,7 @@ void makeEntry() {
 // OGCG:   br label %[[COND_END:.*]]
 // OGCG: [[COND_FALSE]]:
 // OGCG:   store i1 true, ptr %[[CLEANUP_COND]]
-// OGCG:   invoke void @_ZN5EntryC1E4Path(ptr {{.*}} %[[ENSURED_F]], ptr {{.*}} %[[AGG_TMP]])
+// OGCG:   invoke void @_ZN5EntryC1E4Path(ptr {{.*}} %[[ENSURED_F]], ptr nofreeobj noundef align 1 dereferenceable(1) %[[AGG_TMP]])
 // OGCG:           to label %[[FALSE_CONT:.*]] unwind label %[[LPAD2:.*]]
 // OGCG: [[FALSE_CONT]]:
 // OGCG:   br label %[[COND_END]]

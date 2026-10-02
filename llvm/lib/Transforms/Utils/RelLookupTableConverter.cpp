@@ -116,6 +116,15 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
         !GlovalVarOp->isImplicitDSOLocal())
       return false;
 
+    // On AArch64 small code model, the text-to-data span can be up to 4GB,
+    // which exceeds 32-bit signed relative offsets. Avoid converting if the
+    // target operand requires dynamic relocations (placing it in .data.rel.ro
+    // in the data segment rather than .rodata in the text segment).
+    if (TT.isAArch64() &&
+        (!GlovalVarOp->hasInitializer() ||
+         GlovalVarOp->getInitializer()->needsDynamicRelocation()))
+      return false;
+
     if (ShouldDropUnnamedAddr)
       GVOps.push_back(GlovalVarOp);
 

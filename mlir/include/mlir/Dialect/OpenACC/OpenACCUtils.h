@@ -57,8 +57,9 @@ std::optional<ClauseDefaultValue> getDefaultAttr(mlir::Operation *op);
 mlir::acc::VariableTypeCategory getTypeCategory(mlir::Value var);
 
 /// Attempts to extract the variable name from a value by walking through
-/// view-like operations until an `acc.var_name` attribute is found. Returns
-/// empty string if no name is found.
+/// view-like operations until an `acc.var_name` attribute, the name of a data
+/// clause operation, or the symbol a global is addressed through is found.
+/// Returns empty string if no name is found.
 std::string getVariableName(mlir::Value v);
 
 /// Returns a placeholder string for use as an acc.var_name attribute value when
