@@ -7,14 +7,7 @@ define <32 x i16> @combine_pmaddubsw_add_u8_s6(<64 x i8> %a0, <64 x i8> %a1) {
 ; AVX512-LABEL: combine_pmaddubsw_add_u8_s6:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm1
-; AVX512-NEXT:    vpbroadcastw {{.*#+}} zmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; AVX512-NEXT:    vpandq %zmm2, %zmm0, %zmm3
-; AVX512-NEXT:    vpandq %zmm2, %zmm1, %zmm2
-; AVX512-NEXT:    vpmaddubsw %zmm2, %zmm3, %zmm2
-; AVX512-NEXT:    vpsrlw $8, %zmm0, %zmm0
-; AVX512-NEXT:    vpsrlw $8, %zmm1, %zmm1
 ; AVX512-NEXT:    vpmaddubsw %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpaddw %zmm0, %zmm2, %zmm0
 ; AVX512-NEXT:    retq
   %and = and <64 x i8> %a1, <i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63>
   %even0 = shufflevector <64 x i8> %a0, <64 x i8> zeroinitializer, <64 x i32> <i32 0, i32 64, i32 2, i32 64, i32 4, i32 64, i32 6, i32 64, i32 8, i32 64, i32 10, i32 64, i32 12, i32 64, i32 14, i32 64, i32 16, i32 64, i32 18, i32 64, i32 20, i32 64, i32 22, i32 64, i32 24, i32 64, i32 26, i32 64, i32 28, i32 64, i32 30, i32 64, i32 32, i32 64, i32 34, i32 64, i32 36, i32 64, i32 38, i32 64, i32 40, i32 64, i32 42, i32 64, i32 44, i32 64, i32 46, i32 64, i32 48, i32 64, i32 50, i32 64, i32 52, i32 64, i32 54, i32 64, i32 56, i32 64, i32 58, i32 64, i32 60, i32 64, i32 62, i32 64>
@@ -32,14 +25,7 @@ define <32 x i16> @combine_pmaddubsw_add_u8_s6_commuted(<64 x i8> %a0, <64 x i8>
 ; AVX512-LABEL: combine_pmaddubsw_add_u8_s6_commuted:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm1
-; AVX512-NEXT:    vpbroadcastw {{.*#+}} zmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; AVX512-NEXT:    vpandq %zmm2, %zmm0, %zmm3
-; AVX512-NEXT:    vpandq %zmm2, %zmm1, %zmm2
-; AVX512-NEXT:    vpmaddubsw %zmm2, %zmm3, %zmm2
-; AVX512-NEXT:    vpsrlw $8, %zmm0, %zmm0
-; AVX512-NEXT:    vpsrlw $8, %zmm1, %zmm1
 ; AVX512-NEXT:    vpmaddubsw %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpaddw %zmm2, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %and = and <64 x i8> %a1, <i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63>
   %even0 = shufflevector <64 x i8> %a0, <64 x i8> zeroinitializer, <64 x i32> <i32 0, i32 64, i32 2, i32 64, i32 4, i32 64, i32 6, i32 64, i32 8, i32 64, i32 10, i32 64, i32 12, i32 64, i32 14, i32 64, i32 16, i32 64, i32 18, i32 64, i32 20, i32 64, i32 22, i32 64, i32 24, i32 64, i32 26, i32 64, i32 28, i32 64, i32 30, i32 64, i32 32, i32 64, i32 34, i32 64, i32 36, i32 64, i32 38, i32 64, i32 40, i32 64, i32 42, i32 64, i32 44, i32 64, i32 46, i32 64, i32 48, i32 64, i32 50, i32 64, i32 52, i32 64, i32 54, i32 64, i32 56, i32 64, i32 58, i32 64, i32 60, i32 64, i32 62, i32 64>

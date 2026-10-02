@@ -172,59 +172,17 @@ define i32 @combine_pmaddubsw_constant_sat() {
 ; 255 * 63 + 255 * 63 fits in signed i16.
 ; The unsigned input may have its high bit set; keep it as operand 0.
 define <8 x i16> @combine_pmaddubsw_add_u8_s6(<16 x i8> %a0, <16 x i8> %a1) {
-; SSSE3-LABEL: combine_pmaddubsw_add_u8_s6:
-; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; SSSE3-NEXT:    movdqa %xmm0, %xmm3
-; SSSE3-NEXT:    pand %xmm2, %xmm3
-; SSSE3-NEXT:    pand %xmm1, %xmm2
-; SSSE3-NEXT:    pmaddubsw %xmm2, %xmm3
-; SSSE3-NEXT:    psrlw $8, %xmm0
-; SSSE3-NEXT:    psrlw $8, %xmm1
-; SSSE3-NEXT:    pmaddubsw %xmm1, %xmm0
-; SSSE3-NEXT:    paddw %xmm3, %xmm0
-; SSSE3-NEXT:    retq
+; SSE-LABEL: combine_pmaddubsw_add_u8_s6:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    pmaddubsw %xmm1, %xmm0
+; SSE-NEXT:    retq
 ;
-; SSE41-LABEL: combine_pmaddubsw_add_u8_s6:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
-; SSE41-NEXT:    movdqa %xmm0, %xmm3
-; SSE41-NEXT:    pand %xmm2, %xmm3
-; SSE41-NEXT:    pand %xmm1, %xmm2
-; SSE41-NEXT:    pmaddubsw %xmm2, %xmm3
-; SSE41-NEXT:    psrlw $8, %xmm0
-; SSE41-NEXT:    psrlw $8, %xmm1
-; SSE41-NEXT:    pmaddubsw %xmm1, %xmm0
-; SSE41-NEXT:    paddw %xmm3, %xmm0
-; SSE41-NEXT:    retq
-;
-; AVX1-LABEL: combine_pmaddubsw_add_u8_s6:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm3
-; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm2
-; AVX1-NEXT:    vpmaddubsw %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vpsrlw $8, %xmm0, %xmm0
-; AVX1-NEXT:    vpsrlw $8, %xmm1, %xmm1
-; AVX1-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpaddw %xmm0, %xmm2, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: combine_pmaddubsw_add_u8_s6:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX2-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm3
-; AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm2
-; AVX2-NEXT:    vpmaddubsw %xmm2, %xmm3, %xmm2
-; AVX2-NEXT:    vpsrlw $8, %xmm0, %xmm0
-; AVX2-NEXT:    vpsrlw $8, %xmm1, %xmm1
-; AVX2-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpaddw %xmm0, %xmm2, %xmm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: combine_pmaddubsw_add_u8_s6:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %and = and <16 x i8> %a1, <i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63>
   %even0 = shufflevector <16 x i8> %a0, <16 x i8> zeroinitializer, <16 x i32> <i32 0, i32 16, i32 2, i32 16, i32 4, i32 16, i32 6, i32 16, i32 8, i32 16, i32 10, i32 16, i32 12, i32 16, i32 14, i32 16>
   %even1 = shufflevector <16 x i8> %and, <16 x i8> zeroinitializer, <16 x i32> <i32 0, i32 16, i32 2, i32 16, i32 4, i32 16, i32 6, i32 16, i32 8, i32 16, i32 10, i32 16, i32 12, i32 16, i32 14, i32 16>
@@ -238,59 +196,17 @@ define <8 x i16> @combine_pmaddubsw_add_u8_s6(<16 x i8> %a0, <16 x i8> %a1) {
 
 ; The ADD operands can be commuted without changing PMADDUBSW operand roles.
 define <8 x i16> @combine_pmaddubsw_add_u8_s6_commuted(<16 x i8> %a0, <16 x i8> %a1) {
-; SSSE3-LABEL: combine_pmaddubsw_add_u8_s6_commuted:
-; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; SSSE3-NEXT:    movdqa %xmm0, %xmm3
-; SSSE3-NEXT:    pand %xmm2, %xmm3
-; SSSE3-NEXT:    pand %xmm1, %xmm2
-; SSSE3-NEXT:    pmaddubsw %xmm2, %xmm3
-; SSSE3-NEXT:    psrlw $8, %xmm0
-; SSSE3-NEXT:    psrlw $8, %xmm1
-; SSSE3-NEXT:    pmaddubsw %xmm1, %xmm0
-; SSSE3-NEXT:    paddw %xmm3, %xmm0
-; SSSE3-NEXT:    retq
+; SSE-LABEL: combine_pmaddubsw_add_u8_s6_commuted:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    pmaddubsw %xmm1, %xmm0
+; SSE-NEXT:    retq
 ;
-; SSE41-LABEL: combine_pmaddubsw_add_u8_s6_commuted:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
-; SSE41-NEXT:    movdqa %xmm0, %xmm3
-; SSE41-NEXT:    pand %xmm2, %xmm3
-; SSE41-NEXT:    pand %xmm1, %xmm2
-; SSE41-NEXT:    pmaddubsw %xmm2, %xmm3
-; SSE41-NEXT:    psrlw $8, %xmm0
-; SSE41-NEXT:    psrlw $8, %xmm1
-; SSE41-NEXT:    pmaddubsw %xmm1, %xmm0
-; SSE41-NEXT:    paddw %xmm3, %xmm0
-; SSE41-NEXT:    retq
-;
-; AVX1-LABEL: combine_pmaddubsw_add_u8_s6_commuted:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm3
-; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm2
-; AVX1-NEXT:    vpmaddubsw %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vpsrlw $8, %xmm0, %xmm0
-; AVX1-NEXT:    vpsrlw $8, %xmm1, %xmm1
-; AVX1-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpaddw %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: combine_pmaddubsw_add_u8_s6_commuted:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX2-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm3
-; AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm2
-; AVX2-NEXT:    vpmaddubsw %xmm2, %xmm3, %xmm2
-; AVX2-NEXT:    vpsrlw $8, %xmm0, %xmm0
-; AVX2-NEXT:    vpsrlw $8, %xmm1, %xmm1
-; AVX2-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpaddw %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: combine_pmaddubsw_add_u8_s6_commuted:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %and = and <16 x i8> %a1, <i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63>
   %even0 = shufflevector <16 x i8> %a0, <16 x i8> zeroinitializer, <16 x i32> <i32 0, i32 16, i32 2, i32 16, i32 4, i32 16, i32 6, i32 16, i32 8, i32 16, i32 10, i32 16, i32 12, i32 16, i32 14, i32 16>
   %even1 = shufflevector <16 x i8> %and, <16 x i8> zeroinitializer, <16 x i32> <i32 0, i32 16, i32 2, i32 16, i32 4, i32 16, i32 6, i32 16, i32 8, i32 16, i32 10, i32 16, i32 12, i32 16, i32 14, i32 16>
