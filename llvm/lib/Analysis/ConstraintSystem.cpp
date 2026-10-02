@@ -300,6 +300,10 @@ bool ConstraintSystem::isConditionImplied(RowTy R) const {
   if (isConstantOnly(R))
     return getConstant(R) >= 0;
 
+  // R is trivially implied if a single row of the system implies it.
+  if (isImpliedBySingleRow(R))
+    return true;
+
   // If there is no solution with the negation of R added to the system, the
   // condition must hold based on the existing constraints.
   R = ConstraintSystem::negate(std::move(R));

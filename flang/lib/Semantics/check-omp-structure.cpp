@@ -3814,9 +3814,6 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &x) {
           std::get<parser::OmpClause::Ordered>(clause->u)};
 
       if (orderedClause.v) {
-        CheckNotAllowedIfClause(
-            llvm::omp::Clause::OMPC_ordered, {llvm::omp::Clause::OMPC_linear});
-
         if (auto *clause2{FindClause(llvm::omp::Clause::OMPC_collapse)}) {
           const auto &collapseClause{
               std::get<parser::OmpClause::Collapse>(clause2->u)};
