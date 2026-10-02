@@ -32,6 +32,7 @@ class CharUnits;
 class Expr;
 class CallExpr;
 class CXXRecordDecl;
+class FunctionDecl;
 } // namespace clang
 using namespace clang;
 /// Values returned by __builtin_classify_type, chosen to match the values
@@ -157,5 +158,8 @@ inline bool isOpaqueConstantCall(const CallExpr *E) {
 }
 
 bool isGlobalLValue(const ValueDecl *D, const Expr *E);
+
+/// Whether we can instantiate FD during constant evaluation
+bool FunctionDefinitionCanBeLazilyInstantiated(const FunctionDecl *FD);
 
 #endif

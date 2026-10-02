@@ -25,6 +25,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaProxy.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/DenseMap.h"
@@ -911,8 +912,9 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
   SmallVector<PartialDiagnosticAt, 2> EvaluationDiags;
   Expr::EvalResult EvalResult;
   EvalResult.Diag = &EvaluationDiags;
-  if (!SubstitutedAtomicExpr.get()->EvaluateAsConstantExpr(EvalResult,
-                                                           S.Context) ||
+  EvalProxy SProxy(S);
+  if (!SubstitutedAtomicExpr.get()->EvaluateAsMandatedConstantExpr(
+          EvalResult, S.Context, SProxy) ||
       !EvaluationDiags.empty()) {
     // C++2a [temp.constr.atomic]p1
     //   ...E shall be a constant expression of type bool.

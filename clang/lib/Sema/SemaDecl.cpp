@@ -56,6 +56,7 @@
 #include "clang/Sema/SemaOpenACC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaPPC.h"
+#include "clang/Sema/SemaProxy.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/SemaSwift.h"
@@ -15295,7 +15296,8 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
                 << Init->getSourceRange();
           }
         }
-        (void)var->checkForConstantInitialization(Notes);
+        EvalProxy SProxy(*this);
+        (void)var->checkForConstantInitialization(Notes, SProxy);
         Notes.clear();
       } else if (CacheCulprit) {
         Notes.emplace_back(CacheCulprit->getExprLoc(),
@@ -15304,7 +15306,8 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       }
     } else {
       // Evaluate the initializer to see if it's a constant initializer.
-      HasConstInit = var->checkForConstantInitialization(Notes);
+      EvalProxy SProxy(*this);
+      HasConstInit = var->checkForConstantInitialization(Notes, SProxy);
     }
 
     if (HasConstInit) {
