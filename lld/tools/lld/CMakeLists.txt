@@ -9,7 +9,6 @@ add_lld_tool(lld
   SUPPORT_PLUGINS
   GENERATE_DRIVER
   )
-export_executable_symbols_for_plugins(lld)
 
 function(lld_target_link_libraries target type)
   if (TARGET obj.${target})
@@ -33,6 +32,8 @@ lld_target_link_libraries(lld
   lldMinGW
   lldWasm
   )
+
+export_executable_symbols_for_plugins(lld)
 
 if(NOT LLD_SYMLINKS_TO_CREATE)
   set(LLD_SYMLINKS_TO_CREATE
