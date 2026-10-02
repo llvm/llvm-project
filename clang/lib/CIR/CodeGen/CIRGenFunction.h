@@ -36,8 +36,10 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/TypeEvaluationKind.h"
+#include "clang/CodeGenUtils/StmtUtils.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
 
 namespace {
 class ScalarExprEmitter;
@@ -636,6 +638,26 @@ public:
     //
     // Hence each function is 'mustprogress' in C++11 or later.
     return getLangOpts().CPlusPlus11;
+  }
+
+  // [C++26][intro.progress] (DR)
+  // The implementation may assume that any thread will eventually do one of
+  // the following:
+  // [...]
+  // - continue execution of a trivial infinite loop ([stmt.iter.general]).
+  //
+  // A trivial infinite loop with no side effects (e.g. `while (true) {}`)
+  // is therefore exempt from the forward-progress guarantee. If such a loop
+  // is found in a function that was speculatively marked 'mustprogress',
+  // that attribute must be removed: otherwise the optimizer would be
+  // licensed to assume the loop terminates and could delete it.
+  bool checkIfLoopMustProgress(const clang::Expr *controllingExpression,
+                               bool hasEmptyBody) {
+    return clang::CodeGenUtils::checkIfLoopMustProgress(
+        getLangOpts(), cgm.getCodeGenOpts(), getContext(),
+        controllingExpression, hasEmptyBody, [this] {
+          curFn->removeAttr(cir::CIRDialect::getMustProgressAttrName());
+        });
   }
 
   /// True if an insertion point is defined. If not, this indicates that the
@@ -1916,6 +1938,11 @@ public:
                                               bool isDynamic);
 
   int64_t getAccessedFieldNo(unsigned idx, mlir::ArrayAttr elts);
+
+  /// Return the CIR signature of the LLVM intrinsic \p id, resolving its
+  /// overloaded types to \p overloadTys. Integer types are returned signed.
+  cir::FuncType getIntrinsicType(llvm::Intrinsic::ID id,
+                                 llvm::ArrayRef<mlir::Type> overloadTys = {});
 
   /// Emit a simple LLVM intrinsic that takes N scalar arguments.  The intrinsic
   /// name is used verbatim; any overload mangling (e.g. `.f32`, `.p1`) must be
