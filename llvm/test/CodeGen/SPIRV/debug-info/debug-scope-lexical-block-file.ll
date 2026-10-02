@@ -3,8 +3,8 @@
 
 ;; Verify that a DILocation whose scope is a DILexicalBlockFile resolves to the
 ;; underlying DISubprogram's DebugFunction, not to the DebugCompilationUnit.
-;; DILexicalBlockFile is a transparent wrapper (file + discriminator) with no
-;; SPIR-V counterpart and must be unwrapped by resolveScope().
+;; DILexicalBlockFile's SPIR-V counterpart (DebugLexicalBlockDiscriminator)
+;; cannot be used as a scope, so resolveScope() must unwrap it.
 
 ; CHECK-DAG: [[EXT:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK-DAG: [[VOID:%[0-9]+]] = OpTypeVoid
