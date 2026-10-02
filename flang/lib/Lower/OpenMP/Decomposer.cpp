@@ -51,15 +51,21 @@ struct ConstructDecomposition {
   }
 
   // Given an object, return its base object if one exists.
-  std::optional<Object> getBaseObject(const Object &object) {
+  std::optional<Object> getBaseObject(const Object &object) const {
     return lower::omp::getBaseObject(object, semaCtx);
   }
 
   // Return the iteration variable of the associated loop if any.
-  std::optional<Object> getLoopIterVar() {
+  std::optional<Object> getLoopIterVar() const {
     if (semantics::Symbol *symbol = getIterationVariableSymbol(eval))
       return Object{symbol, /*designator=*/{}};
     return std::nullopt;
+  }
+
+  bool isClauseAllowedOnDirective(llvm::omp::Clause clauseId,
+                                  llvm::omp::Directive dirId,
+                                  llvm::omp::Version version) const {
+    return llvm::omp::isAllowedClauseForDirective(dirId, clauseId, version);
   }
 
   semantics::SemanticsContext &semaCtx;
