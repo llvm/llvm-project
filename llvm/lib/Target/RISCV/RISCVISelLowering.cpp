@@ -6541,8 +6541,7 @@ static SDValue lowerVECTOR_SHUFFLEAsPSlide1(ShuffleVectorSDNode *SVN,
   if (ActiveElts == 2) {
     SDValue ScalarVec = DAG.getBitcast(VT, Scalar);
     return DAG.getNode(SlideUp ? RISCVISD::PPAIRE : RISCVISD::PPAIROE, DL, VT,
-                       SlideUp ? ScalarVec : V1,
-                       SlideUp ? V1 : ScalarVec);
+                       SlideUp ? ScalarVec : V1, SlideUp ? V1 : ScalarVec);
   }
 
   // Lower a full-register slide to the funnel shift instruction that
