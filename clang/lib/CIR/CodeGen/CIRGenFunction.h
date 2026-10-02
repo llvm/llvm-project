@@ -38,6 +38,7 @@
 #include "clang/CIR/TypeEvaluationKind.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
 
 namespace {
 class ScalarExprEmitter;
@@ -1916,6 +1917,11 @@ public:
                                               bool isDynamic);
 
   int64_t getAccessedFieldNo(unsigned idx, mlir::ArrayAttr elts);
+
+  /// Return the CIR signature of the LLVM intrinsic \p id, resolving its
+  /// overloaded types to \p overloadTys. Integer types are returned signed.
+  cir::FuncType getIntrinsicType(llvm::Intrinsic::ID id,
+                                 llvm::ArrayRef<mlir::Type> overloadTys = {});
 
   /// Emit a simple LLVM intrinsic that takes N scalar arguments.  The intrinsic
   /// name is used verbatim; any overload mangling (e.g. `.f32`, `.p1`) must be
