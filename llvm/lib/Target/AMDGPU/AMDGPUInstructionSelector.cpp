@@ -877,8 +877,6 @@ bool AMDGPUInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
 
   const TargetRegisterClass *SrcRC =
       TRI.getRegClassForSizeOnBank(SrcSize, *SrcBank);
-  if (!SrcRC || !RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI))
-    return false;
 
   // Note we could have mixed SGPR and VGPR destination banks for an SGPR
   // source, and this relies on the fact that the same subregister indices are
@@ -895,10 +893,11 @@ bool AMDGPUInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
     } else {
       BuildMI(*BB, &MI, DL, TII.get(TargetOpcode::COPY), DstReg)
           .addReg(SrcReg, {}, SubRegs[I]);
+
+      // Make sure the subregister index is valid for the source register.
+      SrcRC = TRI.getSubClassWithSubReg(SrcRC, SubRegs[I]);
     }
 
-    // Make sure the subregister index is valid for the source register.
-    SrcRC = TRI.getSubClassWithSubReg(SrcRC, SubRegs[I]);
     if (!SrcRC || !RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI))
       return false;
 
@@ -1246,9 +1245,10 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
     // FIXME: Manually selecting to avoid dealing with the SReg_1 trick
     // SelectionDAG uses for wave32 vs wave64.
     BuildMI(*BB, &I, I.getDebugLoc(), TII.get(AMDGPU::SI_IF_BREAK))
-      .add(I.getOperand(0))
-      .add(I.getOperand(2))
-      .add(I.getOperand(3));
+        .add(I.getOperand(0))
+        .add(I.getOperand(2))
+        .add(I.getOperand(3))
+        .setOperandDead(3); // implicit-def $scc
 
     Register DstReg = I.getOperand(0).getReg();
     Register Src0Reg = I.getOperand(2).getReg();
@@ -1819,7 +1819,8 @@ bool AMDGPUInstructionSelector::selectEndCfIntrinsic(MachineInstr &MI) const {
   // SelectionDAG uses for wave32 vs wave64.
   MachineBasicBlock *BB = MI.getParent();
   BuildMI(*BB, &MI, MI.getDebugLoc(), TII.get(AMDGPU::SI_END_CF))
-      .add(MI.getOperand(1));
+      .add(MI.getOperand(1))
+      .setOperandDead(2); // implicit-def $scc
 
   Register Reg = MI.getOperand(1).getReg();
   MI.eraseFromParent();
@@ -7221,13 +7222,16 @@ AMDGPUInstructionSelector::selectVOP3PMadMixModsImpl(MachineOperand &Root,
       // Src is now the 32-bit source and op_sel picks its high half.
       Mods |= SISrcMods::OP_SEL_0;
       CheckAbsNeg();
-    } else {
-      // op_sel already picks the low half, so use the 32-bit source directly if
-      // the 16-bit value is the low half of one. Otherwise Src is genuinely 16
-      // bits wide and widenSrcIfVGPR16 widens it when the operand is
-      // rendered.
-      isExtractLoElt(*MRI, Src, Src);
+    } else if (isExtractLoElt(*MRI, Src, Src)) {
+      // op_sel already picks the low half, so the 32-bit source can be used
+      // directly. Unlike the high half, only an fneg/fabs that acts on each
+      // 16-bit element can be folded here: one that acts on the 32-bit value
+      // touches bit 31 and leaves the low half alone.
+      if (MRI->getType(Src).isFixedVector(2, 16))
+        CheckAbsNeg();
     }
+    // Otherwise Src is genuinely 16 bits wide and widenSrcIfVGPR16 widens it
+    // when the operand is rendered.
 
     Matched = true;
   }

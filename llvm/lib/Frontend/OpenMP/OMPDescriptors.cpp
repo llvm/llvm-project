@@ -92,13 +92,13 @@ Clauses descriptor::ModifierSet::getClauses(Version V) const {
   return getClausesOrEmpty(Details, V);
 }
 
-const descriptor::Clause &getDescriptor(llvm::omp::Clause C) {
+const descriptor::Clause &getDescriptor(Clause C) {
   return getClauseMap().at(C);
 }
-const descriptor::Modifier &getDescriptor(llvm::omp::Modifier M) {
+const descriptor::Modifier &getDescriptor(Modifier M) {
   return getModifierMap().at(M);
 }
-const descriptor::ModifierSet &getDescriptor(llvm::omp::ModifierSet S) {
+const descriptor::ModifierSet &getDescriptor(ModifierSet S) {
   return getModifierSetMap().at(S);
 }
 

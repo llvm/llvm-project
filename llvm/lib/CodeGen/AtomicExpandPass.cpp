@@ -106,6 +106,7 @@ private:
   bool tryExpandAtomicStore(StoreInst *SI);
   void expandAtomicStoreToXChg(StoreInst *SI);
   bool tryExpandAtomicRMW(AtomicRMWInst *AI);
+  void expandAtomicSubToAdd(AtomicRMWInst *AI);
   AtomicRMWInst *convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI);
   Value *
   insertRMWLLSCLoop(IRBuilderBase &Builder, Type *ResultTy, Value *Addr,
@@ -246,6 +247,7 @@ static void copyMetadataForAtomic(Instruction &Dest,
     case LLVMContext::MD_tbaa:
     case LLVMContext::MD_tbaa_struct:
     case LLVMContext::MD_alias_scope:
+    case LLVMContext::MD_mem_cache_hint:
     case LLVMContext::MD_noalias:
     case LLVMContext::MD_noalias_addrspace:
     case LLVMContext::MD_access_group:
@@ -759,6 +761,7 @@ StoreInst *AtomicExpandImpl::convertAtomicStoreToIntegerType(StoreInst *SI) {
   Value *Addr = SI->getPointerOperand();
 
   StoreInst *NewSI = Builder.CreateStore(NewVal, Addr, SI->getProperties());
+  copyMetadataForAtomic(*NewSI, *SI);
   LLVM_DEBUG(dbgs() << "Replaced " << *SI << " with " << *NewSI << "\n");
   SI->eraseFromParent();
   return NewSI;
@@ -815,6 +818,28 @@ static void createCmpXchgInstFun(IRBuilderBase &Builder, Value *Addr,
 
   if (NeedBitcast)
     NewLoaded = Builder.CreateBitCast(NewLoaded, OrigTy);
+}
+
+void AtomicExpandImpl::expandAtomicSubToAdd(AtomicRMWInst *AI) {
+  ReplacementIRBuilder Builder(AI, *DL);
+  AtomicRMWInst::BinOp NewOp;
+  Value *NewVal;
+
+  switch (AI->getOperation()) {
+  case AtomicRMWInst::Sub:
+    NewOp = AtomicRMWInst::Add;
+    NewVal = Builder.CreateNeg(AI->getValOperand(), "neg");
+    break;
+  case AtomicRMWInst::FSub:
+    NewOp = AtomicRMWInst::FAdd;
+    NewVal = Builder.CreateFNeg(AI->getValOperand(), "fneg");
+    break;
+  default:
+    llvm_unreachable("unsupported atomicrmw expansion");
+  }
+
+  AI->setOperation(NewOp);
+  AI->setOperand(1, NewVal);
 }
 
 bool AtomicExpandImpl::tryExpandAtomicRMW(AtomicRMWInst *AI) {
@@ -885,6 +910,9 @@ bool AtomicExpandImpl::tryExpandAtomicRMW(AtomicRMWInst *AI) {
     TLI->emitCmpArithAtomicRMWIntrinsic(AI);
     return true;
   }
+  case TargetLoweringBase::AtomicExpansionKind::Expand:
+    expandAtomicSubToAdd(AI);
+    return true;
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
     return lowerAtomicRMWInst(AI);
   case TargetLoweringBase::AtomicExpansionKind::CustomExpand:

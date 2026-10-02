@@ -1746,6 +1746,11 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
     llvmFunc->addFnAttr("disable-tail-calls",
                         llvm::toStringRef(*disableTailCalls));
 
+  if (auto sampleProfileSuffixElisionPolicy =
+          func.getSampleProfileSuffixElisionPolicy())
+    llvmFunc->addFnAttr("sample-profile-suffix-elision-policy",
+                        *sampleProfileSuffixElisionPolicy);
+
   if (auto attr = func.getVscaleRange())
     llvmFunc->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
         getLLVMContext(), attr->getMinRange().getInt(),
@@ -2333,9 +2338,11 @@ ModuleTranslation::getOrCreateAliasScope(AliasScopeAttr aliasScopeAttr) {
   auto [domainIt, insertedDomain] = aliasDomainMetadataMapping.try_emplace(
       aliasScopeAttr.getDomain(), nullptr);
   if (insertedDomain) {
-    llvm::SmallVector<llvm::Metadata *, 2> operands;
+    llvm::SmallVector<llvm::Metadata *, 3> operands;
     // Placeholder for potential self-reference.
     operands.push_back(dummy.get());
+    operands.push_back(
+        llvm::ConstantAsMetadata::get(llvm::ConstantInt::getFalse(ctx)));
     if (StringAttr description = aliasScopeAttr.getDomain().getDescription())
       operands.push_back(llvm::MDString::get(ctx, description));
     domainIt->second = llvm::MDNode::get(ctx, operands);
