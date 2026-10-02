@@ -76,16 +76,3 @@ define void @callsite_noreturn() {
 define void @unreachable() {
   unreachable
 }
-
-; CHECK-NOT: Function Attrs: {{.*}}noreturn
-; CHECK: @coro
-; CHECK: call token @llvm.coro.id.retcon.once({{.*}}ptr null)
-; CHECK: ret void
-define void @coro() presplitcoroutine {
-  call token @llvm.coro.id.retcon.once(i32 0, i32 0, ptr null, ptr @coro, ptr null, ptr null)
-  call void (ptr, i1, ...) @llvm.coro.end(ptr null, i1 false)
-  unreachable
-}
-
-declare token @llvm.coro.id.retcon.once(i32 %size, i32 %align, ptr %buffer, ptr %prototype, ptr %alloc, ptr %free)
-declare void @llvm.coro.end(ptr, i1, ...)

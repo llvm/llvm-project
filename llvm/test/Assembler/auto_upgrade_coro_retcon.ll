@@ -1,11 +1,12 @@
 ; RUN: opt -verify-each -passes='ipsccp' -S %s | FileCheck %s --check-prefix=PRE
-; RUN: opt -verify-each -passes='cgscc(function-attrs),ipsccp' -S %s | FileCheck %s --check-prefixes=PRE,ATTR
 ; RUN: opt -verify-each -passes='thinlto<O2>' -S %s | FileCheck %s --check-prefix=POST
+; RUN: llvm-as %s -o - | llvm-dis -o - | FileCheck %s --check-prefix=PRE
 
 ; An ICP-style direct/indirect call join must retain the direct return pair.
-; The return is represented explicitly, without relying on auto-upgrade.
+; Legacy six-operand IR is upgraded to an explicit return slot, including
+; return-related attributes inferred by an older optimizer.
 
-declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr, ptr)
+declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
 declare void @llvm.coro.end(ptr, i1, token)
@@ -18,15 +19,13 @@ declare void @consume(ptr)
 define internal swiftcc { ptr, ptr } @accessor(ptr noalias %buffer,
                                                 ptr swiftself %object) #0 {
 entry:
-  %coro.ret = alloca { ptr, ptr }
   %id = call token @llvm.coro.id.retcon.once(
-      i32 32, i32 8, ptr %buffer, ptr @resume, ptr @malloc, ptr @free, ptr %coro.ret)
+      i32 32, i32 8, ptr %buffer, ptr @resume, ptr @malloc, ptr @free)
   %frame = call ptr @llvm.coro.begin(token %id, ptr null)
   %field = getelementptr i8, ptr %object, i64 8
   %suspended = call i1 (...) @llvm.coro.suspend.retcon.i1(ptr %field)
   call void @llvm.coro.end(ptr %frame, i1 false, token none)
-  %coro.ret.load = load { ptr, ptr }, ptr %coro.ret
-  ret { ptr, ptr } %coro.ret.load
+  unreachable
 }
 
 define void @caller(ptr %target, ptr %buffer, ptr %object) {
@@ -37,7 +36,7 @@ entry:
 
 direct:
   %direct_pair = call swiftcc { ptr, ptr } @accessor(
-      ptr noalias %buffer, ptr swiftself %object)
+      ptr noalias %buffer, ptr swiftself %object) #1
   br label %join
 
 indirect:
@@ -55,7 +54,6 @@ join:
   ret void
 }
 
-; ATTR: Function Attrs: noinline nounwind presplitcoroutine
 ; PRE-LABEL: define internal swiftcc { ptr, ptr } @accessor(
 ; PRE: %coro.ret = alloca { ptr, ptr }
 ; PRE: call token @llvm.coro.id.retcon.once({{.*}}ptr %coro.ret)
@@ -71,4 +69,5 @@ join:
 ; POST-LABEL: define void @caller(
 ; POST: %pair = phi { ptr, ptr } [ %direct_pair, %direct ], [ %indirect_pair, %indirect ]
 
-attributes #0 = { noinline presplitcoroutine }
+attributes #0 = { noinline noreturn presplitcoroutine }
+attributes #1 = { noreturn }

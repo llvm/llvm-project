@@ -6,7 +6,8 @@ target triple = "x86_64-apple-macosx10.12.0"
 define {ptr, ptr} @f(ptr %buffer, ptr %ptr) presplitcoroutine {
 entry:
   %temp = alloca i32, align 4
-  %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate)
+  %coro.ret = alloca {ptr, ptr}
+  %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate, ptr %coro.ret)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   %oldvalue = load i32, ptr %ptr
   store i32 %oldvalue, ptr %temp
@@ -20,14 +21,16 @@ cont:
 
 cleanup:
   call void @llvm.coro.end(ptr %hdl, i1 0, token none)
-  unreachable
+  %coro.ret.load = load {ptr, ptr}, ptr %coro.ret
+  ret {ptr, ptr} %coro.ret.load
 }
 
 
 define {ptr, ptr} @g(ptr %buffer, ptr %ptr, i8 %val) presplitcoroutine {
 entry:
   %temp = alloca i32, align 4
-  %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype2, ptr @allocate, ptr @deallocate)
+  %coro.ret = alloca {ptr, ptr}
+  %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype2, ptr @allocate, ptr @deallocate, ptr %coro.ret)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   %oldvalue = load i32, ptr %ptr
   store i32 %oldvalue, ptr %temp
@@ -42,14 +45,16 @@ cont:
 cleanup:
   %tok = call token (...) @llvm.coro.end.results(i8 %val)
   call void @llvm.coro.end(ptr %hdl, i1 0, token %tok)
-  unreachable
+  %coro.ret.load = load {ptr, ptr}, ptr %coro.ret
+  ret {ptr, ptr} %coro.ret.load
 }
 
 
 define {ptr, ptr} @h(ptr %buffer, ptr %ptr) presplitcoroutine {
 entry:
   %temp = alloca i32, align 4
-  %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype3, ptr @allocate, ptr @deallocate)
+  %coro.ret = alloca {ptr, ptr}
+  %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype3, ptr @allocate, ptr @deallocate, ptr %coro.ret)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   %oldvalue = load i32, ptr %ptr
   store i32 %oldvalue, ptr %temp
@@ -64,11 +69,12 @@ cont:
 cleanup:
   %tok = call token (...) @llvm.coro.end.results(ptr null, i32 123, ptr @deallocate)
   call void @llvm.coro.end(ptr %hdl, i1 0, token %tok)
-  unreachable
+  %coro.ret.load = load {ptr, ptr}, ptr %coro.ret
+  ret {ptr, ptr} %coro.ret.load
 }
 
 
-declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr)
+declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
 declare void @llvm.coro.end(ptr, i1, token)
