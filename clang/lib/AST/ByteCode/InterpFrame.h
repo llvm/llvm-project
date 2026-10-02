@@ -79,10 +79,8 @@ public:
   /// Returns the current function.
   const Function *getFunction() const { return Func; }
 
-#ifndef NDEBUG
   /// Returns the offset on the stack at which the frame starts.
   size_t getFrameOffset() const { return FrameOffset; }
-#endif
 
   /// Returns the value of a local variable.
   template <typename T> const T &getLocal(unsigned Offset) const {
@@ -216,10 +214,8 @@ private:
   CodePtr RetPC;
   /// Pointer to the arguments in the callee's frame.
   char *Args = nullptr;
-#ifndef NDEBUG
   /// Offset on the stack at entry.
   size_t FrameOffset = 0;
-#endif
   /// The size of all the arguments.
   const unsigned ArgSize;
   /// Depth of this frame.
