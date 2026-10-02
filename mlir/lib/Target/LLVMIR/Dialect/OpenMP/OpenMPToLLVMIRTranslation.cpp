@@ -1386,7 +1386,7 @@ static LogicalResult
 allocReductionVars(T op, ArrayRef<BlockArgument> reductionArgs,
                    llvm::IRBuilderBase &builder,
                    LLVM::ModuleTranslation &moduleTranslation,
-                   llvm::OpenMPIRBuilder::InsertPointTy &allocaIP,
+                   const llvm::OpenMPIRBuilder::InsertPointTy &allocaIP,
                    SmallVectorImpl<omp::DeclareReductionOp> &reductionDecls,
                    SmallVectorImpl<llvm::Value *> &privateReductionVariables,
                    DenseMap<Value, llvm::Value *> &reductionVariableMap,
