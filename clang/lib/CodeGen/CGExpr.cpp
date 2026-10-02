@@ -7286,9 +7286,9 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
       case OO_PipePipe:
       case OO_Comma:
       case OO_ArrowStar:
+      case OO_Subscript:
         Order = EvaluationOrder::ForceLeftToRight;
         break;
-      case OO_Subscript:
       case OO_Call:
         Order = EvaluationOrder::ForceFirstBeforeRest;
         break;

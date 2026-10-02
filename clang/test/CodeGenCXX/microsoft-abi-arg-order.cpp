@@ -84,6 +84,7 @@ struct B {
   ~B();
   int b;
   void operator[](this B self, B i, B j);
+  void operator()(this B self, B i, B j);
 };
 
 void B::operator[](this B self, B i, B j) {
@@ -117,18 +118,18 @@ void call_subscript() {
 // X86-CXX23: %[[argmem:[^ ]*]] = alloca inalloca [[argmem_b]]
 // X86-CXX23: %[[obj:[^ ]*]] = getelementptr inbounds nuw [[argmem_b]], ptr %[[argmem]], i32 0, i32 0
 // X86-CXX23: call x86_thiscallcc noundef ptr @"??0B@@QAE@H@Z"(ptr {{[^,]*}} %[[obj]], i32 noundef 1)
-// X86-CXX23: %[[idx2:[^ ]*]] = getelementptr inbounds nuw [[argmem_b]], ptr %[[argmem]], i32 0, i32 2
-// X86-CXX23: invoke x86_thiscallcc noundef ptr @"??0B@@QAE@H@Z"(ptr {{[^,]*}} %[[idx2]], i32 noundef 3)
-// X86-CXX23: to label %{{[^ ]+}} unwind label %[[OBJ_CLEANUP:[^ ]+]]
 // X86-CXX23: %[[idx1:[^ ]*]] = getelementptr inbounds nuw [[argmem_b]], ptr %[[argmem]], i32 0, i32 1
 // X86-CXX23: invoke x86_thiscallcc noundef ptr @"??0B@@QAE@H@Z"(ptr {{[^,]*}} %[[idx1]], i32 noundef 2)
+// X86-CXX23: to label %{{[^ ]+}} unwind label %[[OBJ_CLEANUP:[^ ]+]]
+// X86-CXX23: %[[idx2:[^ ]*]] = getelementptr inbounds nuw [[argmem_b]], ptr %[[argmem]], i32 0, i32 2
+// X86-CXX23: invoke x86_thiscallcc noundef ptr @"??0B@@QAE@H@Z"(ptr {{[^,]*}} %[[idx2]], i32 noundef 3)
 // X86-CXX23: to label %{{[^ ]+}} unwind label %[[IDX_CLEANUP:[^ ]+]]
 // X86-CXX23: call void @"??AB@@SAX_VU0@00@Z"(ptr inalloca([[argmem_b]]) %[[argmem]])
 // X86-CXX23: ret void
 //
 // X86-CXX23: [[IDX_CLEANUP]]:
 // X86-CXX23: cleanuppad within none []
-// X86-CXX23: call x86_thiscallcc void @"??1B@@QAE@XZ"(ptr {{[^,]*}} %[[idx2]])
+// X86-CXX23: call x86_thiscallcc void @"??1B@@QAE@XZ"(ptr {{[^,]*}} %[[idx1]])
 // X86-CXX23: cleanupret {{.*}} unwind label %[[OBJ_CLEANUP]]
 //
 // X86-CXX23: [[OBJ_CLEANUP]]:
@@ -137,9 +138,9 @@ void call_subscript() {
 
 // X64-CXX23-LABEL: define dso_local void @"?call_subscript@@YAXXZ"()
 // X64-CXX23: call noundef ptr @"??0B@@QEAA@H@Z"(ptr {{[^,]*}} %[[obj:[^,]*]], i32 noundef 1)
-// X64-CXX23: invoke noundef ptr @"??0B@@QEAA@H@Z"(ptr {{[^,]*}} %[[idx2:[^,]*]], i32 noundef 3)
-// X64-CXX23: to label %{{[^ ]+}} unwind label %[[OBJ_CLEANUP:[^ ]+]]
 // X64-CXX23: invoke noundef ptr @"??0B@@QEAA@H@Z"(ptr {{[^,]*}} %[[idx1:[^,]*]], i32 noundef 2)
+// X64-CXX23: to label %{{[^ ]+}} unwind label %[[OBJ_CLEANUP:[^ ]+]]
+// X64-CXX23: invoke noundef ptr @"??0B@@QEAA@H@Z"(ptr {{[^,]*}} %[[idx2:[^,]*]], i32 noundef 3)
 // X64-CXX23: to label %{{[^ ]+}} unwind label %[[IDX_CLEANUP:[^ ]+]]
 // X64-CXX23: call void @"??AB@@SAX_VU0@00@Z"
 // X64-CXX23:       (ptr {{[^,]*}} %[[obj]], ptr {{[^,]*}} %[[idx1]], ptr {{[^,]*}} %[[idx2]])
@@ -147,13 +148,46 @@ void call_subscript() {
 //
 // X64-CXX23: [[IDX_CLEANUP]]:
 // X64-CXX23: cleanuppad within none []
-// X64-CXX23: call void @"??1B@@QEAA@XZ"(ptr {{[^,]*}} %[[idx2]])
+// X64-CXX23: call void @"??1B@@QEAA@XZ"(ptr {{[^,]*}} %[[idx1]])
 // X64-CXX23: cleanupret {{.*}} unwind label %[[OBJ_CLEANUP]]
 //
 // X64-CXX23: [[OBJ_CLEANUP]]:
 // X64-CXX23: cleanuppad within none []
 // X64-CXX23: call void @"??1B@@QEAA@XZ"(ptr {{[^,]*}} %[[obj]])
 
+void call_call() {
+  B(1)(B(2), B(3));
+}
+
+// The call arguments must occupy their declared parameter slots.
+//
+// X86-CXX23-LABEL: define dso_local void @"?call_call@@YAXXZ"()
+// X86-CXX23: %[[argmem:[^ ]*]] = alloca inalloca [[argmem_b]]
+// X86-CXX23: %[[obj:[^ ]*]] = getelementptr inbounds nuw [[argmem_b]], ptr %[[argmem]], i32 0, i32 0
+// X86-CXX23: call x86_thiscallcc noundef ptr @"??0B@@QAE@H@Z"(ptr {{[^,]*}} %[[obj]], i32 noundef 1)
+// X86-CXX23: %[[arg2:[^ ]*]] = getelementptr inbounds nuw [[argmem_b]], ptr %[[argmem]], i32 0, i32 2
+// X86-CXX23: invoke x86_thiscallcc noundef ptr @"??0B@@QAE@H@Z"(ptr {{[^,]*}} %[[arg2]], i32 noundef 3)
+// X86-CXX23: %[[arg1:[^ ]*]] = getelementptr inbounds nuw [[argmem_b]], ptr %[[argmem]], i32 0, i32 1
+// X86-CXX23: invoke x86_thiscallcc noundef ptr @"??0B@@QAE@H@Z"(ptr {{[^,]*}} %[[arg1]], i32 noundef 2)
+// X86-CXX23: call void @"??RB@@SAX_VU0@00@Z"(ptr inalloca([[argmem_b]]) %[[argmem]])
+// X86-CXX23: ret void
+//
+//   ehcleanup:
+// X86-CXX23: cleanuppad within none []
+// X86-CXX23: call x86_thiscallcc void @"??1B@@QAE@XZ"(ptr {{[^,]*}} %[[arg2]])
+// X86-CXX23: cleanupret
+//
+//   ehcleanup4:
+// X86-CXX23: cleanuppad within none []
+// X86-CXX23: call x86_thiscallcc void @"??1B@@QAE@XZ"(ptr {{[^,]*}} %[[obj]])
+
+// X64-CXX23-LABEL: define dso_local void @"?call_call@@YAXXZ"()
+// X64-CXX23: call noundef ptr @"??0B@@QEAA@H@Z"(ptr {{[^,]*}} %[[obj:[^,]*]], i32 noundef 1)
+// X64-CXX23: invoke noundef ptr @"??0B@@QEAA@H@Z"(ptr {{[^,]*}} %[[arg2:[^,]*]], i32 noundef 3)
+// X64-CXX23: invoke noundef ptr @"??0B@@QEAA@H@Z"(ptr {{[^,]*}} %[[arg1:[^,]*]], i32 noundef 2)
+// X64-CXX23: call void @"??RB@@SAX_VU0@00@Z"
+// X64-CXX23:       (ptr {{[^,]*}} %[[obj]], ptr {{[^,]*}} %[[arg1]], ptr {{[^,]*}} %[[arg2]])
+// X64-CXX23: ret void
 struct SizeObject {
   operator SizeObject *();
   int operator[](this SizeObject *const Self

@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -std=c++1z %s -emit-llvm -o - -triple %itanium_abi_triple | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-ITANIUM
 // RUN: %clang_cc1 -std=c++1z %s -emit-llvm -o - -triple i686-windows | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-WINDOWS
 // RUN: %clang_cc1 -std=c++1z %s -emit-llvm -o - -triple x86_64-windows | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-WINDOWS
-// RUN: %clang_cc1 -std=c++23 %s -emit-llvm -o - -triple %itanium_abi_triple | FileCheck %s --check-prefix=CXX23 --check-prefix=CXX23-ITANIUM
-// RUN: %clang_cc1 -std=c++23 %s -emit-llvm -o - -triple i686-windows | FileCheck %s --check-prefix=CXX23 --check-prefix=CXX23-WINDOWS
-// RUN: %clang_cc1 -std=c++23 %s -emit-llvm -o - -triple x86_64-windows | FileCheck %s --check-prefix=CXX23 --check-prefix=CXX23-WINDOWS
+// RUN: %clang_cc1 -std=c++23 %s -emit-llvm -o - -triple %itanium_abi_triple | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-ITANIUM --check-prefix=CXX23 --check-prefix=CXX23-ITANIUM
+// RUN: %clang_cc1 -std=c++23 %s -emit-llvm -o - -triple i686-windows | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-WINDOWS --check-prefix=CXX23 --check-prefix=CXX23-WINDOWS
+// RUN: %clang_cc1 -std=c++23 %s -emit-llvm -o - -triple x86_64-windows | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-WINDOWS --check-prefix=CXX23 --check-prefix=CXX23-WINDOWS
 
 struct B;
 struct A {
@@ -282,9 +282,14 @@ struct D {
 };
 struct E {
   static void operator()(B b, C c);
+  static void operator[](B b, C c);
+};
+struct F {
+  void operator[](B b, C c);
 };
 D make_d();
 E make_e();
+F make_f();
 
 // CXX23-LABEL: define {{.*}}@{{.*}}subscript_object_before_index{{.*}}(
 void subscript_object_before_index() {
@@ -296,12 +301,9 @@ void subscript_object_before_index() {
 
 // CXX23-LABEL: define {{.*}}@{{.*}}subscript_object_before_indices{{.*}}(
 void subscript_object_before_indices() {
-  // The indices can run in either order, so keep the ABI order.
   // CXX23: call {{.*}}@{{.*}}make_d{{.*}}(
-  // CXX23-ITANIUM: call {{.*}}@{{.*}}make_b{{.*}}(
-  // CXX23-ITANIUM: call {{.*}}@{{.*}}make_c{{.*}}(
-  // CXX23-WINDOWS: call {{.*}}@{{.*}}make_c{{.*}}(
-  // CXX23-WINDOWS: call {{.*}}@{{.*}}make_b{{.*}}(
+  // CXX23: call {{.*}}@{{.*}}make_b{{.*}}(
+  // CXX23: call {{.*}}@{{.*}}make_c{{.*}}(
   make_d()[make_b(), make_c()];
 // CXX23: }
 }
@@ -309,13 +311,19 @@ void subscript_object_before_indices() {
 // CXX23-LABEL: define {{.*}}@{{.*}}subscript_object_before_three_indices{{.*}}(
 void subscript_object_before_three_indices() {
   // CXX23: call {{.*}}@{{.*}}make_d{{.*}}(
-  // CXX23-ITANIUM: call {{.*}}@{{.*}}make_b{{.*}}(
-  // CXX23-ITANIUM: call {{.*}}@{{.*}}make_c{{.*}}(
-  // CXX23-ITANIUM: call {{.*}}@{{.*}}make_a{{.*}}(
-  // CXX23-WINDOWS: call {{.*}}@{{.*}}make_a{{.*}}(
-  // CXX23-WINDOWS: call {{.*}}@{{.*}}make_c{{.*}}(
-  // CXX23-WINDOWS: call {{.*}}@{{.*}}make_b{{.*}}(
+  // CXX23: call {{.*}}@{{.*}}make_b{{.*}}(
+  // CXX23: call {{.*}}@{{.*}}make_c{{.*}}(
+  // CXX23: call {{.*}}@{{.*}}make_a{{.*}}(
   make_d()[make_b(), make_c(), make_a()];
+// CXX23: }
+}
+
+// CXX23-LABEL: define {{.*}}@{{.*}}implicit_subscript_object_before_indices{{.*}}(
+void implicit_subscript_object_before_indices() {
+  // CXX23: call {{.*}}@{{.*}}make_f{{.*}}(
+  // CXX23: call {{.*}}@{{.*}}make_b{{.*}}(
+  // CXX23: call {{.*}}@{{.*}}make_c{{.*}}(
+  make_f()[make_b(), make_c()];
 // CXX23: }
 }
 
@@ -338,6 +346,15 @@ void static_operator_object_first() {
   // CXX23-WINDOWS: call {{.*}}@{{.*}}make_c{{.*}}(
   // CXX23-WINDOWS: call {{.*}}@{{.*}}make_b{{.*}}(
   make_e()(make_b(), make_c());
+// CXX23: }
+}
+
+// CXX23-LABEL: define {{.*}}@{{.*}}static_subscript_object_first{{.*}}(
+void static_subscript_object_first() {
+  // CXX23: call {{.*}}@{{.*}}make_e{{.*}}(
+  // CXX23: call {{.*}}@{{.*}}make_b{{.*}}(
+  // CXX23: call {{.*}}@{{.*}}make_c{{.*}}(
+  make_e()[make_b(), make_c()];
 // CXX23: }
 }
 #endif

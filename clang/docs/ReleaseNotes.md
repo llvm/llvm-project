@@ -623,8 +623,9 @@ features cannot lower the translation-unit ABI level;
 
 - Clang now evaluates the object before the arguments of overloaded
   `operator[]` and `operator()` with explicit object parameters on Microsoft
-  ABI targets. Parameter destruction still follows Microsoft ABI order and
-  can differ from reverse construction order.
+  ABI targets. It evaluates multidimensional subscript indices left to right.
+  Parameter destruction still follows Microsoft ABI order and can differ from
+  reverse construction order.
 
 - Fixed lambdas with specifiers or attributes after the capture list being
   misparsed as function declarations in direct-initialization contexts under
