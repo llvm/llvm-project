@@ -359,4 +359,9 @@ def int_dx_store_output
           [llvm_i32_ty /*SigElementId*/, llvm_i32_ty /*RowIndex*/,
            llvm_i8_ty /*ColIndex*/, llvm_any_ty /*Value*/],
           [IntrConvergent]>;
+
+def int_dx_unpack_u8u16 : DefaultAttrsIntrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [llvm_i32_ty], [IntrNoMem]>;
+def int_dx_unpack_u8u32 : DefaultAttrsIntrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
+def int_dx_unpack_s8s16 : DefaultAttrsIntrinsic<[llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i16_ty], [llvm_i32_ty], [IntrNoMem]>;
+def int_dx_unpack_s8s32 : DefaultAttrsIntrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
 }
