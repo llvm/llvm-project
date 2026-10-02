@@ -232,9 +232,9 @@ contains
 
   attributes(host,device) subroutine generic_subroutines(n)
     integer, intent(inout) :: n
-    !ERROR: 'host_subroutine' may not be called in device code
+    !ERROR: 'host_generic' (specific procedure 'host_subroutine') may not be called in device code
     call host_generic(n)
-    !ERROR: 'device_subroutine' may not be called in host code
+    !ERROR: 'device_generic' (specific procedure 'device_subroutine') may not be called in host code
     call device_generic(n)
   end subroutine
 
