@@ -25,6 +25,7 @@
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
@@ -4807,6 +4808,9 @@ static void attachRoutineInfo(mlir::func::FuncOp func,
   func.getOperation()->setAttr(
       mlir::acc::getRoutineInfoAttrName(),
       mlir::acc::RoutineInfoAttr::get(func.getContext(), routines));
+  // The routine is compiled for the device as well, where -fstack-arrays
+  // cannot be honored: record the same policy as for a device procedure.
+  cuf::setDeviceAllocationPolicy(func.getOperation());
 }
 
 static mlir::ArrayAttr
