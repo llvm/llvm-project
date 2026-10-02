@@ -310,13 +310,10 @@ We currently feature 5 implementations:
   header (.h) and native object (.o). The latter is a CPU-based implementation of
   the neural network, together with its weights (essentially, loops performing
   matrix multiplications)
-
-
 - `EmitCModelRunner`. This is another inference implementation. At build time,
   an MLIR pipeline lowers a model expressed in TOSA through EmitC to a C++
   header, which is compiled into LLVM. It does not require TensorFlow at build
   time. See {ref}`embed-tosa-models` for configuration and model selection.
-
 - `InteractiveModelRunner`. This is intended for training scenarios where the
   training algorithm drives compilation. This model runner has no special
   dependencies, and relies on I/O pipes to communicate with a separate process,
@@ -691,14 +688,14 @@ cmake -DLLVM_MLGO_MODELS="size,/absolute/path/to/inliner.mlir,inliner;evict,/abs
 ```
 
 `LLVM_MLGO_MLIR_OPT` and `LLVM_MLGO_MLIR_TRANSLATE` default to `mlir-opt` and
-`mlir-translate`, respectively. Set them to the paths of the built tools when
-using a separate MLIR build.
+`mlir-translate`, respectively. Set these variables to the absolute paths of the built
+tools, as in the example above.
 
 At runtime, select an embedded inliner model with `-mllvm -mlgo-model=<name>`
 and an embedded register allocation eviction model with
 `-mllvm -regalloc-mlgo-model=<name>`. Enable the corresponding release mode
 advisor with `-mllvm -enable-ml-inliner=release` or
-`-mllvm -regalloc-evict-advisor=release`. The `default` model choice uses the
+`-mllvm -regalloc-enable-advisor=release`. The `default` choice uses the
 standard heuristic.
 
 #### Embed TensorFlow Saved Models
@@ -744,7 +741,7 @@ The `InteractiveModelRunner` is available with no extra dependencies. For the
 optimizations that are currently MLGO-enabled, it may be used as follows:
 
 - for inlining: `-mllvm -enable-ml-inliner=release -mllvm -inliner-interactive-channel-base=<name>`
-- for regalloc eviction: `-mllvm -regalloc-evict-advisor=release -mllvm -regalloc-evict-interactive-channel-base=<name>`
+- for regalloc eviction: `-mllvm -regalloc-enable-advisor=release -mllvm -regalloc-evict-interactive-channel-base=<name>`
 
 where the `name` is a path fragment. We will expect to find 2 files,
 `<name>.in` (readable, data incoming from the managing process) and
