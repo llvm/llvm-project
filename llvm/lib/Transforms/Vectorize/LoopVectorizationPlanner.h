@@ -946,10 +946,14 @@ public:
   /// Destroy the cost model.
   void clearCostModel();
 
+  /// Return true if there is at least one VPlan for a vector VF
   bool hasVectorPlan() const {
     return any_of(
         VPlans, [&](const VPlanPtr &Plan) { return !Plan->hasScalarVFOnly(); });
   }
+
+  /// Returns true if there is at least one VPlan.
+  bool hasAPlan() const { return !VPlans.empty(); }
 
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and

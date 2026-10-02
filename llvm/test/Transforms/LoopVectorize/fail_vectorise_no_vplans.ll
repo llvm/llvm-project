@@ -1,15 +1,14 @@
-; REQUIRES: asserts
 ; RUN: opt -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -S -disable-output \
-; RUN:   -debug-only=loop-vectorize %s 2>&1 | FileCheck %s
+; RUN:   -pass-remarks-analysis=loop-vectorize -pass-remarks-missed=loop-vectorize %s 2>&1 | FileCheck %s
 
 ; This is testing that we emit more accurate debug messages when we
 ; fail to vectorize because we didn't create any vector vplans. Essentially,
-; we are doing legalisation in vplan more often for things that used to
+; we are doing legalisation in VPlan more often for things that used to
 ; happen in LoopVectorizationLegality.
 define void @fail_vplan_bad_users_of_for(ptr noalias %A, ptr noalias %B, ptr noalias %C, i64 %n) {
-; CHECK: Checking a loop in 'fail_vplan_bad_users_of_for'
-; CHECK: LV: Not vectorizing: Failed to sink or hoist user of first-order recurrence.
-; CHECK-NEXT: LV: Vectorization is not possible. Failed to create any vector vplans.
+; CHECK: remark: <unknown>:0:0: loop not vectorized: Failed to sink or hoist user of first-order recurrence
+; CHECK: remark: <unknown>:0:0: vectorization is not possible
+; CHECK: remark: <unknown>:0:0: interleaving is not possible
 entry:
   br label %loop
 
