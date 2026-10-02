@@ -5,6 +5,10 @@
 // RUN:   -x hip --offload-arch=gfx1100 -clang:-nogpuinc -clang:-nogpulib \
 // RUN:   /O1 -- %s 2>&1 | FileCheck %s --check-prefix=OS
 
+// RUN: %clang_cl --target=x86_64-unknown-linux-gnu -### /c --offload-new-driver \
+// RUN:   -x hip --offload-arch=gfx1100 -clang:-nogpuinc -clang:-nogpulib \
+// RUN:   /O1 -- %s 2>&1 | FileCheck %s --check-prefix=LINUX
+
 // RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c --offload-new-driver \
 // RUN:   -x hip --offload-arch=gfx1100 -clang:-nogpuinc -clang:-nogpulib \
 // RUN:   /O2 -- %s 2>&1 | FileCheck %s --check-prefix=O3
@@ -40,6 +44,10 @@
 // RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c --no-offload-new-driver \
 // RUN:   -x hip --offload-arch=gfx1100 -clang:-nogpuinc -clang:-nogpulib \
 // RUN:   /O1 -- %s 2>&1 | FileCheck %s --check-prefix=OS
+
+// RUN: %clang_cl --target=x86_64-unknown-linux-gnu -### /c --no-offload-new-driver \
+// RUN:   -x hip --offload-arch=gfx1100 -clang:-nogpuinc -clang:-nogpulib \
+// RUN:   /O1 -- %s 2>&1 | FileCheck %s --check-prefix=LINUX
 
 // RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c --no-offload-new-driver \
 // RUN:   -x hip --offload-arch=gfx1100 -clang:-nogpuinc -clang:-nogpulib \
@@ -77,6 +85,11 @@
 // OS-SAME: "-Os"
 // OS: "-cc1" "-triple" "x86_64-pc-windows-msvc{{[^"]*}}"
 // OS-SAME: "-Os"
+
+// LINUX: "-cc1" "-triple" "amdgpu11.00-amd-amdhsa"
+// LINUX-SAME: "-Os"
+// LINUX: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
+// LINUX-SAME: "-Os"
 
 // O3: "-cc1" "-triple" "amdgpu11.00-amd-amdhsa"
 // O3-SAME: "-O3"

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Driver.h"
+#include "ClangCLArgs.h"
 #include "ToolChains/AIX.h"
 #include "ToolChains/AMDGPU.h"
 #include "ToolChains/AVR.h"
@@ -459,127 +460,14 @@ Arg *clang::driver::makeInputArg(DerivedArgList &Args, const OptTable &Opts,
   return A;
 }
 
-static void translateMSVCOptArg(Arg *A, llvm::opt::DerivedArgList &DAL,
-                                bool SupportsForcingFramePointer,
-                                const char *ExpandChar, const OptTable &Opts) {
-  assert(A->getOption().matches(options::OPT__SLASH_O));
-
-  StringRef OptStr = A->getValue();
-  for (size_t I = 0, E = OptStr.size(); I != E; ++I) {
-    const char &OptChar = *(OptStr.data() + I);
-    switch (OptChar) {
-    default:
-      break;
-    case '1':
-    case '2':
-    case 'x':
-    case 'd':
-      // Ignore /O[12xd] flags that aren't the last one on the command line.
-      // Only the last one gets expanded.
-      if (&OptChar != ExpandChar) {
-        A->claim();
-        break;
-      }
-      if (OptChar == 'd') {
-        DAL.AddFlagArg(A, Opts.getOption(options::OPT_O0));
-      } else {
-        if (OptChar == '1') {
-          DAL.AddJoinedArg(A, Opts.getOption(options::OPT_O), "s");
-        } else if (OptChar == '2' || OptChar == 'x') {
-          DAL.AddFlagArg(A, Opts.getOption(options::OPT_fbuiltin));
-          DAL.AddJoinedArg(A, Opts.getOption(options::OPT_O), "3");
-        }
-        if (SupportsForcingFramePointer &&
-            !DAL.hasArgNoClaim(options::OPT_fno_omit_frame_pointer))
-          DAL.AddFlagArg(A, Opts.getOption(options::OPT_fomit_frame_pointer));
-        if (OptChar == '1' || OptChar == '2')
-          DAL.AddFlagArg(A, Opts.getOption(options::OPT_ffunction_sections));
-      }
-      break;
-    case 'b':
-      if (I + 1 != E && isdigit(OptStr[I + 1])) {
-        switch (OptStr[I + 1]) {
-        case '0':
-          DAL.AddFlagArg(A, Opts.getOption(options::OPT_fno_inline));
-          break;
-        case '1':
-          DAL.AddFlagArg(A,
-                         Opts.getOption(options::OPT_finline_hint_functions));
-          break;
-        case '2':
-        case '3':
-          DAL.AddFlagArg(A, Opts.getOption(options::OPT_finline_functions));
-          break;
-        }
-        ++I;
-      }
-      break;
-    case 'g':
-      A->claim();
-      break;
-    case 'i':
-      if (I + 1 != E && OptStr[I + 1] == '-') {
-        ++I;
-        DAL.AddFlagArg(A, Opts.getOption(options::OPT_fno_builtin));
-      } else {
-        DAL.AddFlagArg(A, Opts.getOption(options::OPT_fbuiltin));
-      }
-      break;
-    case 's':
-      DAL.AddJoinedArg(A, Opts.getOption(options::OPT_O), "s");
-      break;
-    case 't':
-      DAL.AddJoinedArg(A, Opts.getOption(options::OPT_O), "3");
-      break;
-    case 'y': {
-      bool OmitFramePointer = true;
-      if (I + 1 != E && OptStr[I + 1] == '-') {
-        OmitFramePointer = false;
-        ++I;
-      }
-      if (SupportsForcingFramePointer) {
-        if (OmitFramePointer)
-          DAL.AddFlagArg(A, Opts.getOption(options::OPT_fomit_frame_pointer));
-        else
-          DAL.AddFlagArg(A,
-                         Opts.getOption(options::OPT_fno_omit_frame_pointer));
-      } else {
-        // Silently accept /Oy- on x86-64 for portable clang-cl build flags.
-        A->claim();
-      }
-      break;
-    }
-    }
-  }
-}
-
 DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args,
                                            const llvm::Triple &Triple) const {
   const llvm::opt::OptTable &Opts = getOpts();
   DerivedArgList *DAL = new DerivedArgList(Args);
 
-  // Normalize MSVC optimization options before host and device arguments split.
-  bool TranslateMSVCOpts = Triple.isWindowsMSVCEnvironment();
-  // /Oy and /Oy- do not affect the x86-64 host.
-  bool SupportsForcingFramePointer = Triple.getArch() != llvm::Triple::x86_64;
-  // Expand only the last /O[12xd], preserving overrides such as /O2 /Oy-.
-  const char *ExpandChar = nullptr;
-  if (TranslateMSVCOpts) {
-    for (Arg *A : Args.filtered(options::OPT__SLASH_O)) {
-      StringRef OptStr = A->getValue();
-      for (size_t I = 0, E = OptStr.size(); I != E; ++I) {
-        char OptChar = OptStr[I];
-        char PrevChar = I > 0 ? OptStr[I - 1] : '0';
-        if (PrevChar == 'b') {
-          // OptChar does not expand; it's an argument to the previous char.
-          continue;
-        }
-        if (OptChar == '1' || OptChar == '2' || OptChar == 'x' ||
-            OptChar == 'd')
-          ExpandChar = OptStr.data() + I;
-      }
-    }
-  }
+  std::optional<ClangCLArgs> CLArgs;
+  if (IsCLMode())
+    CLArgs.emplace(Args, Triple);
 
   bool HasNostdlib = Args.hasArg(options::OPT_nostdlib);
   bool HasNostdlibxx = Args.hasArg(options::OPT_nostdlibxx);
@@ -598,13 +486,8 @@ DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args,
       continue;
     }
 
-    if (TranslateMSVCOpts && A->getOption().matches(options::OPT__SLASH_O)) {
-      // Keep the original argument for unused-option diagnostics.
-      DAL->append(A);
-      translateMSVCOptArg(A, *DAL, SupportsForcingFramePointer, ExpandChar,
-                          Opts);
+    if (CLArgs && CLArgs->translateArg(A, *DAL))
       continue;
-    }
 
     // Unfortunately, we have to parse some forwarding options (-Xassembler,
     // -Xlinker, -Xpreprocessor) because we either integrate their functionality

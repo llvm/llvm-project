@@ -816,7 +816,8 @@ features cannot lower the translation-unit ABI level;
 #### Miscellaneous Bug Fixes
 
 - Fixed `clang-cl` optimization options such as `/O1`, `/O2`, and
-  `/Ox` being ignored when compiling HIP device code.
+  `/Ox` being ignored when compiling HIP device code or using a non-MSVC
+  host toolchain.
 
 #### Miscellaneous Clang Crashes Fixed
 
