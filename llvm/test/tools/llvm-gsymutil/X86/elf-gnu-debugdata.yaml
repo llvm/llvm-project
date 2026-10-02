@@ -1,11 +1,9 @@
-## Test that llvm-gsymutil reads function symbols from the .gnu_debugdata
-## (MiniDebugInfo) section of a stripped ELF file. The outer object has no
-## .symtab: exported_func comes from .dynsym, and the other two functions come
-## from the xz-compressed object in .gnu_debugdata.
+## Check that llvm-gsymutil reads function symbols from .gnu_debugdata. The
+## file has no .symtab. exported_func is in .dynsym and the other two functions
+## are in the compressed object in .gnu_debugdata.
 ##
-## The .gnu_debugdata content is the object below, built with yaml2obj and then
-## piped through `xz --check=crc32 -9 | xxd -p -u | tr -d '\n'`. Its .text is
-## a NOBITS placeholder: MiniDebugInfo keeps only the symbol table.
+## To regenerate the .gnu_debugdata content, run yaml2obj on the YAML below and
+## pipe the output through `xz --check=crc32 -9 | xxd -p -u | tr -d '\n'`.
 ##
 ##   --- !ELF
 ##   FileHeader:

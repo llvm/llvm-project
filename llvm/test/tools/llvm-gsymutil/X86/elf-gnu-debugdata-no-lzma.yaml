@@ -1,4 +1,5 @@
-## Without LZMA support, warn for .gnu_debugdata but keep the main .symtab.
+## Check that without LZMA support we warn about .gnu_debugdata and still add
+## the .symtab functions.
 
 # REQUIRES: !lzma
 

@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -215,41 +217,67 @@ static Expected<size_t> loadSymbols(const object::ObjectFile &Obj,
   return Gsym.getNumFunctionInfos() - NumBefore;
 }
 
-// MiniDebugInfo omits exported functions, so also read the outer .dynsym. It is
-// supplementary, so bad data is only a warning.
+// Add function symbols from the .gnu_debugdata section (MiniDebugInfo), which
+// contains an xz-compressed ELF file with a .symtab. Errors reading the section
+// are reported as warnings.
 static llvm::Error loadGnuDebugDataSymbols(const object::ELFObjectFileBase &Obj,
                                            OutputAggregator &Out,
                                            GsymCreator &Gsym) {
   using namespace llvm::object;
 
-  if (!Obj.hasGnuDebugDataSection())
+  std::optional<SectionRef> DebugDataSect;
+  for (const SectionRef &Sect : Obj.sections()) {
+    Expected<StringRef> SectNameOrErr = Sect.getName();
+    if (!SectNameOrErr) {
+      consumeError(SectNameOrErr.takeError());
+      continue;
+    }
+    if (*SectNameOrErr == ".gnu_debugdata") {
+      DebugDataSect = Sect;
+      break;
+    }
+  }
+  if (!DebugDataSect)
     return Error::success();
 
-  Expected<size_t> FunctionsAddedCount = loadSymbols(
+  // MiniDebugInfo leaves out symbols that are in .dynsym, so add those too.
+  Expected<size_t> DynFunctionsAdded = loadSymbols(
       Obj, Obj.getDynamicSymbolIterators(), Out, Gsym, /*CopyStrings=*/false);
-  if (!FunctionsAddedCount)
-    return FunctionsAddedCount.takeError();
+  if (!DynFunctionsAdded)
+    return DynFunctionsAdded.takeError();
   if (Out.GetOS())
-    *Out.GetOS() << "Loaded " << *FunctionsAddedCount
+    *Out.GetOS() << "Loaded " << *DynFunctionsAdded
                  << " functions from dynamic symbol table.\n";
 
-  Expected<OwningBinary<ObjectFile>> DebugDataObj =
-      Obj.getGnuDebugDataObjectFile();
-  if (!DebugDataObj) {
-    // Consume the error even when Report() has no output stream.
-    std::string ErrMsg = toString(DebugDataObj.takeError());
+  auto Warn = [&](const Twine &Msg) {
     Out.Report(
         "Failed to load the .gnu_debugdata section", [&](raw_ostream &OS) {
-          OS << "warning: unable to read the .gnu_debugdata section: " << ErrMsg
+          OS << "warning: unable to read the .gnu_debugdata section: " << Msg
              << "\n";
         });
     return Error::success();
-  }
+  };
 
-  // Copy names because the decompressed buffer dies with DebugDataObj.
-  ObjectFile &DebugObj = *DebugDataObj->getBinary();
-  Expected<size_t> DebugFunctionsAdded = loadSymbols(
-      DebugObj, DebugObj.symbols(), Out, Gsym, /*CopyStrings=*/true);
+  if (!compression::xz::isAvailable())
+    return Warn("missing LZMA support (LLVM_ENABLE_LZMA)");
+  Expected<StringRef> Contents = DebugDataSect->getContents();
+  if (!Contents)
+    return Warn(toString(Contents.takeError()));
+  SmallVector<uint8_t, 0> Decompressed;
+  if (Error E = compression::xz::decompress(arrayRefFromStringRef(*Contents),
+                                            Decompressed))
+    return Warn("failed to decompress: " + toString(std::move(E)));
+  Expected<std::unique_ptr<ObjectFile>> DebugObj =
+      ObjectFile::createELFObjectFile(
+          MemoryBufferRef(toStringRef(Decompressed), Obj.getFileName()));
+  if (!DebugObj)
+    return Warn("failed to parse the embedded ELF object: " +
+                toString(DebugObj.takeError()));
+
+  // Decompressed is freed when we return, so the names need to be copied.
+  Expected<size_t> DebugFunctionsAdded =
+      loadSymbols(**DebugObj, (*DebugObj)->symbols(), Out, Gsym,
+                  /*CopyStrings=*/true);
   if (!DebugFunctionsAdded)
     return DebugFunctionsAdded.takeError();
   if (Out.GetOS())
@@ -267,7 +295,6 @@ llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
   Gsym.setUUID(getUUID(Obj));
 
   // Parse the symbol table.
-  // The main object's buffer outlives the conversion; reference names in place.
   Expected<size_t> FunctionsAddedCount =
       loadSymbols(Obj, Obj.symbols(), Out, Gsym, /*CopyStrings=*/false);
   if (!FunctionsAddedCount)

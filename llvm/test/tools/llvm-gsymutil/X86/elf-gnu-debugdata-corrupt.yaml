@@ -1,6 +1,5 @@
-## A corrupt .gnu_debugdata warns without discarding the main .symtab.
-##
-## The content is a valid xz stream header followed by garbage.
+## Check that a corrupt .gnu_debugdata section gives a warning and the .symtab
+## functions are still added. The section is an xz header followed by garbage.
 
 # REQUIRES: lzma
 
