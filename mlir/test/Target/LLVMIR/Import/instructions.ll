@@ -375,6 +375,19 @@ define void @load_store(ptr %ptr) {
 
 ; // -----
 
+; CHECK-LABEL: @range_load
+; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
+define i32 @range_load(ptr %ptr) {
+  ; CHECK:  %[[V:[0-9]+]] = llvm.load %[[PTR]] range <i32, 0, 10> <alignment = 4> : !llvm.ptr -> i32
+  %1 = load i32, ptr %ptr, align 4, !range !0
+  ; CHECK:  llvm.return %[[V]]
+  ret i32 %1
+}
+
+!0 = !{i32 0, i32 10}
+
+; // -----
+
 ; CHECK-LABEL: @invariant_load
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
 define float @invariant_load(ptr %ptr) {

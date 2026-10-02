@@ -921,6 +921,14 @@ verifyAtomicMemOp(OpTy memOp, Type valueType,
 
 LogicalResult LoadOp::verify() {
   Type valueType = getResult().getType();
+  if (ConstantRangeAttr range = getRangeAttr()) {
+    auto intType = dyn_cast<IntegerType>(getElementTypeOrSelf(valueType));
+    if (!intType || intType.getWidth() != range.getLower().getBitWidth())
+      return emitOpError("expected range bitwidth to match the integer "
+                         "(element) result type");
+    if (range.getLower() == range.getUpper())
+      return emitOpError("expected range to be neither empty nor full");
+  }
   return verifyAtomicMemOp(*this, valueType,
                            {AtomicOrdering::release, AtomicOrdering::acq_rel});
 }
@@ -933,7 +941,7 @@ void LoadOp::build(OpBuilder &builder, OperationState &state, Type type,
         alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isVolatile,
         isNonTemporal, isInvariant, isInvariantGroup, ordering,
         syncscope.empty() ? nullptr : builder.getStringAttr(syncscope),
-        /*dereferenceable=*/nullptr,
+        /*dereferenceable=*/nullptr, /*range=*/nullptr,
         /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr,
         /*tbaa=*/nullptr);
