@@ -40,6 +40,7 @@ public:
 
   enum TypeKind {
     KIND_INTEGER,
+    KIND_UNSIGNED,
     KIND_LOGICAL,
     KIND_REAL,
     KIND_COMPLEX,
