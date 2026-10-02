@@ -26,6 +26,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "legalize-types"
 
+static void reportNoLibcall(SelectionDAG &DAG, SDNode *N, EVT VT) {
+  DAG.getContext()->emitError(Twine("no libcall available for ") +
+                              N->getOperationName(&DAG) + " with type " +
+                              VT.getEVTString());
+}
+
 /// GetFPLibCall - Return the right libcall for the given floating point type.
 /// FIXME: This is a local version of RTLIB::getFPLibCall that should be
 ///        refactored away (see RTLIB::getPOWI for an example).
@@ -194,8 +200,7 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
 // No libcall is available to soften this operation. Emit a diagnostic and
 // produce a poison result of the softened type \p NVT.
 SDValue DAGTypeLegalizer::SoftenFloatRes_NoLibcall(SDNode *N, EVT NVT) {
-  DAG.getContext()->emitError(Twine("no libcall available for ") +
-                              N->getOperationName(&DAG));
+  reportNoLibcall(DAG, N, N->getValueType(0));
   if (N->isStrictFPOpcode())
     ReplaceValueWith(SDValue(N, 1), N->getOperand(0));
   return DAG.getPOISON(NVT);
@@ -715,8 +720,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FFREXP(SDNode *N) {
   SDLoc DL(N);
 
   if (LCImpl == RTLIB::Unsupported) {
-    DAG.getContext()->emitError(Twine("no libcall available for ") +
-                                N->getOperationName(&DAG));
+    reportNoLibcall(DAG, N, VT0);
     SDValue PoisonExp = DAG.getPOISON(VT1);
     ReplaceValueWith(SDValue(N, 1), PoisonExp);
     return DAG.getMergeValues({DAG.getPOISON(NVT0), PoisonExp}, DL);
@@ -1160,8 +1164,7 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_FP_ROUND(SDNode *N) {
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
   RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
   if (LCImpl == RTLIB::Unsupported) {
-    DAG.getContext()->emitError(Twine("no libcall available for ") +
-                                N->getOperationName(&DAG));
+    reportNoLibcall(DAG, N, SVT);
     SDValue Poison = DAG.getPOISON(RVT);
     if (IsStrict) {
       ReplaceValueWith(SDValue(N, 1), Chain);
@@ -1247,8 +1250,7 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_FP_TO_XINT(SDNode *N) {
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
   RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
   if (LCImpl == RTLIB::Unsupported) {
-    DAG.getContext()->emitError(Twine("no libcall available for ") +
-                                N->getOperationName(&DAG));
+    reportNoLibcall(DAG, N, SVT);
     SDValue Poison = DAG.getPOISON(RVT);
     if (IsStrict) {
       ReplaceValueWith(SDValue(N, 1), Chain);
@@ -1419,8 +1421,7 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_Unary(SDNode *N, RTLIB::Libcall LC) {
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
   RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
   if (LCImpl == RTLIB::Unsupported) {
-    DAG.getContext()->emitError(Twine("no libcall available for ") +
-                                N->getOperationName(&DAG));
+    reportNoLibcall(DAG, N, N->getOperand(0 + Offset).getValueType());
     SDValue Poison = DAG.getPOISON(N->getValueType(0));
     if (IsStrict) {
       ReplaceValueWith(SDValue(N, 1), Chain);
@@ -1652,8 +1653,7 @@ void DAGTypeLegalizer::ExpandFloatRes_ConstantFP(SDNode *N, SDValue &Lo,
 // Diagnose a missing libcall and produce a poison expanded pair.
 void DAGTypeLegalizer::ExpandFloatRes_NoLibcall(SDNode *N, SDValue &Lo,
                                                 SDValue &Hi) {
-  DAG.getContext()->emitError(Twine("no libcall available for ") +
-                              N->getOperationName(&DAG));
+  reportNoLibcall(DAG, N, N->getValueType(0));
   if (N->isStrictFPOpcode())
     ReplaceValueWith(SDValue(N, 1), N->getOperand(0));
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
@@ -1713,8 +1713,7 @@ void DAGTypeLegalizer::ExpandFloatRes_UnaryWithTwoFPResults(
   assert(!N->isStrictFPOpcode() && "strictfp not implemented");
   SmallVector<SDValue> Results;
   if (!TLI.expandMultipleResultFPLibCall(DAG, LC, N, Results, CallRetResNo)) {
-    DAG.getContext()->emitError(Twine("no libcall available for ") +
-                                N->getOperationName(&DAG));
+    reportNoLibcall(DAG, N, N->getValueType(0));
     EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
     SDValue Poison = DAG.getPOISON(NVT);
     for (unsigned ResNo = 0, E = N->getNumValues(); ResNo != E; ++ResNo)
@@ -2336,8 +2335,7 @@ SDValue DAGTypeLegalizer::ExpandFloatOp_FP_TO_XINT(SDNode *N) {
          "Unsupported FP_TO_XINT!");
   RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
   if (LCImpl == RTLIB::Unsupported) {
-    DAG.getContext()->emitError(Twine("no libcall available for ") +
-                                N->getOperationName(&DAG));
+    reportNoLibcall(DAG, N, Op.getValueType());
     SDValue Poison = DAG.getPOISON(RVT);
     if (IsStrict) {
       ReplaceValueWith(SDValue(N, 1), Chain);
@@ -2427,8 +2425,7 @@ SDValue DAGTypeLegalizer::ExpandFloatOp_XRINT_XROUND(SDNode *N,
   EVT RVT = N->getValueType(0);
   RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
   if (LCImpl == RTLIB::Unsupported) {
-    DAG.getContext()->emitError(Twine("no libcall available for ") +
-                                N->getOperationName(&DAG));
+    reportNoLibcall(DAG, N, N->getOperand(0).getValueType());
     return DAG.getPOISON(RVT);
   }
 
