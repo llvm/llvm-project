@@ -19,12 +19,14 @@ int main(void) {
 #else
 #pragma omp target
   {
+  // CHECK: {{.*}}error_directive.c:[[# @LINE + 1]]:{{[0-9]+}}: Encountered user-directed warning: warning message.
 #pragma omp error at(execution) severity(warning) message("warning message")
   }
 
   // No MESSAGE clause, so the runtime receives a null message pointer.
 #pragma omp target
   {
+  // CHECK: {{.*}}error_directive.c:[[# @LINE + 1]]:{{[0-9]+}}: Encountered user-directed warning.
 #pragma omp error at(execution) severity(warning)
   }
 #endif
@@ -36,6 +38,3 @@ int main(void) {
 // aborts before the buffered stdout is flushed.
 //
 // clang fills in the ident location from the AST, so it is present without -g
-
-// CHECK: {{.*}}error_directive.c:{{[0-9]+}}:{{[0-9]+}}: Encountered user-directed warning: warning message.
-// CHECK: {{.*}}error_directive.c:{{[0-9]+}}:{{[0-9]+}}: Encountered user-directed warning.

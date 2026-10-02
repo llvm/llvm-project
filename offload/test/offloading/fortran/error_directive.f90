@@ -14,11 +14,13 @@ program error_directive
   implicit none
 
   !$omp target
+  ! LOC: {{.*}}error_directive.f90:[[# @LINE + 1]]:{{[0-9]+}}: Encountered user-directed warning: warning message.
   !$omp error at(execution) severity(warning) message("warning message")
   !$omp end target
 
   ! No MESSAGE clause, so the runtime receives a null message pointer.
   !$omp target
+  ! LOC: {{.*}}error_directive.f90:[[# @LINE + 1]]:{{[0-9]+}}: Encountered user-directed warning.
   !$omp error at(execution) severity(warning)
   !$omp end target
 end program error_directive
@@ -29,6 +31,3 @@ end program error_directive
 
 ! NOLOC: OMP: unknown:0:0: Encountered user-directed warning: warning message.
 ! NOLOC: OMP: unknown:0:0: Encountered user-directed warning.
-
-! LOC: {{.*}}error_directive.f90:{{[0-9]+}}:{{[0-9]+}}: Encountered user-directed warning: warning message.
-! LOC: {{.*}}error_directive.f90:{{[0-9]+}}:{{[0-9]+}}: Encountered user-directed warning.
