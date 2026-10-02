@@ -73,12 +73,6 @@ struct L0OptionsTy {
   /// Binary flags.
   L0OptionFlagsTy Flags;
 
-  /// Staging buffer size.
-  size_t StagingBufferSize = L0StagingBufferSize;
-
-  /// Staging buffer count.
-  size_t StagingBufferCount = L0StagingBufferCount;
-
   struct MemPoolConfigTy {
     bool Use;
     int32_t AllocMax;
