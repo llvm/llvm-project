@@ -1001,6 +1001,7 @@ public:
                                 unsigned Opcode1,
                                 const SmallBitVector &OpcodeMask) const;
 
+  /// Enum describing the source/producer of a mask.
   enum class MaskSource {
     /// The operation is unmasked.
     None,
