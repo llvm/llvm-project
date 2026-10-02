@@ -14251,7 +14251,16 @@ void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
     InstructionCost StridedCost =
         getStridedLoadCost(*TTI, StridedLoadTy, VecTy, LI0->getPointerOperand(),
                            CommonAlignment, getCastContextHint(E), CostKind);
-    return StridedCost < CompressedCost;
+    bool PreferStrided = StridedCost < CompressedCost;
+    if (PreferStrided)
+      LLVM_DEBUG({
+        dbgs() << "SLP: Converted TreeEntry at Idx " << E.Idx
+               << " from Compressed Load to Strided Load; "
+               << "StridedCost = " << StridedCost
+               << "; CompressedCost = " << CompressedCost << "\n";
+      });
+
+    return PreferStrided;
   };
 
   if (PreferStridedOverCompressed()) {
