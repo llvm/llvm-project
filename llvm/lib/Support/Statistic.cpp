@@ -64,7 +64,10 @@ namespace {
 /// This class is also used to look up statistic values from applications that
 /// use LLVM.
 class StatisticInfo {
-  std::vector<TrackingStatistic *> Stats;
+  /// Currently enabled statistics.
+  std::vector<TrackingStatistic *> EnabledStats;
+  /// All statistics that have ever been registered.
+  std::vector<TrackingStatistic *> AllStats;
 
   friend void llvm::PrintStatistics();
   friend void llvm::PrintStatistics(raw_ostream &OS);
@@ -78,10 +81,11 @@ public:
   StatisticInfo();
   ~StatisticInfo();
 
-  void addStatistic(TrackingStatistic *S) { Stats.push_back(S); }
+  void registerStatistic(TrackingStatistic *S) { AllStats.push_back(S); }
+  void enableStatistic(TrackingStatistic *S) { EnabledStats.push_back(S); }
 
-  const_iterator begin() const { return Stats.begin(); }
-  const_iterator end() const { return Stats.end(); }
+  const_iterator begin() const { return EnabledStats.begin(); }
+  const_iterator end() const { return EnabledStats.end(); }
   iterator_range<const_iterator> statistics() const {
     return {begin(), end()};
   }
@@ -111,8 +115,15 @@ void TrackingStatistic::RegisterStatistic() {
     // Check Initialized again after acquiring the lock.
     if (Initialized.load(std::memory_order_relaxed))
       return;
+    if (!Registered) {
+      // registerStatistic must be called once for each statistic, regardless
+      // of whether statistics are enabled. Even if statistics are disabled now,
+      // they may be enabled later.
+      SI.registerStatistic(this);
+      Registered = true;
+    }
     if (EnableStats || Enabled)
-      SI.addStatistic(this);
+      SI.enableStatistic(this);
 
     // Remember we have been registered.
     Initialized.store(true, std::memory_order_release);
@@ -132,23 +143,32 @@ StatisticInfo::~StatisticInfo() {
 }
 
 void llvm::EnableStatistics(bool DoPrintOnExit) {
+  if (!AreStatisticsEnabled())
+    ResetStatistics();
   Enabled = true;
   PrintOnExit = DoPrintOnExit;
+}
+
+void llvm::DisableStatistics() {
+  if (AreStatisticsEnabled())
+    ResetStatistics();
+  Enabled = false;
+  PrintOnExit = false;
 }
 
 bool llvm::AreStatisticsEnabled() { return Enabled || EnableStats; }
 
 void StatisticInfo::sort() {
-  llvm::stable_sort(
-      Stats, [](const TrackingStatistic *LHS, const TrackingStatistic *RHS) {
-        if (int Cmp = std::strcmp(LHS->getDebugType(), RHS->getDebugType()))
-          return Cmp < 0;
+  llvm::stable_sort(EnabledStats, [](const TrackingStatistic *LHS,
+                                     const TrackingStatistic *RHS) {
+    if (int Cmp = std::strcmp(LHS->getDebugType(), RHS->getDebugType()))
+      return Cmp < 0;
 
-        if (int Cmp = std::strcmp(LHS->getName(), RHS->getName()))
-          return Cmp < 0;
+    if (int Cmp = std::strcmp(LHS->getName(), RHS->getName()))
+      return Cmp < 0;
 
-        return std::strcmp(LHS->getDesc(), RHS->getDesc()) < 0;
-      });
+    return std::strcmp(LHS->getDesc(), RHS->getDesc()) < 0;
+  });
 }
 
 void StatisticInfo::reset() {
@@ -158,19 +178,19 @@ void StatisticInfo::reset() {
   // again. We're holding the lock so it won't be able to do so until we're
   // finished. Once we've forced it to re-register (after we return), then zero
   // the value.
-  for (auto *Stat : Stats) {
+  for (auto *Stat : AllStats) {
     // Value updates to a statistic that complete before this statement in the
     // iteration for that statistic will be lost as intended.
     Stat->Initialized = false;
     Stat->Value = 0;
   }
 
-  // Clear the registration list and release the lock once we're done. Any
+  // Clear the enabled statistic list and release the lock once we're done. Any
   // pending updates from other threads will safely take effect after we return.
   // That might not be what the user wants if they're measuring a compilation
   // but it's their responsibility to prevent concurrent compilations to make
   // a single compilation measurable.
-  Stats.clear();
+  EnabledStats.clear();
 }
 
 void llvm::PrintStatistics(raw_ostream &OS) {
@@ -178,7 +198,7 @@ void llvm::PrintStatistics(raw_ostream &OS) {
 
   // Figure out how long the biggest Value and Name fields are.
   unsigned MaxDebugTypeLen = 0, MaxValLen = 0;
-  for (TrackingStatistic *Stat : Stats.Stats) {
+  for (TrackingStatistic *Stat : Stats.EnabledStats) {
     MaxValLen = std::max(MaxValLen, (unsigned)utostr(Stat->getValue()).size());
     MaxDebugTypeLen =
         std::max(MaxDebugTypeLen, (unsigned)std::strlen(Stat->getDebugType()));
@@ -192,7 +212,7 @@ void llvm::PrintStatistics(raw_ostream &OS) {
      << "===" << std::string(73, '-') << "===\n\n";
 
   // Print all of the statistics.
-  for (TrackingStatistic *Stat : Stats.Stats)
+  for (TrackingStatistic *Stat : Stats.EnabledStats)
     OS << format("%*" PRIu64 " %-*s - %s\n", MaxValLen, Stat->getValue(),
                  MaxDebugTypeLen, Stat->getDebugType(), Stat->getDesc());
 
@@ -209,7 +229,7 @@ void llvm::PrintStatisticsJSON(raw_ostream &OS) {
   // Print all of the statistics.
   OS << "{\n";
   const char *delim = "";
-  for (const TrackingStatistic *Stat : Stats.Stats) {
+  for (const TrackingStatistic *Stat : Stats.EnabledStats) {
     OS << delim;
     assert(yaml::needsQuotes(Stat->getDebugType()) == yaml::QuotingType::None &&
            "Statistic group/type name is simple.");
@@ -232,7 +252,8 @@ void llvm::PrintStatistics() {
   StatisticInfo &Stats = *StatInfo;
 
   // Statistics not enabled?
-  if (Stats.Stats.empty()) return;
+  if (Stats.EnabledStats.empty())
+    return;
 
   // Get the stream to write to.
   std::unique_ptr<raw_ostream> OutStream = CreateInfoOutputFile();
