@@ -30,7 +30,7 @@ namespace {
 // Return true if the operation is a constant dense element
 // attribute.
 static bool isZeroVectorConstant(Operation *op) {
-  auto constantOp = dyn_cast<arith::ConstantOp>(op);
+  auto constantOp = dyn_cast_if_present<arith::ConstantOp>(op);
   if (!constantOp)
     return false;
 
