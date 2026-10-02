@@ -17506,7 +17506,10 @@ VarDecl *Sema::BuildExceptionDeclaration(Scope *S, TypeSourceInfo *TInfo,
 
   // Reject pointers/refs whose pointee is in a non-default address space.
   // Runtimes cannot perform cross-address-space conversions yet.
-  if (Mode != 0 && BaseType.getAddressSpace() != LangAS::Default) {
+if (Mode != 0 &&
+      (BaseType.getAddressSpace() != LangAS::Default ||
+       (BaseType->isPointerType() &&
+        BaseType->getPointeeType().getAddressSpace() != LangAS::Default))) {
     Diag(Loc, diag::err_throw_or_catch_address_space_qualified_ptr)
         << /*IsCatch=*/1 << /*IsRef=*/(Mode == 2) << ExDeclType;
     Invalid = true;

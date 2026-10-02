@@ -5,9 +5,6 @@
 // has a non-default address space; runtimes don't yet support cross-address-
 // space conversions.
 
-// catch of a reference to a pointer (T*&), are not rejected by the Mode/BaseType
-// check.
-
 using as1_int = int __attribute__((address_space(1)));
 using as1_int_ptr = int * __ptr32;
 
@@ -32,7 +29,7 @@ void test_catch() {
                           // expected-error@-1 {{cannot catch reference with non-default address space}}
   }
   try {
-  } catch (as1_int_ptr &p) { // ok: reference to pointer; BaseType is the pointer type (default AS)
+  } catch (as1_int_ptr &p) { // expected-error {{cannot catch reference with non-default address space}}
   }
   try {
   } catch (int &p) { // ok
