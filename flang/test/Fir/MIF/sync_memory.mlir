@@ -4,9 +4,9 @@
     %0 = fir.dummy_scope : !fir.dscope
     %1 = fir.address_of(@_QFEerror_message) : !fir.ref<!fir.char<1,128>>
     %c128 = arith.constant 128 : index
-    %2:2 = hlfir.declare %1 typeparams %c128 {uniq_name = "_QFEerror_message"} : (!fir.ref<!fir.char<1,128>>, index) -> (!fir.ref<!fir.char<1,128>>, !fir.ref<!fir.char<1,128>>)
+    %2:2 = hlfir.declare %1 typeparams %c128 uniq_name("_QFEerror_message") : (!fir.ref<!fir.char<1,128>>, index) -> (!fir.ref<!fir.char<1,128>>, !fir.ref<!fir.char<1,128>>)
     %3 = fir.alloca i32 {bindc_name = "sync_status", uniq_name = "_QFEsync_status"}
-    %4:2 = hlfir.declare %3 {uniq_name = "_QFEsync_status"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %4:2 = hlfir.declare %3 uniq_name("_QFEsync_status") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     mif.sync_memory : () -> ()
     mif.sync_memory stat %4#0 : (!fir.ref<i32>) -> ()
     %5 = fir.embox %2#0 : (!fir.ref<!fir.char<1,128>>) -> !fir.box<!fir.char<1,128>>
@@ -21,8 +21,8 @@
   }
 
 
-// CHECK: %[[ERRMSG:.*]]:2 = hlfir.declare %[[E:.*]] typeparams %[[C_128:.*]] {uniq_name = "_QFEerror_message"} : (!fir.ref<!fir.char<1,128>>, index) -> (!fir.ref<!fir.char<1,128>>, !fir.ref<!fir.char<1,128>>)
-// CHECK: %[[STAT:.*]]:2 = hlfir.declare %[[S:.*]] {uniq_name = "_QFEsync_status"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK: %[[ERRMSG:.*]]:2 = hlfir.declare %[[E:.*]] typeparams %[[C_128:.*]] uniq_name("_QFEerror_message") : (!fir.ref<!fir.char<1,128>>, index) -> (!fir.ref<!fir.char<1,128>>, !fir.ref<!fir.char<1,128>>)
+// CHECK: %[[STAT:.*]]:2 = hlfir.declare %[[S:.*]] uniq_name("_QFEsync_status") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 // CHECK: %[[VAL_1:.*]] = fir.absent !fir.box<!fir.char<1,?>>
 // CHECK: %[[VAL_2:.*]] = fir.absent !fir.ref<i32>
