@@ -20,8 +20,8 @@ let Predicates = [HasStdExtZvzip], ElementsDependOn = EltDepsNone in {
   def VZIP_VV : VALUVV<0b111110, OPMVV, "vzip.vv">;
 
   let ReadsPastVL = 1 in {
-    def VUNZIPE_V : VALUVs2NoVm<0b010010, 0b01011, OPMVV, "vunzipe.v">;
-    def VUNZIPO_V : VALUVs2NoVm<0b010010, 0b01111, OPMVV, "vunzipo.v">;
+    def VUNZIPE_V : VALUVs2<0b010010, 0b01011, OPMVV, "vunzipe.v">;
+    def VUNZIPO_V : VALUVs2<0b010010, 0b01111, OPMVV, "vunzipo.v">;
   }
 
   let Constraints = "@earlyclobber $vd", VS1VS2Constraint = Vrgather in {
@@ -96,12 +96,18 @@ multiclass VPseudoVZIP {
 multiclass VPseudoVUNZIP {
   foreach m = MxListW in {
     defvar wm = !cast<LMULInfo>("V_" # octuple_to_str<!shl(m.octuple, 1)>.ret);
+    defvar constraint = !if(!ge(m.octuple, 8), "@earlyclobber $rd", "");
     let VLMul = m.value in {
-      def "_V_" # m.MX : VPseudoUnaryNoMask<m.vrclass, wm.vrclass,
-                            !if(!ge(m.octuple, 8), "@earlyclobber $rd", ""),
-                            TargetConstraintType=2>,
-                          SchedUnary<"WriteVIALUV", "ReadVIALUV", m.MX,
-                                      forcePassthruRead=true>;
+      def "_V_" # m.MX : VPseudoUnaryNoMask<m.vrclass, wm.vrclass, constraint,
+                                            TargetConstraintType=2>,
+                         SchedUnary<"WriteVIALUV", "ReadVIALUV", m.MX,
+                                    forcePassthruRead=true>;
+      def "_V_" # m.MX # "_MASK"
+          : VPseudoUnaryMask<m.vrclass, wm.vrclass, constraint,
+                             TargetConstraintType=2>,
+            RISCVMaskedPseudo<MaskIdx=2>,
+            SchedUnary<"WriteVIALUV", "ReadVIALUV", m.MX,
+                       forcePassthruRead=true>;
     }
   }
 }
@@ -126,6 +132,9 @@ multiclass VPatVUnzipIntrinsic<string intrinsic_name,
       def : VPatUnaryNoMask<intrinsic_name, instruction_name, "V",
                             vti.Vector, wti.Vector, vti.Log2SEW,
                             vti.LMul, vti.RegClass, wti.RegClass>;
+      def : VPatUnaryMask<intrinsic_name, instruction_name, "V",
+                          vti.Vector, wti.Vector, vti.Mask, vti.Log2SEW,
+                          vti.LMul, vti.RegClass, wti.RegClass>;
     }
   }
 }
@@ -163,11 +172,13 @@ def SDT_RISCVZip_VL : SDTypeProfile<1, 5, [SDTCisVec<0>, SDTCisVec<1>,
                                            SDTCisSameNumEltsAs<0, 4>,
                                            SDTCisVT<5, XLenVT>]>;
 
-// (vd (op vs2, passthru, vl))
-def SDT_RISCVUnzip_VL : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisVec<1>,
+// (vd (op vs2, passthru, mask, vl))
+def SDT_RISCVUnzip_VL : SDTypeProfile<1, 4, [SDTCisVec<0>, SDTCisVec<1>,
                                              SDTCisSubVecOfVec<0, 1>,
                                              SDTCisSameAs<0, 2>,
-                                             SDTCisVT<3, XLenVT>]>;
+                                             SDTCVecEltisVT<3, i1>,
+                                             SDTCisSameNumEltsAs<0, 3>,
+                                             SDTCisVT<4, XLenVT>]>;
 
 def SDT_RISCVVecBinOp_VL : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
                                                 SDTCisSameAs<0, 2>,
@@ -207,9 +218,9 @@ multiclass VPatVUNZIP<SDPatternOperator op, string instruction_name> {
     defvar vti = VtiToWti.Vti;
     defvar wti = VtiToWti.Wti;
     let append Predicates = GetVTypeMinimalPredicates<vti>.Predicates in {
-      def : VPatUnaryVLNoMask_V<op, instruction_name, "V",
-                                vti.Vector, wti.Vector, vti.Log2SEW,
-                                vti.LMul, vti.RegClass, wti.RegClass>;
+      def : VPatUnaryVL_V<op, instruction_name, "V",
+                          vti.Vector, wti.Vector, vti.Mask, vti.Log2SEW,
+                          vti.LMul, vti.RegClass, wti.RegClass>;
     }
   }
 }

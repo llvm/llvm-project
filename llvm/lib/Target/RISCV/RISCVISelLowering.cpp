@@ -5930,7 +5930,8 @@ static SDValue lowerZvzipVUNZIP(unsigned Opc, SDValue Op, const SDLoc &DL,
   MVT HalfIntVT = IntVT.getHalfNumVectorElementsVT();
   SDValue VL = getDefaultVLOps(HalfIntVT, ResVT, DL, DAG, Subtarget).second;
   SDValue Passthru = DAG.getUNDEF(ResVT);
-  SDValue Res = DAG.getNode(Opc, DL, ResVT, Op, Passthru, VL);
+  SDValue Res = DAG.getNode(Opc, DL, ResVT, Op, Passthru,
+                            getAllOnesMask(ResVT, VL, DL, DAG), VL);
   if (HalfIntVT.isFixedLengthVector())
     Res = convertFromScalableVector(HalfIntVT, Res, DAG, Subtarget);
   Res = DAG.getBitcast(HalfVT, Res);
