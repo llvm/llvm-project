@@ -15,7 +15,7 @@ namespace orc_rt {
 Error registerSocketConnector(ConnectorRegistry &R) noexcept {
   return R.registerConnector(
       "socket",
-      [](const ConnectionSpec &, Session &, BootstrapInfo) noexcept -> Error {
+      [](const ConnectionSpec &, Session &, BootstrapInfo &&) noexcept -> Error {
         return make_error<StringError>("socket connector not implemented");
       });
 }
