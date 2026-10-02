@@ -410,7 +410,8 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                             SmallVectorImpl<MCFixup> &Fixups,
                                             const MCSubtargetInfo &STI) const {
   int Opcode = MI.getOpcode();
-  if (Opcode == AMDGPU::S_BRANCH_LONG || Opcode == AMDGPU::S_CBRANCH_LONG) {
+  if (Opcode == AMDGPU::S_BRANCH_long_pseudo ||
+      Opcode == AMDGPU::S_CBRANCH_long_pseudo) {
     expandLongBranch(MI, CB, Fixups, STI);
     return;
   }
@@ -507,16 +508,16 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
   }
 }
 
-// Expand S_BRANCH_LONG or S_CBRANCH_LONG, created by branch relaxation, into an
-// s_add_pc_i64 with a 32-bit literal, optionally preceded by an inverted short
-// branch that skips over it. s_add_pc_i64 sign-extends the literal, so this can
-// reach +/-2GB, which is assumed to be enough for any branch within a single
-// code object.
+// Expand S_BRANCH_long_pseudo or S_CBRANCH_long_pseudo, created by branch
+// relaxation, into an s_add_pc_i64 with a 32-bit literal, optionally preceded
+// by an inverted short branch that skips over it. s_add_pc_i64 sign-extends the
+// literal, so this can reach +/-2GB, which is assumed to be enough for any
+// branch within a single code object.
 void AMDGPUMCCodeEmitter::expandLongBranch(const MCInst &MI,
                                            SmallVectorImpl<char> &CB,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
-  bool IsCond = MI.getOpcode() == AMDGPU::S_CBRANCH_LONG;
+  bool IsCond = MI.getOpcode() == AMDGPU::S_CBRANCH_long_pseudo;
   unsigned AddPCOpc = MI.getOperand(IsCond ? 1 : 0).getImm();
   const MCExpr *Target = MI.getOperand(IsCond ? 2 : 1).getExpr();
 

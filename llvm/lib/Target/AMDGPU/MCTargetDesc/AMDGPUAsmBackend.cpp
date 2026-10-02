@@ -61,8 +61,8 @@ struct LongBranchInfo {
 
 } // End anonymous namespace
 
-// Get the information needed to relax a short branch into S_BRANCH_LONG or
-// S_CBRANCH_LONG on subtargets with FeatureUseAddPC64Inst.
+// Get the information needed to relax a short branch into S_BRANCH_long_pseudo
+// or S_CBRANCH_long_pseudo on subtargets with FeatureUseAddPC64Inst.
 static std::optional<LongBranchInfo> getLongBranchInfo(unsigned Opcode) {
   switch (Opcode) {
   case AMDGPU::S_BRANCH_gfx12:
@@ -117,10 +117,10 @@ void AMDGPUAsmBackend::relaxInstruction(MCInst &Inst,
     assert(Info && "unexpected instruction to relax");
     MCInst Res;
     if (Info->SkipOpc) {
-      Res.setOpcode(AMDGPU::S_CBRANCH_LONG);
+      Res.setOpcode(AMDGPU::S_CBRANCH_long_pseudo);
       Res.addOperand(MCOperand::createImm(Info->SkipOpc));
     } else {
-      Res.setOpcode(AMDGPU::S_BRANCH_LONG);
+      Res.setOpcode(AMDGPU::S_BRANCH_long_pseudo);
     }
     Res.addOperand(MCOperand::createImm(Info->AddPCOpc));
     Res.addOperand(Inst.getOperand(0));

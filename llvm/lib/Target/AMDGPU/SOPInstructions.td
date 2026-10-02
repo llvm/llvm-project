@@ -1653,20 +1653,20 @@ defm S_CBRANCH_CDBGUSER : SOPP_With_Relaxation <
 // the MC opcode of s_add_pc_i64 and $skip_opc is the MC opcode of the short
 // branch with the inverted condition. They are encoded as:
 //
-// S_BRANCH_LONG:
+// S_BRANCH_long_pseudo:
 //   s_add_pc_i64 $target   ; 32-bit literal
 //
-// S_CBRANCH_LONG:
+// S_CBRANCH_long_pseudo:
 //   $skip_opc 2
 //   s_add_pc_i64 $target   ; 32-bit literal
 let isBranch = 1, isTerminator = 1 in {
-def S_BRANCH_LONG : PseudoInstSI <(outs),
+def S_BRANCH_long_pseudo : PseudoInstSI <(outs),
   (ins i32imm:$add_pc_opc, SOPPBrTarget:$target)> {
   let isBarrier = 1;
   let Size = 8;
 }
 
-def S_CBRANCH_LONG : PseudoInstSI <(outs),
+def S_CBRANCH_long_pseudo : PseudoInstSI <(outs),
   (ins i32imm:$skip_opc, i32imm:$add_pc_opc, SOPPBrTarget:$target)> {
   let Size = 12;
 }
