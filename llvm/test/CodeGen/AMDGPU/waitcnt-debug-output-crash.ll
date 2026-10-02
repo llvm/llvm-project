@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -debug-only si-insert-waitcnts < %s 2>&1 | FileCheck %s
+; RUN: llc -mtriple=amdgpu12.50 -debug-only si-insert-waitcnts < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK: Begin Block: bb.0.bb

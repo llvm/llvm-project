@@ -1,9 +1,9 @@
 // REQUIRES: amdgpu-registered-target
 // REQUIRES: spirv-registered-target
-// RUN: %clang_cc1 -triple amdgcn -target-cpu gfx900 -ast-dump -ast-dump-decl-types %s | FileCheck %s --strict-whitespace
-// RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1201 -ast-dump -ast-dump-decl-types %s | FileCheck %s --strict-whitespace
+// RUN: %clang_cc1 -triple amdgpu9.00 -ast-dump -ast-dump-decl-types %s | FileCheck %s --strict-whitespace
+// RUN: %clang_cc1 -triple amdgpu12.01 -ast-dump -ast-dump-decl-types %s | FileCheck %s --strict-whitespace
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -ast-dump -ast-dump-decl-types %s | FileCheck %s --strict-whitespace
-// RUN: %clang_cc1 -triple x86_64 -aux-triple amdgcn -ast-dump -ast-dump-decl-types %s | FileCheck %s --strict-whitespace
+// RUN: %clang_cc1 -triple x86_64 -aux-triple amdgpu -ast-dump -ast-dump-decl-types %s | FileCheck %s --strict-whitespace
 // RUN: %clang_cc1 -triple x86_64 -aux-triple spirv64-amd-amdhsa -ast-dump -ast-dump-decl-types %s | FileCheck %s --strict-whitespace
 
 __attribute__((device)) auto foo() {

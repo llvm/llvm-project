@@ -36,6 +36,7 @@
 #include "lldb/lldb-private-enumerations.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -584,6 +585,14 @@ bool Type::WriteToMemory(ExecutionContext *exe_ctx, lldb::addr_t addr,
 const Declaration &Type::GetDeclaration() const { return m_decl; }
 
 bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
+  if (m_resolving_compiler_type) {
+    LLDB_LOG(GetLog(LLDBLog::Symbols),
+             "Cycle detected while resolving type {0:x} ({1})", GetID(),
+             m_name.AsCString("<anonymous>"));
+    return false;
+  }
+  llvm::SaveAndRestore<bool> guard(m_resolving_compiler_type, true);
+
   // TODO: This needs to consider the correct type system to use.
   Type *encoding_type = nullptr;
   if (!m_compiler_type.IsValid()) {
@@ -1192,9 +1201,9 @@ bool TypeImpl::GetDescription(lldb_private::Stream &strm,
   ModuleSP module_sp;
   if (CheckModule(module_sp)) {
     if (m_dynamic_type.IsValid()) {
-      strm.Printf("Dynamic:\n");
+      strm.PutCString("Dynamic:\n");
       m_dynamic_type.DumpTypeDescription(&strm);
-      strm.Printf("\nStatic:\n");
+      strm.PutCString("\nStatic:\n");
     }
     m_static_type.DumpTypeDescription(&strm);
   } else {
@@ -1206,7 +1215,7 @@ bool TypeImpl::GetDescription(lldb_private::Stream &strm,
 CompilerType TypeImpl::FindDirectNestedType(llvm::StringRef name) {
   if (name.empty())
     return CompilerType();
-  return GetCompilerType(/*prefer_dynamic=*/false)
+  return GetCompilerType(/*prefer_dynamic=*/true)
       .GetDirectNestedTypeWithName(name);
 }
 

@@ -1,7 +1,7 @@
-; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri | FileCheck -check-prefixes=GCN,HSA,COV5 %s
-; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri | FileCheck -check-prefixes=GCN,HSA,COV5 %s
-; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri | FileCheck -check-prefixes=GCN,HSA,COV4 %s
-; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti | FileCheck -check-prefixes=GCN,MESA %s
+; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | llc -mtriple=amdgpu7.00-amd-amdhsa | FileCheck -check-prefixes=GCN,HSA,COV5 %s
+; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -mtriple=amdgpu7.00-amd-amdhsa | FileCheck -check-prefixes=GCN,HSA,COV5 %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgpu7.00-amd-amdhsa | FileCheck -check-prefixes=GCN,HSA,COV4 %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgpu6.00-mesa-mesa3d | FileCheck -check-prefixes=GCN,MESA %s
 
 ; GCN-LABEL: {{^}}kernel_implicitarg_ptr_empty:
 

@@ -865,8 +865,8 @@ define half @caller_half_return_stack2(half %x, half %y) nounwind {
   ; RV32I-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
   ; RV32I-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
   ; RV32I-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
-  ; RV32I-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH3C00
-  ; RV32I-NEXT:   [[C1:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH4200
+  ; RV32I-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 1.000000e+00
+  ; RV32I-NEXT:   [[C1:%[0-9]+]]:_(s16) = G_FCONSTANT half 3.000000e+00
   ; RV32I-NEXT:   ADJCALLSTACKDOWN 4, 0, implicit-def $x2, implicit $x2
   ; RV32I-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s16)
   ; RV32I-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[C]](s16)
@@ -905,8 +905,8 @@ define half @caller_half_return_stack2(half %x, half %y) nounwind {
   ; RV32IF-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
   ; RV32IF-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $f11_f
   ; RV32IF-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
-  ; RV32IF-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH3C00
-  ; RV32IF-NEXT:   [[C1:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH4200
+  ; RV32IF-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 1.000000e+00
+  ; RV32IF-NEXT:   [[C1:%[0-9]+]]:_(s16) = G_FCONSTANT half 3.000000e+00
   ; RV32IF-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV32IF-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s16)
   ; RV32IF-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[C]](s16)
@@ -940,8 +940,8 @@ define half @caller_half_return_stack2(half %x, half %y) nounwind {
   ; RV32IZFH-NEXT: {{  $}}
   ; RV32IZFH-NEXT:   [[COPY:%[0-9]+]]:_(s16) = COPY $f10_h
   ; RV32IZFH-NEXT:   [[COPY1:%[0-9]+]]:_(s16) = COPY $f11_h
-  ; RV32IZFH-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH3C00
-  ; RV32IZFH-NEXT:   [[C1:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH4200
+  ; RV32IZFH-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 1.000000e+00
+  ; RV32IZFH-NEXT:   [[C1:%[0-9]+]]:_(s16) = G_FCONSTANT half 3.000000e+00
   ; RV32IZFH-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV32IZFH-NEXT:   $f10_h = COPY [[COPY]](s16)
   ; RV32IZFH-NEXT:   $f11_h = COPY [[C]](s16)
@@ -967,8 +967,8 @@ define half @caller_half_return_stack2(half %x, half %y) nounwind {
   ; RV64I-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s64)
   ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
   ; RV64I-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s64)
-  ; RV64I-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH3C00
-  ; RV64I-NEXT:   [[C1:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH4200
+  ; RV64I-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 1.000000e+00
+  ; RV64I-NEXT:   [[C1:%[0-9]+]]:_(s16) = G_FCONSTANT half 3.000000e+00
   ; RV64I-NEXT:   ADJCALLSTACKDOWN 8, 0, implicit-def $x2, implicit $x2
   ; RV64I-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[TRUNC]](s16)
   ; RV64I-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s16)
@@ -1007,8 +1007,8 @@ define half @caller_half_return_stack2(half %x, half %y) nounwind {
   ; RV64IF-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
   ; RV64IF-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $f11_f
   ; RV64IF-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
-  ; RV64IF-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH3C00
-  ; RV64IF-NEXT:   [[C1:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH4200
+  ; RV64IF-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 1.000000e+00
+  ; RV64IF-NEXT:   [[C1:%[0-9]+]]:_(s16) = G_FCONSTANT half 3.000000e+00
   ; RV64IF-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV64IF-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s16)
   ; RV64IF-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[C]](s16)
@@ -1042,8 +1042,8 @@ define half @caller_half_return_stack2(half %x, half %y) nounwind {
   ; RV64IZFH-NEXT: {{  $}}
   ; RV64IZFH-NEXT:   [[COPY:%[0-9]+]]:_(s16) = COPY $f10_h
   ; RV64IZFH-NEXT:   [[COPY1:%[0-9]+]]:_(s16) = COPY $f11_h
-  ; RV64IZFH-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH3C00
-  ; RV64IZFH-NEXT:   [[C1:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH4200
+  ; RV64IZFH-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 1.000000e+00
+  ; RV64IZFH-NEXT:   [[C1:%[0-9]+]]:_(s16) = G_FCONSTANT half 3.000000e+00
   ; RV64IZFH-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV64IZFH-NEXT:   $f10_h = COPY [[COPY]](s16)
   ; RV64IZFH-NEXT:   $f11_h = COPY [[C]](s16)

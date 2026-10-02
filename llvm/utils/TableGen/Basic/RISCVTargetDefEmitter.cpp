@@ -49,7 +49,7 @@ static void printExtensionTable(raw_ostream &OS,
   OS << "};\n";
 }
 
-static void emitExtensionTable(std::vector<const Record *> &Extensions,
+static void emitExtensionTable(ArrayRef<const Record *> Extensions,
                                raw_ostream &OS) {
   IfDefEmitter IfDef(OS, "GET_SUPPORTED_EXTENSIONS");
   if (!Extensions.empty()) {
@@ -58,7 +58,7 @@ static void emitExtensionTable(std::vector<const Record *> &Extensions,
   }
 }
 
-static void emitImpliedExtensionTable(std::vector<const Record *> &Extensions,
+static void emitImpliedExtensionTable(ArrayRef<const Record *> Extensions,
                                       raw_ostream &OS) {
   IfDefEmitter IfDef(OS, "GET_IMPLIED_EXTENSIONS");
 

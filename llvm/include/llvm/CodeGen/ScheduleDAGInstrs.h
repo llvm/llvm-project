@@ -15,10 +15,9 @@
 #define LLVM_CODEGEN_SCHEDULEDAGINSTRS_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseMultiSet.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
@@ -28,7 +27,6 @@
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
-#include <list>
 #include <string>
 #include <utility>
 #include <vector>
@@ -46,6 +44,7 @@ namespace llvm {
   class PressureDiffs;
   class PseudoSourceValue;
   class RegPressureTracker;
+  class ScheduleDAGDependencyBuilder;
   class UndefValue;
   class Value;
 
@@ -104,15 +103,7 @@ namespace llvm {
 
   using ValueType = PointerUnion<const Value *, const PseudoSourceValue *>;
 
-  struct UnderlyingObject : PointerIntPair<ValueType, 1, bool> {
-    UnderlyingObject(ValueType V, bool MayAlias)
-        : PointerIntPair<ValueType, 1, bool>(V, MayAlias) {}
-
-    ValueType getValue() const { return getPointer(); }
-    bool mayAlias() const { return getInt(); }
-  };
-
-  using UnderlyingObjectsVector = SmallVector<UnderlyingObject, 4>;
+  using UnderlyingObjectsVector = SmallVector<ValueType, 4>;
 
   /// A ScheduleDAG for scheduling lists of MachineInstr.
   class LLVM_ABI ScheduleDAGInstrs : public ScheduleDAG {
@@ -176,23 +167,11 @@ namespace llvm {
     /// Tracks the last instructions in this region using each virtual register.
     VReg2SUnitOperIdxMultiMap CurrentVRegUses;
 
-    mutable std::optional<BatchAAResults> AAForDep;
-
-    /// Remember a generic side-effecting instruction as we proceed.
-    /// No other SU ever gets scheduled around it (except in the special
-    /// case of a huge region that gets reduced).
-    SUnit *BarrierChain = nullptr;
-
     SmallVector<ClusterInfo> Clusters;
 
-  public:
-    /// A list of SUnits, used in Value2SUsMap, during DAG construction.
-    /// Note: to gain speed it might be worth investigating an optimized
-    /// implementation of this data structure, such as a singly linked list
-    /// with a memory pool (SmallVector was tried but slow and SparseSet is not
-    /// applicable).
-    using SUList = std::list<SUnit *>;
+    friend class ScheduleDAGDependencyBuilder;
 
+  public:
     /// The direction that should be used to dump the scheduled Sequence.
     enum DumpDirection {
       TopDown,
@@ -205,59 +184,6 @@ namespace llvm {
 
   protected:
     DumpDirection DumpDir = NotSet;
-
-    /// A map from ValueType to SUList, used during DAG construction, as
-    /// a means of remembering which SUs depend on which memory locations.
-    class Value2SUsMap;
-
-    /// Returns a (possibly null) pointer to the current BatchAAResults.
-    BatchAAResults *getAAForDep() const {
-      if (AAForDep.has_value())
-        return &AAForDep.value();
-      return nullptr;
-    }
-
-    /// Reduces maps in FIFO order, by N SUs. This is better than turning
-    /// every Nth memory SU into BarrierChain in buildSchedGraph(), since
-    /// it avoids unnecessary edges between seen SUs above the new BarrierChain,
-    /// and those below it.
-    void reduceHugeMemNodeMaps(Value2SUsMap &stores,
-                               Value2SUsMap &loads, unsigned N);
-
-    /// Adds a chain edge between SUa and SUb, but only if both
-    /// AAResults and Target fail to deny the dependency.
-    void addChainDependency(SUnit *SUa, SUnit *SUb,
-                            unsigned Latency = 0);
-
-    /// Adds dependencies as needed from all SUs in list to SU.
-    void addChainDependencies(SUnit *SU, SUList &SUs, unsigned Latency) {
-      for (SUnit *Entry : SUs)
-        addChainDependency(SU, Entry, Latency);
-    }
-
-    /// Adds dependencies as needed from all SUs in map, to SU.
-    void addChainDependencies(SUnit *SU, Value2SUsMap &Val2SUsMap);
-
-    /// Adds dependencies as needed to SU, from all SUs mapped to V.
-    void addChainDependencies(SUnit *SU, Value2SUsMap &Val2SUsMap,
-                              ValueType V);
-
-    /// Adds barrier chain edges from all SUs in map, and then clear the map.
-    /// This is equivalent to insertBarrierChain(), but optimized for the common
-    /// case where the new BarrierChain (a global memory object) has a higher
-    /// NodeNum than all SUs in map. It is assumed BarrierChain has been set
-    /// before calling this.
-    void addBarrierChain(Value2SUsMap &map);
-
-    /// Inserts a barrier chain in a huge region, far below current SU.
-    /// Adds barrier chain edges from all SUs in map with higher NodeNums than
-    /// this new BarrierChain, and remove them from map. It is assumed
-    /// BarrierChain has been set before calling this.
-    void insertBarrierChain(Value2SUsMap &map);
-
-    /// For an unanalyzable memory access, this Value is used in maps.
-    UndefValue *UnknownValue;
-
 
     /// Topo - A topological ordering for SUnits which permits fast IsReachable
     /// and similar queries.

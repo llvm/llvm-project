@@ -656,12 +656,12 @@ void FuchsiaHandleChecker::reportBug(SymbolRef Sym, ExplodedNode *ErrorNode,
       const Stmt *S = AcquireNode->getStmtForDiagnostics();
       assert(S && "Statement cannot be null.");
       PathDiagnosticLocation LocUsedForUniqueing =
-          PathDiagnosticLocation::createBegin(
-              S, C.getSourceManager(), AcquireNode->getLocationContext());
+          PathDiagnosticLocation::createBegin(S, C.getSourceManager(),
+                                              AcquireNode->getStackFrame());
 
       R = std::make_unique<PathSensitiveBugReport>(
           Type, Msg, ErrorNode, LocUsedForUniqueing,
-          AcquireNode->getLocationContext()->getDecl());
+          AcquireNode->getStackFrame()->getDecl());
     }
   }
   if (!R)

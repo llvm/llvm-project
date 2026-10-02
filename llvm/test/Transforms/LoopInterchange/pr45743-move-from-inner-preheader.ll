@@ -3,8 +3,20 @@
 
 @global = external local_unnamed_addr global [400 x [400 x i32]], align 16
 
-; We need to move %mul from the inner loop pre header to the outer loop header
+; We need to move %add from the inner loop pre header to the outer loop header
 ; before interchanging.
+;
+; outer_red = 0;
+; for (i = 0; i < 391; i++) {
+;   add = i + 9;
+;   inner_red = outer_red;
+;   for (j = 0; j < 400; j++) {
+;     global[j][add] = 0;
+;     inner_red |= 20;
+;   }
+;   outer_red = inner_red;
+; }
+;
 define void @test1() local_unnamed_addr #0 {
 ; CHECK-LABEL: define void @test1() local_unnamed_addr {
 ; CHECK-NEXT:  [[BB:.*:]]
@@ -36,7 +48,7 @@ define void @test1() local_unnamed_addr #0 {
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[INNER]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nsw i64 [[OUTER_IV]], 1
-; CHECK-NEXT:    [[EC_2:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], 400
+; CHECK-NEXT:    [[EC_2:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], 391
 ; CHECK-NEXT:    br i1 [[EC_2]], label %[[INNER_SPLIT]], label %[[OUTER_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -50,13 +62,13 @@ outer.header:                                              ; preds = %bb11, %bb
   br label %inner.ph
 
 inner.ph:                                              ; preds = %bb1
-  %mul = add nsw i64 %outer.iv, 9
+  %add = add nsw i64 %outer.iv, 9
   br label %inner
 
 inner:                                              ; preds = %bb5, %bb3
   %inner.iv = phi i64 [ 0, %inner.ph ], [ %inner.iv.next, %inner ]
   %inner.red = phi i32 [ %outer.red, %inner.ph ], [ %red.next, %inner ]
-  %ptr = getelementptr inbounds [400 x [400 x i32]], ptr @global, i64 0, i64 %inner.iv, i64 %mul
+  %ptr = getelementptr inbounds [400 x [400 x i32]], ptr @global, i64 0, i64 %inner.iv, i64 %add
   store i32 0, ptr %ptr
   %red.next = or i32 %inner.red, 20
   %inner.iv.next = add nsw i64 %inner.iv, 1
@@ -66,7 +78,7 @@ inner:                                              ; preds = %bb5, %bb3
 outer.latch:                                             ; preds = %bb5
   %red.next.lcssa = phi i32 [ %red.next, %inner ]
   %outer.iv.next = add nsw i64 %outer.iv, 1
-  %ec.2 = icmp eq i64 %outer.iv.next, 400
+  %ec.2 = icmp eq i64 %outer.iv.next, 391
   br i1 %ec.2, label %exit, label %outer.header
 
 exit:                                             ; preds = %bb11
@@ -77,6 +89,19 @@ declare void @side_effect()
 
 ; Cannot interchange, as the inner loop preheader contains a call to a function
 ; with side effects.
+;
+; outer_red = 0;
+; for (i = 0; i < 391; i++) {
+;   add = i + 9;
+;   side_effect();
+;   inner_red = outer_red;
+;   for (j = 0; j < 400; j++) {
+;     global[j][add] = 0;
+;     inner_red |= 20;
+;   }
+;   outer_red = inner_red;
+; }
+;
 
 define void @test2() {
 ; CHECK-LABEL: define void @test2() {
@@ -102,7 +127,7 @@ define void @test2() {
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[RED_NEXT_LCSSA]] = phi i32 [ [[RED_NEXT]], %[[INNER]] ]
 ; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nsw i64 [[OUTER_IV]], 1
-; CHECK-NEXT:    [[EC_2:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], 400
+; CHECK-NEXT:    [[EC_2:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], 391
 ; CHECK-NEXT:    br i1 [[EC_2]], label %[[EXIT:.*]], label %[[OUTER_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -116,14 +141,14 @@ outer.header:                                              ; preds = %bb11, %bb
   br label %inner.ph
 
 inner.ph:                                              ; preds = %bb1
-  %mul = add nsw i64 %outer.iv, 9
+  %add = add nsw i64 %outer.iv, 9
   call void @side_effect()
   br label %inner
 
 inner:                                              ; preds = %bb5, %bb3
   %inner.iv = phi i64 [ 0, %inner.ph ], [ %inner.iv.next, %inner ]
   %inner.red = phi i32 [ %outer.red, %inner.ph ], [ %red.next, %inner ]
-  %ptr = getelementptr inbounds [400 x [400 x i32]], ptr @global, i64 0, i64 %inner.iv, i64 %mul
+  %ptr = getelementptr inbounds [400 x [400 x i32]], ptr @global, i64 0, i64 %inner.iv, i64 %add
   store i32 0, ptr %ptr
   %red.next = or i32 %inner.red, 20
   %inner.iv.next = add nsw i64 %inner.iv, 1
@@ -133,7 +158,7 @@ inner:                                              ; preds = %bb5, %bb3
 outer.latch:                                             ; preds = %bb5
   %red.next.lcssa = phi i32 [ %red.next, %inner ]
   %outer.iv.next = add nsw i64 %outer.iv, 1
-  %ec.2 = icmp eq i64 %outer.iv.next, 400
+  %ec.2 = icmp eq i64 %outer.iv.next, 391
   br i1 %ec.2, label %exit, label %outer.header
 
 exit:                                             ; preds = %bb11

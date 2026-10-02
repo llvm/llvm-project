@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(canonicalize{test-convergence}))' -split-input-file | FileCheck %s
 
+
 func.func @single_iteration_some(%A: memref<?x?x?xi32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -1109,6 +1110,47 @@ func.func @while_move_if_down() -> i32 {
 
 // -----
 
+// The same scf.if result may be forwarded to several scf.condition operands.
+// Every corresponding after-region argument must receive the *then* value,
+// while the while op's results receive the *else* value.
+
+// CHECK-LABEL: @while_move_if_down_duplicate_forward
+func.func @while_move_if_down_duplicate_forward() -> i32 {
+  %0:2 = scf.while () : () -> (i32, i32) {
+    %else_value = "test.get_some_value0" () : () -> (i32)
+    %condition = "test.condition"() : () -> i1
+    %res = scf.if %condition -> (i32) {
+      %then_value = "test.get_some_value1" () : () -> (i32)
+      scf.yield %then_value : i32
+    } else {
+      scf.yield %else_value : i32
+    }
+    scf.condition(%condition) %res, %res : i32, i32
+  } do {
+  ^bb0(%first: i32, %second: i32):
+    "test.use0" (%first) : (i32) -> ()
+    "test.use1" (%second) : (i32) -> ()
+    scf.yield
+  }
+  return %0#1 : i32
+}
+// CHECK:           %[[WHILE_RES:.*]] = scf.while : () -> i32 {
+// CHECK:             %[[else_value:.*]] = "test.get_some_value0"() : () -> i32
+// CHECK:             %[[condition:.*]] = "test.condition"() : () -> i1
+// The while result is the else value.
+// CHECK:             scf.condition(%[[condition]]) %[[else_value]] : i32
+// CHECK:           } do {
+// CHECK:           ^bb0(%{{.*}}: i32):
+// CHECK:             %[[then_value:.*]] = "test.get_some_value1"() : () -> i32
+// Both forwarded positions must observe the then value, not the else value.
+// CHECK:             "test.use0"(%[[then_value]]) : (i32) -> ()
+// CHECK:             "test.use1"(%[[then_value]]) : (i32) -> ()
+// CHECK:             scf.yield
+// CHECK:           }
+// CHECK:           return %[[WHILE_RES]] : i32
+
+// -----
+
 // CHECK-LABEL: @while_cond_true
 func.func @while_cond_true() -> i1 {
   %0 = scf.while () : () -> i1 {
@@ -1750,11 +1792,11 @@ func.func @func_execute_region_inline_multi_yield() {
 module {
 func.func private @foo()->()
 func.func private @execute_region_yeilding_external_value() -> memref<1x60xui8> {
-  %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>  
-  %1 = scf.execute_region -> memref<1x60xui8> no_inline {    
+  %alloc = memref.alloc() alignment = 64 : memref<1x60xui8>
+  %1 = scf.execute_region -> memref<1x60xui8> no_inline {
     func.call @foo():()->()
     scf.yield %alloc: memref<1x60xui8>
-  }  
+  }
   return %1 : memref<1x60xui8>
 }
 }
@@ -1766,19 +1808,19 @@ func.func private @execute_region_yeilding_external_value() -> memref<1x60xui8> 
 // Remove just this operand from the op results.
 
 // CHECK:           %[[VAL_1:.*]] = scf.execute_region -> memref<1x120xui8> no_inline {
-// CHECK:             %[[VAL_2:.*]] = memref.alloc() {alignment = 64 : i64} : memref<1x120xui8>
+// CHECK:             %[[VAL_2:.*]] = memref.alloc() alignment = 64 : memref<1x120xui8>
 // CHECK:             func.call @foo() : () -> ()
 // CHECK:             scf.yield %[[VAL_2]] : memref<1x120xui8>
 // CHECK:           }
 module {
 func.func private @foo()->()
 func.func private @execute_region_yeilding_external_and_local_values() -> (memref<1x60xui8>, memref<1x120xui8>) {
-  %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>  
-  %1, %2 = scf.execute_region -> (memref<1x60xui8>, memref<1x120xui8>) no_inline {    
-    %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<1x120xui8>
+  %alloc = memref.alloc() alignment = 64 : memref<1x60xui8>
+  %1, %2 = scf.execute_region -> (memref<1x60xui8>, memref<1x120xui8>) no_inline {
+    %alloc_1 = memref.alloc() alignment = 64 : memref<1x120xui8>
     func.call @foo():()->()
     scf.yield %alloc, %alloc_1: memref<1x60xui8>,  memref<1x120xui8>
-  }  
+  }
   return %1, %2 : memref<1x60xui8>, memref<1x120xui8>
 }
 }
@@ -1801,18 +1843,18 @@ func.func private @execute_region_yeilding_external_and_local_values() -> (memre
 module {
   func.func private @foo()->()
   func.func private @execute_region_multiple_yields_same_operands() -> (memref<1x60xui8>, memref<1x120xui8>) {
-    %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>  
-    %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<1x120xui8>  
+    %alloc = memref.alloc() alignment = 64 : memref<1x60xui8>
+    %alloc_1 = memref.alloc() alignment = 64 : memref<1x120xui8>
     %1, %2 = scf.execute_region -> (memref<1x60xui8>, memref<1x120xui8>) no_inline {
       %c = "test.cmp"() : () -> i1
       cf.cond_br %c, ^bb2, ^bb3
-    ^bb2:    
+    ^bb2:
       func.call @foo():()->()
       scf.yield %alloc, %alloc_1 : memref<1x60xui8>, memref<1x120xui8>
-    ^bb3: 
-      func.call @foo():()->()   
+    ^bb3:
+      func.call @foo():()->()
       scf.yield %alloc, %alloc_1 : memref<1x60xui8>, memref<1x120xui8>
-    }  
+    }
     return %1, %2 : memref<1x60xui8>, memref<1x120xui8>
   }
 }
@@ -1831,19 +1873,19 @@ module {
 module {
   func.func private @foo()->()
   func.func private @execute_region_multiple_yields_different_operands() -> (memref<1x60xui8>, memref<1x120xui8>) {
-    %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>  
-    %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<1x120xui8>  
-    %alloc_2 = memref.alloc() {alignment = 64 : i64} : memref<1x120xui8>  
+    %alloc = memref.alloc() alignment = 64 : memref<1x60xui8>
+    %alloc_1 = memref.alloc() alignment = 64 : memref<1x120xui8>
+    %alloc_2 = memref.alloc() alignment = 64 : memref<1x120xui8>
     %1, %2 = scf.execute_region -> (memref<1x60xui8>, memref<1x120xui8>) no_inline {
       %c = "test.cmp"() : () -> i1
       cf.cond_br %c, ^bb2, ^bb3
-    ^bb2:    
+    ^bb2:
       func.call @foo():()->()
       scf.yield %alloc, %alloc_1 : memref<1x60xui8>, memref<1x120xui8>
-    ^bb3: 
-      func.call @foo():()->()   
+    ^bb3:
+      func.call @foo():()->()
       scf.yield %alloc, %alloc_2 : memref<1x60xui8>, memref<1x120xui8>
-    }  
+    }
     return %1, %2 : memref<1x60xui8>, memref<1x120xui8>
   }
 }
@@ -1863,18 +1905,18 @@ module {
 module {
 func.func private @foo()->()
 func.func private @execute_region_multiple_yields_different_operands() -> (memref<1x60xui8>) {
-  %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>  
-  %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>   
+  %alloc = memref.alloc() alignment = 64 : memref<1x60xui8>
+  %alloc_1 = memref.alloc() alignment = 64 : memref<1x60xui8>
   %1 = scf.execute_region -> (memref<1x60xui8>) no_inline {
     %c = "test.cmp"() : () -> i1
     cf.cond_br %c, ^bb2, ^bb3
-  ^bb2:    
+  ^bb2:
     func.call @foo():()->()
     scf.yield %alloc : memref<1x60xui8>
-  ^bb3:    
+  ^bb3:
     func.call @foo():()->()
     scf.yield %alloc_1 : memref<1x60xui8>
-  }    
+  }
   return %1 : memref<1x60xui8>
 }
 }
@@ -2128,7 +2170,7 @@ module {
       %4 = affine.min #map2(%arg3)[%dim, %arg0]
       %extracted_slice0 = tensor.extract_slice %arg4[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
       %extracted_slice1 = tensor.extract_slice %arg5[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
-      %5 = linalg.exp ins(%extracted_slice0 : tensor<?xf32>) outs(%extracted_slice1 : tensor<?xf32>) -> tensor<?xf32>
+      %5 = linalg.elementwise <exp> ins(%extracted_slice0 : tensor<?xf32>) outs(%extracted_slice1 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %5 into %arg5[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
       }
@@ -2142,7 +2184,7 @@ module {
 //  CHECK-SAME:                       shared_outs(%[[ITER_ARG_5:.*]] = %[[ARG2]]) -> (tensor<?xf32>) {
 //       CHECK:      %[[OPERAND0:.*]] = tensor.extract_slice %[[ARG1]]
 //       CHECK:      %[[OPERAND1:.*]] = tensor.extract_slice %[[ITER_ARG_5]]
-//       CHECK:      %[[ELEM:.*]] = linalg.exp ins(%[[OPERAND0]] : tensor<?xf32>) outs(%[[OPERAND1]] : tensor<?xf32>) -> tensor<?xf32>
+//       CHECK:      %[[ELEM:.*]] = linalg.elementwise <exp> ins(%[[OPERAND0]] : tensor<?xf32>) outs(%[[OPERAND1]] : tensor<?xf32>) -> tensor<?xf32>
 //       CHECK:      scf.forall.in_parallel {
 //  CHECK-NEXT:         tensor.parallel_insert_slice %[[ELEM]] into %[[ITER_ARG_5]]
 //  CHECK-NEXT:      }
@@ -2168,7 +2210,7 @@ module {
       %extracted_slice_0 = tensor.extract_slice %arg6[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
       %extracted_slice_1 = tensor.extract_slice %arg7[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
       %extracted_slice_2 = tensor.extract_slice %0[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
-      %5 = linalg.exp ins(%extracted_slice : tensor<?xf32>) outs(%extracted_slice_1 : tensor<?xf32>) -> tensor<?xf32>
+      %5 = linalg.elementwise <exp> ins(%extracted_slice : tensor<?xf32>) outs(%extracted_slice_1 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %5 into %arg6[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
         tensor.parallel_insert_slice %extracted_slice into %arg5[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
@@ -2185,7 +2227,7 @@ module {
 //  CHECK-SAME:                       shared_outs(%[[ITER_ARG_6:.*]] = %[[ARG2]]) -> (tensor<?xf32>) {
 //       CHECK:      %[[OPERAND0:.*]] = tensor.extract_slice %[[ARG1]]
 //       CHECK:      %[[OPERAND1:.*]] = tensor.extract_slice %[[ARG3]]
-//       CHECK:      %[[ELEM:.*]] = linalg.exp ins(%[[OPERAND0]] : tensor<?xf32>) outs(%[[OPERAND1]] : tensor<?xf32>) -> tensor<?xf32>
+//       CHECK:      %[[ELEM:.*]] = linalg.elementwise <exp> ins(%[[OPERAND0]] : tensor<?xf32>) outs(%[[OPERAND1]] : tensor<?xf32>) -> tensor<?xf32>
 //       CHECK:      scf.forall.in_parallel {
 //  CHECK-NEXT:         tensor.parallel_insert_slice %[[ELEM]] into %[[ITER_ARG_6]]
 //  CHECK-NEXT:      }
@@ -2267,7 +2309,7 @@ func.func @scf_for_all_step_size_0()  {
 //       CHECK:   scf.index_switch %[[arg0]]
 //       CHECK:   case 1 {
 //       CHECK:     memref.store %[[c10]]
-//       CHECK:   } 
+//       CHECK:   }
 //       CHECK:   default {
 //       CHECK:     memref.store %[[c11]]
 //       CHECK:   }

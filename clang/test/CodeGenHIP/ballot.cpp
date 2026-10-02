@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -aux-triple x86_64-pc-windows-msvc -target-cpu gfx900 -x hip -emit-llvm -fcuda-is-device -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -aux-triple x86_64-pc-windows-msvc -target-cpu gfx900 -x hip -S -fcuda-is-device -o - %s | FileCheck %s --check-prefix=GFX9
+// RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -aux-triple x86_64-pc-windows-msvc -x hip -emit-llvm -fcuda-is-device -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -aux-triple x86_64-pc-windows-msvc -x hip -S -fcuda-is-device -o - %s | FileCheck %s --check-prefix=GFX9
 
 // Unlike OpenCL, HIP depends on the C++ interpration of "unsigned long", which
 // is 64 bits long on Linux and 32 bits long on Windows. The return type of the

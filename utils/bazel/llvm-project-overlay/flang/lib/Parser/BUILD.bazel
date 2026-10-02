@@ -1,0 +1,38 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+cc_library(
+    name = "FortranParser",
+    srcs = glob([
+        "*.cpp",
+        "*.h",
+    ]),
+    # openacc-parsers.cpp and unparse.cpp include "llvm/Frontend/OpenACC/ACC.inc"
+    # directly. ACC.inc lives in `srcs` of //llvm:FrontendOpenACC (not `hdrs`),
+    # so Clang's layering_check rejects it as a private header from outside its
+    # module. Disable the check on this target — the dependency on
+    # //llvm:FrontendOpenACC is still correct, just the strict module
+    # boundary doesn't apply.
+    features = ["-layering_check"],
+    deps = [
+        "//flang:CommonHeaders",
+        "//flang:ParserHeaders",
+        "//flang:SupportHeaders",
+        "//flang/lib/Support:FortranSupport",
+        "//llvm:FrontendOpenACC",
+        "//llvm:FrontendOpenMP",
+        "//llvm:Support",
+    ],
+)

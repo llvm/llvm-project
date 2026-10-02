@@ -10,9 +10,9 @@ declare void @bar(ptr, [2 x i128])
 define void @foo(ptr %v) #0 {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast ppc_fp128 0xM403B0000000000000000000000000000 to i128
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast ppc_fp128 2.700000e+01 to i128
 ; CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [2 x i128] poison, i128 [[TMP0]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast ppc_fp128 0xM4093B400000000000000000000000000 to i128
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast ppc_fp128 1.261000e+03 to i128
 ; CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue [2 x i128] [[DOTFCA_0_INSERT]], i128 [[TMP1]], 1
 ; CHECK-NEXT:    call void @bar(ptr [[V:%.*]], [2 x i128] [[DOTFCA_1_INSERT]])
 ; CHECK-NEXT:    ret void

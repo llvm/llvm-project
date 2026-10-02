@@ -1,12 +1,12 @@
 set(
   LLVM_LINK_COMPONENTS
   Core
+  FrontendOpenMP
   Support
 )
 
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-
 add_clang_library(clangCIR
+  CIRDataLayoutSpec.cpp
   CIRGenerator.cpp
   CIRGenAsm.cpp
   CIRGenAtomic.cpp
@@ -14,6 +14,7 @@ add_clang_library(clangCIR
   CIRGenBuiltin.cpp
   CIRGenBuiltinAArch64.cpp
   CIRGenBuiltinAMDGPU.cpp
+  CIRGenBuiltinNVPTX.cpp
   CIRGenAMDGPU.cpp
   CIRGenBuiltinRISCV.cpp
   CIRGenBuiltinX86.cpp
@@ -38,35 +39,48 @@ add_clang_library(clangCIR
   CIRGenExprScalar.cpp
   CIRGenFunction.cpp
   CIRGenItaniumCXXABI.cpp
+  CIRGenMicrosoftCXXABI.cpp
   CIRGenModule.cpp
   CIRGenOpenACC.cpp
   CIRGenOpenACCClause.cpp
   CIRGenOpenACCRecipe.cpp
   CIRGenOpenMPClause.cpp
+  CIRGenOpenMPRuntime.cpp
   CIRGenPointerAuth.cpp
   CIRGenRecordLayoutBuilder.cpp
   CIRGenStmt.cpp
   CIRGenStmtOpenACC.cpp
   CIRGenStmtOpenACCLoop.cpp
   CIRGenStmtOpenMP.cpp
+  CIRGenSYCL.cpp
   CIRGenTypes.cpp
   CIRGenVTables.cpp
   TargetInfo.cpp
+  Targets/AArch64.cpp
   Targets/AMDGPU.cpp
+  Targets/NVPTX.cpp
+  Targets/SPIRV.cpp
 
   DEPENDS
   MLIRCIR
   MLIRCIROpInterfacesIncGen
-  ${dialect_libs}
 
   LINK_LIBS
   clangAST
   clangBasic
+  clangCodeGenUtils
   clangLex
-  ${dialect_libs}
+  CIRRegisterAllDialects
   CIROpenACCSupport
   CIROpenMPSupport
+  MLIRArithDialect
   MLIRCIR
   MLIRCIRInterfaces
+  MLIRDLTIDialect
+  MLIRLLVMDialect
+  MLIROpenACCDialect
+  MLIROpenMPDialect
+  MLIROpenMPUtils
+  MLIRPtrMemorySpaceInterfaces
   MLIRTargetLLVMIRImport
 )

@@ -4,8 +4,8 @@
 define i1 @or_eq_0(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @or_eq_0(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[X]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %red = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> %x)
@@ -16,8 +16,8 @@ define i1 @or_eq_0(<4 x i32> %x) {
 define i1 @or_ne_0(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @or_ne_0(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[X]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %red = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> %x)
@@ -124,8 +124,8 @@ define i1 @and_sgt_m2(<4 x i32> %x) {
 define i1 @umax_eq_0(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @umax_eq_0(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RED]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[X]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %red = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> %x)
@@ -136,8 +136,8 @@ define i1 @umax_eq_0(<4 x i32> %x) {
 define i1 @umax_ne_0(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @umax_ne_0(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[RED]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[X]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %red = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> %x)
@@ -220,8 +220,8 @@ define i1 @umin_sgt_m1(<4 x i32> %x) {
 define i1 @or_eq_0_i8(<16 x i8> %x) {
 ; CHECK-LABEL: define i1 @or_eq_0_i8(
 ; CHECK-SAME: <16 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.vector.reduce.umax.v16i8(<16 x i8> [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <16 x i8> [[X]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v16i1(<16 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %red = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> %x)
@@ -232,8 +232,8 @@ define i1 @or_eq_0_i8(<16 x i8> %x) {
 define i1 @or_eq_0_i64(<2 x i64> %x) {
 ; CHECK-LABEL: define i1 @or_eq_0_i64(
 ; CHECK-SAME: <2 x i64> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.umax.v2i64(<2 x i64> [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i64> [[X]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %red = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> %x)
@@ -344,8 +344,8 @@ define i1 @or_eq_0_scalable_negative(<vscale x 4 x i32> %x) {
 define i1 @or_eq_0_v4i1(<4 x i1> %x) {
 ; CHECK-LABEL: define i1 @or_eq_0_v4i1(
 ; CHECK-SAME: <4 x i1> [[X:%.*]]) {
-; CHECK-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i1 [[RED]], false
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i1> [[X]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %red = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> %x)
@@ -357,8 +357,7 @@ define i1 @or_ne_0_v4i1(<4 x i1> %x) {
 ; CHECK-LABEL: define i1 @or_ne_0_v4i1(
 ; CHECK-SAME: <4 x i1> [[X:%.*]]) {
 ; CHECK-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i1 [[RED]], false
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 [[RED]]
 ;
   %red = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> %x)
   %cmp = icmp ne i1 %red, 0
@@ -392,8 +391,8 @@ define i1 @and_ne_allones_v4i1(<4 x i1> %x) {
 define i1 @umax_eq_0_v4i1(<4 x i1> %x) {
 ; CHECK-LABEL: define i1 @umax_eq_0_v4i1(
 ; CHECK-SAME: <4 x i1> [[X:%.*]]) {
-; CHECK-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.umax.v4i1(<4 x i1> [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i1 [[RED]], false
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i1> [[X]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %red = call i1 @llvm.vector.reduce.umax.v4i1(<4 x i1> %x)

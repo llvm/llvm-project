@@ -14,7 +14,7 @@ bb:
   %tmp6 = and <16 x i32> %tmp, <i32 16777215, i32 16777215, i32 16777215, i32 16777215, i32 16777215, i32 16777215, i32 16777215, i32 16777215, i32 16777215, i32 16777215, i32 16777215, i32 16777215, i32 16777215, i32 16777215, i32 16777215, i32 16777215>
   %tmp7 = icmp ne <16 x i32> %tmp6, zeroinitializer
   %tmp8 = and <16 x i1> %tmp7, %tmp5
-  %tmp9 = select fast <16 x i1> %tmp8, <16 x float> <float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000>, <16 x float> %tmp4
+  %tmp9 = select fast <16 x i1> %tmp8, <16 x float> <float -inf, float -inf, float -inf, float -inf, float -inf, float -inf, float -inf, float -inf, float -inf, float -inf, float -inf, float -inf, float -inf, float -inf, float -inf, float -inf>, <16 x float> %tmp4
   ret <16 x float> %tmp9
 }
 declare <16 x float> @llvm.fma.v16f32(<16 x float>, <16 x float>, <16 x float>)

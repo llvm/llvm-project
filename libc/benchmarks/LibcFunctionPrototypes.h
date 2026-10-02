@@ -10,32 +10,32 @@ namespace libc_benchmarks {
 using MemcpyFunction = void *(*)(void *__restrict, const void *__restrict,
                                  size_t);
 struct MemcpyConfiguration {
-  MemcpyFunction Function;
-  llvm::StringRef Name;
+  MemcpyFunction function;
+  llvm::StringRef name;
 };
 
 using MemmoveFunction = void *(*)(void *, const void *, size_t);
 struct MemmoveConfiguration {
-  MemmoveFunction Function;
-  llvm::StringRef Name;
+  MemmoveFunction function;
+  llvm::StringRef name;
 };
 
 using MemsetFunction = void *(*)(void *, int, size_t);
 struct MemsetConfiguration {
-  MemsetFunction Function;
-  llvm::StringRef Name;
+  MemsetFunction function;
+  llvm::StringRef name;
 };
 
 using BzeroFunction = void (*)(void *, size_t);
 struct BzeroConfiguration {
-  BzeroFunction Function;
-  llvm::StringRef Name;
+  BzeroFunction function;
+  llvm::StringRef name;
 };
 
 using MemcmpOrBcmpFunction = int (*)(const void *, const void *, size_t);
 struct MemcmpOrBcmpConfiguration {
-  MemcmpOrBcmpFunction Function;
-  llvm::StringRef Name;
+  MemcmpOrBcmpFunction function;
+  llvm::StringRef name;
 };
 
 } // namespace libc_benchmarks

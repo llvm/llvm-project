@@ -30,18 +30,18 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare void @ext(ptr)
 
-; CHECK: declare hidden i32 @hidden_def_weak_def()
-; CHECK: declare protected void @protected_def_weak_def()
-; CHECK: declare hidden void @protected_def_weak_hidden_def()
+; CHECK: declare !guid !{{[0-9]+}} hidden i32 @hidden_def_weak_def()
+; CHECK: declare !guid !{{[0-9]+}} protected void @protected_def_weak_def()
+; CHECK: declare !guid !{{[0-9]+}} hidden void @protected_def_weak_hidden_def()
 ;; Currently the visibility is not propagated onto an unimported function,
 ;; because we don't have summaries for declarations.
 ; CHECK: declare extern_weak void @not_imported()
-; CHECK: define available_externally hidden void @hidden_def_ref() !thinlto_src_module !0 !thinlto_src_file !1
-; CHECK: define available_externally hidden void @hidden_def_weak_ref() !thinlto_src_module !0 !thinlto_src_file !1
+; CHECK: define available_externally hidden void @hidden_def_ref() {{.*}} !thinlto_src_module !{{[0-9]+}} !thinlto_src_file !{{[0-9]+}}
+; CHECK: define available_externally hidden void @hidden_def_weak_ref() {{.*}} !thinlto_src_module !{{[0-9]+}} !thinlto_src_file !{{[0-9]+}}
 ;; This can be hidden, but we cannot communicate the declaration's visibility
 ;; to other modules because declarations don't have summaries, and the IRLinker
 ;; overrides it when importing the protected def.
-; CHECK: define available_externally protected void @protected_def_hidden_ref() !thinlto_src_module !0 !thinlto_src_file !1
+; CHECK: define available_externally protected void @protected_def_hidden_ref() {{.*}} !thinlto_src_module !{{[0-9]+}} !thinlto_src_file !{{[0-9]+}}
 
 ; CHECK2: define hidden i32 @hidden_def_weak_def()
 ; CHECK2: define protected void @protected_def_weak_def()

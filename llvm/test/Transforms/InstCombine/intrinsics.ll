@@ -139,7 +139,7 @@ define <vscale x 1 x i1> @cttz_knownbits_scalable_vec(<vscale x 1 x i32> %arg) {
 define i32 @cttz_knownbits2(i32 %arg) {
 ; CHECK-LABEL: @cttz_knownbits2(
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[ARG:%.*]], 4
-; CHECK-NEXT:    [[CNT:%.*]] = call range(i32 0, 3) i32 @llvm.cttz.i32(i32 [[OR]], i1 true) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[CNT:%.*]] = call range(i32 0, 3) i32 @llvm.cttz.i32(i32 [[OR]], i1 true) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    ret i32 [[CNT]]
 ;
   %or = or i32 %arg, 4
@@ -150,7 +150,7 @@ define i32 @cttz_knownbits2(i32 %arg) {
 define <2 x i32> @cttz_knownbits2_vec(<2 x i32> %arg) {
 ; CHECK-LABEL: @cttz_knownbits2_vec(
 ; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[ARG:%.*]], splat (i32 4)
-; CHECK-NEXT:    [[CNT:%.*]] = call range(i32 0, 3) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[OR]], i1 true) #[[ATTR2]]
+; CHECK-NEXT:    [[CNT:%.*]] = call range(i32 0, 3) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[OR]], i1 true) #[[ATTR3]]
 ; CHECK-NEXT:    ret <2 x i32> [[CNT]]
 ;
   %or = or <2 x i32> %arg, <i32 4, i32 4>
@@ -256,7 +256,7 @@ define <2 x i1> @ctlz_knownbits_vec(<2 x i8> %arg) {
 define i8 @ctlz_knownbits2(i8 %arg) {
 ; CHECK-LABEL: @ctlz_knownbits2(
 ; CHECK-NEXT:    [[OR:%.*]] = or i8 [[ARG:%.*]], 32
-; CHECK-NEXT:    [[CNT:%.*]] = call range(i8 0, 3) i8 @llvm.ctlz.i8(i8 [[OR]], i1 true) #[[ATTR2]]
+; CHECK-NEXT:    [[CNT:%.*]] = call range(i8 0, 3) i8 @llvm.ctlz.i8(i8 [[OR]], i1 true) #[[ATTR3]]
 ; CHECK-NEXT:    ret i8 [[CNT]]
 ;
   %or = or i8 %arg, 32
@@ -267,7 +267,7 @@ define i8 @ctlz_knownbits2(i8 %arg) {
 define <2 x i8> @ctlz_knownbits2_vec(<2 x i8> %arg) {
 ; CHECK-LABEL: @ctlz_knownbits2_vec(
 ; CHECK-NEXT:    [[OR:%.*]] = or <2 x i8> [[ARG:%.*]], splat (i8 32)
-; CHECK-NEXT:    [[CNT:%.*]] = call range(i8 0, 3) <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[OR]], i1 true) #[[ATTR2]]
+; CHECK-NEXT:    [[CNT:%.*]] = call range(i8 0, 3) <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[OR]], i1 true) #[[ATTR3]]
 ; CHECK-NEXT:    ret <2 x i8> [[CNT]]
 ;
   %or = or <2 x i8> %arg, <i8 32, i8 32>
@@ -314,7 +314,7 @@ define <2 x i32> @ctlz_poison_vec(<2 x i32> %Value) {
 define i32 @ctlz_no_zero(i32 %a) {
 ; CHECK-LABEL: @ctlz_no_zero(
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A:%.*]], 8
-; CHECK-NEXT:    [[CTLZ:%.*]] = tail call range(i32 0, 29) i32 @llvm.ctlz.i32(i32 [[OR]], i1 true)
+; CHECK-NEXT:    [[CTLZ:%.*]] = call range(i32 0, 29) i32 @llvm.ctlz.i32(i32 [[OR]], i1 true)
 ; CHECK-NEXT:    ret i32 [[CTLZ]]
 ;
   %or = or i32 %a, 8
@@ -325,7 +325,7 @@ define i32 @ctlz_no_zero(i32 %a) {
 define <2 x i32> @ctlz_no_zero_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @ctlz_no_zero_vec(
 ; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[A:%.*]], splat (i32 8)
-; CHECK-NEXT:    [[CTLZ:%.*]] = tail call range(i32 0, 29) <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[OR]], i1 true)
+; CHECK-NEXT:    [[CTLZ:%.*]] = call range(i32 0, 29) <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[OR]], i1 true)
 ; CHECK-NEXT:    ret <2 x i32> [[CTLZ]]
 ;
   %or = or <2 x i32> %a, <i32 8, i32 8>
@@ -352,7 +352,7 @@ define <2 x i32> @cttz_poison_vec(<2 x i32> %Value) {
 define i32 @cttz_no_zero(i32 %a) {
 ; CHECK-LABEL: @cttz_no_zero(
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A:%.*]], 8
-; CHECK-NEXT:    [[CTTZ:%.*]] = tail call range(i32 0, 4) i32 @llvm.cttz.i32(i32 [[OR]], i1 true)
+; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i32 0, 4) i32 @llvm.cttz.i32(i32 [[OR]], i1 true)
 ; CHECK-NEXT:    ret i32 [[CTTZ]]
 ;
   %or = or i32 %a, 8
@@ -363,7 +363,7 @@ define i32 @cttz_no_zero(i32 %a) {
 define <2 x i32> @cttz_no_zero_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @cttz_no_zero_vec(
 ; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[A:%.*]], splat (i32 8)
-; CHECK-NEXT:    [[CTTZ:%.*]] = tail call range(i32 0, 4) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[OR]], i1 true)
+; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i32 0, 4) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[OR]], i1 true)
 ; CHECK-NEXT:    ret <2 x i32> [[CTTZ]]
 ;
   %or = or <2 x i32> %a, <i32 8, i32 8>

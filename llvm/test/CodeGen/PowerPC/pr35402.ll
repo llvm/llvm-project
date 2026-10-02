@@ -5,17 +5,17 @@ target triple = "powerpc64le-linux-gnu"
 define void @test(ptr %p, i64 %data) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rotldi 5, 4, 16
-; CHECK-NEXT:    rldicl 6, 4, 8, 56
-; CHECK-NEXT:    rldimi 6, 5, 8, 48
-; CHECK-NEXT:    rotldi 5, 4, 24
-; CHECK-NEXT:    rldimi 6, 5, 16, 40
-; CHECK-NEXT:    rotldi 5, 4, 32
-; CHECK-NEXT:    rldimi 6, 5, 24, 32
-; CHECK-NEXT:    rlwinm 5, 4, 8, 24, 31
+; CHECK-NEXT:    rotlwi 5, 4, 8
+; CHECK-NEXT:    rlwimi 5, 4, 24, 0, 7
 ; CHECK-NEXT:    rlwimi 5, 4, 24, 16, 23
+; CHECK-NEXT:    rldicl 4, 4, 32, 32
+; CHECK-NEXT:    rotlwi 6, 4, 8
+; CHECK-NEXT:    rlwimi 6, 4, 24, 0, 7
+; CHECK-NEXT:    rlwimi 6, 4, 24, 16, 23
+; CHECK-NEXT:    rldimi 6, 5, 32, 0
+; CHECK-NEXT:    rldicl 4, 6, 32, 32
 ; CHECK-NEXT:    stw 6, 0(3)
-; CHECK-NEXT:    sth 5, 4(3)
+; CHECK-NEXT:    sth 4, 4(3)
 ; CHECK-NEXT:    blr
 entry:
   %0 = tail call i64 @llvm.bswap.i64(i64 %data)

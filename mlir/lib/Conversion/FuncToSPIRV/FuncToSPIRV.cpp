@@ -68,11 +68,15 @@ public:
           getTypeConverter()->convertType(callOp.getResult(0).getType());
       if (!resultType)
         return failure();
-      rewriter.replaceOpWithNewOp<spirv::FunctionCallOp>(
-          callOp, resultType, adaptor.getOperands(), callOp->getAttrs());
+      auto newCall = rewriter.replaceOpWithNewOp<spirv::FunctionCallOp>(
+          callOp, resultType, callOp.getCalleeAttr(), adaptor.getOperands(),
+          callOp.getArgAttrsAttr(), callOp.getResAttrsAttr());
+      newCall->setDiscardableAttrs(callOp->getDiscardableAttrDictionary());
     } else {
-      rewriter.replaceOpWithNewOp<spirv::FunctionCallOp>(
-          callOp, TypeRange(), adaptor.getOperands(), callOp->getAttrs());
+      auto newCall = rewriter.replaceOpWithNewOp<spirv::FunctionCallOp>(
+          callOp, TypeRange(), callOp.getCalleeAttr(), adaptor.getOperands(),
+          callOp.getArgAttrsAttr(), callOp.getResAttrsAttr());
+      newCall->setDiscardableAttrs(callOp->getDiscardableAttrDictionary());
     }
     return success();
   }

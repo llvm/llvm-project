@@ -5,12 +5,12 @@
 ;; memset. If loop idiom recognition begins to recognize unrotated loops, this
 ;; test will need to be updated.
 
-; RUN: opt -passes='default<Oz>' -S < %s  | FileCheck %s --check-prefix=NOROTATION
-; RUN: opt -passes='default<Oz>' -S  -enable-loop-header-duplication-at-minsize < %s  | FileCheck %s --check-prefix=ROTATION
+; RUN: opt -passes='default<O2>' -S < %s  | FileCheck %s --check-prefix=NOROTATION
+; RUN: opt -passes='default<O2>' -S  -enable-loop-header-duplication-at-minsize < %s  | FileCheck %s --check-prefix=ROTATION
 
 define void @test(i8* noalias nonnull align 1 %start, i8* %end) minsize {
 ; NOROTATION-LABEL: define void @test(
-; NOROTATION-SAME: ptr noalias nonnull writeonly align 1 captures(address) [[START:%.*]], ptr readnone captures(address) [[END:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; NOROTATION-SAME: ptr noalias nofree nonnull writeonly align 1 captures(address) [[START:%.*]], ptr nofree readnone captures(address) [[END:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; NOROTATION-NEXT:  entry:
 ; NOROTATION-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; NOROTATION:       loop.header:
@@ -25,13 +25,13 @@ define void @test(i8* noalias nonnull align 1 %start, i8* %end) minsize {
 ; NOROTATION-NEXT:    ret void
 ;
 ; ROTATION-LABEL: define void @test(
-; ROTATION-SAME: ptr noalias nonnull writeonly align 1 captures(address) [[START:%.*]], ptr readnone captures(address) [[END:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; ROTATION-SAME: ptr noalias nofree nonnull writeonly align 1 captures(address) [[START:%.*]], ptr nofree readnone captures(address) [[END:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; ROTATION-NEXT:  entry:
 ; ROTATION-NEXT:    [[_12_I1:%.*]] = icmp eq ptr [[START]], [[END]]
 ; ROTATION-NEXT:    br i1 [[_12_I1]], label [[EXIT:%.*]], label [[LOOP_LATCH_PREHEADER:%.*]]
 ; ROTATION:       loop.latch.preheader:
-; ROTATION-NEXT:    [[END3:%.*]] = ptrtoint ptr [[END]] to i64
-; ROTATION-NEXT:    [[START4:%.*]] = ptrtoint ptr [[START]] to i64
+; ROTATION-NEXT:    [[END3:%.*]] = ptrtoaddr ptr [[END]] to i64
+; ROTATION-NEXT:    [[START4:%.*]] = ptrtoaddr ptr [[START]] to i64
 ; ROTATION-NEXT:    [[TMP0:%.*]] = sub i64 [[END3]], [[START4]]
 ; ROTATION-NEXT:    tail call void @llvm.memset.p0.i64(ptr nonnull align 1 [[START]], i8 1, i64 [[TMP0]], i1 false)
 ; ROTATION-NEXT:    br label [[EXIT]]

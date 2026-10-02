@@ -135,8 +135,9 @@ template <bool Const> struct Impl : RecursiveASTVisitor<Impl<Const>> {
     return Visitor.TraverseTemplateArgumentLoc(ArgLoc);
   }
 
-  bool TraverseTemplateName(TemplateName Template) {
-    return Visitor.TraverseTemplateName(Template);
+  bool TraverseTemplateName(TemplateName Template,
+                            bool TraverseQualifier = true) {
+    return Visitor.TraverseTemplateName(Template, TraverseQualifier);
   }
 
   bool TraverseObjCProtocolLoc(ObjCProtocolLoc ProtocolLoc) {
@@ -161,6 +162,13 @@ template <bool Const> struct Impl : RecursiveASTVisitor<Impl<Const>> {
 
   bool TraverseConceptReference(ConceptReference *CR) {
     return Visitor.TraverseConceptReference(CR);
+  }
+
+  bool TraverseOffsetOfNode(const OffsetOfNode *Node) {
+    return Visitor.TraverseOffsetOfNode(Node);
+  }
+  bool VisitOffsetOfNode(const OffsetOfNode *Node) {
+    return Visitor.VisitOffsetOfNode(Node);
   }
 
   bool TraverseCXXBaseSpecifier(const CXXBaseSpecifier &Base) {
@@ -311,13 +319,22 @@ FORWARD_TO_BASE(TraverseConceptReference, ConceptReference, *)
 FORWARD_TO_BASE(TraverseConceptNestedRequirement,
                 concepts::NestedRequirement, *)
 
+FORWARD_TO_BASE_EXACT(TraverseOffsetOfNode, const OffsetOfNode *)
+
 FORWARD_TO_BASE_EXACT(TraverseCXXBaseSpecifier, const CXXBaseSpecifier &)
 FORWARD_TO_BASE_EXACT(TraverseDeclarationNameInfo, DeclarationNameInfo)
 FORWARD_TO_BASE_EXACT(TraverseTemplateArgument, const TemplateArgument &)
 FORWARD_TO_BASE_EXACT(TraverseTemplateArguments, ArrayRef<TemplateArgument>)
 FORWARD_TO_BASE_EXACT(TraverseTemplateArgumentLoc, const TemplateArgumentLoc &)
-FORWARD_TO_BASE_EXACT(TraverseTemplateName, TemplateName)
 FORWARD_TO_BASE_EXACT(TraverseNestedNameSpecifier, NestedNameSpecifier)
+
+template <bool Const>
+bool DynamicRecursiveASTVisitorBase<Const>::TraverseTemplateName(
+    TemplateName Template, bool TraverseQualifier) {
+  return Impl<Const>(*this)
+      .RecursiveASTVisitor<Impl<Const>>::TraverseTemplateName(
+          Template, TraverseQualifier);
+}
 
 template <bool Const>
 bool DynamicRecursiveASTVisitorBase<Const>::TraverseType(

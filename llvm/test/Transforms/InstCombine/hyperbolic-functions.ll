@@ -4,7 +4,7 @@
 define double @fneg_cosh(double noundef %x) {
 ; CHECK-LABEL: @fneg_cosh(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RET:%.*]] = tail call nnan double @llvm.cosh.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = call nnan double @llvm.cosh.f64(double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[RET]]
 ;
 entry:

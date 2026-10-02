@@ -60,10 +60,8 @@ public:
 protected:
     int m_d;
 };
-int main (int argc, char const *argv[], char const *envp[])
-{
-    D *good_d = new D(1, 2, 3, 4);
-    D *d = nullptr;
-    return d->get();
+int main(int argc, char const *argv[]) {
+  D *good_d = new D(1, 2, 3, 4);
+  D *d = nullptr;
+  return d->get();
 }
-

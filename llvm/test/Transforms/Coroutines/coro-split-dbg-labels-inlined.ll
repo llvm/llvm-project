@@ -33,13 +33,13 @@ coro_Suspend:
 }
 
 ; Check that the resume function contains the `#dbg_label` instructions.
-; CHECK-LABEL:   define internal fastcc void @f.resume({{.*}})
+; CHECK-LABEL:   define internal void @f.resume({{.*}})
 ; CHECK-SAME:      !dbg ![[RESUME_SUBPROGRAM:[0-9]+]]
 ; CHECK:         resume.0:
 ; CHECK-NEXT:        #dbg_label(![[RESUME_0:[0-9]+]], ![[RESUME_LABEL_LOC:[0-9]+]])
 
 ; Check that the destroy function contains the `#dbg_label` instructions.
-; CHECK-LABEL:   define internal fastcc void @f.destroy({{.*}})
+; CHECK-LABEL:   define internal void @f.destroy({{.*}})
 ; CHECK-SAME:      !dbg ![[DESTROY_SUBPROGRAM:[0-9]+]]
 ; CHECK:         resume.0:
 ; CHECK-NEXT:        #dbg_label(![[DESTROY_0:[0-9]+]], ![[DESTROY_LABEL_LOC:[0-9]+]])

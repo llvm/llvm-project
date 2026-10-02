@@ -1,0 +1,50 @@
+---
+Name: WhereParametersParser
+Functions:
+- Name: makeWidget
+  Where:
+    Parameters:
+      - int
+  SwiftName: makeWidget(_:)
+- Name: makeWidget
+  Where:
+    Parameters:
+      - double
+      - const char *
+  SwiftName: makeWidget(_:_:)
+- Name: currentWidget
+  Where:
+    Parameters: []
+  SwiftName: currentWidget()
+- Name: makeWidget
+  SwiftName: makeWidget(_:)
+- Name: functionWithParameterNotes
+  Parameters:
+  - Position: 0
+    Type: int
+  SwiftName: functionWithParameterNotes(_:)
+Tags:
+- Name: Widget
+  Methods:
+  - Name: setValue
+    Where:
+      Parameters:
+        - int
+    SwiftName: setIntValue(_:)
+  - Name: setValue
+    Where:
+      Parameters:
+        - double
+        - const char *
+    SwiftName: setValue(_:_:)
+  - Name: reset
+    Where:
+      Parameters: []
+    SwiftName: reset()
+  - Name: setValue
+    SwiftName: setValue(_:)
+  - Name: methodWithParameterNotes
+    Parameters:
+    - Position: 0
+      Type: int
+    SwiftName: methodWithParameterNotes(_:)

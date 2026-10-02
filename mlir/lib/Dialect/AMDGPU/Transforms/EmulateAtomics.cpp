@@ -87,6 +87,22 @@ static void patchOperandSegmentSizes(ArrayRef<NamedAttribute> attrs,
   }
 }
 
+template <typename OpTy>
+static typename OpTy::Properties
+getPropertiesFromAttrs(OpBuilder &builder, Location loc,
+                       ArrayRef<NamedAttribute> attrs) {
+  typename OpTy::Properties properties{};
+  OpTy::populateDefaultProperties(
+      OperationName(OpTy::getOperationName(), builder.getContext()),
+      properties);
+  LogicalResult result =
+      OpTy::setPropertiesFromAttr(properties, builder.getDictionaryAttr(attrs),
+                                  [&]() { return emitError(loc); });
+  assert(succeeded(result) && "failed to convert operation properties");
+  (void)result;
+  return properties;
+}
+
 // A helper function to flatten a vector value to a scalar containing its bits,
 // returning the value itself if othetwise.
 static Value flattenVecToBits(ConversionPatternRewriter &rewriter, Location loc,
@@ -110,19 +126,29 @@ LogicalResult RawBufferAtomicByCasPattern<AtomicOp, ArithOp>::matchAndRewrite(
     ConversionPatternRewriter &rewriter) const {
   Location loc = atomicOp.getLoc();
 
-  ArrayRef<NamedAttribute> origAttrs = atomicOp->getAttrs();
+  NamedAttrList origProperties;
+  atomicOp->getName().walkInherentAttrs(atomicOp,
+                                        [&](StringRef name, Attribute &attr) {
+                                          origProperties.append(name, attr);
+                                        });
+  ArrayRef<NamedAttribute> discardableAttrs =
+      atomicOp->getDiscardableAttrDictionary().getValue();
   ValueRange operands = adaptor.getOperands();
   Value data = operands.take_front()[0];
   ValueRange invariantArgs = operands.drop_front();
   Type dataType = data.getType();
 
   SmallVector<NamedAttribute> loadAttrs;
-  patchOperandSegmentSizes(origAttrs, loadAttrs, DataArgAction::Drop);
-  Value initialLoad = RawBufferLoadOp::create(rewriter, loc, dataType,
-                                              invariantArgs, loadAttrs);
+  patchOperandSegmentSizes(origProperties, loadAttrs, DataArgAction::Drop);
+  auto loadProperties =
+      getPropertiesFromAttrs<RawBufferLoadOp>(rewriter, loc, loadAttrs);
+  Value initialLoad =
+      RawBufferLoadOp::create(rewriter, loc, TypeRange{dataType}, invariantArgs,
+                              loadProperties, discardableAttrs);
   Block *currentBlock = rewriter.getInsertionBlock();
   Block *afterAtomic =
       rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
+  afterAtomic->addArgument(dataType, loc);
   Block *loopBlock = rewriter.createBlock(afterAtomic, {dataType}, {loc});
 
   rewriter.setInsertionPointToEnd(currentBlock);
@@ -134,11 +160,15 @@ LogicalResult RawBufferAtomicByCasPattern<AtomicOp, ArithOp>::matchAndRewrite(
   dataType = operated.getType();
 
   SmallVector<NamedAttribute> cmpswapAttrs;
-  patchOperandSegmentSizes(origAttrs, cmpswapAttrs, DataArgAction::Duplicate);
+  patchOperandSegmentSizes(origProperties, cmpswapAttrs,
+                           DataArgAction::Duplicate);
   SmallVector<Value> cmpswapArgs = {operated, prevLoad};
   cmpswapArgs.append(invariantArgs.begin(), invariantArgs.end());
-  Value atomicRes = RawBufferAtomicCmpswapOp::create(rewriter, loc, dataType,
-                                                     cmpswapArgs, cmpswapAttrs);
+  auto cmpswapProperties = getPropertiesFromAttrs<RawBufferAtomicCmpswapOp>(
+      rewriter, loc, cmpswapAttrs);
+  Value atomicRes = RawBufferAtomicCmpswapOp::create(
+      rewriter, loc, TypeRange{dataType}, cmpswapArgs, cmpswapProperties,
+      discardableAttrs);
 
   // We care about exact bitwise equality here, so do some bitcasts.
   // These will fold away during lowering to the ROCDL dialect, where
@@ -157,9 +187,9 @@ LogicalResult RawBufferAtomicByCasPattern<AtomicOp, ArithOp>::matchAndRewrite(
   Value canLeave =
       arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::eq,
                             atomicResForCompare, prevLoadForCompare);
-  cf::CondBranchOp::create(rewriter, loc, canLeave, afterAtomic, ValueRange{},
-                           loopBlock, atomicRes);
-  rewriter.eraseOp(atomicOp);
+  cf::CondBranchOp::create(rewriter, loc, canLeave, afterAtomic,
+                           ValueRange{prevLoad}, loopBlock, atomicRes);
+  rewriter.replaceOp(atomicOp, ValueRange{afterAtomic->getArgument(0)});
   return success();
 }
 

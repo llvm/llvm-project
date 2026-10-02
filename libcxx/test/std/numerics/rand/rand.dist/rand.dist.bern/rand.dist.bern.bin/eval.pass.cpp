@@ -8,6 +8,9 @@
 //
 // REQUIRES: long_tests
 
+// Missing lgammar_r
+// XFAIL: LLVM-LIBC-FIXME
+
 // <random>
 
 // template<class IntType = int>

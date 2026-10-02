@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include <cassert>
@@ -60,6 +61,7 @@ public:
     AU.addPreserved<MachineLoopInfoWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -195,7 +197,7 @@ static void RevertWhileLoopSetup(MachineInstr *MI, const TargetInstrInfo *TII) {
   MIB.add(MI->getOperand(1));
   MIB.addImm(0);
   MIB.addImm(ARMCC::AL);
-  MIB.addReg(ARM::NoRegister);
+  MIB.addReg(Register());
   MIB.addReg(ARM::CPSR, RegState::Define);
 
   // Attempt to find a t2WhileLoopStart and revert to a t2Bcc.

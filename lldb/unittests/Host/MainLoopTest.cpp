@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/MainLoop.h"
+#include "TestingSupport/Host/SocketTestUtilities.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSystem.h"
@@ -28,6 +29,9 @@ public:
   SubsystemRAII<FileSystem, Socket> subsystems;
 
   void SetUp() override {
+    if (!HostSupportsIPv4() && !HostSupportsIPv6())
+      GTEST_SKIP() << "TCP sockets unavailable";
+
     Status error;
     auto listen_socket_up = std::make_unique<TCPSocket>(true);
     ASSERT_TRUE(error.Success());

@@ -30,7 +30,7 @@ struct Struct{Struct(); Struct(int);};
 Struct s;
 template void templ<s>();
 // CIR: cir.func{{.*}}@_Z5templITnRDaL_Z1sEEvv()
-// CIR-NEXT: %[[TEMP:.*]] = cir.alloca !rec_Struct, !cir.ptr<!rec_Struct>
+// CIR-NEXT: %[[TEMP:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_Struct>
 // CIR-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
 // CIR-NEXT: cir.call @_ZN6StructC1Ei(%[[TEMP]], %[[ONE]])
 // CIR-NEXT: %[[GLOB:.*]] = cir.get_global @s : !cir.ptr<!rec_Struct>

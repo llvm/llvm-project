@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@requireExpressionEvaluation
 class TestCase(TestBase):
     # int128 is not available on 32-bit ARM.
     @skipIf(archs=["arm$"])

@@ -73,14 +73,16 @@ public:
   _LIBCPP_HIDE_FROM_ABI istreambuf_iterator(streambuf_type* __s) _NOEXCEPT : __sbuf_(__s) {}
   _LIBCPP_HIDE_FROM_ABI istreambuf_iterator(const __proxy& __p) _NOEXCEPT : __sbuf_(__p.__sbuf_) {}
 
-  _LIBCPP_HIDE_FROM_ABI char_type operator*() const { return static_cast<char_type>(__sbuf_->sgetc()); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type operator*() const {
+    return static_cast<char_type>(__sbuf_->sgetc());
+  }
   _LIBCPP_HIDE_FROM_ABI istreambuf_iterator& operator++() {
     __sbuf_->sbumpc();
     return *this;
   }
   _LIBCPP_HIDE_FROM_ABI __proxy operator++(int) { return __proxy(__sbuf_->sbumpc(), __sbuf_); }
 
-  _LIBCPP_HIDE_FROM_ABI bool equal(const istreambuf_iterator& __b) const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool equal(const istreambuf_iterator& __b) const {
     return __test_for_eof() == __b.__test_for_eof();
   }
 

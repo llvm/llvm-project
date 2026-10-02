@@ -45,7 +45,7 @@ program selectCaseProg
    end select
 
   ! C1145
-  !ERROR: SELECT CASE expression must be integer, logical, or character
+  !ERROR: SELECT CASE expression must be integer, logical, character, or enumeration type
   select case (grade4)
      case (1.0)
      case (2.0)
@@ -53,7 +53,7 @@ program selectCaseProg
      case default
   end select
 
-  !ERROR: SELECT CASE expression must be integer, logical, or character
+  !ERROR: SELECT CASE expression must be integer, logical, character, or enumeration type
   select case (score)
      case (score_val)
      case (scores(100))

@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -emit-llvm \
+// RUN:   spirv-unknown-vulkan-library %s -emit-llvm \
 // RUN:   -Wdeprecated-declarations -o - | FileCheck %s --check-prefixes=CHECK \
 // RUN:   -DFNATTRS="hidden spir_func noundef nofpclass(nan inf)"
-// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple spirv-unknown-vulkan-compute %s  \
+// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple spirv-unknown-vulkan-library %s  \
 // RUN:   -verify -verify-ignore-unexpected=note
 
 // CHECK: define [[FNATTRS]] float @_Z16test_atan_doubled(
@@ -42,7 +42,7 @@ float4 test_atan_double4 ( double4 p0 ) {
 }
 
 // CHECK: define [[FNATTRS]] float @_Z13test_atan_inti(
-// CHECK:    [[CONVI:%.*]] = sitofp i32 %{{.*}} to float
+// CHECK:    [[CONVI:%.*]] = sitofp {{.*}} i32 %{{.*}} to float
 // CHECK:    [[V3:%.*]] = call {{.*}} float @llvm.atan.f32(float [[CONVI]])
 // CHECK:    ret float [[V3]]
 float test_atan_int ( int p0 ) {
@@ -51,7 +51,7 @@ float test_atan_int ( int p0 ) {
 }
 
 // CHECK: define [[FNATTRS]] <2 x float> @_Z14test_atan_int2Dv2_i(
-// CHECK:    [[CONVI:%.*]] = sitofp <2 x i32> %{{.*}} to <2 x float>
+// CHECK:    [[CONVI:%.*]] = sitofp {{.*}} <2 x i32> %{{.*}} to <2 x float>
 // CHECK:    [[V3:%.*]] = call {{.*}} <2 x float> @llvm.atan.v2f32(<2 x float> [[CONVI]])
 // CHECK:    ret <2 x float> [[V3]]
 float2 test_atan_int2 ( int2 p0 ) {
@@ -60,7 +60,7 @@ float2 test_atan_int2 ( int2 p0 ) {
 }
 
 // CHECK: define [[FNATTRS]] <3 x float> @_Z14test_atan_int3Dv3_i(
-// CHECK:    [[CONVI:%.*]] = sitofp <3 x i32> %{{.*}} to <3 x float>
+// CHECK:    [[CONVI:%.*]] = sitofp {{.*}} <3 x i32> %{{.*}} to <3 x float>
 // CHECK:    [[V3:%.*]] = call {{.*}} <3 x float> @llvm.atan.v3f32(<3 x float> [[CONVI]])
 // CHECK:    ret <3 x float> [[V3]]
 float3 test_atan_int3 ( int3 p0 ) {
@@ -69,7 +69,7 @@ float3 test_atan_int3 ( int3 p0 ) {
 }
 
 // CHECK: define [[FNATTRS]] <4 x float> @_Z14test_atan_int4Dv4_i(
-// CHECK:    [[CONVI:%.*]] = sitofp <4 x i32> %{{.*}} to <4 x float>
+// CHECK:    [[CONVI:%.*]] = sitofp {{.*}} <4 x i32> %{{.*}} to <4 x float>
 // CHECK:    [[V3:%.*]] = call {{.*}} <4 x float> @llvm.atan.v4f32(<4 x float> [[CONVI]])
 // CHECK:    ret <4 x float> [[V3]]
 float4 test_atan_int4 ( int4 p0 ) {
@@ -78,7 +78,7 @@ float4 test_atan_int4 ( int4 p0 ) {
 }
 
 // CHECK: define [[FNATTRS]] float @_Z14test_atan_uintj(
-// CHECK:    [[CONVI:%.*]] = uitofp i32 %{{.*}} to float
+// CHECK:    [[CONVI:%.*]] = uitofp {{.*}} i32 %{{.*}} to float
 // CHECK:    [[V3:%.*]] = call {{.*}} float @llvm.atan.f32(float [[CONVI]])
 // CHECK:    ret float [[V3]]
 float test_atan_uint ( uint p0 ) {
@@ -87,7 +87,7 @@ float test_atan_uint ( uint p0 ) {
 }
 
 // CHECK: define [[FNATTRS]] <2 x float> @_Z15test_atan_uint2Dv2_j(
-// CHECK:    [[CONVI:%.*]] = uitofp <2 x i32> %{{.*}} to <2 x float>
+// CHECK:    [[CONVI:%.*]] = uitofp {{.*}} <2 x i32> %{{.*}} to <2 x float>
 // CHECK:    [[V3:%.*]] = call {{.*}} <2 x float> @llvm.atan.v2f32(<2 x float> [[CONVI]])
 // CHECK:    ret <2 x float> [[V3]]
 float2 test_atan_uint2 ( uint2 p0 ) {
@@ -96,7 +96,7 @@ float2 test_atan_uint2 ( uint2 p0 ) {
 }
 
 // CHECK: define [[FNATTRS]] <3 x float> @_Z15test_atan_uint3Dv3_j(
-// CHECK:    [[CONVI:%.*]] = uitofp <3 x i32> %{{.*}} to <3 x float>
+// CHECK:    [[CONVI:%.*]] = uitofp {{.*}} <3 x i32> %{{.*}} to <3 x float>
 // CHECK:    [[V3:%.*]] = call {{.*}} <3 x float> @llvm.atan.v3f32(<3 x float> [[CONVI]])
 // CHECK:    ret <3 x float> [[V3]]
 float3 test_atan_uint3 ( uint3 p0 ) {
@@ -105,7 +105,7 @@ float3 test_atan_uint3 ( uint3 p0 ) {
 }
 
 // CHECK: define [[FNATTRS]] <4 x float> @_Z15test_atan_uint4Dv4_j(
-// CHECK:    [[CONVI:%.*]] = uitofp <4 x i32> %{{.*}} to <4 x float>
+// CHECK:    [[CONVI:%.*]] = uitofp {{.*}} <4 x i32> %{{.*}} to <4 x float>
 // CHECK:    [[V3:%.*]] = call {{.*}} <4 x float> @llvm.atan.v4f32(<4 x float> [[CONVI]])
 // CHECK:    ret <4 x float> [[V3]]
 float4 test_atan_uint4 ( uint4 p0 ) {
@@ -114,7 +114,7 @@ float4 test_atan_uint4 ( uint4 p0 ) {
 }
 
 // CHECK: define [[FNATTRS]] float @_Z17test_atan_int64_tl(
-// CHECK:    [[CONVI:%.*]] = sitofp i64 %{{.*}} to float
+// CHECK:    [[CONVI:%.*]] = sitofp {{.*}} i64 %{{.*}} to float
 // CHECK:    [[V3:%.*]] = call {{.*}} float @llvm.atan.f32(float [[CONVI]])
 // CHECK:    ret float [[V3]]
 float test_atan_int64_t ( int64_t p0 ) {
@@ -123,7 +123,7 @@ float test_atan_int64_t ( int64_t p0 ) {
 }
 
 // CHECK: define [[FNATTRS]] <2 x float> @_Z18test_atan_int64_t2Dv2_l(
-// CHECK:    [[CONVI:%.*]] = sitofp <2 x i64> %{{.*}} to <2 x float>
+// CHECK:    [[CONVI:%.*]] = sitofp {{.*}} <2 x i64> %{{.*}} to <2 x float>
 // CHECK:    [[V3:%.*]] = call {{.*}} <2 x float> @llvm.atan.v2f32(<2 x float> [[CONVI]])
 // CHECK:    ret <2 x float> [[V3]]
 float2 test_atan_int64_t2 ( int64_t2 p0 ) {
@@ -132,7 +132,7 @@ float2 test_atan_int64_t2 ( int64_t2 p0 ) {
 }
 
 // CHECK: define [[FNATTRS]] <3 x float> @_Z18test_atan_int64_t3Dv3_l(
-// CHECK:    [[CONVI:%.*]] = sitofp <3 x i64> %{{.*}} to <3 x float>
+// CHECK:    [[CONVI:%.*]] = sitofp {{.*}} <3 x i64> %{{.*}} to <3 x float>
 // CHECK:    [[V3:%.*]] = call {{.*}} <3 x float> @llvm.atan.v3f32(<3 x float> [[CONVI]])
 // CHECK:    ret <3 x float> [[V3]]
 float3 test_atan_int64_t3 ( int64_t3 p0 ) {
@@ -141,7 +141,7 @@ float3 test_atan_int64_t3 ( int64_t3 p0 ) {
 }
 
 // CHECK: define [[FNATTRS]] <4 x float> @_Z18test_atan_int64_t4Dv4_l(
-// CHECK:    [[CONVI:%.*]] = sitofp <4 x i64> %{{.*}} to <4 x float>
+// CHECK:    [[CONVI:%.*]] = sitofp {{.*}} <4 x i64> %{{.*}} to <4 x float>
 // CHECK:    [[V3:%.*]] = call {{.*}} <4 x float> @llvm.atan.v4f32(<4 x float> [[CONVI]])
 // CHECK:    ret <4 x float> [[V3]]
 float4 test_atan_int64_t4 ( int64_t4 p0 ) {
@@ -150,7 +150,7 @@ float4 test_atan_int64_t4 ( int64_t4 p0 ) {
 }
 
 // CHECK: define [[FNATTRS]] float @_Z18test_atan_uint64_tm(
-// CHECK:    [[CONVI:%.*]] = uitofp i64 %{{.*}} to float
+// CHECK:    [[CONVI:%.*]] = uitofp {{.*}} i64 %{{.*}} to float
 // CHECK:    [[V3:%.*]] = call {{.*}} float @llvm.atan.f32(float [[CONVI]])
 // CHECK:    ret float [[V3]]
 float test_atan_uint64_t ( uint64_t p0 ) {
@@ -159,7 +159,7 @@ float test_atan_uint64_t ( uint64_t p0 ) {
 }
 
 // CHECK: define [[FNATTRS]] <2 x float> @_Z19test_atan_uint64_t2Dv2_m(
-// CHECK:    [[CONVI:%.*]] = uitofp <2 x i64> %{{.*}} to <2 x float>
+// CHECK:    [[CONVI:%.*]] = uitofp {{.*}} <2 x i64> %{{.*}} to <2 x float>
 // CHECK:    [[V3:%.*]] = call {{.*}} <2 x float> @llvm.atan.v2f32(<2 x float> [[CONVI]])
 // CHECK:    ret <2 x float> [[V3]]
 float2 test_atan_uint64_t2 ( uint64_t2 p0 ) {
@@ -168,7 +168,7 @@ float2 test_atan_uint64_t2 ( uint64_t2 p0 ) {
 }
 
 // CHECK: define [[FNATTRS]] <3 x float> @_Z19test_atan_uint64_t3Dv3_m(
-// CHECK:    [[CONVI:%.*]] = uitofp <3 x i64> %{{.*}} to <3 x float>
+// CHECK:    [[CONVI:%.*]] = uitofp {{.*}} <3 x i64> %{{.*}} to <3 x float>
 // CHECK:    [[V3:%.*]] = call {{.*}} <3 x float> @llvm.atan.v3f32(<3 x float> [[CONVI]])
 // CHECK:    ret <3 x float> [[V3]]
 float3 test_atan_uint64_t3 ( uint64_t3 p0 ) {
@@ -177,7 +177,7 @@ float3 test_atan_uint64_t3 ( uint64_t3 p0 ) {
 }
 
 // CHECK: define [[FNATTRS]] <4 x float> @_Z19test_atan_uint64_t4Dv4_m(
-// CHECK:    [[CONVI:%.*]] = uitofp <4 x i64> %{{.*}} to <4 x float>
+// CHECK:    [[CONVI:%.*]] = uitofp {{.*}} <4 x i64> %{{.*}} to <4 x float>
 // CHECK:    [[V3:%.*]] = call {{.*}} <4 x float> @llvm.atan.v4f32(<4 x float> [[CONVI]])
 // CHECK:    ret <4 x float> [[V3]]
 float4 test_atan_uint64_t4 ( uint64_t4 p0 ) {

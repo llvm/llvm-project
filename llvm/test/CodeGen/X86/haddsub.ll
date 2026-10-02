@@ -433,7 +433,7 @@ define <4 x double> @vhsubpd1(<4 x double> %x, <4 x double> %y) {
   ret <4 x double> %r
 }
 
-define <2 x float> @haddps_v2f32(<4 x float> %v0) {
+define <2 x float> @haddps_v2f32(<4 x float> %x) {
 ; SSE3-LABEL: haddps_v2f32:
 ; SSE3:       # %bb.0:
 ; SSE3-NEXT:    haddps %xmm0, %xmm0
@@ -443,15 +443,10 @@ define <2 x float> @haddps_v2f32(<4 x float> %v0) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %v0.0 = extractelement <4 x float> %v0, i32 0
-  %v0.1 = extractelement <4 x float> %v0, i32 1
-  %v0.2 = extractelement <4 x float> %v0, i32 2
-  %v0.3 = extractelement <4 x float> %v0, i32 3
-  %op0 = fadd float %v0.0, %v0.1
-  %op1 = fadd float %v0.2, %v0.3
-  %res0 = insertelement <2 x float> undef, float %op0, i32 0
-  %res1 = insertelement <2 x float> %res0, float %op1, i32 1
-  ret <2 x float> %res1
+  %a = shufflevector <4 x float> %x, <4 x float> poison, <2 x i32> <i32 1, i32 2>
+  %b = shufflevector <4 x float> %x, <4 x float> poison, <2 x i32> <i32 0, i32 3>
+  %r = fadd <2 x float> %a, %b
+  ret <2 x float> %r
 }
 
 ; 128-bit vectors, float/double, fadd/fsub

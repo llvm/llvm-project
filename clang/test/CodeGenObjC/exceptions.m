@@ -144,18 +144,17 @@ void f4(void) {
   // CHECK-NEXT: br label
   //   -> rethrow
 
-  // finally.call-exit:  Predecessors are the @try and @catch fallthroughs
-  // as well as the no-match case in the catch mechanism.  The i1 is whether
-  // to rethrow and should be true only in the last case.
-  // CHECK:      phi ptr
-  // CHECK-NEXT: phi i1
-  // CHECK-NEXT: call void @objc_exception_try_exit(ptr nonnull [[EXNDATA]])
+  // finally.call-exit:  Predecessor is the no-match case in the catch mechanism
+  // which rethrows.
+  // CHECK:      call void @objc_exception_try_exit(ptr nonnull [[EXNDATA]])
   // CHECK-NEXT: call void @f4_help(i32 noundef 2)
-  // CHECK-NEXT: br i1
-  //   -> ret, rethrow
+  // CHECK-NEXT: br label
+  //   -> rethrow
 
-  // ret:
-  // CHECK:      ret void
+  // finally.end.critedge:  Predecessors are the @try and @catch fallthroughs.
+  // CHECK:      call void @objc_exception_try_exit(ptr nonnull [[EXNDATA]])
+  // CHECK-NEXT: call void @f4_help(i32 noundef 2)
+  // CHECK-NEXT: ret void
 
   // Catch mechanism:
   // CHECK:      call ptr @objc_exception_extract(ptr nonnull [[EXNDATA]])

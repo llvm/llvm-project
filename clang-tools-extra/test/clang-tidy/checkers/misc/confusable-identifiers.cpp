@@ -17,6 +17,18 @@ int ll;
 // CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: 'll' is confusable with 'l1' [misc-confusable-identifiers]
 // CHECK-MESSAGES: :[[#@LINE-3]]:5: note: other declaration found here
 
+int rn;
+int m;
+// CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: 'm' is confusable with 'rn'
+// CHECK-MESSAGES-SAME: [misc-confusable-identifiers]
+// CHECK-MESSAGES: :[[#@LINE-4]]:5: note: other declaration found here
+
+int μ;
+int µ;
+// CHECK-MESSAGES: :[[#@LINE-1]]:5: warning: 'µ' is confusable with 'μ'
+// CHECK-MESSAGES-SAME: [misc-confusable-identifiers]
+// CHECK-MESSAGES: :[[#@LINE-4]]:5: note: other declaration found here
+
 bool f0(const char *q1, const char *ql) {
   // CHECK-MESSAGES: :[[#@LINE-1]]:37: warning: 'ql' is confusable with 'q1' [misc-confusable-identifiers]
   // CHECK-MESSAGES: :[[#@LINE-2]]:21: note: other declaration found here

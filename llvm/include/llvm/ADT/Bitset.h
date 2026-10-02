@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/bit.h"
 #include <array>
+#include <cassert>
 #include <climits>
 #include <cstdint>
 
@@ -51,14 +52,7 @@ template <unsigned NumBits> class Bitset {
 
   constexpr void maskLastWord() { Bits[getLastWordIndex()] &= RemainderMask; }
 
-protected:
-  constexpr const StorageType &getData() const { return Bits; }
-
 public:
-  constexpr Bitset() = default;
-
-  /// Construct from an array of 64-bit words. On 32-bit platforms, each 64-bit
-  /// element is split into two 32-bit storage words.
   explicit constexpr Bitset(
       const std::array<uint64_t, (NumBits + 63) / 64> &B) {
     if constexpr (sizeof(BitWord) == sizeof(uint64_t)) {
@@ -78,6 +72,7 @@ public:
     }
     maskLastWord();
   }
+  constexpr Bitset() = default;
   constexpr Bitset(std::initializer_list<unsigned> Init) {
     for (auto I : Init)
       set(I);
@@ -203,17 +198,18 @@ public:
   constexpr Bitset &operator<<=(unsigned N) {
     if (N == 0)
       return *this;
-    if (N >= NumBits) {
+    if (N >= NumBits)
       return *this = Bitset();
-    }
     const unsigned WordShift = N / BitwordBits;
     const unsigned BitShift = N % BitwordBits;
     if (BitShift == 0) {
-      for (int I = NumWords - 1; I >= static_cast<int>(WordShift); --I)
+      for (unsigned I = NumWords; I > WordShift;) {
+        --I;
         Bits[I] = Bits[I - WordShift];
+      }
     } else {
       const unsigned CarryShift = BitwordBits - BitShift;
-      for (int I = NumWords - 1; I > static_cast<int>(WordShift); --I) {
+      for (unsigned I = NumWords - 1; I > WordShift; --I) {
         Bits[I] = (Bits[I - WordShift] << BitShift) |
                   (Bits[I - WordShift - 1] >> CarryShift);
       }
@@ -234,9 +230,8 @@ public:
   constexpr Bitset &operator>>=(unsigned N) {
     if (N == 0)
       return *this;
-    if (N >= NumBits) {
+    if (N >= NumBits)
       return *this = Bitset();
-    }
     const unsigned WordShift = N / BitwordBits;
     const unsigned BitShift = N % BitwordBits;
     if (BitShift == 0) {
@@ -262,35 +257,36 @@ public:
     return Result;
   }
 
-  /// Return the number of 64-bit words needed to hold all bits.
-  static constexpr unsigned getNumWords64() { return (NumBits + 63) / 64; }
-
-  /// Return the I-th 64-bit word of the bitset, where word 0 contains bits
-  /// [0..63], word 1 contains bits [64..127], etc. On 32-bit platforms this
-  /// assembles two underlying storage words into one 64-bit value.
-  constexpr uint64_t getWord(unsigned I) const {
+  /// Return the I-th 64-bit word of the bitset, from least significant to most.
+  ///
+  /// All words other than the last contain exactly 64 stored bits. The last
+  /// word (\p I == \c getNumWords64() - 1) may cover fewer than 64 stored bits
+  /// when \c NumBits is not a multiple of 64; in that case the unused high bits
+  /// are reported as 0.
+  constexpr uint64_t getWord64(unsigned I) const {
+    assert(I < getNumWords64() && "Word index out of range");
     if constexpr (BitwordBits == 64) {
       return Bits[I];
     } else {
-      static_assert(BitwordBits == 32, "Unsupported word size");
-      uint64_t Lo = (2 * I < NumWords) ? Bits[2 * I] : 0;
+      uint64_t Lo = Bits[2 * I];
       uint64_t Hi = (2 * I + 1 < NumWords) ? Bits[2 * I + 1] : 0;
       return Lo | (Hi << 32);
     }
   }
 
   /// Return the index of the highest set bit, or -1 if no bits are set.
-  /// The return type is signed to allow the -1 sentinel.
   constexpr int findLastSet() const {
-    for (int I = NumWords - 1; I >= 0; --I) {
-      if (Bits[I] != 0) {
-        unsigned LeadingZeros =
-            countl_zero_constexpr(static_cast<BitWord>(Bits[I]));
-        return I * BitwordBits + (BitwordBits - 1 - LeadingZeros);
-      }
+    for (unsigned I = NumWords; I > 0;) {
+      --I;
+      if (Bits[I] != 0)
+        return I * BitwordBits +
+               (BitwordBits - 1 - countl_zero_constexpr(Bits[I]));
     }
     return -1;
   }
+
+  /// Return the number of 64-bit words needed to hold all bits.
+  static constexpr unsigned getNumWords64() { return (NumBits + 63) / 64; }
 };
 
 } // end namespace llvm

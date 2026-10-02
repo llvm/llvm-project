@@ -71,8 +71,8 @@ define void @test3(ptr %init.ptr) {
 ; CHECK-LABEL: 'test3'
 ; CHECK-NEXT:  Determining loop execution counts for: @test3
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 32
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 32
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 16
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 16
 ;
  entry:
   %init = load i32, ptr %init.ptr, !range !0
@@ -222,5 +222,122 @@ loop:
   br i1 %exit.cond, label %leave, label %loop
 }
 
+; Shift amount exceeds bit width and would be truncated from uint64_t to
+; unsigned (4294967299 truncates to 3). The check against getScalarSizeInBits()
+; must happen before truncation to correctly reject this.
+define void @test_shift_amount_exceeds_bitwidth_truncation(i64 %init) {
+; CHECK-LABEL: 'test_shift_amount_exceeds_bitwidth_truncation'
+; CHECK-NEXT:  Determining loop execution counts for: @test_shift_amount_exceeds_bitwidth_truncation
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+ entry:
+  br label %loop
+
+ loop:
+  %iv = phi i64 [ %init, %entry ], [ %iv.shift, %loop ]
+  %iv.shift = shl i64 %iv, 4294967299
+  %exit.cond = icmp eq i64 %iv, 0
+  br i1 %exit.cond, label %leave, label %loop
+
+ leave:
+  ret void
+}
+
+; Shift amount equals bit width (32 for i32) - produces poison per LangRef,
+; so we do not recognize this as a valid shift recurrence.
+define void @test_shift_amount_eq_bitwidth(i32 %init) {
+; CHECK-LABEL: 'test_shift_amount_eq_bitwidth'
+; CHECK-NEXT:  Determining loop execution counts for: @test_shift_amount_eq_bitwidth
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+ entry:
+  br label %loop
+
+ loop:
+  %iv = phi i32 [ %init, %entry ], [ %iv.shift, %loop ]
+  %iv.shift = lshr i32 %iv, 32
+  %exit.cond = icmp eq i32 %iv, 0
+  br i1 %exit.cond, label %leave, label %loop
+
+ leave:
+  ret void
+}
+
+; lshr by 1 with range metadata: activeBits(49999) = 16, MaxBTC = 16.
+; Mirrors test3 but with lshr instead of ashr.
+define void @test_lshr_range(ptr %init.ptr) {
+; CHECK-LABEL: 'test_lshr_range'
+; CHECK-NEXT:  Determining loop execution counts for: @test_lshr_range
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 16
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 16
+;
+ entry:
+  %init = load i32, ptr %init.ptr, !range !0
+  br label %loop
+
+ loop:
+  %iv = phi i32 [ %init, %entry ], [ %iv.shift, %loop ]
+  %iv.shift = lshr i32 %iv, 1
+  %exit.cond = icmp eq i32 %iv, 0
+  br i1 %exit.cond, label %leave, label %loop
+
+ leave:
+  ret void
+}
+
+; lshr by 3 with range metadata: activeBits(49999) = 16,
+; MaxBTC = ceil(16/3) = 6.
+define void @test_lshr_shift3_range(ptr %init.ptr) {
+; CHECK-LABEL: 'test_lshr_shift3_range'
+; CHECK-NEXT:  Determining loop execution counts for: @test_lshr_shift3_range
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 6
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 6
+;
+ entry:
+  %init = load i32, ptr %init.ptr, !range !0
+  br label %loop
+
+ loop:
+  %iv = phi i32 [ %init, %entry ], [ %iv.shift, %loop ]
+  %iv.shift = lshr i32 %iv, 3
+  %exit.cond = icmp eq i32 %iv, 0
+  br i1 %exit.cond, label %leave, label %loop
+
+ leave:
+  ret void
+}
+
+; GPU-style reduction: for (i = blockDim.x/2; i >= 1; i >>= 1)
+; %blockdim has !range [1, 1025), so %start = lshr %blockdim, 1 has max 512.
+; activeBits(512) = 10, MaxBTC = 10.
+define void @test_gpu_reduction(ptr %blockdim.ptr) {
+; CHECK-LABEL: 'test_gpu_reduction'
+; CHECK-NEXT:  Determining loop execution counts for: @test_gpu_reduction
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 10
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 10
+;
+ entry:
+  %blockdim = load i32, ptr %blockdim.ptr, !range !2
+  %start = lshr i32 %blockdim, 1
+  br label %loop
+
+ loop:
+  %iv = phi i32 [ %start, %entry ], [ %iv.shift, %loop ]
+  %iv.shift = lshr i32 %iv, 1
+  %exit.cond = icmp eq i32 %iv, 0
+  br i1 %exit.cond, label %leave, label %loop
+
+ leave:
+  ret void
+}
+
 !0 = !{i32 0, i32 50000}
 !1 = !{i32 -5000, i32 -1}
+!2 = !{i32 1, i32 1025}

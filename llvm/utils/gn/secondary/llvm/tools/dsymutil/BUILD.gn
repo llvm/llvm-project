@@ -30,6 +30,7 @@ driver_executable("dsymutil") {
     "DwarfLinkerForBinary.cpp",
     "MachODebugMapParser.cpp",
     "MachOUtils.cpp",
+    "PseudoProbeLinker.cpp",
     "RelocationMap.cpp",
     "Reproducer.cpp",
     "SwiftModule.cpp",

@@ -30,15 +30,15 @@ struct HasThings : Base {
     side_effect2();
   }
 
-// CIR: cir.func {{.*}}@_ZN9HasThingsC2ERK4Ctor(%[[THIS_ARG:.*]]: !cir.ptr<!rec_HasThings> {{.*}}, %[[C_ARG:.*]]: !cir.ptr<!rec_Ctor> {{.*}}) {{.*}}special_member<#cir.cxx_ctor<!rec_HasThings, custom>> {
-// CIR-NEXT:  %[[THIS_ALLOC:.*]] = cir.alloca !cir.ptr<!rec_HasThings>, !cir.ptr<!cir.ptr<!rec_HasThings>>, ["this", init]
-// CIR-NEXT:  %[[C_ALLOC:.*]] = cir.alloca !cir.ptr<!rec_Ctor>, !cir.ptr<!cir.ptr<!rec_Ctor>>, ["c", init, const]
+// CIR: cir.func {{.*}}@_ZN9HasThingsC2ERK4Ctor(%[[THIS_ARG:.*]]: !cir.ptr<!rec_HasThings> {{.*}}, %[[C_ARG:.*]]: !cir.ptr<!rec_Ctor> {{.*}}) {{.*}}func_info<#cir.cxx_ctor<!rec_HasThings, custom>>{{.*}} {
+// CIR-NEXT:  %[[THIS_ALLOC:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_HasThings>>
+// CIR-NEXT:  %[[C_ALLOC:.*]] = cir.alloca "c" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_Ctor>>
 // CIR-NEXT:  cir.store %[[THIS_ARG]], %[[THIS_ALLOC]] : !cir.ptr<!rec_HasThings>, !cir.ptr<!cir.ptr<!rec_HasThings>>
 // CIR-NEXT:  cir.store %[[C_ARG]], %[[C_ALLOC]] : !cir.ptr<!rec_Ctor>, !cir.ptr<!cir.ptr<!rec_Ctor>>
 // CIR-NEXT:  %[[THIS_LOAD:.*]] = cir.load %[[THIS_ALLOC]] : !cir.ptr<!cir.ptr<!rec_HasThings>>, !cir.ptr<!rec_HasThings>
 // CIR-NEXT:  cir.scope {
 // CIR-NEXT:    cir.try {
-// CIR-NEXT:      %[[BASE_ADDR:.*]] = cir.base_class_addr %[[THIS_LOAD]] : !cir.ptr<!rec_HasThings> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR-NEXT:      %[[BASE_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS_LOAD]] [0] : !cir.ptr<!rec_HasThings> -> !cir.ptr<!rec_Base>
 // CIR-NEXT:      cir.call @_ZN4BaseC2Ev(%[[BASE_ADDR]]) : (!cir.ptr<!rec_Base>{{.*}}) -> ()
 // CIR-NEXT:      %[[FROMCTOR_ADDR:.*]] = cir.cast bitcast %[[THIS_LOAD]] : !cir.ptr<!rec_HasThings> -> !cir.ptr<!rec_FromCtor>
 // CIR-NEXT:      %[[C_LOAD:.*]] = cir.load %[[C_ALLOC]] : !cir.ptr<!cir.ptr<!rec_Ctor>>, !cir.ptr<!rec_Ctor>

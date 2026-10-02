@@ -86,6 +86,10 @@ def SDT_PPCst_vec_be : SDTypeProfile<0, 2, [
 def SDT_PPCxxperm : SDTypeProfile<1, 3, [
   SDTCisVT<0, v2f64>, SDTCisVT<1, v2f64>,
   SDTCisVT<2, v2f64>, SDTCisVT<3, v4i32>]>;
+
+def SDT_PPCxvcvsxwsp : SDTypeProfile<1, 1, [
+  SDTCisVT<0, v4f32>, SDTCisVT<1, v4i32>
+]>;
 //--------------------------- Custom PPC nodes -------------------------------//
 
 // VSRC, CHAIN = LXVD2X_LE CHAIN, Ptr - Occurs only for little endian.
@@ -176,6 +180,8 @@ def PPCSToV : SDNode<"PPCISD::SCALAR_TO_VECTOR_PERMUTED",
                      SDTypeProfile<1, 1, []>, []>;
 
 def PPCxxperm : SDNode<"PPCISD::XXPERM", SDT_PPCxxperm, []>;
+
+def PPCxvcvsxwsp : SDNode<"PPCISD::XVCVSXWSP", SDT_PPCxvcvsxwsp, []>;
 
 def PPCldsplatAlign16 : PatFrag<(ops node:$ptr), (PPCldsplat node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getAlign() >= Align(16) &&
@@ -343,7 +349,6 @@ let hasSideEffects = 0 in {
     // Pseudo instruction XFLOADf64 will be expanded to LXSDX or LFDX later
     let CodeSize = 3 in
       def XFLOADf64  : PseudoXFormMemOp<(outs vsfrc:$XT), (ins (memrr $RA, $RB):$addr),
-                              "#XFLOADf64",
                               [(set f64:$XT, (load XForm:$addr))]>;
 
     let Predicates = [HasVSX, HasOnlySwappingMemOps] in
@@ -374,7 +379,6 @@ let hasSideEffects = 0 in {
     // Pseudo instruction XFSTOREf64  will be expanded to STXSDX or STFDX later
     let CodeSize = 3 in
       def XFSTOREf64 : PseudoXFormMemOp<(outs), (ins vsfrc:$XT, (memrr $RA, $RB):$addr),
-                              "#XFSTOREf64",
                               [(store f64:$XT, XForm:$addr)]>;
 
     let Predicates = [HasVSX, HasOnlySwappingMemOps] in {
@@ -1165,15 +1169,12 @@ let Predicates = [HasVSX, HasP8Vector] in {
     // Pseudo instruction XFLOADf32 will be expanded to LXSSPX or LFSX later
     let CodeSize = 3 in
     def XFLOADf32  : PseudoXFormMemOp<(outs vssrc:$XT), (ins memrr:$src),
-                            "#XFLOADf32",
                             [(set f32:$XT, (load XForm:$src))]>;
     // Pseudo instruction LIWAX will be expanded to LXSIWAX or LFIWAX later
     def LIWAX : PseudoXFormMemOp<(outs vsfrc:$XT), (ins memrr:$src),
-                       "#LIWAX",
                        [(set f64:$XT, (PPClfiwax ForceXForm:$src))]>;
     // Pseudo instruction LIWZX will be expanded to LXSIWZX or LFIWZX later
     def LIWZX : PseudoXFormMemOp<(outs vsfrc:$XT), (ins memrr:$src),
-                       "#LIWZX",
                        [(set f64:$XT, (PPClfiwzx ForceXForm:$src))]>;
   } // mayLoad
 
@@ -1188,11 +1189,9 @@ let Predicates = [HasVSX, HasP8Vector] in {
     // Pseudo instruction XFSTOREf32 will be expanded to STXSSPX or STFSX later
     let CodeSize = 3 in
     def XFSTOREf32 : PseudoXFormMemOp<(outs), (ins vssrc:$XT, memrr:$dst),
-                            "#XFSTOREf32",
                             [(store f32:$XT, XForm:$dst)]>;
     // Pseudo instruction STIWX will be expanded to STXSIWX or STFIWX later
     def STIWX : PseudoXFormMemOp<(outs), (ins vsfrc:$XT, memrr:$dst),
-                       "#STIWX",
                       [(PPCstfiwx f64:$XT, ForceXForm:$dst)]>;
   } // mayStore
 
@@ -1793,31 +1792,23 @@ let Predicates = [HasVSX, HasP9Vector] in {
   } // mayStore
 
   def DFLOADf32  : PPCPostRAExpPseudo<(outs vssrc:$XT), (ins memrix:$src),
-                          "#DFLOADf32",
                           [(set f32:$XT, (load DSForm:$src))]>;
   def DFLOADf64  : PPCPostRAExpPseudo<(outs vsfrc:$XT), (ins memrix:$src),
-                          "#DFLOADf64",
                           [(set f64:$XT, (load DSForm:$src))]>;
   def DFSTOREf32 : PPCPostRAExpPseudo<(outs), (ins vssrc:$XT, memrix:$dst),
-                          "#DFSTOREf32",
                           [(store f32:$XT, DSForm:$dst)]>;
   def DFSTOREf64 : PPCPostRAExpPseudo<(outs), (ins vsfrc:$XT, memrix:$dst),
-                          "#DFSTOREf64",
                           [(store f64:$XT, DSForm:$dst)]>;
 
   let mayStore = 1 in {
     def SPILLTOVSR_STX : PseudoXFormMemOp<(outs),
-                                          (ins spilltovsrrc:$XT, memrr:$dst),
-                                          "#SPILLTOVSR_STX", []>;
-    def SPILLTOVSR_ST : PPCPostRAExpPseudo<(outs), (ins spilltovsrrc:$XT, memrix:$dst),
-                              "#SPILLTOVSR_ST", []>;
+                                          (ins spilltovsrrc:$XT, memrr:$dst)>;
+    def SPILLTOVSR_ST : PPCPostRAExpPseudo<(outs), (ins spilltovsrrc:$XT, memrix:$dst)>;
   }
   let mayLoad = 1 in {
     def SPILLTOVSR_LDX : PseudoXFormMemOp<(outs spilltovsrrc:$XT),
-                                          (ins memrr:$src),
-                                          "#SPILLTOVSR_LDX", []>;
-    def SPILLTOVSR_LD : PPCPostRAExpPseudo<(outs spilltovsrrc:$XT), (ins memrix:$src),
-                              "#SPILLTOVSR_LD", []>;
+                                          (ins memrr:$src)>;
+    def SPILLTOVSR_LD : PPCPostRAExpPseudo<(outs spilltovsrrc:$XT), (ins memrix:$src)>;
 
   }
   } // HasP9Vector
@@ -3402,6 +3393,10 @@ def : Pat<(f64 (int_ppc_insert_exp f64:$A, i64:$B)),
 def : Pat<(int_ppc_stfiw ForceXForm:$dst, f64:$XT),
           (STXSIWX f64:$XT, ForceXForm:$dst)>;
 def : Pat<(int_ppc_frsqrtes vssrc:$XB), (XSRSQRTESP $XB)>;
+
+def : Pat<(PPCxvcvsxwsp (v4i32 VRRC:$XB)),
+           (XVCVSXWSP (COPY_TO_REGCLASS $XB, VSRC))>;
+
 } // HasVSX, HasP8Vector
 
 // Any big endian Power8 VSX subtarget.

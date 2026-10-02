@@ -7,9 +7,9 @@
 !u8i = !cir.int<u, 8>
 !void = !cir.void
 
-!rec_S = !cir.record<struct "S" {!s32i, !s32i}>
-!rec_Base = !cir.record<struct "Base" {!u8i}>
-!rec_Derived = !cir.record<struct "Derived" {!rec_Base, !s32i}>
+!rec_S = !cir.struct<"S" {data !s32i, data !s32i}>
+!rec_Base = !cir.struct<"Base" {data !u8i}>
+!rec_Derived = !cir.struct<"Derived" {data !rec_Base, data !s32i}>
 
 module {
 
@@ -23,14 +23,14 @@ cir.func @dead_get_member(%arg0: !cir.ptr<!rec_S>) {
 // CHECK-LABEL: @dead_base_class_addr
 // CHECK-NOT:     cir.base_class_addr
 cir.func @dead_base_class_addr(%arg0: !cir.ptr<!rec_Derived>) {
-  %0 = cir.base_class_addr %arg0 : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+  %0 = cir.base_class_addr nonnull %arg0 [0] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
   cir.return
 }
 
 // CHECK-LABEL: @dead_derived_class_addr
 // CHECK-NOT:     cir.derived_class_addr
 cir.func @dead_derived_class_addr(%arg0: !cir.ptr<!rec_Base>) {
-  %0 = cir.derived_class_addr %arg0 : !cir.ptr<!rec_Base> nonnull [0] -> !cir.ptr<!rec_Derived>
+  %0 = cir.derived_class_addr nonnull %arg0 [0] : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
   cir.return
 }
 

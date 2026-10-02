@@ -8,6 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # WASI gives the inferior no working directory and no file system
 class SettingsCommandTestCase(TestBase):
     output_file_name = "output.txt"
 

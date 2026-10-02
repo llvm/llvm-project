@@ -11,7 +11,7 @@
 // Ensure that APIs which take a CharT* are diagnosing passing a nullptr to them
 
 // AppleClang doesn't have diagnose_if with diagnostic flags
-// UNSUPPORTED: apple-clang-17
+// UNSUPPORTED: apple-clang-21
 
 // ADDITIONAL_COMPILE_FLAGS: -Wno-unused-result
 

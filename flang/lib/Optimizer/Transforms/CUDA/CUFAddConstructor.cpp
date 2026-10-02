@@ -10,16 +10,15 @@
 #include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
-#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/CodeGen/Target.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/DataLayout.h"
+#include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Runtime/CUDA/registration.h"
 #include "flang/Runtime/entry-names.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
@@ -29,6 +28,46 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/CommandLine.h"
+
+#include <string>
+#include <utility>
+
+namespace llvm::cl {
+template <>
+class parser<std::pair<std::string, bool>>
+    : public basic_parser<std::pair<std::string, bool>> {
+public:
+  parser(Option &option) : basic_parser(option) {}
+
+  bool parse(Option &option, StringRef argName, StringRef arg,
+             std::pair<std::string, bool> &value) {
+    auto [name, flagStr] = arg.rsplit(':');
+    if (name.empty() || flagStr.empty())
+      return option.error("expected <name>:<bool>", argName);
+
+    bool ifMain = false;
+    if (flagStr.equals_insensitive("true") || flagStr == "1")
+      ifMain = true;
+    else if (flagStr.equals_insensitive("false") || flagStr == "0")
+      ifMain = false;
+    else
+      return option.error("invalid boolean in extra constructor mapping",
+                          argName);
+
+    value = {name.str(), ifMain};
+    return false;
+  }
+
+  StringRef getValueName() const override { return "name:bool"; }
+
+  static void print(raw_ostream &os,
+                    const std::pair<std::string, bool> &value) {
+    os << value.first << ':' << (value.second ? "true" : "false");
+  }
+};
+} // namespace llvm::cl
 
 namespace fir {
 #define GEN_PASS_DEF_CUFADDCONSTRUCTOR
@@ -42,13 +81,25 @@ namespace {
 static constexpr llvm::StringRef cudaFortranCtorName{
     "__cudaFortranConstructor"};
 static constexpr llvm::StringRef managedPtrSuffix{".managed.ptr"};
+static constexpr llvm::StringRef cudaCompiledSymbolName{"Mcuda_compiled"};
 
-/// Create an 8-byte pointer global in the __nv_managed_data__ section.
-/// The CUDA runtime populates this pointer with the unified memory address
-/// when the module is initialized via __cudaInitModule.
+/// Create the 8-byte companion pointer global holding the unified memory
+/// address of \p globalOp, which the CUDA runtime populates when the module is
+/// initialized via __cudaInitModule.
+///
+/// The pointer has external linkage so that the whole program shares a single
+/// one. Only the translation unit that defines the variable emits a definition
+/// (zero-initialized, in the __nv_managed_data__ section, and registered);
+/// every other translation unit emits a declaration and resolves to that same
+/// definition at link time.
+///
+/// A pointer per translation unit does not work: the runtime populates only
+/// the registration it performs first for a given variable name, so any other
+/// unit would be left loading through a null pointer.
 static fir::GlobalOp createManagedPointerGlobal(fir::FirOpBuilder &builder,
                                                 mlir::ModuleOp mod,
-                                                fir::GlobalOp globalOp) {
+                                                fir::GlobalOp globalOp,
+                                                bool isDefinition) {
   mlir::MLIRContext *ctx = mod.getContext();
   std::string ptrGlobalName = (globalOp.getSymName() + managedPtrSuffix).str();
   auto ptrTy = fir::LLVMPointerType::get(ctx, mlir::IntegerType::get(ctx, 8));
@@ -56,16 +107,18 @@ static fir::GlobalOp createManagedPointerGlobal(fir::FirOpBuilder &builder,
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointAfter(globalOp);
 
-  llvm::SmallVector<mlir::NamedAttribute> attrs;
-  attrs.push_back(
-      mlir::NamedAttribute(mlir::StringAttr::get(ctx, "section"),
-                           mlir::StringAttr::get(ctx, "__nv_managed_data__")));
-
   mlir::DenseElementsAttr initAttr = {};
   auto ptrGlobal = fir::GlobalOp::create(
       builder, globalOp.getLoc(), ptrGlobalName, /*isConstant=*/false,
       /*isTarget=*/false, ptrTy, initAttr,
-      /*linkName=*/builder.createInternalLinkage(), attrs);
+      /*linkage=*/builder.createExternalLinkage());
+
+  // Leaving the region empty makes this a declaration of the definition
+  // emitted by the defining translation unit.
+  if (!isDefinition)
+    return ptrGlobal;
+
+  ptrGlobal.setSectionAttr(builder.getStringAttr("__nv_managed_data__"));
 
   mlir::Region &region = ptrGlobal.getRegion();
   mlir::Block *block = builder.createBlock(&region);
@@ -76,8 +129,187 @@ static fir::GlobalOp createManagedPointerGlobal(fir::FirOpBuilder &builder,
   return ptrGlobal;
 }
 
+/// Return true if the GPU-module counterpart of \p hostGlobal has no body, so
+/// the device side is an `.extern` reference rather than a device-resident
+/// definition. Such symbols must be registered with
+/// cuf.register_variable_static so the driver binds the device reference to the
+/// host pointer at module-load time and HMM/ATS handles migration. A
+/// device-resident definition instead needs a cuf.register_variable_static
+/// with the deviceResident attribute: registering it as host memory would
+/// override the device symbol and make cudaGetSymbolAddress fail.
+static bool isDeviceExternReference(fir::GlobalOp hostGlobal,
+                                    mlir::SymbolTable &gpuSymTable) {
+  auto gpuGlobal = gpuSymTable.lookup<fir::GlobalOp>(hostGlobal.getSymName());
+  if (!gpuGlobal)
+    return false;
+  return !gpuGlobal.isInitialized();
+}
+
+/// Return true if \p globalOp defines the variable rather than just declaring
+/// it. A variable USEd from another translation unit has no body here; its
+/// device symbol belongs to the defining unit's device module, so registering
+/// the declaration would bind the host address to the wrong module.
+static bool definesGlobal(fir::GlobalOp globalOp) {
+  return globalOp.isInitialized();
+}
+
+/// Return true if \p hostGlobal is a host module-scope global that has been
+/// mirrored in the GPU module as an external (no-body) declaration by the
+/// CUFDeviceGlobal pass under -gpu=mem:unified.
+static bool isCudaUnifiedExternalGlobal(fir::GlobalOp hostGlobal,
+                                        mlir::SymbolTable &gpuSymTable) {
+  bool isCompilerGenerated =
+      fir::NameUniquer::isCompilerGenerated(hostGlobal.getSymName());
+  if (hostGlobal.getDataAttrAttr())
+    return false;
+  if (hostGlobal.getConstant() && !isCompilerGenerated)
+    return false;
+  return isDeviceExternReference(hostGlobal, gpuSymTable);
+}
+
+/// Build a C-style name literal (`<symname>\0`) for use as the deviceName
+/// argument of a CUF registration runtime call.
+static mlir::Value buildGlobalNameLiteral(fir::FirOpBuilder &builder,
+                                          mlir::Location loc,
+                                          fir::GlobalOp globalOp) {
+  std::string nameStr = globalOp.getSymbol().getValue().str();
+  nameStr += '\0';
+  return fir::getBase(fir::factory::createStringLiteral(builder, loc, nameStr));
+}
+
+/// Compute the storage size in bytes of \p globalOp. For a box-typed
+/// allocatable global the size is the descriptor size (after type
+/// conversion); otherwise it's the size of the global's declared type.
+static mlir::Value computeGlobalSize(fir::FirOpBuilder &builder,
+                                     mlir::Location loc, mlir::Type idxTy,
+                                     const mlir::DataLayout &dl,
+                                     const fir::KindMapping &kindMap,
+                                     fir::LLVMTypeConverter &typeConverter,
+                                     fir::GlobalOp globalOp) {
+  std::optional<uint64_t> size;
+  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(globalOp.getType())) {
+    mlir::Type structTy = typeConverter.convertBoxTypeAsStruct(boxTy);
+    size = dl.getTypeSizeInBits(structTy) / 8;
+  }
+  if (!size) {
+    if (auto s =
+            fir::getTypeSizeAndAlignment(loc, globalOp.getType(), dl, kindMap))
+      size = s->first;
+  }
+  if (!size) {
+    // A global embedding descriptor (allocatable/pointer) components has no
+    // structural size; size it via its LLVM type, which inlines the
+    // descriptors.
+    mlir::Type llvmTy = typeConverter.convertType(globalOp.getType());
+    if (llvmTy && mlir::isa<mlir::DataLayoutTypeInterface>(llvmTy))
+      size = dl.getTypeSizeInBits(llvmTy) / 8;
+  }
+  if (!size) {
+    size = fir::getTypeSizeAndAlignmentOrCrash(loc, globalOp.getType(), dl,
+                                               kindMap)
+               .first;
+  }
+  return builder.createIntegerConstant(loc, idxTy, *size);
+}
+
+/// Storage size in bytes of \p globalOp as a raw integer (see computeGlobalSize
+/// for the box vs declared-type handling).
+static uint64_t getGlobalSizeInBytes(mlir::Location loc,
+                                     const mlir::DataLayout &dl,
+                                     const fir::KindMapping &kindMap,
+                                     fir::LLVMTypeConverter &typeConverter,
+                                     fir::GlobalOp globalOp) {
+  std::optional<uint64_t> size;
+  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(globalOp.getType())) {
+    mlir::Type structTy = typeConverter.convertBoxTypeAsStruct(boxTy);
+    size = dl.getTypeSizeInBits(structTy) / 8;
+  }
+  if (!size) {
+    if (auto s =
+            fir::getTypeSizeAndAlignment(loc, globalOp.getType(), dl, kindMap))
+      size = s->first;
+  }
+  if (!size) {
+    // A global embedding descriptor (allocatable/pointer) components has no
+    // structural size; size it via its LLVM type, which inlines the
+    // descriptors.
+    mlir::Type llvmTy = typeConverter.convertType(globalOp.getType());
+    if (llvmTy && mlir::isa<mlir::DataLayoutTypeInterface>(llvmTy))
+      size = dl.getTypeSizeInBits(llvmTy) / 8;
+  }
+  if (!size) {
+    size = fir::getTypeSizeAndAlignmentOrCrash(loc, globalOp.getType(), dl,
+                                               kindMap)
+               .first;
+  }
+  return *size;
+}
+
+/// Emit a call to a CUF registration runtime function with the canonical
+/// (module, addr, name, size) signature, where addr is the address of \p
+/// addrGlobal taken via fir.address_of and name/size describe \p nameGlobal.
+/// Used both for CUFRegisterVariable / CUFRegisterManagedVariable.
+static void
+emitCUFRegistrationCall(fir::FirOpBuilder &builder, mlir::Location loc,
+                        mlir::Type idxTy, const mlir::DataLayout &dl,
+                        const fir::KindMapping &kindMap,
+                        fir::LLVMTypeConverter &typeConverter,
+                        mlir::Value registeredMod, mlir::func::FuncOp func,
+                        fir::GlobalOp addrGlobal, fir::GlobalOp nameGlobal) {
+  mlir::Value gblName = buildGlobalNameLiteral(builder, loc, nameGlobal);
+  mlir::Value sizeVal = computeGlobalSize(builder, loc, idxTy, dl, kindMap,
+                                          typeConverter, nameGlobal);
+  mlir::Value addr = fir::AddrOfOp::create(
+      builder, loc, addrGlobal.resultType(), addrGlobal.getSymbol());
+  llvm::SmallVector<mlir::Value> args{
+      fir::runtime::createArguments(builder, loc, func.getFunctionType(),
+                                    registeredMod, addr, gblName, sizeVal)};
+  fir::CallOp::create(builder, loc, func, args);
+}
+
+static bool hasRegisteredGlobals(mlir::ModuleOp mod,
+                                 mlir::SymbolTable gpuSymTable,
+                                 bool cudaUnified) {
+  for (fir::GlobalOp globalOp : mod.getOps<fir::GlobalOp>()) {
+    auto attr = globalOp.getDataAttrAttr();
+    if (!attr) {
+      if (cudaUnified && isCudaUnifiedExternalGlobal(globalOp, gpuSymTable))
+        return true;
+      continue;
+    }
+    if (!gpuSymTable.lookup(globalOp.getSymName()))
+      continue;
+    // Non-allocatable managed globals still need a companion pointer
+    // declaration when defined elsewhere, so they count here too.
+    if (attr.getValue() == cuf::DataAttribute::Managed &&
+        !mlir::isa<fir::BaseBoxType>(globalOp.getType()))
+      return true;
+    if (!definesGlobal(globalOp))
+      continue;
+    switch (attr.getValue()) {
+    case cuf::DataAttribute::Device:
+    case cuf::DataAttribute::Constant:
+    case cuf::DataAttribute::Managed: {
+      return true;
+    } break;
+    default:
+      break;
+    }
+  }
+  return false;
+}
+
+static bool hasKernel(mlir::gpu::GPUModuleOp gpuMod) {
+  for (auto func : gpuMod.getOps<mlir::gpu::GPUFuncOp>())
+    if (func.isKernel())
+      return true;
+  return false;
+}
+
 struct CUFAddConstructor
     : public fir::impl::CUFAddConstructorBase<CUFAddConstructor> {
+
+  using CUFAddConstructorBase::CUFAddConstructorBase;
 
   void runOnOperation() override {
     mlir::ModuleOp mod = getOperation();
@@ -100,120 +332,243 @@ struct CUFAddConstructor
                           getName() + "pass");
     }
 
-    // Symbol reference to CUFRegisterAllocator.
-    builder.setInsertionPointToEnd(mod.getBody());
-    auto registerFuncOp = mlir::LLVM::LLVMFuncOp::create(
-        builder, loc, RTNAME_STRING(CUFRegisterAllocator), funcTy);
-    registerFuncOp.setVisibility(mlir::SymbolTable::Visibility::Private);
-    auto cufRegisterAllocatorRef = mlir::SymbolRefAttr::get(
-        mod.getContext(), RTNAME_STRING(CUFRegisterAllocator));
-    builder.setInsertionPointToEnd(mod.getBody());
+    bool needAllocatorRegistration = false;
+    mod.walk([&](cuf::AllocateOp) {
+      needAllocatorRegistration = true;
+      return mlir::WalkResult::interrupt();
+    });
+    if (!needAllocatorRegistration) {
+      mod.walk([&](cuf::DeallocateOp) {
+        needAllocatorRegistration = true;
+        return mlir::WalkResult::interrupt();
+      });
+    }
+    if (!needAllocatorRegistration) {
+      mod.walk([&](fir::DeclareOp declOp) {
+        if (declOp.getFortranAttrs() &&
+            fir::bitEnumContainsAny(
+                *declOp.getFortranAttrs(),
+                fir::FortranVariableFlagsEnum::allocatable |
+                    fir::FortranVariableFlagsEnum::pointer)) {
+          needAllocatorRegistration = true;
+          return mlir::WalkResult::interrupt();
+        }
+        return mlir::WalkResult::advance();
+      });
+    }
+    if (!needAllocatorRegistration) {
+      mod.walk([&](fir::GlobalOp globalOp) {
+        if (globalOp.getDataAttrAttr()) {
+          if (auto baseBoxType =
+                  mlir::dyn_cast<fir::BaseBoxType>(globalOp.getType())) {
+            if (baseBoxType.isPointerOrAllocatable()) {
+              needAllocatorRegistration = true;
+              return mlir::WalkResult::interrupt();
+            }
+          }
+        }
+        return mlir::WalkResult::advance();
+      });
+    }
 
     // Create the constructor function that call CUFRegisterAllocator.
+    builder.setInsertionPointToEnd(mod.getBody());
+    mlir::LLVM::GlobalOp cudaCompiledGlobal;
+    bool hasProgramEntry =
+        symTab.lookup<mlir::func::FuncOp>(fir::NameUniquer::doProgramEntry());
+    // Only the program unit needs the link-time CUDA Fortran runtime check.
+    bool emitCudaCompiledMarker = emitCudaCompiled && hasProgramEntry;
+    if (emitCudaCompiledMarker) {
+      // Undefined sentinel: objects compiled as CUDA Fortran reference this
+      // symbol so linking without the CUDA Fortran runtime produces
+      // "undefined reference to `Mcuda_compiled'".
+      cudaCompiledGlobal = mlir::LLVM::GlobalOp::create(
+          builder, loc, mlir::IntegerType::get(ctx, 8), /*isConstant=*/false,
+          mlir::LLVM::Linkage::External, cudaCompiledSymbolName,
+          mlir::Attribute{});
+    }
     auto func = mlir::LLVM::LLVMFuncOp::create(builder, loc,
                                                cudaFortranCtorName, funcTy);
     func.setLinkage(mlir::LLVM::Linkage::Internal);
-    builder.setInsertionPointToStart(func.addEntryBlock(builder));
-    mlir::LLVM::CallOp::create(builder, loc, funcTy, cufRegisterAllocatorRef);
+    auto entryBlock = func.addEntryBlock(builder);
+    builder.setInsertionPointToStart(entryBlock);
+
+    if (needAllocatorRegistration) {
+      llvm::StringRef allocatorRegistrationFunctionName =
+          RTNAME_STRING(CUFRegisterAllocator);
+      if (!allocatorRegistrationFunction.empty())
+        allocatorRegistrationFunctionName = allocatorRegistrationFunction;
+      // Symbol reference to the allocator registration function.
+      builder.setInsertionPointToEnd(mod.getBody());
+      auto registerFuncOp = mlir::LLVM::LLVMFuncOp::create(
+          builder, loc, allocatorRegistrationFunctionName, funcTy);
+      registerFuncOp.setVisibility(mlir::SymbolTable::Visibility::Private);
+      auto cufRegisterAllocatorRef = mlir::SymbolRefAttr::get(
+          mod.getContext(), allocatorRegistrationFunctionName);
+      builder.setInsertionPointToStart(entryBlock);
+      mlir::LLVM::CallOp::create(builder, loc, funcTy, cufRegisterAllocatorRef);
+    }
 
     auto gpuMod = symTab.lookup<mlir::gpu::GPUModuleOp>(cudaDeviceModuleName);
     if (gpuMod) {
-      auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(ctx);
-      auto registeredMod = cuf::RegisterModuleOp::create(
-          builder, loc, llvmPtrTy,
-          mlir::SymbolRefAttr::get(ctx, gpuMod.getName()));
+      mlir::SymbolTable gpuSymTable(gpuMod);
+      bool needsModuleRegistration =
+          hasKernel(gpuMod) ||
+          hasRegisteredGlobals(mod, gpuSymTable, cudaUnified);
+      if (needsModuleRegistration) {
+        auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(ctx);
+        auto registeredMod = cuf::RegisterModuleOp::create(
+            builder, loc, llvmPtrTy,
+            mlir::SymbolRefAttr::get(ctx, gpuMod.getName()));
 
-      fir::LLVMTypeConverter typeConverter(mod, /*applyTBAA=*/false,
-                                           /*forceUnifiedTBAATree=*/false, *dl);
-      // Register kernels
-      for (auto func : gpuMod.getOps<mlir::gpu::GPUFuncOp>()) {
-        if (func.isKernel()) {
-          auto kernelName = mlir::SymbolRefAttr::get(
-              builder.getStringAttr(cudaDeviceModuleName),
-              {mlir::SymbolRefAttr::get(builder.getContext(), func.getName())});
-          cuf::RegisterKernelOp::create(builder, loc, kernelName,
-                                        registeredMod);
+        fir::LLVMTypeConverter typeConverter(
+            mod, /*applyTBAA=*/false, /*forceUnifiedTBAATree=*/false, *dl);
+        // Register kernels
+        for (auto func : gpuMod.getOps<mlir::gpu::GPUFuncOp>()) {
+          if (func.isKernel()) {
+            auto kernelName = mlir::SymbolRefAttr::get(
+                builder.getStringAttr(cudaDeviceModuleName),
+                {mlir::SymbolRefAttr::get(builder.getContext(),
+                                          func.getName())});
+            cuf::RegisterKernelOp::create(builder, loc, kernelName,
+                                          registeredMod);
+          }
         }
-      }
 
-      // Register variables
-      bool hasNonAllocManagedGlobal = false;
-      for (fir::GlobalOp globalOp : mod.getOps<fir::GlobalOp>()) {
-        auto attr = globalOp.getDataAttrAttr();
-        if (!attr)
-          continue;
+        // Register variables
+        bool hasNonAllocManagedGlobal = false;
+        for (fir::GlobalOp globalOp : mod.getOps<fir::GlobalOp>()) {
+          auto attr = globalOp.getDataAttrAttr();
+          if (!attr)
+            continue;
+          if (!gpuSymTable.lookup(globalOp.getSymName()))
+            continue;
 
-        bool isNonAllocManagedGlobal =
-            attr.getValue() == cuf::DataAttribute::Managed &&
-            !mlir::isa<fir::BaseBoxType>(globalOp.getType());
+          bool isNonAllocManagedGlobal =
+              attr.getValue() == cuf::DataAttribute::Managed &&
+              !mlir::isa<fir::BaseBoxType>(globalOp.getType());
 
-        mlir::func::FuncOp func;
-        switch (attr.getValue()) {
-        case cuf::DataAttribute::Device:
-        case cuf::DataAttribute::Constant:
-        case cuf::DataAttribute::Managed: {
-          // Global variable name
-          std::string gblNameStr = globalOp.getSymbol().getValue().str();
-          gblNameStr += '\0';
-          mlir::Value gblName = fir::getBase(
-              fir::factory::createStringLiteral(builder, loc, gblNameStr));
+          // Non-allocatable managed globals are still visited when defined
+          // elsewhere: such a unit emits no registration, but it does need a
+          // declaration of the companion pointer to load through.
+          if (!definesGlobal(globalOp) && !isNonAllocManagedGlobal)
+            continue;
 
-          // Global variable size
-          std::optional<uint64_t> size;
-          if (auto boxTy =
-                  mlir::dyn_cast<fir::BaseBoxType>(globalOp.getType())) {
-            mlir::Type structTy = typeConverter.convertBoxTypeAsStruct(boxTy);
-            size = dl->getTypeSizeInBits(structTy) / 8;
+          switch (attr.getValue()) {
+          case cuf::DataAttribute::Device:
+          case cuf::DataAttribute::Constant:
+          case cuf::DataAttribute::Managed: {
+            if (isNonAllocManagedGlobal) {
+              // Non-allocatable managed globals use pointer indirection:
+              // a companion pointer in __nv_managed_data__ holds the unified
+              // memory address, registered via __cudaRegisterManagedVar.
+              // The pointer is shared across the program, so it is defined and
+              // registered only by the unit that defines the variable; other
+              // units just declare it.
+              bool definesVariable = definesGlobal(globalOp);
+              fir::GlobalOp ptrGlobal = createManagedPointerGlobal(
+                  builder, mod, globalOp, definesVariable);
+              if (!definesVariable)
+                break;
+              hasNonAllocManagedGlobal = true;
+              auto func = fir::runtime::getRuntimeFunc<mkRTKey(
+                  CUFRegisterManagedVariable)>(loc, builder);
+              emitCUFRegistrationCall(builder, loc, idxTy, *dl, kindMap,
+                                      typeConverter, registeredMod, func,
+                                      /*addrGlobal=*/ptrGlobal,
+                                      /*nameGlobal=*/globalOp);
+            } else if (cudaUnified) {
+              // The registration must be deferred, but the runtime still needs
+              // to know which kind of symbol it is: a device-side definition
+              // has to stay registered as a device variable so
+              // cudaGetSymbolAddress can resolve it, whereas a device-side
+              // extern reference is bound to the host pointer instead. Mapping
+              // a symbol as host memory overrides a device-variable
+              // registration for the same symbol, so the two are exclusive.
+              bool isDeviceResident =
+                  !isDeviceExternReference(globalOp, gpuSymTable);
+              uint64_t szBytes = getGlobalSizeInBytes(loc, *dl, kindMap,
+                                                      typeConverter, globalOp);
+              cuf::RegisterVariableStaticOp::create(
+                  builder, loc,
+                  mlir::SymbolRefAttr::get(ctx, globalOp.getSymName()),
+                  globalOp.getSymName(), szBytes, isDeviceResident);
+            } else {
+              auto func =
+                  fir::runtime::getRuntimeFunc<mkRTKey(CUFRegisterVariable)>(
+                      loc, builder);
+              emitCUFRegistrationCall(builder, loc, idxTy, *dl, kindMap,
+                                      typeConverter, registeredMod, func,
+                                      /*addrGlobal=*/globalOp,
+                                      /*nameGlobal=*/globalOp);
+            }
+          } break;
+          default:
+            break;
           }
-          if (!size) {
-            size = fir::getTypeSizeAndAlignmentOrCrash(loc, globalOp.getType(),
-                                                       *dl, kindMap)
-                       .first;
-          }
-          auto sizeVal = builder.createIntegerConstant(loc, idxTy, *size);
-
-          if (isNonAllocManagedGlobal) {
-            hasNonAllocManagedGlobal = true;
-            // Non-allocatable managed globals use pointer indirection:
-            // a companion pointer in __nv_managed_data__ holds the unified
-            // memory address, registered via __cudaRegisterManagedVar.
-            fir::GlobalOp ptrGlobal =
-                createManagedPointerGlobal(builder, mod, globalOp);
-            func = fir::runtime::getRuntimeFunc<mkRTKey(
-                CUFRegisterManagedVariable)>(loc, builder);
-            auto fTy = func.getFunctionType();
-            mlir::Value addr = fir::AddrOfOp::create(
-                builder, loc, ptrGlobal.resultType(), ptrGlobal.getSymbol());
-            llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
-                builder, loc, fTy, registeredMod, addr, gblName, sizeVal)};
-            fir::CallOp::create(builder, loc, func, args);
-          } else {
-            func = fir::runtime::getRuntimeFunc<mkRTKey(CUFRegisterVariable)>(
-                loc, builder);
-            auto fTy = func.getFunctionType();
-            mlir::Value addr = fir::AddrOfOp::create(
-                builder, loc, globalOp.resultType(), globalOp.getSymbol());
-            llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
-                builder, loc, fTy, registeredMod, addr, gblName, sizeVal)};
-            fir::CallOp::create(builder, loc, func, args);
-          }
-        } break;
-        default:
-          break;
         }
-      }
 
-      if (hasNonAllocManagedGlobal) {
-        // Initialize the module after all variables are registered so the
-        // runtime populates managed variable unified memory pointers.
-        mlir::func::FuncOp initFunc =
-            fir::runtime::getRuntimeFunc<mkRTKey(CUFInitModule)>(loc, builder);
-        mlir::FunctionType initFTy = initFunc.getFunctionType();
-        llvm::SmallVector<mlir::Value> initArgs{fir::runtime::createArguments(
-            builder, loc, initFTy, registeredMod)};
-        fir::CallOp::create(builder, loc, initFunc, initArgs);
+        // Register externally-linked module globals under -gpu=mem:unified.
+        // CUFDeviceGlobal cloned them into the GPU module with external
+        // linkage so PTX emits .extern; the CUDA driver patches the device
+        // reference to the host pointer at module-load time after this call.
+        // Works uniformly for fixed-shape (e.g. fir.array<5xi32>) and
+        // allocatable (fir.box<fir.heap<...>>) module globals.
+        if (cudaUnified) {
+          for (fir::GlobalOp globalOp : mod.getOps<fir::GlobalOp>()) {
+            if (!isCudaUnifiedExternalGlobal(globalOp, gpuSymTable))
+              continue;
+            uint64_t szBytes = getGlobalSizeInBytes(loc, *dl, kindMap,
+                                                    typeConverter, globalOp);
+            cuf::RegisterVariableStaticOp::create(
+                builder, loc,
+                mlir::SymbolRefAttr::get(ctx, globalOp.getSymName()),
+                builder.getStringAttr(globalOp.getSymName()),
+                builder.getI64IntegerAttr(szBytes));
+          }
+        }
+
+        if (hasNonAllocManagedGlobal) {
+          // Initialize the module after all variables are registered so the
+          // runtime populates managed variable unified memory pointers.
+          mlir::func::FuncOp initFunc =
+              fir::runtime::getRuntimeFunc<mkRTKey(CUFInitModule)>(loc,
+                                                                   builder);
+          mlir::FunctionType initFTy = initFunc.getFunctionType();
+          llvm::SmallVector<mlir::Value> initArgs{fir::runtime::createArguments(
+              builder, loc, initFTy, registeredMod)};
+          fir::CallOp::create(builder, loc, initFunc, initArgs);
+        }
       }
     }
+    if (emitCudaCompiledMarker) {
+      // Keep the sentinel reference alive: an unused non-volatile load would
+      // be folded away before it reaches the object file.
+      auto addr =
+          mlir::LLVM::AddressOfOp::create(builder, loc, cudaCompiledGlobal);
+      mlir::LLVM::LoadOp::create(builder, loc, mlir::IntegerType::get(ctx, 8),
+                                 addr, /*alignment=*/0, /*isVolatile=*/true);
+    }
+
+    // The extra constructors are defined in a runtime library, so they are
+    // only declared here and called from the constructor: an entry in
+    // llvm.mlir.global_ctors requires a function with a definition.
+    auto addExtraConstructor = [&](const std::string &funcName) {
+      if (!mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>(funcName)) {
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        builder.setInsertionPointToEnd(mod.getBody());
+        mlir::LLVM::LLVMFuncOp::create(builder, loc, funcName, funcTy);
+      }
+      mlir::LLVM::CallOp::create(builder, loc, funcTy,
+                                 mlir::SymbolRefAttr::get(ctx, funcName));
+    };
+    for (const auto &funcName : extraConstructors)
+      addExtraConstructor(funcName);
+    for (const auto &funcName : entryOnlyConstructors) {
+      if (hasProgramEntry)
+        addExtraConstructor(funcName);
+    }
+
     mlir::LLVM::ReturnOp::create(builder, loc, mlir::ValueRange{});
 
     // Create the llvm.global_ctor with the function.
@@ -225,7 +580,7 @@ struct CUFAddConstructor
         mlir::FlatSymbolRefAttr::get(mod.getContext(), func.getSymName()));
     llvm::SmallVector<int> priorities;
     llvm::SmallVector<mlir::Attribute> data;
-    priorities.push_back(0);
+    priorities.push_back(priority);
     data.push_back(mlir::LLVM::ZeroAttr::get(mod.getContext()));
     mlir::LLVM::GlobalCtorsOp::create(
         builder, mod.getLoc(), builder.getArrayAttr(funcs),

@@ -15,14 +15,15 @@
 ; CHECK-DAG: %[[Const0:[0-9]+]] = OpConstantNull %[[TyFP16]]
 ; CHECK-DAG: %[[Const42:[0-9]+]] = OpConstant %[[TyFP16]] 20800{{$}}
 ; CHECK-DAG: %[[ScopeAllSvmDevices:[0-9]+]] = OpConstantNull %[[TyInt32]]
-; CHECK-DAG: %[[MemSeqCst:[0-9]+]] = OpConstant %[[TyInt32]] 16{{$}}
+; CHECK-DAG: %[[MemSeqCst:[0-9]+]] = OpConstant %[[TyInt32]] 528{{$}}
+; CHECK-DAG: %[[MemRaw16:[0-9]+]] = OpConstant %[[TyInt32]] 16{{$}}
 ; CHECK-DAG: %[[ScopeDevice:[0-9]+]] = OpConstant %[[TyInt32]] 1{{$}}
 ; CHECK-DAG: %[[TyFP16Ptr:[0-9]+]] = OpTypePointer {{[a-zA-Z]+}} %[[TyFP16]]
 ; CHECK-DAG: %[[DblPtr:[0-9]+]] = OpVariable %[[TyFP16Ptr]] {{[a-zA-Z]+}} %[[Const0]]
 ; CHECK: OpAtomicFAddEXT %[[TyFP16]] %[[DblPtr]] %[[ScopeAllSvmDevices]] %[[MemSeqCst]] %[[Const42]]
 ; CHECK: %[[Const42Neg:[0-9]+]] = OpFNegate %[[TyFP16]] %[[Const42]]
 ; CHECK: OpAtomicFAddEXT %[[TyFP16]] %[[DblPtr]] %[[ScopeAllSvmDevices]] %[[MemSeqCst]] %[[Const42Neg]]
-; CHECK: OpAtomicFAddEXT %[[TyFP16]] %[[DblPtr]] %[[ScopeDevice]] %[[MemSeqCst]] %[[Const42]]
+; CHECK: OpAtomicFAddEXT %[[TyFP16]] %[[DblPtr]] %[[ScopeDevice]] %[[MemRaw16]] %[[Const42]]
 
 @f = common dso_local local_unnamed_addr addrspace(1) global half 0.000000e+00, align 8
 

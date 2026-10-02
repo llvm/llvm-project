@@ -11,12 +11,14 @@ add_target_library(omptarget.rtl.level_zero LEVEL_ZERO)
 set(LEVEL_ZERO_SRC_FILES
   src/L0Context.cpp
   src/L0Device.cpp
+  src/L0Event.cpp
   src/L0Kernel.cpp
   src/L0Memory.cpp
   src/L0Program.cpp
   src/L0Plugin.cpp
   src/L0Program.cpp
   src/L0Options.cpp
+  src/L0Queue.cpp
 )
 
 target_sources(omptarget.rtl.level_zero PRIVATE
@@ -32,7 +34,13 @@ target_include_directories(omptarget.rtl.level_zero PRIVATE
   ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
 )
 
-if (LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARY AND NOT "level_zero" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS)
+if (WIN32 AND NOT "level_zero" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS)
+  message(WARNING "Direct linking against level_zero library is not supported on "
+                  "Windows; falling back to dlopen. Add 'level_zero' to "
+                  "LIBOMPTARGET_DLOPEN_PLUGINS to silence this warning.")
+endif()
+
+if (LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARY AND NOT "level_zero" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS AND NOT WIN32)
   message(STATUS "Building Level Zero NG plugin linked against level_zero library")
   target_include_directories(omptarget.rtl.level_zero PRIVATE
     ${LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIR}

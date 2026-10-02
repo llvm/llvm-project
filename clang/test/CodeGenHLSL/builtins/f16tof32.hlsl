@@ -2,11 +2,11 @@
 // RUN:   -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -O0 -o - | \
 // RUN:   FileCheck %s
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl \
-// RUN:   -triple spirv-unknown-vulkan-compute %s -emit-llvm -O0 -o - | \
+// RUN:   -triple spirv-unknown-vulkan-library %s -emit-llvm -O0 -o - | \
 // RUN:   FileCheck %s --check-prefix=SPIRV
 
 // CHECK: define hidden noundef nofpclass(nan inf) float
-// CHECK: %hlsl.f16tof32 = call reassoc nnan ninf nsz arcp afn float @llvm.dx.legacyf16tof32.i32(i32 %0)
+// CHECK: %hlsl.f16tof32 = call reassoc nnan ninf nsz arcp afn float @llvm.dx.legacyf16tof32.i32(i32 %[[#]])
 // CHECK: ret float %hlsl.f16tof32
 // CHECK: declare float @llvm.dx.legacyf16tof32.i32(i32)
 //
@@ -18,7 +18,7 @@
 float test_scalar(uint p0) { return f16tof32(p0); }
 
 // CHECK: define hidden noundef nofpclass(nan inf) <2 x float>
-// CHECK: %hlsl.f16tof32 = call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.dx.legacyf16tof32.v2i32(<2 x i32> %0)
+// CHECK: %hlsl.f16tof32 = call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.dx.legacyf16tof32.v2i32(<2 x i32> %[[#]])
 // CHECK: ret <2 x float> %hlsl.f16tof32
 // CHECK: declare <2 x float> @llvm.dx.legacyf16tof32.v2i32(<2 x i32>)
 //
@@ -29,7 +29,7 @@ float test_scalar(uint p0) { return f16tof32(p0); }
 float2 test_uint2(uint2 p0) { return f16tof32(p0); }
 
 // CHECK: define hidden noundef nofpclass(nan inf) <3 x float> @_Z10test_uint3Dv3_j(<3 x i32> noundef %p0) #0 {
-// CHECK: %hlsl.f16tof32 = call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.dx.legacyf16tof32.v3i32(<3 x i32> %0)
+// CHECK: %hlsl.f16tof32 = call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.dx.legacyf16tof32.v3i32(<3 x i32> %[[#]])
 // CHECK: ret <3 x float> %hlsl.f16tof32
 // CHECK: declare <3 x float> @llvm.dx.legacyf16tof32.v3i32(<3 x i32>)
 //
@@ -40,7 +40,7 @@ float2 test_uint2(uint2 p0) { return f16tof32(p0); }
 float3 test_uint3(uint3 p0) { return f16tof32(p0); }
 
 // CHECK: define hidden noundef nofpclass(nan inf) <4 x float> @_Z10test_uint4Dv4_j(<4 x i32> noundef %p0) #0 {
-// CHECK: %hlsl.f16tof32 = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.legacyf16tof32.v4i32(<4 x i32> %0)
+// CHECK: %hlsl.f16tof32 = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.legacyf16tof32.v4i32(<4 x i32> %[[#]])
 // CHECK: ret <4 x float> %hlsl.f16tof32
 // CHECK: declare <4 x float> @llvm.dx.legacyf16tof32.v4i32(<4 x i32>)
 //
@@ -49,3 +49,13 @@ float3 test_uint3(uint3 p0) { return f16tof32(p0); }
 // SPRIV-NOT: call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.spv.unpackhalf2x16.v2f32(i32 %[[#]])
 // SPRIV: ret <4 x float> %[[#]]
 float4 test_uint4(uint4 p0) { return f16tof32(p0); }
+
+// CHECK: define hidden noundef nofpclass(nan inf) <5 x float> @
+// CHECK: %hlsl.f16tof32 = call reassoc nnan ninf nsz arcp afn <5 x float> @llvm.dx.legacyf16tof32.v5i32(<5 x i32> %[[#]])
+// CHECK: ret <5 x float> %hlsl.f16tof32
+// CHECK: declare <5 x float> @llvm.dx.legacyf16tof32.v5i32(<5 x i32>)
+//
+// SPIRV: define hidden spir_func noundef nofpclass(nan inf) <5 x float> @{{.*}}test_uint5
+// SPIRV-COUNT-5: call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.spv.unpackhalf2x16.v2f32(i32 %[[#]])
+// SPIRV: ret <5 x float>
+vector<float, 5> test_uint5(vector<uint, 5> p0) { return f16tof32(p0); }

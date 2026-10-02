@@ -7,9 +7,9 @@
 ! CHECK-SAME:    %[[VAL_1:.*]]: !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>> {fir.bindc_name = "cptr2"}) {
 ! CHECK-DAG:     %[[VAL_CPTR1:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}} {uniq_name = "_QFtest_c_ptrEcptr1"}
 ! CHECK-DAG:     %[[VAL_CPTR2:.*]]:2 = hlfir.declare %[[VAL_1]] {{.*}} {uniq_name = "_QFtest_c_ptrEcptr2"}
-! CHECK-DAG:     %[[VAL_Z1_ALLOCA:.*]] = fir.alloca !fir.logical<4> {bindc_name = "z1", uniq_name = "_QFtest_c_ptrEz1"}
+! CHECK-DAG:     %[[VAL_Z1_ALLOCA:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "z1", uniq_name = "_QFtest_c_ptrEz1"}>
 ! CHECK-DAG:     %[[VAL_Z1:.*]]:2 = hlfir.declare %[[VAL_Z1_ALLOCA]] {uniq_name = "_QFtest_c_ptrEz1"}
-! CHECK-DAG:     %[[VAL_Z2_ALLOCA:.*]] = fir.alloca !fir.logical<4> {bindc_name = "z2", uniq_name = "_QFtest_c_ptrEz2"}
+! CHECK-DAG:     %[[VAL_Z2_ALLOCA:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "z2", uniq_name = "_QFtest_c_ptrEz2"}>
 ! CHECK-DAG:     %[[VAL_Z2:.*]]:2 = hlfir.declare %[[VAL_Z2_ALLOCA]] {uniq_name = "_QFtest_c_ptrEz2"}
 ! CHECK:         %[[VAL_5:.*]] = fir.coordinate_of %[[VAL_CPTR1]]#0, __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         %[[VAL_6:.*]] = fir.load %[[VAL_5]] : !fir.ref<i64>
@@ -53,9 +53,9 @@ end
 ! CHECK-SAME:    %[[VAL_1:.*]]: !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>> {fir.bindc_name = "cptr2"}) {
 ! CHECK-DAG:     %[[VAL_CPTR1:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}} {uniq_name = "_QFtest_c_funptrEcptr1"}
 ! CHECK-DAG:     %[[VAL_CPTR2:.*]]:2 = hlfir.declare %[[VAL_1]] {{.*}} {uniq_name = "_QFtest_c_funptrEcptr2"}
-! CHECK-DAG:     %[[VAL_Z1_ALLOCA:.*]] = fir.alloca !fir.logical<4> {bindc_name = "z1", uniq_name = "_QFtest_c_funptrEz1"}
+! CHECK-DAG:     %[[VAL_Z1_ALLOCA:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "z1", uniq_name = "_QFtest_c_funptrEz1"}>
 ! CHECK-DAG:     %[[VAL_Z1:.*]]:2 = hlfir.declare %[[VAL_Z1_ALLOCA]] {uniq_name = "_QFtest_c_funptrEz1"}
-! CHECK-DAG:     %[[VAL_Z2_ALLOCA:.*]] = fir.alloca !fir.logical<4> {bindc_name = "z2", uniq_name = "_QFtest_c_funptrEz2"}
+! CHECK-DAG:     %[[VAL_Z2_ALLOCA:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "z2", uniq_name = "_QFtest_c_funptrEz2"}>
 ! CHECK-DAG:     %[[VAL_Z2:.*]]:2 = hlfir.declare %[[VAL_Z2_ALLOCA]] {uniq_name = "_QFtest_c_funptrEz2"}
 ! CHECK:         %[[VAL_5:.*]] = fir.coordinate_of %[[VAL_CPTR1]]#0, __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         %[[VAL_6:.*]] = fir.load %[[VAL_5]] : !fir.ref<i64>
@@ -103,9 +103,9 @@ end
 ! CHECK-DAG:     %[[VAL_CPTR2:.*]]:2 = hlfir.declare %[[VAL_1]] {{.*}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtest_optional_argumentEcptr2"}
 ! CHECK-DAG:     %[[VAL_CFUNPTR1:.*]]:2 = hlfir.declare %[[VAL_2]] {{.*}} {uniq_name = "_QFtest_optional_argumentEcfunptr1"}
 ! CHECK-DAG:     %[[VAL_CFUNPTR2:.*]]:2 = hlfir.declare %[[VAL_3]] {{.*}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtest_optional_argumentEcfunptr2"}
-! CHECK-DAG:     %[[VAL_Z1_ALLOCA:.*]] = fir.alloca !fir.logical<4> {bindc_name = "z1", uniq_name = "_QFtest_optional_argumentEz1"}
+! CHECK-DAG:     %[[VAL_Z1_ALLOCA:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "z1", uniq_name = "_QFtest_optional_argumentEz1"}>
 ! CHECK-DAG:     %[[VAL_Z1:.*]]:2 = hlfir.declare %[[VAL_Z1_ALLOCA]] {uniq_name = "_QFtest_optional_argumentEz1"}
-! CHECK-DAG:     %[[VAL_Z2_ALLOCA:.*]] = fir.alloca !fir.logical<4> {bindc_name = "z2", uniq_name = "_QFtest_optional_argumentEz2"}
+! CHECK-DAG:     %[[VAL_Z2_ALLOCA:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "z2", uniq_name = "_QFtest_optional_argumentEz2"}>
 ! CHECK-DAG:     %[[VAL_Z2:.*]]:2 = hlfir.declare %[[VAL_Z2_ALLOCA]] {uniq_name = "_QFtest_optional_argumentEz2"}
 ! CHECK:         %[[VAL_7:.*]] = fir.coordinate_of %[[VAL_CPTR1]]#0, __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         %[[VAL_8:.*]] = fir.load %[[VAL_7]] : !fir.ref<i64>

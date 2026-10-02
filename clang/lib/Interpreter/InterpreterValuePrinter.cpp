@@ -204,7 +204,7 @@ std::string Interpreter::ValueDataToString(const Value &V) const {
       if (ElemTy->isBuiltinType()) {
         // Single dim arrays, advancing.
         uintptr_t Offset = (uintptr_t)V.getPtr() + Idx * ElemSize;
-        InnerV.setRawBits((void *)Offset, ElemSize * 8);
+        InnerV.setRawBits((void *)Offset, ElemSize);
       } else {
         // Multi dim arrays, position to the next dimension.
         size_t Stride = ElemCount / N;

@@ -11,6 +11,7 @@
 #include "CodeComplete.h"
 #include "CodeCompletionStrings.h"
 #include "ExpectedTypes.h"
+#include "FindSymbols.h"
 #include "SourceCode.h"
 #include "URI.h"
 #include "clang-include-cleaner/Analysis.h"
@@ -392,17 +393,14 @@ private:
     llvm::sys::path::append(UmbrellaPath, Framework + ".framework", "Headers",
                             Framework + ".h");
 
-    llvm::vfs::Status Status;
-    auto StatErr = HS.getFileMgr().getNoncachedStatValue(UmbrellaPath, Status);
-    if (!StatErr)
+    if (HS.getFileMgr().getOptionalFileRef(UmbrellaPath))
       CachedSpelling->PublicHeader = llvm::formatv("<{0}/{0}.h>", Framework);
 
     UmbrellaPath = HeaderPath.FrameworkParentDir;
     llvm::sys::path::append(UmbrellaPath, Framework + ".framework",
                             "PrivateHeaders", Framework + "_Private.h");
 
-    StatErr = HS.getFileMgr().getNoncachedStatValue(UmbrellaPath, Status);
-    if (!StatErr)
+    if (HS.getFileMgr().getOptionalFileRef(UmbrellaPath))
       CachedSpelling->PrivateHeader =
           llvm::formatv("<{0}/{0}_Private.h>", Framework);
 
@@ -576,23 +574,12 @@ SymbolCollector::getRefContainer(const Decl *Enclosing,
   return Enclosing;
 }
 
-SmallVector<const CXXConstructorDecl *, 1>
+ArrayRef<const CXXConstructorDecl *>
 SymbolCollector::findIndirectConstructors(const Decl *D) {
-  auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D);
-  if (FD == nullptr || !FD->isTemplateInstantiation())
+  const auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D);
+  if (!FD)
     return {};
-  if (auto Entry = ForwardingToConstructorCache.find(FD);
-      Entry != ForwardingToConstructorCache.end())
-    return Entry->getSecond();
-  if (auto *PT = FD->getPrimaryTemplate();
-      PT == nullptr || !isLikelyForwardingFunction(PT))
-    return {};
-
-  SmallVector<const CXXConstructorDecl *, 1> FoundConstructors =
-      searchConstructorsInForwardingFunction(FD);
-  auto Iter = ForwardingToConstructorCache.try_emplace(
-      FD, std::move(FoundConstructors));
-  return Iter.first->getSecond();
+  return getForwardedConstructors(FD, ForwardingToConstructorCache);
 }
 
 // Always return true to continue indexing.
@@ -1102,6 +1089,8 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
   if (ND.getAvailability() == AR_Deprecated)
     S.Flags |= Symbol::Deprecated;
 
+  S.Tags = computeSymbolTags(ND);
+
   // Add completion info.
   // FIXME: we may want to choose a different redecl, or combine from several.
   assert(ASTCtx && PP && "ASTContext and Preprocessor must be set.");
@@ -1192,7 +1181,7 @@ void SymbolCollector::addDefinition(const NamedDecl &ND, const Symbol &DeclSym,
       S.Flags |= Symbol::HasDocComment;
     S.Documentation = Documentation;
   }
-
+  S.Tags |= computeSymbolTags(ND);
   Symbols.insert(S);
 }
 

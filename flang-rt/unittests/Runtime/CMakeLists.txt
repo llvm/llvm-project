@@ -13,11 +13,13 @@ add_flangrt_unittest(RuntimeTests
   Assign.cpp
   BufferTest.cpp
   CharacterTest.cpp
+  ChildIO.cpp
   CommandTest.cpp
   Complex.cpp
   CrashHandlerFixture.cpp
   Derived.cpp
   Descriptor.cpp
+  Exceptions.cpp
   ExternalIOTest.cpp
   Format.cpp
   InputExtensions.cpp

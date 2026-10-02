@@ -11,10 +11,11 @@
 #include <algorithm>
 #include <benchmark/benchmark.h>
 #include <vector>
+#include "test_macros.h"
 
 // Benchmarks the worst case: check the whole range just to find out that they compare equal
 template <class T>
-static void bm_lexicographical_compare(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void bm_lexicographical_compare(benchmark::State& state) {
   std::vector<T> vec1(state.range(), '1');
   std::vector<T> vec2(state.range(), '1');
 
@@ -29,7 +30,7 @@ BENCHMARK(bm_lexicographical_compare<signed char>)->Arg(1)->Range(8, 1 << 20);
 BENCHMARK(bm_lexicographical_compare<int>)->Arg(1)->Range(8, 1 << 20);
 
 template <class T>
-static void bm_ranges_lexicographical_compare(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void bm_ranges_lexicographical_compare(benchmark::State& state) {
   std::vector<T> vec1(state.range(), '1');
   std::vector<T> vec2(state.range(), '1');
 

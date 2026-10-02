@@ -231,6 +231,9 @@ private:
   /// Matches functions with similarly named profiled functions.
   size_t matchWithNameSimilarity(BinaryContext &BC);
 
+  /// Fallback for matching stale functions using exact name.
+  size_t matchUnusedWithExactName();
+
   /// Update matched YAML -> BinaryFunction pair.
   void matchProfileToFunction(yaml::bolt::BinaryFunctionProfile &YamlBF,
                               BinaryFunction &BF) {

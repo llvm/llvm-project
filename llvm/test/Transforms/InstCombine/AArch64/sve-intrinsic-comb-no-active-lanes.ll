@@ -655,8 +655,7 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.revb.nxv4i32(<vscale x 4 x i32>, <v
 define <vscale x 4 x i32> @simplify_revb_intrinsic(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: define <vscale x 4 x i32> @simplify_revb_intrinsic
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.revb.nxv4i32(<vscale x 4 x i32> [[A]], <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[B]])
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A]]
 ;
   %r = tail call <vscale x 4 x i32> @llvm.aarch64.sve.revb.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %r
@@ -666,8 +665,7 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.revh.nxv4i32(<vscale x 4 x i32>, <v
 define <vscale x 4 x i32> @simplify_revh_intrinsic(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: define <vscale x 4 x i32> @simplify_revh_intrinsic
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.revh.nxv4i32(<vscale x 4 x i32> [[A]], <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[B]])
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A]]
 ;
   %r = tail call <vscale x 4 x i32> @llvm.aarch64.sve.revh.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %r
@@ -677,8 +675,7 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.revw.nxv2i64(<vscale x 2 x i64>, <v
 define <vscale x 2 x i64> @simplify_revw_intrinsic(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: define <vscale x 2 x i64> @simplify_revw_intrinsic
 ; CHECK-SAME: (<vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.revw.nxv2i64(<vscale x 2 x i64> [[A]], <vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> [[B]])
-; CHECK-NEXT:    ret <vscale x 2 x i64> [[R]]
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[A]]
 ;
   %r = tail call <vscale x 2 x i64> @llvm.aarch64.sve.revw.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %r
@@ -688,8 +685,7 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.revd.nxv4i32(<vscale x 4 x i32>, <v
 define <vscale x 4 x i32> @simplify_revd_intrinsic(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: define <vscale x 4 x i32> @simplify_revd_intrinsic
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.revd.nxv4i32(<vscale x 4 x i32> [[A]], <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[B]])
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A]]
 ;
   %r = tail call <vscale x 4 x i32> @llvm.aarch64.sve.revd.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %r

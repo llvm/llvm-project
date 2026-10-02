@@ -23,10 +23,10 @@ program main
    end do
 end
 
-! HOST: %[[ORIG_J_ALLOC:.*]] = fir.alloca i32 {bindc_name = "j", {{.*}}}
+! HOST: %[[ORIG_J_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "j", {{.*}>}}
 ! HOST: %[[ORIG_J_DECL:.*]]:2 = hlfir.declare %[[ORIG_J_ALLOC]]
 
-! DEVICE: omp.target {{.*}}map_entries(
+! DEVICE: omp.target kernel_type(spmd) {{.*}}map_entries(
 ! DEVICE-SAME:   %{{[[:alnum:]]+}} -> %{{[^,]+}},
 ! DEVICE-SAME:   %{{[[:alnum:]]+}} -> %{{[^,]+}},
 ! DEVICE-SAME:   %{{[[:alnum:]]+}} -> %{{[^,]+}},
@@ -48,12 +48,12 @@ end
 
 ! COMMON: omp.wsloop {
 ! COMMON: omp.loop_nest ({{[^[:space:]]+}}) {{.*}} {
-! COMMON:   fir.do_loop {{.*}} iter_args(%[[J_IV:.*]] = {{.*}}) -> {{.*}} {
+! COMMON:   fir.do_loop %[[J_IV:.*]] = {{.*}} to {{.*}} step {{.*}} : i32 {
 ! HOST:       fir.store %[[J_IV]] to %[[ORIG_J_DECL]]#0
 ! DEVICE:     fir.store %[[J_IV]] to %[[TARGET_J_DECL]]#0
 
 ! COMMON:     fir.do_concurrent {
-! COMMON:         %[[ORIG_K_ALLOC:.*]] = fir.alloca i32 {bindc_name = "k"}
+! COMMON:         %[[ORIG_K_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "k"}>
 ! COMMON:         %[[ORIG_K_DECL:.*]]:2 = hlfir.declare %[[ORIG_K_ALLOC]]
 ! COMMON:       fir.do_concurrent.loop (%[[K_IV:.*]]) = {{.*}} {
 ! COMMON:         %[[K_IV_CONV:.*]] = fir.convert %[[K_IV]] : (index) -> i32

@@ -13,7 +13,7 @@
 ; RUN: rm -rf %t && split-file %s %t && cd %t
 ; RUN: llvm-as src.ll -o src.o
 ; RUN: llvm-as src.o.thinlto.ll -o src.o.thinlto.bc
-; RUN: opt -passes=memprof-context-disambiguation -stats \
+; RUN: opt -passes=assign-guid,memprof-context-disambiguation -stats \
 ; RUN: 	-memprof-import-summary=src.o.thinlto.bc \
 ; RUN:  -pass-remarks=memprof-context-disambiguation \
 ; RUN:	src.o -S 2>&1 | FileCheck %s

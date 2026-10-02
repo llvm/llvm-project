@@ -9,8 +9,6 @@
 // NetBSD does not support LC_TIME at the moment
 // XFAIL: netbsd
 
-// XFAIL: LIBCXX-FREEBSD-FIXME
-
 // XFAIL: no-wide-characters
 
 // REQUIRES: locale.en_US.UTF-8
@@ -105,7 +103,7 @@ int main(int, char**)
 #elif defined(_AIX)
         const wchar_t in[] = L"31 d" L"\xE9" L"c. 2061" L"\xE0" L"23:55:59";
 #else
-        const wchar_t in[] = L"Sam 31 d" L"\xE9" L"c 23:55:59 2061";
+        const wchar_t in[] = L"sam. 31 d" L"\xE9" L"c. 23:55:59 2061";
 #endif
         err = std::ios_base::goodbit;
         t = std::tm();
@@ -173,7 +171,7 @@ int main(int, char**)
     {
         const my_facet f("zh_CN", 1);
         const wchar_t in[] = L"\x516D"
-                          L" 12/31 23:55:59 2061";
+                          L" 12\x6708/31 23:55:59 2061";
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get(I(in), I(in+sizeof(in)/sizeof(in[0])-1), ios, err, &t, 'c');

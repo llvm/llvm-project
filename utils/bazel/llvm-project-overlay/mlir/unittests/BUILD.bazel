@@ -95,6 +95,7 @@ cc_test(
         "//llvm:TestingSupport",
         "//mlir:Support",
         "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
 )
@@ -170,6 +171,7 @@ cc_test(
         "//llvm:TestingSupport",
         "//mlir:IR",
         "//mlir:MemRefDialect",
+        "//mlir:MemRefUtils",
         "//mlir:SideEffectInterfaces",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
@@ -230,6 +232,7 @@ cc_test(
         "//mlir:SPIRVDialect",
         "//mlir:SPIRVSerialization",
         "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
 )

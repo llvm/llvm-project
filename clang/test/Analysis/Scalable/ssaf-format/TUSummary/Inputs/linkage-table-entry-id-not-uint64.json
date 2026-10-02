@@ -1,0 +1,16 @@
+{
+  "tu_namespace": {
+    "kind": "CompilationUnit",
+    "name": "test.cpp"
+  },
+  "id_table": [],
+  "linkage_table": [
+    {
+      "id": "not_a_number",
+      "linkage": { "type": "External" }
+    }
+  ],
+  "data": [],
+  "target_triple": "arm64-apple-macosx",
+  "type": "TUSummary"
+}

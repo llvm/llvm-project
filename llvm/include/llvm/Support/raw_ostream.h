@@ -13,6 +13,7 @@
 #ifndef LLVM_SUPPORT_RAW_OSTREAM_H
 #define LLVM_SUPPORT_RAW_OSTREAM_H
 
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
@@ -31,7 +32,6 @@ namespace llvm {
 
 class Duration;
 class formatv_object_base;
-class format_object_base;
 class FormattedString;
 class FormattedNumber;
 class FormattedBytes;
@@ -305,7 +305,7 @@ public:
   raw_ostream &write(const char *Ptr, size_t Size);
 
   // Formatted output, see the format() function in Support/Format.h.
-  raw_ostream &operator<<(const format_object_base &Fmt);
+  raw_ostream &operator<<(function_ref<int(char *, size_t)> Snprint);
 
   // Formatted output, see the leftJustify() function in Support/Format.h.
   raw_ostream &operator<<(const FormattedString &);
@@ -332,6 +332,8 @@ public:
   /// @param Bold bold/brighter text, default false
   /// @param BG if true change the background, default: change foreground
   /// @returns itself so it can be used within << invocations
+  ///
+  /// FIXME: If Color == SAVEDCOLOR, Bold == false is currently ignored.
   virtual raw_ostream &changeColor(enum Colors Color, bool Bold = false,
                                    bool BG = false);
 

@@ -1,0 +1,56 @@
+# UNSUPPORTED: system-windows
+
+## File instance counting should be case-sensitive on non-Windows platforms.
+## On non-Windows systems, `foo.txt` and `FOO.TXT` are distinct, so `-N 2 foo.txt`
+## should fail because only one file named `foo.txt` exists.
+
+# RUN: rm -rf %t && mkdir %t && cd %t
+# RUN: mkdir a b
+# RUN: echo first > a/foo.txt
+# RUN: echo second > b/FOO.TXT
+# RUN: llvm-ar rc count-case.a a/foo.txt b/FOO.TXT
+
+# RUN: mkdir out1 out2
+# RUN: llvm-ar xN 1 --output out1 count-case.a foo.txt
+# RUN: cat out1/foo.txt | FileCheck %s --check-prefix=EXTRACT-FIRST
+# RUN: not llvm-ar xN 2 --output out2 count-case.a foo.txt 2>&1 | FileCheck %s --check-prefix=EXTRACT-NOT-FOUND
+
+# EXTRACT-FIRST: first
+# EXTRACT-NOT-FOUND: error: 'foo.txt' was not found
+
+# RUN: llvm-ar rc delete-count.a a/foo.txt b/FOO.TXT
+# RUN: llvm-ar dN 2 delete-count.a FOO.TXT
+# RUN: llvm-ar t delete-count.a | FileCheck %s --check-prefix=ARCHIVE-BEFORE --implicit-check-not={{.}}
+
+# RUN: llvm-ar dN 1 delete-count.a FOO.TXT
+# RUN: llvm-ar t delete-count.a | FileCheck %s --check-prefix=ARCHIVE-AFTER --implicit-check-not={{.}}
+
+# ARCHIVE-BEFORE: foo.txt
+# ARCHIVE-BEFORE: FOO.TXT
+
+# ARCHIVE-AFTER: foo.txt
+
+## Test thin archive d option with P and N modifiers (full path matching).
+
+# RUN: echo one > a/file.txt
+# RUN: echo two > a/FILE.txt
+# RUN: llvm-ar rc --thin archive-dPN.a a/file.txt a/FILE.txt
+# RUN: llvm-ar t archive-dPN.a | FileCheck %s --check-prefix=THIN-BEFORE --implicit-check-not={{.}}
+
+## The path to `FILE.TXT` does not match because the directory name has a different case; expect no-op.
+# RUN: llvm-ar dPN 2 --thin archive-dPN.a A/FILE.txt
+# RUN: llvm-ar t archive-dPN.a | FileCheck %s --check-prefix=THIN-BEFORE --implicit-check-not={{.}}
+
+## The uppercase filename occurs only once; expect no-op.
+# RUN: llvm-ar dPN 2 --thin archive-dPN.a a/FILE.txt
+# RUN: llvm-ar t archive-dPN.a | FileCheck %s --check-prefix=THIN-BEFORE --implicit-check-not={{.}}
+
+# RUN: llvm-ar dPN 1 --thin archive-dPN.a a/FILE.txt
+# RUN: llvm-ar t archive-dPN.a | FileCheck %s --check-prefix=THIN-AFTER --implicit-check-not={{.}}
+# RUN: llvm-ar dPN 1 --thin archive-dPN.a a/file.txt
+# RUN: llvm-ar t archive-dPN.a | count 0
+
+# THIN-BEFORE: a/file.txt
+# THIN-BEFORE: a/FILE.txt
+
+# THIN-AFTER: a/file.txt

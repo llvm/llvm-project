@@ -146,6 +146,8 @@ TEST(Unicode, nameToCodepointStrict) {
   EXPECT_EQ(0x2FA1Du, map("CJK COMPATIBILITY IDEOGRAPH-2FA1D"));
   EXPECT_EQ(0x31350u, map("CJK UNIFIED IDEOGRAPH-31350")); // Unicode 15.0
   EXPECT_EQ(0x2EBF0u, map("CJK UNIFIED IDEOGRAPH-2EBF0")); // Unicode 15.1
+  EXPECT_EQ(0x13460u, map("EGYPTIAN HIEROGLYPH-13460"));   // Unicode 16.0
+  EXPECT_EQ(0x3D000u, map("SEAL CHARACTER-3D000"));        // Unicode 18.0
 
   EXPECT_EQ(0xAC00u, map("HANGUL SYLLABLE GA"));
   EXPECT_EQ(0xAC14u, map("HANGUL SYLLABLE GASS"));
@@ -171,6 +173,9 @@ TEST(Unicode, nameToCodepointStrict) {
   EXPECT_EQ(0x1FA77u, map("PINK HEART")); // Unicode 15.0
   EXPECT_EQ(0x2FFFu,
             map("IDEOGRAPHIC DESCRIPTION CHARACTER ROTATION")); // Unicode 15.1
+  EXPECT_EQ(0x1FA89u, map("HARP"));                             // Unicode 16.0
+  EXPECT_EQ(0x1FAC8u, map("HAIRY CREATURE"));                   // Unicode 17.0
+  EXPECT_EQ(0x1FACCu, map("MONARCH BUTTERFLY"));                // Unicode 18.0
 
   // Aliases
   EXPECT_EQ(0x0000u, map("NULL"));
@@ -186,6 +191,12 @@ TEST(Unicode, nameToCodepointStrict) {
   EXPECT_EQ(0x2118u, map("SCRIPT CAPITAL P"));          // correction
   EXPECT_EQ(0xFEFFu, map("BYTE ORDER MARK"));           // alternate
   EXPECT_EQ(0xFEFFu, map("ZERO WIDTH NO-BREAK SPACE")); // alternate
+  EXPECT_EQ(0x0080u, map("PADDING CHARACTER"));         // figment
+  EXPECT_EQ(0x0081u, map("HIGH OCTET PRESET"));         // figment
+  EXPECT_EQ(0x0007u, map("BEL"));                       // abbreviation
+  EXPECT_EQ(0x180Bu, map("FVS1"));                      // abbreviation
+  EXPECT_EQ(0x200Du, map("ZWJ"));                       // abbreviation
+  EXPECT_EQ(0xE01EFu, map("VS256"));                    // abbreviation
 
   // Should perform exact case match
   EXPECT_EQ(0xFFFFFFFFu, map(""));
@@ -204,11 +215,6 @@ TEST(Unicode, nameToCodepointStrict) {
   EXPECT_EQ(0xFFFFFFFF, map("CJK COMPATIBILITY IDEOGRAPH-NOTANUMBER"));
   EXPECT_EQ(0xFFFFFFFFu, map("CJK COMPATIBILITY IDEOGRAPH-1"));
   EXPECT_EQ(0xFFFFFFFFu, map("ZERO WIDTH NO BREAK SPACE"));
-
-  // Should not support abbreviations or figments
-  EXPECT_EQ(0xFFFFFFFFu, map("FVS1"));
-  EXPECT_EQ(0xFFFFFFFFu, map("HIGH OCTET PRESET"));
-  EXPECT_EQ(0xFFFFFFFFu, map("BEL"));
 }
 
 TEST(Unicode, nameToCodepointLoose) {
@@ -372,11 +378,11 @@ TEST(Unicode, nearestMatchesForCodepointName) {
   using ::testing::ElementsAre;
   using M = MatchForCodepointName;
 
-  ASSERT_THAT(L(""), ElementsAre(M{"OX", 2, 0x1F402}, M{"ANT", 3, 0x1F41C},
-                                 M{"ARC", 3, 0x2312}));
+  ASSERT_THAT(L(""), ElementsAre(M{"BS", 2, 0x0008}, M{"CR", 2, 0x000D},
+                                 M{"EM", 2, 0x0019}));
   // shortest name
   ASSERT_THAT(L("OX"), ElementsAre(M{"OX", 0, 0x1F402}, M{"AXE", 2, 0x1FA93},
-                                   M{"BOY", 2, 0x1F466}));
+                                   M{"BOM", 2, 0xFEFF}));
 
   // longest name
   ASSERT_THAT(L("ARABIC LIGATURE UIGHUR KIRGHIZ YEH WITH HAMZA ABOVE WITH ALEF "

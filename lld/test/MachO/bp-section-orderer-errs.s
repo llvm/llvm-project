@@ -1,3 +1,5 @@
+# REQUIRES: aarch64
+# RUN: rm -rf %t && mkdir %t && cd %t
 # RUN: not %no-fatal-warnings-lld -o /dev/null --irpgo-profile-sort %s --call-graph-profile-sort 2>&1 | FileCheck %s --check-prefix=IRPGO-ERR
 # RUN: not %no-fatal-warnings-lld -o /dev/null --irpgo-profile-sort=%s --call-graph-profile-sort 2>&1 | FileCheck %s --check-prefix=IRPGO-ERR
 # IRPGO-ERR: --irpgo-profile-sort is incompatible with --call-graph-profile-sort
@@ -32,3 +34,11 @@
 
 # RUN: not %lld -o /dev/null --bp-startup-sort=function 2>&1 | FileCheck %s --check-prefix=STARTUP-COMPRESSION
 # STARTUP-COMPRESSION: --bp-startup-sort=function must be used with --irpgo-profile
+
+# RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %s -o a.o
+# RUN: not %lld -arch arm64 -lSystem -o /dev/null a.o --irpgo-profile=missing.profdata --bp-startup-sort=function 2>&1 | FileCheck %s --check-prefix=MISSING -DMSG=%errc_ENOENT
+# MISSING: error: [[MSG]]
+
+.globl _main
+_main:
+  ret

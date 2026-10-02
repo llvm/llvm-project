@@ -23,6 +23,11 @@
 
 namespace lldb_private::mcp {
 
+/// Installs the standard LLDB tool and resource-provider set on \p server.
+/// Sharing one installer keeps every MCP server consistent, whether it runs in
+/// the plugin or is hosted in-process by an embedder.
+void PopulateServer(lldb_protocol::mcp::Server &server);
+
 class ProtocolServerMCP : public ProtocolServer {
 
   using ServerUP = std::unique_ptr<lldb_protocol::mcp::Server>;

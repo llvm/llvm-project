@@ -18,11 +18,8 @@ define <8 x half> @maskload_v8f16_byref(ptr %p, i8 %k, ptr %mem_addr) {
 ; CHECK-LABEL: maskload_v8f16_byref:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    andl $1, %esi
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vmovdqu16 (%rdx), %zmm0 {%k1}
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm0 {%k1} = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    retq
   %src = load <8 x half>, ptr %p, align 16
   %bit = and i8 %k, 1

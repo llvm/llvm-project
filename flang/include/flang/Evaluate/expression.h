@@ -27,7 +27,6 @@
 #include "flang/Parser/char-block.h"
 #include "flang/Support/Fortran.h"
 #include <algorithm>
-#include <list>
 #include <tuple>
 #include <type_traits>
 #include <variant>
@@ -408,7 +407,20 @@ public:
   Expr<Result> &elseValue() { return elseValue_.value(); }
   const Expr<Result> &elseValue() const { return elseValue_.value(); }
   int Rank() const { return thenValue().Rank(); }
-  std::optional<DynamicType> GetType() const { return thenValue().GetType(); }
+  std::optional<DynamicType> GetType() const {
+    const auto thenType{thenValue().GetType()};
+    if constexpr (T::category == TypeCategory::Derived) {
+      // F2023 10.1.4(7) A conditional-expr is polymorphic if any branch is
+      if (thenType && !thenType->IsPolymorphic()) {
+        if (const auto elseType{elseValue().GetType()}) {
+          if (elseType->IsPolymorphic()) {
+            return elseType;
+          }
+        }
+      }
+    }
+    return thenType;
+  }
   static constexpr int Corank() { return 0; }
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
@@ -573,12 +585,15 @@ private:
   using DescriptorInquiries =
       std::conditional_t<KIND == DescriptorInquiry::Result::kind,
           std::tuple<DescriptorInquiry>, std::tuple<>>;
+  using RankOneBoundElements =
+      std::conditional_t<KIND == RankOneBoundElement::Result::kind,
+          std::tuple<RankOneBoundElement>, std::tuple<>>;
   using Others = std::tuple<Constant<Result>, ArrayConstructor<Result>,
       Designator<Result>, FunctionRef<Result>>;
 
 public:
   common::TupleToVariant<common::CombineTuples<Operations, Conversions, Indices,
-      TypeParamInquiries, DescriptorInquiries, Others>>
+      TypeParamInquiries, DescriptorInquiries, RankOneBoundElements, Others>>
       u;
 };
 

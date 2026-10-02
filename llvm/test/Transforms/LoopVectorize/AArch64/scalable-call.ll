@@ -1,8 +1,8 @@
 ; RUN: opt -S -passes=loop-vectorize -force-vector-interleave=1 -mattr=+sve -mtriple aarch64-unknown-linux-gnu \
-; RUN:     -tail-folding-policy=dont-fold-tail -pass-remarks-missed=loop-vectorize < %s 2>%t | FileCheck %s
+; RUN:     -tail-folding-policy=dont-fold-tail -pass-remarks-missed=loop-vectorize -pass-remarks-analysis=loop-vectorize < %s 2>%t | FileCheck %s
 ; RUN: cat %t | FileCheck %s --check-prefix=CHECK-REMARKS
 ; RUN: opt -S -passes=loop-vectorize -force-vector-interleave=1 -force-target-instruction-cost=1 -mattr=+sve -mtriple aarch64-unknown-linux-gnu \
-; RUN:     -tail-folding-policy=dont-fold-tail -pass-remarks-missed=loop-vectorize < %s 2>%t | FileCheck %s
+; RUN:     -tail-folding-policy=dont-fold-tail -pass-remarks-missed=loop-vectorize -pass-remarks-analysis=loop-vectorize < %s 2>%t | FileCheck %s
 ; RUN: cat %t | FileCheck %s --check-prefix=CHECK-REMARKS
 
 define void @vec_load(i64 %N, ptr nocapture %a, ptr nocapture readonly %b) {
@@ -230,7 +230,7 @@ attributes #3 = { "vector-function-abi-variant"="_ZGV_LLVM_N2v_llvm.sin.f64(sin_
 
 !1 = distinct !{!1, !2, !3}
 !2 = !{!"llvm.loop.vectorize.width", i32 2}
-!3 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.scalable.enable"}
 
 !llvm.dbg.cu = !{!4}
 !llvm.module.flags = !{!7}

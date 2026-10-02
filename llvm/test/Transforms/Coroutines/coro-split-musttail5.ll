@@ -38,7 +38,7 @@ exit:
 
 ; Verify that in the resume part resume call is marked with musttail.
 ; CHECK-LABEL: @g.resume(
-; CHECK:          musttail call fastcc void
+; CHECK:          musttail call void
 ; CHECK-NEXT:     ret void
 
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #1

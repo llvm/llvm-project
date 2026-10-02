@@ -1,19 +1,14 @@
 ;; Tests memprof when contains internal linkage function.
 
-;; Avoid failures on big-endian systems that can't read the profile properly
-; REQUIRES: x86_64-linux
+; RUN: rm -rf %t && split-file %s %t
 
-;; TODO: Use text profile inputs once that is available for memprof.
-;; # To update the Inputs below, run Inputs/update_memprof_inputs.sh.
-;; # To generate below LLVM IR for use in matching.
-;; $ clang++ -gmlt -fdebug-info-for-profiling -S %S/Inputs/memprof_internal_linkage.cc -emit-llvm -funique-internal-linkage-names
-
-; RUN: llvm-profdata merge %S/Inputs/memprof_internal_linkage.memprofraw --profiled-binary %S/Inputs/memprof_internal_linkage.exe -o %t.memprofdata
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -S | FileCheck %s
+; RUN: llvm-profdata merge %t/a.yaml -o %t/a.memprofdata
+; RUN: opt < %t/a.ll -passes='memprof-use<profile-filename=%t/a.memprofdata>' -S | FileCheck %s
 
 ; CHECK: call {{.*}} @_Znam{{.*}} #[[ATTR:[0-9]+]]
 ; CHECK: attributes #[[ATTR]] = { builtin allocsize(0) "memprof"="notcold" }
 
+;--- a.ll
 ; ModuleID = 'memprof_internal_linkage.cc'
 source_filename = "memprof_internal_linkage.cc"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
@@ -82,3 +77,22 @@ attributes #5 = { builtin allocsize(0) }
 !19 = !DILocation(line: 5, column: 10, scope: !16)
 !20 = !DILocation(line: 5, column: 3, scope: !16)
 !21 = !DILocation(line: 6, column: 1, scope: !16)
+
+;--- a.yaml
+---
+HeapProfileRecords:
+  - GUID:            main
+    CallSites:
+      - Frames:
+          - { Function: main, LineOffset: 1, Column: 3, IsInlineFrame: false }
+  - GUID:            _ZL3foov.__uniq.246575255519150625886541854978321354160
+    AllocSites:
+      - Callstack:
+          - { Function: _ZL3foov.__uniq.246575255519150625886541854978321354160, LineOffset: 1, Column: 12, IsInlineFrame: false }
+          - { Function: main, LineOffset: 1, Column: 3, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      1
+          TotalSize:       20
+          TotalLifetime:   0
+          TotalLifetimeAccessDensity: 5000
+...

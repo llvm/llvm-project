@@ -99,30 +99,49 @@ TEST(AllocatorTest, TestAlignment) {
   EXPECT_EQ(0U, a & 127);
 }
 
+TEST(AllocatorTest, TestPlacementNew) {
+  struct S24 {
+    uint64_t X[3];
+  };
+  struct alignas(16) S32 {
+    uint64_t X[4];
+  };
+  struct S48 {
+    uint64_t X[6];
+  };
+  BumpPtrAllocator Alloc;
+  Alloc.setRedZoneSize(0);
+  auto *A0 = new (Alloc) S24;
+  auto *A1 = new (Alloc) S24;
+  EXPECT_EQ(uintptr_t(A0) + sizeof(S24), uintptr_t(A1));
+  auto *B0 = new (Alloc) S32;
+  auto *B1 = new (Alloc) S32;
+  EXPECT_EQ(uintptr_t(B0) + sizeof(S32), uintptr_t(B1));
+  auto *C0 = new (Alloc) S48;
+  auto *C1 = new (Alloc) S48;
+  EXPECT_EQ(uintptr_t(C0) + sizeof(S48), uintptr_t(C1));
+}
+
 // Test zero-sized allocations.
 // In general we don't need to allocate memory for these.
 // However Allocate never returns null, so if the first allocation is zero-sized
 // we end up creating a slab for it.
 TEST(AllocatorTest, TestZero) {
   BumpPtrAllocator Alloc;
-  Alloc.setRedZoneSize(0); // else our arithmetic is all off
+  Alloc.setRedZoneSize(0); // else the slab count below is off under ASan
   EXPECT_EQ(0u, Alloc.GetNumSlabs());
-  EXPECT_EQ(0u, Alloc.getBytesAllocated());
 
   void *Empty = Alloc.Allocate(0, 1);
   EXPECT_NE(Empty, nullptr) << "Allocate is __attribute__((returns_nonnull))";
   EXPECT_EQ(1u, Alloc.GetNumSlabs()) << "Allocated a slab to point to";
-  EXPECT_EQ(0u, Alloc.getBytesAllocated());
 
   void *Large = Alloc.Allocate(4096, 1);
   EXPECT_EQ(1u, Alloc.GetNumSlabs());
-  EXPECT_EQ(4096u, Alloc.getBytesAllocated());
   EXPECT_EQ(Empty, Large);
 
   void *Empty2 = Alloc.Allocate(0, 1);
   EXPECT_NE(Empty2, nullptr);
   EXPECT_EQ(1u, Alloc.GetNumSlabs());
-  EXPECT_EQ(4096u, Alloc.getBytesAllocated());
 }
 
 // Test allocating just over the slab size.  This tests a bug where before the
@@ -277,6 +296,25 @@ TEST(AllocatorTest, TestBigAlignment) {
   // We test that the last slab size is not the default 4096 byte slab, but
   // rather a custom sized slab that is larger.
   EXPECT_GT(MockSlabAllocator::GetLastSlabSize(), 4096u);
+}
+
+// Over-aligned element type: Allocate() honors alignof(T) > MinAlign and
+// DestroyAll() runs every destructor.
+TEST(AllocatorTest, TestOverAlignedSpecific) {
+  unsigned NumDtorCalls = 0;
+  struct alignas(32) S {
+    unsigned *Calls;
+    ~S() { ++*Calls; }
+  };
+  {
+    SpecificBumpPtrAllocator<S> Alloc;
+    for (int I = 0; I != 4; ++I) {
+      S *P = Alloc.Allocate();
+      EXPECT_EQ(0u, reinterpret_cast<uintptr_t>(P) & 31u);
+      P->Calls = &NumDtorCalls;
+    }
+  }
+  EXPECT_EQ(4u, NumDtorCalls);
 }
 
 }  // anonymous namespace

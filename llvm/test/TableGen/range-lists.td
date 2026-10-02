@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen %s | FileCheck %s
-// XFAIL: vg_leak
 
 // This file has tests for range lists and range pieces. Some use the
 // deprecated '-' range punctuation just to be sure it still works.

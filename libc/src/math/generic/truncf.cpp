@@ -7,18 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/truncf.h"
-#include "src/__support/FPUtil/NearestIntegerOperations.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/truncf.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float, truncf, (float x)) {
-#ifdef __LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC
-  return __builtin_truncf(x);
-#else
-  return fputil::trunc(x);
-#endif
-}
+LLVM_LIBC_FUNCTION(float, truncf, (float x)) { return math::truncf(x); }
 
 } // namespace LIBC_NAMESPACE_DECL

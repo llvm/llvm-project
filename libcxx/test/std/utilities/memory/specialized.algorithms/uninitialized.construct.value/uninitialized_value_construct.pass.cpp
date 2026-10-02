@@ -53,6 +53,38 @@ int ThrowsCounted::count = 0;
 int ThrowsCounted::constructed = 0;
 int ThrowsCounted::throw_after = 0;
 
+TEST_CONSTEXPR_CXX26 bool test() {
+  {
+    const int n = 3;
+    std::allocator<int> alloc;
+    int* out = alloc.allocate(n);
+
+    std::uninitialized_value_construct(out, out + n);
+    for (int i = 0; i != n; ++i)
+      assert(out[i] == 0);
+
+    std::destroy(out, out + n);
+    alloc.deallocate(out, n);
+  }
+
+  {
+    using It    = forward_iterator<int*>;
+    const int N = 5;
+    int pool[N] = {-1, -1, -1, -1, -1};
+    int* p      = pool;
+    std::uninitialized_value_construct(It(p), It(p + 1));
+    assert(pool[0] == 0);
+    assert(pool[1] == -1);
+    std::uninitialized_value_construct(It(p + 1), It(p + N));
+    assert(pool[1] == 0);
+    assert(pool[2] == 0);
+    assert(pool[3] == 0);
+    assert(pool[4] == 0);
+  }
+
+  return true;
+}
+
 void test_ctor_throws()
 {
 #ifndef TEST_HAS_NO_EXCEPTIONS
@@ -86,27 +118,15 @@ void test_counted()
     assert(Counted::count == 0);
 }
 
-void test_value_initialized()
-{
-    using It = forward_iterator<int*>;
-    const int N = 5;
-    int pool[N] = {-1, -1, -1, -1, -1};
-    int* p = pool;
-    std::uninitialized_value_construct(It(p), It(p+1));
-    assert(pool[0] == 0);
-    assert(pool[1] == -1);
-    std::uninitialized_value_construct(It(p+1), It(p+N));
-    assert(pool[1] == 0);
-    assert(pool[2] == 0);
-    assert(pool[3] == 0);
-    assert(pool[4] == 0);
-}
-
 int main(int, char**)
 {
-    test_counted();
-    test_value_initialized();
-    test_ctor_throws();
+  test_counted();
+  test_ctor_throws();
+
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif // TEST_STD_VER >= 26
 
   return 0;
 }

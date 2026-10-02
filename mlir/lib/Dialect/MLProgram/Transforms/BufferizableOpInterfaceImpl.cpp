@@ -146,7 +146,7 @@ struct GlobalStoreOpInterface
     }
 
     auto memcpy =
-        options.createMemCpy(rewriter, loc, sourceMemref.value(), targetMemref);
+        options.memCpyFn(rewriter, loc, sourceMemref.value(), targetMemref);
     if (failed(memcpy)) {
       return failure();
     }

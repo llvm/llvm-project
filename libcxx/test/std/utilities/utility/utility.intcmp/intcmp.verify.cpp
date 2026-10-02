@@ -143,5 +143,15 @@ int main(int, char**) {
   test_uchars<char16_t>();
   test_uchars<char32_t>();
 
+  // in_range<R>(t) takes the target type R as an explicit template argument
+  // (cast-like). cv-qualified R is not a signed/unsigned integer type per
+  // [basic.fundamental]/p1-2 and is rejected by the constraint.
+  std::in_range<const int>(0);           // expected-error {{no matching function for call to 'in_range'}}
+  std::in_range<volatile int>(0);        // expected-error {{no matching function for call to 'in_range'}}
+  std::in_range<const volatile int>(0);  // expected-error {{no matching function for call to 'in_range'}}
+  std::in_range<const unsigned long>(0); // expected-error {{no matching function for call to 'in_range'}}
+  std::in_range<const bool>(0);          // expected-error {{no matching function for call to 'in_range'}}
+  std::in_range<const char>(0);          // expected-error {{no matching function for call to 'in_range'}}
+
   return 0;
 }

@@ -101,6 +101,19 @@ SymbolizedStack *Symbolizer::SymbolizePC(uptr addr) {
   return res;
 }
 
+SymbolizedStack* Symbolizer::SymbolizeModuleOffset(const char* module_name,
+                                                   uptr module_offset) {
+  Lock l(&mu_);
+  SymbolizedStack* res = SymbolizedStack::New(module_offset);
+  res->info.FillModuleInfo(module_name, module_offset, kModuleArchUnknown);
+  for (auto& tool : tools_) {
+    SymbolizerScope sym_scope(this);
+    if (tool.SymbolizePC(module_offset, res))
+      return res;
+  }
+  return res;
+}
+
 bool Symbolizer::SymbolizeData(uptr addr, DataInfo *info) {
   Lock l(&mu_);
   const char *module_name = nullptr;
@@ -555,8 +568,8 @@ bool SymbolizerProcess::ReadFromSymbolizer() {
     uptr size_before = buffer_.size();
     buffer_.resize(size_before + max_length);
     buffer_.resize(buffer_.capacity());
-    bool ret = ReadFromFile(input_fd_, &buffer_[size_before],
-                            buffer_.size() - size_before, &just_read);
+    ret = ReadFromFile(input_fd_, &buffer_[size_before],
+                       buffer_.size() - size_before, &just_read);
 
     if (!ret)
       just_read = 0;

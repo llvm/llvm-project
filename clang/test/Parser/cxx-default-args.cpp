@@ -40,3 +40,21 @@ struct U {
   void i(int x = ) {} // expected-error{{expected expression}}
   typedef int *fp(int x = ); // expected-error{{default arguments can only be specified for parameters in a function declaration}}
 };
+
+namespace GH196725 {
+template <class T> void f();
+template <> void f<int>(int = []{ ; return 0; }()) {} // expected-error{{no function template matches function template specialization 'f'}} \
+                                                      // expected-note@-1{{candidate template ignored}}
+}
+
+namespace GH208868 {
+struct Y {};
+enum E { e1, e2 };
+
+template<typename T>
+auto foo(E = ({ ; }) ? 0 : 1, E = e2) {  // expected-error {{default argument may not use a GNU statement expression}}
+  return 42;
+}
+
+static_assert(foo<Y>(e1) == 42, ""); // expected-error {{no matching function for call to 'foo'}}
+}

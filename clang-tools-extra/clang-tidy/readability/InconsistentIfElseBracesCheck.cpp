@@ -18,21 +18,14 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
-/// Look through AttributedStmt wrappers to find the underlying statement.
-static const Stmt *ignoreAttributed(const Stmt *S) {
-  if (const auto *AS = dyn_cast<AttributedStmt>(S))
-    return AS->getSubStmt();
-  return S;
-}
-
 /// Check that at least one branch of the \p If statement is a \c CompoundStmt.
 static bool shouldHaveBraces(const IfStmt *If) {
-  const Stmt *const Then = ignoreAttributed(If->getThen());
+  const Stmt *const Then = If->getThen()->stripLabelLikeStatements();
   if (isa<CompoundStmt>(Then))
     return true;
 
   if (const Stmt *Else = If->getElse()) {
-    Else = ignoreAttributed(Else);
+    Else = Else->stripLabelLikeStatements();
     if (const auto *NestedIf = dyn_cast<const IfStmt>(Else))
       return shouldHaveBraces(NestedIf);
 
@@ -61,7 +54,7 @@ void InconsistentIfElseBracesCheck::check(
 
 void InconsistentIfElseBracesCheck::checkIfStmt(
     const MatchFinder::MatchResult &Result, const IfStmt *If) {
-  const Stmt *Then = ignoreAttributed(If->getThen());
+  const Stmt *Then = If->getThen()->stripLabelLikeStatements();
   if (const auto *NestedIf = dyn_cast<const IfStmt>(Then)) {
     // If the then-branch is a nested IfStmt, first we need to add braces to
     // it, then we need to check the inner IfStmt.
@@ -74,7 +67,7 @@ void InconsistentIfElseBracesCheck::checkIfStmt(
   }
 
   if (const Stmt *Else = If->getElse()) {
-    Else = ignoreAttributed(Else);
+    Else = Else->stripLabelLikeStatements();
     if (const auto *NestedIf = dyn_cast<const IfStmt>(Else))
       checkIfStmt(Result, NestedIf);
     else if (!isa<CompoundStmt>(Else))

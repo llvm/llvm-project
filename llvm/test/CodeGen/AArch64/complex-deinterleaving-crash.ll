@@ -35,7 +35,7 @@ define i32 @check_deinterleaving_has_deinterleave(ptr %a) {
 ; CHECK-LABEL: check_deinterleaving_has_deinterleave:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    movi v2.4s, #1
+; CHECK-NEXT:    movi v2.16b, #1
 ; CHECK-NEXT:    add x8, x0, #16
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    movi v4.2d, #0000000000000000
@@ -52,34 +52,20 @@ define i32 @check_deinterleaving_has_deinterleave(ptr %a) {
 ; CHECK-NEXT:    add x8, x8, #32
 ; CHECK-NEXT:    cmeq v17.16b, v17.16b, #0
 ; CHECK-NEXT:    cmeq v18.16b, v18.16b, #0
+; CHECK-NEXT:    and v17.16b, v17.16b, v2.16b
+; CHECK-NEXT:    and v18.16b, v18.16b, v2.16b
 ; CHECK-NEXT:    ushll2 v19.8h, v17.16b, #0
 ; CHECK-NEXT:    ushll v17.8h, v17.8b, #0
 ; CHECK-NEXT:    ushll2 v20.8h, v18.16b, #0
 ; CHECK-NEXT:    ushll v18.8h, v18.8b, #0
-; CHECK-NEXT:    ushll v21.4s, v19.4h, #0
-; CHECK-NEXT:    ushll2 v19.4s, v19.8h, #0
-; CHECK-NEXT:    ushll v22.4s, v17.4h, #0
-; CHECK-NEXT:    ushll2 v17.4s, v17.8h, #0
-; CHECK-NEXT:    ushll2 v23.4s, v20.8h, #0
-; CHECK-NEXT:    ushll v24.4s, v18.4h, #0
-; CHECK-NEXT:    ushll2 v18.4s, v18.8h, #0
-; CHECK-NEXT:    ushll v20.4s, v20.4h, #0
-; CHECK-NEXT:    and v21.16b, v21.16b, v2.16b
-; CHECK-NEXT:    and v19.16b, v19.16b, v2.16b
-; CHECK-NEXT:    and v22.16b, v22.16b, v2.16b
-; CHECK-NEXT:    and v17.16b, v17.16b, v2.16b
-; CHECK-NEXT:    and v23.16b, v23.16b, v2.16b
-; CHECK-NEXT:    and v24.16b, v24.16b, v2.16b
-; CHECK-NEXT:    and v18.16b, v18.16b, v2.16b
-; CHECK-NEXT:    and v20.16b, v20.16b, v2.16b
-; CHECK-NEXT:    add v5.4s, v5.4s, v19.4s
-; CHECK-NEXT:    add v3.4s, v3.4s, v21.4s
-; CHECK-NEXT:    add v1.4s, v1.4s, v22.4s
-; CHECK-NEXT:    add v4.4s, v4.4s, v17.4s
-; CHECK-NEXT:    add v16.4s, v16.4s, v23.4s
-; CHECK-NEXT:    add v6.4s, v6.4s, v24.4s
-; CHECK-NEXT:    add v7.4s, v7.4s, v20.4s
-; CHECK-NEXT:    add v0.4s, v0.4s, v18.4s
+; CHECK-NEXT:    uaddw2 v5.4s, v5.4s, v19.8h
+; CHECK-NEXT:    uaddw v3.4s, v3.4s, v19.4h
+; CHECK-NEXT:    uaddw2 v4.4s, v4.4s, v17.8h
+; CHECK-NEXT:    uaddw v1.4s, v1.4s, v17.4h
+; CHECK-NEXT:    uaddw2 v16.4s, v16.4s, v20.8h
+; CHECK-NEXT:    uaddw v7.4s, v7.4s, v20.4h
+; CHECK-NEXT:    uaddw2 v0.4s, v0.4s, v18.8h
+; CHECK-NEXT:    uaddw v6.4s, v6.4s, v18.4h
 ; CHECK-NEXT:    b.ne .LBB1_1
 ; CHECK-NEXT:  // %bb.2: // %middle.block
 ; CHECK-NEXT:    add v0.4s, v0.4s, v4.4s

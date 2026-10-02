@@ -21,13 +21,16 @@
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/DebugLog.h"
+#include "llvm/Support/LogicalResult.h"
 
 #define DEBUG_TYPE "vector-transfer-opt"
 
@@ -526,6 +529,7 @@ class TransferReadDropUnitDimsPattern
     Value maskOp = transferReadOp.getMask();
     if (maskOp) {
       LDBG() << "  -> Processing mask operation";
+      auto maskVectorType = cast<VectorType>(maskOp.getType());
       FailureOr<Value> rankReducedMaskOp = failure();
       if (auto createMaskOp = maskOp.getDefiningOp<vector::CreateMaskOp>())
         rankReducedMaskOp =
@@ -534,16 +538,19 @@ class TransferReadDropUnitDimsPattern
                    maskOp.getDefiningOp<vector::ConstantMaskOp>())
         rankReducedMaskOp =
             maskDropNonScalableUnitDims(rewriter, loc, constantMaskOp);
-
-      if (failed(rankReducedMaskOp)) {
-        LDBG() << "  -> Failed to reduce mask dimensions";
+      else
         return rewriter.notifyMatchFailure(
             transferReadOp,
             "unsupported mask op, only 'vector.create_mask' and "
             "'vector.constant_mask' are currently supported");
+
+      if (succeeded(rankReducedMaskOp)) {
+        maskOp = *rankReducedMaskOp;
+        LDBG() << "  -> Successfully reduced mask dimensions";
+      } else if (maskVectorType.getRank() != reducedVectorType.getRank()) {
+        return rewriter.notifyMatchFailure(
+            transferReadOp, "Mask reduction required, but failed");
       }
-      maskOp = *rankReducedMaskOp;
-      LDBG() << "  -> Successfully reduced mask dimensions";
     }
 
     LDBG() << "  -> Creating rank-reduced subview and new transfer_read";
@@ -642,6 +649,7 @@ class TransferWriteDropUnitDimsPattern
     Value maskOp = transferWriteOp.getMask();
     if (maskOp) {
       LDBG() << "  -> Processing mask operation";
+      auto maskVectorType = cast<VectorType>(maskOp.getType());
       FailureOr<Value> rankReducedMask = failure();
       if (auto createMaskOp = maskOp.getDefiningOp<vector::CreateMaskOp>())
         rankReducedMask =
@@ -650,16 +658,19 @@ class TransferWriteDropUnitDimsPattern
                    maskOp.getDefiningOp<vector::ConstantMaskOp>())
         rankReducedMask =
             maskDropNonScalableUnitDims(rewriter, loc, constantMaskOp);
-
-      if (failed(rankReducedMask)) {
-        LDBG() << "  -> Failed to reduce mask dimensions";
+      else
         return rewriter.notifyMatchFailure(
             transferWriteOp,
             "unsupported mask op, only 'vector.create_mask' and "
             "'vector.constant_mask' are currently supported");
+
+      if (succeeded(rankReducedMask)) {
+        maskOp = *rankReducedMask;
+        LDBG() << "  -> Successfully reduced mask dimensions";
+      } else if (maskVectorType.getRank() != reducedVectorType.getRank()) {
+        return rewriter.notifyMatchFailure(
+            transferWriteOp, "Mask reduction required, but failed");
       }
-      maskOp = *rankReducedMask;
-      LDBG() << "  -> Successfully reduced mask dimensions";
     }
     LDBG() << "  -> Creating rank-reduced subview and new transfer_write";
     Value reducedShapeSource =

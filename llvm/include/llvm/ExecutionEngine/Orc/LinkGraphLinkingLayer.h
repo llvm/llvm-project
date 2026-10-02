@@ -75,11 +75,7 @@ public:
                                              ResourceKey SrcKey) = 0;
   };
 
-  /// Construct a LinkGraphLinkingLayer using the ExecutorProcessControl
-  /// instance's memory manager.
-  LinkGraphLinkingLayer(ExecutionSession &ES);
-
-  /// Construct a LinkGraphLinkingLayer using a custom memory manager.
+  /// Construct a LinkGraphLinkingLayer.
   LinkGraphLinkingLayer(ExecutionSession &ES,
                         jitlink::JITLinkMemoryManager &MemMgr);
 

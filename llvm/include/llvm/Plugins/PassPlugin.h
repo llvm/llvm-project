@@ -13,6 +13,7 @@
 #ifndef LLVM_PLUGINS_PASSPLUGIN_H
 #define LLVM_PLUGINS_PASSPLUGIN_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -33,7 +34,7 @@ class TargetMachine;
 /// against that of the plugin. A mismatch is an error. The supported version
 /// will be incremented for ABI-breaking changes to the \c PassPluginLibraryInfo
 /// struct, i.e. when callbacks are added, removed, or reordered.
-#define LLVM_PLUGIN_API_VERSION 2
+#define LLVM_PLUGIN_API_VERSION 3
 
 extern "C" {
 /// Information about the plugin required to load its passes
@@ -46,7 +47,8 @@ struct PassPluginLibraryInfo {
   /// The API version understood by this plugin, usually \c
   /// LLVM_PLUGIN_API_VERSION
   uint32_t APIVersion;
-  /// A meaningful name of the plugin.
+  /// A meaningful name of the plugin. -plugin-arg=<PluginName>,<arg> passes
+  /// <arg> to the plugin with this name.
   const char *PluginName;
   /// The version of the plugin.
   const char *PluginVersion;
@@ -61,6 +63,10 @@ struct PassPluginLibraryInfo {
   /// callbacks from running.
   bool (*PreCodeGenCallback)(Module &, TargetMachine &, CodeGenFileType,
                              raw_pwrite_stream &OS) = nullptr;
+
+  /// Callback receiving the arguments given to the plugin, e.g. by
+  /// -plugin-arg=<PluginName>,<arg>, in order.
+  Error (*ParseArguments)(ArrayRef<const char *> Args) = nullptr;
 };
 }
 
@@ -75,7 +81,7 @@ public:
   /// \returns Returns an error if either the library cannot be found or loaded,
   /// there is no public entry point, or the plugin implements the wrong API
   /// version.
-  LLVM_ABI static Expected<PassPlugin> Load(const std::string &Filename);
+  LLVM_ABI static Expected<PassPlugin> load(StringRef Filename);
 
   /// Get the filename of the loaded plugin.
   StringRef getFilename() const { return Filename; }
@@ -88,6 +94,8 @@ public:
 
   /// Get the plugin API version
   uint32_t getAPIVersion() const { return Info.APIVersion; }
+
+  const PassPluginLibraryInfo &getInfo() const { return Info; }
 
   /// Invoke the PassBuilder callback registration
   void registerPassBuilderCallbacks(PassBuilder &PB) const {
@@ -112,6 +120,12 @@ private:
   sys::DynamicLibrary Library;
   PassPluginLibraryInfo Info;
 };
+
+/// Passes each "<PluginName>,<arg>" in \p Args to the \c ParseArguments
+/// callback of the extension in \p Infos with that name. Two extensions with
+/// the same name are an error.
+LLVM_ABI Error passPluginArguments(ArrayRef<PassPluginLibraryInfo> Infos,
+                                   ArrayRef<std::string> Args);
 } // namespace llvm
 
 // The function returns a struct with default initializers.
@@ -133,8 +147,9 @@ private:
 ///   };
 /// }
 /// ```
-extern "C" ::llvm::PassPluginLibraryInfo LLVM_ATTRIBUTE_WEAK
-llvmGetPassPluginInfo();
+extern "C" LLVM_ABI_NOT_EXPORTED ::llvm::PassPluginLibraryInfo
+    LLVM_ATTRIBUTE_WEAK
+    llvmGetPassPluginInfo();
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif

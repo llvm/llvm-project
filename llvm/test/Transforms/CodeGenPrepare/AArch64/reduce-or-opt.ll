@@ -10,7 +10,7 @@ define i64 @select_or_reduce_v2i1(ptr nocapture noundef readonly %src) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x ptr>, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq <2 x ptr> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq <2 x ptr> [[WIDE_LOAD]], splat (ptr null)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[OR_REDUC:%.*]] = tail call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[COND]])
 ; CHECK-NEXT:    [[IV_CMP:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4
@@ -48,7 +48,7 @@ define i64 @br_or_reduce_v2i1(ptr nocapture noundef readonly %src, ptr noundef r
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x ptr>, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq <2 x ptr> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq <2 x ptr> [[WIDE_LOAD]], splat (ptr null)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[OR_REDUC:%.*]] = tail call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[COND]])
 ; CHECK-NEXT:    [[IV_CMP:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4
@@ -96,7 +96,7 @@ define i64 @select_or_reduce_nxv2i1(ptr nocapture noundef readonly %src) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x ptr>, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq <vscale x 2 x ptr> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq <vscale x 2 x ptr> [[WIDE_LOAD]], splat (ptr null)
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
@@ -105,7 +105,7 @@ define i64 @select_or_reduce_nxv2i1(ptr nocapture noundef readonly %src) {
 ; CHECK-NEXT:    [[EXIT_COND:%.*]] = or i1 [[OR_REDUC]], [[IV_CMP]]
 ; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[MIDDLE_SPLIT:.*]], label %[[VECTOR_BODY]]
 ; CHECK:       [[MIDDLE_SPLIT]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <vscale x 2 x ptr> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <vscale x 2 x ptr> [[WIDE_LOAD]], splat (ptr null)
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i1 @llvm.vector.reduce.or.nxv2i1(<vscale x 2 x i1> [[TMP2]])
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TMP3]], i64 1, i64 0
 ; CHECK-NEXT:    ret i64 [[SEL]]
@@ -140,7 +140,7 @@ define i64 @br_or_reduce_nxv2i1(ptr nocapture noundef readonly %src, ptr noundef
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x ptr>, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq <vscale x 2 x ptr> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq <vscale x 2 x ptr> [[WIDE_LOAD]], splat (ptr null)
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
@@ -149,7 +149,7 @@ define i64 @br_or_reduce_nxv2i1(ptr nocapture noundef readonly %src, ptr noundef
 ; CHECK-NEXT:    [[EXIT_COND:%.*]] = or i1 [[OR_REDUC]], [[IV_CMP]]
 ; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[MIDDLE_SPLIT:.*]], label %[[VECTOR_BODY]]
 ; CHECK:       [[MIDDLE_SPLIT]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <vscale x 2 x ptr> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <vscale x 2 x ptr> [[WIDE_LOAD]], splat (ptr null)
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i1 @llvm.vector.reduce.or.nxv2i1(<vscale x 2 x i1> [[TMP2]])
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[FOUND:.*]], label %[[NOTFOUND:.*]]
 ; CHECK:       [[FOUND]]:

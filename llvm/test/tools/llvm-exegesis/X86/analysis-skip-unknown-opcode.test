@@ -1,0 +1,41 @@
+# Verify that in analysis mode an entry referencing an unknown opcode (e.g. a
+# sample that has bitrotted due to instruction renaming) is skipped with a
+# warning instead of aborting, and that the remaining valid entries are still
+# analyzed.
+
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-clusters-output-file=- -analysis-clustering-epsilon=0.1 -analysis-inconsistency-epsilon=0.1 -analysis-numpoints=1 2> %t.err | FileCheck -check-prefix=CHECK-CLUSTERS %s
+# RUN: FileCheck -check-prefix=CHECK-WARN %s < %t.err
+
+# CHECK-WARN: warning: skipping benchmark entry: No opcode with name 'NOT_A_REAL_OPCODE'
+# CHECK-WARN: warning: skipped 1 benchmark entries that could not be parsed
+
+# CHECK-CLUSTERS: {{^}}cluster_id,opcode_name,config,sched_class,
+# CHECK-CLUSTERS-NEXT: {{^}}0,
+
+---
+mode:            uops
+key:
+  instructions:
+    - 'NOT_A_REAL_OPCODE RAX'
+  config:          ''
+  register_initial_values: []
+cpu_name:        znver3
+llvm_triple:     x86_64-pc-linux-gnu
+num_repetitions: 10000
+measurements: []
+error:           ''
+...
+---
+mode:            uops
+key:
+  instructions:
+    - 'CMOV16rm AX AX RDI i_0x1 %noreg i_0x0 %noreg i_0x0'
+  config:          ''
+  register_initial_values: []
+cpu_name:        znver3
+llvm_triple:     x86_64-pc-linux-gnu
+num_repetitions: 10000
+measurements:
+  - { key: NumMicroOps, value: 1.0146, per_snippet_value: 14.2044 }
+error:           ''
+...

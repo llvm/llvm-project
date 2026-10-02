@@ -30,6 +30,7 @@ static_library("Lex") {
     "Preprocessor.cpp",
     "PreprocessorLexer.cpp",
     "ScratchBuffer.cpp",
+    "TextEncoding.cpp",
     "TokenConcatenation.cpp",
     "TokenLexer.cpp",
   ]

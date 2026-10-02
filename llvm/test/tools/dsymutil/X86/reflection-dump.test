@@ -6,7 +6,7 @@ RUN: yaml2obj %p/../Inputs/main.yaml -o %t.dir/main
 RUN: yaml2obj %p/../Inputs/test.yaml -o %t.dir/tmp/test-1.o
 RUN: yaml2obj %p/../Inputs/reflection_metadata.yaml -o %t.dir/tmp/reflection_metadata-1.o
 
-RUN: dsymutil -oso-prepend-path=%t.dir %t.dir/main -o %t.dir/main.dSYM
+RUN: dsymutil --linker classic -oso-prepend-path=%t.dir %t.dir/main -o %t.dir/main.dSYM
 RUN: llvm-objdump -s %t.dir/main.dSYM/Contents/Resources/DWARF/main | FileCheck %s
 
 RUN: dsymutil --linker parallel -oso-prepend-path=%t.dir %t.dir/main -o %t.dir/main.dSYM

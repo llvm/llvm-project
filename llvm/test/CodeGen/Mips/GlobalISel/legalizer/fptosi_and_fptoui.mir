@@ -35,7 +35,7 @@ body:             |
     ; FP32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $f12
     ; FP32-NEXT: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP32-NEXT: $f12 = COPY [[COPY]](s32)
-    ; FP32-NEXT: JAL &__fixsfdi, csr_o32, implicit-def $ra, implicit-def $sp, implicit $f12, implicit-def $v0, implicit-def $v1
+    ; FP32-NEXT: JAL &__fixsfdi, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $f12, implicit-def $v0, implicit-def $v1
     ; FP32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $v0
     ; FP32-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $v1
     ; FP32-NEXT: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
@@ -49,7 +49,7 @@ body:             |
     ; FP64-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $f12
     ; FP64-NEXT: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP64-NEXT: $f12 = COPY [[COPY]](s32)
-    ; FP64-NEXT: JAL &__fixsfdi, csr_o32_fp64, implicit-def $ra, implicit-def $sp, implicit $f12, implicit-def $v0, implicit-def $v1
+    ; FP64-NEXT: JAL &__fixsfdi, csr_o32_fp64, implicit-def dead $ra, implicit-def $sp, implicit $f12, implicit-def $v0, implicit-def $v1
     ; FP64-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $v0
     ; FP64-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $v1
     ; FP64-NEXT: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
@@ -179,7 +179,7 @@ body:             |
     ; FP32-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; FP32-NEXT: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP32-NEXT: $d6 = COPY [[COPY]](s64)
-    ; FP32-NEXT: JAL &__fixdfdi, csr_o32, implicit-def $ra, implicit-def $sp, implicit $d6, implicit-def $v0, implicit-def $v1
+    ; FP32-NEXT: JAL &__fixdfdi, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $d6, implicit-def $v0, implicit-def $v1
     ; FP32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $v0
     ; FP32-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $v1
     ; FP32-NEXT: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
@@ -193,7 +193,7 @@ body:             |
     ; FP64-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; FP64-NEXT: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP64-NEXT: $d12_64 = COPY [[COPY]](s64)
-    ; FP64-NEXT: JAL &__fixdfdi, csr_o32_fp64, implicit-def $ra, implicit-def $sp, implicit $d12_64, implicit-def $v0, implicit-def $v1
+    ; FP64-NEXT: JAL &__fixdfdi, csr_o32_fp64, implicit-def dead $ra, implicit-def $sp, implicit $d12_64, implicit-def $v0, implicit-def $v1
     ; FP64-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $v0
     ; FP64-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $v1
     ; FP64-NEXT: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
@@ -323,7 +323,7 @@ body:             |
     ; FP32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $f12
     ; FP32-NEXT: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP32-NEXT: $f12 = COPY [[COPY]](s32)
-    ; FP32-NEXT: JAL &__fixunssfdi, csr_o32, implicit-def $ra, implicit-def $sp, implicit $f12, implicit-def $v0, implicit-def $v1
+    ; FP32-NEXT: JAL &__fixunssfdi, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $f12, implicit-def $v0, implicit-def $v1
     ; FP32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $v0
     ; FP32-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $v1
     ; FP32-NEXT: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
@@ -337,7 +337,7 @@ body:             |
     ; FP64-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $f12
     ; FP64-NEXT: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP64-NEXT: $f12 = COPY [[COPY]](s32)
-    ; FP64-NEXT: JAL &__fixunssfdi, csr_o32_fp64, implicit-def $ra, implicit-def $sp, implicit $f12, implicit-def $v0, implicit-def $v1
+    ; FP64-NEXT: JAL &__fixunssfdi, csr_o32_fp64, implicit-def dead $ra, implicit-def $sp, implicit $f12, implicit-def $v0, implicit-def $v1
     ; FP64-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $v0
     ; FP64-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $v1
     ; FP64-NEXT: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
@@ -365,7 +365,7 @@ body:             |
     ; FP32-NEXT: {{  $}}
     ; FP32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $f12
     ; FP32-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s32)
-    ; FP32-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x41E0000000000000
+    ; FP32-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x4F000000
     ; FP32-NEXT: [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[COPY]], [[C]]
     ; FP32-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FSUB]](s32)
     ; FP32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -380,7 +380,7 @@ body:             |
     ; FP64-NEXT: {{  $}}
     ; FP64-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $f12
     ; FP64-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s32)
-    ; FP64-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x41E0000000000000
+    ; FP64-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x4F000000
     ; FP64-NEXT: [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[COPY]], [[C]]
     ; FP64-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FSUB]](s32)
     ; FP64-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -408,7 +408,7 @@ body:             |
     ; FP32-NEXT: {{  $}}
     ; FP32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $f12
     ; FP32-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s32)
-    ; FP32-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x41E0000000000000
+    ; FP32-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x4F000000
     ; FP32-NEXT: [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[COPY]], [[C]]
     ; FP32-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FSUB]](s32)
     ; FP32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -425,7 +425,7 @@ body:             |
     ; FP64-NEXT: {{  $}}
     ; FP64-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $f12
     ; FP64-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s32)
-    ; FP64-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x41E0000000000000
+    ; FP64-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x4F000000
     ; FP64-NEXT: [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[COPY]], [[C]]
     ; FP64-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FSUB]](s32)
     ; FP64-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -456,7 +456,7 @@ body:             |
     ; FP32-NEXT: {{  $}}
     ; FP32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $f12
     ; FP32-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s32)
-    ; FP32-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x41E0000000000000
+    ; FP32-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x4F000000
     ; FP32-NEXT: [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[COPY]], [[C]]
     ; FP32-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FSUB]](s32)
     ; FP32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -473,7 +473,7 @@ body:             |
     ; FP64-NEXT: {{  $}}
     ; FP64-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $f12
     ; FP64-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s32)
-    ; FP64-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x41E0000000000000
+    ; FP64-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x4F000000
     ; FP64-NEXT: [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[COPY]], [[C]]
     ; FP64-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FSUB]](s32)
     ; FP64-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -505,7 +505,7 @@ body:             |
     ; FP32-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; FP32-NEXT: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP32-NEXT: $d6 = COPY [[COPY]](s64)
-    ; FP32-NEXT: JAL &__fixunsdfdi, csr_o32, implicit-def $ra, implicit-def $sp, implicit $d6, implicit-def $v0, implicit-def $v1
+    ; FP32-NEXT: JAL &__fixunsdfdi, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $d6, implicit-def $v0, implicit-def $v1
     ; FP32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $v0
     ; FP32-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $v1
     ; FP32-NEXT: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
@@ -519,7 +519,7 @@ body:             |
     ; FP64-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; FP64-NEXT: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP64-NEXT: $d12_64 = COPY [[COPY]](s64)
-    ; FP64-NEXT: JAL &__fixunsdfdi, csr_o32_fp64, implicit-def $ra, implicit-def $sp, implicit $d12_64, implicit-def $v0, implicit-def $v1
+    ; FP64-NEXT: JAL &__fixunsdfdi, csr_o32_fp64, implicit-def dead $ra, implicit-def $sp, implicit $d12_64, implicit-def $v0, implicit-def $v1
     ; FP64-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $v0
     ; FP64-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $v1
     ; FP64-NEXT: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
@@ -547,7 +547,7 @@ body:             |
     ; FP32-NEXT: {{  $}}
     ; FP32-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; FP32-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s64)
-    ; FP32-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x41E0000000000000
+    ; FP32-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x41E0000000000000
     ; FP32-NEXT: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[COPY]], [[C]]
     ; FP32-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FSUB]](s64)
     ; FP32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -562,7 +562,7 @@ body:             |
     ; FP64-NEXT: {{  $}}
     ; FP64-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; FP64-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s64)
-    ; FP64-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x41E0000000000000
+    ; FP64-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x41E0000000000000
     ; FP64-NEXT: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[COPY]], [[C]]
     ; FP64-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FSUB]](s64)
     ; FP64-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -590,7 +590,7 @@ body:             |
     ; FP32-NEXT: {{  $}}
     ; FP32-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; FP32-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s64)
-    ; FP32-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x41E0000000000000
+    ; FP32-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x41E0000000000000
     ; FP32-NEXT: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[COPY]], [[C]]
     ; FP32-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FSUB]](s64)
     ; FP32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -607,7 +607,7 @@ body:             |
     ; FP64-NEXT: {{  $}}
     ; FP64-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; FP64-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s64)
-    ; FP64-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x41E0000000000000
+    ; FP64-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x41E0000000000000
     ; FP64-NEXT: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[COPY]], [[C]]
     ; FP64-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FSUB]](s64)
     ; FP64-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -638,7 +638,7 @@ body:             |
     ; FP32-NEXT: {{  $}}
     ; FP32-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; FP32-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s64)
-    ; FP32-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x41E0000000000000
+    ; FP32-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x41E0000000000000
     ; FP32-NEXT: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[COPY]], [[C]]
     ; FP32-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FSUB]](s64)
     ; FP32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -655,7 +655,7 @@ body:             |
     ; FP64-NEXT: {{  $}}
     ; FP64-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; FP64-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s64)
-    ; FP64-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x41E0000000000000
+    ; FP64-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x41E0000000000000
     ; FP64-NEXT: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[COPY]], [[C]]
     ; FP64-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FSUB]](s64)
     ; FP64-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648

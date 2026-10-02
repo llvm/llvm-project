@@ -135,6 +135,19 @@ public:
     return FieldInfo.FieldLoc;
   }
 
+  /// Returns the start location of this designator. A leading field designator
+  /// has no '.', so its location collapses to the field-name location.
+  SourceLocation getBeginLoc() const {
+    if (isFieldDesignator())
+      return getDotLoc().isValid() ? getDotLoc() : getFieldLoc();
+    return getLBracketLoc();
+  }
+
+  /// Returns the end location of this designator.
+  SourceLocation getEndLoc() const {
+    return isFieldDesignator() ? getFieldLoc() : getRBracketLoc();
+  }
+
   //===--------------------------------------------------------------------===//
   // ArrayDesignatorInfo:
 

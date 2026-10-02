@@ -912,7 +912,11 @@ public:
     Type boolType = rewriter.getIntegerType(1);
     Type idxType = rewriter.getIndexType();
     // All initialization should be done on entry of the loop nest.
-    rewriter.setInsertionPointAfter(op.getTensor().getDefiningOp());
+    if (isa<BlockArgument>(op.getTensor())) {
+      rewriter.setInsertionPointToStart(op->getBlock());
+    } else {
+      rewriter.setInsertionPointAfter(op.getTensor().getDefiningOp());
+    }
 
     // Determine the size for access expansion (always the innermost stored
     // level size).
@@ -1360,7 +1364,7 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
     Level trailCOORank = stt.getLvlRank() - trailCOOStart;
     // Sets up SparseTensorSpecifier.
     for (Level lvl = 0, lvlRank = stt.getLvlRank(); lvl < lvlRank; lvl++) {
-      assert(ShapedType::isStatic(stt.getDimShape()[lvl]));
+      assert(ShapedType::isStatic(stt.getLvlShape()[lvl]));
 
       // Sets up the level size.
       auto lvlSize = constantIndex(rewriter, loc, stt.getLvlShape()[lvl]);

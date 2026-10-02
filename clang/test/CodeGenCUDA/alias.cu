@@ -6,7 +6,7 @@
 // RUN:   -o - %s | FileCheck %s
 // RUN: %clang_cc1 -fcuda-is-device -triple nvptx-nvidia-cuda -emit-llvm -target-sdk-version=10.1 \
 // RUN:   -o - %s | FileCheck %s
-// RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -emit-llvm \
+// RUN: %clang_cc1 -fcuda-is-device -triple amdgpu-amd-amdhsa -emit-llvm \
 // RUN:   -o - %s | FileCheck %s
 
 #include "Inputs/cuda.h"

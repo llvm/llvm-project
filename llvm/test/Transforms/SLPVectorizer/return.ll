@@ -18,8 +18,8 @@ define double @return1() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr @a, align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr @b, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[ADD2:%.*]] = fadd double [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    ret double [[ADD2]]
 ;
@@ -45,8 +45,8 @@ define double @return2(ptr nocapture readonly %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[X]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i64 1
 ; CHECK-NEXT:    [[ADD5:%.*]] = fadd double [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    ret double [[ADD5]]
 ;

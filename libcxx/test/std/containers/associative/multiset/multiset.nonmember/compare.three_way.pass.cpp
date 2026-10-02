@@ -13,15 +13,22 @@
 
 // template<class Key, class Compare, class Allocator>
 //   synth-three-way-result<Key> operator<=>(const multiset<Key, Compare, Allocator>& x,
-//                                           const multiset<Key, Compare, Allocator>& y);
+//                                           const multiset<Key, Compare, Allocator>& y); // constexpr since C++26
 
 #include <cassert>
 #include <set>
 
 #include "test_container_comparisons.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   assert(test_ordered_set_container_spaceship<std::multiset>());
-  // `std::multiset` is not constexpr, so no `static_assert` test here.
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

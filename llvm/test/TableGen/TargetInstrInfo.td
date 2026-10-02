@@ -1,7 +1,6 @@
 // This test describes how we eventually want to describe instructions in
 // the target independent code generators.
 // RUN: llvm-tblgen %s
-// XFAIL: vg_leak
 
 // Target indep stuff.
 class Instruction {   // Would have other stuff eventually

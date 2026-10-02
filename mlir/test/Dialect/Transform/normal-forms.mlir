@@ -84,8 +84,7 @@ module attributes {transform.with_named_sequence} {
 
 module attributes {transform.with_named_sequence} {
   // expected-remark @below {{matched}}
-  transform.payload attributes {
-      normal_forms = [#transform.test_single_block_normal_form<nested true>]} {
+  transform.payload normal_forms = [#transform.test_single_block_normal_form<nested true>] {
     transform.test_dummy_payload_op : () -> ()
   }
 
@@ -103,15 +102,14 @@ module attributes {transform.with_named_sequence} {
 
 // expected-note @below {{previous instance}}
 // expected-error @below {{duplicate normal form}}
-transform.payload attributes {normal_forms = [
+transform.payload normal_forms = [
     #transform.test_single_block_normal_form<nested false>,
-    #transform.test_single_block_normal_form<nested true>]} {
+    #transform.test_single_block_normal_form<nested true>] {
 }
 
 // -----
 
-transform.payload attributes {
-    normal_forms = [#transform.test_single_block_normal_form<nested true>]} {
+transform.payload normal_forms = [#transform.test_single_block_normal_form<nested true>] {
   // expected-error @below {{normal form test_single_block_normal_form requires payload operations to have a single region}}
   "test.foo"() ({
     cf.br ^bb1
@@ -122,12 +120,11 @@ transform.payload attributes {
 
 // -----
 
-transform.payload attributes {
-    normal_forms = [#transform.test_single_block_normal_form<nested true>]} {
+transform.payload normal_forms = [#transform.test_single_block_normal_form<nested true>] {
   // We should see the diagnostic from the inner op verifier, and never hit
   // the normal form check.
   // expected-error @below {{fail_to_verify is set}}
-  transform.test_dummy_payload_op {fail_to_verify} : () -> ()
+  transform.test_dummy_payload_op fail_to_verify : () -> ()
   "test.foo"() ({
     cf.br ^bb1
   ^bb1:
@@ -137,20 +134,18 @@ transform.payload attributes {
 
 // -----
 
-// We have surprisingly many invocations of the verifier here:
-//  1. after the initial parsing (reasonable)
-//  2. also in transform::detail::mergeSymbolsInto (has a TODO to be removed)
-//  3. after the transform interpreter pass (reasonable)
+// We have two invocations of the verifier:
+//  1. after the initial parsing, and
+//  2. after the transform interpreter pass
 // Notably this doesn't include an extra run from checkPayload, which is
 // what we intend to test here.
 
 // CHECK-LABEL: @verification_count
 // CHECK: transform.payload
-// CHECK-SAME: test.counting_normal_form_count = 3
+// CHECK-SAME: test.counting_normal_form_count = 2
 
 module @verification_count attributes {transform.with_named_sequence} {
-  transform.payload attributes {
-      normal_forms = [#transform.test_counting_normal_form]} {
+  transform.payload normal_forms = [#transform.test_counting_normal_form] {
     transform.test_dummy_payload_op : () -> ()
   }
 

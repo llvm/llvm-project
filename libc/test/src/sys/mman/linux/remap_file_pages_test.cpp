@@ -6,20 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_mman_macros.h"
+#include "hdr/sys_stat_macros.h" // For S_IRWXU
 #include "src/fcntl/open.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munmap.h"
 #include "src/sys/mman/remap_file_pages.h"
 #include "src/unistd/close.h"
-#include "src/unistd/sysconf.h"
+#include "src/unistd/getpagesize.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <sys/mman.h>
-#include <sys/stat.h> // For S_IRWXU
-
-const size_t PAGE_SIZE = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);
+const size_t PAGE_SIZE = LIBC_NAMESPACE::getpagesize();
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;

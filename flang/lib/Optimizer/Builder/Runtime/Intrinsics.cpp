@@ -18,10 +18,7 @@
 #include "flang/Runtime/random.h"
 #include "flang/Runtime/stop.h"
 #include "flang/Runtime/time-intrinsic.h"
-#include "flang/Semantics/tools.h"
-#include "llvm/Support/Debug.h"
 #include <optional>
-#include <signal.h>
 
 #define DEBUG_TYPE "flang-lower-runtime"
 
@@ -323,6 +320,14 @@ mlir::Value fir::runtime::genSecnds(fir::FirOpBuilder &builder,
 mlir::Value fir::runtime::genTime(fir::FirOpBuilder &builder,
                                   mlir::Location loc) {
   auto func = fir::runtime::getRuntimeFunc<mkRTKey(time)>(loc, builder);
+  return fir::CallOp::create(builder, loc, func, mlir::ValueRange{})
+      .getResult(0);
+}
+
+/// generate runtime call to timef intrinsic
+mlir::Value fir::runtime::genTimef(fir::FirOpBuilder &builder,
+                                   mlir::Location loc) {
+  auto func = fir::runtime::getRuntimeFunc<mkRTKey(Timef)>(loc, builder);
   return fir::CallOp::create(builder, loc, func, mlir::ValueRange{})
       .getResult(0);
 }

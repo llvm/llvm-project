@@ -19,25 +19,47 @@ void test_qualifiers(int x, const int y, int * restrict z) {
   auto yup = ci;
   yup = 12;
 
+  // Because inference happens after lvalue conversion, top-level qualifiers
+  // are stripped. So r_test will not be restrict qualified, while r_test_2
+  // will be because of the explicit use of the qualifier.
   auto r_test = z;
+  auto restrict r_test_2 = z;
+
+  // Yes, you can unfortunately infer the type when _Atomic is used as a
+  // qualifier. (Remember, string literals in C are not const char[], they are
+  // char[].)
+  _Atomic auto atom_int = 12;
+  _Atomic auto atom_float = 1.2f;
+  _Atomic auto atom_str = "really?";
 
   _Static_assert(_Generic(a, int : 1));
   _Static_assert(_Generic(c, unsigned long : 1));
   _Static_assert(_Generic(pa, int * : 1));
   _Static_assert(_Generic(pb, const int * : 1));
-  _Static_assert(_Generic(r_test, int * : 1));
+  _Static_assert(_Generic(&r_test, int ** : 1));
+  _Static_assert(_Generic(&r_test_2, int * restrict * : 1));
+  _Static_assert(_Generic(&atom_int, _Atomic(int) * : 1));
+  _Static_assert(_Generic(&atom_float, _Atomic(float) * : 1));
+  _Static_assert(_Generic(&atom_str, _Atomic(char *) * : 1));
 }
 
 void test_atomic(void) {
-  _Atomic auto i = 12;  // expected-error {{_Atomic cannot be applied to type 'auto' in C23}}
+  // As silly as this seems, it's required to accept `_Atomic auto` because
+  // _Atomic is a qualifier in that case. But it's required to reject
+  // `_Atomic(auto)` because _Atomic is a type specifier in that case and you
+  // cannot combine auto with other type specifiers (e.g., no `_Complex auto`
+  // either).
+  _Atomic auto i = 12;
   _Atomic(auto) j = 12; // expected-error {{'auto' not allowed here}} \
                            expected-error {{a type specifier is required for all declarations}}
 
   _Atomic(int) foo(void);
   auto k = foo();
 
-  _Static_assert(_Generic(&i, _Atomic auto *: 1)); // expected-error {{_Atomic cannot be applied to type 'auto' in C23}} \
-                                                      expected-error {{'auto' not allowed here}}
+  // Despite being valid as a construct, it's only valid if you can actually
+  // deduce the type, which requires an initializer. So it cannot be used in a
+  // generic association.
+  _Static_assert(_Generic(&i, _Atomic auto *: 1)); // expected-error {{'auto' not allowed here}}
   _Static_assert(_Generic(k, int: 1));
 }
 

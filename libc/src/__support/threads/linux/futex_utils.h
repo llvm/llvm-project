@@ -20,8 +20,20 @@
 #include "src/__support/time/abs_timeout.h"
 #include <linux/errno.h>
 #include <linux/futex.h>
+#if defined(SYS_futex_time64)
+#include <linux/time_types.h>
+#endif
 
 namespace LIBC_NAMESPACE_DECL {
+
+#if !defined(SYS_futex_time64) && defined(SYS_futex)
+static_assert(
+    sizeof(timespec::tv_nsec) == sizeof(long),
+    "This legacy syscall fallback is only safe on platforms where tv_nsec "
+    "matches the register size (long). It is unsafe on 32-bit platforms "
+    "with 64-bit tv_nsec.");
+#endif
+
 class Futex : public cpp::Atomic<FutexWordType> {
 public:
   using Timeout = internal::AbsTimeout;
@@ -43,12 +55,37 @@ public:
       if (this->load(cpp::MemoryOrder::RELAXED) != expected)
         return 0;
 
+      void *timeout_ptr = nullptr;
+#if defined(SYS_futex_time64)
+      __kernel_timespec ts64;
+      if (timeout) {
+        // If timespec has the same size and layout as __kernel_timespec, we can
+        // pass a pointer to it directly.
+        if constexpr (sizeof(timespec) == sizeof(__kernel_timespec)) {
+          timeout_ptr = const_cast<timespec *>(&timeout->get_timespec());
+        } else {
+          // Otherwise (e.g. 32-bit platforms with 32-bit time_t), the 64-bit
+          // futex syscall (SYS_futex_time64) still expects a 64-bit timespec.
+          // We must convert it to avoid passing a mismatching structure size.
+          ts64.tv_sec = timeout->get_timespec().tv_sec;
+          ts64.tv_nsec = timeout->get_timespec().tv_nsec;
+          timeout_ptr = &ts64;
+        }
+      }
+#else
+      timespec ts;
+      if (timeout) {
+        ts = timeout->get_timespec();
+        timeout_ptr = &ts;
+      }
+#endif
+
       int ret = syscall_impl<int>(
           /*syscall_number=*/FUTEX_SYSCALL_ID,
           /*futex_addr=*/this,
           /*op=*/op,
           /*expected=*/expected,
-          /*timeout=*/timeout ? &timeout->get_timespec() : nullptr,
+          /*timeout=*/timeout_ptr,
           /*ignored=*/nullptr,
           /*bitset=*/FUTEX_BITSET_MATCH_ANY);
 
@@ -56,6 +93,11 @@ public:
       // which should normally be 0 or -ETIMEOUT.
       if (ret == -EINTR)
         continue;
+
+      // EAGAIN and EWOULDBLOCK will be treated as a normal finish, as the value
+      // has changed.
+      if (ret == -EAGAIN || ret == -EWOULDBLOCK)
+        return 0;
 
       if (ret < 0)
         return cpp::unexpected(-ret);

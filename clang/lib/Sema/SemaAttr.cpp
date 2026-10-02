@@ -853,8 +853,7 @@ bool Sema::UnifySection(StringRef SectionName, int SectionFlags,
     return false;
   Diag(Decl->getLocation(), diag::err_section_conflict) << Decl << Section;
   if (Section.Decl)
-    Diag(Section.Decl->getLocation(), diag::note_declared_at)
-        << Section.Decl->getName();
+    Diag(Section.Decl->getLocation(), diag::note_declared_at);
   if (PragmaLocation.isValid())
     Diag(PragmaLocation, diag::note_pragma_entered_here);
   if (Section.PragmaSectionLocation.isValid())
@@ -874,8 +873,7 @@ bool Sema::UnifySection(StringRef SectionName,
       Diag(PragmaSectionLocation, diag::err_section_conflict)
           << "this" << Section;
       if (Section.Decl)
-        Diag(Section.Decl->getLocation(), diag::note_declared_at)
-            << Section.Decl->getName();
+        Diag(Section.Decl->getLocation(), diag::note_declared_at);
       if (Section.PragmaSectionLocation.isValid())
         Diag(Section.PragmaSectionLocation, diag::note_pragma_entered_here);
       return true;
@@ -1076,7 +1074,7 @@ void Sema::ActOnPragmaAttributeAttribute(
     //    variable(is_parameter).
     //  - a sub-rule and a sibling that's negated. E.g.
     //    variable(is_thread_local) and variable(unless(is_parameter))
-    llvm::SmallDenseMap<int, std::pair<int, SourceRange>, 2>
+    llvm::SmallDenseMap<int, attr::ParsedSubjectMatchRuleSet::value_type, 2>
         RulesToFirstSpecifiedNegatedSubRule;
     for (const auto &Rule : Rules) {
       attr::SubjectMatchRule MatchRule = attr::SubjectMatchRule(Rule.first);

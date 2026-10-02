@@ -147,7 +147,7 @@ DebugMap::DebugMap(const Triple &BinaryTriple, StringRef BinaryPath,
 ErrorOr<std::vector<std::unique_ptr<DebugMap>>>
 DebugMap::parseYAMLDebugMap(BinaryHolder &BinHolder, StringRef InputFile,
                             StringRef PrependPath, bool Verbose) {
-  auto ErrOrFile = MemoryBuffer::getFileOrSTDIN(InputFile);
+  auto ErrOrFile = MemoryBuffer::getFileOrSTDIN(InputFile, /*IsText=*/true);
   if (auto Err = ErrOrFile.getError())
     return Err;
 

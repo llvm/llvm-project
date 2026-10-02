@@ -13,11 +13,11 @@
 ; RUN:     -disable-output < %s 2>&1 | FileCheck %s --check-prefix=CHECK-SCALABLE
 
 ; LV: Checking a loop in 'sext_reduction_i8_to_i16'
-; CHECK-SCALABLE-BASE: Cost of 4 for VF vscale x 16: EXPRESSION vp<%8> = ir<%acc> + partial.reduce.add (ir<%load> sext to i16)
+; CHECK-SCALABLE-BASE-NOT: Cost of {{.*}} for VF vscale x 16: EXPRESSION vp<{{.*}}> = ir<%acc> + partial.reduce.add (ir<%load> sext to i16)
 ; CHECK-SCALABLE: Cost of 1 for VF vscale x 16: EXPRESSION vp<%8> = ir<%acc> + partial.reduce.add (ir<%load> sext to i16)
 
 ; LV: Checking a loop in 'zext_reduction_i8_to_i16'
-; CHECK-SCALABLE-BASE: Cost of 4 for VF vscale x 16: EXPRESSION vp<%8> = ir<%acc> + partial.reduce.add (ir<%load> zext to i16)
+; CHECK-SCALABLE-BASE-NOT: Cost of {{.*}} for VF vscale x 16: EXPRESSION vp<{{.*}}> = ir<%acc> + partial.reduce.add (ir<%load> sext to i16)
 ; CHECK-SCALABLE: Cost of 1 for VF vscale x 16: EXPRESSION vp<%8> = ir<%acc> + partial.reduce.add (ir<%load> zext to i16)
 
 target triple = "aarch64"

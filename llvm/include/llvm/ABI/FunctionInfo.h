@@ -39,6 +39,9 @@ public:
     /// Pass the argument indirectly via a hidden pointer with the specified
     /// alignment and address space.
     Indirect,
+    /// Like Indirect, but the pointer may alias an object referenced
+    /// elsewhere. The callee must not modify it and never treats it as byval.
+    IndirectAliased,
     /// Ignore the argument (treat as void). Useful for void and empty structs.
     Ignore,
   };
@@ -71,10 +74,14 @@ private:
   bool ZeroExt : 1;
   bool IndirectByVal : 1;
   bool IndirectRealign : 1;
+  bool CanBeFlattened : 1;
+  unsigned NeededIntRegs : 3;
+  unsigned NeededSseRegs : 3;
 
   ArgInfo(Kind K = Direct)
       : TheKind(K), SignExt(false), ZeroExt(false), IndirectByVal(false),
-        IndirectRealign(false) {}
+        IndirectRealign(false), CanBeFlattened(false), NeededIntRegs(0),
+        NeededSseRegs(0) {}
 
 public:
   /// \param T The type to coerce to. If null, the argument's original type is
@@ -85,12 +92,16 @@ public:
   ///               return value on x86-64).
   /// \param Align  Override for the argument's alignment. If absent, the
   ///               default alignment for \p T is used.
+  /// \param CanBeFlattened Whether a record coercion may be split into one
+  ///               wire argument per field. See getCanBeFlattened.
   static ArgInfo getDirect(const Type *T = nullptr, unsigned Offset = 0,
-                           MaybeAlign Align = std::nullopt) {
+                           MaybeAlign Align = std::nullopt,
+                           bool CanBeFlattened = true) {
     ArgInfo AI(Direct);
     AI.CoercionType = T;
     AI.Alignment = Align;
     AI.DirectAttr.Offset = Offset;
+    AI.CanBeFlattened = CanBeFlattened;
     return AI;
   }
 
@@ -124,6 +135,17 @@ public:
     return AI;
   }
 
+  /// An aliased indirect argument. It carries an address space but no byval,
+  /// since the pointer refers to an object the caller owns.
+  static ArgInfo getIndirectAliased(Align Align, unsigned AddrSpace,
+                                    bool Realign = false) {
+    ArgInfo AI(IndirectAliased);
+    AI.Alignment = Align;
+    AI.IndirectAttr.AddrSpace = AddrSpace;
+    AI.IndirectRealign = Realign;
+    return AI;
+  }
+
   static ArgInfo getIgnore() { return ArgInfo(Ignore); }
 
   ArgInfo &setSignExt(bool SignExtend = true) {
@@ -140,9 +162,17 @@ public:
     return *this;
   }
 
+  /// See getCanBeFlattened.
+  ArgInfo &setCanBeFlattened(bool Flatten) {
+    assert(isDirect() && "Invalid Kind!");
+    CanBeFlattened = Flatten;
+    return *this;
+  }
+
   Kind getKind() const { return TheKind; }
   bool isDirect() const { return TheKind == Direct; }
   bool isIndirect() const { return TheKind == Indirect; }
+  bool isIndirectAliased() const { return TheKind == IndirectAliased; }
   bool isIgnore() const { return TheKind == Ignore; }
   bool isExtend() const { return TheKind == Extend; }
 
@@ -151,31 +181,51 @@ public:
     return DirectAttr.Offset;
   }
 
+  /// How many integer and vector argument registers this argument occupies.
+  /// Both zero means it occupies none and travels in memory, which is also
+  /// what a target whose classifier does not record the demand reports.
+  unsigned getNeededIntRegs() const { return NeededIntRegs; }
+  unsigned getNeededSseRegs() const { return NeededSseRegs; }
+
+  void setNeededRegs(unsigned IntRegs, unsigned SseRegs) {
+    assert(IntRegs <= 7 && SseRegs <= 7 && "Register demand does not fit");
+    NeededIntRegs = IntRegs;
+    NeededSseRegs = SseRegs;
+  }
+
   MaybeAlign getDirectAlign() const {
     assert((isDirect() || isExtend()) && "Not a direct or extend kind");
     return Alignment;
   }
 
   Align getIndirectAlign() const {
-    assert(isIndirect() && "Invalid Kind!");
+    assert((isIndirect() || isIndirectAliased()) && "Invalid Kind!");
     assert(Alignment.has_value() &&
            "Indirect arguments must have an alignment");
     return *Alignment;
   }
 
   unsigned getIndirectAddrSpace() const {
-    assert(isIndirect() && "Invalid Kind!");
+    assert((isIndirect() || isIndirectAliased()) && "Invalid Kind!");
     return IndirectAttr.AddrSpace;
   }
 
   bool getIndirectByVal() const {
+    // Aliased pointers are never byval.
     assert(isIndirect() && "Invalid Kind!");
     return IndirectByVal;
   }
 
   bool getIndirectRealign() const {
-    assert(isIndirect() && "Invalid Kind!");
+    assert((isIndirect() || isIndirectAliased()) && "Invalid Kind!");
     return IndirectRealign;
+  }
+
+  /// Whether a Direct record coercion may be split into one wire argument
+  /// per field. Mirrors clang::CodeGen::ABIArgInfo::CanBeFlattened.
+  bool getCanBeFlattened() const {
+    assert(isDirect() && "Invalid Kind!");
+    return CanBeFlattened;
   }
 
   bool isSignExt() const {
@@ -207,18 +257,50 @@ struct ArgEntry {
   ArgEntry(const Type *T, ArgInfo A) : ABIType(T), Info(A) {}
 };
 
+/// Whether a signature accepts arguments beyond its declared parameters, and
+/// where the declared ones end when it does.  An argument past an ellipsis is
+/// unnamed, and some ABI rules pass an unnamed type differently.
+///
+/// A count and All are not interchangeable when the count equals the number of
+/// arguments.  FunctionInfo::isVariadic() is true whenever a count was given,
+/// so a signature with no ellipsis has to be spelled All.
+class RequiredArgs {
+  /// The number of leading arguments that are declared parameters, or ~0U if
+  /// the signature accepts no optional arguments.
+  unsigned NumRequired;
+
+public:
+  enum All_t { All };
+
+  /// A signature with no ellipsis, where every argument is declared.
+  RequiredArgs(All_t) : NumRequired(~0U) {}
+
+  /// A signature whose leading \p N arguments are declared and whose remaining
+  /// arguments pass through an ellipsis.
+  explicit RequiredArgs(unsigned N) : NumRequired(N) {
+    assert(N != ~0U && "~0U is reserved for a signature with no ellipsis");
+  }
+
+  bool allowsOptionalArgs() const { return NumRequired != ~0U; }
+
+  unsigned getNumRequiredArgs() const {
+    assert(allowsOptionalArgs() && "signature accepts no optional arguments");
+    return NumRequired;
+  }
+};
+
 class FunctionInfo final : private TrailingObjects<FunctionInfo, ArgEntry> {
 private:
   const Type *ReturnType;
   ArgInfo ReturnInfo;
   unsigned NumArgs;
   CallingConv::ID CC = CallingConv::C;
-  std::optional<unsigned> NumRequired;
+  RequiredArgs Required;
 
   FunctionInfo(CallingConv::ID CC, const Type *RetTy, unsigned NumArguments,
-               std::optional<unsigned> NumRequired)
+               RequiredArgs Required)
       : ReturnType(RetTy), ReturnInfo(ArgInfo::getDirect()),
-        NumArgs(NumArguments), CC(CC), NumRequired(NumRequired) {}
+        NumArgs(NumArguments), CC(CC), Required(Required) {}
 
   friend class TrailingObjects;
 
@@ -234,10 +316,10 @@ public:
 
   unsigned arg_size() const { return NumArgs; }
 
-  static FunctionInfo *
+  LLVM_ABI static std::unique_ptr<FunctionInfo>
   create(CallingConv::ID CC, const Type *ReturnType,
          ArrayRef<const Type *> ArgTypes,
-         std::optional<unsigned> NumRequired = std::nullopt);
+         RequiredArgs Required = RequiredArgs::All);
 
   const Type *getReturnType() const { return ReturnType; }
   ArgInfo &getReturnInfo() { return ReturnInfo; }
@@ -245,10 +327,10 @@ public:
 
   CallingConv::ID getCallingConvention() const { return CC; }
 
-  bool isVariadic() const { return NumRequired.has_value(); }
+  bool isVariadic() const { return Required.allowsOptionalArgs(); }
 
   unsigned getNumRequiredArgs() const {
-    return isVariadic() ? *NumRequired : arg_size();
+    return isVariadic() ? Required.getNumRequiredArgs() : arg_size();
   }
 
   ArrayRef<ArgEntry> arguments() const {

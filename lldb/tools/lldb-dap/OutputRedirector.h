@@ -9,35 +9,44 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_OUTPUT_REDIRECTOR_H
 #define LLDB_TOOLS_LLDB_DAP_OUTPUT_REDIRECTOR_H
 
+#include "lldb/Host/MainLoop.h"
+#include "lldb/Host/MainLoopBase.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
-#include <atomic>
 #include <functional>
-#include <thread>
 
 namespace lldb_dap {
-
+class Log;
 class OutputRedirector {
 public:
   static int kInvalidDescriptor;
 
-  /// Creates writable file descriptor that will invoke the given callback on
-  /// each write in a background thread.
+  /// Creates a writable file descriptor that will invoke the given callback
+  /// when data is written, dispatched from the provided main loop.
+  ///
+  /// \param[in] loop
+  ///     The main loop used to poll the read end of the redirection pipe.
   ///
   /// \param[in] file_override
-  ///     Updates the file descriptor to the redirection pipe, if not null.
+  ///     If non-null, redirects this file's descriptor to the pipe so writes
+  ///     to it are captured.
   ///
   /// \param[in] callback
-  ///     A callback invoked when any data is written to the file handle.
+  ///     Invoked on the main loop thread with each chunk of data read from
+  ///     the pipe.
+  ///
+  /// \param[in] log
+  ///     Used to report read errors from the redirection pipe.
   ///
   /// \return
   ///     \a Error::success if the redirection was set up correctly, or an error
   ///     otherwise.
-  llvm::Error RedirectTo(std::FILE *file_override,
-                         std::function<void(llvm::StringRef)> callback);
+  llvm::Error RedirectTo(lldb_private::MainLoopBase &loop,
+                         std::FILE *file_override,
+                         std::function<void(llvm::StringRef)> callback,
+                         Log &log);
 
   llvm::Expected<int> GetWriteFileDescriptor();
-  void Stop();
 
   ~OutputRedirector() { Stop(); }
 
@@ -46,11 +55,13 @@ public:
   OutputRedirector &operator=(const OutputRedirector &) = delete;
 
 private:
-  std::atomic<bool> m_stopped = false;
+  void Stop();
+
   int m_fd;
   int m_original_fd;
   int m_restore_fd;
-  std::thread m_forwarder;
+  lldb::IOObjectSP m_read_obj;
+  lldb_private::MainLoop::ReadHandleUP m_read_handle;
 };
 
 } // namespace lldb_dap

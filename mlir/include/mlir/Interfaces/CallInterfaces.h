@@ -25,6 +25,7 @@ struct CallInterfaceCallable : public PointerUnion<SymbolRefAttr, Value> {
   using PointerUnion<SymbolRefAttr, Value>::PointerUnion;
 };
 
+class CallableOpInterface;
 class CallOpInterface;
 
 namespace call_interface_impl {
@@ -35,6 +36,27 @@ namespace call_interface_impl {
 /// instead of performing an O(N) scan.
 Operation *resolveCallable(CallOpInterface call,
                            SymbolTableCollection *symbolTable = nullptr);
+
+/// Verify that the forwarded operands and results of `call` are in a 1:1
+/// relationship with the given argument and result types of its callee: the
+/// numbers must match and corresponding types must be equal.
+///
+/// This overload is for call operations whose callee does not necessarily
+/// implement `CallableOpInterface`, e.g., `llvm.call`, which can also call an
+/// `llvm.mlir.alias` or an `llvm.mlir.ifunc`.
+LogicalResult verifyCallOpInterface(CallOpInterface call,
+                                    TypeRange argumentTypes,
+                                    TypeRange resultTypes);
+
+/// Same as above, taking the argument and result types from `callable`.
+LogicalResult verifyCallOpInterface(CallOpInterface call,
+                                    CallableOpInterface callable);
+
+/// Same as above, but resolve the callee of `call` first. Returns success if
+/// the callee cannot be resolved or does not implement `CallableOpInterface`.
+LogicalResult verifyCallOpInterface(CallOpInterface call,
+                                    SymbolTableCollection &symbolTable);
+LogicalResult verifyCallOpInterface(CallOpInterface call);
 
 /// Parse a function or call result list.
 ///

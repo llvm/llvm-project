@@ -15,40 +15,40 @@ bool fcmp_const() {
   // CHECK-NOT: llvm.convert.from.fp16
 
   // CHECK: [[REG1:%.*]] = load half, ptr %a, align 2
-  // CHECK-NEXT: fcmp olt half [[REG1]], 0xH3C00
+  // CHECK-NEXT: fcmp olt half [[REG1]], 1.000000e+00
 
   // CHECK: [[REG2:%.*]] = load half, ptr %a, align 2
-  // CHECK-NEXT: fcmp olt half [[REG2]], 0xH4000
+  // CHECK-NEXT: fcmp olt half [[REG2]], 2.000000e+00
 
   // CHECK: [[REG3:%.*]] = load half, ptr %a, align 2
-  // CHECK-NEXT: fcmp ogt half [[REG3]], 0xH3C00
+  // CHECK-NEXT: fcmp ogt half [[REG3]], 1.000000e+00
 
   // CHECK: [[REG4:%.*]] = load half, ptr %a, align 2
-  // CHECK-NEXT: fcmp ogt half [[REG4]], 0xH4200
+  // CHECK-NEXT: fcmp ogt half [[REG4]], 3.000000e+00
 
   // CHECK: [[REG5:%.*]] = load half, ptr %a, align 2
-  // CHECK-NEXT: fcmp oeq half [[REG5]], 0xH3C00
+  // CHECK-NEXT: fcmp oeq half [[REG5]], 1.000000e+00
 
   // CHECK: [[REG7:%.*]] = load half, ptr %a, align 2
-  // CHECK-NEXT: fcmp oeq half [[REG7]], 0xH4400
+  // CHECK-NEXT: fcmp oeq half [[REG7]], 4.000000e+00
 
   // CHECK: [[REG8:%.*]] = load half, ptr %a, align 2
-  // CHECK-NEXT: fcmp une half [[REG8]], 0xH3C00
+  // CHECK-NEXT: fcmp une half [[REG8]], 1.000000e+00
 
   // CHECK: [[REG9:%.*]] = load half, ptr %a, align 2
-  // CHECK-NEXT: fcmp une half [[REG9]], 0xH4500
+  // CHECK-NEXT: fcmp une half [[REG9]], 5.000000e+00
 
   // CHECK: [[REG10:%.*]] = load half, ptr %a, align 2
-  // CHECK-NEXT: fcmp ole half [[REG10]], 0xH3C00
+  // CHECK-NEXT: fcmp ole half [[REG10]], 1.000000e+00
 
   // CHECK: [[REG11:%.*]] = load half, ptr %a, align 2
-  // CHECK-NEXT: fcmp ole half [[REG11]], 0xH4600
+  // CHECK-NEXT: fcmp ole half [[REG11]], 6.000000e+00
 
   // CHECK: [[REG12:%.*]] = load half, ptr %a, align 2
-  // CHECK-NEXT: fcmp oge half [[REG12]], 0xH3C00
+  // CHECK-NEXT: fcmp oge half [[REG12]], 1.000000e+00
 
   // CHECK: [[REG13:%.*]] = load half, ptr %a, align 2
-  // CHECK-NEXT: fcmp oge half [[REG13]], 0xH4700
+  // CHECK-NEXT: fcmp oge half [[REG13]], 7.000000e+00
   return a < b || a < 2.0f16 || a > b || a > 3.0f16 || a == b || a == 4.0f16 ||
          a != b || a != 5.0f16 || a <= b || a <= 6.0f16 || a >= b ||
          a >= 7.0f16;
@@ -94,8 +94,8 @@ _Float16 fadd() {
   // CHECK-NOT: llvm.convert.from.fp16
 
   // CHECK: [[REG1:%.*]] = load half, ptr %a, align 2
-  // CHECK-NEXT: [[REG2:%.*]] = fadd half [[REG1]], 0xH4000
-  // CHECK-NEXT: [[REG3:%.*]] = fadd half [[REG2]], 0xH4200
+  // CHECK-NEXT: [[REG2:%.*]] = fadd half [[REG1]], 2.000000e+00
+  // CHECK-NEXT: [[REG3:%.*]] = fadd half [[REG2]], 3.000000e+00
   // CHECK-NEXT: ret half [[REG3]]
   return a + b + 3.0f16;
 }
@@ -108,8 +108,8 @@ _Float16 fsub() {
   // CHECK-NOT: llvm.convert.from.fp16
 
   // CHECK: [[REG1:%.*]] = load half, ptr %a, align 2
-  // CHECK-NEXT: [[REG2:%.*]] = fsub half [[REG1]], 0xH4000
-  // CHECK-NEXT: [[REG3:%.*]] = fsub half [[REG2]], 0xH4200
+  // CHECK-NEXT: [[REG2:%.*]] = fsub half [[REG1]], 2.000000e+00
+  // CHECK-NEXT: [[REG3:%.*]] = fsub half [[REG2]], 3.000000e+00
   // CHECK-NEXT: ret half [[REG3]]
   return a - b - 3.0f16;
 }
@@ -125,8 +125,8 @@ _Float16 fmul(_Float16 arg) {
   // CHECK: [[REG1:%.*]] = load half, ptr %a, align 2
   // CHECK-NEXT: [[REG2:%.*]] = load half, ptr %arg.addr, align 2
   // CHECK-NEXT: [[REG3:%.*]] = fmul half [[REG1]], [[REG2]]
-  // CHECK-NEXT: [[REG4:%.*]] = fmul half [[REG3]], 0xH4000
-  // CHECK-NEXT: [[REG5:%.*]] = fmul half [[REG4]], 0xH4200
+  // CHECK-NEXT: [[REG4:%.*]] = fmul half [[REG3]], 2.000000e+00
+  // CHECK-NEXT: [[REG5:%.*]] = fmul half [[REG4]], 3.000000e+00
   // CHECK-NEXT: ret half [[REG5]]
   return a * arg * b * 3.0f16;
 }
@@ -139,8 +139,8 @@ _Float16 fdiv() {
   // CHECK-NOT: llvm.convert.from.fp16
 
   // CHECK: [[REG1:%.*]] = load half, ptr %a, align 2
-  // CHECK-NEXT: [[REG2:%.*]] = fdiv half [[REG1]], 0xH4000
-  // CHECK-NEXT: [[REG3:%.*]] = fdiv half [[REG2]], 0xH4200
+  // CHECK-NEXT: [[REG2:%.*]] = fdiv half [[REG1]], 2.000000e+00
+  // CHECK-NEXT: [[REG3:%.*]] = fdiv half [[REG2]], 3.000000e+00
   // CHECK-NEXT: ret half [[REG3]]
   return a / b / 3.0f16;
 }

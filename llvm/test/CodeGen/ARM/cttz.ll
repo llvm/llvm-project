@@ -366,8 +366,8 @@ define i64 @test_i64(i64 %a) {
 
 ;------------------------------------------------------------------------------
 
-define i8 @test_i8_zero_undef(i8 %a) {
-; CHECK-5-LABEL: test_i8_zero_undef:
+define i8 @test_i8_zero_poison(i8 %a) {
+; CHECK-5-LABEL: test_i8_zero_poison:
 ; CHECK-5:       @ %bb.0:
 ; CHECK-5-NEXT:    sub r1, r0, #1
 ; CHECK-5-NEXT:    bic r0, r1, r0
@@ -375,13 +375,13 @@ define i8 @test_i8_zero_undef(i8 %a) {
 ; CHECK-5-NEXT:    rsb r0, r0, #32
 ; CHECK-5-NEXT:    bx lr
 ;
-; CHECK-LABEL: test_i8_zero_undef:
+; CHECK-LABEL: test_i8_zero_poison:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    rbit r0, r0
 ; CHECK-NEXT:    clz r0, r0
 ; CHECK-NEXT:    bx lr
 ;
-; CHECK-6M-LABEL: test_i8_zero_undef:
+; CHECK-6M-LABEL: test_i8_zero_poison:
 ; CHECK-6M:       @ %bb.0:
 ; CHECK-6M-NEXT:    cmp r0, #0
 ; CHECK-6M-NEXT:    beq .LBB4_2
@@ -404,7 +404,7 @@ define i8 @test_i8_zero_undef(i8 %a) {
 ; CHECK-6M-NEXT:  .LCPI4_1:
 ; CHECK-6M-NEXT:    .ascii "\000\001\034\002\035\016\030\003\036\026\024\017\031\021\004\b\037\033\r\027\025\023\020\007\032\f\022\006\013\005\n\t"
 ;
-; CHECK-8MBASE-LABEL: test_i8_zero_undef:
+; CHECK-8MBASE-LABEL: test_i8_zero_poison:
 ; CHECK-8MBASE:       @ %bb.0:
 ; CHECK-8MBASE-NEXT:    cbz r0, .LBB4_2
 ; CHECK-8MBASE-NEXT:  @ %bb.1:
@@ -428,8 +428,8 @@ define i8 @test_i8_zero_undef(i8 %a) {
   ret i8 %tmp
 }
 
-define i16 @test_i16_zero_undef(i16 %a) {
-; CHECK-5-LABEL: test_i16_zero_undef:
+define i16 @test_i16_zero_poison(i16 %a) {
+; CHECK-5-LABEL: test_i16_zero_poison:
 ; CHECK-5:       @ %bb.0:
 ; CHECK-5-NEXT:    sub r1, r0, #1
 ; CHECK-5-NEXT:    bic r0, r1, r0
@@ -437,13 +437,13 @@ define i16 @test_i16_zero_undef(i16 %a) {
 ; CHECK-5-NEXT:    rsb r0, r0, #32
 ; CHECK-5-NEXT:    bx lr
 ;
-; CHECK-LABEL: test_i16_zero_undef:
+; CHECK-LABEL: test_i16_zero_poison:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    rbit r0, r0
 ; CHECK-NEXT:    clz r0, r0
 ; CHECK-NEXT:    bx lr
 ;
-; CHECK-6M-LABEL: test_i16_zero_undef:
+; CHECK-6M-LABEL: test_i16_zero_poison:
 ; CHECK-6M:       @ %bb.0:
 ; CHECK-6M-NEXT:    cmp r0, #0
 ; CHECK-6M-NEXT:    beq .LBB5_2
@@ -466,7 +466,7 @@ define i16 @test_i16_zero_undef(i16 %a) {
 ; CHECK-6M-NEXT:  .LCPI5_1:
 ; CHECK-6M-NEXT:    .ascii "\000\001\034\002\035\016\030\003\036\026\024\017\031\021\004\b\037\033\r\027\025\023\020\007\032\f\022\006\013\005\n\t"
 ;
-; CHECK-8MBASE-LABEL: test_i16_zero_undef:
+; CHECK-8MBASE-LABEL: test_i16_zero_poison:
 ; CHECK-8MBASE:       @ %bb.0:
 ; CHECK-8MBASE-NEXT:    cbz r0, .LBB5_2
 ; CHECK-8MBASE-NEXT:  @ %bb.1:
@@ -491,8 +491,8 @@ define i16 @test_i16_zero_undef(i16 %a) {
 }
 
 
-define i32 @test_i32_zero_undef(i32 %a) {
-; CHECK-5-LABEL: test_i32_zero_undef:
+define i32 @test_i32_zero_poison(i32 %a) {
+; CHECK-5-LABEL: test_i32_zero_poison:
 ; CHECK-5:       @ %bb.0:
 ; CHECK-5-NEXT:    sub r1, r0, #1
 ; CHECK-5-NEXT:    bic r0, r1, r0
@@ -500,13 +500,13 @@ define i32 @test_i32_zero_undef(i32 %a) {
 ; CHECK-5-NEXT:    rsb r0, r0, #32
 ; CHECK-5-NEXT:    bx lr
 ;
-; CHECK-LABEL: test_i32_zero_undef:
+; CHECK-LABEL: test_i32_zero_poison:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    rbit r0, r0
 ; CHECK-NEXT:    clz r0, r0
 ; CHECK-NEXT:    bx lr
 ;
-; CHECK-6M-LABEL: test_i32_zero_undef:
+; CHECK-6M-LABEL: test_i32_zero_poison:
 ; CHECK-6M:       @ %bb.0:
 ; CHECK-6M-NEXT:    cmp r0, #0
 ; CHECK-6M-NEXT:    beq .LBB6_2
@@ -529,7 +529,7 @@ define i32 @test_i32_zero_undef(i32 %a) {
 ; CHECK-6M-NEXT:  .LCPI6_1:
 ; CHECK-6M-NEXT:    .ascii "\000\001\034\002\035\016\030\003\036\026\024\017\031\021\004\b\037\033\r\027\025\023\020\007\032\f\022\006\013\005\n\t"
 ;
-; CHECK-8MBASE-LABEL: test_i32_zero_undef:
+; CHECK-8MBASE-LABEL: test_i32_zero_poison:
 ; CHECK-8MBASE:       @ %bb.0:
 ; CHECK-8MBASE-NEXT:    cbz r0, .LBB6_2
 ; CHECK-8MBASE-NEXT:  @ %bb.1:
@@ -553,8 +553,8 @@ define i32 @test_i32_zero_undef(i32 %a) {
   ret i32 %tmp
 }
 
-define i64 @test_i64_zero_undef(i64 %a) {
-; CHECK-5-LABEL: test_i64_zero_undef:
+define i64 @test_i64_zero_poison(i64 %a) {
+; CHECK-5-LABEL: test_i64_zero_poison:
 ; CHECK-5:       @ %bb.0:
 ; CHECK-5-NEXT:    sub r3, r1, #1
 ; CHECK-5-NEXT:    sub r2, r0, #1
@@ -569,7 +569,7 @@ define i64 @test_i64_zero_undef(i64 %a) {
 ; CHECK-5-NEXT:    mov r1, #0
 ; CHECK-5-NEXT:    bx lr
 ;
-; CHECK-LABEL: test_i64_zero_undef:
+; CHECK-LABEL: test_i64_zero_poison:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    rbit r1, r1
 ; CHECK-NEXT:    rbit r2, r0
@@ -581,7 +581,7 @@ define i64 @test_i64_zero_undef(i64 %a) {
 ; CHECK-NEXT:    mov r1, #0
 ; CHECK-NEXT:    bx lr
 ;
-; CHECK-6M-LABEL: test_i64_zero_undef:
+; CHECK-6M-LABEL: test_i64_zero_poison:
 ; CHECK-6M:       @ %bb.0:
 ; CHECK-6M-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-6M-NEXT:    push {r4, r5, r7, lr}
@@ -625,7 +625,7 @@ define i64 @test_i64_zero_undef(i64 %a) {
 ; CHECK-6M-NEXT:  .LCPI7_1:
 ; CHECK-6M-NEXT:    .ascii "\000\001\034\002\035\016\030\003\036\026\024\017\031\021\004\b\037\033\r\027\025\023\020\007\032\f\022\006\013\005\n\t"
 ;
-; CHECK-8MBASE-LABEL: test_i64_zero_undef:
+; CHECK-8MBASE-LABEL: test_i64_zero_poison:
 ; CHECK-8MBASE:       @ %bb.0:
 ; CHECK-8MBASE-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-8MBASE-NEXT:    push {r4, r5, r7, lr}

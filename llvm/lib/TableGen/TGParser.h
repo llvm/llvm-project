@@ -17,6 +17,7 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <map>
+#include <optional>
 
 namespace llvm {
 class SourceMgr;
@@ -316,7 +317,6 @@ private: // Parser methods.
       SmallVectorImpl<std::pair<const Init *, const StringInit *>> &Result,
       Record *CurRec);
   bool ParseOptionalRangeList(SmallVectorImpl<unsigned> &Ranges);
-  bool ParseOptionalBitList(SmallVectorImpl<unsigned> &Ranges);
   const TypedInit *ParseSliceElement(Record *CurRec);
   const TypedInit *ParseSliceElements(Record *CurRec, bool Single = false);
   void ParseRangeList(SmallVectorImpl<unsigned> &Result);
@@ -326,9 +326,12 @@ private: // Parser methods.
   const Init *ParseOperation(Record *CurRec, const RecTy *ItemType);
   const Init *ParseOperationSubstr(Record *CurRec, const RecTy *ItemType);
   const Init *ParseOperationFind(Record *CurRec, const RecTy *ItemType);
-  const Init *ParseOperationForEachFilter(Record *CurRec,
-                                          const RecTy *ItemType);
+  const Init *ParseOperationListComprehension(Record *CurRec,
+                                              const RecTy *ItemType);
   const Init *ParseOperationCond(Record *CurRec, const RecTy *ItemType);
+  const Init *ParseOperationSwitch(Record *CurRec, const RecTy *ItemType);
+  std::optional<const RecTy *> resolveInitTypes(ArrayRef<const Init *> Inits,
+                                                const Twine &ErrCtx);
   const RecTy *ParseOperatorType();
   const Init *ParseObjectName(MultiClass *CurMultiClass);
   const Record *ParseClassID();

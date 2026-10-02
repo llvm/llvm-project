@@ -11,18 +11,6 @@
 
 namespace llvm::sandboxir {
 
-const char *Instruction::getOpcodeName(Opcode Opc) {
-  switch (Opc) {
-#define OP(OPC)                                                                \
-  case Opcode::OPC:                                                            \
-    return #OPC;
-#define OPCODES(...) __VA_ARGS__
-#define DEF_INSTR(ID, OPC, CLASS) OPC
-#include "llvm/SandboxIR/Values.def"
-  }
-  llvm_unreachable("Unknown Opcode");
-}
-
 llvm::Instruction *Instruction::getTopmostLLVMInstruction() const {
   Instruction *Prev = getPrevNode();
   if (Prev == nullptr) {
@@ -172,7 +160,8 @@ bool Instruction::classof(const sandboxir::Value *From) {
 #define DEF_INSTR(ID, OPC, CLASS)                                              \
   case ClassID::ID:                                                            \
     return true;
-#include "llvm/SandboxIR/Values.def"
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
+#include "llvm/SandboxIR/ValuesDefFilesList.def"
   default:
     return false;
   }
@@ -1175,12 +1164,12 @@ SwitchInst::CaseHandleImpl<LLVMCaseItT, BlockT, ConstT>::getCaseSuccessor()
   return cast<BlockT>(Ctx.getValue(LLVMBB));
 }
 
-template class SwitchInst::CaseHandleImpl<llvm::SwitchInst::CaseIt, BasicBlock,
-                                          ConstantInt>;
+template class LLVM_EXPORT_TEMPLATE SwitchInst::CaseHandleImpl<
+    llvm::SwitchInst::CaseIt, BasicBlock, ConstantInt>;
 template class SwitchInst::CaseItImpl<llvm::SwitchInst::CaseIt, BasicBlock,
                                       ConstantInt>;
-template class SwitchInst::CaseHandleImpl<llvm::SwitchInst::ConstCaseIt,
-                                          const BasicBlock, const ConstantInt>;
+template class LLVM_EXPORT_TEMPLATE SwitchInst::CaseHandleImpl<
+    llvm::SwitchInst::ConstCaseIt, const BasicBlock, const ConstantInt>;
 template class SwitchInst::CaseItImpl<llvm::SwitchInst::ConstCaseIt,
                                       const BasicBlock, const ConstantInt>;
 

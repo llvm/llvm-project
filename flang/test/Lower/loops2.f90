@@ -15,9 +15,22 @@ contains
 ! CHECK: %[[PTR:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMtest_loop_varEi_pointer"}
 ! CHECK: %[[BOX:.*]] = fir.load %[[PTR]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK: %[[ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
-! CHECK: %[[LOOP:.*]] = fir.do_loop
-! CHECK:   fir.store %{{.*}} to %[[ADDR]] : !fir.ptr<i32>
-! CHECK: fir.store %[[LOOP]] to %[[ADDR]] : !fir.ptr<i32>
+! CHECK: fir.do_loop %[[IV:.*]] = %[[LB:.*]] to %[[UB:.*]] step %[[STEP:.*]] : i32 {
+! CHECK:   fir.store %[[IV]] to %[[ADDR]] : !fir.ptr<i32>
+! CHECK: }
+! CHECK: %[[LBIDX:.*]] = fir.convert %[[LB]] : (i32) -> index
+! CHECK: %[[UBIDX:.*]] = fir.convert %[[UB]] : (i32) -> index
+! CHECK: %[[STEPIDX:.*]] = fir.convert %[[STEP]] : (i32) -> index
+! CHECK: %[[C0:.*]] = arith.constant 0 : index
+! CHECK: %[[DIFF:.*]] = arith.subi %[[UBIDX]], %[[LBIDX]] : index
+! CHECK: %[[ADD:.*]] = arith.addi %[[DIFF]], %[[STEPIDX]] : index
+! CHECK: %[[TRIP:.*]] = arith.divsi %[[ADD]], %[[STEPIDX]] : index
+! CHECK: %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : index
+! CHECK: %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : index
+! CHECK: %[[MUL:.*]] = arith.muli %[[SEL]], %[[STEPIDX]] : index
+! CHECK: %[[LASTIDX:.*]] = arith.addi %[[LBIDX]], %[[MUL]] : index
+! CHECK: %[[LAST:.*]] = fir.convert %[[LASTIDX]] : (index) -> i32
+! CHECK: fir.store %[[LAST]] to %[[ADDR]] : !fir.ptr<i32>
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMtest_loop_varPtest_allocatable
@@ -27,9 +40,22 @@ contains
 ! CHECK: %[[ALLOC:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMtest_loop_varEi_allocatable"}
 ! CHECK: %[[BOX:.*]] = fir.load %[[ALLOC]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK: %[[ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-! CHECK: %[[LOOP:.*]] = fir.do_loop
-! CHECK:   fir.store %{{.*}} to %[[ADDR]] : !fir.heap<i32>
-! CHECK: fir.store %[[LOOP]] to %[[ADDR]] : !fir.heap<i32>
+! CHECK: fir.do_loop %[[IV:.*]] = %[[LB:.*]] to %[[UB:.*]] step %[[STEP:.*]] : i32 {
+! CHECK:   fir.store %[[IV]] to %[[ADDR]] : !fir.heap<i32>
+! CHECK: }
+! CHECK: %[[LBIDX:.*]] = fir.convert %[[LB]] : (i32) -> index
+! CHECK: %[[UBIDX:.*]] = fir.convert %[[UB]] : (i32) -> index
+! CHECK: %[[STEPIDX:.*]] = fir.convert %[[STEP]] : (i32) -> index
+! CHECK: %[[C0:.*]] = arith.constant 0 : index
+! CHECK: %[[DIFF:.*]] = arith.subi %[[UBIDX]], %[[LBIDX]] : index
+! CHECK: %[[ADD:.*]] = arith.addi %[[DIFF]], %[[STEPIDX]] : index
+! CHECK: %[[TRIP:.*]] = arith.divsi %[[ADD]], %[[STEPIDX]] : index
+! CHECK: %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : index
+! CHECK: %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : index
+! CHECK: %[[MUL:.*]] = arith.muli %[[SEL]], %[[STEPIDX]] : index
+! CHECK: %[[LASTIDX:.*]] = arith.addi %[[LBIDX]], %[[MUL]] : index
+! CHECK: %[[LAST:.*]] = fir.convert %[[LASTIDX]] : (index) -> i32
+! CHECK: fir.store %[[LAST]] to %[[ADDR]] : !fir.heap<i32>
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMtest_loop_varPtest_real_pointer

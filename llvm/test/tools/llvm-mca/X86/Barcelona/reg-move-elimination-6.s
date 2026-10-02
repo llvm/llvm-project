@@ -96,4 +96,4 @@ mov %esi, %ecx
 # CHECK-NEXT: 3.     3     3.0    0.0    0.0       addq	%rcx, %rcx
 # CHECK-NEXT: 4.     3     3.3    0.0    0.0       addq	%rcx, %rcx
 # CHECK-NEXT: 5.     3     1.0    1.0    2.3       movl	%esi, %ecx
-# CHECK-NEXT:        3     1.8    0.2    1.1       <total>
+# CHECK-NEXT:        18    1.8    0.2    1.1       <total>

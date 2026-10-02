@@ -46,7 +46,7 @@ namespace mca {
 //
 // If the number of micro opcodes exceedes DispatchWidth, then the instruction
 // is dispatched in multiple cycles.
-class DispatchStage final : public Stage {
+class LLVM_ABI DispatchStage final : public Stage {
   unsigned DispatchWidth;
   unsigned AvailableEntries;
   unsigned CarryOver;

@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ASINBF16_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_ASINBF16_H
 
-#include "inv_trigf_utils.h"
+#include "asin_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/bfloat16.h"
@@ -45,15 +45,17 @@ LIBC_INLINE LIBC_CONSTEXPR bfloat16 asinbf16(bfloat16 x) {
       return x; // with sign
 
     if (LIBC_UNLIKELY(x_abs <= 0x3D00)) {
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       int rounding = fputil::quick_get_round();
       if ((xbits.is_pos() && rounding == FE_UPWARD) ||
           (xbits.is_neg() && rounding == FE_DOWNWARD)) {
         return fputil::cast<bfloat16>(fputil::multiply_add(xf, 0x1.0p-9f, xf));
       }
+#endif
       return x;
     }
 
-    float xp = fputil::cast<float>(inv_trigf_utils_internal::asin_eval(x_sq));
+    float xp = fputil::cast<float>(asin_internal::asin_eval(x_sq));
     float result = xf * (fputil::multiply_add<float>(x_sq, xp, 1.0f));
     return fputil::cast<bfloat16>(result);
   }
@@ -68,7 +70,7 @@ LIBC_INLINE LIBC_CONSTEXPR bfloat16 asinbf16(bfloat16 x) {
 
     float t = fputil::multiply_add<float>(xf_abs, -0.5f, 0.5f);
     float t_sqrt = fputil::sqrt<float>(t);
-    float tp = fputil::cast<float>(inv_trigf_utils_internal::asin_eval(t));
+    float tp = fputil::cast<float>(asin_internal::asin_eval(t));
     float asin_sqrt_t = t_sqrt * (fputil::multiply_add<float>(t, tp, 1.0f));
     float result = fputil::multiply_add<float>(-2.0f, asin_sqrt_t, PI_2);
     return fputil::cast<bfloat16>(x_sign * result);

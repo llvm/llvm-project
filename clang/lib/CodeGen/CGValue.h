@@ -59,7 +59,7 @@ class RValue {
   unsigned Flavor : 2;
 
 public:
-  RValue() : Vals{nullptr, nullptr}, Flavor(Scalar) {}
+  RValue() : Vals{nullptr, nullptr}, IsVolatile(false), Flavor(Scalar) {}
 
   bool isScalar() const { return Flavor == Scalar; }
   bool isComplex() const { return Flavor == Complex; }

@@ -51,8 +51,8 @@ void DWARFCompileUnit::BuildAddressRangeTable(
       if (!ranges->empty())
         return;
     } else {
-      LLDB_LOG_ERROR(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
-                     "DIE({1:x}): {0}", cu_offset);
+      LLDB_LOG_ERRORV(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
+                      "DIE({1:x}): {0}", cu_offset);
     }
   }
 

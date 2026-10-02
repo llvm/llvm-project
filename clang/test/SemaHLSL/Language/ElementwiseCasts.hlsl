@@ -30,6 +30,7 @@ struct S {
 // cast from a struct
 // CHECK-LABEL: call3
 // CHECK: CStyleCastExpr {{.*}} 'int[2]' <HLSLElementwiseCast>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'S' <LValueToRValue> part_of_explicit_cast
 // CHECK-NEXT: DeclRefExpr {{.*}} 'S' lvalue Var {{.*}} 'SS' 'S'
 export void call3() {
   S SS = {1,1.0};

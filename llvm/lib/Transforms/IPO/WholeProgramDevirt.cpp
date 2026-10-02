@@ -65,6 +65,7 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -195,8 +196,6 @@ static cl::list<std::string>
     SkipFunctionNames("wholeprogramdevirt-skip",
                       cl::desc("Prevent function(s) from being devirtualized"),
                       cl::Hidden, cl::CommaSeparated);
-
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 
 } // end namespace llvm
 
@@ -383,14 +382,6 @@ struct VTableSlot {
 } // end anonymous namespace
 
 template <> struct llvm::DenseMapInfo<VTableSlot> {
-  static VTableSlot getEmptyKey() {
-    return {DenseMapInfo<Metadata *>::getEmptyKey(),
-            DenseMapInfo<uint64_t>::getEmptyKey()};
-  }
-  static VTableSlot getTombstoneKey() {
-    return {DenseMapInfo<Metadata *>::getTombstoneKey(),
-            DenseMapInfo<uint64_t>::getTombstoneKey()};
-  }
   static unsigned getHashValue(const VTableSlot &I) {
     return DenseMapInfo<Metadata *>::getHashValue(I.TypeID) ^
            DenseMapInfo<uint64_t>::getHashValue(I.ByteOffset);
@@ -402,14 +393,6 @@ template <> struct llvm::DenseMapInfo<VTableSlot> {
 };
 
 template <> struct llvm::DenseMapInfo<VTableSlotSummary> {
-  static VTableSlotSummary getEmptyKey() {
-    return {DenseMapInfo<StringRef>::getEmptyKey(),
-            DenseMapInfo<uint64_t>::getEmptyKey()};
-  }
-  static VTableSlotSummary getTombstoneKey() {
-    return {DenseMapInfo<StringRef>::getTombstoneKey(),
-            DenseMapInfo<uint64_t>::getTombstoneKey()};
-  }
   static unsigned getHashValue(const VTableSlotSummary &I) {
     return DenseMapInfo<StringRef>::getHashValue(I.TypeID) ^
            DenseMapInfo<uint64_t>::getHashValue(I.ByteOffset);
@@ -886,6 +869,7 @@ void llvm::updateVCallVisibilityInModule(
     function_ref<bool(StringRef)> IsVisibleToRegularObj) {
   if (!hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO))
     return;
+
   for (GlobalVariable &GV : M.globals()) {
     // Add linkage unit visibility to any variable with type metadata, which are
     // the vtable definitions. We won't have an existing vcall_visibility
@@ -1162,6 +1146,9 @@ bool DevirtModule::tryFindVirtualCallTargets(
     // target.
     auto *GV = dyn_cast<GlobalValue>(C);
     assert(GV);
+    if (auto *GA = dyn_cast<GlobalAlias>(GV))
+      if (!GA->isInterposable() && !GA->getAliaseeObject()->isInterposable())
+        GV = GA->getAliaseeObject();
     TargetsForSlot.push_back({GV, &TM});
   }
 
@@ -1589,20 +1576,20 @@ void DevirtModule::applyICallBranchFunnel(VTableSlotInfo &SlotInfo,
       llvm::append_range(Args, CB.args());
 
       CallBase *NewCS = nullptr;
-      if (!JT.isDeclaration() && !ProfcheckDisableMetadataFixes) {
+      if (!JT.isDeclaration()) {
         // Accumulate the call frequencies of the original call site, and use
         // that as total entry count for the funnel function.
         auto &F = *CB.getCaller();
         auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
         auto EC = BFI.getBlockFreq(&F.getEntryBlock());
-        auto CC = F.getEntryCount(/*AllowSynthetic=*/true);
+        auto CC = F.getEntryCount();
         double CallCount = 0.0;
-        if (EC.getFrequency() != 0 && CC && CC->getCount() != 0) {
+        if (EC.getFrequency() != 0 && CC && *CC != 0) {
           double CallFreq =
               static_cast<double>(
                   BFI.getBlockFreq(CB.getParent()).getFrequency()) /
               EC.getFrequency();
-          CallCount = CallFreq * CC->getCount();
+          CallCount = CallFreq * *CC;
         }
         FunctionEntryCounts[&JT] += CallCount;
       }
@@ -1645,7 +1632,7 @@ void DevirtModule::applyICallBranchFunnel(VTableSlotInfo &SlotInfo,
   for (auto &P : SlotInfo.ConstCSInfo)
     Apply(P.second);
   for (auto &[F, C] : FunctionEntryCounts) {
-    assert(!F->getEntryCount(/*AllowSynthetic=*/true) &&
+    assert(!F->getEntryCount() &&
            "Unexpected entry count for funnel that was freshly synthesized");
     F->setEntryCount(static_cast<uint64_t>(std::round(C)));
   }
@@ -1940,7 +1927,7 @@ bool DevirtModule::tryVirtualConstProp(
     if (!Fn)
       return false;
 
-    if (Fn->isDeclaration() ||
+    if (Fn->isDeclaration() || Fn->isInterposable() ||
         !computeFunctionBodyMemoryAccess(*Fn, FAM.getResult<AAManager>(*Fn))
              .doesNotAccessMemory() ||
         Fn->arg_empty() || !Fn->arg_begin()->use_empty() ||
@@ -2075,10 +2062,10 @@ void DevirtModule::rebuildGlobal(VTableBits &B) {
   // element (the original initializer).
   auto *Alias = GlobalAlias::create(
       B.GV->getInitializer()->getType(), 0, B.GV->getLinkage(), "",
-      ConstantExpr::getInBoundsGetElementPtr(
-          NewInit->getType(), NewGV,
-          ArrayRef<Constant *>{ConstantInt::get(Int32Ty, 0),
-                               ConstantInt::get(Int32Ty, 1)}),
+      ConstantExpr::getGetElementPtr(
+          M.getDataLayout(), NewInit->getType(), NewGV,
+          {ConstantInt::get(Int32Ty, 0), ConstantInt::get(Int32Ty, 1)},
+          GEPNoWrapFlags::inBounds()),
       &M);
   Alias->setVisibility(B.GV->getVisibility());
   Alias->takeName(B.GV);
@@ -2098,9 +2085,62 @@ bool DevirtModule::areRemarksEnabled() {
   return false;
 }
 
+/// Find assumes whose conditions depend on this type test through phi or select
+/// nodes. SimplifyCFG can produce these patterns by merging type test + assume
+/// sequences from different predecessors.
+static void
+findAssumesThroughMergesForTypeTest(SmallVectorImpl<CallInst *> &Assumes,
+                                    CallInst &TypeTest,
+                                    SmallPtrSetImpl<Value *> &VisitedMerges) {
+  SmallVector<Value *, 4> Worklist;
+#ifndef NDEBUG
+  SmallPtrSet<CallInst *, 4> DirectAssumes(Assumes.begin(), Assumes.end());
+#endif
+
+  auto GetMergeUser = [](User *U, Value *V) -> Value * {
+    if (isa<PHINode>(U))
+      return U;
+    if (auto *Select = dyn_cast<SelectInst>(U);
+        Select && (Select->getTrueValue() == V || Select->getFalseValue() == V))
+      return Select;
+    return nullptr;
+  };
+
+  // Direct assume users were already collected by
+  // findDevirtualizableCallsForTypeTest. Start from merge users so this search
+  // finds only assumptions that depend on the type test through merges.
+  for (User *U : TypeTest.users())
+    if (Value *Merge = GetMergeUser(U, &TypeTest))
+      Worklist.push_back(Merge);
+
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+    if (!VisitedMerges.insert(V).second)
+      continue;
+
+    for (User *U : V->users()) {
+      if (auto *Assume = dyn_cast<AssumeInst>(U)) {
+        if (Assume->getArgOperand(0) == V) {
+          assert(!DirectAssumes.contains(Assume) &&
+                 "assume must not be both direct and merged");
+          Assumes.push_back(Assume);
+        }
+        continue;
+      }
+
+      if (Value *Merge = GetMergeUser(U, V))
+        Worklist.push_back(Merge);
+    }
+  }
+}
+
 void DevirtModule::scanTypeTestUsers(
     Function *TypeTestFunc,
     DenseMap<Metadata *, std::set<TypeMemberInfo>> &TypeIdMap) {
+  // Cleanup removes every assume reachable through a merge, so each merge only
+  // needs to be processed once even if multiple unresolved type tests reach it.
+  SmallPtrSet<Value *, 8> VisitedMerges;
+
   // Find all virtual calls via a virtual table pointer %p under an assumption
   // of the form llvm.assume(llvm.type.test(%p, %md)) or
   // llvm.assume(llvm.public.type.test(%p, %md)).
@@ -2127,6 +2167,12 @@ void DevirtModule::scanTypeTestUsers(
     }
 
     auto RemoveTypeTestAssumes = [&]() {
+      // A merge of type test results does not imply that any individual type
+      // test can be assumed, so don't use these assumes to identify
+      // devirtualizable calls. They still need to be removed when type
+      // information is missing for any value contributing to the merge.
+      findAssumesThroughMergesForTypeTest(Assumes, *CI, VisitedMerges);
+
       // We no longer need the assumes or the type test.
       for (auto *Assume : Assumes)
         Assume->eraseFromParent();
@@ -2276,10 +2322,14 @@ void DevirtModule::importResolution(VTableSlot Slot, VTableSlotInfo &SlotInfo) {
     assert(!Res.SingleImplName.empty());
     // The type of the function in the declaration is irrelevant because every
     // call site will cast it to the correct type.
-    Constant *SingleImpl =
-        cast<Constant>(M.getOrInsertFunction(Res.SingleImplName,
-                                             Type::getVoidTy(M.getContext()))
-                           .getCallee());
+    Value *SingleImplVal =
+        M.getOrInsertFunction(Res.SingleImplName,
+                              Type::getVoidTy(M.getContext()))
+            .getCallee();
+    if (auto *A = dyn_cast<GlobalAlias>(SingleImplVal->stripPointerCasts()))
+      if (!A->isInterposable() && !A->getAliaseeObject()->isInterposable())
+        SingleImplVal = A->getAliaseeObject();
+    Constant *SingleImpl = cast<Constant>(SingleImplVal);
 
     // This is the import phase so we should not be exporting anything.
     bool IsExported = false;

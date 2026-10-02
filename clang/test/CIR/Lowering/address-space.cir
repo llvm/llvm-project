@@ -25,21 +25,41 @@ module {
   // LLVM: define void @foo(ptr %0)
   cir.func @foo(%arg0: !cir.ptr<!s32i>) {
     // LLVM-NEXT: alloca ptr,
-    %0 = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arg", init] {alignment = 8 : i64}
+    %0 = cir.alloca "arg" align(8) init : !cir.ptr<!cir.ptr<!s32i>>
     cir.return
   }
 
   // LLVM: define void @bar(ptr addrspace(1) %0)
   cir.func @bar(%arg0: !cir.ptr<!s32i, target_address_space(1)>) {
     // LLVM-NEXT: alloca ptr addrspace(1)
-    %0 = cir.alloca !cir.ptr<!s32i, target_address_space(1)>, !cir.ptr<!cir.ptr<!s32i, target_address_space(1)>>, ["arg", init] {alignment = 8 : i64}
+    %0 = cir.alloca "arg" align(8) init : !cir.ptr<!cir.ptr<!s32i, target_address_space(1)>>
     cir.return
   }
 
   // LLVM: define void @baz(ptr %0)
   cir.func @baz(%arg0: !cir.ptr<!s32i, target_address_space(0)>) {
     // LLVM-NEXT: alloca ptr,
-    %0 = cir.alloca !cir.ptr<!s32i, target_address_space(0)>, !cir.ptr<!cir.ptr<!s32i, target_address_space(0)>>, ["arg", init] {alignment = 8 : i64}
+    %0 = cir.alloca "arg" align(8) init : !cir.ptr<!cir.ptr<!s32i, target_address_space(0)>>
     cir.return
+  }
+
+  // LLVM-LABEL: define ptr addrspace(3) @nested_pointer
+  // LLVM-SAME: ptr addrspace(1) %[[ARG:[0-9]+]]
+  cir.func @nested_pointer(%arg0: !cir.ptr<!cir.ptr<!s32i, target_address_space(3)>, target_address_space(1)>) -> !cir.ptr<!s32i, target_address_space(3)> {
+    // LLVM: %[[INNER:.*]] = load ptr addrspace(3)
+    // LLVM-SAME: ptr addrspace(1) %[[ARG]]
+    %0 = cir.load %arg0 : !cir.ptr<!cir.ptr<!s32i, target_address_space(3)>, target_address_space(1)>, !cir.ptr<!s32i, target_address_space(3)>
+    // LLVM: ret ptr addrspace(3) %[[INNER]]
+    cir.return %0 : !cir.ptr<!s32i, target_address_space(3)>
+  }
+
+  // LLVM-LABEL: define ptr addrspace(2) @address_space_cast
+  // LLVM-SAME: ptr addrspace(1) %[[ARG:[0-9]+]]
+  cir.func @address_space_cast(%arg0: !cir.ptr<!s32i, target_address_space(1)>) -> !cir.ptr<!s32i, target_address_space(2)> {
+    // LLVM: %[[CAST:.*]] = addrspacecast ptr addrspace(1) %[[ARG]]
+    // LLVM-SAME: to ptr addrspace(2)
+    %0 = cir.cast address_space %arg0 : !cir.ptr<!s32i, target_address_space(1)> -> !cir.ptr<!s32i, target_address_space(2)>
+    // LLVM: ret ptr addrspace(2) %[[CAST]]
+    cir.return %0 : !cir.ptr<!s32i, target_address_space(2)>
   }
 }

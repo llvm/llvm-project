@@ -144,7 +144,7 @@ public:
   bool isZero() const { return getValue().isZero(); }
   bool isNonZero() const { return getValue().isNonZero(); }
   bool isMin() const { return getValue().isSmallest(); }
-  bool isMinusOne() const { return getValue().isExactlyValue(-1.0); }
+  bool isMinusOne() const { return getValue().isMinusOne(); }
   bool isNan() const { return getValue().isNaN(); }
   bool isSignaling() const { return getValue().isSignaling(); }
   bool isInf() const { return getValue().isInfinity(); }
@@ -166,7 +166,7 @@ public:
     case llvm::APFloatBase::cmpUnordered:
       return ComparisonCategoryResult::Unordered;
     }
-    llvm_unreachable("Inavlid cmpResult value");
+    llvm_unreachable("Invalid cmpResult value");
   }
 
   static APFloat::opStatus fromIntegral(APSInt Val,

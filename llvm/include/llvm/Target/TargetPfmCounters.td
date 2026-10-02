@@ -16,6 +16,11 @@ class PfmCounter<string counter> {
   // The name can be "some_counter + some_other_counter", in which case the
   // measured value is the sum of events on these counters.
   string Counter = counter;
+  // Optional raw PMU encoding that bypasses libpfm symbolic lookup.
+  // EventSelect is an up to 16-bit event identifier.
+  // UMask is an 8-bit unit mask qualifying the event.
+  int EventSelect = -1;
+  int UMask = 0;
 }
 
 // Issue counters can be tied to a ProcResource

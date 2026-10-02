@@ -10,7 +10,7 @@ endif()
 
 # Use WinHTTP on Windows
 if (WIN32)
-  set(imported_libs ${imported_libs} winhttp.lib)
+  set(imported_libs ${imported_libs} winhttp.lib crypt32.lib)
 endif()
 
 # This is no component library so the LLVM dylib does not gain a dependency on curl

@@ -237,7 +237,7 @@ define <2 x i64> @test_insertqi_call_constexpr(<2 x i64> %x) {
 }
 
 ; The result of this insert is the second arg, since the top 64 bits of
-; the result are poisonined, and we copy the bottom 64 bits from the
+; the result are poisoned, and we copy the bottom 64 bits from the
 ; second arg
 define <2 x i64> @testInsert64Bits(<2 x i64> %v, <2 x i64> %i) {
 ; CHECK-LABEL: @testInsert64Bits(

@@ -7,11 +7,11 @@
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,DXCHECK,NO_HALF
 
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -fnative-half-type -fnative-int16-type \
+// RUN:   spirv-unknown-vulkan-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,SPVCHECK,NATIVE_HALF
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -emit-llvm -disable-llvm-passes \
+// RUN:   spirv-unknown-vulkan-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,SPVCHECK,NO_HALF
 
 
@@ -33,6 +33,10 @@ int test_dot_int3(int3 p0, int3 p1) { return dot(p0, p1); }
 // CHECK: ret i32 %hlsl.dot
 int test_dot_int4(int4 p0, int4 p1) { return dot(p0, p1); }
 
+// CHECK: %hlsl.dot = call i32 @llvm.[[ICF]].sdot.v5i32(<5 x i32>
+// CHECK: ret i32 %hlsl.dot
+int test_dot_int5(vector<int, 5> p0, vector<int, 5> p1) { return dot(p0, p1); }
+
 // CHECK: %hlsl.dot = mul i32
 // CHECK: ret i32 %hlsl.dot
 uint test_dot_uint(uint p0, uint p1) { return dot(p0, p1); }
@@ -48,6 +52,10 @@ uint test_dot_uint3(uint3 p0, uint3 p1) { return dot(p0, p1); }
 // CHECK: %hlsl.dot = call i32 @llvm.[[ICF]].udot.v4i32(<4 x i32>
 // CHECK: ret i32 %hlsl.dot
 uint test_dot_uint4(uint4 p0, uint4 p1) { return dot(p0, p1); }
+
+// CHECK: %hlsl.dot = call i32 @llvm.[[ICF]].udot.v5i32(<5 x i32>
+// CHECK: ret i32 %hlsl.dot
+uint test_dot_uint5(vector<uint, 5> p0, vector<uint, 5> p1) { return dot(p0, p1); }
 
 // CHECK: %hlsl.dot = mul i64
 // CHECK: ret i64 %hlsl.dot
@@ -154,6 +162,10 @@ float test_dot_float3(float3 p0, float3 p1) { return dot(p0, p1); }
 // CHECK: %hlsl.dot = call reassoc nnan ninf nsz arcp afn float @llvm.[[ICF]].fdot.v4f32(<4 x float>
 // CHECK: ret float %hlsl.dot
 float test_dot_float4(float4 p0, float4 p1) { return dot(p0, p1); }
+
+// CHECK: %hlsl.dot = call reassoc nnan ninf nsz arcp afn float @llvm.[[ICF]].fdot.v5f32(<5 x float>
+// CHECK: ret float %hlsl.dot
+float test_dot_float5(vector<float, 5> p0, vector<float, 5> p1) { return dot(p0, p1); }
 
 // CHECK: %hlsl.dot = fmul reassoc nnan ninf nsz arcp afn double
 // CHECK: ret double %hlsl.dot

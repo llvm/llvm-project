@@ -32,31 +32,30 @@ struct LoopState {
 private:
   enum Kind { Normal, Unrolled } K;
   const Stmt *LoopStmt;
-  const LocationContext *LCtx;
+  const StackFrame *SF;
   unsigned maxStep;
-  LoopState(Kind InK, const Stmt *S, const LocationContext *L, unsigned N)
-      : K(InK), LoopStmt(S), LCtx(L), maxStep(N) {}
+  LoopState(Kind InK, const Stmt *S, const StackFrame *SF, unsigned N)
+      : K(InK), LoopStmt(S), SF(SF), maxStep(N) {}
 
 public:
-  static LoopState getNormal(const Stmt *S, const LocationContext *L,
-                             unsigned N) {
-    return LoopState(Normal, S, L, N);
+  static LoopState getNormal(const Stmt *S, const StackFrame *SF, unsigned N) {
+    return LoopState(Normal, S, SF, N);
   }
-  static LoopState getUnrolled(const Stmt *S, const LocationContext *L,
+  static LoopState getUnrolled(const Stmt *S, const StackFrame *SF,
                                unsigned N) {
-    return LoopState(Unrolled, S, L, N);
+    return LoopState(Unrolled, S, SF, N);
   }
   bool isUnrolled() const { return K == Unrolled; }
   unsigned getMaxStep() const { return maxStep; }
   const Stmt *getLoopStmt() const { return LoopStmt; }
-  const LocationContext *getLocationContext() const { return LCtx; }
+  const StackFrame *getStackFrame() const { return SF; }
   bool operator==(const LoopState &X) const {
     return K == X.K && LoopStmt == X.LoopStmt;
   }
   void Profile(llvm::FoldingSetNodeID &ID) const {
     ID.AddInteger(K);
     ID.AddPointer(LoopStmt);
-    ID.AddPointer(LCtx);
+    ID.AddPointer(SF);
     ID.AddInteger(maxStep);
   }
 };
@@ -67,7 +66,7 @@ public:
 // to unroll them.
 // TODO: The loop stack should not need to be in the program state since it is
 // lexical in nature. Instead, the stack of loops should be tracked in the
-// LocationContext.
+// StackFrame.
 REGISTER_LIST_WITH_PROGRAMSTATE(LoopStack, LoopState)
 
 namespace clang {
@@ -175,8 +174,7 @@ static bool isCapturedByReference(ExplodedNode *N, const DeclRefExpr *DR) {
 
   // Get the lambda CXXRecordDecl
   assert(DR->refersToEnclosingVariableOrCapture());
-  const LocationContext *LocCtxt = N->getLocationContext();
-  const Decl *D = LocCtxt->getDecl();
+  const Decl *D = N->getStackFrame()->getDecl();
   const auto *MD = cast<CXXMethodDecl>(D);
   assert(MD && MD->getParent()->isLambda() &&
          "Captured variable should only be seen while evaluating a lambda");
@@ -251,7 +249,7 @@ static bool isPossiblyEscaped(ExplodedNode *N, const DeclRefExpr *DR) {
     // Check the usage of the pass-by-ref function calls and adress-of operator
     // on VD and reference initialized by VD.
     ASTContext &ASTCtx =
-        N->getLocationContext()->getAnalysisDeclContext()->getASTContext();
+        N->getStackFrame()->getAnalysisDeclContext()->getASTContext();
     // Case 3 and 4:
     auto Match =
         match(stmt(anyOf(callByRef(equalsNode(VD)), getAddrTo(equalsNode(VD)),
@@ -328,25 +326,25 @@ static bool madeNewBranch(ExplodedNode *N, const Stmt *LoopStmt) {
 ProgramStateRef updateLoopStack(const Stmt *LoopStmt, ASTContext &ASTCtx,
                                 ExplodedNode *Pred, unsigned maxVisitOnPath) {
   auto State = Pred->getState();
-  auto LCtx = Pred->getLocationContext();
+  auto SF = Pred->getStackFrame();
 
   if (!isLoopStmt(LoopStmt))
     return State;
 
   auto LS = State->get<LoopStack>();
   if (!LS.isEmpty() && LoopStmt == LS.getHead().getLoopStmt() &&
-      LCtx == LS.getHead().getLocationContext()) {
+      SF == LS.getHead().getStackFrame()) {
     if (LS.getHead().isUnrolled() && madeNewBranch(Pred, LoopStmt)) {
       State = State->set<LoopStack>(LS.getTail());
       State = State->add<LoopStack>(
-          LoopState::getNormal(LoopStmt, LCtx, maxVisitOnPath));
+          LoopState::getNormal(LoopStmt, SF, maxVisitOnPath));
     }
     return State;
   }
   unsigned maxStep;
   if (!shouldCompletelyUnroll(LoopStmt, ASTCtx, Pred, maxStep)) {
     State = State->add<LoopStack>(
-        LoopState::getNormal(LoopStmt, LCtx, maxVisitOnPath));
+        LoopState::getNormal(LoopStmt, SF, maxVisitOnPath));
     return State;
   }
 
@@ -355,10 +353,10 @@ ProgramStateRef updateLoopStack(const Stmt *LoopStmt, ASTContext &ASTCtx,
   unsigned innerMaxStep = maxStep * outerStep;
   if (innerMaxStep > MAXIMUM_STEP_UNROLLED)
     State = State->add<LoopStack>(
-        LoopState::getNormal(LoopStmt, LCtx, maxVisitOnPath));
+        LoopState::getNormal(LoopStmt, SF, maxVisitOnPath));
   else
     State = State->add<LoopStack>(
-        LoopState::getUnrolled(LoopStmt, LCtx, innerMaxStep));
+        LoopState::getUnrolled(LoopStmt, SF, innerMaxStep));
   return State;
 }
 

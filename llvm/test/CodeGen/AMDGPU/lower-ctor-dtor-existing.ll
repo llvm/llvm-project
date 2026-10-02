@@ -1,5 +1,5 @@
-; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-ctor-dtor < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=obj -o - < %s | llvm-readelf -s - 2>&1 | FileCheck %s -check-prefix=CHECK-VIS
+; RUN: opt -S -mtriple=amdgpu-- -passes=amdgpu-lower-ctor-dtor < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -filetype=obj -o - < %s | llvm-readelf -s - 2>&1 | FileCheck %s -check-prefix=CHECK-VIS
 
 ; Make sure that we don't modify the functions if amdgcn.device.init or
 ; amdgcn.device.fini already exit.

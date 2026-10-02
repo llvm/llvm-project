@@ -33,6 +33,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator_range.h"
@@ -48,7 +49,6 @@ namespace clang {
 class AnalyzerOptions;
 class ASTContext;
 class Decl;
-class LocationContext;
 class SourceManager;
 class Stmt;
 
@@ -133,13 +133,13 @@ protected:
   SmallVector<std::shared_ptr<PathDiagnosticNotePiece>, 4> Notes;
   SmallVector<FixItHint, 4> Fixits;
 
-  BugReport(Kind kind, const BugType &bt, StringRef desc)
+  BugReport(Kind kind, const BugType &bt, const llvm::Twine &desc)
       : BugReport(kind, bt, "", desc) {}
 
-  BugReport(Kind K, const BugType &BT, StringRef ShortDescription,
-            StringRef Description)
-      : K(K), BT(BT), ShortDescription(ShortDescription),
-        Description(Description) {}
+  BugReport(Kind K, const BugType &BT, const llvm::Twine &ShortDescription,
+            const llvm::Twine &Description)
+      : K(K), BT(BT), ShortDescription(ShortDescription.str()),
+        Description(Description.str()) {}
 
 public:
   virtual ~BugReport() = default;
@@ -253,11 +253,12 @@ class BasicBugReport : public BugReport {
   const Decl *DeclWithIssue = nullptr;
 
 public:
-  BasicBugReport(const BugType &bt, StringRef desc, PathDiagnosticLocation l)
+  BasicBugReport(const BugType &bt, const llvm::Twine &desc,
+                 PathDiagnosticLocation l)
       : BugReport(Kind::Basic, bt, desc), Location(l) {}
 
-  BasicBugReport(const BugType &BT, StringRef ShortDesc, StringRef Desc,
-                 PathDiagnosticLocation L)
+  BasicBugReport(const BugType &BT, const llvm::Twine &ShortDesc,
+                 const llvm::Twine &Desc, PathDiagnosticLocation L)
       : BugReport(Kind::Basic, BT, ShortDesc, Desc), Location(L) {}
 
   static bool classof(const BugReport *R) {
@@ -322,9 +323,9 @@ protected:
   llvm::DenseMap<const MemRegion *, bugreporter::TrackingKind>
       InterestingRegions;
 
-  /// A set of location contexts that correspoind to call sites which should be
+  /// A set of stack frames that correspond to call sites which should be
   /// considered "interesting".
-  llvm::SmallPtrSet<const LocationContext *, 2> InterestingLocationContexts;
+  llvm::SmallPtrSet<const StackFrame *, 2> InterestingStackFrames;
 
   /// A set of custom visitors which generate "event" diagnostics at
   /// interesting points in the path.
@@ -370,12 +371,12 @@ protected:
       StackHints;
 
 public:
-  PathSensitiveBugReport(const BugType &bt, StringRef desc,
+  PathSensitiveBugReport(const BugType &bt, const llvm::Twine &desc,
                          const ExplodedNode *errorNode)
       : PathSensitiveBugReport(bt, desc, desc, errorNode) {}
 
-  PathSensitiveBugReport(const BugType &bt, StringRef shortDesc, StringRef desc,
-                         const ExplodedNode *errorNode)
+  PathSensitiveBugReport(const BugType &bt, const llvm::Twine &shortDesc,
+                         const llvm::Twine &desc, const ExplodedNode *errorNode)
       : PathSensitiveBugReport(bt, shortDesc, desc, errorNode,
                                /*LocationToUnique*/ {},
                                /*DeclToUnique*/ nullptr) {}
@@ -387,15 +388,15 @@ public:
   /// to the user. This method allows to rest the location which should be used
   /// for uniquing reports. For example, memory leaks checker, could set this to
   /// the allocation site, rather then the location where the bug is reported.
-  PathSensitiveBugReport(const BugType &bt, StringRef desc,
+  PathSensitiveBugReport(const BugType &bt, const llvm::Twine &desc,
                          const ExplodedNode *errorNode,
                          PathDiagnosticLocation LocationToUnique,
                          const Decl *DeclToUnique)
       : PathSensitiveBugReport(bt, desc, desc, errorNode, LocationToUnique,
                                DeclToUnique) {}
 
-  PathSensitiveBugReport(const BugType &bt, StringRef shortDesc, StringRef desc,
-                         const ExplodedNode *errorNode,
+  PathSensitiveBugReport(const BugType &bt, const llvm::Twine &shortDesc,
+                         const llvm::Twine &desc, const ExplodedNode *errorNode,
                          PathDiagnosticLocation LocationToUnique,
                          const Decl *DeclToUnique);
 
@@ -450,12 +451,12 @@ public:
   /// condition, will append "will be used as a condition" to the message).
   void markInteresting(SVal V, bugreporter::TrackingKind TKind =
                                    bugreporter::TrackingKind::Thorough);
-  void markInteresting(const LocationContext *LC);
+  void markInteresting(const StackFrame *SF);
 
   bool isInteresting(SymbolRef sym) const;
   bool isInteresting(const MemRegion *R) const;
   bool isInteresting(SVal V) const;
-  bool isInteresting(const LocationContext *LC) const;
+  bool isInteresting(const StackFrame *SF) const;
 
   std::optional<bugreporter::TrackingKind>
   getInterestingnessKind(SymbolRef sym) const;

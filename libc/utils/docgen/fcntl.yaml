@@ -11,6 +11,8 @@ functions:
     in-latest-posix: ''
   posix_fallocate:
     in-latest-posix: ''
+  fallocate:
+    c-definition: ''
 
 macros:
   AT_EACCESS:

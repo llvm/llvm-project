@@ -21,6 +21,7 @@ add_llvm_library(LLVMBOLTCore
   BinaryFunctionCallGraph.cpp
   BinaryFunctionProfile.cpp
   BinarySection.cpp
+  BranchLivenessInfo.cpp
   CallGraph.cpp
   CallGraphWalker.cpp
   DebugData.cpp

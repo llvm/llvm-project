@@ -14,7 +14,7 @@
 
 #include <__concepts/same_as.h>
 #include <__config>
-#include <__format/concepts.h>
+#include <__format/fmt_char_type.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -14,7 +14,7 @@ define void @foo(i32 %x, ptr %p) nounwind {
 ; CHECK-LABEL: define void @foo
 ; CHECK-SAME: (i32 [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 [[X]], ptr [[P]], align 16, !noalias !0, !llvm.access.group [[ACC_GRP3:![0-9]+]]
+; CHECK-NEXT:    store i32 [[X]], ptr [[P]], align 16, !noalias [[META0:![0-9]+]], !llvm.access.group [[ACC_GRP3:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -59,7 +59,7 @@ define void @ppcf128_ones_store(ptr %dest) {
 ; CHECK-LABEL: define void @ppcf128_ones_store
 ; CHECK-SAME: (ptr [[DEST:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store ppc_fp128 0xMFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF, ptr [[DEST]], align 16
+; CHECK-NEXT:    store ppc_fp128 f0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF, ptr [[DEST]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -72,4 +72,4 @@ entry:
 !0 = !{!1}
 !1 = !{!1, !2}
 !2 = !{!2}
-!3 = !{}
+!3 = distinct !{}

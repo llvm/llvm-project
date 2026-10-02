@@ -55,6 +55,55 @@ define preserve_nonecc void @caller2(ptr %a) {
   ret void
 }
 
+%S = type { [3 x i64] }
+declare preserve_nonecc void @callee_byval(ptr byval(%S) align 8)
+
+; Preserve_none caller with a byval argument from a local alloca should not
+; be lowered as a sibling tail call, as this would corrupt the stack frame
+; containing the byval copy.
+define preserve_nonecc void @caller_byval_alloca() {
+; CHECK-LABEL: caller_byval_alloca:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    subq $56, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    movups %xmm0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq $0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movups %xmm0, (%rsp)
+; CHECK-NEXT:    movq $0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    callq callee_byval@PLT
+; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+  %s = alloca %S, align 8
+  %a0 = getelementptr inbounds %S, ptr %s, i32 0, i32 0, i32 0
+  store i64 0, ptr %a0, align 8
+  %a1 = getelementptr inbounds %S, ptr %s, i32 0, i32 0, i32 1
+  store i64 0, ptr %a1, align 8
+  %a2 = getelementptr inbounds %S, ptr %s, i32 0, i32 0, i32 2
+  store i64 0, ptr %a2, align 8
+  tail call preserve_nonecc void @callee_byval(ptr byval(%S) align 8 %s)
+  ret void
+}
+
+; Test that byval arguments from an incoming pointer are correctly copied.
+define preserve_nonecc void @caller_byval_ptr(ptr %a) {
+; CHECK-LABEL: caller_byval_ptr:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    subq $24, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    movq 16(%r12), %rax
+; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movups (%r12), %xmm0
+; CHECK-NEXT:    movups %xmm0, (%rsp)
+; CHECK-NEXT:    callq callee_byval@PLT
+; CHECK-NEXT:    addq $24, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+  call preserve_nonecc void @callee_byval(ptr byval(%S) align 8 %a)
+  ret void
+}
+
 ; Preserve_none function can use more registers to pass parameters.
 declare preserve_nonecc i64 @callee_with_many_param2(i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, i64 %a8, i64 %a9, i64 %a10, i64 %a11)
 define preserve_nonecc i64 @callee_with_many_param(i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, i64 %a8, i64 %a9, i64 %a10, i64 %a11, i64 %a12) {

@@ -66,8 +66,8 @@ int main() {
   // CHECK: arr is present
   fprintf(stderr, "arr is present\n");
 
-  // CHECK: omptarget message: device mapping required by 'present' motion modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] ([[#SIZE]] bytes)
-  // CHECK: omptarget fatal error 1: failure of target construct while offloading is mandatory
+  // CHECK: message: device mapping required by 'present' motion modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] ([[#SIZE]] bytes)
+  // CHECK: fatal error 1: failure of target construct while offloading is mandatory
 #pragma omp target data map(alloc : arr[SMALL])
   {
 #pragma omp target update CLAUSE(present : arr[LARGE])

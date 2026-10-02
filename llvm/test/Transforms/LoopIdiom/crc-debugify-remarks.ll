@@ -1,0 +1,96 @@
+; RUN: opt -passes=debugify,loop-idiom -pass-remarks=loop-idiom -pass-remarks-missed=loop-idiom -pass-remarks-analysis=loop-idiom -pass-remarks-output=%t.yaml -disable-output < %s
+; RUN: FileCheck --input-file=%t.yaml %s --check-prefixes=YAML
+
+; YAML:      --- !Analysis
+; YAML-NEXT: Pass:            loop-idiom
+; YAML-NEXT: Name:            CRCLoopCosts
+; YAML-NEXT: DebugLoc:        { File: '<stdin>', Line: 1, Column: 1 }
+; YAML-NEXT: Function:        crc32.le.tc32
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'CRC loop costs: original='
+; YAML-NEXT:   - OrigLoopCost:    '192'
+; YAML-NEXT:   - String:          ', table='
+; YAML-NEXT:   - TableStrategyCost: '16'
+; YAML-NEXT:   - String:          ', clmul='
+; YAML-NEXT:   - ClmulStrategyCost: '7'
+; YAML-NEXT: ...
+; YAML:      --- !Passed
+; YAML-NEXT: Pass:            loop-idiom
+; YAML-NEXT: Name:            CRCLoopOptimized
+; YAML-NEXT: DebugLoc:        { File: '<stdin>', Line: 1, Column: 1 }
+; YAML-NEXT: Function:        crc32.le.tc32
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'CRC loop optimized using '
+; YAML-NEXT:   - Strategy:        clmul
+; YAML-NEXT:   - String:          ': '
+; YAML-NEXT:   - String:          most profitable strategy
+; YAML-NEXT: ...
+
+define i32 @crc32.le.tc32(i32 %checksum, i32 %msg) {
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %crc = phi i32 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i32 [ %msg, %entry ], [ %data.next, %loop ]
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %xor.crc.data = xor i32 %crc, %data
+  %sb.crc.data = and i32 %xor.crc.data, 1
+  %check.sb = icmp eq i32 %sb.crc.data, 0
+  %crc.lshr = lshr i32 %crc, 1
+  %crc.xor = xor i32 %crc.lshr, 33800
+  %crc.next = select i1 %check.sb, i32 %crc.lshr, i32 %crc.xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %data.next = lshr i32 %data, 1
+  %exit.cond = icmp samesign ult i8 %iv, 31
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i32 %crc.next
+}
+
+; YAML:      --- !Analysis
+; YAML-NEXT: Pass:            loop-idiom
+; YAML-NEXT: Name:            CRCLoopCosts
+; YAML-NEXT: DebugLoc:        { File: '<stdin>', Line: 16, Column: 1 }
+; YAML-NEXT: Function:        crc32.le.tc32.optsize
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'CRC loop costs: original='
+; YAML-NEXT:   - OrigLoopCost:    '192'
+; YAML-NEXT:   - String:          ', table='
+; YAML-NEXT:   - TableStrategyCost: '16'
+; YAML-NEXT:   - String:          ', clmul='
+; YAML-NEXT:   - ClmulStrategyCost: '7'
+; YAML-NEXT: ...
+; YAML:      --- !Missed
+; YAML-NEXT: Pass:            loop-idiom
+; YAML-NEXT: Name:            CRCLoopMissed
+; YAML-NEXT: DebugLoc:        { File: '<stdin>', Line: 16, Column: 1 }
+; YAML-NEXT: Function:        crc32.le.tc32.optsize
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'CRC loop not optimized: '
+; YAML-NEXT:   - String:          optimizing for size
+; YAML-NEXT: ...
+
+define i32 @crc32.le.tc32.optsize(i32 %checksum, i32 %msg) optsize {
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %crc = phi i32 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i32 [ %msg, %entry ], [ %data.next, %loop ]
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %xor.crc.data = xor i32 %crc, %data
+  %sb.crc.data = and i32 %xor.crc.data, 1
+  %check.sb = icmp eq i32 %sb.crc.data, 0
+  %crc.lshr = lshr i32 %crc, 1
+  %crc.xor = xor i32 %crc.lshr, 33800
+  %crc.next = select i1 %check.sb, i32 %crc.lshr, i32 %crc.xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %data.next = lshr i32 %data, 1
+  %exit.cond = icmp samesign ult i8 %iv, 31
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i32 %crc.next
+}

@@ -469,15 +469,15 @@ func.func @_QMmPtest.fir(%arg0: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_nam
 // CHECK-DAG: argp.fir#0 <-> arg%p.fir#0: MayAlias
 // CHECK-DAG: argp.fir#0 <-> arg%i.fir#0: NoAlias
 //
-// TODO: Shouldn't these all be NoAlias?
-// However, argp.tgt is currently handled as Indirect, and we only
-// can disambiguate descriptor and data addresses.
-// CHECK-DAG: argp.tgt#0 <-> arg#0: MayAlias
+// Scope-aware refinement (ScopedOrigin) now disambiguates argp.tgt
+// against unrelated scope-mate variables: arg is a non-TARGET dummy
+// so a pointer component dereference cannot reach it.
+// CHECK-DAG: argp.tgt#0 <-> arg#0: NoAlias
 // CHECK-DAG: argp.tgt#0 <-> arg%p#0: NoAlias
-// CHECK-DAG: argp.tgt#0 <-> arg%i#0: MayAlias
-// CHECK-DAG: argp.tgt.fir#0 <-> arg.fir#0: MayAlias
+// CHECK-DAG: argp.tgt#0 <-> arg%i#0: NoAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> arg.fir#0: NoAlias
 // CHECK-DAG: argp.tgt.fir#0 <-> arg%p.fir#0: NoAlias
-// CHECK-DAG: argp.tgt.fir#0 <-> arg%i.fir#0: MayAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> arg%i.fir#0: NoAlias
 //
 // CHECK-DAG: arga#0 <-> arg#0: NoAlias
 // CHECK-DAG: arga#0 <-> arg%p#0: NoAlias
@@ -493,15 +493,14 @@ func.func @_QMmPtest.fir(%arg0: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_nam
 // CHECK-DAG: argp.fir#0 <-> glob%p.fir#0: MayAlias
 // CHECK-DAG: argp.fir#0 <-> glob%i.fir#0: NoAlias
 //
-// TODO: Shouldn't these all be NoAlias?
-// However, argp.tgt is currently handled as Indirect, and we only
-// can disambiguate descriptor and data addresses.
-// CHECK-DAG: argp.tgt#0 <-> glob#0: MayAlias
+// Scope-aware refinement (ScopedOrigin) now disambiguates argp.tgt
+// against the non-TARGET global glob.
+// CHECK-DAG: argp.tgt#0 <-> glob#0: NoAlias
 // CHECK-DAG: argp.tgt#0 <-> glob%p#0: NoAlias
-// CHECK-DAG: argp.tgt#0 <-> glob%i#0: MayAlias
-// CHECK-DAG: argp.tgt.fir#0 <-> glob.fir#0: MayAlias
+// CHECK-DAG: argp.tgt#0 <-> glob%i#0: NoAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> glob.fir#0: NoAlias
 // CHECK-DAG: argp.tgt.fir#0 <-> glob%p.fir#0: NoAlias
-// CHECK-DAG: argp.tgt.fir#0 <-> glob%i.fir#0: MayAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> glob%i.fir#0: NoAlias
 //
 // CHECK-DAG: arga#0 <-> glob#0: NoAlias
 // CHECK-DAG: arga#0 <-> glob%p#0: NoAlias
@@ -517,15 +516,14 @@ func.func @_QMmPtest.fir(%arg0: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_nam
 // CHECK-DAG: argp.fir#0 <-> loc%p.fir#0: NoAlias
 // CHECK-DAG: argp.fir#0 <-> loc%i.fir#0: NoAlias
 //
-// TODO: Shouldn't these all be NoAlias?
-// However, argp.tgt is currently handled as Indirect, and we only
-// can disambiguate descriptor and data addresses.
-// CHECK-DAG: argp.tgt#0 <-> loc#0: MayAlias
+// Scope-aware refinement (ScopedOrigin) now disambiguates argp.tgt
+// against the non-TARGET local loc.
+// CHECK-DAG: argp.tgt#0 <-> loc#0: NoAlias
 // CHECK-DAG: argp.tgt#0 <-> loc%p#0: NoAlias
-// CHECK-DAG: argp.tgt#0 <-> loc%i#0: MayAlias
-// CHECK-DAG: argp.tgt.fir#0 <-> loc.fir#0: MayAlias
+// CHECK-DAG: argp.tgt#0 <-> loc%i#0: NoAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> loc.fir#0: NoAlias
 // CHECK-DAG: argp.tgt.fir#0 <-> loc%p.fir#0: NoAlias
-// CHECK-DAG: argp.tgt.fir#0 <-> loc%i.fir#0: MayAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> loc%i.fir#0: NoAlias
 //
 // CHECK-DAG: arga#0 <-> loc#0: NoAlias
 // CHECK-DAG: arga#0 <-> loc%p#0: NoAlias

@@ -18,12 +18,18 @@ namespace llvm {
 
 class AvailabilityPredicate {
   const Record *TheDef;
-  StringRef PredicateString;
+  std::string PredicateString;
 
 public:
   AvailabilityPredicate(const Record *Def) : TheDef(Def) {
-    if (TheDef)
-      PredicateString = TheDef->getValueAsString("Cond");
+    if (!TheDef)
+      return;
+    // An unset CondDag means the libcall is always available.
+    if (const RecordVal *RV = TheDef->getValue("CondDag")) {
+      if (const auto *Dag = dyn_cast_or_null<DagInit>(RV->getValue());
+          Dag && !isa<UnsetInit>(Dag->getOperator()))
+        PredicateString = lowerCondDag(TheDef, Dag);
+    }
   }
 
   const Record *getDef() const { return TheDef; }
@@ -40,6 +46,12 @@ public:
     if (TheDef)
       OS << '_' << TheDef->getName();
   }
+
+private:
+  // Lower a (all_of/any_of/not <LibcallPredicate>...) dag to a C++ boolean
+  // expression.
+  static std::string lowerCondDag(const Record *Owner, const Init *Val,
+                                  bool ParenIfBinOp = false);
 };
 
 class RuntimeLibcalls;
@@ -123,8 +135,6 @@ public:
     OS << '\"' << getLibcallFuncName() << '\"';
   }
 
-  bool isDefault() const { return TheDef->getValueAsBit("IsDefault"); }
-
   void emitEnumEntry(raw_ostream &OS) const {
     OS << "RTLIB::impl_" << this->getName();
   }
@@ -160,9 +170,6 @@ private:
 
   std::vector<RuntimeLibcall> RuntimeLibcallDefList;
   std::vector<RuntimeLibcallImpl> RuntimeLibcallImplDefList;
-
-  DenseMap<const RuntimeLibcall *, const RuntimeLibcallImpl *>
-      LibCallToDefaultImpl;
 
 public:
   RuntimeLibcalls(const RecordKeeper &Records);

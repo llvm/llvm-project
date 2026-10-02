@@ -179,6 +179,25 @@ TEST(KnownBitsTest, SelfAddExhaustive) {
   });
 }
 
+TEST(KnownBitsTest, SelfAddWide) {
+  // SelfAdd lowers to shl(X, 1), whose getMaxShiftAmount extracts
+  // Log2_32(BitWidth) bits from the shift amount. For source widths >= 512 that
+  // is more than the 8-bit shift amount used by the lowering, which used to
+  // assert in APInt::extractBitsAsZExtValue.
+  // 1 << 23 is IntegerType::MAX_INT_BITS, the widest integer IR can produce.
+  for (unsigned Bits : {256u, 512u, 1024u, 1u << 23}) {
+    for (const APInt &X : {APInt(Bits, 1), APInt::getMaxValue(Bits)}) {
+      KnownBits Known = KnownBits::makeConstant(X);
+      KnownBits Computed = KnownBits::add(Known, Known, /*NSW=*/false,
+                                          /*NUW=*/false, /*SelfAdd=*/true);
+      // X + X == X << 1 (truncated to Bits); the result is fully known.
+      APInt Doubled = X << 1;
+      EXPECT_EQ(Computed.One, Doubled);
+      EXPECT_EQ(Computed.Zero, ~Doubled);
+    }
+  }
+}
+
 TEST(KnownBitsTest, AddCarryExhaustive) {
   unsigned Bits = 4;
   ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
@@ -635,6 +654,8 @@ TEST(KnownBitsTest, BinaryExhaustive) {
   testBinaryOpExhaustive("avgCeilS", KnownBits::avgCeilS, APIntOps::avgCeilS);
 
   testBinaryOpExhaustive("clmul", KnownBits::clmul, APIntOps::clmul);
+  testBinaryOpExhaustive("pext", KnownBits::pext, APIntOps::pext);
+  testBinaryOpExhaustive("pdep", KnownBits::pdep, APIntOps::pdep);
 }
 
 TEST(KnownBitsTest, UnaryExhaustive) {
@@ -671,6 +692,41 @@ TEST(KnownBitsTest, UnaryExhaustive) {
         return KnownBits::mul(Known, Known, /*SelfMultiply=*/true);
       },
       [](const APInt &N) { return N * N; }, /*CheckOptimality=*/false);
+}
+
+TEST(KnownBitsTest, FunnelShiftExhaustive) {
+  unsigned Bits = 4;
+  ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
+    ForeachKnownBits(Bits, [&](const KnownBits &Known2) {
+      if (Known1.hasConflict() || Known2.hasConflict())
+        return;
+
+      for (unsigned ShAmt = 0; ShAmt < Bits; ShAmt++) {
+        KnownBits FSHLResult(Bits), FSHRResult(Bits);
+        FSHLResult.setAllConflict();
+        FSHRResult.setAllConflict();
+
+        ForeachNumInKnownBits(Known1, [&](const APInt &N1) {
+          ForeachNumInKnownBits(Known2, [&](const APInt &N2) {
+            APInt FSHL = APIntOps::fshl(N1, N2, APInt(Bits, ShAmt));
+            FSHLResult.One &= FSHL;
+            FSHLResult.Zero &= ~FSHL;
+            APInt FSHR = APIntOps::fshr(N1, N2, APInt(Bits, ShAmt));
+            FSHRResult.One &= FSHR;
+            FSHRResult.Zero &= ~FSHR;
+          });
+        });
+
+        const APInt Amt(Bits, ShAmt);
+        KnownBits ComputeFSHL = KnownBits::fshl(Known1, Known2, Amt);
+        KnownBits ComputeFSHR = KnownBits::fshr(Known1, Known2, Amt);
+        EXPECT_TRUE(FSHLResult.Zero.isSubsetOf(ComputeFSHL.Zero) &&
+                    FSHLResult.One.isSubsetOf(ComputeFSHL.One));
+        EXPECT_TRUE(FSHRResult.Zero.isSubsetOf(ComputeFSHR.Zero) &&
+                    FSHRResult.One.isSubsetOf(ComputeFSHR.One));
+      }
+    });
+  });
 }
 
 TEST(KnownBitsTest, WideShifts) {

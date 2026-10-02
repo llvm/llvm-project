@@ -1,5 +1,5 @@
 ; REQUIRES: x86-registered-target
-; RUN: opt -passes=hotcoldsplit -hotcoldsplit-threshold=0 < %s | opt -passes='require<profile-summary>,function(codegenprepare)' -S | FileCheck %s
+; RUN: opt -passes="require<profile-summary>,hotcoldsplit,codegenprepare" -hotcoldsplit-threshold=0 < %s -S | FileCheck %s
 
 ; Test to ensure that split cold function gets 0 entry count profile
 ; metadata when compiling with pgo.

@@ -27,7 +27,7 @@ using namespace clang;
 
 namespace {
 
-class PrintPass final : public llvm::AnalysisInfoMixin<PrintPass> {
+class PrintPass final : public llvm::RequiredPassInfoMixin<PrintPass> {
   friend struct llvm::AnalysisInfoMixin<PrintPass>;
 
 public:
@@ -38,7 +38,6 @@ public:
       llvm::outs() << "[PrintPass] Found function: " << F.getName() << "\n";
     return llvm::PreservedAnalyses::all();
   }
-  static bool isRequired() { return true; }
 };
 
 void PrintCallback(llvm::PassBuilder &PB) {

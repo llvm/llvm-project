@@ -1,6 +1,9 @@
-RUN: dsymutil -accelerator=Dwarf -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 -o %t.dwarf.dSYM
-RUN: dsymutil -accelerator=Apple -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 -o %t.apple.dSYM
-RUN: dsymutil -accelerator=None -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 -o %t.none.dSYM
+RUN: dsymutil --linker classic -accelerator=Dwarf -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 -o %t.dwarf.dSYM
+RUN: dsymutil --linker parallel -accelerator=Dwarf -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 -o %t.dwarf.dSYM
+RUN: dsymutil --linker classic -accelerator=Apple -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 -o %t.apple.dSYM
+RUN: dsymutil --linker parallel -accelerator=Apple -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 -o %t.apple.dSYM
+RUN: dsymutil --linker classic -accelerator=None -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 -o %t.none.dSYM
+RUN: dsymutil --linker parallel -accelerator=None -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 -o %t.none.dSYM
 
 RUN: llvm-dwarfdump -verify %t.dwarf.dSYM
 RUN: llvm-dwarfdump -verify %t.apple.dSYM
@@ -10,9 +13,12 @@ RUN: llvm-dwarfdump -debug-names %t.dwarf.dSYM | FileCheck %s -check-prefixes=NA
 RUN: llvm-dwarfdump -apple-names -apple-namespaces -apple-types %t.apple.dSYM | FileCheck %s -check-prefixes=NAMES,APPLE
 RUN: llvm-dwarfdump -a %t.none.dSYM | FileCheck %s -check-prefixes=NONE
 
-RUN: dsymutil -update -accelerator=Dwarf %t.apple.dSYM
-RUN: dsymutil -update -accelerator=Apple %t.dwarf.dSYM
-RUN: dsymutil -update -accelerator=None %t.none.dSYM
+RUN: dsymutil --linker classic -update -accelerator=Dwarf %t.apple.dSYM
+RUN: dsymutil --linker parallel -update -accelerator=Dwarf %t.apple.dSYM
+RUN: dsymutil --linker classic -update -accelerator=Apple %t.dwarf.dSYM
+RUN: dsymutil --linker parallel -update -accelerator=Apple %t.dwarf.dSYM
+RUN: dsymutil --linker classic -update -accelerator=None %t.none.dSYM
+RUN: dsymutil --linker parallel -update -accelerator=None %t.none.dSYM
 
 RUN: llvm-dwarfdump -verify %t.dwarf.dSYM
 RUN: llvm-dwarfdump -verify %t.apple.dSYM

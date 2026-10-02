@@ -8,9 +8,9 @@ subroutine omp_do
   integer, save:: i, j, k,n
   !$omp  threadprivate(k,j,i)
   !$omp  do collapse(2)
-  !ERROR: Loop iteration variable i is not allowed in THREADPRIVATE.
+  !ERROR: Loop iteration variable of an affected loop cannot be THREADPRIVATE
   do i = 1, 10
-    !ERROR: Loop iteration variable j is not allowed in THREADPRIVATE.
+    !ERROR: Loop iteration variable of an affected loop cannot be THREADPRIVATE
     do j = 1, 10
       print *, "Hello"
     end do
@@ -22,7 +22,7 @@ subroutine omp_do1
   integer, save :: i, j, k
   !$omp  threadprivate(k,j,i)
   !$omp  do
-  !ERROR: Loop iteration variable i is not allowed in THREADPRIVATE.
+  !ERROR: Loop iteration variable of an affected loop cannot be THREADPRIVATE
   do i = 1, 10
     do j = 1, 10
       print *, "Hello"
@@ -40,7 +40,7 @@ subroutine omp_do2
   contains
   subroutine compute()
   !$omp  do ordered(1) collapse(1)
-  !ERROR: Loop iteration variable k is not allowed in THREADPRIVATE.
+  !ERROR: Loop iteration variable of an affected loop cannot be THREADPRIVATE
   foo: do k = 1, 10
     do i = 1, 10
       print *, "Hello"
@@ -58,7 +58,7 @@ subroutine omp_do3
   print *, "parallel"
   !$omp end parallel
   !$omp  do
-  !ERROR: Loop iteration variable i is not allowed in THREADPRIVATE.
+  !ERROR: Loop iteration variable of an affected loop cannot be THREADPRIVATE
   do i = 1, 10
     do j = 1, 10
       print *, "Hello"
@@ -82,7 +82,7 @@ end module usetp
 subroutine main
   use usetp
   !$omp  do
-  !ERROR: Loop iteration variable i is not allowed in THREADPRIVATE.
+  !ERROR: Loop iteration variable of an affected loop cannot be THREADPRIVATE
   do i = 1, 10
     do j = 1, 10
       print *, "Hello"
@@ -94,7 +94,7 @@ end subroutine
 subroutine main1
   use tp
   !$omp  do
-  !ERROR: Loop iteration variable j is not allowed in THREADPRIVATE.
+  !ERROR: Loop iteration variable of an affected loop cannot be THREADPRIVATE
   do j = 1, 10
     do i = 1, 10
       print *, "Hello"

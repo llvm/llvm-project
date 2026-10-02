@@ -210,8 +210,9 @@ void RedundantQualifiedAliasCheck::check(
   if (EqualRange.isInvalid())
     return;
 
-  auto Diag = diag(Alias->getLocation(),
-                   "type alias is redundant; use a using-declaration instead");
+  const auto Diag =
+      diag(Alias->getLocation(),
+           "type alias is redundant; use a using-declaration instead");
 
   Diag << FixItHint::CreateRemoval(Alias->getLocation())
        << FixItHint::CreateRemoval(EqualRange.getBegin());

@@ -22,12 +22,11 @@ getLastTemplateParameterList(const FunctionDecl *FuncDecl) {
       FuncDecl->getDescribedTemplateParams();
 
   if (!ReturnList) {
-    const unsigned NumberOfTemplateParameterLists =
-        FuncDecl->getNumTemplateParameterLists();
+    const ArrayRef<TemplateParameterList *> TPLs =
+        FuncDecl->getTemplateParameterLists();
 
-    if (NumberOfTemplateParameterLists > 0)
-      ReturnList = FuncDecl->getTemplateParameterList(
-          NumberOfTemplateParameterLists - 1);
+    if (!TPLs.empty())
+      ReturnList = TPLs.back();
   }
 
   return ReturnList;
@@ -70,13 +69,13 @@ void InlineFunctionDeclCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // Ignore lambda functions as they are internal and implicit.
-  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(FuncDecl))
-    if (MethodDecl->getParent()->isLambda())
-      return;
+  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(FuncDecl);
+      MethodDecl && MethodDecl->getParent()->isLambda())
+    return;
 
   // Check if decl starts with LIBC_INLINE
-  auto Loc = FullSourceLoc(Result.SourceManager->getFileLoc(SrcBegin),
-                           *Result.SourceManager);
+  const auto Loc = FullSourceLoc(Result.SourceManager->getFileLoc(SrcBegin),
+                                 *Result.SourceManager);
   const StringRef SrcText = Loc.getBufferData().drop_front(Loc.getFileOffset());
   if (SrcText.starts_with("LIBC_INLINE"))
     return;

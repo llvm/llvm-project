@@ -632,7 +632,7 @@ body:             |
   bb.0:
     liveins:
 
-    ; HARD: [[R:%[0-9]+]]:_(s32) = G_FCONSTANT float -1.25
+    ; HARD: [[R:%[0-9]+]]:_(s32) = G_FCONSTANT float -1.250000e+00
     ; SOFT-NOT: G_FCONSTANT
     ; SOFT: [[R:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1080033280
     ; SOFT-NOT: G_FCONSTANT
@@ -663,7 +663,7 @@ body:             |
     ; SOFT_POOL: id: 1
     ; SOFT_POOL: value: i32 858993459
 
-    ; HARD: [[R:%[0-9]+]]:_(s64) = G_FCONSTANT double -2.4
+    ; HARD: [[R:%[0-9]+]]:_(s64) = G_FCONSTANT double -2.400000e+00
     ; SOFT-NOT: G_FCONSTANT
     ; SOFT_CONST-DAG: [[HI:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1073532109
     ; SOFT_CONST-DAG: [[LO:%[0-9]+]]:_(s32) = G_CONSTANT i32 858993459

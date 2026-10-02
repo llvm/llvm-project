@@ -28,22 +28,14 @@
 # CHECK: <_start>:
 # CHECK-NEXT:                 addis 2, 12, 2
 # CHECK-NEXT:                 addi 2, 2, -32636
-# CHECK-NEXT: 1001021c:       bl 0x10010240
+# CHECK-NEXT: 1001021c:       bl 0x10010254
 # CHECK-NEXT:                 ld 2, 24(1)
-# CHECK-NEXT: 10010224:       bl 0x10010254
+# CHECK-NEXT: 10010224:       bl 0x10010240
 # CHECK-NEXT:                 ld 2, 24(1)
 # CHECK-NEXT:                 addis 3, 2, -2
 # CHECK-NEXT:                 addi 3, 3, 32720
 # CHECK-NEXT:                 addis 3, 2, -2
 # CHECK-NEXT:                 addi 3, 3, 32752
-
-# .plt[1] - .TOC. = 0x100302a0+8 - 0x10028298 = (1<<16) - 32752
-# CHECK: <__plt_ifunc2>:
-# CHECK-NEXT:     std 2, 24(1)
-# CHECK-NEXT:     addis 12, 2, 1
-# CHECK-NEXT:     ld 12, -32752(12)
-# CHECK-NEXT:     mtctr 12
-# CHECK-NEXT:     bctr
 
 # .plt[2] - .TOC. = 0x100302a0+16 - 0x10028298 = (1<<16) - 32744
 # CHECK: <__plt_ifunc3>:
@@ -52,25 +44,35 @@
 # CHECK-NEXT:     ld 12, -32744(12)
 # CHECK-NEXT:     mtctr 12
 # CHECK-NEXT:     bctr
-# CHECK-EMPTY:
 
-## .glink has 3 IPLT entries for ifunc1, ifunc2 and ifunc3.
-## ifunc2 and ifunc3 have the same code sequence as their PLT call stubs.
-# CHECK:      Disassembly of section .glink:
-# CHECK-EMPTY:
-# CHECK-NEXT: 0000000010010268 <ifunc1>:
-# CHECK-NEXT:     addis 12, 2, 1
-# CHECK-NEXT:     ld 12, -32760(12)
-# CHECK-NEXT:     mtctr 12
-# CHECK-NEXT:     bctr
+# .plt[1] - .TOC. = 0x100302a0+8 - 0x10028298 = (1<<16) - 32752
+# CHECK: <__plt_ifunc2>:
+# CHECK-NEXT:     std 2, 24(1)
 # CHECK-NEXT:     addis 12, 2, 1
 # CHECK-NEXT:     ld 12, -32752(12)
 # CHECK-NEXT:     mtctr 12
 # CHECK-NEXT:     bctr
 # CHECK-EMPTY:
+
+## .glink has 3 IPLT entries for ifunc1, ifunc2 and ifunc3.
+## ifunc1@toc - ifunc1@iplt = 0x100302a0 - 0x10010268 = (2<<16) + 56
+## ifunc2@toc - ifunc2@iplt = 0x100302a8 - 0x10010278 = (2<<16) + 48
+## ifunc3@toc - ifunc3@iplt = 0x100302b0 - 0x10010288 = (2<<16) + 40
+# CHECK:      Disassembly of section .glink:
+# CHECK-EMPTY:
+# CHECK-NEXT: 0000000010010268 <ifunc1>:
+# CHECK-NEXT:     addis 12, 12, 2
+# CHECK-NEXT:     ld 12, 56(12)
+# CHECK-NEXT:     mtctr 12
+# CHECK-NEXT:     bctr
+# CHECK-NEXT:     addis 12, 12, 2
+# CHECK-NEXT:     ld 12, 48(12)
+# CHECK-NEXT:     mtctr 12
+# CHECK-NEXT:     bctr
+# CHECK-EMPTY:
 # CHECK-NEXT: 0000000010010288 <ifunc3>:
-# CHECK-NEXT:     addis 12, 2, 1
-# CHECK-NEXT:     ld 12, -32744(12)
+# CHECK-NEXT:     addis 12, 12, 2
+# CHECK-NEXT:     ld 12, 40(12)
 # CHECK-NEXT:     mtctr 12
 # CHECK-NEXT:     bctr
 

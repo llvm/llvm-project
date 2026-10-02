@@ -89,7 +89,7 @@ define <4 x double> @multiply_right_transpose_2x3x2(<6 x double> %a, <6 x double
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[SPLIT41]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <3 x double> [[TMP9]], double [[TMP10]], i64 2
 ; CHECK-NEXT:    store <3 x double> [[TMP5]], ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[P]], i64 3
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[P]], i64 3
 ; CHECK-NEXT:    store <3 x double> [[TMP11]], ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <6 x double> [[A:%.*]], <6 x double> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <6 x double> [[A]], <6 x double> poison, <2 x i32> <i32 2, i32 3>

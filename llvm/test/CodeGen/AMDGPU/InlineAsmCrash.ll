@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck %s
 
 ; CHECK: ;;#ASMSTART
 ; CHECK-NEXT: s_nop 0

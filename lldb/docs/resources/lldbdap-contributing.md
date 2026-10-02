@@ -163,6 +163,72 @@ forcefully performs a deep copy of all symlinks.*
 *Note: It's possible to use this kind flow for local installations, but it's
 not recommended because updating `lldb-dap` requires rebuilding the extension.*
 
+## Debugging the VS Code extension
+
+To set breakpoints and step through the TypeScript source of the VS Code
+extension, you need an [Extension Development
+Host](https://code.visualstudio.com/api/get-started/your-first-extension#debugging-the-extension).
+
+### Pre-requisites
+
+Complete the steps in [Building the VS Code extension from source](#building-the-vs-code-extension-from-source)
+before proceeding.
+
+### Configuring `.vscode/launch.json`
+
+From the root of the `llvm-project` workspace, create (or add to)
+`.vscode/launch.json`:
+
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/lldb/tools/lldb-dap/extension"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/lldb/tools/lldb-dap/extension/out/**/*.js"
+      ],
+      "preLaunchTask": "compile-debug"
+    }
+  ]
+}
+```
+
+The `preLaunchTask` runs the `compile-debug` npm script, which bundles the
+extension with source maps so VS Code can resolve breakpoints back to the
+original TypeScript files. Add the corresponding task to `.vscode/tasks.json`:
+
+```json
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "compile-debug",
+      "type": "npm",
+      "script": "compile-debug",
+      "options": {
+        "cwd": "${workspaceFolder}/lldb/tools/lldb-dap/extension"
+      }
+    }
+  ]
+}
+```
+
+### Starting a debug session
+
+1. Open the **Run and Debug** panel (`Ctrl+Shift+D` / `Cmd+Shift+D`).
+2. Select **Launch Extension** from the dropdown and press **F5**.
+3. An Extension Development Host window opens with the local extension loaded.
+4. In the host window, set `lldb-dap.executable-path` to your locally built
+   `lldb-dap` binary (e.g. `llvm-build/debug/bin/lldb-dap`).
+5. Set breakpoints in the TypeScript source inside the original window and
+   start a debug session in the host window to hit them.
+
 ## Formatting the Typescript code
 
 This is also very simple, just run:

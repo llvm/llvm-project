@@ -103,7 +103,7 @@
 
 #define ompt_callback_reduction_implemented ompt_event_MAY_ALWAYS_OPTIONAL
 
-#define ompt_callback_dispatch_implemented ompt_event_MAY_ALWAYS_OPTIONAL
+#define ompt_callback_dispatch_implemented ompt_event_MAY_CONVENIENT
 
 #define ompt_callback_error_implemented ompt_event_MAY_ALWAYS_OPTIONAL
 

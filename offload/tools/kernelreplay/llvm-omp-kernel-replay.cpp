@@ -58,6 +58,21 @@ static cl::opt<uint32_t> NumThreadsOpt("num-threads",
 static cl::opt<int32_t> DeviceIdOpt("device-id", cl::desc("Set the device id."),
                                     cl::init(-1), cl::cat(ReplayOptions));
 
+static cl::opt<uint32_t>
+    RepetitionsOpt("repetitions",
+                   cl::desc("Set the number of replay repetitions."),
+                   cl::init(1), cl::cat(ReplayOptions));
+
+static cl::opt<bool>
+    IgnoreLimitsOpt("ignore-limits",
+                    cl::desc("Ignore thread and team limits (unrecommended)."),
+                    cl::init(false), cl::cat(ReplayOptions));
+
+static cl::opt<bool>
+    LoadBitcodeOpt("load-bitcode",
+                   cl::desc("Load the recorded IR bitcode image file."),
+                   cl::init(false), cl::cat(ReplayOptions));
+
 template <typename... ArgsTy>
 Error createErr(const char *ErrFmt, ArgsTy &&...Args) {
   return llvm::createStringError(llvm::inconvertibleErrorCode(), ErrFmt,
@@ -125,19 +140,22 @@ Error verifyReplayOutput(StringRef RecordOutputFilename,
   if (!ReplayOutputBufferOrErr)
     return createErr("failed to read the kernel replay output file");
 
-  // Compare record and replay outputs to verify they match.
+  // Compare record and replay outputs to verify they match. If they are both
+  // empty, the verification is successful.
   StringRef RecordOutput = RecordOutputBufferOrErr.get()->getBuffer();
   StringRef ReplayOutput = ReplayOutputBufferOrErr.get()->getBuffer();
   if (RecordOutput != ReplayOutput)
     return createErr("replay device memory failed to verify");
 
   // Sucessfully verified.
-  outs() << TOOL_PREFIX << "Replay device memory verified\n";
   return Error::success();
 }
 
 /// Replay the kernel and return whether verification occurred.
 Error replayKernel() {
+  if (RepetitionsOpt == 0)
+    return createErr("invalid number of repetitions");
+
   // Load the kernel descriptor JSON file.
   auto KernelDescrBufferOrErr =
       MemoryBuffer::getFile(JsonFilename, /*isText=*/true,
@@ -201,16 +219,29 @@ Error replayKernel() {
   if (Err)
     return Err;
 
+  // Check that a minimum and maximum have been exported.
   if (TeamsLimits.size() != 2 || ThreadsLimits.size() != 2)
     return createErr("TeamsLimits and ThreadsLimits must have a min and max");
 
+  // Check that the minimum and maximum are specified or both are zero.
+  if (bool(TeamsLimits[0]) != bool(TeamsLimits[1]))
+    return createErr("TeamsLimits min and max are inconsistent");
+  if (bool(ThreadsLimits[0]) != bool(ThreadsLimits[1]))
+    return createErr("ThreadsLimits min and max are inconsistent");
+
   // If the limits were specified, verify the selected values are valid.
-  if (TeamsLimits[0] > 0 &&
+  if (!IgnoreLimitsOpt && TeamsLimits[0] > 0 &&
       (NumTeams < TeamsLimits[0] || NumTeams > TeamsLimits[1]))
-    return createErr("number of teams is out of the allowed limits");
-  if (ThreadsLimits[0] > 0 &&
+    return createErr("number of teams (%" PRIu32
+                     ") is out of the allowed limits (min,max: %" PRIu32
+                     ",%" PRIu32 ")",
+                     NumTeams, TeamsLimits[0], TeamsLimits[1]);
+  if (!IgnoreLimitsOpt && ThreadsLimits[0] > 0 &&
       (NumThreads < ThreadsLimits[0] || NumThreads > ThreadsLimits[1]))
-    return createErr("number of threads is out of the allowed limits");
+    return createErr("number of threads (%" PRIu32
+                     ") is out of the allowed limits (min,max: %" PRIu32
+                     ",%" PRIu32 ")",
+                     NumThreads, ThreadsLimits[0], ThreadsLimits[1]);
 
   // Retrieve the arguments of the kernel.
   SmallVector<void *> TgtArgs;
@@ -274,7 +305,7 @@ Error replayKernel() {
   }
 
   // Load the device image file.
-  Filepath.replace_extension("image");
+  Filepath.replace_extension(LoadBitcodeOpt ? "bc" : "image");
   auto ImageBufferOrErr =
       MemoryBuffer::getFile(Filepath.c_str(), /*isText=*/false,
                             /*RequiresNullTerminator=*/false);
@@ -315,15 +346,23 @@ Error replayKernel() {
   auto RecordInputBuffer = std::move(RecordInputBufferOrErr.get());
 
   KernelReplayOutcomeTy Outcome;
-  Rc = __tgt_target_kernel_replay(
-      /*Loc=*/nullptr, DeviceId, OffloadEntries[0].Address,
-      const_cast<char *>(RecordInputBuffer->getBufferStart()),
-      RecordInputBuffer->getBufferSize(),
-      NumGlobals ? &OffloadEntries[1] : nullptr, NumGlobals, TgtArgs.data(),
-      TgtArgOffsets.data(), NumArgs, NumTeams, NumThreads, SharedMemorySize,
-      LoopTripCount, &Outcome);
-  if (Rc != OMP_TGT_SUCCESS)
-    return createErr("failed to replay kernel");
+
+  // Perform the kernel replay and verification (if needed) for each repetition.
+  for (uint32_t R = 1; R <= RepetitionsOpt; ++R) {
+    Rc = __tgt_target_kernel_replay(
+        /*Loc=*/nullptr, DeviceId, OffloadEntries[0].Address,
+        const_cast<char *>(RecordInputBuffer->getBufferStart()),
+        R > 0 ? Outcome.ReplayDeviceAlloc : nullptr,
+        RecordInputBuffer->getBufferSize(),
+        NumGlobals ? &OffloadEntries[1] : nullptr, NumGlobals, TgtArgs.data(),
+        TgtArgOffsets.data(), NumArgs, NumTeams, NumThreads, SharedMemorySize,
+        LoopTripCount, &Outcome);
+    if (Rc != OMP_TGT_SUCCESS)
+      return createErr("failed to replay kernel");
+
+    outs() << TOOL_PREFIX << " Replay time (" << R
+           << "): " << Outcome.KernelReplayTimeNs << " ns\n";
+  }
 
   // Verify the replay output if requested.
   if (VerifyOpt) {
@@ -331,10 +370,15 @@ Error replayKernel() {
       return createErr("replay output file was not generated");
 
     Filepath.replace_extension("record_output");
-    return verifyReplayOutput(Filepath.c_str(), Outcome.OutputFilepath.c_str());
-  }
+    if (auto Err = verifyReplayOutput(Filepath.c_str(),
+                                      Outcome.OutputFilepath.c_str()))
+      return Err;
 
-  outs() << TOOL_PREFIX << "Replay finished (verification skipped)\n";
+    // The verification was successful.
+    outs() << TOOL_PREFIX << " Replay done, device memory verified\n";
+  } else {
+    outs() << TOOL_PREFIX << " Replay done, verification skipped\n";
+  }
   return Error::success();
 }
 

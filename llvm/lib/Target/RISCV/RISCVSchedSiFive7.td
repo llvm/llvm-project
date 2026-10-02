@@ -298,14 +298,14 @@ multiclass SiFive7ProcResources<bit dualVALU = false> {
     // instruction at a time and remain busy for the number of cycles associated
     // with that instruction.
     def VCQ       : ProcResource<1>; // Vector Command Queue
+
+    def PipeAB : ProcResGroup<[!cast<ProcResource>(NAME#"PipeA"),
+                               !cast<ProcResource>(NAME#"PipeB")]>;
+
+    if dualVALU then
+    def VA1OrVA2 : ProcResGroup<[!cast<ProcResource>(NAME#"VA1"),
+                                 !cast<ProcResource>(NAME#"VA2")]>;
   }
-
-  def PipeAB : ProcResGroup<[!cast<ProcResource>(NAME#"PipeA"),
-                             !cast<ProcResource>(NAME#"PipeB")]>;
-
-  if dualVALU then
-  def VA1OrVA2 : ProcResGroup<[!cast<ProcResource>(NAME#"VA1"),
-                               !cast<ProcResource>(NAME#"VA2")]>;
 }
 
 multiclass SiFive7WriteResBase<int VLEN,
@@ -1141,9 +1141,12 @@ multiclass SiFive7WriteResBase<int VLEN,
     let Latency = 4, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, Cycles)] in {
       defm : LMULWriteResMX<"WriteVSlideUpX",   [VCQ, VA1], mx, IsWorstCase>;
       defm : LMULWriteResMX<"WriteVSlideDownX", [VCQ, VA1], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVSlideI",     [VCQ, VA1], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVISlide1X",   [VCQ, VA1], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVFSlide1F",   [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVSlideUpI",   [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVSlideDownI", [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVISlide1Up",   [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVISlide1Down", [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVFSlide1Up",   [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVFSlide1Down", [VCQ, VA1], mx, IsWorstCase>;
     }
   }
 

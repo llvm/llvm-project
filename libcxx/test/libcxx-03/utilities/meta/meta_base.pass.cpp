@@ -76,15 +76,6 @@ using FuncCallable = decltype(std::declval<T>().func(std::declval<U>()));
 template <class T>
 using BadCheck = typename T::DOES_NOT_EXIST;
 
-void test_is_valid_trait() {
-  static_assert(std::_IsValidExpansion<HasFooData, MemberTest>::value, "");
-  static_assert(!std::_IsValidExpansion<HasFooType, MemberTest>::value, "");
-  static_assert(!std::_IsValidExpansion<HasFooData, MemberTest2>::value, "");
-  static_assert(std::_IsValidExpansion<HasFooType, MemberTest2>::value, "");
-  static_assert(std::_IsValidExpansion<FuncCallable, MemberTest, int>::value, "");
-  static_assert(!std::_IsValidExpansion<FuncCallable, MemberTest, void*>::value, "");
-}
-
 int main(int, char**) {
   return 0;
 }

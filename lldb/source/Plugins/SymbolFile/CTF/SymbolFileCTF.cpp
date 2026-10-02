@@ -176,8 +176,8 @@ bool SymbolFileCTF::ParseHeader() {
 
     if (zstr.total_out != decompressed_size) {
       LLDB_LOG(log,
-               "CTF parsing failed: decompressed size ({0}) doesn't match "
-               "expected size ([1})",
+               "CTF parsing failed: decompressed size ({}) doesn't match "
+               "expected size ({})",
                zstr.total_out, decompressed_size);
       return false;
     }

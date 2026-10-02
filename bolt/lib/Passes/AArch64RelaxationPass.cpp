@@ -46,7 +46,7 @@ void AArch64RelaxationPass::runOnFunction(BinaryFunction &BF) {
       bool IsADR = BC.MIB->isADR(Inst);
 
       // TODO: Handle other types of LDR (literal, PC-relative) instructions.
-      if (!IsADR && !BC.MIB->isLDRXl(Inst) && !BC.MIB->isLDRWl(Inst))
+      if (!IsADR && !BC.MIB->isLoadLiteralGPR(Inst))
         continue;
 
       const MCSymbol *Symbol = BC.MIB->getTargetSymbol(Inst, IsADR ? 0 : 1);
@@ -59,10 +59,12 @@ void AArch64RelaxationPass::runOnFunction(BinaryFunction &BF) {
           continue;
       }
 
-      // Don't relax ADR/LDR if it points to the same function and is in the
-      // main fragment and BF initial size is < 1MB.
+      // The layout of a non-simple function is preserved, so references within
+      // the same fragment retain their original in-range displacement. For
+      // simple functions, basic blocks can move, but an initial size below 1MiB
+      // guarantees that internal references remain in range after reordering.
       const unsigned OneMB = 0x100000;
-      if (BF.getSize() < OneMB) {
+      if (!BF.isSimple() || BF.getSize() < OneMB) {
         BinaryFunction *TargetBF = BC.getFunctionForSymbol(Symbol);
         if (TargetBF == &BF && !BB.isSplit())
           continue;

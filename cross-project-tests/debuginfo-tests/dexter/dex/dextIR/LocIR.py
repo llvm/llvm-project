@@ -46,3 +46,8 @@ class LocIR:
             return self.column > rhs.column
 
         return self.lineno > rhs.lineno
+
+    def short_str(self):
+        """Returns a shortened version of the location string by using only the basename of the file."""
+        basename = os.path.basename(self.path) if self.path else None
+        return f"{basename}:{self.lineno}:{self.column}"

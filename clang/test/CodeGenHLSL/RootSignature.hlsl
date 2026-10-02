@@ -77,7 +77,7 @@ void RootDescriptorsEntry() {}
 
 // checking mipLODBias, maxAnisotropy, comparisonFunc, borderColor
 // note: the hex value is the float bit representation of 12.45
-// CHECK-SAME: float 0x4028E66660000000, i32 9, i32 3, i32 2,
+// CHECK-SAME: float 1.245000e+01, i32 9, i32 3, i32 2,
 
 // checking minLOD, maxLOD
 // CHECK-SAME: float -1.280000e+02, float 1.280000e+02,

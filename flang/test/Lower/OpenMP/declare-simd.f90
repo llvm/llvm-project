@@ -57,7 +57,7 @@ end subroutine  declare_simd_linear
 ! CHECK: %[[SCOPE:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[SCOPE]] arg 4 {{.*}} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[C1:.*]] = arith.constant 1 : i32
-! CHECK: omp.declare_simd linear(ref(%[[I]]#0 : !fir.ref<i32> = %[[C1]] : i32)) {linear_var_types = [i32]}{{$}}
+! CHECK: omp.declare_simd linear(ref(%[[I]]#0 : !fir.ref<i32> = %[[C1]] : i32)) linear_var_types([i32]){{$}}
 ! CHECK: return
 
 subroutine declare_simd_simdlen(x, y, n, i)
@@ -158,10 +158,11 @@ end subroutine declare_simd_combined
 ! CHECK-SAME:         %[[Y_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>> -> 64 : i64)
 ! CHECK-SAME: inbranch
 ! CHECK-SAME: linear(ref(%[[I_DECL]]#0 : !fir.ref<i32> = %[[C1]] : i32))
+! CHECK-SAME: linear_var_types([i32])
 ! CHECK-SAME: simdlen(8)
 ! CHECK-SAME: uniform(%[[X_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>,
 ! CHECK-SAME:         %[[Y_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>)
-! CHECK-SAME: {linear_var_types = [i32]}{{$}}
+! CHECK-SAME: {{$}}
 ! CHECK: return
 
 subroutine declare_simd_linear_val(a, b)
@@ -180,7 +181,7 @@ end subroutine declare_simd_linear_val
 ! CHECK: %[[C2:.*]] = arith.constant 2 : i32
 ! CHECK: %[[C1:.*]] = arith.constant 1 : i32
 ! CHECK: omp.declare_simd linear(val(%[[A]]#0 : !fir.ref<i32> = %[[C2]] : i32), val(%[[B]]#0 : !fir.ref<i32> = %[[C1]] : i32))
-! CHECK-SAME: {linear_var_types = [i32, i32]}{{$}}
+! CHECK-SAME: linear_var_types([i32, i32]){{$}}
 ! CHECK: return
 
 subroutine declare_simd_linear_ref(x)
@@ -197,7 +198,7 @@ end subroutine declare_simd_linear_ref
 ! CHECK: %[[X:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[SCOPE]] arg 1 {{.*}} : (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
 ! CHECK: %[[C4:.*]] = arith.constant 4 : i32
 ! CHECK: omp.declare_simd linear(ref(%[[X]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>> = %[[C4]] : i32))
-! CHECK-SAME: {linear_var_types = [!fir.box<!fir.heap<i32>>]}{{$}}
+! CHECK-SAME: linear_var_types([!fir.box<!fir.heap<i32>>]){{$}}
 ! CHECK: return
 
 subroutine declare_simd_linear_uval(y)
@@ -214,5 +215,5 @@ end subroutine declare_simd_linear_uval
 ! CHECK: %[[Y:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[SCOPE]] arg 1 {{.*}} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[C1:.*]] = arith.constant 1 : i32
 ! CHECK: omp.declare_simd linear(uval(%[[Y]]#0 : !fir.ref<i32> = %[[C1]] : i32))
-! CHECK-SAME: {linear_var_types = [i32]}{{$}}
+! CHECK-SAME: linear_var_types([i32]){{$}}
 ! CHECK: return

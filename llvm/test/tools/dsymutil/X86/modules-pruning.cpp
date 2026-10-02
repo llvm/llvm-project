@@ -3,6 +3,11 @@
 // RUN:   -y %p/dummy-debug-map.map -o - \
 // RUN:     | llvm-dwarfdump --name isRef -p - | FileCheck %s
 
+// RUN: dsymutil --linker parallel -f -oso-prepend-path=%p/../Inputs/modules-pruning \
+// RUN:   -verify \
+// RUN:   -y %p/dummy-debug-map.map -o - \
+// RUN:     | llvm-dwarfdump --name isRef -p - | FileCheck %s
+
 /* Compile with:
    cat >modules.modulemap <<EOF
    module Outer {

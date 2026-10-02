@@ -1,0 +1,7 @@
+libdir=@CMAKE_INSTALL_FULL_LIBDIR@
+
+Name: @PROJECT_NAME@
+Description: Google microbenchmark framework (with main() function)
+Version: @NORMALIZED_VERSION@
+Requires: benchmark
+Libs: -L${libdir} -lbenchmark_main

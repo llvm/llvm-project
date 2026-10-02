@@ -4,7 +4,7 @@
 define void @test(float %0) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: float [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> <float poison, float 0.000000e+00>, float [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> <float poison, float 0.000000e+00>, float [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> <float 0.000000e+00, float poison>, <2 x i32> <i32 2, i32 0>
 ; CHECK-NEXT:    [[TMP5:%.*]] = fdiv <2 x float> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = fdiv <2 x float> [[TMP6]], zeroinitializer
@@ -21,8 +21,8 @@ define void @test(float %0) {
 ; CHECK:       [[BB12]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = fmul <2 x float> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = fsub <2 x float> [[TMP11]], [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x float> [[TMP14]], i32 0
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[TMP14]], i32 1
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x float> [[TMP14]], i64 0
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[TMP14]], i64 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = fadd float [[TMP15]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = call float @llvm.fabs.f32(float [[TMP17]])
 ; CHECK-NEXT:    ret void

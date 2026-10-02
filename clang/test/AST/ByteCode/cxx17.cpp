@@ -174,5 +174,23 @@ template <int I> struct std::tuple_element<I, const C> {
 
 namespace ZeroInCheckInvoke {
   constexpr C foo(const C &) { return C{}; }
+#ifndef __MVS__
   thread_local const auto &[s, t, u] = foo(C{}); // both-warning {{thread_local}}
+#endif
+}
+
+namespace InitListBaseInit {
+  struct A {
+    int m;
+    constexpr A(int m) : m(m) {}
+  };
+
+  struct B : A {
+    A a;
+    int i;
+  };
+  constexpr B b{42, 43};
+  static_assert(b.m == 42);
+  static_assert(b.a.m == 43);
+  static_assert(b.i == 0);
 }

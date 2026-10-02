@@ -1,0 +1,12 @@
+# Check that ORC_RT_LOG narrows output at runtime to levels at or above the
+# requested threshold.
+#
+# REQUIRES: orc-rt-log-level-warning
+# RUN: env ORC_RT_LOG=error orc-rt-log-check 2>&1 | FileCheck %s
+
+# With the threshold raised to error, warning must not appear; error must.
+# warning is compiled in (orc-rt-log-level-warning), so its absence proves runtime
+# narrowing rather than a compiled-out level.
+# CHECK-NOT:  [orc-rt:General:WARNING]
+# CHECK:      [orc-rt:General:ERROR] error message
+# CHECK-NOT:  [orc-rt:General:WARNING]

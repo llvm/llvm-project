@@ -2,7 +2,7 @@
 
 ! CHECK-LABEL: func @_QPtarget_teams_workdistribute
 ! CHECK: omp.target_data map_entries({{.*}})
-! CHECK: omp.target thread_limit({{.*}}) host_eval({{.*}}) map_entries({{.*}})
+! CHECK: omp.target kernel_type(spmd) thread_limit({{.*}}) host_eval({{.*}}) map_entries({{.*}})
 ! CHECK: omp.teams num_teams({{.*}})
 ! CHECK: omp.parallel
 ! CHECK: omp.distribute

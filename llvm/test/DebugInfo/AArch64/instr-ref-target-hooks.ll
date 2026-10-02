@@ -1,7 +1,7 @@
 ; Test to ensure that variable "__last" is properly recovered at the end of the livedebugvalues pass when Instruction Referencing-based LiveDebugValues is used.
 ; This testcase was obtained by looking at FileCheck.cpp and reducing it down via llvm-reduce.
 
-; RUN: llc -mtriple=aarch64-apple-darwin -o - %s -stop-after=livedebugvalues -O2 -experimental-debug-variable-locations | FileCheck %s
+; RUN: llc -mtriple=aarch64-apple-darwin -o - %s -stop-after=livedebugvalues -O2 -experimental-debug-variable-locations -aarch64-br-merging-base-cost=-1 | FileCheck %s
 
 ; CHECK: ![[LOC:[0-9]+]] = !DILocalVariable(name: "__last",
 ; CHECK: DBG_VALUE_LIST ![[LOC]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 8, DW_OP_deref), $sp

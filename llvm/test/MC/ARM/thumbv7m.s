@@ -36,10 +36,10 @@
 @ CHECK-V6M-NEXT: mrs r0, basepri_max
 @ CHECK-V6M: error: invalid instruction
 @ CHECK-V6M-NEXT: mrs r0, faultmask
-@ CHECK-V6M: error: invalid instruction
+@ CHECK-V6M: error: invalid operand for instruction
 @ CHECK-V6M-NEXT: msr basepri, r0
-@ CHECK-V6M: error: invalid instruction
+@ CHECK-V6M: error: invalid operand for instruction
 @ CHECK-V6M-NEXT: msr basepri_max, r0
-@ CHECK-V6M: error: invalid instruction
+@ CHECK-V6M: error: invalid operand for instruction
 @ CHECK-V6M-NEXT: msr faultmask, r0
 

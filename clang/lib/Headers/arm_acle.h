@@ -222,7 +222,8 @@ __rev16(uint32_t __t) {
 
 static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
 __rev16ll(uint64_t __t) {
-  return (((uint64_t)__rev16(__t >> 32)) << 32) | (uint64_t)__rev16((uint32_t)__t);
+  return (((__t >> 8) & 0x00ff00ff00ff00ff) |
+          ((__t << 8) & 0xff00ff00ff00ff00));
 }
 
 static __inline__ unsigned long __attribute__((__always_inline__, __nodebug__))
@@ -739,6 +740,14 @@ static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__, target
 __arm_st64bv0(void *__addr, data512_t __value) {
   return __builtin_arm_st64bv0(__addr, __value.val);
 }
+#endif
+
+/* Atomic store with hints */
+#if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE
+#define HINT_STSHH_KEEP 0
+#define HINT_STSHH_STRM 1
+#define __arm_atomic_store_with_hint(ptr, data, memory_order, hint)            \
+  __builtin_arm_atomic_store_with_hint(ptr, data, memory_order, hint)
 #endif
 
 /* 11.1 Special register intrinsics */

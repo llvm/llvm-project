@@ -531,6 +531,8 @@ sw.epilog:                                        ; preds = %entry
 }
 
 !llvm.dbg.cu = !{!0}
+!15 = !{null}
+!16 = !DISubroutineType(types: !15)
 !llvm.module.flags = !{!3, !4, !5}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, runtimeVersion: 0, emissionKind: FullDebug)
@@ -538,7 +540,7 @@ sw.epilog:                                        ; preds = %entry
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"PIC Level", i32 2}
-!7 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 2, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0)
+!7 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 2, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, type: !16, unit: !0)
 !12 = !DILocalVariable(name: "c", scope: !7)
 !13 = !DIExpression()
 !14 = !DILocation(line: 2, column: 12, scope: !7)

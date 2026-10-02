@@ -18,8 +18,8 @@ void test_cleanup_with_automatic_storage_duration() {
 }
 
 // CIR: cir.func{{.*}} @_Z44test_cleanup_with_automatic_storage_durationv()
-// CIR:   %[[REF_TMP:.*]] = cir.alloca !rec_Struk, !cir.ptr<!rec_Struk>, ["ref.tmp0"]
-// CIR:   %[[REF:.*]] = cir.alloca !cir.ptr<!rec_Struk>, !cir.ptr<!cir.ptr<!rec_Struk>>, ["ref", init, const]
+// CIR:   %[[REF_TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_Struk>
+// CIR:   %[[REF:.*]] = cir.alloca "ref" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_Struk>>
 // CIR:   cir.call @_ZN5StrukC1Ev(%[[REF_TMP]])
 // CIR:   cir.cleanup.scope {
 // CIR:     cir.store{{.*}} %[[REF_TMP]], %[[REF]]

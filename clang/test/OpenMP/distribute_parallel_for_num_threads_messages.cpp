@@ -48,7 +48,7 @@ T tmain(T argc, S **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for num_threads (argv[1]=2) // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error 2 {{expression must have integral or unscoped enumeration type, not 'char *'}}
+#pragma omp distribute parallel for num_threads (argv[1]=2) // expected-error 2 {{incompatible integer to pointer conversion assigning to 'char *' from 'int'}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target
 #pragma omp teams
@@ -98,7 +98,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for num_threads (argv[1]=2) // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expression must have integral or unscoped enumeration type, not 'char *'}}
+#pragma omp distribute parallel for num_threads (argv[1]=2) // expected-error {{incompatible integer to pointer conversion assigning to 'char *' from 'int'}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target
 #pragma omp teams

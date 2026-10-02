@@ -92,6 +92,11 @@ enum {
   ///        failed match.
   GIM_Try,
 
+  /// GIM_Try only if the feature bits match.
+  /// - OnFail(4) - The MatchTable entry at which to resume if the match fails.
+  /// - Feature(2) - Expected features
+  GIM_Try_CheckFeatures,
+
   /// Switch over the opcode on the specified instruction
   /// - InsnID(ULEB128) - Instruction ID
   /// - LowerBound(2) - numerically minimum opcode supported
@@ -125,10 +130,6 @@ enum {
   /// - OpIdx(ULEB128) - Operand index
   GIM_RecordInsn,
   GIM_RecordInsnIgnoreCopies,
-
-  /// Check the feature bits
-  ///   Feature(2) - Expected features
-  GIM_CheckFeatures,
 
   /// Check the opcode on the specified instruction
   /// - InsnID(ULEB128) - Instruction ID
@@ -514,6 +515,8 @@ enum {
   /// Calls a C++ function that concludes the current match.
   /// The C++ function is free to return false and reject the match, or
   /// return true and mutate the instruction(s) (or do nothing, even).
+  /// Poison-generating flags left on OutMIs by the custom action are treated as
+  /// explicitly preserved.
   /// - FnID(2) - The function to call.
   GIR_DoneWithCustomAction,
 
@@ -737,6 +740,8 @@ protected:
                                NewMIVector &OutMIs) const {
     llvm_unreachable("Subclass does not implement runCustomAction!");
   }
+
+  virtual uint32_t getRootFlagsToDrop() const { return 0; }
 
   LLVM_ABI bool isOperandImmEqual(const MachineOperand &MO, int64_t Value,
                                   const MachineRegisterInfo &MRI,

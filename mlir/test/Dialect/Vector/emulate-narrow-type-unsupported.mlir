@@ -7,14 +7,14 @@
 /// vector.load
 ///----------------------------------------------------------------------------------------
 
-func.func @vector_load_2d_i8_negative(%arg1: index, %arg2: index) -> vector<2x4xi8> {
+func.func @negative_vector_load_2d_i8(%arg1: index, %arg2: index) -> vector<2x4xi8> {
     %0 = memref.alloc() : memref<3x4xi8>
     %1 = vector.load %0[%arg1, %arg2] : memref<3x4xi8>, vector<2x4xi8>
     return %1 : vector<2x4xi8>
 }
 
 // No support for loading 2D vectors - expect no conversions
-//  CHECK-LABEL: func @vector_load_2d_i8_negative
+//  CHECK-LABEL: func @negative_vector_load_2d_i8
 //        CHECK:   memref.alloc() : memref<3x4xi8>
 //    CHECK-NOT: i32
 
@@ -24,14 +24,14 @@ func.func @vector_load_2d_i8_negative(%arg1: index, %arg2: index) -> vector<2x4x
 /// vector.transfer_read
 ///----------------------------------------------------------------------------------------
 
-func.func @vector_transfer_read_2d_i4_negative(%arg1: index, %arg2: index) -> vector<2x8xi4> {
+func.func @negative_vector_transfer_read_2d_i4(%arg1: index, %arg2: index) -> vector<2x8xi4> {
     %c0 = arith.constant 0 : i4
     %0 = memref.alloc() : memref<3x8xi4>
     %1 = vector.transfer_read %0[%arg1, %arg2], %c0 {in_bounds = [true, true]} :
       memref<3x8xi4>, vector<2x8xi4>
     return %1 : vector<2x8xi4>
 }
-//  CHECK-LABEL: func @vector_transfer_read_2d_i4_negative
+//  CHECK-LABEL: func @negative_vector_transfer_read_2d_i4
 //        CHECK:  memref.alloc() : memref<3x8xi4>
 //    CHECK-NOT: i32
 
@@ -41,7 +41,7 @@ func.func @vector_transfer_read_2d_i4_negative(%arg1: index, %arg2: index) -> ve
 /// vector.maskedload
 ///----------------------------------------------------------------------------------------
 
-func.func @vector_maskedload_2d_i8_negative(%arg1: index, %arg2: index, %arg3: index, %passthru: vector<2x4xi8>) -> vector<2x4xi8> {
+func.func @negative_vector_maskedload_2d_i8(%arg1: index, %arg2: index, %arg3: index, %passthru: vector<2x4xi8>) -> vector<2x4xi8> {
     %0 = memref.alloc() : memref<3x4xi8>
     %mask = vector.create_mask %arg3, %arg3 : vector<2x4xi1>
     %1 = vector.maskedload %0[%arg1, %arg2], %mask, %passthru :
@@ -49,9 +49,23 @@ func.func @vector_maskedload_2d_i8_negative(%arg1: index, %arg2: index, %arg3: i
     return %1 : vector<2x4xi8>
 }
 
-//  CHECK-LABEL: func @vector_maskedload_2d_i8_negative
+//  CHECK-LABEL: func @negative_vector_maskedload_2d_i8
 //        CHECK:  memref.alloc() : memref<3x4xi8>
 //    CHECK-NOT: i32
+
+// -----
+
+// The mask is a block argument and cannot be traced back to a supported
+// mask-creation op, so the load is left unconverted.
+
+func.func @negative_vector_maskedload_i8_block_arg_mask(%arg0: memref<?xi8>, %mask: vector<8xi1>, %passthru: vector<8xi8>) -> vector<8xi8> {
+  %c0 = arith.constant 0 : index
+  %0 = vector.maskedload %arg0[%c0], %mask, %passthru : memref<?xi8>, vector<8xi1>, vector<8xi8> into vector<8xi8>
+  return %0 : vector<8xi8>
+}
+
+//  CHECK-LABEL: func @negative_vector_maskedload_i8_block_arg_mask
+//        CHECK: vector.maskedload
 
 // -----
 
@@ -59,7 +73,7 @@ func.func @vector_maskedload_2d_i8_negative(%arg1: index, %arg2: index, %arg3: i
 /// vector.extract -> vector.masked_load
 ///----------------------------------------------------------------------------------------
 
-func.func @vector_extract_maskedload_2d_i4_negative(%arg1: index) -> vector<8x8x16xi4> {
+func.func @negative_vector_extract_maskedload_2d_i4(%arg1: index) -> vector<8x8x16xi4> {
     %0 = memref.alloc() : memref<8x8x16xi4>
     %c0 = arith.constant 0 : index
     %c16 = arith.constant 16 : index
@@ -73,7 +87,7 @@ func.func @vector_extract_maskedload_2d_i4_negative(%arg1: index) -> vector<8x8x
     return %63 : vector<8x8x16xi4>
 }
 
-//  CHECK-LABEL: func @vector_extract_maskedload_2d_i4_negative
+//  CHECK-LABEL: func @negative_vector_extract_maskedload_2d_i4
 //        CHECK: memref.alloc() : memref<8x8x16xi4>
 //    CHECK-NOT: i32
 
@@ -83,13 +97,13 @@ func.func @vector_extract_maskedload_2d_i4_negative(%arg1: index) -> vector<8x8x
 /// vector.store
 ///----------------------------------------------------------------------------------------
 
-func.func @vector_store_2d_i8_negative(%arg0: vector<2x8xi8>, %arg1: index, %arg2: index) {
+func.func @negative_vector_store_2d_i8(%arg0: vector<2x8xi8>, %arg1: index, %arg2: index) {
     %0 = memref.alloc() : memref<4x8xi8>
     vector.store %arg0, %0[%arg1, %arg2] :memref<4x8xi8>, vector<2x8xi8>
     return
 }
 
-//  CHECK-LABEL: func @vector_store_2d_i8_negative
+//  CHECK-LABEL: func @negative_vector_store_2d_i8
 //        CHECK: memref.alloc() : memref<4x8xi8>
 //    CHECK-NOT: i32
 
@@ -99,13 +113,27 @@ func.func @vector_store_2d_i8_negative(%arg0: vector<2x8xi8>, %arg1: index, %arg
 /// vector.maskedstore
 ///----------------------------------------------------------------------------------------
 
-func.func @vector_maskedstore_2d_i8_negative(%arg0: index, %arg1: index, %arg2: index, %value: vector<2x8xi8>) {
+func.func @negative_vector_maskedstore_2d_i8(%arg0: index, %arg1: index, %arg2: index, %value: vector<2x8xi8>) {
   %0 = memref.alloc() : memref<3x8xi8>
   %mask = vector.create_mask %arg2, %arg2 : vector<2x8xi1>
   vector.maskedstore %0[%arg0, %arg1], %mask, %value : memref<3x8xi8>, vector<2x8xi1>, vector<2x8xi8>
   return
 }
 
-//  CHECK-LABEL: func @vector_maskedstore_2d_i8_negative
+//  CHECK-LABEL: func @negative_vector_maskedstore_2d_i8
 //        CHECK: memref.alloc() : memref<3x8xi8>
 //    CHECK-NOT: i32
+
+// -----
+
+// The mask is a block argument and cannot be traced back to a supported
+// mask-creation op, so the store is left unconverted.
+
+func.func @negative_vector_maskedstore_i8_block_arg_mask(%arg0: memref<?xi8>, %mask: vector<8xi1>, %value: vector<8xi8>) {
+  %c0 = arith.constant 0 : index
+  vector.maskedstore %arg0[%c0], %mask, %value : memref<?xi8>, vector<8xi1>, vector<8xi8>
+  return
+}
+
+//  CHECK-LABEL: func @negative_vector_maskedstore_i8_block_arg_mask
+//        CHECK: vector.maskedstore

@@ -1,0 +1,25 @@
+add_entrypoint_object(
+  in6addr_any
+  SRCS
+    in6addr_any.cpp
+  HDRS
+    in6addr_any.h
+  DEPENDS
+    libc.hdr.netinet_in_macros
+    libc.hdr.types.struct_in6_addr
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  in6addr_loopback
+  SRCS
+    in6addr_loopback.cpp
+  HDRS
+    in6addr_loopback.h
+  DEPENDS
+    libc.hdr.netinet_in_macros
+    libc.hdr.types.struct_in6_addr
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)

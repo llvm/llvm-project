@@ -1,6 +1,12 @@
-// RUN: %clang_cc1 -O1 -triple spirv64 -fsycl-is-device -verify %s -o -
+// RUN: %clang_cc1 -O1 -triple spirv64 -fsycl-is-device -x c++ -verify %s -o -
 // RUN: %clang_cc1 -O1 -triple spirv64 -verify %s -cl-std=CL3.0 -x cl -o -
 // RUN: %clang_cc1 -O1 -triple spirv32 -verify %s -cl-std=CL3.0 -x cl -o -
+
+#ifdef __SYCL_DEVICE_ONLY__
+#define LOCALAS [[clang::sycl_local]]
+#else
+#define LOCALAS __attribute__((opencl_local))
+#endif
 
 void test_missing_arguments(int* p) {
   __builtin_spirv_generic_cast_to_ptr_explicit(p);
@@ -14,7 +20,7 @@ void test_wrong_flag_value(int* p) {
   // expected-error@-1 {{invalid value for storage class argument}}
 }
 
-void test_wrong_address_space(__attribute__((opencl_local)) int* p) {
+void test_wrong_address_space(int LOCALAS * p) {
   __builtin_spirv_generic_cast_to_ptr_explicit(p, 14);
   // expected-error@-1 {{expecting a pointer argument to the generic address space}}
 }

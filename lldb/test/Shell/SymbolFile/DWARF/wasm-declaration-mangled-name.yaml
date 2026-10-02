@@ -1,0 +1,89 @@
+# A C++ function defined in a translation unit compiled without debug info has
+# no defining DWARF DIE, only a declaration DIE (DW_AT_declaration, no
+# DW_AT_low_pc) that carries its DW_AT_linkage_name. The Wasm "name" section
+# stores only the demangled name, so unless the linkage name is recovered from
+# that declaration the code symbol has no mangled name and cannot be found by
+# it, which also defeats guessing a language from the symbol name.
+#
+# `S::fn()` below is such a function: its symbol comes from the name section
+# (demangled) and its only DIE is the declaration. LLDB must attach the linkage
+# name to the symbol so it resolves by the mangled name.
+
+# REQUIRES: webassembly
+# RUN: yaml2obj %s -o %t.wasm
+# RUN: %lldb %t.wasm -o "image lookup -s _ZN1S2fnEv" -o exit 2>&1 | FileCheck %s
+
+# CHECK: 1 symbols match '_ZN1S2fnEv'
+# CHECK: S::fn()
+
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:     []
+      - Index:           1
+        ParamTypes:      []
+        ReturnTypes:
+          - I32
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0, 1, 1 ]
+  - Type:            MEMORY
+    Memories:
+      - Minimum:         0x2
+  - Type:            GLOBAL
+    Globals:
+      - Index:           0
+        Type:            I32
+        Mutable:         true
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           65536
+  - Type:            EXPORT
+    Exports:
+      - Name:            _Z6callerv
+        Kind:            FUNCTION
+        Index:           1
+      - Name:            _ZN1S2fnEv
+        Kind:            FUNCTION
+        Index:           2
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            0B
+      - Index:           1
+        Locals:          []
+        Body:            1082808080000F0B
+      - Index:           2
+        Locals:          []
+        Body:            412A0F0B
+  - Type:            CUSTOM
+    Name:            .debug_abbrev
+    Payload:         011101250E1305030E10171B0E110112060000023400030E49133F193A0B3B0B02180000031301360B030E0B0B3A0B3B0B0000042E006E0E030E3A0B3B0B49133C193F190000052400030E3E0B0B0B0000062E001101120640186E0E030E3A0B3B0B49133F19000000
+  - Type:            CUSTOM
+    HeaderSecSizeEncodingLen: 2
+    Name:            .debug_info
+    Payload:         7300000004000000000004014300000021002A00000000000000350000000500000009000000021A000000370000000202050300000100030541000000010101040B00000032000000010150000000000516000000050406050000000900000007ED03000000009F000000002300000002035000000000
+  - Type:            CUSTOM
+    Name:            .debug_str
+    Payload:         5F5A3663616C6C657276005F5A4E315332666E457600696E7400676C6F62616C5F730063616C6C6572007573652E63707000666E002F746D702F676C6865726D005300636C616E672076657273696F6E2032322E312E302D776173692D73646B202868747470733A2F2F6769746875622E636F6D2F6C6C766D2F6C6C766D2D70726F6A65637420343433346461626236393931363835366238323466363861363462303239633637313735653533322900
+  - Type:            CUSTOM
+    Name:            .debug_line
+    Payload:         4600000004002A000000010101FB0E0D0001010101000000010000012E00006864722E68000100007573652E6370700000000000040205170A0005020600000014051006660202000101
+  - Type:            CUSTOM
+    Name:            name
+    FunctionNames:
+      - Index:           0
+        Name:            __wasm_call_ctors
+      - Index:           1
+        Name:            'caller()'
+      - Index:           2
+        Name:            'S::fn()'
+    GlobalNames:
+      - Index:           0
+        Name:            __stack_pointer
+...

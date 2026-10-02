@@ -25,15 +25,19 @@ int main() { return 0; }
 
 
 // RUN: %clang %s -target x86_64-apple-driverkit19.0 -isysroot %S/Inputs/DriverKit19.0.sdk -x c++ -### 2>&1 \
-// RUN: | FileCheck %s -DSDKROOT=%S/Inputs/DriverKit19.0.sdk --check-prefix=INC
+// RUN: | FileCheck %s -DSDKROOT=%S/Inputs/DriverKit19.0.sdk -DRESOURCE_DIR=%clang-resource-dir --check-prefix=INC
 // RUN: %clang %s -target x86_64-apple-driverkit21.0.1 -isysroot %S/Inputs/DriverKit21.0.1.sdk -x c++ -### 2>&1 \
-// RUN: | FileCheck %s -DSDKROOT=%S/Inputs/DriverKit21.0.1.sdk --check-prefix=INC
+// RUN: | FileCheck %s -DSDKROOT=%S/Inputs/DriverKit21.0.1.sdk -DRESOURCE_DIR=%clang-resource-dir --check-prefix=INC
 // RUN: %clang %s -target x86_64-apple-driverkit23.0 -isysroot %S/Inputs/DriverKit23.0.sdk -x c++ -### 2>&1 \
-// RUN: | FileCheck %s -DSDKROOT=%S/Inputs/DriverKit23.0.sdk --check-prefix=INC
+// RUN: | FileCheck %s -DSDKROOT=%S/Inputs/DriverKit23.0.sdk -DRESOURCE_DIR=%clang-resource-dir --check-prefix=INC
+// RUN: %clang %s -target ppc-apple-driverkit23.0 -isysroot %S/Inputs/DriverKit23.0.sdk -x c++ -### 2>&1 \
+// RUN: | FileCheck %s -DSDKROOT=%S/Inputs/DriverKit23.0.sdk -DRESOURCE_DIR=%clang-resource-dir --check-prefix=INC
+// RUN: %clang %s -target arm64-apple-driverkit23.0-macabi -isysroot %S/Inputs/DriverKit23.0.sdk -x c++ -### 2>&1 \
+// RUN: | FileCheck %s -DSDKROOT=%S/Inputs/DriverKit23.0.sdk -DRESOURCE_DIR=%clang-resource-dir --check-prefix=INC
 //
 // INC: "-isysroot" "[[SDKROOT]]"
 // INC: "-internal-isystem" "[[SDKROOT]]/System/DriverKit/usr/local/include"
-// INC: "-internal-isystem" "{{.+}}/lib{{(64)?}}/clang/{{[^/ ]+}}/include"
+// INC: "-internal-isystem" "[[RESOURCE_DIR]]/include"
 // INC: "-internal-externc-isystem" "[[SDKROOT]]/System/DriverKit/usr/include"
 // INC: "-internal-iframework" "[[SDKROOT]]/System/DriverKit/System/Library/Frameworks"
 // INC: "-internal-iframework" "[[SDKROOT]]/System/DriverKit/System/Library/SubFrameworks"

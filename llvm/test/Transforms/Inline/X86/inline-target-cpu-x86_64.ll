@@ -51,4 +51,4 @@ attributes #0 = { nounwind "target-cpu"="x86-64" }
 attributes #1 = { nounwind "target-cpu"="k8" }
 attributes #2 = { nounwind "target-cpu"="nehalem" }
 attributes #3 = { nounwind "target-cpu"="goldmont" }
-attributes #4 = { nounwind "target-cpu"="nocona" "target-features"="-sse3" }
+attributes #4 = { nounwind "target-cpu"="nocona" "target-features"="-sse3,-cx16" }

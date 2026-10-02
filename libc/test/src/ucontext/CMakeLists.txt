@@ -1,7 +1,7 @@
 add_custom_target(libc_ucontext_unittests)
 
 if(TARGET libc.src.ucontext.getcontext)
-  add_libc_unittest(
+  add_libc_test(
     ucontext_test
     SUITE
       libc_ucontext_unittests

@@ -1,6 +1,6 @@
 // This test merely verifies that emitting the object file does not cause a
 // crash when the LLVM coroutines passes are run.
-// RUN: %clang_cc1 -emit-obj -std=c++2a -fsanitize=null %s -o %t.o
+// RUN: %clang_cc1 -emit-obj -std=c++2a -fsanitize=null -Wno-coroutines-unsupported-target %s -o %t.o
 // UNSUPPORTED: target={{.*}}-zos{{.*}}
 
 namespace std {

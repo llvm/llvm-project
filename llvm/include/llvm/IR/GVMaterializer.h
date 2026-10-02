@@ -17,6 +17,7 @@
 #ifndef LLVM_IR_GVMATERIALIZER_H
 #define LLVM_IR_GVMATERIALIZER_H
 
+#include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace llvm {
@@ -25,7 +26,7 @@ class Error;
 class GlobalValue;
 class StructType;
 
-class GVMaterializer {
+class LLVM_ABI GVMaterializer {
 protected:
   GVMaterializer() = default;
 

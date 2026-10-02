@@ -45,5 +45,5 @@ for.body:
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 ;.
-; CHECK-INTRIN: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; CHECK-INTRIN: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ;.

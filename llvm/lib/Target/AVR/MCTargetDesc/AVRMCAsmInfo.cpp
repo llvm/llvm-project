@@ -19,7 +19,8 @@
 
 using namespace llvm;
 
-AVRMCAsmInfo::AVRMCAsmInfo(const Triple &TT, const MCTargetOptions &Options) {
+AVRMCAsmInfo::AVRMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   CodePointerSize = 2;
   CalleeSaveStackSlotSize = 2;
   CommentString = ";";
@@ -199,7 +200,7 @@ bool AVRMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
     if (E.getSpecifier() == AVR::S_PM)
       Spec = AVR::S_PM;
 
-    // TODO: don't attach specifier to MCSymbolRefExpr.
+    // TODO: Don't attach specifier to MCSymbolRefExpr.
     Result =
         MCValue::get(Value.getAddSym(), nullptr, Value.getConstant(), Spec);
   }

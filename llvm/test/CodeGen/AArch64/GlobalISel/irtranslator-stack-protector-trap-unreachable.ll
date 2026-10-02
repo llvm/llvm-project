@@ -20,13 +20,13 @@ define void @test() nounwind ssp {
   ; NO_TRAP_UNREACHABLE-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.buf
   ; NO_TRAP_UNREACHABLE-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; NO_TRAP_UNREACHABLE-NEXT:   $x0 = COPY [[FRAME_INDEX1]](p0)
-  ; NO_TRAP_UNREACHABLE-NEXT:   BL @callee, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit-def $w0
+  ; NO_TRAP_UNREACHABLE-NEXT:   BL @callee, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $w0
   ; NO_TRAP_UNREACHABLE-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; NO_TRAP_UNREACHABLE-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
   ; NO_TRAP_UNREACHABLE-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.StackGuardSlot
   ; NO_TRAP_UNREACHABLE-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[FRAME_INDEX2]](p0) :: (volatile load (i64) from %stack.0.StackGuardSlot)
-  ; NO_TRAP_UNREACHABLE-NEXT:   [[LOAD_STACK_GUARD2:%[0-9]+]]:gpr64sp(s64) = LOAD_STACK_GUARD :: (dereferenceable invariant load (p0) from @__stack_chk_guard)
-  ; NO_TRAP_UNREACHABLE-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[LOAD_STACK_GUARD2]](s64), [[LOAD]]
+  ; NO_TRAP_UNREACHABLE-NEXT:   [[LOAD_STACK_GUARD2:%[0-9]+]]:gpr64sp(i64) = LOAD_STACK_GUARD :: (dereferenceable invariant load (p0) from @__stack_chk_guard)
+  ; NO_TRAP_UNREACHABLE-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[LOAD_STACK_GUARD2]](i64), [[LOAD]]
   ; NO_TRAP_UNREACHABLE-NEXT:   G_BRCOND [[ICMP]](i1), %bb.3
   ; NO_TRAP_UNREACHABLE-NEXT:   G_BR %bb.2
   ; NO_TRAP_UNREACHABLE-NEXT: {{  $}}
@@ -34,7 +34,7 @@ define void @test() nounwind ssp {
   ; NO_TRAP_UNREACHABLE-NEXT:   successors:
   ; NO_TRAP_UNREACHABLE-NEXT: {{  $}}
   ; NO_TRAP_UNREACHABLE-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; NO_TRAP_UNREACHABLE-NEXT:   BL &__stack_chk_fail, csr_aarch64_aapcs, implicit-def $lr, implicit $sp
+  ; NO_TRAP_UNREACHABLE-NEXT:   BL &__stack_chk_fail, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp
   ; NO_TRAP_UNREACHABLE-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; NO_TRAP_UNREACHABLE-NEXT: {{  $}}
   ; NO_TRAP_UNREACHABLE-NEXT: bb.2.entry:
@@ -51,13 +51,13 @@ define void @test() nounwind ssp {
   ; TRAP_UNREACHABLE-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.buf
   ; TRAP_UNREACHABLE-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; TRAP_UNREACHABLE-NEXT:   $x0 = COPY [[FRAME_INDEX1]](p0)
-  ; TRAP_UNREACHABLE-NEXT:   BL @callee, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit-def $w0
+  ; TRAP_UNREACHABLE-NEXT:   BL @callee, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $w0
   ; TRAP_UNREACHABLE-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; TRAP_UNREACHABLE-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
   ; TRAP_UNREACHABLE-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.StackGuardSlot
   ; TRAP_UNREACHABLE-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[FRAME_INDEX2]](p0) :: (volatile load (i64) from %stack.0.StackGuardSlot)
-  ; TRAP_UNREACHABLE-NEXT:   [[LOAD_STACK_GUARD2:%[0-9]+]]:gpr64sp(s64) = LOAD_STACK_GUARD :: (dereferenceable invariant load (p0) from @__stack_chk_guard)
-  ; TRAP_UNREACHABLE-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[LOAD_STACK_GUARD2]](s64), [[LOAD]]
+  ; TRAP_UNREACHABLE-NEXT:   [[LOAD_STACK_GUARD2:%[0-9]+]]:gpr64sp(i64) = LOAD_STACK_GUARD :: (dereferenceable invariant load (p0) from @__stack_chk_guard)
+  ; TRAP_UNREACHABLE-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[LOAD_STACK_GUARD2]](i64), [[LOAD]]
   ; TRAP_UNREACHABLE-NEXT:   G_BRCOND [[ICMP]](i1), %bb.3
   ; TRAP_UNREACHABLE-NEXT:   G_BR %bb.2
   ; TRAP_UNREACHABLE-NEXT: {{  $}}
@@ -65,7 +65,7 @@ define void @test() nounwind ssp {
   ; TRAP_UNREACHABLE-NEXT:   successors:
   ; TRAP_UNREACHABLE-NEXT: {{  $}}
   ; TRAP_UNREACHABLE-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; TRAP_UNREACHABLE-NEXT:   BL &__stack_chk_fail, csr_aarch64_aapcs, implicit-def $lr, implicit $sp
+  ; TRAP_UNREACHABLE-NEXT:   BL &__stack_chk_fail, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp
   ; TRAP_UNREACHABLE-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; TRAP_UNREACHABLE-NEXT:   G_TRAP
   ; TRAP_UNREACHABLE-NEXT: {{  $}}

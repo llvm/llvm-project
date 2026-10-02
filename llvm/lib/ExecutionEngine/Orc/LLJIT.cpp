@@ -11,6 +11,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
+#include "llvm/ExecutionEngine/Orc/DlfcnSPS.h"
 #include "llvm/ExecutionEngine/Orc/EHFrameRegistrationPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
@@ -19,6 +20,7 @@
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/RecordProxy.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/ExecutionEngine/Orc/UnwindInfoRegistrationPlugin.h"
@@ -601,10 +603,6 @@ namespace llvm {
 namespace orc {
 
 Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
-  using llvm::orc::shared::SPSExecutorAddr;
-  using llvm::orc::shared::SPSString;
-  using SPSDLOpenSig = SPSExecutorAddr(SPSString, int32_t);
-  using SPSDLUpdateSig = int32_t(SPSExecutorAddr);
   enum dlopen_mode : int32_t {
     ORC_RT_RTLD_LAZY = 0x1,
     ORC_RT_RTLD_NOW = 0x2,
@@ -615,57 +613,52 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
   auto &ES = J.getExecutionSession();
   auto MainSearchOrder = J.getMainJITDylib().withLinkOrderDo(
       [](const JITDylibSearchOrder &SO) { return SO; });
-  StringRef WrapperToCall = "__orc_rt_jit_dlopen_wrapper";
-  bool dlupdate = false;
+
   if (InitializedDylib.contains(&JD)) {
-    WrapperToCall = "__orc_rt_jit_dlupdate_wrapper";
-    dlupdate = true;
-  } else
-    InitializedDylib.insert(&JD);
+    // Already initialized: re-run initializers via dlupdate.
+    DlfcnUpdateProxy Update;
+    if (auto Err =
+            lookupAndApply(LookupKind::Static, MainSearchOrder,
+                           {recordProxy<sps::DlfcnUpdateProxySpec>(&Update)}))
+      return Err;
+    auto Result = Update(ES, DSOHandles[&JD]);
+    if (!Result)
+      return Result.takeError();
+    if (*Result)
+      return make_error<StringError>("dlupdate failed",
+                                     inconvertibleErrorCode());
+    return Error::success();
+  }
 
-  if (auto WrapperAddr =
-          ES.lookup(MainSearchOrder, J.mangleAndIntern(WrapperToCall))) {
-    if (dlupdate) {
-      int32_t result;
-      auto E = ES.callSPSWrapper<SPSDLUpdateSig>(WrapperAddr->getAddress(),
-                                                 result, DSOHandles[&JD]);
-      if (E)
-        return E;
-      else if (result)
-        return make_error<StringError>("dlupdate failed",
-                                       inconvertibleErrorCode());
-    } else
-      return ES.callSPSWrapper<SPSDLOpenSig>(WrapperAddr->getAddress(),
-                                             DSOHandles[&JD], JD.getName(),
-                                             int32_t(ORC_RT_RTLD_LAZY));
-  } else
-    return WrapperAddr.takeError();
-
+  InitializedDylib.insert(&JD);
+  DlfcnOpenProxy Open;
+  if (auto Err = lookupAndApply(LookupKind::Static, MainSearchOrder,
+                                {recordProxy<sps::DlfcnOpenProxySpec>(&Open)}))
+    return Err;
+  auto H = Open(ES, JD.getName(), int32_t(ORC_RT_RTLD_LAZY));
+  if (!H)
+    return H.takeError();
+  DSOHandles[&JD] = *H;
   return Error::success();
 }
 
 Error ORCPlatformSupport::deinitialize(orc::JITDylib &JD) {
-  using llvm::orc::shared::SPSExecutorAddr;
-  using SPSDLCloseSig = int32_t(SPSExecutorAddr);
-
   auto &ES = J.getExecutionSession();
   auto MainSearchOrder = J.getMainJITDylib().withLinkOrderDo(
       [](const JITDylibSearchOrder &SO) { return SO; });
 
-  if (auto WrapperAddr = ES.lookup(
-          MainSearchOrder, J.mangleAndIntern("__orc_rt_jit_dlclose_wrapper"))) {
-    int32_t result;
-    auto E = J.getExecutionSession().callSPSWrapper<SPSDLCloseSig>(
-        WrapperAddr->getAddress(), result, DSOHandles[&JD]);
-    if (E)
-      return E;
-    else if (result)
-      return make_error<StringError>("dlclose failed",
-                                     inconvertibleErrorCode());
-    DSOHandles.erase(&JD);
-    InitializedDylib.erase(&JD);
-  } else
-    return WrapperAddr.takeError();
+  DlfcnCloseProxy Close;
+  if (auto Err =
+          lookupAndApply(LookupKind::Static, MainSearchOrder,
+                         {recordProxy<sps::DlfcnCloseProxySpec>(&Close)}))
+    return Err;
+  auto Result = Close(ES, DSOHandles[&JD]);
+  if (!Result)
+    return Result.takeError();
+  if (*Result)
+    return make_error<StringError>("dlclose failed", inconvertibleErrorCode());
+  DSOHandles.erase(&JD);
+  InitializedDylib.erase(&JD);
   return Error::success();
 }
 
@@ -777,7 +770,7 @@ Error LLJITBuilderState::prepareForConstruction() {
       D = std::make_unique<InPlaceTaskDispatcher>();
 #endif // LLVM_ENABLE_THREADS
     if (auto EPCOrErr =
-            SelfExecutorProcessControl::Create(nullptr, std::move(D), nullptr))
+            SelfExecutorProcessControl::Create(nullptr, std::move(D)))
       EPC = std::move(*EPCOrErr);
     else
       return EPCOrErr.takeError();
@@ -819,6 +812,9 @@ Error LLJITBuilderState::prepareForConstruction() {
       UseJITLink = TT.isPPC64ELFv2ABI();
       break;
     case Triple::ppc64le:
+      UseJITLink = TT.isOSBinFormatELF();
+      break;
+    case Triple::systemz:
       UseJITLink = TT.isOSBinFormatELF();
       break;
     default:
@@ -912,7 +908,7 @@ Error LLJIT::addIRModule(ResourceTrackerSP RT, ThreadSafeModule TSM) {
   assert(TSM && "Can not add null module");
 
   if (auto Err =
-          TSM.withModuleDo([&](Module &M) { return applyDataLayout(M); }))
+          TSM.withModuleDo([&](Module &M) { return applyTargetConfig(M); }))
     return Err;
 
   return InitHelperTransformLayer->add(std::move(RT), std::move(TSM));
@@ -941,6 +937,13 @@ Expected<ExecutorAddr> LLJIT::lookupLinkerMangled(JITDylib &JD,
     return Sym->getAddress();
   else
     return Sym.takeError();
+}
+
+Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+LLJIT::createMemoryManager(LLJITBuilderState &S, ExecutionSession &ES) {
+  if (S.CreateMemoryManager)
+    return S.CreateMemoryManager(ES);
+  return ES.getExecutorProcessControl().createDefaultMemoryManager();
 }
 
 Expected<std::unique_ptr<ObjectLayer>>
@@ -1014,6 +1017,13 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     }
   }
 
+  if (auto MM = createMemoryManager(S, *ES))
+    MemMgr = std::move(*MM);
+  else {
+    Err = MM.takeError();
+    return;
+  }
+
   if (auto DM = ES->getExecutorProcessControl().createDefaultDylibMgr())
     DylibMgr = std::move(*DM);
   else {
@@ -1021,8 +1031,7 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     return;
   }
 
-  auto ObjLayer = createObjectLinkingLayer(
-      S, *ES, ES->getExecutorProcessControl().getMemMgr());
+  auto ObjLayer = createObjectLinkingLayer(S, *ES, *MemMgr);
   if (!ObjLayer) {
     Err = ObjLayer.takeError();
     return;
@@ -1089,12 +1098,15 @@ std::string LLJIT::mangle(StringRef UnmangledName) const {
   std::string MangledName;
   {
     raw_string_ostream MangledNameStream(MangledName);
-    Mangler::getNameWithPrefix(MangledNameStream, UnmangledName, DL);
+    llvm::Mangler::getNameWithPrefix(MangledNameStream, UnmangledName, DL);
   }
   return MangledName;
 }
 
-Error LLJIT::applyDataLayout(Module &M) {
+Error LLJIT::applyTargetConfig(Module &M) {
+  if (M.getTargetTriple().empty())
+    M.setTargetTriple(TT);
+
   if (M.getDataLayout().isDefault())
     M.setDataLayout(DL);
 
@@ -1293,10 +1305,18 @@ Error LLLazyJIT::addLazyIRModule(JITDylib &JD, ThreadSafeModule TSM) {
   assert(TSM && "Can not add null module");
 
   if (auto Err = TSM.withModuleDo(
-          [&](Module &M) -> Error { return applyDataLayout(M); }))
+          [&](Module &M) -> Error { return applyTargetConfig(M); }))
     return Err;
 
   return CODLayer->add(JD, std::move(TSM));
+}
+
+// End the session before this class's members (CODLayer, IPLayer, LCTMgr) are
+// destroyed: endSession joins the compile threads, and those threads may still
+// be operating on the CompileOnDemandLayer's per-dylib IndirectStubsManagers.
+LLLazyJIT::~LLLazyJIT() {
+  if (auto Err = ES->endSession())
+    ES->reportError(std::move(Err));
 }
 
 LLLazyJIT::LLLazyJIT(LLLazyJITBuilderState &S, Error &Err) : LLJIT(S, Err) {

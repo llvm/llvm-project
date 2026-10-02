@@ -2,7 +2,7 @@
 # is no exact string match (e.g. the debug map triple has a version suffix that
 # the object file triple lacks).
 
-# RUN: dsymutil -f -oso-prepend-path=%p/../Inputs -y %s -o - | llvm-dwarfdump -debug-info - | FileCheck %s
+# RUN: dsymutil --linker classic -f -oso-prepend-path=%p/../Inputs -y %s -o - | llvm-dwarfdump -debug-info - | FileCheck %s
 
 # RUN: dsymutil --linker parallel -f -oso-prepend-path=%p/../Inputs -y %s -o - | llvm-dwarfdump -debug-info - | FileCheck %s
 

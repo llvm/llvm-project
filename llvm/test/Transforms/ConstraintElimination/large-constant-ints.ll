@@ -152,13 +152,13 @@ else:
 define i1 @gep_zext_shl_decomp_i80(ptr %a, i80 %v) {
 ; CHECK-LABEL: @gep_zext_shl_decomp_i80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i80 [[V:%.*]], 1973801615886922022913
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i80 [[V:%.*]], 1973801615886922022913
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i80 [[SHL]] to i128
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i128 [[EXT]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[GEP]], null
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[SHL_1:%.*]] = shl nuw i80 [[V]], 1973801615886922022913
+; CHECK-NEXT:    [[SHL_1:%.*]] = shl nuw nsw i80 [[V]], 1973801615886922022913
 ; CHECK-NEXT:    [[EXT_1:%.*]] = zext i80 [[SHL_1]] to i128
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, ptr [[A]], i128 [[EXT_1]]
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq ptr [[GEP_1]], null
@@ -222,12 +222,12 @@ else:
 define i1 @gep_shl_decomp_i80(ptr %a, i80 %v) {
 ; CHECK-LABEL: @gep_shl_decomp_i80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i80 [[V:%.*]], 1973801615886922022913
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i80 [[V:%.*]], 1973801615886922022913
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i80 [[SHL]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[GEP]], null
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[SHL_1:%.*]] = shl nuw i80 [[V]], 1973801615886922022913
+; CHECK-NEXT:    [[SHL_1:%.*]] = shl nuw nsw i80 [[V]], 1973801615886922022913
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, ptr [[A]], i80 [[SHL_1]]
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq ptr [[GEP_1]], null
 ; CHECK-NEXT:    ret i1 [[C_1]]

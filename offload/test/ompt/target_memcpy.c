@@ -49,7 +49,7 @@ int main() {
 
 // clang-format off
 /// CHECK: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=ompt_target_data_alloc
-/// CHECK-SAME: src_device_num=[[HOST:[0-9]+]]
+/// CHECK-SAME: src_device_num=[[HOST:-1]]
 /// CHECK-SAME: dest_device_num=[[DEVICE:[0-9]+]]
 /// CHECK-NOT: code=(nil)
 /// CHECK: code=[[CODE1:0x[0-f]+]]

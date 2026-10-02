@@ -1,5 +1,5 @@
 ; RUN: llc  -verify-machineinstrs -mcpu=pwr7 -ppc-asm-full-reg-names \
-; RUN:      -mtriple powerpc64-ibm-aix-xcoff -mattr=+aix-small-local-exec-tls < %s \
+; RUN:      -mtriple powerpc64-ibm-aix-xcoff --code-model=small -mattr=+aix-small-local-exec-tls < %s \
 ; RUN:      | FileCheck %s --check-prefixes=COMMONCM,SMALL-LOCAL-EXEC-SMALLCM64
 ; RUN: llc  -verify-machineinstrs -mcpu=pwr7 -ppc-asm-full-reg-names \
 ; RUN:      -mtriple powerpc64-ibm-aix-xcoff --code-model=large \

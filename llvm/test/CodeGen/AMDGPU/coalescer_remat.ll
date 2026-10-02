@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-- -o - %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu6.00-- -o - %s | FileCheck %s
 
 declare float @llvm.fma.f32(float, float, float)
 

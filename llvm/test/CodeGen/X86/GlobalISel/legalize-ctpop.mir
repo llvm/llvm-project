@@ -17,13 +17,13 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:_(s35) = IMPLICIT_DEF
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[DEF]](s35)
     ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(s64) = G_CTPOP [[ZEXT]](s64)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s35) = G_TRUNC [[CTPOP]](s64)
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s35) = COPY [[TRUNC]](s35)
-    ; CHECK-NEXT: RET 0, implicit [[COPY]](s35)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY [[CTPOP]](s64)
+    ; CHECK-NEXT: RET 0, implicit [[COPY]](s64)
     %0:_(s35) = IMPLICIT_DEF
     %1:_(s35) = G_CTPOP %0
-    %2:_(s35) = COPY %1(s35)
-    RET 0, implicit %2
+    %2:_(s64) = G_ZEXT %1
+    %3:_(s64) = COPY %2(s64)
+    RET 0, implicit %3
 
 ...
 ---

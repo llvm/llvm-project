@@ -1,0 +1,12 @@
+{
+  "id_table": [],
+  "results": [
+    {
+      "analysis_name": "TypeConstrainedPointersAnalysisResult",
+      "result": {
+        "TypeConstrainedPointersAnalysisResult": []
+      }
+    }
+  ],
+  "type": "WPASuite"
+}

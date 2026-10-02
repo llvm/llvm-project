@@ -1,0 +1,49 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+td_library(
+    name = "CUFAttrsTdFiles",
+    srcs = ["CUFAttr.td"],
+    includes = ["/flang/include"],
+    deps = [
+        "//flang/include/flang/Optimizer/Dialect/CUF:CUFDialectTdFiles",
+        "//mlir:OpBaseTdFiles",
+    ],
+)
+
+cc_library(
+    name = "CUFAttrsHeaders",
+    hdrs = ["CUFAttr.h"],
+    strip_include_prefix = "/flang/include",
+    deps = [
+        ":CUFAttrsIncGen",
+        "//mlir:IR",
+    ],
+)
+
+gentbl_cc_library(
+    name = "CUFAttrsIncGen",
+    strip_include_prefix = "/flang/include",
+    tbl_outs = {
+        "CUFAttr.cpp.inc": ["-gen-attrdef-defs"],
+        "CUFAttr.h.inc": ["-gen-attrdef-decls"],
+        "CUFEnumAttr.cpp.inc": ["-gen-enum-defs"],
+        "CUFEnumAttr.h.inc": ["-gen-enum-decls"],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "CUFAttr.td",
+    deps = [":CUFAttrsTdFiles"],
+)

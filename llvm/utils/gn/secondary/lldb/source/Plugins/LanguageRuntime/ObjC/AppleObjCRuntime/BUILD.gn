@@ -28,7 +28,6 @@ static_library("AppleObjCRuntime") {
     "AppleObjCClassDescriptorV2.cpp",
     "AppleObjCDeclVendor.cpp",
     "AppleObjCRuntime.cpp",
-    "AppleObjCRuntimeV1.cpp",
     "AppleObjCRuntimeV2.cpp",
     "AppleObjCTrampolineHandler.cpp",
     "AppleObjCTypeEncodingParser.cpp",

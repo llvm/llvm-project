@@ -2,7 +2,7 @@
 ; RUN:     -mattr=-altivec -function-sections < %s | \
 ; RUN:   FileCheck --check-prefix=ASM %s
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 \
-; RUN:     -mattr=-altivec -function-sections < %s | \
+; RUN:     -mattr=-altivec --code-model=small -function-sections < %s | \
 ; RUN:   FileCheck --check-prefix=ASM %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 \
@@ -14,7 +14,7 @@
 ; RUN:   FileCheck -D#NFA=2 --check-prefix=DIS32 %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 \
-; RUN:     -mattr=-altivec -function-sections -xcoff-traceback-table=true \
+; RUN:     -mattr=-altivec --code-model=small -function-sections -xcoff-traceback-table=true \
 ; RUN:     -filetype=obj -o %t64.o < %s
 ; RUN: llvm-objdump --syms --reloc --symbol-description %t64.o | \
 ; RUN:   FileCheck -D#NFA=2 --check-prefix=XCOFF64 %s

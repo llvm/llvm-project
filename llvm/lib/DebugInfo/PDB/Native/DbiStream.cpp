@@ -231,6 +231,10 @@ void DbiStream::visitSectionContributions(
   }
 }
 
+PdbRaw_DbiSecContribVer DbiStream::getSectionContributionsVersion() const {
+  return SectionContribVersion;
+}
+
 Expected<StringRef> DbiStream::getECName(uint32_t NI) const {
   return ECNames.getStringForID(NI);
 }

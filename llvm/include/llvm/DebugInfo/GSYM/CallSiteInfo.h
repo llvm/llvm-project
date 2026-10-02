@@ -78,6 +78,13 @@ struct CallSiteInfo {
 struct CallSiteInfoCollection {
   std::vector<CallSiteInfo> CallSites;
 
+  bool operator==(const CallSiteInfoCollection &RHS) const {
+    return CallSites == RHS.CallSites;
+  }
+  bool operator!=(const CallSiteInfoCollection &RHS) const {
+    return !(*this == RHS);
+  }
+
   /// Decode a CallSiteInfoCollection object from a binary data stream.
   ///
   /// \param Data The binary stream to read the data from.

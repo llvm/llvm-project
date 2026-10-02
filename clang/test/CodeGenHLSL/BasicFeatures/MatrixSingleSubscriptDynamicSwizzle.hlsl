@@ -4,6 +4,7 @@
 // CHECK-LABEL: define hidden void @_Z9setMatrixRu11matrix_typeILm4ELm4EfEiDv4_f(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[M:%.*]], i32 noundef [[INDEX:%.*]], <4 x float> noundef nofpclass(nan inf) [[V:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x float>, align 4
@@ -38,6 +39,7 @@ void setMatrix(out float4x4 M, int index, float4 V) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) <3 x float> @_Z9getMatrixu11matrix_typeILm4ELm4EfEi(
 // CHECK-SAME: <16 x float> noundef nofpclass(nan inf) [[M:%.*]], i32 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store <16 x float> [[M]], ptr [[M_ADDR]], align 4
@@ -62,6 +64,7 @@ float3 getMatrix(float4x4 M, int index) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) <4 x float> @_Z9getMatrixu11matrix_typeILm3ELm3EfEi(
 // CHECK-SAME: <9 x float> noundef nofpclass(nan inf) [[M:%.*]], i32 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [3 x <3 x float>], align 4
 // CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store <9 x float> [[M]], ptr [[M_ADDR]], align 4
@@ -89,6 +92,7 @@ float4 getMatrix(float3x3 M, int index) {
 // CHECK-LABEL: define hidden noundef <3 x i32> @_Z19getMatrixSwizzle2x3Ru11matrix_typeILm2ELm3EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(24) [[M:%.*]], i32 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[M]], ptr [[M_ADDR]], align 4
@@ -114,6 +118,7 @@ int3 getMatrixSwizzle2x3(out int2x3 M, int index) {
 // CHECK-LABEL: define hidden void @_Z26setMatrixSwizzleFromMatrixRu11matrix_typeILm2ELm3EiES_i(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(24) [[M:%.*]], <6 x i32> noundef [[N:%.*]], i32 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[N_ADDR:%.*]] = alloca [3 x <2 x i32>], align 4
 // CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4

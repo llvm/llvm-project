@@ -1,9 +1,14 @@
-//===-- Implementation header for powf --------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation header for powf.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_POWF_H
@@ -25,6 +30,7 @@
 
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS && LIBC_MATH_HAS_SMALL_TABLES
 
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -533,7 +539,7 @@ LIBC_INLINE_VAR constexpr DoubleDouble LOG2_R2_DD[] = {
 };
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
-LIBC_INLINE constexpr bool is_odd_integer(float x) {
+LIBC_INLINE bool is_odd_integer(float x) {
   using FPBits = typename fputil::FPBits<float>;
   uint32_t x_u = cpp::bit_cast<uint32_t>(x);
   int32_t x_e =
@@ -544,7 +550,7 @@ LIBC_INLINE constexpr bool is_odd_integer(float x) {
   return (x_e + lsb == UNIT_EXPONENT);
 }
 
-LIBC_INLINE constexpr bool is_integer(float x) {
+LIBC_INLINE bool is_integer(float x) {
   using FPBits = typename fputil::FPBits<float>;
   uint32_t x_u = cpp::bit_cast<uint32_t>(x);
   int32_t x_e =
@@ -556,7 +562,7 @@ LIBC_INLINE constexpr bool is_integer(float x) {
 }
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-LIBC_INLINE constexpr bool larger_exponent(double a, double b) {
+LIBC_INLINE bool larger_exponent(double a, double b) {
   using DoubleBits = typename fputil::FPBits<double>;
   return DoubleBits(a).get_biased_exponent() >=
          DoubleBits(b).get_biased_exponent();
@@ -979,9 +985,8 @@ LIBC_INLINE float powf(float x, float y) {
   // Clamp the exponent part into smaller range that fits double precision.
   // For those exponents that are out of range, the final conversion will round
   // them correctly to inf/max float or 0/min float accordingly.
-  int64_t hm_i = static_cast<int64_t>(hm);
-  hm_i = (hm_i > (1 << 15)) ? (1 << 15)
-                            : (hm_i < (-(1 << 15)) ? -(1 << 15) : hm_i);
+  int64_t hm_i =
+      cpp::clamp<int64_t>(static_cast<int64_t>(hm), -(1 << 15), 1 << 15);
 
   int idx_y = hm_i & 0x3f;
 

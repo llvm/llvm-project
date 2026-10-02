@@ -27,7 +27,7 @@ class DebugSymbolRVASubsectionRef final : public DebugSubsectionRef {
 public:
   using ArrayType = FixedStreamArray<support::ulittle32_t>;
 
-  DebugSymbolRVASubsectionRef();
+  LLVM_ABI DebugSymbolRVASubsectionRef();
 
   static bool classof(const DebugSubsectionRef *S) {
     return S->kind() == DebugSubsectionKind::CoffSymbolRVA;
@@ -36,13 +36,13 @@ public:
   ArrayType::Iterator begin() const { return RVAs.begin(); }
   ArrayType::Iterator end() const { return RVAs.end(); }
 
-  Error initialize(BinaryStreamReader &Reader);
+  LLVM_ABI Error initialize(BinaryStreamReader &Reader);
 
 private:
   ArrayType RVAs;
 };
 
-class DebugSymbolRVASubsection final : public DebugSubsection {
+class LLVM_ABI DebugSymbolRVASubsection final : public DebugSubsection {
 public:
   DebugSymbolRVASubsection();
 

@@ -635,11 +635,114 @@ bb.exit: ; preds = %sw.bb.i, %if.end.i, %if.end5
 
 declare void @llvm.fake.use(...)
 
+; Cloning a block with an llvm.experimental.noalias.scope.decl must give each
+; clone a fresh scope; otherwise the clones share a scope and AA wrongly treats
+; aliasing accesses on different paths as noalias.
+define i32 @test_noalias_scope_cloned(i32 %num, ptr %ptr) {
+; CHECK-LABEL: @test_noalias_scope_cloned(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[COUNT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[STATE:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ [[STATE_NEXT:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    switch i32 [[STATE]], label [[FOR_INC_JT1:%.*]] [
+; CHECK-NEXT:      i32 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i32 2, label [[CASE2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       for.body.jt2:
+; CHECK-NEXT:    [[COUNT_JT2:%.*]] = phi i32 [ [[INC_JT2:%.*]], [[FOR_INC_JT2:%.*]] ]
+; CHECK-NEXT:    [[STATE_JT2:%.*]] = phi i32 [ [[STATE_NEXT_JT2:%.*]], [[FOR_INC_JT2]] ]
+; CHECK-NEXT:    br label [[CASE2]]
+; CHECK:       for.body.jt1:
+; CHECK-NEXT:    [[COUNT_JT1:%.*]] = phi i32 [ [[INC_JT1:%.*]], [[FOR_INC_JT1]] ]
+; CHECK-NEXT:    [[STATE_JT1:%.*]] = phi i32 [ [[STATE_NEXT_JT1:%.*]], [[FOR_INC_JT1]] ]
+; CHECK-NEXT:    br label [[CASE1]]
+; CHECK:       case1:
+; CHECK-NEXT:    [[COUNT2:%.*]] = phi i32 [ [[COUNT_JT1]], [[FOR_BODY_JT1:%.*]] ], [ [[COUNT]], [[FOR_BODY]] ]
+; CHECK-NEXT:    br label [[FOR_INC_JT2]]
+; CHECK:       case2:
+; CHECK-NEXT:    [[COUNT1:%.*]] = phi i32 [ [[COUNT_JT2]], [[FOR_BODY_JT2:%.*]] ], [ [[COUNT]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[COUNT1]], 50
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_INC_JT1]], label [[SEL_SI_UNFOLD_FALSE_JT2:%.*]]
+; CHECK:       sel.si.unfold.false:
+; CHECK-NEXT:    br label [[FOR_INC]]
+; CHECK:       sel.si.unfold.false.jt2:
+; CHECK-NEXT:    [[DOTSI_UNFOLD_PHI_JT2:%.*]] = phi i32 [ 2, [[CASE2]] ]
+; CHECK-NEXT:    br label [[FOR_INC_JT2]]
+; CHECK:       for.inc:
+; CHECK-NEXT:    [[STATE_NEXT]] = phi i32 [ poison, [[SEL_SI_UNFOLD_FALSE:%.*]] ]
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META2:![0-9]+]])
+; CHECK-NEXT:    store i8 0, ptr [[PTR:%.*]], align 1, !noalias [[META2]]
+; CHECK-NEXT:    [[INC]] = add nsw i32 undef, 1
+; CHECK-NEXT:    [[CMP_EXIT:%.*]] = icmp slt i32 [[INC]], [[NUM:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_EXIT]], label [[FOR_BODY]], label [[FOR_END:%.*]]
+; CHECK:       for.inc.jt2:
+; CHECK-NEXT:    [[COUNT4:%.*]] = phi i32 [ [[COUNT1]], [[SEL_SI_UNFOLD_FALSE_JT2]] ], [ [[COUNT2]], [[CASE1]] ]
+; CHECK-NEXT:    [[STATE_NEXT_JT2]] = phi i32 [ [[DOTSI_UNFOLD_PHI_JT2]], [[SEL_SI_UNFOLD_FALSE_JT2]] ], [ 2, [[CASE1]] ]
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META5:![0-9]+]])
+; CHECK-NEXT:    store i8 0, ptr [[PTR]], align 1, !noalias [[META5]]
+; CHECK-NEXT:    [[INC_JT2]] = add nsw i32 [[COUNT4]], 1
+; CHECK-NEXT:    [[CMP_EXIT_JT2:%.*]] = icmp slt i32 [[INC_JT2]], [[NUM]]
+; CHECK-NEXT:    br i1 [[CMP_EXIT_JT2]], label [[FOR_BODY_JT2]], label [[FOR_END]]
+; CHECK:       for.inc.jt1:
+; CHECK-NEXT:    [[COUNT3:%.*]] = phi i32 [ [[COUNT]], [[FOR_BODY]] ], [ [[COUNT1]], [[CASE2]] ]
+; CHECK-NEXT:    [[STATE_NEXT_JT1]] = phi i32 [ 1, [[CASE2]] ], [ 1, [[FOR_BODY]] ]
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META7:![0-9]+]])
+; CHECK-NEXT:    store i8 0, ptr [[PTR]], align 1, !noalias [[META7]]
+; CHECK-NEXT:    [[INC_JT1]] = add nsw i32 [[COUNT3]], 1
+; CHECK-NEXT:    [[CMP_EXIT_JT1:%.*]] = icmp slt i32 [[INC_JT1]], [[NUM]]
+; CHECK-NEXT:    br i1 [[CMP_EXIT_JT1]], label [[FOR_BODY_JT1]], label [[FOR_END]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %for.body
+
+for.body:
+  %count = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
+  %state = phi i32 [ 1, %entry ], [ %state.next, %for.inc ]
+  switch i32 %state, label %for.inc [
+  i32 1, label %case1
+  i32 2, label %case2
+  ]
+
+case1:
+  br label %for.inc
+
+case2:
+  %cmp = icmp eq i32 %count, 50
+  %sel = select i1 %cmp, i32 1, i32 2
+  br label %for.inc
+
+for.inc:
+  %state.next = phi i32 [ %sel, %case2 ], [ 1, %for.body ], [ 2, %case1 ]
+  call void @llvm.experimental.noalias.scope.decl(metadata !2)
+  store i8 0, ptr %ptr, !noalias !2
+  %inc = add nsw i32 %count, 1
+  %cmp.exit = icmp slt i32 %inc, %num
+  br i1 %cmp.exit, label %for.body, label %for.end
+
+for.end:
+  ret i32 0
+}
+
+declare void @llvm.experimental.noalias.scope.decl(metadata)
+
 !0 = !{!"function_entry_count", i32 10}
 !1 = !{!"branch_weights", i32 3, i32 5}
+!2 = !{!3}
+!3 = distinct !{!3, !4, !"scope1"}
+!4 = distinct !{!4, !"domain"}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i32 10}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 3, i32 5}
+; CHECK: [[META2]] = !{[[META3:![0-9]+]]}
+; CHECK: [[META3]] = distinct !{[[META3]], [[META4:![0-9]+]], !"scope1"}
+; CHECK: [[META4]] = distinct !{[[META4]], !"domain"}
+; CHECK: [[META5]] = !{[[META6:![0-9]+]]}
+; CHECK: [[META6]] = distinct !{[[META6]], [[META4]], !"scope1:dfa"}
+; CHECK: [[META7]] = !{[[META8:![0-9]+]]}
+; CHECK: [[META8]] = distinct !{[[META8]], [[META4]], !"scope1:dfa"}
 ;.

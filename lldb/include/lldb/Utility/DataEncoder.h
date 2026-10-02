@@ -146,17 +146,17 @@ public:
   ///    will be determined by the address size specified in the constructor.
   void AppendAddress(lldb::addr_t addr);
 
-  /// Append a bytes to the end of the owned data.
+  /// Append bytes to the end of the owned data.
   ///
   /// Append the bytes contained in the string reference. This function will
-  /// not append a NULL termination character for a C string. Use the
-  /// AppendCString function for this purpose.
+  /// not append a null terminator for a C string. Use the AppendCString
+  /// function for this purpose.
   ///
   /// \param data
   ///     A string reference that contains bytes to append.
   void AppendData(llvm::StringRef data);
 
-  /// Append a bytes to the end of the owned data.
+  /// Append bytes to the end of the owned data.
   ///
   /// Append the bytes contained in the array reference.
   ///
@@ -167,8 +167,8 @@ public:
   /// Append a C string to the end of the owned data.
   ///
   /// Append the bytes contained in the string reference along with an extra
-  /// NULL termination character if the StringRef bytes doesn't include one as
-  /// the last byte.
+  /// null terminator if the StringRef bytes doesn't include one as the last
+  /// byte.
   ///
   /// \param data
   ///     A string reference that contains bytes to append.
@@ -214,7 +214,7 @@ public:
   ///
   /// Encodes a C string into the existing data including the terminating. If
   /// there is not enough room in the buffer to fit the entire C string and the
-  /// NULL terminator in the existing buffer bounds, then this function will
+  /// null terminator in the existing buffer bounds, then this function will
   /// fail.
   ///
   /// \param[in] offset

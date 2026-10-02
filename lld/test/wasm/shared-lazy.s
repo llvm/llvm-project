@@ -2,14 +2,14 @@
 
 # RUN: rm -rf %t && split-file %s %t && cd %t
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-emscripten a.s -o a.o
-# RUN: wasm-ld a.o --experimental-pic -shared -o a.so
+# RUN: wasm-ld a.o -shared -o a.so
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-emscripten b.s -o b.o
-# RUN: wasm-ld b.o --experimental-pic -shared -o b.so
+# RUN: wasm-ld b.o -shared -o b.so
 # RUN: llvm-ar rc a.a a.o
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-emscripten ref.s -o ref.o
-# RUN: wasm-ld a.a b.so ref.o --experimental-pic -shared -o 1.so
+# RUN: wasm-ld a.a b.so ref.o -shared -o 1.so
 # RUN: obj2yaml 1.so | FileCheck %s
-# RUN: wasm-ld a.so a.a ref.o --experimental-pic -shared -o 1.so
+# RUN: wasm-ld a.so a.a ref.o -shared -o 1.so
 # RUN: obj2yaml 1.so | FileCheck %s
 
 ## The definitions from a.so are used and we don't extract a member from the
@@ -28,9 +28,9 @@
 # CHECK-NEXT:         GlobalMutable:   true
 
 ## The extracted x1 is defined as STB_GLOBAL.
-# RUN: wasm-ld ref.o a.a b.so -o 2.so --experimental-pic -shared
+# RUN: wasm-ld ref.o a.a b.so -o 2.so -shared
 # RUN: obj2yaml 2.so | FileCheck %s --check-prefix=CHECK2
-# RUN: wasm-ld a.a ref.o b.so -o 2.so --experimental-pic -shared
+# RUN: wasm-ld a.a ref.o b.so -o 2.so -shared
 # RUN: obj2yaml 2.so | FileCheck %s --check-prefix=CHECK2
 
 # CHECK2:       - Type:            EXPORT

@@ -23,14 +23,12 @@ class SourceMgr;
 class MCContext;
 class MCSubtargetInfo;
 class MCStreamer;
-class MCTargetOptions;
 
 class Disassembler {
 public:
   static int disassemble(const Target &T, MCSubtargetInfo &STI,
                          MCStreamer &Streamer, MemoryBuffer &Buffer,
-                         SourceMgr &SM, MCContext &Ctx,
-                         const MCTargetOptions &MCOptions, bool HexBytes,
+                         SourceMgr &SM, MCContext &Ctx, bool HexBytes,
                          unsigned NumBenchmarkRuns);
 };
 

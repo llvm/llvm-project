@@ -69,10 +69,12 @@ define void @main() {
   %lshr = lshr i8 127, 3
   %lshr_exact = lshr exact i8 126, 1
   %lshr_exact_poison = lshr exact i8 1, 1
+  %lshr_exact_poison_zero = lshr exact i8 0, 8
 
   %ashr = ashr i8 127, 3
   %ashr_exact = ashr exact i8 126, 1
   %ashr_exact_poison = ashr exact i8 1, 1
+  %ashr_exact_poison_zero = ashr exact i8 0, 8
 
   %select = select i1 true, i1 false, i1 poison
   %select_vec1 = select <3 x i1> <i1 true, i1 false, i1 poison>, <3 x i32> splat(i32 10), <3 x i32> splat(i32 20)
@@ -141,9 +143,11 @@ define void @main() {
 ; CHECK-NEXT:   %lshr = lshr i8 127, 3 => i8 15
 ; CHECK-NEXT:   %lshr_exact = lshr exact i8 126, 1 => i8 63
 ; CHECK-NEXT:   %lshr_exact_poison = lshr exact i8 1, 1 => poison
+; CHECK-NEXT:   %lshr_exact_poison_zero = lshr exact i8 0, 8 => poison
 ; CHECK-NEXT:   %ashr = ashr i8 127, 3 => i8 15
 ; CHECK-NEXT:   %ashr_exact = ashr exact i8 126, 1 => i8 63
 ; CHECK-NEXT:   %ashr_exact_poison = ashr exact i8 1, 1 => poison
+; CHECK-NEXT:   %ashr_exact_poison_zero = ashr exact i8 0, 8 => poison
 ; CHECK-NEXT:   %select = select i1 true, i1 false, i1 poison => F
 ; CHECK-NEXT:   %select_vec1 = select <3 x i1> <i1 true, i1 false, i1 poison>, <3 x i32> splat (i32 10), <3 x i32> splat (i32 20) => { i32 10, i32 20, poison }
 ; CHECK-NEXT:   %select_vec2 = select i1 false, <2 x i32> splat (i32 10), <2 x i32> splat (i32 20) => { i32 20, i32 20 }

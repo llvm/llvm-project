@@ -16,9 +16,12 @@
 #include "llvm/ADT/bit.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
 static constexpr char kIntegerPrefix[] = "i_0x";
@@ -63,7 +66,21 @@ struct YamlContext {
 
   std::string &getLastError() { return ErrorStream.str(); }
 
+  // Returns the recorded error to report to the YAML parser from a
+  // ScalarTraits::input. When ContinueOnError is set, recoverable per-entry
+  // errors (e.g. an unknown opcode in a bitrotted sample) are left recorded for
+  // the caller to inspect but are not reported to the parser, which would
+  // otherwise abort parsing of every remaining document.
+  StringRef getInputError() {
+    return ContinueOnError ? StringRef() : StringRef(getLastError());
+  }
+
   raw_string_ostream &getErrorStream() { return ErrorStream; }
+
+  // When set, ScalarTraits::input swallows recoverable deserialization errors
+  // (see getInputError) so that readYamls can skip the offending entry instead
+  // of aborting the whole file.
+  bool ContinueOnError = false;
 
   StringRef getRegName(MCRegister Reg) {
     // Special case: Reg may be invalid. We have to deal with it explicitly.
@@ -141,11 +158,44 @@ private:
     return InstrName;
   }
 
+  StringRef findNearestOpcodeName(StringRef InstrName) const {
+    unsigned BestDistance = 2;
+    StringRef Nearest;
+
+    for (const auto &Entry : OpcodeNameToOpcodeIdx) {
+      StringRef Candidate = Entry.getFirst();
+
+      size_t CandidateSize = Candidate.size();
+      size_t InstrSize = InstrName.size();
+      size_t AbsDiff = llvm::AbsoluteDifference(CandidateSize, InstrSize);
+
+      if (AbsDiff >= BestDistance)
+        continue;
+
+      unsigned Distance =
+          InstrName.edit_distance(Candidate, /*AllowReplacements=*/true,
+                                  /*MaxEditDistance=*/BestDistance - 1);
+
+      if (Distance < BestDistance) {
+        BestDistance = Distance;
+        Nearest = Candidate;
+        if (BestDistance == 1)
+          break;
+      }
+    }
+
+    return Nearest;
+  }
+
   unsigned getInstrOpcode(StringRef InstrName) {
     auto Iter = OpcodeNameToOpcodeIdx.find(InstrName);
     if (Iter != OpcodeNameToOpcodeIdx.end())
       return Iter->second;
-    ErrorStream << "No opcode with name '" << InstrName << "'\n";
+
+    ErrorStream << "No opcode with name '" << InstrName << "'";
+    if (StringRef Nearest = findNearestOpcodeName(InstrName); !Nearest.empty())
+      ErrorStream << " - did you mean '" << Nearest << "' ?";
+    ErrorStream << "\n";
     return 0;
   }
 
@@ -177,7 +227,7 @@ template <> struct ScalarTraits<MCInst> {
   static StringRef input(StringRef Scalar, void *Ctx, MCInst &Value) {
     YamlContext &Context = getTypedContext(Ctx);
     Context.deserializeMCInst(Scalar, Value);
-    return Context.getLastError();
+    return Context.getInputError();
   }
 
   // By default strings are quoted only when necessary.
@@ -270,7 +320,7 @@ template <> struct ScalarTraits<exegesis::RegisterValue> {
       Context.getErrorStream()
           << "Unknown initial register value: '" << String << "'";
     }
-    return Context.getLastError();
+    return Context.getInputError();
   }
 
   static QuotingType mustQuote(StringRef) { return QuotingType::Single; }
@@ -379,16 +429,32 @@ Expected<std::vector<Benchmark>> Benchmark::readYamls(const LLVMState &State,
                                                       MemoryBufferRef Buffer) {
   yaml::Input Yin(Buffer);
   YamlContext Context(State);
+  // Recoverable per-entry errors (e.g. unknown opcodes) are recorded rather
+  // than reported to the parser, so a single bad entry can be dropped without
+  // aborting the read of the whole file.
+  Context.ContinueOnError = true;
   std::vector<Benchmark> Benchmarks;
+  unsigned NumSkippedEntries = 0;
   while (Yin.setCurrentDocument()) {
     Benchmarks.emplace_back();
     yamlize(Yin, Benchmarks.back(), /*unused*/ true, Context);
     if (Yin.error())
       return errorCodeToError(Yin.error());
-    if (!Context.getLastError().empty())
-      return make_error<Failure>(Context.getLastError());
+    if (!Context.getLastError().empty()) {
+      // Warn about the unparsable entry (e.g. an unknown opcode from a
+      // bitrotted sample), discard it, and continue so that a single bad entry
+      // doesn't abort the read of the whole file.
+      WithColor::warning() << "skipping benchmark entry: "
+                           << Context.getLastError();
+      Context.getLastError().clear();
+      Benchmarks.pop_back();
+      ++NumSkippedEntries;
+    }
     Yin.nextDocument();
   }
+  if (NumSkippedEntries)
+    WithColor::warning() << "skipped " << NumSkippedEntries
+                         << " benchmark entries that could not be parsed\n";
   return std::move(Benchmarks);
 }
 

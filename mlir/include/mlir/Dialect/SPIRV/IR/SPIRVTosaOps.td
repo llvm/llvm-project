@@ -156,14 +156,22 @@ class SPIRV_TosaConvolutionOp<string mnemonic, int opcode, list<Trait> traits = 
     TypeConstraintImplicationOn<"input", BF16, "output", [BF16]>,
     TypeConstraintImplicationOn<"input", F16, "output", [F16]>,
     TypeConstraintImplicationOn<"input", F32, "output", [F32]>,
+    TypeConstraintImplicationOn<"input", F8E4M3FN, "output", [F16]>,
+    TypeConstraintImplicationOn<"input", F8E5M2, "output", [F16]>,
+    TypeConstraintImplicationOn<"input", I8, "weight", [I8]>,
+    TypeConstraintImplicationOn<"input", I16, "weight", [I8]>,
     TypeConstraintImplicationOn<"input", BF16, "weight", [BF16]>,
     TypeConstraintImplicationOn<"input", F16, "weight", [F16]>,
     TypeConstraintImplicationOn<"input", F32, "weight", [F32]>,
+    TypeConstraintImplicationOn<"input", F8E4M3FN, "weight", [F8E4M3FN]>,
+    TypeConstraintImplicationOn<"input", F8E5M2, "weight", [F8E5M2]>,
     TypeImpliesAccType<"input", I8, ["INT32"]>,
     TypeImpliesAccType<"input", I16, ["INT48"]>,
     TypeImpliesAccType<"input", F16, ["FP16", "FP32"]>,
     TypeImpliesAccType<"input", BF16, ["FP32"]>,
     TypeImpliesAccType<"input", F32, ["FP32"]>,
+    TypeImpliesAccType<"input", F8E4M3FN, ["FP16"]>,
+    TypeImpliesAccType<"input", F8E5M2, ["FP16"]>,
     AllElementTypesMatch<["bias", "output"]>,
     AllElementTypesMatch<["input", "input_zp"]>,
     AllElementTypesMatch<["weight", "weight_zp"]>])> {
@@ -215,7 +223,8 @@ class SPIRV_TosaReductionOp<string mnemonic, int opcode, list<Trait> traits = []
   SPIRV_TosaOpWithResult<mnemonic, opcode, !listconcat(traits, [
   AllElementTypesMatch<["input", "output"]>,
   AllRanksMatch<["input", "output"]>,
-  AxisValueLessThanRankOf<"input">])> {
+  AxisValueLessThanRankOf<"input">,
+  ReductionOutputShapeMatchesInputAndAxis<"input", "output">])> {
 
   let extraClassDeclaration = extraBaseClassDeclaration#[{
     ::mlir::spirv::TensorArmType getInputType() {
@@ -249,7 +258,7 @@ def SPIRV_TosaArgMaxOp : SPIRV_TosaOpWithResult<"ArgMax", 0, [Pure,
   let arguments = (ins
     SPIRV_TensorArmAxisAttr: $axis,
     SPIRV_TosaExtNaNPropagationModeAttr: $nan_mode,
-    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm: $input
+    SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_TensorArm: $input
   );
 
   let results = (outs
@@ -277,7 +286,11 @@ def SPIRV_TosaAvgPool2DOp : SPIRV_TosaOpWithResult<"AvgPool2D", 1, [NoMemoryEffe
   TypeImpliesAccType<"input", F16, ["FP16", "FP32"]>,
   TypeImpliesAccType<"input", BF16, ["FP32"]>,
   TypeImpliesAccType<"input", F32, ["FP32"]>,
-  AllElementTypesMatch<["input", "input_zp", "output", "output_zp"]>]> {
+  TypeImpliesAccType<"input", F8E4M3FN, ["FP16"]>,
+  TypeImpliesAccType<"input", F8E5M2, ["FP16"]>,
+  AllElementTypesMatch<["input", "input_zp", "output", "output_zp"]>,
+  NHWCInputOutputShapeMatch<"input", "output">,
+  Pool2DPadValuesLessThanKernel<"pad", "kernel">]> {
   let summary = "Performs average pooling on the input.";
 
   let description = [{
@@ -300,17 +313,17 @@ def SPIRV_TosaAvgPool2DOp : SPIRV_TosaOpWithResult<"AvgPool2D", 1, [NoMemoryEffe
   }];
 
   let arguments = (ins
-    SPIRV_I32_1DTensorArmOfLength2Attr: $kernel,
-    SPIRV_I32_1DTensorArmOfLength2Attr: $stride,
-    SPIRV_I32_1DTensorArmOfLength4Attr: $pad,
+    SPIRV_PositiveI32_1DTensorArmOfLength2Attr: $kernel,
+    SPIRV_PositiveI32_1DTensorArmOfLength2Attr: $stride,
+    SPIRV_NonNegativeI32_1DTensorArmOfLength4Attr: $pad,
     SPIRV_TosaExtAccTypeAttr: $acc_type,
-    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm4D: $input,
-    SPIRV_I8OrI16OrF16OrF32OrBF16_1DTensorArmOfLength1: $input_zp,
-    SPIRV_I8OrI16OrF16OrF32OrBF16_1DTensorArmOfLength1: $output_zp
+    SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_TensorArm4D: $input,
+    SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_1DTensorArmOfLength1: $input_zp,
+    SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_1DTensorArmOfLength1: $output_zp
   );
 
   let results = (outs
-    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm4D: $output
+    SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_TensorArm4D: $output
   );
 
   let assemblyFormat = [{
@@ -329,10 +342,13 @@ def SPIRV_TosaAvgPool2DOp : SPIRV_TosaOpWithResult<"AvgPool2D", 1, [NoMemoryEffe
       return cast<::mlir::spirv::TensorArmType>(getInput().getType());
     }
   }];
+
+  let hasVerifier = 1;
 }
 
 
-def SPIRV_TosaConv2DOp : SPIRV_TosaConvolutionOp<"Conv2D", 2> {
+def SPIRV_TosaConv2DOp : SPIRV_TosaConvolutionOp<"Conv2D", 2, [
+  Conv2DShapeMatch<"input", "weight", "bias", "output">]> {
   let summary = "2D Convolution operator.";
 
   let description = [{
@@ -356,16 +372,16 @@ def SPIRV_TosaConv2DOp : SPIRV_TosaConvolutionOp<"Conv2D", 2> {
   }];
 
   let arguments = (ins
-    SPIRV_I32_1DTensorArmOfLength4Attr: $pad,
-    SPIRV_I32_1DTensorArmOfLength2Attr: $stride,
-    SPIRV_I32_1DTensorArmOfLength2Attr: $dilation,
+    SPIRV_NonNegativeI32_1DTensorArmOfLength4Attr: $pad,
+    SPIRV_PositiveI32_1DTensorArmOfLength2Attr: $stride,
+    SPIRV_PositiveI32_1DTensorArmOfLength2Attr: $dilation,
     SPIRV_TosaExtAccTypeAttr: $acc_type,
     SPIRV_BoolConstAttr: $local_bound,
-    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm4D: $input,
-    SPIRV_I8OrF16OrF32OrBF16_TensorArm4D: $weight,
+    SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_TensorArm4D: $input,
+    SPIRV_I8OrF16OrF32OrBF16OrFP8_TensorArm4D: $weight,
     SPIRV_I32OrI64OrF16OrF32OrBF16_TensorArm1D: $bias,
-    SPIRV_I8OrI16OrF16OrF32OrBF16_1DTensorArmOfLength1: $input_zp,
-    SPIRV_I8OrF16OrF32OrBF16_1DTensorArmOfLength1: $weight_zp
+    SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_1DTensorArmOfLength1: $input_zp,
+    SPIRV_I8OrF16OrF32OrBF16OrFP8_1DTensorArmOfLength1: $weight_zp
   );
 
   let results = (outs
@@ -385,10 +401,13 @@ def SPIRV_TosaConv2DOp : SPIRV_TosaConvolutionOp<"Conv2D", 2> {
     $weight_zp
     attr-dict `:` type(operands) `->` type(results)
   }];
+
+  let hasVerifier = 1;
 }
 
 
-def SPIRV_TosaConv3DOp : SPIRV_TosaConvolutionOp<"Conv3D", 3> {
+def SPIRV_TosaConv3DOp : SPIRV_TosaConvolutionOp<"Conv3D", 3, [
+  Conv3DShapeMatch<"input", "weight", "bias", "output">]> {
   let summary = "3D Convolution operator.";
 
   let description = [{
@@ -411,16 +430,16 @@ def SPIRV_TosaConv3DOp : SPIRV_TosaConvolutionOp<"Conv3D", 3> {
   }];
 
   let arguments = (ins
-    SPIRV_I32_1DTensorArmOfLength6Attr: $pad,
-    SPIRV_I32_1DTensorArmOfLength3Attr: $stride,
-    SPIRV_I32_1DTensorArmOfLength3Attr: $dilation,
+    SPIRV_NonNegativeI32_1DTensorArmOfLength6Attr: $pad,
+    SPIRV_PositiveI32_1DTensorArmOfLength3Attr: $stride,
+    SPIRV_PositiveI32_1DTensorArmOfLength3Attr: $dilation,
     SPIRV_TosaExtAccTypeAttr: $acc_type,
     SPIRV_BoolConstAttr: $local_bound,
-    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm5D: $input,
-    SPIRV_I8OrF16OrF32OrBF16_TensorArm5D: $weight,
+    SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_TensorArm5D: $input,
+    SPIRV_I8OrF16OrF32OrBF16OrFP8_TensorArm5D: $weight,
     SPIRV_I32OrI64OrF16OrF32OrBF16_TensorArm1D: $bias,
-    SPIRV_I8OrI16OrF16OrF32OrBF16_1DTensorArmOfLength1: $input_zp,
-    SPIRV_I8OrF16OrF32OrBF16_1DTensorArmOfLength1: $weight_zp
+    SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_1DTensorArmOfLength1: $input_zp,
+    SPIRV_I8OrF16OrF32OrBF16OrFP8_1DTensorArmOfLength1: $weight_zp
   );
 
   let results = (outs
@@ -440,10 +459,13 @@ def SPIRV_TosaConv3DOp : SPIRV_TosaConvolutionOp<"Conv3D", 3> {
     $weight_zp
     attr-dict `:` type(operands) `->` type(results)
   }];
+
+  let hasVerifier = 1;
 }
 
 
-def SPIRV_TosaDepthwiseConv2DOp : SPIRV_TosaConvolutionOp<"DepthwiseConv2D", 4> {
+def SPIRV_TosaDepthwiseConv2DOp : SPIRV_TosaConvolutionOp<"DepthwiseConv2D", 4, [
+  DepthwiseConv2DShapeMatch<"input", "weight", "bias", "output">]> {
   let summary = "Depthwise 2D Convolution operator.";
 
   let description = [{
@@ -467,16 +489,16 @@ def SPIRV_TosaDepthwiseConv2DOp : SPIRV_TosaConvolutionOp<"DepthwiseConv2D", 4> 
   }];
 
   let arguments = (ins
-    SPIRV_I32_1DTensorArmOfLength4Attr: $pad,
-    SPIRV_I32_1DTensorArmOfLength2Attr: $stride,
-    SPIRV_I32_1DTensorArmOfLength2Attr: $dilation,
+    SPIRV_NonNegativeI32_1DTensorArmOfLength4Attr: $pad,
+    SPIRV_PositiveI32_1DTensorArmOfLength2Attr: $stride,
+    SPIRV_PositiveI32_1DTensorArmOfLength2Attr: $dilation,
     SPIRV_TosaExtAccTypeAttr: $acc_type,
     SPIRV_BoolConstAttr: $local_bound,
-    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm4D: $input,
-    SPIRV_I8OrF16OrF32OrBF16_TensorArm4D: $weight,
+    SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_TensorArm4D: $input,
+    SPIRV_I8OrF16OrF32OrBF16OrFP8_TensorArm4D: $weight,
     SPIRV_I32OrI64OrF16OrF32OrBF16_TensorArm1D: $bias,
-    SPIRV_I8OrI16OrF16OrF32OrBF16_1DTensorArmOfLength1: $input_zp,
-    SPIRV_I8OrF16OrF32OrBF16_1DTensorArmOfLength1: $weight_zp
+    SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_1DTensorArmOfLength1: $input_zp,
+    SPIRV_I8OrF16OrF32OrBF16OrFP8_1DTensorArmOfLength1: $weight_zp
   );
 
   let results = (outs
@@ -496,10 +518,15 @@ def SPIRV_TosaDepthwiseConv2DOp : SPIRV_TosaConvolutionOp<"DepthwiseConv2D", 4> 
     $weight_zp
     attr-dict `:` type(operands) `->` type(results)
   }];
+
+  let hasVerifier = 1;
 }
 
 
-def SPIRV_TosaFFT2DOp : SPIRV_TosaOpWithComplexResult<"FFT2D", 5, [Pure]> {
+def SPIRV_TosaFFT2DOp : SPIRV_TosaOpWithComplexResult<"FFT2D", 5, [Pure,
+  AllShapesMatch<["input_real", "input_imag"]>,
+  Struct2TensorArmShapesMatchInput<"input_real">,
+  TensorDimsArePowerOfTwo<"input_real", [1, 2]>]> {
   let summary = "Performs FFT2D operation on the input.";
 
   let description = [{
@@ -552,11 +579,14 @@ def SPIRV_TosaFFT2DOp : SPIRV_TosaOpWithComplexResult<"FFT2D", 5, [Pure]> {
 
 
 def SPIRV_TosaMatMulOp : SPIRV_TosaOpWithResult<"MatMul", 6, [NoMemoryEffect,
+  MatMulShapesMatch<"A", "B", "output">,
   TypeConstraintImplicationOn<"A", I8, "output", [I32]>,
   TypeConstraintImplicationOn<"A", I16, "output", [I64]>,
   TypeConstraintImplicationOn<"A", BF16, "output", [F32]>,
   TypeConstraintImplicationOn<"A", F16, "output", [F16, F32]>,
   TypeConstraintImplicationOn<"A", F32, "output", [F32]>,
+  TypeConstraintImplicationOn<"A", F8E4M3FN, "output", [F16]>,
+  TypeConstraintImplicationOn<"A", F8E5M2, "output", [F16]>,
   AllElementTypesMatch<["A", "A_zp", "B", "B_zp"]>]> {
   let summary = "Matrix Multiplication operator.";
 
@@ -579,10 +609,10 @@ def SPIRV_TosaMatMulOp : SPIRV_TosaOpWithResult<"MatMul", 6, [NoMemoryEffect,
   }];
 
   let arguments = (ins
-    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm3D: $A,
-    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm3D: $B,
-    SPIRV_I8OrI16OrF16OrF32OrBF16_1DTensorArmOfLength1: $A_zp,
-    SPIRV_I8OrI16OrF16OrF32OrBF16_1DTensorArmOfLength1: $B_zp
+    SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_TensorArm3D: $A,
+    SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_TensorArm3D: $B,
+    SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_1DTensorArmOfLength1: $A_zp,
+    SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_1DTensorArmOfLength1: $B_zp
   );
 
   let results = (outs
@@ -609,7 +639,9 @@ def SPIRV_TosaMatMulOp : SPIRV_TosaOpWithResult<"MatMul", 6, [NoMemoryEffect,
 
 
 def SPIRV_TosaMaxPool2DOp : SPIRV_TosaOpWithResult<"MaxPool2D", 7, [Pure,
-  AllElementTypesMatch<["input", "output"]>]> {
+  AllElementTypesMatch<["input", "output"]>,
+  NHWCInputOutputShapeMatch<"input", "output">,
+  Pool2DPadValuesLessThanKernel<"pad", "kernel">]> {
   let summary = "Performs max pooling on the input.";
 
   let description = [{
@@ -630,15 +662,15 @@ def SPIRV_TosaMaxPool2DOp : SPIRV_TosaOpWithResult<"MaxPool2D", 7, [Pure,
   }];
 
   let arguments = (ins
-    SPIRV_I32_1DTensorArmOfLength2Attr: $kernel,
-    SPIRV_I32_1DTensorArmOfLength2Attr: $stride,
-    SPIRV_I32_1DTensorArmOfLength4Attr: $pad,
+    SPIRV_PositiveI32_1DTensorArmOfLength2Attr: $kernel,
+    SPIRV_PositiveI32_1DTensorArmOfLength2Attr: $stride,
+    SPIRV_NonNegativeI32_1DTensorArmOfLength4Attr: $pad,
     SPIRV_TosaExtNaNPropagationModeAttr: $nan_mode,
-    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm4D: $input
+    SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_TensorArm4D: $input
   );
 
   let results = (outs
-    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm4D: $output
+    SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_TensorArm4D: $output
   );
 
   let assemblyFormat = [{
@@ -655,10 +687,14 @@ def SPIRV_TosaMaxPool2DOp : SPIRV_TosaOpWithResult<"MaxPool2D", 7, [Pure,
       return cast<::mlir::spirv::TensorArmType>(getInput().getType());
     }
   }];
+
+  let hasVerifier = 1;
 }
 
 
-def SPIRV_TosaRFFT2DOp : SPIRV_TosaOpWithComplexResult<"RFFT2D", 8, [Pure]> {
+def SPIRV_TosaRFFT2DOp : SPIRV_TosaOpWithComplexResult<"RFFT2D", 8, [Pure,
+  Struct2TensorArmRFFT2DShapesMatchInput<"input_real">,
+  TensorDimsArePowerOfTwo<"input_real", [1, 2]>]> {
   let summary = "Performs RFFT2D operation on the input.";
 
   let description = [{
@@ -706,7 +742,8 @@ def SPIRV_TosaRFFT2DOp : SPIRV_TosaOpWithComplexResult<"RFFT2D", 8, [Pure]> {
 }
 
 
-def SPIRV_TosaTransposeConv2DOp : SPIRV_TosaConvolutionOp<"TransposeConv2D", 9> {
+def SPIRV_TosaTransposeConv2DOp : SPIRV_TosaConvolutionOp<"TransposeConv2D", 9, [
+  Conv2DShapeMatch<"input", "weight", "bias", "output">]> {
   let summary = "Transpose 2D Convolution operator.";
 
   let description = [{
@@ -731,14 +768,14 @@ def SPIRV_TosaTransposeConv2DOp : SPIRV_TosaConvolutionOp<"TransposeConv2D", 9> 
 
   let arguments = (ins
     SPIRV_I32_1DTensorArmOfLength4Attr: $out_pad,
-    SPIRV_I32_1DTensorArmOfLength2Attr: $stride,
+    SPIRV_PositiveI32_1DTensorArmOfLength2Attr: $stride,
     SPIRV_TosaExtAccTypeAttr: $acc_type,
     SPIRV_BoolConstAttr: $local_bound,
-    SPIRV_I8OrI16OrF16OrF32OrBF16_TensorArm4D: $input,
-    SPIRV_I8OrF16OrF32OrBF16_TensorArm4D: $weight,
+    SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_TensorArm4D: $input,
+    SPIRV_I8OrF16OrF32OrBF16OrFP8_TensorArm4D: $weight,
     SPIRV_I32OrI64OrF16OrF32OrBF16_TensorArm1D: $bias,
-    SPIRV_I8OrI16OrF16OrF32OrBF16_1DTensorArmOfLength1: $input_zp,
-    SPIRV_I8OrF16OrF32OrBF16_1DTensorArmOfLength1: $weight_zp
+    SPIRV_I8OrI16OrF16OrF32OrBF16OrFP8_1DTensorArmOfLength1: $input_zp,
+    SPIRV_I8OrF16OrF32OrBF16OrFP8_1DTensorArmOfLength1: $weight_zp
   );
 
   let results = (outs
@@ -757,12 +794,16 @@ def SPIRV_TosaTransposeConv2DOp : SPIRV_TosaConvolutionOp<"TransposeConv2D", 9> 
     $weight_zp
     attr-dict `:` type(operands) `->` type(results)
   }];
+
+  let hasVerifier = 1;
 }
 
 
 def SPIRV_TosaClampOp : SPIRV_TosaOpWithResult<"Clamp", 10, [Pure,
   AllTypesMatch<["input", "output"]>,
-  AllElementTypesMatch<["input", "output", "min_val", "max_val"]>]> {
+  AllElementTypesMatch<["input", "output", "min_val", "max_val"]>,
+  ClampBoundsAreNotNaN<"min_val", "max_val">,
+  ClampMinValLessThanOrEqualToMaxVal<"min_val", "max_val">]> {
   let summary = "Computes Clamp(min, max).";
 
   let description = [{
@@ -2167,11 +2208,11 @@ def SPIRV_TosaConcatOp : SPIRV_TosaOpWithResult<"Concat", 54, [Pure,
 
   let arguments = (ins
     SPIRV_TensorArmAxisAttr: $axis,
-    Variadic<SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm>: $input1
+    Variadic<SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16OrFP8_TensorArm>: $input1
   );
 
   let results = (outs
-    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $output
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16OrFP8_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -2185,6 +2226,8 @@ def SPIRV_TosaConcatOp : SPIRV_TosaOpWithResult<"Concat", 54, [Pure,
       return getInput1().getTypes();
     }
   }];
+
+  let hasVerifier = 1;
 }
 
 
@@ -2214,13 +2257,13 @@ def SPIRV_TosaPadOp : SPIRV_TosaOpWithResult<"Pad", 55, [Pure,
   }];
 
   let arguments = (ins
-    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $input1,
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16OrFP8_TensorArm: $input1,
     SPIRV_I32_1DTensorArmOfEvenLength2To12: $padding,
-    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_1DTensorArmOfLength1: $pad_const
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16OrFP8_1DTensorArmOfLength1: $pad_const
   );
 
   let results = (outs
-    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $output
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16OrFP8_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -2267,12 +2310,12 @@ def SPIRV_TosaReshapeOp : SPIRV_TosaOpWithResult<"Reshape", 56, [Pure,
   }];
 
   let arguments = (ins
-    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $input1,
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16OrFP8_TensorArm: $input1,
     SPIRV_I32_1DTensorArmOfLength1To6: $shape
   );
 
   let results = (outs
-    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $output
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16OrFP8_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -2315,11 +2358,11 @@ def SPIRV_TosaReverseOp : SPIRV_TosaOpWithResult<"Reverse", 57, [Pure,
 
   let arguments = (ins
     SPIRV_TensorArmAxisAttr: $axis,
-    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $input1
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16OrFP8_TensorArm: $input1
   );
 
   let results = (outs
-    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $output
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16OrFP8_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -2362,13 +2405,13 @@ def SPIRV_TosaSliceOp : SPIRV_TosaOpWithResult<"Slice", 58, [Pure,
   }];
 
   let arguments = (ins
-    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $input1,
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16OrFP8_TensorArm: $input1,
     SPIRV_I32_1DTensorArmOfLength1To6: $start,
     SPIRV_I32_1DTensorArmOfLength1To6: $size
   );
 
   let results = (outs
-    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $output
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16OrFP8_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -2416,12 +2459,12 @@ def SPIRV_TosaTileOp : SPIRV_TosaOpWithResult<"Tile", 59, [Pure,
   }];
 
   let arguments = (ins
-    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $input1,
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16OrFP8_TensorArm: $input1,
     SPIRV_I32_1DTensorArmOfLength1To6: $multiples
   );
 
   let results = (outs
-    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $output
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16OrFP8_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -2466,11 +2509,11 @@ def SPIRV_TosaTransposeOp : SPIRV_TosaOpWithResult<"Transpose", 60, [Pure,
 
   let arguments = (ins
     SPIRV_I32_1DTensorArmOfLength1To6Attr: $perms,
-    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $input1
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16OrFP8_TensorArm: $input1
   );
 
   let results = (outs
-    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16_TensorArm: $output
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16OrFP8_TensorArm: $output
   );
 
   let assemblyFormat = [{
@@ -2512,12 +2555,12 @@ def SPIRV_TosaGatherOp : SPIRV_TosaOpWithResult<"Gather", 61, [NoMemoryEffect,
   }];
 
   let arguments = (ins
-    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16_TensorArm3D: $values,
+    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16OrFP8_TensorArm3D: $values,
     SPIRV_I32_TensorArm2D: $indices
   );
 
   let results = (outs
-    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16_TensorArm3D: $output
+    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16OrFP8_TensorArm3D: $output
   );
 
   let assemblyFormat = [{
@@ -2566,13 +2609,13 @@ def SPIRV_TosaScatterOp : SPIRV_TosaOpWithResult<"Scatter", 62, [NoMemoryEffect,
   }];
 
   let arguments = (ins
-    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16_TensorArm3D: $values_in,
+    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16OrFP8_TensorArm3D: $values_in,
     SPIRV_I32_TensorArm2D: $indices,
-    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16_TensorArm3D: $input
+    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16OrFP8_TensorArm3D: $input
   );
 
   let results = (outs
-    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16_TensorArm3D: $values_out
+    SPIRV_I8OrI16OrI32OrF16OrF32OrBF16OrFP8_TensorArm3D: $values_out
   );
 
   let assemblyFormat = [{
@@ -2601,7 +2644,8 @@ def SPIRV_TosaResizeOp : SPIRV_TosaOpWithResult<"Resize", 63, [Pure,
   TypeConstraintImplicationOn<"input", F32, "output", [F32]>,
   TypeConstraintImplicationOn<"input", BF16, "output", [BF16]>,
   TypeConstraintImplicationOn<"input", I8, "output", [I8, I32]>,
-  TypeConstraintImplicationOn<"input", I16, "output", [I16, I64]>]> {
+  TypeConstraintImplicationOn<"input", I16, "output", [I16, I64]>,
+  NHWCInputOutputShapeMatch<"input", "output">]> {
   let summary = "Resize operation, supports various resize/upsample modes.";
 
   let description = [{
@@ -2687,13 +2731,15 @@ def SPIRV_TosaResizeOp : SPIRV_TosaOpWithResult<"Resize", 63, [Pure,
 
 def SPIRV_TosaCastOp : SPIRV_TosaOpWithResult<"Cast", 64, [Pure,
   AllShapesMatch<["input", "output"]>,
-  TypeConstraintImplicationOn<"input", F16, "output", [F32, I16, I32, I8]>,
-  TypeConstraintImplicationOn<"input", F32, "output", [F16, I16, I32, I8, BF16]>,
+  TypeConstraintImplicationOn<"input", F16, "output", [F32, I16, I32, I8, F8E4M3FN, F8E5M2]>,
+  TypeConstraintImplicationOn<"input", F32, "output", [F16, I16, I32, I8, BF16, F8E4M3FN, F8E5M2]>,
   TypeConstraintImplicationOn<"input", I16, "output", [F16, F32, I32, I8, SPIRV_Bool, BF16]>,
   TypeConstraintImplicationOn<"input", I32, "output", [F16, F32, I16, I8, SPIRV_Bool, BF16]>,
   TypeConstraintImplicationOn<"input", I8, "output", [F16, F32, I16, I32, SPIRV_Bool, BF16]>,
   TypeConstraintImplicationOn<"input", SPIRV_Bool, "output", [I16, I32, I8]>,
-  TypeConstraintImplicationOn<"input", BF16, "output", [F32, I16, I32, I8]>]> {
+  TypeConstraintImplicationOn<"input", BF16, "output", [F32, I16, I32, I8, F8E4M3FN, F8E5M2]>,
+  TypeConstraintImplicationOn<"input", F8E4M3FN, "output", [F16, F32, BF16]>,
+  TypeConstraintImplicationOn<"input", F8E5M2, "output", [F16, F32, BF16]>]> {
   let summary = "Cast operation.";
 
   let description = [{
@@ -2737,6 +2783,18 @@ def SPIRV_TosaCastOp : SPIRV_TosaOpWithResult<"Cast", 64, [Pure,
     | int16   | bf16    |
     | int32   | bf16    |
     | int8    | bf16    |
+    | bf16    | fp8e4m3 |
+    | fp8e4m3 | bf16    |
+    | bf16    | fp8e5m2 |
+    | fp8e5m2 | bf16    |
+    | float16 | fp8e4m3 |
+    | float32 | fp8e4m3 |
+    | fp8e4m3 | float16 |
+    | fp8e4m3 | float32 |
+    | float16 | fp8e5m2 |
+    | float32 | fp8e5m2 |
+    | fp8e5m2 | float16 |
+    | fp8e5m2 | float32 |
 
     References:
       * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_cast
@@ -2750,11 +2808,11 @@ def SPIRV_TosaCastOp : SPIRV_TosaOpWithResult<"Cast", 64, [Pure,
   }];
 
   let arguments = (ins
-    SPIRV_BoolOrI8OrI16OrI32OrBF16OrF16OrF32_TensorArm: $input
+    SPIRV_BoolOrI8OrI16OrI32OrF16OrF32OrBF16OrFP8_TensorArm: $input
   );
 
   let results = (outs
-    SPIRV_I8OrI16OrI32OrBoolOrF16OrF32OrBF16_TensorArm: $output
+    SPIRV_I8OrI16OrI32OrBoolOrF16OrF32OrBF16OrFP8_TensorArm: $output
   );
 
   let assemblyFormat = [{

@@ -147,3 +147,7 @@ brb INJ
 // CHECK: brb inj   // encoding: [0xbf,0x72,0x09,0xd5]
 // ERROR-NO-BRBE: [[@LINE-4]]:1: error: instruction requires: brbe
 // ERROR-NO-BRBE: [[@LINE-4]]:1: error: instruction requires: brbe
+
+brb iall, x30
+// ERROR: [[@LINE-1]]:11: error: invalid operand for instruction
+// ERROR-NO-BRBE: [[@LINE-2]]:11: error: invalid operand for instruction

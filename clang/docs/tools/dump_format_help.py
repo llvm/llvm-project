@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # A tool to parse the output of `clang-format --help` and update the
-# documentation in ../ClangFormat.rst automatically.
+# documentation in ../ClangFormat.md automatically.
 
 import argparse
 import os
@@ -9,12 +9,12 @@ import subprocess
 import sys
 
 PARENT_DIR = os.path.join(os.path.dirname(__file__), "..")
-DOC_FILE = os.path.join(PARENT_DIR, "ClangFormat.rst")
+DOC_FILE = os.path.join(PARENT_DIR, "ClangFormat.md")
 
 
 def substitute(text, tag, contents):
-    replacement = "\n.. START_%s\n\n%s\n\n.. END_%s\n" % (tag, contents, tag)
-    pattern = r"\n\.\. START_%s\n.*\n\.\. END_%s\n" % (tag, tag)
+    replacement = f"\n% START_{tag}\n\n{contents}\n\n% END_{tag}\n"
+    pattern = rf"\n% START_{tag}\n.*\n% END_{tag}\n"
     return re.sub(pattern, replacement, text, flags=re.S)
 
 
@@ -38,15 +38,7 @@ def get_help_text():
     out = get_help_output()
     out = re.sub(r" clang-format\.exe ", " clang-format ", out)
 
-    out = (
-        """.. code-block:: console
-
-$ clang-format --help
-"""
-        + out
-    )
-    out = indent(out, 2, indent_first_line=False)
-    return out
+    return "```console\n$ clang-format --help\n" + out + "```"
 
 
 def validate(text, columns):

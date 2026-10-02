@@ -32,8 +32,7 @@ define <1 x i32> @smulo_v1i32(<1 x i32> %a0, <1 x i32> %a1, ptr %p2) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    imull %esi, %edi
-; CHECK-NEXT:    seto %al
-; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    movl %edi, (%rdx)
 ; CHECK-NEXT:    retq
   %t = call {<1 x i32>, <1 x i1>} @llvm.smul.with.overflow.v1i32(<1 x i32> %a0, <1 x i32> %a1)
@@ -2804,13 +2803,13 @@ define <2 x i32> @smulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; SSE2-NEXT:    imulq %rdx, %rsi
 ; SSE2-NEXT:    movq $-1, %rdx
 ; SSE2-NEXT:    movl $0, %r9d
-; SSE2-NEXT:    cmovoq %rdx, %r9
+; SSE2-NEXT:    cmovbq %rdx, %r9
 ; SSE2-NEXT:    movq %rsi, %xmm1
 ; SSE2-NEXT:    imulq %rax, %rcx
 ; SSE2-NEXT:    movq %rcx, %xmm0
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; SSE2-NEXT:    movq %r9, %xmm0
-; SSE2-NEXT:    cmovoq %rdx, %r8
+; SSE2-NEXT:    cmovbq %rdx, %r8
 ; SSE2-NEXT:    movq %r8, %xmm2
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
@@ -2829,13 +2828,13 @@ define <2 x i32> @smulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; SSSE3-NEXT:    imulq %rdx, %rsi
 ; SSSE3-NEXT:    movq $-1, %rdx
 ; SSSE3-NEXT:    movl $0, %r9d
-; SSSE3-NEXT:    cmovoq %rdx, %r9
+; SSSE3-NEXT:    cmovbq %rdx, %r9
 ; SSSE3-NEXT:    movq %rsi, %xmm1
 ; SSSE3-NEXT:    imulq %rax, %rcx
 ; SSSE3-NEXT:    movq %rcx, %xmm0
 ; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; SSSE3-NEXT:    movq %r9, %xmm0
-; SSSE3-NEXT:    cmovoq %rdx, %r8
+; SSSE3-NEXT:    cmovbq %rdx, %r8
 ; SSSE3-NEXT:    movq %r8, %xmm2
 ; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
@@ -2852,13 +2851,13 @@ define <2 x i32> @smulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; SSE41-NEXT:    imulq %rdx, %rsi
 ; SSE41-NEXT:    movq $-1, %rdx
 ; SSE41-NEXT:    movl $0, %r9d
-; SSE41-NEXT:    cmovoq %rdx, %r9
+; SSE41-NEXT:    cmovbq %rdx, %r9
 ; SSE41-NEXT:    movq %rsi, %xmm0
 ; SSE41-NEXT:    imulq %rax, %rcx
 ; SSE41-NEXT:    movq %rcx, %xmm1
 ; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; SSE41-NEXT:    movq %r9, %xmm0
-; SSE41-NEXT:    cmovoq %rdx, %r8
+; SSE41-NEXT:    cmovbq %rdx, %r8
 ; SSE41-NEXT:    movq %r8, %xmm2
 ; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,2,2,3]
@@ -2875,66 +2874,40 @@ define <2 x i32> @smulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; AVX-NEXT:    imulq %rdx, %rsi
 ; AVX-NEXT:    movq $-1, %rdx
 ; AVX-NEXT:    movl $0, %r9d
-; AVX-NEXT:    cmovoq %rdx, %r9
+; AVX-NEXT:    cmovbq %rdx, %r9
 ; AVX-NEXT:    vmovq %rsi, %xmm0
 ; AVX-NEXT:    imulq %rax, %rcx
 ; AVX-NEXT:    vmovq %rcx, %xmm1
 ; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; AVX-NEXT:    vmovq %r9, %xmm0
-; AVX-NEXT:    cmovoq %rdx, %r8
+; AVX-NEXT:    cmovbq %rdx, %r8
 ; AVX-NEXT:    vmovq %r8, %xmm2
 ; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; AVX-NEXT:    vmovdqa %xmm1, (%rdi)
 ; AVX-NEXT:    retq
 ;
-; AVX512F-LABEL: smulo_v2i64:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovq %xmm1, %rax
-; AVX512F-NEXT:    vmovq %xmm0, %rcx
-; AVX512F-NEXT:    vpextrq $1, %xmm1, %rdx
-; AVX512F-NEXT:    vpextrq $1, %xmm0, %rsi
-; AVX512F-NEXT:    imulq %rdx, %rsi
-; AVX512F-NEXT:    seto %dl
-; AVX512F-NEXT:    vmovq %rsi, %xmm0
-; AVX512F-NEXT:    imulq %rax, %rcx
-; AVX512F-NEXT:    vmovq %rcx, %xmm1
-; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; AVX512F-NEXT:    seto %al
-; AVX512F-NEXT:    andl $1, %eax
-; AVX512F-NEXT:    kmovw %eax, %k0
-; AVX512F-NEXT:    kmovw %edx, %k1
-; AVX512F-NEXT:    kshiftlw $15, %k1, %k1
-; AVX512F-NEXT:    kshiftrw $14, %k1, %k1
-; AVX512F-NEXT:    korw %k1, %k0, %k1
-; AVX512F-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512F-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
-; AVX512F-NEXT:    vmovdqa %xmm1, (%rdi)
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: smulo_v2i64:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovq %xmm1, %rax
-; AVX512BW-NEXT:    vmovq %xmm0, %rcx
-; AVX512BW-NEXT:    vpextrq $1, %xmm1, %rdx
-; AVX512BW-NEXT:    vpextrq $1, %xmm0, %rsi
-; AVX512BW-NEXT:    imulq %rdx, %rsi
-; AVX512BW-NEXT:    seto %dl
-; AVX512BW-NEXT:    vmovq %rsi, %xmm0
-; AVX512BW-NEXT:    imulq %rax, %rcx
-; AVX512BW-NEXT:    vmovq %rcx, %xmm1
-; AVX512BW-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; AVX512BW-NEXT:    seto %al
-; AVX512BW-NEXT:    andl $1, %eax
-; AVX512BW-NEXT:    kmovw %eax, %k0
-; AVX512BW-NEXT:    kmovd %edx, %k1
-; AVX512BW-NEXT:    kshiftlw $15, %k1, %k1
-; AVX512BW-NEXT:    kshiftrw $14, %k1, %k1
-; AVX512BW-NEXT:    korw %k1, %k0, %k1
-; AVX512BW-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512BW-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
-; AVX512BW-NEXT:    vmovdqa %xmm1, (%rdi)
-; AVX512BW-NEXT:    retq
+; AVX512-LABEL: smulo_v2i64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpextrq $1, %xmm1, %rax
+; AVX512-NEXT:    vpextrq $1, %xmm0, %rcx
+; AVX512-NEXT:    vmovq %xmm1, %rdx
+; AVX512-NEXT:    vmovq %xmm0, %rsi
+; AVX512-NEXT:    imulq %rdx, %rsi
+; AVX512-NEXT:    setb %dl
+; AVX512-NEXT:    imulq %rax, %rcx
+; AVX512-NEXT:    vmovq %rcx, %xmm0
+; AVX512-NEXT:    vmovq %rsi, %xmm1
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; AVX512-NEXT:    setb %al
+; AVX512-NEXT:    vmovd %edx, %xmm0
+; AVX512-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
+; AVX512-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; AVX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vmovdqa %xmm1, (%rdi)
+; AVX512-NEXT:    retq
   %t = call {<2 x i64>, <2 x i1>} @llvm.smul.with.overflow.v2i64(<2 x i64> %a0, <2 x i64> %a1)
   %val = extractvalue {<2 x i64>, <2 x i1>} %t, 0
   %obit = extractvalue {<2 x i64>, <2 x i1>} %t, 1

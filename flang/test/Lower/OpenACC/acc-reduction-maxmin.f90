@@ -58,40 +58,40 @@ end subroutine acc_array_reduction_min
 ! EXTREMUM-LABEL:   acc.reduction.recipe @reduction_minimumf_ref_10xf32 : !fir.ref<!fir.array<10xf32>> reduction_operator <minimumf> init {
 ! EXTREMUM:         } combiner {
 ! EXTREMUM:           fir.do_loop
-! EXTREMUM:             %[[MINIMUMF_0:.*]] = arith.minimumf %{{.*}}, %{{.*}} fastmath<contract> : f32
+! EXTREMUM:             acc.reduction_combine %{{.*}} into %{{.*}} <minimumf> : !fir.ref<f32>
 
 ! EXTREMUM-LABEL:   acc.reduction.recipe @reduction_minimumf_ref_f32 : !fir.ref<f32> reduction_operator <minimumf> init {
 ! EXTREMUM:           %[[CST:.*]] = arith.constant 3.40282347E+38 : f32
 ! EXTREMUM:         } combiner {
-! EXTREMUM:           %[[MINIMUMF_0:.*]] = arith.minimumf %{{.*}}, %{{.*}} fastmath<contract> : f32
+! EXTREMUM:           acc.reduction_combine %{{.*}} into %{{.*}} <minimumf> : !fir.ref<f32>
 
 ! EXTREMUM-LABEL:   acc.reduction.recipe @reduction_maximumf_ref_10xf32 : !fir.ref<!fir.array<10xf32>> reduction_operator <maximumf> init {
 ! EXTREMUM:         } combiner {
 ! EXTREMUM:           fir.do_loop
-! EXTREMUM:             %[[MAXIMUMF_0:.*]] = arith.maximumf %{{.*}}, %{{.*}} fastmath<contract> : f32
+! EXTREMUM:             acc.reduction_combine %{{.*}} into %{{.*}} <maximumf> : !fir.ref<f32>
 
 ! EXTREMUM-LABEL:   acc.reduction.recipe @reduction_maximumf_ref_f32 : !fir.ref<f32> reduction_operator <maximumf> init {
 ! EXTREMUM-LABEL:   } combiner {
-! EXTREMUM:           %[[MAXIMUMF_0:.*]] = arith.maximumf %{{.*}}, %{{.*}} fastmath<contract> : f32
+! EXTREMUM:           acc.reduction_combine %{{.*}} into %{{.*}} <maximumf> : !fir.ref<f32>
 
 ! EXTREMENUM-LABEL:   acc.reduction.recipe @reduction_minnumf_ref_10xf32 : !fir.ref<!fir.array<10xf32>> reduction_operator <minnumf> init {
 ! EXTREMENUM:         } combiner {
 ! EXTREMENUM:           fir.do_loop
-! EXTREMENUM:             %[[MINNUMF_0:.*]] = arith.minnumf %{{.*}}, %{{.*}} fastmath<contract> : f32
+! EXTREMENUM:             acc.reduction_combine %{{.*}} into %{{.*}} <minnumf> : !fir.ref<f32>
 
 ! EXTREMENUM-LABEL:   acc.reduction.recipe @reduction_minnumf_ref_f32 : !fir.ref<f32> reduction_operator <minnumf> init {
 ! EXTREMENUM:           %[[CST:.*]] = arith.constant 3.40282347E+38 : f32
 ! EXTREMENUM:         } combiner {
-! EXTREMENUM:           %[[MINNUMF_0:.*]] = arith.minnumf %{{.*}}, %{{.*}} fastmath<contract> : f32
+! EXTREMENUM:           acc.reduction_combine %{{.*}} into %{{.*}} <minnumf> : !fir.ref<f32>
 
 ! EXTREMENUM-LABEL:   acc.reduction.recipe @reduction_maxnumf_ref_10xf32 : !fir.ref<!fir.array<10xf32>> reduction_operator <maxnumf> init {
 ! EXTREMENUM:         } combiner {
 ! EXTREMENUM:           fir.do_loop
-! EXTREMENUM:             %[[MAXNUMF_0:.*]] = arith.maxnumf %{{.*}}, %{{.*}} fastmath<contract> : f32
+! EXTREMENUM:             acc.reduction_combine %{{.*}} into %{{.*}} <maxnumf> : !fir.ref<f32>
 
 ! EXTREMENUM-LABEL:   acc.reduction.recipe @reduction_maxnumf_ref_f32 : !fir.ref<f32> reduction_operator <maxnumf> init {
 ! EXTREMENUM-LABEL:   } combiner {
-! EXTREMENUM:           %[[MAXNUMF_0:.*]] = arith.maxnumf %{{.*}}, %{{.*}} fastmath<contract> : f32
+! EXTREMENUM:           acc.reduction_combine %{{.*}} into %{{.*}} <maxnumf> : !fir.ref<f32>
 
 ! PORTABLE-NANNSZ-LABEL:   acc.reduction.recipe @reduction_min_ref_10xf32 : !fir.ref<!fir.array<10xf32>> reduction_operator <min> init {
 ! PORTABLE-NANNSZ:         } combiner {

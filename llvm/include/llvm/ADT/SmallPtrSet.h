@@ -35,6 +35,8 @@
 
 namespace llvm {
 
+template <typename PtrTy> class SmallPtrSetIterator;
+
 /// SmallPtrSetImplBase - This is the common code shared among all the
 /// SmallPtrSet<>'s, which is almost everything.  SmallPtrSet has two modes, one
 /// for small and one for large sets.
@@ -47,14 +49,16 @@ namespace llvm {
 /// sets are often small.  In this case, no memory allocation is used, and only
 /// light-weight and cache-efficient scanning is used.
 ///
-/// Large sets use a classic quadratically-probed hash table.  Empty buckets are
-/// represented with an illegal pointer value (-1) to allow null pointers to be
-/// inserted.  Tombstones are represented with another illegal pointer value
-/// (-2), to allow deletion.  The hash table is resized when the table is 3/4 or
-/// more.  When this happens, the table is doubled in size.
-///
+/// Large sets use a linear-probed hash table with deletion implemented using
+/// Knuth TAOCP 6.4 Algorithm R: `erase` opens a hole, walks forward sliding
+/// each following entry whose probe path crosses the hole back into it (the
+/// hole moves with each slide), and stops at the next empty slot.  Empty
+/// buckets are represented with an illegal pointer value (-1) to allow null
+/// pointers to be inserted; no tombstone state is needed.  The hash table is
+/// resized when the table is 2/3 or more.  When this happens, the table is
+/// doubled in size.
 class SmallPtrSetImplBase : public DebugEpochBase {
-  friend class SmallPtrSetIteratorImpl;
+  template <typename PtrTy> friend class SmallPtrSetIterator;
 
 protected:
   /// The current set of buckets, in either small or big representation.
@@ -66,8 +70,6 @@ protected:
   /// If small, all these elements are at the beginning of CurArray and the rest
   /// is uninitialized.
   unsigned NumEntries;
-  /// Number of tombstones in CurArray.
-  unsigned NumTombstones;
   /// Whether the set is in small representation.
   bool IsSmall;
 
@@ -80,7 +82,7 @@ protected:
 
   explicit SmallPtrSetImplBase(const void **SmallStorage, unsigned SmallSize)
       : CurArray(SmallStorage), CurArraySize(SmallSize), NumEntries(0),
-        NumTombstones(0), IsSmall(true) {
+        IsSmall(true) {
     assert(llvm::has_single_bit(SmallSize) &&
            "Initial size must be a power of two!");
   }
@@ -111,7 +113,6 @@ public:
     }
 
     NumEntries = 0;
-    NumTombstones = 0;
   }
 
   void reserve(size_type NewNumEntries) {
@@ -122,13 +123,13 @@ public:
     // No need to expand if we're small and NewNumEntries will fit in the space.
     if (isSmall() && NewNumEntries <= CurArraySize)
       return;
-    // insert_imp_big will reallocate if stores is more than 75% full, on the
+    // insert_imp_big will reallocate if stores is more than 2/3 full, on the
     // /final/ insertion.
-    if (!isSmall() && ((NewNumEntries - 1) * 4) < (CurArraySize * 3))
+    if (!isSmall() && ((NewNumEntries - 1) * 3) < (CurArraySize * 2))
       return;
-    // We must Grow -- find the size where we'd be 75% full, then round up to
+    // We must Grow -- find the size where we'd be 2/3 full, then round up to
     // the next power of two.
-    size_type NewSize = NewNumEntries + (NewNumEntries / 3);
+    size_type NewSize = NewNumEntries + (NewNumEntries / 2);
     NewSize = llvm::bit_ceil(NewSize);
     // Like insert_imp_big, always allocate at least 128 elements.
     NewSize = std::max(128u, NewSize);
@@ -136,8 +137,6 @@ public:
   }
 
 protected:
-  static void *getTombstoneMarker() { return reinterpret_cast<void *>(-2); }
-
   static void *getEmptyMarker() {
     // Note that -1 is chosen to make clear() efficiently implementable with
     // memset and because it's not a valid pointer value.
@@ -206,11 +205,8 @@ protected:
     if (!Bucket)
       return false;
 
-    *const_cast<const void **>(Bucket) = getTombstoneMarker();
-    NumTombstones++;
+    eraseFromBucket(const_cast<const void **>(Bucket));
     --NumEntries;
-    // Treat this consistently from an API perspective, even if we don't
-    // actually invalidate iterators here.
     incrementEpoch();
     return true;
   }
@@ -251,13 +247,18 @@ private:
   LLVM_ABI std::pair<const void *const *, bool> insert_imp_big(const void *Ptr);
 
   LLVM_ABI const void *const *doFind(const void *Ptr) const;
-  const void *const *FindBucketFor(const void *Ptr) const;
   LLVM_ABI void shrink_and_clear();
 
-  /// Grow - Allocate a larger backing store for the buckets and move it over.
+protected:
+  /// Erase the entry at \p Bucket and close the resulting hole via Knuth
+  /// TAOCP 6.4 Algorithm R. Caller must update \c NumEntries and the epoch.
+  LLVM_ABI void eraseFromBucket(const void **Bucket);
+
+  /// Allocate a larger backing store for the buckets and move it over.
+  /// Passing the current size triggers a same-size rehash, used by batch
+  /// erase to compact away empty slots left by mark-then-rebuild.
   LLVM_ABI void Grow(unsigned NewSize);
 
-protected:
   /// swap - Swaps the elements of two sets.
   /// Note: This method assumes that both sets have the same small size.
   LLVM_ABI void swap(const void **SmallStorage, const void **RHSSmallStorage,
@@ -277,61 +278,27 @@ private:
   void copyHelper(const SmallPtrSetImplBase &RHS);
 };
 
-/// SmallPtrSetIteratorImpl - This is the common base class shared between all
-/// instances of SmallPtrSetIterator.
-class LLVM_DEBUGEPOCHBASE_HANDLEBASE_EMPTYBASE SmallPtrSetIteratorImpl
+/// This implements a const_iterator for SmallPtrSet.
+template <typename PtrTy>
+class LLVM_DEBUGEPOCHBASE_HANDLEBASE_EMPTYBASE SmallPtrSetIterator
     : public DebugEpochBase::HandleBase {
-public:
-  explicit SmallPtrSetIteratorImpl(const void *const *BP, const void *const *E,
-                                   const DebugEpochBase &Epoch)
-      : DebugEpochBase::HandleBase(&Epoch), Bucket(BP), End(E) {
-    AdvanceIfNotValid();
-  }
-
-  bool operator==(const SmallPtrSetIteratorImpl &RHS) const {
-    return Bucket == RHS.Bucket;
-  }
-  bool operator!=(const SmallPtrSetIteratorImpl &RHS) const {
-    return Bucket != RHS.Bucket;
-  }
-
-protected:
-  void *dereference() const {
-    assert(isHandleInSync() && "invalid iterator access!");
-    assert(Bucket < End);
-    return const_cast<void *>(*Bucket);
-  }
-  void increment() {
-    assert(isHandleInSync() && "invalid iterator access!");
-    ++Bucket;
-    AdvanceIfNotValid();
-  }
-
-private:
-  /// AdvanceIfNotValid - If the current bucket isn't valid, advance to a bucket
-  /// that is.   This is guaranteed to stop because the end() bucket is marked
-  /// valid.
-  void AdvanceIfNotValid() {
-    assert(Bucket <= End);
-    while (Bucket != End &&
-           (*Bucket == SmallPtrSetImplBase::getEmptyMarker() ||
-            *Bucket == SmallPtrSetImplBase::getTombstoneMarker()))
-      ++Bucket;
-  }
-
+  using PtrTraits = PointerLikeTypeTraits<PtrTy>;
   using BucketItTy =
       std::conditional_t<shouldReverseIterate(),
                          std::reverse_iterator<const void *const *>,
                          const void *const *>;
 
-  BucketItTy Bucket;
-  BucketItTy End;
-};
+  BucketItTy Bucket = {};
+  BucketItTy End = {};
 
-/// SmallPtrSetIterator - This implements a const_iterator for SmallPtrSet.
-template <typename PtrTy>
-class SmallPtrSetIterator : public SmallPtrSetIteratorImpl {
-  using PtrTraits = PointerLikeTypeTraits<PtrTy>;
+  /// AdvanceIfNotValid - If the current bucket isn't valid, advance to a bucket
+  /// that is.   This is guaranteed to stop because the end() bucket is marked
+  /// valid.
+  void AdvanceIfNotValid() {
+    assert(Bucket <= End);
+    while (Bucket != End && *Bucket == SmallPtrSetImplBase::getEmptyMarker())
+      ++Bucket;
+  }
 
 public:
   using value_type = PtrTy;
@@ -340,23 +307,40 @@ public:
   using difference_type = std::ptrdiff_t;
   using iterator_category = std::forward_iterator_tag;
 
-  using SmallPtrSetIteratorImpl::SmallPtrSetIteratorImpl;
+  SmallPtrSetIterator() = default;
 
-  // Most methods are provided by the base class.
+  SmallPtrSetIterator(const void *const *BP, const void *const *E,
+                      const DebugEpochBase &Epoch)
+      : DebugEpochBase::HandleBase(&Epoch), Bucket(BucketItTy(BP)),
+        End(BucketItTy(E)) {
+    AdvanceIfNotValid();
+  }
 
   [[nodiscard]] const PtrTy operator*() const {
-    return PtrTraits::getFromVoidPointer(dereference());
+    assert(isHandleInSync() && "invalid iterator access!");
+    assert(Bucket < End);
+    return PtrTraits::getFromVoidPointer(const_cast<void *>(*Bucket));
   }
 
   inline SmallPtrSetIterator &operator++() { // Preincrement
-    increment();
+    assert(isHandleInSync() && "invalid iterator access!");
+    ++Bucket;
+    AdvanceIfNotValid();
     return *this;
   }
 
   SmallPtrSetIterator operator++(int) { // Postincrement
     SmallPtrSetIterator tmp = *this;
-    increment();
+    ++*this;
     return tmp;
+  }
+
+  bool operator==(const SmallPtrSetIterator &RHS) const {
+    assert(isComparableWith(RHS) && "incomparable iterators!");
+    return Bucket == RHS.Bucket;
+  }
+  bool operator!=(const SmallPtrSetIterator &RHS) const {
+    return !(*this == RHS);
   }
 };
 
@@ -414,9 +398,11 @@ public:
   ///       if (Pred(P))
   ///         Set.erase(P);
   ///
-  /// Returns whether anything was removed. It is safe to read the set inside
-  /// the predicate function. However, the predicate must not modify the set
-  /// itself, only indicate a removal by returning true.
+  /// Returns whether anything was removed. The predicate must not access the
+  /// set being modified: it may inspect the element passed to it and return
+  /// true to request removal, but must not read (e.g. count()/find()) or
+  /// otherwise mutate the set. If anything is removed, all iterators and
+  /// references into the set are invalidated.
   template <typename UnaryPredicate> bool remove_if(UnaryPredicate P) {
     bool Removed = false;
     if (isSmall()) {
@@ -436,17 +422,23 @@ public:
       return Removed;
     }
 
+    // Mark-then-rebuild: one pass to clear matches without sliding (which
+    // would re-walk the cluster on every erase), then a single rehash to
+    // restore the linear-probe invariant.  O(N) total, vs O(N * cluster)
+    // for repeated per-match Algorithm R erases.
     for (const void *&Bucket : buckets()) {
-      if (Bucket == getTombstoneMarker() || Bucket == getEmptyMarker())
+      if (Bucket == getEmptyMarker())
         continue;
       PtrType Ptr = PtrTraits::getFromVoidPointer(const_cast<void *>(Bucket));
       if (P(Ptr)) {
-        Bucket = getTombstoneMarker();
-        ++NumTombstones;
+        Bucket = getEmptyMarker();
         --NumEntries;
-        incrementEpoch();
         Removed = true;
       }
+    }
+    if (Removed) {
+      incrementEpoch();
+      Grow(CurArraySize);
     }
     return Removed;
   }

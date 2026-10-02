@@ -16,7 +16,7 @@ subroutine test_irand()
   integer :: seed = 0
   integer :: result
   result = irand(seed)
-  ! CHECK: %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "result", uniq_name = "_QFtest_irandEresult"} 
+  ! CHECK: %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "result", uniq_name = "_QFtest_irandEresult"}>
   ! CHECK: %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_irandEresult"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK: %[[VAL_2:.*]] = fir.address_of(@_QFtest_irandEseed) : !fir.ref<i32> 
   ! CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFtest_irandEseed"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -30,7 +30,7 @@ subroutine test_rand()
   integer :: seed = 0
   real :: result
   result = rand(seed)
-  ! CHECK: %[[VAL_0:.*]] = fir.alloca f32 {bindc_name = "result", uniq_name = "_QFtest_randEresult"} 
+  ! CHECK: %[[VAL_0:.*]] = fir.alloca f32 <{bindc_name = "result", uniq_name = "_QFtest_randEresult"}>
   ! CHECK: %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_randEresult"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   ! CHECK: %[[VAL_2:.*]] = fir.address_of(@_QFtest_randEseed) : !fir.ref<i32> 
   ! CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFtest_randEseed"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -38,4 +38,3 @@ subroutine test_rand()
   ! CHECK: hlfir.assign %[[VAL_4]] to %[[VAL_1]]#0 : f32, !fir.ref<f32>
   ! CHECK: return
 end subroutine test_rand
-

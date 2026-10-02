@@ -54,11 +54,17 @@
 ; MULTIPLE-GRANULAR-PASSES-DAG: 4-[[MODULE_NAME_HASH]]-function-[[FUNCTION_FOO_HASH]]-NoOpFunctionPass-before.ll
 ; MULTIPLE-GRANULAR-PASSES-DAG: 5-[[MODULE_NAME_HASH]]-function-[[FUNCTION_BAR_HASH:[a-z0-9]+]]-NoOpFunctionPass-after.ll
 ; MULTIPLE-GRANULAR-PASSES-DAG: 5-[[MODULE_NAME_HASH]]-function-[[FUNCTION_BAR_HASH]]-NoOpFunctionPass-before.ll
-; MULTIPLE-GRANULAR-PASSES-DAG: 10-[[MODULE_NAME_HASH]]-loop-[[LOOP_NAME_HASH:[a-z0-9]+]]-NoOpLoopPass-after.ll
-; MULTIPLE-GRANULAR-PASSES-DAG: 10-[[MODULE_NAME_HASH]]-loop-[[LOOP_NAME_HASH]]-NoOpLoopPass-before.ll
-; MULTIPLE-GRANULAR-PASSES-DAG: 11-[[MODULE_NAME_HASH]]-module-NoOpModulePass-after.ll
-; MULTIPLE-GRANULAR-PASSES-DAG: 11-[[MODULE_NAME_HASH]]-module-NoOpModulePass-before.ll
+; MULTIPLE-GRANULAR-PASSES-DAG: 8-[[MODULE_NAME_HASH]]-loop-[[LOOP_NAME_HASH:[a-z0-9]+]]-NoOpLoopPass-after.ll
+; MULTIPLE-GRANULAR-PASSES-DAG: 8-[[MODULE_NAME_HASH]]-loop-[[LOOP_NAME_HASH]]-NoOpLoopPass-before.ll
+; MULTIPLE-GRANULAR-PASSES-DAG: 9-[[MODULE_NAME_HASH]]-module-NoOpModulePass-after.ll
+; MULTIPLE-GRANULAR-PASSES-DAG: 9-[[MODULE_NAME_HASH]]-module-NoOpModulePass-before.ll
 ; RUN: rm -rf %t/logs
+
+; Validate that analysis passes are excluded from dump.
+; RUN: opt %s -disable-output -passes='require<inline-advisor>,invalidate<inline-advisor>,no-op-module' -ir-dump-directory %t/logs -print-after=no-op-module
+; RUN: ls %t/logs | FileCheck %s --check-prefix=EXCLUDE-ANALYSIS-PASSES
+; RUN: ls %t/logs | count 1
+; EXCLUDE-ANALYSIS-PASSES: 1-[[MODULE_NAME_HASH:[a-z0-9]+]]-module-NoOpModulePass-after.ll
 
 define void @foo() {
     ret void

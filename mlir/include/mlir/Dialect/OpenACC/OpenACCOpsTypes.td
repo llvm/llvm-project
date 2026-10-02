@@ -33,4 +33,15 @@ def OpenACC_DeclareTokenType : OpenACC_Type<"DeclareToken", "declare_token"> {
   }];
 }
 
+def OpenACC_PrivateType : OpenACC_Type<"Private", "private_type"> {
+  let summary = "Handle type for privatized storage across parallel dimensions";
+  let description = [{
+    A handle type for privatized memory used in OpenACC codegen. It is
+    produced by `acc.privatize` and accessed through `acc.private_local`, which
+    materializes the underlying storage for the current parallel execution context.
+  }];
+  let parameters = (ins "mlir::Type":$baseTy);
+  let assemblyFormat = "`<` $baseTy `>`";
+}
+
 #endif // OPENACC_OPS_TYPES

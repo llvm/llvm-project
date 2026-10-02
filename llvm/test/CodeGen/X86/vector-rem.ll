@@ -4,36 +4,25 @@
 define <4 x i32> @foo(<4 x i32> %t, <4 x i32> %u) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[3,3,3,3]
-; CHECK-NEXT:    movd %xmm2, %eax
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[3,3,3,3]
-; CHECK-NEXT:    movd %xmm2, %ecx
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %ecx
-; CHECK-NEXT:    movd %edx, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
-; CHECK-NEXT:    movd %xmm3, %eax
+; CHECK-NEXT:    cvtdq2pd %xmm1, %xmm2
+; CHECK-NEXT:    cvtdq2pd %xmm0, %xmm3
+; CHECK-NEXT:    divpd %xmm2, %xmm3
+; CHECK-NEXT:    cvttpd2dq %xmm3, %xmm2
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
-; CHECK-NEXT:    movd %xmm3, %ecx
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %ecx
-; CHECK-NEXT:    movd %edx, %xmm3
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    movd %xmm1, %ecx
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %ecx
-; CHECK-NEXT:    movd %edx, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
-; CHECK-NEXT:    movd %xmm0, %ecx
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %ecx
-; CHECK-NEXT:    movd %edx, %xmm0
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    cvtdq2pd %xmm3, %xmm3
+; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,2,3]
+; CHECK-NEXT:    cvtdq2pd %xmm4, %xmm4
+; CHECK-NEXT:    divpd %xmm3, %xmm4
+; CHECK-NEXT:    cvttpd2dq %xmm4, %xmm3
+; CHECK-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
+; CHECK-NEXT:    pmuludq %xmm1, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; CHECK-NEXT:    pmuludq %xmm3, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; CHECK-NEXT:    psubd %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %m = srem <4 x i32> %t, %u
   ret <4 x i32> %m

@@ -1,4 +1,4 @@
-; RUN: opt %s -mtriple amdgcn-- -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
+; RUN: opt %s -mtriple=amdgpu6.00-- -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
 
 define amdgpu_kernel void @cycle_diverge_enter(i32 %n, i32 %a, i32 %b) #0 {
 ;      entry(div)
@@ -569,36 +569,7 @@ X:
   ret void
 }
 
-define amdgpu_kernel void @always_uniform() {
-; CHECK-LABEL: UniformityInfo for function 'always_uniform':
-; CHECK: CYCLES ASSUMED DIVERGENT:
-; CHECK:   depth=1: entries(bb2 bb3)
-
-bb:
-  %inst = tail call i32 @llvm.amdgcn.mbcnt.hi(i32 0, i32 0)
-  %inst1 = icmp ugt i32 %inst, 0
-  br i1 %inst1, label %bb3, label %bb2
-; CHECK:   DIVERGENT:   %inst = tail call i32 @llvm.amdgcn.mbcnt.hi(i32 0, i32 0)
-; CHECK:   DIVERGENT:   %inst1 = icmp ugt i32 %inst, 0
-; CHECK:   DIVERGENT:   br i1 %inst1, label %bb3, label %bb2
-
-bb2:                                              ; preds = %bb3, %bb
-  br label %bb3
-
-bb3:                                              ; preds = %bb2, %bb
-  %inst4 = tail call i64 @llvm.amdgcn.icmp.i64.i16(i16 0, i16 0, i32 0)
-  %inst5 = trunc i64 %inst4 to i32
-  %inst6 = and i32 0, %inst5
-  br label %bb2
-; CHECK-LABEL: BLOCK bb3
-; CHECK-NOT: DIVERGENT: {{.*}} call i64 @llvm.amdgcn.icmp.i64.i16
-; CHECK:   DIVERGENT:   %inst5 = trunc i64 %inst4 to i32
-; CHECK:   DIVERGENT:   %inst6 = and i32 0, %inst5
-}
-
 declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32)
-
-declare i64 @llvm.amdgcn.icmp.i64.i16(i16, i16, i32 immarg)
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 

@@ -21,7 +21,8 @@
 #include "gtest/gtest.h"
 #include <memory>
 
-namespace llvm {
+using namespace llvm;
+
 namespace {
 
 TEST(BasicBlockTest, PhiRange) {
@@ -546,4 +547,3 @@ TEST(BasicBlockTest, DiscardValueNames2) {
 }
 
 } // End anonymous namespace.
-} // End llvm namespace.

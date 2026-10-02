@@ -59,37 +59,33 @@ bb27:                                             ; preds = %bb9, %bb8
 define void @avoid_promotion_2_and(ptr nocapture noundef %arg) {
 ; CHECK-LABEL: avoid_promotion_2_and:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    add x8, x0, #32
-; CHECK-NEXT:    b LBB1_2
-; CHECK-NEXT:  LBB1_1: ; %latch
-; CHECK-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    cmp w9, #2
-; CHECK-NEXT:    add x8, x8, #56
-; CHECK-NEXT:    b.ls LBB1_4
-; CHECK-NEXT:  LBB1_2: ; %loop
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    add x9, x0, #32
+; CHECK-NEXT:  LBB1_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr w9, [x8, #20]
-; CHECK-NEXT:    cmp w9, #3
-; CHECK-NEXT:    b.lo LBB1_1
-; CHECK-NEXT:  ; %bb.3: ; %then
-; CHECK-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    ldp w13, w12, [x8, #12]
-; CHECK-NEXT:    ldr w10, [x8]
+; CHECK-NEXT:    ldr w10, [x9, #20]
+; CHECK-NEXT:    cmp w10, #3
+; CHECK-NEXT:    b.lo LBB1_3
+; CHECK-NEXT:  ; %bb.2: ; %then
+; CHECK-NEXT:    ; in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:    ldp w13, w12, [x9, #12]
+; CHECK-NEXT:    ldr w10, [x9]
 ; CHECK-NEXT:    ldr x11, [x0]
-; CHECK-NEXT:    ldr w14, [x8, #8]
+; CHECK-NEXT:    add x8, x8, #1
+; CHECK-NEXT:    ldr w14, [x9, #8]
 ; CHECK-NEXT:    lsl w10, w10, w13
 ; CHECK-NEXT:    ldrb w11, [x11, x12]
 ; CHECK-NEXT:    eor w10, w10, w11
-; CHECK-NEXT:    ldur w11, [x8, #-24]
+; CHECK-NEXT:    ldur w11, [x9, #-24]
 ; CHECK-NEXT:    and w10, w10, w14
-; CHECK-NEXT:    ldp x14, x13, [x8, #-16]
-; CHECK-NEXT:    str w10, [x8]
+; CHECK-NEXT:    ldp x14, x13, [x9, #-16]
+; CHECK-NEXT:    str w10, [x9], #56
 ; CHECK-NEXT:    and w11, w11, w12
 ; CHECK-NEXT:    ldrh w15, [x13, w10, uxtw #1]
 ; CHECK-NEXT:    strh w15, [x14, w11, uxtw #1]
 ; CHECK-NEXT:    strh w12, [x13, w10, uxtw #1]
 ; CHECK-NEXT:    b LBB1_1
-; CHECK-NEXT:  LBB1_4: ; %exit
+; CHECK-NEXT:  LBB1_3: ; %exit.critedge
 ; CHECK-NEXT:    ret
 entry:
   br label %loop

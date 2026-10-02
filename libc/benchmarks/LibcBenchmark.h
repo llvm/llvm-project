@@ -39,6 +39,8 @@
 #include <cstdint>
 #include <optional>
 
+#include "llvm/Support/ErrorHandling.h"
+
 namespace llvm {
 namespace libc_benchmarks {
 
@@ -55,24 +57,24 @@ enum class BenchmarkLog {
 // meaning of each field.
 struct BenchmarkOptions {
   // The minimum time for which the benchmark is running.
-  Duration MinDuration = std::chrono::seconds(0);
+  Duration min_duration = std::chrono::seconds(0);
   // The maximum time for which the benchmark is running.
-  Duration MaxDuration = std::chrono::seconds(10);
+  Duration max_duration = std::chrono::seconds(10);
   // The number of iterations in the first sample.
-  uint32_t InitialIterations = 1;
+  uint32_t initial_iterations = 1;
   // The maximum number of iterations for any given sample.
-  uint32_t MaxIterations = 10000000;
+  uint32_t max_iterations = 10000000;
   // The minimum number of samples.
-  uint32_t MinSamples = 4;
+  uint32_t min_samples = 4;
   // The maximum number of samples.
-  uint32_t MaxSamples = 1000;
+  uint32_t max_samples = 1000;
   // The benchmark will stop if the relative difference between the current and
   // the last estimation is less than epsilon. This is 1% by default.
-  double Epsilon = 0.01;
+  double epsilon = 0.01;
   // The number of iterations grows exponentially between each sample.
   // Must be greater or equal to 1.
-  double ScalingFactor = 1.4;
-  BenchmarkLog Log = BenchmarkLog::None;
+  double scaling_factor = 1.4;
+  BenchmarkLog log = BenchmarkLog::None;
 };
 
 // The state of a benchmark.
@@ -87,35 +89,42 @@ enum class BenchmarkStatus {
 // The internal state of the benchmark, useful to debug, test or report
 // statistics.
 struct BenchmarkState {
-  size_t LastSampleIterations;
-  Duration LastBatchElapsed;
-  BenchmarkStatus CurrentStatus;
-  Duration CurrentBestGuess; // The time estimation for a single run of `foo`.
-  double ChangeRatio; // The change in time estimation between previous and
-                      // current samples.
+  size_t last_sample_iterations;
+  Duration last_batch_elapsed;
+  BenchmarkStatus current_status;
+  Duration current_best_guess; // The time estimation for a single run of `foo`.
+  double change_ratio; // The change in time estimation between previous and
+                       // current samples.
 };
+
+#ifdef LIBC_BENCHMARKS_HAS_LLVM_SUPPORT
+using BenchmarkLogType = llvm::SmallVector<BenchmarkState, 16>;
+#else
+#include <vector>
+using BenchmarkLogType = std::vector<BenchmarkState>;
+#endif
 
 // A lightweight result for a benchmark.
 struct BenchmarkResult {
-  BenchmarkStatus TerminationStatus = BenchmarkStatus::Running;
-  Duration BestGuess = {};
-  std::optional<llvm::SmallVector<BenchmarkState, 16>> MaybeBenchmarkLog;
+  BenchmarkStatus termination_status = BenchmarkStatus::Running;
+  Duration best_guess = {};
+  std::optional<BenchmarkLogType> maybe_benchmark_log;
 };
 
 // Stores information about a cache in the host memory system.
 struct CacheInfo {
-  std::string Type; //  e.g. "Instruction", "Data", "Unified".
-  int Level;        // 0 is closest to processing unit.
-  int Size;         // In bytes.
-  int NumSharing;   // The number of processing units (Hyper-Threading Thread)
+  std::string type; //  e.g. "Instruction", "Data", "Unified".
+  int level;        // 0 is closest to processing unit.
+  int size;         // In bytes.
+  int num_sharing;  // The number of processing units (Hyper-Threading Thread)
                     // with which this cache is shared.
 };
 
 // Stores information about the host.
 struct HostState {
-  std::string CpuName; // returns a string compatible with the -march option.
-  double CpuFrequency; // in Hertz.
-  std::vector<CacheInfo> Caches;
+  std::string cpu_name; // returns a string compatible with the -march option.
+  double cpu_frequency; // in Hertz.
+  std::vector<CacheInfo> caches;
 
   static HostState get();
 };
@@ -123,41 +132,41 @@ struct HostState {
 namespace internal {
 
 struct Measurement {
-  size_t Iterations = 0;
-  Duration Elapsed = {};
+  size_t iterations = 0;
+  Duration elapsed = {};
 };
 
 // Updates the estimation of the elapsed time for a single iteration.
 class RefinableRuntimeEstimation {
-  Duration TotalTime = {};
-  size_t TotalIterations = 0;
+  Duration total_time = {};
+  size_t total_iterations = 0;
 
 public:
-  Duration update(const Measurement &M) {
-    assert(M.Iterations > 0);
+  Duration update(const Measurement &m) {
+    assert(m.iterations > 0);
     // Duration is encoded as a double (see definition).
-    // `TotalTime` and `M.Elapsed` are of the same magnitude so we don't expect
+    // `total_time` and `m.elapsed` are of the same magnitude so we don't expect
     // loss of precision due to radically different scales.
-    TotalTime += M.Elapsed;
-    TotalIterations += M.Iterations;
-    return TotalTime / TotalIterations;
+    total_time += m.elapsed;
+    total_iterations += m.iterations;
+    return total_time / total_iterations;
   }
 };
 
 // This class tracks the progression of the runtime estimation.
 class RuntimeEstimationProgression {
-  RefinableRuntimeEstimation RRE;
+  RefinableRuntimeEstimation rre;
 
 public:
-  Duration CurrentEstimation = {};
+  Duration current_estimation = {};
 
   // Returns the change ratio between our best guess so far and the one from the
   // new measurement.
-  double computeImprovement(const Measurement &M) {
-    const Duration NewEstimation = RRE.update(M);
-    const double Ratio = fabs(((CurrentEstimation / NewEstimation) - 1.0));
-    CurrentEstimation = NewEstimation;
-    return Ratio;
+  double compute_improvement(const Measurement &m) {
+    const Duration new_estimation = rre.update(m);
+    const double ratio = fabs(((current_estimation / new_estimation) - 1.0));
+    current_estimation = new_estimation;
+    return ratio;
   }
 };
 
@@ -192,78 +201,78 @@ public:
 //     `std::chrono::time_point now();`
 template <typename Function, typename ParameterProvider,
           typename BenchmarkClock = const std::chrono::high_resolution_clock>
-BenchmarkResult benchmark(const BenchmarkOptions &Options,
+BenchmarkResult benchmark(const BenchmarkOptions &options,
                           ParameterProvider &PP, Function foo,
                           BenchmarkClock &Clock = BenchmarkClock()) {
-  BenchmarkResult Result;
-  internal::RuntimeEstimationProgression REP;
-  Duration TotalBenchmarkDuration = {};
-  size_t Iterations = std::max(Options.InitialIterations, uint32_t(1));
-  size_t Samples = 0;
-  if (Options.ScalingFactor < 1.0)
-    report_fatal_error("ScalingFactor should be >= 1");
-  if (Options.Log != BenchmarkLog::None)
-    Result.MaybeBenchmarkLog.emplace();
+  BenchmarkResult result;
+  internal::RuntimeEstimationProgression rep;
+  Duration total_benchmark_duration = {};
+  size_t iterations = std::max(options.initial_iterations, uint32_t(1));
+  size_t samples = 0;
+  if (options.scaling_factor < 1.0)
+    report_fatal_error("scaling_factor should be >= 1");
+  if (options.log != BenchmarkLog::None)
+    result.maybe_benchmark_log.emplace();
   for (;;) {
-    // Request a new Batch of size `Iterations`.
-    const auto &Batch = PP.generateBatch(Iterations);
+    // Request a new Batch of size `iterations`.
+    const auto &batch = PP.generate_batch(iterations);
 
     // Measuring this Batch.
-    const auto StartTime = Clock.now();
-    for (const auto Parameter : Batch) {
-      auto Production = foo(Parameter);
-      benchmark::DoNotOptimize(Production);
+    const auto start_time = Clock.now();
+    for (const auto parameter : batch) {
+      auto production = foo(parameter);
+      benchmark::DoNotOptimize(production);
     }
-    const auto EndTime = Clock.now();
-    const Duration Elapsed = EndTime - StartTime;
+    const auto end_time = Clock.now();
+    const Duration elapsed = end_time - start_time;
 
     // Updating statistics.
-    ++Samples;
-    TotalBenchmarkDuration += Elapsed;
-    const double ChangeRatio = REP.computeImprovement({Iterations, Elapsed});
-    Result.BestGuess = REP.CurrentEstimation;
+    ++samples;
+    total_benchmark_duration += elapsed;
+    const double change_ratio = rep.compute_improvement({iterations, elapsed});
+    result.best_guess = rep.current_estimation;
 
     // Stopping condition.
-    if (TotalBenchmarkDuration >= Options.MinDuration &&
-        Samples >= Options.MinSamples && ChangeRatio < Options.Epsilon)
-      Result.TerminationStatus = BenchmarkStatus::PrecisionReached;
-    else if (Samples >= Options.MaxSamples)
-      Result.TerminationStatus = BenchmarkStatus::MaxSamplesReached;
-    else if (TotalBenchmarkDuration >= Options.MaxDuration)
-      Result.TerminationStatus = BenchmarkStatus::MaxDurationReached;
-    else if (Iterations >= Options.MaxIterations)
-      Result.TerminationStatus = BenchmarkStatus::MaxIterationsReached;
+    if (total_benchmark_duration >= options.min_duration &&
+        samples >= options.min_samples && change_ratio < options.epsilon)
+      result.termination_status = BenchmarkStatus::PrecisionReached;
+    else if (samples >= options.max_samples)
+      result.termination_status = BenchmarkStatus::MaxSamplesReached;
+    else if (total_benchmark_duration >= options.max_duration)
+      result.termination_status = BenchmarkStatus::MaxDurationReached;
+    else if (iterations >= options.max_iterations)
+      result.termination_status = BenchmarkStatus::MaxIterationsReached;
 
-    if (Result.MaybeBenchmarkLog) {
-      auto &BenchmarkLog = *Result.MaybeBenchmarkLog;
-      if (Options.Log == BenchmarkLog::Last && !BenchmarkLog.empty())
-        BenchmarkLog.pop_back();
-      BenchmarkState BS;
-      BS.LastSampleIterations = Iterations;
-      BS.LastBatchElapsed = Elapsed;
-      BS.CurrentStatus = Result.TerminationStatus;
-      BS.CurrentBestGuess = Result.BestGuess;
-      BS.ChangeRatio = ChangeRatio;
-      BenchmarkLog.push_back(BS);
+    if (result.maybe_benchmark_log) {
+      auto &benchmark_log = *result.maybe_benchmark_log;
+      if (options.log == BenchmarkLog::Last && !benchmark_log.empty())
+        benchmark_log.pop_back();
+      BenchmarkState bs;
+      bs.last_sample_iterations = iterations;
+      bs.last_batch_elapsed = elapsed;
+      bs.current_status = result.termination_status;
+      bs.current_best_guess = result.best_guess;
+      bs.change_ratio = change_ratio;
+      benchmark_log.push_back(bs);
     }
 
-    if (Result.TerminationStatus != BenchmarkStatus::Running)
-      return Result;
+    if (result.termination_status != BenchmarkStatus::Running)
+      return result;
 
-    if (Options.ScalingFactor > 1 &&
-        Iterations * Options.ScalingFactor == Iterations)
-      report_fatal_error(
-          "`Iterations *= ScalingFactor` is idempotent, increase ScalingFactor "
-          "or InitialIterations.");
+    if (options.scaling_factor > 1 &&
+        iterations * options.scaling_factor == iterations)
+      report_fatal_error("`iterations *= scaling_factor` is idempotent, "
+                         "increase scaling_factor "
+                         "or initial_iterations.");
 
-    Iterations *= Options.ScalingFactor;
+    iterations *= options.scaling_factor;
   }
 }
 
 // Interprets `Array` as a circular buffer of `Size` elements.
 template <typename T> class CircularArrayRef {
-  llvm::ArrayRef<T> Array;
-  size_t Size;
+  llvm::ArrayRef<T> array;
+  size_t size;
 
 public:
   using value_type = T;
@@ -274,38 +283,38 @@ public:
 
   class const_iterator {
     using iterator_category = std::input_iterator_tag;
-    llvm::ArrayRef<T> Array;
-    size_t Index;
-    size_t Offset;
+    llvm::ArrayRef<T> array;
+    size_t index;
+    size_t offset;
 
   public:
-    explicit const_iterator(llvm::ArrayRef<T> Array, size_t Index = 0)
-        : Array(Array), Index(Index), Offset(Index % Array.size()) {}
+    explicit const_iterator(llvm::ArrayRef<T> array, size_t index = 0)
+        : array(array), index(index), offset(index % array.size()) {}
     const_iterator &operator++() {
-      ++Index;
-      ++Offset;
-      if (Offset == Array.size())
-        Offset = 0;
+      ++index;
+      ++offset;
+      if (offset == array.size())
+        offset = 0;
       return *this;
     }
-    bool operator==(const_iterator Other) const { return Index == Other.Index; }
-    bool operator!=(const_iterator Other) const { return !(*this == Other); }
-    const T &operator*() const { return Array[Offset]; }
+    bool operator==(const_iterator other) const { return index == other.index; }
+    bool operator!=(const_iterator other) const { return !(*this == other); }
+    const T &operator*() const { return array[offset]; }
   };
 
-  CircularArrayRef(llvm::ArrayRef<T> Array, size_t Size)
-      : Array(Array), Size(Size) {
-    assert(Array.size() > 0);
+  CircularArrayRef(llvm::ArrayRef<T> array, size_t size)
+      : array(array), size(size) {
+    assert(array.size() > 0);
   }
 
-  const_iterator begin() const { return const_iterator(Array); }
-  const_iterator end() const { return const_iterator(Array, Size); }
+  const_iterator begin() const { return const_iterator(array); }
+  const_iterator end() const { return const_iterator(array, size); }
 };
 
 // A convenient helper to produce a CircularArrayRef from an ArrayRef.
 template <typename T>
-CircularArrayRef<T> cycle(llvm::ArrayRef<T> Array, size_t Size) {
-  return {Array, Size};
+CircularArrayRef<T> cycle(llvm::ArrayRef<T> array, size_t size) {
+  return {array, size};
 }
 
 // Creates an std::array which storage size is constrained under `Bytes`.
@@ -315,8 +324,8 @@ using ByteConstrainedArray = std::array<T, Bytes / sizeof(T)>;
 // A convenient helper to produce a CircularArrayRef from a
 // ByteConstrainedArray.
 template <typename T, size_t N>
-CircularArrayRef<T> cycle(const std::array<T, N> &Container, size_t Size) {
-  return {llvm::ArrayRef<T>(Container.cbegin(), Container.cend()), Size};
+CircularArrayRef<T> cycle(const std::array<T, N> &container, size_t size) {
+  return {llvm::ArrayRef<T>(container.cbegin(), container.cend()), size};
 }
 
 // Makes sure the binary was compiled in release mode and that frequency

@@ -21,5 +21,7 @@ define float @main() #0 !dbg !14 {
 !11 = !{i32 1, !"wchar_size", i32 4}
 !12 = !{i32 7, !"PIC Level", i32 2}
 !13 = !{!"clang"}
-!14 = distinct !DISubprogram(name: "main", scope: !3, file: !3, line: 3, scopeLine: 3, spFlags: DISPFlagDefinition, unit: !2, retainedNodes: !4)
+!14 = distinct !DISubprogram(name: "main", scope: !3, file: !3, line: 3, scopeLine: 3, spFlags: DISPFlagDefinition, unit: !2, retainedNodes: !4, type: !26)
 !24 = !DILocation(line: 7, column: 3, scope: !14)
+!25 = !{null}
+!26 = !DISubroutineType(types: !25)

@@ -44,9 +44,8 @@ enum { MemDisp = 0, MemBase = 1, MemIndex = 2, MemOuter = 3 };
 /// Enums for pc-relative memory operand decoding. Supports these forms:
 /// (d,PC)
 /// (d,PC,Xn)
-/// ([bd,PC],Xn,od)
-/// ([bd,PC,Xn],od)
-enum { PCRelDisp = 0, PCRelIndex = 1, PCRelOuter = 2 };
+/// (bd,PC,Xn.Size*SCALE)
+enum { PCRelDisp = 0, PCRelIndex = 1, PCRelScale = 2 };
 
 enum class MemAddrModeKind : unsigned {
   j = 1, // (An)
@@ -66,8 +65,8 @@ enum class MemAddrModeKind : unsigned {
   q,     // (d,PC)
   k,     // (d,PC,Xn.L)
   K,     // (d,PC,Xn.W)
-  l,     // (d,PC,Xn.L,SCALE)
-  L,     // (d,PC,Xn.W,SCALE)
+  l,     // (bd,PC,Xn.L,SCALE)
+  L,     // (bd,PC,Xn.W,SCALE)
   x,     // ([bd,PC],Xn.L,SCALE,od)
   X,     // ([bd,PC],Xn.W,SCALE,od)
   y,     // ([bd,PC,Xn.L,SCALE],od)

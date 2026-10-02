@@ -11,6 +11,7 @@
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/PosixApi.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Stream.h"
@@ -108,7 +109,7 @@ int SBFileSpec::ResolvePath(const char *src_path, char *dst_path,
 const char *SBFileSpec::GetFilename() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return m_opaque_up->GetFilename().AsCString(nullptr);
+  return ConstString(m_opaque_up->GetFilename()).AsCString(nullptr);
 }
 
 const char *SBFileSpec::GetDirectory() const {
@@ -116,7 +117,7 @@ const char *SBFileSpec::GetDirectory() const {
 
   FileSpec directory{*m_opaque_up};
   directory.ClearFilename();
-  return directory.GetPathAsConstString().GetCString();
+  return ConstString(directory.GetPath()).GetCString();
 }
 
 void SBFileSpec::SetFilename(const char *filename) {

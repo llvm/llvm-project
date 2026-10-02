@@ -241,7 +241,8 @@ void JSONNodeDumper::Visit(const APValue &Value, QualType Ty) {
 
 void JSONNodeDumper::Visit(const ConceptReference *CR) {
   JOS.attribute("kind", "ConceptReference");
-  JOS.attribute("id", createPointerRepresentation(CR->getNamedConcept()));
+  JOS.attribute("id", createPointerRepresentation(
+                          CR->getNamedConcept().getAsTemplateDecl()));
   if (const auto *Args = CR->getTemplateArgsAsWritten()) {
     JOS.attributeArray("templateArgsAsWritten", [Args, this] {
       for (const TemplateArgumentLoc &TAL : Args->arguments())
@@ -771,7 +772,7 @@ void JSONNodeDumper::VisitUnaryTransformType(const UnaryTransformType *UTT) {
   case UnaryTransformType::Enum:                                               \
     JOS.attribute("transformKind", #Trait);                                    \
     break;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
   }
 }
 
@@ -1119,9 +1120,49 @@ void JSONNodeDumper::VisitAccessSpecDecl(const AccessSpecDecl *ASD) {
   JOS.attribute("access", createAccessSpecifier(ASD->getAccess()));
 }
 
+void JSONNodeDumper::VisitExplicitInstantiationDecl(
+    const ExplicitInstantiationDecl *D) {
+  attributeOnlyIfTrue("isExternTemplate", D->isExternTemplate());
+  if (D->getSpecialization())
+    JOS.attribute("specializationDeclId",
+                  createPointerRepresentation(D->getSpecialization()));
+  switch (D->getTemplateSpecializationKind()) {
+  case TSK_Undeclared:
+    break;
+  case TSK_ImplicitInstantiation:
+    JOS.attribute("templateSpecializationKind", "implicit_instantiation");
+    break;
+  case TSK_ExplicitSpecialization:
+    JOS.attribute("templateSpecializationKind", "explicit_specialization");
+    break;
+  case TSK_ExplicitInstantiationDeclaration:
+    JOS.attribute("templateSpecializationKind",
+                  "explicit_instantiation_declaration");
+    break;
+  case TSK_ExplicitInstantiationDefinition:
+    JOS.attribute("templateSpecializationKind",
+                  "explicit_instantiation_definition");
+    break;
+  }
+}
+
 void JSONNodeDumper::VisitFriendDecl(const FriendDecl *FD) {
   if (const TypeSourceInfo *T = FD->getFriendType())
     JOS.attribute("type", createQualType(T->getType()));
+  attributeOnlyIfTrue("isPackExpansion", FD->isPackExpansion());
+}
+
+void JSONNodeDumper::VisitFriendTemplateDecl(const FriendTemplateDecl *FD) {
+  if (FD->getFriendKind() !=
+      FriendTemplateDecl::FriendTemplateEntityKind::Template) {
+    VisitFriendDecl(FD);
+    return;
+  }
+
+  llvm::SmallString<128> Str;
+  llvm::raw_svector_ostream OS(Str);
+  FD->getFriendTemplateName().print(OS, PrintPolicy);
+  JOS.attribute("templateName", Str);
   attributeOnlyIfTrue("isPackExpansion", FD->isPackExpansion());
 }
 

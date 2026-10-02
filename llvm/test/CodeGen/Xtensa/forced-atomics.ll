@@ -811,31 +811,35 @@ define i32 @rmw32_max_seq_cst(ptr %p) nounwind {
 ; XTENSA-LABEL: rmw32_max_seq_cst:
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    entry a1, 48
-; XTENSA-NEXT:    or a6, a2, a2
-; XTENSA-NEXT:    l32i a2, a6, 0
-; XTENSA-NEXT:    movi a5, 1
+; XTENSA-NEXT:    movi a11, 0
+; XTENSA-NEXT:    l32r a8, .LCPI23_0
+; XTENSA-NEXT:    or a10, a2, a2
+; XTENSA-NEXT:    callx8 a8
+; XTENSA-NEXT:    movi a6, 1
 ; XTENSA-NEXT:    movi a7, 5
-; XTENSA-NEXT:    l32r a4, .LCPI23_0
+; XTENSA-NEXT:    l32r a5, .LCPI23_1
 ; XTENSA-NEXT:    j .LBB23_2
 ; XTENSA-NEXT:  .LBB23_1: # %atomicrmw.start
 ; XTENSA-NEXT:    # in Loop: Header=BB23_2 Depth=1
 ; XTENSA-NEXT:    addi a11, a1, 0
-; XTENSA-NEXT:    or a10, a6, a6
+; XTENSA-NEXT:    or a10, a2, a2
 ; XTENSA-NEXT:    or a13, a7, a7
 ; XTENSA-NEXT:    or a14, a7, a7
-; XTENSA-NEXT:    callx8 a4
-; XTENSA-NEXT:    l32i a2, a1, 0
-; XTENSA-NEXT:    bnez a10, .LBB23_4
+; XTENSA-NEXT:    callx8 a5
+; XTENSA-NEXT:    or a8, a10, a10
+; XTENSA-NEXT:    l32i a10, a1, 0
+; XTENSA-NEXT:    bnez a8, .LBB23_4
 ; XTENSA-NEXT:  .LBB23_2: # %atomicrmw.start
 ; XTENSA-NEXT:    # =>This Inner Loop Header: Depth=1
-; XTENSA-NEXT:    s32i a2, a1, 0
-; XTENSA-NEXT:    or a12, a5, a5
-; XTENSA-NEXT:    bge a5, a2, .LBB23_1
+; XTENSA-NEXT:    s32i a10, a1, 0
+; XTENSA-NEXT:    or a12, a6, a6
+; XTENSA-NEXT:    bge a6, a10, .LBB23_1
 ; XTENSA-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-NEXT:    # in Loop: Header=BB23_2 Depth=1
-; XTENSA-NEXT:    or a12, a2, a2
+; XTENSA-NEXT:    or a12, a10, a10
 ; XTENSA-NEXT:    j .LBB23_1
 ; XTENSA-NEXT:  .LBB23_4: # %atomicrmw.end
+; XTENSA-NEXT:    or a2, a10, a10
 ; XTENSA-NEXT:    retw
 ;
 ; XTENSA-ATOMIC-LABEL: rmw32_max_seq_cst:
@@ -879,11 +883,15 @@ define i32 @rmw32_min_seq_cst(ptr %p) nounwind {
 ; XTENSA-LABEL: rmw32_min_seq_cst:
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    entry a1, 48
-; XTENSA-NEXT:    l32i a12, a2, 0
+; XTENSA-NEXT:    movi a11, 0
+; XTENSA-NEXT:    l32r a8, .LCPI24_0
+; XTENSA-NEXT:    or a10, a2, a2
+; XTENSA-NEXT:    callx8 a8
+; XTENSA-NEXT:    or a12, a10, a10
 ; XTENSA-NEXT:    movi a6, 1
 ; XTENSA-NEXT:    movi a5, 2
 ; XTENSA-NEXT:    movi a7, 5
-; XTENSA-NEXT:    l32r a4, .LCPI24_0
+; XTENSA-NEXT:    l32r a4, .LCPI24_1
 ; XTENSA-NEXT:    j .LBB24_2
 ; XTENSA-NEXT:  .LBB24_1: # %atomicrmw.start
 ; XTENSA-NEXT:    # in Loop: Header=BB24_2 Depth=1
@@ -948,31 +956,35 @@ define i32 @rmw32_umax_seq_cst(ptr %p) nounwind {
 ; XTENSA-LABEL: rmw32_umax_seq_cst:
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    entry a1, 48
-; XTENSA-NEXT:    or a6, a2, a2
-; XTENSA-NEXT:    l32i a2, a6, 0
-; XTENSA-NEXT:    movi a5, 1
+; XTENSA-NEXT:    movi a11, 0
+; XTENSA-NEXT:    l32r a8, .LCPI25_0
+; XTENSA-NEXT:    or a10, a2, a2
+; XTENSA-NEXT:    callx8 a8
+; XTENSA-NEXT:    movi a6, 1
 ; XTENSA-NEXT:    movi a7, 5
-; XTENSA-NEXT:    l32r a4, .LCPI25_0
+; XTENSA-NEXT:    l32r a5, .LCPI25_1
 ; XTENSA-NEXT:    j .LBB25_2
 ; XTENSA-NEXT:  .LBB25_1: # %atomicrmw.start
 ; XTENSA-NEXT:    # in Loop: Header=BB25_2 Depth=1
 ; XTENSA-NEXT:    addi a11, a1, 0
-; XTENSA-NEXT:    or a10, a6, a6
+; XTENSA-NEXT:    or a10, a2, a2
 ; XTENSA-NEXT:    or a13, a7, a7
 ; XTENSA-NEXT:    or a14, a7, a7
-; XTENSA-NEXT:    callx8 a4
-; XTENSA-NEXT:    l32i a2, a1, 0
-; XTENSA-NEXT:    bnez a10, .LBB25_4
+; XTENSA-NEXT:    callx8 a5
+; XTENSA-NEXT:    or a8, a10, a10
+; XTENSA-NEXT:    l32i a10, a1, 0
+; XTENSA-NEXT:    bnez a8, .LBB25_4
 ; XTENSA-NEXT:  .LBB25_2: # %atomicrmw.start
 ; XTENSA-NEXT:    # =>This Inner Loop Header: Depth=1
-; XTENSA-NEXT:    s32i a2, a1, 0
-; XTENSA-NEXT:    or a12, a5, a5
-; XTENSA-NEXT:    bgeu a5, a2, .LBB25_1
+; XTENSA-NEXT:    s32i a10, a1, 0
+; XTENSA-NEXT:    or a12, a6, a6
+; XTENSA-NEXT:    bgeu a6, a10, .LBB25_1
 ; XTENSA-NEXT:  # %bb.3: # %atomicrmw.start
 ; XTENSA-NEXT:    # in Loop: Header=BB25_2 Depth=1
-; XTENSA-NEXT:    or a12, a2, a2
+; XTENSA-NEXT:    or a12, a10, a10
 ; XTENSA-NEXT:    j .LBB25_1
 ; XTENSA-NEXT:  .LBB25_4: # %atomicrmw.end
+; XTENSA-NEXT:    or a2, a10, a10
 ; XTENSA-NEXT:    retw
 ;
 ; XTENSA-ATOMIC-LABEL: rmw32_umax_seq_cst:
@@ -1016,11 +1028,15 @@ define i32 @rmw32_umin_seq_cst(ptr %p) nounwind {
 ; XTENSA-LABEL: rmw32_umin_seq_cst:
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    entry a1, 48
-; XTENSA-NEXT:    l32i a12, a2, 0
+; XTENSA-NEXT:    movi a11, 0
+; XTENSA-NEXT:    l32r a8, .LCPI26_0
+; XTENSA-NEXT:    or a10, a2, a2
+; XTENSA-NEXT:    callx8 a8
+; XTENSA-NEXT:    or a12, a10, a10
 ; XTENSA-NEXT:    movi a6, 1
 ; XTENSA-NEXT:    movi a5, 2
 ; XTENSA-NEXT:    movi a7, 5
-; XTENSA-NEXT:    l32r a4, .LCPI26_0
+; XTENSA-NEXT:    l32r a4, .LCPI26_1
 ; XTENSA-NEXT:    j .LBB26_2
 ; XTENSA-NEXT:  .LBB26_1: # %atomicrmw.start
 ; XTENSA-NEXT:    # in Loop: Header=BB26_2 Depth=1
@@ -1128,14 +1144,17 @@ define float @rmw32_fadd_seq_cst(ptr %p) nounwind {
 ; XTENSA-LABEL: rmw32_fadd_seq_cst:
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    entry a1, 48
-; XTENSA-NEXT:    l32i a10, a2, 0
-; XTENSA-NEXT:    l32r a6, .LCPI28_1
+; XTENSA-NEXT:    movi a11, 0
+; XTENSA-NEXT:    l32r a8, .LCPI28_0
+; XTENSA-NEXT:    or a10, a2, a2
+; XTENSA-NEXT:    callx8 a8
+; XTENSA-NEXT:    l32r a6, .LCPI28_2
 ; XTENSA-NEXT:    movi a7, 5
-; XTENSA-NEXT:    l32r a5, .LCPI28_2
+; XTENSA-NEXT:    l32r a5, .LCPI28_3
 ; XTENSA-NEXT:  .LBB28_1: # %atomicrmw.start
 ; XTENSA-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XTENSA-NEXT:    s32i a10, a1, 0
-; XTENSA-NEXT:    l32r a11, .LCPI28_0
+; XTENSA-NEXT:    l32r a11, .LCPI28_1
 ; XTENSA-NEXT:    callx8 a6
 ; XTENSA-NEXT:    or a12, a10, a10
 ; XTENSA-NEXT:    addi a11, a1, 0
@@ -1188,14 +1207,17 @@ define float @rmw32_fsub_seq_cst(ptr %p) nounwind {
 ; XTENSA-LABEL: rmw32_fsub_seq_cst:
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    entry a1, 48
-; XTENSA-NEXT:    l32i a10, a2, 0
-; XTENSA-NEXT:    l32r a6, .LCPI29_1
+; XTENSA-NEXT:    movi a11, 0
+; XTENSA-NEXT:    l32r a8, .LCPI29_0
+; XTENSA-NEXT:    or a10, a2, a2
+; XTENSA-NEXT:    callx8 a8
+; XTENSA-NEXT:    l32r a6, .LCPI29_2
 ; XTENSA-NEXT:    movi a7, 5
-; XTENSA-NEXT:    l32r a5, .LCPI29_2
+; XTENSA-NEXT:    l32r a5, .LCPI29_3
 ; XTENSA-NEXT:  .LBB29_1: # %atomicrmw.start
 ; XTENSA-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XTENSA-NEXT:    s32i a10, a1, 0
-; XTENSA-NEXT:    l32r a11, .LCPI29_0
+; XTENSA-NEXT:    l32r a11, .LCPI29_1
 ; XTENSA-NEXT:    callx8 a6
 ; XTENSA-NEXT:    or a12, a10, a10
 ; XTENSA-NEXT:    addi a11, a1, 0
@@ -1248,14 +1270,17 @@ define float @rmw32_fmin_seq_cst(ptr %p) nounwind {
 ; XTENSA-LABEL: rmw32_fmin_seq_cst:
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    entry a1, 48
-; XTENSA-NEXT:    l32i a10, a2, 0
-; XTENSA-NEXT:    l32r a6, .LCPI30_1
+; XTENSA-NEXT:    movi a11, 0
+; XTENSA-NEXT:    l32r a8, .LCPI30_0
+; XTENSA-NEXT:    or a10, a2, a2
+; XTENSA-NEXT:    callx8 a8
+; XTENSA-NEXT:    l32r a6, .LCPI30_2
 ; XTENSA-NEXT:    movi a7, 5
-; XTENSA-NEXT:    l32r a5, .LCPI30_2
+; XTENSA-NEXT:    l32r a5, .LCPI30_3
 ; XTENSA-NEXT:  .LBB30_1: # %atomicrmw.start
 ; XTENSA-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XTENSA-NEXT:    s32i a10, a1, 0
-; XTENSA-NEXT:    l32r a11, .LCPI30_0
+; XTENSA-NEXT:    l32r a11, .LCPI30_1
 ; XTENSA-NEXT:    callx8 a6
 ; XTENSA-NEXT:    or a12, a10, a10
 ; XTENSA-NEXT:    addi a11, a1, 0
@@ -1308,14 +1333,17 @@ define float @rmw32_fmax_seq_cst(ptr %p) nounwind {
 ; XTENSA-LABEL: rmw32_fmax_seq_cst:
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    entry a1, 48
-; XTENSA-NEXT:    l32i a10, a2, 0
-; XTENSA-NEXT:    l32r a6, .LCPI31_1
+; XTENSA-NEXT:    movi a11, 0
+; XTENSA-NEXT:    l32r a8, .LCPI31_0
+; XTENSA-NEXT:    or a10, a2, a2
+; XTENSA-NEXT:    callx8 a8
+; XTENSA-NEXT:    l32r a6, .LCPI31_2
 ; XTENSA-NEXT:    movi a7, 5
-; XTENSA-NEXT:    l32r a5, .LCPI31_2
+; XTENSA-NEXT:    l32r a5, .LCPI31_3
 ; XTENSA-NEXT:  .LBB31_1: # %atomicrmw.start
 ; XTENSA-NEXT:    # =>This Inner Loop Header: Depth=1
 ; XTENSA-NEXT:    s32i a10, a1, 0
-; XTENSA-NEXT:    l32r a11, .LCPI31_0
+; XTENSA-NEXT:    l32r a11, .LCPI31_1
 ; XTENSA-NEXT:    callx8 a6
 ; XTENSA-NEXT:    or a12, a10, a10
 ; XTENSA-NEXT:    addi a11, a1, 0

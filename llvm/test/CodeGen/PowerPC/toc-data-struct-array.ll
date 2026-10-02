@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck %s --check-prefix CHECK
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff < %s | FileCheck %s --check-prefix CHECK
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff --code-model=small < %s | FileCheck %s --check-prefix CHECK
 
 ; RUN: llc -filetype=obj -mtriple powerpc-ibm-aix-xcoff < %s -o %t32.o
 ; RUN: llvm-readobj %t32.o --syms | FileCheck %s --check-prefix=OBJ32
-; RUN: llc -filetype=obj -mtriple powerpc64-ibm-aix-xcoff < %s -o %t64.o
+; RUN: llc -filetype=obj -mtriple powerpc64-ibm-aix-xcoff --code-model=small < %s -o %t64.o
 ; RUN: llvm-readobj %t64.o --syms | FileCheck %s --check-prefix=OBJ64
 
 %struct.small_struct = type { i16 }

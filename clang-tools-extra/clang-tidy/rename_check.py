@@ -80,21 +80,18 @@ def deleteMatchingLines(fileName: str, pattern: str) -> bool:
 def getListOfFiles(clang_tidy_path: str) -> List[str]:
     files = glob.glob(os.path.join(clang_tidy_path, "**"), recursive=True)
     files += [
-        os.path.normpath(os.path.join(clang_tidy_path, "../docs/ReleaseNotes.rst"))
+        os.path.normpath(os.path.join(clang_tidy_path, "../docs/ReleaseNotes.md"))
     ]
     files += glob.glob(
         os.path.join(clang_tidy_path, "..", "test", "clang-tidy", "checkers", "**"),
         recursive=True,
     )
-    files += glob.glob(
-        os.path.join(clang_tidy_path, "..", "docs", "clang-tidy", "checks", "*.rst")
-    )
-    files += glob.glob(
-        os.path.join(
-            clang_tidy_path, "..", "docs", "clang-tidy", "checks", "*", "*.rst"
-        ),
-        recursive=True,
-    )
+    docs_path = os.path.join(clang_tidy_path, "..", "docs", "clang-tidy", "checks")
+    # TODO: Stop discovering reST files once all clang-tidy check
+    # documentation has been migrated to MyST.
+    for extension in (".md", ".rst"):
+        files += glob.glob(os.path.join(docs_path, f"*{extension}"))
+        files += glob.glob(os.path.join(docs_path, "*", f"*{extension}"))
     return [filename for filename in files if os.path.isfile(filename)]
 
 
@@ -186,13 +183,13 @@ def add_release_notes(
     clang_tidy_path: str, old_check_name: str, new_check_name: str
 ) -> None:
     filename = os.path.normpath(
-        os.path.join(clang_tidy_path, "../docs/ReleaseNotes.rst")
+        os.path.join(clang_tidy_path, "../docs/ReleaseNotes.md")
     )
     with io.open(filename, "r", encoding="utf8") as f:
         lines = f.readlines()
 
-    lineMatcher = re.compile("Renamed checks")
-    nextSectionMatcher = re.compile("Improvements to include-fixer")
+    lineMatcher = re.compile(r"#### Renamed checks")
+    nextSectionMatcher = re.compile(r"### Improvements to include-fixer")
     checkMatcher = re.compile("- The '(.*)")
 
     print("Updating %s..." % filename)
@@ -214,30 +211,29 @@ def add_release_notes(
                 if match_next:
                     add_note_here = True
 
+                # When inside the Renamed checks section and we reach any
+                # heading, insert before it (handles empty sections).
+                if header_found and line.startswith("#"):
+                    add_note_here = True
+
                 if match:
                     header_found = True
                     f.write(line)
                     continue
 
-                if line.startswith("^^^^"):
-                    f.write(line)
-                    continue
-
                 if header_found and add_note_here:
-                    if not line.startswith("^^^^"):
-                        f.write(
-                            """- The '%s' check was renamed to :doc:`%s
-  <clang-tidy/checks/%s/%s>`
-
-                    """
-                            % (
-                                old_check_name,
-                                new_check_name,
-                                new_check_name.split("-", 1)[0],
-                                "-".join(new_check_name.split("-")[1:]),
-                            )
+                    f.write(
+                        "- The '%s' check was renamed to {doc}`%s\n"
+                        "  <clang-tidy/checks/%s/%s>`\n"
+                        "\n"
+                        % (
+                            old_check_name,
+                            new_check_name,
+                            new_check_name.split("-", 1)[0],
+                            "-".join(new_check_name.split("-")[1:]),
                         )
-                        note_added = True
+                    )
+                    note_added = True
 
             f.write(line)
 
@@ -315,6 +311,8 @@ def main() -> None:
         for header_guard in header_guard_variants:
             replaceInFile(filename, header_guard, header_guard_new)
 
+        # TODO: Remove the reST heading handling once all clang-tidy check
+        # documentation has been migrated to MyST.
         if new_module + "/" + new_name + ".rst" in filename:
             replaceInFile(
                 filename,

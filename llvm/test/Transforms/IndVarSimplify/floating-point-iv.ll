@@ -507,7 +507,7 @@ define void @test_fp_to_int_irrealizable_exitval_pow_2_24() {
 ; CHECK-NEXT:    [[IV:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    call void @opaque()
 ; CHECK-NEXT:    [[IV_NEXT]] = fadd float [[IV]], 1.000000e+00
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[IV_NEXT]], 0x4170000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[IV_NEXT]], f0x4B800000
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -534,7 +534,7 @@ define void @test_fp_to_int_irrealizable_exitval_int64_min() {
 ; CHECK-NEXT:    [[IV:%.*]] = phi double [ 2.500000e+01, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    call void @opaque()
 ; CHECK-NEXT:    [[IV_NEXT]] = fadd double [[IV]], 1.700000e+01
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult double [[IV_NEXT]], 0xC3E0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult double [[IV_NEXT]], f0xC3E0000000000000
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

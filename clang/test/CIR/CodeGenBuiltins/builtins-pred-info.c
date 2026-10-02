@@ -6,7 +6,7 @@
 // CIR-O0-NOT: cir.expect
 // RUN: %clang_cc1 -O2 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o - | FileCheck %s --check-prefix=CIR-O2
 // RUN: %clang_cc1 -O2 -disable-llvm-passes -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefix=LLVM
-// RUN: %clang_cc1 -O2 -disable-llvm-passes -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=OGCG
+// RUN: %clang_cc1 -O2 -disable-llvm-passes -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=LLVM
 
 extern void __attribute__((noinline)) bar(void);
 
@@ -29,10 +29,6 @@ void expect(int x) {
 // LLVM: [[THEN]]:
 // LLVM: call void @bar()
 
-// OGCG-LABEL: @expect
-// OGCG: br i1 {{.*}}, label %[[THEN:.*]], label %[[END:.*]]
-// OGCG: [[THEN]]:
-// OGCG: call void @bar()
 
 void expect_with_probability(int x) {
   if (__builtin_expect_with_probability(x, 1, 0.8))
@@ -53,10 +49,6 @@ void expect_with_probability(int x) {
 // LLVM: [[THEN]]:
 // LLVM: call void @bar()
 
-// OGCG-LABEL: @expect_with_probability
-// OGCG: br i1 {{.*}}, label %[[THEN:.*]], label %[[END:.*]]
-// OGCG: [[THEN]]:
-// OGCG: call void @bar()
 
 void unpredictable(int x) {
   if (__builtin_unpredictable(x > 1))
@@ -71,7 +63,3 @@ void unpredictable(int x) {
 // LLVM: [[THEN]]:
 // LLVM: call void @bar()
 
-// OGCG-LABEL: @unpredictable
-// OGCG: br i1 {{.*}}, label %[[THEN:.*]], label %[[END:.*]]
-// OGCG: [[THEN]]:
-// OGCG: call void @bar()

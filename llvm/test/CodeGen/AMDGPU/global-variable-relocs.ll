@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu8.03--amdhsa < %s | FileCheck %s
 
 @private = private addrspace(1) global [256 x i32] zeroinitializer
 @internal = internal addrspace(1) global [256 x i32] zeroinitializer

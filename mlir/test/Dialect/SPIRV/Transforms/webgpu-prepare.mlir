@@ -182,6 +182,43 @@ spirv.func @iaddcarry_i16(%a : i16, %b : i16) -> !spirv.struct<(i16, i16)> "None
   spirv.ReturnValue %0 : !spirv.struct<(i16, i16)>
 }
 
+// CHECK-LABEL: func @isubborrow_i32
+// CHECK-SAME:       ([[A:%.+]]: i32, [[B:%.+]]: i32)
+// CHECK-NEXT:       [[ONE:%.+]]    = spirv.Constant 1 : i32
+// CHECK-NEXT:       [[ZERO:%.+]]   = spirv.Constant 0 : i32
+// CHECK-NEXT:       [[OUT:%.+]]    = spirv.ISub [[A]], [[B]]
+// CHECK-NEXT:       [[CMP:%.+]]    = spirv.ULessThan [[A]], [[B]]
+// CHECK-NEXT:       [[BORROW:%.+]] = spirv.Select [[CMP]], [[ONE]], [[ZERO]]
+// CHECK-NEXT:       [[RES:%.+]]    = spirv.CompositeConstruct [[OUT]], [[BORROW]] : (i32, i32) -> !spirv.struct<(i32, i32)>
+// CHECK-NEXT:       spirv.ReturnValue [[RES]] : !spirv.struct<(i32, i32)>
+spirv.func @isubborrow_i32(%a : i32, %b : i32) -> !spirv.struct<(i32, i32)> "None" {
+  %0 = spirv.ISubBorrow %a, %b : !spirv.struct<(i32, i32)>
+  spirv.ReturnValue %0 : !spirv.struct<(i32, i32)>
+}
+
+// CHECK-LABEL: func @isubborrow_vector_i32
+// CHECK-SAME:       ([[A:%.+]]: vector<3xi32>, [[B:%.+]]: vector<3xi32>)
+// CHECK-NEXT:       [[ONE:%.+]]    = spirv.Constant dense<1> : vector<3xi32>
+// CHECK-NEXT:       [[ZERO:%.+]]   = spirv.Constant dense<0> : vector<3xi32>
+// CHECK-NEXT:       [[OUT:%.+]]    = spirv.ISub [[A]], [[B]]
+// CHECK-NEXT:       [[CMP:%.+]]    = spirv.ULessThan [[A]], [[B]]
+// CHECK-NEXT:       [[BORROW:%.+]] = spirv.Select [[CMP]], [[ONE]], [[ZERO]]
+// CHECK-NEXT:       [[RES:%.+]]    = spirv.CompositeConstruct [[OUT]], [[BORROW]] : (vector<3xi32>, vector<3xi32>) -> !spirv.struct<(vector<3xi32>, vector<3xi32>)>
+// CHECK-NEXT:       spirv.ReturnValue [[RES]] : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
+spirv.func @isubborrow_vector_i32(%a : vector<3xi32>, %b : vector<3xi32>)
+  -> !spirv.struct<(vector<3xi32>, vector<3xi32>)> "None" {
+  %0 = spirv.ISubBorrow %a, %b : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
+  spirv.ReturnValue %0 : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
+}
+
+// CHECK-LABEL: func @isubborrow_i16
+// CHECK-NEXT:       spirv.ISubBorrow
+// CHECK-NEXT:       spirv.ReturnValue
+spirv.func @isubborrow_i16(%a : i16, %b : i16) -> !spirv.struct<(i16, i16)> "None" {
+  %0 = spirv.ISubBorrow %a, %b : !spirv.struct<(i16, i16)>
+  spirv.ReturnValue %0 : !spirv.struct<(i16, i16)>
+}
+
 // CHECK-LABEL: func @is_inf_f32
 // CHECK-NEXT:       [[FALSE:%.+]] = spirv.Constant false
 // CHECK-NEXT:       spirv.ReturnValue [[FALSE]] : i1

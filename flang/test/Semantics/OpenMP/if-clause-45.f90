@@ -24,7 +24,7 @@ program main
   end do
   !$omp end distribute parallel do
 
-  !ERROR: At most one IF clause can appear on the DISTRIBUTE PARALLEL DO directive
+  !ERROR: At most one IF clause can apply to each directive constituent
   !$omp distribute parallel do if(.true.) if(parallel: .false.)
   do i = 1, 10
   end do
@@ -57,29 +57,28 @@ program main
   ! DISTRIBUTE SIMD
   ! ----------------------------------------------------------------------------
   !$omp teams
-  !ERROR: IF clause is not allowed on directive DISTRIBUTE SIMD in OpenMP v4.5, try -fopenmp-version=50
+  !ERROR: IF clause is not allowed on DISTRIBUTE SIMD directive in OpenMP v4.5, try -fopenmp-version=50
   !$omp distribute simd if(.true.)
   do i = 1, 10
   end do
   !$omp end distribute simd
 
-  !ERROR: IF clause is not allowed on directive DISTRIBUTE SIMD in OpenMP v4.5, try -fopenmp-version=50
+  !ERROR: IF clause is not allowed on DISTRIBUTE SIMD directive in OpenMP v4.5, try -fopenmp-version=50
   !ERROR: SIMD is not allowed as 'directive-name-modifier' in OpenMP v4.5, try -fopenmp-version=50
   !$omp distribute simd if(simd: .true.)
   do i = 1, 10
   end do
   !$omp end distribute simd
 
-  !ERROR: IF clause is not allowed on directive DISTRIBUTE SIMD in OpenMP v4.5, try -fopenmp-version=50
+  !ERROR: IF clause is not allowed on DISTRIBUTE SIMD directive in OpenMP v4.5, try -fopenmp-version=50
   !ERROR: TARGET is not a constituent of the DISTRIBUTE SIMD directive
   !$omp distribute simd if(target: .true.)
   do i = 1, 10
   end do
   !$omp end distribute simd
 
-  !ERROR: IF clause is not allowed on directive DISTRIBUTE SIMD in OpenMP v4.5, try -fopenmp-version=50
-  !ERROR: IF clause is not allowed on directive DISTRIBUTE SIMD in OpenMP v4.5, try -fopenmp-version=50
-  !ERROR: At most one IF clause can appear on the DISTRIBUTE SIMD directive
+  !ERROR: IF clause is not allowed on DISTRIBUTE SIMD directive in OpenMP v4.5, try -fopenmp-version=50
+  !ERROR: IF clause is not allowed on DISTRIBUTE SIMD directive in OpenMP v4.5, try -fopenmp-version=50
   !ERROR: SIMD is not allowed as 'directive-name-modifier' in OpenMP v4.5, try -fopenmp-version=50
   !$omp distribute simd if(.true.) if(simd: .false.)
   do i = 1, 10
@@ -90,29 +89,28 @@ program main
   ! ----------------------------------------------------------------------------
   ! DO SIMD
   ! ----------------------------------------------------------------------------
-  !ERROR: IF clause is not allowed on directive DO SIMD in OpenMP v4.5, try -fopenmp-version=50
+  !ERROR: IF clause is not allowed on DO SIMD directive in OpenMP v4.5, try -fopenmp-version=50
   !$omp do simd if(.true.)
   do i = 1, 10
   end do
   !$omp end do simd
 
-  !ERROR: IF clause is not allowed on directive DO SIMD in OpenMP v4.5, try -fopenmp-version=50
+  !ERROR: IF clause is not allowed on DO SIMD directive in OpenMP v4.5, try -fopenmp-version=50
   !ERROR: SIMD is not allowed as 'directive-name-modifier' in OpenMP v4.5, try -fopenmp-version=50
   !$omp do simd if(simd: .true.)
   do i = 1, 10
   end do
   !$omp end do simd
 
-  !ERROR: IF clause is not allowed on directive DO SIMD in OpenMP v4.5, try -fopenmp-version=50
+  !ERROR: IF clause is not allowed on DO SIMD directive in OpenMP v4.5, try -fopenmp-version=50
   !ERROR: TARGET is not a constituent of the DO SIMD directive
   !$omp do simd if(target: .true.)
   do i = 1, 10
   end do
   !$omp end do simd
 
-  !ERROR: IF clause is not allowed on directive DO SIMD in OpenMP v4.5, try -fopenmp-version=50
-  !ERROR: IF clause is not allowed on directive DO SIMD in OpenMP v4.5, try -fopenmp-version=50
-  !ERROR: At most one IF clause can appear on the DO SIMD directive
+  !ERROR: IF clause is not allowed on DO SIMD directive in OpenMP v4.5, try -fopenmp-version=50
+  !ERROR: IF clause is not allowed on DO SIMD directive in OpenMP v4.5, try -fopenmp-version=50
   !ERROR: SIMD is not allowed as 'directive-name-modifier' in OpenMP v4.5, try -fopenmp-version=50
   !$omp do simd if(.true.) if(simd: .false.)
   do i = 1, 10
@@ -132,7 +130,7 @@ program main
   !$omp parallel if(target: .true.)
   !$omp end parallel
 
-  !ERROR: At most one IF clause can appear on the PARALLEL directive
+  !ERROR: At most one IF clause can apply to each directive constituent
   !$omp parallel if(.true.) if(parallel: .false.)
   !$omp end parallel
 
@@ -155,7 +153,7 @@ program main
   end do
   !$omp end parallel do
 
-  !ERROR: At most one IF clause can appear on the PARALLEL DO directive
+  !ERROR: At most one IF clause can apply to each directive constituent
   !$omp parallel do if(.true.) if(parallel: .false.)
   do i = 1, 10
   end do
@@ -194,7 +192,7 @@ program main
   !$omp parallel sections if(target: .true.)
   !$omp end parallel sections
 
-  !ERROR: At most one IF clause can appear on the PARALLEL SECTIONS directive
+  !ERROR: At most one IF clause can apply to each directive constituent
   !$omp parallel sections if(.true.) if(parallel: .false.)
   !$omp end parallel sections
 
@@ -211,36 +209,35 @@ program main
   !$omp parallel workshare if(target: .true.)
   !$omp end parallel workshare
 
-  !ERROR: At most one IF clause can appear on the PARALLEL WORKSHARE directive
+  !ERROR: At most one IF clause can apply to each directive constituent
   !$omp parallel workshare if(.true.) if(parallel: .false.)
   !$omp end parallel workshare
 
   ! ----------------------------------------------------------------------------
   ! SIMD
   ! ----------------------------------------------------------------------------
-  !ERROR: IF clause is not allowed on directive SIMD in OpenMP v4.5, try -fopenmp-version=50
+  !ERROR: IF clause is not allowed on SIMD directive in OpenMP v4.5, try -fopenmp-version=50
   !$omp simd if(.true.)
   do i = 1, 10
   end do
   !$omp end simd
 
-  !ERROR: IF clause is not allowed on directive SIMD in OpenMP v4.5, try -fopenmp-version=50
+  !ERROR: IF clause is not allowed on SIMD directive in OpenMP v4.5, try -fopenmp-version=50
   !ERROR: SIMD is not allowed as 'directive-name-modifier' in OpenMP v4.5, try -fopenmp-version=50
   !$omp simd if(simd: .true.)
   do i = 1, 10
   end do
   !$omp end simd
 
-  !ERROR: IF clause is not allowed on directive SIMD in OpenMP v4.5, try -fopenmp-version=50
+  !ERROR: IF clause is not allowed on SIMD directive in OpenMP v4.5, try -fopenmp-version=50
   !ERROR: TARGET is not a constituent of the SIMD directive
   !$omp simd if(target: .true.)
   do i = 1, 10
   end do
   !$omp end simd
 
-  !ERROR: IF clause is not allowed on directive SIMD in OpenMP v4.5, try -fopenmp-version=50
-  !ERROR: IF clause is not allowed on directive SIMD in OpenMP v4.5, try -fopenmp-version=50
-  !ERROR: At most one IF clause can appear on the SIMD directive
+  !ERROR: IF clause is not allowed on SIMD directive in OpenMP v4.5, try -fopenmp-version=50
+  !ERROR: IF clause is not allowed on SIMD directive in OpenMP v4.5, try -fopenmp-version=50
   !ERROR: SIMD is not allowed as 'directive-name-modifier' in OpenMP v4.5, try -fopenmp-version=50
   !$omp simd if(.true.) if(simd: .false.)
   do i = 1, 10
@@ -260,7 +257,7 @@ program main
   !$omp target if(parallel: .true.)
   !$omp end target
 
-  !ERROR: At most one IF clause can appear on the TARGET directive
+  !ERROR: At most one IF clause can apply to each directive constituent
   !$omp target if(.true.) if(target: .false.)
   !$omp end target
 
@@ -277,7 +274,7 @@ program main
   !$omp target data map(tofrom: i) if(target: .true.)
   !$omp end target data
 
-  !ERROR: At most one IF clause can appear on the TARGET DATA directive
+  !ERROR: At most one IF clause can apply to each directive constituent
   !$omp target data map(tofrom: i) if(.true.) if(target data: .false.)
   !$omp end target data
 
@@ -291,7 +288,7 @@ program main
   !ERROR: TARGET is not a constituent of the TARGET ENTER DATA directive
   !$omp target enter data map(to: i) if(target: .true.)
 
-  !ERROR: At most one IF clause can appear on the TARGET ENTER DATA directive
+  !ERROR: At most one IF clause can apply to each directive constituent
   !$omp target enter data map(to: i) if(.true.) if(target enter data: .false.)
 
   ! ----------------------------------------------------------------------------
@@ -304,7 +301,7 @@ program main
   !ERROR: TARGET is not a constituent of the TARGET EXIT DATA directive
   !$omp target exit data map(from: i) if(target: .true.)
 
-  !ERROR: At most one IF clause can appear on the TARGET EXIT DATA directive
+  !ERROR: At most one IF clause can apply to each directive constituent
   !$omp target exit data map(from: i) if(.true.) if(target exit data: .false.)
 
   ! ----------------------------------------------------------------------------
@@ -490,7 +487,7 @@ program main
   !ERROR: TARGET is not a constituent of the TARGET UPDATE directive
   !$omp target update to(i) if(target: .true.)
 
-  !ERROR: At most one IF clause can appear on the TARGET UPDATE directive
+  !ERROR: At most one IF clause can apply to each directive constituent
   !$omp target update to(i) if(.true.) if(target update: .false.)
 
   ! ----------------------------------------------------------------------------
@@ -506,7 +503,7 @@ program main
   !$omp task if(target: .true.)
   !$omp end task
 
-  !ERROR: At most one IF clause can appear on the TASK directive
+  !ERROR: At most one IF clause can apply to each directive constituent
   !$omp task if(.true.) if(task: .false.)
   !$omp end task
 
@@ -529,7 +526,7 @@ program main
   end do
   !$omp end taskloop
 
-  !ERROR: At most one IF clause can appear on the TASKLOOP directive
+  !ERROR: At most one IF clause can apply to each directive constituent
   !$omp taskloop if(.true.) if(taskloop: .false.)
   do i = 1, 10
   end do
@@ -558,23 +555,22 @@ program main
   ! ----------------------------------------------------------------------------
   ! TEAMS
   ! ----------------------------------------------------------------------------
-  !ERROR: IF clause is not allowed on directive TEAMS in OpenMP v4.5, try -fopenmp-version=52
+  !ERROR: IF clause is not allowed on TEAMS directive in OpenMP v4.5, try -fopenmp-version=52
   !$omp teams if(.true.)
   !$omp end teams
 
-  !ERROR: IF clause is not allowed on directive TEAMS in OpenMP v4.5, try -fopenmp-version=52
+  !ERROR: IF clause is not allowed on TEAMS directive in OpenMP v4.5, try -fopenmp-version=52
   !ERROR: TEAMS is not allowed as 'directive-name-modifier' in OpenMP v4.5, try -fopenmp-version=52
   !$omp teams if(teams: .true.)
   !$omp end teams
 
-  !ERROR: IF clause is not allowed on directive TEAMS in OpenMP v4.5, try -fopenmp-version=52
+  !ERROR: IF clause is not allowed on TEAMS directive in OpenMP v4.5, try -fopenmp-version=52
   !ERROR: TARGET is not a constituent of the TEAMS directive
   !$omp teams if(target: .true.)
   !$omp end teams
 
-  !ERROR: IF clause is not allowed on directive TEAMS in OpenMP v4.5, try -fopenmp-version=52
-  !ERROR: IF clause is not allowed on directive TEAMS in OpenMP v4.5, try -fopenmp-version=52
-  !ERROR: At most one IF clause can appear on the TEAMS directive
+  !ERROR: IF clause is not allowed on TEAMS directive in OpenMP v4.5, try -fopenmp-version=52
+  !ERROR: IF clause is not allowed on TEAMS directive in OpenMP v4.5, try -fopenmp-version=52
   !ERROR: TEAMS is not allowed as 'directive-name-modifier' in OpenMP v4.5, try -fopenmp-version=52
   !$omp teams if(.true.) if(teams: .false.)
   !$omp end teams
@@ -599,7 +595,6 @@ program main
   end do
   !$omp end teams distribute
 
-  !ERROR: At most one IF clause can appear on the TEAMS DISTRIBUTE directive
   !ERROR: TEAMS is not allowed as 'directive-name-modifier' in OpenMP v4.5, try -fopenmp-version=52
   !$omp teams distribute if(.true.) if(teams: .true.)
   do i = 1, 10
@@ -651,22 +646,22 @@ program main
   ! ----------------------------------------------------------------------------
   ! TEAMS DISTRIBUTE SIMD
   ! ----------------------------------------------------------------------------
-  !ERROR: IF clause is not allowed on directive TEAMS DISTRIBUTE SIMD in OpenMP v4.5, try -fopenmp-version=50
+  !ERROR: IF clause is not allowed on TEAMS DISTRIBUTE SIMD directive in OpenMP v4.5, try -fopenmp-version=50
   !$omp teams distribute simd if(.true.)
   do i = 1, 10
   end do
   !$omp end teams distribute simd
 
-  !ERROR: IF clause is not allowed on directive TEAMS DISTRIBUTE SIMD in OpenMP v4.5, try -fopenmp-version=50
+  !ERROR: IF clause is not allowed on TEAMS DISTRIBUTE SIMD directive in OpenMP v4.5, try -fopenmp-version=50
   !ERROR: TEAMS is not allowed as 'directive-name-modifier' in OpenMP v4.5, try -fopenmp-version=52
-  !ERROR: IF clause is not allowed on directive TEAMS DISTRIBUTE SIMD in OpenMP v4.5, try -fopenmp-version=50
+  !ERROR: IF clause is not allowed on TEAMS DISTRIBUTE SIMD directive in OpenMP v4.5, try -fopenmp-version=50
   !ERROR: SIMD is not allowed as 'directive-name-modifier' in OpenMP v4.5, try -fopenmp-version=50
   !$omp teams distribute simd if(teams: .true.) if(simd: .true.)
   do i = 1, 10
   end do
   !$omp end teams distribute simd
 
-  !ERROR: IF clause is not allowed on directive TEAMS DISTRIBUTE SIMD in OpenMP v4.5, try -fopenmp-version=50
+  !ERROR: IF clause is not allowed on TEAMS DISTRIBUTE SIMD directive in OpenMP v4.5, try -fopenmp-version=50
   !ERROR: TARGET is not a constituent of the TEAMS DISTRIBUTE SIMD directive
   !$omp teams distribute simd if(target: .true.)
   do i = 1, 10

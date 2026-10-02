@@ -191,8 +191,7 @@ bool mlir::tosa::getConstShapeValues(Operation *op,
     return false;
   }
   if (auto constOp = mlir::dyn_cast<tosa::ConstShapeOp>(op)) {
-    Attribute constOpAttr = constOp->getAttr("values");
-    DenseElementsAttr elementsAttr = cast<DenseElementsAttr>(constOpAttr);
+    DenseElementsAttr elementsAttr = constOp.getValuesAttr();
     for (int i = 0; i < elementsAttr.size(); i++) {
       int64_t val = elementsAttr.getValues<int64_t>()[i];
       resultShape.push_back(val);
@@ -248,3 +247,19 @@ bool mlir::tosa::hasUniqueConstantScatterIndices(
 
   return true;
 }
+
+template <typename T>
+FailureOr<T> mlir::tosa::getConstantScalarIntValue(Value val) {
+  ElementsAttr attr;
+  if (!matchPattern(val, m_Constant(&attr)))
+    return failure();
+
+  if (!llvm::isa<IntegerType>(attr.getElementType()) ||
+      attr.getNumElements() != 1)
+    return failure();
+
+  return attr.getValues<T>()[0];
+}
+
+template FailureOr<int32_t>
+mlir::tosa::getConstantScalarIntValue<int32_t>(Value val);

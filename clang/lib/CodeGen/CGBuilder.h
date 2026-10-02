@@ -362,6 +362,28 @@ public:
                       ElementType, Align, Addr.isKnownNonNull());
   }
 
+  using CGBuilderBaseTy::CreateStructuredGEP;
+  llvm::Value *CreateAccessChain(bool Logical, llvm::Type *BaseType,
+                                 llvm::Value *PtrBase,
+                                 ArrayRef<llvm::Value *> IdxList,
+                                 const Twine &Name = "") {
+
+    if (Logical)
+      return CreateStructuredGEP(BaseType, PtrBase, IdxList, Name);
+    return CreateInBoundsGEP(BaseType, PtrBase, IdxList, Name);
+  }
+
+  Address CreateAccessChain(bool Logical, Address Addr,
+                            ArrayRef<llvm::Value *> IdxList,
+                            llvm::Type *ElementType, CharUnits Align,
+                            const Twine &Name = "") {
+
+    return RawAddress(CreateAccessChain(Logical, Addr.getElementType(),
+                                        emitRawPointerFromAddress(Addr),
+                                        IdxList, Name),
+                      ElementType, Align, Addr.isKnownNonNull());
+  }
+
   using CGBuilderBaseTy::CreateIsNull;
   llvm::Value *CreateIsNull(Address Addr, const Twine &Name = "") {
     if (!Addr.hasOffset())
@@ -446,12 +468,6 @@ public:
   using CGBuilderBaseTy::CreateLaunderInvariantGroup;
   Address CreateLaunderInvariantGroup(Address Addr) {
     Addr.replaceBasePointer(CreateLaunderInvariantGroup(Addr.getBasePointer()));
-    return Addr;
-  }
-
-  using CGBuilderBaseTy::CreateStripInvariantGroup;
-  Address CreateStripInvariantGroup(Address Addr) {
-    Addr.replaceBasePointer(CreateStripInvariantGroup(Addr.getBasePointer()));
     return Addr;
   }
 };

@@ -23,7 +23,7 @@ namespace llvm::orc {
 
 class ExecutorResolver {
 public:
-  using ResolveResult = Expected<std::vector<std::optional<ExecutorSymbolDef>>>;
+  using ResolveResult = Expected<std::vector<std::optional<ExecutorAddr>>>;
   using YieldResolveResultFn = unique_function<void(ResolveResult)>;
 
   virtual ~ExecutorResolver() = default;
@@ -32,7 +32,7 @@ public:
                             YieldResolveResultFn &&OnResolve) = 0;
 };
 
-class DylibSymbolResolver : public ExecutorResolver {
+class LLVM_ABI DylibSymbolResolver : public ExecutorResolver {
 public:
   DylibSymbolResolver(tpctypes::DylibHandle H) : Handle(H) {}
 

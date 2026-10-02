@@ -32,12 +32,6 @@
 // Work around https://gcc.gnu.org/bugzilla/show_bug.cgi?id=120502
 
 #include <__config>
-
-// TODO(LLVM 23): When upgrading to GCC 16 this can be removed
-#ifdef _LIBCPP_COMPILER_GCC
-#  pragma GCC optimize("-O0")
-#endif
-
 #include <algorithm>
 #include <cctype>
 #include <chrono>
@@ -55,6 +49,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #ifdef PRINT
 template <>
@@ -1055,4 +1050,5 @@ time_zone::__get_info(local_seconds __local_time) const {
 
 } // namespace chrono
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

@@ -27,6 +27,8 @@ public:
   virtual void emitDirectiveOptionPop();
   virtual void emitDirectiveOptionRelax();
   virtual void emitDirectiveOptionNoRelax();
+  virtual void emitDTPRel32Value(const MCExpr *);
+  virtual void emitDTPRel64Value(const MCExpr *);
 };
 
 // This part is for ascii assembly output.
@@ -40,6 +42,8 @@ public:
   void emitDirectiveOptionPop() override;
   void emitDirectiveOptionRelax() override;
   void emitDirectiveOptionNoRelax() override;
+  void emitDTPRel32Value(const MCExpr *) override;
+  void emitDTPRel64Value(const MCExpr *) override;
 };
 
 } // end namespace llvm

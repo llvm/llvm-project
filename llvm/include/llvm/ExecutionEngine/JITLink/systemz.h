@@ -554,7 +554,7 @@ enum EdgeKind_systemz : Edge::Kind {
 
 /// Returns a string name for the given systemz edge. For debugging purposes
 /// only
-const char *getEdgeKindName(Edge::Kind K);
+LLVM_ABI const char *getEdgeKindName(Edge::Kind K);
 
 /// Apply fixup expression for edge to block content.
 inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
@@ -764,7 +764,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
 }
 
 /// SystemZ null pointer content.
-extern const char NullPointerContent[8];
+extern const LLVM_ABI char NullPointerContent[8];
 inline ArrayRef<char> getGOTEntryBlockContent(LinkGraph &G) {
   return {reinterpret_cast<const char *>(NullPointerContent),
           G.getPointerSize()};
@@ -777,7 +777,7 @@ inline ArrayRef<char> getGOTEntryBlockContent(LinkGraph &G) {
 ///   lgrl %r1, ptr
 ///   j    %r1
 constexpr size_t StubEntrySize = 8;
-extern const char Pointer64JumpStubContent[StubEntrySize];
+extern const LLVM_ABI char Pointer64JumpStubContent[StubEntrySize];
 inline ArrayRef<char> getStubBlockContent(LinkGraph &G) {
   auto StubContent = Pointer64JumpStubContent;
   return {reinterpret_cast<const char *>(StubContent), StubEntrySize};

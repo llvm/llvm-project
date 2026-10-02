@@ -189,9 +189,9 @@ define i32 @extract_v4i32_vector_extract_const_illegal_scalable(<vscale x 4 x i3
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
-  ; CHECK-NEXT:   [[VSCALE:%[0-9]+]]:_(s64) = G_VSCALE i64 1
-  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[VSCALE]], [[C]]
-  ; CHECK-NEXT:   [[EVEC:%[0-9]+]]:_(i32) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 4 x i32>), [[MUL]](s64)
+  ; CHECK-NEXT:   [[VSCALE:%[0-9]+]]:_(i64) = G_VSCALE i64 1
+  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(i64) = G_MUL [[VSCALE]], [[C]]
+  ; CHECK-NEXT:   [[EVEC:%[0-9]+]]:_(i32) = G_EXTRACT_VECTOR_ELT [[COPY]](<vscale x 4 x i32>), [[MUL]](i64)
   ; CHECK-NEXT:   G_STORE [[EVEC]](i32), [[COPY1]](p0) :: (store (i32) into %ir.p, align 16)
   ; CHECK-NEXT:   $w0 = COPY [[C1]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
@@ -213,9 +213,9 @@ define i32 @extract_v4i32_vector_insert_const_illegal_scalable(<vscale x 4 x i32
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY $x1
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
-  ; CHECK-NEXT:   [[VSCALE:%[0-9]+]]:_(s64) = G_VSCALE i64 1
-  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[VSCALE]], [[C]]
-  ; CHECK-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x i32>) = G_INSERT_VECTOR_ELT [[COPY]], [[UV]](i32), [[MUL]](s64)
+  ; CHECK-NEXT:   [[VSCALE:%[0-9]+]]:_(i64) = G_VSCALE i64 1
+  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(i64) = G_MUL [[VSCALE]], [[C]]
+  ; CHECK-NEXT:   [[IVEC:%[0-9]+]]:_(<vscale x 4 x i32>) = G_INSERT_VECTOR_ELT [[COPY]], [[UV]](i32), [[MUL]](i64)
   ; CHECK-NEXT:   G_STORE [[IVEC]](<vscale x 4 x i32>), [[COPY3]](p0) :: (store (<vscale x 4 x i32>) into %ir.p)
   ; CHECK-NEXT:   $w0 = COPY [[C1]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0

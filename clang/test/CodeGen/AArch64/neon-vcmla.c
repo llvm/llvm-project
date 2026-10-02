@@ -573,7 +573,7 @@ float16x8_t test_vcmlaq_laneq_f16(float16x8_t acc, float16x8_t lhs, float16x8_t 
 // CHECK-SAME: <2 x float> noundef [[ACC:%.*]], <2 x float> noundef [[LHS:%.*]], <2 x float> noundef [[RHS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[RHS]] to i64
-// CHECK-NEXT:    [[__S2_182_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CHECK-NEXT:    [[__S2_182_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <1 x i64> [[__S2_182_SROA_0_0_VEC_INSERT]], i32 0
 // CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <1 x i64> poison, i64 [[VGET_LANE]], i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[VECINIT]] to <2 x float>
@@ -627,7 +627,7 @@ float32x2_t test_vcmla_laneq_f32(float32x2_t acc, float32x2_t lhs, float32x4_t r
 // CHECK-SAME: <4 x float> noundef [[ACC:%.*]], <4 x float> noundef [[LHS:%.*]], <2 x float> noundef [[RHS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[RHS]] to i64
-// CHECK-NEXT:    [[__S2_184_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CHECK-NEXT:    [[__S2_184_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <1 x i64> [[__S2_184_SROA_0_0_VEC_INSERT]], i32 0
 // CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <2 x i64> poison, i64 [[VGET_LANE]], i32 0
 // CHECK-NEXT:    [[VGET_LANE4:%.*]] = extractelement <1 x i64> [[__S2_184_SROA_0_0_VEC_INSERT]], i32 0
@@ -805,7 +805,7 @@ float16x8_t test_vcmlaq_rot90_laneq_f16(float16x8_t acc, float16x8_t lhs, float1
 // CHECK-SAME: <2 x float> noundef [[ACC:%.*]], <2 x float> noundef [[LHS:%.*]], <2 x float> noundef [[RHS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[RHS]] to i64
-// CHECK-NEXT:    [[__S2_206_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CHECK-NEXT:    [[__S2_206_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <1 x i64> [[__S2_206_SROA_0_0_VEC_INSERT]], i32 0
 // CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <1 x i64> poison, i64 [[VGET_LANE]], i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[VECINIT]] to <2 x float>
@@ -859,7 +859,7 @@ float32x2_t test_vcmla_rot90_laneq_f32(float32x2_t acc, float32x2_t lhs, float32
 // CHECK-SAME: <4 x float> noundef [[ACC:%.*]], <4 x float> noundef [[LHS:%.*]], <2 x float> noundef [[RHS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[RHS]] to i64
-// CHECK-NEXT:    [[__S2_208_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CHECK-NEXT:    [[__S2_208_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <1 x i64> [[__S2_208_SROA_0_0_VEC_INSERT]], i32 0
 // CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <2 x i64> poison, i64 [[VGET_LANE]], i32 0
 // CHECK-NEXT:    [[VGET_LANE4:%.*]] = extractelement <1 x i64> [[__S2_208_SROA_0_0_VEC_INSERT]], i32 0
@@ -1037,7 +1037,7 @@ float16x8_t test_vcmlaq_rot180_laneq_f16(float16x8_t acc, float16x8_t lhs, float
 // CHECK-SAME: <2 x float> noundef [[ACC:%.*]], <2 x float> noundef [[LHS:%.*]], <2 x float> noundef [[RHS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[RHS]] to i64
-// CHECK-NEXT:    [[__S2_190_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CHECK-NEXT:    [[__S2_190_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <1 x i64> [[__S2_190_SROA_0_0_VEC_INSERT]], i32 0
 // CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <1 x i64> poison, i64 [[VGET_LANE]], i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[VECINIT]] to <2 x float>
@@ -1091,7 +1091,7 @@ float32x2_t test_vcmla_rot180_laneq_f32(float32x2_t acc, float32x2_t lhs, float3
 // CHECK-SAME: <4 x float> noundef [[ACC:%.*]], <4 x float> noundef [[LHS:%.*]], <2 x float> noundef [[RHS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[RHS]] to i64
-// CHECK-NEXT:    [[__S2_192_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CHECK-NEXT:    [[__S2_192_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <1 x i64> [[__S2_192_SROA_0_0_VEC_INSERT]], i32 0
 // CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <2 x i64> poison, i64 [[VGET_LANE]], i32 0
 // CHECK-NEXT:    [[VGET_LANE4:%.*]] = extractelement <1 x i64> [[__S2_192_SROA_0_0_VEC_INSERT]], i32 0
@@ -1269,7 +1269,7 @@ float16x8_t test_vcmlaq_rot270_laneq_f16(float16x8_t acc, float16x8_t lhs, float
 // CHECK-SAME: <2 x float> noundef [[ACC:%.*]], <2 x float> noundef [[LHS:%.*]], <2 x float> noundef [[RHS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[RHS]] to i64
-// CHECK-NEXT:    [[__S2_198_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CHECK-NEXT:    [[__S2_198_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <1 x i64> [[__S2_198_SROA_0_0_VEC_INSERT]], i32 0
 // CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <1 x i64> poison, i64 [[VGET_LANE]], i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[VECINIT]] to <2 x float>
@@ -1323,7 +1323,7 @@ float32x2_t test_vcmla_rot270_laneq_f32(float32x2_t acc, float32x2_t lhs, float3
 // CHECK-SAME: <4 x float> noundef [[ACC:%.*]], <4 x float> noundef [[LHS:%.*]], <2 x float> noundef [[RHS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[RHS]] to i64
-// CHECK-NEXT:    [[__S2_200_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CHECK-NEXT:    [[__S2_200_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <1 x i64> [[__S2_200_SROA_0_0_VEC_INSERT]], i32 0
 // CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <2 x i64> poison, i64 [[VGET_LANE]], i32 0
 // CHECK-NEXT:    [[VGET_LANE4:%.*]] = extractelement <1 x i64> [[__S2_200_SROA_0_0_VEC_INSERT]], i32 0

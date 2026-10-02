@@ -14,115 +14,23 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUCOEXECSCHEDSTRATEGY_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUCOEXECSCHEDSTRATEGY_H
 
+#include "AMDGPUCoExecInfo.h"
 #include "GCNSchedStrategy.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 
 namespace llvm {
 
 namespace AMDGPU {
-
-//===----------------------------------------------------------------------===//
-// Instruction Flavor Classification
-//===----------------------------------------------------------------------===//
-
-enum class InstructionFlavor : uint8_t {
-  WMMA,            // WMMA/MFMA matrix operations
-  SingleCycleVALU, // Single-cycle VALU (not TRANS32, not multi-cycle CVT)
-  TRANS,           // Transcendental ops (v_exp, v_log, etc.)
-  MultiCycleVALU,  // VALU instructions with repeat rate > 1
-  VMEM,            // FLAT/GLOBAL memory operations
-  DS,              // LDS/GDS operations
-  SALU,            // Scalar ALU
-  DMA,             // Tensor DMA operations
-  Fence,           // Fences and waits
-  Other,           // Everything else
-  NUM_FLAVORS
-};
-
-inline StringRef getFlavorName(InstructionFlavor F) {
-  switch (F) {
-  case InstructionFlavor::WMMA:
-    return "WMMA";
-  case InstructionFlavor::SingleCycleVALU:
-    return "VALU(1c)";
-  case InstructionFlavor::TRANS:
-    return "TRANS";
-  case InstructionFlavor::MultiCycleVALU:
-    return "VALU(Nc)";
-  case InstructionFlavor::VMEM:
-    return "VMEM";
-  case InstructionFlavor::DS:
-    return "DS";
-  case InstructionFlavor::SALU:
-    return "SALU";
-  case InstructionFlavor::DMA:
-    return "DMA";
-  case InstructionFlavor::Fence:
-    return "Fence";
-  case InstructionFlavor::Other:
-    return "Other";
-  case InstructionFlavor::NUM_FLAVORS:
-    return "???";
-  }
-  llvm_unreachable("Unknown InstructionFlavor");
-}
-
-inline StringRef getFlavorShortName(InstructionFlavor F) {
-  switch (F) {
-  case InstructionFlavor::WMMA:
-    return "W";
-  case InstructionFlavor::SingleCycleVALU:
-    return "V";
-  case InstructionFlavor::TRANS:
-    return "T";
-  case InstructionFlavor::MultiCycleVALU:
-    return "C";
-  case InstructionFlavor::VMEM:
-    return "M";
-  case InstructionFlavor::DS:
-    return "D";
-  case InstructionFlavor::SALU:
-    return "S";
-  case InstructionFlavor::DMA:
-    return "X";
-  case InstructionFlavor::Fence:
-    return "F";
-  case InstructionFlavor::Other:
-    return "O";
-  case InstructionFlavor::NUM_FLAVORS:
-    return "?";
-  }
-  llvm_unreachable("Unknown InstructionFlavor");
-}
-
-InstructionFlavor classifyFlavor(const MachineInstr &MI,
-                                 const SIInstrInfo &SII);
-
-using FlavorGroup = SmallVector<InstructionFlavor, 4>;
-
-namespace FlavorGroups {
-inline FlavorGroup allVALU() {
-  return {InstructionFlavor::SingleCycleVALU, InstructionFlavor::TRANS,
-          InstructionFlavor::MultiCycleVALU};
-}
-inline FlavorGroup allMem() {
-  return {InstructionFlavor::VMEM, InstructionFlavor::DS,
-          InstructionFlavor::DMA};
-}
-inline FlavorGroup individual(InstructionFlavor F) { return {F}; }
-inline FlavorGroup all() {
-  FlavorGroup G;
-  for (unsigned I = 0;
-       I < static_cast<unsigned>(InstructionFlavor::NUM_FLAVORS); ++I)
-    G.push_back(static_cast<InstructionFlavor>(I));
-  return G;
-}
-} // namespace FlavorGroups
+namespace DefaultBufferSizes {
+constexpr unsigned DS = 16;
+} // namespace DefaultBufferSizes
 
 /// AMDGPU-specific scheduling decision reasons. These provide more granularity
 /// than the generic CandReason enum for debugging purposes.
 enum class AMDGPUSchedReason : uint8_t {
   None,
+  Stall,
+  MemoryPipeline,
   CritResourceBalance, // tryCriticalResource chose based on resource pressure
   CritResourceDep,     // tryCriticalResourceDependency chose based on enabling
   NUM_REASONS
@@ -132,12 +40,16 @@ inline StringRef getReasonName(AMDGPUSchedReason R) {
   switch (R) {
   case AMDGPUSchedReason::None:
     return "None";
+  case AMDGPUSchedReason::Stall:
+    return "Stall";
+  case AMDGPUSchedReason::MemoryPipeline:
+    return "MemoryPipeline";
   case AMDGPUSchedReason::CritResourceBalance:
     return "CritResource";
   case AMDGPUSchedReason::CritResourceDep:
     return "CritResourceDep";
   case AMDGPUSchedReason::NUM_REASONS:
-    return "???";
+    llvm_unreachable("Unknown AMDGPUSchedReason");
   }
   llvm_unreachable("Unknown AMDGPUSchedReason");
 }
@@ -161,17 +73,39 @@ private:
   /// more regular HardwareUnit access patterns. SUs are prioritized based on
   /// depth for top-down scheduling.
   SmallSetVector<SUnit *, 16> PrioritySUs;
-  /// All the SUs in the region that consume this resource
+  /// All the SUs in the region that consume this resource.
   SmallSetVector<SUnit *, 16> AllSUs;
+  /// All the SUs for this HardwareUnit that have already been scheduled.
+  SmallVector<SUnit *, 16> ScheduledSUs;
   /// The total number of busy cycles for this HardwareUnit for a given region.
   unsigned TotalCycles = 0;
-  // InstructionFlavor mapping
+  /// InstructionFlavor mapping.
   AMDGPU::InstructionFlavor Type;
-  // Whether or not instructions on this HardwareUnit may produce a window in
-  // which instructions in other HardwareUnits can coexecute. For example, WMMA
-  // / MFMA instructions may take multiple cycles, which may be overlapped with
-  // instructions on other HardwareUnits
+  /// Whether or not instructions on this HardwareUnit may produce a window in
+  /// which instructions in other HardwareUnits can coexecute. For example, WMMA
+  /// / MFMA instructions may take multiple cycles, which may be overlapped with
+  /// instructions on other HardwareUnits.
   bool ProducesCoexecWindow = false;
+  /// How many instructions can be held simultaneously for this HardwareUnit.
+  /// A value of 0 means there is no limit. A value of 1 models an unbuffered
+  /// resource with a single in-flight instruction.
+  ///
+  /// This may approximate the hardware. For example, for LDS instructions
+  /// it is a well-known phenomena that oversubscribing the LDS unit results in
+  /// longer latency for the LDS instructions. While it is true that there is a
+  /// hard limit to the amount of simulatenous in-flight LDS instructions, good
+  /// scheduling would also cool off the LDS to avoid other forms of hardware
+  /// contention and increasing LDS latency. Thus, we limit the amount of LDS
+  /// instructions we are willing to schedule close together, though this does
+  /// not correspond 1:1 with a hardware mechanism.
+  unsigned BufferSize = 0;
+  /// How many cycles it takes for an instruction to clear the buffer.
+  ///
+  /// Again, this may be an apprxoimation. For example, for memory FIFOs, the
+  /// actual amount of cycles it will take to clear it is dependent on how
+  /// quickly prior instructions evacuate the FIFO, which is based on runtime
+  /// behavior which is not modelled in the compiler.
+  unsigned BufferCycles = 0;
 
 public:
   HardwareUnitInfo() {}
@@ -193,13 +127,39 @@ public:
 
   bool contains(SUnit *SU) const { return AllSUs.contains(SU); }
 
-  /// \returns true if there is a difference in priority between \p SU and \p
-  /// Other. If so, \returns the SUnit with higher priority. This
-  /// method looks through the PrioritySUs to determine if one SU is more
+  void setBufferSize(unsigned Size) { BufferSize = Size; }
+
+  unsigned getBufferSize() { return BufferSize; }
+
+  /// \returns the next cycle where there is space in the buffer.
+  unsigned getBufferAvailableCycle(unsigned CurrCycle) {
+    // An unlimited buffer is always available.
+    if (BufferSize == 0)
+      return CurrCycle;
+
+    // Buffer is available now.
+    if (ScheduledSUs.size() < BufferSize)
+      return CurrCycle;
+
+    return BufferCycles +
+           ScheduledSUs[ScheduledSUs.size() - BufferSize]->TopReadyCycle;
+  }
+
+  /// \returns the most recently scheduled SU for this HardwareUnit.
+  SUnit *getLastScheduledSU() {
+    unsigned ScheduledCount = ScheduledSUs.size();
+    if (!ScheduledCount)
+      return nullptr;
+
+    return ScheduledSUs[ScheduledCount - 1];
+  }
+
+  /// \returns the SUnit with higher priority or nullptr if they are the same.
+  /// This method looks through the PrioritySUs to determine if one SU is more
   /// prioritized than the other. If neither are in the PrioritySUs list, then
   /// neither have priority over each other.
   SUnit *getHigherPriority(SUnit *SU, SUnit *Other) const {
-    for (auto *SUOrder : PrioritySUs) {
+    for (SUnit *SUOrder : PrioritySUs) {
       if (SUOrder == SU)
         return SU;
 
@@ -212,9 +172,12 @@ public:
   void reset() {
     AllSUs.clear();
     PrioritySUs.clear();
+    ScheduledSUs.clear();
     TotalCycles = 0;
     Type = AMDGPU::InstructionFlavor::Other;
     ProducesCoexecWindow = false;
+    BufferSize = 0;
+    BufferCycles = 0;
   }
 
   /// \returns the next SU in PrioritySUs that is not ready. If \p LookDeep is
@@ -227,13 +190,18 @@ public:
   /// long latency (e.g. memory instructions). If we have many long latency
   /// dependencies, it is beneficial to enable SUs multiple levels ahead.
   SUnit *getNextTargetSU(bool LookDeep = false) const;
-  /// Insert the \p SU into the AllSUs and account its \p BlockingCycles into
+  /// Insert the \p SU into AllSUs and account its \p BlockingCycles into
   /// the TotalCycles. This maintains the list of PrioritySUs.
   void insert(SUnit *SU, unsigned BlockingCycles);
-  /// Update the state for \p SU being scheduled by removing it from the AllSus
+  /// Update the state for \p SU being scheduled by removing it from the AllSUs
   /// and reducing its \p BlockingCycles from the TotalCycles. This maintains
-  /// the list of PrioritySUS.
+  /// the list of PrioritySUs.
   void markScheduled(SUnit *SU, unsigned BlockingCycles);
+  /// After we've collected all the region pressure for this HWUI, correct for
+  /// any specifics of the behavior of this resource. For example, if the
+  /// HardwareUnit can hold N instructions simultaneously, then there is no
+  /// penalty for scheduling N instructions back to back.
+  void finalizeCycles();
 };
 
 //===----------------------------------------------------------------------===//
@@ -245,22 +213,47 @@ public:
 /// tryCandidate to decide which instruction to schedule next.
 class CandidateHeuristics {
 protected:
+  struct StallCosts {
+    unsigned Ready = 0;
+    unsigned Structural = 0;
+    unsigned Latency = 0;
+    unsigned Carried = 0;
+    unsigned Buffer = 0;
+    unsigned Fence = 0;
+    unsigned Effective = 0;
+  };
+
   ScheduleDAGMI *DAG;
   const SIInstrInfo *SII;
   const SIRegisterInfo *SRI;
   const TargetSchedModel *SchedModel;
   SmallVector<HardwareUnitInfo, 8> HWUInfo;
+  DenseMap<MachineInstr *, unsigned> CarriedLatencies;
 
-  /// Walk over the region and collect total usage per HardwareUnit
-  void collectHWUIPressure();
+  /// Walk over the region and collect characteristics for the various
+  /// heuristics.
+  void collectRegionSummary();
+
+  /// \returns the maximum blocking cycles according to the SchedModel for a
+  /// given MCSchedClassDesc \p SC.
+  unsigned getMaxBlockingCycles(const MCSchedClassDesc *SC,
+                                const MachineInstr *MI);
 
   /// Compute the blocking cycles for the appropriate HardwareUnit given an \p
-  /// SU
-  unsigned getHWUICyclesForInst(SUnit *SU);
+  /// SU.
+  unsigned getHWUICyclesForSU(SUnit *SU);
+  /// Compute the blocking cycles for the appropriate HardwareUnit given an \p
+  /// MI.
+  unsigned getHWUICyclesForMI(MachineInstr *MI);
 
-  /// Given a \p Flavor , find the corresponding HardwareUnit. \returns the
-  /// mapped HardwareUnit.
-  HardwareUnitInfo *getHWUIFromFlavor(AMDGPU::InstructionFlavor Flavor);
+  /// Estimate the block carried latency from loads for a given \p SU. This is
+  /// essentially global scheduling info that our local scheduling
+  /// infrastructure lacks the necessary infrastructure to accurately measure.
+  /// Thus, this method just attempts to find a reasonable upper bound for
+  /// carried load latency to avoid long stalls.
+  unsigned getCarriedLatency(SUnit *SU);
+
+  StallCosts getStallCosts(SUnit *SU, SchedBoundary &Zone);
 
 public:
   CandidateHeuristics() = default;
@@ -271,10 +264,32 @@ public:
   /// Update the state to reflect that \p SU is going to be scheduled.
   void updateForScheduling(SUnit *SU);
 
-  /// Sort the HWUInfo vector. After sorting, the HardwareUnits that are highest
+  /// Given a \p Flavor , find the corresponding HardwareUnit. \returns the
+  /// mapped HardwareUnit.
+  HardwareUnitInfo *getHWUIFromFlavor(AMDGPU::InstructionFlavor Flavor);
+
+  /// Sort the HardwarUnitInfo vector. After sorting, the HWUI that are highest
   /// priority are first. Priority is determined by maximizing coexecution and
   /// keeping the critical HardwareUnit busy.
   void sortHWUIResources();
+
+  unsigned getStructuralStallCycles(SchedBoundary &Zone, SUnit *SU);
+
+  bool tryEffectiveStall(GenericSchedulerBase::SchedCandidate &TryCand,
+                         GenericSchedulerBase::SchedCandidate &Cand,
+                         SchedBoundary &Zone);
+
+  /// Prioritize instructions involved the memory pipeline. Currently we don't
+  /// have any modelling of pipelined loads, so we control the layout of the
+  /// pipeline per iteration by giving the user some control over the stalls
+  /// (e.g. between s_barrier_signal and s_barrier_wait) and scheduling the
+  /// pipeline instructions as soon as they are ready.
+  ///
+  /// TODO -- add better modelling and heuristics for pipelining based
+  /// scheduling.
+  bool tryMemoryPipeline(GenericSchedulerBase::SchedCandidate &TryCand,
+                         GenericSchedulerBase::SchedCandidate &Cand,
+                         SchedBoundary &Zone);
 
   /// Check for critical resource consumption. Prefer the candidate that uses
   /// the most prioritized HardwareUnit. If both candidates use the same
@@ -299,8 +314,6 @@ public:
 
 class AMDGPUCoExecSchedStrategy final : public GCNSchedStrategy {
 protected:
-  bool tryEffectiveStall(SchedCandidate &Cand, SchedCandidate &TryCand,
-                         SchedBoundary &Zone) const;
   AMDGPU::AMDGPUSchedReason LastAMDGPUReason = AMDGPU::AMDGPUSchedReason::None;
   CandidateHeuristics Heurs;
 

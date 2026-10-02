@@ -20,7 +20,7 @@
 constexpr std::size_t TestNumInputs = 1024;
 
 template <class HashFn, class GenInputs>
-void BM_Hash(benchmark::State& st, HashFn fn, GenInputs gen) {
+TEST_ALIGN_BENCHMARK void BM_Hash(benchmark::State& st, HashFn fn, GenInputs gen) {
   auto in               = gen(st.range(0));
   const auto end        = in.data() + in.size();
   std::size_t last_hash = 0;
