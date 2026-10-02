@@ -551,7 +551,7 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   gv.setAlignment(getASTContext().getDeclAlign(&d).getAsAlign().value());
 
   if (supportsCOMDAT() && gv.isWeakForLinker())
-    gv.setComdat(true);
+    gv.setSelfComdat();
 
   if (d.getTLSKind())
     setTLSMode(gv, d);

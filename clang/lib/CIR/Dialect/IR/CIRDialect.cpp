@@ -2452,6 +2452,33 @@ void cir::GlobalOp::getSuccessorRegions(
     regions.push_back(RegionSuccessor(dtorRegion));
 }
 
+static void printComdatName(OpAsmPrinter &p, StringAttr comdat) {
+  if (!comdat)
+    return;
+  p << "comdat";
+  if (!comdat.getValue().empty())
+    p << "(\"" << comdat.getValue() << "\")";
+}
+
+static void printComdatName(OpAsmPrinter &p, cir::GlobalOp op,
+                            StringAttr comdat) {
+  printComdatName(p, comdat);
+}
+
+static ParseResult parseComdatName(OpAsmParser &parser,
+                                   StringAttr &comdatAttr) {
+  if (parser.parseOptionalKeyword("comdat").failed())
+    return success();
+  std::string comdatKey;
+  if (succeeded(parser.parseOptionalLParen())) {
+    if (parser.parseString(&comdatKey).failed() ||
+        parser.parseRParen().failed())
+      return failure();
+  }
+  comdatAttr = parser.getBuilder().getStringAttr(comdatKey);
+  return success();
+}
+
 static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,
                                              TypeAttr type, Attribute initAttr,
                                              mlir::Region &ctorRegion,
@@ -2736,16 +2763,12 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   if (parser.parseOptionalKeyword(noProtoNameAttr).succeeded())
     state.addAttribute(noProtoNameAttr, parser.getBuilder().getUnitAttr());
 
-  if (parser.parseOptionalKeyword(comdatNameAttr).succeeded()) {
-    std::string comdatKey;
-    if (mlir::succeeded(parser.parseOptionalLParen())) {
-      if (parser.parseString(&comdatKey).failed())
-        return failure();
-      if (parser.parseRParen().failed())
-        return failure();
-    }
-    state.addAttribute(comdatNameAttr,
-                       parser.getBuilder().getStringAttr(comdatKey));
+  {
+    StringAttr comdatAttr;
+    if (parseComdatName(parser, comdatAttr).failed())
+      return failure();
+    if (comdatAttr)
+      state.addAttribute(comdatNameAttr, comdatAttr);
   }
 
   auto parseAlignmentBody = [&](int64_t &value) {
@@ -3080,10 +3103,9 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (getNoProto())
     p << " no_proto";
 
-  if (std::optional<StringRef> comdatKey = getComdat()) {
-    p << " comdat";
-    if (!comdatKey->empty())
-      p << "(\"" << *comdatKey << "\")";
+  if (getComdatAttr()) {
+    p << ' ';
+    printComdatName(p, getComdatAttr());
   }
 
   if (getAlignment())
