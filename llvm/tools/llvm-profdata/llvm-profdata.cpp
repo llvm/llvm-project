@@ -544,14 +544,82 @@ static void warn(Error E, StringRef Whence = "") {
   }
 }
 
+namespace {
+class ProfdataError : public ErrorInfo<ProfdataError> {
+public:
+  static char ID;
+
+  ProfdataError(Twine Message, Twine Whence = "", Twine Hint = "")
+      : Message(Message.str()), Whence(Whence.str()), Hint(Hint.str()) {}
+
+  void log(raw_ostream &OS) const override {
+    if (!Whence.empty())
+      OS << Whence << ": ";
+    OS << Message;
+  }
+
+  void print() const {
+    WithColor::error();
+    log(errs());
+    errs() << "\n";
+    if (!Hint.empty())
+      WithColor::note() << Hint << "\n";
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return inconvertibleErrorCode();
+  }
+
+private:
+  std::string Message;
+  std::string Whence;
+  std::string Hint;
+};
+
+char ProfdataError::ID = 0;
+} // namespace
+
+static Error makeError(Twine Message, StringRef Whence = "",
+                       StringRef Hint = "") {
+  return make_error<ProfdataError>(Message, Whence, Hint);
+}
+
+static Error makeError(Error E, StringRef Whence = "") {
+  if (E.isA<InstrProfError>()) {
+    std::string Msg;
+    std::string Hint;
+    handleAllErrors(std::move(E), [&](const InstrProfError &IPE) {
+      instrprof_error instrError = IPE.get();
+      if (instrError == instrprof_error::unrecognized_format) {
+        // Hint in case user missed specifying the profile type.
+        Hint = "Perhaps you forgot to use the --sample or --memory option?";
+      }
+      Msg = IPE.message();
+    });
+    return makeError(Msg, Whence, Hint);
+  }
+
+  return makeError(toString(std::move(E)), Whence);
+}
+
+static Error makeError(std::error_code EC, StringRef Whence = "") {
+  return makeError(EC.message(), Whence);
+}
+
+static int reportError(Error E) {
+  if (!E)
+    return 0;
+  handleAllErrors(
+      std::move(E), [](const ProfdataError &PE) { PE.print(); },
+      [](const ErrorInfoBase &EIB) {
+        WithColor::error() << EIB.message() << "\n";
+      });
+  return 1;
+}
+
 static void exitWithError(Twine Message, StringRef Whence = "",
                           StringRef Hint = "") {
-  WithColor::error();
-  if (!Whence.empty())
-    errs() << Whence << ": ";
-  errs() << Message << "\n";
-  if (!Hint.empty())
-    WithColor::note() << Hint << "\n";
+  reportError(makeError(Message, Whence, Hint));
   // exit() terminates without unwinding the stack or running destructors, and
   // there is no guaranty that pointers to allocations will be preserved, so
   // LSan reports in-flight heap allocations as leaks at atexit.
@@ -560,24 +628,15 @@ static void exitWithError(Twine Message, StringRef Whence = "",
 }
 
 static void exitWithError(Error E, StringRef Whence = "") {
-  if (E.isA<InstrProfError>()) {
-    handleAllErrors(std::move(E), [&](const InstrProfError &IPE) {
-      instrprof_error instrError = IPE.get();
-      StringRef Hint = "";
-      if (instrError == instrprof_error::unrecognized_format) {
-        // Hint in case user missed specifying the profile type.
-        Hint = "Perhaps you forgot to use the --sample or --memory option?";
-      }
-      exitWithError(IPE.message(), Whence, Hint);
-    });
-    return;
-  }
-
-  exitWithError(toString(std::move(E)), Whence);
+  reportError(makeError(std::move(E), Whence));
+  skipLeakCheck();
+  ::exit(1);
 }
 
 static void exitWithErrorCode(std::error_code EC, StringRef Whence = "") {
-  exitWithError(EC.message(), Whence);
+  reportError(makeError(EC, Whence));
+  skipLeakCheck();
+  ::exit(1);
 }
 
 static void warnOrExitGivenError(FailureMode FailMode, std::error_code EC,
@@ -1867,10 +1926,10 @@ static int merge_main(StringRef ProgName) {
 }
 
 /// Computer the overlap b/w profile BaseFilename and profile TestFilename.
-static void overlapInstrProfile(const std::string &BaseFilename,
-                                const std::string &TestFilename,
-                                const OverlapFuncFilters &FuncFilter,
-                                raw_fd_ostream &OS, bool IsCS) {
+static Error overlapInstrProfile(const std::string &BaseFilename,
+                                 const std::string &TestFilename,
+                                 const OverlapFuncFilters &FuncFilter,
+                                 raw_fd_ostream &OS, bool IsCS) {
   std::mutex ErrorLock;
   SmallSet<instrprof_error, 4> WriterErrorCodes;
   WriterContext Context(false, ErrorLock, WriterErrorCodes);
@@ -1878,19 +1937,20 @@ static void overlapInstrProfile(const std::string &BaseFilename,
   OverlapStats Overlap;
   Error E = Overlap.accumulateCounts(BaseFilename, TestFilename, IsCS);
   if (E)
-    exitWithError(std::move(E), "error in getting profile count sums");
+    return makeError(std::move(E), "error in getting profile count sums");
   if (Overlap.Base.CountSum < 1.0f) {
     OS << "Sum of edge counts for profile " << BaseFilename << " is 0.\n";
-    exit(0);
+    return Error::success();
   }
   if (Overlap.Test.CountSum < 1.0f) {
     OS << "Sum of edge counts for profile " << TestFilename << " is 0.\n";
-    exit(0);
+    return Error::success();
   }
   loadInput(WeightedInput, nullptr, nullptr, /*ProfiledBinary=*/"", &Context);
   overlapInput(BaseFilename, TestFilename, &Context, Overlap, FuncFilter, OS,
                IsCS);
   Overlap.dump(OS);
+  return Error::success();
 }
 
 namespace {
@@ -2093,7 +2153,7 @@ public:
   void initializeSampleProfileOverlap();
 
   /// Load profiles specified by BaseFilename and TestFilename.
-  std::error_code loadProfiles();
+  Error loadProfiles();
 
   using FuncSampleStatsMap = DenseMap<SampleContext, FuncSampleStats>;
 
@@ -2752,7 +2812,7 @@ void SampleOverlapAggregator::dumpHotFuncAndBlockOverlap(
      << HotBlockOverlap.TestCount - HotBlockOverlap.OverlapCount << "\n";
 }
 
-std::error_code SampleOverlapAggregator::loadProfiles() {
+Error SampleOverlapAggregator::loadProfiles() {
   using namespace sampleprof;
 
   LLVMContext Context;
@@ -2760,25 +2820,25 @@ std::error_code SampleOverlapAggregator::loadProfiles() {
   auto BaseReaderOrErr = SampleProfileReader::create(BaseFilename, Context, *FS,
                                                      FSDiscriminatorPassOption);
   if (std::error_code EC = BaseReaderOrErr.getError())
-    exitWithErrorCode(EC, BaseFilename);
+    return makeError(EC, BaseFilename);
 
   auto TestReaderOrErr = SampleProfileReader::create(TestFilename, Context, *FS,
                                                      FSDiscriminatorPassOption);
   if (std::error_code EC = TestReaderOrErr.getError())
-    exitWithErrorCode(EC, TestFilename);
+    return makeError(EC, TestFilename);
 
   BaseReader = std::move(BaseReaderOrErr.get());
   TestReader = std::move(TestReaderOrErr.get());
 
   if (std::error_code EC = BaseReader->read())
-    exitWithErrorCode(EC, BaseFilename);
+    return makeError(EC, BaseFilename);
   if (std::error_code EC = TestReader->read())
-    exitWithErrorCode(EC, TestFilename);
+    return makeError(EC, TestFilename);
   if (BaseReader->profileIsProbeBased() != TestReader->profileIsProbeBased())
-    exitWithError(
+    return makeError(
         "cannot compare probe-based profile with non-probe-based profile");
   if (BaseReader->profileIsCS() != TestReader->profileIsCS())
-    exitWithError("cannot compare CS profile with non-CS profile");
+    return makeError("cannot compare CS profile with non-CS profile");
 
   // Load BaseHotThreshold and TestHotThreshold as 99-percentile threshold in
   // profile summary.
@@ -2789,13 +2849,14 @@ std::error_code SampleOverlapAggregator::loadProfiles() {
   TestHotThreshold =
       ProfileSummaryBuilder::getHotCountThreshold(TestPS.getDetailedSummary());
 
-  return std::error_code();
+  return Error::success();
 }
 
-void overlapSampleProfile(const std::string &BaseFilename,
-                          const std::string &TestFilename,
-                          const OverlapFuncFilters &FuncFilter,
-                          uint64_t SimilarityCutoff, raw_fd_ostream &OS) {
+static Error overlapSampleProfile(const std::string &BaseFilename,
+                                  const std::string &TestFilename,
+                                  const OverlapFuncFilters &FuncFilter,
+                                  uint64_t SimilarityCutoff,
+                                  raw_fd_ostream &OS) {
   using namespace sampleprof;
 
   // We use 0.000005 to initialize OverlapAggr.Epsilon because the final metrics
@@ -2803,36 +2864,36 @@ void overlapSampleProfile(const std::string &BaseFilename,
   SampleOverlapAggregator OverlapAggr(
       BaseFilename, TestFilename,
       static_cast<double>(SimilarityCutoff) / 1000000, 0.000005, FuncFilter);
-  if (std::error_code EC = OverlapAggr.loadProfiles())
-    exitWithErrorCode(EC);
+  if (Error E = OverlapAggr.loadProfiles())
+    return E;
 
   OverlapAggr.initializeSampleProfileOverlap();
   if (OverlapAggr.detectZeroSampleProfile(OS))
-    return;
+    return Error::success();
 
   OverlapAggr.computeSampleProfileOverlap(OS);
 
   OverlapAggr.dumpProgramSummary(OS);
   OverlapAggr.dumpHotFuncAndBlockOverlap(OS);
   OverlapAggr.dumpFuncSimilarity(OS);
+  return Error::success();
 }
 
-static int overlap_main() {
+static Error overlap_main() {
   std::error_code EC;
   raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_TextWithCRLF);
   if (EC)
-    exitWithErrorCode(EC, OutputFilename);
+    return makeError(EC, OutputFilename);
 
   if (ProfileKind == instr)
-    overlapInstrProfile(BaseFilename, TestFilename,
-                        OverlapFuncFilters{OverlapValueCutoff, FuncNameFilter},
-                        OS, IsCS);
-  else
-    overlapSampleProfile(BaseFilename, TestFilename,
-                         OverlapFuncFilters{OverlapValueCutoff, FuncNameFilter},
-                         SimilarityCutoff, OS);
+    return overlapInstrProfile(
+        BaseFilename, TestFilename,
+        OverlapFuncFilters{OverlapValueCutoff, FuncNameFilter}, OS, IsCS);
 
-  return 0;
+  return overlapSampleProfile(
+      BaseFilename, TestFilename,
+      OverlapFuncFilters{OverlapValueCutoff, FuncNameFilter}, SimilarityCutoff,
+      OS);
 }
 
 namespace {
@@ -2893,11 +2954,11 @@ static void showValueSitesStats(raw_fd_ostream &OS, uint32_t VK,
   }
 }
 
-static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
+static Error showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Json)
-    exitWithError("JSON output is not supported for instr profiles");
+    return makeError("JSON output is not supported for instr profiles");
   if (SFormat == ShowFormat::Yaml)
-    exitWithError("YAML output is not supported for instr profiles");
+    return makeError("YAML output is not supported for instr profiles");
   auto FS = vfs::getRealFileSystem();
   auto ReaderOrErr = InstrProfReader::create(Filename, *FS);
   std::vector<uint32_t> Cutoffs = std::move(DetailedSummaryCutoffs);
@@ -2905,7 +2966,7 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
     Cutoffs = ProfileSummaryBuilder::DefaultCutoffs;
   InstrProfSummaryBuilder Builder(std::move(Cutoffs));
   if (Error E = ReaderOrErr.takeError())
-    exitWithError(std::move(E), Filename);
+    return makeError(std::move(E), Filename);
 
   auto Reader = std::move(ReaderOrErr.get());
   bool IsIRInstr = Reader->isIRLevelProfile();
@@ -3058,10 +3119,10 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
     }
   }
   if (Reader->hasError())
-    exitWithError(Reader->getError(), Filename);
+    return makeError(Reader->getError(), Filename);
 
   if (TextFormat || ShowCovered)
-    return 0;
+    return Error::success();
   std::unique_ptr<ProfileSummary> PS(Builder.getSummary());
   bool IsIR = Reader->isIRLevelProfile();
   OS << "Instrumentation level: " << (IsIR ? "IR" : "Front-end");
@@ -3124,7 +3185,7 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
 
   if (ShowBinaryIds)
     if (Error E = Reader->printBinaryIds(OS))
-      exitWithError(std::move(E), Filename);
+      return makeError(std::move(E), Filename);
 
   if (ShowProfileVersion)
     OS << "Profile version: " << Reader->getVersion() << "\n";
@@ -3141,7 +3202,7 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
     }
   }
 
-  return 0;
+  return Error::success();
 }
 
 static void showSectionInfo(sampleprof::SampleProfileReader *Reader,
@@ -3288,12 +3349,12 @@ static int showHotFunctionList(const sampleprof::SampleProfileMap &Profiles,
   return 0;
 }
 
-static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
+static Error showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Yaml)
-    exitWithError("YAML output is not supported for sample profiles");
+    return makeError("YAML output is not supported for sample profiles");
   if (ShowSectionInfoOnly && ShowCompositeInfoOnly)
-    exitWithError("-show-sec-info-only and "
-                  "-show-composite-info-only cannot be used together");
+    return makeError("-show-sec-info-only and "
+                     "-show-composite-info-only cannot be used together");
 
   using namespace sampleprof;
   LLVMContext Context;
@@ -3301,28 +3362,28 @@ static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   auto ReaderOrErr = SampleProfileReader::create(Filename, Context, *FS,
                                                  FSDiscriminatorPassOption);
   if (std::error_code EC = ReaderOrErr.getError())
-    exitWithErrorCode(EC, Filename);
+    return makeError(EC, Filename);
 
   auto Reader = std::move(ReaderOrErr.get());
   if (ShowSectionInfoOnly) {
     showSectionInfo(Reader.get(), OS);
-    return 0;
+    return Error::success();
   }
 
   if (ShowCompositeInfoOnly) {
     if (!Reader->hasCompositeProfileSection()) {
       WithColor::warning() << "no composite profile section; nothing to show\n";
-      return 0;
+      return Error::success();
     }
     if (std::error_code EC = Reader->dumpProfileTypeInfo(OS)) {
       OS.flush();
-      exitWithErrorCode(EC, Filename);
+      return makeError(EC, Filename);
     }
-    return 0;
+    return Error::success();
   }
 
   if (std::error_code EC = Reader->read())
-    exitWithErrorCode(EC, Filename);
+    return makeError(EC, Filename);
 
   if (ShowAllFunctions || FuncNameFilter.empty()) {
     if (SFormat == ShowFormat::Json)
@@ -3331,7 +3392,7 @@ static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
       Reader->dump(OS);
   } else {
     if (SFormat == ShowFormat::Json)
-      exitWithError(
+      return makeError(
           "the JSON format is supported only when all functions are to "
           "be printed");
 
@@ -3356,12 +3417,12 @@ static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
     showHotFunctionList(Reader->getProfiles(), Reader->getSummary(),
                         TopNFunctions, OS);
 
-  return 0;
+  return Error::success();
 }
 
-static int showMemProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
+static Error showMemProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Json)
-    exitWithError("JSON output is not supported for MemProf");
+    return makeError("JSON output is not supported for MemProf");
 
   // Show the raw profile in YAML.
   if (memprof::RawMemProfReader::hasFormat(Filename)) {
@@ -3371,21 +3432,21 @@ static int showMemProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
       // Since the error can be related to the profile or the binary we do not
       // pass whence. Instead additional context is provided where necessary in
       // the error message.
-      exitWithError(std::move(E), /*Whence*/ "");
+      return makeError(std::move(E), /*Whence*/ "");
     }
 
     std::unique_ptr<llvm::memprof::RawMemProfReader> Reader(
         ReaderOr.get().release());
 
     Reader->printYAML(OS);
-    return 0;
+    return Error::success();
   }
 
   // Show the indexed MemProf profile in YAML.
   auto FS = vfs::getRealFileSystem();
   auto ReaderOrErr = IndexedInstrProfReader::create(Filename, *FS);
   if (Error E = ReaderOrErr.takeError())
-    exitWithError(std::move(E), Filename);
+    return makeError(std::move(E), Filename);
 
   auto Reader = std::move(ReaderOrErr.get());
   memprof::AllMemProfData Data = Reader->getAllMemProfData();
@@ -3406,31 +3467,31 @@ static int showMemProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   yaml::Output Yout(OS, nullptr, 80);
   Yout << Data;
 
-  return 0;
+  return Error::success();
 }
 
-static int showDebugInfoCorrelation(const std::string &Filename,
-                                    ShowFormat SFormat, raw_fd_ostream &OS) {
+static Error showDebugInfoCorrelation(const std::string &Filename,
+                                      ShowFormat SFormat, raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Json)
-    exitWithError("JSON output is not supported for debug info correlation");
+    return makeError("JSON output is not supported for debug info correlation");
   std::unique_ptr<InstrProfCorrelator> Correlator;
   if (auto Err =
           InstrProfCorrelator::get(Filename, InstrProfCorrelator::DEBUG_INFO)
               .moveInto(Correlator))
-    exitWithError(std::move(Err), Filename);
+    return makeError(std::move(Err), Filename);
   if (SFormat == ShowFormat::Yaml) {
     if (auto Err = Correlator->dumpYaml(MaxDbgCorrelationWarnings, OS))
-      exitWithError(std::move(Err), Filename);
-    return 0;
+      return makeError(std::move(Err), Filename);
+    return Error::success();
   }
 
   if (auto Err = Correlator->correlateProfileData(MaxDbgCorrelationWarnings))
-    exitWithError(std::move(Err), Filename);
+    return makeError(std::move(Err), Filename);
 
   InstrProfSymtab Symtab;
   if (auto Err = Symtab.create(
           StringRef(Correlator->getNamesPointer(), Correlator->getNamesSize())))
-    exitWithError(std::move(Err), Filename);
+    return makeError(std::move(Err), Filename);
 
   if (ShowProfileSymbolList)
     Symtab.dumpNames(OS);
@@ -3441,28 +3502,26 @@ static int showDebugInfoCorrelation(const std::string &Filename,
        << Twine::utohexstr(Correlator->getCountersSectionSize()) << " bytes\n";
   OS << "Found " << Correlator->getDataSize() << " functions\n";
 
-  return 0;
+  return Error::success();
 }
 
-static int show_main(StringRef ProgName) {
+static Error show_main(StringRef ProgName) {
   if (Filename.empty() && DebugInfoFilename.empty())
-    exitWithError(
+    return makeError(
         "the positional argument '<profdata-file>' is required unless '--" +
         DebugInfoFilename.ArgStr + "' is provided");
 
-  if (Filename == OutputFilename) {
-    errs() << ProgName
-           << " show: Input file name cannot be the same as the output file "
-              "name!\n";
-    return 1;
-  }
+  if (Filename == OutputFilename)
+    return makeError(
+        "Input file name cannot be the same as the output file name!",
+        (ProgName + " show").str());
   if (JsonFormat)
     SFormat = ShowFormat::Json;
 
   std::error_code EC;
   raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_TextWithCRLF);
   if (EC)
-    exitWithErrorCode(EC, OutputFilename);
+    return makeError(EC, OutputFilename);
 
   if (ShowAllFunctions && !FuncNameFilter.empty())
     WithColor::warning() << "-function argument ignored: showing all functions\n";
@@ -3477,15 +3536,15 @@ static int show_main(StringRef ProgName) {
   return showMemProfProfile(SFormat, OS);
 }
 
-static int order_main() {
+static Error order_main() {
   std::error_code EC;
   raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_TextWithCRLF);
   if (EC)
-    exitWithErrorCode(EC, OutputFilename);
+    return makeError(EC, OutputFilename);
   auto FS = vfs::getRealFileSystem();
   auto ReaderOrErr = InstrProfReader::create(Filename, *FS);
   if (Error E = ReaderOrErr.takeError())
-    exitWithError(std::move(E), Filename);
+    return makeError(std::move(E), Filename);
 
   auto Reader = std::move(ReaderOrErr.get());
   for (auto &I : *Reader) {
@@ -3494,7 +3553,7 @@ static int order_main() {
   }
   ArrayRef Traces = Reader->getTemporalProfTraces();
   if (NumTestTraces && NumTestTraces >= Traces.size())
-    exitWithError(
+    return makeError(
         "--" + NumTestTraces.ArgStr +
         " must be smaller than the total number of traces: expected: < " +
         Twine(Traces.size()) + ", actual: " + Twine(NumTestTraces));
@@ -3539,7 +3598,7 @@ static int order_main() {
       OS << "# " << Filename << "\n";
     OS << ParsedFuncName << "\n";
   }
-  return 0;
+  return Error::success();
 }
 
 int main(int argc, const char *argv[]) {
@@ -3556,13 +3615,13 @@ int main(int argc, const char *argv[]) {
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data\n");
 
   if (ShowSubcommand)
-    return show_main(ProgName);
+    return reportError(show_main(ProgName));
 
   if (OrderSubcommand)
-    return order_main();
+    return reportError(order_main());
 
   if (OverlapSubcommand)
-    return overlap_main();
+    return reportError(overlap_main());
 
   if (MergeSubcommand)
     return merge_main(ProgName);
