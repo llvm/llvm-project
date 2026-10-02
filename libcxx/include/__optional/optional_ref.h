@@ -60,11 +60,11 @@ template <class _Tp>
   requires(is_object_v<_Tp> && !__is_unbounded_array_v<_Tp>)
 struct __optional_ref_iterator_base<_Tp&> {
 protected:
-  using __pointer = add_pointer_t<_Tp>;
+  using __pointer _LIBCPP_NODEBUG = add_pointer_t<_Tp>;
 
   template <bool = std::__range_fits_in_alignment(alignof(_Tp), 1)>
   struct __iterator {
-    using __type = std::__static_packed_bounded_iterator<__pointer, 1>;
+    using __type _LIBCPP_NODEBUG = std::__static_packed_bounded_iterator<__pointer, 1>;
 
     static __type __make(__pointer __p, unsigned) noexcept {
       return std::__make_static_packed_bounded_iter<__pointer, 1>(__p, 0);
@@ -74,9 +74,9 @@ protected:
   template <>
   struct __iterator<false> {
 #  ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
-    using __type = std::__bounded_iter<__pointer>;
+    using __type _LIBCPP_NO_DEBUG = std::__bounded_iter<__pointer>;
 #  else
-    using __type = std::__capacity_aware_iterator<__pointer, 1>;
+    using __type _LIBCPP_NODEBUG = std::__capacity_aware_iterator<__pointer, 1>;
 #  endif
 
     static __type __make(__pointer __p, [[__maybe_unused__]] unsigned __end_offset) noexcept {
