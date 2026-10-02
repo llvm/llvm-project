@@ -191,7 +191,8 @@ constexpr bool test() {
 
     using InputIterator = cpp20_input_iterator<int*>;
     using View          = MinimalView<InputIterator>;
-    View mv{InputIterator(std::to_address(base(buffer.begin()))), Sentinel(InputIterator(std::to_address(base(buffer.end()))))};
+    View mv{InputIterator(std::to_address(base(buffer.begin()))),
+            Sentinel(InputIterator(std::to_address(base(buffer.end()))))};
     std::ranges::enumerate_view ev(std::move(mv));
 
     assert(ev.begin() != ev.end());
