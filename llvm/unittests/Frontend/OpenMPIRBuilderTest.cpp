@@ -5617,7 +5617,9 @@ TEST_F(OpenMPIRBuilderTest, ScanReduction) {
   EXPECT_EQ(NumBodiesGenerated, 2U);
   EXPECT_EQ(NumMasked, 3U);
   EXPECT_EQ(NumEndMasked, 3U);
-  EXPECT_EQ(NumBarriers, 3U);
+  // 4th barrier syncs before the masked region frees the shared scan buffer,
+  // so no thread still in the scan loop reads freed memory.
+  EXPECT_EQ(NumBarriers, 4U);
   EXPECT_EQ(NumMallocs, 1U);
   EXPECT_EQ(NumFrees, 1U);
   EXPECT_EQ(NumLog, 1U);
