@@ -294,7 +294,6 @@ cc_library(
     hdrs = glob(["lib/Dialect/TestIRDLToCpp/*.h"]),
     includes = ["lib/Dialect/TestIRDLToCpp"],
     deps = [
-        ":test_irdl_to_cpp_gen",
         "//llvm:Support",
         "//mlir:BuiltinToLLVMIRTranslation",
         "//mlir:IR",

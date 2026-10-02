@@ -1056,8 +1056,8 @@ libc_support_library(
 
 libc_support_library(
     name = "hdr_elf_proxy",
-    hdrs = ["hdr/elf_proxy.h"],
-    deps = [
+    hdrs = [
+        "hdr/elf_proxy.h",
         ":include_llvm-libc-proxy_elf_proxy_h",
     ],
 )
