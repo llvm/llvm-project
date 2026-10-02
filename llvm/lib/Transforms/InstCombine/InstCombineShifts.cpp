@@ -20,6 +20,10 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
+
 bool canTryToConstantAddTwoShiftAmounts(Value *Sh0, Value *ShAmt0, Value *Sh1,
                                         Value *ShAmt1) {
   // We have two shift amounts from two different shifts. The types of those
@@ -994,8 +998,9 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
 
       Value *NewShift = Builder.CreateBinOp(I.getOpcode(), FalseVal, C1);
       Value *NewOp = Builder.CreateBinOp(TBO->getOpcode(), NewShift, NewRHS);
-      return SelectInst::Create(Cond, NewOp, NewShift, "", nullptr,
-                                cast<SelectInst>(Op0));
+      return SelectInst::Create(
+          Cond, NewOp, NewShift, "", nullptr,
+          ProfcheckDisableMetadataFixes ? nullptr : cast<SelectInst>(Op0));
     }
   }
 
@@ -1012,8 +1017,9 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
 
       Value *NewShift = Builder.CreateBinOp(I.getOpcode(), TrueVal, C1);
       Value *NewOp = Builder.CreateBinOp(FBO->getOpcode(), NewShift, NewRHS);
-      return SelectInst::Create(Cond, NewShift, NewOp, "", nullptr,
-                                cast<SelectInst>(Op0));
+      return SelectInst::Create(
+          Cond, NewShift, NewOp, "", nullptr,
+          ProfcheckDisableMetadataFixes ? nullptr : cast<SelectInst>(Op0));
     }
   }
 
