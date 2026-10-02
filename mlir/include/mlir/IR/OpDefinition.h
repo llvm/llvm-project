@@ -21,6 +21,7 @@
 
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/ODSSupport.h"
+#include "mlir/IR/OpFoldResult.h"
 #include "mlir/IR/Operation.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 
@@ -267,51 +268,6 @@ inline bool operator!=(OpState lhs, OpState rhs) {
   return lhs.getOperation() != rhs.getOperation();
 }
 
-raw_ostream &operator<<(raw_ostream &os, OpFoldResult ofr);
-
-/// This class represents a single result from folding an operation.
-class OpFoldResult : public PointerUnion<Attribute, Value> {
-  using PointerUnion<Attribute, Value>::PointerUnion;
-
-public:
-  LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this << "\n"; }
-
-  MLIRContext *getContext() const {
-    PointerUnion pu = *this;
-    return isa<Attribute>(pu) ? cast<Attribute>(pu).getContext()
-                              : cast<Value>(pu).getContext();
-  }
-};
-
-// Temporarily exit the MLIR namespace to add casting support as later code in
-// this uses it. The CastInfo must come after the OpFoldResult definition and
-// before any cast function calls depending on CastInfo.
-
-} // namespace mlir
-
-namespace llvm {
-
-// Allow llvm::cast style functions.
-template <typename To>
-struct CastInfo<To, mlir::OpFoldResult>
-    : public CastInfo<To, mlir::OpFoldResult::PointerUnion> {};
-
-template <typename To>
-struct CastInfo<To, const mlir::OpFoldResult>
-    : public CastInfo<To, const mlir::OpFoldResult::PointerUnion> {};
-
-} // namespace llvm
-
-namespace mlir {
-
-/// Allow printing to a stream.
-inline raw_ostream &operator<<(raw_ostream &os, OpFoldResult ofr) {
-  if (Value value = llvm::dyn_cast_if_present<Value>(ofr))
-    value.print(os);
-  else
-    llvm::dyn_cast_if_present<Attribute>(ofr).print(os);
-  return os;
-}
 /// Allow printing to a stream.
 inline raw_ostream &operator<<(raw_ostream &os, OpState op) {
   op.print(os, OpPrintingFlags().useLocalScope());
