@@ -38,7 +38,6 @@ class StringTableSection;
 class SymbolTableSection;
 class RelocationSection;
 class DynamicRelocationSection;
-class DynamicSymbolTableSection;
 class GnuDebugLinkSection;
 class GroupSection;
 class SectionIndexSection;
@@ -876,15 +875,10 @@ struct Relocation {
 // and another which handles the symbol table type. The symbol table type is
 // taken as a type parameter to the class (see RelocSectionWithSymtabBase).
 class RelocationSectionBase : public SectionBase {
-  const bool Dynamic;
-
 protected:
   SectionBase *SecToApplyRel = nullptr;
 
-  explicit RelocationSectionBase(bool Dynamic) : Dynamic(Dynamic) {}
-
 public:
-  bool isDynamic() const { return Dynamic; }
   const SectionBase *getSection() const { return SecToApplyRel; }
   void setSection(SectionBase *Sec) { SecToApplyRel = Sec; }
 
@@ -903,9 +897,7 @@ class RelocSectionWithSymtabBase : public RelocationSectionBase {
   void setSymTab(SymTabType *SymTab) { Symbols = SymTab; }
 
 protected:
-  RelocSectionWithSymtabBase()
-      : RelocationSectionBase(
-            std::is_same_v<SymTabType, DynamicSymbolTableSection>) {}
+  RelocSectionWithSymtabBase() = default;
 
   SymTabType *Symbols = nullptr;
 
@@ -936,8 +928,9 @@ public:
   const Object &getObject() const { return Obj; }
 
   static bool classof(const SectionBase *S) {
-    return RelocationSectionBase::classof(S) &&
-           !static_cast<const RelocationSectionBase *>(S)->isDynamic();
+    if (S->OriginalFlags & ELF::SHF_ALLOC)
+      return false;
+    return RelocationSectionBase::classof(S);
   }
 };
 
@@ -1022,8 +1015,9 @@ public:
       function_ref<bool(const SectionBase *)> ToRemove) override;
 
   static bool classof(const SectionBase *S) {
-    return RelocationSectionBase::classof(S) &&
-           static_cast<const RelocationSectionBase *>(S)->isDynamic();
+    if (!(S->OriginalFlags & ELF::SHF_ALLOC))
+      return false;
+    return S->OriginalType == ELF::SHT_REL || S->OriginalType == ELF::SHT_RELA;
   }
 };
 
