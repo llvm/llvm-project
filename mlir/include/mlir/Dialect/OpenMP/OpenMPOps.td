@@ -1777,7 +1777,9 @@ def CriticalDeclareOp : OpenMP_Op<"critical.declare", clauses = [
 
 
 def CriticalOp : OpenMP_Op<"critical", [
-    DeclareOpInterfaceMethods<SymbolUserOpInterface>
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>,
+    MemoryEffects<[MemRead, MemWrite]>,
+    RecursiveMemoryEffects
   ], singleRegion = 1> {
   let summary = "critical construct";
   let description = [{
