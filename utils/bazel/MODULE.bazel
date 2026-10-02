@@ -15,7 +15,7 @@ bazel_dep(name = "rules_cc", version = "0.2.25")
 
 # Keep below 2.0: from 2.0.0, py_binary on Windows requires symlink privileges
 # (https://github.com/bazel-contrib/rules_python/issues/3792).
-bazel_dep(name = "rules_python", version = "1.8.4")
+bazel_dep(name = "rules_python", version = "1.9.0")
 bazel_dep(name = "rules_shell", version = "0.8.0")
 
 # Latest pins: track upstream freely. No compatibility contract -- bump to
