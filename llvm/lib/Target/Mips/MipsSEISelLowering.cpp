@@ -1559,7 +1559,9 @@ static SDValue lowerDSPIntr(SDValue Op, SelectionDAG &DAG, unsigned Opc) {
 static SDValue lowerMSACopyIntr(SDValue Op, SelectionDAG &DAG, unsigned Opc) {
   SDLoc DL(Op);
   SDValue Vec = Op->getOperand(1);
-  SDValue Idx = Op->getOperand(2);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDValue Idx = DAG.getZExtOrTrunc(Op->getOperand(2), DL,
+                                   TLI.getVectorIdxTy(DAG.getDataLayout()));
   EVT ResTy = Op->getValueType(0);
   EVT EltTy = Vec->getValueType(0).getVectorElementType();
 
