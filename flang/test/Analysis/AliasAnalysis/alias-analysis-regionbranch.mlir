@@ -240,6 +240,73 @@ func.func @test_rb_optional_ref_present_absent(%arg0: !fir.ref<i32> {fir.bindc_n
 
 // -----
 
+// The join is either a fresh allocmem or a null address. The null path
+// contributes no object, so the join stays an allocation and does not alias
+// other storage.
+// CHECK-LABEL: Testing : "test_rb_allocmem_or_zero"
+// CHECK-DAG: outside_heap#0 <-> join_heap#0: NoAlias
+
+func.func @test_rb_allocmem_or_zero() {
+  %cond = arith.constant true
+  %a_ext = fir.allocmem f32 {uniq_name = "_QFEout"}
+  %d_ext = fir.convert %a_ext {test.ptr = "outside_heap"} : (!fir.heap<f32>) -> !fir.heap<f32>
+  %jf = fir.if %cond -> !fir.heap<f32> {
+    %a = fir.allocmem f32 {uniq_name = "_QFEpriv"}
+    fir.result %a : !fir.heap<f32>
+  } else {
+    %z = fir.zero_bits !fir.heap<f32>
+    fir.result %z : !fir.heap<f32>
+  }
+  %join = fir.convert %jf {test.ptr = "join_heap"} : (!fir.heap<f32>) -> !fir.heap<f32>
+  return
+}
+
+// -----
+
+// Every predecessor is a distinct null, and one is defined outside the branch.
+// The join is still a null and does not alias other storage.
+// CHECK-LABEL: Testing : "test_rb_distinct_nulls"
+// CHECK-DAG: outside_null_join#0 <-> join_nulls#0: NoAlias
+
+func.func @test_rb_distinct_nulls() {
+  %cond = arith.constant true
+  %a = fir.alloca i32 {uniq_name = "_QFEnulljoin"}
+  %d = fir.declare %a {uniq_name = "_QFEnulljoin", test.ptr = "outside_null_join"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %z_out = fir.zero_bits !fir.ref<i32>
+  %jf = fir.if %cond -> !fir.ref<i32> {
+    %z_in = fir.zero_bits !fir.ref<i32>
+    fir.result %z_in : !fir.ref<i32>
+  } else {
+    fir.result %z_out : !fir.ref<i32>
+  }
+  %join = fir.convert %jf {test.ptr = "join_nulls"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  return
+}
+
+// -----
+
+// Null predecessors may carry different attributes. The join is still a null.
+// CHECK-LABEL: Testing : "test_rb_nulls_different_attrs"
+// CHECK-DAG: outside_attr#0 <-> join_attr#0: NoAlias
+
+func.func @test_rb_nulls_different_attrs() {
+  %cond = arith.constant true
+  %a = fir.alloca f32 {uniq_name = "_QFEnullattr"}
+  %d_out = fir.declare %a {uniq_name = "_QFEnullattr", test.ptr = "outside_attr"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %jf = fir.if %cond -> !fir.ref<f32> {
+    %z = fir.zero_bits !fir.ref<f32>
+    %p = fir.declare %z {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEp"} : (!fir.ref<f32>) -> !fir.ref<f32>
+    fir.result %p : !fir.ref<f32>
+  } else {
+    %z2 = fir.zero_bits !fir.ref<f32>
+    fir.result %z2 : !fir.ref<f32>
+  }
+  %join = fir.convert %jf {test.ptr = "join_attr"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  return
+}
+
+// -----
+
 // Same OPTIONAL idea as above, but the unrelated fir.alloca outside the if is
 // declared with TARGET: join should still not alias that unrelated storage.
 // CHECK-LABEL: Testing : "test_rb_optional_ref_outside_target"
