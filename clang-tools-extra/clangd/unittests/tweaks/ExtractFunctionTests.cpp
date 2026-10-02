@@ -10,6 +10,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using ::testing::AllOf;
 using ::testing::HasSubstr;
 using ::testing::Not;
 using ::testing::StartsWith;
@@ -56,9 +57,6 @@ TEST_F(ExtractFunctionTest, FunctionTest) {
   EXPECT_THAT(
       apply("#define RETURN_IF_ERROR(x) if (x) return\nRETU^RN_IF_ERROR(4);"),
       StartsWith("unavailable"));
-
-  FileName = "a.c";
-  EXPECT_THAT(apply(" for([[int i = 0;]];);"), HasSubstr("unavailable"));
 }
 
 TEST_F(ExtractFunctionTest, FileTest) {
@@ -1042,6 +1040,82 @@ TEST_F(ExtractFunctionTest, VolatileScalar) {
       ]]
     })cpp"),
               HasSubstr("extracted(const volatile int &V)"));
+}
+
+TEST_F(ExtractFunctionTest, CFileAllowUnmodifiedScalar) {
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      int i;
+      void foo() {
+         int j = 0;
+         [[i = j;]]
+    })cpp"),
+              HasSubstr("extracted(int j)"));
+}
+
+TEST_F(ExtractFunctionTest, CFileModifiedScalarBecomesPointer) {
+  // C has no references: a mutated capture becomes a real pointer
+  // parameter instead, with the call site taking its address and the
+  // body dereferencing it.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      void foo() {
+         int j;
+         [[j = 0;]]
+    })cpp"),
+              AllOf(HasSubstr("extracted(int * j)"), HasSubstr("(*j) = 0;"),
+                    HasSubstr("extracted(&j)")));
+}
+
+TEST_F(ExtractFunctionTest, CFileUnmodifiedStructBecomesConstPointer) {
+  // Same, but for an unmutated non-scalar capture: the parameter becomes
+  // a pointer to const, and every member access on it is rewritten too.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      struct pair { int v1; int v2; };
+      int i;
+      void foo() {
+         struct pair p;
+         p.v1 = 0;
+         [[i = p.v1;]]
+    })cpp"),
+              AllOf(HasSubstr("extracted(const struct pair * p)"),
+                    HasSubstr("i = p->v1;"), HasSubstr("extracted(&p)")));
+}
+
+TEST_F(ExtractFunctionTest, CFileStructMixedUses) {
+  // The same capture can appear both as a member-access base (rewritten
+  // to "->") and as a plain use (wrapped in "(*...)") within a single
+  // extraction; each occurrence is rewritten independently.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      struct pair { int v1; int v2; };
+      void use(struct pair);
+      int i;
+      void foo() {
+         struct pair p;
+         [[use(p); i = p.v1;]]
+    })cpp"),
+              AllOf(HasSubstr("use((*p));"), HasSubstr("i = p->v1;")));
+}
+
+TEST_F(ExtractFunctionTest, CFileModifiedArrayStaysPlainPointer) {
+  // Unlike other non-scalar types, an array decays to a pointer on its
+  // own wherever it's used, so it needs neither an address-of at the
+  // call site nor a dereference-rewrite of its uses in the body.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      void foo() {
+         int arr[5];
+         [[arr[0] = 1;]]
+    })cpp"),
+              AllOf(HasSubstr("arr[0] = 1;"), HasSubstr("extracted(arr)"),
+                    Not(HasSubstr("&arr"))));
 }
 
 } // namespace

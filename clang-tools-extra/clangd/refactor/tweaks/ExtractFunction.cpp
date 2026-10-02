@@ -28,6 +28,10 @@
 //   code become const references, except scalars (arithmetic, pointer,
 //   enumeration, ...), which are passed by value instead.
 // - Otherwise passed by non-const reference
+// - In C, which has no references, a parameter that would otherwise need
+//   one becomes a real pointer instead (except array types, which decay to
+//   a pointer on their own): the call site takes its address, and every
+//   use inside the extracted body is rewritten into a dereference.
 // - Void return type
 // - Cannot extract declarations that will be needed in the original function
 //   after extraction.
@@ -95,6 +99,17 @@ enum FunctionDeclKind {
   InlineDefinition,
   ForwardDeclaration,
   OutOfLineDefinition
+};
+
+// How a captured variable is passed to the extracted function.
+enum class ParamPassKind {
+  Value,     // A plain copy: `T name`. Also used for a C array, which
+             // decays to a pointer on its own wherever it's used.
+  Reference, // C++ only: `T &name`.
+  Pointer,   // C only (no references there): a real pointer, `T *name`,
+             // with the call site taking the address of the original
+             // variable and every use inside the extracted body rewritten
+             // into a dereference (see createParameters and getFuncBody).
 };
 
 // Whether N, despite being Unselected, may still be a single RootStmt: a
@@ -421,7 +436,7 @@ struct NewFunction {
   struct Parameter {
     std::string Name;
     QualType TypeInfo;
-    bool PassByReference;
+    ParamPassKind Kind;
     unsigned OrderPriority; // Lower value parameters are preferred first.
     std::string render(const DeclContext *Context) const;
     bool operator<(const Parameter &Other) const {
@@ -443,6 +458,23 @@ struct NewFunction {
   bool Static = false;
   ConstexprSpecKind Constexpr = ConstexprSpecKind::Unspecified;
   bool Const = false;
+
+  // For C only: describes how to rewrite a single in-body reference to a
+  // parameter that had to become a real pointer instead of a reference (C
+  // has none), because its corresponding Parameter::Kind is Pointer. See
+  // createParameters and getFuncBody.
+  struct PointerRewriteSite {
+    SourceLocation Loc; // Location of the identifier itself.
+    unsigned NameLength;
+    // Set when this occurrence is the base of a non-arrow member access
+    // (`name.member`) immediately following it: that reads more
+    // naturally rewritten as `name->member` than `(*name).member`. Holds
+    // the location of the '.' token to replace with "->"; the identifier
+    // itself is then left untouched. Unset otherwise, in which case the
+    // identifier is instead wrapped in "(*...)".
+    std::optional<SourceLocation> DotLoc;
+  };
+  std::vector<PointerRewriteSite> PointerRewriteSites;
 
   // Decides whether the extracted function body and the function call need a
   // semicolon after extraction.
@@ -490,6 +522,8 @@ std::string NewFunction::renderParametersForCall() const {
     if (NeedCommaBefore)
       Result += ", ";
     NeedCommaBefore = true;
+    if (P.Kind == ParamPassKind::Pointer)
+      Result += "&";
     Result += P.Name;
   }
   return Result;
@@ -570,12 +604,45 @@ std::string NewFunction::getFuncBody(const SourceManager &SM) const {
   // - hoist decls
   // - add return statement
   // - Add semicolon
-  return toSourceCode(SM, BodyRange).str() +
-         (SemicolonPolicy.isNeededInExtractedFunction() ? ";" : "");
+  std::string Body;
+  if (PointerRewriteSites.empty()) {
+    Body = toSourceCode(SM, BodyRange).str();
+  } else {
+    // Splice in each site's rewrite, keeping everything else verbatim.
+    auto Sites = PointerRewriteSites;
+    llvm::sort(Sites, [&SM](const auto &A, const auto &B) {
+      return SM.isBeforeInTranslationUnit(A.Loc, B.Loc);
+    });
+    FileID FID = SM.getFileID(BodyRange.getBegin());
+    StringRef Buf = SM.getBufferOrFake(FID).getBuffer();
+    unsigned Cursor = SM.getFileOffset(BodyRange.getBegin());
+    for (const auto &Site : Sites) {
+      unsigned SiteBegin = SM.getFileOffset(Site.Loc);
+      Body += Buf.substr(Cursor, SiteBegin - Cursor);
+      if (Site.DotLoc) {
+        // Leave the identifier itself untouched; turn the member access
+        // that follows it into "->" instead of wrapping in a dereference.
+        Body += Buf.substr(SiteBegin, Site.NameLength);
+        Cursor = SiteBegin + Site.NameLength;
+        unsigned DotOffset = SM.getFileOffset(*Site.DotLoc);
+        Body += Buf.substr(Cursor, DotOffset - Cursor);
+        Body += "->";
+        Cursor = DotOffset + 1;
+      } else {
+        Body += "(*";
+        Body += Buf.substr(SiteBegin, Site.NameLength);
+        Body += ")";
+        Cursor = SiteBegin + Site.NameLength;
+      }
+    }
+    Body += Buf.substr(Cursor, SM.getFileOffset(BodyRange.getEnd()) - Cursor);
+  }
+  return Body + (SemicolonPolicy.isNeededInExtractedFunction() ? ";" : "");
 }
 
 std::string NewFunction::Parameter::render(const DeclContext *Context) const {
-  return printType(TypeInfo, *Context) + (PassByReference ? " &" : " ") + Name;
+  return printType(TypeInfo, *Context) +
+         (Kind == ParamPassKind::Reference ? " &" : " ") + Name;
 }
 
 // Stores captured information about Extraction Zone.
@@ -591,6 +658,22 @@ struct CapturedZoneInfo {
     // ExtractionZoneVisitor::markPossiblyMutated() for what "conservatively"
     // means here.
     bool IsPossiblyMutated = false;
+    // Describes one reference to this Decl inside the zone (not
+    // before/after it). Used to rewrite each use if this ends up becoming
+    // a C pointer-adapter parameter (see createParameters): C has no
+    // references, so a parameter that needs reference semantics there
+    // becomes a real pointer instead, and every use of it in the
+    // copied-out body must be adjusted accordingly.
+    struct Occurrence {
+      SourceLocation Loc; // Location of the identifier itself.
+      // Set when this occurrence is the base of a non-arrow member access
+      // (`name.member`) immediately following it: holds the location of
+      // the '.' token, so it can be turned into "->" instead of wrapping
+      // the identifier in a dereference. See
+      // NewFunction::PointerRewriteSite.
+      std::optional<SourceLocation> DotLoc;
+    };
+    llvm::SmallVector<Occurrence, 1> ZoneOccurrences;
     DeclInformation(const Decl *TheDecl, ZoneRelative DeclaredIn,
                     unsigned DeclIndex)
         : TheDecl(TheDecl), DeclaredIn(DeclaredIn), DeclIndex(DeclIndex){};
@@ -756,6 +839,21 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
       return true;
     }
 
+    // Set by VisitMemberExpr right before traversing into a non-arrow
+    // MemberExpr's base, when that base is (possibly parenthesized)
+    // exactly a DeclRefExpr: since that base is always traversed
+    // immediately afterwards (it's the MemberExpr's only child),
+    // VisitDeclRefExpr can rely on this still describing itself, and
+    // must always consume (reset) it, matched or not, so it never leaks
+    // into an unrelated, later DeclRefExpr.
+    std::optional<SourceLocation> PendingMemberDotLoc;
+
+    bool VisitMemberExpr(MemberExpr *ME) {
+      if (!ME->isArrow() && isa<DeclRefExpr>(ME->getBase()->IgnoreParens()))
+        PendingMemberDotLoc = ME->getOperatorLoc();
+      return true;
+    }
+
     bool VisitDeclRefExpr(DeclRefExpr *DRE) {
       // Find the corresponding Decl and mark it's occurrence.
       const Decl *D = DRE->getDecl();
@@ -764,6 +862,10 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
       if (!DeclInfo)
         DeclInfo = Info.createDeclInfo(D, ZoneRelative::OutsideFunc);
       DeclInfo->markOccurence(CurrentLocation);
+      if (CurrentLocation == ZoneRelative::Inside)
+        DeclInfo->ZoneOccurrences.push_back(
+            {DRE->getLocation(), PendingMemberDotLoc});
+      PendingMemberDotLoc.reset();
       return true;
     }
 
@@ -993,7 +1095,7 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
 // FIXME: Check if the declaration has a local/anonymous type
 bool createParameters(NewFunction &ExtractedFunc,
                       const CapturedZoneInfo &CapturedInfo,
-                      const ASTContext &Context) {
+                      const ASTContext &Context, const LangOptions &LangOpts) {
   for (const auto &KeyVal : CapturedInfo.DeclInfoMap) {
     const auto &DeclInfo = KeyVal.second;
     // If a Decl was Declared in zone and referenced in post zone, it
@@ -1017,7 +1119,7 @@ bool createParameters(NewFunction &ExtractedFunc,
     QualType FullTypeInfo = VD->getType();
     QualType TypeInfo = FullTypeInfo.getNonReferenceType();
     // FIXME: check if parameter will be a non l-value reference.
-    bool IsPassedByReference = true;
+    ParamPassKind Kind = ParamPassKind::Reference;
     if (!DeclInfo.IsPossiblyMutated) {
       auto WordSize = Context.getTypeSizeInChars(Context.VoidPtrTy);
       // A scalar (arithmetic, pointer, enumeration, ...) is at least as
@@ -1025,7 +1127,7 @@ bool createParameters(NewFunction &ExtractedFunc,
       if (TypeInfo->isScalarType() && !TypeInfo.isVolatileQualified() &&
           !FullTypeInfo->isReferenceType() &&
           Context.getTypeSizeInChars(TypeInfo) <= 2 * WordSize) {
-        IsPassedByReference = false;
+        Kind = ParamPassKind::Value;
       } else if (!TypeInfo->isArrayType()) {
         // Still passed by reference to avoid a copy, but the reference
         // doesn't need to be mutable. Array types are never made const:
@@ -1035,10 +1137,39 @@ bool createParameters(NewFunction &ExtractedFunc,
         TypeInfo.addConst();
       }
     }
+
+    // C has no references. A parameter that would otherwise need one
+    // becomes a real pointer instead: the call site takes the address of
+    // the original variable explicitly, and every use of it in the
+    // copied-out body is rewritten into a dereference (see
+    // NewFunction::getFuncBody). Array types are the exception: they decay
+    // to a pointer on their own wherever they're used, so no rewriting or
+    // address-of is needed for them at all.
+    if (Kind == ParamPassKind::Reference && !LangOpts.CPlusPlus) {
+      if (TypeInfo->isArrayType()) {
+        Kind = ParamPassKind::Value;
+      } else {
+        // Bail out rather than rewrite a use whose location can't be
+        // mapped back to a single, unambiguous spot in the source (e.g.
+        // one produced by macro expansion).
+        if (llvm::any_of(
+                DeclInfo.ZoneOccurrences,
+                [](const CapturedZoneInfo::DeclInformation::Occurrence &O) {
+                  return O.Loc.isMacroID();
+                }))
+          return false;
+        TypeInfo = Context.getPointerType(TypeInfo);
+        Kind = ParamPassKind::Pointer;
+        unsigned NameLength = VD->getName().size();
+        for (const auto &Occ : DeclInfo.ZoneOccurrences)
+          ExtractedFunc.PointerRewriteSites.push_back(
+              {Occ.Loc, NameLength, Occ.DotLoc});
+      }
+    }
+
     // We use the index of declaration as the ordering priority for parameters.
-    ExtractedFunc.Parameters.push_back({std::string(VD->getName()), TypeInfo,
-                                        IsPassedByReference,
-                                        DeclInfo.DeclIndex});
+    ExtractedFunc.Parameters.push_back(
+        {std::string(VD->getName()), TypeInfo, Kind, DeclInfo.DeclIndex});
   }
   llvm::sort(ExtractedFunc.Parameters);
   return true;
@@ -1134,7 +1265,7 @@ llvm::Expected<NewFunction> getExtractedFunction(ExtractionZone &ExtZone,
 
   ExtractedFunc.CallerReturnsValue = CapturedInfo.AlwaysReturns;
   if (!createParameters(ExtractedFunc, CapturedInfo,
-                        ExtZone.EnclosingFunction->getASTContext()) ||
+                        ExtZone.EnclosingFunction->getASTContext(), LangOpts) ||
       !generateReturnProperties(ExtractedFunc, *ExtZone.EnclosingFunction,
                                 CapturedInfo))
     return error("Too complex to extract.");
@@ -1209,8 +1340,6 @@ bool hasReturnStmt(const ExtractionZone &ExtZone) {
 
 bool ExtractFunction::prepare(const Selection &Inputs) {
   const LangOptions &LangOpts = Inputs.AST->getLangOpts();
-  if (!LangOpts.CPlusPlus)
-    return false;
   const Node *CommonAnc = Inputs.ASTSelection.commonAncestor();
   const SourceManager &SM = Inputs.AST->getSourceManager();
   auto MaybeExtZone = findExtractionZone(CommonAnc, SM, LangOpts);
