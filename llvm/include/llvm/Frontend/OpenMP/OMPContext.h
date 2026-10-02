@@ -192,6 +192,11 @@ struct VariantMatchInfo {
   StringRef UserCondition;
 };
 
+/// Return a directive's enclosing construct traits in source order. Constructs
+/// without selector properties use invalid placeholders to retain scoring
+/// depth. DISPATCH is omitted; callers handle its target call separately.
+LLVM_ABI SmallVector<TraitProperty, 8> getConstructTraits(Directive Kind);
+
 /// The context for a source location is made up of active property traits,
 /// e.g., device={kind(host)}, and constructs traits which describe the nesting
 /// in OpenMP constructs at the location.

@@ -32,11 +32,6 @@ void depth_base(void);
 #pragma omp declare variant(parallel_variant) match(construct = {parallel})
 void construct_base(void);
 
-#pragma omp declare variant(cpu_variant) match(device = {kind(cpu)})
-#pragma omp declare variant(scored_variant) \
-    match(implementation = {vendor(score(3) : llvm)})
-void task_depth_base(void);
-
 #pragma omp declare variant(arch_variant) match(device = {arch(x86_64)})
 #pragma omp declare variant(scored_variant) \
     match(implementation = {vendor(score(3) : llvm)})
@@ -200,7 +195,7 @@ void task_depth(void) {
 #pragma omp parallel
   {
 #pragma omp task
-    { task_depth_base(); }
+    { target_base(); }
   }
 }
 // CHECK-LABEL: define internal {{.*}}i32 @.omp_task_entry.
@@ -241,7 +236,7 @@ void assume_context(void) {
 #pragma omp parallel
   {
 #pragma omp assume no_openmp_routines
-    { task_depth_base(); }
+    { target_base(); }
   }
 }
 // CHECK-LABEL: define internal void @assume_context.omp_outlined
