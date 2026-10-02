@@ -229,7 +229,7 @@ void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
         SS << VecVal << " must have vector type, but has type " << VecVT;
         reportNodeError(DAG, N, SS.str());
       }
-      if (VT != VecVT.getVectorElementType()) {
+      if (VecVT.isVectorOf(VT)) {
         SS << Val << " must have " << VecVT.getVectorElementType()
            << " type (element type of " << VecVal << "), but has type " << VT;
         reportNodeError(DAG, N, SS.str());
