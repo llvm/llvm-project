@@ -1069,6 +1069,8 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
                                       : eValueTypeVariableStatic;
     name = ds.Name;
     addr = m_index->MakeVirtualAddress(ds.Segment, ds.DataOffset);
+    if (addr == LLDB_INVALID_ADDRESS)
+      return nullptr;
     location_expr =
         MakeGlobalLocationExpression(ds.Segment, ds.DataOffset, module_sp);
     break;
@@ -1088,6 +1090,8 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
     name = tlds.Name;
     addr = m_index->MakeVirtualAddress(tlds.Segment, tlds.DataOffset);
     scope = eValueTypeVariableThreadLocal;
+    if (addr == LLDB_INVALID_ADDRESS)
+      return nullptr;
     location_expr =
         MakeGlobalThreadLocalLocationExpression(tlds.DataOffset, module_sp);
     break;
