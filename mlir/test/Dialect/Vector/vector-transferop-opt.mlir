@@ -625,6 +625,23 @@ func.func @negative_forward_to_region_masked_read(%arg0: memref<4xf32>,
   return %0 : vector<4xf32>
 }
 
+// A write under vector.mask leaves its masked-off lanes unwritten, so it must
+// not be forwarded to a later unmasked read.
+// CHECK-LABEL: func @negative_forward_from_region_masked_write
+//       CHECK:   vector.mask %{{.*}} { vector.transfer_write
+//       CHECK:   %[[R:.*]] = vector.transfer_read
+//       CHECK:   return %[[R]]
+func.func @negative_forward_from_region_masked_write(%arg0: memref<4xf32>,
+  %v0: vector<4xf32>, %mask: vector<4xi1>) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %cf0 = arith.constant 0.0 : f32
+  vector.mask %mask { vector.transfer_write %v0, %arg0[%c0] {in_bounds = [true]} :
+    vector<4xf32>, memref<4xf32> } : vector<4xi1>
+  %0 = vector.transfer_read %arg0[%c0], %cf0 {in_bounds = [true]} :
+    memref<4xf32>, vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
 // A region-masked write is still fully overwritten by a later unmasked write
 // to the same location, so it is dead.
 // CHECK-LABEL: func @dead_region_masked_store

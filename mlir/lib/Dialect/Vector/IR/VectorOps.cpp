@@ -254,7 +254,8 @@ bool mlir::vector::checkSameValueRAW(vector::TransferWriteOp defWrite,
 bool mlir::vector::checkSameValueWAW(vector::TransferWriteOp write,
                                      vector::TransferWriteOp priorWrite) {
   // A write under an enclosing vector.mask does not overwrite all lanes of
-  // the prior write.
+  // the prior write. Only the later write needs checking: a region-masked
+  // prior write is still dead if the later write fully overwrites it.
   if (write.isMasked())
     return false;
   return priorWrite.getIndices() == write.getIndices() &&
