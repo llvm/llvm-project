@@ -1309,12 +1309,11 @@ void PTUMutationActions::restoreDecl(PTUID ID, const Decl *D,
 }
 #undef DECL_SHAPES
 
-void PTUMutationActions::restoreSpecialMemberCache(PTUID ID) {
+void SemaCacheReverter::restoreSpecialMemberCache(PTUID ID) {
   PTUStateInfo &Cur = Tracker.current();
   if (!Cur.HadImplicitCXXMember)
     return;
 
-  Sema &SemaRef = Tracker.getSema();
   llvm::SmallVector<Sema::SpecialMemberCacheKey, 8> ToRemove;
   for (auto &Entry : SemaRef.SpecialMemberCache) {
     CXXMethodDecl *MD = Entry.second.getMethod();
@@ -1384,7 +1383,7 @@ void PTUMutationActions::restore(TranslationUnitDecl *ThisTU) {
   // SpecialMemberCache stores the CXXMethodDecl* from a previous
   // LookupSpecialMember() call. If it was created by a PTU being rolled back,
   // the cache entry is stale, so remove it here.
-  restoreSpecialMemberCache(ID);
+  SemaCache.restoreSpecialMemberCache(ID);
 
   // Must be last: Cur/ID/ThisTU refer to data owned by this PTU, and
   // popCurrentPTU() destroys that entry. This runs for both committed and

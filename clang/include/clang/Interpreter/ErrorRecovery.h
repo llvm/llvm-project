@@ -698,16 +698,32 @@ private:
   }
 };
 
+// Once place to revert Sema specific cache.
+class SemaCacheReverter {
+  Sema &SemaRef;
+  IncrementalStateTracker &Tracker;
+public:
+  explicit SemaCacheReverter(Sema &S, IncrementalStateTracker &Tracker)
+      : SemaRef(S), Tracker(Tracker) {}
+
+  // Sema::SpecialMemberCache stores the CXXMethodDecl* resolved by a previous
+  // LookupSpecialMember() call for each (RD, kind+qualifiers). Remove entries
+  // whose cached method belongs to the PTU being rolled back.
+  void restoreSpecialMemberCache(PTUID ID);
+};
+
 class PTUMutationActions {
 private:
   IncrementalStateTracker &Tracker;
   SweepTracker &HiddenMutationTracker;
+  SemaCacheReverter SemaCache;
   DeclStateReverter Reverter;
 
 public:
   explicit PTUMutationActions(IncrementalStateTracker &Tracker)
       : Tracker(Tracker),
         HiddenMutationTracker(Tracker.getHiddenMutationTracker()),
+        SemaCache(Tracker.getSema(), Tracker),
         Reverter(Tracker.getPTUSlabCheckpoints()) {}
 
   template <typename DeclStatePolicyT>
@@ -767,12 +783,6 @@ public:
   // IncrementalStateTracker tracking info and unlinks decls created by this
   // PTU.
   void restore(TranslationUnitDecl *MostRecentTU);
-
-private:
-  // Sema::SpecialMemberCache stores the CXXMethodDecl* resolved by a previous
-  // LookupSpecialMember() call for each (RD, kind+qualifiers). Remove entries
-  // whose cached method belongs to the PTU being rolled back.
-  void restoreSpecialMemberCache(PTUID ID);
 };
 
 class PTUMutationRecorder : public ASTMutationListener {
