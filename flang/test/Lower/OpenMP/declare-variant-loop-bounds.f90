@@ -463,7 +463,7 @@ contains
     integer, intent(in) :: n
     !$omp declare variant(parallel_depth) match(construct={parallel})
     !$omp declare variant(scored_depth) &
-    !$omp& match(implementation={vendor(score(6): llvm)})
+    !$omp& match(implementation={vendor(score(3): llvm)})
     depth_bound = n
   end function
 
@@ -551,8 +551,8 @@ contains
     end do
   end subroutine
 
-  ! PARALLEL scores 5 and the vendor scores 7 in TARGET, PARALLEL.
-  ! Counting PARALLEL twice raises its score to 9 and selects the wrong variant.
+  ! PARALLEL scores 3 and the vendor scores 4 in TARGET, PARALLEL.
+  ! Counting PARALLEL twice raises its score to at least 5, so it wins.
   ! TARGET-LABEL: func.func @_QMhost_boundsPprefix_depth(
   ! HOST: fir.call @_QMhost_boundsPscored_depth(
   ! TARGET: omp.target

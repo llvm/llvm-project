@@ -1,6 +1,11 @@
 ! RUN: %if x86-registered-target %{ %flang_fc1 -fopenmp \
 ! RUN:   -fopenmp-version=52 -triple x86_64-unknown-linux-gnu \
-! RUN:   -emit-hlfir %s -o - | FileCheck %s %}
+! RUN:   -emit-hlfir %s -o - | FileCheck %s \
+! RUN:   --implicit-check-not='fir.call @_QMsource_contextPbound_arch' %}
+! RUN: %if x86-registered-target %{ %flang_fc1 -fopenmp \
+! RUN:   -fopenmp-version=60 -triple x86_64-unknown-linux-gnu \
+! RUN:   -emit-hlfir %s -o - | FileCheck %s \
+! RUN:   --implicit-check-not='fir.call @_QMsource_contextPbound_arch' %}
 
 module source_context
 contains
@@ -37,14 +42,32 @@ contains
     value_arch = 2
   end function
 
+  integer function bound_base(n)
+    integer, intent(in) :: n
+    !$omp declare variant(bound_vendor) &
+    !$omp& match(implementation={vendor(score(3): llvm)})
+    !$omp declare variant(bound_arch) match(device={arch(x86_64)})
+    bound_base = n
+  end function
+  integer function bound_vendor(n)
+    integer, intent(in) :: n
+    bound_vendor = n
+  end function
+  integer function bound_arch(n)
+    integer, intent(in) :: n
+    bound_arch = n
+  end function
+
+! Bounds exclude TILE in both evaluations; the body includes it.
 ! CHECK-LABEL: func.func @_QMsource_contextPtile_context(
+! CHECK-COUNT-2: fir.call @_QMsource_contextPbound_vendor(
 ! CHECK: fir.call @_QMsource_contextPdepth_arch()
 ! CHECK-NOT: fir.call @_QMsource_contextPdepth_vendor
 ! CHECK: return
   subroutine tile_context(n)
     integer :: n, i
     !$omp tile sizes(2)
-    do i = 1, n
+    do i = 1, bound_base(n)
       call depth_base()
     end do
   end subroutine
@@ -61,18 +84,22 @@ contains
     end do
   end subroutine
 
+! Bounds exclude FUSE in both evaluations of each loop; the bodies include it.
 ! CHECK-LABEL: func.func @_QMsource_contextPfuse_context(
 ! CHECK-NOT: fir.call @_QMsource_contextPdepth_vendor
-! CHECK-COUNT-2: fir.call @_QMsource_contextPdepth_arch()
+! CHECK-COUNT-2: fir.call @_QMsource_contextPbound_vendor(
+! CHECK: fir.call @_QMsource_contextPdepth_arch()
+! CHECK-COUNT-2: fir.call @_QMsource_contextPbound_vendor(
+! CHECK: fir.call @_QMsource_contextPdepth_arch()
 ! CHECK-NOT: fir.call @_QMsource_contextPdepth_vendor
 ! CHECK: return
   subroutine fuse_context(n)
     integer :: n, i, j
     !$omp fuse
-    do i = 1, n
+    do i = 1, bound_base(n)
       call depth_base()
     end do
-    do j = 1, n
+    do j = 1, bound_base(n)
       call depth_base()
     end do
     !$omp end fuse

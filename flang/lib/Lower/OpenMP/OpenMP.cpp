@@ -7092,8 +7092,8 @@ struct SplicedAssociatedEvaluations {
   void suppressEntryBlock(lower::pft::Evaluation &evaluation) {
     assert(!entryEvaluation && evaluation.isNewBlock && evaluation.block &&
            "invalid associated entry evaluation");
-    // Do not let either cloned loop arm enter a function-region block. The
-    // metadirective selection will be placed in this block for an active ENTRY.
+    // Keep selected bodies out of function-region blocks. Place the
+    // metadirective selection in this block for an active ENTRY.
     entryEvaluation = &evaluation;
     entryBlock = evaluation.block;
     evaluation.isNewBlock = false;
@@ -7247,6 +7247,40 @@ static lower::pft::Evaluation *spliceAssociatedDoEval(
   if (splicedEvaluations)
     splicedEvaluations->record(*parentList, loopIt);
   eval.evaluationList->splice(eval.evaluationList->end(), *parentList, loopIt);
+  return &eval.getNestedEvaluations().back();
+}
+
+// A standalone metadirective's strictly structured BLOCK is a sibling in the
+// PFT. Attach it while lowering the selected replacement, as for associated DO.
+static lower::pft::Evaluation *
+spliceAssociatedBlockEval(lower::pft::Evaluation &eval,
+                          SplicedAssociatedEvaluations &splicedEvaluations) {
+  const auto *omp = eval.getIf<parser::OpenMPConstruct>();
+  if (omp && std::holds_alternative<parser::OmpDelimitedMetadirectiveDirective>(
+                 omp->u))
+    return nullptr;
+
+  lower::pft::FunctionLikeUnit *owningProc = eval.getOwningProcedure();
+  if (!eval.parentConstruct && !owningProc)
+    return nullptr;
+  auto &parent = eval.parentConstruct
+                     ? eval.parentConstruct->getNestedEvaluations()
+                     : owningProc->evaluationList;
+  auto metaIt = llvm::find_if(
+      parent, [&](lower::pft::Evaluation &e) { return &e == &eval; });
+  assert(metaIt != parent.end() &&
+         "metadirective eval not found in parent list");
+  auto blockIt = std::next(metaIt);
+  if (blockIt == parent.end() || !blockIt->getIf<parser::BlockConstruct>())
+    return nullptr;
+
+  auto &blockStmt = blockIt->getFirstNestedEvaluation();
+  if (blockStmt.isNewBlock && blockStmt.block)
+    splicedEvaluations.suppressEntryBlock(blockStmt);
+  splicedEvaluations.record(parent, blockIt);
+  // Preserve source nesting for construct selectors in the BLOCK.
+  blockIt->parentConstruct = &eval;
+  eval.evaluationList->splice(eval.evaluationList->end(), parent, blockIt);
   return &eval.getNestedEvaluations().back();
 }
 
@@ -7520,7 +7554,10 @@ static void genMetadirective(lower::AbstractConverter &converter,
       });
   SplicedAssociatedEvaluations splicedAssociatedEvaluations;
   lower::pft::Evaluation *associatedLoopEval = nullptr;
+  lower::pft::Evaluation *associatedBlockEval = nullptr;
   llvm::scope_exit restoreEvaluationOwnership([&]() {
+    if (associatedBlockEval)
+      associatedBlockEval->parentConstruct = eval.parentConstruct;
     if (eval.hasNestedEvaluations())
       splicedAssociatedEvaluations.restore(eval.getNestedEvaluations());
   });
@@ -7596,6 +7633,18 @@ static void genMetadirective(lower::AbstractConverter &converter,
                "DO");
     }
   }
+
+  if (!hasLoopAssociatedCandidate &&
+      llvm::any_of(reachableVariantSpecs, [](const auto *spec) {
+        return spec && hasDirectiveAssociation(spec->DirId(),
+                                               llvm::omp::Association::Block);
+      }))
+    associatedBlockEval =
+        spliceAssociatedBlockEval(eval, splicedAssociatedEvaluations);
+
+  if (associatedBlockEval && splicedAssociatedEvaluations.getEntryBlock())
+    builder.setInsertionPointToStart(
+        splicedAssociatedEvaluations.getEntryBlock());
 
   auto genMetadirectiveBody = [&]() {
     for (lower::pft::Evaluation &nested : eval.getNestedEvaluations())
@@ -7711,6 +7760,9 @@ static void genMetadirective(lower::AbstractConverter &converter,
            "METADIRECTIVE with both block- and loop-associated variants");
 
     if (consumesBody) {
+      if (associatedBlockEval && associatedBlockEval->lowerAsUnstructured())
+        TODO(variantLoc,
+             "unstructured associated BLOCK in METADIRECTIVE variant");
       mlir::SaveStateStack<OpenMPContextFrame> context{
           converter.getStateStack(), eval, spec->DirId(),
           /*isReplacement=*/true};
@@ -7790,6 +7842,10 @@ static void genMetadirective(lower::AbstractConverter &converter,
       TODO(converter.genLocation(candidate.dynamicCondition->source),
            "unstructured associated DO in loop-associated METADIRECTIVE "
            "variant");
+
+    if (associatedBlockEval && associatedBlockEval->lowerAsUnstructured())
+      TODO(converter.genLocation(candidate.dynamicCondition->source),
+           "unstructured associated BLOCK in METADIRECTIVE variant");
 
     mlir::Location condLoc =
         converter.genLocation(candidate.dynamicCondition->source);

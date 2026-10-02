@@ -1567,8 +1567,10 @@ void collectEnclosingConstructTraits(
   // TARGET TEAMS DISTRIBUTE PARALLEL DO therefore retains TARGET and TEAMS.
   for (llvm::omp::Directive leaf :
        llvm::omp::getLeafConstructsOrSelf(directive)) {
-    if (llvm::omp::getDirectiveAssociation(leaf) ==
-        llvm::omp::Association::LoopNest)
+    llvm::omp::Association association =
+        llvm::omp::getDirectiveAssociation(leaf);
+    if (association == llvm::omp::Association::LoopNest ||
+        association == llvm::omp::Association::LoopSequence)
       break;
     append(leaf);
   }
