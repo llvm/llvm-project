@@ -4816,23 +4816,18 @@ bool AMDGPUDAGToDAGISel::SelectInlineAsmMemoryOperand(
     OutOps.push_back(Op);
     return false;
   case InlineAsm::ConstraintCode::RF: {
-    // flat_load/flat_store require the address in a VGPR. Force a copy to the
-    // appropriate VGPR class if the operand is not already in one.
+    // flat_load/flat_store require the address in a VGPR. Always force a copy
+    // to the appropriate VGPR class.
     const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
     MVT VT = Op.getSimpleValueType();
     const TargetRegisterClass *VRC =
         TRI->getVGPRClassForBitWidth(VT.getSizeInBits());
-    const TargetRegisterClass *RC =
-        getOperandRegClass(Op.getNode(), Op.getResNo());
-    if (VRC && (!RC || !TRI->isVGPRClass(RC))) {
-      SDLoc DL(Op);
-      SDValue RCVal = CurDAG->getTargetConstant(VRC->getID(), DL, MVT::i32);
-      SDNode *Copy =
-          CurDAG->getMachineNode(AMDGPU::COPY_TO_REGCLASS, DL, VT, {Op, RCVal});
-      OutOps.push_back(SDValue(Copy, 0));
-      return false;
-    }
-    OutOps.push_back(Op);
+    assert(VRC && "Expected valid VGPR class for RF constraint operand");
+    SDLoc DL(Op);
+    SDValue RCVal = CurDAG->getTargetConstant(VRC->getID(), DL, MVT::i32);
+    SDNode *Copy =
+        CurDAG->getMachineNode(AMDGPU::COPY_TO_REGCLASS, DL, VT, {Op, RCVal});
+    OutOps.push_back(SDValue(Copy, 0));
     return false;
   }
   default:
