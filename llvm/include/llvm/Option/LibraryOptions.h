@@ -21,6 +21,7 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include <optional>
 #include <type_traits>
 
 namespace llvm {
@@ -49,6 +50,15 @@ parseArgValue(StringRef S, T &V) {
     return to_float(S, V);
   else
     return to_integer(S, V);
+}
+
+// A std::optional member is set only when its option is given.
+template <typename T> bool parseArgValue(StringRef S, std::optional<T> &V) {
+  T X{};
+  if (!parseArgValue(S, X))
+    return false;
+  V = X;
+  return true;
 }
 
 /// An OptTable with a public constructor, shared by every options struct.

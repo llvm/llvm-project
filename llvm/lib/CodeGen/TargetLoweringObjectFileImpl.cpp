@@ -700,7 +700,8 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
     if (Kind.isReadOnly() || Kind.isReadOnlyWithRel() || Kind.isData() ||
         Kind.isBSS()) {
       AddSectionPrefix =
-          !SectionPrefix.starts_with(".hot") || PreserveHotDataSectionPrefix;
+          TM.getEnableStaticDataPartitioning() &&
+          (!SectionPrefix.starts_with(".hot") || PreserveHotDataSectionPrefix);
     }
 
     if (AddSectionPrefix) {
