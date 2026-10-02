@@ -53888,7 +53888,8 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
       SDValue ShrFlag = DAG.getNode(X86ISD::SHR_FLAG, DL, VTs, D, ShAmt);
 
       // Replace uses of the original SRL with the shifted result from SHR_FLAG
-      DAG.ReplaceAllUsesOfValueWith(SDValue(SrlBy1Node, 0), ShrFlag.getValue(0));
+      DAG.ReplaceAllUsesOfValueWith(SDValue(SrlBy1Node, 0),
+                                    ShrFlag.getValue(0));
 
       // Use the EFLAGS output from SHR_FLAG
       EFLAGS = ShrFlag.getValue(1);
