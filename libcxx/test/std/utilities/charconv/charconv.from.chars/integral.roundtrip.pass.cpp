@@ -21,58 +21,64 @@
 #include "test_macros.h"
 #include "charconv_test_helpers.h"
 
-struct test_basics : roundtrip_test_base {
-  template <typename T>
-  TEST_CONSTEXPR_CXX23 void operator()() {
-    test<T>(0);
-    test<T>(42);
-    test<T>(32768);
-    test<T>(0, 10);
-    test<T>(42, 10);
-    test<T>(32768, 10);
-    test<T>(0xf, 16);
-    test<T>(0xdeadbeaf, 16);
-    test<T>(0755, 8);
+struct test_basics : roundtrip_test_base
+{
+    template <typename T>
+    TEST_CONSTEXPR_CXX23 void operator()()
+    {
+        test<T>(0);
+        test<T>(42);
+        test<T>(32768);
+        test<T>(0, 10);
+        test<T>(42, 10);
+        test<T>(32768, 10);
+        test<T>(0xf, 16);
+        test<T>(0xdeadbeaf, 16);
+        test<T>(0755, 8);
 
-    for (int b = 2; b < 37; ++b) {
-      using xl = std::numeric_limits<T>;
+        for (int b = 2; b < 37; ++b)
+        {
+            using xl = std::numeric_limits<T>;
 
-      test<T>(1, b);
-      test<T>(-1, b);
-      test<T>(xl::lowest(), b);
-      test<T>((xl::max)(), b);
-      test<T>((xl::max)() / 2, b);
+            test<T>(1, b);
+            test<T>(-1, b);
+            test<T>(xl::lowest(), b);
+            test<T>((xl::max)(), b);
+            test<T>((xl::max)() / 2, b);
+        }
     }
-  }
 };
 
-struct test_signed : roundtrip_test_base {
-  template <typename T>
-  TEST_CONSTEXPR_CXX23 void operator()() {
-    test<T>(-1);
-    test<T>(-12);
-    test<T>(-1, 10);
-    test<T>(-12, 10);
-    test<T>(-21734634, 10);
-    test<T>(-2647, 2);
-    test<T>(-0xcc1, 16);
+struct test_signed : roundtrip_test_base
+{
+    template <typename T>
+    TEST_CONSTEXPR_CXX23 void operator()()
+    {
+        test<T>(-1);
+        test<T>(-12);
+        test<T>(-1, 10);
+        test<T>(-12, 10);
+        test<T>(-21734634, 10);
+        test<T>(-2647, 2);
+        test<T>(-0xcc1, 16);
 
-    for (int b = 2; b < 37; ++b) {
-      using xl = std::numeric_limits<T>;
+        for (int b = 2; b < 37; ++b)
+        {
+            using xl = std::numeric_limits<T>;
 
-      test<T>(0, b);
-      test<T>(xl::lowest(), b);
-      test<T>((xl::max)(), b);
+            test<T>(0, b);
+            test<T>(xl::lowest(), b);
+            test<T>((xl::max)(), b);
+        }
     }
-  }
 };
 
 TEST_CONSTEXPR_CXX23 bool test()
 {
-  types::for_each(integrals(), test_basics());
-  types::for_each(types::signed_integer_types(), test_signed());
+    types::for_each(integrals(), test_basics());
+    types::for_each(types::signed_integer_types(), test_signed());
 
-  return true;
+    return true;
 }
 
 int main(int, char**) {
