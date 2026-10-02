@@ -8,6 +8,14 @@ func.func @test_argmax_rank_invalid(%arg0: tensor<1x1x1x1x29x29x4xf32>) -> tenso
 
 // -----
 
+func.func @test_argmin_rank_invalid(%arg0: tensor<1x1x1x1x29x29x4xf32>) -> tensor<1x1x1x1x29x4xi32> {
+  // expected-error@+1 {{'tosa.argmin' op failed level check: operand rank(shape) <= MAX_RANK}}
+  %0 = "tosa.argmin"(%arg0) <{axis = 4 : i32}> : (tensor<1x1x1x1x29x29x4xf32>) -> tensor<1x1x1x1x29x4xi32>
+  return %0 : tensor<1x1x1x1x29x4xi32>
+}
+
+// -----
+
 func.func @test_clamp_rank_invalid(%arg0: tensor<1x1x1x1x13x21x3xf32>) -> tensor<1x1x1x1x13x21x3xf32> {
   // expected-error@+1 {{'tosa.clamp' op failed level check: operand rank(shape) <= MAX_RANK}}
   %0 = tosa.clamp %arg0 min_val(-3.40282347E+38 : f32) max_val(3.40282347E+38 : f32) : (tensor<1x1x1x1x13x21x3xf32>) -> tensor<1x1x1x1x13x21x3xf32>
@@ -1020,7 +1028,7 @@ func.func @test_maxpool2d_adaptive_pad_first(%arg0: tensor<1x32x8194x8xf32>) -> 
   %a = tosa.const_shape values(dense<[1, 1]> : tensor<2xindex>) : () -> !tosa.shape<2>
   %b = tosa.const_shape values(dense<[1, 1]> : tensor<2xindex>) : () -> !tosa.shape<2>
   %kernel = tosa.add_shape %a, %b : (!tosa.shape<2>, !tosa.shape<2>) -> !tosa.shape<2>
-  
+
   %stride = tosa.const_shape values(dense<[1, 1]> : tensor<2xindex>) : () -> !tosa.shape<2>
   %pad = tosa.const_shape values(dense<[8193, 0, 0, 0]> : tensor<4xindex>) : () -> !tosa.shape<4>
   // expected-error@+1 {{'tosa.max_pool2d_adaptive' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
