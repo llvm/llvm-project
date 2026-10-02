@@ -1059,7 +1059,6 @@ SymbolUserMap::SymbolUserMap(SymbolTableCollection &symbolTable,
           symbolsWithAllUsesVisible.insert(&nestedOp);
       }
       auto symbolUses = SymbolTable::getSymbolUses(&nestedOp);
-
       if (!symbolUses) {
         // An unknown op with a region may reference any symbol visible from
         // this table, so we cannot know all users. Record it and move on.
@@ -1082,12 +1081,14 @@ SymbolUserMap::SymbolUserMap(SymbolTableCollection &symbolTable,
 }
 
 bool SymbolUserMap::areAllUsesVisible(Operation *symbol) const {
+
   for (Operation *parent = symbol->getParentOp(); parent;
        parent = parent->getParentOp()) {
     if (symbolTablesWithUnknownUsers.contains(parent)) {
       return false;
     }
   }
+
   // Private symbols can only have users within their table.
   if (cast<SymbolOpInterface>(symbol).isPrivate())
     return true;
