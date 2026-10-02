@@ -27,6 +27,7 @@ set(ORC_RT_HEADERS
     orc-rt/bedrock/SocketHandle.h
     orc-rt/bedrock/TaskGroup.h
     orc-rt/bedrock/ThreadPoolRunner.h
+    orc-rt/bedrock/VettedPeer.h
     orc-rt/bedrock/sps/AllSPSCI.h
     orc-rt/bedrock/sps/CallSPSCI.h
     orc-rt/bedrock/sps/GDBJITRegistrarSPSCI.h
