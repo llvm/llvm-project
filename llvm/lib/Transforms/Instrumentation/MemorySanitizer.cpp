@@ -5990,16 +5990,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         IRB.CreateSExt(IRB.CreateICmpNE(Sa, getCleanShadow(Sa)), Sa->getType());
 
     // Extract the specific lane from Sb to get i16, then turn it into a single
-    // bit.
+    // bit representing if it is fully initialized.
     Sb = IRB.CreateExtractElement(Sb, Lane);
-    Sb = IRB.CreateIsNull(Sb);
+    Value *SbClean = IRB.CreateIsNull(Sb);
 
-    SAcc = IRB.CreateOr(SAcc, Sa);
+    Value *SOutput = IRB.CreateOr(SAcc, Sa);
 
     // Select is cheaper than broadcasting Sb into <4 x i16>.
-    SAcc = IRB.CreateSelect(Sb, getPoisonedShadow(SAcc), SAcc);
+    SOutput = IRB.CreateSelect(SbClean, SOutput, getPoisonedShadow(SOutput));
 
-    setShadow(&I, SAcc);
+    setShadow(&I, SOutput);
     setOriginForNaryOp(I);
   }
 

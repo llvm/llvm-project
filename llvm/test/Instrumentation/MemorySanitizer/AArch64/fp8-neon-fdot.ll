@@ -74,7 +74,7 @@ define <4 x half> @test_fdot_lane_f16(<4 x half> %vd, <8 x i8> %vn, <16 x i8> %v
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i16> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i16 [[TMP8]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = or <4 x i16> [[TMP1]], [[TMP7]]
-; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP9]], <4 x i16> splat (i16 -1), <4 x i16> [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP9]], <4 x i16> [[TMP10]], <4 x i16> splat (i16 -1)
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x half> @llvm.aarch64.neon.fp8.fdot2.lane.v4f16.v8i8(<4 x half> [[VD]], <8 x i8> [[VN]], <16 x i8> [[VM]], i32 0)
 ; CHECK-NEXT:    store <4 x i16> [[TMP11]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x half> [[RES]]
@@ -97,7 +97,7 @@ define <8 x half> @test_fdotq_lane_f16(<8 x half> %vd, <16 x i8> %vn, <16 x i8> 
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i16> [[TMP5]], i32 7
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i16 [[TMP8]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = or <8 x i16> [[TMP1]], [[TMP7]]
-; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP9]], <8 x i16> splat (i16 -1), <8 x i16> [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP9]], <8 x i16> [[TMP10]], <8 x i16> splat (i16 -1)
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x half> @llvm.aarch64.neon.fp8.fdot2.lane.v8f16.v16i8(<8 x half> [[VD]], <16 x i8> [[VN]], <16 x i8> [[VM]], i32 7)
 ; CHECK-NEXT:    store <8 x i16> [[TMP11]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x half> [[RES]]
@@ -166,7 +166,7 @@ define <2 x float> @test_fdot_lane_f32(<2 x float> %vd, <8 x i8> %vn, <16 x i8> 
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = or <2 x i32> [[TMP1]], [[TMP7]]
-; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP9]], <2 x i32> splat (i32 -1), <2 x i32> [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP9]], <2 x i32> [[TMP10]], <2 x i32> splat (i32 -1)
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x float> @llvm.aarch64.neon.fp8.fdot4.lane.v2f32.v8i8(<2 x float> [[VD]], <8 x i8> [[VN]], <16 x i8> [[VM]], i32 0)
 ; CHECK-NEXT:    store <2 x i32> [[TMP11]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x float> [[RES]]
@@ -189,7 +189,7 @@ define <4 x float> @test_fdotq_lane_f32(<4 x float> %vd, <16 x i8> %vn, <16 x i8
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP5]], i32 3
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = or <4 x i32> [[TMP1]], [[TMP7]]
-; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP9]], <4 x i32> splat (i32 -1), <4 x i32> [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP9]], <4 x i32> [[TMP10]], <4 x i32> splat (i32 -1)
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.aarch64.neon.fp8.fdot4.lane.v4f32.v16i8(<4 x float> [[VD]], <16 x i8> [[VN]], <16 x i8> [[VM]], i32 3)
 ; CHECK-NEXT:    store <4 x i32> [[TMP11]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
