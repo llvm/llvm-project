@@ -2348,16 +2348,22 @@ bool IRTranslatorImpl::translateBitCast(const User &U,
     return translateCopy(U, *U.getOperand(0), MIRBuilder);
   }
 
-  // Only the scalar byte<->ptr crossing is redirected to G_INTTOPTR/G_PTRTOINT,
-  // which is the well-typed MIR shape for that boundary. Vector byte<->ptr
-  // (e.g. <N x b32> -> ptr produced by mixed-type load coalescing) and other
-  // legacy ptr/non-ptr IR bitcasts (AMDGPU iN<->p3 kernarg packing, etc.)
-  // keep their historical G_BITCAST lowering — G_INTTOPTR has no vector-src
-  // -> scalar-ptr form, and downstream passes already handle G_BITCAST.
-  if (DstTy->isPointerTy() && SrcTy->isByteTy())
-    return translateCast(TargetOpcode::G_INTTOPTR, U, MIRBuilder);
-  if (SrcTy->isPointerTy() && DstTy->isByteTy())
-    return translateCast(TargetOpcode::G_PTRTOINT, U, MIRBuilder);
+  // The IR only allows pointer/non-pointer bitcasts with byte types, but
+  // G_BITCAST can't convert between pointers and other types. Go through an
+  // integer with the pointer's shape instead: `bitcast <2 x b32> to ptr`
+  // becomes a G_BITCAST to i64 and a G_INTTOPTR.
+  if (SrcTy->isPtrOrPtrVectorTy() != DstTy->isPtrOrPtrVectorTy()) {
+    assert((SrcTy->isByteOrByteVectorTy() || DstTy->isByteOrByteVectorTy()) &&
+           "only byte types can be bitcast to or from pointers");
+    Type *PtrIRTy = SrcTy->isPtrOrPtrVectorTy() ? SrcTy : DstTy;
+    LLT IntTy = getLLTForType(*DL->getIntPtrType(PtrIRTy), *DL);
+    Register Src = getOrCreateVReg(*U.getOperand(0));
+    Register Dst = getOrCreateVReg(U);
+    if (MRI->getType(Src) != IntTy && MRI->getType(Dst) != IntTy)
+      Src = MIRBuilder.buildCast(IntTy, Src).getReg(0);
+    MIRBuilder.buildCast(Dst, Src);
+    return true;
+  }
 
   return translateCast(TargetOpcode::G_BITCAST, U, MIRBuilder);
 }
