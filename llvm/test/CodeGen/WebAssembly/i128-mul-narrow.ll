@@ -182,3 +182,139 @@ define i128 @mul_i128(i128 %a, i128 %b) {
   %mul = mul i128 %a, %b
   ret i128 %mul
 }
+
+define i128 @mul_u128_u128_u64(i128 %a, i64 %b) {
+; CHECK-LABEL: mul_u128_u128_u64:
+; CHECK:         .functype mul_u128_u128_u64 (i32, i64, i64, i64) -> ()
+; CHECK-NEXT:    .local i32
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get $push3=, __stack_pointer
+; CHECK-NEXT:    i32.const $push4=, 16
+; CHECK-NEXT:    i32.sub $push8=, $pop3, $pop4
+; CHECK-NEXT:    local.tee $push7=, 4, $pop8
+; CHECK-NEXT:    global.set __stack_pointer, $pop7
+; CHECK-NEXT:    local.get $push12=, 4
+; CHECK-NEXT:    local.get $push11=, 1
+; CHECK-NEXT:    local.get $push10=, 2
+; CHECK-NEXT:    local.get $push9=, 3
+; CHECK-NEXT:    i64.const $push0=, 0
+; CHECK-NEXT:    call __multi3, $pop12, $pop11, $pop10, $pop9, $pop0
+; CHECK-NEXT:    local.get $push14=, 0
+; CHECK-NEXT:    local.get $push13=, 4
+; CHECK-NEXT:    i64.load $push1=, 8($pop13)
+; CHECK-NEXT:    i64.store 8($pop14), $pop1
+; CHECK-NEXT:    local.get $push16=, 0
+; CHECK-NEXT:    local.get $push15=, 4
+; CHECK-NEXT:    i64.load $push2=, 0($pop15)
+; CHECK-NEXT:    i64.store 0($pop16), $pop2
+; CHECK-NEXT:    local.get $push17=, 4
+; CHECK-NEXT:    i32.const $push5=, 16
+; CHECK-NEXT:    i32.add $push6=, $pop17, $pop5
+; CHECK-NEXT:    global.set __stack_pointer, $pop6
+; CHECK-NEXT:    return
+  %zb = zext i64 %b to i128
+  %mul = mul i128 %a, %zb
+  ret i128 %mul
+}
+
+define i128 @mul_u128_u64_u128(i64 %a, i128 %b) {
+; CHECK-LABEL: mul_u128_u64_u128:
+; CHECK:         .functype mul_u128_u64_u128 (i32, i64, i64, i64) -> ()
+; CHECK-NEXT:    .local i32
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get $push3=, __stack_pointer
+; CHECK-NEXT:    i32.const $push4=, 16
+; CHECK-NEXT:    i32.sub $push8=, $pop3, $pop4
+; CHECK-NEXT:    local.tee $push7=, 4, $pop8
+; CHECK-NEXT:    global.set __stack_pointer, $pop7
+; CHECK-NEXT:    local.get $push12=, 4
+; CHECK-NEXT:    local.get $push11=, 1
+; CHECK-NEXT:    i64.const $push0=, 0
+; CHECK-NEXT:    local.get $push10=, 2
+; CHECK-NEXT:    local.get $push9=, 3
+; CHECK-NEXT:    call __multi3, $pop12, $pop11, $pop0, $pop10, $pop9
+; CHECK-NEXT:    local.get $push14=, 0
+; CHECK-NEXT:    local.get $push13=, 4
+; CHECK-NEXT:    i64.load $push1=, 8($pop13)
+; CHECK-NEXT:    i64.store 8($pop14), $pop1
+; CHECK-NEXT:    local.get $push16=, 0
+; CHECK-NEXT:    local.get $push15=, 4
+; CHECK-NEXT:    i64.load $push2=, 0($pop15)
+; CHECK-NEXT:    i64.store 0($pop16), $pop2
+; CHECK-NEXT:    local.get $push17=, 4
+; CHECK-NEXT:    i32.const $push5=, 16
+; CHECK-NEXT:    i32.add $push6=, $pop17, $pop5
+; CHECK-NEXT:    global.set __stack_pointer, $pop6
+; CHECK-NEXT:    return
+  %za = zext i64 %a to i128
+  %mul = mul i128 %za, %b
+  ret i128 %mul
+}
+
+define i128 @mul_u128_u128_u32(i128 %a, i32 %b) {
+; CHECK-LABEL: mul_u128_u128_u32:
+; CHECK:         .functype mul_u128_u128_u32 (i32, i64, i64, i32) -> ()
+; CHECK-NEXT:    .local i32
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get $push4=, __stack_pointer
+; CHECK-NEXT:    i32.const $push5=, 16
+; CHECK-NEXT:    i32.sub $push9=, $pop4, $pop5
+; CHECK-NEXT:    local.tee $push8=, 4, $pop9
+; CHECK-NEXT:    global.set __stack_pointer, $pop8
+; CHECK-NEXT:    local.get $push13=, 4
+; CHECK-NEXT:    local.get $push12=, 1
+; CHECK-NEXT:    local.get $push11=, 2
+; CHECK-NEXT:    local.get $push10=, 3
+; CHECK-NEXT:    i64.extend_i32_u $push0=, $pop10
+; CHECK-NEXT:    i64.const $push1=, 0
+; CHECK-NEXT:    call __multi3, $pop13, $pop12, $pop11, $pop0, $pop1
+; CHECK-NEXT:    local.get $push15=, 0
+; CHECK-NEXT:    local.get $push14=, 4
+; CHECK-NEXT:    i64.load $push2=, 8($pop14)
+; CHECK-NEXT:    i64.store 8($pop15), $pop2
+; CHECK-NEXT:    local.get $push17=, 0
+; CHECK-NEXT:    local.get $push16=, 4
+; CHECK-NEXT:    i64.load $push3=, 0($pop16)
+; CHECK-NEXT:    i64.store 0($pop17), $pop3
+; CHECK-NEXT:    local.get $push18=, 4
+; CHECK-NEXT:    i32.const $push6=, 16
+; CHECK-NEXT:    i32.add $push7=, $pop18, $pop6
+; CHECK-NEXT:    global.set __stack_pointer, $pop7
+; CHECK-NEXT:    return
+  %zb = zext i32 %b to i128
+  %mul = mul i128 %a, %zb
+  ret i128 %mul
+}
+
+define i128 @mul_u128_constant(i128 %a) {
+; CHECK-LABEL: mul_u128_constant:
+; CHECK:         .functype mul_u128_constant (i32, i64, i64) -> ()
+; CHECK-NEXT:    .local i32
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get $push4=, __stack_pointer
+; CHECK-NEXT:    i32.const $push5=, 16
+; CHECK-NEXT:    i32.sub $push9=, $pop4, $pop5
+; CHECK-NEXT:    local.tee $push8=, 3, $pop9
+; CHECK-NEXT:    global.set __stack_pointer, $pop8
+; CHECK-NEXT:    local.get $push12=, 3
+; CHECK-NEXT:    local.get $push11=, 1
+; CHECK-NEXT:    local.get $push10=, 2
+; CHECK-NEXT:    i64.const $push1=, 6364136223846793005
+; CHECK-NEXT:    i64.const $push0=, 0
+; CHECK-NEXT:    call __multi3, $pop12, $pop11, $pop10, $pop1, $pop0
+; CHECK-NEXT:    local.get $push14=, 0
+; CHECK-NEXT:    local.get $push13=, 3
+; CHECK-NEXT:    i64.load $push2=, 8($pop13)
+; CHECK-NEXT:    i64.store 8($pop14), $pop2
+; CHECK-NEXT:    local.get $push16=, 0
+; CHECK-NEXT:    local.get $push15=, 3
+; CHECK-NEXT:    i64.load $push3=, 0($pop15)
+; CHECK-NEXT:    i64.store 0($pop16), $pop3
+; CHECK-NEXT:    local.get $push17=, 3
+; CHECK-NEXT:    i32.const $push6=, 16
+; CHECK-NEXT:    i32.add $push7=, $pop17, $pop6
+; CHECK-NEXT:    global.set __stack_pointer, $pop7
+; CHECK-NEXT:    return
+  %mul = mul i128 %a, 6364136223846793005
+  ret i128 %mul
+}
