@@ -198,3 +198,50 @@ module {
 
 // CHECK-LABEL: func @memref_cast_folding
 //       CHECK: %[[r:.*]] = bufferization.dealloc (%{{.*}} : memref<f32, 1>) if (%{{.*}}) retain (%{{.*}} : memref<4x4xf32, 1>)
+
+// -----
+
+func.func @partial_ownership(%a: memref<4xi32>, %b: memref<4xi32>, %pick: i1, %owned: i1) -> (memref<4xi32>, i1, i1, i1) {
+  %true = arith.constant true
+  %fresh = memref.alloc() : memref<4xi32>
+  %selected = scf.if %pick -> (memref<4xi32>) {
+    scf.yield %fresh : memref<4xi32>
+  } else {
+    scf.yield %a : memref<4xi32>
+  }
+  %r:3 = bufferization.dealloc(%a, %b, %selected : memref<4xi32>, memref<4xi32>, memref<4xi32>)
+      if (%true, %true, %owned)
+      retain (%a, %b, %fresh : memref<4xi32>, memref<4xi32>, memref<4xi32>)
+  return %fresh, %r#0, %r#1, %r#2 : memref<4xi32>, i1, i1, i1
+}
+
+// CHECK-LABEL: func.func @partial_ownership
+// CHECK: %[[TRUE:.*]] = arith.constant true
+// CHECK: %[[SELECTED:.*]] = scf.if
+// CHECK: %[[R:.*]]:3 = bufferization.dealloc (%[[SELECTED]] : memref<4xi32>) if (%{{.*}}) retain (%{{.*}}, %{{.*}}, %{{.*}} : memref<4xi32>, memref<4xi32>, memref<4xi32>)
+// CHECK: return %{{.*}}, %[[TRUE]], %[[TRUE]], %[[R]]#2
+
+// -----
+
+func.func @partial_ownership_generalized(%a: memref<4xi32>, %b: memref<4xi32>, %pick: i1, %owned: i1) -> (memref<4xi32>, i1, i1, i1) {
+  %true = arith.constant true
+  %fresh = memref.alloc() : memref<4xi32>
+  %c = memref.cast %b : memref<4xi32> to memref<?xi32>
+
+  %selected = scf.if %pick -> (memref<4xi32>) {
+    scf.yield %fresh : memref<4xi32>
+  } else {
+    scf.yield %a : memref<4xi32>
+  }
+
+  %r:3 = bufferization.dealloc(%a, %c, %selected : memref<4xi32>, memref<?xi32>, memref<4xi32>)
+      if (%true, %true, %owned)
+      retain (%a, %b, %fresh : memref<4xi32>, memref<4xi32>, memref<4xi32>)
+  return %fresh, %r#0, %r#1, %r#2 : memref<4xi32>, i1, i1, i1
+}
+
+// CHECK-LABEL: func.func @partial_ownership_generalized
+// CHECK: %[[TRUE:.*]] = arith.constant true
+// CHECK: %[[SELECTED:.*]] = scf.if
+// CHECK: %[[R:.*]]:3 = bufferization.dealloc (%[[SELECTED]] : memref<4xi32>) if (%{{.*}}) retain (%{{.*}}, %{{.*}}, %{{.*}} : memref<4xi32>, memref<4xi32>, memref<4xi32>)
+// CHECK: return %{{.*}}, %[[TRUE]], %[[TRUE]], %[[R]]#2

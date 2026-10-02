@@ -106,8 +106,9 @@ namespace {
 /// Remove values from the `memref` operand list that are also present in the
 /// `retained` list (or a guaranteed alias of it) because they will never
 /// actually be deallocated. However, we also need to be certain about which
-/// other memrefs in the `retained` list can alias, i.e., there must not by any
-/// may-aliasing memref. This is necessary because the `dealloc` operation is
+/// other memrefs in the `retained` list can alias, i.e., there must not be any
+/// may-aliasing memref its updated ownership condition can be statically
+/// resolved to true. This is necessary because the `dealloc` operation is
 /// defined to return one `i1` value per memref in the `retained` list which
 /// represents the disjunction of the condition values corresponding to all
 /// aliasing values in the `memref` list. In particular, this means that if
@@ -139,24 +140,30 @@ struct RemoveDeallocMemrefsContainedInRetained
       : OpRewritePattern<DeallocOp>(context), analysis(analysis) {}
 
   /// The passed 'memref' must not have a may-alias relation to any retained
-  /// memref, and at least one must-alias relation. If there is no must-aliasing
-  /// memref in the retain list, we cannot simply remove the memref as there
-  /// could be situations in which it actually has to be deallocated. If it's
-  /// no-alias, then just proceed, if it's must-alias we need to update the
-  /// updated condition returned by the dealloc operation for that alias.
-  LogicalResult handleOneMemref(DeallocOp deallocOp, Value memref, Value cond,
-                                PatternRewriter &rewriter) const {
+  /// memref whose updated ownership condition cannot be resolved to true, and
+  /// at least one must-alias relation. If there is no must-aliasing memref in
+  /// the retain list, we cannot simply remove the memref as there could be
+  /// situations in which it actually has to be deallocated. If it's no-alias,
+  /// then just proceed, if it's must-alias we need to update the updated
+  /// condition returned by the dealloc operation for that alias.
+  LogicalResult
+  handleOneMemref(DeallocOp deallocOp, Value memref, Value cond,
+                  PatternRewriter &rewriter,
+                  const DenseSet<Value> &retainedWithKnownTrueOwnership) const {
     rewriter.setInsertionPointAfter(deallocOp);
 
-    // Check that there is no may-aliasing memref and that at least one memref
+    // Check that every may-aliasing retained memref has an updated ownership
+    // condition known to be true and that at least one memref
     // in the retain list aliases (because otherwise it might have to be
     // deallocated in some situations and can thus not be dropped).
     bool atLeastOneMustAlias = false;
     for (Value retained : deallocOp.getRetained()) {
       std::optional<bool> analysisResult =
           analysis.isSameAllocation(retained, memref);
-      if (!analysisResult.has_value())
-        return failure();
+      if (!analysisResult.has_value()) {
+        if (!retainedWithKnownTrueOwnership.contains(retained))
+          return failure();
+      }
       if (analysisResult == true)
         atLeastOneMustAlias = true;
     }
@@ -181,6 +188,39 @@ struct RemoveDeallocMemrefsContainedInRetained
     return success();
   }
 
+  /// Precompute sets of retained that have known true owernships. Since
+  /// matchAndRewrite call handleOneMemref twice on different sets of memrefs,
+  /// we precompute retained sets for both of them.
+  std::pair<DenseSet<Value>, DenseSet<Value>>
+  findRetainedWithKnownTrueOwnership(DeallocOp deallocOp) const {
+    DenseSet<Value> retainedWithKnownTrueOwnershipFromMemref;
+    DenseSet<Value> retainedWithKnownTrueOwnershipFromSource;
+
+    for (auto [memref, cond] :
+         llvm::zip(deallocOp.getMemrefs(), deallocOp.getConditions())) {
+
+      if (!matchPattern(cond, m_One()))
+        continue;
+
+      auto extractOp = memref.getDefiningOp<memref::ExtractStridedMetadataOp>();
+      Value source = extractOp ? extractOp.getOperand() : Value();
+      for (Value retained : deallocOp.getRetained()) {
+        std::optional<bool> analysisResult =
+            analysis.isSameAllocation(retained, memref);
+        if (analysisResult == true)
+          retainedWithKnownTrueOwnershipFromMemref.insert(retained);
+        if (source) {
+          analysisResult = analysis.isSameAllocation(retained, source);
+          if (analysisResult == true)
+            retainedWithKnownTrueOwnershipFromSource.insert(retained);
+        }
+      }
+    }
+
+    return {retainedWithKnownTrueOwnershipFromMemref,
+            retainedWithKnownTrueOwnershipFromSource};
+  }
+
   LogicalResult matchAndRewrite(DeallocOp deallocOp,
                                 PatternRewriter &rewriter) const override {
     // There must not be any duplicates in the retain list anymore because we
@@ -190,17 +230,23 @@ struct RemoveDeallocMemrefsContainedInRetained
     if (retained.size() != deallocOp.getRetained().size())
       return failure();
 
+    auto [retainedWithKnownTrueOwnershipFromMemref,
+          retainedWithKnownTrueOwnershipFromSource] =
+        findRetainedWithKnownTrueOwnership(deallocOp);
+
     SmallVector<Value> newMemrefs, newConditions;
     for (auto [memref, cond] :
          llvm::zip(deallocOp.getMemrefs(), deallocOp.getConditions())) {
 
-      if (succeeded(handleOneMemref(deallocOp, memref, cond, rewriter)))
+      if (succeeded(handleOneMemref(deallocOp, memref, cond, rewriter,
+                                    retainedWithKnownTrueOwnershipFromMemref)))
         continue;
 
       if (auto extractOp =
               memref.getDefiningOp<memref::ExtractStridedMetadataOp>())
-        if (succeeded(handleOneMemref(deallocOp, extractOp.getOperand(), cond,
-                                      rewriter)))
+        if (succeeded(handleOneMemref(
+                deallocOp, extractOp.getOperand(), cond, rewriter,
+                retainedWithKnownTrueOwnershipFromSource)))
           continue;
 
       newMemrefs.push_back(memref);
