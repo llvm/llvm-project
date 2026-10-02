@@ -375,6 +375,10 @@ cc_library(
             "-lm",
         ],
     }),
+    local_defines = [
+        "KMP_SPEC_DATE=201611",
+        "KMP_SPEC_VERSION=5.0",
+    ],
     deps = [
         ":omp_headers",
     ],
