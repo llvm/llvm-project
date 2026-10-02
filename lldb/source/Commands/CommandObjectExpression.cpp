@@ -165,6 +165,18 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
     break;
   }
 
+  case 'e': {
+    bool success;
+    bool tmp_value = OptionArgParser::ToBoolean(option_arg, true, &success);
+    if (success)
+      trap_on_exceptions = tmp_value;
+    else
+      error = Status::FromErrorStringWithFormat(
+          "could not convert \"%s\" to a boolean value.",
+          option_arg.str().c_str());
+    break;
+  }
+
   default:
     llvm_unreachable("Unimplemented option");
   }
@@ -195,6 +207,7 @@ void CommandObjectExpression::CommandOptions::OptionParsingStarting(
   allow_jit = true;
   suppress_persistent_result = eLazyBoolCalculate;
   cpp_ignore_context_qualifiers = false;
+  trap_on_exceptions = true;
 }
 
 llvm::ArrayRef<OptionDefinition>
@@ -218,6 +231,7 @@ CommandObjectExpression::CommandOptions::GetEvaluateExpressionOptions(
       allow_jit ? EvaluateExpressionOptions::default_execution_policy
                 : lldb_private::eExecutionPolicyNever);
   options.SetCppIgnoreContextQualifiers(cpp_ignore_context_qualifiers);
+  options.SetTrapExceptions(trap_on_exceptions);
 
   bool auto_apply_fixits;
   if (this->auto_apply_fixits == eLazyBoolCalculate)
