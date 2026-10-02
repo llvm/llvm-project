@@ -229,6 +229,16 @@ module {
     // CHECK: llvm.fcmp "olt" %{{.*}}, %{{.*}} : vector<4xf32>
     // CHECK: llvm.sext %{{.*}} : vector<4xi1> to vector<4xi32>
     %2 = cir.vec.cmp(lt, %a, %b) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+    // The `signaling` attribute overrides the behavior implied by the kind.
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"oeq">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fcmps"
+    %3 = cir.vec.cmp(eq, %a, %b) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv<strict_except = true> signaling true
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"olt">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fcmp"
+    %4 = cir.vec.cmp(lt, %a, %b) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv<strict_except = true> signaling false
+    // Without `fenv`, `signaling` has no effect.
+    // CHECK: llvm.fcmp "oeq" %{{.*}}, %{{.*}} : vector<4xf32>
+    %5 = cir.vec.cmp(eq, %a, %b) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> signaling true
     cir.return
   }
 

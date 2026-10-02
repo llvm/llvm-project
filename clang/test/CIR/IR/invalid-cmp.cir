@@ -35,3 +35,17 @@ module {
     cir.return
   }
 }
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @signaling_on_int_vec_cmp(%a: !cir.vector<4 x !s32i>,
+                                     %b: !cir.vector<4 x !s32i>) {
+    // expected-error@+1 {{'signaling' is only valid for floating-point comparisons}}
+    %0 = cir.vec.cmp(eq, %a, %b) : !cir.vector<4 x !s32i>,
+                                   !cir.vector<4 x !s32i> signaling true
+    cir.return
+  }
+}

@@ -1095,6 +1095,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
 
   // The operands of the builtin call
   llvm::SmallVector<mlir::Value> ops;
+  bool isMaskFCmp = false;
 
   // `ICEArguments` is a bitmap indicating whether the argument at the i-th bit
   // is required to be a constant integer expression.
@@ -2637,10 +2638,195 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_vcmpbf16512_mask:
   case X86::BI__builtin_ia32_vcmpbf16256_mask:
   case X86::BI__builtin_ia32_vcmpbf16128_mask:
+    isMaskFCmp = true;
+    [[fallthrough]];
   case X86::BI__builtin_ia32_cmpps:
   case X86::BI__builtin_ia32_cmpps256:
   case X86::BI__builtin_ia32_cmppd:
-  case X86::BI__builtin_ia32_cmppd256:
+  case X86::BI__builtin_ia32_cmppd256: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+
+    // The third argument is the comparison condition, an integer in the range
+    // [0, 31]. Predicates for 16-31 repeat the 0-15 predicates and differ only
+    // in signalling behavior.
+    unsigned cc =
+        ops[2].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue() &
+        0x1f;
+
+    // CIR has no unordered predicates, so they are expressed as the inverse of
+    // the corresponding ordered predicate, e.g. ULT is !OGE.
+    cir::CmpOpKind pred = cir::CmpOpKind::eq;
+    bool shouldInvert = false;
+    bool isTrue = false;
+    bool isFalse = false;
+    bool isSignaling = false;
+    switch (cc & 0xf) {
+    case 0x00:
+      pred = cir::CmpOpKind::eq;
+      isSignaling = false;
+      break;
+    case 0x01:
+      pred = cir::CmpOpKind::lt;
+      isSignaling = true;
+      break;
+    case 0x02:
+      pred = cir::CmpOpKind::le;
+      isSignaling = true;
+      break;
+    case 0x03:
+      pred = cir::CmpOpKind::uno;
+      isSignaling = false;
+      break;
+    case 0x04:
+      pred = cir::CmpOpKind::ne;
+      isSignaling = false;
+      break;
+    case 0x05: // UGE = !LT
+      pred = cir::CmpOpKind::lt;
+      shouldInvert = true;
+      isSignaling = true;
+      break;
+    case 0x06: // UGT = !LE
+      pred = cir::CmpOpKind::le;
+      shouldInvert = true;
+      isSignaling = true;
+      break;
+    case 0x07: // ORD = !UNO
+      pred = cir::CmpOpKind::uno;
+      shouldInvert = true;
+      isSignaling = false;
+      break;
+    case 0x08: // UEQ != ONE
+      pred = cir::CmpOpKind::one;
+      shouldInvert = true;
+      isSignaling = false;
+      break;
+    case 0x09: // ULT != GE
+      pred = cir::CmpOpKind::ge;
+      shouldInvert = true;
+      isSignaling = true;
+      break;
+    case 0x0a: // ULE != GT
+      pred = cir::CmpOpKind::gt;
+      shouldInvert = true;
+      isSignaling = true;
+      break;
+    case 0x0b: // FALSE
+      isFalse = true;
+      isSignaling = false;
+      break;
+    case 0x0c:
+      pred = cir::CmpOpKind::one;
+      isSignaling = false;
+      break;
+    case 0x0d:
+      pred = cir::CmpOpKind::ge;
+      isSignaling = true;
+      break;
+    case 0x0e: // GT
+      pred = cir::CmpOpKind::gt;
+      isSignaling = true;
+      break;
+    case 0x0f: // TRUE
+      isTrue = true;
+      isSignaling = false;
+      break;
+    default:
+      llvm_unreachable("Unhandled cc");
+    }
+
+    // Invert the signalling behavior for 16-31.
+    if (cc & 0x10)
+      isSignaling = !isSignaling;
+
+    auto opsTy = cast<cir::VectorType>(ops[0].getType());
+    unsigned numElts = opsTy.getSize();
+
+    // If the predicate is true or false, or the builtin is mask enabled, and
+    // we're using constrained intrinsics, there is no compare operation we can
+    // use. Just use the legacy X86 specific intrinsic.
+    if (builder.getIsFPConstrained() && (isTrue || isFalse || isMaskFCmp)) {
+      llvm::StringRef intrinsicName;
+      switch (builtinID) {
+      default: llvm_unreachable("Unexpected builtin");
+      case X86::BI__builtin_ia32_cmpps:
+        intrinsicName = "x86.sse.cmp.ps";
+        break;
+      case X86::BI__builtin_ia32_cmpps256:
+        intrinsicName = "x86.avx.cmp.ps.256";
+        break;
+      case X86::BI__builtin_ia32_cmppd:
+        intrinsicName = "x86.sse2.cmp.pd";
+        break;
+      case X86::BI__builtin_ia32_cmppd256:
+        intrinsicName = "x86.avx.cmp.pd.256";
+        break;
+      case X86::BI__builtin_ia32_cmpph128_mask:
+        intrinsicName = "x86.avx512fp16.mask.cmp.ph.128";
+        break;
+      case X86::BI__builtin_ia32_cmpph256_mask:
+        intrinsicName = "x86.avx512fp16.mask.cmp.ph.256";
+        break;
+      case X86::BI__builtin_ia32_cmpph512_mask:
+        intrinsicName = "x86.avx512fp16.mask.cmp.ph.512";
+        break;
+      case X86::BI__builtin_ia32_cmpps512_mask:
+        intrinsicName = "x86.avx512.mask.cmp.ps.512";
+        break;
+      case X86::BI__builtin_ia32_cmppd512_mask:
+        intrinsicName = "x86.avx512.mask.cmp.pd.512";
+        break;
+      case X86::BI__builtin_ia32_cmpps128_mask:
+        intrinsicName = "x86.avx512.mask.cmp.ps.128";
+        break;
+      case X86::BI__builtin_ia32_cmpps256_mask:
+        intrinsicName = "x86.avx512.mask.cmp.ps.256";
+        break;
+      case X86::BI__builtin_ia32_cmppd128_mask:
+        intrinsicName = "x86.avx512.mask.cmp.pd.128";
+        break;
+      case X86::BI__builtin_ia32_cmppd256_mask:
+        intrinsicName = "x86.avx512.mask.cmp.pd.256";
+        break;
+      }
+
+      if (isMaskFCmp) {
+        ops[3] = getMaskVecValue(builder, loc, ops[3], numElts);
+        mlir::Value cmp = builder.emitIntrinsicCallOp(
+            loc, intrinsicName,
+            cir::VectorType::get(builder.getSIntNTy(1), numElts), ops);
+        return emitX86MaskedCompareResult(builder, cmp, numElts, nullptr, loc);
+      }
+
+      return builder.emitIntrinsicCallOp(loc, intrinsicName, ops[0].getType(),
+                                         ops);
+    }
+
+    unsigned width = builder.getCIRIntOrFloatBitWidth(opsTy.getElementType());
+    cir::IntType cmpEltTy = builder.getSIntNTy(isMaskFCmp ? 1 : width);
+    auto cmpTy = cir::VectorType::get(cmpEltTy, numElts);
+
+    mlir::Value cmp;
+    if (isFalse) {
+      cmp = builder.getNullValue(cmpTy, loc);
+    } else if (isTrue) {
+      llvm::APInt allOnes = llvm::APInt::getAllOnes(cmpEltTy.getWidth());
+      cmp = cir::VecSplatOp::create(
+          builder, loc, cmpTy, builder.getConstAPInt(loc, cmpEltTy, allOnes));
+    } else {
+      CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, expr);
+      cmp = cir::VecCmpOp::create(builder, loc, cmpTy, pred, ops[0], ops[1],
+                                  builder.getConstrainedFPAttr(),
+                                  builder.getBoolAttr(isSignaling));
+      if (shouldInvert)
+        cmp = builder.createNot(cmp);
+    }
+
+    if (isMaskFCmp)
+      return emitX86MaskedCompareResult(builder, cmp, numElts, ops[3], loc);
+
+    return builder.createBitcast(cmp, opsTy);
+  }
   case X86::BI__builtin_ia32_cmpeqss:
   case X86::BI__builtin_ia32_cmpltss:
   case X86::BI__builtin_ia32_cmpless:
