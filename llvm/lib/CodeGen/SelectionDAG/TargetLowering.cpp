@@ -12660,7 +12660,7 @@ SDValue TargetLowering::expandWideSquare(SDNode *N, SelectionDAG &DAG) const {
   // square it at its real width: only the limbs that may be nonzero take part.
   SDValue X = N->getOperand(0);
   unsigned NumLimbs =
-      divideCeil(Bits - DAG.computeKnownBits(X).countMinLeadingZeros(), U);
+      divideCeil(DAG.computeKnownBits(X).countMaxActiveBits(), U);
   if (NumLimbs < 2)
     return SDValue();
   NumLimbs = std::min(NumLimbs, R);
