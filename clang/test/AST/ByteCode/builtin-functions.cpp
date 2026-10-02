@@ -2044,6 +2044,12 @@ namespace WithinLifetime {
     static_assert(__builtin_is_within_lifetime(&temp)); // both-error {{not an integral constant expression}} \
                                                         // both-note {{initializer of 'temp' is not a constant expression}}
   }
+
+
+  static_assert(__builtin_is_within_lifetime("")); // both-error {{not an integral constant expression}} \
+                                                   // both-note-re {{read of object {{.*}} whose value is not known}} \
+                                                   // both-note {{temporary created here}}
+
 }
 
 #ifdef __SIZEOF_INT128__
