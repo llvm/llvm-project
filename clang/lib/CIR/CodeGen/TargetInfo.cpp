@@ -214,6 +214,13 @@ cir::CallingConv TargetCIRGenInfo::getDeviceKernelCallingConv() const {
   return cir::CallingConv::C;
 }
 
+mlir::Value TargetCIRGenInfo::getNullPointer(CIRGenModule &cgm,
+                                             cir::PointerType ptrTy,
+                                             QualType qt,
+                                             mlir::Location loc) const {
+  return cgm.getBuilder().getNullPtr(ptrTy, loc);
+}
+
 clang::LangAS
 TargetCIRGenInfo::getGlobalVarAddressSpace(CIRGenModule &cgm,
                                            const clang::VarDecl *d) const {

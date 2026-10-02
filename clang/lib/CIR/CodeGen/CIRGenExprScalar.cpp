@@ -2645,8 +2645,9 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
       // eliminate the useless instructions emitted during translating E.
       if (result.HasSideEffects)
         Visit(subExpr);
-      return cgf.cgm.emitNullConstant(destTy,
-                                      cgf.getLoc(subExpr->getExprLoc()));
+      return cgf.cgm.getNullPointer(
+          mlir::cast<cir::PointerType>(convertType(destTy)), destTy,
+          cgf.getLoc(subExpr->getExprLoc()));
     }
     return cgf.performAddrSpaceCast(Visit(subExpr), convertType(destTy));
   }
@@ -2716,8 +2717,9 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
 
     // Note that DestTy is used as the MLIR type instead of a custom
     // nullptr type.
-    mlir::Type ty = cgf.convertType(destTy);
-    return builder.getNullPtr(ty, cgf.getLoc(subExpr->getExprLoc()));
+    auto ty = mlir::cast<cir::PointerType>(cgf.convertType(destTy));
+    return cgf.cgm.getNullPointer(ty, destTy,
+                                  cgf.getLoc(subExpr->getExprLoc()));
   }
 
   case CK_NullToMemberPointer: {
