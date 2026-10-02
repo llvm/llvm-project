@@ -125,13 +125,7 @@ define <2 x float> @test_fdot_f32(<2 x float> %vd, <8 x i8> %vn, <8 x i8> %vm) s
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <8 x i8> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <8 x i8> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <8 x i8> [[VN]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne <8 x i8> [[VM]], zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = and <8 x i1> [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = and <8 x i1> [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[TMP10:%.*]] = and <8 x i1> [[TMP4]], [[TMP7]]
-; CHECK-NEXT:    [[TMP11:%.*]] = or <8 x i1> [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    [[TMP12:%.*]] = or <8 x i1> [[TMP11]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = or <8 x i1> [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = sext <8 x i1> [[TMP12]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <8 x i8> [[TMP13]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp ne <2 x i32> [[TMP14]], zeroinitializer
@@ -154,13 +148,7 @@ define <4 x float> @test_fdotq_f32(<4 x float> %vd, <16 x i8> %vn, <16 x i8> %vm
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <16 x i8> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <16 x i8> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <16 x i8> [[VN]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne <16 x i8> [[VM]], zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = and <16 x i1> [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = and <16 x i1> [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[TMP10:%.*]] = and <16 x i1> [[TMP4]], [[TMP7]]
-; CHECK-NEXT:    [[TMP11:%.*]] = or <16 x i1> [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    [[TMP12:%.*]] = or <16 x i1> [[TMP11]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = or <16 x i1> [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = sext <16 x i1> [[TMP12]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <16 x i8> [[TMP13]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp ne <4 x i32> [[TMP14]], zeroinitializer

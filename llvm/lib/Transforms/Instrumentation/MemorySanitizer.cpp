@@ -7518,9 +7518,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //               (<2 x float>, < 8 x i8>, < 8 x i8>)
     // <4 x float> @llvm.aarch64.neon.fp8.fdot4
     //               (<4 x float>, <16 x i8>, <16 x i8>)
+    //
+    // N.B. although the multiplicands are i8, they are actually fp8, thus
+    //      ZeroPurifies is not applicable.
     case Intrinsic::aarch64_neon_fp8_fdot4:
       handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/4,
-                                      /*ZeroPurifies=*/true,
+                                      /*ZeroPurifies=*/false,
                                       /*EltSizeInBits=*/0,
                                       /*Lanes=*/kBothLanes);
       break;
