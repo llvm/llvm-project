@@ -829,9 +829,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV,
   emitVisibility(EmittedSym, GV->getVisibility(), !GV->isDeclaration());
 
   if (GV->isTagged()) {
-    Triple T = TM.getTargetTriple();
-
-    if (T.getArch() != Triple::aarch64)
+    if (TM.getTargetTriple().getArch() != Triple::aarch64)
       OutContext.reportError(SMLoc(),
                              "tagged symbols (-fsanitize=memtag-globals) are "
                              "only supported on AArch64");
@@ -1337,6 +1335,12 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
     }
     case MachineOperand::MO_TargetIndex: {
       OS << "!target-index(" << Op.getIndex() << "," << Op.getOffset() << ")";
+      break;
+    }
+    case MachineOperand::MO_GlobalAddress: {
+      Op.getGlobal()->printAsOperand(OS, /*PrintType=*/false);
+      if (Op.getOffset())
+        OS << '+' << Op.getOffset();
       break;
     }
     case MachineOperand::MO_Register:

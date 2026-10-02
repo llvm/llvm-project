@@ -200,11 +200,12 @@ public:
   }
 
   /// This specifies that created instructions should be inserted at
-  /// the specified point, but also requires that \p IP is dereferencable.
+  /// the specified point.
   void SetInsertPoint(BasicBlock::iterator IP) {
-    BB = IP->getParent();
+    BB = IP.getNodeParent();
     InsertPt = IP;
-    SetCurrentDebugLocation(IP->getStableDebugLoc());
+    if (IP != BB->end())
+      SetCurrentDebugLocation(IP->getStableDebugLoc());
   }
 
   /// This specifies that created instructions should inserted at the beginning
@@ -241,41 +242,22 @@ public:
   LLVM_ABI Type *getCurrentFunctionReturnType() const;
 
   /// InsertPoint - A saved insertion point.
-  class InsertPoint {
-    BasicBlock *Block = nullptr;
-    BasicBlock::iterator Point;
-
-  public:
-    /// Creates a new insertion point which doesn't point to anything.
-    InsertPoint() = default;
-
-    /// Creates a new insertion point at the given location.
-    InsertPoint(BasicBlock *InsertBlock, BasicBlock::iterator InsertPoint)
-        : Block(InsertBlock), Point(InsertPoint) {}
-
-    /// Returns true if this insert point is set.
-    bool isSet() const { return (Block != nullptr); }
-
-    BasicBlock *getBlock() const { return Block; }
-    BasicBlock::iterator getPoint() const { return Point; }
-  };
+  using InsertPoint = BasicBlock::iterator;
 
   /// Returns the current insert point.
-  InsertPoint saveIP() const {
-    return InsertPoint(GetInsertBlock(), GetInsertPoint());
-  }
+  InsertPoint saveIP() const { return GetInsertPoint(); }
 
   /// Returns the current insert point, clearing it in the process.
   InsertPoint saveAndClearIP() {
-    InsertPoint IP(GetInsertBlock(), GetInsertPoint());
+    InsertPoint IP(GetInsertPoint());
     ClearInsertionPoint();
     return IP;
   }
 
   /// Sets the current insert point to a previously-saved location.
   void restoreIP(InsertPoint IP) {
-    if (IP.isSet())
-      SetInsertPoint(IP.getBlock(), IP.getPoint());
+    if (IP.isValid())
+      SetInsertPoint(IP);
     else
       ClearInsertionPoint();
   }
@@ -361,20 +343,19 @@ public:
   // when the object is destroyed. This includes the debug location.
   class InsertPointGuard {
     IRBuilderBase &Builder;
-    AssertingVH<BasicBlock> Block;
     BasicBlock::iterator Point;
     DebugLoc DbgLoc;
 
   public:
     InsertPointGuard(IRBuilderBase &B)
-        : Builder(B), Block(B.GetInsertBlock()), Point(B.GetInsertPoint()),
+        : Builder(B), Point(B.GetInsertPoint()),
           DbgLoc(B.getCurrentDebugLocation()) {}
 
     InsertPointGuard(const InsertPointGuard &) = delete;
     InsertPointGuard &operator=(const InsertPointGuard &) = delete;
 
     ~InsertPointGuard() {
-      Builder.restoreIP(InsertPoint(Block, Point));
+      Builder.restoreIP(Point);
       Builder.SetCurrentDebugLocation(DbgLoc);
     }
   };
@@ -1743,7 +1724,7 @@ public:
   Value *CreateBinOpFMF(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
                         FMFSource FMFSource, const Twine &Name = "",
                         MDNode *FPMathTag = nullptr) {
-    if (Value *V = Folder.FoldBinOp(Opc, LHS, RHS))
+    if (Value *V = Folder.FoldBinOpFMF(Opc, LHS, RHS, FMFSource.get(FMF)))
       return V;
     Instruction *BinOp = BinaryOperator::Create(Opc, LHS, RHS);
     if (isa<FPMathOperator>(BinOp))

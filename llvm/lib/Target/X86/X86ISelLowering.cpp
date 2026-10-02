@@ -49145,7 +49145,10 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       SDValue TruncSrc = LHS.getOperand(0);
       EVT TruncSrcVT = TruncSrc.getValueType();
       if (VT == MVT::v16i8 && TruncSrcVT == MVT::v8i64) {
-        return DAG.getNode(X86ISD::VMTRUNC, DL, VT, TruncSrc, RHS, Cond);
+        // VMTRUNC's mask operand must have the same number of elements as
+        // the truncation source (v8i64), not the (wider) v16i8 result.
+        SDValue MaskCond = DAG.getExtractSubvector(DL, MVT::v8i1, Cond, 0);
+        return DAG.getNode(X86ISD::VMTRUNC, DL, VT, TruncSrc, RHS, MaskCond);
       }
     }
   }
@@ -61504,12 +61507,13 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     case X86ISD::VPERMILPV:
       if (!IsSplat && (VT.is256BitVector() ||
                        (VT.is512BitVector() && Subtarget.useAVX512Regs()))) {
+        MVT IntVT = VT.changeVectorElementTypeToInteger();
         SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
-        SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
+        SDValue Concat1 = CombineSubOperand(IntVT, Ops, 1);
         if (Concat0 || Concat1)
-          return DAG.getNode(Opcode, DL, VT,
-                             Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0),
-                             Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1));
+          return DAG.getNode(
+              Opcode, DL, VT, Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0),
+              Concat1 ? Concat1 : ConcatSubOperand(IntVT, Ops, 1));
       }
       break;
     case X86ISD::PSHUFB:
