@@ -376,6 +376,73 @@ void test_bdev_ops_fail(struct BDevOps *ops, struct BDev *bdev) {
   ops->unlock(bdev); // expected-warning {{releasing mutex 'bdev->lock' that was not held}}
 }
 
+// A pointee parameter shadows a member of the same name, in both modes: the
+// release is of the argument, not of 'ops->mu'.
+struct ShadowOps {
+  void (*unlock)(struct Mutex *mu) UNLOCK_FUNCTION(mu);
+  struct Mutex mu;
+};
+
+void test_shadow_ops(struct ShadowOps *ops, struct Mutex *m) {
+  ops->unlock(m); // expected-warning {{releasing mutex 'm' that was not held}}
+}
+
+// Likewise a later parameter of the same name: 'release' releases its own
+// argument, leaving the enclosing function's 'mu' held.
+void shadow_param(void (*release)(struct Mutex *mu) UNLOCK_FUNCTION(mu),
+                  struct Mutex *mu) EXCLUSIVE_LOCKS_REQUIRED(mu) {
+  release(&mu1); // expected-warning {{releasing mutex 'mu1' that was not held}}
+}
+
+// guarded_by describes the pointer itself, not a call through it, so a pointee
+// parameter of the same name does not shadow the member: reading 'cb' is
+// guarded by 'ops->mu', in both modes.
+struct GuardedOps {
+  struct Mutex mu;
+  void (*cb)(struct Mutex *mu) GUARDED_BY(mu);
+};
+
+void test_guarded_ops(struct GuardedOps *ops, struct Mutex *m) {
+  ops->cb(m); // expected-warning {{reading variable 'cb' requires holding mutex 'ops->mu'}}
+  mutex_exclusive_lock(&ops->mu);
+  ops->cb(m);
+  mutex_exclusive_unlock(&ops->mu);
+}
+
+#ifdef LATE_PARSING
+// Likewise when the member is declared after the field.
+struct GuardedOpsLater {
+  void (*cb)(struct Mutex *mu) GUARDED_BY(mu);
+  struct Mutex mu;
+};
+
+void test_guarded_ops_later(struct GuardedOpsLater *ops, struct Mutex *m) {
+  ops->cb(m); // expected-warning {{reading variable 'cb' requires holding mutex 'ops->mu'}}
+  mutex_exclusive_lock(&ops->mu);
+  ops->cb(m);
+  mutex_exclusive_unlock(&ops->mu);
+}
+#endif
+
+#ifdef LATE_PARSING
+// A requirement on a parameter may name another parameter declared later. The
+// deferred attribute has to end up on the parameter it was written on and stay
+// live, so check that the call through it is really honored rather than merely
+// accepted: the release consumes the lock, making the second one unheld.
+void late_param_cb(void (*release)(struct Mutex *) UNLOCK_FUNCTION(mu),
+                   struct Mutex *mu) EXCLUSIVE_LOCKS_REQUIRED(mu) { // expected-note {{mutex acquired here}}
+  release(mu); // expected-note {{mutex released here}}
+  mutex_exclusive_unlock(mu); // expected-warning {{releasing mutex 'mu' that was not held}}
+} // expected-warning {{expecting mutex 'mu' to be held at the end of function}}
+
+// It names 'mu', not the neighbouring parameter: only 'mu' is consumed.
+void late_param_other(void (*release)(struct Mutex *) UNLOCK_FUNCTION(mu),
+                      struct Mutex *other, struct Mutex *mu)
+    EXCLUSIVE_LOCKS_REQUIRED(mu, other) { // expected-note {{mutex acquired here}}
+  release(mu);
+} // expected-warning {{expecting mutex 'mu' to be held at the end of function}}
+#endif
+
 // Test unusual trylock patterns
 void do_some_work(void);
 int work_data GUARDED_BY(mu1);
