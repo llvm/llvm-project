@@ -12,6 +12,7 @@
 
 ; CHECK-ERROR: LLVM ERROR: array allocation: this instruction requires the following SPIR-V extension: SPV_INTEL_variable_length_array
 
+; CHECK-SPIRV-UNTYPED: Capability UntypedPointersKHR
 ; CHECK-COMMON: Capability VariableLengthArrayINTEL
 ; CHECK-SPIRV-UNTYPED: Capability UntypedVariableLengthArrayINTEL
 ; CHECK-COMMON-DAG: Extension "SPV_INTEL_variable_length_array"
