@@ -232,8 +232,7 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr 
 ; GCN:       ; %bb.0: ; %bb0
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0xb
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_cmp_eq_f32_e64 s[2:3], s0, 0
-; GCN-NEXT:    s_and_b64 vcc, exec, s[2:3]
+; GCN-NEXT:    v_cmp_eq_f32_e64 vcc, s0, 0
 ; GCN-NEXT:    s_cbranch_vccz .LBB2_1
 ; GCN-NEXT:  ; %bb.3: ; %bb0
 ; GCN-NEXT:    s_getpc_b64 s[2:3]
@@ -263,8 +262,7 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr 
 ; GFX11:       ; %bb.0: ; %bb0
 ; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x2c
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_eq_f32_e64 s[2:3], s0, 0
-; GFX11-NEXT:    s_and_b64 vcc, exec, s[2:3]
+; GFX11-NEXT:    v_cmp_eq_f32_e64 vcc, s0, 0
 ; GFX11-NEXT:    s_cbranch_vccz .LBB2_1
 ; GFX11-NEXT:  ; %bb.3: ; %bb0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]

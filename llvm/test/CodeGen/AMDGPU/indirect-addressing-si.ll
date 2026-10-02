@@ -8579,20 +8579,18 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; GENERIC-NEXT:    v_mov_b32_e32 v0, 8
 ; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
 ; GENERIC-NEXT:    s_mov_b32 s2, -1
-; GENERIC-NEXT:  .LBB26_1: ; %bb2
-; GENERIC-NEXT:    ; =>This Loop Header: Depth=1
-; GENERIC-NEXT:    ; Child Loop BB26_3 Depth 2
 ; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
 ; GENERIC-NEXT:    v_cmp_le_i32_e32 vcc, s0, v0
-; GENERIC-NEXT:    s_cbranch_vccnz .LBB26_5
-; GENERIC-NEXT:  ; %bb.2: ; %bb4
-; GENERIC-NEXT:    ; in Loop: Header=BB26_1 Depth=1
+; GENERIC-NEXT:    s_cbranch_vccnz .LBB26_4
+; GENERIC-NEXT:  .LBB26_1: ; %bb4
+; GENERIC-NEXT:    ; =>This Loop Header: Depth=1
+; GENERIC-NEXT:    ; Child Loop BB26_2 Depth 2
 ; GENERIC-NEXT:    buffer_load_dword v16, off, s[0:3], 0 glc
 ; GENERIC-NEXT:    s_waitcnt vmcnt(0)
 ; GENERIC-NEXT:    v_mov_b32_e32 v17, s1
 ; GENERIC-NEXT:    s_mov_b64 s[4:5], exec
 ; GENERIC-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-; GENERIC-NEXT:  .LBB26_3: ; Parent Loop BB26_1 Depth=1
+; GENERIC-NEXT:  .LBB26_2: ; Parent Loop BB26_1 Depth=1
 ; GENERIC-NEXT:    ; => This Inner Loop Header: Depth=2
 ; GENERIC-NEXT:    v_readfirstlane_b32 s6, v16
 ; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, s6, v16
@@ -8600,11 +8598,12 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; GENERIC-NEXT:    s_mov_b32 m0, s6
 ; GENERIC-NEXT:    v_movreld_b32_e32 v0, v17
 ; GENERIC-NEXT:    s_xor_b64 exec, exec, vcc
-; GENERIC-NEXT:    s_cbranch_execnz .LBB26_3
-; GENERIC-NEXT:  ; %bb.4: ; in Loop: Header=BB26_1 Depth=1
+; GENERIC-NEXT:    s_cbranch_execnz .LBB26_2
+; GENERIC-NEXT:  ; %bb.3: ; in Loop: Header=BB26_1 Depth=1
 ; GENERIC-NEXT:    s_mov_b64 exec, s[4:5]
-; GENERIC-NEXT:    s_branch .LBB26_1
-; GENERIC-NEXT:  .LBB26_5: ; %bb8
+; GENERIC-NEXT:    v_cmp_le_i32_e32 vcc, s0, v0
+; GENERIC-NEXT:    s_cbranch_vccz .LBB26_1
+; GENERIC-NEXT:  .LBB26_4: ; %bb8
 ; GENERIC-NEXT:    s_endpgm
 ;
 ; NOOPT-LABEL: broken_phi_bb:
@@ -8829,20 +8828,18 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; SI-MOVREL-NEXT:    v_mov_b32_e32 v0, 8
 ; SI-MOVREL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-MOVREL-NEXT:    s_mov_b32 s2, -1
-; SI-MOVREL-NEXT:  .LBB26_1: ; %bb2
-; SI-MOVREL-NEXT:    ; =>This Loop Header: Depth=1
-; SI-MOVREL-NEXT:    ; Child Loop BB26_3 Depth 2
 ; SI-MOVREL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-MOVREL-NEXT:    v_cmp_le_i32_e32 vcc, s0, v0
-; SI-MOVREL-NEXT:    s_cbranch_vccnz .LBB26_5
-; SI-MOVREL-NEXT:  ; %bb.2: ; %bb4
-; SI-MOVREL-NEXT:    ; in Loop: Header=BB26_1 Depth=1
+; SI-MOVREL-NEXT:    s_cbranch_vccnz .LBB26_4
+; SI-MOVREL-NEXT:  .LBB26_1: ; %bb4
+; SI-MOVREL-NEXT:    ; =>This Loop Header: Depth=1
+; SI-MOVREL-NEXT:    ; Child Loop BB26_2 Depth 2
 ; SI-MOVREL-NEXT:    buffer_load_dword v16, off, s[0:3], 0 glc
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-MOVREL-NEXT:    v_mov_b32_e32 v17, s1
 ; SI-MOVREL-NEXT:    s_mov_b64 s[4:5], exec
 ; SI-MOVREL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-; SI-MOVREL-NEXT:  .LBB26_3: ; Parent Loop BB26_1 Depth=1
+; SI-MOVREL-NEXT:  .LBB26_2: ; Parent Loop BB26_1 Depth=1
 ; SI-MOVREL-NEXT:    ; => This Inner Loop Header: Depth=2
 ; SI-MOVREL-NEXT:    v_readfirstlane_b32 s6, v16
 ; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, s6, v16
@@ -8850,31 +8847,30 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; SI-MOVREL-NEXT:    s_mov_b32 m0, s6
 ; SI-MOVREL-NEXT:    v_movreld_b32_e32 v0, v17
 ; SI-MOVREL-NEXT:    s_xor_b64 exec, exec, vcc
-; SI-MOVREL-NEXT:    s_cbranch_execnz .LBB26_3
-; SI-MOVREL-NEXT:  ; %bb.4: ; in Loop: Header=BB26_1 Depth=1
+; SI-MOVREL-NEXT:    s_cbranch_execnz .LBB26_2
+; SI-MOVREL-NEXT:  ; %bb.3: ; in Loop: Header=BB26_1 Depth=1
 ; SI-MOVREL-NEXT:    s_mov_b64 exec, s[4:5]
-; SI-MOVREL-NEXT:    s_branch .LBB26_1
-; SI-MOVREL-NEXT:  .LBB26_5: ; %bb8
+; SI-MOVREL-NEXT:    v_cmp_le_i32_e32 vcc, s0, v0
+; SI-MOVREL-NEXT:    s_cbranch_vccz .LBB26_1
+; SI-MOVREL-NEXT:  .LBB26_4: ; %bb8
 ; SI-MOVREL-NEXT:    s_endpgm
 ;
 ; VI-MOVREL-LABEL: broken_phi_bb:
 ; VI-MOVREL:       ; %bb.0: ; %bb
 ; VI-MOVREL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-MOVREL-NEXT:    v_mov_b32_e32 v0, 8
-; VI-MOVREL-NEXT:  .LBB26_1: ; %bb2
-; VI-MOVREL-NEXT:    ; =>This Loop Header: Depth=1
-; VI-MOVREL-NEXT:    ; Child Loop BB26_3 Depth 2
 ; VI-MOVREL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-MOVREL-NEXT:    v_cmp_le_i32_e32 vcc, s0, v0
-; VI-MOVREL-NEXT:    s_cbranch_vccnz .LBB26_5
-; VI-MOVREL-NEXT:  ; %bb.2: ; %bb4
-; VI-MOVREL-NEXT:    ; in Loop: Header=BB26_1 Depth=1
+; VI-MOVREL-NEXT:    s_cbranch_vccnz .LBB26_4
+; VI-MOVREL-NEXT:  .LBB26_1: ; %bb4
+; VI-MOVREL-NEXT:    ; =>This Loop Header: Depth=1
+; VI-MOVREL-NEXT:    ; Child Loop BB26_2 Depth 2
 ; VI-MOVREL-NEXT:    flat_load_dword v16, v[0:1] glc
 ; VI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; VI-MOVREL-NEXT:    v_mov_b32_e32 v17, s1
 ; VI-MOVREL-NEXT:    s_mov_b64 s[2:3], exec
 ; VI-MOVREL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-; VI-MOVREL-NEXT:  .LBB26_3: ; Parent Loop BB26_1 Depth=1
+; VI-MOVREL-NEXT:  .LBB26_2: ; Parent Loop BB26_1 Depth=1
 ; VI-MOVREL-NEXT:    ; => This Inner Loop Header: Depth=2
 ; VI-MOVREL-NEXT:    v_readfirstlane_b32 s4, v16
 ; VI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v16
@@ -8882,31 +8878,30 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; VI-MOVREL-NEXT:    s_mov_b32 m0, s4
 ; VI-MOVREL-NEXT:    v_movreld_b32_e32 v0, v17
 ; VI-MOVREL-NEXT:    s_xor_b64 exec, exec, vcc
-; VI-MOVREL-NEXT:    s_cbranch_execnz .LBB26_3
-; VI-MOVREL-NEXT:  ; %bb.4: ; in Loop: Header=BB26_1 Depth=1
+; VI-MOVREL-NEXT:    s_cbranch_execnz .LBB26_2
+; VI-MOVREL-NEXT:  ; %bb.3: ; in Loop: Header=BB26_1 Depth=1
 ; VI-MOVREL-NEXT:    s_mov_b64 exec, s[2:3]
-; VI-MOVREL-NEXT:    s_branch .LBB26_1
-; VI-MOVREL-NEXT:  .LBB26_5: ; %bb8
+; VI-MOVREL-NEXT:    v_cmp_le_i32_e32 vcc, s0, v0
+; VI-MOVREL-NEXT:    s_cbranch_vccz .LBB26_1
+; VI-MOVREL-NEXT:  .LBB26_4: ; %bb8
 ; VI-MOVREL-NEXT:    s_endpgm
 ;
 ; VI-IDXMODE-LABEL: broken_phi_bb:
 ; VI-IDXMODE:       ; %bb.0: ; %bb
 ; VI-IDXMODE-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v0, 8
-; VI-IDXMODE-NEXT:  .LBB26_1: ; %bb2
-; VI-IDXMODE-NEXT:    ; =>This Loop Header: Depth=1
-; VI-IDXMODE-NEXT:    ; Child Loop BB26_3 Depth 2
 ; VI-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-IDXMODE-NEXT:    v_cmp_le_i32_e32 vcc, s0, v0
-; VI-IDXMODE-NEXT:    s_cbranch_vccnz .LBB26_5
-; VI-IDXMODE-NEXT:  ; %bb.2: ; %bb4
-; VI-IDXMODE-NEXT:    ; in Loop: Header=BB26_1 Depth=1
+; VI-IDXMODE-NEXT:    s_cbranch_vccnz .LBB26_4
+; VI-IDXMODE-NEXT:  .LBB26_1: ; %bb4
+; VI-IDXMODE-NEXT:    ; =>This Loop Header: Depth=1
+; VI-IDXMODE-NEXT:    ; Child Loop BB26_2 Depth 2
 ; VI-IDXMODE-NEXT:    flat_load_dword v16, v[0:1] glc
 ; VI-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v17, s1
 ; VI-IDXMODE-NEXT:    s_mov_b64 s[2:3], exec
 ; VI-IDXMODE-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-; VI-IDXMODE-NEXT:  .LBB26_3: ; Parent Loop BB26_1 Depth=1
+; VI-IDXMODE-NEXT:  .LBB26_2: ; Parent Loop BB26_1 Depth=1
 ; VI-IDXMODE-NEXT:    ; => This Inner Loop Header: Depth=2
 ; VI-IDXMODE-NEXT:    v_readfirstlane_b32 s4, v16
 ; VI-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v16
@@ -8915,31 +8910,30 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v0, v17
 ; VI-IDXMODE-NEXT:    s_set_gpr_idx_off
 ; VI-IDXMODE-NEXT:    s_xor_b64 exec, exec, vcc
-; VI-IDXMODE-NEXT:    s_cbranch_execnz .LBB26_3
-; VI-IDXMODE-NEXT:  ; %bb.4: ; in Loop: Header=BB26_1 Depth=1
+; VI-IDXMODE-NEXT:    s_cbranch_execnz .LBB26_2
+; VI-IDXMODE-NEXT:  ; %bb.3: ; in Loop: Header=BB26_1 Depth=1
 ; VI-IDXMODE-NEXT:    s_mov_b64 exec, s[2:3]
-; VI-IDXMODE-NEXT:    s_branch .LBB26_1
-; VI-IDXMODE-NEXT:  .LBB26_5: ; %bb8
+; VI-IDXMODE-NEXT:    v_cmp_le_i32_e32 vcc, s0, v0
+; VI-IDXMODE-NEXT:    s_cbranch_vccz .LBB26_1
+; VI-IDXMODE-NEXT:  .LBB26_4: ; %bb8
 ; VI-IDXMODE-NEXT:    s_endpgm
 ;
 ; GFX9-IDXMODE-LABEL: broken_phi_bb:
 ; GFX9-IDXMODE:       ; %bb.0: ; %bb
 ; GFX9-IDXMODE-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v0, 8
-; GFX9-IDXMODE-NEXT:  .LBB26_1: ; %bb2
-; GFX9-IDXMODE-NEXT:    ; =>This Loop Header: Depth=1
-; GFX9-IDXMODE-NEXT:    ; Child Loop BB26_3 Depth 2
 ; GFX9-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-IDXMODE-NEXT:    v_cmp_le_i32_e32 vcc, s0, v0
-; GFX9-IDXMODE-NEXT:    s_cbranch_vccnz .LBB26_5
-; GFX9-IDXMODE-NEXT:  ; %bb.2: ; %bb4
-; GFX9-IDXMODE-NEXT:    ; in Loop: Header=BB26_1 Depth=1
+; GFX9-IDXMODE-NEXT:    s_cbranch_vccnz .LBB26_4
+; GFX9-IDXMODE-NEXT:  .LBB26_1: ; %bb4
+; GFX9-IDXMODE-NEXT:    ; =>This Loop Header: Depth=1
+; GFX9-IDXMODE-NEXT:    ; Child Loop BB26_2 Depth 2
 ; GFX9-IDXMODE-NEXT:    global_load_dword v16, v[0:1], off glc
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v17, s1
 ; GFX9-IDXMODE-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX9-IDXMODE-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-; GFX9-IDXMODE-NEXT:  .LBB26_3: ; Parent Loop BB26_1 Depth=1
+; GFX9-IDXMODE-NEXT:  .LBB26_2: ; Parent Loop BB26_1 Depth=1
 ; GFX9-IDXMODE-NEXT:    ; => This Inner Loop Header: Depth=2
 ; GFX9-IDXMODE-NEXT:    v_readfirstlane_b32 s4, v16
 ; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v16
@@ -8948,11 +8942,12 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v0, v17
 ; GFX9-IDXMODE-NEXT:    s_set_gpr_idx_off
 ; GFX9-IDXMODE-NEXT:    s_xor_b64 exec, exec, vcc
-; GFX9-IDXMODE-NEXT:    s_cbranch_execnz .LBB26_3
-; GFX9-IDXMODE-NEXT:  ; %bb.4: ; in Loop: Header=BB26_1 Depth=1
+; GFX9-IDXMODE-NEXT:    s_cbranch_execnz .LBB26_2
+; GFX9-IDXMODE-NEXT:  ; %bb.3: ; in Loop: Header=BB26_1 Depth=1
 ; GFX9-IDXMODE-NEXT:    s_mov_b64 exec, s[2:3]
-; GFX9-IDXMODE-NEXT:    s_branch .LBB26_1
-; GFX9-IDXMODE-NEXT:  .LBB26_5: ; %bb8
+; GFX9-IDXMODE-NEXT:    v_cmp_le_i32_e32 vcc, s0, v0
+; GFX9-IDXMODE-NEXT:    s_cbranch_vccz .LBB26_1
+; GFX9-IDXMODE-NEXT:  .LBB26_4: ; %bb8
 ; GFX9-IDXMODE-NEXT:    s_endpgm
 bb:
   br label %bb2

@@ -17,13 +17,12 @@ define void @issue63986(i64 %0, i64 %idxprom, ptr inreg %ptr) {
 ; CHECK-NEXT:    v_mov_b32_e32 v9, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v8, s4
 ; CHECK-NEXT:    flat_load_dwordx4 v[8:11], v[8:9]
+; CHECK-NEXT:    v_mov_b32_e32 v13, s5
 ; CHECK-NEXT:    v_add_co_u32_e32 v12, vcc, s4, v6
 ; CHECK-NEXT:    s_add_u32 s4, s4, 16
-; CHECK-NEXT:    v_mov_b32_e32 v13, s5
-; CHECK-NEXT:    s_addc_u32 s5, s5, 0
-; CHECK-NEXT:    v_cmp_lt_u64_e64 s[6:7], s[4:5], 32
 ; CHECK-NEXT:    v_addc_co_u32_e32 v13, vcc, v7, v13, vcc
-; CHECK-NEXT:    s_and_b64 vcc, exec, s[6:7]
+; CHECK-NEXT:    s_addc_u32 s5, s5, 0
+; CHECK-NEXT:    v_cmp_lt_u64_e64 vcc, s[4:5], 32
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_store_dwordx4 v[12:13], v[8:11]
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_1

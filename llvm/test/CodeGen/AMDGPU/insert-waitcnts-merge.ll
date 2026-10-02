@@ -104,7 +104,6 @@ define amdgpu_kernel void @widget(ptr addrspace(1) %arg, i1 %arg1) #0 {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_WAITCNT .Vmcnt_0
   ; CHECK-NEXT:   V_CMP_EQ_U32_e32 0, killed $vgpr4, implicit-def $vcc, implicit $exec
-  ; CHECK-NEXT:   $vcc = S_AND_B64 $exec, killed renamable $vcc, implicit-def dead $scc
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.5, implicit killed $vcc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.8.bb9:

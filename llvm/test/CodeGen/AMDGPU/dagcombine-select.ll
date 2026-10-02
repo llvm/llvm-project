@@ -591,8 +591,7 @@ define amdgpu_kernel void @frem_constant_sel_constants(ptr addrspace(1) %p, i1 %
 ; GFX9-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX9-NEXT:    v_cndmask_b32_e64 v1, v0, -4.0, s[0:1]
 ; GFX9-NEXT:    s_mov_b32 s0, 0x40a00000
-; GFX9-NEXT:    v_cmp_lt_f32_e64 s[2:3], |v1|, s0
-; GFX9-NEXT:    s_and_b64 vcc, exec, s[2:3]
+; GFX9-NEXT:    v_cmp_lt_f32_e64 vcc, |v1|, s0
 ; GFX9-NEXT:    s_cbranch_vccz .LBB26_5
 ; GFX9-NEXT:  ; %bb.1: ; %frem.compute
 ; GFX9-NEXT:    v_frexp_mant_f32_e64 v0, |v1|
@@ -606,36 +605,36 @@ define amdgpu_kernel void @frem_constant_sel_constants(ptr addrspace(1) %p, i1 %
 ; GFX9-NEXT:    v_fma_f32 v6, -v2, v5, v3
 ; GFX9-NEXT:    v_fma_f32 v5, v6, v4, v5
 ; GFX9-NEXT:    v_fma_f32 v2, -v2, v5, v3
-; GFX9-NEXT:    v_div_fmas_f32 v3, v2, v4, v5
+; GFX9-NEXT:    v_div_fmas_f32 v2, v2, v4, v5
 ; GFX9-NEXT:    v_frexp_exp_i32_f32_e32 v5, v1
-; GFX9-NEXT:    v_sub_u32_e32 v2, 3, v5
-; GFX9-NEXT:    v_cmp_gt_i32_e32 vcc, 13, v2
-; GFX9-NEXT:    v_add_u32_e32 v1, -1, v5
+; GFX9-NEXT:    v_sub_u32_e32 v3, 3, v5
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0x45200000
-; GFX9-NEXT:    v_div_fixup_f32 v3, v3, v0, 1.0
+; GFX9-NEXT:    v_add_u32_e32 v1, -1, v5
+; GFX9-NEXT:    v_cmp_gt_i32_e32 vcc, 13, v3
+; GFX9-NEXT:    v_div_fixup_f32 v2, v2, v0, 1.0
 ; GFX9-NEXT:    s_cbranch_vccnz .LBB26_4
 ; GFX9-NEXT:  ; %bb.2: ; %frem.loop_body.preheader
-; GFX9-NEXT:    v_sub_u32_e32 v2, 15, v5
+; GFX9-NEXT:    v_sub_u32_e32 v3, 15, v5
 ; GFX9-NEXT:    v_mov_b32_e32 v5, 0x45200000
 ; GFX9-NEXT:  .LBB26_3: ; %frem.loop_body
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    v_mov_b32_e32 v4, v5
-; GFX9-NEXT:    v_mul_f32_e32 v5, v4, v3
+; GFX9-NEXT:    v_mul_f32_e32 v5, v4, v2
 ; GFX9-NEXT:    v_rndne_f32_e32 v5, v5
 ; GFX9-NEXT:    v_fma_f32 v5, -v5, v0, v4
 ; GFX9-NEXT:    v_add_f32_e32 v6, v5, v0
 ; GFX9-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v5
-; GFX9-NEXT:    v_add_u32_e32 v2, -12, v2
 ; GFX9-NEXT:    v_cndmask_b32_e32 v5, v5, v6, vcc
-; GFX9-NEXT:    v_cmp_lt_i32_e32 vcc, 12, v2
+; GFX9-NEXT:    v_add_u32_e32 v3, -12, v3
 ; GFX9-NEXT:    v_ldexp_f32 v5, v5, 12
+; GFX9-NEXT:    v_cmp_lt_i32_e32 vcc, 12, v3
 ; GFX9-NEXT:    s_cbranch_vccnz .LBB26_3
 ; GFX9-NEXT:  .LBB26_4: ; %frem.loop_exit
-; GFX9-NEXT:    v_add_u32_e32 v2, -11, v2
-; GFX9-NEXT:    v_ldexp_f32 v2, v4, v2
-; GFX9-NEXT:    v_mul_f32_e32 v3, v2, v3
-; GFX9-NEXT:    v_rndne_f32_e32 v3, v3
-; GFX9-NEXT:    v_fma_f32 v2, -v3, v0, v2
+; GFX9-NEXT:    v_add_u32_e32 v3, -11, v3
+; GFX9-NEXT:    v_ldexp_f32 v3, v4, v3
+; GFX9-NEXT:    v_mul_f32_e32 v2, v3, v2
+; GFX9-NEXT:    v_rndne_f32_e32 v2, v2
+; GFX9-NEXT:    v_fma_f32 v2, -v2, v0, v3
 ; GFX9-NEXT:    v_add_f32_e32 v0, v2, v0
 ; GFX9-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v2
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
@@ -663,8 +662,7 @@ define amdgpu_kernel void @frem_constant_sel_constants(ptr addrspace(1) %p, i1 %
 ; GFX942-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX942-NEXT:    v_cndmask_b32_e64 v1, v0, -4.0, s[0:1]
 ; GFX942-NEXT:    s_mov_b32 s0, 0x40a00000
-; GFX942-NEXT:    v_cmp_lt_f32_e64 s[2:3], |v1|, s0
-; GFX942-NEXT:    s_and_b64 vcc, exec, s[2:3]
+; GFX942-NEXT:    v_cmp_lt_f32_e64 vcc, |v1|, s0
 ; GFX942-NEXT:    s_cbranch_vccz .LBB26_5
 ; GFX942-NEXT:  ; %bb.1: ; %frem.compute
 ; GFX942-NEXT:    v_frexp_mant_f32_e64 v0, |v1|
@@ -682,8 +680,8 @@ define amdgpu_kernel void @frem_constant_sel_constants(ptr addrspace(1) %p, i1 %
 ; GFX942-NEXT:    v_fmac_f32_e32 v7, v8, v4
 ; GFX942-NEXT:    v_fma_f32 v3, -v3, v7, v6
 ; GFX942-NEXT:    v_div_fmas_f32 v3, v3, v4, v7
-; GFX942-NEXT:    v_cmp_gt_i32_e32 vcc, 13, v2
 ; GFX942-NEXT:    v_div_fixup_f32 v3, v3, v0, 1.0
+; GFX942-NEXT:    v_cmp_gt_i32_e32 vcc, 13, v2
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0x45200000
 ; GFX942-NEXT:    s_cbranch_vccnz .LBB26_4
 ; GFX942-NEXT:  ; %bb.2: ; %frem.loop_body.preheader
@@ -700,8 +698,8 @@ define amdgpu_kernel void @frem_constant_sel_constants(ptr addrspace(1) %p, i1 %
 ; GFX942-NEXT:    v_add_u32_e32 v2, -12, v2
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_cndmask_b32_e32 v5, v5, v6, vcc
-; GFX942-NEXT:    v_cmp_lt_i32_e32 vcc, 12, v2
 ; GFX942-NEXT:    v_ldexp_f32 v5, v5, 12
+; GFX942-NEXT:    v_cmp_lt_i32_e32 vcc, 12, v2
 ; GFX942-NEXT:    s_cbranch_vccnz .LBB26_3
 ; GFX942-NEXT:  .LBB26_4: ; %frem.loop_exit
 ; GFX942-NEXT:    v_add_u32_e32 v2, -11, v2

@@ -386,7 +386,6 @@ define amdgpu_kernel void @loop_arg_0(ptr addrspace(3) %ptr, i32 %n) nounwind {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GCN-NEXT:    s_and_b64 vcc, exec, vcc
 ; GCN-NEXT:  .LBB4_1: ; %for.body
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_lshl_b32 s2, s1, 2

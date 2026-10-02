@@ -1923,17 +1923,16 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) nounwind {
 ; GFX9-W64-NEXT:    s_wqm_b64 exec, exec
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-W64-NEXT:    s_mov_b32 s2, 0x40e00000
-; GFX9-W64-NEXT:  .LBB35_1: ; %loop
-; GFX9-W64-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-W64-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v4
-; GFX9-W64-NEXT:    s_cbranch_vccnz .LBB35_3
-; GFX9-W64-NEXT:  ; %bb.2: ; %body
-; GFX9-W64-NEXT:    ; in Loop: Header=BB35_1 Depth=1
+; GFX9-W64-NEXT:    s_cbranch_vccnz .LBB35_2
+; GFX9-W64-NEXT:  .LBB35_1: ; %body
+; GFX9-W64-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-W64-NEXT:    image_sample v[0:3], v0, s[0:7], s[0:3] dmask:0xf
 ; GFX9-W64-NEXT:    v_add_f32_e32 v4, 2.0, v4
-; GFX9-W64-NEXT:    s_branch .LBB35_1
-; GFX9-W64-NEXT:  .LBB35_3: ; %break
+; GFX9-W64-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v4
+; GFX9-W64-NEXT:    s_cbranch_vccz .LBB35_1
+; GFX9-W64-NEXT:  .LBB35_2: ; %break
 ; GFX9-W64-NEXT:    s_and_b64 exec, exec, s[0:1]
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-W64-NEXT:    ; return to shader part epilog
@@ -1946,17 +1945,16 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) nounwind {
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s0
 ; GFX10-W32-NEXT:    image_store v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm
 ; GFX10-W32-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX10-W32-NEXT:  .LBB35_1: ; %loop
-; GFX10-W32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-W32-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 0x40e00000, v4
-; GFX10-W32-NEXT:    s_cbranch_vccnz .LBB35_3
-; GFX10-W32-NEXT:  ; %bb.2: ; %body
-; GFX10-W32-NEXT:    ; in Loop: Header=BB35_1 Depth=1
+; GFX10-W32-NEXT:    s_cbranch_vccnz .LBB35_2
+; GFX10-W32-NEXT:  .LBB35_1: ; %body
+; GFX10-W32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    image_sample v[0:3], v0, s[0:7], s[0:3] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10-W32-NEXT:    v_add_f32_e32 v4, 2.0, v4
-; GFX10-W32-NEXT:    s_branch .LBB35_1
-; GFX10-W32-NEXT:  .LBB35_3: ; %break
+; GFX10-W32-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 0x40e00000, v4
+; GFX10-W32-NEXT:    s_cbranch_vccz .LBB35_1
+; GFX10-W32-NEXT:  .LBB35_2: ; %break
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s0
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    ; return to shader part epilog

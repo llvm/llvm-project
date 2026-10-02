@@ -26,13 +26,12 @@ define amdgpu_kernel void @blender_no_live_segment_at_def_error(<4 x float> %ext
 ; CHECK-NEXT:    s_cmp_lg_u32 s27, 0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_4
 ; CHECK-NEXT:  ; %bb.3: ; %if.then263.i.i
-; CHECK-NEXT:    v_cmp_nlt_f32_e64 s12, s25, 0
+; CHECK-NEXT:    v_cmp_nlt_f32_e64 vcc_lo, s25, 0
 ; CHECK-NEXT:    s_mov_b32 s20, 1.0
+; CHECK-NEXT:    s_mov_b32 s12, 0x7fc00000
 ; CHECK-NEXT:    s_mov_b32 s21, s20
 ; CHECK-NEXT:    s_mov_b32 s22, s20
 ; CHECK-NEXT:    s_mov_b32 s23, s20
-; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s12
-; CHECK-NEXT:    s_mov_b32 s12, 0x7fc00000
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_6
 ; CHECK-NEXT:  .LBB0_4: ; %if.end273.i.i
 ; CHECK-NEXT:    s_add_u32 s18, s8, 40
