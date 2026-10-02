@@ -67,7 +67,13 @@ inline bool probeRequiredCPUFeatures() XRAY_NEVER_INSTRUMENT { return true; }
 
 ALWAYS_INLINE uint64_t readTSC(uint8_t &CPU) XRAY_NEVER_INSTRUMENT {
   timespec TS;
-  int result = clock_gettime(CLOCK_REALTIME, &TS);
+  int result = clock_gettime(
+#if SANITIZER_APPLE
+      CLOCK_MONOTONIC_RAW,
+#else
+      CLOCK_REALTIME,
+#endif
+      &TS);
   if (result != 0) {
     Report("clock_gettime(2) returned %d, errno=%d.", result, int(errno));
     TS.tv_sec = 0;
