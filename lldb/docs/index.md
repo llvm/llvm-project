@@ -21,9 +21,9 @@ All of the code in the LLDB project is available under the
 ## Using LLDB
 
 For an introduction into the LLDB command language, head over to the [LLDB
-Tutorial](https://lldb.llvm.org/use/tutorial.html). For users already familiar
+Tutorial](use/tutorial.md). For users already familiar
 with GDB there is a cheat sheet listing common tasks and their LLDB equivalent
-in the [GDB to LLDB command map](https://lldb.llvm.org/use/map.html).
+in the [GDB to LLDB command map](use/map.md).
 
 There are also multiple resources on how to script LLDB using Python: the
 {doc}`use/python-reference` is a great starting point for that.
