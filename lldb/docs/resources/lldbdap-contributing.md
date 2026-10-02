@@ -20,7 +20,7 @@ requests](https://github.com/llvm/llvm-project/pulls).
 
 ## Building `lldb-dap` from source
 
-To build lldb-dap from source, first need to [setup a LLDB build](https://lldb.llvm.org/resources/build.html).
+To build lldb-dap from source, first need to [setup a LLDB build](build.md).
 After doing so, run `ninja lldb-dap`. To use your freshly built `lldb-dap`
 binary, install the VS Code extension and point it to lldb-dap by setting the
 `lldb-dap.executable-path` setting.
@@ -44,9 +44,9 @@ components:
   configuration files.
 
 Since lldb-dap builds on top of LLDB, all of LLDB's extensibility mechanisms
-such as [Variable Pretty-Printing](https://lldb.llvm.org/use/variable.html),
-[Frame recognizers](https://lldb.llvm.org/use/python-reference.html#writing-lldb-frame-recognizers-in-python)
-and [Python Scripting](https://lldb.llvm.org/use/python.html) are available
+such as [Variable Pretty-Printing](../use/variable.md),
+[Frame recognizers](../use/tutorials/custom-frame-recognizers.md)
+and [Python Scripting](../use/python-reference.md) are available
 also in lldb-dap.
 
 When adding new functionality, you generally want to add it on the lowest
