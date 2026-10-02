@@ -259,6 +259,25 @@ define <8 x half> @splatandidentity(<8 x half> %a, <8 x half> %b) {
   ret <8 x half> %r
 }
 
+define <8 x half> @splatandidentity_commuted(<8 x half> %a, <8 x half> %b) {
+; CHECK-LABEL: @splatandidentity_commuted(
+; CHECK-NEXT:    [[AB:%.*]] = shufflevector <8 x half> [[A:%.*]], <8 x half> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[AT:%.*]] = shufflevector <8 x half> [[A]], <8 x half> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
+; CHECK-NEXT:    [[BS:%.*]] = shufflevector <8 x half> [[A]], <8 x half> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[ABT:%.*]] = fadd <4 x half> [[AT]], [[BS]]
+; CHECK-NEXT:    [[ABB:%.*]] = fadd <4 x half> [[BS]], [[AB]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x half> [[ABT]], <4 x half> [[ABB]], <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    ret <8 x half> [[R]]
+;
+  %ab = shufflevector <8 x half> %a, <8 x half> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %at = shufflevector <8 x half> %a, <8 x half> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
+  %bs = shufflevector <8 x half> %a, <8 x half> poison, <4 x i32> zeroinitializer
+  %abt = fadd <4 x half> %at, %bs
+  %abb = fadd <4 x half> %bs, %ab
+  %r = shufflevector <4 x half> %abt, <4 x half> %abb, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+  ret <8 x half> %r
+}
+
 define <8 x half> @splattwice(<8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: @splattwice(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x half> [[A:%.*]], <8 x half> poison, <8 x i32> zeroinitializer
