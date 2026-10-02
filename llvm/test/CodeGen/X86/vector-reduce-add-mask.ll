@@ -2379,6 +2379,281 @@ define i16 @test_v64i16_v64i8(<64 x i16> %a0) nounwind {
   ret i16 %2
 }
 
+define i48 @test_v8i48(<8 x i48> %a0) {
+; X86-SSE2-LABEL: test_v8i48:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    movdqu {{[0-9]+}}(%esp), %xmm0
+; X86-SSE2-NEXT:    movdqu {{[0-9]+}}(%esp), %xmm1
+; X86-SSE2-NEXT:    movdqu {{[0-9]+}}(%esp), %xmm2
+; X86-SSE2-NEXT:    movdqu {{[0-9]+}}(%esp), %xmm3
+; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [1,0,1,0]
+; X86-SSE2-NEXT:    pand %xmm4, %xmm3
+; X86-SSE2-NEXT:    pand %xmm4, %xmm2
+; X86-SSE2-NEXT:    paddq %xmm3, %xmm2
+; X86-SSE2-NEXT:    pand %xmm4, %xmm1
+; X86-SSE2-NEXT:    pand %xmm4, %xmm0
+; X86-SSE2-NEXT:    paddq %xmm1, %xmm0
+; X86-SSE2-NEXT:    paddq %xmm2, %xmm0
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X86-SSE2-NEXT:    paddq %xmm0, %xmm1
+; X86-SSE2-NEXT:    movd %xmm1, %eax
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; X86-SSE2-NEXT:    movd %xmm0, %edx
+; X86-SSE2-NEXT:    retl
+;
+; X64-SSE2-LABEL: test_v8i48:
+; X64-SSE2:       # %bb.0:
+; X64-SSE2-NEXT:    movq %rsi, %xmm0
+; X64-SSE2-NEXT:    movq %rdi, %xmm1
+; X64-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; X64-SSE2-NEXT:    movq %r9, %xmm0
+; X64-SSE2-NEXT:    movq %r8, %xmm2
+; X64-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
+; X64-SSE2-NEXT:    movq %rcx, %xmm0
+; X64-SSE2-NEXT:    movq %rdx, %xmm3
+; X64-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm0[0]
+; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [1,1]
+; X64-SSE2-NEXT:    pand %xmm0, %xmm3
+; X64-SSE2-NEXT:    pand %xmm0, %xmm2
+; X64-SSE2-NEXT:    pand %xmm0, %xmm1
+; X64-SSE2-NEXT:    paddq %xmm2, %xmm1
+; X64-SSE2-NEXT:    pand {{[0-9]+}}(%rsp), %xmm0
+; X64-SSE2-NEXT:    paddq %xmm3, %xmm0
+; X64-SSE2-NEXT:    paddq %xmm1, %xmm0
+; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X64-SSE2-NEXT:    paddq %xmm0, %xmm1
+; X64-SSE2-NEXT:    movq %xmm1, %rax
+; X64-SSE2-NEXT:    retq
+;
+; X86-SSE4-LABEL: test_v8i48:
+; X86-SSE4:       # %bb.0:
+; X86-SSE4-NEXT:    movdqu {{[0-9]+}}(%esp), %xmm0
+; X86-SSE4-NEXT:    movdqu {{[0-9]+}}(%esp), %xmm1
+; X86-SSE4-NEXT:    movdqu {{[0-9]+}}(%esp), %xmm2
+; X86-SSE4-NEXT:    movdqu {{[0-9]+}}(%esp), %xmm3
+; X86-SSE4-NEXT:    pmovsxbq {{.*#+}} xmm4 = [1,1]
+; X86-SSE4-NEXT:    pand %xmm4, %xmm3
+; X86-SSE4-NEXT:    pand %xmm4, %xmm2
+; X86-SSE4-NEXT:    paddq %xmm3, %xmm2
+; X86-SSE4-NEXT:    pand %xmm4, %xmm1
+; X86-SSE4-NEXT:    pand %xmm4, %xmm0
+; X86-SSE4-NEXT:    paddq %xmm1, %xmm0
+; X86-SSE4-NEXT:    paddq %xmm2, %xmm0
+; X86-SSE4-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X86-SSE4-NEXT:    paddq %xmm0, %xmm1
+; X86-SSE4-NEXT:    movd %xmm1, %eax
+; X86-SSE4-NEXT:    pextrd $1, %xmm1, %edx
+; X86-SSE4-NEXT:    retl
+;
+; X64-SSE4-LABEL: test_v8i48:
+; X64-SSE4:       # %bb.0:
+; X64-SSE4-NEXT:    movq %rsi, %xmm0
+; X64-SSE4-NEXT:    movq %rdi, %xmm1
+; X64-SSE4-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; X64-SSE4-NEXT:    movq %r9, %xmm0
+; X64-SSE4-NEXT:    movq %r8, %xmm2
+; X64-SSE4-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
+; X64-SSE4-NEXT:    movq %rcx, %xmm0
+; X64-SSE4-NEXT:    movq %rdx, %xmm3
+; X64-SSE4-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm0[0]
+; X64-SSE4-NEXT:    pmovsxbq {{.*#+}} xmm0 = [1,1]
+; X64-SSE4-NEXT:    pand %xmm0, %xmm3
+; X64-SSE4-NEXT:    pand %xmm0, %xmm2
+; X64-SSE4-NEXT:    pand %xmm0, %xmm1
+; X64-SSE4-NEXT:    paddq %xmm2, %xmm1
+; X64-SSE4-NEXT:    pand {{[0-9]+}}(%rsp), %xmm0
+; X64-SSE4-NEXT:    paddq %xmm3, %xmm0
+; X64-SSE4-NEXT:    paddq %xmm1, %xmm0
+; X64-SSE4-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X64-SSE4-NEXT:    paddq %xmm0, %xmm1
+; X64-SSE4-NEXT:    movq %xmm1, %rax
+; X64-SSE4-NEXT:    retq
+;
+; X86-AVX1-LABEL: test_v8i48:
+; X86-AVX1:       # %bb.0:
+; X86-AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-AVX1-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-AVX1-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-AVX1-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; X86-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X86-AVX1-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-AVX1-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; X86-AVX1-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-AVX1-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm2, %xmm2
+; X86-AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; X86-AVX1-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [1,0,1,0,1,0,1,0]
+; X86-AVX1-NEXT:    vandps %ymm2, %ymm1, %ymm1
+; X86-AVX1-NEXT:    vandps %ymm2, %ymm0, %ymm0
+; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; X86-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; X86-AVX1-NEXT:    vpaddq %xmm2, %xmm3, %xmm2
+; X86-AVX1-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
+; X86-AVX1-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X86-AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vmovd %xmm0, %eax
+; X86-AVX1-NEXT:    vpextrd $1, %xmm0, %edx
+; X86-AVX1-NEXT:    vzeroupper
+; X86-AVX1-NEXT:    retl
+;
+; X64-AVX1-LABEL: test_v8i48:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vmovq %rcx, %xmm0
+; X64-AVX1-NEXT:    vmovq %rdx, %xmm1
+; X64-AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; X64-AVX1-NEXT:    vmovq %rsi, %xmm1
+; X64-AVX1-NEXT:    vmovq %rdi, %xmm2
+; X64-AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; X64-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X64-AVX1-NEXT:    vmovq %r9, %xmm1
+; X64-AVX1-NEXT:    vmovq %r8, %xmm2
+; X64-AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; X64-AVX1-NEXT:    vinsertf128 $1, {{[0-9]+}}(%rsp), %ymm1, %ymm1
+; X64-AVX1-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [1,1,1,1]
+; X64-AVX1-NEXT:    vandps %ymm2, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vandps %ymm2, %ymm1, %ymm1
+; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; X64-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; X64-AVX1-NEXT:    vpaddq %xmm3, %xmm2, %xmm2
+; X64-AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X64-AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; X64-AVX1-NEXT:    vmovq %xmm0, %rax
+; X64-AVX1-NEXT:    vzeroupper
+; X64-AVX1-NEXT:    retq
+;
+; X86-AVX2-LABEL: test_v8i48:
+; X86-AVX2:       # %bb.0:
+; X86-AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [1,0,1,0,1,0,1,0]
+; X86-AVX2-NEXT:    vpand {{[0-9]+}}(%esp), %ymm0, %ymm1
+; X86-AVX2-NEXT:    vpand {{[0-9]+}}(%esp), %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; X86-AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X86-AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; X86-AVX2-NEXT:    vmovd %xmm0, %eax
+; X86-AVX2-NEXT:    vpextrd $1, %xmm0, %edx
+; X86-AVX2-NEXT:    vzeroupper
+; X86-AVX2-NEXT:    retl
+;
+; X64-AVX2-LABEL: test_v8i48:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vmovq %rcx, %xmm0
+; X64-AVX2-NEXT:    vmovq %rdx, %xmm1
+; X64-AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; X64-AVX2-NEXT:    vmovq %rsi, %xmm1
+; X64-AVX2-NEXT:    vmovq %rdi, %xmm2
+; X64-AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; X64-AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; X64-AVX2-NEXT:    vmovq %r9, %xmm1
+; X64-AVX2-NEXT:    vmovq %r8, %xmm2
+; X64-AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; X64-AVX2-NEXT:    vinserti128 $1, {{[0-9]+}}(%rsp), %ymm1, %ymm1
+; X64-AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [1,1,1,1]
+; X64-AVX2-NEXT:    vpand %ymm2, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vpand %ymm2, %ymm1, %ymm1
+; X64-AVX2-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; X64-AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X64-AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vmovq %xmm0, %rax
+; X64-AVX2-NEXT:    vzeroupper
+; X64-AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: test_v8i48:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512F-NEXT:    vpmovqb %zmm0, %xmm1
+; AVX512F-NEXT:    vextracti32x4 $2, %zmm0, %xmm2
+; AVX512F-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; AVX512F-NEXT:    vpextrb $8, %xmm2, %eax
+; AVX512F-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
+; AVX512F-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
+; AVX512F-NEXT:    vmovd %xmm0, %eax
+; AVX512F-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
+; AVX512F-NEXT:    vpextrb $8, %xmm0, %eax
+; AVX512F-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm0
+; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vmovd %xmm0, %eax
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: test_v8i48:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512VL-NEXT:    vpmovqb %xmm0, %xmm1
+; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX512VL-NEXT:    vmovd %xmm2, %eax
+; AVX512VL-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpextrb $8, %xmm2, %eax
+; AVX512VL-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm1
+; AVX512VL-NEXT:    vextracti32x4 $2, %zmm0, %xmm2
+; AVX512VL-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; AVX512VL-NEXT:    vpextrb $8, %xmm2, %eax
+; AVX512VL-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
+; AVX512VL-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
+; AVX512VL-NEXT:    vmovd %xmm0, %eax
+; AVX512VL-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpextrb $8, %xmm0, %eax
+; AVX512VL-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm0
+; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovd %xmm0, %eax
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
+;
+; AVX512BW-LABEL: test_v8i48:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpmovqb %zmm0, %xmm1
+; AVX512BW-NEXT:    vextracti32x4 $2, %zmm0, %xmm2
+; AVX512BW-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; AVX512BW-NEXT:    vpextrb $8, %xmm2, %eax
+; AVX512BW-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
+; AVX512BW-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
+; AVX512BW-NEXT:    vmovd %xmm0, %eax
+; AVX512BW-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpextrb $8, %xmm0, %eax
+; AVX512BW-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm0
+; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovd %xmm0, %eax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512BWVL-LABEL: test_v8i48:
+; AVX512BWVL:       # %bb.0:
+; AVX512BWVL-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpmovqb %xmm0, %xmm1
+; AVX512BWVL-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX512BWVL-NEXT:    vmovd %xmm2, %eax
+; AVX512BWVL-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
+; AVX512BWVL-NEXT:    vpextrb $8, %xmm2, %eax
+; AVX512BWVL-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm1
+; AVX512BWVL-NEXT:    vextracti32x4 $2, %zmm0, %xmm2
+; AVX512BWVL-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; AVX512BWVL-NEXT:    vpextrb $8, %xmm2, %eax
+; AVX512BWVL-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
+; AVX512BWVL-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
+; AVX512BWVL-NEXT:    vmovd %xmm0, %eax
+; AVX512BWVL-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
+; AVX512BWVL-NEXT:    vpextrb $8, %xmm0, %eax
+; AVX512BWVL-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm0
+; AVX512BWVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BWVL-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX512BWVL-NEXT:    vmovd %xmm0, %eax
+; AVX512BWVL-NEXT:    vzeroupper
+; AVX512BWVL-NEXT:    retq
+  %1 = and <8 x i48> %a0, splat (i48 1)
+  %2 = call i48 @llvm.vector.reduce.add.v8i48(<8 x i48> %1)
+  ret i48 %2
+}
+
+declare i48 @llvm.vector.reduce.add.v8i48(<8 x i48>)
 declare i64 @llvm.vector.reduce.add.v2i64(<2 x i64>)
 declare i64 @llvm.vector.reduce.add.v4i64(<4 x i64>)
 declare i64 @llvm.vector.reduce.add.v8i64(<8 x i64>)
