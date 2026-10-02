@@ -13414,6 +13414,30 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     return SDValue();
   }
+  case Intrinsic::riscv_pmqwacc_i32x2:
+  case Intrinsic::riscv_pmqrwacc_i32x2: {
+    EVT VT = Op.getValueType();
+    SDValue Acc = Op.getOperand(1);
+    SDValue Rs1 = Op.getOperand(2);
+    SDValue Rs2 = Op.getOperand(3);
+
+    if (!Subtarget.is64Bit()) {
+      unsigned Opc = IntNo == Intrinsic::riscv_pmqwacc_i32x2
+                         ? RISCVISD::PMQWACC_H
+                         : RISCVISD::PMQRWACC_H;
+      return DAG.getNode(Opc, DL, VT, Acc, Rs1, Rs2);
+    }
+
+    Rs1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16, Rs1,
+                      DAG.getUNDEF(MVT::v2i16));
+    Rs2 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16, Rs2,
+                      DAG.getUNDEF(MVT::v2i16));
+    SDValue Zip = DAG.getNode(RISCVISD::PZIP, DL, MVT::v4i16, Rs1, Rs2);
+    unsigned Opc = IntNo == Intrinsic::riscv_pmqwacc_i32x2
+                       ? RISCVISD::PMQACC_W_H01
+                       : RISCVISD::PMQRACC_W_H01;
+    return DAG.getNode(Opc, DL, VT, Acc, Zip, Zip);
+  }
   case Intrinsic::riscv_mulh_h0:
   case Intrinsic::riscv_mulh_h1:
   case Intrinsic::riscv_mulhsu_h0:
