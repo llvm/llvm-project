@@ -50,8 +50,13 @@ define i16 @loadCombine_2consecutive_BE(ptr %p) {
 ; BE-NEXT:    ret i16 [[L1]]
 ;
 ; ZBB-LABEL: @loadCombine_2consecutive_BE(
-; ZBB-NEXT:    [[L1:%.*]] = load i16, ptr [[P:%.*]], align 1
-; ZBB-NEXT:    [[TMP1:%.*]] = call i16 @llvm.bswap.i16(i16 [[L1]])
+; ZBB-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1
+; ZBB-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1
+; ZBB-NEXT:    [[L2:%.*]] = load i8, ptr [[P1]], align 1
+; ZBB-NEXT:    [[E1:%.*]] = zext i8 [[L1]] to i16
+; ZBB-NEXT:    [[E2:%.*]] = zext i8 [[L2]] to i16
+; ZBB-NEXT:    [[S1:%.*]] = shl i16 [[E1]], 8
+; ZBB-NEXT:    [[TMP1:%.*]] = or i16 [[S1]], [[E2]]
 ; ZBB-NEXT:    ret i16 [[TMP1]]
 ;
   %p1 = getelementptr i8, ptr %p, i32 1

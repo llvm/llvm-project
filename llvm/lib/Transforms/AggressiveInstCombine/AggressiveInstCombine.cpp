@@ -1582,6 +1582,10 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
   if (!Allowed)
     return false;
 
+  // Require at least 4 bytes when forming load+bswap to avoid regressions.
+  if (LOps.BSwap && LOps.LoadSize < 32)
+    return false;
+
   unsigned AS = LI1->getPointerAddressSpace();
   unsigned Fast = 0;
   Allowed = TTI.allowsMisalignedMemoryAccesses(I.getContext(), LOps.LoadSize,
