@@ -1179,6 +1179,7 @@ void ProcessGDBRemote::LoadStubBinaries() {
       bin_spec.force_symbol_search = true;
       bin_spec.notify = true;
       bin_spec.set_address_in_target = true;
+      bin_spec.is_main_executable = true;
       llvm::Expected<ModuleSP> module =
           DynamicLoader::LocateAndLoadBinary(this, bin_spec);
       if (!module)
@@ -6355,7 +6356,7 @@ llvm::Error ProcessGDBRemote::LoadModules() {
         return IterationAction::Stop;
 
       lldb::ModuleSP module_copy_sp = module_sp;
-      target.SetExecutableModule(module_copy_sp, eLoadDependentsNo);
+      target.RebuildModuleListWithExecutable(module_copy_sp, eLoadDependentsNo);
       return IterationAction::Stop;
     });
 

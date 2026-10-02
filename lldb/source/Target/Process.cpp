@@ -3502,8 +3502,13 @@ void Process::CompleteAttach() {
     }
   }
   if (new_executable_module_sp) {
-    GetTarget().SetExecutableModule(new_executable_module_sp,
-                                    eLoadDependentsNo);
+    // Replacing an executable clears the images, which would drop the
+    // modules the loader already found.
+    if (GetTarget().GetExecutableModulePointer())
+      GetTarget().RebuildModuleListWithExecutable(new_executable_module_sp,
+                                                  eLoadDependentsNo);
+    else
+      GetTarget().MarkExecutableModule(new_executable_module_sp);
     if (log) {
       ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
       LLDB_LOGF(

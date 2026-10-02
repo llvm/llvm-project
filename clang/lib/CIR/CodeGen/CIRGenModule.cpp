@@ -146,6 +146,14 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
     if (langOpts.OpenCLCPlusPlus)
       setOpenCLVersionAttr(cir::CIRDialect::getOpenCLCXXVersionAttrName(),
                            langOpts.OpenCLCPlusPlusVersion);
+    // SPIR v2.0 s2.12 requires opencl.spir.version.
+    if (getTriple().isSPIR()) {
+      unsigned spirMajor = version / 100;
+      theModule->setAttr(cir::CIRDialect::getOpenCLSPIRVersionAttrName(),
+                         cir::OpenCLVersionAttr::get(&getMLIRContext(),
+                                                     spirMajor,
+                                                     spirMajor > 1 ? 0 : 2));
+    }
   }
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
@@ -3292,7 +3300,10 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
 
 void CIRGenModule::setCIRFunctionAttributesForDefinition(
     const clang::FunctionDecl *decl, cir::FuncOp f) {
-  assert(!cir::MissingFeatures::opFuncUnwindTablesAttr());
+
+  if ((!decl || !decl->hasAttr<NoUwtableAttr>()) && codeGenOpts.UnwindTables)
+    f.setUwtable(static_cast<cir::UnwindTableKind>(codeGenOpts.UnwindTables));
+
   assert(!cir::MissingFeatures::stackProtector());
 
   if (!CodeGenUtils::hasUnwindExceptions(langOpts))

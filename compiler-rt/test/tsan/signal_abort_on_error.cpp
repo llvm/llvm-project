@@ -1,21 +1,17 @@
-// RUN: %clang_tsan -O1 %s -o %t && %env_tsan_opts=halt_on_error=1:abort_on_error=1:handle_abort=0 %deflake %run %t 2>&1 | FileCheck %s
+// RUN: %clang_tsan -O1 %s -o %t && %env_tsan_opts=halt_on_error=1:abort_on_error=1:handle_abort=0 not %run %t 2>&1 | FileCheck %s
 #include "test.h"
 #include <signal.h>
 
 int Global;
-int Sink;
 
-__attribute__((noinline)) void step(int i) {
-  Sink = i;
-  asm volatile("" : : : "memory");
-}
+__attribute__((noinline)) void step() { asm volatile(""); }
 
 static void handler(int, siginfo_t *, void *) {
   // Overflow the active 256KB TracePart (~32K events) in the SIGABRT handler
   // to trigger TraceSwitchPartImpl -> TracePartAlloc, which acquires
   // ctx->slot_mtx.
-  for (int i = 0; i < 20000; ++i)
-    step(i);
+  for (int i = 0; i < 100000; ++i)
+    step();
   write(2, "SIGNAL\n", 7);
   _exit(0);
 }
