@@ -637,7 +637,7 @@ public:
   /// \param ptr is a USM pointer to the memory to be prefetched to the device.
   /// \param numBytes is a number of bytes to be prefetched.
   /// \return an event representing prefetch operation.
-  event prefetch(void *ptr, std::size_t numBytes) {
+  event prefetch(const void *ptr, std::size_t numBytes) {
     return prefetch(ptr, numBytes, std::vector<event>{});
   }
 
@@ -649,7 +649,7 @@ public:
   /// \param numBytes is a number of bytes to be prefetched.
   /// \param depEvent is an event that specifies the kernel dependencies.
   /// \return an event representing prefetch operation.
-  event prefetch(void *ptr, std::size_t numBytes, event depEvent) {
+  event prefetch(const void *ptr, std::size_t numBytes, event depEvent) {
     return prefetch(ptr, numBytes, std::vector<event>{depEvent});
   }
 
@@ -662,7 +662,7 @@ public:
   /// \param depEvents is a vector of events that specify the kernel
   /// dependencies.
   /// \return an event representing prefetch operation.
-  event prefetch(void *ptr, std::size_t numBytes,
+  event prefetch(const void *ptr, std::size_t numBytes,
                  const std::vector<event> &depEvents);
 
 private:

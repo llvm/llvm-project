@@ -231,7 +231,7 @@ EventImplPtr QueueImpl::fill(void *Ptr, const void *Pattern,
   return createEvent();
 }
 
-EventImplPtr QueueImpl::prefetch(void *Ptr, std::size_t NumBytes,
+EventImplPtr QueueImpl::prefetch(const void *Ptr, std::size_t NumBytes,
                                  const std::vector<EventImplPtr> &DepEvents) {
   assert(MContext && "Context impl ptr can't be nullptr");
   checkEventsPlatformMatch(DepEvents, *MContext);
