@@ -17,6 +17,7 @@
 
 #include "AMDGPUAsmPrinter.h"
 #include "AMDGPU.h"
+#include "AMDGPUDwarfDebug.h"
 #include "AMDGPUHSAMetadataStreamer.h"
 #include "AMDGPUMCResourceInfo.h"
 #include "AMDGPUResourceUsageAnalysis.h"
@@ -1959,6 +1960,10 @@ void AMDGPUAsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineModuleInfoWrapperPass>();
   AU.addPreserved<MachineModuleInfoWrapperPass>();
   AsmPrinter::getAnalysisUsage(AU);
+}
+
+DwarfDebug *AMDGPUAsmPrinter::createDwarfDebug() {
+  return new AMDGPUDwarfDebug(this);
 }
 
 void AMDGPUAsmPrinter::emitResourceUsageRemarks(
