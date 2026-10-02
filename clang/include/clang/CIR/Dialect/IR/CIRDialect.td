@@ -38,6 +38,8 @@ def CIR_Dialect : Dialect {
   // operations in the IR.
   let hasConstantMaterializer = 1;
 
+  let useOpFoldResults = 1;
+
   let extraClassDeclaration = [{
     static llvm::StringRef getSourceLanguageAttrName() { return "cir.lang"; }
     static llvm::StringRef getTripleAttrName() { return "cir.triple"; }
