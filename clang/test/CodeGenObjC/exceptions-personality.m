@@ -35,7 +35,7 @@ void throwing(void) {
   @catch(...)
   {
     // CHECK-MINGW-OBJC2: call ptr @__cxa_begin_catch
-    // CHECK-MINGW-OBJC2: invoke ptr @__cxa_rethrow
+    // CHECK-MINGW-OBJC2: invoke void @__cxa_rethrow
     // CHECK-MINGW-OBJC2: invoke void @__cxa_end_catch
 
     // CHECK-MINGW-GCC: call void @objc_exception_throw
@@ -51,3 +51,5 @@ void throwing(void) {
     @throw;
   }
 }
+
+// CHECK-MINGW-OBJC2: declare{{.*}} void @__cxa_rethrow()

@@ -90,7 +90,7 @@ void tools::uefi::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   bool NoLibc = Args.hasArg(options::OPT_nolibc);
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
                    options::OPT_r)) {
-    addSanitizerRuntimes(TC, Args, CmdArgs);
+    addSanitizerRuntimes(TC, Args, CmdArgs, C);
 
     addXRayRuntime(TC, Args, CmdArgs);
 

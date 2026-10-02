@@ -51,19 +51,20 @@ public:
 
   void deallocate(pointer p, std::ptrdiff_t) { return ::operator delete(p); }
 
-  template <typename ...Args>
-  void construct(T* p, Args&& ...args) {
+  template <class U, typename... Args>
+  void construct(U* p, Args&&... args) {
     construct_called = true;
     destroy_called = false;
     allocator_id = id;
-    ::new (p) T(std::forward<Args>(args)...);
+    ::new (p) U(std::forward<Args>(args)...);
   }
 
-  void destroy(T* p) {
+  template <class U>
+  void destroy(U* p) {
     construct_called = false;
     destroy_called = true;
     allocator_id = id;
-    p->~T();
+    p->~U();
   }
 };
 
@@ -81,7 +82,8 @@ struct Private {
   int id;
 
 private:
-  friend FactoryAllocator<Private>;
+  template <class>
+  friend struct FactoryAllocator;
   Private(int i) : id(i) {}
   ~Private() {}
 };
@@ -98,8 +100,15 @@ struct FactoryAllocator : std::allocator<T> {
     typedef FactoryAllocator<T1> other;
   };
 
-  void construct(void* p, int id) { ::new (p) Private(id); }
-  void destroy(Private* p) { p->~Private(); }
+  template <class U>
+  void construct(U* p, int id) {
+    ::new (p) U(id);
+  }
+
+  template <class U>
+  void destroy(U* p) {
+    p->~U();
+  }
 };
 
 std::shared_ptr<Private> Factory::allocate() {

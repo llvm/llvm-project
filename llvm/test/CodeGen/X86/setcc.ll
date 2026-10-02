@@ -350,7 +350,7 @@ define i64 @pr63055(double %arg) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
-  %fcmp = fcmp une double 0x7FF8000000000000, %arg
+  %fcmp = fcmp une double +qnan, %arg
   %ext = zext i1 %fcmp to i64
   ret i64 %ext
 }

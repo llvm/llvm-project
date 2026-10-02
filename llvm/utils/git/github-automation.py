@@ -86,6 +86,15 @@ class IssueSubscriber:
         self._team_name = "issue-subscribers-{}".format(label_name).lower()
 
     def run(self) -> bool:
+        if self.team_name.endswith("miscompilation:undef"):
+            comment = textwrap.dedent(
+                """
+                Undef values are deprecated. Unless this miscompilation is observable in real-world programs, we don't want to fix it.
+            """
+            )
+            self.issue.create_comment(comment)
+            return True
+
         team = _get_current_team(self.team_name, self.org.get_teams())
         if not team:
             print(f"couldn't find team named {self.team_name}")
@@ -539,7 +548,7 @@ class ReleaseWorkflow:
 
     @property
     def push_url(self) -> str:
-        return "https://{}@github.com/{}".format(
+        return "https://x-access-token:{}@github.com/{}".format(
             self.branch_repo_token, self.branch_repo_name
         )
 

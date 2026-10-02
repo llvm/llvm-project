@@ -7,7 +7,7 @@
 ; RUN: rm -rf %t && split-file %s %t && cd %t
 ; RUN: llvm-as src.ll -o src.o
 ; RUN: llvm-as src.o.thinlto.ll -o src.o.thinlto.bc
-; RUN: opt -passes=memprof-context-disambiguation src.o -S -memprof-import-summary=src.o.thinlto.bc | FileCheck %s
+; RUN: opt -passes=assign-guid,memprof-context-disambiguation src.o -S -memprof-import-summary=src.o.thinlto.bc | FileCheck %s
 
 ;--- src.ll
 ; ModuleID = 'src.o'

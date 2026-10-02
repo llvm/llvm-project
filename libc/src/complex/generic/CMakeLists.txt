@@ -1,4 +1,59 @@
 add_entrypoint_object(
+  cabs
+  SRCS
+    cabs.cpp
+  HDRS
+    ../cabs.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.common
+    libc.src.__support.complex_type
+    libc.src.__support.macros.config
+    libc.src.__support.math.hypot
+)
+
+add_entrypoint_object(
+  cabsf
+  SRCS
+    cabsf.cpp
+  HDRS
+    ../cabsf.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.common
+    libc.src.__support.complex_type
+    libc.src.__support.macros.config
+    libc.src.__support.math.hypotf
+)
+
+add_entrypoint_object(
+  carg
+  SRCS
+    carg.cpp
+  HDRS
+    ../carg.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.common
+    libc.src.__support.complex_type
+    libc.src.__support.math.atan2
+)
+
+add_entrypoint_object(
+  cargf
+  SRCS
+    cargf.cpp
+  HDRS
+    ../cargf.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.common
+    libc.src.__support.complex_type
+    libc.src.__support.math.atan2f
+)
+
+
+add_entrypoint_object(
   cproj
   SRCS
     cproj.cpp

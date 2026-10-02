@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu12.00--amdpal < %s | FileCheck %s
 
 ; Test that compiler-generated WQM/WWM exec mask manipulation instructions
 ; have debug locations attached.

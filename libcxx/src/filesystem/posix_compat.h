@@ -31,7 +31,7 @@
 #include "error.h"
 #include "time_utils.h"
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 #  define WIN32_LEAN_AND_MEAN
 #  define NOMINMAX
 #  include <io.h>
@@ -47,7 +47,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 // This struct isn't defined in the normal Windows SDK, but only in the
 // Windows Driver Kit.
 struct LIBCPP_REPARSE_DATA_BUFFER {
@@ -81,7 +81,7 @@ _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
 namespace detail {
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 
 // Various C runtime header sets provide more or less of these. As we
 // provide our own implementation, undef all potential defines from the

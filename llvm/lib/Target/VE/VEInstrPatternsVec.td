@@ -130,6 +130,10 @@ def: Mask_Binary<v256i1, xor, "XORM">;
 ///// Packing support /////
 
 // v256i1 <> v512i1
+def : Pat<(v256i1 (vec_unpack_lo (v512i1 true_mask), (i32 srcvalue))),
+          (v256i1 VM0)>;
+def : Pat<(v256i1 (vec_unpack_hi (v512i1 true_mask), (i32 srcvalue))),
+          (v256i1 VM0)>;
 def : Pat<(v256i1 (vec_unpack_lo v512i1:$vm, (i32 srcvalue))),
           (EXTRACT_SUBREG $vm, sub_vm_odd)>;
 def : Pat<(v256i1 (vec_unpack_hi v512i1:$vm, (i32 srcvalue))),

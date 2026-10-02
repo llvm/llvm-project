@@ -1,0 +1,19 @@
+{
+  "configuration": {
+    "runtime_prefix": "__instrumentor_"
+  },
+  "instruction_post": {
+    "numeric": {
+      "enabled": true,
+      "type_id": true,
+      "sub_type_id": true,
+      "size": true,
+      "opcode": true,
+      "left": true,
+      "right": true,
+      "result": true,
+      "flags": true,
+      "id": true
+    }
+  }
+}

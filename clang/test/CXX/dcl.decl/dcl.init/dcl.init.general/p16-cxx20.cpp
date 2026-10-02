@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s -fexperimental-new-constant-interpreter
 
 namespace GH69890 {
     // If the initializer is (), the object is value-initialized.

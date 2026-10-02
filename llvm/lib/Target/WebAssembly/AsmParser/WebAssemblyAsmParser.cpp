@@ -305,18 +305,7 @@ public:
       : MCTargetAsmParser(STI, MII), Parser(Parser), Lexer(Parser.getLexer()),
         Is64(STI.getTargetTriple().isArch64Bit()), TC(Parser, MII, Is64),
         SkipTypeCheck(Parser.getContext().getTargetOptions().MCNoTypeCheck) {
-    FeatureBitset FBS = ComputeAvailableFeatures(STI.getFeatureBits());
-
-    // bulk-memory implies bulk-memory-opt
-    if (FBS.test(WebAssembly::FeatureBulkMemory)) {
-      FBS.set(WebAssembly::FeatureBulkMemoryOpt);
-    }
-    // reference-types implies call-indirect-overlong
-    if (FBS.test(WebAssembly::FeatureReferenceTypes)) {
-      FBS.set(WebAssembly::FeatureCallIndirectOverlong);
-    }
-
-    setAvailableFeatures(FBS);
+    setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
     // Don't type check if this is inline asm, since that is a naked sequence of
     // instructions without a function/locals decl.
     auto &SM = Parser.getSourceManager();

@@ -49,6 +49,19 @@ struct move_only_large final {
   int value;
 };
 
+// a non-movable type
+struct nonmovable {
+  nonmovable(const nonmovable&) = default;
+  nonmovable(nonmovable&&)      = delete;
+};
+
+// a non-movable type with a usable copy constructor
+// verifying that tuple's move constructor is not confused to select that copy constructor
+struct nonmovable_with_copy_ctor {
+  nonmovable_with_copy_ctor(const nonmovable_with_copy_ctor&) = default;
+  nonmovable_with_copy_ctor(nonmovable_with_copy_ctor&&)      = delete;
+};
+
 template <class Elem>
 void test_sfinae() {
     using Tup = std::tuple<Elem>;
@@ -122,6 +135,18 @@ int main(int, char**)
     {
         test_sfinae<move_only_ebo>();
         test_sfinae<move_only_large>();
+    }
+    // non-movable types
+    {
+      using Alloc = std::allocator<int>;
+      using Tag   = std::allocator_arg_t;
+
+      static_assert(!std::is_move_constructible<nonmovable>::value, "");
+      static_assert(!std::is_constructible<nonmovable, Tag, Alloc, nonmovable>::value, "");
+
+      static_assert(!std::is_move_constructible<nonmovable_with_copy_ctor>::value, "");
+      static_assert(
+          !std::is_constructible<nonmovable_with_copy_ctor, Tag, Alloc, nonmovable_with_copy_ctor>::value, "");
     }
 
   return 0;

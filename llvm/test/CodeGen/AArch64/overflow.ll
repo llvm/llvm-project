@@ -188,29 +188,3 @@ entry:
   %ret = select i1 %obit, i32 %v1, i32 %v2
   ret i32 %ret
 }
-
-
-declare {i8, i1} @llvm.sadd.with.overflow.i8(i8, i8) nounwind readnone
-declare {i16, i1} @llvm.sadd.with.overflow.i16(i16, i16) nounwind readnone
-declare {i32, i1} @llvm.sadd.with.overflow.i32(i32, i32) nounwind readnone
-declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone
-declare {i8, i1} @llvm.uadd.with.overflow.i8(i8, i8) nounwind readnone
-declare {i16, i1} @llvm.uadd.with.overflow.i16(i16, i16) nounwind readnone
-declare {i32, i1} @llvm.uadd.with.overflow.i32(i32, i32) nounwind readnone
-declare {i64, i1} @llvm.uadd.with.overflow.i64(i64, i64) nounwind readnone
-declare {i8, i1} @llvm.ssub.with.overflow.i8(i8, i8) nounwind readnone
-declare {i16, i1} @llvm.ssub.with.overflow.i16(i16, i16) nounwind readnone
-declare {i32, i1} @llvm.ssub.with.overflow.i32(i32, i32) nounwind readnone
-declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone
-declare {i8, i1} @llvm.usub.with.overflow.i8(i8, i8) nounwind readnone
-declare {i16, i1} @llvm.usub.with.overflow.i16(i16, i16) nounwind readnone
-declare {i32, i1} @llvm.usub.with.overflow.i32(i32, i32) nounwind readnone
-declare {i64, i1} @llvm.usub.with.overflow.i64(i64, i64) nounwind readnone
-declare {i8, i1} @llvm.smul.with.overflow.i8(i8, i8) nounwind readnone
-declare {i16, i1} @llvm.smul.with.overflow.i16(i16, i16) nounwind readnone
-declare {i32, i1} @llvm.smul.with.overflow.i32(i32, i32) nounwind readnone
-declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64) nounwind readnone
-declare {i8, i1} @llvm.umul.with.overflow.i8(i8, i8) nounwind readnone
-declare {i16, i1} @llvm.umul.with.overflow.i16(i16, i16) nounwind readnone
-declare {i32, i1} @llvm.umul.with.overflow.i32(i32, i32) nounwind readnone
-declare {i64, i1} @llvm.umul.with.overflow.i64(i64, i64) nounwind readnone

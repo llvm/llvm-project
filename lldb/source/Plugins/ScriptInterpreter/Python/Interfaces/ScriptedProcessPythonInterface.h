@@ -37,6 +37,8 @@ public:
 
   StructuredData::DictionarySP GetCapabilities() override;
 
+  StructuredData::DictionarySP GetAddressableBits() override;
+
   Status Attach(const ProcessAttachInfo &attach_info) override;
 
   Status Launch() override;

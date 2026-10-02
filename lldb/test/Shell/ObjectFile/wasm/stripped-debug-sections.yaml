@@ -2,7 +2,7 @@
 # RUN: lldb-test object-file %t | FileCheck %s
 
 # CHECK: Plugin name: wasm
-# CHECK: Architecture: wasm32-unknown-unknown-wasm
+# CHECK: Architecture: wasm32
 # CHECK: UUID: 
 # CHECK: Executable: false
 # CHECK: Stripped: false

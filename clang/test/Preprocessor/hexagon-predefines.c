@@ -261,3 +261,19 @@
 // CHECK-H2: #define __h2__ 1
 // CHECK-H2: #define __hexagon__ 1
 // CHECK-H2-NOT: #define __linux__
+
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-elf -x c++ %s | FileCheck \
+// RUN: %s -check-prefix CHECK-CXX-GNU
+// CHECK-CXX-GNU: #define _GNU_SOURCE 1
+
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-h2 -x c++ %s | FileCheck \
+// RUN: %s -check-prefix CHECK-H2-CXX-GNU
+// CHECK-H2-CXX-GNU: #define _GNU_SOURCE 1
+
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-qurt -x c++ %s | FileCheck \
+// RUN: %s -check-prefix CHECK-QURT-CXX-GNU
+// CHECK-QURT-CXX-GNU: #define _GNU_SOURCE 1
+
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-elf %s | FileCheck \
+// RUN: %s -check-prefix CHECK-C-GNU
+// CHECK-C-GNU-NOT: #define _GNU_SOURCE

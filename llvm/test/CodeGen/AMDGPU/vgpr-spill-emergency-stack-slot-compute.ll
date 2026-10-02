@@ -1,9 +1,9 @@
 ; XFAIL: *
-; RUN: llc -mtriple=amdgcn-- -mcpu=tahiti < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=SIMESA %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=fiji -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=VIMESA %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=GFX9MESA %s
-; RUN: llc  -mcpu=hawaii -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck -check-prefix=GCN -check-prefix=CIHSA -check-prefix=HSA %s
-; RUN: llc  -mcpu=fiji -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck -check-prefix=GCN -check-prefix=VIHSA -check-prefix=HSA %s
+; RUN: llc -mtriple=amdgpu6.00-- < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=SIMESA %s
+; RUN: llc -mtriple=amdgpu8.03-- -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=VIMESA %s
+; RUN: llc -mtriple=amdgpu9.00-- -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=GFX9MESA %s
+; RUN: llc  -mtriple=amdgpu7.01-unknown-amdhsa < %s | FileCheck -check-prefix=GCN -check-prefix=CIHSA -check-prefix=HSA %s
+; RUN: llc  -mtriple=amdgpu8.03-unknown-amdhsa < %s | FileCheck -check-prefix=GCN -check-prefix=VIHSA -check-prefix=HSA %s
 
 ; This ends up using all 256 registers and requires register
 ; scavenging which will fail to find an unsued register.

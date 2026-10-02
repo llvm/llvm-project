@@ -24,7 +24,7 @@
 #  pragma weak pthread_create // Do not create libpthread dependency
 #endif
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 #  include <windows.h>
 #endif
 
@@ -74,7 +74,7 @@ unsigned thread::hardware_concurrency() noexcept {
   if (result < 0)
     return 0;
   return static_cast<unsigned>(result);
-#elif defined(_LIBCPP_WIN32API)
+#elif defined(_WIN32)
   return static_cast<unsigned>(GetActiveProcessorCount(ALL_PROCESSOR_GROUPS));
 #else // defined(CTL_HW) && defined(HW_NCPU)
   // TODO: grovel through /proc or check cpuid on x86 and similar

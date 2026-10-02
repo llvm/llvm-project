@@ -21,6 +21,8 @@ protected:
   void AugmentRegisterInfo(
       std::vector<lldb_private::DynamicRegisterInfo::Register> &regs) override;
 
+  virtual bool Is64Bit() const = 0;
+
 private:
   using lldb_private::MCBasedABI::MCBasedABI;
 };

@@ -331,8 +331,6 @@ __tysan_instrument_mem_inst(char *dest, char *src, uint64_t size,
 
   if (needsMemMove) {
     internal_memmove((char *)destShadowDataPtr, srcShadow, size << PtrShift());
-  } else {
-    internal_memcpy((char *)destShadowDataPtr, srcShadow, size << PtrShift());
   }
 }
 

@@ -93,6 +93,8 @@ public:
   LLVM_ABI void
   visitSectionContributions(ISectionContribVisitor &Visitor) const;
 
+  LLVM_ABI PdbRaw_DbiSecContribVer getSectionContributionsVersion() const;
+
   LLVM_ABI Expected<StringRef> getECName(uint32_t NI) const;
 
 private:

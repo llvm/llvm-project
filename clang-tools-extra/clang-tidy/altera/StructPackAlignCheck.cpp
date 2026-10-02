@@ -107,7 +107,7 @@ void StructPackAlignCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   FixItHint FixIt;
-  auto *Attribute = Struct->getAttr<AlignedAttr>();
+  const auto *Attribute = Struct->getAttr<AlignedAttr>();
   const std::string NewAlignQuantity = std::to_string(NewAlign.getQuantity());
   if (Attribute) {
     FixIt = FixItHint::CreateReplacement(

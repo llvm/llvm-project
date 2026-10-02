@@ -7,16 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/fopen.h"
-#include "src/__support/File/file.h"
-
 #include "hdr/types/FILE.h"
+#include "src/__support/File/file.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(::FILE *, fopen,
                    (const char *__restrict name, const char *__restrict mode)) {
+  LIBC_CRASH_ON_NULLPTR(name);
+  LIBC_CRASH_ON_NULLPTR(mode);
   auto result = LIBC_NAMESPACE::openfile(name, mode);
   if (!result.has_value()) {
     libc_errno = result.error();

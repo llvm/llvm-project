@@ -12,10 +12,10 @@
 #include "src/__support/arg_list.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/stdio/printf_core/core_structs.h"
-#include "src/stdio/printf_core/error_mapper.h"
-#include "src/stdio/printf_core/printf_main.h"
-#include "src/stdio/printf_core/writer.h"
+#include "src/__support/printf_core/core_structs.h"
+#include "src/__support/printf_core/error_mapper.h"
+#include "src/__support/printf_core/printf_main.h"
+#include "src/__support/printf_core/writer.h"
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -31,8 +31,9 @@ LLVM_LIBC_FUNCTION(int, __snprintf_modular,
                                  // and pointer semantics, as well as handling
                                  // destruction automatically.
   va_end(vlist);
-  printf_core::DropOverflowBuffer wb(buffer, (buffsz > 0 ? buffsz - 1 : 0));
-  printf_core::Writer writer(wb);
+  printf_core::Writer writer = printf_core::make_drop_overflow_writer(
+      buffer, (buffsz > 0 ? buffsz - 1 : 0));
+  printf_core::WriteBuffer<char> &wb = writer.get_write_buffer();
 
   auto ret_val = printf_core::printf_main_modular(&writer, format, args);
   if (!ret_val.has_value()) {

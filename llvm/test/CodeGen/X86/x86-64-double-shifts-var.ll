@@ -22,6 +22,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=c86-4g-m4 | FileCheck %s --check-prefixes=BMI2-SLOW
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=c86-4g-m6 | FileCheck %s --check-prefixes=BMI2-SLOW
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=c86-4g-m7 | FileCheck %s --check-prefixes=BMI2-SLOW
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=c86-4g-m8 | FileCheck %s --check-prefixes=BMI2-SLOW
 
 ; Verify that for the X86_64 processors that are known to have poor latency
 ; double precision shift instructions we do not generate 'shld' or 'shrd'

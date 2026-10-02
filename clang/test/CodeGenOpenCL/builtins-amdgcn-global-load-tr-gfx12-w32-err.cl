@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx1200 -target-feature +wavefrontsize32 \
+// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu12.00-amd-amdhsa -target-feature +wavefrontsize32 \
 // RUN:   -verify -S -o - %s
 
 // REQUIRES: amdgpu-registered-target

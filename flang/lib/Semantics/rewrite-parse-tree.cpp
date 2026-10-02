@@ -81,7 +81,9 @@ public:
   bool Pre(parser::EndSubmoduleStmt &) { return false; }
   bool Pre(parser::EndSubroutineStmt &) { return false; }
   bool Pre(parser::EndTypeStmt &) { return false; }
+  bool Pre(parser::EndEnumerationTypeStmt &) { return false; }
 
+  bool Pre(parser::OmpObject &);
   bool Pre(parser::OmpBlockConstruct &);
   bool Pre(parser::OpenMPLoopConstruct &);
   void Post(parser::OmpBlockConstruct &);
@@ -190,6 +192,11 @@ void RewriteMutator::OpenMPSimdOnly(
         } else if (auto *ompBlock{std::get_if<parser::OmpBlockConstruct>(
                        &omp->value().u)}) {
           it = replaceInlineBlock(std::get<parser::Block>(ompBlock->t), it);
+          continue;
+        } else if (auto *ompDispatch{
+                       std::get_if<parser::OpenMPDispatchConstruct>(
+                           &omp->value().u)}) {
+          it = replaceInlineBlock(std::get<parser::Block>(ompDispatch->t), it);
           continue;
         } else if (auto *ompLoop{std::get_if<parser::OpenMPLoopConstruct>(
                        &omp->value().u)}) {
@@ -370,6 +377,22 @@ bool RewriteMutator::Pre(parser::Block &block) {
 }
 
 void RewriteMutator::Post(parser::Block &block) { this->Pre(block); }
+
+bool RewriteMutator::Pre(parser::OmpObject &object) {
+  // When parsing A(i) there is no way to tell whether it's a function call
+  // or an array element access. In OmpObject it will be preferentially
+  // parsed as FunctionReference, but once the name "A" is resolved, and it
+  // turns out to be an array, the function call in the OmpObject will need
+  // to be converted to an array element.
+  // This has to happen early, before the ExprChecker runs, or otherwise it
+  // will emit undesirable diagnostics.
+  if (auto *ref{parser::Unwrap<parser::FunctionReference>(object)}) {
+    if (CheckMisparsedArrayElement(context_, *ref)) {
+      object.u = ref->ConvertToArrayElementRef();
+    }
+  }
+  return true;
+}
 
 bool RewriteMutator::Pre(parser::OmpBlockConstruct &block) {
   if (context_.langOptions().OpenMPSimd) {

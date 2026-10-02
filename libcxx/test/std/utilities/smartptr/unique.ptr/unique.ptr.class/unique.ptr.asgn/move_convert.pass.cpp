@@ -220,7 +220,7 @@ TEST_CONSTEXPR_CXX23 void test_sfinae() {
     static_assert(!std::is_assignable<U1, U5&&>::value, "");
 
     using U1C = std::unique_ptr<const VT, GenericConvertingDeleter<0> const&>;
-    static_assert(std::is_nothrow_assignable<U1C, U1&&>::value, "");
+    static_assert(!std::is_assignable<U1C, U1&&>::value, "");
   }
   { // Test that if the deleter assignment is not valid the assignment operator
     // SFINAEs.
@@ -296,12 +296,12 @@ TEST_CONSTEXPR_CXX23 void test_noexcept() {
   {
     typedef std::unique_ptr<const VT, NCDeleter<const VT>&> APtr;
     typedef std::unique_ptr<VT, NCDeleter<const VT>&> BPtr;
-    static_assert(std::is_nothrow_assignable<APtr, BPtr>::value, "");
+    static_assert(!std::is_assignable<APtr, BPtr>::value, "");
   }
   {
     typedef std::unique_ptr<const VT, const NCConstDeleter<const VT>&> APtr;
     typedef std::unique_ptr<VT, const NCConstDeleter<const VT>&> BPtr;
-    static_assert(std::is_nothrow_assignable<APtr, BPtr>::value, "");
+    static_assert(!std::is_assignable<APtr, BPtr>::value, "");
   }
 }
 

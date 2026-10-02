@@ -11,7 +11,7 @@ func.func @alloca_with_dynamic_shape() {
 
 func.func @alloca_with_alignment() {
   // expected-error@+1 {{failed to legalize operation 'memref.alloca'}}
-  %0 = memref.alloca() {alignment = 64 : i64}: memref<4xf32>
+  %0 = memref.alloca() alignment = 64: memref<4xf32>
   return
 }
 
@@ -67,14 +67,6 @@ func.func @get_global_uninit_and_dealloc() {
 func.func @non_identity_layout() {
   // expected-error@+1 {{failed to legalize operation 'memref.alloca'}}
   %0 = memref.alloca() : memref<4x3xf32, affine_map<(d0, d1) -> (d1, d0)>>
-  return
-}
-
-// -----
-
-func.func @zero_rank() {
-  // expected-error@+1 {{failed to legalize operation 'memref.alloca'}}
-  %0 = memref.alloca() : memref<f32>
   return
 }
 

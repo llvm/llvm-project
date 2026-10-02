@@ -45,8 +45,8 @@ namespace clang::CIRGen {
 /// represented by one !u16i value, and the array provides padding to align the
 /// struct to a 4-byte alignment.
 ///
-///   !rec_S = !cir.record<struct "S" padded {!s8i, !s8i, !s8i, !u16i,
-///   !cir.array<!u8i x 3>}>
+///   !rec_S = !cir.struct<"S" packed {!s8i, !s8i, !s8i, !u16i,
+///                                   pad !cir.array<!u8i x 3>}>
 ///
 /// When generating code to access more_bits, we'll generate something
 /// essentially like this:
@@ -184,9 +184,18 @@ public:
     return fieldIdxMap.lookup(fd);
   }
 
+  bool hasCIRField(const clang::FieldDecl *fd) const {
+    fd = fd->getCanonicalDecl();
+    return fieldIdxMap.contains(fd);
+  }
+
   unsigned getNonVirtualBaseCIRFieldNo(const CXXRecordDecl *rd) const {
     assert(nonVirtualBases.count(rd) && "Invalid non-virtual base!");
     return nonVirtualBases.lookup(rd);
+  }
+
+  bool hasNonVirtualBaseCIRField(const CXXRecordDecl *rd) const {
+    return nonVirtualBases.contains(rd);
   }
 
   /// Check whether this struct can be C++ zero-initialized

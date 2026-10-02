@@ -8,7 +8,9 @@
 
 #include "clang/DependencyScanning/InProcessModuleCache.h"
 
+#include "clang/Basic/AtomicLineLogger.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
+#include "clang/Serialization/ModuleCache.h"
 #include "llvm/Support/AdvisoryLock.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Error.h"
@@ -109,7 +111,8 @@ class InProcessModuleCache : public ModuleCache {
   }
 
 public:
-  InProcessModuleCache(ModuleCacheEntries &Entries) : Entries(Entries) {}
+  InProcessModuleCache(ModuleCacheEntries &Entries, AtomicLineLogger &Logger)
+      : ModuleCache(Logger), Entries(Entries), InMemory(Logger) {}
 
   std::unique_ptr<llvm::AdvisoryLock> getLock(StringRef Filename) override {
     auto &Entry = getOrCreateEntry(Filename);
@@ -119,6 +122,7 @@ public:
   std::time_t getModuleTimestamp(StringRef Filename) override {
     auto &Timestamp = getOrCreateEntry(Filename).Timestamp;
 
+    Logger.log() << "timestamp_read: " << Filename;
     return Timestamp.load();
   }
 
@@ -126,6 +130,7 @@ public:
     // Note: This essentially replaces FS contention with mutex contention.
     auto &Timestamp = getOrCreateEntry(Filename).Timestamp;
 
+    Logger.log() << "timestamp_write: " << Filename;
     Timestamp.store(llvm::sys::toTimeT(std::chrono::system_clock::now()));
   }
 
@@ -145,6 +150,7 @@ public:
                         off_t &Size, time_t &ModTime) override {
     ModuleCacheEntry &Entry = getOrCreateEntry(Path);
     std::lock_guard<std::mutex> Lock(Entry.Mutex);
+    Logger.log() << "pcm_write: " << Path;
     if (Entry.State == ModuleCacheEntry::S_Written) {
       assert(Entry.WrittenBuffer && "Wrote PCM with no contents");
       assert(Entry.WrittenBuffer->getBuffer() == Buffer.getBuffer() &&
@@ -164,6 +170,7 @@ public:
 
   Expected<std::unique_ptr<llvm::MemoryBuffer>>
   read(StringRef FileName, off_t &Size, time_t &ModTime) override {
+    Logger.log() << "pcm_read_disk: " << FileName;
     ModuleCacheEntry &Entry = getOrCreateEntry(FileName);
     std::lock_guard<std::mutex> Lock(Entry.Mutex);
     if (Entry.State == ModuleCacheEntry::S_Unknown) {
@@ -191,6 +198,7 @@ public:
 } // namespace
 
 std::shared_ptr<ModuleCache>
-dependencies::makeInProcessModuleCache(ModuleCacheEntries &Entries) {
-  return std::make_shared<InProcessModuleCache>(Entries);
+dependencies::makeInProcessModuleCache(ModuleCacheEntries &Entries,
+                                       AtomicLineLogger &Logger) {
+  return std::make_shared<InProcessModuleCache>(Entries, Logger);
 }

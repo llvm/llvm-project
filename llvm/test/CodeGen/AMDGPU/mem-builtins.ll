@@ -1,5 +1,5 @@
 ; RUN: not llc -mtriple=r600 < %s 2>&1 | FileCheck -check-prefix=ERROR %s
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=GCN %s
 
 declare hidden i32 @memcmp(ptr addrspace(1) readonly nocapture, ptr addrspace(1) readonly nocapture, i64) #0
 declare hidden ptr addrspace(1) @memchr(ptr addrspace(1) readonly nocapture, i32, i64) #1

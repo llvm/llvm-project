@@ -21,6 +21,8 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
 
+#include "llvm/Support/FormatAdapters.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -129,6 +131,9 @@ public:
       case 'F':
         log_options |= LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION;
         break;
+      case 'j':
+        log_options |= LLDB_LOG_OPTION_JSON;
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -198,18 +203,16 @@ protected:
     else
       log_file[0] = '\0';
 
-    std::string error;
-    llvm::raw_string_ostream error_stream(error);
-    bool success = GetDebugger().EnableLog(
+    llvm::Error error = GetDebugger().EnableLog(
         channel, args.GetArgumentArrayRef(), log_file, m_options.log_options,
-        m_options.buffer_size.GetCurrentValue(), m_options.handler,
-        error_stream);
-    result.GetErrorStream() << error;
+        m_options.buffer_size.GetCurrentValue(), m_options.handler);
 
-    if (success)
-      result.SetStatus(eReturnStatusSuccessFinishNoResult);
-    else
+    if (error) {
+      result.GetErrorStream()
+          << llvm::formatv("{}", llvm::fmt_consume(std::move(error)));
       result.SetStatus(eReturnStatusFailed);
+    } else
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
   }
 
   CommandOptions m_options;
@@ -268,13 +271,11 @@ protected:
       Log::DisableAllLogChannels();
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
-      std::string error;
-      llvm::raw_string_ostream error_stream(error);
-      if (Log::DisableLogChannel(channel, args.GetArgumentArrayRef(),
-                                 error_stream))
-        result.SetStatus(eReturnStatusSuccessFinishNoResult);
+      if (llvm::Error err =
+              Log::DisableLogChannel(channel, args.GetArgumentArrayRef()))
+        result.AppendError(toString(std::move(err)));
       else
-        result.AppendError(error);
+        result.SetStatus(eReturnStatusSuccessFinishNoResult);
     }
   }
 };
@@ -308,9 +309,14 @@ protected:
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       bool success = true;
-      for (const auto &entry : args.entries())
-        success =
-            success && Log::ListChannelCategories(entry.ref(), output_stream);
+      for (const auto &entry : args.entries()) {
+        auto err_or_list = Log::ListChannelCategories(entry.ref());
+        if (!err_or_list) {
+          success = false;
+          output_stream << toString(err_or_list.takeError());
+        } else
+          output_stream << *err_or_list;
+      }
       if (success)
         result.SetStatus(eReturnStatusSuccessFinishResult);
     }

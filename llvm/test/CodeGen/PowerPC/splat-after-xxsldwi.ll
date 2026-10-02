@@ -20,3 +20,24 @@ entry:
   %foldExtExtBinop = and <4 x i8> %shift, %conv4
   ret <4 x i8> %foldExtExtBinop
 }
+
+define <4 x i8> @backsmith_pure_load(ptr %p) {
+; CHECK-LABEL: backsmith_pure_load:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi r3, r3, 16
+; CHECK-NEXT:    lxvw4x vs34, 0, r3
+; CHECK-NEXT:    ld r3, L..C1(r2) # %const.0
+; CHECK-NEXT:    lxvw4x vs36, 0, r3
+; CHECK-NEXT:    xxsldwi vs35, vs34, vs34, 1
+; CHECK-NEXT:    vspltb v2, v2, 3
+; CHECK-NEXT:    vperm v3, v3, v3, v4
+; CHECK-NEXT:    xxland vs34, vs34, vs35
+; CHECK-NEXT:    blr
+entry:
+  %v = load <8 x i32>, ptr %p
+  %shuffle = shufflevector <8 x i32> %v, <8 x i32> zeroinitializer, <4 x i32> <i32 5, i32 6, i32 7, i32 4>
+  %conv4 = trunc <4 x i32> %shuffle to <4 x i8>
+  %shift = shufflevector <4 x i8> %conv4, <4 x i8> zeroinitializer, <4 x i32> <i32 3, i32 poison, i32 poison, i32 poison>
+  %foldExtExtBinop = and <4 x i8> %shift, %conv4
+  ret <4 x i8> %foldExtExtBinop
+}

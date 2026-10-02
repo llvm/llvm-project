@@ -2964,7 +2964,7 @@ public:
     if (!module_sp->IsExecutable())
       return "";
 
-    return module_sp->GetFileSpec().GetFilename().GetString();
+    return module_sp->GetFileSpec().GetFilename().str();
   }
 
   bool StopRunningProcess() {
@@ -4347,7 +4347,8 @@ public:
 
     ListenerSP listener_sp(
         Listener::MakeListener("lldb.IOHandler.curses.Application"));
-    ConstString broadcaster_class_process(Process::GetStaticBroadcasterClass());
+    llvm::StringRef broadcaster_class_process(
+        Process::GetStaticBroadcasterClass());
     debugger.EnableForwardEvents(listener_sp);
 
     m_update_screen = true;
@@ -4424,8 +4425,7 @@ public:
             if (event_sp) {
               Broadcaster *broadcaster = event_sp->GetBroadcaster();
               if (broadcaster) {
-                // uint32_t event_type = event_sp->GetType();
-                ConstString broadcaster_class(
+                llvm::StringRef broadcaster_class(
                     broadcaster->GetBroadcasterClass());
                 if (broadcaster_class == broadcaster_class_process) {
                   m_update_screen = true;
@@ -5396,8 +5396,8 @@ public:
     if (symbol_context.comp_unit != nullptr) {
       StreamString compile_unit_stream;
       compile_unit_stream.PutCString("compile unit = ");
-      symbol_context.comp_unit->GetPrimaryFile().GetFilename().Dump(
-          &compile_unit_stream);
+      compile_unit_stream.PutCString(
+          symbol_context.comp_unit->GetPrimaryFile().GetFilename());
       details.AppendString(compile_unit_stream.GetString());
 
       if (symbol_context.function != nullptr) {
@@ -6926,11 +6926,10 @@ public:
       if (frame_sp) {
         m_sc = frame_sp->GetSymbolContext(eSymbolContextEverything);
         if (m_sc.module_sp) {
-          m_title.Printf(
-              "%s", m_sc.module_sp->GetFileSpec().GetFilename().GetCString());
-          ConstString func_name = m_sc.GetFunctionName();
-          if (func_name)
-            m_title.Printf("`%s", func_name.GetCString());
+          m_title.Format("{0}", m_sc.module_sp->GetFileSpec().GetFilename());
+          llvm::StringRef func_name = m_sc.GetFunctionName().GetStringRef();
+          if (!func_name.empty())
+            m_title.Format("`{0}", func_name);
         }
         const uint32_t frame_idx = frame_sp->GetFrameIndex();
         frame_changed = frame_idx != m_frame_idx;
@@ -7255,7 +7254,7 @@ public:
           else if (mnemonic != nullptr && operands != nullptr)
             strm.Printf("%-8s %s", mnemonic, operands);
           else if (mnemonic != nullptr)
-            strm.Printf("%s", mnemonic);
+            strm.PutCString(mnemonic);
 
           int right_pad = 1;
           window.PutCStringTruncated(

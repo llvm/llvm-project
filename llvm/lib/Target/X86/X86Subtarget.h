@@ -309,6 +309,8 @@ public:
   bool isTargetMCU() const { return TargetTriple.isOSIAMCU(); }
   bool isTargetFuchsia() const { return TargetTriple.isOSFuchsia(); }
 
+  bool isLFI() const { return TargetTriple.isLFI(); }
+
   bool isTargetWindowsMSVC() const {
     return TargetTriple.isWindowsMSVCEnvironment();
   }
@@ -334,6 +336,8 @@ public:
   bool isUEFI() const { return TargetTriple.isUEFI(); }
 
   bool isOSWindows() const { return TargetTriple.isOSWindows(); }
+
+  bool isOSWindowsOrUEFI() const { return TargetTriple.isOSWindowsOrUEFI(); }
 
   bool isTargetUEFI64() const { return Is64Bit && isUEFI(); }
 

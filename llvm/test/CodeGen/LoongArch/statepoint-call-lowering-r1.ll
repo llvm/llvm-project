@@ -1,4 +1,4 @@
-; RUN: llc --mtriple=loongarch64 --verify-machineinstrs --stop-after=prologepilog < %s | FileCheck %s
+; RUN: llc --mtriple=loongarch64 --verify-machineinstrs --stop-after=prolog-epilog < %s | FileCheck %s
 
 ;; Check that STATEPOINT instruction has an early clobber implicit def for R1.
 

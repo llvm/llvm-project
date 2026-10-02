@@ -87,6 +87,8 @@ static bool lowerTileCopy(MachineFunction &MF) {
     LiveRegUnits UsedRegs(*TRI);
     UsedRegs.addLiveOuts(MBB);
     for (MachineInstr &MI : llvm::make_early_inc_range(reverse(MBB))) {
+      if (MI.isDebugInstr())
+        continue;
       UsedRegs.stepBackward(MI);
       if (!MI.isCopy())
         continue;

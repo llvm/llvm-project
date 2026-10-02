@@ -478,7 +478,9 @@ unsigned SystemZTTIImpl::getMinPrefetchStride(unsigned NumMemAccesses,
   return ST->hasMiscellaneousExtensions3() ? 8192 : 2048;
 }
 
-unsigned SystemZTTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
+unsigned
+SystemZTTIImpl::getMaxInterleaveFactor(ElementCount VF,
+                                       bool HasUnorderedReductions) const {
   return VF.isVector() ? 8 : 1;
 }
 
@@ -554,10 +556,32 @@ static bool isFoldableRMW(const Instruction *I, Type *Ty) {
   switch (Opcode) {
   case Instruction::And:
   case Instruction::Or:
-  case Instruction::Xor:
-    if (BitWidth != 8)
+  case Instruction::Xor: {
+    if (BitWidth == 8)
+      break;
+    if (BitWidth != 16 && BitWidth != 32 && BitWidth != 64)
       return false;
+
+    auto *CI = dyn_cast<ConstantInt>(I->getOperand(1));
+    if (!CI)
+      return false;
+
+    uint64_t Val = CI->getZExtValue();
+    if (Opcode == Instruction::And) {
+      if (BitWidth == 16 && (Val & 0xff00ULL) != 0xff00ULL)
+        return false;
+      if (BitWidth == 32 && (Val & 0xffffff00ULL) != 0xffffff00ULL)
+        return false;
+      if (BitWidth == 64 &&
+          (Val & 0xffffffffffffff00ULL) != 0xffffffffffffff00ULL)
+        return false;
+    } else {
+      if (CI->getValue().getActiveBits() > 8) {
+        return false;
+      }
+    }
     break;
+  }
   case Instruction::Add:
   case Instruction::Sub:
     if (BitWidth != 32 && BitWidth != 64)
@@ -587,13 +611,13 @@ static bool isFoldableRMW(const Instruction *I, Type *Ty) {
 InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
 
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info, Args, CxtI);
-  if (CxtI && Ty && !Ty->isVectorTy() && isFoldableRMW(CxtI, Ty))
+                                         Op2Info, Args, CtxI);
+  if (CtxI && Ty && !Ty->isVectorTy() && isFoldableRMW(CtxI, Ty))
     return TTI::TCC_Free;
   // TODO: return a good value for BB-VECTORIZER that includes the
   // immediate loads, which we do not want to count for the loop
@@ -767,15 +791,14 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
 
   // Fallback to the default implementation.
   return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                       Args, CxtI);
+                                       Args, CtxI);
 }
 
-InstructionCost
-SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
-                               VectorType *SrcTy, ArrayRef<int> Mask,
-                               TTI::TargetCostKind CostKind, int Index,
-                               VectorType *SubTp, ArrayRef<const Value *> Args,
-                               const Instruction *CxtI) const {
+InstructionCost SystemZTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CtxI,
+    TTI::VectorInstrContext VIC) const {
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
   if (ST->hasVector()) {
     unsigned NumVectors = getNumVectorRegs(SrcTy);
@@ -809,7 +832,7 @@ SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
     }
   }
 
-  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index,
                                SubTp);
 }
 

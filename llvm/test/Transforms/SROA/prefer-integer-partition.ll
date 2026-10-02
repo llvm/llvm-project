@@ -23,9 +23,9 @@ define <2 x float> @subsurface_test() local_unnamed_addr {
 ; CHECK-NEXT:    [[BC2_I:%.*]] = bitcast <2 x float> [[TMP7]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32> [[BC2_I]], i64 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i32 [[TMP8]] to float
-; CHECK-NEXT:    [[DOTSROA_1_36_VEC_INSERT:%.*]] = insertelement <2 x float> zeroinitializer, float [[TMP12]], i32 0
+; CHECK-NEXT:    [[DOTSROA_1_36_VEC_INSERT:%.*]] = insertelement <2 x float> zeroinitializer, float [[TMP12]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i32 [[TMP9]] to float
-; CHECK-NEXT:    [[DOTSROA_1_40_VEC_INSERT:%.*]] = insertelement <2 x float> [[DOTSROA_1_36_VEC_INSERT]], float [[TMP11]], i32 1
+; CHECK-NEXT:    [[DOTSROA_1_40_VEC_INSERT:%.*]] = insertelement <2 x float> [[DOTSROA_1_36_VEC_INSERT]], float [[TMP11]], i64 1
 ; CHECK-NEXT:    br label %[[_ZNK4PBRT3SOAINS_10RAYSAMPLESEEIXEI_EXIT]]
 ; CHECK:       [[_ZNK4PBRT3SOAINS_10RAYSAMPLESEEIXEI_EXIT]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x float> [ [[DOTSROA_1_40_VEC_INSERT]], %[[BB4]] ], [ zeroinitializer, [[TMP0:%.*]] ]

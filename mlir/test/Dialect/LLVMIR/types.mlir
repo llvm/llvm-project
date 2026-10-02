@@ -197,3 +197,14 @@ llvm.func @ext_target() {
     %4 = "some.op"() : () -> !llvm.target<"target5", i32, f64, 0, 5>
     llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: byte
+llvm.func @byte() {
+    // CHECK: !llvm.byte<8>
+    %0 = "some.op"() : () -> !llvm.byte<8>
+    // CHECK: !llvm.byte<1>
+    %1 = "some.op"() : () -> !llvm.byte<1>
+    llvm.return
+}

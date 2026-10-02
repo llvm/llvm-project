@@ -13,12 +13,12 @@ define void @foo() {
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <2 x i1> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i1> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = and <2 x i1> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i1 [[TMP5]] to i32
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP4]], i64 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i1 [[TMP7]] to i32
 ; CHECK-NEXT:    [[I22:%.*]] = or i32 [[TMP6]], [[TMP8]]
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[I22]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[I22]], i64 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult <2 x i32> [[TMP9]], zeroinitializer
 ; CHECK-NEXT:    [[TMP11]] = select <2 x i1> [[TMP10]], <2 x i32> zeroinitializer, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[BB1]]

@@ -205,6 +205,13 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
       DebugName.write(OS);
       break;
     }
+    case dxbc::PartType::PRIV: {
+      if (!P.PrivateData)
+        continue;
+      OS.write(reinterpret_cast<char *>(P.PrivateData->data()),
+               P.PrivateData->size());
+      break;
+    }
     case dxbc::PartType::SFI0: {
       // If we don't have any flags we can continue here and the data will be
       // zeroed out.

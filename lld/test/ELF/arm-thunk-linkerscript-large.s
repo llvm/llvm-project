@@ -1,19 +1,25 @@
 // REQUIRES: arm
-// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t
-// RUN: echo "SECTIONS { \
-// RUN:       .text 0x100000 : { *(.text) } \
-// RUN:       .textl : { *(.text_l0*) *(.text_l1*) *(.text_l2*) *(.text_l3*) } \
-// RUN:       .texth : { *(.text_h0*) *(.text_h1*) *(.text_h2*) *(.text_h3*) } \
-// RUN:       }" > %t.script
-// RUN: ld.lld --script %t.script %t -o %t2
+// RUN: rm -rf %t && split-file %s %t && cd %t
+// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi a.s -o a.o
+// RUN: ld.lld --script a.lds a.o -o exe
 // The output file is large, most of it zeroes. We dissassemble only the
 // parts we need to speed up the test and avoid a large output file
-// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x100000 --stop-address=0x100012 | FileCheck --check-prefix=CHECK1 %s
-// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x200000 --stop-address=0x200008 | FileCheck --check-prefix=CHECK2 %s
-// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0xb00004 --stop-address=0xb0000e | FileCheck --check-prefix=CHECK3 %s
-// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x2100000 --stop-address=0x210001a | FileCheck --check-prefix=CHECK4 %s
-// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x2200000 --stop-address=0x220000e | FileCheck --check-prefix=CHECK5 %s
-// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x4100000 --stop-address=0x4100020 | FileCheck --check-prefix=CHECK6 %s
+// RUN: llvm-objdump --no-print-imm-hex -d exe --start-address=0x100000 --stop-address=0x100012 | FileCheck --check-prefix=CHECK1 %s
+// RUN: llvm-objdump --no-print-imm-hex -d exe --start-address=0x200000 --stop-address=0x200008 | FileCheck --check-prefix=CHECK2 %s
+// RUN: llvm-objdump --no-print-imm-hex -d exe --start-address=0xb00004 --stop-address=0xb0000e | FileCheck --check-prefix=CHECK3 %s
+// RUN: llvm-objdump --no-print-imm-hex -d exe --start-address=0x2100000 --stop-address=0x210001a | FileCheck --check-prefix=CHECK4 %s
+// RUN: llvm-objdump --no-print-imm-hex -d exe --start-address=0x2200000 --stop-address=0x220000e | FileCheck --check-prefix=CHECK5 %s
+// RUN: llvm-objdump --no-print-imm-hex -d exe --start-address=0x4100000 --stop-address=0x4100020 | FileCheck --check-prefix=CHECK6 %s
+// RUN: rm a.o exe
+
+//--- a.lds
+SECTIONS {
+  .text 0x100000 : { *(.text) }
+  .textl : { *(.text_l0*) *(.text_l1*) *(.text_l2*) *(.text_l3*) }
+  .texth : { *(.text_h0*) *(.text_h1*) *(.text_h2*) *(.text_h3*) }
+}
+
+//--- a.s
 
 // Test the range extensions in a linker script where there are several
 // OutputSections requiring range extension Thunks. We should be able to reuse

@@ -713,28 +713,6 @@ define i32 @extractelt_v32i32_idx(ptr %x, i32 zeroext %idx) nounwind {
 ; RV64M-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
 ; RV64M-NEXT:    addi sp, sp, 256
 ; RV64M-NEXT:    ret
-; VISNI-LABEL: extractelt_v32i32_idx:
-; VISNI:       # %bb.0:
-; VISNI-NEXT:    addi sp, sp, -256
-; VISNI-NEXT:    sd ra, 248(sp) # 8-byte Folded Spill
-; VISNI-NEXT:    sd s0, 240(sp) # 8-byte Folded Spill
-; VISNI-NEXT:    addi s0, sp, 256
-; VISNI-NEXT:    andi sp, sp, -128
-; VISNI-NEXT:    li a2, 32
-; VISNI-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; VISNI-NEXT:    vle32.v v8, (a0)
-; VISNI-NEXT:    vadd.vv v8, v8, v8
-; VISNI-NEXT:    andi a1, a1, 31
-; VISNI-NEXT:    slli a1, a1, 2
-; VISNI-NEXT:    mv a0, sp
-; VISNI-NEXT:    or a1, a0, a1
-; VISNI-NEXT:    vse32.v v8, (a0)
-; VISNI-NEXT:    lw a0, 0(a1)
-; VISNI-NEXT:    addi sp, s0, -256
-; VISNI-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
-; VISNI-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
-; VISNI-NEXT:    addi sp, sp, 256
-; VISNI-NEXT:    ret
   %a = load <32 x i32>, ptr %x
   %b = add <32 x i32> %a, %a
   %c = extractelement <32 x i32> %b, i32 %idx
@@ -791,30 +769,6 @@ define i32 @extractelt_v64i32_idx(<64 x i32> %a, i32 zeroext %idx) nounwind {
 ; RV64-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 384
 ; RV64-NEXT:    ret
-; VISNI-LABEL: extractelt_v64i32_idx:
-; VISNI:       # %bb.0:
-; VISNI-NEXT:    addi sp, sp, -384
-; VISNI-NEXT:    sd ra, 376(sp) # 8-byte Folded Spill
-; VISNI-NEXT:    sd s0, 368(sp) # 8-byte Folded Spill
-; VISNI-NEXT:    addi s0, sp, 384
-; VISNI-NEXT:    andi sp, sp, -128
-; VISNI-NEXT:    li a1, 32
-; VISNI-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; VISNI-NEXT:    vadd.vv v16, v16, v16
-; VISNI-NEXT:    addi a1, sp, 128
-; VISNI-NEXT:    vse32.v v16, (a1)
-; VISNI-NEXT:    vadd.vv v8, v8, v8
-; VISNI-NEXT:    andi a0, a0, 63
-; VISNI-NEXT:    mv a1, sp
-; VISNI-NEXT:    slli a0, a0, 2
-; VISNI-NEXT:    add a0, a1, a0
-; VISNI-NEXT:    vse32.v v8, (a1)
-; VISNI-NEXT:    lw a0, 0(a0)
-; VISNI-NEXT:    addi sp, s0, -384
-; VISNI-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
-; VISNI-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
-; VISNI-NEXT:    addi sp, sp, 384
-; VISNI-NEXT:    ret
   %b = add <64 x i32> %a, %a
   %c = extractelement <64 x i32> %b, i32 %idx
   ret i32 %c
@@ -932,13 +886,6 @@ define i32 @extractelt_sub_v4i32(<4 x i32> %x) {
 ; RV64-NEXT:    li a1, 13
 ; RV64-NEXT:    subw a0, a1, a0
 ; RV64-NEXT:    ret
-; VISNI-LABEL: extractelt_sub_v4i32:
-; VISNI:       # %bb.0:
-; VISNI-NEXT:    li a0, 13
-; VISNI-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; VISNI-NEXT:    ri.vextract.x.v a1, v8, 2
-; VISNI-NEXT:    subw a0, a0, a1
-; VISNI-NEXT:    ret
   %bo = sub <4 x i32> <i32 11, i32 12, i32 13, i32 14>, %x
   %ext = extractelement <4 x i32> %bo, i32 2
   ret i32 %ext
@@ -980,13 +927,6 @@ define i32 @extractelt_mul_v4i32(<4 x i32> %x) {
 ; RV64M-NEXT:    li a1, 13
 ; RV64M-NEXT:    mulw a0, a0, a1
 ; RV64M-NEXT:    ret
-; VISNI-LABEL: extractelt_mul_v4i32:
-; VISNI:       # %bb.0:
-; VISNI-NEXT:    li a0, 13
-; VISNI-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; VISNI-NEXT:    ri.vextract.x.v a1, v8, 2
-; VISNI-NEXT:    mulw a0, a1, a0
-; VISNI-NEXT:    ret
   %bo = mul <4 x i32> %x, <i32 11, i32 12, i32 13, i32 14>
   %ext = extractelement <4 x i32> %bo, i32 2
   ret i32 %ext
@@ -1064,18 +1004,6 @@ define i32 @extractelt_sdiv_v4i32(<4 x i32> %x) {
 ; RV64M-NEXT:    srai a0, a0, 34
 ; RV64M-NEXT:    add a0, a0, a1
 ; RV64M-NEXT:    ret
-; VISNI-LABEL: extractelt_sdiv_v4i32:
-; VISNI:       # %bb.0:
-; VISNI-NEXT:    lui a0, 322639
-; VISNI-NEXT:    addi a0, a0, -945
-; VISNI-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; VISNI-NEXT:    ri.vextract.x.v a1, v8, 2
-; VISNI-NEXT:    sext.w a1, a1
-; VISNI-NEXT:    mul a0, a1, a0
-; VISNI-NEXT:    srli a1, a0, 63
-; VISNI-NEXT:    srai a0, a0, 34
-; VISNI-NEXT:    add a0, a0, a1
-; VISNI-NEXT:    ret
   %bo = sdiv <4 x i32> %x, <i32 11, i32 12, i32 13, i32 14>
   %ext = extractelement <4 x i32> %bo, i32 2
   ret i32 %ext
@@ -1130,17 +1058,6 @@ define i32 @extractelt_udiv_v4i32(<4 x i32> %x) {
 ; RV64M-NEXT:    mulhu a0, a1, a0
 ; RV64M-NEXT:    srli a0, a0, 34
 ; RV64M-NEXT:    ret
-; VISNI-LABEL: extractelt_udiv_v4i32:
-; VISNI:       # %bb.0:
-; VISNI-NEXT:    lui a0, 322639
-; VISNI-NEXT:    addi a0, a0, -945
-; VISNI-NEXT:    slli a0, a0, 32
-; VISNI-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; VISNI-NEXT:    ri.vextract.x.v a1, v8, 2
-; VISNI-NEXT:    slli a1, a1, 32
-; VISNI-NEXT:    mulhu a0, a1, a0
-; VISNI-NEXT:    srli a0, a0, 34
-; VISNI-NEXT:    ret
   %bo = udiv <4 x i32> %x, <i32 11, i32 12, i32 13, i32 14>
   %ext = extractelement <4 x i32> %bo, i32 2
   ret i32 %ext
@@ -1156,15 +1073,6 @@ define float @extractelt_fadd_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    vfmv.f.s fa4, v8
 ; CHECK-NEXT:    fadd.s fa0, fa4, fa5
 ; CHECK-NEXT:    ret
-; VISNI-LABEL: extractelt_fadd_v4f32:
-; VISNI:       # %bb.0:
-; VISNI-NEXT:    lui a0, 267520
-; VISNI-NEXT:    fmv.w.x fa5, a0
-; VISNI-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; VISNI-NEXT:    vslidedown.vi v8, v8, 2
-; VISNI-NEXT:    vfmv.f.s fa4, v8
-; VISNI-NEXT:    fadd.s fa0, fa4, fa5
-; VISNI-NEXT:    ret
   %bo = fadd <4 x float> %x, <float 11.0, float 12.0, float 13.0, float 14.0>
   %ext = extractelement <4 x float> %bo, i32 2
   ret float %ext
@@ -1180,15 +1088,6 @@ define float @extractelt_fsub_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    vfmv.f.s fa4, v8
 ; CHECK-NEXT:    fsub.s fa0, fa5, fa4
 ; CHECK-NEXT:    ret
-; VISNI-LABEL: extractelt_fsub_v4f32:
-; VISNI:       # %bb.0:
-; VISNI-NEXT:    lui a0, 267520
-; VISNI-NEXT:    fmv.w.x fa5, a0
-; VISNI-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; VISNI-NEXT:    vslidedown.vi v8, v8, 2
-; VISNI-NEXT:    vfmv.f.s fa4, v8
-; VISNI-NEXT:    fsub.s fa0, fa5, fa4
-; VISNI-NEXT:    ret
   %bo = fsub <4 x float> <float 11.0, float 12.0, float 13.0, float 14.0>, %x
   %ext = extractelement <4 x float> %bo, i32 2
   ret float %ext
@@ -1204,15 +1103,6 @@ define float @extractelt_fmul_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    vfmv.f.s fa4, v8
 ; CHECK-NEXT:    fmul.s fa0, fa4, fa5
 ; CHECK-NEXT:    ret
-; VISNI-LABEL: extractelt_fmul_v4f32:
-; VISNI:       # %bb.0:
-; VISNI-NEXT:    lui a0, 267520
-; VISNI-NEXT:    fmv.w.x fa5, a0
-; VISNI-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; VISNI-NEXT:    vslidedown.vi v8, v8, 2
-; VISNI-NEXT:    vfmv.f.s fa4, v8
-; VISNI-NEXT:    fmul.s fa0, fa4, fa5
-; VISNI-NEXT:    ret
   %bo = fmul <4 x float> %x, <float 11.0, float 12.0, float 13.0, float 14.0>
   %ext = extractelement <4 x float> %bo, i32 2
   ret float %ext
@@ -1228,15 +1118,6 @@ define float @extractelt_fdiv_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    vfmv.f.s fa4, v8
 ; CHECK-NEXT:    fdiv.s fa0, fa4, fa5
 ; CHECK-NEXT:    ret
-; VISNI-LABEL: extractelt_fdiv_v4f32:
-; VISNI:       # %bb.0:
-; VISNI-NEXT:    lui a0, 267520
-; VISNI-NEXT:    fmv.w.x fa5, a0
-; VISNI-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; VISNI-NEXT:    vslidedown.vi v8, v8, 2
-; VISNI-NEXT:    vfmv.f.s fa4, v8
-; VISNI-NEXT:    fdiv.s fa0, fa4, fa5
-; VISNI-NEXT:    ret
   %bo = fdiv <4 x float> %x, <float 11.0, float 12.0, float 13.0, float 14.0>
   %ext = extractelement <4 x float> %bo, i32 2
   ret float %ext

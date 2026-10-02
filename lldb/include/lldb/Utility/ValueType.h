@@ -15,17 +15,17 @@ namespace lldb_private {
 /// Get the base value type - for when we don't care if the value is synthetic
 /// or not, or when we've already handled that case.
 constexpr lldb::ValueType GetBaseValueType(lldb::ValueType vt) {
-  return lldb::ValueType(vt & ~lldb::ValueTypeSyntheticMask);
+  return lldb::ValueType(vt & ~lldb::eValueTypeSyntheticFlag);
 }
 
 /// Given a base value type, return a version that carries the synthetic bit.
 constexpr lldb::ValueType GetSyntheticValueType(lldb::ValueType base) {
-  return lldb::ValueType(base | lldb::ValueTypeSyntheticMask);
+  return lldb::ValueType(base | lldb::eValueTypeSyntheticFlag);
 }
 
 /// Return true if vt represents a synthetic value, false if not.
 constexpr bool IsSyntheticValueType(lldb::ValueType vt) {
-  return vt & lldb::ValueTypeSyntheticMask;
+  return vt & lldb::eValueTypeSyntheticFlag;
 }
 } // namespace lldb_private
 

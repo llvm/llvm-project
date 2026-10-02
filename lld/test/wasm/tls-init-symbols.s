@@ -9,6 +9,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
 # RUN: wasm-ld -no-gc-sections --shared-memory -o %t.wasm %t.o
+# RUN: wasm-ld -no-gc-sections --shared-memory --extra-features=extended-const -o %t.extended.wasm %t.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
 # RUN: llvm-objdump -d --no-show-raw-insn --no-leading-addr %t.wasm | FileCheck %s --check-prefixes DIS
 

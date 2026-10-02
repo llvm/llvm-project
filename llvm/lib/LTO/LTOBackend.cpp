@@ -207,7 +207,7 @@ static void RegisterPassPlugins(const Config &Conf, PassBuilder &PB) {
 
   // Load requested pass plugins and let them register pass builder callbacks
   for (auto &PluginFN : Conf.PassPluginFilenames) {
-    auto PassPlugin = PassPlugin::Load(PluginFN);
+    auto PassPlugin = PassPlugin::load(PluginFN);
     if (!PassPlugin)
       reportFatalUsageError(PassPlugin.takeError());
     PassPlugin->registerPassBuilderCallbacks(PB);
@@ -335,6 +335,9 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   PB.registerFunctionAnalyses(FAM);
   PB.registerLoopAnalyses(LAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+  if (Conf.PassBuilderCallback)
+    Conf.PassBuilderCallback(PB);
 
   ModulePassManager MPM;
 
@@ -485,8 +488,6 @@ static void codegen(const Config &Conf, TargetMachine *TM,
     TargetLibraryInfoImpl TLII(Mod.getTargetTriple(), TM->Options.VecLib);
     CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
     CodeGenPasses.add(new RuntimeLibraryInfoWrapper(
-        Mod.getTargetTriple(), TM->Options.ExceptionModel,
-        TM->Options.FloatABIType, TM->Options.EABIVersion,
         TM->Options.MCOptions.ABIName, TM->Options.VecLib));
 
     // No need to make index available if the module is empty.
@@ -625,12 +626,18 @@ static void dropDeadSymbols(Module &Mod, const GVSummaryMapTy &DefinedGlobals,
                             const ModuleSummaryIndex &Index) {
   llvm::TimeTraceScope timeScope("Drop dead symbols");
   std::vector<GlobalValue*> DeadGVs;
-  for (auto &GV : Mod.global_values())
-    if (GlobalValueSummary *GVS = DefinedGlobals.lookup(GV.getGUID()))
+
+  for (auto &GV : Mod.global_values()) {
+    auto GUID = GV.getGUIDIfAssigned();
+    if (!GUID)
+      continue;
+
+    if (GlobalValueSummary *GVS = DefinedGlobals.lookup(*GUID))
       if (!Index.isGlobalValueLive(GVS)) {
         DeadGVs.push_back(&GV);
         convertToDeclaration(GV);
       }
+  }
 
   // Now that all dead bodies have been dropped, delete the actual objects
   // themselves when possible.

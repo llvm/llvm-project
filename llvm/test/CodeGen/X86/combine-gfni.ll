@@ -93,6 +93,379 @@ define <16 x i8> @gf2p8mulb_freeze(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2) 
   ret <16 x i8> %r
 }
 
+;; Nested GF2P8AFFINEQB fold
+
+define <16 x i8> @nested_fold_ashr1_rotl2(<16 x i8> %src) nounwind {
+; SSE-LABEL: nested_fold_ashr1_rotl2:
+; SSE:       # %bb.0:
+; SSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [64,32,16,8,4,2,128,128,64,32,16,8,4,2,128,128]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: nested_fold_ashr1_rotl2:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [64,32,16,8,4,2,128,128,64,32,16,8,4,2,128,128]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: nested_fold_ashr1_rotl2:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [64,32,16,8,4,2,128,128,64,32,16,8,4,2,128,128]
+; AVX512-NEXT:    retq
+  %ashr1 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 128, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 128, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2>, i8 0)
+  %rotl2 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %ashr1, <16 x i8> <i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128, i8 64>, i8 0)
+  ret <16 x i8> %rotl2
+}
+
+define <16 x i8> @nested_fold_ashr2_reverse(<16 x i8> %src) nounwind {
+; SSE-LABEL: nested_fold_ashr2_reverse:
+; SSE:       # %bb.0:
+; SSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [4,8,16,32,64,128,128,128,4,8,16,32,64,128,128,128]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: nested_fold_ashr2_reverse:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4,8,16,32,64,128,128,128,4,8,16,32,64,128,128,128]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: nested_fold_ashr2_reverse:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [4,8,16,32,64,128,128,128,4,8,16,32,64,128,128,128]
+; AVX512-NEXT:    retq
+  %ashr2 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 128, i8 128, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 128, i8 128, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4>, i8 0)
+  %rev = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %ashr2, <16 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128>, i8 0)
+  ret <16 x i8> %rev
+}
+
+define <16 x i8> @nested_fold_ashr2_splat_lsb(<16 x i8> %src) nounwind {
+; SSE-LABEL: nested_fold_ashr2_splat_lsb:
+; SSE:       # %bb.0:
+; SSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: nested_fold_ashr2_splat_lsb:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: nested_fold_ashr2_splat_lsb:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
+; AVX512-NEXT:    retq
+  %ashr2 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 128, i8 128, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 128, i8 128, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4>, i8 0)
+  %lsb = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %ashr2, <16 x i8> splat(i8 1), i8 0)
+  ret <16 x i8> %lsb
+}
+
+define <16 x i8> @nested_fold_cumulative_parity_both_directions(<16 x i8> %src) nounwind {
+; SSE-LABEL: nested_fold_cumulative_parity_both_directions:
+; SSE:       # %bb.0:
+; SSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [255,128,191,160,175,168,171,170,255,128,191,160,175,168,171,170]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: nested_fold_cumulative_parity_both_directions:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [255,128,191,160,175,168,171,170,255,128,191,160,175,168,171,170]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: nested_fold_cumulative_parity_both_directions:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [255,128,191,160,175,168,171,170,255,128,191,160,175,168,171,170]
+; AVX512-NEXT:    retq
+  %left = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1, i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1>, i8 0)
+  %right = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %left, <16 x i8> <i8 128, i8 192, i8 224, i8 240, i8 248, i8 252, i8 254, i8 255, i8 128, i8 192, i8 224, i8 240, i8 248, i8 252, i8 254, i8 255>, i8 0)
+  ret <16 x i8> %right
+}
+
+define <16 x i8> @nested_fold_reverse_reverse_reverse(<16 x i8> %src) nounwind {
+; SSE-LABEL: nested_fold_reverse_reverse_reverse:
+; SSE:       # %bb.0:
+; SSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: nested_fold_reverse_reverse_reverse:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: nested_fold_reverse_reverse_reverse:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; AVX512-NEXT:    retq
+  %rev1 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128>, i8 0)
+  %rev2 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %rev1, <16 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128>, i8 0)
+  %rev3 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %rev2, <16 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128>, i8 0)
+  ret <16 x i8> %rev3
+}
+
+define <16 x i8> @nested_fold_parity_fill_cumulative_parity(<16 x i8> %src) nounwind {
+; SSE-LABEL: nested_fold_parity_fill_cumulative_parity:
+; SSE:       # %bb.0:
+; SSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: nested_fold_parity_fill_cumulative_parity:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: nested_fold_parity_fill_cumulative_parity:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255]
+; AVX512-NEXT:    retq
+  %fill = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> splat(i8 -1), i8 0)
+  %parity = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %fill, <16 x i8> <i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1, i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1>, i8 0)
+  ret <16 x i8> %parity
+}
+
+define <16 x i8> @nested_fold_ashr1_reverse_non_zero_imm(<16 x i8> %src) nounwind {
+; SSE-LABEL: nested_fold_ashr1_reverse_non_zero_imm:
+; SSE:       # %bb.0:
+; SSE-NEXT:    gf2p8affineqb $240, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [2,4,8,16,32,64,128,128,2,4,8,16,32,64,128,128]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: nested_fold_ashr1_reverse_non_zero_imm:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vgf2p8affineqb $240, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,4,8,16,32,64,128,128,2,4,8,16,32,64,128,128]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: nested_fold_ashr1_reverse_non_zero_imm:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $240, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [2,4,8,16,32,64,128,128,2,4,8,16,32,64,128,128]
+; AVX512-NEXT:    retq
+  %ashr1 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 128, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 128, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2>, i8 15)
+  %rev = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %ashr1, <16 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128>, i8 0)
+  ret <16 x i8> %rev
+}
+
+define <16 x i8> @nested_fold_reverse_ashr1_non_zero_imm(<16 x i8> %src) nounwind {
+; SSE-LABEL: nested_fold_reverse_ashr1_non_zero_imm:
+; SSE:       # %bb.0:
+; SSE-NEXT:    gf2p8affineqb $192, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,1,2,4,8,16,32,64,1,1,2,4,8,16,32,64]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: nested_fold_reverse_ashr1_non_zero_imm:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vgf2p8affineqb $192, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,1,2,4,8,16,32,64,1,1,2,4,8,16,32,64]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: nested_fold_reverse_ashr1_non_zero_imm:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $192, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [1,1,2,4,8,16,32,64,1,1,2,4,8,16,32,64]
+; AVX512-NEXT:    retq
+  %rev = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128>, i8 129)
+  %ashr1 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %rev, <16 x i8> <i8 128, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 128, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2>, i8 0)
+  ret <16 x i8> %ashr1
+}
+
+define <16 x i8> @nested_fold_const_gen_cumulative_parity_non_zero_imm(<16 x i8> %src) nounwind {
+; SSE-LABEL: nested_fold_const_gen_cumulative_parity_non_zero_imm:
+; SSE:       # %bb.0:
+; SSE-NEXT:    gf2p8affineqb $213, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [96,32,0,32,0,32,0,32,96,32,0,32,0,32,0,32]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: nested_fold_const_gen_cumulative_parity_non_zero_imm:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vgf2p8affineqb $213, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [96,32,0,32,0,32,0,32,96,32,0,32,0,32,0,32]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: nested_fold_const_gen_cumulative_parity_non_zero_imm:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $213, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [96,32,0,32,0,32,0,32,96,32,0,32,0,32,0,32]
+; AVX512-NEXT:    retq
+  %gen = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 64, i8 32, i8 32, i8 32,i8 32, i8 32, i8 32, i8 32, i8 64, i8 32, i8 32, i8 32,i8 32, i8 32, i8 32, i8 32>, i8 127)
+  %parity = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %gen, <16 x i8> <i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1, i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1>, i8 0)
+  ret <16 x i8> %parity
+}
+
+define <16 x i8> @nested_fold_rotr2_cumulative_parity_non_zero_imm(<16 x i8> %src) nounwind {
+; SSE-LABEL: nested_fold_rotr2_cumulative_parity_non_zero_imm:
+; SSE:       # %bb.0:
+; SSE-NEXT:    gf2p8affineqb $170, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [255,253,252,124,60,28,12,4,255,253,252,124,60,28,12,4]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: nested_fold_rotr2_cumulative_parity_non_zero_imm:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vgf2p8affineqb $170, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [255,253,252,124,60,28,12,4,255,253,252,124,60,28,12,4]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: nested_fold_rotr2_cumulative_parity_non_zero_imm:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $170, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [255,253,252,124,60,28,12,4,255,253,252,124,60,28,12,4]
+; AVX512-NEXT:    retq
+  %rotr2 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 2, i8 1, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4>, i8 255)
+  %parity = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %rotr2, <16 x i8> <i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1, i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1>, i8 255)
+  ret <16 x i8> %parity
+}
+
+;; Positive case: Same number of instructions but shortens dependency chain
+define <16 x i8> @nested_fold_multi_use(<16 x i8> %src, ptr %sink) nounwind {
+; SSE-LABEL: nested_fold_multi_use:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; SSE-NEXT:    movdqa %xmm1, (%rdi)
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    gf2p8affineqb $0, %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: nested_fold_multi_use:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; AVX-NEXT:    vmovdqa %xmm1, (%rdi)
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: nested_fold_multi_use:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm1 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; AVX512-NEXT:    vmovdqa %xmm1, (%rdi)
+; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %rev = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128>, i8 0)
+  store <16 x i8> %rev, ptr %sink
+  %parity = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %rev, <16 x i8> splat(i8 -1), i8 0)
+  ret <16 x i8> %parity
+}
+
+;; Positive case: Non-splat sub-matrix can still fold
+define <16 x i8> @nested_fold_ashr12_reverse(<16 x i8> %src) nounwind {
+; SSE-LABEL: nested_fold_ashr12_reverse:
+; SSE:       # %bb.0:
+; SSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [2,4,8,16,32,64,128,128,4,8,16,32,64,128,128,128]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: nested_fold_ashr12_reverse:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,4,8,16,32,64,128,128,4,8,16,32,64,128,128,128]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: nested_fold_ashr12_reverse:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,4,8,16,32,64,128,128,4,8,16,32,64,128,128,128]
+; AVX512-NEXT:    retq
+  %ashr12 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 128, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 128, i8 128, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4>, i8 0)
+  %rev = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %ashr12, <16 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128>, i8 0)
+  ret <16 x i8> %rev
+}
+
+;; Positive case: Non-splat super-matrix can still fold with a zero immediate
+define <16 x i8> @nested_fold_cumulative_parity_fill_17(<16 x i8> %src) nounwind {
+; SSE-LABEL: nested_fold_cumulative_parity_fill_17:
+; SSE:       # %bb.0:
+; SSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [3,3,3,3,3,3,3,3,255,255,255,255,255,255,255,255]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: nested_fold_cumulative_parity_fill_17:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [3,3,3,3,3,3,3,3,255,255,255,255,255,255,255,255]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: nested_fold_cumulative_parity_fill_17:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [3,3,3,3,3,3,3,3,255,255,255,255,255,255,255,255]
+; AVX512-NEXT:    retq
+  %parity = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1, i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1>, i8 0)
+  %fill12 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %parity, <16 x i8> <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128>, i8 0)
+  ret <16 x i8> %fill12
+}
+
+;; Negative case: Non-splat super-matrix can't fold a non-zero immediate
+define <16 x i8> @nested_fold_cumulative_parity_fill_17_non_zero_imm(<16 x i8> %src) nounwind {
+; SSE-LABEL: nested_fold_cumulative_parity_fill_17_non_zero_imm:
+; SSE:       # %bb.0:
+; SSE-NEXT:    gf2p8affineqb $1, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1]
+; SSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [2,2,2,2,2,2,2,2,128,128,128,128,128,128,128,128]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: nested_fold_cumulative_parity_fill_17_non_zero_imm:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vgf2p8affineqb $1, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1]
+; AVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,2,2,2,2,2,2,2,128,128,128,128,128,128,128,128]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: nested_fold_cumulative_parity_fill_17_non_zero_imm:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $1, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1]
+; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,2,2,2,2,2,2,2,128,128,128,128,128,128,128,128]
+; AVX512-NEXT:    retq
+  %parity = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1, i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1>, i8 1)
+  %fill12 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %parity, <16 x i8> <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128>, i8 0)
+  ret <16 x i8> %fill12
+}
+
+;; Negative case: Can't fold if sub-matrix isn't constant
+define <16 x i8> @nested_fold_variable_sub(<16 x i8> %src, <16 x i8> %matrix) nounwind {
+; SSE-LABEL: nested_fold_variable_sub:
+; SSE:       # %bb.0:
+; SSE-NEXT:    gf2p8affineqb $0, %xmm1, %xmm0
+; SSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: nested_fold_variable_sub:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: nested_fold_variable_sub:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; AVX512-NEXT:    retq
+  %gfni = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> %matrix, i8 0)
+  %rev = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %gfni, <16 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128>, i8 0)
+  ret <16 x i8> %rev
+}
+
+;; Negative case: Can't fold if super-matrix isn't constant
+define <16 x i8> @nested_fold_variable_super(<16 x i8> %src, <16 x i8> %matrix) nounwind {
+; SSE-LABEL: nested_fold_variable_super:
+; SSE:       # %bb.0:
+; SSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; SSE-NEXT:    gf2p8affineqb $0, %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: nested_fold_variable_super:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; AVX-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: nested_fold_variable_super:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; AVX512-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %rev = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128>, i8 0)
+  %gfni = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %rev, <16 x i8> %matrix, i8 0)
+  ret <16 x i8> %gfni
+}
+
+;; Negative case: Can't fold with both variable
+define <16 x i8> @nested_fold_both_variable(<16 x i8> %src, <16 x i8> %submatrix, <16 x i8> %supmatrix) nounwind {
+; SSE-LABEL: nested_fold_both_variable:
+; SSE:       # %bb.0:
+; SSE-NEXT:    gf2p8affineqb $0, %xmm1, %xmm0
+; SSE-NEXT:    gf2p8affineqb $0, %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: nested_fold_both_variable:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vgf2p8affineqb $0, %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: nested_fold_both_variable:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vgf2p8affineqb $0, %xmm2, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %sub = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> %submatrix, i8 0)
+  %sup = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %sub, <16 x i8> %supmatrix, i8 0)
+  ret <16 x i8> %sup
+}
+
 declare <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8>, <16 x i8>, i8)
 declare <32 x i8> @llvm.x86.vgf2p8affineqb.256(<32 x i8>, <32 x i8>, i8)
 declare <16 x i8> @llvm.x86.vgf2p8affineinvqb.128(<16 x i8>, <16 x i8>, i8)

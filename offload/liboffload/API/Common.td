@@ -39,6 +39,14 @@ def OL_APIEXPORT : Macro {
   let alt_value = "";
 }
 
+def OL_NODISCARD : Macro {
+  let desc = "Marks a function whose result should not be discarded";
+  let condition = "(defined(__cplusplus) && __cplusplus >= 201703L) || "
+                  "(defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L)";
+  let value = "[[nodiscard]]";
+  let alt_value = "";
+}
+
 def ol_platform_handle_t : Handle {
   let desc = "Handle of a platform instance";
 }
@@ -69,6 +77,7 @@ def ol_symbol_handle_t : Handle {
 
 def ol_errc_t : Enum {
   let desc = "Defines Return/Error codes";
+  let nodiscard = 1;
   let etors =[
     Etor<"SUCCESS", "success">,
 
@@ -98,6 +107,7 @@ def ol_errc_t : Enum {
     Etor<"INVALID_DEVICE", "invalid device">,
     Etor<"INVALID_QUEUE", "invalid queue">,
     Etor<"INVALID_EVENT", "invalid event">,
+    Etor<"INVALID_CONTEXT", "invalid context">,
     Etor<"SYMBOL_KIND", "the operation does not support this symbol kind">,
   ];
 }
@@ -157,8 +167,9 @@ def olInit : Function {
   let desc = "Perform initialization of the Offload library";
   let details = [
     "This must be the first API call made by a user of the Offload library",
+    "The underlying platforms are lazily initialized on their first use",
     "Each call will increment an internal reference count that is decremented by `olShutDown`",
-    "If InitArgs is NULL, default configuration is used which initializes all available platforms"
+    "If InitArgs is NULL, default configuration is used which makes all available platforms usable"
   ];
   let params = [
     Param<"const ol_init_args_t*", "InitArgs", "Optional pointer to initialization configuration. NULL uses defaults.", PARAM_IN_OPTIONAL>
@@ -170,7 +181,8 @@ def olShutDown : Function {
   let desc = "Release the resources in use by Offload";
   let details = [
     "This decrements an internal reference count. When this reaches 0, all resources will be released",
-    "Subsequent API calls to methods other than `olInit` made after resources are released will return OL_ERRC_UNINITIALIZED"
+    "Subsequent API calls to methods other than `olInit` made after resources are released will return OL_ERRC_UNINITIALIZED",
+    "Resources still held at process exit are released before the vendor runtimes are torn down, as if the reference count reached 0. Calls balancing an earlier `olInit` still succeed afterwards"
   ];
   let params = [];
   let returns = [];

@@ -7,10 +7,10 @@
  * target region but emit a warning instead.
 */
 
-// RUN: %clang_cc1 -fopenmp -triple amdgcn-amd-amdhsa -fopenmp-is-target-device -fcxx-exceptions -fexceptions %s -verify=with -Wopenmp-target-exception -analyze
-// RUN: %clang_cc1 -fopenmp -triple amdgcn-amd-amdhsa -fopenmp-is-target-device -fcxx-exceptions -fexceptions %s -verify=with -Wopenmp-target-exception -analyze
-// RUN: %clang_cc1 -fopenmp -triple amdgcn-amd-amdhsa -fopenmp-is-target-device -fexceptions %s -verify=with -Wopenmp-target-exception -analyze
-// RUN: %clang_cc1 -fopenmp -triple amdgcn-amd-amdhsa -fopenmp-is-target-device %s -verify=with -Wopenmp-target-exception -analyze
+// RUN: %clang_cc1 -fopenmp -triple amdgpu-amd-amdhsa -fopenmp-is-target-device -fcxx-exceptions -fexceptions %s -verify=with -Wopenmp-target-exception -analyze
+// RUN: %clang_cc1 -fopenmp -triple amdgpu-amd-amdhsa -fopenmp-is-target-device -fcxx-exceptions -fexceptions %s -verify=with -Wopenmp-target-exception -analyze
+// RUN: %clang_cc1 -fopenmp -triple amdgpu-amd-amdhsa -fopenmp-is-target-device -fexceptions %s -verify=with -Wopenmp-target-exception -analyze
+// RUN: %clang_cc1 -fopenmp -triple amdgpu-amd-amdhsa -fopenmp-is-target-device %s -verify=with -Wopenmp-target-exception -analyze
 
 /**
  * The following four lines test that no warning is emitted when providing 
@@ -18,24 +18,24 @@
  * -fcxx-exceptions.
 */
 
-// RUN: %clang_cc1 -fopenmp -triple amdgcn-amd-amdhsa -fopenmp-is-target-device -fcxx-exceptions -fexceptions %s -verify=without -Wno-openmp-target-exception -analyze
-// RUN: %clang_cc1 -fopenmp -triple amdgcn-amd-amdhsa -fopenmp-is-target-device -fcxx-exceptions %s -verify=without -Wno-openmp-target-exception -analyze
-// RUN: %clang_cc1 -fopenmp -triple amdgcn-amd-amdhsa -fopenmp-is-target-device -fexceptions %s -verify=without -Wno-openmp-target-exception -analyze
-// RUN: %clang_cc1 -fopenmp -triple amdgcn-amd-amdhsa -fopenmp-is-target-device %s -verify=without -Wno-openmp-target-exception -analyze
+// RUN: %clang_cc1 -fopenmp -triple amdgpu-amd-amdhsa -fopenmp-is-target-device -fcxx-exceptions -fexceptions %s -verify=without -Wno-openmp-target-exception -analyze
+// RUN: %clang_cc1 -fopenmp -triple amdgpu-amd-amdhsa -fopenmp-is-target-device -fcxx-exceptions %s -verify=without -Wno-openmp-target-exception -analyze
+// RUN: %clang_cc1 -fopenmp -triple amdgpu-amd-amdhsa -fopenmp-is-target-device -fexceptions %s -verify=without -Wno-openmp-target-exception -analyze
+// RUN: %clang_cc1 -fopenmp -triple amdgpu-amd-amdhsa -fopenmp-is-target-device %s -verify=without -Wno-openmp-target-exception -analyze
 
 /**
  * Finally we should test that we only ignore exceptions in the OpenMP 
  * offloading tool-chain
 */
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa %s -emit-llvm-only -verify=noexceptions
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa %s -emit-llvm-only -verify=noexceptions
 
 // noexceptions-error@38 {{cannot use 'try' with exceptions disabled}}
 
 #pragma omp declare target
 int foo(void) {
 	int error = -1;
-	try { // with-warning {{target 'amdgcn-amd-amdhsa' does not support exception handling; 'catch' block is ignored}}
+	try { // with-warning {{target 'amdgpu-amd-amdhsa' does not support exception handling; 'catch' block is ignored}}
 		error = 1;
 	}
 	catch (int e){ 

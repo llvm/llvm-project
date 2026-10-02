@@ -14,12 +14,12 @@ body:             |
     ; CHECK-LABEL: name: mul_by_zero
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: $x0 = COPY [[C]](s64)
-    %0:_(s64) = COPY $x0
-    %1:_(s64) = G_CONSTANT i64 0
-    %2:_(s64) = G_MUL %0, %1(s64)
-    $x0 = COPY %2(s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: $x0 = COPY [[C]](i64)
+    %0:_(i64) = COPY $x0
+    %1:_(i64) = G_CONSTANT i64 0
+    %2:_(i64) = G_MUL %0, %1(i64)
+    $x0 = COPY %2(i64)
 ...
 ---
 name:            mul_vector_by_zero
@@ -34,14 +34,14 @@ body:             |
     ; CHECK-LABEL: name: mul_vector_by_zero
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: $q0 = COPY [[BUILD_VECTOR]](<4 x s32>)
-    %0:_(<4 x s32>) = COPY $q0
-    %1:_(s32) = G_CONSTANT i32 0
-    %2:_(<4 x s32>) = G_BUILD_VECTOR %1(s32), %1(s32), %1(s32), %1(s32)
-    %3:_(<4 x s32>) = G_MUL %0, %2(<4 x s32>)
-    $q0 = COPY %3(<4 x s32>)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32)
+    ; CHECK-NEXT: $q0 = COPY [[BUILD_VECTOR]](<4 x i32>)
+    %0:_(<4 x i32>) = COPY $q0
+    %1:_(i32) = G_CONSTANT i32 0
+    %2:_(<4 x i32>) = G_BUILD_VECTOR %1(i32), %1(i32), %1(i32), %1(i32)
+    %3:_(<4 x i32>) = G_MUL %0, %2(<4 x i32>)
+    $q0 = COPY %3(<4 x i32>)
 ...
 ---
 name:            mul_by_one
@@ -56,12 +56,12 @@ body:             |
     ; CHECK-LABEL: name: mul_by_one
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK-NEXT: $x0 = COPY [[COPY]](s64)
-    %0:_(s64) = COPY $x0
-    %1:_(s64) = G_CONSTANT i64 1
-    %2:_(s64) = G_MUL %0, %1(s64)
-    $x0 = COPY %2(s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](i64)
+    %0:_(i64) = COPY $x0
+    %1:_(i64) = G_CONSTANT i64 1
+    %2:_(i64) = G_MUL %0, %1(i64)
+    $x0 = COPY %2(i64)
 ...
 ---
 name:            fmul_by_one
@@ -72,12 +72,12 @@ body:             |
     ; CHECK-LABEL: name: fmul_by_one
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d0
-    ; CHECK-NEXT: $d0 = COPY [[COPY]](s64)
-    %0:_(s64) = COPY $d0
-    %1:_(s64) = G_FCONSTANT double 1.000000e+00
-    %2:_(s64) = G_FMUL %0, %1(s64)
-    $d0 = COPY %2(s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $d0
+    ; CHECK-NEXT: $d0 = COPY [[COPY]](f64)
+    %0:_(f64) = COPY $d0
+    %1:_(f64) = G_FCONSTANT double 1.000000e+00
+    %2:_(f64) = G_FMUL %0, %1(f64)
+    $d0 = COPY %2(f64)
 ...
 ---
 name:            fmul_vector_by_one
@@ -92,13 +92,13 @@ body:             |
     ; CHECK-LABEL: name: fmul_vector_by_one
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK-NEXT: $q0 = COPY [[COPY]](<4 x s32>)
-    %0:_(<4 x s32>) = COPY $q0
-    %1:_(s32) = G_FCONSTANT float 1.0
-    %2:_(<4 x s32>) = G_BUILD_VECTOR %1(s32), %1(s32), %1(s32), %1(s32)
-    %3:_(<4 x s32>) = G_FMUL %0, %2(<4 x s32>)
-    $q0 = COPY %3(<4 x s32>)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x f32>) = COPY $q0
+    ; CHECK-NEXT: $q0 = COPY [[COPY]](<4 x f32>)
+    %0:_(<4 x f32>) = COPY $q0
+    %1:_(f32) = G_FCONSTANT float 1.0
+    %2:_(<4 x f32>) = G_BUILD_VECTOR %1(f32), %1(f32), %1(f32), %1(f32)
+    %3:_(<4 x f32>) = G_FMUL %0, %2(<4 x f32>)
+    $q0 = COPY %3(<4 x f32>)
 ...
 ---
 name:            mul_vector_by_one
@@ -113,13 +113,13 @@ body:             |
     ; CHECK-LABEL: name: mul_vector_by_one
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK-NEXT: $q0 = COPY [[COPY]](<4 x s32>)
-    %0:_(<4 x s32>) = COPY $q0
-    %1:_(s32) = G_CONSTANT i32 1
-    %2:_(<4 x s32>) = G_BUILD_VECTOR %1(s32), %1(s32), %1(s32), %1(s32)
-    %3:_(<4 x s32>) = G_MUL %0, %2(<4 x s32>)
-    $q0 = COPY %3(<4 x s32>)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+    ; CHECK-NEXT: $q0 = COPY [[COPY]](<4 x i32>)
+    %0:_(<4 x i32>) = COPY $q0
+    %1:_(i32) = G_CONSTANT i32 1
+    %2:_(<4 x i32>) = G_BUILD_VECTOR %1(i32), %1(i32), %1(i32), %1(i32)
+    %3:_(<4 x i32>) = G_MUL %0, %2(<4 x i32>)
+    $q0 = COPY %3(<4 x i32>)
 ...
 ---
 name:            mul_by_neg_one
@@ -134,14 +134,14 @@ body:             |
     ; CHECK-LABEL: name: mul_by_neg_one
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[C]], [[COPY]]
-    ; CHECK-NEXT: $x0 = COPY [[SUB]](s64)
-    %0:_(s64) = COPY $x0
-    %1:_(s64) = G_CONSTANT i64 -1
-    %2:_(s64) = G_MUL %0, %1(s64)
-    $x0 = COPY %2(s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(i64) = G_SUB [[C]], [[COPY]]
+    ; CHECK-NEXT: $x0 = COPY [[SUB]](i64)
+    %0:_(i64) = COPY $x0
+    %1:_(i64) = G_CONSTANT i64 -1
+    %2:_(i64) = G_MUL %0, %1(i64)
+    $x0 = COPY %2(i64)
 ...
 ---
 name:            mul_vector_by_neg_one
@@ -156,14 +156,14 @@ body:             |
     ; CHECK-LABEL: name: mul_vector_by_neg_one
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(<4 x s32>) = G_SUB [[BUILD_VECTOR]], [[COPY]]
-    ; CHECK-NEXT: $q0 = COPY [[SUB]](<4 x s32>)
-    %0:_(<4 x s32>) = COPY $q0
-    %1:_(s32) = G_CONSTANT i32 -1
-    %2:_(<4 x s32>) = G_BUILD_VECTOR %1(s32), %1(s32), %1(s32), %1(s32)
-    %3:_(<4 x s32>) = G_MUL %0, %2(<4 x s32>)
-    $q0 = COPY %3(<4 x s32>)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32)
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(<4 x i32>) = G_SUB [[BUILD_VECTOR]], [[COPY]]
+    ; CHECK-NEXT: $q0 = COPY [[SUB]](<4 x i32>)
+    %0:_(<4 x i32>) = COPY $q0
+    %1:_(i32) = G_CONSTANT i32 -1
+    %2:_(<4 x i32>) = G_BUILD_VECTOR %1(i32), %1(i32), %1(i32), %1(i32)
+    %3:_(<4 x i32>) = G_MUL %0, %2(<4 x i32>)
+    $q0 = COPY %3(<4 x i32>)
 ...

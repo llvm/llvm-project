@@ -1,4 +1,4 @@
-; RUN: llc -O3 -verify-machineinstrs < %s -o /dev/null
+; RUN: llc -mtriple=hexagon -O3 -verify-machineinstrs < %s -o /dev/null
 ; REQUIRES: asserts
 ;
 ; This is a compile-only regression test (asserts build) for Hexagon.

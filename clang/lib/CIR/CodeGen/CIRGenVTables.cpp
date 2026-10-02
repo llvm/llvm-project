@@ -69,7 +69,8 @@ cir::RecordType CIRGenVTables::getVTableType(const VTableLayout &layout) {
 
   // FIXME(cir): should VTableLayout be encoded like we do for some
   // AST nodes?
-  return cgm.getBuilder().getAnonRecordTy(tys, /*incomplete=*/false);
+  return cgm.getBuilder().getAnonRecordTy(
+      tys, /*packed=*/false, cir::RecordType::getAllDataKinds(tys));
 }
 
 /// At this point in the translation unit, does it appear that can we
@@ -665,6 +666,7 @@ void CIRGenFunction::finishThunk() {
 }
 
 void CIRGenFunction::emitCallAndReturnForThunk(cir::FuncOp callee,
+                                               SourceRange fnLoc,
                                                const ThunkInfo *thunk,
                                                bool isUnprototyped) {
   assert(isa<CXXMethodDecl>(curGD.getDecl()) &&
@@ -744,13 +746,13 @@ void CIRGenFunction::emitCallAndReturnForThunk(cir::FuncOp callee,
   CIRGenCallee cirCallee = CIRGenCallee::forDirect(callee, curGD);
   mlir::Location loc = builder.getUnknownLoc();
   RValue rv = emitCall(*curFnInfo, cirCallee, slot, callArgs,
-                       /*callOrTryCall=*/nullptr, loc);
+                       /*callOrTryCall=*/nullptr, /*isMustTail=*/false, fnLoc);
 
   // Consider return adjustment if we have ThunkInfo.
   if (thunk && !thunk->Return.isEmpty())
     rv = performReturnAdjustment(*this, resultType, rv, *thunk);
   else
-    assert(!cir::MissingFeatures::opCallMustTail());
+    assert(!cir::MissingFeatures::opCallThunkTailHint());
 
   // Emit return.  For aggregate returns the call has already written the
   // result through the slot bound to returnValue above; emit the
@@ -803,7 +805,7 @@ void CIRGenFunction::emitMustTailThunk(GlobalDecl gd,
   finishThunk();
 }
 
-void CIRGenFunction::generateThunk(cir::FuncOp fn,
+void CIRGenFunction::generateThunk(cir::FuncOp fn, SourceRange fnLoc,
                                    const CIRGenFunctionInfo &fnInfo,
                                    GlobalDecl gd, const ThunkInfo &thunk,
                                    bool isUnprototyped) {
@@ -821,7 +823,7 @@ void CIRGenFunction::generateThunk(cir::FuncOp fn,
 
   // Create lexical scope - must stay alive for entire thunk generation.
   // startFunction() requires currLexScope to be set.
-  SourceLocRAIIObject locRAII(*this, fn.getLoc());
+  SourceLocRAIIObject locRAII(*this, fnLoc);
   LexicalScope lexScope{*this, fn.getLoc(), entryBb};
 
   startThunk(fn, gd, fnInfo, isUnprototyped);
@@ -838,7 +840,7 @@ void CIRGenFunction::generateThunk(cir::FuncOp fn,
   cir::FuncOp calleeOp = cgm.getAddrOfFunction(gd, ty, /*forVTable=*/true);
 
   // Make the call and return the result.
-  emitCallAndReturnForThunk(calleeOp, &thunk, isUnprototyped);
+  emitCallAndReturnForThunk(calleeOp, fnLoc, &thunk, isUnprototyped);
 }
 
 static bool shouldEmitVTableThunk(CIRGenModule &cgm, const CXXMethodDecl *md,
@@ -973,7 +975,8 @@ cir::FuncOp CIRGenVTables::maybeEmitThunk(GlobalDecl gd,
     // Normal thunk body generation.
     mlir::OpBuilder::InsertionGuard guard(cgm.getBuilder());
     CIRGenFunction cgf(cgm, cgm.getBuilder());
-    cgf.generateThunk(thunkFn, fnInfo, gd, thunkAdjustments, isUnprototyped);
+    cgf.generateThunk(thunkFn, md->getSourceRange(), fnInfo, gd,
+                      thunkAdjustments, isUnprototyped);
   }
 
   setThunkProperties(cgm, thunkAdjustments, thunkFn, forVTable, gd);

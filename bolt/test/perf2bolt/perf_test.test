@@ -21,6 +21,10 @@ RUN: cmp %t3.x2 %t3.multi.x2
 RUN: perf2bolt %t -p=%t2 -o %t2.pa -ba -ignore-build-id --profile-format=preagg
 RUN: perf2bolt %t -p=%t2.pa -o %t2.pa.fdata -ba -pa
 RUN: cmp %t2.pa.fdata %t3
+# PerfScript output: compare perf->perfscript->fdata vs perf->fdata
+RUN: perf2bolt %t -p=%t2 -o %t2.ps -ba -ignore-build-id --profile-format=perfscript
+RUN: perf2bolt %t -p=%t2.ps -o %t2.ps.fdata -ba -ps
+RUN: cmp %t2.ps.fdata %t3
 
 CHECK-NOT: PERF2BOLT-ERROR
 CHECK-NOT: !! WARNING !! This high mismatch ratio indicates the input binary is probably not the same binary used during profiling collection.

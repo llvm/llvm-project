@@ -71,6 +71,10 @@
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-none-elf -mbranch-protection=standard | FileCheck --check-prefix=CHECK-BRANCH-PROTECTION %s
 // CHECK-BRANCH-PROTECTION: -mbranch-protection=standard
 
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi --cstdlib=picolibc | FileCheck --check-prefix=CHECK-CSTDLIB %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi --cstdlib picolibc | FileCheck --check-prefix=CHECK-CSTDLIB %s
+// CHECK-CSTDLIB: --cstdlib=picolibc
+
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -mno-unaligned-access | FileCheck --check-prefix=CHECK-NO-UNALIGNED-ACCESS %s
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -mstrict-align | FileCheck --check-prefix=CHECK-NO-UNALIGNED-ACCESS %s
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi | FileCheck --check-prefix=CHECK-NO-UNALIGNED-ACCESS %s
@@ -154,3 +158,16 @@
 // CHECK-OPT-OS: -Os
 // CHECK-OPT-NOT: -Oz
 // CHECK-OPT-NOT: -Os
+
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf                                                         | FileCheck --check-prefix=CHECK-CF-PROTECTION-NONE --implicit-check-not="mcf-branch-label-scheme" %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -fcf-protection=none                                   | FileCheck --check-prefix=CHECK-CF-PROTECTION-NONE --implicit-check-not="mcf-branch-label-scheme" %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -fcf-protection=return                                 | FileCheck --check-prefix=CHECK-CF-PROTECTION-RETURN --implicit-check-not="mcf-branch-label-scheme" %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -fcf-protection=branch -mcf-branch-label-scheme=unlabeled | FileCheck --check-prefix=CHECK-CF-PROTECTION-BRANCH %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -fcf-protection=full   -mcf-branch-label-scheme=unlabeled | FileCheck --check-prefix=CHECK-CF-PROTECTION-FULL   %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -fcf-protection        -mcf-branch-label-scheme=unlabeled | FileCheck --check-prefix=CHECK-CF-PROTECTION-FULL   %s
+// CHECK-CF-PROTECTION-NONE: -fcf-protection=none
+// CHECK-CF-PROTECTION-RETURN: -fcf-protection=return
+// CHECK-CF-PROTECTION-BRANCH: -fcf-protection=branch
+// CHECK-CF-PROTECTION-BRANCH: -mcf-branch-label-scheme=unlabeled
+// CHECK-CF-PROTECTION-FULL: -fcf-protection=full
+// CHECK-CF-PROTECTION-FULL: -mcf-branch-label-scheme=unlabeled

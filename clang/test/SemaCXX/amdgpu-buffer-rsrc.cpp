@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -fsyntax-only -verify -std=gnu++11 -triple amdgcn -Wno-unused-value %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=gnu++11 -triple amdgpu -Wno-unused-value %s
 
 void foo() {
   int n = 100;

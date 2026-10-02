@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-gnu-linux -aux-triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 -triple x86_64-unknown-gnu-linux -aux-triple amdgpu-amd-amdhsa \
 // RUN:   -verify -fsyntax-only -x hip %s
 
 #include "Inputs/cuda.h"

@@ -45,6 +45,14 @@ define void @powi_i16(float %V, ptr%P) {
   ret void
 }
 
+define float @powi_const_fold() {
+; CHECK-LABEL: @powi_const_fold(
+; CHECK-NEXT:    ret float f0x41E8FBBA
+;
+  %r = tail call float @llvm.powi.f32.i16(float 1.234567, i16 16) nounwind
+  ret float %r
+}
+
 define i32 @test_ctpop_poison(i32 %a) {
 ; CHECK-LABEL: @test_ctpop_poison(
 ; CHECK-NEXT:    ret i32 poison

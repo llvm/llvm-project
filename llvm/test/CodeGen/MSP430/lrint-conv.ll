@@ -18,43 +18,36 @@
 
 define ITy @test_lrint_ixx_f32(float %x) nounwind {
 ; CHECK-LABEL: test_lrint_ixx_f32:
-; CHECK:         call #lrintf
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    call #lrintf
+; CHECK-NEXT:    ret
   %res = tail call ITy @llvm.lrint.ITy.f32(float %x)
   ret ITy %res
 }
 
 define ITy @test_llrint_ixx_f32(float %x) nounwind {
 ; CHECK-LABEL: test_llrint_ixx_f32:
-; CHECK:         call #llrintf
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    call #llrintf
+; CHECK-NEXT:    ret
   %res = tail call ITy @llvm.llrint.ITy.f32(float %x)
   ret ITy %res
 }
 
 define ITy @test_lrint_ixx_f64(double %x) nounwind {
 ; CHECK-LABEL: test_lrint_ixx_f64:
-; CHECK:         call #lrint
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    call #lrint
+; CHECK-NEXT:    ret
   %res = tail call ITy @llvm.lrint.ITy.f64(double %x)
   ret ITy %res
 }
 
 define ITy @test_llrint_ixx_f64(double %x) nounwind {
 ; CHECK-LABEL: test_llrint_ixx_f64:
-; CHECK:         call #llrint
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    call #llrint
+; CHECK-NEXT:    ret
   %res = tail call ITy @llvm.llrint.ITy.f64(double %x)
-  ret ITy %res
-}
-
-; FIXME(#44744): incorrect libcall
-define ITy @test_lrint_ixx_f128(fp128 %x) nounwind {
-; CHECK-LABEL: test_lrint_ixx_f128:
-; CHECK:         call #lrintl
-  %res = tail call ITy @llvm.lrint.ITy.f128(fp128 %x)
-  ret ITy %res
-}
-
-define ITy @test_llrint_ixx_f128(fp128 %x) nounwind {
-; CHECK-LABEL: test_llrint_ixx_f128:
-; CHECK:         call #llrintl
-  %res = tail call ITy @llvm.llrint.ITy.f128(fp128 %x)
   ret ITy %res
 }

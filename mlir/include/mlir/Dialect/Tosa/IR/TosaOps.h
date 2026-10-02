@@ -25,6 +25,8 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
 
+#include <string>
+
 //===----------------------------------------------------------------------===//
 // TOSA dialect and structs includes.
 //===----------------------------------------------------------------------===//
@@ -32,12 +34,6 @@
 #include "mlir/Dialect/Tosa/IR/TosaEnums.h.inc"
 #include "mlir/Dialect/Tosa/IR/TosaOpsDialect.h.inc"
 #include "mlir/Transforms/DialectConversion.h"
-
-//===----------------------------------------------------------------------===//
-// TOSA operation validation includes.
-//===----------------------------------------------------------------------===//
-
-#include "mlir/Dialect/Tosa/IR/TosaAvailability.h.inc"
 
 namespace mlir {
 class PatternRewriter;
@@ -134,6 +130,22 @@ RankedTensorType getVariableType(VariableOp variableOp);
 
 // Returns the bitwidth of a TOSA tensor element type
 unsigned getBitWidth(Type type);
+
+// Returns the storage element type for a given type
+Type getStorageElementTypeOrSelf(Type type);
+
+// Returns the storage element type for a given value
+Type getStorageElementTypeOrSelf(Value value);
+
+// Verify that a given type is a valid block scaled tensor type
+LogicalResult verifyBlockScaledTensorType(
+    mlir::Type type,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError = nullptr,
+    bool allowScaleValues = false);
+
+// Returns a diagnostic suffix string for a type verification failure, or
+// empty string if the type is valid
+std::string getTosaTensorTypeErrorMessage(mlir::Type type);
 
 } // namespace tosa
 } // namespace mlir

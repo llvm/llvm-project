@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: can-test-hardening-assertions-fast
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// REQUIRES: libcpp-hardening-mode={{fast|extensive|debug}}
-// XFAIL:libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // constexpr __iterator& operator+=(difference_type __n)
 

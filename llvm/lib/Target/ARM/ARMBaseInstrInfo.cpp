@@ -26,7 +26,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -451,7 +450,7 @@ bool ARMBaseInstrInfo::PredicateInstruction(
       assert((MI.getOperand(1).isDead() ||
               MI.getOperand(1).getReg() != ARM::CPSR) &&
              "if conversion tried to stop defining used CPSR");
-      MI.getOperand(1).setReg(ARM::NoRegister);
+      MI.getOperand(1).setReg(Register());
     }
 
     return true;
@@ -624,6 +623,11 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
       return 4;
     else
       return 2;
+  case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
+  case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
+  case TargetOpcode::PATCHABLE_TAIL_CALL:
+    // Size of xray sled: Branch + 6 nops.
+    return 28;
   case ARM::CONSTPOOL_ENTRY:
   case ARM::JUMPTABLE_INSTS:
   case ARM::JUMPTABLE_ADDRS:
@@ -642,6 +646,10 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
       Size = alignTo(Size, 4);
     return Size;
   }
+  case ARM::Int_eh_sjlj_longjmp:
+    return Subtarget.isTargetDarwin() || Subtarget.isTargetWindows() ? 16 : 20;
+  case ARM::tInt_eh_sjlj_longjmp:
+    return Subtarget.isTargetDarwin() || Subtarget.isTargetWindows() ? 10 : 12;
   }
 }
 
@@ -921,6 +929,22 @@ ARMBaseInstrInfo::describeLoadedValue(const MachineInstr &MI,
       return std::nullopt;
   }
   return TargetInstrInfo::describeLoadedValue(MI, Reg);
+}
+
+const MachineOperand &
+ARMBaseInstrInfo::getCalleeOperand(const MachineInstr &MI) const {
+  assert(MI.isCall());
+
+  switch (MI.getOpcode()) {
+  case ARM::tBL:
+  case ARM::tBLXi:
+  case ARM::tBLXr:
+  case ARM::tBLXr_noip:
+  case ARM::tBLXNSr:
+    return MI.getOperand(2);
+  default:
+    return TargetInstrInfo::getCalleeOperand(MI);
+  }
 }
 
 const MachineInstrBuilder &ARMBaseInstrInfo::AddDReg(MachineInstrBuilder &MIB,
@@ -5694,6 +5718,15 @@ static bool isLRAvailable(const TargetRegisterInfo &TRI,
   return !Live;
 }
 
+/// Return true if \p MI is a call instruction that the outliner can rewrite as
+/// a tail call.
+static bool CanTransformInstrIntoTailCall(const MachineInstr &MI) {
+  auto Opcode = MI.getOpcode();
+  return (Opcode == ARM::BL || Opcode == ARM::BLX || Opcode == ARM::BLX_noip ||
+          Opcode == ARM::tBL || Opcode == ARM::tBLXi || Opcode == ARM::tBLXr ||
+          Opcode == ARM::tBLXr_noip);
+}
+
 std::optional<std::unique_ptr<outliner::OutlinedFunction>>
 ARMBaseInstrInfo::getOutliningCandidateInfo(
     const MachineModuleInfo &MMI,
@@ -5788,8 +5821,6 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
   // At this point, we have only "safe" candidates to outline. Figure out
   // frame + call instruction information.
 
-  unsigned LastInstrOpcode = RepeatedSequenceLocs[0].back().getOpcode();
-
   // Helper lambda which sets call information for every candidate.
   auto SetCandidateCallInfo =
       [&RepeatedSequenceLocs](unsigned CallID, unsigned NumBytesForCall) {
@@ -5825,11 +5856,7 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
     FrameID = MachineOutlinerTailCall;
     NumBytesToCreateFrame = Costs.FrameTailCall;
     SetCandidateCallInfo(MachineOutlinerTailCall, Costs.CallTailCall);
-  } else if (LastInstrOpcode == ARM::BL || LastInstrOpcode == ARM::BLX ||
-             LastInstrOpcode == ARM::BLX_noip || LastInstrOpcode == ARM::tBL ||
-             LastInstrOpcode == ARM::tBLXr ||
-             LastInstrOpcode == ARM::tBLXr_noip ||
-             LastInstrOpcode == ARM::tBLXi) {
+  } else if (CanTransformInstrIntoTailCall(RepeatedSequenceLocs[0].back())) {
     FrameID = MachineOutlinerThunk;
     NumBytesToCreateFrame = Costs.FrameThunk;
     SetCandidateCallInfo(MachineOutlinerThunk, Costs.CallThunk);
@@ -6169,9 +6196,7 @@ ARMBaseInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
     // as a tail-call. Explicitly list the call instructions we know about so
     // we don't get unexpected results with call pseudo-instructions.
     auto UnknownCallOutlineType = outliner::InstrType::Illegal;
-    if (Opc == ARM::BL || Opc == ARM::tBL || Opc == ARM::BLX ||
-        Opc == ARM::BLX_noip || Opc == ARM::tBLXr || Opc == ARM::tBLXr_noip ||
-        Opc == ARM::tBLXi)
+    if (CanTransformInstrIntoTailCall(MI))
       UnknownCallOutlineType = outliner::InstrType::LegalTerminator;
 
     if (!Callee)
@@ -6580,7 +6605,7 @@ public:
           .addReg(LoopDec->getOperand(0).getReg())
           .addImm(0)
           .addImm(ARMCC::AL)
-          .addReg(ARM::NoRegister);
+          .addReg(Register());
       Cond.push_back(MachineOperand::CreateImm(ARMCC::EQ));
       Cond.push_back(MachineOperand::CreateReg(ARM::CPSR, false));
       return {};

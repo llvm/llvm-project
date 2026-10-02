@@ -1,4 +1,4 @@
-; RUN: opt %s -mtriple amdgcn-- -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
+; RUN: opt %s -mtriple amdgpu7.00-- -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
 
 ; These tests have identical control flow graphs with slight changes
 ; that affect cycle-info. There is a minor functional difference in
@@ -127,7 +127,7 @@ exit:
 ;;
 ;; CHECK-LABEL: UniformityInfo for function 'headers_b_t':
 ;; CHECK: CYCLES ASSUMED DIVERGENT:
-;; CHECK:   depth=2: entries(T P) S Q R
+;; CHECK:   depth=2: entries(T P) Q R S
 ;; CHECK-NOT: CYCLES WITH DIVERGENT EXIT:
 
 define amdgpu_kernel void @headers_b_t(i32 %a, i32 %b, i32 %c) {
@@ -185,7 +185,7 @@ exit:
 ;;
 ;; CHECK-LABEL: UniformityInfo for function 'headers_a_t':
 ;; CHECK: CYCLES ASSUMED DIVERGENT:
-;; CHECK:   depth=1: entries(A B) D T S Q P R C
+;; CHECK:   depth=1: entries(A B) D C T P Q R S
 ;; CHECK-NOT: CYCLES WITH DIVERGENT EXIT:
 
 define amdgpu_kernel void @headers_a_t(i32 %a, i32 %b, i32 %c) {

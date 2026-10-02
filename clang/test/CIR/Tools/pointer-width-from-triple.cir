@@ -1,0 +1,22 @@
+// RUN: cir-translate --cir-to-llvmir --target nvptx-nvidia-cuda --disable-cc-lowering %s -o %t.nvptx.ll
+// RUN: FileCheck %s -input-file %t.nvptx.ll -check-prefix=NVPTX
+// RUN: cir-translate --cir-to-llvmir --target x86_64-unknown-linux-gnu --disable-cc-lowering %s -o %t.x86.ll
+// RUN: FileCheck %s -input-file %t.x86.ll -check-prefix=X86
+
+// A data layout derived from the target triple must carry the #cir.ptr_spec
+// entry, just as CIRGen emits it. cir.ptr_diff bakes the pointee size into
+// the emitted division: 4 bytes on nvptx, not the 64-bit fallback of 8.
+
+!s64i = !cir.int<s, 64>
+module {
+  cir.func @f(%arg0: !cir.ptr<!cir.ptr<!s64i>>, %arg1: !cir.ptr<!cir.ptr<!s64i>>) -> !s64i {
+    %0 = cir.ptr_diff %arg0, %arg1 : !cir.ptr<!cir.ptr<!s64i>> -> !s64i
+    cir.return %0 : !s64i
+  }
+}
+
+// NVPTX-LABEL: define i64 @f
+// NVPTX: sdiv exact i64 %{{.*}}, 4
+
+// X86-LABEL: define i64 @f
+// X86: sdiv exact i64 %{{.*}}, 8

@@ -227,7 +227,7 @@ TEST_F(OnDiskCASLoggerTest, MultiProcess) {
 
   for (auto &PI : PIs) {
     // Note: this is typically <1 second, but account for slow CI systems.
-    auto Result = Wait(PI, /*Timeout=*/15, &Error);
+    auto Result = llvm::sys::Wait(PI, /*Timeout=*/15, &Error);
     ASSERT_TRUE(Error.empty()) << Error;
     ASSERT_EQ(Result.Pid, PI.Pid);
     ASSERT_EQ(Result.ReturnCode, 0);

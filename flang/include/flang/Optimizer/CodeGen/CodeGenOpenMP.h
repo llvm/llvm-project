@@ -10,7 +10,6 @@
 #define FORTRAN_OPTIMIZER_CODEGEN_CODEGENOPENMP_H
 
 #include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassRegistry.h"
 
 namespace fir {
 class LLVMTypeConverter;

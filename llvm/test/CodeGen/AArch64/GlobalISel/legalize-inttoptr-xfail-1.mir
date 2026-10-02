@@ -30,8 +30,8 @@ body:             |
     liveins: $x0
 
     %0:_(p0) = COPY $x0
-    %1:_(s64) = G_INTTOPTR %0(p0)
-    $x0 = COPY %1(s64)
+    %1:_(i64) = G_INTTOPTR %0(p0)
+    $x0 = COPY %1(i64)
     RET_ReallyLR implicit $x0
 
 ...

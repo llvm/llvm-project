@@ -47,6 +47,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
@@ -56,6 +57,8 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SplitModuleByCategory.h"
+
+#include <mutex>
 
 using namespace llvm;
 using namespace llvm::opt;
@@ -98,24 +101,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "SYCLLinkOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "SYCLLinkOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-constexpr OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "SYCLLinkOpts.inc"
-#undef OPTION
-};
-
-class LinkerOptTable : public opt::GenericOptTable {
+class LinkerOptTable : public opt::OptTable {
 public:
-  LinkerOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  LinkerOptTable() : opt::OptTable(optionTables()) {}
 };
 } // namespace
 
@@ -181,8 +172,11 @@ static void printCommands(ArrayRef<StringRef> CmdArgs) {
 /// Execute the command \p ExecutablePath with the arguments \p Args.
 static Error executeCommands(StringRef ExecutablePath,
                              ArrayRef<StringRef> Args) {
-  if (Verbose || DryRun)
+  if (Verbose || DryRun) {
+    static std::mutex PrintMutex;
+    std::lock_guard<std::mutex> Lock(PrintMutex);
     printCommands(Args);
+  }
 
   if (DryRun)
     return Error::success();
@@ -652,7 +646,7 @@ static Error runCodeGen(StringRef File, const llvm::Triple &TargetTriple,
 
   // Set data layout if needed.
   if (M->getDataLayout().isDefault())
-    M->setDataLayout(TM->createDataLayout());
+    M->setDataLayout(TargetTriple.computeDataLayout());
 
   // Open output file for writing.
   int FD = -1;
@@ -725,8 +719,11 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
   CmdArgs.push_back("-device");
   CmdArgs.push_back(Arch);
 
-  StringRef ExtraArgs = Args.getLastArgValue(OPT_ocloc_options_EQ);
-  ExtraArgs.split(CmdArgs, " ", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  // getAllArgValues returns a temporary vector; retain it so the StringRefs
+  // remain valid through the executeCommands call below.
+  std::vector<std::string> ExtraArgsStorage =
+      Args.getAllArgValues(OPT_ocloc_options_EQ);
+  llvm::append_range(CmdArgs, ExtraArgsStorage);
 
   CmdArgs.push_back("-output");
   CmdArgs.push_back(OutputFile);
@@ -747,9 +744,9 @@ static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
                            const ArgList &Args) {
   StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
   OffloadArch OA = StringToOffloadArch(Arch);
-  if (IsIntelGPUOffloadArch(OA))
+  if (OA.isIntelGPU())
     return runAOTCompileIntelGPU(InputFile, OutputFile, Args);
-  if (IsIntelCPUOffloadArch(OA))
+  if (OA.isIntelCPU())
     return runAOTCompileIntelCPU(InputFile, OutputFile, Args);
 
   llvm_unreachable("runAOTCompile dispatched on unsupported arch");
@@ -769,20 +766,20 @@ enum class IRSplitMode {
 /// Parses the value of \p --module-split-mode.
 static std::optional<IRSplitMode> convertStringToSplitMode(StringRef S) {
   return StringSwitch<std::optional<IRSplitMode>>(S)
-      .Case("source", IRSplitMode::SPLIT_PER_TU)
+      .Case("translation_unit", IRSplitMode::SPLIT_PER_TU)
       .Case("kernel", IRSplitMode::SPLIT_PER_KERNEL)
-      .Case("none", IRSplitMode::SPLIT_NONE)
+      .Case("link_unit", IRSplitMode::SPLIT_NONE)
       .Default(std::nullopt);
 }
 
 static StringRef splitModeToString(IRSplitMode Mode) {
   switch (Mode) {
   case IRSplitMode::SPLIT_PER_TU:
-    return "source";
+    return "translation_unit";
   case IRSplitMode::SPLIT_PER_KERNEL:
     return "kernel";
   case IRSplitMode::SPLIT_NONE:
-    return "none";
+    return "link_unit";
   }
   llvm_unreachable("bad split mode");
 }
@@ -921,6 +918,33 @@ static bool canSkipModuleSplit(IRSplitMode Mode, const Module &M,
   });
 }
 
+/// AOT-compiles every JIT image in \p SplitModules concurrently and swaps each
+/// module's path to point at the compiled object.
+static Error aotCompileSplitModules(SmallVectorImpl<SplitModule> &SplitModules,
+                                    const ArgList &Args) {
+  // Each worker thread writes only its own index, so this is race-free.
+  SmallVector<std::string, 0> AOTFiles(SplitModules.size());
+  for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
+    // Reuse the codegen file's unique name so the AOT output can be
+    // correlated with the SPIR-V file it was compiled from.
+    SmallString<128> AOTFile(SplitModules[I].ModuleFilePath);
+    sys::path::replace_extension(AOTFile, "out");
+    TempFiles.push_back(AOTFile);
+    AOTFiles[I] = std::string(TempFiles.back());
+  }
+
+  if (Error Err = parallelForEachError(
+          llvm::seq<size_t>(0, SplitModules.size()), [&](size_t I) -> Error {
+            return runAOTCompile(SplitModules[I].ModuleFilePath, AOTFiles[I],
+                                 Args);
+          }))
+    return Err;
+
+  for (size_t I = 0, E = AOTFiles.size(); I != E; ++I)
+    SplitModules[I].ModuleFilePath = AOTFiles[I];
+  return Error::success();
+}
+
 /// Performs the following steps:
 /// 1. Link all input bitcode files together with library files.
 /// 2. Optionally split the linked module according to the requested
@@ -975,15 +999,19 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
     SplitModules = std::move(*SplitModulesOrErr);
   }
 
-  bool IsAOTCompileNeeded = IsIntelOffloadArch(
-      StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ)));
+  bool IsAOTCompileNeeded =
+      StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ)).isIntel();
 
   StringRef OutputFileNameExt = ".spv";
 
   // Code generation step.
+  StringRef Stem = sys::path::filename(OutputFile).rsplit('.').first;
   for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
-    StringRef Stem = OutputFile.rsplit('.').first;
-    std::string CodeGenFile = (Stem + "_" + Twine(I) + OutputFileNameExt).str();
+    auto CodeGenFileOrErr =
+        createTempFile(Args, Stem, OutputFileNameExt.drop_front());
+    if (!CodeGenFileOrErr)
+      return CodeGenFileOrErr.takeError();
+    StringRef CodeGenFile = *CodeGenFileOrErr;
 
     if (Error Err = runCodeGen(SplitModules[I].ModuleFilePath,
                                Result.TargetTriple, Args, CodeGenFile, C))
@@ -997,13 +1025,11 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
     }
 
     SplitModules[I].ModuleFilePath = CodeGenFile;
-    if (IsAOTCompileNeeded) {
-      std::string AOTFile = (Stem + "_" + Twine(I) + ".out").str();
-      if (Error Err = runAOTCompile(CodeGenFile, AOTFile, Args))
-        return Err;
-      SplitModules[I].ModuleFilePath = AOTFile;
-    }
   }
+
+  if (IsAOTCompileNeeded)
+    if (Error Err = aotCompileSplitModules(SplitModules, Args))
+      return Err;
 
   // Collect all images to be packed into a single OffloadBinary.
   SmallVector<OffloadingImage> Images;

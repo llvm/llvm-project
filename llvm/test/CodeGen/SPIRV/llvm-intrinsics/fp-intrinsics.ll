@@ -402,4 +402,40 @@ return:
   ret void
 }
 
+; Only the fractional part is used, so the integral part must not be loaded
+; back from the scratch pointer.
+; CHECK: OpFunction
+; CHECK: %[[#d:]] = OpFunctionParameter %[[#]]
+; CHECK: %[[#fracPtr:]] = OpFunctionParameter %[[#]]
+; CHECK: %[[#varPtr:]] = OpVariable %[[#]] Function
+; CHECK: %[[#frac:]] = OpExtInst %[[#var2]] %[[#extinst_id]] modf %[[#d]] %[[#varPtr]]
+; CHECK-NOT: OpLoad %[[#var2]] %[[#varPtr]]
+; CHECK: OpStore %[[#fracPtr]] %[[#frac]]
+; CHECK: OpFunctionEnd
+define void @TestModfFracOnly(double %d, ptr addrspace(1) %frac) {
+entry:
+  %0 = tail call { double, double } @llvm.modf.f64(double %d)
+  %1 = extractvalue { double, double } %0, 0
+  store double %1, ptr addrspace(1) %frac, align 8
+  ret void
+}
+
+; Only the integral part is used, so it must still be loaded back from the
+; scratch pointer.
+; CHECK: OpFunction
+; CHECK: %[[#d:]] = OpFunctionParameter %[[#]]
+; CHECK: %[[#integralPtr:]] = OpFunctionParameter %[[#]]
+; CHECK: %[[#varPtr:]] = OpVariable %[[#]] Function
+; CHECK: %[[#frac:]] = OpExtInst %[[#var2]] %[[#extinst_id]] modf %[[#d]] %[[#varPtr]]
+; CHECK: %[[#integral:]] = OpLoad %[[#var2]] %[[#varPtr]]
+; CHECK: OpStore %[[#integralPtr]] %[[#integral]]
+; CHECK: OpFunctionEnd
+define void @TestModfIntegralOnly(double %d, ptr addrspace(1) %integral) {
+entry:
+  %0 = tail call { double, double } @llvm.modf.f64(double %d)
+  %1 = extractvalue { double, double } %0, 1
+  store double %1, ptr addrspace(1) %integral, align 8
+  ret void
+}
+
 declare { double, double } @llvm.modf.f64(double)

@@ -7,10 +7,10 @@
 typedef void (*__funcref funcref_t)();
 
 // Global funcref variables - test that codegen doesn't crash.
-// CHECK-DAG: @fptr = global ptr addrspace(20) null
+// CHECK-DAG: @fptr = global target("wasm.funcref") zeroinitializer
 funcref_t fptr;
 
-// CHECK-DAG: @fpt2 = global ptr addrspace(20) null
+// CHECK-DAG: @fpt2 = global target("wasm.funcref") zeroinitializer
 void (*__funcref fpt2)();
 
 // CHECK-DAG: _Z2f1u11externref_t

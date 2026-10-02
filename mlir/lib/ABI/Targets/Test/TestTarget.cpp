@@ -108,7 +108,7 @@ ArgClassification classifyOne(Type type, const DataLayout &dl) {
 
 } // namespace
 
-FunctionClassification mlir::abi::test::classify(ArrayRef<Type> argTypes,
+FunctionClassification mlir::abi::test::classify(TypeRange argTypes,
                                                  Type returnType,
                                                  const DataLayout &dl) {
   FunctionClassification fc;
@@ -161,7 +161,7 @@ parseOne(DictionaryAttr argDict, function_ref<InFlightDiagnostic()> emitError) {
     Type coerced;
     if (auto t = argDict.getAs<TypeAttr>("coerced_type"))
       coerced = t.getValue();
-    auto c = ArgClassification::getDirect(coerced);
+    auto c = ArgClassification::getDirect(coerced, /*offset=*/0);
     if (auto cf = argDict.getAs<BoolAttr>("can_flatten"))
       c.canFlatten = cf.getValue();
     return c;

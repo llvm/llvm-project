@@ -1,5 +1,6 @@
 // REQUIRES: aarch64-registered-target
 // RUN: %clang --target=aarch64 --print-enabled-extensions -mcpu=neoverse-v3ae | FileCheck --strict-whitespace --implicit-check-not=FEAT_ %s
+// RUN: %clang --target=aarch64 --print-enabled-extensions -mcpu=armagicpu | FileCheck --strict-whitespace --implicit-check-not=FEAT_ %s
 
 // CHECK: Extensions enabled for the given AArch64 target
 // CHECK-EMPTY:
@@ -28,7 +29,6 @@
 // CHECK-NEXT:     FEAT_FRINTTS                                           Enable FRInt[32|64][Z|X] instructions that round a floating-point number to an integer (in FP format) forcing it to fit into a 32- or 64-bit int
 // CHECK-NEXT:     FEAT_FlagM                                             Enable Armv8.4-A Flag Manipulation instructions
 // CHECK-NEXT:     FEAT_FlagM2                                            Enable alternative NZCV format for floating point comparisons
-// CHECK-NEXT:     FEAT_HCX                                               Enable Armv8.7-A HCRX_EL2 system register
 // CHECK-NEXT:     FEAT_I8MM                                              Enable Matrix Multiply Int8 Extension
 // CHECK-NEXT:     FEAT_JSCVT                                             Enable Armv8.3-A JavaScript FP conversion instructions
 // CHECK-NEXT:     FEAT_LOR                                               Enable Armv8.1-A Limited Ordering Regions extension

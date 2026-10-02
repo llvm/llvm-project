@@ -20,7 +20,7 @@
 #include "posix_compat.h"
 #include "time_utils.h"
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 #  define WIN32_LEAN_AND_MEAN
 #  define NOMINMAX
 #  include <windows.h>
@@ -30,13 +30,13 @@
 #  include <sys/stat.h>
 #  include <sys/statvfs.h>
 #  include <unistd.h>
-#endif // defined(_LIBCPP_WIN32API)
+#endif // _WIN32
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
 namespace detail {
 
-#if !defined(_LIBCPP_WIN32API)
+#ifndef _WIN32
 
 #  if defined(DT_BLK)
 template <class DirEntT, class = decltype(DirEntT::d_type)>
@@ -84,7 +84,7 @@ inline pair<string_view, file_type> posix_readdir(DIR* dir_stream, error_code& e
   }
 }
 
-#else // _LIBCPP_WIN32API
+#else // _WIN32
 
 inline file_type get_file_type(const WIN32_FIND_DATAW& data) {
   if (data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT && data.dwReserved0 == IO_REPARSE_TAG_SYMLINK)
@@ -111,7 +111,7 @@ inline perms get_file_perm(const WIN32_FIND_DATAW& data) {
   return static_cast<perms>(st_mode) & perms::mask;
 }
 
-#endif // !_LIBCPP_WIN32API
+#endif // _WIN32
 
 //                       POSIX HELPERS
 
@@ -128,7 +128,7 @@ struct FileDescriptor {
   static FileDescriptor create(const path* p, error_code& ec, Args... args) {
     ec.clear();
     int fd;
-#ifdef _LIBCPP_WIN32API
+#ifdef _WIN32
     // TODO: most of the filesystem implementation uses native Win32 calls
     // (mostly via posix_compat.h). However, here we use the C-runtime APIs to
     // open a file, because we subsequently pass the C-runtime fd to
@@ -171,7 +171,7 @@ struct FileDescriptor {
 
   void close() noexcept {
     if (fd != -1) {
-#ifdef _LIBCPP_WIN32API
+#ifdef _WIN32
       ::_close(fd);
 #else
       ::close(fd);

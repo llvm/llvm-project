@@ -1,7 +1,7 @@
 # RUN: llc -mtriple=riscv64 -mattr=+v -o %t0 -filetype=obj \
-# RUN:   -start-before=prologepilog %s
+# RUN:   -start-before=prolog-epilog %s
 # RUN: llc -mtriple=riscv64 -mattr=+v -o %t1 -filetype=obj \
-# RUN:   -frame-pointer=all -start-before=prologepilog %s
+# RUN:   -frame-pointer=all -start-before=prolog-epilog %s
 # RUN: llvm-dwarfdump --name="value0" %t0 | FileCheck %s --check-prefix=CHECK0-PLUS
 # RUN: llvm-dwarfdump --name="value1" %t0 | FileCheck %s --check-prefix=CHECK1-PLUS
 # RUN: llvm-dwarfdump --name="value2" %t0 | FileCheck %s --check-prefix=CHECK2-PLUS

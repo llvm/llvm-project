@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../private.h"
 #include "PluginManager.h"
 #include "device.h"
 #include "omptarget.h"
@@ -114,7 +115,7 @@ EXTERN const char *omp_get_uid_from_device(int DeviceNum) {
     ODBG(ODT_Interface) << "Call to " << __func__ << " returning nullptr";
     return nullptr;
   }
-  if (DeviceNum == omp_get_initial_device()) {
+  if (isInitialDevice(DeviceNum)) {
     ODBG(ODT_Interface) << "Call to " << __func__
                         << " returning initial device UID";
     return GenericPluginTy::getHostDeviceUid();
@@ -141,7 +142,7 @@ EXTERN int omp_get_initial_device(void) {
 EXTERN size_t omp_get_gprivate_limit(int DeviceNum, omp_access_t AccessGroup) {
   TIMESCOPE();
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
-  if (DeviceNum == omp_get_initial_device())
+  if (isInitialDevice(DeviceNum))
     return 0;
 
   if (AccessGroup != omp_access_cgroup)
@@ -230,7 +231,7 @@ EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
     return false;
   }
 
-  if (DeviceNum == omp_get_initial_device()) {
+  if (isInitialDevice(DeviceNum)) {
     ODBG(ODT_Interface) << "Call to " << __func__ << " on host, returning true";
     return true;
   }
@@ -267,7 +268,7 @@ EXTERN int omp_target_is_accessible(const void *Ptr, size_t Size,
     return false;
   }
 
-  if (DeviceNum == omp_get_initial_device() || DeviceNum == -1) {
+  if (isInitialDevice(DeviceNum)) {
     ODBG(ODT_Interface) << "Call to " << __func__ << " on host, returning true";
     return true;
   }
@@ -307,13 +308,12 @@ EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
   void *SrcAddr = (char *)const_cast<void *>(Src) + SrcOffset;
   void *DstAddr = (char *)Dst + DstOffset;
 
-  if (SrcDevice == omp_get_initial_device() &&
-      DstDevice == omp_get_initial_device()) {
+  if (isInitialDevice(SrcDevice) && isInitialDevice(DstDevice)) {
     ODBG(ODT_Interface) << "copy from host to host";
     const void *P = memcpy(DstAddr, SrcAddr, Length);
     if (P == NULL)
       Rc = OFFLOAD_FAIL;
-  } else if (SrcDevice == omp_get_initial_device()) {
+  } else if (isInitialDevice(SrcDevice)) {
     ODBG(ODT_Interface) << "copy from host to device";
     auto DstDeviceOrErr = PM->getDevice(DstDevice);
     if (!DstDeviceOrErr)
@@ -321,7 +321,7 @@ EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
                     toString(DstDeviceOrErr.takeError()).c_str());
     AsyncInfoTy AsyncInfo(*DstDeviceOrErr);
     Rc = DstDeviceOrErr->submitData(DstAddr, SrcAddr, Length, AsyncInfo);
-  } else if (DstDevice == omp_get_initial_device()) {
+  } else if (isInitialDevice(DstDevice)) {
     ODBG(ODT_Interface) << "copy from device to host";
     auto SrcDeviceOrErr = PM->getDevice(SrcDevice);
     if (!SrcDeviceOrErr)
@@ -473,7 +473,7 @@ EXTERN void *omp_target_memset(void *Ptr, int ByteVal, size_t NumBytes,
     return Ptr;
   }
 
-  if (DeviceNum == omp_get_initial_device()) {
+  if (isInitialDevice(DeviceNum)) {
     ODBG(ODT_Interface) << "filling memory on host via memset";
     memset(Ptr, ByteVal, NumBytes); // ignore return value, memset() cannot fail
   } else {
@@ -671,7 +671,7 @@ EXTERN int omp_target_associate_ptr(const void *HostPtr, const void *DevicePtr,
     return OFFLOAD_FAIL;
   }
 
-  if (DeviceNum == omp_get_initial_device()) {
+  if (isInitialDevice(DeviceNum)) {
     REPORT() << __func__ << ": no association possible on the host";
     return OFFLOAD_FAIL;
   }
@@ -704,7 +704,7 @@ EXTERN int omp_target_disassociate_ptr(const void *HostPtr, int DeviceNum) {
     return OFFLOAD_FAIL;
   }
 
-  if (DeviceNum == omp_get_initial_device()) {
+  if (isInitialDevice(DeviceNum)) {
     REPORT() << __func__ << ": no association possible on the host";
     return OFFLOAD_FAIL;
   }
@@ -736,7 +736,7 @@ EXTERN void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum) {
   }
 
   int NumDevices = omp_get_initial_device();
-  if (DeviceNum == NumDevices) {
+  if (isInitialDevice(DeviceNum)) {
     ODBG(ODT_Interface) << "Device " << DeviceNum
                         << " is initial device, returning Ptr " << Ptr;
     return const_cast<void *>(Ptr);

@@ -256,18 +256,18 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
     //CHECK: %[[ptr:.*]] = llvm.inttoptr %[[final_ptr]] : i32 to !llvm.ptr<3>
     //CHECK: %[[blockload:.*]] = xevm.blockload %[[ptr]] : (!llvm.ptr<3>) -> vector<8xi16>
     //CHECK: %[[loaded:.*]] = vector.bitcast %[[blockload]] : vector<8xi16> to vector<8xf16>
-    
+
     %0 = xegpu.create_mem_desc %arg0 : memref<4096xi8, 3> -> !xegpu.mem_desc<32x64xf16, #xegpu.mem_layout<block = [16, 16]>>
 
     %c16 = arith.constant 16 : index
     %c48 = arith.constant 48 : index
 
-    %1 = xegpu.load_matrix %0[%c16, %c48] {subgroup_block_io}: !xegpu.mem_desc<32x64xf16, #xegpu.mem_layout<block = [16, 16]>>, index, index -> vector<8xf16>
+    %1 = xegpu.load_matrix %0[%c16, %c48] <{subgroup_block_io}>: !xegpu.mem_desc<32x64xf16, #xegpu.mem_layout<block = [16, 16]>>, index, index -> vector<8xf16>
 
     //CHECK: %[[storeDataI16:.*]] = vector.bitcast %[[loaded]] : vector<8xf16> to vector<8xi16>
     //CHECK: xevm.blockstore %[[ptr2:.*]], %[[storeDataI16]] : (!llvm.ptr<3>, vector<8xi16>)
 
-    xegpu.store_matrix %1, %0[%c16, %c48] {subgroup_block_io}: vector<8xf16>, !xegpu.mem_desc<32x64xf16, #xegpu.mem_layout<block = [16, 16]>>, index, index
+    xegpu.store_matrix %1, %0[%c16, %c48] <{subgroup_block_io}>: vector<8xf16>, !xegpu.mem_desc<32x64xf16, #xegpu.mem_layout<block = [16, 16]>>, index, index
 
     gpu.return %1: vector<8xf16>
   }
@@ -307,5 +307,29 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
 
   }
 
+  // f8E8M0FNU has no native LLVM representation. The load must use the integer
+  // storage type from the XeVM type converter (i8) and then materialize back
+  // to f8E8M0FNU, rather than emitting an illegal llvm.load of f8E8M0FNU.
+  //CHECK-LABEL: load_matrix_f8e8m0_scalar
+  gpu.func @load_matrix_f8e8m0_scalar(%arg0: memref<1024xi8, 3>) -> vector<1x1xf8E8M0FNU> {
+    %c0 = arith.constant 0 : index
+    %0 = xegpu.create_mem_desc %arg0 : memref<1024xi8, 3> -> !xegpu.mem_desc<32x32xf8E8M0FNU>
+    %tid_x = gpu.thread_id x
+    //CHECK: %[[LOADED:.*]] = llvm.load %{{.*}} : !llvm.ptr<3> -> i8
+    //CHECK: %[[BCAST:.*]] = arith.bitcast %[[LOADED]] : i8 to f8E8M0FNU
+    //CHECK: vector.broadcast %[[BCAST]] : f8E8M0FNU to vector<1x1xf8E8M0FNU>
+    %1 = xegpu.load_matrix %0[%c0, %tid_x]: !xegpu.mem_desc<32x32xf8E8M0FNU>, index, index -> vector<1x1xf8E8M0FNU>
+    gpu.return %1 : vector<1x1xf8E8M0FNU>
+  }
+
+  //CHECK-LABEL: load_matrix_f8e8m0_vector
+  gpu.func @load_matrix_f8e8m0_vector(%arg0: memref<1024xi8, 3>) -> vector<8xf8E8M0FNU> {
+    %c0 = arith.constant 0 : index
+    %0 = xegpu.create_mem_desc %arg0 : memref<1024xi8, 3> -> !xegpu.mem_desc<32x32xf8E8M0FNU>
+    //CHECK: %[[LOADEDV:.*]] = llvm.load %{{.*}} : !llvm.ptr<3> -> vector<8xi8>
+    //CHECK: vector.bitcast %[[LOADEDV]] : vector<8xi8> to vector<8xf8E8M0FNU>
+    %1 = xegpu.load_matrix %0[%c0, %c0]: !xegpu.mem_desc<32x32xf8E8M0FNU>, index, index -> vector<8xf8E8M0FNU>
+    gpu.return %1 : vector<8xf8E8M0FNU>
+  }
 
 }

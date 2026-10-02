@@ -6,9 +6,10 @@ add_entrypoint_object(
     ../chmod.h
   DEPENDS
     libc.hdr.types.mode_t
-    libc.hdr.fcntl_macros
     libc.src.__support.OSUtil.linux.syscall_wrappers.chmod
-    libc.src.errno.errno
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(
@@ -60,16 +61,65 @@ add_entrypoint_object(
     libc.src.errno.errno
 )
 
-add_header_library(
-  kernel_statx
+add_entrypoint_object(
+  mkfifo
+  SRCS
+    mkfifo.cpp
   HDRS
-    kernel_statx.h
+    ../mkfifo.h
   DEPENDS
-    libc.hdr.stdint_proxy
-    libc.hdr.types.struct_stat
-    libc.src.__support.OSUtil.linux.syscall_wrappers.statx
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.mode_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mknodat
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  mkfifoat
+  SRCS
+    mkfifoat.cpp
+  HDRS
+    ../mkfifoat.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.mode_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mknodat
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  mknod
+  SRCS
+    mknod.cpp
+  HDRS
+    ../mknod.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.types.dev_t
+    libc.hdr.types.mode_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mknodat
     libc.src.__support.common
     libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  mknodat
+  SRCS
+    mknodat.cpp
+  HDRS
+    ../mknodat.h
+  DEPENDS
+    libc.hdr.types.dev_t
+    libc.hdr.types.mode_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mknodat
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -79,9 +129,11 @@ add_entrypoint_object(
   HDRS
     ../stat.h
   DEPENDS
-    .kernel_statx
     libc.hdr.fcntl_macros
     libc.hdr.types.struct_stat
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.OSUtil.linux.stat.stat_via_statx
 )
 
 add_entrypoint_object(
@@ -91,9 +143,11 @@ add_entrypoint_object(
   HDRS
     ../lstat.h
   DEPENDS
-    .kernel_statx
     libc.hdr.fcntl_macros
     libc.hdr.types.struct_stat
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.OSUtil.linux.stat.stat_via_statx
 )
 
 add_entrypoint_object(
@@ -103,9 +157,25 @@ add_entrypoint_object(
   HDRS
     ../fstat.h
   DEPENDS
-    .kernel_statx
     libc.hdr.fcntl_macros
     libc.hdr.types.struct_stat
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.OSUtil.linux.stat.stat_via_statx
+)
+
+add_entrypoint_object(
+  fstatat
+  SRCS
+    fstatat.cpp
+  HDRS
+    ../fstatat.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.types.struct_stat
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.OSUtil.linux.stat.stat_via_statx
 )
 
 add_entrypoint_object(
@@ -119,4 +189,29 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.linux.syscall_wrappers.utimensat
     libc.src.__support.common
     libc.src.__support.libc_errno
+)
+
+add_entrypoint_object(
+  futimens
+  SRCS
+    futimens.cpp
+  HDRS
+    ../futimens.h
+  DEPENDS
+    libc.hdr.types.struct_timespec
+    libc.src.__support.OSUtil.linux.syscall_wrappers.utimensat
+    libc.src.__support.common
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  umask
+  SRCS
+    umask.cpp
+  HDRS
+    ../umask.h
+  DEPENDS
+    libc.hdr.types.mode_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.umask
+    libc.src.__support.common
 )

@@ -18,6 +18,7 @@
 #include "benchmark/benchmark.h"
 #include "common.h"
 #include "count_new.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto std_stable_sort = [](auto first, auto last) { return std::stable_sort(first, last); };
@@ -33,7 +34,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto stable_sort, auto generate_data) {
       benchmark::RegisterBenchmark(
           name,
-          [stable_sort, generate_data](auto& st) {
+          [stable_sort, generate_data](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size          = st.range(0);
             constexpr std::size_t BatchSize = 32;
             using ValueType                 = typename Container::value_type;
@@ -88,7 +89,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto stable_sort, auto generate_data) {
       benchmark::RegisterBenchmark(
           name,
-          [stable_sort, generate_data](auto& st) {
+          [stable_sort, generate_data](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size          = st.range(0);
             constexpr std::size_t BatchSize = 32;
             using ValueType                 = typename Container::value_type;

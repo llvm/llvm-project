@@ -23,6 +23,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 
@@ -31,7 +32,7 @@ static cl::opt<bool> SPVPreserveAuxData(
     cl::desc("Preserve LLVM attributes and metadata as "
              "NonSemantic.AuxData ExtInst annotations (requires "
              "SPV_KHR_non_semantic_info)"),
-    cl::Optional, cl::Hidden, cl::init(false));
+    cl::Hidden, cl::init(false));
 
 namespace {
 enum AuxDataLinkageType : uint32_t {
@@ -319,7 +320,7 @@ MCRegister SPIRVAuxDataHandler::emitConstant(const Constant *C,
   Inst.addOperand(MCOperand::createReg(Reg));
   Inst.addOperand(MCOperand::createReg(TypeReg));
   // SPIR-V encodes the literal as ceil(width/32) little-endian 32-bit words.
-  unsigned NumWords = std::max(1u, (Bits.getBitWidth() + 31) / 32);
+  unsigned NumWords = divideCeil(Bits.getBitWidth(), 32);
   for (unsigned I = 0; I < NumWords; ++I)
     Inst.addOperand(MCOperand::createImm(Bits.extractBitsAsZExtValue(
         std::min(32u, Bits.getBitWidth() - I * 32), I * 32)));

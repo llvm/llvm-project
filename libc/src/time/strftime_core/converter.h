@@ -16,7 +16,7 @@
 
 #include "hdr/types/struct_tm.h"
 #include "src/__support/macros/config.h"
-#include "src/stdio/printf_core/writer.h"
+#include "src/__support/printf_core/writer.h"
 #include "src/time/strftime_core/composite_converter.h"
 #include "src/time/strftime_core/core_structs.h"
 #include "src/time/strftime_core/num_converter.h"
@@ -27,14 +27,14 @@ namespace strftime_core {
 
 /// Converts a format section and writes it to the writer.
 ///
-/// \tparam write_mode The write mode for the writer.
+/// \tparam overflow_mode The write overflow mode for the writer.
 /// \param writer The writer to write the output to.
 /// \param to_conv The format section to convert.
 /// \param timeptr Pointer to the tm structure.
 /// \return Number of characters written on success, or a negative error code on
 /// failure.
-template <printf_core::WriteMode write_mode>
-int convert(printf_core::Writer<write_mode> *writer,
+template <printf_core::OverflowMode overflow_mode>
+int convert(printf_core::Writer<overflow_mode> *writer,
             const FormatSection &to_conv, const tm *timeptr) {
   // TODO: Implement the locale support.
   // Currently locale flags are ignored, as described by the posix standard for

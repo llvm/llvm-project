@@ -1341,6 +1341,43 @@ the flag `--recognizer-function`.
 (lldb) type synthetic add --python-class my_child_provider --recognizer-function is_generated_object
 ```
 
+## API-attached synthetic child provider
+
+In some situations, a value's type or a program's debug information do not contain
+sufficient information to determine the appropriate synthetic child provider.
+
+In these cases, you may use {any}`SBValue.SetTypeSynthetic` to manually attach
+(or override the system's choice of) a synthetic child provider for a value.
+
+This can be done even without a corresponding registration with the `type synthetic add`
+command.
+
+The attached provider instance can be retrieved with {any}`SBValue.GetTypeSyntheticImplementation`
+for further customization or inspection.
+
+```python
+import lldb
+
+class FooSyntheticChildren:
+   def __init__(self, valobj: lldb.SBValue, _) -> None:
+     self.valobj = valobj
+     self.bar = None
+
+   ...
+
+value = lldb.frame.FindVariable("foo")
+value.SetTypeSynthetic(
+   lldb.SBTypeSynthetic.CreateWithClassName(
+      f"{__name__}.FooSyntheticChildren"
+   )
+)
+
+impl = value.GetTypeSyntheticImplementation()
+assert isinstance(impl, FooSyntheticChildren)
+
+impl.bar = 42
+```
+
 ## Objective-C Dynamic Type Discovery
 
 When doing Objective-C development, you may notice that some of your variables

@@ -40,4 +40,4 @@ for.end10:
 }
 
 !1 = distinct !{!1, !2}
-!2 = !{!"llvm.loop.vectorize.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.enable"}

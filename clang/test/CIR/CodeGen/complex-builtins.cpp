@@ -16,9 +16,9 @@ void foo() {
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[COMPLEX_A]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: cir.store{{.*}} %[[TMP_A]], %[[COMPLEX_R]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
-// LLVM: %[[COMPLEX_A:.*]] = alloca { i32, i32 }, i64 1, align 4
-// LLVM: %[[COMPLEX_B:.*]] = alloca { i32, i32 }, i64 1, align 4
-// LLVM: %[[COMPLEX_R:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: %[[COMPLEX_A:.*]] = alloca { i32, i32 }, align 4
+// LLVM: %[[COMPLEX_B:.*]] = alloca { i32, i32 }, align 4
+// LLVM: %[[COMPLEX_R:.*]] = alloca { i32, i32 }, align 4
 // LLVM: %[[TMP_A:.*]] = load { i32, i32 }, ptr %[[COMPLEX_A]], align 4
 // LLVM: store { i32, i32 } %[[TMP_A]], ptr %[[COMPLEX_R]], align 4
 
@@ -45,8 +45,8 @@ void foo2() {
 // CIR: %[[REAL:.*]] = cir.complex.real %[[TMP]] : !cir.complex<!cir.double> -> !cir.double
 // CIR: cir.store{{.*}} %[[REAL]], %[[INIT]] : !cir.double, !cir.ptr<!cir.double>
 
-// LLVM: %[[COMPLEX:.*]] = alloca { double, double }, i64 1, align 8
-// LLVM: %[[INIT:.*]] = alloca double, i64 1, align 8
+// LLVM: %[[COMPLEX:.*]] = alloca { double, double }, align 8
+// LLVM: %[[INIT:.*]] = alloca double, align 8
 // LLVM: %[[TMP:.*]] = load { double, double }, ptr %[[COMPLEX]], align 8
 // LLVM: %[[REAL:.*]] = extractvalue { double, double } %[[TMP]], 0
 // LLVM: store double %[[REAL]], ptr %[[INIT]], align 8
@@ -70,8 +70,8 @@ void foo3() {
 // CIR: %[[IMAG:.*]] = cir.complex.imag %[[TMP]] : !cir.complex<!cir.double> -> !cir.double
 // CIR: cir.store{{.*}} %[[IMAG]], %[[INIT]] : !cir.double, !cir.ptr<!cir.double>
 
-// LLVM: %[[COMPLEX:.*]] = alloca { double, double }, i64 1, align 8
-// LLVM: %[[INIT:.*]] = alloca double, i64 1, align 8
+// LLVM: %[[COMPLEX:.*]] = alloca { double, double }, align 8
+// LLVM: %[[INIT:.*]] = alloca double, align 8
 // LLVM: %[[TMP:.*]] = load { double, double }, ptr %[[COMPLEX]], align 8
 // LLVM: %[[IMAG:.*]] = extractvalue { double, double } %[[TMP]], 1
 // LLVM: store double %[[IMAG]], ptr %[[INIT]], align 8
@@ -98,8 +98,8 @@ void foo4() {
 // CIR: %[[RESULT_VAL:.*]] = cir.complex.create %[[REAL]], %[[IMAG_MINUS]] : !cir.float -> !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[RESULT_VAL]], %[[RESULT]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// LLVM: %[[COMPLEX:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM: %[[RESULT:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[COMPLEX:.*]] = alloca { float, float }, align 4
+// LLVM: %[[RESULT:.*]] = alloca { float, float }, align 4
 // LLVM: %[[TMP:.*]] = load { float, float }, ptr %[[COMPLEX]], align 4
 // LLVM: %[[REAL:.*]] = extractvalue { float, float } %[[TMP]], 0
 // LLVM: %[[IMAG:.*]] = extractvalue { float, float } %[[TMP]], 1

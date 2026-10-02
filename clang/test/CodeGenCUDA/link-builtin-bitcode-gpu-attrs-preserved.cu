@@ -9,29 +9,29 @@
 
 // Build the fake device library in the way rocm-device-libs should be built.
 //
-// RUN: %clang_cc1 -x cl -triple amdgcn-amd-amdhsa\
+// RUN: %clang_cc1 -x cl -triple amdgpu-amd-amdhsa\
 // RUN:   -mcode-object-version=none -emit-llvm-bc \
 // RUN:   %S/Inputs/ocml-sample-target-attrs.cl -o %t.bc
 
 // Check the default behavior
-// RUN: %clang_cc1 -x hip -triple amdgcn-amd-amdhsa -target-cpu gfx803 -fcuda-is-device \
+// RUN: %clang_cc1 -x hip -triple amdgpu8.03-amd-amdhsa -fcuda-is-device \
 // RUN:   -mlink-builtin-bitcode %t.bc \
 // RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,INTERNALIZE
 
-// RUN: %clang_cc1 -x hip -triple amdgcn-amd-amdhsa -target-cpu gfx1101 -fcuda-is-device \
+// RUN: %clang_cc1 -x hip -triple amdgpu11.01-amd-amdhsa -fcuda-is-device \
 // RUN:   -mlink-builtin-bitcode %t.bc -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,INTERNALIZE
 
 // Check the case where no internalization is performed
-// RUN: %clang_cc1 -x hip -triple amdgcn-amd-amdhsa -target-cpu gfx803 \
+// RUN: %clang_cc1 -x hip -triple amdgpu8.03-amd-amdhsa \
 // RUN:   -fcuda-is-device -mlink-bitcode-file %t.bc -emit-llvm %s -o -  | FileCheck %s --check-prefixes=CHECK,NOINTERNALIZE
 
 // Check the case where no internalization is performed
-// RUN: %clang_cc1 -x hip -triple amdgcn-amd-amdhsa -target-cpu gfx1101 \
+// RUN: %clang_cc1 -x hip -triple amdgpu11.01-amd-amdhsa \
 // RUN:   -fcuda-is-device -mlink-bitcode-file %t.bc -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,NOINTERNALIZE
 
 
 // CHECK: define {{.*}} i64 @do_intrin_stuff() #[[ATTR:[0-9]+]]
-// INTERNALIZE: attributes #[[ATTR]] = {{.*}} "target-cpu"="gfx{{.*}}" "target-features"="{{.*}}+gfx11-insts{{.*}}"
+// INTERNALIZE: attributes #[[ATTR]] = {{.*}} "target-features"="{{.*}}+gfx11-insts{{.*}}"
 // NOINTERNALIZE: attributes #[[ATTR]] = {{.*}} "target-features"="+gfx11-insts"
 
 #define __device__ __attribute__((device))

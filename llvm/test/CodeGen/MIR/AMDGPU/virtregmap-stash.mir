@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass=virtregmap \
+# RUN: llc -mtriple=amdgpu11.00 -run-pass=virtregmap \
 # RUN:     -o - %s | FileCheck %s
 #
 # Verify that VirtRegMap state (split-from, assigned-phys) round-trips through

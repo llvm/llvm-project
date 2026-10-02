@@ -35,8 +35,8 @@ void test() {
     std::ranges::basic_istream_view<int, CharT> isv{iss};
     using Iter = std::ranges::iterator_t<decltype(isv)>;
 
-    Iter it1{isv};
-    Iter it2{isv};
+    Iter it1 = isv.begin();
+    Iter it2 = isv.begin();
     assert(&*it1 == &*it2);
   }
 }

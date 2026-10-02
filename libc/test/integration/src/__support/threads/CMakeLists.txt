@@ -1,5 +1,5 @@
 if(NOT (TARGET libc.src.__support.threads.thread AND
-        TARGET libc.src.__support.threads.mutex))
+  TARGET libc.src.__support.threads.mutex))
   return()
 endif()
 

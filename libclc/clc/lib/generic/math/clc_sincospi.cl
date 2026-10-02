@@ -9,6 +9,7 @@
 #include "clc/clc_convert.h"
 #include "clc/float/definitions.h"
 #include "clc/internal/clc.h"
+#include "clc/math/clc_copysign.h"
 #include "clc/math/clc_cos.h"
 #include "clc/math/clc_fabs.h"
 #include "clc/math/clc_sin.h"

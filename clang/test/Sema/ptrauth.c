@@ -145,6 +145,33 @@ void test_auth_load_relative_and_sign(int *dp, int (*fp)(int)) {
   float *mismatch = __builtin_ptrauth_auth_load_relative_and_sign(dp, VALID_DATA_KEY, 0, VALID_DATA_KEY, dp,0); // expected-error {{incompatible pointer types initializing 'float *' with an expression of type 'int *'}}
 }
 
+void test_auth_with_pc_and_resign(int *dp, int (*fp)(int), void *pc) {
+  __builtin_ptrauth_auth_with_pc_and_resign(dp, VALID_DATA_KEY, 0, pc, VALID_DATA_KEY); // expected-error {{too few arguments}}
+  __builtin_ptrauth_auth_with_pc_and_resign(dp, VALID_DATA_KEY, dp, pc, VALID_DATA_KEY, dp, 0); // expected-error {{too many arguments}}
+
+  __builtin_ptrauth_auth_with_pc_and_resign(mismatched_type, VALID_DATA_KEY, 0, pc, VALID_DATA_KEY, dp); // expected-error {{signed value must have pointer type; type here is 'struct A'}}
+  __builtin_ptrauth_auth_with_pc_and_resign(dp, mismatched_type, 0, pc, VALID_DATA_KEY, dp); // expected-error {{passing 'struct A' to parameter of incompatible type 'int'}}
+  __builtin_ptrauth_auth_with_pc_and_resign(dp, VALID_DATA_KEY, mismatched_type, pc, VALID_DATA_KEY, dp); // expected-error {{extra discriminator must have pointer or integer type; type here is 'struct A'}}
+  __builtin_ptrauth_auth_with_pc_and_resign(dp, VALID_DATA_KEY, 0, mismatched_type, VALID_DATA_KEY, dp); // expected-error {{blended pc must have pointer or integer type; type here is 'struct A'}}
+  __builtin_ptrauth_auth_with_pc_and_resign(dp, VALID_DATA_KEY, 0, pc, mismatched_type, dp); // expected-error {{passing 'struct A' to parameter of incompatible type 'int'}}
+  __builtin_ptrauth_auth_with_pc_and_resign(dp, VALID_DATA_KEY, 0, pc, VALID_DATA_KEY, mismatched_type); // expected-error {{extra discriminator must have pointer or integer type; type here is 'struct A'}}
+
+  (void) __builtin_ptrauth_auth_with_pc_and_resign(NULL, VALID_DATA_KEY, 0, pc, VALID_DATA_KEY, dp); // expected-error {{ptrauth_auth_with_pc_and_resign only supports auth with IA and IB keys, not 2}} expected-warning {{authenticating a null pointer will almost certainly trap}}
+
+  // Test that data keys (DA/DB) are rejected for oldKey
+  int *dr = __builtin_ptrauth_auth_with_pc_and_resign(dp, VALID_DATA_KEY, 0, pc, VALID_DATA_KEY, dp); // expected-error {{ptrauth_auth_with_pc_and_resign only supports auth with IA and IB keys, not 2}}
+  dr = __builtin_ptrauth_auth_with_pc_and_resign(dp, 3, 0, pc, VALID_DATA_KEY, dp); // expected-error {{ptrauth_auth_with_pc_and_resign only supports auth with IA and IB keys, not 3}}
+  dr = __builtin_ptrauth_auth_with_pc_and_resign(dp, INVALID_KEY, 0, pc, VALID_DATA_KEY, dp); // expected-error {{does not identify a valid pointer authentication key for the current target}}
+  dr = __builtin_ptrauth_auth_with_pc_and_resign(dp, VALID_CODE_KEY, 0, pc, INVALID_KEY, dp); // expected-error {{does not identify a valid pointer authentication key for the current target}}
+
+  // Test with valid IA/IB keys
+  int (*fr)(int) = __builtin_ptrauth_auth_with_pc_and_resign(fp, VALID_CODE_KEY, 0, pc, VALID_CODE_KEY, dp);
+  fr = __builtin_ptrauth_auth_with_pc_and_resign(fp, INVALID_KEY, 0, pc, VALID_CODE_KEY, dp); // expected-error {{does not identify a valid pointer authentication key for the current target}}
+  fr = __builtin_ptrauth_auth_with_pc_and_resign(fp, VALID_CODE_KEY, 0, pc, INVALID_KEY, dp); // expected-error {{does not identify a valid pointer authentication key for the current target}}
+
+  float *mismatch = __builtin_ptrauth_auth_with_pc_and_resign(dp, VALID_CODE_KEY, 0, pc, VALID_DATA_KEY, dp); // expected-error {{incompatible pointer types initializing 'float *' with an expression of type 'int *'}}
+}
+
 void test_sign_generic_data(int *dp) {
   __builtin_ptrauth_sign_generic_data(dp); // expected-error {{too few arguments}}
   __builtin_ptrauth_sign_generic_data(dp, 0, 0); // expected-error {{too many arguments}}

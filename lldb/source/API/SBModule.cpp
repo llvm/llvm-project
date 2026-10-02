@@ -557,8 +557,7 @@ SBSection SBModule::FindSection(const char *sect_name) {
     module_sp->GetSymbolFile();
     SectionList *section_list = module_sp->GetSectionList();
     if (section_list) {
-      ConstString const_sect_name(sect_name);
-      SectionSP section_sp(section_list->FindSectionByName(const_sect_name));
+      SectionSP section_sp(section_list->FindSectionByName(sect_name));
       if (section_sp) {
         sb_section.SetSP(section_sp);
       }

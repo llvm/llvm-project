@@ -126,7 +126,20 @@ public:
                                  const Value *initial_value_ptr,
                                  const Value *object_address_ptr) const;
 
+  /// Return true if the expression in scope at the current PC produces an
+  /// implicit location, or if no location is in scope. See
+  /// DWARFExpression::IsImplicit. \p exe_ctx and \p reg_ctx may be null for an
+  /// always-valid single expression.
+  bool IsImplicit(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
+                  lldb::addr_t func_load_addr) const;
+
 private:
+  /// Return the expression in scope at the current PC, or an error if no
+  /// location is in scope.
+  llvm::Expected<const DWARFExpression *>
+  GetExpressionAtPC(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
+                    lldb::addr_t func_load_addr) const;
+
   // RangeDataVector requires a comparator for DWARFExpression, but it doesn't
   // make sense to do so.
   struct DWARFExpressionCompare {

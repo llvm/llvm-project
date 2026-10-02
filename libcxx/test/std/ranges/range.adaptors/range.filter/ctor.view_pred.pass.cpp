@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// constexpr filter_view(View, Pred); // explicit since C++23
+// constexpr explicit filter_view(View, Pred); // explicit since C++23
 
 #include <cassert>
 #include <ranges>
@@ -45,17 +45,8 @@ struct TrackingRange : TrackInitialization, std::ranges::view_base {
 
 // SFINAE tests.
 
-#if TEST_STD_VER >= 23
-
 static_assert(!test_convertible<std::ranges::filter_view<Range, Pred>, Range, Pred>(),
               "This constructor must be explicit");
-
-#else
-
-static_assert(test_convertible<std::ranges::filter_view<Range, Pred>, Range, Pred>(),
-              "This constructor must not be explicit");
-
-#endif // TEST_STD_VER >= 23
 
 constexpr bool test() {
   int buff[] = {1, 2, 3, 4, 5, 6, 7, 8};

@@ -50,6 +50,7 @@ my_exception:
 # CHECK:        - Type:            CUSTOM
 # CHECK-NEXT:     Name:            linking
 # CHECK-NEXT:     Version:         2
+# CHECK-NEXT:     TargetArch:      wasm32
 # CHECK-NEXT:     SymbolTable:
 
 # CHECK:            - Index:           1

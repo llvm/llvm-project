@@ -1,4 +1,4 @@
-RUN: not %dexter_regression_test_run --binary %s --use-script -- %s 2>&1 | FileCheck %s
+RUN: not %dexter_regression_test_run --binary %s -- %s 2>&1 | FileCheck %s
 
 This is a test that Dexter validates that nodes appear in the correct place in scripts.
 
@@ -21,4 +21,10 @@ CHECK-NEXT: Script starting line [[# @LINE + 1 ]]
 # CHECK-NEXT: Found unexpected node: [{Value(x): 5}]
 !where {function: foo}:
 - !value x: 5
+...
+
+CHECK-NEXT: Script starting line [[# @LINE + 1 ]]
+---
+# CHECK-NEXT: Invalid !then command "bar"
+!where {function: foo}: !then bar
 ...

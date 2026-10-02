@@ -17,12 +17,12 @@ subroutine foo(a, n)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPfoo
-! CHECK: omp.target
+! CHECK: omp.target kernel_type(spmd)
 ! CHECK-SAME: host_eval(%{{.*}} -> %{{.*}}, %{{.*}} -> %[[N_HOST_EVAL:.*]], %{{.*}} -> %{{.*}} : index, index, index)
 ! CHECK-SAME: map_entries({{[^[:space:]]*}} -> {{[^[:space:]]*}},
 ! CHECK-SAME:   {{[^[:space:]]*}} -> {{[^[:space:]]*}}, {{[^[:space:]]*}} -> {{[^[:space:]]*}},
 ! CHECK-SAME:   {{[^[:space:]]*}} -> {{[^[:space:]]*}}, {{[^[:space:]]*}} -> %[[N_MAP_ARG:[^[:space:]]*]], {{.*}}) {
-! CHECK:   %[[N_MAPPED:.*]]:2 = hlfir.declare %[[N_MAP_ARG]] {uniq_name = "_QFfooEn"}
+! CHECK:   %[[N_MAPPED:.*]]:2 = hlfir.declare %[[N_MAP_ARG]] uniq_name("_QFfooEn")
 ! CHECK:   omp.teams {
 ! CHECK:     omp.parallel {
 ! CHECK:       omp.distribute {
@@ -33,8 +33,8 @@ end subroutine
 ! CHECK:             hlfir.assign %[[N_VAL_CVT]] to {{.*}}
 ! CHECK-NEXT:        omp.yield
 ! CHECK:           }
-! CHECK:         }
-! CHECK:       }
-! CHECK:     }
-! CHECK:   }
-! CHECK: }
+! CHECK:         } {omp.composite}
+! CHECK:       } {omp.composite}
+! CHECK:     } {omp.composite}
+! CHECK:   } {omp.combined}
+! CHECK: } {omp.combined}

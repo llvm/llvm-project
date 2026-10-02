@@ -136,7 +136,7 @@ mlir::Value genInitialDataTarget(Fortran::lower::AbstractConverter &,
 /// Create the global op and its init if it has one
 fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
                            const Fortran::lower::pft::Variable &var,
-                           llvm::StringRef globalName, mlir::StringAttr linkage,
+                           llvm::StringRef globalName, fir::LinkageAttr linkage,
                            cuf::DataAttributeAttr dataAttr = {});
 
 /// Generate address \p addr inside an initializer.

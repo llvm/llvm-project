@@ -3,6 +3,7 @@
 
 // FIXME: Implement.
 // XFAIL: hwasan
+// UNSUPPORTED: rtsan
 
 #include <dlfcn.h>
 #include <stdio.h>

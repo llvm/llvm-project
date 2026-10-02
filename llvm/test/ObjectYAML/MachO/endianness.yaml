@@ -1,0 +1,207 @@
+# RUN: yaml2obj -DENDIAN=false %s | obj2yaml | FileCheck %s
+# RUN: yaml2obj -DENDIAN=true %s | obj2yaml | FileCheck %s
+
+## Check that yaml2obj writes all endian-sensitive Mach-O fields in object
+## endianness rather than host endianness.
+
+# CHECK: FileHeader:
+# CHECK:   magic:           0xFEEDFACF
+# CHECK:   cputype:         0x1000012
+# CHECK:   cpusubtype:      0x34
+# CHECK:   filetype:        0x1
+# CHECK:   ncmds:           5
+# CHECK:   sizeofcmds:      304
+# CHECK:   flags:           0x1020304
+
+# CHECK: LoadCommands:
+# CHECK:   - cmd:             LC_SEGMENT_64
+# CHECK:     cmdsize:         152
+# CHECK:     segname:         __TEXT
+# CHECK:     vmaddr:          2387509390608836384
+# CHECK:     vmsize:          256
+# CHECK:     fileoff:         336
+# CHECK:     filesize:        4
+# CHECK:     maxprot:         16909060
+# CHECK:     initprot:        84281096
+# CHECK:     nsects:          1
+# CHECK:     flags:           151653132
+# CHECK:     Sections:
+# CHECK:       - sectname:        __text
+# CHECK:         segname:         __TEXT
+# CHECK:         addr:            0x2122232425262728
+# CHECK:         size:            4
+# CHECK:         offset:          0x150
+# CHECK:         align:           2
+# CHECK:         reloff:          0x154
+# CHECK:         nreloc:          1
+# CHECK:         flags:           0x80000400
+# CHECK:         reserved1:       0x1020304
+# CHECK:         reserved2:       0x5060708
+# CHECK:         reserved3:       0x90A0B0C
+# CHECK:         content:         DEADBEEF
+# CHECK:         relocations:
+# CHECK:           - address:         0x1020304
+# CHECK:             symbolnum:       1
+# CHECK:             pcrel:           false
+# CHECK:             length:          3
+# CHECK:             extern:          true
+# CHECK:             type:            2
+# CHECK:             scattered:       false
+# CHECK:             value:           0
+# CHECK:   - cmd:             LC_SYMTAB
+# CHECK:     cmdsize:         24
+# CHECK:     symoff:          356
+# CHECK:     nsyms:           2
+# CHECK:     stroff:          396
+# CHECK:     strsize:         8
+# CHECK:   - cmd:             LC_DYSYMTAB
+# CHECK:     cmdsize:         80
+# CHECK:     ilocalsym:       0
+# CHECK:     nlocalsym:       1
+# CHECK:     iextdefsym:      1
+# CHECK:     nextdefsym:      0
+# CHECK:     iundefsym:       1
+# CHECK:     nundefsym:       1
+# CHECK:     indirectsymoff:  388
+# CHECK:     nindirectsyms:   2
+# CHECK:   - cmd:             LC_DATA_IN_CODE
+# CHECK:     cmdsize:         16
+# CHECK:     dataoff:         348
+# CHECK:     datasize:        8
+# CHECK:   - cmd:             LC_BUILD_VERSION
+# CHECK:     cmdsize:         32
+# CHECK:     platform:        16909060
+# CHECK:     minos:           84281096
+# CHECK:     sdk:             151653132
+# CHECK:     ntools:          1
+# CHECK:     Tools:
+# CHECK:       - tool:            219025168
+# CHECK:         version:         286397204
+
+# CHECK: LinkEditData:
+# CHECK:   NameList:
+# CHECK:     - n_strx:          1
+# CHECK:       n_type:          0x1
+# CHECK:       n_sect:          1
+# CHECK:       n_desc:          4660
+# CHECK:       n_value:         72623859790382856
+# CHECK:     - n_strx:          4
+# CHECK:       n_type:          0x1
+# CHECK:       n_sect:          0
+# CHECK:       n_desc:          22136
+# CHECK:       n_value:         1230066625199609624
+# CHECK:   StringTable:
+# CHECK:     - ''
+# CHECK:     - _a
+# CHECK:     - _b
+# CHECK:     - ''
+# CHECK:   IndirectSymbols: [ 0x1, 0x40000000 ]
+# CHECK:   DataInCode:
+# CHECK:     - Offset:          0x1020304
+# CHECK:       Length:          1286
+# CHECK:       Kind:            0x708
+
+--- !mach-o
+IsLittleEndian: [[ENDIAN]]
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000012
+  cpusubtype:      0x00000034
+  filetype:        0x00000001
+  ncmds:           5
+  sizeofcmds:      304
+  flags:           0x01020304
+  reserved:        0x05060708
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          0x2122232425262720
+    vmsize:          0x0000000000000100
+    fileoff:         336
+    filesize:        4
+    maxprot:         0x01020304
+    initprot:        0x05060708
+    nsects:          1
+    flags:           0x090A0B0C
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x2122232425262728
+        size:            4
+        offset:          336
+        align:           2
+        reloff:          340
+        nreloc:          1
+        flags:           0x80000400
+        reserved1:       0x01020304
+        reserved2:       0x05060708
+        reserved3:       0x090A0B0C
+        content:         DEADBEEF
+        relocations:
+          - address:         0x01020304
+            symbolnum:       1
+            pcrel:           false
+            length:          3
+            extern:          true
+            type:            2
+            scattered:       false
+            value:           0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          356
+    nsyms:           2
+    stroff:          396
+    strsize:         8
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       1
+    iextdefsym:      1
+    nextdefsym:      0
+    iundefsym:       1
+    nundefsym:       1
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  388
+    nindirectsyms:   2
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         348
+    datasize:        8
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        0x01020304
+    minos:           0x05060708
+    sdk:             0x090A0B0C
+    ntools:          1
+    Tools:
+      - tool:            0x0D0E0F10
+        version:         0x11121314
+LinkEditData:
+  NameList:
+    - n_strx:          1
+      n_type:          0x01
+      n_sect:          1
+      n_desc:          0x1234
+      n_value:         0x0102030405060708
+    - n_strx:          4
+      n_type:          0x01
+      n_sect:          0
+      n_desc:          0x5678
+      n_value:         0x1112131415161718
+  StringTable: [ '', _a, _b, '' ]
+  IndirectSymbols: [ 0x1, 0x40000000 ]
+  DataInCode:
+    - Offset:          0x01020304
+      Length:          0x0506
+      Kind:            0x0708
+...

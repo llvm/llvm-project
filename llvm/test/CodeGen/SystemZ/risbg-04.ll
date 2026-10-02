@@ -252,8 +252,9 @@ define i64 @f20(i64 %foo) {
 }
 
 ; Now try an arithmetic right shift in which the sign bits aren't needed.
-; Introduce a second use of %shr so that the ashr doesn't decompose to
-; an lshr.
+; Introduce a second use of %shr so that the ashr doesn't decompose to an
+; lshr. TODO: Maybe better if pre-ra scheduler put the risblg below the the
+; other use of %r2.
 define i32 @f21(i32 %foo, ptr %dest) {
 ; CHECK-LABEL: f21:
 ; CHECK:       # %bb.0:

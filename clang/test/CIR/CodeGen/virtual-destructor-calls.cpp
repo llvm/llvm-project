@@ -79,7 +79,7 @@ C::~C() { }
 // Base (D2) dtor for C: calls B's base dtor.
 
 // CIR: cir.func{{.*}} @_ZN1CD2Ev
-// CIR:   %[[B:.*]] = cir.base_class_addr %[[THIS:.*]] : !cir.ptr<!rec_C> nonnull [0] -> !cir.ptr<!rec_B>
+// CIR:   %[[B:.*]] = cir.base_class_addr nonnull %[[THIS:.*]] [0] : !cir.ptr<!rec_C> -> !cir.ptr<!rec_B>
 // CIR:   cir.call @_ZN1BD2Ev(%[[B]])
 
 // LLVM: define{{.*}} void @_ZN1CD2Ev
@@ -141,7 +141,7 @@ D::~D() = default;
 // CIR: cir.return
 
 // LLVM: define {{.*}} @_ZN1DD2Ev
-// LLVM: %[[THIS_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM: %[[THIS_ADDR:.*]] = alloca ptr, align 8
 // LLVM: store ptr %[[THIS:.*]], ptr %[[THIS_ADDR]], align 8
 // LLVM: %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
 // LLVM: ret void
@@ -161,7 +161,7 @@ D::~D() = default;
 // CIR: cir.trap
 
 // LLVM: define {{.*}} @_ZN1DD0Ev
-// LLVM:  %[[THIS_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM:  %[[THIS_ADDR:.*]] = alloca ptr, align 8
 // LLVM:  store ptr %[[THIS:.*]], ptr %[[THIS_ADDR]], align 8
 // LLVM:  %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
 // LLVM:  call void @llvm.trap()

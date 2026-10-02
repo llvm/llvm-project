@@ -5,7 +5,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-    @skipUnlessDarwin
+    @requireDarwin
     def test_objc_self(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -13,7 +13,7 @@ class TestCase(TestBase):
         )
         self.expect("frame variable _ivar", startstr="(int) _ivar = 30")
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_objc_explicit_self(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -21,7 +21,7 @@ class TestCase(TestBase):
         )
         self.expect("frame variable _ivar", startstr="(int) _ivar = 30")
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_cpp_this(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

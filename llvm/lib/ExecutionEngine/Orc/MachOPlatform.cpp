@@ -7,15 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
+#include "llvm/ExecutionEngine/Orc/Mangling.h"
 
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
-#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/MachOBuilder.h"
+#include "llvm/ExecutionEngine/Orc/SPSProxySpec.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -86,6 +88,16 @@ public:
 } // namespace orc
 } // namespace llvm
 
+// Controller-interface descriptors for the MachO platform runtime's SPS
+// wrapper calls.
+namespace llvm::orc::macho_sps_ci {
+struct CreatePThreadKey {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_macho_create_pthread_key");
+  using SPSSig = SPSExpected<uint64_t>();
+};
+} // namespace llvm::orc::macho_sps_ci
+
 namespace {
 
 using SPSRegisterSymbolsArgs =
@@ -98,7 +110,8 @@ std::unique_ptr<jitlink::LinkGraph> createPlatformGraph(MachOPlatform &MOP,
   auto &ES = MOP.getExecutionSession();
   return std::make_unique<jitlink::LinkGraph>(
       std::move(Name), ES.getSymbolStringPool(), ES.getTargetTriple(),
-      SubtargetFeatures(), jitlink::getGenericEdgeKindName);
+      ES.getTargetTriple().getArchPointerBitWidth() / 8, SubtargetFeatures(),
+      jitlink::getGenericEdgeKindName);
 }
 
 // Creates a Bootstrap-Complete LinkGraph to run deferred actions.
@@ -292,8 +305,6 @@ MachOPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
                                        ES.getTargetTriple().str(),
                                    inconvertibleErrorCode());
 
-  auto &EPC = ES.getExecutorProcessControl();
-
   // Create default aliases if the caller didn't supply any.
   if (!RuntimeAliases)
     RuntimeAliases = standardPlatformAliases(ES);
@@ -302,15 +313,18 @@ MachOPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
   if (auto Err = PlatformJD.define(symbolAliases(std::move(*RuntimeAliases))))
     return std::move(Err);
 
-  // Add JIT-dispatch function support symbols.
-  if (auto Err = PlatformJD.define(
-          absoluteSymbols({{ES.intern("___orc_rt_jit_dispatch"),
-                            {EPC.getJITDispatchInfo().JITDispatchFunction,
-                             JITSymbolFlags::Exported}},
-                           {ES.intern("___orc_rt_jit_dispatch_ctx"),
-                            {EPC.getJITDispatchInfo().JITDispatchContext,
-                             JITSymbolFlags::Exported}}})))
-    return std::move(Err);
+  {
+    // Add JIT dispatch reexports from bootstrap JITDylib.
+    MangleAndInterner Mangle(ES);
+    if (auto Err = PlatformJD.define(reexports(
+            ES.getBootstrapJITDylib(),
+            {{ES.intern("___orc_rt_jit_dispatch"),
+              {Mangle(rt::DispatchName),
+               JITSymbolFlags::Exported | JITSymbolFlags::Callable}},
+             {ES.intern("___orc_rt_jit_dispatch_ctx"),
+              {Mangle(rt::DispatchCtxName), JITSymbolFlags::Exported}}})))
+      return Err;
+  }
 
   // Create the instance.
   Error Err = Error::success();
@@ -797,11 +811,12 @@ Expected<uint64_t> MachOPlatform::createPThreadKey() {
         "not been loaded yet",
         inconvertibleErrorCode());
 
-  Expected<uint64_t> Result(0);
-  if (auto Err = ES.callSPSWrapper<SPSExpected<uint64_t>(void)>(
-          CreatePThreadKey.Addr, Result))
-    return std::move(Err);
-  return Result;
+  using CreatePThreadKeyProxy = Proxy<Expected<uint64_t>()>;
+  CreatePThreadKeyProxy CreateKey(
+      sps::ProxySpec<CreatePThreadKeyProxy,
+                     macho_sps_ci::CreatePThreadKey>::dispatch,
+      CreatePThreadKey.Addr);
+  return CreateKey(ES);
 }
 
 void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
@@ -1771,6 +1786,9 @@ jitlink::Block &createHeaderBlock(MachOPlatform &MOP,
   for (auto &BV : Opts.BuildVersions)
     B.template addLoadCommand<MachO::LC_BUILD_VERSION>(
         BV.Platform, BV.MinOS, BV.SDK, static_cast<uint32_t>(0));
+
+  if (Opts.TargetTriple)
+    B.template addLoadCommand<MachO::LC_TARGET_TRIPLE>(*Opts.TargetTriple);
 
   using LoadKind = MachOPlatform::HeaderOptions::LoadDylibCmd::LoadKind;
   for (auto &LD : Opts.LoadDylibs) {

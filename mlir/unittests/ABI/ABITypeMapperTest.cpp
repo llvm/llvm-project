@@ -170,4 +170,34 @@ TEST_F(ABITypeMapperTest, MapUnsignedI32) {
   EXPECT_FALSE(intTy->isSigned());
 }
 
+TEST_F(ABITypeMapperTest, MapScalableVectorOf4xF32) {
+  DataLayout dl(module);
+  ABITypeMapper mapper(dl);
+
+  auto f32 = Float32Type::get(&ctx);
+  auto vec = VectorType::get({4}, f32, /* scalableDims=*/true);
+  const llvm::abi::Type *result = mapper.map(vec);
+
+  ASSERT_NE(result, nullptr);
+  EXPECT_TRUE(result->isVector());
+
+  auto *vecTy = llvm::cast<llvm::abi::VectorType>(result);
+  EXPECT_TRUE(vecTy->getNumElements().isScalable());
+  EXPECT_EQ(vecTy->getNumElements().getKnownMinValue(), 4u);
+  EXPECT_TRUE(vecTy->getElementType()->isFloat());
+}
+
+TEST_F(ABITypeMapperTest, MapWithTwoScalableDimsReturnsNull) {
+  DataLayout dl(module);
+  ABITypeMapper mapper(dl);
+
+  auto f32 = Float32Type::get(&ctx);
+  auto vec = VectorType::get({2, 4}, f32, /*scalableDims=*/{true, true});
+  const llvm::abi::Type *result = mapper.map(vec);
+
+  // LLVM supports at most 1 scalable dimension, hence this case should
+  // return nullptr.
+  EXPECT_EQ(result, nullptr);
+}
+
 } // namespace

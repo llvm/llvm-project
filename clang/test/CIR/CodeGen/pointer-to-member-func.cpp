@@ -77,7 +77,7 @@ auto make_non_virtual() -> void (Foo::*)(int) {
 
 // LLVM: define {{.*}} { i64, i64 } @_Z16make_non_virtualv()
 // LLVM:   %[[RETVAL:.*]] = alloca { i64, i64 }
-// LLVM:   call void @llvm.memcpy{{.*}}(ptr %[[RETVAL]], ptr @[[NONVIRT_RET]]
+// LLVM:   call void @llvm.memcpy{{.*}}(ptr align 8 %[[RETVAL]], ptr align 8 @[[NONVIRT_RET]]
 // LLVM:   %[[RET:.*]] = load { i64, i64 }, ptr %[[RETVAL]]
 // LLVM:   ret { i64, i64 } %[[RET]]
 
@@ -110,7 +110,7 @@ auto make_virtual() -> void (Foo::*)(int) {
 
 // LLVM: define {{.*}} @_Z12make_virtualv()
 // LLVM:   %[[RETVAL:.*]] = alloca { i64, i64 }
-// LLVM:   call void @llvm.memcpy{{.*}}(ptr %[[RETVAL]], ptr @[[VIRT_RET]]
+// LLVM:   call void @llvm.memcpy{{.*}}(ptr align 8 %[[RETVAL]], ptr align 8 @[[VIRT_RET]]
 // LLVM:   %[[RET:.*]] = load { i64, i64 }, ptr %[[RETVAL]]
 // LLVM:   ret { i64, i64 } %[[RET]]
 
@@ -141,7 +141,7 @@ auto make_null() -> void (Foo::*)(int) {
 
 // LLVM: define {{.*}} @_Z9make_nullv()
 // LLVM:   %[[RETVAL:.*]] = alloca { i64, i64 }
-// LLVM:   call void @llvm.memcpy{{.*}}(ptr %[[RETVAL]], ptr @[[NULL_RET]]
+// LLVM:   call void @llvm.memcpy{{.*}}(ptr align 8 %[[RETVAL]], ptr align 8 @[[NULL_RET]]
 // LLVM:   %[[RET:.*]] = load { i64, i64 }, ptr %[[RETVAL]]
 // LLVM:   ret { i64, i64 } %[[RET]]
 

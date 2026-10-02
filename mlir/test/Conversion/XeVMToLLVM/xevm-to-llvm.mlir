@@ -569,3 +569,51 @@ llvm.func @subgroup_id() -> i32 {
   %1 = xevm.subgroup_id : i32
   llvm.return %1 : i32
 }
+
+// -----
+// CHECK-LABEL: llvm.func spir_funccc @llvm.genx.GenISA.SubgroupBitcastShuffle.i64.v4i16(vector<4xi16>) -> i64
+// CHECK-SAME:  attributes {convergent, no_unwind, will_return}
+llvm.func @bitcast_shuffle(%a: vector<4xi16>) -> i64 {
+  // CHECK: %[[VAR0:.*]] = llvm.call spir_funccc @llvm.genx.GenISA.SubgroupBitcastShuffle.i64.v4i16(%[[ARG0:.*]]) {convergent,
+  // CHECK-SAME:  function_type = !llvm.func<i64 (vector<4xi16>)>, linkage = #llvm.linkage<external>,
+  // CHECK-SAME:  no_unwind, sym_name = "llvm.genx.GenISA.SubgroupBitcastShuffle.i64.v4i16", visibility_ = 0 : i64, will_return}
+  // CHECK-SAME: : (vector<4xi16>) -> i64
+  %0 = xevm.bitcast_shuffle %a : (vector<4xi16>) -> i64
+  llvm.return %0 : i64
+}
+
+// -----
+// CHECK-LABEL: llvm.func spir_funccc @llvm.genx.GenISA.SubgroupBitcastShuffle.v2i16.i32(i32) -> vector<2xi16>
+llvm.func @bitcast_shuffle_scalar_src(%a: i32) -> vector<2xi16> {
+  // CHECK: llvm.call spir_funccc @llvm.genx.GenISA.SubgroupBitcastShuffle.v2i16.i32({{.*}}) {{{.*}}} : (i32) -> vector<2xi16>
+  %0 = xevm.bitcast_shuffle %a : (i32) -> vector<2xi16>
+  llvm.return %0 : vector<2xi16>
+}
+
+// -----
+// CHECK-LABEL: llvm.func spir_funccc @llvm.genx.GenISA.SubgroupBitcastShuffle.i16.v2i8(vector<2xi8>) -> i16
+llvm.func @bitcast_shuffle_scalar_res(%a: vector<2xi8>) -> i16 {
+  // CHECK: llvm.call spir_funccc @llvm.genx.GenISA.SubgroupBitcastShuffle.i16.v2i8({{.*}}) {{{.*}}} : (vector<2xi8>) -> i16
+  %0 = xevm.bitcast_shuffle %a : (vector<2xi8>) -> i16
+  llvm.return %0 : i16
+}
+
+// -----
+// CHECK-LABEL: llvm.func spir_funccc @llvm.genx.GenISA.SubgroupBitcastShuffle.i64.v2i32(vector<2xi32>) -> i64
+llvm.func @bitcast_shuffle_i32(%a: vector<2xi32>) -> i64 {
+  // CHECK: llvm.call spir_funccc @llvm.genx.GenISA.SubgroupBitcastShuffle.i64.v2i32({{.*}}) {{{.*}}} : (vector<2xi32>) -> i64
+  %0 = xevm.bitcast_shuffle %a : (vector<2xi32>) -> i64
+  llvm.return %0 : i64
+}
+
+// -----
+// A pack and an unpack of the same types round-trip through two intrinsic calls.
+// CHECK-LABEL: llvm.func @bitcast_shuffle_roundtrip
+llvm.func @bitcast_shuffle_roundtrip(%a: vector<2xi16>) -> vector<2xi16> {
+  // CHECK: %[[PACKED:.*]] = llvm.call spir_funccc @llvm.genx.GenISA.SubgroupBitcastShuffle.i32.v2i16({{.*}}) {{{.*}}} : (vector<2xi16>) -> i32
+  // CHECK: %[[RES:.*]] = llvm.call spir_funccc @llvm.genx.GenISA.SubgroupBitcastShuffle.v2i16.i32(%[[PACKED]]) {{{.*}}} : (i32) -> vector<2xi16>
+  // CHECK: llvm.return %[[RES]]
+  %0 = xevm.bitcast_shuffle %a : (vector<2xi16>) -> i32
+  %1 = xevm.bitcast_shuffle %0 : (i32) -> vector<2xi16>
+  llvm.return %1 : vector<2xi16>
+}

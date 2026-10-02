@@ -7,6 +7,7 @@
 !===------------------------------------------------------------------------===!
 
 module cuda_runtime_api
+  use __cuda_builtins ! implicit dependency, made explicit for CMake
 implicit none
 
 integer, parameter :: cuda_stream_kind = int_ptr_kind()

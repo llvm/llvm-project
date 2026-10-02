@@ -7,10 +7,10 @@ config.substitutions.append(('%{flags}',
     '-isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else ''
 ))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdlibinc -I %{include} -I %{cxx-include} -I %{cxx-target-include} %{maybe-include-libunwind} -I @CMAKE_BINARY_DIR@/libc/include -I %{libcxx}/test/support -I %{libcxx}/src -idirafter @LIBC_KERNEL_HEADERS@ -D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS'
+    '-nostdlibinc -I %{include} -I %{cxx-include} -I %{cxx-target-include} %{maybe-include-libunwind} -isystem @CMAKE_BINARY_DIR@/libc/include -I %{libcxx}/test/support -I %{libcxx}/src -idirafter @LIBC_KERNEL_HEADERS@ -D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nodefaultlibs -nostartfiles -L %{lib} -lc++ -lc++abi -pthread @CMAKE_BINARY_DIR@/libc/startup/linux/crt1.o @CMAKE_BINARY_DIR@/libc/lib/libc.a -static -fno-use-cxa-atexit'
+    '-nodefaultlibs -nostartfiles -L %{lib} -lc++ -lc++abi -pthread @CMAKE_BINARY_DIR@/libc/startup/linux/crt1.o @CMAKE_BINARY_DIR@/libc/lib/libc.a -static -fno-use-cxa-atexit @CMAKE_BINARY_DIR@/compiler-rt/lib/linux/libclang_rt.builtins-x86_64.a -Wl,--defsym,__dso_handle=0'
 ))
 config.substitutions.append(('%{exec}',
     '%{executor} --execdir %{temp} -- '

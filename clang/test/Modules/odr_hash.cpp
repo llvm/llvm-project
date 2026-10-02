@@ -2631,6 +2631,32 @@ S5 s5;
 // expected-note@first.h:* {{but in 'FirstModule' found friend function 'T5a'}}
 #endif
 
+#if defined(FIRST) || defined(SECOND)
+template <class T> struct A {
+  struct B;
+};
+#endif
+
+#if defined(FIRST)
+struct S6 {
+  template <class T>
+    requires true
+  friend struct A<T>::B;
+};
+#elif defined(SECOND)
+struct S6 {
+  template <class T>
+    requires(sizeof(T) > 0)
+  friend struct A<T>::B;
+};
+#else
+S6 s6;
+// expected-error@second.h:* {{'Friend::S6' has different definitions in different modules}}
+// expected-note@second.h:* {{in first definition, possible difference is here}}
+// expected-note@first.h:* {{definition in module 'FirstModule' is here}}
+// expected-note@first.h:* {{in second definition, possible difference is here}}
+#endif
+
 #define DECLS            \
   friend class FriendA;  \
   friend struct FriendB; \

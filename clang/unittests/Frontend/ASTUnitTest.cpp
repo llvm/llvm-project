@@ -38,13 +38,15 @@ protected:
   std::shared_ptr<CompilerInvocation> CInvok;
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
 
-  std::unique_ptr<ASTUnit> createASTUnit(bool isVolatile) {
+  std::unique_ptr<ASTUnit>
+  createASTUnit(bool isVolatile, ArrayRef<const char *> ExtraArgs = {}) {
     EXPECT_FALSE(llvm::sys::fs::createTemporaryFile("ast-unit", "cpp", FD,
                                                     InputFileName));
     input_file = std::make_unique<ToolOutputFile>(InputFileName, FD);
     input_file->os() << "";
 
-    const char *Args[] = {"clang", "-xc++", InputFileName.c_str()};
+    SmallVector<const char *> Args{"clang", "-xc++", InputFileName.c_str()};
+    append_range(Args, ExtraArgs);
 
     auto VFS = llvm::vfs::getRealFileSystem();
     Diags = CompilerInstance::createDiagnostics(*VFS, *DiagOpts);
@@ -109,6 +111,42 @@ TEST_F(ASTUnitTest, SaveLoadPreservesLangOptionsInPrintingPolicy) {
   EXPECT_FALSE(AU->getASTContext().getPrintingPolicy().UseVoidForZeroParams);
 }
 
+TEST_F(ASTUnitTest, SaveLoadPreservesCodeGenOptions) {
+  // Check that the CodeGenOptions are preserved when saving and loading an
+  // ASTUnit from a file.
+
+  {
+    std::unique_ptr<ASTUnit> AST = createASTUnit(false);
+    if (!AST)
+      FAIL() << "failed to create ASTUnit";
+    EXPECT_EQ(AST->getCodeGenOpts().OptimizationLevel, 0u);
+  }
+
+  std::unique_ptr<ASTUnit> AST = createASTUnit(false, {"-O3"});
+  if (!AST)
+    FAIL() << "failed to create ASTUnit";
+  EXPECT_EQ(AST->getCodeGenOpts().OptimizationLevel, 3u);
+
+  llvm::SmallString<256> ASTFileName;
+  ASSERT_FALSE(
+      llvm::sys::fs::createTemporaryFile("ast-unit", "ast", FD, ASTFileName));
+  ToolOutputFile ast_file(ASTFileName, FD);
+  AST->Save(ASTFileName.str());
+
+  EXPECT_TRUE(llvm::sys::fs::exists(ASTFileName));
+  HeaderSearchOptions HSOpts;
+
+  std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
+      ASTFileName, PCHContainerOps->getRawReader(), ASTUnit::LoadEverything,
+      llvm::vfs::getRealFileSystem(), DiagOpts, Diags, FileSystemOptions(),
+      HSOpts);
+
+  if (!AU)
+    FAIL() << "failed to load ASTUnit";
+
+  EXPECT_EQ(AU->getCodeGenOpts().OptimizationLevel, 3u);
+}
+
 TEST_F(ASTUnitTest, GetBufferForFileMemoryMapping) {
   std::unique_ptr<ASTUnit> AST = createASTUnit(true);
 
@@ -155,7 +193,7 @@ TEST_F(ASTUnitTest, ModuleTextualHeader) {
       CInvok, PCHContainerOps, DiagOpts, Diags, FileMgr, false,
       CaptureDiagsKind::None, 1, TU_Complete, false, false, false);
   ASSERT_TRUE(AU);
-  auto File = AU->getFileManager().getFileRef("Textual.h", false, false);
+  auto File = AU->getFileManager().getFileRef("Textual.h");
   ASSERT_TRUE(bool(File));
   // Verify that we do not crash here.
   EXPECT_TRUE(

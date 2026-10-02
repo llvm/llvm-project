@@ -15,7 +15,7 @@ end subroutine
 
 ! CHECK: omp.private {type = private} @[[PRIVATIZER:.*]] : {{.*}}
 
-! CHECK: omp.target {{.*}} {
+! CHECK: omp.target kernel_type(generic) {{.*}} {
 ! CHECK:   omp.parallel private(@[[PRIVATIZER]] %{{.*}} -> %{{.*}} : {{.*}}) {
 ! CHECK:   }
 ! CHECK: }

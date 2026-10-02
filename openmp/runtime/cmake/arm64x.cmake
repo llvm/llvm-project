@@ -11,7 +11,7 @@ set(arm64ReproDir "${LLVM_BINARY_DIR}/runtimes/repros-arm64ec")
 
 # Don't install the runtime if we are doing an arm64ec build for arm64x.
 # The hybrid arm64x runtime will get installed by the host (default) runtime build
-if (LIBOMP_ARCH STREQUAL "arm64ec")
+if (LIBOMP_ARCH STREQUAL "arm64ec" AND NOT LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
   set(CMAKE_SKIP_INSTALL_RULES On)
 endif()
 

@@ -393,9 +393,7 @@ static const llvm::sys::UnicodeCharRange XIDContinueRanges[] = {
     {0x1FBF0, 0x1FBF9}, {0xE0100, 0xE01EF},
 };
 
-// Clang supports the "Mathematical notation profile" as an extension,
-// as described in https://www.unicode.org/L2/L2022/22230-math-profile.pdf
-// Math_Start
+// Unicode 18.0 ID_Compat_Math_Start
 static const llvm::sys::UnicodeCharRange
     MathematicalNotationProfileIDStartRanges[] = {
         {0x02202, 0x02202}, // ∂
@@ -413,7 +411,7 @@ static const llvm::sys::UnicodeCharRange
         {0x1D7C3, 0x1D7C3}, // 𝟃
 };
 
-// Math_Continue
+// Unicode 18.0 ID_Compat_Math_Continue, excluding ID_Compat_Math_Start
 static const llvm::sys::UnicodeCharRange
     MathematicalNotationProfileIDContinueRanges[] = {
         {0x000B2, 0x000B3}, // ²-³

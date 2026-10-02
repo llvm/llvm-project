@@ -37,6 +37,7 @@ TEST_CONSTEXPR_CXX20 void test(const S& s, typename S::size_type pos, typename S
   else if (!TEST_IS_CONSTANT_EVALUATED) {
     try {
       S str = s.substr(pos, n);
+      (void)str;
       assert(false);
     } catch (std::out_of_range&) {
       assert(pos > s.size());

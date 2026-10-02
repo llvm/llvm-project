@@ -19,6 +19,7 @@
 #include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -78,7 +79,7 @@ class AVRAsmParser : public MCTargetAsmParser {
                                       unsigned Kind) override;
 
   MCRegister toDREG(MCRegister Reg, unsigned From = AVR::sub_lo) {
-    MCRegisterClass const *Class = &AVRMCRegisterClasses[AVR::DREGSRegClassID];
+    MCRegisterClass const *Class = &getAVRMCRegisterClass(AVR::DREGSRegClassID);
     return MRI->getMatchingSuperReg(Reg, From, Class);
   }
 

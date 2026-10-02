@@ -26,7 +26,7 @@ define i1 @t2(i64 %x) nounwind {
 define i1 @t3(i32 %x) nounwind {
 ; CHECK-LABEL: t3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    clr.b %d0
 ; CHECK-NEXT:    rts
   %tmp = icmp ugt i32 %x, -1
   ret i1 %tmp

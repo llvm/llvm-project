@@ -67,3 +67,47 @@ merge:
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %dst, ptr align 8 %sel, i64 16, i1 false)
   ret void
 }
+
+; SROA sees these slices:
+;   [0,8)   load ptr
+;   [0,32)  store i256, splittable
+;   [8,16)  load i64, splittable
+;   [16,32) memcpy source, splittable
+;
+; These form three partitions:
+;   [0,8)   contains the ptr load and the store i256 slice that starts at 0
+;   [8,16)  contains the i64 load, plus the store i256 split tail
+;   [16,32) contains the memcpy source, plus the store i256 split tail
+;
+; The [16,32) subpartition has type { i64, i64 }, and the only slice that
+; starts in the partition is a memcpy. However, the whole-alloca i256 store is a
+; split tail overlapping the subpartition, so it must block struct-to-vector
+; fallback canonicalization.
+
+; CHECK-LABEL: define void @test_split_tail_store_blocks_subpartition_type(
+; CHECK-NOT: <2 x i64>
+; CHECK: [[TAIL_SHIFT:%.*]] = lshr i256 %x, 128
+; CHECK-NOT: <2 x i64>
+; CHECK: [[TAIL:%.*]] = trunc i256 [[TAIL_SHIFT]] to i128
+; CHECK-NOT: <2 x i64>
+; CHECK: store i128 [[TAIL]], ptr %dst, align 8
+; CHECK-NOT: <2 x i64>
+; CHECK: ret void
+define void @test_split_tail_store_blocks_subpartition_type(ptr %dst, i256 %x) {
+entry:
+  %a = alloca { ptr, i64, i64, i64 }, align 8
+  store i256 %x, ptr %a, align 8
+
+  ; Force earlier partition boundaries so [16,32) is selected as a subpartition
+  ; whose type from getTypePartition is { i64, i64 }.
+  %p = load ptr, ptr %a, align 8
+  %puse = ptrtoint ptr %p to i64
+  %gep.a.8 = getelementptr inbounds i8, ptr %a, i64 8
+  %v8 = load i64, ptr %gep.a.8, align 8
+  %use = add i64 %puse, %v8
+  store i64 %use, ptr %dst, align 8
+
+  %gep.a.16 = getelementptr inbounds i8, ptr %a, i64 16
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %dst, ptr align 8 %gep.a.16, i64 16, i1 false)
+  ret void
+}

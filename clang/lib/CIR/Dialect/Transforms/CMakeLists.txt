@@ -13,14 +13,15 @@ add_clang_library(MLIRCIRTransforms
   LoweringPrepare.cpp
   GotoSolver.cpp
   IdiomRecognizer.cpp
+  LibOpt.cpp
 
   DEPENDS
   MLIRCIRPassIncGen
 
   LINK_LIBS PUBLIC
-  clangAST
   clangBasic
 
+  LLVMABI
   MLIRABI
   MLIRAnalysis
   MLIRDLTIDialect

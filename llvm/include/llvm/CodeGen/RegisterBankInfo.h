@@ -33,7 +33,8 @@ class MachineIRBuilder;
 class MachineRegisterInfo;
 class raw_ostream;
 class TargetInstrInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 /// Holds all the information related to register banks.

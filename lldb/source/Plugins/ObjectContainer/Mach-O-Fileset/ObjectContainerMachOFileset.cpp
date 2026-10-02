@@ -21,6 +21,31 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::MachO;
 
+/// Read a Mach-O load-command header (cmd + cmdsize) from \p data at
+/// \p offset into \p cmd, advancing \p offset by 8 bytes.  \p T may be
+/// \c llvm::MachO::load_command or any of its richer variants
+/// (\c thread_command, \c dylib_command, \c encryption_info_command, ...);
+/// only the leading cmd/cmdsize fields are touched by this read.  Returns
+/// false on EOF or on a cmdsize smaller than sizeof(load_command), in which
+/// case callers should break out of their load-command loop to avoid spinning
+/// on malformed input.
+template <typename T>
+static bool ReadMachOCommand(DataExtractor &data, lldb::offset_t &offset,
+                             T &cmd) {
+  static_assert(offsetof(T, cmd) == 0, "T::cmd must be the first field");
+  static_assert(offsetof(T, cmdsize) == sizeof(uint32_t),
+                "T::cmdsize must immediately follow T::cmd");
+  static_assert(std::is_same<decltype(T::cmd), uint32_t>::value,
+                "T::cmd must be uint32_t");
+  static_assert(std::is_same<decltype(T::cmdsize), uint32_t>::value,
+                "T::cmdsize must be uint32_t");
+  if (data.GetU32(&offset, &cmd, 2) == nullptr)
+    return false;
+  if (cmd.cmdsize < sizeof(load_command))
+    return false;
+  return true;
+}
+
 LLDB_PLUGIN_DEFINE(ObjectContainerMachOFileset)
 
 void ObjectContainerMachOFileset::Initialize() {
@@ -142,7 +167,7 @@ ParseFileset(DataExtractor &extractor, mach_header header,
   for (uint32_t i = 0; i < header.ncmds; ++i) {
     const lldb::offset_t load_cmd_offset = offset;
     load_command lc = {};
-    if (extractor.GetU32(&offset, &lc.cmd, 2) == nullptr)
+    if (!ReadMachOCommand(extractor, offset, lc))
       break;
 
     // If we know the load address we can compute the slide.

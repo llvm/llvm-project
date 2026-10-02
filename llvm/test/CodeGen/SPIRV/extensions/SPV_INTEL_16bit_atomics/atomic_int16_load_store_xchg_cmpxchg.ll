@@ -15,14 +15,13 @@
 ; CHECK-DAG: %[[#Const0:]] = OpConstantNull %[[#TyInt16]]
 ; CHECK-DAG: %[[#Const1:]] = OpConstant %[[#TyInt16]] 1{{$}}
 ; CHECK-DAG: %[[#Const42:]] = OpConstant %[[#TyInt16]] 42{{$}}
-; CHECK-DAG: %[[#ScopeDevice:]] = OpConstant %[[#TyInt32]] 1{{$}}
 ; CHECK-DAG: %[[#ScopeAllSvmDevices:]] = OpConstantNull %[[#TyInt32]]
 ; CHECK-DAG: %[[#MemSem528:]] = OpConstant %[[#TyInt32]] 528{{$}}
 
 ; CHECK-DAG: %[[#Val:]] = OpVariable %[[#TyInt16Ptr]] CrossWorkgroup %[[#Const0]]
 
-; CHECK: OpAtomicLoad %[[#TyInt16]] %[[#Val]] %[[#ScopeDevice]] %[[#MemSem528]]
-; CHECK: OpAtomicStore %[[#Val]] %[[#ScopeDevice]] %[[#MemSem528]] %[[#Const42]]
+; CHECK: OpAtomicLoad %[[#TyInt16]] %[[#Val]] %[[#ScopeAllSvmDevices]] %[[#MemSem528]]
+; CHECK: OpAtomicStore %[[#Val]] %[[#ScopeAllSvmDevices]] %[[#MemSem528]] %[[#Const42]]
 ; CHECK: OpAtomicExchange %[[#TyInt16]] %[[#Val]] %[[#ScopeAllSvmDevices]] %[[#MemSem528]] %[[#Const42]]
 ; CHECK: OpAtomicCompareExchange %[[#TyInt16]] %[[#]] %[[#ScopeAllSvmDevices]] %[[#MemSem528]] %[[#MemSem528]] %[[#Const42]] %[[#Const1]]
 
@@ -31,14 +30,9 @@
 
 define spir_func void @test_atomic_int16_basic() {
 entry:
-; TODO: 'load atomic'/'store atomic' LLVM instructions are not yet lowered to
-; OpAtomicLoad/OpAtomicStore by the SPIRV backend; use OCL builtins instead.
-  %load = call spir_func i16 @_Z11atomic_loadPU3AS1VU7_Atomics(ptr addrspace(1) @val)
-  call spir_func void @_Z12atomic_storePU3AS1VU7_Atomicss(ptr addrspace(1) @val, i16 42)
+  %load = load atomic i16, ptr addrspace(1) @val seq_cst, align 2
+  store atomic i16 42, ptr addrspace(1) @val seq_cst, align 2
   %xchg = atomicrmw xchg ptr addrspace(1) @val, i16 42 seq_cst
   %cmpxchg = cmpxchg ptr addrspace(1) @val, i16 1, i16 42 seq_cst seq_cst
   ret void
 }
-
-declare spir_func i16 @_Z11atomic_loadPU3AS1VU7_Atomics(ptr addrspace(1))
-declare spir_func void @_Z12atomic_storePU3AS1VU7_Atomicss(ptr addrspace(1), i16)

@@ -86,7 +86,7 @@ def to_file(versioned_symbols):
             "Do not check this version script in: you should instead work "
             "out which symbols are missing in `lib/gcc_s.ver` and then "
             "integrate them into `lib/gcc_s.ver`. For more information, "
-            "please see `doc/LLVMLibgcc.rst`.\n"
+            "please see `doc/LLVMLibgcc.md`.\n"
         )
         for version, symbols in versioned_symbols:
             f.write(f"{version} {{\n")

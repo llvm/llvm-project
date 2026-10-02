@@ -654,6 +654,8 @@ TEST(KnownBitsTest, BinaryExhaustive) {
   testBinaryOpExhaustive("avgCeilS", KnownBits::avgCeilS, APIntOps::avgCeilS);
 
   testBinaryOpExhaustive("clmul", KnownBits::clmul, APIntOps::clmul);
+  testBinaryOpExhaustive("pext", KnownBits::pext, APIntOps::pext);
+  testBinaryOpExhaustive("pdep", KnownBits::pdep, APIntOps::pdep);
 }
 
 TEST(KnownBitsTest, UnaryExhaustive) {

@@ -13,8 +13,8 @@ define i1 @test(ptr noalias %0, i64 %1, ptr noalias %p, ptr %p1) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP3]], align 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i64 16
 ; CHECK-NEXT:    [[BF_LOAD_I1345:%.*]] = load i24, ptr [[TMP5]], align 16
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i24> poison, i24 [[BF_LOAD_I1336]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i24> [[TMP6]], i24 [[BF_LOAD_I1345]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i24> poison, i24 [[BF_LOAD_I1336]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i24> [[TMP6]], i24 [[BF_LOAD_I1345]], i64 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = and <2 x i24> [[TMP7]], splat (i24 255)
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <2 x i24> [[TMP8]], splat (i24 24)
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <2 x i1> [[TMP9]], <2 x i24> splat (i24 23), <2 x i24> [[TMP8]]
@@ -26,9 +26,9 @@ define i1 @test(ptr noalias %0, i64 %1, ptr noalias %p, ptr %p1) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <2 x i1> [[TMP17]], <2 x i32> splat (i32 31), <2 x i32> [[TMP14]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = icmp eq <2 x i32> [[TMP16]], splat (i32 54)
 ; CHECK-NEXT:    [[TMP18:%.*]] = select <2 x i1> [[TMP27]], <2 x i32> splat (i32 53), <2 x i32> [[TMP16]]
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i32> [[TMP18]], i32 0
+; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i32> [[TMP18]], i64 0
 ; CHECK-NEXT:    store i32 [[TMP19]], ptr [[P1]], align 4
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <2 x i32> [[TMP18]], i32 1
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <2 x i32> [[TMP18]], i64 1
 ; CHECK-NEXT:    [[CMP210_NOT:%.*]] = icmp eq i32 [[TMP19]], [[TMP20]]
 ; CHECK-NEXT:    ret i1 [[CMP210_NOT]]
 ;

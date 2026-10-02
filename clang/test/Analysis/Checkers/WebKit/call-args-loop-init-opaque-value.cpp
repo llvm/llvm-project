@@ -60,5 +60,5 @@ bool someFunction(Component* other) {
 
 bool otherFunction(Component* other) {
     return provide()->isNonTrivialEqual(*other);
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    // expected-warning@-1{{Function argument 'provide()' (parameter 'this' to 'Component::isNonTrivialEqual') is a raw pointer to RefPtr-capable type 'Component'}}
 }

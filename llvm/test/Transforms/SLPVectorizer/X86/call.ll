@@ -132,9 +132,9 @@ define void @sqrt_libm_no_errno(ptr %a, ptr %b) {
 define void @sqrt_libm_errno(ptr %a, ptr %b) {
 ; CHECK-LABEL: @sqrt_libm_errno(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[SQRT1:%.*]] = tail call nnan double @sqrt(double [[TMP2]]) #[[ATTR4:[0-9]+]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[SQRT2:%.*]] = tail call nnan double @sqrt(double [[TMP3]]) #[[ATTR4]]
 ; CHECK-NEXT:    store double [[SQRT1]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr inbounds double, ptr [[B]], i64 1
@@ -156,9 +156,9 @@ define void @sqrt_libm_errno(ptr %a, ptr %b) {
 define void @round_custom(ptr %a, ptr %b) {
 ; CHECK-LABEL: @round_custom(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[ROUND1:%.*]] = tail call i64 @round(i64 [[TMP2]]) #[[ATTR5:[0-9]+]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[ROUND2:%.*]] = tail call i64 @round(i64 [[TMP3]]) #[[ATTR5]]
 ; CHECK-NEXT:    store i64 [[ROUND1]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 1

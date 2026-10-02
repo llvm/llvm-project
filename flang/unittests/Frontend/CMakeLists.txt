@@ -24,6 +24,7 @@ target_link_libraries(FlangFrontendTests
 clang_target_link_libraries(FlangFrontendTests
   PRIVATE
   clangBasic
+  clangOptions
 )
 
 mlir_target_link_libraries(FlangFrontendTests

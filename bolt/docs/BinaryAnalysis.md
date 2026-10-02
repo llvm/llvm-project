@@ -193,7 +193,7 @@ with the specific set depending on command line options:
   non-protected return instruction
 * [`ptrauth-tail-calls`](#return-address-protection-before-tail-call-ptrauth-tail-calls) -
   performing a tail call with an untrusted value in the link register
-* [`ptrauth-forward-cf`](#indirect-branch-call-target-protection-ptrauth-forward-cf) -
+* [`ptrauth-forward-cf`](#ptrauth-forward-cf) -
   non-protected destination of branch or call instruction
 * [`ptrauth-sign-oracles`](#signing-oracles-ptrauth-sign-oracles) -
   signing of untrusted value (signing oracle)
@@ -370,6 +370,7 @@ check after a regular authentication instruction, which may be either too
 expensive (if a fully-generic XPAC-based sequence is being used) on one hand,
 or not required at all (if `FEAT_FPAC` is known to be implemented) on the other hand.
 
+(ptrauth-forward-cf)=
 ### Indirect branch / call target protection (`ptrauth-forward-cf`)
 
 **Instructions:** Indirect call and branch instructions without built-in

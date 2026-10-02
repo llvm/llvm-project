@@ -19,6 +19,10 @@ namespace lld::wasm {
 
 void OutputSegment::addInputSegment(InputChunk *inSeg) {
   alignment = std::max(alignment, inSeg->alignment);
+  // Carry input flags (RETAIN, STRINGS) into the relocatable SegmentInfo
+  // output; otherwise a relocatable link drops them and the downstream link
+  // loses RETAIN (segment GC'd) and STRINGS (string merge disabled).
+  linkingFlags |= inSeg->flags;
   inputSegments.push_back(inSeg);
   size = llvm::alignTo(size, 1ULL << inSeg->alignment);
   LLVM_DEBUG(dbgs() << "addInputSegment: " << inSeg->name << " oname=" << name

@@ -24,7 +24,6 @@
 #include "flang/Evaluate/type.h"
 #include "flang/Support/Fortran.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/IR/BuiltinTypes.h"
 
 namespace mlir {
 class Location;

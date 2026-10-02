@@ -53,8 +53,8 @@ class Function;
 ///    there is a function B with signature S. An "A" -> "B" edge will be added
 ///    to the graph;
 ///
-/// FIXME: For now, the algorithm assumes no recursion in the input Module. This
-/// will be addressed in the near future.
+/// Recursion and other cycles in the input Module (e.g. directly or mutually
+/// recursive functions, or self-referencing global variables) are supported.
 LLVM_ABI Error splitModuleTransitiveFromEntryPoints(
     std::unique_ptr<Module> M,
     function_ref<std::optional<int>(const Function &F)> EntryPointCategorizer,

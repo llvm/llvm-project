@@ -1,13 +1,13 @@
 # RUN: not llvm-mc -triple=riscv32 -mattr=+xqccmp -M no-aliases -show-encoding < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK-ERROR %s
 
-# CHECK-ERROR: :[[@LINE+1]]:14: error: invalid operand for instruction
+# CHECK-ERROR: :[[@LINE+1]]:14: error: register must be GPR from s0 to s7 (x8, x9 or x18-x23)
 qc.cm.mvsa01 a1, a2
 
 # CHECK-ERROR: :[[@LINE+1]]:14: error: rs1 and rs2 must be different
 qc.cm.mvsa01 s0, s0
 
-# CHECK-ERROR: :[[@LINE+1]]:14: error: invalid operand for instruction
+# CHECK-ERROR: :[[@LINE+1]]:14: error: register must be GPR from s0 to s7 (x8, x9 or x18-x23)
 qc.cm.mva01s a1, a2
 
 # CHECK-ERROR: :[[@LINE+1]]:15: error: invalid register list, '{ra, s0-s10}' or '{x1, x8-x9, x18-x26}' is not supported

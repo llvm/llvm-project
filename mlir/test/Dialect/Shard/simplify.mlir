@@ -213,6 +213,24 @@ func.func @all_reduce_arith_addf_no_endomorphism_wrong_reduction_kind(
   return %2 : tensor<5xf32>
 }
 
+// CHECK-LABEL: func.func @all_reduce_arith_addf_no_endomorphism_different_reduction_kind
+func.func @all_reduce_arith_addf_no_endomorphism_different_reduction_kind(
+    // CHECK-SAME: %[[ARG0:[A-Za-z0-9_]*]]: tensor<5xf32>
+    %arg0: tensor<5xf32>,
+    // CHECK-SAME: %[[ARG1:[A-Za-z0-9_]*]]: tensor<5xf32>
+    %arg1: tensor<5xf32>) -> tensor<5xf32> {
+  // CHECK: %[[ALL_REDUCE0:[A-Za-z0-9_]*]] = shard.all_reduce %[[ARG0]] on @grid0 grid_axes = [0]
+  %0 = shard.all_reduce %arg0 on @grid0 grid_axes = [0]
+    : tensor<5xf32> -> tensor<5xf32>
+  // CHECK: %[[ALL_REDUCE1:[A-Za-z0-9_]*]] = shard.all_reduce %[[ARG1]] on @grid0 grid_axes = [0] reduction = max
+  %1 = shard.all_reduce %arg1 on @grid0 grid_axes = [0] reduction = max
+    : tensor<5xf32> -> tensor<5xf32>
+  // CHECK: %[[ADD_RES:[A-Za-z0-9_]*]] = arith.addf %[[ALL_REDUCE0]], %[[ALL_REDUCE1]]
+  %2 = arith.addf %0, %1 : tensor<5xf32>
+  // CHECK: return %[[ADD_RES]]
+  return %2 : tensor<5xf32>
+}
+
 // CHECK-LABEL: func.func @all_reduce_arith_addf_no_endomorphism_different_operand_result_element_types
 func.func @all_reduce_arith_addf_no_endomorphism_different_operand_result_element_types(
     // CHECK-SAME: %[[ARG0:[A-Za-z0-9_]*]]: tensor<5xf32>

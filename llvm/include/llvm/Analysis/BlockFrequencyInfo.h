@@ -26,7 +26,7 @@ namespace llvm {
 
 class BasicBlock;
 class BranchProbabilityInfo;
-class LoopInfo;
+class CycleInfo;
 class Module;
 class raw_ostream;
 template <class BlockT> class BlockFrequencyInfoImpl;
@@ -44,7 +44,7 @@ public:
   LLVM_ABI BlockFrequencyInfo();
   LLVM_ABI BlockFrequencyInfo(const Function &F,
                               const BranchProbabilityInfo &BPI,
-                              const LoopInfo &LI);
+                              const CycleInfo &CI);
   BlockFrequencyInfo(const BlockFrequencyInfo &) = delete;
   BlockFrequencyInfo &operator=(const BlockFrequencyInfo &) = delete;
   LLVM_ABI BlockFrequencyInfo(BlockFrequencyInfo &&Arg);
@@ -94,7 +94,7 @@ public:
 
   /// calculate - compute block frequency info for the given function.
   LLVM_ABI void calculate(const Function &F, const BranchProbabilityInfo &BPI,
-                          const LoopInfo &LI);
+                          const CycleInfo &CI);
 
   LLVM_ABI BlockFrequency getEntryFreq() const;
   LLVM_ABI void releaseMemory();

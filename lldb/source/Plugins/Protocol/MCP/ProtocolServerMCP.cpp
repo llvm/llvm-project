@@ -26,7 +26,6 @@ using namespace llvm;
 LLDB_PLUGIN_DEFINE(ProtocolServerMCP)
 
 static constexpr llvm::StringLiteral kName = "lldb-mcp";
-static constexpr llvm::StringLiteral kVersion = "0.1.0";
 
 ProtocolServerMCP::ProtocolServerMCP() : ProtocolServer() {}
 
@@ -51,12 +50,20 @@ llvm::StringRef ProtocolServerMCP::GetPluginDescriptionStatic() {
   return "MCP Server.";
 }
 
-void ProtocolServerMCP::Extend(lldb_protocol::mcp::Server &server) const {
+void lldb_private::mcp::PopulateServer(lldb_protocol::mcp::Server &server) {
   server.AddTool(
       std::make_unique<CommandTool>("command", "Run an lldb command."));
   server.AddTool(std::make_unique<DebuggerListTool>(
       "debugger_list", "List debugger instances with their debugger_id."));
+  server.AddTool(std::make_unique<DebuggerCreateTool>(
+      "debugger_create", "Create a new debugger instance and return its URI."));
+  server.AddTool(std::make_unique<DebuggerDeleteTool>(
+      "debugger_delete", "Destroy a debugger instance by id or URI."));
   server.AddResourceProvider(std::make_unique<DebuggerResourceProvider>());
+}
+
+void ProtocolServerMCP::Extend(lldb_protocol::mcp::Server &server) const {
+  PopulateServer(server);
 }
 
 void ProtocolServerMCP::AcceptCallback(std::unique_ptr<Socket> socket) {
@@ -98,8 +105,6 @@ llvm::Error ProtocolServerMCP::Start(ProtocolServer::Connection connection) {
   auto listening_uris = m_listener->GetListeningConnectionURI();
   if (listening_uris.empty())
     return createStringError("failed to get listening connections");
-  std::string address =
-      llvm::join(m_listener->GetListeningConnectionURI(), ", ");
 
   ServerInfo info{listening_uris[0]};
   llvm::Expected<ServerInfoHandle> server_info_handle = ServerInfo::Write(info);
@@ -108,7 +113,8 @@ llvm::Error ProtocolServerMCP::Start(ProtocolServer::Connection connection) {
 
   m_client_count = 0;
   m_server = std::make_unique<lldb_protocol::mcp::Server>(
-      std::string(kName), std::string(kVersion), [](StringRef message) {
+      std::string(kName), std::string(lldb_protocol::mcp::GetServerVersion()),
+      [](StringRef message) {
         LLDB_LOG(GetLog(LLDBLog::Host), "MCP Server: {0}", message);
       });
   Extend(*m_server);

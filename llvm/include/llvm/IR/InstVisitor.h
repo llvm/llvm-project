@@ -199,6 +199,8 @@ public:
   RetTy visitCleanupPadInst(CleanupPadInst &I) { DELEGATE(FuncletPadInst); }
   RetTy visitCatchPadInst(CatchPadInst &I)     { DELEGATE(FuncletPadInst); }
   RetTy visitFreezeInst(FreezeInst &I)         { DELEGATE(Instruction); }
+  RetTy visitBitInsertInst(BitInsertInst &I) { DELEGATE(Instruction); }
+  RetTy visitBitExtractInst(BitExtractInst &I) { DELEGATE(Instruction); }
 
   RetTy visitMemSetInst(MemSetInst &I)            { DELEGATE(MemIntrinsic); }
   RetTy visitMemSetPatternInst(MemSetPatternInst &I) {
@@ -222,18 +224,11 @@ public:
     return static_cast<SubClass *>(this)->visitTerminator(I);
   }
   RetTy visitUncondBrInst(UncondBrInst &I) {
-    return static_cast<SubClass *>(this)->visitBranchInst(I);
-  }
-  RetTy visitCondBrInst(CondBrInst &I) {
-    return static_cast<SubClass *>(this)->visitBranchInst(I);
-  }
-  // Suppress warning for BranchInst. Replace with Instruction once BranchInst
-  // is removed.
-  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
-  RetTy visitBranchInst(BranchInst &I) {
     return static_cast<SubClass *>(this)->visitTerminator(I);
   }
-  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
+  RetTy visitCondBrInst(CondBrInst &I) {
+    return static_cast<SubClass *>(this)->visitTerminator(I);
+  }
   RetTy visitSwitchInst(SwitchInst &I) {
     return static_cast<SubClass *>(this)->visitTerminator(I);
   }

@@ -4,7 +4,7 @@
 define void @assume_align_dynamic(ptr %p, i32 %align) {
   call void @llvm.assume(i1 true) ["align"(ptr %p, i32 4)]
   call void @llvm.assume(i1 true) ["align"(ptr %p, i32 %align)]
-  call void @llvm.assume(i1 true) ["align"(ptr %p, i32 %align, i32 20)]
+  call void @llvm.assume(i1 true) ["align"(ptr %p, i32 %align, i32 0)]
   ret void
 }
 
@@ -31,7 +31,7 @@ define void @main() {
 ; CHECK-NEXT:   i32 %align = i32 8
 ; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr %p, i32 4) ]
 ; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr %p, i32 %align) ]
-; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr %p, i32 %align, i32 20) ]
+; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr %p, i32 %align, i32 0) ]
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: assume_align_dynamic
 ; CHECK-NEXT:   call void @assume_align_dynamic(ptr %alloc, i32 8)

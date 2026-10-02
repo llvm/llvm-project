@@ -16,6 +16,7 @@
 #include "PHIEliminationUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/LiveInterval.h"
@@ -34,6 +35,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -73,6 +75,7 @@ namespace {
 class PHIEliminationImpl {
   MachineRegisterInfo *MRI = nullptr; // Machine register information
   LiveVariables *LV = nullptr;
+  SlotIndexes *SI = nullptr;
   LiveIntervals *LIS = nullptr;
   MachineLoopInfo *MLI = nullptr;
   MachineDominatorTree *MDT = nullptr;
@@ -112,6 +115,10 @@ class PHIEliminationImpl {
   // Count the number of non-undef PHI uses of each register in each BB.
   VRegPHIUse VRegPHIUseCount;
 
+  // PHI source registers whose subranges must be shrunk to their own uses once
+  // all PHIs are gone.
+  SmallSet<Register, 8> PHISrcRegsToShrink;
+
   // Defs of PHI sources which are implicit_def.
   SmallPtrSet<MachineInstr *, 4> ImpDefs;
 
@@ -126,6 +133,7 @@ class PHIEliminationImpl {
 public:
   PHIEliminationImpl(MachineFunctionPass *P) : P(P) {
     auto *LVWrapper = P->getAnalysisIfAvailable<LiveVariablesWrapperPass>();
+    auto *SIWrapper = P->getAnalysisIfAvailable<SlotIndexesWrapperPass>();
     auto *LISWrapper = P->getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
     auto *MLIWrapper = P->getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
     auto *MDTWrapper =
@@ -138,6 +146,7 @@ public:
         P->getAnalysisIfAvailable<MachineBlockFrequencyInfoWrapperPass>();
 
     LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
+    SI = SIWrapper ? &SIWrapper->getSI() : nullptr;
     LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
     MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
     MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
@@ -148,6 +157,7 @@ public:
 
   PHIEliminationImpl(MachineFunction &MF, MachineFunctionAnalysisManager &AM)
       : LV(AM.getCachedResult<LiveVariablesAnalysis>(MF)),
+        SI(AM.getCachedResult<SlotIndexesAnalysis>(MF)),
         LIS(AM.getCachedResult<LiveIntervalsAnalysis>(MF)),
         MLI(AM.getCachedResult<MachineLoopAnalysis>(MF)),
         MDT(AM.getCachedResult<MachineDominatorTreeAnalysis>(MF)),
@@ -224,6 +234,7 @@ void PHIElimination::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
   AU.addPreserved<MachineLoopInfoWrapperPass>();
   AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
+  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -286,20 +297,32 @@ bool PHIEliminationImpl::run(MachineFunction &MF) {
   for (MachineInstr *DefMI : ImpDefs) {
     Register DefReg = DefMI->getOperand(0).getReg();
     if (MRI->use_nodbg_empty(DefReg)) {
-      if (LIS)
-        LIS->RemoveMachineInstrFromMaps(*DefMI);
+      if (SI)
+        SI->removeMachineInstrFromMaps(*DefMI);
       DefMI->eraseFromParent();
     }
   }
 
   // Clean up the lowered PHI instructions.
   for (auto &I : LoweredPHIs) {
-    if (LIS)
-      LIS->RemoveMachineInstrFromMaps(*I.first);
+    if (SI)
+      SI->removeMachineInstrFromMaps(*I.first);
     MF.deleteMachineInstr(I.first);
   }
 
   LoweredPHIs.clear();
+
+  // Different lanes may be used by different PHI source copies, or may already
+  // be dead in a predecessor. The main range's last use is therefore not a
+  // valid endpoint for every subrange. Wait until all PHIs have been removed
+  // before shrinking subranges to their remaining lane-specific uses.
+  for (Register Reg : PHISrcRegsToShrink) {
+    LiveInterval &LI = LIS->getInterval(Reg);
+    for (LiveInterval::SubRange &SR : LI.subranges())
+      LIS->shrinkToUses(SR, Reg);
+  }
+  PHISrcRegsToShrink.clear();
+
   ImpDefs.clear();
   VRegPHIUseCount.clear();
 
@@ -418,7 +441,7 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
         MBB, AfterPHIsIt, MPhi->getDebugLoc(), IncomingReg, DestReg);
   }
 
-  if (MPhi->peekDebugInstrNum()) {
+  if (MPhi->peekDebugInstrNum() && IncomingReg) {
     // If referred to by debug-info, store where this PHI was.
     MachineFunction *MF = MBB.getParent();
     unsigned ID = MPhi->peekDebugInstrNum();
@@ -485,9 +508,13 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
   }
 
   // Update LiveIntervals for the new copy or implicit def.
-  if (LIS) {
-    SlotIndex DestCopyIndex = LIS->InsertMachineInstrInMaps(*PHICopy);
+  SlotIndex DestCopyIndex;
+  if (SI)
+    DestCopyIndex = SI->insertMachineInstrInMaps(*PHICopy);
 
+  if (LIS) {
+    assert(DestCopyIndex.isValid() &&
+           "Expected a valid SlotIndex if LIS is available.");
     SlotIndex MBBStartIndex = LIS->getMBBStartIdx(&MBB);
     if (IncomingReg) {
       // Add the region from the beginning of MBB to the copy instruction to
@@ -503,6 +530,11 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
 
     LiveInterval &DestLI = LIS->getInterval(DestReg);
     assert(!DestLI.empty() && "PHIs should have non-empty LiveIntervals.");
+
+    // Make sure the instruction's dead flag matches the dead range created
+    // below.
+    if (DestLI.endIndex().isDead())
+      PHICopy->getOperand(0).setIsDead();
 
     SlotIndex NewStart = DestCopyIndex.getRegSlot();
 
@@ -694,15 +726,22 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
         LV->recomputeForSingleDefVirtReg(SrcReg);
     }
 
+    if (SI && NewSrcInstr)
+      SI->insertMachineInstrInMaps(*NewSrcInstr);
+
     if (LIS) {
       if (NewSrcInstr) {
-        LIS->InsertMachineInstrInMaps(*NewSrcInstr);
+        assert(
+            SI &&
+            "Expected SI to be available to insert new MI if LIS is available");
         LIS->addSegmentToEndOfBlock(IncomingReg, *NewSrcInstr);
       }
 
       if (!SrcUndef &&
           !VRegPHIUseCount[BBVRegPair(opBlock.getNumber(), SrcReg)]) {
         LiveInterval &SrcLI = LIS->getInterval(SrcReg);
+        if (SrcLI.hasSubRanges())
+          PHISrcRegsToShrink.insert(SrcReg);
 
         bool isLiveOut = false;
         for (MachineBasicBlock *Succ : opBlock.successors()) {
@@ -748,10 +787,6 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
           SlotIndex LastUseIndex = LIS->getInstructionIndex(*KillInst);
           SrcLI.removeSegment(LastUseIndex.getRegSlot(),
                               LIS->getMBBEndIdx(&opBlock));
-          for (auto &SR : SrcLI.subranges()) {
-            SR.removeSegment(LastUseIndex.getRegSlot(),
-                             LIS->getMBBEndIdx(&opBlock));
-          }
         }
       }
     }
@@ -759,8 +794,8 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
 
   // Really delete the PHI instruction now, if it is not in the LoweredPHIs map.
   if (EliminateNow) {
-    if (LIS)
-      LIS->RemoveMachineInstrFromMaps(*MPhi);
+    if (SI)
+      SI->removeMachineInstrFromMaps(*MPhi);
     MF.deleteMachineInstr(MPhi);
   }
 }

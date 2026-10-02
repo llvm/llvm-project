@@ -339,9 +339,9 @@ ParseResult Parser::parseAttributeDict(NamedAttrList &attributes) {
 
 /// Parse a float attribute.
 Attribute Parser::parseFloatAttr(Type type, bool isNegative) {
-  auto val = getToken().getFloatingPointValue();
-  if (!val)
-    return (emitError("floating point value too large for attribute"), nullptr);
+  // Defer parsing the literal until the type, and with it the float semantics,
+  // is known.
+  Token literalTok = getToken();
   consumeToken(Token::floatliteral);
   if (!type) {
     // Default to F64 when no type is specified.
@@ -353,7 +353,13 @@ Attribute Parser::parseFloatAttr(Type type, bool isNegative) {
   if (!isa<FloatType>(type))
     return (emitError("floating point value not valid for specified type"),
             nullptr);
-  return FloatAttr::get(type, isNegative ? -*val : *val);
+  // Note: parseFloatFromLiteral rejects a negative literal for a type with no
+  // signed representation, such as f8E8M0FNU.
+  std::optional<APFloat> result;
+  if (failed(parseFloatFromLiteral(result, literalTok, isNegative,
+                                   cast<FloatType>(type).getFloatSemantics())))
+    return nullptr;
+  return FloatAttr::get(type, *result);
 }
 
 /// Construct an APint from a parsed value, a known attribute type and

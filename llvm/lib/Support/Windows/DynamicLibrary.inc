@@ -131,10 +131,10 @@ void *DynamicLibrary::HandleSet::DLSym(void *Handle, const char *Symbol) {
 
   if (Handles.size() > 1) {
     // This is different behaviour than what Posix dlsym(dlopen(NULL)) does.
-    // Doing that here is causing real problems for the JIT where msvc.dll
+    // Doing that here is causing real problems for the JIT where msvcrt.dll
     // and ucrt.dll can define the same symbols. The runtime linker will choose
     // symbols from ucrt.dll first, but iterating NOT in reverse here would
-    // mean that the msvc.dll versions would be returned.
+    // mean that the msvcrt.dll versions would be returned.
 
     for (auto I = Handles.rbegin(), E = Handles.rend() - 1; I != E; ++I) {
       if (FARPROC Ptr = GetProcAddress(HMODULE(*I), Symbol))
