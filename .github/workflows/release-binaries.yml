@@ -223,6 +223,10 @@ jobs:
       with:
         python-version: '3.14.7'
 
+    - name: Install Python psutil (Windows)
+      if: runner.os == 'Windows'
+      run: python -m pip install --disable-pip-version-check --no-input psutil
+
     # For some reason this is needed on Windows or else the build system can't find python3.lib.
     - name: Setup Python library path
       if: runner.os == 'Windows'
