@@ -17547,9 +17547,10 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               *TTI, SLPReVec, ShuffleOrOp, ScalarTy, VL.size(), CostKind);
           MaskedCost.isValid())
         return MaskedCost + CommonCost;
-      unsigned OpIdx = isa<UnaryOperator>(VL0) ? 0 : 1;
       TTI::OperandValueInfo Op1Info = getOperandInfo(E->getOperand(0));
-      TTI::OperandValueInfo Op2Info = getOperandInfo(E->getOperand(OpIdx));
+      TTI::OperandValueInfo Op2Info = isa<UnaryOperator>(VL0)
+                                          ? TTI::OperandValueInfo()
+                                          : getOperandInfo(E->getOperand(1));
       InstructionCost Cost = TTI->getArithmeticInstrCost(
           ShuffleOrOp, VecTy, CostKind, Op1Info, Op2Info, {},
           VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr, TLI);
