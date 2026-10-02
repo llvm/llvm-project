@@ -60,8 +60,6 @@ public:
   std::vector<ArchSpec>
   GetSupportedArchitectures(const ArchSpec &process_host_arch) override;
 
-  ConstString GetSDKDirectory(Target &target) override;
-
   void
   AddClangModuleCompilationOptions(Target *target,
                                    std::vector<std::string> &options) override {
