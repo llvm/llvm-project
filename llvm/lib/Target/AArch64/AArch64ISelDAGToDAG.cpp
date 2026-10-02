@@ -790,10 +790,9 @@ bool AArch64DAGToDAGISel::SelectShiftMask(SDValue N, SDValue &ShAmt) {
     }
   }
   // If shifting by X+/-N where N == 0 mod ShiftWidth, then just shift by X
-  // to avoid the ADD/SUB. Only do this if the ADD/SUB has a single use, so
-  // we don't leave the ADD/SUB behind for other users.
+  // to avoid the ADD/SUB. The low log2(ShiftWidth) bits are unchanged, so the
+  // shift can use X directly; the original ADD/SUB stays for any other users.
   if ((N.getOpcode() == ISD::ADD || N.getOpcode() == ISD::SUB) &&
-      N.hasOneUse() &&
       N.getValueType() == (ShiftWidth == 32 ? MVT::i32 : MVT::i64)) {
     uint64_t Imm;
     if (isIntImmediate(N.getOperand(1).getNode(), Imm) &&
