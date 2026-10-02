@@ -678,6 +678,6 @@ for.end:
         EXPECT_EQ(Desc.getStepSCEV(), StepSCEV);
 
         // Check we don't add `nuw` when we have a negative GEP step.
-        EXPECT_EQ(Desc.getSCEVNoWrapFlags(), SCEV::FlagAnyWrap);
+        EXPECT_EQ(Desc.getSCEVNoWrapFlags(), SCEV::FlagNone);
       });
 }

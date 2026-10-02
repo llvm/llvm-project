@@ -405,6 +405,16 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
   if (nameKind != fir::NameUniquer::NameKind::DERIVED_TYPE)
     return genPlaceholderType(context);
 
+  // The fir.type_info is at the derived type definition, so it names the file
+  // the type is written in. That is not the file being compiled when the
+  // definition was read through an INCLUDE statement. A type with no
+  // fir.type_info carries no position at all, and keeps the compile unit's
+  // file and a line of 1.
+  fir::TypeInfoOp tiOp = symbolTable->lookup<fir::TypeInfoOp>(Ty.getName());
+  unsigned line = (tiOp) ? getLineFromLoc(tiOp.getLoc()) : 1;
+  if (tiOp)
+    fileAttr = fir::getFileAttrFromLoc(tiOp.getLoc(), fileAttr);
+
   llvm::SmallVector<mlir::LLVM::DINodeAttr> elements;
   // Generate a place holder TypeAttr which will be used if a member
   // references the parent type.
@@ -418,9 +428,6 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
       /*discriminator=*/nullptr, elements);
   DerivedTypeCache::ActiveLevels nestedRecursions =
       derivedTypeCache.startTranslating(Ty, placeHolder);
-
-  fir::TypeInfoOp tiOp = symbolTable->lookup<fir::TypeInfoOp>(Ty.getName());
-  unsigned line = (tiOp) ? getLineFromLoc(tiOp.getLoc()) : 1;
 
   mlir::OpBuilder builder(context);
   mlir::IntegerType intTy = mlir::IntegerType::get(context, 64);

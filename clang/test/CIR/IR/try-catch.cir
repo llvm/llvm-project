@@ -209,6 +209,25 @@ cir.func @filter_no_types() {
 // CHECK:         } unexpected (%[[UTOK:.*]]: !cir.eh_token) {
 // CHECK:           cir.eh.unexpected %[[UTOK]] : !cir.eh_token
 
+// void target() noexcept
+cir.func @terminate_scope() {
+  cir.try {
+    cir.call @_Z8externalv() : () -> ()
+    cir.yield
+  } catch all (%eh_token : !cir.eh_token) {
+    cir.eh.terminate %eh_token : !cir.eh_token
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func{{.*}} @terminate_scope
+// CHECK:         cir.try {
+// CHECK:           cir.call @_Z8externalv() : () -> ()
+// CHECK:           cir.yield
+// CHECK:         } catch all (%[[TTOK:.*]]: !cir.eh_token) {
+// CHECK:           cir.eh.terminate %[[TTOK]] : !cir.eh_token
+// CHECK:         }
+
 cir.func @flat_dispatch_filter() {
   cir.try_call @_Z8externalv() ^bb1, ^bb2 : () -> ()
 ^bb1:

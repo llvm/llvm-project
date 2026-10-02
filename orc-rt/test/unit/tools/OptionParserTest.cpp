@@ -125,9 +125,9 @@ TEST_F(OptionParserTest, ParseAsMainWithRegularArgsSucceeds) {
   EXPECT_EQ(Parser.positionals()[1], "1234");
 }
 
-TEST_F(OptionParserTest, ParseAsMainWithEmplyListFails) {
-  const char *Argv[] = {};
-  auto Err = Parser.parseAsMainArgs(0, const_cast<char **>(Argv));
+TEST_F(OptionParserTest, ParseAsMainWithEmptyListFails) {
+  std::vector<char *> Argv;
+  auto Err = Parser.parseAsMainArgs(static_cast<int>(Argv.size()), Argv.data());
 
   EXPECT_TRUE(!!Err);
   consumeError(std::move(Err));

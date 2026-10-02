@@ -11,14 +11,13 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/macros/optimization.h"
-
-// TODO: Implement bitwise reproducible float-only mathvec sinf
-#if !defined(LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT)
 #include "hdr/math_macros.h"
 #include "src/__support/CPP/simd.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/math/sinf.h"
+#include "src/__support/macros/optimization.h"
+// Keep the scalar reference correctly rounded in every build configuration.
+#undef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#include "src/__support/math/sinf_double_eval.h"
 #include "src/mathvec/sinf.h"
 #include "test/UnitTest/SIMDMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -29,9 +28,8 @@
 
 using LlvmLibcVecSinfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-using SinfOp =
-    LIBC_NAMESPACE::testing::mathvec::UnaryOp<float, LIBC_NAMESPACE::sinf,
-                                              LIBC_NAMESPACE::sinf>;
+using SinfOp = LIBC_NAMESPACE::testing::mathvec::UnaryOp<
+    float, LIBC_NAMESPACE::math::double_eval::sinf, LIBC_NAMESPACE::sinf>;
 using LIBC_NAMESPACE::cpp::splat;
 using LIBC_NAMESPACE::testing::SDCOMP26094_VALUES;
 using LIBC_NAMESPACE::testing::mathvec::wrap_ref;
@@ -104,4 +102,3 @@ TEST_F(LlvmLibcVecSinfTest, SpecificBitPatterns) {
 }
 
 TEST_F(LlvmLibcVecSinfTest, InFloatRange) { TEST_MATHVEC_FLOAT_RANGE(SinfOp); }
-#endif // !LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT

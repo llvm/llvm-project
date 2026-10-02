@@ -1833,6 +1833,11 @@ class AsmParser {
   // several registers share the same alias (i.e. not a 1:1 mapping).
   bit ShouldEmitMatchRegisterAltName = false;
 
+  // Generate MatchRegisterAltName(StringRef Name, unsigned AltIdx), matching
+  // only explicit names for AltIdx, without fallback. Duplicate names are
+  // checked per index, subject to AllowDuplicateRegisterNames.
+  bit ShouldEmitMatchRegisterAltNameWithIndex = false;
+
   // Set to true if MatchRegisterName and MatchRegisterAltName functions
   // should be generated even if there are duplicate register names. The
   // target is responsible for coercing aliased registers as necessary
@@ -1852,6 +1857,15 @@ class AsmParser {
   // to matching the parsed instruction, so to allow more detailed error
   // messages.
   bit ReportMultipleNearMisses = false;
+
+  // PrioritizeFeatureInMultiMismatchFallback -
+  // When 0, retain the first operand near-miss as the fallback diagnostic when an
+  // instruction has multiple invalid operands.
+  // When 1, prioritize a feature near-miss over the first operand near-miss when
+  // recording a MultiMismatchFallback entry, so that diagnostics point to the
+  // missing extension rather than an operand mismatch.
+  // Only effective when ReportMultipleNearMisses is also 1.
+  bit PrioritizeFeatureInMultiMismatchFallback = false;
 
   // OperandParserMethod - If non-empty, this is the name of a custom
   // member function of the AsmParser class to call for every custom instruction
