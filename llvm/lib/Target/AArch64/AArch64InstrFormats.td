@@ -470,6 +470,16 @@ def uimm6_32b : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm < 64; }]> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
+// TODO: Use AdjImmAsmOperand for the uimm6m1 and uimm6p1 operands too.
+class AdjImmAsmOperand<string name, string diagnostic, int adjustment,
+                       int low, int high> : AsmOperandClass {
+  let Name = name;
+  let DiagnosticType = diagnostic;
+  let RenderMethod = "addAdjImmOperands<" # adjustment # ">";
+  let PredicateMethod = "isImmInRange<" # !sub(low, adjustment) # "," #
+                        !sub(high, adjustment) # ">";
+}
+
 def CmpBranchUImm6Operand_32b
     : ComplexPattern<i32, 1, "SelectCmpBranchUImm6Operand", [imm]> {
   let WantsParent = true;
@@ -486,21 +496,11 @@ def CmpBranchBExtOperand
 def CmpBranchHExtOperand
     : ComplexPattern<i32, 2, "SelectCmpBranchExtOperand<false>", []> {}
 
-def UImm6Plus1Operand : AsmOperandClass {
-  let Name = "UImm6P1";
-  let DiagnosticType = "InvalidImm1_64";
-  let RenderMethod = "addImmOperands";
-  let ParserMethod = "tryParseAdjImm0_63<-1>";
-  let PredicateMethod = "isImmInRange<0,63>";
-}
+def UImm6Plus1Operand
+    : AdjImmAsmOperand<"UImm6P1", "InvalidImm1_64", -1, 0, 63>;
 
-def UImm6Minus1Operand : AsmOperandClass {
-  let Name = "UImm6M1";
-  let DiagnosticType = "InvalidImmM1_62";
-  let RenderMethod = "addImmOperands";
-  let ParserMethod = "tryParseAdjImm0_63<1>";
-  let PredicateMethod = "isImmInRange<0,63>";
-}
+def UImm6Minus1Operand
+    : AdjImmAsmOperand<"UImm6M1", "InvalidImmM1_62", 1, 0, 63>;
 
 def uimm6p1_32b : Operand<i32> {
   let ParserMatchClass = UImm6Plus1Operand;
@@ -525,16 +525,6 @@ def uimm6m1_64b : Operand<i64> {
 def uimm9 : Operand<i64> {
   let ParserMatchClass = AsmImmRange<0, 511>;
   let OperandType = "OPERAND_IMMEDIATE";
-}
-
-// TODO: Use AdjImmAsmOperand for the uimm6m1 and uimm6p1 operands too.
-class AdjImmAsmOperand<string name, string diagnostic, int adjustment,
-                       int low, int high> : AsmOperandClass {
-  let Name = name;
-  let DiagnosticType = diagnostic;
-  let RenderMethod = "addAdjImmOperands<" # adjustment # ">";
-  let PredicateMethod = "isImmInRange<" # !sub(low, adjustment) # "," #
-                        !sub(high, adjustment) # ">";
 }
 
 def uimm9p1 : Operand<i64> {
