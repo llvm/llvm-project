@@ -636,6 +636,7 @@ function Get-MissingPrerequisites {
         if ($tool.Cmd -eq 'make') {
             $toolPath = Find-MakeExecutable
         }
+        # These tools are deprecated and removed in newer version of WiX.
         if ($tool.Cmd -in @('candle', 'light') -and -not $wixBin) {
             $toolPath = $null
         }
