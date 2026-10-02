@@ -17,6 +17,7 @@
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Host/windows/PathUtils.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/FileSpec.h"
@@ -59,7 +60,9 @@ bool ProcessDebugger::IsSystemDLL(llvm::StringRef path) {
   if (windows_prefix.empty())
     return false;
 
-  std::string normalized = path.str();
+  // A module loaded through an extended-length path has the "\\?\" prefix,
+  // which would not match the Windows directory.
+  std::string normalized = StripExtendedLengthPrefix(path);
   NormalizeWindowsPathSeparators(normalized);
   return llvm::StringRef(normalized).starts_with_insensitive(windows_prefix);
 }

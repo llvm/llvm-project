@@ -1154,6 +1154,9 @@ enum PredefinedTypeIDs {
 // \brief HLSL intangible types with auto numeration
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/HLSLIntangibleTypes.def"
+// \brief HLSL packed types with auto numeration
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
+#include "clang/Basic/HLSLPackedTypes.def"
 // \brief SPIR-V types with auto numeration
 #define SPIRV_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/SPIRVTypes.def"
@@ -1169,7 +1172,7 @@ enum PredefinedTypeIDs {
 ///
 /// Type IDs for non-predefined types will start at
 /// NUM_PREDEF_TYPE_IDs.
-const unsigned NUM_PREDEF_TYPE_IDS = 530;
+const unsigned NUM_PREDEF_TYPE_IDS = 532;
 
 // Ensure we do not overrun the predefined types we reserved
 // in the enum PredefinedTypeIDs above.

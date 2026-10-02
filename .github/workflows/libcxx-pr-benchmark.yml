@@ -71,11 +71,10 @@ jobs:
             const match = context.payload.comment.body.match(/\/libcxx-bot benchmark (.+)/);
             core.setOutput('benchmarks', match ? match[1] : '');
 
-            // Benchmark the configurations defined in machines.json. We only consider configurations that
-            // build something, since there's nothing to do an A/B comparison with for other configurations.
+            // Benchmark the configurations defined in machines.json that opt into PR benchmarking.
             const config = JSON.parse(require('fs').readFileSync('libcxx/utils/ci/lnt/machines.json', 'utf8'));
-            const buildable = config.filter(cfg => cfg.build);
-            core.setOutput('matrix', JSON.stringify(buildable.map(({coverage, ...machine}) => machine)));
+            const selected = config.filter(cfg => cfg['pr-benchmarks']);
+            core.setOutput('matrix', JSON.stringify(selected.map(({coverage, ...machine}) => machine)));
 
       - name: Update comment with link to the run
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -108,6 +107,10 @@ jobs:
     permissions:
       pull-requests: write
     runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container || null }}
+    defaults:
+      run:
+        shell: bash
     needs:
       - extract-info
     env:
@@ -126,6 +129,11 @@ jobs:
           persist-credentials: false
           ref: ${{ needs.extract-info.outputs.pr_head }}
           fetch-depth: 0
+        # TODO(#226230): Remove this once we have resolved the underlying issue
+        # causing actions/checkout to be prematurely killed.
+        env:
+          GIT_TRACE: "true"
+          GIT_CURL_VERBOSE: "true"
 
       # This workflow is always taken from the default branch. Check out the tooling from the corresponding
       # commit so that we're always running tooling that's in sync with the workflow's definition. Only the
@@ -137,14 +145,7 @@ jobs:
           ref: ${{ github.sha }}
           path: tooling
           sparse-checkout: |
-            .github/workflows/libcxx
             libcxx/utils
-
-      - name: Install Python
-        if: runner.os == 'Linux' # installed via Homebrew on macOS
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: '3.14'
 
       - name: Select Xcode
         if: runner.os == 'macOS'
@@ -175,22 +176,36 @@ jobs:
         run: echo "commit=$(git merge-base "${PR_BASE}" "${PR_HEAD}")" >> "${GITHUB_OUTPUT}"
 
       - name: Build the baseline
-        uses: ./tooling/.github/workflows/libcxx/build-at-commit
-        with:
-          git-repo: ${{ github.workspace }}
-          commit: ${{ steps.baseline.outputs.commit }}
-          install-dir: ${{ github.workspace }}/install/baseline
-          compiler: ${{ matrix.cxx }}
-          cmake-cache: ${{ matrix.build.cmake-cache }}
+        env:
+          CMAKE_CACHE: ${{ matrix.cmake-cache }}
+          COMMIT: ${{ steps.baseline.outputs.commit }}
+          INSTALL_DIR: ${{ github.workspace }}/install/baseline
+        run: |
+          cd "${TOOLING}" # use the tooling checkout for scripts
+          rm -rf "${INSTALL_DIR}"
+          libcxx/utils/build-at-commit                       \
+            --git-repo "${GITHUB_WORKSPACE}"                 \
+            --commit "${COMMIT}"                             \
+            --install-dir "${INSTALL_DIR}"                   \
+            --                                               \
+            -DCMAKE_CXX_COMPILER="${COMPILER}"               \
+            -C "${CMAKE_CACHE}"
 
       - name: Build the candidate
-        uses: ./tooling/.github/workflows/libcxx/build-at-commit
-        with:
-          git-repo: ${{ github.workspace }}
-          commit: ${{ needs.extract-info.outputs.pr_head }}
-          install-dir: ${{ github.workspace }}/install/candidate
-          compiler: ${{ matrix.cxx }}
-          cmake-cache: ${{ matrix.build.cmake-cache }}
+        env:
+          CMAKE_CACHE: ${{ matrix.cmake-cache }}
+          COMMIT: ${{ needs.extract-info.outputs.pr_head }}
+          INSTALL_DIR: ${{ github.workspace }}/install/candidate
+        run: |
+          cd "${TOOLING}" # use the tooling checkout for scripts
+          rm -rf "${INSTALL_DIR}"
+          libcxx/utils/build-at-commit                       \
+            --git-repo "${GITHUB_WORKSPACE}"                 \
+            --commit "${COMMIT}"                             \
+            --install-dir "${INSTALL_DIR}"                   \
+            --                                               \
+            -DCMAKE_CXX_COMPILER="${COMPILER}"               \
+            -C "${CMAKE_CACHE}"
 
       - name: Run baseline and candidate interleaved
         run: |

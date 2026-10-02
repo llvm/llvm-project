@@ -116,11 +116,10 @@ struct Big varargs_aggregate_memory(int count, ...) {
 // CIR:   cir.copy %[[TMP_ADDR]] align(4) to %[[RET_ADDR]] align(4) : !cir.ptr<!rec_Bar>
 // CIR:   %[[VA_PTR2:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
 // CIR:   cir.va_end %[[VA_PTR2]] : !cir.ptr<!rec___va_list_tag>
-// CIR:   %[[RETVAL:.+]] = cir.load{{.*}} %[[RET_ADDR]] : !cir.ptr<!rec_Bar>, !rec_Bar
 // CIR:   %[[SLOT:.+]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!rec_anon_struct{{[0-9]*}}> -> !cir.ptr<!rec_Bar>
-// CIR:   cir.store %[[RETVAL]], %[[SLOT]] : !rec_Bar, !cir.ptr<!rec_Bar>
-// CIR:   %[[COERCED:.+]] = cir.load %[[COERCE]] : !cir.ptr<!rec_anon_struct{{[0-9]*}}>, !rec_anon_struct{{[0-9]*}}
-// CIR:   cir.return %[[COERCED]] : !rec_anon_struct{{[0-9]*}}
+// CIR-NEXT:   cir.copy %[[RET_ADDR]] align(4) to %[[SLOT]] align(8) : !cir.ptr<!rec_Bar>
+// CIR-NEXT:   %[[COERCED:.+]] = cir.load align(8) %[[COERCE]] : !cir.ptr<!rec_anon_struct{{[0-9]*}}>, !rec_anon_struct{{[0-9]*}}
+// CIR-NEXT:   cir.return %[[COERCED]] : !rec_anon_struct{{[0-9]*}}
 
 // GP pair: both eightbytes INTEGER, contiguous, so a single load suffices.
 // CIR-LABEL: cir.func {{.*}} @varargs_aggregate_gp_pair(
@@ -234,7 +233,11 @@ struct Big varargs_aggregate_memory(int count, ...) {
 // LLVMCIR: %[[VA_ARG:.+]] = load %struct.Bar, ptr %[[ADDR]], align 4
 // LLVMCIR: store %struct.Bar %[[VA_ARG]], ptr %{{.*}}, align 4
 // OGCG:   %[[ADDR:.+]] = phi ptr [ %{{.*}}, %[[REG_BB]] ], [ %{{.*}}, %[[MEM_BB]] ]
-// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 %{{.*}}, i64 12, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[RETVAL_ADDR:.+]], ptr align 4 %{{.*}}, i64 12, i1 false)
+// LLVM:   call void @llvm.va_end.p0(ptr %{{.+}})
+// LLVM-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[COERCE:.+]], ptr align 4 %[[RETVAL_ADDR]], i64 12, i1 false)
+// LLVM-NEXT:   %[[RES:.+]] = load { <2 x float>, i32 }, ptr %[[COERCE]], align 8
+// LLVM-NEXT:   ret { <2 x float>, i32 } %[[RES]]
 
 // LLVM-LABEL: define dso_local { i64, i64 } @varargs_aggregate_gp_pair(i32 noundef %{{.*}}, ...)
 // LLVM:   %[[GP_OFFSET_P:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
