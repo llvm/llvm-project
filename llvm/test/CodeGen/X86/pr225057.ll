@@ -1,11 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -O2 -stop-after=finalize-isel | FileCheck %s
-
-; When an x86_regcall argument or return value uses a 32-bit subregister (such
-; as R14D), the dynamic call-preserved mask must clear all aliases including the
-; 64-bit superregister (R14). Otherwise a live value in the superregister can be
-; incorrectly assumed preserved across the call.
-;
-; Fixes llvm/llvm-project#225057.
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -stop-after=finalize-isel | FileCheck %s
 
 %struct.R = type { i64, i64, i64, i64, i64, i64, i64, i64, i64, i32 }
 
