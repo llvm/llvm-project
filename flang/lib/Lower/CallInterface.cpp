@@ -279,6 +279,27 @@ static bool isExternalDefinedInSameCompilationUnit(
   return false;
 }
 
+/// Is a call to \p proc, whose characteristics are \p characteristic,
+/// prepared according to the actual arguments rather than to the dummy
+/// arguments of the procedure (see CallerInterface::characterize)?
+static bool isPreparedFromActualArguments(
+    const Fortran::evaluate::characteristics::Procedure &characteristic,
+    const Fortran::evaluate::ProcedureDesignator &proc) {
+  return !characteristic.HasExplicitInterface() ||
+         (isExternalDefinedInSameCompilationUnit(proc) &&
+          characteristic.CanBeCalledViaImplicitInterface());
+}
+
+bool Fortran::lower::isCalledThroughImplicitInterface(
+    const Fortran::evaluate::ProcedureRef &procRef,
+    Fortran::evaluate::FoldingContext &foldingContext) {
+  std::optional<Fortran::evaluate::characteristics::Procedure> characteristic =
+      Fortran::evaluate::characteristics::Procedure::Characterize(
+          procRef.proc(), foldingContext, /*emitError=*/false);
+  return !characteristic ||
+         isPreparedFromActualArguments(*characteristic, procRef.proc());
+}
+
 Fortran::evaluate::characteristics::Procedure
 Fortran::lower::CallerInterface::characterize() const {
   Fortran::evaluate::FoldingContext &foldingContext =
@@ -290,9 +311,7 @@ Fortran::lower::CallerInterface::characterize() const {
   // The characteristic may not contain the argument characteristic if the
   // ProcedureDesignator has no interface, or may mismatch in case of implicit
   // interface.
-  if (!characteristic->HasExplicitInterface() ||
-      (isExternalDefinedInSameCompilationUnit(procRef.proc()) &&
-       characteristic->CanBeCalledViaImplicitInterface())) {
+  if (isPreparedFromActualArguments(*characteristic, procRef.proc())) {
     // In HLFIR lowering, calls to subprogram with implicit interfaces are
     // always prepared according to the actual arguments. This is to support
     // cases where the implicit interfaces are "abused" in old and not so old

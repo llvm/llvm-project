@@ -1038,6 +1038,14 @@ struct CallContext {
     return false;
   }
 
+  /// Is the procedure called through an implicit interface?
+  bool calleeHasImplicitInterface() {
+    if (!implicitInterface)
+      implicitInterface = Fortran::lower::isCalledThroughImplicitInterface(
+          procRef, converter.getFoldingContext());
+    return *implicitInterface;
+  }
+
   const Fortran::evaluate::ProcedureRef &procRef;
   Fortran::lower::AbstractConverter &converter;
   Fortran::lower::SymMap &symMap;
@@ -1045,6 +1053,9 @@ struct CallContext {
   std::optional<mlir::Type> resultType;
   mlir::Location loc;
   bool doCopyIn;
+
+private:
+  std::optional<bool> implicitInterface;
 };
 
 using ExvAndCleanup =
@@ -1511,8 +1522,18 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
         // (genCopyIn requires a descriptor) and because compiler-generated
         // copy-out must never target the read-only storage of a
         // non-definable actual argument.
+        // A named constant is not definable, so a conforming procedure never
+        // defines a dummy argument associated with one.  Still, programs pass
+        // named constants through implicit interfaces to procedures that do
+        // define the dummy argument, and the dummy's characteristics are not
+        // known at such call sites.  Copy a whole named-constant array or a
+        // section of one in that case too, as was done before named constants
+        // were associated with their storage.  An array element is not
+        // copied: it may start a sequence association (F'2023 15.5.2.12),
+        // which a temporary holding only the element would break.
         (isParameterObjectOrSubObject(entity) &&
-         (suggestCopyIn || suggestCopyOut))) {
+         (suggestCopyIn || suggestCopyOut ||
+          (entity.isArray() && callContext.calleeHasImplicitInterface())))) {
       // Make a copy in a temporary.
       auto copy = hlfir::AsExprOp::create(builder, loc, entity);
       mlir::Type storageType = entity.getType();

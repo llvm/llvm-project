@@ -460,6 +460,15 @@ private:
   Fortran::lower::pft::FunctionLikeUnit &funit;
 };
 
+/// Is the procedure called through an implicit interface at \p procRef?  This
+/// includes calls to an external procedure defined in the same compilation
+/// unit that can be called through an implicit interface: such calls are
+/// prepared according to the actual arguments, like calls to procedures whose
+/// definition is not visible.
+bool isCalledThroughImplicitInterface(
+    const Fortran::evaluate::ProcedureRef &procRef,
+    Fortran::evaluate::FoldingContext &foldingContext);
+
 /// Translate a procedure characteristics to an mlir::FunctionType signature.
 mlir::FunctionType
 translateSignature(const Fortran::evaluate::ProcedureDesignator &,
