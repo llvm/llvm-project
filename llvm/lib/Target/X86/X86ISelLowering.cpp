@@ -49039,9 +49039,9 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         if (VT == MVT::i16)
           return DAG.getNode(ISD::TRUNCATE, DL, VT,
                              DAG.getBitcast(MVT::i32, Sel));
-        SDValue VSel = DAG.getBitcast(
-            MVT::v8i16,
-            DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4f32, Sel));
+        SDValue VSel =
+            DAG.getBitcast(MVT::v8i16, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL,
+                                                   MVT::v4f32, Sel));
         return DAG.getBitcast(VT,
                               DAG.getExtractVectorElt(DL, MVT::i16, VSel, 0));
       }
