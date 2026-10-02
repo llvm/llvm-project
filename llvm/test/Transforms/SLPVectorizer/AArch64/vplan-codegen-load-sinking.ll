@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=slp-vectorizer -mtriple=aarch64 -slp-threshold=-1 -slp-use-vplan-codegen < %s | FileCheck %s
+; RUN: opt -S -passes=slp-vectorizer -mtriple=aarch64 -slp-threshold=-1 -slp-use-vplan-codegen -slp-vplan-codegen-assert-eligible < %s | FileCheck %s
 
 declare void @may_write()
 declare void @read_only() memory(read)

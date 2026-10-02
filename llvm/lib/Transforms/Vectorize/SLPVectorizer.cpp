@@ -257,8 +257,8 @@ public:
                 ArrayRef<ReductionVectorPart> VectorValuesAndScales = {});
 
   /// Returns true if the current SLP tree is eligible for VPlan-based codegen.
-  /// Must be called after scheduling.
-  bool isVPlanEligible();
+  /// Must be called after scheduling and before versioning the block.
+  bool isVPlanEligible() const;
 
   /// Build a VPlan for the current SLP tree.
   std::unique_ptr<VPlan> buildVPlanForTree();
@@ -26339,14 +26339,14 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
   CFGChanged = true;
 }
 
-bool BoUpSLP::isVPlanEligible() {
-  // External uses require extracts, which are not supported yet.
-  if (!ExternalUses.empty())
+bool BoUpSLP::isVPlanEligible() const {
+  // External uses require extracts, and versioning the block for runtime alias
+  // checks is not supported yet.
+  if (!ExternalUses.empty() || hasRuntimeAliasChecks())
     return false;
 
   BasicBlock *RootBB =
       cast<Instruction>(getRootNode().Scalars.front())->getParent();
-  Instruction *FirstLoad = nullptr;
   for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
     if (DeletedNodes.contains(TE.get()))
       continue;
@@ -26365,8 +26365,8 @@ bool BoUpSLP::isVPlanEligible() {
     if (!isSupportedVPlanCodegenOpcode(Opcode))
       return false;
 
-    // All recipes are emitted into the root's block.
-    if (TE->getMainOp()->getParent() != RootBB)
+    // Recipes are placed in the schedule of the root's block.
+    if (TE->getMainOp()->getParent() != RootBB || TE->doesNotNeedToSchedule())
       return false;
 
     // The recipes assume scalar element types, so revec is not supported.
@@ -26408,20 +26408,8 @@ bool BoUpSLP::isVPlanEligible() {
     // Bundles with extra operands, e.g. reassociated ones, are not supported.
     if (TE->getNumOperands() != TE->getMainOp()->getNumOperands())
       return false;
-
-    if (Opcode == Instruction::Load) {
-      Instruction *LastInst = &getLastInstructionInBundle(TE.get());
-      if (!FirstLoad || LastInst->comesBefore(FirstLoad))
-        FirstLoad = LastInst;
-    }
   }
-
-  // Recipes are emitted at the root, so loads must not be sunk past a write.
-  if (!FirstLoad)
-    return true;
-  Instruction *RootInst = &getLastInstructionInBundle(&getRootNode());
-  return none_of(make_range(FirstLoad->getIterator(), RootInst->getIterator()),
-                 [](Instruction &I) { return I.mayWriteToMemory(); });
+  return true;
 }
 
 std::unique_ptr<VPlan> BoUpSLP::buildVPlanForTree() {
@@ -26433,33 +26421,58 @@ std::unique_ptr<VPlan> BoUpSLP::buildVPlanForTree() {
                 }) &&
          "all entries must have the same number of lanes as the root");
 
-  auto Plan = std::make_unique<VPlan>(getRootNode().getMainOp()->getParent(),
-                                      Type::getInt32Ty(F->getContext()));
+  BasicBlock *BB = getRootNode().getMainOp()->getParent();
+  auto Plan = std::make_unique<VPlan>(BB, Type::getInt32Ty(F->getContext()));
   VPBuilder VPB(Plan->getEntry());
 
-  // Create the recipes in scheduled order, like the existing codegen, with
-  // operands first. Operand entries are never deleted, see isVPlanEligible().
-  DenseMap<const TreeEntry *, VPValue *> EntryToVPValue;
-  auto AddEntry = [&](TreeEntry *E, auto &Self) -> VPValue * {
-    if (auto It = EntryToVPValue.find(E); It != EntryToVPValue.end())
-      return It->second;
+  // Walk the scheduled region backwards to find where to place each entry. The
+  // first member of a bundle seen is the last one in the schedule, after which
+  // the operands of all lanes are available.
+  const BlockScheduling &BS = *BlocksSchedules.find(BB)->second;
+  unsigned NumEntries =
+      count_if(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+        return !DeletedNodes.contains(TE.get());
+      });
+  MapVector<TreeEntry *, Instruction *> InsertPoints;
+  bool SeenNonTreeInst = false;
+  for (Instruction *I = BS.ScheduleEnd->getPrevNode();
+       InsertPoints.size() != NumEntries; I = I->getPrevNode()) {
+    assert(I && "all entries must be in the scheduled region");
+    ArrayRef<ScheduleBundle *> Bundles = BS.getScheduleBundles(I);
+    SeenNonTreeInst |= Bundles.empty();
+    for (ScheduleBundle *Bundle : Bundles) {
+      TreeEntry *TE = Bundle->getTreeEntry();
+      assert(!DeletedNodes.contains(TE) &&
+             "bundles of deleted entries are cancelled by scheduling");
+      if (InsertPoints.contains(TE))
+        continue;
+
+      // If there are instructions outside the tree in the schedule, record a
+      // new insert point.
+      if (!InsertPoints.empty() && !SeenNonTreeInst)
+        InsertPoints.back().second = nullptr;
+
+      InsertPoints.try_emplace(TE, I);
+      SeenNonTreeInst = false;
+    }
+  }
+
+  // Create the recipes in scheduled order.
+  SmallDenseMap<const TreeEntry *, VPValue *> EntryToVPValue;
+  for (auto [TE, I] : reverse(InsertPoints)) {
+    if (I)
+      VPB.insert(VPIRInstruction::create(*I));
     SmallVector<VPValue *> Ops;
-    for (unsigned J : seq<unsigned>(E->getNumOperands()))
-      if (!isLiveInOperand(E->getOpcode(), J))
-        Ops.push_back(Self(getOperandEntry(E, J), Self));
-    return EntryToVPValue[E] = createRecipeForBundle(*Plan, VPB, E->getMainOp(),
-                                                     E->Scalars, Ops);
-  };
-  SmallVector<TreeEntry *> Entries;
-  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree)
-    if (!DeletedNodes.contains(TE.get()))
-      Entries.push_back(TE.get());
-  stable_sort(Entries, [&](const TreeEntry *A, const TreeEntry *B) {
-    return getLastInstructionInBundle(A).comesBefore(
-        &getLastInstructionInBundle(B));
-  });
-  for (TreeEntry *TE : Entries)
-    AddEntry(TE, AddEntry);
+    for (unsigned J : seq<unsigned>(TE->getNumOperands())) {
+      if (isLiveInOperand(TE->getOpcode(), J))
+        continue;
+      VPValue *Op = EntryToVPValue.lookup(getOperandEntry(TE, J));
+      assert(Op && "operands must be scheduled before their users");
+      Ops.push_back(Op);
+    }
+    EntryToVPValue[TE] =
+        createRecipeForBundle(*Plan, VPB, TE->getMainOp(), TE->Scalars, Ops);
+  }
 
   return Plan;
 }
@@ -26506,6 +26519,14 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
     (void)getLastInstructionInBundle(TE.get());
   }
 
+  // Reductions need the root's VectorizedValue, which VPlan does not set.
+  // Decide before versioning clears the runtime alias checks.
+  bool UsedVPlan =
+      Opts.slp_use_vplan_codegen && !ReductionRoot && isVPlanEligible();
+  assert((!Opts.slp_use_vplan_codegen ||
+          !Opts.slp_vplan_codegen_assert_eligible || UsedVPlan) &&
+         "tree is not eligible for VPlan-based codegen");
+
   // If this tree was scheduled by dropping may-alias memory dependencies in
   // favor of runtime alias checks, materialize the checks and version the
   // affected block before emitting the vector code. Scheduling has already
@@ -26517,9 +26538,6 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
     Builder.SetInsertPoint(ReductionRoot->getIterator());
   else
     Builder.SetInsertPoint(F->getEntryBlock().begin());
-
-  // Reductions need the root's VectorizedValue, which VPlan does not set.
-  bool UsedVPlan = Opts.slp_use_vplan_codegen && !ReductionRoot && isVPlanEligible();
 
   // Vectorize gather operands of the nodes with the external uses only.
   SmallVector<std::pair<TreeEntry *, Instruction *>> GatherEntries;
@@ -26580,7 +26598,6 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
     }
   }
   if (UsedVPlan) {
-    setInsertPointAfterBundle(&getRootNode());
     std::unique_ptr<VPlan> Plan = buildVPlanForTree();
     Plan->setName("SLP tree");
     LLVM_DEBUG(dbgs() << "SLP: VPlan for tree:\n" << *Plan << '\n');
