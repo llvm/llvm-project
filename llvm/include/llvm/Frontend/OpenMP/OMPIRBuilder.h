@@ -2532,7 +2532,7 @@ public:
   bool updateToLocation(const LocationDescription &Loc) {
     Builder.restoreIP(Loc.IP);
     Builder.SetCurrentDebugLocation(Loc.DL);
-    return Loc.IP.getBlock() != nullptr;
+    return Loc.IP.isValid();
   }
 
   /// Return the function declaration for the runtime function with \p FnID.
@@ -2562,7 +2562,7 @@ public:
   /// Return the (LLVM-IR) string describing the DebugLoc \p DL. Use \p F as
   /// fallback if \p DL does not specify the function name.
   LLVM_ABI Constant *getOrCreateSrcLocStr(DebugLoc DL, uint32_t &SrcLocStrSize,
-                                          Function *F = nullptr);
+                                          const Function *F = nullptr);
 
   /// Return the (LLVM-IR) string describing the source location \p Loc.
   LLVM_ABI Constant *getOrCreateSrcLocStr(const LocationDescription &Loc,
@@ -4617,21 +4617,21 @@ public:
   OpenMPIRBuilder::InsertPointTy getPreheaderIP() const {
     assert(isValid() && "Requires a valid canonical loop");
     BasicBlock *Preheader = getPreheader();
-    return {Preheader, std::prev(Preheader->end())};
+    return std::prev(Preheader->end());
   };
 
   /// Return the insertion point for user code in the body.
   OpenMPIRBuilder::InsertPointTy getBodyIP() const {
     assert(isValid() && "Requires a valid canonical loop");
     BasicBlock *Body = getBody();
-    return {Body, Body->begin()};
+    return Body->begin();
   };
 
   /// Return the insertion point for user code after the loop.
   OpenMPIRBuilder::InsertPointTy getAfterIP() const {
     assert(isValid() && "Requires a valid canonical loop");
     BasicBlock *After = getAfter();
-    return {After, After->begin()};
+    return After->begin();
   };
 
   Function *getFunction() const {
