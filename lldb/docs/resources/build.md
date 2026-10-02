@@ -290,7 +290,8 @@ to `OFF`:
   also a configure error if `LLDB_ENABLE_PYTHON_LIMITED_API` is requested
   explicitly.
 
-When both of these options are enabled, LLDB can use, and be used from, a
+When both `LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS` and
+`LLDB_ENABLE_PYTHON_LIMITED_API` are enabled, LLDB can use, and be used from, a
 different version of Python (3.8 or later) than it was built against. Note that
 on Windows, `LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS` is not required, so
 `-DLLDB_EMBED_PYTHON_HOME=OFF -DLLDB_ENABLE_PYTHON_LIMITED_API=ON` is enough.
@@ -322,10 +323,12 @@ are commonly used on Windows.
   runtime (looking for installed Pythons, or using the `PYTHONHOME`
   environment variable if it is specified).
 
-  Leaving `LLDB_EMBED_PYTHON_HOME` at its Windows default also forces
-  `LLDB_ENABLE_PYTHON_LIMITED_API` off, which links LLDB against
-  `python3XX.dll` for the exact Python it was built with. To run against a
-  different Python version than you built with, use
+  Leaving `LLDB_EMBED_PYTHON_HOME` at its Windows default also makes
+  `LLDB_ENABLE_PYTHON_LIMITED_API` default to off, which links LLDB against
+  `python3XX.dll` for the exact Python it was built with. Explicitly enabling
+  `LLDB_ENABLE_PYTHON_LIMITED_API` without turning `LLDB_EMBED_PYTHON_HOME` off
+  is a configure error. To run against a different Python version than you
+  built with, use
   `-DLLDB_EMBED_PYTHON_HOME=OFF -DLLDB_ENABLE_PYTHON_LIMITED_API=ON`; LLDB then
   links against the stable-ABI `python3.dll` instead and locates it at runtime
   through `PATH`. The `LLDB_PYTHON_LIBRARY` environment variable overrides that
