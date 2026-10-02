@@ -20,6 +20,7 @@
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -286,6 +287,22 @@ static mlir::LLVM::CConv convertCallingConv(cir::CallingConv callingConv) {
     return LLVM::AMDGPU_KERNEL;
   }
   llvm_unreachable("Unknown calling convention");
+}
+
+static mlir::LLVM::uwtable::UWTableKind
+convertUWTableKind(cir::UnwindTableKind kind) {
+  using CIR = cir::UnwindTableKind;
+  using LLVM = mlir::LLVM::uwtable::UWTableKind;
+
+  switch (kind) {
+  case CIR::None:
+    return LLVM::None;
+  case CIR::Sync:
+    return LLVM::Sync;
+  case CIR::Async:
+    return LLVM::Async;
+  }
+  llvm_unreachable("Unknown CIR unwind table kind");
 }
 
 mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
@@ -2890,6 +2907,10 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
 
   if (op->hasAttr(CIRDialect::getNoReturnAttrName()))
     fn.setNoreturn(true);
+
+  if (std::optional<cir::UnwindTableKind> uwtableKind = op.getUwtable())
+    fn.setUwtableKindAttr(mlir::LLVM::UWTableKindAttr::get(
+        fn.getContext(), convertUWTableKind(*uwtableKind)));
 
   // Function attributes with no dedicated field on the LLVM dialect's
   // LLVMFuncOp are routed through the `passthrough` array. The MLIR LLVM IR
