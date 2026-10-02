@@ -17504,19 +17504,11 @@ VarDecl *Sema::BuildExceptionDeclaration(Scope *S, TypeSourceInfo *TInfo,
     Invalid = true;
   }
 
-  // Reject catching of ptr's and ref's involving non-default address spaces
-  // runtimes cannot perform cross-address-space conversions yet.
-  QualType T = ExDeclType;
-  bool IsRef = false;
-  if (const auto *RT = T->getAs<ReferenceType>()) {
-    IsRef = true;
-    T = RT->getPointeeType();
-  }
-  if (T.getAddressSpace() != LangAS::Default ||
-      (T->isPointerType() &&
-       T->getPointeeType().getAddressSpace() != LangAS::Default)) {
+  // Reject pointers/refs whose pointee is in a non-default address space.
+  // Runtimes cannot perform cross-address-space conversions yet.
+  if (Mode != 0 && BaseType.getAddressSpace() != LangAS::Default) {
     Diag(Loc, diag::err_throw_or_catch_address_space_qualified_ptr)
-        << /*IsCatch=*/1 << IsRef << ExDeclType;
+        << /*IsCatch=*/1 << /*IsRef=*/(Mode == 2) << ExDeclType;
     Invalid = true;
   }
 
