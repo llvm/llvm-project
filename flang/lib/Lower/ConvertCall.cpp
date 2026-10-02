@@ -1038,14 +1038,6 @@ struct CallContext {
     return false;
   }
 
-  /// Is the procedure called through an implicit interface?
-  bool calleeHasImplicitInterface() {
-    if (!implicitInterface)
-      implicitInterface = Fortran::lower::isCalledThroughImplicitInterface(
-          procRef, converter.getFoldingContext());
-    return *implicitInterface;
-  }
-
   const Fortran::evaluate::ProcedureRef &procRef;
   Fortran::lower::AbstractConverter &converter;
   Fortran::lower::SymMap &symMap;
@@ -1053,9 +1045,9 @@ struct CallContext {
   std::optional<mlir::Type> resultType;
   mlir::Location loc;
   bool doCopyIn;
-
-private:
-  std::optional<bool> implicitInterface;
+  /// Is the procedure called through an implicit interface? Set from the
+  /// CallerInterface when the user call arguments are prepared.
+  bool calledThroughImplicitInterface = false;
 };
 
 using ExvAndCleanup =
@@ -1411,11 +1403,13 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       callContext.converter.getFoldingContext()};
   const bool suggestCopyIn{Fortran::evaluate::ActualArgNeedsCopy(
                                arg.entity, arg.characteristics, foldingContext,
-                               /*forCopyOut=*/false)
+                               /*forCopyOut=*/false,
+                               callContext.calledThroughImplicitInterface)
                                .value_or(true)};
   const bool suggestCopyOut{Fortran::evaluate::ActualArgNeedsCopy(
                                 arg.entity, arg.characteristics, foldingContext,
-                                /*forCopyOut=*/true)
+                                /*forCopyOut=*/true,
+                                callContext.calledThroughImplicitInterface)
                                 .value_or(true)};
   bool mustDoCopyIn{false};
   bool mustDoCopyOut{false};
@@ -1522,18 +1516,8 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
         // (genCopyIn requires a descriptor) and because compiler-generated
         // copy-out must never target the read-only storage of a
         // non-definable actual argument.
-        // A named constant is not definable, so a conforming procedure never
-        // defines a dummy argument associated with one.  Still, programs pass
-        // named constants through implicit interfaces to procedures that do
-        // define the dummy argument, and the dummy's characteristics are not
-        // known at such call sites.  Copy a whole named-constant array or a
-        // section of one in that case too, as was done before named constants
-        // were associated with their storage.  An array element is not
-        // copied: it may start a sequence association (F'2023 15.5.2.12),
-        // which a temporary holding only the element would break.
         (isParameterObjectOrSubObject(entity) &&
-         (suggestCopyIn || suggestCopyOut ||
-          (entity.isArray() && callContext.calleeHasImplicitInterface())))) {
+         (suggestCopyIn || suggestCopyOut))) {
       // Make a copy in a temporary.
       auto copy = hlfir::AsExprOp::create(builder, loc, entity);
       mlir::Type storageType = entity.getType();
@@ -1763,6 +1747,8 @@ void prepareUserCallArguments(
   bool mustRemapActualToDummyDescriptors = false;
   fir::FirOpBuilder &builder = callContext.getBuilder();
   std::optional<unsigned> passArg = caller.getPassArgIndex();
+  callContext.calledThroughImplicitInterface =
+      caller.isCalledThroughImplicitInterface();
   int argIndex = -1;
   for (auto [preparedActual, arg] :
        llvm::zip(loweredActuals, caller.getPassedArguments())) {
