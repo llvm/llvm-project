@@ -3379,6 +3379,9 @@ def t2REV16 : T2I_misc<0b01, 0b01, (outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iUNAr,
                 [(set rGPR:$Rd, (rotr (bswap rGPR:$Rm), (i32 16)))]>,
                 Sched<[WriteALU]>;
 
+def : T2v6Pat<(cttz rGPR:$Rn),
+              (t2CLZ (t2RBIT rGPR:$Rn))>;
+
 def : T2Pat<(srl (bswap top16Zero:$Rn), (i32 16)),
             (t2REV16 rGPR:$Rn)>;
 
