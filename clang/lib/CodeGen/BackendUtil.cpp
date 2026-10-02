@@ -68,8 +68,8 @@
 #include "llvm/Transforms/HipStdPar/HipStdPar.h"
 #include "llvm/Transforms/IPO/DeadArgumentElimination.h"
 #include "llvm/Transforms/IPO/EmbedBitcodePass.h"
-#include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/IPO/ForceFunctionAttrs.h"
+#include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/IPO/GlobalOpt.h"
 #include "llvm/Transforms/IPO/InferFunctionAttrs.h"
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
@@ -101,8 +101,8 @@
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
-#include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Scalar/SROA.h"
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/Transforms/Utils/DynamicDebugging.h"
@@ -822,8 +822,8 @@ static void addAMDGCNSPIRVSizeOptimizationPasses(ModulePassManager &MPM) {
   // GF: -lower-expect -simplifycfg -sroa -early-cse
   MPM.addPass(createModuleToFunctionPassAdaptor(LowerExpectIntrinsicPass()));
   MPM.addPass(createModuleToFunctionPassAdaptor(SimplifyCFGPass()));
-  MPM.addPass(createModuleToFunctionPassAdaptor(
-      SROAPass(SROAOptions::PreserveCFG)));
+  MPM.addPass(
+      createModuleToFunctionPassAdaptor(SROAPass(SROAOptions::PreserveCFG)));
   MPM.addPass(createModuleToFunctionPassAdaptor(EarlyCSEPass()));
 
   // G0: -forceattrs -inferattrs -ipsccp -globalopt -mem2reg -deadargelim
@@ -837,8 +837,8 @@ static void addAMDGCNSPIRVSizeOptimizationPasses(ModulePassManager &MPM) {
   MPM.addPass(DeadArgumentEliminationPass());
   MPM.addPass(createModuleToFunctionPassAdaptor(InstCombinePass()));
   MPM.addPass(createModuleToFunctionPassAdaptor(SimplifyCFGPass()));
-  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
-      PostOrderFunctionAttrsPass()));
+  MPM.addPass(
+      createModuleToPostOrderCGSCCPassAdaptor(PostOrderFunctionAttrsPass()));
 }
 
 void EmitAssemblyHelper::RunOptimizationPipeline(
