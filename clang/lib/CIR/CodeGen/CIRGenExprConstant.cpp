@@ -286,6 +286,24 @@ setBitfieldInit(CIRGenModule &cgm, const CIRGenRecordLayout &cirLayout,
       field->getType()->isSignedIntegerOrEnumerationType(), info);
 }
 
+// Handle potentially-overlapping field rewrite for the const subobject records.
+mlir::Attribute asBaseSubobject(CIRGenBuilderTy &builder, mlir::Attribute attr,
+                                cir::RecordType baseSubobjTy) {
+  auto typedAttr = mlir::cast<mlir::TypedAttr>(attr);
+  if (typedAttr.getType() == baseSubobjTy)
+    return attr;
+
+  if (mlir::isa<cir::ZeroAttr>(attr))
+    return builder.getZeroInitAttr(baseSubobjTy);
+
+  auto recordAttr = mlir::cast<cir::ConstRecordAttr>(attr);
+  mlir::ArrayAttr members = recordAttr.getMembers();
+  llvm::SmallVector<mlir::Attribute> baseMembers(
+      members.begin(), members.begin() + baseSubobjTy.getNumElements());
+  return cir::ConstRecordAttr::get(baseSubobjTy,
+                                   builder.getArrayAttr(baseMembers));
+}
+
 mlir::Attribute buildRecordHelper(ConstantEmitter &emitter,
                                   const RecordDecl *rd,
                                   const RecordDecl *vtableBaseTy,
@@ -406,11 +424,17 @@ mlir::Attribute buildRecordHelper(ConstantEmitter &emitter,
     if (!eltAttr)
       return {};
 
-    if (field->isBitField())
+    if (field->isBitField()) {
       elements[fieldIdx] = setBitfieldInit(cgm, cirLayout, builder, field,
                                            elements[fieldIdx], eltAttr);
-    else
+    } else {
+      if (field->isPotentiallyOverlapping()) {
+        if (auto expectedTy = mlir::dyn_cast<cir::RecordType>(
+                recordTy.getMembers()[fieldIdx]))
+          eltAttr = asBaseSubobject(builder, eltAttr, expectedTy);
+      }
       elements[fieldIdx] = eltAttr;
+    }
   }
 
   // Anything we haven't initialized, we try to zero init. We could/should
