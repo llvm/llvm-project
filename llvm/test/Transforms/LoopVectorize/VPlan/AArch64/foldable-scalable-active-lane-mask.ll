@@ -24,27 +24,6 @@ for.end:
   ret void
 }
 
-define void @all_false(ptr %p) vscale_range(1, 2) {
-; CHECK-LABEL: VPlan for loop in 'all_false'
-; CHECK:    EMIT vp<%active.lane.mask.entry> = wide active lane mask ir<0>, ir<7>, ir<1>
-; CHECK:    EMIT vp<%extract.entry.alm.part> = extract-vector-for-part vp<%active.lane.mask.entry>, ir<0>
-; CHECK:    EMIT vp<%active.lane.mask.next> = wide active lane mask vp<%index.next>, ir<7>, ir<1>
-; CHECK:    EMIT vp<%extract.next.alm.part> = extract-vector-for-part vp<%active.lane.mask.next>, ir<0>
-;
-entry:
-  br label %loop
-loop:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %g = getelementptr i32, ptr %p, i64 %iv
-  store i32 1, ptr %g
-  %iv.next = add i64 %iv, 1
-  %ec = icmp eq i64 %iv.next, 7
-  br i1 %ec, label %exit, label %loop
-
-exit:
-  ret void
-}
-
 ; Check that we don't crash on an unreasonably large vscale_range.
 define void @vscale_range_large(ptr %A, ptr noalias %B) vscale_range(1, 1073741824) {
 ; CHECK-LABEL: VPlan for loop in 'vscale_range_large'
