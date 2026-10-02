@@ -62,7 +62,7 @@ static void writeCFGToDotFile(Function &F, BlockFrequencyInfo *BFI,
                               BranchProbabilityInfo *BPI, uint64_t MaxFreq,
                               bool CFGOnly = false) {
   std::string Filename =
-      (CFGDotFilenamePrefix + "." + F.getName() + ".dot").str();
+      (Twine(CFGDotFilenamePrefix) + "." + F.getName() + ".dot").str();
   errs() << "Writing '" << Filename << "'...";
 
   std::error_code EC;

@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/ReplayInlineAdvisor.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LineIterator.h"
@@ -107,7 +108,7 @@ std::unique_ptr<InlineAdvice> ReplayInlineAdvisor::getAdviceImpl(CallBase &CB) {
   std::string CallSiteLoc =
       formatCallSiteLocation(CB.getDebugLoc(), ReplaySettings.ReplayFormat);
   StringRef Callee = CB.getCalledFunction()->getName();
-  std::string Combined = (Callee + CallSiteLoc).str();
+  std::string Combined = (Twine(Callee) + CallSiteLoc).str();
 
   // Replay decision, if it has one
   auto Iter = InlineSitesFromRemarks.find(Combined);
