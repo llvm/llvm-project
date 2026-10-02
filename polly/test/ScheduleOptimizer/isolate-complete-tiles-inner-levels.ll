@@ -1,20 +1,28 @@
-; RUN: opt %loadNPMPolly -polly-isolate-complete-tiles \
-; RUN:     -polly-2nd-level-tiling -polly-2nd-level-default-tile-size=12 \
-; RUN:     '-passes=polly-custom<opt-isl;ast>' -polly-print-ast \
+; RUN: opt %loadNPMPolly '-passes=polly-custom<opt-isl;ast>' \
+; RUN:     -plugin-arg=Polly,-polly-isolate-complete-tiles \
+; RUN:     -plugin-arg=Polly,-polly-2nd-level-tiling \
+; RUN:     -plugin-arg=Polly,-polly-2nd-level-default-tile-size=12 \
+; RUN:     -plugin-arg=Polly,-polly-print-ast \
 ; RUN:     -disable-output < %s | FileCheck %s --check-prefix=L2
-; RUN: opt %loadNPMPolly -polly-isolate-complete-tiles \
-; RUN:     -polly-2nd-level-tiling -polly-2nd-level-default-tile-size=12 \
-; RUN:     -polly-isolate-complete-tiles-2nd-level \
-; RUN:     '-passes=polly-custom<opt-isl;ast>' -polly-print-ast \
+; RUN: opt %loadNPMPolly '-passes=polly-custom<opt-isl;ast>'\
+; RUN:     -plugin-arg=Polly,-polly-isolate-complete-tiles \
+; RUN:     -plugin-arg=Polly,-polly-2nd-level-tiling \
+; RUN:     -plugin-arg=Polly,-polly-2nd-level-default-tile-size=12 \
+; RUN:     -plugin-arg=Polly,-polly-isolate-complete-tiles-2nd-level \
+; RUN:     -plugin-arg=Polly,-polly-print-ast \
 ; RUN:     -disable-output < %s | FileCheck %s --check-prefix=L2-ISO
-; RUN: opt %loadNPMPolly -polly-isolate-complete-tiles \
-; RUN:     -polly-register-tiling -polly-register-tiling-default-tile-size=3 \
-; RUN:     '-passes=polly-custom<opt-isl;ast>' -polly-print-ast \
+; RUN: opt %loadNPMPolly '-passes=polly-custom<opt-isl;ast>' \
+; RUN:     -plugin-arg=Polly,-polly-isolate-complete-tiles \
+; RUN:     -plugin-arg=Polly,-polly-register-tiling \
+; RUN:     -plugin-arg=Polly,-polly-register-tiling-default-tile-size=3 \
+; RUN:     -plugin-arg=Polly,-polly-print-ast \
 ; RUN:     -disable-output < %s | FileCheck %s --check-prefix=REG
-; RUN: opt %loadNPMPolly -polly-isolate-complete-tiles \
-; RUN:     -polly-register-tiling -polly-register-tiling-default-tile-size=3 \
-; RUN:     -polly-isolate-complete-register-tiles \
-; RUN:     '-passes=polly-custom<opt-isl;ast>' -polly-print-ast \
+; RUN: opt %loadNPMPolly '-passes=polly-custom<opt-isl;ast>' \
+; RUN:     -plugin-arg=Polly,-polly-isolate-complete-tiles \
+; RUN:     -plugin-arg=Polly,-polly-register-tiling \
+; RUN:     -plugin-arg=Polly,-polly-register-tiling-default-tile-size=3 \
+; RUN:     -plugin-arg=Polly,-polly-isolate-complete-register-tiles \
+; RUN:     -plugin-arg=Polly,-polly-print-ast \
 ; RUN:     -disable-output < %s | FileCheck %s --check-prefix=REG-ISO
 ;
 ;    void foo(float *A, float *B) {
