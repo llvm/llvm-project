@@ -101,15 +101,15 @@ class ScriptedProcesTestCase(TestBase):
             log = f.read()
 
         self.assertIn(
-            "Abstract method MissingMethodsScriptedProcess.read_memory_at_address not implemented",
+            "abstract method MissingMethodsScriptedProcess.read_memory_at_address not implemented",
             log,
         )
         self.assertIn(
-            "Abstract method MissingMethodsScriptedProcess.is_alive not implemented",
+            "abstract method MissingMethodsScriptedProcess.is_alive not implemented",
             log,
         )
         self.assertIn(
-            "Abstract method MissingMethodsScriptedProcess.get_scripted_thread_plugin not implemented",
+            "abstract method MissingMethodsScriptedProcess.get_scripted_thread_plugin not implemented",
             log,
         )
 
@@ -324,6 +324,8 @@ class ScriptedProcesTestCase(TestBase):
         )
         self.assertEqual(post_launch_frame.thread.GetThreadID(), tid)
 
+    # No dylib on Windows.
+    @skipIfWindows
     @skipIf(archs=no_match(["arm64", "arm64e", "aarch64"]))
     def test_scripted_process_addressable_bits(self):
         """Test that the addressable bits a scripted process reports are in

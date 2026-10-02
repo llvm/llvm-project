@@ -15,6 +15,11 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIREGISTERINFO_H
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/LiveRegMatrix.h"
+#include "llvm/CodeGen/Register.h"
+#include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/MC/MCRegister.h"
 
 #define GET_REGINFO_HEADER
 #include "AMDGPUGenRegisterInfo.inc"
@@ -57,6 +62,11 @@ private:
   static std::array<std::array<uint16_t, 32>, 9> SubRegFromChannelTable;
 
   void reserveRegisterTuples(BitVector &, MCRegister Reg) const;
+
+  /// True if assigning Reg would fit in the current occupancy VGPR budget.
+  bool isRegWithinOccupancyBudget(MCPhysReg Reg, unsigned NumVGPRs,
+                                  unsigned NumAGPRs,
+                                  unsigned MaxVGPRsForCurrentOccupancy) const;
 
 public:
   SIRegisterInfo(const GCNSubtarget &ST);
@@ -368,6 +378,16 @@ public:
                              SmallVectorImpl<MCPhysReg> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
+
+  bool shouldApplyAntiHints(const MachineFunction &MF,
+                            unsigned NumAllocatedVGPRs,
+                            unsigned &MaxVGPRsForCurrentOccupancy) const;
+
+  void filterAndSortForAntiHintedRegs(
+      Register VirtReg, MutableArrayRef<MCPhysReg> CustomOrder,
+      const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
+      const LiveRegMatrix *Matrix = nullptr,
+      const RegisterClassInfo *RegClassInfo = nullptr) const override;
 
   const int *getRegUnitPressureSets(MCRegUnit RegUnit) const override;
 

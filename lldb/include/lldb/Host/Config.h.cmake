@@ -29,8 +29,6 @@
 
 #cmakedefine01 LLDB_ENABLE_TERMIOS
 
-#cmakedefine01 LLDB_ENABLE_LZMA
-
 #cmakedefine01 LLVM_ENABLE_CURL
 
 #cmakedefine01 LLDB_ENABLE_CURSES

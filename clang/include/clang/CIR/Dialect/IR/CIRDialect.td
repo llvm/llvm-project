@@ -17,6 +17,7 @@ include "mlir/IR/OpBase.td"
 
 def CIR_Dialect : Dialect {
   let name = "cir";
+  let useStrictPropertiesInAssemblyFormat = 1;
 
   // A short one-line summary of our dialect.
   let summary = "A high-level dialect for analyzing and optimizing Clang "
@@ -40,13 +41,15 @@ def CIR_Dialect : Dialect {
   let extraClassDeclaration = [{
     static llvm::StringRef getSourceLanguageAttrName() { return "cir.lang"; }
     static llvm::StringRef getTripleAttrName() { return "cir.triple"; }
+    // TargetInfo::getABI(), e.g. "avx512" on x86 or "aapcs" on ARM.
+    static llvm::StringRef getTargetABIAttrName() { return "cir.target_abi"; }
     static llvm::StringRef getSizeTypeWidthAttrName() { return "cir.size_type_width"; }
     static llvm::StringRef getIntTypeWidthAttrName() { return "cir.int_type_width"; }
     static llvm::StringRef getOptInfoAttrName() { return "cir.opt_info"; }
     static llvm::StringRef getCalleeAttrName() { return "callee"; }
     static llvm::StringRef getNoThrowAttrName() { return "nothrow"; }
     static llvm::StringRef getNoReturnAttrName() { return "noreturn"; }
-    static llvm::StringRef getSideEffectAttrName() { return "side_effect"; }
+    static llvm::StringRef getMemoryEffectsAttrName() { return "memory_effects"; }
     static llvm::StringRef getReturnsTwiceAttrName() { return "returns_twice"; }
     static llvm::StringRef getColdAttrName() { return "cold"; }
     static llvm::StringRef getHotAttrName() { return "hot"; }
@@ -56,7 +59,11 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getNoRecurseAttrName() { return "norecurse"; }
     static llvm::StringRef getMustProgressAttrName() { return "mustprogress"; }
     static llvm::StringRef getSYCLModuleIdAttrName() { return "sycl-module-id"; }
+    static llvm::StringRef getDontCallErrorAttrName() { return "dontcall-error"; }
+    static llvm::StringRef getDontCallWarnAttrName() { return "dontcall-warn"; }
+    static llvm::StringRef getSrcLocAttrName() { return "cir.srcloc"; }
     static llvm::StringRef getNoUnwindAttrName() { return "nounwind"; }
+    static llvm::StringRef getWillReturnAttrName() { return "willreturn"; }
     static llvm::StringRef getModuleLevelAsmAttrName() { return "cir.module_asm"; }
     static llvm::StringRef getGlobalCtorsAttrName() { return "cir.global_ctors"; }
     static llvm::StringRef getGlobalDtorsAttrName() { return "cir.global_dtors"; }
@@ -92,10 +99,19 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getTargetCPUAttrName() { return "cir.target-cpu"; }
     static llvm::StringRef getTuneCPUAttrName() { return "cir.tune-cpu"; }
     static llvm::StringRef getTargetFeaturesAttrName() { return "cir.target-features"; }
-    static llvm::StringRef getCUDABinaryHandleAttrName() { return "cir.cu.binary_handle"; }
+    // Raw bytes of the device-side fat binary, read by CIRGen so LoweringPrepare
+    // can build the runtime-registration globals without doing file I/O.
+    static llvm::StringRef getCUDADeviceBinaryAttrName() { return "cir.cu.device_binary"; }
     // Mangled symbol name of the C++20 named-module initializer function,
     // precomputed by CIRGen so later passes don't need a live ASTContext.
     static llvm::StringRef getCXXModuleInitFnNameAttrName() { return "cir.cxx_module_init_fn_name"; }
+    // LangOptions facts that post-CIRGen lowering consumes, serialized by
+    // CIRGen so a reloaded .cir module is self-describing without a live
+    // clang::LangOptions. See #cir.lowering_lang_options.
+    static llvm::StringRef getLoweringLangOptionsAttrName() { return "cir.lowering_lang_options"; }
+    // Platform SDK version from -target-sdk-version, as printed by
+    // llvm::VersionTuple (e.g. "12.3"). Absent when none was given.
+    static llvm::StringRef getSDKVersionAttrName() { return "cir.sdk_version"; }
     static llvm::StringRef getMustTailAttrName() { return "musttail"; }
     static llvm::StringRef getCatchCopyThunkAttrName() { return "cir.eh.catch_copy_thunk"; }
 
