@@ -63,11 +63,11 @@ public:
   // __int128 types to satisfy std::is_integral_v, and the portable fallback
   // is a class type that never does.
   template <typename INT,
-      typename = std::enable_if_t<std::numeric_limits<INT>::is_integer>>
+      typename = std::enable_if_t<common::numeric_limits<INT>::is_integer>>
   IntegerValue(int kind, INT v) {
     if constexpr (sizeof(INT) > 8) {
       static_assert(sizeof(INT) == 16);
-      ConstructFromIntegral(kind, static_cast<Fortran::common::uint128_t>(v));
+      ConstructFromIntegral(kind, static_cast<common::uint128_t>(v));
     } else if constexpr (std::is_signed_v<INT>) {
       ConstructFromIntegral(
           kind, static_cast<uint64_t>(static_cast<int64_t>(v)), true);

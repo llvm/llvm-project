@@ -88,7 +88,7 @@ TYPED_TEST(IntegerValueTypedKind, ConstructFromIntegral) {
   // The signedness of the C++ operand decides between sign- and zero-extension.
   IntegerValue sext{kind, int8_t{-1}};
   EXPECT_EQ(SignedT{-1}, sext.ToSInt<SignedT>());
-  EXPECT_EQ(std::numeric_limits<UnsignedT>::max(), sext.ToUInt<UnsignedT>());
+  EXPECT_EQ(numeric_limits<UnsignedT>::max(), sext.ToUInt<UnsignedT>());
   IntegerValue zext{kind, uint8_t{255}};
   EXPECT_EQ(UnsignedT{255}, zext.ToUInt<UnsignedT>());
 
@@ -216,12 +216,12 @@ TYPED_TEST(IntegerValueTypedKind, UnsignedDecimal) {
   IntegerValue theanswer{kind, 42};
   EXPECT_EQ("42", theanswer.UnsignedDecimal());
 
-  IntegerValue maxv{kind, std::numeric_limits<UnsignedT>::max()};
+  IntegerValue maxv{kind, numeric_limits<UnsignedT>::max()};
   static constexpr const char *maxstr[]{"255", "65535", "4294967295",
       "18446744073709551615", "340282366920938463463374607431768211455"};
   EXPECT_EQ(maxstr[IntKindPos<TypeParam>], maxv.UnsignedDecimal());
 
-  IntegerValue beforemaxv{kind, std::numeric_limits<UnsignedT>::max() - 1};
+  IntegerValue beforemaxv{kind, numeric_limits<UnsignedT>::max() - 1};
   static constexpr const char *beforemaxstr[]{"254", "65534", "4294967294",
       "18446744073709551614", "340282366920938463463374607431768211454"};
   EXPECT_EQ(beforemaxstr[IntKindPos<TypeParam>], beforemaxv.UnsignedDecimal());
@@ -264,12 +264,12 @@ TYPED_TEST(IntegerValueTypedKind, SignedDecimal) {
   IntegerValue theanswer{kind, 42};
   EXPECT_EQ("42", theanswer.SignedDecimal());
 
-  IntegerValue maxv{kind, std::numeric_limits<SignedT>::max()};
+  IntegerValue maxv{kind, numeric_limits<SignedT>::max()};
   static constexpr const char *maxstr[]{"127", "32767", "2147483647",
       "9223372036854775807", "170141183460469231731687303715884105727"};
   EXPECT_EQ(maxstr[IntKindPos<TypeParam>], maxv.SignedDecimal());
 
-  IntegerValue beforemaxv{kind, std::numeric_limits<SignedT>::max() - 1};
+  IntegerValue beforemaxv{kind, numeric_limits<SignedT>::max() - 1};
   static constexpr const char *beforemaxstr[]{"126", "32766", "2147483646",
       "9223372036854775806", "170141183460469231731687303715884105726"};
   EXPECT_EQ(beforemaxstr[IntKindPos<TypeParam>], beforemaxv.SignedDecimal());
@@ -308,12 +308,12 @@ TYPED_TEST(IntegerValueTypedKind, Hexadecimal) {
   IntegerValue theanswer{kind, 42};
   EXPECT_EQ("2a", theanswer.Hexadecimal());
 
-  IntegerValue maxv{kind, std::numeric_limits<UnsignedT>::max()};
+  IntegerValue maxv{kind, numeric_limits<UnsignedT>::max()};
   static constexpr const char *maxstr[]{"ff", "ffff", "ffffffff",
       "ffffffffffffffff", "ffffffffffffffffffffffffffffffff"};
   EXPECT_EQ(maxstr[IntKindPos<TypeParam>], maxv.Hexadecimal());
 
-  IntegerValue beforemaxv{kind, std::numeric_limits<UnsignedT>::max() - 1};
+  IntegerValue beforemaxv{kind, numeric_limits<UnsignedT>::max() - 1};
   static constexpr const char *beforemaxstr[]{"fe", "fffe", "fffffffe",
       "fffffffffffffffe", "fffffffffffffffffffffffffffffffe"};
   EXPECT_EQ(beforemaxstr[IntKindPos<TypeParam>], beforemaxv.Hexadecimal());
@@ -379,7 +379,7 @@ TYPED_TEST(IntegerValueTypedKind, Read) {
         IntegerValue::Read(kind, p, /*base=*/16, /*isSigned=*/false)};
     EXPECT_TRUE(unsignedRead.overflow);
     EXPECT_EQ(kind, unsignedRead.value.kind());
-    EXPECT_EQ(std::numeric_limits<UnsignedT>::max(),
+    EXPECT_EQ(numeric_limits<UnsignedT>::max(),
         unsignedRead.value.ToUInt<UnsignedT>());
     EXPECT_EQ(p[0], '\0');
   }
@@ -477,7 +477,7 @@ TYPED_TEST(IntegerValueTypedKind, HUGE) {
 
   IntegerValue huge{IntegerValue::HUGE(kind)};
   EXPECT_EQ(kind, huge.kind());
-  EXPECT_EQ(std::numeric_limits<SignedT>::max(), huge.ToSInt<SignedT>());
+  EXPECT_EQ(numeric_limits<SignedT>::max(), huge.ToSInt<SignedT>());
 }
 
 TYPED_TEST(IntegerValueTypedKind, Least) {
@@ -486,7 +486,7 @@ TYPED_TEST(IntegerValueTypedKind, Least) {
 
   IntegerValue least{IntegerValue::Least(kind)};
   EXPECT_EQ(kind, least.kind());
-  EXPECT_EQ(std::numeric_limits<SignedT>::min(), least.ToSInt<SignedT>());
+  EXPECT_EQ(numeric_limits<SignedT>::min(), least.ToSInt<SignedT>());
 }
 
 //===----------------------------------------------------------------------===//
@@ -510,16 +510,16 @@ TYPED_TEST(IntegerValueTypedKind, IsZero) {
   IntegerValue theanswer{kind, 42};
   EXPECT_FALSE(theanswer.IsZero());
 
-  IntegerValue maxv{kind, std::numeric_limits<UnsignedT>::max()};
+  IntegerValue maxv{kind, numeric_limits<UnsignedT>::max()};
   EXPECT_FALSE(maxv.IsZero());
 
-  IntegerValue minv{kind, std::numeric_limits<UnsignedT>::min()};
+  IntegerValue minv{kind, numeric_limits<UnsignedT>::min()};
   EXPECT_TRUE(minv.IsZero());
 
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
   EXPECT_FALSE(smaxv.IsZero());
 
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   EXPECT_FALSE(smaxv.IsZero());
 
   IntegerValue patternv{kind, 0x0123456789abcdefull};
@@ -546,16 +546,16 @@ TYPED_TEST(IntegerValueTypedKind, IsNegative) {
   IntegerValue theanswer{kind, 42};
   EXPECT_FALSE(theanswer.IsNegative());
 
-  IntegerValue maxv{kind, std::numeric_limits<UnsignedT>::max()};
+  IntegerValue maxv{kind, numeric_limits<UnsignedT>::max()};
   EXPECT_TRUE(maxv.IsNegative());
 
-  IntegerValue minv{kind, std::numeric_limits<UnsignedT>::min()};
+  IntegerValue minv{kind, numeric_limits<UnsignedT>::min()};
   EXPECT_FALSE(minv.IsNegative());
 
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
   EXPECT_FALSE(smaxv.IsNegative());
 
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   EXPECT_FALSE(smaxv.IsNegative());
 
   IntegerValue patternv{kind, 0x7FFFFFFF7FFF7F7Full};
@@ -582,16 +582,16 @@ TYPED_TEST(IntegerValueTypedKind, CompareToZeroSigned) {
   IntegerValue theanswer{kind, 42};
   EXPECT_EQ(Ordering::Greater, theanswer.CompareToZeroSigned());
 
-  IntegerValue maxv{kind, std::numeric_limits<UnsignedT>::max()};
+  IntegerValue maxv{kind, numeric_limits<UnsignedT>::max()};
   EXPECT_EQ(Ordering::Less, maxv.CompareToZeroSigned());
 
-  IntegerValue minv{kind, std::numeric_limits<UnsignedT>::min()};
+  IntegerValue minv{kind, numeric_limits<UnsignedT>::min()};
   EXPECT_EQ(Ordering::Equal, minv.CompareToZeroSigned());
 
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
   EXPECT_EQ(Ordering::Greater, smaxv.CompareToZeroSigned());
 
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   EXPECT_EQ(Ordering::Less, sminv.CompareToZeroSigned());
 
   IntegerValue patternv{kind, 0x7FFFFFFF7FFF7F7Full};
@@ -619,16 +619,16 @@ TYPED_TEST(IntegerValueTypedKind, LEADZ) {
   IntegerValue theanswer{kind, 42};
   EXPECT_EQ(bits - 6, theanswer.LEADZ());
 
-  IntegerValue maxv{kind, std::numeric_limits<UnsignedT>::max()};
+  IntegerValue maxv{kind, numeric_limits<UnsignedT>::max()};
   EXPECT_EQ(0, maxv.LEADZ());
 
-  IntegerValue minv{kind, std::numeric_limits<UnsignedT>::min()};
+  IntegerValue minv{kind, numeric_limits<UnsignedT>::min()};
   EXPECT_EQ(bits, minv.LEADZ());
 
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
   EXPECT_EQ(1, smaxv.LEADZ());
 
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   EXPECT_EQ(0, sminv.LEADZ());
 
   IntegerValue patternv{kind, 0x7FFFFFFF7FFF7F7Full};
@@ -656,16 +656,16 @@ TYPED_TEST(IntegerValueTypedKind, POPCNT) {
   IntegerValue theanswer{kind, 42};
   EXPECT_EQ(3, theanswer.POPCNT());
 
-  IntegerValue maxv{kind, std::numeric_limits<UnsignedT>::max()};
+  IntegerValue maxv{kind, numeric_limits<UnsignedT>::max()};
   EXPECT_EQ(bits, maxv.POPCNT());
 
-  IntegerValue minv{kind, std::numeric_limits<UnsignedT>::min()};
+  IntegerValue minv{kind, numeric_limits<UnsignedT>::min()};
   EXPECT_EQ(0, minv.POPCNT());
 
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
   EXPECT_EQ(bits - 1, smaxv.POPCNT());
 
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   EXPECT_EQ(1, sminv.POPCNT());
 
   IntegerValue patternv{kind, 0x7FFFFFFF7FFF7F7Full};
@@ -694,16 +694,16 @@ TYPED_TEST(IntegerValueTypedKind, POPPAR) {
   IntegerValue theanswer{kind, 42};
   EXPECT_EQ(true, theanswer.POPPAR());
 
-  IntegerValue maxv{kind, std::numeric_limits<UnsignedT>::max()};
+  IntegerValue maxv{kind, numeric_limits<UnsignedT>::max()};
   EXPECT_EQ(bits & 1, maxv.POPPAR());
 
-  IntegerValue minv{kind, std::numeric_limits<UnsignedT>::min()};
+  IntegerValue minv{kind, numeric_limits<UnsignedT>::min()};
   EXPECT_EQ(0, minv.POPPAR());
 
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
   EXPECT_EQ(bits % 2 == 0, smaxv.POPPAR());
 
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   EXPECT_EQ(true, sminv.POPPAR());
 
   IntegerValue patternv{kind, 0x5555555555555554ull};
@@ -731,16 +731,16 @@ TYPED_TEST(IntegerValueTypedKind, TRAILZ) {
   IntegerValue theanswer{kind, 42};
   EXPECT_EQ(1, theanswer.TRAILZ());
 
-  IntegerValue maxv{kind, std::numeric_limits<UnsignedT>::max()};
+  IntegerValue maxv{kind, numeric_limits<UnsignedT>::max()};
   EXPECT_EQ(0, maxv.TRAILZ());
 
-  IntegerValue minv{kind, std::numeric_limits<UnsignedT>::min()};
+  IntegerValue minv{kind, numeric_limits<UnsignedT>::min()};
   EXPECT_EQ(bits, minv.TRAILZ());
 
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
   EXPECT_EQ(0, smaxv.TRAILZ());
 
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   EXPECT_EQ(bits - 1, sminv.TRAILZ());
 
   IntegerValue patternv{kind, 0x0123456789abcdefull};
@@ -785,8 +785,8 @@ TYPED_TEST(IntegerValueTypedKind, CompareUnsigned) {
   EXPECT_EQ(Ordering::Greater, negone.CompareUnsigned(one));
 
   // As an unsigned pattern, the sign bit outweighs the rest of the word.
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   EXPECT_EQ(Ordering::Less, smaxv.CompareUnsigned(sminv));
 
   IntegerValue theanswer{kind, 42};
@@ -818,8 +818,8 @@ TYPED_TEST(IntegerValueTypedKind, CompareSigned) {
   EXPECT_EQ(Ordering::Less, negone.CompareSigned(one));
   EXPECT_EQ(Ordering::Greater, one.CompareSigned(negone));
 
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   EXPECT_EQ(Ordering::Greater, smaxv.CompareSigned(sminv));
 
   IntegerValue theanswer{kind, 42};
@@ -853,8 +853,8 @@ TYPED_TEST(IntegerValueTypedKind, BitwiseComparisons) {
   EXPECT_FALSE(negone.BLE(one));
   EXPECT_FALSE(negone.BLT(one));
 
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   EXPECT_FALSE(smaxv.BGE(sminv));
   EXPECT_FALSE(smaxv.BGT(sminv));
   EXPECT_TRUE(smaxv.BLE(sminv));
@@ -895,8 +895,8 @@ TYPED_TEST(IntegerValueTypedKind, RelationalOperators) {
   EXPECT_FALSE(negone >= one);
   EXPECT_FALSE(negone > one);
 
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   EXPECT_FALSE(smaxv < sminv);
   EXPECT_FALSE(smaxv <= sminv);
   EXPECT_FALSE(smaxv == sminv);
@@ -934,18 +934,18 @@ TYPED_TEST(IntegerValueTypedKind, ToUInt64) {
   IntegerValue theanswer{kind, 42};
   EXPECT_EQ(42u, theanswer.ToUInt64());
 
-  IntegerValue maxv{kind, std::numeric_limits<UnsignedT>::max()};
+  IntegerValue maxv{kind, numeric_limits<UnsignedT>::max()};
   EXPECT_EQ(moneu64[IntKindPos<TypeParam>], maxv.ToUInt64());
 
-  IntegerValue minv{kind, std::numeric_limits<UnsignedT>::min()};
+  IntegerValue minv{kind, numeric_limits<UnsignedT>::min()};
   EXPECT_EQ(0u, minv.ToUInt64());
 
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
   static constexpr uint64_t smaxu64[]{127ull, 32767ull, 2147483647ull,
       9223372036854775807ull, 18446744073709551615ull};
   EXPECT_EQ(smaxu64[IntKindPos<TypeParam>], smaxv.ToUInt64());
 
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   static constexpr uint64_t sminu64[]{
       128ull, 32768ull, 2147483648ull, 9223372036854775808ull, 0ull};
   EXPECT_EQ(sminu64[IntKindPos<TypeParam>], sminv.ToUInt64());
@@ -980,14 +980,14 @@ TYPED_TEST(IntegerValueTypedKind, ToInt64) {
   IntegerValue theanswer{kind, 42};
   EXPECT_EQ(42, theanswer.ToInt64());
 
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
   static constexpr int64_t smaxi64[]{
       127, 32767, 2147483647, 9223372036854775807ll, -1ll};
   EXPECT_EQ(smaxi64[IntKindPos<TypeParam>], smaxv.ToInt64());
 
   // For kinds up to 8 bytes, ToInt64() recovers the exact signed value.
   // For 16-byte kind, only the low 8 bytes survive, reread as signed.
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   static constexpr int64_t smini64[]{
       -128, -32768, -2147483648ll, -9223372036854775807ll - 1, 0};
   EXPECT_EQ(smini64[IntKindPos<TypeParam>], sminv.ToInt64());
@@ -1038,19 +1038,19 @@ TYPED_TEST(IntegerValueTypedKind, ToUInt) {
   EXPECT_EQ(uint8_t{0xff}, negone.ToUInt<uint8_t>());
   EXPECT_EQ(UnsignedT(0xffffu), negone.ToUInt<uint16_t>());
   EXPECT_EQ(UnsignedT(0xffffffffu), negone.ToUInt<uint32_t>());
-  EXPECT_EQ(uint128_t{std::numeric_limits<UnsignedT>::max()},
-      negone.ToUInt<uint128_t>());
+  EXPECT_EQ(
+      uint128_t{numeric_limits<UnsignedT>::max()}, negone.ToUInt<uint128_t>());
 
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
-  EXPECT_EQ(UnsignedT(std::numeric_limits<SignedT>::max()),
-      smaxv.ToUInt<UnsignedT>());
-  EXPECT_EQ(uint128_t{std::numeric_limits<SignedT>::max()},
-      smaxv.ToUInt<uint128_t>());
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
+  EXPECT_EQ(
+      UnsignedT(numeric_limits<SignedT>::max()), smaxv.ToUInt<UnsignedT>());
+  EXPECT_EQ(
+      uint128_t{numeric_limits<SignedT>::max()}, smaxv.ToUInt<uint128_t>());
 
   // Least truncates to zero in any host width narrower than the kind.
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   EXPECT_EQ(kind == 1 ? 0x80u : 0, sminv.ToUInt<uint8_t>());
-  EXPECT_EQ(uint128_t{UnsignedT(std::numeric_limits<SignedT>::min())},
+  EXPECT_EQ(uint128_t{UnsignedT(numeric_limits<SignedT>::min())},
       sminv.ToUInt<uint128_t>());
 
   IntegerValue patternv{kind, 0x0123456789abcdefull};
@@ -1105,34 +1105,24 @@ TYPED_TEST(IntegerValueTypedKind, ToSInt) {
   EXPECT_EQ(int64_t(-1), negone.ToSInt<int64_t>());
   EXPECT_EQ(int128_t{-1}, negone.ToSInt<int128_t>());
 
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
-  EXPECT_EQ(std::numeric_limits<SignedT>::max(), smaxv.ToSInt<SignedT>());
-  EXPECT_EQ(
-      int8_t(std::numeric_limits<SignedT>::max()), smaxv.ToSInt<int8_t>());
-  EXPECT_EQ(
-      int16_t(std::numeric_limits<SignedT>::max()), smaxv.ToSInt<int16_t>());
-  EXPECT_EQ(
-      int32_t(std::numeric_limits<SignedT>::max()), smaxv.ToSInt<int32_t>());
-  EXPECT_EQ(
-      int64_t(std::numeric_limits<SignedT>::max()), smaxv.ToSInt<int64_t>());
-  EXPECT_EQ(
-      int128_t{std::numeric_limits<SignedT>::max()}, smaxv.ToSInt<int128_t>());
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
+  EXPECT_EQ(numeric_limits<SignedT>::max(), smaxv.ToSInt<SignedT>());
+  EXPECT_EQ(int8_t(numeric_limits<SignedT>::max()), smaxv.ToSInt<int8_t>());
+  EXPECT_EQ(int16_t(numeric_limits<SignedT>::max()), smaxv.ToSInt<int16_t>());
+  EXPECT_EQ(int32_t(numeric_limits<SignedT>::max()), smaxv.ToSInt<int32_t>());
+  EXPECT_EQ(int64_t(numeric_limits<SignedT>::max()), smaxv.ToSInt<int64_t>());
+  EXPECT_EQ(int128_t{numeric_limits<SignedT>::max()}, smaxv.ToSInt<int128_t>());
 
   // Least's sign bit only survives in a host width no narrower than the
   // kind; a narrower width truncates it away, along with the sign. Widening
   // to the widest kind's own width (16) always sign-extends the true value.
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   EXPECT_EQ(kind == 1 ? -128 : 0, sminv.ToSInt<int8_t>());
-  EXPECT_EQ(
-      int8_t(std::numeric_limits<SignedT>::min()), sminv.ToSInt<int8_t>());
-  EXPECT_EQ(
-      int16_t(std::numeric_limits<SignedT>::min()), sminv.ToSInt<int16_t>());
-  EXPECT_EQ(
-      int32_t(std::numeric_limits<SignedT>::min()), sminv.ToSInt<int32_t>());
-  EXPECT_EQ(
-      int64_t(std::numeric_limits<SignedT>::min()), sminv.ToSInt<int64_t>());
-  EXPECT_EQ(
-      int128_t{std::numeric_limits<SignedT>::min()}, sminv.ToSInt<int128_t>());
+  EXPECT_EQ(int8_t(numeric_limits<SignedT>::min()), sminv.ToSInt<int8_t>());
+  EXPECT_EQ(int16_t(numeric_limits<SignedT>::min()), sminv.ToSInt<int16_t>());
+  EXPECT_EQ(int32_t(numeric_limits<SignedT>::min()), sminv.ToSInt<int32_t>());
+  EXPECT_EQ(int64_t(numeric_limits<SignedT>::min()), sminv.ToSInt<int64_t>());
+  EXPECT_EQ(int128_t{numeric_limits<SignedT>::min()}, sminv.ToSInt<int128_t>());
 
   IntegerValue patternv{kind, 0x0123456789abcdefull};
   SignedT patternvref{SignedT(UnsignedT(0x0123456789abcdefull))};
@@ -1173,8 +1163,8 @@ TYPED_TEST(IntegerValueTypedKind, NOT) {
   EXPECT_EQ(UnsignedT(~UnsignedT{42}), theanswer.NOT().ToUInt<UnsignedT>());
 
   // Complementing HUGE (a leading zero followed by all ones) yields Least.
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   EXPECT_EQ(sminv, smaxv.NOT());
   EXPECT_EQ(smaxv, sminv.NOT());
 
@@ -1267,8 +1257,8 @@ TYPED_TEST(IntegerValueTypedKind, MAX) {
   IntegerValue negone{kind, -1};
   EXPECT_EQ(one, negone.MAX(one));
 
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   EXPECT_EQ(smaxv, smaxv.MAX(sminv));
 
   IntegerValue theanswer{kind, 42};
@@ -1286,8 +1276,8 @@ TYPED_TEST(IntegerValueTypedKind, MIN) {
   IntegerValue negone{kind, -1};
   EXPECT_EQ(negone, negone.MIN(one));
 
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   EXPECT_EQ(sminv, smaxv.MIN(sminv));
 
   IntegerValue theanswer{kind, 42};
@@ -1311,7 +1301,7 @@ TYPED_TEST(IntegerValueTypedKind, IBCLR) {
   IntegerValue negone{kind, -1};
   EXPECT_EQ(UnsignedT(~UnsignedT{1}), negone.IBCLR(0).ToUInt<UnsignedT>());
   // Clearing the sign bit of all-ones yields HUGE.
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
   EXPECT_EQ(smaxv, negone.IBCLR(bits - 1));
 }
 
@@ -1331,7 +1321,7 @@ TYPED_TEST(IntegerValueTypedKind, IBSET) {
   IntegerValue one{kind, 1};
   EXPECT_EQ(one, zero.IBSET(0));
   // Setting the sign bit of zero yields Least.
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   EXPECT_EQ(sminv, zero.IBSET(bits - 1));
 }
 
@@ -1367,7 +1357,7 @@ TYPED_TEST(IntegerValueTypedKind, ISHFT) {
   EXPECT_EQ(2, one.ISHFT(1).ToInt64());
   EXPECT_EQ(0, one.ISHFT(-1).ToInt64());
 
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   EXPECT_EQ(sminv, one.ISHFT(bits - 1));
   EXPECT_TRUE(one.ISHFT(bits).IsZero());
   EXPECT_TRUE(one.ISHFT(bits + 1).IsZero());
@@ -1375,7 +1365,7 @@ TYPED_TEST(IntegerValueTypedKind, ISHFT) {
   IntegerValue negone{kind, -1};
   EXPECT_EQ(UnsignedT(~UnsignedT{1}), negone.ISHFT(1).ToUInt<UnsignedT>());
 
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
   EXPECT_EQ(smaxv, negone.ISHFT(-1));
   EXPECT_TRUE(negone.ISHFT(bits).IsZero());
   EXPECT_TRUE(negone.ISHFT(-bits).IsZero());
@@ -1391,7 +1381,7 @@ TYPED_TEST(IntegerValueTypedKind, SHIFTL) {
   EXPECT_EQ(1, one.SHIFTL(-1).ToInt64()); // nonpositive count: no shift
   EXPECT_EQ(1, one.SHIFTL(0).ToInt64());
   EXPECT_EQ(2, one.SHIFTL(1).ToInt64());
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   EXPECT_EQ(sminv, one.SHIFTL(bits - 1));
   EXPECT_TRUE(one.SHIFTL(bits).IsZero());
   EXPECT_TRUE(one.SHIFTL(bits + 1).IsZero());
@@ -1411,12 +1401,12 @@ TYPED_TEST(IntegerValueTypedKind, SHIFTR) {
   EXPECT_EQ(negone, negone.SHIFTR(0));
 
   // Zero fill, so a negative value becomes positive.
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
   EXPECT_EQ(smaxv, negone.SHIFTR(1));
   EXPECT_TRUE(negone.SHIFTR(bits).IsZero());
   EXPECT_TRUE(negone.SHIFTR(bits + 1).IsZero());
 
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   EXPECT_EQ(1, sminv.SHIFTR(bits - 1).ToInt64());
 }
 
@@ -1432,10 +1422,10 @@ TYPED_TEST(IntegerValueTypedKind, SHIFTA) {
   EXPECT_EQ(negone, negone.SHIFTA(1));
   EXPECT_EQ(negone, negone.SHIFTA(bits - 1));
 
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   EXPECT_EQ(negone, sminv.SHIFTA(bits - 1));
 
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
   EXPECT_TRUE(smaxv.SHIFTA(bits - 1).IsZero());
 }
 
@@ -1451,7 +1441,7 @@ TYPED_TEST(IntegerValueTypedKind, ISHFTC) {
 
   // Rotating the single set bit off one end wraps it to the other.
   IntegerValue one{kind, 1};
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   EXPECT_EQ(2, one.ISHFTC(1).ToInt64());
   EXPECT_EQ(sminv, one.ISHFTC(-1));
   EXPECT_EQ(one, sminv.ISHFTC(1));
@@ -1533,14 +1523,14 @@ TYPED_TEST(IntegerValueTypedKind, Negate) {
   EXPECT_EQ(-42, negAnswer.value.ToInt64());
   EXPECT_FALSE(negAnswer.overflow);
 
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
   auto negHuge{smaxv.Negate()};
   EXPECT_EQ(-smaxv.ToInt64(), negHuge.value.ToInt64());
   EXPECT_FALSE(negHuge.overflow);
 
   // Only the most negative number cannot be negated; it wraps back to
   // itself.
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   auto negLeast{sminv.Negate()};
   EXPECT_EQ(sminv, negLeast.value);
   EXPECT_TRUE(negLeast.overflow);
@@ -1571,14 +1561,14 @@ TYPED_TEST(IntegerValueTypedKind, ABS) {
   EXPECT_FALSE(absAnswer.overflow);
 
   // HUGE is already nonnegative.
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
   auto absHuge{smaxv.ABS()};
   EXPECT_EQ(smaxv, absHuge.value);
   EXPECT_FALSE(absHuge.overflow);
 
   // Taking the magnitude of the most negative number overflows; it stays
   // unchanged.
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   auto absLeast{sminv.ABS()};
   EXPECT_EQ(sminv, absLeast.value);
   EXPECT_TRUE(absLeast.overflow);
@@ -1642,8 +1632,8 @@ TYPED_TEST(IntegerValueTypedKind, AddSigned) {
   EXPECT_EQ(84, doubled.value.ToInt64());
   EXPECT_FALSE(doubled.overflow);
 
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   // HUGE+1 overflows and wraps around to the most negative number.
   auto hugePlusOne{smaxv.AddSigned(one)};
   EXPECT_EQ(sminv, hugePlusOne.value);
@@ -1675,8 +1665,8 @@ TYPED_TEST(IntegerValueTypedKind, SubtractSigned) {
   EXPECT_EQ(2, oneMinusMOne.value.ToInt64());
   EXPECT_FALSE(oneMinusMOne.overflow);
 
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   // HUGE-(-1) overflows and wraps around to the most negative number.
   auto hugeMinusMOne{smaxv.SubtractSigned(negone)};
   EXPECT_EQ(sminv, hugeMinusMOne.value);
@@ -1709,8 +1699,8 @@ TYPED_TEST(IntegerValueTypedKind, DIM) {
   EXPECT_FALSE(bigMinusSmall.overflow);
 
   // HUGE-Least overflows the representable range.
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   IntegerValue negone{kind, -1};
   auto hugeMinusLeast{smaxv.DIM(sminv)};
   EXPECT_EQ(negone, hugeMinusLeast.value);
@@ -1746,8 +1736,8 @@ TYPED_TEST(IntegerValueTypedKind, SIGN) {
   EXPECT_FALSE(flipToPos.overflow);
 
   // Negating the most negative number overflows and wraps back to itself.
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   auto flipLeast{sminv.SIGN(smaxv)};
   EXPECT_EQ(sminv, flipLeast.value);
   EXPECT_TRUE(flipLeast.overflow);
@@ -1820,7 +1810,7 @@ TYPED_TEST(IntegerValueTypedKind, MultiplySigned) {
 
   // Least*-1 overflows: the true product is one past the representable
   // range, and wraps back to the bit pattern of Least itself.
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   auto negatedLeast{sminv.MultiplySigned(negone)};
   EXPECT_EQ(sminv, negatedLeast.lower);
   EXPECT_TRUE(negatedLeast.upper.IsZero());
@@ -1886,8 +1876,8 @@ TYPED_TEST(IntegerValueTypedKind, DivideSigned) {
   IntegerValue zero{IntegerValue::Zero(kind)};
   IntegerValue theanswer{kind, 42};
   IntegerValue negone{kind, -1};
-  IntegerValue smaxv{kind, std::numeric_limits<SignedT>::max()};
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue smaxv{kind, numeric_limits<SignedT>::max()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
 
   // Division by zero saturates in the direction of the dividend's sign.
   auto positiveByZero{theanswer.DivideSigned(zero)};
@@ -1940,7 +1930,7 @@ TYPED_TEST(IntegerValueTypedKind, MODULO) {
 
   // Least mod -1 is exactly zero, but MODULO still reports the overflow
   // that occurs while computing the underlying Least/-1 quotient.
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   auto leastByMOne{sminv.MODULO(negone)};
   EXPECT_TRUE(leastByMOne.overflow);
   EXPECT_TRUE(leastByMOne.value.IsZero());
@@ -2044,7 +2034,7 @@ TYPED_TEST(IntegerValueTypedKind, RawBytesRoundTrip) {
   EXPECT_EQ(kind, patternRestored.kind());
   EXPECT_EQ(patternv, patternRestored);
 
-  IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
+  IntegerValue sminv{kind, numeric_limits<SignedT>::min()};
   char sminvBuffer[16]{};
   bool sminvChanged{false};
   sminv.StoreRawBytes(sminvBuffer, sminv.bytesStored(), &sminvChanged);
