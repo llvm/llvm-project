@@ -257,10 +257,67 @@ func.func @roundf_func(%a: f32) -> f32 {
 // CHECK-LABEL:   func @powf_func
 // CHECK-SAME:    (%[[ARG0:.+]]: f64, %[[ARG1:.+]]: f64) -> f64
 func.func @powf_func(%a: f64, %b: f64) -> f64 {
-  // CHECK: %[[LOGA:.+]] = math.log %[[ARG0]] : f64
-  // CHECK: %[[MUL:.+]] = arith.mulf %[[ARG1]], %[[LOGA]] : f64
+  // CHECK: %[[ZERO:.+]] = arith.constant 0.000000e+00 : f64
+  // CHECK: %[[NAN:.+]] = arith.constant 0x7FF8000000000000 : f64
+  // CHECK: %[[HALF:.+]] = arith.constant 5.000000e-01 : f64
+  // CHECK: %[[ABSA:.+]] = math.absf %[[ARG0]] : f64
+  // CHECK: %[[LOGABS:.+]] = math.log %[[ABSA]] : f64
+  // CHECK: %[[MUL:.+]] = arith.mulf %[[ARG1]], %[[LOGABS]] : f64
+  // CHECK: %[[MAG:.+]] = math.exp %[[MUL]] : f64
+  // CHECK: %[[FLOORB:.+]] = math.floor %[[ARG1]] : f64
+  // CHECK: %[[ISINT:.+]] = arith.cmpf oeq, %[[ARG1]], %[[FLOORB]] : f64
+  // CHECK: %[[HALFB:.+]] = arith.mulf %[[FLOORB]], %[[HALF]] : f64
+  // CHECK: %[[HALFBFLOOR:.+]] = math.floor %[[HALFB]] : f64
+  // CHECK: %[[ISEVEN:.+]] = arith.cmpf oeq, %[[HALFB]], %[[HALFBFLOOR]] : f64
+  // CHECK: %[[NEGMAG:.+]] = arith.negf %[[MAG]] : f64
+  // CHECK: %[[SIGNED:.+]] = arith.select %[[ISEVEN]], %[[MAG]], %[[NEGMAG]] : f64
+  // CHECK: %[[NEGCASE:.+]] = arith.select %[[ISINT]], %[[SIGNED]], %[[NAN]] : f64
+  // CHECK: %[[ANEG:.+]] = arith.cmpf olt, %[[ARG0]], %[[ZERO]] : f64
+  // CHECK: %[[RES:.+]] = arith.select %[[ANEG]], %[[NEGCASE]], %[[MAG]] : f64
+  // CHECK: return %[[RES]] : f64
+  %ret = math.powf %a, %b : f64
+  return %ret : f64
+}
+
+// CHECK-LABEL:   func @powf_func_nonneg_base
+// CHECK-SAME:    (%[[ARG0:.+]]: f64, %[[ARG1:.+]]: f64) -> f64
+func.func @powf_func_nonneg_base(%a: f64, %b: f64) -> f64 {
+  // CHECK: %[[ABS:.+]] = math.absf %[[ARG0]] : f64
+  // CHECK: %[[LOG:.+]] = math.log %[[ABS]] : f64
+  // CHECK: %[[MUL:.+]] = arith.mulf %[[ARG1]], %[[LOG]] : f64
   // CHECK: %[[EXP:.+]] = math.exp %[[MUL]] : f64
+  // CHECK-NOT: arith.select
   // CHECK: return %[[EXP]] : f64
+  %abs = math.absf %a : f64
+  %ret = math.powf %abs, %b : f64
+  return %ret : f64
+}
+
+// CHECK-LABEL:   func @powf_func_const_nonneg_base
+// CHECK-SAME:    (%[[ARG0:.+]]: f64)
+func.func @powf_func_const_nonneg_base(%b: f64) -> f64 {
+  // log(const) is gone because of constant folding, only mul + exp are left.
+  // CHECK: %[[LOGCST:.+]] = arith.constant {{.*}} : f64
+  // CHECK: %[[MUL:.+]] = arith.mulf %[[ARG0]], %[[LOGCST]] : f64
+  // CHECK: %[[EXP:.+]] = math.exp %[[MUL]] : f64
+  // CHECK-NOT: arith.select
+  // CHECK-NOT: math.absf
+  // CHECK: return %[[EXP]] : f64
+  %a = arith.constant 3.0 : f64
+  %ret = math.powf %a, %b : f64
+  return %ret : f64
+}
+
+// CHECK-LABEL:   func @powf_func_const_neg_base
+func.func @powf_func_const_neg_base(%b: f64) -> f64 {
+  // Negative constant forces the general branching form.
+  // After constant folding, absf and the outer aNeg select should vanish,
+  // but the sign-fixing negf + select should stay.
+  // CHECK-NOT: math.absf
+  // CHECK-NOT: arith.cmpf olt
+  // CHECK: arith.negf
+  // CHECK: arith.select
+  %a = arith.constant -3.0 : f64
   %ret = math.powf %a, %b : f64
   return %ret : f64
 }
@@ -728,10 +785,13 @@ func.func @math_fpowi_to_powf_tensor(%0 : tensor<8xf32>, %1: tensor<8xi32>) -> t
 }
 // CHECK-SAME: (%[[ARG0:.*]]: tensor<8xf32>, %[[ARG1:.*]]: tensor<8xi32>) -> tensor<8xf32> {
 // CHECK: %[[TOFP:.*]] = arith.sitofp %[[ARG1]] : tensor<8xi32> to tensor<8xf32>
-// CHECK: %[[LOGA:.*]] = math.log %[[ARG0]] : tensor<8xf32>
-// CHECK: %[[MUL:.*]] = arith.mulf %[[TOFP]], %[[LOGA]] : tensor<8xf32>
-// CHECK: %[[EXP:.*]] = math.exp %[[MUL]] : tensor<8xf32>
-// CHECK: return %[[EXP]]
+// CHECK: %[[ABS:.*]] = math.absf %[[ARG0]] : tensor<8xf32>
+// CHECK: %[[LOGABS:.*]] = math.log %[[ABS]] : tensor<8xf32>
+// CHECK: %[[MUL:.*]] = arith.mulf %[[TOFP]], %[[LOGABS]] : tensor<8xf32>
+// CHECK: %[[MAG:.*]] = math.exp %[[MUL]] : tensor<8xf32>
+// CHECK: %[[ANEG:.*]] = arith.cmpf olt, %[[ARG0]]
+// CHECK: %[[RES:.*]] = arith.select %[[ANEG]]
+// CHECK: return %[[RES]]
 // -----
 
 // CHECK-LABEL:   func.func @math_fpowi_to_powf_scalar
@@ -740,11 +800,14 @@ func.func @math_fpowi_to_powf_scalar(%0 : f32, %1: i64) -> f32 {
   return %2 : f32
 }
 // CHECK-SAME: (%[[ARG0:.*]]: f32, %[[ARG1:.*]]: i64) -> f32 {
-// CHECK:        %[[TOFP:.*]] = arith.sitofp %[[ARG1]] : i64 to f32
-// CHECK:        %[[LOGA:.*]] = math.log %[[ARG0]] : f32
-// CHECK:        %[[MUL:.*]] = arith.mulf %[[TOFP]], %[[LOGA]] : f32
-// CHECK:        %[[EXP:.*]] = math.exp %[[MUL]] : f32
-// CHECK:       return %[[EXP]] : f32
+// CHECK: %[[TOFP:.*]] = arith.sitofp %[[ARG1]] : i64 to f32
+// CHECK: %[[ABS:.*]] = math.absf %[[ARG0]] : f32
+// CHECK: %[[LOGABS:.*]] = math.log %[[ABS]] : f32
+// CHECK: %[[MUL:.*]] = arith.mulf %[[TOFP]], %[[LOGABS]] : f32
+// CHECK: %[[MAG:.*]] = math.exp %[[MUL]] : f32
+// CHECK: %[[ANEG:.*]] = arith.cmpf olt, %[[ARG0]]
+// CHECK: %[[RES:.*]] = arith.select %[[ANEG]]
+// CHECK: return %[[RES]] : f32
 
 // -----
 
