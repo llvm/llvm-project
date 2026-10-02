@@ -74,7 +74,7 @@ define signext i8 @call_sext_stack_arg_i8(i32 %x1, i32 %x2, i32 %x3, i32 %x4, i8
   ; MIPS32-NEXT:   $a1 = COPY [[COPY1]](s32)
   ; MIPS32-NEXT:   $a2 = COPY [[COPY2]](s32)
   ; MIPS32-NEXT:   $a3 = COPY [[COPY3]](s32)
-  ; MIPS32-NEXT:   JAL @sext_stack_arg_i8, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0
+  ; MIPS32-NEXT:   JAL @sext_stack_arg_i8, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0
   ; MIPS32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $v0
   ; MIPS32-NEXT:   [[ASSERT_SEXT1:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY5]], 8
   ; MIPS32-NEXT:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_SEXT1]](s32)
@@ -110,7 +110,7 @@ define zeroext i8 @call_zext_stack_arg_i8(i32 %x1, i32 %x2, i32 %x3, i32 %x4, i8
   ; MIPS32-NEXT:   $a1 = COPY [[COPY1]](s32)
   ; MIPS32-NEXT:   $a2 = COPY [[COPY2]](s32)
   ; MIPS32-NEXT:   $a3 = COPY [[COPY3]](s32)
-  ; MIPS32-NEXT:   JAL @zext_stack_arg_i8, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0
+  ; MIPS32-NEXT:   JAL @zext_stack_arg_i8, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0
   ; MIPS32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $v0
   ; MIPS32-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY5]], 8
   ; MIPS32-NEXT:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_ZEXT1]](s32)
@@ -145,7 +145,7 @@ define i8 @call_aext_stack_arg_i8(i32 %x1, i32 %x2, i32 %x3, i32 %x4, i8 %a) {
   ; MIPS32-NEXT:   $a1 = COPY [[COPY1]](s32)
   ; MIPS32-NEXT:   $a2 = COPY [[COPY2]](s32)
   ; MIPS32-NEXT:   $a3 = COPY [[COPY3]](s32)
-  ; MIPS32-NEXT:   JAL @aext_stack_arg_i8, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0
+  ; MIPS32-NEXT:   JAL @aext_stack_arg_i8, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0
   ; MIPS32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $v0
   ; MIPS32-NEXT:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[COPY5]](s32)
   ; MIPS32-NEXT:   ADJCALLSTACKUP 24, 0, implicit-def $sp, implicit $sp
@@ -229,7 +229,7 @@ define signext i16 @call_sext_stack_arg_i16(i32 %x1, i32 %x2, i32 %x3, i32 %x4, 
   ; MIPS32-NEXT:   $a1 = COPY [[COPY1]](s32)
   ; MIPS32-NEXT:   $a2 = COPY [[COPY2]](s32)
   ; MIPS32-NEXT:   $a3 = COPY [[COPY3]](s32)
-  ; MIPS32-NEXT:   JAL @sext_stack_arg_i16, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0
+  ; MIPS32-NEXT:   JAL @sext_stack_arg_i16, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0
   ; MIPS32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $v0
   ; MIPS32-NEXT:   [[ASSERT_SEXT1:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY5]], 16
   ; MIPS32-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_SEXT1]](s32)
@@ -265,7 +265,7 @@ define zeroext i16 @call_zext_stack_arg_i16(i32 %x1, i32 %x2, i32 %x3, i32 %x4, 
   ; MIPS32-NEXT:   $a1 = COPY [[COPY1]](s32)
   ; MIPS32-NEXT:   $a2 = COPY [[COPY2]](s32)
   ; MIPS32-NEXT:   $a3 = COPY [[COPY3]](s32)
-  ; MIPS32-NEXT:   JAL @zext_stack_arg_i16, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0
+  ; MIPS32-NEXT:   JAL @zext_stack_arg_i16, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0
   ; MIPS32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $v0
   ; MIPS32-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY5]], 16
   ; MIPS32-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT1]](s32)
@@ -300,7 +300,7 @@ define i16 @call_aext_stack_arg_i16(i32 %x1, i32 %x2, i32 %x3, i32 %x4, i16 %a) 
   ; MIPS32-NEXT:   $a1 = COPY [[COPY1]](s32)
   ; MIPS32-NEXT:   $a2 = COPY [[COPY2]](s32)
   ; MIPS32-NEXT:   $a3 = COPY [[COPY3]](s32)
-  ; MIPS32-NEXT:   JAL @aext_stack_arg_i16, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0
+  ; MIPS32-NEXT:   JAL @aext_stack_arg_i16, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0
   ; MIPS32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $v0
   ; MIPS32-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY5]](s32)
   ; MIPS32-NEXT:   ADJCALLSTACKUP 24, 0, implicit-def $sp, implicit $sp

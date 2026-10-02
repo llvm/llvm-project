@@ -24,6 +24,7 @@
 #include "clang/AST/DeclContextInternals.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
@@ -70,6 +71,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/Weak.h"
 #include "clang/Serialization/ASTBitCodes.h"
@@ -1174,32 +1176,34 @@ void ASTWriter::WriteBlockInfoBlock() {
 /// \param Filename the file name to adjust.
 ///
 /// \param BaseDir When non-NULL, the PCH file is a relocatable AST file and
-/// the returned filename will be adjusted by this root directory.
+/// the filename will be adjusted by this root directory.
 ///
-/// \returns either the original filename (if it needs no adjustment) or the
-/// adjusted filename (which points into the @p Filename parameter).
-static const char *
-adjustFilenameForRelocatableAST(const char *Filename, StringRef BaseDir) {
-  assert(Filename && "No file name to adjust?");
-
+/// \returns true if \p Filename was adjusted.
+static bool adjustFilenameForRelocatableAST(SmallVectorImpl<char> &Filename,
+                                            StringRef BaseDir) {
   if (BaseDir.empty())
-    return Filename;
+    return false;
 
   // Verify that the filename and the system root have the same prefix.
   unsigned Pos = 0;
-  for (; Filename[Pos] && Pos < BaseDir.size(); ++Pos)
+  for (; Pos < Filename.size() && Pos < BaseDir.size(); ++Pos)
     if (Filename[Pos] != BaseDir[Pos])
-      return Filename; // Prefixes don't match.
+      return false; // Prefixes don't match.
 
   // We hit the end of the filename before we hit the end of the system root.
-  if (!Filename[Pos])
-    return Filename;
+  if (Pos == Filename.size()) {
+    if (Pos != BaseDir.size())
+      return false;
+    // The filename is the system root itself.
+    Filename.assign(1, '.');
+    return true;
+  }
 
   // If there's not a path separator at the end of the base directory nor
   // immediately after it, then this isn't within the base directory.
   if (!llvm::sys::path::is_separator(Filename[Pos])) {
     if (!llvm::sys::path::is_separator(BaseDir.back()))
-      return Filename;
+      return false;
   } else {
     // If the file name has a '/' at the current position, skip over the '/'.
     // We distinguish relative paths from absolute paths by the
@@ -1212,7 +1216,8 @@ adjustFilenameForRelocatableAST(const char *Filename, StringRef BaseDir) {
     ++Pos;
   }
 
-  return Filename + Pos;
+  Filename.erase(Filename.begin(), Filename.begin() + Pos);
+  return true;
 }
 
 std::pair<ASTFileSignature, ASTFileSignature>
@@ -5279,6 +5284,19 @@ void ASTWriter::WriteDeclsWithEffectsToVerify(Sema &SemaRef) {
   Stream.EmitRecord(DECLS_WITH_EFFECTS_TO_VERIFY, Record);
 }
 
+/// Write the OpenMP 'requires' directives seen in this translation unit.
+void ASTWriter::WriteOpenMPRequiresDecls(Sema &SemaRef) {
+  ArrayRef<const OMPRequiresDecl *> Decls = SemaRef.OpenMP().getRequiresDecls();
+  if (Decls.empty())
+    return;
+  RecordData Record;
+  for (const OMPRequiresDecl *D : Decls)
+    if (!D->isFromASTFile())
+      AddDeclRef(D, Record);
+  if (!Record.empty())
+    Stream.EmitRecord(OMP_REQUIRES_DECLS, Record);
+}
+
 void ASTWriter::WriteModuleFileExtension(Sema &SemaRef,
                                          ModuleFileExtensionWriter &Writer) {
   // Enter the extension block.
@@ -5427,13 +5445,7 @@ bool ASTWriter::PreparePathForOutput(SmallVectorImpl<char> &Path) {
   bool Changed =
       PP->getFileManager().makeAbsolutePath(Path, /*Canonicalize=*/true);
   // Remove a prefix to make the path relative, if relevant.
-  const char *PathBegin = Path.data();
-  const char *PathPtr =
-      adjustFilenameForRelocatableAST(PathBegin, BaseDirectory);
-  if (PathPtr != PathBegin) {
-    Path.erase(Path.begin(), Path.begin() + (PathPtr - PathBegin));
-    Changed = true;
-  }
+  Changed |= adjustFilenameForRelocatableAST(Path, BaseDirectory);
 
   return Changed;
 }
@@ -6354,6 +6366,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
     WritePackPragmaOptions(*SemaPtr);
     WriteFloatControlPragmaOptions(*SemaPtr);
     WriteDeclsWithEffectsToVerify(*SemaPtr);
+    WriteOpenMPRequiresDecls(*SemaPtr);
   }
 
   // Some simple statistics

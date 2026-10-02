@@ -2796,8 +2796,11 @@ public:
 
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) bool is##Id##Type() const;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) bool is##Id##Type() const;
+#include "clang/Basic/HLSLPackedTypes.def"
   bool isHLSLSpecificType() const; // Any HLSL specific type
   bool isHLSLBuiltinIntangibleType() const; // Any HLSL builtin intangible type
+  bool isHLSLBuiltinPackedType() const;
   bool isHLSLAttributedResourceType() const;
   bool isHLSLInlineSpirvType() const;
   bool isHLSLResourceRecord() const;
@@ -3265,6 +3268,9 @@ public:
 // HLSL intangible Types
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) Id,
 #include "clang/Basic/HLSLIntangibleTypes.def"
+// HLSL packed types
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) Id,
+#include "clang/Basic/HLSLPackedTypes.def"
 // SPIRV types
 #define SPIRV_TYPE(Name, Id, SingletonId) Id,
 #include "clang/Basic/SPIRVTypes.def"
@@ -4429,9 +4435,14 @@ class MatrixType : public Type, public llvm::FoldingSetNode {
 protected:
   friend class ASTContext;
 
+public:
+  enum class LayoutKind : uint8_t { RowMajor, ColumnMajor };
+
+private:
   /// The element type of the matrix.
   QualType ElementType;
 
+protected:
   MatrixType(QualType ElementTy, QualType CanonElementTy);
 
   MatrixType(TypeClass TypeClass, QualType ElementTy, QualType CanonElementTy,
@@ -4482,12 +4493,15 @@ protected:
   /// Number of rows and columns.
   unsigned NumRows;
   unsigned NumColumns;
+  std::optional<LayoutKind> Layout;
 
   ConstantMatrixType(QualType MatrixElementType, unsigned NRows,
-                     unsigned NColumns, QualType CanonElementType);
+                     unsigned NColumns, QualType CanonElementType,
+                     std::optional<LayoutKind> Layout);
 
   ConstantMatrixType(TypeClass typeClass, QualType MatrixType, unsigned NRows,
-                     unsigned NColumns, QualType CanonElementType);
+                     unsigned NColumns, QualType CanonElementType,
+                     std::optional<LayoutKind> Layout);
 
 public:
   /// Returns the number of rows in the matrix.
@@ -4495,6 +4509,8 @@ public:
 
   /// Returns the number of columns in the matrix.
   unsigned getNumColumns() const { return NumColumns; }
+
+  std::optional<LayoutKind> getLayout() const { return Layout; }
 
   /// Returns the number of elements required to embed the matrix into a vector.
   unsigned getNumElementsFlattened() const {
@@ -4541,16 +4557,17 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getElementType(), getNumRows(), getNumColumns(),
+    Profile(ID, getElementType(), getNumRows(), getNumColumns(), getLayout(),
             getTypeClass());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType ElementType,
                       unsigned NumRows, unsigned NumColumns,
-                      TypeClass TypeClass) {
+                      std::optional<LayoutKind> Layout, TypeClass TypeClass) {
     ID.AddPointer(ElementType.getAsOpaquePtr());
     ID.AddInteger(NumRows);
     ID.AddInteger(NumColumns);
+    ID.AddInteger(Layout ? llvm::to_underlying(*Layout) + 1 : 0);
     ID.AddInteger(TypeClass);
   }
 
@@ -8973,6 +8990,12 @@ inline bool Type::isOpenCLSpecificType() const {
   }
 #include "clang/Basic/HLSLIntangibleTypes.def"
 
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  inline bool Type::is##Id##Type() const {                                     \
+    return isSpecificBuiltinType(BuiltinType::Id);                             \
+  }
+#include "clang/Basic/HLSLPackedTypes.def"
+
 #define SPIRV_TYPE(Name, Id, SingletonId)                                      \
   inline bool Type::is##Id##Type() const {                                     \
     return isSpecificBuiltinType(BuiltinType::Id);                             \
@@ -8986,9 +9009,16 @@ inline bool Type::isHLSLBuiltinIntangibleType() const {
       false;
 }
 
+inline bool Type::isHLSLBuiltinPackedType() const {
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) is##Id##Type() ||
+  return
+#include "clang/Basic/HLSLPackedTypes.def"
+      false;
+}
+
 inline bool Type::isHLSLSpecificType() const {
   return isHLSLBuiltinIntangibleType() || isHLSLAttributedResourceType() ||
-         isHLSLInlineSpirvType();
+         isHLSLInlineSpirvType() || isHLSLBuiltinPackedType();
 }
 
 inline bool Type::isHLSLAttributedResourceType() const {

@@ -201,6 +201,9 @@ defm openacc_multiple_names_in_routine : OptOutFC1FFlag<"openacc-multiple-names-
 defm openacc_combined_loop_firstprivate : OptOutFC1FFlag<"openacc-combined-loop-firstprivate",
   "Attach firstprivate on combined loop in addition to compute construct (extension)",
   "Keep firstprivate only on the compute construct for combined loop">;
+defm openacc_acc_kernels_do_concurrent_independent : OptOutFC1FFlag<"openacc-acc-kernels-do-concurrent-independent",
+  "Treat DO CONCURRENT associated with an OpenACC KERNELS LOOP as independent (extension)",
+  "Treat DO CONCURRENT associated with an OpenACC KERNELS LOOP as auto">;
 defm prefer_intrinsic_module_use_association : OptOutFC1FFlag<"prefer-intrinsic-module-use-association",
   "Resolve a USE association conflict in favor of an intrinsic module generic (extension)",
   "Diagnose a USE association conflict with an intrinsic module generic">;

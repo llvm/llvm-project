@@ -221,6 +221,8 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
 
   const MipsTargetMachine &TM;
 
+  MipsABIInfo ABI;
+
   std::unique_ptr<const SelectionDAGTargetInfo> TSInfo;
   std::unique_ptr<const MipsInstrInfo> InstrInfo;
   std::unique_ptr<const MipsFrameLowering> FrameLowering;
@@ -236,7 +238,7 @@ public:
   bool isABI_N64() const;
   bool isABI_N32() const;
   bool isABI_O32() const;
-  const MipsABIInfo &getABI() const;
+  const MipsABIInfo &getABI() const { return ABI; }
   bool isABI_FPXX() const { return isABI_O32() && IsFPXX; }
 
   bool isGPRReservedByUser(unsigned GPR) const {
@@ -246,8 +248,9 @@ public:
 
   /// This constructor initializes the data members to match that
   /// of the specified triple.
-  MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS, bool little,
-                const MipsTargetMachine &TM, MaybeAlign StackAlignOverride);
+  MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
+                StringRef ABIName, bool little, const MipsTargetMachine &TM,
+                MaybeAlign StackAlignOverride);
 
   ~MipsSubtarget() override;
 

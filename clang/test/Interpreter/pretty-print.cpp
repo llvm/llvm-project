@@ -89,6 +89,14 @@ const decltype(N::D()) decl3; decl3
 __remove_extent(N::D)* decl4; decl4
 // CHECK-NEXT: (N::D *)
 
+// A call to a void function without a semicolon must still be executed.
+// https://github.com/llvm/llvm-project/issues/219800
+int void_x = 10;
+void set_void_x() { void_x = 100; }
+set_void_x()
+void_x
+// CHECK-NEXT: (int) 100
+
 // int i = 12;
 // int &iref = i;
 // iref
