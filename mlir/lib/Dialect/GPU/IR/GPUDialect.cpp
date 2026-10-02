@@ -2198,13 +2198,11 @@ LogicalResult SubgroupMmaComputeOp::verify() {
   return success();
 }
 
-LogicalResult MemcpyOp::fold(FoldAdaptor adaptor,
-                             SmallVectorImpl<::mlir::OpFoldResult> &results) {
+OpFoldResults MemcpyOp::fold(FoldAdaptor adaptor) {
   return memref::foldMemRefCast(*this);
 }
 
-LogicalResult MemsetOp::fold(FoldAdaptor adaptor,
-                             SmallVectorImpl<::mlir::OpFoldResult> &results) {
+OpFoldResults MemsetOp::fold(FoldAdaptor adaptor) {
   return memref::foldMemRefCast(*this);
 }
 

@@ -198,16 +198,12 @@ LogicalResult ModuleOp::verify() {
 // UnrealizedConversionCastOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult
-UnrealizedConversionCastOp::fold(FoldAdaptor adaptor,
-                                 SmallVectorImpl<OpFoldResult> &foldResults) {
+OpFoldResults UnrealizedConversionCastOp::fold(FoldAdaptor adaptor) {
   OperandRange operands = getInputs();
   ResultRange results = getOutputs();
 
-  if (operands.getType() == results.getType()) {
-    foldResults.append(operands.begin(), operands.end());
-    return success();
-  }
+  if (operands.getType() == results.getType())
+    return operands;
 
   if (operands.empty())
     return failure();
@@ -222,8 +218,7 @@ UnrealizedConversionCastOp::fold(FoldAdaptor adaptor,
     return failure();
 
   // If everything matches up, we can fold the passthrough.
-  foldResults.append(inputOp->operand_begin(), inputOp->operand_end());
-  return success();
+  return inputOp->getOperands();
 }
 
 LogicalResult UnrealizedConversionCastOp::verify() {

@@ -1916,8 +1916,7 @@ LogicalResult shape::YieldOp::verify() {
 // SplitAtOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult SplitAtOp::fold(FoldAdaptor adaptor,
-                              SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults SplitAtOp::fold(FoldAdaptor adaptor) {
   if (!adaptor.getOperand() || !adaptor.getIndex())
     return failure();
   auto shapeVec =
@@ -1933,9 +1932,8 @@ LogicalResult SplitAtOp::fold(FoldAdaptor adaptor,
   if (splitPoint < 0)
     splitPoint += shape.size();
   Builder builder(adaptor.getOperand().getContext());
-  results.push_back(builder.getIndexTensorAttr(shape.take_front(splitPoint)));
-  results.push_back(builder.getIndexTensorAttr(shape.drop_front(splitPoint)));
-  return success();
+  return {builder.getIndexTensorAttr(shape.take_front(splitPoint)),
+          builder.getIndexTensorAttr(shape.drop_front(splitPoint))};
 }
 
 //===----------------------------------------------------------------------===//

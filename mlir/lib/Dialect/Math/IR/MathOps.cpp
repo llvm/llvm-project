@@ -311,8 +311,7 @@ std::optional<SmallVector<int64_t, 4>> math::SincosOp::getShapeForUnroll() {
   return std::nullopt;
 }
 
-LogicalResult math::SincosOp::fold(FoldAdaptor adaptor,
-                                   SmallVectorImpl<OpFoldResult> &result) {
+OpFoldResults math::SincosOp::fold(FoldAdaptor adaptor) {
   auto foldSincos = [](const APFloat &a, double (*fnDouble)(double),
                        float (*fnFloat)(float)) -> std::optional<APFloat> {
     switch (APFloat::SemanticsToEnum(a.getSemantics())) {
@@ -332,11 +331,8 @@ LogicalResult math::SincosOp::fold(FoldAdaptor adaptor,
       adaptor.getOperands(),
       [&](const APFloat &a) { return foldSincos(a, cos, cosf); });
 
-  if (sinRes && cosRes) {
-    result.push_back(sinRes);
-    result.push_back(cosRes);
-    return success();
-  }
+  if (sinRes && cosRes)
+    return {sinRes, cosRes};
   return failure();
 }
 

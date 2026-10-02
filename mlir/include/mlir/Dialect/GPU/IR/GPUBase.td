@@ -25,6 +25,7 @@ def GPU_Dialect : Dialect {
   let name = "gpu";
   let cppNamespace = "::mlir::gpu";
   let hasOperationAttrVerify = 1;
+  let useOpFoldResults = 1;
 
   let extraClassDeclaration = [{
     /// Get the name of the attribute used to annotate the modules that contain

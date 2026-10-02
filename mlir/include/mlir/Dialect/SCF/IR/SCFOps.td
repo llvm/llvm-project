@@ -44,6 +44,8 @@ def SCF_Dialect : Dialect {
   // The canonicalization of a multi-block `scf.execute_region` materializes
   // `cf.br` operations, so the ControlFlow dialect must always be loaded.
   let dependentDialects = ["arith::ArithDialect", "cf::ControlFlowDialect"];
+
+  let useOpFoldResults = 1;
 }
 
 // Base class for SCF dialect ops.

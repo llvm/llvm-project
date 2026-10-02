@@ -2139,8 +2139,7 @@ void IfOp::getEntrySuccessorRegions(ArrayRef<Attribute> operands,
   }
 }
 
-LogicalResult IfOp::fold(FoldAdaptor adaptor,
-                         SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults IfOp::fold(FoldAdaptor adaptor) {
   // if (!c) then A() else B() -> if c then B() else A()
   if (getElseRegion().empty())
     return failure();
