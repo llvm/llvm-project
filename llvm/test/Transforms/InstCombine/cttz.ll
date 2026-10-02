@@ -356,7 +356,7 @@ define i8 @fold_ctz_log2_maybe_z_okay(i8 %x, i8 %y, i1 %c) {
 define i8 @fold_clz_log2(i8 %x) {
 ; CHECK-LABEL: @fold_clz_log2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[X:%.*]], i8 5)
-; CHECK-NEXT:    [[R:%.*]] = xor i8 [[TMP1]], 7
+; CHECK-NEXT:    [[R:%.*]] = sub nuw nsw i8 7, [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %p2 = shl i8 1, %x
