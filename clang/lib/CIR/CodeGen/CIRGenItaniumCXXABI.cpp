@@ -514,7 +514,7 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
   vtable.setLinkage(linkage);
 
   if (cgm.supportsCOMDAT() && cir::isWeakForLinker(linkage))
-    vtable.setComdat(true);
+    vtable.setSelfComdat();
 
   // Set the right visibility.
   cgm.setGVProperties(vtable, rd);
@@ -785,6 +785,7 @@ static bool typeInfoIsInStandardLibrary(const BuiltinType *ty) {
   case BuiltinType::SatUFract:
   case BuiltinType::SatULongFract:
   case BuiltinType::BFloat16:
+  case BuiltinType::MetaInfo:
     return false;
 
   case BuiltinType::Dependent:
@@ -1652,7 +1653,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
   }
 
   if (cgm.supportsCOMDAT() && cir::isWeakForLinker(linkage))
-    gv.setComdat(true);
+    gv.setSelfComdat();
 
   CharUnits align = cgm.getASTContext().toCharUnitsFromBits(
       cgm.getTarget().getPointerAlign(LangAS::Default));
