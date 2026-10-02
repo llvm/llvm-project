@@ -8137,6 +8137,60 @@ bool llvm::impliesPoison(const Value *ValAssumedPoison, const Value *V) {
 
 static bool programUndefinedIfUndefOrPoison(const Value *V, bool PoisonOnly);
 
+static bool isGuaranteedNotToBeUndefOrPoisonSpecialCases(
+    const Value *V, AssumptionCache *AC, const Instruction *CtxI,
+    const DominatorTree *DT, UndefPoisonKind Kind) {
+  // If we have `V = zext nneg <ty> %X`, where %X is provably non-negative, then
+  // V is never undef or poison.
+  Value *X;
+  if (match(V, m_NNegZExt(m_Value(X)))) {
+    return isKnownNonNegative(X, SimplifyQuery({}, DT, AC, CtxI));
+  }
+
+  // If V is used as a branch condition before reaching CtxI, V cannot be
+  // undef or poison.
+  //   br V, BB1, BB2
+  // BB1:
+  //   CtxI ; V cannot be undef or poison here
+  if (!DT)
+    return false;
+  auto *DNode = DT->getNode(CtxI->getParent());
+  if (!DNode)
+    // Unreachable block
+    return false;
+  auto *Dominator = DNode->getIDom();
+  // This check is purely for compile time reasons: we can skip the IDom walk
+  // if what we are checking for includes undef and the value is not an integer.
+  if (!includesUndef(Kind) || V->getType()->isIntegerTy())
+    while (Dominator) {
+      auto *TI = Dominator->getBlock()->getTerminatorOrNull();
+
+      Value *Cond = nullptr;
+      if (auto BI = dyn_cast_or_null<CondBrInst>(TI)) {
+        Cond = BI->getCondition();
+      } else if (auto SI = dyn_cast_or_null<SwitchInst>(TI)) {
+        Cond = SI->getCondition();
+      }
+
+      if (Cond) {
+        if (Cond == V)
+          return true;
+        else if (!includesUndef(Kind) && isa<Operator>(Cond)) {
+          // For poison, we can analyze further
+          auto *Opr = cast<Operator>(Cond);
+          if (any_of(Opr->operands(), [V](const Use &U) {
+                return V == U && propagatesPoison(U);
+              }))
+            return true;
+        }
+      }
+
+      Dominator = Dominator->getIDom();
+    }
+
+  return false;
+}
+
 static bool isGuaranteedNotToBeUndefOrPoison(
     const Value *V, AssumptionCache *AC, const Instruction *CtxI,
     const DominatorTree *DT, unsigned Depth, UndefPoisonKind Kind) {
@@ -8247,48 +8301,11 @@ static bool isGuaranteedNotToBeUndefOrPoison(
     return true;
 
   // CtxI may be null or a cloned instruction.
-  if (!CtxI || !CtxI->getParent() || !DT)
+  if (!CtxI || !CtxI->getParent())
     return false;
 
-  auto *DNode = DT->getNode(CtxI->getParent());
-  if (!DNode)
-    // Unreachable block
-    return false;
-
-  // If V is used as a branch condition before reaching CtxI, V cannot be
-  // undef or poison.
-  //   br V, BB1, BB2
-  // BB1:
-  //   CtxI ; V cannot be undef or poison here
-  auto *Dominator = DNode->getIDom();
-  // This check is purely for compile time reasons: we can skip the IDom walk
-  // if what we are checking for includes undef and the value is not an integer.
-  if (!includesUndef(Kind) || V->getType()->isIntegerTy())
-    while (Dominator) {
-      auto *TI = Dominator->getBlock()->getTerminatorOrNull();
-
-      Value *Cond = nullptr;
-      if (auto BI = dyn_cast_or_null<CondBrInst>(TI)) {
-        Cond = BI->getCondition();
-      } else if (auto SI = dyn_cast_or_null<SwitchInst>(TI)) {
-        Cond = SI->getCondition();
-      }
-
-      if (Cond) {
-        if (Cond == V)
-          return true;
-        else if (!includesUndef(Kind) && isa<Operator>(Cond)) {
-          // For poison, we can analyze further
-          auto *Opr = cast<Operator>(Cond);
-          if (any_of(Opr->operands(), [V](const Use &U) {
-                return V == U && propagatesPoison(U);
-              }))
-            return true;
-        }
-      }
-
-      Dominator = Dominator->getIDom();
-    }
+  if (isGuaranteedNotToBeUndefOrPoisonSpecialCases(V, AC, CtxI, DT, Kind))
+    return true;
 
   if (AC && getKnowledgeValidInContext(V, {Attribute::NoUndef}, *AC, CtxI, DT))
     return true;
