@@ -81,7 +81,7 @@ define i32 @test(i32 %a, i1 %c) {
   ; POSTSELECTION-NEXT:   B %bb.2
   ; POSTSELECTION-NEXT: {{  $}}
   ; POSTSELECTION-NEXT: bb.2.common.ret:
-  ; POSTSELECTION-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI %7, %bb.3, [[COPY2]], %bb.1
+  ; POSTSELECTION-NEXT:   [[PHI:%[0-9]+]]:gpr32all = PHI %7, %bb.3, [[COPY2]], %bb.1
   ; POSTSELECTION-NEXT:   $w0 = COPY [[PHI]]
   ; POSTSELECTION-NEXT:   RET_ReallyLR implicit $w0
   ; POSTSELECTION-NEXT: {{  $}}

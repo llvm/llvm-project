@@ -163,9 +163,9 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %fp_phi:fpr16 = PHI %fpr, %bb.3, [[COPY1]], %bb.2
-  ; CHECK-NEXT:   %gp_phi1:gpr32 = PHI %gpr_1, %bb.3, %gpr_2, %bb.2
-  ; CHECK-NEXT:   %gp_phi2:gpr32 = PHI %gpr_1, %bb.3, %gpr_2, %bb.2
-  ; CHECK-NEXT:   %gp_phi3:gpr32 = PHI %gpr_1, %bb.3, %gpr_2, %bb.2
+  ; CHECK-NEXT:   %gp_phi1:gpr32all = PHI %gpr_1, %bb.3, %gpr_2, %bb.2
+  ; CHECK-NEXT:   %gp_phi2:gpr32all = PHI %gpr_1, %bb.3, %gpr_2, %bb.2
+  ; CHECK-NEXT:   %gp_phi3:gpr32all = PHI %gpr_1, %bb.3, %gpr_2, %bb.2
   ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG %fp_phi, %subreg.hsub
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32all = COPY [[SUBREG_TO_REG]]
   ; CHECK-NEXT: {{  $}}

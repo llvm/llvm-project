@@ -68,7 +68,7 @@ body: |
     ; CHECK-LABEL: name: test_dbg_value_dead
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: DBG_VALUE %1:gpr64, $noreg, !7, !DIExpression(),  debug-location !9
+    ; CHECK-NEXT: DBG_VALUE %1:gpr64all, $noreg, !7, !DIExpression(),  debug-location !9
     %0:gpr(i32) = COPY $w0
     %1:gpr(i64) = G_ZEXT %0:gpr(i32)
     DBG_VALUE %1(i64), $noreg, !7, !DIExpression(), debug-location !9
@@ -95,8 +95,8 @@ body: |
     $x0 = COPY %1(p0)
 ...
 
-# A PHI keeps any class already assigned to its def, so the DBG_VALUE must not
-# assign one, not even the widest.
+# A PHI keeps a class already set on its def, so the class it picks otherwise
+# must match the one the DBG_VALUE sets.
 ---
 name:            test_dbg_value_phi
 legalized:       true
@@ -117,7 +117,7 @@ body: |
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr64 = PHI [[COPY1]], %bb.0, [[COPY2]], %bb.1
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr64all = PHI [[COPY1]], %bb.0, [[COPY2]], %bb.1
   ; CHECK-NEXT:   DBG_VALUE [[PHI]], $noreg, !7, !DIExpression(), debug-location !9
   ; CHECK-NEXT:   $x0 = COPY [[PHI]]
   bb.0:
