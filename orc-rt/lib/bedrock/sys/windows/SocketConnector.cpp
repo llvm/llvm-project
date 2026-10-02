@@ -10,20 +10,14 @@
 
 using namespace orc_rt;
 
-namespace {
-
-Error socketConnectorNotImplemented(const ConnectionSpec &, Session &,
-                                    BootstrapInfo) noexcept {
-  return make_error<StringError>(
-      "Socket transport is not implemented on Windows");
-}
-
-} // namespace
-
 namespace orc_rt {
 
 Error registerSocketConnector(ConnectorRegistry &R) noexcept {
-  return R.registerConnector("socket", socketConnectorNotImplemented);
+  return R.registerConnector(
+      "socket",
+      [](const ConnectionSpec &, Session &, BootstrapInfo) noexcept -> Error {
+        return make_error<StringError>("socket connector not implemented");
+      });
 }
 
 } // namespace orc_rt
