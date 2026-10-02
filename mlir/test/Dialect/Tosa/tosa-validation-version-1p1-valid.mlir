@@ -194,6 +194,14 @@ func.func @test_argmax_int64(%arg0: tensor<1x13x13x5xf32>) -> tensor<1x13x13xi64
 
 // -----
 
+// CHECK-LABEL: test_argmin_int64
+func.func @test_argmin_int64(%arg0: tensor<1x13x13x5xf32>) -> tensor<1x13x13xi64> {
+  %0 = tosa.argmin %arg0 axis(3) : (tensor<1x13x13x5xf32>) -> tensor<1x13x13xi64>
+  return %0 : tensor<1x13x13xi64>
+}
+
+// -----
+
 // CHECK-LABEL: test_const_i64
 func.func @test_const_i64() -> tensor<4xi64> {
     %0 = "tosa.const"() <{values = dense<[3, 0, 1, 2]> : tensor<4xi64>}> : () -> tensor<4xi64>
@@ -298,6 +306,22 @@ func.func @test_argmax_fp8_i64(%arg0: tensor<12x8x16xf8E5M2>) -> tensor<12x16xi6
 // CHECK-LABEL: test_argmax_bf16_i64
 func.func @test_argmax_bf16_i64(%arg0: tensor<12x8x16xbf16>) -> tensor<12x16xi64> {
   %0 = tosa.argmax %arg0 axis(1) : (tensor<12x8x16xbf16>) -> tensor<12x16xi64>
+  return %0 : tensor<12x16xi64>
+}
+
+// -----
+
+// CHECK-LABEL: test_argmin_fp8_i64
+func.func @test_argmin_fp8_i64(%arg0: tensor<12x8x16xf8E5M2>) -> tensor<12x16xi64> {
+  %0 = tosa.argmin %arg0 axis(1) : (tensor<12x8x16xf8E5M2>) -> tensor<12x16xi64>
+  return %0 : tensor<12x16xi64>
+}
+
+// -----
+
+// CHECK-LABEL: test_argmin_bf16_i64
+func.func @test_argmin_bf16_i64(%arg0: tensor<12x8x16xbf16>) -> tensor<12x16xi64> {
+  %0 = tosa.argmin %arg0 axis(1) : (tensor<12x8x16xbf16>) -> tensor<12x16xi64>
   return %0 : tensor<12x16xi64>
 }
 
