@@ -99,6 +99,7 @@ getCompressedLoadCost(const TargetTransformInfo &TTI, const LoadInst *LI0,
         LI0->getPointerAddressSpace(), CostKind,
         TargetTransformInfo::getOperandInfo(LI0->getPointerOperand()));
   }
+  // TODO: include this cost into CommonCost.
   Cost += getShuffleCost(TTI, TTI::SK_PermuteSingleSrc, Info.LoadVecTy,
                          CostKind, Info.CompressMask);
   return Cost;
