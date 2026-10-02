@@ -287,6 +287,10 @@ class OpenMPIRBuilderTestWithIVBits
     : public OpenMPIRBuilderTest,
       public ::testing::WithParamInterface<int> {};
 
+class OpenMPIRBuilderTestWithNeedsBarrier
+    : public OpenMPIRBuilderTest,
+      public ::testing::WithParamInterface<bool> {};
+
 // Returns the value stored in the given allocation. Returns null if the given
 // value is not a result of an InstTy instruction, if no value is stored or if
 // there is more than one store.
@@ -2384,8 +2388,9 @@ TEST_F(OpenMPIRBuilderTest, UnrollLoopHeuristic) {
   EXPECT_TRUE(getBooleanLoopAttribute(L, "llvm.loop.unroll.enable"));
 }
 
-TEST_F(OpenMPIRBuilderTest, StaticWorkshareLoopTarget) {
+TEST_P(OpenMPIRBuilderTestWithNeedsBarrier, StaticWorkshareLoopTarget) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  bool NeedsBarrier = GetParam();
   M->setDataLayout(
       "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:"
       "256:256:32-p8:128:128:128:48-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-"
@@ -2410,13 +2415,14 @@ TEST_F(OpenMPIRBuilderTest, StaticWorkshareLoopTarget) {
                                                       StartVal, StopVal,
                                                       StepVal, false, false));
   BasicBlock *Preheader = CLI->getPreheader();
+  BasicBlock *Exit = CLI->getExit();
   Value *TripCount = CLI->getTripCount();
 
   Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());
 
   ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, AfterIP,
                        OMPBuilder.applyWorkshareLoop(
-                           DL, CLI, AllocaIP, true, OMP_SCHEDULE_Static,
+                           DL, CLI, AllocaIP, NeedsBarrier, OMP_SCHEDULE_Static,
                            nullptr, false, false, false, false,
                            WorksharingLoopType::ForStaticLoop));
   Builder.restoreIP(AfterIP);
@@ -2454,7 +2460,23 @@ TEST_F(OpenMPIRBuilderTest, StaticWorkshareLoopTarget) {
             WorkshareLoopRuntimeCall->getArgOperand(2));
   // Check loop trip count argument
   EXPECT_EQ(TripCount, WorkshareLoopRuntimeCall->getArgOperand(3));
+
+  Function *BarrierFn = M->getFunction("__kmpc_barrier");
+  if (NeedsBarrier) {
+    ASSERT_NE(BarrierFn, nullptr);
+    ASSERT_TRUE(BarrierFn->hasOneUse());
+    auto *BarrierCall = dyn_cast<CallInst>(*BarrierFn->user_begin());
+    ASSERT_NE(BarrierCall, nullptr);
+    // All threads synchronize after worksharing, outside the outlined body.
+    EXPECT_EQ(BarrierCall->getParent(), Exit);
+    EXPECT_EQ(Preheader->getSingleSuccessor(), Exit);
+  } else {
+    EXPECT_EQ(BarrierFn, nullptr);
+  }
 }
+
+INSTANTIATE_TEST_SUITE_P(NeedsBarrier, OpenMPIRBuilderTestWithNeedsBarrier,
+                         ::testing::Bool());
 
 TEST_F(OpenMPIRBuilderTest, StaticWorkShareLoop) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;

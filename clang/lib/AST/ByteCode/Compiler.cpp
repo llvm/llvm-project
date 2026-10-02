@@ -51,6 +51,15 @@ static bool isSideEffectFree(const Expr *E) {
   return false;
 }
 
+/// Whether the CheckArraySize op rejects an array with \p NumElems elements.
+static bool exceedsArraySizeLimit(const LangOptions &LangOpts,
+                                  uint64_t NumElems) {
+  if (NumElems > std::numeric_limits<unsigned>::max())
+    return true;
+  uint64_t Limit = LangOpts.ConstexprStepLimit;
+  return Limit != 0 && NumElems > Limit;
+}
+
 /// Scope chain managing the variable lifetimes.
 template <class Emitter> class VariableScope {
 public:
@@ -3038,6 +3047,8 @@ bool Compiler<Emitter>::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
   const Expr *SubExpr = E->getSubExpr();
   OptPrimType SubExprT = classify(SubExpr);
   size_t Size = E->getArraySize().getZExtValue();
+  if (exceedsArraySizeLimit(Ctx.getLangOpts(), Size))
+    return this->emitCheckArraySize(Size, E);
 
   if (SubExprT) {
     // Unwrap the OpaqueValueExpr so we don't cache something we won't reuse.
@@ -4041,8 +4052,10 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
       if (!CAT)
         return false;
       QualType ElemTy = CAT->getElementType();
-      unsigned NumElems = CAT->getZExtSize();
-      for (size_t I = 0; I != NumElems; ++I) {
+      uint64_t NumElems = CAT->getZExtSize();
+      if (exceedsArraySizeLimit(Ctx.getLangOpts(), NumElems))
+        return this->emitCheckArraySize(NumElems, E);
+      for (uint64_t I = 0; I != NumElems; ++I) {
         if (!this->emitConstUint64(I, E))
           return false;
         if (!this->emitArrayElemPtrUint64(E))

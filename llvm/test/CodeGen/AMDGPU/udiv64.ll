@@ -126,6 +126,7 @@ define amdgpu_kernel void @s_test_udiv_i64(ptr addrspace(1) %out, i64 %x, i64 %y
 ; GCN-IR-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0xd
 ; GCN-IR-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GCN-IR-NEXT:    s_mov_b64 s[4:5], 0
+; GCN-IR-NEXT:    s_mov_b32 s11, 0
 ; GCN-IR-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[6:7], 0
 ; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[12:13], s[2:3], 0
@@ -142,10 +143,7 @@ define amdgpu_kernel void @s_test_udiv_i64(ptr addrspace(1) %out, i64 %x, i64 %y
 ; GCN-IR-NEXT:    s_cselect_b32 s8, 0, s2
 ; GCN-IR-NEXT:    s_or_b64 s[14:15], s[14:15], s[18:19]
 ; GCN-IR-NEXT:    s_and_b64 s[14:15], s[14:15], exec
-; GCN-IR-NEXT:    s_cselect_b32 s11, 1, 0
-; GCN-IR-NEXT:    s_cmp_lg_u32 s11, 1
-; GCN-IR-NEXT:    s_mov_b32 s11, 0
-; GCN-IR-NEXT:    s_cbranch_scc0 .LBB0_5
+; GCN-IR-NEXT:    s_cbranch_scc1 .LBB0_5
 ; GCN-IR-NEXT:  ; %bb.1: ; %udiv-bb1
 ; GCN-IR-NEXT:    s_add_u32 s14, s12, 1
 ; GCN-IR-NEXT:    s_addc_u32 s8, s13, 0
@@ -1018,10 +1016,8 @@ define amdgpu_kernel void @s_test_udiv_k_num_i64(ptr addrspace(1) %out, i64 %x) 
 ; GCN-IR-NEXT:    s_cselect_b32 s6, 0, 24
 ; GCN-IR-NEXT:    s_or_b64 s[10:11], s[10:11], s[12:13]
 ; GCN-IR-NEXT:    s_and_b64 s[10:11], s[10:11], exec
-; GCN-IR-NEXT:    s_cselect_b32 s7, 1, 0
-; GCN-IR-NEXT:    s_cmp_lg_u32 s7, 1
 ; GCN-IR-NEXT:    s_mov_b32 s7, 0
-; GCN-IR-NEXT:    s_cbranch_scc0 .LBB8_5
+; GCN-IR-NEXT:    s_cbranch_scc1 .LBB8_5
 ; GCN-IR-NEXT:  ; %bb.1: ; %udiv-bb1
 ; GCN-IR-NEXT:    s_add_u32 s10, s8, 1
 ; GCN-IR-NEXT:    s_addc_u32 s6, s9, 0
@@ -1389,10 +1385,8 @@ define amdgpu_kernel void @s_test_udiv_k_den_i64(ptr addrspace(1) %out, i64 %x) 
 ; GCN-IR-NEXT:    s_cselect_b32 s6, 0, s2
 ; GCN-IR-NEXT:    s_or_b64 s[4:5], s[4:5], s[12:13]
 ; GCN-IR-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GCN-IR-NEXT:    s_cselect_b32 s4, 1, 0
-; GCN-IR-NEXT:    s_cmp_lg_u32 s4, 1
 ; GCN-IR-NEXT:    s_mov_b64 s[4:5], 0
-; GCN-IR-NEXT:    s_cbranch_scc0 .LBB11_5
+; GCN-IR-NEXT:    s_cbranch_scc1 .LBB11_5
 ; GCN-IR-NEXT:  ; %bb.1: ; %udiv-bb1
 ; GCN-IR-NEXT:    s_add_u32 s11, s8, 1
 ; GCN-IR-NEXT:    s_addc_u32 s6, s9, 0
