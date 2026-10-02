@@ -689,7 +689,7 @@ private:
   using __const_pointer _LIBCPP_NODEBUG = add_pointer_t<const _Tp>;
 
   template <bool = std::__range_fits_in_alignment(alignof(_Tp), 1)>
-  struct _LIBCPP_NODEBUG __iterator {
+  struct __iterator {
     using __type _LIBCPP_NODEBUG       = std::__static_packed_bounded_iterator<__pointer, 1>;
     using __const_type _LIBCPP_NODEBUG = std::__static_packed_bounded_iterator<__const_pointer, 1>;
 
@@ -700,8 +700,8 @@ private:
   };
 
   template <>
-  struct _LIBCPP_NODEBUG __iterator<false> {
-#    if _LIBCPP_ABI_BOUNDED_ITERATORS
+  struct __iterator<false> {
+#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
     using __type _LIBCPP_NODEBUG       = std::__bounded_iter<__pointer>;
     using __const_type _LIBCPP_NODEBUG = std::__bounded_iter<__const_pointer>;
 #    else
@@ -711,7 +711,7 @@ private:
 
     template <class _PtrType>
     static auto __make(_PtrType __p, [[__maybe_unused__]] unsigned __end_offset) noexcept {
-#    if _LIBCPP_ABI_BOUNDED_ITERATORS
+#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
       return std::__make_bounded_iter<_PtrType>(__p, __p, __p + __end_offset)
 #    else
       return std::__make_capacity_aware_iterator<_PtrType, 1>(__p);

@@ -63,7 +63,7 @@ protected:
   using __pointer = add_pointer_t<_Tp>;
 
   template <bool = std::__range_fits_in_alignment(alignof(_Tp), 1)>
-  struct _LIBCPP_NODEBUG __iterator {
+  struct __iterator {
     using __type = std::__static_packed_bounded_iterator<__pointer, 1>;
 
     static __type __make(__pointer __p, unsigned) noexcept {
@@ -72,15 +72,15 @@ protected:
   };
 
   template <>
-  struct _LIBCPP_NODEBUG __iterator<false> {
-#  if _LIBCPP_ABI_BOUNDED_ITERATORS
+  struct __iterator<false> {
+#  ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
     using __type = std::__bounded_iter<__pointer>;
 #  else
     using __type = std::__capacity_aware_iterator<__pointer, 1>;
 #  endif
 
     static __type __make(__pointer __p, [[__maybe_unused__]] unsigned __end_offset) noexcept {
-#  if _LIBCPP_ABI_BOUNDED_ITERATORS
+#  ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
       return std::__make_bounded_iter<__pointer>(__p, __p, __p + __end_offset);
 #  else
       return std::__make_capacity_aware_iterator<__pointer, 1>(__p);
