@@ -66,3 +66,8 @@ const char16_t *test_char16_typedef() {
 // CIR: cir.global "private" constant cir_private dso_local @{{.+}} = #cir.const_array<[#cir.int<116> : !u16i, #cir.int<101> : !u16i, #cir.int<115> : !u16i, #cir.int<116> : !u16i], trailing_zeros> : !cir.array<!u16i x 5>
 // LLVM: @{{.+}} = private constant [5 x i16] [i16 116, i16 101, i16 115, i16 116, i16 0]
 // OGCG: @{{.+}} = private unnamed_addr constant [5 x i16] [i16 116, i16 101, i16 115, i16 116, i16 0]
+
+// CIR: cir.global external @wchar_large_code_unit = #cir.const_array<[#cir.int<34> : !s32i, #cir.int<-1> : !s32i], trailing_zeros> : !cir.array<!s32i x 3>
+// LLVM: @wchar_large_code_unit = global [3 x i32] [i32 34, i32 -1, i32 0]
+// OGCG: @wchar_large_code_unit = global [3 x i32] [i32 34, i32 -1, i32 0]
+wchar_t wchar_large_code_unit[] = L"\"\xffffffff";

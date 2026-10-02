@@ -1840,8 +1840,12 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *e) {
   // Otherwise emit a constant array holding the characters.
   SmallVector<mlir::Attribute> elements;
   elements.reserve(arraySize);
-  for (unsigned i = 0; i < literalSize; ++i)
-    elements.push_back(cir::IntAttr::get(arrayEltTy, e->getCodeUnit(i)));
+  for (unsigned i = 0; i < literalSize; ++i) {
+    // getCodeUnit() is unsigned: build the APInt directly to preserve the
+    // bit pattern for signed element types (e.g. 0xFFFFFFFF is -1 as s32).
+    llvm::APInt codeUnit(arrayEltTy.getWidth(), e->getCodeUnit(i));
+    elements.push_back(cir::IntAttr::get(arrayEltTy, codeUnit));
+  }
 
   auto elementsAttr = mlir::ArrayAttr::get(&getMLIRContext(), elements);
   return builder.getConstArray(elementsAttr, arrayTy);
