@@ -8017,6 +8017,38 @@ declare <2 x i32> @llvm.riscv.pmhacc.h0.v2i32(<2 x i32>, <2 x i32>, <4 x i16>)
 declare <2 x i32> @llvm.riscv.pmhacc.h1.v2i32(<2 x i32>, <2 x i32>, <4 x i16>)
 declare <2 x i32> @llvm.riscv.pmhaccsu.h0.v2i32(<2 x i32>, <2 x i32>, <4 x i16>)
 declare <2 x i32> @llvm.riscv.pmhaccsu.h1.v2i32(<2 x i32>, <2 x i32>, <4 x i16>)
+declare <2 x i32> @llvm.riscv.pmqwacc.i32x2(<2 x i32>, <2 x i16>, <2 x i16>)
+declare <2 x i32> @llvm.riscv.pmqrwacc.i32x2(<2 x i32>, <2 x i16>, <2 x i16>)
+
+define <2 x i32> @test_pmqwacc_i32x2(<2 x i32> %rd, <2 x i16> %rs1, <2 x i16> %rs2) {
+; RV32-LABEL: test_pmqwacc_i32x2:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pmqwacc.h a0, a2, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmqwacc_i32x2:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zip16p a1, a1, a2
+; RV64-NEXT:    pmqacc.w.h01 a0, a1, a1
+; RV64-NEXT:    ret
+  %r = call <2 x i32> @llvm.riscv.pmqwacc.i32x2(<2 x i32> %rd, <2 x i16> %rs1, <2 x i16> %rs2)
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @test_pmqrwacc_i32x2(<2 x i32> %rd, <2 x i16> %rs1, <2 x i16> %rs2) {
+; RV32-LABEL: test_pmqrwacc_i32x2:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pmqrwacc.h a0, a2, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pmqrwacc_i32x2:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zip16p a1, a1, a2
+; RV64-NEXT:    pmqracc.w.h01 a0, a1, a1
+; RV64-NEXT:    ret
+  %r = call <2 x i32> @llvm.riscv.pmqrwacc.i32x2(<2 x i32> %rd, <2 x i16> %rs1, <2 x i16> %rs2)
+  ret <2 x i32> %r
+}
 
 define <2 x i32> @test_pmacc_h00_v2i32(<2 x i32> %rd, <4 x i16> %a, <4 x i16> %b) {
 ; RV32-LABEL: test_pmacc_h00_v2i32:

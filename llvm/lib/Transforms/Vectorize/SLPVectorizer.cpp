@@ -2517,9 +2517,10 @@ private:
 
   /// \returns the fadd/fsub user of the single-use fmul \p I, which the
   /// backend fuses with \p I into an fmuladd in the scalar code, and the cost
-  /// of that fmuladd, or {nullptr, invalid cost}.
+  /// of that fmuladd, or {nullptr, invalid cost}. If \p InTree is set, the
+  /// users, whose fusion is accounted for by the tree, are not returned.
   std::pair<Instruction *, InstructionCost>
-  getFMulFusingUser(Instruction *I) const;
+  getFMulFusingUser(Instruction *I, bool InTree = true) const;
 
   /// \returns true if the fadd/fsub \p U, fused with its fmul operand by the
   /// backend, is a vectorized tree scalar whose lane is priced as fmuladd.
@@ -13223,7 +13224,7 @@ static InstructionCost getUnfusedBinOpCost(Instruction *I,
 }
 
 std::pair<Instruction *, InstructionCost>
-BoUpSLP::getFMulFusingUser(Instruction *I) const {
+BoUpSLP::getFMulFusingUser(Instruction *I, bool InTree) const {
   if (!match(I, m_OneUse(m_FMul(m_Value(), m_Value()))))
     return {nullptr, InstructionCost::getInvalid()};
   auto *U = cast<Instruction>(I->user_back());
@@ -13231,10 +13232,10 @@ BoUpSLP::getFMulFusingUser(Instruction *I) const {
   // reduction operations itself. The lanes of the combined fmuladd node are
   // fused with its own fmul operand node, not with the other operand.
   if (getFusableFMulOperand(U, *TTI) != I ||
-      (UserIgnoreList && UserIgnoreList->contains(U)) ||
-      any_of(getTreeEntries(U), [](const TreeEntry *TE) {
-        return TE->CombinedOp == TreeEntry::FMulAdd;
-      }))
+      (InTree && ((UserIgnoreList && UserIgnoreList->contains(U)) ||
+                  any_of(getTreeEntries(U), [](const TreeEntry *TE) {
+                    return TE->CombinedOp == TreeEntry::FMulAdd;
+                  }))))
     return {nullptr, InstructionCost::getInvalid()};
   // The target must actually prefer the fused form.
   InstructionCost FMACost =
@@ -16042,8 +16043,10 @@ TTI::CastContextHint BoUpSLP::getCastContextHint(const TreeEntry &TE) const {
       return TTI::CastContextHint::Reversed;
   }
   // A gather of extracted sub-fields inherits the context of the entry
-  // vectorizing the common source scalar, or of the source scalar load.
-  if (TE.isGather())
+  // vectorizing the common source scalar, or of the source scalar load. The
+  // scalars erased by the vectorization have no operands to match.
+  if (TE.isGather() && none_of(make_isa_range<Instruction>(TE.Scalars),
+                               [&](Instruction *I) { return isDeleted(I); }))
     if (std::optional<std::tuple<Value *, unsigned, SmallVector<int>>> Fields =
             matchGatheredExtractedFields(TE.Scalars, *DL)) {
       Value *Src = std::get<0>(*Fields);
@@ -25692,8 +25695,14 @@ bool BoUpSLP::canVersionForRuntimeChecks() {
   InstructionCost ScalarCost = 0;
   for (Instruction &I : make_filter_range(*BB, [](Instruction &I) {
          return !isa<PHINode>(&I) && !I.isTerminator();
-       }))
-    ScalarCost += TTI->getInstructionCost(&I, CostKind);
+       })) {
+    // The backend fuses the fmul into its fadd/fsub user, so the pair costs as
+    // the fmuladd.
+    auto [U, FMACost] = getFMulFusingUser(&I, /*InTree=*/false);
+    ScalarCost += U && U->getParent() == BB
+                      ? FMACost - TTI->getInstructionCost(U, CostKind)
+                      : TTI->getInstructionCost(&I, CostKind);
+  }
   InstructionCost CheckCost = getRuntimeChecksCost();
   if (!ScalarCost.isValid() || !CheckCost.isValid())
     return false;
