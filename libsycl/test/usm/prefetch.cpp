@@ -12,6 +12,7 @@
 
 #include <sycl/sycl.hpp>
 
+#include <cassert>
 #include <cstddef>
 
 using namespace sycl;
