@@ -112,8 +112,8 @@ void X86SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
                     Target.getOpcode() == ISD::TargetGlobalAddress ||
                     Target.getOpcode() == ISD::ExternalSymbol ||
                     Target.getOpcode() == ISD::TargetExternalSymbol;
-    bool WantI64 = IsDirect ? Subtarget.isTarget64BitLP64()
-                            : Subtarget.is64Bit();
+    bool WantI64 =
+        IsDirect ? Subtarget.isTarget64BitLP64() : Subtarget.is64Bit();
     EVT ExpectedVT = WantI64 ? MVT::i64 : MVT::i32;
     EVT VT = Target.getValueType();
     if (VT != ExpectedVT)
