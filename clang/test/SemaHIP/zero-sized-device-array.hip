@@ -30,12 +30,17 @@ __host__ void host_fun() {
 template <typename Ty, unsigned Size>
 __device__ void templated() {
   Ty arr[Size];
-  __shared__ Ty shared_arr[Size];
+  __shared__ Ty shared_arr[Size]; // device-warning {{zero-length __shared__ array 'shared_arr' has no storage}}
 }
 
 template <typename Ty>
 __device__ void dependent_element() {
   __shared__ Ty shared_arr[0]; // device-warning {{zero-length __shared__ array 'shared_arr' has no storage}}
+}
+
+template <typename Ty>
+__device__ void dependent_type() {
+  __shared__ Ty shared_arr; // device-warning {{zero-length __shared__ array 'shared_arr' has no storage}}
 }
 
 __host__ __device__ void host_dev_fun() {
@@ -45,6 +50,10 @@ __host__ __device__ void host_dev_fun() {
 __device__ void device_fun() {
   __shared__ float array[0]; // device-warning {{zero-length __shared__ array 'array' has no storage}}
   __shared__ ZEROARR typedef_array; // device-warning {{zero-length __shared__ array 'typedef_array' has no storage}}
-  templated<int, 0>();
+  templated<int, 0>(); // device-note {{in instantiation of function template specialization 'templated<int, 0U>' requested here}}
+  templated<int, 1>();
   dependent_element<int>();
+  dependent_element<float>();
+  dependent_type<float[1]>();
+  dependent_type<float[0]>(); // device-note {{in instantiation of function template specialization 'dependent_type<float[0]>' requested here}}
 }
