@@ -93,6 +93,9 @@ subroutine host(ad)
   if (tt%h(1) > 0.0) x = 13.0
   !ERROR: Device data 'mc' may not be referenced in host code outside of a data transfer or an actual argument
   if (mc > 0) x = 14.0
+  !ERROR: Device data 'nd' may not be referenced in host code outside of a data transfer or an actual argument
+  if (size(tta(nd)%c, dim=1) > 0) x = 15.0
+  if (size(tta(2)%c, dim=1) > 0) x = 14.0
   mc = 10
   x = md(1)
   h = md
@@ -118,6 +121,9 @@ subroutine host(ad)
   do i = 1, mn
     if (md(i) > 0.0) md(i) = 0.0
   end do
+
+
+
 end subroutine
 
 attributes(global) subroutine kernel(a)
