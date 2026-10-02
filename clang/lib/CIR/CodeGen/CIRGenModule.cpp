@@ -1524,9 +1524,14 @@ void CIRGenModule::emitLLVMUsed() {
 
 void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
                                            bool isTentative) {
-  if (getLangOpts().OpenCL || getLangOpts().OpenMPIsTargetDevice) {
+  // OpenCL global variables of sampler type are translated to function calls,
+  // therefore no need to be translated.
+  if (getLangOpts().OpenCL && vd->getType()->isSamplerT())
+    return;
+
+  if (getLangOpts().OpenMPIsTargetDevice) {
     errorNYI(vd->getSourceRange(),
-             "emitGlobalVarDefinition: emit OpenCL/OpenMP global variable");
+             "emitGlobalVarDefinition: emit OpenMP global variable");
     return;
   }
 

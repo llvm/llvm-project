@@ -16043,8 +16043,10 @@ TTI::CastContextHint BoUpSLP::getCastContextHint(const TreeEntry &TE) const {
       return TTI::CastContextHint::Reversed;
   }
   // A gather of extracted sub-fields inherits the context of the entry
-  // vectorizing the common source scalar, or of the source scalar load.
-  if (TE.isGather())
+  // vectorizing the common source scalar, or of the source scalar load. The
+  // scalars erased by the vectorization have no operands to match.
+  if (TE.isGather() && none_of(make_isa_range<Instruction>(TE.Scalars),
+                               [&](Instruction *I) { return isDeleted(I); }))
     if (std::optional<std::tuple<Value *, unsigned, SmallVector<int>>> Fields =
             matchGatheredExtractedFields(TE.Scalars, *DL)) {
       Value *Src = std::get<0>(*Fields);
