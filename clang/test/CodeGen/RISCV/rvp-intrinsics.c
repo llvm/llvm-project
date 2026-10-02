@@ -5801,6 +5801,34 @@ int32x2_t test_pwmul_i32x2(int16x2_t rs1, int16x2_t rs2) {
   return __riscv_pwmul_i32x2(rs1, rs2);
 }
 
+// CHECK-LABEL: define dso_local i64 @test_pmqwacc_i32x2(
+// CHECK-SAME: i64 noundef [[RD_COERCE:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RD_COERCE]] to <2 x i32>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[RS2_COERCE]] to <2 x i16>
+// CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i32> @llvm.riscv.pmqwacc.i32x2(<2 x i32> [[TMP0]], <2 x i16> [[TMP1]], <2 x i16> [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP3]] to i64
+// CHECK-NEXT:    ret i64 [[TMP4]]
+//
+int32x2_t test_pmqwacc_i32x2(int32x2_t rd, int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pmqwacc_i32x2(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: define dso_local i64 @test_pmqrwacc_i32x2(
+// CHECK-SAME: i64 noundef [[RD_COERCE:%.*]], i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RD_COERCE]] to <2 x i32>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[RS2_COERCE]] to <2 x i16>
+// CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i32> @llvm.riscv.pmqrwacc.i32x2(<2 x i32> [[TMP0]], <2 x i16> [[TMP1]], <2 x i16> [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP3]] to i64
+// CHECK-NEXT:    ret i64 [[TMP4]]
+//
+int32x2_t test_pmqrwacc_i32x2(int32x2_t rd, int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pmqrwacc_i32x2(rd, rs1, rs2);
+}
+
 // CHECK-LABEL: define dso_local i64 @test_pwmulu_u16x4(
 // CHECK-SAME: i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
