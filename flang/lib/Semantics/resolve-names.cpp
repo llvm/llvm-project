@@ -5949,6 +5949,9 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
     if (Symbol *iface{
             FindSeparateModuleProcedureInterface(name, /*emitError=*/false)};
         iface && &iface->owner() != &currScope()) {
+      // Repairing a same-scope interface would also require replacing its
+      // existing symbol, as the explicit MODULE path above does. That case
+      // seems less likely than a missing prefix on an ancestor interface.
       moduleInterface = iface;
       context().messages().Warn(/*isInModuleFile=*/false,
           context().languageFeatures(),
