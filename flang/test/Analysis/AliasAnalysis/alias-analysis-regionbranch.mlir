@@ -271,7 +271,7 @@ func.func @test_rb_allocmem_or_zero() {
 func.func @test_rb_distinct_nulls() {
   %cond = arith.constant true
   %a = fir.alloca i32 {uniq_name = "_QFEnulljoin"}
-  %d = fir.declare %a {uniq_name = "_QFEnulljoin", test.ptr = "outside_null_join"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %d = fir.declare %a uniq_name("_QFEnulljoin") {test.ptr = "outside_null_join"} : (!fir.ref<i32>) -> !fir.ref<i32>
   %z_out = fir.zero_bits !fir.ref<i32>
   %jf = fir.if %cond -> !fir.ref<i32> {
     %z_in = fir.zero_bits !fir.ref<i32>
@@ -292,10 +292,10 @@ func.func @test_rb_distinct_nulls() {
 func.func @test_rb_nulls_different_attrs() {
   %cond = arith.constant true
   %a = fir.alloca f32 {uniq_name = "_QFEnullattr"}
-  %d_out = fir.declare %a {uniq_name = "_QFEnullattr", test.ptr = "outside_attr"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %d_out = fir.declare %a uniq_name("_QFEnullattr") {test.ptr = "outside_attr"} : (!fir.ref<f32>) -> !fir.ref<f32>
   %jf = fir.if %cond -> !fir.ref<f32> {
     %z = fir.zero_bits !fir.ref<f32>
-    %p = fir.declare %z {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEp"} : (!fir.ref<f32>) -> !fir.ref<f32>
+    %p = fir.declare %z uniq_name("_QFEp") fortran_attrs<pointer> : (!fir.ref<f32>) -> !fir.ref<f32>
     fir.result %p : !fir.ref<f32>
   } else {
     %z2 = fir.zero_bits !fir.ref<f32>
