@@ -2621,7 +2621,11 @@ void ACCCGToGPULowering::processPredicateRegion(
                 if (auto arg = dyn_cast<BlockArgument>(v))
                   return launch->isAncestor(arg.getOwner()->getParentOp());
                 Operation *def = v.getDefiningOp();
-                return launch->isAncestor(def) &&
+                if (!launch->isAncestor(def) ||
+                    def->hasTrait<OpTrait::ConstantLike>())
+                  return false;
+                // Ids and dims such as gpu.grid_dim take no operands.
+                return def->getNumOperands() == 0 ||
                        llvm::any_of(def->getOperands(), fromLaunch);
               };
               if (!fromLaunch(memref) &&
