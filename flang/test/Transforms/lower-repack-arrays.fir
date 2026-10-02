@@ -3,7 +3,7 @@
 func.func @_QPtest1(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"}) {
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.pack_array %arg0 heap innermost : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>>
-  %2 = fir.declare %1 dummy_scope %0 {uniq_name = "_QFtest1Ex"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
+  %2 = fir.declare %1 dummy_scope %0 uniq_name("_QFtest1Ex") : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
   fir.unpack_array %1 to %arg0 heap : !fir.box<!fir.array<?x?xf32>>
   return
 }
@@ -27,7 +27,7 @@ func.func @_QPtest1(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"})
 // CHECK:               %[[VAL_16:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_3]] : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_17:.*]] = fir.shape %[[VAL_15]]#1, %[[VAL_16]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:               %[[VAL_18:.*]] = fir.allocmem !fir.array<?x?xf32>, %[[VAL_15]]#1, %[[VAL_16]]#1 <{bindc_name = ".repacked", uniq_name = ""}>
-// CHECK:               %[[VAL_19:.*]] = fir.declare %[[VAL_18]](%[[VAL_17]]) {uniq_name = ".repacked"} : (!fir.heap<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.heap<!fir.array<?x?xf32>>
+// CHECK:               %[[VAL_19:.*]] = fir.declare %[[VAL_18]](%[[VAL_17]]) uniq_name(".repacked") : (!fir.heap<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.heap<!fir.array<?x?xf32>>
 // CHECK:               %[[VAL_25:.*]] = fir.shape_shift %[[VAL_15]]#0, %[[VAL_15]]#1, %[[VAL_16]]#0, %[[VAL_16]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
 // CHECK:               %[[VAL_20:.*]] = fir.embox %[[VAL_19]](%[[VAL_25]]) : (!fir.heap<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.box<!fir.array<?x?xf32>>
 // CHECK:               %[[VAL_21:.*]] = fir.address_of(@{{_QQcl.*}}
@@ -43,7 +43,7 @@ func.func @_QPtest1(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"})
 // CHECK:           } else {
 // CHECK:             fir.result %[[VAL_0]] : !fir.box<!fir.array<?x?xf32>>
 // CHECK:           }
-// CHECK:           %[[VAL_27:.*]] = fir.declare %[[VAL_8]] dummy_scope %[[VAL_6]] {uniq_name = "_QFtest1Ex"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
+// CHECK:           %[[VAL_27:.*]] = fir.declare %[[VAL_8]] dummy_scope %[[VAL_6]] uniq_name("_QFtest1Ex") : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
 // CHECK:           %[[VAL_28:.*]] = fir.is_present %[[VAL_0]] : (!fir.box<!fir.array<?x?xf32>>) -> i1
 // CHECK:           fir.if %[[VAL_28]] {
 // CHECK:             %[[VAL_29:.*]] = fir.box_addr %[[VAL_8]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.heap<!fir.array<?x?xf32>>
@@ -68,7 +68,7 @@ func.func @_QPtest1(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"})
 func.func @_QPtest1_whole(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"}) {
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.pack_array %arg0 stack whole : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>>
-  %2 = fir.declare %1 dummy_scope %0 {uniq_name = "_QFtest1_wholeEx"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
+  %2 = fir.declare %1 dummy_scope %0 uniq_name("_QFtest1_wholeEx") : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
   fir.unpack_array %1 to %arg0 stack : !fir.box<!fir.array<?x?xf32>>
   return
 }
@@ -92,7 +92,7 @@ func.func @_QPtest1_whole(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name =
 // CHECK:               %[[VAL_16:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_3]] : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_17:.*]] = fir.shape %[[VAL_15]]#1, %[[VAL_16]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:               %[[VAL_18:.*]] = fir.alloca !fir.array<?x?xf32>, %[[VAL_15]]#1, %[[VAL_16]]#1 <{bindc_name = ".repacked"}>
-// CHECK:               %[[VAL_19:.*]] = fir.declare %[[VAL_18]](%[[VAL_17]]) {uniq_name = ".repacked"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.ref<!fir.array<?x?xf32>>
+// CHECK:               %[[VAL_19:.*]] = fir.declare %[[VAL_18]](%[[VAL_17]]) uniq_name(".repacked") : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.ref<!fir.array<?x?xf32>>
 // CHECK:               %[[VAL_25:.*]] = fir.shape_shift %[[VAL_15]]#0, %[[VAL_15]]#1, %[[VAL_16]]#0, %[[VAL_16]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
 // CHECK:               %[[VAL_20:.*]] = fir.embox %[[VAL_19]](%[[VAL_25]]) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.box<!fir.array<?x?xf32>>
 // CHECK:               %[[VAL_21:.*]] = fir.address_of(@{{_QQcl.*}}
@@ -108,7 +108,7 @@ func.func @_QPtest1_whole(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name =
 // CHECK:           } else {
 // CHECK:             fir.result %[[VAL_0]] : !fir.box<!fir.array<?x?xf32>>
 // CHECK:           }
-// CHECK:           %[[VAL_27:.*]] = fir.declare %[[VAL_8]] dummy_scope %[[VAL_6]] {uniq_name = "_QFtest1_wholeEx"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
+// CHECK:           %[[VAL_27:.*]] = fir.declare %[[VAL_8]] dummy_scope %[[VAL_6]] uniq_name("_QFtest1_wholeEx") : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
 // CHECK:           %[[VAL_28:.*]] = fir.is_present %[[VAL_0]] : (!fir.box<!fir.array<?x?xf32>>) -> i1
 // CHECK:           fir.if %[[VAL_28]] {
 // CHECK:             %[[VAL_29:.*]] = fir.box_addr %[[VAL_8]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.heap<!fir.array<?x?xf32>>
@@ -132,7 +132,7 @@ func.func @_QPtest1_whole(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name =
 func.func @_QPtest1_in(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"}) {
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.pack_array %arg0 heap innermost : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>>
-  %2 = fir.declare %1 dummy_scope %0 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtest1_inEx"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
+  %2 = fir.declare %1 dummy_scope %0 uniq_name("_QFtest1_inEx") fortran_attrs<intent_in> : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
   fir.unpack_array %1 to %arg0 heap no_copy : !fir.box<!fir.array<?x?xf32>>
   return
 }
@@ -155,7 +155,7 @@ func.func @_QPtest1_in(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x
 // CHECK:               %[[VAL_15:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_2]] : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_16:.*]] = fir.shape %[[VAL_14]]#1, %[[VAL_15]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:               %[[VAL_17:.*]] = fir.allocmem !fir.array<?x?xf32>, %[[VAL_14]]#1, %[[VAL_15]]#1 <{bindc_name = ".repacked", uniq_name = ""}>
-// CHECK:               %[[VAL_18:.*]] = fir.declare %[[VAL_17]](%[[VAL_16]]) {uniq_name = ".repacked"} : (!fir.heap<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.heap<!fir.array<?x?xf32>>
+// CHECK:               %[[VAL_18:.*]] = fir.declare %[[VAL_17]](%[[VAL_16]]) uniq_name(".repacked") : (!fir.heap<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.heap<!fir.array<?x?xf32>>
 // CHECK:               %[[VAL_24:.*]] = fir.shape_shift %[[VAL_14]]#0, %[[VAL_14]]#1, %[[VAL_15]]#0, %[[VAL_15]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
 // CHECK:               %[[VAL_19:.*]] = fir.embox %[[VAL_18]](%[[VAL_24]]) : (!fir.heap<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.box<!fir.array<?x?xf32>>
 // CHECK:               %[[VAL_20:.*]] = fir.address_of(@{{_QQcl.*}}
@@ -171,7 +171,7 @@ func.func @_QPtest1_in(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x
 // CHECK:           } else {
 // CHECK:             fir.result %[[VAL_0]] : !fir.box<!fir.array<?x?xf32>>
 // CHECK:           }
-// CHECK:           %[[VAL_26:.*]] = fir.declare %[[VAL_7]] dummy_scope %[[VAL_5]] {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtest1_inEx"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
+// CHECK:           %[[VAL_26:.*]] = fir.declare %[[VAL_7]] dummy_scope %[[VAL_5]] uniq_name("_QFtest1_inEx") fortran_attrs<intent_in> : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
 // CHECK:           %[[VAL_27:.*]] = fir.is_present %[[VAL_0]] : (!fir.box<!fir.array<?x?xf32>>) -> i1
 // CHECK:           fir.if %[[VAL_27]] {
 // CHECK:             %[[VAL_28:.*]] = fir.box_addr %[[VAL_7]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.heap<!fir.array<?x?xf32>>
@@ -190,7 +190,7 @@ func.func @_QPtest1_in(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x
 func.func @_QPtest1_out(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"}) {
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.pack_array %arg0 heap innermost no_copy : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>>
-  %2 = fir.declare %1 dummy_scope %0 {fortran_attrs = #fir.var_attrs<intent_out>, uniq_name = "_QFtest1_outEx"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
+  %2 = fir.declare %1 dummy_scope %0 uniq_name("_QFtest1_outEx") fortran_attrs<intent_out> : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
   fir.unpack_array %1 to %arg0 heap : !fir.box<!fir.array<?x?xf32>>
   return
 }
@@ -213,7 +213,7 @@ func.func @_QPtest1_out(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "
 // CHECK:               %[[VAL_15:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_2]] : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_16:.*]] = fir.shape %[[VAL_14]]#1, %[[VAL_15]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:               %[[VAL_17:.*]] = fir.allocmem !fir.array<?x?xf32>, %[[VAL_14]]#1, %[[VAL_15]]#1 <{bindc_name = ".repacked", uniq_name = ""}>
-// CHECK:               %[[VAL_18:.*]] = fir.declare %[[VAL_17]](%[[VAL_16]]) {uniq_name = ".repacked"} : (!fir.heap<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.heap<!fir.array<?x?xf32>>
+// CHECK:               %[[VAL_18:.*]] = fir.declare %[[VAL_17]](%[[VAL_16]]) uniq_name(".repacked") : (!fir.heap<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.heap<!fir.array<?x?xf32>>
 // CHECK:               %[[VAL_20:.*]] = fir.shape_shift %[[VAL_14]]#0, %[[VAL_14]]#1, %[[VAL_15]]#0, %[[VAL_15]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
 // CHECK:               %[[VAL_19:.*]] = fir.embox %[[VAL_18]](%[[VAL_20]]) : (!fir.heap<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.box<!fir.array<?x?xf32>>
 // CHECK:               fir.result %[[VAL_19]] : !fir.box<!fir.array<?x?xf32>>
@@ -224,7 +224,7 @@ func.func @_QPtest1_out(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "
 // CHECK:           } else {
 // CHECK:             fir.result %[[VAL_0]] : !fir.box<!fir.array<?x?xf32>>
 // CHECK:           }
-// CHECK:           %[[VAL_22:.*]] = fir.declare %[[VAL_7]] dummy_scope %[[VAL_5]] {fortran_attrs = #fir.var_attrs<intent_out>, uniq_name = "_QFtest1_outEx"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
+// CHECK:           %[[VAL_22:.*]] = fir.declare %[[VAL_7]] dummy_scope %[[VAL_5]] uniq_name("_QFtest1_outEx") fortran_attrs<intent_out> : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
 // CHECK:           %[[VAL_23:.*]] = fir.is_present %[[VAL_0]] : (!fir.box<!fir.array<?x?xf32>>) -> i1
 // CHECK:           fir.if %[[VAL_23]] {
 // CHECK:             %[[VAL_24:.*]] = fir.box_addr %[[VAL_7]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.heap<!fir.array<?x?xf32>>
@@ -249,12 +249,12 @@ func.func @_QPtest1_out(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "
 func.func @_QPtest2(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.box<!fir.array<?x?x!fir.char<1,?>>> {fir.bindc_name = "x"}) {
   %c0_i32 = arith.constant 0 : i32
   %0 = fir.dummy_scope : !fir.dscope
-  %1 = fir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtest2En"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %1 = fir.declare %arg0 dummy_scope %0 uniq_name("_QFtest2En") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   %2 = fir.load %1 : !fir.ref<i32>
   %3 = arith.cmpi sgt, %2, %c0_i32 : i32
   %4 = arith.select %3, %2, %c0_i32 : i32
   %5 = fir.pack_array %arg1 heap innermost typeparams %4 : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, i32) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
-  %6 = fir.declare %5 typeparams %4 dummy_scope %0 {uniq_name = "_QFtest2Ex"} : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, i32, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
+  %6 = fir.declare %5 typeparams %4 dummy_scope %0 uniq_name("_QFtest2Ex") : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, i32, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
   fir.unpack_array %5 to %arg1 heap : !fir.box<!fir.array<?x?x!fir.char<1,?>>>
   return
 }
@@ -268,7 +268,7 @@ func.func @_QPtest2(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.box
 // CHECK:           %[[VAL_6:.*]] = arith.constant false
 // CHECK:           %[[VAL_7:.*]] = arith.constant 0 : i32
 // CHECK:           %[[VAL_8:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_9:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[VAL_8]] {uniq_name = "_QFtest2En"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+// CHECK:           %[[VAL_9:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[VAL_8]] uniq_name("_QFtest2En") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[VAL_10:.*]] = fir.load %[[VAL_9]] : !fir.ref<i32>
 // CHECK:           %[[VAL_11:.*]] = arith.cmpi sgt, %[[VAL_10]], %[[VAL_7]] : i32
 // CHECK:           %[[VAL_12:.*]] = arith.select %[[VAL_11]], %[[VAL_10]], %[[VAL_7]] : i32
@@ -284,7 +284,7 @@ func.func @_QPtest2(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.box
 // CHECK:               %[[VAL_22:.*]]:3 = fir.box_dims %[[VAL_1]], %[[VAL_4]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_23:.*]] = fir.shape %[[VAL_21]]#1, %[[VAL_22]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:               %[[VAL_24:.*]] = fir.allocmem !fir.array<?x?x!fir.char<1,?>>(%[[VAL_12]] : i32), %[[VAL_21]]#1, %[[VAL_22]]#1 <{bindc_name = ".repacked", uniq_name = ""}>
-// CHECK:               %[[VAL_25:.*]] = fir.declare %[[VAL_24]](%[[VAL_23]]) typeparams %[[VAL_12]] {uniq_name = ".repacked"} : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, i32) -> !fir.heap<!fir.array<?x?x!fir.char<1,?>>>
+// CHECK:               %[[VAL_25:.*]] = fir.declare %[[VAL_24]](%[[VAL_23]]) typeparams %[[VAL_12]] uniq_name(".repacked") : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, i32) -> !fir.heap<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:               %[[VAL_31:.*]] = fir.shape_shift %[[VAL_21]]#0, %[[VAL_21]]#1, %[[VAL_22]]#0, %[[VAL_22]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
 // CHECK:               %[[VAL_26:.*]] = fir.embox %[[VAL_25]](%[[VAL_31]]) typeparams %[[VAL_12]] : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>, !fir.shapeshift<2>, i32) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:               %[[VAL_27:.*]] = fir.address_of(@{{_QQcl.*}}
@@ -300,7 +300,7 @@ func.func @_QPtest2(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.box
 // CHECK:           } else {
 // CHECK:             fir.result %[[VAL_1]] : !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:           }
-// CHECK:           %[[VAL_33:.*]] = fir.declare %[[VAL_14]] typeparams %[[VAL_12]] dummy_scope %[[VAL_8]] {uniq_name = "_QFtest2Ex"} : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, i32, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
+// CHECK:           %[[VAL_33:.*]] = fir.declare %[[VAL_14]] typeparams %[[VAL_12]] dummy_scope %[[VAL_8]] uniq_name("_QFtest2Ex") : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, i32, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:           %[[VAL_34:.*]] = fir.is_present %[[VAL_1]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> i1
 // CHECK:           fir.if %[[VAL_34]] {
 // CHECK:             %[[VAL_35:.*]] = fir.box_addr %[[VAL_14]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.heap<!fir.array<?x?x!fir.char<1,?>>>
@@ -325,12 +325,12 @@ func.func @_QPtest2(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.box
 func.func @_QPtest2_stack(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.box<!fir.array<?x?x!fir.char<1,?>>> {fir.bindc_name = "x"}) {
   %c0_i32 = arith.constant 0 : i32
   %0 = fir.dummy_scope : !fir.dscope
-  %1 = fir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtest2_stackEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %1 = fir.declare %arg0 dummy_scope %0 uniq_name("_QFtest2_stackEn") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   %2 = fir.load %1 : !fir.ref<i32>
   %3 = arith.cmpi sgt, %2, %c0_i32 : i32
   %4 = arith.select %3, %2, %c0_i32 : i32
   %5 = fir.pack_array %arg1 stack innermost typeparams %4 : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, i32) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
-  %6 = fir.declare %5 typeparams %4 dummy_scope %0 {uniq_name = "_QFtest2_stackEx"} : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, i32, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
+  %6 = fir.declare %5 typeparams %4 dummy_scope %0 uniq_name("_QFtest2_stackEx") : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, i32, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
   fir.unpack_array %5 to %arg1 stack : !fir.box<!fir.array<?x?x!fir.char<1,?>>>
   return
 }
@@ -344,7 +344,7 @@ func.func @_QPtest2_stack(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !f
 // CHECK:           %[[VAL_6:.*]] = arith.constant false
 // CHECK:           %[[VAL_7:.*]] = arith.constant 0 : i32
 // CHECK:           %[[VAL_8:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_9:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[VAL_8]] {uniq_name = "_QFtest2_stackEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+// CHECK:           %[[VAL_9:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[VAL_8]] uniq_name("_QFtest2_stackEn") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[VAL_10:.*]] = fir.load %[[VAL_9]] : !fir.ref<i32>
 // CHECK:           %[[VAL_11:.*]] = arith.cmpi sgt, %[[VAL_10]], %[[VAL_7]] : i32
 // CHECK:           %[[VAL_12:.*]] = arith.select %[[VAL_11]], %[[VAL_10]], %[[VAL_7]] : i32
@@ -360,7 +360,7 @@ func.func @_QPtest2_stack(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !f
 // CHECK:               %[[VAL_22:.*]]:3 = fir.box_dims %[[VAL_1]], %[[VAL_4]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_23:.*]] = fir.shape %[[VAL_21]]#1, %[[VAL_22]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:               %[[VAL_24:.*]] = fir.alloca !fir.array<?x?x!fir.char<1,?>>(%[[VAL_12]] : i32), %[[VAL_21]]#1, %[[VAL_22]]#1 <{bindc_name = ".repacked"}>
-// CHECK:               %[[VAL_25:.*]] = fir.declare %[[VAL_24]](%[[VAL_23]]) typeparams %[[VAL_12]] {uniq_name = ".repacked"} : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, i32) -> !fir.ref<!fir.array<?x?x!fir.char<1,?>>>
+// CHECK:               %[[VAL_25:.*]] = fir.declare %[[VAL_24]](%[[VAL_23]]) typeparams %[[VAL_12]] uniq_name(".repacked") : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, i32) -> !fir.ref<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:               %[[VAL_31:.*]] = fir.shape_shift %[[VAL_21]]#0, %[[VAL_21]]#1, %[[VAL_22]]#0, %[[VAL_22]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
 // CHECK:               %[[VAL_26:.*]] = fir.embox %[[VAL_25]](%[[VAL_31]]) typeparams %[[VAL_12]] : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shapeshift<2>, i32) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:               %[[VAL_27:.*]] = fir.address_of(@{{_QQcl.*}}
@@ -376,7 +376,7 @@ func.func @_QPtest2_stack(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !f
 // CHECK:           } else {
 // CHECK:             fir.result %[[VAL_1]] : !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:           }
-// CHECK:           %[[VAL_33:.*]] = fir.declare %[[VAL_14]] typeparams %[[VAL_12]] dummy_scope %[[VAL_8]] {uniq_name = "_QFtest2_stackEx"} : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, i32, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
+// CHECK:           %[[VAL_33:.*]] = fir.declare %[[VAL_14]] typeparams %[[VAL_12]] dummy_scope %[[VAL_8]] uniq_name("_QFtest2_stackEx") : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, i32, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:           %[[VAL_34:.*]] = fir.is_present %[[VAL_1]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> i1
 // CHECK:           fir.if %[[VAL_34]] {
 // CHECK:             %[[VAL_35:.*]] = fir.box_addr %[[VAL_14]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.heap<!fir.array<?x?x!fir.char<1,?>>>
@@ -400,7 +400,7 @@ func.func @_QPtest2_stack(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !f
 func.func @_QPtest3(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>> {fir.bindc_name = "x"}) {
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.pack_array %arg0 heap innermost : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
-  %2 = fir.declare %1 dummy_scope %0 {uniq_name = "_QFtest3Ex"} : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
+  %2 = fir.declare %1 dummy_scope %0 uniq_name("_QFtest3Ex") : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
   fir.unpack_array %1 to %arg0 heap : !fir.box<!fir.array<?x?x!fir.char<1,?>>>
   return
 }
@@ -425,7 +425,7 @@ func.func @_QPtest3(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>> {fir.bindc_n
 // CHECK:               %[[VAL_17:.*]] = fir.box_elesize %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> index
 // CHECK:               %[[VAL_18:.*]] = fir.shape %[[VAL_15]]#1, %[[VAL_16]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:               %[[VAL_19:.*]] = fir.allocmem !fir.array<?x?x!fir.char<1,?>>(%[[VAL_17]] : index), %[[VAL_15]]#1, %[[VAL_16]]#1 <{bindc_name = ".repacked", uniq_name = ""}>
-// CHECK:               %[[VAL_20:.*]] = fir.declare %[[VAL_19]](%[[VAL_18]]) typeparams %[[VAL_17]] {uniq_name = ".repacked"} : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, index) -> !fir.heap<!fir.array<?x?x!fir.char<1,?>>>
+// CHECK:               %[[VAL_20:.*]] = fir.declare %[[VAL_19]](%[[VAL_18]]) typeparams %[[VAL_17]] uniq_name(".repacked") : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, index) -> !fir.heap<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:               %[[VAL_26:.*]] = fir.shape_shift %[[VAL_15]]#0, %[[VAL_15]]#1, %[[VAL_16]]#0, %[[VAL_16]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
 // CHECK:               %[[VAL_21:.*]] = fir.embox %[[VAL_20]](%[[VAL_26]]) typeparams %[[VAL_17]] : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>, !fir.shapeshift<2>, index) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:               %[[VAL_22:.*]] = fir.address_of(@{{_QQcl.*}}
@@ -441,7 +441,7 @@ func.func @_QPtest3(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>> {fir.bindc_n
 // CHECK:           } else {
 // CHECK:             fir.result %[[VAL_0]] : !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:           }
-// CHECK:           %[[VAL_28:.*]] = fir.declare %[[VAL_8]] dummy_scope %[[VAL_6]] {uniq_name = "_QFtest3Ex"} : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
+// CHECK:           %[[VAL_28:.*]] = fir.declare %[[VAL_8]] dummy_scope %[[VAL_6]] uniq_name("_QFtest3Ex") : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:           %[[VAL_29:.*]] = fir.is_present %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> i1
 // CHECK:           fir.if %[[VAL_29]] {
 // CHECK:             %[[VAL_30:.*]] = fir.box_addr %[[VAL_8]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.heap<!fir.array<?x?x!fir.char<1,?>>>
@@ -466,7 +466,7 @@ func.func @_QPtest3(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>> {fir.bindc_n
 func.func @_QPtest3_stack(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>> {fir.bindc_name = "x"}) {
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.pack_array %arg0 stack innermost : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
-  %2 = fir.declare %1 dummy_scope %0 {uniq_name = "_QFtest3_stackEx"} : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
+  %2 = fir.declare %1 dummy_scope %0 uniq_name("_QFtest3_stackEx") : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
   fir.unpack_array %1 to %arg0 stack : !fir.box<!fir.array<?x?x!fir.char<1,?>>>
   return
 }
@@ -491,7 +491,7 @@ func.func @_QPtest3_stack(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>> {fir.b
 // CHECK:               %[[VAL_17:.*]] = fir.box_elesize %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> index
 // CHECK:               %[[VAL_18:.*]] = fir.shape %[[VAL_15]]#1, %[[VAL_16]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:               %[[VAL_19:.*]] = fir.alloca !fir.array<?x?x!fir.char<1,?>>(%[[VAL_17]] : index), %[[VAL_15]]#1, %[[VAL_16]]#1 <{bindc_name = ".repacked"}>
-// CHECK:               %[[VAL_20:.*]] = fir.declare %[[VAL_19]](%[[VAL_18]]) typeparams %[[VAL_17]] {uniq_name = ".repacked"} : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, index) -> !fir.ref<!fir.array<?x?x!fir.char<1,?>>>
+// CHECK:               %[[VAL_20:.*]] = fir.declare %[[VAL_19]](%[[VAL_18]]) typeparams %[[VAL_17]] uniq_name(".repacked") : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, index) -> !fir.ref<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:               %[[VAL_26:.*]] = fir.shape_shift %[[VAL_15]]#0, %[[VAL_15]]#1, %[[VAL_16]]#0, %[[VAL_16]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
 // CHECK:               %[[VAL_21:.*]] = fir.embox %[[VAL_20]](%[[VAL_26]]) typeparams %[[VAL_17]] : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shapeshift<2>, index) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:               %[[VAL_22:.*]] = fir.address_of(@{{_QQcl.*}}
@@ -507,7 +507,7 @@ func.func @_QPtest3_stack(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>> {fir.b
 // CHECK:           } else {
 // CHECK:             fir.result %[[VAL_0]] : !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:           }
-// CHECK:           %[[VAL_28:.*]] = fir.declare %[[VAL_8]] dummy_scope %[[VAL_6]] {uniq_name = "_QFtest3_stackEx"} : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
+// CHECK:           %[[VAL_28:.*]] = fir.declare %[[VAL_8]] dummy_scope %[[VAL_6]] uniq_name("_QFtest3_stackEx") : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:           %[[VAL_29:.*]] = fir.is_present %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> i1
 // CHECK:           fir.if %[[VAL_29]] {
 // CHECK:             %[[VAL_30:.*]] = fir.box_addr %[[VAL_8]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.heap<!fir.array<?x?x!fir.char<1,?>>>
@@ -532,7 +532,7 @@ func.func @_QPtest4(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,10>>> {fir.bindc_
   %c10 = arith.constant 10 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.pack_array %arg0 heap innermost : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>) -> !fir.box<!fir.array<?x?x!fir.char<1,10>>>
-  %2 = fir.declare %1 typeparams %c10 dummy_scope %0 {uniq_name = "_QFtest4Ex"} : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, index, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.char<1,10>>>
+  %2 = fir.declare %1 typeparams %c10 dummy_scope %0 uniq_name("_QFtest4Ex") : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, index, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.char<1,10>>>
   fir.unpack_array %1 to %arg0 heap : !fir.box<!fir.array<?x?x!fir.char<1,10>>>
   return
 }
@@ -557,7 +557,7 @@ func.func @_QPtest4(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,10>>> {fir.bindc_
 // CHECK:               %[[VAL_17:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_3]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_18:.*]] = fir.shape %[[VAL_16]]#1, %[[VAL_17]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:               %[[VAL_19:.*]] = fir.allocmem !fir.array<?x?x!fir.char<1,10>>, %[[VAL_16]]#1, %[[VAL_17]]#1 <{bindc_name = ".repacked", uniq_name = ""}>
-// CHECK:               %[[VAL_20:.*]] = fir.declare %[[VAL_19]](%[[VAL_18]]) typeparams %[[VAL_6]] {uniq_name = ".repacked"} : (!fir.heap<!fir.array<?x?x!fir.char<1,10>>>, !fir.shape<2>, index) -> !fir.heap<!fir.array<?x?x!fir.char<1,10>>>
+// CHECK:               %[[VAL_20:.*]] = fir.declare %[[VAL_19]](%[[VAL_18]]) typeparams %[[VAL_6]] uniq_name(".repacked") : (!fir.heap<!fir.array<?x?x!fir.char<1,10>>>, !fir.shape<2>, index) -> !fir.heap<!fir.array<?x?x!fir.char<1,10>>>
 // CHECK:               %[[VAL_26:.*]] = fir.shape_shift %[[VAL_16]]#0, %[[VAL_16]]#1, %[[VAL_17]]#0, %[[VAL_17]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
 // CHECK:               %[[VAL_21:.*]] = fir.embox %[[VAL_20]](%[[VAL_26]]) : (!fir.heap<!fir.array<?x?x!fir.char<1,10>>>, !fir.shapeshift<2>) -> !fir.box<!fir.array<?x?x!fir.char<1,10>>>
 // CHECK:               %[[VAL_22:.*]] = fir.address_of(@{{_QQcl.*}}
@@ -573,7 +573,7 @@ func.func @_QPtest4(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,10>>> {fir.bindc_
 // CHECK:           } else {
 // CHECK:             fir.result %[[VAL_0]] : !fir.box<!fir.array<?x?x!fir.char<1,10>>>
 // CHECK:           }
-// CHECK:           %[[VAL_28:.*]] = fir.declare %[[VAL_9]] typeparams %[[VAL_6]] dummy_scope %[[VAL_7]] {uniq_name = "_QFtest4Ex"} : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, index, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.char<1,10>>>
+// CHECK:           %[[VAL_28:.*]] = fir.declare %[[VAL_9]] typeparams %[[VAL_6]] dummy_scope %[[VAL_7]] uniq_name("_QFtest4Ex") : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, index, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.char<1,10>>>
 // CHECK:           %[[VAL_29:.*]] = fir.is_present %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>) -> i1
 // CHECK:           fir.if %[[VAL_29]] {
 // CHECK:             %[[VAL_30:.*]] = fir.box_addr %[[VAL_9]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>) -> !fir.heap<!fir.array<?x?x!fir.char<1,10>>>
@@ -599,7 +599,7 @@ func.func @_QPtest4_stack(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,10>>> {fir.
   %c10 = arith.constant 10 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.pack_array %arg0 stack innermost : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>) -> !fir.box<!fir.array<?x?x!fir.char<1,10>>>
-  %2 = fir.declare %1 typeparams %c10 dummy_scope %0 {uniq_name = "_QFtest4_stackEx"} : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, index, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.char<1,10>>>
+  %2 = fir.declare %1 typeparams %c10 dummy_scope %0 uniq_name("_QFtest4_stackEx") : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, index, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.char<1,10>>>
   fir.unpack_array %1 to %arg0 stack : !fir.box<!fir.array<?x?x!fir.char<1,10>>>
   return
 }
@@ -624,7 +624,7 @@ func.func @_QPtest4_stack(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,10>>> {fir.
 // CHECK:               %[[VAL_17:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_3]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_18:.*]] = fir.shape %[[VAL_16]]#1, %[[VAL_17]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:               %[[VAL_19:.*]] = fir.alloca !fir.array<?x?x!fir.char<1,10>>, %[[VAL_16]]#1, %[[VAL_17]]#1 <{bindc_name = ".repacked"}>
-// CHECK:               %[[VAL_20:.*]] = fir.declare %[[VAL_19]](%[[VAL_18]]) typeparams %[[VAL_6]] {uniq_name = ".repacked"} : (!fir.ref<!fir.array<?x?x!fir.char<1,10>>>, !fir.shape<2>, index) -> !fir.ref<!fir.array<?x?x!fir.char<1,10>>>
+// CHECK:               %[[VAL_20:.*]] = fir.declare %[[VAL_19]](%[[VAL_18]]) typeparams %[[VAL_6]] uniq_name(".repacked") : (!fir.ref<!fir.array<?x?x!fir.char<1,10>>>, !fir.shape<2>, index) -> !fir.ref<!fir.array<?x?x!fir.char<1,10>>>
 // CHECK:               %[[VAL_26:.*]] = fir.shape_shift %[[VAL_16]]#0, %[[VAL_16]]#1, %[[VAL_17]]#0, %[[VAL_17]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
 // CHECK:               %[[VAL_21:.*]] = fir.embox %[[VAL_20]](%[[VAL_26]]) : (!fir.ref<!fir.array<?x?x!fir.char<1,10>>>, !fir.shapeshift<2>) -> !fir.box<!fir.array<?x?x!fir.char<1,10>>>
 // CHECK:               %[[VAL_22:.*]] = fir.address_of(@{{_QQcl.*}}
@@ -640,7 +640,7 @@ func.func @_QPtest4_stack(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,10>>> {fir.
 // CHECK:           } else {
 // CHECK:             fir.result %[[VAL_0]] : !fir.box<!fir.array<?x?x!fir.char<1,10>>>
 // CHECK:           }
-// CHECK:           %[[VAL_28:.*]] = fir.declare %[[VAL_9]] typeparams %[[VAL_6]] dummy_scope %[[VAL_7]] {uniq_name = "_QFtest4_stackEx"} : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, index, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.char<1,10>>>
+// CHECK:           %[[VAL_28:.*]] = fir.declare %[[VAL_9]] typeparams %[[VAL_6]] dummy_scope %[[VAL_7]] uniq_name("_QFtest4_stackEx") : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, index, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.char<1,10>>>
 // CHECK:           %[[VAL_29:.*]] = fir.is_present %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>) -> i1
 // CHECK:           fir.if %[[VAL_29]] {
 // CHECK:             %[[VAL_30:.*]] = fir.box_addr %[[VAL_9]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>) -> !fir.heap<!fir.array<?x?x!fir.char<1,10>>>
@@ -664,7 +664,7 @@ func.func @_QPtest4_stack(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,10>>> {fir.
 func.func @_QPtest5(%arg0: !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>> {fir.bindc_name = "x"}) {
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.pack_array %arg0 heap innermost : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
-  %2 = fir.declare %1 dummy_scope %0 {uniq_name = "_QFtest5Ex"} : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
+  %2 = fir.declare %1 dummy_scope %0 uniq_name("_QFtest5Ex") : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
   fir.unpack_array %1 to %arg0 heap : !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
   return
 }
@@ -688,7 +688,7 @@ func.func @_QPtest5(%arg0: !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>> {fir.bind
 // CHECK:               %[[VAL_16:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_3]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_17:.*]] = fir.shape %[[VAL_15]]#1, %[[VAL_16]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:               %[[VAL_18:.*]] = fir.allocmem !fir.array<?x?x!fir.type<_QMmTt>>, %[[VAL_15]]#1, %[[VAL_16]]#1 <{bindc_name = ".repacked", uniq_name = ""}>
-// CHECK:               %[[VAL_19:.*]] = fir.declare %[[VAL_18]](%[[VAL_17]]) {uniq_name = ".repacked"} : (!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.shape<2>) -> !fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>
+// CHECK:               %[[VAL_19:.*]] = fir.declare %[[VAL_18]](%[[VAL_17]]) uniq_name(".repacked") : (!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.shape<2>) -> !fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:               %[[VAL_25:.*]] = fir.shape_shift %[[VAL_15]]#0, %[[VAL_15]]#1, %[[VAL_16]]#0, %[[VAL_16]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
 // CHECK:               %[[VAL_20:.*]] = fir.embox %[[VAL_19]](%[[VAL_25]]) source_box %[[VAL_0]] : (!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.shapeshift<2>, !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:               %[[BOX:.*]] = fir.convert %[[VAL_20]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
@@ -705,7 +705,7 @@ func.func @_QPtest5(%arg0: !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>> {fir.bind
 // CHECK:           } else {
 // CHECK:             fir.result %[[VAL_0]] : !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:           }
-// CHECK:           %[[VAL_27:.*]] = fir.declare %[[VAL_8]] dummy_scope %[[VAL_6]] {uniq_name = "_QFtest5Ex"} : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
+// CHECK:           %[[VAL_27:.*]] = fir.declare %[[VAL_8]] dummy_scope %[[VAL_6]] uniq_name("_QFtest5Ex") : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:           %[[VAL_28:.*]] = fir.is_present %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> i1
 // CHECK:           fir.if %[[VAL_28]] {
 // CHECK:             %[[VAL_29:.*]] = fir.box_addr %[[VAL_8]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>
@@ -730,7 +730,7 @@ func.func @_QPtest5(%arg0: !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>> {fir.bind
 func.func @_QPtest5_stack(%arg0: !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>> {fir.bindc_name = "x"}) {
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.pack_array %arg0 stack innermost : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
-  %2 = fir.declare %1 dummy_scope %0 {uniq_name = "_QFtest5_stackEx"} : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
+  %2 = fir.declare %1 dummy_scope %0 uniq_name("_QFtest5_stackEx") : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
   fir.unpack_array %1 to %arg0 stack : !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
   return
 }
@@ -754,7 +754,7 @@ func.func @_QPtest5_stack(%arg0: !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>> {fi
 // CHECK:               %[[VAL_16:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_3]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_17:.*]] = fir.shape %[[VAL_15]]#1, %[[VAL_16]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:               %[[VAL_18:.*]] = fir.alloca !fir.array<?x?x!fir.type<_QMmTt>>, %[[VAL_15]]#1, %[[VAL_16]]#1 <{bindc_name = ".repacked"}>
-// CHECK:               %[[VAL_19:.*]] = fir.declare %[[VAL_18]](%[[VAL_17]]) {uniq_name = ".repacked"} : (!fir.ref<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.shape<2>) -> !fir.ref<!fir.array<?x?x!fir.type<_QMmTt>>>
+// CHECK:               %[[VAL_19:.*]] = fir.declare %[[VAL_18]](%[[VAL_17]]) uniq_name(".repacked") : (!fir.ref<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.shape<2>) -> !fir.ref<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:               %[[VAL_25:.*]] = fir.shape_shift %[[VAL_15]]#0, %[[VAL_15]]#1, %[[VAL_16]]#0, %[[VAL_16]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
 // CHECK:               %[[VAL_20:.*]] = fir.embox %[[VAL_19]](%[[VAL_25]]) source_box %[[VAL_0]] : (!fir.ref<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.shapeshift<2>, !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:               %[[BOX:.*]] = fir.convert %[[VAL_20]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
@@ -771,7 +771,7 @@ func.func @_QPtest5_stack(%arg0: !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>> {fi
 // CHECK:           } else {
 // CHECK:             fir.result %[[VAL_0]] : !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:           }
-// CHECK:           %[[VAL_27:.*]] = fir.declare %[[VAL_8]] dummy_scope %[[VAL_6]] {uniq_name = "_QFtest5_stackEx"} : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
+// CHECK:           %[[VAL_27:.*]] = fir.declare %[[VAL_8]] dummy_scope %[[VAL_6]] uniq_name("_QFtest5_stackEx") : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:           %[[VAL_28:.*]] = fir.is_present %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> i1
 // CHECK:           fir.if %[[VAL_28]] {
 // CHECK:             %[[VAL_29:.*]] = fir.box_addr %[[VAL_8]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>
@@ -795,7 +795,7 @@ func.func @_QPtest5_stack(%arg0: !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>> {fi
 func.func @_QPtest6(%arg0: !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>> {fir.bindc_name = "x"}) {
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.pack_array %arg0 heap innermost : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
-  %2 = fir.declare %1 dummy_scope %0 {uniq_name = "_QFtest6Ex"} : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.dscope) -> !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
+  %2 = fir.declare %1 dummy_scope %0 uniq_name("_QFtest6Ex") : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.dscope) -> !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
   fir.unpack_array %1 to %arg0 heap : !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
   return
 }
@@ -830,7 +830,7 @@ func.func @_QPtest6(%arg0: !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>> {fir.bi
 // CHECK:               %[[VAL_25:.*]] = fir.convert %[[VAL_21]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 // CHECK:               %[[VAL_26:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_23]], %[[VAL_24]], %[[VAL_4]], %[[VAL_22]], %[[VAL_25]], %[[VAL_1]], {{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<i64>, i1, !fir.box<none>, !fir.ref<i8>, i32, {{.*}}) -> i32
 // CHECK:               %[[VAL_27:.*]] = fir.load %[[VAL_5]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>>
-// CHECK:               %[[VAL_28:.*]] = fir.declare %[[VAL_27]] {uniq_name = ".repacked"} : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>) -> !fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>
+// CHECK:               %[[VAL_28:.*]] = fir.declare %[[VAL_27]] uniq_name(".repacked") : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>) -> !fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>
 // CHECK:               %[[ADDR:.*]] = fir.box_addr %[[VAL_28]] : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>) -> !fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:               %[[VAL_33:.*]] = fir.shape_shift %[[VAL_15]]#0, %[[VAL_15]]#1, %[[VAL_16]]#0, %[[VAL_16]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
 // CHECK:               %[[VAL_34:.*]] = fir.embox %[[ADDR]](%[[VAL_33]]) source_box %[[ARG0]] : (!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.shapeshift<2>, !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
@@ -847,7 +847,7 @@ func.func @_QPtest6(%arg0: !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>> {fir.bi
 // CHECK:           } else {
 // CHECK:             fir.result %[[ARG0]] : !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:           }
-// CHECK:           %[[VAL_35:.*]] = fir.declare %[[VAL_8]] dummy_scope %[[VAL_6]] {uniq_name = "_QFtest6Ex"} : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.dscope) -> !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
+// CHECK:           %[[VAL_35:.*]] = fir.declare %[[VAL_8]] dummy_scope %[[VAL_6]] uniq_name("_QFtest6Ex") : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.dscope) -> !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:           %[[VAL_36:.*]] = fir.is_present %[[ARG0]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> i1
 // CHECK:           fir.if %[[VAL_36]] {
 // CHECK:             %[[VAL_37:.*]] = fir.box_addr %[[VAL_8]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>
@@ -873,7 +873,7 @@ func.func @_QPtest6(%arg0: !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>> {fir.bi
 func.func @_QPtest6_stack(%arg0: !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>> {fir.bindc_name = "x"}) {
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.pack_array %arg0 stack innermost : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
-  %2 = fir.declare %1 dummy_scope %0 {uniq_name = "_QFtest6_stackEx"} : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.dscope) -> !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
+  %2 = fir.declare %1 dummy_scope %0 uniq_name("_QFtest6_stackEx") : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.dscope) -> !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
   fir.unpack_array %1 to %arg0 stack : !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
   return
 }
@@ -908,7 +908,7 @@ func.func @_QPtest6_stack(%arg0: !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>> {
 // CHECK:               %[[VAL_25:.*]] = fir.convert %[[VAL_21]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 // CHECK:               %[[VAL_26:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_23]], %[[VAL_24]], %[[VAL_4]], %[[VAL_22]], %[[VAL_25]], %[[VAL_1]], {{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<i64>, i1, !fir.box<none>, !fir.ref<i8>, i32, {{.*}}) -> i32
 // CHECK:               %[[VAL_27:.*]] = fir.load %[[VAL_5]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>>
-// CHECK:               %[[VAL_28:.*]] = fir.declare %[[VAL_27]] {uniq_name = ".repacked"} : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>) -> !fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>
+// CHECK:               %[[VAL_28:.*]] = fir.declare %[[VAL_27]] uniq_name(".repacked") : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>) -> !fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>
 // CHECK:               %[[ADDR:.*]] = fir.box_addr %[[VAL_28]] : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>>) -> !fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:               %[[VAL_33:.*]] = fir.shape_shift %[[VAL_15]]#0, %[[VAL_15]]#1, %[[VAL_16]]#0, %[[VAL_16]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
 // CHECK:               %[[VAL_34:.*]] = fir.embox %[[ADDR]](%[[VAL_33]]) source_box %[[ARG0]] : (!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.shapeshift<2>, !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
@@ -925,7 +925,7 @@ func.func @_QPtest6_stack(%arg0: !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>> {
 // CHECK:           } else {
 // CHECK:             fir.result %[[ARG0]] : !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:           }
-// CHECK:           %[[VAL_35:.*]] = fir.declare %[[VAL_8]] dummy_scope %[[VAL_6]] {uniq_name = "_QFtest6_stackEx"} : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.dscope) -> !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
+// CHECK:           %[[VAL_35:.*]] = fir.declare %[[VAL_8]] dummy_scope %[[VAL_6]] uniq_name("_QFtest6_stackEx") : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>, !fir.dscope) -> !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>
 // CHECK:           %[[VAL_36:.*]] = fir.is_present %[[ARG0]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> i1
 // CHECK:           fir.if %[[VAL_36]] {
 // CHECK:             %[[VAL_37:.*]] = fir.box_addr %[[VAL_8]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>
@@ -950,7 +950,7 @@ func.func @_QPtest6_stack(%arg0: !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>> {
 func.func @_QPtest7(%arg0: !fir.class<!fir.array<?x?xnone>> {fir.bindc_name = "x"}) {
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.pack_array %arg0 heap innermost : (!fir.class<!fir.array<?x?xnone>>) -> !fir.class<!fir.array<?x?xnone>>
-  %2 = fir.declare %1 dummy_scope %0 {uniq_name = "_QFtest7Ex"} : (!fir.class<!fir.array<?x?xnone>>, !fir.dscope) -> !fir.class<!fir.array<?x?xnone>>
+  %2 = fir.declare %1 dummy_scope %0 uniq_name("_QFtest7Ex") : (!fir.class<!fir.array<?x?xnone>>, !fir.dscope) -> !fir.class<!fir.array<?x?xnone>>
   fir.unpack_array %1 to %arg0 heap : !fir.class<!fir.array<?x?xnone>>
   return
 }
@@ -985,7 +985,7 @@ func.func @_QPtest7(%arg0: !fir.class<!fir.array<?x?xnone>> {fir.bindc_name = "x
 // CHECK:               %[[VAL_25:.*]] = fir.convert %[[VAL_21]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 // CHECK:               %[[VAL_26:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_23]], %[[VAL_24]], %[[VAL_4]], %[[VAL_22]], %[[VAL_25]], %[[VAL_1]], {{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<i64>, i1, !fir.box<none>, !fir.ref<i8>, i32, {{.*}}) -> i32
 // CHECK:               %[[VAL_27:.*]] = fir.load %[[VAL_5]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>
-// CHECK:               %[[VAL_28:.*]] = fir.declare %[[VAL_27]] {uniq_name = ".repacked"} : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> !fir.class<!fir.heap<!fir.array<?x?xnone>>>
+// CHECK:               %[[VAL_28:.*]] = fir.declare %[[VAL_27]] uniq_name(".repacked") : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> !fir.class<!fir.heap<!fir.array<?x?xnone>>>
 // CHECK:               %[[ADDR:.*]] = fir.box_addr %[[VAL_28]] : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> !fir.heap<!fir.array<?x?xnone>>
 // CHECK:               %[[VAL_33:.*]] = fir.shape_shift %[[VAL_15]]#0, %[[VAL_15]]#1, %[[VAL_16]]#0, %[[VAL_16]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
 // CHECK:               %[[VAL_34:.*]] = fir.embox %[[ADDR]](%[[VAL_33]]) source_box %[[ARG0]] : (!fir.heap<!fir.array<?x?xnone>>, !fir.shapeshift<2>, !fir.class<!fir.array<?x?xnone>>) -> !fir.class<!fir.array<?x?xnone>>
@@ -1002,7 +1002,7 @@ func.func @_QPtest7(%arg0: !fir.class<!fir.array<?x?xnone>> {fir.bindc_name = "x
 // CHECK:           } else {
 // CHECK:             fir.result %[[ARG0]] : !fir.class<!fir.array<?x?xnone>>
 // CHECK:           }
-// CHECK:           %[[VAL_35:.*]] = fir.declare %[[VAL_8]] dummy_scope %[[VAL_6]] {uniq_name = "_QFtest7Ex"} : (!fir.class<!fir.array<?x?xnone>>, !fir.dscope) -> !fir.class<!fir.array<?x?xnone>>
+// CHECK:           %[[VAL_35:.*]] = fir.declare %[[VAL_8]] dummy_scope %[[VAL_6]] uniq_name("_QFtest7Ex") : (!fir.class<!fir.array<?x?xnone>>, !fir.dscope) -> !fir.class<!fir.array<?x?xnone>>
 // CHECK:           %[[VAL_36:.*]] = fir.is_present %[[ARG0]] : (!fir.class<!fir.array<?x?xnone>>) -> i1
 // CHECK:           fir.if %[[VAL_36]] {
 // CHECK:             %[[VAL_37:.*]] = fir.box_addr %[[VAL_8]] : (!fir.class<!fir.array<?x?xnone>>) -> !fir.heap<!fir.array<?x?xnone>>
@@ -1028,7 +1028,7 @@ func.func @_QPtest7(%arg0: !fir.class<!fir.array<?x?xnone>> {fir.bindc_name = "x
 func.func @_QPtest7_stack(%arg0: !fir.class<!fir.array<?x?xnone>> {fir.bindc_name = "x"}) {
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.pack_array %arg0 stack innermost : (!fir.class<!fir.array<?x?xnone>>) -> !fir.class<!fir.array<?x?xnone>>
-  %2 = fir.declare %1 dummy_scope %0 {uniq_name = "_QFtest7Ex"} : (!fir.class<!fir.array<?x?xnone>>, !fir.dscope) -> !fir.class<!fir.array<?x?xnone>>
+  %2 = fir.declare %1 dummy_scope %0 uniq_name("_QFtest7Ex") : (!fir.class<!fir.array<?x?xnone>>, !fir.dscope) -> !fir.class<!fir.array<?x?xnone>>
   fir.unpack_array %1 to %arg0 stack : !fir.class<!fir.array<?x?xnone>>
   return
 }
@@ -1063,7 +1063,7 @@ func.func @_QPtest7_stack(%arg0: !fir.class<!fir.array<?x?xnone>> {fir.bindc_nam
 // CHECK:               %[[VAL_25:.*]] = fir.convert %[[VAL_21]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 // CHECK:               %[[VAL_26:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_23]], %[[VAL_24]], %[[VAL_4]], %[[VAL_22]], %[[VAL_25]], %[[VAL_1]], {{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<i64>, i1, !fir.box<none>, !fir.ref<i8>, i32, {{.*}}) -> i32
 // CHECK:               %[[VAL_27:.*]] = fir.load %[[VAL_5]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>
-// CHECK:               %[[VAL_28:.*]] = fir.declare %[[VAL_27]] {uniq_name = ".repacked"} : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> !fir.class<!fir.heap<!fir.array<?x?xnone>>>
+// CHECK:               %[[VAL_28:.*]] = fir.declare %[[VAL_27]] uniq_name(".repacked") : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> !fir.class<!fir.heap<!fir.array<?x?xnone>>>
 // CHECK:               %[[ADDR:.*]] = fir.box_addr %[[VAL_28]] : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> !fir.heap<!fir.array<?x?xnone>>
 // CHECK:               %[[VAL_33:.*]] = fir.shape_shift %[[VAL_15]]#0, %[[VAL_15]]#1, %[[VAL_16]]#0, %[[VAL_16]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
 // CHECK:               %[[VAL_34:.*]] = fir.embox %[[ADDR]](%[[VAL_33]]) source_box %[[ARG0]] : (!fir.heap<!fir.array<?x?xnone>>, !fir.shapeshift<2>, !fir.class<!fir.array<?x?xnone>>) -> !fir.class<!fir.array<?x?xnone>>
@@ -1080,7 +1080,7 @@ func.func @_QPtest7_stack(%arg0: !fir.class<!fir.array<?x?xnone>> {fir.bindc_nam
 // CHECK:           } else {
 // CHECK:             fir.result %[[ARG0]] : !fir.class<!fir.array<?x?xnone>>
 // CHECK:           }
-// CHECK:           %[[VAL_35:.*]] = fir.declare %[[VAL_8]] dummy_scope %[[VAL_6]] {uniq_name = "_QFtest7Ex"} : (!fir.class<!fir.array<?x?xnone>>, !fir.dscope) -> !fir.class<!fir.array<?x?xnone>>
+// CHECK:           %[[VAL_35:.*]] = fir.declare %[[VAL_8]] dummy_scope %[[VAL_6]] uniq_name("_QFtest7Ex") : (!fir.class<!fir.array<?x?xnone>>, !fir.dscope) -> !fir.class<!fir.array<?x?xnone>>
 // CHECK:           %[[VAL_36:.*]] = fir.is_present %[[ARG0]] : (!fir.class<!fir.array<?x?xnone>>) -> i1
 // CHECK:           fir.if %[[VAL_36]] {
 // CHECK:             %[[VAL_37:.*]] = fir.box_addr %[[VAL_8]] : (!fir.class<!fir.array<?x?xnone>>) -> !fir.heap<!fir.array<?x?xnone>>
