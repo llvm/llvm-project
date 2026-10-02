@@ -1476,19 +1476,17 @@ LogicalResult CrdTranslateOp::verify() {
   return success();
 }
 
-LogicalResult CrdTranslateOp::fold(FoldAdaptor adaptor,
-                                   SmallVectorImpl<OpFoldResult> &results) {
-  if (getEncoder().isIdentity()) {
-    results.assign(getInCrds().begin(), getInCrds().end());
-    return success();
-  }
+OpFoldResults CrdTranslateOp::fold(FoldAdaptor adaptor) {
+  if (getEncoder().isIdentity())
+    return getInCrds();
   if (getEncoder().isPermutation()) {
     AffineMap perm = getDirection() == CrdTransDirectionKind::dim2lvl
                          ? getEncoder().getDimToLvl()
                          : getEncoder().getLvlToDim();
-    for (AffineExpr exp : perm.getResults())
-      results.push_back(getInCrds()[cast<AffineDimExpr>(exp).getPosition()]);
-    return success();
+    return llvm::map_to_vector(
+        perm.getResults(), [&](AffineExpr exp) -> OpFoldResult {
+          return getInCrds()[cast<AffineDimExpr>(exp).getPosition()];
+        });
   }
 
   // Fuse dim2lvl/lvl2dim pairs.
@@ -1518,8 +1516,7 @@ LogicalResult CrdTranslateOp::fold(FoldAdaptor adaptor,
     return failure();
   // l1 = dim2lvl (lvl2dim l0)
   // ==> l0
-  results.append(def.getInCrds().begin(), def.getInCrds().end());
-  return success();
+  return def.getInCrds();
 }
 
 void LvlOp::build(OpBuilder &builder, OperationState &state, Value source,

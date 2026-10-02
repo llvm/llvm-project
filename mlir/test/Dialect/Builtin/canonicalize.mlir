@@ -36,3 +36,40 @@ func.func @graph_region_self_forward() {
   }
   return
 }
+
+// In a graph region, a forwarded operand can be another result of the same
+// cast. The fold also replaces that result, so it must not apply.
+// CHECK-LABEL: func @graph_region_chain
+//       CHECK:   test.graph_region
+//       CHECK:     %[[CAST:.+]]:2 = builtin.unrealized_conversion_cast %[[CAST]]#1, %{{.+}} : i32, i32 to i32, i32
+func.func @graph_region_chain(%x: i32) {
+  test.graph_region {
+    %0:2 = builtin.unrealized_conversion_cast %0#1, %x : i32, i32 to i32, i32
+    "test.use"(%0#0, %0#1) : (i32, i32) -> ()
+  }
+  return
+}
+
+// Same as above, but the forwarded operands form a cycle.
+// CHECK-LABEL: func @graph_region_cycle
+//       CHECK:   test.graph_region
+//       CHECK:     %[[CAST:.+]]:2 = builtin.unrealized_conversion_cast %[[CAST]]#1, %[[CAST]]#0 : i32, i32 to i32, i32
+func.func @graph_region_cycle() {
+  test.graph_region {
+    %0:2 = builtin.unrealized_conversion_cast %0#1, %0#0 : i32, i32 to i32, i32
+    "test.use"(%0#0, %0#1) : (i32, i32) -> ()
+  }
+  return
+}
+
+// Same as above, but the second operand forwards the first result.
+// CHECK-LABEL: func @graph_region_backward_chain
+//       CHECK:   test.graph_region
+//       CHECK:     %[[CAST:.+]]:2 = builtin.unrealized_conversion_cast %{{.+}}, %[[CAST]]#0 : i32, i32 to i32, i32
+func.func @graph_region_backward_chain(%x: i32) {
+  test.graph_region {
+    %0:2 = builtin.unrealized_conversion_cast %x, %0#0 : i32, i32 to i32, i32
+    "test.use"(%0#0, %0#1) : (i32, i32) -> ()
+  }
+  return
+}

@@ -126,3 +126,19 @@ func.func @sparse_reinterpret_map(%t0 : tensor<6x12xi32, #BSR>) -> tensor<6x12xi
                                          to tensor<6x12xi32, #BSR>
   return %t2 : tensor<6x12xi32, #BSR>
 }
+
+#CSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
+
+// In a graph region, a coordinate that crd_translate forwards can be another
+// result of the same op. The fold also replaces that result, so it must not
+// apply.
+// CHECK-LABEL: func @sparse_crd_translate_graph_region_cycle(
+//       CHECK:   test.graph_region
+//       CHECK:     %[[CRD:.+]]:2 = sparse_tensor.crd_translate dim_to_lvl[%[[CRD]]#1, %[[CRD]]#0] as #{{.+}} : index, index
+func.func @sparse_crd_translate_graph_region_cycle() {
+  test.graph_region {
+    %c:2 = sparse_tensor.crd_translate dim_to_lvl [%c#1, %c#0] as #CSR : index, index
+    "test.use"(%c#0, %c#1) : (index, index) -> ()
+  }
+  return
+}

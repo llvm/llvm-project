@@ -37,6 +37,7 @@ def Math_Dialect : Dialect {
     backend and may differ from the default math rounding mode.
   }];
   let hasConstantMaterializer = 1;
+  let useOpFoldResults = 1;
   let dependentDialects = [
     "::mlir::arith::ArithDialect"
   ];
