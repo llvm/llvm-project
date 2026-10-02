@@ -72,7 +72,7 @@ fir.global internal @_QFEarr : !fir.array<10xi32> {
 // CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_4:.*]] = fir.volatile_cast %[[VAL_1]] : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>, volatile>
 // CHECK:           %[[VAL_5:.*]] = fir.declare %[[VAL_4]](%[[VAL_3]]) {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFEarr"} : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> !fir.ref<!fir.array<10xi32>, volatile>
-// CHECK:           %[[VAL_6:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
+// CHECK:           %[[VAL_6:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFEi"}>
 // CHECK:           %[[VAL_7:.*]] = fir.volatile_cast %[[VAL_6]] : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
 // CHECK:           %[[VAL_8:.*]] = fir.declare %[[VAL_7]] {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFEi"} : (!fir.ref<i32, volatile>) -> !fir.ref<i32, volatile>
 // CHECK:           %[[VAL_9:.*]] = fir.volatile_cast %[[VAL_8]] : (!fir.ref<i32, volatile>) -> !fir.ref<i32>

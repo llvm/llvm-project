@@ -31,7 +31,7 @@ define void @CallZeroInit(ptr noalias sret(%struct.S) %agg.result) {
   ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $a0
   ; MIPS32-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
   ; MIPS32-NEXT:   $a0 = COPY [[COPY]](p0)
-  ; MIPS32-NEXT:   JAL @ZeroInit, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0
+  ; MIPS32-NEXT:   JAL @ZeroInit, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0
   ; MIPS32-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; MIPS32-NEXT:   RetRA
 entry:

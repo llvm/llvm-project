@@ -51,7 +51,7 @@ func.func @test_dynamic(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: index) {
 func.func private @_QPdyn_array_func(index) -> !fir.array<?xf32>
 
 // CHECK-LABEL:   func.func @_QPtest() {
-// CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.array<10xf32> {bindc_name = ".tmp.expr_result"}
+// CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.array<10xf32> <{bindc_name = ".tmp.expr_result"}>
 // CHECK:           %[[VAL_1:.*]] = arith.constant 10 : index
 // CHECK:           %[[VAL_2:.*]] = fir.address_of(@_QFtestEx) : !fir.ref<!fir.array<10xf32>>
 // CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
@@ -69,7 +69,7 @@ func.func private @_QPdyn_array_func(index) -> !fir.array<?xf32>
 // CHECK:         func.func private @_QParray_func() -> !fir.array<10xf32>
 
 // CHECK-LABEL:   func.func @_QPtest_char() {
-// CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.array<10x!fir.char<1,5>> {bindc_name = ".tmp.expr_result"}
+// CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.array<10x!fir.char<1,5>> <{bindc_name = ".tmp.expr_result"}>
 // CHECK:           %[[VAL_1:.*]] = arith.constant 10 : index
 // CHECK:           %[[VAL_2:.*]] = arith.constant 5 : index
 // CHECK:           %[[VAL_3:.*]] = fir.address_of(@_QFtest_charEx) : !fir.ref<!fir.array<10x!fir.char<1,5>>>
@@ -91,7 +91,7 @@ func.func private @_QPdyn_array_func(index) -> !fir.array<?xf32>
 // CHECK-SAME:                            %[[VAL_0:.*]]: !fir.box<!fir.array<?xf32>>,
 // CHECK-SAME:                            %[[VAL_1:.*]]: index) {
 // CHECK:           %[[VAL_2:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_3:.*]] = fir.allocmem !fir.array<?xf32>, %[[VAL_1]] {bindc_name = ".tmp.expr_result", uniq_name = ""}
+// CHECK:           %[[VAL_3:.*]] = fir.allocmem !fir.array<?xf32>, %[[VAL_1]] <{bindc_name = ".tmp.expr_result", uniq_name = ""}>
 // CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.heap<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
 // CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]](%[[VAL_2]]) {uniq_name = ".tmp.expr_result"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
 // CHECK:           %[[VAL_6:.*]] = fir.call @_QPdyn_array_func(%[[VAL_1]]) : (index) -> !fir.array<?xf32>

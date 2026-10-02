@@ -10,7 +10,7 @@ end subroutine t
 ! CHECK-LABEL:   func.func @_QPt(
 ! CHECK-SAME:                    %[[ARG0:.*]]: !fir.boxchar<1> {fir.bindc_name = "s"}) {
 ! CHECK:           %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 {bindc_name = "n", uniq_name = "_QFtEn"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 <{bindc_name = "n", uniq_name = "_QFtEn"}>
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFtEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_3:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]]#0 typeparams %[[VAL_3]]#1 dummy_scope %[[VAL_0]] arg {{[0-9]+}} {uniq_name = "_QFtEs"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
@@ -32,7 +32,7 @@ end subroutine t1
 ! CHECK-SAME:                     %[[ARG1:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "b"}) {
 ! CHECK:           %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} {uniq_name = "_QFt1Eb"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "n", uniq_name = "_QFt1En"}
+! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 <{bindc_name = "n", uniq_name = "_QFt1En"}>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFt1En"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_4:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]]#0 typeparams %[[VAL_4]]#1 dummy_scope %[[VAL_0]] arg {{[0-9]+}} {uniq_name = "_QFt1Es"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
@@ -56,7 +56,7 @@ end subroutine t2
 ! CHECK:           %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_1:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<2>) -> (!fir.ref<!fir.char<2,?>>, index)
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]]#0 typeparams %[[VAL_1]]#1 dummy_scope %[[VAL_0]] arg {{[0-9]+}} {uniq_name = "_QFt2Ec"} : (!fir.ref<!fir.char<2,?>>, index, !fir.dscope) -> (!fir.boxchar<2>, !fir.ref<!fir.char<2,?>>)
-! CHECK:           %[[VAL_3:.*]] = fir.alloca i32 {bindc_name = "n", uniq_name = "_QFt2En"}
+! CHECK:           %[[VAL_3:.*]] = fir.alloca i32 <{bindc_name = "n", uniq_name = "_QFt2En"}>
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QFt2En"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_5:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<2>) -> (!fir.ref<!fir.char<2,?>>, index)
 ! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]]#0 typeparams %[[VAL_5]]#1 dummy_scope %[[VAL_0]] arg {{[0-9]+}} {uniq_name = "_QFt2Es"} : (!fir.ref<!fir.char<2,?>>, index, !fir.dscope) -> (!fir.boxchar<2>, !fir.ref<!fir.char<2,?>>)
@@ -76,7 +76,7 @@ end subroutine t3
 ! CHECK:           %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_1:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<4>) -> (!fir.ref<!fir.char<4,?>>, index)
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]]#0 typeparams %[[VAL_1]]#1 dummy_scope %[[VAL_0]] arg {{[0-9]+}} {uniq_name = "_QFt3Ec"} : (!fir.ref<!fir.char<4,?>>, index, !fir.dscope) -> (!fir.boxchar<4>, !fir.ref<!fir.char<4,?>>)
-! CHECK:           %[[VAL_3:.*]] = fir.alloca i32 {bindc_name = "n", uniq_name = "_QFt3En"}
+! CHECK:           %[[VAL_3:.*]] = fir.alloca i32 <{bindc_name = "n", uniq_name = "_QFt3En"}>
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QFt3En"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_5:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<4>) -> (!fir.ref<!fir.char<4,?>>, index)
 ! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]]#0 typeparams %[[VAL_5]]#1 dummy_scope %[[VAL_0]] arg {{[0-9]+}} {uniq_name = "_QFt3Es"} : (!fir.ref<!fir.char<4,?>>, index, !fir.dscope) -> (!fir.boxchar<4>, !fir.ref<!fir.char<4,?>>)
@@ -107,7 +107,7 @@ end subroutine t4
 ! CHECK:           %[[VAL_9:.*]] = fir.shape %[[VAL_8]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_9]]) typeparams %[[VAL_6]]#1 dummy_scope %[[VAL_0]] arg {{[0-9]+}} {uniq_name = "_QFt4Ec2"} : (!fir.ref<!fir.array<3x!fir.char<1,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<3x!fir.char<1,?>>>, !fir.ref<!fir.array<3x!fir.char<1,?>>>)
 ! CHECK:           %[[VAL_11:.*]] = arith.constant 3 : index
-! CHECK:           %[[VAL_12:.*]] = fir.alloca !fir.array<3xi8> {bindc_name = "n", uniq_name = "_QFt4En"}
+! CHECK:           %[[VAL_12:.*]] = fir.alloca !fir.array<3xi8> <{bindc_name = "n", uniq_name = "_QFt4En"}>
 ! CHECK:           %[[VAL_13:.*]] = fir.shape %[[VAL_11]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_12]](%[[VAL_13]]) {uniq_name = "_QFt4En"} : (!fir.ref<!fir.array<3xi8>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi8>>, !fir.ref<!fir.array<3xi8>>)
 ! CHECK:           %[[VAL_15:.*]] = hlfir.elemental %[[VAL_4]] unordered : (!fir.shape<1>) -> !hlfir.expr<3xi8> {

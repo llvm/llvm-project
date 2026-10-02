@@ -47,8 +47,8 @@
 ; CHECK-DAG: Capability SubgroupImageBlockIOINTEL
 ; CHECK: Extension "SPV_INTEL_subgroups"
 
-; CHECK-SPIRV-LABEL: Function
-; CHECK-SPIRV-LABEL: Label
+; CHECK: OpFunction
+; CHECK: OpLabel
 
 ; CHECK: SubgroupShuffleINTEL
 ; CHECK: SubgroupShuffleDownINTEL
@@ -75,7 +75,7 @@
 ; CHECK: SubgroupBlockReadINTEL
 ; CHECK: SubgroupBlockWriteINTEL
 
-; CHECK-SPIRV-LABEL: Return
+; CHECK: OpReturn
 
 %opencl.image2d_ro_t = type opaque
 %opencl.image2d_wo_t = type opaque

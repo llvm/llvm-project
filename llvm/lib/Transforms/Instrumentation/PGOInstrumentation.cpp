@@ -675,7 +675,7 @@ public:
       NumOfCSPGOBB += MST.bbInfoSize();
     }
 
-    FuncName = getIRPGOFuncName(F);
+    FuncName = getIRPGOObjectName(F);
     DeprecatedFuncName = getPGOFuncName(F);
     computeCFGHash();
     if (!ComdatMembers.empty())
@@ -1893,9 +1893,6 @@ void PGOUseFunc::annotateValueSites() {
   if (DisableValueProfiling)
     return;
 
-  // Create the PGOFuncName meta data.
-  createPGOFuncNameMetadata(F, FuncInfo.FuncName);
-
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
     annotateValueSites(Kind);
 }
@@ -2246,16 +2243,6 @@ static bool annotateAllFunctions(
         ProfileFileName.data(),
         "Function entry profiles are not yet supported for optimization"));
     return false;
-  }
-
-  if (EnableVTableProfileUse) {
-    for (GlobalVariable &G : M.globals()) {
-      if (!G.hasName() || !G.hasMetadata(LLVMContext::MD_type))
-        continue;
-
-      // Create the PGOFuncName meta data.
-      createPGONameMetadata(G, getPGOName(G, false /* InLTO*/));
-    }
   }
 
   // Add the profile summary (read from the header of the indexed summary) here

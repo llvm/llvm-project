@@ -119,9 +119,9 @@ bool allSameBlock(ArrayRef<Value *> VL) {
     return true;
 
   BasicBlock *BB = I0->getParent();
-  for (Value *V : iterator_range(It, VL.end())) {
-    if (isa<PoisonValue>(V))
-      continue;
+  for (Value *V : make_filter_range(iterator_range(It, VL.end()), [](Value *V) {
+         return !isa<PoisonValue>(V);
+       })) {
     auto *II = dyn_cast<Instruction>(V);
     if (!II)
       return false;
@@ -140,9 +140,8 @@ bool allConstant(ArrayRef<Value *> VL) {
 
 bool isSplat(ArrayRef<Value *> VL) {
   Value *FirstNonUndef = nullptr;
-  for (Value *V : VL) {
-    if (isa<UndefValue>(V))
-      continue;
+  for (Value *V :
+       make_filter_range(VL, [](Value *V) { return !isa<UndefValue>(V); })) {
     if (!FirstNonUndef) {
       FirstNonUndef = V;
       continue;
@@ -458,12 +457,10 @@ bool areAllOperandsNonInsts(Value *V) {
   if (!I)
     return true;
   return !mayHaveNonDefUseDependency(*I) &&
-         all_of(I->operands(), [I](Value *V) {
-           auto *IO = dyn_cast<Instruction>(V);
-           if (!IO)
-             return true;
-           return isa<PHINode>(IO) || IO->getParent() != I->getParent();
-         });
+         all_of(make_isa_range<Instruction>(I->operands()),
+                [I](Instruction *IO) {
+                  return isa<PHINode>(IO) || IO->getParent() != I->getParent();
+                });
 }
 
 bool isUsedOutsideBlock(Value *V) {
@@ -601,15 +598,13 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
 
   Value *Vec1 = nullptr;
   Value *Vec2 = nullptr;
-  bool HasNonUndefVec = any_of(VL, [&](Value *V) {
-    auto *EE = dyn_cast<ExtractElementInst>(V);
-    if (!EE)
-      return false;
-    Value *Vec = EE->getVectorOperand();
-    if (isa<UndefValue>(Vec))
-      return false;
-    return isGuaranteedNotToBePoison(Vec, AC);
-  });
+  bool HasNonUndefVec = any_of(make_isa_range<ExtractElementInst>(VL),
+                               [&](ExtractElementInst *EE) {
+                                 Value *Vec = EE->getVectorOperand();
+                                 if (isa<UndefValue>(Vec))
+                                   return false;
+                                 return isGuaranteedNotToBePoison(Vec, AC);
+                               });
   enum ShuffleMode { Unknown, Select, Permute };
   ShuffleMode CommonShuffleMode = Unknown;
   Mask.assign(VL.size(), PoisonMaskElem);
@@ -1137,6 +1132,136 @@ void collectNarrowedLeaves(Value *V, unsigned RdxOpcode, unsigned WideBW,
 TargetTransformInfo::TargetCostKind getSLPCostKind(const Function *F) {
   assert(F && "Expected function.");
   return F->hasOptSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
+}
+
+/// Checks if \p V is a zero-extended sub-field of a wider integer scalar.
+/// Returns the source scalar, the field width and the field offset.
+static std::optional<std::tuple<Value *, unsigned, unsigned>>
+matchExtractedField(Value *V) {
+  if (!V->getType()->isIntegerTy())
+    return std::nullopt;
+  // Field offset for the field-aligned shift amount, if the shifted value of
+  // the given bit width keeps at least one full field.
+  auto GetFieldOffset = [](const APInt *Amt, unsigned BitWidth,
+                           unsigned FieldWidth) -> std::optional<unsigned> {
+    uint64_t ShAmt = Amt->getLimitedValue(BitWidth);
+    if (ShAmt % FieldWidth != 0 || ShAmt + FieldWidth > BitWidth)
+      return std::nullopt;
+    return ShAmt / FieldWidth;
+  };
+  // Checks if the low bits of Val are a sub-field of the given width of a
+  // wider integer scalar. Val is a scalar integer, since V is one, and so is
+  // the matched source.
+  auto MatchLowField =
+      [&](Value *Val,
+          unsigned FieldWidth) -> std::optional<std::pair<Value *, unsigned>> {
+    Value *Src;
+    const APInt *Amt;
+    // Only the low bits of Val are observed, so lshr and ashr are equivalent.
+    if (match(Val, m_Trunc(m_Shr(m_Value(Src), m_APInt(Amt)))) ||
+        match(Val, m_Shr(m_Value(Src), m_APInt(Amt)))) {
+      if (std::optional<unsigned> Offset = GetFieldOffset(
+              Amt, Src->getType()->getIntegerBitWidth(), FieldWidth)) {
+        // The truncation of the shifted value keeps the field, look through it.
+        match(Src, m_Trunc(m_Value(Src)));
+        return std::make_pair(Src, *Offset);
+      }
+      return std::nullopt;
+    }
+    if (match(Val, m_Trunc(m_Value(Src))) &&
+        Src->getType()->getIntegerBitWidth() >= FieldWidth)
+      return std::make_pair(Src, 0u);
+    // Val itself is the source of its low field.
+    if (Val->getType()->getIntegerBitWidth() > FieldWidth)
+      return std::make_pair(Val, 0u);
+    return std::nullopt;
+  };
+  Value *Val;
+  const APInt *Mask;
+  // and Val, (1 << FieldWidth) - 1 or zext i<FieldWidth> Val - the low bits of
+  // Val.
+  unsigned FieldWidth = 0;
+  if (match(V, m_c_And(m_Value(Val), m_APInt(Mask))) && Mask->isMask())
+    FieldWidth = Mask->popcount();
+  else if (match(V, m_ZExt(m_Value(Val))))
+    FieldWidth = Val->getType()->getIntegerBitWidth();
+  if (FieldWidth != 0) {
+    if (std::optional<std::pair<Value *, unsigned>> Field =
+            MatchLowField(Val, FieldWidth))
+      return std::make_tuple(Field->first, FieldWidth, Field->second);
+    return std::nullopt;
+  }
+  unsigned LaneWidth = V->getType()->getIntegerBitWidth();
+  Value *Src;
+  const APInt *Amt;
+  if (match(V, m_Trunc(m_LShr(m_Value(Src), m_APInt(Amt))))) {
+    unsigned SrcWidth = Src->getType()->getIntegerBitWidth();
+    uint64_t ShAmt = Amt->getLimitedValue(SrcWidth);
+    // The field itself, if the lane width is the field width.
+    if (std::optional<unsigned> Offset =
+            GetFieldOffset(Amt, SrcWidth, LaneWidth))
+      return std::make_tuple(Src, LaneWidth, *Offset);
+    // The zero-extended top field of the source.
+    unsigned FieldWidth = SrcWidth - ShAmt;
+    if (FieldWidth > 0 && FieldWidth < LaneWidth && ShAmt % FieldWidth == 0)
+      return std::make_tuple(Src, FieldWidth, ShAmt / FieldWidth);
+    return std::nullopt;
+  }
+  if (match(V, m_LShr(m_Value(Src), m_APInt(Amt)))) {
+    // The zero-extended top field of the source, if the result keeps exactly
+    // one field. Look through a truncation of the shifted value.
+    unsigned ShfWidth = Src->getType()->getIntegerBitWidth();
+    uint64_t ShAmt = Amt->getLimitedValue(ShfWidth);
+    unsigned FieldWidth = ShfWidth - ShAmt;
+    if (FieldWidth > 0 && ShAmt % FieldWidth == 0) {
+      match(Src, m_Trunc(m_Value(Src)));
+      return std::make_tuple(Src, FieldWidth, ShAmt / FieldWidth);
+    }
+    return std::nullopt;
+  }
+  if (match(V, m_Trunc(m_Value(Src))))
+    return std::make_tuple(Src, LaneWidth, 0u);
+  return std::nullopt;
+}
+
+std::optional<std::tuple<Value *, unsigned, SmallVector<int>>>
+matchGatheredExtractedFields(ArrayRef<Value *> VL, const DataLayout &DL) {
+  // Splats are emitted as broadcasts, sub-fields of a constant are folded.
+  // The bitcast to the field vector maps lane 0 to the least significant
+  // field on little-endian targets only.
+  if (VL.size() < 2 || !VL.front()->getType()->isIntegerTy() || isSplat(VL) ||
+      DL.isBigEndian())
+    return std::nullopt;
+  Value *Src = nullptr;
+  unsigned FieldWidth = 0;
+  SmallVector<int> Mask(VL.size(), PoisonMaskElem);
+  for (auto [Idx, V] : make_filter_range(enumerate(VL), [](const auto &P) {
+         return !isa<UndefValue>(P.value());
+       })) {
+    if (V->getType() != VL.front()->getType())
+      return std::nullopt;
+    std::optional<std::tuple<Value *, unsigned, unsigned>> Field =
+        matchExtractedField(V);
+    if (!Field || (Src && (Src != std::get<0>(*Field) ||
+                           FieldWidth != std::get<1>(*Field))))
+      return std::nullopt;
+    Src = std::get<0>(*Field);
+    FieldWidth = std::get<1>(*Field);
+    Mask[Idx] = std::get<2>(*Field);
+  }
+  // The field width is a whole number of bytes and divides the source
+  // exactly, same as for the packing layout, so the source bitcasts to the
+  // field vector.
+  if (!Src || isa<Constant>(Src) || FieldWidth % 8 != 0 ||
+      Src->getType()->getIntegerBitWidth() % FieldWidth != 0)
+    return std::nullopt;
+  // The same field in every lane is a splat, emitted as a broadcast.
+  if (all_of(Mask, [First = *find_if(Mask, not_equal_to(PoisonMaskElem))](
+                       int MaskElt) {
+        return MaskElt == PoisonMaskElem || MaskElt == First;
+      }))
+    return std::nullopt;
+  return std::make_tuple(Src, FieldWidth, std::move(Mask));
 }
 
 /// Deeper than the standard analysis recursion depth to keep the numeric

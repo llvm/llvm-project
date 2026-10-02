@@ -351,8 +351,8 @@ bool RISCVPreAllocZilsdOpt::rescheduleOps(
 
     if (IsLoad) {
       MIB = BuildMI(*MBB, InsertPos, DL, TII->get(RISCV::PseudoLD_RV32_OPT))
-                .addReg(FirstReg, RegState::Define)
-                .addReg(SecondReg, RegState::Define);
+                .addDef(FirstReg)
+                .addDef(SecondReg);
       ++NumLDFormed;
       LLVM_DEBUG(dbgs() << "Formed LD: " << *MIB << "\n");
     } else {
