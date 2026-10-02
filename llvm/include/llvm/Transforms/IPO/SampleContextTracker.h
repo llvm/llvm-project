@@ -59,6 +59,8 @@ public:
   LLVM_ABI ContextTrieNode *getParentContext() const;
   LLVM_ABI void setParentContext(ContextTrieNode *Parent);
   LLVM_ABI void setCallSiteLoc(const LineLocation &Loc);
+  bool getWasInlined() const { return WasInlined; }
+  void setWasInlined(bool V) { WasInlined = V; }
   LLVM_ABI void dumpNode();
   LLVM_ABI void dumpTree();
 
@@ -80,6 +82,10 @@ private:
 
   // Callsite location in parent context
   LineLocation CallSiteLoc;
+
+  // Whether this function was inlined at this context in the binary.
+  // Set from the probe inline tree during profile generation.
+  bool WasInlined = false;
 };
 
 // Profile tracker that manages profiles and its associated context. It
