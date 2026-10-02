@@ -58,6 +58,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/LLVMContext.h"
@@ -2235,6 +2236,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Known &= Known2.anyextOrTrunc(BitWidth);
         break;
       }
+      case Intrinsic::nvvm_mulhi_s:
+      case Intrinsic::nvvm_mulhi_i:
+      case Intrinsic::nvvm_mulhi_ll:
       case Intrinsic::x86_sse2_pmulh_w:
       case Intrinsic::x86_avx2_pmulh_w:
       case Intrinsic::x86_avx512_pmulh_w_512:
@@ -2242,6 +2246,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
         computeKnownBits(I->getOperand(1), DemandedElts, Known2, Q, Depth + 1);
         Known = KnownBits::mulhs(Known, Known2);
         break;
+      case Intrinsic::nvvm_mulhi_us:
+      case Intrinsic::nvvm_mulhi_ui:
+      case Intrinsic::nvvm_mulhi_ull:
       case Intrinsic::x86_sse2_pmulhu_w:
       case Intrinsic::x86_avx2_pmulhu_w:
       case Intrinsic::x86_avx512_pmulhu_w_512:

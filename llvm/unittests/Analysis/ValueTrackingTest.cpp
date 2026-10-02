@@ -18,6 +18,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1512,6 +1513,62 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownMulBits) {
       "  ret i32 %A\n"
       "}\n");
   expectKnownBits(/*zero*/ 95u, /*one*/ 32u);
+}
+
+TEST_F(ComputeKnownBitsTest, NVVMMulHi) {
+  for (auto [ID, IsSigned] : {std::pair{Intrinsic::nvvm_mulhi_s, true},
+                              {Intrinsic::nvvm_mulhi_i, true},
+                              {Intrinsic::nvvm_mulhi_ll, true},
+                              {Intrinsic::nvvm_mulhi_us, false},
+                              {Intrinsic::nvvm_mulhi_ui, false},
+                              {Intrinsic::nvvm_mulhi_ull, false}}) {
+    Module M("test", Context);
+    Function *MulHi = Intrinsic::getOrInsertDeclaration(&M, ID);
+    SCOPED_TRACE(MulHi->getName().str());
+    Function *F = Function::Create(MulHi->getFunctionType(),
+                                   Function::ExternalLinkage, "test", M);
+    IRBuilder<> B(BasicBlock::Create(Context, "entry", F));
+    Type *Ty = MulHi->getReturnType();
+    unsigned BitWidth = Ty->getIntegerBitWidth();
+    APInt Zero = APInt::getZero(BitWidth);
+    APInt AllOnes = APInt::getAllOnes(BitWidth);
+    Value *X = F->getArg(0);
+    Value *Y = F->getArg(1);
+
+    auto Check = [&](Value *LHS, Value *RHS, const APInt &ExpectedZero,
+                     const APInt &ExpectedOne) {
+      Value *Product = B.CreateCall(MulHi, {LHS, RHS});
+      KnownBits Known = computeKnownBits(Product, M.getDataLayout());
+      EXPECT_FALSE(Known.hasConflict());
+      EXPECT_EQ(Known.Zero, ExpectedZero);
+      EXPECT_EQ(Known.One, ExpectedOne);
+    };
+
+    Check(X, Y, Zero, Zero);
+    Check(X, ConstantInt::get(Ty, 0), AllOnes, Zero);
+    Check(ConstantInt::get(Ty, 0), Y, AllOnes, Zero);
+
+    // Two half-width operands have no set bits in the high half of the product.
+    APInt HalfMask = APInt::getLowBitsSet(BitWidth, BitWidth / 2);
+    Check(B.CreateAnd(X, HalfMask), B.CreateAnd(Y, HalfMask), AllOnes, Zero);
+
+    // Known leading zeros from both operands propagate to the high product.
+    APInt Mask = APInt::getLowBitsSet(BitWidth, BitWidth - 2);
+    Check(B.CreateAnd(X, Mask), B.CreateAnd(Y, Mask),
+          APInt::getHighBitsSet(BitWidth, 4), Zero);
+
+    // The low two bits of the high product are 01, even with unknown sign bits.
+    APInt Bit = APInt::getOneBitSet(BitWidth, BitWidth / 2);
+    Value *LHS = B.CreateOr(B.CreateShl(X, BitWidth / 2 + 2), Bit);
+    Value *RHS = B.CreateOr(B.CreateShl(Y, BitWidth / 2 + 2), Bit);
+    Check(LHS, RHS, APInt(BitWidth, 2), APInt(BitWidth, 1));
+
+    // Sign extension and zero extension give different high halves for -1 * 2.
+    APInt Expected = IsSigned ? AllOnes : APInt(BitWidth, 1);
+    Check(ConstantInt::get(Ty, AllOnes), ConstantInt::get(Ty, 2), ~Expected,
+          Expected);
+    B.CreateRet(ConstantInt::get(Ty, 0));
+  }
 }
 
 TEST_F(ComputeKnownFPClassTest, SelectPos0) {
