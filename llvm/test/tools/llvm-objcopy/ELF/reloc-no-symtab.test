@@ -10,16 +10,11 @@
 # RUN: llvm-readobj --sections %t.original | FileCheck %s
 # RUN: llvm-readobj --sections %t.stripped | FileCheck %s
 
-## In a relocatable file, .rela.plt is a static relocation section.
-# RUN: yaml2obj -DTYPE=ET_REL %s -o %t.rel
-# RUN: llvm-strip %t.rel -o %t.rel.stripped
-# RUN: llvm-readobj --sections %t.rel.stripped | FileCheck %s
-
 !ELF
 FileHeader:
   Class:           ELFCLASS64
   Data:            ELFDATA2LSB
-  Type:            [[TYPE=ET_EXEC]]
+  Type:            ET_REL
   Machine:         EM_X86_64
 Sections:
   - Name:          .text

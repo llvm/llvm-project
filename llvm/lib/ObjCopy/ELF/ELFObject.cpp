@@ -1709,11 +1709,7 @@ Expected<SectionBase &> ELFBuilder<ELFT>::makeSection(const Elf_Shdr &Shdr) {
   case SHT_REL:
   case SHT_RELA:
   case SHT_CREL:
-    // SHF_ALLOC relocations of an executable or shared object are copied
-    // verbatim. Relocatable files relocations are usually non-ALLOC, but Linux
-    // livepatch modules set SHF_ALLOC on .klp.rela.* to keep these static
-    // relocations in memory.
-    if ((Shdr.sh_flags & SHF_ALLOC) && ElfFile.getHeader().e_type != ET_REL) {
+    if (Shdr.sh_flags & SHF_ALLOC) {
       if (Expected<ArrayRef<uint8_t>> Data = ElfFile.getSectionContents(Shdr))
         return Obj.addSection<DynamicRelocationSection>(*Data);
       else
