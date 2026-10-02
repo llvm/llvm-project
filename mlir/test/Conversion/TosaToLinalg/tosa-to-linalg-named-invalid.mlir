@@ -10,3 +10,18 @@ func.func @max_pool2d_adaptive_not_canonicalized(
     (tensor<1x4x4x1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x2x2x1xf32>
   return %0 : tensor<1x2x2x1xf32>
 }
+
+// -----
+
+func.func @avg_pool2d_adaptive_not_canonicalized(
+    %arg0: tensor<1x4x4x1xf32>) -> tensor<1x2x2x1xf32> {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %kernel = tosa.const_shape values(dense<[2, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %stride = tosa.const_shape values(dense<[2, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %pad = tosa.const_shape values(dense<[0, 0, 0, 0]> : tensor<4xindex>) : () -> !tosa.shape<4>
+  // expected-error@+1 {{failed to legalize operation 'tosa.avg_pool2d_adaptive'}}
+  %0 = tosa.avg_pool2d_adaptive %arg0, %input_zp, %output_zp, %kernel, %stride, %pad acc_type(f32) :
+    (tensor<1x4x4x1xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x2x2x1xf32>
+  return %0 : tensor<1x2x2x1xf32>
+}
