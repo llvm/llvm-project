@@ -1112,13 +1112,12 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
       // pointer-typed min/max as cmp + select, matching SCEVExpander.
       VPValue *Cmp = Builder.createICmp(
           MinMaxIntrinsic::getPredicate(IntrinsicID), Result, Op, DL);
-      VPInstruction *Sel = Builder.createSelect(Cmp, Result, Op, DL);
+      Result = Builder.createSelect(Cmp, Result, Op, DL);
       Function &F =
           *Builder.getPlan().getScalarHeader()->getIRBasicBlock()->getParent();
       if (MDNode *MD =
               getExplicitlyUnknownBranchWeightsIfProfiled(F, "scev-expander"))
-        Sel->setMetadata(LLVMContext::MD_prof, MD);
-      Result = Sel;
+        cast<VPInstruction>(Result)->setMetadata(LLVMContext::MD_prof, MD);
     }
     return Result;
   }

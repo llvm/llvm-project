@@ -6966,7 +6966,7 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
       });
     }
     // VPSCEVExpander expands AddRecs in the plan's entry, not the check block.
-    auto IsUnsupported = [](const SCEV *S) { return isa<SCEVAddRecExpr>(S); };
+    auto IsUnsupported = IsaPred<SCEVAddRecExpr>;
     // Diff checks are not modelled in VPlan yet, and the VPlan expander cannot
     // hoist bounds out of an enclosing loop.
     const auto &RtPtrChecking = *Legal->getRuntimePointerChecking();
