@@ -7406,6 +7406,12 @@ convertClauseMapFlags(omp::ClauseMapFlags mlirFlags) {
   return mapType;
 }
 
+static StringRef getMapClauseName(omp::MapInfoOp mapOp) {
+  if (StringAttr name = mapOp.getNameAttr())
+    return name.getValue();
+  return {};
+}
+
 static void collectMapDataFromMapOperands(
     MapInfoData &mapData, SmallVectorImpl<Value> &mapVars,
     LLVM::ModuleTranslation &moduleTranslation, DataLayout &dl,
@@ -7488,7 +7494,8 @@ static void collectMapDataFromMapOperands(
     // TODO: set HasAttachPtr from Flang for pointee-storage entries.
     mapData.HasAttachPtr.push_back(false);
     mapData.Names.push_back(LLVM::createMappingInformation(
-        mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder()));
+        mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder(),
+        getMapClauseName(mapOp)));
     mapData.DevicePointers.push_back(llvm::OpenMPIRBuilder::DeviceInfoTy::None);
     if (mapOp.getMapperId())
       mapData.Mappers.push_back(
@@ -7558,7 +7565,8 @@ static void collectMapDataFromMapOperands(
         // TODO: set HasAttachPtr from Flang for pointee-storage entries.
         mapData.HasAttachPtr.push_back(false);
         mapData.Names.push_back(LLVM::createMappingInformation(
-            mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder()));
+            mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder(),
+            getMapClauseName(mapOp)));
         mapData.DevicePointers.push_back(devInfoTy);
         mapData.Mappers.push_back(nullptr);
         mapData.IsAMapping.push_back(false);
@@ -7620,7 +7628,8 @@ static void collectMapDataFromMapOperands(
       mapData.Mappers.push_back(nullptr);
     }
     mapData.Names.push_back(LLVM::createMappingInformation(
-        mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder()));
+        mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder(),
+        getMapClauseName(mapOp)));
     mapData.DevicePointers.push_back(
         isDevicePtr ? llvm::OpenMPIRBuilder::DeviceInfoTy::Pointer
                     : llvm::OpenMPIRBuilder::DeviceInfoTy::Address);
@@ -8003,7 +8012,8 @@ static void mapParentWithMembers(
   combinedInfo.Mappers.emplace_back(
       parentMapper && !parentClause.getPartialMap() ? parentMapper : nullptr);
   combinedInfo.Names.emplace_back(LLVM::createMappingInformation(
-      mapData.MapClause[mapDataIndex]->getLoc(), ompBuilder));
+      mapData.MapClause[mapDataIndex]->getLoc(), ompBuilder,
+      getMapClauseName(cast<omp::MapInfoOp>(mapData.MapClause[mapDataIndex]))));
   combinedInfo.BasePointers.emplace_back(mapData.BasePointers[mapDataIndex]);
 
   // Calculate size of the parent object being mapped based on the
@@ -8100,7 +8110,9 @@ static void mapParentWithMembers(
       combinedInfo.DevicePointers.emplace_back(
           mapData.DevicePointers[mapDataIndex]);
       combinedInfo.Names.emplace_back(LLVM::createMappingInformation(
-          mapData.MapClause[mapDataIndex]->getLoc(), ompBuilder));
+          mapData.MapClause[mapDataIndex]->getLoc(), ompBuilder,
+          getMapClauseName(
+              cast<omp::MapInfoOp>(mapData.MapClause[mapDataIndex]))));
       combinedInfo.BasePointers.emplace_back(
           mapData.BasePointers[mapDataIndex]);
       combinedInfo.Pointers.emplace_back(mapData.Pointers[mapDataIndex]);
@@ -8142,7 +8154,9 @@ static void mapParentWithMembers(
         combinedInfo.DevicePointers.emplace_back(
             llvm::OpenMPIRBuilder::DeviceInfoTy::None);
         combinedInfo.Names.emplace_back(LLVM::createMappingInformation(
-            mapData.MapClause[mapDataIndex]->getLoc(), ompBuilder));
+            mapData.MapClause[mapDataIndex]->getLoc(), ompBuilder,
+            getMapClauseName(
+                cast<omp::MapInfoOp>(mapData.MapClause[mapDataIndex]))));
         combinedInfo.BasePointers.emplace_back(
             mapData.BasePointers[mapDataIndex]);
         combinedInfo.Mappers.emplace_back(nullptr);
@@ -8173,7 +8187,9 @@ static void mapParentWithMembers(
       combinedInfo.DevicePointers.emplace_back(
           llvm::OpenMPIRBuilder::DeviceInfoTy::None);
       combinedInfo.Names.emplace_back(LLVM::createMappingInformation(
-          mapData.MapClause[mapDataIndex]->getLoc(), ompBuilder));
+          mapData.MapClause[mapDataIndex]->getLoc(), ompBuilder,
+          getMapClauseName(
+              cast<omp::MapInfoOp>(mapData.MapClause[mapDataIndex]))));
       combinedInfo.BasePointers.emplace_back(
           mapData.BasePointers[mapDataIndex]);
       combinedInfo.Mappers.emplace_back(nullptr);
