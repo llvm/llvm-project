@@ -826,6 +826,12 @@ __packed_widen_mulsu(pwmulsu_i16x4, int16x4_t, int8x4_t, uint8x4_t, uint16x4_t)
 __packed_widen_mulsu(pwmulsu_i32x2, int32x2_t, int16x2_t, uint16x2_t,
                      uint32x2_t)
 
+/* Packed "Q-format" Multiply with Widening Accumulate */
+__packed_ternary_builtin_mixed(pmqwacc_i32x2, int32x2_t, int16x2_t, int16x2_t,
+                               __builtin_riscv_pmqwacc_i32x2)
+__packed_ternary_builtin_mixed(pmqrwacc_i32x2, int32x2_t, int16x2_t, int16x2_t,
+                               __builtin_riscv_pmqrwacc_i32x2)
+
 /* Packed Narrowing Convert */
 __packed_narrow_even4(pncvt_i8x4, int8x4_t, int16x4_t, int8x8_t)
 __packed_narrow_even4(pncvt_u8x4, uint8x4_t, uint16x4_t, uint8x8_t)
