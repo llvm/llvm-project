@@ -1345,9 +1345,9 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
         if (I->getOperand(ni+1).getMBB() == NMBB) {
           MachineOperand &MO = I->getOperand(ni);
           Register Reg = MO.getReg();
-          PHISrcRegs.insert(Reg);
           if (MO.isUndef())
             continue;
+          PHISrcRegs.insert(Reg);
 
           LiveInterval &LI = LIS->getInterval(Reg);
           VNInfo *VNI = LI.getVNInfoAt(PrevIndex);
