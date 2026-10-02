@@ -6674,6 +6674,22 @@ static bool AreMulWideOperandsDemotable(SDValue LHS, SDValue RHS,
                                         unsigned OptSize,
                                         const SelectionDAG &DAG,
                                         bool &IsSigned) {
+  // The native register size is 32 bits, so extending i16 to i32 is often
+  // cheap, whereas truncating i64 to i32 is free. Use known bits to narrow
+  // i64 products, and require explicit extensions for i32 products.
+  if (LHS.getValueType() != MVT::i64) {
+    if (!IsExtendedFromLte(LHS, OptSize, IsSigned))
+      return false;
+
+    if (auto *CI = dyn_cast<ConstantSDNode>(RHS)) {
+      const APInt &Val = CI->getAPIntValue();
+      return IsSigned ? Val.isSignedIntN(OptSize) : Val.isIntN(OptSize);
+    }
+
+    bool RHSSigned;
+    return IsExtendedFromLte(RHS, OptSize, RHSSigned) && IsSigned == RHSSigned;
+  }
+
   // Extensions may have been folded into masks, shifts, or other operations.
   // Check the values' widths rather than requiring explicit extension nodes.
   if (DAG.computeKnownBits(LHS).countMaxActiveBits() <= OptSize &&

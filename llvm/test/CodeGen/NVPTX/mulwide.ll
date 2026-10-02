@@ -615,18 +615,17 @@ define i32 @shl_narrow_mask(i32 %a) {
   ret i32 %p
 }
 
-; Also cover the 16-bit operand / 32-bit product variant.
+; Implicit narrowing of i32 operands should keep ordinary 32-bit multiplies.
 define i32 @mulwide_u16_mask(i32 %a, i16 %b) {
 ; OPT-LABEL: mulwide_u16_mask(
 ; OPT:       {
-; OPT-NEXT:    .reg .b16 %rs<3>;
-; OPT-NEXT:    .reg .b32 %r<2>;
+; OPT-NEXT:    .reg .b32 %r<4>;
 ; OPT-EMPTY:
 ; OPT-NEXT:  // %bb.0:
-; OPT-NEXT:    ld.param.b16 %rs1, [mulwide_u16_mask_param_0];
-; OPT-NEXT:    ld.param.b16 %rs2, [mulwide_u16_mask_param_1];
-; OPT-NEXT:    mul.wide.u16 %r1, %rs1, %rs2;
-; OPT-NEXT:    st.param.b32 [func_retval0], %r1;
+; OPT-NEXT:    ld.param.b16 %r1, [mulwide_u16_mask_param_0];
+; OPT-NEXT:    ld.param.b16 %r2, [mulwide_u16_mask_param_1];
+; OPT-NEXT:    mul.lo.s32 %r3, %r1, %r2;
+; OPT-NEXT:    st.param.b32 [func_retval0], %r3;
 ; OPT-NEXT:    ret;
 ;
 ; NOOPT-LABEL: mulwide_u16_mask(
@@ -651,14 +650,13 @@ define i32 @mulwide_u16_mask(i32 %a, i16 %b) {
 define i32 @mulwide_s16_ashr(i32 %a, i16 %b) {
 ; OPT-LABEL: mulwide_s16_ashr(
 ; OPT:       {
-; OPT-NEXT:    .reg .b16 %rs<3>;
-; OPT-NEXT:    .reg .b32 %r<2>;
+; OPT-NEXT:    .reg .b32 %r<4>;
 ; OPT-EMPTY:
 ; OPT-NEXT:  // %bb.0:
-; OPT-NEXT:    ld.param.b16 %rs1, [mulwide_s16_ashr_param_0+2];
-; OPT-NEXT:    ld.param.b16 %rs2, [mulwide_s16_ashr_param_1];
-; OPT-NEXT:    mul.wide.s16 %r1, %rs1, %rs2;
-; OPT-NEXT:    st.param.b32 [func_retval0], %r1;
+; OPT-NEXT:    ld.param.s16 %r1, [mulwide_s16_ashr_param_0+2];
+; OPT-NEXT:    ld.param.s16 %r2, [mulwide_s16_ashr_param_1];
+; OPT-NEXT:    mul.lo.s32 %r3, %r1, %r2;
+; OPT-NEXT:    st.param.b32 [func_retval0], %r3;
 ; OPT-NEXT:    ret;
 ;
 ; NOOPT-LABEL: mulwide_s16_ashr(
