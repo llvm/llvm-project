@@ -172,10 +172,10 @@ static uint64_t addMachOSymbolStubs(const object::MachOObjectFile &MachO,
   return Gsym.getNumFunctionInfos() - NumBefore;
 }
 
-template <typename SymbolRange>
-static Expected<size_t> loadSymbols(const object::ObjectFile &Obj,
-                                    SymbolRange Symbols, OutputAggregator &Out,
-                                    GsymCreator &Gsym, bool CopyStrings) {
+static Expected<size_t>
+loadSymbols(const object::ObjectFile &Obj,
+            object::ObjectFile::symbol_iterator_range Symbols,
+            OutputAggregator &Out, GsymCreator &Gsym, bool CopyStrings) {
   using namespace llvm::object;
 
   const bool IsMachO = isa<MachOObjectFile>(&Obj);
@@ -279,7 +279,7 @@ static llvm::Error loadGnuDebugDataSymbols(const object::ELFObjectFileBase &Obj,
       loadSymbols(**DebugObj, (*DebugObj)->symbols(), Out, Gsym,
                   /*CopyStrings=*/true);
   if (!DebugFunctionsAdded)
-    return DebugFunctionsAdded.takeError();
+    return Warn(toString(DebugFunctionsAdded.takeError()));
   if (Out.GetOS())
     *Out.GetOS() << "Loaded " << *DebugFunctionsAdded
                  << " functions from .gnu_debugdata symbol table.\n";
