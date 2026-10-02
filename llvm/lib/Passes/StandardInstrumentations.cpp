@@ -271,7 +271,7 @@ std::string getIRName(IRUnitRef IR, ExtendedIRContext *Context) {
 
   if (Context) {
     // Go through the traits and check if any of them apply
-    for (const auto& extendedIRTraits : Context->traits) {
+    for (const auto &extendedIRTraits : Context->traits) {
       if (auto IRName = extendedIRTraits->getIRName(IR))
         return *IRName;
     }
@@ -906,8 +906,8 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, IRUnitRef IR) {
   ++CurrentPassNumber;
 
   if (shouldPrintPassNumbers())
-    dbgs() << " Running pass " << CurrentPassNumber << " " << PassID
-           << " on " << getIRName(IR, IRContext) << "\n";
+    dbgs() << " Running pass " << CurrentPassNumber << " " << PassID << " on "
+           << getIRName(IR, IRContext) << "\n";
 
   if (shouldPrintAfterCurrentPassNumber())
     pushPassRunDescriptor(PassID, IR, CurrentPassNumber);
@@ -919,8 +919,7 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, IRUnitRef IR) {
     Stream << "; *** IR Dump Before ";
     if (shouldPrintBeforeSomePassNumber())
       Stream << CurrentPassNumber << "-";
-    Stream << PassID << " on " << getIRName(IR, IRContext)
-           << " ***\n";
+    Stream << PassID << " on " << getIRName(IR, IRContext) << " ***\n";
     unwrapAndPrint(Stream, IR);
   };
 
@@ -1091,8 +1090,7 @@ bool OptNoneInstrumentation::shouldRun(StringRef PassID, IRUnitRef IR) {
     ShouldRun = !MF->getFunction().hasOptNone();
 
   if (!ShouldRun && DebugLogging) {
-    errs() << "Skipping pass " << PassID << " on "
-           << getIRName(IR, IRContext)
+    errs() << "Skipping pass " << PassID << " on " << getIRName(IR, IRContext)
            << " due to optnone attribute\n";
   }
   return ShouldRun;
@@ -1102,8 +1100,8 @@ bool OptPassGateInstrumentation::shouldRun(StringRef PassName, IRUnitRef IR) {
   if (isIgnored(PassName))
     return true;
 
-  bool ShouldRun =
-      Context.getOptPassGate().shouldRunPass(PassName, getIRName(IR, IRContext));
+  bool ShouldRun = Context.getOptPassGate().shouldRunPass(
+      PassName, getIRName(IR, IRContext));
   if (!ShouldRun && !this->HasWrittenIR && !OptBisectPrintIRPath.empty()) {
     // FIXME: print IR if limit is higher than number of opt-bisect
     // invocations
@@ -1160,8 +1158,8 @@ void PrintPassInstrumentation::registerCallbacks(
     assert(!isSpecialPass(PassID, SpecialPasses) &&
            "Unexpectedly skipping special pass");
 
-        print() << "Skipping pass: " << PassID << " on "
-          << getIRName(IR, this->IRContext) << "\n";
+    print() << "Skipping pass: " << PassID << " on "
+            << getIRName(IR, this->IRContext) << "\n";
   });
   PIC.registerBeforeNonSkippedPassCallback(
       [this, SpecialPasses](StringRef PassID, IRUnitRef IR) {
@@ -1211,10 +1209,11 @@ void PrintPassInstrumentation::registerCallbacks(
     });
     PIC.registerAfterAnalysisCallback(
         [this](StringRef PassID, IRUnitRef IR) { Indent -= 2; });
-    PIC.registerAnalysisInvalidatedCallback([this](StringRef PassID, IRUnitRef IR) {
-      print() << "Invalidating analysis: " << PassID << " on "
-              << getIRName(IR, this->IRContext) << "\n";
-    });
+    PIC.registerAnalysisInvalidatedCallback(
+        [this](StringRef PassID, IRUnitRef IR) {
+          print() << "Invalidating analysis: " << PassID << " on "
+                  << getIRName(IR, this->IRContext) << "\n";
+        });
     PIC.registerAnalysesClearedCallback([this](StringRef IRName) {
       print() << "Clearing all analysis results for: " << IRName << "\n";
     });

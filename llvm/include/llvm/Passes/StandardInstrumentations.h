@@ -208,13 +208,13 @@ public:
 };
 
 class ExtendedIRTraits {
-  public:
+public:
   ExtendedIRTraits() = default;
-  ExtendedIRTraits(const ExtendedIRTraits&) = delete;
-  ExtendedIRTraits& operator=(const ExtendedIRTraits&) = delete;
+  ExtendedIRTraits(const ExtendedIRTraits &) = delete;
+  ExtendedIRTraits &operator=(const ExtendedIRTraits &) = delete;
 
-  ExtendedIRTraits(ExtendedIRTraits&&) = delete;
-  ExtendedIRTraits& operator=(ExtendedIRTraits&&) = delete;
+  ExtendedIRTraits(ExtendedIRTraits &&) = delete;
+  ExtendedIRTraits &operator=(ExtendedIRTraits &&) = delete;
 
   virtual ~ExtendedIRTraits() = default;
   virtual std::optional<std::string> getIRName(IRUnitRef IR) const = 0;
@@ -224,11 +224,11 @@ class ExtendedIRTraits {
 // non-standard IR representations.
 struct ExtendedIRContext {
   ExtendedIRContext() = default;
-  ExtendedIRContext(const ExtendedIRContext&) = delete;
-  ExtendedIRContext& operator=(const ExtendedIRContext&) = delete;
+  ExtendedIRContext(const ExtendedIRContext &) = delete;
+  ExtendedIRContext &operator=(const ExtendedIRContext &) = delete;
 
-  ExtendedIRContext(ExtendedIRContext&&) = delete;
-  ExtendedIRContext& operator=(ExtendedIRContext&&) = delete;
+  ExtendedIRContext(ExtendedIRContext &&) = delete;
+  ExtendedIRContext &operator=(ExtendedIRContext &&) = delete;
 
   llvm::SmallVector<std::unique_ptr<ExtendedIRTraits>> traits;
   // Register an ExtendedIRTraits implementation for this IR context.
