@@ -11430,7 +11430,8 @@ bool ScalarEvolution::isKnownPredicate(CmpPredicate Pred, SCEVUse LHS,
 
   return isKnownViaInduction(Pred, LHS, RHS) ||
          isKnownPredicateViaSplitting(Pred, LHS, RHS) ||
-         isKnownViaNonRecursiveReasoning(Pred, LHS, RHS);
+         isKnownViaNonRecursiveReasoning(Pred, LHS, RHS) ||
+         isKnownPredicateViaAddRecStart(Pred, LHS, RHS);
 }
 
 std::optional<bool> ScalarEvolution::evaluatePredicate(CmpPredicate Pred,
@@ -12909,9 +12910,9 @@ bool ScalarEvolution::isKnownPredicateViaAddRecStart(CmpPredicate Pred,
   if (!LAR->getNoWrapFlags(NW) || !RAR->getNoWrapFlags(NW))
     return false;
 
-  // Reentering the full predicate prover here can recursively
-  // branch into induction proofs for a chain of recurrences.
-  return isKnownViaNonRecursiveReasoning(Pred, LStart, RStart);
+  // This recursive query must stay out of isKnownViaNonRecursiveReasoning,
+  // which is used to check entry and backedge conditions during induction.
+  return isKnownPredicate(Pred, LStart, RStart);
 }
 
 /// Is LHS `Pred` RHS true because one of them is an AddRec that is known not to
@@ -13198,7 +13199,6 @@ bool ScalarEvolution::isKnownViaNonRecursiveReasoning(CmpPredicate Pred,
   return isKnownPredicateExtendIdiom(Pred, LHS, RHS) ||
          isKnownPredicateViaConstantRanges(Pred, LHS, RHS) ||
          IsKnownPredicateViaMinOrMax(*this, Pred, LHS, RHS) ||
-         isKnownPredicateViaAddRecStart(Pred, LHS, RHS) ||
          IsKnownPredicateViaAddRecMonotonicity(*this, Pred, LHS, RHS) ||
          isKnownPredicateViaNoOverflow(Pred, LHS, RHS);
 }
@@ -13276,7 +13276,14 @@ bool ScalarEvolution::isImpliedCondOperandsViaRanges(
   const APInt &ConstRHS = cast<SCEVConstant>(RHS)->getAPInt();
   // The antecedent implies the consequent if every value of `LHS` that
   // satisfies the antecedent also satisfies the consequent.
-  return LHSRange.icmp(Pred, ConstRHS);
+  if (LHSRange.icmp(Pred, ConstRHS))
+    return true;
+
+  // Intersect with the known range of LHS to exclude impossible values that
+  // may have been introduced by wrapping when adding the constant difference.
+  ConstantRange KnownLHSRange =
+      ICmpInst::isSigned(Pred) ? getSignedRange(LHS) : getUnsignedRange(LHS);
+  return LHSRange.intersectWith(KnownLHSRange).icmp(Pred, ConstRHS);
 }
 
 bool ScalarEvolution::canIVOverflowOnLT(const SCEV *RHS, const SCEV *Stride,
