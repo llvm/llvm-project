@@ -4226,9 +4226,9 @@ void VPlanTransforms::widenMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
         CastHint = Cast->getOpcode();
 
       VectorType *VectorAccessType = VectorType::get(AccessType, VF);
-      if (!TTI.hasMultipleVectorLoadStore(
-              /*NumVectors=*/UF, VectorAccessType, IsStore,
-              TargetTransformInfo::MaskSource::MS_None, CastHint))
+      if (!TTI.hasMultiVectorLoadStore(
+              /*NumVectors=*/UF, TargetTransformInfo::MaskSource::None,
+              VectorAccessType, IsStore, CastHint))
         continue;
 
       DebugLoc DL = R.getDebugLoc();

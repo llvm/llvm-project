@@ -1001,13 +1001,13 @@ public:
                                 unsigned Opcode1,
                                 const SmallBitVector &OpcodeMask) const;
 
-  enum MaskSource {
+  enum class MaskSource {
     /// The operation is unmasked.
-    MS_None,
+    None,
     /// The operation is masked with an arbitrary predicate.
-    MS_Masked,
+    ArbitraryPredicate,
     /// The operation is masked with a contiguous active lane mask.
-    MS_ActiveLaneMask,
+    ActiveLaneMask,
   };
 
   /// Return true if the target supports loading or storing \p NumVectors
@@ -1017,9 +1017,9 @@ public:
   ///
   /// \p CastHint is non-null if a stored value is produced by a cast or a
   /// loaded value is consumed by one.
-  LLVM_ABI bool hasMultipleVectorLoadStore(
-      unsigned NumVectors, VectorType *VectorTy = nullptr, bool IsStore = false,
-      MaskSource Mask = MS_None,
+  LLVM_ABI bool hasMultiVectorLoadStore(
+      unsigned NumVectors, MaskSource Mask, VectorType *VectorTy = nullptr,
+      bool IsStore = false,
       std::optional<Instruction::CastOps> CastHint = std::nullopt) const;
 
   /// Return true if we should be enabling ordered reductions for the target.

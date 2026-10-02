@@ -282,9 +282,9 @@ public:
   bool isLegalSpeculativeLoad(Type *DataType,
                               unsigned AddressSpace) const override;
 
-  bool hasMultipleVectorLoadStore(
-      unsigned NumVectors, VectorType *VectorTy, bool IsStore,
-      TTI::MaskSource Mask,
+  bool hasMultiVectorLoadStore(
+      unsigned NumVectors, TTI::MaskSource Mask, VectorType *VectorTy,
+      bool IsStore,
       std::optional<Instruction::CastOps> CastHint) const override;
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,

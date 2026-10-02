@@ -5974,14 +5974,14 @@ bool AArch64TTIImpl::isLegalSpeculativeLoad(Type *DataType,
          Size.getFixedValue() <= 16;
 }
 
-bool AArch64TTIImpl::hasMultipleVectorLoadStore(
-    unsigned NumVectors, VectorType *VectorTy, bool IsStore,
-    TTI::MaskSource Mask, std::optional<Instruction::CastOps> CastHint) const {
+bool AArch64TTIImpl::hasMultiVectorLoadStore(
+    unsigned NumVectors, TTI::MaskSource Mask, VectorType *VectorTy,
+    bool IsStore, std::optional<Instruction::CastOps> CastHint) const {
   if (NumVectors <= 1 || !ST->enableSubRegLiveness() || !ST->hasSVE2p1())
     return false;
 
   // TODO: Support masked multi-vector loads/stores.
-  if (Mask != TTI::MS_None)
+  if (Mask != TTI::MaskSource::None)
     return false;
 
   // A null vector type queries whether the target supports multi-vector memory
@@ -6002,8 +6002,8 @@ bool AArch64TTIImpl::hasMultipleVectorLoadStore(
   // For unpredicated loads/stores allow any pow-of-two multiple of a vector >=
   // to a single z-register. We can split operations wider than a single
   // multi-vector load/store during ISEL.
-  unsigned VectorWidth = DL.getTypeSizeInBits(VectorTy).getKnownMinValue();
-  return VectorWidth % 128 == 0 && isPowerOf2_32(NumVectors);
+  return DL.getTypeSizeInBits(VectorTy).isKnownMultipleOf(128) &&
+         isPowerOf2_32(NumVectors);
 }
 
 unsigned
