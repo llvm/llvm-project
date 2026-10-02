@@ -3195,7 +3195,8 @@ struct FormatStyle {
     /// \endcode
     IAMS_Never,
     /// Give access modifiers their own indentation level and indent all
-    /// members two levels below the record. Ignore `AccessModifierOffset`.
+    /// members two levels below the record. Value of the `AccessModifierOffset`
+    /// is ignored.
     /// \code
     ///   struct S {
     ///       int before;
@@ -3207,7 +3208,7 @@ struct FormatStyle {
     IAMS_Always,
     /// In C, C++, and Objective-C, indent members one level until the first
     /// explicit access modifier, then two levels. Other languages use the
-    /// `Always` behavior. Ignore `AccessModifierOffset`.
+    /// `Always` behavior. Value of the `AccessModifierOffset` is ignored.
     /// \code
     ///   struct S {
     ///     int before;

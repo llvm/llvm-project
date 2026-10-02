@@ -893,9 +893,9 @@ FormatToken *UnwrappedLineParser::parseBlock(
 
   size_t PPEndHash = computePPHash();
 
-  // Munch the closing brace.
   if (SeenExplicitAccessModifier)
     ++AddLevels;
+  // Munch the closing brace.
   nextToken(/*LevelDifference=*/-AddLevels);
 
   // When this is a function block and there is an unnecessary semicolon
@@ -4320,16 +4320,15 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr, bool IsJavaRecord) {
       switch (Style.IndentAccessModifiers) {
       case FormatStyle::IAMS_Never:
         break;
-      case FormatStyle::IAMS_Always:
-        AddLevels = 2u;
-        break;
       case FormatStyle::IAMS_AfterFirstAccessModifier:
         if (Style.isCpp()) {
           IndentAfterExplicitAccessModifier = true;
-        } else {
-          // Other languages use the same indentation as IAMS_Always.
-          AddLevels = 2u;
+          break;
         }
+        // Other languages use the same indentation as IAMS_Always.
+        [[fallthrough]];
+      case FormatStyle::IAMS_Always:
+        AddLevels = 2u;
         break;
       }
       parseBlock(/*MustBeDeclaration=*/true, AddLevels, /*MunchSemi=*/false,
