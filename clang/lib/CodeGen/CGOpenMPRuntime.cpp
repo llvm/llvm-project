@@ -1323,6 +1323,19 @@ llvm::Function *CGOpenMPRuntime::emitTeamsOutlinedFunction(
   return OutlinedFn;
 }
 
+/// The captured region of \p D that is outlined as the body of an explicit
+/// task.  Besides the tasking directives, this is the structured block of a
+/// 'target data' that a taskgraph records, which Sema gives task parameters in
+/// its only (OMPD_unknown) region.
+static OpenMPDirectiveKind
+getTaskCaptureRegion(const OMPExecutableDirective &D) {
+  if (isOpenMPTaskLoopDirective(D.getDirectiveKind()))
+    return OMPD_taskloop;
+  if (D.getDirectiveKind() == OMPD_target_data)
+    return OMPD_unknown;
+  return OMPD_task;
+}
+
 llvm::Function *CGOpenMPRuntime::emitTaskOutlinedFunction(
     const OMPExecutableDirective &D, const VarDecl *ThreadIDVar,
     const VarDecl *PartIDVar, const VarDecl *TaskTVar,
@@ -1346,10 +1359,7 @@ llvm::Function *CGOpenMPRuntime::emitTaskOutlinedFunction(
   CodeGen.setAction(Action);
   assert(!ThreadIDVar->getType()->isPointerType() &&
          "thread id variable must be of type kmp_int32 for tasks");
-  const OpenMPDirectiveKind Region =
-      isOpenMPTaskLoopDirective(D.getDirectiveKind()) ? OMPD_taskloop
-                                                      : OMPD_task;
-  const CapturedStmt *CS = D.getCapturedStmt(Region);
+  const CapturedStmt *CS = D.getCapturedStmt(getTaskCaptureRegion(D));
   bool HasCancel = false;
   if (const auto *TD = dyn_cast<OMPTaskDirective>(&D))
     HasCancel = TD->hasCancel();
@@ -4099,10 +4109,7 @@ static void emitPrivatesInit(CodeGenFunction &CGF,
   ASTContext &C = CGF.getContext();
   auto FI = std::next(KmpTaskTWithPrivatesQTyRD->field_begin());
   LValue PrivatesBase = CGF.EmitLValueForField(TDBase, *FI);
-  OpenMPDirectiveKind Kind = isOpenMPTaskLoopDirective(D.getDirectiveKind())
-                                 ? OMPD_taskloop
-                                 : OMPD_task;
-  const CapturedStmt &CS = *D.getCapturedStmt(Kind);
+  const CapturedStmt &CS = *D.getCapturedStmt(getTaskCaptureRegion(D));
   CodeGenFunction::CGCapturedStmtInfo CapturesInfo(CS);
   LValue SrcBase;
   bool IsTargetTask =
@@ -4448,7 +4455,7 @@ static llvm::Value *emitTaskCloneFunction(
   LValue DstBase = PrivatesOf(DstArg);
   LValue SrcBase = PrivatesOf(SrcArg);
   CodeGenFunction::CGCapturedStmtInfo CapturesInfo(
-      *D.getCapturedStmt(OMPD_task));
+      *D.getCapturedStmt(getTaskCaptureRegion(D)));
   auto FI = PrivatesFI->getType()->castAsRecordDecl()->field_begin();
   for (const PrivateDataTy &Pair : Privates) {
     const FieldDecl *Field = *FI++;
@@ -4740,6 +4747,7 @@ CGOpenMPRuntime::TaskResultTy CGOpenMPRuntime::emitTaskInit(
     FreeAgentFlag = 0x80,
     TransparentFlag = 0x100,
     TaskgraphDestructorsFlag = 0x200,
+    TaskgraphBodyFlag = 0x400,
   };
   unsigned Flags = Data.Tied ? TiedFlag : 0;
   bool NeedsCleanup = false;
@@ -4759,6 +4767,8 @@ CGOpenMPRuntime::TaskResultTy CGOpenMPRuntime::emitTaskInit(
   }
   if (D.getSingleClause<OMPTransparentClause>())
     Flags |= TransparentFlag;
+  if (Data.TaskgraphBody)
+    Flags |= TaskgraphBodyFlag;
 
   if (Data.Priority.getInt())
     Flags = Flags | PriorityFlag;
@@ -12832,12 +12842,12 @@ void CGOpenMPRuntime::emitTaskgraphTargetCall(
 }
 
 void CGOpenMPRuntime::emitTaskgraphTargetDataCall(
-    CodeGenFunction &CGF, const OMPExecutableDirective &D, SourceLocation Loc,
-    llvm::Value *DeviceID, unsigned NumTargetItems,
-    llvm::Value *BasePointersArray, llvm::Value *PointersArray,
-    llvm::Value *SizesArray, llvm::Value *MapTypesArray,
-    llvm::Value *MapNamesArray, llvm::Value *MappersArray,
-    llvm::Value *Relocate) {
+    CodeGenFunction &CGF, const OMPExecutableDirective &D,
+    OpenMPDirectiveKind ActionKind, SourceLocation Loc, llvm::Value *DeviceID,
+    unsigned NumTargetItems, llvm::Value *BasePointersArray,
+    llvm::Value *PointersArray, llvm::Value *SizesArray,
+    llvm::Value *MapTypesArray, llvm::Value *MapNamesArray,
+    llvm::Value *MappersArray, llvm::Value *Relocate) {
   llvm::Value *ThreadID = getThreadID(CGF, Loc);
   llvm::Value *UpLoc = emitUpdateLocation(CGF, Loc);
 
@@ -12863,7 +12873,7 @@ void CGOpenMPRuntime::emitTaskgraphTargetDataCall(
   llvm::Value *PointerNum = CGF.Builder.getInt32(NumTargetItems);
 
   RuntimeFunction RTLFn;
-  switch (D.getDirectiveKind()) {
+  switch (ActionKind) {
   case OMPD_target_enter_data:
     RTLFn = OMPRTL___kmpc_taskgraph_target_enter_data;
     break;
@@ -12874,7 +12884,7 @@ void CGOpenMPRuntime::emitTaskgraphTargetDataCall(
     RTLFn = OMPRTL___kmpc_taskgraph_target_update;
     break;
   default:
-    llvm_unreachable("Unexpected standalone target data directive.");
+    llvm_unreachable("Unexpected target data action.");
   }
 
   llvm::Value *Args[] = {UpLoc,        ThreadID,          NumDeps,
@@ -13691,9 +13701,12 @@ void CGOpenMPRuntime::emitThreadLimitClause(CodeGenFunction &CGF,
 void CGOpenMPRuntime::emitTargetDataCalls(
     CodeGenFunction &CGF, const OMPExecutableDirective &D, const Expr *IfCond,
     const Expr *Device, const RegionCodeGenTy &CodeGen,
-    CGOpenMPRuntime::TargetDataInfo &Info) {
+    CGOpenMPRuntime::TargetDataInfo &Info, const Expr *ReplayableCond,
+    llvm::function_ref<void(CodeGenFunction &)> BodyTaskGen) {
   if (!CGF.HaveInsertPoint())
     return;
+  assert((!ReplayableCond || BodyTaskGen) &&
+         "a recorded 'target data' needs its body emitted as a task");
 
   // Action used to replace the default codegen action and turn privatization
   // off.
@@ -13778,15 +13791,158 @@ void CGOpenMPRuntime::emitTargetDataCalls(
   // Source location for the ident struct
   llvm::Value *RTLoc = emitUpdateLocation(CGF, D.getBeginLoc());
 
-  InsertPointTy AllocaIP(CGF.AllocaInsertPt->getIterator());
-  InsertPointTy CodeGenIP(CGF.Builder.GetInsertPoint());
-  llvm::OpenMPIRBuilder::LocationDescription OmpLoc(CGF.Builder);
-  llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
-      cantFail(OMPBuilder.createTargetData(
-          OmpLoc, AllocaIP, CodeGenIP, /*DeallocBlocks=*/{}, DeviceID,
-          IfCondVal, Info, GenMapInfoCB, CustomMapperCB,
-          /*MapperFunc=*/nullptr, BodyCB, DeviceAddrCB, RTLoc));
-  CGF.Builder.restoreIP(AfterIP);
+  auto &&EmitOrdinary = [&](CodeGenFunction &CGF, PrePostActionTy &) {
+    InsertPointTy AllocaIP(CGF.AllocaInsertPt->getIterator());
+    InsertPointTy CodeGenIP(CGF.Builder.GetInsertPoint());
+    llvm::OpenMPIRBuilder::LocationDescription OmpLoc(CGF.Builder);
+    llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
+        cantFail(OMPBuilder.createTargetData(
+            OmpLoc, AllocaIP, CodeGenIP, /*DeallocBlocks=*/{}, DeviceID,
+            IfCondVal, Info, GenMapInfoCB, CustomMapperCB,
+            /*MapperFunc=*/nullptr, BodyCB, DeviceAddrCB, RTLoc));
+    CGF.Builder.restoreIP(AfterIP);
+  };
+
+  if (!ReplayableCond) {
+    RegionCodeGenTy RCG(EmitOrdinary);
+    RCG(CGF);
+    return;
+  }
+
+  // OpenMP 6.1 [21.5] gives 'target data' the semantics of an enter-data
+  // task, a task whose region is the body and which shares by default, and an
+  // exit-data task, in that order.  All three are recorded.  The body task is
+  // opaque to the taskgraph: its region is not part of the one being recorded,
+  // so what it encounters runs afresh on every replay rather than being
+  // recorded as nodes of its own.
+  auto &&EmitRecording = [&](CodeGenFunction &CGF, PrePostActionTy &) {
+    // Built once, before either action, so the stores dominate both call sites
+    // and the exit action can reuse the same argument pointers.  The begin and
+    // end mapper calls of the ordinary path share these arrays too; only the
+    // map types differ, and only by dropping `present` for the end.
+    MappableExprsHandler::MapCombinedInfoTy CombinedInfo;
+    MappableExprsHandler MEHandler(D, CGF);
+    genMapInfo(MEHandler, CGF, CombinedInfo, OMPBuilder);
+    // The body task answers its use-device list items itself, when it starts.
+    // Left in, the flag would have the begin mapper write the device address
+    // over the recorded base-pointer array, which every replay of both actions
+    // reads again.
+    for (auto &Type : CombinedInfo.Types)
+      Type &= ~OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
+    emitOffloadingArraysAndArgs(CGF, CombinedInfo, Info, OMPBuilder,
+                                /*IsNonContiguous=*/true,
+                                /*ForEndCall=*/false);
+
+    // A replay may run from a different frame than the encounter that recorded
+    // the actions, so the recorded map arrays need refreshing before they are
+    // used again.  One helper serves both actions: they share the arrays, and
+    // differ only in the map types, which relocation does not touch.
+    llvm::Function *RelocateFn = emitTargetRelocationFunction(
+        CGM, D.getBeginLoc(), /*CS=*/nullptr, CGF.CapturedStmtInfo,
+        CombinedInfo, /*IsDataNode=*/true);
+    llvm::Value *Relocate = RelocateFn
+                                ? cast<llvm::Value>(RelocateFn)
+                                : llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
+
+    llvm::Value *ExitMapTypesArray = Info.RTArgs.MapTypesArray;
+    if (Info.RTArgs.MapTypesArrayEnd)
+      ExitMapTypesArray = CGF.Builder.CreateConstInBoundsGEP2_32(
+          llvm::ArrayType::get(CGF.Int64Ty, Info.NumberOfPtrs),
+          Info.RTArgs.MapTypesArrayEnd, /*Idx0=*/0, /*Idx1=*/0);
+
+    auto EmitAction = [&](OpenMPDirectiveKind ActionKind,
+                          llvm::Value *MapTypesArray) {
+      // As on the ordinary path, an `if` clause suppresses the mapping while
+      // leaving the body alone, so only the actions are guarded.  IfCondVal was
+      // evaluated once above; the clause must not be re-evaluated here.
+      llvm::BasicBlock *ContBB = nullptr;
+      if (IfCondVal) {
+        llvm::BasicBlock *ThenBB = CGF.createBasicBlock("omp_if.then");
+        ContBB = CGF.createBasicBlock("omp_if.end");
+        CGF.Builder.CreateCondBr(IfCondVal, ThenBB, ContBB);
+        CGF.EmitBlock(ThenBB);
+      }
+      emitTaskgraphTargetDataCall(
+          CGF, D, ActionKind, D.getBeginLoc(), DeviceID, Info.NumberOfPtrs,
+          Info.RTArgs.BasePointersArray, Info.RTArgs.PointersArray,
+          Info.RTArgs.SizesArray, MapTypesArray, Info.RTArgs.MapNamesArray,
+          Info.RTArgs.MappersArray, Relocate);
+      if (ContBB) {
+        CGF.EmitBranch(ContBB);
+        CGF.EmitBlock(ContBB, /*IsFinished=*/true);
+      }
+    };
+
+    EmitAction(OMPD_target_enter_data, Info.RTArgs.MapTypesArray);
+    BodyTaskGen(CGF);
+    EmitAction(OMPD_target_exit_data, ExitMapTypesArray);
+  };
+
+  emitIfClause(CGF, ReplayableCond, EmitRecording, EmitOrdinary);
+}
+
+void CGOpenMPRuntime::emitTaskgraphUseDeviceLookup(
+    CodeGenFunction &CGF, const OMPExecutableDirective &D,
+    llvm::DenseMap<const ValueDecl *, llvm::Value *> &DeviceAddrs) {
+  // Rebuilt from the list items as they stand now: the begin mapper would see
+  // the same entries, so the answers are the ones it would have given.
+  MappableExprsHandler::MapCombinedInfoTy CombinedInfo;
+  MappableExprsHandler MEHandler(D, CGF);
+  MEHandler.generateAllInfo(CombinedInfo, OMPBuilder);
+  SmallVector<unsigned, 4> Entries;
+  for (unsigned I = 0, E = CombinedInfo.DevicePtrDecls.size(); I < E; ++I)
+    if (CombinedInfo.DevicePtrDecls[I])
+      Entries.push_back(I);
+  if (Entries.empty())
+    return;
+
+  ASTContext &C = CGM.getContext();
+  const unsigned N = Entries.size();
+  QualType PtrsTy =
+      C.getConstantArrayType(C.VoidPtrTy, llvm::APInt(32, N),
+                             /*SizeExpr=*/nullptr, ArraySizeModifier::Normal,
+                             /*IndexTypeQuals=*/0);
+  QualType TypesTy = C.getConstantArrayType(
+      C.getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/true),
+      llvm::APInt(32, N), /*SizeExpr=*/nullptr, ArraySizeModifier::Normal,
+      /*IndexTypeQuals=*/0);
+  Address Bases = CGF.CreateMemTemp(PtrsTy, ".tg_use_device_bases");
+  Address Ptrs = CGF.CreateMemTemp(PtrsTy, ".tg_use_device_ptrs");
+  Address Types = CGF.CreateMemTemp(TypesTy, ".tg_use_device_types");
+  Address Out = CGF.CreateMemTemp(PtrsTy, ".tg_use_device_out");
+  for (unsigned K = 0; K < N; ++K) {
+    unsigned I = Entries[K];
+    CGF.Builder.CreateStore(CombinedInfo.BasePointers[I],
+                            CGF.Builder.CreateConstArrayGEP(Bases, K));
+    CGF.Builder.CreateStore(CombinedInfo.Pointers[I],
+                            CGF.Builder.CreateConstArrayGEP(Ptrs, K));
+    CGF.Builder.CreateStore(
+        CGF.Builder.getInt64(
+            static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+                CombinedInfo.Types[I])),
+        CGF.Builder.CreateConstArrayGEP(Types, K));
+    DeviceAddrs.try_emplace(
+        CombinedInfo.DevicePtrDecls[I],
+        CGF.Builder.CreateConstArrayGEP(Out, K).emitRawPointer(CGF));
+  }
+
+  llvm::Value *DeviceID;
+  if (const auto *C = D.getSingleClause<OMPDeviceClause>())
+    DeviceID = CGF.Builder.CreateIntCast(CGF.EmitScalarExpr(C->getDevice()),
+                                         CGF.Int64Ty, /*isSigned=*/true);
+  else
+    DeviceID = CGF.Builder.getInt64(OMP_DEVICEID_UNDEF);
+  llvm::Value *Args[] = {
+      DeviceID,
+      CGF.Builder.getInt32(N),
+      CGF.Builder.CreateConstArrayGEP(Bases, 0).emitRawPointer(CGF),
+      CGF.Builder.CreateConstArrayGEP(Ptrs, 0).emitRawPointer(CGF),
+      CGF.Builder.CreateConstArrayGEP(Types, 0).emitRawPointer(CGF),
+      CGF.Builder.CreateConstArrayGEP(Out, 0).emitRawPointer(CGF)};
+  CGF.EmitRuntimeCall(
+      OMPBuilder.getOrCreateRuntimeFunction(
+          CGM.getModule(), OMPRTL___tgt_taskgraph_lookup_use_device),
+      Args);
 }
 
 void CGOpenMPRuntime::emitTargetDataStandAloneCall(
@@ -13831,7 +13987,8 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
       // entry point satisfies the dependences itself; there is no enclosing
       // helper task on this path.
       emitTaskgraphTargetDataCall(
-          CGF, D, D.getBeginLoc(), DeviceID, InputInfo.NumberOfTargetItems,
+          CGF, D, D.getDirectiveKind(), D.getBeginLoc(), DeviceID,
+          InputInfo.NumberOfTargetItems,
           InputInfo.BasePointersArray.emitRawPointer(CGF),
           InputInfo.PointersArray.emitRawPointer(CGF),
           InputInfo.SizesArray.emitRawPointer(CGF), MapTypesArray,
@@ -15528,7 +15685,8 @@ void CGOpenMPSIMDRuntime::emitNumTeamsClause(CodeGenFunction &CGF,
 void CGOpenMPSIMDRuntime::emitTargetDataCalls(
     CodeGenFunction &CGF, const OMPExecutableDirective &D, const Expr *IfCond,
     const Expr *Device, const RegionCodeGenTy &CodeGen,
-    CGOpenMPRuntime::TargetDataInfo &Info) {
+    CGOpenMPRuntime::TargetDataInfo &Info, const Expr *ReplayableCond,
+    llvm::function_ref<void(CodeGenFunction &)> BodyTaskGen) {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 

@@ -208,6 +208,10 @@ private:
     const Decl *PossiblyLoopCounter = nullptr;
     bool NowaitRegion = false;
     bool UntiedRegion = false;
+    bool ReplayableRegion = false;
+    /// For a 'target data' whose structured block a taskgraph records, the
+    /// captured declaration of that block.
+    const CapturedDecl *TaskgraphBodyDecl = nullptr;
     bool CancelRegion = false;
     bool LoopStart = false;
     bool BodyComplete = false;
@@ -964,6 +968,51 @@ public:
     if (const SharingMapTy *Parent = getSecondOnStackOrNull())
       return Parent->NowaitRegion;
     return false;
+  }
+  /// Marks current region as replayable (it has a 'replayable' clause).
+  void setReplayableRegion() { getTopOfStack().ReplayableRegion = true; }
+  /// Whether the current directive is a 'target data' whose structured block
+  /// is the task a taskgraph records and replays: the directive is encountered
+  /// in a taskgraph region, or is marked replayable.
+  bool isTaskgraphTargetDataBody() const {
+    if (isStackEmpty())
+      return false;
+    return isTaskgraphTargetDataBody(getStackSize() - 1);
+  }
+  /// Records the captured declaration of the current directive's structured
+  /// block, when isTaskgraphTargetDataBody().
+  void setTaskgraphBodyDecl(const CapturedDecl *CD) {
+    getTopOfStack().TaskgraphBodyDecl = CD;
+  }
+  /// The innermost 'target data' enclosing the current directive whose
+  /// structured block a taskgraph records, looking out through the constructs
+  /// nested in that block but not past a taskgraph or target region, each of
+  /// which begins a region of its own.  \p Loc is set to its location.
+  const CapturedDecl *getEnclosingTaskgraphBody(SourceLocation &Loc) const {
+    if (getStackSize() < 2)
+      return nullptr;
+    for (unsigned Level = getStackSize() - 1; Level-- > 0;) {
+      const SharingMapTy &Elem = getStackElemAtLevel(Level);
+      if (Elem.Directive == OMPD_taskgraph ||
+          isOpenMPTargetExecutionDirective(Elem.Directive))
+        return nullptr;
+      if (Elem.TaskgraphBodyDecl) {
+        Loc = Elem.ConstructLoc;
+        return Elem.TaskgraphBodyDecl;
+      }
+    }
+    return nullptr;
+  }
+  /// As above, for the directive at \p Level.
+  bool isTaskgraphTargetDataBody(unsigned Level) const {
+    if (Level >= getStackSize())
+      return false;
+    const SharingMapTy &Elem = getStackElemAtLevel(Level);
+    if (Elem.Directive != OMPD_target_data)
+      return false;
+    return Elem.ReplayableRegion ||
+           (Level > 0 &&
+            getStackElemAtLevel(Level - 1).Directive == OMPD_taskgraph);
   }
   /// Marks current region as untied (it has a 'untied' clause).
   void setUntiedRegion(bool IsUntied = true) {
@@ -2224,6 +2273,12 @@ bool SemaOpenMP::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
   QualType Ty = D->getType();
   if (const auto *BD = dyn_cast<BindingDecl>(D))
     Ty = BD->getDecomposedDecl()->getType();
+
+  // The recorded body of a 'target data' is a task that shares by default,
+  // and a replay refreshes its shareds as addresses.  A use-device list item,
+  // though firstprivate to the construct, is converted by the body itself.
+  if (DSAStack->isTaskgraphTargetDataBody(Level))
+    return true;
 
   bool IsVariableUsedInMapClause = false;
   if (DSAStack->hasExplicitDirective(isOpenMPTargetExecutionDirective, Level)) {
@@ -4942,7 +4997,8 @@ getTaskloopRegionParams(Sema &SemaRef) {
 }
 
 static void processCapturedRegions(Sema &SemaRef, OpenMPDirectiveKind DKind,
-                                   Scope *CurScope, SourceLocation Loc) {
+                                   Scope *CurScope, SourceLocation Loc,
+                                   bool TaskgraphTargetDataBody) {
   SmallVector<OpenMPDirectiveKind> Regions;
   getOpenMPCaptureRegions(Regions, DKind);
 
@@ -4989,6 +5045,17 @@ static void processCapturedRegions(Sema &SemaRef, OpenMPDirectiveKind DKind,
                                        getTargetRegionParams(SemaRef), Level);
       break;
     case OMPD_unknown:
+      // OpenMP 6.1 [21.5] makes the structured block of a 'target data' a task
+      // of its own, bracketed by the enter-data and exit-data tasks.  A
+      // taskgraph records and replays that task, so it is given the parameters
+      // of one; everywhere else it is merged into the encountering task and
+      // the block is emitted inline.
+      if (TaskgraphTargetDataBody) {
+        SemaRef.ActOnCapturedRegionStart(Loc, CurScope, CR_OpenMP,
+                                         getTaskRegionParams(SemaRef));
+        MarkAsInlined(SemaRef.getCurCapturedRegion());
+        break;
+      }
       SemaRef.ActOnCapturedRegionStart(Loc, CurScope, CR_OpenMP,
                                        getUnknownRegionParams(SemaRef));
       break;
@@ -5024,7 +5091,11 @@ void SemaOpenMP::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind,
     break;
   default:
     processCapturedRegions(SemaRef, DKind, CurScope,
-                           DSAStack->getConstructLoc());
+                           DSAStack->getConstructLoc(),
+                           DSAStack->isTaskgraphTargetDataBody());
+    if (DSAStack->isTaskgraphTargetDataBody())
+      DSAStack->setTaskgraphBodyDecl(
+          SemaRef.getCurCapturedRegion()->TheCapturedDecl);
     break;
   }
 
@@ -5277,6 +5348,25 @@ StmtResult SemaOpenMP::ActOnOpenMPRegionEnd(StmtResult S,
       OC = cast<OMPOrderedClause>(Clause);
     else if (Clause->getClauseKind() == OMPC_linear)
       LCs.push_back(cast<OMPLinearClause>(Clause));
+  }
+  // The structured block of a replayed 'target data' is a task that converts
+  // the use-device list items itself when it starts, from the map arrays it
+  // rebuilds, so everything those arrays are built from is shared with it.
+  if (DSAStack->isTaskgraphTargetDataBody()) {
+    for (OMPClause *Clause : Clauses) {
+      switch (Clause->getClauseKind()) {
+      case OMPC_map:
+      case OMPC_use_device_ptr:
+      case OMPC_use_device_addr:
+      case OMPC_device:
+        for (Stmt *Child : Clause->children())
+          if (auto *E = dyn_cast_or_null<Expr>(Child))
+            SemaRef.MarkDeclarationsReferencedInExpr(E);
+        break;
+      default:
+        break;
+      }
+    }
   }
   // Capture allocator expressions if used.
   for (Expr *E : DSAStack->getInnerAllocators())
@@ -6780,6 +6870,83 @@ static bool teamsLoopCanBeParallelFor(Stmt *AStmt, Sema &SemaRef) {
   return Checker.teamsLoopCanBeParallelFor();
 }
 
+/// The variable a depend list item is a part of, or null if it is not a part
+/// of a variable (an lvalue reached through a pointer is a part of the
+/// pointer's variable, as far as this lexical check can tell).
+static const VarDecl *getDependBaseDecl(const Expr *E) {
+  while (true) {
+    E = E->IgnoreParenImpCasts();
+    if (const auto *OASE = dyn_cast<ArraySectionExpr>(E))
+      E = OASE->getBase();
+    else if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
+      E = ASE->getBase();
+    else if (const auto *ME = dyn_cast<MemberExpr>(E))
+      E = ME->getBase();
+    else if (const auto *Shape = dyn_cast<OMPArrayShapingExpr>(E))
+      E = Shape->getBase();
+    else if (const auto *UO = dyn_cast<UnaryOperator>(E);
+             UO && UO->getOpcode() == UO_Deref)
+      E = UO->getSubExpr();
+    else
+      break;
+  }
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+    return dyn_cast<VarDecl>(DRE->getDecl());
+  return nullptr;
+}
+
+/// OpenMP 6.1 [21.5]: the structured block of a 'target data' that a taskgraph
+/// records is a task of its own, and the region it executes is not part of
+/// the taskgraph region.  Two things written in it therefore do not do what
+/// they appear to, and are diagnosed here, lexically:
+///
+///   * a device construct is not recorded, so it queues device work from a
+///     host task the taskgraph cannot see;
+///   * a dependence on storage declared outside the block orders nothing
+///     outside it, since only the construct's own tasks are in the graph.
+static void checkTaskgraphTargetDataBody(Sema &SemaRef, DSAStackTy *Stack,
+                                         OpenMPDirectiveKind Kind,
+                                         ArrayRef<OMPClause *> Clauses,
+                                         SourceLocation StartLoc) {
+  SourceLocation BodyLoc;
+  const CapturedDecl *Body = Stack->getEnclosingTaskgraphBody(BodyLoc);
+  if (!Body)
+    return;
+  if (isOpenMPTargetExecutionDirective(Kind) || Kind == OMPD_target_data ||
+      Kind == OMPD_target_enter_data || Kind == OMPD_target_exit_data ||
+      Kind == OMPD_target_update) {
+    SemaRef.Diag(StartLoc, diag::warn_omp_taskgraph_body_device_construct)
+        << getOpenMPDirectiveName(Kind,
+                                  SemaRef.getLangOpts().getOpenMPVersion());
+    SemaRef.Diag(BodyLoc, diag::note_omp_taskgraph_body);
+  }
+  for (const OMPClause *C : Clauses) {
+    const auto *DC = dyn_cast_or_null<OMPDependClause>(C);
+    if (!DC || DC->getModifier())
+      continue;
+    OpenMPDependClauseKind DepKind = DC->getDependencyKind();
+    if (DepKind == OMPC_DEPEND_depobj || DepKind == OMPC_DEPEND_source ||
+        DepKind == OMPC_DEPEND_sink || DepKind == OMPC_DEPEND_outallmemory ||
+        DepKind == OMPC_DEPEND_inoutallmemory)
+      continue;
+    for (const Expr *E : DC->varlist()) {
+      if (!E || E->isTypeDependent())
+        continue;
+      QualType DependT = Stack->getOMPDependT();
+      if (!DependT.isNull() &&
+          SemaRef.getASTContext().hasSameUnqualifiedType(E->getType(), DependT))
+        continue;
+      const VarDecl *VD = getDependBaseDecl(E);
+      if (!VD || Body->Encloses(VD->getDeclContext()))
+        continue;
+      SemaRef.Diag(E->getExprLoc(),
+                   diag::warn_omp_taskgraph_body_escaping_depend)
+          << VD;
+      SemaRef.Diag(BodyLoc, diag::note_omp_taskgraph_body);
+    }
+  }
+}
+
 StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
     OpenMPDirectiveKind Kind, const DeclarationNameInfo &DirName,
     OpenMPDirectiveKind CancelRegion, ArrayRef<OMPClause *> Clauses,
@@ -6840,6 +7007,9 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
                             BindKind, StartLoc)) {
     return StmtError();
   }
+
+  if (!SemaRef.inTemplateInstantiation())
+    checkTaskgraphTargetDataBody(SemaRef, DSAStack, Kind, Clauses, StartLoc);
 
   // Report affected OpenMP target offloading behavior when in HIP lang-mode.
   if (getLangOpts().HIP && (isOpenMPTargetExecutionDirective(Kind) ||
@@ -20608,6 +20778,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPReplayableClause(SourceLocation StartLoc,
       ValExpr = Val.get();
     }
   }
+  DSAStack->setReplayableRegion();
   return new (getASTContext())
       OMPReplayableClause(ValExpr, StartLoc, LParenLoc, EndLoc);
 }

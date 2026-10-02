@@ -8547,9 +8547,58 @@ void CodeGenFunction::EmitOMPTargetDataDirective(
   // Set the action to signal privatization of device pointers.
   RCG.setAction(PrivAction);
 
+  // Sema gives the body task parameters only where the construct can be
+  // recorded; anywhere else it stays merged into the encountering task.
+  const CapturedStmt *CS = S.getCapturedStmt(OMPD_unknown);
+  const Expr *ReplayableCond = getOMPReplayableCond(*this, S);
+  if (CS->getCapturedDecl()->getNumParams() <= 1)
+    ReplayableCond = nullptr;
+
+  // The recorded body is a task of its own, which converts the use-device
+  // list items when it starts and then waits, in a taskgroup, for the tasks
+  // it generates: the exit-data action must not run until they are done.
+  auto &&EmitBodyTask = [&S, CS](CodeGenFunction &CGF) {
+    Address CapturedStruct = CGF.GenerateCapturedStmtArgument(*CS);
+    CanQualType SharedsTy =
+        CGF.getContext().getCanonicalTagType(CS->getCapturedRecordDecl());
+    const Expr *Replayable = IntegerLiteral::Create(
+        CGF.getContext(), llvm::APInt(32, 1),
+        CGF.getContext().getIntTypeForBitwidth(32, /*Signed=*/0),
+        SourceLocation());
+    OMPTaskDataTy Data;
+    Data.Tied = true;
+    Data.TaskgraphBody = true;
+    Data.ReplayableCond = Replayable;
+    auto &&BodyGen = [&S, CS](CodeGenFunction &CGF, PrePostActionTy &) {
+      llvm::DenseMap<const ValueDecl *, llvm::Value *> DeviceAddrs;
+      CGF.CGM.getOpenMPRuntime().emitTaskgraphUseDeviceLookup(CGF, S,
+                                                              DeviceAddrs);
+      OMPPrivateScope PrivateScope(CGF);
+      for (const auto *C : S.getClausesOfKind<OMPUseDevicePtrClause>())
+        CGF.EmitOMPUseDevicePtrClause(*C, PrivateScope, DeviceAddrs);
+      for (const auto *C : S.getClausesOfKind<OMPUseDeviceAddrClause>())
+        CGF.EmitOMPUseDeviceAddrClause(*C, PrivateScope, DeviceAddrs);
+      (void)PrivateScope.Privatize();
+      auto &&Body = [CS](CodeGenFunction &CGF, PrePostActionTy &Action) {
+        Action.Enter(CGF);
+        CGF.EmitStmt(CS->getCapturedStmt());
+      };
+      CGF.CGM.getOpenMPRuntime().emitTaskgroupRegion(CGF, Body,
+                                                     S.getBeginLoc());
+    };
+    auto &&TaskGen = [&S, SharedsTy, CapturedStruct, Replayable](
+                         CodeGenFunction &CGF, llvm::Function *OutlinedFn,
+                         const OMPTaskDataTy &Data) {
+      CGF.CGM.getOpenMPRuntime().emitTaskCall(
+          CGF, S.getBeginLoc(), S, OutlinedFn, SharedsTy, CapturedStruct,
+          /*IfCond=*/nullptr, Replayable, Data);
+    };
+    CGF.EmitOMPTaskBasedDirective(S, OMPD_unknown, BodyGen, TaskGen, Data);
+  };
+
   // Emit region code.
-  CGM.getOpenMPRuntime().emitTargetDataCalls(*this, S, IfCond, Device, RCG,
-                                             Info);
+  CGM.getOpenMPRuntime().emitTargetDataCalls(
+      *this, S, IfCond, Device, RCG, Info, ReplayableCond, EmitBodyTask);
 }
 
 void CodeGenFunction::EmitOMPTargetEnterDataDirective(

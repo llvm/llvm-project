@@ -12496,6 +12496,17 @@ def err_omp_taskgraph_replayable_task: Error<
   "%select{detachable|transparent|undeferred}0 replayable task is not allowed within '#pragma omp taskgraph'">;
 def err_omp_taskgraph_not_task_generating: Error<
   "'%0' directive is not task-generating and cannot be used within '#pragma omp taskgraph'">;
+def warn_omp_taskgraph_body_device_construct : Warning<
+  "'#pragma omp %0' in the body of a replayed 'target data' construct is not "
+  "part of the taskgraph; it queues device work from a task the taskgraph "
+  "cannot see">,
+  InGroup<OpenMPTaskgraph>;
+def warn_omp_taskgraph_body_escaping_depend : Warning<
+  "dependence on %0 in the body of a replayed 'target data' construct does "
+  "not order the construct with tasks outside it">,
+  InGroup<OpenMPTaskgraph>;
+def note_omp_taskgraph_body : Note<
+  "body of this 'target data' construct is a task of its own">;
 def note_omp_nowait_clause_here : Note<
   "'nowait' clause is here">;
 def err_omp_single_decl_in_declare_simd_variant : Error<

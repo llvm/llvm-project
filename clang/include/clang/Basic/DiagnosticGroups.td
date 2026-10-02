@@ -1793,10 +1793,11 @@ def OpenMP51Ext : DiagGroup<"openmp-51-extensions">;
 def OpenMPExtensions : DiagGroup<"openmp-extensions">;
 def OpenMPTargetException : DiagGroup<"openmp-target-exception">;
 def OpenMPFuture : DiagGroup<"openmp-future">;
+def OpenMPTaskgraph : DiagGroup<"openmp-taskgraph">;
 def OpenMP : DiagGroup<"openmp", [
     SourceUsesOpenMP, OpenMPClauses, OpenMPLoopForm, OpenMPTarget,
     OpenMPMapping, OpenMP51Ext, OpenMPExtensions, OpenMPTargetException,
-    OpenMPFuture
+    OpenMPFuture, OpenMPTaskgraph
   ]>;
 
 // OpenACC warnings.
