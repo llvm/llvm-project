@@ -2001,35 +2001,30 @@ static llvm::Expected<llvm::BasicBlock *> allocatePrivateVars(
   llvm::Instruction *allocaTerminator = allocaBB->getTerminator();
   splitBB(allocaTerminator->getIterator(), true,
           allocaTerminator->getStableDebugLoc(), "omp.region.after_alloca");
-  // Update allocaIP: the split may have moved its iterator to the new block.
-  allocaIP = allocaBB->getTerminator()->getIterator();
+  // Update the allocaTerminator since the alloca block was split above.
+  allocaTerminator = allocaBB->getTerminator();
+  // The new terminator is an uncondition branch created by the splitBB above.
+  assert(allocaTerminator->getNumSuccessors() == 1 &&
+         "This is an unconditional branch created by splitBB");
+  allocaIP = allocaTerminator->getIterator();
 
   llvm::Instruction *allocatorTerminator = nullptr;
   llvm::BasicBlock *afterAllocatorAllocations = nullptr;
-  llvm::BasicBlock *allocatorBB = nullptr;
   if (allocatorIP) {
-    allocatorBB = allocatorIP->getNodeParent();
+    llvm::BasicBlock *allocatorBB = allocatorIP->getNodeParent();
     allocatorTerminator = allocatorBB->getTerminator();
     afterAllocatorAllocations = splitBB(
         allocatorTerminator->getIterator(), true,
         allocatorTerminator->getStableDebugLoc(), "omp.region.after_allocate");
-    *allocatorIP = allocatorBB->getTerminator()->getIterator();
+    allocatorTerminator = allocatorBB->getTerminator();
+    assert(allocatorTerminator->getNumSuccessors() == 1 &&
+           "This is an unconditional branch created by splitBB");
   }
 
   std::optional<llvm::IRBuilderBase::InsertPointGuard> guard;
   if (!allocatorIP)
     guard.emplace(builder);
-  // Update the allocaTerminator since the alloca block was split above.
-  allocaTerminator = allocaBB->getTerminator();
   builder.SetInsertPoint(allocaTerminator);
-  // The new terminator is an uncondition branch created by the splitBB above.
-  assert(allocaTerminator->getNumSuccessors() == 1 &&
-         "This is an unconditional branch created by splitBB");
-  if (allocatorIP) {
-    allocatorTerminator = allocatorBB->getTerminator();
-    assert(allocatorTerminator->getNumSuccessors() == 1 &&
-           "This is an unconditional branch created by splitBB");
-  }
 
   llvm::DataLayout dataLayout = builder.GetInsertBlock()->getDataLayout();
   llvm::BasicBlock *afterAllocas = allocaTerminator->getSuccessor(0);
