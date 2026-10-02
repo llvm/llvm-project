@@ -537,6 +537,7 @@ bool X86FastPreTileConfigImpl::configBasicBlock(MachineBasicBlock &MBB) {
                                      ST->getTileConfigAlignment(), false);
     LastTileCfg = addFrameReference(
         BuildMI(MBB, Before, DebugLoc(), TII->get(X86::PLDTILECFGV)), CfgSS);
+    LastTileCfg->setImplicitPhysRegDefsDead();
     LastShapeMI = nullptr;
     Change = true;
   };

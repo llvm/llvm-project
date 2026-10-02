@@ -1394,6 +1394,12 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
 
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case DeclSpec::TST_##Name:                                                   \
+    Result = Context.SingletonId;                                              \
+    break;
+#include "clang/Basic/HLSLPackedTypes.def"
+
   case DeclSpec::TST_error:
     Result = Context.IntTy;
     declarator.setInvalidType(true);
@@ -9180,8 +9186,15 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_HLSLRowMajor:
     case ParsedAttr::AT_HLSLColumnMajor:
       if (Attr *A =
-              state.getSema().HLSL().buildMatrixLayoutTypeAttr(type, attr))
-        type = state.getAttributedType(A, type, type);
+              state.getSema().HLSL().buildMatrixLayoutTypeAttr(type, attr)) {
+        MatrixType::LayoutKind Layout =
+            attr.getKind() == ParsedAttr::AT_HLSLRowMajor
+                ? MatrixType::LayoutKind::RowMajor
+                : MatrixType::LayoutKind::ColumnMajor;
+        QualType Equivalent =
+            state.getSema().Context.getMatrixTypeWithLayout(type, Layout);
+        type = state.getAttributedType(A, type, Equivalent);
+      }
       attr.setUsedAsTypeAttr();
       break;
     OBJC_POINTER_TYPE_ATTRS_CASELIST:
@@ -10018,6 +10031,40 @@ BuildTypeCoupledDecls(Expr *E,
   // Currently, 'counted_by' only allows direct DeclRefExpr to FieldDecl.
   auto *CountDecl = cast<DeclRefExpr>(E)->getDecl();
   Decls.push_back(TypeCoupledDeclRefInfo(CountDecl, /*IsDref*/ false));
+}
+
+bool Sema::ActOnLateParsedTypeAttrArgument(BoundsAttributedType *BATy,
+                                           FieldDecl *FD, Expr *Arg) {
+  assert(Arg);
+
+  // Only the counted_by family exists so far.
+  auto *CATy = cast<CountAttributedType>(BATy);
+
+  auto Reject = [&]() -> bool {
+    // Guarded so shared declarators (`IP __counted_by(n) a, b;`) only complete
+    // the node once.
+    if (!CATy->getCountExpr())
+      Context.completeCountAttributedType(CATy, Arg, {});
+    FD->setInvalidDecl();
+    return false;
+  };
+
+  if (Arg->containsErrors())
+    return Reject();
+
+  if (CheckCountedByAttrOnField(FD, Arg, CATy->isCountInBytes(),
+                                CATy->isOrNull()))
+    return Reject();
+
+  llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
+  BuildTypeCoupledDecls(Arg, Decls);
+  // Several declarators can share one node when the attribute was written in
+  // declaration-specifier position (`IP __counted_by(n) a, b;`), so this runs
+  // once per field
+  if (!CATy->getCountExpr())
+    Context.completeCountAttributedType(CATy, Arg, Decls);
+
+  return true;
 }
 
 QualType Sema::BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
