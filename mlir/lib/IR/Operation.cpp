@@ -632,9 +632,11 @@ NormalizedOpFoldResults Operation::fold() {
   return fold(getConstantOperands(this));
 }
 
-LogicalResult Operation::fold(ArrayRef<Attribute> operands,
-                              SmallVectorImpl<OpFoldResult> &results) {
-  NormalizedOpFoldResults foldResults = fold(operands);
+/// Convert `foldResults` to the strict contract of the legacy `fold`
+/// overloads.
+static LogicalResult
+convertToLegacyFoldResults(const NormalizedOpFoldResults &foldResults,
+                           SmallVectorImpl<OpFoldResult> &results) {
   if (foldResults.replacesAll()) {
     llvm::append_range(results, foldResults.getReplacements());
     return success();
@@ -642,8 +644,13 @@ LogicalResult Operation::fold(ArrayRef<Attribute> operands,
   return success(foldResults.modifiedInPlace());
 }
 
+LogicalResult Operation::fold(ArrayRef<Attribute> operands,
+                              SmallVectorImpl<OpFoldResult> &results) {
+  return convertToLegacyFoldResults(fold(operands), results);
+}
+
 LogicalResult Operation::fold(SmallVectorImpl<OpFoldResult> &results) {
-  return fold(getConstantOperands(this), results);
+  return convertToLegacyFoldResults(fold(), results);
 }
 
 /// Emit an error with the op name prefixed, like "'dim' op " which is

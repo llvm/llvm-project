@@ -554,7 +554,7 @@ auto printFn = [](Operation *op, OpAsmPrinter &printer) {
 
 // General folder implementation, see AbstractOperation::foldHook for more
 // information. The legacy form with a `SmallVectorImpl<OpFoldResult> &`
-// out-parameter is also accepted.
+// out-parameter is deprecated.
 auto foldHookFn = [](Operation * op, ArrayRef<Attribute> operands)
                                    -> OpFoldResults {
     ...

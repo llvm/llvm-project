@@ -15,6 +15,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpFoldResult.h"
 #include "mlir/IR/Operation.h"
+#include "llvm/Support/Compiler.h"
 #include "gtest/gtest.h"
 
 #include <functional>
@@ -384,6 +385,9 @@ TEST_F(OpFoldResultsTest, FromLegacy) {
 // Legacy fold APIs
 //===----------------------------------------------------------------------===//
 
+// These tests cover the deprecated legacy fold APIs.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+
 void OpFoldResultsTest::loadDynamicDialect() {
   context.getOrLoadDynamicDialect("test_fold", [&](DynamicDialect *dialect) {
     auto verify = [](Operation *) { return success(); };
@@ -594,8 +598,6 @@ TEST_F(OpFoldResultsTest, NullFoldHookFails) {
   EXPECT_TRUE(results.empty());
 }
 
-// This test covers the deprecated overload of OpBuilder::tryFold.
-LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
 TEST_F(OpFoldResultsTest, OpBuilderLegacyTryFold) {
   Block block;
   OpBuilder b(&context);
@@ -634,7 +636,6 @@ TEST_F(OpFoldResultsTest, OpBuilderLegacyTryFold) {
   EXPECT_EQ(results[0], constants[0]->getResult(0));
   EXPECT_EQ(results[1], producer);
 }
-LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 #ifdef GTEST_HAS_DEATH_TEST
 #ifndef NDEBUG
@@ -651,3 +652,5 @@ TEST_F(OpFoldResultsDeathTest, LegacyNullResult) {
 }
 #endif // NDEBUG
 #endif // GTEST_HAS_DEATH_TEST
+
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP

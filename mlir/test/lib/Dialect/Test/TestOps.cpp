@@ -6,6 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/Compiler.h"
+
+// The fold tests keep a legacy fold trait to cover the deprecated trait form.
+// Its warning fires inside OpDefinition.h, so the suppression must start
+// before the includes.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+
 #include "TestOps.h"
 #include "TestDialect.h"
 #include "TestFormatUtils.h"
@@ -15,3 +22,5 @@ using namespace mlir;
 using namespace test;
 
 #include "TestOps.cpp.inc"
+
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP

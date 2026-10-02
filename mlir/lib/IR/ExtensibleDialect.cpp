@@ -285,19 +285,6 @@ void DynamicAttr::print(AsmPrinter &printer) {
 // Dynamic operation
 //===----------------------------------------------------------------------===//
 
-/// Wrap a legacy fold hook into a fold hook that returns normalized results.
-static OperationName::FoldHookFn
-adaptLegacyFoldHookFn(DynamicOpDefinition::LegacyFoldHookFn &&foldHookFn) {
-  return [foldHookFn = std::move(foldHookFn)](
-             Operation *op,
-             ArrayRef<Attribute> operands) -> NormalizedOpFoldResults {
-    SmallVector<OpFoldResult> results;
-    LogicalResult status = foldHookFn(op, operands, results);
-    return NormalizedOpFoldResults(op,
-                                   OpFoldResults::fromLegacy(status, results));
-  };
-}
-
 DynamicOpDefinition::DynamicOpDefinition(
     StringRef name, ExtensibleDialect *dialect,
     OperationName::VerifyInvariantsFn &&verifyFn,
@@ -379,6 +366,21 @@ std::unique_ptr<DynamicOpDefinition> DynamicOpDefinition::get(
       std::move(populateDefaultAttrsFn)));
 }
 
+// The legacy fold hook API is deprecated.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+/// Wrap a legacy fold hook into a fold hook that returns normalized results.
+static OperationName::FoldHookFn
+adaptLegacyFoldHookFn(DynamicOpDefinition::LegacyFoldHookFn &&foldHookFn) {
+  return [foldHookFn = std::move(foldHookFn)](
+             Operation *op,
+             ArrayRef<Attribute> operands) -> NormalizedOpFoldResults {
+    SmallVector<OpFoldResult> results;
+    LogicalResult status = foldHookFn(op, operands, results);
+    return NormalizedOpFoldResults(op,
+                                   OpFoldResults::fromLegacy(status, results));
+  };
+}
+
 std::unique_ptr<DynamicOpDefinition> DynamicOpDefinition::get(
     StringRef name, ExtensibleDialect *dialect,
     OperationName::VerifyInvariantsFn &&verifyFn,
@@ -398,6 +400,7 @@ std::unique_ptr<DynamicOpDefinition> DynamicOpDefinition::get(
 void DynamicOpDefinition::setFoldHookFn(LegacyFoldHookFn &&foldHook) {
   foldHookFn = adaptLegacyFoldHookFn(std::move(foldHook));
 }
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 void DynamicOpDefinition::setFoldHookFn(std::nullptr_t) { foldHookFn = noFold; }
 

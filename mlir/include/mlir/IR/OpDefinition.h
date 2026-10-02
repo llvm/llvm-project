@@ -1591,6 +1591,9 @@ foldTrait(Operation *op, ArrayRef<Attribute> operands) {
 /// not implement the `OpFoldResults` form. It keeps the strict legacy
 /// contract.
 template <typename Trait>
+[[deprecated("implement `static OpFoldResults foldTrait(Operation *, "
+             "ArrayRef<Attribute>)` in the trait instead of the form with a "
+             "`SmallVectorImpl<OpFoldResult> &` parameter")]]
 std::enable_if_t<detect_has_fold_trait<Trait>::value, OpFoldResults>
 foldTrait(Operation *op, ArrayRef<Attribute> operands) {
   SmallVector<OpFoldResult, 2> results;

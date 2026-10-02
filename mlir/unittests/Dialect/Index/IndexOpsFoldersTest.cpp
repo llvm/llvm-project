@@ -39,15 +39,14 @@ void IndexFolderTest::foldOp(IntegerAttr &value, Type type,
   OperationState state(UnknownLoc::get(&ctx), OpT::getOperationName());
   state.addTypes(type);
   OwningOpRef<OpT> op = cast<OpT>(b.create(state));
-  SmallVector<OpFoldResult> results;
-  LogicalResult result = op->getOperation()->fold(operands, results);
+  NormalizedOpFoldResults result = op->getOperation()->fold(operands);
   // Propagate the failure to the test.
   if (failed(result)) {
     value = nullptr;
     return;
   }
-  ASSERT_EQ(results.size(), 1u);
-  value = dyn_cast_or_null<IntegerAttr>(dyn_cast<Attribute>(results.front()));
+  ASSERT_TRUE(result.replacesAll());
+  value = dyn_cast_or_null<IntegerAttr>(dyn_cast<Attribute>(result[0]));
   ASSERT_TRUE(value);
 }
 

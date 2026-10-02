@@ -314,7 +314,8 @@ representation of a specific `Type` is consistent.
 
 When the `fold` hook on an operation is not successful, the dialect can
 provide a fallback by implementing the `DialectFoldInterface` and overriding
-the fold hook.
+its `OpFoldResults fold(Operation *, ArrayRef<Attribute>) const` method. The
+method with a `SmallVectorImpl<OpFoldResult> &` parameter is deprecated.
 
 #### Generating Constants from Attributes
 
