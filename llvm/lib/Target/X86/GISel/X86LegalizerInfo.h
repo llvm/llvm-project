@@ -37,6 +37,14 @@ public:
                          MachineInstr &MI) const override;
 
 private:
+  /// Whether an x87 result that is \p SizeInBits wide has to be rounded back to
+  /// its own type through memory.
+  bool needsX87RoundToType(unsigned SizeInBits) const;
+
+  /// Whether a scalar FP value that is \p SizeInBits wide is computed on the
+  /// x87 stack.
+  bool isScalarFPTypeOnX87Stack(unsigned SizeInBits) const;
+
   bool legalizeBuildVector(MachineInstr &MI, MachineRegisterInfo &MRI,
                            LegalizerHelper &Helper) const;
 

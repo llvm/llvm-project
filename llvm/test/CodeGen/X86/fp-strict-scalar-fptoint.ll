@@ -683,10 +683,8 @@ define i64 @fptoui_f32toi64(float %x) #0 {
 ; X87-NEXT:    fcom %st(1)
 ; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
-; X87-NEXT:    xorl %edx, %edx
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
-; X87-NEXT:    setbe %al
 ; X87-NEXT:    fldz
 ; X87-NEXT:    jbe .LBB9_2
 ; X87-NEXT:  # %bb.1:
@@ -695,15 +693,19 @@ define i64 @fptoui_f32toi64(float %x) #0 {
 ; X87-NEXT:  .LBB9_2:
 ; X87-NEXT:    fstp %st(0)
 ; X87-NEXT:    fsubrp %st, %st(1)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X87-NEXT:    setbe %al
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    wait
+; X87-NEXT:    fnstcw (%esp)
+; X87-NEXT:    movzwl (%esp), %ecx
 ; X87-NEXT:    orl $3072, %ecx # imm = 0xC00
 ; X87-NEXT:    movw %cx, {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X87-NEXT:    fistpll {{[0-9]+}}(%esp)
-; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X87-NEXT:    movb %al, %dl
+; X87-NEXT:    fldcw (%esp)
+; X87-NEXT:    movzbl %al, %edx
 ; X87-NEXT:    shll $31, %edx
 ; X87-NEXT:    xorl {{[0-9]+}}(%esp), %edx
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1317,16 +1319,14 @@ define i64 @fptoui_f64toi64(double %x) #0 {
 ; X87-NEXT:    movl %esp, %ebp
 ; X87-NEXT:    .cfi_def_cfa_register %ebp
 ; X87-NEXT:    andl $-8, %esp
-; X87-NEXT:    subl $16, %esp
+; X87-NEXT:    subl $24, %esp
 ; X87-NEXT:    fldl 8(%ebp)
 ; X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X87-NEXT:    fcom %st(1)
 ; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
-; X87-NEXT:    xorl %edx, %edx
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
-; X87-NEXT:    setbe %al
 ; X87-NEXT:    fldz
 ; X87-NEXT:    jbe .LBB18_2
 ; X87-NEXT:  # %bb.1:
@@ -1335,6 +1335,10 @@ define i64 @fptoui_f64toi64(double %x) #0 {
 ; X87-NEXT:  .LBB18_2:
 ; X87-NEXT:    fstp %st(0)
 ; X87-NEXT:    fsubrp %st, %st(1)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    wait
+; X87-NEXT:    setbe %al
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
 ; X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
@@ -1343,7 +1347,7 @@ define i64 @fptoui_f64toi64(double %x) #0 {
 ; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X87-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X87-NEXT:    movb %al, %dl
+; X87-NEXT:    movzbl %al, %edx
 ; X87-NEXT:    shll $31, %edx
 ; X87-NEXT:    xorl {{[0-9]+}}(%esp), %edx
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax

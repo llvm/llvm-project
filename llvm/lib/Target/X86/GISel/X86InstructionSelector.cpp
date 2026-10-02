@@ -116,6 +116,7 @@ private:
                           const TargetRegisterClass *DstRC,
                           const Register SrcReg,
                           const TargetRegisterClass *SrcRC) const;
+  bool selectX87FPExt(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool materializeFP(MachineInstr &I, MachineRegisterInfo &MRI,
                      MachineFunction &MF) const;
   bool selectImplicitDefOrPHI(MachineInstr &I, MachineRegisterInfo &MRI) const;
@@ -460,6 +461,8 @@ bool X86InstructionSelector::select(MachineInstr &I) {
     return selectZext(I, MRI, MF);
   case TargetOpcode::G_ANYEXT:
     return selectAnyext(I, MRI, MF);
+  case TargetOpcode::G_FPEXT:
+    return selectX87FPExt(I, MRI);
   case TargetOpcode::G_ICMP:
     return selectCmp(I, MRI, MF);
   case TargetOpcode::G_FCMP:
@@ -857,6 +860,25 @@ bool X86InstructionSelector::selectTurnIntoCOPY(
   }
   I.setDesc(TII.get(X86::COPY));
   return true;
+}
+
+bool X86InstructionSelector::selectX87FPExt(MachineInstr &I,
+                                            MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_FPEXT && "unexpected instruction");
+
+  const Register DstReg = I.getOperand(0).getReg();
+  const Register SrcReg = I.getOperand(1).getReg();
+  const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
+  const RegisterBank &SrcRB = *RBI.getRegBank(SrcReg, MRI, TRI);
+
+  // Only the x87 stack, where the register is 80 bits wide whatever type it
+  // holds and widening is therefore a plain copy.
+  if (DstRB.getID() != X86::PSRRegBankID || SrcRB.getID() != X86::PSRRegBankID)
+    return false;
+
+  return selectTurnIntoCOPY(I, MRI, DstReg,
+                            getRegClass(MRI.getType(DstReg), DstRB), SrcReg,
+                            getRegClass(MRI.getType(SrcReg), SrcRB));
 }
 
 bool X86InstructionSelector::selectTruncOrPtrToInt(MachineInstr &I,

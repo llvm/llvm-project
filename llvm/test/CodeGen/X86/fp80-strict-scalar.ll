@@ -183,16 +183,12 @@ define float @fptrunc_fp80_to_f32(x86_fp80 %a) nounwind strictfp {
 define double @fptrunc_fp80_to_f64(x86_fp80 %a) nounwind strictfp {
 ; X86-LABEL: fptrunc_fp80_to_f64:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    fldt 8(%ebp)
+; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstpl (%esp)
 ; X86-NEXT:    fldl (%esp)
 ; X86-NEXT:    wait
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fptrunc_fp80_to_f64:

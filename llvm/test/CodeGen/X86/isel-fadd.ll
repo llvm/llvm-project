@@ -15,21 +15,40 @@
 define float @test_fadd_f32(float %arg1, float %arg2) {
 ; SDAG-X86-LABEL: test_fadd_f32:
 ; SDAG-X86:       # %bb.0:
+; SDAG-X86-NEXT:    pushl %eax
+; SDAG-X86-NEXT:    .cfi_def_cfa_offset 8
 ; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fadds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fstps (%esp)
+; SDAG-X86-NEXT:    flds (%esp)
+; SDAG-X86-NEXT:    popl %eax
+; SDAG-X86-NEXT:    .cfi_def_cfa_offset 4
 ; SDAG-X86-NEXT:    retl
 ;
 ; FASTISEL-X86-LABEL: test_fadd_f32:
 ; FASTISEL-X86:       # %bb.0:
+; FASTISEL-X86-NEXT:    pushl %eax
+; FASTISEL-X86-NEXT:    .cfi_def_cfa_offset 8
 ; FASTISEL-X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; FASTISEL-X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; FASTISEL-X86-NEXT:    faddp %st, %st(1)
+; FASTISEL-X86-NEXT:    fstps (%esp)
+; FASTISEL-X86-NEXT:    flds (%esp)
+; FASTISEL-X86-NEXT:    popl %eax
+; FASTISEL-X86-NEXT:    .cfi_def_cfa_offset 4
 ; FASTISEL-X86-NEXT:    retl
 ;
 ; GISEL-X86-LABEL: test_fadd_f32:
 ; GISEL-X86:       # %bb.0:
+; GISEL-X86-NEXT:    pushl %eax
+; GISEL-X86-NEXT:    .cfi_def_cfa_offset 8
 ; GISEL-X86-NEXT:    flds {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fadds {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    faddp %st, %st(1)
+; GISEL-X86-NEXT:    fstps (%esp)
+; GISEL-X86-NEXT:    flds (%esp)
+; GISEL-X86-NEXT:    popl %eax
+; GISEL-X86-NEXT:    .cfi_def_cfa_offset 4
 ; GISEL-X86-NEXT:    retl
 ;
 ; SSE-LABEL: test_fadd_f32:
@@ -48,21 +67,39 @@ define float @test_fadd_f32(float %arg1, float %arg2) {
 define double @test_fadd_f64(double %arg1, double %arg2) {
 ; SDAG-X86-LABEL: test_fadd_f64:
 ; SDAG-X86:       # %bb.0:
+; SDAG-X86-NEXT:    subl $8, %esp
+; SDAG-X86-NEXT:    .cfi_def_cfa_offset 12
 ; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    faddl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fstpl (%esp)
+; SDAG-X86-NEXT:    fldl (%esp)
+; SDAG-X86-NEXT:    addl $8, %esp
+; SDAG-X86-NEXT:    .cfi_def_cfa_offset 4
 ; SDAG-X86-NEXT:    retl
 ;
 ; FASTISEL-X86-LABEL: test_fadd_f64:
 ; FASTISEL-X86:       # %bb.0:
+; FASTISEL-X86-NEXT:    subl $8, %esp
+; FASTISEL-X86-NEXT:    .cfi_def_cfa_offset 12
 ; FASTISEL-X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; FASTISEL-X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; FASTISEL-X86-NEXT:    faddp %st, %st(1)
+; FASTISEL-X86-NEXT:    fstpl (%esp)
+; FASTISEL-X86-NEXT:    fldl (%esp)
+; FASTISEL-X86-NEXT:    addl $8, %esp
+; FASTISEL-X86-NEXT:    .cfi_def_cfa_offset 4
 ; FASTISEL-X86-NEXT:    retl
 ;
 ; GISEL-X86-LABEL: test_fadd_f64:
 ; GISEL-X86:       # %bb.0:
+; GISEL-X86-NEXT:    subl $8, %esp
+; GISEL-X86-NEXT:    .cfi_def_cfa_offset 12
 ; GISEL-X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    faddl {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    fstpl (%esp)
+; GISEL-X86-NEXT:    fldl (%esp)
+; GISEL-X86-NEXT:    addl $8, %esp
+; GISEL-X86-NEXT:    .cfi_def_cfa_offset 4
 ; GISEL-X86-NEXT:    retl
 ;
 ; SSE-LABEL: test_fadd_f64:
