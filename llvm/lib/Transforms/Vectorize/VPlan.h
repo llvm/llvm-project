@@ -1210,8 +1210,9 @@ public:
   VPIRMetadata(Instruction &I) {
     getMetadataToPropagate(&I, Metadata);
     // Retain the branch weights of terminators. They are used to compute the
-    // frequencies with which the blocks of the original loop execute.
-    if (I.isTerminator())
+    // frequencies with which the blocks of the original loop execute. Also
+    // retain !prof on selects.
+    if (I.isTerminator() || isa<SelectInst>(&I))
       if (MDNode *BW = I.getMetadata(LLVMContext::MD_prof))
         Metadata.emplace_back(LLVMContext::MD_prof, BW);
   }
@@ -1235,6 +1236,11 @@ public:
       It->second = Node;
     else
       Metadata.emplace_back(Kind, Node);
+  }
+
+  /// Remove the metadata of kind \p Kind, if present.
+  void eraseMetadata(unsigned Kind) {
+    erase_if(Metadata, [Kind](const auto &P) { return P.first == Kind; });
   }
 
   /// Intersect this VPIRMetadata object with \p MD, keeping only metadata
@@ -1615,7 +1621,8 @@ public:
   const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
 
   /// Returns the incoming value for \p VPBB. \p VPBB must be an incoming block.
-  VPValue *getIncomingValueForBlock(const VPBasicBlock *VPBB) const;
+  LLVM_ABI_FOR_TEST VPValue *
+  getIncomingValueForBlock(const VPBasicBlock *VPBB) const;
 
   /// Sets the incoming value for \p VPBB to \p V. \p VPBB must be an incoming
   /// block.
