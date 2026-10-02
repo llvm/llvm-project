@@ -5563,7 +5563,12 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
       return InstructionCost::getInvalid();
 
     // Operation will be split into expand of masked.load
-    MemOpCost *= 2;
+    // Something like:
+    // cntp     x8, p0, p0.s
+    // whilelo  p1.s, xzr, x8
+    // ld1w     { z1.s }, p1/z, [x0]
+    // expand   z1.s, p0, z1.s
+    MemOpCost *= 4;
   }
 
   if (MICA.getID() == Intrinsic::masked_compressstore) {
@@ -5571,12 +5576,11 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
       return InstructionCost::getInvalid();
 
     // A compress store lowers to something like:
-    //  ptrue    p1.s
     //  compact  z0.s, p0, z0.s
     //  cntp     x8, p1, p0.s
     //  whilelo  p0.s, xzr, x8
     //  st1w     { z0.s }, p0, [x0]
-    MemOpCost *= 2;
+    MemOpCost *= 4;
   }
 
   // If we need to split the memory operation, we will also need to split the
