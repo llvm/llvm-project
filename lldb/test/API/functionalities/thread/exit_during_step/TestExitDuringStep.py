@@ -11,6 +11,11 @@ from lldbsuite.test import lldbutil
 
 @requireThreadSupport
 class ExitDuringStepTestCase(TestBase):
+    # On Windows on Arm we cannot backtrace through a function with a signed return address.
+    # This causes us to miscount the number of application threads in this test
+    # because ntdll is using return address signing. https://github.com/llvm/llvm-project/issues/228374
+
+    @skipIf(oslist=["windows"], archs=["aarch64"])
     def test(self):
         """Test thread exit during step handling."""
         self.build()
@@ -18,6 +23,7 @@ class ExitDuringStepTestCase(TestBase):
             "thread step-inst -m all-threads", "stop reason = instruction step", True
         )
 
+    @skipIf(oslist=["windows"], archs=["aarch64"])
     def test_step_over(self):
         """Test thread exit during step-over handling."""
         self.build()
@@ -25,6 +31,7 @@ class ExitDuringStepTestCase(TestBase):
             "thread step-over -m all-threads", "stop reason = step over", False
         )
 
+    @skipIf(oslist=["windows"], archs=["aarch64"])
     def test_step_in(self):
         """Test thread exit during step-in handling."""
         self.build()
