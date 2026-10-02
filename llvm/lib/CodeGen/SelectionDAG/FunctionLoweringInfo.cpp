@@ -317,7 +317,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
         const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
         for (unsigned i = 0; i != NumRegisters; ++i)
           BuildMI(MBB, DL, TII->get(TargetOpcode::PHI), PHIReg + i);
-        PHIReg.changeVirtRegIndex(NumRegisters);
+        PHIReg.incrementVirtRegIndex(NumRegisters);
       }
     }
   }
@@ -587,7 +587,7 @@ FunctionLoweringInfo::getValueFromVirtualReg(Register Vreg) {
       for (EVT VT : ValueVTs) {
         unsigned NumRegisters = TLI->getNumRegisters(Fn->getContext(), VT);
         for (unsigned i = 0, e = NumRegisters; i != e; ++i) {
-          Reg.changeVirtRegIndex(1u);
+          Reg.incrementVirtRegIndex(1u);
           VirtReg2Value[Reg] = P.first;
         }
       }

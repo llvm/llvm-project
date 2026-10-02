@@ -90,16 +90,16 @@ public:
   }
 
   /// Changes the virtual register number by offset
-  void changeVirtRegIndex(unsigned offset) {
+  void incrementVirtRegIndex(unsigned offset) {
     assert(isVirtual() && "Not a virtual register");
     assert(Reg + offset >= Reg && "Register number overflow");
     Reg += offset;
   }
 
-  /// Make calling changeVirtRegIndex with anything implicitly converting to
+  /// Make calling incrementVirtRegIndex with anything implicitly converting to
   /// unsigned a compiler error to prevent bugs due to signed/unsigned mismatch
   /// and other overflow bugs
-  template <typename T> void changeVirtRegIndex(T offset) = delete;
+  template <typename T> void incrementVirtRegIndex(T offset) = delete;
 
   /// Compute the frame index from a register value representing a stack slot.
   int stackSlotIndex() const {
