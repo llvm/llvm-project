@@ -17,43 +17,44 @@ define void @f(i32 %x, i32 %a) nounwind {
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    ori $a2, $zero, 5
-; LA64-NEXT:    bltu $a2, $a0, .LBB0_8
+; LA64-NEXT:    bltu $a2, $a0, .LBB0_9
 ; LA64-NEXT:  # %bb.1: # %entry
 ; LA64-NEXT:    addi.d $sp, $sp, -16
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    slli.d $a0, $a0, 3
 ; LA64-NEXT:    pcalau12i $a2, %pc_hi20(.LJTI0_0)
 ; LA64-NEXT:    addi.d $a2, $a2, %pc_lo12(.LJTI0_0)
-; LA64-NEXT:    ldx.d $a2, $a2, $a0
-; LA64-NEXT:    ori $a0, $zero, 1234
-; LA64-NEXT:    jr $a2
+; LA64-NEXT:    ldx.d $a0, $a2, $a0
+; LA64-NEXT:    jr $a0
 ; LA64-NEXT:  .LBB0_2: # %c0
 ; LA64-NEXT:    ori $a0, $zero, 10
-; LA64-NEXT:    b .LBB0_7
+; LA64-NEXT:    b .LBB0_8
 ; LA64-NEXT:  .LBB0_3: # %c4
 ; LA64-NEXT:    ori $a0, $zero, 14
-; LA64-NEXT:    b .LBB0_7
-; LA64-NEXT:  .LBB0_4: # %c1
-; LA64-NEXT:    ori $a0, $zero, 11
-; LA64-NEXT:    b .LBB0_7
-; LA64-NEXT:  .LBB0_5: # %c2
+; LA64-NEXT:    b .LBB0_8
+; LA64-NEXT:  .LBB0_4:
+; LA64-NEXT:    ori $a1, $zero, 1234
+; LA64-NEXT:  .LBB0_5: # %merge
 ; LA64-NEXT:    move $a0, $a1
-; LA64-NEXT:    b .LBB0_7
-; LA64-NEXT:  .LBB0_6: # %c5
+; LA64-NEXT:    b .LBB0_8
+; LA64-NEXT:  .LBB0_6: # %c1
+; LA64-NEXT:    ori $a0, $zero, 11
+; LA64-NEXT:    b .LBB0_8
+; LA64-NEXT:  .LBB0_7: # %c5
 ; LA64-NEXT:    ori $a0, $zero, 15
-; LA64-NEXT:  .LBB0_7:
+; LA64-NEXT:  .LBB0_8:
 ; LA64-NEXT:    pcaddu18i $ra, %call36(g)
 ; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
-; LA64-NEXT:  .LBB0_8: # %exit
+; LA64-NEXT:  .LBB0_9: # %exit
 ; LA64-NEXT:    ret
 ;
 ; LA64-PIC-LABEL: f:
 ; LA64-PIC:       # %bb.0: # %entry
 ; LA64-PIC-NEXT:    addi.w $a0, $a0, 0
 ; LA64-PIC-NEXT:    ori $a2, $zero, 5
-; LA64-PIC-NEXT:    bltu $a2, $a0, .LBB0_8
+; LA64-PIC-NEXT:    bltu $a2, $a0, .LBB0_9
 ; LA64-PIC-NEXT:  # %bb.1: # %entry
 ; LA64-PIC-NEXT:    addi.d $sp, $sp, -16
 ; LA64-PIC-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
@@ -61,35 +62,36 @@ define void @f(i32 %x, i32 %a) nounwind {
 ; LA64-PIC-NEXT:    pcalau12i $a2, %pc_hi20(.LJTI0_0)
 ; LA64-PIC-NEXT:    addi.d $a2, $a2, %pc_lo12(.LJTI0_0)
 ; LA64-PIC-NEXT:    ldx.w $a0, $a2, $a0
-; LA64-PIC-NEXT:    add.d $a2, $a2, $a0
-; LA64-PIC-NEXT:    ori $a0, $zero, 1234
-; LA64-PIC-NEXT:    jr $a2
+; LA64-PIC-NEXT:    add.d $a0, $a2, $a0
+; LA64-PIC-NEXT:    jr $a0
 ; LA64-PIC-NEXT:  .LBB0_2: # %c0
 ; LA64-PIC-NEXT:    ori $a0, $zero, 10
-; LA64-PIC-NEXT:    b .LBB0_7
+; LA64-PIC-NEXT:    b .LBB0_8
 ; LA64-PIC-NEXT:  .LBB0_3: # %c4
 ; LA64-PIC-NEXT:    ori $a0, $zero, 14
-; LA64-PIC-NEXT:    b .LBB0_7
-; LA64-PIC-NEXT:  .LBB0_4: # %c1
-; LA64-PIC-NEXT:    ori $a0, $zero, 11
-; LA64-PIC-NEXT:    b .LBB0_7
-; LA64-PIC-NEXT:  .LBB0_5: # %c2
+; LA64-PIC-NEXT:    b .LBB0_8
+; LA64-PIC-NEXT:  .LBB0_4:
+; LA64-PIC-NEXT:    ori $a1, $zero, 1234
+; LA64-PIC-NEXT:  .LBB0_5: # %merge
 ; LA64-PIC-NEXT:    move $a0, $a1
-; LA64-PIC-NEXT:    b .LBB0_7
-; LA64-PIC-NEXT:  .LBB0_6: # %c5
+; LA64-PIC-NEXT:    b .LBB0_8
+; LA64-PIC-NEXT:  .LBB0_6: # %c1
+; LA64-PIC-NEXT:    ori $a0, $zero, 11
+; LA64-PIC-NEXT:    b .LBB0_8
+; LA64-PIC-NEXT:  .LBB0_7: # %c5
 ; LA64-PIC-NEXT:    ori $a0, $zero, 15
-; LA64-PIC-NEXT:  .LBB0_7:
+; LA64-PIC-NEXT:  .LBB0_8:
 ; LA64-PIC-NEXT:    pcaddu18i $ra, %call36(g)
 ; LA64-PIC-NEXT:    jirl $ra, $ra, 0
 ; LA64-PIC-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-PIC-NEXT:    addi.d $sp, $sp, 16
-; LA64-PIC-NEXT:  .LBB0_8: # %exit
+; LA64-PIC-NEXT:  .LBB0_9: # %exit
 ; LA64-PIC-NEXT:    ret
 ;
 ; LA32R-LABEL: f:
 ; LA32R:       # %bb.0: # %entry
 ; LA32R-NEXT:    ori $a2, $zero, 5
-; LA32R-NEXT:    bltu $a2, $a0, .LBB0_8
+; LA32R-NEXT:    bltu $a2, $a0, .LBB0_9
 ; LA32R-NEXT:  # %bb.1: # %entry
 ; LA32R-NEXT:    addi.w $sp, $sp, -16
 ; LA32R-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
@@ -98,34 +100,35 @@ define void @f(i32 %x, i32 %a) nounwind {
 ; LA32R-NEXT:    pcaddu12i $a2, %pcadd_hi20(.LJTI0_0)
 ; LA32R-NEXT:    addi.w $a2, $a2, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32R-NEXT:    add.w $a0, $a2, $a0
-; LA32R-NEXT:    ld.w $a2, $a0, 0
-; LA32R-NEXT:    ori $a0, $zero, 1234
-; LA32R-NEXT:    jr $a2
+; LA32R-NEXT:    ld.w $a0, $a0, 0
+; LA32R-NEXT:    jr $a0
 ; LA32R-NEXT:  .LBB0_2: # %c0
 ; LA32R-NEXT:    ori $a0, $zero, 10
-; LA32R-NEXT:    b .LBB0_7
+; LA32R-NEXT:    b .LBB0_8
 ; LA32R-NEXT:  .LBB0_3: # %c4
 ; LA32R-NEXT:    ori $a0, $zero, 14
-; LA32R-NEXT:    b .LBB0_7
-; LA32R-NEXT:  .LBB0_4: # %c1
-; LA32R-NEXT:    ori $a0, $zero, 11
-; LA32R-NEXT:    b .LBB0_7
-; LA32R-NEXT:  .LBB0_5: # %c2
+; LA32R-NEXT:    b .LBB0_8
+; LA32R-NEXT:  .LBB0_4:
+; LA32R-NEXT:    ori $a1, $zero, 1234
+; LA32R-NEXT:  .LBB0_5: # %merge
 ; LA32R-NEXT:    move $a0, $a1
-; LA32R-NEXT:    b .LBB0_7
-; LA32R-NEXT:  .LBB0_6: # %c5
+; LA32R-NEXT:    b .LBB0_8
+; LA32R-NEXT:  .LBB0_6: # %c1
+; LA32R-NEXT:    ori $a0, $zero, 11
+; LA32R-NEXT:    b .LBB0_8
+; LA32R-NEXT:  .LBB0_7: # %c5
 ; LA32R-NEXT:    ori $a0, $zero, 15
-; LA32R-NEXT:  .LBB0_7:
+; LA32R-NEXT:  .LBB0_8:
 ; LA32R-NEXT:    bl g
 ; LA32R-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32R-NEXT:    addi.w $sp, $sp, 16
-; LA32R-NEXT:  .LBB0_8: # %exit
+; LA32R-NEXT:  .LBB0_9: # %exit
 ; LA32R-NEXT:    ret
 ;
 ; LA32R-PIC-LABEL: f:
 ; LA32R-PIC:       # %bb.0: # %entry
 ; LA32R-PIC-NEXT:    ori $a2, $zero, 5
-; LA32R-PIC-NEXT:    bltu $a2, $a0, .LBB0_8
+; LA32R-PIC-NEXT:    bltu $a2, $a0, .LBB0_9
 ; LA32R-PIC-NEXT:  # %bb.1: # %entry
 ; LA32R-PIC-NEXT:    addi.w $sp, $sp, -16
 ; LA32R-PIC-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
@@ -135,68 +138,70 @@ define void @f(i32 %x, i32 %a) nounwind {
 ; LA32R-PIC-NEXT:    addi.w $a2, $a2, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32R-PIC-NEXT:    add.w $a0, $a2, $a0
 ; LA32R-PIC-NEXT:    ld.w $a0, $a0, 0
-; LA32R-PIC-NEXT:    add.w $a2, $a2, $a0
-; LA32R-PIC-NEXT:    ori $a0, $zero, 1234
-; LA32R-PIC-NEXT:    jr $a2
+; LA32R-PIC-NEXT:    add.w $a0, $a2, $a0
+; LA32R-PIC-NEXT:    jr $a0
 ; LA32R-PIC-NEXT:  .LBB0_2: # %c0
 ; LA32R-PIC-NEXT:    ori $a0, $zero, 10
-; LA32R-PIC-NEXT:    b .LBB0_7
+; LA32R-PIC-NEXT:    b .LBB0_8
 ; LA32R-PIC-NEXT:  .LBB0_3: # %c4
 ; LA32R-PIC-NEXT:    ori $a0, $zero, 14
-; LA32R-PIC-NEXT:    b .LBB0_7
-; LA32R-PIC-NEXT:  .LBB0_4: # %c1
-; LA32R-PIC-NEXT:    ori $a0, $zero, 11
-; LA32R-PIC-NEXT:    b .LBB0_7
-; LA32R-PIC-NEXT:  .LBB0_5: # %c2
+; LA32R-PIC-NEXT:    b .LBB0_8
+; LA32R-PIC-NEXT:  .LBB0_4:
+; LA32R-PIC-NEXT:    ori $a1, $zero, 1234
+; LA32R-PIC-NEXT:  .LBB0_5: # %merge
 ; LA32R-PIC-NEXT:    move $a0, $a1
-; LA32R-PIC-NEXT:    b .LBB0_7
-; LA32R-PIC-NEXT:  .LBB0_6: # %c5
+; LA32R-PIC-NEXT:    b .LBB0_8
+; LA32R-PIC-NEXT:  .LBB0_6: # %c1
+; LA32R-PIC-NEXT:    ori $a0, $zero, 11
+; LA32R-PIC-NEXT:    b .LBB0_8
+; LA32R-PIC-NEXT:  .LBB0_7: # %c5
 ; LA32R-PIC-NEXT:    ori $a0, $zero, 15
-; LA32R-PIC-NEXT:  .LBB0_7:
+; LA32R-PIC-NEXT:  .LBB0_8:
 ; LA32R-PIC-NEXT:    bl g
 ; LA32R-PIC-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32R-PIC-NEXT:    addi.w $sp, $sp, 16
-; LA32R-PIC-NEXT:  .LBB0_8: # %exit
+; LA32R-PIC-NEXT:  .LBB0_9: # %exit
 ; LA32R-PIC-NEXT:    ret
 ;
 ; LA32S-LABEL: f:
 ; LA32S:       # %bb.0: # %entry
 ; LA32S-NEXT:    ori $a2, $zero, 5
-; LA32S-NEXT:    bltu $a2, $a0, .LBB0_8
+; LA32S-NEXT:    bltu $a2, $a0, .LBB0_9
 ; LA32S-NEXT:  # %bb.1: # %entry
 ; LA32S-NEXT:    addi.w $sp, $sp, -16
 ; LA32S-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32S-NEXT:    pcalau12i $a2, %pc_hi20(.LJTI0_0)
 ; LA32S-NEXT:    addi.w $a2, $a2, %pc_lo12(.LJTI0_0)
 ; LA32S-NEXT:    alsl.w $a0, $a0, $a2, 2
-; LA32S-NEXT:    ld.w $a2, $a0, 0
-; LA32S-NEXT:    ori $a0, $zero, 1234
-; LA32S-NEXT:    jr $a2
+; LA32S-NEXT:    ld.w $a0, $a0, 0
+; LA32S-NEXT:    jr $a0
 ; LA32S-NEXT:  .LBB0_2: # %c0
 ; LA32S-NEXT:    ori $a0, $zero, 10
-; LA32S-NEXT:    b .LBB0_7
+; LA32S-NEXT:    b .LBB0_8
 ; LA32S-NEXT:  .LBB0_3: # %c4
 ; LA32S-NEXT:    ori $a0, $zero, 14
-; LA32S-NEXT:    b .LBB0_7
-; LA32S-NEXT:  .LBB0_4: # %c1
-; LA32S-NEXT:    ori $a0, $zero, 11
-; LA32S-NEXT:    b .LBB0_7
-; LA32S-NEXT:  .LBB0_5: # %c2
+; LA32S-NEXT:    b .LBB0_8
+; LA32S-NEXT:  .LBB0_4:
+; LA32S-NEXT:    ori $a1, $zero, 1234
+; LA32S-NEXT:  .LBB0_5: # %merge
 ; LA32S-NEXT:    move $a0, $a1
-; LA32S-NEXT:    b .LBB0_7
-; LA32S-NEXT:  .LBB0_6: # %c5
+; LA32S-NEXT:    b .LBB0_8
+; LA32S-NEXT:  .LBB0_6: # %c1
+; LA32S-NEXT:    ori $a0, $zero, 11
+; LA32S-NEXT:    b .LBB0_8
+; LA32S-NEXT:  .LBB0_7: # %c5
 ; LA32S-NEXT:    ori $a0, $zero, 15
-; LA32S-NEXT:  .LBB0_7:
+; LA32S-NEXT:  .LBB0_8:
 ; LA32S-NEXT:    bl g
 ; LA32S-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32S-NEXT:    addi.w $sp, $sp, 16
-; LA32S-NEXT:  .LBB0_8: # %exit
+; LA32S-NEXT:  .LBB0_9: # %exit
 ; LA32S-NEXT:    ret
 ;
 ; LA32S-PIC-LABEL: f:
 ; LA32S-PIC:       # %bb.0: # %entry
 ; LA32S-PIC-NEXT:    ori $a2, $zero, 5
-; LA32S-PIC-NEXT:    bltu $a2, $a0, .LBB0_8
+; LA32S-PIC-NEXT:    bltu $a2, $a0, .LBB0_9
 ; LA32S-PIC-NEXT:  # %bb.1: # %entry
 ; LA32S-PIC-NEXT:    addi.w $sp, $sp, -16
 ; LA32S-PIC-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
@@ -204,28 +209,29 @@ define void @f(i32 %x, i32 %a) nounwind {
 ; LA32S-PIC-NEXT:    addi.w $a2, $a2, %pc_lo12(.LJTI0_0)
 ; LA32S-PIC-NEXT:    alsl.w $a0, $a0, $a2, 2
 ; LA32S-PIC-NEXT:    ld.w $a0, $a0, 0
-; LA32S-PIC-NEXT:    add.w $a2, $a2, $a0
-; LA32S-PIC-NEXT:    ori $a0, $zero, 1234
-; LA32S-PIC-NEXT:    jr $a2
+; LA32S-PIC-NEXT:    add.w $a0, $a2, $a0
+; LA32S-PIC-NEXT:    jr $a0
 ; LA32S-PIC-NEXT:  .LBB0_2: # %c0
 ; LA32S-PIC-NEXT:    ori $a0, $zero, 10
-; LA32S-PIC-NEXT:    b .LBB0_7
+; LA32S-PIC-NEXT:    b .LBB0_8
 ; LA32S-PIC-NEXT:  .LBB0_3: # %c4
 ; LA32S-PIC-NEXT:    ori $a0, $zero, 14
-; LA32S-PIC-NEXT:    b .LBB0_7
-; LA32S-PIC-NEXT:  .LBB0_4: # %c1
-; LA32S-PIC-NEXT:    ori $a0, $zero, 11
-; LA32S-PIC-NEXT:    b .LBB0_7
-; LA32S-PIC-NEXT:  .LBB0_5: # %c2
+; LA32S-PIC-NEXT:    b .LBB0_8
+; LA32S-PIC-NEXT:  .LBB0_4:
+; LA32S-PIC-NEXT:    ori $a1, $zero, 1234
+; LA32S-PIC-NEXT:  .LBB0_5: # %merge
 ; LA32S-PIC-NEXT:    move $a0, $a1
-; LA32S-PIC-NEXT:    b .LBB0_7
-; LA32S-PIC-NEXT:  .LBB0_6: # %c5
+; LA32S-PIC-NEXT:    b .LBB0_8
+; LA32S-PIC-NEXT:  .LBB0_6: # %c1
+; LA32S-PIC-NEXT:    ori $a0, $zero, 11
+; LA32S-PIC-NEXT:    b .LBB0_8
+; LA32S-PIC-NEXT:  .LBB0_7: # %c5
 ; LA32S-PIC-NEXT:    ori $a0, $zero, 15
-; LA32S-PIC-NEXT:  .LBB0_7:
+; LA32S-PIC-NEXT:  .LBB0_8:
 ; LA32S-PIC-NEXT:    bl g
 ; LA32S-PIC-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32S-PIC-NEXT:    addi.w $sp, $sp, 16
-; LA32S-PIC-NEXT:  .LBB0_8: # %exit
+; LA32S-PIC-NEXT:  .LBB0_9: # %exit
 ; LA32S-PIC-NEXT:    ret
 entry:
   switch i32 %x, label %exit [
