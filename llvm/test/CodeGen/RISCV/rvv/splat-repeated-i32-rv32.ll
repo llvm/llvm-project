@@ -151,3 +151,36 @@ define <vscale x 1 x i64> @splat_zero_constant() {
 ; CHECK-NEXT:    ret
   ret <vscale x 1 x i64> zeroinitializer
 }
+
+declare <vscale x 2 x i64> @llvm.riscv.vle.nxv2i64(<vscale x 2 x i64>, ptr, i32)
+declare <vscale x 2 x i64> @llvm.riscv.vmv.v.x.nxv2i64(<vscale x 2 x i64>, i64, i32)
+declare void @llvm.riscv.vse.nxv2i64(<vscale x 2 x i64>, ptr, i32)
+
+; Preserve defined passthru for repeated constants.
+define void @splat_equal_constant_defined_passthru(ptr %in, ptr %out, i32 %vl) {
+; CHECK-LABEL: splat_equal_constant_defined_passthru:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    vsetivli zero, 2, e64, m2, ta, ma
+; CHECK-NEXT:    vle64.v v8, (a0)
+; CHECK-NEXT:    lui a0, 74565
+; CHECK-NEXT:    addi a0, a0, 1656
+; CHECK-NEXT:    sw a0, 8(sp)
+; CHECK-NEXT:    sw a0, 12(sp)
+; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vsetvli zero, a2, e64, m2, tu, ma
+; CHECK-NEXT:    vlse64.v v8, (a0), zero
+; CHECK-NEXT:    vsetivli zero, 2, e64, m2, ta, ma
+; CHECK-NEXT:    vse64.v v8, (a1)
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    ret
+  %passthru = call <vscale x 2 x i64> @llvm.riscv.vle.nxv2i64(
+      <vscale x 2 x i64> poison, ptr %in, i32 2)
+  %splat = call <vscale x 2 x i64> @llvm.riscv.vmv.v.x.nxv2i64(
+      <vscale x 2 x i64> %passthru, i64 1311768465173141112, i32 %vl)
+  call void @llvm.riscv.vse.nxv2i64(
+      <vscale x 2 x i64> %splat, ptr %out, i32 2)
+  ret void
+}

@@ -5198,7 +5198,7 @@ static SDValue splatPartsI64WithVL(const SDLoc &DL, MVT VT, SDValue Passthru,
 
     // Use vmv.v.x with EEW=32.  Use either a vsetivli or vsetvli to change
     // VL.  This can temporarily increase VL if VL less than VLMAX.
-    if (LoC == HiC) {
+    if (LoC == HiC && Passthru.isUndef()) {
       SDValue NewVL;
       if (isa<ConstantSDNode>(VL) && isUInt<4>(VL->getAsZExtVal()))
         NewVL = DAG.getNode(ISD::ADD, DL, VL.getValueType(), VL, VL);
