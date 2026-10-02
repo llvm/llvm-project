@@ -4,7 +4,7 @@
 ; The loops below walk a dereferenceable region backwards, so every load is
 ; safe.
 
-; TODO: The counting-down IV accesses [0, %length), which is exactly the region
+; TODO: The counting-down IV is in the range [0, %length), which is exactly the region
 ; the assume marks dereferenceable, so the early-exit loop should be vectorized.
 define ptr @reverse_reaches_base_dynamic_length(i64 %length, ptr %ptr) {
 ; CHECK-LABEL: define ptr @reverse_reaches_base_dynamic_length(
