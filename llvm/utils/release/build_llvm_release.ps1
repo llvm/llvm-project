@@ -10,7 +10,7 @@
     Can bootstrap a fresh VM by installing all prerequisites.
 
     By default, builds x64 using the local source tree and auto-detected
-    Python.  Use -DownloadSource to download a tagged release tarball
+    Python. Use -DownloadSource to download a tagged release tarball
     instead.
 
     Build steps (in order):
@@ -22,18 +22,18 @@
       6. tarball   - Generate full install tarball
 
 .PARAMETER Version
-    LLVM version string (e.g. "19.1.0").  If omitted, auto-detected from
+    LLVM version string (e.g. "19.1.0"). If omitted, auto-detected from
     the source tree.
 
 .PARAMETER x64
-    Build for x64 (64-bit).  This is the default if no architecture is specified.
+    Build for x64 (64-bit). This is the default if no architecture is specified.
 
 .PARAMETER arm64
     Build for ARM64 (AArch64).
 
 .PARAMETER DownloadSource
     Download and extract the tagged release source tarball from GitHub
-    instead of using the local source tree.  Requires -Version.
+    instead of using the local source tree. Requires -Version.
 
 .PARAMETER ForceMSVC
     Force using MSVC (cl.exe) as the stage 0 host compiler instead of the
@@ -45,20 +45,20 @@
 
 .PARAMETER InstallPrerequisites
     Install build prerequisites (NetFx3, Visual Studio, official LLVM release,
-    CMake, Python and its psutil module, etc.)
-    before building.  When used with -arm64, also installs ARM64 Python for
-    LLDB.  Requests administrator elevation once for the entire prerequisite
+    CMake, Python and its psutil module, etc.) before building.
+    When used with -arm64, also installs ARM64 Python for LLDB.
+    Requests administrator elevation once for the entire prerequisite
     installation when the current shell is not elevated.
 
 .PARAMETER Unattended
-    Never prompt for input.  Missing prerequisites cause the build to fail
-    unless -InstallPrerequisites is also specified.  An existing build
-    directory must be resumed with -StartAt or removed beforehand.  Run
+    Never prompt for input. Missing prerequisites cause the build to fail
+    unless -InstallPrerequisites is also specified. An existing build
+    directory must be resumed with -StartAt or removed beforehand. Run
     from an elevated shell when using -InstallPrerequisites.
 
 .PARAMETER StartAt
-    Resume a previous build from a specific step.  Artifacts from earlier
-    steps must already exist on disk.  The step being restarted gets a
+    Resume a previous build from a specific step. Artifacts from earlier
+    steps must already exist on disk. The step being restarted gets a
     clean directory; earlier steps are skipped entirely.
 
     Valid steps: libxml2, stage1, pgo, stage2, package, tarball
@@ -74,8 +74,8 @@
     Full x64 build using the local source tree.
 
 .EXAMPLE
-    .\build_llvm_release.ps1 -x64 -arm64
-    Build for both x64 and ARM64.
+    .\build_llvm_release.ps1 -arm64
+    Build for ARM64.
 
 .EXAMPLE
     .\build_llvm_release.ps1 -Version 19.1.0 -DownloadSource
@@ -84,10 +84,6 @@
 .EXAMPLE
     .\build_llvm_release.ps1 -InstallPrerequisites -x64
     Install prerequisites, then do a full x64 build.
-
-.EXAMPLE
-    .\build_llvm_release.ps1 -InstallPrerequisites -x64 -arm64
-    Install prerequisites (including ARM64 Python), then build both architectures.
 
 .EXAMPLE
     .\build_llvm_release.ps1 -Unattended -InstallPrerequisites
@@ -106,13 +102,13 @@
     Display the list of available build steps and exit.
 
 .NOTES
-    Python is auto-detected from PATH for x64 builds.  For ARM64 builds,
-    the script probes standard install locations for ARM64 Python.  Use
+    Python is auto-detected from PATH for x64 builds. For ARM64 builds,
+    the script probes standard install locations for ARM64 Python. Use
     -InstallPrerequisites to install it automatically.
 
     Environment variables:
       LLVM_NINJA_OVERRIDE  - Override the ninja binary and optionally provide
-                             extra flags.  The first token is the executable,
+                             extra flags. The first token is the executable,
                              remaining tokens are prepended to every ninja
                              invocation.
                              Example: LLVM_NINJA_OVERRIDE="myninja.exe --flag1 --flag2"
@@ -136,7 +132,7 @@ param(
 # PowerShell 7 self-relaunch
 #
 # This script requires PowerShell 7+ features (ternary operator, null-
-# coalescing, improved error handling, etc.).  If we detect we are running
+# coalescing, improved error handling, etc.). If we detect we are running
 # under Windows PowerShell 5.x, we attempt to find or install PowerShell 7
 # and re-launch ourselves under it, forwarding all original arguments.
 #===============================================================================
@@ -210,7 +206,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $script:ReleaseScriptPath = $PSCommandPath
 
-# Save the console mode so we can restore it at exit.  Child processes
+# Save the console mode so we can restore it at exit. Child processes
 # (cmake, ninja, link.exe, etc.) sometimes disable virtual terminal
 # processing and don't restore it, which breaks arrow keys and ESC in
 # the parent shell after the script finishes.
@@ -273,7 +269,7 @@ function Test-ShouldRun {
     <#
     .SYNOPSIS
         Returns $true if the given step should execute (i.e. it is at or after
-        the -StartAt step).  When -StartAt is not set, always returns $true.
+        the -StartAt step). When -StartAt is not set, always returns $true.
     #>
     param([Parameter(Mandatory)][string]$Step)
     if (-not $script:StartAtStep) { return $true }
@@ -293,7 +289,7 @@ function Test-IsStartStep {
 function Assert-PathExists {
     <#
     .SYNOPSIS
-        Validates that a path exists on disk.  Used when skipping steps to
+        Validates that a path exists on disk. Used when skipping steps to
         ensure the artifacts from a prior run are still present.
     #>
     param(
@@ -395,7 +391,7 @@ function Invoke-NativeCommand {
     .NOTES
         This is intentionally a simple function (no [Parameter()] attributes
         and no [CmdletBinding()]) so that PowerShell does NOT inject common
-        parameters (-Confirm, -OutVariable, -ErrorAction, etc.).  Those
+        parameters (-Confirm, -OutVariable, -ErrorAction, etc.). Those
         common parameters collide with native flags like -C, -O, -E, etc.
     #>
     $Command = $args[0]
@@ -1270,7 +1266,7 @@ function Find-Python {
 
         For x64 (amd64) builds, uses the system Python from PATH.
         For ARM64 builds, probes standard install locations for any ARM64
-        Python 3.x.  Falls back to the PATH Python with a warning if no
+        Python 3.x. Falls back to the PATH Python with a warning if no
         ARM64 install is found.
     #>
     param(
@@ -2196,6 +2192,14 @@ if ($StartAt) {
 New-Item -ItemType Directory -Path $buildDir -Force | Out-Null
 Push-Location $buildDir
 
+# Ninja's single-line progress display overprints cmake's output and garbles
+# the console on some hosts (notably conhost). TERM=dumb makes ninja print one
+# plain line per step, which also keeps CI logs readable. Windows Terminal
+# (identified by WT_SESSION) renders the progress line correctly, and an
+# explicit TERM set by the caller is respected, so neither is overridden.
+$script:SavedTerm = $env:TERM
+if (-not $env:TERM -and -not $env:WT_SESSION) { $env:TERM = 'dumb' }
+
 try {
     # Download source if requested (skip when resuming with -StartAt)
     if ($DownloadSource) {
@@ -2335,6 +2339,7 @@ try {
 
 } finally {
     Pop-Location
+    $env:TERM = $script:SavedTerm
     # Restore the console mode that was saved at script start.
     if ($null -ne $script:SavedConsoleMode) {
         try { [ConsoleMode]::Set($script:SavedConsoleMode) } catch {}
