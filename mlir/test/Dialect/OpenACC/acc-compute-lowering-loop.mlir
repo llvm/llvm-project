@@ -255,3 +255,58 @@ func.func @orphan_loop_unroll_annotation(%buf: memref<8xi32>) {
   } independent attributes {llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, full = true>>} 
   return
 }
+
+// -----
+
+// Independent loop with gang(static:N): chunk size and gang par_dims on scf.parallel.
+// CHECK-LABEL: func.func @parallel_loop_gang_static
+func.func @parallel_loop_gang_static(%buf: memref<1xi32>) {
+  %c0 = arith.constant 0 : index
+  %c1_i32 = arith.constant 1 : i32
+  %c32_i32 = arith.constant 32 : i32
+  %c10_i32 = arith.constant 10 : i32
+  %c100_i32 = arith.constant 100 : i32
+
+  %dev = acc.copyin varPtr(%buf : memref<1xi32>) -> memref<1xi32>
+  // CHECK-NOT: acc.parallel
+  // CHECK: acc.kernel_environment
+  // CHECK: acc.compute_region
+  // CHECK: scf.parallel
+  // CHECK: acc.chunk_size = #acc.chunk_size<32>
+  // CHECK-SAME: acc.par_dims = #acc<par_dims[block_x]>
+  acc.parallel num_gangs({%c10_i32 : i32}) dataOperands(%dev : memref<1xi32>) {
+    acc.loop gang({static=%c32_i32 : i32}) control(%arg0 : i32) = (%c1_i32 : i32) to (%c100_i32 : i32) step (%c1_i32 : i32) {
+      memref.store %arg0, %dev[%c0] : memref<1xi32>
+      acc.yield
+    } independent
+    acc.yield
+  }
+  acc.copyout accPtr(%dev : memref<1xi32>) to varPtr(%buf : memref<1xi32>)
+  return
+}
+
+// -----
+
+// gang(static:*) is encoded as chunk size -1.
+// CHECK-LABEL: func.func @parallel_loop_gang_static_star
+func.func @parallel_loop_gang_static_star(%buf: memref<1xi32>) {
+  %c0 = arith.constant 0 : index
+  %c1_i32 = arith.constant 1 : i32
+  %c_m1 = arith.constant -1 : index
+  %c10_i32 = arith.constant 10 : i32
+  %c100_i32 = arith.constant 100 : i32
+
+  %dev = acc.copyin varPtr(%buf : memref<1xi32>) -> memref<1xi32>
+  // CHECK: scf.parallel
+  // CHECK: acc.chunk_size = #acc.chunk_size<-1>
+  // CHECK-SAME: acc.par_dims = #acc<par_dims[block_x]>
+  acc.parallel num_gangs({%c10_i32 : i32}) dataOperands(%dev : memref<1xi32>) {
+    acc.loop gang({static=%c_m1 : index}) control(%arg0 : i32) = (%c1_i32 : i32) to (%c100_i32 : i32) step (%c1_i32 : i32) {
+      memref.store %arg0, %dev[%c0] : memref<1xi32>
+      acc.yield
+    } independent
+    acc.yield
+  }
+  acc.copyout accPtr(%dev : memref<1xi32>) to varPtr(%buf : memref<1xi32>)
+  return
+}

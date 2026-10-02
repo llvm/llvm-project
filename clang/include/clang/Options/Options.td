@@ -2661,6 +2661,18 @@ def fmemory_profile_use_EQ : Joined<["-"], "fmemory-profile-use=">,
     HelpText<"Use memory profile for profile-guided memory optimization">,
     MarshallingInfoString<CodeGenOpts<"MemoryProfileUsePath">>;
 
+defm copyprof : BoolFOption<"copyprof",
+  CodeGenOpts<"CopyProf">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption], " copy profiling">>;
+def fcopyprof_static_size_threshold_EQ
+    : Joined<["-"], "fcopyprof-static-size-threshold=">,
+      Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+      MetaVarName<"<N>">,
+      HelpText<"Minimum C++ object size in bytes to enable CopyProf instrumentation (default: 16).">,
+      MarshallingInfoInt<CodeGenOpts<"CopyProfStaticSizeThreshold">, "16">;
+
 // Begin sanitizer flags. These should all be core options exposed in all driver
 // modes.
 let Visibility = [ClangOption, CC1Option, CLOption] in {
@@ -9843,6 +9855,7 @@ def _SLASH_await : CLFlag<"await">;
 def _SLASH_await_COLON : CLJoined<"await:">;
 def _SLASH_constexpr : CLJoined<"constexpr:">;
 def _SLASH_AI : CLJoinedOrSeparate<"AI">;
+def _SLASH_BE : CLFlag<"BE">;
 def _SLASH_Bt : CLFlag<"Bt">;
 def _SLASH_Bt_plus : CLFlag<"Bt+">;
 def _SLASH_clr : CLJoined<"clr">;

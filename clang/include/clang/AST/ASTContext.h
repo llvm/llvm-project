@@ -345,7 +345,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// Internal storage for NestedNameSpecifiers.
   ///
   /// This set is managed by the NestedNameSpecifier class.
-  mutable llvm::FoldingSet<NamespaceAndPrefixStorage>
+  mutable llvm::UniquingSet<NamespaceAndPrefixStorage>
       NamespaceAndPrefixStorages;
 
   /// A cache mapping from RecordDecls to ASTRecordLayouts.
@@ -548,6 +548,10 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// Since so few decls have attrs, we keep them in a hash map instead of
   /// wasting space in the Decl class.
   llvm::DenseMap<const Decl*, AttrVec*> DeclAttrs;
+
+  /// One-entry cache for getDeclAttrs().
+  const Decl *LastDeclAttrsDecl = nullptr;
+  AttrVec *LastDeclAttrs = nullptr;
 
   /// A mapping from non-redeclarable declarations in modules that were
   /// merged with other declarations to the canonical declaration that they were
@@ -1422,6 +1426,8 @@ public:
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
 #include "clang/Basic/SPIRVTypes.def"
 
@@ -1906,14 +1912,18 @@ public:
   ///
   /// \pre \p ElementType must be a valid matrix element type (see
   /// MatrixType::isValidElementType).
-  QualType getConstantMatrixType(QualType ElementType, unsigned NumRows,
-                                 unsigned NumColumns) const;
+  QualType getConstantMatrixType(
+      QualType ElementType, unsigned NumRows, unsigned NumColumns,
+      std::optional<MatrixType::LayoutKind> Layout = std::nullopt) const;
 
   /// Return the unique reference to the matrix type of the specified element
   /// type and size
   QualType getDependentSizedMatrixType(QualType ElementType, Expr *RowExpr,
                                        Expr *ColumnExpr,
                                        SourceLocation AttrLoc) const;
+
+  QualType getMatrixTypeWithLayout(QualType T,
+                                   MatrixType::LayoutKind Layout) const;
 
   QualType getDependentAddressSpaceType(QualType PointeeType,
                                         Expr *AddrSpaceExpr,
