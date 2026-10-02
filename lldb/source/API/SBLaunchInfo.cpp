@@ -8,6 +8,7 @@
 
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/StringPool.h"
 
 #include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBError.h"
@@ -149,8 +150,8 @@ uint32_t SBLaunchInfo::GetNumArguments() {
 const char *SBLaunchInfo::GetArgumentAtIndex(uint32_t idx) {
   LLDB_INSTRUMENT_VA(this, idx);
 
-  return ConstString(m_opaque_sp->GetArguments().GetArgumentAtIndex(idx))
-      .GetCString();
+  return StringPool::GetSystemPool().Intern(
+      m_opaque_sp->GetArguments().GetArgumentAtIndex(idx));
 }
 
 void SBLaunchInfo::SetArguments(const char **argv, bool append) {
@@ -178,7 +179,7 @@ const char *SBLaunchInfo::GetEnvironmentEntryAtIndex(uint32_t idx) {
 
   if (idx > GetNumEnvironmentEntries())
     return nullptr;
-  return ConstString(m_opaque_sp->GetEnvp()[idx]).GetCString();
+  return StringPool::GetSystemPool().Intern(m_opaque_sp->GetEnvp()[idx]);
 }
 
 void SBLaunchInfo::SetEnvironmentEntries(const char **envp, bool append) {
@@ -211,8 +212,8 @@ void SBLaunchInfo::Clear() {
 const char *SBLaunchInfo::GetWorkingDirectory() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return ConstString(m_opaque_sp->GetWorkingDirectory().GetPath())
-      .AsCString(nullptr);
+  return StringPool::GetSystemPool().Intern(
+      m_opaque_sp->GetWorkingDirectory().GetPath());
 }
 
 void SBLaunchInfo::SetWorkingDirectory(const char *working_dir) {
@@ -236,7 +237,8 @@ void SBLaunchInfo::SetLaunchFlags(uint32_t flags) {
 const char *SBLaunchInfo::GetProcessPluginName() {
   LLDB_INSTRUMENT_VA(this);
 
-  return ConstString(m_opaque_sp->GetProcessPluginName()).GetCString();
+  return StringPool::GetSystemPool().Intern(
+      m_opaque_sp->GetProcessPluginName());
 }
 
 void SBLaunchInfo::SetProcessPluginName(const char *plugin_name) {
@@ -318,7 +320,7 @@ void SBLaunchInfo::SetLaunchEventData(const char *data) {
 const char *SBLaunchInfo::GetLaunchEventData() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return ConstString(m_opaque_sp->GetLaunchEventData()).GetCString();
+  return StringPool::GetSystemPool().Intern(m_opaque_sp->GetLaunchEventData());
 }
 
 void SBLaunchInfo::SetDetachOnError(bool enable) {
