@@ -1,7 +1,7 @@
-; RUN: opt %loadNPMPolly -polly-tile-sizes=256,16 '-passes=polly-custom<opt-isl;ast>' -polly-print-ast -disable-output < %s | FileCheck %s
-; RUN: opt %loadNPMPolly -polly-tile-sizes=256,16 -polly-tiling=false '-passes=polly-custom<opt-isl;ast>' -polly-print-ast -disable-output < %s | FileCheck %s --check-prefix=NOTILING
-; RUN: opt %loadNPMPolly -polly-tile-sizes=256,16 -polly-2nd-level-tiling -polly-2nd-level-tile-sizes=16,8 '-passes=polly-custom<opt-isl;ast>' -polly-print-ast -disable-output < %s | FileCheck %s --check-prefix=TWOLEVEL
-; RUN: opt %loadNPMPolly -polly-tile-sizes=256,16 -polly-2nd-level-tiling -polly-2nd-level-tile-sizes=16,8 -polly-register-tiling '-passes=polly-custom<opt-isl;ast>' -polly-print-ast -disable-output < %s | FileCheck %s --check-prefix=TWO-PLUS-REGISTER
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-tile-sizes=256,16 '-passes=polly-custom<opt-isl;ast>' -plugin-arg=Polly,-polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-tile-sizes=256,16 -plugin-arg=Polly,-polly-tiling=false '-passes=polly-custom<opt-isl;ast>' -plugin-arg=Polly,-polly-print-ast -disable-output < %s | FileCheck %s --check-prefix=NOTILING
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-tile-sizes=256,16 -plugin-arg=Polly,-polly-2nd-level-tiling -plugin-arg=Polly,-polly-2nd-level-tile-sizes=16,8 '-passes=polly-custom<opt-isl;ast>' -plugin-arg=Polly,-polly-print-ast -disable-output < %s | FileCheck %s --check-prefix=TWOLEVEL
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-tile-sizes=256,16 -plugin-arg=Polly,-polly-2nd-level-tiling -plugin-arg=Polly,-polly-2nd-level-tile-sizes=16,8 -plugin-arg=Polly,-polly-register-tiling '-passes=polly-custom<opt-isl;ast>' -plugin-arg=Polly,-polly-print-ast -disable-output < %s | FileCheck %s --check-prefix=TWO-PLUS-REGISTER
 
 ; CHECK: // 1st level tiling - Tiles
 ; CHECK: for (int c0 = 0; c0 <= 3; c0 += 1)

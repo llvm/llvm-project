@@ -5388,10 +5388,21 @@ the configuration (without a prefix: `Auto`).
 
   ```c++
   KeepEmptyLines:
+    AtEndOfBlock: false
     AtEndOfFile: false
     AtStartOfBlock: false
     AtStartOfFile: false
   ```
+
+  - `bool AtEndOfBlock` Keep empty lines at end of a block.
+
+    ```c++
+    true:                                  false:
+    if (foo) {                     vs.     if (foo) {
+      bar();                                 bar();
+                                           }
+    }
+    ```
 
   - `bool AtEndOfFile` Keep empty lines at end of file.
 

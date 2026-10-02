@@ -411,6 +411,22 @@ def AddAliasTags : Pass<"fir-add-alias-tags", "mlir::ModuleOp"> {
   let dependentDialects = ["mlir::LLVM::LLVMDialect"];
 }
 
+def O0CanonicalizerPass : Pass<"fir-o0-canonicalize"> {
+  let summary = "Simplify operations while preserving statement-entry branches";
+  let description = [{
+    Clean up IR after CFG lowering at O0, using canonicalization patterns from
+    all loaded dialects except ControlFlow. CF canonicalizations can bypass
+    loop-entry branches carrying an array assignment's source location and
+    move its PHI initializations into preceding statements, losing the
+    assignment's breakpoint location outside the loop.
+
+    Both dialect-wide and operation-level CF pattern registrations are omitted.
+    Folding and dead operation elimination remain enabled; region simplification
+    is disabled. This pass does not promise to preserve arbitrary CFG structure
+    against transformations registered by other dialects.
+  }];
+}
+
 def SimplifyRegionLite : Pass<"simplify-region-lite"> {
   let summary = "Region simplification";
   let description = [{
@@ -589,14 +605,15 @@ def CUFAllocationConversion : Pass<"cuf-allocation-convert", "mlir::ModuleOp"> {
 def CUFOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
   let summary = "Convert some CUF operations to runtime calls";
   let dependentDialects = ["fir::FIROpsDialect", "hlfir::hlfirDialect",
-                           "mlir::gpu::GPUDialect", "mlir::DLTIDialect"];
+                           "mlir::arith::ArithDialect", "mlir::gpu::GPUDialect",
+                           "mlir::DLTIDialect"];
   let options = [Option<
       "deferAccRoutineDataTransfers", "defer-acc-routine-data-transfers",
       "bool", /*default=*/"false",
-      "Do not convert cuf.data_transfer operations in the host copy of an "
-      "OpenACC routine. The routine is later specialized for host and device, "
-      "after which each copy can be handled according to its execution "
-      "context.">];
+      "Do not convert cuf.data_transfer or cuf.on_device operations in the "
+      "host copy of an OpenACC routine. The routine is later specialized for "
+      "host and device, after which each copy can be handled according to its "
+      "execution context.">];
 }
 
 def CUFOpConversionLate : Pass<"cuf-convert-late", "mlir::ModuleOp"> {
@@ -712,18 +729,6 @@ def CUFDeviceFuncTransform
               /*default=*/"false",
               "Report an error if device code contains a call to "
               "descriptor I/O">];
-}
-
-def CUFFunctionRewrite : Pass<"cuf-function-rewrite", ""> {
-  let summary = "Convert some CUDA Fortran specific call";
-  let dependentDialects = ["fir::FIROpsDialect"];
-  let options = [Option<
-      "deferAccRoutines", "defer-acc-routines", "bool", /*default=*/"false",
-      "Do not fold device-detection intrinsics located in the host copy of an "
-      "OpenACC routine. Such a routine is later cloned to build its device "
-      "counterpart, so folding it to the host value here would bake that value "
-      "into the device clone. Deferred calls are folded by a later run that "
-      "executes after device specialization.">];
 }
 
 def CUFLaunchAttachAttr : Pass<"cuf-launch-attach-attr", ""> {

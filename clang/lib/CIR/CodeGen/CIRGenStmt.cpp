@@ -141,7 +141,7 @@ CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
 
   SaveAndRestore save_musttail(mustTailCall, musttail);
 
-  return emitStmt(s.getSubStmt(), /*useCurrentScope=*/true, s.getAttrs());
+  return emitStmt(s.getSubStmt(), /*useCurrentScope=*/false, s.getAttrs());
 }
 
 mlir::LogicalResult CIRGenFunction::emitCompoundStmt(const CompoundStmt &s,
@@ -524,7 +524,7 @@ mlir::LogicalResult CIRGenFunction::emitLabelStmt(const clang::LabelStmt &s) {
   if (getContext().getLangOpts().EHAsynch && s.isSideEntry())
     getCIRGenModule().errorNYI(s.getSourceRange(), "IsEHa: not implemented.");
 
-  return emitStmt(s.getSubStmt(), /*useCurrentScope*/ true);
+  return emitStmt(s.getSubStmt(), /*useCurrentScope=*/false);
 }
 
 // Add a terminating yield on a body region if no other terminators are used.
