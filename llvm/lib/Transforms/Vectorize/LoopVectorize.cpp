@@ -4701,7 +4701,7 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
           dbgs() << "LV: Memory widening: updating decision for load user "
                  << *UI << '\n');
       setWideningDecision(
-          cast<Instruction>(U), VF, CM_Scalarize,
+          UI, VF, CM_Scalarize,
           getMemInstScalarizationCost(cast<Instruction>(U), VF));
     }
   };
