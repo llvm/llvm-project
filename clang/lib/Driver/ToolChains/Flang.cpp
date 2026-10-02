@@ -874,6 +874,16 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
                    /*Default=*/false))
     CmdArgs.push_back("-fopenmp-assume-threads-oversubscription");
 
+  // This forwards the option to switch off/on mapper generation for scenarios
+  // where the compiler considers it neccessary to generate a mapper to cover
+  // implicit allocatable member mapping inside of derived types to adhere to
+  // specification compliance.
+  if (!Args.hasFlag(
+          options::OPT_fimplicit_default_mapper_allocatable_members,
+          options::OPT_fno_implicit_default_mapper_allocatable_members,
+          /*Default=*/true))
+    CmdArgs.push_back("-fno-implicit-default-mapper-allocatable-members");
+
   if (IsOpenMPDevice) {
     // -fopenmp-is-target-device is passed along to tell the frontend that it is
     // generating code for a device, so that only the relevant code is emitted.

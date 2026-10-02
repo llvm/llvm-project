@@ -312,6 +312,12 @@ def fdo_concurrent_to_openmp_EQ : Joined<["-"], "fdo-concurrent-to-openmp=">,
   HelpText<"Try to map `do concurrent` loops to OpenMP [none|host|device]">,
       Values<"none, host, device">;
 
+def fimplicit_default_mapper_allocatable_members : Flag<["-"], "fimplicit-default-mapper-allocatable-members">,
+  Group<f_Group>, HelpText<"Enable implicit allocatable member maps in compiler-generated OpenMP default mappers">;
+def fno_implicit_default_mapper_allocatable_members : Flag<["-"], "fno-implicit-default-mapper-allocatable-members">,
+  Group<f_Group>, HelpText<"Disable implicit allocatable member maps in compiler-generated OpenMP default mappers">;
+
+
 def J : JoinedOrSeparate<["-"], "J">,
   Flags<[RenderJoined]>, Group<gfortran_Group>, Alias<module_dir>;
 
