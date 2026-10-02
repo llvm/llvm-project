@@ -514,7 +514,7 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
   vtable.setLinkage(linkage);
 
   if (cgm.supportsCOMDAT() && cir::isWeakForLinker(linkage))
-    vtable.setComdat(true);
+    vtable.setSelfComdat();
 
   // Set the right visibility.
   cgm.setGVProperties(vtable, rd);
@@ -1653,7 +1653,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
   }
 
   if (cgm.supportsCOMDAT() && cir::isWeakForLinker(linkage))
-    gv.setComdat(true);
+    gv.setSelfComdat();
 
   CharUnits align = cgm.getASTContext().toCharUnitsFromBits(
       cgm.getTarget().getPointerAlign(LangAS::Default));
