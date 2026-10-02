@@ -338,8 +338,8 @@ bool OmpStructureChecker::VerifyModifierRequired(
 
   for (llvm::omp::Modifier m : result.first) {
     auto &mdesc{llvm::omp::getDescriptor(m)};
-    context_.Say(clause.source, "'%s' modifier is required"_err_en_US,
-        mdesc.getName().str());
+    context_.Say(
+        clause.source, "'%s' modifier is required"_err_en_US, mdesc.getName());
   }
   for (llvm::omp::ModifierSet s : result.second) {
     auto &sdesc{llvm::omp::getDescriptor(s)};
@@ -348,7 +348,7 @@ bool OmpStructureChecker::VerifyModifierRequired(
     if (llvm::omp::isModifierGroup(s)) {
       context_.Say(clause.source,
           "modifier from '%s' modifier group is required"_err_en_US,
-          sdesc.getName().str());
+          sdesc.getName());
     } else {
       context_.Say(clause.source,
           "modifier from the modifier set on %s clause is required"_err_en_US,
@@ -369,7 +369,7 @@ bool OmpStructureChecker::VerifyModifierUnique(
     auto &mdesc{llvm::omp::getDescriptor(id)};
     context_
         .Say(where.first, "'%s' modifier cannot occur multiple times"_err_en_US,
-            mdesc.getName().str())
+            mdesc.getName())
         .Attach(where.second, "previous occurrence of this modifier"_en_US);
   }
 
@@ -387,9 +387,9 @@ bool OmpStructureChecker::VerifyModifierExclusive(
     context_
         .Say(source,
             "An exclusive '%s' modifier cannot be specified together with a modifier of a different type"_err_en_US,
-            llvm::omp::getDescriptor(id).getName().str())
+            llvm::omp::getDescriptor(id).getName())
         .Attach(otherSource, "'%s' provided here"_en_US,
-            llvm::omp::getDescriptor(otherId).getName().str());
+            llvm::omp::getDescriptor(otherId).getName());
   }
 
   auto resultMut = VerifyMutuallyExclusive(info, clause.value, version);
@@ -400,7 +400,7 @@ bool OmpStructureChecker::VerifyModifierExclusive(
     context_
         .Say(otherSource,
             "The '%s' and '%s' modifiers are mutually exclusive"_err_en_US,
-            llvm::omp::getDescriptor(otherId).getName().str(), thisName)
+            llvm::omp::getDescriptor(otherId).getName(), thisName)
         .Attach(source, "'%s' modifier specified here"_en_US, thisName);
   }
 
@@ -419,7 +419,7 @@ bool OmpStructureChecker::VerifyModifierUltimate(
 
   for (auto [id, where] : result) {
     context_.Say(where, "'%s' should be the %s modifier"_err_en_US,
-        llvm::omp::getDescriptor(id).getName().str(), expected);
+        llvm::omp::getDescriptor(id).getName(), expected);
   }
 
   return result.empty();

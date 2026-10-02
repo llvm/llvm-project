@@ -19,6 +19,7 @@
 #include "flang/Common/reference-counted.h"
 #include "flang/Common/restorer.h"
 #include "flang/Support/Fortran-features.h"
+#include "llvm/ADT/StringRef.h"
 #include <cstddef>
 #include <cstring>
 #include <forward_list>
@@ -159,6 +160,7 @@ private:
   const char *Convert(const std::string_view &);
   const char *Convert(std::string_view &&);
   const char *Convert(CharBlock);
+  const char *Convert(llvm::StringRef);
   std::intmax_t Convert(std::int64_t x) { return x; }
   std::uintmax_t Convert(std::uint64_t x) { return x; }
 
