@@ -1897,11 +1897,18 @@ private:
 
   /// Return the internal implementations of each of the OperationName hooks.
   static constexpr FoldHookFn getFoldHookFn() {
+    constexpr bool hasOneResult = hasTrait<OpTrait::OneResult>();
+    constexpr bool hasSingleResultFold =
+        has_single_result_fold_v<ConcreteType> ||
+        has_fold_adaptor_single_result_v<ConcreteType>;
+    // Without this check, the dispatch below silently skips such a `fold`.
+    static_assert(hasOneResult || !hasSingleResultFold,
+                  "a single-result `OpFoldResult fold(...)` requires the "
+                  "OneResult trait; ops with zero, several, or variadic "
+                  "results must use `LogicalResult fold(FoldAdaptor, "
+                  "SmallVectorImpl<OpFoldResult> &)`");
     // If the operation is single result and defines a `fold` method.
-    if constexpr (llvm::is_one_of<OpTrait::OneResult<ConcreteType>,
-                                  Traits<ConcreteType>...>::value &&
-                  (has_single_result_fold_v<ConcreteType> ||
-                   has_fold_adaptor_single_result_v<ConcreteType>))
+    if constexpr (hasOneResult && hasSingleResultFold)
       return [](Operation *op, ArrayRef<Attribute> operands,
                 SmallVectorImpl<OpFoldResult> &results) {
         return foldSingleResultHook<ConcreteType>(op, operands, results);
