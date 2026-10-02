@@ -211,16 +211,36 @@ entry:
 define i64 @g(i32 %a, i32 %b) {
 ; CHECK-EABI-LABEL: g:
 ; CHECK-EABI:       @ %bb.0: @ %entry
-; CHECK-EABI-NEXT:    .save {r7, lr}
-; CHECK-EABI-NEXT:    push {r7, lr}
-; CHECK-EABI-NEXT:    movs r2, r0
-; CHECK-EABI-NEXT:    movs r3, #0
-; CHECK-EABI-NEXT:    movs r0, r1
-; CHECK-EABI-NEXT:    movs r1, r3
-; CHECK-EABI-NEXT:    bl __aeabi_lmul
-; CHECK-EABI-NEXT:    pop {r7}
+; CHECK-EABI-NEXT:    .save {r4, r5, r6, lr}
+; CHECK-EABI-NEXT:    push {r4, r5, r6, lr}
+; CHECK-EABI-NEXT:    ldr r4, .LCPI15_0
+; CHECK-EABI-NEXT:    lsrs r2, r0, #16
+; CHECK-EABI-NEXT:    ands r0, r4
+; CHECK-EABI-NEXT:    lsrs r3, r1, #16
+; CHECK-EABI-NEXT:    ands r1, r4
+; CHECK-EABI-NEXT:    movs r5, r0
+; CHECK-EABI-NEXT:    muls r5, r1, r5
+; CHECK-EABI-NEXT:    lsrs r6, r5, #16
+; CHECK-EABI-NEXT:    ands r5, r4
+; CHECK-EABI-NEXT:    muls r0, r3, r0
+; CHECK-EABI-NEXT:    adds r6, r0, r6
+; CHECK-EABI-NEXT:    ands r4, r6
+; CHECK-EABI-NEXT:    muls r1, r2, r1
+; CHECK-EABI-NEXT:    adds r1, r1, r4
+; CHECK-EABI-NEXT:    lsls r0, r1, #16
+; CHECK-EABI-NEXT:    adds r0, r5, r0
+; CHECK-EABI-NEXT:    lsrs r4, r6, #16
+; CHECK-EABI-NEXT:    lsrs r1, r1, #16
+; CHECK-EABI-NEXT:    adds r1, r4, r1
+; CHECK-EABI-NEXT:    muls r2, r3, r2
+; CHECK-EABI-NEXT:    adds r1, r2, r1
+; CHECK-EABI-NEXT:    pop {r4, r5, r6}
 ; CHECK-EABI-NEXT:    pop {r2}
 ; CHECK-EABI-NEXT:    bx r2
+; CHECK-EABI-NEXT:    .p2align 2
+; CHECK-EABI-NEXT:  @ %bb.1:
+; CHECK-EABI-NEXT:  .LCPI15_0:
+; CHECK-EABI-NEXT:    .long 65535 @ 0xffff
 entry:
         %tmp = zext i32 %a to i64               ; <i64> [#uses=1]
         %tmp1 = zext i32 %b to i64              ; <i64> [#uses=1]
