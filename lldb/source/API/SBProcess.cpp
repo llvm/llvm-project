@@ -1263,7 +1263,8 @@ const char *SBProcess::GetExtendedBacktraceTypeAtIndex(uint32_t idx) {
     const std::vector<ConstString> &names =
         runtime->GetExtendedBacktraceTypes();
     if (idx < names.size()) {
-      return names[idx].AsCString(nullptr);
+      return GetDebuggerStringPool(process_sp->GetTarget())
+          .InternNonEmpty(names[idx]);
     }
   }
   return nullptr;
