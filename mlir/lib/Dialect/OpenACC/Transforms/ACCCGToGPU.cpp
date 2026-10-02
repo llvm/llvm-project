@@ -2006,7 +2006,14 @@ static bool hasTrailingSideEffectSiblings(Operation *loopOp) {
 //     the block-level (or worker/thread-y) ancestor and insert the barrier
 //     there, handling gang-redundant init loops and grid-stride remainders.
 void ACCCGToGPULowering::createBarrierAfterSeqLoop(Operation *loopOp) {
-  scf::ParallelOp wsLoop = loopOp->getParentOfType<scf::ParallelOp>();
+  // Host loops enclosing the compute region are not GPU execution scopes.
+  auto getParentParallel = [&](Operation *op) -> scf::ParallelOp {
+    scf::ParallelOp parent = op->getParentOfType<scf::ParallelOp>();
+    if (parent && computeRegion->isAncestor(parent))
+      return parent;
+    return {};
+  };
+  scf::ParallelOp wsLoop = getParentParallel(loopOp);
   if (!wsLoop) {
     // loopOp is a worksharing loop at the kernel-body top level (no enclosing
     // parallel loop). When it writes gang-private shared memory
@@ -2019,14 +2026,9 @@ void ACCCGToGPULowering::createBarrierAfterSeqLoop(Operation *loopOp) {
     return;
   }
 
-  bool parentIsSeq = false;
-  if (mlir::acc::GPUParallelDimsAttr wsParDims =
-          mlir::acc::getParDimsAttr(wsLoop)) {
-    if (wsParDims.getArray().size() == 1 &&
-        wsParDims.getArray().front().isSeq()) {
-      parentIsSeq = true;
-    }
-  }
+  mlir::acc::GPUParallelDimsAttr wsParDims = mlir::acc::getParDimsAttr(wsLoop);
+  bool parentIsSeq =
+      wsParDims.getArray().size() == 1 && wsParDims.getArray().front().isSeq();
 
   if (parentIsSeq) {
     // loopOp is nested inside a sequential parent loop.
@@ -2037,23 +2039,21 @@ void ACCCGToGPULowering::createBarrierAfterSeqLoop(Operation *loopOp) {
     loopOp->walk([&](scf::ParallelOp innerPar) -> WalkResult {
       if (innerPar.getOperation() == loopOp)
         return WalkResult::advance();
-      if (mlir::acc::GPUParallelDimsAttr dims =
-              mlir::acc::getParDimsAttr(innerPar)) {
-        for (auto d : dims.getArray()) {
-          if (d.isThreadX() || d.isThreadY()) {
-            hasThreadSubLoop = true;
-            return WalkResult::interrupt();
-          }
+      mlir::acc::GPUParallelDimsAttr dims = mlir::acc::getParDimsAttr(innerPar);
+      for (auto d : dims.getArray()) {
+        if (d.isThreadX() || d.isThreadY()) {
+          hasThreadSubLoop = true;
+          return WalkResult::interrupt();
         }
       }
       return WalkResult::advance();
     });
     if (!hasThreadSubLoop)
       return;
-    scf::ParallelOp threadLoop = wsLoop->getParentOfType<scf::ParallelOp>();
+    scf::ParallelOp threadLoop = getParentParallel(wsLoop);
     if (!threadLoop)
       return;
-    scf::ParallelOp blockLoop = threadLoop->getParentOfType<scf::ParallelOp>();
+    scf::ParallelOp blockLoop = getParentParallel(threadLoop);
     if (!blockLoop)
       return;
     mlir::acc::GPUParallelDimsAttr parDimsAttr =
@@ -2065,7 +2065,7 @@ void ACCCGToGPULowering::createBarrierAfterSeqLoop(Operation *loopOp) {
 
   // Parent is a non-sequential parallel loop.  Walk up to find the block-level
   // ancestor and insert a barrier there.
-  scf::ParallelOp seqLoop = wsLoop->getParentOfType<scf::ParallelOp>();
+  scf::ParallelOp seqLoop = getParentParallel(wsLoop);
   if (!seqLoop) {
     // wsLoop is a worksharing loop directly under the compute region with no
     // gang ancestor: a gang-redundant init loop (e.g. a thread-level loop that
@@ -2078,8 +2078,7 @@ void ACCCGToGPULowering::createBarrierAfterSeqLoop(Operation *loopOp) {
       emitGPUBarrierWorkgroup(rewriter, loopOp->getLoc());
     return;
   }
-  if (scf::ParallelOp outerParLoop =
-          seqLoop->getParentOfType<scf::ParallelOp>()) {
+  if (scf::ParallelOp outerParLoop = getParentParallel(seqLoop)) {
     mlir::acc::GPUParallelDimsAttr parDimsAttr =
         mlir::acc::getParDimsAttr(outerParLoop);
     if (parDimsAttr.hasOnlyBlockLevel()) {
@@ -2090,13 +2089,10 @@ void ACCCGToGPULowering::createBarrierAfterSeqLoop(Operation *loopOp) {
       // outerParLoop is a sequential grid-stride remainder of a partitioned
       // gang loop, not the gang. Walk past the remainder(s) to the block-level
       // gang and barrier there.
-      for (Operation *gangLoop =
-               outerParLoop->getParentOfType<scf::ParallelOp>();
-           gangLoop; gangLoop = gangLoop->getParentOfType<scf::ParallelOp>()) {
+      for (scf::ParallelOp gangLoop = getParentParallel(outerParLoop); gangLoop;
+           gangLoop = getParentParallel(gangLoop)) {
         mlir::acc::GPUParallelDimsAttr gangDims =
             mlir::acc::getParDimsAttr(gangLoop);
-        if (!gangDims)
-          break;
         if (gangDims.hasOnlyBlockLevel()) {
           createBarrier(loopOp->getLoc(), gangDims);
           break;
@@ -2117,8 +2113,7 @@ void ACCCGToGPULowering::createBarrierAfterSeqLoop(Operation *loopOp) {
   // not need one here.
   mlir::acc::GPUParallelDimsAttr parDimsAttr =
       mlir::acc::getParDimsAttr(seqLoop);
-  if (parDimsAttr && parDimsAttr.hasOnlyBlockLevel() &&
-      mayWriteSharedMemory(loopOp)) {
+  if (parDimsAttr.hasOnlyBlockLevel() && mayWriteSharedMemory(loopOp)) {
     createBarrier(loopOp->getLoc(), parDimsAttr);
   }
 }
@@ -4356,6 +4351,21 @@ public:
     assert(deviceType != mlir::acc::DeviceType::Host &&
            deviceType != mlir::acc::DeviceType::Multicore &&
            "ACCCGToGPU only supports GPU device types");
+
+    // Validate parallel-loop mappings before any compute region is rewritten.
+    // Loops outside compute regions do not require GPU mappings.
+    WalkResult result = funcOp->walk([](scf::ParallelOp loop) {
+      if (!loop->getParentOfType<acc::ComputeRegionOp>() ||
+          mlir::acc::hasParDimsAttr(loop))
+        return WalkResult::advance();
+      loop.emitOpError("requires an 'acc.par_dims' attribute");
+      return WalkResult::interrupt();
+    });
+    if (result.wasInterrupted()) {
+      signalPassFailure();
+      return;
+    }
+
     ACCCGToGPUOptions options;
     options.deviceType = deviceType;
     options.maxWorkgroupSharedMemory = maxWorkgroupSharedMemory;
