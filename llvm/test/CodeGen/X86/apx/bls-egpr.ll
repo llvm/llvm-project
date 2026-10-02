@@ -13,19 +13,13 @@ define i8 @blsi8(i8 %x) nounwind {
 ; CHECK-NEXT:    pushq %r13 # encoding: [0x41,0x55]
 ; CHECK-NEXT:    pushq %r12 # encoding: [0x41,0x54]
 ; CHECK-NEXT:    pushq %rbx # encoding: [0x53]
-; CHECK-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    # encoding: [0x89,0x7c,0x24,0xfc]
+; CHECK-NEXT:    movl %edi, %r16d # encoding: [0xd5,0x10,0x89,0xf8]
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    blsil {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Folded Reload
-; CHECK-NEXT:    # encoding: [0xc4,0xe2,0x78,0xf3,0x5c,0x24,0xfc]
-; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    # encoding: [0x89,0x44,0x24,0xfc]
+; CHECK-NEXT:    blsil %r16d, %r16d # encoding: [0x62,0xfa,0x7c,0x00,0xf3,0xd8]
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; CHECK-NEXT:    # encoding: [0x8b,0x44,0x24,0xfc]
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    movl %r16d, %eax # encoding: [0xd5,0x40,0x89,0xc0]
 ; CHECK-NEXT:    popq %rbx # encoding: [0x5b]
 ; CHECK-NEXT:    popq %r12 # encoding: [0x41,0x5c]
 ; CHECK-NEXT:    popq %r13 # encoding: [0x41,0x5d]
@@ -79,19 +73,13 @@ define i8 @blsmsk8(i8 %x) nounwind {
 ; CHECK-NEXT:    pushq %r13 # encoding: [0x41,0x55]
 ; CHECK-NEXT:    pushq %r12 # encoding: [0x41,0x54]
 ; CHECK-NEXT:    pushq %rbx # encoding: [0x53]
-; CHECK-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    # encoding: [0x89,0x7c,0x24,0xfc]
+; CHECK-NEXT:    movl %edi, %r16d # encoding: [0xd5,0x10,0x89,0xf8]
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    blsmskl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Folded Reload
-; CHECK-NEXT:    # encoding: [0xc4,0xe2,0x78,0xf3,0x54,0x24,0xfc]
-; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    # encoding: [0x89,0x44,0x24,0xfc]
+; CHECK-NEXT:    blsmskl %r16d, %r16d # encoding: [0x62,0xfa,0x7c,0x00,0xf3,0xd0]
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; CHECK-NEXT:    # encoding: [0x8b,0x44,0x24,0xfc]
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    movl %r16d, %eax # encoding: [0xd5,0x40,0x89,0xc0]
 ; CHECK-NEXT:    popq %rbx # encoding: [0x5b]
 ; CHECK-NEXT:    popq %r12 # encoding: [0x41,0x5c]
 ; CHECK-NEXT:    popq %r13 # encoding: [0x41,0x5d]

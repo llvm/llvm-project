@@ -1238,11 +1238,9 @@ void DwarfLineTable::emitCU(MCStreamer *MCOS, MCDwarfLineTableParams Params,
 // Bonus is that when we output a final binary we can reuse .debug_line_str
 // section. So we don't have to do the SHF_ALLOC trick we did with
 // .debug_line.
-static void parseAndPopulateDebugLineStr(BinarySection &LineStrSection,
-                                         MCDwarfLineStr &LineStr,
+static void parseAndPopulateDebugLineStr(MCDwarfLineStr &LineStr,
                                          BinaryContext &BC) {
-  DataExtractor StrData(LineStrSection.getContents(),
-                        BC.DwCtx->isLittleEndian());
+  DataExtractor StrData = BC.DwCtx->getLineStringExtractor();
   uint64_t Offset = 0;
   while (StrData.isValidOffset(Offset)) {
     const uint64_t StrOffset = Offset;
@@ -1281,7 +1279,7 @@ void DwarfLineTable::emit(BinaryContext &BC, MCStreamer &Streamer) {
   // .debug_line, so need to check if section exists.
   if (LineStrSection) {
     LineStr.emplace(*BC.Ctx);
-    parseAndPopulateDebugLineStr(*LineStrSection, *LineStr, BC);
+    parseAndPopulateDebugLineStr(*LineStr, BC);
   }
 
   // Switch to the section where the table will be emitted into.
