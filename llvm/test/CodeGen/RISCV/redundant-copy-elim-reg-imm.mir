@@ -230,8 +230,6 @@ body:             |
     PseudoRET
 ...
 
-# The formal ADDI definition cannot change x0's architectural zero value.
-
 ---
 name:            bne_x0_is_zero
 tracksRegLiveness: true
