@@ -190,7 +190,7 @@ JSONCompilationDatabase::loadFromFile(StringRef FilePath,
                                       JSONCommandLineSyntax Syntax) {
   // Don't mmap: if we're a long-lived process, the build system may overwrite.
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> DatabaseBuffer =
-      llvm::MemoryBuffer::getFile(FilePath, /*IsText=*/false,
+      llvm::MemoryBuffer::getFile(FilePath, /*IsText=*/true,
                                   /*RequiresNullTerminator=*/true,
                                   /*IsVolatile=*/true);
   if (std::error_code Result = DatabaseBuffer.getError()) {
