@@ -296,6 +296,8 @@ features cannot lower the translation-unit ABI level;
 
 - Clang now recognizes the `[[gnu::flag_enum]]` attribute and treats it equivalent to `[[clang::flag_enum]]`
 
+- Clang now accepts `_single_inheritance` under `-fms-compatibility` as an alias for `__single_inheritance`; `_multiple_inheritance` and `_virtual_inheritance` were already correctly supported as aliases.
+
 ### Improvements to Clang's diagnostics
 
 - `-Wfortify-source` now diagnoses when `strlcat`, `__builtin_strlcat`, `strlcpy`, or
@@ -583,6 +585,7 @@ features cannot lower the translation-unit ABI level;
   (e.g. `({ s.b; })`) was not subject to integer promotion, unlike an ordinary
   bit-field access. (#GH221542)
 - No longer crashing due to follow-on diagnostics when there is an invalid operand in a logical operator involving a vector operand. (#GH227588)
+- Fixed a crash due to typo correction mishandling custom keywords `_virtual_inheritance` and `_multiple_inheritance` in `-fms-compatibility` mode. (#GH228003)
   
 #### Bug Fixes to Compiler Builtins
 
@@ -1043,6 +1046,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 ### OpenMP Support
 
+- Fixed an OpenMP `requires` directive read from a PCH or module losing its effect on
+  semantic checks, which caused spurious `reverse_offload` errors.
 - Added the OpenMP 6.1 `#pragma omp flatten` loop transformation and the
   `depth` clause. Flatten combines perfectly nested canonical loops into one
   loop. `depth(k)` selects how many outermost loops to combine (default 2).

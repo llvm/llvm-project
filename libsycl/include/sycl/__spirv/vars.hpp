@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL___SPIRV_SPIRV_VARS
-#define _LIBSYCL___SPIRV_SPIRV_VARS
+#ifndef _LIBSYCL___SPIRV_VARS_HPP
+#define _LIBSYCL___SPIRV_VARS_HPP
 
 #include <__clang_spirv_builtins.h>
 
@@ -24,10 +24,16 @@ namespace __spirv {
 // Helper function templates to initialize and get vector component from SPIR-V
 // built-in variables
 #define __SPIRV_DEFINE_INIT_AND_GET_HELPERS(POSTFIX)                           \
-  template <int ID> size_t get##POSTFIX();                                     \
-  template <> inline size_t get##POSTFIX<0>() { return __spirv_##POSTFIX(0); } \
-  template <> inline size_t get##POSTFIX<1>() { return __spirv_##POSTFIX(1); } \
-  template <> inline size_t get##POSTFIX<2>() { return __spirv_##POSTFIX(2); } \
+  template <int ID> std::size_t get##POSTFIX();                                \
+  template <> inline std::size_t get##POSTFIX<0>() {                           \
+    return __spirv_##POSTFIX(0);                                               \
+  }                                                                            \
+  template <> inline std::size_t get##POSTFIX<1>() {                           \
+    return __spirv_##POSTFIX(1);                                               \
+  }                                                                            \
+  template <> inline std::size_t get##POSTFIX<2>() {                           \
+    return __spirv_##POSTFIX(2);                                               \
+  }                                                                            \
                                                                                \
   template <int Dim, class DstT> struct InitSizesST##POSTFIX;                  \
                                                                                \
@@ -61,4 +67,4 @@ __SPIRV_DEFINE_INIT_AND_GET_HELPERS(BuiltInNumWorkgroups)
 
 } // namespace __spirv
 
-#endif // _LIBSYCL___SPIRV_SPIRV_VARS
+#endif // _LIBSYCL___SPIRV_VARS_HPP
