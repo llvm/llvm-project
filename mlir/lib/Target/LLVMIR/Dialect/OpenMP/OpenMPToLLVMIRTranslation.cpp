@@ -568,7 +568,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkAllocate(op, result);
         checkTaskReductionByref(op, result);
       })
-      .Case([&](omp::TaskwaitOp op) { checkNowait(op, result); })
       .Case([&](omp::DispatchOp op) {
         // OpenMP 5.1 dispatch creates an explicit task; nowait controls whether
         // it is included. Diagnose unsupported asynchronous tasking before 5.2,
@@ -4714,7 +4713,8 @@ convertOmpTaskwaitOp(omp::TaskwaitOp twOp, llvm::IRBuilderBase &builder,
     return failure();
   }
 
-  moduleTranslation.getOpenMPBuilder()->createTaskwait(builder, dds);
+  moduleTranslation.getOpenMPBuilder()->createTaskwait(builder, dds,
+                                                       twOp.getNowait());
   if (dds.DepArray) {
     builder.CreateFree(dds.DepArray);
   }
@@ -7924,11 +7924,15 @@ processIndividualMap(llvm::IRBuilderBase &builder,
   combinedInfo.Types.emplace_back(mapFlag);
   // TODO: set HasAttachPtr from Flang for pointee-storage entries.
   combinedInfo.HasAttachPtr.emplace_back(false);
+  // A privatized attach map needs storage for the pointer or descriptor even
+  // when its pointee is null. Its size describes that storage, not the pointee,
+  // and is needed by the runtime for corresponding-pointer-initialization.
   combinedInfo.Sizes.emplace_back(
-      isPtrTy ? builder.CreateSelect(
-                    builder.CreateIsNull(mapData.Pointers[mapDataIdx]),
-                    builder.getInt64(0), mapData.Sizes[mapDataIdx])
-              : mapData.Sizes[mapDataIdx]);
+      isPtrTy && !isPrivatizeableAttachMap(mapInfoOp.getMapType())
+          ? builder.CreateSelect(
+                builder.CreateIsNull(mapData.Pointers[mapDataIdx]),
+                builder.getInt64(0), mapData.Sizes[mapDataIdx])
+          : mapData.Sizes[mapDataIdx]);
 }
 
 // This creates two insertions into the MapInfosTy data structure for the

@@ -2,6 +2,46 @@
 
 // -----
 
+// CHECK-LABEL: test_matmul_rank2
+func.func @test_matmul_rank2(%arg0: tensor<3x4xf32>, %arg1: tensor<4x5xf32>) -> tensor<3x5xf32> {
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<3x4xf32>, tensor<4x5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<3x5xf32>
+  return %0 : tensor<3x5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_matmul_rank4
+func.func @test_matmul_rank4(%arg0: tensor<2x3x3x4xf32>, %arg1: tensor<2x3x4x6xf32>) -> tensor<2x3x3x6xf32> {
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<2x3x3x4xf32>, tensor<2x3x4x6xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x3x3x6xf32>
+  return %0 : tensor<2x3x3x6xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_matmul_rank3_batch_broadcast
+func.func @test_matmul_rank3_batch_broadcast(%arg0: tensor<2x3x4xf32>, %arg1: tensor<1x4x5xf32>) -> tensor<2x3x5xf32> {
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<2x3x4xf32>, tensor<1x4x5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x3x5xf32>
+  return %0 : tensor<2x3x5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_matmul_t_rank4
+func.func @test_matmul_t_rank4(%arg0: tensor<2x1x3x4xf32>, %arg1: tensor<1x5x6x4xf32>) -> tensor<2x5x3x6xf32> {
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %0 = tosa.matmul_t %arg0, %arg1, %azp0, %bzp0 : (tensor<2x1x3x4xf32>, tensor<1x5x6x4xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x5x3x6xf32>
+  return %0 : tensor<2x5x3x6xf32>
+}
+
+// -----
+
 // CHECK-LABEL: test_matmul_fp8_mixed_precision_operands
 func.func @test_matmul_fp8_mixed_precision_operands(%arg0: tensor<1x14x19xf8E4M3FN>, %arg1: tensor<1x19x28xf8E5M2>) -> tensor<1x14x28xf16> {
   %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf8E4M3FN>}> : () -> tensor<1xf8E4M3FN>
@@ -352,6 +392,22 @@ func.func @test_row_gather_mxfp_i64_indices(%arg0: tensor<13x21x32x!tosa.block_s
   %row_count = "tosa.const"() <{values = dense<2> : tensor<1xi32>}> : () -> tensor<1xi32>
   %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>, tensor<13x26xi64>, tensor<1xi32>) -> tensor<13x52x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
   return %0 : tensor<13x52x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
+}
+
+// -----
+
+// CHECK-LABEL: test_gather_mxfp_i32_indices
+func.func @test_gather_mxfp_i32_indices(%arg0: tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %arg1: tensor<13x26xi32>) -> tensor<13x26x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<13x26xi32>) -> tensor<13x26x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %0 : tensor<13x26x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+// CHECK-LABEL: test_gather_mxfp_i64_indices
+func.func @test_gather_mxfp_i64_indices(%arg0: tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>, %arg1: tensor<13x26xi64>) -> tensor<13x26x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>> {
+  %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>, tensor<13x26xi64>) -> tensor<13x26x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
+  return %0 : tensor<13x26x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
 }
 
 // -----

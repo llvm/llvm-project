@@ -416,21 +416,31 @@ def Tosa_MatMulOp : Tosa_InferShapedTypeOp<"matmul", [NoMemoryEffect]> {
   let summary = "Matrix multiplication operator.";
 
   let description = [{
-    Performs two dimensional matrix multiplications.
+    Performs matrix multiplications over the two innermost dimensions while
+    treating any leading dimensions as broadcastable batch dimensions. `A` has
+    shape `[A0, ..., A(n-1), H, C]`. `B` has shape
+    `[B0, ..., B(m-1), C, W]`. `[A0, ..., A(n-1)]` and
+    `[B0, ..., B(m-1)]` must be compatible as leading batch dimensions.
+
+    Right-align these two dimension lists and treat any missing leading
+    dimensions as size 1, producing common batch dimensions
+    `[D0, ..., D(k-1)]` where `k = max(n, m)` and each `Di` is the larger of
+    the two aligned dimension sizes. `output` has shape
+    `[D0, ..., D(k-1), H, W]`.
 
     This operation is not pure. Undefined behaviour may occur if the accumulated
     result overflows.
   }];
 
   let arguments = (ins
-    Tosa_Tensor3D:$a,
-    Tosa_Tensor3D:$b,
+    Tosa_TensorAtLeast2D:$a,
+    Tosa_TensorAtLeast2D:$b,
     Tosa_ScalarIntOrFloatTensor:$a_zp,
     Tosa_ScalarIntOrFloatTensor:$b_zp
   );
 
   let results = (outs
-    Tosa_Tensor3D:$output
+    Tosa_TensorAtLeast2D:$output
   );
 
   let extraClassDeclaration = [{
@@ -454,16 +464,28 @@ def Tosa_MatMulTOp : Tosa_InferShapedTypeOp<"matmul_t", [NoMemoryEffect]> {
   let summary = "Matrix multiplication with transposed B operator.";
 
   let description = [{
-    Performs two dimensional matrix multiplications. `A` matrix is of shape
-    `N x H x C`. `B` matrix is of shape `D x W x C`. This is effectively a
-    matrix multiply of `A` by the transposed `B` matrix. If the batched
-    dimension of input `B` is of size 1, the `B` matrix is broadcast.
+    Performs matrix multiplications over the two innermost dimensions while
+    implicitly transposing the last two dimensions of `B`. Any leading
+    dimensions are broadcastable batch dimensions. `A` has shape
+    `[A0, ..., A(n-1), H, C]`. `B` has shape
+    `[B0, ..., B(m-1), W, C]` before swapping those last two dimensions to
+    `[B0, ..., B(m-1), C, W]`. `[A0, ..., A(n-1)]` and
+    `[B0, ..., B(m-1)]` must be compatible as leading batch dimensions.
+
+    Right-align these two dimension lists and treat any missing leading
+    dimensions as size 1, producing common batch dimensions
+    `[D0, ..., D(k-1)]` where `k = max(n, m)` and each `Di` is the larger of
+    the two aligned dimension sizes. `output` has shape
+    `[D0, ..., D(k-1), H, W]`.
+
+    This operation is not pure. Undefined behaviour may occur if the accumulated
+    result overflows.
   }];
 
-  let arguments = (ins Tosa_Tensor3D:$a, Tosa_Tensor3D:$b,
+  let arguments = (ins Tosa_TensorAtLeast2D:$a, Tosa_TensorAtLeast2D:$b,
       Tosa_ScalarIntOrFloatTensor:$a_zp, Tosa_ScalarIntOrFloatTensor:$b_zp);
 
-  let results = (outs Tosa_Tensor3D:$output);
+  let results = (outs Tosa_TensorAtLeast2D:$output);
 
   let extraClassDeclaration = [{
     FailureOr<int64_t> getAZeroPoint();
