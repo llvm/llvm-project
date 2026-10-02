@@ -5457,6 +5457,66 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
   EXPECT_TRUE(findGEPZeroOne(ReductionFn->getArg(1), FirstRHS, SecondRHS));
 }
 
+TEST_F(OpenMPIRBuilderTest, GPUTeamsReductionRuntimeCallHasDebugLoc) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.Config.IsTargetDevice = true;
+  OMPBuilder.Config.setIsGPU(true);
+  OMPBuilder.initialize();
+
+  IRBuilder<> Builder(BB);
+  Instruction *AllocaInsertPt =
+      new BitCastInst(PoisonValue::get(Builder.getInt32Ty()),
+                      Builder.getInt32Ty(), "allocapt", BB);
+  Builder.SetInsertPoint(BB);
+  Builder.SetCurrentDebugLocation(DL);
+  InsertPointTy AllocaIP(AllocaInsertPt->getIterator());
+  Value *Original;
+  Value *Private;
+  {
+    IRBuilder<>::InsertPointGuard Guard(Builder);
+    Builder.restoreIP(AllocaIP);
+    Original = Builder.CreateAlloca(Builder.getFloatTy(), nullptr, "original");
+    Private = Builder.CreateAlloca(Builder.getFloatTy(), nullptr, "private");
+  }
+
+  auto ReductionGen = [](InsertPointTy IP, unsigned, Value **LHSPtr,
+                         Value **RHSPtr, Function *) {
+    IRBuilder<> Builder(IP.getNodeParent(), IP);
+    *LHSPtr = Builder.CreateAlloca(Builder.getFloatTy());
+    *RHSPtr = Builder.CreateAlloca(Builder.getFloatTy());
+    Builder.CreateLoad(Builder.getFloatTy(), *LHSPtr);
+    Builder.CreateLoad(Builder.getFloatTy(), *RHSPtr);
+    return Builder.saveIP();
+  };
+  OpenMPIRBuilder::ReductionInfo ReductionInfos[] = {
+      {Builder.getFloatTy(), Original, Private,
+       /*EvaluationKind=*/OpenMPIRBuilder::EvalKind::Scalar,
+       /*ReductionGen=*/nullptr, ReductionGen,
+       /*AtomicReductionGen=*/nullptr, /*DataPtrPtrGen=*/nullptr}};
+  bool IsByRef[] = {false};
+
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  ASSERT_EXPECTED_INIT(
+      InsertPointTy, AfterIP,
+      OMPBuilder.createReductionsGPU(
+          Loc, AllocaIP, Builder.saveIP(), ReductionInfos, IsByRef,
+          /*IsNoWait=*/false, /*IsTeamsReduction=*/true, /*IsSPMD=*/true,
+          OpenMPIRBuilder::ReductionGenCBKind::Clang, omp::NVPTXGridValues));
+  Builder.restoreIP(AfterIP);
+  Builder.CreateRetVoid();
+
+  SmallVector<CallInst *> Calls;
+  findCalls(F, RuntimeFunction::OMPRTL___kmpc_gpu_xteam_reduce_nowait,
+            OMPBuilder, Calls);
+  ASSERT_EQ(Calls.size(), 1u);
+  ASSERT_TRUE(Calls.front()->getDebugLoc());
+  EXPECT_EQ(Calls.front()->getDebugLoc()->getScope()->getSubprogram(),
+            F->getSubprogram());
+
+  EXPECT_FALSE(verifyModule(*M));
+}
+
 static void createScan(llvm::Value *scanVar, llvm::Type *scanType,
                        OpenMPIRBuilder &OMPBuilder, IRBuilder<> &Builder,
                        OpenMPIRBuilder::LocationDescription Loc,
