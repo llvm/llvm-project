@@ -35,29 +35,42 @@ static constexpr std::array<CounterInfo, 4> GFX12CounterInfos = {{
 
 class AMDGPUGFX12EventTrackingTest : public AMDGPUCodeGenTestBase {
 public:
-  void SetUp() override { setUpImpl("amdgpu12.00-amd-amdhsa", "", ""); }
+  void SetUp() override {
+    setUpImpl("amdgpu12.00-amd-amdhsa", "", "");
+
+    TrackerGetter = [&](const MachineBasicBlock &MBB) -> EventTracker & {
+      auto &Entry = Trackers[&MBB];
+      if (!Entry)
+        Entry = std::make_unique<EventTracker>(MBB, GFX12CounterInfos);
+      return *Entry;
+    };
+  }
+
+  EventTracker &
+  visitAll(MachineBasicBlock &MBB,
+           function_ref<void(EventTracker &ET)> AfterVisit = nullptr) {
+    const GCNSubtarget &ST = MBB.getParent()->getSubtarget<GCNSubtarget>();
+
+    EventTracker &ET = TrackerGetter(MBB);
+    ET.enterBlock(TrackerGetter);
+    for (MachineInstr &MI : MBB) {
+      HWEvents Events =
+          getEventsFor(MI, ST, /*IsExpertMode=*/false, /*TgSplit=*/false);
+      for (HWEvents SingleEv : Events) {
+        ET.record(MI, SingleHWEvent::encode(SingleEv));
+      }
+    }
+    if (AfterVisit)
+      AfterVisit(ET);
+    ET.leaveBlock();
+    return ET;
+  }
+
+  std::function<EventTracker &(const MachineBasicBlock &)> TrackerGetter;
+  DenseMap<const MachineBasicBlock *, std::unique_ptr<EventTracker>> Trackers;
 };
 
 namespace {
-static EventTracker &
-visitAll(EventTrackingContext &Ctx, MachineBasicBlock &MBB,
-         function_ref<void(EventTracker &ET)> AfterVisit = nullptr) {
-  const GCNSubtarget &ST = MBB.getParent()->getSubtarget<GCNSubtarget>();
-
-  EventTracker &ET = Ctx[&MBB];
-  ET.enterBlock();
-  for (MachineInstr &MI : MBB) {
-    HWEvents Events =
-        getEventsFor(MI, ST, /*IsExpertMode=*/false, /*TgSplit=*/false);
-    for (HWEvents SingleEv : Events) {
-      ET.record(MI, SingleHWEvent::encode(SingleEv));
-    }
-  }
-  if (AfterVisit)
-    AfterVisit(ET);
-  ET.leaveBlock();
-  return ET;
-}
 
 /// Provides some helpers to declaratively check the state of the EventTracker
 /// for one counter. This provides helpers to check the general counter state
@@ -75,7 +88,7 @@ struct TrackerRecordsChecker {
 
   bool empty() { return Records.empty(); }
 
-  // Has no records and score is zero (if there is one)
+  // Has no records and count is zero (if there is one)
   bool unused() { return empty() && (!hasCount() || !getCount()); }
 
   const EventTrackerRecord &cur() { return Records[CurElt]; }
@@ -115,16 +128,14 @@ body:             |
   MachineFunction &MF = getMF("BasicTimeline");
   MachineBasicBlock &BB0 = *MF.getBlockNumbered(0);
 
-  EventTrackingContext Ctx(MF, GFX12CounterInfos);
-
-  auto &ET = visitAll(Ctx, BB0);
+  auto &ET = visitAll(BB0);
 
   auto LoadCnt = TrackerRecordsChecker(ET, AMDGPU::LOAD_CNT);
   EXPECT_TRUE(LoadCnt.hasCount());
   EXPECT_EQ(LoadCnt.getCount(), 1u);
   EXPECT_FALSE(LoadCnt.empty());
   EXPECT_EQ(LoadCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_LOAD_DWORD);
-  EXPECT_EQ(LoadCnt.cur().getScore(), 0u);
+  EXPECT_EQ(LoadCnt.cur().getHeight(), 0u);
   EXPECT_FALSE(LoadCnt.next());
 
   auto DsCnt = TrackerRecordsChecker(ET, AMDGPU::DS_CNT);
@@ -132,7 +143,7 @@ body:             |
   EXPECT_EQ(DsCnt.getCount(), 1u);
   EXPECT_FALSE(DsCnt.empty());
   EXPECT_EQ(DsCnt.cur().getMI()->getOpcode(), AMDGPU::DS_READ_B32_gfx9);
-  EXPECT_EQ(DsCnt.cur().getScore(), 0u);
+  EXPECT_EQ(DsCnt.cur().getHeight(), 0u);
   EXPECT_FALSE(DsCnt.next());
 
   auto ExpCnt = TrackerRecordsChecker(ET, AMDGPU::EXP_CNT);
@@ -143,10 +154,10 @@ body:             |
   EXPECT_EQ(StoreCnt.getCount(), 2u);
   EXPECT_FALSE(StoreCnt.empty());
   EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORD);
-  EXPECT_EQ(StoreCnt.cur().getScore(), 1u);
+  EXPECT_EQ(StoreCnt.cur().getHeight(), 1u);
   EXPECT_TRUE(StoreCnt.next());
   EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORDX2);
-  EXPECT_EQ(StoreCnt.cur().getScore(), 0u);
+  EXPECT_EQ(StoreCnt.cur().getHeight(), 0u);
   EXPECT_FALSE(StoreCnt.next());
 }
 
@@ -171,21 +182,19 @@ body:             |
   MachineFunction &MF = getMF("BasicTimeline");
   MachineBasicBlock &BB0 = *MF.getBlockNumbered(0);
 
-  EventTrackingContext Ctx(MF, GFX12CounterInfos);
-
   // Iterate twice
-  visitAll(Ctx, BB0);
-  auto &ET = visitAll(Ctx, BB0);
+  visitAll(BB0);
+  auto &ET = visitAll(BB0);
 
   auto LoadCnt = TrackerRecordsChecker(ET, AMDGPU::LOAD_CNT);
   EXPECT_TRUE(LoadCnt.hasCount());
   EXPECT_EQ(LoadCnt.getCount(), 2u);
   EXPECT_FALSE(LoadCnt.empty());
   EXPECT_EQ(LoadCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_LOAD_DWORD);
-  EXPECT_EQ(LoadCnt.cur().getScore(), 1u);
+  EXPECT_EQ(LoadCnt.cur().getHeight(), 1u);
   EXPECT_TRUE(LoadCnt.next());
   EXPECT_EQ(LoadCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_LOAD_DWORD);
-  EXPECT_EQ(LoadCnt.cur().getScore(), 0u);
+  EXPECT_EQ(LoadCnt.cur().getHeight(), 0u);
   EXPECT_FALSE(LoadCnt.next());
 
   auto DsCnt = TrackerRecordsChecker(ET, AMDGPU::DS_CNT);
@@ -193,10 +202,10 @@ body:             |
   EXPECT_EQ(DsCnt.getCount(), 2u);
   EXPECT_FALSE(DsCnt.empty());
   EXPECT_EQ(DsCnt.cur().getMI()->getOpcode(), AMDGPU::DS_READ_B32_gfx9);
-  EXPECT_EQ(DsCnt.cur().getScore(), 1u);
+  EXPECT_EQ(DsCnt.cur().getHeight(), 1u);
   EXPECT_TRUE(DsCnt.next());
   EXPECT_EQ(DsCnt.cur().getMI()->getOpcode(), AMDGPU::DS_READ_B32_gfx9);
-  EXPECT_EQ(DsCnt.cur().getScore(), 0u);
+  EXPECT_EQ(DsCnt.cur().getHeight(), 0u);
   EXPECT_FALSE(DsCnt.next());
 
   auto ExpCnt = TrackerRecordsChecker(ET, AMDGPU::EXP_CNT);
@@ -207,10 +216,10 @@ body:             |
   EXPECT_EQ(StoreCnt.getCount(), 2u);
   EXPECT_FALSE(StoreCnt.empty());
   EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORDX2);
-  EXPECT_EQ(StoreCnt.cur().getScore(), 1u);
+  EXPECT_EQ(StoreCnt.cur().getHeight(), 1u);
   EXPECT_TRUE(StoreCnt.next());
   EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORDX2);
-  EXPECT_EQ(StoreCnt.cur().getScore(), 0u);
+  EXPECT_EQ(StoreCnt.cur().getHeight(), 0u);
   EXPECT_FALSE(StoreCnt.next());
 }
 
@@ -237,17 +246,15 @@ body:             |
   MachineBasicBlock &BB0 = *MF.getBlockNumbered(0);
   MachineBasicBlock &BB1 = *MF.getBlockNumbered(1);
 
-  EventTrackingContext Ctx(MF, GFX12CounterInfos);
-
-  visitAll(Ctx, BB0);
-  auto &ET = visitAll(Ctx, BB1);
+  visitAll(BB0);
+  auto &ET = visitAll(BB1);
 
   auto LoadCnt = TrackerRecordsChecker(ET, AMDGPU::LOAD_CNT);
   EXPECT_TRUE(LoadCnt.hasCount());
   EXPECT_EQ(LoadCnt.getCount(), 1u);
   EXPECT_FALSE(LoadCnt.empty());
   EXPECT_EQ(LoadCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_LOAD_DWORD);
-  EXPECT_EQ(LoadCnt.cur().getScore(), 0u);
+  EXPECT_EQ(LoadCnt.cur().getHeight(), 0u);
   EXPECT_FALSE(LoadCnt.next());
 
   auto DsCnt = TrackerRecordsChecker(ET, AMDGPU::DS_CNT);
@@ -255,7 +262,7 @@ body:             |
   EXPECT_EQ(DsCnt.getCount(), 1u);
   EXPECT_FALSE(DsCnt.empty());
   EXPECT_EQ(DsCnt.cur().getMI()->getOpcode(), AMDGPU::DS_READ_B32_gfx9);
-  EXPECT_EQ(DsCnt.cur().getScore(), 0u);
+  EXPECT_EQ(DsCnt.cur().getHeight(), 0u);
   EXPECT_FALSE(DsCnt.next());
 
   auto ExpCnt = TrackerRecordsChecker(ET, AMDGPU::EXP_CNT);
@@ -266,10 +273,10 @@ body:             |
   EXPECT_EQ(StoreCnt.getCount(), 2u);
   EXPECT_FALSE(StoreCnt.empty());
   EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORD);
-  EXPECT_EQ(StoreCnt.cur().getScore(), 1u);
+  EXPECT_EQ(StoreCnt.cur().getHeight(), 1u);
   EXPECT_TRUE(StoreCnt.next());
   EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORDX2);
-  EXPECT_EQ(StoreCnt.cur().getScore(), 0u);
+  EXPECT_EQ(StoreCnt.cur().getHeight(), 0u);
   EXPECT_FALSE(StoreCnt.next());
 }
 
@@ -301,18 +308,16 @@ body:             |
   MachineBasicBlock &BB1 = *MF.getBlockNumbered(1);
   MachineBasicBlock &BB2 = *MF.getBlockNumbered(2);
 
-  EventTrackingContext Ctx(MF, GFX12CounterInfos);
-
-  visitAll(Ctx, BB0);
-  visitAll(Ctx, BB1);
-  auto &ET = visitAll(Ctx, BB2);
+  visitAll(BB0);
+  visitAll(BB1);
+  auto &ET = visitAll(BB2);
 
   auto LoadCnt = TrackerRecordsChecker(ET, AMDGPU::LOAD_CNT);
   EXPECT_TRUE(LoadCnt.hasCount());
   EXPECT_EQ(LoadCnt.getCount(), 1u);
   EXPECT_FALSE(LoadCnt.empty());
   EXPECT_EQ(LoadCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_LOAD_DWORD);
-  EXPECT_EQ(LoadCnt.cur().getScore(), 0u);
+  EXPECT_EQ(LoadCnt.cur().getHeight(), 0u);
   EXPECT_FALSE(LoadCnt.next());
 
   auto DsCnt = TrackerRecordsChecker(ET, AMDGPU::DS_CNT);
@@ -320,7 +325,7 @@ body:             |
   EXPECT_EQ(DsCnt.getCount(), 1u);
   EXPECT_FALSE(DsCnt.empty());
   EXPECT_EQ(DsCnt.cur().getMI()->getOpcode(), AMDGPU::DS_READ_B32_gfx9);
-  EXPECT_EQ(DsCnt.cur().getScore(), 0u);
+  EXPECT_EQ(DsCnt.cur().getHeight(), 0u);
   EXPECT_FALSE(DsCnt.next());
 
   auto ExpCnt = TrackerRecordsChecker(ET, AMDGPU::EXP_CNT);
@@ -331,10 +336,10 @@ body:             |
   EXPECT_EQ(StoreCnt.getCount(), 2u);
   EXPECT_FALSE(StoreCnt.empty());
   EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORD);
-  EXPECT_EQ(StoreCnt.cur().getScore(), 1u);
+  EXPECT_EQ(StoreCnt.cur().getHeight(), 1u);
   EXPECT_TRUE(StoreCnt.next());
   EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORDX2);
-  EXPECT_EQ(StoreCnt.cur().getScore(), 0u);
+  EXPECT_EQ(StoreCnt.cur().getHeight(), 0u);
   EXPECT_FALSE(StoreCnt.next());
 }
 
@@ -366,18 +371,16 @@ body:             |
   MachineBasicBlock &BB1 = *MF.getBlockNumbered(1);
   MachineBasicBlock &BB2 = *MF.getBlockNumbered(2);
 
-  EventTrackingContext Ctx(MF, GFX12CounterInfos);
-
-  visitAll(Ctx, BB0);
-  visitAll(Ctx, BB1);
-  auto &ET = visitAll(Ctx, BB2);
+  visitAll(BB0);
+  visitAll(BB1);
+  auto &ET = visitAll(BB2);
 
   auto LoadCnt = TrackerRecordsChecker(ET, AMDGPU::LOAD_CNT);
   EXPECT_TRUE(LoadCnt.hasCount());
   EXPECT_EQ(LoadCnt.getCount(), 1u);
   EXPECT_FALSE(LoadCnt.empty());
   EXPECT_EQ(LoadCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_LOAD_DWORD);
-  EXPECT_EQ(LoadCnt.cur().getScore(), 0u);
+  EXPECT_EQ(LoadCnt.cur().getHeight(), 0u);
   EXPECT_FALSE(LoadCnt.next());
 
   auto DsCnt = TrackerRecordsChecker(ET, AMDGPU::DS_CNT);
@@ -385,7 +388,7 @@ body:             |
   EXPECT_EQ(DsCnt.getCount(), 1u);
   EXPECT_FALSE(DsCnt.empty());
   EXPECT_EQ(DsCnt.cur().getMI()->getOpcode(), AMDGPU::DS_READ_B32_gfx9);
-  EXPECT_EQ(DsCnt.cur().getScore(), 0u);
+  EXPECT_EQ(DsCnt.cur().getHeight(), 0u);
   EXPECT_FALSE(DsCnt.next());
 
   auto ExpCnt = TrackerRecordsChecker(ET, AMDGPU::EXP_CNT);
@@ -398,11 +401,11 @@ body:             |
   EXPECT_FALSE(StoreCnt.empty());
   // First successor has GLOBAL_STORE_DWORD at height 0
   EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORD);
-  EXPECT_EQ(StoreCnt.cur().getScore(), 0u);
+  EXPECT_EQ(StoreCnt.cur().getHeight(), 0u);
   EXPECT_TRUE(StoreCnt.next());
   // Second successor has GLOBAL_STORE_DWORDX2 at height 0 too
   EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORDX2);
-  EXPECT_EQ(StoreCnt.cur().getScore(), 0u);
+  EXPECT_EQ(StoreCnt.cur().getHeight(), 0u);
   EXPECT_FALSE(StoreCnt.next());
 }
 
@@ -440,19 +443,17 @@ body:             |
   MachineBasicBlock &BB2 = *MF.getBlockNumbered(2);
   MachineBasicBlock &BB3 = *MF.getBlockNumbered(3);
 
-  EventTrackingContext Ctx(MF, GFX12CounterInfos);
-
-  visitAll(Ctx, BB0);
-  visitAll(Ctx, BB1);
-  visitAll(Ctx, BB2);
-  auto &ET = visitAll(Ctx, BB3);
+  visitAll(BB0);
+  visitAll(BB1);
+  visitAll(BB2);
+  auto &ET = visitAll(BB3);
 
   auto LoadCnt = TrackerRecordsChecker(ET, AMDGPU::LOAD_CNT);
   EXPECT_TRUE(LoadCnt.hasCount());
   EXPECT_EQ(LoadCnt.getCount(), 1u);
   EXPECT_FALSE(LoadCnt.empty());
   EXPECT_EQ(LoadCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_LOAD_DWORD);
-  EXPECT_EQ(LoadCnt.cur().getScore(), 0u);
+  EXPECT_EQ(LoadCnt.cur().getHeight(), 0u);
   EXPECT_FALSE(LoadCnt.next());
 
   auto DsCnt = TrackerRecordsChecker(ET, AMDGPU::DS_CNT);
@@ -460,7 +461,7 @@ body:             |
   EXPECT_EQ(DsCnt.getCount(), 1u);
   EXPECT_FALSE(DsCnt.empty());
   EXPECT_EQ(DsCnt.cur().getMI()->getOpcode(), AMDGPU::DS_READ_B32_gfx9);
-  EXPECT_EQ(DsCnt.cur().getScore(), 0u);
+  EXPECT_EQ(DsCnt.cur().getHeight(), 0u);
   EXPECT_FALSE(DsCnt.next());
 
   auto ExpCnt = TrackerRecordsChecker(ET, AMDGPU::EXP_CNT);
@@ -471,7 +472,7 @@ body:             |
   EXPECT_EQ(StoreCnt.getCount(), 1u);
   EXPECT_FALSE(StoreCnt.empty());
   EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORD);
-  EXPECT_EQ(StoreCnt.cur().getScore(), 0u);
+  EXPECT_EQ(StoreCnt.cur().getHeight(), 0u);
   EXPECT_FALSE(StoreCnt.next());
 }
 
@@ -506,14 +507,12 @@ body:             |
   MachineBasicBlock &BB2 = *MF.getBlockNumbered(2);
   MachineBasicBlock &BB3 = *MF.getBlockNumbered(3);
 
-  EventTrackingContext Ctx(MF, GFX12CounterInfos);
-
-  visitAll(Ctx, BB0);
-  visitAll(Ctx, BB1, /*AfterVisit=*/[&](EventTracker &ET) {
+  visitAll(BB0);
+  visitAll(BB1, /*AfterVisit=*/[&](EventTracker &ET) {
     ET.markIndeterminate(STORE_CNT);
   });
-  visitAll(Ctx, BB2, [&](EventTracker &ET) { ET.markOutOfOrder(LOAD_CNT); });
-  auto &ET = visitAll(Ctx, BB3);
+  visitAll(BB2, [&](EventTracker &ET) { ET.markOutOfOrder(LOAD_CNT); });
+  auto &ET = visitAll(BB3);
 
   auto LoadCnt = TrackerRecordsChecker(ET, AMDGPU::LOAD_CNT);
   EXPECT_TRUE(LoadCnt.unused());
@@ -540,8 +539,8 @@ body:             |
 ///
 /// The timeline will be:
 ///   - Stores from bb0 exist at 1/2
-///   - The added store from bb1 exist at score 0
-///   - The added store from bb2 exist at score 0
+///   - The added store from bb1 exist at height 0
+///   - The added store from bb2 exist at height 0
 TEST_F(AMDGPUGFX12EventTrackingTest, AssymetricalDiamond) {
   StringRef MIR = R"(
 name:            AssymetricalDiamond
@@ -575,13 +574,11 @@ body:             |
   MachineBasicBlock &BB2 = *MF.getBlockNumbered(2);
   MachineBasicBlock &BB3 = *MF.getBlockNumbered(3);
 
-  EventTrackingContext Ctx(MF, GFX12CounterInfos);
-
-  visitAll(Ctx, BB0);
-  visitAll(Ctx, BB1);
-  visitAll(Ctx, BB2,
+  visitAll(BB0);
+  visitAll(BB1);
+  visitAll(BB2,
            /*AfterVisit=*/[&](EventTracker &ET) { ET.wait(STORE_CNT, 1); });
-  auto &ET = visitAll(Ctx, BB3);
+  auto &ET = visitAll(BB3);
 
   auto LoadCnt = TrackerRecordsChecker(ET, AMDGPU::LOAD_CNT);
   EXPECT_TRUE(LoadCnt.unused());
@@ -600,18 +597,18 @@ body:             |
 
   EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORD);
   EXPECT_EQ(StoreCnt.cur().getMI()->getParent(), &BB0);
-  EXPECT_EQ(StoreCnt.cur().getScore(), 2u);
+  EXPECT_EQ(StoreCnt.cur().getHeight(), 2u);
   EXPECT_TRUE(StoreCnt.next());
   EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORDX2);
-  EXPECT_EQ(StoreCnt.cur().getScore(), 1u);
-  EXPECT_TRUE(StoreCnt.next());
-  EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORD);
-  EXPECT_EQ(StoreCnt.cur().getMI()->getParent(), &BB2);
-  EXPECT_EQ(StoreCnt.cur().getScore(), 0u);
+  EXPECT_EQ(StoreCnt.cur().getHeight(), 1u);
   EXPECT_TRUE(StoreCnt.next());
   EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORD);
   EXPECT_EQ(StoreCnt.cur().getMI()->getParent(), &BB1);
-  EXPECT_EQ(StoreCnt.cur().getScore(), 0u);
+  EXPECT_EQ(StoreCnt.cur().getHeight(), 0u);
+  EXPECT_TRUE(StoreCnt.next());
+  EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORD);
+  EXPECT_EQ(StoreCnt.cur().getMI()->getParent(), &BB2);
+  EXPECT_EQ(StoreCnt.cur().getHeight(), 0u);
   EXPECT_FALSE(StoreCnt.next());
 }
 
@@ -620,7 +617,7 @@ body:             |
 ///   - bb1 just falls through
 ///   - bb2 adds 1 more store.
 ///
-/// The timeline will showcase how the score of a counter can be different from
+/// The timeline will showcase how the value of a counter can be different from
 /// the content of the timeline.
 ///   - The timeline will have all records at a height of 0.
 ///   - The counter will still be at 2.
@@ -655,13 +652,11 @@ body:             |
   MachineBasicBlock &BB2 = *MF.getBlockNumbered(2);
   MachineBasicBlock &BB3 = *MF.getBlockNumbered(3);
 
-  EventTrackingContext Ctx(MF, GFX12CounterInfos);
+  visitAll(BB0);
+  visitAll(BB1);
+  visitAll(BB2);
 
-  visitAll(Ctx, BB0);
-  visitAll(Ctx, BB1);
-  visitAll(Ctx, BB2);
-
-  auto &ET = visitAll(Ctx, BB3);
+  auto &ET = visitAll(BB3);
 
   auto LoadCnt = TrackerRecordsChecker(ET, AMDGPU::LOAD_CNT);
   EXPECT_TRUE(LoadCnt.unused());
@@ -679,12 +674,12 @@ body:             |
   EXPECT_FALSE(StoreCnt.empty());
 
   EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORD);
-  EXPECT_EQ(StoreCnt.cur().getMI()->getParent(), &BB2);
-  EXPECT_EQ(StoreCnt.cur().getScore(), 0u);
+  EXPECT_EQ(StoreCnt.cur().getMI()->getParent(), &BB0);
+  EXPECT_EQ(StoreCnt.cur().getHeight(), 0u);
   EXPECT_TRUE(StoreCnt.next());
   EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORD);
-  EXPECT_EQ(StoreCnt.cur().getMI()->getParent(), &BB0);
-  EXPECT_EQ(StoreCnt.cur().getScore(), 0u);
+  EXPECT_EQ(StoreCnt.cur().getMI()->getParent(), &BB2);
+  EXPECT_EQ(StoreCnt.cur().getHeight(), 0u);
   EXPECT_FALSE(StoreCnt.next());
 }
 
