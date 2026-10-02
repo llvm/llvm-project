@@ -298,6 +298,16 @@ llvm::SmallVector<mlir::Value> genLowerbounds(mlir::Location loc,
                                               fir::FirOpBuilder &builder,
                                               mlir::Value shape, unsigned rank);
 
+/// Return a vector of the non-default (non-1) lower bounds for \p entity.
+/// For explicit-shape arrays the bounds are read from the DeclareOp shape.
+/// For assumed-shape and allocatable arrays the bounds are read from the
+/// runtime descriptor by generating fir.box_dims operations. Returns an
+/// empty vector when all lower bounds are known to be 1 (the Fortran default).
+/// \p entity must not be an assumed-rank.
+llvm::SmallVector<mlir::Value>
+getNonDefaultLowerBounds(mlir::Location loc, fir::FirOpBuilder &builder,
+                         hlfir::Entity entity);
+
 /// Compute fir.shape<> (no lower bounds) for an entity.
 mlir::Value genShape(mlir::Location loc, fir::FirOpBuilder &builder,
                      Entity entity);
