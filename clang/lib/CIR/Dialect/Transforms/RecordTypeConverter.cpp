@@ -110,9 +110,6 @@ RecordRewritingTypeConverter::convertRecordMemberTypes(cir::RecordType type) {
 
 cir::RecordType
 RecordRewritingTypeConverter::convertRecordType(cir::RecordType type) {
-  if (!shouldConvertRecord(type))
-    return type;
-
   // Unnamed record types can't be referred to recursively, so we can just
   // convert this one. It also doesn't have uniqueness problems, so we can
   // just do a conversion on it.

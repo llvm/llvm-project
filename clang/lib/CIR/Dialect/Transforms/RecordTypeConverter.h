@@ -44,11 +44,6 @@ public:
   /// Remove the temporary name of every record rebuilt by this converter.
   void restoreRecordTypeNames();
 
-protected:
-  /// Whether \p type has to be rebuilt. Rebuilding every record is always
-  /// correct, but makes every operation that uses one illegal.
-  virtual bool shouldConvertRecord(cir::RecordType type) { return true; }
-
 private:
   cir::RecordType convertRecordType(cir::RecordType type);
   llvm::SmallVector<mlir::Type> convertRecordMemberTypes(cir::RecordType type);
