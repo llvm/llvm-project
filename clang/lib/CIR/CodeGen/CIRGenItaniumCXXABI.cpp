@@ -703,9 +703,6 @@ static bool typeInfoIsInStandardLibrary(const BuiltinType *ty) {
 
   // Types added here must also be added to emitFundamentalRTTIDescriptors.
   switch (ty->getKind()) {
-  case BuiltinType::WasmExternRef:
-  case BuiltinType::HLSLResource:
-    llvm_unreachable("NYI");
   case BuiltinType::Void:
   case BuiltinType::NullPtr:
   case BuiltinType::Bool:
@@ -753,8 +750,14 @@ static bool typeInfoIsInStandardLibrary(const BuiltinType *ty) {
 #include "clang/Basic/PPCTypes.def"
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
+#define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/SPIRVTypes.def"
   case BuiltinType::ShortAccum:
