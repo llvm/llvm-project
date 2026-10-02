@@ -211,6 +211,9 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       });
     }
 
+    // Case 1: hoist a vector.transfer_read and, when present, its matching
+    // vector.transfer_write (a pair); a read with no matching write is hoisted
+    // on its own.
     root->walk([&](vector::TransferReadOp transferRead) {
       if (!isa<MemRefType>(transferRead.getShapedType()))
         return WalkResult::advance();
@@ -424,11 +427,10 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       return WalkResult::interrupt();
     });
 
-    // Sink a singleton transfer_write whose operands are loop-invariant and
-    // that is the only op touching its memref: it stores the same value to the
-    // same place every iteration. A lone write introduces a store the loop may
-    // never perform, so it is only sunk past a loop proven to run at least
-    // once.
+    // Case 2: sink a singleton vector.transfer_write. A write whose operands
+    // are loop-invariant and that is the only op touching its memref stores the
+    // same value to the same place every iteration, so it is sunk past the loop
+    // and executed once (if the loop is proven to run at least once).
     if (changed || !verifyNonZeroTrip)
       continue;
     root->walk([&](vector::TransferWriteOp transferWrite) {
