@@ -195,9 +195,9 @@ AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
   for (MVT VT : MVT::integer_valuetypes()) {
     setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Expand);
     // TODO: The generated code is pretty poor. Investigate using the
-    // same "shift and subtract with carry" trick that we do for
-    // extending 8-bit to 16-bit. This may require infrastructure
-    // improvements in how we treat 16-bit "registers" to be feasible.
+    //       same "shift and subtract with carry" trick that we do for
+    //       extending 8-bit to 16-bit. This may require infrastructure
+    //       improvements in how we treat 16-bit "registers" to be feasible.
   }
 
   setMinFunctionAlignment(Align(2));
@@ -235,7 +235,7 @@ SDValue AVRTargetLowering::LowerShifts(SDValue Op, SelectionDAG &DAG) const {
     if (ShiftAmount == 16) {
       // Special case these two operations because they appear to be used by the
       // generic codegen parts to lower 32-bit numbers.
-      // TODO: perhaps we can lower shift amounts bigger than 16 to a 16-bit
+      // TODO: Perhaps we can lower shift amounts bigger than 16 to a 16-bit
       // shift of a part of the 32-bit value?
       switch (Op.getOpcode()) {
       case ISD::SHL: {
@@ -2267,8 +2267,9 @@ AVRTargetLowering::insertWideShift(MachineInstr &MI,
   //   - lshr prefers starting from the least significant byte (1st case).
   //   - for ashr it depends on the number of shifted bytes.
   // Some shift operations still don't get the most optimal mov sequences even
-  // with this distinction. TODO: figure out why and try to fix it (but we're
-  // already equal to or faster than avr-gcc in all cases except ashr 8).
+  // with this distinction.
+  // TODO: Figure out why and try to fix it (but we're
+  //       already equal to or faster than avr-gcc in all cases except ashr 8).
   if (Opc != ISD::SHL &&
       (Opc != ISD::SRA || (ShiftAmt < 16 || ShiftAmt >= 22))) {
     // Use the resulting registers starting with the least significant byte.

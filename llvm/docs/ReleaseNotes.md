@@ -74,7 +74,7 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Added `llvm.vector.reduce.fmaximumnum` and `llvm.vector.reduce.fminimumnum`
   intrinsics, the reduction variants of `llvm.maximumnum` and
-  `llvm.minimumnum`. 
+  `llvm.minimumnum`.
 * Added `llvm.smulh` and `llvm.umulh` intrinsics for signed and unsigned
   multiply returning the high-order half of the 2N-bit product of iN operands.
 * Added `nofreeobj` attribute for attributes and returns, which forbids
@@ -168,6 +168,9 @@ Makes programs 10x faster by doing Special New Thing.
 * Introduced the generic `!atomic.ignore.denormal.mode` metadata for
   floating-point `atomicrmw` instructions, generalizing the previously
   AMDGPU-specific `!amdgpu.ignore.denormal.mode`.
+
+* Added the `bitinsert` and `bitextract` instructions for bit-range
+  manipulation on byte type values.
 
 ### Changes to LLVM infrastructure
 
@@ -284,6 +287,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Updated the canonical order of one-letter RISC-V extensions to match the
   latest specification, placing ``p`` after ``v`` and removing unused ``n``.
 * Adds experimental assembler support for the `Xqccmi` (Qualcomm 16-bit Instruction Lookup Table) vendor extension.
+* Added `-mcpu=gaisler-gr765` for the 64-bit GR765 processor.
 
 ### Changes to the WebAssembly Backend
 
@@ -304,6 +308,8 @@ Makes programs 10x faster by doing Special New Thing.
 * Removed the `size_of` and `align_of` functions. Create a constant based on
   the result of `DataLayout.abi_size` or `DataLayout.abi_align` instead.
 
+* `DataLayout` has been moved from `Llvm_target` to `Llvm`.
+
 ### Changes to the Python bindings
 
 ### Changes to the C API
@@ -311,6 +317,9 @@ Makes programs 10x faster by doing Special New Thing.
 * `LLVMAlignOf()` and `LLVMSizeOf()` have been deprecated. Create a constant
   based on the result of `LLVMABIAlignmentOfType()` or `LLVMABISizeOfType()`
   instead.
+
+* Bindings operating on data layout (`LLVMTargetDataRef`) have been moved
+  from `Target.h` (`Target` library) to `Core.h` (`IR` library).
 
 ### Changes to the CodeGen infrastructure
 
@@ -325,6 +334,15 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to the Debug Info
 
 ### Changes to the LLVM tools
+
+* `opt` and `llc` accept `-plugin-arg=<plugin>,<arg>`, which passes `<arg>` to the new `PassPluginLibraryInfo::ParseArguments` callback of the pass plugin named `<plugin>`.
+  A plugin that defines `cl::opt` has to call `cl::ParseCommandLineOptions` itself inside `ParseArguments`.
+  `LLVM_PLUGIN_API_VERSION` is now 3.
+
+* `opt` and `llc` load `-load-pass-plugin` plugins after parsing the command line, so a loaded plugin's options are no longer accepted as ordinary options.
+  Pass them with `-plugin-arg=<plugin>,<arg>`.
+
+* llvm-offload-binary can now compress packaged binaries using zstd or zlib.
 
 * llvm-mca no longer defaults -mcpu to "native"
 

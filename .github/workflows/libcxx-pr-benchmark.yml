@@ -28,7 +28,7 @@ jobs:
       name: main-branch-only
       deployment: false
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           sparse-checkout: |
@@ -49,7 +49,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout the LNT configurations
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           # Disabling cone mode allows checking out exactly the single file we need.
@@ -71,9 +71,10 @@ jobs:
             const match = context.payload.comment.body.match(/\/libcxx-bot benchmark (.+)/);
             core.setOutput('benchmarks', match ? match[1] : '');
 
-            // Benchmark on the same configurations that we track performance on.
+            // Benchmark the configurations defined in machines.json that opt into PR benchmarking.
             const config = JSON.parse(require('fs').readFileSync('libcxx/utils/ci/lnt/machines.json', 'utf8'));
-            core.setOutput('matrix', JSON.stringify(config.map(({coverage, ...machine}) => machine)));
+            const selected = config.filter(cfg => cfg['pr-benchmarks']);
+            core.setOutput('matrix', JSON.stringify(selected.map(({coverage, ...machine}) => machine)));
 
       - name: Update comment with link to the run
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -106,6 +107,10 @@ jobs:
     permissions:
       pull-requests: write
     runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container || null }}
+    defaults:
+      run:
+        shell: bash
     needs:
       - extract-info
     env:
@@ -115,34 +120,32 @@ jobs:
       LNT_MACHINE: ${{ matrix.lnt-machine }}
       PR_HEAD: ${{ needs.extract-info.outputs.pr_head }}
       PR_BASE: ${{ needs.extract-info.outputs.pr_base }}
+      TEST_CONFIG: ${{ matrix.test-config }}
       TOOLING: ${{ github.workspace }}/tooling
     steps:
       - name: Checkout the PR
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ needs.extract-info.outputs.pr_head }}
           fetch-depth: 0
-          fetch-tags: true # This job requires access to all the Git branches so it can diff against (usually) main
+        # TODO(#226230): Remove this once we have resolved the underlying issue
+        # causing actions/checkout to be prematurely killed.
+        env:
+          GIT_TRACE: "true"
+          GIT_CURL_VERBOSE: "true"
 
       # This workflow is always taken from the default branch. Check out the tooling from the corresponding
       # commit so that we're always running tooling that's in sync with the workflow's definition. Only the
       # code and the test suite (including its testing configuration) are taken from the PR head.
       - name: Checkout the tooling from ${{ github.sha }}
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ github.sha }}
           path: tooling
           sparse-checkout: |
-            .github/workflows/libcxx
             libcxx/utils
-
-      - name: Install Python
-        if: runner.os == 'Linux' # installed via Homebrew on macOS
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
-        with:
-          python-version: '3.14'
 
       - name: Select Xcode
         if: runner.os == 'macOS'
@@ -173,22 +176,36 @@ jobs:
         run: echo "commit=$(git merge-base "${PR_BASE}" "${PR_HEAD}")" >> "${GITHUB_OUTPUT}"
 
       - name: Build the baseline
-        uses: ./tooling/.github/workflows/libcxx/build-at-commit
-        with:
-          git-repo: ${{ github.workspace }}
-          commit: ${{ steps.baseline.outputs.commit }}
-          install-dir: ${{ github.workspace }}/install/baseline
-          compiler: ${{ matrix.cxx }}
-          cmake-cache: ${{ matrix.cmake-cache }}
+        env:
+          CMAKE_CACHE: ${{ matrix.cmake-cache }}
+          COMMIT: ${{ steps.baseline.outputs.commit }}
+          INSTALL_DIR: ${{ github.workspace }}/install/baseline
+        run: |
+          cd "${TOOLING}" # use the tooling checkout for scripts
+          rm -rf "${INSTALL_DIR}"
+          libcxx/utils/build-at-commit                       \
+            --git-repo "${GITHUB_WORKSPACE}"                 \
+            --commit "${COMMIT}"                             \
+            --install-dir "${INSTALL_DIR}"                   \
+            --                                               \
+            -DCMAKE_CXX_COMPILER="${COMPILER}"               \
+            -C "${CMAKE_CACHE}"
 
       - name: Build the candidate
-        uses: ./tooling/.github/workflows/libcxx/build-at-commit
-        with:
-          git-repo: ${{ github.workspace }}
-          commit: ${{ needs.extract-info.outputs.pr_head }}
-          install-dir: ${{ github.workspace }}/install/candidate
-          compiler: ${{ matrix.cxx }}
-          cmake-cache: ${{ matrix.cmake-cache }}
+        env:
+          CMAKE_CACHE: ${{ matrix.cmake-cache }}
+          COMMIT: ${{ needs.extract-info.outputs.pr_head }}
+          INSTALL_DIR: ${{ github.workspace }}/install/candidate
+        run: |
+          cd "${TOOLING}" # use the tooling checkout for scripts
+          rm -rf "${INSTALL_DIR}"
+          libcxx/utils/build-at-commit                       \
+            --git-repo "${GITHUB_WORKSPACE}"                 \
+            --commit "${COMMIT}"                             \
+            --install-dir "${INSTALL_DIR}"                   \
+            --                                               \
+            -DCMAKE_CXX_COMPILER="${COMPILER}"               \
+            -C "${CMAKE_CACHE}"
 
       - name: Run baseline and candidate interleaved
         run: |
@@ -203,9 +220,9 @@ jobs:
           # Run 5 times so we can pick the median, and interleave baseline and candidate to mitigate the impact of
           # environmental noise
           for _ in $(seq 1 5); do
-            "${TOOLING}/libcxx/utils/test-at-commit" --test-config installed-libc++.cfg.in -B benchmarks/baseline --compiler "${COMPILER}" -- -sv -j1 "${lit_params[@]}" --param libcxx_installation="${PWD}/install/baseline" "$BENCHMARKS"
+            "${TOOLING}/libcxx/utils/test-at-commit" --test-config "${TEST_CONFIG}" -B benchmarks/baseline --compiler "${COMPILER}" -- -sv -j1 "${lit_params[@]}" --param libcxx_installation="${PWD}/install/baseline" "$BENCHMARKS"
             "${TOOLING}/libcxx/utils/consolidate-benchmarks" benchmarks/baseline | tee -a baseline.lnt
-            "${TOOLING}/libcxx/utils/test-at-commit" --test-config installed-libc++.cfg.in -B benchmarks/candidate --compiler "${COMPILER}" -- -sv -j1 "${lit_params[@]}" --param libcxx_installation="${PWD}/install/candidate" "$BENCHMARKS"
+            "${TOOLING}/libcxx/utils/test-at-commit" --test-config "${TEST_CONFIG}" -B benchmarks/candidate --compiler "${COMPILER}" -- -sv -j1 "${lit_params[@]}" --param libcxx_installation="${PWD}/install/candidate" "$BENCHMARKS"
             "${TOOLING}/libcxx/utils/consolidate-benchmarks" benchmarks/candidate | tee -a candidate.lnt
           done
 

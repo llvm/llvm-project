@@ -146,8 +146,7 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
   // Store return address to shadow call stack
   // addi    gp, gp, [4|8]
   // s[w|d]  ra, -[4|8](gp)
-  BuildMI(MBB, MI, DL, TII->get(RISCV::ADDI))
-      .addReg(SCSPReg, RegState::Define)
+  BuildMI(MBB, MI, DL, TII->get(RISCV::ADDI), SCSPReg)
       .addReg(SCSPReg)
       .addImm(SlotSize)
       .setMIFlag(MachineInstr::FrameSetup);
@@ -214,13 +213,11 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
   // Load return address from shadow call stack
   // l[w|d]  ra, -[4|8](gp)
   // addi    gp, gp, -[4|8]
-  BuildMI(MBB, MI, DL, TII->get(IsRV64 ? RISCV::LD : RISCV::LW))
-      .addReg(RAReg, RegState::Define)
+  BuildMI(MBB, MI, DL, TII->get(IsRV64 ? RISCV::LD : RISCV::LW), RAReg)
       .addReg(SCSPReg)
       .addImm(-SlotSize)
       .setMIFlag(MachineInstr::FrameDestroy);
-  BuildMI(MBB, MI, DL, TII->get(RISCV::ADDI))
-      .addReg(SCSPReg, RegState::Define)
+  BuildMI(MBB, MI, DL, TII->get(RISCV::ADDI), SCSPReg)
       .addReg(SCSPReg)
       .addImm(-SlotSize)
       .setMIFlag(MachineInstr::FrameDestroy);
@@ -245,8 +242,7 @@ static void emitSiFiveCLICStackSwap(MachineFunction &MF, MachineBasicBlock &MBB,
 
   assert(STI.hasVendorXSfmclic() && "Stack Swapping Requires XSfmclic");
 
-  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRW))
-      .addReg(SPReg, RegState::Define)
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRW), SPReg)
       .addImm(RISCVSysReg::sf_mscratchcsw)
       .addReg(SPReg, RegState::Kill)
       .setMIFlag(FrameFlag);
@@ -307,8 +303,7 @@ static void emitSiFiveCLICPreemptibleSaves(MachineFunction &MF,
     CFIInstBuilder(MBB, MBBI, MachineInstr::FrameSetup)
         .buildOffset(RISCV::X5, MF.getFrameInfo().getObjectOffset(ScratchFI));
 
-  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRS))
-      .addReg(RISCV::X5, RegState::Define)
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRS), RISCV::X5)
       .addImm(RISCVSysReg::mcause)
       .addReg(RISCV::X0)
       .setMIFlag(MachineInstr::FrameSetup);
@@ -317,15 +312,13 @@ static void emitSiFiveCLICPreemptibleSaves(MachineFunction &MF,
                            &RISCV::GPRRegClass, Register(),
                            MachineInstr::FrameSetup);
 
-  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRS))
-      .addReg(RISCV::X5, RegState::Define)
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRS), RISCV::X5)
       .addImm(RISCVSysReg::mepc)
       .addReg(RISCV::X0)
       .setMIFlag(MachineInstr::FrameSetup);
 
   // Enable interrupts.
-  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRSI))
-      .addReg(RISCV::X0, RegState::Define)
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRSI), RISCV::X0)
       .addImm(RISCVSysReg::mstatus)
       .addImm(8)
       .setMIFlag(MachineInstr::FrameSetup);
@@ -358,16 +351,14 @@ static void emitSiFiveCLICPreemptibleRestores(MachineFunction &MF,
                             RISCV::NoSubRegister, MachineInstr::FrameDestroy);
 
   // Disable interrupts.
-  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRCI))
-      .addReg(RISCV::X0, RegState::Define)
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRCI), RISCV::X0)
       .addImm(RISCVSysReg::mstatus)
       .addImm(8)
       .setMIFlag(MachineInstr::FrameDestroy);
 
   // Restore `mepc` and `mcause` through X5, then restore the value X5 held
   // on entry to the handler.
-  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRW))
-      .addReg(RISCV::X0, RegState::Define)
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRW), RISCV::X0)
       .addImm(RISCVSysReg::mepc)
       .addReg(RISCV::X5, RegState::Kill)
       .setMIFlag(MachineInstr::FrameDestroy);
@@ -376,8 +367,7 @@ static void emitSiFiveCLICPreemptibleRestores(MachineFunction &MF,
                             RVFI->getInterruptCSRFrameIndex(0),
                             &RISCV::GPRRegClass, Register(),
                             RISCV::NoSubRegister, MachineInstr::FrameDestroy);
-  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRW))
-      .addReg(RISCV::X0, RegState::Define)
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRW), RISCV::X0)
       .addImm(RISCVSysReg::mcause)
       .addReg(RISCV::X5, RegState::Kill)
       .setMIFlag(MachineInstr::FrameDestroy);

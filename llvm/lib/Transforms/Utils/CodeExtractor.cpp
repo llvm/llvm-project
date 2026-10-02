@@ -1330,9 +1330,12 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
     // Iterate the debug users of the Input values. If they are in the extracted
     // function then update their location with the new value. If they are in
     // the parent function then create a similar debug record.
-    for (auto *DVR : DPUsers)
-      UpdateOrInsertDebugRecord(DVR, Input, NewVal, DVR->getExpression(),
-                                DVR->isDbgDeclare());
+    for (auto *DVR : DPUsers) {
+      DIExpression *Expr = DVR->getNumVariableLocationOps() == 1
+                               ? DVR->getExpression()
+                               : DIB.createExpression();
+      UpdateOrInsertDebugRecord(DVR, Input, NewVal, Expr, DVR->isDbgDeclare());
+    }
   }
 
   auto IsInvalidLocation = [&NewFunc](Value *Location) {

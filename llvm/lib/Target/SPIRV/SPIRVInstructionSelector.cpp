@@ -1685,8 +1685,8 @@ bool SPIRVInstructionSelector::selectLdexp(Register ResVReg,
     unsigned NumElts = ResType->getOperand(2).getImm();
     SPIRVTypeInst ExpVecType =
         GR.getOrCreateSPIRVVectorType(ExpType, NumElts, I, TII);
-    Register SplatReg =
-        createVirtualRegister(ExpVecType, &GR, MRI, MRI->getMF());
+    Register SplatReg = MRI->createVirtualRegister(GR.getRegClass(ExpVecType));
+    GR.assignSPIRVTypeToVReg(ExpVecType, SplatReg, MRI->getMF());
     auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
                        TII.get(SPIRV::OpCompositeConstruct))
                    .addDef(SplatReg)
@@ -5721,6 +5721,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_wave_readlane:
     return selectWaveOpInst(ResVReg, ResType, I,
                             SPIRV::OpGroupNonUniformShuffle);
+  case Intrinsic::spv_wave_readlane_first:
+    return selectWaveOpInst(ResVReg, ResType, I,
+                            SPIRV::OpGroupNonUniformBroadcastFirst);
   case Intrinsic::spv_wave_prefix_sum:
     return selectWaveExclusiveScanSum(ResVReg, ResType, I);
   case Intrinsic::spv_wave_prefix_product:

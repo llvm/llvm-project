@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' -polly-print-ast -polly-ast-detect-parallel -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' -plugin-arg=Polly,-polly-print-ast -plugin-arg=Polly,-polly-ast-detect-parallel -disable-output < %s | FileCheck %s
 ;
 ; CHECK: #pragma known-parallel reduction (^ : MemRef_sum)
 ;        void f(int N, int M, int P, int sum[P][M]) {

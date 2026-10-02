@@ -90,6 +90,9 @@ public:
   bool SelectLogicalShiftedRegister(SDValue N, SDValue &Reg, SDValue &Shift) {
     return SelectShiftedRegister(N, true, Reg, Shift);
   }
+  template <unsigned ShiftWidth>
+  bool SelectShiftMask(SDValue N, SDValue &ShAmt);
+
   bool SelectAddrModeIndexed7S8(SDValue N, SDValue &Base, SDValue &OffImm) {
     return SelectAddrModeIndexed7S(N, 1, Base, OffImm);
   }
@@ -769,6 +772,24 @@ bool AArch64DAGToDAGISel::SelectInlineAsmMemoryOperand(
     return false;
   }
   return true;
+}
+
+template <unsigned ShiftWidth>
+bool AArch64DAGToDAGISel::SelectShiftMask(SDValue N, SDValue &ShAmt) {
+  // AArch64 shift instructions only use the low log2(ShiftWidth) bits of the
+  // shift amount. If the shift amount has a redundant AND mask that covers
+  // those bits, we can remove it. Return false if nothing was combined so
+  // other patterns (e.g. zext/sext GPR32 → SUBREG_TO_REG) can match.
+  if (N.getOpcode() == ISD::AND && isa<ConstantSDNode>(N.getOperand(1)) &&
+      N.getValueType() == (ShiftWidth == 32 ? MVT::i32 : MVT::i64)) {
+    uint64_t Mask = N.getConstantOperandVal(1);
+    // Remove AND if the mask covers at least the low log2(ShiftWidth) bits.
+    if ((unsigned)llvm::countr_one(Mask) >= Log2_32(ShiftWidth)) {
+      ShAmt = N.getOperand(0);
+      return true;
+    }
+  }
+  return false;
 }
 
 /// SelectArithImmed - Select an immediate value that can be represented as
@@ -4624,7 +4645,7 @@ AArch64DAGToDAGISel::decodeMemoryHintFlags(MachineMemOperand *MMO) const {
   int MemoryHint = -1;
   const MDNode *MemCacheHint = MMO->getMemCacheHint();
   if (!MemCacheHint)
-    return AArch64MemoryHint::HINT_NONE;
+    return AArch64MemoryHint::NONE;
 
   for (unsigned I = 0; I + 1 < MemCacheHint->getNumOperands(); I += 2) {
     if (MemCacheHint->getOperand(I).equalsStr("aarch64.mem_hint")) {
@@ -4639,12 +4660,12 @@ AArch64DAGToDAGISel::decodeMemoryHintFlags(MachineMemOperand *MMO) const {
 
 bool AArch64DAGToDAGISel::isAtomicSTSHH_KEEP(SDNode *N) const {
   return decodeMemoryHintFlags(cast<MemSDNode>(N)->getMemOperand()) ==
-         AArch64MemoryHint::HINT_STSHH_KEEP;
+         AArch64MemoryHint::STSHH_KEEP;
 }
 
 bool AArch64DAGToDAGISel::isAtomicSTSHH_STRM(SDNode *N) const {
   return decodeMemoryHintFlags(cast<MemSDNode>(N)->getMemOperand()) ==
-         AArch64MemoryHint::HINT_STSHH_STRM;
+         AArch64MemoryHint::STSHH_STRM;
 }
 
 bool AArch64DAGToDAGISel::SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm,
