@@ -43,6 +43,9 @@ public:
 
   const DataLayout &getDataLayout() const { return LLVMM.getDataLayout(); }
 
+  /// Get the target triple which is a string describing the target host.
+  const Triple &getTargetTriple() const { return LLVMM.getTargetTriple(); }
+
   const std::string &getSourceFileName() const {
     return LLVMM.getSourceFileName();
   }

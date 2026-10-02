@@ -3,15 +3,19 @@
 #include <signal.h>
 
 int Global;
+int Sink;
 
-__attribute__((noinline)) static void step(int *p, int i) { *p = i; }
+__attribute__((noinline)) void step(int i) {
+  Sink = i;
+  asm volatile("" : : : "memory");
+}
 
 static void handler(int, siginfo_t *, void *) {
-  // Overflow the active TracePart in the SIGABRT handler to trigger
-  // TracePartAlloc, which acquires ctx->slot_mtx.
-  int x = 0;
-  for (int i = 0; i < 10000; ++i)
-    step(&x, i);
+  // Overflow the active 256KB TracePart (~32K events) in the SIGABRT handler
+  // to trigger TraceSwitchPartImpl -> TracePartAlloc, which acquires
+  // ctx->slot_mtx.
+  for (int i = 0; i < 20000; ++i)
+    step(i);
   write(2, "SIGNAL\n", 7);
   _exit(0);
 }

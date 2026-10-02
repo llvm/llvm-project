@@ -1227,6 +1227,12 @@ bool AArch64DAGToDAGISel::SelectArithExtendedRegister(SDValue N, SDValue &Reg,
       return false;
   }
 
+  // Don't match if the sext can be folded with an asr to form an SBFX.
+  if (Ext == AArch64_AM::SXTW && Reg.getOpcode() == ISD::SRA &&
+      Reg.getValueType() == MVT::i32 &&
+      isa<ConstantSDNode>(Reg.getOperand(1)) && Reg.hasOneUse())
+    return false;
+
   // AArch64 mandates that the RHS of the operation must use the smallest
   // register class that could contain the size being extended from.  Thus,
   // if we're folding a (sext i8), we need the RHS to be a GPR32, even though
