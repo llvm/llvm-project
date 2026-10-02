@@ -11,14 +11,14 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL___SPIRV_SPIRV_TYPES_HPP
-#define _LIBSYCL___SPIRV_SPIRV_TYPES_HPP
+#ifndef _LIBSYCL___SPIRV_TYPES_HPP
+#define _LIBSYCL___SPIRV_TYPES_HPP
 
 #include <cstdint>
 
 namespace __spirv {
 
-enum Scope : int32_t {
+enum Scope : std::int32_t {
   CrossDevice = 0,
   Device = 1,
   Workgroup = 2,
@@ -26,7 +26,7 @@ enum Scope : int32_t {
   Invocation = 4,
 };
 
-enum MemorySemanticsMask : int32_t {
+enum MemorySemanticsMask : std::int32_t {
   None = 0x0,
   Acquire = 0x2,
   Release = 0x4,
@@ -42,4 +42,4 @@ enum MemorySemanticsMask : int32_t {
 
 } // namespace __spirv
 
-#endif // _LIBSYCL___SPIRV_SPIRV_TYPES_HPP
+#endif // _LIBSYCL___SPIRV_TYPES_HPP
