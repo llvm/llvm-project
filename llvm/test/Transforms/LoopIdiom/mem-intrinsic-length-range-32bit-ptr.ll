@@ -45,3 +45,22 @@ loop:
 exit:
   ret void
 }
+
+; An i64 IV runs up to 2^32 with no guard, so the max backedge-taken count,
+; 2^32 - 1, still fits in the i32 length, but the max trip count doesn't.
+
+define void @i64_iv_trip_count_too_large(ptr %p, i64 %start) {
+; CHECK-LABEL: define void @i64_iv_trip_count_too_large(
+; CHECK:       call void @llvm.memset.p0.i32(ptr align 1 {{%.*}}, i8 0, i32 {{%.*}}, i1 false)
+entry:
+  br label %loop
+loop:
+  %i = phi i64 [ %start, %entry ], [ %i.next, %loop ]
+  %gep = getelementptr inbounds i8, ptr %p, i64 %i
+  store i8 0, ptr %gep, align 1
+  %i.next = add nuw i64 %i, 1
+  %cmp = icmp ult i64 %i.next, 4294967296
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret void
+}
