@@ -2454,7 +2454,15 @@ void ACCCGToGPULowering::processPredicateRegion(
     }
   }
 
-  if (Value predicate = emitPredicate(loc, parDimsPair.second)) {
+  Value predicate = emitPredicate(loc, parDimsPair.second);
+  // With one thread per block nothing is predicated, but a block-level
+  // reduction store below must still become a cross-block atomic.
+  if (!predicate && llvm::all_of(computeRegion.getLaunchParDims(),
+                                 [](mlir::acc::GPUParallelDimAttr pd) {
+                                   return pd.isAnyBlock();
+                                 }))
+    predicate = arith::ConstantIntOp::create(rewriter, loc, 1, 1);
+  if (predicate) {
     LLVM_DEBUG(llvm::dbgs() << "predicate: " << predicate << "\n");
     bool isInsideThreadXLoop = false;
     bool isInsideThreadYLoop = false;
@@ -2601,7 +2609,35 @@ void ACCCGToGPULowering::processPredicateRegion(
                 insertBefore = parOp.getOperation();
                 return WalkResult::interrupt();
               });
-              if (insertBefore)
+              // The identity must be ordered before the atomics of every
+              // block, so store it from a launch ahead of this one when the
+              // address does not depend on the launch.
+              std::function<bool(Value)> fromLaunch = [&](Value v) -> bool {
+                if (auto arg = dyn_cast<BlockArgument>(v))
+                  return launch->isAncestor(arg.getOwner()->getParentOp());
+                Operation *def = v.getDefiningOp();
+                if (!launch->isAncestor(def) ||
+                    def->hasTrait<OpTrait::ConstantLike>())
+                  return false;
+                // Ids and dims such as gpu.grid_dim take no operands.
+                return def->getNumOperands() == 0 ||
+                       llvm::any_of(def->getOperands(), fromLaunch);
+              };
+              if (!fromLaunch(memref) &&
+                  llvm::none_of(initIndices, fromLaunch)) {
+                rewriter.setInsertionPoint(launch);
+                Value one = arith::ConstantIndexOp::create(rewriter, loc, 1);
+                Value token = launch.getAsyncToken();
+                auto initLaunch = gpu::LaunchOp::create(
+                    rewriter, loc, one, one, one, one, one, one,
+                    /*dynamicSharedMemorySize=*/nullptr,
+                    token ? token.getType() : Type(),
+                    launch.getAsyncDependencies());
+                rewriter.setInsertionPointToStart(
+                    &initLaunch.getBody().front());
+                rewriter.setInsertionPoint(
+                    gpu::TerminatorOp::create(rewriter, loc));
+              } else if (insertBefore)
                 rewriter.setInsertionPoint(insertBefore);
               else
                 rewriter.setInsertionPointToStart(&launchBody);
