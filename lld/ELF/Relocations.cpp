@@ -693,18 +693,24 @@ bool RelocScan::maybeReportUndefined(Undefined &sym, uint64_t offset) {
   return elf::maybeReportUndefined(ctx, sym, *sec, offset);
 }
 
-bool elf::checkTlsSym(Ctx &ctx, InputSectionBase &sec, uint64_t offset,
-                      Symbol &sym, RelType type) {
-  // TLS relocations can only reference symbols with type STT_TLS (gABI).
-  // Symbols whose type cannot be validated against the gABI invariant are
-  // exempt:
+bool elf::isValidTlsSym(const Symbol &sym) {
   // * script-defined symbols have no ELF type,
   // * section symbols and undefined symbols are accepted by GNU ld, and some
   //   assemblers (LoongArch, MIPS) emit them for TLS relocations, e.g.
-  //   `.dtprelword .tdata+1` in debug info.
+  //   `.dtprelword .tdata+1` in debug info,
+  // * local NOTYPE symbols (e.g. labels) may be used by TLS relocation
+  //   sequences such as RISC-V's TLSDESC.
+  return sym.isTls() || sym.isUndefined() || sym.scriptDefined ||
+         sym.isSection() || (sym.isLocal() && sym.type == STT_NOTYPE);
+}
+
+bool elf::checkTlsSym(Ctx &ctx, InputSectionBase &sec, uint64_t offset,
+                      Symbol &sym, RelType type) {
+  // TLS relocations can only reference symbols with type STT_TLS (gABI).
+  // See isValidTlsSym for the exempt symbol classes.
   // Defined non-TLS symbols are rejected; this is stricter than GNU ld, which
   // only warns.
-  if (sym.isTls() || sym.scriptDefined || sym.isSection() || sym.isUndefined())
+  if (isValidTlsSym(sym))
     return false;
   auto diag = Err(ctx);
   diag << "relocation " << type << " against " << &sym

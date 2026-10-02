@@ -642,34 +642,24 @@ void LoongArch::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     // TLS GD/LD relocations (no GD/LD->IE/LE optimization):
     case R_LARCH_TLS_LD_PC_HI20:
     case R_LARCH_TLS_GD_PC_HI20:
-      if (checkTlsSym(ctx, sec, offset, sym, type))
-        continue;
       sym.setFlags(NEEDS_TLSGD);
       sec.addReloc({RE_LOONGARCH_TLSGD_PAGE_PC, type, offset, addend, &sym});
       continue;
     case R_LARCH_TLS_LD_HI20:
-      if (checkTlsSym(ctx, sec, offset, sym, type))
-        continue;
       ctx.needsTlsLd.store(true, std::memory_order_relaxed);
       sec.addReloc({R_TLSLD_GOT, type, offset, addend, &sym});
       continue;
     case R_LARCH_TLS_GD_HI20:
-      if (checkTlsSym(ctx, sec, offset, sym, type))
-        continue;
       sym.setFlags(NEEDS_TLSGD);
       sec.addReloc({R_TLSGD_GOT, type, offset, addend, &sym});
       continue;
     case R_LARCH_TLS_LD_PCREL20_S2:
     case R_LARCH_TLS_LD_PCADD_HI20:
-      if (checkTlsSym(ctx, sec, offset, sym, type))
-        continue;
       ctx.needsTlsLd.store(true, std::memory_order_relaxed);
       sec.addReloc({R_TLSLD_PC, type, offset, addend, &sym});
       continue;
     case R_LARCH_TLS_GD_PCREL20_S2:
     case R_LARCH_TLS_GD_PCADD_HI20:
-      if (checkTlsSym(ctx, sec, offset, sym, type))
-        continue;
       sym.setFlags(NEEDS_TLSGD);
       sec.addReloc({R_TLSGD_PC, type, offset, addend, &sym});
       continue;
@@ -689,8 +679,6 @@ void LoongArch::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
                        addend, sym);
       continue;
     case R_LARCH_TLS_DESC_CALL:
-      if (checkTlsSym(ctx, sec, offset, sym, type))
-        continue;
       if (!ctx.arg.shared)
         sec.addReloc(
             {sym.isPreemptible ? R_GOT : R_TPREL, type, offset, addend, &sym});
@@ -698,8 +686,6 @@ void LoongArch::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     // TLSDESC relocations (extreme code model, no optimization):
     case R_LARCH_TLS_DESC64_PC_LO20:
     case R_LARCH_TLS_DESC64_PC_HI12:
-      if (checkTlsSym(ctx, sec, offset, sym, type))
-        continue;
       sym.setFlags(NEEDS_TLSDESC);
       sec.addReloc({RE_LOONGARCH_TLSDESC_PAGE_PC, type, offset, addend, &sym});
       continue;
@@ -709,8 +695,6 @@ void LoongArch::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     case R_LARCH_TLS_DESC64_LO20:
     case R_LARCH_TLS_DESC64_HI12:
     case R_LARCH_TLS_DESC_PCADD_HI20:
-      if (checkTlsSym(ctx, sec, offset, sym, type))
-        continue;
       sym.setFlags(NEEDS_TLSDESC);
       sec.addReloc({R_TLSDESC, type, offset, addend, &sym});
       continue;

@@ -264,7 +264,22 @@ public:
   // This vector contains such "cooked" relocations.
   SmallVector<Relocation, 0> relocations;
 
-  void addReloc(const Relocation &r) { relocations.push_back(r); }
+  void addReloc(const Relocation &r) {
+    // Every scan-produced relocation record passes through here exactly once.
+    // Records carrying a TLS expr are checked against the gABI invariant that
+    // TLS relocations reference STT_TLS symbols. TLS relocations classified
+    // with a non-TLS expr or taking a branch that records no relocation are
+    // checked by the shared TLS handlers where possible; see checkTlsLe and
+    // handleTlsIe/handleTlsGd/handleTlsLd/handleTlsDesc. Some remain
+    // unchecked, e.g. MIPS GOTTPREL, SystemZ GOTIE*, Hexagon GD_PLT/DTPREL_32,
+    // and the preemptible/shared-only branches of the PPC/PPC64/SPARC TLS
+    // markers.
+    if (LLVM_UNLIKELY(r.sym && isTlsExpr(r.expr) && !isValidTlsSym(*r.sym))) {
+      checkTlsSym(getCtx(), *this, r.offset, *r.sym, r.type);
+      return;
+    }
+    relocations.push_back(r);
+  }
   MutableArrayRef<Relocation> relocs() { return relocations; }
   ArrayRef<Relocation> relocs() const { return relocations; }
 

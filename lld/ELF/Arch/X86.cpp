@@ -269,8 +269,6 @@ void X86::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
         ++it;
       continue;
     case R_386_TLS_LDO_32:
-      if (checkTlsSym(ctx, sec, offset, sym, type))
-        continue;
       sec.addReloc(
           {ctx.arg.shared ? R_DTPREL : R_TPREL, type, offset, addend, &sym});
       continue;

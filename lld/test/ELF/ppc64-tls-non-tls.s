@@ -24,6 +24,10 @@ _start:
  nop
  .reloc ., R_PPC64_TLSGD, nonTls
  nop
+## R_PPC64_TLSGD consumes the next relocation (normally the __tls_get_addr
+## call) via ++it; add a benign one so the following relocations are scanned.
+ .reloc ., R_PPC64_REL24
+ nop
  .reloc ., R_PPC64_GOT_TLSLD16, nonTls
  nop
  .reloc ., R_PPC64_DTPREL16, nonTls

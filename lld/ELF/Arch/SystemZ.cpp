@@ -314,14 +314,10 @@ void SystemZ::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     case R_390_TLS_GOTIE20:
     case R_390_TLS_GOTIE32:
     case R_390_TLS_GOTIE64:
-      if (checkTlsSym(ctx, sec, offset, sym, type))
-        continue;
       sym.setFlags(NEEDS_TLSIE);
       sec.addReloc({R_GOT_OFF, type, offset, addend, &sym});
       continue;
     case R_390_TLS_IEENT:
-      if (checkTlsSym(ctx, sec, offset, sym, type))
-        continue;
       sym.setFlags(NEEDS_TLSIE);
       sec.addReloc({R_GOT_PC, type, offset, addend, &sym});
       continue;
@@ -349,8 +345,6 @@ void SystemZ::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     // TLS DTPREL relocations:
     case R_390_TLS_LDO32:
     case R_390_TLS_LDO64:
-      if (checkTlsSym(ctx, sec, offset, sym, type))
-        continue;
       if (ctx.arg.shared)
         sec.addReloc({R_DTPREL, type, offset, addend, &sym});
       else

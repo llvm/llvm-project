@@ -737,8 +737,6 @@ void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
       continue;
     case R_X86_64_DTPOFF32:
     case R_X86_64_DTPOFF64:
-      if (checkTlsSym(ctx, sec, offset, sym, type))
-        continue;
       sec.addReloc(
           {ctx.arg.shared ? R_DTPREL : R_TPREL, type, offset, addend, &sym});
       continue;

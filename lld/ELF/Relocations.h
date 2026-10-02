@@ -118,6 +118,47 @@ enum RelExpr {
   RE_LOONGARCH_TLSDESC_PAGE_PC,
 };
 
+// Build a bitmask with one bit set for each 64 subset of RelExpr.
+inline constexpr uint64_t buildMask() { return 0; }
+
+template <typename... Tails>
+inline constexpr uint64_t buildMask(int head, Tails... tails) {
+  return (0 <= head && head < 64 ? uint64_t(1) << head : 0) |
+         buildMask(tails...);
+}
+
+// Return true if `Expr` is one of `Exprs`.
+// There are more than 64 but less than 128 RelExprs, so we divide the set of
+// exprs into [0, 64) and [64, 128) and represent each range as a constant
+// 64-bit mask. Then we decide which mask to test depending on the value of
+// expr and use a simple shift and bitwise-and to test for membership.
+template <RelExpr... Exprs> bool oneof(RelExpr expr) {
+  assert(0 <= expr && (int)expr < 128 &&
+         "RelExpr is too large for 128-bit mask!");
+
+  if (expr >= 64)
+    return (uint64_t(1) << (expr - 64)) & buildMask((Exprs - 64)...);
+  return (uint64_t(1) << expr) & buildMask(Exprs...);
+}
+
+// TLS relocations can only reference symbols with type STT_TLS (gABI).
+// Records carrying one of these exprs are checked in InputSectionBase::
+// addReloc. TLS relocations classified with a non-TLS expr are checked by
+// the shared TLS handlers, with a few documented exceptions.
+inline bool isTlsExpr(RelExpr expr) {
+  // RE_LOONGARCH_GOT* are also used for non-TLS GOT relocations and
+  // therefore excluded.
+  return oneof<R_TPREL, R_TPREL_NEG, R_DTPREL, R_TLSDESC, R_TLSDESC_PC,
+               R_TLSDESC_GOTPLT, R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC,
+               R_TLSLD_GOT, R_TLSLD_GOTPLT, R_TLSLD_GOT_OFF, R_TLSLD_PC,
+               RE_AARCH64_TLSDESC_PAGE, RE_MIPS_TLSGD, RE_MIPS_TLSLD,
+               RE_LOONGARCH_TLSGD_PAGE_PC, RE_LOONGARCH_TLSDESC_PAGE_PC>(expr);
+}
+
+// Returns true if a TLS relocation may reference `sym` without violating the
+// gABI, i.e. no error should be reported.
+bool isValidTlsSym(const Symbol &sym);
+
 // Architecture-neutral representation of relocation.
 struct Relocation {
   RelExpr expr;

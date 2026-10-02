@@ -215,10 +215,8 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     // the switch to reach rs.process(). Types that need special handling
     // (fast-path helpers, TLS) call a handler and use `continue`.
 
-    auto handleTlsDescAuth = [this, &sym, &sec, type, offset,
+    auto handleTlsDescAuth = [&sym, &sec, type, offset,
                               addend](RelExpr tlsdescExpr) {
-      if (checkTlsSym(ctx, sec, offset, sym, type))
-        return;
       if (sym.isUndefined() && !sym.isPreemptible) {
         // Resolves to `addend`. Handle in
         // relaxAuthTlsDescForNonPreemptibleUndefined

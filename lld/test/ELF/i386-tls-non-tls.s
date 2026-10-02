@@ -7,6 +7,7 @@
 ## .reloc to create references that are genuinely non-STT_TLS.
 
 # CHECK: error: relocation R_386_TLS_LE against nonTls cannot be used with a non-STT_TLS symbol
+# CHECK: error: relocation R_386_TLS_LE_32 against nonTls cannot be used with a non-STT_TLS symbol
 # CHECK: error: relocation R_386_TLS_LDO_32 against nonTls cannot be used with a non-STT_TLS symbol
 # CHECK: error: relocation R_386_TLS_IE against nonTls cannot be used with a non-STT_TLS symbol
 # CHECK: error: relocation R_386_TLS_GOTDESC against nonTls cannot be used with a non-STT_TLS symbol
@@ -17,6 +18,8 @@
 .globl _start
 _start:
  .reloc ., R_386_TLS_LE, nonTls
+ nop
+ .reloc ., R_386_TLS_LE_32, nonTls
  nop
  .reloc ., R_386_TLS_LDO_32, nonTls
  nop

@@ -162,13 +162,7 @@ void Hexagon::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     case R_HEX_32_6_X:
     case R_HEX_HI16:
     case R_HEX_LO16:
-      expr = R_ABS;
-      break;
-    // R_HEX_DTPREL_32 is classified R_ABS as relocation application is
-    // handled specially, so check the symbol type here.
     case R_HEX_DTPREL_32:
-      if (checkTlsSym(ctx, sec, offset, sym, type))
-        continue;
       expr = R_ABS;
       break;
 
@@ -193,8 +187,6 @@ void Hexagon::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     case R_HEX_GD_PLT_B22_PCREL:
     case R_HEX_GD_PLT_B22_PCREL_X:
     case R_HEX_GD_PLT_B32_PCREL_X:
-      if (checkTlsSym(ctx, sec, offset, sym, type))
-        continue;
       // GD PLT: call foo@GDPLT becomes call __tls_get_addr.
       // Record R_PLT_PC on the TLS symbol; finalizeRelocScan (called
       // single-threaded after scanning) will create __tls_get_addr and
@@ -250,8 +242,6 @@ void Hexagon::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     case R_HEX_GD_GOT_11_X:
     case R_HEX_GD_GOT_16_X:
     case R_HEX_GD_GOT_32_6_X:
-      if (checkTlsSym(ctx, sec, offset, sym, type))
-        continue;
       sym.setFlags(NEEDS_TLSGD);
       ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
       sec.addReloc({R_TLSGD_GOTPLT, type, offset, addend, &sym});

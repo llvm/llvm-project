@@ -10,8 +10,10 @@
 
 # TEXT: error: relocation R_MIPS_TLS_GD against nonTls cannot be used with a non-STT_TLS symbol
 # TEXT: error: relocation R_MIPS_TLS_LDM against nonTls cannot be used with a non-STT_TLS symbol
-# TEXT: error: relocation R_MIPS_TLS_GOTTPREL against nonTls cannot be used with a non-STT_TLS symbol
 # TEXT: error: relocation R_MIPS_TLS_TPREL_HI16 against nonTls cannot be used with a non-STT_TLS symbol
+
+## R_MIPS_TLS_GOTTPREL is classified RE_MIPS_GOT_OFF, which is shared with
+## non-TLS GOT relocations, so it is not covered by the central check.
 
 # DEBUG: error: relocation R_MIPS_TLS_DTPREL32 against nonTls cannot be used with a non-STT_TLS symbol
 
@@ -22,8 +24,6 @@ _start:
  .reloc ., R_MIPS_TLS_GD, nonTls
  nop
  .reloc ., R_MIPS_TLS_LDM, nonTls
- nop
- .reloc ., R_MIPS_TLS_GOTTPREL, nonTls
  nop
  .reloc ., R_MIPS_TLS_TPREL_HI16, nonTls
  nop

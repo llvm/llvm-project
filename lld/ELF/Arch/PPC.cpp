@@ -367,8 +367,6 @@ void PPC::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
       rs.handleTlsIe(R_GOT_OFF, type, offset, addend, sym);
       continue;
     case R_PPC_TLS:
-      if (checkTlsSym(ctx, sec, offset, sym, type))
-        continue;
       if (!ctx.arg.shared && !sym.isPreemptible)
         sec.addReloc({R_TPREL, type, offset, addend, &sym});
       continue;
@@ -380,8 +378,6 @@ void PPC::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
       continue;
     case R_PPC_TLSGD:
     case R_PPC_TLSLD:
-      if (checkTlsSym(ctx, sec, offset, sym, type))
-        continue;
       if (!ctx.arg.shared) {
         sec.addReloc({sym.isPreemptible ? R_GOT_OFF : R_TPREL, type, offset,
                       addend, &sym});
@@ -398,8 +394,6 @@ void PPC::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     case R_PPC_DTPREL16_HI:
     case R_PPC_DTPREL16_LO:
     case R_PPC_DTPREL32:
-      if (checkTlsSym(ctx, sec, offset, sym, type))
-        continue;
       sec.addReloc({R_DTPREL, type, offset, addend, &sym});
       continue;
 

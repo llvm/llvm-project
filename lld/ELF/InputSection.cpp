@@ -10,7 +10,6 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "OutputSections.h"
-#include "RelocScan.h"
 #include "Relocations.h"
 #include "SymbolTable.h"
 #include "Symbols.h"

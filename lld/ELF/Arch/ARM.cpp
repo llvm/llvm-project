@@ -297,8 +297,6 @@ void ARM::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
       rs.handleTlsGd(R_TLSGD_PC, R_NONE, R_NONE, type, offset, addend, sym);
       continue;
     case R_ARM_TLS_LDM32:
-      if (checkTlsSym(ctx, sec, offset, sym, type))
-        continue;
       ctx.needsTlsLd.store(true, std::memory_order_relaxed);
       sec.addReloc({R_TLSLD_PC, type, offset, addend, &sym});
       continue;

@@ -6,20 +6,18 @@
 ## llvm-mc marks symbols referenced through TLS syntax as STT_TLS, so use
 ## .reloc to create references that are genuinely non-STT_TLS.
 
-# CHECK: error: relocation R_HEX_GD_PLT_B22_PCREL against nonTls cannot be used with a non-STT_TLS symbol
 # CHECK: error: relocation R_HEX_GD_GOT_32_6_X against nonTls cannot be used with a non-STT_TLS symbol
-# CHECK: error: relocation R_HEX_DTPREL_32 against nonTls cannot be used with a non-STT_TLS symbol
 # CHECK: error: relocation R_HEX_TPREL_16_X against nonTls cannot be used with a non-STT_TLS symbol
 # CHECK: error: relocation R_HEX_IE_GOT_11_X against nonTls cannot be used with a non-STT_TLS symbol
+
+## R_HEX_GD_PLT_* and R_HEX_DTPREL_32 are classified R_PLT_PC/R_ABS, which
+## are shared with non-TLS relocations, so they are not covered by the
+## central check.
 
 .text
 .globl _start
 _start:
- .reloc ., R_HEX_GD_PLT_B22_PCREL, nonTls
- nop
  .reloc ., R_HEX_GD_GOT_32_6_X, nonTls
- nop
- .reloc ., R_HEX_DTPREL_32, nonTls
  nop
  .reloc ., R_HEX_TPREL_16_X, nonTls
  nop

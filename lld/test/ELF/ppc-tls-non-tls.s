@@ -18,6 +18,10 @@
 _start:
  .reloc ., R_PPC_TLSGD, nonTls
  nop
+## R_PPC_TLSGD consumes the next relocation (normally the __tls_get_addr
+## call) via ++it; add a benign one so the following relocations are scanned.
+ .reloc ., R_PPC_NONE
+ nop
  .reloc ., R_PPC_DTPREL16, nonTls
  nop
  .reloc ., R_PPC_TLS, nonTls
