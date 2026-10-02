@@ -107,7 +107,7 @@ struct MCDwarfFile {
 class MCDwarfLoc {
   uint32_t FileNum;
   uint32_t Line;
-  uint16_t Column;
+  uint32_t Column;
   // Flags (see #define's below)
   uint8_t Flags;
   uint8_t Isa;
@@ -159,10 +159,7 @@ public:
   void setLine(unsigned line) { Line = line; }
 
   /// Set the Column of this MCDwarfLoc.
-  void setColumn(unsigned column) {
-    assert(column <= UINT16_MAX);
-    Column = column;
-  }
+  void setColumn(unsigned column) { Column = column; }
 
   /// Set the Flags of this MCDwarfLoc.
   void setFlags(unsigned flags) {
