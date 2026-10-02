@@ -127,12 +127,15 @@ struct InProgressEntry {
 };
 
 struct llvm::TimeTraceProfiler {
-  TimeTraceProfiler(unsigned TimeTraceGranularity = 0, StringRef ProcName = "",
-                    bool TimeTraceVerbose = false)
+  TimeTraceProfiler(
+      unsigned TimeTraceGranularity = 0, StringRef ProcName = "",
+      bool TimeTraceVerbose = false,
+      DebugCompressionType TimeTraceCompress = DebugCompressionType::None)
       : BeginningOfTime(system_clock::now()), StartTime(ClockType::now()),
         ProcName(ProcName), Pid(sys::Process::getProcessId()),
         Tid(llvm::get_threadid()), TimeTraceGranularity(TimeTraceGranularity),
-        TimeTraceVerbose(TimeTraceVerbose) {
+        TimeTraceVerbose(TimeTraceVerbose),
+        TimeTraceCompress(TimeTraceCompress) {
     llvm::get_thread_name(ThreadName);
   }
 
@@ -212,7 +215,7 @@ struct llvm::TimeTraceProfiler {
 
   // Write events from this TimeTraceProfilerInstance and
   // ThreadTimeTraceProfilerInstances.
-  void write(raw_pwrite_stream &OS) {
+  void write(raw_ostream &OS) {
     // Acquire Mutex as reading ThreadTimeTraceProfilerInstances.
     auto &Instances = getTimeTraceProfilerInstances();
     std::lock_guard<std::mutex> Lock(Instances.Lock);
@@ -383,6 +386,9 @@ struct llvm::TimeTraceProfiler {
   // Make time trace capture verbose event details (e.g. source filenames). This
   // can increase the size of the output by 2-3 times.
   const bool TimeTraceVerbose;
+
+  // Optional compression format for output.
+  DebugCompressionType TimeTraceCompress;
 };
 
 bool llvm::isTimeTraceVerbose() {
@@ -390,14 +396,22 @@ bool llvm::isTimeTraceVerbose() {
          getTimeTraceProfilerInstance()->TimeTraceVerbose;
 }
 
+DebugCompressionType llvm::inferTimeTraceCompressionFromPath(StringRef Path) {
+  StringRef Ext = llvm::sys::path::extension(Path);
+  if (Ext.equals_insensitive(".zst") || Ext.equals_insensitive(".zstd"))
+    return DebugCompressionType::Zstd;
+  return DebugCompressionType::None;
+}
+
 void llvm::timeTraceProfilerInitialize(unsigned TimeTraceGranularity,
                                        StringRef ProcName,
-                                       bool TimeTraceVerbose) {
+                                       bool TimeTraceVerbose,
+                                       DebugCompressionType TimeTraceCompress) {
   assert(TimeTraceProfilerInstance == nullptr &&
          "Profiler should not be initialized");
   TimeTraceProfilerInstance = new TimeTraceProfiler(
       TimeTraceGranularity, llvm::sys::path::filename(ProcName),
-      TimeTraceVerbose);
+      TimeTraceVerbose, TimeTraceCompress);
 }
 
 // Removes all TimeTraceProfilerInstances.
@@ -425,7 +439,30 @@ void llvm::timeTraceProfilerFinishThread() {
 void llvm::timeTraceProfilerWrite(raw_pwrite_stream &OS) {
   assert(TimeTraceProfilerInstance != nullptr &&
          "Profiler object can't be null");
-  TimeTraceProfilerInstance->write(OS);
+  DebugCompressionType CompressType =
+      TimeTraceProfilerInstance->TimeTraceCompress;
+  if (CompressType == DebugCompressionType::None) {
+    TimeTraceProfilerInstance->write(OS);
+    return;
+  }
+
+  compression::Format F = compression::formatFor(CompressType);
+  if (const char *Reason = compression::getReasonIfUnsupported(F))
+    report_fatal_error(Reason);
+
+  SmallVector<char, 0> Uncompressed;
+  {
+    raw_svector_ostream UncompressedOS(Uncompressed);
+    TimeTraceProfilerInstance->write(UncompressedOS);
+  }
+  SmallVector<uint8_t, 0> Compressed;
+  compression::compress(
+      compression::Params(F),
+      ArrayRef(reinterpret_cast<const uint8_t *>(Uncompressed.data()),
+               Uncompressed.size()),
+      Compressed);
+  OS.write(reinterpret_cast<const char *>(Compressed.data()),
+           Compressed.size());
 }
 
 Error llvm::timeTraceProfilerWrite(StringRef PreferredFileName,
@@ -437,14 +474,35 @@ Error llvm::timeTraceProfilerWrite(StringRef PreferredFileName,
   if (Path.empty()) {
     Path = FallbackFileName == "-" ? "out" : FallbackFileName.str();
     Path += TimeTraceFileExtension;
+    if (TimeTraceProfilerInstance->TimeTraceCompress ==
+        DebugCompressionType::Zstd)
+      Path += ".zst";
+  }
+
+  DebugCompressionType CompressType =
+      TimeTraceProfilerInstance->TimeTraceCompress;
+  if (CompressType == DebugCompressionType::None)
+    CompressType = inferTimeTraceCompressionFromPath(Path);
+
+  if (CompressType != DebugCompressionType::None) {
+    if (const char *Reason = compression::getReasonIfUnsupported(
+            compression::formatFor(CompressType)))
+      return createStringError(inconvertibleErrorCode(), Reason);
   }
 
   std::error_code EC;
-  raw_fd_ostream OS(Path, EC, sys::fs::OF_TextWithCRLF);
+  sys::fs::OpenFlags Flags = CompressType == DebugCompressionType::None
+                                 ? sys::fs::OF_TextWithCRLF
+                                 : sys::fs::OF_None;
+  raw_fd_ostream OS(Path, EC, Flags);
   if (EC)
     return createStringError(EC, "Could not open " + Path);
 
+  DebugCompressionType SavedCompress =
+      TimeTraceProfilerInstance->TimeTraceCompress;
+  TimeTraceProfilerInstance->TimeTraceCompress = CompressType;
   timeTraceProfilerWrite(OS);
+  TimeTraceProfilerInstance->TimeTraceCompress = SavedCompress;
   return Error::success();
 }
 

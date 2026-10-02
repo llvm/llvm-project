@@ -43,6 +43,34 @@ TEST(TimeProfiler, Scope_Smoke) {
   ASSERT_TRUE(json.find(R"("detail":"detail")") != std::string::npos);
 }
 
+TEST(TimeProfiler, Compression) {
+  EXPECT_EQ(inferTimeTraceCompressionFromPath("foo.json"),
+            DebugCompressionType::None);
+  EXPECT_EQ(inferTimeTraceCompressionFromPath("foo.json.zst"),
+            DebugCompressionType::Zstd);
+  EXPECT_EQ(inferTimeTraceCompressionFromPath("foo.ZSTD"),
+            DebugCompressionType::Zstd);
+
+  if (!compression::zstd::isAvailable())
+    return;
+
+  timeTraceProfilerInitialize(/*TimeTraceGranularity=*/0, "test",
+                              /*TimeTraceVerbose=*/false,
+                              DebugCompressionType::Zstd);
+  {
+    TimeTraceScope Scope("compressed_event", "compressed_detail");
+  }
+
+  SmallVector<char, 0> CompressedChars;
+  raw_svector_ostream OS(CompressedChars);
+  timeTraceProfilerWrite(OS);
+  timeTraceProfilerCleanup();
+
+  ASSERT_FALSE(CompressedChars.empty());
+  // Compressed output must not start with '{'.
+  EXPECT_NE(CompressedChars.front(), '{');
+}
+
 TEST(TimeProfiler, Begin_End_Smoke) {
   setupProfiler();
 
