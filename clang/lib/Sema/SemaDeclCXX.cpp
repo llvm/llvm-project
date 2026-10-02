@@ -4703,6 +4703,10 @@ Sema::BuildMemberInitializer(ValueDecl *Member, Expr *Init,
     Args = MultiExprArg(ParenList->getExprs(), ParenList->getNumExprs());
   } else if (InitListExpr *InitList = dyn_cast<InitListExpr>(Init)) {
     Args = MultiExprArg(InitList->getInits(), InitList->getNumInits());
+  } else if (auto *ParenListInit = dyn_cast<CXXParenListInitExpr>(Init)) {
+    // Template instantiation reverts the elements to their syntactic form;
+    // redo the initialization from the written arguments.
+    Args = ParenListInit->getUserSpecifiedInitExprs();
   } else {
     // Template instantiation doesn't reconstruct ParenListExprs for us.
     Args = Init;
@@ -18816,8 +18820,7 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
     FriendDecl *Friend = FriendDecl::Create(
         Context, CurContext, D.getIdentifierLoc(), ND, DS.getFriendSpecLoc());
     Friend->setAccess(AS_public);
-    if (!isa<FunctionTemplateDecl>(ND))
-      Friend->setInvalidDecl();
+    Friend->setInvalidDecl();
     CurContext->addDecl(Friend);
     return ND;
   }

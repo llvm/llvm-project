@@ -979,6 +979,10 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
   case BuiltinType::Id:                                                        \
     return getOrCreateStructPtrType(#Name, SingletonId);
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case BuiltinType::Id:                                                        \
+    return DBuilder.createBasicType(#Name, 32, llvm::dwarf::DW_ATE_unsigned);
+#include "clang/Basic/HLSLPackedTypes.def"
 
 #define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/AArch64ACLETypes.def"
@@ -3239,11 +3243,17 @@ static bool canUseCtorHoming(const CXXRecordDecl *RD) {
   if (isClassOrMethodDLLImport(RD))
     return false;
 
-  if (RD->isLambda() || RD->isAggregate() ||
-      RD->hasTrivialDefaultConstructor() ||
-      RD->hasConstexprNonCopyMoveConstructor())
+  if (RD->isLambda() || RD->isAggregate() || RD->hasTrivialDefaultConstructor())
     return false;
 
+  // Skip this optimization if the class has an implicit constexpr default
+  // constructor, since those constructors can be invoked without emitting type
+  // information for the constructor.
+  if (RD->needsImplicitDefaultConstructor() &&
+      RD->defaultedDefaultConstructorIsConstexpr())
+    return false;
+
+  bool HasNonDeletedCtor = false;
   for (const CXXConstructorDecl *Ctor : RD->ctors()) {
     if (Ctor->isCopyOrMoveConstructor())
       continue;
@@ -3254,11 +3264,15 @@ static bool canUseCtorHoming(const CXXRecordDecl *RD) {
       // copy/move constructor, which does not enable homing.
       if (CtorDef->isDelegatingConstructor())
         continue;
+      // Skip this optimization if we see a defined constexpr constructor, which
+      // can be invoked without emitting type info.
+      if (Ctor->isConstexpr() && !Ctor->isDeleted())
+        return false;
     }
     if (!Ctor->isDeleted())
-      return true;
+      HasNonDeletedCtor = true;
   }
-  return false;
+  return HasNonDeletedCtor;
 }
 
 static bool shouldOmitDefinition(llvm::codegenoptions::DebugInfoKind DebugKind,
@@ -5305,9 +5319,12 @@ void CGDebugInfo::CreateLexicalBlock(SourceLocation Loc) {
   llvm::MDNode *Back = nullptr;
   if (!LexicalBlockStack.empty())
     Back = LexicalBlockStack.back().get();
+  // A #line 0 macro carried no line information but still take column
+  // information. This will finally be rejected by the lexer but is legal.
+  unsigned Line = getLineNumber(CurLoc);
+  unsigned Column = Line ? getColumnNumber(CurLoc) : 0;
   LexicalBlockStack.emplace_back(DBuilder.createLexicalBlock(
-      cast<llvm::DIScope>(Back), getOrCreateFile(CurLoc), getLineNumber(CurLoc),
-      getColumnNumber(CurLoc)));
+      cast<llvm::DIScope>(Back), getOrCreateFile(CurLoc), Line, Column));
 }
 
 void CGDebugInfo::AppendAddressSpaceXDeref(

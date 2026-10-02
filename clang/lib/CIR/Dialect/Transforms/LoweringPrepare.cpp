@@ -13,7 +13,6 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Value.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
@@ -32,10 +31,8 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VersionTuple.h"
-#include "llvm/Support/VirtualFileSystem.h"
 
 #include <map>
 #include <memory>
@@ -291,12 +288,6 @@ struct LoweringPreparePass
     }
     return guard;
   }
-
-  ///
-  /// AST related
-  /// -----------
-
-  clang::ASTContext *astCtx = nullptr;
 
   /// Target/ABI facts sourced from the module's own attributes.
   std::unique_ptr<cir::LowerModule> lowerModule;
@@ -580,8 +571,6 @@ struct LoweringPreparePass
 
     builder.createYield(loc); // Outermost IfOp
   }
-
-  void setASTContext(clang::ASTContext *c) { astCtx = c; }
 };
 
 } // namespace
@@ -2538,30 +2527,13 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
 
   // There's no device-side binary, so no need to proceed for CUDA.
   // HIP has to create an external symbol in this case, which is NYI.
-  mlir::Attribute cudaBinaryHandleAttr =
-      mlirModule->getAttr(CIRDialect::getCUDABinaryHandleAttrName());
-  if (!cudaBinaryHandleAttr) {
+  auto deviceBinaryAttr = mlirModule->getAttrOfType<mlir::StringAttr>(
+      CIRDialect::getCUDADeviceBinaryAttrName());
+  if (!deviceBinaryAttr) {
     if (isHIP)
       assert(!cir::MissingFeatures::hipModuleCtor());
     return;
   }
-
-  llvm::StringRef cudaGPUBinaryName =
-      mlir::cast<CUDABinaryHandleAttr>(cudaBinaryHandleAttr)
-          .getName()
-          .getValue();
-
-  llvm::vfs::FileSystem &vfs =
-      astCtx->getSourceManager().getFileManager().getVirtualFileSystem();
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> gpuBinaryOrErr =
-      vfs.getBufferForFile(cudaGPUBinaryName);
-  if (std::error_code ec = gpuBinaryOrErr.getError()) {
-    mlirModule->emitError("cannot open GPU binary file: " + cudaGPUBinaryName +
-                          ": " + ec.message());
-    return;
-  }
-  std::unique_ptr<llvm::MemoryBuffer> gpuBinary =
-      std::move(gpuBinaryOrErr.get());
 
   // Set up common types and builder.
   llvm::StringRef cudaPrefix = getCUDAPrefix(getLangOpts());
@@ -2573,9 +2545,6 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
   PointerType voidPtrTy = builder.getVoidPtrTy();
   PointerType voidPtrPtrTy = builder.getPointerTo(voidPtrTy);
   IntType intTy = builder.getSIntNTy(32);
-  IntType charTy =
-      cir::IntType::get(&getContext(), getTargetInfo().getCharWidth(),
-                        /*isSigned=*/false);
 
   // --- Create fatbin globals ---
 
@@ -2587,8 +2556,8 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
       getLangOpts().HIP ? ".hipFatBinSegment" : ".nvFatBinSegment";
 
   // Create the fatbin string constant with GPU binary contents.
-  auto fatbinType =
-      ArrayType::get(&getContext(), charTy, gpuBinary->getBuffer().size());
+  // The dialect verifier guarantees the attribute is typed as the array.
+  auto fatbinType = mlir::cast<ArrayType>(deviceBinaryAttr.getType());
   std::string fatbinStrName = addUnderscoredPrefix(cudaPrefix, "_fatbin_str");
   GlobalOp fatbinStr = GlobalOp::create(builder, loc, fatbinStrName, fatbinType,
                                         /*isConstant=*/true, {},
@@ -2600,8 +2569,8 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
     fatbinStr.setAlignment(8);
   }
 
-  fatbinStr.setInitialValueAttr(cir::ConstArrayAttr::get(
-      fatbinType, StringAttr::get(gpuBinary->getBuffer(), fatbinType)));
+  fatbinStr.setInitialValueAttr(
+      cir::ConstArrayAttr::get(fatbinType, deviceBinaryAttr));
   fatbinStr.setSection(fatbinConstName);
   fatbinStr.setPrivate();
 
@@ -2781,7 +2750,7 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
 }
 
 std::optional<FuncOp> LoweringPreparePass::buildCUDAModuleDtor() {
-  if (!mlirModule->getAttr(CIRDialect::getCUDABinaryHandleAttrName()))
+  if (!mlirModule->getAttr(CIRDialect::getCUDADeviceBinaryAttrName()))
     return {};
 
   llvm::StringRef prefix = getCUDAPrefix(getLangOpts());
@@ -2838,7 +2807,7 @@ std::optional<FuncOp> LoweringPreparePass::buildCUDAModuleDtor() {
 /// the dtor list would cause a double-free. It is meant to be registered via
 /// atexit() at the end of the module ctor.
 std::optional<FuncOp> LoweringPreparePass::buildHIPModuleDtor() {
-  if (!mlirModule->getAttr(CIRDialect::getCUDABinaryHandleAttrName()))
+  if (!mlirModule->getAttr(CIRDialect::getCUDADeviceBinaryAttrName()))
     return {};
 
   llvm::StringRef prefix = getCUDAPrefix(getLangOpts());
@@ -3118,19 +3087,18 @@ void LoweringPreparePass::runOnOperation() {
 
   buildCXXGlobalInitFunc();
   buildCXXGlobalTlsFunc();
-  if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice)
+  if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice) {
     buildCUDAModuleCtor();
+    // The fatbin global now references the same attribute; drop the module's
+    // reference so an emitted .cir doesn't print the bytes twice. This has to
+    // happen out here because the ctor and both dtor builders test the
+    // attribute to decide whether a device-side binary exists at all.
+    mlirModule->removeAttr(CIRDialect::getCUDADeviceBinaryAttrName());
+  }
 
   buildGlobalCtorDtorList();
 }
 
 std::unique_ptr<Pass> mlir::createLoweringPreparePass() {
   return std::make_unique<LoweringPreparePass>();
-}
-
-std::unique_ptr<Pass>
-mlir::createLoweringPreparePass(clang::ASTContext *astCtx) {
-  auto pass = std::make_unique<LoweringPreparePass>();
-  pass->setASTContext(astCtx);
-  return std::move(pass);
 }
