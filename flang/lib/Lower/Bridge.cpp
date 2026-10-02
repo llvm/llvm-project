@@ -3903,6 +3903,10 @@ private:
         std::get_if<Fortran::parser::OpenACCCombinedConstruct>(&acc.u);
 
     Fortran::lower::pft::Evaluation *curEval = &getEval();
+    // The loop the directive takes over, once the descent below has found it.
+    // A construct that owns no loop -- acc data, or acc parallel without a
+    // loop directive -- leaves this null and has its own evaluations lowered.
+    Fortran::lower::pft::Evaluation *absorbedLoop = nullptr;
     bool collapseForce = false;
     uint64_t collapseDepth = 1;
     uint64_t loopCount = 1;
@@ -3947,6 +3951,11 @@ private:
             break;
           curEval = nextDo;
         }
+      // The descent lands on the loop the directive takes over, and every
+      // level it steps through is one. A construct whose first evaluation is
+      // not a loop takes over none.
+      if (outerDo)
+        absorbedLoop = curEval;
     }
 
     // collapse(force: ...) allows statements between the loop levels the
@@ -4006,6 +4015,11 @@ private:
 
     if (collapseForce && collapseDepth > 1) {
       genCollapseForceBody();
+    } else if (absorbedLoop && absorbedLoop->lowerBodyAsWrappedRegion()) {
+      // Taking the loop over means genFIR(DoConstruct) -- where a plain loop
+      // folds a body that branches into a region -- never runs for it. Such a
+      // body still needs that region, so fold it through the same helper.
+      genLoopBodyEvaluations(*absorbedLoop, /*unstructuredContext=*/true);
     } else if (curEval->hasNestedEvaluations()) {
       for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
         genFIR(e);

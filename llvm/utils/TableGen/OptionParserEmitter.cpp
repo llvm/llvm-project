@@ -230,9 +230,12 @@ static MarshallingInfo createMarshallingInfo(const Record &R) {
   return Ret;
 }
 
-// -foo-bar and -foo-bar= become foo_bar.
-static std::string getSpellingIdentifier(const Record &R) {
-  std::string ID = R.getValueAsString("Name").rtrim('=').str();
+// -foo-bar and -foo-bar= become foo_bar, or bar if Prefix is "foo-".
+static std::string getSpellingIdentifier(const Record &R,
+                                         StringRef Prefix = "") {
+  StringRef Spelling = R.getValueAsString("Name").rtrim('=');
+  Spelling.consume_front(Prefix);
+  std::string ID = Spelling.str();
   llvm::replace(ID, '-', '_');
   if (ID.empty() || isDigit(ID[0]) ||
       !all_of(ID, [](char C) { return isAlnum(C) || C == '_'; }))
@@ -243,9 +246,10 @@ static std::string getSpellingIdentifier(const Record &R) {
 
 // `defm : BoolField<"foo-bar", ...>` declares member foo_bar, and a named defm
 // names it.
-static std::string getMemberName(const Record &R) {
+static std::string getMemberName(const Record &R, StringRef Prefix) {
   StringRef Name = R.getValueAsString("FieldName");
-  return Name.starts_with("anonymous_") ? getSpellingIdentifier(R) : Name.str();
+  return Name.starts_with("anonymous_") ? getSpellingIdentifier(R, Prefix)
+                                        : Name.str();
 }
 
 // The OPT_ name of an option of an OptionsStruct. `defm :` rows are named
@@ -291,10 +295,11 @@ static void emitOptionsStruct(const Record &Struct,
   llvm::sort(ByID, [](const Record *A, const Record *B) {
     return A->getID() < B->getID();
   });
+  StringRef Prefix = Struct.getValueAsString("MemberPrefix");
   std::vector<Member> Members;
   StringMap<unsigned> MemberIndex;
   for (const Record *R : ByID) {
-    Member M{getMemberName(*R), R->getValueAsString("FieldType"),
+    Member M{getMemberName(*R, Prefix), R->getValueAsString("FieldType"),
              R->getValueAsString("FieldDefault"),
              R->getValueAsString("Name").rtrim('=')};
     auto [It, Inserted] = MemberIndex.try_emplace(M.Name, Members.size());
@@ -346,8 +351,21 @@ static void emitOptionsStruct(const Record &Struct,
   OS << "  switch (A.getOption().getID()) {\n";
   for (const Record *R : Fields) {
     OS << "  case OPT_" << getStructOptionID(*R) << ":\n";
-    std::string Member = getMemberName(*R);
-    if (!R->getValue("FieldValue"))
+    std::string Member = getMemberName(*R, Prefix);
+    if (!isa<UnsetInit>(R->getValueInit("NormalizedValues"))) {
+      SmallVector<StringRef> Values;
+      R->getValueAsString("Values").split(Values, ',');
+      std::vector<StringRef> Enumerators =
+          R->getValueAsListOfStrings("NormalizedValues");
+      if (Values.size() != Enumerators.size())
+        PrintFatalError(R->getLoc(), "an EnumField needs one enumerator per "
+                                     "value");
+      OS << "    {\n      llvm::StringRef V = A.getValue();\n";
+      for (auto [Value, Enumerator] : llvm::zip_equal(Values, Enumerators))
+        OS << "      if (V == \"" << Value << "\") {\n        " << Member
+           << " = " << Enumerator << ";\n        return true;\n      }\n";
+      OS << "      return false;\n    }\n";
+    } else if (!R->getValue("FieldValue"))
       OS << "    return llvm::opt::parseArgValue(A.getValue(), " << Member
          << ");\n";
     else

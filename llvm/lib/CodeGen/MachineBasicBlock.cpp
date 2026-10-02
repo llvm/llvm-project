@@ -1385,8 +1385,12 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
         }
       } else if (!isLiveOut && !isLastMBB) {
         LI.removeSegment(StartIndex, EndIndex);
-        for (auto &SR : LI.subranges())
-          SR.removeSegment(StartIndex, EndIndex);
+        // The main range is live across NMBB, but an individual lane need not
+        // be.
+        for (auto &SR : LI.subranges()) {
+          if (SR.liveAt(PrevIndex))
+            SR.removeSegment(StartIndex, EndIndex);
+        }
       }
     }
 

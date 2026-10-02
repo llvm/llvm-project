@@ -36,3 +36,17 @@ v_mov_b32_dpp v0, v1 row_bcast:15 row_mask:0x1 bank_mask:0x1
 v_mov_b32_dpp v0, v1 row_bcast:31 row_mask:0x1 bank_mask:0x1
 // GFX89:     v_mov_b32_dpp v0, v1 row_bcast:31 row_mask:0x1 bank_mask:0x1 ; encoding: [0xfa,0x02,0x00,0x7e,0x01,0x43,0x01,0x11]
 // GFX10-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+// DPP with a 64-bit VGPR operand requires gfx90a+ (FeatureDPALU_DPP).
+
+v_cvt_f64_i32_dpp v[0:1], v2 quad_perm:[2,3,0,1] row_mask:0x1 bank_mask:0x1
+// GFX89-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// GFX10-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_f64_u32_dpp v[0:1], v2 quad_perm:[2,3,0,1] row_mask:0x1 bank_mask:0x1
+// GFX89-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// GFX10-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_f64_f32_dpp v[0:1], v2 quad_perm:[2,3,0,1] row_mask:0x1 bank_mask:0x1
+// GFX89-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+// GFX10-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
