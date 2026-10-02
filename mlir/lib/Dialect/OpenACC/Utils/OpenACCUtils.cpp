@@ -8,7 +8,6 @@
 
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 
-#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -482,33 +481,23 @@ bool mlir::acc::isInHostBranch(mlir::Operation *op,
     if (!condition)
       continue;
 
-    // Include the condition's defining operation so a direct `acc.on_device`
-    // result is part of the slice.
-    mlir::BackwardSliceOptions sliceOptions;
-    sliceOptions.inclusive = true;
-    sliceOptions.omitBlockArguments = true;
-    llvm::SetVector<mlir::Operation *> slice;
-    if (failed(mlir::getBackwardSlice(condition, &slice, sliceOptions)))
+    // The condition must be the `acc.on_device` result itself.
+    auto onDeviceOp = condition.getDefiningOp<mlir::acc::OnDeviceOp>();
+    if (!onDeviceOp)
       continue;
 
-    for (mlir::Operation *sliceOp : slice) {
-      auto onDeviceOp = mlir::dyn_cast<mlir::acc::OnDeviceOp>(sliceOp);
-      if (!onDeviceOp)
-        continue;
+    std::optional<int64_t> deviceTypeValue =
+        mlir::getConstantIntValue(onDeviceOp.getDeviceType());
+    if (!deviceTypeValue)
+      continue;
 
-      std::optional<int64_t> deviceTypeValue =
-          mlir::getConstantIntValue(onDeviceOp.getDeviceType());
-      if (!deviceTypeValue)
-        continue;
-
-      bool onTarget = llvm::is_contained(deviceTypes, *deviceTypeValue);
-      bool inThen = parent->getRegion(0).isAncestor(op->getParentRegion());
-      bool inElse = parent->getRegion(1).isAncestor(op->getParentRegion());
-      // Off the target: the then of a device type outside `deviceTypes`, or
-      // the else of a device type in `deviceTypes`.
-      if ((!onTarget && inThen) || (onTarget && inElse))
-        return true;
-    }
+    bool onTarget = llvm::is_contained(deviceTypes, *deviceTypeValue);
+    bool inThen = parent->getRegion(0).isAncestor(op->getParentRegion());
+    bool inElse = parent->getRegion(1).isAncestor(op->getParentRegion());
+    // Off the target: the then of a device type outside `deviceTypes`, or
+    // the else of a device type in `deviceTypes`.
+    if ((!onTarget && inThen) || (onTarget && inElse))
+      return true;
   }
   return false;
 }

@@ -149,13 +149,6 @@ def ACCImplicitRoutine : Pass<"acc-implicit-routine", "mlir::ModuleOp"> {
     3. Recursively walking through all existing `acc routine` and creating
        implicit routine operations for function calls within these routines,
        while avoiding infinite recursion through proper tracking.
-
-    Calls in a branch that does not execute on the target device are skipped.
-    `the-device-types` lists the runtime `acc_device_t` values for which
-    `acc.on_device` is true on that device. A call in the `then` of
-    `acc.on_device` whose operand is outside the list, or in the `else` of
-    `acc.on_device` whose operand is in the list, does not get an implicit
-    routine. An empty list means no `acc_device_t` value is true on the target.
   }];
   let options = [ AccDeviceTypeOption, AccTheDeviceTypesOption ];
 }
