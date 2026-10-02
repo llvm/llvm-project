@@ -1841,7 +1841,8 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *e) {
   SmallVector<mlir::Attribute> elements;
   elements.reserve(arraySize);
   for (unsigned i = 0; i < literalSize; ++i)
-    elements.push_back(cir::IntAttr::get(arrayEltTy, e->getCodeUnit(i)));
+    elements.push_back(cir::IntAttr::get(
+        arrayEltTy, llvm::APInt(arrayEltTy.getWidth(), e->getCodeUnit(i))));
 
   auto elementsAttr = mlir::ArrayAttr::get(&getMLIRContext(), elements);
   return builder.getConstArray(elementsAttr, arrayTy);
