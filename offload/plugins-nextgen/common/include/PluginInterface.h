@@ -461,6 +461,9 @@ struct KernelLaunchArgsTy {
     uint32_t ReductionDataSize = 0;
     /// Maximum number of threads per block that this kernel may use.
     uint32_t MaxNumThreads = 0;
+    /// Number of blocks originally requested by the program for the first
+    /// dimension (e.g., num_teams clause), or 0 if none was requested.
+    uint32_t RequestedNumBlocks = 0;
   } KernelLaunchInfo;
   struct {
     uint64_t Cooperative : 1; // Was this kernel spawned as cooperative.
