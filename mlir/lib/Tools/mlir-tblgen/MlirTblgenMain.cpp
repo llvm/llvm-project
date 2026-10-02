@@ -24,9 +24,11 @@
 using namespace mlir;
 using namespace llvm;
 
-enum DeprecatedAction { None, Warn, Error };
-
 static DeprecatedAction actionOnDeprecatedValue;
+
+DeprecatedAction mlir::getActionOnDeprecated() {
+  return actionOnDeprecatedValue;
+}
 
 // Returns if there is a use of `deprecatedInit` in `field`.
 static bool findUse(const Init *field, const Init *deprecatedInit,
@@ -146,7 +148,8 @@ int mlir::MlirTblgenMain(int argc, char **argv) {
           clEnumValN(DeprecatedAction::None, "none", "No action"),
           clEnumValN(DeprecatedAction::Warn, "warn", "Warn on use"),
           clEnumValN(DeprecatedAction::Error, "error", "Error on use")),
-      cl::location(actionOnDeprecatedValue), llvm::cl::init(Warn));
+      cl::location(actionOnDeprecatedValue),
+      llvm::cl::init(DeprecatedAction::Warn));
 
   llvm::cl::opt<const mlir::GenInfo *, true, mlir::GenNameParser> generator(
       "", llvm::cl::desc("Generator to run"), cl::location(::generator));

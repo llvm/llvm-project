@@ -290,7 +290,9 @@ LogicalResult MyOp::fold(FoldAdaptor adaptor,
 The legacy form does not support partial folds. The fold returns failure, or
 returns success with an empty list for an in-place change, or fills in one
 non-null entry for each result and returns success. The legacy form exists only
-for the transition to `OpFoldResults`.
+for the transition to `OpFoldResults`. The legacy form is deprecated, and
+`mlir-tblgen -gen-op-decls` warns once for each dialect that uses it in each
+run.
 
 In the above, for each method a `FoldAdaptor` is provided with getters for
 each of the operands, returning the corresponding constant attribute. These

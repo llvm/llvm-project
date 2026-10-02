@@ -29,11 +29,13 @@
 #include "mlir/TableGen/SideEffects.h"
 #include "mlir/TableGen/Successor.h"
 #include "mlir/TableGen/Trait.h"
+#include "mlir/Tools/mlir-tblgen/MlirTblgenMain.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -3418,6 +3420,10 @@ void OpEmitter::genCanonicalizerDecls() {
   }
 }
 
+static bool hasSingleFixedResult(const Operator &op) {
+  return op.getNumResults() == 1 && op.getNumVariableLengthResults() == 0;
+}
+
 void OpEmitter::genFolderDecls() {
   if (!op.hasFolder())
     return;
@@ -3426,9 +3432,7 @@ void OpEmitter::genFolderDecls() {
   paramList.emplace_back("FoldAdaptor", "adaptor");
 
   StringRef retType;
-  bool hasSingleResult =
-      op.getNumResults() == 1 && op.getNumVariableLengthResults() == 0;
-  if (hasSingleResult) {
+  if (hasSingleFixedResult(op)) {
     retType = "::mlir::OpFoldResult";
   } else if (op.getDialect().useOpFoldResults()) {
     retType = "::mlir::OpFoldResults";
@@ -4664,11 +4668,49 @@ static void emitOpClassDefs(const RecordKeeper &records,
                 /*emitDecl=*/false);
 }
 
+/// Reports once for each dialect that declares the deprecated multi-result
+/// `fold` form for one of `defs`, at the severity that `-on-deprecated`
+/// selects. Returns true if it reported an error.
+static bool reportDeprecatedFolders(ArrayRef<const Record *> defs) {
+  DeprecatedAction action = getActionOnDeprecated();
+  if (action == DeprecatedAction::None)
+    return false;
+
+  bool emittedError = false;
+  SmallPtrSet<const Record *, 4> warnedDialects;
+  for (const Record *def : defs) {
+    Operator op(*def);
+    const Dialect &dialect = op.getDialect();
+    if (!op.hasFolder() || hasSingleFixedResult(op) ||
+        dialect.useOpFoldResults() ||
+        !warnedDialects.insert(dialect.getDef()).second)
+      continue;
+    std::string message =
+        ("dialect '" + dialect.getName() +
+         "' uses the deprecated multi-result fold form; set "
+         "'useOpFoldResults' to 1 and return 'OpFoldResults' from each "
+         "multi-result 'fold'")
+            .str();
+    if (action == DeprecatedAction::Error) {
+      PrintError(dialect.getDef()->getLoc(), message);
+      emittedError = true;
+    } else {
+      PrintWarning(dialect.getDef()->getLoc(), message);
+    }
+    PrintNote(def->getLoc(), "'" + op.getOperationName() +
+                                 "' declares 'LogicalResult fold(FoldAdaptor, "
+                                 "SmallVectorImpl<OpFoldResult> &)'");
+  }
+  return emittedError;
+}
+
 /// Emit op declarations for all op records.
 static bool emitOpDecls(const RecordKeeper &records, raw_ostream &os) {
   emitSourceFileHeader("Op Declarations", os, records);
 
   std::vector<const Record *> defs = getRequestedOpDefinitions(records);
+  if (reportDeprecatedFolders(defs))
+    return true;
   emitOpClassDecls(records, defs, os);
 
   // If we are generating sharded op definitions, emit the sharded op

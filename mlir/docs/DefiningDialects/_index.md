@@ -198,6 +198,10 @@ partial folds. If it is `0`, the operation declares the legacy
 [documentation for canonicalization](../Canonicalization.md#canonicalizing-with-the-fold-method)
 for the rules of each form.
 
+The legacy form is deprecated. If a dialect keeps this field at `0` and has such
+an operation, `mlir-tblgen -gen-op-decls` emits a warning at the dialect
+definition (`-on-deprecated=none|error` silences it or makes it an error).
+
 ### `hasNonDefaultDestructor`: Providing a custom destructor
 
 This field should be used when the Dialect class has a custom destructor, i.e.
