@@ -531,6 +531,11 @@ public:
                                        int64_t Scale,
                                        unsigned AddrSpace) const override;
 
+  bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
+                             bool HasBaseReg, int64_t Scale, unsigned AddrSpace,
+                             Instruction *I = nullptr,
+                             int64_t ScalableOffset = 0) const override;
+
   bool enableSelectOptimize() const override {
     return ST->enableSelectOptimize();
   }

@@ -594,42 +594,33 @@ exit:
 define void @multivector_accesses(ptr noalias %x, ptr noalias %y, i64 %n) #1 {
 ; COMMON-LABEL: multivector_accesses:
 ; COMMON:       // %bb.0: // %entry
-; COMMON-NEXT:    mov x8, xzr
+; COMMON-NEXT:    mov w8, #4096 // =0x1000
 ; COMMON-NEXT:    ptrue pn8.d
 ; COMMON-NEXT:    ptrue pn9.s
 ; COMMON-NEXT:  .LBB11_1: // %vector.body
 ; COMMON-NEXT:    // =>This Inner Loop Header: Depth=1
-; COMMON-NEXT:    add x9, x0, x8, lsl #3
-; COMMON-NEXT:    ld1d { z0.d - z3.d }, pn8/z, [x0, x8, lsl #3]
-; COMMON-NEXT:    ld1d { z16.d - z19.d }, pn8/z, [x9, #4, mul vl]
-; COMMON-NEXT:    movprfx z5, z1
-; COMMON-NEXT:    add z5.d, z5.d, #1 // =0x1
-; COMMON-NEXT:    movprfx z4, z0
-; COMMON-NEXT:    add z4.d, z4.d, #1 // =0x1
-; COMMON-NEXT:    movprfx z7, z3
-; COMMON-NEXT:    add z7.d, z7.d, #1 // =0x1
-; COMMON-NEXT:    movprfx z6, z2
-; COMMON-NEXT:    add z6.d, z6.d, #1 // =0x1
-; COMMON-NEXT:    movprfx z1, z17
+; COMMON-NEXT:    ld1d { z4.d - z7.d }, pn8/z, [x0, #4, mul vl]
+; COMMON-NEXT:    ld1d { z0.d - z3.d }, pn8/z, [x0]
+; COMMON-NEXT:    decb x8
 ; COMMON-NEXT:    add z1.d, z1.d, #1 // =0x1
-; COMMON-NEXT:    movprfx z0, z16
+; COMMON-NEXT:    add z5.d, z5.d, #1 // =0x1
 ; COMMON-NEXT:    add z0.d, z0.d, #1 // =0x1
-; COMMON-NEXT:    movprfx z3, z19
+; COMMON-NEXT:    add z4.d, z4.d, #1 // =0x1
 ; COMMON-NEXT:    add z3.d, z3.d, #1 // =0x1
-; COMMON-NEXT:    movprfx z2, z18
+; COMMON-NEXT:    add z7.d, z7.d, #1 // =0x1
 ; COMMON-NEXT:    add z2.d, z2.d, #1 // =0x1
-; COMMON-NEXT:    st1d { z4.d - z7.d }, pn8, [x9]
-; COMMON-NEXT:    st1d { z0.d - z3.d }, pn8, [x9, #4, mul vl]
-; COMMON-NEXT:    add x9, x1, x8, lsl #2
-; COMMON-NEXT:    ld1w { z0.s - z3.s }, pn9/z, [x1, x8, lsl #2]
-; COMMON-NEXT:    incb x8
+; COMMON-NEXT:    add z6.d, z6.d, #1 // =0x1
+; COMMON-NEXT:    st1d { z4.d - z7.d }, pn8, [x0, #4, mul vl]
+; COMMON-NEXT:    st1d { z0.d - z3.d }, pn8, [x0]
+; COMMON-NEXT:    addvl x0, x0, #8
+; COMMON-NEXT:    ld1w { z0.s - z3.s }, pn9/z, [x1]
 ; COMMON-NEXT:    add z0.s, z0.s, #1 // =0x1
 ; COMMON-NEXT:    add z1.s, z1.s, #1 // =0x1
 ; COMMON-NEXT:    add z2.s, z2.s, #1 // =0x1
 ; COMMON-NEXT:    add z3.s, z3.s, #1 // =0x1
-; COMMON-NEXT:    cmp x8, #1, lsl #12 // =4096
-; COMMON-NEXT:    st1w { z0.s - z3.s }, pn9, [x9]
-; COMMON-NEXT:    b.ne .LBB11_1
+; COMMON-NEXT:    st1w { z0.s - z3.s }, pn9, [x1]
+; COMMON-NEXT:    incb x1, all, mul #4
+; COMMON-NEXT:    cbnz x8, .LBB11_1
 ; COMMON-NEXT:  // %bb.2: // %exit
 ; COMMON-NEXT:    ret
 entry:
@@ -687,19 +678,17 @@ exit:
 define void @split_vector_accesses(ptr noalias %x, ptr noalias %y, i64 %n) #0 {
 ; COMMON-LABEL: split_vector_accesses:
 ; COMMON:       // %bb.0: // %entry
-; COMMON-NEXT:    ptrue p0.s
-; COMMON-NEXT:    mov x8, xzr
+; COMMON-NEXT:    mov w8, #4096 // =0x1000
 ; COMMON-NEXT:  .LBB12_1: // %vector.body
 ; COMMON-NEXT:    // =>This Inner Loop Header: Depth=1
-; COMMON-NEXT:    add x9, x0, x8, lsl #3
-; COMMON-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
-; COMMON-NEXT:    ldr z1, [x9, #6, mul vl]
-; COMMON-NEXT:    ldr z2, [x9, #7, mul vl]
-; COMMON-NEXT:    ldr z3, [x9, #4, mul vl]
-; COMMON-NEXT:    ldr z4, [x9, #5, mul vl]
-; COMMON-NEXT:    ldr z5, [x9, #2, mul vl]
-; COMMON-NEXT:    ldr z6, [x9, #3, mul vl]
-; COMMON-NEXT:    ldr z7, [x9, #1, mul vl]
+; COMMON-NEXT:    ldr z0, [x0, #6, mul vl]
+; COMMON-NEXT:    ldr z1, [x0, #7, mul vl]
+; COMMON-NEXT:    decb x8
+; COMMON-NEXT:    ldr z2, [x0, #4, mul vl]
+; COMMON-NEXT:    ldr z3, [x0, #5, mul vl]
+; COMMON-NEXT:    ldr z4, [x0, #2, mul vl]
+; COMMON-NEXT:    ldr z5, [x0, #3, mul vl]
+; COMMON-NEXT:    ldr z6, [x0]
 ; COMMON-NEXT:    add z0.d, z0.d, #1 // =0x1
 ; COMMON-NEXT:    add z1.d, z1.d, #1 // =0x1
 ; COMMON-NEXT:    add z2.d, z2.d, #1 // =0x1
@@ -707,31 +696,31 @@ define void @split_vector_accesses(ptr noalias %x, ptr noalias %y, i64 %n) #0 {
 ; COMMON-NEXT:    add z4.d, z4.d, #1 // =0x1
 ; COMMON-NEXT:    add z5.d, z5.d, #1 // =0x1
 ; COMMON-NEXT:    add z6.d, z6.d, #1 // =0x1
-; COMMON-NEXT:    add z7.d, z7.d, #1 // =0x1
-; COMMON-NEXT:    st1d { z0.d }, p0, [x0, x8, lsl #3]
-; COMMON-NEXT:    str z1, [x9, #6, mul vl]
-; COMMON-NEXT:    str z2, [x9, #7, mul vl]
-; COMMON-NEXT:    str z3, [x9, #4, mul vl]
-; COMMON-NEXT:    str z4, [x9, #5, mul vl]
-; COMMON-NEXT:    str z5, [x9, #2, mul vl]
-; COMMON-NEXT:    str z6, [x9, #3, mul vl]
-; COMMON-NEXT:    str z7, [x9, #1, mul vl]
-; COMMON-NEXT:    add x9, x1, x8, lsl #2
-; COMMON-NEXT:    ld1w { z0.s }, p0/z, [x1, x8, lsl #2]
-; COMMON-NEXT:    ldr z1, [x9, #2, mul vl]
-; COMMON-NEXT:    ldr z2, [x9, #3, mul vl]
-; COMMON-NEXT:    ldr z3, [x9, #1, mul vl]
+; COMMON-NEXT:    str z0, [x0, #6, mul vl]
+; COMMON-NEXT:    ldr z0, [x0, #1, mul vl]
+; COMMON-NEXT:    str z1, [x0, #7, mul vl]
+; COMMON-NEXT:    str z2, [x0, #4, mul vl]
+; COMMON-NEXT:    add z0.d, z0.d, #1 // =0x1
+; COMMON-NEXT:    str z3, [x0, #5, mul vl]
+; COMMON-NEXT:    str z4, [x0, #2, mul vl]
+; COMMON-NEXT:    str z5, [x0, #3, mul vl]
+; COMMON-NEXT:    str z6, [x0]
+; COMMON-NEXT:    str z0, [x0, #1, mul vl]
+; COMMON-NEXT:    addvl x0, x0, #8
+; COMMON-NEXT:    ldr z0, [x1, #2, mul vl]
+; COMMON-NEXT:    ldr z1, [x1, #3, mul vl]
+; COMMON-NEXT:    ldr z2, [x1]
+; COMMON-NEXT:    ldr z3, [x1, #1, mul vl]
 ; COMMON-NEXT:    add z0.s, z0.s, #1 // =0x1
 ; COMMON-NEXT:    add z1.s, z1.s, #1 // =0x1
 ; COMMON-NEXT:    add z2.s, z2.s, #1 // =0x1
 ; COMMON-NEXT:    add z3.s, z3.s, #1 // =0x1
-; COMMON-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
-; COMMON-NEXT:    incb x8
-; COMMON-NEXT:    str z1, [x9, #2, mul vl]
-; COMMON-NEXT:    str z2, [x9, #3, mul vl]
-; COMMON-NEXT:    cmp x8, #1, lsl #12 // =4096
-; COMMON-NEXT:    str z3, [x9, #1, mul vl]
-; COMMON-NEXT:    b.ne .LBB12_1
+; COMMON-NEXT:    str z0, [x1, #2, mul vl]
+; COMMON-NEXT:    str z1, [x1, #3, mul vl]
+; COMMON-NEXT:    str z2, [x1]
+; COMMON-NEXT:    str z3, [x1, #1, mul vl]
+; COMMON-NEXT:    incb x1, all, mul #4
+; COMMON-NEXT:    cbnz x8, .LBB12_1
 ; COMMON-NEXT:  // %bb.2: // %exit
 ; COMMON-NEXT:    ret
 entry:
