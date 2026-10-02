@@ -56,6 +56,7 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.global external @gi = #cir.int<0> : !s32i
   cir.global external @gi_past_end = #cir.global_offset<@gi, 4> : !cir.ptr<!s32i>
   cir.global external @gi_before = #cir.global_offset<@gi, -4> : !cir.ptr<!s32i>
+  cir.global "private" external @strict_fp : !s32i strictfp
 }
 
 // CHECK: cir.global external @c = #cir.int<0> : !s8i
@@ -101,3 +102,4 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
 // CHECK: cir.global external @gi = #cir.int<0> : !s32i
 // CHECK: cir.global external @gi_past_end = #cir.global_offset<@gi, 4> : !cir.ptr<!s32i>
 // CHECK: cir.global external @gi_before = #cir.global_offset<@gi, -4> : !cir.ptr<!s32i>
+// CHECK: cir.global "private" external @strict_fp : !s32i strictfp

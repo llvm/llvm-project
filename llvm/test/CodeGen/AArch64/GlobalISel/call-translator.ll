@@ -2,7 +2,7 @@
 
 ; CHECK-LABEL: name: test_trivial_call
 ; CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-; CHECK: BL @trivial_callee, csr_aarch64_aapcs, implicit-def $lr
+; CHECK: BL @trivial_callee, csr_aarch64_aapcs, implicit-def dead $lr
 ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
 declare void @trivial_callee()
 define void @test_trivial_call() {
@@ -11,7 +11,7 @@ define void @test_trivial_call() {
 }
 
 ; CHECK-LABEL: name: test_simple_return
-; CHECK: BL @simple_return_callee, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $x0
+; CHECK: BL @simple_return_callee, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $x0
 ; CHECK: [[RES:%[0-9]+]]:_(i64) = COPY $x0
 ; CHECK: $x0 = COPY [[RES]]
 ; CHECK: RET_ReallyLR implicit $x0
@@ -24,7 +24,7 @@ define i64 @test_simple_return() {
 ; CHECK-LABEL: name: test_simple_arg
 ; CHECK: [[IN:%[0-9]+]]:_(i32) = COPY $w0
 ; CHECK: $w0 = COPY [[IN]]
-; CHECK: BL @simple_arg_callee, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0
+; CHECK: BL @simple_arg_callee, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0
 ; CHECK: RET_ReallyLR
 declare void @simple_arg_callee(i32 %in)
 define void @test_simple_arg(i32 %in) {
@@ -37,7 +37,7 @@ define void @test_simple_arg(i32 %in) {
 ; Make sure the register feeding the indirect call is properly constrained.
 ; CHECK: - { id: [[FUNC:[0-9]+]], class: gpr64, preferred-register: '', flags: [  ] }
 ; CHECK: %[[FUNC]]:gpr64(p0) = COPY $x0
-; CHECK: BLR %[[FUNC]](p0), csr_aarch64_aapcs, implicit-def $lr, implicit $sp
+; CHECK: BLR %[[FUNC]](p0), csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp
 ; CHECK: RET_ReallyLR
 define void @test_indirect_call(ptr %func) {
   call void %func()
@@ -49,7 +49,7 @@ define void @test_indirect_call(ptr %func) {
 ; CHECK: [[ANSWER:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
 ; CHECK: $w0 = COPY [[ANSWER]]
 ; CHECK: $x1 = COPY [[IN]]
-; CHECK: BL @multiple_args_callee, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $x1
+; CHECK: BL @multiple_args_callee, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit $x1
 ; CHECK: RET_ReallyLR
 declare void @multiple_args_callee(i32, i64)
 define void @test_multiple_args(i64 %in) {
@@ -116,7 +116,7 @@ define {double, i64, i32} @test_struct_return(ptr %addr) {
 ; CHECK: $x1 = COPY [[LD2]](i64)
 ; CHECK: $x2 = COPY [[LD3]](i64)
 ; CHECK: $x3 = COPY [[LD4]](i64)
-; CHECK: BL @arr_callee, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit-def $x0, implicit-def $x1, implicit-def $x2, implicit-def $x3
+; CHECK: BL @arr_callee, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit-def $x0, implicit-def $x1, implicit-def $x2, implicit-def $x3
 ; CHECK: [[E0:%[0-9]+]]:_(i64) = COPY $x0
 ; CHECK: [[E1:%[0-9]+]]:_(i64) = COPY $x1
 ; CHECK: [[E2:%[0-9]+]]:_(i64) = COPY $x2
@@ -135,13 +135,13 @@ define i64 @test_arr_call(ptr %addr) {
 ; CHECK: [[VAL:%[0-9]+]]:_(i8) = G_LOAD
 ; CHECK: [[VAL_TMP:%[0-9]+]]:_(i32) = G_ANYEXT [[VAL]]
 ; CHECK: $w0 = COPY [[VAL_TMP]]
-; CHECK: BL @take_char, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0
+; CHECK: BL @take_char, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0
 ; CHECK: [[SVAL:%[0-9]+]]:_(i32) = G_SEXT [[VAL]](i8)
 ; CHECK: $w0 = COPY [[SVAL]](i32)
-; CHECK: BL @take_char, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0
+; CHECK: BL @take_char, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0
 ; CHECK: [[ZVAL:%[0-9]+]]:_(i32) = G_ZEXT [[VAL]](i8)
 ; CHECK: $w0 = COPY [[ZVAL]](i32)
-; CHECK: BL @take_char, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0
+; CHECK: BL @take_char, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0
 declare void @take_char(i8)
 define void @test_abi_exts_call(ptr %addr) {
   %val = load i8, ptr %addr
@@ -159,7 +159,7 @@ define void @test_abi_exts_call(ptr %addr) {
 ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
 ; CHECK:   [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[LOAD]](i8)
 ; CHECK:   $w0 = COPY [[ZEXT]](i32)
-; CHECK:   BL @has_zext_param, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0
+; CHECK:   BL @has_zext_param, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0
 ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
 ; CHECK:   RET_ReallyLR
 declare void @has_zext_param(i8 zeroext)
@@ -177,7 +177,7 @@ define void @test_zext_in_callee(ptr %addr) {
 ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
 ; CHECK:   [[SEXT:%[0-9]+]]:_(i32) = G_SEXT [[LOAD]](i8)
 ; CHECK:   $w0 = COPY [[SEXT]](i32)
-; CHECK:   BL @has_sext_param, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0
+; CHECK:   BL @has_sext_param, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0
 ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
 ; CHECK:   RET_ReallyLR
 declare void @has_sext_param(i8 signext)
@@ -371,7 +371,7 @@ define i32 @test_zext_return_from_callee() {
   ; CHECK-LABEL: name: test_zext_return_from_callee
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   BL @has_zext_return, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $w0
+  ; CHECK-NEXT:   BL @has_zext_return, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $w0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
   ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY]], 16
@@ -390,7 +390,7 @@ define i32 @test_zext_return_from_callee2() {
   ; CHECK-LABEL: name: test_zext_return_from_callee2
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   BL @has_zext_return, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $w0
+  ; CHECK-NEXT:   BL @has_zext_return, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $w0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
   ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY]], 16
@@ -410,7 +410,7 @@ define i32 @test_sext_return_from_callee() {
   ; CHECK-LABEL: name: test_sext_return_from_callee
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   BL @has_sext_return, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $w0
+  ; CHECK-NEXT:   BL @has_sext_return, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $w0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
   ; CHECK-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(i32) = G_ASSERT_SEXT [[COPY]], 16
@@ -429,7 +429,7 @@ define i32 @test_sext_return_from_callee2() {
   ; CHECK-LABEL: name: test_sext_return_from_callee2
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   BL @has_sext_return, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $w0
+  ; CHECK-NEXT:   BL @has_sext_return, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $w0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
   ; CHECK-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(i32) = G_ASSERT_SEXT [[COPY]], 16
