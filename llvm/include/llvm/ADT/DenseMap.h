@@ -95,6 +95,16 @@ inline constexpr bool isRelocatableBucket =
     std::is_trivially_copy_constructible_v<BucketT> &&
     std::is_trivially_destructible_v<BucketT>;
 
+// Move-construct *Dst from *Src, then destroy *Src. Dst is raw storage.
+template <typename BucketT> void relocateBucket(BucketT *Dst, BucketT *Src) {
+  using KeyT = std::remove_reference_t<decltype(Dst->getFirst())>;
+  using ValueT = std::remove_reference_t<decltype(Dst->getSecond())>;
+  ::new (&Dst->getFirst()) KeyT(std::move(Src->getFirst()));
+  ::new (&Dst->getSecond()) ValueT(std::move(Src->getSecond()));
+  Src->getSecond().~ValueT();
+  Src->getFirst().~KeyT();
+}
+
 using UsedT = uint32_t;
 
 // Number of used words backing N buckets where N is zero or a power of two.
@@ -313,16 +323,6 @@ class SmallDenseMapStorage {
     LargeRep Large;
   } storage;
 
-  // Move-construct *Dst from *Src, then destroy *Src. Dst is raw storage.
-  static void relocateBucket(BucketT *Dst, BucketT *Src) {
-    using KeyT = std::remove_reference_t<decltype(Dst->getFirst())>;
-    using ValueT = std::remove_reference_t<decltype(Dst->getSecond())>;
-    ::new (&Dst->getFirst()) KeyT(std::move(Src->getFirst()));
-    ::new (&Dst->getSecond()) ValueT(std::move(Src->getSecond()));
-    Src->getSecond().~ValueT();
-    Src->getFirst().~KeyT();
-  }
-
   const BucketT *getInlineBuckets() const {
     assert(Small);
     // Note that this cast does not violate aliasing rules as we assert that
@@ -530,10 +530,6 @@ public:
 };
 
 } // namespace densemap::detail
-
-// Befriended below so DenseMapBase can expose its bucket-relocation callback
-// erase to ValueHandleBase, the only caller that caches bucket pointers.
-class ValueHandleBase;
 
 template <typename KeyT, typename ValueT,
           typename KeyInfoT = DenseMapInfo<KeyT>,
@@ -947,10 +943,6 @@ public:
     return Ret;
   }
 
-  void eraseFromFilledBucket(BucketT *TheBucket) {
-    eraseFromFilledBucket(TheBucket, [](BucketT &) {});
-  }
-
   bool erase(const KeyT &Val) {
     BucketT *TheBucket = doFind(Val);
     if (!TheBucket)
@@ -1140,14 +1132,8 @@ protected:
       unsigned BucketNo = KeyInfoT::getHashValue(OtherB[I].getFirst()) & Mask;
       while (llvm::densemap::detail::used(U, BucketNo))
         BucketNo = (BucketNo + 1) & Mask;
-      BucketT *DestBucket = B + BucketNo;
-      ::new (&DestBucket->getFirst()) KeyT(std::move(OtherB[I].getFirst()));
-      ::new (&DestBucket->getSecond()) ValueT(std::move(OtherB[I].getSecond()));
+      llvm::densemap::detail::relocateBucket(B + BucketNo, &OtherB[I]);
       llvm::densemap::detail::setUsed(U, BucketNo);
-
-      // Free the moved-out key/value.
-      OtherB[I].getSecond().~ValueT();
-      OtherB[I].getFirst().~KeyT();
     });
     setNumEntries(Other.getNumEntries());
     Other.Storage.kill();
@@ -1186,17 +1172,9 @@ protected:
   }
 
 private:
-  // ValueHandleBase caches pointers into the bucket array, so it needs the
-  // callback erase below to fix them up as entries shift. It is the only
-  // intended caller; do not add new ones.
-  friend class ValueHandleBase;
-
   /// Erase the entry at \p TheBucket and close the resulting hole via Knuth
-  /// TAOCP 6.4 Algorithm R. For callers that cache pointers into the bucket
-  /// array, call \p OnMoved per shifted bucket.
-  template <typename OnMovedT>
-  LLVM_ATTRIBUTE_NOINLINE void eraseFromFilledBucket(BucketT *TheBucket,
-                                                     OnMovedT &&OnMoved) {
+  /// TAOCP 6.4 Algorithm R.
+  LLVM_ATTRIBUTE_NOINLINE void eraseFromFilledBucket(BucketT *TheBucket) {
     incrementEpoch();
     TheBucket->getSecond().~ValueT();
     TheBucket->getFirst().~KeyT();
@@ -1216,27 +1194,11 @@ private:
       // If the hole (I) lies on the linear-probe chain from the home bucket
       // (Ideal) to J, shift J into the hole and make J the new hole.
       if (((I - Ideal) & Mask) < ((J - Ideal) & Mask)) {
-        BucketT &BI = BucketsPtr[I];
-        ::new (&BI.getFirst()) KeyT(std::move(BJ.getFirst()));
-        ::new (&BI.getSecond()) ValueT(std::move(BJ.getSecond()));
-        BJ.getSecond().~ValueT();
-        BJ.getFirst().~KeyT();
-        OnMoved(BI);
+        llvm::densemap::detail::relocateBucket(&BucketsPtr[I], &BJ);
         I = J;
       }
     }
     llvm::densemap::detail::unsetUsed(U, I);
-  }
-
-  /// Erase \p Val and close the resulting hole by potentially shifting other
-  /// entries into it. For callers that cache pointers into the bucket array,
-  /// call \p OnMoved per shifted bucket.
-  template <typename OnMovedT> bool erase(const KeyT &Val, OnMovedT &&OnMoved) {
-    BucketT *TheBucket = doFind(Val);
-    if (!TheBucket)
-      return false;
-    eraseFromFilledBucket(TheBucket, std::forward<OnMovedT>(OnMoved));
-    return true;
   }
 
   template <typename KeyArgT, typename... Ts>
