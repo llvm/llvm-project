@@ -494,11 +494,8 @@ define <8 x i32> @shuf_uniform_const_mul_v8i32_v4i32(<4 x i32> %a0, <4 x i32> %a
 define <8 x float> @shuf_fdiv_v4f32_extract_halves_poison(<4 x float> %x, <4 x float> %z, <8 x float> %d) {
 ; CHECK-LABEL: define <8 x float> @shuf_fdiv_v4f32_extract_halves_poison(
 ; CHECK-SAME: <4 x float> [[X:%.*]], <4 x float> [[Z:%.*]], <8 x float> [[D:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[LO:%.*]] = shufflevector <8 x float> [[D]], <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[HI:%.*]] = shufflevector <8 x float> [[D]], <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[L:%.*]] = fdiv <4 x float> [[X]], [[LO]]
-; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x float> [[Z]], [[HI]]
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x float> [[L]], <4 x float> [[R]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[X]], <4 x float> [[Z]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 poison>
+; CHECK-NEXT:    [[S:%.*]] = fdiv <8 x float> [[TMP1]], [[D]]
 ; CHECK-NEXT:    ret <8 x float> [[S]]
 ;
   %lo = shufflevector <8 x float> %d, <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -512,7 +509,7 @@ define <8 x float> @shuf_fdiv_v4f32_extract_halves_poison(<4 x float> %x, <4 x f
 define <4 x i32> @shuf_sdiv_v4i32_same_width_permutes_of_same_src(<4 x i32> %a, <4 x i32> %y) {
 ; CHECK-LABEL: define <4 x i32> @shuf_sdiv_v4i32_same_width_permutes_of_same_src(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[Y:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[A]], <4 x i32> <i32 1, i32 0, i32 5, i32 4>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
 ; CHECK-NEXT:    [[S:%.*]] = sdiv <4 x i32> [[Y]], [[TMP1]]
 ; CHECK-NEXT:    ret <4 x i32> [[S]]
 ;
