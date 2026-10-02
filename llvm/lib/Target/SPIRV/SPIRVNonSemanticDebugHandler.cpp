@@ -653,7 +653,7 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::resolveScope(
 
   // DILexicalBlockFile carries file/discriminator info. Its SPIR-V counterpart
   // (DebugLexicalBlockDiscriminator) cannot be used as a scope, so unwrap it.
-  if (const auto *DLBF = dyn_cast_or_null<DILexicalBlockFile>(Scope))
+  while (const auto *DLBF = dyn_cast_or_null<DILexicalBlockFile>(Scope))
     Scope = DLBF->getScope();
 
   if (isa_and_nonnull<DIType, DILexicalBlock, DINamespace, DISubprogram>(Scope))
