@@ -554,11 +554,11 @@ bool TargetTransformInfo::isLegalStridedLoadStore(Type *DataType,
   return TTIImpl->isLegalStridedLoadStore(DataType, Alignment);
 }
 
-bool TargetTransformInfo::hasMultipleVectorLoadStore(
-    unsigned NumVectors, VectorType *VectorTy, bool IsStore,
-    TTI::MaskSource Mask, std::optional<Instruction::CastOps> CastHint) const {
-  return TTIImpl->hasMultipleVectorLoadStore(NumVectors, VectorTy, IsStore,
-                                             Mask, CastHint);
+bool TargetTransformInfo::hasMultiVectorLoadStore(
+    unsigned NumVectors, TTI::MaskSource Mask, VectorType *VectorTy,
+    bool IsStore, std::optional<Instruction::CastOps> CastHint) const {
+  return TTIImpl->hasMultiVectorLoadStore(NumVectors, Mask, VectorTy, IsStore,
+                                          CastHint);
 }
 
 bool TargetTransformInfo::isLegalInterleavedAccessType(

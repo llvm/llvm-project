@@ -429,10 +429,10 @@ public:
     return false;
   }
 
-  virtual bool hasMultipleVectorLoadStore(
-      unsigned NumVectors, VectorType *VectorTy, bool IsStore,
-      TTI::MaskSource Mask,
-      std::optional<Instruction::CastOps> CastHint) const {
+  virtual bool
+  hasMultiVectorLoadStore(unsigned NumVectors, TTI::MaskSource Mask,
+                          VectorType *VectorTy, bool IsStore,
+                          std::optional<Instruction::CastOps> CastHint) const {
     return false;
   }
 
