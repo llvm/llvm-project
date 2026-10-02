@@ -657,7 +657,10 @@ bool TypeInfer::EnforceVectorSubVectorTypeIs(TypeSetByHwMode &Vec,
       return false;
     if (B.getVectorElementType() != P.getVectorElementType())
       return false;
-    return B.getVectorMinNumElements() < P.getVectorMinNumElements();
+    // We can't tell if a fixed vector is bigger than a scalable vector without
+    // knowing vscale.
+    return B.isScalableVector() != P.isScalableVector() ||
+           B.getVectorMinNumElements() < P.getVectorMinNumElements();
   };
 
   /// Return true if S has no element (vector type) that T is a sub-vector of,
