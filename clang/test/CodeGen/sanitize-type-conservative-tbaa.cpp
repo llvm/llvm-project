@@ -1,5 +1,6 @@
 // RUN: %clang --target=x86_64-linux-gnu -S -fsanitize=type -emit-llvm -o - %s \
-// RUN:     | FileCheck %s
+// RUN:     | FileCheck %s --implicit-check-not='!{!"float"'
+
 
 // With TySan enabled, when "omnipotent char" TBAA would be emitted,
 // instead it should emit TysanConservativeTBAA. This gets recorded
@@ -14,4 +15,3 @@ struct S{
 S s;
 
 // CHECK: !{!"TysanConservativeTBAA",
-// CHECK-NOT: !{!"float",
