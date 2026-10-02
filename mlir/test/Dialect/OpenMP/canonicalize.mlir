@@ -143,3 +143,34 @@ func.func @constant_hoisting_target(%x : !llvm.ptr) {
 // CHECK-NOT: arith.constant
 // CHECK: omp.target
 // CHECK: arith.constant
+
+// -----
+
+// Masked has no implicit barrier so a body with no effects can be removed.
+// CHECK-LABEL: func.func @masked_no_side_effects
+// CHECK-NEXT: return
+func.func @masked_no_side_effects(%a: i32, %b: i32, %filter: i32) {
+  omp.masked filter(%filter : i32) {
+    %unused = arith.addi %a, %b : i32
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+// Masked must preserve memory effects in its body.
+// CHECK-LABEL: func.func @masked_store
+// CHECK-SAME: (%[[X:.*]]: memref<i32>, %[[VALUE:.*]]: i32, %[[FILTER:.*]]: i32)
+// CHECK-NEXT: omp.masked filter(%[[FILTER]] : i32) {
+// CHECK-NEXT: memref.store %[[VALUE]], %[[X]][] : memref<i32>
+// CHECK-NEXT: omp.terminator
+// CHECK-NEXT: }
+// CHECK-NEXT: return
+func.func @masked_store(%x: memref<i32>, %value: i32, %filter: i32) {
+  omp.masked filter(%filter : i32) {
+    memref.store %value, %x[] : memref<i32>
+    omp.terminator
+  }
+  return
+}
