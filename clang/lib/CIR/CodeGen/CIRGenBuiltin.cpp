@@ -1132,13 +1132,19 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
 static mlir::Type
 decodeFixedType(CIRGenFunction &cgf,
                 ArrayRef<llvm::Intrinsic::IITDescriptor> &infos,
-                mlir::MLIRContext *context) {
+                ArrayRef<mlir::Type> overloadTys, mlir::MLIRContext *context) {
   using namespace llvm::Intrinsic;
 
   IITDescriptor descriptor = infos.front();
   infos = infos.slice(1);
 
   switch (descriptor.Kind) {
+  case IITDescriptor::Overloaded:
+  case IITDescriptor::Match:
+    if (descriptor.getOverloadIndex() < overloadTys.size())
+      return overloadTys[descriptor.getOverloadIndex()];
+    cgf.cgm.errorNYI("Overloaded intrinsic type without overload types");
+    return cir::VoidType::get(context);
   case IITDescriptor::Void:
     return cir::VoidType::get(context);
   case IITDescriptor::Half:
@@ -1157,7 +1163,7 @@ decodeFixedType(CIRGenFunction &cgf,
     return cir::IntType::get(context, descriptor.IntegerWidth,
                              /*isSigned=*/true);
   case IITDescriptor::Vector: {
-    mlir::Type elementType = decodeFixedType(cgf, infos, context);
+    mlir::Type elementType = decodeFixedType(cgf, infos, overloadTys, context);
     unsigned numElements = descriptor.VectorWidth.getFixedValue();
     return cir::VectorType::get(elementType, numElements);
   }
@@ -1227,19 +1233,20 @@ static mlir::Value getCorrectedPtr(mlir::Value argValue, mlir::Type expectedTy,
   return builder.createBitcast(argValue, expectedTy);
 }
 
-static cir::FuncType getIntrinsicType(CIRGenFunction &cgf,
-                                      mlir::MLIRContext *context,
-                                      llvm::Intrinsic::ID id) {
+cir::FuncType
+CIRGenFunction::getIntrinsicType(llvm::Intrinsic::ID id,
+                                 ArrayRef<mlir::Type> overloadTys) {
   using namespace llvm::Intrinsic;
 
+  mlir::MLIRContext *context = &getMLIRContext();
   SmallVector<IITDescriptor, 8> table;
   auto [tableRef, _, isVarArg] = getIntrinsicInfoTableEntries(id, table);
 
-  mlir::Type resultTy = decodeFixedType(cgf, tableRef, context);
+  mlir::Type resultTy = decodeFixedType(*this, tableRef, overloadTys, context);
 
   SmallVector<mlir::Type, 8> argTypes;
   while (!tableRef.empty())
-    argTypes.push_back(decodeFixedType(cgf, tableRef, context));
+    argTypes.push_back(decodeFixedType(*this, tableRef, overloadTys, context));
 
   // CIR convention: no explicit void return type
   if (isa<cir::VoidType>(resultTy))
@@ -3196,8 +3203,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     assert(name.starts_with("llvm.") && "expected llvm. prefix");
     name = name.drop_front(/*strlen("llvm.")=*/5);
 
-    cir::FuncType intrinsicType =
-        getIntrinsicType(*this, &getMLIRContext(), intrinsicID);
+    cir::FuncType intrinsicType = getIntrinsicType(intrinsicID);
 
     SmallVector<mlir::Value> args;
     const FunctionDecl *fd = e->getDirectCallee();
