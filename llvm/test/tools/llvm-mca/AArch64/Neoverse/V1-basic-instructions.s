@@ -1046,16 +1046,16 @@
 # CHECK-NEXT:  1      4     0.33    *                   ldrsb	x18, [x22, w10, sxtw]
 # CHECK-NEXT:  1      4     0.33    *                   ldrsh	w3, [sp, x5]
 # CHECK-NEXT:  1      4     0.33    *                   ldrsh	w9, [x27, x6]
-# CHECK-NEXT:  1      4     0.33    *                   ldrh	w10, [x30, x7, lsl #1]
+# CHECK-NEXT:  2      5     0.33    *                   ldrh	w10, [x30, x7, lsl #1]
 # CHECK-NEXT:  2      1     0.50           *            strh	w11, [x29, x3, sxtx]
 # CHECK-NEXT:  1      4     0.33    *                   ldrh	w12, [x28, xzr, sxtx]
-# CHECK-NEXT:  1      4     0.33    *                   ldrsh	x13, [x27, x5, sxtx #1]
+# CHECK-NEXT:  2      5     0.33    *                   ldrsh	x13, [x27, x5, sxtx #1]
 # CHECK-NEXT:  1      4     0.33    *                   ldrh	w14, [x26, w6, uxtw]
 # CHECK-NEXT:  1      4     0.33    *                   ldrh	w15, [x25, w7, uxtw]
-# CHECK-NEXT:  1      4     0.33    *                   ldrsh	w16, [x24, w8, uxtw #1]
+# CHECK-NEXT:  2      5     0.33    *                   ldrsh	w16, [x24, w8, uxtw #1]
 # CHECK-NEXT:  1      4     0.33    *                   ldrh	w17, [x23, w9, sxtw]
 # CHECK-NEXT:  1      4     0.33    *                   ldrh	w18, [x22, w10, sxtw]
-# CHECK-NEXT:  2      1     0.50           *            strh	w19, [x21, wzr, sxtw #1]
+# CHECK-NEXT:  3      1     0.50           *            strh	w19, [x21, wzr, sxtw #1]
 # CHECK-NEXT:  1      6     0.33    *                   ldr	b25, [x21, w8, uxtw]
 # CHECK-NEXT:  1      6     0.33    *                   ldr	b8, [x30, x10]
 # CHECK-NEXT:  2      2     0.50           *            str	b14, [x13, x25]
@@ -1286,7 +1286,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]
-# CHECK-NEXT: 13.00  13.00  34.00  34.00  51.00  51.00  51.00  98.67  171.67 171.67 321.00 208.00 152.00 152.00 208.00 56.50  47.50  13.00
+# CHECK-NEXT: 13.00  13.00  34.00  34.00  51.00  51.00  51.00  98.67  171.67 171.67 322.00 209.00 153.00 153.00 208.00 56.50  47.50  13.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]   Instructions:
@@ -2326,16 +2326,16 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldrsb	x18, [x22, w10, sxtw]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldrsh	w3, [sp, x5]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldrsh	w9, [x27, x6]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldrh	w10, [x30, x7, lsl #1]
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -      -      -     ldrh	w10, [x30, x7, lsl #1]
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     strh	w11, [x29, x3, sxtx]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldrh	w12, [x28, xzr, sxtx]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldrsh	x13, [x27, x5, sxtx #1]
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -      -      -     ldrsh	x13, [x27, x5, sxtx #1]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldrh	w14, [x26, w6, uxtw]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldrh	w15, [x25, w7, uxtw]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldrsh	w16, [x24, w8, uxtw #1]
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -      -      -     ldrsh	w16, [x24, w8, uxtw #1]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldrh	w17, [x23, w9, sxtw]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldrh	w18, [x22, w10, sxtw]
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     strh	w19, [x21, wzr, sxtw #1]
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50   0.25   0.25   0.25   0.25    -      -      -      -     strh	w19, [x21, wzr, sxtw #1]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldr	b25, [x21, w8, uxtw]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldr	b8, [x30, x10]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -     str	b14, [x13, x25]
