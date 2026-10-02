@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=slp-vectorizer -mtriple=riscv64 -mattr=+v \
 ; RUN: -riscv-v-slp-max-vf=0 -S | FileCheck %s
 ; RUN: opt < %s -passes=slp-vectorizer -mtriple=riscv64 -mattr=+v \
-; RUN: -riscv-v-slp-max-vf=0 -S -slp-use-vplan-codegen | FileCheck %s
+; RUN: -riscv-v-slp-max-vf=0 -S -slp-use-vplan-codegen -slp-vplan-codegen-assert-eligible | FileCheck %s
 
 ; This should not be vectorized, as the cost of computing the offsets nullifies
 ; the benefits of vectorizing:
