@@ -81,7 +81,7 @@ declare <vscale x 1 x i64> @llvm.riscv.vmv.v.x.nxv1i64(<vscale x 1 x i64>, i64, 
 define void @splat_repeated_i32_fixed1_store(ptr %p, i32 %x) {
 ; CHECK-LABEL: splat_repeated_i32_fixed1_store:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vse64.v v8, (a0)
@@ -99,7 +99,7 @@ define void @splat_repeated_i32_fixed1_store(ptr %p, i32 %x) {
 define void @splat_repeated_i32_fixed_store(ptr %p, i32 %x) {
 ; VLEN128-LABEL: splat_repeated_i32_fixed_store:
 ; VLEN128:       # %bb.0:
-; VLEN128-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; VLEN128-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; VLEN128-NEXT:    vmv.v.x v8, a1
 ; VLEN128-NEXT:    vsetivli zero, 3, e64, m2, ta, ma
 ; VLEN128-NEXT:    vse64.v v8, (a0)
@@ -107,7 +107,7 @@ define void @splat_repeated_i32_fixed_store(ptr %p, i32 %x) {
 ;
 ; VLEN256-LABEL: splat_repeated_i32_fixed_store:
 ; VLEN256:       # %bb.0:
-; VLEN256-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; VLEN256-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
 ; VLEN256-NEXT:    vmv.v.x v8, a1
 ; VLEN256-NEXT:    vsetivli zero, 3, e64, m1, ta, ma
 ; VLEN256-NEXT:    vse64.v v8, (a0)
