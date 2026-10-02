@@ -793,10 +793,20 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "MCCLOptionsTableGen",
+    strip_include_prefix = "lib/MC",
+    tbl_outs = {"lib/MC/MCCLOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/MC/MCCLOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "MC",
     srcs = glob([
         "lib/MC/*.cpp",
+        "lib/MC/*.h",
     ]),
     hdrs = glob([
         "include/llvm/MC/*.h",
@@ -807,6 +817,8 @@ cc_library(
         ":BinaryFormat",
         ":DebugInfoCodeView",
         ":DebugInfoDWARFLowLevel",
+        ":MCCLOptionsTableGen",
+        ":Option",
         ":Support",
         ":TargetParser",
         ":config",

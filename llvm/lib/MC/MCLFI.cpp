@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCLFI.h"
+#include "MCCLOptions.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -21,7 +22,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Alignment.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -29,10 +29,6 @@ using namespace llvm;
 const char NoteNamespace[] = "LFI";
 
 constexpr unsigned X86BundleSize = 32;
-
-static cl::opt<bool> FlagEnableRewriting("lfi-enable-rewriter",
-                                         cl::desc("Enable rewriting for LFI"),
-                                         cl::init(true), cl::Hidden);
 
 void llvm::initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
                                    const Triple &TheTriple) {
@@ -43,7 +39,7 @@ void llvm::initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
 
   // Create the target-specific MCLFIRewriter.
   assert(TheTarget != nullptr);
-  if (FlagEnableRewriting) {
+  if (MCCLOptions::Global.lfi_enable_rewriter) {
     auto MRI =
         std::unique_ptr<MCRegisterInfo>(TheTarget->createMCRegInfo(TheTriple));
     auto MII = std::unique_ptr<MCInstrInfo>(TheTarget->createMCInstrInfo());
