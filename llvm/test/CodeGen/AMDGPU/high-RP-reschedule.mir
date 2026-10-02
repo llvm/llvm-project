@@ -10,10 +10,12 @@
 
 # GCN: Unclustered High Register Pressure Reschedule stage successfully increased occupancy to 4
 
-# GCN-GCNTRACKER: Occupancy before scheduling: 3, after 4.
-# GCN-GCNTRACKER-NEXT: Ending scheduling stage: Max Occupancy Initial Schedule
+# GCN-GCNTRACKER: Starting scheduling stage: Max Occupancy Initial Schedule
+# GCN-GCNTRACKER-NOT: Occupancy before scheduling: 3
+# GCN-GCNTRACKER: Ending scheduling stage: Max Occupancy Initial Schedule
 
 # When using the GCN Trackers, the scheduler is able to acieve desired occupancy without running high-RP-reschedule stage.
+# The initial schedule already brings the region within the critical VGPR limit, so occupancy never drops to 3.
 
 ---
 name: high-RP-reschedule
