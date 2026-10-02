@@ -17,7 +17,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -71,6 +70,30 @@ STATISTIC(NumOmittedReadsBeforeWrite,
 
 static constexpr char kCsanModuleCtorName[] = "csan.module_ctor";
 static constexpr char kCsanInitName[] = "__csan_init";
+
+// Accesses sizes are powers of two: 1, 2, 4, 8, 16.
+static constexpr size_t kNumAccessSizes = 5;
+static constexpr StringLiteral kCsanReadNames[kNumAccessSizes] = {
+    "__csan_read1", "__csan_read2", "__csan_read4", "__csan_read8",
+    "__csan_read16"};
+static constexpr StringLiteral kCsanWriteNames[kNumAccessSizes] = {
+    "__csan_write1", "__csan_write2", "__csan_write4", "__csan_write8",
+    "__csan_write16"};
+static constexpr StringLiteral kCsanUnalignedReadNames[kNumAccessSizes] = {
+    "__csan_unaligned_read1", "__csan_unaligned_read2",
+    "__csan_unaligned_read4", "__csan_unaligned_read8",
+    "__csan_unaligned_read16"};
+static constexpr StringLiteral kCsanUnalignedWriteNames[kNumAccessSizes] = {
+    "__csan_unaligned_write1", "__csan_unaligned_write2",
+    "__csan_unaligned_write4", "__csan_unaligned_write8",
+    "__csan_unaligned_write16"};
+static constexpr StringLiteral kCsanCompoundRWNames[kNumAccessSizes] = {
+    "__csan_read_write1", "__csan_read_write2", "__csan_read_write4",
+    "__csan_read_write8", "__csan_read_write16"};
+static constexpr StringLiteral kCsanUnalignedCompoundRWNames[kNumAccessSizes] =
+    {"__csan_unaligned_read_write1", "__csan_unaligned_read_write2",
+     "__csan_unaligned_read_write4", "__csan_unaligned_read_write8",
+     "__csan_unaligned_read_write16"};
 
 namespace {
 
@@ -133,18 +156,21 @@ static int getAccessSizeIndex(Type *Ty, const DataLayout &DL) {
 }
 
 static bool addressSpaceMayRace(const Triple &T, unsigned AS) {
-  if (T.isAMDGPU())
+  if (T.isAMDGPU()) {
     // GDS and buffer fat pointers cannot form a generic watchpoint key.
     return AS == AMDGPUAS::FLAT_ADDRESS || AS == AMDGPUAS::GLOBAL_ADDRESS ||
            AS == AMDGPUAS::LOCAL_ADDRESS;
-  if (T.isNVPTX())
+  }
+  if (T.isNVPTX()) {
     return AS == NVPTXAS::ADDRESS_SPACE_GENERIC ||
            AS == NVPTXAS::ADDRESS_SPACE_GLOBAL ||
            AS == NVPTXAS::ADDRESS_SPACE_SHARED ||
            AS == NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER;
-  if (T.isSPIRV())
+  }
+  if (T.isSPIRV()) {
     // FIXME: No exposed address spaces for SPIR-V.
     return false;
+  }
   return AS == 0;
 }
 
@@ -179,8 +205,6 @@ private:
   Type *IntptrTy = nullptr;
   IntegerType *FlagsTy = nullptr;
 
-  // Accesses sizes are powers of two: 1, 2, 4, 8, 16.
-  static const size_t kNumAccessSizes = 5;
   // void __csan_readN(ptr, i32);
   FunctionCallee CsanRead[kNumAccessSizes];
   // void __csan_writeN(ptr, i32);
@@ -253,18 +277,16 @@ void ConcurrencySanitizer::initialize(Module &M, const TargetLibraryInfo &TLI) {
       M.getOrInsertFunction("__csan_ignore_thread_begin", Attr, VoidTy);
   CsanIgnoreEnd =
       M.getOrInsertFunction("__csan_ignore_thread_end", Attr, VoidTy);
+  auto AccessFn = [&](StringRef Name) {
+    return M.getOrInsertFunction(Name, Attr, VoidTy, PtrTy, FlagsTy);
+  };
   for (unsigned I = 0; I < kNumAccessSizes; ++I) {
-    std::string ByteSize = utostr(1U << I);
-    auto AccessFn = [&](const Twine &Name) {
-      return M.getOrInsertFunction(("__csan_" + Name).str(), Attr, VoidTy,
-                                   PtrTy, FlagsTy);
-    };
-    CsanRead[I] = AccessFn("read" + ByteSize);
-    CsanWrite[I] = AccessFn("write" + ByteSize);
-    CsanUnalignedRead[I] = AccessFn("unaligned_read" + ByteSize);
-    CsanUnalignedWrite[I] = AccessFn("unaligned_write" + ByteSize);
-    CsanCompoundRW[I] = AccessFn("read_write" + ByteSize);
-    CsanUnalignedCompoundRW[I] = AccessFn("unaligned_read_write" + ByteSize);
+    CsanRead[I] = AccessFn(kCsanReadNames[I]);
+    CsanWrite[I] = AccessFn(kCsanWriteNames[I]);
+    CsanUnalignedRead[I] = AccessFn(kCsanUnalignedReadNames[I]);
+    CsanUnalignedWrite[I] = AccessFn(kCsanUnalignedWriteNames[I]);
+    CsanCompoundRW[I] = AccessFn(kCsanCompoundRWNames[I]);
+    CsanUnalignedCompoundRW[I] = AccessFn(kCsanUnalignedCompoundRWNames[I]);
   }
   IntegerType *OrdTy = IRB.getInt32Ty();
   CsanReadRange = M.getOrInsertFunction("__csan_read_range", Attr, VoidTy,
