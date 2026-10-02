@@ -6,22 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-// RUN: %clangxx -fsycl -fsycl-device-only -std=c++17 -fsyntax-only %s
+// REQUIRES: any-device
+// RUN: %clangxx -fsycl  %s -o %t.out
+// RUN: %t.out
 
 #include <sycl/sycl.hpp>
 
-struct SingleTaskKernel {
-  void operator()() const {}
-};
+class Test;
 
 int main() {
-  sycl::queue q;
+  sycl::queue Q;
+  int *Ptr = sycl::malloc_shared<int>(1, Q);
+  *Ptr = 0;
+  Q.single_task<Test>([=]() { *Ptr = 42; });
+  Q.wait();
 
-  q.single_task<class QueueSingleTaskNamed>(SingleTaskKernel{});
+  bool Failed = *Ptr != 42;
 
-  q.submit([&](sycl::handler &cgh) {
-    cgh.single_task<class HandlerSingleTaskNamed>(SingleTaskKernel{});
-  });
-
-  return 0;
+  sycl::free(Ptr, Q);
+  return Failed;
 }
