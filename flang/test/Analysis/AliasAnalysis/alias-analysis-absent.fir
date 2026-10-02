@@ -15,7 +15,7 @@ func.func @_QPtest_absent() {
   %c10 = arith.constant 10 : index
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
   %alloc = fir.alloca !fir.array<10xf32>
-  %real = fir.declare %alloc(%shape) {uniq_name = "_QPtest_absentEx", test.ptr = "real"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+  %real = fir.declare %alloc(%shape) uniq_name("_QPtest_absentEx") {test.ptr = "real"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
   %abs1 = fir.absent !fir.ref<!fir.array<10xf32>> {test.ptr = "absent1"}
   %abs2 = fir.absent !fir.ref<!fir.array<10xf32>> {test.ptr = "absent2"}
   return
@@ -34,8 +34,8 @@ func.func @_QPtest_absent_same_through_convert() {
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
   %abs = fir.absent !fir.ref<!fir.array<10xf32>> {test.ptr = "abs_slot"}
   %conv = fir.convert %abs : (!fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>>
-  %via = fir.declare %conv(%shape) {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QPtest_absent_sameEv", test.ptr = "via_convert"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
-  %direct = fir.declare %abs(%shape) {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QPtest_absent_sameEd", test.ptr = "direct_abs"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+  %via = fir.declare %conv(%shape) uniq_name("_QPtest_absent_sameEv") fortran_attrs<optional> {test.ptr = "via_convert"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+  %direct = fir.declare %abs(%shape) uniq_name("_QPtest_absent_sameEd") fortran_attrs<optional> {test.ptr = "direct_abs"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
   return
 }
 
@@ -54,7 +54,7 @@ func.func @_QPtest_absent_vs_global() {
   %c10 = arith.constant 10 : index
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
   %gaddr = fir.address_of(@_QPtest_absent_vs_global_g) : !fir.ref<!fir.array<10xf32>>
-  %g = fir.declare %gaddr(%shape) {uniq_name = "_QPtest_absent_vs_globalEg", test.ptr = "global"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+  %g = fir.declare %gaddr(%shape) uniq_name("_QPtest_absent_vs_globalEg") {test.ptr = "global"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
   %abs = fir.absent !fir.ref<!fir.array<10xf32>> {test.ptr = "absent_g"}
   return
 }

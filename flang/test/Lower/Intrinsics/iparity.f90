@@ -6,7 +6,7 @@ integer(1) function iparity_test_1(a)
 integer(1) :: a(:)
 ! CHECK-DAG:  %[[c0:.*]] = arith.constant 0 : index
 ! CHECK-DAG:  %[[a1:.*]] = fir.absent !fir.box<i1>
-! CHECK-DAG:  %[[adecl:.*]]:2 = hlfir.declare %[[arg0]] {{.*}} {uniq_name = "_QFiparity_test_1Ea"}
+! CHECK-DAG:  %[[adecl:.*]]:2 = hlfir.declare %[[arg0]] {{.*}} uniq_name("_QFiparity_test_1Ea")
 ! CHECK-DAG: %[[a3:.*]] = fir.convert %[[adecl]]#1 : (!fir.box<!fir.array<?xi8>>) -> !fir.box<none>
 ! CHECK-DAG:  %[[a5:.*]] = fir.convert %[[c0]] : (index) -> i32
 ! CHECK-DAG:  %[[a6:.*]] = fir.convert %[[a1]] : (!fir.box<i1>) -> !fir.box<none>
@@ -20,7 +20,7 @@ integer(2) function iparity_test_2(a)
 integer(2) :: a(:)
 ! CHECK-DAG:  %[[c0:.*]] = arith.constant 0 : index
 ! CHECK-DAG:  %[[a1:.*]] = fir.absent !fir.box<i1>
-! CHECK-DAG:  %[[adecl:.*]]:2 = hlfir.declare %[[arg0]] {{.*}} {uniq_name = "_QFiparity_test_2Ea"}
+! CHECK-DAG:  %[[adecl:.*]]:2 = hlfir.declare %[[arg0]] {{.*}} uniq_name("_QFiparity_test_2Ea")
 ! CHECK-DAG: %[[a3:.*]] = fir.convert %[[adecl]]#1 : (!fir.box<!fir.array<?xi16>>) -> !fir.box<none>
 ! CHECK-DAG:  %[[a5:.*]] = fir.convert %[[c0]] : (index) -> i32
 ! CHECK-DAG:  %[[a6:.*]] = fir.convert %[[a1]] : (!fir.box<i1>) -> !fir.box<none>
@@ -34,7 +34,7 @@ integer function iparity_test_4(a)
 integer :: a(:)
 ! CHECK-DAG:  %[[c0:.*]] = arith.constant 0 : index
 ! CHECK-DAG:  %[[a1:.*]] = fir.absent !fir.box<i1>
-! CHECK-DAG:  %[[adecl:.*]]:2 = hlfir.declare %[[arg0]] {{.*}} {uniq_name = "_QFiparity_test_4Ea"}
+! CHECK-DAG:  %[[adecl:.*]]:2 = hlfir.declare %[[arg0]] {{.*}} uniq_name("_QFiparity_test_4Ea")
 ! CHECK-DAG: %[[a3:.*]] = fir.convert %[[adecl]]#1 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
 ! CHECK-DAG:  %[[a5:.*]] = fir.convert %[[c0]] : (index) -> i32
 ! CHECK-DAG:  %[[a6:.*]] = fir.convert %[[a1]] : (!fir.box<i1>) -> !fir.box<none>
@@ -48,7 +48,7 @@ integer(8) function iparity_test_8(a)
 integer(8) :: a(:)
 ! CHECK-DAG:  %[[c0:.*]] = arith.constant 0 : index
 ! CHECK-DAG:  %[[a1:.*]] = fir.absent !fir.box<i1>
-! CHECK-DAG:  %[[adecl:.*]]:2 = hlfir.declare %[[arg0]] {{.*}} {uniq_name = "_QFiparity_test_8Ea"}
+! CHECK-DAG:  %[[adecl:.*]]:2 = hlfir.declare %[[arg0]] {{.*}} uniq_name("_QFiparity_test_8Ea")
 ! CHECK-DAG: %[[a3:.*]] = fir.convert %[[adecl]]#1 : (!fir.box<!fir.array<?xi64>>) -> !fir.box<none>
 ! CHECK-DAG:  %[[a5:.*]] = fir.convert %[[c0]] : (index) -> i32
 ! CHECK-DAG:  %[[a6:.*]] = fir.convert %[[a1]] : (!fir.box<i1>) -> !fir.box<none>
@@ -62,7 +62,7 @@ integer(16) function iparity_test_16(a)
 integer(16) :: a(:)
 ! CHECK-DAG:  %[[c0:.*]] = arith.constant 0 : index
 ! CHECK-DAG:  %[[a1:.*]] = fir.absent !fir.box<i1>
-! CHECK-DAG:  %[[adecl:.*]]:2 = hlfir.declare %[[arg0]] {{.*}} {uniq_name = "_QFiparity_test_16Ea"}
+! CHECK-DAG:  %[[adecl:.*]]:2 = hlfir.declare %[[arg0]] {{.*}} uniq_name("_QFiparity_test_16Ea")
 ! CHECK-DAG: %[[a3:.*]] = fir.convert %[[adecl]]#1 : (!fir.box<!fir.array<?xi128>>) -> !fir.box<none>
 ! CHECK-DAG:  %[[a5:.*]] = fir.convert %[[c0]] : (index) -> i32
 ! CHECK-DAG:  %[[a6:.*]] = fir.convert %[[a1]] : (!fir.box<i1>) -> !fir.box<none>
@@ -78,7 +78,7 @@ integer :: r(:)
 ! CHECK-DAG:  %[[c2_i32:.*]] = arith.constant 2 : i32
 ! CHECK-DAG:  %[[a0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK-DAG:  %[[a1:.*]] = fir.absent !fir.box<i1>
-! CHECK-DAG:  %[[adecl:.*]]:2 = hlfir.declare %[[arg0]] {{.*}} {uniq_name = "_QFiparity_test2Ea"}
+! CHECK-DAG:  %[[adecl:.*]]:2 = hlfir.declare %[[arg0]] {{.*}} uniq_name("_QFiparity_test2Ea")
 ! CHECK-DAG:  %[[a6:.*]] = fir.convert %[[a0]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK-DAG:  %[[a7:.*]] = fir.convert %[[adecl]]#1 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<none>
 ! CHECK-DAG:  %[[a9:.*]] = fir.convert %[[a1]] : (!fir.box<i1>) -> !fir.box<none>
@@ -92,7 +92,7 @@ integer function iparity_test_optional(mask, x)
 integer :: x(:)
 logical, optional :: mask(:)
 iparity_test_optional = iparity(x, mask=mask)
-! CHECK:  %[[maskdecl:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QFiparity_test_optionalEmask"
+! CHECK:  %[[maskdecl:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QFiparity_test_optionalEmask")
 ! CHECK:  %[[masknone:.*]] = fir.convert %[[maskdecl]]#1 : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.box<none>
 ! CHECK:  fir.call @_FortranAIParity4(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[masknone]]) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
 end function
@@ -103,7 +103,7 @@ integer function iparity_test_optional_2(mask, x)
 integer :: x(:)
 logical, pointer :: mask(:)
 iparity_test_optional_2 = iparity(x, mask=mask)
-! CHECK:  %[[maskdecl:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QFiparity_test_optional_2Emask"
+! CHECK:  %[[maskdecl:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QFiparity_test_optional_2Emask")
 ! CHECK:  %[[VAL_4:.*]] = fir.load %[[maskdecl]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>>
 ! CHECK:  %[[VAL_5:.*]] = fir.box_addr %[[VAL_4]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>) -> !fir.ptr<!fir.array<?x!fir.logical<4>>>
 ! CHECK:  %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (!fir.ptr<!fir.array<?x!fir.logical<4>>>) -> i64
@@ -123,7 +123,7 @@ integer :: x(:)
 logical, optional :: mask(10)
 iparity_test_optional_3 = iparity(x, mask=mask)
 ! CHECK:  %[[VAL_2:.*]] = arith.constant 10 : index
-! CHECK:  %[[maskdecl:.*]]:2 = hlfir.declare %[[VAL_0]]{{.*}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFiparity_test_optional_3Emask"}
+! CHECK:  %[[maskdecl:.*]]:2 = hlfir.declare %[[VAL_0]]{{.*}} uniq_name("_QFiparity_test_optional_3Emask") fortran_attrs<optional>
 ! CHECK:  %[[VAL_5:.*]] = fir.is_present %[[maskdecl]]#0 : (!fir.ref<!fir.array<10x!fir.logical<4>>>) -> i1
 ! CHECK:  %[[VAL_6:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_7:.*]] = fir.embox %[[maskdecl]]#0(%[[VAL_6]]) : (!fir.ref<!fir.array<10x!fir.logical<4>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.logical<4>>>
