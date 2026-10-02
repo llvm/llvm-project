@@ -7774,8 +7774,16 @@ getScalarAtomicRMWExpansion(const AtomicRMWInst *AI, Type *Ty,
   if (Ty->isVectorTy())
     return AtomicExpansionKind::CmpXChg;
 
-  assert(Ty->isIntegerTy() && "Ty should be integer at this point");
-  const unsigned BitWidth = cast<IntegerType>(Ty)->getBitWidth();
+  // AtomicExpand casts non-integer xchg operations to the same-width integer
+  // type. When classifying an elementwise xchg, this hook runs before that
+  // cast is performed on the scalar lanes, so account for it here.
+  assert(
+      (Ty->isIntegerTy() || AI->getOperation() == AtomicRMWInst::BinOp::Xchg) &&
+      "Ty should be integer at this point");
+  const unsigned BitWidth =
+      Ty->isIntegerTy()
+          ? cast<IntegerType>(Ty)->getBitWidth()
+          : AI->getDataLayout().getTypeStoreSizeInBits(Ty).getFixedValue();
 
   switch (AI->getOperation()) {
   default:
@@ -7950,7 +7958,7 @@ AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
            RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent) {
     AtomicExpansionKind ExpansionKind = shouldExpandAtomicRMWInIR(RI);
     if (ExpansionKind == AtomicExpansionKind::None ||
-        ExpansionKind == AtomicExpansionKind::Expand)
+        (ExpansionKind == AtomicExpansionKind::Expand && !RI->isElementwise()))
       return AtomicOrdering::Acquire;
   }
 

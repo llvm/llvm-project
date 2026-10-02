@@ -143,6 +143,29 @@ entry:
   ret <4 x i8> %old
 }
 
+; Non-integer xchg lanes are classified using the integer type to which they
+; will be bitcast, then expanded into native scalar xchg operations.
+define <2 x float> @xchg_v2f32_elementwise(ptr %addr, <2 x float> %val) {
+; CHECK-LABEL: @xchg_v2f32_elementwise(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LO_VAL:%.*]] = extractelement <2 x float> [[VAL:%.*]], i64 0
+; CHECK-NEXT:    [[HI_VAL:%.*]] = extractelement <2 x float> [[VAL]], i64 1
+; CHECK-NEXT:    [[HI_PTR:%.*]] = getelementptr inbounds float, ptr [[ADDR:%.*]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[LO_VAL]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR]], i32 [[TMP0]] monotonic, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[TMP1]] to float
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[HI_VAL]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw xchg ptr [[HI_PTR]], i32 [[TMP3]] monotonic, align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP4]] to float
+; CHECK-NEXT:    [[LO_OLD:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i64 0
+; CHECK-NEXT:    [[HI_OLD:%.*]] = insertelement <2 x float> [[LO_OLD]], float [[TMP5]], i64 1
+; CHECK-NEXT:    ret <2 x float> [[HI_OLD]]
+;
+entry:
+  %old = atomicrmw elementwise xchg ptr %addr, <2 x float> %val monotonic
+  ret <2 x float> %old
+}
+
 ; Partword bitwise vector atomics must bitcast before widening; zext directly
 ; from <2 x i8> to i32 is invalid IR.
 define <2 x i8> @and_v2i8_partword_elementwise(ptr %addr, <2 x i8> %val) {
@@ -258,4 +281,3 @@ entry:
 !0 = !{!1, !2}
 !1 = !{!"foo", !"bar"}
 !2 = !{!"bux", !"baz"}
-
