@@ -30,7 +30,7 @@ Optionally, a list of the destination suffixes can be provided. When the
 suffix is found, a case-insensitive lookup in that list is made, and if a
 replacement is found that is different from the current suffix, then the
 diagnostic is issued. This allows for fine-grained control of what suffixes to
-consider and what their replacements should be.
+consider and what their replacements should be. Default is empty string.
 ```
 
 ### Example

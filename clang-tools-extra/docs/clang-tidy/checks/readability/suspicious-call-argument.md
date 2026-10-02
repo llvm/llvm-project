@@ -49,7 +49,7 @@ foo(b, src);
 ```
 
 The abbreviations to recognise can be configured with the
-{option}`Abbreviations` option.
+{option}`Abbreviations`.
 This heuristic is case-insensitive.
 
 ### Prefix
@@ -59,7 +59,8 @@ prefix of the other string, e.g. `target` to `targetPtr`.
 The similarity percentage is the length ratio of the prefix to the longer
 string, in the previous example, it would be `6 / 9 = 66.66...`%.
 
-This heuristic can be configured with {ref}`bounds<opt_Bounds>`.
+This heuristic can be configured with {option}`<HeuristicName>DissimilarBelow` and
+{option}`<HeuristicName>SimilarAbove`.
 The default bounds are: below `25`% dissimilar and above `30`% similar.
 This heuristic is case-insensitive.
 
@@ -67,9 +68,10 @@ This heuristic is case-insensitive.
 
 Analogous to the `Prefix` heuristic.
 In the case of `oldValue` and `value` compared, the similarity percentage
-is `8 / 5 = 62.5`%.
+is `5 / 8 = 62.5`%.
 
-This heuristic can be configured with {ref}`bounds<opt_Bounds>`.
+This heuristic can be configured with {option}`<HeuristicName>DissimilarBelow` and
+{option}`<HeuristicName>SimilarAbove`.
 The default bounds are: below `25`% dissimilar and above `30`% similar.
 This heuristic is case-insensitive.
 
@@ -82,7 +84,8 @@ against the *longer* of the two input strings.
 For example, given `val` and `rvalue`, the similarity is `3 / 6 = 50`%.
 If no characters are common in the two string, `0`%.
 
-This heuristic can be configured with {ref}`bounds<opt_Bounds>`.
+This heuristic can be configured with {option}`<HeuristicName>DissimilarBelow` and
+{option}`<HeuristicName>SimilarAbove`.
 The default bounds are: below `40`% dissimilar and above `50`% similar.
 This heuristic is case-insensitive.
 
@@ -98,7 +101,8 @@ regards to `100`%.
 For example, given `something` and `anything`, the distance is `4` edits,
 and the similarity percentage is `100`% `- 4 / 9 = 55.55...`%.
 
-This heuristic can be configured with {ref}`bounds<opt_Bounds>`.
+This heuristic can be configured with {option}`<HeuristicName>DissimilarBelow` and
+{option}`<HeuristicName>SimilarAbove`.
 The default bounds are: below `50`% dissimilar and above `66`% similar.
 This heuristic is case-sensitive.
 
@@ -113,7 +117,8 @@ similarities more.
 The similarity percentage is expressed as an average of the common and
 non-common characters against the length of both strings.
 
-This heuristic can be configured with {ref}`bounds<opt_Bounds>`.
+This heuristic can be configured with {option}`<HeuristicName>DissimilarBelow` and
+{option}`<HeuristicName>SimilarAbove`.
 The default bounds are: below `75`% dissimilar and above `85`% similar.
 This heuristic is case-insensitive.
 
@@ -127,7 +132,8 @@ This metric is applied to strings by creating bigrams (substring sequences of
 length 2) of the two strings and using the set of bigrams for the two strings
 as the two sets.
 
-This heuristic can be configured with {ref}`bounds<opt_Bounds>`.
+This heuristic can be configured with {option}`<HeuristicName>DissimilarBelow` and
+{option}`<HeuristicName>SimilarAbove`.
 The default bounds are: below `60`% dissimilar and above `70`% similar.
 This heuristic is case-insensitive.
 
@@ -138,8 +144,6 @@ Sets the minimum required length the argument and parameter names
 need to have. Names shorter than this length will be ignored.
 Default is `3`.
 ```
-
-(opt_Abbreviations)=
 
 ```{option} Abbreviations
 For the **Abbreviation** heuristic
@@ -194,8 +198,6 @@ heuristics implemented.
 Default is `true` for every heuristic.
 ```
 
-(opt_Bounds)=
-
 ```{option} <HeuristicName>DissimilarBelow, <HeuristicName>SimilarAbove
 A value between `0` and `100`, expressing a percentage.
 The bounds set what percentage of similarity the heuristic must deduce
@@ -205,9 +207,10 @@ check.
 Given arguments `arg1` and `arg2` passed to `param1` and `param2`,
 respectively, the bounds check is performed in the following way:
 If the similarity of the currently passed argument order
-(`arg1` to `param1`) is **below** the `DissimilarBelow` threshold, and
+(`arg1` to `param1`) is **below** the
+{option}`<HeuristicName>DissimilarBelow` threshold, and
 the similarity of the suggested swapped order (`arg1` to `param2`) is
-**above** the `SimilarAbove` threshold, the swap is reported.
+**above** the {option}`<HeuristicName>SimilarAbove` threshold, the swap is reported.
 
 For the defaults of each heuristic, {ref}`see above<heuristics>`.
 ```

@@ -69,7 +69,7 @@ Default is `::std::basic_string;::std::basic_string_view`.
 struct CustomString {
 public:
   int compare (const CustomString& other) const;
-}
+};
 
 CustomString str1;
 CustomString str2;
