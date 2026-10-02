@@ -15,7 +15,7 @@
 // RUN: %clangxx -O0 -fsanitize-coverage=trace-pc-guard %s -o %t
 // RUN: %env_tool_opts=coverage=1 %t 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT
 // RUN: rm -f *.sancov
-// RUN: %env_tool_opts=coverage=1:print_coverage_summary=0 %t 2>&1 | FileCheck %s --check-prefix=CHECK-QUIET
+// RUN: %env_tool_opts=coverage=1:print_coverage_summary=0 %t 2>&1 | FileCheck %s --check-prefix=CHECK-QUIET --implicit-check-not='SanitizerCoverage'
 // RUN: ls *.sancov
 // RUN: rm -rf %t_workdir
 
@@ -30,4 +30,3 @@ int main() {
 // CHECK-DEFAULT: SanitizerCoverage: {{.*}}.sancov: {{[0-9]+}} PCs written
 
 // CHECK-QUIET: main
-// CHECK-QUIET-NOT: SanitizerCoverage
