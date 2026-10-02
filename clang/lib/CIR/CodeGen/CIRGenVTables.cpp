@@ -174,7 +174,28 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
         cgm.getASTContext().getTargetInfo().emitVectorDeletingDtors(
             cgm.getASTContext().getLangOpts()));
 
-    assert(!cir::MissingFeatures::cudaSupport());
+    const bool isThunk =
+        nextVTableThunkIndex < layout.vtable_thunks().size() &&
+        layout.vtable_thunks()[nextVTableThunkIndex].first == componentIndex;
+
+    if (cgm.getLangOpts().CUDA) {
+      // Emit NULL for methods we can't codegen on this
+      // side. Otherwise we'd end up with vtable with unresolved
+      // references.
+      const CXXMethodDecl *md = cast<CXXMethodDecl>(gd.getDecl());
+      // OK on device side: functions w/ __device__ attribute
+      // OK on host side: anything except __device__-only functions.
+      bool canEmitMethod =
+          cgm.getLangOpts().CUDAIsDevice
+              ? md->hasAttr<CUDADeviceAttr>()
+              : (md->hasAttr<CUDAHostAttr>() || !md->hasAttr<CUDADeviceAttr>());
+      if (!canEmitMethod) {
+        if (isThunk)
+          nextVTableThunkIndex++;
+        return builder.getConstNullPtrAttr(builder.getUInt8PtrTy());
+      }
+      // Method is acceptable, continue processing as usual.
+    }
 
     auto getSpecialVirtFn = [&](StringRef name) -> cir::FuncOp {
       assert(!cir::MissingFeatures::vtableRelativeLayout());
@@ -189,6 +210,23 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
       cir::FuncOp fnPtr = cgm.createRuntimeFunction(fnTy, name);
 
       assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
+
+      // The Microsoft ABI uses the same function name for pure and deleted
+      // virtual functions.
+      if (!fnPtr.isDeclaration())
+        return fnPtr;
+
+      // For device compilation, provide a weak definition that traps,
+      // otherwise linking ends up with unresolved references.
+      if (cgm.getLangOpts().isTargetDevice()) {
+        fnPtr.setLinkage(cir::GlobalLinkageKind::WeakAnyLinkage);
+        mlir::SymbolTable::setSymbolVisibility(
+            fnPtr, cgm.getMLIRVisibilityFromCIRLinkage(fnPtr.getLinkage()));
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        builder.setInsertionPointToStart(fnPtr.addEntryBlock());
+        cir::TrapOp::create(builder, fnPtr.getLoc());
+      }
+
       return fnPtr;
     };
 
@@ -203,9 +241,7 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
         deletedVirtualFn =
             getSpecialVirtFn(cgm.getCXXABI().getDeletedVirtualCallName());
       fnPtr = deletedVirtualFn;
-    } else if (nextVTableThunkIndex < layout.vtable_thunks().size() &&
-               layout.vtable_thunks()[nextVTableThunkIndex].first ==
-                   componentIndex) {
+    } else if (isThunk) {
       const ThunkInfo &thunkInfo =
           layout.vtable_thunks()[nextVTableThunkIndex].second;
       nextVTableThunkIndex++;
