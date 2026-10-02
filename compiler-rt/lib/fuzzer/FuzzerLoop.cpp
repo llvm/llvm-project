@@ -352,6 +352,8 @@ void Fuzzer::PrintStats(const char *Where, const char *End, size_t Units,
 
   Printf(" exec/s: %zd", ExecPerSec);
   Printf(" rss: %zdMB", GetPeakRSSMb());
+  if (Options.StaleCorpusTimeoutSec > 0)
+    Printf(" stale: %zd", secondsSinceLastNewCorpus());
   Printf("%s", End);
 }
 
@@ -535,6 +537,7 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
   size_t NumNewFeatures = Corpus.NumFeatureUpdates() - NumUpdatesBefore;
   if (NumNewFeatures || ForceAddToCorpus) {
     TPC.UpdateObservedPCs();
+    LastNewCorpusTime = UnitStopTime;
     auto NewII =
         Corpus.AddToCorpus({Data, Data + Size}, NumNewFeatures, MayDeleteFile,
                            TPC.ObservedFocusFunction(), ForceAddToCorpus,
