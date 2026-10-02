@@ -16,7 +16,6 @@ add_flang_library(FIRTransforms
   CUDA/CUFDeviceFuncTransform.cpp
   CUDA/CUFDeviceGlobal.cpp
   CUDA/CUFDuplicateDeviceFunc.cpp
-  CUDA/CUFFunctionRewrite.cpp
   CUDA/CUFGPUToLLVMConversion.cpp
   CUDA/CUFLaunchAttachAttr.cpp
   CUDA/CUFOpConversion.cpp
@@ -52,6 +51,7 @@ add_flang_library(FIRTransforms
   MemoryAllocation.cpp
   MemoryUtils.cpp
   OptimizeArrayRepacking.cpp
+  O0CanonicalizerPass.cpp
   PolymorphicOpConversion.cpp
   SetRuntimeCallAttributes.cpp
   SimplifyFIROperations.cpp
@@ -86,6 +86,7 @@ add_flang_library(FIRTransforms
   MLIR_LIBS
   MLIRAffineUtils
   MLIRAnalysis
+  MLIRControlFlowDialect
   MLIRFuncDialect
   MLIRGPUDialect
   MLIRLLVMCommonConversion

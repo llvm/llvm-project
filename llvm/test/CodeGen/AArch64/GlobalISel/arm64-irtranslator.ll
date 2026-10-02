@@ -1,6 +1,6 @@
-; RUN: llc -O0 -aarch64-enable-atomic-cfg-tidy=0 -mattr=+lse -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - -use-constant-int-for-fixed-length-splat=false 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-CV
-; RUN: llc -O0 -aarch64-enable-atomic-cfg-tidy=0 -mattr=+lse -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - -use-constant-int-for-fixed-length-splat 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-CI
-; RUN: llc -O3 -aarch64-enable-atomic-cfg-tidy=0 -mattr=+lse -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefix=O3
+; RUN: llc -O0 -aarch64-enable-atomic-cfg-tidy=0 -mattr=+lse -stop-after=ir-translator -global-isel -verify-machineinstrs %s -o - -use-constant-int-for-fixed-length-splat=false 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-CV
+; RUN: llc -O0 -aarch64-enable-atomic-cfg-tidy=0 -mattr=+lse -stop-after=ir-translator -global-isel -verify-machineinstrs %s -o - -use-constant-int-for-fixed-length-splat 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-CI
+; RUN: llc -O3 -aarch64-enable-atomic-cfg-tidy=0 -mattr=+lse -stop-after=ir-translator -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefix=O3
 
 ; This file checks that the translation from llvm IR to generic MachineInstr
 ; is correct.
