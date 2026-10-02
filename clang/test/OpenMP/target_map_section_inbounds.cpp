@@ -1,7 +1,11 @@
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-unknown \
+// RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm-bc %s -o %t-host.bc
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple amdgcn-amd-amdhsa \
 // RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -fopenmp-is-target-device \
 // RUN:   -fopenmp-host-ir-file-path %t-host.bc -emit-llvm %s -o - \
 // RUN:   | FileCheck %s
+
+// expected-no-diagnostics
 
 int Data[8][4];
 
