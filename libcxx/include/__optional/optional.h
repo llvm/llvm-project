@@ -688,7 +688,7 @@ private:
   using __pointer _LIBCPP_NODEBUG       = add_pointer_t<_Tp>;
   using __const_pointer _LIBCPP_NODEBUG = add_pointer_t<const _Tp>;
 
-  template <bool = std::__range_fits_in_alignment(alignof(_Tp), 1)>
+  template <class _Up = _Tp, bool = std::__range_fits_in_alignment(alignof(_Up), 1)>
   struct __iterator {
     using __type _LIBCPP_NODEBUG       = std::__static_packed_bounded_iterator<__pointer, 1>;
     using __const_type _LIBCPP_NODEBUG = std::__static_packed_bounded_iterator<__const_pointer, 1>;
@@ -699,8 +699,8 @@ private:
     }
   };
 
-  template <>
-  struct __iterator<false> {
+  template <class _Up>
+  struct __iterator<_Up, false> {
 #    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
     using __type _LIBCPP_NODEBUG       = std::__bounded_iter<__pointer>;
     using __const_type _LIBCPP_NODEBUG = std::__bounded_iter<__const_pointer>;
