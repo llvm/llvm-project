@@ -14871,6 +14871,7 @@ void BoUpSLP::transformNodes() {
       if (PreferStridedOverCompressed()) {
         E->State = TreeEntry::StridedVectorize;
         TreeEntryToStridedPtrInfoMap[E.get()] = SPtrInfo;
+        CompressEntryToData.erase(E);
       }
     }
   }
