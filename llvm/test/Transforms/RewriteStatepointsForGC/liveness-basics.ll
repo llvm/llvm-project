@@ -13,7 +13,7 @@ entry:
 taken:                                            ; preds = %entry
 ; CHECK-LABEL: taken:
 ; CHECK-NEXT: gc.statepoint
-; CHECK-NEXT: %obj.relocated = call coldcc ptr addrspace(1)
+; CHECK-NEXT: %obj.relocated = call ptr addrspace(1)
 ; CHECK-NEXT: br label %merge
   call void @foo() [ "deopt"() ]
   br label %merge
@@ -21,7 +21,7 @@ taken:                                            ; preds = %entry
 untaken:                                          ; preds = %entry
 ; CHECK-LABEL: untaken:
 ; CHECK-NEXT: gc.statepoint
-; CHECK-NEXT: %obj.relocated2 = call coldcc ptr addrspace(1)
+; CHECK-NEXT: %obj.relocated2 = call ptr addrspace(1)
 ; CHECK-NEXT: br label %merge
   call void @foo() [ "deopt"() ]
   br label %merge
@@ -69,7 +69,7 @@ taken:                                            ; preds = %entry
 ; CHECK-NEXT: gc.statepoint
 ; CHECK-NEXT: %obj = load
 ; CHECK-NEXT: gc.statepoint
-; CHECK-NEXT: %obj.relocated = call coldcc ptr addrspace(1)
+; CHECK-NEXT: %obj.relocated = call ptr addrspace(1)
 ; CHECK-NEXT: br label %merge
   call void @foo() [ "deopt"() ]
   %obj = load ptr addrspace(1), ptr %loc
@@ -124,7 +124,7 @@ entry:
 taken:                                            ; preds = %entry
 ; CHECK-LABEL: taken:
 ; CHECK-NEXT: gc.statepoint
-; CHECK-NEXT: %obj.relocated = call coldcc ptr addrspace(1)
+; CHECK-NEXT: %obj.relocated = call ptr addrspace(1)
 ; CHECK-NEXT: br label %merge
   call void @foo() [ "deopt"() ]
   br label %merge
