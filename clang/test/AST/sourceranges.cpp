@@ -180,6 +180,53 @@ namespace in_class_init {
   };
 }
 
+// CHECK-1Z: NamespaceDecl {{.*}} field_copy_init
+namespace field_copy_init {
+  struct D {};
+
+  // CHECK-1Z: CXXRecordDecl {{.*}} struct S definition
+  struct S {
+    D d0;
+
+    // CHECK-1Z: FieldDecl {{.*}} d1 'D'
+    // CHECK-1Z-NEXT: CXXConstructExpr {{.*}} <col:12> 'D'
+    D d1 = d0;
+
+    // CHECK-1Z: FieldDecl {{.*}} d2 'D'
+    // CHECK-1Z-NEXT: CXXConstructExpr {{.*}} <col:12, col:15> 'D'
+    D d2 = {d0};
+
+    // CHECK-1Z: FieldDecl {{.*}} d3 'D'
+    // CHECK-1Z-NEXT: CXXTemporaryObjectExpr {{.*}} <col:12, col:16> 'D'
+    D d3 = D{d0};
+
+    // CHECK-1Z: FieldDecl {{.*}} d4 'D'
+    // CHECK-1Z-NEXT: CXXConstructExpr {{.*}} <col:9, col:12> 'D'
+    D d4{d0};
+  };
+
+  // CHECK-1Z: FunctionDecl {{.*}} fn 'void ()'
+  void fn() {
+    D d0;
+
+    // CHECK-1Z: VarDecl {{.*}} d1 'D' cinit
+    // CHECK-1Z-NEXT: CXXConstructExpr {{.*}} <col:12> 'D'
+    D d1 = d0;
+
+    // CHECK-1Z: VarDecl {{.*}} d2 'D' cinit
+    // CHECK-1Z-NEXT: CXXConstructExpr {{.*}} <col:12, col:15> 'D'
+    D d2 = {d0};
+
+    // CHECK-1Z: VarDecl {{.*}} d3 'D' cinit
+    // CHECK-1Z-NEXT: CXXTemporaryObjectExpr {{.*}} <col:12, col:16> 'D'
+    D d3 = D{d0};
+
+    // CHECK-1Z: VarDecl {{.*}} d4 'D' listinit
+    // CHECK-1Z-NEXT: CXXConstructExpr {{.*}} <col:7, col:12> 'D'
+    D d4{d0};
+  }
+}
+
 // CHECK-1Z: NamespaceDecl {{.*}} delegating_constructor_init
 namespace delegating_constructor_init {
   struct A {};
