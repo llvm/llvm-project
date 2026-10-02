@@ -60,13 +60,12 @@ public:
   ARMDAGToDAGISel() = delete;
 
   explicit ARMDAGToDAGISel(ARMBaseTargetMachine &tm, CodeGenOptLevel OptLevel)
-      : SelectionDAGISel(tm, OptLevel) {}
+      : SelectionDAGISel(tm, OptLevel), Subtarget(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     // Reset the subtarget each time through.
     Subtarget = &MF.getSubtarget<ARMSubtarget>();
-    SelectionDAGISel::runOnMachineFunction(MF);
-    return true;
+    return SelectionDAGISel::runOnMachineFunction(MF);
   }
 
   void PreprocessISelDAG() override;
@@ -105,8 +104,6 @@ public:
       return false;
     return SelectImmShifterOperand(N, A, B, false);
   }
-
-  bool SelectAddLikeOr(SDNode *Parent, SDValue N, SDValue &Out);
 
   bool SelectAddrModeImm12(SDValue N, SDValue &Base, SDValue &OffImm);
   bool SelectLdStSOReg(SDValue N, SDValue &Base, SDValue &Offset, SDValue &Opc);
@@ -652,15 +649,6 @@ bool ARMDAGToDAGISel::SelectRegShifterOperand(SDValue N,
                                   SDLoc(N), MVT::i32);
   return true;
 }
-
-// Determine whether an ISD::OR's operands are suitable to turn the operation
-// into an addition, which often has more compact encodings.
-bool ARMDAGToDAGISel::SelectAddLikeOr(SDNode *Parent, SDValue N, SDValue &Out) {
-  assert(Parent->getOpcode() == ISD::OR && "unexpected parent");
-  Out = N;
-  return CurDAG->haveNoCommonBitsSet(N, Parent->getOperand(1));
-}
-
 
 bool ARMDAGToDAGISel::SelectAddrModeImm12(SDValue N,
                                           SDValue &Base,
