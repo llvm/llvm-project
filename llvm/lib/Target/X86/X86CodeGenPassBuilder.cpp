@@ -290,8 +290,7 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
 
   // KCFI indirect call checks are lowered to a bundle, and on Darwin platforms,
   // also CALL_RVMARKER.
-  // TODO(boomanaiden154): Add UnpackMachineBundlesPass here once it has been
-  // ported.
+  addMachineFunctionPass(UnpackMachineBundlesPass(), PMW);
 
   // Analyzes and emits pseudos to support Win x64 Unwind V2. This pass must run
   // after all real instructions have been added to the epilog.
