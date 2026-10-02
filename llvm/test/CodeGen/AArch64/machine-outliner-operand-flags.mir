@@ -9,6 +9,7 @@
 --- |
   define void @test_pac_disc(ptr %p) #0 { ret void }
   define void @test_not_exactly_cloned_flags(i64 %a, i64 %b) #0 { ret void }
+  define void @test_instruction_bundles(i64 %a, i64 %b) #0 { ret void }
   attributes #0 = { noredzone optsize minsize }
 ...
 ---
@@ -51,9 +52,9 @@ tracksRegLiveness: true
 body:             |
     bb.0:
         ; CHECK-LABEL: name: test_not_exactly_cloned_flags
-        ; CHECK:         BL @OUTLINED_FUNCTION_1,
-        ; CHECK-NEXT:    BL @OUTLINED_FUNCTION_1,
-        ; CHECK-NEXT:    BL @OUTLINED_FUNCTION_1,
+        ; CHECK:         BL @OUTLINED_FUNCTION_2,
+        ; CHECK-NEXT:    BL @OUTLINED_FUNCTION_2,
+        ; CHECK-NEXT:    BL @OUTLINED_FUNCTION_2,
         ; CHECK-NEXT:    RET undef $lr
 
         liveins: $x0, $x1
@@ -68,6 +69,40 @@ body:             |
         $x4 = ADDXrs $x2, killed $x3, 0
         RET undef $lr
 ...
+---
+# Make sure `killed` flags are reset inside instruction bundles.
+
+name: test_instruction_bundles
+tracksRegLiveness: true
+body:             |
+    bb.0:
+        ; CHECK-LABEL: name: test_instruction_bundles
+        ; CHECK:         BL @OUTLINED_FUNCTION_1,
+        ; CHECK-NEXT:    BL @OUTLINED_FUNCTION_1,
+        ; CHECK-NEXT:    BL @OUTLINED_FUNCTION_1,
+        ; CHECK-NEXT:    RET undef $lr
+
+        liveins: $x0, $x1
+        $x2 = ORRXrs $xzr, $x0, 0
+        $x3 = ORRXrs $xzr, $x1, 0
+        BUNDLE implicit-def $x4, implicit $x2, implicit $x3 {
+          HINT 0
+          $x4 = ADDXrs killed $x2, killed $x3, 0
+        }
+        $x2 = ORRXrs $xzr, $x0, 0
+        $x3 = ORRXrs $xzr, $x1, 0
+        BUNDLE implicit-def $x4, implicit $x2, implicit $x3 {
+          HINT 0
+          $x4 = ADDXrs killed $x2, $x3, 0
+        }
+        $x2 = ORRXrs $xzr, $x0, 0
+        $x3 = ORRXrs $xzr, $x1, 0
+        BUNDLE implicit-def $x4, implicit $x2, implicit $x3 {
+          HINT 0
+          $x4 = ADDXrs $x2, killed $x3, 0
+        }
+        RET undef $lr
+...
 
 # CHECK-LABEL: name: OUTLINED_FUNCTION_0
 # CHECK:         $x2 = LDRXui $x1, 0
@@ -76,6 +111,15 @@ body:             |
 # CHECK-NEXT:    RET $lr
 
 # CHECK-LABEL: name: OUTLINED_FUNCTION_1
+# CHECK:         $x2 = ORRXrs $xzr, $x0, 0
+# CHECK-NEXT:    $x3 = ORRXrs $xzr, $x1, 0
+# CHECK-NEXT:    BUNDLE implicit-def $x4, implicit $x2, implicit $x3 {
+# CHECK-NEXT:      HINT 0
+# CHECK-NEXT:      $x4 = ADDXrs $x2, $x3, 0
+# CHECK-NEXT:    }
+# CHECK-NEXT:    RET $lr
+
+# CHECK-LABEL: name: OUTLINED_FUNCTION_2
 # CHECK:         $x2 = ORRXrs $xzr, $x0, 0
 # CHECK-NEXT:    $x3 = ORRXrs $xzr, $x1, 0
 # CHECK-NEXT:    $x4 = ADDXrs $x2, $x3, 0
