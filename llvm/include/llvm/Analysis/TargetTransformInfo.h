@@ -1359,15 +1359,18 @@ public:
   /// \return the number of registers in the target-provided register class.
   LLVM_ABI unsigned getNumberOfRegisters(unsigned ClassID) const;
 
-  /// \return The number of registers available to \p F before the register
-  /// allocator is forced to spill, or std::nullopt if the target cannot
-  /// provide a meaningful bound.
+  /// \return A conservative bound on the number of registers \p F can use
+  /// before the register allocator is likely to spill, or std::nullopt if the
+  /// target has no meaningful bound to report.
   ///
-  /// Unlike getNumberOfRegisters(), which some targets deliberately
-  /// under-report to tune vectorization and interleaving, this is meant to be
-  /// a real budget usable by register-pressure heuristics. Targets with
-  /// several register files report the budget for the file that dominates
-  /// pressure.
+  /// The budget is a property of the function, not only of the subtarget: it
+  /// may depend on attributes that constrain how many registers the function
+  /// is permitted to use. So two functions in the same module can have
+  /// different budgets.
+  ///
+  /// It is intended for heuristics deciding whether a
+  /// transform is about to make register pressure a problem, and staying below.
+  /// Not a guarantee that no spilling occurs.
   LLVM_ABI std::optional<unsigned> getRegisterBudget(const Function &F) const;
 
   /// \return true if the target supports load/store that enables fault

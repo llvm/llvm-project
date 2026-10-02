@@ -1541,23 +1541,16 @@ private:
   // registers than \p Budget.
   bool rewriteWouldOverflowBudget(unsigned Before, unsigned After,
                                   unsigned Budget) const {
-    // Leave the allocator some slack: it also has to satisfy register class
-    // and ABI constraints that this estimate knows nothing about.
-    constexpr unsigned SafeMargin = 8;
-    unsigned SafeBudget = Budget >= SafeMargin ? Budget - SafeMargin : Budget;
 
     // There is headroom, so however much the rewrite adds is irrelevant.
-    if (After <= SafeBudget)
+    if (After <= Budget)
       return false;
 
     // The rewrite is what takes the block over.
-    if (Before <= SafeBudget)
+    if (Before <= Budget)
       return true;
 
-    // Already over budget. SLSR can still lower pressure here, so only refuse
-    // rewrites that make it meaningfully worse.
-    constexpr unsigned AbsDelta = 4;
-    return After > Before && After - Before > AbsDelta;
+    return After > Before && After - Before > 0;
   }
 
   std::pair<unsigned, unsigned> countCandsAndBasisesInBB(
@@ -1608,7 +1601,10 @@ private:
 
     // TTI's getRegUsageForType is less accurate than
     // default logic to compute pressure for targets like AMDGPU
-    return divideCeil(Size.getFixedValue(), 32);
+    unsigned RegisterBitWidth =
+        TTI->getRegisterBitWidth(TargetTransformInfo::RGK_Scalar)
+            .getFixedValue();
+    return divideCeil(Size.getFixedValue(), RegisterBitWidth);
   }
 
   std::optional<unsigned> weight(const Value *V) const {
