@@ -1495,6 +1495,8 @@ public:
 
   /// Returns metadata that can be copied unchanged to an access covering
   /// all or part of this access's bytes, even if the value type changes.
+  /// Metadata describing the loaded value (e.g. !range) is excluded, since
+  /// it may not apply to a value loaded with a different type or byte range.
   MMOMetadata getMMOMetadataForSubAccess() const {
     return MMOMetadata(getAAInfo(), /*Ranges=*/nullptr, getMemCacheHint());
   }
