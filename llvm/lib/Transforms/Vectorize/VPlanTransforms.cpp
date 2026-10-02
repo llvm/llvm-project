@@ -5205,9 +5205,10 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   if (!Cond)
     Cond = Plan.getVectorLoopRegion()->getHeaderMask();
 
-  bool IsLastInChain = RdxPhi->getBackedgeValue() == WidenRecipe ||
-                       RdxPhi->getBackedgeValue() == ExitValue ||
-                       RdxPhi->getBackedgeValue() == Chain.Blend;
+  [[maybe_unused]] bool IsLastInChain =
+      RdxPhi->getBackedgeValue() == WidenRecipe ||
+      RdxPhi->getBackedgeValue() == ExitValue ||
+      RdxPhi->getBackedgeValue() == Chain.Blend;
   assert((!ExitValue || IsLastInChain) &&
          "if we found ExitValue, it must match RdxPhi's backedge value");
 
