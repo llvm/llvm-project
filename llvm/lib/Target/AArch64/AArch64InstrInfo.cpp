@@ -1626,7 +1626,6 @@ bool AArch64InstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
 
 bool AArch64InstrInfo::areMemAccessesTriviallyDisjoint(
     const MachineInstr &MIa, const MachineInstr &MIb) const {
-  const TargetRegisterInfo *TRI = &getRegisterInfo();
   const MachineOperand *BaseOpA = nullptr, *BaseOpB = nullptr;
   int64_t OffsetA = 0, OffsetB = 0;
   TypeSize WidthA(0, false), WidthB(0, false);
@@ -1647,9 +1646,9 @@ bool AArch64InstrInfo::areMemAccessesTriviallyDisjoint(
   // If OffsetAIsScalable and OffsetBIsScalable are both true, they
   // are assumed to have the same scale (vscale).
   if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, OffsetAIsScalable,
-                                   WidthA, TRI) &&
+                                   WidthA) &&
       getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, OffsetBIsScalable,
-                                   WidthB, TRI)) {
+                                   WidthB)) {
     if (BaseOpA->isIdenticalTo(*BaseOpB) &&
         OffsetAIsScalable == OffsetBIsScalable) {
       int LowOffset = OffsetA < OffsetB ? OffsetA : OffsetB;
@@ -3690,7 +3689,7 @@ bool AArch64InstrInfo::getMemOperandsWithOffsetWidth(
   const MachineOperand *BaseOp;
   TypeSize WidthN(0, false);
   if (!getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, OffsetIsScalable,
-                                    WidthN, &RI))
+                                    WidthN))
     return false;
   // The maximum vscale is 16 under AArch64, return the maximal extent for the
   // vector.
@@ -4696,8 +4695,7 @@ static bool isPostIndexLdStOpcode(unsigned Opcode) {
 
 bool AArch64InstrInfo::getMemOperandWithOffsetWidth(
     const MachineInstr &LdSt, const MachineOperand *&BaseOp, int64_t &Offset,
-    bool &OffsetIsScalable, TypeSize &Width,
-    const TargetRegisterInfo *TRI) const {
+    bool &OffsetIsScalable, TypeSize &Width) const {
   assert(LdSt.mayLoadOrStore() && "Expected a memory operation.");
   // Handle only loads/stores with base register followed by immediate offset.
   if (LdSt.getNumExplicitOperands() == 3) {
@@ -11268,8 +11266,8 @@ void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
 
     // Is this a load or store with an immediate offset with SP as the base?
     if (!MI.mayLoadOrStore() ||
-        !getMemOperandWithOffsetWidth(MI, Base, Offset, OffsetIsScalable, Width,
-                                      &RI) ||
+        !getMemOperandWithOffsetWidth(MI, Base, Offset, OffsetIsScalable,
+                                      Width) ||
         (Base->isReg() && Base->getReg() != AArch64::SP))
       continue;
 

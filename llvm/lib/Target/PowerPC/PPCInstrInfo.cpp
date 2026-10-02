@@ -2894,7 +2894,7 @@ bool PPCInstrInfo::getMemOperandsWithOffsetWidth(
     int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width) const {
   const MachineOperand *BaseOp;
   OffsetIsScalable = false;
-  if (!getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, Width, &RI))
+  if (!getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, Width))
     return false;
   BaseOps.push_back(BaseOp);
   return true;
@@ -2984,8 +2984,8 @@ bool PPCInstrInfo::shouldClusterMemOps(
   LocationSize Width1 = LocationSize::precise(0),
                Width2 = LocationSize::precise(0);
   const MachineOperand *Base1 = nullptr, *Base2 = nullptr;
-  if (!getMemOperandWithOffsetWidth(FirstLdSt, Base1, Offset1, Width1, &RI) ||
-      !getMemOperandWithOffsetWidth(SecondLdSt, Base2, Offset2, Width2, &RI) ||
+  if (!getMemOperandWithOffsetWidth(FirstLdSt, Base1, Offset1, Width1) ||
+      !getMemOperandWithOffsetWidth(SecondLdSt, Base2, Offset2, Width2) ||
       Width1 != Width2)
     return false;
 
@@ -5821,9 +5821,10 @@ MachineInstr *PPCInstrInfo::findLoopInstr(
 
 // Return true if get the base operand, byte offset of an instruction and the
 // memory width. Width is the size of memory that is being loaded/stored.
-bool PPCInstrInfo::getMemOperandWithOffsetWidth(
-    const MachineInstr &LdSt, const MachineOperand *&BaseReg, int64_t &Offset,
-    LocationSize &Width, const TargetRegisterInfo *TRI) const {
+bool PPCInstrInfo::getMemOperandWithOffsetWidth(const MachineInstr &LdSt,
+                                                const MachineOperand *&BaseReg,
+                                                int64_t &Offset,
+                                                LocationSize &Width) const {
   if (!LdSt.mayLoadOrStore() || LdSt.getNumExplicitOperands() != 3)
     return false;
 
@@ -5859,8 +5860,8 @@ bool PPCInstrInfo::areMemAccessesTriviallyDisjoint(
   int64_t OffsetA = 0, OffsetB = 0;
   LocationSize WidthA = LocationSize::precise(0),
                WidthB = LocationSize::precise(0);
-  if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, WidthA, &RI) &&
-      getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, WidthB, &RI)) {
+  if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, WidthA) &&
+      getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, WidthB)) {
     if (BaseOpA->isIdenticalTo(*BaseOpB)) {
       int LowOffset = std::min(OffsetA, OffsetB);
       int HighOffset = std::max(OffsetA, OffsetB);

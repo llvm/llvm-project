@@ -423,8 +423,7 @@ public:
                            const MachineInstr &MI2) const;
   bool isHVXVec(const MachineInstr &MI) const;
   bool isValidAutoIncImm(const EVT VT, const int Offset) const;
-  bool isValidOffset(unsigned Opcode, int Offset,
-                     const TargetRegisterInfo *TRI, bool Extend = true) const;
+  bool isValidOffset(unsigned Opcode, int Offset, bool Extend = true) const;
   bool isVecAcc(const MachineInstr &MI) const;
   bool isVecALU(const MachineInstr &MI) const;
   bool isVecUsableNextPacket(const MachineInstr &ProdMI,

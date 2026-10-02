@@ -290,7 +290,7 @@ bool HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       break;
   }
 
-  if (!HII.isValidOffset(Opc, RealOffset, this)) {
+  if (!HII.isValidOffset(Opc, RealOffset)) {
     // If the offset is not valid, calculate the address in a temporary
     // register and use it with offset 0.
     int InstOffset = 0;
