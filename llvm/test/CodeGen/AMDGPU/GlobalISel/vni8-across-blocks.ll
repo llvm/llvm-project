@@ -282,6 +282,7 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    global_load_dwordx4 v[53:56], v4, s[0:1] offset:208
 ; GFX906-NEXT:    global_load_dwordx4 v[57:60], v4, s[0:1] offset:224
 ; GFX906-NEXT:    global_load_dwordx4 v[0:3], v4, s[0:1] offset:240
+; GFX906-NEXT:    s_nop 0
 ; GFX906-NEXT:    global_load_dwordx4 v[5:8], v4, s[0:1] offset:16
 ; GFX906-NEXT:    global_load_dwordx4 v[9:12], v4, s[0:1] offset:32
 ; GFX906-NEXT:    global_load_dwordx4 v[13:16], v4, s[0:1] offset:48
@@ -309,6 +310,7 @@ define amdgpu_kernel void @v256i8_liveout(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    global_load_dwordx4 v[49:52], v4, s[2:3] offset:192
 ; GFX906-NEXT:    global_load_dwordx4 v[53:56], v4, s[2:3] offset:208
 ; GFX906-NEXT:    global_load_dwordx4 v[57:60], v4, s[2:3] offset:224
+; GFX906-NEXT:    s_nop 0
 ; GFX906-NEXT:    global_load_dwordx4 v[0:3], v4, s[2:3] offset:240
 ; GFX906-NEXT:  .LBB6_2: ; %bb.2
 ; GFX906-NEXT:    s_or_b64 exec, exec, s[0:1]

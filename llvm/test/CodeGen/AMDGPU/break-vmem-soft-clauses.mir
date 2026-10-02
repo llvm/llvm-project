@@ -577,3 +577,29 @@ body: |
     $vgpr11 = FLAT_LOAD_DWORD $vgpr4_vgpr5, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 ...
+---
+# WAR at clause distance 6, beyond the scheduler lookahead window
+# (MaxLookAhead = 5).
+name: break_vmem_clause_war_distance_6
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: break_vmem_clause_war_distance_6
+    ; GCN: $vgpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
+    ; GCN-NEXT: $vgpr1 = FLAT_LOAD_DWORD $vgpr4_vgpr5, 0, 0, implicit $exec, implicit $flat_scr
+    ; GCN-NEXT: $vgpr10 = FLAT_LOAD_DWORD $vgpr6_vgpr7, 0, 0, implicit $exec, implicit $flat_scr
+    ; GCN-NEXT: $vgpr11 = FLAT_LOAD_DWORD $vgpr8_vgpr9, 0, 0, implicit $exec, implicit $flat_scr
+    ; GCN-NEXT: $vgpr12 = FLAT_LOAD_DWORD $vgpr14_vgpr15, 0, 0, implicit $exec, implicit $flat_scr
+    ; GCN-NEXT: $vgpr13 = FLAT_LOAD_DWORD $vgpr16_vgpr17, 0, 0, implicit $exec, implicit $flat_scr
+    ; XNACK-NEXT: S_NOP 0
+    ; GCN-NEXT: $vgpr2 = FLAT_LOAD_DWORD $vgpr18_vgpr19, 0, 0, implicit $exec, implicit $flat_scr
+    ; GCN-NEXT: S_ENDPGM 0
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr1 = FLAT_LOAD_DWORD $vgpr4_vgpr5, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr10 = FLAT_LOAD_DWORD $vgpr6_vgpr7, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr11 = FLAT_LOAD_DWORD $vgpr8_vgpr9, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr12 = FLAT_LOAD_DWORD $vgpr14_vgpr15, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr13 = FLAT_LOAD_DWORD $vgpr16_vgpr17, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr2 = FLAT_LOAD_DWORD $vgpr18_vgpr19, 0, 0, implicit $exec, implicit $flat_scr
+    S_ENDPGM 0
+...
