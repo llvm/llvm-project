@@ -702,7 +702,9 @@ void BinaryFunction::printRelocations(raw_ostream &OS, uint64_t Offset,
 
   auto RI = Relocations.lower_bound(Offset);
   while (RI != Relocations.end() && RI->first < Offset + Size) {
-    OS << Sep << "(R: " << RI->second << ")";
+    OS << Sep << "(R: ";
+    RI->second.print(OS, BC.getRelocationHandler());
+    OS << ")";
     Sep = ", ";
     ++RI;
   }
@@ -1826,7 +1828,7 @@ bool BinaryFunction::scanExternalRefs() {
       if (ignoreReference(Rel->Symbol))
         continue;
 
-      if (Relocation::getSizeForType(Rel->Type) < 4) {
+      if (BC.getRelocationHandler().getSizeForType(Rel->Type) < 4) {
         // If the instruction uses a short form, then we might not be able
         // to handle the rewrite without relaxation, and hence cannot reliably
         // create an external reference relocation.
@@ -2097,7 +2099,7 @@ bool BinaryFunction::validateInternalRefDataRelocations() {
       const Relocation *Relocation = BC.getRelocationAt(RelocationAddress);
       BC.errs() << "  ";
       if (Relocation)
-        BC.errs() << *Relocation;
+        Relocation->print(BC.errs(), BC.getRelocationHandler());
       else
         BC.errs() << "<missing relocation>";
       BC.errs() << '\n';

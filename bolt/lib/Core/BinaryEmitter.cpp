@@ -581,6 +581,8 @@ void BinaryEmitter::emitConstantIslands(BinaryFunction &BF, bool EmitColdPart,
       if (FunctionOffset >= EndOffset)
         return;
 
+      const RelocationHandler &RH = BC.getRelocationHandler();
+
       for (auto It = Islands.Relocations.lower_bound(FunctionOffset);
            It != Islands.Relocations.end(); ++It) {
         if (It->first >= EndOffset)
@@ -593,13 +595,13 @@ void BinaryEmitter::emitConstantIslands(BinaryFunction &BF, bool EmitColdPart,
           FunctionOffset = Relocation.Offset;
         }
 
-        LLVM_DEBUG(
-            dbgs() << "BOLT-DEBUG: emitting constant island relocation"
-                   << " for " << BF << " at offset 0x"
-                   << Twine::utohexstr(Relocation.Offset) << " with size "
-                   << Relocation::getSizeForType(Relocation.Type) << '\n');
+        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: emitting constant island relocation"
+                          << " for " << BF << " at offset 0x"
+                          << Twine::utohexstr(Relocation.Offset)
+                          << " with size " << RH.getSizeForType(Relocation.Type)
+                          << '\n');
 
-        FunctionOffset += Relocation.emit(&Streamer);
+        FunctionOffset += Relocation.emit(&Streamer, RH);
       }
 
       assert(FunctionOffset <= EndOffset && "overflow error");
