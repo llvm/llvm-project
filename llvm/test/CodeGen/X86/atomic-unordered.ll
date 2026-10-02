@@ -1248,7 +1248,7 @@ define i1 @load_fold_icmp1(ptr %p) {
 ; CHECK-O0-LABEL: load_fold_icmp1:
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
-; CHECK-O0-NEXT:    subq $15, %rax
+; CHECK-O0-NEXT:    cmpq $15, %rax
 ; CHECK-O0-NEXT:    sete %al
 ; CHECK-O0-NEXT:    retq
 ;
@@ -1266,7 +1266,7 @@ define i1 @load_fold_icmp2(ptr %p, i64 %v2) {
 ; CHECK-O0-LABEL: load_fold_icmp2:
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
-; CHECK-O0-NEXT:    subq %rsi, %rax
+; CHECK-O0-NEXT:    cmpq %rsi, %rax
 ; CHECK-O0-NEXT:    sete %al
 ; CHECK-O0-NEXT:    retq
 ;
@@ -1285,14 +1285,14 @@ define i1 @load_fold_icmp3(ptr %p1, ptr %p2) {
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movq (%rdi), %rax
 ; CHECK-O0-NEXT:    movq (%rsi), %rcx
-; CHECK-O0-NEXT:    subq %rcx, %rax
+; CHECK-O0-NEXT:    cmpq %rcx, %rax
 ; CHECK-O0-NEXT:    sete %al
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_fold_icmp3:
 ; CHECK-O3:       # %bb.0:
-; CHECK-O3-NEXT:    movq (%rsi), %rax
-; CHECK-O3-NEXT:    cmpq %rax, (%rdi)
+; CHECK-O3-NEXT:    movq (%rdi), %rax
+; CHECK-O3-NEXT:    cmpq (%rsi), %rax
 ; CHECK-O3-NEXT:    sete %al
 ; CHECK-O3-NEXT:    retq
   %v = load atomic i64, ptr %p1 unordered, align 8

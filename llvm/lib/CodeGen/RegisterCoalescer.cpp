@@ -3326,8 +3326,8 @@ void JoinVals::pruneValues(JoinVals &Other,
           // Also remove dead flags since the joined live range will
           // continue past this instruction.
           for (MachineOperand &MO :
-               Indexes->getInstructionFromIndex(Def)->all_defs()) {
-            if (MO.getReg() == Reg) {
+               mi_bundle_ops(*Indexes->getInstructionFromIndex(Def))) {
+            if (MO.isReg() && MO.isDef() && MO.getReg() == Reg) {
               if (MO.getSubReg() != 0 && MO.isUndef() && !EraseImpDef)
                 MO.setIsUndef(false);
               MO.setIsDead(false);
@@ -3693,6 +3693,10 @@ void RegisterCoalescer::mergeSubRangeInto(LiveInterval &LI,
         }
       },
       *LIS->getSlotIndexes(), *TRI, ComposeSubRegIdx);
+
+  // Merging may leave subranges empty; drop them so the interval is left in a
+  // valid state.
+  LI.removeEmptySubRanges();
 }
 
 bool RegisterCoalescer::isHighCostLiveInterval(LiveInterval &LI) {

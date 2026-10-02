@@ -22,7 +22,7 @@
 
 namespace llvm::omp::target::plugin {
 /// Command submission mode.
-enum class CommandModeTy { Sync = 0, Async, AsyncOrdered, InOrder };
+enum class CommandModeTy { Sync = 0, InOrder };
 
 /// Specialization constants used for a module compilation.
 class SpecConstantsTy {
@@ -72,12 +72,6 @@ struct L0OptionFlagsTy {
 struct L0OptionsTy {
   /// Binary flags.
   L0OptionFlagsTy Flags;
-
-  /// Staging buffer size.
-  size_t StagingBufferSize = L0StagingBufferSize;
-
-  /// Staging buffer count.
-  size_t StagingBufferCount = L0StagingBufferCount;
 
   struct MemPoolConfigTy {
     bool Use;

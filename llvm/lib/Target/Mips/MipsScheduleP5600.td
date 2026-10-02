@@ -563,7 +563,7 @@ def P5600WriteLoadFPU : WriteSequence<[P5600WriteLoadToOtherUnits,
 // ctc1, mtc1, mthc1
 def : InstRW<[P5600WriteMoveGPRToFPU], (instrs CTC1, MTC1, MTC1_D64, MTHC1_D32,
                                         MTHC1_D64, BuildPairF64,
-                                        BuildPairF64_64)>;
+                                        BuildPairF64_64, BuildPairF64_FPR)>;
 
 // copy.[su]_[bhwd]
 def : InstRW<[P5600WriteMoveFPUToGPR], (instregex "^COPY_U_[BHW]$")>;

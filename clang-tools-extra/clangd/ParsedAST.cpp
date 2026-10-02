@@ -83,6 +83,11 @@
 #include "../clang-tidy/ClangTidyForceLinker.h"
 #endif
 
+#if CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS
+#include "../clang-tidy/ClangTidy.h"
+#include <mutex>
+#endif
+
 namespace clang {
 namespace clangd {
 namespace {
@@ -470,6 +475,10 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
         for (const auto &L : ASTListeners)
           L->sawDiagnostic(D, Diag);
       });
+  ASTDiags.setDiagFinalizer([&ASTListeners](clangd::Diag &Diag) {
+    for (const auto &L : ASTListeners)
+      L->finalizeDiagnostic(Diag);
+  });
 
   // Adjust header search options to load the built module files recorded
   // in RequiredModules.
@@ -575,15 +584,30 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
         E.instantiate()->addCheckFactories(*CTFactories);
       return CTFactories;
     }();
-    tidy::ClangTidyCheckFactories FastFactories = filterFastTidyChecks(
-        *AllCTFactories, Cfg.Diagnostics.ClangTidy.FastCheckFilter);
     CTContext.emplace(std::make_unique<tidy::DefaultOptionsProvider>(
-        tidy::ClangTidyGlobalOptions(), ClangTidyOpts));
+                          tidy::ClangTidyGlobalOptions(), ClangTidyOpts),
+                      /*AllowEnablingAnalyzerAlphaCheckers=*/false,
+                      /*EnableModuleHeadersParsing=*/false,
+                      Cfg.Diagnostics.ClangTidy.ExperimentalCustomChecks);
     // The lifetime of DiagnosticOptions is managed by \c Clang.
     CTContext->setDiagnosticsEngine(nullptr, &Clang->getDiagnostics());
     CTContext->setASTContext(&Clang->getASTContext());
     CTContext->setCurrentFile(Filename);
     CTContext->setSelfContainedDiags(true);
+    tidy::ClangTidyCheckFactories CTCheckFactories = *AllCTFactories;
+#if CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS
+    if (CTContext->canExperimentalCustomChecks() &&
+        tidy::custom::RegisterCustomChecks) {
+      // RegisterCustomChecks tracks names in process-wide mutable state.
+      // Serializing its use keeps concurrent AST builds independent.
+      static std::mutex CustomChecksMu;
+      std::lock_guard<std::mutex> Lock(CustomChecksMu);
+      tidy::custom::RegisterCustomChecks(CTContext->getOptions(),
+                                         CTCheckFactories);
+    }
+#endif
+    tidy::ClangTidyCheckFactories FastFactories = filterFastTidyChecks(
+        CTCheckFactories, Cfg.Diagnostics.ClangTidy.FastCheckFilter);
     CTChecks = FastFactories.createChecksForLanguage(&*CTContext);
     Preprocessor *PP = &Clang->getPreprocessor();
     for (const auto &Check : CTChecks) {
@@ -683,6 +707,10 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     }
   }
 
+  // ReplayPreamble must capture callbacks installed by feature modules.
+  for (const auto &L : ASTListeners)
+    L->beforePPCallbacks(*Clang);
+
   IncludeStructure Includes;
   include_cleaner::PragmaIncludes PI;
   // If we are using a preamble, copy existing includes.
@@ -752,6 +780,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     trace::Span Tracer("ClangTidyMatch");
     CTFinder.matchAST(Clang->getASTContext());
   }
+  for (const auto &L : ASTListeners)
+    L->afterExecute(*Clang);
 
   // XXX: This is messy: clang-tidy checks flush some diagnostics at EOF.
   // However Action->EndSourceFile() would destroy the ASTContext!

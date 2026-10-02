@@ -74,7 +74,6 @@ private:
   void printRsrcReg(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
 
-  void printRegOperand(MCRegister Reg, raw_ostream &O);
   void printVOPDst(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
   void printVINTRPDst(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
@@ -207,30 +206,6 @@ public:
 
 protected:
   void printOModSI(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                   raw_ostream &O);
-  void printLiteral(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                    raw_ostream &O);
-  void printLast(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                 raw_ostream &O);
-  void printNeg(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                raw_ostream &O);
-  void printOMOD(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                 raw_ostream &O);
-  void printRel(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                raw_ostream &O);
-  void printUpdateExecMask(const MCInst *MI, unsigned OpNo,
-                           const MCSubtargetInfo &STI, raw_ostream &O);
-  void printUpdatePred(const MCInst *MI, unsigned OpNo,
-                       const MCSubtargetInfo &STI, raw_ostream &O);
-  void printWrite(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                  raw_ostream &O);
-  void printBankSwizzle(const MCInst *MI, unsigned OpNo,
-                        const MCSubtargetInfo &STI, raw_ostream &O);
-  void printRSel(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                 raw_ostream &O);
-  void printCT(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-               raw_ostream &O);
-  void printKCache(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
   void printSendMsg(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
