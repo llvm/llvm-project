@@ -478,6 +478,30 @@ func.func @no_hoist_parallel(
 
 // -----
 
+// CHECK-LABEL: func @no_hoist_affine_parallel
+func.func @no_hoist_affine_parallel(%out: memref<2xindex>) {
+  %c0 = arith.constant 0 : index
+  affine.parallel (%i) = (0) to (2) {
+    %buffer = memref.alloc() : memref<1xindex>
+    memref.store %i, %buffer[%c0] : memref<1xindex>
+    %value = memref.load %buffer[%c0] : memref<1xindex>
+    memref.store %value, %out[%i] : memref<2xindex>
+  }
+  return
+}
+
+//  CHECK-NOT: memref.alloc
+//      CHECK: affine.parallel
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+// CHECK-NEXT: %[[VALUE:.*]] = memref.load %[[ALLOC]]
+// CHECK-NEXT: memref.store %[[VALUE]]
+//  CHECK-NOT: memref.alloc
+//      CHECK: return
+// CHECK-NEXT: }
+
+// -----
+
 func.func @no_hoist_forall(
     %lb: index,
     %ub: index,

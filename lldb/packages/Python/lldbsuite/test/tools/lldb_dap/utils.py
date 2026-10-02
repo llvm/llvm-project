@@ -832,7 +832,9 @@ class _SocketTransport:
             self._writer.flush()
 
         if self._socket.fileno() != -1:
-            self._socket.shutdown(socket.SHUT_RDWR)
+            # Fails if the adapter has already closed the connection.
+            with contextlib.suppress(OSError):
+                self._socket.shutdown(socket.SHUT_RDWR)
 
         self._writer.close()
         self._socket.close()
