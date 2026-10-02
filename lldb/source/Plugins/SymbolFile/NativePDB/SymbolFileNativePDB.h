@@ -144,19 +144,18 @@ public:
   /// are routed through ResolveFunctionCallLabel.
   ///
   /// \param id A symbol ID of a S_LPROC32/S_GPROC32 record
-  /// \returns The label, if \p id is a function.
-  std::optional<std::string> GetFunctionCallLabel(PdbCompilandSymId id);
+  /// \returns The label, or an empty string if \p id is not a function.
+  std::string GetFunctionCallLabel(PdbCompilandSymId id);
 
   /// Build the asm label for a method that was declared in the field list of
   /// its class.
   ///
   /// \param method_type The type of the method in the field list.
   /// \param qualified_name The name of the method including its class.
-  /// \returns The label of the definition of the method, if the method is
-  /// defined in this module.
-  std::optional<std::string>
-  GetMethodCallLabel(llvm::codeview::TypeIndex method_type,
-                     llvm::StringRef qualified_name);
+  /// \returns The label of the definition of the method, or an empty string
+  /// if the method is not defined in this module.
+  std::string GetMethodCallLabel(llvm::codeview::TypeIndex method_type,
+                                 llvm::StringRef qualified_name);
 
   llvm::Expected<SymbolContext>
   ResolveFunctionCallLabel(FunctionCallLabel &label) override;
@@ -308,8 +307,7 @@ private:
   llvm::StringRef StripMangledFunctionName(llvm::StringRef mangled,
                                            PdbTypeSymId func_ty);
 
-  std::optional<std::string> MakeFunctionCallLabel(PdbSymUid uid,
-                                                   llvm::StringRef lookup_name);
+  std::string MakeFunctionCallLabel(PdbSymUid uid, llvm::StringRef lookup_name);
 
   /// Find the S_GPROC32/S_LPROC32 record named \p qualified_name whose type is
   /// \p method_type.
