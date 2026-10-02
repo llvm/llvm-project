@@ -1198,6 +1198,30 @@ TEST_F(ValueTrackingTest, isGuaranteedNotToBePoison_phi) {
   }
 }
 
+TEST_F(ValueTrackingTest, isGuaranteedNotToBePoison_ZExt_NNeg) {
+  {
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+
+  define i64 @test(i32 %X, i32 %Y) {
+    %res = icmp sge i32 %X, 0
+    call void @llvm.assume(i1 %res)
+
+    %ExtendX = zext nneg i32 %X to i64
+    %ExtendY = zext nneg i32 %Y to i64
+    ret i64 %ExtendY
+  })");
+    auto *F = M->getFunction("test");
+    auto *ExtendX = &findInstructionByName(F, "ExtendX");
+    auto *ExtendY = &findInstructionByName(F, "ExtendY");
+    AssumptionCache AC(*F);
+    SimplifyQuery SQ(M->getDataLayout(), /*DT=*/nullptr, &AC, /*CtxI=*/ExtendY);
+
+    EXPECT_TRUE(isGuaranteedNotToBePoison(ExtendX, SQ.AC, SQ.CtxI, SQ.DT));
+    EXPECT_FALSE(isGuaranteedNotToBePoison(ExtendY, SQ.AC, SQ.CtxI, SQ.DT));
+  }
+}
+
 TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison) {
   parseAssembly("declare void @f(i32 noundef)"
                 "define void @test(i32 %x) {\n"
