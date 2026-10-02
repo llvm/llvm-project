@@ -30,6 +30,12 @@ llvm_config.with_environment("PATH", test_tools_dir, append_path=True)
 
 llvm_config.use_default_substitutions()
 
+# split-file is required, like FileCheck and not: it's an LLVM utility, so it
+# is available wherever they are.
+llvm_config.add_tool_substitutions(
+    [ToolSubst("split-file", unresolved="fatal")], [config.llvm_tools_dir]
+)
+
 # %{obj-jit} runs JIT-loaded object files under ogre, with llvm-jitlink as the
 # controller. Tests that use it must be gated on the llvm-jitlink feature.
 ogre = os.path.join(config.orc_rt_obj_root, "tools", "ogre", "ogre")
@@ -82,14 +88,6 @@ if llvm_mc:
         )
     )
 
-# split-file splits a test into several files, e.g. so that a test can build
-# and link more than one object. Tests that use it must be gated on the
-# split-file feature.
-split_file = llvm_config.use_llvm_tool("split-file")
-if split_file:
-    config.available_features.add("split-file")
-    llvm_config.add_tool_substitutions([ToolSubst("split-file", command=split_file)])
-
 # Describe the runtime's target architecture and object format, so that object
 # format tests can gate on them:
 #   target-arch=<arch>             (arm64 and aarch64 are aliases)
@@ -135,6 +133,13 @@ def run_test_tool(name, *args):
         )
     return out
 
+
+def normalise_machine(machine):
+    arch = machine.lower()
+    return {
+        "amd64": "x86_64",
+        "x64": "x86_64",
+    }.get(arch, arch)
 
 # Probe the compiled-in logging configuration from orc-rt-log-check and
 # expose it as lit features, so logging tests can gate on the build's backend
@@ -192,7 +197,7 @@ config.substitutions.append(("%target-arch", config.target_triple.split("-")[0])
 config.substitutions.append(("%host-page-size", str(mmap.PAGESIZE)))
 
 # Add host OS and arch substitutions for host-detection tests.
-config.substitutions.append(("%host-arch", platform.machine()))
+config.substitutions.append(("%host-arch", normalise_machine(platform.machine())))
 if platform.system() == "Darwin":
     config.substitutions.append(("%host-os", "macosx"))
 else:

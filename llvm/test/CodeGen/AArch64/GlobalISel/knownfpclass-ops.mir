@@ -108,6 +108,20 @@ body:             |
     %copy:_(s32) = COPY %trunc
 ...
 ---
+# f0x35800000 is 0x1p-20, which is normal in f32 and subnormal in f16.
+# RoundingMode::NearestTiesToEven is encoded as 1 in MIR.
+name:            CstPosNormalFPTruncRound
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @CstPosNormalFPTruncRound
+  ; CHECK-NEXT: %src:_ FPClasses:(pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %trunc:_ FPClasses:(pinf zero psub pnorm) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(pinf zero psub pnorm) SignBitKnown:?
+    %src:_(s32) = G_FCONSTANT float f0x35800000
+    %trunc:_(s16) = G_INTRINSIC_FPTRUNC_ROUND %src, 1
+    %copy:_(s16) = COPY %trunc
+...
+---
 name:            CstVecZeroFPTrunc
 body:             |
   bb.0:

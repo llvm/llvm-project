@@ -514,6 +514,9 @@ Interpreter::createWithDevice(OffloadType Type,
   if (llvm::Error E = ExecuteIncrementalAction(*DCI, *Interp->DeviceAct))
     return std::move(E);
 
+  // Set the finalized initial device module aside, as the host path does.
+  Interp->DeviceAct->CacheCodeGenModule();
+
   Interp->DeviceCI = std::move(DCI);
 
   if (Type == OffloadType::HIP) {
@@ -576,7 +579,12 @@ Interpreter::Parse(llvm::StringRef Code) {
 
     DeviceParser->RegisterPTU(*DeviceTU);
 
-    if (llvm::Error Err = DeviceParser->GenerateOffloadBinary())
+    llvm::Expected<llvm::StringRef> PTX = DeviceParser->GeneratePTX();
+    if (!PTX)
+      return PTX.takeError();
+
+    llvm::Error Err = DeviceParser->GenerateFatbinary();
+    if (Err)
       return std::move(Err);
   }
 

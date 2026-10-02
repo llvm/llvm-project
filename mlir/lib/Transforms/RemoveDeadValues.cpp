@@ -259,7 +259,8 @@ static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
 }
 
 /// Process a function-like operation `funcOp` using the liveness analysis `la`
-/// and `symbolUserMap`. If it is not public or external:
+/// and `symbolUserMap`. If it is not public or external and all users are
+/// visible:
 ///   (1) Adding its non-live arguments to a list for future removal.
 ///   (2) Marking their corresponding operands in its callers for removal.
 ///   (3) Identifying and enqueueing unnecessary terminator operands
@@ -275,8 +276,10 @@ static void processFuncOp(FunctionOpInterface funcOp,
   LDBG() << "Processing function op: "
          << OpWithFlags(funcOp,
                         OpPrintingFlags().skipRegions().printGenericOpForm());
-  if (funcOp.isPublic() || funcOp.isExternal()) {
-    LDBG() << "Function is public or external, skipping: "
+  // Preserve the signature if callers may exist outside the pass root.
+  if (funcOp.isPublic() || funcOp.isExternal() ||
+      !symbolUserMap.areAllUsesVisible(funcOp)) {
+    LDBG() << "Function is public, external, or has unknown users, skipping: "
            << funcOp.getOperation()->getName();
     return;
   }

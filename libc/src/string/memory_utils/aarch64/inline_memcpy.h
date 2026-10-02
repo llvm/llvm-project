@@ -10,6 +10,7 @@
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/properties/cpu_features.h"
+#include "src/string/memory_utils/generic/aligned_access.h"
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/utils.h"
 
@@ -62,9 +63,25 @@ inline_memcpy_aarch64(Ptr __restrict dst, CPtr __restrict src, size_t count) {
     return builtin::Memcpy<32>::head_tail(dst, src, count);
   if (count < 128)
     return builtin::Memcpy<64>::head_tail(dst, src, count);
+#if !defined(__ARM_FEATURE_UNALIGNED)
+  // When unaligned access is disabled (-mstrict-align), align_to_next_boundary
+  // below only aligns `src`. Because `dst` has type `cpp::byte*`, LLVM cannot
+  // statically prove that `dst` is aligned to more than 1 byte. Under strict
+  // alignment, this forces the compiler to lower the bulk copy loop to
+  // single-byte load and store instructions to prevent unaligned access faults,
+  // causing severe performance degradation.
+  //
+  // Instead, use inline_memcpy_aligned_access_64bit which explicitly aligns
+  // `dst` to an 8-byte boundary so 64-bit word stores can be safely used.
+  return inline_memcpy_aligned_access_64bit(dst, src, count);
+#else
+  // When hardware unaligned access is supported, aligning only `src` maximizes
+  // streaming read throughput while hardware handles unaligned vector stores to
+  // `dst` at full speed.
   builtin::Memcpy<16>::block(dst, src);
   align_to_next_boundary<16, Arg::Src>(dst, src, count);
   return builtin::Memcpy<64>::loop_and_tail(dst, src, count);
+#endif
 }
 
 } // namespace LIBC_NAMESPACE_DECL
