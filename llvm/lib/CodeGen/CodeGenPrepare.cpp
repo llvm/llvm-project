@@ -4390,25 +4390,25 @@ private:
       return nullptr;
     }
 
-    // Now we'd like to match New Phi nodes to existed ones.
-    unsigned PhiNotMatchedCount = 0;
-    if (!MatchPhiSet(ST, AddrSinkNewPhis, PhiNotMatchedCount)) {
+    // New nodes are inserted at the original phis and selects, but the matcher
+    // only guarantees that combined fields dominate the memory instruction
+    // (e.g. a reused IV increment). Give up if a new node uses a value that
+    // does not dominate the use. Check before MatchPhiSet, which stops tracking
+    // the new phis it keeps.
+    const DominatorTree &DT = getDTFn();
+    auto UsesAreDominated = [&DT](const Instruction *I) {
+      return all_of(I->operands(),
+                    [&DT](const Use &U) { return DT.dominates(U.get(), U); });
+    };
+    if (!all_of(ST.newPhiNodes(), UsesAreDominated) ||
+        !all_of(ST.newSelectNodes(), UsesAreDominated)) {
       ST.destroyNewNodes(CommonType);
       return nullptr;
     }
 
-    // New selects are inserted at the original selects, but the matcher only
-    // guarantees that combined fields dominate the memory instruction (e.g. a
-    // reused IV increment). Give up if a new select uses a value that does not
-    // dominate it.
-    const DominatorTree &DT = getDTFn();
-    bool ValidSelects =
-        all_of(ST.newSelectNodes(), [&DT](const SelectInst *SI) {
-          return all_of(SI->operands(), [&DT, SI](const Value *Op) {
-            return DT.dominates(Op, SI);
-          });
-        });
-    if (!ValidSelects) {
+    // Now we'd like to match New Phi nodes to existed ones.
+    unsigned PhiNotMatchedCount = 0;
+    if (!MatchPhiSet(ST, AddrSinkNewPhis, PhiNotMatchedCount)) {
       ST.destroyNewNodes(CommonType);
       return nullptr;
     }
