@@ -296,6 +296,8 @@ features cannot lower the translation-unit ABI level;
 
 - Clang now recognizes the `[[gnu::flag_enum]]` attribute and treats it equivalent to `[[clang::flag_enum]]`
 
+- Clang now accepts `_single_inheritance` under `-fms-compatibility` as an alias for `__single_inheritance`; `_multiple_inheritance` and `_virtual_inheritance` were already correctly supported as aliases.
+
 ### Improvements to Clang's diagnostics
 
 - `-Wfortify-source` now diagnoses when `strlcat`, `__builtin_strlcat`, `strlcpy`, or
@@ -480,6 +482,9 @@ features cannot lower the translation-unit ABI level;
 - Diagnostics for the C++11 range-based for statement now report the correct
   iterator type in notes for invalid iterator types.
 
+- `-Wfortify-source` now diagnoses calls to `fread`, `fwrite`, and `fgets`
+  when the requested size exceeds the corresponding buffer. (#GH204337)
+
 - `-Wfortify-source` now warns when the constant-evaluated argument to
   `umask` has bits set outside `0777`. Those bits are silently discarded
   by the kernel, so setting them is almost always a typo (matching the
@@ -579,6 +584,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed a bug where a bit-field accessed as the result of a statement expression
   (e.g. `({ s.b; })`) was not subject to integer promotion, unlike an ordinary
   bit-field access. (#GH221542)
+- No longer crashing due to follow-on diagnostics when there is an invalid operand in a logical operator involving a vector operand. (#GH227588)
+- Fixed a crash due to typo correction mishandling custom keywords `_virtual_inheritance` and `_multiple_inheritance` in `-fms-compatibility` mode. (#GH228003)
   
 #### Bug Fixes to Compiler Builtins
 
@@ -616,9 +623,6 @@ features cannot lower the translation-unit ABI level;
   rather than to a declarator chunk. (#GH196982, #GH111463)
 
 #### Bug Fixes to C++ Support
-
-- Fixed a stack overflow crash when evaluating deeply recursive `constexpr`
-  function calls. (#GH201418, #GH200673)
 
 - Fixed lambdas with specifiers or attributes after the capture list being
   misparsed as function declarations in direct-initialization contexts under
@@ -800,6 +804,11 @@ features cannot lower the translation-unit ABI level;
   take effect, causing them to be dropped from llvm.used and omitted from
   the object file. (#GH226572)
 
+- Fixed an assertion failure when the initializer of a variable template
+  specialization with a deduced type is instantiated from inside a lambda in
+  the initializer of another specialization of the same variable template.
+  (#GH134148)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -829,6 +838,10 @@ features cannot lower the translation-unit ABI level;
   that was inherited from a different declarator, for example when
   ``__typeof__`` resolves to the type of another, already-processed
   declaration. (#GH217489)
+- Fixed a crash when the constant evaluator default-constructed or copied a
+  very large array, such as a local ``T s[0xFFFFFFFF][0]`` of an empty class
+  ``T``. Such evaluations now fail once the element count exceeds the
+  ``-fconstexpr-steps`` limit, as they already did for ``new``. (#GH173728)
 - Fixed an assertion failure when instantiating a block that captures
   `this` via a member access through a dependent base class.
 - Fixed `DiagnoseUnguardedAvailability::TraverseIfStmt` dereferencing a nullptr
@@ -937,6 +950,8 @@ features cannot lower the translation-unit ABI level;
 - Added `--cuda-emit-nvcc-abi` to emit the NVCC-compatible host registration ABI
   (`__cudaRegisterLinkedBinary`).
 
+- Fixed CUDA built-in variables such as `threadIdx` and `blockDim` being incorrectly treated as having side effects in assumptions. (#GH181340)
+
 - Clang now provides device-side definitions of `__cxa_pure_virtual()` and
   `__cxa_deleted_virtual()`; previously, any (potential) call to a pure/deleted
   virtual function that could not be optimised out would cause the program to
@@ -983,6 +998,7 @@ features cannot lower the translation-unit ABI level;
 ### libclang
 
 - visit identifier initializers in lambda capture as VarDecl instead of VariableRef. Warning: this changes behaviour.
+- add unary operator handling to `clang_getCursorSpelling()`.
 
 ### Code Completion
 
@@ -1031,9 +1047,12 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   register word so the return value is correctly extended, working around a
   `ctypes` bug (https://github.com/python/cpython/issues/156933) that left the
   high bytes of the return register uninitialized.
+- Add support for retrieving unary operator information through `Cursor.unary_operator()`.
 
 ### OpenMP Support
 
+- Fixed an OpenMP `requires` directive read from a PCH or module losing its effect on
+  semantic checks, which caused spurious `reverse_offload` errors.
 - Added the OpenMP 6.1 `#pragma omp flatten` loop transformation and the
   `depth` clause. Flatten combines perfectly nested canonical loops into one
   loop. `depth(k)` selects how many outermost loops to combine (default 2).

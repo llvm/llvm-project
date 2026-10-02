@@ -5,6 +5,7 @@
 # LLVM libc project.
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_python//python:defs.bzl", "py_binary")
 load(
@@ -280,21 +281,27 @@ STATIC_HEADERS = glob(
     ],
 ) + ["include/__llvm-libc-common.h"]
 
-genrule(
+[
+    copy_file(
+        name = "copy_staging/" + f,
+        src = f,
+        out = "staging/" + f,
+    )
+    for f in STATIC_HEADERS
+]
+
+filegroup(
     name = "copy_llvm_libc_static_headers",
-    srcs = STATIC_HEADERS,
-    outs = ["staging/" + f for f in STATIC_HEADERS],
-    cmd = """srcs=($(SRCS))\n outs=($(OUTS))\n for i in "$${!srcs[@]}"; do cp "$${srcs[$$i]}" "$${outs[$$i]}"; done""",
+    srcs = ["staging/" + f for f in STATIC_HEADERS],
 )
 
-genrule(
+copy_file(
     name = "copy_modular_format_header",
-    srcs = select({
-        ":modular_format_enable": ["include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h"],
-        "//conditions:default": ["include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF-disable.h"],
+    src = select({
+        ":modular_format_enable": "include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h",
+        "//conditions:default": "include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF-disable.h",
     }),
-    outs = ["staging/include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h"],
-    cmd = "cp $< $@",
+    out = "staging/include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h",
 )
 
 STATIC_AND_CONDITIONAL_HEADERS = STATIC_HEADERS + ["include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h"]
@@ -1050,9 +1057,7 @@ libc_support_library(
 libc_support_library(
     name = "hdr_elf_proxy",
     hdrs = ["hdr/elf_proxy.h"],
-    deps = [
-        ":include_llvm-libc-proxy_elf_proxy_h",
-    ],
+    textual_hdrs = [":include_llvm-libc-proxy_elf_proxy_h"],
 )
 
 libc_support_library(

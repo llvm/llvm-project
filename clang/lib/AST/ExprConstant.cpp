@@ -50,12 +50,12 @@
 #include "clang/AST/OSLog.h"
 #include "clang/AST/OptionalDiagnostic.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/Reflection.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
-#include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APFixedPoint.h"
@@ -785,10 +785,6 @@ namespace {
     /// initialized after CurrentCall and CallStackDepth.
     CallStackFrame BottomFrame;
 
-    /// Runs recursive constexpr function calls on a fresh stack when needed
-    /// and emits at most one stack exhaustion warning per evaluation.
-    StackExhaustionHandler StackHandler;
-
     /// A stack of values whose lifetimes end at the end of some surrounding
     /// evaluation frame.
     llvm::SmallVector<Cleanup, 16> CleanupStack;
@@ -892,7 +888,6 @@ namespace {
           BottomFrame(*this, SourceLocation(), /*Callee=*/nullptr,
                       /*This=*/nullptr,
                       /*CallExpr=*/nullptr, CallRef()),
-          StackHandler(C.getDiagnostics()),
           EvaluatingDecl((const ValueDecl *)nullptr),
           EvaluatingDeclValue(nullptr) {
       EvalMode = Mode;
@@ -984,13 +979,6 @@ namespace {
       }
       --StepsLeft;
       return true;
-    }
-
-    bool runWithSufficientStackSpace(SourceLocation Loc,
-                                     llvm::function_ref<bool()> Fn) {
-      bool Result = false;
-      StackHandler.runWithSufficientStackSpace(Loc, [&] { Result = Fn(); });
-      return Result;
     }
 
     APValue *createHeapAlloc(const Expr *E, QualType T, LValue &LV);
@@ -2629,6 +2617,7 @@ static bool HandleConversionToBool(const APValue &Val, bool &Result) {
   case APValue::Struct:
   case APValue::Union:
   case APValue::AddrLabelDiff:
+  case APValue::Reflection:
     return false;
   }
 
@@ -7151,12 +7140,12 @@ static bool handleTrivialCopy(EvalInfo &Info, const ParmVarDecl *Param,
 }
 
 /// Evaluate a function call.
-static bool HandleFunctionCallImpl(SourceLocation CallLoc,
-                                   const FunctionDecl *Callee,
-                                   const LValue *ObjectArg, const Expr *E,
-                                   ArrayRef<const Expr *> Args, CallRef Call,
-                                   const Stmt *Body, EvalInfo &Info,
-                                   APValue &Result, const LValue *ResultSlot) {
+static bool HandleFunctionCall(SourceLocation CallLoc,
+                               const FunctionDecl *Callee,
+                               const LValue *ObjectArg, const Expr *E,
+                               ArrayRef<const Expr *> Args, CallRef Call,
+                               const Stmt *Body, EvalInfo &Info,
+                               APValue &Result, const LValue *ResultSlot) {
   if (!Info.CheckCallLimit(CallLoc))
     return false;
 
@@ -7215,18 +7204,6 @@ static bool HandleFunctionCallImpl(SourceLocation CallLoc,
     Info.FFDiag(Callee->getEndLoc(), diag::note_constexpr_no_return);
   }
   return ESR == ESR_Returned;
-}
-
-static bool HandleFunctionCall(SourceLocation CallLoc,
-                               const FunctionDecl *Callee,
-                               const LValue *ObjectArg, const Expr *E,
-                               ArrayRef<const Expr *> Args, CallRef Call,
-                               const Stmt *Body, EvalInfo &Info,
-                               APValue &Result, const LValue *ResultSlot) {
-  return Info.runWithSufficientStackSpace(CallLoc, [&] {
-    return HandleFunctionCallImpl(CallLoc, Callee, ObjectArg, E, Args, Call,
-                                  Body, Info, Result, ResultSlot);
-  });
 }
 
 static bool HandleConstructorCall(const Expr *E, const LValue &This,
@@ -8003,7 +7980,8 @@ class APValueToBufferConverter {
     case APValue::Matrix:
     case APValue::Union:
     case APValue::MemberPointer:
-    case APValue::AddrLabelDiff: {
+    case APValue::AddrLabelDiff:
+    case APValue::Reflection: {
       Info.FFDiag(BCE->getBeginLoc(),
                   diag::note_constexpr_bit_cast_unsupported_type)
           << Ty;
@@ -11248,6 +11226,59 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
 
   return true;
 }
+
+//===----------------------------------------------------------------------===//
+// Reflection expression evaluation
+//===----------------------------------------------------------------------===//
+
+namespace {
+class ReflectionEvaluator : public ExprEvaluatorBase<ReflectionEvaluator> {
+
+  using BaseType = ExprEvaluatorBase<ReflectionEvaluator>;
+
+  APValue &Result;
+
+public:
+  ReflectionEvaluator(EvalInfo &E, APValue &Result)
+      : ExprEvaluatorBaseTy(E), Result(Result) {}
+
+  bool Success(const APValue &V, const Expr *E) {
+    Result = V;
+    return true;
+  }
+
+  bool VisitCXXReflectExpr(const CXXReflectExpr *E);
+  bool ZeroInitialization(const Expr *E);
+};
+
+bool ReflectionEvaluator::VisitCXXReflectExpr(const CXXReflectExpr *E) {
+  switch (E->getKind()) {
+  case ReflectionKind::Null: {
+    assert(false && "null reflection can't be constructed from parsing a "
+                    "reflection operand");
+    return false;
+  }
+  case ReflectionKind::Type: {
+    APValue ReflectionValue(ReflectionKind::Type, E->getOpaqueValue());
+    return Success(ReflectionValue, E);
+  }
+  }
+  assert(false && "unknown or unimplemented reflection entities");
+  return false;
+}
+
+bool ReflectionEvaluator::ZeroInitialization(const Expr *E) {
+  Result = APValue(ReflectionKind::Null, /*Operand=*/nullptr);
+  return true;
+}
+
+} // end anonymous namespace
+
+static bool EvaluateReflection(const Expr *E, APValue &Result, EvalInfo &Info) {
+  assert(E->isPRValue() && E->getType()->isMetaInfoType());
+  return ReflectionEvaluator(Info, Result).Visit(E);
+}
+
 //===----------------------------------------------------------------------===//
 // Member Pointer Evaluation
 //===----------------------------------------------------------------------===//
@@ -15855,6 +15886,8 @@ bool ArrayExprEvaluator::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
     return false;
 
   auto *CAT = cast<ConstantArrayType>(E->getType()->castAsArrayTypeUnsafe());
+  if (!CheckArraySize(Info, CAT, E->getExprLoc()))
+    return false;
 
   uint64_t Elements = CAT->getZExtSize();
   Result = APValue(APValue::UninitArray(), Elements, Elements);
@@ -15901,6 +15934,8 @@ bool ArrayExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E,
   bool HadZeroInit = Value->hasValue();
 
   if (const ConstantArrayType *CAT = Info.Ctx.getAsConstantArrayType(Type)) {
+    if (!CheckArraySize(Info, CAT, E->getExprLoc()))
+      return false;
     unsigned FinalSize = CAT->getZExtSize();
 
     // Preserve the array filler if we had prior zero-initialization.
@@ -16393,6 +16428,7 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
 #include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/SPIRVTypes.def"
+    case BuiltinType::MetaInfo:
       return GCCTypeClass::None;
 
     case BuiltinType::Dependent:
@@ -19526,6 +19562,23 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     return Success(CmpResult::Equal, E);
   }
 
+  if (LHSTy->isMetaInfoType() && RHSTy->isMetaInfoType()) {
+    APValue LHSValue, RHSValue;
+    llvm::FoldingSetNodeID LID, RID;
+    if (!Evaluate(LHSValue, Info, E->getLHS()))
+      return false;
+    LHSValue.Profile(LID);
+
+    if (!Evaluate(RHSValue, Info, E->getRHS()))
+      return false;
+    RHSValue.Profile(RID);
+
+    if (LID == RID)
+      return Success(CmpResult::Equal, E);
+    else
+      return Success(CmpResult::Unequal, E);
+  }
+
   return DoAfter();
 }
 
@@ -21719,6 +21772,9 @@ static bool Evaluate(APValue &Result, EvalInfo &Info, const Expr *E) {
       return false;
   } else if (T->isIntegralOrEnumerationType()) {
     if (!IntExprEvaluator(Info, Result).Visit(E))
+      return false;
+  } else if (T->isMetaInfoType()) {
+    if (!EvaluateReflection(E, Result, Info))
       return false;
   } else if (T->hasPointerRepresentation()) {
     LValue LV;
