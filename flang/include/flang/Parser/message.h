@@ -113,9 +113,9 @@ constexpr MessageFixedText operator""_en_US(const char str[], std::size_t n) {
 
 // The construction of a MessageFormattedText uses a MessageFixedText
 // as a vsnprintf() formatting string that is applied to the
-// following arguments.  CharBlock, std::string, and std::string_view
-// argument values are also supported; they are automatically converted
-// into char pointers that are suitable for '%s' formatting.
+// following arguments.  CharBlock, std::string, std::string_view, and
+// llvm::StringRef argument values are also supported; they are automatically
+// converted into char pointers that are suitable for '%s' formatting.
 class MessageFormattedText {
 public:
   template <typename... A>
