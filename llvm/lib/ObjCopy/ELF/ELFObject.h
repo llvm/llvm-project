@@ -891,6 +891,8 @@ public:
   StringRef getNamePrefix() const;
 
   static bool classof(const SectionBase *S) {
+    if (S->OriginalFlags & ELF::SHF_COMPRESSED)
+      return false;
     return is_contained({ELF::SHT_REL, ELF::SHT_RELA, ELF::SHT_CREL},
                         S->OriginalType);
   }
