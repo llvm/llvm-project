@@ -4947,12 +4947,12 @@ struct ExtendedReductionOperand {
   ReductionExtend ExtendA, ExtendB;
 };
 
-/// A collection of recipes that form a partial reduction. Matches either
+/// A collection of recipes that describe a partial reduction. Matches either
 ///   reduction_bin_op (extended op, accumulator), or
 ///   reduction_bin_op (accumulator, extended op).
 /// The possible forms of the "extended op" are listed in
 /// matchExtendedReductionOperand.
-struct VPPartialReduction {
+struct PartialReductionDescriptor {
   /// The top-level binary operation that forms the reduction to a scalar
   /// after the loop body.
   VPWidenRecipe *ReductionBinOp = nullptr;
@@ -5123,9 +5123,9 @@ createPartialReductionExpression(VPReductionRecipe *Red) {
   llvm_unreachable("Unsupported expression");
 }
 
-// Helper to transform a VPPartialReduction into a partial reduction recipe.
-// Assumes profitability has been checked.
-static void transformToPartialReduction(const VPPartialReduction &Link,
+// Helper to transform a PartialReductionDescriptor into a partial reduction
+// recipe. Assumes profitability has been checked.
+static void transformToPartialReduction(const PartialReductionDescriptor &Link,
                                         VPlan &Plan,
                                         VPReductionPHIRecipe *RdxPhi) {
   VPWidenRecipe *WidenRecipe = Link.ReductionBinOp;
@@ -5274,7 +5274,8 @@ static void transformToPartialReduction(const VPPartialReduction &Link,
 /// Returns the cost of a link in a partial-reduction chain for a given VF.
 static InstructionCost
 getPartialReductionLinkCost(VPCostContext &CostCtx,
-                            const VPPartialReduction &Link, ElementCount VF) {
+                            const PartialReductionDescriptor &Link,
+                            ElementCount VF) {
   Type *RdxType = Link.ReductionBinOp->getScalarType();
   const ExtendedReductionOperand &ExtendedOp = Link.ExtendedOp;
   std::optional<unsigned> BinOpc = std::nullopt;
@@ -5424,8 +5425,8 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
 /// Examines each operation in the reduction chain corresponding to \p RedPhiR,
 /// and determines if the target can use a cheaper operation with a wider
 /// per-iteration input VF and narrower PHI VF. If successful, returns the chain
-/// of operations in the reduction.
-static std::optional<SmallVector<VPPartialReduction>>
+/// of partial reduction descriptors (that are links in the reduction chain).
+static std::optional<SmallVector<PartialReductionDescriptor>>
 getScaledReductionChain(VPReductionPHIRecipe *RedPhiR) {
   // Get the backedge value from the reduction PHI and find the
   // ComputeReductionResult that uses it (directly or through a select for
@@ -5436,7 +5437,7 @@ getScaledReductionChain(VPReductionPHIRecipe *RedPhiR) {
   VPValue *ExitValue = RdxResult->getOperand(0);
   match(ExitValue, m_Select(m_VPValue(), m_VPValue(ExitValue), m_VPValue()));
 
-  SmallVector<VPPartialReduction> Chain;
+  SmallVector<PartialReductionDescriptor> Chain;
   RecurKind RK = RedPhiR->getRecurrenceKind();
   Type *PhiType = RedPhiR->getScalarType();
   TypeSize PHISize = PhiType->getPrimitiveSizeInBits();
@@ -5487,7 +5488,7 @@ getScaledReductionChain(VPReductionPHIRecipe *RedPhiR) {
     if (!PHISize.hasKnownScalarFactor(ExtSrcSize))
       return std::nullopt;
 
-    VPPartialReduction Link(
+    PartialReductionDescriptor Link(
         {UpdateR, *ExtendedOp, RK,
          PrevValue == UpdateR->getOperand(0) ? 0U : 1U,
          static_cast<unsigned>(PHISize.getKnownScalarFactor(ExtSrcSize)),
@@ -5509,14 +5510,15 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
   // Find all possible valid partial reductions, grouping chains by their PHI.
   // This grouping allows invalidating the whole chain, if any link is not a
   // valid partial reduction.
-  MapVector<VPReductionPHIRecipe *, SmallVector<VPPartialReduction>>
-      ChainsByPhi;
+  MapVector<VPReductionPHIRecipe *, SmallVector<PartialReductionDescriptor>>
+      PhiToChain;
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  SmallVector<VPReductionPHIRecipe *, 4> UnorderedReductions;
   SmallVector<VPReductionPHIRecipe *, 4> UnorderedReductions;
   for (VPReductionPHIRecipe &RedPhiR :
        make_isa_range<VPReductionPHIRecipe>(HeaderVPBB->phis())) {
     if (auto Chain = getScaledReductionChain(&RedPhiR))
-      ChainsByPhi.try_emplace(&RedPhiR, std::move(*Chain));
+      PhiToChain.try_emplace(&RedPhiR, std::move(*Chain));
     else if (UsePartialReductionsByDefault &&
              (RedPhiR.getRecurrenceKind() == RecurKind::Add ||
               (RedPhiR.getRecurrenceKind() == RecurKind::FAdd &&
@@ -5565,7 +5567,7 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
     Backedge->eraseFromParent();
   }
 
-  if (ChainsByPhi.empty())
+  if (PhiToChain.empty())
     return;
 
   // Build set of partial reduction operations and blends for user validation
@@ -5573,8 +5575,8 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
   SmallPtrSet<VPRecipeBase *, 4> PartialReductionOps;
   SmallPtrSet<VPBlendRecipe *, 4> PartialReductionBlends;
   DenseMap<VPSingleDefRecipe *, unsigned> ScaledReductionMap;
-  for (const auto &[_, Chain] : ChainsByPhi)
-    for (const VPPartialReduction &Link : Chain) {
+  for (auto &[_, Chain] : PhiToChain)
+    for (const PartialReductionDescriptor &Link : Chain) {
       PartialReductionOps.insert(Link.ExtendedOp.ExtendsUser);
       if (Link.Blend)
         PartialReductionBlends.insert(Link.Blend);
@@ -5591,13 +5593,13 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
   };
 
   auto IsProfitablePartialReductionChainForVF =
-      [&](ArrayRef<VPPartialReduction> Chain, ElementCount VF) -> bool {
+      [&](ArrayRef<PartialReductionDescriptor> Chain, ElementCount VF) -> bool {
     InstructionCost PartialCost = 0, RegularCost = 0;
 
     // The chain is a profitable partial reduction chain if the cost of handling
     // the entire chain is cheaper when using partial reductions than when
     // handling the entire chain using regular reductions.
-    for (const VPPartialReduction &Link : Chain) {
+    for (const PartialReductionDescriptor &Link : Chain) {
       const ExtendedReductionOperand &ExtendedOp = Link.ExtendedOp;
       InstructionCost LinkCost = getPartialReductionLinkCost(CostCtx, Link, VF);
       if (!LinkCost.isValid())
@@ -5620,8 +5622,8 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
   // matching scale factors, are outside the loop region or the select
   // introduced by tail-folding. Otherwise we would create users of scaled
   // reductions where the types of the other operands don't match.
-  for (auto &[RedPhiR, Chain] : ChainsByPhi) {
-    for (const VPPartialReduction &Link : Chain) {
+  for (auto &[RedPhiR, Chain] : PhiToChain) {
+    for (const PartialReductionDescriptor &Link : Chain) {
       if (!all_of(Link.ExtendedOp.ExtendsUser->operands(), ExtendUsersValid)) {
         Chain.clear();
         break;
@@ -5667,8 +5669,8 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
       Chain.clear();
   }
 
-  for (auto &[Phi, Chain] : ChainsByPhi)
-    for (const VPPartialReduction &Link : Chain)
+  for (auto &[Phi, Chain] : PhiToChain)
+    for (const PartialReductionDescriptor &Link : Chain)
       transformToPartialReduction(Link, Plan, Phi);
 }
 
