@@ -11,11 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Support/AllocationPolicy.h"
-#include "flang/Optimizer/Dialect/CUDAKernelOpInterface.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -64,18 +62,6 @@ bool fir::shouldUseStackForCopyin(mlir::Location loc, mlir::Type sequenceType,
   AllocationPolicy copyInPolicy = allocationPolicy;
   copyInPolicy.stackArrays = false;
   return shouldAllocateOnStack(info, copyInPolicy, /*stackBytesUsed=*/0);
-}
-
-bool fir::isInOffloadRegion(mlir::Operation *op) {
-  for (mlir::Operation *cur = op ? op->getParentOp() : nullptr; cur;
-       cur = cur->getParentOp()) {
-    if (mlir::isa<mlir::acc::OffloadRegionOpInterface,
-                  fir::CUDAKernelOpInterface, mlir::gpu::LaunchOp,
-                  mlir::gpu::GPUFuncOp, mlir::gpu::GPUModuleOp>(cur) ||
-        mlir::acc::isSpecializedAccRoutine(cur))
-      return true;
-  }
-  return false;
 }
 
 /// The policy in effect for \p info. Inside an offload region -fstack-arrays is
