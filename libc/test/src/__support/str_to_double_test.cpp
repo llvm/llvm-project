@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/macros/config.h"
 #include "str_to_fp_test.h"
 
@@ -27,8 +28,17 @@ TEST_F(LlvmLibcStrToDblTest, ClingerFastPathFloat64ExtendedExp) {
 
 TEST_F(LlvmLibcStrToDblTest, ClingerFastPathFloat64NegativeExp) {
   clinger_fast_path_test(1, -10, 0x1b7cdfd9d7bdbb, 989);
+  clinger_fast_path_test(1, -10, 0x1b7cdfd9d7bdbb, 989,
+                         internal::RoundDirection::Up);
+  clinger_fast_path_test(1, -10, 0x1b7cdfd9d7bdbb, 989,
+                         internal::RoundDirection::Down);
+  clinger_fast_path_test(295851801554362, -12, 0x127da0faaaaaab, 1031,
+                         internal::RoundDirection::Up);
+  clinger_fast_path_test(295851801554362, -12, 0x127da0faaaaaab, 1031,
+                         internal::RoundDirection::Down);
   clinger_fast_path_test(1, -20, 0x179ca10c924223, 956);
   clinger_fast_path_fails_test(1, -25);
+  clinger_fast_path_fails_test(1, INT32_MIN);
 }
 
 TEST_F(LlvmLibcStrToDblTest, EiselLemireFloat64Simple) {
