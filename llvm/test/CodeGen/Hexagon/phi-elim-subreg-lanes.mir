@@ -394,3 +394,49 @@ body:             |
   bb.3:
     PS_jmpret $r31, implicit-def dead $pc
 ...
+
+# The copy for the landing pad goes before the call, but the copy for the
+# normal successor goes before the terminators. The normal successor is
+# lowered first, so the later copy is recorded first.
+---
+name:            copies_before_call_and_terminator
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: copies_before_call_and_terminator
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[A2_tfrsi:%[0-9]+]]:intregs = A2_tfrsi 0
+  ; CHECK-NEXT:   [[A2_tfrsi1:%[0-9]+]]:intregs = A2_tfrsi 1
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:doubleregs = REG_SEQUENCE [[A2_tfrsi]], %subreg.isub_lo, [[A2_tfrsi1]], %subreg.isub_hi
+  ; CHECK-NEXT:   [[A2_tfrsi2:%[0-9]+]]:intregs = A2_tfrsi 2
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:doubleregs = COPY [[REG_SEQUENCE]]
+  ; CHECK-NEXT:   J2_callr [[A2_tfrsi2]], implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit-def $r29
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:intregs = COPY [[REG_SEQUENCE]].isub_lo
+  ; CHECK-NEXT:   J2_jump %bb.1, implicit-def dead $pc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:intregs = COPY [[COPY1]]
+  ; CHECK-NEXT:   PS_jmpret $r31, implicit-def dead $pc, implicit [[COPY2]]
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2 (landing-pad):
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:doubleregs = COPY [[COPY]]
+  ; CHECK-NEXT:   PS_jmpret $r31, implicit-def dead $pc, implicit [[COPY3]]
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %0:intregs = A2_tfrsi 0
+    %1:intregs = A2_tfrsi 1
+    %2:doubleregs = REG_SEQUENCE %0, %subreg.isub_lo, %1, %subreg.isub_hi
+    %3:intregs = A2_tfrsi 2
+    J2_callr %3, implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit-def $r29
+    J2_jump %bb.1, implicit-def dead $pc
+
+  bb.1:
+    %4:intregs = PHI %2.isub_lo, %bb.0
+    PS_jmpret $r31, implicit-def dead $pc, implicit %4
+
+  bb.2 (landing-pad):
+    %5:doubleregs = PHI %2, %bb.0
+    PS_jmpret $r31, implicit-def dead $pc, implicit %5
+...

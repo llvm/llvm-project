@@ -1303,8 +1303,9 @@ MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
   }
 
   // Fix PHI nodes in Succ so they refer to NMBB instead of this, and find the
-  // registers used from NMBB in them.
-  SmallSet<Register, 8> PHISrcRegs;
+  // registers used from NMBB in them, along with the lanes those PHIs read.
+  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+  SmallDenseMap<Register, LaneBitmask, 8> PHISrcRegs;
   for (MachineInstr &MI : Succ->phis()) {
     for (unsigned I = 1, E = MI.getNumOperands(); I != E; I += 2) {
       MachineOperand &MBBOp = MI.getOperand(I + 1);
@@ -1313,7 +1314,7 @@ MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
       MBBOp.setMBB(NMBB);
       const MachineOperand &MO = MI.getOperand(I);
       if (LIS && !MO.isUndef())
-        PHISrcRegs.insert(MO.getReg());
+        PHISrcRegs[MO.getReg()] |= TRI->getSubRegIndexLaneMask(MO.getSubReg());
     }
   }
 
@@ -1328,15 +1329,23 @@ MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
     SlotIndex PrevIndex = StartIndex.getPrevSlot();
     SlotIndex EndIndex = Indexes->getMBBEndIdx(NMBB);
 
-#ifndef NDEBUG
-    for (Register Reg : PHISrcRegs) {
-      assert(LIS->getInterval(Reg).liveAt(PrevIndex) &&
+    SlotIndex SuccStartIndex = LIS->getMBBStartIdx(Succ);
+    for (auto [Reg, PHILanes] : PHISrcRegs) {
+      LiveInterval &LI = LIS->getInterval(Reg);
+      assert(LI.liveAt(PrevIndex) &&
              "PHI sources should be live out of their predecessors.");
+
+      // Only the lanes read by the PHI, plus any lanes that are live into the
+      // successor, remain live through the new block.
+      for (auto &SR : LI.subranges()) {
+        if (SR.liveAt(PrevIndex) && (SR.LaneMask & PHILanes).none() &&
+            !SR.liveAt(SuccStartIndex))
+          SR.removeSegment(StartIndex, EndIndex);
+      }
     }
-#endif
 
     auto UpdateLiveOutReg = [&](Register Reg) {
-      if (PHISrcRegs.count(Reg))
+      if (PHISrcRegs.contains(Reg))
         return true;
       if (!LIS->hasInterval(Reg))
         return false;
@@ -1345,7 +1354,7 @@ MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
       if (!LI.liveAt(PrevIndex))
         return false;
 
-      bool isLiveOut = LI.liveAt(LIS->getMBBStartIdx(Succ));
+      bool isLiveOut = LI.liveAt(SuccStartIndex);
       if (!isLiveOut) {
         LI.removeSegment(StartIndex, EndIndex);
         // The main range is live across NMBB, but an individual lane need not
