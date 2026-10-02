@@ -82,14 +82,12 @@ struct TrackerRecordsChecker {
   TrackerRecordsChecker(EventTracker &ET, InstCounterType T)
       : ET(ET), T(T), Records(ET.getLiveRecords(T)) {}
 
-  bool hasCount() { return ET.count(T).has_value(); }
-
-  unsigned getCount() { return *ET.count(T); }
+  unsigned getCount() { return ET.count(T); }
 
   bool empty() { return Records.empty(); }
 
-  // Has no records and count is zero (if there is one)
-  bool unused() { return empty() && (!hasCount() || !getCount()); }
+  // Has no records and count is zero
+  bool unused() { return empty() && !getCount(); }
 
   const EventTrackerRecord &cur() { return Records[CurElt]; }
 
@@ -131,7 +129,6 @@ body:             |
   auto &ET = visitAll(BB0);
 
   auto LoadCnt = TrackerRecordsChecker(ET, AMDGPU::LOAD_CNT);
-  EXPECT_TRUE(LoadCnt.hasCount());
   EXPECT_EQ(LoadCnt.getCount(), 1u);
   EXPECT_FALSE(LoadCnt.empty());
   EXPECT_EQ(LoadCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_LOAD_DWORD);
@@ -139,7 +136,6 @@ body:             |
   EXPECT_FALSE(LoadCnt.next());
 
   auto DsCnt = TrackerRecordsChecker(ET, AMDGPU::DS_CNT);
-  EXPECT_TRUE(DsCnt.hasCount());
   EXPECT_EQ(DsCnt.getCount(), 1u);
   EXPECT_FALSE(DsCnt.empty());
   EXPECT_EQ(DsCnt.cur().getMI()->getOpcode(), AMDGPU::DS_READ_B32_gfx9);
@@ -150,7 +146,6 @@ body:             |
   EXPECT_TRUE(ExpCnt.unused());
 
   auto StoreCnt = TrackerRecordsChecker(ET, AMDGPU::STORE_CNT);
-  EXPECT_TRUE(StoreCnt.hasCount());
   EXPECT_EQ(StoreCnt.getCount(), 2u);
   EXPECT_FALSE(StoreCnt.empty());
   EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORD);
@@ -187,7 +182,6 @@ body:             |
   auto &ET = visitAll(BB0);
 
   auto LoadCnt = TrackerRecordsChecker(ET, AMDGPU::LOAD_CNT);
-  EXPECT_TRUE(LoadCnt.hasCount());
   EXPECT_EQ(LoadCnt.getCount(), 2u);
   EXPECT_FALSE(LoadCnt.empty());
   EXPECT_EQ(LoadCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_LOAD_DWORD);
@@ -198,7 +192,6 @@ body:             |
   EXPECT_FALSE(LoadCnt.next());
 
   auto DsCnt = TrackerRecordsChecker(ET, AMDGPU::DS_CNT);
-  EXPECT_TRUE(DsCnt.hasCount());
   EXPECT_EQ(DsCnt.getCount(), 2u);
   EXPECT_FALSE(DsCnt.empty());
   EXPECT_EQ(DsCnt.cur().getMI()->getOpcode(), AMDGPU::DS_READ_B32_gfx9);
@@ -212,7 +205,6 @@ body:             |
   EXPECT_TRUE(ExpCnt.unused());
 
   auto StoreCnt = TrackerRecordsChecker(ET, AMDGPU::STORE_CNT);
-  EXPECT_TRUE(StoreCnt.hasCount());
   EXPECT_EQ(StoreCnt.getCount(), 2u);
   EXPECT_FALSE(StoreCnt.empty());
   EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORDX2);
@@ -250,7 +242,6 @@ body:             |
   auto &ET = visitAll(BB1);
 
   auto LoadCnt = TrackerRecordsChecker(ET, AMDGPU::LOAD_CNT);
-  EXPECT_TRUE(LoadCnt.hasCount());
   EXPECT_EQ(LoadCnt.getCount(), 1u);
   EXPECT_FALSE(LoadCnt.empty());
   EXPECT_EQ(LoadCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_LOAD_DWORD);
@@ -258,7 +249,6 @@ body:             |
   EXPECT_FALSE(LoadCnt.next());
 
   auto DsCnt = TrackerRecordsChecker(ET, AMDGPU::DS_CNT);
-  EXPECT_TRUE(DsCnt.hasCount());
   EXPECT_EQ(DsCnt.getCount(), 1u);
   EXPECT_FALSE(DsCnt.empty());
   EXPECT_EQ(DsCnt.cur().getMI()->getOpcode(), AMDGPU::DS_READ_B32_gfx9);
@@ -269,7 +259,6 @@ body:             |
   EXPECT_TRUE(ExpCnt.unused());
 
   auto StoreCnt = TrackerRecordsChecker(ET, AMDGPU::STORE_CNT);
-  EXPECT_TRUE(StoreCnt.hasCount());
   EXPECT_EQ(StoreCnt.getCount(), 2u);
   EXPECT_FALSE(StoreCnt.empty());
   EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORD);
@@ -313,7 +302,6 @@ body:             |
   auto &ET = visitAll(BB2);
 
   auto LoadCnt = TrackerRecordsChecker(ET, AMDGPU::LOAD_CNT);
-  EXPECT_TRUE(LoadCnt.hasCount());
   EXPECT_EQ(LoadCnt.getCount(), 1u);
   EXPECT_FALSE(LoadCnt.empty());
   EXPECT_EQ(LoadCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_LOAD_DWORD);
@@ -321,7 +309,6 @@ body:             |
   EXPECT_FALSE(LoadCnt.next());
 
   auto DsCnt = TrackerRecordsChecker(ET, AMDGPU::DS_CNT);
-  EXPECT_TRUE(DsCnt.hasCount());
   EXPECT_EQ(DsCnt.getCount(), 1u);
   EXPECT_FALSE(DsCnt.empty());
   EXPECT_EQ(DsCnt.cur().getMI()->getOpcode(), AMDGPU::DS_READ_B32_gfx9);
@@ -332,7 +319,6 @@ body:             |
   EXPECT_TRUE(ExpCnt.unused());
 
   auto StoreCnt = TrackerRecordsChecker(ET, AMDGPU::STORE_CNT);
-  EXPECT_TRUE(StoreCnt.hasCount());
   EXPECT_EQ(StoreCnt.getCount(), 2u);
   EXPECT_FALSE(StoreCnt.empty());
   EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORD);
@@ -376,7 +362,6 @@ body:             |
   auto &ET = visitAll(BB2);
 
   auto LoadCnt = TrackerRecordsChecker(ET, AMDGPU::LOAD_CNT);
-  EXPECT_TRUE(LoadCnt.hasCount());
   EXPECT_EQ(LoadCnt.getCount(), 1u);
   EXPECT_FALSE(LoadCnt.empty());
   EXPECT_EQ(LoadCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_LOAD_DWORD);
@@ -384,7 +369,6 @@ body:             |
   EXPECT_FALSE(LoadCnt.next());
 
   auto DsCnt = TrackerRecordsChecker(ET, AMDGPU::DS_CNT);
-  EXPECT_TRUE(DsCnt.hasCount());
   EXPECT_EQ(DsCnt.getCount(), 1u);
   EXPECT_FALSE(DsCnt.empty());
   EXPECT_EQ(DsCnt.cur().getMI()->getOpcode(), AMDGPU::DS_READ_B32_gfx9);
@@ -395,7 +379,6 @@ body:             |
   EXPECT_TRUE(ExpCnt.unused());
 
   auto StoreCnt = TrackerRecordsChecker(ET, AMDGPU::STORE_CNT);
-  EXPECT_TRUE(StoreCnt.hasCount());
   // Count is 1 because we have 1 event max across all predecessors.
   EXPECT_EQ(StoreCnt.getCount(), 1u);
   EXPECT_FALSE(StoreCnt.empty());
@@ -449,7 +432,6 @@ body:             |
   auto &ET = visitAll(BB3);
 
   auto LoadCnt = TrackerRecordsChecker(ET, AMDGPU::LOAD_CNT);
-  EXPECT_TRUE(LoadCnt.hasCount());
   EXPECT_EQ(LoadCnt.getCount(), 1u);
   EXPECT_FALSE(LoadCnt.empty());
   EXPECT_EQ(LoadCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_LOAD_DWORD);
@@ -457,7 +439,6 @@ body:             |
   EXPECT_FALSE(LoadCnt.next());
 
   auto DsCnt = TrackerRecordsChecker(ET, AMDGPU::DS_CNT);
-  EXPECT_TRUE(DsCnt.hasCount());
   EXPECT_EQ(DsCnt.getCount(), 1u);
   EXPECT_FALSE(DsCnt.empty());
   EXPECT_EQ(DsCnt.cur().getMI()->getOpcode(), AMDGPU::DS_READ_B32_gfx9);
@@ -468,68 +449,11 @@ body:             |
   EXPECT_TRUE(ExpCnt.unused());
 
   auto StoreCnt = TrackerRecordsChecker(ET, AMDGPU::STORE_CNT);
-  EXPECT_TRUE(StoreCnt.hasCount());
   EXPECT_EQ(StoreCnt.getCount(), 1u);
   EXPECT_FALSE(StoreCnt.empty());
   EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORD);
   EXPECT_EQ(StoreCnt.cur().getHeight(), 0u);
   EXPECT_FALSE(StoreCnt.next());
-}
-
-/// Basic diamond CFG, the store is carried all the way into bb3 and uniqued
-/// again so only 1 instance of the record is present in bb3.
-TEST_F(AMDGPUGFX12EventTrackingTest, BasicDiamondFlags) {
-  StringRef MIR = R"(
-name:            BasicDiamondFlags
-body:             |
-  bb.0:
-    successors: %bb.1, %bb.2
-
-    S_CBRANCH_SCC1 %bb.1, implicit $scc
-    S_BRANCH %bb.2
-
-  bb.1:
-    successors: %bb.3
-    S_BRANCH %bb.3
-
-  bb.2:
-    successors: %bb.3
-    S_BRANCH %bb.3
-
-  bb.3:
-    S_ENDPGM 0
-...
-)";
-  ASSERT_TRUE(parseMIR(MIR));
-  MachineFunction &MF = getMF("BasicDiamondFlags");
-  MachineBasicBlock &BB0 = *MF.getBlockNumbered(0);
-  MachineBasicBlock &BB1 = *MF.getBlockNumbered(1);
-  MachineBasicBlock &BB2 = *MF.getBlockNumbered(2);
-  MachineBasicBlock &BB3 = *MF.getBlockNumbered(3);
-
-  visitAll(BB0);
-  visitAll(BB1, /*AfterVisit=*/[&](EventTracker &ET) {
-    ET.markIndeterminate(STORE_CNT);
-  });
-  visitAll(BB2, [&](EventTracker &ET) { ET.markOutOfOrder(LOAD_CNT); });
-  auto &ET = visitAll(BB3);
-
-  auto LoadCnt = TrackerRecordsChecker(ET, AMDGPU::LOAD_CNT);
-  EXPECT_TRUE(LoadCnt.unused());
-  // We inherit the out of order flag is either predecessor has it.
-  EXPECT_TRUE(LoadCnt.ET.isOutOfOrder(LOAD_CNT));
-  EXPECT_FALSE(LoadCnt.ET.isIndeterminate(LOAD_CNT));
-
-  auto DsCnt = TrackerRecordsChecker(ET, AMDGPU::DS_CNT);
-  EXPECT_TRUE(DsCnt.unused());
-
-  auto ExpCnt = TrackerRecordsChecker(ET, AMDGPU::EXP_CNT);
-  EXPECT_TRUE(ExpCnt.unused());
-
-  auto StoreCnt = TrackerRecordsChecker(ET, AMDGPU::STORE_CNT);
-  EXPECT_TRUE(StoreCnt.unused());
-  // We inherit the indeterminate flag is either predecessor has it.
-  EXPECT_TRUE(StoreCnt.ET.isIndeterminate(STORE_CNT));
 }
 
 /// Assymetrical diamond
@@ -591,7 +515,6 @@ body:             |
 
   auto StoreCnt = TrackerRecordsChecker(ET, AMDGPU::STORE_CNT);
 
-  EXPECT_TRUE(StoreCnt.hasCount());
   EXPECT_EQ(StoreCnt.getCount(), 3u);
   EXPECT_FALSE(StoreCnt.empty());
 
@@ -669,7 +592,6 @@ body:             |
 
   auto StoreCnt = TrackerRecordsChecker(ET, AMDGPU::STORE_CNT);
 
-  EXPECT_TRUE(StoreCnt.hasCount());
   EXPECT_EQ(StoreCnt.getCount(), 2u);
   EXPECT_FALSE(StoreCnt.empty());
 
