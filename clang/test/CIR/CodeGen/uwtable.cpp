@@ -19,7 +19,8 @@
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -funwind-tables=0 -emit-llvm %s -o %t-none-ogcg.ll
 // RUN: FileCheck --input-file=%t-none-ogcg.ll %s -check-prefix=LLVM-NONE
 
-void normal() {}
+void declaration();
+void normal() { declaration(); }
 // CIR-ASYNC: cir.func{{.*}}@_Z6normalv() attributes {{.*}}uwtable = #cir.uwtable<async>
 // LLVM-ASYNC: define {{.*}}@_Z6normalv(){{.*}}#[[NORM_ATTR:[0-9]+]]
 
@@ -29,6 +30,17 @@ void normal() {}
 // CIR-NONE: cir.func{{.*}}@_Z6normalv()
 // CIR-NONE-NOT: attributes {{.*}}uwtable = 
 // LLVM-NONE: define {{.*}}@_Z6normalv(){{.*}}#[[NORM_ATTR:[0-9]+]]
+
+// CIR-ASYNC: cir.func {{.*}}@_Z11declarationv()
+// CIR-ASYNC-NOT: attributes {{.*}}uwtable = 
+// CIR-SYNC: cir.func {{.*}}@_Z11declarationv()
+// CIR-SYNC-NOT: attributes {{.*}}uwtable = 
+// CIR-NONE: cir.func {{.*}}@_Z11declarationv()
+// CIR-NONE-NOT: attributes {{.*}}uwtable = 
+
+// LLVM-ASYNC: declare void @_Z11declarationv() #[[DECL_ATTR:.*]]
+// LLVM-SYNC: declare void @_Z11declarationv() #[[DECL_ATTR:.*]]
+// LLVM-NONE: declare void @_Z11declarationv() #[[DECL_ATTR:.*]]
 
 [[clang::nouwtable]] void suppressed() {}
 // CIR-ASYNC: cir.func{{.*}}@_Z10suppressedv() 
@@ -45,9 +57,12 @@ void normal() {}
 
 // LLVM-ASYNC: attributes #[[NORM_ATTR]] ={{.*}}uwtable
 // LLVM-ASYNC-NOT: attributes #[[SUPP_ATTR]] ={{.*}}uwtable
+// LLVM-ASYNC-NOT: attributes #[[DECL_ATTR]] ={{.*}}uwtable
 
 // LLVM-SYNC: attributes #[[NORM_ATTR]] ={{.*}}uwtable(sync)
 // LLVM-SYNC-NOT: attributes #[[SUPP_ATTR]] ={{.*}}uwtable
+// LLVM-SYNC-NOT: attributes #[[DECL_ATTR]] ={{.*}}uwtable
 
 // LLVM-NONE-NOT: attributes #[[NORM_ATTR]] ={{.*}}uwtable
 // LLVM-NONE-NOT: attributes #[[SUPP_ATTR]] ={{.*}}uwtable
+// LLVM-NONE-NOT: attributes #[[DECL_ATTR]] ={{.*}}uwtable
