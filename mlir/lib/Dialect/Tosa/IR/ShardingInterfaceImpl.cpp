@@ -23,13 +23,14 @@ using namespace mlir::shard;
 
 namespace {
 
-// loop types: [parallel, parallel, parallel, reduction_sum]
-// indexing maps:
-// (d0, d1, d2, d3) -> (d0, d1, d3)
-// (d0, d1, d2, d3) -> (d0, d3, d2)
-// (d0, d1, d2, d3) -> (d0, d1, d2)
-struct MatMulOpSharding
-    : public ShardingInterface::ExternalModel<MatMulOpSharding, MatMulOp> {
+// For an output of rank R, use R parallel loops followed by one reduction
+// loop. Right align the input batch dimensions with the output batch loops and
+// map A[..., H, C] to [..., d(R-2), d(R)]. MATMUL maps B[..., C, W] to
+// [..., d(R), d(R-1)], while MATMUL_T maps B[..., W, C] to
+// [..., d(R-1), d(R)].
+template <typename OpType, bool TransposeB>
+struct MatMulSharding : public ShardingInterface::ExternalModel<
+                            MatMulSharding<OpType, TransposeB>, OpType> {
   SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
     auto tensorType = dyn_cast<RankedTensorType>(op->getResult(0).getType());
     if (!tensorType)
@@ -47,19 +48,94 @@ struct MatMulOpSharding
   }
 
   SmallVector<AffineMap> getIndexingMaps(Operation *op) const {
-    auto tensorType = dyn_cast<RankedTensorType>(op->getResult(0).getType());
-    if (!tensorType)
+    auto aType = dyn_cast<RankedTensorType>(op->getOperand(0).getType());
+    auto bType = dyn_cast<RankedTensorType>(op->getOperand(1).getType());
+    auto outputType = dyn_cast<RankedTensorType>(op->getResult(0).getType());
+    if (!aType || !bType || !outputType || aType.getRank() < 2 ||
+        bType.getRank() < 2 || outputType.getRank() < aType.getRank() ||
+        outputType.getRank() < bType.getRank())
       return {};
+
     MLIRContext *ctx = op->getContext();
+    const int64_t outputRank = outputType.getRank();
+    const int64_t loopRank = outputRank + 1;
+    const int64_t reductionLoop = outputRank;
+
+    auto getAlignedBatchDim = [&](RankedTensorType operandType,
+                                  int64_t outputDim) {
+      const int64_t operandDim =
+          outputDim - (outputRank - operandType.getRank());
+      return operandDim < 0 ? 1 : operandType.getDimSize(operandDim);
+    };
+    for (int64_t i = 0; i < outputRank - 2; ++i) {
+      const int64_t aDim = getAlignedBatchDim(aType, i);
+      const int64_t bDim = getAlignedBatchDim(bType, i);
+      // A dynamic dimension may be either one (broadcast) or the corresponding
+      // output extent. These cases require different indexing maps unless the
+      // other operand is known to be a singleton.
+      if ((ShapedType::isDynamic(aDim) && bDim != 1) ||
+          (ShapedType::isDynamic(bDim) && aDim != 1))
+        return {};
+    }
+
+    auto getOperandMap = [&](RankedTensorType operandType, bool isB) {
+      const int64_t operandRank = operandType.getRank();
+      const int64_t operandBatchRank = operandRank - 2;
+      const int64_t batchRankDiff = outputRank - operandRank;
+      SmallVector<AffineExpr> results;
+      results.reserve(operandRank);
+      for (int64_t i = 0; i < operandBatchRank; ++i) {
+        // A statically sized batch dimension of one is broadcast and must
+        // remain replicated rather than inherit the corresponding sharding.
+        if (operandType.getDimSize(i) == 1)
+          results.push_back(getAffineConstantExpr(0, ctx));
+        else
+          results.push_back(getAffineDimExpr(batchRankDiff + i, ctx));
+      }
+      if (isB) {
+        if constexpr (TransposeB) {
+          results.push_back(getAffineDimExpr(outputRank - 1, ctx));
+          results.push_back(getAffineDimExpr(reductionLoop, ctx));
+        } else {
+          results.push_back(getAffineDimExpr(reductionLoop, ctx));
+          results.push_back(getAffineDimExpr(outputRank - 1, ctx));
+        }
+      } else {
+        results.push_back(getAffineDimExpr(outputRank - 2, ctx));
+        results.push_back(getAffineDimExpr(reductionLoop, ctx));
+      }
+      return AffineMap::get(loopRank, 0, results, ctx);
+    };
+
+    SmallVector<unsigned> outputTargets;
+    outputTargets.reserve(outputRank);
+    for (int64_t i = 0; i < outputRank; ++i)
+      outputTargets.push_back(i);
+
     SmallVector<AffineMap> maps;
-    maps.push_back(AffineMap::getMultiDimMapWithTargets(4, {0, 1, 3}, ctx));
-    maps.push_back(AffineMap::getMultiDimMapWithTargets(4, {0, 3, 2}, ctx));
-    maps.push_back(AffineMap::get(0, 0, {}, ctx));
-    maps.push_back(AffineMap::get(0, 0, {}, ctx));
-    maps.push_back(AffineMap::getMultiDimMapWithTargets(4, {0, 1, 2}, ctx));
+    maps.push_back(getOperandMap(aType, /*isB=*/false));
+    maps.push_back(getOperandMap(bType, /*isB=*/true));
+    maps.push_back(AffineMap::get(loopRank, 0, {}, ctx));
+    maps.push_back(AffineMap::get(loopRank, 0, {}, ctx));
+    maps.push_back(
+        AffineMap::getMultiDimMapWithTargets(loopRank, outputTargets, ctx));
     return maps;
   }
+
+  FailureOr<ShardingOption>
+  getShardingOption(Operation *op, ArrayRef<Sharding> operandShardings,
+                    ArrayRef<Sharding> resultShardings) const {
+    // Decline propagation when a dynamic batch dimension makes the operand
+    // indexing ambiguous between replication and the corresponding loop.
+    if (getIndexingMaps(op).empty())
+      return ShardingOption::makeEmpty();
+    return shard::detail::defaultGetShardingOption(op, operandShardings,
+                                                   resultShardings);
+  }
 };
+
+using MatMulOpSharding = MatMulSharding<MatMulOp, /*TransposeB=*/false>;
+using MatMulTOpSharding = MatMulSharding<MatMulTOp, /*TransposeB=*/true>;
 
 struct NegateOpSharding
     : public ShardingInterface::ExternalModel<NegateOpSharding, NegateOp> {
@@ -126,6 +202,7 @@ void mlir::tosa::registerShardingInterfaceExternalModels(
         GreaterOp, GreaterEqualOp>(ctx);
 
     MatMulOp::attachInterface<MatMulOpSharding>(*ctx);
+    MatMulTOp::attachInterface<MatMulTOpSharding>(*ctx);
     NegateOp::attachInterface<NegateOpSharding>(*ctx);
   });
 }

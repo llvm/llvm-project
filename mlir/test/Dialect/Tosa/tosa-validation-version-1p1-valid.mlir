@@ -2,6 +2,46 @@
 
 // -----
 
+// CHECK-LABEL: test_matmul_rank2
+func.func @test_matmul_rank2(%arg0: tensor<3x4xf32>, %arg1: tensor<4x5xf32>) -> tensor<3x5xf32> {
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<3x4xf32>, tensor<4x5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<3x5xf32>
+  return %0 : tensor<3x5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_matmul_rank4
+func.func @test_matmul_rank4(%arg0: tensor<2x3x3x4xf32>, %arg1: tensor<2x3x4x6xf32>) -> tensor<2x3x3x6xf32> {
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<2x3x3x4xf32>, tensor<2x3x4x6xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x3x3x6xf32>
+  return %0 : tensor<2x3x3x6xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_matmul_rank3_batch_broadcast
+func.func @test_matmul_rank3_batch_broadcast(%arg0: tensor<2x3x4xf32>, %arg1: tensor<1x4x5xf32>) -> tensor<2x3x5xf32> {
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<2x3x4xf32>, tensor<1x4x5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x3x5xf32>
+  return %0 : tensor<2x3x5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_matmul_t_rank4
+func.func @test_matmul_t_rank4(%arg0: tensor<2x1x3x4xf32>, %arg1: tensor<1x5x6x4xf32>) -> tensor<2x5x3x6xf32> {
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %0 = tosa.matmul_t %arg0, %arg1, %azp0, %bzp0 : (tensor<2x1x3x4xf32>, tensor<1x5x6x4xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x5x3x6xf32>
+  return %0 : tensor<2x5x3x6xf32>
+}
+
+// -----
+
 // CHECK-LABEL: test_matmul_fp8_mixed_precision_operands
 func.func @test_matmul_fp8_mixed_precision_operands(%arg0: tensor<1x14x19xf8E4M3FN>, %arg1: tensor<1x19x28xf8E5M2>) -> tensor<1x14x28xf16> {
   %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf8E4M3FN>}> : () -> tensor<1xf8E4M3FN>
