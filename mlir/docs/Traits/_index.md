@@ -98,7 +98,7 @@ The returned `OpFoldResults` follows the rules of the `OpFoldResults` form of
 `fold` in [Canonicalization](../Canonicalization.md#canonicalizing-with-the-fold-method).
 The legacy signature
 `static LogicalResult foldTrait(Operation *, ArrayRef<Attribute>, SmallVectorImpl<OpFoldResult> &)`
-is also accepted. It does not support partial folds.
+is deprecated. It does not support partial folds.
 
 Note: It is generally good practice to define the implementation of the
 `foldTrait` hook out-of-line as a free function when possible to avoid

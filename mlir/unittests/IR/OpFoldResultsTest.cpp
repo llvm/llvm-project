@@ -6,6 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/Compiler.h"
+
+// These tests cover the deprecated legacy fold API. A legacy fold trait warns
+// inside OpDefinition.h, so the suppression must start before the includes.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -1378,8 +1384,6 @@ TEST_F(OpFoldResultsTest, OpBuilderMaterializeFoldResults) {
   EXPECT_EQ(block.getOperations().size(), numOps + 1);
 }
 
-// This test covers the deprecated overload of OpBuilder::tryFold.
-LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
 TEST_F(OpFoldResultsTest, OpBuilderLegacyTryFold) {
   Block block;
   OpBuilder b(&context);
@@ -1420,7 +1424,6 @@ TEST_F(OpFoldResultsTest, OpBuilderLegacyTryFold) {
   EXPECT_EQ(results[0], constants[0]->getResult(0));
   EXPECT_EQ(results[1], producer);
 }
-LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 #ifdef GTEST_HAS_DEATH_TEST
 #ifndef NDEBUG
@@ -1462,3 +1465,5 @@ TEST_F(OpFoldResultsDeathTest, LegacyNullResult) {
 }
 #endif // NDEBUG
 #endif // GTEST_HAS_DEATH_TEST
+
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP

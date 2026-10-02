@@ -794,6 +794,9 @@ public:
   /// If the fold replaces only some results, those replacements are dropped:
   /// this function returns "success" with an empty `results` if this operation
   /// was modified in place, and "failure" otherwise.
+  LLVM_DEPRECATED("use the overload that returns OpFoldResults; it also "
+                  "returns partial folds",
+                  "")
   LogicalResult fold(ArrayRef<Attribute> operands,
                      SmallVectorImpl<OpFoldResult> &results);
 
@@ -807,6 +810,9 @@ public:
   /// If the fold replaces only some results, those replacements are dropped:
   /// this function returns "success" with an empty `results` if this operation
   /// was modified in place, and "failure" otherwise.
+  LLVM_DEPRECATED("use the overload that returns OpFoldResults; it also "
+                  "returns partial folds",
+                  "")
   LogicalResult fold(SmallVectorImpl<OpFoldResult> &results);
 
   /// Returns true if `InterfaceT` has been promised by the dialect or

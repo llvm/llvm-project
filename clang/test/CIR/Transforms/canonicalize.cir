@@ -323,4 +323,21 @@ module {
   // CHECK-NEXT:   cir.return %[[P]] : !s32i
   // CHECK-NEXT: }
 
+  cir.func @cast_integral_same_type_arg(%arg0: !s32i) -> !s32i {
+    %0 = cir.cast integral %arg0 : !s32i -> !s32i
+    cir.return %0 : !s32i
+  }
+  // CHECK:      cir.func{{.*}} @cast_integral_same_type_arg(%[[ARG0:.*]]: !s32i) -> !s32i
+  // CHECK-NEXT:   %[[CAST:.*]] = cir.cast integral %[[ARG0]] : !s32i -> !s32i
+  // CHECK-NEXT:   cir.return %[[CAST]] : !s32i
+
+  cir.func @cast_integral_same_type_const() -> !s32i {
+    %0 = cir.const #cir.int<5> : !s32i
+    %1 = cir.cast integral %0 : !s32i -> !s32i
+    cir.return %1 : !s32i
+  }
+  // CHECK:      cir.func{{.*}} @cast_integral_same_type_const() -> !s32i
+  // CHECK-NEXT:   %[[CONST:.*]] = cir.const #cir.int<5> : !s32i
+  // CHECK-NEXT:   cir.return %[[CONST]] : !s32i
+
 }

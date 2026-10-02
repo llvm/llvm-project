@@ -17,8 +17,8 @@ def DialectFoldInterface : DialectInterface<"DialectFoldInterface"> {
         operand values - the elements in "operands" will correspond directly to
         the operands of the operation, but may be null if non-constant. The
         result has the same contract as the fold hook of an operation. The
-        default implementation calls the `fold` method with a `results` vector,
-        with its strict contract.
+        default implementation calls the deprecated `fold` method with a
+        `results` vector, with its strict contract.
       }],
       "::mlir::OpFoldResults", "fold",
       (ins "::mlir::Operation *":$op,
@@ -35,6 +35,9 @@ def DialectFoldInterface : DialectInterface<"DialectFoldInterface"> {
         the operands of the operation, but may be null if non-constant.  If
         folding is successful, this fills in the `results` vector.  If not, this
         returns failure and `results` is unspecified.
+
+        Deprecated: override the `fold` method that returns `OpFoldResults`
+        instead. This method does not support partial folds.
       }],
       "::mlir::LogicalResult", "fold",
       (ins "::mlir::Operation *":$op, "::mlir::ArrayRef<Attribute>":$operands,

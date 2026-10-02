@@ -1485,16 +1485,15 @@ OpFoldResult mlir::affine::makeComposedFoldedAffineApply(
     matchPattern(applyOp->getOperand(i), m_Constant(&constOperands[i]));
 
   // Try to fold the operation.
-  SmallVector<OpFoldResult> foldResults;
-  if (failed(applyOp->fold(constOperands, foldResults)) ||
-      foldResults.empty()) {
+  OpFoldResults foldResults = applyOp->fold(constOperands);
+  if (!foldResults.replacesAll()) {
     if (OpBuilder::Listener *listener = b.getListener())
       listener->notifyOperationInserted(applyOp, /*previous=*/{});
     return applyOp.getResult();
   }
 
   applyOp->erase();
-  return llvm::getSingleElement(foldResults);
+  return llvm::getSingleElement(foldResults.getReplacements());
 }
 
 OpFoldResult mlir::affine::makeComposedFoldedAffineApply(
@@ -1553,16 +1552,15 @@ static OpFoldResult makeComposedFoldedMinMax(OpBuilder &b, Location loc,
     matchPattern(minMaxOp->getOperand(i), m_Constant(&constOperands[i]));
 
   // Try to fold the operation.
-  SmallVector<OpFoldResult> foldResults;
-  if (failed(minMaxOp->fold(constOperands, foldResults)) ||
-      foldResults.empty()) {
+  OpFoldResults foldResults = minMaxOp->fold(constOperands);
+  if (!foldResults.replacesAll()) {
     if (OpBuilder::Listener *listener = b.getListener())
       listener->notifyOperationInserted(minMaxOp, /*previous=*/{});
     return minMaxOp.getResult();
   }
 
   minMaxOp->erase();
-  return llvm::getSingleElement(foldResults);
+  return llvm::getSingleElement(foldResults.getReplacements());
 }
 
 OpFoldResult
