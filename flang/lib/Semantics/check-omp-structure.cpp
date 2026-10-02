@@ -3814,9 +3814,6 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &x) {
           std::get<parser::OmpClause::Ordered>(clause->u)};
 
       if (orderedClause.v) {
-        CheckNotAllowedIfClause(
-            llvm::omp::Clause::OMPC_ordered, {llvm::omp::Clause::OMPC_linear});
-
         if (auto *clause2{FindClause(llvm::omp::Clause::OMPC_collapse)}) {
           const auto &collapseClause{
               std::get<parser::OmpClause::Collapse>(clause2->u)};
@@ -4008,6 +4005,16 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &x) {
       break;
     } else {
       firstClause = clause;
+    }
+  }
+
+  // [5.2:308] The nowait clause may only appear on a taskwait directive if the
+  // depend clause is present.
+  if (GetContext().directive == llvm::omp::OMPD_taskwait) {
+    if (FindClause(llvm::omp::Clause::OMPC_nowait) &&
+        !FindClause(llvm::omp::Clause::OMPC_depend)) {
+      context_.Say(GetContext().clauseSource,
+          "A NOWAIT clause may only appear on TASKWAIT if a DEPEND clause is present"_err_en_US);
     }
   }
 }

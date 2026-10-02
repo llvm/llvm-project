@@ -2175,8 +2175,14 @@ public:
   /// Return the preferred function alignment.
   Align getPrefFunctionAlignment() const { return PrefFunctionAlignment; }
 
-  /// Return the preferred loop alignment.
-  virtual Align getPrefLoopAlignment(MachineLoop *ML = nullptr) const;
+  /// Return the preferred loop alignment. \p BlockToAlign, when non-null, is
+  /// the block that will actually be aligned; after loop rotation this need not
+  /// be the LoopInfo header. Targets whose alignment depends on the block
+  /// contents should use it. Callers that are not aligning a particular block,
+  /// such as llvm-exegesis and ARM constant islands, leave it null.
+  virtual Align
+  getPrefLoopAlignment(MachineLoop *ML = nullptr,
+                       const MachineBasicBlock *BlockToAlign = nullptr) const;
 
   /// Return the maximum amount of bytes allowed to be emitted when padding for
   /// alignment
@@ -2241,7 +2247,8 @@ public:
   /// Returns true if a cast from SrcAS to DestAS is "cheap", such that e.g. we
   /// are happy to sink it into basic blocks. A cast may be free, but not
   /// necessarily a no-op. e.g. a free truncate from a 64-bit to 32-bit pointer.
-  virtual bool isFreeAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const;
+  virtual bool isFreeAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
+                                   unsigned DestAS) const;
 
   /// Return true if the pointer arguments to CI should be aligned by aligning
   /// the object whose address is being passed. If so then MinSize is set to the

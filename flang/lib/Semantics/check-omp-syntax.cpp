@@ -33,11 +33,6 @@
 namespace Fortran::semantics {
 using namespace Fortran::parser::omp;
 
-template <typename T> struct SetTypeFor {
-  using type = llvm::omp::EnumSet<T,
-      llvm::to_underlying(T::Last_) - llvm::to_underlying(T::First_) + 1>;
-};
-
 static llvm::omp::Modifiers GetElements(
     const llvm::omp::descriptor::Clause &desc, llvm::omp::Version version) {
   return desc.getModifiers(version);
@@ -101,7 +96,7 @@ static ResultTy VerifyVersions(
 
 template < //
     typename ElemTy, typename SetsSetTy, typename OwnerTy,
-    typename ElemSetTy = typename SetTypeFor<ElemTy>::type,
+    typename ElemSetTy = llvm::omp::EnumSet<ElemTy>,
     typename ResultTy = std::pair<ElemSetTy, SetsSetTy>>
 static ResultTy VerifyRequired(
     const AppliedElementInfo<ElemTy, SetsSetTy> &info, OwnerTy ownerId,
@@ -138,8 +133,7 @@ template < //
 static ResultTy VerifyUnique(const AppliedElementInfo<ElemTy, SetsSetTy> &info,
     OwnerTy ownerId, llvm::omp::Version version) {
   using AppliedElementTy = AppliedElement<ElemTy, SetsSetTy>;
-  using ElemSetTy = typename SetTypeFor<ElemTy>::type;
-  ElemSetTy unique;
+  llvm::omp::EnumSet<ElemTy> unique;
 
   auto &odesc{llvm::omp::getDescriptor(ownerId)};
   auto elements{GetElements(odesc, version)};
@@ -267,8 +261,7 @@ static ResultTy VerifyUltimate(
   }
 
   using AppliedElementTy = AppliedElement<ElemTy, SetsSetTy>;
-  using ElemSetTy = typename SetTypeFor<ElemTy>::type;
-  ElemSetTy ultimate;
+  llvm::omp::EnumSet<ElemTy> ultimate;
 
   auto &odesc{llvm::omp::getDescriptor(ownerId)};
   auto elements{GetElements(odesc, version)};

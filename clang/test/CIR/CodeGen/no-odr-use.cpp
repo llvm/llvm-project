@@ -15,11 +15,11 @@
 // LLVM-DAG: @[[F_A:.*]] = private constant {{.*}} { i32 1, [2 x i32] [i32 2, i32 3], [3 x i32] [i32 4, i32 5, i32 6] }
 // OGCG-DAG: @__const._Z1fi.a = private unnamed_addr constant {{.*}} { i32 1, [2 x i32] [i32 2, i32 3], [3 x i32] [i32 4, i32 5, i32 6] }
 
-// CIR-CXX11-DAG: cir.global "private" constant cir_private @_ZN7PR422765State3dmsE.const = #cir.const_array<[#cir.int<0> : !s64i, #cir.int<0> : !s64i]> : !cir.array<!s64i x 2> {alignment = 16 : i64}
+// CIR-CXX11-DAG: cir.global "private" constant cir_private @_ZN7PR422765State3dmsE.const = #cir.const_array<[#cir.int<0> : !s64i, #cir.int<0> : !s64i]> : !cir.array<!s64i x 2> align(16)
 // LLVM-CXX11-DAG :@_ZN7PR422765State3dmsE.const = private constant [2 x i64] zeroinitializer, align 16
 // OGCG-CXX11-DAG :@_ZN7PR422765State3dmsE.const = private constant [2 x i64] zeroinitializer, align 16
 
-// CIR-CXX20-DAG: cir.global "private" constant cir_private @_ZN7PR422765State3dmsE = #cir.const_array<[#cir.int<0> : !s64i, #cir.int<0> : !s64i]> : !cir.array<!s64i x 2> {alignment = 16 : i64}
+// CIR-CXX20-DAG: cir.global "private" constant cir_private @_ZN7PR422765State3dmsE = #cir.const_array<[#cir.int<0> : !s64i, #cir.int<0> : !s64i]> : !cir.array<!s64i x 2> align(16)
 // LLVM-CXX20-DAG :@_ZN7PR422765State3dmsE = private constant [2 x i64] zeroinitializer, align 16
 // OGCG-CXX20-DAG :@_ZN7PR422765State3dmsE = private constant [2 x i64] zeroinitializer, align 16
 
