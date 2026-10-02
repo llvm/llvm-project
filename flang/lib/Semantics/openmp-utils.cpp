@@ -2477,31 +2477,11 @@ static void AppendConstructTraitsForDirective(
 
 void AppendDirectiveContextTraits(llvm::omp::Directive directive,
     llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits) {
-  using llvm::omp::Directive;
-  using llvm::omp::TraitProperty;
-
-  for (Directive leaf : llvm::omp::getLeafConstructsOrSelf(directive)) {
-    if (leaf == Directive::OMPD_nothing ||
-        leaf == Directive::OMPD_metadirective ||
-        leaf == Directive::OMPD_unknown || leaf == Directive::OMPD_section ||
-        leaf == Directive::OMPD_dispatch ||
-        llvm::omp::getDirectiveCategory(leaf) ==
-            llvm::omp::Category::Informational) {
-      continue;
-    }
-
-    llvm::omp::VariantMatchInfo vmi;
-    AppendConstructTraitsForDirective(leaf, vmi);
-    if (vmi.RequiredTraits.test(
-            static_cast<unsigned>(TraitProperty::construct_target_target))) {
+  for (llvm::omp::TraitProperty trait :
+      llvm::omp::getConstructTraits(directive)) {
+    if (trait == llvm::omp::TraitProperty::construct_target_target)
       constructTraits.clear();
-    }
-    if (vmi.ConstructTraits.empty()) {
-      constructTraits.push_back(TraitProperty::invalid);
-    } else {
-      constructTraits.append(
-          vmi.ConstructTraits.begin(), vmi.ConstructTraits.end());
-    }
+    constructTraits.push_back(trait);
   }
 }
 
@@ -2836,13 +2816,12 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
   // Rank against the complete set once. Removing a failed runtime guard must
   // not restore the raw score of a selector that was its strict subset.
   llvm::SmallVector<llvm::omp::VariantMatchInfo, 4> vmis;
-  llvm::SmallVector<unsigned, 4> order;
   for (const auto &[index, candidate] : llvm::enumerate(result.candidates)) {
     vmis.push_back(candidate.vmi);
-    order.push_back(index);
+    result.order.push_back(index);
   }
   auto scores{llvm::omp::getVariantMatchScores(vmis, matchContext)};
-  llvm::stable_sort(order, [&](unsigned a, unsigned b) {
+  llvm::stable_sort(result.order, [&](unsigned a, unsigned b) {
     CHECK(scores[a] && scores[b]);
     const auto &left{*scores[a]}, &right{*scores[b]};
     unsigned width{std::max(left.getBitWidth(), right.getBitWidth())};
@@ -2850,19 +2829,7 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
       return left.zextOrTrunc(width).ugt(right.zextOrTrunc(width));
     return result.candidates[a].isExplicit && !result.candidates[b].isExplicit;
   });
-  for (auto [rank, index] : llvm::enumerate(order))
-    result.candidates[index].rank = rank;
   return result;
-}
-
-std::optional<unsigned> SelectBestMetadirectiveCandidate(
-    llvm::ArrayRef<unsigned> candidateIndices,
-    llvm::ArrayRef<MetadirectiveCandidate> candidates) {
-  if (candidateIndices.empty())
-    return std::nullopt;
-  return *llvm::min_element(candidateIndices, [&](unsigned a, unsigned b) {
-    return candidates[a].rank < candidates[b].rank;
-  });
 }
 
 namespace {
@@ -2927,28 +2894,23 @@ bool AreSameRepeatableMetadirectiveCondition(const parser::ScalarExpr &left,
 }
 
 llvm::SmallVector<unsigned, 4> GetMetadirectiveElsePathCandidates(
-    unsigned selectedIndex, llvm::ArrayRef<unsigned> candidateIndices,
+    llvm::ArrayRef<unsigned> candidateIndices,
     llvm::ArrayRef<MetadirectiveCandidate> candidates,
     SemanticsContext &context) {
-  CHECK(selectedIndex < candidates.size());
-  const MetadirectiveCandidate &selected{candidates[selectedIndex]};
+  CHECK(!candidateIndices.empty() &&
+      candidateIndices.front() < candidates.size());
+  const MetadirectiveCandidate &selected{candidates[candidateIndices.front()]};
   CHECK(selected.dynamicCondition);
 
-  llvm::SmallVector<unsigned, 4> result;
-  result.reserve(candidateIndices.size());
-  for (unsigned index : candidateIndices)
-    if (index != selectedIndex)
-      result.push_back(index);
+  llvm::SmallVector<unsigned, 4> result{candidateIndices.drop_front()};
 
   // Inspect candidates in the order in which selection would evaluate them.
   // A distinct repeatable condition cannot modify the selected condition, so
   // the failed value remains usable past it. Stop at the first non-repeatable
   // condition because it can change state before a lower-ranked occurrence is
   // evaluated.
-  llvm::SmallVector<unsigned, 4> candidatesToInspect{result};
-  while (std::optional<unsigned> next{
-      SelectBestMetadirectiveCandidate(candidatesToInspect, candidates)}) {
-    const MetadirectiveCandidate &candidate{candidates[*next]};
+  for (unsigned index : candidateIndices.drop_front()) {
+    const MetadirectiveCandidate &candidate{candidates[index]};
     if (!candidate.dynamicCondition ||
         !IsRepeatableMetadirectiveCondition(
             *candidate.dynamicCondition->expr, context))
@@ -2960,8 +2922,7 @@ llvm::SmallVector<unsigned, 4> GetMetadirectiveElsePathCandidates(
             *selected.dynamicCondition->expr, *candidate.dynamicCondition->expr,
             context)};
     if (hasSameFailedCondition)
-      llvm::erase(result, *next);
-    llvm::erase(candidatesToInspect, *next);
+      llvm::erase(result, index);
   }
   return result;
 }
@@ -2969,22 +2930,17 @@ llvm::SmallVector<unsigned, 4> GetMetadirectiveElsePathCandidates(
 llvm::SmallVector<const parser::OmpDirectiveSpecification *, 4>
 GetReachableMetadirectiveVariants(
     const MetadirectiveCandidateSet &candidateSet, SemanticsContext &context) {
-  llvm::SmallVector<unsigned, 4> candidates;
-  candidates.reserve(candidateSet.candidates.size());
-  for (unsigned index{0}; index < candidateSet.candidates.size(); ++index) {
-    candidates.push_back(index);
-  }
+  llvm::SmallVector<unsigned, 4> candidates{candidateSet.order};
 
   llvm::SmallVector<const parser::OmpDirectiveSpecification *, 4> reachable;
   while (true) {
-    std::optional<unsigned> selected{
-        SelectBestMetadirectiveCandidate(candidates, candidateSet.candidates)};
-    if (!selected) {
+    if (candidates.empty()) {
       reachable.push_back(candidateSet.fallback);
       break;
     }
 
-    const MetadirectiveCandidate &candidate{candidateSet.candidates[*selected]};
+    const MetadirectiveCandidate &candidate{
+        candidateSet.candidates[candidates.front()]};
     reachable.push_back(candidate.spec);
     // An unguarded winner ends selection. A dynamic winner leaves the
     // remaining candidates reachable through its false path.
@@ -2993,12 +2949,11 @@ GetReachableMetadirectiveVariants(
     }
 
     candidates = GetMetadirectiveElsePathCandidates(
-        *selected, candidates, candidateSet.candidates, context);
+        candidates, candidateSet.candidates, context);
 
-    if (std::optional<unsigned> selectedInElse{SelectBestMetadirectiveCandidate(
-            candidates, candidateSet.candidates)}) {
+    if (!candidates.empty()) {
       const MetadirectiveCandidate &elseCandidate{
-          candidateSet.candidates[*selectedInElse]};
+          candidateSet.candidates[candidates.front()]};
       if (!elseCandidate.dynamicCondition &&
           elseCandidate.spec == candidate.spec) {
         break;

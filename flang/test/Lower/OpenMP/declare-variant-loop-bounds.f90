@@ -119,12 +119,15 @@ contains
     end do
   end subroutine
 
-  ! A standalone DO does not contribute its own context to its bounds.
+  ! A standalone DO contributes to its body, but not its bounds or later calls.
   ! CHECK-LABEL: func.func @_QMloop_contextPstandalone_do(
   ! CHECK-NOT: fir.call @_QMloop_contextPdo_bound(
   ! CHECK: fir.call @_QMloop_contextPbound(
   ! CHECK: omp.wsloop
   ! CHECK: fir.call @_QMloop_contextPdo_bound(
+  ! CHECK-NOT: fir.call @_QMloop_contextPdo_bound(
+  ! CHECK: fir.call @_QMloop_contextPbound(
+  ! CHECK-NOT: fir.call @_QMloop_contextPdo_bound(
   ! CHECK: return
   subroutine standalone_do(n, a)
     integer, intent(in) :: n
@@ -133,6 +136,7 @@ contains
     do i = 1, bound(n)
       a(i) = bound(n)
     end do
+    a(n) = bound(n)
   end subroutine
 
   pure integer function cpu_count(n)

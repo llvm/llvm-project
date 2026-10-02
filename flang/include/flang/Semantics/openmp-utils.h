@@ -284,12 +284,13 @@ struct MetadirectiveCandidate {
   bool isExplicit{false};
   std::optional<DynamicUserCondition> dynamicCondition;
   bool conditionShouldBeTrue{true};
-  /// Position in the original candidate ordering, including subset scores.
-  unsigned rank{0};
 };
 
 struct MetadirectiveCandidateSet {
   llvm::SmallVector<MetadirectiveCandidate, 4> candidates;
+  /// Candidate indices in selection order, including global subset scores.
+  /// Filtering this list must preserve its order without recomputing scores.
+  llvm::SmallVector<unsigned, 4> order;
   /// Null represents either an explicit NOTHING fallback or no fallback.
   const parser::OmpDirectiveSpecification *fallback{nullptr};
 };
@@ -302,11 +303,6 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
     const parser::OmpClauseList &clauses, SemanticsContext &context,
     const OmpVariantMatchContext &matchContext);
 
-/// Select the first remaining candidate in the original ranking.
-std::optional<unsigned> SelectBestMetadirectiveCandidate(
-    llvm::ArrayRef<unsigned> candidateIndices,
-    llvm::ArrayRef<MetadirectiveCandidate> candidates);
-
 /// Return true when repeated evaluation of \p condition cannot call a
 /// procedure or observe asynchronously changing state.
 bool IsRepeatableMetadirectiveCondition(
@@ -316,10 +312,11 @@ bool IsRepeatableMetadirectiveCondition(
 bool AreSameRepeatableMetadirectiveCondition(const parser::ScalarExpr &left,
     const parser::ScalarExpr &right, SemanticsContext &context);
 
-/// Return candidates reachable after \p selectedIndex fails. Equal repeatable
-/// guards are pruned until a non-repeatable guard is encountered.
+/// Return candidates reachable after the first candidate fails. The nonempty
+/// \p candidateIndices list must be in selection order. Equal repeatable guards
+/// are pruned until an unguarded or non-repeatable candidate is encountered.
 llvm::SmallVector<unsigned, 4> GetMetadirectiveElsePathCandidates(
-    unsigned selectedIndex, llvm::ArrayRef<unsigned> candidateIndices,
+    llvm::ArrayRef<unsigned> candidateIndices,
     llvm::ArrayRef<MetadirectiveCandidate> candidates,
     SemanticsContext &context);
 

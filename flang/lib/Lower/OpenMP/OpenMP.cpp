@@ -7155,25 +7155,24 @@ isUnsupportedMetadirectiveLoopAssociationEval(lower::pft::Evaluation &eval) {
          (eval.isDirective() && !eval.isExecutableDirective());
 }
 
-/// A loop-associated metadirective is lowered like a real loop construct, but
-/// the PFT leaves its associated loop nest as the following sibling instead of
-/// nesting it underneath. Splice that sibling into the metadirective's own
-/// nested evaluations so the shared loop-lowering path can find it. Return
-/// nullptr if no associated DO loop follows.
-static lower::pft::Evaluation *spliceAssociatedDoEval(
+// The PFT leaves associated DO and BLOCK constructs as siblings. Attach them
+// while lowering the selected replacement and restore them afterwards.
+template <typename Construct>
+static lower::pft::Evaluation *spliceAssociatedEval(
     lower::pft::Evaluation &eval,
     SplicedAssociatedEvaluations *splicedEvaluations = nullptr,
     lower::pft::Evaluation **unsupportedInterveningEval = nullptr) {
+  constexpr bool isLoop = std::is_same_v<Construct, parser::DoConstruct>;
   if (unsupportedInterveningEval)
     *unsupportedInterveningEval = nullptr;
 
-  if (eval.hasNestedEvaluations()) {
+  if (isLoop && eval.hasNestedEvaluations()) {
     auto nestedIt =
         llvm::find_if(eval.getNestedEvaluations(), [](auto &nested) {
           return !isIgnorableMetadirectiveLoopAssociationEval(nested);
         });
     if (nestedIt != eval.getNestedEvaluations().end()) {
-      if (nestedIt->getIf<parser::DoConstruct>())
+      if (nestedIt->template getIf<Construct>())
         return &*nestedIt;
       if (unsupportedInterveningEval &&
           isUnsupportedMetadirectiveLoopAssociationEval(*nestedIt))
@@ -7183,7 +7182,7 @@ static lower::pft::Evaluation *spliceAssociatedDoEval(
   }
 
   // A delimited metadirective owns only its nested evaluations. An empty body
-  // must not capture a following sibling loop as its associated DO.
+  // must not capture a following sibling construct.
   if (const auto *omp = eval.getIf<parser::OpenMPConstruct>();
       omp && std::holds_alternative<parser::OmpDelimitedMetadirectiveDirective>(
                  omp->u))
@@ -7203,41 +7202,41 @@ static lower::pft::Evaluation *spliceAssociatedDoEval(
          "metadirective eval not found in parent list");
 
   auto firstAssociatedIt = std::next(metaIt);
-  auto loopIt = firstAssociatedIt;
-  while (loopIt != parentList->end() &&
-         isIgnorableMetadirectiveLoopAssociationEval(*loopIt))
-    ++loopIt;
+  auto associatedIt = firstAssociatedIt;
+  while (isLoop && associatedIt != parentList->end() &&
+         isIgnorableMetadirectiveLoopAssociationEval(*associatedIt))
+    ++associatedIt;
 
-  if (loopIt == parentList->end())
+  if (associatedIt == parentList->end())
     return nullptr;
-  if (!loopIt->getIf<parser::DoConstruct>()) {
+  if (!associatedIt->template getIf<Construct>()) {
     if (unsupportedInterveningEval &&
-        isUnsupportedMetadirectiveLoopAssociationEval(*loopIt))
-      *unsupportedInterveningEval = &*loopIt;
+        isUnsupportedMetadirectiveLoopAssociationEval(*associatedIt))
+      *unsupportedInterveningEval = &*associatedIt;
     return nullptr;
   }
 
   if (splicedEvaluations) {
     auto entryIt =
-        llvm::find_if(llvm::make_range(firstAssociatedIt, loopIt),
+        llvm::find_if(llvm::make_range(firstAssociatedIt, associatedIt),
                       [](lower::pft::Evaluation &candidate) {
                         return candidate.isNewBlock && candidate.block;
                       });
-    if (entryIt != loopIt) {
+    if (entryIt != associatedIt) {
       splicedEvaluations->suppressEntryBlock(*entryIt);
     } else {
-      lower::pft::Evaluation &doStmt = loopIt->getFirstNestedEvaluation();
-      if (doStmt.isNewBlock && doStmt.block)
-        splicedEvaluations->suppressEntryBlock(doStmt);
+      auto &stmt = associatedIt->getFirstNestedEvaluation();
+      if (stmt.isNewBlock && stmt.block)
+        splicedEvaluations->suppressEntryBlock(stmt);
     }
   }
 
   // Compiler directives between the metadirective and its associated loop
   // must be processed before the loop is lowered. Move them with the loop so
   // they are not visited later as siblings of the metadirective.
-  for (auto it = firstAssociatedIt; it != loopIt;) {
+  for (auto it = firstAssociatedIt; it != associatedIt;) {
     auto current = it++;
-    if (current->getIf<parser::CompilerDirective>()) {
+    if (current->template getIf<parser::CompilerDirective>()) {
       if (splicedEvaluations)
         splicedEvaluations->record(*parentList, current);
       eval.evaluationList->splice(eval.evaluationList->end(), *parentList,
@@ -7245,42 +7244,12 @@ static lower::pft::Evaluation *spliceAssociatedDoEval(
     }
   }
   if (splicedEvaluations)
-    splicedEvaluations->record(*parentList, loopIt);
-  eval.evaluationList->splice(eval.evaluationList->end(), *parentList, loopIt);
-  return &eval.getNestedEvaluations().back();
-}
-
-// A standalone metadirective's strictly structured BLOCK is a sibling in the
-// PFT. Attach it while lowering the selected replacement, as for associated DO.
-static lower::pft::Evaluation *
-spliceAssociatedBlockEval(lower::pft::Evaluation &eval,
-                          SplicedAssociatedEvaluations &splicedEvaluations) {
-  const auto *omp = eval.getIf<parser::OpenMPConstruct>();
-  if (omp && std::holds_alternative<parser::OmpDelimitedMetadirectiveDirective>(
-                 omp->u))
-    return nullptr;
-
-  lower::pft::FunctionLikeUnit *owningProc = eval.getOwningProcedure();
-  if (!eval.parentConstruct && !owningProc)
-    return nullptr;
-  auto &parent = eval.parentConstruct
-                     ? eval.parentConstruct->getNestedEvaluations()
-                     : owningProc->evaluationList;
-  auto metaIt = llvm::find_if(
-      parent, [&](lower::pft::Evaluation &e) { return &e == &eval; });
-  assert(metaIt != parent.end() &&
-         "metadirective eval not found in parent list");
-  auto blockIt = std::next(metaIt);
-  if (blockIt == parent.end() || !blockIt->getIf<parser::BlockConstruct>())
-    return nullptr;
-
-  auto &blockStmt = blockIt->getFirstNestedEvaluation();
-  if (blockStmt.isNewBlock && blockStmt.block)
-    splicedEvaluations.suppressEntryBlock(blockStmt);
-  splicedEvaluations.record(parent, blockIt);
-  // Preserve source nesting for construct selectors in the BLOCK.
-  blockIt->parentConstruct = &eval;
-  eval.evaluationList->splice(eval.evaluationList->end(), parent, blockIt);
+    splicedEvaluations->record(*parentList, associatedIt);
+  // BLOCK bodies need source ancestry for nested construct selectors.
+  if constexpr (!isLoop)
+    associatedIt->parentConstruct = &eval;
+  eval.evaluationList->splice(eval.evaluationList->end(), *parentList,
+                              associatedIt);
   return &eval.getNestedEvaluations().back();
 }
 
@@ -7538,11 +7507,6 @@ static void genMetadirective(lower::AbstractConverter &converter,
   auto &candidates = candidateSet->candidates;
   const parser::OmpDirectiveSpecification *fallback = candidateSet->fallback;
 
-  llvm::SmallVector<unsigned, 4> allCandidateIndices;
-  allCandidateIndices.reserve(candidates.size());
-  for (unsigned idx = 0, end = candidates.size(); idx < end; ++idx)
-    allCandidateIndices.push_back(idx);
-
   llvm::SmallVector<const parser::OmpDirectiveSpecification *, 4>
       reachableVariantSpecs = semantics::omp::GetReachableMetadirectiveVariants(
           *candidateSet, semaCtx);
@@ -7563,8 +7527,10 @@ static void genMetadirective(lower::AbstractConverter &converter,
   });
   if (hasLoopAssociatedCandidate) {
     lower::pft::Evaluation *unsupportedInterveningEval = nullptr;
-    if (lower::pft::Evaluation *loopEval = spliceAssociatedDoEval(
-            eval, &splicedAssociatedEvaluations, &unsupportedInterveningEval)) {
+    if (lower::pft::Evaluation *loopEval =
+            spliceAssociatedEval<parser::DoConstruct>(
+                eval, &splicedAssociatedEvaluations,
+                &unsupportedInterveningEval)) {
       associatedLoopEval = loopEval;
       if (lower::pft::FunctionLikeUnit *owningProc =
               eval.getOwningProcedure()) {
@@ -7639,8 +7605,8 @@ static void genMetadirective(lower::AbstractConverter &converter,
         return spec && hasDirectiveAssociation(spec->DirId(),
                                                llvm::omp::Association::Block);
       }))
-    associatedBlockEval =
-        spliceAssociatedBlockEval(eval, splicedAssociatedEvaluations);
+    associatedBlockEval = spliceAssociatedEval<parser::BlockConstruct>(
+        eval, &splicedAssociatedEvaluations);
 
   if (associatedBlockEval && splicedAssociatedEvaluations.getEntryBlock())
     builder.setInsertionPointToStart(
@@ -7708,7 +7674,8 @@ static void genMetadirective(lower::AbstractConverter &converter,
       if (!enableDelayedPrivatization)
         TODO(variantLoc,
              "loop-associated METADIRECTIVE with eager privatization");
-      lower::pft::Evaluation *loopEval = spliceAssociatedDoEval(eval);
+      lower::pft::Evaluation *loopEval =
+          spliceAssociatedEval<parser::DoConstruct>(eval);
       if (!loopEval)
         TODO(variantLoc, "loop-associated METADIRECTIVE without associated DO");
       if (hasContentFollowingAssociatedDo(eval, *loopEval))
@@ -7778,7 +7745,7 @@ static void genMetadirective(lower::AbstractConverter &converter,
       genMetadirectiveBody();
   };
 
-  llvm::SmallVector<unsigned, 4> remainingCandidates{allCandidateIndices};
+  llvm::SmallVector<unsigned, 4> remainingCandidates{candidateSet->order};
 
   lower::StatementContext stmtCtx;
 
@@ -7798,24 +7765,16 @@ static void genMetadirective(lower::AbstractConverter &converter,
   // If the else path selects the same unguarded directive, lower it directly.
   // Stop when selection reaches an unguarded candidate or the fallback.
   while (!remainingCandidates.empty()) {
-    std::optional<unsigned> selected =
-        semantics::omp::SelectBestMetadirectiveCandidate(remainingCandidates,
-                                                         candidates);
-    if (!selected) {
-      genVariant(fallback);
-      return;
-    }
-
     const semantics::omp::MetadirectiveCandidate &candidate =
-        candidates[*selected];
+        candidates[remainingCandidates.front()];
     if (!candidate.dynamicCondition) {
       genVariant(candidate.spec);
       return;
     }
 
     llvm::SmallVector<unsigned, 4> elsePathCandidates =
-        semantics::omp::GetMetadirectiveElsePathCandidates(
-            *selected, remainingCandidates, candidates, semaCtx);
+        semantics::omp::GetMetadirectiveElsePathCandidates(remainingCandidates,
+                                                           candidates, semaCtx);
 
     // match_any may create a guarded condition-true candidate and an unguarded
     // static candidate for the same directive. If the else path picks the
@@ -7823,11 +7782,9 @@ static void genMetadirective(lower::AbstractConverter &converter,
     //
     //   if (flag) barrier    into just    barrier
     //   else barrier
-    if (std::optional<unsigned> selectedInElse =
-            semantics::omp::SelectBestMetadirectiveCandidate(elsePathCandidates,
-                                                             candidates)) {
+    if (!elsePathCandidates.empty()) {
       const semantics::omp::MetadirectiveCandidate &candidateInElse =
-          candidates[*selectedInElse];
+          candidates[elsePathCandidates.front()];
       if (!candidateInElse.dynamicCondition &&
           candidateInElse.spec == candidate.spec) {
         genVariant(candidate.spec);

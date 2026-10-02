@@ -1517,26 +1517,25 @@ void collectEnclosingConstructTraits(
   auto append = [&](llvm::omp::Directive directive) {
     semantics::omp::AppendDirectiveContextTraits(directive, constructTraits);
   };
+  auto getDirective = [&](const pft::Evaluation &eval,
+                          const parser::OpenMPConstruct &omp) {
+    llvm::omp::Directive directive = parser::omp::GetOmpDirectiveName(omp).v;
+    if (directive == llvm::omp::Directive::OMPD_metadirective)
+      for (const OpenMPContextFrame *frame : frames)
+        if (&frame->evaluation == &eval && frame->isReplacement)
+          return frame->directive;
+    return directive;
+  };
   for (const pft::Evaluation *ancestor : ancestors) {
     const auto *omp = ancestor->getIf<parser::OpenMPConstruct>();
     if (!omp)
       continue;
-    llvm::omp::Directive directive{parser::omp::GetOmpDirectiveName(*omp).v};
     // An ancestor supplies the full source context, including constituents
     // whose bodies also have active frames. Count each construct only once.
     for (auto [index, frame] : llvm::enumerate(frames))
       if (&frame->evaluation == ancestor)
         usedFrames[index] = true;
-    if (directive != llvm::omp::Directive::OMPD_metadirective) {
-      append(directive);
-      continue;
-    }
-    for (const OpenMPContextFrame *frame : frames) {
-      if (&frame->evaluation == ancestor && frame->isReplacement) {
-        append(frame->directive);
-        break;
-      }
-    }
+    append(getDirective(*ancestor, *omp));
   }
 
   // Use entered frames for clauses. Loop bounds use the source prefix below,
@@ -1554,19 +1553,10 @@ void collectEnclosingConstructTraits(
   const auto *omp = evaluation->getIf<parser::OpenMPConstruct>();
   if (!omp)
     return;
-  llvm::omp::Directive directive = parser::omp::GetOmpDirectiveName(*omp).v;
-  if (directive == llvm::omp::Directive::OMPD_metadirective) {
-    for (const OpenMPContextFrame *frame : frames) {
-      if (&frame->evaluation == evaluation && frame->isReplacement) {
-        directive = frame->directive;
-        break;
-      }
-    }
-  }
   // Bounds precede the first loop-associated constituent in source order.
   // TARGET TEAMS DISTRIBUTE PARALLEL DO therefore retains TARGET and TEAMS.
   for (llvm::omp::Directive leaf :
-       llvm::omp::getLeafConstructsOrSelf(directive)) {
+       llvm::omp::getLeafConstructsOrSelf(getDirective(*evaluation, *omp))) {
     llvm::omp::Association association =
         llvm::omp::getDirectiveAssociation(leaf);
     if (association == llvm::omp::Association::LoopNest ||

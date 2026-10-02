@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -25,6 +26,43 @@
 
 using namespace llvm;
 using namespace omp;
+
+SmallVector<TraitProperty, 8> llvm::omp::getConstructTraits(Directive Kind) {
+  SmallVector<TraitProperty, 8> Traits;
+  for (Directive Leaf : getLeafConstructsOrSelf(Kind)) {
+    if (getDirectiveCategory(Leaf) == Category::Informational)
+      continue;
+    switch (Leaf) {
+    case OMPD_target:
+      Traits.push_back(TraitProperty::construct_target_target);
+      break;
+    case OMPD_teams:
+      Traits.push_back(TraitProperty::construct_teams_teams);
+      break;
+    case OMPD_parallel:
+      Traits.push_back(TraitProperty::construct_parallel_parallel);
+      break;
+    case OMPD_for:
+    case OMPD_do:
+      Traits.push_back(TraitProperty::construct_for_for);
+      break;
+    case OMPD_simd:
+      Traits.push_back(TraitProperty::construct_simd_simd);
+      break;
+    case OMPD_section:
+      // SECTION separates blocks within SECTIONS without adding a level.
+    case OMPD_dispatch:
+    case OMPD_nothing:
+    case OMPD_metadirective:
+    case OMPD_unknown:
+      break;
+    default:
+      Traits.push_back(TraitProperty::invalid);
+      break;
+    }
+  }
+  return Traits;
+}
 
 OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple,
                        Triple TargetOffloadTriple, int DeviceNum) {
