@@ -732,9 +732,8 @@ struct IntToFPPattern final : public OpConversionPattern<ArithOp> {
     unsigned originalBitwidth =
         getElementTypeOrSelf(op.getIn().getType()).getIntOrFloatBitWidth();
 
-    if (!srcType ||
-        !(isa<IntegerType, FloatType>(getElementTypeOrSelf(srcType)) ||
-          isa<VectorType>(srcType))) {
+    Type srcElemType = getElementTypeOrSelf(srcType);
+    if (!srcElemType.isIntOrFloat()) {
       return rewriter.notifyMatchFailure(op,
                                          "unsupported type for uitofp/sitofp");
     }
