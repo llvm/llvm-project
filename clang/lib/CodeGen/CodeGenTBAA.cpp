@@ -286,6 +286,9 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
     SmallString<256> TyName;
     if (isa<BuiltinType>(Ty)) {
       llvm::MDNode *ScalarMD = getTypeInfoHelper(Ty);
+      // char-derived pointers alias everything; use the universal pointer node.
+      if (ScalarMD == getChar())
+        return getAnyPtr(PtrDepth);
       StringRef Name =
           cast<llvm::MDString>(
               ScalarMD->getOperand(CodeGenOpts.NewStructPathTBAA ? 2 : 0))
