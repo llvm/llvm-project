@@ -285,6 +285,7 @@ add_llvm_component_library(LLVMSupport
   ThreadPool.cpp
   TimeProfiler.cpp
   Timer.cpp
+  ToolInterface.cpp
   ToolOutputFile.cpp
   TrieRawHashMap.cpp
   Twine.cpp
