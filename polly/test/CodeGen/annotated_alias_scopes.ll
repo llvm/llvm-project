@@ -14,7 +14,7 @@
 ; SCOPES: !1 = !{!"llvm.loop.vectorize.disable"}
 ; SCOPES: !2 = !{!3}
 ; SCOPES: !3 = distinct !{!3, !4, !"polly.alias.scope.MemRef_B"}
-; SCOPES: !4 = distinct !{!4, !"polly.alias.scope.domain"}
+; SCOPES: !4 = distinct !{!4, i1 false, !"polly.alias.scope.domain"}
 ; SCOPES: !5 = !{!6, !7}
 ; SCOPES: !6 = distinct !{!6, !4, !"polly.alias.scope.MemRef_C"}
 ; SCOPES: !7 = distinct !{!7, !4, !"polly.alias.scope.MemRef_A"}

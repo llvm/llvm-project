@@ -241,7 +241,10 @@ void createDefaultFIRPostCFGOptimizerPassPipeline(
 
   pm.addPass(mlir::createSCFToControlFlowPass());
 
-  pm.addPass(mlir::createCanonicalizerPass(config));
+  if (pc.OptLevel == llvm::OptimizationLevel::O0)
+    pm.addPass(fir::createO0CanonicalizerPass());
+  else
+    pm.addPass(mlir::createCanonicalizerPass(config));
   pm.addPass(fir::createSimplifyRegionLite());
   if (!pc.SkipConvertComplexPow)
     pm.addPass(fir::createConvertComplexPow());
@@ -463,6 +466,7 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
        config.InstrumentFunctionExit, config.NoInfsFPMath, config.NoNaNsFPMath,
        config.ApproxFuncFPMath, config.NoSignedZerosFPMath, config.UnsafeFPMath,
        config.Reciprocals, config.PreferVectorWidth, config.UseSampleProfile,
+       config.DisableTailCalls, config.UniqueInternalLinkageNames,
        /*tuneCPU=*/"", setNoCapture, setNoAlias, setReadOnly}));
 
   if (config.EnableOpenMP) {

@@ -117,11 +117,33 @@ static std::optional<TypeSize> getObjectSize(const Value *V,
   return std::nullopt;
 }
 
+/// Return the minimal extent from \p V to the end of the underlying object,
+/// assuming the result is used in an aliasing query. E.g., we do use the query
+/// location size and the fact that null pointers cannot alias here.
+static TypeSize getMinimalExtentFrom(const Value &V,
+                                     const LocationSize &LocSize,
+                                     const DataLayout &DL,
+                                     bool NullIsValidLoc) {
+  // If we have dereferenceability information we know a lower bound for the
+  // extent as accesses for a lower offset would be valid. We need to exclude
+  // the "or null" part if null is a valid pointer. We can ignore frees, as an
+  // access after free would be undefined behavior.
+  bool CanBeNull;
+  uint64_t DerefBytes =
+      V.getPointerDereferenceableBytes(DL, CanBeNull, /*CanBeFreed=*/nullptr);
+  DerefBytes = (CanBeNull && NullIsValidLoc) ? 0 : DerefBytes;
+  // If queried with a precise location size, we assume that location size to be
+  // accessed, thus valid.
+  if (LocSize.isPrecise())
+    DerefBytes = std::max(DerefBytes, LocSize.getValue().getKnownMinValue());
+  return TypeSize::getFixed(DerefBytes);
+}
+
 /// Returns true if we can prove that the object specified by V is smaller than
-/// Size. Bails out early unless the root object is passed as the first
-/// parameter.
-static bool isObjectSmallerThan(const Value *V, TypeSize Size,
-                                const DataLayout &DL,
+/// the minimal extent accessed from OtherV with size OtherSize. Bails out early
+/// unless the root object is passed as the first parameter.
+static bool isObjectSmallerThan(const Value *V, const Value &OtherV,
+                                LocationSize OtherSize, const DataLayout &DL,
                                 const TargetLibraryInfo &TLI,
                                 bool NullIsValidLoc) {
   // Note that the meanings of the "object" are slightly different in the
@@ -151,30 +173,11 @@ static bool isObjectSmallerThan(const Value *V, TypeSize Size,
   // reads a bit past the end given sufficient alignment.
   std::optional<TypeSize> ObjectSize = getObjectSize(V, DL, TLI, NullIsValidLoc,
                                                      /*RoundToAlign*/ true);
+  if (!ObjectSize)
+    return false;
 
-  return ObjectSize && TypeSize::isKnownLT(*ObjectSize, Size);
-}
-
-/// Return the minimal extent from \p V to the end of the underlying object,
-/// assuming the result is used in an aliasing query. E.g., we do use the query
-/// location size and the fact that null pointers cannot alias here.
-static TypeSize getMinimalExtentFrom(const Value &V,
-                                     const LocationSize &LocSize,
-                                     const DataLayout &DL,
-                                     bool NullIsValidLoc) {
-  // If we have dereferenceability information we know a lower bound for the
-  // extent as accesses for a lower offset would be valid. We need to exclude
-  // the "or null" part if null is a valid pointer. We can ignore frees, as an
-  // access after free would be undefined behavior.
-  bool CanBeNull;
-  uint64_t DerefBytes =
-      V.getPointerDereferenceableBytes(DL, CanBeNull, /*CanBeFreed=*/nullptr);
-  DerefBytes = (CanBeNull && NullIsValidLoc) ? 0 : DerefBytes;
-  // If queried with a precise location size, we assume that location size to be
-  // accessed, thus valid.
-  if (LocSize.isPrecise())
-    DerefBytes = std::max(DerefBytes, LocSize.getValue().getKnownMinValue());
-  return TypeSize::getFixed(DerefBytes);
+  TypeSize Size = getMinimalExtentFrom(OtherV, OtherSize, DL, NullIsValidLoc);
+  return TypeSize::isKnownLT(*ObjectSize, Size);
 }
 
 /// Returns true if we can prove that the object specified by V has size Size.
@@ -362,6 +365,18 @@ struct CastedValue {
     return N;
   }
 
+  KnownBits evaluateWith(KnownBits K) const {
+    assert(K.getBitWidth() == V->getType()->getPrimitiveSizeInBits() &&
+           "Incompatible bit width");
+    if (TruncBits)
+      K = K.trunc(K.getBitWidth() - TruncBits);
+    if (SExtBits)
+      K = K.sext(K.getBitWidth() + SExtBits);
+    if (ZExtBits)
+      K = K.zext(K.getBitWidth() + ZExtBits);
+    return K;
+  }
+
   bool canDistributeOver(bool NUW, bool NSW) const {
     // zext(x op<nuw> y) == zext(x) op<nuw> zext(y)
     // sext(x op<nsw> y) == sext(x) op<nsw> sext(y)
@@ -523,7 +538,7 @@ struct VariableGEPIndex {
   APInt Scale;
 
   // Context instruction to use when querying information about this index.
-  const Instruction *CxtI;
+  const Instruction *CtxI;
 
   /// True if all operations in this expression are NSW.
   bool IsNSW;
@@ -589,6 +604,7 @@ struct BasicAAResult::DecomposedGEP {
 struct BasicAAResult::VariableGEPOffsetInfo {
   APInt GCD;
   ConstantRange OffsetRange;
+  SmallVector<KnownBits, 4> VarIndexKnownBits;
 };
 
 /// If V is a symbolic pointer expression, decompose it into a base pointer
@@ -604,7 +620,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
   // Limit recursion depth to limit compile time in crazy cases.
   unsigned MaxLookup = MaxLookupSearchDepth;
   SearchTimes++;
-  const Instruction *CxtI = dyn_cast<Instruction>(V);
+  const Instruction *CtxI = dyn_cast<Instruction>(V);
 
   unsigned IndexSize = DL.getIndexTypeSizeInBits(V->getType());
   DecomposedGEP Decomposed;
@@ -751,7 +767,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       }
 
       if (!!Scale) {
-        VariableGEPIndex Entry = {LE.Val, Scale, CxtI, LE.IsNSW,
+        VariableGEPIndex Entry = {LE.Val, Scale, CtxI, LE.IsNSW,
                                   /* IsNegated */ false};
         Decomposed.VarIndices.push_back(Entry);
       }
@@ -1303,7 +1319,7 @@ AliasResult BasicAAResult::aliasGEP(
   // Analyze the variable indices, and compute the GCD that the total
   // variable offset is guaranteed to be a multiple of, and its approximate
   // range.
-  auto [GCD, OffsetRange] = analyzeVariableOffsets(DecompGEP1, DT);
+  auto [GCD, OffsetRange, VIKnownBits] = analyzeVariableOffsets(DecompGEP1, DT);
 
   // We now have accesses at two offsets from the same base:
   //  1. (...)*GCD + DecompGEP1.Offset with size V1Size
@@ -1329,7 +1345,8 @@ AliasResult BasicAAResult::aliasGEP(
 
   // If a minimum absolute variable offset can be established, employ it to
   // prove that the two accesses are far enough apart.
-  if (auto MinAbsVarIndex = computeMinAbsVarOffset(DecompGEP1, DT, AAQI)) {
+  if (auto MinAbsVarIndex =
+          computeMinAbsVarOffset(DecompGEP1, VIKnownBits, DT, AAQI)) {
     // The constant offset will have added at least +/-MinAbsVarIndex to it.
     APInt OffsetLo = DecompGEP1.Offset - *MinAbsVarIndex;
     APInt OffsetHi = DecompGEP1.Offset + *MinAbsVarIndex;
@@ -1601,12 +1618,8 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   // If the size of one access is larger than the entire object on the other
   // side, then we know such behavior is undefined and can assume no alias.
   bool NullIsValidLocation = NullPointerIsDefined(&F);
-  if ((isObjectSmallerThan(
-          O2, getMinimalExtentFrom(*V1, V1Size, DL, NullIsValidLocation), DL,
-          TLI, NullIsValidLocation)) ||
-      (isObjectSmallerThan(
-          O1, getMinimalExtentFrom(*V2, V2Size, DL, NullIsValidLocation), DL,
-          TLI, NullIsValidLocation)))
+  if (isObjectSmallerThan(O2, *V1, V1Size, DL, TLI, NullIsValidLocation) ||
+      isObjectSmallerThan(O1, *V2, V2Size, DL, TLI, NullIsValidLocation))
     return AliasResult::NoAlias;
 
   if (EnableSeparateStorageAnalysis) {
@@ -1909,7 +1922,7 @@ void BasicAAResult::subtractDecomposedGEPs(DecomposedGEP &DestGEP,
 
     // If we didn't consume this entry, add it to the end of the Dest list.
     if (!Found) {
-      VariableGEPIndex Entry = {Src.Val, Src.Scale, Src.CxtI, Src.IsNSW,
+      VariableGEPIndex Entry = {Src.Val, Src.Scale, Src.CtxI, Src.IsNSW,
                                 /* IsNegated */ true};
       DestGEP.VarIndices.push_back(Entry);
 
@@ -1924,13 +1937,16 @@ BasicAAResult::analyzeVariableOffsets(const DecomposedGEP &GEP,
                                       DominatorTree *DT) {
   APInt GCD;
   ConstantRange OffsetRange(GEP.Offset);
+  SmallVector<KnownBits, 4> VarIndexKnownBits;
+  VarIndexKnownBits.reserve(GEP.VarIndices.size());
 
   for (unsigned I = 0, E = GEP.VarIndices.size(); I != E; ++I) {
     const VariableGEPIndex &Index = GEP.VarIndices[I];
     const APInt &Scale = Index.Scale;
 
-    SimplifyQuery SQ(DL, DT, &AC, Index.CxtI, /*UseInstrInfo=*/true);
+    SimplifyQuery SQ(DL, DT, &AC, Index.CtxI, /*UseInstrInfo=*/true);
     KnownBits Known = computeKnownBits(Index.Val.V, SQ);
+    VarIndexKnownBits.emplace_back(Known);
 
     APInt ScaleForGCD = Scale;
     if (!Index.IsNSW)
@@ -1973,11 +1989,12 @@ BasicAAResult::analyzeVariableOffsets(const DecomposedGEP &GEP,
       OffsetRange = OffsetRange.add(CR);
   }
 
-  return {GCD, OffsetRange};
+  return {GCD, OffsetRange, std::move(VarIndexKnownBits)};
 }
 
 std::optional<APInt> BasicAAResult::computeMinAbsVarOffset(
-    const DecomposedGEP &GEP, DominatorTree *DT, const AAQueryInfo &AAQI) {
+    const DecomposedGEP &GEP, ArrayRef<KnownBits> VIKnownBits,
+    DominatorTree *DT, const AAQueryInfo &AAQI) {
   // Check if abs(V*Scale) >= abs(Scale) holds in the presence of
   // potentially wrapping math.
   auto MultiplyByScaleNoWrap = [](const VariableGEPIndex &Var) {
@@ -2000,7 +2017,7 @@ std::optional<APInt> BasicAAResult::computeMinAbsVarOffset(
     // VarIndex = Scale*V.
     const VariableGEPIndex &Var = VarIndices[0];
     if (Var.Val.TruncBits == 0 &&
-        isKnownNonZero(Var.Val.V, SimplifyQuery(DL, DT, &AC, Var.CxtI))) {
+        isKnownNonZero(Var.Val.V, SimplifyQuery(DL, DT, &AC, Var.CtxI))) {
       // Refine MinAbsVarIndex, if abs(Scale*V) >= abs(Scale) holds in the
       // presence of potentially wrapping math.
       if (MultiplyByScaleNoWrap(Var)) {
@@ -2018,14 +2035,53 @@ std::optional<APInt> BasicAAResult::computeMinAbsVarOffset(
     // inequality of values across loop iterations.
     const VariableGEPIndex &Var0 = VarIndices[0];
     const VariableGEPIndex &Var1 = VarIndices[1];
-    if (Var0.hasNegatedScaleOf(Var1) && Var0.Val.TruncBits == 0 &&
-        Var0.Val.hasSameCastsAs(Var1.Val) && !AAQI.MayBeCrossIteration &&
-        MultiplyByScaleNoWrap(Var0) && MultiplyByScaleNoWrap(Var1) &&
-        isKnownNonEqual(Var0.Val.V, Var1.Val.V,
-                        SimplifyQuery(DL, DT, &AC, /*CxtI=*/Var0.CxtI
-                                                       ? Var0.CxtI
-                                                       : Var1.CxtI)))
-      return Var0.Scale.abs();
+    bool Preconditions =
+        Var0.Val.TruncBits == 0 && Var0.Val.hasSameCastsAs(Var1.Val) &&
+        !AAQI.MayBeCrossIteration && MultiplyByScaleNoWrap(Var0) &&
+        MultiplyByScaleNoWrap(Var1);
+
+    if (!Preconditions)
+      return std::nullopt;
+
+    if (Var0.hasNegatedScaleOf(Var1)) {
+      if (isKnownNonEqual(Var0.Val.V, Var1.Val.V,
+                          SimplifyQuery(DL, DT, &AC, /*CtxI=*/Var0.CtxI
+                                                         ? Var0.CtxI
+                                                         : Var1.CtxI)))
+        return Var0.Scale.abs();
+      // Equal scales would imply the GCD equals the scale itself, leading
+      // the generalized path below not to do better than isKnownNonEqual.
+      return std::nullopt;
+    }
+
+    // On the chance we have not found a min abs, fallback to the generalization
+    // of the two variables case being handled to different scales:
+    // VarIndex = Scale0*V0 + (-Scale1)*V1 = ScaleGCD*(C0*V0 - C1*V1)
+    // where C0 = abs(Scale0)/ScaleGCD, C1 = abs(Scale1)/ScaleGCD.
+    // If C0*V0 != C1*V1, then abs(VarIndex) >= ScaleGCD, leading to the min
+    // absolute value being ScaleGCD.
+    //
+    // Ensure scales, after subtraction, have opposite signs.
+    bool EffectiveNeg0 = Var0.IsNegated ^ Var0.Scale.isNegative();
+    bool EffectiveNeg1 = Var1.IsNegated ^ Var1.Scale.isNegative();
+    if (EffectiveNeg0 != EffectiveNeg1) {
+      APInt AbsScale0 = Var0.Scale.abs();
+      APInt AbsScale1 = Var1.Scale.abs();
+      APInt ScaleGCD = APIntOps::GreatestCommonDivisor(AbsScale0, AbsScale1);
+      APInt C0 = AbsScale0.udiv(ScaleGCD);
+      APInt C1 = AbsScale1.udiv(ScaleGCD);
+
+      // Try to check whether C0*V0 and C1*V1 are provably distinct (i.e., one
+      // is guaranteed even while the other is guaranteed odd).
+      auto Known0 = KnownBits::mul(Var0.Val.evaluateWith(VIKnownBits[0]),
+                                   KnownBits::makeConstant(C0));
+
+      auto Known1 = KnownBits::mul(Var1.Val.evaluateWith(VIKnownBits[1]),
+                                   KnownBits::makeConstant(C1));
+
+      if (auto Res = KnownBits::ne(Known0, Known1); Res && *Res)
+        return ScaleGCD;
+    }
   }
 
   return std::nullopt;

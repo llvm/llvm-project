@@ -21,6 +21,7 @@
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Support/Parallel.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -127,19 +128,7 @@ static std::string demangleForVersion(StringRef name) {
   return s;
 }
 
-// Initialize demangledSyms with a map from demangled symbols to symbol
-// objects. Used to handle "extern C++" directive in version scripts.
-//
-// The map will contain all demangled symbols. That can be very large,
-// and in LLD we generally want to avoid do anything for each symbol.
-// Then, why are we doing this? Here's why.
-//
-// Users can use "extern C++ {}" directive to match against demangled
-// C++ symbols. For example, you can write a pattern such as
-// "llvm::*::foo(int, ?)". Obviously, there's no way to handle this
-// other than trying to match a pattern against all demangled symbols.
-// So, if "extern C++" feature is used, we need to demangle all known
-// symbols.
+// Map from demangled name to symbols, for exact lookups in extern "C++" blocks.
 StringMap<SmallVector<Symbol *, 0>> &SymbolTable::getDemangledSyms() {
   if (!demangledSyms) {
     demangledSyms.emplace();
@@ -157,45 +146,6 @@ SmallVector<Symbol *, 0> SymbolTable::findByVersion(SymbolVersion ver) {
     if (canBeVersioned(*sym))
       return {sym};
   return {};
-}
-
-SmallVector<Symbol *, 0> SymbolTable::findAllByVersion(SymbolVersion ver,
-                                                       bool includeNonDefault) {
-  SmallVector<Symbol *, 0> res;
-  SingleStringMatcher m(ver.name);
-  auto check = [&](const Symbol &sym) -> bool {
-    if (!includeNonDefault)
-      return !sym.hasVersionSuffix;
-    return !sym.hasVersionSuffix ||
-           !sym.getName().split('@').second.starts_with('@');
-  };
-
-  if (ver.isExternCpp) {
-    for (auto &p : getDemangledSyms())
-      if (m.match(p.first()))
-        for (Symbol *sym : p.second)
-          if (check(*sym))
-            res.push_back(sym);
-    return res;
-  }
-
-  for (Symbol *sym : symVector)
-    if (canBeVersioned(*sym) && check(*sym) && m.match(sym->getName()))
-      res.push_back(sym);
-  return res;
-}
-
-void SymbolTable::handleDynamicList() {
-  SmallVector<Symbol *, 0> syms;
-  for (SymbolVersion &ver : ctx.arg.dynamicList) {
-    if (ver.hasWildcard)
-      syms = findAllByVersion(ver, /*includeNonDefault=*/true);
-    else
-      syms = findByVersion(ver);
-
-    for (Symbol *sym : syms)
-      sym->isExported = sym->inDynamicList = true;
-  }
 }
 
 // Set symbol versions to symbols. This function handles patterns containing no
@@ -236,10 +186,11 @@ bool SymbolTable::assignExactVersion(SymbolVersion ver, uint16_t versionId) {
 
 namespace {
 struct WildcardPattern {
-  SymbolVersion ver;
+  SingleStringMatcher matcher;
+  bool isExternCpp;
   uint16_t versionId;
   WildcardPattern(const SymbolVersion &ver, uint16_t versionId)
-      : ver(ver), versionId(versionId) {}
+      : matcher(ver.name), isExternCpp(ver.isExternCpp), versionId(versionId) {}
 };
 } // namespace
 
@@ -314,20 +265,51 @@ void SymbolTable::scanVersionScript() {
   }
   pats.append(asterisks);
 
+  auto findFirstMatch = [&](ArrayRef<WildcardPattern> pats,
+                            StringRef name) -> const WildcardPattern * {
+    std::optional<std::string> demangled;
+    for (auto &pat : pats) {
+      if (pat.isExternCpp && !demangled)
+        demangled = demangleForVersion(name);
+      if (pat.matcher.match(pat.isExternCpp ? StringRef(*demangled) : name))
+        return &pat;
+    }
+    return nullptr;
+  };
+
   // Exact matching takes precedence over wildcard matching, so a wildcard
   // assigns a version only if none has been assigned.
-  for (auto &pat : pats) {
-    for (Symbol *sym : findAllByVersion(pat.ver, /*includeNonDefault=*/false)) {
-      if (!sym->versionScriptAssigned) {
-        sym->versionScriptAssigned = true;
-        sym->versionId = pat.versionId;
-      }
-    }
+  if (!pats.empty()) {
+    parallelForEach(symVector, [&](Symbol *sym) {
+      if (sym->versionScriptAssigned || sym->hasVersionSuffix ||
+          !canBeVersioned(*sym))
+        return;
+      if (auto *pat = findFirstMatch(pats, sym->getName()))
+        sym->versionId = pat->versionId;
+    });
   }
 
   // Handle --dynamic-list. If a specified symbol is also matched by local: in a
   // version script, the version script takes precedence.
-  handleDynamicList();
+  SmallVector<Symbol *, 0> syms;
+  pats.clear();
+  for (SymbolVersion &ver : ctx.arg.dynamicList) {
+    if (ver.hasWildcard) {
+      pats.emplace_back(ver, 0);
+    } else {
+      for (Symbol *sym : findByVersion(ver))
+        sym->isExported = sym->inDynamicList = true;
+    }
+  }
+  if (!pats.empty()) {
+    parallelForEach(symVector, [&](Symbol *sym) {
+      if (!canBeVersioned(*sym))
+        return;
+      StringRef name = sym->getName();
+      if (findFirstMatch(pats, name))
+        sym->isExported = sym->inDynamicList = true;
+    });
+  }
 }
 
 Symbol *SymbolTable::addUnusedUndefined(StringRef name, uint8_t binding) {

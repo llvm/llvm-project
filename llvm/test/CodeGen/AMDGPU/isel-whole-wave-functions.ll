@@ -100,7 +100,7 @@ define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) {
   ; GISEL-NEXT:   [[SI_WHOLE_WAVE_FUNC_SETUP:%[0-9]+]]:sreg_32_xm0_xexec = SI_WHOLE_WAVE_FUNC_SETUP implicit-def dead $exec, implicit $exec
   ; GISEL-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_EQ_U32_e64 [[COPY]], [[COPY1]], implicit $exec
   ; GISEL-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[V_CMP_EQ_U32_e64_]]
-  ; GISEL-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[COPY2]], %bb.3, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GISEL-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[COPY2]], %bb.3, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GISEL-NEXT:   S_BRANCH %bb.2
   ; GISEL-NEXT: {{  $}}
   ; GISEL-NEXT: bb.2.if.then:
@@ -110,7 +110,7 @@ define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) {
   ; GISEL-NEXT: {{  $}}
   ; GISEL-NEXT: bb.3.if.end:
   ; GISEL-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY1]], %bb.1, [[V_ADD_U32_e64_]], %bb.2
-  ; GISEL-NEXT:   SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GISEL-NEXT:   SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GISEL-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[PHI]], 0, [[COPY]], [[SI_WHOLE_WAVE_FUNC_SETUP]], implicit $exec
   ; GISEL-NEXT:   $vgpr0 = COPY [[V_CNDMASK_B32_e64_]]
   ; GISEL-NEXT:   SI_WHOLE_WAVE_FUNC_RETURN [[SI_WHOLE_WAVE_FUNC_SETUP]], implicit $vgpr0
@@ -221,7 +221,7 @@ define amdgpu_cs void @call(<8 x i32> %x, ptr %p) {
   ; DAGISEL-NEXT:   $vgpr5 = COPY [[COPY4]]
   ; DAGISEL-NEXT:   $vgpr6 = COPY [[COPY3]]
   ; DAGISEL-NEXT:   $vgpr7 = COPY [[COPY2]]
-  ; DAGISEL-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[REG_SEQUENCE1]], @callee, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit-def $vgpr0
+  ; DAGISEL-NEXT:   dead $sgpr30_sgpr31 = SI_CALL killed [[REG_SEQUENCE1]], @callee, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit-def $vgpr0
   ; DAGISEL-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; DAGISEL-NEXT:   [[COPY11:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
@@ -255,7 +255,7 @@ define amdgpu_cs void @call(<8 x i32> %x, ptr %p) {
   ; GISEL-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @callee
   ; GISEL-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @callee
   ; GISEL-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
-  ; GISEL-NEXT:   $sgpr30_sgpr31 = SI_CALL [[REG_SEQUENCE1]], @callee, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit-def $vgpr0
+  ; GISEL-NEXT:   dead $sgpr30_sgpr31 = SI_CALL [[REG_SEQUENCE1]], @callee, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit-def $vgpr0
   ; GISEL-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GISEL-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-NEXT:   FLAT_STORE_DWORD [[REG_SEQUENCE]], [[COPY10]], 0, 0, implicit $exec, implicit $flat_scr :: (store (i32) into %ir.p)

@@ -197,18 +197,6 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
 }
 
 const TargetRegisterClass *
-X86RegisterInfo::getPointerRegClass(unsigned Kind) const {
-  assert(Kind == 0 && "this should only be used for default cases");
-  if (IsTarget64BitLP64)
-    return &X86::GR64RegClass;
-  // If the target is 64bit but we have been told to use 32bit addresses,
-  // we can still use 64-bit register as long as we know the high bits
-  // are zeros.
-  // Reflect that in the returned register class.
-  return Is64Bit ? &X86::LOW32_ADDR_ACCESSRegClass : &X86::GR32RegClass;
-}
-
-const TargetRegisterClass *
 X86RegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
   if (RC == &X86::CCRRegClass) {
     if (Is64Bit)
@@ -1175,12 +1163,10 @@ static ShapeT getTileShape(Register VirtReg, VirtRegMap *VRM,
   }
 }
 
-bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
-                                            ArrayRef<MCPhysReg> Order,
-                                            SmallVectorImpl<MCPhysReg> &Hints,
-                                            const MachineFunction &MF,
-                                            const VirtRegMap *VRM,
-                                            const LiveRegMatrix *Matrix) const {
+bool X86RegisterInfo::getRegAllocationHints(
+    Register VirtReg, ArrayRef<MCPhysReg> Order,
+    SmallSetVector<MCPhysReg, 16> &Hints, const MachineFunction &MF,
+    const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
   bool BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(
@@ -1204,7 +1190,7 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
     auto TryAddNDDHint = [&](const MachineOperand &MO) {
       Register Reg = MO.getReg();
       Register PhysReg = Reg.isPhysical() ? Reg : Register(VRM->getPhys(Reg));
-      if (PhysReg && !MRI->isReserved(PhysReg) && !is_contained(Hints, PhysReg))
+      if (PhysReg && !MRI->isReserved(PhysReg) && !Hints.contains(PhysReg))
         TwoAddrHints.insert(PhysReg);
     };
 
@@ -1231,7 +1217,7 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
 
     for (MCPhysReg OrderReg : Order)
       if (TwoAddrHints.count(OrderReg))
-        Hints.push_back(OrderReg);
+        Hints.insert(OrderReg);
 
     return BaseImplRetVal;
   }
@@ -1240,22 +1226,22 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
   auto AddHint = [&](MCPhysReg PhysReg) {
     Register VReg = Matrix->getOneVReg(PhysReg);
     if (VReg == MCRegister::NoRegister) { // Not allocated yet
-      Hints.push_back(PhysReg);
+      Hints.insert(PhysReg);
       return;
     }
     ShapeT PhysShape = getTileShape(VReg, const_cast<VirtRegMap *>(VRM), MRI);
     if (PhysShape == VirtShape)
-      Hints.push_back(PhysReg);
+      Hints.insert(PhysReg);
   };
 
-  SmallSet<MCPhysReg, 4> CopyHints(llvm::from_range, Hints);
+  SmallSetVector<MCPhysReg, 16> CopyHints(Hints);
   Hints.clear();
   for (auto Hint : CopyHints) {
     if (RC.contains(Hint) && !MRI->isReserved(Hint))
       AddHint(Hint);
   }
   for (MCPhysReg PhysReg : Order) {
-    if (!CopyHints.count(PhysReg) && RC.contains(PhysReg) &&
+    if (!CopyHints.contains(PhysReg) && RC.contains(PhysReg) &&
         !MRI->isReserved(PhysReg))
       AddHint(PhysReg);
   }
@@ -1306,4 +1292,14 @@ bool X86RegisterInfo::isNonRex2RegClass(const TargetRegisterClass *RC) const {
   case X86::GR64_with_sub_16bit_in_GR16_NOREX2RegClassID:
     return true;
   }
+}
+
+unsigned X86RegisterInfo::getCSRFirstUseCost(const MachineFunction &MF) const {
+  // If PPX is implemented, push/pop pairs don't access memory.
+  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  if (ST.is64Bit() && ST.hasPPX())
+    return 0;
+
+  // push + pop.
+  return 2;
 }

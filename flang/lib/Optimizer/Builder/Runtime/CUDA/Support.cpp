@@ -8,9 +8,6 @@
 
 #include "flang/Optimizer/Builder/Runtime/CUDA/Support.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
-
-using namespace fir::runtime::cuda;
 
 static constexpr llvm::StringRef kCudaDeviceSynchronizeName =
     "_QPcudadevicesynchronize";

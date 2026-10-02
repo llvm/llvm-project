@@ -365,9 +365,9 @@ private:
       const AppliedModifierInfo &info);
   bool VerifyModifierUltimate(parser::omp::WithSource<llvm::omp::Clause> clause,
       const AppliedModifierInfo &info);
-  bool VerifyModifiers(parser::omp::WithSource<llvm::omp::Clause> clause,
+  bool VerifyModifierSyntax(parser::omp::WithSource<llvm::omp::Clause> clause,
       const AppliedModifierInfo &info);
-  void VerifyModifiers(const parser::OmpClause &x);
+  void VerifyModifierSyntax(const parser::OmpClause &x);
 
   // check-omp-structure.cpp
   using ClauseIterator =
@@ -419,6 +419,7 @@ private:
   bool HasRequires(llvm::omp::Clause req);
   void CheckAllowedMapTypes(
       parser::OmpMapType::Value, llvm::ArrayRef<parser::OmpMapType::Value>);
+  void CheckCloseModifierOnMapMembers();
 
   llvm::StringRef getClauseName(llvm::omp::Clause clause) override;
   llvm::StringRef getDirectiveName(llvm::omp::Directive directive) override;

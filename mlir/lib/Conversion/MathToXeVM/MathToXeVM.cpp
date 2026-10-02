@@ -13,9 +13,11 @@
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #include "../GPUCommon/GPUOpsLowering.h"
@@ -274,6 +276,26 @@ void ConvertMathToXeVMPass::runOnOperation() {
   Operation *op = getOperation();
   MLIRContext *ctx = op->getContext();
 
+  // Simplify first, so the cheaper form is what the conversion below lowers. A
+  // simplification rewrites a whole expression, so it must run before the
+  // lowering turns the parts of that expression into calls. Only the ops these
+  // patterns can match are given to the driver, and folding is off, so nothing
+  // else is touched.
+  {
+    RewritePatternSet simplifications(ctx);
+    populateMathAlgebraicSimplificationPatterns(simplifications);
+    FrozenRewritePatternSet frozen(std::move(simplifications));
+    SmallVector<Operation *> candidates;
+    op->walk([&](Operation *nested) {
+      if (frozen.getOpSpecificNativePatterns().contains(nested->getName()))
+        candidates.push_back(nested);
+    });
+    GreedyRewriteConfig config;
+    config.enableFolding(false);
+    if (failed(applyOpPatternsGreedily(candidates, frozen, config)))
+      return signalPassFailure();
+  }
+
   const auto &dl = getAnalysis<DataLayoutAnalysis>();
 
   RewritePatternSet patterns(&getContext());
@@ -281,12 +303,14 @@ void ConvertMathToXeVMPass::runOnOperation() {
   LLVMTypeConverter converter(ctx, options);
   ConversionTarget target(getContext());
 
-  // Native OCL patterns should take precedence for `fast` ops even when
-  // convertToOCL is set.
-  populateMathToXeVMConversionPatterns(patterns, convertArith,
-                                       convertToOCL + 1);
+  // The native (`afn`) patterns must outrank the precise OCL patterns: an op
+  // marked `afn` gets the native intrinsic, and every other op falls through to
+  // the precise OCL intrinsic.
+  constexpr unsigned oclBenefit = 1;
+  populateMathToXeVMConversionPatterns(patterns, convertArith, oclBenefit + 1);
   if (convertToOCL) {
-    populateMathToScalarOCLExtSetConversionPatterns(converter, patterns, 1);
+    populateMathToScalarOCLExtSetConversionPatterns(converter, patterns,
+                                                    oclBenefit);
     target
         .addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::Exp2Op, LLVM::LogOp,
                       LLVM::Log10Op, LLVM::Log2Op, LLVM::SinOp, LLVM::SqrtOp>();

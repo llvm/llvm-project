@@ -903,7 +903,7 @@ const ctype<char>::mask* ctype<char>::classic_table() noexcept {
 #  elif defined(__NetBSD__)
   return _C_ctype_tab_ + 1;
 #  elif defined(__GLIBC__)
-  return _LIBCPP_GET_C_LOCALE->__ctype_b;
+  return __locale::__get_c_locale()->__ctype_b;
 #  elif defined(_WIN32)
   return __pctype_func();
 #  elif defined(__EMSCRIPTEN__)
@@ -1225,7 +1225,7 @@ int codecvt<char, char, mbstate_t>::do_max_length() const noexcept { return 1; }
 #if _LIBCPP_HAS_WIDE_CHARACTERS
 constinit locale::id codecvt<wchar_t, char, mbstate_t>::id;
 
-codecvt<wchar_t, char, mbstate_t>::codecvt(size_t refs) : locale::facet(refs), __l_(_LIBCPP_GET_C_LOCALE) {}
+codecvt<wchar_t, char, mbstate_t>::codecvt(size_t refs) : locale::facet(refs), __l_(__locale::__get_c_locale()) {}
 
 codecvt<wchar_t, char, mbstate_t>::codecvt(const char* nm, size_t refs)
     : locale::facet(refs), __l_(__locale::__newlocale(_LIBCPP_ALL_MASK, nm, 0)) {
@@ -1238,7 +1238,7 @@ codecvt<wchar_t, char, mbstate_t>::codecvt(const char* nm, size_t refs)
 }
 
 codecvt<wchar_t, char, mbstate_t>::~codecvt() {
-  if (__l_ != _LIBCPP_GET_C_LOCALE)
+  if (__l_ != __locale::__get_c_locale())
     __locale::__freelocale(__l_);
 }
 
@@ -4863,7 +4863,7 @@ __time_put::__time_put(const string& nm) : __loc_(__locale::__newlocale(_LIBCPP_
 }
 
 __time_put::~__time_put() {
-  if (__loc_ != _LIBCPP_GET_C_LOCALE)
+  if (__loc_ != __locale::__get_c_locale())
     __locale::__freelocale(__loc_);
 }
 

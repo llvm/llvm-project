@@ -1557,6 +1557,19 @@ struct MDAttachment {
   TrackingMDNodeRef Node;
 };
 
+/// Head pointer for a Value's ValueHandleBase doubly-linked list, stored in
+/// LLVMContextImpl::ValueHandles. The first node's PrevPtr points to Head, so
+/// relocating the bucket refreshes PrevPtr to the new Head address.
+struct ValueHandleHead {
+  ValueHandleBase *Head = nullptr;
+
+  ValueHandleHead() = default;
+  ValueHandleHead(ValueHandleHead &&Other) noexcept;
+  ValueHandleHead &operator=(ValueHandleHead &&) = delete;
+  ValueHandleHead(const ValueHandleHead &) = delete;
+  ValueHandleHead &operator=(const ValueHandleHead &) = delete;
+};
+
 class LLVMContextImpl {
 public:
   /// OwnedModules - The set of modules instantiated in this context, and which
@@ -1750,7 +1763,7 @@ public:
   /// ValueHandles - This map keeps track of all of the value handles that are
   /// watching a Value*.  The Value::HasValueHandle bit is used to know
   /// whether or not a value has an entry in this map.
-  using ValueHandlesTy = DenseMap<Value *, ValueHandleBase *>;
+  using ValueHandlesTy = DenseMap<Value *, ValueHandleHead>;
   ValueHandlesTy ValueHandles;
 
   /// CustomMDKindNames - Map to hold the metadata string to ID mapping.
@@ -1763,11 +1776,6 @@ public:
   /// Number of currently unused metadata entries. Only used/updated in debug
   /// builds to ensure that all metadata attachments are properly freed.
   unsigned MetadataRecycleSize = 0;
-
-  /// Map DIAssignID -> Instructions with that attachment.
-  /// Managed by Instruction via Instruction::updateDIAssignIDMapping.
-  /// Query using the at:: functions defined in DebugInfo.h.
-  DenseMap<DIAssignID *, SmallVector<Instruction *, 1>> AssignmentIDToInstrs;
 
   /// Collection of per-GlobalObject sections used in this context.
   DenseMap<const GlobalObject *, StringRef> GlobalObjectSections;

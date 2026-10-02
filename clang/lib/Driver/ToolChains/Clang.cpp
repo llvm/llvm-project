@@ -1361,7 +1361,6 @@ namespace {
 void RenderARMABI(const Driver &D, const llvm::Triple &Triple,
                   const ArgList &Args, ArgStringList &CmdArgs) {
   // Select the ABI to use.
-  // FIXME: Support -meabi.
   // FIXME: Parts of this are duplicated in the backend, unify this somehow.
   const char *ABIName = nullptr;
   if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ))
@@ -4555,6 +4554,9 @@ static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
   Args.addOptInFlag(CmdArgs, options::OPT_fdiagnostics_show_hotness,
                     options::OPT_fno_diagnostics_show_hotness);
 
+  Args.addOptOutFlag(CmdArgs, options::OPT_flifetime_safety_c,
+                     options::OPT_fno_lifetime_safety_c);
+
   if (const Arg *A =
           Args.getLastArg(options::OPT_fdiagnostics_hotness_threshold_EQ)) {
     std::string Opt =
@@ -5646,6 +5648,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     MemProfUseArg->render(Args, CmdArgs);
   }
 
+  auto *CopyProfArg =
+      Args.getLastArg(options::OPT_fcopyprof, options::OPT_fno_copyprof);
+  if (CopyProfArg &&
+      !CopyProfArg->getOption().matches(options::OPT_fno_copyprof)) {
+    CopyProfArg->render(Args, CmdArgs);
+    Args.AddLastArg(CmdArgs, options::OPT_fcopyprof_static_size_threshold_EQ);
+  }
+
   // Embed-bitcode option.
   // Only white-listed flags below are allowed to be embedded.
   if (C.getDriver().embedBitcodeInObject() && !IsUsingLTO &&
@@ -5960,9 +5970,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       RelocationModel == llvm::Reloc::ROPI_RWPI)
     CmdArgs.push_back("-frwpi");
 
+  // -meabi=gnu/5 are encoded in the cc1 -triple environment; forward only other
+  // values (e.g. 4, which has no triple representation, and invalid values).
   if (Arg *A = Args.getLastArg(options::OPT_meabi)) {
-    CmdArgs.push_back("-meabi");
-    CmdArgs.push_back(A->getValue());
+    StringRef Value = A->getValue();
+    if (Value != "gnu" && Value != "5") {
+      CmdArgs.push_back("-meabi");
+      CmdArgs.push_back(A->getValue());
+    }
   }
 
   // -fsemantic-interposition is forwarded to CC1: set the
@@ -7891,7 +7906,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Handle exception personalities
   Arg *A = Args.getLastArg(
       options::OPT_fsjlj_exceptions, options::OPT_fseh_exceptions,
-      options::OPT_fdwarf_exceptions, options::OPT_fwasm_exceptions);
+      options::OPT_fdwarf_exceptions, options::OPT_fwasm_exceptions,
+      options::OPT_femscripten_exceptions);
   if (A) {
     const Option &Opt = A->getOption();
     if (Opt.matches(options::OPT_fsjlj_exceptions))
@@ -7902,6 +7918,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-exception-model=dwarf");
     if (Opt.matches(options::OPT_fwasm_exceptions))
       CmdArgs.push_back("-exception-model=wasm");
+    if (Opt.matches(options::OPT_femscripten_exceptions))
+      CmdArgs.push_back("-exception-model=emscripten");
   } else {
     switch (TC.GetExceptionModel(Args)) {
     default:
@@ -9801,7 +9819,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       return false;
     // Don't forward sanitizer arguments if the toolchain doesn't support it.
     // Without this check using it on the host would result in linker errors.
-    if (requiresUBSanRT(ID) && !ToolChainHasRT(TC, "ubsan_minimal"))
+    if (requiresUBSanRT(ID) && !ToolChainHasRT(TC, "ubsan_minimal") &&
+        !ToolChainHasRT(TC, "ubsan_standalone"))
       return false;
     // Don't forward -mllvm to toolchains that don't support LLVM.
     return TC.HasNativeLLVMSupport() || ID != OPT_mllvm;

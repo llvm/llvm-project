@@ -212,21 +212,26 @@ void FastISel::flushLocalValueMap() {
       }
     }
 
-    if (FirstNonValue != FuncInfo.MBB->end()) {
-      // See if there are any local value instructions left.  If so, we want to
-      // make sure the first one has a debug location; if it doesn't, use the
-      // first non-value instruction's debug location.
+    // See if there are any local value instructions left.  If so, we want to
+    // make sure the first one has a debug location; if it doesn't, use the
+    // first non-value instruction's debug location.
 
-      // If EmitStartPt is non-null, this block had copies at the top before
-      // FastISel started doing anything; it points to the last one, so the
-      // first local value instruction is the one after EmitStartPt.
-      // If EmitStartPt is null, the first local value instruction is at the
-      // top of the block.
-      MachineBasicBlock::iterator FirstLocalValue =
-          EmitStartPt ? ++MachineBasicBlock::iterator(EmitStartPt)
-                      : FuncInfo.MBB->begin();
-      if (FirstLocalValue != FirstNonValue && !FirstLocalValue->getDebugLoc())
+    // If EmitStartPt is non-null, this block had copies at the top before
+    // FastISel started doing anything; it points to the last one, so the
+    // first local value instruction is the one after EmitStartPt.
+    // If EmitStartPt is null, the first local value instruction is at the
+    // top of the block.
+    MachineBasicBlock::iterator FirstLocalValue =
+        EmitStartPt ? ++MachineBasicBlock::iterator(EmitStartPt)
+                    : FuncInfo.MBB->begin();
+    if (FirstLocalValue != FirstNonValue && !FirstLocalValue->getDebugLoc()) {
+      if (FirstNonValue != FuncInfo.MBB->end()) {
         FirstLocalValue->setDebugLoc(FirstNonValue->getDebugLoc());
+      } else if (const BasicBlock *BB = FuncInfo.MBB->getBasicBlock()) {
+        // Nothing follows them, e.g. a block only setting up a successor's PHI
+        // nodes before falling through. Use the terminator's location.
+        FirstLocalValue->setDebugLoc(BB->getTerminator()->getDebugLoc());
+      }
     }
   }
 
@@ -1408,7 +1413,6 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
   }
 
   case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
   case Intrinsic::expect:
   case Intrinsic::expect_with_probability: {
     Register ResultReg = getRegForValue(II->getArgOperand(0));
@@ -1980,7 +1984,8 @@ Register FastISel::fastEmitInst_(unsigned MachineInstOpcode,
   Register ResultReg = createResultReg(RC);
   const MCInstrDesc &II = TII.get(MachineInstOpcode);
 
-  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg);
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
+      ->setImplicitPhysRegDefsDead();
   return ResultReg;
 }
 
@@ -1991,16 +1996,10 @@ Register FastISel::fastEmitInst_r(unsigned MachineInstOpcode,
   Register ResultReg = createResultReg(RC);
   Op0 = constrainOperandRegClass(II, Op0, II.getNumDefs());
 
-  if (II.getNumDefs() >= 1)
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
-        .addReg(Op0);
-  else {
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II)
-        .addReg(Op0);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
-            ResultReg)
-        .addReg(II.implicit_defs()[0]);
-  }
+  assert(II.getNumDefs() >= 1 && "instruction must define the result");
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
+      .addReg(Op0)
+      ->setImplicitPhysRegDefsDead();
 
   return ResultReg;
 }
@@ -2014,18 +2013,11 @@ Register FastISel::fastEmitInst_rr(unsigned MachineInstOpcode,
   Op0 = constrainOperandRegClass(II, Op0, II.getNumDefs());
   Op1 = constrainOperandRegClass(II, Op1, II.getNumDefs() + 1);
 
-  if (II.getNumDefs() >= 1)
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
-        .addReg(Op0)
-        .addReg(Op1);
-  else {
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II)
-        .addReg(Op0)
-        .addReg(Op1);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
-            ResultReg)
-        .addReg(II.implicit_defs()[0]);
-  }
+  assert(II.getNumDefs() >= 1 && "instruction must define the result");
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
+      .addReg(Op0)
+      .addReg(Op1)
+      ->setImplicitPhysRegDefsDead();
   return ResultReg;
 }
 
@@ -2039,20 +2031,12 @@ Register FastISel::fastEmitInst_rrr(unsigned MachineInstOpcode,
   Op1 = constrainOperandRegClass(II, Op1, II.getNumDefs() + 1);
   Op2 = constrainOperandRegClass(II, Op2, II.getNumDefs() + 2);
 
-  if (II.getNumDefs() >= 1)
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
-        .addReg(Op0)
-        .addReg(Op1)
-        .addReg(Op2);
-  else {
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II)
-        .addReg(Op0)
-        .addReg(Op1)
-        .addReg(Op2);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
-            ResultReg)
-        .addReg(II.implicit_defs()[0]);
-  }
+  assert(II.getNumDefs() >= 1 && "instruction must define the result");
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
+      .addReg(Op0)
+      .addReg(Op1)
+      .addReg(Op2)
+      ->setImplicitPhysRegDefsDead();
   return ResultReg;
 }
 
@@ -2064,18 +2048,11 @@ Register FastISel::fastEmitInst_ri(unsigned MachineInstOpcode,
   Register ResultReg = createResultReg(RC);
   Op0 = constrainOperandRegClass(II, Op0, II.getNumDefs());
 
-  if (II.getNumDefs() >= 1)
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
-        .addReg(Op0)
-        .addImm(Imm);
-  else {
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II)
-        .addReg(Op0)
-        .addImm(Imm);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
-            ResultReg)
-        .addReg(II.implicit_defs()[0]);
-  }
+  assert(II.getNumDefs() >= 1 && "instruction must define the result");
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
+      .addReg(Op0)
+      .addImm(Imm)
+      ->setImplicitPhysRegDefsDead();
   return ResultReg;
 }
 
@@ -2087,20 +2064,12 @@ Register FastISel::fastEmitInst_rii(unsigned MachineInstOpcode,
   Register ResultReg = createResultReg(RC);
   Op0 = constrainOperandRegClass(II, Op0, II.getNumDefs());
 
-  if (II.getNumDefs() >= 1)
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
-        .addReg(Op0)
-        .addImm(Imm1)
-        .addImm(Imm2);
-  else {
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II)
-        .addReg(Op0)
-        .addImm(Imm1)
-        .addImm(Imm2);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
-            ResultReg)
-        .addReg(II.implicit_defs()[0]);
-  }
+  assert(II.getNumDefs() >= 1 && "instruction must define the result");
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
+      .addReg(Op0)
+      .addImm(Imm1)
+      .addImm(Imm2)
+      ->setImplicitPhysRegDefsDead();
   return ResultReg;
 }
 
@@ -2111,16 +2080,10 @@ Register FastISel::fastEmitInst_f(unsigned MachineInstOpcode,
 
   Register ResultReg = createResultReg(RC);
 
-  if (II.getNumDefs() >= 1)
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
-        .addFPImm(FPImm);
-  else {
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II)
-        .addFPImm(FPImm);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
-            ResultReg)
-        .addReg(II.implicit_defs()[0]);
-  }
+  assert(II.getNumDefs() >= 1 && "instruction must define the result");
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
+      .addFPImm(FPImm)
+      ->setImplicitPhysRegDefsDead();
   return ResultReg;
 }
 
@@ -2133,20 +2096,12 @@ Register FastISel::fastEmitInst_rri(unsigned MachineInstOpcode,
   Op0 = constrainOperandRegClass(II, Op0, II.getNumDefs());
   Op1 = constrainOperandRegClass(II, Op1, II.getNumDefs() + 1);
 
-  if (II.getNumDefs() >= 1)
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
-        .addReg(Op0)
-        .addReg(Op1)
-        .addImm(Imm);
-  else {
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II)
-        .addReg(Op0)
-        .addReg(Op1)
-        .addImm(Imm);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
-            ResultReg)
-        .addReg(II.implicit_defs()[0]);
-  }
+  assert(II.getNumDefs() >= 1 && "instruction must define the result");
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
+      .addReg(Op0)
+      .addReg(Op1)
+      .addImm(Imm)
+      ->setImplicitPhysRegDefsDead();
   return ResultReg;
 }
 
@@ -2155,15 +2110,10 @@ Register FastISel::fastEmitInst_i(unsigned MachineInstOpcode,
   Register ResultReg = createResultReg(RC);
   const MCInstrDesc &II = TII.get(MachineInstOpcode);
 
-  if (II.getNumDefs() >= 1)
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
-        .addImm(Imm);
-  else {
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II).addImm(Imm);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
-            ResultReg)
-        .addReg(II.implicit_defs()[0]);
-  }
+  assert(II.getNumDefs() >= 1 && "instruction must define the result");
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
+      .addImm(Imm)
+      ->setImplicitPhysRegDefsDead();
   return ResultReg;
 }
 

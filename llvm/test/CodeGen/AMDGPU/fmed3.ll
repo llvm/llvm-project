@@ -5692,9 +5692,10 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use0(ptr addrspace(1)
 ; GFX11-NEXT:    global_load_b32 v3, v0, s[6:7] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_dual_max_f32 v1, v1, v1 :: v_dual_max_f32 v2, v2, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_min_f32_e32 v4, v1, v2
-; GFX11-NEXT:    v_dual_max_f32 v1, v1, v2 :: v_dual_max_f32 v2, v3, v3
+; GFX11-NEXT:    v_max_f32_e32 v1, v1, v2
+; GFX11-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX11-NEXT:    v_minmax_f32 v1, v1, v2, v4
 ; GFX11-NEXT:    global_store_b32 v[0:1], v4, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -5894,8 +5895,9 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use1(ptr addrspace(1)
 ; GFX11-SDAG-NEXT:    global_load_b32 v3, v0, s[6:7] glc dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-NEXT:    v_dual_max_f32 v1, v1, v1 :: v_dual_max_f32 v2, v2, v2
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SDAG-NEXT:    v_dual_max_f32 v3, v3, v3 :: v_dual_max_f32 v4, v1, v2
+; GFX11-SDAG-NEXT:    v_max_f32_e32 v3, v3, v3
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_max_f32_e32 v4, v1, v2
 ; GFX11-SDAG-NEXT:    v_min_f32_e32 v3, v4, v3
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_minmax_f32 v1, v1, v2, v3
@@ -5918,9 +5920,10 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use1(ptr addrspace(1)
 ; GFX11-GISEL-NEXT:    global_load_b32 v3, v0, s[6:7] glc dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    v_dual_max_f32 v1, v1, v1 :: v_dual_max_f32 v2, v2, v2
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_min_f32_e32 v4, v1, v2
-; GFX11-GISEL-NEXT:    v_dual_max_f32 v1, v1, v2 :: v_dual_max_f32 v2, v3, v3
+; GFX11-GISEL-NEXT:    v_max_f32_e32 v1, v1, v2
+; GFX11-GISEL-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX11-GISEL-NEXT:    v_minmax_f32 v2, v1, v2, v4
 ; GFX11-GISEL-NEXT:    global_store_b32 v[0:1], v1, off dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -6330,9 +6333,10 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0(ptr addrspace(1) %out, ptr 
 ; GFX11-GISEL-NEXT:    global_load_b32 v3, v0, s[6:7] glc dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    v_dual_max_f32 v1, v1, v1 :: v_dual_max_f32 v2, v2, v2
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_min_f32_e32 v4, v1, v2
-; GFX11-GISEL-NEXT:    v_dual_max_f32 v1, v1, v2 :: v_dual_max_f32 v2, v3, v3
+; GFX11-GISEL-NEXT:    v_max_f32_e32 v1, v1, v2
+; GFX11-GISEL-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX11-GISEL-NEXT:    v_minmax_f32 v1, v1, v2, v4
 ; GFX11-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-GISEL-NEXT:    s_endpgm

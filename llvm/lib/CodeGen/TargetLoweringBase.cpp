@@ -719,7 +719,6 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm,
     : TM(tm),
       RuntimeLibcallInfo(TM.getTargetTriple(), TM.Options.ExceptionModel,
                          TM.getTargetTriple().getDefaultFloatABI(),
-                         TM.Options.EABIVersion,
                          TM.Options.MCOptions.getABIName(), TM.Options.VecLib),
       Libcalls(RuntimeLibcallInfo, [&STI](LibcallLoweringInfo &Info) {
         STI.initLibcallLoweringInfo(Info);
@@ -953,10 +952,9 @@ void TargetLoweringBase::initActions() {
 
     // Only some target support these vector operations. Default them to Expand.
     setOperationAction({ISD::VECTOR_COMPRESS, ISD::VECTOR_MATCH}, VT, Expand);
-
-    // cttz.elts defaults to expand.
     setOperationAction({ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON}, VT,
                        Expand);
+    setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Expand);
 
     // VP operations default to expand.
 #define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...)                                   \
@@ -1069,9 +1067,10 @@ bool TargetLoweringBase::canOpTrap(unsigned Op, EVT VT) const {
   }
 }
 
-bool TargetLoweringBase::isFreeAddrSpaceCast(unsigned SrcAS,
+bool TargetLoweringBase::isFreeAddrSpaceCast(const DataLayout &DL,
+                                             unsigned SrcAS,
                                              unsigned DestAS) const {
-  return TM.isNoopAddrSpaceCast(SrcAS, DestAS);
+  return TM.isNoopAddrSpaceCast(DL, SrcAS, DestAS);
 }
 
 unsigned TargetLoweringBase::getBitWidthForCttzElements(
@@ -1952,6 +1951,7 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
 #define LAST_OTHER_INST(NUM) InstructionOpcodesCount = NUM
 #include "llvm/IR/Instruction.def"
   };
+  // clang-format off
   switch (static_cast<InstructionOpcodes>(Opcode)) {
   case Ret:            return 0;
   case UncondBr:       return 0;
@@ -2022,8 +2022,10 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
   case InsertValue:    return ISD::MERGE_VALUES;
   case LandingPad:     return 0;
   case Freeze:         return ISD::FREEZE;
+  case BitInsert:      return 0;
+  case BitExtract:     return 0;
   }
-
+  // clang-format on
   llvm_unreachable("Unknown instruction type encountered!");
 }
 
@@ -2051,8 +2053,14 @@ int TargetLoweringBase::IntrinsicIDToISD(Intrinsic::ID ID) const {
     return ISD::FLOG2;
   case Intrinsic::log10:
     return ISD::FLOG10;
+  case Intrinsic::modf:
+    return ISD::FMODF;
   case Intrinsic::sin:
     return ISD::FSIN;
+  case Intrinsic::sincos:
+    return ISD::FSINCOS;
+  case Intrinsic::sincospi:
+    return ISD::FSINCOSPI;
   case Intrinsic::sinh:
     return ISD::FSINH;
   case Intrinsic::tan:
@@ -2277,7 +2285,8 @@ void TargetLoweringBase::setMinimumBitTestCmps(unsigned Val) {
   MinimumBitTestCmps = Val;
 }
 
-Align TargetLoweringBase::getPrefLoopAlignment(MachineLoop *ML) const {
+Align TargetLoweringBase::getPrefLoopAlignment(
+    MachineLoop *ML, const MachineBasicBlock *BlockToAlign) const {
   if (TM.Options.LoopAlignment)
     return Align(TM.Options.LoopAlignment);
   return PrefLoopAlignment;
