@@ -61,7 +61,7 @@ subroutine test_litteral_copies_1
   end interface
   integer, parameter :: p(100) = 42
   call takes_array_value(p)
-  ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare {{.*}}"_QQro.100xi4.2"
+  ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare {{.*}}"_QFtest_litteral_copies_1ECp"
   ! CHECK:           %[[VAL_8:.*]] = hlfir.as_expr %[[VAL_7]]#0 : (!fir.ref<!fir.array<100xi32>>) -> !hlfir.expr<100xi32>
   ! CHECK:           %[[VAL_9:.*]]:3 = hlfir.associate %[[VAL_8]](%{{.*}}) {adapt.valuebyref} : (!hlfir.expr<100xi32>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>, i1)
   ! CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_9]]#0 : (!fir.ref<!fir.array<100xi32>>) -> !fir.ref<!fir.array<4xi32>>
