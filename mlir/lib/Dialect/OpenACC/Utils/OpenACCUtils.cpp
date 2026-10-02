@@ -470,7 +470,7 @@ static mlir::Value getIfCondition(mlir::Operation *op) {
 }
 
 bool mlir::acc::isInOffTargetBranch(mlir::Operation *op,
-                               llvm::ArrayRef<int64_t> deviceTypes) {
+                                    llvm::ArrayRef<int64_t> deviceTypes) {
   // No device type is known to be true, so no branch can be classified.
   if (deviceTypes.empty())
     return false;

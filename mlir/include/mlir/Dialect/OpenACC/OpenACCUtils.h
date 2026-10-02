@@ -145,7 +145,8 @@ getDominatingDataClauses(mlir::Operation *computeConstructOp,
 /// true. That branch is the `then` of a constant `acc.on_device` outside the
 /// list, or the `else` of one in the list. A non-constant operand is ignored.
 /// An empty list returns false.
-bool isInOffTargetBranch(mlir::Operation *op, llvm::ArrayRef<int64_t> deviceTypes);
+bool isInOffTargetBranch(mlir::Operation *op,
+                         llvm::ArrayRef<int64_t> deviceTypes);
 
 /// Emit an OpenACC remark with lazy message generation.
 ///
