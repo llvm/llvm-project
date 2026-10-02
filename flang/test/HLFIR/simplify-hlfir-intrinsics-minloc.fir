@@ -483,3 +483,11 @@ func.func @test_back(%input: !hlfir.expr<?xi32>) -> !hlfir.expr<1xi32> {
 }
 // CHECK-LABEL:   func.func @test_back(
 // CHECK:           hlfir.minloc
+
+// The INTEGER(16) identity must not be truncated to 64 bits.
+func.func @test_i128_mask(%input: !hlfir.expr<?xi128>, %mask: !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<1xi32> {
+  %0 = hlfir.minloc %input mask %mask : (!hlfir.expr<?xi128>, !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<1xi32>
+  return %0 : !hlfir.expr<1xi32>
+}
+// CHECK-LABEL: func.func @test_i128_mask(
+// CHECK: arith.constant 170141183460469231731687303715884105727 : i128
