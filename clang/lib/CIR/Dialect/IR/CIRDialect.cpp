@@ -4861,6 +4861,16 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
   return mlir::success();
 }
 
+void InlineAsmOp::getEffects(
+    llvm::SmallVectorImpl<mlir::MemoryEffects::EffectInstance> &effects) {
+  // If we have any side effects (that is, we're volatile asm), add a read and
+  // write memory effect. We do this the same as the llvm dialect InlineAsmOp.
+  if (getSideEffects()) {
+    effects.emplace_back(mlir::MemoryEffects::Read::get());
+    effects.emplace_back(mlir::MemoryEffects::Write::get());
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // ThrowOp / TryThrowOp
 //===----------------------------------------------------------------------===//
