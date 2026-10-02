@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/ConcurrencySanitizer.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -74,10 +75,11 @@ static constexpr char kCsanInitName[] = "__csan_init";
 namespace {
 
 /// Must match CSAN_ACCESS_* in compiler-rt/lib/csan/csan_defs.h.
-enum AccessFlags : unsigned {
-  AF_None = 0,
-  AF_Atomic = 1u << 0,
-  AF_Compound = 1u << 1,
+enum class AccessFlags : unsigned {
+  None = 0,
+  Atomic = 1u << 0,
+  Compound = 1u << 1,
+  LLVM_MARK_AS_BITMASK_ENUM(Compound),
 };
 
 static bool isAtomicMemoryAccess(const Instruction *I) {
@@ -169,6 +171,9 @@ private:
   bool shouldInstrumentAccess(Instruction *I) const;
   void insertFuncEntryExit(Function &F);
   void insertRuntimeIgnores(Function &F);
+  Constant *getFlags(AccessFlags Flags) const {
+    return ConstantInt::get(FlagsTy, to_underlying(Flags));
+  }
 
   Module *Mod = nullptr;
   Type *IntptrTy = nullptr;
@@ -336,8 +341,7 @@ bool ConcurrencySanitizer::sanitizeFunction(Function &F,
     insertFuncEntryExit(F);
     Res = true;
   }
-  // Callback declarations may have changed the module.
-  return true;
+  return Res;
 }
 
 bool ConcurrencySanitizer::shouldInstrumentAddress(Value *Addr) const {
@@ -503,7 +507,7 @@ bool ConcurrencySanitizer::instrumentMemIntrinsic(IntrinsicInst *II,
     Len = IRB.CreateMul(Len, IRB.CreateTypeSize(IntptrTy, Size));
   }
   Constant *Flags =
-      ConstantInt::get(FlagsTy, MI && MI->isAtomic() ? AF_Atomic : AF_None);
+      getFlags(MI && MI->isAtomic() ? AccessFlags::Atomic : AccessFlags::None);
   if (InstrumentRead) {
     IRB.CreateCall(CsanReadRange, {getCallbackAddress(IRB, Src), Len, Flags});
     ++NumInstrumentedReads;
@@ -521,17 +525,19 @@ bool ConcurrencySanitizer::insertAccessProbe(Instruction *I, Value *Addr,
                                              bool IsCompound, bool IsAtomic) {
   if (Addr->isSwiftError())
     return false;
-  unsigned Flags =
-      (IsAtomic ? AF_Atomic : AF_None) | (IsCompound ? AF_Compound : AF_None);
+  AccessFlags Flags = AccessFlags::None;
+  if (IsAtomic)
+    Flags |= AccessFlags::Atomic;
+  if (IsCompound)
+    Flags |= AccessFlags::Compound;
   int Idx = getAccessSizeIndex(AccessTy, DL);
   if (Idx < 0) {
     if (IsCompound)
       return false;
     InstrumentationIRBuilder IRB(I);
     Value *Len = IRB.CreateTypeSize(IntptrTy, DL.getTypeStoreSize(AccessTy));
-    IRB.CreateCall(
-        IsWrite ? CsanWriteRange : CsanReadRange,
-        {getCallbackAddress(IRB, Addr), Len, ConstantInt::get(FlagsTy, Flags)});
+    IRB.CreateCall(IsWrite ? CsanWriteRange : CsanReadRange,
+                   {getCallbackAddress(IRB, Addr), Len, getFlags(Flags)});
     return true;
   }
 
@@ -564,7 +570,7 @@ bool ConcurrencySanitizer::insertAccessProbe(Instruction *I, Value *Addr,
 
   InstrumentationIRBuilder IRB(I);
   Value *CallbackAddr = getCallbackAddress(IRB, Addr);
-  Value *FlagsVal = ConstantInt::get(FlagsTy, Flags);
+  Value *FlagsVal = getFlags(Flags);
   if (ClDistinguishVolatile && IsVolatile && TypeSize <= 64) {
     // The declared alignment may understate the pointer's real alignment.
     Value *IsAligned = IRB.getTrue();
@@ -572,7 +578,7 @@ bool ConcurrencySanitizer::insertAccessProbe(Instruction *I, Value *Addr,
       IsAligned = IRB.CreateIsNull(IRB.CreateAnd(
           IRB.CreatePtrToInt(CallbackAddr, IntptrTy), TypeSize / 8 - 1));
     FlagsVal = IRB.CreateSelect(
-        IsAligned, ConstantInt::get(FlagsTy, Flags | AF_Atomic), FlagsVal);
+        IsAligned, getFlags(Flags | AccessFlags::Atomic), FlagsVal);
   }
   IRB.CreateCall(Callback, {CallbackAddr, FlagsVal});
   return true;
