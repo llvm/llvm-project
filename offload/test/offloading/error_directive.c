@@ -19,14 +19,14 @@ int main(void) {
 #else
 #pragma omp target
   {
-  // CHECK: {{.*}}error_directive.c:[[# @LINE + 1]]:{{[0-9]+}}: Encountered user-directed warning: warning message.
+    // CHECK: {{.*}}error_directive.c:[[# @LINE + 1]]:{{[0-9]+}}: Encountered user-directed warning: warning message.
 #pragma omp error at(execution) severity(warning) message("warning message")
   }
 
   // No MESSAGE clause, so the runtime receives a null message pointer.
 #pragma omp target
   {
-  // CHECK: {{.*}}error_directive.c:[[# @LINE + 1]]:{{[0-9]+}}: Encountered user-directed warning.
+    // CHECK: {{.*}}error_directive.c:[[# @LINE + 1]]:{{[0-9]+}}: Encountered user-directed warning.
 #pragma omp error at(execution) severity(warning)
   }
 #endif
