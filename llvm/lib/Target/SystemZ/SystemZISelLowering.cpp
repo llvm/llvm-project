@@ -5424,6 +5424,32 @@ SDValue SystemZTargetLowering::lowerSTACKRESTORE(SDValue Op,
                             MachinePointerInfo());
   }
 
+  // XPLINK: @@ALCAXP (lowerDYNAMIC_STACKALLOC_XPLINK) moves the frame header
+  // (register save area and reserved words at SP + bias) down with the stack
+  // pointer, and calls made while the stack pointer is lowered place their
+  // arguments over the old header. Copy the current header back to the
+  // restored stack pointer, otherwise the epilogue and the LE stack walk use
+  // a clobbered header (abend U4083). The restored stack pointer is never
+  // below the current one, so copying from the highest word down is safe even
+  // if the areas overlap.
+  if (Subtarget.isTargetXPLINK64()) {
+    auto &XRegs = Subtarget.getSpecialRegisters<SystemZXPLINK64Registers>();
+    uint64_t Bias = XRegs.getStackPointerBias();
+    SDValue OldSP = DAG.getCopyFromReg(
+        Chain, DL, Regs->getStackPointerRegister(), MVT::i64);
+    Chain = OldSP.getValue(1);
+    for (int I = XRegs.getCallFrameSize() / 8 - 1; I >= 0; --I) {
+      SDValue Offset = DAG.getConstant(Bias + 8 * I, DL, MVT::i64);
+      SDValue Word =
+          DAG.getLoad(MVT::i64, DL, Chain,
+                      DAG.getNode(ISD::ADD, DL, MVT::i64, OldSP, Offset),
+                      MachinePointerInfo());
+      Chain = DAG.getStore(Word.getValue(1), DL, Word,
+                           DAG.getNode(ISD::ADD, DL, MVT::i64, NewSP, Offset),
+                           MachinePointerInfo());
+    }
+  }
+
   Chain = DAG.getCopyToReg(Chain, DL, Regs->getStackPointerRegister(), NewSP);
 
   if (StoreBackchain)
