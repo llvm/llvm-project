@@ -252,7 +252,6 @@ bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
   // Check if the defining op is a function
   if (auto func =
           mlir::dyn_cast_if_present<mlir::FunctionOpInterface>(definingOp)) {
-
     // If this symbol is actually an acc routine or a specialized acc routine -
     // then it is expected for it to be offloaded - therefore it is valid.
     if (func->hasDiscardableAttr(mlir::acc::getRoutineInfoAttrName()) ||
@@ -470,7 +469,7 @@ static mlir::Value getIfCondition(mlir::Operation *op) {
   return op->getOperand(0);
 }
 
-bool mlir::acc::isInHostBranch(mlir::Operation *op,
+bool mlir::acc::isInOffTargetBranch(mlir::Operation *op,
                                llvm::ArrayRef<int64_t> deviceTypes) {
   // No device type is known to be true, so no branch can be classified.
   if (deviceTypes.empty())

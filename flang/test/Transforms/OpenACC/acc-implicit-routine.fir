@@ -150,9 +150,6 @@ module {
 
 // -----
 
-// Calls that do not execute for the-device-types=3,4 do not get an implicit
-// routine. 3 is acc_device_not_host and 4 is acc_device_nvidia, so the then
-// of acc_on_device(2) and the else of acc_on_device(3) stay off the target.
 module {
   func.func @_QPhost_then() {
     return

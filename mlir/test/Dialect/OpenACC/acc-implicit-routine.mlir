@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -acc-implicit-routine=the-device-types=3,4 -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s -acc-implicit-routine -split-input-file -verify-diagnostics | FileCheck %s --check-prefix=NODEVICE
 
 // -----
 
@@ -366,3 +367,51 @@ module {
 // CHECK-NOT: acc.routine @{{.*}} func(@other_device_then)
 // CHECK: acc.routine @acc_routine_2 func(@other_device_else) implicit
 // CHECK: func.func @other_device_else() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_2]>}
+
+// -----
+
+// With no the-device-types, no branch is classified as off the target, so both
+// sides of acc.on_device get an implicit routine.
+module {
+  func.func @no_dev_host_then() {
+    return
+  }
+  func.func @no_dev_host_else() {
+    return
+  }
+  func.func @no_dev_device_then() {
+    return
+  }
+  func.func @no_dev_device_else() {
+    return
+  }
+  func.func @test_no_device_types() {
+    %host = arith.constant 2 : i32
+    %not_host = arith.constant 3 : i32
+    %on_host = acc.on_device %host : i32 -> i1
+    %on_device = acc.on_device %not_host : i32 -> i1
+    acc.serial {
+      scf.if %on_host {
+        func.call @no_dev_host_then() : () -> ()
+      } else {
+        func.call @no_dev_host_else() : () -> ()
+      }
+      scf.if %on_device {
+        func.call @no_dev_device_then() : () -> ()
+      } else {
+        func.call @no_dev_device_else() : () -> ()
+      }
+      acc.yield
+    }
+    return
+  }
+}
+
+// NODEVICE: acc.routine @acc_routine_0 func(@no_dev_host_then) implicit
+// NODEVICE: func.func @no_dev_host_then() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_0]>}
+// NODEVICE: acc.routine @acc_routine_1 func(@no_dev_host_else) implicit
+// NODEVICE: func.func @no_dev_host_else() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_1]>}
+// NODEVICE: acc.routine @acc_routine_2 func(@no_dev_device_then) implicit
+// NODEVICE: func.func @no_dev_device_then() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_2]>}
+// NODEVICE: acc.routine @acc_routine_3 func(@no_dev_device_else) implicit
+// NODEVICE: func.func @no_dev_device_else() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_3]>}

@@ -144,7 +144,7 @@ private:
                                           acc::OpenACCSupport &accSupport) {
     LogicalResult result = success();
     op->walk([&](CallOpInterface callOp) {
-      if (acc::isInHostBranch(callOp.getOperation(), *theDeviceTypes))
+      if (acc::isInOffTargetBranch(callOp.getOperation(), *theDeviceTypes))
         return;
       if (!callOp.getCallableForCallee())
         return;
@@ -203,7 +203,7 @@ private:
       auto func = symTab.lookup<FunctionOpInterface>(
           currentRoutine.getFuncName().getLeafReference());
       func.walk([&](CallOpInterface callOp) {
-        if (acc::isInHostBranch(callOp.getOperation(), *theDeviceTypes))
+        if (acc::isInOffTargetBranch(callOp.getOperation(), *theDeviceTypes))
           return;
         if (!callOp.getCallableForCallee())
           return;
