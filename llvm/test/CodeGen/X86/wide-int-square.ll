@@ -8,37 +8,37 @@ define void @sqr_i256(ptr %out, ptr %in) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    movq (%rsi), %rcx
-; X64-NEXT:    movq 8(%rsi), %r8
+; X64-NEXT:    movq 8(%rsi), %r9
 ; X64-NEXT:    movq 16(%rsi), %r11
 ; X64-NEXT:    movq %rcx, %rax
 ; X64-NEXT:    mulq %r11
-; X64-NEXT:    movq %rax, %r9
+; X64-NEXT:    movq %rax, %r10
 ; X64-NEXT:    movq 24(%rsi), %rbx
 ; X64-NEXT:    imulq %rcx, %rbx
 ; X64-NEXT:    addq %rdx, %rbx
-; X64-NEXT:    imulq %r8, %r11
+; X64-NEXT:    imulq %r9, %r11
 ; X64-NEXT:    movq %rcx, %rax
-; X64-NEXT:    mulq %r8
-; X64-NEXT:    movq %rax, %rsi
-; X64-NEXT:    movq %rdx, %r10
-; X64-NEXT:    addq %r9, %r10
+; X64-NEXT:    mulq %r9
+; X64-NEXT:    movq %rax, %r8
+; X64-NEXT:    movq %rdx, %rsi
+; X64-NEXT:    addq %r10, %rsi
 ; X64-NEXT:    adcq %rbx, %r11
-; X64-NEXT:    shldq $1, %r10, %r11
-; X64-NEXT:    shldq $1, %rax, %r10
-; X64-NEXT:    movq %r8, %rax
-; X64-NEXT:    mulq %r8
-; X64-NEXT:    movq %rdx, %r8
-; X64-NEXT:    movq %rax, %r9
+; X64-NEXT:    shldq $1, %rsi, %r11
+; X64-NEXT:    shldq $1, %rax, %rsi
+; X64-NEXT:    movq %r9, %rax
+; X64-NEXT:    mulq %r9
+; X64-NEXT:    movq %rdx, %r9
+; X64-NEXT:    movq %rax, %r10
 ; X64-NEXT:    movq %rcx, %rax
 ; X64-NEXT:    mulq %rcx
-; X64-NEXT:    addq %rsi, %rsi
-; X64-NEXT:    addq %rdx, %rsi
-; X64-NEXT:    adcq %r10, %r9
-; X64-NEXT:    adcq %r11, %r8
+; X64-NEXT:    addq %r8, %r8
+; X64-NEXT:    addq %rdx, %r8
+; X64-NEXT:    adcq %rsi, %r10
+; X64-NEXT:    adcq %r11, %r9
 ; X64-NEXT:    movq %rax, (%rdi)
-; X64-NEXT:    movq %rsi, 8(%rdi)
-; X64-NEXT:    movq %r9, 16(%rdi)
-; X64-NEXT:    movq %r8, 24(%rdi)
+; X64-NEXT:    movq %r8, 8(%rdi)
+; X64-NEXT:    movq %r10, 16(%rdi)
+; X64-NEXT:    movq %r9, 24(%rdi)
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    retq
 ;
@@ -808,32 +808,31 @@ define void @sqr_i512(ptr %out, ptr %in) nounwind {
 ; BMI2-NEXT:    adcq %rsi, %r15
 ; BMI2-NEXT:    adcq %r14, %r11
 ; BMI2-NEXT:    movq %r9, %rdx
-; BMI2-NEXT:    mulxq %r10, %rbp, %r14
+; BMI2-NEXT:    mulxq %r10, %r14, %rsi
 ; BMI2-NEXT:    movq %r8, %rdx
-; BMI2-NEXT:    movq %rcx, %rsi
-; BMI2-NEXT:    mulxq %rcx, %rcx, %rdi
+; BMI2-NEXT:    mulxq %rcx, %rbp, %rdi
 ; BMI2-NEXT:    movq %rax, %rdx
 ; BMI2-NEXT:    mulxq %r9, %rdx, %r13
 ; BMI2-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; BMI2-NEXT:    addq {{[-0-9]+}}(%r{{[sb]}}p), %r13 # 8-byte Folded Reload
-; BMI2-NEXT:    adcq %r12, %rcx
+; BMI2-NEXT:    adcq %r12, %rbp
 ; BMI2-NEXT:    adcq %rbx, %rdi
-; BMI2-NEXT:    adcq %r15, %rbp
-; BMI2-NEXT:    adcq %r11, %r14
+; BMI2-NEXT:    adcq %r15, %r14
 ; BMI2-NEXT:    movq %r14, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; BMI2-NEXT:    adcq %r11, %rsi
 ; BMI2-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; BMI2-NEXT:    imulq %rsi, %r10
+; BMI2-NEXT:    imulq %rcx, %r10
 ; BMI2-NEXT:    movq %r9, %rdx
-; BMI2-NEXT:    mulxq %rsi, %rbx, %rsi
+; BMI2-NEXT:    mulxq %rcx, %rbx, %rsi
 ; BMI2-NEXT:    movq %r8, %rdx
 ; BMI2-NEXT:    mulxq %r9, %r15, %r14
 ; BMI2-NEXT:    movq %rax, %rdx
 ; BMI2-NEXT:    mulxq %r8, %r11, %r12
 ; BMI2-NEXT:    addq {{[-0-9]+}}(%r{{[sb]}}p), %r12 # 8-byte Folded Reload
 ; BMI2-NEXT:    adcq %r13, %r15
-; BMI2-NEXT:    adcq %rcx, %r14
+; BMI2-NEXT:    adcq %rbp, %r14
 ; BMI2-NEXT:    adcq %rdi, %rbx
-; BMI2-NEXT:    adcq %rbp, %rsi
+; BMI2-NEXT:    adcq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Folded Reload
 ; BMI2-NEXT:    adcq {{[-0-9]+}}(%r{{[sb]}}p), %r10 # 8-byte Folded Reload
 ; BMI2-NEXT:    shldq $1, %rsi, %r10
 ; BMI2-NEXT:    shldq $1, %rbx, %rsi
@@ -841,8 +840,8 @@ define void @sqr_i512(ptr %out, ptr %in) nounwind {
 ; BMI2-NEXT:    shldq $1, %r15, %r14
 ; BMI2-NEXT:    shldq $1, %r12, %r15
 ; BMI2-NEXT:    shldq $1, %r11, %r12
-; BMI2-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
-; BMI2-NEXT:    mulxq %rdx, %rcx, %rdi
+; BMI2-NEXT:    movq %rcx, %rdx
+; BMI2-NEXT:    mulxq %rcx, %rcx, %rdi
 ; BMI2-NEXT:    movq %r9, %rdx
 ; BMI2-NEXT:    mulxq %r9, %r9, %r13
 ; BMI2-NEXT:    movq %r8, %rdx
