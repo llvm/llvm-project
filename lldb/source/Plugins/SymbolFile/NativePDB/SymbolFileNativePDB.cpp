@@ -3163,16 +3163,17 @@ SymbolFileNativePDB::StripMangledFunctionName(const llvm::StringRef mangled,
   return mangled;
 }
 
-std::optional<std::string>
+std::string
 SymbolFileNativePDB::MakeFunctionCallLabel(PdbSymUid uid,
                                            llvm::StringRef lookup_name) {
   if (lookup_name.empty())
-    return std::nullopt;
+    return {};
 
   lldb::ModuleSP module_sp = m_objfile_sp->GetModule();
   if (!module_sp)
-    return std::nullopt;
+    return {};
 
+  // Note, discriminator is added by Clang during mangling.
   return FunctionCallLabel{/*discriminator=*/{},
                            /*module_id=*/module_sp->GetID(),
                            /*symbol_id=*/uid.toOpaqueId(),
@@ -3180,21 +3181,20 @@ SymbolFileNativePDB::MakeFunctionCallLabel(PdbSymUid uid,
       .toString();
 }
 
-std::optional<std::string>
-SymbolFileNativePDB::GetFunctionCallLabel(PdbCompilandSymId id) {
+std::string SymbolFileNativePDB::GetFunctionCallLabel(PdbCompilandSymId id) {
   const CompilandIndexItem *cci = m_index->compilands().GetCompiland(id.modi);
   if (!cci)
-    return std::nullopt;
+    return {};
 
   CVSymbol sym_record = cci->m_debug_stream.readSymbolAtOffset(id.offset);
   if (sym_record.kind() != S_LPROC32 && sym_record.kind() != S_GPROC32)
-    return std::nullopt;
+    return {};
 
   ProcSym proc(static_cast<SymbolRecordKind>(sym_record.kind()));
   if (auto err = SymbolDeserializer::deserializeAs<ProcSym>(sym_record, proc)) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
                    "Failed to deserialize ProcSym record: {0}");
-    return std::nullopt;
+    return {};
   }
 
   // Functions with internal linkage have no public symbol, so fall back to the
@@ -3206,82 +3206,78 @@ SymbolFileNativePDB::GetFunctionCallLabel(PdbCompilandSymId id) {
   return MakeFunctionCallLabel(id, lookup_name);
 }
 
-std::optional<std::string>
+std::string
 SymbolFileNativePDB::GetMethodCallLabel(TypeIndex method_type,
                                         llvm::StringRef qualified_name) {
   if (std::optional<PdbCompilandSymId> func_id =
           FindMethodDefinition(qualified_name, method_type))
     return GetFunctionCallLabel(*func_id);
-  return std::nullopt;
+  return {};
 }
 
 std::optional<PdbCompilandSymId>
 SymbolFileNativePDB::FindMethodDefinition(llvm::StringRef qualified_name,
                                           TypeIndex method_type) {
-  CacheGlobalBaseNames();
+  // GSIHashTable leaves its bucket map uninitialized when the table has no
+  // records, so findRecordsByName cannot be called on it.
+  if (m_index->globals().getGlobalsTable().HashRecords.empty())
+    return std::nullopt;
 
-  std::vector<uint32_t> ids;
-  m_func_full_names.GetValues(ConstString(qualified_name), ids);
-
-  for (uint32_t id : ids) {
-    CVSymbol sym = m_index->ReadSymbolRecord(PdbGlobalSymId{id, false});
+  Log *log = GetLog(LLDBLog::Symbols);
+  for (const auto &[offset, sym] : m_index->globals().findRecordsByName(
+           qualified_name, m_index->symrecords())) {
     if (sym.kind() != S_PROCREF && sym.kind() != S_LPROCREF)
       continue;
     auto ref_or_err = SymbolDeserializer::deserializeAs<ProcRefSym>(sym);
     if (!ref_or_err) {
-      llvm::consumeError(ref_or_err.takeError());
+      LLDB_LOG_ERROR(log, ref_or_err.takeError(),
+                     "Failed to deserialize ProcRefSym record: {0}");
       continue;
     }
 
-    PdbCompilandSymId func_id(ref_or_err->modi(), ref_or_err->SymOffset);
-    CVSymbol func_sym = m_index->ReadSymbolRecord(func_id);
-    if (func_sym.kind() != S_GPROC32 && func_sym.kind() != S_LPROC32)
+    // Nothing else may have loaded the compiland of the definition yet.
+    CompilandIndexItem &cci =
+        m_index->compilands().GetOrCreateCompiland(ref_or_err->modi());
+    auto iter = cci.m_debug_stream.getSymbolArray().at(ref_or_err->SymOffset);
+    if (iter == cci.m_debug_stream.getSymbolArray().end())
       continue;
-    auto proc_or_err = SymbolDeserializer::deserializeAs<ProcSym>(func_sym);
+    if (iter->kind() != S_GPROC32 && iter->kind() != S_LPROC32)
+      continue;
+    auto proc_or_err = SymbolDeserializer::deserializeAs<ProcSym>(*iter);
     if (!proc_or_err) {
-      llvm::consumeError(proc_or_err.takeError());
+      LLDB_LOG_ERROR(log, proc_or_err.takeError(),
+                     "Failed to deserialize ProcSym record: {0}");
       continue;
     }
 
     // Overloads share the name, so only the type identifies the definition.
     if (proc_or_err->FunctionType == method_type)
-      return func_id;
+      return PdbCompilandSymId(ref_or_err->modi(), ref_or_err->SymOffset);
   }
   return std::nullopt;
-}
-
-/// Returns true if \p discriminator names a structor variant that is the
-/// function described by the procedure record.
-///
-/// In the Microsoft ABI, complete and base object structors share one
-/// definition, while closures and deleting destructors are separate functions
-/// without debug info.
-static bool IsDefinedStructorVariant(llvm::StringRef discriminator) {
-  if (discriminator.empty())
-    return true;
-
-  const bool is_ctor = discriminator.consume_front("C");
-  if (!is_ctor && !discriminator.consume_front("D"))
-    return false;
-
-  uint64_t kind;
-  if (!llvm::to_integer(discriminator, kind))
-    return false;
-
-  if (is_ctor)
-    return kind == clang::CXXCtorType::Ctor_Complete ||
-           kind == clang::CXXCtorType::Ctor_Base;
-  return kind == clang::CXXDtorType::Dtor_Complete ||
-         kind == clang::CXXDtorType::Dtor_Base;
 }
 
 llvm::Expected<SymbolContext>
 SymbolFileNativePDB::ResolveFunctionCallLabel(FunctionCallLabel &label) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
 
-  if (!IsDefinedStructorVariant(label.discriminator))
-    return llvm::createStringErrorV(
-        "{0} refers to a structor variant without debug info", label);
+  // Only complete and base object structors have a procedure record. Closures
+  // and deleting destructors have no debug info.
+  if (llvm::StringRef discriminator = label.discriminator;
+      !discriminator.empty()) {
+    const bool is_ctor = discriminator.consume_front("C");
+    uint64_t kind;
+    bool is_defined = false;
+    if ((is_ctor || discriminator.consume_front("D")) &&
+        llvm::to_integer(discriminator, kind))
+      is_defined = is_ctor ? kind == clang::CXXCtorType::Ctor_Complete ||
+                                 kind == clang::CXXCtorType::Ctor_Base
+                           : kind == clang::CXXDtorType::Dtor_Complete ||
+                                 kind == clang::CXXDtorType::Dtor_Base;
+    if (!is_defined)
+      return llvm::createStringErrorV(
+          "{0} refers to a structor variant without debug info", label);
+  }
 
   PdbSymUid uid(label.symbol_id);
   if (uid.kind() != PdbSymUidKind::CompilandSym)
