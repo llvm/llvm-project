@@ -17,6 +17,10 @@ enum Fixups {
   /// 16-bit PC relative fixup for SOPP branch instructions.
   fixup_si_sopp_br = FirstTargetFixupKind,
 
+  /// 32-bit PC relative fixup for the literal of s_add_pc_i64 when it is used
+  /// as a long branch.
+  fixup_si_add_pc_lit32,
+
   // Marker
   LastTargetFixupKind,
   NumTargetFixupKinds = LastTargetFixupKind - FirstTargetFixupKind

@@ -112,6 +112,10 @@ void GCNPreRALongBranchReg::generateBlockInfo(
 
 bool GCNPreRALongBranchReg::run(MachineFunction &MF) {
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
+  // Long branches are relaxed by the assembler without needing any registers.
+  if (STM.useAddPC64Inst())
+    return false;
+
   const SIInstrInfo *TII = STM.getInstrInfo();
   const SIRegisterInfo *TRI = STM.getRegisterInfo();
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();

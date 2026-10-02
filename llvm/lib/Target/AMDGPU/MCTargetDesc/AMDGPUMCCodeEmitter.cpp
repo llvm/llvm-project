@@ -21,6 +21,7 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -35,10 +36,12 @@ namespace {
 class AMDGPUMCCodeEmitter : public MCCodeEmitter {
   const MCRegisterInfo &MRI;
   const MCInstrInfo &MCII;
+  MCContext &Ctx;
 
 public:
-  AMDGPUMCCodeEmitter(const MCInstrInfo &MCII, const MCRegisterInfo &MRI)
-      : MRI(MRI), MCII(MCII) {}
+  AMDGPUMCCodeEmitter(const MCInstrInfo &MCII, const MCRegisterInfo &MRI,
+                      MCContext &Ctx)
+      : MRI(MRI), MCII(MCII), Ctx(Ctx) {}
 
   /// Encode the instruction and write it to the OS.
   void encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
@@ -84,6 +87,10 @@ public:
                             const MCSubtargetInfo &STI) const;
 
 private:
+  void expandLongBranch(const MCInst &MI, SmallVectorImpl<char> &CB,
+                        SmallVectorImpl<MCFixup> &Fixups,
+                        const MCSubtargetInfo &STI) const;
+
   uint64_t getImplicitOpSelHiEncoding(int Opcode) const;
   void getMachineOpValueCommon(const MCInst &MI, const MCOperand &MO,
                                unsigned OpNo, APInt &Op,
@@ -112,7 +119,7 @@ private:
 
 MCCodeEmitter *llvm::createAMDGPUMCCodeEmitter(const MCInstrInfo &MCII,
                                                MCContext &Ctx) {
-  return new AMDGPUMCCodeEmitter(MCII, *Ctx.getRegisterInfo());
+  return new AMDGPUMCCodeEmitter(MCII, *Ctx.getRegisterInfo(), Ctx);
 }
 
 static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
@@ -403,6 +410,12 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                             SmallVectorImpl<MCFixup> &Fixups,
                                             const MCSubtargetInfo &STI) const {
   int Opcode = MI.getOpcode();
+  if (Opcode == AMDGPU::S_BRANCH_long_pseudo ||
+      Opcode == AMDGPU::S_CBRANCH_long_pseudo) {
+    expandLongBranch(MI, CB, Fixups, STI);
+    return;
+  }
+
   APInt Encoding, Scratch;
   getBinaryCodeForInstr(MI, Fixups, Encoding, Scratch,  STI);
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
@@ -493,6 +506,40 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
     // Only one literal value allowed
     break;
   }
+}
+
+// Expand S_BRANCH_long_pseudo or S_CBRANCH_long_pseudo, created by branch
+// relaxation, into an s_add_pc_i64 with a 32-bit literal, optionally preceded
+// by an inverted short branch that skips over it. s_add_pc_i64 sign-extends the
+// literal, so this can reach +/-2GB, which is assumed to be enough for any
+// branch within a single code object.
+void AMDGPUMCCodeEmitter::expandLongBranch(const MCInst &MI,
+                                           SmallVectorImpl<char> &CB,
+                                           SmallVectorImpl<MCFixup> &Fixups,
+                                           const MCSubtargetInfo &STI) const {
+  bool IsCond = MI.getOpcode() == AMDGPU::S_CBRANCH_long_pseudo;
+  unsigned AddPCOpc = MI.getOperand(IsCond ? 1 : 0).getImm();
+  const MCExpr *Target = MI.getOperand(IsCond ? 2 : 1).getExpr();
+
+  if (IsCond) {
+    // Skip over the 2 dwords of the s_add_pc_i64.
+    unsigned SkipOpc = MI.getOperand(0).getImm();
+    encodeInstruction(MCInstBuilder(SkipOpc).addImm(2), CB, Fixups, STI);
+  }
+
+  // Encode s_add_pc_i64 with lit(0) to force a zero 32-bit literal, which the
+  // fixup will fill in.
+  uint32_t LitOffset = CB.size() + 4;
+  const MCExpr *Zero = AMDGPUMCExpr::createLit(LitModifier::Lit, 0, Ctx);
+  encodeInstruction(MCInstBuilder(AddPCOpc).addExpr(Zero), CB, Fixups, STI);
+  assert(CB.size() == LitOffset + 4 && "expected a 32-bit literal");
+
+  // s_add_pc_i64 adds the literal to the address of the next instruction, which
+  // is 4 bytes after the literal.
+  const MCExpr *Value = MCBinaryExpr::createAdd(
+      Target, MCConstantExpr::create(-4, Ctx), Ctx, Target->getLoc());
+  addFixup(Fixups, LitOffset, Value, AMDGPU::fixup_si_add_pc_lit32,
+           /*PCRel=*/true);
 }
 
 void AMDGPUMCCodeEmitter::getSOPPBrEncoding(const MCInst &MI, unsigned OpNo,

@@ -78,6 +78,9 @@ unsigned AMDGPUELFObjectWriter::getRelocType(const MCFixup &Fixup,
     return IsPCRel ? ELF::R_AMDGPU_REL64 : ELF::R_AMDGPU_ABS64;
   }
 
+  if (Fixup.getKind() == AMDGPU::fixup_si_add_pc_lit32)
+    return ELF::R_AMDGPU_REL32;
+
   if (Fixup.getKind() == AMDGPU::fixup_si_sopp_br) {
     const auto *SymA = Target.getAddSym();
     assert(SymA);
