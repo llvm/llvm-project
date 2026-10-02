@@ -15226,6 +15226,8 @@ static SDValue PerformBUILD_VECTORCombine(SDNode *N,
 static SDValue performLegalizedVECTOR_DEINTERLEAVECombine(
     SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG,
     const ARMSubtarget *Subtarget) {
+  if (!Subtarget->hasNEON() && !Subtarget->hasMVEIntegerOps())
+    return SDValue();
   // Type legalization splits a wide load into consecutive legal loads. Combine
   // each group used by a legal VECTOR_DEINTERLEAVE into a structured load.
   if (DCI.getDAGCombineLevel() < AfterLegalizeTypes)
@@ -15235,11 +15237,14 @@ static SDValue performLegalizedVECTOR_DEINTERLEAVECombine(
   if (NumParts < 2 || NumParts > 4)
     return SDValue();
 
-  if (NumParts == 3 && !Subtarget->hasNEON())
+  if (NumParts == 3 && Subtarget->hasMVEIntegerOps())
     return SDValue();
 
   EVT SubVecTy = N->getValueType(0);
-  if (!SubVecTy.is64BitVector() && !SubVecTy.is128BitVector())
+  if (Subtarget->hasNEON() && !SubVecTy.is64BitVector() &&
+      !SubVecTy.is128BitVector())
+    return SDValue();
+  if (Subtarget->hasMVEIntegerOps() && !SubVecTy.is128BitVector())
     return SDValue();
   unsigned EltBits = SubVecTy.getScalarSizeInBits();
   if (EltBits != 8 && EltBits != 16 && EltBits != 32)
@@ -15260,9 +15265,6 @@ static SDValue performLegalizedVECTOR_DEINTERLEAVECombine(
       return SDValue();
   }
 
-  static constexpr Intrinsic::ID NEONLoads[] = {Intrinsic::arm_neon_vld2,
-                                                Intrinsic::arm_neon_vld3,
-                                                Intrinsic::arm_neon_vld4};
   SDLoc DL(N);
   EVT MemVT =
       EVT::getVectorVT(*DAG.getContext(), SubVecTy.getVectorElementType(),
@@ -15277,6 +15279,9 @@ static SDValue performLegalizedVECTOR_DEINTERLEAVECombine(
   SmallVector<SDValue> NewLdOps;
   NewLdOps.push_back(BaseLoad->getChain());
   Intrinsic::ID IID = 0;
+  static constexpr Intrinsic::ID NEONLoads[] = {Intrinsic::arm_neon_vld2,
+                                                Intrinsic::arm_neon_vld3,
+                                                Intrinsic::arm_neon_vld4};
   if (Subtarget->hasNEON())
     IID = NEONLoads[NumParts - 2];
   else
@@ -15305,6 +15310,9 @@ static SDValue
 PerformVECTOR_DEINTERLEAVECombine(SDNode *N,
                                   TargetLowering::DAGCombinerInfo &DCI,
                                   const ARMSubtarget *Subtarget) {
+  if (!Subtarget->hasNEON() && !Subtarget->hasMVEIntegerOps())
+    return SDValue();
+
   if (SDValue Res = performLegalizedVECTOR_DEINTERLEAVECombine(N, DCI, DCI.DAG,
                                                                Subtarget))
     return Res;
@@ -15317,18 +15325,16 @@ PerformVECTOR_DEINTERLEAVECombine(SDNode *N,
   if (NumParts != 2 && NumParts != 3 && NumParts != 4)
     return SDValue();
 
-  if (NumParts == 3 && !Subtarget->hasNEON())
+  if (NumParts == 3 && Subtarget->hasMVEIntegerOps())
     return SDValue();
 
   EVT SubVecTy = N->getValueType(0);
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
-  if (!TLI.isTypeLegal(SubVecTy))
+  if (Subtarget->hasNEON() && !SubVecTy.is64BitVector() &&
+      !SubVecTy.is128BitVector())
     return SDValue();
-
-  if (!SubVecTy.is64BitVector() && !SubVecTy.is128BitVector())
+  if (Subtarget->hasMVEIntegerOps() && !SubVecTy.is128BitVector())
     return SDValue();
-
   unsigned EltBits = SubVecTy.getScalarSizeInBits();
   if (EltBits != 8 && EltBits != 16 && EltBits != 32)
     return SDValue();
@@ -15371,11 +15377,11 @@ PerformVECTOR_DEINTERLEAVECombine(SDNode *N,
 
   NewLdOps.push_back(Load->getBasePtr());
 
+  // We can now generate a structured load!
   SDValue Res =
       DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, ResVTList, NewLdOps,
                               Load->getMemoryVT(), Load->getMemOperand());
 
-  // We can now generate a structured load!
   SmallVector<SDValue, 4> ResOps(NumParts);
   for (unsigned Idx = 0; Idx < NumParts; Idx++)
     ResOps[Idx] = SDValue(Res.getNode(), Idx);
