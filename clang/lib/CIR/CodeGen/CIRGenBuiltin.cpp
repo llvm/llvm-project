@@ -2437,6 +2437,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value len = emitScalarExpr(e->getArg(2));
     mlir::Value res = cir::MemChrOp::create(builder, getLoc(e->getExprLoc()),
                                             src, pattern, len);
+    // builtin_char_memchr needs its type converted to 'char', but MemChrOp is a
+    // 'void' result type.
+    res = builder.createBitcast(res, convertType(e->getType()));
     return RValue::get(res);
   }
   case Builtin::BImemcpy:
