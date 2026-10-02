@@ -24,8 +24,8 @@ using namespace orc_rt;
 
 namespace {
 
-Error socketConnector(ConnectorRegistry::GetAttachInfoFn GetAttachInfo,
-                      const ConnectionSpec &CS) noexcept {
+Error socketConnector(const ConnectionSpec &CS, Session &S,
+                      BootstrapInfo BI) noexcept {
   auto BadCS = [&](const std::string &Reason) noexcept {
     return make_error<StringError>((StringOutputStream()
                                     << "Invalid connection spec \"" << CS.str()
@@ -59,16 +59,14 @@ Error socketConnector(ConnectorRegistry::GetAttachInfoFn GetAttachInfo,
     return BadCS("file descriptor " + std::string(FDStr) +
                  " is not a socket (" + sys::strError(ErrNum) + ")");
   }
-  SocketHandle Sock(FD);
 
-  auto AI = GetAttachInfo();
-  if (!AI)
-    return AI.takeError();
-  auto CA = createSimpleRemoteCAOverSocket(AI->S, std::move(Sock));
+  // Inherited, under the preconditions documented on registerSocketConnector.
+  auto CA = createSimpleRemoteCAOverSocket(
+      S, VettedPeer<SocketHandle>::inherited(SocketHandle(FD)));
   if (!CA)
     return CA.takeError();
 
-  AI->S.attach(std::move(*CA), std::move(AI->BI));
+  S.attach(std::move(*CA), std::move(BI));
   return Error::success();
 }
 

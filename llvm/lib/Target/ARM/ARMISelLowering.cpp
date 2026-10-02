@@ -11751,6 +11751,7 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr &MI,
     BuildMI(*MBB, MI, DL, TII.get(ARM::tBL))
         .add(predOps(ARMCC::AL))
         .addExternalSymbol(ChkStk)
+        .setOperandDead(3) // implicit-def $lr
         .addReg(ARM::R4, RegState::Implicit | RegState::Kill)
         .addReg(ARM::R4, RegState::Implicit | RegState::Define)
         .addReg(ARM::R12,
@@ -11767,6 +11768,7 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr &MI,
     BuildMI(*MBB, MI, DL, TII.get(gettBLXrOpcode(*MBB->getParent())))
         .add(predOps(ARMCC::AL))
         .addReg(Reg, RegState::Kill)
+        .setOperandDead(3) // implicit-def $lr
         .addReg(ARM::R4, RegState::Implicit | RegState::Kill)
         .addReg(ARM::R4, RegState::Implicit | RegState::Define)
         .addReg(ARM::R12,
