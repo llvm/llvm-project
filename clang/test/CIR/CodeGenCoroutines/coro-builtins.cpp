@@ -77,6 +77,10 @@ void f(int n) {
 
   // LLVM: call void @llvm.coro.end(ptr %[[FRAME]], i1 false, token none)
 
-  // TODO(CIR):
-  //__builtin_coro_suspend(1);
+  __builtin_coro_suspend(true);
+  // CIR: %[[TK_NONE2:.*]] = cir.token.none
+  // CIR: %[[TRUE:.*]] = cir.const #true
+  // CIR: cir.coro.intrinsic.suspend(%[[TK_NONE2]], %[[TRUE]])
+
+  // LLVM: call i8 @llvm.coro.suspend(token none, i1 true)
 }
