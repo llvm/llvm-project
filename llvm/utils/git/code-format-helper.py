@@ -549,9 +549,7 @@ View the diff from {self.name} here.
         cmake_cmd = self._construct_command()
         if args.verbose:
             print(f"Running: {' '.join(cmake_cmd)}")
-        proc = subprocess.run(
-            cmake_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-        )
+        proc = subprocess.run(cmake_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if args.verbose:
             sys.stdout.write(proc.stderr.decode("utf-8"))
 
