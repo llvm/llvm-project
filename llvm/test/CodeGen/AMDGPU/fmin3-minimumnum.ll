@@ -1204,10 +1204,8 @@ define <2 x half> @v_min3_v2f16_minimumnum_minimumnum__v_v_v_0(<2 x half> %a, <2
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX950-SDAG-NEXT:    s_nop 0
 ; GFX950-SDAG-NEXT:    v_pk_min_f16 v0, v0, v1
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v1, v2, v2
-; GFX950-SDAG-NEXT:    s_nop 0
 ; GFX950-SDAG-NEXT:    v_pk_min_f16 v0, v0, v1
 ; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1365,7 +1363,6 @@ define <3 x half> @v_min3_v3f16_minimumnum_minimumnum__v_v_v_0(<3 x half> %a, <3
 ; GFX950-SDAG-NEXT:    v_pk_min_f16 v1, v1, v3
 ; GFX950-SDAG-NEXT:    v_pk_min_f16 v0, v0, v2
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v2, v5, v5
-; GFX950-SDAG-NEXT:    s_nop 0
 ; GFX950-SDAG-NEXT:    v_pk_min_f16 v1, v1, v2
 ; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1568,7 +1565,6 @@ define <4 x half> @v_min3_v4f16_minimumnum_minimumnum__v_v_v_0(<4 x half> %a, <4
 ; GFX950-SDAG-NEXT:    v_pk_min_f16 v1, v1, v3
 ; GFX950-SDAG-NEXT:    v_pk_min_f16 v0, v0, v2
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v2, v5, v5
-; GFX950-SDAG-NEXT:    s_nop 0
 ; GFX950-SDAG-NEXT:    v_pk_min_f16 v1, v1, v2
 ; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;

@@ -3953,7 +3953,6 @@ define <2 x half> @v_minimumnum_v2f16(<2 x half> %x, <2 x half> %y) #1 {
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_pk_min_f16 v0, v0, v1
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -4573,10 +4572,9 @@ define <4 x half> @v_minimumnum_v4f16(<4 x half> %x, <4 x half> %y) #1 {
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_pk_max_f16 v2, v2, v2
 ; GFX950-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX950-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-NEXT:    v_pk_min_f16 v0, v0, v2
 ; GFX950-NEXT:    v_pk_max_f16 v2, v3, v3
-; GFX950-NEXT:    s_nop 0
+; GFX950-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-NEXT:    v_pk_min_f16 v1, v1, v2
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -4974,13 +4972,12 @@ define <6 x half> @v_minimumnum_v6f16(<6 x half> %x, <6 x half> %y) #1 {
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_pk_max_f16 v3, v3, v3
 ; GFX950-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX950-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-NEXT:    v_pk_min_f16 v0, v0, v3
 ; GFX950-NEXT:    v_pk_max_f16 v3, v4, v4
-; GFX950-NEXT:    v_pk_max_f16 v2, v2, v2
+; GFX950-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-NEXT:    v_pk_min_f16 v1, v1, v3
 ; GFX950-NEXT:    v_pk_max_f16 v3, v5, v5
-; GFX950-NEXT:    s_nop 0
+; GFX950-NEXT:    v_pk_max_f16 v2, v2, v2
 ; GFX950-NEXT:    v_pk_min_f16 v2, v2, v3
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -5320,16 +5317,15 @@ define <8 x half> @v_minimumnum_v8f16(<8 x half> %x, <8 x half> %y) #1 {
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_pk_max_f16 v4, v4, v4
 ; GFX950-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX950-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-NEXT:    v_pk_min_f16 v0, v0, v4
 ; GFX950-NEXT:    v_pk_max_f16 v4, v5, v5
-; GFX950-NEXT:    v_pk_max_f16 v2, v2, v2
+; GFX950-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-NEXT:    v_pk_min_f16 v1, v1, v4
 ; GFX950-NEXT:    v_pk_max_f16 v4, v6, v6
-; GFX950-NEXT:    v_pk_max_f16 v3, v3, v3
+; GFX950-NEXT:    v_pk_max_f16 v2, v2, v2
 ; GFX950-NEXT:    v_pk_min_f16 v2, v2, v4
 ; GFX950-NEXT:    v_pk_max_f16 v4, v7, v7
-; GFX950-NEXT:    s_nop 0
+; GFX950-NEXT:    v_pk_max_f16 v3, v3, v3
 ; GFX950-NEXT:    v_pk_min_f16 v3, v3, v4
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -5806,28 +5802,27 @@ define <16 x half> @v_minimumnum_v16f16(<16 x half> %x, <16 x half> %y) #1 {
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_pk_max_f16 v8, v8, v8
 ; GFX950-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX950-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-NEXT:    v_pk_min_f16 v0, v0, v8
 ; GFX950-NEXT:    v_pk_max_f16 v8, v9, v9
-; GFX950-NEXT:    v_pk_max_f16 v2, v2, v2
+; GFX950-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-NEXT:    v_pk_min_f16 v1, v1, v8
 ; GFX950-NEXT:    v_pk_max_f16 v8, v10, v10
-; GFX950-NEXT:    v_pk_max_f16 v3, v3, v3
+; GFX950-NEXT:    v_pk_max_f16 v2, v2, v2
 ; GFX950-NEXT:    v_pk_min_f16 v2, v2, v8
 ; GFX950-NEXT:    v_pk_max_f16 v8, v11, v11
-; GFX950-NEXT:    v_pk_max_f16 v4, v4, v4
+; GFX950-NEXT:    v_pk_max_f16 v3, v3, v3
 ; GFX950-NEXT:    v_pk_min_f16 v3, v3, v8
 ; GFX950-NEXT:    v_pk_max_f16 v8, v12, v12
-; GFX950-NEXT:    v_pk_max_f16 v5, v5, v5
+; GFX950-NEXT:    v_pk_max_f16 v4, v4, v4
 ; GFX950-NEXT:    v_pk_min_f16 v4, v4, v8
 ; GFX950-NEXT:    v_pk_max_f16 v8, v13, v13
-; GFX950-NEXT:    v_pk_max_f16 v6, v6, v6
+; GFX950-NEXT:    v_pk_max_f16 v5, v5, v5
 ; GFX950-NEXT:    v_pk_min_f16 v5, v5, v8
 ; GFX950-NEXT:    v_pk_max_f16 v8, v14, v14
-; GFX950-NEXT:    v_pk_max_f16 v7, v7, v7
+; GFX950-NEXT:    v_pk_max_f16 v6, v6, v6
 ; GFX950-NEXT:    v_pk_min_f16 v6, v6, v8
 ; GFX950-NEXT:    v_pk_max_f16 v8, v15, v15
-; GFX950-NEXT:    s_nop 0
+; GFX950-NEXT:    v_pk_max_f16 v7, v7, v7
 ; GFX950-NEXT:    v_pk_min_f16 v7, v7, v8
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -6759,7 +6754,6 @@ define <32 x half> @v_minimumnum_v32f16(<32 x half> %x, <32 x half> %y) #1 {
 ; GFX950-NEXT:    v_pk_min_f16 v14, v14, v30
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    v_pk_max_f16 v16, v31, v31
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_pk_min_f16 v15, v15, v16
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;

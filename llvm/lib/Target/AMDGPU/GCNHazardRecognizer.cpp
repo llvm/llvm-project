@@ -1469,9 +1469,11 @@ getDstSelForwardingOperand(const MachineInstr &MI, const GCNSubtarget &ST) {
 
   AMDGPU::FPType IsFP4OrFP8ConvOpc = AMDGPU::getFPDstSelType(Opcode);
   if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::op_sel)) {
-    // Type 2: VOP3 which write the hi bits
-    if (TII->getNamedImmOperand(MI, AMDGPU::OpName::src0_modifiers) &
-        SISrcMods::DST_OP_SEL)
+    // Type 2: VOP3 which write the hi bits. DST_OP_SEL is a destination
+    // selector in the VOP3 layout; VOP3P uses this bit for source op_sel_hi.
+    if (SIInstrInfo::isVOP3(MI) && !SIInstrInfo::isVOP3P(MI) &&
+        (TII->getNamedImmOperand(MI, AMDGPU::OpName::src0_modifiers) &
+         SISrcMods::DST_OP_SEL))
       return TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
 
     // Type 3: FP8DstSelInst with op_sel[3:2] != 0)
