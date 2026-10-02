@@ -10,6 +10,7 @@ static_library("CodeGenUtils") {
     "CallUtils.cpp",
     "ClassUtils.cpp",
     "CodeGenUtils.cpp",
+    "EHPersonality.cpp",
     "ExprUtils.cpp",
     "FunctionUtils.cpp",
     "ItaniumCXXABIUtils.cpp",
