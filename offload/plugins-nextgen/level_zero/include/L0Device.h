@@ -547,14 +547,17 @@ public:
   Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
                        bool *IsQueueWorkCompleted) override;
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
-                       AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+                       AsyncInfoWrapperTy &AsyncInfoWrapper,
+                       GenericProfilerTy *ProfilerPtr) override;
   Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr, int64_t Size,
-                         AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+                         AsyncInfoWrapperTy &AsyncInfoWrapper,
+                         GenericProfilerTy *ProfilerPtr) override;
   Error dataMemcpyImpl(void *DstPtr, const void *SrcPtr, int64_t Size,
                        AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
                          void *DstPtr, int64_t Size,
-                         AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+                         AsyncInfoWrapperTy &AsyncInfoWrapper,
+                         GenericProfilerTy *ProfilerPtr) override;
   Expected<bool>
   hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override;
 
