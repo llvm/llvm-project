@@ -54,6 +54,7 @@ void FunctionScopeInfo::Clear() {
   ErrorTrap.reset();
   PossiblyUnreachableDiags.clear();
   WeakObjectUses.clear();
+  ObjUnwindingLocs.clear();
   ModifiedNonNullParams.clear();
   Blocks.clear();
   ByrefBlockVars.clear();
