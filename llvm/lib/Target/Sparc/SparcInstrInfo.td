@@ -1131,9 +1131,7 @@ let Uses = [O6], Defs = [O7],
   // This is for using the CALL instruction as a longer unconditional branch.
   let isCall = 0, isCodeGenOnly = 1, isTerminator = 1 in {
     def CALL_LONGJUMP : InstSP<(outs), (ins calltarget:$disp, variable_ops),
-                    "call $disp",
-                    [],
-                    IIC_jmp_or_call> {
+                    "call $disp", []> {
       bits<30> disp;
       let op = 1;
       let Inst{29-0} = disp;
