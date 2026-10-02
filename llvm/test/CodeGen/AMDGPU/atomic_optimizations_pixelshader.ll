@@ -45,9 +45,7 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ; GFX7-NEXT:    s_wqm_b64 s[4:5], -1
 ; GFX7-NEXT:    s_and_b64 s[4:5], s[4:5], s[4:5]
 ; GFX7-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX7-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX7-NEXT:    s_cmp_lg_u32 s4, 1
-; GFX7-NEXT:    s_cbranch_scc1 .LBB0_6
+; GFX7-NEXT:    s_cbranch_scc0 .LBB0_6
 ; GFX7-NEXT:  ; %bb.5: ; %if
 ; GFX7-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX7-NEXT:  .LBB0_6: ; %UnifiedReturnBlock
@@ -82,9 +80,7 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ; GFX89-NEXT:    s_wqm_b64 s[4:5], -1
 ; GFX89-NEXT:    s_and_b64 s[4:5], s[4:5], s[4:5]
 ; GFX89-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX89-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX89-NEXT:    s_cmp_lg_u32 s4, 1
-; GFX89-NEXT:    s_cbranch_scc1 .LBB0_6
+; GFX89-NEXT:    s_cbranch_scc0 .LBB0_6
 ; GFX89-NEXT:  ; %bb.5: ; %if
 ; GFX89-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX89-NEXT:  .LBB0_6: ; %UnifiedReturnBlock
@@ -120,9 +116,7 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ; GFX1064-NEXT:    s_wqm_b64 s[4:5], -1
 ; GFX1064-NEXT:    s_and_b64 s[4:5], s[4:5], s[4:5]
 ; GFX1064-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX1064-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX1064-NEXT:    s_cmp_lg_u32 s4, 1
-; GFX1064-NEXT:    s_cbranch_scc1 .LBB0_6
+; GFX1064-NEXT:    s_cbranch_scc0 .LBB0_6
 ; GFX1064-NEXT:  ; %bb.5: ; %if
 ; GFX1064-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX1064-NEXT:  .LBB0_6: ; %UnifiedReturnBlock
@@ -157,9 +151,7 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ; GFX1032-NEXT:    s_wqm_b32 s4, -1
 ; GFX1032-NEXT:    s_and_b32 s4, s4, s4
 ; GFX1032-NEXT:    s_and_b32 s4, s4, exec_lo
-; GFX1032-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX1032-NEXT:    s_cmp_lg_u32 s4, 1
-; GFX1032-NEXT:    s_cbranch_scc1 .LBB0_6
+; GFX1032-NEXT:    s_cbranch_scc0 .LBB0_6
 ; GFX1032-NEXT:  ; %bb.5: ; %if
 ; GFX1032-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX1032-NEXT:  .LBB0_6: ; %UnifiedReturnBlock
@@ -199,10 +191,7 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1164-NEXT:    s_and_b64 s[4:5], s[4:5], s[4:5]
 ; GFX1164-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX1164-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1164-NEXT:    s_cmp_lg_u32 s4, 1
-; GFX1164-NEXT:    s_cbranch_scc1 .LBB0_6
+; GFX1164-NEXT:    s_cbranch_scc0 .LBB0_6
 ; GFX1164-NEXT:  ; %bb.5: ; %if
 ; GFX1164-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX1164-NEXT:  .LBB0_6: ; %UnifiedReturnBlock
@@ -241,10 +230,7 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1132-NEXT:    s_and_b32 s4, s4, s4
 ; GFX1132-NEXT:    s_and_b32 s4, s4, exec_lo
-; GFX1132-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1132-NEXT:    s_cmp_lg_u32 s4, 1
-; GFX1132-NEXT:    s_cbranch_scc1 .LBB0_6
+; GFX1132-NEXT:    s_cbranch_scc0 .LBB0_6
 ; GFX1132-NEXT:  ; %bb.5: ; %if
 ; GFX1132-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX1132-NEXT:  .LBB0_6: ; %UnifiedReturnBlock
@@ -284,10 +270,7 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1364-NEXT:    s_and_b64 s[4:5], s[4:5], s[4:5]
 ; GFX1364-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX1364-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1364-NEXT:    s_cmp_lg_u32 s4, 1
-; GFX1364-NEXT:    s_cbranch_scc1 .LBB0_6
+; GFX1364-NEXT:    s_cbranch_scc0 .LBB0_6
 ; GFX1364-NEXT:  ; %bb.5: ; %if
 ; GFX1364-NEXT:    buffer_store_b32 v0, off, s[0:3], null
 ; GFX1364-NEXT:  .LBB0_6: ; %UnifiedReturnBlock
@@ -326,10 +309,7 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ; GFX1332-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1332-NEXT:    s_and_b32 s4, s4, s4
 ; GFX1332-NEXT:    s_and_b32 s4, s4, exec_lo
-; GFX1332-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX1332-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1332-NEXT:    s_cmp_lg_u32 s4, 1
-; GFX1332-NEXT:    s_cbranch_scc1 .LBB0_6
+; GFX1332-NEXT:    s_cbranch_scc0 .LBB0_6
 ; GFX1332-NEXT:  ; %bb.5: ; %if
 ; GFX1332-NEXT:    buffer_store_b32 v0, off, s[0:3], null
 ; GFX1332-NEXT:  .LBB0_6: ; %UnifiedReturnBlock
@@ -354,9 +334,7 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX7-NEXT:    buffer_atomic_add v0, off, s[4:7], 0 glc
 ; GFX7-NEXT:    s_wqm_b64 s[4:5], -1
 ; GFX7-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX7-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX7-NEXT:    s_cmp_lg_u32 s4, 1
-; GFX7-NEXT:    s_cbranch_scc1 .LBB1_2
+; GFX7-NEXT:    s_cbranch_scc0 .LBB1_2
 ; GFX7-NEXT:  ; %bb.1: ; %if
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -412,9 +390,7 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX8-NEXT:    s_wqm_b64 s[4:5], -1
 ; GFX8-NEXT:    s_and_b64 s[4:5], s[4:5], s[4:5]
 ; GFX8-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX8-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX8-NEXT:    s_cmp_lg_u32 s4, 1
-; GFX8-NEXT:    s_cbranch_scc1 .LBB1_6
+; GFX8-NEXT:    s_cbranch_scc0 .LBB1_6
 ; GFX8-NEXT:  ; %bb.5: ; %if
 ; GFX8-NEXT:    buffer_store_dword v3, off, s[0:3], 0
 ; GFX8-NEXT:  .LBB1_6: ; %UnifiedReturnBlock
@@ -469,9 +445,7 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX9-NEXT:    s_wqm_b64 s[4:5], -1
 ; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], s[4:5]
 ; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX9-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX9-NEXT:    s_cmp_lg_u32 s4, 1
-; GFX9-NEXT:    s_cbranch_scc1 .LBB1_6
+; GFX9-NEXT:    s_cbranch_scc0 .LBB1_6
 ; GFX9-NEXT:  ; %bb.5: ; %if
 ; GFX9-NEXT:    buffer_store_dword v3, off, s[0:3], 0
 ; GFX9-NEXT:  .LBB1_6: ; %UnifiedReturnBlock
@@ -531,9 +505,7 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1064-NEXT:    s_wqm_b64 s[4:5], -1
 ; GFX1064-NEXT:    s_and_b64 s[4:5], s[4:5], s[4:5]
 ; GFX1064-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX1064-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX1064-NEXT:    s_cmp_lg_u32 s4, 1
-; GFX1064-NEXT:    s_cbranch_scc1 .LBB1_6
+; GFX1064-NEXT:    s_cbranch_scc0 .LBB1_6
 ; GFX1064-NEXT:  ; %bb.5: ; %if
 ; GFX1064-NEXT:    buffer_store_dword v4, off, s[0:3], 0
 ; GFX1064-NEXT:  .LBB1_6: ; %UnifiedReturnBlock
@@ -583,9 +555,7 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1032-NEXT:    s_wqm_b32 s4, -1
 ; GFX1032-NEXT:    s_and_b32 s4, s4, s4
 ; GFX1032-NEXT:    s_and_b32 s4, s4, exec_lo
-; GFX1032-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX1032-NEXT:    s_cmp_lg_u32 s4, 1
-; GFX1032-NEXT:    s_cbranch_scc1 .LBB1_6
+; GFX1032-NEXT:    s_cbranch_scc0 .LBB1_6
 ; GFX1032-NEXT:  ; %bb.5: ; %if
 ; GFX1032-NEXT:    buffer_store_dword v4, off, s[0:3], 0
 ; GFX1032-NEXT:  .LBB1_6: ; %UnifiedReturnBlock
@@ -656,10 +626,7 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1164-NEXT:    s_and_b64 s[4:5], s[4:5], s[4:5]
 ; GFX1164-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX1164-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1164-NEXT:    s_cmp_lg_u32 s4, 1
-; GFX1164-NEXT:    s_cbranch_scc1 .LBB1_6
+; GFX1164-NEXT:    s_cbranch_scc0 .LBB1_6
 ; GFX1164-NEXT:  ; %bb.5: ; %if
 ; GFX1164-NEXT:    buffer_store_b32 v4, off, s[0:3], 0
 ; GFX1164-NEXT:  .LBB1_6: ; %UnifiedReturnBlock
@@ -716,10 +683,7 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1132-NEXT:    s_and_b32 s4, s4, s4
 ; GFX1132-NEXT:    s_and_b32 s4, s4, exec_lo
-; GFX1132-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1132-NEXT:    s_cmp_lg_u32 s4, 1
-; GFX1132-NEXT:    s_cbranch_scc1 .LBB1_6
+; GFX1132-NEXT:    s_cbranch_scc0 .LBB1_6
 ; GFX1132-NEXT:  ; %bb.5: ; %if
 ; GFX1132-NEXT:    buffer_store_b32 v4, off, s[0:3], 0
 ; GFX1132-NEXT:  .LBB1_6: ; %UnifiedReturnBlock
@@ -789,10 +753,7 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1364-NEXT:    s_and_b64 s[4:5], s[4:5], s[4:5]
 ; GFX1364-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX1364-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1364-NEXT:    s_cmp_lg_u32 s4, 1
-; GFX1364-NEXT:    s_cbranch_scc1 .LBB1_6
+; GFX1364-NEXT:    s_cbranch_scc0 .LBB1_6
 ; GFX1364-NEXT:  ; %bb.5: ; %if
 ; GFX1364-NEXT:    buffer_store_b32 v4, off, s[0:3], null
 ; GFX1364-NEXT:  .LBB1_6: ; %UnifiedReturnBlock
@@ -848,10 +809,7 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1332-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1332-NEXT:    s_and_b32 s4, s4, s4
 ; GFX1332-NEXT:    s_and_b32 s4, s4, exec_lo
-; GFX1332-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX1332-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1332-NEXT:    s_cmp_lg_u32 s4, 1
-; GFX1332-NEXT:    s_cbranch_scc1 .LBB1_6
+; GFX1332-NEXT:    s_cbranch_scc0 .LBB1_6
 ; GFX1332-NEXT:  ; %bb.5: ; %if
 ; GFX1332-NEXT:    buffer_store_b32 v4, off, s[0:3], null
 ; GFX1332-NEXT:  .LBB1_6: ; %UnifiedReturnBlock

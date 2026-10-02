@@ -727,50 +727,70 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
   return false;
 }
 
-bool llvm::willNotFreeBetween(const Instruction *Assume,
-                              const Instruction *CtxI) {
-  // Helper to check if there are any calls in the range that may free memory.
-  unsigned NumChecked = 0;
-  auto hasNoFreeInRange = [&NumChecked](auto Range) {
-    for (const Instruction &I : Range) {
-      if (NumChecked++ > MaxInstrsToCheckForFree)
+static bool hasNoFreeInRange(BasicBlock::const_iterator Begin,
+                             BasicBlock::const_iterator End,
+                             unsigned &NumChecked) {
+  for (const Instruction &I : make_range(Begin, End)) {
+    if (NumChecked++ > MaxInstrsToCheckForFree)
+      return false;
+    if (auto *CB = dyn_cast<CallBase>(&I)) {
+      if (!CB->hasFnAttr(Attribute::NoFree))
         return false;
-
-      if (auto *CB = dyn_cast<CallBase>(&I)) {
-        if (!CB->hasFnAttr(Attribute::NoFree))
-          return false;
-      } else if (I.maySynchronize())
-        return false;
+    } else if (I.maySynchronize()) {
+      return false;
     }
-    return true;
-  };
+  }
+  return true;
+}
 
+bool llvm::willNotFreeBetween(const Instruction *Assume,
+                              const Instruction *CtxI,
+                              const DominatorTree *DT) {
   const BasicBlock *CtxBB = CtxI->getParent();
   const BasicBlock *AssumeBB = Assume->getParent();
+  unsigned NumChecked = 0;
   BasicBlock::const_iterator CtxIter = CtxI->getIterator();
   if (CtxBB == AssumeBB) {
-    // Same block case: check that Assume comes before CtxI.
     if (Assume != CtxI && !Assume->comesBefore(CtxI))
       return false;
-    return hasNoFreeInRange(make_range(Assume->getIterator(), CtxIter));
+    return hasNoFreeInRange(Assume->getIterator(), CtxIter, NumChecked);
   }
+  if (DT && !DT->dominates(Assume, CtxI))
+    return false;
+  if (!hasNoFreeInRange(CtxBB->begin(), CtxIter, NumChecked))
+    return false;
+  if (pred_empty(CtxBB))
+    return false;
 
-  // Handle chain of single-predecessor blocks.
-  const BasicBlock *CurBB = CtxBB;
-  while (true) {
-    if (CurBB == AssumeBB)
-      return hasNoFreeInRange(
-          make_range(Assume->getIterator(), AssumeBB->end()));
+  // Note: CtxBB is NOT pre-inserted into Visited to ensure that loop
+  // backedges returning to CtxBB are enqueued and checked correctly.
+  SmallVector<const BasicBlock *, 16> Worklist(predecessors(CtxBB));
+  SmallPtrSet<const BasicBlock *, 16> Visited;
+  while (!Worklist.empty()) {
+    const BasicBlock *CurBB = Worklist.pop_back_val();
+    if (!Visited.insert(CurBB).second)
+      continue;
 
-    const BasicBlock *PredBB = CurBB->getSinglePredecessor();
-    if (!PredBB)
+    if (CurBB == AssumeBB) {
+      if (!hasNoFreeInRange(Assume->getIterator(), AssumeBB->end(), NumChecked))
+        return false;
+      continue;
+    }
+    assert((!DT || DT->dominates(AssumeBB, CurBB)) &&
+           "Blocks between Assume and CtxI must be dominated by AssumeBB");
+
+    if (pred_empty(CurBB))
       return false;
 
-    if (!hasNoFreeInRange(make_range(CurBB->begin(),
-                                     CurBB == CtxBB ? CtxIter : CurBB->end())))
+    // If CurBB == CtxBB (due to a loop backedge targeting CtxBB), check
+    // instructions from CtxIter to the end of CtxBB (instructions before
+    // CtxIter were checked above). Otherwise, check the entire block.
+    auto StartIt = (CurBB == CtxBB) ? CtxIter : CurBB->begin();
+    if (!hasNoFreeInRange(StartIt, CurBB->end(), NumChecked))
       return false;
-    CurBB = PredBB;
+    append_range(Worklist, predecessors(CurBB));
   }
+  return true;
 }
 
 // TODO: cmpExcludesZero misses many cases where `RHS` is non-constant but
@@ -2277,20 +2297,6 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Known &= Known2.anyextOrTrunc(BitWidth);
         break;
       }
-      case Intrinsic::x86_sse2_pmulh_w:
-      case Intrinsic::x86_avx2_pmulh_w:
-      case Intrinsic::x86_avx512_pmulh_w_512:
-        computeKnownBits(I->getOperand(0), DemandedElts, Known, Q, Depth + 1);
-        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Q, Depth + 1);
-        Known = KnownBits::mulhs(Known, Known2);
-        break;
-      case Intrinsic::x86_sse2_pmulhu_w:
-      case Intrinsic::x86_avx2_pmulhu_w:
-      case Intrinsic::x86_avx512_pmulhu_w_512:
-        computeKnownBits(I->getOperand(0), DemandedElts, Known, Q, Depth + 1);
-        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Q, Depth + 1);
-        Known = KnownBits::mulhu(Known, Known2);
-        break;
       case Intrinsic::x86_sse42_crc32_64_64:
         Known.Zero.setBitsFrom(32);
         break;
@@ -8466,6 +8472,8 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::umax:
   case Intrinsic::umin:
   case Intrinsic::scmp:
+  case Intrinsic::smulh:
+  case Intrinsic::umulh:
   case Intrinsic::is_fpclass:
   case Intrinsic::ptrmask:
   case Intrinsic::ucmp:
@@ -10784,6 +10792,14 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
     ConstantRange SrcCR =
         computeConstantRange(TI->getOperand(0), ForSigned, SQ, Depth + 1);
     CR = SrcCR.truncate(BitWidth);
+  } else if (auto *ZExt = dyn_cast<ZExtInst>(V)) {
+    ConstantRange SrcCR =
+        computeConstantRange(ZExt->getOperand(0), ForSigned, SQ, Depth + 1);
+    CR = SrcCR.zeroExtend(BitWidth);
+  } else if (auto *SExt = dyn_cast<SExtInst>(V)) {
+    ConstantRange SrcCR =
+        computeConstantRange(SExt->getOperand(0), ForSigned, SQ, Depth + 1);
+    CR = SrcCR.signExtend(BitWidth);
   } else if (isa<FPToUIInst>(V) || isa<FPToSIInst>(V)) {
     APInt Lower = APInt(BitWidth, 0);
     APInt Upper = APInt(BitWidth, 0);

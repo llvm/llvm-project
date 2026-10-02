@@ -44,6 +44,14 @@ bool hasUnwindExceptions(const LangOptions &LangOpts);
 /// Helper method to check if the underlying ABI is AAPCS
 bool isAAPCS(const TargetInfo &TargetInfo);
 
+/// Return the AST address space of constant literal, which is used to emit
+/// the constant literal as global variable in LLVM IR.
+/// Note: This is not necessarily the address space of the constant literal
+/// in AST. For address space agnostic language, e.g. C++, constant literal
+/// in AST is always in default address space.
+LangAS getGlobalConstantAddressSpace(const LangOptions &LangOpts,
+                                     const TargetInfo &Target);
+
 bool isInitializerOfDynamicClass(const CXXCtorInitializer *BaseInit);
 
 /// Check that a call to a target-specific builtin has the required target
