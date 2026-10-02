@@ -174,6 +174,23 @@ constexpr U _ = nondeterministic(true);
 #endif
 } // namespace cwg2922
 
+namespace cwg2943 { // cwg2943: 3.9
+#if __cplusplus >= 201703L
+[[nodiscard]] void f();
+// expected-warning@-1 {{attribute 'nodiscard' cannot be applied to functions without return value}}
+template <class T> [[nodiscard]] T g();
+
+void h() {
+  f();
+  (void)f();
+  g<int>();
+  // expected-warning@-1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  g<void>();
+  (void)g<void>();
+}
+#endif
+} // namespace cwg2943
+
 // cwg2947 is in cwg2947.cpp
 
 namespace cwg2966 { // cwg2966: 2.7
