@@ -480,6 +480,9 @@ features cannot lower the translation-unit ABI level;
 - Diagnostics for the C++11 range-based for statement now report the correct
   iterator type in notes for invalid iterator types.
 
+- `-Wfortify-source` now diagnoses calls to `fread`, `fwrite`, and `fgets`
+  when the requested size exceeds the corresponding buffer. (#GH204337)
+
 - `-Wfortify-source` now warns when the constant-evaluated argument to
   `umask` has bits set outside `0777`. Those bits are silently discarded
   by the kernel, so setting them is almost always a typo (matching the
@@ -617,9 +620,6 @@ features cannot lower the translation-unit ABI level;
   rather than to a declarator chunk. (#GH196982, #GH111463)
 
 #### Bug Fixes to C++ Support
-
-- Fixed a stack overflow crash when evaluating deeply recursive `constexpr`
-  function calls. (#GH201418, #GH200673)
 
 - Fixed lambdas with specifiers or attributes after the capture list being
   misparsed as function declarations in direct-initialization contexts under
@@ -830,6 +830,10 @@ features cannot lower the translation-unit ABI level;
   that was inherited from a different declarator, for example when
   ``__typeof__`` resolves to the type of another, already-processed
   declaration. (#GH217489)
+- Fixed a crash when the constant evaluator default-constructed or copied a
+  very large array, such as a local ``T s[0xFFFFFFFF][0]`` of an empty class
+  ``T``. Such evaluations now fail once the element count exceeds the
+  ``-fconstexpr-steps`` limit, as they already did for ``new``. (#GH173728)
 - Fixed an assertion failure when instantiating a block that captures
   `this` via a member access through a dependent base class.
 - Fixed `DiagnoseUnguardedAvailability::TraverseIfStmt` dereferencing a nullptr
@@ -937,6 +941,8 @@ features cannot lower the translation-unit ABI level;
 
 - Added `--cuda-emit-nvcc-abi` to emit the NVCC-compatible host registration ABI
   (`__cudaRegisterLinkedBinary`).
+
+- Fixed CUDA built-in variables such as `threadIdx` and `blockDim` being incorrectly treated as having side effects in assumptions. (#GH181340)
 
 - Clang now provides device-side definitions of `__cxa_pure_virtual()` and
   `__cxa_deleted_virtual()`; previously, any (potential) call to a pure/deleted

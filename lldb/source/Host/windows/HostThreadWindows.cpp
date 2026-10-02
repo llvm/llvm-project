@@ -92,7 +92,7 @@ StructuredData::ObjectSP HostThreadWindows::GetExtendedInfo() const {
                      PULONG ReturnLength);
 
   static LazyImport<NtQueryInformationThreadFn> s_query_information_thread{
-      L"Kernel32.dll", "NtQueryInformationThread"};
+      L"ntdll.dll", "NtQueryInformationThread"};
   if (!s_query_information_thread)
     return StructuredData::ObjectSP();
   auto NtQueryInformationThread = *s_query_information_thread;

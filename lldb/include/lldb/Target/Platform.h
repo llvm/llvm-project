@@ -503,13 +503,6 @@ public:
   // process control.
   virtual lldb::BreakpointSP SetThreadCreationBreakpoint(Target &target);
 
-  // Given a target, find the local SDK directory if one exists on the current
-  // host.
-  virtual lldb_private::ConstString
-  GetSDKDirectory(lldb_private::Target &target) {
-    return lldb_private::ConstString();
-  }
-
   /// Search each CU associated with the specified 'module' for
   /// the SDK paths the CUs were compiled against. In the presence
   /// of different SDKs, we try to pick the most appropriate one
