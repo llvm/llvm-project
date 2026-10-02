@@ -14,6 +14,15 @@
 // RUN:   | FileCheck %s --check-prefix=VERIFIER --implicit-check-not=error:
 // VERIFIER: verifier.cir:5:5: error: 'cir.return' op returns '!cir.int<s, 64>' but enclosing function returns '!cir.int<s, 32>'
 
+// Ops in CIR emitted by CIRGen are located in the original source, which is not
+// loaded for ClangIR input; the location is kept as text in the message.
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %t/src.c -o - \
+// RUN:   | sed -E 's/cir\.return %[0-9]+ : !s32i/cir.return/' > %t/src-verifier.cir
+// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-cir %t/src-verifier.cir -o - 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=SRC-VERIFIER --implicit-check-not=error:
+// SRC-VERIFIER: error: {{.*}}src.c:2:3: 'cir.return' op returns '!cir.void' but enclosing function returns '!cir.int<s, 32>'
+// SRC-VERIFIER: note: {{.*}}src.c:2:3: see current operation
+
 // RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-cir %t/no-triple.cir -o - 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NO-TRIPLE --implicit-check-not=error:
 // RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-cir %t/int-triple.cir -o - 2>&1 \
@@ -38,6 +47,11 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.func @f(%arg0: !s64i) -> !s32i {
     cir.return %arg0 : !s64i
   }
+}
+
+//--- src.c
+int f(int a) {
+  return a;
 }
 
 //--- no-triple.cir

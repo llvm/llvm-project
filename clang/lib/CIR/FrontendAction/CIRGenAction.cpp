@@ -396,7 +396,7 @@ void CIRGenAction::ExecuteAction() {
   // errors point into the .cir input. Verifier errors use the location of
   // the failing op, which for CIR emitted by CIRGen is a location in the
   // original source file; that file is not loaded in the SourceManager, so
-  // such errors are currently reported without a location.
+  // the handler reports such errors with the original location as text.
   // TODO: Decide where errors in CIRGen-produced input should point: at the
   // .cir text, or at the original source.
   CIRDiagnosticHandler DiagHandler(&MLIRContext, Diags, SM,
