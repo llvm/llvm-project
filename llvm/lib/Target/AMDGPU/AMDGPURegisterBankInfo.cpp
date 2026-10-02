@@ -932,7 +932,8 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
   // Update EXEC, save the original EXEC value to VCC.
   B.buildInstr(LMC.AndSaveExecOpc)
       .addDef(NewExec)
-      .addReg(CondReg, RegState::Kill);
+      .addReg(CondReg, RegState::Kill)
+      .setOperandDead(3);
 
   MRI.setSimpleHint(NewExec, CondReg);
 
@@ -942,7 +943,8 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
   B.buildInstr(LMC.XorTermOpc)
       .addDef(LMC.ExecReg)
       .addReg(LMC.ExecReg)
-      .addReg(NewExec);
+      .addReg(NewExec)
+      .setOperandDead(3);
 
   // XXX - s_xor_b64 sets scc to 1 if the result is nonzero, so can we use
   // s_cbranch_scc0?

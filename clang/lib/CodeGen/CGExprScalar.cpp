@@ -2253,11 +2253,10 @@ Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   const auto *MatrixTy = E->getBase()->getType()->castAs<ConstantMatrixType>();
   llvm::MatrixBuilder MB(Builder);
 
-  Value *Idx;
   unsigned NumCols = MatrixTy->getNumColumns();
   unsigned NumRows = MatrixTy->getNumRows();
-  Idx = MB.CreateIndex(RowIdx, ColumnIdx, NumRows, NumCols,
-                       /*IsRowMajor=*/false);
+  Value *Idx = MB.CreateIndex(RowIdx, ColumnIdx, NumRows, NumCols,
+                              /*IsRowMajor=*/false);
 
   if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0)
     MB.CreateIndexAssumption(Idx, MatrixTy->getNumElementsFlattened());
@@ -2589,8 +2588,6 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
            "Flattened type on RHS must have the same number or more elements "
            "than vector on LHS.");
 
-    bool IsRowMajor = isMatrixRowMajor(CGF.getLangOpts(), DestTy);
-
     llvm::Value *V = llvm::PoisonValue::get(CGF.ConvertType(DestTy));
     // V is an allocated temporary for constructing the matrix.
     for (unsigned Row = 0, RE = MatTy->getNumRows(); Row < RE; Row++) {
@@ -2604,7 +2601,7 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
         llvm::Value *Cast = CGF.EmitScalarConversion(
             RVal.getScalarVal(), LoadList[LoadIdx].getType(),
             MatTy->getElementType(), Loc);
-        unsigned MatrixIdx = MatTy->getFlattenedIndex(Row, Col, IsRowMajor);
+        unsigned MatrixIdx = MatTy->getColumnMajorFlattenedIndex(Row, Col);
         V = CGF.Builder.CreateInsertElement(V, Cast, MatrixIdx);
       }
     }
@@ -3557,12 +3554,9 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     llvm::Value *amt;
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
 
-    if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
-      // Another special case: half FP increment should be done via float. If
-      // the input isn't already half, it may be i16.
-      Value *bitcast = Builder.CreateBitCast(input, CGF.CGM.HalfTy);
-      value = Builder.CreateFPExt(bitcast, CGF.CGM.FloatTy, "incdec.conv");
-    }
+    // Another special case: half FP increment should be done via float.
+    if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType)
+      value = Builder.CreateFPExt(value, CGF.CGM.FloatTy, "incdec.conv");
 
     if (value->getType()->isFloatTy())
       amt = llvm::ConstantFP::get(VMContext,
@@ -3593,12 +3587,10 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     }
     value = Builder.CreateFAdd(value, amt, isInc ? "inc" : "dec");
 
-    if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
+    if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType)
       value = Builder.CreateFPTrunc(value, CGF.CGM.HalfTy, "incdec.conv");
-      value = Builder.CreateBitCast(value, input->getType());
-    }
 
-  // Fixed-point types.
+    // Fixed-point types.
   } else if (type->isFixedPointType()) {
     // Fixed-point types are tricky. In some cases, it isn't possible to
     // represent a 1 or a -1 in the type at all. Piggyback off of
