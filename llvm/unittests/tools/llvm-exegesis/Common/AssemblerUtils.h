@@ -95,6 +95,31 @@ private:
   const ExegesisTarget *const ET;
 };
 
+inline void checkAssembleWithABI(const Triple &TT, StringRef CpuName,
+                                 StringRef ABIName) {
+  std::string Error;
+  const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
+  ASSERT_TRUE(TheTarget) << Error;
+  const ExegesisTarget *ET = ExegesisTarget::lookup(TT);
+  ASSERT_TRUE(ET);
+
+  TargetOptions Options;
+  Options.MCOptions.ABIName = ABIName;
+  std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
+      TT, CpuName, "", Options, Reloc::Model::Static));
+  ASSERT_TRUE(TM);
+  ASSERT_NE(TM->createDataLayout(), DataLayout(TT.computeDataLayout()));
+  EXPECT_TRUE(getFunctionReservedRegs(*TM).any());
+
+  SmallString<256> Buffer;
+  raw_svector_ostream AsmStream(Buffer);
+  EXPECT_EQ(toString(assembleToStream(
+                *ET, std::move(TM), /*LiveIns=*/{}, [](FunctionFiller &) {},
+                AsmStream, BenchmarkKey(), false)),
+            "");
+  EXPECT_FALSE(Buffer.empty());
+}
+
 } // namespace exegesis
 } // namespace llvm
 

@@ -31,6 +31,7 @@ protected:
     LLVMInitializeMipsTargetInfo();
     LLVMInitializeMipsTargetMC();
     LLVMInitializeMipsTarget();
+    LLVMInitializeMipsAsmPrinter();
     InitializeMipsExegesisTarget();
   }
 

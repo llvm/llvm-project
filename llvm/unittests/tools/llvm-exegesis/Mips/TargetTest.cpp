@@ -10,6 +10,7 @@
 
 #include <cassert>
 
+#include "../Common/AssemblerUtils.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "TestBase.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -123,6 +124,10 @@ TEST_F(MipsTargetTest, DefaultPfmCounters) {
   EXPECT_EQ(
       State.getExegesisTarget().getPfmCounters("unknown_cpu").CycleCounter,
       Expected);
+}
+
+TEST_F(MipsTargetTest, AssembleWithN32) {
+  checkAssembleWithABI(Triple("mips64-unknown-linux"), "mips64", "n32");
 }
 
 } // namespace
