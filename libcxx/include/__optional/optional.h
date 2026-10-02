@@ -16,6 +16,7 @@
 #include <__fwd/optional.h>
 #include <__iterator/bounded_iter.h>
 #include <__iterator/capacity_aware_iterator.h>
+#include <__iterator/static_packed_bounded_iter.h>
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
 #include <__optional/common.h>
@@ -681,50 +682,68 @@ public:
 
   using __base::reset;
 
-#  if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
+#  if _LIBCPP_STD_VER >= 26
 
 private:
   using __pointer _LIBCPP_NODEBUG       = add_pointer_t<_Tp>;
   using __const_pointer _LIBCPP_NODEBUG = add_pointer_t<const _Tp>;
 
-public:
-#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
-  using iterator       = __bounded_iter<__pointer>;
-  using const_iterator = __bounded_iter<__const_pointer>;
+  template <bool = std::__range_fits_in_alignment(alignof(_Tp), 1)>
+  struct _LIBCPP_NODEBUG __iterator {
+    using __type _LIBCPP_NODEBUG       = std::__static_packed_bounded_iterator<__pointer, 1>;
+    using __const_type _LIBCPP_NODEBUG = std::__static_packed_bounded_iterator<__const_pointer, 1>;
+
+    template <class _PtrType>
+    static auto __make(_PtrType __p, unsigned) noexcept {
+      return std::__make_static_packed_bounded_iter<_PtrType, 1>(__p, 0);
+    }
+  };
+
+  template <>
+  struct _LIBCPP_NODEBUG __iterator<false> {
+#    if _LIBCPP_ABI_BOUNDED_ITERATORS
+    using __type _LIBCPP_NODEBUG       = std::__bounded_iter<__pointer>;
+    using __const_type _LIBCPP_NODEBUG = std::__bounded_iter<__const_pointer>;
 #    else
-  using iterator       = __capacity_aware_iterator<__pointer, 1>;
-  using const_iterator = __capacity_aware_iterator<__const_pointer, 1>;
+    using __type _LIBCPP_NODEBUG       = std::__capacity_aware_iterator<__pointer, 1>;
+    using __const_type _LIBCPP_NODEBUG = std::__capacity_aware_iterator<__const_pointer, 1>;
 #    endif
+
+    template <class _PtrType>
+    static auto __make(_PtrType __p, [[__maybe_unused__]] unsigned __end_offset) noexcept {
+#    if _LIBCPP_ABI_BOUNDED_ITERATORS
+      return std::__make_bounded_iter<_PtrType>(__p, __p, __p + __end_offset)
+#    else
+      return std::__make_capacity_aware_iterator<_PtrType, 1>(__p);
+#    endif
+    }
+  };
+
+  using __iter _LIBCPP_NODEBUG = __iterator<>;
+
+public:
+  using iterator       = __iter::__type;
+  using const_iterator = __iter::__const_type;
 
   // [optional.iterators], iterator support
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator begin() noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI iterator begin() noexcept {
     auto* __ptr = std::addressof(this->__val_);
 
-#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
-    return std::__make_bounded_iter(__ptr, __ptr, __ptr + (this->has_value() ? 1 : 0));
-#    else
-    return std::__make_capacity_aware_iterator<__pointer, 1>(__ptr);
-#    endif
+    return __iter::__make(__ptr, this->has_value() ? 1 : 0);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const_iterator begin() const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_iterator begin() const noexcept {
     auto* __ptr = std::addressof(this->__val_);
 
-#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
-    return std::__make_bounded_iter(__ptr, __ptr, __ptr + (this->has_value() ? 1 : 0));
-#    else
-    return std::__make_capacity_aware_iterator<__const_pointer, 1>(__ptr);
-#    endif
+    return __iter::__make(__ptr, this->has_value() ? 1 : 0);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator end() noexcept {
-    return begin() + (this->has_value() ? 1 : 0);
-  }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const_iterator end() const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI iterator end() noexcept { return begin() + (this->has_value() ? 1 : 0); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_iterator end() const noexcept {
     return begin() + (this->has_value() ? 1 : 0);
   }
 
-#  endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
+#  endif // _LIBCPP_STD_VER >= 26
 };
 
 _LIBCPP_END_NAMESPACE_STD

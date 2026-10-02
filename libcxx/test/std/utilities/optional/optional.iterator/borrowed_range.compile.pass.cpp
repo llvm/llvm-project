@@ -31,4 +31,6 @@ void test_borrowed_range() {
   borrowed_range<int[]>();
   borrowed_range<int[10]>();
   borrowed_range<int()>();
+  borrowed_range<char>();
+  borrowed_range<short>();
 }

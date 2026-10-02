@@ -16,6 +16,7 @@
 #include <__fwd/optional.h>
 #include <__iterator/bounded_iter.h>
 #include <__iterator/capacity_aware_iterator.h>
+#include <__iterator/static_packed_bounded_iter.h>
 #include <__memory/addressof.h>
 #include <__optional/common.h>
 #include <__optional/comparison.h>
@@ -55,19 +56,41 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 struct __optional_ref_iterator_base {};
 
-#  if _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
-
 template <class _Tp>
   requires(is_object_v<_Tp> && !__is_unbounded_array_v<_Tp>)
 struct __optional_ref_iterator_base<_Tp&> {
-#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
-  using iterator = __bounded_iter<_Tp*>;
-#    else
-  using iterator = __capacity_aware_iterator<_Tp*, 1>;
-#    endif
-};
+protected:
+  using __pointer = add_pointer_t<_Tp>;
 
+  template <bool = std::__range_fits_in_alignment(alignof(_Tp), 1)>
+  struct _LIBCPP_NODEBUG __iterator {
+    using __type = std::__static_packed_bounded_iterator<__pointer, 1>;
+
+    static __type __make(__pointer __p, unsigned) noexcept {
+      return std::__make_static_packed_bounded_iter<__pointer, 1>(__p, 0);
+    }
+  };
+
+  template <>
+  struct _LIBCPP_NODEBUG __iterator<false> {
+#  if _LIBCPP_ABI_BOUNDED_ITERATORS
+    using __type = std::__bounded_iter<__pointer>;
+#  else
+    using __type = std::__capacity_aware_iterator<__pointer, 1>;
 #  endif
+
+    static __type __make(__pointer __p, [[__maybe_unused__]] unsigned __end_offset) noexcept {
+#  if _LIBCPP_ABI_BOUNDED_ITERATORS
+      return std::__make_bounded_iter<__pointer>(__p, __p, __p + __end_offset);
+#  else
+      return std::__make_capacity_aware_iterator<__pointer, 1>(__p);
+#  endif
+    }
+  };
+
+public:
+  using iterator = __iterator<>::__type;
+};
 
 template <class _Tp>
 class optional<_Tp&> : public __optional_ref_iterator_base<_Tp&> {
@@ -275,24 +298,18 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr void reset() noexcept { __value_ = nullptr; }
 
   // [optional.ref.iterators], iterator support
-#  if _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const noexcept
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI auto begin() const noexcept
     requires __has_iterator_
   {
-#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
-    return std::__make_bounded_iter(__value_, __value_, __value_ + (this->has_value() ? 1 : 0));
-#    else
-    return std::__make_capacity_aware_iterator<_Tp*, 1>(__value_);
-#    endif
+    return __optional_ref_iterator_base<_Tp&>::template __iterator<>::__make(__value_, this->has_value() ? 1 : 0);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const noexcept
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI auto end() const noexcept
     requires __has_iterator_
   {
     return begin() + (this->has_value() ? 1 : 0);
   }
-#  endif
 };
 
 _LIBCPP_END_NAMESPACE_STD
