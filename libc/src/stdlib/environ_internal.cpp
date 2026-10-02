@@ -82,10 +82,33 @@ cpp::optional<size_t> EnvironmentManager::find_var(cpp::string_view name) {
   if (!env_array)
     return cpp::nullopt;
 
-  for (size_t i = 0; i < count; i++) {
-    cpp::string_view current(env_array[i]);
-    if (current.starts_with(name) && current.size() > name.size() &&
-        current[name.size()] == '=')
+  // Compare entries directly: constructing a string_view from the entry's C
+  // string would scan the entire value to determine the entry's length, even
+  // when the name does not match.
+  // Empty names, supported by putenv, match entries starting with '='.
+  const char first = name.empty() ? '=' : name.front();
+
+  // Reject a leading null so matching an empty entry cannot advance past its
+  // terminator when the comparison resumes at index 1.
+  if (first == '\0')
+    return cpp::nullopt;
+  const size_t start = name.empty() ? 0 : 1;
+
+  for (size_t i = 0; i < count; ++i) {
+    const char *entry = env_array[i];
+    // Reject entries with a different first character before comparing the
+    // rest.
+    if (entry[0] != first)
+      continue;
+
+    size_t j = start;
+    // Bound the comparison by the name's length and stop at a mismatch or null
+    // terminator, so shorter entries cannot cause an out-of-bounds read.
+    while (j < name.size() && entry[j] != '\0' && entry[j] == name[j])
+      ++j;
+
+    // Require the full key to match, not just a prefix of a longer key.
+    if (j == name.size() && entry[j] == '=')
       return i;
   }
 
