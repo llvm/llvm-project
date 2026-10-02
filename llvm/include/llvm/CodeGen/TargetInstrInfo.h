@@ -1669,9 +1669,9 @@ public:
 
   /// Returns true if the two given memory operations should be scheduled
   /// adjacent. Note that you have to add:
-  ///   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
+  ///   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII));
   /// or
-  ///   DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+  ///   DAG->addMutation(createStoreClusterDAGMutation(DAG->TII));
   /// to TargetMachine::createMachineScheduler() to have an effect.
   ///
   /// \p BaseOps1 and \p BaseOps2 are memory operands of two memory operations.
