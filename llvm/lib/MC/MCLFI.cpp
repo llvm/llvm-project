@@ -24,18 +24,18 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/Triple.h"
 
-static const char NoteNamespace[] = "LFI";
+using namespace llvm;
 
-static constexpr unsigned X86BundleSize = 32;
+const char NoteNamespace[] = "LFI";
 
-namespace llvm {
+constexpr unsigned X86BundleSize = 32;
 
-cl::opt<bool> FlagEnableRewriting("lfi-enable-rewriter",
-                                  cl::desc("Enable rewriting for LFI."),
-                                  cl::init(true), cl::Hidden);
+static cl::opt<bool> FlagEnableRewriting("lfi-enable-rewriter",
+                                         cl::desc("Enable rewriting for LFI"),
+                                         cl::init(true), cl::Hidden);
 
-void initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
-                             const Triple &TheTriple) {
+void llvm::initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
+                                   const Triple &TheTriple) {
   assert(TheTriple.isLFI());
 
   std::string Error;
@@ -52,15 +52,14 @@ void initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
   }
 }
 
-void emitLFIBundleAlign(MCStreamer &Streamer, MCContext &Ctx) {
+void llvm::emitLFIBundleAlign(MCStreamer &Streamer, MCContext &Ctx) {
   const Triple &TheTriple = Ctx.getTargetTriple();
   assert(TheTriple.isLFI());
-
   if (TheTriple.getArch() == Triple::x86_64)
     Streamer.emitBundleAlignMode(Align(X86BundleSize));
 }
 
-void emitLFINoteSection(MCStreamer &Streamer, MCContext &Ctx) {
+void llvm::emitLFINoteSection(MCStreamer &Streamer, MCContext &Ctx) {
   const Triple &TheTriple = Ctx.getTargetTriple();
   assert(TheTriple.isLFI());
 
@@ -96,5 +95,3 @@ void emitLFINoteSection(MCStreamer &Streamer, MCContext &Ctx) {
   Streamer.emitIntValue(0, 1); // NUL terminator
   Streamer.emitValueToAlignment(Align(4));
 }
-
-} // namespace llvm

@@ -41,6 +41,8 @@ def CIR_Dialect : Dialect {
   let extraClassDeclaration = [{
     static llvm::StringRef getSourceLanguageAttrName() { return "cir.lang"; }
     static llvm::StringRef getTripleAttrName() { return "cir.triple"; }
+    // TargetInfo::getABI(), e.g. "avx512" on x86 or "aapcs" on ARM.
+    static llvm::StringRef getTargetABIAttrName() { return "cir.target_abi"; }
     static llvm::StringRef getSizeTypeWidthAttrName() { return "cir.size_type_width"; }
     static llvm::StringRef getIntTypeWidthAttrName() { return "cir.int_type_width"; }
     static llvm::StringRef getOptInfoAttrName() { return "cir.opt_info"; }
@@ -57,6 +59,9 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getNoRecurseAttrName() { return "norecurse"; }
     static llvm::StringRef getMustProgressAttrName() { return "mustprogress"; }
     static llvm::StringRef getSYCLModuleIdAttrName() { return "sycl-module-id"; }
+    static llvm::StringRef getDontCallErrorAttrName() { return "dontcall-error"; }
+    static llvm::StringRef getDontCallWarnAttrName() { return "dontcall-warn"; }
+    static llvm::StringRef getSrcLocAttrName() { return "cir.srcloc"; }
     static llvm::StringRef getNoUnwindAttrName() { return "nounwind"; }
     static llvm::StringRef getWillReturnAttrName() { return "willreturn"; }
     static llvm::StringRef getModuleLevelAsmAttrName() { return "cir.module_asm"; }

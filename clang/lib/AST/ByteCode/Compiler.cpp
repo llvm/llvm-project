@@ -51,6 +51,15 @@ static bool isSideEffectFree(const Expr *E) {
   return false;
 }
 
+/// Whether the CheckArraySize op rejects an array with \p NumElems elements.
+static bool exceedsArraySizeLimit(const LangOptions &LangOpts,
+                                  uint64_t NumElems) {
+  if (NumElems > std::numeric_limits<unsigned>::max())
+    return true;
+  uint64_t Limit = LangOpts.ConstexprStepLimit;
+  return Limit != 0 && NumElems > Limit;
+}
+
 /// Scope chain managing the variable lifetimes.
 template <class Emitter> class VariableScope {
 public:
@@ -458,6 +467,11 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
 
   switch (E->getCastKind()) {
   case CK_LValueToRValue: {
+    // This *could* work I guess, but the current interpreter rejects (via
+    // checkLiteralType).
+    if (!Ctx.getLangOpts().HLSL && E->getType()->isConstantMatrixType())
+      return false;
+
     if (ToLValue && E->getType()->isPointerType()) {
       assert(!DiscardResult);
       if (!this->visit(SubExpr))
@@ -3033,6 +3047,8 @@ bool Compiler<Emitter>::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
   const Expr *SubExpr = E->getSubExpr();
   OptPrimType SubExprT = classify(SubExpr);
   size_t Size = E->getArraySize().getZExtValue();
+  if (exceedsArraySizeLimit(Ctx.getLangOpts(), Size))
+    return this->emitCheckArraySize(Size, E);
 
   if (SubExprT) {
     // Unwrap the OpaqueValueExpr so we don't cache something we won't reuse.
@@ -4036,8 +4052,10 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
       if (!CAT)
         return false;
       QualType ElemTy = CAT->getElementType();
-      unsigned NumElems = CAT->getZExtSize();
-      for (size_t I = 0; I != NumElems; ++I) {
+      uint64_t NumElems = CAT->getZExtSize();
+      if (exceedsArraySizeLimit(Ctx.getLangOpts(), NumElems))
+        return this->emitCheckArraySize(NumElems, E);
+      for (uint64_t I = 0; I != NumElems; ++I) {
         if (!this->emitConstUint64(I, E))
           return false;
         if (!this->emitArrayElemPtrUint64(E))
@@ -6162,6 +6180,21 @@ bool Compiler<Emitter>::registerRedecl(const VarDecl *VD, const APValue &Val) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
                                              unsigned BuiltinID) {
+  const ASTContext &ASTCtx = Ctx.getASTContext();
+
+  // BuiltinID is the raw ID baked into the bytecode. The "is constant
+  // evaluated" gate needs the raw ID so that auxiliary-target IDs resolve into
+  // the correct (aux-target) builtin records.
+  if (!Ctx.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
+    return this->emitInvalid(E);
+
+  // Convert an auxiliary x86 target builtin ID to its canonical X86::BI* value
+  // so the target-specific cases below (and the handlers they call) match. This
+  // is a cheap integer operation (a single comparison for the common,
+  // target-independent case); we deliberately avoid re-deriving the ID from the
+  // call expression, which is comparatively slow.
+  BuiltinID = ConvertBuiltinIDToX86BuiltinID(ASTCtx, BuiltinID);
+
   if (BuiltinID == Builtin::BI__builtin_constant_p) {
     // Void argument is always invalid and harder to handle later.
     if (E->getArg(0)->getType()->isVoidType()) {

@@ -1130,7 +1130,10 @@ struct PackOpTiling
                          ArrayRef<OpFoldResult> offsets,
                          ArrayRef<OpFoldResult> sizes) const {
     auto packOp = cast<PackOp>(op);
-    // TODO: Support Memref PackOp. Temporarily return failure.
+    // Pack/unpack transformations on memrefs are currently unsupported.
+    // The memref forms are mainly used for bufferization and scalar
+    // lowering. Other uses are not recommended without strong motivation.
+    // See #225650 for details.
     if (!packOp.hasPureTensorSemantics())
       return failure();
 
@@ -1505,7 +1508,10 @@ struct PackOpTiling
     ArrayRef<OpFoldResult> sizes(allSizes[0]);
 
     auto packOp = cast<PackOp>(op);
-    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    // Pack/unpack transformations on memrefs are currently unsupported.
+    // The memref forms are mainly used for bufferization and scalar
+    // lowering. Other uses are not recommended without strong motivation.
+    // See #225650 for details.
     if (!packOp.hasPureTensorSemantics())
       return failure();
 
@@ -1723,7 +1729,10 @@ struct UnPackOpTiling
       ArrayRef<OpFoldResult> sizes,
       ArrayRef<InnerTileAlignment> innerTileAlignments) const {
     auto unpackOp = cast<UnPackOp>(op);
-    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    // Pack/unpack transformations on memrefs are currently unsupported.
+    // The memref forms are mainly used for bufferization and scalar
+    // lowering. Other uses are not recommended without strong motivation.
+    // See #225650 for details.
     if (!unpackOp.hasPureTensorSemantics())
       return failure();
 
@@ -1976,7 +1985,10 @@ struct UnPackOpTiling
       return failure();
     }
     auto unPackOp = cast<UnPackOp>(op);
-    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    // Pack/unpack transformations on memrefs are currently unsupported.
+    // The memref forms are mainly used for bufferization and scalar
+    // lowering. Other uses are not recommended without strong motivation.
+    // See #225650 for details.
     if (!unPackOp.hasPureTensorSemantics())
       return failure();
 
