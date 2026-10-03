@@ -374,8 +374,28 @@ Error YAMLProfileReader::preprocessProfile(BinaryContext &BC) {
   yaml::Input YamlInput(MB.get()->getBuffer());
   YamlInput.setAllowUnknownKeys(true);
 
-  // Consume YAML file.
+  const StringRef BinaryName = sys::path::filename(BC.getFilename());
+  auto matchesBinary = [&](const yaml::bolt::BinaryProfile &Profile) {
+    return sys::path::filename(Profile.Header.FileName) == BinaryName;
+  };
+  // Read the first profile as a default profile even if none matches the
+  // binary.
   YamlInput >> YamlBP;
+  // For multi-document YAML files, we need to find the document that matches
+  // the binary.
+  if (!YamlInput.error() && !matchesBinary(YamlBP)) {
+    while (YamlInput.nextDocument()) {
+      yaml::bolt::BinaryProfile Profile;
+      YamlInput >> Profile;
+      if (YamlInput.error())
+        break;
+      if (matchesBinary(Profile)) {
+        YamlBP = std::move(Profile);
+        break;
+      }
+    }
+  }
+
   if (YamlInput.error()) {
     errs() << "BOLT-ERROR: syntax error parsing profile in " << Filename
            << " : " << YamlInput.error().message() << '\n';
@@ -415,7 +435,8 @@ Error YAMLProfileReader::preprocessProfile(BinaryContext &BC) {
 }
 
 bool YAMLProfileReader::profileMatches(
-    const yaml::bolt::BinaryFunctionProfile &Profile, const BinaryFunction &BF) {
+    const yaml::bolt::BinaryFunctionProfile &Profile,
+    const BinaryFunction &BF) {
   if (opts::IgnoreHash)
     return Profile.NumBasicBlocks == BF.size();
   return Profile.Hash == static_cast<uint64_t>(BF.getHash());
