@@ -1199,9 +1199,9 @@ void GCNScheduleDAGMILive::finalizeSchedule() {
   // GCNScheduleDAGMILive::schedule().
   LiveIns.resize(Regions.size());
   Pressure.resize(Regions.size());
-  RegionsWithHighRP.resize(Regions.size());
-  RegionsWithExcessRP.resize(Regions.size());
-  RegionsWithIGLPInstrs.resize(Regions.size());
+  RegionsWithHighRP.resize(static_cast<unsigned>(Regions.size()));
+  RegionsWithExcessRP.resize(static_cast<unsigned>(Regions.size()));
+  RegionsWithIGLPInstrs.resize(static_cast<unsigned>(Regions.size()));
   RegionsWithHighRP.reset();
   RegionsWithExcessRP.reset();
   RegionsWithIGLPInstrs.reset();
@@ -1382,7 +1382,7 @@ bool RewriteMFMAFormStage::initGCNSchedStage() {
   if (!ST.hasGFX90AInsts() || MFI.getMinWavesPerEU() > 1)
     return false;
 
-  RegionsWithExcessArchVGPR.resize(DAG.Regions.size());
+  RegionsWithExcessArchVGPR.resize(static_cast<unsigned>(DAG.Regions.size()));
   RegionsWithExcessArchVGPR.reset();
   for (unsigned Region = 0; Region < DAG.Regions.size(); Region++) {
     GCNRegPressure PressureBefore = DAG.Pressure[Region];
@@ -1540,7 +1540,7 @@ bool PreRARematStage::initGCNSchedStage() {
   // since 0 is a valid index.
   IndexedMap<unsigned, VirtReg2IndexFunctor> DefRegToCandIdx(~0u);
   DefRegToCandIdx.resize(DAG.MRI.getNumVirtRegs());
-  const unsigned NumRegions = DAG.Regions.size();
+  const unsigned NumRegions = static_cast<unsigned>(DAG.Regions.size());
 
   for (unsigned RegIdx = 0, E = Remater.getNumRegs(); RegIdx < E; ++RegIdx) {
     const Rematerializer::Reg &CandReg = Remater.getReg(RegIdx);
@@ -1629,7 +1629,7 @@ bool PreRARematStage::initGCNSchedStage() {
     Cand.init(FreqInfo, Remater, DAG);
     Cand.update(TargetRegions, RPTargets, FreqInfo, !TargetOcc);
     if (!Cand.hasNullScore())
-      CandidateOrder.push_back(CandIdx);
+      CandidateOrder.push_back(static_cast<unsigned>(CandIdx));
   }
 
   if (TargetOcc) {
@@ -1644,7 +1644,7 @@ bool PreRARematStage::initGCNSchedStage() {
 
   // Rematerialize registers in successive rounds until all RP targets are
   // satisifed or until we run out of rematerialization candidates.
-  BitVector RecomputeRP(DAG.Regions.size());
+  BitVector RecomputeRP(static_cast<unsigned>(DAG.Regions.size()));
   for (;;) {
     RecomputeRP.reset();
 
@@ -1831,7 +1831,8 @@ bool GCNSchedStage::initGCNRegion() {
   if (DAG.RegionBegin->getParent() != CurrentMBB)
     setupNewBlock();
 
-  unsigned NumRegionInstrs = std::distance(DAG.begin(), DAG.end());
+  unsigned NumRegionInstrs =
+      static_cast<unsigned>(std::distance(DAG.begin(), DAG.end()));
   DAG.enterRegion(CurrentMBB, DAG.begin(), DAG.end(), NumRegionInstrs);
 
   // Skip regions with 1 schedulable instruction.
@@ -2699,7 +2700,7 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
             : 1;
 
     const TargetRegisterClass *RC = DAG.MRI.getRegClass(DefReg);
-    CopyCost += RC->getCopyCost() * DefFreq;
+    CopyCost += static_cast<unsigned>(RC->getCopyCost() * DefFreq);
   }
 
   // Account for CopyForUse copies in each block that the register is used.
@@ -2709,7 +2710,7 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
 
     for (Register UseReg : UseRegs) {
       const TargetRegisterClass *RC = DAG.MRI.getRegClass(UseReg);
-      CopyCost += RC->getCopyCost() * UseFreq;
+      CopyCost += static_cast<unsigned>(RC->getCopyCost() * UseFreq);
     }
   }
 
@@ -3109,7 +3110,8 @@ bool PreRARematStage::setObjective() {
   unsigned MaxSGPRs = ST.getMaxNumSGPRs(F);
   unsigned MaxVGPRs = ST.getMaxNumVGPRs(F);
   bool HasVectorRegisterExcess = false;
-  for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
+  for (unsigned I = 0, E = static_cast<unsigned>(DAG.Regions.size()); I != E;
+       ++I) {
     const GCNRegPressure &RP = DAG.Pressure[I];
     GCNRPTarget &Target = RPTargets.emplace_back(MaxSGPRs, MaxVGPRs, MF, RP);
     if (!Target.satisfied())
@@ -3131,7 +3133,7 @@ bool PreRARematStage::setObjective() {
     for (auto [I, Target] : enumerate(RPTargets)) {
       Target.setTarget(MaxSGPRs, MaxVGPRs);
       if (!Target.satisfied())
-        TargetRegions.set(I);
+        TargetRegions.set(static_cast<unsigned>(I));
     }
   }
 
@@ -3154,7 +3156,7 @@ PreRARematStage::ScoredRemat::FreqInfo::FreqInfo(
   MCI.compute(MF);
   MachineBlockFrequencyInfo MBFI(MF, MBPI, MCI);
 
-  const unsigned NumRegions = DAG.Regions.size();
+  const unsigned NumRegions = static_cast<unsigned>(DAG.Regions.size());
   MinFreq = MBFI.getEntryFreq().getFrequency();
   MaxFreq = 0;
   Regions.reserve(NumRegions);
