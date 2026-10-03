@@ -528,45 +528,34 @@ define void @vf_ordering_issue(ptr %pl, ptr %ps) {
 ; CHECK-LABEL: define void @vf_ordering_issue(
 ; CHECK-SAME: ptr [[PL:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[GEP_S0:%.*]] = getelementptr i8, ptr [[PL]], i64 0
-; CHECK-NEXT:    [[GEP_L1:%.*]] = getelementptr i8, ptr [[PL]], i64 38
 ; CHECK-NEXT:    [[GEP_L14:%.*]] = getelementptr i8, ptr [[PL]], i64 92
-; CHECK-NEXT:    [[GEP_S11:%.*]] = getelementptr i8, ptr [[PL]], i64 33
-; CHECK-NEXT:    [[GEP_L4:%.*]] = getelementptr i8, ptr [[PL]], i64 4
-; CHECK-NEXT:    [[GEP_L20:%.*]] = getelementptr i8, ptr [[PL]], i64 13
-; CHECK-NEXT:    [[GEP_L21:%.*]] = getelementptr i8, ptr [[PL]], i64 83
-; CHECK-NEXT:    [[GEP_L22:%.*]] = getelementptr i8, ptr [[PL]], i64 32
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x ptr> poison, ptr [[PL]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x ptr> [[TMP1]], <8 x ptr> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, <8 x ptr> [[TMP2]], <8 x i64> <i64 33, i64 4, i64 6, i64 8, i64 10, i64 13, i64 83, i64 32>
+; CHECK-NEXT:    [[GEP_L5:%.*]] = getelementptr i8, ptr [[PL]], i64 5
 ; CHECK-NEXT:    [[GEP_L3:%.*]] = getelementptr i8, ptr [[PL]], i64 15
 ; CHECK-NEXT:    [[GEP_L23:%.*]] = getelementptr i8, ptr [[PL]], i64 23
-; CHECK-NEXT:    [[LOAD5:%.*]] = load i8, ptr [[GEP_S0]], align 1
-; CHECK-NEXT:    [[LOAD7:%.*]] = load i8, ptr [[GEP_L1]], align 1
 ; CHECK-NEXT:    [[LOAD14:%.*]] = load i8, ptr [[GEP_L14]], align 1
-; CHECK-NEXT:    [[LOAD15:%.*]] = load i8, ptr [[GEP_S11]], align 1
-; CHECK-NEXT:    [[LOAD20:%.*]] = load i8, ptr [[GEP_L20]], align 1
-; CHECK-NEXT:    [[LOAD21:%.*]] = load i8, ptr [[GEP_L21]], align 1
-; CHECK-NEXT:    [[LOAD22:%.*]] = load i8, ptr [[GEP_L22]], align 1
 ; CHECK-NEXT:    [[LOAD23:%.*]] = load i8, ptr [[GEP_L23]], align 1
 ; CHECK-NEXT:    [[GEP_S5:%.*]] = getelementptr i8, ptr [[PS]], i64 0
-; CHECK-NEXT:    [[GEP_S7:%.*]] = getelementptr i8, ptr [[PS]], i64 2
 ; CHECK-NEXT:    [[GEP_S9:%.*]] = getelementptr i8, ptr [[PS]], i64 4
 ; CHECK-NEXT:    [[GEP_S3:%.*]] = getelementptr i8, ptr [[PS]], i64 6
-; CHECK-NEXT:    [[GEP_S4:%.*]] = getelementptr i8, ptr [[PS]], i64 8
-; CHECK-NEXT:    [[GEP_S12:%.*]] = getelementptr i8, ptr [[PS]], i64 16
-; CHECK-NEXT:    [[GEP_S13:%.*]] = getelementptr i8, ptr [[PS]], i64 18
-; CHECK-NEXT:    [[GEP_S14:%.*]] = getelementptr i8, ptr [[PS]], i64 20
-; CHECK-NEXT:    [[GEP_S15:%.*]] = getelementptr i8, ptr [[PS]], i64 22
+; CHECK-NEXT:    [[GEP_S6:%.*]] = getelementptr i8, ptr [[PS]], i64 9
 ; CHECK-NEXT:    [[GEP_S23:%.*]] = getelementptr i8, ptr [[PS]], i64 38
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[GEP_L4]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = add <8 x i8> [[TMP1]], splat (i8 1)
+; CHECK-NEXT:    [[TMP4:%.*]] = call <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr> align 1 [[TMP5]], <8 x i1> splat (i1 true), <8 x i8> poison)
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr [[GEP_L3]], align 1
-; CHECK-NEXT:    store i8 [[LOAD5]], ptr [[GEP_S5]], align 1
-; CHECK-NEXT:    store i8 [[LOAD7]], ptr [[GEP_S7]], align 1
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i8> [[TMP4]], <8 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i8> [[TMP4]], <8 x i8> [[TMP3]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP9:%.*]] = add <16 x i8> [[TMP8]], <i8 0, i8 1, i8 1, i8 1, i8 1, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
+; CHECK-NEXT:    [[TMP10:%.*]] = call <7 x i8> @llvm.masked.load.v7i8.p0(ptr align 1 [[GEP_L5]], <7 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>, <7 x i8> poison)
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <7 x i8> [[TMP10]], <7 x i8> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[TMP12:%.*]] = add <4 x i8> [[TMP11]], splat (i8 1)
+; CHECK-NEXT:    [[TMP13:%.*]] = call <2 x i8> @llvm.experimental.vp.strided.load.v2i8.p0.i64(ptr align 1 [[GEP_S0]], i64 38, <2 x i1> splat (i1 true), i32 2)
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v2i8.p0.i64(<2 x i8> [[TMP13]], ptr align 1 [[GEP_S5]], i64 2, <2 x i1> splat (i1 true), i32 2)
 ; CHECK-NEXT:    store i8 [[LOAD14]], ptr [[GEP_S9]], align 1
-; CHECK-NEXT:    store i8 [[LOAD15]], ptr [[GEP_S3]], align 1
-; CHECK-NEXT:    store <8 x i8> [[TMP2]], ptr [[GEP_S4]], align 1
-; CHECK-NEXT:    store i8 [[LOAD20]], ptr [[GEP_S12]], align 1
-; CHECK-NEXT:    store i8 [[LOAD21]], ptr [[GEP_S13]], align 1
-; CHECK-NEXT:    store i8 [[LOAD22]], ptr [[GEP_S14]], align 1
-; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v8i8.p0.i64(<8 x i8> [[TMP3]], ptr align 1 [[GEP_S15]], i64 2, <8 x i1> splat (i1 true), i32 8)
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v4i8.p0.i64(<4 x i8> [[TMP12]], ptr align 1 [[GEP_S6]], i64 2, <4 x i1> splat (i1 true), i32 4)
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v16i8.p0.i64(<16 x i8> [[TMP9]], ptr align 1 [[GEP_S3]], i64 2, <16 x i1> splat (i1 true), i32 16)
 ; CHECK-NEXT:    store i8 [[LOAD23]], ptr [[GEP_S23]], align 1
 ; CHECK-NEXT:    ret void
 ;
