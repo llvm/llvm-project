@@ -838,9 +838,13 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         while self._debugger_state.thread is None or not self._debugger_state.launched:
             # Debuggee can terminate without even stopping, for example if it fails to start
             if self._debugger_state.is_finished:
-                raise DebuggerException("debuggee finished without stopping; it may have failed to start")
+                raise DebuggerException(
+                    "debuggee finished without stopping; it may have failed to start"
+                )
             if launch_timeout.timed_out():
-                raise TimeoutError("Timeout while waiting for the debuggee to launch and start")
+                raise TimeoutError(
+                    "Timeout while waiting for the debuggee to launch and start"
+                )
             time.sleep(0.001)
 
     # LLDB has unique stepping behaviour w.r.t. breakpoints that needs to be handled after completing a step, so we use
