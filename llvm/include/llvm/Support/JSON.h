@@ -123,11 +123,11 @@ public:
   void clear() { M.clear(); }
   std::pair<iterator, bool> insert(KV E);
   template <typename... Ts>
-  std::pair<iterator, bool> try_emplace(const ObjectKey &K, Ts &&... Args) {
+  std::pair<iterator, bool> try_emplace(const ObjectKey &K, Ts &&...Args) {
     return M.try_emplace(K, std::forward<Ts>(Args)...);
   }
   template <typename... Ts>
-  std::pair<iterator, bool> try_emplace(ObjectKey &&K, Ts &&... Args) {
+  std::pair<iterator, bool> try_emplace(ObjectKey &&K, Ts &&...Args) {
     return M.try_emplace(std::move(K), std::forward<Ts>(Args)...);
   }
   bool erase(StringRef K);
@@ -640,9 +640,7 @@ inline Object::Object(std::initializer_list<KV> Properties) {
 inline std::pair<Object::iterator, bool> Object::insert(KV E) {
   return try_emplace(std::move(E.K), std::move(E.V));
 }
-inline bool Object::erase(StringRef K) {
-  return M.erase(ObjectKey(K));
-}
+inline bool Object::erase(StringRef K) { return M.erase(ObjectKey(K)); }
 
 LLVM_ABI std::vector<const Object::value_type *>
 sortedElements(const Object &O);
@@ -981,7 +979,7 @@ Expected<T> parse(const llvm::StringRef &JSON, const char *RootName = "") {
 /// an array, and so on.
 /// With asserts disabled, this is undefined behavior.
 class OStream {
- public:
+public:
   using Block = llvm::function_ref<void()>;
   // If IndentSize is nonzero, output is pretty-printed.
   explicit OStream(llvm::raw_ostream &OS, unsigned IndentSize = 0)
@@ -1035,7 +1033,7 @@ class OStream {
   // Valid only within an object (any number of times).
 
   /// Emit an attribute whose value is self-contained (number, vector<int> etc).
-  void attribute(llvm::StringRef Key, const Value& Contents) {
+  void attribute(llvm::StringRef Key, const Value &Contents) {
     attributeImpl(Key, [&] { value(Contents); });
   }
   /// Emit an attribute whose value is an array with elements from the Block.
@@ -1094,6 +1092,14 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Value &V) {
   OStream(OS).value(V);
   return OS;
 }
+
+/// If \p S is valid UTF-8, returns a Value that references S (zero-copy).
+/// Otherwise, replaces invalid sequences with U+FFFD and returns an owned
+/// string Value (calls fixUTF8). This is safe to use with untrusted strings
+/// without triggering assertions in debug builds.
+/// The returned Value may reference S's data, so S must outlive it.
+LLVM_ABI Value safeUTF8(StringRef S);
+
 } // namespace json
 
 /// Allow printing json::Value with formatv().
