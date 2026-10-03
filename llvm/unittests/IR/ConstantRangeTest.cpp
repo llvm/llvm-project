@@ -2101,6 +2101,9 @@ void TestNoWrapRegionExhaustive(Instruction::BinaryOps BinOp,
 
       ConstantRange NoWrap =
           ConstantRange::makeGuaranteedNoWrapRegion(BinOp, CR, NoWrapKind);
+      if (const APInt *C = CR.getSingleElement())
+        EXPECT_EQ(NoWrap,
+                  ConstantRange::makeExactNoWrapRegion(BinOp, *C, NoWrapKind));
       EnumerateAPInts(Bits, [&](const APInt &N1) {
         bool NoOverflow = true;
         bool Overflow = true;

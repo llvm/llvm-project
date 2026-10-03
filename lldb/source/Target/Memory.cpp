@@ -141,9 +141,9 @@ void MemoryCache::InsertWholeLine(addr_t line_base_addr,
 }
 
 void MemoryCache::InsertPartialLine(addr_t addr, llvm::ArrayRef<uint8_t> src) {
-  const uint32_t line_size = m_L2_cache.GetLineByteSize();
-  assert(src.size() <= line_size &&
-         addr / line_size == (addr + src.size() - 1) / line_size &&
+  assert(src.size() <= m_L2_cache.GetLineByteSize() &&
+         addr / m_L2_cache.GetLineByteSize() ==
+             (addr + src.size() - 1) / m_L2_cache.GetLineByteSize() &&
          "a partial-line insert must not cross a cache line boundary");
   // L2 holds only whole lines, so a range inside a resident line is held
   // already.

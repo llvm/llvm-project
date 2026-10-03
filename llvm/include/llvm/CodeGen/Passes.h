@@ -422,7 +422,7 @@ LLVM_ABI FunctionPass *createDwarfEHPass(CodeGenOptLevel OptLevel);
 
 /// createWinEHPass - Prepares personality functions used by MSVC on Windows,
 /// in addition to the Itanium LSDA based personalities.
-LLVM_ABI FunctionPass *createWinEHPass(bool DemoteCatchSwitchPHIOnly = false);
+LLVM_ABI FunctionPass *createWinEHPass();
 
 /// createSjLjEHPreparePass - This pass adapts exception handling code to use
 /// the GCC-style builtin setjmp/longjmp (sjlj) to handling EH control flow.

@@ -12,9 +12,12 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
+#include "llvm/ADT/StringSet.h"
 #include <optional>
 
 using namespace clang;
@@ -131,6 +134,108 @@ std::optional<bool> isCheckedPtrCapable(const clang::CXXRecordDecl *R) {
                               "decrementCheckedPtrCount");
 }
 
+std::optional<bool> isBorrowable(const clang::CXXRecordDecl *R) {
+  assert(R);
+  return hasPublicMethodInHierarchy(R, "crashIfBorrowed");
+}
+
+bool isBorrow(const clang::CXXRecordDecl *R) {
+  if (!R)
+    return false;
+  return isBorrow(safeGetName(R));
+}
+
+bool isBorrowType(const clang::QualType T) {
+  return isBorrow(T->getAsCXXRecordDecl());
+}
+
+QualType pointeeType(QualType T) {
+  while (!T.isNull()) {
+    QualType Pointee = T->getPointeeType();
+    if (Pointee.isNull())
+      break;
+    T = Pointee;
+  }
+  return T;
+}
+
+QualType borrowedType(QualType T) {
+  const auto *Specialization =
+      dyn_cast_or_null<ClassTemplateSpecializationDecl>(
+          T->getAsCXXRecordDecl());
+  if (!Specialization)
+    return QualType();
+  const auto &Args = Specialization->getTemplateArgs();
+  if (!Args.size() || Args[0].getKind() != TemplateArgument::Type)
+    return QualType();
+  return Args[0].getAsType();
+}
+
+static bool hasLifetimeBoundCtor(const clang::CXXRecordDecl *R) {
+  if (!R || !R->hasDefinition())
+    return false;
+  for (const CXXConstructorDecl *Ctor : R->ctors()) {
+    for (const ParmVarDecl *Param : Ctor->parameters()) {
+      if (Param->hasAttr<LifetimeBoundAttr>() ||
+          Param->hasAttr<LifetimeCaptureByAttr>())
+        return true;
+    }
+  }
+  return false;
+}
+
+static bool isStdRangesViewInterface(const clang::CXXRecordDecl *R) {
+  if (!R || !R->getIdentifier() || R->getName() != "view_interface")
+    return false;
+  const auto *NS = dyn_cast<NamespaceDecl>(R->getDeclContext());
+  return NS && NS->getIdentifier() && NS->getName() == "ranges" &&
+         NS->getParent()->isStdNamespace();
+}
+
+static bool derivesFromViewInterface(const clang::CXXRecordDecl *R) {
+  if (!R)
+    return false;
+  R = R->getDefinition();
+  if (!R)
+    return false;
+  if (isStdRangesViewInterface(R))
+    return true;
+  for (const CXXBaseSpecifier &Base : R->bases()) {
+    if (derivesFromViewInterface(Base.getType()->getAsCXXRecordDecl()))
+      return true;
+  }
+  return false;
+}
+
+bool isStdView(const clang::CXXRecordDecl *R) {
+  if (!R)
+    return false;
+  if (R->hasAttr<PointerAttr>())
+    return true;
+  static const llvm::StringSet<> StdIterators{
+      "reverse_iterator", "move_iterator", "common_iterator",
+      "counted_iterator", "basic_const_iterator"};
+  if (R->isInStdNamespace() && R->getIdentifier() &&
+      StdIterators.contains(R->getName()))
+    return true;
+  if (derivesFromViewInterface(R))
+    return true;
+  if (const auto *Parent = dyn_cast<CXXRecordDecl>(R->getDeclContext()))
+    return isStdView(Parent);
+  return false;
+}
+
+bool isView(const clang::QualType T) {
+  if (T->isReferenceType())
+    return true;
+  if (lifetimes::isPointerLikeType(T))
+    return true;
+  auto *Record = T->getAsCXXRecordDecl();
+  if (isStdView(Record))
+    return true;
+  return hasLifetimeBoundCtor(Record);
+}
+
 bool isRefType(const std::string &Name) {
   return Name == "Ref" || Name == "RefAllowingPartiallyDestroyed" ||
          Name == "RefPtr" || Name == "RefPtrAllowingPartiallyDestroyed";
@@ -148,6 +253,8 @@ bool isCheckedPtr(const std::string &Name) {
 bool isUniquePtr(const std::string &Name) {
   return Name == "unique_ptr" || Name == "UniqueRef" || Name == "LazyUniqueRef";
 }
+
+bool isBorrow(const std::string &Name) { return Name == "Borrow"; }
 
 bool isOwnerPtr(const std::string &Name) {
   return isRefType(Name) || isCheckedPtr(Name) || isRetainPtrOrOSPtr(Name) ||
