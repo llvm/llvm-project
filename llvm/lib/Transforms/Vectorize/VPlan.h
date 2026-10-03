@@ -1470,7 +1470,7 @@ public:
   VP_CLASSOF_IMPL(VPRecipeBase::VPInstructionSC)
 
   VPInstruction *clone() override {
-    return cloneWithOperands(operands(), getScalarType());
+    return cloneWithOperands(operands(), getResultType());
   }
 
   VPInstruction *cloneWithOperands(ArrayRef<VPValue *> NewOperands,
@@ -1821,17 +1821,19 @@ class LLVM_ABI_FOR_TEST VPWidenRecipe : public VPRecipeWithIRFlags,
 public:
   VPWidenRecipe(Instruction &I, ArrayRef<VPValue *> Operands,
                 const VPIRFlags &Flags = {}, const VPIRMetadata &Metadata = {},
-                DebugLoc DL = {})
-      : VPWidenRecipe(I.getOpcode(), Operands, Flags, Metadata, DL) {
+                DebugLoc DL = {}, Type *ResultTy = nullptr)
+      : VPWidenRecipe(I.getOpcode(), Operands, Flags, Metadata, DL, ResultTy) {
     setUnderlyingValue(&I);
   }
 
   VPWidenRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands,
                 const VPIRFlags &Flags = {}, const VPIRMetadata &Metadata = {},
-                DebugLoc DL = {})
-      : VPRecipeWithIRFlags(VPRecipeBase::VPWidenSC, Operands,
-                            computeScalarTypeForInstruction(Opcode, Operands),
-                            Flags, DL),
+                DebugLoc DL = {}, Type *ResultTy = nullptr)
+      : VPRecipeWithIRFlags(
+            VPRecipeBase::VPWidenSC, Operands,
+            ResultTy ? ResultTy
+                     : computeScalarTypeForInstruction(Opcode, Operands),
+            Flags, DL),
         VPIRMetadata(Metadata), Opcode(Opcode) {
     assert(flagsValidForOpcode(Opcode) &&
            "Set flags not supported for the provided opcode");
@@ -1841,13 +1843,17 @@ public:
 
   ~VPWidenRecipe() override = default;
 
-  VPWidenRecipe *clone() override { return cloneWithOperands(operands()); }
+  VPWidenRecipe *clone() override {
+    return cloneWithOperands(operands(), getResultType());
+  }
 
-  VPWidenRecipe *cloneWithOperands(ArrayRef<VPValue *> NewOperands) {
+  VPWidenRecipe *cloneWithOperands(ArrayRef<VPValue *> NewOperands,
+                                   Type *ResultTy = nullptr) {
     if (auto *UV = getUnderlyingValue())
       return new VPWidenRecipe(*cast<Instruction>(UV), NewOperands, *this,
-                               *this, getDebugLoc());
-    return new VPWidenRecipe(Opcode, NewOperands, *this, *this, getDebugLoc());
+                               *this, getDebugLoc(), ResultTy);
+    return new VPWidenRecipe(Opcode, NewOperands, *this, *this, getDebugLoc(),
+                             ResultTy);
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenSC)
@@ -1904,7 +1910,7 @@ public:
   ~VPWidenCastRecipe() override = default;
 
   VPWidenCastRecipe *clone() override {
-    return new VPWidenCastRecipe(Opcode, getOperand(0), getScalarType(),
+    return new VPWidenCastRecipe(Opcode, getOperand(0), getResultType(),
                                  cast_or_null<CastInst>(getUnderlyingValue()),
                                  *this, *this, getDebugLoc());
   }
@@ -3813,16 +3819,18 @@ public:
 struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPSingleDefRecipe,
                                                    public VPWidenMemoryRecipe {
   VPWidenLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
-                    bool Consecutive, const VPIRMetadata &Metadata, DebugLoc DL)
-      : VPSingleDefRecipe(VPRecipeBase::VPWidenLoadSC, {Addr}, Load.getType(),
-                          &Load, DL),
+                    bool Consecutive, const VPIRMetadata &Metadata, DebugLoc DL,
+                    Type *ResultTy = nullptr)
+      : VPSingleDefRecipe(VPRecipeBase::VPWidenLoadSC, {Addr},
+                          ResultTy ? ResultTy : Load.getType(), &Load, DL),
         VPWidenMemoryRecipe(Load, Consecutive, Metadata) {
     setMask(Mask);
   }
 
   VPWidenLoadRecipe *clone() override {
     return new VPWidenLoadRecipe(cast<LoadInst>(Ingredient), getAddr(),
-                                 getMask(), Consecutive, *this, getDebugLoc());
+                                 getMask(), Consecutive, *this, getDebugLoc(),
+                                 getResultType());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenLoadSC);

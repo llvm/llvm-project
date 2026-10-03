@@ -267,6 +267,7 @@ llvm::calculateRegisterUsageForPlan(VPlan &Plan, ArrayRef<ElementCount> VFs,
                               << " to " << VF << " for " << *R << "\n";);
           }
 
+          VF = VPV->getWideningVF(VF);
           Type *ScalarTy = VPV->getScalarType();
           unsigned ClassID = TTI.getRegisterClassForType(true, ScalarTy);
           RegUsage[ClassID] += GetRegUsage(ScalarTy, VF);
