@@ -1449,7 +1449,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                                           IsaInfo::getSGPREncodingGranule(STM));
   }
   ProgInfo.VGPRBlocks = GetNumGPRBlocks(ProgInfo.NumVGPRsForWavesPerEU,
-                                        IsaInfo::getVGPREncodingGranule(STM));
+                                        STM.getVGPREncodingGranule());
 
   const SIModeRegisterDefaults Mode = MFI->getMode();
 
