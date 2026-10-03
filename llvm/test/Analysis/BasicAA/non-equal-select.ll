@@ -77,35 +77,38 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: Function: select_offsets_zext
+
+; CHECK-LABEL: Function: select_offsets_zext_gap
 ; CHECK: NoAlias: i32* %p, i32* %q
-define void @select_offsets_zext(ptr %base, i1 %c, i32 %x) {
+define void @select_offsets_zext_gap(ptr %base, i1 %c, i32 %x) {
   %a = add i32 %x, 1
   %b = add i32 %x, 2
-  %d = add i32 %x, 3
+  %d = add i32 %x, 5
   %s = select i1 %c, i32 %a, i32 %b
   %i = zext i32 %s to i64
   %j = zext i32 %d to i64
   %p = getelementptr i32, ptr %base, i64 %i
-  %q = getelementptr i32, ptr %base, i64 %j
-  store i32 0, ptr %p
-  store i32 0, ptr %q
+  %qbase = getelementptr i32, ptr %base, i64 %j
+  %q = getelementptr i8, ptr %qbase, i64 1
+  store i32 0, ptr %p, align 1
+  store i32 0, ptr %q, align 1
   ret void
 }
 
-; CHECK-LABEL: Function: select_offsets_sext
+; CHECK-LABEL: Function: select_offsets_sext_gap
 ; CHECK: NoAlias: i32* %p, i32* %q
-define void @select_offsets_sext(ptr %base, i1 %c, i32 %x) {
+define void @select_offsets_sext_gap(ptr %base, i1 %c, i32 %x) {
   %a = add i32 %x, 1
   %b = add i32 %x, 2
-  %d = add i32 %x, 3
+  %d = add i32 %x, 5
   %s = select i1 %c, i32 %a, i32 %b
   %i = sext i32 %s to i64
   %j = sext i32 %d to i64
   %p = getelementptr i32, ptr %base, i64 %i
-  %q = getelementptr i32, ptr %base, i64 %j
-  store i32 0, ptr %p
-  store i32 0, ptr %q
+  %qbase = getelementptr i32, ptr %base, i64 %j
+  %q = getelementptr i8, ptr %qbase, i64 1
+  store i32 0, ptr %p, align 1
+  store i32 0, ptr %q, align 1
   ret void
 }
 
@@ -113,14 +116,15 @@ define void @select_offsets_sext(ptr %base, i1 %c, i32 %x) {
 ; CHECK: MayAlias: i32* %p, i32* %q
 define void @select_offsets_zext_overlap(ptr %base, i1 %c, i32 %x) {
   %a = add i32 %x, 1
-  %b = add i32 %x, 3
+  %b = add i32 %x, 2
   %d = add i32 %x, 3
   %s = select i1 %c, i32 %a, i32 %b
   %i = zext i32 %s to i64
   %j = zext i32 %d to i64
   %p = getelementptr i32, ptr %base, i64 %i
-  %q = getelementptr i32, ptr %base, i64 %j
-  store i32 0, ptr %p
-  store i32 0, ptr %q
+  %qbase = getelementptr i32, ptr %base, i64 %j
+  %q = getelementptr i8, ptr %qbase, i64 -1
+  store i32 0, ptr %p, align 1
+  store i32 0, ptr %q, align 1
   ret void
 }
