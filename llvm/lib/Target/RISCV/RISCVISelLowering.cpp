@@ -13194,12 +13194,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Lo, Hi);
     }
 
-    if (VT == MVT::i32 && !Subtarget.is64Bit()) {
-      unsigned Opc = getRVPQFormatAccScalarOpcode(IntNo);
-      return DAG.getNode(Opc, DL, XLenVT, Rd, Rs1, Rs2);
-    }
-
-    if (VT == MVT::i64 && Subtarget.is64Bit()) {
+    if (VT == XLenVT) {
       unsigned Opc = getRVPQFormatAccScalarOpcode(IntNo);
       return DAG.getNode(Opc, DL, XLenVT, Rd, Rs1, Rs2);
     }
@@ -14405,13 +14400,14 @@ SDValue RISCVTargetLowering::lowerVPREDUCE(SDValue Op,
   MVT VecVT = VecEVT.getSimpleVT();
   unsigned RVVOpcode = getRVVReductionOp(Opc);
 
+  SDValue VL = Op.getOperand(3);
+  SDValue Mask = Op.getOperand(2);
   if (VecVT.isFixedLengthVector()) {
     auto ContainerVT = getContainerForFixedLengthVector(VecVT);
     Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
+    Mask = convertToScalableVector(getMaskTypeFor(ContainerVT), Mask, DAG,
+                                   Subtarget);
   }
-
-  SDValue VL = Op.getOperand(3);
-  SDValue Mask = Op.getOperand(2);
   SDValue Res =
       lowerReductionSeq(RVVOpcode, Op.getSimpleValueType(), Op.getOperand(0),
                         Vec, Mask, VL, DL, DAG, Subtarget);
