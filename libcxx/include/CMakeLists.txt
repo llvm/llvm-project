@@ -714,6 +714,7 @@ set(files
   __pstl/cpu_algos/swap_ranges.h
   __pstl/cpu_algos/transform.h
   __pstl/cpu_algos/transform_reduce.h
+  __pstl/cpu_algos/transform_scan.h
   __pstl/cpu_algos/uninitialized_algorithms.h
   __pstl/dispatch.h
   __pstl/handle_exception.h
