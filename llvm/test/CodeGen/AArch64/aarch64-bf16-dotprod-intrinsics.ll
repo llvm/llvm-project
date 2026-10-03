@@ -182,6 +182,24 @@ entry:
   ret <2 x float> %vbfdotq
 }
 
+define <2 x float> @test_vbfdotq_lane_f32_v2f32_load(ptr %r_val_vals, ptr %a_val_vals, ptr %b_val_vals) {
+; CHECK-LABEL: test_vbfdotq_lane_f32_v2f32_load:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ldr d2, [x2]
+; CHECK-NEXT:    bfdot v0.2s, v1.4h, v2.2h[1]
+; CHECK-NEXT:    ret
+entry:
+  %0 = load <2 x float>, ptr %r_val_vals, align 4
+  %1 = load <4 x bfloat>, ptr %a_val_vals, align 2
+  %2 = load <4 x bfloat>, ptr %b_val_vals, align 2
+  %3 = shufflevector <4 x bfloat> %2, <4 x bfloat> poison, <4 x i32> <i32 2, i32 3, i32 2, i32 3>
+  %vbfdot3.i = tail call <2 x float> @llvm.aarch64.neon.bfdot.v2f32.v4bf16(<2 x float> %0, <4 x bfloat> %1, <4 x bfloat> %3)
+  ret <2 x float> %vbfdot3.i
+}
+
+
 declare <2 x float> @llvm.aarch64.neon.bfdot.v2f32.v4bf16(<2 x float>, <4 x bfloat>, <4 x bfloat>)
 declare <4 x float> @llvm.aarch64.neon.bfdot.v4f32.v8bf16(<4 x float>, <8 x bfloat>, <8 x bfloat>)
 declare <4 x float> @llvm.aarch64.neon.bfmmla(<4 x float>, <8 x bfloat>, <8 x bfloat>)
