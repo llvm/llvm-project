@@ -1955,8 +1955,8 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakStringLiterals = true;
   LLVMStyle.BreakTemplateDeclarations = FormatStyle::BTDS_MultiLine;
   LLVMStyle.ColumnLimit = 80;
-  LLVMStyle.CompactCaseLabels = false;
   LLVMStyle.CommentPragmas = "^ IWYU pragma:";
+  LLVMStyle.CompactCaseLabels = false;
   LLVMStyle.CompactNamespaces = false;
   LLVMStyle.ConstructorInitializerIndentWidth = 4;
   LLVMStyle.ContinuationIndentWidth = 4;
