@@ -463,14 +463,6 @@ struct ContiguousHelper {
   ContiguousHelper(SemanticsContext &context)
       : fctx_(context.foldingContext()) {}
 
-  template <typename Contained>
-  std::optional<bool> Visit(const common::Indirection<Contained> &x) {
-    return Visit(x.value());
-  }
-  template <typename Contained>
-  std::optional<bool> Visit(const common::Reference<Contained> &x) {
-    return Visit(x.get());
-  }
   template <typename T> std::optional<bool> Visit(const evaluate::Expr<T> &x) {
     return common::visit([&](auto &&s) { return Visit(s); }, x.u);
   }
