@@ -109,4 +109,43 @@ define void @scalarize_v2i64_const_mask(ptr %p, <2 x i64> %data) {
   ret void
 }
 
+define void @scalarize_v1f16(ptr %p, <1 x i1> %mask, <1 x half> %data) vscale_range(2,2) {
+; CHECK-LE-LABEL: @scalarize_v1f16(
+; CHECK-LE-NEXT:    [[TMP1:%.*]] = extractelement <1 x i1> [[MASK:%.*]], i64 0
+; CHECK-LE-NEXT:    br i1 [[TMP1]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-LE:       cond.store:
+; CHECK-LE-NEXT:    [[TMP2:%.*]] = extractelement <1 x half> [[DATA:%.*]], i64 0
+; CHECK-LE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds half, ptr [[P:%.*]], i32 0
+; CHECK-LE-NEXT:    store half [[TMP2]], ptr [[TMP3]], align 2
+; CHECK-LE-NEXT:    br label [[ELSE]]
+; CHECK-LE:       else:
+; CHECK-LE-NEXT:    ret void
+;
+; CHECK-SVE-LE-LABEL: @scalarize_v1f16(
+; CHECK-SVE-LE-NEXT:    [[TMP1:%.*]] = extractelement <1 x i1> [[MASK:%.*]], i64 0
+; CHECK-SVE-LE-NEXT:    br i1 [[TMP1]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-SVE-LE:       cond.store:
+; CHECK-SVE-LE-NEXT:    [[TMP2:%.*]] = extractelement <1 x half> [[DATA:%.*]], i64 0
+; CHECK-SVE-LE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds half, ptr [[P:%.*]], i32 0
+; CHECK-SVE-LE-NEXT:    store half [[TMP2]], ptr [[TMP3]], align 2
+; CHECK-SVE-LE-NEXT:    br label [[ELSE]]
+; CHECK-SVE-LE:       else:
+; CHECK-SVE-LE-NEXT:    ret void
+;
+; CHECK-BE-LABEL: @scalarize_v1f16(
+; CHECK-BE-NEXT:    [[TMP1:%.*]] = extractelement <1 x i1> [[MASK:%.*]], i64 0
+; CHECK-BE-NEXT:    br i1 [[TMP1]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-BE:       cond.store:
+; CHECK-BE-NEXT:    [[TMP2:%.*]] = extractelement <1 x half> [[DATA:%.*]], i64 0
+; CHECK-BE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds half, ptr [[P:%.*]], i32 0
+; CHECK-BE-NEXT:    store half [[TMP2]], ptr [[TMP3]], align 2
+; CHECK-BE-NEXT:    br label [[ELSE]]
+; CHECK-BE:       else:
+; CHECK-BE-NEXT:    ret void
+;
+  call void @llvm.masked.store.v1f16.p0(<1 x half> %data, ptr %p, i32 2, <1 x i1> %mask)
+  ret void
+}
+
+declare void @llvm.masked.store.v1f16.p0(<1 x half>, ptr, i32, <1 x i1>)
 declare void @llvm.masked.store.v2i64.p0(<2 x i64>, ptr, i32, <2 x i1>)
