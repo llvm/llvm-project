@@ -479,11 +479,9 @@ would translate to:
 ```c
 struct _block_byref_i {
     void *isa;  // set to NULL
-    struct _block_byref_voidBlock *forwarding;
+    struct _block_byref_i *forwarding;
     int flags;   //refcount;
     int size;
-    void (*byref_keep)(struct _block_byref_i *dst, struct _block_byref_i *src);
-    void (*byref_dispose)(struct _block_byref_i *);
     int captured_i;
 };
 
@@ -498,17 +496,17 @@ struct __block_literal_5 {
 };
 
 void __block_invoke_5(struct __block_literal_5 *_block) {
-   _block->forwarding->captured_i = 10;
+   _block->i_holder->forwarding->captured_i = 10;
 }
 
 void __block_copy_5(struct __block_literal_5 *dst, struct __block_literal_5 *src) {
-     //_Block_byref_assign_copy(&dst->captured_i, src->captured_i);
-     _Block_object_assign(&dst->captured_i, src->captured_i, BLOCK_FIELD_IS_BYREF | BLOCK_BYREF_CALLER);
+     //_Block_byref_assign_copy(&dst->i_holder, src->i_holder);
+     _Block_object_assign(&dst->i_holder, src->i_holder, BLOCK_FIELD_IS_BYREF);
 }
 
 void __block_dispose_5(struct __block_literal_5 *src) {
-     //_Block_byref_release(src->captured_i);
-     _Block_object_dispose(src->captured_i, BLOCK_FIELD_IS_BYREF | BLOCK_BYREF_CALLER);
+     //_Block_byref_release(src->i_holder);
+     _Block_object_dispose(src->i_holder, BLOCK_FIELD_IS_BYREF);
 }
 
 static struct __block_descriptor_5 {
@@ -516,7 +514,7 @@ static struct __block_descriptor_5 {
     unsigned long int Block_size;
     void (*copy_helper)(struct __block_literal_5 *dst, struct __block_literal_5 *src);
     void (*dispose_helper)(struct __block_literal_5 *);
-} __block_descriptor_5 = { 0, sizeof(struct __block_literal_5) __block_copy_5, __block_dispose_5 };
+} __block_descriptor_5 = { 0, sizeof(struct __block_literal_5), __block_copy_5, __block_dispose_5 };
 ```
 
 and:
