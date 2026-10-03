@@ -1212,6 +1212,29 @@ public:
 
   virtual bool hasActiveVectorLength() const { return false; }
 
+  virtual bool isProfitableToFoldLowBitsMaskLoad(const LoadInst *LI,
+                                                 const Value *Idx) const {
+    auto CostKind = TTI::TCK_RecipThroughput;
+    Type *Ty = LI->getType();
+    TTI::OperandValueInfo One{TTI::OK_UniformConstantValue, TTI::OP_PowerOf2};
+    InstructionCost MaskCost =
+        getArithmeticInstrCost(Instruction::Shl, Ty, CostKind, One, {}, {});
+    MaskCost +=
+        getArithmeticInstrCost(Instruction::Sub, Ty, CostKind, {}, One, {});
+    Type *IdxTy = Idx->getType();
+    if (IdxTy != Ty) {
+      unsigned Opcode = IdxTy->getIntegerBitWidth() < Ty->getIntegerBitWidth()
+                            ? Instruction::ZExt
+                            : Instruction::Trunc;
+      MaskCost += getCastInstrCost(
+          Opcode, Ty, IdxTy, TTI::CastContextHint::None, CostKind, nullptr);
+    }
+    InstructionCost LoadCost =
+        getMemoryOpCost(Instruction::Load, Ty, LI->getAlign(),
+                        LI->getPointerAddressSpace(), CostKind, {}, LI);
+    return MaskCost.isValid() && LoadCost.isValid() && MaskCost <= LoadCost;
+  }
+
   virtual bool isProfitableToSinkOperands(Instruction *I,
                                           SmallVectorImpl<Use *> &Ops) const {
     return false;

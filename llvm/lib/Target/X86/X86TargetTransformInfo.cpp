@@ -8114,6 +8114,18 @@ unsigned X86TTIImpl::getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
                                   AddrSpace);
 }
 
+bool X86TTIImpl::isProfitableToFoldLowBitsMaskLoad(const LoadInst *LI,
+                                                   const Value *Idx) const {
+  unsigned Bits = LI->getType()->getIntegerBitWidth();
+  if (ST->hasBMI2() && (Bits == 32 || (Bits == 64 && ST->is64Bit())) &&
+      LI->hasOneUse()) {
+    const auto *And = dyn_cast<BinaryOperator>(*LI->user_begin());
+    if (And && And->getOpcode() == Instruction::And)
+      return true; // The mask and AND select to one BZHI instruction.
+  }
+  return BaseT::isProfitableToFoldLowBitsMaskLoad(LI, Idx);
+}
+
 bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
                                             SmallVectorImpl<Use *> &Ops) const {
   using namespace llvm::PatternMatch;

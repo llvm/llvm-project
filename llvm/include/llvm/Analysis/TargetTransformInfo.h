@@ -2054,6 +2054,11 @@ public:
   /// Intrinsics"). Use of %evl is discouraged when that is not the case.
   LLVM_ABI bool hasActiveVectorLength() const;
 
+  /// Return true if replacing a low-bits-mask table load with (1 << Idx) - 1
+  /// is profitable, accounting for uses that fold into target instructions.
+  LLVM_ABI bool isProfitableToFoldLowBitsMaskLoad(const LoadInst *LI,
+                                                  const Value *Idx) const;
+
   /// Return true if sinking I's operands to the same basic block as I is
   /// profitable, e.g. because the operands can be folded into a target
   /// instruction during instruction selection. After calling the function

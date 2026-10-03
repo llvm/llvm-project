@@ -1255,7 +1255,8 @@ static bool tryToRecognizeTableBasedLowBitsMask(LoadInst *LI, Type *AccessType,
                                                 GlobalVariable *GVTable,
                                                 Value *GepIdx,
                                                 const APInt &GEPScale,
-                                                const DataLayout &DL) {
+                                                const DataLayout &DL,
+                                                TargetTransformInfo &TTI) {
   // The value must be exactly the table element; refuse volatile/atomic loads.
   if (!LI->isSimple())
     return false;
@@ -1299,6 +1300,10 @@ static bool tryToRecognizeTableBasedLowBitsMask(LoadInst *LI, Type *AccessType,
   // The index must step by exactly one element, so the runtime index value is
   // the shift amount; a different scale would load tbl[c * i].
   if (GEPScale != EltBytes)
+    return false;
+
+  // A legal shift and subtraction may cost more than the table load.
+  if (!TTI.isProfitableToFoldLowBitsMaskLoad(LI, GepIdx))
     return false;
 
   // Every element must be the low-bits mask for its position.
@@ -1363,7 +1368,7 @@ static bool tryToRecognizeTableBasedPatterns(Instruction &I,
     return true;
 
   return tryToRecognizeTableBasedLowBitsMask(LI, AccessType, GVTable, GepIdx,
-                                             GEPScale, DL);
+                                             GEPScale, DL, TTI);
 }
 
 /// This is used by foldLoadsRecursive() to capture a Root Load node which is

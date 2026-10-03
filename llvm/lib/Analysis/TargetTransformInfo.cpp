@@ -1571,6 +1571,11 @@ bool TargetTransformInfo::hasActiveVectorLength() const {
   return TTIImpl->hasActiveVectorLength();
 }
 
+bool TargetTransformInfo::isProfitableToFoldLowBitsMaskLoad(
+    const LoadInst *LI, const Value *Idx) const {
+  return TTIImpl->isProfitableToFoldLowBitsMaskLoad(LI, Idx);
+}
+
 bool TargetTransformInfo::isProfitableToSinkOperands(
     Instruction *I, SmallVectorImpl<Use *> &OpsToSink) const {
   return TTIImpl->isProfitableToSinkOperands(I, OpsToSink);

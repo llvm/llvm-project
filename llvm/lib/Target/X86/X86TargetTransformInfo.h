@@ -256,6 +256,9 @@ public:
 
   InstructionCost getBranchMispredictPenalty() const override;
 
+  bool isProfitableToFoldLowBitsMaskLoad(const LoadInst *LI,
+                                         const Value *Idx) const override;
+
   bool isProfitableToSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const override;
 
