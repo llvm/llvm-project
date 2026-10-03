@@ -848,7 +848,8 @@ public:
 
   /// \returns VGPR allocation granularity supported by the subtarget.
   unsigned getVGPRAllocGranule(unsigned DynamicVGPRBlockSize) const {
-    return AMDGPU::IsaInfo::getVGPRAllocGranule(*this, DynamicVGPRBlockSize);
+    return AMDGPU::getVGPRAllocGranule(getTargetID().getGPUKind(), isWave32(),
+                                       DynamicVGPRBlockSize);
   }
 
   /// \returns VGPR encoding granularity supported by the subtarget.

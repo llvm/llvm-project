@@ -174,11 +174,14 @@ LLVM_ABI unsigned getSGPRAllocGranule(Triple::SubArchType SubArch);
 
 /// \returns VGPR allocation granularity for \p AK, in registers. \p IsWave32
 /// selects the wavefront size, which is a per-kernel mode rather than a
-/// property of the GPU. This does not account for dynamic VGPR mode, where the
-/// block size chosen by the caller is the granule.
-LLVM_ABI unsigned getVGPRAllocGranule(GPUKind AK, bool IsWave32);
+/// property of the GPU. A nonzero \p DynamicVGPRBlockSize selects dynamic
+/// VGPR mode, where the block size is the granule. On gfx90a-family targets,
+/// the fixed granule is used regardless of \p DynamicVGPRBlockSize.
+LLVM_ABI unsigned getVGPRAllocGranule(GPUKind AK, bool IsWave32,
+                                      unsigned DynamicVGPRBlockSize = 0);
 LLVM_ABI unsigned getVGPRAllocGranule(Triple::SubArchType SubArch,
-                                      bool IsWave32);
+                                      bool IsWave32,
+                                      unsigned DynamicVGPRBlockSize = 0);
 
 /// \returns VGPR encoding granularity for \p AK, in registers. \p IsWave32
 /// selects the wavefront size encoded in the kernel descriptor. This can
