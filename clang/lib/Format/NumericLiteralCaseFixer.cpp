@@ -16,6 +16,7 @@
 #include "NumericLiteralInfo.h"
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSet.h"
 
 #include <algorithm>
 
@@ -130,6 +131,12 @@ NumericLiteralCaseFixer::process(const Environment &Env,
   const auto &SourceMgr = Env.getSourceManager();
   AffectedRangeManager AffectedRangeMgr(SourceMgr, Env.getCharRanges());
 
+  // Don't recase pp-numbers inside whitespace-sensitive macros (e.g.
+  // STRINGIZE(0xa)); recasing a stringized argument would change the result.
+  llvm::StringSet<> UntouchableMacros;
+  for (StringRef Macro : Style.WhitespaceSensitiveMacros)
+    UntouchableMacros.insert(Macro);
+
   const auto ID = Env.getFileID();
   const auto LangOpts = getFormattingLangOpts(Style);
   Lexer Lex(ID, SourceMgr.getBufferOrFake(ID), SourceMgr, LangOpts);
@@ -137,8 +144,22 @@ NumericLiteralCaseFixer::process(const Environment &Env,
 
   Token Tok;
   tooling::Replacements Result;
+  int MacroArgDepth = 0; // Paren depth inside an untouchable macro invocation.
 
-  for (bool Skip = false; !Lex.LexFromRawLexer(Tok);) {
+  for (bool Skip = false, AfterMacroName = false; !Lex.LexFromRawLexer(Tok);) {
+    // Track whether we are inside the argument list of an untouchable macro.
+    if (Tok.is(tok::raw_identifier)) {
+      AfterMacroName = UntouchableMacros.contains(Tok.getRawIdentifier());
+    } else if (Tok.is(tok::l_paren)) {
+      if (MacroArgDepth > 0 || AfterMacroName)
+        ++MacroArgDepth;
+      AfterMacroName = false;
+    } else {
+      if (Tok.is(tok::r_paren) && MacroArgDepth > 0)
+        --MacroArgDepth;
+      AfterMacroName = false;
+    }
+
     // Skip tokens that are too small to contain a formattable literal.
     // Size=2 is the smallest possible literal that could contain formattable
     // components, for example "1u".
@@ -157,7 +178,7 @@ NumericLiteralCaseFixer::process(const Environment &Env,
       continue;
     }
 
-    if (Skip || Tok.isNot(tok::numeric_constant) ||
+    if (Skip || MacroArgDepth > 0 || Tok.isNot(tok::numeric_constant) ||
         !AffectedRangeMgr.affectsCharSourceRange(
             CharSourceRange::getCharRange(Location, Tok.getEndLoc()))) {
       continue;
