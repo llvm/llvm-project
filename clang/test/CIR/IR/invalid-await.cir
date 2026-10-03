@@ -31,7 +31,7 @@ cir.func coroutine @missing_condition() {
 
 cir.func coroutine @missing_suspend_point(%arg0 : !cir.bool) {
   cir.coroutine initialSuspend : {
-    cir.await(init, ready : { // expected-error {{suspend region must end with cir.coro.suspend_point}}
+    cir.await(init, ready : { // expected-error {{suspend region must end with cir.coro.suspend_point or cir.condition}}
       cir.condition(%arg0)
     }, suspend : { 
       cir.yield
@@ -40,6 +40,37 @@ cir.func coroutine @missing_suspend_point(%arg0 : !cir.bool) {
     },)
     cir.yield
   }, body : {
+    cir.yield
+  }, finalSuspend : {
+    cir.yield
+  }, destroy : {
+    cir.yield
+  }, exit : {
+    cir.return
+  }
+  cir.trap
+}
+
+// -----
+
+cir.func coroutine @invalid_suspend_terminator(%arg0 : !cir.bool) {
+  cir.coroutine initialSuspend : {
+    cir.await(init, ready : {
+      cir.condition(%arg0)
+    }, suspend : {
+      cir.coro.suspend_point
+    }, resume : {
+      cir.yield
+    },)
+    cir.yield
+  }, body : {
+    cir.await(user, ready : { // expected-error {{suspend region must end with cir.coro.suspend_point or cir.condition}}
+      cir.condition(%arg0)
+    }, suspend : {
+      cir.unreachable
+    }, resume : {
+      cir.yield
+    },)
     cir.yield
   }, finalSuspend : {
     cir.yield

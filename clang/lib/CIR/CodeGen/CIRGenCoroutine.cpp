@@ -667,16 +667,21 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
         // and coro.suspend here, that should be done as part of lowering this
         // to LLVM dialect (or some other MLIR dialect)
 
-        // A invalid suspendRet indicates "void returning await_suspend"
-        mlir::Value suspendRet = cgf.emitScalarExpr(s.getSuspendExpr());
-
-        // Veto suspension if requested by bool returning await_suspend.
-        if (suspendRet) {
-          cgf.cgm.errorNYI("Veto await_suspend");
+        if (s.getSuspendReturnType() ==
+            CoroutineSuspendExpr::SuspendReturnType::SuspendBool) {
+          mlir::Value suspendRet = cgf.evaluateExprAsBool(s.getSuspendExpr());
+          // Veto suspension if requested by bool returning await_suspend.
+          builder.createCondition(suspendRet);
+        } else if (s.getSuspendReturnType() ==
+                   CoroutineSuspendExpr::SuspendReturnType::SuspendVoid) {
+          cgf.emitScalarExpr(s.getSuspendExpr());
+          // Signals the parent that execution flows to next region.
+          cir::CoroSuspendPoint::create(builder, loc);
+        } else {
+          cgf.cgm.errorNYI(s.getSourceRange(),
+                           "await_suspend returning handle");
+          cir::CoroSuspendPoint::create(builder, loc);
         }
-
-        // Signals the parent that execution flows to next region.
-        cir::CoroSuspendPoint::create(builder, loc);
       },
       /*resumeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {

@@ -703,10 +703,21 @@ void cir::ConditionOp::getSuccessorRegions(
     return;
   }
 
-  // Parent is an await: condition may branch to resume or suspend regions.
+  // Parent is an await: condition in ready region branches to resume or
+  // suspend regions. Condition in suspend region branches to resume (veto) or
+  // exits to parent op (suspend).
   auto await = cast<AwaitOp>(getOperation()->getParentOp());
-  regions.emplace_back(&await.getResume());
-  regions.emplace_back(&await.getSuspend());
+  mlir::Region *parentRegion = getOperation()->getBlock()->getParent();
+  if (parentRegion == &await.getReady()) {
+    regions.emplace_back(&await.getResume());
+    regions.emplace_back(&await.getSuspend());
+    return;
+  }
+  if (parentRegion == &await.getSuspend()) {
+    regions.emplace_back(getOperation());
+    regions.emplace_back(&await.getResume());
+    return;
+  }
 }
 
 MutableOperandRange
@@ -3608,17 +3619,29 @@ void cir::AwaitOp::getSuccessorRegions(
     return;
   }
 
+  // Branching from suspend: if terminated by cir.condition, it may branch to
+  // exit to parent op (suspend) or resume (veto).
+  if (&getSuspend() == parentRegion) {
+    if (isa<ConditionOp>(point.getTerminatorPredecessorOrNull())) {
+      regions.emplace_back(getOperation());
+      regions.emplace_back(&getResume());
+      return;
+    }
+  }
+
   // Branching from suspend or resume: exit to the parent operation.
   regions.emplace_back(getOperation());
 }
 
 LogicalResult cir::AwaitOp::verify() {
-  if (!isa<ConditionOp>(this->getReady().back().getTerminator()))
+  if (this->getReady().empty() ||
+      !isa<ConditionOp>(this->getReady().back().getTerminator()))
     return emitOpError("ready region must end with cir.condition");
-  if (this->getSuspend().empty())
-    return emitOpError("suspend region must not be empty");
-  if (!isa<CoroSuspendPoint>(this->getSuspend().back().getTerminator()))
-    return emitOpError("suspend region must end with cir.coro.suspend_point");
+  if (this->getSuspend().empty() ||
+      !isa<CoroSuspendPoint, ConditionOp>(
+          this->getSuspend().back().getTerminator()))
+    return emitOpError(
+        "suspend region must end with cir.coro.suspend_point or cir.condition");
   return success();
 }
 

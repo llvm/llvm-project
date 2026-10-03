@@ -36,3 +36,40 @@ cir.func coroutine @checkPrintParse(%arg0 : !cir.bool) {
 // CHECK: }, resume : {
 // CHECK:   cir.yield
 // CHECK: },)
+
+cir.func coroutine @checkPrintParseBoolSuspend(%arg0 : !cir.bool) {
+  cir.coroutine initialSuspend : {
+    cir.await(init, ready : {
+      cir.condition(%arg0)
+    }, suspend : {
+      cir.coro.suspend_point
+    }, resume : {
+      cir.yield
+    },)
+    cir.yield
+  }, body : {
+    cir.await(user, ready : {
+      cir.condition(%arg0)
+    }, suspend : {
+      cir.condition(%arg0)
+    }, resume : {
+      cir.yield
+    },)
+    cir.yield
+  }, finalSuspend : {
+    cir.yield
+  }, destroy : {
+    cir.yield
+  }, exit : {
+    cir.return
+  }
+  cir.trap
+}
+
+// CHECK: cir.await(user, ready : {
+// CHECK:   cir.condition(%arg0)
+// CHECK: }, suspend : {
+// CHECK:   cir.condition(%arg0)
+// CHECK: }, resume : {
+// CHECK:   cir.yield
+// CHECK: },)
