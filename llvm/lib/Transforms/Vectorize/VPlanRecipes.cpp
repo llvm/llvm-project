@@ -914,8 +914,8 @@ Value *VPInstruction::generate(VPTransformState &State,
     assert(!GenerateSingleScalar &&
            "Cannot generate scalar value for Broadcast");
     return Builder.CreateVectorSplat(
-        State.VF, State.get(getOperand(0), /*NeedsSingleScalar=*/true),
-        "broadcast");
+        getWideningVF(State.VF),
+        State.get(getOperand(0), /*NeedsSingleScalar=*/true), "broadcast");
   }
   case VPInstruction::BuildStructVector: {
     assert(!GenerateSingleScalar &&
@@ -1184,8 +1184,7 @@ Value *VPInstruction::generate(VPTransformState &State,
 
 InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
     unsigned Opcode, ElementCount VF, VPCostContext &Ctx) const {
-  Type *ScalarTy = this->getScalarType();
-  Type *ResultTy = VF.isVector() ? toVectorTy(ScalarTy, VF) : ScalarTy;
+  Type *ResultTy = getWideType(VF);
   switch (Opcode) {
   case Instruction::FNeg:
     return Ctx.TTI.getArithmeticInstrCost(Opcode, ResultTy, Ctx.CostKind);
@@ -1237,8 +1236,7 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
                                              Ctx.CostKind);
   case Instruction::ICmp:
   case Instruction::FCmp: {
-    Type *ScalarOpTy = getOperand(0)->getScalarType();
-    Type *OpTy = VF.isVector() ? toVectorTy(ScalarOpTy, VF) : ScalarOpTy;
+    Type *OpTy = getOperand(0)->getWideType(VF);
     Instruction *CtxI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
     return Ctx.TTI.getCmpSelInstrCost(
         Opcode, OpTy, CmpInst::makeCmpResultType(OpTy), getPredicate(),
@@ -1326,8 +1324,7 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
     if (IsReverse && CCH != TTI::CastContextHint::None)
       CCH = TTI::CastContextHint::Reversed;
 
-    auto *ScalarSrcTy = Operand->getScalarType();
-    Type *SrcTy = VF.isVector() ? toVectorTy(ScalarSrcTy, VF) : ScalarSrcTy;
+    Type *SrcTy = Operand->getWideType(VF);
     // Arm TTI will use the underlying instruction to determine the cost.
     return Ctx.TTI.getCastInstrCost(
         Opcode, ResultTy, SrcTy, CCH, Ctx.CostKind,
@@ -1367,16 +1364,15 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
           Ctx.CostKind, {Op1VK, Op1VP}, {Op2VK, Op2VP}, Operands, SI);
     }
 
-    Type *CondTy = getOperand(0)->getScalarType();
-    if (!IsScalarCond && VF.isVector())
-      CondTy = VectorType::get(CondTy, VF);
+    Type *CondTy = IsScalarCond ? getOperand(0)->getScalarType()
+                                : getOperand(0)->getWideType(VF);
 
     llvm::CmpPredicate Pred;
     if (!match(getOperand(0), m_Cmp(Pred, m_VPValue(), m_VPValue())))
       if (auto *CondIRV = dyn_cast<VPIRValue>(getOperand(0)))
         if (auto *Cmp = dyn_cast<CmpInst>(CondIRV->getValue()))
           Pred = Cmp->getPredicate();
-    Type *VectorTy = toVectorTy(this->getScalarType(), VF);
+    Type *VectorTy = getWideType(VF);
     return Ctx.TTI.getCmpSelInstrCost(
         Instruction::Select, VectorTy, CondTy, Pred, Ctx.CostKind,
         {TTI::OK_AnyValue, TTI::OP_None}, {TTI::OK_AnyValue, TTI::OP_None}, SI);
@@ -1437,12 +1433,12 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     }
 
     // Add on the cost of extracting the element.
-    auto *VecTy = toVectorTy(getOperand(0)->getScalarType(), VF);
+    auto *VecTy = getOperand(0)->getWideType(VF);
     return Ctx.TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy,
                                       Ctx.CostKind);
   }
   case VPInstruction::AnyOf: {
-    auto *VecTy = toVectorTy(this->getScalarType(), VF);
+    auto *VecTy = getWideType(VF);
     return Ctx.TTI.getArithmeticReductionCost(
         Instruction::Or, cast<VectorType>(VecTy), std::nullopt, Ctx.CostKind);
   }
@@ -1492,7 +1488,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   }
   case VPInstruction::FirstOrderRecurrenceSplice: {
     assert(VF.isVector() && "Scalar FirstOrderRecurrenceSplice?");
-    Type *VectorTy = toVectorTy(this->getScalarType(), VF);
+    Type *VectorTy = getWideType(VF);
     return Ctx.TTI.getShuffleCost(
         TargetTransformInfo::SK_Splice, cast<VectorType>(VectorTy),
         cast<VectorType>(VectorTy), Ctx.CostKind, {}, -1);
@@ -1532,7 +1528,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   }
   case VPInstruction::ExtractLastLane: {
     // Add on the cost of extracting the element.
-    auto *VecTy = toVectorTy(getOperand(0)->getScalarType(), VF);
+    auto *VecTy = getOperand(0)->getWideType(VF);
     return Ctx.TTI.getIndexedVectorInstrCostFromEnd(Instruction::ExtractElement,
                                                     VecTy, Ctx.CostKind, 0);
   }
@@ -2403,10 +2399,8 @@ InstructionCost VPWidenIntrinsicRecipe::computeCallCost(
   }
 
   Type *RetTy = VF.isVector() ? toVectorizedTy(ScalarRetTy, VF) : ScalarRetTy;
-  SmallVector<Type *> ParamTys =
-      map_to_vector(Operands, [&](const VPValue *Op) {
-        return toVectorTy(Op->getScalarType(), VF);
-      });
+  SmallVector<Type *> ParamTys = map_to_vector(
+      Operands, [&](const VPValue *Op) { return Op->getWideType(VF); });
 
   VectorInstrContext VIC = VectorInstrContext::None;
   for (const VPValue *Op : Operands)
@@ -2482,13 +2476,12 @@ InstructionCost VPWidenMemIntrinsicRecipe::computeMemIntrinsicCost(
 InstructionCost
 VPWidenMemIntrinsicRecipe::computeCost(ElementCount VF,
                                        VPCostContext &Ctx) const {
-  Type *DataTy;
+  Type *Ty;
   if (auto DataPos = VPIntrinsic::getMemoryDataParamPos(getVectorIntrinsicID()))
-    DataTy = getOperand(*DataPos)->getScalarType();
+    Ty = getOperand(*DataPos)->getWideType(VF);
   else
-    DataTy = getScalarType();
-  assert(!DataTy->isVoidTy() && "Expected a non-void data type");
-  Type *Ty = toVectorTy(DataTy, VF);
+    Ty = getWideType(VF);
+  assert(!Ty->isVoidTy() && "Expected a non-void data type");
   auto MaskPos = VPIntrinsic::getMaskParamPos(getVectorIntrinsicID());
   assert(MaskPos && "Expected a memory intrinsic with a valid mask position");
   return computeMemIntrinsicCost(getVectorIntrinsicID(), Ty,
@@ -2951,8 +2944,7 @@ void VPWidenRecipe::execute(VPTransformState &State) {
 #if !defined(NDEBUG)
   // Verify that VPlan type inference results agree with the type of the
   // generated values.
-  assert(VectorType::get(this->getScalarType(), State.VF) ==
-             State.get(this)->getType() &&
+  assert(getWideType(State.VF) == State.get(this)->getType() &&
          "inferred type and type from generated instructions do not match");
 #endif
 }
@@ -3009,7 +3001,7 @@ void VPWidenCastRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   /// Vectorize casts.
   assert(State.VF.isVector() && "Not vectorizing?");
-  Type *DestTy = VectorType::get(getScalarType(), State.VF);
+  Type *DestTy = getWideType(State.VF);
   VPValue *Op = getOperand(0);
   Value *A = State.get(Op);
   Value *Cast = Builder.CreateCast(Instruction::CastOps(Opcode), A, DestTy);
@@ -3443,7 +3435,7 @@ InstructionCost VPBlendRecipe::computeCost(ElementCount VF,
   if (vputils::onlyFirstLaneUsed(this))
     VF = ElementCount::getFixed(1);
 
-  Type *ResultTy = toVectorTy(this->getScalarType(), VF);
+  Type *ResultTy = getWideType(VF);
   Type *CmpTy = toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF);
 
   InstructionCost Cost = 0;
@@ -3614,8 +3606,7 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
     InstructionCost CondCost = 0;
     if (isConditional()) {
       CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
-      auto *CondTy =
-          cast<VectorType>(toVectorTy(getCondOp()->getScalarType(), VF));
+      auto *CondTy = cast<VectorType>(getCondOp()->getWideType(VF));
       CondCost = Ctx.TTI.getCmpSelInstrCost(Instruction::Select, VectorTy,
                                             CondTy, Pred, Ctx.CostKind);
     }
@@ -3724,8 +3715,7 @@ SmallVector<VPSingleDefRecipe *> VPExpressionRecipe::decompose() {
 InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
                                                 VPCostContext &Ctx) const {
   Type *RedTy = this->getScalarType();
-  auto *SrcVecTy =
-      cast<VectorType>(toVectorTy(getOperand(0)->getScalarType(), VF));
+  auto *SrcVecTy = cast<VectorType>(getOperand(0)->getWideType(VF));
   unsigned Opcode = RecurrenceDescriptor::getOpcode(
       cast<VPReductionRecipe>(ExpressionRecipes.back())->getRecurrenceKind());
   switch (ExpressionType) {
@@ -4320,9 +4310,8 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
                                                  VPCostContext &Ctx) const {
   const VPRecipeBase *R = getAsRecipe();
   bool IsLoad = isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(R);
-  Type *ScalarTy = IsLoad ? cast<VPSingleDefRecipe>(R)->getScalarType()
-                          : R->getOperand(1)->getScalarType();
-  Type *Ty = toVectorTy(ScalarTy, VF);
+  Type *Ty = IsLoad ? cast<VPSingleDefRecipe>(R)->getWideType(VF)
+                    : R->getOperand(1)->getWideType(VF);
   unsigned AS =
       cast<PointerType>(getAddr()->getScalarType())->getAddressSpace();
   unsigned Opcode = IsLoad ? Instruction::Load : Instruction::Store;
@@ -4368,8 +4357,7 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
 }
 
 void VPWidenLoadRecipe::execute(VPTransformState &State) {
-  Type *ScalarDataTy = getScalarType();
-  auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
+  Type *DataTy = getWideType(State.VF);
   bool CreateGather = !isConsecutive();
 
   auto &Builder = State.Builder;
@@ -4442,7 +4430,7 @@ InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
   // legacy model, it will always calculate the cost of mask.
   // TODO: Using getMemoryOpCost() instead of getMemIntrinsicInstrCost  when we
   // don't need to compare to the legacy cost model.
-  Type *Ty = toVectorTy(getScalarType(), VF);
+  Type *Ty = getWideType(VF);
   unsigned AS =
       cast<PointerType>(getAddr()->getScalarType())->getAddressSpace();
   return Ctx.TTI.getMemIntrinsicInstrCost(
@@ -4530,7 +4518,7 @@ InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
   // legacy model, it will always calculate the cost of mask.
   // TODO: Using getMemoryOpCost() instead of getMemIntrinsicInstrCost when we
   // don't need to compare to the legacy cost model.
-  Type *Ty = toVectorTy(getStoredValue()->getScalarType(), VF);
+  Type *Ty = getStoredValue()->getWideType(VF);
   unsigned AS =
       cast<PointerType>(getAddr()->getScalarType())->getAddressSpace();
   return Ctx.TTI.getMemIntrinsicInstrCost(
