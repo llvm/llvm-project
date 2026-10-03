@@ -54,7 +54,7 @@ b:                           // CHECK-NEXT: File 0, [[@LINE]]:1 -> [[@LINE+2]]:2
 void test3() {
   if (0)
     goto b; // CHECK: Gap,File 0, [[@LINE]]:12 -> [[@LINE+1]]:1 = (#0 - #1)
-a: // CHECK-NEXT: Expansion,File 0, [[@LINE]]:1 -> [[@LINE]]:2 = [[retnCount:#[0-9]+]] (Expanded file = 1)
+a: // CHECK-NEXT: MacroExpansion,File 0, [[@LINE]]:1 -> [[@LINE]]:2 = [[retnCount:#[0-9]+]] (Expanded file = 1)
   return; // CHECK-NEXT: File 0, [[@LINE-1]]:2 -> [[@LINE]]:9 = [[retnCount]]
 }
 #undef a

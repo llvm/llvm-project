@@ -99,9 +99,13 @@ std::vector<NestedCountedRegion>
 collectNestedBranches(const coverage::CoverageMapping &Coverage,
                       ArrayRef<llvm::coverage::ExpansionRecord> Expansions,
                       std::vector<LineColPair> &NestedPath,
-                      unsigned &PositionCounter) {
+                      unsigned &PositionCounter,
+                      bool IgnoreBranchesInMacros = false) {
   std::vector<NestedCountedRegion> Branches;
   for (const auto &Expansion : Expansions) {
+    // Skip macro expansions if requested.
+    if (IgnoreBranchesInMacros && Expansion.Region.isMacroExpansion())
+      continue;
     auto ExpansionCoverage = Coverage.getCoverageForExpansion(Expansion);
 
     // Track the path to the nested expansions.
@@ -109,8 +113,9 @@ collectNestedBranches(const coverage::CoverageMapping &Coverage,
 
     // Recursively collect branches from nested expansions.
     auto NestedExpansions = ExpansionCoverage.getExpansions();
-    auto NestedExBranches = collectNestedBranches(Coverage, NestedExpansions,
-                                                  NestedPath, PositionCounter);
+    auto NestedExBranches =
+        collectNestedBranches(Coverage, NestedExpansions, NestedPath,
+                              PositionCounter, IgnoreBranchesInMacros);
     append_range(Branches, NestedExBranches);
 
     // Add branches from this level of expansion.
@@ -125,20 +130,6 @@ collectNestedBranches(const coverage::CoverageMapping &Coverage,
   }
 
   return Branches;
-}
-
-void appendNestedCountedRegions(const std::vector<CountedRegion> &Src,
-                                std::vector<NestedCountedRegion> &Dst) {
-  auto Unfolded = make_filter_range(Src, [](auto &Region) {
-    return !Region.TrueFolded || !Region.FalseFolded;
-  });
-  Dst.reserve(Dst.size() + Src.size());
-  unsigned PositionCounter = Dst.size();
-  std::transform(Unfolded.begin(), Unfolded.end(), std::back_inserter(Dst),
-                 [=, &PositionCounter](auto &Region) {
-                   return NestedCountedRegion(Region, {Region.startLoc()},
-                                              PositionCounter++);
-                 });
 }
 
 void appendNestedCountedRegions(const std::vector<NestedCountedRegion> &Src,
@@ -181,17 +172,27 @@ void combineInstanceCounts(std::vector<NestedCountedRegion> &Branches) {
 void renderBranchExecutionCounts(raw_ostream &OS,
                                  const coverage::CoverageMapping &Coverage,
                                  const coverage::CoverageData &FileCoverage,
-                                 bool UnifyInstances) {
+                                 bool UnifyInstances,
+                                 bool IgnoreBranchesInMacros = false) {
 
   std::vector<NestedCountedRegion> Branches;
 
-  appendNestedCountedRegions(FileCoverage.getBranches(), Branches);
+  // Filter out branches from macro expansions if requested.
+  // These branches have a FileID that differs from the main file's FileID.
+  auto FileBranches = FileCoverage.getBranches();
+  unsigned MainFileID = FileBranches.empty() ? 0 : FileBranches[0].FileID;
+  for (const auto &B : FileBranches) {
+    if (IgnoreBranchesInMacros && B.FileID != MainFileID)
+      continue;
+    Branches.push_back(NestedCountedRegion(B, {B.startLoc()}, Branches.size()));
+  }
 
   // Recursively collect branches for all file expansions.
   std::vector<LineColPair> NestedPath;
   unsigned PositionCounter = 0;
-  std::vector<NestedCountedRegion> ExBranches = collectNestedBranches(
-      Coverage, FileCoverage.getExpansions(), NestedPath, PositionCounter);
+  std::vector<NestedCountedRegion> ExBranches =
+      collectNestedBranches(Coverage, FileCoverage.getExpansions(), NestedPath,
+                            PositionCounter, IgnoreBranchesInMacros);
 
   // Append Expansion Branches to Source Branches.
   appendNestedCountedRegions(ExBranches, Branches);
@@ -250,7 +251,8 @@ void renderBranchSummary(raw_ostream &OS, const FileCoverageSummary &Summary) {
 void renderFile(raw_ostream &OS, const coverage::CoverageMapping &Coverage,
                 const std::string &Filename,
                 const FileCoverageSummary &FileReport, bool ExportSummaryOnly,
-                bool SkipFunctions, bool SkipBranches, bool UnifyInstances) {
+                bool SkipFunctions, bool SkipBranches, bool UnifyInstances,
+                bool IgnoreBranchesInMacros = false) {
   OS << "SF:" << Filename << '\n';
 
   if (!ExportSummaryOnly && !SkipFunctions) {
@@ -263,7 +265,8 @@ void renderFile(raw_ostream &OS, const coverage::CoverageMapping &Coverage,
     auto FileCoverage = Coverage.getCoverageForFile(Filename);
     renderLineExecutionCounts(OS, FileCoverage);
     if (!SkipBranches)
-      renderBranchExecutionCounts(OS, Coverage, FileCoverage, UnifyInstances);
+      renderBranchExecutionCounts(OS, Coverage, FileCoverage, UnifyInstances,
+                                  IgnoreBranchesInMacros);
   }
   if (!SkipBranches)
     renderBranchSummary(OS, FileReport);
@@ -276,10 +279,11 @@ void renderFiles(raw_ostream &OS, const coverage::CoverageMapping &Coverage,
                  ArrayRef<std::string> SourceFiles,
                  ArrayRef<FileCoverageSummary> FileReports,
                  bool ExportSummaryOnly, bool SkipFunctions, bool SkipBranches,
-                 bool UnifyInstances) {
+                 bool UnifyInstances, bool IgnoreBranchesInMacros = false) {
   for (unsigned I = 0, E = SourceFiles.size(); I < E; ++I)
     renderFile(OS, Coverage, SourceFiles[I], FileReports[I], ExportSummaryOnly,
-               SkipFunctions, SkipBranches, UnifyInstances);
+               SkipFunctions, SkipBranches, UnifyInstances,
+               IgnoreBranchesInMacros);
 }
 
 } // end anonymous namespace
@@ -299,5 +303,6 @@ void CoverageExporterLcov::renderRoot(ArrayRef<std::string> SourceFiles) {
                                                         SourceFiles, Options);
   renderFiles(OS, Coverage, SourceFiles, FileReports, Options.ExportSummaryOnly,
               Options.SkipFunctions, Options.SkipBranches,
-              Options.UnifyFunctionInstantiations);
+              Options.UnifyFunctionInstantiations,
+              Options.IgnoreBranchesInMacros);
 }
