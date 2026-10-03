@@ -192,6 +192,7 @@ public:
 
   /// This specifies that created instructions should be inserted at the
   /// specified point.
+  // TODO: Deprecate this method.
   void SetInsertPoint(BasicBlock *TheBB, BasicBlock::iterator IP) {
     SetInsertPoint(IP);
   }
