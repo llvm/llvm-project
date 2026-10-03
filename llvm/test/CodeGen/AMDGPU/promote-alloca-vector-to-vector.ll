@@ -11,8 +11,12 @@
 ; GCN: v_cndmask_b32_e32 [[RES:v[0-9]+]], 4.0,
 ; GCN: store_dword v{{.+}}, [[RES]]
 
-; OPT:  %0 = extractelement <4 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00>, i32 %sel2
-; OPT:  store float %0, ptr addrspace(1) %out, align 4
+; OPT: %sel2 = select i1 %c2, i32 0, i32 %sel1
+; OPT: %alloca.0.gep.sroa_stride = mul i32 %sel2, 4
+; OPT: %alloca.0.gep.sroa_offset = add i32 0, %alloca.0.gep.sroa_stride
+; OPT: %0 = ashr exact i32 %alloca.0.gep.sroa_offset, 2
+; OPT: %1 = extractelement <4 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00>, i32 %0
+; OPT: store float %1, ptr addrspace(1) %out, align 4
 
 define amdgpu_kernel void @float4_alloca_store4(ptr addrspace(1) %out, ptr addrspace(3) %dummy_lds) {
 entry:
@@ -43,8 +47,12 @@ entry:
 ; GCN:     v_mov_b32_e32 v{{[0-9]+}}, [[ONE]]
 ; GCN:     store_dwordx4 v{{.+}},
 
-; OPT: %0 = insertelement <4 x float> poison, float 1.000000e+00, i32 %sel2
-; OPT: store <4 x float> %0, ptr addrspace(1) %out, align 4
+; OPT: %sel2 = select i1 %c2, i32 0, i32 %sel1
+; OPT: %alloca.0.gep.sroa_stride = mul i32 %sel2, 4
+; OPT: %alloca.0.gep.sroa_offset = add i32 0, %alloca.0.gep.sroa_stride
+; OPT: %0 = ashr exact i32 %alloca.0.gep.sroa_offset, 2
+; OPT: %1 = insertelement <4 x float> poison, float 1.000000e+00, i32 %0
+; OPT: store <4 x float> %1, ptr addrspace(1) %out, align 4
 
 define amdgpu_kernel void @float4_alloca_load4(ptr addrspace(1) %out, ptr addrspace(3) %dummy_lds) {
 entry:
@@ -71,8 +79,12 @@ entry:
 ; GCN-DAG: s_mov_b32 s[[SL:[0-9]+]], 0x40003c00
 ; GCN:     v_lshrrev_b64 v[{{[0-9:]+}}], v{{[0-9]+}}, s[[[SL]]:[[SH]]]
 
-; OPT: %0 = extractelement <4 x half> <half 1.000000e+00, half 2.000000e+00, half 3.000000e+00, half 4.000000e+00>, i32 %sel2
-; OPT: store half %0, ptr addrspace(1) %out, align 2
+; OPT: %sel2 = select i1 %c2, i32 0, i32 %sel1
+; OPT: %alloca.0.gep.sroa_stride = mul i32 %sel2, 2
+; OPT: %alloca.0.gep.sroa_offset = add i32 0, %alloca.0.gep.sroa_stride
+; OPT: %0 = ashr exact i32 %alloca.0.gep.sroa_offset, 1
+; OPT: %1 = extractelement <4 x half> <half 1.000000e+00, half 2.000000e+00, half 3.000000e+00, half 4.000000e+00>, i32 %0
+; OPT: store half %1, ptr addrspace(1) %out, align 2
 
 define amdgpu_kernel void @half4_alloca_store4(ptr addrspace(1) %out, ptr addrspace(3) %dummy_lds) {
 entry:
@@ -97,8 +109,12 @@ entry:
 ; GCN:     s_mov_b64 s[{{[0-9:]+}}], 0xffff
 
 ; OPT: %alloca = freeze <4 x half> poison
-; OPT: %0 = insertelement <4 x half> %alloca, half 1.000000e+00, i32 %sel2
-; OPT: store <4 x half> %0, ptr addrspace(1) %out, align 2
+; OPT: %sel2 = select i1 %c2, i32 0, i32 %sel1
+; OPT: %alloca.0.gep.sroa_stride = mul i32 %sel2, 2
+; OPT: %alloca.0.gep.sroa_offset = add i32 0, %alloca.0.gep.sroa_stride
+; OPT: %0 = ashr exact i32 %alloca.0.gep.sroa_offset, 1
+; OPT: %1 = insertelement <4 x half> %alloca, half 1.000000e+00, i32 %0
+; OPT: store <4 x half> %1, ptr addrspace(1) %out, align 2
 
 define amdgpu_kernel void @half4_alloca_load4(ptr addrspace(1) %out, ptr addrspace(3) %dummy_lds) {
 entry:
@@ -124,8 +140,12 @@ entry:
 ; GCN-DAG: s_mov_b32 s[[SL:[0-9]+]], 0x20001
 ; GCN:     v_lshrrev_b64 v[{{[0-9:]+}}], v{{[0-9]+}}, s[[[SL]]:[[SH]]]
 
-; OPT: %0 = extractelement <4 x i16> <i16 1, i16 2, i16 3, i16 4>, i32 %sel2
-; OPT: store i16 %0, ptr addrspace(1) %out, align 2
+; OPT: %sel2 = select i1 %c2, i32 0, i32 %sel1
+; OPT: %alloca.0.gep.sroa_stride = mul i32 %sel2, 2
+; OPT: %alloca.0.gep.sroa_offset = add i32 0, %alloca.0.gep.sroa_stride
+; OPT: %0 = ashr exact i32 %alloca.0.gep.sroa_offset, 1
+; OPT: %1 = extractelement <4 x i16> <i16 1, i16 2, i16 3, i16 4>, i32 %0
+; OPT: store i16 %1, ptr addrspace(1) %out, align 2
 
 define amdgpu_kernel void @short4_alloca_store4(ptr addrspace(1) %out, ptr addrspace(3) %dummy_lds) {
 entry:
@@ -150,8 +170,12 @@ entry:
 ; GCN:     s_mov_b64 s[{{[0-9:]+}}], 0xffff
 
 ; OPT: %alloca = freeze <4 x i16> poison
-; OPT: %0 = insertelement <4 x i16> %alloca, i16 1, i32 %sel2
-; OPT: store <4 x i16> %0, ptr addrspace(1) %out, align 2
+; OPT: %sel2 = select i1 %c2, i32 0, i32 %sel1
+; OPT: %alloca.0.gep.sroa_stride = mul i32 %sel2, 2
+; OPT: %alloca.0.gep.sroa_offset = add i32 0, %alloca.0.gep.sroa_stride
+; OPT: %0 = ashr exact i32 %alloca.0.gep.sroa_offset, 1
+; OPT: %1 = insertelement <4 x i16> %alloca, i16 1, i32 %0
+; OPT: store <4 x i16> %1, ptr addrspace(1) %out, align 2
 
 define amdgpu_kernel void @short4_alloca_load4(ptr addrspace(1) %out, ptr addrspace(3) %dummy_lds) {
 entry:
