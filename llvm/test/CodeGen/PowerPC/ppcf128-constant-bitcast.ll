@@ -14,10 +14,10 @@
 ; flipped on big-endian targets.
 
 ; 27.0 is represented in memory as [0x403b000000000000, 0x0000000000000000].
-; Interpreting these 128 bit as an i128 on little-endian means the upper 64
-; bits are 0x0000000000000000, the lower are 0x403b000000000000.
+; Interpreting these 128 bits as an i128 on little-endian means the upper 64
+; bits are 0x0000000000000000, the lower 64 bits are 0x403b000000000000.
 ;
-; But on big-endian the interpretation of the bytes is flipped, and now the
+; But on big-endian the interpretation of the bytes is flipped, and the
 ; upper bits are now 0x403b000000000000 while the lower are 0x0000000000000000.
 
 define i64 @extract_high64() {
