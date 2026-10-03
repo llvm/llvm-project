@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/CodeView/TypeIndexDiscovery.h"
-#include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
@@ -42,7 +42,8 @@ static inline uint32_t getEncodedIntegerLength(ArrayRef<uint8_t> Data) {
   if (N < LF_NUMERIC)
     return 2;
 
-  assert(N <= LF_UQUADWORD);
+  if (N > LF_DATE)
+    return 0;
 
   constexpr uint32_t Sizes[] = {
       1,  // LF_CHAR
@@ -56,6 +57,22 @@ static inline uint32_t getEncodedIntegerLength(ArrayRef<uint8_t> Data) {
       16, // LF_REAL128
       8,  // LF_QUADWORD
       8,  // LF_UQUADWORD
+      6,  // LF_REAL48
+      8,  // LF_COMPLEX32
+      16, // LF_COMPLEX64
+      20, // LF_COMPLEX80
+      32, // LF_COMPLEX128
+      0,  // LF_VARSTRING (variable length)
+      0,  // 0x8011 (Unused)
+      0,  // 0x8012 (Unused)
+      0,  // 0x8013 (Unused)
+      0,  // 0x8014 (Unused)
+      0,  // 0x8015 (Unused)
+      0,  // 0x8016 (Unused)
+      16, // LF_OCTWORD
+      16, // LF_UOCTWORD
+      16, // LF_DECIMAL (sizeof(DECIMAL))
+      8,  // LF_DATE (sizeof(DATE))
   };
 
   return 2 + Sizes[N - LF_NUMERIC];
