@@ -978,6 +978,7 @@ module std {
     module exception                  { header "__chrono/exception.h" }
     module file_clock                 { header "__chrono/file_clock.h" }
     module formatter                  { header "__chrono/formatter.h" }
+    module from_stream                { header "__chrono/from_stream.h" }
     module gps_clock {
       header "__chrono/gps_clock.h"
       export std.chrono.time_point
@@ -1005,6 +1006,8 @@ module std {
     module month                      { header "__chrono/month.h" }
     module monthday                   { header "__chrono/monthday.h" }
     module ostream                    { header "__chrono/ostream.h" }
+    module parse                      { header "__chrono/parse.h" }
+    module parser_data                { header "__chrono/parser_data.h" }
     module parser_std_format_spec     { header "__chrono/parser_std_format_spec.h" }
     module statically_widen           { header "__chrono/statically_widen.h" }
     module steady_clock {
