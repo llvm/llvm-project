@@ -435,7 +435,6 @@ static StringRef GetDeferKeywordSpelling(Sema &S, SourceLocation DeferLoc) {
       S.PP.getLastMacroWithSpelling(DeferLoc, {tok::kw__Defer});
   if (DeferSpelling.empty())
     DeferSpelling = "_Defer";
-
   return DeferSpelling;
 }
 
