@@ -1572,6 +1572,27 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   if (isValueEqualInPotentialCycles(V1, V2, AAQI))
     return AliasResult::MustAlias;
 
+  // Reuse definitive recursive results before repeating object and capture
+  // analysis. Keep assumption accounting on the existing cache path below.
+  if (AAQI.Depth < 512) {
+    LocationSize CacheSize1 = V1Size, CacheSize2 = V2Size;
+    if (CacheSize1.mayBeBeforePointer() || CacheSize2.mayBeBeforePointer()) {
+      CacheSize1 = LocationSize::afterPointer();
+      CacheSize2 = LocationSize::afterPointer();
+    }
+    AAQueryInfo::LocPair Locs({V1, CacheSize1, AAQI.MayBeCrossIteration},
+                              {V2, CacheSize2, AAQI.MayBeCrossIteration});
+    bool Swapped = V1 > V2;
+    if (Swapped)
+      std::swap(Locs.first, Locs.second);
+    auto It = AAQI.AliasCache.find(Locs);
+    if (It != AAQI.AliasCache.end() && It->second.isDefinitive()) {
+      AliasResult Result = It->second.Result;
+      Result.swap(Swapped);
+      return Result;
+    }
+  }
+
   // Figure out what objects these things are pointing to if we can.
   const Value *O1 = getUnderlyingObject(V1, MaxLookupSearchDepth);
   const Value *O2 = getUnderlyingObject(V2, MaxLookupSearchDepth);
