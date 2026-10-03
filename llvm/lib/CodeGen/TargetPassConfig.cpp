@@ -259,12 +259,6 @@ static cl::opt<std::string>
                   cl::desc("Stop compilation before a specific pass"),
                   cl::value_desc("pass-name"), cl::init(""), cl::Hidden);
 
-/// Enable the machine function splitter pass.
-static cl::opt<bool> EnableMachineFunctionSplitter(
-    "enable-split-machine-functions", cl::Hidden,
-    cl::desc("Split out cold blocks from machine functions based on profile "
-             "information."));
-
 /// Disable the expand reductions pass for testing.
 static cl::opt<bool> DisableExpandReductions(
     "disable-expand-reductions", cl::init(false), cl::Hidden,
@@ -539,7 +533,6 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_OPTION(DebugifyCheckAndStripAll)
   SET_OPTION(DisableRAFSProfileLoader)
   SET_OPTION(DisableCFIFixup)
-  SET_OPTION(EnableMachineFunctionSplitter)
 
   return Opt;
 }
@@ -1265,8 +1258,10 @@ void TargetPassConfig::addMachinePasses() {
     addPass(createMIRAddFSDiscriminatorsPass(
         sampleprof::FSDiscriminatorPass::PassLast));
 
-  if (TM->Options.EnableMachineFunctionSplitter ||
-      EnableMachineFunctionSplitter || SplitStaticData ||
+  const bool SplitFunctions =
+      TM->Options.FunctionSplitting == FunctionSplittingMode::All;
+
+  if (SplitFunctions || SplitStaticData ||
       TM->Options.EnableStaticDataPartitioning) {
     const std::string ProfileFile = getFSProfileFile(TM);
     if (!ProfileFile.empty()) {
@@ -1289,8 +1284,7 @@ void TargetPassConfig::addMachinePasses() {
   // feature takes precedence. This means functions eligible for
   // basic-block-sections optimizations (`=all`, or `=list=` with function
   // included in the list profile) will get that optimization instead.
-  if (TM->Options.EnableMachineFunctionSplitter ||
-      EnableMachineFunctionSplitter)
+  if (SplitFunctions)
     addPass(createMachineFunctionSplitterPass());
 
   if (SplitStaticData || TM->Options.EnableStaticDataPartitioning) {

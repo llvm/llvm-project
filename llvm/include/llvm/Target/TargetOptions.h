@@ -50,6 +50,19 @@ enum class BasicBlockSection {
   None    // Do not use Basic Block Sections.
 };
 
+/// Late function splitting mode. Decides which functions are eligible to have
+/// their cold blocks moved into a separate section.
+enum class FunctionSplittingMode {
+  None,           // Hard off. Never create a cold section, even for functions
+                  // which have a basic block sections profile. Such functions
+                  // are still laid out using the profile, but are emitted as a
+                  // single contiguous section.
+  BBSectionsOnly, // Split only functions which have a basic block sections
+                  // profile. This is the default.
+  All             // Split functions using the basic block sections profile
+                  // where it is available, and PGO/AutoFDO elsewhere.
+};
+
 /// Identify a debugger for "tuning" the debug info.
 ///
 /// The "debugger tuning" concept allows us to present a more intuitive
@@ -113,7 +126,6 @@ public:
         TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
         EmulatedTLS(false), EnableTLSDESC(false), EnableIPRA(false),
         EmitStackSizeSection(false), EnableMachineOutliner(false),
-        EnableMachineFunctionSplitter(false),
         EnableStaticDataPartitioning(false), EnableDefaultMachineVerifier(true),
         EmitAddrsig(false), BBAddrMap(false), EmitCallGraphSection(false),
         EmitCallSiteInfo(false), EnableDebugEntryValues(false),
@@ -208,9 +220,6 @@ public:
   /// Enables the MachineOutliner pass.
   unsigned EnableMachineOutliner : 1;
 
-  /// Enables the MachineFunctionSplitter pass.
-  unsigned EnableMachineFunctionSplitter : 1;
-
   /// Enables the StaticDataSplitter pass.
   unsigned EnableStaticDataPartitioning : 1;
 
@@ -227,6 +236,10 @@ public:
 
   /// Emit basic blocks into separate sections.
   BasicBlockSection BBSections = BasicBlockSection::None;
+
+  /// Which functions are eligible for late function splitting.
+  FunctionSplittingMode FunctionSplitting =
+      FunctionSplittingMode::BBSectionsOnly;
 
   /// Memory Buffer that contains information on sampled basic blocks and used
   /// to selectively generate basic block sections.
