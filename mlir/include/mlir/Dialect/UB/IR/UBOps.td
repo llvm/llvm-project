@@ -20,7 +20,6 @@ def UB_Dialect : Dialect {
 
   let hasConstantMaterializer = 1;
   let useDefaultAttributePrinterParser = 1;
-  let useStrictPropertiesInAssemblyFormat = 1;
 }
 
 // Base class for UB dialect attributes.

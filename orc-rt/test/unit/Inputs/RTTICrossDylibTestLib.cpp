@@ -7,7 +7,7 @@
 #include "RTTICrossDylibTestError.h"
 
 using namespace orc_rt;
-using orc_rt_test::CrossDylibTestError;
+using orc_rt::test::CrossDylibTestError;
 
 extern "C" TEST_EXPORT ErrorInfoBase *rttiCrossDylibTest_makeError(int Code) {
   return new CrossDylibTestError(Code);
