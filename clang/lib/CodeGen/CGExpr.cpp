@@ -1063,8 +1063,8 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
 
 /// Returns true if \p Field is reachable from \p RD either as a direct field or
 /// through a chain of nested record fields (including anonymous
-/// structs/unions). This mirrors the GEP path that getGEPIndicesToField builds,
-/// and is used to identify the right anchor expression in Base.
+/// structs/unions). This mirrors the path that getFieldOffsetInBits walks, and
+/// is used to identify the right anchor expression in Base.
 static bool RecordContainsField(const RecordDecl *RD, const FieldDecl *Field) {
   for (const FieldDecl *FD : RD->fields()) {
     if (FD == Field)
@@ -1099,7 +1099,7 @@ class StructAccessBase
     : public ConstStmtVisitor<StructAccessBase, const Expr *> {
   /// The count field we're navigating to. We stop at the innermost expression
   /// whose struct type transitively contains this field, so that
-  /// getGEPIndicesToField can navigate from that struct down to it.
+  /// getFieldOffsetInBits can navigate from that struct down to it.
   const FieldDecl *CountDecl;
 
   /// Returns true if E's record type (or pointee record type) transitively
@@ -1191,34 +1191,28 @@ public:
 
 } // end anonymous namespace
 
-using RecIndicesTy = SmallVector<llvm::Value *, 8>;
+/// The offset of a field from the beginning of the record.
+static bool getFieldOffsetInBits(CodeGenFunction &CGF, const RecordDecl *RD,
+                                 const FieldDecl *Field, int64_t &Offset) {
+  ASTContext &Ctx = CGF.getContext();
+  const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
+  unsigned FieldNo = 0;
 
-static bool getGEPIndicesToField(CodeGenFunction &CGF, const RecordDecl *RD,
-                                 const FieldDecl *Field,
-                                 RecIndicesTy &Indices) {
-  const CGRecordLayout &Layout = CGF.CGM.getTypes().getCGRecordLayout(RD);
-  int64_t FieldNo = -1;
   for (const FieldDecl *FD : RD->fields()) {
-    if (!Layout.containsFieldDecl(FD))
-      // This could happen if the field has a struct type that's empty. I don't
-      // know why either.
-      continue;
-
-    FieldNo = Layout.getLLVMFieldNo(FD);
     if (FD == Field) {
-      Indices.emplace_back(CGF.Builder.getInt32(FieldNo));
+      Offset += Layout.getFieldOffset(FieldNo);
       return true;
     }
 
     QualType Ty = FD->getType();
-    if (Ty->isRecordType()) {
-      if (getGEPIndicesToField(CGF, Ty->getAsRecordDecl(), Field, Indices)) {
-        if (RD->isUnion())
-          FieldNo = 0;
-        Indices.emplace_back(CGF.Builder.getInt32(FieldNo));
+    if (Ty->isRecordType())
+      if (getFieldOffsetInBits(CGF, Ty->getAsRecordDecl(), Field, Offset)) {
+        Offset += Layout.getFieldOffset(FieldNo);
         return true;
       }
-    }
+
+    if (!RD->isUnion())
+      ++FieldNo;
   }
 
   return false;
@@ -1227,8 +1221,8 @@ static bool getGEPIndicesToField(CodeGenFunction &CGF, const RecordDecl *RD,
 llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
     const Expr *Base, const FieldDecl *FAMDecl, const FieldDecl *CountDecl) {
   // Walk Base to find the deepest sub-expression whose struct type transitively
-  // contains CountDecl. This is our GEP anchor — getGEPIndicesToField then
-  // builds the field indices from that struct down to CountDecl, handling any
+  // contains CountDecl. This is our GEP anchor — getFieldOffsetInBits then
+  // computes the offset from that struct down to CountDecl, handling any
   // intermediate nesting without requiring us to pre-compute a RecordDecl from
   // Base's type or from CountDecl's parent chain.
   const Expr *StructBase = StructAccessBase(CountDecl).Visit(Base);
@@ -1257,16 +1251,19 @@ llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
     return nullptr;
   }
 
-  RecIndicesTy Indices;
-  getGEPIndicesToField(*this, RD, CountDecl, Indices);
-  if (Indices.empty())
+  // A bit-field count has no byte offset of its own to load from.
+  if (CountDecl->isBitField())
     return nullptr;
 
-  Indices.push_back(Builder.getInt32(0));
-  CanQualType T = CGM.getContext().getCanonicalTagType(RD);
-  return Builder.CreateInBoundsGEP(ConvertType(T), Res,
-                                   RecIndicesTy(llvm::reverse(Indices)),
-                                   "counted_by.gep");
+  // Struct GEP indices can't reach a count inside a union, because the union
+  // lowers to its largest member and the indices would walk that one instead.
+  int64_t Offset = 0;
+  if (!getFieldOffsetInBits(*this, RD, CountDecl, Offset))
+    return nullptr;
+
+  return Builder.CreateInBoundsGEP(
+      Int8Ty, Res, Builder.getSize(getContext().toCharUnitsFromBits(Offset)),
+      "counted_by.gep");
 }
 
 /// This method is typically called in contexts where we can't generate
@@ -5005,33 +5002,6 @@ struct StructFieldAccess
 };
 
 } // end anonymous namespace
-
-/// The offset of a field from the beginning of the record.
-static bool getFieldOffsetInBits(CodeGenFunction &CGF, const RecordDecl *RD,
-                                 const FieldDecl *Field, int64_t &Offset) {
-  ASTContext &Ctx = CGF.getContext();
-  const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
-  unsigned FieldNo = 0;
-
-  for (const FieldDecl *FD : RD->fields()) {
-    if (FD == Field) {
-      Offset += Layout.getFieldOffset(FieldNo);
-      return true;
-    }
-
-    QualType Ty = FD->getType();
-    if (Ty->isRecordType())
-      if (getFieldOffsetInBits(CGF, Ty->getAsRecordDecl(), Field, Offset)) {
-        Offset += Layout.getFieldOffset(FieldNo);
-        return true;
-      }
-
-    if (!RD->isUnion())
-      ++FieldNo;
-  }
-
-  return false;
-}
 
 /// Returns the relative offset difference between \p FD1 and \p FD2.
 /// \code
