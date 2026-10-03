@@ -830,7 +830,7 @@ function(add_libc_hermetic test_name)
   endif()
 
   if(LIBC_ENABLE_COVERAGE)
-     set(coverage_deps
+    set(coverage_deps
       libc.src.stdio.fclose
       libc.src.stdio.fdopen
       libc.src.stdio.feof
@@ -996,7 +996,7 @@ function(add_libc_hermetic test_name)
   if(LIBC_ENABLE_COVERAGE)
     set(coverage_link_libs
       "${LIBC_CLANG_PROFILE_LIB}"
-       ${fq_target_name}.__libc__
+      ${fq_target_name}.__libc__
     )
   endif()
 
