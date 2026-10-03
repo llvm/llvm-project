@@ -394,3 +394,158 @@ define amdgpu_ps void @test_s_load_constant_v8i32_align1(ptr addrspace(4) inreg 
   store <8 x i32> %load, ptr addrspace(1) %out
   ret void
 }
+
+define float @load_lds_f32_align1(ptr addrspace(3) %p) {
+; GFX9-LABEL: load_lds_f32_align1:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    ds_read_b32 v0, v0
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-LABEL: load_lds_f32_align1:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_mov_b32 m0, -1
+; GFX7-NEXT:    ds_read_u8 v1, v0 offset:1
+; GFX7-NEXT:    ds_read_u8 v2, v0
+; GFX7-NEXT:    ds_read_u8 v3, v0 offset:3
+; GFX7-NEXT:    ds_read_u8 v0, v0 offset:2
+; GFX7-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
+; GFX7-NEXT:    s_waitcnt lgkmcnt(2)
+; GFX7-NEXT:    v_or_b32_e32 v1, v1, v2
+; GFX7-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 24, v3
+; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX7-NEXT:    v_or_b32_e32 v0, v2, v0
+; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: load_lds_f32_align1:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    ds_read_b32 v0, v0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: load_lds_f32_align1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ds_load_b32 v0, v0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %v = load float, ptr addrspace(3) %p, align 1
+  ret float %v
+}
+
+define double @load_lds_f64_align1(ptr addrspace(3) %p) {
+; GFX9-LABEL: load_lds_f64_align1:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    ds_read_b64 v[0:1], v0
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-LABEL: load_lds_f64_align1:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_mov_b32 m0, -1
+; GFX7-NEXT:    ds_read_u8 v1, v0
+; GFX7-NEXT:    ds_read_u8 v2, v0 offset:1
+; GFX7-NEXT:    ds_read_u8 v3, v0 offset:2
+; GFX7-NEXT:    ds_read_u8 v4, v0 offset:3
+; GFX7-NEXT:    ds_read_u8 v5, v0 offset:4
+; GFX7-NEXT:    ds_read_u8 v6, v0 offset:5
+; GFX7-NEXT:    ds_read_u8 v7, v0 offset:6
+; GFX7-NEXT:    ds_read_u8 v8, v0 offset:7
+; GFX7-NEXT:    s_waitcnt lgkmcnt(6)
+; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 8, v2
+; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX7-NEXT:    s_waitcnt lgkmcnt(4)
+; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 24, v4
+; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
+; GFX7-NEXT:    v_or_b32_e32 v1, v1, v2
+; GFX7-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX7-NEXT:    s_waitcnt lgkmcnt(2)
+; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 8, v6
+; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 24, v8
+; GFX7-NEXT:    v_lshlrev_b32_e32 v3, 16, v7
+; GFX7-NEXT:    v_or_b32_e32 v1, v1, v5
+; GFX7-NEXT:    v_or_b32_e32 v2, v2, v3
+; GFX7-NEXT:    v_or_b32_e32 v1, v2, v1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: load_lds_f64_align1:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    ds_read2_b32 v[0:1], v0 offset1:1
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: load_lds_f64_align1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ds_load_b64 v[0:1], v0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %v = load double, ptr addrspace(3) %p, align 1
+  ret double %v
+}
+
+define ptr addrspace(1) @load_lds_p1_align1(ptr addrspace(3) %p) {
+; GFX9-LABEL: load_lds_p1_align1:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    ds_read_b64 v[0:1], v0
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-LABEL: load_lds_p1_align1:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_mov_b32 m0, -1
+; GFX7-NEXT:    ds_read_u8 v1, v0
+; GFX7-NEXT:    ds_read_u8 v2, v0 offset:1
+; GFX7-NEXT:    ds_read_u8 v3, v0 offset:2
+; GFX7-NEXT:    ds_read_u8 v4, v0 offset:3
+; GFX7-NEXT:    ds_read_u8 v5, v0 offset:4
+; GFX7-NEXT:    ds_read_u8 v6, v0 offset:5
+; GFX7-NEXT:    ds_read_u8 v7, v0 offset:6
+; GFX7-NEXT:    ds_read_u8 v8, v0 offset:7
+; GFX7-NEXT:    s_waitcnt lgkmcnt(6)
+; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 8, v2
+; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX7-NEXT:    s_waitcnt lgkmcnt(4)
+; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 24, v4
+; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
+; GFX7-NEXT:    v_or_b32_e32 v1, v1, v2
+; GFX7-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX7-NEXT:    s_waitcnt lgkmcnt(2)
+; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 8, v6
+; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 24, v8
+; GFX7-NEXT:    v_lshlrev_b32_e32 v3, 16, v7
+; GFX7-NEXT:    v_or_b32_e32 v1, v1, v5
+; GFX7-NEXT:    v_or_b32_e32 v2, v2, v3
+; GFX7-NEXT:    v_or_b32_e32 v1, v2, v1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: load_lds_p1_align1:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    ds_read2_b32 v[0:1], v0 offset1:1
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: load_lds_p1_align1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ds_load_b64 v[0:1], v0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %v = load ptr addrspace(1), ptr addrspace(3) %p, align 1
+  ret ptr addrspace(1) %v
+}
