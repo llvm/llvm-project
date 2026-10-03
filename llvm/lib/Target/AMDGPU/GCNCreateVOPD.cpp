@@ -28,6 +28,7 @@
 #include "GCNSubtarget.h"
 #include "GCNVOPDUtils.h"
 #include "SIInstrInfo.h"
+#include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -102,6 +103,17 @@ static Register takeFreeSGPR(const GCNSubtarget &ST,
     return Reg;
   }
   return Register();
+}
+
+static bool hasLine(const DebugLoc &DL) { return DL && DL.getLine() != 0; }
+
+/// Return the location of the VOPD instruction fusing \p MIX and \p MIY. It can
+/// carry only one: X's, unless X has no line and Y has one.
+static const DebugLoc &getVOPDDebugLoc(const MachineInstr &MIX,
+                                       const MachineInstr &MIY) {
+  const DebugLoc &XLoc = MIX.getDebugLoc();
+  const DebugLoc &YLoc = MIY.getDebugLoc();
+  return hasLine(XLoc) || !hasLine(YLoc) ? XLoc : YLoc;
 }
 
 namespace {
@@ -208,9 +220,16 @@ public:
                     return Fixup.Imm == Imm;
                   }));
 
+    // The move takes the pair's line but not its source atom, which stays with
+    // the VOPD instruction.
+    DebugLoc DL =
+        getVOPDDebugLoc(*Candidate.Match.getMIX(), *Candidate.Match.getMIY());
+    if (DL)
+      DL = DebugLoc(DL->getWithoutAtom());
+
     MachineInstr *InsertPt = Candidate.Match.InOrder[0];
-    BuildMI(*InsertPt->getParent(), InsertPt, DebugLoc(),
-            TII.get(AMDGPU::S_MOV_B32), Candidate.MaterializationReg)
+    BuildMI(*InsertPt->getParent(), InsertPt, DL, TII.get(AMDGPU::S_MOV_B32),
+            Candidate.MaterializationReg)
         .addImm(Fixups.front().Imm);
     ++NumLiteralsMaterialized;
 
@@ -237,9 +256,9 @@ public:
     assert(NewOpcode != -1 &&
            "Should have previously determined this as a possible VOPD\n");
 
-    auto VOPDInst =
-        BuildMI(*MIX->getParent(), MIX, MIX->getDebugLoc(), SII->get(NewOpcode))
-            .setMIFlags(MIX->getFlags() | MIY->getFlags());
+    auto VOPDInst = BuildMI(*MIX->getParent(), MIX, getVOPDDebugLoc(*MIX, *MIY),
+                            SII->get(NewOpcode))
+                        .setMIFlags(MIX->getFlags() | MIY->getFlags());
 
     namespace VOPD = AMDGPU::VOPD;
     MachineInstr *MI[] = {MIX, MIY};
@@ -286,6 +305,17 @@ public:
     SII->fixImplicitOperands(*VOPDInst);
     for (auto CompIdx : VOPD::COMPONENTS)
       VOPDInst.copyImplicitOps(*MI[CompIdx]);
+
+    // If X and Y have different locations, Y's is kept as well and emitted to
+    // the line table before the instruction's own. A merged location (see
+    // "When to merge instruction locations" in HowToUpdateDebugInfo.md) would
+    // be line 0 and lose both.
+    const DebugLoc &XLoc = MIX->getDebugLoc();
+    const DebugLoc &YLoc = MIY->getDebugLoc();
+    if (hasLine(XLoc) && hasLine(YLoc) && !YLoc.isSameSourceLocation(XLoc)) {
+      MachineFunction &MF = *MIX->getMF();
+      MF.getInfo<SIMachineFunctionInfo>()->setFusedDebugLoc(*VOPDInst, YLoc);
+    }
 
     LLVM_DEBUG(dbgs() << "VOPD Fused: " << *VOPDInst << " from\tX: " << *MIX
                       << "\tY: " << *MIY << "\n");
