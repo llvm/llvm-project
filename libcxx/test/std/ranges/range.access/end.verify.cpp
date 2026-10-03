@@ -20,7 +20,5 @@ static_assert(!std::ranges::enable_borrowed_range<NonBorrowedRange>);
 
 // Verify that if the expression is an rvalue and `enable_borrowed_range` is false, `ranges::end` is ill-formed.
 void test() {
-  std::ranges::end(NonBorrowedRange());
-  // expected-error-re@-1 {{{{call to deleted function call operator in type 'const (std::ranges::)?__end::__fn'}}}}
-  // expected-error@-2  {{attempt to use a deleted function}}
+  std::ranges::end(NonBorrowedRange()); // expected-error {{no matching function for call to object of type 'const __end::__fn'}}
 }

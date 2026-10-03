@@ -12,15 +12,17 @@
 
 #include <__concepts/class_or_enum.h>
 #include <__config>
-#include <__cstddef/size_t.h>
 #include <__iterator/concepts.h>
-#include <__iterator/readable_traits.h>
 #include <__ranges/enable_borrowed_range.h>
-#include <__type_traits/decay.h>
+#include <__type_traits/extent.h>
+#include <__type_traits/is_array.h>
 #include <__type_traits/is_reference.h>
+#include <__type_traits/remove_all_extents.h>
+#include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/remove_reference.h>
 #include <__utility/auto_cast.h>
+#include <__utility/cpo.h>
 #include <__utility/declval.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -40,50 +42,50 @@ concept __can_borrow = is_lvalue_reference_v<_Tp> || enable_borrowed_range<remov
 
 namespace ranges {
 namespace __begin {
-template <class _Tp>
-concept __member_begin = __can_borrow<_Tp> && requires(_Tp&& __t) {
-  { _LIBCPP_AUTO_CAST(__t.begin()) } -> input_or_output_iterator;
-};
-
 void begin() = delete;
 
-template <class _Tp>
-concept __unqualified_begin =
-    !__member_begin<_Tp> && __can_borrow<_Tp> && __class_or_enum<remove_cvref_t<_Tp>> && requires(_Tp&& __t) {
-      { _LIBCPP_AUTO_CAST(begin(__t)) } -> input_or_output_iterator;
-    };
+struct __fn : _CPO<[]<class _Ep> consteval noexcept {
+  // [range.access.begin]
 
-struct __fn {
-  template <class _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp (&__t)[]) const noexcept
-    requires(sizeof(_Tp) >= 0) // Disallow incomplete element types.
-  {
-    return __t + 0;
+  // Given a subexpression E with type T, let t be an lvalue that denotes the reified object for E. Then:
+  using _Tp = remove_reference_t<_Ep>;
+
+  // If E is an rvalue and enable_borrowed_range<remove_cv_t<T>> is false, ranges​::​begin(E) is ill-formed.
+  if constexpr (is_rvalue_reference_v<_Ep> && !enable_borrowed_range<remove_cv_t<_Tp>>) {
+    return __diagnostic<"calling ranges::begin on an rvalue of a non-borrowed range">{};
+
+    // Otherwise, if T is an array type ([dcl.array]) and remove_all_extents_t<T> is an incomplete type,
+    // ranges​::​begin(E) is ill-formed with no diagnostic required.
+  } else if constexpr (is_array_v<_Tp>) {
+    if constexpr (!requires { sizeof(remove_all_extents_t<_Tp>); })
+      return __diagnostic<"calling ranges::begin on an array of incomplete type">{};
+    else
+      // Otherwise, if T is an array type, ranges​::​begin(E) is expression-equivalent to t + 0.
+      return [](_Ep __v) noexcept { return __v + 0; };
+
+    // Otherwise, if auto(t.begin()) is a valid expression whose type models input_or_output_iterator,
+    // ranges​::​begin(E) is expression-equivalent to auto(t.begin()).
+  } else if constexpr (requires(_Tp& __t) {
+                         { _LIBCPP_AUTO_CAST(__t.begin()) } -> input_or_output_iterator;
+                       }) {
+    return [](_Ep __v) noexcept(noexcept(_LIBCPP_AUTO_CAST(__v.begin()))) { return _LIBCPP_AUTO_CAST(__v.begin()); };
+
+    // Otherwise, if T is a class or enumeration type and auto(begin(t)) is a valid expression whose type models
+    // input_or_output_iterator where the meaning of begin is established as-if by performing argument-dependent lookup
+    // only ([basic.lookup.argdep]), then ranges​::​begin(E) is expression-equivalent to that expression.
+  } else if constexpr (__class_or_enum<_Tp>) {
+    if constexpr (requires(_Tp& __t) {
+                    { _LIBCPP_AUTO_CAST(begin(__t)) } -> input_or_output_iterator;
+                  })
+      return [](_Ep __v) noexcept(noexcept(_LIBCPP_AUTO_CAST(begin(__v)))) { return _LIBCPP_AUTO_CAST(begin(__v)); };
+    else
+      return __diagnostic<"neither v.begin() nor begin(v) are valid calls">{};
+
+    // Otherwise, ranges​::​begin(E) is ill-formed.
+  } else {
+    return __diagnostic<"neither v.begin() nor begin(v) are valid calls">{};
   }
-
-  template <class _Tp, size_t _Np>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp (&__t)[_Np]) const noexcept
-    requires(sizeof(_Tp) >= 0) // Disallow incomplete element types.
-  {
-    return __t + 0;
-  }
-
-  template <class _Tp>
-    requires __member_begin<_Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-      noexcept(noexcept(_LIBCPP_AUTO_CAST(__t.begin()))) {
-    return _LIBCPP_AUTO_CAST(__t.begin());
-  }
-
-  template <class _Tp>
-    requires __unqualified_begin<_Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-      noexcept(noexcept(_LIBCPP_AUTO_CAST(begin(__t)))) {
-    return _LIBCPP_AUTO_CAST(begin(__t));
-  }
-
-  void operator()(auto&&) const = delete;
-};
+}> {};
 } // namespace __begin
 
 inline namespace __cpo {
@@ -102,45 +104,53 @@ using iterator_t = decltype(ranges::begin(std::declval<_Tp&>()));
 
 namespace ranges {
 namespace __end {
-template <class _Tp>
-concept __member_end = __can_borrow<_Tp> && requires(_Tp&& __t) {
-  typename iterator_t<_Tp>;
-  { _LIBCPP_AUTO_CAST(__t.end()) } -> sentinel_for<iterator_t<_Tp>>;
-};
+struct __fn : _CPO<[]<class _Ep> consteval noexcept {
+  // [range.access.end]
 
-void end() = delete;
+  // Given a subexpression E with type T, let t be an lvalue that denotes the reified object for E. Then:
+  using _Tp = remove_reference_t<_Ep>;
 
-template <class _Tp>
-concept __unqualified_end =
-    !__member_end<_Tp> && __can_borrow<_Tp> && __class_or_enum<remove_cvref_t<_Tp>> && requires(_Tp&& __t) {
-      typename iterator_t<_Tp>;
-      { _LIBCPP_AUTO_CAST(end(__t)) } -> sentinel_for<iterator_t<_Tp>>;
-    };
+  // If E is an rvalue and enable_borrowed_range<remove_cv_t<T>> is false, ranges​::​end(E) is ill-formed.
+  if constexpr (is_rvalue_reference_v<_Ep> && !enable_borrowed_range<remove_cv_t<_Tp>>) {
+    return;
 
-struct __fn {
-  template <class _Tp, size_t _Np>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp (&__t)[_Np]) const noexcept
-    requires(sizeof(_Tp) >= 0) // Disallow incomplete element types.
-  {
-    return __t + _Np;
+    // Otherwise, if T is an array type ([dcl.array]) and remove_all_extents_t<T> is an incomplete type,
+    // ranges​::​end(E) is ill-formed with no diagnostic required.
+  } else if constexpr (is_array_v<_Tp>) {
+    if constexpr (!requires { sizeof(remove_all_extents_t<_Tp>); }) {
+      return;
+
+      // Otherwise, if T is an array of unknown bound, ranges​::​end(E) is ill-formed.
+    } else if constexpr (is_unbounded_array_v<_Tp>) {
+      return;
+
+      // Otherwise, if T is an array, ranges​::​end(E) is expression-equivalent to t + extent_v<T>.
+    } else {
+      return [](_Ep __v) noexcept { return __v + extent_v<_Tp>; };
+    }
+
+    // Otherwise, if auto(t.end()) is a valid expression whose type models sentinel_for<iterator_t<T>> then
+    // ranges​::​end(E) is expression-equivalent to auto(t.end()).
+  } else if constexpr (requires(_Tp& __t) {
+                         { _LIBCPP_AUTO_CAST(__t.end()) } -> sentinel_for<iterator_t<_Tp>>;
+                       }) {
+    return [](_Ep __v) noexcept(noexcept(_LIBCPP_AUTO_CAST(__v.end()))) { return _LIBCPP_AUTO_CAST(__v.end()); };
+
+    // Otherwise, if T is a class or enumeration type and auto(end(t)) is a valid expression whose type models
+    // sentinel_for<iterator_t<T>> where the meaning of end is established as-if by performing argument-dependent lookup
+    // only ([basic.lookup.argdep]), then ranges​::​end(E) is expression-equivalent to that expression.
+  } else if constexpr (__class_or_enum<_Tp>) {
+    if constexpr (requires(_Tp& __t) {
+                    { _LIBCPP_AUTO_CAST(end(__t)) } -> sentinel_for<iterator_t<_Tp>>;
+                  }) {
+      return [](_Ep __v) noexcept(noexcept(_LIBCPP_AUTO_CAST(end(__v)))) { return _LIBCPP_AUTO_CAST(end(__v)); };
+    } else {
+      return;
+    }
+  } else {
+    return;
   }
-
-  template <class _Tp>
-    requires __member_end<_Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-      noexcept(noexcept(_LIBCPP_AUTO_CAST(__t.end()))) {
-    return _LIBCPP_AUTO_CAST(__t.end());
-  }
-
-  template <class _Tp>
-    requires __unqualified_end<_Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-      noexcept(noexcept(_LIBCPP_AUTO_CAST(end(__t)))) {
-    return _LIBCPP_AUTO_CAST(end(__t));
-  }
-
-  void operator()(auto&&) const = delete;
-};
+}> {};
 } // namespace __end
 
 inline namespace __cpo {
@@ -191,8 +201,9 @@ struct __fn {
 
   template <class _Tp>
     requires is_rvalue_reference_v<_Tp&&>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const noexcept(
-      noexcept(ranges::end(static_cast<const _Tp&&>(__t)))) -> decltype(ranges::end(static_cast<const _Tp&&>(__t))) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
+      noexcept(noexcept(ranges::end(static_cast<const _Tp&&>(__t))))
+          -> decltype(ranges::end(static_cast<const _Tp&&>(__t))) {
     return ranges::end(static_cast<const _Tp&&>(__t));
   }
 };
