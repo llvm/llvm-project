@@ -1148,8 +1148,11 @@
 // PPC64LE-LINUX:#define _CALL_LINUX 1
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-unknown-freebsd < /dev/null | FileCheck -match-full-lines -check-prefix PPC64-FREEBSD %s
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64le-unknown-freebsd < /dev/null | FileCheck -match-full-lines -check-prefix PPC64-FREEBSD %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64le-unknown-freebsd < /dev/null | FileCheck -match-full-lines -check-prefix PPC64LE-FREEBSD %s
 // PPC64-FREEBSD-NOT: #define __LONG_DOUBLE_128__ 1
+// PPC64LE-FREEBSD: #define __LDBL_MANT_DIG__ 113
+// PPC64LE-FREEBSD: #define __LONG_DOUBLE_128__ 1
+// PPC64LE-FREEBSD: #define __LONG_DOUBLE_IEEE128__ 1
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none < /dev/null | FileCheck -match-full-lines -check-prefix PPC64PWR4-RSQRT %s
 //
