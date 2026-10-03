@@ -387,8 +387,20 @@ bool UnwindAssemblyInstEmulation::GetRegisterValue(const RegisterInfo &reg_info,
                  // to it...
   }
   // We are making up a value that is recognizable...
-  reg_value.SetUInt(reg_id, reg_info.byte_size);
+  reg_value.SetUInt(GetSentinelFor(reg_info), reg_info.byte_size);
   return false;
+}
+
+uint64_t
+UnwindAssemblyInstEmulation::GetSentinelFor(const RegisterInfo &reg_info) {
+  return MakeRegisterKindValuePair(reg_info);
+}
+
+bool UnwindAssemblyInstEmulation::RegisterHoldsEntryValue(
+    const RegisterInfo &reg_info) {
+  RegisterValue current;
+  GetRegisterValue(reg_info, current);
+  return current.GetAsUInt64() == GetSentinelFor(reg_info);
 }
 
 size_t UnwindAssemblyInstEmulation::ReadMemory(
@@ -478,8 +490,7 @@ size_t UnwindAssemblyInstEmulation::WriteMemory(
     // Only a register that still holds the value it had on entry to the
     // function should be saved, otherwise we would be recording the location of
     // a local.
-    const bool holds_entry_value =
-        m_state.register_values.count(MakeRegisterKindValuePair(data_reg)) == 0;
+    const bool holds_entry_value = RegisterHoldsEntryValue(data_reg);
 
     if (reg_num != LLDB_INVALID_REGNUM &&
         generic_regnum != LLDB_REGNUM_GENERIC_SP && holds_entry_value) {
