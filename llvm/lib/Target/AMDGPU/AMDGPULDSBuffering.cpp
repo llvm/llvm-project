@@ -1,0 +1,306 @@
+//===-- AMDGPULDSBuffering.cpp - Per-thread LDS buffering -----------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This pass buffers selected per-thread global memory accesses through LDS
+// (addrspace(3)) to improve performance in memory-bound kernels.
+//
+// SROA can split a partially updated aggregate into independent fragments. An
+// unchanged fragment can become a load whose only use is a store back to the
+// same global location. Intervening potentially-aliasing memory operations can
+// prevent generic load/store forwarding. Buffering the long-lived value in LDS
+// shortens its VGPR live range.
+//
+// The pass runs late in the pipeline, after SROA and AMDGPUPromoteAlloca,
+// using only leftover LDS budget to avoid interfering with other LDS
+// optimizations. It respects the same LDS budget constraints as
+// AMDGPUPromoteAlloca, ensuring that LDS usage remains within occupancy
+// tier limits.
+//
+// Current implementation handles the simplest pattern: a load from global
+// memory whose only use is a store back to the same pointer. This pattern is
+// transformed into a pair of memcpy operations (global->LDS and LDS->global),
+// parking the value in LDS to shorten its VGPR live range.
+//
+// This pass was inspired by finding that some rocrand performance tests
+// show better performance when global memory is buffered through LDS
+// instead of being loaded/stored to registers directly. This optimization
+// is experimental and must be enabled in the default pipeline via the
+// -amdgpu-enable-lds-buffering flag (or explicitly scheduled via
+// -passes='amdgpu-lds-buffering<...>').
+//
+//===----------------------------------------------------------------------===//
+
+#include "AMDGPU.h"
+#include "AMDGPULDSUtils.h"
+#include "AMDGPUTargetMachine.h"
+#include "GCNSubtarget.h"
+#include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/InitializePasses.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Alignment.h"
+#include "llvm/Support/Debug.h"
+#include <algorithm>
+#include <utility>
+
+#define DEBUG_TYPE "amdgpu-lds-buffering"
+
+using namespace llvm;
+
+namespace {
+
+class AMDGPULDSBufferingImpl {
+  const AMDGPUTargetMachine &TM;
+  AMDGPULDSBufferingOptions Options;
+  Module *Mod = nullptr;
+  const DataLayout *DL = nullptr;
+
+public:
+  AMDGPULDSBufferingImpl(const AMDGPUTargetMachine &TM,
+                         AMDGPULDSBufferingOptions Options)
+      : TM(TM), Options(Options) {}
+
+  bool run(Function &F) {
+    LLVM_DEBUG(dbgs() << "[LDSBuffer] Visit function: " << F.getName() << '\n');
+    if (!TM.getTargetTriple().isAMDGCN() ||
+        !AMDGPU::isEntryFunctionCC(F.getCallingConv()))
+      return false;
+
+    Mod = F.getParent();
+    DL = &Mod->getDataLayout();
+
+    AMDGPU::AMDGPULDSBudget Budget = AMDGPU::computeLDSBudget(F, TM);
+    if (!Budget.Promotable)
+      return false;
+    const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
+    unsigned WorkGroupSize = ST.getFlatWorkGroupSizes(F).second;
+
+    bool Changed = false;
+    unsigned CandidateIndex = 0;
+    unsigned NumTransformed = 0;
+
+    // Minimal pattern: a load from AS(1) whose only use is a store back to the
+    // exact same pointer later. Replace with global<->LDS memcpy pair to
+    // shorten the live range and free VGPRs.
+    SmallVector<Instruction *> ToErase;
+    for (BasicBlock &BB : F) {
+      for (Instruction &I : llvm::make_early_inc_range(BB)) {
+        auto *LI = dyn_cast<LoadInst>(&I);
+        if (!LI || LI->isVolatile() || LI->isAtomic())
+          continue;
+
+        Type *ValTy = LI->getType();
+        if (!ValTy->isFirstClassType())
+          continue;
+
+        Value *Ptr = LI->getPointerOperand();
+        auto *PtrTy = cast<PointerType>(Ptr->getType());
+        if (PtrTy->getAddressSpace() != AMDGPUAS::GLOBAL_ADDRESS)
+          continue;
+
+        if (!LI->hasOneUse())
+          continue;
+        auto *SI = dyn_cast<StoreInst>(LI->user_back());
+        if (!SI || SI->isVolatile() || SI->isAtomic())
+          continue;
+        if (SI->getValueOperand() != LI)
+          continue;
+
+        Value *SPtr = SI->getPointerOperand();
+        if (SPtr != Ptr)
+          continue;
+
+        TypeSize StoreSize = DL->getTypeStoreSize(ValTy);
+        TypeSize AllocSize = DL->getTypeAllocSize(ValTy);
+        if (StoreSize.isScalable() || AllocSize.isScalable())
+          continue;
+        uint64_t CopySize = StoreSize.getFixedValue();
+        if (CopySize == 0 || CopySize > Options.MaxBytes)
+          continue;
+        uint64_t SlotSize = AllocSize.getFixedValue();
+        Align MinAlign = Align(Options.MinAlignment);
+        Align LoadAlign = LI->getAlign();
+        Align StoreAlign = SI->getAlign();
+        Align Alignment = std::min(LoadAlign, StoreAlign);
+        if (Alignment < MinAlign)
+          continue;
+
+        unsigned ThisCandidate = CandidateIndex++;
+        if (Options.OnlyCandidate >= 0 &&
+            ThisCandidate != static_cast<unsigned>(Options.OnlyCandidate))
+          continue;
+
+        // Create LDS slot near the load and emit memcpy global->LDS.
+        LLVM_DEBUG({
+          dbgs() << "[LDSBuffer] Candidate found: load->store same ptr in "
+                 << F.getName() << '\n';
+          dbgs() << "            index=" << ThisCandidate
+                 << ", size=" << CopySize
+                 << "B, loadAlign=" << LoadAlign.value()
+                 << ", storeAlign=" << StoreAlign.value()
+                 << ", chosenAlign=" << Alignment.value()
+                 << ", ptr AS=" << PtrTy->getAddressSpace() << "\n";
+        });
+        IRBuilder<> BLoad(LI);
+
+        // Ensure LDS budget allows allocating a per-thread slot.
+        if (WorkGroupSize == 0 || SlotSize > Budget.Limit / WorkGroupSize)
+          continue;
+        if (!Budget.tryReserve(SlotSize * WorkGroupSize, Alignment))
+          continue;
+        auto [GV, SlotPtr] = createLDSGlobalAndThreadSlot(
+            F, ValTy, WorkGroupSize, Alignment, BLoad);
+
+        if (Options.Mode != AMDGPULDSBufferingMode::Buffer) {
+          Value *ControlValue =
+              Options.Mode == AMDGPULDSBufferingMode::ShadowLDS
+                  ? static_cast<Value *>(LI)
+                  : Constant::getNullValue(ValTy);
+          IRBuilder<> BAfterLoad(LI->getNextNode());
+          StoreInst *ControlStore = BAfterLoad.CreateStore(
+              ControlValue, SlotPtr, /*isVolatile=*/true);
+          ControlStore->setAlignment(Alignment);
+
+          IRBuilder<> BAfterStore(SI->getNextNode());
+          LoadInst *ControlLoad = BAfterStore.CreateLoad(
+              ValTy, SlotPtr, /*isVolatile=*/true, "ldsbuf.control");
+          ControlLoad->setAlignment(Alignment);
+
+          LLVM_DEBUG(dbgs()
+                     << "[LDSBuffer] Insert "
+                     << (Options.Mode == AMDGPULDSBufferingMode::ShadowLDS
+                             ? "shadow"
+                             : "irrelevant")
+                     << " LDS control: " << GV->getName() << ", bytes="
+                     << CopySize << ", align=" << Alignment.value() << '\n');
+          Changed = true;
+          ++NumTransformed;
+          continue;
+        }
+
+        // memcpy p3 <- p1
+        LLVM_DEBUG(dbgs() << "[LDSBuffer] Insert memcpy global->LDS: "
+                          << GV->getName() << ", bytes=" << CopySize
+                          << ", align=" << Alignment.value() << '\n');
+        BLoad.CreateMemCpy(SlotPtr, Alignment, Ptr, LoadAlign, StoreSize);
+
+        // Replace the final store with memcpy LDS->global.
+        IRBuilder<> BStore(SI);
+        LLVM_DEBUG(dbgs() << "[LDSBuffer] Insert memcpy LDS->global: "
+                          << GV->getName() << ", bytes=" << CopySize
+                          << ", align=" << Alignment.value() << '\n');
+        BStore.CreateMemCpy(SPtr, StoreAlign, SlotPtr, Alignment, StoreSize);
+
+        ToErase.push_back(SI);
+        ToErase.push_back(LI);
+        LLVM_DEBUG(dbgs() << "[LDSBuffer] Erase original load/store pair\n");
+        Changed = true;
+        ++NumTransformed;
+      }
+    }
+
+    for (Instruction *E : ToErase)
+      E->eraseFromParent();
+
+    LLVM_DEBUG(dbgs() << "[LDSBuffer] Transformations applied: "
+                      << NumTransformed << "\n");
+
+    return Changed;
+  }
+
+private:
+  // Create an LDS array [WGSize x ElemTy] and return pointer to per-thread
+  // slot.
+  std::pair<GlobalVariable *, Value *>
+  createLDSGlobalAndThreadSlot(Function &F, Type *ElemTy,
+                               unsigned WorkGroupSize, Align Alignment,
+                               IRBuilder<> &Builder) {
+    Type *ArrTy = ArrayType::get(ElemTy, WorkGroupSize);
+    GlobalVariable *GV = new GlobalVariable(
+        *Mod, ArrTy, /*isConstant=*/false, GlobalValue::InternalLinkage,
+        PoisonValue::get(ArrTy), (F.getName() + ".ldsbuf").str(), nullptr,
+        GlobalVariable::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS);
+    GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+    GV->setAlignment(Alignment);
+
+    LLVM_DEBUG({
+      dbgs() << "[LDSBuffer] Create LDS global: name=" << GV->getName()
+             << ", elemTy=" << *ElemTy << ", WGSize=" << WorkGroupSize
+             << ", align=" << Alignment.value() << '\n';
+    });
+
+    Value *LinearTID = AMDGPU::buildLinearThreadId(Builder, TM);
+    LLVMContext &Ctx = Mod->getContext();
+    Value *Indices[] = {Constant::getNullValue(Type::getInt32Ty(Ctx)),
+                        LinearTID};
+    Value *SlotPtr = Builder.CreateInBoundsGEP(ArrTy, GV, Indices);
+    return {GV, SlotPtr};
+  }
+};
+
+} // end anonymous namespace
+
+PreservedAnalyses AMDGPULDSBufferingPass::run(Function &F,
+                                              FunctionAnalysisManager &AM) {
+  bool Changed = AMDGPULDSBufferingImpl(TM, Options).run(F);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+//===----------------------------------------------------------------------===//
+// Legacy PM wrapper
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+class AMDGPULDSBufferingLegacy : public FunctionPass {
+  AMDGPULDSBufferingOptions Options;
+
+public:
+  static char ID;
+  AMDGPULDSBufferingLegacy(AMDGPULDSBufferingOptions Options)
+      : FunctionPass(ID), Options(Options) {}
+
+  StringRef getPassName() const override { return "AMDGPU LDS Buffering"; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    FunctionPass::getAnalysisUsage(AU);
+  }
+
+  bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
+    if (TargetPassConfig *TPC = getAnalysisIfAvailable<TargetPassConfig>())
+      return AMDGPULDSBufferingImpl(TPC->getTM<AMDGPUTargetMachine>(), Options)
+          .run(F);
+    return false;
+  }
+};
+
+} // end anonymous namespace
+
+char AMDGPULDSBufferingLegacy::ID = 0;
+
+INITIALIZE_PASS_BEGIN(AMDGPULDSBufferingLegacy, DEBUG_TYPE,
+                      "AMDGPU per-thread LDS buffering", false, false)
+INITIALIZE_PASS_END(AMDGPULDSBufferingLegacy, DEBUG_TYPE,
+                    "AMDGPU per-thread LDS buffering", false, false)
+
+FunctionPass *
+llvm::createAMDGPULDSBufferingLegacyPass(AMDGPULDSBufferingOptions Options) {
+  return new AMDGPULDSBufferingLegacy(Options);
+}
