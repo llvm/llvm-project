@@ -120,18 +120,6 @@ define <3 x bfloat> @return_arg_v3bf16(<3 x bfloat> %x) #0 {
 ;
 ; FAST_ISEL_AVX512BF16-LABEL: return_arg_v3bf16:
 ; FAST_ISEL_AVX512BF16:       # %bb.0:
-; FAST_ISEL_AVX512BF16-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; FAST_ISEL_AVX512BF16-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm0[1],xmm1[2],xmm0[3],xmm1[4],xmm0[5],xmm1[6],xmm0[7]
-; FAST_ISEL_AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm2
-; FAST_ISEL_AVX512BF16-NEXT:    vpextrw $2, %xmm0, %eax
-; FAST_ISEL_AVX512BF16-NEXT:    vmovd %eax, %xmm0
-; FAST_ISEL_AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
-; FAST_ISEL_AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
-; FAST_ISEL_AVX512BF16-NEXT:    vmovd %xmm0, %eax
-; FAST_ISEL_AVX512BF16-NEXT:    vcvtneps2bf16 %xmm2, %xmm0
-; FAST_ISEL_AVX512BF16-NEXT:    vcvtneps2bf16 %xmm1, %xmm1
-; FAST_ISEL_AVX512BF16-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; FAST_ISEL_AVX512BF16-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0
 ; FAST_ISEL_AVX512BF16-NEXT:    retq
 ;
 ; AVXNECONVERT-LABEL: return_arg_v3bf16:
@@ -140,23 +128,12 @@ define <3 x bfloat> @return_arg_v3bf16(<3 x bfloat> %x) #0 {
 ;
 ; FAST_ISEL_AVXNECONVERT-LABEL: return_arg_v3bf16:
 ; FAST_ISEL_AVXNECONVERT:       # %bb.0:
-; FAST_ISEL_AVXNECONVERT-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; FAST_ISEL_AVXNECONVERT-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm0[1],xmm1[2],xmm0[3],xmm1[4],xmm0[5],xmm1[6],xmm0[7]
-; FAST_ISEL_AVXNECONVERT-NEXT:    vpslld $16, %xmm0, %xmm2
-; FAST_ISEL_AVXNECONVERT-NEXT:    vpextrw $2, %xmm0, %eax
-; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %eax, %xmm0
-; FAST_ISEL_AVXNECONVERT-NEXT:    vpslld $16, %xmm0, %xmm0
-; FAST_ISEL_AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
-; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %xmm0, %eax
-; FAST_ISEL_AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm2, %xmm0
-; FAST_ISEL_AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm1, %xmm1
-; FAST_ISEL_AVXNECONVERT-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; FAST_ISEL_AVXNECONVERT-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
-; FAST_ISEL_AVXNECONVERT-NEXT:    vmovq %xmm1, %rax
+; FAST_ISEL_AVXNECONVERT-NEXT:    vmovq %xmm0, %rax
 ; FAST_ISEL_AVXNECONVERT-NEXT:    movl %eax, %ecx
 ; FAST_ISEL_AVXNECONVERT-NEXT:    shrl $16, %ecx
-; FAST_ISEL_AVXNECONVERT-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm1
-; FAST_ISEL_AVXNECONVERT-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %ecx, %xmm1
+; FAST_ISEL_AVXNECONVERT-NEXT:    vpbroadcastw %xmm1, %xmm1
+; FAST_ISEL_AVXNECONVERT-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3,4,5,6,7]
 ; FAST_ISEL_AVXNECONVERT-NEXT:    shrq $32, %rax
 ; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %eax, %xmm1
 ; FAST_ISEL_AVXNECONVERT-NEXT:    vpbroadcastw %xmm1, %xmm1
@@ -671,21 +648,7 @@ define <3 x bfloat> @call_ret_v3bf16(ptr %ptr) #0 {
 ; FAST_ISEL_AVX512BF16-LABEL: call_ret_v3bf16:
 ; FAST_ISEL_AVX512BF16:       # %bb.0:
 ; FAST_ISEL_AVX512BF16-NEXT:    pushq %rax
-; FAST_ISEL_AVX512BF16-NEXT:    movq (%rdi), %rax
-; FAST_ISEL_AVX512BF16-NEXT:    vmovd %eax, %xmm0
-; FAST_ISEL_AVX512BF16-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; FAST_ISEL_AVX512BF16-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2],xmm0[3],xmm1[4],xmm0[5],xmm1[6],xmm0[7]
-; FAST_ISEL_AVX512BF16-NEXT:    vmovq %rax, %xmm1
-; FAST_ISEL_AVX512BF16-NEXT:    vpslld $16, %xmm1, %xmm1
-; FAST_ISEL_AVX512BF16-NEXT:    shrq $32, %rax
-; FAST_ISEL_AVX512BF16-NEXT:    vmovd %eax, %xmm2
-; FAST_ISEL_AVX512BF16-NEXT:    vpslld $16, %xmm2, %xmm2
-; FAST_ISEL_AVX512BF16-NEXT:    vcvtneps2bf16 %xmm2, %xmm2
-; FAST_ISEL_AVX512BF16-NEXT:    vmovd %xmm2, %eax
-; FAST_ISEL_AVX512BF16-NEXT:    vcvtneps2bf16 %xmm1, %xmm1
-; FAST_ISEL_AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
-; FAST_ISEL_AVX512BF16-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; FAST_ISEL_AVX512BF16-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0
+; FAST_ISEL_AVX512BF16-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; FAST_ISEL_AVX512BF16-NEXT:    callq returns_v3bf16@PLT
 ;
 ; AVXNECONVERT-LABEL: call_ret_v3bf16:
@@ -699,26 +662,13 @@ define <3 x bfloat> @call_ret_v3bf16(ptr %ptr) #0 {
 ; FAST_ISEL_AVXNECONVERT-LABEL: call_ret_v3bf16:
 ; FAST_ISEL_AVXNECONVERT:       # %bb.0:
 ; FAST_ISEL_AVXNECONVERT-NEXT:    pushq %rax
-; FAST_ISEL_AVXNECONVERT-NEXT:    movq (%rdi), %rax
-; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %eax, %xmm0
-; FAST_ISEL_AVXNECONVERT-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; FAST_ISEL_AVXNECONVERT-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2],xmm0[3],xmm1[4],xmm0[5],xmm1[6],xmm0[7]
-; FAST_ISEL_AVXNECONVERT-NEXT:    vmovq %rax, %xmm1
-; FAST_ISEL_AVXNECONVERT-NEXT:    vpslld $16, %xmm1, %xmm1
-; FAST_ISEL_AVXNECONVERT-NEXT:    shrq $32, %rax
-; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %eax, %xmm2
-; FAST_ISEL_AVXNECONVERT-NEXT:    vpslld $16, %xmm2, %xmm2
-; FAST_ISEL_AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm2, %xmm2
-; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %xmm2, %eax
-; FAST_ISEL_AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm1, %xmm1
-; FAST_ISEL_AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
-; FAST_ISEL_AVXNECONVERT-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; FAST_ISEL_AVXNECONVERT-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0
+; FAST_ISEL_AVXNECONVERT-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; FAST_ISEL_AVXNECONVERT-NEXT:    vmovq %xmm0, %rax
 ; FAST_ISEL_AVXNECONVERT-NEXT:    movl %eax, %ecx
 ; FAST_ISEL_AVXNECONVERT-NEXT:    shrl $16, %ecx
-; FAST_ISEL_AVXNECONVERT-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm0
-; FAST_ISEL_AVXNECONVERT-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %ecx, %xmm1
+; FAST_ISEL_AVXNECONVERT-NEXT:    vpbroadcastw %xmm1, %xmm1
+; FAST_ISEL_AVXNECONVERT-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3,4,5,6,7]
 ; FAST_ISEL_AVXNECONVERT-NEXT:    shrq $32, %rax
 ; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %eax, %xmm1
 ; FAST_ISEL_AVXNECONVERT-NEXT:    vpbroadcastw %xmm1, %xmm1
