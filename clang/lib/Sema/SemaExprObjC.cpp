@@ -1035,6 +1035,42 @@ CheckObjCDictionaryLiteralDuplicateKeys(Sema &S,
   }
 }
 
+/// Warn about string keys of a constant dictionary literal that are not
+/// well-formed UTF-8. When a dictionary is emitted as a static constant, its
+/// keys are stored and looked up as UTF-16, and the CFString emitter truncates
+/// each key at the first ill-formed byte. A truncated key generally cannot be
+/// found at runtime as written, so flag it -- mirroring the diagnostic emitted
+/// for ill-formed UTF-8 when boxing a string (warn_objc_boxing_invalid_utf8_string).
+static void
+CheckObjCDictionaryLiteralUTF8Keys(Sema &S, ObjCDictionaryLiteral *Literal) {
+  // Only constant dictionaries store/truncate keys as UTF-16; ordinary runtime
+  // dictionaries keep the original NSString unchanged.
+  if (!Literal->isExpressibleAsConstantInitializer())
+    return;
+  if (Literal->isValueDependent() || Literal->isTypeDependent())
+    return;
+  // With -fno-constant-cfstrings the keys are emitted as
+  // OBJC_CLASS_$_NSConstantString, which preserves the original bytes (no
+  // truncation) and compares them as-is at lookup time, so an ill-formed key
+  // is still found and there is nothing to warn about.
+  if (S.getLangOpts().NoConstantCFStrings)
+    return;
+
+  for (unsigned Idx = 0, End = Literal->getNumElements(); Idx != End; ++Idx) {
+    Expr *Key = Literal->getKeyValueElement(Idx).Key->IgnoreParenImpCasts();
+    auto *StrLit = dyn_cast<ObjCStringLiteral>(Key);
+    if (!StrLit)
+      continue;
+    StringRef Bytes = StrLit->getString()->getBytes();
+    const llvm::UTF8 *Begin = Bytes.bytes_begin();
+    const llvm::UTF8 *End2 = Bytes.bytes_end();
+    if (!llvm::isLegalUTF8String(&Begin, End2))
+      S.Diag(StrLit->getExprLoc(),
+             diag::warn_objc_dictionary_ill_formed_utf8_key)
+          << StrLit->getSourceRange();
+  }
+}
+
 ExprResult SemaObjC::BuildObjCDictionaryLiteral(
     SourceRange SR, MutableArrayRef<ObjCDictionaryElement> Elements) {
   ASTContext &Context = getASTContext();
@@ -1246,6 +1282,7 @@ ExprResult SemaObjC::BuildObjCDictionaryLiteral(
       ExpressibleAsConstantInitLiteral, SR);
 
   CheckObjCDictionaryLiteralDuplicateKeys(SemaRef, DictionaryLiteral);
+  CheckObjCDictionaryLiteralUTF8Keys(SemaRef, DictionaryLiteral);
 
   return SemaRef.MaybeBindToTemporary(DictionaryLiteral);
 }
