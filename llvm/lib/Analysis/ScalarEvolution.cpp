@@ -654,9 +654,14 @@ static int CompareValueComplexity(const LoopInfo *const LI, Value *LV,
 // more efficient.
 // If the max analysis depth was reached, return std::nullopt, assuming we do
 // not know if they are equivalent for sure.
+using SCEVComplexityCache =
+    SmallDenseMap<std::tuple<const SCEV *, const SCEV *, unsigned>,
+                  std::optional<int>, 8>;
+
 static std::optional<int>
-CompareSCEVComplexity(const LoopInfo *const LI, const SCEV *LHS,
-                      const SCEV *RHS, DominatorTree &DT, unsigned Depth = 0) {
+CompareSCEVComplexityImpl(SCEVComplexityCache &Cache, const LoopInfo *const LI,
+                          const SCEV *LHS, const SCEV *RHS, DominatorTree &DT,
+                          unsigned Depth) {
   // Fast-path: SCEVs are uniqued so we can do a quick equality check.
   if (LHS == RHS)
     return 0;
@@ -669,6 +674,18 @@ CompareSCEVComplexity(const LoopInfo *const LI, const SCEV *LHS,
   if (Depth > MaxSCEVCompareDepth)
     return std::nullopt;
 
+  // Include Depth in the Key because a comparison can produce a different
+  // result at different Depth levels.
+  auto Key = std::make_tuple(LHS, RHS, Depth);
+  auto It = Cache.find(Key);
+  if (It != Cache.end())
+    return It->second;
+
+  auto CacheResult = [&Cache, &Key](std::optional<int> Result) {
+    Cache.try_emplace(Key, Result);
+    return Result;
+  };
+
   // Aside from the getSCEVType() ordering, the particular ordering
   // isn't very important except that it's beneficial to be consistent,
   // so that (a + b) and (b + a) don't end up as different expressions.
@@ -679,7 +696,7 @@ CompareSCEVComplexity(const LoopInfo *const LI, const SCEV *LHS,
 
     int X =
         CompareValueComplexity(LI, LU->getValue(), RU->getValue(), Depth + 1);
-    return X;
+    return CacheResult(X);
   }
 
   case scConstant: {
@@ -691,14 +708,14 @@ CompareSCEVComplexity(const LoopInfo *const LI, const SCEV *LHS,
     const APInt &RA = RC->getAPInt();
     unsigned LBitWidth = LA.getBitWidth(), RBitWidth = RA.getBitWidth();
     if (LBitWidth != RBitWidth)
-      return (int)LBitWidth - (int)RBitWidth;
-    return LA.ult(RA) ? -1 : 1;
+      return CacheResult((int)LBitWidth - (int)RBitWidth);
+    return CacheResult(LA.ult(RA) ? -1 : 1);
   }
 
   case scVScale: {
     const auto *LTy = cast<IntegerType>(cast<SCEVVScale>(LHS)->getType());
     const auto *RTy = cast<IntegerType>(cast<SCEVVScale>(RHS)->getType());
-    return LTy->getBitWidth() - RTy->getBitWidth();
+    return CacheResult(LTy->getBitWidth() - RTy->getBitWidth());
   }
 
   case scAddRecExpr: {
@@ -713,10 +730,10 @@ CompareSCEVComplexity(const LoopInfo *const LI, const SCEV *LHS,
       const BasicBlock *LHead = LLoop->getHeader(), *RHead = RLoop->getHeader();
       assert(LHead != RHead && "Two loops share the same header?");
       if (DT.dominates(LHead, RHead))
-        return 1;
+        return CacheResult(1);
       assert(DT.dominates(RHead, LHead) &&
              "No dominance between recurrences used by one SCEV?");
-      return -1;
+      return CacheResult(-1);
     }
 
     [[fallthrough]];
@@ -740,21 +757,29 @@ CompareSCEVComplexity(const LoopInfo *const LI, const SCEV *LHS,
     // Lexicographically compare n-ary-like expressions.
     unsigned LNumOps = LOps.size(), RNumOps = ROps.size();
     if (LNumOps != RNumOps)
-      return (int)LNumOps - (int)RNumOps;
+      return CacheResult((int)LNumOps - (int)RNumOps);
 
     for (unsigned i = 0; i != LNumOps; ++i) {
-      auto X = CompareSCEVComplexity(LI, LOps[i].getPointer(),
-                                     ROps[i].getPointer(), DT, Depth + 1);
+      auto X = CompareSCEVComplexityImpl(Cache, LI, LOps[i].getPointer(),
+                                         ROps[i].getPointer(), DT, Depth + 1);
       if (X != 0)
-        return X;
+        return CacheResult(X);
     }
-    return 0;
+    return CacheResult(0);
   }
 
   case scCouldNotCompute:
     llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
   }
   llvm_unreachable("Unknown SCEV kind!");
+}
+
+static std::optional<int> CompareSCEVComplexity(const LoopInfo *const LI,
+                                                const SCEV *LHS,
+                                                const SCEV *RHS,
+                                                DominatorTree &DT) {
+  SCEVComplexityCache Cache;
+  return CompareSCEVComplexityImpl(Cache, LI, LHS, RHS, DT, 0);
 }
 
 /// Given a list of SCEV objects, order them by their complexity, and group
