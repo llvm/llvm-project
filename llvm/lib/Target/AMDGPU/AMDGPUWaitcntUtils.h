@@ -5,6 +5,15 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+/// \file
+/// Shared waitcnt analysis primitives for AMDGPU passes: the InstCounterType
+/// enum and Waitcnt value class, s_waitcnt encode/decode helpers, and VMEM-load
+/// classification predicates.  These let a pass reason about VMEM-counter state
+/// without owning a full WaitcntBrackets scoreboard (SIInsertWaitcnts uses them
+/// alongside its own scoreboard).
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUWAITCNTUTILS_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUWAITCNTUTILS_H
@@ -16,6 +25,9 @@
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 namespace llvm {
+
+class GCNSubtarget;
+class MachineInstr;
 
 namespace AMDGPU {
 
@@ -202,6 +214,37 @@ unsigned encodeStorecntDscnt(const IsaVersion &Version, const Waitcnt &Decoded);
 /// Determine if \p MI is a gfx12+ single-counter S_WAIT_*CNT instruction,
 /// and if so, which counter it is waiting on.
 std::optional<AMDGPU::InstCounterType> counterTypeForInstr(unsigned Opcode);
+
+//===----------------------------------------------------------------------===//
+// VMEM-load classification primitives.
+//===----------------------------------------------------------------------===//
+
+/// \returns true iff \p MI increments only VMEM-class counters
+/// (loadcnt/samplecnt/bvhcnt/storecnt; vmcnt/vscnt on pre-GFX12).
+/// Includes BUF, image, and segment-specific FLAT; excludes generic FLAT.
+bool updateVMCntOnly(const MachineInstr &MI);
+
+/// \returns the VMEM completion family of \p MI: BVH_CNT for BVH images,
+/// SAMPLE_CNT for sampler/MSAA images, LOAD_CNT otherwise.
+/// \pre updateVMCntOnly(MI) must be true.
+InstCounterType getVmemFamily(const MachineInstr &MI);
+
+/// \returns the VMEM hardware counter \p MI increments under \p ST.
+/// Pre-GFX12: always LOAD_CNT.  GFX12+: BVH images -> BVH_CNT,
+/// sampler/MSAA images -> SAMPLE_CNT, everything else -> LOAD_CNT.
+InstCounterType getVmemLoadCounter(const MachineInstr &MI,
+                                   const GCNSubtarget &ST);
+
+/// \returns true iff a VMEM counter alone is sufficient to wait for \p MI's
+/// result.  This is updateVMCntOnly() plus generic FLAT loads on subtargets
+/// where \see GCNSubtarget::hasFlatLgkmVMemCountInOrder holds.
+bool isVmemCounterLoad(const MachineInstr &MI, const GCNSubtarget &ST);
+
+/// \returns true iff \p MI is a non-store, side-effect-free VMEM load that
+/// completes on a VMEM counter alone, with no pseudo-source memory operands
+/// (i.e. not a spill reload).  For BUNDLE: every member of the bundle must
+/// independently satisfy the same criteria.
+bool isPureVMemLoad(const MachineInstr &MI, const GCNSubtarget &ST);
 
 } // namespace AMDGPU
 
