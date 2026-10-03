@@ -932,15 +932,22 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
   // Alignment of the return value of the allocator call.
   Align GVAlign = CI->getPointerAlignment(DL);
 
-  // The allocation is in local `CI` and also stored in global `GV`. The
-  // alignment of the allocation should be at least as high as to satisfy the
-  // highest alignment of the uses of these, to avoid making the program less
-  // defined.
+  // The allocation is in local `CI` and also stored in global `GV`.
+  // `GV` is set once with the allocation, checked by
+  // `valueIsOnlyUsedLocallyOrStoredToOneGlobal`.
+  // The global's alignment should be at least as large as to support the
+  // largest alignment of `CI`s loads and stores, and `GV`s loads' users.
+  SmallVector<Value *, 4> Guses;
+  allUsesOfLoadAndStores(GV, Guses);
+
   {
     SmallPtrSet<const Value *, 4> Visited;
     SmallVector<const Value *, 4> Worklist;
     Worklist.push_back(CI);
-    Worklist.push_back(GV);
+
+    for (Value *Guse : Guses)
+      if (isa<LoadInst>(Guse))
+        Worklist.push_back(Guse);
 
     while (!Worklist.empty()) {
       const Value *V = Worklist.pop_back_val();
@@ -989,8 +996,6 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
   bool InitBoolUsed = false;
 
   // Loop over all instruction uses of GV, processing them in turn.
-  SmallVector<Value *, 4> Guses;
-  allUsesOfLoadAndStores(GV, Guses);
   for (auto *U : Guses) {
     if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
       // The global is initialized when the store to it occurs. If the stored
