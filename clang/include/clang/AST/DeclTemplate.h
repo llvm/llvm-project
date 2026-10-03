@@ -2741,12 +2741,14 @@ public:
     return PointOfInstantiation;
   }
 
+  /// An invalid location means that no instantiation was requested yet.
   void setPointOfInstantiation(SourceLocation Loc) {
-    assert(Loc.isValid() && "point of instantiation must be valid!");
     PointOfInstantiation = Loc;
   }
 
-  void setCompleteDefinition() { IsCompleteDefinition = true; }
+  void setCompleteDefinition(bool Complete = true) {
+    IsCompleteDefinition = Complete;
+  }
 
   /// If this variable template specialization is an instantiation of
   /// a template (rather than an explicit specialization), return the

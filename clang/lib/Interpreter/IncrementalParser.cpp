@@ -63,6 +63,7 @@ IncrementalParser::ParseOrWrapTopLevelDecl() {
   // Add a new PTU.
   ASTContext &C = S.getASTContext();
   C.addTranslationUnitDecl();
+  Act->getImplicitInstantiations().clear();
 
   // Skip previous eof due to last incremental input.
   if (P->getCurToken().is(tok::annot_repl_input_end)) {
@@ -88,6 +89,7 @@ IncrementalParser::ParseOrWrapTopLevelDecl() {
 
   DiagnosticsEngine &Diags = S.getDiagnostics();
   if (Diags.hasErrorOccurred()) {
+    resetImplicitInstantiations(C.getTranslationUnitDecl());
     CleanUpPTU(C.getTranslationUnitDecl());
 
     Diags.Reset(/*soft=*/true);
@@ -322,7 +324,107 @@ public:
   }
 
   void VisitTranslationUnitDecl(TranslationUnitDecl *D) { VisitDeclContext(D); }
+
+  /// Withdraw a redeclaration that the discarded PTU added to a context that
+  /// survives, such as the instantiated definition of a static data member.
+  void withdrawRedeclaration(VarDecl *D) {
+    VarDecl *Prev = D->getPreviousDecl();
+    assert(Prev && "not a redeclaration");
+    unlinkRedeclChain(S.getASTContext(), D, Prev);
+
+    // removeDecl also drops D from the lookup table of its context.
+    DeclContext *LexicalDC = D->getLexicalDeclContext();
+    if (LexicalDC->containsDecl(D))
+      LexicalDC->removeDecl(D);
+    removeFromLookups(D);
+    D->getDeclContext()->getPrimaryContext()->makeDeclVisibleInContext(Prev);
+  }
 };
+
+/// An implicit instantiation. An explicit instantiation declaration still
+/// instantiates inline functions and constant variables implicitly.
+static bool isImplicitlyInstantiated(TemplateSpecializationKind TSK) {
+  return TSK == TSK_ImplicitInstantiation ||
+         TSK == TSK_ExplicitInstantiationDeclaration;
+}
+
+static void resetPointOfInstantiation(FunctionDecl *FD) {
+  if (auto *Info = FD->getTemplateSpecializationInfo())
+    Info->setPointOfInstantiation(SourceLocation());
+  else if (auto *MSI = FD->getMemberSpecializationInfo())
+    MSI->setPointOfInstantiation(SourceLocation());
+  FD->setInstantiationIsPending(false);
+}
+
+static void resetPointOfInstantiation(VarDecl *VD) {
+  if (auto *Spec = dyn_cast<VarTemplateSpecializationDecl>(VD))
+    Spec->setPointOfInstantiation(SourceLocation());
+  else if (auto *MSI = VD->getMemberSpecializationInfo())
+    MSI->setPointOfInstantiation(SourceLocation());
+}
+
+void IncrementalParser::resetImplicitInstantiations(
+    TranslationUnitDecl *FailedTU) {
+  ImplicitInstantiationRecorder &R = Act->getImplicitInstantiations();
+  ASTContext &C = S.getASTContext();
+  ASTDeclUnmerger Unmerger(S, FailedTU);
+
+  for (FunctionDecl *FD : R.Functions) {
+    if (!isImplicitlyInstantiated(
+            FD->getTemplateSpecializationKindForInstantiation()) ||
+        FD->isDefaulted())
+      continue;
+    FD->setBody(nullptr);
+    FD->setWillHaveBody(false);
+    FD->setInvalidDecl(false);
+    if (R.DeducedReturnTypes.contains(FD))
+      C.adjustDeducedFunctionResultType(FD, FD->getDeclaredReturnType());
+    resetPointOfInstantiation(FD);
+    // The first use of a vtable instantiates its virtual functions. Forget the
+    // use, so the next one instantiates them again.
+    if (auto *MD = dyn_cast<CXXMethodDecl>(FD); MD && MD->isVirtual())
+      S.VTablesUsed.erase(MD->getParent()->getCanonicalDecl());
+  }
+
+  for (VarDecl *VD : R.Variables) {
+    // Skip the local variables of instantiated functions.
+    if (!VD->isStaticDataMember() && !isa<VarTemplateSpecializationDecl>(VD))
+      continue;
+    if (!isImplicitlyInstantiated(
+            VD->getTemplateSpecializationKindForInstantiation()))
+      continue;
+    // An out-of-line definition is a new declaration.
+    if (VarDecl *Decl = VD->getPreviousDecl()) {
+      Unmerger.withdrawRedeclaration(VD);
+      resetPointOfInstantiation(Decl);
+      continue;
+    }
+    VD->setInit(nullptr);
+    // Undo a type deduced or completed by the initializer.
+    if (TypeSourceInfo *TSI = VD->getTypeSourceInfo())
+      VD->setType(TSI->getType());
+    if (auto *Spec = dyn_cast<VarTemplateSpecializationDecl>(VD))
+      Spec->setCompleteDefinition(false);
+    VD->setInvalidDecl(false);
+    resetPointOfInstantiation(VD);
+  }
+
+  // A request with no definition yet (a template declared, not defined) must
+  // come again too.
+  for (ValueDecl *D : R.Requested) {
+    if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+      if (isImplicitlyInstantiated(
+              FD->getTemplateSpecializationKindForInstantiation()))
+        resetPointOfInstantiation(FD);
+    } else if (auto *VD = dyn_cast<VarDecl>(D)) {
+      if (isImplicitlyInstantiated(
+              VD->getTemplateSpecializationKindForInstantiation()))
+        resetPointOfInstantiation(VD);
+    }
+  }
+
+  R.clear();
+}
 
 void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
   ASTDeclUnmerger(S, MostRecentTU).Visit(MostRecentTU);
