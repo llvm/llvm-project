@@ -131,6 +131,9 @@ public:
   /// function \p F.
   void checkSubtargetFeatures(const Function &F) const;
 
+  bool isCustomIntrinsicSupported(unsigned IntrinsicID,
+                                  const CallBase &CB) const override;
+
   const SIInstrInfo *getInstrInfo() const override { return &InstrInfo; }
 
   const SIFrameLowering *getFrameLowering() const override {
