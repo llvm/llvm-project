@@ -840,6 +840,174 @@ TEST(DWARFDie, DWARFTypePrinterTest) {
   testAppendQualifiedName(Ctx->getDIEForOffset(0x28), "t3<int>::my_int");
 }
 
+void testUnitRootIsNotAScope(DWARFUnit *U) {
+  ASSERT_NE(nullptr, U);
+  DWARFDie Root = U->getUnitDIE(/*ExtractUnitDIEOnly=*/false);
+  ASSERT_TRUE(Root.isValid());
+
+  DWARFDie Bar = Root.getFirstChild();
+  ASSERT_TRUE(Bar.isValid());
+  DWARFDie Namespace = Bar.getSibling();
+  ASSERT_TRUE(Namespace.isValid());
+  DWARFDie Foo = Namespace.getFirstChild();
+  ASSERT_TRUE(Foo.isValid());
+
+  testAppendQualifiedName(Bar, "Bar");
+  testAppendQualifiedName(Foo, "ns::Foo");
+}
+
+TEST(DWARFDie, DWARFTypePrinterUnitRootTest) {
+  // A qualified name must not include the unit root, whatever its tag. The
+  // last root has no DW_AT_name, as dwz emits.
+
+  // 0x0000000c: DW_TAG_partial_unit
+  //               DW_AT_name      ("dwz-common.h")
+  // 0x0000001a:   DW_TAG_structure_type
+  //                 DW_AT_name    ("Bar")
+  // 0x0000001f:   DW_TAG_namespace
+  //                 DW_AT_name    ("ns")
+  // 0x00000023:     DW_TAG_structure_type
+  //                   DW_AT_name  ("Foo")
+  // 0x00000028:     NULL
+  // 0x00000029:   NULL
+  // 0x00000036: DW_TAG_compile_unit
+  //               DW_AT_name      ("main.cpp")
+  // 0x00000040:   DW_TAG_structure_type
+  //                 DW_AT_name    ("Bar")
+  // 0x00000045:   DW_TAG_namespace
+  //                 DW_AT_name    ("ns")
+  // 0x00000049:     DW_TAG_structure_type
+  //                   DW_AT_name  ("Foo")
+  // 0x0000004e:     NULL
+  // 0x0000004f:   NULL
+  // 0x0000005c: DW_TAG_partial_unit
+  //               DW_AT_comp_dir  ("/src")
+  // 0x00000062:   DW_TAG_structure_type
+  //                 DW_AT_name    ("Bar")
+  // 0x00000067:   DW_TAG_namespace
+  //                 DW_AT_name    ("ns")
+  // 0x0000006b:     DW_TAG_structure_type
+  //                   DW_AT_name  ("Foo")
+  // 0x00000070:     NULL
+  // 0x00000071:   NULL
+  const char *yamldata = R"(
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_partial_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+        - Code:            0x2
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+        - Code:            0x3
+          Tag:             DW_TAG_namespace
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+        - Code:            0x4
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+        - Code:            0x5
+          Tag:             DW_TAG_partial_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_comp_dir
+              Form:            DW_FORM_string
+  debug_info:
+    - Version:         5
+      UnitType:        DW_UT_partial
+      AbbrevTableID:   0
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - CStr:            dwz-common.h
+        - AbbrCode:        0x4
+          Values:
+            - CStr:            Bar
+        - AbbrCode:        0x3
+          Values:
+            - CStr:            ns
+        - AbbrCode:        0x4
+          Values:
+            - CStr:            Foo
+        - AbbrCode:        0x0
+        - AbbrCode:        0x0
+    - Version:         5
+      UnitType:        DW_UT_compile
+      AbbrevTableID:   0
+      Entries:
+        - AbbrCode:        0x2
+          Values:
+            - CStr:            main.cpp
+        - AbbrCode:        0x4
+          Values:
+            - CStr:            Bar
+        - AbbrCode:        0x3
+          Values:
+            - CStr:            ns
+        - AbbrCode:        0x4
+          Values:
+            - CStr:            Foo
+        - AbbrCode:        0x0
+        - AbbrCode:        0x0
+    - Version:         5
+      UnitType:        DW_UT_partial
+      AbbrevTableID:   0
+      Entries:
+        - AbbrCode:        0x5
+          Values:
+            - CStr:            /src
+        - AbbrCode:        0x4
+          Values:
+            - CStr:            Bar
+        - AbbrCode:        0x3
+          Values:
+            - CStr:            ns
+        - AbbrCode:        0x4
+          Values:
+            - CStr:            Foo
+        - AbbrCode:        0x0
+        - AbbrCode:        0x0)";
+  Expected<StringMap<std::unique_ptr<MemoryBuffer>>> Sections =
+      DWARFYAML::emitDebugSections(StringRef(yamldata),
+                                   /*IsLittleEndian=*/true,
+                                   /*Is64BitAddrSize=*/true);
+  ASSERT_THAT_EXPECTED(Sections, Succeeded());
+  std::unique_ptr<DWARFContext> Ctx =
+      DWARFContext::create(*Sections, 4, /*isLittleEndian=*/true);
+  ASSERT_EQ(3u, Ctx->getNumCompileUnits());
+
+  DWARFUnit *PartialUnit = Ctx->getUnitAtIndex(0);
+  ASSERT_NE(nullptr, PartialUnit);
+  EXPECT_EQ(dwarf::DW_TAG_partial_unit,
+            PartialUnit->getUnitDIE(/*ExtractUnitDIEOnly=*/false).getTag());
+  testUnitRootIsNotAScope(PartialUnit);
+
+  DWARFUnit *CompileUnit = Ctx->getUnitAtIndex(1);
+  ASSERT_NE(nullptr, CompileUnit);
+  EXPECT_EQ(dwarf::DW_TAG_compile_unit,
+            CompileUnit->getUnitDIE(/*ExtractUnitDIEOnly=*/false).getTag());
+  testUnitRootIsNotAScope(CompileUnit);
+
+  DWARFUnit *UnnamedPartialUnit = Ctx->getUnitAtIndex(2);
+  ASSERT_NE(nullptr, UnnamedPartialUnit);
+  EXPECT_EQ(
+      dwarf::DW_TAG_partial_unit,
+      UnnamedPartialUnit->getUnitDIE(/*ExtractUnitDIEOnly=*/false).getTag());
+  testUnitRootIsNotAScope(UnnamedPartialUnit);
+}
+
 TEST(DWARFDie, getLanguage) {
   const char *yamldata = R"(
     debug_abbrev:
