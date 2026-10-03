@@ -43,4 +43,10 @@
     enumerator :: wrong = 0/0
   end enum
 
+  enum, bind(C)
+    enumerator :: max = huge(0_4)
+    !ERROR: Enumerator value is out of range for INTEGER(4)
+    enumerator :: too_large
+  end enum
+
 end
