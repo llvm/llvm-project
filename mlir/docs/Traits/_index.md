@@ -88,12 +88,17 @@ class MyTrait : public OpTrait::TraitBase<ConcreteType, MyTrait> {
 public:
   /// Override the 'foldTrait' hook to support trait based folding on the
   /// concrete operation.
-  static LogicalResult foldTrait(Operation *op, ArrayRef<Attribute> operands,
-                                 SmallVectorImpl<OpFoldResult> &results) {
+  static OpFoldResults foldTrait(Operation *op, ArrayRef<Attribute> operands) {
     // ...
   }
 };
 ```
+
+The returned `OpFoldResults` follows the rules of the `OpFoldResults` form of
+`fold` in [Canonicalization](../Canonicalization.md#canonicalizing-with-the-fold-method).
+The legacy signature
+`static LogicalResult foldTrait(Operation *, ArrayRef<Attribute>, SmallVectorImpl<OpFoldResult> &)`
+is also accepted. It does not support partial folds.
 
 Note: It is generally good practice to define the implementation of the
 `foldTrait` hook out-of-line as a free function when possible to avoid

@@ -188,6 +188,16 @@ Operation *MyDialect::materializeConstant(OpBuilder &builder, Attribute value,
 }
 ```
 
+### `useOpFoldResults`: Folding Operations with Multiple Results
+
+This field selects the `fold` declaration for each operation of the dialect
+that sets `hasFolder` and does not have exactly one fixed result. If it is `1`,
+the operation declares `OpFoldResults fold(FoldAdaptor)`, which supports
+partial folds. If it is `0`, the operation declares the legacy
+`LogicalResult fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &)`. See the
+[documentation for canonicalization](../Canonicalization.md#canonicalizing-with-the-fold-method)
+for the rules of each form.
+
 ### `hasNonDefaultDestructor`: Providing a custom destructor
 
 This field should be used when the Dialect class has a custom destructor, i.e.
@@ -543,9 +553,10 @@ auto printFn = [](Operation *op, OpAsmPrinter &printer) {
 };
 
 // General folder implementation, see AbstractOperation::foldHook for more
-// information.
-auto foldHookFn = [](Operation * op, ArrayRef<Attribute> operands, 
-                                   SmallVectorImpl<OpFoldResult> &result) {
+// information. The legacy form with a `SmallVectorImpl<OpFoldResult> &`
+// out-parameter is also accepted.
+auto foldHookFn = [](Operation * op, ArrayRef<Attribute> operands)
+                                   -> OpFoldResults {
     ...
 };
 
