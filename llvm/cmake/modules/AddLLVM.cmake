@@ -106,6 +106,9 @@ function(llvm_update_pch name)
     # Disable for Objective-C as well to avoid errors due to mixed languages.
     set(ARG_DISABLE_PCH_REUSE ON)
   endif()
+  if(ARG_DISABLE_PCH_REUSE)
+    set_target_properties(${name} PROPERTIES LLVM_DISABLE_PCH_REUSE TRUE)
+  endif()
 
   # Find PCH with highest priority from dependencies. We reuse the first PCH
   # with the highest priority. If the target has its own set of PCH, we give it
@@ -117,6 +120,7 @@ function(llvm_update_pch name)
     ${LLVM_LINK_COMPONENTS}
   )
   list(APPEND libs ${ARG_LINK_LIBS})
+  list(APPEND libs ${ARG_PCH_REUSE_FROM})
   foreach(lib ${libs})
     if(TARGET ${lib})
       get_target_property(lib_pch_priority ${lib} LLVM_PCH_PRIORITY)
@@ -573,6 +577,9 @@ endfunction(set_windows_version_resource_properties)
 #   PRECOMPILE_HEADERS include_directives...
 #     Pre-compiled C++ headers to use. PCH can be reused by dependants. If
 #     specified, no PCHs from dependencies will be reused.
+#   PCH_REUSE_FROM targets...
+#     Additional targets whose PCH may be reused without adding a link
+#     dependency.
 #   DISABLE_PCH_REUSE
 #     Disable reuse of pre-compiled headers in both directions: the library will
 #     not reuse the PCH of a dependency and a defined PCH will not be offered
@@ -598,7 +605,7 @@ function(llvm_add_library name)
   cmake_parse_arguments(ARG
     "MODULE;SHARED;STATIC;OBJECT;DISABLE_LLVM_LINK_LLVM_DYLIB;SONAME;NO_INSTALL_RPATH;COMPONENT_LIB;DISABLE_PCH_REUSE"
     "OUTPUT_NAME;PLUGIN_TOOL;ENTITLEMENTS;BUNDLE_PATH"
-    "ADDITIONAL_HEADERS;PRECOMPILE_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS;OBJLIBS"
+    "ADDITIONAL_HEADERS;PRECOMPILE_HEADERS;PCH_REUSE_FROM;DEPENDS;LINK_COMPONENTS;LINK_LIBS;OBJLIBS"
     ${ARGN})
   list(APPEND LLVM_COMMON_DEPENDS ${ARG_DEPENDS})
   list(APPEND LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
