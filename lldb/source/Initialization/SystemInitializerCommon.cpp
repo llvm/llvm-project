@@ -15,6 +15,7 @@
 #include "lldb/Host/Socket.h"
 #include "lldb/Target/Statistics.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/StringPool.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/Version/Version.h"
 
@@ -40,6 +41,7 @@ SystemInitializerCommon::SystemInitializerCommon() = default;
 SystemInitializerCommon::~SystemInitializerCommon() = default;
 
 llvm::Error SystemInitializerCommon::Initialize() {
+  StringPool::Initialize();
 #if defined(_WIN32)
   const char *disable_crash_dialog_var = getenv("LLDB_DISABLE_CRASH_DIALOG");
   if (disable_crash_dialog_var &&
@@ -95,6 +97,8 @@ llvm::Error SystemInitializerCommon::Initialize() {
 
 void SystemInitializerCommon::Terminate() {
   LLDB_SCOPED_TIMER();
+
+  StringPool::Terminate();
 
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__) ||       \
     defined(__OpenBSD__)
