@@ -74,9 +74,7 @@ LogicalResult SparseConstantPropagation::visitOperation(
   Attribute originalProperties = op->getPropertiesAsAttribute();
 
   // Simulate the result of folding this operation to a constant.
-  SmallVector<OpFoldResult, 8> foldResults;
-  foldResults.reserve(op->getNumResults());
-  LogicalResult folded = op->fold(constantOperands, foldResults);
+  NormalizedOpFoldResults foldResults = op->fold(constantOperands);
 
   // `fold` can mutate the operation in place and still return an out-of-place
   // result, so the mutation must be reverted regardless of the outcome.
@@ -89,22 +87,26 @@ LogicalResult SparseConstantPropagation::visitOperation(
     (void)op->setPropertiesFromAttribute(originalProperties,
                                          /*emitError=*/nullptr);
 
-  // If folding failed or was in-place, mark the results as overdefined. We
-  // don't allow in-place folds here: the goal is simulated execution, not
+  // If folding failed or replaced no result, mark the results as overdefined.
+  // We don't allow in-place folds here: the goal is simulated execution, not
   // general folding.
-  if (failed(folded) || foldResults.empty()) {
+  if (!foldResults.replacesAny()) {
     setAllToEntryStates(results);
     return success();
   }
 
   // Merge the fold results into the lattice for this operation.
-  assert(foldResults.size() == op->getNumResults() && "invalid result size");
-  for (const auto it : llvm::zip(results, foldResults)) {
-    Lattice<ConstantValue> *lattice = std::get<0>(it);
+  for (auto [lattice, foldResult] :
+       llvm::zip_equal(results, foldResults.getReplacements())) {
+    // A kept result is overdefined. It must not join with its own lattice,
+    // because that leaves the lattice uninitialized.
+    if (!foldResult) {
+      setToEntryState(lattice);
+      continue;
+    }
 
     // Merge in the result of the fold, either a constant or a value.
-    OpFoldResult foldResult = std::get<1>(it);
-    if (Attribute attr = llvm::dyn_cast_if_present<Attribute>(foldResult)) {
+    if (Attribute attr = llvm::dyn_cast<Attribute>(foldResult)) {
       LDBG() << "Folded to constant: " << attr;
       propagateIfChanged(lattice,
                          lattice->join(ConstantValue(attr, op->getDialect())));
