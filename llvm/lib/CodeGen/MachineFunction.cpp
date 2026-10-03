@@ -105,6 +105,7 @@ static const char *getPropertyName(MachineFunctionProperties::Property Prop) {
   case P::FailsVerification: return "FailsVerification";
   case P::FailedRegAlloc: return "FailedRegAlloc";
   case P::TracksDebugUserValues: return "TracksDebugUserValues";
+  case P::UsesBlockArgs: return "UsesBlockArgs";
   }
   // clang-format on
   llvm_unreachable("Invalid machine function property");
