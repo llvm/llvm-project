@@ -13,6 +13,7 @@ set(LLVM_LINK_COMPONENTS
 # clangd/tool/CMakeLists.txt for an example.
 add_clang_library(clangDaemonTweaks OBJECT
   AddUsing.cpp
+  AddUsingReplaceAll.cpp
   AnnotateHighlightings.cpp
   DefineInline.cpp
   DefineOutline.cpp
@@ -27,6 +28,7 @@ add_clang_library(clangDaemonTweaks OBJECT
   OverridePureVirtuals.cpp
   PopulateSwitch.cpp
   RawStringLiteral.cpp
+  ReplaceQualifiedWithAlias.cpp
   RemoveUsingNamespace.cpp
   ScopifyEnum.cpp
   SpecialMembers.cpp

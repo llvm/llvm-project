@@ -120,6 +120,7 @@ add_unittest(ClangdUnitTests ClangdTests
   support/TraceTests.cpp
 
   tweaks/AddUsingTests.cpp
+  tweaks/AddUsingReplaceAllTests.cpp
   tweaks/AnnotateHighlightingsTests.cpp
   tweaks/DefineInlineTests.cpp
   tweaks/DefineOutlineTests.cpp
@@ -136,6 +137,7 @@ add_unittest(ClangdUnitTests ClangdTests
   tweaks/OverridePureVirtualsTests.cpp
   tweaks/PopulateSwitchTests.cpp
   tweaks/RawStringLiteralTests.cpp
+  tweaks/ReplaceQualifiedWithAliasTests.cpp
   tweaks/RemoveUsingNamespaceTests.cpp
   tweaks/ScopifyEnumTests.cpp
   tweaks/ShowSelectionTreeTests.cpp
