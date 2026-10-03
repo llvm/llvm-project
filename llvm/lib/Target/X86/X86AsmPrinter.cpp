@@ -1126,7 +1126,6 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
           (TT.getArch() == Triple::x86) ? "__fltused" : "_fltused";
       MCSymbol *S = MMI->getContext().getOrCreateSymbol(SymbolName);
       OutStreamer->emitSymbolAttribute(S, MCSA_Global);
-      return;
     }
   } else if (TT.isOSBinFormatELF()) {
     FM.serializeToFaultMapSection();
