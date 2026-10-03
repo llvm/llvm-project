@@ -13,7 +13,7 @@ define float @s256_to_f32(i256 %val) {
 ; CHECK-NEXT:    orr x8, x1, x3
 ; CHECK-NEXT:    orr x9, x0, x2
 ; CHECK-NEXT:    orr x8, x9, x8
-; CHECK-NEXT:    cbz x8, .LBB0_7
+; CHECK-NEXT:    cbz x8, .LBB0_9
 ; CHECK-NEXT:  // %bb.1: // %itofp-if-end
 ; CHECK-NEXT:    sub sp, sp, #192
 ; CHECK-NEXT:    .cfi_def_cfa_offset 192
@@ -44,13 +44,13 @@ define float @s256_to_f32(i256 %val) {
 ; CHECK-NEXT:    mov w8, #255 // =0xff
 ; CHECK-NEXT:    cmp w9, #25
 ; CHECK-NEXT:    sub w8, w8, w15
-; CHECK-NEXT:    b.lt .LBB0_8
+; CHECK-NEXT:    b.lt .LBB0_10
 ; CHECK-NEXT:  // %bb.2: // %itofp-if-then4
 ; CHECK-NEXT:    cmp w9, #26
 ; CHECK-NEXT:    b.eq .LBB0_5
 ; CHECK-NEXT:  // %bb.3: // %itofp-if-then4
 ; CHECK-NEXT:    cmp w9, #25
-; CHECK-NEXT:    b.eq .LBB0_9
+; CHECK-NEXT:    b.eq .LBB0_12
 ; CHECK-NEXT:  // %bb.4: // %itofp-sw-default
 ; CHECK-NEXT:    mov w14, #230 // =0xe6
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
@@ -100,12 +100,12 @@ define float @s256_to_f32(i256 %val) {
 ; CHECK-NEXT:    ubfx w11, w10, #2, #1
 ; CHECK-NEXT:    orr x10, x10, x11
 ; CHECK-NEXT:    adds x10, x10, #1
-; CHECK-NEXT:    lsr x11, x10, #2
-; CHECK-NEXT:    lsr x12, x10, #3
-; CHECK-NEXT:    tst w10, #0x4000000
-; CHECK-NEXT:    csel w9, w8, w9, eq
-; CHECK-NEXT:    csel w10, w11, w12, eq
-; CHECK-NEXT:  .LBB0_6: // %itofp-if-end26
+; CHECK-NEXT:    tbnz w10, #26, .LBB0_11
+; CHECK-NEXT:  // %bb.6:
+; CHECK-NEXT:    lsr x10, x10, #2
+; CHECK-NEXT:  .LBB0_7: // %itofp-if-end26
+; CHECK-NEXT:    mov w9, w8
+; CHECK-NEXT:  .LBB0_8: // %itofp-if-end26
 ; CHECK-NEXT:    lsr x11, x3, #32
 ; CHECK-NEXT:    mov w12, #1065353216 // =0x3f800000
 ; CHECK-NEXT:    mov w13, #2139095040 // =0x7f800000
@@ -123,10 +123,10 @@ define float @s256_to_f32(i256 %val) {
 ; CHECK-NEXT:    fcsel s0, s0, s1, hi
 ; CHECK-NEXT:    add sp, sp, #192
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_7:
+; CHECK-NEXT:  .LBB0_9:
 ; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_8: // %itofp-if-else
+; CHECK-NEXT:  .LBB0_10: // %itofp-if-else
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    sub w9, w15, #232
 ; CHECK-NEXT:    str x10, [sp, #160]
@@ -138,9 +138,13 @@ define float @s256_to_f32(i256 %val) {
 ; CHECK-NEXT:    sub x10, x10, x11
 ; CHECK-NEXT:    ldr x10, [x10]
 ; CHECK-NEXT:    lsl x10, x10, x9
-; CHECK-NEXT:    mov w9, w8
-; CHECK-NEXT:    b .LBB0_6
-; CHECK-NEXT:  .LBB0_9: // %itofp-sw-bb
+; CHECK-NEXT:    // kill: def $w10 killed $w10 killed $x10 def $x10
+; CHECK-NEXT:    b .LBB0_7
+; CHECK-NEXT:  .LBB0_11: // %itofp-if-then20
+; CHECK-NEXT:    lsr x10, x10, #3
+; CHECK-NEXT:    // kill: def $w10 killed $w10 killed $x10 def $x10
+; CHECK-NEXT:    b .LBB0_8
+; CHECK-NEXT:  .LBB0_12: // %itofp-sw-bb
 ; CHECK-NEXT:    lsl x10, x10, #1
 ; CHECK-NEXT:    b .LBB0_5
   %result = sitofp i256 %val to float
@@ -153,7 +157,7 @@ define float @u256_to_f32(i256 %val) {
 ; CHECK-NEXT:    orr x8, x1, x3
 ; CHECK-NEXT:    orr x9, x0, x2
 ; CHECK-NEXT:    orr x8, x9, x8
-; CHECK-NEXT:    cbz x8, .LBB1_7
+; CHECK-NEXT:    cbz x8, .LBB1_9
 ; CHECK-NEXT:  // %bb.1: // %itofp-if-end
 ; CHECK-NEXT:    sub sp, sp, #192
 ; CHECK-NEXT:    .cfi_def_cfa_offset 192
@@ -176,13 +180,13 @@ define float @u256_to_f32(i256 %val) {
 ; CHECK-NEXT:    mov w8, #255 // =0xff
 ; CHECK-NEXT:    cmp w9, #25
 ; CHECK-NEXT:    sub w8, w8, w11
-; CHECK-NEXT:    b.lt .LBB1_8
+; CHECK-NEXT:    b.lt .LBB1_10
 ; CHECK-NEXT:  // %bb.2: // %itofp-if-then4
 ; CHECK-NEXT:    cmp w9, #26
 ; CHECK-NEXT:    b.eq .LBB1_5
 ; CHECK-NEXT:  // %bb.3: // %itofp-if-then4
 ; CHECK-NEXT:    cmp w9, #25
-; CHECK-NEXT:    b.eq .LBB1_9
+; CHECK-NEXT:    b.eq .LBB1_12
 ; CHECK-NEXT:  // %bb.4: // %itofp-sw-default
 ; CHECK-NEXT:    mov w10, #230 // =0xe6
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
@@ -232,12 +236,12 @@ define float @u256_to_f32(i256 %val) {
 ; CHECK-NEXT:    ubfx w10, w0, #2, #1
 ; CHECK-NEXT:    orr x10, x0, x10
 ; CHECK-NEXT:    adds x10, x10, #1
-; CHECK-NEXT:    lsr x11, x10, #2
-; CHECK-NEXT:    lsr x12, x10, #3
-; CHECK-NEXT:    tst w10, #0x4000000
-; CHECK-NEXT:    csel w9, w8, w9, eq
-; CHECK-NEXT:    csel w10, w11, w12, eq
-; CHECK-NEXT:  .LBB1_6: // %itofp-if-end26
+; CHECK-NEXT:    tbnz w10, #26, .LBB1_11
+; CHECK-NEXT:  // %bb.6:
+; CHECK-NEXT:    lsr x10, x10, #2
+; CHECK-NEXT:  .LBB1_7: // %itofp-if-end26
+; CHECK-NEXT:    mov w9, w8
+; CHECK-NEXT:  .LBB1_8: // %itofp-if-end26
 ; CHECK-NEXT:    bfi w10, w9, #23, #9
 ; CHECK-NEXT:    mov w9, #1065353216 // =0x3f800000
 ; CHECK-NEXT:    cmp w8, #127
@@ -248,10 +252,10 @@ define float @u256_to_f32(i256 %val) {
 ; CHECK-NEXT:    fcsel s0, s1, s0, hi
 ; CHECK-NEXT:    add sp, sp, #192
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB1_7:
+; CHECK-NEXT:  .LBB1_9:
 ; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB1_8: // %itofp-if-else
+; CHECK-NEXT:  .LBB1_10: // %itofp-if-else
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    sub w9, w11, #232
 ; CHECK-NEXT:    add x11, sp, #128
@@ -263,9 +267,13 @@ define float @u256_to_f32(i256 %val) {
 ; CHECK-NEXT:    sub x10, x11, x10
 ; CHECK-NEXT:    ldr x10, [x10]
 ; CHECK-NEXT:    lsl x10, x10, x9
-; CHECK-NEXT:    mov w9, w8
-; CHECK-NEXT:    b .LBB1_6
-; CHECK-NEXT:  .LBB1_9: // %itofp-sw-bb
+; CHECK-NEXT:    // kill: def $w10 killed $w10 killed $x10 def $x10
+; CHECK-NEXT:    b .LBB1_7
+; CHECK-NEXT:  .LBB1_11: // %itofp-if-then20
+; CHECK-NEXT:    lsr x10, x10, #3
+; CHECK-NEXT:    // kill: def $w10 killed $w10 killed $x10 def $x10
+; CHECK-NEXT:    b .LBB1_8
+; CHECK-NEXT:  .LBB1_12: // %itofp-sw-bb
 ; CHECK-NEXT:    lsl x0, x0, #1
 ; CHECK-NEXT:    b .LBB1_5
   %result = uitofp i256 %val to float
@@ -423,7 +431,7 @@ define double @u256_to_f64(i256 %val) {
 ; CHECK-NEXT:    orr x8, x1, x3
 ; CHECK-NEXT:    orr x9, x0, x2
 ; CHECK-NEXT:    orr x8, x9, x8
-; CHECK-NEXT:    cbz x8, .LBB3_7
+; CHECK-NEXT:    cbz x8, .LBB3_8
 ; CHECK-NEXT:  // %bb.1: // %itofp-if-end
 ; CHECK-NEXT:    sub sp, sp, #192
 ; CHECK-NEXT:    .cfi_def_cfa_offset 192
@@ -446,13 +454,13 @@ define double @u256_to_f64(i256 %val) {
 ; CHECK-NEXT:    mov w8, #255 // =0xff
 ; CHECK-NEXT:    cmp w9, #54
 ; CHECK-NEXT:    sub w8, w8, w10
-; CHECK-NEXT:    b.lt .LBB3_8
+; CHECK-NEXT:    b.lt .LBB3_9
 ; CHECK-NEXT:  // %bb.2: // %itofp-if-then4
 ; CHECK-NEXT:    cmp w9, #55
 ; CHECK-NEXT:    b.eq .LBB3_5
 ; CHECK-NEXT:  // %bb.3: // %itofp-if-then4
 ; CHECK-NEXT:    cmp w9, #54
-; CHECK-NEXT:    b.eq .LBB3_9
+; CHECK-NEXT:    b.eq .LBB3_11
 ; CHECK-NEXT:  // %bb.4: // %itofp-sw-default
 ; CHECK-NEXT:    mov w11, #201 // =0xc9
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
@@ -507,17 +515,13 @@ define double @u256_to_f64(i256 %val) {
 ; CHECK-NEXT:  .LBB3_5: // %itofp-sw-epilog
 ; CHECK-NEXT:    ubfx w10, w0, #2, #1
 ; CHECK-NEXT:    orr x10, x0, x10
-; CHECK-NEXT:    adds x10, x10, #1
-; CHECK-NEXT:    adcs x11, x1, xzr
-; CHECK-NEXT:    extr x12, x11, x10, #2
-; CHECK-NEXT:    extr x13, x11, x10, #34
-; CHECK-NEXT:    extr x14, x11, x10, #3
-; CHECK-NEXT:    extr x11, x11, x10, #35
-; CHECK-NEXT:    tst x10, #0x80000000000000
-; CHECK-NEXT:    csel x10, x12, x14, eq
-; CHECK-NEXT:    csel w8, w8, w9, eq
-; CHECK-NEXT:    csel w11, w13, w11, eq
-; CHECK-NEXT:  .LBB3_6: // %itofp-if-end26
+; CHECK-NEXT:    adds x11, x10, #1
+; CHECK-NEXT:    adcs x12, x1, xzr
+; CHECK-NEXT:    tbnz x11, #55, .LBB3_10
+; CHECK-NEXT:  // %bb.6:
+; CHECK-NEXT:    extr x10, x12, x11, #2
+; CHECK-NEXT:    extr x11, x12, x11, #34
+; CHECK-NEXT:  .LBB3_7: // %itofp-if-end26
 ; CHECK-NEXT:    bfi w11, w8, #20, #12
 ; CHECK-NEXT:    mov w8, #1072693248 // =0x3ff00000
 ; CHECK-NEXT:    add w8, w11, w8
@@ -525,10 +529,10 @@ define double @u256_to_f64(i256 %val) {
 ; CHECK-NEXT:    fmov d0, x10
 ; CHECK-NEXT:    add sp, sp, #192
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB3_7:
+; CHECK-NEXT:  .LBB3_8:
 ; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB3_8: // %itofp-if-else
+; CHECK-NEXT:  .LBB3_9: // %itofp-if-else
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    sub w9, w10, #203
 ; CHECK-NEXT:    add x11, sp, #128
@@ -542,8 +546,15 @@ define double @u256_to_f64(i256 %val) {
 ; CHECK-NEXT:    ldr x10, [x10]
 ; CHECK-NEXT:    lsl x10, x10, x9
 ; CHECK-NEXT:    lsr x11, x10, #32
-; CHECK-NEXT:    b .LBB3_6
-; CHECK-NEXT:  .LBB3_9: // %itofp-sw-bb
+; CHECK-NEXT:    // kill: def $w11 killed $w11 killed $x11 def $x11
+; CHECK-NEXT:    b .LBB3_7
+; CHECK-NEXT:  .LBB3_10: // %itofp-if-then20
+; CHECK-NEXT:    extr x8, x12, x11, #35
+; CHECK-NEXT:    extr x10, x12, x11, #3
+; CHECK-NEXT:    mov w11, w8
+; CHECK-NEXT:    mov w8, w9
+; CHECK-NEXT:    b .LBB3_7
+; CHECK-NEXT:  .LBB3_11: // %itofp-sw-bb
 ; CHECK-NEXT:    extr x1, x1, x0, #63
 ; CHECK-NEXT:    lsl x0, x0, #1
 ; CHECK-NEXT:    b .LBB3_5
