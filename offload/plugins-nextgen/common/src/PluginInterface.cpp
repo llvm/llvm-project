@@ -864,6 +864,20 @@ MemoryManagerTy *PluginContextTy::getHostMemoryManager() {
   return HostMemoryManager.get();
 }
 
+TargetAllocTy PluginContextTy::getPooledKind(GenericDeviceTy &Device,
+                                             void *Ptr) {
+  std::lock_guard<std::mutex> Lock(MemoryManagersMutex);
+  if (HostMemoryManager && HostMemoryManager->isManaged(Ptr))
+    return TARGET_ALLOC_HOST;
+
+  auto It = DeviceMemoryManagers.find(
+      {&Device, static_cast<int>(TARGET_ALLOC_SHARED)});
+  if (It != DeviceMemoryManagers.end() && It->second->isManaged(Ptr))
+    return TARGET_ALLOC_SHARED;
+
+  return TARGET_ALLOC_DEFAULT;
+}
+
 Expected<void *> PluginContextTy::allocate(GenericDeviceTy &Device,
                                            int64_t Size, void *HostPtr,
                                            TargetAllocTy Kind,
@@ -899,6 +913,13 @@ Error PluginContextTy::deallocate(GenericDeviceTy &Device, void *Ptr,
   // pool, so route their free through dataDelete's RR shortcut.
   if (auto *RR = Device.getRecordReplay(); RR && RR->isRecordingOrReplaying())
     return Device.dataDelete(Ptr, Kind);
+
+  // omp_target_free passes TARGET_ALLOC_DEFAULT regardless of how the memory
+  // was allocated. Return pooled host and shared allocations to the manager
+  // that owns them; otherwise they are freed on the device behind the pool's
+  // back and the stale node can be handed out or freed again later.
+  if (Kind == TARGET_ALLOC_DEFAULT)
+    Kind = getPooledKind(Device, Ptr);
 
   MemoryManagerTy *MM = (Kind == TARGET_ALLOC_HOST)
                             ? getHostMemoryManager()

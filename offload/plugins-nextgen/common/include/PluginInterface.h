@@ -859,6 +859,10 @@ private:
                                              TargetAllocTy Kind);
   MemoryManagerTy *getHostMemoryManager();
 
+  /// Return the kind of the existing host or shared memory manager that owns
+  /// \p Ptr, or TARGET_ALLOC_DEFAULT if neither does. Never creates a manager.
+  TargetAllocTy getPooledKind(GenericDeviceTy &Device, void *Ptr);
+
   llvm::DenseMap<std::pair<GenericDeviceTy *, int>,
                  std::unique_ptr<MemoryManagerTy>>
       DeviceMemoryManagers;

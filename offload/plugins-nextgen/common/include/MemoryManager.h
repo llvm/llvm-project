@@ -253,6 +253,12 @@ public:
     }
   }
 
+  /// Return true if \p TgtPtr was allocated through this memory manager.
+  bool isManaged(void *TgtPtr) {
+    std::lock_guard<std::mutex> G(MapTableLock);
+    return PtrToNodeTable.count(TgtPtr);
+  }
+
   /// Allocate memory of size \p Size from target device. \p HstPtr is used to
   /// assist the allocation.
   Expected<void *> allocate(size_t Size, void *HstPtr, size_t Alignment) {
