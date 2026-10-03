@@ -233,14 +233,9 @@ define i32 @test_invariant_address(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    call void @init(ptr [[ALLOCA]])
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ALLOCA]], align 4
-; CHECK-NEXT:    [[TMP64:%.*]] = load i32, ptr [[ALLOCA]], align 4
-; CHECK-NEXT:    [[TMP65:%.*]] = load i32, ptr [[ALLOCA]], align 4
 ; CHECK-NEXT:    [[TMP66:%.*]] = load i32, ptr [[ALLOCA]], align 4
-; CHECK-NEXT:    [[TMP67:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP68:%.*]] = insertelement <4 x i32> [[TMP67]], i32 [[TMP64]], i64 1
-; CHECK-NEXT:    [[TMP69:%.*]] = insertelement <4 x i32> [[TMP68]], i32 [[TMP65]], i64 2
-; CHECK-NEXT:    [[TMP71:%.*]] = insertelement <4 x i32> [[TMP69]], i32 [[TMP66]], i64 3
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP66]], i64 0
+; CHECK-NEXT:    [[TMP71:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
