@@ -954,15 +954,15 @@ DIStringType *DIStringType::getImpl(LLVMContext &Context, unsigned Tag,
                                     Metadata *StringLengthExp,
                                     Metadata *StringLocationExp,
                                     Metadata *SizeInBits, uint32_t AlignInBits,
-                                    unsigned Encoding, StorageType Storage,
-                                    bool ShouldCreate) {
+                                    unsigned Encoding, Metadata *CharType,
+                                    StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DIStringType,
-                        (Tag, Name, StringLength, StringLengthExp,
-                         StringLocationExp, SizeInBits, AlignInBits, Encoding));
-  Metadata *Ops[] = {nullptr,         nullptr,          Name,
-                     SizeInBits,      nullptr,          StringLength,
-                     StringLengthExp, StringLocationExp};
+  DEFINE_GETIMPL_LOOKUP(DIStringType, (Tag, Name, StringLength, StringLengthExp,
+                                       StringLocationExp, SizeInBits,
+                                       AlignInBits, Encoding, CharType));
+  Metadata *Ops[] = {nullptr,         nullptr,           Name,
+                     SizeInBits,      nullptr,           StringLength,
+                     StringLengthExp, StringLocationExp, CharType};
   DEFINE_GETIMPL_STORE(DIStringType, (Tag, AlignInBits, Encoding), Ops);
 }
 DIType *DIDerivedType::getClassType() const {
