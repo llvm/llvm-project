@@ -111,12 +111,6 @@ PGO:
       - llvm/**/llvm-profdata/**/*
       - llvm/**/llvm-profgen/**/*
 
-vectorizers:
-  - changed-files:
-    - any-glob-to-any-file:
-      - llvm/lib/Transforms/Vectorize/**/*
-      - llvm/include/llvm/Transforms/Vectorize/**/*
-
 # IMPORTED FROM CODEOWNERS
 LTO:
   - changed-files:
@@ -851,6 +845,22 @@ llvm:analysis:
       - llvm/test/Analysis/**
       - llvm/unittests/Analysis/**
 
+llvm:loopaccessanalysis:
+  - changed-files:
+    - any-glob-to-any-file:
+      - llvm/lib/Analysis/LoopAccessAnalysis.cpp
+      - llvm/include/llvm/Analysis/LoopAccessAnalysis.h
+      - llvm/test/Analysis/LoopAccessAnalysis/**
+
+llvm:scalarevolution:
+  - changed-files:
+    - any-glob-to-any-file:
+      - llvm/lib/Analysis/ScalarEvolution*
+      - llvm/lib/Transforms/Utils/ScalarEvolution*
+      - llvm/include/llvm/Analysis/ScalarEvolution*
+      - llvm/include/llvm/Transforms/Utils/ScalarEvolution*
+      - llvm/test/Analysis/ScalarEvolution/**
+
 llvm:adt:
   - changed-files:
     - any-glob-to-any-file:
@@ -892,6 +902,20 @@ llvm:vectorcombine:
     - any-glob-to-any-file:
       - llvm/lib/Transforms/Vectorize/VectorCombine.cpp
       - llvm/test/Transforms/VectorCombine/**
+
+llvm:vectorizers:
+  - changed-files:
+    - any-glob-to-any-file:
+      - llvm/lib/Transforms/Vectorize/**/*
+      - llvm/include/llvm/Transforms/Vectorize/**/*
+
+llvm:loopvectorize:
+  - changed-files:
+    - any-glob-to-any-file:
+      - llvm/lib/Transforms/Vectorize/LoopVectoriz*
+      - llvm/lib/Transforms/Vectorize/VPlan*
+      - llvm/include/llvm/Transforms/Vectorize/LoopVectorize.h
+      - llvm/test/Transforms/LoopVectorize/**
 
 clangd:
   - changed-files:
