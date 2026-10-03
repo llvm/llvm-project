@@ -41,6 +41,7 @@
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
 #include "flang/Support/Fortran.h"
+#include "flang/Support/PluginDirectives.h"
 #include "flang/Support/default-kinds.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
@@ -2416,6 +2417,8 @@ public:
   void Post(const parser::AssignStmt &);
   void Post(const parser::AssignedGotoStmt &);
   void Post(const parser::CompilerDirective &);
+  void ResolvePluginDirective(const parser::CompilerDirective &,
+      const parser::CompilerDirective::Plugin &);
 
   bool Pre(const parser::SectionSubscript &);
 
@@ -11457,9 +11460,280 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
           "INLINEALWAYS name '%s' does not match the subprogram name '%s'"_warn_en_US,
           inlineAlways->v->ToString(), sym->name().ToString());
     }
-  } else if (context().ShouldWarn(common::UsageWarning::IgnoredDirective)) {
+  } else if (const auto *plugin{
+                 std::get_if<parser::CompilerDirective::Plugin>(&x.u)}) {
+    ResolvePluginDirective(x, *plugin);
+  } else if (context().ShouldWarn(common::UsageWarning::IgnoredDirective) &&
+      // A module file may hold the directives of a plugin that is not
+      // loaded here (see PutPluginDirectives); they are not the user's to fix.
+      !(currScope().symbol() && currScope().symbol()->IsFromModFile())) {
     Say(x.source, "Unrecognized compiler directive was ignored"_warn_en_US)
         .set_usageWarning(common::UsageWarning::IgnoredDirective);
+  }
+}
+
+// A directive registered by a plugin: resolve its name arguments, check them
+// against the registered argument kinds, and record it with its subject.
+void ResolveNamesVisitor::ResolvePluginDirective(
+    const parser::CompilerDirective &x,
+    const parser::CompilerDirective::Plugin &plugin) {
+  const auto &[prefix, keyword, args]{plugin.t};
+  const common::PluginDirectiveSpec *spec{
+      common::lookupPluginDirective(prefix.ToString(), keyword.ToString())};
+  if (!spec) {
+    Say(keyword.source, "Unknown '%s' directive '%s'"_err_en_US,
+        prefix.ToString(), keyword.ToString());
+    return;
+  }
+  auto isProcedure{[](const Symbol &symbol) {
+    // A procedure under CONTAINS that is named before it is defined.
+    return symbol.has<SubprogramNameDetails>() ||
+        IsProcedure(symbol.GetUltimate());
+  }};
+  // Check that a name stands for a procedure (kind Procedure), a variable
+  // (kind Variable) or either (no kind), as lowering can refer to it: a
+  // subprogram or an external procedure, not a dummy procedure, a procedure
+  // pointer, a statement function or an intrinsic; a variable, not e.g. a
+  // derived type or a namelist group. A generic interface is checked below,
+  // as a subject and as an argument.
+  auto checkKind{[&](const parser::Name &name, const Symbol *symbol,
+                     std::optional<common::PluginDirectiveArgKind> kind) {
+    const Symbol &ultimate{symbol->GetUltimate()};
+    if (!isProcedure(*symbol)) {
+      if (kind == common::PluginDirectiveArgKind::Procedure) {
+        Say(name, "'%s' is not a procedure"_err_en_US);
+        return false;
+      }
+      if (!ultimate.has<ObjectEntityDetails>() &&
+          !ultimate.has<EntityDetails>()) {
+        Say(name, "'%s' is not a variable"_err_en_US);
+        return false;
+      }
+      return true;
+    }
+    if (kind == common::PluginDirectiveArgKind::Variable) {
+      Say(name, "'%s' is not a variable"_err_en_US);
+      return false;
+    }
+    if (ultimate.has<GenericDetails>()) {
+      return true; // a subject stands for its specifics; not an argument
+    }
+    if (IsDummy(ultimate) || IsProcedurePointer(ultimate) ||
+        ultimate.test(Symbol::Flag::StmtFunction) ||
+        ultimate.attrs().test(Attr::INTRINSIC)) {
+      Say(name, "'%s' must be a subprogram or an external procedure"_err_en_US);
+      return false;
+    }
+    return true;
+  }};
+  auto resolve{[&](const parser::Name &name,
+                   std::optional<common::PluginDirectiveArgKind> kind)
+                   -> const Symbol * {
+    Symbol *symbol{FindSymbol(name)};
+    if (!symbol) {
+      Say(name, "'%s' is not declared"_err_en_US);
+      return nullptr;
+    }
+    // In a function without a RESULT clause, its name is its result
+    // variable; where a procedure may be meant, it is the function.
+    if (kind != common::PluginDirectiveArgKind::Variable) {
+      const Symbol &ultimate{symbol->GetUltimate()};
+      if (IsFunctionResult(ultimate)) {
+        if (const Symbol *function{ultimate.owner().symbol()};
+            function && function->name() == ultimate.name()) {
+          symbol = const_cast<Symbol *>(function);
+        }
+      }
+    }
+    name.symbol = symbol;
+    return symbol;
+  }};
+  auto resolveCommon{[&](const parser::Name &name) -> Symbol * {
+    Symbol *symbol{currScope().FindCommonBlockInVisibleScopes(name.source)};
+    if (!symbol) {
+      Say(name, "COMMON block /%s/ is not declared"_err_en_US);
+      return nullptr;
+    }
+    name.symbol = symbol;
+    return symbol;
+  }};
+
+  // The subject: a leading positional name, or the enclosing subprogram.
+  std::optional<common::PluginDirectiveArgKind> subjectKind;
+  if (spec->subject == common::PluginDirectiveSubject::Procedure) {
+    subjectKind = common::PluginDirectiveArgKind::Procedure;
+  } else if (spec->subject == common::PluginDirectiveSubject::Variable) {
+    subjectKind = common::PluginDirectiveArgKind::Variable;
+  }
+  auto it{args.begin()};
+  const Symbol *subject{nullptr};
+  const parser::Name *subjectNamePtr{nullptr};
+  if (it != args.end() && !std::get<0>(it->t)) {
+    const auto &value{std::get<1>(it->t)};
+    if (const auto *name{std::get_if<parser::Name>(&value)}) {
+      subjectNamePtr = name;
+      subject = resolve(*name, subjectKind);
+    } else if (const auto *common{
+                   std::get_if<parser::CompilerDirective::Plugin::CommonBlock>(
+                       &value)}) {
+      subjectNamePtr = &common->v;
+      subject = resolveCommon(common->v);
+    } else {
+      Say(x.source,
+          "The subject of a '%s %s' directive must be a name or a COMMON block"_err_en_US,
+          prefix.ToString(), keyword.ToString());
+      return;
+    }
+    if (!subject) {
+      return;
+    }
+    ++it;
+  } else if (spec->subject != common::PluginDirectiveSubject::Variable) {
+    const Symbol *scopeSymbol{currScope().symbol()};
+    if (scopeSymbol && scopeSymbol->has<SubprogramDetails>()) {
+      subject = scopeSymbol;
+    }
+  }
+  if (!subject) {
+    Say(x.source,
+        "A '%s %s' directive must name what it applies to, or appear in a subprogram"_err_en_US,
+        prefix.ToString(), keyword.ToString());
+    return;
+  }
+  const parser::Name &subjectName{subjectNamePtr ? *subjectNamePtr : keyword};
+  if (subject->has<CommonBlockDetails>()) {
+    if (subjectKind == common::PluginDirectiveArgKind::Procedure) {
+      Say(subjectName, "'%s' is not a procedure"_err_en_US);
+      return;
+    }
+  } else if (!checkKind(subjectName, subject, subjectKind)) {
+    return;
+  }
+  // A generic interface stands for all of its specific procedures, also
+  // private ones and those of other modules, which a directive elsewhere
+  // could not name. Not for a directive with procedure arguments, which
+  // each specific procedure would need its own of.
+  // A name of the host (e.g. a procedure's own name, in it) is host
+  // associated; the directive is on the host's symbol, which a module file
+  // declares.
+  while (const auto *host{subject->detailsIf<HostAssocDetails>()}) {
+    subject = &host->symbol();
+  }
+  std::vector<const Symbol *> subjects{subject};
+  if (const auto *generic{subject->GetUltimate().detailsIf<GenericDetails>()}) {
+    bool takesProcedures{false};
+    for (const common::PluginDirectiveArg &a : spec->args) {
+      takesProcedures |= a.kind == common::PluginDirectiveArgKind::Procedure;
+    }
+    if (takesProcedures) {
+      Say(subjectName.source,
+          "'%s' is a generic interface; a '%s %s' directive must name one of its specific procedures"_err_en_US,
+          subjectName.ToString(), prefix.ToString(), keyword.ToString());
+      return;
+    }
+    subjects.clear();
+    for (const Symbol &specific : generic->specificProcs()) {
+      subjects.push_back(&specific);
+    }
+    if (const Symbol *specific{generic->specific()}; specific &&
+        std::find(subjects.begin(), subjects.end(), specific) ==
+            subjects.end()) {
+      subjects.push_back(specific);
+    }
+    if (subjects.empty()) {
+      Say(subjectName.source,
+          "Generic interface '%s' has no specific procedures"_err_en_US,
+          subjectName.ToString());
+      return;
+    }
+  }
+
+  // The other arguments are keyword arguments.
+  std::set<std::string> seen;
+  bool ok{true};
+  for (; it != args.end(); ++it) {
+    const auto &maybeKeyword{std::get<0>(it->t)};
+    if (!maybeKeyword) {
+      Say(x.source,
+          "Only the first argument of a '%s %s' directive may be positional"_err_en_US,
+          prefix.ToString(), keyword.ToString());
+      ok = false;
+      continue;
+    }
+    std::string argName{maybeKeyword->ToString()};
+    const common::PluginDirectiveArg *argSpec{nullptr};
+    for (const common::PluginDirectiveArg &a : spec->args) {
+      if (a.keyword == argName) {
+        argSpec = &a;
+      }
+    }
+    if (!argSpec) {
+      Say(maybeKeyword->source,
+          "'%s' is not an argument of the '%s %s' directive"_err_en_US, argName,
+          prefix.ToString(), keyword.ToString());
+      ok = false;
+      continue;
+    }
+    if (!seen.insert(argName).second) {
+      Say(maybeKeyword->source,
+          "Argument '%s' appears more than once"_err_en_US, argName);
+      ok = false;
+      continue;
+    }
+    const auto &value{std::get<1>(it->t)};
+    switch (argSpec->kind) {
+    case common::PluginDirectiveArgKind::Procedure:
+    case common::PluginDirectiveArgKind::Variable:
+      if (const auto *name{std::get_if<parser::Name>(&value)}) {
+        const Symbol *symbol{resolve(*name, argSpec->kind)};
+        ok &= symbol && checkKind(*name, symbol, argSpec->kind);
+        if (symbol &&
+            argSpec->kind == common::PluginDirectiveArgKind::Procedure &&
+            symbol->GetUltimate().has<GenericDetails>()) {
+          Say(name->source,
+              "'%s' is a generic interface; argument '%s' of a '%s %s' directive must name a specific procedure"_err_en_US,
+              name->ToString(), argName, prefix.ToString(), keyword.ToString());
+          ok = false;
+        }
+      } else if (const auto *common{std::get_if<
+                     parser::CompilerDirective::Plugin::CommonBlock>(&value)};
+          common && argSpec->kind == common::PluginDirectiveArgKind::Variable) {
+        ok &= resolveCommon(common->v) != nullptr;
+      } else {
+        Say(maybeKeyword->source, "Argument '%s' must be a name"_err_en_US,
+            argName);
+        ok = false;
+      }
+      break;
+    case common::PluginDirectiveArgKind::Integer:
+      if (!std::holds_alternative<std::uint64_t>(value)) {
+        Say(maybeKeyword->source, "Argument '%s' must be an integer"_err_en_US,
+            argName);
+        ok = false;
+      }
+      break;
+    case common::PluginDirectiveArgKind::String:
+      if (std::holds_alternative<std::uint64_t>(value)) {
+        Say(maybeKeyword->source,
+            "Argument '%s' must be a character literal or a name"_err_en_US,
+            argName);
+        ok = false;
+      }
+      break;
+    }
+  }
+  for (const common::PluginDirectiveArg &a : spec->args) {
+    if (a.required && !seen.count(a.keyword)) {
+      Say(x.source, "The '%s %s' directive requires argument '%s'"_err_en_US,
+          prefix.ToString(), keyword.ToString(), a.keyword);
+      ok = false;
+    }
+  }
+  if (ok) {
+    for (const Symbol *s : subjects) {
+      context().AddPluginDirective(
+          *s, x, currScope().symbol() && currScope().symbol()->IsFromModFile());
+    }
   }
 }
 

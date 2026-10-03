@@ -3268,6 +3268,14 @@ void Fortran::lower::defineModuleVariable(
   }
 }
 
+fir::GlobalOp
+Fortran::lower::declareModuleVariable(AbstractConverter &converter,
+                                      const Fortran::semantics::Symbol &sym) {
+  Fortran::lower::pft::Variable var{sym, /*global=*/true};
+  return declareGlobal(converter, var, converter.mangleName(sym),
+                       getLinkageAttribute(converter, var));
+}
+
 void Fortran::lower::instantiateVariable(AbstractConverter &converter,
                                          const pft::Variable &var,
                                          Fortran::lower::SymMap &symMap,

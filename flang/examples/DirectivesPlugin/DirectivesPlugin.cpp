@@ -1,0 +1,52 @@
+//===-- DirectivesPlugin.cpp ----------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Example plugin defining compiler directives with the prefix "example"
+// (flang/Support/PluginDirectives.h). Loaded with `flang -fc1 -load`, it makes
+// flang accept, check and lower
+//
+//   !DIR$ EXAMPLE CALLBACK([proc,] HANDLER=proc [, PRIORITY=n] [, TAG=str])
+//   !DIR$ EXAMPLE WATCH(var [, BY=var])
+//   !DIR$ EXAMPLE NOTE([proc-or-var,] TEXT=str)
+//
+// which may also be spelled with the plugin's own comment sentinel, e.g.
+// `!$EXAMPLE NOTE(TEXT="...")`, a comment for other compilers.
+//
+// Each one becomes an entry of the `fir.directives` attribute of the
+// func.func or fir.global of its subject, for a pass of the plugin to act on;
+// this one defines no pass.
+//
+//===----------------------------------------------------------------------===//
+
+#include "flang/Support/PluginDirectives.h"
+
+using namespace Fortran::common;
+
+namespace {
+
+[[maybe_unused]] const bool registered{[] {
+  // Call HANDLER when the subject procedure (by default, the subprogram the
+  // directive is in) is called.
+  registerPluginDirective(
+      {"example", "callback", PluginDirectiveSubject::Procedure,
+          {{"handler", PluginDirectiveArgKind::Procedure, /*required=*/true},
+              {"priority", PluginDirectiveArgKind::Integer},
+              {"tag", PluginDirectiveArgKind::String}}});
+  // Track the subject variable, or a COMMON block, possibly through another
+  // variable.
+  registerPluginDirective({"example", "watch", PluginDirectiveSubject::Variable,
+      {{"by", PluginDirectiveArgKind::Variable}}});
+  // A remark on a procedure or a variable.
+  registerPluginDirective({"example", "note", PluginDirectiveSubject::Any,
+      {{"text", PluginDirectiveArgKind::String, /*required=*/true}}});
+  // !$example ... is !DIR$ example ...
+  registerPluginDirectiveSentinel("example");
+  return true;
+}()};
+
+} // namespace
