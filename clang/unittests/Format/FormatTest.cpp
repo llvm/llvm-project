@@ -2878,6 +2878,36 @@ TEST_F(FormatTest, FormatsSwitchStatementCompactCaseLabels) {
                "  }\n"
                "}",
                Style);
+
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Always;
+  Style.BraceWrapping.AfterCaseLabel = true;
+  verifyFormat("switch (n)\n"
+               "{\n"
+               "  break; case 0:\n"
+               "  {\n"
+               "    foo();\n"
+               "  }\n"
+               "  break; case 1:\n"
+               "  {\n"
+               "    bar();\n"
+               "  }\n"
+               "}",
+               Style);
+
+  Style.BraceWrapping.IndentBraces = true;
+  verifyFormat("switch (n)\n"
+               "  {\n"
+               "    break; case 0:\n"
+               "      {\n"
+               "        foo();\n"
+               "      }\n"
+               "    break; case 1:\n"
+               "      {\n"
+               "        bar();\n"
+               "      }\n"
+               "  }",
+               Style);
 }
 
 TEST_F(FormatTest, CaseRanges) {
