@@ -1459,6 +1459,19 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
     return false;
   };
 
+  // Before giving up on a complex PHI, try to resolve a single underlying
+  // object. Keep this off the normal path and only compare identified objects.
+  auto AliasComplexPHI = [&]() {
+    const Value *OtherObject = getUnderlyingObject(V2);
+    if (!EnableRecPhiAnalysis || !isIdentifiedObject(OtherObject))
+      return AliasResult::MayAlias;
+    const Value *Object =
+        getUnderlyingObjectAggressive(PN, /*MustPreserveProvenance=*/true);
+    return Object != OtherObject && isIdentifiedObject(Object)
+               ? AliasResult::NoAlias
+               : AliasResult::MayAlias;
+  };
+
   SmallPtrSet<Value *, 4> UniqueSrc;
   Value *OnePhi = nullptr;
   for (Value *PV1 : PN->incoming_values()) {
@@ -1473,7 +1486,7 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
         // that we handle the single phi case as that lets us handle LCSSA
         // phi nodes and (combined with the recursive phi handling) simple
         // pointer induction variable patterns.
-        return AliasResult::MayAlias;
+        return AliasComplexPHI();
       }
       OnePhi = PV1;
     }
@@ -1488,7 +1501,7 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
   if (OnePhi && UniqueSrc.size() > 1)
     // Out of an abundance of caution, allow only the trivial lcssa and
     // recursive phi cases.
-    return AliasResult::MayAlias;
+    return AliasComplexPHI();
 
   // If V1Srcs is empty then that means that the phi has no underlying non-phi
   // value. This should only be possible in blocks unreachable from the entry
