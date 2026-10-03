@@ -1,43 +1,43 @@
 // Check that clang-cl optimization options apply to both host and device.
 // Device-specific options must still override the shared optimization level.
 
-// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c --offload-new-driver \
+// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c \
 // RUN:   -x hip --offload-arch=gfx1100 -clang:-nogpuinc -clang:-nogpulib \
 // RUN:   /O1 -- %s 2>&1 | FileCheck %s --check-prefix=OS
 
-// RUN: %clang_cl --target=x86_64-unknown-linux-gnu -### /c --offload-new-driver \
+// RUN: %clang_cl --target=x86_64-unknown-linux-gnu -### /c \
 // RUN:   -x hip --offload-arch=gfx1100 -clang:-nogpuinc -clang:-nogpulib \
 // RUN:   /O1 -- %s 2>&1 | FileCheck %s --check-prefix=LINUX
 
-// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c --offload-new-driver \
+// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c \
 // RUN:   -x hip --offload-arch=gfx1100 -clang:-nogpuinc -clang:-nogpulib \
 // RUN:   /O2 -- %s 2>&1 | FileCheck %s --check-prefix=O3
 
-// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c --offload-new-driver \
+// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c \
 // RUN:   -x hip --offload-arch=gfx1100 -clang:-nogpuinc -clang:-nogpulib \
 // RUN:   /Ox -- %s 2>&1 | FileCheck %s --check-prefix=O3
 
-// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c --offload-new-driver \
+// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c \
 // RUN:   -x hip --offload-arch=gfx1100 -clang:-nogpuinc -clang:-nogpulib \
 // RUN:   /Od -- %s 2>&1 | FileCheck %s --check-prefix=O0
 
-// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c --offload-new-driver \
+// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c \
 // RUN:   -x hip --offload-arch=gfx1100 -clang:-nogpuinc -clang:-nogpulib \
 // RUN:   /O2 /Od -- %s 2>&1 | FileCheck %s --check-prefix=O0
 
-// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c --offload-new-driver \
+// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c \
 // RUN:   -x hip --offload-arch=gfx1100 -clang:-nogpuinc -clang:-nogpulib \
 // RUN:   /Od /O2 -- %s 2>&1 | FileCheck %s --check-prefix=O3
 
-// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c --offload-new-driver \
+// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c \
 // RUN:   -x hip --offload-arch=gfx1100 -clang:-nogpuinc -clang:-nogpulib \
 // RUN:   /O2 -clang:-O1 -- %s 2>&1 | FileCheck %s --check-prefix=O1
 
-// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c --offload-new-driver \
+// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c \
 // RUN:   -x hip --offload-arch=gfx1100 -clang:-nogpuinc -clang:-nogpulib \
 // RUN:   /O2 -clang:-Xarch_device -clang:-O1 -- %s 2>&1 | FileCheck %s --check-prefix=DEVICE-O1
 
-// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c --offload-new-driver \
+// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c \
 // RUN:   -x hip --offload-arch=gfx1100 -clang:-nogpuinc -clang:-nogpulib \
 // RUN:   /O2 /Ob0 -- %s 2>&1 | FileCheck %s --check-prefix=NOINLINE
 

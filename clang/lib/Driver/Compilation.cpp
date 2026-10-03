@@ -74,9 +74,8 @@ Compilation::getArgsForToolChain(const ToolChain *TC, BoundArch BA,
     // Translate OpenMP toolchain arguments provided via the -Xopenmp-target flags.
     if (DeviceOffloadKind == Action::OFK_OpenMP) {
       const ToolChain *HostTC = getSingleOffloadToolChain<Action::OFK_Host>();
-      bool SameTripleAsHost = (TC->getTriple() == HostTC->getTriple());
       OpenMPArgs = TC->TranslateOpenMPTargetArgs(
-          *TranslatedArgs, SameTripleAsHost, AllocatedArgs);
+          *TranslatedArgs, HostTC->getTriple(), AllocatedArgs);
     }
 
     DerivedArgList *NewDAL = nullptr;
@@ -92,10 +91,8 @@ Compilation::getArgsForToolChain(const ToolChain *TC, BoundArch BA,
         delete OpenMPArgs;
     }
 
-    if (NewDAL && DeviceOffloadKind == Action::OFK_OpenMP &&
-        (TheDriver.IsCLMode() ||
-         DefaultToolChain.getTriple().isWindowsMSVCEnvironment())) {
-      // OpenMP forwarding can introduce clang-cl options after the shared
+    if (NewDAL && TheDriver.IsCLMode()) {
+      // Forwarding can introduce clang-cl options after the shared
       // translation. Keep synthesized arguments in the compilation-owned list.
       auto *DAL = ClangCLArgs::translateArgs(
           *NewDAL, DefaultToolChain.getTriple(), *TranslatedArgs);

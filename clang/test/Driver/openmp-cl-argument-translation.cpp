@@ -39,6 +39,13 @@
 // RUN:   -clang:-Xopenmp-target=amdgcn-amd-amdhsa -clang:/permissive -- %s 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=DEVICE-O3
 
+// RUN: %clang_cl --target=x86_64-w64-windows-gnu -### /c \
+// RUN:   -clang:-fopenmp -clang:-fopenmp-targets=amdgcn-amd-amdhsa \
+// RUN:   -clang:--offload-arch=gfx1100 -clang:-nogpulib \
+// RUN:   -clang:-Xopenmp-target=amdgcn-amd-amdhsa -clang:/O2 \
+// RUN:   -clang:-Xopenmp-target=amdgcn-amd-amdhsa -clang:/permissive -- %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=DEVICE-O3
+
 // DEVICE-O3: "-cc1" "-triple" "x86_64-{{[^"]*}}"
 // DEVICE-O3-NOT: "-O3"
 // DEVICE-O3-NOT: "-fno-operator-names"
@@ -94,6 +101,47 @@
 // RUN:   -Xopenmp-target=x86_64-pc-windows-msvc /O2 \
 // RUN:   -Xopenmp-target=x86_64-pc-windows-msvc /permissive -- %s 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=DEVICE-O3
+
+// Forwarded frame-pointer options use the host architecture after -m32/-m64.
+// /Oy- is silently accepted on x86-64, including when bundled with /O2.
+// RUN: %clang --target=i686-pc-windows-msvc -m64 -### -c -fopenmp \
+// RUN:   -fopenmp-targets=x86_64-pc-windows-msvc -nogpulib \
+// RUN:   -Xopenmp-target=x86_64-pc-windows-msvc /Oy- -- %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=FRAME64
+// RUN: %clang --target=i686-pc-windows-msvc -m64 -### -c -fopenmp \
+// RUN:   -fopenmp-targets=x86_64-pc-windows-msvc -nogpulib \
+// RUN:   -Xopenmp-target=x86_64-pc-windows-msvc /O2y- -- %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=FRAME64
+// FRAME64: "-cc1" "-triple" "x86_64-pc-windows-msvc{{[^"]*}}"
+// FRAME64: "-cc1" "-triple" "x86_64-pc-windows-msvc{{[^"]*}}"
+// FRAME64-SAME: "-mframe-pointer=none"
+
+// RUN: %clang --target=x86_64-pc-windows-msvc -m32 -### -c -fopenmp \
+// RUN:   -fopenmp-targets=i386-pc-windows-msvc -nogpulib \
+// RUN:   -Xopenmp-target=i386-pc-windows-msvc /Oy -- %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=FRAME32-OMIT
+// FRAME32-OMIT: "-cc1" "-triple" "i386-pc-windows-msvc{{[^"]*}}"
+// FRAME32-OMIT: "-cc1" "-triple" "i386-pc-windows-msvc{{[^"]*}}"
+// FRAME32-OMIT-SAME: "-mframe-pointer=none"
+
+// RUN: %clang --target=x86_64-pc-windows-msvc -m32 -### -c -fopenmp \
+// RUN:   -fopenmp-targets=i386-pc-windows-msvc -nogpulib \
+// RUN:   -Xopenmp-target=i386-pc-windows-msvc /O2y- -- %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=FRAME32-KEEP
+// FRAME32-KEEP: "-cc1" "-triple" "i386-pc-windows-msvc{{[^"]*}}"
+// FRAME32-KEEP: "-cc1" "-triple" "i386-pc-windows-msvc{{[^"]*}}"
+// FRAME32-KEEP-SAME: "-O3"
+// FRAME32-KEEP-SAME: "-mframe-pointer=all"
+
+// A different device architecture does not change the host's /Oy- policy.
+// RUN: %clang --target=i686-pc-windows-msvc -m64 -### -c -fopenmp \
+// RUN:   -fopenmp-targets=i386-pc-windows-msvc -nogpulib \
+// RUN:   -Xopenmp-target=i386-pc-windows-msvc /O2y- -- %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=HOST64-DEVICE32
+// HOST64-DEVICE32: "-cc1" "-triple" "x86_64-pc-windows-msvc{{[^"]*}}"
+// HOST64-DEVICE32: "-cc1" "-triple" "i386-pc-windows-msvc{{[^"]*}}"
+// HOST64-DEVICE32-SAME: "-O3"
+// HOST64-DEVICE32-SAME: "-mframe-pointer=none"
 
 // Separate device architecture argument lists retain their own overrides.
 // RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c /O2 \

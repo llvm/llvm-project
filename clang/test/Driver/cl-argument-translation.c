@@ -13,6 +13,24 @@
 // MSVC: "-D" "FOO=7"
 // GNU: "-D" "FOO#7"
 
+// Filtering host arguments preserves explicit overrides of shared /O options.
+// RUN: %clang_cl --target=x86_64-pc-windows-msvc /c -### /O2 /Ob0 \
+// RUN:   -clang:-Xarch_host -clang:-O1 -clang:-Xarch_host -clang:-fno-builtin \
+// RUN:   -- %s 2>&1 | FileCheck %s --check-prefix=FILTERED
+// RUN: %clang_cl --target=x86_64-unknown-linux-gnu /c -### /O2 /Ob0 \
+// RUN:   -clang:-Xarch_host -clang:-O1 -clang:-Xarch_host -clang:-fno-builtin \
+// RUN:   -- %s 2>&1 | FileCheck %s --check-prefix=FILTERED
+// RUN: %clang_cl --target=x86_64-w64-windows-gnu /c -### /O2 /Ob0 \
+// RUN:   -clang:-Xarch_host -clang:-O1 -clang:-Xarch_host -clang:-fno-builtin \
+// RUN:   -- %s 2>&1 | FileCheck %s --check-prefix=FILTERED
+// FILTERED: "-cc1"
+// FILTERED-NOT: "-O3"
+// FILTERED: "-O1"
+// FILTERED-NOT: "-O3"
+// FILTERED: "-fno-builtin"
+// FILTERED-SAME: "-fno-inline"
+// FILTERED-NOT: argument unused during compilation
+
 // Last-option precedence must include both slash and canonical options.
 // RUN: %clang_cl --target=x86_64-pc-windows-msvc /c -x c++ -### /permissive- /permissive -- %s 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=PERMISSIVE

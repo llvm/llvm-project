@@ -2009,11 +2009,12 @@ ToolChain::computeMSVCVersion(const Driver *D,
 }
 
 llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
-    const llvm::opt::DerivedArgList &Args, bool SameTripleAsHost,
+    const llvm::opt::DerivedArgList &Args, const llvm::Triple &HostTriple,
     SmallVectorImpl<llvm::opt::Arg *> &AllocatedArgs) const {
   DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
   const OptTable &Opts = getDriver().getOpts();
   bool Modified = false;
+  bool SameTripleAsHost = getTriple() == HostTriple;
 
   // Handle -Xopenmp-target flags
   for (auto *A : Args) {
@@ -2076,9 +2077,7 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
     XOpenMPTargetArg->setBaseArg(A);
     A = XOpenMPTargetArg.release();
     if (A->getOption().matches(options::OPT_D) &&
-        (getDriver().IsCLMode() ||
-         llvm::Triple(llvm::Triple::normalize(getDriver().getTargetTriple()))
-             .isWindowsMSVCEnvironment()))
+        (getDriver().IsCLMode() || HostTriple.isWindowsMSVCEnvironment()))
       A->getValues()[0] =
           ClangCLArgs::translateMacroDefinition(A->getValue(), Args);
     AllocatedArgs.push_back(A);
@@ -2086,8 +2085,16 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
     Modified = true;
   }
 
-  if (Modified)
+  if (Modified) {
+    // GNU-mode Clang targeting MSVC also accepts forwarded clang-cl options.
+    if (!getDriver().IsCLMode() && HostTriple.isWindowsMSVCEnvironment()) {
+      DerivedArgList *Translated =
+          ClangCLArgs::translateArgs(*DAL, HostTriple, Args);
+      delete DAL;
+      return Translated;
+    }
     return DAL;
+  }
 
   delete DAL;
   return nullptr;

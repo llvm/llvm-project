@@ -1,18 +1,18 @@
 // Shared source-language options must reach both HIP jobs.
-// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c --offload-new-driver \
+// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c \
 // RUN:   -x hip --offload-arch=gfx1100 -clang:-nogpuinc -clang:-nogpulib \
 // RUN:   /DFOO#7 /permissive- -- %s 2>&1 | FileCheck %s --check-prefix=COMMON
 
-// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c --offload-new-driver \
+// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c \
 // RUN:   -x hip --offload-arch=gfx1100 -clang:-nogpuinc -clang:-nogpulib \
 // RUN:   /permissive -- %s 2>&1 | FileCheck %s --check-prefix=PERMISSIVE
 
-// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c --offload-new-driver \
+// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c \
 // RUN:   -x hip --offload-arch=gfx1100 -clang:-nogpuinc -clang:-nogpulib \
 // RUN:   /DFOO#1 -clang:-Xarch_host -clang:-DFOO#2 -clang:-Xarch_device -clang:-DDEV#3 -- %s 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=SCOPED
 
-// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c --offload-new-driver \
+// RUN: %clang_cl --target=x86_64-pc-windows-msvc -### /c \
 // RUN:   -x hip --offload-arch=gfx1100 -clang:-nogpuinc -clang:-nogpulib \
 // RUN:   /permissive -clang:-Xarch_device -clang:-fno-delayed-template-parsing -clang:-Xarch_device \
 // RUN:   -clang:-foperator-names -- %s 2>&1 | FileCheck %s --check-prefix=DEVICE-CONFORMING
@@ -35,20 +35,20 @@
 // RUN:   /permissive -clang:-Xarch_device -clang:-fno-delayed-template-parsing -clang:-Xarch_device \
 // RUN:   -clang:-foperator-names -- %s 2>&1 | FileCheck %s --check-prefix=DEVICE-CONFORMING
 
-// RUN: %clang_cl --target=x86_64-unknown-linux-gnu -### /c --offload-new-driver \
+// RUN: %clang_cl --target=x86_64-unknown-linux-gnu -### /c \
 // RUN:   -x hip --offload-arch=gfx1100 -clang:-nogpuinc -clang:-nogpulib \
 // RUN:   /DFOO#7 /permissive- -- %s 2>&1 | FileCheck %s --check-prefix=COMMON
 
-// RUN: %clang_cl --target=x86_64-unknown-linux-gnu -### /c --offload-new-driver \
+// RUN: %clang_cl --target=x86_64-unknown-linux-gnu -### /c \
 // RUN:   -x hip --offload-arch=gfx1100 -clang:-nogpuinc -clang:-nogpulib \
 // RUN:   /permissive -- %s 2>&1 | FileCheck %s --check-prefix=PERMISSIVE
 
-// RUN: %clang_cl --target=x86_64-unknown-linux-gnu -### /c --offload-new-driver \
+// RUN: %clang_cl --target=x86_64-unknown-linux-gnu -### /c \
 // RUN:   -x hip --offload-arch=gfx1100 -clang:-nogpuinc -clang:-nogpulib \
 // RUN:   /DFOO#1 -clang:-Xarch_host -clang:-DFOO#2 -clang:-Xarch_device -clang:-DDEV#3 -- %s 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=SCOPED
 
-// RUN: %clang_cl --target=x86_64-unknown-linux-gnu -### /c --offload-new-driver \
+// RUN: %clang_cl --target=x86_64-unknown-linux-gnu -### /c \
 // RUN:   -x hip --offload-arch=gfx1100 -clang:-nogpuinc -clang:-nogpulib \
 // RUN:   /permissive -clang:-Xarch_device -clang:-fno-delayed-template-parsing -clang:-Xarch_device \
 // RUN:   -clang:-foperator-names -- %s 2>&1 | FileCheck %s --check-prefix=DEVICE-CONFORMING
@@ -102,6 +102,6 @@
 // DEVICE-CONFORMING-SAME: "-fdelayed-template-parsing"
 
 // GNU-mode offloading retains MSVC macro syntax when selected by the host.
-// RUN: %clang --target=x86_64-pc-windows-msvc -### -c --offload-new-driver \
+// RUN: %clang --target=x86_64-pc-windows-msvc -### -c \
 // RUN:   -x hip --offload-arch=gfx1100 -nogpuinc -nogpulib \
 // RUN:   -DFOO#1 -Xarch_host -DFOO#2 -Xarch_device -DDEV#3 -- %s 2>&1 | FileCheck %s --check-prefix=SCOPED
