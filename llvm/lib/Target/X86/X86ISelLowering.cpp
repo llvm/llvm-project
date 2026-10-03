@@ -53931,17 +53931,18 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
     // Do not flip "e > c", where "c" is a constant, because Cmp instruction
     // cannot take an immediate as its first operand.
     //
-    if (EFLAGS.getOpcode() == X86ISD::SUB &&
+    if ((EFLAGS.getOpcode() == X86ISD::SUB ||
+         EFLAGS.getOpcode() == X86ISD::CMP) &&
         EFLAGS.getValueType().isInteger() &&
         !isa<ConstantSDNode>(EFLAGS.getOperand(1))) {
-      // Only create NewSub if we know one of the folds will succeed to avoid
-      // introducing a temporary node that may persist and affect one-use checks
-      // below.
+      // Only create a swapped node if we know one of the folds will succeed to
+      // avoid introducing a temporary node that may persist and affect one-use
+      // checks below.
       if (EFLAGS.getNode()->hasOneUse()) {
-        SDValue NewSub = DAG.getNode(
-            X86ISD::SUB, SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
+        SDValue Swapped = DAG.getNode(
+            EFLAGS.getOpcode(), SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
             EFLAGS.getOperand(1), EFLAGS.getOperand(0));
-        SDValue NewEFLAGS = NewSub.getValue(EFLAGS.getResNo());
+        SDValue NewEFLAGS = Swapped.getValue(EFLAGS.getResNo());
         return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL,
                            DAG.getVTList(VT, MVT::i32), X,
                            DAG.getConstant(0, DL, VT), NewEFLAGS);
