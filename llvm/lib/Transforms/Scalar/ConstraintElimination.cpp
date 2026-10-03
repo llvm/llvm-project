@@ -1405,11 +1405,15 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (!Info.Signed)
     WorkList.push_back(FactOrCheck::getConditionFact(
         DTN, CmpInst::ICMP_SGE, PN, StartValue, StartBeforeBoundSigned));
-  // Add PN < B, as the loop exits once the compared value reaches B.
-  WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SLT, PN,
-                                                   B, StartBeforeBoundSigned));
-  WorkList.push_back(FactOrCheck::getConditionFact(
-      DTN, CmpInst::ICMP_ULT, PN, B, StartBeforeBoundUnsigned));
+  // Add PN < B, as the loop exits once the compared value reaches B. With a
+  // header bound, the PN != B condition fact in InLoopSucc already tightens it
+  // to PN < B.
+  if (!HasHeaderBound || !canAddSuccessor(BB, InLoopSucc)) {
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_SLT, PN, B, StartBeforeBoundSigned));
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_ULT, PN, B, StartBeforeBoundUnsigned));
+  }
 
   // Try to add condition from the header or latch to the dedicated exit
   // blocks. When exiting either with EQ or NE, we know that the induction value
