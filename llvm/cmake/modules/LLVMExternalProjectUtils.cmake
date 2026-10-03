@@ -202,6 +202,34 @@ function(llvm_ExternalProject_Add name source_dir)
     endif()
   endforeach()
 
+  # Compiler launchers -- ccache, sccache and friends -- are set on the
+  # top-level project, but every runtimes/builtins sub-build is a separate CMake
+  # project and does not inherit them, so a compilation cache configured for the
+  # build does not cover those compiles at all.
+  #
+  # This forwards nothing unless the user set a launcher, and only forwards one
+  # that resolves to a program that exists. An unresolvable launcher degrades to
+  # an uncached sub-build with a warning rather than a configure failure, so a
+  # stale setting cannot be turned into a build error by this propagation.
+  foreach(lang C CXX ASM)
+    if(CMAKE_${lang}_COMPILER_LAUNCHER)
+      # The variable may carry arguments after the program name.
+      list(GET CMAKE_${lang}_COMPILER_LAUNCHER 0 launcher_command)
+      unset(launcher_program CACHE)
+      find_program(launcher_program NAMES "${launcher_command}")
+      if(launcher_program)
+        list(APPEND CMAKE_CACHE_DEFAULT_ARGS
+          "-DCMAKE_${lang}_COMPILER_LAUNCHER:STRING=${CMAKE_${lang}_COMPILER_LAUNCHER}")
+      else()
+        message(WARNING
+          "CMAKE_${lang}_COMPILER_LAUNCHER is set to '${launcher_command}', which "
+          "was not found. Not forwarding it to the ${name} sub-build, which will "
+          "compile without it.")
+      endif()
+      unset(launcher_program CACHE)
+    endif()
+  endforeach()
+
   # Find all variables that start with a prefix and propagate them through
   get_cmake_property(variableNames VARIABLES)
 
