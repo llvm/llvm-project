@@ -3092,8 +3092,11 @@ bool cir::FuncOp::isCxxTrivialMemberFunction() {
 }
 
 mlir::Region *cir::FuncOp::getCallableRegion() {
-  // TODO(CIR): This function will have special handling for aliases and a
-  // check for an external function, once those features have been upstreamed.
+  // Declarations and aliases have no body to analyze or inline. Returning the
+  // empty region would make interprocedural analyses (e.g. SCCP) treat calls
+  // to them as having no returns, leaving their results uninitialized.
+  if (getBody().empty())
+    return nullptr;
   return &getBody();
 }
 
