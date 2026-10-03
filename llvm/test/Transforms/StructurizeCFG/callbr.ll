@@ -1219,11 +1219,19 @@ define void @callbr_self_loop_fallthrough(i1 %c) {
 ; CHECK-NEXT:    br label %[[CB:.*]]
 ; CHECK:       [[CB]]:
 ; CHECK-NEXT:    callbr void asm "", "!i"()
-; CHECK-NEXT:            to label %[[CB]] [label %[[FLOW3:.*]]]
-; CHECK:       [[FLOW3]]:
+; CHECK-NEXT:            to label %[[CB_TARGET_CB:.*]] [label %[[CB_TARGET_IND:.*]]]
+; CHECK:       [[FLOW3:.*]]:
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[CB_TARGET_CB]] ], [ false, %[[CB_TARGET_IND]] ]
+; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
+; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[IND:.*]], label %[[CB]]
+; CHECK:       [[IND]]:
 ; CHECK-NEXT:    br label %[[EXIT1:.*]]
 ; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
+; CHECK:       [[CB_TARGET_CB]]:
+; CHECK-NEXT:    br label %[[FLOW3]]
+; CHECK:       [[CB_TARGET_IND]]:
+; CHECK-NEXT:    br label %[[FLOW3]]
 ;
 entry:
   br label %cb
@@ -1243,11 +1251,18 @@ define void @callbr_self_loop_indirect(i1 %c) {
 ; CHECK-NEXT:    br label %[[CB:.*]]
 ; CHECK:       [[CB]]:
 ; CHECK-NEXT:    callbr void asm "", "!i"()
-; CHECK-NEXT:            to label %[[FT1:.*]] [label %[[CB]]]
-; CHECK:       [[FT1]]:
+; CHECK-NEXT:            to label %[[CB_TARGET_FT:.*]] [label %[[CB_TARGET_CB:.*]]]
+; CHECK:       [[FT1:.*]]:
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[CB_TARGET_FT]] ], [ false, %[[CB_TARGET_CB]] ]
+; CHECK-NEXT:    br i1 [[ISLAND_SEL]], label %[[FT:.*]], label %[[CB]]
+; CHECK:       [[FT]]:
 ; CHECK-NEXT:    br label %[[EXIT1:.*]]
 ; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
+; CHECK:       [[CB_TARGET_FT]]:
+; CHECK-NEXT:    br label %[[FT1]]
+; CHECK:       [[CB_TARGET_CB]]:
+; CHECK-NEXT:    br label %[[FT1]]
 ;
 entry:
   br label %cb
@@ -1269,15 +1284,63 @@ define void @callbr_self_loop_exit_is_ret(i1 %c) {
 ; CHECK-NEXT:    br label %[[CB:.*]]
 ; CHECK:       [[CB]]:
 ; CHECK-NEXT:    callbr void asm "", "!i"()
-; CHECK-NEXT:            to label %[[CB]] [label %[[RET:.*]]]
-; CHECK:       [[RET]]:
+; CHECK-NEXT:            to label %[[CB_TARGET_CB:.*]] [label %[[CB_TARGET_RET:.*]]]
+; CHECK:       [[RET:.*]]:
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[CB_TARGET_CB]] ], [ false, %[[CB_TARGET_RET]] ]
+; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
+; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[RET1:.*]], label %[[CB]]
+; CHECK:       [[RET1]]:
 ; CHECK-NEXT:    ret void
+; CHECK:       [[CB_TARGET_CB]]:
+; CHECK-NEXT:    br label %[[RET]]
+; CHECK:       [[CB_TARGET_RET]]:
+; CHECK-NEXT:    br label %[[RET]]
 ;
 entry:
   br label %cb
 cb:
   callbr void asm "", "!i"() to label %cb [label %ret]
 ret:
+  ret void
+}
+
+; The callbr self-loop is its own region (cb => ft) nested in a region that
+; needs structurizing. Apart from the back edge, the callbr only targets the
+; region exit, so the region must not be mistaken for an already structured
+; island and left alone.
+define void @callbr_self_loop_in_region(i1 %c) {
+; CHECK-LABEL: define void @callbr_self_loop_in_region(
+; CHECK-SAME: i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 [[C]], label %[[PREHEADER:.*]], label %[[FLOW1:.*]]
+; CHECK:       [[PREHEADER]]:
+; CHECK-NEXT:    br label %[[CB:.*]]
+; CHECK:       [[FLOW1]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[CB]]:
+; CHECK-NEXT:    callbr void asm "", "!i"()
+; CHECK-NEXT:            to label %[[CB_TARGET_FT:.*]] [label %[[CB_TARGET_CB:.*]]]
+; CHECK:       [[FLOW:.*]]:
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[CB_TARGET_FT]] ], [ false, %[[CB_TARGET_CB]] ]
+; CHECK-NEXT:    br i1 [[ISLAND_SEL]], label %[[FT:.*]], label %[[CB]]
+; CHECK:       [[FT]]:
+; CHECK-NEXT:    br label %[[FLOW1]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[CB_TARGET_FT]]:
+; CHECK-NEXT:    br label %[[FLOW]]
+; CHECK:       [[CB_TARGET_CB]]:
+; CHECK-NEXT:    br label %[[FLOW]]
+;
+entry:
+  br i1 %c, label %preheader, label %exit
+preheader:
+  br label %cb
+cb:
+  callbr void asm "", "!i"() to label %ft [label %cb]
+ft:
+  br label %exit
+exit:
   ret void
 }
 
