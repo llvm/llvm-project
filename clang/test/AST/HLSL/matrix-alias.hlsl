@@ -45,5 +45,10 @@ void entry() {
 
   // CHECK: DeclStmt 0x{{[0-9a-fA-F]+}} <line:44:3, col:21>
   // CHECK-NEXT: VarDecl 0x{{[0-9a-fA-F]+}} <col:3, col:12> col:12 ImpMat4x4 'matrix<>':'matrix<float, 4, 4>'
+
+  matrix ImpMat4x4b;
+
+  // CHECK: DeclStmt 0x{{[0-9a-fA-F]+}} <line:49:3, col:20>
+  // CHECK-NEXT: VarDecl 0x{{[0-9a-fA-F]+}} <col:3, col:10> col:10 ImpMat4x4b 'hlsl::matrix<float, 4, 4>':'matrix<float, 4, 4>'
   return;
 }
