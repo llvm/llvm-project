@@ -475,6 +475,7 @@ private:
   // Other helper routines.
   bool processInstruction(Instruction *I);
   bool processBlock(BasicBlock *BB);
+  bool replaceWithEquivalentCmp(CmpInst *Cmp);
   bool iterateOnFunction(Function &F);
   bool performPRE(Function &F);
   bool performScalarPRE(Instruction *I);
@@ -3634,6 +3635,42 @@ bool GVNPassImpl::propagateEquality(
   return Changed;
 }
 
+bool GVNPassImpl::replaceWithEquivalentCmp(CmpInst *Cmp) {
+  // Substitute cmp instruction with not if possible.
+  uint32_t Num = VN.lookupCmp(Cmp->getOpcode(), Cmp->getInversePredicate(),
+                              Cmp->getOperand(0), Cmp->getOperand(1));
+  if (Num != 0) {
+    Value *Repl = findLeader(Cmp->getParent(), Num);
+    if (Repl) {
+      patchReplacementInstruction(Cmp, Repl);
+      BinaryOperator *Not = BinaryOperator::CreateNot(
+          Repl, Repl->getName() + ".not", Cmp->getIterator());
+      Not->setDebugLoc(Cmp->getDebugLoc());
+      Cmp->replaceAllUsesWith(Not);
+      salvageAndRemoveInstruction(Cmp);
+      return true;
+    }
+  }
+
+  // Substitute icmp samesign upred with icmp spred
+  auto *ICmp = dyn_cast<ICmpInst>(Cmp);
+  if (ICmp && ICmp->hasSameSign() && !ICmp->isEquality()) {
+    uint32_t Num = VN.lookupCmp(
+        ICmp->getOpcode(),
+        ICmpInst::getFlippedSignednessPredicate(ICmp->getPredicate()),
+        ICmp->getOperand(0), ICmp->getOperand(1));
+    if (Num != 0) {
+      Value *Repl = findLeader(Cmp->getParent(), Num);
+      if (Repl) {
+        patchAndReplaceAllUsesWith(Cmp, Repl);
+        salvageAndRemoveInstruction(Cmp);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 /// When calculating availability, handle an instruction
 /// by inserting it into the appropriate sets.
 bool GVNPassImpl::processInstruction(Instruction *I) {
@@ -3766,39 +3803,9 @@ bool GVNPassImpl::processInstruction(Instruction *I) {
   // in the domtree: it can't!
   Value *Repl = Num < NextNum ? findLeader(I->getParent(), Num) : nullptr;
   if (!Repl) {
-    // Substitute cmp instruction with not if possible.
-    if (CmpInst *Cmp = dyn_cast<CmpInst>(I)) {
-      uint32_t NotNum =
-          VN.lookupCmp(Cmp->getOpcode(), Cmp->getInversePredicate(),
-                       Cmp->getOperand(0), Cmp->getOperand(1));
-      if (NotNum != 0) {
-        Value *NotRepl = findLeader(I->getParent(), NotNum);
-        if (NotRepl) {
-          patchReplacementInstruction(I, NotRepl);
-          BinaryOperator *Not = BinaryOperator::CreateNot(
-              NotRepl, NotRepl->getName() + ".not", I->getIterator());
-          Not->setDebugLoc(I->getDebugLoc());
-          I->replaceAllUsesWith(Not);
-          salvageAndRemoveInstruction(I);
-          return true;
-        }
-      }
-      auto *ICmp = dyn_cast<ICmpInst>(Cmp);
-      if (ICmp && ICmp->hasSameSign() && !ICmp->isEquality()) {
-        uint32_t SameSignNum = VN.lookupCmp(
-            ICmp->getOpcode(),
-            ICmpInst::getFlippedSignednessPredicate(ICmp->getPredicate()),
-            ICmp->getOperand(0), ICmp->getOperand(1));
-        if (SameSignNum != 0) {
-          Repl = findLeader(I->getParent(), SameSignNum);
-          if (Repl) {
-            patchAndReplaceAllUsesWith(I, Repl);
-            salvageAndRemoveInstruction(I);
-            return true;
-          }
-        }
-      }
-    }
+    if (auto *Cmp = dyn_cast<CmpInst>(I); Cmp && replaceWithEquivalentCmp(Cmp))
+      return true;
+
     // Failure, just remember this instance for future use.
     LeaderTable.insert(Num, I, I->getParent());
     return false;
