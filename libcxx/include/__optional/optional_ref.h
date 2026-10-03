@@ -67,7 +67,7 @@ public:
   using iterator =
       conditional_t< std::__range_fits_in_alignment(alignof(_Tp), 1),
                      std::__static_packed_bounded_iterator<__pointer, 1>,
-#  if _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
+#  ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
                      std::__bounded_iter<__pointer>
 #  else
                      std::__capacity_aware_iterator<__pointer, 1>
