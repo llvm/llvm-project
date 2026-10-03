@@ -74,6 +74,12 @@ public:
                                    SourceLocation FreeLoc,
                                    llvm::ArrayRef<const Expr *> ExprChain) {}
 
+  // Overload for a use with only a location and no expression (e.g. a borrow
+  // captured into the object and still held at the capturing method's exit).
+  virtual void reportUseAfterScope(const Expr *IssueExpr, SourceLocation UseLoc,
+                                   const Expr *MovedExpr,
+                                   SourceLocation FreeLoc) {}
+
   // TODO: Pass the expiry location and aliasing chain like
   // reportUseAfterScope.
   virtual void reportUseAfterReturn(const Expr *IssueExpr,

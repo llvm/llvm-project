@@ -328,6 +328,8 @@ public:
                                                   Warning.InvalidatedByExpr);
           } else if (isa<ReturnEscapeFact>(OEF)) {
             // FIXME: Diagnose invalidated return escapes separately.
+          } else if (isa<ThisEscapeFact>(OEF)) {
+            // FIXME: Diagnose a `this`-held loan invalidated through `this`.
           } else
             llvm_unreachable("Unhandled OriginEscapesFact type");
         } else if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))
@@ -348,7 +350,14 @@ public:
             IsMain = Func->isMain();
           SemaHelper->reportDanglingGlobal(IssueExpr, GlobalEscape->getGlobal(),
                                            MovedExpr, ExpiryLoc, IsMain);
-        } else
+        } else if (const auto *ThisEscape = dyn_cast<ThisEscapeFact>(OEF))
+          // A borrow is still held by the object (e.g. captured via
+          // lifetime_capture_by_this) when the captured local goes out of
+          // scope; reuse the use-after-scope diagnostic at the capturing
+          // method.
+          SemaHelper->reportUseAfterScope(IssueExpr, ThisEscape->getLoc(),
+                                          MovedExpr, ExpiryLoc);
+        else
           llvm_unreachable("Unhandled OriginEscapesFact type");
       } else
         llvm_unreachable("Unhandled CausingFact type");
