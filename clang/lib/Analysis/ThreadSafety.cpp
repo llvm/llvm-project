@@ -346,6 +346,58 @@ private:
   CycleMap CycMap;
 };
 
+const ValueDecl* CapabilityExpr::valueDecl() const {
+  if (negative() || sexpr() == nullptr)
+    return nullptr;
+  if (const auto *P = dyn_cast<til::Project>(sexpr()))
+    return P->clangDecl();
+  if (const auto *P = dyn_cast<til::LiteralPtr>(sexpr()))
+    return P->clangDecl();
+  return nullptr;
+}
+
+std::string CapabilityExpr::toString() const {
+  if (negative())
+    return "!" + sx::toString(sexpr());
+  return sx::toString(sexpr());
+}
+
+bool CapabilityExpr::isInvalid() const {
+  return isa_and_nonnull<til::Undefined>(sexpr());
+}
+
+bool CapabilityExpr::isUniversal() const {
+  return isa_and_nonnull<til::Wildcard>(sexpr());
+}
+
+bool CapabilityExpr::equals(const CapabilityExpr &other) const {
+  return (negative() == other.negative()) &&
+         sx::equals(sexpr(), other.sexpr());
+}
+
+CapabilityExpr CapabilityExpr::operator!() const {
+  return CapabilityExpr(CapExpr.getPointer(), CapKind, !negative(),
+                        reentrant());
+}
+
+bool CapabilityExpr::matches(const CapabilityExpr &other) const {
+  return (negative() == other.negative()) &&
+         sx::matches(sexpr(), other.sexpr());
+}
+
+bool CapabilityExpr::matchesUniv(const CapabilityExpr &CapE) const {
+  return isUniversal() || matches(CapE);
+}
+
+bool CapabilityExpr::partiallyMatches(const CapabilityExpr &other) const {
+  return (negative() == other.negative()) &&
+         sx::partiallyMatches(sexpr(), other.sexpr());
+}
+
+bool CapabilityExpr::shouldIgnore() const { 
+  return sexpr() == nullptr; 
+}
+
 } // namespace threadSafety
 } // namespace clang
 
