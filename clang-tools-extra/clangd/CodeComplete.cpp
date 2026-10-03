@@ -1833,9 +1833,13 @@ private:
     }
 
     if (Opts.EnableInsertReplace) {
-      ReplaceRange.emplace();
-      ReplaceRange->start = InsertRange.start;
-      ReplaceRange->end = getEndOfCodeCompletionReplace(SM);
+      // Header-name completion always provides a replace-like range,
+      // including delimiters, even in the Insert mode.
+      const Position ReplaceRangeEnd =
+          CCContextKind == CodeCompletionContext::CCC_IncludedFile
+              ? InsertRange.end
+              : getEndOfCodeCompletionReplace(SM);
+      ReplaceRange = Range{InsertRange.start, ReplaceRangeEnd};
     }
     Filter = FuzzyMatcher(
         Recorder->CCSema->getPreprocessor().getCodeCompletionFilter());
