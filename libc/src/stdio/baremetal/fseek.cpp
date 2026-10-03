@@ -26,10 +26,10 @@ LLVM_LIBC_FUNCTION(int, fseek, (::FILE * stream, long offset, int whence)) {
     libc_errno = EINVAL;
     return -1;
   }
-  off_t result =
-      __llvm_libc_stdio_seek(stream, static_cast<off_t>(offset), whence);
+  off_t off = offset;
+  int result = __llvm_libc_stdio_seek(stream, &off, whence);
   if (result < 0) {
-    libc_errno = static_cast<int>(-result);
+    libc_errno = -result;
     return -1;
   }
   return 0;
