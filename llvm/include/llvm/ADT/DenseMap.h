@@ -990,19 +990,6 @@ public:
     return lookupOrInsertIntoBucket(std::move(Key)).first->second;
   }
 
-  /// Return true if the specified pointer points somewhere into the DenseMap's
-  /// array of buckets (i.e. either to a key or value in the DenseMap).
-  [[nodiscard]] bool isPointerIntoBucketsArray(const void *Ptr) const {
-    return Ptr >= getBuckets() && Ptr < getBucketsEnd();
-  }
-
-  /// getPointerIntoBucketsArray() - Return an opaque pointer into the buckets
-  /// array.  In conjunction with the previous method, this can be used to
-  /// determine whether an insertion caused the DenseMap to reallocate.
-  [[nodiscard]] const void *getPointerIntoBucketsArray() const {
-    return getBuckets();
-  }
-
   void swap(DenseMapBase &RHS) {
     this->incrementEpoch();
     RHS.incrementEpoch();
@@ -1251,12 +1238,6 @@ private:
   UsedT *getUsed() { return Storage.getUsed(); }
 
   unsigned getNumBuckets() const { return Storage.getNumBuckets(); }
-
-  BucketT *getBucketsEnd() { return getBuckets() + getNumBuckets(); }
-
-  const BucketT *getBucketsEnd() const {
-    return getBuckets() + getNumBuckets();
-  }
 
   LLVM_ATTRIBUTE_NOINLINE void grow(unsigned MinNumBuckets) {
     assert((MinNumBuckets == 0 || isPowerOf2_32(MinNumBuckets)) &&
