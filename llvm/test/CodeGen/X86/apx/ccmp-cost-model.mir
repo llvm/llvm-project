@@ -1,0 +1,206 @@
+# RUN: llc -o - %s -mtriple=x86_64 -mattr=+ccmp -mcpu=diamondrapids -x86-enable-ccmp-opt -run-pass=machine-ccmp | FileCheck %s
+# RUN: llc -o - %s -mtriple=x86_64 -mattr=+ccmp -mcpu=diamondrapids -x86-enable-ccmp-opt -passes=machine-ccmp | FileCheck %s
+
+# This test exercises the profitability cost model of the CCMP formation pass
+# (machine-ccmp), i.e. the paths that -stress-machine-ccmp bypasses. A fixed
+# -mcpu is required so MachineTraceMetrics produces deterministic depths.
+# positive_control confirms the pass is active by folding to a CTEST; the other
+# two functions are structurally convertible but rejected by shouldConvert().
+# minsize_control takes the MinSize code-size path: X86 reports a zero delta, so
+# the pass falls through to the same cost model and still folds to a CTEST.
+
+--- |
+  define void @positive_control(i32 %a, i32 %b) { ret void }
+  define void @minsize_control(i32 %a, i32 %b) #0 { ret void }
+  define void @reject_branch_delay(i32 %a, i32 %b) { ret void }
+  define void @reject_resource_depth(i32 %a, i32 %b) { ret void }
+
+  attributes #0 = { minsize }
+...
+
+# Structurally convertible and cheap: the cost model accepts and a CTEST forms.
+---
+name:            positive_control
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: positive_control
+  ; CHECK:       bb.0:
+  ; CHECK:       CTEST32rr
+  bb.0:
+    successors: %bb.1, %bb.3
+    liveins: $edi, $esi
+
+    %1:gr32 = COPY $esi
+    %0:gr32 = COPY $edi
+    TEST32rr %0, %0, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+
+    TEST32rr %1, %1, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.2
+
+  bb.2:
+    %3:gr32 = MOV32ri 1
+    $eax = COPY %3
+    RET 0, $eax
+
+  bb.3:
+    %2:gr32 = MOV32r0 implicit-def dead $eflags
+    $eax = COPY %2
+    RET 0, $eax
+...
+
+# MinSize function: shouldConvert() enters the code-size path, X86's zero delta
+# falls through to the cost model, and the cheap candidate still folds.
+---
+name:            minsize_control
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: minsize_control
+  ; CHECK:       bb.0:
+  ; CHECK:       CTEST32rr
+  bb.0:
+    successors: %bb.1, %bb.3
+    liveins: $edi, $esi
+
+    %1:gr32 = COPY $esi
+    %0:gr32 = COPY $edi
+    TEST32rr %0, %0, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+
+    TEST32rr %1, %1, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.2
+
+  bb.2:
+    %3:gr32 = MOV32ri 1
+    $eax = COPY %3
+    RET 0, $eax
+
+  bb.3:
+    %2:gr32 = MOV32r0 implicit-def dead $eflags
+    $eax = COPY %2
+    RET 0, $eax
+...
+
+# Branch-delay budget: a long (flag-free) dependency chain feeds the CmpBB
+# compare, so folding it would delay the branch by more than 3/4 of the
+# misprediction penalty. shouldConvert() rejects; the two branches are kept.
+---
+name:            reject_branch_delay
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: reject_branch_delay
+  ; CHECK:       bb.0:
+  ; CHECK:       TEST32rr
+  ; CHECK:       JCC_1
+  ; CHECK:       bb.1:
+  ; CHECK:       TEST32rr
+  ; CHECK:       JCC_1
+  ; CHECK-NOT:   CCMP
+  ; CHECK-NOT:   CTEST
+  bb.0:
+    successors: %bb.1, %bb.3
+    liveins: $edi, $esi
+
+    %1:gr32 = COPY $esi
+    %0:gr32 = COPY $edi
+    TEST32rr %0, %0, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+
+    %10:gr32 = NOT32r %1
+    %11:gr32 = NOT32r %10
+    %12:gr32 = NOT32r %11
+    %13:gr32 = NOT32r %12
+    %14:gr32 = NOT32r %13
+    %15:gr32 = NOT32r %14
+    %16:gr32 = NOT32r %15
+    %17:gr32 = NOT32r %16
+    %18:gr32 = NOT32r %17
+    %19:gr32 = NOT32r %18
+    %20:gr32 = NOT32r %19
+    %21:gr32 = NOT32r %20
+    %22:gr32 = NOT32r %21
+    %23:gr32 = NOT32r %22
+    TEST32rr %23, %23, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.2
+
+  bb.2:
+    %3:gr32 = MOV32ri 1
+    $eax = COPY %3
+    RET 0, $eax
+
+  bb.3:
+    %2:gr32 = MOV32r0 implicit-def dead $eflags
+    $eax = COPY %2
+    RET 0, $eax
+...
+
+# Resource depth: many independent speculatable instructions in CmpBB push the
+# resource depth above the Head critical path, so shouldConvert() rejects even
+# though the branch delay is within budget. The two branches are kept.
+---
+name:            reject_resource_depth
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: reject_resource_depth
+  ; CHECK:       bb.0:
+  ; CHECK:       TEST32rr
+  ; CHECK:       JCC_1
+  ; CHECK:       bb.1:
+  ; CHECK:       TEST32rr
+  ; CHECK:       JCC_1
+  ; CHECK-NOT:   CCMP
+  ; CHECK-NOT:   CTEST
+  bb.0:
+    successors: %bb.1, %bb.3
+    liveins: $edi, $esi
+
+    %1:gr32 = COPY $esi
+    %0:gr32 = COPY $edi
+    TEST32rr %0, %0, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+
+    %10:gr32 = MOV32ri 1
+    %11:gr32 = MOV32ri 2
+    %12:gr32 = MOV32ri 3
+    %13:gr32 = MOV32ri 4
+    %14:gr32 = MOV32ri 5
+    %15:gr32 = MOV32ri 6
+    %16:gr32 = MOV32ri 7
+    %17:gr32 = MOV32ri 8
+    %18:gr32 = MOV32ri 9
+    %19:gr32 = MOV32ri 10
+    %20:gr32 = MOV32ri 11
+    %21:gr32 = MOV32ri 12
+    TEST32rr %1, %1, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.2
+
+  bb.2:
+    %3:gr32 = MOV32ri 1
+    $eax = COPY %3
+    RET 0, $eax
+
+  bb.3:
+    %2:gr32 = MOV32r0 implicit-def dead $eflags
+    $eax = COPY %2
+    RET 0, $eax
+...
