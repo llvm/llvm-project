@@ -289,13 +289,19 @@ public:
   /// subcommands.
   /// \param HandleOtherPositionals - A callback for the case where positional
   /// arguments that are not subcommands are present.
+  /// \param AllowSubCommandNamesAsPositionals - If true, only the first
+  /// positional argument that matches a subcommand name is the subcommand.
+  /// Later ones are passed to \p HandleOtherPositionals instead of being
+  /// reported as multiple subcommands, so that e.g. `foo foo` is subcommand
+  /// `foo` with a positional argument `foo`.
   /// \return The name of the subcommand found. If no subcommand is found,
   /// this returns an empty StringRef. If multiple subcommands are found, the
   /// first one is returned.
   LLVM_ABI StringRef getSubCommand(
       ArrayRef<OptTable::SubCommand> AllSubCommands,
       std::function<void(ArrayRef<StringRef>)> HandleMultipleSubcommands,
-      std::function<void(ArrayRef<StringRef>)> HandleOtherPositionals) const;
+      std::function<void(ArrayRef<StringRef>)> HandleOtherPositionals,
+      bool AllowSubCommandNamesAsPositionals = false) const;
 
   /// @}
   /// @name Argument Lookup Utilities
