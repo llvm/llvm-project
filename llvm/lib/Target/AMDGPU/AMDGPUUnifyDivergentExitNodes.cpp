@@ -149,7 +149,8 @@ BasicBlock *AMDGPUUnifyDivergentExitNodesImpl::unifyReturnBlockSet(
     B.CreateRetVoid();
   } else {
     // If the function doesn't return void... add a PHI node to the block...
-    PN = B.CreatePHI(F.getReturnType(), ReturningBlocks.size(),
+    PN = B.CreatePHI(F.getReturnType(),
+                     static_cast<unsigned>(ReturningBlocks.size()),
                      "UnifiedRetVal");
     B.CreateRet(PN);
   }
