@@ -406,6 +406,7 @@ defm SPV_KHR_abort : ExtensionOperand<138, [EnvOpenCL]>;
 defm SPV_KHR_poison_freeze : ExtensionOperand<139, [EnvVulkan, EnvOpenCL]>;
 defm SPV_KHR_untyped_pointers : ExtensionOperand<140, [EnvOpenCL]>;
 defm SPV_EXT_long_vector : ExtensionOperand<141, [EnvOpenCL, EnvVulkan]>;
+defm SPV_KHR_relaxed_extended_instruction : ExtensionOperand<142, [EnvVulkan, EnvOpenCL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -1439,6 +1440,8 @@ defm FunctionFloatingPointModeINTEL : DecorationOperand<6080, 0, 0, [], [Functio
 defm AliasScopeINTEL : DecorationOperand<5914, 0, 0, [], [MemoryAccessAliasingINTEL]>;
 defm NoAliasINTEL : DecorationOperand<5915, 0, 0, [], [MemoryAccessAliasingINTEL]>;
 defm FPMaxErrorDecorationINTEL : DecorationOperand<6170, 0, 0, [], [FPMaxErrorINTEL]>;
+// Internal-only sentinel; intercepted by SPIRVModuleAnalysis, never emitted.
+defm AuxDataInstructionMetadata : DecorationOperand<0xFFFF, 0, 0, [], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define BuiltIn enum values and at the same time
