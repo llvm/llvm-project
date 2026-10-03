@@ -14873,79 +14873,11 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
   if (IsFixedVector)
     ContainerVecVT = getContainerForFixedLengthVector(VecVT);
 
-  // If concatenating would exceed LMUL=8, we need to split.
-  if ((ContainerVecVT.getSizeInBits().getKnownMinValue() * Factor) >
-      (8 * RISCV::RVVBitsPerBlock)) {
-    // Fixed-length: spill operands once, then reuse the shared vlseg helper on
-    // legal-sized chunks (#222938). Scalable keeps the recursive split below.
-    if (IsFixedVector) {
-      const unsigned NumElts = VecVT.getVectorNumElements();
-      MVT ElemVT = VecVT.getVectorElementType();
-
-      unsigned ChunkElts = 0;
-      for (unsigned K = 1u << Log2_32(NumElts); K >= 1; K /= 2) {
-        MVT ChunkVT = MVT::getVectorVT(ElemVT, K);
-        if (!ChunkVT.isValid() || !useRVVForFixedLengthVectorVT(ChunkVT))
-          continue;
-        MVT ChunkContainer = getContainerForFixedLengthVector(ChunkVT);
-        if (ChunkContainer.getSizeInBits().getKnownMinValue() * Factor <=
-            (8 * RISCV::RVVBitsPerBlock)) {
-          ChunkElts = K;
-          break;
-        }
-      }
-      assert(ChunkElts != 0 && "expected a legal fixed-length vlseg chunk");
-
-      auto [Chain, StackPtr, PtrInfo, Alignment] =
-          spillFixedDeinterleaveOperands(Op, DL, DAG, VecVT, Factor);
-
-      MVT XLenVT = Subtarget.getXLenVT();
-      MVT ChunkVT = MVT::getVectorVT(ElemVT, ChunkElts);
-      MVT ChunkContainer = getContainerForFixedLengthVector(ChunkVT);
-      MVT WideVT = MVT::getVectorVT(ElemVT, ChunkElts * PowerOf2Ceil(Factor));
-      assert(WideVT.isValid() && WideVT.isFixedLengthVector() &&
-             "expected legal wide passthru VT for chunked vlseg");
-      MVT WideContainer = getContainerForFixedLengthVector(WideVT);
-      const unsigned ElemBytes = VecVT.getScalarStoreSize();
-
-      SmallVector<SmallVector<SDValue, 4>, 8> Parts(Factor);
-      for (unsigned Offset = 0; Offset < NumElts; Offset += ChunkElts) {
-        unsigned ThisChunkElts = std::min(ChunkElts, NumElts - Offset);
-        uint64_t ByteOff = static_cast<uint64_t>(Offset) * Factor * ElemBytes;
-        SDValue ChunkPtr =
-            DAG.getObjectPtrOffset(DL, StackPtr, TypeSize::getFixed(ByteOff));
-        MachinePointerInfo ChunkPI = PtrInfo.getWithOffset(ByteOff);
-
-        auto [Mask, VL] =
-            getDefaultVLOps(ChunkVT, ChunkContainer, DL, DAG, Subtarget);
-        if (ThisChunkElts != ChunkElts)
-          VL = DAG.getConstant(ThisChunkElts, DL, XLenVT);
-
-        SmallVector<SDValue, 8> Fields;
-        Chain = vlsegDeinterleaveFields(
-            DAG, Subtarget, DL, Factor, ChunkContainer, ElemVT, Chain, ChunkPtr,
-            ChunkPI, Alignment, Mask, VL, WideContainer, ChunkVT, Fields);
-        for (unsigned i = 0; i != Factor; ++i) {
-          SDValue Fixed = Fields[i];
-          if (ThisChunkElts != ChunkElts) {
-            EVT NarrowVT =
-                EVT::getVectorVT(*DAG.getContext(), ElemVT, ThisChunkElts);
-            Fixed = DAG.getExtractSubvector(DL, NarrowVT, Fixed, 0);
-          }
-          Parts[i].push_back(Fixed);
-        }
-      }
-
-      SmallVector<SDValue, 8> Res(Factor);
-      for (unsigned i = 0; i != Factor; ++i) {
-        if (Parts[i].size() == 1)
-          Res[i] = Parts[i][0];
-        else
-          Res[i] = DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, Parts[i]);
-      }
-      return DAG.getMergeValues(Res, DL);
-    }
-
+  // Scalable vectors that would exceed LMUL=8 split into smaller
+  // VECTOR_DEINTERLEAVE nodes and are lowered recursively. Fixed-length
+  // vectors fall through to the generic store+vlseg path (#222938).
+  if (!IsFixedVector && (ContainerVecVT.getSizeInBits().getKnownMinValue() *
+                         Factor) > (8 * RISCV::RVVBitsPerBlock)) {
     SmallVector<SDValue, 8> Ops(Factor * 2);
     for (unsigned i = 0; i != Factor; ++i) {
       auto [OpLo, OpHi] = DAG.SplitVectorOperand(Op.getNode(), i);
@@ -14984,75 +14916,71 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
     }
   }
 
-  SmallVector<SDValue, 8> Ops(Op->op_values());
+  // Scalable special lowerings (vnsrl / vcompress) and the scalable generic
+  // path. Fixed-length uses the chunked store+vlseg below, so a full concat
+  // MVT is never built for it.
+  if (!IsFixedVector) {
+    SmallVector<SDValue, 8> Ops(Op->op_values());
 
-  // Concatenate the vectors as one vector to deinterleave
-  MVT ConcatVT =
-      MVT::getVectorVT(VecVT.getVectorElementType(),
-                       VecVT.getVectorElementCount() * PowerOf2Ceil(Factor));
-  if (Ops.size() < PowerOf2Ceil(Factor))
-    Ops.append(PowerOf2Ceil(Factor) - Factor, DAG.getUNDEF(VecVT));
-  SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, Ops);
+    // Concatenate the vectors as one vector to deinterleave
+    MVT ConcatVT =
+        MVT::getVectorVT(VecVT.getVectorElementType(),
+                         VecVT.getVectorElementCount() * PowerOf2Ceil(Factor));
+    if (Ops.size() < PowerOf2Ceil(Factor))
+      Ops.append(PowerOf2Ceil(Factor) - Factor, DAG.getUNDEF(VecVT));
+    SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, Ops);
 
-  if (Factor == 2 && !IsFixedVector) {
-    // We can deinterleave through vnsrl.wi if the element type is smaller than
-    // ELEN
-    if (VecVT.getScalarSizeInBits() < Subtarget.getELen()) {
-      SDValue Even = getDeinterleaveShiftAndTrunc(DL, VecVT, Concat, 2, 0, DAG);
-      SDValue Odd = getDeinterleaveShiftAndTrunc(DL, VecVT, Concat, 2, 1, DAG);
+    if (Factor == 2) {
+      // We can deinterleave through vnsrl.wi if the element type is smaller
+      // than ELEN
+      if (VecVT.getScalarSizeInBits() < Subtarget.getELen()) {
+        SDValue Even =
+            getDeinterleaveShiftAndTrunc(DL, VecVT, Concat, 2, 0, DAG);
+        SDValue Odd =
+            getDeinterleaveShiftAndTrunc(DL, VecVT, Concat, 2, 1, DAG);
+        return DAG.getMergeValues({Even, Odd}, DL);
+      }
+
+      // For the indices, use the vmv.v.x of an i8 constant to fill the largest
+      // possibly mask vector, then extract the required subvector.  Doing this
+      // (instead of a vid, vmsne sequence) reduces LMUL, and allows the mask
+      // creation to be rematerialized during register allocation to reduce
+      // register pressure if needed.
+
+      MVT MaskVT = ConcatVT.changeVectorElementType(MVT::i1);
+
+      SDValue EvenSplat = DAG.getConstant(0b01010101, DL, MVT::nxv8i8);
+      EvenSplat = DAG.getBitcast(MVT::nxv64i1, EvenSplat);
+      SDValue EvenMask = DAG.getExtractSubvector(DL, MaskVT, EvenSplat, 0);
+
+      SDValue OddSplat = DAG.getConstant(0b10101010, DL, MVT::nxv8i8);
+      OddSplat = DAG.getBitcast(MVT::nxv64i1, OddSplat);
+      SDValue OddMask = DAG.getExtractSubvector(DL, MaskVT, OddSplat, 0);
+
+      // vcompress the even and odd elements into two separate vectors
+      SDValue EvenWide = DAG.getNode(ISD::VECTOR_COMPRESS, DL, ConcatVT, Concat,
+                                     EvenMask, DAG.getUNDEF(ConcatVT));
+      SDValue OddWide = DAG.getNode(ISD::VECTOR_COMPRESS, DL, ConcatVT, Concat,
+                                    OddMask, DAG.getUNDEF(ConcatVT));
+
+      // Extract the result half of the gather for even and odd
+      SDValue Even = DAG.getExtractSubvector(DL, VecVT, EvenWide, 0);
+      SDValue Odd = DAG.getExtractSubvector(DL, VecVT, OddWide, 0);
+
       return DAG.getMergeValues({Even, Odd}, DL);
     }
 
-    // For the indices, use the vmv.v.x of an i8 constant to fill the largest
-    // possibly mask vector, then extract the required subvector.  Doing this
-    // (instead of a vid, vmsne sequence) reduces LMUL, and allows the mask
-    // creation to be rematerialized during register allocation to reduce
-    // register pressure if needed.
-
-    MVT MaskVT = ConcatVT.changeVectorElementType(MVT::i1);
-
-    SDValue EvenSplat = DAG.getConstant(0b01010101, DL, MVT::nxv8i8);
-    EvenSplat = DAG.getBitcast(MVT::nxv64i1, EvenSplat);
-    SDValue EvenMask = DAG.getExtractSubvector(DL, MaskVT, EvenSplat, 0);
-
-    SDValue OddSplat = DAG.getConstant(0b10101010, DL, MVT::nxv8i8);
-    OddSplat = DAG.getBitcast(MVT::nxv64i1, OddSplat);
-    SDValue OddMask = DAG.getExtractSubvector(DL, MaskVT, OddSplat, 0);
-
-    // vcompress the even and odd elements into two separate vectors
-    SDValue EvenWide = DAG.getNode(ISD::VECTOR_COMPRESS, DL, ConcatVT, Concat,
-                                   EvenMask, DAG.getUNDEF(ConcatVT));
-    SDValue OddWide = DAG.getNode(ISD::VECTOR_COMPRESS, DL, ConcatVT, Concat,
-                                  OddMask, DAG.getUNDEF(ConcatVT));
-
-    // Extract the result half of the gather for even and odd
-    SDValue Even = DAG.getExtractSubvector(DL, VecVT, EvenWide, 0);
-    SDValue Odd = DAG.getExtractSubvector(DL, VecVT, OddWide, 0);
-
-    return DAG.getMergeValues({Even, Odd}, DL);
-  }
-
-  // Store with unit-stride store and load it back with segmented load.
-  SDValue Mask, VL;
-  MVT XLenVT = Subtarget.getXLenVT();
-  SDValue Chain;
-  Align Alignment;
-  SDValue StackPtr;
-  MachinePointerInfo PtrInfo;
-  if (IsFixedVector) {
-    std::tie(Chain, StackPtr, PtrInfo, Alignment) =
-        spillFixedDeinterleaveOperands(Op, DL, DAG, VecVT, Factor);
-    std::tie(Mask, VL) =
-        getDefaultVLOps(VecVT, ContainerVecVT, DL, DAG, Subtarget);
-    ConcatVT = getContainerForFixedLengthVector(ConcatVT);
-  } else {
+    // Store with unit-stride store and load it back with segmented load.
+    MVT XLenVT = Subtarget.getXLenVT();
     auto &MF = DAG.getMachineFunction();
-    Chain = DAG.getEntryNode();
-    Alignment = DAG.getReducedAlign(VecVT, /*UseABI=*/false);
-    std::tie(Mask, VL) = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
-    StackPtr = DAG.CreateStackTemporary(ConcatVT.getStoreSize(), Alignment);
+    SDValue Chain = DAG.getEntryNode();
+    Align Alignment = DAG.getReducedAlign(VecVT, /*UseABI=*/false);
+    auto [Mask, VL] = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
+    SDValue StackPtr =
+        DAG.CreateStackTemporary(ConcatVT.getStoreSize(), Alignment);
     auto FrameIndex = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
-    PtrInfo = MachinePointerInfo::getFixedStack(MF, FrameIndex);
+    MachinePointerInfo PtrInfo =
+        MachinePointerInfo::getFixedStack(MF, FrameIndex);
 
     SDValue StoreOps[] = {
         Chain, DAG.getTargetConstant(Intrinsic::riscv_vse, DL, XLenVT), Concat,
@@ -15062,16 +14990,71 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
         ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), StoreOps,
         ConcatVT.getVectorElementType(), PtrInfo, Alignment,
         MachineMemOperand::MOStore, LocationSize::beforeOrAfterPointer());
+
+    // Load it back with segmented load.
+    SmallVector<SDValue, 8> Res;
+    vlsegDeinterleaveFields(DAG, Subtarget, DL, Factor, ContainerVecVT,
+                            ConcatVT.getVectorElementType(), Chain, StackPtr,
+                            PtrInfo, Alignment, Mask, VL, ConcatVT,
+                            std::nullopt, Res);
+
+    return DAG.getMergeValues(Res, DL);
   }
 
-  // Load it back with segmented load.
-  SmallVector<SDValue, 8> Res;
-  vlsegDeinterleaveFields(
-      DAG, Subtarget, DL, Factor, ContainerVecVT,
-      ConcatVT.getVectorElementType(), Chain, StackPtr, PtrInfo, Alignment,
-      Mask, VL, ConcatVT,
-      IsFixedVector ? std::optional<MVT>(VecVT) : std::nullopt, Res);
+  // Fixed-length, including types over LMUL=8. Spill the operands once and
+  // reload them with one vlseg per legal chunk. Legal fixed vectors have a
+  // power-of-two length here, so halving yields equal chunks (#222938).
+  MVT LoadVecVT = VecVT;
+  MVT LoadContainerVecVT = ContainerVecVT;
+  while ((LoadContainerVecVT.getSizeInBits().getKnownMinValue() * Factor) >
+         (8 * RISCV::RVVBitsPerBlock)) {
+    LoadVecVT = LoadVecVT.getHalfNumVectorElementsVT();
+    LoadContainerVecVT = getContainerForFixedLengthVector(LoadVecVT);
+  }
 
+  auto [Chain, StackPtr, PtrInfo, Alignment] =
+      spillFixedDeinterleaveOperands(Op, DL, DAG, VecVT, Factor);
+  auto [Mask, VL] =
+      getDefaultVLOps(LoadVecVT, LoadContainerVecVT, DL, DAG, Subtarget);
+
+  MVT ElemVT = VecVT.getVectorElementType();
+  MVT WideVT = MVT::getVectorVT(ElemVT, LoadVecVT.getVectorNumElements() *
+                                            PowerOf2Ceil(Factor));
+  MVT WideContainer = getContainerForFixedLengthVector(WideVT);
+
+  const unsigned NumChunks =
+      VecVT.getVectorNumElements() / LoadVecVT.getVectorNumElements();
+  const uint64_t ChunkBytes =
+      static_cast<uint64_t>(Factor) * LoadVecVT.getStoreSize().getFixedValue();
+
+  SmallVector<SmallVector<SDValue, 4>, 8> Parts(Factor);
+  for (unsigned Part = 0; Part != NumChunks; ++Part) {
+    uint64_t ByteOff = static_cast<uint64_t>(Part) * ChunkBytes;
+    SDValue ChunkPtr = StackPtr;
+    MachinePointerInfo ChunkPI = PtrInfo;
+    Align ChunkAlign = Alignment;
+    if (ByteOff) {
+      ChunkPtr =
+          DAG.getObjectPtrOffset(DL, StackPtr, TypeSize::getFixed(ByteOff));
+      ChunkPI = PtrInfo.getWithOffset(ByteOff);
+      ChunkAlign = commonAlignment(Alignment, ByteOff);
+    }
+
+    SmallVector<SDValue, 8> Fields;
+    Chain = vlsegDeinterleaveFields(
+        DAG, Subtarget, DL, Factor, LoadContainerVecVT, ElemVT, Chain, ChunkPtr,
+        ChunkPI, ChunkAlign, Mask, VL, WideContainer, LoadVecVT, Fields);
+    for (unsigned I = 0; I != Factor; ++I)
+      Parts[I].push_back(Fields[I]);
+  }
+
+  SmallVector<SDValue, 8> Res(Factor);
+  for (unsigned I = 0; I != Factor; ++I) {
+    if (NumChunks == 1)
+      Res[I] = Parts[I].front();
+    else
+      Res[I] = DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, Parts[I]);
+  }
   return DAG.getMergeValues(Res, DL);
 }
 
