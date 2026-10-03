@@ -1,0 +1,204 @@
+# REQUIRES: aarch64-registered-target
+
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/binary.yaml -o %t/binary
+# RUN: llvm-dwarfdump --verify %t/binary
+
+## A and B have disjoint live code and non-code DWARF ranges [0, 8) and [0, 16).
+## Sampling both functions makes Basic zero filling visit both non-code ranges.
+## Their shared start must count twice so the longer range remains active after
+## the shorter range ends. Keep the measured samples and the cold body locations.
+# RUN: llvm-profgen --basic-events --binary=%t/binary \
+# RUN:   --perfscript=%t/basic.perfscript --format=text \
+# RUN:   --profile-summary-cold-count=0 --output=%t/direct.prof
+# RUN: FileCheck %s --match-full-lines --input-file=%t/direct.prof
+
+# RUN: llvm-profgen --basic-events --binary=%t/binary \
+# RUN:   --perfscript=%t/basic.perfscript --skip-symbolization \
+# RUN:   --use-offset=0 --output=%t/basic.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=RAW \
+# RUN:   --input-file=%t/basic.raw
+# RUN: llvm-profgen --binary=%t/binary --unsymbolized-profile=%t/basic.raw \
+# RUN:   --use-offset=0 --format=text --profile-summary-cold-count=0 \
+# RUN:   --output=%t/roundtrip.prof
+# RUN: cmp %t/direct.prof %t/roundtrip.prof
+
+## Function totals use the four-byte AArch64 instruction weight.
+# CHECK-NOT:  {{.}}
+# CHECK:      B:8:0
+# CHECK-NEXT:  0: 2
+# CHECK-NEXT:  1: 0
+# CHECK-NEXT: A:4:0
+# CHECK-NEXT:  0: 1
+# CHECK-NEXT:  1: 0
+# CHECK-NOT:  {{.}}
+
+# RAW:      # llvm-profgen-content: basic-event
+# RAW-NEXT: 2
+# RAW-NEXT: 1000:1
+# RAW-NEXT: 1008:2
+# RAW-NOT:  {{.}}
+
+#--- basic.perfscript
+PERF_RECORD_MMAP2 42/42: [0x500000(0x2000) @ 0 00:1d 1 1]: r-xp /tmp/binary
+42 501000
+42 501008
+42 501008
+
+#--- binary.yaml
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_DYN
+  Machine: EM_AARCH64
+  Entry: 0x1000
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+    Offset: 0x1000
+    Content: '1F2003D5C0035FD61F2003D5C0035FD6' # A: nop; ret. B: nop; ret.
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_R, PF_X ]
+    Offset: 0
+    VAddr: 0
+    FileSize: 0x1010
+    MemSize: 0x1010
+Symbols:
+  - Name: A
+    Type: STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value: 0x1000
+    Size: 8
+  - Name: B
+    Type: STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value: 0x1008
+    Size: 8
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code: 1
+          Tag: DW_TAG_compile_unit
+          Children: DW_CHILDREN_yes
+          Attributes:
+            - Attribute: DW_AT_name
+              Form: DW_FORM_string
+            - Attribute: DW_AT_stmt_list
+              Form: DW_FORM_sec_offset
+            - Attribute: DW_AT_ranges
+              Form: DW_FORM_sec_offset
+        - Code: 2
+          Tag: DW_TAG_subprogram
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form: DW_FORM_string
+            - Attribute: DW_AT_ranges
+              Form: DW_FORM_sec_offset
+            - Attribute: DW_AT_decl_file
+              Form: DW_FORM_data1
+            - Attribute: DW_AT_decl_line
+              Form: DW_FORM_data1
+  debug_info:
+    - Version: 4
+      AddrSize: 8
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: a.c
+            - Value: 0
+            - Value: 0
+        - AbbrCode: 2
+          Values:
+            - CStr: A
+            - Value: 0
+            - Value: 1
+            - Value: 1
+        - AbbrCode: 0
+    - Version: 4
+      AddrSize: 8
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: b.c
+            - Value: 0x3b # The second line table follows the first 59 bytes.
+            - Value: 0x30
+        - AbbrCode: 2
+          Values:
+            - CStr: B
+            - Value: 0x30
+            - Value: 1
+            - Value: 1
+        - AbbrCode: 0
+  debug_ranges:
+    - AddrSize: 8
+      Entries:
+        - LowOffset: 0
+          HighOffset: 8
+        - LowOffset: 0x1000
+          HighOffset: 0x1008
+    - AddrSize: 8
+      Entries:
+        - LowOffset: 0
+          HighOffset: 16
+        - LowOffset: 0x1008
+          HighOffset: 0x1010
+  debug_line:
+    - Version: 4
+      MinInstLength: 1
+      MaxOpsPerInst: 1
+      DefaultIsStmt: 1
+      LineBase: 251
+      LineRange: 14
+      Files:
+        - Name: a.c
+          DirIdx: 0
+          ModTime: 0
+          Length: 0
+      Opcodes:
+        - Opcode: DW_LNS_extended_op
+          SubOpcode: DW_LNE_set_address
+          Data: 0x1000
+        - Opcode: DW_LNS_copy
+        - Opcode: DW_LNS_advance_pc
+          Data: 4
+        - Opcode: DW_LNS_advance_line
+          SData: 1
+        - Opcode: DW_LNS_copy
+        - Opcode: DW_LNS_advance_pc
+          Data: 4
+        - Opcode: DW_LNS_extended_op
+          SubOpcode: DW_LNE_end_sequence
+    - Version: 4
+      MinInstLength: 1
+      MaxOpsPerInst: 1
+      DefaultIsStmt: 1
+      LineBase: 251
+      LineRange: 14
+      Files:
+        - Name: b.c
+          DirIdx: 0
+          ModTime: 0
+          Length: 0
+      Opcodes:
+        - Opcode: DW_LNS_extended_op
+          SubOpcode: DW_LNE_set_address
+          Data: 0x1008
+        - Opcode: DW_LNS_copy
+        - Opcode: DW_LNS_advance_pc
+          Data: 4
+        - Opcode: DW_LNS_advance_line
+          SData: 1
+        - Opcode: DW_LNS_copy
+        - Opcode: DW_LNS_advance_pc
+          Data: 4
+        - Opcode: DW_LNS_extended_op
+          SubOpcode: DW_LNE_end_sequence

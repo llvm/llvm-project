@@ -1,0 +1,141 @@
+# REQUIRES: aarch64-registered-target
+
+# RUN: split-file %s %t
+
+## The default base wraps: 0x1000 - 0x5000 = 0xffffffffffffc000.
+## Raw offsets must reconstruct the sampled instructions when added to it.
+# RUN: yaml2obj %t/binary.yaml -DTEXT=0x1000 -DRO=0 -DRO_OFFSET=0 -o %t/basic.exe
+# RUN: llvm-objdump -d %t/basic.exe | FileCheck %s --check-prefix=LOW-CODE
+# RUN: llvm-profgen --basic-events --binary=%t/basic.exe \
+# RUN:   --perfscript=%t/perfscript --skip-symbolization --output=%t/default.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=DEFAULT --input-file=%t/default.raw
+# RUN: llvm-profgen --binary=%t/basic.exe --unsymbolized-profile=%t/default.raw \
+# RUN:   --skip-symbolization --output=%t/unused
+# RUN: not llvm-profgen --binary=%t/basic.exe --unsymbolized-profile=%t/non-code.raw \
+# RUN:   --skip-symbolization --output=%t/unused 2>&1 | FileCheck %s --check-prefix=INVALID
+# RUN: not llvm-profgen --binary=%t/basic.exe --unsymbolized-profile=%t/count-overflow.raw \
+# RUN:   --skip-symbolization --output=%t/unused 2>&1 | FileCheck %s --check-prefix=COUNT-OVERFLOW
+
+## Absolute addresses provide a control that uses a zero base.
+# RUN: llvm-profgen --basic-events --binary=%t/basic.exe \
+# RUN:   --perfscript=%t/perfscript --skip-symbolization --use-offset=0 --output=%t/absolute.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=ABSOLUTE --input-file=%t/absolute.raw
+# RUN: llvm-profgen --binary=%t/basic.exe --unsymbolized-profile=%t/absolute.raw \
+# RUN:   --skip-symbolization --use-offset=0 --output=%t/unused
+
+## Here only the first-loadable base wraps: 0 - 0x1000. The default base is
+## 0x401000 - 0x5000 = 0x3fc000. Both selectors must support readback.
+# RUN: yaml2obj %t/binary.yaml -DTEXT=0x401000 -DRO=0 -DRO_OFFSET=0x1000 -o %t/basic.exe
+# RUN: llvm-profgen --basic-events --binary=%t/basic.exe \
+# RUN:   --perfscript=%t/perfscript --skip-symbolization --output=%t/default.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=DEFAULT --input-file=%t/default.raw
+# RUN: llvm-profgen --binary=%t/basic.exe --unsymbolized-profile=%t/default.raw \
+# RUN:   --skip-symbolization --output=%t/unused
+# RUN: llvm-profgen --basic-events --binary=%t/basic.exe \
+# RUN:   --perfscript=%t/perfscript --skip-symbolization \
+# RUN:   --use-first-loadable-segment-as-base --output=%t/loadable.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=LOADABLE --input-file=%t/loadable.raw
+# RUN: llvm-profgen --binary=%t/basic.exe --unsymbolized-profile=%t/loadable.raw \
+# RUN:   --skip-symbolization --use-first-loadable-segment-as-base --output=%t/unused
+# RUN: not llvm-profgen --binary=%t/basic.exe --unsymbolized-profile=%t/non-code-loadable.raw \
+# RUN:   --skip-symbolization --use-first-loadable-segment-as-base --output=%t/unused \
+# RUN:   2>&1 | FileCheck %s --check-prefix=INVALID
+
+## High binary addresses retain all 64 bits when reconstructed.
+# RUN: yaml2obj %t/binary.yaml -DTEXT=0xfffffffffffff000 -DRO=0xffffffffffff9000 \
+# RUN:   -DRO_OFFSET=0 -o %t/basic.exe
+# RUN: llvm-objdump -d %t/basic.exe | FileCheck %s --check-prefix=HIGH-CODE
+# RUN: llvm-profgen --basic-events --binary=%t/basic.exe \
+# RUN:   --perfscript=%t/perfscript --skip-symbolization --output=%t/high.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=DEFAULT --input-file=%t/high.raw
+# RUN: llvm-profgen --binary=%t/basic.exe --unsymbolized-profile=%t/high.raw \
+# RUN:   --skip-symbolization --output=%t/unused
+
+# LOW-CODE:      1000: d503201f{{.*}}nop
+# LOW-CODE-NEXT: 1004: d65f03c0{{.*}}ret
+# HIGH-CODE:      fffffffffffff000: d503201f{{.*}}nop
+# HIGH-CODE-NEXT: fffffffffffff004: d65f03c0{{.*}}ret
+
+# DEFAULT:      # llvm-profgen-content: basic-event
+# DEFAULT-NEXT: 2
+# DEFAULT-NEXT: 5000:2
+# DEFAULT-NEXT: 5004:1
+# DEFAULT-NOT:  {{.}}
+
+# ABSOLUTE:      # llvm-profgen-content: basic-event
+# ABSOLUTE-NEXT: 2
+# ABSOLUTE-NEXT: 1000:2
+# ABSOLUTE-NEXT: 1004:1
+# ABSOLUTE-NOT:  {{.}}
+
+# LOADABLE:      # llvm-profgen-content: basic-event
+# LOADABLE-NEXT: 2
+# LOADABLE-NEXT: 402000:2
+# LOADABLE-NEXT: 402004:1
+# LOADABLE-NOT:  {{.}}
+
+# INVALID: Invalid raw profile at line 3:
+# COUNT-OVERFLOW: Invalid raw profile at line 4:
+
+#--- perfscript
+PERF_RECORD_MMAP2 100/100: [0x501000(0x1000) @ 0x5000 00:1d 1 1]: r-xp /tmp/basic.exe
+100 501000
+100 501000
+100 501004
+
+#--- non-code.raw
+# llvm-profgen-content: basic-event
+1
+5008:1
+
+#--- non-code-loadable.raw
+# llvm-profgen-content: basic-event
+1
+402008:1
+
+#--- count-overflow.raw
+# llvm-profgen-content: basic-event
+2
+5000:18446744073709551615
+5000:1
+
+#--- binary.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+  Entry:   [[TEXT]]
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      [[TEXT]]
+    Offset:       0x5000
+    AddressAlign: 0x4
+    Content:      1F2003D5C0035FD6
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    Offset:   [[RO_OFFSET]]
+    VAddr:    [[RO]]
+    FileSize: 0x1000
+    MemSize:  0x1000
+    Align:    0x1000
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    Offset:   0x5000
+    VAddr:    [[TEXT]]
+    FileSize: 0x8
+    MemSize:  0x8
+    Align:    0x1000
+    FirstSec: .text
+    LastSec:  .text
+Symbols:
+  - Name:    code
+    Type:    STT_NOTYPE
+    Binding: STB_GLOBAL
+    Section: .text
+    Value:   [[TEXT]]
+    Size:    0x8

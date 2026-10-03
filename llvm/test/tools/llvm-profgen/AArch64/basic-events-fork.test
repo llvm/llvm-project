@@ -1,0 +1,37 @@
+; REQUIRES: aarch64-registered-target
+
+; RUN: rm -rf %t && split-file %s %t
+; RUN: yaml2obj %S/Inputs/basic-events.yaml -o %t/binary
+; RUN: llvm-dwarfdump --verify %t/binary
+
+; A synthetic fork describes the initial task snapshot. The child's explicit
+; mmap owns 0x6005b0; the parent's mapping does not establish child ownership
+; of 0x5005b0. Selecting the child must still retain the parent metadata.
+; RUN: llvm-profgen --basic-events --pid=200 \
+; RUN:   --perfscript=%t/synthetic.perfscript \
+; RUN:   --binary=%t/binary \
+; RUN:   --skip-symbolization --output=%t/synthetic.raw
+; RUN: FileCheck %s --match-full-lines --check-prefixes=RAW,SYNTHETIC \
+; RUN:   --input-file=%t/synthetic.raw
+
+; A live fork inherits the parent's mapping. The child then owns both aliases,
+; and the two observations contribute to the same instruction's raw count.
+; RUN: sed 's/0.000000:/1.000000:/' %t/synthetic.perfscript > %t/live.perfscript
+; RUN: llvm-profgen --basic-events --pid=200 --perfscript=%t/live.perfscript \
+; RUN:   --binary=%t/binary \
+; RUN:   --skip-symbolization --output=%t/live.raw
+; RUN: FileCheck %s --match-full-lines --check-prefixes=RAW,LIVE \
+; RUN:   --input-file=%t/live.raw
+
+; RAW:            # llvm-profgen-content: basic-event
+; RAW-NEXT:       1
+; SYNTHETIC-NEXT: 5b0:1
+; LIVE-NEXT:      5b0:2
+; RAW-NOT:        {{.}}
+
+;--- synthetic.perfscript
+PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/binary
+100 0.000000: PERF_RECORD_FORK(200:200):(100:100)
+PERF_RECORD_MMAP2 200/200: [0x600000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/binary
+200 1.000001: 5005b0
+200 1.000002: 6005b0

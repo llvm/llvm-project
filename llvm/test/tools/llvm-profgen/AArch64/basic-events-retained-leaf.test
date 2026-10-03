@@ -1,0 +1,188 @@
+# REQUIRES: aarch64-registered-target
+
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/binary.yaml -o %t/binary
+# RUN: llvm-dwarfdump --verify %t/binary
+
+## Both functions contain an unnamed inline frame. Symbolisation retains the
+## named caller and uses its line location for both Basic and LBR samples.
+## invalid_retained has call line 0 and starts on line 10, giving offset 65526.
+## valid_retained has call line 33 and starts on line 30, giving offset 3.
+# RUN: llvm-profgen --binary=%t/binary --unsymbolized-profile=%t/basic.raw \
+# RUN:   --use-offset=0 --format=text --profile-summary-cold-count=0 \
+# RUN:   --output=%t/basic.prof
+# RUN: FileCheck %s --match-full-lines --input-file=%t/basic.prof
+
+# RUN: llvm-profgen --binary=%t/binary --unsymbolized-profile=%t/lbr.raw \
+# RUN:   --use-offset=0 --format=text --profile-summary-cold-count=0 \
+# RUN:   --output=%t/lbr.prof
+# RUN: cmp %t/basic.prof %t/lbr.prof
+
+# CHECK:      valid_retained:28:0
+# CHECK-NEXT:  3: 7
+# CHECK-NEXT: invalid_retained:20:0
+# CHECK-NEXT:  65526: 5
+# CHECK-NOT:  {{.}}
+
+#--- basic.raw
+# llvm-profgen-content: basic-event
+2
+401000:5
+401008:7
+#--- lbr.raw
+2
+401000-401000:5
+401008-401008:7
+0
+#--- binary.yaml
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_EXEC
+  Machine: EM_AARCH64
+  Entry: 0x401000
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x401000
+    Offset: 0x1000
+    AddressAlign: 4
+    Content: '1F2003D51F2003D51F2003D51F2003D5'
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_R, PF_X ]
+    Offset: 0
+    VAddr: 0x400000
+    FileSize: 0x1010
+    MemSize: 0x1010
+Symbols:
+  - Name: invalid_retained
+    Type: STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value: 0x401000
+    Size: 8
+  - Name: valid_retained
+    Type: STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value: 0x401008
+    Size: 8
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code: 1
+          Tag: DW_TAG_compile_unit
+          Children: DW_CHILDREN_yes
+          Attributes:
+            - Attribute: DW_AT_name
+              Form: DW_FORM_string
+            - Attribute: DW_AT_stmt_list
+              Form: DW_FORM_sec_offset
+            - Attribute: DW_AT_low_pc
+              Form: DW_FORM_addr
+            - Attribute: DW_AT_high_pc
+              Form: DW_FORM_data4
+        - Code: 2
+          Tag: DW_TAG_subprogram
+          Children: DW_CHILDREN_yes
+          Attributes:
+            - Attribute: DW_AT_name
+              Form: DW_FORM_string
+            - Attribute: DW_AT_low_pc
+              Form: DW_FORM_addr
+            - Attribute: DW_AT_high_pc
+              Form: DW_FORM_data4
+            - Attribute: DW_AT_decl_file
+              Form: DW_FORM_data1
+            - Attribute: DW_AT_decl_line
+              Form: DW_FORM_data1
+        - Code: 3
+          Tag: DW_TAG_inlined_subroutine
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_low_pc
+              Form: DW_FORM_addr
+            - Attribute: DW_AT_high_pc
+              Form: DW_FORM_data4
+            - Attribute: DW_AT_decl_file
+              Form: DW_FORM_data1
+            - Attribute: DW_AT_decl_line
+              Form: DW_FORM_data1
+            - Attribute: DW_AT_call_file
+              Form: DW_FORM_data1
+            - Attribute: DW_AT_call_line
+              Form: DW_FORM_data1
+  debug_info:
+    - Version: 4
+      AddrSize: 8
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: leaf.c
+            - Value: 0
+            - Value: 0x401000
+            - Value: 16
+        - AbbrCode: 2
+          Values:
+            - CStr: invalid_retained
+            - Value: 0x401000
+            - Value: 8
+            - Value: 1
+            - Value: 10
+        - AbbrCode: 3
+          Values:
+            - Value: 0x401000
+            - Value: 8
+            - Value: 1
+            - Value: 20
+            - Value: 1
+            - Value: 0
+        - AbbrCode: 0
+        - AbbrCode: 2
+          Values:
+            - CStr: valid_retained
+            - Value: 0x401008
+            - Value: 8
+            - Value: 1
+            - Value: 30
+        - AbbrCode: 3
+          Values:
+            - Value: 0x401008
+            - Value: 8
+            - Value: 1
+            - Value: 0
+            - Value: 1
+            - Value: 33
+        - AbbrCode: 0
+        - AbbrCode: 0
+  debug_line:
+    - Version: 4
+      MinInstLength: 1
+      MaxOpsPerInst: 1
+      DefaultIsStmt: 1
+      LineBase: 251
+      LineRange: 14
+      Files:
+        - Name: leaf.c
+          DirIdx: 0
+          ModTime: 0
+          Length: 0
+      Opcodes:
+        - Opcode: DW_LNS_extended_op
+          SubOpcode: DW_LNE_set_address
+          Data: 0x401000
+        - Opcode: DW_LNS_advance_line
+          SData: 22
+        - Opcode: DW_LNS_copy
+        - Opcode: DW_LNS_advance_pc
+          Data: 8
+        - Opcode: DW_LNS_advance_line
+          SData: 17
+        - Opcode: DW_LNS_copy
+        - Opcode: DW_LNS_advance_pc
+          Data: 8
+        - Opcode: DW_LNS_extended_op
+          SubOpcode: DW_LNE_end_sequence

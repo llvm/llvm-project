@@ -1,0 +1,454 @@
+# REQUIRES: aarch64-registered-target
+
+# RUN: split-file %s %t
+
+## Two executable segment starts share a mapped file page but imply different
+## relocation biases. Do not silently select one and lose the other function.
+# RUN: yaml2obj %t/starts.yaml -o %t/segments.exe
+# RUN: not llvm-profgen --basic-events --binary=%t/segments.exe \
+# RUN:   --perfscript=%t/shared-starts.perfscript --skip-symbolization \
+# RUN:   --use-offset=0 --output=%t/rejected.raw 2>&1 | FileCheck %s --check-prefix=AMBIGUOUS
+# RUN: llvm-profgen --binary=%t/segments.exe --perfscript=%t/lbr.perfscript \
+# RUN:   --skip-symbolization --use-offset=0 --output=%t/lbr.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=LBR --input-file=%t/lbr.raw
+
+## Multiple starts are not themselves ambiguous: the same file/virtual bias
+## maps both functions correctly, including in a single full-image mmap.
+# RUN: yaml2obj %t/starts.yaml -DSECOND_ADDRESS=0x401800 -o %t/segments.exe
+# RUN: llvm-profgen --basic-events --binary=%t/segments.exe \
+# RUN:   --perfscript=%t/same-page.perfscript --skip-symbolization \
+# RUN:   --use-offset=0 --output=%t/same-page.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=SAME-PAGE --input-file=%t/same-page.raw
+# RUN: yaml2obj %t/starts.yaml -DSECOND_OFFSET=0x3100 \
+# RUN:   -DSECOND_ADDRESS=0x403100 -o %t/segments.exe
+# RUN: llvm-profgen --basic-events --binary=%t/segments.exe \
+# RUN:   --perfscript=%t/full-image.perfscript --skip-symbolization \
+# RUN:   --use-offset=0 --output=%t/full-image.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=FULL-IMAGE --input-file=%t/full-image.raw
+
+## The file/virtual bias can wrap while the canonical mmap address is valid:
+## 0x1100 - 0x5100 == 0x1800 - 0x5800 == 0xffffffffffffc000.
+# RUN: yaml2obj %t/starts.yaml -DRO_ADDRESS=0 -DFIRST_OFFSET=0x5100 -DFIRST_ADDRESS=0x1100 \
+# RUN:   -DSECOND_OFFSET=0x5800 -DSECOND_ADDRESS=0x1800 -o %t/segments.exe
+# RUN: llvm-profgen --basic-events --binary=%t/segments.exe \
+# RUN:   --perfscript=%t/wrapped-bias.perfscript --skip-symbolization \
+# RUN:   --output=%t/wrapped-bias.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=WRAPPED --input-file=%t/wrapped-bias.raw
+
+## Equal modular biases must not relax the checked canonical-address bounds.
+# RUN: yaml2obj %t/starts.yaml -DRO_ADDRESS=0 -DFIRST_ADDRESS=0x100 \
+# RUN:   -DSECOND_ADDRESS=0x800 -o %t/segments.exe
+# RUN: not llvm-profgen --basic-events --binary=%t/segments.exe \
+# RUN:   --perfscript=%t/prefix-underflow.perfscript --skip-symbolization \
+# RUN:   --use-offset=0 --output=%t/rejected.raw 2>&1 | FileCheck %s --check-prefix=INVALID-ADDRESS
+# RUN: yaml2obj %t/starts.yaml -DFIRST_ADDRESS=0xfffffffffffff100 \
+# RUN:   -DFIRST_SIZE=0x2000 -DSECOND_OFFSET=0x5800 \
+# RUN:   -DSECOND_ADDRESS=0xfffffffffffff800 -o %t/segments.exe
+# RUN: not llvm-profgen --basic-events --binary=%t/segments.exe \
+# RUN:   --perfscript=%t/older-continuation.perfscript --skip-symbolization \
+# RUN:   --use-offset=0 --output=%t/rejected.raw 2>&1 | FileCheck %s --check-prefix=INVALID-ADDRESS
+
+## A representable origin in the last header must not mask an invalid origin
+## in an earlier header with the same modular bias.
+# RUN: yaml2obj %t/masked-underflow.yaml -o %t/segments.exe
+# RUN: not llvm-profgen --basic-events --binary=%t/segments.exe \
+# RUN:   --perfscript=%t/masked-underflow.perfscript --skip-symbolization \
+# RUN:   --use-offset=0 --output=%t/rejected.raw 2>&1 | FileCheck %s --check-prefix=INVALID-ADDRESS
+
+## A preceding segment that ends at the mmap start is not a continuation.
+## A later segment that starts at the mmap end is likewise not a candidate.
+# RUN: yaml2obj %t/starts.yaml -DFIRST_SIZE=0xf00 -DSECOND_OFFSET=0x2800 \
+# RUN:   -DSECOND_ADDRESS=0x502800 -o %t/segments.exe
+# RUN: llvm-profgen --basic-events --binary=%t/segments.exe \
+# RUN:   --perfscript=%t/ended-predecessor.perfscript --skip-symbolization \
+# RUN:   --use-offset=0 --output=%t/ended.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=ENDED --input-file=%t/ended.raw
+# RUN: yaml2obj %t/starts.yaml -DSECOND_OFFSET=0x2000 \
+# RUN:   -DSECOND_ADDRESS=0x502000 -o %t/segments.exe
+# RUN: llvm-profgen --basic-events --binary=%t/segments.exe \
+# RUN:   --perfscript=%t/first-only.perfscript --skip-symbolization \
+# RUN:   --use-offset=0 --output=%t/after-end.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=FIRST --input-file=%t/after-end.raw
+
+## The first segment continues onto file page 0x2000, where the second starts.
+## Looking only at starts inside the mmap would miss the conflicting bias.
+# RUN: yaml2obj %t/continuation.yaml -o %t/segments.exe
+# RUN: not llvm-profgen --basic-events --binary=%t/segments.exe \
+# RUN:   --perfscript=%t/continued.perfscript --skip-symbolization \
+# RUN:   --use-offset=0 --output=%t/rejected.raw 2>&1 | FileCheck %s --check-prefix=AMBIGUOUS
+# RUN: yaml2obj %t/continuation.yaml -DSECOND_ADDRESS=0x402800 -o %t/segments.exe
+# RUN: llvm-profgen --basic-events --binary=%t/segments.exe \
+# RUN:   --perfscript=%t/same-continuation.perfscript --skip-symbolization \
+# RUN:   --use-offset=0 --output=%t/continued.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=CONTINUED --input-file=%t/continued.raw
+
+## Equal file offsets do not imply equal biases, at the segment start or in
+## a continuation. Identical offsets with identical biases remain accepted.
+# RUN: yaml2obj %t/aliases.yaml -o %t/segments.exe
+# RUN: not llvm-profgen --basic-events --binary=%t/segments.exe \
+# RUN:   --perfscript=%t/first-only.perfscript --skip-symbolization \
+# RUN:   --use-offset=0 --output=%t/rejected.raw 2>&1 | FileCheck %s --check-prefix=AMBIGUOUS
+# RUN: not llvm-profgen --basic-events --binary=%t/segments.exe \
+# RUN:   --perfscript=%t/tail-only.perfscript --skip-symbolization \
+# RUN:   --use-offset=0 --output=%t/rejected.raw 2>&1 | FileCheck %s --check-prefix=AMBIGUOUS
+# RUN: yaml2obj %t/aliases.yaml -DSECOND_ADDRESS=0x401100 -o %t/segments.exe
+# RUN: llvm-profgen --basic-events --binary=%t/segments.exe \
+# RUN:   --perfscript=%t/start-and-tail.perfscript --skip-symbolization \
+# RUN:   --use-offset=0 --output=%t/aliases.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=ALIASES --input-file=%t/aliases.raw
+
+## Do not mistake a nearer but expired segment for a continuation. Both
+## headers begin before the mmap; only the first reaches file offset 0x3000.
+# RUN: yaml2obj %t/aliases.yaml -DFIRST_SIZE=0x2004 -DTAIL_OFFSET=0x3100 \
+# RUN:   -DTAIL_ADDRESS=0x403100 -DSECOND_OFFSET=0x2800 \
+# RUN:   -DSECOND_ADDRESS=0x502800 -DSECOND_SIZE=0x4 -o %t/segments.exe
+# RUN: llvm-profgen --basic-events --binary=%t/segments.exe \
+# RUN:   --perfscript=%t/older-continuation.perfscript --skip-symbolization \
+# RUN:   --use-offset=0 --output=%t/older.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=OLDER --input-file=%t/older.raw
+
+## Two different predecessor offsets can both still cover the mmap start.
+# RUN: yaml2obj %t/aliases.yaml -DFIRST_SIZE=0x2004 -DTAIL_OFFSET=0x3100 \
+# RUN:   -DTAIL_ADDRESS=0x403100 -DSECOND_OFFSET=0x2100 \
+# RUN:   -DSECOND_ADDRESS=0x502100 -DSECOND_SIZE=0x1004 -o %t/segments.exe
+# RUN: not llvm-profgen --basic-events --binary=%t/segments.exe \
+# RUN:   --perfscript=%t/older-continuation.perfscript --skip-symbolization \
+# RUN:   --use-offset=0 --output=%t/rejected.raw 2>&1 | FileCheck %s --check-prefix=AMBIGUOUS
+
+# AMBIGUOUS: error: Ambiguous perf script mmap load bias
+# INVALID-ADDRESS: error: Invalid perf script mmap address
+
+# LBR:      0
+# LBR-NEXT: 1
+# LBR-NEXT: 401100->401100:1
+# LBR-NOT:  {{.}}
+
+# SAME-PAGE:      # llvm-profgen-content: basic-event
+# SAME-PAGE-NEXT: 2
+# SAME-PAGE-NEXT: 401100:1
+# SAME-PAGE-NEXT: 401800:1
+# SAME-PAGE-NOT:  {{.}}
+# FULL-IMAGE:      # llvm-profgen-content: basic-event
+# FULL-IMAGE-NEXT: 2
+# FULL-IMAGE-NEXT: 401100:1
+# FULL-IMAGE-NEXT: 403100:1
+# FULL-IMAGE-NOT:  {{.}}
+# WRAPPED:      # llvm-profgen-content: basic-event
+# WRAPPED-NEXT: 2
+# WRAPPED-NEXT: 5100:1
+# WRAPPED-NEXT: 5800:1
+# WRAPPED-NOT:  {{.}}
+# ENDED:      # llvm-profgen-content: basic-event
+# ENDED-NEXT: 1
+# ENDED-NEXT: 502800:1
+# ENDED-NOT:  {{.}}
+# FIRST:      # llvm-profgen-content: basic-event
+# FIRST-NEXT: 1
+# FIRST-NEXT: 401100:1
+# FIRST-NOT:  {{.}}
+# CONTINUED:      # llvm-profgen-content: basic-event
+# CONTINUED-NEXT: 2
+# CONTINUED-NEXT: 402100:1
+# CONTINUED-NEXT: 402800:1
+# CONTINUED-NOT:  {{.}}
+# ALIASES:      # llvm-profgen-content: basic-event
+# ALIASES-NEXT: 2
+# ALIASES-NEXT: 401100:1
+# ALIASES-NEXT: 402100:1
+# ALIASES-NOT:  {{.}}
+# OLDER:      # llvm-profgen-content: basic-event
+# OLDER-NEXT: 1
+# OLDER-NEXT: 403100:1
+# OLDER-NOT:  {{.}}
+
+#--- shared-starts.perfscript
+PERF_RECORD_MMAP2 100/100: [0x4401000(0x1000) @ 0x1000 00:1d 1 1]: r-xp /tmp/segments.exe
+100 4401100
+PERF_RECORD_MMAP2 100/100: [0x4501000(0x1000) @ 0x1000 00:1d 1 1]: r-xp /tmp/segments.exe
+100 4501800
+
+#--- same-page.perfscript
+PERF_RECORD_MMAP2 100/100: [0x4401000(0x1000) @ 0x1000 00:1d 1 1]: r-xp /tmp/segments.exe
+100 4401100
+100 4401800
+
+#--- lbr.perfscript
+PERF_RECORD_MMAP2 100/100: [0x4401000(0x1000) @ 0x1000 00:1d 1 1]: r-xp /tmp/segments.exe
+4401100 0x4401100/0x4401100/P/-/-/0
+
+#--- full-image.perfscript
+PERF_RECORD_MMAP2 100/100: [0x4400000(0x4000) @ 0 00:1d 1 1]: r-xp /tmp/segments.exe
+100 4401100
+100 4403100
+
+#--- wrapped-bias.perfscript
+PERF_RECORD_MMAP2 100/100: [0x500000(0x2000) @ 0x4000 00:1d 1 1]: r-xp /tmp/segments.exe
+100 501100
+100 501800
+
+#--- ended-predecessor.perfscript
+PERF_RECORD_MMAP2 100/100: [0x4502000(0x1000) @ 0x2000 00:1d 1 1]: r-xp /tmp/segments.exe
+100 4502800
+
+#--- prefix-underflow.perfscript
+PERF_RECORD_MMAP2 100/100: [0x500000(0x2000) @ 0 00:1d 1 1]: r-xp /tmp/segments.exe
+100 501100
+
+#--- masked-underflow.perfscript
+PERF_RECORD_MMAP2 100/100: [0x500000(0x2000) @ 0x2000 00:1d 1 1]: r-xp /tmp/segments.exe
+100 501800
+
+#--- first-only.perfscript
+PERF_RECORD_MMAP2 100/100: [0x4401000(0x1000) @ 0x1000 00:1d 1 1]: r-xp /tmp/segments.exe
+100 4401100
+
+#--- continued.perfscript
+PERF_RECORD_MMAP2 100/100: [0x4402000(0x1000) @ 0x2000 00:1d 1 1]: r-xp /tmp/segments.exe
+100 4402100
+PERF_RECORD_MMAP2 100/100: [0x4502000(0x1000) @ 0x2000 00:1d 1 1]: r-xp /tmp/segments.exe
+100 4502800
+
+#--- same-continuation.perfscript
+PERF_RECORD_MMAP2 100/100: [0x4402000(0x1000) @ 0x2000 00:1d 1 1]: r-xp /tmp/segments.exe
+100 4402100
+100 4402800
+
+#--- tail-only.perfscript
+PERF_RECORD_MMAP2 100/100: [0x4402000(0x1000) @ 0x2000 00:1d 1 1]: r-xp /tmp/segments.exe
+100 4402100
+
+#--- start-and-tail.perfscript
+PERF_RECORD_MMAP2 100/100: [0x4401000(0x1000) @ 0x1000 00:1d 1 1]: r-xp /tmp/segments.exe
+100 4401100
+PERF_RECORD_MMAP2 100/100: [0x4402000(0x1000) @ 0x2000 00:1d 1 1]: r-xp /tmp/segments.exe
+100 4402100
+
+#--- older-continuation.perfscript
+PERF_RECORD_MMAP2 100/100: [0x4403000(0x1000) @ 0x3000 00:1d 1 1]: r-xp /tmp/segments.exe
+100 4403100
+
+#--- starts.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+  Entry:   [[FIRST_ADDRESS=0x401100]]
+Sections:
+  - Name:         .text.first
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      [[FIRST_ADDRESS=0x401100]]
+    Offset:       [[FIRST_OFFSET=0x1100]]
+    AddressAlign: 0x4
+    Content:      C0035FD6
+  - Name:         .text.second
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      [[SECOND_ADDRESS=0x501800]]
+    Offset:       [[SECOND_OFFSET=0x1800]]
+    AddressAlign: 0x4
+    Content:      C0035FD6
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    Offset:   0
+    VAddr:    [[RO_ADDRESS=0x400000]]
+    FileSize: 0x1000
+    MemSize:  0x1000
+    Align:    0x1000
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    Offset:   [[FIRST_OFFSET=0x1100]]
+    VAddr:    [[FIRST_ADDRESS=0x401100]]
+    FileSize: [[FIRST_SIZE=0x4]]
+    MemSize:  [[FIRST_SIZE=0x4]]
+    Align:    0x1000
+    FirstSec: .text.first
+    LastSec:  .text.first
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    Offset:   [[SECOND_OFFSET=0x1800]]
+    VAddr:    [[SECOND_ADDRESS=0x501800]]
+    FileSize: 0x4
+    MemSize:  0x4
+    Align:    0x1000
+    FirstSec: .text.second
+    LastSec:  .text.second
+Symbols:
+  - Name:    first
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+    Section: .text.first
+    Value:   [[FIRST_ADDRESS=0x401100]]
+    Size:    0x4
+  - Name:    second
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+    Section: .text.second
+    Value:   [[SECOND_ADDRESS=0x501800]]
+    Size:    0x4
+
+#--- masked-underflow.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+  Entry:   0x800
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x800
+    Offset:  0x3800
+    Content: C0035FD6
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    Offset:   0x3800
+    VAddr:    0x800
+    FileSize: 0x4
+    MemSize:  0x4
+    Align:    0x1000
+    FirstSec: .text
+    LastSec:  .text
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    Offset:   0x1000
+    VAddr:    0xffffffffffffe000
+    FileSize: 0x1004
+    MemSize:  0x1004
+    Align:    0x1000
+Symbols:
+  - Name:    first
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+    Section: .text
+    Value:   0x800
+    Size:    0x4
+
+#--- continuation.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+  Entry:   0x401100
+Sections:
+  - Name:         .text.first
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x401100
+    Offset:       0x1100
+    AddressAlign: 0x4
+    Content:      C0035FD6
+  - Name:         .text.first.tail
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x402100
+    Offset:       0x2100
+    AddressAlign: 0x4
+    Content:      C0035FD6
+  - Name:         .text.second
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      [[SECOND_ADDRESS=0x502800]]
+    Offset:       0x2800
+    AddressAlign: 0x4
+    Content:      C0035FD6
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    Offset:   0x1100
+    VAddr:    0x401100
+    FileSize: 0x1004
+    MemSize:  0x1004
+    Align:    0x1000
+    FirstSec: .text.first
+    LastSec:  .text.first.tail
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    Offset:   0x2800
+    VAddr:    [[SECOND_ADDRESS=0x502800]]
+    FileSize: 0x4
+    MemSize:  0x4
+    Align:    0x1000
+    FirstSec: .text.second
+    LastSec:  .text.second
+Symbols:
+  - Name:    first
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+    Section: .text.first
+    Value:   0x401100
+    Size:    0x4
+  - Name:    first_tail
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+    Section: .text.first.tail
+    Value:   0x402100
+    Size:    0x4
+  - Name:    second
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+    Section: .text.second
+    Value:   [[SECOND_ADDRESS=0x502800]]
+    Size:    0x4
+
+#--- aliases.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+  Entry:   0x401100
+Sections:
+  - Name:         .text.first
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x401100
+    Offset:       0x1100
+    AddressAlign: 0x4
+    Content:      C0035FD6
+  - Name:         .text.first.tail
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      [[TAIL_ADDRESS=0x402100]]
+    Offset:       [[TAIL_OFFSET=0x2100]]
+    AddressAlign: 0x4
+    Content:      C0035FD6
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    Offset:   0x1100
+    VAddr:    0x401100
+    FileSize: [[FIRST_SIZE=0x1004]]
+    MemSize:  [[FIRST_SIZE=0x1004]]
+    Align:    0x1000
+    FirstSec: .text.first
+    LastSec:  .text.first.tail
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    Offset:   [[SECOND_OFFSET=0x1100]]
+    VAddr:    [[SECOND_ADDRESS=0x501100]]
+    FileSize: [[SECOND_SIZE=0x1004]]
+    MemSize:  [[SECOND_SIZE=0x1004]]
+    Align:    0x1000
+Symbols:
+  - Name:    first
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+    Section: .text.first
+    Value:   0x401100
+    Size:    0x4
+  - Name:    first_tail
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+    Section: .text.first.tail
+    Value:   [[TAIL_ADDRESS=0x402100]]
+    Size:    0x4
