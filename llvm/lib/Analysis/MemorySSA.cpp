@@ -2541,7 +2541,16 @@ MemoryAccess *MemorySSA::ClobberWalkerBase::getClobberingMemoryAccessBase(
       assert(isa<LoadInst>(I) || isa<StoreInst>(I));
 
       auto *ClobberMA = MSSA->getMemoryAccess(I);
-      assert(ClobberMA);
+      if (!ClobberMA) {
+        // MemorySSA may be scoped to a single loop, in which case I has no
+        // MemoryAccess if it lies outside of that loop. I dominates the
+        // starting instruction inside the loop, so it also dominates the loop
+        // header and executes before the loop is entered: the memory it
+        // accesses is live on entry to the loop.
+        assert(MSSA->L && !MSSA->L->contains(I) &&
+               "Only instructions outside the loop scope lack a MemoryAccess");
+        return MSSA->getLiveOnEntryDef();
+      }
       if (isa<MemoryUse>(ClobberMA))
         return ClobberMA->getDefiningAccess();
       return ClobberMA;
