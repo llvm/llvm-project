@@ -512,17 +512,14 @@ static void computeFunctionSummary(
         if (!CalledValue || isa<Constant>(CalledValue))
           continue;
 
-        // Check if the instruction has a callees metadata. If so, add callees
-        // to CallGraphEdges to reflect the references from the metadata, and
-        // to enable importing for subsequent indirect call promotion and
+        // If the instruction has valid callees metadata, add its callees to
+        // CallGraphEdges to reflect the references from the metadata, and to
+        // enable importing for subsequent indirect call promotion and
         // inlining.
-        if (auto *MD = I.getMetadata(LLVMContext::MD_callees)) {
-          for (const auto &Op : MD->operands()) {
-            Function *Callee = mdconst::extract_or_null<Function>(Op);
-            if (Callee)
-              CallGraphEdges[Index.getOrInsertValueInfo(Callee)];
-          }
-        }
+        SmallVector<Function *, 4> Callees;
+        if (CB->getCalleesMetadata(Callees))
+          for (Function *Callee : Callees)
+            CallGraphEdges[Index.getOrInsertValueInfo(Callee)];
 
         CandidateProfileData =
             ICallAnalysis.getPromotionCandidatesForInstruction(
