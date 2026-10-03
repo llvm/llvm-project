@@ -1533,6 +1533,205 @@ bb.5:
   br label %bb.5
 }
 
+define double @FloatTilesDoubleInsert(double %init, float %a, float %b) {
+; CHECK-LABEL: @FloatTilesDoubleInsert(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double [[INIT:%.*]] to <2 x float>
+; CHECK-NEXT:    [[P_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x float> [[TMP1]], float [[A:%.*]], i64 0
+; CHECK-NEXT:    [[P_SROA_0_4_VEC_INSERT:%.*]] = insertelement <2 x float> [[P_SROA_0_0_VEC_INSERT]], float [[B:%.*]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[P_SROA_0_4_VEC_INSERT]] to double
+; CHECK-NEXT:    ret double [[TMP0]]
+;
+; DEBUG-LABEL: @FloatTilesDoubleInsert(
+; DEBUG-NEXT:  entry:
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META585:![0-9]+]], !DIExpression(), [[META588:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr undef, [[META585]], !DIExpression(), [[META588]])
+; DEBUG-NEXT:    [[TMP0:%.*]] = bitcast double [[INIT:%.*]] to <2 x float>, !dbg [[DBG589:![0-9]+]]
+; DEBUG-NEXT:    [[P_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x float> [[TMP0]], float [[A:%.*]], i64 0, !dbg [[DBG590:![0-9]+]]
+; DEBUG-NEXT:      #dbg_value(ptr undef, [[META586:![0-9]+]], !DIExpression(), [[META591:![0-9]+]])
+; DEBUG-NEXT:    [[P_SROA_0_4_VEC_INSERT:%.*]] = insertelement <2 x float> [[P_SROA_0_0_VEC_INSERT]], float [[B:%.*]], i64 1, !dbg [[DBG592:![0-9]+]]
+; DEBUG-NEXT:    [[TMP1:%.*]] = bitcast <2 x float> [[P_SROA_0_4_VEC_INSERT]] to double, !dbg [[DBG593:![0-9]+]]
+; DEBUG-NEXT:      #dbg_value(double [[TMP1]], [[META587:![0-9]+]], !DIExpression(), [[DBG593]])
+; DEBUG-NEXT:    ret double [[TMP1]], !dbg [[DBG594:![0-9]+]]
+;
+entry:
+  %p = alloca double, align 8
+  store double %init, ptr %p, align 8
+  store float %a, ptr %p, align 8
+  %q = getelementptr inbounds i8, ptr %p, i64 4
+  store float %b, ptr %q, align 4
+  %r = load double, ptr %p, align 8
+  ret double %r
+}
+
+define float @FloatTilesDoubleExtract(double %x) {
+; CHECK-LABEL: @FloatTilesDoubleExtract(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double [[X:%.*]] to <2 x float>
+; CHECK-NEXT:    [[P_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[TMP0]], i64 1
+; CHECK-NEXT:    ret float [[P_SROA_0_4_VEC_EXTRACT]]
+;
+; DEBUG-LABEL: @FloatTilesDoubleExtract(
+; DEBUG-NEXT:  entry:
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META597:![0-9]+]], !DIExpression(), [[META600:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr undef, [[META597]], !DIExpression(), [[META600]])
+; DEBUG-NEXT:    [[TMP0:%.*]] = bitcast double [[X:%.*]] to <2 x float>, !dbg [[DBG601:![0-9]+]]
+; DEBUG-NEXT:      #dbg_value(ptr undef, [[META598:![0-9]+]], !DIExpression(), [[META602:![0-9]+]])
+; DEBUG-NEXT:    [[P_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[TMP0]], i64 1, !dbg [[DBG603:![0-9]+]]
+; DEBUG-NEXT:      #dbg_value(float [[P_SROA_0_4_VEC_EXTRACT]], [[META599:![0-9]+]], !DIExpression(), [[DBG603]])
+; DEBUG-NEXT:    ret float [[P_SROA_0_4_VEC_EXTRACT]], !dbg [[DBG604:![0-9]+]]
+;
+entry:
+  %p = alloca double, align 8
+  store double %x, ptr %p, align 8
+  %q = getelementptr inbounds i8, ptr %p, i64 4
+  %r = load float, ptr %q, align 4
+  ret float %r
+}
+
+; Negative test: x86_fp80  should not tile, doing so is not beneficial.
+define void @F80DoesNotTile(x86_fp80 %a, x86_fp80 %b, ptr %out) {
+; CHECK-LABEL: @F80DoesNotTile(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast x86_fp80 [[A:%.*]] to i80
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast x86_fp80 [[B:%.*]] to i80
+; CHECK-NEXT:    store i80 [[TMP0]], ptr [[P:%.*]], align 2
+; CHECK-NEXT:    [[P_10_Q_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 10
+; CHECK-NEXT:    store i80 [[TMP1]], ptr [[P_10_Q_SROA_IDX]], align 2
+; CHECK-NEXT:    ret void
+;
+; DEBUG-LABEL: @F80DoesNotTile(
+; DEBUG-NEXT:  entry:
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META607:![0-9]+]], !DIExpression(), [[META611:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr undef, [[META607]], !DIExpression(), [[META611]])
+; DEBUG-NEXT:    [[TMP0:%.*]] = bitcast x86_fp80 [[A:%.*]] to i80, !dbg [[DBG612:![0-9]+]]
+; DEBUG-NEXT:      #dbg_value(ptr undef, [[META608:![0-9]+]], !DIExpression(), [[META613:![0-9]+]])
+; DEBUG-NEXT:    [[TMP1:%.*]] = bitcast x86_fp80 [[B:%.*]] to i80, !dbg [[DBG614:![0-9]+]]
+; DEBUG-NEXT:      #dbg_value(i160 undef, [[META609:![0-9]+]], !DIExpression(), [[META615:![0-9]+]])
+; DEBUG-NEXT:    store i80 [[TMP0]], ptr [[OUT:%.*]], align 2, !dbg [[DBG616:![0-9]+]]
+; DEBUG-NEXT:    [[OUT_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 10, !dbg [[DBG616]]
+; DEBUG-NEXT:    store i80 [[TMP1]], ptr [[OUT_SROA_IDX]], align 2, !dbg [[DBG616]]
+; DEBUG-NEXT:    ret void, !dbg [[DBG617:![0-9]+]]
+;
+entry:
+  %p = alloca i160, align 2
+  store x86_fp80 %a, ptr %p, align 2
+  %q = getelementptr inbounds i8, ptr %p, i64 10
+  store x86_fp80 %b, ptr %q, align 2
+  %r = load i160, ptr %p, align 2
+  store i160 %r, ptr %out, align 2
+  ret void
+}
+
+; Negative test: ppc_fp128 should not tile, doing so is not beneficial.
+define void @PPCF128DoesNotTile(ppc_fp128 %a, ppc_fp128 %b, ptr %out) {
+; CHECK-LABEL: @PPCF128DoesNotTile(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast ppc_fp128 [[A:%.*]] to i128
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast ppc_fp128 [[B:%.*]] to i128
+; CHECK-NEXT:    store i128 [[TMP0]], ptr [[OUT:%.*]], align 8
+; CHECK-NEXT:    [[OUT_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 16
+; CHECK-NEXT:    store i128 [[TMP1]], ptr [[OUT_SROA_IDX]], align 8
+; CHECK-NEXT:    ret void
+;
+; DEBUG-LABEL: @PPCF128DoesNotTile(
+; DEBUG-NEXT:  entry:
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META620:![0-9]+]], !DIExpression(), [[META623:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr undef, [[META620]], !DIExpression(), [[META623]])
+; DEBUG-NEXT:    [[TMP0:%.*]] = bitcast ppc_fp128 [[A:%.*]] to i128, !dbg [[DBG624:![0-9]+]]
+; DEBUG-NEXT:      #dbg_value(ptr undef, [[META621:![0-9]+]], !DIExpression(), [[META625:![0-9]+]])
+; DEBUG-NEXT:    [[TMP1:%.*]] = bitcast ppc_fp128 [[B:%.*]] to i128, !dbg [[DBG626:![0-9]+]]
+; DEBUG-NEXT:      #dbg_value(i256 undef, [[META622:![0-9]+]], !DIExpression(), [[META627:![0-9]+]])
+; DEBUG-NEXT:    store i128 [[TMP0]], ptr [[OUT:%.*]], align 8, !dbg [[DBG628:![0-9]+]]
+; DEBUG-NEXT:    [[OUT_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 16, !dbg [[DBG628]]
+; DEBUG-NEXT:    store i128 [[TMP1]], ptr [[OUT_SROA_IDX]], align 8, !dbg [[DBG628]]
+; DEBUG-NEXT:    ret void, !dbg [[DBG629:![0-9]+]]
+;
+entry:
+  %p = alloca i256, align 8
+  store ppc_fp128 %a, ptr %p, align 8
+  %q = getelementptr inbounds i8, ptr %p, i64 16
+  store ppc_fp128 %b, ptr %q, align 8
+  %r = load i256, ptr %p, align 8
+  store i256 %r, ptr %out, align 8
+  ret void
+}
+
+; Negative test: using f16 (or bf16) tiles is usually not beneficial.
+define double @F16DoesNotTile(half %a, half %b, half %c, half %d) {
+; CHECK-LABEL: @F16DoesNotTile(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P:%.*]] = alloca double, align 8
+; CHECK-NEXT:    store half [[A:%.*]], ptr [[P]], align 8
+; CHECK-NEXT:    [[P_2_Q1_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 2
+; CHECK-NEXT:    store half [[B:%.*]], ptr [[P_2_Q1_SROA_IDX]], align 2
+; CHECK-NEXT:    [[P_4_Q2_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; CHECK-NEXT:    store half [[C:%.*]], ptr [[P_4_Q2_SROA_IDX]], align 4
+; CHECK-NEXT:    [[P_6_Q3_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 6
+; CHECK-NEXT:    store half [[D:%.*]], ptr [[P_6_Q3_SROA_IDX]], align 2
+; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[P]], align 8
+; CHECK-NEXT:    ret double [[TMP0]]
+;
+; DEBUG-LABEL: @F16DoesNotTile(
+; DEBUG-NEXT:  entry:
+; DEBUG-NEXT:    [[P:%.*]] = alloca double, align 8, !dbg [[DBG637:![0-9]+]]
+; DEBUG-NEXT:      #dbg_value(ptr [[P]], [[META632:![0-9]+]], !DIExpression(), [[DBG637]])
+; DEBUG-NEXT:    store half [[A:%.*]], ptr [[P]], align 8, !dbg [[DBG638:![0-9]+]]
+; DEBUG-NEXT:      #dbg_value(ptr undef, [[META633:![0-9]+]], !DIExpression(), [[META639:![0-9]+]])
+; DEBUG-NEXT:    [[P_2_Q1_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 2, !dbg [[DBG640:![0-9]+]]
+; DEBUG-NEXT:    store half [[B:%.*]], ptr [[P_2_Q1_SROA_IDX]], align 2, !dbg [[DBG640]]
+; DEBUG-NEXT:      #dbg_value(ptr undef, [[META634:![0-9]+]], !DIExpression(), [[META641:![0-9]+]])
+; DEBUG-NEXT:    [[P_4_Q2_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4, !dbg [[DBG642:![0-9]+]]
+; DEBUG-NEXT:    store half [[C:%.*]], ptr [[P_4_Q2_SROA_IDX]], align 4, !dbg [[DBG642]]
+; DEBUG-NEXT:      #dbg_value(ptr undef, [[META635:![0-9]+]], !DIExpression(), [[META643:![0-9]+]])
+; DEBUG-NEXT:    [[P_6_Q3_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 6, !dbg [[DBG644:![0-9]+]]
+; DEBUG-NEXT:    store half [[D:%.*]], ptr [[P_6_Q3_SROA_IDX]], align 2, !dbg [[DBG644]]
+; DEBUG-NEXT:    [[P_0_R:%.*]] = load double, ptr [[P]], align 8, !dbg [[DBG645:![0-9]+]]
+; DEBUG-NEXT:      #dbg_value(double [[P_0_R]], [[META636:![0-9]+]], !DIExpression(), [[DBG645]])
+; DEBUG-NEXT:    ret double [[P_0_R]], !dbg [[DBG646:![0-9]+]]
+;
+entry:
+  %p = alloca double, align 8
+  store half %a, ptr %p, align 8
+  %q1 = getelementptr inbounds i8, ptr %p, i64 2
+  store half %b, ptr %q1, align 2
+  %q2 = getelementptr inbounds i8, ptr %p, i64 4
+  store half %c, ptr %q2, align 4
+  %q3 = getelementptr inbounds i8, ptr %p, i64 6
+  store half %d, ptr %q3, align 2
+  %r = load double, ptr %p, align 8
+  ret double %r
+}
+
+; Negative test: don't tile integers, scalar operations are usually cheaper.
+define i32 @IntDoesNotTile(i64 %x) {
+; CHECK-LABEL: @IntDoesNotTile(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[X:%.*]] to i32
+; CHECK-NEXT:    [[P_SROA_1_0_EXTRACT_SHIFT:%.*]] = lshr i64 [[X]], 32
+; CHECK-NEXT:    [[P_SROA_1_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[P_SROA_1_0_EXTRACT_SHIFT]] to i32
+; CHECK-NEXT:    ret i32 [[P_SROA_1_0_EXTRACT_TRUNC]]
+;
+; DEBUG-LABEL: @IntDoesNotTile(
+; DEBUG-NEXT:  entry:
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META649:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 32), [[META652:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(ptr poison, [[META649]], !DIExpression(DW_OP_LLVM_fragment, 32, 32), [[META652]])
+; DEBUG-NEXT:      #dbg_value(ptr undef, [[META649]], !DIExpression(), [[META652]])
+; DEBUG-NEXT:    [[P_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[X:%.*]] to i32, !dbg [[DBG653:![0-9]+]]
+; DEBUG-NEXT:    [[P_SROA_1_0_EXTRACT_SHIFT:%.*]] = lshr i64 [[X]], 32, !dbg [[DBG653]]
+; DEBUG-NEXT:    [[P_SROA_1_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[P_SROA_1_0_EXTRACT_SHIFT]] to i32, !dbg [[DBG653]]
+; DEBUG-NEXT:      #dbg_value(ptr undef, [[META650:![0-9]+]], !DIExpression(), [[META654:![0-9]+]])
+; DEBUG-NEXT:      #dbg_value(i32 [[P_SROA_1_0_EXTRACT_TRUNC]], [[META651:![0-9]+]], !DIExpression(), [[META655:![0-9]+]])
+; DEBUG-NEXT:    ret i32 [[P_SROA_1_0_EXTRACT_TRUNC]], !dbg [[DBG656:![0-9]+]]
+;
+entry:
+  %p = alloca i64, align 8
+  store i64 %x, ptr %p, align 8
+  %q = getelementptr inbounds i8, ptr %p, i64 4
+  %r = load i32, ptr %q, align 4
+  ret i32 %r
+}
+
 declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
 declare void @llvm.lifetime.end.p0(ptr)
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
