@@ -6,11 +6,6 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-; CHECK-LABEL: decode_bits:
-; CHECK-NOT: csel
-; CHECK: cbnz
-; CHECK-NOT: csel
-; CHECK: ret
 define i32 @decode_bits(ptr %counts, i64 %count, i64 %bits, i32 %initial, ptr %out) {
 ; CHECK-LABEL: decode_bits:
 ; CHECK:       // %bb.0: // %entry
@@ -69,10 +64,6 @@ exit:
   ret i32 %nextconsumed
 }
 
-; CHECK-LABEL: decode_bits_balanced:
-; CHECK: csel
-; CHECK: csel
-; CHECK: ret
 define i32 @decode_bits_balanced(ptr %counts, i64 %count, i64 %bits, i32 %initial, ptr %out) {
 ; CHECK-LABEL: decode_bits_balanced:
 ; CHECK:       // %bb.0: // %entry
