@@ -2107,10 +2107,8 @@ bool BasicAAResult::computeConstantOffsetHeuristic(const DecomposedGEP &GEP,
       Var0.Val.V->getType() != Var1.Val.V->getType())
     return false;
 
-  // Without extensions, matching linear expressions have an exact modular
-  // difference. Check each select alternative before losing that correlation.
-  if (!AAQI.MayBeCrossIteration && !Var0.Val.ZExtBits && !Var0.Val.SExtBits &&
-      Var0.Val.getBitWidth() == GEP.Offset.getBitWidth() &&
+  // Check each select alternative before losing its offset correlation.
+  if (!AAQI.MayBeCrossIteration &&
       (isa<SelectInst>(Var0.Val.V) || isa<SelectInst>(Var1.Val.V))) {
     unsigned Budget = 8;
     auto Check = [&](auto &&Check, const Value *V0, const Value *V1) -> bool {
@@ -2121,11 +2119,23 @@ bool BasicAAResult::computeConstantOffsetHeuristic(const DecomposedGEP &GEP,
       LinearExpression E1 = GetLinearExpression(CastedValue(V1), DL, 0, AC, DT);
       if (E0.Scale == E1.Scale && E0.Val.hasSameCastsAs(E1.Val) &&
           isValueEqualInPotentialCycles(E0.Val.V, E1.Val.V, AAQI)) {
-        APInt Offset = (E0.Offset - E1.Offset) * Var0.Scale;
-        if (Var0.IsNegated)
-          Offset = -Offset;
-        Offset += GEP.Offset;
-        return Offset.uge(V2Size) && (-Offset).uge(V1Size);
+        if (!Var0.Val.ZExtBits && !Var0.Val.SExtBits &&
+            Var0.Val.getBitWidth() == GEP.Offset.getBitWidth()) {
+          APInt Offset = (E0.Offset - E1.Offset) * Var0.Scale;
+          if (Var0.IsNegated)
+            Offset = -Offset;
+          Offset += GEP.Offset;
+          return Offset.uge(V2Size) && (-Offset).uge(V1Size);
+        }
+
+        // Extensions may change the direction of the difference on wrapping,
+        // but preserve its minimum absolute distance in the source type.
+        APInt Diff = E0.Offset - E1.Offset;
+        APInt MinDiff = APIntOps::umin(Diff, -Diff);
+        APInt MinDiffBytes =
+            MinDiff.zextOrTrunc(Var0.Scale.getBitWidth()) * Var0.Scale.abs();
+        return MinDiffBytes.uge(V1Size + GEP.Offset.abs()) &&
+               MinDiffBytes.uge(V2Size + GEP.Offset.abs());
       }
       if (const auto *SI = dyn_cast<SelectInst>(V0))
         return Check(Check, SI->getTrueValue(), V1) &&
