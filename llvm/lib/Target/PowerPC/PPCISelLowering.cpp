@@ -1430,7 +1430,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   }
 
   if (Subtarget.has64BitSupport())
-    setOperationAction(ISD::PREFETCH, MVT::Other, Legal);
+    setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
   if (Subtarget.isISA3_1())
     setOperationAction(ISD::SRA, MVT::v1i128, Legal);
@@ -12973,6 +12973,17 @@ SDValue PPCTargetLowering::LowerSCMP(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getSExtOrTrunc(Result, DL, ResVT);
 }
 
+SDValue PPCTargetLowering::LowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
+  unsigned IsData = Op.getConstantOperandVal(4);
+
+  // Instruction cache prefetches need icbt; drop them on subtargets
+  // without it. Just preserve the chain.
+  if (!IsData && !Subtarget.hasICBT())
+    return Op.getOperand(0);
+
+  return Op;
+}
+
 /// LowerOperation - Provide custom lowering hooks for some operations.
 ///
 SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
@@ -12996,6 +13007,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::BR_CC:              return LowerBR_CC(Op, DAG);
   case ISD::INIT_TRAMPOLINE:    return LowerINIT_TRAMPOLINE(Op, DAG);
   case ISD::ADJUST_TRAMPOLINE:  return LowerADJUST_TRAMPOLINE(Op, DAG);
+  case ISD::PREFETCH:
+    return LowerPREFETCH(Op, DAG);
   case ISD::SSUBO:
     return LowerSSUBO(Op, DAG);
   case ISD::SADDO:
