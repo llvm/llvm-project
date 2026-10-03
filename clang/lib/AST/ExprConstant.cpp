@@ -10963,9 +10963,8 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   }
 }
 
-static bool EvaluateArrayNewInit(EvalInfo &Info, LValue &This,
-                                 APValue &Result, const Expr *Init,
-                                 QualType AllocType);
+static bool EvaluateArrayNewInit(EvalInfo &Info, LValue &This, APValue &Result,
+                                 const Expr *Init, QualType AllocType);
 static bool EvaluateArrayNewConstructExpr(EvalInfo &Info, LValue &This,
                                           APValue &Result,
                                           const CXXConstructExpr *CCE,
@@ -15636,9 +15635,8 @@ static bool EvaluateArray(const Expr *E, const LValue &This,
   return ArrayExprEvaluator(Info, This, Result).Visit(E);
 }
 
-static bool EvaluateArrayNewInit(EvalInfo &Info, LValue &This,
-                                 APValue &Result, const Expr *Init,
-                                 QualType AllocType) {
+static bool EvaluateArrayNewInit(EvalInfo &Info, LValue &This, APValue &Result,
+                                 const Expr *Init, QualType AllocType) {
   assert(!Init->isValueDependent());
   assert(Init->isPRValue() && Init->getType()->isArrayType() &&
          "not an array prvalue");
