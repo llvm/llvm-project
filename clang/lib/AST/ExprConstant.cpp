@@ -22648,6 +22648,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::ObjCIsaExprClass:
   case Expr::ObjCAvailabilityCheckExprClass:
   case Expr::ShuffleVectorExprClass:
+  case Expr::SplatVectorExprClass:
   case Expr::ConvertVectorExprClass:
   case Expr::BlockExprClass:
   case Expr::NoStmtClass:
