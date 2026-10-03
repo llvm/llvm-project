@@ -5,10 +5,9 @@
 ;
 ; The user assumption itself has no preconditions, but it is located in a
 ; block whose domain is derived from (trunc i64 %n to i8), which is only
-; modeled correctly if the truncation does not overflow. Adding the assumption
-; to the context therefore relies on the 'n <= -129 or n >= 128' runtime
-; check, but the context is used to gist the invalid context, which removes
-; 'n <= -129' from it.
+; modeled correctly if the truncation does not overflow. The assumption must
+; therefore not be added to the context, which is used to gist the invalid
+; context and would remove 'n <= -129' from the runtime check.
 ; For n = -200, (signed char)n == 56, hence neither the assumption nor the
 ; store is executed. The optimized code must not execute Stmt_then.
 ;
