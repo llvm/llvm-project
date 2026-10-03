@@ -44,6 +44,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/InstructionNamer.h"
 #include <utility>
 #include <vector>
 
@@ -57,6 +58,11 @@ static cl::opt<bool> VerifyAnalysisInvalidation("verify-analysis-invalidation",
                                                 cl::init(false)
 #endif
 );
+
+static cl::opt<bool> InstNamerAfterEachPass(
+    "instnamer-after-each-pass", cl::Hidden,
+    cl::desc("Name unnamed IR values before and after each new-PM pass with "
+             "pipeline-unique names"));
 
 // An option that supports the -print-changed option.  See
 // the description for -print-changed for an explanation of the use
@@ -2547,6 +2553,8 @@ void PrintCrashIRInstrumentation::registerCallbacks(
 
 void StandardInstrumentations::registerCallbacks(
     PassInstrumentationCallbacks &PIC, ModuleAnalysisManager *MAM) {
+  if (InstNamerAfterEachPass)
+    InstructionNamerPass::registerCallbacks(PIC);
   PrintIR.registerCallbacks(PIC);
   PrintPass.registerCallbacks(PIC);
   TimePasses.registerCallbacks(PIC);
