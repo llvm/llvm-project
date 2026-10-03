@@ -233,6 +233,40 @@ void SPIRVCombinerHelper::applySPIRVFaceForward(MachineInstr &MI) const {
   MI.eraseFromParent();
 }
 
+/// This match is part of a combine that
+/// rewrites fmul (x,180/pi) to degrees(x)
+///   (fN (g_fmul (fN X) (fN 180/pi))) -> (fN (g_intrinsic degrees (fN X)))
+///   (vXfN (g_fmul (vXfN X) (vXfN splat(180/pi)))) ->
+///   (vXfN (g_intrinsic degrees (vXfN X)))
+/// where `fN` denotes a supported floating-point type.
+bool SPIRVCombinerHelper::matchDegrees(Register LHS, Register RHS,
+                                       Register &MatchInfo) const {
+  std::optional<FPValueAndVReg> ConstVal;
+
+  if (!mi_match(RHS, MRI, m_GFCstOrSplat(ConstVal)))
+    return false;
+
+  if (!ConstVal)
+    return false;
+
+  MatchInfo = LHS;
+  APFloat Expected(180.0 / llvm::numbers::pi);
+  bool LostInfo = false;
+  Expected.convert(ConstVal->Value.getSemantics(), APFloat::rmNearestTiesToEven,
+                   &LostInfo);
+  return Expected.compare(ConstVal->Value) == APFloat::cmpEqual;
+}
+
+void SPIRVCombinerHelper::applyDegrees(MachineInstr &MI,
+                                       Register &MatchInfo) const {
+  Register ResultReg = MI.getOperand(0).getReg();
+
+  Builder.setInstrAndDebugLoc(MI);
+  Builder.buildIntrinsic(Intrinsic::spv_degrees, ResultReg).addUse(MatchInfo);
+
+  MI.eraseFromParent();
+}
+
 void SPIRVCombinerHelper::applyMatrixTranspose(MachineInstr &MI) const {
   Register ResReg = MI.getOperand(0).getReg();
   Register InReg = MI.getOperand(2).getReg();
