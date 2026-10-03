@@ -9,6 +9,8 @@
 # CHECK: 		DW_TAG_inlined_subroutine
 # CHECK:      DW_AT_low_pc
 # CHECK-SAME: 0x0000000000000000
+# CHECK:      DW_AT_high_pc
+# CHECK-SAME: 0x0000000000000000
 
 # CHECK:    DW_TAG_GNU_call_site
 # CHECK:      DW_AT_low_pc
