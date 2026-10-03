@@ -420,7 +420,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
 
     // If we get foo:bar, this is almost certainly a typo for foo::bar.  Recover
     // and emit a fixit hint for it.
-    if (Next.is(tok::colon) && !ColonIsSacred) {
+    if (Next.is(tok::colon) && !ColonIsSacred &&
+        !ParsingGenericAssociationType) {
       if (Actions.IsInvalidUnlessNestedName(getCurScope(), SS, IdInfo,
                                             EnteringContext) &&
           // If the token after the colon isn't an identifier, it's still an
@@ -2239,6 +2240,11 @@ void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
     DS.SetTypeSpecType(DeclSpec::TST_##Name, Loc, PrevSpec, DiagID, Policy);   \
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case tok::kw_##Name:                                                         \
+    DS.SetTypeSpecType(DeclSpec::TST_##Name, Loc, PrevSpec, DiagID, Policy);   \
+    break;
+#include "clang/Basic/HLSLPackedTypes.def"
 
   case tok::annot_decltype:
   case tok::kw_decltype:

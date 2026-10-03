@@ -122,9 +122,19 @@ llvm.mlir.global internal constant @int_gep() : !llvm.ptr {
   llvm.return %gepinit : !llvm.ptr
 }
 
+// CHECK: @i32_array = internal constant [4 x i32] [i32 1, i32 2, i32 3, i32 4]
+llvm.mlir.global internal constant @i32_array(dense<[1, 2, 3, 4]> : tensor<4xi32>) : !llvm.array<4 x i32>
+// The offset is within the global, so the folder infers inbounds and nuw.
+// CHECK: @int_gep_inferred_flags = internal constant ptr getelementptr inbounds nuw (i8, ptr @i32_array, i64 8)
+llvm.mlir.global internal constant @int_gep_inferred_flags() : !llvm.ptr {
+  %addr = llvm.mlir.addressof @i32_array : !llvm.ptr
+  %gepinit = llvm.getelementptr %addr[0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i32>
+  llvm.return %gepinit : !llvm.ptr
+}
+
 // CHECK: @vt = external constant { [3 x ptr] }
 llvm.mlir.global external constant @vt() : !llvm.struct<(array<3 x ptr>)>
-// CHECK: @int_gep_inrange = internal constant ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @vt, i32 0, i32 0, i32 2)
+// CHECK: @int_gep_inrange = internal constant ptr getelementptr inbounds nuw inrange(-16, 8) (i8, ptr @vt, i64 16)
 llvm.mlir.global internal constant @int_gep_inrange() : !llvm.ptr {
   %addr = llvm.mlir.addressof @vt : !llvm.ptr
   %gepinit = llvm.getelementptr inbounds inrange <i64, -16, 8> %addr[0, 0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(array<3 x ptr>)>

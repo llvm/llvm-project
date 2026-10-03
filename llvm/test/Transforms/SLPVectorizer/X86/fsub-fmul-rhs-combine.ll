@@ -50,14 +50,16 @@ define double @fsub_fmul_rhs_gathered_c(ptr %a, ptr %b, double %c0, double %c1) 
 ; CHECK-LABEL: define double @fsub_fmul_rhs_gathered_c(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], double [[C0:%.*]], double [[C1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul contract <2 x double> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[C0]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[C1]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = fsub contract <2 x double> [[TMP4]], [[TMP2]]
-; CHECK-NEXT:    [[S0:%.*]] = extractelement <2 x double> [[TMP5]], i64 0
-; CHECK-NEXT:    [[S1:%.*]] = extractelement <2 x double> [[TMP5]], i64 1
+; CHECK-NEXT:    [[A0:%.*]] = load double, ptr [[A]], align 8
+; CHECK-NEXT:    [[A1P:%.*]] = getelementptr inbounds double, ptr [[A]], i64 1
+; CHECK-NEXT:    [[A1:%.*]] = load double, ptr [[A1P]], align 8
+; CHECK-NEXT:    [[B0:%.*]] = load double, ptr [[B]], align 8
+; CHECK-NEXT:    [[B1P:%.*]] = getelementptr inbounds double, ptr [[B]], i64 1
+; CHECK-NEXT:    [[B1:%.*]] = load double, ptr [[B1P]], align 8
+; CHECK-NEXT:    [[M0:%.*]] = fmul contract double [[A0]], [[B0]]
+; CHECK-NEXT:    [[M1:%.*]] = fmul contract double [[A1]], [[B1]]
+; CHECK-NEXT:    [[S0:%.*]] = fsub contract double [[C0]], [[M0]]
+; CHECK-NEXT:    [[S1:%.*]] = fsub contract double [[C1]], [[M1]]
 ; CHECK-NEXT:    [[R:%.*]] = fmul double [[S0]], [[S1]]
 ; CHECK-NEXT:    ret double [[R]]
 ;

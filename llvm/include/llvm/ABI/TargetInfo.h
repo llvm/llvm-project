@@ -145,6 +145,10 @@ protected:
 
 LLVM_ABI std::unique_ptr<TargetInfo> createBPFTargetInfo(TypeBuilder &TB);
 
+LLVM_ABI std::unique_ptr<TargetInfo>
+createAMDGPUTargetInfo(TypeBuilder &TB,
+                       bool CoerceGenericPtrArgToGlobal = false);
+
 /// The AVX ABI level for X86 targets.
 enum class X86AVXABILevel {
   None,
@@ -171,6 +175,9 @@ struct AArch64ABIOptions {
   AArch64ABIKind Kind = AArch64ABIKind::AAPCS;
   bool IsILP32 = false;
   bool IsCXX = false;
+  bool IsMachO = false;
+  bool IsAndroidOrOHOS = false;
+  bool IsWindowsArm64EC = false;
   bool IsMicrosoftCXXABI = false;
   ABICompatInfo CompatInfo;
 

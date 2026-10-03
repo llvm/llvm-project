@@ -275,7 +275,7 @@ bool BinOpSameOpcodeHelper::add(const Instruction *I) {
   }
   MaskType InterchangeableMask = OpcodeInMaskForm;
   auto [C, Pos] = isBinOpWithConstant(I);
-  if (auto *CI = dyn_cast_or_null<ConstantInt>(C)) {
+  if (auto *CI = dyn_cast_if_present<ConstantInt>(C)) {
     constexpr MaskType CanBeAll =
         XorBIT | OrBIT | AndBIT | SubBIT | AddBIT | MulBIT | AShrBIT | ShlBIT;
     const APInt &CIValue = CI->getValue();
@@ -547,11 +547,30 @@ bool InstructionsState::isCopyableElement(Value *V) const {
   assert(valid() && "InstructionsState is invalid.");
   if (!HasCopyables)
     return false;
-  if (isAltShuffle() || getOpcode() == Instruction::GetElementPtr)
+  if (isAltShuffle())
     return false;
   auto *I = dyn_cast<Instruction>(V);
+  // Copyable lanes of a cast node are limited to constants representable as
+  // the cast of a source-type constant.
+  if (isa<CastInst>(MainOp)) {
+    if (I || isa<PoisonValue>(V))
+      return false;
+    if (isa<UndefValue>(V))
+      return true;
+    auto *C = dyn_cast<ConstantInt>(V);
+    return C && C->getValue().getActiveBits() <=
+                    cast<CastInst>(MainOp)->getSrcTy()->getIntegerBitWidth();
+  }
   if (!I)
     return !isa<PoisonValue>(V);
+  // For a GEP main op only single-index GEPs with the same source element
+  // type can be matching lanes; GEPs with a different shape are copyable.
+  if (getOpcode() == Instruction::GetElementPtr)
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(I);
+        GEP && (GEP->getNumOperands() != 2 ||
+                GEP->getSourceElementType() !=
+                    cast<GetElementPtrInst>(MainOp)->getSourceElementType()))
+      return true;
   if (I->getParent() != MainOp->getParent() &&
       (!isVectorLikeInstWithConstOps(I) ||
        !isVectorLikeInstWithConstOps(MainOp)))
@@ -586,9 +605,8 @@ bool isAbsorbableCopyableFMulOrFAdd(const InstructionsState &S, Value *V) {
 
 bool hasOnlyAbsorbableCopyableFMulOrFAdds(ArrayRef<Value *> VL) {
   bool HasFMulOrFAdd = false;
-  for (Value *V : VL) {
-    if (isa<PoisonValue>(V))
-      continue;
+  for (Value *V :
+       make_filter_range(VL, [](Value *V) { return !isa<PoisonValue>(V); })) {
     auto *I = dyn_cast<Instruction>(V);
     if (I && RecurrenceDescriptor::isFMulAddIntrinsic(I))
       continue;
@@ -678,9 +696,8 @@ bool InstructionsState::isNonSchedulable(Value *V) const {
 /// - nullptr if no matching instruction is found
 static Instruction *findInstructionWithOpcode(ArrayRef<Value *> VL,
                                               unsigned Opcode) {
-  for (Value *V : VL) {
-    if (isa<PoisonValue>(V))
-      continue;
+  for (Value *V :
+       make_filter_range(VL, [](Value *V) { return !isa<PoisonValue>(V); })) {
     assert(isa<Instruction>(V) && "Only accepts PoisonValue and Instruction.");
     auto *Inst = cast<Instruction>(V);
     if (Inst->getOpcode() == Opcode)
@@ -790,11 +807,8 @@ InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   bool AnyPoison = InstCnt != VL.size();
   // Check MainOp too to be sure that it matches the requirements for the
   // instructions.
-  for (Value *V : iterator_range(It, VL.end())) {
-    auto *I = dyn_cast<Instruction>(V);
-    if (!I)
-      continue;
-
+  for (Instruction *I :
+       make_isa_range<Instruction>(iterator_range(It, VL.end()))) {
     // Cannot combine poison and divisions.
     // TODO: do some smart analysis of the CallInsts to exclude divide-like
     // intrinsics/functions only.

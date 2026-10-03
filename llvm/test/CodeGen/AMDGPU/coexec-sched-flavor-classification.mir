@@ -1,5 +1,6 @@
 # REQUIRES: asserts
 # RUN: llc -mtriple=amdgpu12.50 -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec -debug-only=machine-scheduler %s -filetype=null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu12.51 -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec -debug-only=machine-scheduler %s -filetype=null 2>&1 | FileCheck %s --check-prefix=GFX1251
 
 
 --- |
@@ -155,6 +156,8 @@ body: |
 
 # CHECK-LABEL: blocking_cycles_arith_f64:
 # CHECK: VALU(Nc): 32 cycles, 1 instrs
+# GFX1251-LABEL: blocking_cycles_arith_f64:
+# GFX1251: VALU(1c): 1 cycles, 1 instrs
 
 ---
 name: blocking_cycles_arith_f64

@@ -704,6 +704,37 @@ namespace vardecl_in_if_condition {
       return obj->next();
   }
 
+  RefCountable* trivialProvide() { return nullptr; }
+
+  void local_in_non_trivial_else() {
+    if (auto* obj = provide())
+      obj->trivial();
+    else {
+      auto* other = provide(); // expected-warning{{Local variable 'other' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+      someFunction();
+      other->method();
+    }
+  }
+
+  void local_in_non_trivial_else_if(bool flag) {
+    if (auto* obj = provide())
+      obj->trivial();
+    else if (flag) {
+      auto* other = provide(); // expected-warning{{Local variable 'other' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+      someFunction();
+      other->method();
+    }
+  }
+
+  void local_in_trivial_else() {
+    if (auto* obj = provide())
+      obj->trivial();
+    else {
+      auto* other = trivialProvide(); // no warning
+      other->trivial();
+    }
+  }
+
 }
 
 namespace delete_unresolved_type {
