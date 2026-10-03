@@ -1,0 +1,116 @@
+name: Flang integration test check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "flang/**"
+      - ".github/workflows/flang-integration-test-check.yml"
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  check-for-full-pipeline-tests:
+    if: github.repository == 'llvm/llvm-project'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check for new full-pipeline test invocations
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require("fs");
+            const marker = "<!-- flang-integration-test-check -->";
+            const pr = context.payload.pull_request;
+
+            const files = await github.paginate(
+              github.rest.pulls.listFiles,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                per_page: 100,
+              },
+            );
+
+            const findings = [];
+            for (const file of files) {
+              if (!file.filename.startsWith("flang/test/"))
+                continue;
+              if (!file.patch) {
+                core.notice(`Not checked (no patch text from the API): ${file.filename}`);
+                continue;
+              }
+
+              // Count full-pipeline flag tokens across lit directives on both
+              // sides of the diff. Only report a net increase, so reindentation,
+              // option changes and moves into substitutions do not cause reminders.
+              // This is a heuristic, not a count of expanded invocations: a new
+              // use can be offset by a removed one elsewhere in the same file.
+              const directive = /\b(RUN|DEFINE|REDEFINE):/;
+              const fullPipeline = /(^|\s)(-emit-llvm(-bc)?|-emit-obj)(?=\s|=|$)/g;
+              const countFlags = line =>
+                directive.test(line) ? (line.match(fullPipeline) || []).length : 0;
+              const lines = file.patch.split("\n");
+              const total = sign => lines.filter(line => sign.test(line))
+                .reduce((n, line) => n + countFlags(line), 0);
+              if (total(/^\+(?!\+\+)/) > total(/^-(?!--)/)) {
+                // Keep filenames inside a single Markdown code span.
+                const filename = file.filename.replace(/[`\r\n]/g, "'");
+                findings.push(`- \`${filename}\``);
+              }
+            }
+
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                per_page: 100,
+              },
+            );
+            const previous = comments.find(
+              comment => comment.user && comment.user.login === "github-actions[bot]" &&
+                typeof comment.body === "string" && comment.body.startsWith(marker),
+            );
+
+            // issue-write.yml creates or updates comments from this artifact.
+            // Resolve an existing reminder when its findings disappear.
+            if (findings.length === 0) {
+              const resolved = previous ? [{
+                id: previous.id,
+                body: marker + "\n\nNo additional full-pipeline test invocations were detected " +
+                  "under `flang/test/`.",
+              }] : [];
+              fs.writeFileSync("comments", JSON.stringify(resolved));
+              return;
+            }
+
+            const body = [
+              marker,
+              "This pull request adds Flang test commands that exercise the compiler " +
+                "pipeline through LLVM IR generation or later stages:",
+              "",
+              findings.join("\n"),
+              "",
+              "Please consider whether the same behavior can be covered by a focused test " +
+                "that stops at the relevant compiler stage. If LLVM IR generation is " +
+                "necessary, add a nearby, test-specific comment explaining why. See the " +
+                "[Flang integration test guidance](https://github.com/llvm/llvm-project/blob/main/flang/test/Integration/README.md).",
+              "",
+              "_This is an informational reminder; it does not fail the workflow._",
+            ].join("\n");
+
+            const comment = { body };
+            if (previous)
+              comment.id = previous.id;
+            fs.writeFileSync("comments", JSON.stringify([comment]));
+
+      - name: Upload comment for issue-write.yml
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: workflow-args
+          path: comments
