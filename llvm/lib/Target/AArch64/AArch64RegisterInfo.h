@@ -96,6 +96,7 @@ public:
 
   /// Stack probing calls preserve different CSRs to the normal CC.
   const uint32_t *getWindowsStackProbePreservedMask() const;
+  const uint32_t *getDarwinStackProbePreservedMask() const;
 
   BitVector getStrictlyReservedRegs(const MachineFunction &MF) const;
   BitVector getUserReservedRegs(const MachineFunction &MF) const;

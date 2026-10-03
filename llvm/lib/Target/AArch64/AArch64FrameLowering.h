@@ -233,6 +233,8 @@ private:
 
   bool windowsRequiresStackProbe(const MachineFunction &MF,
                                  uint64_t StackSizeInBytes) const;
+  bool darwinRequiresStackProbe(const MachineFunction &MF,
+                                uint64_t StackSizeInBytes) const;
 
   bool shouldSignReturnAddressEverywhere(const MachineFunction &MF) const;
 

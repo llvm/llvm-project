@@ -146,8 +146,10 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
   assert(int64_t(ProbeSize) > 0 && "Invalid stack probe size");
 
   if (STI->isTargetWindows()) {
-    if (!F.hasFnAttribute("no-stack-arg-probe"))
+    if (!F.hasFnAttribute("no-stack-arg-probe")) {
+      StackProbe = StackProbeKind::Windows;
       StackProbeSize = ProbeSize;
+    }
   } else {
     // Round down to the stack alignment.
     uint64_t StackAlign =
@@ -160,7 +162,11 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
                  F.getParent()->getModuleFlag("probe-stack")))
       ProbeKind = PS->getString();
     if (ProbeKind.size()) {
-      if (ProbeKind != "inline-asm")
+      if (ProbeKind == "inline-asm")
+        StackProbe = StackProbeKind::Inline;
+      else if (STI->isTargetDarwin() && ProbeKind == "__chkstk_darwin")
+        StackProbe = StackProbeKind::Darwin;
+      else
         report_fatal_error("Unsupported stack probing method");
       StackProbeSize = ProbeSize;
     }

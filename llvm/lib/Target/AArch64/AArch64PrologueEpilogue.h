@@ -142,6 +142,8 @@ private:
   void emitWindowsStackProbe(MachineBasicBlock::iterator MBBI,
                              const DebugLoc &DL, int64_t &NumBytes,
                              int64_t RealignmentPadding) const;
+  void emitDarwinStackProbe(MachineBasicBlock::iterator MBBI,
+                            const DebugLoc &DL, uint64_t NumBytes) const;
 
   void emitCalleeSavedGPRLocations(MachineBasicBlock::iterator MBBI) const;
   void emitCalleeSavedSVELocations(MachineBasicBlock::iterator MBBI) const;
