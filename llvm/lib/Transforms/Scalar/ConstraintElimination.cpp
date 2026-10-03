@@ -367,6 +367,7 @@ class ConstraintInfo {
   ConstraintSystem SignedCS;
 
   const DataLayout &DL;
+  const DominatorTree &DT;
 
   /// Decompositions computed against the current state of the systems. Must be
   /// cleared when the system changes.
@@ -378,8 +379,9 @@ public:
     return DecomposeCache;
   }
 
-  ConstraintInfo(const DataLayout &DL, ArrayRef<Value *> FunctionArgs)
-      : UnsignedCS(FunctionArgs), SignedCS(FunctionArgs), DL(DL) {
+  ConstraintInfo(const DataLayout &DL, const DominatorTree &DT,
+                 ArrayRef<Value *> FunctionArgs)
+      : UnsignedCS(FunctionArgs), SignedCS(FunctionArgs), DL(DL), DT(DT) {
     auto &Value2Index = getValue2Index(false);
     // Add Arg > -1 constraints to unsigned system for all function arguments.
     for (Value *Arg : FunctionArgs)
@@ -393,6 +395,8 @@ public:
   const DenseMap<Value *, unsigned> &getValue2Index(bool Signed) const {
     return Signed ? SignedCS.getValue2Index() : UnsignedCS.getValue2Index();
   }
+
+  const DominatorTree &getDT() const { return DT; }
 
   ConstraintSystem &getCS(bool Signed) {
     return Signed ? SignedCS : UnsignedCS;
@@ -761,6 +765,23 @@ static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
     if (Trunc->getSrcTy()->getScalarSizeInBits() <= 64 &&
         isKnownNoWrap(Trunc, Info, IsSigned))
       V = Trunc->getOperand(0);
+  }
+
+  // The result of an add/sub.with.overflow whose uses are all guarded by the
+  // no-overflow branch equals the non-wrapping operation wherever it is used.
+  WithOverflowInst *WO;
+  if (match(V, m_ExtractValue<0>(m_WithOverflowInst(WO))) &&
+      (WO->getBinaryOp() == Instruction::Add ||
+       WO->getBinaryOp() == Instruction::Sub)) {
+    if (!isOverflowIntrinsicNoWrap(WO, Info.getDT()) ||
+        !isKnownNoWrap(WO->getBinaryOp(), WO->getLHS(), WO->getRHS(),
+                       WO->getNoWrapKind(), Info, IsSigned))
+      return V;
+    auto ResA = decompose(WO->getLHS(), Info, IsSigned, DL);
+    auto ResB = decompose(WO->getRHS(), Info, IsSigned, DL);
+    bool Overflow =
+        WO->getBinaryOp() == Instruction::Add ? ResA.add(ResB) : ResA.sub(ResB);
+    return Overflow ? Decomposition(V) : ResA;
   }
 
   if (match(V, m_AddLike(m_Value(Op0), m_Value(Op1)))) {
@@ -2377,7 +2398,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
   bool Changed = false;
   DT.updateDFSNumbers();
   SmallVector<Value *> FunctionArgs(llvm::make_pointer_range(F.args()));
-  ConstraintInfo Info(F.getDataLayout(), FunctionArgs);
+  ConstraintInfo Info(F.getDataLayout(), DT, FunctionArgs);
   State S(DT, LI, SE, TLI);
   std::unique_ptr<Module> ReproducerModule(
       DumpReproducers ? new Module(F.getName(), F.getContext()) : nullptr);
