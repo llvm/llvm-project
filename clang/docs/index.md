@@ -47,6 +47,7 @@ ControlFlowIntegrity
 LTOVisibility
 SafeStack
 ShadowCallStack
+SourceFortification
 StructureProtection
 SourceBasedCodeCoverage
 StandardCPlusPlusModules
