@@ -114,7 +114,8 @@ Operation *cir::CIRDialect::materializeConstant(mlir::OpBuilder &builder,
 
 static bool isOpenCLVersionAttrName(StringRef attrName) {
   return attrName == CIRDialect::getOpenCLVersionAttrName() ||
-         attrName == CIRDialect::getOpenCLCXXVersionAttrName();
+         attrName == CIRDialect::getOpenCLCXXVersionAttrName() ||
+         attrName == CIRDialect::getOpenCLSPIRVersionAttrName();
 }
 
 static LogicalResult verifyOpenCLVersionAttrPlacement(Operation *op,
@@ -1337,8 +1338,15 @@ static ParseResult checkEffectAttrKinds(mlir::OpAsmParser &parser,
              << CIRDialect::getMemoryEffectsAttrName()
              << "' must be a #cir.memory_effects attribute";
 
+  if (mlir::Attribute uwtable = attrs.get(CIRDialect::getUwtableAttrName()))
+    if (!mlir::isa<cir::UnwindTableKindAttr>(uwtable))
+      return parser.emitError(loc, "attribute '")
+             << CIRDialect::getUwtableAttrName()
+             << "' must be a #cir.uwtable attribute";
+
   for (llvm::StringRef name :
-       {CIRDialect::getNoUnwindAttrName(), CIRDialect::getWillReturnAttrName()})
+       {CIRDialect::getNoUnwindAttrName(), CIRDialect::getWillReturnAttrName(),
+        CIRDialect::getMustProgressAttrName()})
     if (mlir::Attribute flag = attrs.get(name))
       if (!mlir::isa<mlir::UnitAttr>(flag))
         return parser.emitError(loc, "attribute '")
@@ -2452,6 +2460,33 @@ void cir::GlobalOp::getSuccessorRegions(
     regions.push_back(RegionSuccessor(dtorRegion));
 }
 
+static void printComdatName(OpAsmPrinter &p, StringAttr comdat) {
+  if (!comdat)
+    return;
+  p << "comdat";
+  if (!comdat.getValue().empty())
+    p << "(\"" << comdat.getValue() << "\")";
+}
+
+static void printComdatName(OpAsmPrinter &p, cir::GlobalOp op,
+                            StringAttr comdat) {
+  printComdatName(p, comdat);
+}
+
+static ParseResult parseComdatName(OpAsmParser &parser,
+                                   StringAttr &comdatAttr) {
+  if (parser.parseOptionalKeyword("comdat").failed())
+    return success();
+  std::string comdatKey;
+  if (succeeded(parser.parseOptionalLParen())) {
+    if (parser.parseString(&comdatKey).failed() ||
+        parser.parseRParen().failed())
+      return failure();
+  }
+  comdatAttr = parser.getBuilder().getStringAttr(comdatKey);
+  return success();
+}
+
 static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,
                                              TypeAttr type, Attribute initAttr,
                                              mlir::Region &ctorRegion,
@@ -2736,16 +2771,12 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   if (parser.parseOptionalKeyword(noProtoNameAttr).succeeded())
     state.addAttribute(noProtoNameAttr, parser.getBuilder().getUnitAttr());
 
-  if (parser.parseOptionalKeyword(comdatNameAttr).succeeded()) {
-    std::string comdatKey;
-    if (mlir::succeeded(parser.parseOptionalLParen())) {
-      if (parser.parseString(&comdatKey).failed())
-        return failure();
-      if (parser.parseRParen().failed())
-        return failure();
-    }
-    state.addAttribute(comdatNameAttr,
-                       parser.getBuilder().getStringAttr(comdatKey));
+  {
+    StringAttr comdatAttr;
+    if (parseComdatName(parser, comdatAttr).failed())
+      return failure();
+    if (comdatAttr)
+      state.addAttribute(comdatNameAttr, comdatAttr);
   }
 
   auto parseAlignmentBody = [&](int64_t &value) {
@@ -2959,10 +2990,11 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     return failure();
 
   // Every other declared attribute has dedicated syntax above, so
-  // memory_effects is the only one the explicit list may carry.  Without the
-  // exception cir.func could not parse back what it prints.
+  // memory_effects and uwtable is the only one the explicit list may carry.
+  // Without the exception cir.func could not parse back what it prints.
   for (StringRef disallowed : cir::FuncOp::getAttributeNames()) {
-    if (disallowed == CIRDialect::getMemoryEffectsAttrName())
+    if (disallowed == CIRDialect::getMemoryEffectsAttrName() ||
+        disallowed == CIRDialect::getUwtableAttrName())
       continue;
     if (parsedAttrs.get(disallowed))
       return parser.emitError(loc, "attribute '")
@@ -3080,10 +3112,9 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (getNoProto())
     p << " no_proto";
 
-  if (std::optional<StringRef> comdatKey = getComdat()) {
-    p << " comdat";
-    if (!comdatKey->empty())
-      p << "(\"" << *comdatKey << "\")";
+  if (getComdatAttr()) {
+    p << ' ';
+    printComdatName(p, getComdatAttr());
   }
 
   if (getAlignment())
@@ -3153,10 +3184,12 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   }
 
   // Every declared attribute is printed by the syntax above, except
-  // memory_effects, which has none and so must reach the dictionary.
+  // memory_effects and uwtable, which have none and so must reach the
+  // dictionary.
   llvm::SmallVector<llvm::StringRef> elidedAttrs;
   for (llvm::StringRef name : cir::FuncOp::getAttributeNames())
-    if (name != CIRDialect::getMemoryEffectsAttrName())
+    if (name != CIRDialect::getMemoryEffectsAttrName() &&
+        name != CIRDialect::getUwtableAttrName())
       elidedAttrs.push_back(name);
   function_interface_impl::printFunctionAttributes(p, *this, elidedAttrs);
 
@@ -4859,6 +4892,16 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
     result.addTypes(TypeRange{resType});
 
   return mlir::success();
+}
+
+void InlineAsmOp::getEffects(
+    llvm::SmallVectorImpl<mlir::MemoryEffects::EffectInstance> &effects) {
+  // If we have any side effects (that is, we're volatile asm), add a read and
+  // write memory effect. We do this the same as the llvm dialect InlineAsmOp.
+  if (getSideEffects()) {
+    effects.emplace_back(mlir::MemoryEffects::Read::get());
+    effects.emplace_back(mlir::MemoryEffects::Write::get());
+  }
 }
 
 //===----------------------------------------------------------------------===//
