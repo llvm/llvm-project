@@ -4360,6 +4360,35 @@ unsigned HexagonInstrInfo::getInstrTimingClassLatency(
   return ItinData->getStageLatency(MI.getDesc().getSchedClass());
 }
 
+bool HexagonInstrInfo::hasMultiCycleDefLatency(
+    const InstrItineraryData *ItinData, const MachineInstr &DefMI,
+    const MachineInstr &UseMI, Register Reg) const {
+  const auto &HRI = *Subtarget.getRegisterInfo();
+  // Only meaningful when DefMI actually writes a register that overlaps Reg.
+  // Cover every orientation: exact match, super-reg def (paired def whose low
+  // half is the ABI arg register), and narrow def feeding a wider implicit
+  // use (e.g. sfmpy defining $r0 while the callee's implicit use is $d0).
+  bool DefsReg = false;
+  for (const MachineOperand &MO : DefMI.operands()) {
+    if (MO.isReg() && MO.isDef() && MO.getReg() &&
+        HRI.regsOverlap(MO.getReg(), Reg)) {
+      DefsReg = true;
+      break;
+    }
+  }
+  if (!DefsReg)
+    return false;
+  // Most scalar timing classes (TC1/TC2/TC3/loads/stores) commit their writes
+  // to the register file by the end of the packet, so the callee of a
+  // co-packetized call still observes the up-to-date value of an implicit
+  // argument register. Multi-cycle scalar producers on SLOT2/SLOT3 (TC3x
+  // scalar multiply and TC4x scalar floating-point) complete late enough that
+  // the callee can see a stale register when the def and the call are placed
+  // in the same packet. Refuse the bundle for those classes.
+  unsigned SchedClass = DefMI.getDesc().getSchedClass();
+  return is_TC3x(SchedClass) || is_TC4x(SchedClass);
+}
+
 /// getOperandLatency - Compute and return the use operand latency of a given
 /// pair of def and use.
 /// In most cases, the static scheduling itinerary was enough to determine the
