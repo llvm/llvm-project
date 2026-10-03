@@ -329,6 +329,12 @@ public:
         LoopLatches.push_back(Pred);
   }
 
+  /// Append this loop's blocks from the header to its single latch and return
+  /// true when each block before the latch has exactly one in-loop successor
+  /// and that path visits every block. Exit edges are ignored. Otherwise
+  /// return false and leave \p Order empty. blocks() is not this order.
+  bool getSinglePathBlocks(SmallVectorImpl<BlockT *> &Order) const;
+
   /// Return all inner loops in the loop nest rooted by the loop in preorder,
   /// with siblings in forward program order.
   template <class Type>

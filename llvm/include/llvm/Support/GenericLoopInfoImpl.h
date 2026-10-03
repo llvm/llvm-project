@@ -269,6 +269,47 @@ BlockT *LoopBase<BlockT, LoopT>::getLoopLatch() const {
   return Latch;
 }
 
+/// getSinglePathBlocks - Append this loop's blocks from the header to its
+/// single latch and return true when each block before the latch has exactly
+/// one in-loop successor and that path visits every block. Exit edges are
+/// ignored. Otherwise return false and leave \p Order empty.
+template <class BlockT, class LoopT>
+bool LoopBase<BlockT, LoopT>::getSinglePathBlocks(
+    SmallVectorImpl<BlockT *> &Order) const {
+  assert(!isInvalid() && "Loop not in a valid state!");
+  Order.clear();
+
+  // Null when the loop has more than one backedge.
+  BlockT *Latch = getLoopLatch();
+  if (!Latch)
+    return false;
+
+  // Null unless exactly one successor stays in the loop.
+  auto IsInLoopSucc = [&](BlockT *Succ, bool AllowRepeats) -> BlockT * {
+    assert(!AllowRepeats && "Unexpected parameter value.");
+    return contains(Succ) ? Succ : nullptr;
+  };
+
+  BlockT *BB = getHeader();
+  while (!is_contained(Order, BB)) {
+    Order.push_back(BB);
+    if (BB == Latch)
+      break;
+
+    BB = find_singleton<BlockT>(children<BlockT *>(BB), IsInLoopSucc);
+    if (!BB) {
+      Order.clear();
+      return false;
+    }
+  }
+
+  if (Order.size() != getNumBlocks()) {
+    Order.clear();
+    return false;
+  }
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // APIs for updating loop information after changing the CFG
 //

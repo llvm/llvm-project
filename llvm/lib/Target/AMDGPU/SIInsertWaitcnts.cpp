@@ -3279,12 +3279,12 @@ bool SIInsertWaitcnts::mayStoreIncrementingDSCNT(const MachineInstr &MI) const {
 //    Flushing in preheader reduces wait overhead if the wait requirement in
 //    iteration 1 would otherwise be more strict (but unfortunately preheader
 //    flush decision is taken before knowing that).
-// 5. (Single-block loops only) The loop has DS prefetch reads with flush point
-//    tracking. Some DS reads may be used in the same iteration (creating
-//    "flush points"), but others remain unflushed at the backedge. When a DS
-//    read is consumed in the same iteration, it and all prior reads are
-//    "flushed" (FIFO order). No DS writes are allowed in the loop.
-//    TODO: Find a way to extend to multi-block loops.
+// 5. The loop has DS prefetch reads with flush point tracking. Some DS reads
+//    may be used in the same iteration (creating "flush points"), but others
+//    remain unflushed at the backedge. When a DS read is consumed in the same
+//    iteration, it and all prior reads are "flushed" (FIFO order). No DS
+//    writes are allowed in the loop. Requires one issue order, so an in-loop
+//    branch skips this case.
 PreheaderFlushFlags
 SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
                                          const WaitcntBrackets &Brackets) {
@@ -3302,17 +3302,20 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
   DenseSet<MCRegUnit> VgprDefVMEM;
   DenseSet<MCRegUnit> VgprDefDS;
 
-  // Track DS reads for prefetch pattern with flush points (single-block only).
+  // Track DS reads for prefetch pattern with flush points.
   // Keeps track of the last DS read (position counted from the top of the loop)
   // to each VGPR. Read is considered consumed (and thus needs flushing) if
   // the dest register has a use or is overwritten (by any later opertions).
   DenseMap<MCRegUnit, unsigned> LastDSReadPositionMap;
   unsigned DSReadPosition = 0;
-  bool IsSingleBlock = ML->getNumBlocks() == 1;
-  bool TrackDSFlushPoint = ST.hasExtendedWaitCounts() && IsSingleBlock;
+  SmallVector<MachineBasicBlock *, 8> BlockOrder;
+  bool SinglePath = ML->getSinglePathBlocks(BlockOrder);
+  if (!SinglePath)
+    append_range(BlockOrder, ML->blocks());
+  bool TrackDSFlushPoint = ST.hasExtendedWaitCounts() && SinglePath;
   unsigned LastDSFlushPosition = 0;
 
-  for (MachineBasicBlock *MBB : ML->blocks()) {
+  for (MachineBasicBlock *MBB : BlockOrder) {
     for (MachineInstr &MI : *MBB) {
       if (isVMEMOrFlatVMEM(MI)) {
         HasVMemLoad |= MI.mayLoad();
