@@ -487,6 +487,12 @@ public:
   /// profitable to inline the call.
   LLVM_ABI uint64_t getMaxMemIntrinsicInlineSizeThreshold() const;
 
+  /// Returns the maximum length in bytes for which a memset with a
+  /// non-constant length, known to be bounded by that value, is preferably
+  /// expanded inline instead of calling the library. Zero disables the
+  /// expansion.
+  LLVM_ABI uint64_t getMaxBoundedMemSetInlineSize() const;
+
   /// \return The estimated number of case clusters when lowering \p 'SI'.
   /// \p JTSize Set a jump table size only when \p SI is suitable for a jump
   /// table.
