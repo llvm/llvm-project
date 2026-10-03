@@ -1,0 +1,10 @@
+; RUN: llvm-c-test --object-list-sections < %S/Inputs/simple.o | FileCheck %s
+;
+; Test listing sections in an ELF object file.
+; The object file was created from:
+;   target triple = "x86_64-unknown-linux-gnu"
+;   @global_var = global i32 42, align 4
+;   define i32 @add(i32 %a, i32 %b) { %sum = add i32 %a, %b; ret i32 %sum }
+
+; CHECK: '.text': @0x00000000 +4
+; CHECK: '.data': @0x00000000 +4

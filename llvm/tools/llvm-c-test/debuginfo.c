@@ -210,7 +210,7 @@ int llvm_test_dibuilder(void) {
   LLVMMetadataRef EnumeratorTestB =
       LLVMDIBuilderCreateEnumerator(DIB, "Test_B", strlen("Test_B"), 1, true);
   LLVMMetadataRef EnumeratorTestC =
-      LLVMDIBuilderCreateEnumerator(DIB, "Test_B", strlen("Test_C"), 2, true);
+      LLVMDIBuilderCreateEnumerator(DIB, "Test_C", strlen("Test_C"), 2, true);
   LLVMMetadataRef EnumeratorsTest[] = {EnumeratorTestA, EnumeratorTestB,
                                        EnumeratorTestC};
   LLVMMetadataRef EnumTest = LLVMDIBuilderCreateEnumerationType(
@@ -275,7 +275,7 @@ int llvm_test_dibuilder(void) {
       LLVMMetadataAsValue(LLVMGetModuleContext(M), DynamicArrayMetadataTy));
 
   LLVMMetadataRef StructPTy = LLVMDIBuilderCreateForwardDecl(
-      DIB, 2 /*DW_TAG_class_type*/, "Class1", 5, NameSpace, File, 0, 0, 192, 0,
+      DIB, 2 /*DW_TAG_class_type*/, "Class1", 6, NameSpace, File, 0, 0, 192, 0,
       "FooClass", 8);
 
   LLVMMetadataRef Int32Ty =
