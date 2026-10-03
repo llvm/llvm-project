@@ -244,6 +244,20 @@ TEST(IOApiTests, ListInputComplexRegressionTest) {
       << "', but got '" << output << "'";
 }
 
+TEST(IOApiTests, InternalListBlankFillNoOutputTest) {
+  static constexpr int bufferSize{10};
+  char buffer[bufferSize];
+  std::memcpy(buffer, "abcdefghij", bufferSize);
+  auto cookie{IONAME(BeginInternalListOutput)(buffer, bufferSize)};
+  auto status{IONAME(EndIoStatement)(cookie)};
+  ASSERT_EQ(status, 0) << "EndIoStatement failed, status "
+                       << static_cast<int>(status);
+  EXPECT_TRUE(
+      CompareFormattedStrings("          ", std::string{buffer, bufferSize}))
+      << "Expected all blanks but got '" << std::string{buffer, bufferSize}
+      << "'";
+}
+
 TEST(IOApiTests, DescriptorOutputTest) {
   static constexpr int bufferSize{10};
   char buffer[bufferSize];

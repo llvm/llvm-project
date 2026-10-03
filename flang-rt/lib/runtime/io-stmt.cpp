@@ -219,9 +219,7 @@ template <Direction DIR>
 void InternalListIoStatementState<DIR>::CompleteOperation() {
   if (!this->completedOperation()) {
     if constexpr (DIR == Direction::Output) {
-      if (unit_.furthestPositionInRecord > 0) {
-        unit_.AdvanceRecord(*this);
-      }
+      unit_.AdvanceRecord(*this);
     }
     IoStatementBase::CompleteOperation();
   }
