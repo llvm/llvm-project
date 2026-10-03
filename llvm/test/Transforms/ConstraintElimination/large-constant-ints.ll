@@ -456,4 +456,31 @@ entry:
   ret i1 %c.3
 }
 
+; Combining the rows with coefficients of 2^33 during Fourier-Motzkin
+; elimination would overflow, unless the rows are divided by their GCD first.
+define i1 @gcd_transitive_coefficients_overflow(i64 %x, i64 %y, i64 %z) {
+; CHECK-LABEL: @gcd_transitive_coefficients_overflow(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S:%.*]] = shl nuw i64 [[X:%.*]], 33
+; CHECK-NEXT:    [[T:%.*]] = shl nuw i64 [[Y:%.*]], 33
+; CHECK-NEXT:    [[U:%.*]] = shl nuw i64 [[Z:%.*]], 33
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i64 [[S]], [[T]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i64 [[T]], [[U]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_2]])
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ule i64 [[S]], [[U]]
+; CHECK-NEXT:    ret i1 [[C_3]]
+;
+entry:
+  %s = shl nuw i64 %x, 33
+  %t = shl nuw i64 %y, 33
+  %u = shl nuw i64 %z, 33
+  %c.1 = icmp ule i64 %s, %t
+  call void @llvm.assume(i1 %c.1)
+  %c.2 = icmp ule i64 %t, %u
+  call void @llvm.assume(i1 %c.2)
+  %c.3 = icmp ule i64 %s, %u
+  ret i1 %c.3
+}
+
 declare void @llvm.assume(i1)
