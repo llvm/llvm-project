@@ -101,11 +101,14 @@ void PreferSingleCharOverloadsCheck::check(
   if (!Replacement)
     return;
 
-  diag(Literal->getBeginLoc(), "%0 called with a string literal consisting of "
-                               "a single character; consider using the more "
-                               "efficient overload accepting a character")
-      << FindFunc
-      << FixItHint::CreateReplacement(Literal->getSourceRange(), *Replacement);
+  const auto Diag = diag(Literal->getBeginLoc(),
+                         "%0 called with a string literal consisting of "
+                         "a single character; consider using the more "
+                         "efficient overload accepting a character")
+                    << FindFunc;
+  if (!Literal->getBeginLoc().isMacroID() && !Literal->getEndLoc().isMacroID())
+    Diag << FixItHint::CreateReplacement(Literal->getSourceRange(),
+                                         *Replacement);
 }
 
 } // namespace clang::tidy::performance

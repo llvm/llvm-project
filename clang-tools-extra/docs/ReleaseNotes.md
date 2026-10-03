@@ -264,6 +264,11 @@ infrastructure are described first, followed by tool-specific sections.
   offered when an argument covers only part of a macro expansion, as it then
   has no source text of its own.
 
+- Improved {doc}`performance-prefer-single-char-overloads
+  <clang-tidy/checks/performance/prefer-single-char-overloads>` check to
+  avoid offering fix-its for string literals originating from macro
+  expansions.
+
 - Improved {doc}`readability-convert-member-functions-to-static
   <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
   fixing a crash when checking a const-qualified method declared with the
