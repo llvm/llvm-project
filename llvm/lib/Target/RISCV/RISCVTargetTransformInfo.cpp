@@ -54,7 +54,6 @@ InstructionCost
 RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, Type *Tp,
                                       TTI::TargetCostKind CostKind) const {
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
-  // Note: Asuming all vdot4a* variants are equal cost
   return LT.first * getRISCVInstructionCost(OpCodes, LT.second, CostKind);
 }
 
