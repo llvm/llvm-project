@@ -1326,11 +1326,17 @@ static mlir::Value emitCommonNeonBuiltinExpr(
     return emitCommonNeonShift(builder, loc, vTy, extended, ops[1],
                                /*shiftLeft=*/true);
   }
-  case NEON::BI__builtin_neon_vshrn_n_v:
-    cgf.cgm.errorNYI(expr->getSourceRange(),
-                     std::string("unimplemented AArch64 builtin call: ") +
-                         ctx.BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+  case NEON::BI__builtin_neon_vshrn_n_v: {
+    CIRGenBuilderTy &builder = cgf.getBuilder();
+    cir::VectorType wideVecTy =
+        builder.getExtendedOrTruncatedElementVectorType(vTy,
+                                                        /*isExtended=*/true,
+                                                        /*isSigned=*/!usgn);
+    mlir::Value src = builder.createBitcast(ops[0], wideVecTy);
+    mlir::Value shifted = emitCommonNeonShift(builder, loc, wideVecTy, src,
+                                              ops[1], /*shiftLeft=*/false);
+    return builder.createIntCast(shifted, vTy);
+  }
   case NEON::BI__builtin_neon_vshr_n_v:
   case NEON::BI__builtin_neon_vshrq_n_v:
     return emitNeonRShiftImm(cgf, ops[0], ops[1], vTy, isUnsigned, loc);
@@ -3298,7 +3304,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   }
   case NEON::BI__builtin_neon_vmax_v:
   case NEON::BI__builtin_neon_vmaxq_v:
-    intrName = usgn ? "aarch64.neon.umax" : "aarch64.neon.smax";
+    intrName = usgn ? "umax" : "smax";
     if (cir::isFPOrVectorOfFPType(ty))
       intrName = "aarch64.neon.fmax";
     return emitNeonCall(cgm, builder, {ty, ty}, ops, intrName, ty, loc);
@@ -3308,7 +3314,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   }
   case NEON::BI__builtin_neon_vmin_v:
   case NEON::BI__builtin_neon_vminq_v:
-    intrName = usgn ? "aarch64.neon.umin" : "aarch64.neon.smin";
+    intrName = usgn ? "umin" : "smin";
     if (cir::isFPOrVectorOfFPType(ty))
       intrName = "aarch64.neon.fmin";
     return emitNeonCall(cgm, builder, {ty, ty}, ops, intrName, ty, loc);

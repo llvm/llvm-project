@@ -234,10 +234,6 @@ static cl::opt<bool> MISchedPostRA(
     cl::desc(
         "Run MachineScheduler post regalloc (independent of preRA sched)"));
 
-// Experimental option to run live interval analysis early.
-static cl::opt<bool> EarlyLiveIntervals("early-live-intervals", cl::Hidden,
-    cl::desc("Run live interval analysis earlier in the pipeline"));
-
 static cl::opt<bool> DisableReplaceWithVecLib(
     "disable-replace-with-vec-lib", cl::Hidden,
     cl::desc("Disable replace with vector math call pass"));
@@ -301,13 +297,13 @@ static cl::opt<bool> BasicBlockSectionMatchInfer(
     "basic-block-section-match-infer",
     cl::desc(
         "Enable matching and inference when generating basic block sections"),
-    cl::init(false), cl::Optional);
+    cl::init(false));
 
 cl::opt<bool> EmitBBHash(
     "emit-bb-hash",
     cl::desc(
         "Emit the hash of basic block in the SHT_LLVM_BB_ADDR_MAP section."),
-    cl::init(false), cl::Optional);
+    cl::init(false));
 
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
@@ -535,7 +531,6 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_OPTION(PrintAfterISel)
   SET_OPTION(FSProfileFile)
   SET_OPTION(EnableGCEmptyBlocks)
-  SET_OPTION(EarlyLiveIntervals)
   SET_OPTION(EnableBlockPlacementStats)
   SET_OPTION(EnableGlobalMergeFunc)
   SET_OPTION(EnableImplicitNullChecks)
@@ -968,8 +963,9 @@ void TargetPassConfig::addPassesToHandleExceptions() {
     // Wasm EH uses Windows EH instructions, but it does not need to demote PHIs
     // on catchpads and cleanuppads because it does not outline them into
     // funclets. Catchswitch blocks are not lowered in SelectionDAG, so we
-    // should remove PHIs there.
-    addPass(createWinEHPass(/*DemoteCatchSwitchPHIOnly=*/true));
+    // should remove PHIs there. WinEHPrepare derives this from the Wasm
+    // personality, so no explicit flag is needed here.
+    addPass(createWinEHPass());
     break;
   case ExceptionHandling::Default:
   case ExceptionHandling::None:
@@ -1270,7 +1266,7 @@ void TargetPassConfig::addMachinePasses() {
       getOptLevel() != CodeGenOptLevel::None &&
       EnableMachineOutliner != RunOutliner::NeverOutline) {
     if (EnableMachineOutliner != RunOutliner::TargetDefault ||
-        TM->Options.SupportsDefaultOutlining)
+        TM->supportsDefaultOutlining())
       addPass(createMachineOutlinerPass(EnableMachineOutliner));
   }
 
@@ -1530,9 +1526,11 @@ void TargetPassConfig::addOptimizedRegAlloc() {
   addPass(&MachineLoopInfoID);
   addPass(&PHIEliminationID);
 
-  // Eventually, we want to run LiveIntervals before PHI elimination.
-  if (EarlyLiveIntervals)
-    addPass(&LiveIntervalsID);
+  // LiveIntervals is computed unconditionally before TwoAddressInstruction so
+  // that pass can rely on it instead of LiveVariables. This is a step toward
+  // removing LiveVariables entirely.
+  // FIXME: Eventually, we want to run LiveIntervals before PHI elimination.
+  addPass(&LiveIntervalsID);
 
   addPass(&TwoAddressInstructionPassID);
   addPass(&RegisterCoalescerID);

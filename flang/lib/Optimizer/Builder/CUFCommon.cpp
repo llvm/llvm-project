@@ -15,6 +15,7 @@
 #include "flang/Optimizer/Support/AllocationPolicy.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/StringSet.h"
@@ -67,6 +68,28 @@ bool cuf::isCUDADeviceContext(mlir::Region &region,
   if (isDoConcurrentOffloadEnabled &&
       region.getParentOfType<fir::DoConcurrentLoopOp>())
     return true;
+  return false;
+}
+
+bool cuf::isExecutingOnDevice(mlir::Operation *op) {
+  if (!op)
+    return false;
+  if (op->getParentOfType<cuf::KernelOp>() ||
+      op->getParentOfType<mlir::acc::OffloadRegionOpInterface>() ||
+      op->getParentOfType<mlir::gpu::GPUModuleOp>() ||
+      op->getParentOfType<mlir::gpu::LaunchOp>() ||
+      op->getParentOfType<mlir::gpu::GPUFuncOp>())
+    return true;
+  if (auto funcOp = op->getParentOfType<mlir::func::FuncOp>()) {
+    if (mlir::acc::isSpecializedAccRoutine(funcOp))
+      return true;
+    if (auto cudaProcAttr =
+            funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
+                cuf::getProcAttrName())) {
+      return cudaProcAttr.getValue() != cuf::ProcAttribute::Host &&
+             cudaProcAttr.getValue() != cuf::ProcAttribute::HostDevice;
+    }
+  }
   return false;
 }
 

@@ -53,7 +53,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
 #include <cassert>
 #include <tuple>
 #include <vector>
@@ -1218,6 +1217,9 @@ bool RegAllocFastImpl::defineVirtReg(MachineInstr &MI, unsigned OpNum,
       }
 
       LRI->LastUse = nullptr;
+    } else if (!LRI->LastUse) {
+      // No spill was inserted, so nothing below reads this def.
+      MO.setIsDead(true);
     }
     // A def above spills only if a displacement above reloads again.
     LRI->LiveOut = false;
@@ -1230,12 +1232,8 @@ bool RegAllocFastImpl::defineVirtReg(MachineInstr &MI, unsigned OpNum,
   return setPhysReg(MI, MO, *LRI);
 }
 
-/// Satisfy \p MO's tie: the value must be in the register the def phase already
-/// assigned to the tied def. Take that register over when nothing below \p MI
-/// holds the value and it may live there, otherwise copy into it ahead of
-/// \p MI.
-/// \return true if \p MO is fully lowered; false when it took the register
-/// over and useVirtReg() finishes it.
+/// Place MO's value in its tied def's register, by taking the register over or
+/// copying into it. Return false if useVirtReg() should finish MO.
 bool RegAllocFastImpl::lowerTiedUse(MachineInstr &MI, MachineOperand &MO,
                                     LiveReg &LR) {
   const MachineOperand &DefMO = getTiedOperand(MI, MO);
@@ -1243,10 +1241,9 @@ bool RegAllocFastImpl::lowerTiedUse(MachineInstr &MI, MachineOperand &MO,
   MCRegister DefReg = DefMO.getReg().asMCReg();
   unsigned SubReg = MO.getSubReg();
   if (!LR.PhysReg) {
-    // A subregister read is a truncation, and DefReg may be unallocatable
-    // (e.g. the base pointer, tied to an inline asm operand). An early-clobber
-    // def is written before the uses are read, so it must not share a register
-    // with another operand reading the value.
+    // No register holds the value below MI, so it can live in DefReg, unless
+    // MO reads a subregister, DefReg cannot hold the value, or an early-clobber
+    // def would overwrite DefReg before another operand reads the value.
     bool MustCopy = SubReg || !MRI->isAllocatable(DefReg) ||
                     !MRI->getRegClass(LR.VirtReg)->contains(DefReg) ||
                     (DefMO.isEarlyClobber() &&
@@ -1254,42 +1251,48 @@ bool RegAllocFastImpl::lowerTiedUse(MachineInstr &MI, MachineOperand &MO,
                        return &O != &MO && O.getReg() == LR.VirtReg;
                      }));
     if (!MustCopy) {
+      // The def is not live above MI, so the value can occupy DefReg there.
       freePhysReg(DefReg);
       assignVirtToPhysReg(MI, LR, DefReg);
-    } else {
-      allocVirtReg(MI, LR, Register(), false);
+      return false;
     }
+    allocVirtReg(MI, LR, Register(), false);
+    // The def phase marked DefReg used in MI, so allocVirtReg skips it.
+    assert((LR.Error || !TRI->regsOverlap(LR.PhysReg, DefReg)) &&
+           "copy source overlaps the tied def");
   }
-  MCRegister SrcReg = LR.PhysReg;
-  if (SubReg)
-    SrcReg = TRI->getSubReg(SrcReg, SubReg);
+
+  MCRegister SrcReg = SubReg ? TRI->getSubReg(LR.PhysReg, SubReg) : LR.PhysReg;
+  // Only an already rewritten tie (%x = OP %x) finds the value in DefReg.
   if (SrcReg == DefReg)
     return false;
 
+  // The copy reads SrcReg above MI, so no other operand may take it.
   BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), DefReg)
       .addReg(SrcReg);
   LR.LastUse = &MI;
-  // The copy above MI reads SrcReg, so no other operand may take it.
   markRegUsedInInstr(LR.PhysReg);
+
   bool Renamable = !MRI->isReserved(DefReg);
-  MO.setReg(DefReg);
-  MO.setSubReg(0);
-  MO.setIsRenamable(Renamable);
-  // The copy makes DefReg hold the value, so the instruction's other reads
-  // follow it and SrcReg dies above MI. A read tied to another def owes that
-  // def's register instead.
+  auto ReadDefReg = [&](MachineOperand &O) {
+    O.setReg(DefReg);
+    O.setSubReg(0);
+    O.setIsRenamable(Renamable);
+  };
+  ReadDefReg(MO);
+  // The other reads of the value follow it into DefReg, so SrcReg dies at the
+  // copy. They cannot when an early-clobber def overwrites DefReg first, and a
+  // read tied to another def owes that def's register.
   if (!DefMO.isEarlyClobber()) {
     for (MachineOperand &O : MI.all_uses()) {
       if (O.isTied() || O.getReg() != LR.VirtReg || O.getSubReg() != SubReg)
         continue;
-      O.setReg(DefReg);
-      O.setSubReg(0);
+      ReadDefReg(O);
       O.setIsKill(false);
-      O.setIsRenamable(Renamable);
     }
   }
-  // Def processing skips tied operands when freeing, so DefReg is still
-  // assigned here; the copy ends its live range.
+
+  // The free-defs step skips tied defs, so DefReg still holds the def.
   freePhysReg(DefReg);
   return true;
 }
@@ -1521,6 +1524,16 @@ void RegAllocFastImpl::addRegClassDefCounts(
   }
 }
 
+/// Early clobber, partial def, or tied to a use that carries a value: the
+/// register is occupied while the uses are read.
+static bool isLiveThroughDef(const MachineInstr &MI, const MachineOperand &MO) {
+  assert(MO.isDef() && "expected def operand");
+  if (MO.isEarlyClobber() || MO.readsReg())
+    return true;
+  return MO.isTied() &&
+         !MI.getOperand(MI.findTiedOperandIdx(MI.getOperandNo(&MO))).isUndef();
+}
+
 /// Compute \ref DefOperandIndexes so it contains the indices of "def" operands
 /// that are to be allocated. Those are ordered in a way that small classes,
 /// early clobbers and livethroughs are allocated first.
@@ -1580,10 +1593,8 @@ void RegAllocFastImpl::findAndSortDefOperandIndexes(const MachineInstr &MI) {
       return false;
 
     // Allocate early clobbers and livethrough operands first.
-    bool Livethrough0 = MO0.isEarlyClobber() || MO0.isTied() ||
-                        (MO0.getSubReg() == 0 && !MO0.isUndef());
-    bool Livethrough1 = MO1.isEarlyClobber() || MO1.isTied() ||
-                        (MO1.getSubReg() == 0 && !MO1.isUndef());
+    bool Livethrough0 = isLiveThroughDef(MI, MO0);
+    bool Livethrough1 = isLiveThroughDef(MI, MO1);
     if (Livethrough0 > Livethrough1)
       return true;
     if (Livethrough0 < Livethrough1)
@@ -1592,17 +1603,6 @@ void RegAllocFastImpl::findAndSortDefOperandIndexes(const MachineInstr &MI) {
     // Tie-break rule: operand index.
     return I0 < I1;
   });
-}
-
-// Returns true if this def (MO) ties to a use that actually carries a value
-// (not undef).
-static bool isTiedToNotUndef(const MachineInstr &MI, const MachineOperand &MO) {
-  assert(MO.isDef() && "expected a def operand");
-  if (!MO.isTied())
-    return false;
-  unsigned TiedIdx = MI.findTiedOperandIdx(MI.getOperandNo(&MO));
-  const MachineOperand &TiedMO = MI.getOperand(TiedIdx);
-  return !TiedMO.isUndef();
 }
 
 void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
@@ -1646,12 +1646,9 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
         if (MO.isDef()) {
           HasDef = true;
           HasVRegDef = true;
-          if (MO.isEarlyClobber()) {
+          if (MO.isEarlyClobber())
             HasEarlyClobber = true;
-            NeedToAssignLiveThroughs = true;
-          }
-          if (isTiedToNotUndef(MI, MO) ||
-              (MO.getSubReg() != 0 && !MO.isUndef()))
+          if (isLiveThroughDef(MI, MO))
             NeedToAssignLiveThroughs = true;
         }
       } else if (Reg.isPhysical()) {
@@ -1695,8 +1692,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
             MachineOperand &MO = MI.getOperand(OpIdx);
             LLVM_DEBUG(dbgs() << "Allocating " << MO << '\n');
             Register Reg = MO.getReg();
-            if (MO.isEarlyClobber() || isTiedToNotUndef(MI, MO) ||
-                (MO.getSubReg() && !MO.isUndef())) {
+            if (isLiveThroughDef(MI, MO)) {
               ReArrangedImplicitOps = defineLiveThroughVirtReg(MI, OpIdx, Reg);
             } else {
               ReArrangedImplicitOps = defineVirtReg(MI, OpIdx, Reg);
@@ -1740,8 +1736,8 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
       assert((!MO.isTied() || !isClobberedByRegMasks(MO.getReg())) &&
              "tied def assigned to clobbered register");
 
-      // Do not free tied operands and early clobbers.
-      if (isTiedToNotUndef(MI, MO) || MO.isEarlyClobber())
+      // Do not free live-through defs.
+      if (isLiveThroughDef(MI, MO))
         continue;
       if (!Reg)
         continue;
@@ -2075,8 +2071,7 @@ bool RegAllocFastImpl::runOnMachineFunction(MachineFunction &MF) {
   // MIR that already went through TwoAddressInstructionPass carries
   // TiedOpsRewritten, so partial pipelines (-run-pass, -start-before) follow
   // the input they are given.
-  LowerTiedOps = MF.getTarget().enableTiedFastRegAlloc() &&
-                 !MF.getProperties().hasTiedOpsRewritten();
+  LowerTiedOps = !MF.getProperties().hasTiedOpsRewritten();
   if (LowerTiedOps) {
     for (MachineBasicBlock &MBB : MF)
       for (MachineInstr &MI : make_early_inc_range(MBB))

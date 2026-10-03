@@ -393,8 +393,10 @@ protected:
         // defined for compatibility.
         Builder.defineMacro("__ANDROID_API__", "__ANDROID_MIN_SDK_VERSION__");
       }
+    } else if (Triple.isMlibc()) {
+      Builder.defineMacro("__mlibc__");
     } else {
-        Builder.defineMacro("__gnu_linux__");
+      Builder.defineMacro("__gnu_linux__");
     }
     if (Opts.POSIXThreads)
       Builder.defineMacro("_REENTRANT");
@@ -452,6 +454,8 @@ protected:
                     MacroBuilder &Builder) const override {
     DefineStd(Builder, "unix", Opts);
     Builder.defineMacro("__managarm__");
+    if (Triple.getEnvironmentName() == "mlibc")
+      Builder.defineMacro("__mlibc__");
     if (Opts.POSIXThreads)
       Builder.defineMacro("_REENTRANT");
     if (Opts.CPlusPlus)
