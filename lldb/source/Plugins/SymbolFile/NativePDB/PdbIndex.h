@@ -13,6 +13,7 @@
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
+#include "llvm/Support/Threading.h"
 
 #include "CompileUnitIndex.h"
 #include "PdbSymUid.h"
@@ -63,6 +64,8 @@ class PdbIndex {
   /// the other way around.
   llvm::pdb::TpiStream *m_tpi = nullptr;
   llvm::pdb::TpiStream *m_ipi = nullptr;
+  llvm::once_flag m_tpi_once;
+  llvm::once_flag m_ipi_once;
 
   /// This is called the "PDB Stream" in the Microsoft reference implementation.
   /// It contains information about the structure of the file, as well as fields
@@ -121,11 +124,19 @@ public:
   llvm::pdb::DbiStream &dbi() { return *m_dbi; }
   const llvm::pdb::DbiStream &dbi() const { return *m_dbi; }
 
-  llvm::pdb::TpiStream &tpi() { return *m_tpi; }
-  const llvm::pdb::TpiStream &tpi() const { return *m_tpi; }
+  /// The TPI/IPI (type) streams are the largest streams of a big PDB and are
+  /// only needed once debug info (types) is actually consumed — symtab
+  /// construction from publics does not touch them. They are therefore
+  /// materialized lazily on first access rather than in create().
+  llvm::pdb::TpiStream &tpi();
+  const llvm::pdb::TpiStream &tpi() const {
+    return const_cast<PdbIndex *>(this)->tpi();
+  }
 
-  llvm::pdb::TpiStream &ipi() { return *m_ipi; }
-  const llvm::pdb::TpiStream &ipi() const { return *m_ipi; }
+  llvm::pdb::TpiStream &ipi();
+  const llvm::pdb::TpiStream &ipi() const {
+    return const_cast<PdbIndex *>(this)->ipi();
+  }
 
   llvm::pdb::InfoStream &info() { return *m_info; }
   const llvm::pdb::InfoStream &info() const { return *m_info; }
