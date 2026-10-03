@@ -1174,10 +1174,8 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::s_abs, GL::SAbs);
 
   case TargetOpcode::G_FMINNUM:
-  case TargetOpcode::G_FMINIMUM:
     return selectExtInst(ResVReg, ResType, I, CL::fmin, GL::NMin);
   case TargetOpcode::G_FMAXNUM:
-  case TargetOpcode::G_FMAXIMUM:
     return selectExtInst(ResVReg, ResType, I, CL::fmax, GL::NMax);
 
   case TargetOpcode::G_FCOPYSIGN:
@@ -4583,7 +4581,41 @@ Register SPIRVInstructionSelector::buildI32ConstantInEntryBlock(
 bool SPIRVInstructionSelector::selectFCmp(Register ResVReg,
                                           SPIRVTypeInst ResType,
                                           MachineInstr &I) const {
-  unsigned CmpOp = getFCmpOpcode(I.getOperand(1).getPredicate());
+  auto Pred = I.getOperand(1).getPredicate();
+  // OpOrdered and OpUnordered require the Kernel capability. For shaders,
+  // express them as uno(a, b) = isnan(a) || isnan(b), ord(a, b) = !uno(a, b).
+  if (STI.isShader() &&
+      (Pred == CmpInst::FCMP_ORD || Pred == CmpInst::FCMP_UNO)) {
+    MachineBasicBlock &BB = *I.getParent();
+    Register ResTypeID = GR.getSPIRVTypeID(ResType);
+    Register IsNan[2];
+    for (unsigned Idx = 0; Idx < 2; ++Idx) {
+      IsNan[Idx] = createVirtualRegister(ResType, &GR, MRI, *I.getMF());
+      BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIsNan))
+          .addDef(IsNan[Idx])
+          .addUse(ResTypeID)
+          .addUse(I.getOperand(2 + Idx).getReg())
+          .constrainAllUses(TII, TRI, RBI);
+    }
+    Register UnoReg =
+        Pred == CmpInst::FCMP_UNO
+            ? ResVReg
+            : createVirtualRegister(ResType, &GR, MRI, *I.getMF());
+    BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpLogicalOr))
+        .addDef(UnoReg)
+        .addUse(ResTypeID)
+        .addUse(IsNan[0])
+        .addUse(IsNan[1])
+        .constrainAllUses(TII, TRI, RBI);
+    if (Pred == CmpInst::FCMP_ORD)
+      BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpLogicalNot))
+          .addDef(ResVReg)
+          .addUse(ResTypeID)
+          .addUse(UnoReg)
+          .constrainAllUses(TII, TRI, RBI);
+    return true;
+  }
+  unsigned CmpOp = getFCmpOpcode(Pred);
   return selectCmp(ResVReg, ResType, CmpOp, I);
 }
 
