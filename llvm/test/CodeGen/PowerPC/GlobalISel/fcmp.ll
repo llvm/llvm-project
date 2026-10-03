@@ -18,7 +18,7 @@ define i1 @fcmp_false(float %a, float %b) {
 define i1 @fcmp_oeq(float %a, float %b) {
 ; CHECK-LABEL: fcmp_oeq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcmpu cr0, f1, f2
+; CHECK-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    li r4, 1
 ; CHECK-NEXT:    iseleq r3, r4, r3
@@ -30,7 +30,7 @@ define i1 @fcmp_oeq(float %a, float %b) {
 define i1 @fcmp_ogt(float %a, float %b) {
 ; CHECK-LABEL: fcmp_ogt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcmpu cr0, f1, f2
+; CHECK-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    li r4, 1
 ; CHECK-NEXT:    iselgt r3, r4, r3
@@ -42,7 +42,7 @@ define i1 @fcmp_ogt(float %a, float %b) {
 define i1 @fcmp_olt(float %a, float %b) {
 ; CHECK-LABEL: fcmp_olt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcmpu cr0, f1, f2
+; CHECK-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    li r4, 1
 ; CHECK-NEXT:    isellt r3, r4, r3
@@ -54,7 +54,7 @@ define i1 @fcmp_olt(float %a, float %b) {
 define i1 @fcmp_ord(float %a, float %b) {
 ; CHECK-LABEL: fcmp_ord:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcmpu cr0, f1, f2
+; CHECK-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    li r4, 1
 ; CHECK-NEXT:    crnot 4*cr5+lt, un
@@ -67,7 +67,7 @@ define i1 @fcmp_ord(float %a, float %b) {
 define i1 @fcmp_uge(float %a, float %b) {
 ; CHECK-LABEL: fcmp_uge:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcmpu cr0, f1, f2
+; CHECK-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    li r4, 1
 ; CHECK-NEXT:    crnot 4*cr5+lt, lt
@@ -80,7 +80,7 @@ define i1 @fcmp_uge(float %a, float %b) {
 define i1 @fcmp_ule(float %a, float %b) {
 ; CHECK-LABEL: fcmp_ule:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcmpu cr0, f1, f2
+; CHECK-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    li r4, 1
 ; CHECK-NEXT:    crnot 4*cr5+lt, gt
@@ -93,7 +93,7 @@ define i1 @fcmp_ule(float %a, float %b) {
 define i1 @fcmp_une(float %a, float %b) {
 ; CHECK-LABEL: fcmp_une:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcmpu cr0, f1, f2
+; CHECK-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    li r4, 1
 ; CHECK-NEXT:    crnot 4*cr5+lt, eq
@@ -106,7 +106,7 @@ define i1 @fcmp_une(float %a, float %b) {
 define i1 @fcmp_uno(float %a, float %b) {
 ; CHECK-LABEL: fcmp_uno:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcmpu cr0, f1, f2
+; CHECK-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    li r4, 1
 ; CHECK-NEXT:    isel r3, r4, r3, un
@@ -136,7 +136,7 @@ define i1 @fcmp_false_double(double %a, double %b) {
 define i1 @fcmp_oeq_double(double %a, double %b) {
 ; CHECK-LABEL: fcmp_oeq_double:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcmpu cr0, f1, f2
+; CHECK-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    li r4, 1
 ; CHECK-NEXT:    iseleq r3, r4, r3
@@ -148,7 +148,7 @@ define i1 @fcmp_oeq_double(double %a, double %b) {
 define i1 @fcmp_ogt_double(double %a, double %b) {
 ; CHECK-LABEL: fcmp_ogt_double:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcmpu cr0, f1, f2
+; CHECK-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    li r4, 1
 ; CHECK-NEXT:    iselgt r3, r4, r3
@@ -160,7 +160,7 @@ define i1 @fcmp_ogt_double(double %a, double %b) {
 define i1 @fcmp_olt_double(double %a, double %b) {
 ; CHECK-LABEL: fcmp_olt_double:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcmpu cr0, f1, f2
+; CHECK-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    li r4, 1
 ; CHECK-NEXT:    isellt r3, r4, r3
@@ -172,7 +172,7 @@ define i1 @fcmp_olt_double(double %a, double %b) {
 define i1 @fcmp_ord_double(double %a, double %b) {
 ; CHECK-LABEL: fcmp_ord_double:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcmpu cr0, f1, f2
+; CHECK-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    li r4, 1
 ; CHECK-NEXT:    crnot 4*cr5+lt, un
@@ -185,7 +185,7 @@ define i1 @fcmp_ord_double(double %a, double %b) {
 define i1 @fcmp_uge_double(double %a, double %b) {
 ; CHECK-LABEL: fcmp_uge_double:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcmpu cr0, f1, f2
+; CHECK-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    li r4, 1
 ; CHECK-NEXT:    crnot 4*cr5+lt, lt
@@ -198,7 +198,7 @@ define i1 @fcmp_uge_double(double %a, double %b) {
 define i1 @fcmp_ule_double(double %a, double %b) {
 ; CHECK-LABEL: fcmp_ule_double:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcmpu cr0, f1, f2
+; CHECK-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    li r4, 1
 ; CHECK-NEXT:    crnot 4*cr5+lt, gt
@@ -211,7 +211,7 @@ define i1 @fcmp_ule_double(double %a, double %b) {
 define i1 @fcmp_une_double(double %a, double %b) {
 ; CHECK-LABEL: fcmp_une_double:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcmpu cr0, f1, f2
+; CHECK-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    li r4, 1
 ; CHECK-NEXT:    crnot 4*cr5+lt, eq
@@ -224,7 +224,7 @@ define i1 @fcmp_une_double(double %a, double %b) {
 define i1 @fcmp_uno_double(double %a, double %b) {
 ; CHECK-LABEL: fcmp_uno_double:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcmpu cr0, f1, f2
+; CHECK-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    li r4, 1
 ; CHECK-NEXT:    isel r3, r4, r3, un

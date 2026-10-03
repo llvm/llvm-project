@@ -114,10 +114,10 @@ define fastcc i16 @test_vector_reduce_br(half %arg) nounwind {
 ; CHECK-P9-NEXT:    xxlxor 1, 1, 1
 ; CHECK-P9-NEXT:    mtfprwz 0, 3
 ; CHECK-P9-NEXT:    xscvhpdp 0, 0
-; CHECK-P9-NEXT:    fcmpu 0, 0, 1
+; CHECK-P9-NEXT:    xscmpudp 0, 0, 1
 ; CHECK-P9-NEXT:    bc 12, 0, .LBB2_3
 ; CHECK-P9-NEXT:  # %bb.1:
-; CHECK-P9-NEXT:    fcmpu 0, 0, 0
+; CHECK-P9-NEXT:    xscmpudp 0, 0, 0
 ; CHECK-P9-NEXT:    bc 12, 3, .LBB2_3
 ; CHECK-P9-NEXT:  # %bb.2: # %taken
 ; CHECK-P9-NEXT:    li 3, 0
@@ -135,10 +135,10 @@ define fastcc i16 @test_vector_reduce_br(half %arg) nounwind {
 ; CHECK-P8-NEXT:    bl __extendhfsf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    xxlxor 0, 0, 0
-; CHECK-P8-NEXT:    fcmpu 0, 1, 0
+; CHECK-P8-NEXT:    xscmpudp 0, 1, 0
 ; CHECK-P8-NEXT:    bc 12, 0, .LBB2_3
 ; CHECK-P8-NEXT:  # %bb.1:
-; CHECK-P8-NEXT:    fcmpu 0, 1, 1
+; CHECK-P8-NEXT:    xscmpudp 0, 1, 1
 ; CHECK-P8-NEXT:    bc 12, 3, .LBB2_3
 ; CHECK-P8-NEXT:  # %bb.2: # %taken
 ; CHECK-P8-NEXT:    li 3, 0

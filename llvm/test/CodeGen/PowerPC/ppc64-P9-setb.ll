@@ -1146,7 +1146,7 @@ define i64 @setbf1(float %a, float %b) {
 ;
 ; CHECK-PWR8-LABEL: setbf1:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    fcmpu cr0, f2, f1
+; CHECK-PWR8-NEXT:    xscmpudp cr0, f2, f1
 ; CHECK-PWR8-NEXT:    li r3, 0
 ; CHECK-PWR8-NEXT:    li r4, 1
 ; CHECK-PWR8-NEXT:    isellt r3, r4, r3
@@ -1171,10 +1171,11 @@ define i64 @setbf2(float %a, float %b) {
 ;
 ; CHECK-PWR8-LABEL: setbf2:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    fcmpu cr0, f2, f1
+; CHECK-PWR8-NEXT:    xscmpudp cr0, f2, f1
 ; CHECK-PWR8-NEXT:    li r3, 0
 ; CHECK-PWR8-NEXT:    li r4, 1
 ; CHECK-PWR8-NEXT:    isellt r3, r4, r3
+; CHECK-PWR8-NEXT:    fcmpu cr0, f2, f1
 ; CHECK-PWR8-NEXT:    li r4, -1
 ; CHECK-PWR8-NEXT:    iselgt r3, r4, r3
 ; CHECK-PWR8-NEXT:    blr
@@ -1218,11 +1219,10 @@ define i64 @setbdf2(double %a, double %b) {
 ;
 ; CHECK-PWR8-LABEL: setbdf2:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    fcmpu cr0, f2, f1
+; CHECK-PWR8-NEXT:    xscmpudp cr0, f2, f1
 ; CHECK-PWR8-NEXT:    li r3, 0
 ; CHECK-PWR8-NEXT:    li r4, -1
 ; CHECK-PWR8-NEXT:    iselgt r3, r4, r3
-; CHECK-PWR8-NEXT:    xscmpudp cr0, f2, f1
 ; CHECK-PWR8-NEXT:    li r4, 1
 ; CHECK-PWR8-NEXT:    isellt r3, r4, r3
 ; CHECK-PWR8-NEXT:    blr
@@ -1315,22 +1315,20 @@ define i64 @setbn1(i64 %a, i64 %b) {
 define i64 @setbn2(double %a, double %b) {
 ; CHECK-LABEL: setbn2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcmpu cr0, f1, f2
+; CHECK-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-NEXT:    li r3, 1
 ; CHECK-NEXT:    li r4, -1
 ; CHECK-NEXT:    cror 4*cr5+lt, un, eq
-; CHECK-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; CHECK-NEXT:    isellt r3, r4, r3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-PWR8-LABEL: setbn2:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    fcmpu cr0, f1, f2
+; CHECK-PWR8-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-PWR8-NEXT:    li r3, 1
 ; CHECK-PWR8-NEXT:    li r4, -1
 ; CHECK-PWR8-NEXT:    cror 4*cr5+lt, un, eq
-; CHECK-PWR8-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-PWR8-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; CHECK-PWR8-NEXT:    isellt r3, r4, r3
 ; CHECK-PWR8-NEXT:    blr
@@ -1344,7 +1342,7 @@ define i64 @setbn2(double %a, double %b) {
 define i64 @setbn3(float %a, float %b) {
 ; CHECK-LABEL: setbn3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcmpu cr0, f1, f2
+; CHECK-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-NEXT:    li r3, 1
 ; CHECK-NEXT:    li r4, -1
 ; CHECK-NEXT:    iseleq r3, 0, r3
@@ -1354,7 +1352,7 @@ define i64 @setbn3(float %a, float %b) {
 ;
 ; CHECK-PWR8-LABEL: setbn3:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    fcmpu cr0, f1, f2
+; CHECK-PWR8-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-PWR8-NEXT:    li r3, 1
 ; CHECK-PWR8-NEXT:    li r4, -1
 ; CHECK-PWR8-NEXT:    iseleq r3, 0, r3
