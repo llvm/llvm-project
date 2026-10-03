@@ -73,6 +73,13 @@ class TracePC {
   void HandlePCsInit(const uintptr_t *Start, const uintptr_t *Stop);
   void HandleCallerCallee(uintptr_t Caller, uintptr_t Callee);
   template <class T> void HandleCmp(uintptr_t PC, T Arg1, T Arg2);
+  // Fold an argument or return value observed at \p PC into the value profile
+  // (trace-args / trace-ret). Loc tells apart the arguments and the return of
+  // the same function. Val is the value itself, or, when NumFields is non-zero,
+  // the address of an object whose fields the NumFields {byte offset, byte
+  // size} pairs in Offsets describe.
+  void HandleDataflow(uintptr_t PC, uint32_t Loc, uint32_t Size, uint64_t Val,
+                      const uint64_t *Offsets, uint32_t NumFields);
   size_t GetTotalPCCoverage();
   void SetUseCounters(bool UC) { UseCounters = UC; }
   void SetUseValueProfileMask(uint32_t VPMask) { UseValueProfileMask = VPMask; }

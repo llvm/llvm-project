@@ -330,6 +330,96 @@ void __sanitizer_cov_store8(uint64_t *addr);
 void __sanitizer_cov_store16(__int128 *addr);
 ```
 
+## Tracing function arguments and return values
+
+With `-fsanitize-coverage=trace-args` the compiler will insert a callback in the
+entry block of every instrumented function for each of its source-level
+parameters, and with `-fsanitize-coverage=trace-ret` a callback before every
+return. Either flag implies edge coverage when used alone.
+
+```c++
+// Called in the entry block, once per source-level parameter.
+// pc:         address of the instrumented function
+// arg_idx:    zero-based source-level parameter index
+// size:       number of bytes reported, 0 if there was nothing to report
+// val:        the value itself, or the address of the object holding it
+// offsets:    table of `num_fields` [byte offset, byte size] pairs describing
+//             the fields of the object at `val`, or null
+// num_fields: number of pairs in `offsets`, 0 if `val` is a value
+void __sanitizer_cov_trace_args(uint64_t pc, uint32_t arg_idx, uint32_t size,
+                                uint64_t val, uint64_t *offsets,
+                                uint32_t num_fields);
+
+// Called before each instrumentable return.
+// pc identifies the function whose value is being returned.
+// A register-resident aggregate return may produce multiple calls,
+// one per reported register piece.
+void __sanitizer_cov_trace_ret(uint64_t pc, uint32_t size, uint64_t val,
+                               uint64_t *offsets, uint32_t num_fields);
+```
+
+`num_fields` says what `val` holds:
+
+* `num_fields == 0`: `val` **is** the value, its low `size` bytes,
+  zero-extended. A pointer is reported as the address it holds, a
+  floating-point value as its bit pattern, and a value wider than 64 bits by
+  its low half. Nothing needs to be read out of memory.
+
+* `num_fields != 0`: `val` is the **address** of a `size` byte object, and
+  `offsets` describes its fields so that a consumer can read them out of it.
+  Only an object that already lives in memory is reported this way: a pointer
+  to a struct, a by-value struct the ABI passes indirectly, or the buffer of an
+  indirect struct return.
+
+`size == 0` means there was nothing to report - a parameter the optimizer
+removed, a `void` return, a value of a type that cannot be widened.
+
+The compiler never creates memory to report a value from, so no stack slot
+escapes and no frame is realigned on the instrumentation's account. This is
+what keeps the two flags target-independent.
+
+`arg_idx` is the source-level parameter index, not the IR argument position. The
+two diverge as soon as the ABI rewrites the signature, and the reported index
+follows the source: the pass maps IR values back to source parameters through
+`DILocalVariable::getArg()`, which the frontend assigns before ABI lowering.
+Consequently a hidden ABI-inserted pointer (a struct-return `sret` pointer, a
+C++ `this` with no source entry) is not counted, and a by-value struct return
+lowered to an indirect (`sret`) return, which leaves an IR function returning
+`void`, is reported through the caller-provided buffer rather than dropped.
+
+A struct the ABI passed or returned in registers has no address to report it
+from, so it is reported as one callback per register piece, all carrying the
+same `arg_idx`. Its field values are still observed; they are not split along
+source field boundaries the way a struct in memory is.
+
+Debug info is not required, but it is what makes the source-level indexing
+possible. Without usable debug records the pass reports the IR arguments
+positionally and without field tables, which keeps both flags usable on code
+built without `-g`, at the price of exposing the ABI's view of the arguments to
+the consumer. A consumer that needs source-level parameter indices should
+require `-g`.
+
+Argument values are read in the entry block, before the `-O0` prologue stores
+the incoming arguments to their stack slots, so build with `-O1` or higher for
+them to be meaningful. Return values are reported correctly at any optimization
+level.
+
+### Consumers
+
+`compiler-rt` defines both callbacks weakly and empty in `sanitizer_common`, so
+a program compiled with `trace-args`/`trace-ret` links without a runtime that
+consumes the values; a strong definition overrides the default.
+
+libFuzzer provides one and folds every reported value into the value-profile
+map, enabled with `-use_value_profile=1`. A value bound to its site - the `pc`,
+the argument or return position, and the field within a struct - that has never
+been seen there before becomes a new value-profile feature, so an input that
+reaches a function with a new argument value counts as new coverage and is kept
+in the corpus.
+
+The Linux kernel consumes the same callbacks through the KCOV dataflow
+subsystem rather than through compiler-rt.
+
 ## Tracing control flow
 
 With `-fsanitize-coverage=control-flow` the compiler will create a table to collect
