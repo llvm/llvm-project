@@ -8,6 +8,7 @@
 #define BOOST_MATH_INTERPOLATORS_CUBIC_HERMITE_HPP
 #include <memory>
 #include <boost/math/interpolators/detail/cubic_hermite_detail.hpp>
+#include <cstdint>
 
 namespace boost {
 namespace math {
@@ -41,7 +42,7 @@ public:
         impl_->push_back(x, y, dydx);
     }
 
-    int64_t bytes() const
+    std::int64_t bytes() const
     {
         return impl_->bytes() + sizeof(impl_);
     }
@@ -80,7 +81,7 @@ public:
         return os;
     }
 
-    int64_t bytes() const
+    std::int64_t bytes() const
     {
         return impl_->bytes() + sizeof(impl_);
     }
@@ -121,7 +122,7 @@ public:
         return os;
     }
 
-    int64_t bytes() const
+    std::int64_t bytes() const
     {
         return impl_->bytes() + sizeof(impl_);
     }
