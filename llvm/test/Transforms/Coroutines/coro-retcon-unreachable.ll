@@ -10,7 +10,7 @@ target datalayout = "E-p:64:64"
 define hidden swiftcc { ptr, ptr } @no_suspends(ptr %buffer, i64 %arg) #1 {
 ; CHECK-LABEL: @no_suspends(
 ; CHECK-NEXT:  AllocaSpillBB:
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id.retcon.once(i32 32, i32 8, ptr [[BUFFER:%.*]], ptr @prototype, ptr @malloc, ptr @free)
+; CHECK-NEXT:    [[ID:%.*]] = call token (i32, i32, ptr, ptr, ptr, ptr, ...) @llvm.coro.id.retcon.once(i32 32, i32 8, ptr [[BUFFER:%.*]], ptr @prototype, ptr @malloc, ptr @free)
 ; CHECK-NEXT:    call void @print(i64 [[ARG:%.*]])
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
