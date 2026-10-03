@@ -369,6 +369,10 @@ TestDialect::~TestDialect() {
 
 Operation *TestDialect::materializeConstant(OpBuilder &builder, Attribute value,
                                             Type type, Location loc) {
+  // Tests use this marker to make constant materialization fail.
+  if (auto str = dyn_cast<StringAttr>(value);
+      str && str.getValue() == "unmaterializable")
+    return nullptr;
   return TestOpConstant::create(builder, loc, type, value);
 }
 

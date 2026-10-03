@@ -519,6 +519,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
         OpBuilder::InsertionGuard g(rewriter);
         rewriter.setInsertionPoint(op);
         SmallVector<Value> replacements;
+        SmallVector<Operation *> materializedConstants;
         bool materializationSucceeded = true;
         for (auto [ofr, resultType] :
              llvm::zip_equal(foldResults, op->getResultTypes())) {
@@ -533,17 +534,13 @@ bool GreedyPatternRewriteDriver::processWorklist() {
               rewriter, cast<Attribute>(ofr), resultType, op->getLoc());
 
           if (!constOp) {
-            // If materialization fails, cleanup any operations generated for
-            // the previous results.
-            llvm::SmallDenseSet<Operation *> replacementOps;
-            for (Value replacement : replacements) {
-              assert(replacement.use_empty() &&
-                     "folder reused existing op for one result but constant "
-                     "materialization failed for another result");
-              replacementOps.insert(replacement.getDefiningOp());
-            }
-            for (Operation *op : replacementOps) {
-              rewriter.eraseOp(op);
+            // If materialization fails, erase only the constants that were
+            // materialized for the previous results. Values that the folder
+            // returned existed before the fold, so they must stay.
+            for (Operation *cst : materializedConstants) {
+              assert(cst->use_empty() &&
+                     "materialized constant has uses before replacement");
+              rewriter.eraseOp(cst);
             }
 
             materializationSucceeded = false;
@@ -554,6 +551,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
                  "materializeConstant produced op that is not a ConstantLike");
           assert(constOp->getResultTypes()[0] == resultType &&
                  "materializeConstant produced incorrect result type");
+          materializedConstants.push_back(constOp);
           replacements.push_back(constOp->getResult(0));
         }
 
