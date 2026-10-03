@@ -2180,6 +2180,18 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
   if (OnlyToVGPR && !SpillToVGPR)
     return false;
 
+  // A partial-def spill (see InlineSpiller / setSpillDefinedLaneMask) records
+  // which dwords are real values in its $lanemask operand; a cleared bit means
+  // that dword is undef and must NOT be written to the (possibly shared) stack
+  // slot, so it does not clobber a sibling value living in the same slot. A
+  // mask of -1 (default) means "all lanes defined" = original behavior.
+  const MachineOperand *LaneMask =
+      SB.TII.getNamedOperand(*MI, AMDGPU::OpName::lanemask);
+  int64_t DefinedDwordMask = LaneMask ? LaneMask->getImm() : -1;
+  auto DwordDefined = [&](unsigned i) {
+    return (DefinedDwordMask & (int64_t(1) << i)) != 0;
+  };
+
   const SIFrameLowering *TFL = ST.getFrameLowering();
 
   assert(SpillToVGPR || (SB.SuperReg != SB.MFI.getStackPtrOffsetReg() &&
@@ -2195,15 +2207,29 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
            "Num of SGPRs spilled should be less than or equal to num of "
            "the VGPR lanes.");
 
+    // With a partial-def mask, find the first/last dword that is actually
+    // defined, so the ImplicitDefine of the super-register and the kill flag
+    // can be re-anchored onto emitted writelanes (undef dwords are skipped).
+    unsigned FirstDefined = 0, LastDefined = SB.NumSubRegs - 1;
+    while (FirstDefined < SB.NumSubRegs && !DwordDefined(FirstDefined))
+      ++FirstDefined;
+    while (LastDefined > 0 && !DwordDefined(LastDefined))
+      --LastDefined;
+
     for (unsigned i = 0, e = SB.NumSubRegs; i < e; ++i) {
+      // Skip undef dwords: not writing them to a (possibly shared) stack slot
+      // preserves a sibling value living in the same slot.
+      if (!DwordDefined(i))
+        continue;
+
       Register SubReg =
           SB.NumSubRegs == 1
               ? SB.SuperReg
               : Register(getSubReg(SB.SuperReg, SB.SplitParts[i]));
       SpilledReg Spill = VGPRSpills[i];
 
-      bool IsFirstSubreg = i == 0;
-      bool IsLastSubreg = i == SB.NumSubRegs - 1;
+      bool IsFirstSubreg = i == FirstDefined;
+      bool IsLastSubreg = i == LastDefined;
       bool UseKill = SB.IsKill && IsLastSubreg;
 
 
@@ -2259,13 +2285,30 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
     // Per VGPR helper data
     auto PVD = SB.getPerVGPRData();
 
+    // For a partial-def spill (undef dwords, see $lanemask), the whole TmpVGPR
+    // is stored at once, so first load the slot's current contents; the skipped
+    // dwords then keep the sibling value already there instead of writing
+    // undef.
+    bool IsPartialDef = SB.NumSubRegs > 1 && DefinedDwordMask != -1;
+
     for (unsigned Offset = 0; Offset < PVD.NumVGPRs; ++Offset) {
       RegState TmpVGPRFlags = RegState::Undef;
+
+      if (IsPartialDef) {
+        // Seed TmpVGPR with the slot's current contents, so the dwords we skip
+        // (undef in this partial def) keep the sibling value already living in
+        // the slot when the whole TmpVGPR is stored back below.
+        SB.readWriteTmpVGPR(Offset, /*IsLoad*/ true);
+        TmpVGPRFlags = {};
+      }
 
       // Write sub registers into the VGPR
       for (unsigned i = Offset * PVD.PerVGPR,
                     e = std::min((Offset + 1) * PVD.PerVGPR, SB.NumSubRegs);
            i < e; ++i) {
+        if (IsPartialDef && !DwordDefined(i))
+          continue; // Undef dword: keep the sibling value seeded from the slot.
+
         Register SubReg =
             SB.NumSubRegs == 1
                 ? SB.SuperReg
@@ -2286,8 +2329,8 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
             Indexes->insertMachineInstrInMaps(*WriteLane);
         }
 
-        // There could be undef components of a spilled super register.
-        // TODO: Can we detect this and skip the spill?
+        // Undef components of the spilled super-register are detected via the
+        // $lanemask operand and skipped above (see IsPartialDef).
         if (SB.NumSubRegs > 1) {
           // The last implicit use of the SB.SuperReg carries the "Kill" flag.
           RegState SuperKillState = {};

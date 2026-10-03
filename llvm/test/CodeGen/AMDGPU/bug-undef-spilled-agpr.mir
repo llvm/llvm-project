@@ -75,7 +75,7 @@ body:             |
     liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15
 
     %45:vgpr_32 = IMPLICIT_DEF
-    SI_SPILL_S32_SAVE $sgpr15, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s32) into %stack.0, addrspace 5)
+    SI_SPILL_S32_SAVE $sgpr15, %stack.0, -1, implicit $exec, implicit $sgpr32 :: (store (s32) into %stack.0, addrspace 5)
     %16:vgpr_32 = V_AND_B32_e32 1, %45, implicit $exec
 
   bb.1:
