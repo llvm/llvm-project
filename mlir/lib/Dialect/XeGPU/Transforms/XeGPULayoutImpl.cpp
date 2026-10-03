@@ -2797,8 +2797,6 @@ xegpu::setupShapeCastResultLayout(xegpu::LayoutKind layoutKind,
   SmallVector<int64_t> laneLayout =
       consumerLayout.getEffectiveLaneLayoutAsInt();
   SmallVector<int64_t> instData = consumerLayout.getEffectiveInstDataAsInt();
-  if (laneLayout.empty())
-    return consumerLayout;
 
   xegpu::DistributeLayoutAttr resLayout = [&]() -> DistributeLayoutAttr {
     DistributeLayoutAttr layout = consumerLayout;
@@ -2825,8 +2823,6 @@ xegpu::setupShapeCastResultLayout(xegpu::LayoutKind layoutKind,
   SmallVector<int64_t> resInstData = resLayout.getEffectiveInstDataAsInt();
   SmallVector<int64_t> resLaneLayout = resLayout.getEffectiveLaneLayoutAsInt();
   SmallVector<int64_t> resLaneData = resLayout.getEffectiveLaneDataAsInt();
-  if (resLaneLayout.empty() || resLaneData.empty())
-    return resLayout;
 
   for (const SmallVector<int64_t> &dimGroup : splitDimGroups) {
     // One lane's elements must be a single contiguous run of the collapsed dim.
