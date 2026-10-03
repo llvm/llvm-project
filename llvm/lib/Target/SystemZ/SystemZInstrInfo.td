@@ -2271,6 +2271,19 @@ let hasSideEffects = 1 in {
                                           []>;
 }
 
+// Translate
+let usesCustomInserter = 1, hasNoSchedulingInfo = 1, 
+    mayLoad = 1, mayStore = 1 in {
+
+  // Match TR invocation w/ static constant length
+  def TRImm : Pseudo<(outs), (ins bdaddr12only:$bd1, imm64:$len, bdaddr12only:$bd2),
+                             [(z_tr bdaddr12only:$bd1, imm64:$len, bdaddr12only:$bd2)]>;
+
+  // Match TR invocation w/ variable length
+  def TRReg : Pseudo<(outs), (ins bdaddr12only:$bd1, ADDR64:$len, bdaddr12only:$bd2), 
+                             [(z_tr bdaddr12only:$bd1, ADDR64:$len, bdaddr12only:$bd2)]>;
+}
+
 //===----------------------------------------------------------------------===//
 // .insn directive instructions
 //===----------------------------------------------------------------------===//
