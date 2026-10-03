@@ -21,6 +21,7 @@
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Utils/OpenMP.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
@@ -1721,11 +1722,179 @@ getObjectsSyms(llvm::ArrayRef<Object> objects) {
   return syms;
 }
 
+enum class UserDefinedReductionSubobject {
+  None,
+  ArrayElement,
+  PartialArraySection,
+};
+
+static bool isUserDefinedReductionOperator(
+    const omp::clause::ReductionOperator &reductionOperator,
+    const Object &object, lower::AbstractConverter &converter,
+    semantics::SemanticsContext &semaCtx) {
+  const semantics::Symbol *objectSymbol = object.sym();
+  const semantics::DeclTypeSpec *objectType =
+      objectSymbol ? objectSymbol->GetUltimate().GetType() : nullptr;
+  if (object.ref() && evaluate::ExtractComplexPart(*object.ref())) {
+    if (std::optional<evaluate::DynamicType> dynamicType =
+            object.ref()->GetType())
+      objectType = &semaCtx.MakeNumericType(dynamicType->category(),
+                                            dynamicType->kind());
+  }
+  if (!objectType)
+    return false;
+
+  return common::visit(
+      common::visitors{
+          [&](const omp::clause::DefinedOperator &definedOperator) {
+            return common::visit(
+                common::visitors{
+                    [&](const omp::clause::DefinedOperator::IntrinsicOperator
+                            &op) {
+                      using IntrinsicOperator =
+                          omp::clause::DefinedOperator::IntrinsicOperator;
+                      switch (op) {
+                      case IntrinsicOperator::Add:
+                      case IntrinsicOperator::Multiply:
+                      case IntrinsicOperator::AND:
+                      case IntrinsicOperator::OR:
+                      case IntrinsicOperator::EQV:
+                      case IntrinsicOperator::NEQV:
+                        break;
+                      default:
+                        return false;
+                      }
+
+                      parser::CharBlock mangledName =
+                          semantics::omp::MangledIntrinsicOperatorReductionName(
+                              ReductionProcessor::toParserIntrinsicOperator(op),
+                              semaCtx);
+                      return semantics::omp::FindUserReductionSymbol(
+                                 converter.getCurrentScope(), mangledName,
+                                 objectType) != nullptr;
+                    },
+                    [&](const omp::clause::DefinedOperator::DefinedOpName &op) {
+                      const semantics::Symbol *operatorSymbol = op.v.sym();
+                      return operatorSymbol &&
+                             semantics::omp::FindOperatorUserReductionSymbol(
+                                 converter.getCurrentScope(), *operatorSymbol,
+                                 objectType);
+                    },
+                },
+                definedOperator.u);
+          },
+          [&](const omp::clause::ProcedureDesignator &procedureDesignator) {
+            const semantics::Symbol *symbol = procedureDesignator.v.sym();
+            return (symbol &&
+                    symbol->GetUltimate()
+                        .detailsIf<semantics::UserReductionDetails>()) ||
+                   ReductionProcessor::findUserDefinedReductionForIntrinsic(
+                       converter.getCurrentScope(), procedureDesignator,
+                       objectType) != nullptr;
+          },
+      },
+      reductionOperator.u);
+}
+
+template <typename ReductionClause>
+static UserDefinedReductionSubobject
+getUserDefinedReductionSubobject(const ReductionClause &clause,
+                                 lower::AbstractConverter &converter,
+                                 semantics::SemanticsContext &semaCtx) {
+  // ReductionProcessor receives only base symbols, so classify unsupported
+  // subobjects before lowering discards their designators.
+  const auto &reductionOperators =
+      std::get<omp::clause::ReductionOperatorList>(clause.t);
+  assert(reductionOperators.size() == 1 && "expected one reduction operator");
+
+  for (const Object &object : std::get<omp::ObjectList>(clause.t)) {
+    if (!object.ref())
+      continue;
+
+    UserDefinedReductionSubobject subobject =
+        UserDefinedReductionSubobject::None;
+    if (object.ref()->Rank() == 0 &&
+        evaluate::IsArrayElement(*object.ref(), /*intoSubstring=*/false))
+      subobject = UserDefinedReductionSubobject::ArrayElement;
+    else if (std::optional<evaluate::ComplexPart> complexPart =
+                 evaluate::ExtractComplexPart(*object.ref())) {
+      std::optional<SomeExpr> complex =
+          evaluate::AsGenericExpr(common::Clone(complexPart->complex()));
+      if (complex && evaluate::IsArrayElement(*complex,
+                                              /*intoSubstring=*/false))
+        subobject = UserDefinedReductionSubobject::ArrayElement;
+    } else if (evaluate::IsArraySection(*object.ref()) &&
+               !isWholeArraySection(object, semaCtx))
+      subobject = UserDefinedReductionSubobject::PartialArraySection;
+    if (subobject != UserDefinedReductionSubobject::None &&
+        isUserDefinedReductionOperator(reductionOperators.front(), object,
+                                       converter, semaCtx))
+      return subobject;
+  }
+  return UserDefinedReductionSubobject::None;
+}
+
+template <typename ReductionClause>
+static void checkUserDefinedReductionSubobject(
+    mlir::Location currentLocation, llvm::StringRef clauseName,
+    const ReductionClause &clause, lower::AbstractConverter &converter,
+    semantics::SemanticsContext &semaCtx) {
+  switch (getUserDefinedReductionSubobject(clause, converter, semaCtx)) {
+  case UserDefinedReductionSubobject::ArrayElement:
+    TODO(currentLocation,
+         llvm::Twine(clauseName) +
+             " of an array element using a user-defined reduction");
+  case UserDefinedReductionSubobject::PartialArraySection:
+    TODO(currentLocation,
+         llvm::Twine(clauseName) +
+             " of a partial array section using a user-defined reduction");
+  case UserDefinedReductionSubobject::None:
+    return;
+  }
+  llvm_unreachable("invalid user-defined reduction subobject");
+}
+
+template <typename ReductionClause>
+static void checkReductionSubobjects(mlir::Location currentLocation,
+                                     llvm::StringRef clauseName,
+                                     const ReductionClause &clause,
+                                     lower::AbstractConverter &converter,
+                                     semantics::SemanticsContext &semaCtx) {
+  checkUserDefinedReductionSubobject(currentLocation, clauseName, clause,
+                                     converter, semaCtx);
+  for (const Object &object : std::get<omp::ObjectList>(clause.t))
+    if (object.ref() && evaluate::ExtractComplexPart(*object.ref()))
+      TODO(currentLocation, llvm::Twine(clauseName) + " of a complex part");
+}
+
+void ClauseProcessor::checkReductionObjects(
+    mlir::Location currentLocation) const {
+  for (const Clause &clause : clauses)
+    common::visit(
+        common::visitors{
+            [&](const omp::clause::Reduction &clause) {
+              checkReductionSubobjects(currentLocation, "REDUCTION", clause,
+                                       converter, semaCtx);
+            },
+            [&](const omp::clause::InReduction &clause) {
+              checkReductionSubobjects(currentLocation, "IN_REDUCTION", clause,
+                                       converter, semaCtx);
+            },
+            [&](const omp::clause::TaskReduction &clause) {
+              checkReductionSubobjects(currentLocation, "TASK_REDUCTION",
+                                       clause, converter, semaCtx);
+            },
+            [](const auto &) {}},
+        clause.u);
+}
+
 bool ClauseProcessor::processInReduction(
     mlir::Location currentLocation, mlir::omp::InReductionClauseOps &result,
     llvm::SmallVectorImpl<Object> &outReductionObjects) const {
   return findRepeatableClause<omp::clause::InReduction>(
       [&](const omp::clause::InReduction &clause, const parser::CharBlock &) {
+        checkReductionSubobjects(currentLocation, "IN_REDUCTION", clause,
+                                 converter, semaCtx);
         llvm::SmallVector<mlir::Value> inReductionVars;
         llvm::SmallVector<bool> inReduceVarByRef;
         llvm::SmallVector<mlir::Attribute> inReductionDeclSymbols;
@@ -2135,6 +2304,30 @@ bool ClauseProcessor::processReduction(
     llvm::SmallVectorImpl<Object> &outReductionObjects,
     llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache)
     const {
+  std::optional<ReductionModifier> commonModifier;
+  findRepeatableClause<omp::clause::Reduction>(
+      [&](const omp::clause::Reduction &clause, const parser::CharBlock &) {
+        const auto &modifier =
+            std::get<std::optional<ReductionModifier>>(clause.t);
+        ReductionModifier effectiveModifier =
+            modifier.value_or(ReductionModifier::Default);
+        const omp::ObjectList &objects = std::get<omp::ObjectList>(clause.t);
+        if (effectiveModifier == ReductionModifier::Task &&
+            llvm::any_of(objects, [&](const Object &object) {
+              return object.ref() && evaluate::IsArraySection(*object.ref()) &&
+                     !isWholeArraySection(object, semaCtx);
+            }))
+          TODO(currentLocation,
+               "REDUCTION with TASK modifier of a partial array section");
+
+        checkReductionSubobjects(currentLocation, "REDUCTION", clause,
+                                 converter, semaCtx);
+
+        if (commonModifier && *commonModifier != effectiveModifier)
+          TODO(currentLocation, "REDUCTION clauses with different modifiers");
+        commonModifier = effectiveModifier;
+      });
+
   return findRepeatableClause<omp::clause::Reduction>(
       [&](const omp::clause::Reduction &clause, const parser::CharBlock &) {
         llvm::SmallVector<mlir::Value> reductionVars;
@@ -2173,6 +2366,8 @@ bool ClauseProcessor::processTaskReduction(
     llvm::SmallVectorImpl<Object> &outReductionObjects) const {
   return findRepeatableClause<omp::clause::TaskReduction>(
       [&](const omp::clause::TaskReduction &clause, const parser::CharBlock &) {
+        checkReductionSubobjects(currentLocation, "TASK_REDUCTION", clause,
+                                 converter, semaCtx);
         llvm::SmallVector<mlir::Value> taskReductionVars;
         llvm::SmallVector<bool> taskReduceVarByRef;
         llvm::SmallVector<mlir::Attribute> taskReductionDeclSymbols;
