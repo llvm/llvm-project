@@ -377,6 +377,8 @@ private:
   bool IsAllowedClause(llvm::omp::Clause clauseId);
   bool CheckAllowedClause(llvm::omp::Clause clauseId,
       parser::CharBlock clauseSource, llvm::omp::Directive dirId);
+  void SetAllowedClauseOverride(llvm::omp::Clause clauseId,
+      llvm::omp::Directive dirId, llvm::omp::Version since);
   void CheckArgumentObjectKind(const parser::OmpClause &x);
   void CheckDirectiveSpelling(
       parser::CharBlock spelling, llvm::omp::Directive id);
