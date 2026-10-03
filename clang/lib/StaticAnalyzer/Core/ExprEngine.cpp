@@ -66,6 +66,7 @@
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/ImmutableSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -3926,40 +3927,73 @@ bool ExprEngine::didEagerlyAssumeBifurcateAt(ProgramStateRef State,
   return Ex && State->get<LastEagerlyAssumeExprIfSuccessful>() == Ex;
 }
 
-void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
-                                 ExplodedNodeSet &Dst) {
-  // We have processed both the inputs and the outputs.  All of the outputs
-  // should evaluate to Locs.  Nuke all of their values.
+ProgramStateRef ExprEngine::invalidateAsmOperands(const GCCAsmStmt *A,
+                                                  ProgramStateRef State,
+                                                  ConstCFGElementRef Elem,
+                                                  unsigned BlockCount,
+                                                  const StackFrame *SF) {
+  // All of the outputs should evaluate to Locs.  Nuke all of their values.
 
   // FIXME: Some day in the future it would be nice to allow a "plug-in"
   // which interprets the inline asm and stores proper results in the
   // outputs.
 
-  ProgramStateRef state = Pred->getState();
-
   for (const Expr *O : A->outputs()) {
-    SVal X = state->getSVal(O, Pred->getStackFrame());
+    SVal X = State->getSVal(O, SF);
     assert(!isa<NonLoc>(X)); // Should be an Lval, or unknown, undef.
 
     if (std::optional<Loc> LV = X.getAs<Loc>())
-      state = state->invalidateRegions(*LV, getCFGElementRef(),
-                                       getNumVisitedCurrent(),
-                                       Pred->getStackFrame(),
+      State = State->invalidateRegions(*LV, Elem, BlockCount, SF,
                                        /*CausedByPointerEscape=*/true);
   }
 
   // Do not reason about locations passed inside inline assembly.
   for (const Expr *I : A->inputs()) {
-    SVal X = state->getSVal(I, Pred->getStackFrame());
+    SVal X = State->getSVal(I, SF);
 
     if (std::optional<Loc> LV = X.getAs<Loc>())
-      state = state->invalidateRegions(*LV, getCFGElementRef(),
-                                       getNumVisitedCurrent(),
-                                       Pred->getStackFrame(),
+      State = State->invalidateRegions(*LV, Elem, BlockCount, SF,
                                        /*CausedByPointerEscape=*/true);
   }
 
-  Dst.insert(Engine.makePostStmtNode(A, state, Pred));
+  return State;
+}
+
+void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
+                                 ExplodedNodeSet &Dst) {
+  // We have processed both the inputs and the outputs.
+  ProgramStateRef State =
+      invalidateAsmOperands(A, Pred->getState(), getCFGElementRef(),
+                            getNumVisitedCurrent(), Pred->getStackFrame());
+
+  Dst.insert(Engine.makePostStmtNode(A, State, Pred));
+}
+
+void ExprEngine::processAsmGoto(const GCCAsmStmt *A, const CFGBlock *B,
+                                ExplodedNode *Pred, ExplodedNodeSet &Dst) {
+  ProgramStateRef State = Pred->getState();
+  const StackFrame *SF = Pred->getStackFrame();
+
+  // An asm goto is the terminator of its block, not one of its elements, so
+  // its operands do not pass through VisitGCCAsmStmt. Invalidate them here.
+  // A terminator has no CFG element of its own, so the new values are
+  // conjured at the last element of its block. Parts of an operand, such as
+  // the arms of a conditional, may have been evaluated in earlier blocks.
+  // Without operands the block can be empty, and nothing is invalidated.
+  if (!B->empty())
+    State =
+        invalidateAsmOperands(A, State, ConstCFGElementRef(B, B->size() - 1),
+                              getNumVisited(SF, B), SF);
+
+  // Nothing is known about what the assembly does, so it may fall through or
+  // jump to any of its labels. Follow every successor once.
+  llvm::SmallPtrSet<const CFGBlock *, 4> Followed;
+  for (const CFGBlock::AdjacentBlock &Succ : B->succs()) {
+    const CFGBlock *Next = Succ.getReachableBlock();
+    if (!Next || !Followed.insert(Next).second)
+      continue;
+    Dst.insert(Engine.makeNode(BlockEdge(B, Next, SF), State, Pred));
+  }
 }
 
 void ExprEngine::VisitMSAsmStmt(const MSAsmStmt *A, ExplodedNode *Pred,
