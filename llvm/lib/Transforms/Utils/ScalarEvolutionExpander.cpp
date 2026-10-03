@@ -17,6 +17,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolutionDivision.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -1334,6 +1335,57 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(SCEVUseT<const SCEVAddRecExpr *> S) {
   return nullptr;
 }
 
+/// Try to re-use an existing AddRec when expanding S, if
+/// AddRec * Scale + Offset == S for constant Scale and Offset.
+Value *SCEVExpander::tryToReuseScaledAddRec(const SCEVAddRecExpr *S) {
+  const APInt *Step;
+  if (!S->getType()->isIntegerTy() ||
+      !match(S->getStepRecurrence(SE), m_scev_APInt(Step)))
+    return nullptr;
+
+  APInt Factor = Step->abs();
+  if (Factor.ule(1))
+    return nullptr;
+
+  const SCEV *FactorS = SE.getConstant(Factor);
+
+  // Split S into Divided * FactorS + Offset, with a constant Offset, and check
+  // if there is an existing Divided that can be scaled back to S.
+  const SCEV *Divided, *Offset;
+  SCEVDivision::divide(SE, S, FactorS, &Divided, &Offset);
+  if (!isa<SCEVConstant>(Offset))
+    return nullptr;
+  const SCEV *Scaled = SE.getMulExpr(Divided, FactorS);
+  if (SE.getAddExpr(Scaled, Offset) != S)
+    return nullptr;
+
+  // First check if we have an existing expansion for Scaled directly. Otherwise
+  // look for Divided and scale manually.
+  const Instruction *InsertPt = &*Builder.GetInsertPoint();
+  Value *V = nullptr;
+  if (!Offset->isZero())
+    V = findExistingExpansionAndDropPoisonFlags(Scaled, InsertPt);
+
+  if (!V) {
+    Value *Base = findExistingExpansionAndDropPoisonFlags(Divided, InsertPt);
+    if (!Base)
+      return nullptr;
+    // Carry over the no-wrap facts that hold for the scaling, otherwise the new
+    // expansion may miss flags the original one had.
+    SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
+    if (SE.willNotOverflow(Instruction::Mul, /*Signed=*/false, Divided,
+                           FactorS))
+      Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNUW);
+    if (SE.willNotOverflow(Instruction::Mul, /*Signed=*/true, Divided, FactorS))
+      Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNSW);
+    V = expand(SCEVUse(SE.getMulExpr(SE.getUnknown(Base), FactorS), Flags));
+  }
+
+  if (Offset->isZero())
+    return V;
+  return expand(SE.getAddExpr(SE.getUnknown(V), Offset));
+}
+
 Value *SCEVExpander::visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> S) {
   // In canonical mode we compute the addrec as an expression of a canonical IV
   // using evaluateAtIteration and expand the resulting SCEV expression. This
@@ -1347,6 +1399,9 @@ Value *SCEVExpander::visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> S) {
   // back to non-canonical mode for nested addrecs.
   if (!CanonicalMode || (S->getNumOperands() > 2))
     return expandAddRecExprLiterally(S);
+
+  if (Value *V = tryToReuseScaledAddRec(S))
+    return V;
 
   Type *Ty = SE.getEffectiveSCEVType(S->getType());
   const Loop *L = S->getLoop();
