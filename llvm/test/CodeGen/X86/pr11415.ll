@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=x86_64-pc-linux %s -o - -regalloc=fast | FileCheck %s
+; RUN: llc -mtriple=x86_64-pc-linux -O0 -regalloc-fast-tied %s -o - | FileCheck --check-prefix=O0 %s
 
 ; We used to consider the early clobber in the second asm statement as
 ; defining %0 before it was read. This caused us to omit the
@@ -12,6 +13,17 @@
 ; CHECK-NEXT:	movq	%rcx, -8(%rsp)
 ; CHECK-NEXT:	movq	-8(%rsp), %rax
 ; CHECK-NEXT:	ret
+
+; The asm reads the value twice, so the early-clobber tie needs a copy.
+; O0: 	#APP
+; O0-NEXT:	#NO_APP
+; O0-NEXT:	movq	%rcx, %rdx
+; O0-NEXT:	movq	%rdx, %rcx
+; O0-NEXT:	#APP
+; O0-NEXT:	#NO_APP
+; O0-NEXT:	movq	%rcx, -8(%rsp)
+; O0-NEXT:	movq	-8(%rsp), %rax
+; O0-NEXT:	retq
 
 define i64 @foo() {
 entry:

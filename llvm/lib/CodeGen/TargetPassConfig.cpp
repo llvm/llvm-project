@@ -56,6 +56,13 @@
 
 using namespace llvm;
 
+static cl::opt<cl::boolOrDefault> EnableRegAllocFastTied(
+    "regalloc-fast-tied",
+    cl::desc("Have the fast register allocator lower tied operands itself "
+             "instead of running TwoAddressInstructionPass (overrides the "
+             "target's default)"),
+    cl::Hidden);
+
 static cl::opt<bool>
     EnableIPRA("enable-ipra", cl::init(false), cl::Hidden,
                cl::desc("Enable interprocedural register allocation "
@@ -516,6 +523,7 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
 #define SET_OPTION(Option) Opt.Option = Option;
 
   SET_OPTION(EnableFastISelOption)
+  SET_OPTION(EnableRegAllocFastTied)
   SET_OPTION(EnableGlobalISelOption)
   SET_OPTION(VerifyMachineCode)
   SET_OPTION(DisableAtExitBasedGlobalDtorLowering)
@@ -632,6 +640,10 @@ TargetPassConfig::TargetPassConfig(TargetMachine &TM, PassManagerBase &PM)
 
   if (TM.Options.EnableIPRA)
     setRequiresCodeGenSCCOrder();
+
+  if (EnableRegAllocFastTied != cl::boolOrDefault::BOU_UNSET)
+    TM.setEnableTiedFastRegAlloc(EnableRegAllocFastTied ==
+                                 cl::boolOrDefault::BOU_TRUE);
 
   if (EnableGlobalISelAbort.getNumOccurrences())
     TM.Options.GlobalISelAbort = EnableGlobalISelAbort;
@@ -1481,7 +1493,8 @@ bool TargetPassConfig::usingDefaultRegAlloc() const {
 /// register allocation. No coalescing or scheduling.
 void TargetPassConfig::addFastRegAlloc() {
   addPass(&PHIEliminationID);
-  addPass(&TwoAddressInstructionPassID);
+  if (!TM->enableTiedFastRegAlloc())
+    addPass(&TwoAddressInstructionPassID);
 
   addRegAssignAndRewriteFast();
 }
