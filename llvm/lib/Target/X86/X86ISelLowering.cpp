@@ -64315,7 +64315,7 @@ SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc &dl,
     // Upon ISEL, the pattern will convert it to jmp with NoTrack prefix.
     SDValue Chain = Value;
     // Jump table debug info is only needed if CodeView is enabled.
-    if (DAG.getTarget().getTargetTriple().isOSBinFormatCOFF())
+    if (M->getTargetTriple().isOSBinFormatCOFF())
       Chain = DAG.getJumpTableDebugInfo(JTI, Chain, dl);
     return DAG.getNode(X86ISD::NT_BRIND, dl, MVT::Other, Chain, Addr);
   }
