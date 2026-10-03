@@ -5224,9 +5224,10 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   if (!Cond)
     Cond = Plan.getVectorLoopRegion()->getHeaderMask();
 
-  bool IsLastInChain = RdxPhi->getBackedgeValue() == WidenRecipe ||
-                       RdxPhi->getBackedgeValue() == ExitValue ||
-                       RdxPhi->getBackedgeValue() == Chain.Blend;
+  [[maybe_unused]] bool IsLastInChain =
+      RdxPhi->getBackedgeValue() == WidenRecipe ||
+      RdxPhi->getBackedgeValue() == ExitValue ||
+      RdxPhi->getBackedgeValue() == Chain.Blend;
   assert((!ExitValue || IsLastInChain) &&
          "if we found ExitValue, it must match RdxPhi's backedge value");
 
@@ -5251,43 +5252,6 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   VPExpressionRecipe *E = createPartialReductionExpression(PartialRed);
   E->insertBefore(WidenRecipe);
   PartialRed->replaceAllUsesWith(E);
-
-  // We only need to update the PHI node once, which is when we find the
-  // last reduction in the chain.
-  if (!IsLastInChain)
-    return;
-
-  // Scale the PHI and ReductionStartVector by the VFScaleFactor
-  assert(RdxPhi->getVFScaleFactor() == 1 && "scale factor must not be set");
-  RdxPhi->setVFScaleFactor(Chain.ScaleFactor);
-
-  auto *StartInst = cast<VPInstruction>(RdxPhi->getStartValue());
-  assert(StartInst->getOpcode() == VPInstruction::ReductionStartVector);
-  auto *NewScaleFactor = Plan.getConstantInt(32, Chain.ScaleFactor);
-  StartInst->setOperand(2, NewScaleFactor);
-
-  // If this is the last value in a sub-reduction chain, then update the PHI
-  // node to start at `0` and update the reduction-result to subtract from
-  // the PHI's start value.
-  if (Chain.RK != RecurKind::Sub && Chain.RK != RecurKind::FSub)
-    return;
-
-  VPValue *OldStartValue = StartInst->getOperand(0);
-  StartInst->setOperand(0, StartInst->getOperand(1));
-
-  // Replace reduction_result by 'sub (startval, reductionresult)'.
-  VPInstruction *RdxResult = vputils::findComputeReductionResult(RdxPhi);
-  assert(RdxResult && "Could not find reduction result");
-
-  VPBuilder Builder = VPBuilder::getToInsertAfter(RdxResult);
-  unsigned SubOpc = Chain.RK == RecurKind::FSub ? Instruction::BinaryOps::FSub
-                                                : Instruction::BinaryOps::Sub;
-  VPInstruction *NewResult = Builder.createNaryOp(
-      SubOpc, {OldStartValue, RdxResult}, VPIRFlags::getDefaultFlags(SubOpc),
-      RdxPhi->getDebugLoc());
-  RdxResult->replaceUsesWithIf(
-      NewResult,
-      [&NewResult](VPUser &U, unsigned Idx) { return &U != NewResult; });
 }
 
 /// Returns the cost of a link in a partial-reduction chain for a given VF.
@@ -5523,6 +5487,42 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
 }
 } // namespace
 
+// Scale the PHI and ReductionStartVector by \p Factor and if the recurrence is
+// a sub-recurrence, negate the reduction result.
+static void updatePartialReductionPhiAndResult(VPlan &Plan,
+                                               VPReductionPHIRecipe *Phi,
+                                               unsigned Factor, RecurKind RK) {
+  assert(Phi->getVFScaleFactor() == 1 && "scale factor must not be set");
+  Phi->setVFScaleFactor(Factor);
+
+  auto *StartInst = cast<VPInstruction>(Phi->getStartValue());
+  assert(StartInst->getOpcode() == VPInstruction::ReductionStartVector);
+  auto *NewScaleFactor = Plan.getConstantInt(32, Factor);
+  StartInst->setOperand(2, NewScaleFactor);
+
+  if (RK != RecurKind::Sub && RK != RecurKind::FSub)
+    return;
+
+  // Update the PHI node to start at `0` and update the reduction-result
+  // to subtract from the PHI's start value.
+  VPValue *OldStartValue = StartInst->getOperand(0);
+  StartInst->setOperand(0, StartInst->getOperand(1));
+
+  // Replace reduction_result by 'sub (startval, reductionresult)'.
+  VPInstruction *RdxResult = vputils::findComputeReductionResult(Phi);
+  assert(RdxResult && "Could not find reduction result");
+
+  VPBuilder Builder = VPBuilder::getToInsertAfter(RdxResult);
+  unsigned SubOpc = RK == RecurKind::FSub ? Instruction::BinaryOps::FSub
+                                          : Instruction::BinaryOps::Sub;
+  VPInstruction *NewResult = Builder.createNaryOp(
+      SubOpc, {OldStartValue, RdxResult}, VPIRFlags::getDefaultFlags(SubOpc),
+      Phi->getDebugLoc());
+  RdxResult->replaceUsesWithIf(
+      NewResult,
+      [&NewResult](VPUser &U, unsigned Idx) { return &U != NewResult; });
+}
+
 void VPlanTransforms::createPartialReductions(VPlan &Plan,
                                               VPCostContext &CostCtx,
                                               VFRange &Range) {
@@ -5687,9 +5687,19 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
       Chains.clear();
   }
 
-  for (auto &[Phi, Chains] : ChainsByPhi)
-    for (const VPPartialReductionChain &Chain : Chains)
-      transformToPartialReduction(Chain, Plan, Phi);
+  for (auto &[Phi, Chain] : ChainsByPhi) {
+    if (Chain.empty())
+      continue;
+
+    for (const VPPartialReductionChain &Link : Chain)
+      transformToPartialReduction(Link, Plan, Phi);
+
+    // After transforming all links in the chain, the PHI node and result need
+    // updating. Note that we can pick any link in the chain for this, as the
+    // ScaleFactor and RecurKind must match for all links in the chain.
+    const VPPartialReductionChain &Link = Chain[0];
+    updatePartialReductionPhiAndResult(Plan, Phi, Link.ScaleFactor, Link.RK);
+  }
 }
 
 void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
