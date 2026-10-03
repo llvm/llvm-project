@@ -435,7 +435,6 @@ void Sema::ActOnFinishOfCompoundStmt() {
 static Stmt *GetInnermostStatement(Stmt *Outer) {
   if (isa<LabelStmt>(Outer))
     Outer = cast<LabelStmt>(Outer)->getInnermostLabeledStmt();
-
   if (isa<AttributedStmt>(Outer))
     Outer = cast<AttributedStmt>(Outer)->getSubStmt();
 
@@ -454,10 +453,8 @@ static StringRef GetDeferKeywordSpelling(Sema &S, SourceLocation DeferLoc) {
 // Diagnose if the given statement is a redundant _Defer statement.
 static void CheckRedundantDeferStmt(Sema &S, Stmt *Body) {
   Stmt *Inner = GetInnermostStatement(Body);
-
   if (isa<DeferStmt>(Inner)) {
     SourceLocation DeferLoc = Inner->getBeginLoc();
-
     S.Diag(DeferLoc, diag::warn_redundant_defer)
         << Inner->getSourceRange() << GetDeferKeywordSpelling(S, DeferLoc);
   }
