@@ -398,8 +398,10 @@ ExprDependence clang::computeDependence(PackIndexingExpr *E) {
     D |= PatternDep | ExprDependence::Instantiation;
   else if (!E->getIndexExpr()->isInstantiationDependent()) {
     UnsignedOrNone Index = E->getSelectedIndex();
-    assert(Index && *Index < Exprs.size() && "pack index out of bound");
-    D |= Exprs[*Index]->getDependence();
+    assert(Index && "pack index out of bound");
+    unsigned SelIdx = Exprs.size() == 1 ? 0 : *Index;
+    assert(SelIdx < Exprs.size() && "pack index out of bound");
+    D |= Exprs[SelIdx]->getDependence();
   }
   return D;
 }
