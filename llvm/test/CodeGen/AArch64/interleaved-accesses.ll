@@ -315,10 +315,9 @@ define void @store_factor2(ptr %ptr, <8 x i8> %v0, <8 x i8> %v1) {
 ;
 ; CHECK-GI-LABEL: store_factor2:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    zip1 v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    str q0, [x0]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-GI-NEXT:    st2 { v0.8b, v1.8b }, [x0]
 ; CHECK-GI-NEXT:    ret
   %interleaved.vec = shufflevector <8 x i8> %v0, <8 x i8> %v1, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
   store <16 x i8> %interleaved.vec, ptr %ptr, align 4
@@ -377,20 +376,10 @@ define void @store_factor3(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2
 ;
 ; CHECK-GI-LABEL: store_factor3:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov s3, v0.s[0]
-; CHECK-GI-NEXT:    mov s4, v1.s[1]
-; CHECK-GI-NEXT:    mov s5, v2.s[2]
-; CHECK-GI-NEXT:    mov v3.s[1], v1.s[0]
-; CHECK-GI-NEXT:    mov v4.s[1], v2.s[1]
-; CHECK-GI-NEXT:    mov v5.s[1], v0.s[3]
-; CHECK-GI-NEXT:    mov v3.s[2], v2.s[0]
-; CHECK-GI-NEXT:    mov v4.s[2], v0.s[2]
-; CHECK-GI-NEXT:    mov v5.s[2], v1.s[3]
-; CHECK-GI-NEXT:    mov v3.s[3], v0.s[1]
-; CHECK-GI-NEXT:    mov v4.s[3], v1.s[2]
-; CHECK-GI-NEXT:    mov v5.s[3], v2.s[3]
-; CHECK-GI-NEXT:    stp q3, q4, [x0]
-; CHECK-GI-NEXT:    str q5, [x0, #32]
+; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    st3 { v0.4s, v1.4s, v2.4s }, [x0]
 ; CHECK-GI-NEXT:    ret
   %s0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %s1 = shufflevector <4 x i32> %v2, <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -454,24 +443,11 @@ define void @store_factor4(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2
 ;
 ; CHECK-GI-LABEL: store_factor4:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov s4, v0.s[0]
-; CHECK-GI-NEXT:    mov s5, v0.s[1]
-; CHECK-GI-NEXT:    mov s6, v0.s[2]
-; CHECK-GI-NEXT:    mov s0, v0.s[3]
-; CHECK-GI-NEXT:    mov v4.s[1], v1.s[0]
-; CHECK-GI-NEXT:    mov v5.s[1], v1.s[1]
-; CHECK-GI-NEXT:    mov v6.s[1], v1.s[2]
-; CHECK-GI-NEXT:    mov v0.s[1], v1.s[3]
-; CHECK-GI-NEXT:    mov v4.s[2], v2.s[0]
-; CHECK-GI-NEXT:    mov v5.s[2], v2.s[1]
-; CHECK-GI-NEXT:    mov v6.s[2], v2.s[2]
-; CHECK-GI-NEXT:    mov v0.s[2], v2.s[3]
-; CHECK-GI-NEXT:    mov v4.s[3], v3.s[0]
-; CHECK-GI-NEXT:    mov v5.s[3], v3.s[1]
-; CHECK-GI-NEXT:    mov v6.s[3], v3.s[2]
-; CHECK-GI-NEXT:    mov v0.s[3], v3.s[3]
-; CHECK-GI-NEXT:    stp q4, q5, [x0]
-; CHECK-GI-NEXT:    stp q6, q0, [x0, #32]
+; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    st4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x0]
 ; CHECK-GI-NEXT:    ret
   %s0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %s1 = shufflevector <4 x i32> %v2, <4 x i32> %v3, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -667,9 +643,9 @@ define void @store_ptrvec_factor2(ptr %ptr, <2 x ptr> %v0, <2 x ptr> %v1) {
 ;
 ; CHECK-GI-LABEL: store_ptrvec_factor2:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    zip1 v2.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    zip2 v0.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    stp q2, q0, [x0]
+; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    st2 { v0.2d, v1.2d }, [x0]
 ; CHECK-GI-NEXT:    ret
   %interleaved.vec = shufflevector <2 x ptr> %v0, <2 x ptr> %v1, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
   store <4 x ptr> %interleaved.vec, ptr %ptr, align 4
@@ -703,17 +679,10 @@ define void @store_ptrvec_factor3(ptr %ptr, <2 x ptr> %v0, <2 x ptr> %v1, <2 x p
 ;
 ; CHECK-GI-LABEL: store_ptrvec_factor3:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    zip1 v3.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    zip2 v1.2d, v1.2d, v2.2d
-; CHECK-GI-NEXT:    mov v2.d[1], v0.d[1]
-; CHECK-GI-NEXT:    mov x8, v3.d[1]
-; CHECK-GI-NEXT:    mov x9, v2.d[1]
-; CHECK-GI-NEXT:    mov x10, v1.d[1]
-; CHECK-GI-NEXT:    mov v3.d[1], x8
-; CHECK-GI-NEXT:    mov v2.d[1], x9
-; CHECK-GI-NEXT:    mov v1.d[1], x10
-; CHECK-GI-NEXT:    stp q3, q2, [x0]
-; CHECK-GI-NEXT:    str q1, [x0, #32]
+; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    st3 { v0.2d, v1.2d, v2.2d }, [x0]
 ; CHECK-GI-NEXT:    ret
   %s0 = shufflevector <2 x ptr> %v0, <2 x ptr> %v1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %s1 = shufflevector <2 x ptr> %v2, <2 x ptr> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
@@ -754,12 +723,11 @@ define void @store_ptrvec_factor4(ptr %ptr, <2 x ptr> %v0, <2 x ptr> %v1, <2 x p
 ;
 ; CHECK-GI-LABEL: store_ptrvec_factor4:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    zip1 v4.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    zip1 v5.2d, v2.2d, v3.2d
-; CHECK-GI-NEXT:    zip2 v0.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    zip2 v1.2d, v2.2d, v3.2d
-; CHECK-GI-NEXT:    stp q4, q5, [x0]
-; CHECK-GI-NEXT:    stp q0, q1, [x0, #32]
+; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    st4 { v0.2d, v1.2d, v2.2d, v3.2d }, [x0]
 ; CHECK-GI-NEXT:    ret
   %s0 = shufflevector <2 x ptr> %v0, <2 x ptr> %v1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %s1 = shufflevector <2 x ptr> %v2, <2 x ptr> %v3, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -986,8 +954,9 @@ define void @store_undef_mask_factor2(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1) {
 ;
 ; CHECK-GI-LABEL: store_undef_mask_factor2:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    zip2 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    str q0, [x0, #16]
+; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    st2 { v0.4s, v1.4s }, [x0]
 ; CHECK-GI-NEXT:    ret
   %interleaved.vec = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 2, i32 6, i32 3, i32 7>
   store <8 x i32> %interleaved.vec, ptr %ptr, align 4
@@ -1042,24 +1011,10 @@ define void @store_undef_mask_factor3(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4
 ;
 ; CHECK-GI-LABEL: store_undef_mask_factor3:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI16_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    mov s5, v2.s[2]
-; CHECK-GI-NEXT:    mov v6.s[1], v2.s[1]
-; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI16_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    tbl v3.16b, { v0.16b, v1.16b }, v3.16b
-; CHECK-GI-NEXT:    mov v5.s[1], v0.s[3]
-; CHECK-GI-NEXT:    mov v6.s[2], v0.s[2]
-; CHECK-GI-NEXT:    mov s4, v3.s[0]
-; CHECK-GI-NEXT:    mov v5.s[2], v1.s[3]
-; CHECK-GI-NEXT:    mov v6.s[3], v1.s[2]
-; CHECK-GI-NEXT:    mov v4.s[1], v3.s[1]
-; CHECK-GI-NEXT:    mov v5.s[3], v2.s[3]
-; CHECK-GI-NEXT:    mov v4.s[2], v3.s[2]
-; CHECK-GI-NEXT:    str q5, [x0, #32]
-; CHECK-GI-NEXT:    mov v4.s[3], v3.s[3]
-; CHECK-GI-NEXT:    stp q4, q6, [x0]
+; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    st3 { v0.4s, v1.4s, v2.4s }, [x0]
 ; CHECK-GI-NEXT:    ret
   %s0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %s1 = shufflevector <4 x i32> %v2, <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -1118,22 +1073,11 @@ define void @store_undef_mask_factor4(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4
 ;
 ; CHECK-GI-LABEL: store_undef_mask_factor4:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov s4, v0.s[2]
-; CHECK-GI-NEXT:    mov s5, v0.s[3]
-; CHECK-GI-NEXT:    mov s0, v0.s[0]
-; CHECK-GI-NEXT:    mov v6.s[1], v1.s[1]
-; CHECK-GI-NEXT:    mov v4.s[1], v1.s[2]
-; CHECK-GI-NEXT:    mov v5.s[1], v1.s[3]
-; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-NEXT:    mov v6.s[2], v2.s[1]
-; CHECK-GI-NEXT:    mov v4.s[2], v2.s[2]
-; CHECK-GI-NEXT:    mov v5.s[2], v2.s[3]
-; CHECK-GI-NEXT:    mov v0.s[2], v2.s[0]
-; CHECK-GI-NEXT:    mov v6.s[3], v3.s[1]
-; CHECK-GI-NEXT:    mov v4.s[3], v3.s[2]
-; CHECK-GI-NEXT:    mov v5.s[3], v3.s[3]
-; CHECK-GI-NEXT:    stp q0, q6, [x0]
-; CHECK-GI-NEXT:    stp q4, q5, [x0, #32]
+; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    st4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x0]
 ; CHECK-GI-NEXT:    ret
   %s0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %s1 = shufflevector <4 x i32> %v2, <4 x i32> %v3, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -2423,12 +2367,13 @@ define void @store_factor2_wide2(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1) {
 ;
 ; CHECK-GI-LABEL: store_factor2_wide2:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    zip1 v4.4s, v0.4s, v2.4s
-; CHECK-GI-NEXT:    zip2 v0.4s, v0.4s, v2.4s
-; CHECK-GI-NEXT:    zip1 v2.4s, v1.4s, v3.4s
-; CHECK-GI-NEXT:    zip2 v1.4s, v1.4s, v3.4s
-; CHECK-GI-NEXT:    stp q4, q0, [x0]
-; CHECK-GI-NEXT:    stp q2, q1, [x0, #32]
+; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    mov v4.16b, v1.16b
+; CHECK-GI-NEXT:    add x8, x0, #32
+; CHECK-GI-NEXT:    mov v1.16b, v2.16b
+; CHECK-GI-NEXT:    mov v5.16b, v3.16b
+; CHECK-GI-NEXT:    st2 { v0.4s, v1.4s }, [x0]
+; CHECK-GI-NEXT:    st2 { v4.4s, v5.4s }, [x8]
 ; CHECK-GI-NEXT:    ret
   %interleaved.vec = shufflevector <8 x i32> %v0, <8 x i32> %v1, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
   store <16 x i32> %interleaved.vec, ptr %ptr, align 4
@@ -3060,10 +3005,9 @@ define void @store_factor2_intrinsic(ptr %ptr, <8 x i8> %v0, <8 x i8> %v1) {
 ;
 ; CHECK-GI-LABEL: store_factor2_intrinsic:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    zip1 v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    str q0, [x0]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-GI-NEXT:    st2 { v0.8b, v1.8b }, [x0]
 ; CHECK-GI-NEXT:    ret
   %interleaved.intrinsic = call <16 x i8> @llvm.vector.interleave2.v16i8(<8 x i8> %v0, <8 x i8> %v1)
   store <16 x i8> %interleaved.intrinsic, ptr %ptr, align 4
@@ -3114,12 +3058,13 @@ define void @store_factor2_wide_intrinsic(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1
 ;
 ; CHECK-GI-LABEL: store_factor2_wide_intrinsic:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    zip1 v4.4s, v0.4s, v2.4s
-; CHECK-GI-NEXT:    zip2 v0.4s, v0.4s, v2.4s
-; CHECK-GI-NEXT:    zip1 v2.4s, v1.4s, v3.4s
-; CHECK-GI-NEXT:    zip2 v1.4s, v1.4s, v3.4s
-; CHECK-GI-NEXT:    stp q4, q0, [x0]
-; CHECK-GI-NEXT:    stp q2, q1, [x0, #32]
+; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    mov v4.16b, v1.16b
+; CHECK-GI-NEXT:    add x8, x0, #32
+; CHECK-GI-NEXT:    mov v1.16b, v2.16b
+; CHECK-GI-NEXT:    mov v5.16b, v3.16b
+; CHECK-GI-NEXT:    st2 { v0.4s, v1.4s }, [x0]
+; CHECK-GI-NEXT:    st2 { v4.4s, v5.4s }, [x8]
 ; CHECK-GI-NEXT:    ret
   %interleaved.intrinsic = call <16 x i32> @llvm.vector.interleave2.v16i32(<8 x i32> %v0, <8 x i32> %v1)
   store <16 x i32> %interleaved.intrinsic, ptr %ptr, align 4
@@ -3794,9 +3739,9 @@ define void @store_ptrvec_factor2_intrinsic(ptr %ptr, <2 x ptr> %v0, <2 x ptr> %
 ;
 ; CHECK-GI-LABEL: store_ptrvec_factor2_intrinsic:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    zip1 v2.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    zip2 v0.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    stp q2, q0, [x0]
+; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    st2 { v0.2d, v1.2d }, [x0]
 ; CHECK-GI-NEXT:    ret
   %interleaved.intrinsic = call <4 x ptr> @llvm.vector.interleave2.v4p0(<2 x ptr> %v0, <2 x ptr> %v1)
   store <4 x ptr> %interleaved.intrinsic, ptr %ptr, align 4
@@ -3890,9 +3835,9 @@ define void @store_undef_mask_factor2_intrinsic(ptr %ptr, <4 x i32> %v0, <4 x i3
 ;
 ; CHECK-GI-LABEL: store_undef_mask_factor2_intrinsic:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    zip1 v2.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    zip2 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    stp q2, q0, [x0]
+; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    st2 { v0.4s, v1.4s }, [x0]
 ; CHECK-GI-NEXT:    ret
   %interleaved.intrinsic = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> %v0, <4 x i32> %v1)
   store <8 x i32> %interleaved.intrinsic, ptr %ptr, align 4
