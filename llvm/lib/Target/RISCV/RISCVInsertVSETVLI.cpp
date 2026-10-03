@@ -27,12 +27,15 @@
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
 #include "RISCVVSETVLIInfoAnalysis.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include <optional>
 #include <queue>
 using namespace llvm;
 using namespace RISCV;
@@ -42,6 +45,21 @@ using namespace RISCV;
 
 STATISTIC(NumInsertedVSETVL, "Number of VSETVL inst inserted");
 STATISTIC(NumCoalescedVSETVL, "Number of VSETVL inst coalesced");
+
+STATISTIC(NumIndependentVTYPECandidates, "Number of optional type-only setups");
+STATISTIC(NumIndependentVTYPEBlocks, "Number of blocks in type-fact cleanup");
+STATISTIC(NumIndependentVTYPEForwardVisits,
+          "Number of forward type-fact worklist visits");
+STATISTIC(NumIndependentVTYPEBackwardVisits,
+          "Number of backward type-safety worklist visits");
+STATISTIC(NumIndependentVTYPEInstructionScans,
+          "Number of instructions scanned by type-fact worklists");
+STATISTIC(NumIndependentVTYPEDeleted,
+          "Number of independently redundant type-only setups deleted");
+
+static cl::opt<bool> EnableIndependentVTYPEFacts(
+    DEBUG_TYPE "-independent-type-facts", cl::Hidden, cl::init(true),
+    cl::desc("Remove redundant vector setups using independent type facts"));
 
 static cl::opt<bool> EnsureWholeVectorRegisterMoveValidVTYPE(
     DEBUG_TYPE "-whole-vector-register-move-valid-vtype", cl::Hidden,
@@ -88,6 +106,531 @@ enum TKTMMode {
   VSETTM = 1,
 };
 
+// Common type facts describe fixed, final MIR. They intentionally say nothing
+// about AVL, the selected VL, or whether VL is zero.
+struct IndependentVTYPEFact {
+  enum Kind { NotReached, Exact, Clear, Unknown } K = NotReached;
+  unsigned Encoding = 0;
+
+  bool operator==(const IndependentVTYPEFact &Other) const {
+    return K == Other.K && (K != Exact || Encoding == Other.Encoding);
+  }
+
+  IndependentVTYPEFact merge(IndependentVTYPEFact Other) const {
+    if (K == NotReached)
+      return Other;
+    if (Other.K == NotReached || *this == Other)
+      return *this;
+    if (K == Unknown || Other.K == Unknown)
+      return {Unknown};
+    return {Clear};
+  }
+};
+
+// This deliberately excludes explicit architectural-state manipulation. Check
+// both the original stream (before configs are inserted) and the final stream.
+static bool hasIndependentVTYPEFactScope(const MachineFunction &MF,
+                                         const RISCVSubtarget &ST,
+                                         bool BeforeInsertion) {
+  if (ST.hasVendorXSfmmbase())
+    return false;
+  for (const MachineBasicBlock &MBB : MF)
+    for (const MachineInstr &MI : MBB) {
+      if (MI.isBundled() || MI.isCall() || MI.isInlineAsm() ||
+          RISCVInstrInfo::isFaultOnlyFirstLoad(MI) ||
+          RISCVInstrInfo::isXSfmmVectorConfigInstr(MI) ||
+          (MI.hasUnmodeledSideEffects() && !MI.isMetaInstruction() &&
+           MI.getOpcode() != RISCV::PseudoRET && !MI.isBranch()))
+        return false;
+      switch (MI.getOpcode()) {
+      case RISCV::CSRRW:
+      case RISCV::CSRRS:
+      case RISCV::CSRRC:
+      case RISCV::CSRRWI:
+      case RISCV::CSRRSI:
+      case RISCV::CSRRCI:
+      case RISCV::ECALL:
+      case RISCV::EBREAK:
+      case RISCV::VSETVLI:
+      case RISCV::VSETIVLI:
+      case RISCV::VSETVL:
+      case RISCV::PseudoReadVL:
+      case RISCV::PseudoReadVLENBViaVSETVLIX0:
+        return false;
+      }
+      bool Config = RISCVInstrInfo::isVectorConfigInstr(MI);
+      if (BeforeInsertion && Config)
+        return false;
+      uint64_t Flags = MI.getDesc().TSFlags;
+      if (RISCVII::hasTWidenOp(Flags) ||
+          RISCVII::getAltFmtType(Flags) == RISCVII::AltFmtType::AltFmt)
+        return false;
+      for (const MachineOperand &MO : MI.operands()) {
+        if (MO.isRegMask())
+          return false;
+        if (!MO.isReg() ||
+            (MO.getReg() != RISCV::VL && MO.getReg() != RISCV::VTYPE))
+          continue;
+        if (!MO.isImplicit() || MO.getSubReg())
+          return false;
+        if (Config)
+          continue; // Config operand shapes are checked by the decoder.
+        if (MO.isDef())
+          return false;
+        if (!RISCVII::hasSEWOp(Flags) &&
+            !RISCV::isVectorCopy(ST.getRegisterInfo(), MI))
+          return false;
+        if (MO.getReg() == RISCV::VL && !RISCVII::hasVLOp(Flags))
+          return false;
+      }
+    }
+  return true;
+}
+
+class IndependentVTYPECleanup {
+  MachineFunction &MF;
+  const RISCVSubtarget &ST;
+  const TargetRegisterInfo &TRI;
+  MachineRegisterInfo &MRI;
+  LiveIntervals *LIS;
+  SmallPtrSet<const MachineInstr *, 32> Optional;
+  SmallPtrSet<const MachineInstr *, 32> WholeCopies;
+
+  bool isLegalType(int64_t Encoding) const {
+    if (Encoding < 0 || (Encoding & ~0xff) ||
+        RISCVVType::getVLMUL(Encoding) != RISCVVType::LMUL_1)
+      return false;
+    unsigned SEW = RISCVVType::getSEW(Encoding);
+    return SEW == 8 || SEW == 16 || SEW == 32 ||
+           (SEW == 64 && ST.hasVInstructionsI64());
+  }
+
+  // Require the ordinary independent overwrite shape, including exactly its
+  // two architectural state defs. x0,x0 is deliberately not an overwrite.
+  std::optional<unsigned> decodeConfig(const MachineInstr &MI) const {
+    unsigned Opcode = MI.getOpcode();
+    if (Opcode != RISCV::PseudoVSETIVLI && Opcode != RISCV::PseudoVSETVLI &&
+        Opcode != RISCV::PseudoVSETVLIX0)
+      return std::nullopt;
+    if (MI.getNumOperands() != 5 || MI.getNumExplicitOperands() != 3 ||
+        !MI.getOperand(0).isReg() || !MI.getOperand(0).isDef() ||
+        MI.getOperand(0).getSubReg() || !isGPR(MI.getOperand(0).getReg()) ||
+        !MI.getOperand(2).isImm() || !isLegalType(MI.getOperand(2).getImm()))
+      return std::nullopt;
+    const MachineOperand &AVL = MI.getOperand(1);
+    if (Opcode == RISCV::PseudoVSETIVLI) {
+      if (!AVL.isImm() || AVL.getImm() < 0 || AVL.getImm() > 31)
+        return std::nullopt;
+    } else if (!AVL.isReg() || !AVL.isUse() || AVL.getSubReg() ||
+               (Opcode == RISCV::PseudoVSETVLIX0
+                    ? AVL.getReg() != RISCV::X0
+                    : !isGPR(AVL.getReg()) || AVL.getReg() == RISCV::X0)) {
+      return std::nullopt;
+    }
+    bool VLDef = false, VTypeDef = false;
+    for (const MachineOperand &MO : MI.implicit_operands()) {
+      if (!MO.isReg() || !MO.isDef() || MO.getSubReg())
+        return std::nullopt;
+      if (MO.getReg() == RISCV::VL && !VLDef)
+        VLDef = true;
+      else if (MO.getReg() == RISCV::VTYPE && !VTypeDef)
+        VTypeDef = true;
+      else
+        return std::nullopt;
+    }
+    if (!VLDef || !VTypeDef)
+      return std::nullopt;
+    return MI.getOperand(2).getImm();
+  }
+
+  bool isGPR(Register Reg) const {
+    if (!Reg)
+      return false;
+    if (Reg.isPhysical())
+      return RISCV::GPRRegClass.contains(Reg);
+    return RISCV::GPRRegClass.hasSubClassEq(MRI.getRegClass(Reg));
+  }
+
+  bool hasWholeCopyShape(const MachineInstr &MI) const {
+    if (!RISCV::isVectorCopy(&TRI, MI) || MI.getNumExplicitOperands() != 2 ||
+        MI.getNumOperands() != 3)
+      return false;
+    for (unsigned I = 0; I != 2; ++I) {
+      const MachineOperand &MO = MI.getOperand(I);
+      if (!MO.isReg() || !MO.getReg().isPhysical() || MO.getSubReg() ||
+          MO.isDef() != (I == 0))
+        return false;
+    }
+    const MachineOperand &State = MI.getOperand(2);
+    if (!State.isReg() || !State.isImplicit() || !State.isUse() ||
+        State.getReg() != RISCV::VTYPE || State.getSubReg())
+      return false;
+    return true;
+  }
+
+  bool isWholeCopy(const MachineInstr &MI) const {
+    return WholeCopies.contains(&MI);
+  }
+
+  bool isExtract(const MachineInstr &MI) const {
+    if (MI.getOpcode() != RISCV::PseudoVMV_X_S ||
+        MI.getNumExplicitOperands() != 3 || MI.getNumOperands() != 4)
+      return false;
+    const MachineOperand &Use = MI.getOperand(3);
+    return Use.isReg() && Use.isImplicit() && Use.isUse() &&
+           Use.getReg() == RISCV::VTYPE && !Use.getSubReg();
+  }
+
+  // Requirements of every suffix path before a retained overwrite or return.
+  enum class Demand {
+    None,
+    LegalOnly,
+    Unsafe,
+    SEW8 = 8,
+    SEW16 = 16,
+    SEW32 = 32,
+    SEW64 = 64
+  };
+
+  static Demand mergeDemand(Demand A, Demand B) {
+    if (A == B || B == Demand::None)
+      return A;
+    if (A == Demand::None)
+      return B;
+    if (A == Demand::Unsafe || B == Demand::Unsafe)
+      return Demand::Unsafe;
+    if (A == Demand::LegalOnly)
+      return B;
+    if (B == Demand::LegalOnly)
+      return A;
+    return Demand::Unsafe; // Distinct exact SEW requirements cannot both hold.
+  }
+
+  static bool accepts(Demand Required, IndependentVTYPEFact Fact) {
+    if (Fact.K != IndependentVTYPEFact::Exact &&
+        Fact.K != IndependentVTYPEFact::Clear)
+      return false;
+    if (Required == Demand::None || Required == Demand::LegalOnly)
+      return true;
+    if (Required == Demand::Unsafe)
+      return false;
+    return Fact.K == IndependentVTYPEFact::Exact &&
+           RISCVVType::getSEW(Fact.Encoding) == static_cast<unsigned>(Required);
+  }
+
+  bool isNeutral(const MachineInstr &MI) const {
+    if (MI.isMetaInstruction())
+      return true;
+    if (MI.hasUnmodeledSideEffects() || MI.mayLoadOrStore())
+      return false;
+    switch (MI.getOpcode()) {
+    case TargetOpcode::COPY:
+    case RISCV::ADD:
+    case RISCV::ADDI:
+    case RISCV::ADDW:
+    case RISCV::ADDIW:
+    case RISCV::SUB:
+    case RISCV::SUBW:
+    case RISCV::AND:
+    case RISCV::ANDI:
+    case RISCV::OR:
+    case RISCV::ORI:
+    case RISCV::XOR:
+    case RISCV::XORI:
+    case RISCV::SLL:
+    case RISCV::SLLI:
+    case RISCV::SRL:
+    case RISCV::SRLI:
+    case RISCV::SRA:
+    case RISCV::SRAI:
+    case RISCV::SLT:
+    case RISCV::SLTI:
+    case RISCV::SLTU:
+    case RISCV::SLTIU:
+    case RISCV::LUI:
+    case RISCV::BEQ:
+    case RISCV::BNE:
+    case RISCV::BLT:
+    case RISCV::BGE:
+    case RISCV::BLTU:
+    case RISCV::BGEU:
+    case RISCV::PseudoBR:
+      break;
+    default:
+      return false;
+    }
+    for (const MachineOperand &MO : MI.operands())
+      if (MO.isRegMask() || (MO.isReg() && !isGPR(MO.getReg())))
+        return false;
+    return true;
+  }
+
+  Demand demandBefore(const MachineInstr &MI, Demand After) const {
+    if (Optional.contains(&MI))
+      return After; // Optional overwrites must never shield an observer.
+    if (decodeConfig(MI))
+      return Demand::None;
+    DemandedFields Used = getDemanded(MI, &ST);
+    if (Used.usedVL())
+      return Demand::Unsafe;
+    if (MI.getOpcode() == RISCV::PseudoRET) {
+      if (Used.usedVTYPE() || !MI.getParent()->succ_empty() ||
+          MI.getNumExplicitOperands())
+        return Demand::Unsafe;
+      for (const MachineOperand &MO : MI.operands()) {
+        if (!MO.isReg() || !MO.isImplicit() || !MO.isUse() ||
+            !MO.getReg().isPhysical() || MO.getSubReg())
+          return Demand::Unsafe;
+        Register Reg = MO.getReg();
+        if (!RISCV::GPRRegClass.contains(Reg) &&
+            !RISCV::FPR16RegClass.contains(Reg) &&
+            !RISCV::FPR32RegClass.contains(Reg) &&
+            !RISCV::FPR64RegClass.contains(Reg) &&
+            !RISCV::VRRegClass.contains(Reg) &&
+            !RISCV::VRM2RegClass.contains(Reg) &&
+            !RISCV::VRM4RegClass.contains(Reg) &&
+            !RISCV::VRM8RegClass.contains(Reg))
+          return Demand::Unsafe;
+      }
+      return Demand::None;
+    }
+    if (isWholeCopy(MI) && !Used.SEW && !Used.LMUL && !Used.SEWLMULRatio &&
+        !Used.TailPolicy && !Used.MaskPolicy && !Used.AltFmt && !Used.TWiden)
+      return mergeDemand(Demand::LegalOnly, After);
+    if (isExtract(MI)) {
+      // Keep the required-type support certificate and explicitly check the
+      // integer extraction contract before summarizing compatibility as SEW.
+      if (Used.SEW != DemandedFields::SEWEqual ||
+          Used.LMUL != DemandedFields::LMULNone || Used.SEWLMULRatio ||
+          Used.TailPolicy || Used.MaskPolicy || Used.AltFmt || Used.TWiden)
+        return Demand::Unsafe;
+      RISCVVSETVLIInfoAnalysis Requirements(&ST, nullptr);
+      unsigned Required = Requirements.computeInfoForInstr(MI).encodeVTYPE();
+      if (!isLegalType(Required))
+        return Demand::Unsafe;
+      return mergeDemand(static_cast<Demand>(RISCVVType::getSEW(Required)),
+                         After);
+    }
+    return !Used.usedVTYPE() && isNeutral(MI) ? After : Demand::Unsafe;
+  }
+
+  IndependentVTYPEFact transfer(const MachineInstr &MI,
+                                IndependentVTYPEFact Fact) const {
+    if (Fact.K == IndependentVTYPEFact::NotReached)
+      return Fact;
+    if (Optional.contains(&MI))
+      return {IndependentVTYPEFact::Unknown};
+    if (auto Encoding = decodeConfig(MI))
+      return {IndependentVTYPEFact::Exact, *Encoding};
+    if (RISCVInstrInfo::isVectorConfigInstr(MI) ||
+        MI.modifiesRegister(RISCV::VTYPE, &TRI))
+      return {IndependentVTYPEFact::Unknown};
+    return Fact;
+  }
+
+public:
+  IndependentVTYPECleanup(MachineFunction &MF, const RISCVSubtarget &ST,
+                          LiveIntervals *LIS)
+      : MF(MF), ST(ST), TRI(*ST.getRegisterInfo()), MRI(MF.getRegInfo()),
+        LIS(LIS) {}
+
+  void run(SlotIndexes *Indexes) {
+    // The downstream COPY converter searches for an explicit local producer.
+    // Track physical defs once per block; this check is bounded by the number
+    // of target registers, rather than rescanning a prefix for every COPY.
+    for (MachineBasicBlock &MBB : MF) {
+      SmallSet<Register, 32> Defined;
+      for (MachineInstr &MI : MBB) {
+        if (MI.isMetaInstruction())
+          continue;
+        if (hasWholeCopyShape(MI)) {
+          Register Source = MI.getOperand(1).getReg();
+          if (llvm::none_of(Defined, [&](Register Def) {
+                return TRI.regsOverlap(Def, Source);
+              }))
+            WholeCopies.insert(&MI);
+        }
+        for (const MachineOperand &MO : MI.explicit_operands())
+          if (MO.isReg() && MO.isDef() && MO.getReg().isPhysical())
+            Defined.insert(MO.getReg());
+      }
+    }
+    // Freeze this set before either analysis. Even a retained Optional kills
+    // forward facts and is transparent to backward safety.
+    for (MachineBasicBlock &MBB : MF)
+      for (MachineInstr &MI : MBB) {
+        if (MI.getOpcode() != RISCV::PseudoVSETIVLI || !decodeConfig(MI) ||
+            MI.getOperand(0).getReg() != RISCV::X0 ||
+            !MI.getOperand(0).isDead() || MI.getOperand(1).getImm() != 1)
+          continue;
+        auto Next = std::next(MI.getIterator());
+        while (Next != MBB.end() && Next->isMetaInstruction())
+          ++Next;
+        if (Next != MBB.end() && (isExtract(*Next) || isWholeCopy(*Next)))
+          Optional.insert(&MI);
+      }
+    if (Optional.empty())
+      return;
+    NumIndependentVTYPECandidates += Optional.size();
+    NumIndependentVTYPEBlocks += MF.size();
+
+    unsigned N = MF.getNumBlockIDs();
+    SmallVector<IndependentVTYPEFact> Entries(N), Exits(N);
+    SmallVector<MachineBasicBlock *> Queue;
+    BitVector Queued(N);
+    auto Enqueue = [&](MachineBasicBlock *MBB) {
+      if (!Queued.test(MBB->getNumber())) {
+        Queued.set(MBB->getNumber());
+        Queue.push_back(MBB);
+      }
+    };
+    Enqueue(&MF.front());
+    while (!Queue.empty()) {
+      MachineBasicBlock &MBB = *Queue.pop_back_val();
+      Queued.reset(MBB.getNumber());
+      ++NumIndependentVTYPEForwardVisits;
+      IndependentVTYPEFact Entry;
+      if (&MBB == &MF.front())
+        Entry.K = IndependentVTYPEFact::Unknown;
+      for (MachineBasicBlock *Pred : MBB.predecessors())
+        Entry = Entry.merge(Exits[Pred->getNumber()]);
+      Entries[MBB.getNumber()] = Entry;
+      IndependentVTYPEFact Exit = Entry;
+      for (const MachineInstr &MI : MBB) {
+        ++NumIndependentVTYPEInstructionScans;
+        Exit = transfer(MI, Exit);
+      }
+      if (Exit == Exits[MBB.getNumber()])
+        continue;
+      Exits[MBB.getNumber()] = Exit;
+      for (MachineBasicBlock *Succ : MBB.successors())
+        Enqueue(Succ);
+    }
+
+    // Least fixed point: closed neutral cycles require nothing; observers
+    // strengthen demands and a bad observer on any path propagates Unsafe.
+    SmallVector<Demand> DemandEntry(N, Demand::None),
+        DemandExit(N, Demand::None);
+    Queue.clear();
+    Queued.reset();
+    for (MachineBasicBlock &MBB : MF)
+      Enqueue(&MBB);
+    while (!Queue.empty()) {
+      MachineBasicBlock &MBB = *Queue.pop_back_val();
+      Queued.reset(MBB.getNumber());
+      ++NumIndependentVTYPEBackwardVisits;
+      Demand Required = MBB.succ_empty() ? Demand::Unsafe : Demand::None;
+      for (MachineBasicBlock *Succ : MBB.successors())
+        Required = mergeDemand(Required, DemandEntry[Succ->getNumber()]);
+      DemandExit[MBB.getNumber()] = Required;
+      for (const MachineInstr &MI : llvm::reverse(MBB)) {
+        ++NumIndependentVTYPEInstructionScans;
+        Required = demandBefore(MI, Required);
+      }
+      if (Required == DemandEntry[MBB.getNumber()])
+        continue;
+      DemandEntry[MBB.getNumber()] = Required;
+      for (MachineBasicBlock *Pred : MBB.predecessors())
+        Enqueue(Pred);
+    }
+
+    // Pair each candidate's suffix demand AFTER the Optional with the forward
+    // fact BEFORE it. Both analyses use the immutable original instruction set.
+    DenseMap<const MachineInstr *, Demand> SuffixDemand;
+    for (MachineBasicBlock &MBB : MF) {
+      Demand Required = DemandExit[MBB.getNumber()];
+      for (const MachineInstr &MI : llvm::reverse(MBB)) {
+        if (Optional.contains(&MI))
+          SuffixDemand[&MI] = Required;
+        Required = demandBefore(MI, Required);
+      }
+    }
+    SmallVector<MachineInstr *> Remove;
+    for (MachineBasicBlock &MBB : MF) {
+      IndependentVTYPEFact Fact = Entries[MBB.getNumber()];
+      for (MachineInstr &MI : MBB) {
+        auto It = SuffixDemand.find(&MI);
+        if (It != SuffixDemand.end() && accepts(It->second, Fact))
+          Remove.push_back(&MI);
+        Fact = transfer(MI, Fact);
+      }
+    }
+
+    // No mutations until every proof has been selected. A deletion never
+    // creates facts for another deletion in this invocation.
+    if (Remove.empty())
+      return;
+    for (MachineInstr *MI : Remove) {
+      if (LIS)
+        LIS->RemoveMachineInstrFromMaps(*MI);
+      else if (Indexes)
+        Indexes->removeMachineInstrFromMaps(*MI);
+      MI->eraseFromParent();
+      ++NumIndependentVTYPEDeleted;
+    }
+    // Recompute just the two affected physical live-in sets. Deleted defs can
+    // expose uses across joins and through otherwise transparent blocks.
+    SmallVector<unsigned> LiveIn(N, 0);
+    Queue.clear();
+    Queued.reset();
+    for (MachineBasicBlock &MBB : MF)
+      Enqueue(&MBB);
+    while (!Queue.empty()) {
+      MachineBasicBlock &MBB = *Queue.pop_back_val();
+      Queued.reset(MBB.getNumber());
+      unsigned Live = 0;
+      for (MachineBasicBlock *Succ : MBB.successors())
+        Live |= LiveIn[Succ->getNumber()];
+      for (const MachineInstr &MI : llvm::reverse(MBB)) {
+        for (const MachineOperand &MO : MI.operands()) {
+          if (!MO.isReg() || !MO.isDef())
+            continue;
+          if (MO.getReg() == RISCV::VL)
+            Live &= ~1U;
+          if (MO.getReg() == RISCV::VTYPE)
+            Live &= ~2U;
+        }
+        for (const MachineOperand &MO : MI.operands()) {
+          if (!MO.isReg() || !MO.isUse() || MO.isUndef())
+            continue;
+          if (MO.getReg() == RISCV::VL)
+            Live |= 1;
+          if (MO.getReg() == RISCV::VTYPE)
+            Live |= 2;
+        }
+      }
+      if (Live == LiveIn[MBB.getNumber()])
+        continue;
+      LiveIn[MBB.getNumber()] = Live;
+      for (MachineBasicBlock *Pred : MBB.predecessors())
+        Enqueue(Pred);
+    }
+    for (MachineBasicBlock &MBB : MF) {
+      for (auto [Reg, Mask] :
+           {std::pair(RISCV::VL, 1U), std::pair(RISCV::VTYPE, 2U)}) {
+        MBB.removeLiveIn(Reg);
+        if (LiveIn[MBB.getNumber()] & Mask)
+          MBB.addLiveIn(Reg);
+      }
+      MBB.sortUniqueLiveIns();
+    }
+    if (LIS) {
+      LIS->removeAllRegUnitsForPhysReg(RISCV::VL);
+      LIS->removeAllRegUnitsForPhysReg(RISCV::VTYPE);
+    }
+    for (MachineBasicBlock &MBB : MF)
+      for (MachineInstr &MI : MBB)
+        for (MachineOperand &MO : MI.operands())
+          if (MO.isReg() &&
+              (MO.getReg() == RISCV::VL || MO.getReg() == RISCV::VTYPE)) {
+            if (MO.isDef())
+              MO.setIsDead(false);
+            else
+              MO.setIsKill(false);
+          }
+  }
+};
+
 class RISCVInsertVSETVLI : public MachineFunctionPass {
   const RISCVSubtarget *ST;
   const TargetInstrInfo *TII;
@@ -109,6 +652,7 @@ public:
     AU.setPreservesCFG();
 
     AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
+    AU.addUsedIfAvailable<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveDebugVariablesWrapperLegacy>();
@@ -1146,6 +1690,10 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
   VIA = RISCVVSETVLIInfoAnalysis(ST, LIS);
 
+  bool IndependentTypeScope =
+      EnableIndependentVTYPEFacts &&
+      hasIndependentVTYPEFactScope(MF, *ST, /*BeforeInsertion=*/true);
+
   assert(BlockInfo.empty() && "Expect empty block infos");
   BlockInfo.resize(MF.getNumBlockIDs());
 
@@ -1220,6 +1768,15 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
       insertVSETMTK(MBB, VSETTM);
       insertVSETMTK(MBB, VSETTK);
     }
+  }
+
+  // These facts describe the fixed emitted stream. No earlier insertion,
+  // coalescing, PRE, or scheduler query consumes partial configuration state.
+  if (IndependentTypeScope &&
+      hasIndependentVTYPEFactScope(MF, *ST, /*BeforeInsertion=*/false)) {
+    auto *IndexesWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>();
+    IndependentVTYPECleanup(MF, *ST, LIS)
+        .run(IndexesWrapper ? &IndexesWrapper->getSI() : nullptr);
   }
 
   BlockInfo.clear();

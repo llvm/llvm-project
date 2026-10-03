@@ -1,0 +1,1243 @@
+# RUN: llc -mtriple=riscv64 -run-pass=riscv-insert-vsetvli -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,NOLIS
+# RUN: llc -mtriple=riscv32 -run-pass=riscv-insert-vsetvli -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,NOLIS
+# RUN: llc -mtriple=riscv64 -run-pass=slotindexes,riscv-insert-vsetvli -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,NOLIS
+# RUN: llc -mtriple=riscv64 -run-pass=liveintervals,riscv-insert-vsetvli -precompute-phys-liveness -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,LIS
+
+# Facts describe the final emitted stream independently of AVL/VL. Each
+# negative checks that a join setup survives; positive checks preserve the
+# consumer while excluding a setup in its block. The optional-chain tests
+# require fixed membership and independently justified batch deletion.
+
+--- |
+  target triple = "riscv64"
+  define i64 @same_type_different_avl() #0 { ret i64 0 }
+  define i64 @same_type_same_avl() #0 { ret i64 0 }
+  define i64 @unknown_predecessor() #0 { ret i64 0 }
+  define i64 @illegal_explicit() #0 { ret i64 0 }
+  define i64 @three_predecessors() #0 { ret i64 0 }
+  define i64 @three_one_incompatible() #0 { ret i64 0 }
+  define i64 @nested_diamond() #0 { ret i64 0 }
+  define i64 @safe_independent_backedge() #0 { ret i64 0 }
+  define i64 @unsafe_changed_backedge() #0 { ret i64 0 }
+  define i64 @first_iteration_unknown() #0 { ret i64 0 }
+  define i64 @later_full_vl() #0 { ret i64 0 }
+  define i64 @raw_vl_observer() #0 { ret i64 0 }
+  define i64 @different_policy() #0 { ret i64 0 }
+  define i64 @different_lmul() #0 { ret i64 0 }
+  define i64 @floating_extract() #0 { ret i64 0 }
+  define i64 @raw_vstart() #0 { ret i64 0 }
+  define i64 @system_observer() #0 { ret i64 0 }
+  define i64 @unexpected_extract_operand() #0 { ret i64 0 }
+  define i64 @return_state_operand() #0 { ret i64 0 }
+  define i64 @later_scalar_memory() #0 { ret i64 0 }
+  define i64 @unreachable_scc() #0 { ret i64 0 }
+  define i64 @optional_chain_batch() #0 { ret i64 0 }
+  define i64 @optional_shields_observer() #0 { ret i64 0 }
+  define i64 @different_type_whole_copy() #0 { ret i64 0 }
+  define i64 @copy_local_source_producer() #0 { ret i64 0 }
+  define i64 @optional_only_backedge() #0 { ret i64 0 }
+  define i64 @irreducible_independent_seeds() #0 { ret i64 0 }
+  define i64 @zve32x_e32() #1 { ret i64 0 }
+  define i64 @zve32x_e64_rejected() #1 { ret i64 0 }
+  define i64 @original_call() #0 { ret i64 0 }
+  define i64 @original_inline_asm() #0 { ret i64 0 }
+  define i64 @original_fault_first() #0 { ret i64 0 }
+  define i64 @x0x0_continuation() #0 { ret i64 0 }
+  define i64 @unexpected_return_operand() #0 { ret i64 0 }
+  define i64 @incompatible_sew_successors() #0 { ret i64 0 }
+  define i64 @legal_only_and_sew_successors() #0 { ret i64 0 }
+  attributes #0 = { "target-features"="+v" }
+  attributes #1 = { "target-features"="-v,-zve64d,-zve64f,-zve64x,+zve32x" }
+...
+---
+name: same_type_different_avl
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: same_type_different_avl
+ ; CHECK: bb.3:
+ ; CHECK-NOT: PseudoVSET
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 0, 6, 0
+   PseudoBR %bb.3
+ bb.3:
+   %r:gpr = PseudoVMV_X_S %x, 6
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+...
+---
+name: same_type_same_avl
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: same_type_same_avl
+ ; CHECK: bb.3:
+ ; CHECK-NOT: PseudoVSET
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   PseudoBR %bb.3
+ bb.3:
+   %r:gpr = PseudoVMV_X_S %x, 6
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+...
+---
+name: unknown_predecessor
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: unknown_predecessor
+ ; CHECK: bb.3:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   PseudoBR %bb.3
+ bb.3:
+   %r:gpr = PseudoVMV_X_S %x, 6
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+...
+---
+name: illegal_explicit
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: illegal_explicit
+ ; CHECK: bb.3:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   dead $x0 = PseudoVSETIVLI 1, 221, implicit-def $vl, implicit-def $vtype
+   PseudoBR %bb.3
+ bb.3:
+   %r:gpr = PseudoVMV_X_S %x, 6
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+...
+---
+name: three_predecessors
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: three_predecessors
+ ; CHECK: bb.5:
+ ; CHECK-NOT: PseudoVSET
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.5
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.5
+ bb.2:
+   successors: %bb.3, %bb.4
+   BEQ %c, $x0, %bb.4
+   PseudoBR %bb.3
+ bb.3:
+   successors: %bb.5
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   PseudoBR %bb.5
+ bb.4:
+   successors: %bb.5
+   %d:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 9, 6, 0
+   PseudoBR %bb.5
+ bb.5:
+   %r:gpr = PseudoVMV_X_S %x, 6
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+...
+---
+name: three_one_incompatible
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: three_one_incompatible
+ ; CHECK: bb.5:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.5
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.5
+ bb.2:
+   successors: %bb.3, %bb.4
+   BEQ %c, $x0, %bb.4
+   PseudoBR %bb.3
+ bb.3:
+   successors: %bb.5
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   PseudoBR %bb.5
+ bb.4:
+   successors: %bb.5
+   %d:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 9, 5, 0
+   PseudoBR %bb.5
+ bb.5:
+   %r:gpr = PseudoVMV_X_S %x, 6
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+...
+---
+name: nested_diamond
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: nested_diamond
+ ; CHECK: bb.5:
+ ; CHECK-NOT: PseudoVSET
+ ; CHECK: liveins: $vtype
+ ; CHECK-NOT: PseudoVSET
+ ; CHECK: PseudoBR %bb.6
+ ; CHECK: bb.6:
+ ; CHECK-NOT: PseudoVSET
+ ; CHECK: liveins: $vtype
+ ; CHECK-NOT: PseudoVSET
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3, %bb.4
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   BEQ %c, $x0, %bb.4
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.5
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   PseudoBR %bb.5
+ bb.3:
+   successors: %bb.5
+   PseudoBR %bb.5
+ bb.4:
+   successors: %bb.5
+   PseudoBR %bb.5
+ bb.5:
+   successors: %bb.6
+   PseudoBR %bb.6
+ bb.6:
+   %r:gpr = PseudoVMV_X_S %x, 6
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+...
+---
+name: safe_independent_backedge
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: safe_independent_backedge
+ ; CHECK: bb.1:
+ ; CHECK-NOT: PseudoVSET
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.2
+   %r:gpr = PseudoVMV_X_S %x, 6
+   PseudoBR %bb.2
+ bb.2:
+   successors: %bb.1, %bb.3
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   BNE %c, $x0, %bb.1
+   PseudoBR %bb.3
+ bb.3:
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+...
+---
+name: unsafe_changed_backedge
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: unsafe_changed_backedge
+ ; CHECK: bb.1:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.2
+   %r:gpr = PseudoVMV_X_S %x, 6
+   PseudoBR %bb.2
+ bb.2:
+   successors: %bb.1, %bb.3
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 5, 0
+   BNE %c, $x0, %bb.1
+   PseudoBR %bb.3
+ bb.3:
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+...
+---
+name: first_iteration_unknown
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: first_iteration_unknown
+ ; CHECK: bb.1:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.2
+   %r:gpr = PseudoVMV_X_S %x, 6
+   PseudoBR %bb.2
+ bb.2:
+   successors: %bb.1, %bb.3
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   BNE %c, $x0, %bb.1
+   PseudoBR %bb.3
+ bb.3:
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+...
+---
+name: later_full_vl
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: later_full_vl
+ ; CHECK: bb.3:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   PseudoBR %bb.3
+ bb.3:
+   %r:gpr = PseudoVMV_X_S %x, 6
+   %later:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 1, 6, 0
+   $v8 = COPY %later
+   $x10 = COPY %r
+   PseudoRET implicit $x10, implicit $v8
+...
+---
+name: raw_vl_observer
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: raw_vl_observer
+ ; CHECK: bb.3:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   PseudoBR %bb.3
+ bb.3:
+   %r:gpr = PseudoVMV_X_S %x, 6
+   %obs:gpr = CSRRS 3104, $x0, implicit $vl
+   $x10 = COPY %obs
+   PseudoRET implicit $x10
+...
+---
+name: different_policy
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: different_policy
+ ; CHECK: bb.3:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   %b:vr = PseudoVADD_VV_M1 %x, %x, %y, 7, 6, 0
+   PseudoBR %bb.3
+ bb.3:
+   %r:gpr = PseudoVMV_X_S %x, 6
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+...
+---
+name: different_lmul
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: different_lmul
+ ; CHECK: bb.3:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   %b:vrm2 = PseudoVADD_VV_M2 undef $noreg, undef $v8m2, undef $v10m2, 7, 6, 0
+   PseudoBR %bb.3
+ bb.3:
+   %r:gpr = PseudoVMV_X_S %x, 6
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+...
+---
+name: floating_extract
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: floating_extract
+ ; CHECK: bb.3:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: PseudoVFMV_FPR64_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   PseudoBR %bb.3
+ bb.3:
+   %r:fpr64 = PseudoVFMV_FPR64_S %x, 6
+   $f10_d = COPY %r
+   PseudoRET implicit $f10_d
+...
+---
+name: raw_vstart
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: raw_vstart
+ ; CHECK: bb.3:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   PseudoBR %bb.3
+ bb.3:
+   %r:gpr = PseudoVMV_X_S %x, 6
+   dead $x0 = CSRRWI 8, 1
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+...
+---
+name: system_observer
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: system_observer
+ ; CHECK: bb.3:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   PseudoBR %bb.3
+ bb.3:
+   %r:gpr = PseudoVMV_X_S %x, 6
+   ECALL
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+...
+---
+name: unexpected_extract_operand
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: unexpected_extract_operand
+ ; CHECK: bb.3:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   PseudoBR %bb.3
+ bb.3:
+   %r:gpr = PseudoVMV_X_S %x, 6, implicit $vl
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+...
+---
+name: return_state_operand
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: return_state_operand
+ ; CHECK: bb.3:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   PseudoBR %bb.3
+ bb.3:
+   %r:gpr = PseudoVMV_X_S %x, 6
+   $x10 = COPY %r
+   PseudoRET implicit $x10, implicit $vtype
+...
+---
+name: later_scalar_memory
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: later_scalar_memory
+ ; CHECK: bb.3:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   PseudoBR %bb.3
+ bb.3:
+   %r:gpr = PseudoVMV_X_S %x, 6
+   %load:gpr = LD %c, 0
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+...
+---
+name: unreachable_scc
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: unreachable_scc
+ ; CHECK: bb.3:
+ ; CHECK-NOT: PseudoVSET
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   PseudoBR %bb.3
+ bb.3:
+   %r:gpr = PseudoVMV_X_S undef $v8, 6
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+ bb.4:
+   successors: %bb.5
+   %u:vr = PseudoVADD_VV_M1 undef $noreg, undef $v8, undef $v9, 9, 5, 0
+   PseudoBR %bb.5
+ bb.5:
+   successors: %bb.4, %bb.3
+   BNE undef $x10, $x0, %bb.4
+   PseudoBR %bb.3
+...
+---
+name: optional_chain_batch
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: optional_chain_batch
+ ; CHECK: bb.3:
+ ; CHECK-NOT: PseudoVSET
+ ; CHECK: PseudoVMV_X_S
+ ; CHECK: bb.6:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: $v8 = COPY $v10
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9, $v10
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   liveins: $v10
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   liveins: $v10
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   PseudoBR %bb.3
+ bb.3:
+   successors: %bb.4, %bb.5
+   liveins: $v10
+   %r:gpr = PseudoVMV_X_S %x, 6
+   BEQ %c, $x0, %bb.4
+   PseudoBR %bb.5
+ bb.4:
+   successors: %bb.6
+   liveins: $v10
+   PseudoBR %bb.6
+ bb.5:
+   successors: %bb.6
+   liveins: $v10
+   %d:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 9, 5, 0
+   PseudoBR %bb.6
+ bb.6:
+   liveins: $v10
+   $v8 = COPY $v10
+   $x10 = COPY %r
+   PseudoRET implicit $x10, implicit $v8
+...
+---
+name: optional_shields_observer
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: optional_shields_observer
+ ; CHECK: bb.3:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   PseudoBR %bb.3
+ bb.3:
+   %r:gpr = PseudoVMV_X_S %x, 6
+   %s:gpr = PseudoVMV_X_S %x, 5
+   %later:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 1, 5, 0
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+...
+---
+name: different_type_whole_copy
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: different_type_whole_copy
+ ; CHECK: bb.3:
+ ; CHECK-NOT: PseudoVSET
+ ; CHECK: $v8 = COPY $v10
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9, $v10
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   liveins: $v10
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   liveins: $v10
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 5, 0
+   PseudoBR %bb.3
+ bb.3:
+   liveins: $v10
+   $v8 = COPY $v10
+   PseudoRET implicit $v8
+...
+---
+name: copy_local_source_producer
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: copy_local_source_producer
+ ; CHECK: bb.3:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: $v8 = COPY $v10
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9, $v10
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   liveins: $v9, $v10
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   liveins: $v9, $v10
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 5, 0
+   PseudoBR %bb.3
+ bb.3:
+   liveins: $v9, $v10
+   $v10 = COPY $v9
+   $v8 = COPY $v10
+   PseudoRET implicit $v8
+...
+---
+name: optional_only_backedge
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: optional_only_backedge
+ ; CHECK: bb.1:
+ ; NOLIS: PseudoVSETVLI
+ ; LIS-NOT: PseudoVSET
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.2
+   %r:gpr = PseudoVMV_X_S %x, 6
+   PseudoBR %bb.2
+ bb.2:
+   successors: %bb.1, %bb.3
+   BNE %c, $x0, %bb.1
+   PseudoBR %bb.3
+ bb.3:
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+...
+---
+name: irreducible_independent_seeds
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: irreducible_independent_seeds
+ ; CHECK: bb.3:
+ ; CHECK-NOT: PseudoVSET
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.4
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   PseudoBR %bb.4
+ bb.3:
+   successors: %bb.4
+   %r:gpr = PseudoVMV_X_S %x, 6
+   PseudoBR %bb.4
+ bb.4:
+   successors: %bb.3, %bb.5
+   %d:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 9, 6, 0
+   BEQ %c, $x0, %bb.3
+   PseudoBR %bb.5
+ bb.5:
+   PseudoRET
+...
+---
+name: zve32x_e32
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: zve32x_e32
+ ; CHECK: bb.3:
+ ; CHECK-NOT: PseudoVSET
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 5, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 5, 0
+   PseudoBR %bb.3
+ bb.3:
+   %r:gpr = PseudoVMV_X_S %x, 5
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+...
+---
+name: zve32x_e64_rejected
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: zve32x_e64_rejected
+ ; CHECK: bb.3:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   PseudoBR %bb.3
+ bb.3:
+   %r:gpr = PseudoVMV_X_S %x, 6
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+...
+---
+name: original_call
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: original_call
+ ; CHECK: bb.3:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   PseudoCALL $noreg, csr_ilp32_lp64
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   PseudoBR %bb.3
+ bb.3:
+   %r:gpr = PseudoVMV_X_S %x, 6
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+...
+---
+name: original_inline_asm
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: original_inline_asm
+ ; CHECK: bb.3:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   INLINEASM &"", sideeffect attdialect
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   PseudoBR %bb.3
+ bb.3:
+   %r:gpr = PseudoVMV_X_S %x, 6
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+...
+---
+name: original_fault_first
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: original_fault_first
+ ; CHECK: bb.3:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   %fof:vr, %fofvl:gpr = PseudoVLE64FF_V_M1 undef $noreg, %c, 3, 6, 0
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   PseudoBR %bb.3
+ bb.3:
+   %r:gpr = PseudoVMV_X_S %x, 6
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+...
+---
+name: x0x0_continuation
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: x0x0_continuation
+ ; CHECK: bb.3:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   PseudoBR %bb.3
+ bb.3:
+   %r:gpr = PseudoVMV_X_S %x, 6
+   %later:vr = PseudoVMV_V_I_MF2 undef $noreg, 1, 1, 5, 0
+   $x10 = COPY %r
+   PseudoRET implicit $x10
+...
+---
+name: unexpected_return_operand
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: unexpected_return_operand
+ ; CHECK: bb.3:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: PseudoVMV_X_S
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 6, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 6, 0
+   PseudoBR %bb.3
+ bb.3:
+   %r:gpr = PseudoVMV_X_S %x, 6
+   $x10 = COPY %r
+   PseudoRET implicit $x10, implicit undef $vxrm
+...
+---
+name: incompatible_sew_successors
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: incompatible_sew_successors
+ ; CHECK: bb.3:
+ ; CHECK: PseudoVSETIVLI 1,
+ ; CHECK: PseudoVMV_X_S
+ ; CHECK: bb.4:
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9, $v10
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   liveins: $v10
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 5, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   liveins: $v10
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 5, 0
+   PseudoBR %bb.3
+ bb.3:
+   successors: %bb.4, %bb.5
+   liveins: $v10
+   %r:gpr = PseudoVMV_X_S %x, 5
+   BEQ %c, $x0, %bb.5
+   PseudoBR %bb.4
+ bb.4:
+   liveins: $v10
+   %s:gpr = PseudoVMV_X_S %x, 4
+   $x10 = COPY %s
+   PseudoRET implicit $x10
+ bb.5:
+   %t:gpr = PseudoVMV_X_S %x, 5
+   $x10 = COPY %t
+   PseudoRET implicit $x10
+...
+---
+name: legal_only_and_sew_successors
+tracksRegLiveness: true
+body: |
+ ; CHECK-LABEL: name: legal_only_and_sew_successors
+ ; CHECK: bb.3:
+ ; CHECK-NOT: PseudoVSET
+ ; CHECK: PseudoVMV_X_S
+ ; CHECK: bb.4:
+ bb.0:
+   successors: %bb.1, %bb.2
+   liveins: $x10, $x11, $v8, $v9, $v10
+   %c:gpr = COPY $x10
+   %vl:gprnox0 = COPY $x11
+   %x:vr = COPY $v8
+   %y:vr = COPY $v9
+   BEQ %c, $x0, %bb.2
+   PseudoBR %bb.1
+ bb.1:
+   successors: %bb.3
+   liveins: $v10
+   %a:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, %vl, 5, 0
+   PseudoBR %bb.3
+ bb.2:
+   successors: %bb.3
+   liveins: $v10
+   %b:vr = PseudoVADD_VV_M1 undef $noreg, %x, %y, 7, 5, 0
+   PseudoBR %bb.3
+ bb.3:
+   successors: %bb.4, %bb.5
+   liveins: $v10
+   %r:gpr = PseudoVMV_X_S %x, 5
+   BEQ %c, $x0, %bb.5
+   PseudoBR %bb.4
+ bb.4:
+   liveins: $v10
+   $v8 = COPY $v10
+   PseudoRET implicit $v8
+ bb.5:
+   %t:gpr = PseudoVMV_X_S %x, 5
+   $x10 = COPY %t
+   PseudoRET implicit $x10
+...
