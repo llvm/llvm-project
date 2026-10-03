@@ -127,3 +127,6 @@ static void splats(int i, long l, __uint128_t t, float f, double d) {
   vd = l + vd; // expected-warning {{implicit conversion from 'long' to 'double2' (vector of 2 'double' values) may lose precision}}
   vd = vd + t; // expected-warning {{implicit conversion from '__uint128_t' (aka 'unsigned __int128') to 'double2' (vector of 2 'double' values) may lose precision}}
 }
+
+typedef int no_arg __attribute__((ext_vector_type()));      // expected-error {{'ext_vector_type' attribute takes one argument}}
+typedef int two_args __attribute__((ext_vector_type(2, 4))); // expected-error {{'ext_vector_type' attribute takes one argument}}

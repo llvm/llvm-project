@@ -1620,27 +1620,15 @@ void Sema::PopPragmaVisibility(bool IsNamespaceEnd, SourceLocation EndLoc) {
     FreeVisContext();
 }
 
-template <typename Ty>
-static bool checkCommonAttributeFeatures(Sema &S, const Ty *Node,
-                                         const ParsedAttr &A,
+static bool checkCommonAttributeFeatures(Sema &S, const ParsedAttr &A,
                                          bool SkipArgCountCheck) {
-  // Several attributes carry different semantics than the parsing requires, so
-  // those are opted out of the common argument checks.
-  //
-  // We also bail on unknown and ignored attributes because those are handled
-  // as part of the target-specific handling logic.
+  // We bail on unknown and ignored attributes because those are handled as
+  // part of the target-specific handling logic.
   if (A.getKind() == ParsedAttr::UnknownAttribute)
     return false;
   // Check whether the attribute requires specific language extensions to be
   // enabled.
   if (!A.diagnoseLangOpts(S))
-    return true;
-  // Check whether the attribute appertains to the given subject.
-  if (!A.diagnoseAppertainsTo(S, Node))
-    return true;
-  // Check whether the attribute is mutually exclusive with other attributes
-  // that have already been applied to the declaration.
-  if (!A.diagnoseMutualExclusion(S, Node))
     return true;
   // Check whether the attribute exists in the target architecture.
   if (S.CheckAttrTarget(A))
@@ -1668,6 +1656,25 @@ static bool checkCommonAttributeFeatures(Sema &S, const Ty *Node,
   return false;
 }
 
+template <typename Ty>
+static bool checkCommonAttributeFeatures(Sema &S, const Ty *Node,
+                                         const ParsedAttr &A,
+                                         bool SkipArgCountCheck) {
+  // Run the checks shared with type attributes (language options, target, and
+  // argument count). This also bails on unknown and ignored attributes.
+  if (checkCommonAttributeFeatures(S, A, SkipArgCountCheck))
+    return true;
+  // Check whether the attribute appertains to the given subject.
+  if (!A.diagnoseAppertainsTo(S, Node))
+    return true;
+  // Check whether the attribute is mutually exclusive with other attributes
+  // that have already been applied to the declaration.
+  if (!A.diagnoseMutualExclusion(S, Node))
+    return true;
+
+  return false;
+}
+
 bool Sema::checkCommonAttributeFeatures(const Decl *D, const ParsedAttr &A,
                                         bool SkipArgCountCheck) {
   return ::checkCommonAttributeFeatures(*this, D, A, SkipArgCountCheck);
@@ -1675,4 +1682,8 @@ bool Sema::checkCommonAttributeFeatures(const Decl *D, const ParsedAttr &A,
 bool Sema::checkCommonAttributeFeatures(const Stmt *S, const ParsedAttr &A,
                                         bool SkipArgCountCheck) {
   return ::checkCommonAttributeFeatures(*this, S, A, SkipArgCountCheck);
+}
+bool Sema::checkCommonAttributeFeatures(const ParsedAttr &A,
+                                        bool SkipArgCountCheck) {
+  return ::checkCommonAttributeFeatures(*this, A, SkipArgCountCheck);
 }
