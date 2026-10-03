@@ -292,6 +292,31 @@ func.func private @insert_slice_dynamic_source_and_dest_dim(%source: tensor<?x3x
 
 // -----
 
+// The destination is static and the insert index is a non-zero constant. The
+// vector fits in the destination, but not from offset 6: only 2 elements are
+// left, so the write needs a mask.
+
+func.func private @insert_slice_constant_non_zero_offset(
+    %source: tensor<?xi32>, %dest: tensor<8xi32>, %size: index) -> tensor<8xi32> {
+  %res = tensor.insert_slice %source into %dest[6] [%size] [1] : tensor<?xi32> into tensor<8xi32>
+  return %res : tensor<8xi32>
+}
+// CHECK-LABEL:   func.func private @insert_slice_constant_non_zero_offset(
+// CHECK:           %[[READ:.*]] = vector.mask %{{.*}} { vector.transfer_read
+// CHECK:           %[[C_2:.*]] = arith.constant 2 : index
+// CHECK:           %[[MASK_WRITE:.*]] = vector.create_mask %[[C_2]] : vector<4xi1>
+// CHECK:           vector.mask %[[MASK_WRITE]] { vector.transfer_write %[[READ]]
+
+ module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [4] : !transform.any_op
+    transform.yield
+  }
+ }
+
+// -----
+
 // One of the destination dimensions is dynamic and the the corresponding
 // insert index is != 0. Make sure that the mask is computed correctly (note arith.subi in the output).
 
