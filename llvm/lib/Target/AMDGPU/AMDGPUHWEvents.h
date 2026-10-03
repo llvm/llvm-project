@@ -165,6 +165,33 @@ private:
   value_type Data = NONE;
 };
 
+/// Class to store singular HW events in the most compact way possible (u8).
+class SingleHWEvent {
+public:
+  using value_type = uint8_t;
+
+  static constexpr SingleHWEvent encode(HWEvents E) {
+    assert(E.size() == 1 && "expected exactly one event!");
+    return SingleHWEvent(countr_zero_constexpr(E.value()));
+  }
+
+  constexpr operator HWEvents() const { return HWEvents(1 << Data); }
+
+  constexpr value_type rawValue() const { return Data; }
+
+  constexpr bool operator==(const SingleHWEvent &Other) const {
+    return Data == Other.Data;
+  }
+  constexpr bool operator!=(const SingleHWEvent &Other) const {
+    return Data != Other.Data;
+  }
+
+private:
+  constexpr SingleHWEvent(value_type Data) : Data(Data) {}
+
+  value_type Data;
+};
+
 /// \param Inst A VMEM instruction (as per `SIInstrInfo::isVMEM`).
 /// \returns the simplified set of events triggered by the VMEM instruction \p
 /// Inst. The returned mask is not exhaustive, but is guaranteed to be a subset
