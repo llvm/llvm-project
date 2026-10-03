@@ -1637,3 +1637,172 @@ func.func @push_extract_through_generic_secondextract(%arg0: tensor<128x128xf32>
 // CHECK-SAME:        ins(%[[PAD]], %[[ARG0]]
 // CHECK:           %[[EXTRACT2:.+]] =  tensor.extract_slice %[[GENERIC]]
 // CHECK:           scf.yield %[[EXTRACT2]]
+
+// -----
+
+func.func @no_propagate_pack_with_non_dim_affine_output_expr(
+    %arg0: tensor<8x8x16xf32>) -> tensor<15x4x4xf32> {
+  %init = tensor.empty() : tensor<15x16xf32>
+  %generic = linalg.generic {
+      indexing_maps = [
+        affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
+        affine_map<(d0, d1, d2) -> (d0 + d1, d2)>
+      ],
+      iterator_types = ["parallel", "parallel", "parallel"]
+    }
+    ins(%arg0 : tensor<8x8x16xf32>)
+    outs(%init : tensor<15x16xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    linalg.yield %in : f32
+  } -> tensor<15x16xf32>
+
+  %empty = tensor.empty() : tensor<15x4x4xf32>
+  %pack = linalg.pack %generic
+      outer_dims_perm = [0, 1]
+      inner_dims_pos = [1]
+      inner_tiles = [4]
+      into %empty
+      : tensor<15x16xf32> -> tensor<15x4x4xf32>
+
+  return %pack : tensor<15x4x4xf32>
+}
+
+// CHECK-DAG: #[[$INPUT_MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+// CHECK-DAG: #[[$OUTPUT_MAP:.+]] = affine_map<(d0, d1, d2) -> (d0 + d1, d2)>
+// CHECK-LABEL: func.func @no_propagate_pack_with_non_dim_affine_output_expr
+// CHECK: %[[INIT:.+]] = tensor.empty() : tensor<15x16xf32>
+// CHECK: %[[GENERIC:.+]] = linalg.generic
+// CHECK-SAME: indexing_maps = [#[[$INPUT_MAP]], #[[$OUTPUT_MAP]]]
+// CHECK: %[[EMPTY:.+]] = tensor.empty() : tensor<15x4x4xf32>
+// CHECK: %[[PACK:.+]] = linalg.pack %[[GENERIC]]
+// CHECK-SAME: outer_dims_perm = [0, 1] inner_dims_pos = [1] inner_tiles = [4]
+// CHECK-SAME: into %[[EMPTY]]
+// CHECK: return %[[PACK]] : tensor<15x4x4xf32>
+
+// -----
+
+func.func @no_propagate_pack_with_non_dim_affine_input_expr(
+    %arg0: tensor<15x16xf32>) -> tensor<4x8x8x4xf32> {
+  %init = tensor.empty() : tensor<8x8x16xf32>
+  %generic = linalg.generic {
+      indexing_maps = [
+        affine_map<(d0, d1, d2) -> (d0 + d1, d2)>,
+        affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+      ],
+      iterator_types = ["parallel", "parallel", "parallel"]
+    }
+    ins(%arg0 : tensor<15x16xf32>)
+    outs(%init : tensor<8x8x16xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    linalg.yield %in : f32
+  } -> tensor<8x8x16xf32>
+
+  %empty = tensor.empty() : tensor<4x8x8x4xf32>
+  %pack = linalg.pack %generic
+      outer_dims_perm = [2, 1, 0]
+      inner_dims_pos = [2]
+      inner_tiles = [4]
+      into %empty
+      : tensor<8x8x16xf32> -> tensor<4x8x8x4xf32>
+
+  return %pack : tensor<4x8x8x4xf32>
+}
+
+// CHECK-DAG: #[[$NON_DIM_INPUT_MAP:.+]] = affine_map<(d0, d1, d2) -> (d0 + d1, d2)>
+// CHECK-DAG: #[[$IDENTITY_OUTPUT_MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+// CHECK-LABEL: func.func @no_propagate_pack_with_non_dim_affine_input_expr
+// CHECK: %[[INIT:.+]] = tensor.empty() : tensor<8x8x16xf32>
+// CHECK: %[[GENERIC:.+]] = linalg.generic
+// CHECK-SAME: indexing_maps = [#[[$NON_DIM_INPUT_MAP]], #[[$IDENTITY_OUTPUT_MAP]]]
+// CHECK: %[[EMPTY:.+]] = tensor.empty() : tensor<4x8x8x4xf32>
+// CHECK: %[[PACK:.+]] = linalg.pack %[[GENERIC]]
+// CHECK-SAME: outer_dims_perm = [2, 1, 0] inner_dims_pos = [2] inner_tiles = [4]
+// CHECK-SAME: into %[[EMPTY]]
+// CHECK: return %[[PACK]] : tensor<4x8x8x4xf32>
+
+// -----
+
+func.func @no_push_down_unpack_with_non_dim_affine_input_expr(
+    %packed: tensor<4x8x8x4xf32>,
+    %non_dim: tensor<15x16xf32>,
+    %init: tensor<8x8x16xf32>) -> tensor<8x8x16xf32> {
+  %empty = tensor.empty() : tensor<8x8x16xf32>
+  %unpack = linalg.unpack %packed
+      outer_dims_perm = [2, 1, 0]
+      inner_dims_pos = [2]
+      inner_tiles = [4]
+      into %empty
+      : tensor<4x8x8x4xf32> -> tensor<8x8x16xf32>
+
+  %generic = linalg.generic {
+      indexing_maps = [
+        affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
+        affine_map<(d0, d1, d2) -> (d0 + d1, d2)>,
+        affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+      ],
+      iterator_types = ["parallel", "parallel", "parallel"]
+    }
+    ins(%unpack, %non_dim : tensor<8x8x16xf32>, tensor<15x16xf32>)
+    outs(%init : tensor<8x8x16xf32>) {
+  ^bb0(%in: f32, %non_dim_in: f32, %out: f32):
+    %sum = arith.addf %in, %non_dim_in : f32
+    linalg.yield %sum : f32
+  } -> tensor<8x8x16xf32>
+
+  return %generic : tensor<8x8x16xf32>
+}
+
+// CHECK-DAG: #[[$PUSH_IDENTITY_MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+// CHECK-DAG: #[[$PUSH_NON_DIM_INPUT_MAP:.+]] = affine_map<(d0, d1, d2) -> (d0 + d1, d2)>
+// CHECK-LABEL: func.func @no_push_down_unpack_with_non_dim_affine_input_expr
+// CHECK: %[[EMPTY:.+]] = tensor.empty() : tensor<8x8x16xf32>
+// CHECK: %[[UNPACK:.+]] = linalg.unpack
+// CHECK-SAME: %{{.+}} outer_dims_perm = [2, 1, 0]
+// CHECK-SAME: inner_dims_pos = [2] inner_tiles = [4]
+// CHECK-SAME: into %[[EMPTY]]
+// CHECK: %[[GENERIC:.+]] = linalg.generic
+// CHECK-SAME: indexing_maps = [#[[$PUSH_IDENTITY_MAP]], #[[$PUSH_NON_DIM_INPUT_MAP]], #[[$PUSH_IDENTITY_MAP]]]
+// CHECK-SAME: ins(%[[UNPACK]]
+// CHECK: return %[[GENERIC]] : tensor<8x8x16xf32>
+
+// -----
+
+func.func @propagate_pack_with_non_dim_affine_expr_without_outer_perm(
+    %arg0: tensor<8x8x16xf32>) -> tensor<15x4x4xf32> {
+  %init = tensor.empty() : tensor<15x16xf32>
+  %generic = linalg.generic {
+      indexing_maps = [
+        affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
+        affine_map<(d0, d1, d2) -> (d0 + d1, d2)>
+      ],
+      iterator_types = ["parallel", "parallel", "parallel"]
+    }
+    ins(%arg0 : tensor<8x8x16xf32>)
+    outs(%init : tensor<15x16xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    linalg.yield %in : f32
+  } -> tensor<15x16xf32>
+
+  %empty = tensor.empty() : tensor<15x4x4xf32>
+  %pack = linalg.pack %generic
+      inner_dims_pos = [1]
+      inner_tiles = [4]
+      into %empty
+      : tensor<15x16xf32> -> tensor<15x4x4xf32>
+
+  return %pack : tensor<15x4x4xf32>
+}
+
+// CHECK-DAG: #[[$PACKED_INPUT_MAP:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
+// CHECK-DAG: #[[$PACKED_OUTPUT_MAP:.+]] = affine_map<(d0, d1, d2, d3) -> (d0 + d1, d2, d3)>
+// CHECK-LABEL: func.func @propagate_pack_with_non_dim_affine_expr_without_outer_perm
+// CHECK-DAG: %[[OUTPUT_EMPTY:.+]] = tensor.empty() : tensor<15x4x4xf32>
+// CHECK-DAG: %[[INPUT_EMPTY:.+]] = tensor.empty() : tensor<8x8x4x4xf32>
+// CHECK: %[[INPUT_PACK:[^ ]+]] = linalg.pack %{{[^ ]+}}
+// CHECK-SAME: inner_dims_pos = [2] inner_tiles = [4]
+// CHECK-SAME: into %[[INPUT_EMPTY]]
+// CHECK: %[[GENERIC:.+]] = linalg.generic
+// CHECK-SAME: indexing_maps = [#[[$PACKED_INPUT_MAP]], #[[$PACKED_OUTPUT_MAP]]]
+// CHECK-SAME: ins(%[[INPUT_PACK]] : tensor<8x8x4x4xf32>)
+// CHECK-SAME: outs(%[[OUTPUT_EMPTY]] : tensor<15x4x4xf32>)
+// CHECK: return %[[GENERIC]] : tensor<15x4x4xf32>
