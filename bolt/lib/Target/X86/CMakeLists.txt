@@ -24,6 +24,9 @@ add_llvm_library(LLVMBOLTTargetX86
   NO_EXPORT
   DISABLE_LLVM_LINK_LLVM_DYLIB
 
+  LINK_LIBS
+  ${LLVM_PTHREAD_LIB}
+
   DEPENDS
   X86CommonTableGen
   )

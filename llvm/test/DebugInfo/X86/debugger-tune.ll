@@ -15,13 +15,13 @@
 ; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -debugger-tune=lldb < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=LLDB %s
 ; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj -debugger-tune=sce < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=SCE %s
 
-; GDB-NOT: DW_AT_APPLE_optimized
+; GDB: DW_AT_APPLE_optimized
 ; GDB-NOT: DW_OP_form_tls_address
 
 ; LLDB: DW_AT_APPLE_optimized
 ; LLDB: DW_OP_form_tls_address
 
-; SCE-NOT: DW_AT_APPLE_optimized
+; SCE: DW_AT_APPLE_optimized
 ; SCE-NOT: DW_OP_GNU_push_tls_address
 
 @var = thread_local global i32 0, align 4, !dbg !0

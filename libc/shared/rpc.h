@@ -74,8 +74,8 @@ static_assert(sizeof(Buffer) == 64, "Buffer size mismatch");
 /// A target specific struct containing a doorbell to wake the server-side
 /// thread.
 struct alignas(64) Doorbell {
-  uint64_t *value;
-  uint64_t *mailbox;
+  RPC_GLOBAL uint64_t *value;
+  RPC_GLOBAL uint64_t *mailbox;
   uint32_t event_id;
 };
 
@@ -112,26 +112,26 @@ template <bool Invert> struct Process {
   RPC_ATTRS ~Process() = default;
 
   const uint32_t port_count = 0;
-  Doorbell *const doorbell = nullptr;
-  const uint32_t *const inbox = nullptr;
-  uint32_t *const outbox = nullptr;
-  Header *const header = nullptr;
-  Buffer *const packet = nullptr;
+  RPC_GLOBAL Doorbell *const doorbell = nullptr;
+  RPC_GLOBAL const uint32_t *const inbox = nullptr;
+  RPC_GLOBAL uint32_t *const outbox = nullptr;
+  RPC_GLOBAL Header *const header = nullptr;
+  RPC_GLOBAL Buffer *const packet = nullptr;
 
   static constexpr uint64_t NUM_BITS_IN_WORD = sizeof(uint32_t) * 8;
   uint32_t lock[MAX_PORT_COUNT / NUM_BITS_IN_WORD] = {0};
 
+  // The buffer is supplied by the host unqualified, so the casts below are
+  // C-style as they need to change the address space.
   RPC_ATTRS Process(uint32_t port_count, void *buffer)
-      : port_count(port_count), doorbell(reinterpret_cast<Doorbell *>(
-                                    advance(buffer, doorbell_offset()))),
-        inbox(reinterpret_cast<uint32_t *>(
-            advance(buffer, inbox_offset(port_count)))),
-        outbox(reinterpret_cast<uint32_t *>(
-            advance(buffer, outbox_offset(port_count)))),
-        header(reinterpret_cast<Header *>(
-            advance(buffer, header_offset(port_count)))),
-        packet(reinterpret_cast<Buffer *>(
-            advance(buffer, buffer_offset(port_count)))) {}
+      : port_count(port_count),
+        doorbell((RPC_GLOBAL Doorbell *)advance(buffer, doorbell_offset())),
+        inbox((RPC_GLOBAL uint32_t *)advance(buffer, inbox_offset(port_count))),
+        outbox(
+            (RPC_GLOBAL uint32_t *)advance(buffer, outbox_offset(port_count))),
+        header((RPC_GLOBAL Header *)advance(buffer, header_offset(port_count))),
+        packet(
+            (RPC_GLOBAL Buffer *)advance(buffer, buffer_offset(port_count))) {}
 
   /// Allocate a memory buffer sufficient to store the following equivalent
   /// representation in memory.
@@ -156,8 +156,10 @@ template <bool Invert> struct Process {
 
     uint32_t event_id = rpc::broadcast_value(lane_mask, doorbell->event_id);
     if (rpc::is_first_lane(lane_mask)) {
+      // The interrupt is optional and is skipped if there is no mailbox.
       if (!__scoped_atomic_fetch_add(doorbell->value, 1UL, __ATOMIC_RELAXED,
-                                     __MEMORY_SCOPE_SYSTEM)) {
+                                     __MEMORY_SCOPE_SYSTEM) &&
+          doorbell->mailbox) {
         __scoped_atomic_store_n(doorbell->mailbox,
                                 static_cast<uint64_t>(doorbell->event_id),
                                 __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
@@ -223,7 +225,7 @@ template <bool Invert> struct Process {
   /// The packet is a linearly allocated array of buffers used to communicate
   /// with the other process. This function returns the appropriate slot in this
   /// array such that the process can operate on an entire warp or wavefront.
-  RPC_ATTRS Buffer *get_packet(uint32_t index, uint32_t lane_size) {
+  RPC_ATTRS RPC_GLOBAL Buffer *get_packet(uint32_t index, uint32_t lane_size) {
     return &packet[index * lane_size];
   }
 
@@ -235,47 +237,18 @@ template <bool Invert> struct Process {
     return Invert ? !cond : cond;
   }
 
-  /// Attempt to claim the lock at index. Return true on lock taken.
-  /// lane_mask is a bitmap of the threads in the warp that would hold the
-  /// single lock on success, e.g. the result of rpc::get_lane_mask()
-  /// The lock is held when the n-th bit of the lock bitfield is set.
+  /// Attempts to claim the lock at this index under the given execution mask.
+  /// Returns true on success.
   RPC_ATTRS bool try_lock(uint64_t lane_mask, uint32_t index) {
-    // On AMDGPU, test and set to the n-th lock bit and a sync_lane would
-    // suffice On NVIDIA with ITS we need to handle differences between the
-    // threads running and the threads that were detected in the previous call
-    // to get_lane_mask()
-    //
-    // All threads in lane_mask try to claim the lock. At most one can succeed.
-    // There may be threads active which are not in lane mask which must not
-    // succeed in taking the lock, as otherwise it will leak. This is handled
-    // by making threads which are not in lane_mask or with 0, a no-op.
-    uint32_t id = rpc::get_lane_id();
-    bool id_in_lane_mask = lane_mask & (1ul << id);
+    bool claimed = false;
+    if (rpc::is_first_lane(lane_mask))
+      claimed = !set_nth(lock, index);
+    claimed = rpc::broadcast_value(lane_mask, claimed);
 
-    // All threads in the warp call fetch_or. Possibly at the same time.
-    bool before = set_nth(lock, index, id_in_lane_mask);
-    uint64_t packed = rpc::ballot(lane_mask, before);
-
-    // If every bit set in lane_mask is also set in packed, every single thread
-    // in the warp failed to get the lock. Ballot returns unset for threads not
-    // in the lane mask.
-    //
-    // Cases, per thread:
-    // mask==0 -> unspecified before, discarded by ballot -> 0
-    // mask==1 and before==0 (success), set zero by ballot -> 0
-    // mask==1 and before==1 (failure), set one by ballot -> 1
-    //
-    // mask != packed implies at least one of the threads got the lock
-    // atomic semantics of fetch_or mean at most one of the threads for the lock
-
-    // If holding the lock then the caller can load values knowing said loads
-    // won't move past the lock. No such guarantee is needed if the lock acquire
-    // failed. This conditional branch is expected to fold in the caller after
-    // inlining the current function.
-    bool holding_lock = lane_mask != packed;
-    if (holding_lock)
+    // Do not move any reads past the point we obtain the lock.
+    if (claimed)
       __scoped_atomic_thread_fence(__ATOMIC_ACQUIRE, __MEMORY_SCOPE_DEVICE);
-    return holding_lock;
+    return claimed;
   }
 
   /// Unlock the lock at index. We need a lane sync to keep this function
@@ -284,11 +257,8 @@ template <bool Invert> struct Process {
     // Do not move any writes past the unlock.
     __scoped_atomic_thread_fence(__ATOMIC_RELEASE, __MEMORY_SCOPE_DEVICE);
 
-    // Use exactly one thread to clear the nth bit in the lock array Must
-    // restrict to a single thread to avoid one thread dropping the lock, then
-    // an unrelated warp claiming the lock, then a second thread in this warp
-    // dropping the lock again.
-    clear_nth(lock, index, rpc::is_first_lane(lane_mask));
+    if (rpc::is_first_lane(lane_mask))
+      clear_nth(lock, index);
     rpc::sync_lane(lane_mask);
   }
 
@@ -329,23 +299,20 @@ template <bool Invert> struct Process {
   }
 
   /// Conditionally set the n-th bit in the atomic bitfield.
-  RPC_ATTRS static constexpr uint32_t set_nth(uint32_t *bits, uint32_t index,
-                                              bool cond) {
+  RPC_ATTRS static constexpr uint32_t set_nth(uint32_t *bits, uint32_t index) {
     uint32_t slot = index / NUM_BITS_IN_WORD;
     uint32_t bit = index % NUM_BITS_IN_WORD;
-    return __scoped_atomic_fetch_or(&bits[slot],
-                                    static_cast<uint32_t>(cond) << bit,
-                                    __ATOMIC_RELAXED, __MEMORY_SCOPE_DEVICE) &
+    return __scoped_atomic_fetch_or(&bits[slot], 1u << bit, __ATOMIC_RELAXED,
+                                    __MEMORY_SCOPE_DEVICE) &
            (1u << bit);
   }
 
   /// Conditionally clear the n-th bit in the atomic bitfield.
-  RPC_ATTRS static constexpr uint32_t clear_nth(uint32_t *bits, uint32_t index,
-                                                bool cond) {
+  RPC_ATTRS static constexpr uint32_t clear_nth(uint32_t *bits,
+                                                uint32_t index) {
     uint32_t slot = index / NUM_BITS_IN_WORD;
     uint32_t bit = index % NUM_BITS_IN_WORD;
-    return __scoped_atomic_fetch_and(&bits[slot],
-                                     ~0u ^ (static_cast<uint32_t>(cond) << bit),
+    return __scoped_atomic_fetch_and(&bits[slot], ~0u ^ (1u << bit),
                                      __ATOMIC_RELAXED, __MEMORY_SCOPE_DEVICE) &
            (1u << bit);
   }
@@ -354,7 +321,7 @@ template <bool Invert> struct Process {
 /// Invokes a function across every active buffer across the total lane size.
 template <typename F>
 RPC_ATTRS static void invoke_rpc(F &&fn, uint32_t lane_size, uint64_t lane_mask,
-                                 Buffer *slot) {
+                                 RPC_GLOBAL Buffer *slot) {
   if constexpr (is_process_gpu()) {
     fn(&slot[rpc::get_lane_id()], rpc::get_lane_id());
   } else {
@@ -525,7 +492,7 @@ template <bool T>
 template <typename W>
 RPC_ATTRS void Port<T>::recv_and_send(W work) {
   recv(work);
-  send([](Buffer *, uint32_t) { /* no-op */ });
+  send([](RPC_GLOBAL Buffer *, uint32_t) { /* no-op */ });
 }
 
 /// Helper routine to simplify the interface when sending from the GPU using
@@ -541,28 +508,28 @@ RPC_ATTRS void Port<T>::send_n(const void *src, uint64_t size) {
 /// multiples of the packet length.
 template <bool T>
 RPC_ATTRS void Port<T>::send_n(const void *const *src, uint64_t *size) {
+  constexpr uint64_t BUFFER_SIZE = sizeof(Buffer::data);
+  constexpr uint64_t FIRST_CHUNK = BUFFER_SIZE - sizeof(uint64_t);
   uint64_t num_sends = 0;
-  send([&](Buffer *buffer, uint32_t id) {
+  send([&](RPC_GLOBAL Buffer *buffer, uint32_t id) {
     reinterpret_cast<uint64_t *>(buffer->data)[0] = lane_value(size, id);
     num_sends = is_process_gpu() ? lane_value(size, id)
                                  : rpc::max(lane_value(size, id), num_sends);
     uint64_t len =
-        lane_value(size, id) > sizeof(Buffer::data) - sizeof(uint64_t)
-            ? sizeof(Buffer::data) - sizeof(uint64_t)
-            : lane_value(size, id);
+        lane_value(size, id) > FIRST_CHUNK ? FIRST_CHUNK : lane_value(size, id);
     rpc_memcpy(&buffer->data[1], lane_value(src, id), len);
   });
-  uint64_t idx = sizeof(Buffer::data) - sizeof(uint64_t);
+  uint64_t idx = FIRST_CHUNK;
   uint64_t mask = process.header[index].mask;
-  while (rpc::ballot(mask, idx < num_sends)) {
-    send([=](Buffer *buffer, uint32_t id) {
-      uint64_t len = lane_value(size, id) - idx > sizeof(Buffer::data)
-                         ? sizeof(Buffer::data)
+  while (rpc::ballot(mask, idx < num_sends && num_sends > FIRST_CHUNK)) {
+    send([=](RPC_GLOBAL Buffer *buffer, uint32_t id) {
+      uint64_t len = lane_value(size, id) - idx > BUFFER_SIZE
+                         ? BUFFER_SIZE
                          : lane_value(size, id) - idx;
       if (idx < lane_value(size, id))
         rpc_memcpy(buffer->data, advance(lane_value(src, id), idx), len);
     });
-    idx += sizeof(Buffer::data);
+    idx += BUFFER_SIZE;
   }
 }
 
@@ -572,30 +539,30 @@ RPC_ATTRS void Port<T>::send_n(const void *const *src, uint64_t *size) {
 template <bool T>
 template <typename A>
 RPC_ATTRS void Port<T>::recv_n(void **dst, uint64_t *size, A &&alloc) {
+  constexpr uint64_t BUFFER_SIZE = sizeof(Buffer::data);
+  constexpr uint64_t FIRST_CHUNK = BUFFER_SIZE - sizeof(uint64_t);
   uint64_t num_recvs = 0;
-  recv([&](Buffer *buffer, uint32_t id) {
+  recv([&](RPC_GLOBAL Buffer *buffer, uint32_t id) {
     lane_value(size, id) = reinterpret_cast<uint64_t *>(buffer->data)[0];
     lane_value(dst, id) =
         reinterpret_cast<uint8_t *>(alloc(lane_value(size, id)));
     num_recvs = is_process_gpu() ? lane_value(size, id)
                                  : rpc::max(lane_value(size, id), num_recvs);
     uint64_t len =
-        lane_value(size, id) > sizeof(Buffer::data) - sizeof(uint64_t)
-            ? sizeof(Buffer::data) - sizeof(uint64_t)
-            : lane_value(size, id);
+        lane_value(size, id) > FIRST_CHUNK ? FIRST_CHUNK : lane_value(size, id);
     rpc_memcpy(lane_value(dst, id), &buffer->data[1], len);
   });
-  uint64_t idx = sizeof(Buffer::data) - sizeof(uint64_t);
+  uint64_t idx = FIRST_CHUNK;
   uint64_t mask = process.header[index].mask;
-  while (rpc::ballot(mask, idx < num_recvs)) {
-    recv([=](Buffer *buffer, uint32_t id) {
-      uint64_t len = lane_value(size, id) - idx > sizeof(Buffer::data)
-                         ? sizeof(Buffer::data)
+  while (rpc::ballot(mask, idx < num_recvs && num_recvs > FIRST_CHUNK)) {
+    recv([=](RPC_GLOBAL Buffer *buffer, uint32_t id) {
+      uint64_t len = lane_value(size, id) - idx > BUFFER_SIZE
+                         ? BUFFER_SIZE
                          : lane_value(size, id) - idx;
       if (idx < lane_value(size, id))
         rpc_memcpy(advance(lane_value(dst, id), idx), buffer->data, len);
     });
-    idx += sizeof(Buffer::data);
+    idx += BUFFER_SIZE;
   }
 }
 
@@ -605,7 +572,7 @@ template <typename Ty>
 RPC_ATTRS void Port<T>::send_n(const Ty *src) {
   for (uint64_t idx = 0; idx < sizeof(Ty); idx += sizeof(Buffer::data)) {
     const uint64_t bytes = rpc::min(sizeof(Ty) - idx, sizeof(Buffer::data));
-    send([&](Buffer *buffer, uint32_t id) {
+    send([&](RPC_GLOBAL Buffer *buffer, uint32_t id) {
       rpc_memcpy(buffer->data, advance(&lane_value(src, id), idx), bytes);
     });
   }
@@ -617,7 +584,7 @@ template <typename Ty>
 RPC_ATTRS void Port<T>::recv_n(Ty *dst) {
   for (uint64_t idx = 0; idx < sizeof(Ty); idx += sizeof(Buffer::data)) {
     const uint64_t bytes = rpc::min(sizeof(Ty) - idx, sizeof(Buffer::data));
-    recv([&](Buffer *buffer, uint32_t id) {
+    recv([&](RPC_GLOBAL Buffer *buffer, uint32_t id) {
       rpc_memcpy(advance(&lane_value(dst, id), idx), buffer->data, bytes);
     });
   }

@@ -18,7 +18,7 @@ using namespace llvm;
 
 class LiveRegUnitsTest : public AMDGPUCodeGenTestBase {
 public:
-  void SetUp() override { setUpImpl("amdgcn-amd-", "gfx1200", ""); }
+  void SetUp() override { setUpImpl("amdgpu12.00-amd-", "", ""); }
 };
 
 TEST_F(LiveRegUnitsTest, TestVGPRBlockLoadStore) {

@@ -1227,7 +1227,7 @@ bool DecodeCStrMap(const DataExtractor &data, lldb::offset_t *offset_ptr,
 }
 
 constexpr llvm::StringLiteral kIdentifierSymbolTable("SYMB");
-constexpr uint32_t CURRENT_CACHE_VERSION = 1;
+constexpr uint32_t CURRENT_CACHE_VERSION = 2;
 
 // If the size of the Symbol object changes, the serialized
 // format likely also needs to change so the

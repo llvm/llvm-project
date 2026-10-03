@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass si-fold-operands %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgpu9.00 -verify-machineinstrs -run-pass si-fold-operands %s -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: test_part_fold{{$}}
 # GCN: %2:sreg_32 = S_ADD_I32 70, %1
@@ -272,7 +272,7 @@ body: |
 
 # Ignore regmask operands
 # GCN-LABEL: name: test_si_cs_chain_fold_with_regmask{{$}}
-# GCN: SI_CS_CHAIN_TC_W32 %0, 0, 0, 1234, amdgpu_allvgprs, implicit $sgpr0, implicit $vgpr8
+# GCN: SI_CS_CHAIN_TC_W32 %0, 0, 0, %1, amdgpu_allvgprs, implicit $sgpr0, implicit $vgpr8
 ---
 name: test_si_cs_chain_fold_with_regmask
 tracksRegLiveness: true
@@ -280,7 +280,7 @@ body: |
   bb.0:
     liveins: $sgpr0, $sgpr2_sgpr3, $vgpr8
 
-    %1:ccr_sgpr_64 = COPY $sgpr2_sgpr3
-    %2:sreg_32 = S_MOV_B32 1234
-    SI_CS_CHAIN_TC_W32 %1:ccr_sgpr_64, 0, 0, %2:sreg_32, amdgpu_allvgprs, implicit $sgpr0, implicit $vgpr8
+    %0:ccr_sgpr_64 = COPY $sgpr2_sgpr3
+    %1:sreg_32 = S_MOV_B32 1234
+    SI_CS_CHAIN_TC_W32 %0:ccr_sgpr_64, 0, 0, %1:sreg_32, amdgpu_allvgprs, implicit $sgpr0, implicit $vgpr8
 ...

@@ -2750,9 +2750,7 @@ TGParser::resolveInitTypes(ArrayRef<const Init *> Inits, const Twine &ErrCtx) {
     if (isa<UnsetInit>(V))
       continue;
 
-    const RecTy *VTy = nullptr;
-    if (const auto *Vt = dyn_cast<TypedInit>(V))
-      VTy = Vt->getType();
+    const RecTy *VTy = cast<TypedInit>(V)->getType();
 
     if (!Type) {
       Type = VTy;
@@ -4779,6 +4777,9 @@ bool TGParser::ParseFile() {
   // If we have unread input at the end of the file, report it.
   if (Lex.getCode() == tgtok::Eof)
     return false;
+
+  if (Lex.getCode() == tgtok::Error)
+    return true;
 
   return TokError("Unexpected token at top level");
 }

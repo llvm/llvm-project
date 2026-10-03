@@ -170,3 +170,45 @@ entry:
   %d. = select i1 %tobool.not, double %d, double -0.000000e+00
   ret double %d.
 }
+
+define double @poison() nounwind {
+; CHECK32D-LABEL: poison:
+; CHECK32D:       # %bb.0:
+; CHECK32D-NEXT:    fcvt.d.w fa0, zero
+; CHECK32D-NEXT:    ret
+;
+; CHECK64D-LABEL: poison:
+; CHECK64D:       # %bb.0:
+; CHECK64D-NEXT:    fmv.d.x fa0, zero
+; CHECK64D-NEXT:    ret
+;
+; CHECKRV32ZDINX-LABEL: poison:
+; CHECKRV32ZDINX:       # %bb.0:
+; CHECKRV32ZDINX-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: poison:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    ret
+  ret double poison
+}
+
+define double @undef() nounwind {
+; CHECK32D-LABEL: undef:
+; CHECK32D:       # %bb.0:
+; CHECK32D-NEXT:    fcvt.d.w fa0, zero
+; CHECK32D-NEXT:    ret
+;
+; CHECK64D-LABEL: undef:
+; CHECK64D:       # %bb.0:
+; CHECK64D-NEXT:    fmv.d.x fa0, zero
+; CHECK64D-NEXT:    ret
+;
+; CHECKRV32ZDINX-LABEL: undef:
+; CHECKRV32ZDINX:       # %bb.0:
+; CHECKRV32ZDINX-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: undef:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    ret
+  ret double undef
+}

@@ -43,7 +43,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -109,7 +108,6 @@ static cl::opt<bool>
     DumpThinCGSCCs("dump-thin-cg-sccs", cl::init(false), cl::Hidden,
                    cl::desc("Dump the SCCs in the ThinLTO index's callgraph"));
 namespace llvm {
-extern cl::opt<bool> CodeGenDataThinLTOTwoRounds;
 extern cl::opt<bool> ForceImportAll;
 extern cl::opt<bool> AlwaysRenamePromotedLocals;
 } // end namespace llvm
@@ -304,9 +302,14 @@ std::string llvm::computeLTOCacheKey(
     }
   };
 
-  // Include the hash for the linkage type to reflect internalization and weak
-  // resolution, and collect any used type identifier resolutions.
-  for (auto &GS : DefinedGlobals) {
+  // Sort the defined globals by GUID to be independent of the insertion order,
+  // which may depend on the order that modules are added.
+  SmallVector<std::pair<GlobalValue::GUID, GlobalValueSummary *>>
+      SortedDefinedGlobals(DefinedGlobals.begin(), DefinedGlobals.end());
+  llvm::sort(SortedDefinedGlobals, llvm::less_first());
+  for (auto &GS : SortedDefinedGlobals) {
+    // Include the hash for the linkage type to reflect internalization and weak
+    // resolution, and collect any used type identifier resolutions.
     GlobalValue::LinkageTypes Linkage = GS.second->linkage();
     Hasher.update(
         ArrayRef<uint8_t>((const uint8_t *)&Linkage, sizeof(Linkage)));
@@ -656,8 +659,7 @@ Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
 bool InputFile::Symbol::isLibcall(
     const TargetLibraryInfo &TLI,
     const RTLIB::RuntimeLibcallsInfo &Libcalls) const {
-  LibFunc F;
-  if (TLI.getLibFunc(IRName, F) && TLI.has(F))
+  if (TLI.has(TLI.getLibFunc(IRName)))
     return true;
   return Libcalls.getSupportedLibcallImpl(IRName) != RTLIB::Unsupported;
 }
@@ -1126,7 +1128,7 @@ LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
       NewIA += " " + llvm::join(NonPrevailingAsmSymbols, ", ");
     }
     NewIA += "\n";
-    M.prependModuleInlineAsm(NewIA);
+    M.prependModuleInlineAsm({NewIA, M.getModuleInlineAsm().front().Props});
   }
 
   assert(MsymI == MsymE);
@@ -2294,7 +2296,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
     return BackendProcess->wait();
   };
 
-  if (!CodeGenDataThinLTOTwoRounds) {
+  if (!cgdata::thinLTOTwoRounds()) {
     std::unique_ptr<ThinBackendProc> BackendProc =
         ThinLTO.Backend(Conf, ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
                         AddStream, Cache, BitcodeLibFuncs);

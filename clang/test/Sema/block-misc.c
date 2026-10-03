@@ -145,6 +145,7 @@ void test15(void) {
 }
 
 __block int test16i;  // expected-error {{'__block' is not allowed on a nonlocal variable}}
+int test16i; // This line was introduced by GH183974
 
 void test16(__block int i) { // expected-error {{'__block' is not allowed on a nonlocal variable}}
   int size = 5;

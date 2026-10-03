@@ -191,7 +191,7 @@ void LiveVariables::HandleVirtRegUse(Register Reg, MachineBasicBlock *MBB,
   // where there is a use in a PHI node that's a predecessor to the defining
   // block. We don't want to mark all predecessors as having the value "alive"
   // in this case.
-  if (MBB == MRI->getVRegDef(Reg)->getParent())
+  if (MBB == MRI->getDefBlock(Reg))
     return;
 
   // Add a new kill entry for this basic block. If this virtual register is
@@ -202,7 +202,7 @@ void LiveVariables::HandleVirtRegUse(Register Reg, MachineBasicBlock *MBB,
 
   // Update all dominating blocks to mark them as "known live".
   for (MachineBasicBlock *Pred : MBB->predecessors())
-    MarkVirtRegAliveInBlock(VRInfo, MRI->getVRegDef(Reg)->getParent(), Pred);
+    MarkVirtRegAliveInBlock(VRInfo, MRI->getDefBlock(Reg), Pred);
 }
 
 void LiveVariables::HandleVirtRegDef(Register Reg, MachineInstr &MI) {
@@ -566,13 +566,12 @@ void LiveVariables::runOnBlock(MachineBasicBlock *MBB, unsigned NumRegs) {
 
     for (Register I : VarInfoVec)
       // Mark it alive only in the block we are representing.
-      MarkVirtRegAliveInBlock(getVarInfo(I), MRI->getVRegDef(I)->getParent(),
-                              MBB);
+      MarkVirtRegAliveInBlock(getVarInfo(I), MRI->getDefBlock(I), MBB);
   }
 
   // MachineCSE may CSE instructions which write to non-allocatable physical
   // registers across MBBs. Remember if any reserved register is liveout.
-  SmallSet<unsigned, 4> LiveOuts;
+  SmallSet<MCRegister, 4> LiveOuts;
   for (const MachineBasicBlock *SuccMBB : MBB->successors()) {
     if (SuccMBB->isEHPad())
       continue;

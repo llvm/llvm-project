@@ -291,7 +291,7 @@
 // CHECK-HIP-NEG-NOT: #define __CLANG_RDC__ 1
 // CHECK-HIP-NEG-NOT: #define HIP_API_PER_THREAD_DEFAULT_STREAM
 
-// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgpu-amd-amdhsa \
 // RUN:   -fcuda-is-device \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-HIP-DEV
 // CHECK-HIP-DEV: #define __HIPCC__ 1
@@ -299,7 +299,7 @@
 // CHECK-HIP-DEV: #define __HIP__ 1
 // CHECK-HIP-DEV-NOT: #define __HIP_LLVM__ 1
 
-// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgcn-amd-amdhsa-llvm \
+// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgpu-amd-amdhsa-llvm \
 // RUN:   -fcuda-is-device \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-HIP-LLVM
 // CHECK-HIP-LLVM: #define __HIPCC__ 1
@@ -312,7 +312,7 @@
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-CUDA-DEV-NEG
 // CHECK-CUDA-DEV-NEG-NOT: #define __CLANG_RDC__ 1
 
-// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgpu-amd-amdhsa \
 // RUN:   -fcuda-is-device \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-HIP-DEV-NEG
 // CHECK-HIP-DEV-NEG-NOT: #define __CUDA_ARCH__
@@ -326,7 +326,7 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-RDC
 // RUN: %clang_cc1 %s -E -dM -o - -x hip -triple x86_64-unknown-linux-gnu \
 // RUN:   -fgpu-rdc | FileCheck %s --check-prefix=CHECK-RDC
-// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgpu-amd-amdhsa \
 // RUN:   -fgpu-rdc -fcuda-is-device \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-RDC
 // CHECK-RDC: #define __CLANG_RDC__ 1
@@ -334,7 +334,7 @@
 // RUN: %clang_cc1 %s -E -dM -o - -x hip -triple x86_64-unknown-linux-gnu \
 // RUN:   -fgpu-default-stream=per-thread \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-PTH
-// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgpu-amd-amdhsa \
 // RUN:   -fcuda-is-device -fgpu-default-stream=per-thread \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-PTH
 // CHECK-PTH: #define HIP_API_PER_THREAD_DEFAULT_STREAM 1
@@ -353,7 +353,7 @@
 // CHECK-HIPSTDPAR-INTERPOSE: #define __HIPSTDPAR__ 1
 
 // RUN: %clang_cc1 %s -E -dM -o - -x hip --hipstdpar --hipstdpar-interpose-alloc \
-// RUN:  -triple amdgcn-amd-amdhsa -fcuda-is-device | FileCheck -match-full-lines \
+// RUN:  -triple amdgpu-amd-amdhsa -fcuda-is-device | FileCheck -match-full-lines \
 // RUN:  %s --check-prefix=CHECK-HIPSTDPAR-INTERPOSE-DEV-NEG
 // CHECK-HIPSTDPAR-INTERPOSE-DEV-NEG: #define __HIPSTDPAR__ 1
 // CHECK-HIPSTDPAR-INTERPOSE-DEV-NEG-NOT: #define __HIPSTDPAR_INTERPOSE_ALLOC_V1__ 1

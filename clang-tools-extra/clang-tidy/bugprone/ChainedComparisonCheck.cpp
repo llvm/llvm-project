@@ -106,10 +106,9 @@ void ChainedComparisonData::extract(const Expr *Op) {
     return;
   }
 
-  if (const auto *OverloadedOp = dyn_cast<CXXOperatorCallExpr>(Op)) {
-    if (OverloadedOp->getNumArgs() == 2U)
-      extract(OverloadedOp);
-  }
+  if (const auto *OverloadedOp = dyn_cast<CXXOperatorCallExpr>(Op);
+      OverloadedOp && OverloadedOp->getNumArgs() == 2U)
+    extract(OverloadedOp);
 }
 
 ChainedComparisonCheck::ChainedComparisonCheck(StringRef Name,

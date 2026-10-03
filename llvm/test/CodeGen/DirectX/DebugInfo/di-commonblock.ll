@@ -1,4 +1,5 @@
-; RUN: llc %s -o - | FileCheck %s
+; RUN: opt -S -passes=dxil-debug-info %s -o - | FileCheck %s
+; RUN: llc %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-COMMENT
 
 target triple = "dxil-pc-shadermodel6.3-library"
 
@@ -11,20 +12,23 @@ define i32 @subr() !dbg !9 {
 }
 
 ; CHECK-DAG: ![[CU:[0-9]+]] = distinct !DICompileUnit(language: DW_LANG_Fortran90, file: ![[FILE:[0-9]+]], producer: "PGI Fortran", isOptimized: false, runtimeVersion: 2, emissionKind: FullDebug, retainedTypes: !{{.*}}, globals: ![[GVE_LIST:[0-9]+]])
-; CHECK-DAG: DXIL: ![[CU]]: additional data: ![[SUBPROG_LIST:[0-9]+]]
-; CHECK-DAG: ![[SUBPROG_LIST]] = !{![[SUBPROG:[0-9]+]]}
-; CHECK-DAG: ![[SUBPROG]] = distinct !DISubprogram(name: "s", scope: ![[CU]], file: ![[FILE]], line: 1, type: !{{.*}}, spFlags: DISPFlagDefinition, unit: ![[CU]])
-; CHECK-DAG: DXIL: ![[SUBPROG]]: to be replaced by: ![[NEWSP:[0-9]+]]
-; CHECK-DAG: ![[NEWSP]] = !DISubprogram(name: "s", scope: ![[CU]], file: ![[FILE]], line: 1, type: !{{.*}}, spFlags: DISPFlagDefinition, unit: ![[CU]])
-; CHECK-DAG: DXIL: ![[NEWSP]]: additional data: ptr @subr
+; CHECK-COMMENT-DAG: DXIL: ![[CU]]: additional data: ![[SUBPROG_LIST:[0-9]+]]
+; CHECK-DAG: ![[SUBPROG:[0-9]+]] = distinct !DISubprogram(name: "s", scope: ![[CU]], file: ![[FILE]], line: 1, type: !{{.*}}, spFlags: DISPFlagDefinition, unit: ![[CU]])
+; CHECK-COMMENT-DAG: ![[SUBPROG_LIST]] = !{![[SUBPROG]]}
+; CHECK-COMMENT-DAG: DXIL: ![[SUBPROG]]: to be replaced by: ![[NEWSP:[0-9]+]]
+; CHECK-COMMENT-DAG: ![[NEWSP]] = !DISubprogram(name: "s", scope: ![[CU]], file: ![[FILE]], line: 1, type: !{{.*}}, spFlags: DISPFlagDefinition, unit: ![[CU]])
+; CHECK-COMMENT-DAG: DXIL: ![[NEWSP]]: additional data: ptr @subr
 ; CHECK-DAG: ![[GVE_LIST]] = !{![[GVE1:[0-9]+]], ![[GVE2:[0-9]+]]}
-; CHECK-DAG: DXIL: ![[GVE1]]: to be replaced by: ![[GV1:[0-9]+]]
+; CHECK-DAG: ![[GVE1]] = !DIGlobalVariableExpression(var: ![[GV1:[0-9]+]], expr: !DIExpression())
+; CHECK-COMMENT-DAG: DXIL: ![[GVE1]]: to be replaced by: ![[GV1]]
 ; CHECK-DAG: ![[GV1]] = distinct !DIGlobalVariable(name: "COMMON /foo/", scope: ![[COMMON:[0-9]+]], file: ![[FILE]], line: 4, type: ![[TYPE_INT_ARRAY:[0-9]+]], isLocal: false, isDefinition: true)
-; CHECK-DAG: DXIL: ![[GV1]]: additional data: ptr @common_a
-; CHECK-DAG: DXIL: ![[GVE2]]: to be replaced by: ![[GV2:[0-9]+]]
+; CHECK-COMMENT-DAG: DXIL: ![[GV1]]: additional data: ptr @common_a
+; CHECK-DAG: ![[GVE2]] = !DIGlobalVariableExpression(var: ![[GV2:[0-9]+]], expr: !DIExpression(DW_OP_plus_uconst, 4))
+; CHECK-COMMENT-DAG: DXIL: ![[GVE2]]: to be replaced by: ![[GV2]]
 ; CHECK-DAG: ![[GV2]] = distinct !DIGlobalVariable(name: "c", scope: ![[COMMON]], file: ![[FILE]], type: ![[TYPE_INT_ARRAY]], isLocal: false, isDefinition: true)
 ; CHECK-DAG: ![[TYPE_INT_ARRAY]] = !DIBasicType(name: "int", size: 32)
-; CHECK-DAG: DXIL: ![[COMMON]]: to be replaced by: ![[NEWSP]]
+; CHECK-DAG: ![[COMMON]] = !DICommonBlock(scope: ![[SUBPROG]], declaration: ![[GV1]], name: "a", file: ![[FILE]], line: 4)
+; CHECK-COMMENT-DAG: DXIL: ![[COMMON]]: to be replaced by: ![[NEWSP]]
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!6, !7}

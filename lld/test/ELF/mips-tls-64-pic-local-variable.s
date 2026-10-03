@@ -6,7 +6,7 @@
 # we do the right thing now:
 
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-freebsd %s -o %t.o
-# RUN: echo "{ global: foo; local: *; };" > %t.script
+# RUN: echo "{ global: foo; y; local: *; };" > %t.script
 # RUN: echo "SECTIONS { \
 # RUN:         . = 0x10000; .text : { *(.text) } \
 # RUN:         . = 0x20000; .got  : { *(.got)  } \
@@ -18,13 +18,15 @@
 # GOT:        Contents of section .got:
 # GOT-NEXT:   20000 00000000 00000000 80000000 00000000
 # GOT-NEXT:   20010 00000000 00000000 00000000 00000000
-# GOT-NEXT:   20020 ffffffff ffff8000
+# GOT-NEXT:   20020 ffffffff ffff8000 00000000 00000000
+# GOT-NEXT:   20030 ffffffff ffff8004
 
 # RELOCS:      Section ({{.+}}) .rel.dyn {
-# RELOCS-NEXT:  0x20018 R_MIPS_TLS_DTPMOD64/R_MIPS_NONE/R_MIPS_NONE
+# RELOCS-NEXT:  0x20018 R_MIPS_TLS_DTPMOD64/R_MIPS_NONE/R_MIPS_NONE -
+# RELOCS-NEXT:  0x20028 R_MIPS_TLS_DTPMOD64/R_MIPS_NONE/R_MIPS_NONE -
 # RELOCS-NEXT: }
 
-# Test case generated using:
+# Test case initially generated using:
 # clang -mcpu=mips4 -target mips64-unknown-freebsd12.0 \
 #       -fpic -O -G0 -EB -mabi=n64 -msoft-float -std=gnu99 -S %s -o %t.s
 # from the following source:
@@ -44,12 +46,19 @@ foo:
         ld      $25, %call16(__tls_get_addr)($gp)
         jalr    $25
         daddiu  $4, $gp, %tlsgd(x)
+        daddiu  $4, $gp, %tlsgd(y)
         .end    foo
 
-        .type   x,@object
         .section        .tbss,"awT",@nobits
-        .globl  x
         .p2align        2
+        .type   x,@object
+        .globl  x
 x:
         .4byte  0
         .size   x, 4
+        .type   y,@object
+        .globl  y
+        .protected      y
+y:
+        .4byte  0
+        .size   y, 4

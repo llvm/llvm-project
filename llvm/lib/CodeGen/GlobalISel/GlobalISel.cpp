@@ -15,12 +15,12 @@
 using namespace llvm;
 
 void llvm::initializeGlobalISel(PassRegistry &Registry) {
-  initializeIRTranslatorPass(Registry);
-  initializeLegalizerPass(Registry);
-  initializeLoadStoreOptPass(Registry);
-  initializeLocalizerPass(Registry);
-  initializeRegBankSelectPass(Registry);
-  initializeInstructionSelectPass(Registry);
+  initializeIRTranslatorLegacyPass(Registry);
+  initializeLegalizerLegacyPass(Registry);
+  initializeLoadStoreOptLegacyPass(Registry);
+  initializeLocalizerLegacyPass(Registry);
+  initializeRegBankSelectLegacyPass(Registry);
+  initializeInstructionSelectLegacyPass(Registry);
   initializeGISelValueTrackingAnalysisLegacyPass(Registry);
   initializeGISelCSEAnalysisWrapperPassPass(Registry);
 }

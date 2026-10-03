@@ -90,20 +90,26 @@ int too_large_right_operand_symbolic(int left, int right) {
   // expected-note@-2 {{The result of right shift is undefined because the right operand is >= 32, not smaller than 32, the capacity of 'int'}}
 }
 
+unsigned huge_right_operand_symbolic(unsigned x, unsigned long long t) {
+  // expected-note@+2 {{Assuming 't' is >= 18000000000000000000}}
+  // expected-note@+1 {{Taking false branch}}
+  if (t < 18000000000000000000ULL)
+    return 0;
+  return x >> t; // no-crash: gh #218867
+  // expected-warning@-1 {{Right shift overflows the capacity of 'unsigned int'}}
+  // expected-note@-2 {{The result of right shift is undefined because the right operand is >= 18000000000000000000, not smaller than 32, the capacity of 'unsigned int'}}
+}
+
 void clang_analyzer_value(int);
 int too_large_right_operand_compound(unsigned short arg) {
   // Note: this would be valid code with an 'unsigned int' because
   // unsigned addition is allowed to overflow.
   clang_analyzer_value(32+arg);
-  // expected-warning@-1 {{32s:{ [-2147483648, 2147483647] }}
-  // expected-note@-2 {{32s:{ [-2147483648, 2147483647] }}
+  // expected-warning@-1 {{32s:{ [32, 65567] }}
+  // expected-note@-2 {{32s:{ [32, 65567] }}
   return 1 << (32 + arg);
   // expected-warning@-1 {{Left shift overflows the capacity of 'int'}}
-  // expected-note@-2 {{The result of left shift is undefined because the right operand is not smaller than 32, the capacity of 'int'}}
-  // FIXME: this message should be
-  //     {{The result of left shift is undefined because the right operand is >= 32, not smaller than 32, the capacity of 'int'}}
-  // but for some reason neither the new logic, nor debug.ExprInspection and
-  // clang_analyzer_value reports this range information.
+  // expected-note@-2 {{The result of left shift is undefined because the right operand is >= 32, not smaller than 32, the capacity of 'int'}}
 }
 
 // TEST STATE UPDATES
@@ -116,7 +122,7 @@ void state_update(char a, int *p) {
   // expected-note@-1 {{Assuming right operand of bit shift is non-negative but less than 32}}
   *p += 1 << (a + 32);
   // expected-warning@-1 {{Left shift overflows the capacity of 'int'}}
-  // expected-note@-2 {{The result of left shift is undefined because the right operand is not smaller than 32, the capacity of 'int'}}
+  // expected-note@-2 {{The result of left shift is undefined because the right operand is >= 32, not smaller than 32, the capacity of 'int'}}
 }
 
 void state_update_2(char a, int *p) {

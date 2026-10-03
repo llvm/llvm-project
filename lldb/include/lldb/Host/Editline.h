@@ -41,7 +41,7 @@
 #include <histedit.h>
 #endif
 
-#include <csignal>
+#include <atomic>
 #include <mutex>
 #include <optional>
 #include <string>
@@ -418,7 +418,11 @@ private:
   std::string m_set_continuation_prompt;
   std::string m_current_prompt;
   bool m_needs_prompt_repaint = false;
-  volatile std::sig_atomic_t m_terminal_size_has_changed = 0;
+  /// Set from the signal thread on SIGWINCH and consumed on the thread that
+  /// owns libedit, which applies the resize in its read loop. el_resize() is
+  /// not safe to run off that thread, so this only records that a resize is
+  /// pending rather than performing it here.
+  std::atomic<bool> m_terminal_size_has_changed = false;
   std::string m_editor_name;
   FILE *m_input_file;
   lldb::LockableStreamFileSP m_output_stream_sp;

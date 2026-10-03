@@ -900,21 +900,25 @@ defm DS_LOAD_TR16_B128 : DS_1A_RET_NoM0<"ds_load_tr16_b128", VGPROp_128>;
 } // End WaveSizePredicate = isWave32, mayStore = 0
 
 let OtherPredicates = [HasLdsBarrierArriveAtomic] in {
-let ASYNC_CNT = 1, LGKM_CNT = 0, Uses = [EXEC, ASYNCcnt], Defs = [ASYNCcnt] in {
-def DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_1A_Off16_NORET<"ds_atomic_async_barrier_arrive_b64">;
-}
+  let isConvergent = 1 in {
+    let ASYNC_CNT = 1, LGKM_CNT = 0, Uses = [EXEC, ASYNCcnt], Defs = [ASYNCcnt] in {
+      def DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_1A_Off16_NORET<"ds_atomic_async_barrier_arrive_b64">;
+    }
 
-def : GCNPat <
-  (int_amdgcn_ds_atomic_async_barrier_arrive_b64 (DS1Addr1Offset i32:$ptr, i32:$offset)),
-  (DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 VGPROp_32:$ptr, Offset:$offset, (i1 0))
->;
+    defm DS_ATOMIC_BARRIER_ARRIVE_RTN_B64 : DS_1A1D_RET_mc_gfx9<"ds_atomic_barrier_arrive_rtn_b64", VGPROp_64>;
+  } // End isConvergent = 1
 
-defm DS_ATOMIC_BARRIER_ARRIVE_RTN_B64 : DS_1A1D_RET_mc_gfx9<"ds_atomic_barrier_arrive_rtn_b64", VGPROp_64>;
+  def : GCNPat <
+    (int_amdgcn_ds_atomic_async_barrier_arrive_b64 (DS1Addr1Offset i32:$ptr, i32:$offset)),
+    (DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 VGPROp_32:$ptr, Offset:$offset, (i1 0))
+  >;
 
-def : GCNPat<
-  (i64 (int_amdgcn_ds_atomic_barrier_arrive_rtn_b64 (DS1Addr1Offset i32:$ptr, i32:$offset), i64:$data)),
-  (DS_ATOMIC_BARRIER_ARRIVE_RTN_B64 $ptr, $data, Offset:$offset, (i1 0))
->;
+
+
+  def : GCNPat<
+    (i64 (int_amdgcn_ds_atomic_barrier_arrive_rtn_b64 (DS1Addr1Offset i32:$ptr, i32:$offset), i64:$data)),
+    (DS_ATOMIC_BARRIER_ARRIVE_RTN_B64 $ptr, $data, Offset:$offset, (i1 0))
+  >;
 } // End OtherPredicates = [HasLdsBarrierArriveAtomic]
 
 } // End SubtargetPredicate = isGFX1250Plus
@@ -1111,9 +1115,14 @@ multiclass DS64Bit4ByteAlignedPat_mc<ValueType vt> {
     def : DS64Bit4ByteAlignedWritePat<DS_WRITE2_B32, vt, store_local_m0>;
   }
 
-  let OtherPredicates = [NotLDSRequiresM0Init] in {
+  let OtherPredicates = [NotLDSRequiresM0Init, NotNeedsAligned2addrDS] in {
     def : DS64Bit4ByteAlignedReadPat<DS_READ2_B32_gfx9, vt, load_local>;
     def : DS64Bit4ByteAlignedWritePat<DS_WRITE2_B32_gfx9, vt, store_local>;
+  }
+
+  let OtherPredicates = [NotLDSRequiresM0Init, HasNeedsAligned2addrDS] in {
+    def : DSReadPat<DS_READ_B64_gfx9, vt, load_local>;
+    def : DSWritePat<DS_WRITE_B64_gfx9, vt, store_local>;
   }
 }
 
@@ -1123,9 +1132,14 @@ multiclass DS128Bit8ByteAlignedPat_mc<ValueType vt> {
     def : DS128Bit8ByteAlignedWritePat<DS_WRITE2_B64, vt, store_local_m0>;
   }
 
-  let OtherPredicates = [NotLDSRequiresM0Init] in {
+  let OtherPredicates = [NotLDSRequiresM0Init, NotNeedsAligned2addrDS] in {
     def : DS128Bit8ByteAlignedReadPat<DS_READ2_B64_gfx9, vt, load_local>;
     def : DS128Bit8ByteAlignedWritePat<DS_WRITE2_B64_gfx9, vt, store_local>;
+  }
+
+  let OtherPredicates = [NotLDSRequiresM0Init, HasNeedsAligned2addrDS] in {
+    def : DSReadPat<DS_READ_B128_gfx9, vt, load_local>;
+    def : DSWritePat<DS_WRITE_B128_gfx9, vt, store_local>;
   }
 }
 
@@ -1440,13 +1454,15 @@ multiclass DS_Real_gfx12<bits<8> op,
 multiclass DS_Real_gfx13<bits<8> op,
                          DS_Pseudo ps = !cast<DS_Pseudo>(NAME),
                          string name = !tolower(NAME)> {
-  let AssemblerPredicate = isGFX13Only, DecoderNamespace = "GFX13" in
-    def _gfx13 :
-      Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, ps,
-                                                     SIEncodingFamily.GFX13,
-                                                     name, /*hasGDS=*/false>;
-  if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
+  let AssemblerPredicate = isGFX13Only in {
+    let DecoderNamespace = "GFX13" in
+      def _gfx13 :
+        Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, ps,
+                                                       SIEncodingFamily.GFX13,
+                                                       name, /*hasGDS=*/false>;
+    if !ne(ps.Mnemonic, name) then
+      def : AMDGPUMnemonicAlias<ps.Mnemonic, name>;
+  } // End AssemblerPredicate
 }
 
 // Helper to avoid repeating the pseudo-name if we only need to set

@@ -265,5 +265,41 @@ int EnvironmentManager::unset(cpp::string_view name) {
   return 0;
 }
 
+int EnvironmentManager::put(char *string) {
+  cpp::string_view sv(string);
+  size_t eq_pos = sv.find_first_of('=');
+
+  // No '=' found: treat as unset (POSIX behavior).
+  if (eq_pos == cpp::string_view::npos)
+    return unset(sv);
+
+  cpp::string_view name = sv.substr(0, eq_pos);
+
+  cpp::optional<size_t> idx = find_var(name);
+
+  size_t needed = idx ? count : count + 1;
+  if (!ensure_capacity(needed))
+    return -1;
+
+  char **env_array = get_array();
+
+  if (idx) {
+    // Replace existing variable. Free old string if we own it.
+    if (ownership[*idx].can_free())
+      delete[] env_array[*idx];
+
+    env_array[*idx] = string;
+    ownership[*idx].allocated_by_us = false; // Caller owns this string.
+  } else {
+    // Add new variable at the end.
+    env_array[count] = string;
+    ownership[count].allocated_by_us = false;
+    count++;
+    env_array[count] = nullptr;
+  }
+
+  return 0;
+}
+
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL

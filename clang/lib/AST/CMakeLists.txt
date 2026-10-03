@@ -66,6 +66,7 @@ add_clang_library(clangAST
   ExternalASTMerger.cpp
   ExternalASTSource.cpp
   FormatString.cpp
+  GlobalDecl.cpp
   InferAlloc.cpp
   InheritViz.cpp
   ByteCode/BitcastBuffer.cpp
@@ -78,6 +79,7 @@ add_clang_library(clangAST
   ByteCode/Function.cpp
   ByteCode/InterpBuiltin.cpp
   ByteCode/InterpBuiltinBitCast.cpp
+  ByteCode/InterpBuiltinObjectSize.cpp
   ByteCode/Floating.cpp
   ByteCode/EvaluationResult.cpp
   ByteCode/DynamicAllocator.cpp

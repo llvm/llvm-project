@@ -12,6 +12,7 @@ executable("clang-tblgen") {
     "ClangASTPropertiesEmitter.cpp",
     "ClangAttrEmitter.cpp",
     "ClangBuiltinTemplatesEmitter.cpp",
+    "ClangBuiltinTraitsEmitter.cpp",
     "ClangBuiltinsEmitter.cpp",
     "ClangCommentCommandInfoEmitter.cpp",
     "ClangCommentHTMLNamedCharacterReferenceEmitter.cpp",

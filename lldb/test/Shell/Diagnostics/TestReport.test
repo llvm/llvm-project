@@ -7,6 +7,9 @@
 # CHECK: Attach the following files to the issue:
 # CHECK-DAG: [ ] statistics.json
 # CHECK-DAG: [ ] commands.txt
+# CHECK: Complete the report before sharing it:
+# CHECK: [ ] Give the report a descriptive title
+# CHECK: [ ] Answer the questions
 # CHECK: warning: the report may contain
 
 # Scalars (version, OS, invocation) ride in the report, not as redundant files.

@@ -327,7 +327,7 @@ def MSRpstatePseudo :
     Sched<[WriteSys]> {
   let hasPostISelHook = 1;
   let Uses = [VG];
-  let Defs = [VG];
+  let Defs = [VG, FPMR];
 }
 
 def : Pat<(AArch64_cond_smstart (i32 svcr_op:$pstate), (i64 timm0_31:$condition), (i64 GPR64:$pstatesm)),

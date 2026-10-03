@@ -3,7 +3,7 @@
 
 th.mveqz a0,a1        # CHECK: :[[@LINE]]:15: error: too few operands for instruction
 th.mveqz a0,a1,a2,a3  # CHECK: :[[@LINE]]:19: error: unexpected extra operand for instruction
-th.mveqz a0,a1,1      # CHECK: :[[@LINE]]:16: error: invalid operand for instruction
+th.mveqz a0,a1,1      # CHECK: :[[@LINE]]:16: error: register must be a GPR
 th.mvnez a0,a1        # CHECK: :[[@LINE]]:15: error: too few operands for instruction
 th.mvnez a0,a1,a2,a3  # CHECK: :[[@LINE]]:19: error: unexpected extra operand for instruction
-th.mvnez a0,a1,1      # CHECK: :[[@LINE]]:16: error: invalid operand for instruction
+th.mvnez a0,a1,1      # CHECK: :[[@LINE]]:16: error: register must be a GPR

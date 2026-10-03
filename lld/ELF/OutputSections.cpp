@@ -924,8 +924,13 @@ void OutputSection::checkDynRelAddends(Ctx &ctx) {
           (rel.inputSec == ctx.in.ppc64LongBranchTarget.get() ||
            rel.inputSec == ctx.in.igotPlt.get()))
         continue;
-      const uint8_t *relocTarget = ctx.bufferStart + relOsec->offset +
-                                   rel.inputSec->getOffset(rel.offsetInSec);
+      // With -z mark-plt, the JUMP_SLOT relocation's addend is the PLT entry
+      // address, but the .got.plt entry it targets holds the lazy-binding
+      // address instead, so the written value intentionally differs.
+      if (ctx.arg.zMarkPlt && rel.type == ctx.target->pltRel)
+        continue;
+      const uint8_t *relocTarget =
+          ctx.bufferStart + relOsec->offset + (rel.r_offset - relOsec->addr);
       // For SHT_NOBITS the written addend is always zero.
       int64_t writtenAddend =
           relOsec->type == SHT_NOBITS
@@ -936,7 +941,7 @@ void OutputSection::checkDynRelAddends(Ctx &ctx) {
             << "wrote incorrect addend value 0x" << utohexstr(writtenAddend)
             << " instead of 0x" << utohexstr(addend)
             << " for dynamic relocation " << rel.type << " at offset 0x"
-            << utohexstr(rel.getOffset())
+            << utohexstr(rel.r_offset)
             << (rel.sym ? " against symbol " + rel.sym->getName() : "");
     }
   });

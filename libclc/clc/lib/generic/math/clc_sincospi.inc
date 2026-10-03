@@ -29,8 +29,12 @@ __clc_sincospi(__CLC_GENTYPE x, __private __CLC_GENTYPE *cos_out) {
 
   __CLC_GENTYPE c = odd ? -eval.sin : eval.cos;
   *cos_out =
-      __CLC_AS_GENTYPE(__CLC_CONVERT_S_GENTYPE(__CLC_AS_S_GENTYPE(c) ^ flip));
-  return __CLC_AS_GENTYPE(sin_val);
+      __CLC_AS_GENTYPE(__CLC_CONVERT_S_GENTYPE(__CLC_AS_S_GENTYPE(c) ^ flip)) +
+      __CLC_FP_LIT(0.0);
+
+  __CLC_GENTYPE sin_result = __CLC_AS_GENTYPE(sin_val);
+  return __clc_select(sin_result, __clc_copysign(__CLC_FP_LIT(0.0), x),
+                      __CLC_CONVERT_S_GENTYPE(sin_result == __CLC_FP_LIT(0.0)));
 }
 
 #define __CLC_SINCOSPI_DEF(addrspace)                                          \

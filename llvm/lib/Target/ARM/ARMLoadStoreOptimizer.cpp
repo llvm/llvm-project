@@ -106,13 +106,13 @@ struct ARMLoadStoreOpt {
   const TargetLowering *TL;
   ARMFunctionInfo *AFI;
   LiveRegUnits LiveRegs;
-  RegisterClassInfo RegClassInfo;
+  const RegisterClassInfo *RCI = nullptr;
   MachineBasicBlock::const_iterator LiveRegPos;
   bool LiveRegsValid;
-  bool RegClassInfoValid;
   bool isThumb1, isThumb2;
 
-  bool runOnMachineFunction(MachineFunction &Fn);
+  bool runOnMachineFunction(MachineFunction &Fn,
+                            const RegisterClassInfo &RegClassInfo);
 
 private:
   /// A set of load/store MachineInstrs with same base register sorted by
@@ -153,6 +153,8 @@ private:
   SmallVector<const MergeCandidate *, 4> Candidates;
   SmallVector<MachineInstr *, 4> MergeBaseCandidates;
 
+  MachineBasicBlock::iterator eraseInstr(MachineBasicBlock::iterator MI);
+
   void moveLiveRegsBefore(const MachineBasicBlock &MBB,
                           MachineBasicBlock::const_iterator Before);
   unsigned findFreeReg(const TargetRegisterClass &RegClass);
@@ -180,7 +182,7 @@ private:
                            MachineBasicBlock::iterator &MBBI);
   bool MergeBaseUpdateLoadStore(MachineInstr *MI);
   bool MergeBaseUpdateLSMultiple(MachineInstr *MI);
-  bool MergeBaseUpdateLSDouble(MachineInstr &MI) const;
+  bool MergeBaseUpdateLSDouble(MachineInstr &MI);
   bool LoadStoreMultipleOpti(MachineBasicBlock &MBB);
   bool MergeReturnIntoLDM(MachineBasicBlock &MBB);
   bool CombineMovBx(MachineBasicBlock &MBB);
@@ -198,14 +200,23 @@ struct ARMLoadStoreOptLegacy : public MachineFunctionPass {
   }
 
   StringRef getPassName() const override { return ARM_LOAD_STORE_OPT_NAME; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<MachineRegisterClassInfoWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 };
 
 char ARMLoadStoreOptLegacy::ID = 0;
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(ARMLoadStoreOptLegacy, "arm-ldst-opt", ARM_LOAD_STORE_OPT_NAME,
-                false, false)
+INITIALIZE_PASS_BEGIN(ARMLoadStoreOptLegacy, "arm-ldst-opt",
+                      ARM_LOAD_STORE_OPT_NAME, false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
+INITIALIZE_PASS_END(ARMLoadStoreOptLegacy, "arm-ldst-opt",
+                    ARM_LOAD_STORE_OPT_NAME, false, false)
 
 static bool definesCPSR(const MachineInstr &MI) {
   for (const auto &MO : MI.operands()) {
@@ -585,15 +596,17 @@ void ARMLoadStoreOpt::UpdateBaseRegUses(MachineBasicBlock &MBB,
   }
 }
 
+MachineBasicBlock::iterator
+ARMLoadStoreOpt::eraseInstr(MachineBasicBlock::iterator MI) {
+  if (LiveRegsValid && LiveRegPos == MI)
+    LiveRegsValid = false;
+  return MI->eraseFromParent();
+}
+
 /// Return the first register of class \p RegClass that is not in \p Regs.
 unsigned ARMLoadStoreOpt::findFreeReg(const TargetRegisterClass &RegClass) {
-  if (!RegClassInfoValid) {
-    RegClassInfo.runOnMachineFunction(*MF);
-    RegClassInfoValid = true;
-  }
-
-  for (unsigned Reg : RegClassInfo.getOrder(&RegClass))
-    if (LiveRegs.available(Reg) && !MF->getRegInfo().isReserved(Reg))
+  for (unsigned Reg : RCI->getOrder(&RegClass))
+    if (LiveRegs.available(Reg))
       return Reg;
   return 0;
 }
@@ -935,7 +948,7 @@ MachineInstr *ARMLoadStoreOpt::MergeOpsUpdate(const MergeCandidate &Cand) {
 
   // Remove instructions which have been merged.
   for (MachineInstr *MI : Cand.Instrs)
-    MBB.erase(MI);
+    eraseInstr(MI);
 
   // Determine range between the earliest removed instruction and the new one.
   if (EarliestAtBegin)
@@ -1347,7 +1360,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSMultiple(MachineInstr *MI) {
   }
   if (MergeInstr != MBB.end()) {
     LLVM_DEBUG(dbgs() << "  Erasing old increment: " << *MergeInstr);
-    MBB.erase(MergeInstr);
+    eraseInstr(MergeInstr);
   }
 
   unsigned NewOpc = getUpdatingLSMultipleOpcode(Opcode, Mode);
@@ -1364,7 +1377,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSMultiple(MachineInstr *MI) {
   MIB.setMemRefs(MI->memoperands());
 
   LLVM_DEBUG(dbgs() << "  Added new load/store: " << *MIB);
-  MBB.erase(MBBI);
+  eraseInstr(MBBI);
   return true;
 }
 
@@ -1521,7 +1534,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
     }
   }
   LLVM_DEBUG(dbgs() << "  Erasing old increment: " << *MergeInstr);
-  MBB.erase(MergeInstr);
+  eraseInstr(MergeInstr);
 
   ARM_AM::AddrOpc AddSub = Offset < 0 ? ARM_AM::sub : ARM_AM::add;
 
@@ -1610,12 +1623,12 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
       LLVM_DEBUG(dbgs() << "  Added new instruction: " << *MIB);
     }
   }
-  MBB.erase(MBBI);
+  eraseInstr(MBBI);
 
   return true;
 }
 
-bool ARMLoadStoreOpt::MergeBaseUpdateLSDouble(MachineInstr &MI) const {
+bool ARMLoadStoreOpt::MergeBaseUpdateLSDouble(MachineInstr &MI) {
   unsigned Opcode = MI.getOpcode();
   assert((Opcode == ARM::t2LDRDi8 || Opcode == ARM::t2STRDi8) &&
          "Must have t2STRDi8 or t2LDRDi8");
@@ -1651,7 +1664,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSDouble(MachineInstr &MI) const {
       return false;
   }
   LLVM_DEBUG(dbgs() << "  Erasing old increment: " << *MergeInstr);
-  MBB.erase(MergeInstr);
+  eraseInstr(MergeInstr);
 
   DebugLoc DL = MI.getDebugLoc();
   MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(NewOpc));
@@ -1673,7 +1686,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSDouble(MachineInstr &MI) const {
   MIB.cloneMemRefs(MI);
 
   LLVM_DEBUG(dbgs() << "  Added new load/store: " << *MIB);
-  MBB.erase(MBBI);
+  eraseInstr(MBBI);
   return true;
 }
 
@@ -1799,7 +1812,7 @@ bool ARMLoadStoreOpt::FixInvalidRegPairOp(MachineBasicBlock &MBB,
   bool OddUndef = MI->getOperand(1).isUndef();
   bool BaseKill = BaseOp.isKill();
   bool BaseUndef = BaseOp.isUndef();
-  assert((isT2 || MI->getOperand(3).getReg() == ARM::NoRegister) &&
+  assert((isT2 || !MI->getOperand(3).getReg().isValid()) &&
          "register offset not handled below");
   int OffImm = getMemoryOpOffset(*MI);
   Register PredReg;
@@ -1875,7 +1888,7 @@ bool ARMLoadStoreOpt::FixInvalidRegPairOp(MachineBasicBlock &MBB,
       ++NumSTRD2STR;
   }
 
-  MBBI = MBB.erase(MBBI);
+  MBBI = eraseInstr(MBBI);
   return true;
 }
 
@@ -2068,7 +2081,7 @@ bool ARMLoadStoreOpt::MergeReturnIntoLDM(MachineBasicBlock &MBB) {
       PrevMI.setDesc(TII->get(NewOpc));
       MO.setReg(ARM::PC);
       PrevMI.copyImplicitOps(*MBB.getParent(), *MBBI);
-      MBB.erase(MBBI);
+      eraseInstr(MBBI);
       return true;
     }
   }
@@ -2094,23 +2107,24 @@ bool ARMLoadStoreOpt::CombineMovBx(MachineBasicBlock &MBB) {
           .addReg(Use.getReg(), RegState::Kill)
           .add(predOps(ARMCC::AL))
           .copyImplicitOps(*MBBI);
-      MBB.erase(MBBI);
-      MBB.erase(Prev);
+      eraseInstr(MBBI);
+      eraseInstr(Prev);
       return true;
     }
 
   llvm_unreachable("tMOVr doesn't kill a reg before tBX_RET?");
 }
 
-bool ARMLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
+bool ARMLoadStoreOpt::runOnMachineFunction(
+    MachineFunction &Fn, const RegisterClassInfo &RegClassInfo) {
   MF = &Fn;
   STI = &Fn.getSubtarget<ARMSubtarget>();
   TL = STI->getTargetLowering();
   AFI = Fn.getInfo<ARMFunctionInfo>();
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
+  RCI = &RegClassInfo;
 
-  RegClassInfoValid = false;
   isThumb2 = AFI->isThumb2Function();
   isThumb1 = AFI->isThumbFunction() && !isThumb2;
 
@@ -2139,7 +2153,8 @@ bool ARMLoadStoreOptLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
   ARMLoadStoreOpt Impl;
-  return Impl.runOnMachineFunction(MF);
+  return Impl.runOnMachineFunction(
+      MF, getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI());
 }
 
 #define ARM_PREALLOC_LOAD_STORE_OPT_NAME                                       \
@@ -2191,6 +2206,7 @@ struct ARMPreAllocLoadStoreOptLegacy : public MachineFunctionPass {
     AU.addRequired<AAResultsWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -3338,11 +3354,13 @@ PreservedAnalyses
 ARMLoadStoreOptPass::run(MachineFunction &MF,
                          MachineFunctionAnalysisManager &MFAM) {
   ARMLoadStoreOpt Impl;
-  bool Changed = Impl.runOnMachineFunction(MF);
+  bool Changed = Impl.runOnMachineFunction(
+      MF, MFAM.getResult<MachineRegisterClassAnalysis>(MF));
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
+  PA.preserve<MachineRegisterClassAnalysis>();
   return PA;
 }
 

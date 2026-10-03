@@ -1,8 +1,5 @@
 # Advanced Build Configurations
 
-```{contents}
-:local:
-```
 
 ## Introduction
 

@@ -162,7 +162,7 @@ set(LIBUNWIND_SHARED_OUTPUT_NAME "unwind" CACHE STRING "Output name for the shar
 set(LIBUNWIND_STATIC_OUTPUT_NAME "unwind" CACHE STRING "Output name for the static libunwind runtime library.")
 
 # TODO: Use common runtimes infrastructure for output and install paths
-if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
   set(LIBUNWIND_TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
   if(LIBUNWIND_LIBDIR_SUBDIR)
     string(APPEND LIBUNWIND_TARGET_SUBDIR /${LIBUNWIND_LIBDIR_SUBDIR})

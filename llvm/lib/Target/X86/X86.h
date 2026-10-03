@@ -27,6 +27,7 @@ namespace llvm {
 
 class FunctionPass;
 class InstructionSelector;
+class MachineFunction;
 class PassRegistry;
 class X86RegisterBankInfo;
 class X86Subtarget;
@@ -73,6 +74,15 @@ public:
 };
 
 FunctionPass *createX86FPStackifierLegacyPass();
+
+/// This pass aligns the code so that it conforms to the LFI sandboxing rules.
+class X86LFIRewritePass : public RequiredPassInfoMixin<X86LFIRewritePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86LFIRewritePass();
 
 /// This pass inserts AVX vzeroupper instructions before each call to avoid
 /// transition penalty between functions encoded with AVX and SSE.
@@ -408,6 +418,12 @@ FunctionPass *createX86LowerAMXIntrinsicsLegacyPass();
 /// Capacity check and sub-fragment splitting for Win x64 Unwind V3.
 FunctionPass *createX86WinEHUnwindV3Pass();
 
+/// Returns true when \p MF must use Windows x64 Unwind V3: the module is in V3
+/// mode, or the function needs an unwind table and may use EGPR (R16-R31),
+/// which V1/V2 cannot encode. Shared by frame lowering and the WinEH Unwind
+/// V2/V3 passes so their decisions cannot disagree.
+bool requireWinX64UnwindV3(const MachineFunction &MF);
+
 InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
                                                   const X86Subtarget &,
                                                   const X86RegisterBankInfo &);
@@ -422,7 +438,7 @@ public:
 FunctionPass *createX86PostLegalizerCombinerLegacy();
 
 class X86PreLegalizerCombinerPass
-    : public PassInfoMixin<X86PreLegalizerCombinerPass> {
+    : public RequiredPassInfoMixin<X86PreLegalizerCombinerPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

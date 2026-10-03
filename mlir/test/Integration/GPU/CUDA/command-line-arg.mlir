@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:  | mlir-opt -gpu-lower-to-nvvm-pipeline="cubin-chip=sm_80 ptxas-cmd-options='-v --register-usage-level=8' allow-pattern-rollback=0" -debug-only=serialize-to-binary \
+// RUN:  | mlir-opt -gpu-lower-to-nvvm-pipeline="cubin-chip=sm_80 opt-level=3 ptxas-cmd-options='-v --opt-level=2 --register-usage-level=8' allow-pattern-rollback=0" -debug-only=serialize-to-binary \
 // RUN:  2>&1 | FileCheck %s
 
 func.func @host_function(%arg0 : f32, %arg1 : memref<?xf32>) {
@@ -16,6 +16,8 @@ func.func @host_function(%arg0 : f32, %arg1 : memref<?xf32>) {
     return
 }
 
-// CHECK: ptxas -arch sm_80
-// CHECK-SAME: -v 
+// CHECK: {{ptxas args: ptxas|Arguments:}} -arch sm_80
+// CHECK-SAME: --opt-level 3
+// CHECK-SAME: -v
+// CHECK-SAME: --opt-level=2
 // CHECK-SAME: --register-usage-level=8

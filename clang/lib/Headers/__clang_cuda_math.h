@@ -315,7 +315,7 @@ __DEVICE__ float sinhf(float __a) { return __nv_sinhf(__a); }
 __DEVICE__ double sinpi(double __a) { return __nv_sinpi(__a); }
 __DEVICE__ float sinpif(float __a) { return __nv_sinpif(__a); }
 __DEVICE__ double sqrt(double __a) { return __nv_sqrt(__a); }
-__DEVICE__ float sqrtf(float __a) { return __nv_sqrtf(__a); }
+__DEVICE__ float sqrtf(float __a) { return __builtin_sqrtf(__a); }
 __DEVICE__ double tan(double __a) { return __nv_tan(__a); }
 __DEVICE__ float tanf(float __a) { return __nv_tanf(__a); }
 __DEVICE__ double tanh(double __a) { return __nv_tanh(__a); }

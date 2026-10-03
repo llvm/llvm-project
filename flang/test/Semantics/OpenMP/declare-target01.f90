@@ -1,12 +1,9 @@
-! REQUIRES: openmp_runtime
-
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags -fopenmp-version=52
 ! OpenMP Version 5.1
 ! Check OpenMP construct validity for the following directives:
 ! 2.14.7 Declare Target Directive
 
 module declare_target01
-  use omp_lib
   type my_type(kind_param, len_param)
     integer, KIND :: kind_param
     integer, LEN :: len_param

@@ -19,6 +19,6 @@ void bar() {
 #pragma omp teams ompx_bare // expected-error {{unexpected OpenMP clause 'ompx_bare' in directive '#pragma omp teams'}} expected-note {{OpenMP extension clause 'ompx_bare' only allowed with '#pragma omp target teams'}}
   foo();
 
-#pragma omp target teams ompx_bare // expected-error {{'ompx_bare' clauses requires explicit grid size via 'num_teams' and 'thread_limit' clauses}}
+#pragma omp target teams ompx_bare // expected-error {{'ompx_bare' clause requires explicit grid size via 'num_teams' and 'thread_limit' clauses}}
   foo();
 }

@@ -27,7 +27,9 @@ protocol::Breakpoint ExceptionBreakpoint::SetBreakpoint(StringRef condition) {
     m_bp = m_dap.target.BreakpointCreateForException(
         m_language, m_kind == eExceptionKindCatch,
         m_kind == eExceptionKindThrow);
-    m_bp.AddName(BreakpointBase::kDAPBreakpointLabel);
+    lldb::SBError error =
+        m_bp.AddNameWithErrorHandling(BreakpointBase::kDAPBreakpointLabel);
+    // TODO: Report this error to the user instead of silently dropping it.
   }
 
   m_bp.SetCondition(condition.data());

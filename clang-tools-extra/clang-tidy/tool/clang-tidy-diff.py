@@ -68,8 +68,9 @@ def run_tidy(task_queue, lock, timeout, failed_files):
                 failed_files.append(command)
 
             with lock:
-                sys.stdout.write(stdout.decode("utf-8") + "\n")
-                sys.stdout.flush()
+                if stdout:
+                    sys.stdout.write(stdout.decode("utf-8") + "\n")
+                    sys.stdout.flush()
                 if stderr:
                     sys.stderr.write(stderr.decode("utf-8") + "\n")
                     sys.stderr.flush()

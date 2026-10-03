@@ -638,10 +638,22 @@ func.func @fpowi_fold_vec() -> vector<4xf32> {
   return %0 : vector<4xf32>
 }
 
-// 16777217 is not exactly representable in f32.
-// CHECK-LABEL: @fpowi_fold_failed
-// CHECK:       math.fpowi
-func.func @fpowi_fold_failed() -> f32 {
+// CHECK-LABEL: @fpowi_fold_const
+// CHECK: %[[cst:.+]] = arith.constant 29.1229134 : f32
+// CHECK: return %[[cst]]
+func.func @fpowi_fold_const() -> f32 {
+  %cst = arith.constant 1.234567 : f32
+  %c16_i32 = arith.constant 16 : i32
+  %0 = math.fpowi %cst, %c16_i32 : f32, i32
+  return %0 : f32
+}
+
+// The fold no longer requires the exponent to be exactly representable as
+// f32: it is used as an integer, so this folds and overflows to +inf.
+// CHECK-LABEL: @fpowi_fold_overflow
+// CHECK: %[[cst:.+]] = arith.constant 0x7F800000 : f32
+// CHECK: return %[[cst]]
+func.func @fpowi_fold_overflow() -> f32 {
   %cst = arith.constant 2.000000e+00 : f32
   %c16777217_i32 = arith.constant 16777217 : i32
   %0 = math.fpowi %cst, %c16777217_i32 : f32, i32

@@ -53,6 +53,7 @@ on:
       - '.github/workflows/release-binaries-setup-stage/*'
       - '.github/workflows/release-binaries-save-stage/*'
       - 'clang/cmake/caches/Release.cmake'
+      - 'llvm/utils/release/build_llvm_release.bat'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || 'dispatch' }}
@@ -62,14 +63,14 @@ jobs:
   setup-variables:
     if: >-
       (github.event_name != 'pull_request' || github.event.action != 'closed')
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       release-version: ${{ steps.vars.outputs.release-version }}
       upload: ${{ steps.vars.outputs.upload }}
     steps:
       - name: Validate Input
         if: inputs.release-version != ''
-        uses: ./.github/workflows/validate-release-version
+        uses: $/.github/workflows/validate-release-version
         with:
           release-version: ${{ inputs.release-version }}
       - shell: bash

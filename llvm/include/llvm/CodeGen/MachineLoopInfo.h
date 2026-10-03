@@ -50,12 +50,12 @@ public:
   /// Return the "top" block in the loop, which is the first block in the linear
   /// layout, ignoring any parts of the loop not contiguous with the part that
   /// contains the header.
-  LLVM_ABI MachineBasicBlock *getTopBlock();
+  LLVM_ABI MachineBasicBlock *getTopBlock() const;
 
   /// Return the "bottom" block in the loop, which is the last block in the
   /// linear layout, ignoring any parts of the loop not contiguous with the part
   /// that contains the header.
-  LLVM_ABI MachineBasicBlock *getBottomBlock();
+  LLVM_ABI MachineBasicBlock *getBottomBlock() const;
 
   /// Find the block that contains the loop control variable and the
   /// loop test. This will return the latch block if it's one of the exiting
@@ -96,9 +96,6 @@ private:
   /// Returns true if the given physreg has no defs inside the loop.
   bool isLoopInvariantImplicitPhysReg(Register Reg) const;
 
-  explicit MachineLoop(MachineBasicBlock *MBB)
-    : LoopBase<MachineBasicBlock, MachineLoop>(MBB) {}
-
   MachineLoop() = default;
 };
 
@@ -134,6 +131,12 @@ public:
 
   /// Calculate the natural loop information.
   LLVM_ABI void calculate(MachineDominatorTree &MDT);
+
+  /// Rebuild the loop forest. \p GetDomTree is called only for an irreducible
+  /// CFG.
+  LLVM_ABI void
+  calculate(MachineFunction &MF,
+            function_ref<const DomTreeBase<MachineBasicBlock> &()> GetDomTree);
 };
 
 /// Analysis pass that exposes the \c MachineLoopInfo for a machine function.

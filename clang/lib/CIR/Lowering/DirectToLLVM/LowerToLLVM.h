@@ -29,15 +29,11 @@ struct LLVMBlockAddressInfo;
 /// block address attributes, `blockInfoAddr` is used to resolve them.
 mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp, mlir::Attribute attr,
                                 mlir::ConversionPatternRewriter &rewriter,
+                                mlir::SymbolTableCollection &symbolTables,
                                 const mlir::TypeConverter *converter,
                                 LLVMBlockAddressInfo *blockInfoAddr = nullptr);
 
 mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage);
-
-void convertSideEffectForCall(mlir::Operation *callOp, bool isNothrow,
-                              cir::SideEffect sideEffect,
-                              mlir::LLVM::MemoryEffectsAttr &memoryEffect,
-                              bool &noUnwind, bool &willReturn, bool &noReturn);
 
 struct LLVMBlockAddressInfo {
   // Get the next tag index
@@ -80,6 +76,19 @@ private:
       unresolvedBlockAddressOp;
   int32_t blockTagOpIndex;
 };
+
+mlir::LogicalResult lowerToConstrainedFPIntrinsic(
+    mlir::Operation *op, mlir::ValueRange operands, cir::FenvAttr fenv,
+    mlir::Type llvmResTy, mlir::ConversionPatternRewriter &rewriter,
+    llvm::StringRef constrainedMnemonic, bool hasRoundingMode,
+    mlir::LLVM::FastmathFlags fastmathFlags = {});
+
+template <typename LLVMOp>
+mlir::LogicalResult lowerConstrainableFPOp(
+    mlir::Operation *op, mlir::ValueRange operands, cir::FenvAttr fenv,
+    const mlir::TypeConverter &typeConverter,
+    mlir::ConversionPatternRewriter &rewriter,
+    llvm::StringRef constrainedMnemonic, bool hasRoundingMode);
 
 #define GET_LLVM_LOWERING_PATTERNS
 #include "clang/CIR/Dialect/IR/CIRLowering.inc"

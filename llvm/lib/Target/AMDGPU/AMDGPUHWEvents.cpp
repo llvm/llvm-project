@@ -22,21 +22,21 @@ LLVM_DUMP_METHOD void HWEvents::dump() const { dbgs() << *this << "\n"; }
 
 static HWEvents getExpertSchedulingEventType(const MachineInstr &Inst,
                                              const SIInstrInfo &TII) {
-  if (TII.isVALU(Inst, /*AllowLDSDMA=*/true) && !SIInstrInfo::isLDSDMA(Inst)) {
+  if (TII.isVALU(Inst, /*AllowLDSDMA=*/false)) {
     // Core/Side-, DP-, XDL- and TRANS-MACC VALU instructions complete
     // out-of-order with respect to each other, so each of these classes
     // has its own event.
 
     if (TII.isXDL(Inst))
-      return HWEvents::VGPR_XDL_WRITE;
+      return HWEvents::VGPR_XDL_READ | HWEvents::VGPR_XDL_WRITE;
 
     if (TII.isTRANS(Inst))
-      return HWEvents::VGPR_TRANS_WRITE;
+      return HWEvents::VGPR_TRANS_READ | HWEvents::VGPR_TRANS_WRITE;
 
     if (AMDGPU::isDPMACCInstruction(Inst.getOpcode()))
-      return HWEvents::VGPR_DPMACC_WRITE;
+      return HWEvents::VGPR_DPMACC_READ | HWEvents::VGPR_DPMACC_WRITE;
 
-    return HWEvents::VGPR_CSMACC_WRITE;
+    return HWEvents::VGPR_CSMACC_READ | HWEvents::VGPR_CSMACC_WRITE;
   }
 
   // FLAT and LDS instructions may read their VGPR sources out-of-order
@@ -61,8 +61,9 @@ HWEvents getSimplifiedVMEMEventsFor(const MachineInstr &Inst,
   switch (Inst.getOpcode()) {
   // FIXME: GLOBAL_INV needs to be tracked with xcnt too.
   case AMDGPU::GLOBAL_INV:
-    return HWEvents::GLOBAL_INV_ACCESS; // tracked using loadcnt, but doesn't
-                                        // write VGPRs
+  case AMDGPU::BUFFER_INV:
+    return HWEvents::VMEM_INV_ACCESS; // tracked using loadcnt/vmcnt, but
+                                      // doesn't write VGPRs
   case AMDGPU::GLOBAL_WB:
   case AMDGPU::GLOBAL_WBINV:
     return HWEvents::VMEM_WRITE_ACCESS; // tracked using storecnt
@@ -141,10 +142,10 @@ static HWEvents getEventsForImpl(const MachineInstr &Inst,
 
   if (SIInstrInfo::isVMEM(Inst) &&
       (!AMDGPU::getMUBUFIsBufferInv(Inst.getOpcode()) ||
+       Inst.getOpcode() == AMDGPU::BUFFER_INV ||
        Inst.getOpcode() == AMDGPU::BUFFER_WBL2)) {
-    // BUFFER_WBL2 is included here because unlike invalidates, has to be
-    // followed "S_WAITCNT vmcnt(0)" is needed after to ensure the writeback has
-    // completed.
+    // BUFFER_INV increments VM_CNT. BUFFER_WBL2 also needs tracking because an
+    // S_WAITCNT vmcnt(0) must follow it to ensure the writeback has completed.
     HWEvents E = getSimplifiedVMEMEventsFor(Inst, TII);
     if (ST.hasWaitXcnt())
       E |= HWEvents::VMEM_GROUP;

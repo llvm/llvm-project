@@ -1,5 +1,7 @@
 # RUN: llc -o - %s -mtriple=x86_64-- -verify-cfiinstrs \
 # RUN:     -run-pass=cfi-instr-inserter
+# RUN: llc -o - %s -mtriple=x86_64-- -verify-cfiinstrs \
+# RUN:     -passes=cfi-instr-inserter
 
 # Test that CFI verifier does not report inconsistent offset for the
 # 'noreturn' block.

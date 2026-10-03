@@ -1,7 +1,7 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GCN,GFX11 %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GCN,GFX11 %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GCN,GFX12 %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GCN,GFX12 %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu11.00 < %s | FileCheck -check-prefixes=GCN,GFX11 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu11.00 < %s | FileCheck -check-prefixes=GCN,GFX11 %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu12.00 < %s | FileCheck -check-prefixes=GCN,GFX12 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.00 < %s | FileCheck -check-prefixes=GCN,GFX12 %s
 
 ; GCN-LABEL: {{^}}test_wait_event_export_ready:
 ; GFX11: s_wait_event 0x2

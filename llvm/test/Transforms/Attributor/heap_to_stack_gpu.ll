@@ -6,7 +6,7 @@
 ; useless except the __kmpc_alloc_shared part which now also covers the important
 ; part this test was initially designed for, make sure the "is freed" check is
 ; not sufficient on a GPU.
-target triple = "amdgcn-amd-amdhsa"
+target triple = "amdgpu7.00-amd-amdhsa"
 
 declare noalias ptr @malloc(i64)
 

@@ -41,8 +41,6 @@
 # CHECK:           "tags": [
 # CHECK:             2,
 # CHECK:             9,
-# CHECK:             15,
-# CHECK:             18,
 # CHECK:             20
 # CHECK:           ]
 # CHECK:         }

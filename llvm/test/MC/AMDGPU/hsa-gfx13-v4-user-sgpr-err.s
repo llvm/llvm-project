@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1310 -filetype=null %s 2>&1 | FileCheck --check-prefix=ERR %s
+// RUN: not llvm-mc -triple=amdgpu13.10-amd-amdhsa -filetype=null %s 2>&1 | FileCheck --check-prefix=ERR %s
 
 .text
 

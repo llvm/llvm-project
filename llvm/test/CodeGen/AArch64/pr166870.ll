@@ -26,24 +26,22 @@ define i32 @widget(i32 %arg, i32 %arg1, i1 %arg2, ptr %arg3, i1 %arg4) #0 nounwi
 ; CHECK-NEXT:    mov x22, x1
 ; CHECK-NEXT:    bl baz
 ; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    cbnz w8, .LBB0_9
-; CHECK-NEXT:  // %bb.5: // %bb7
-; CHECK-NEXT:    cbnz w8, .LBB0_9
-; CHECK-NEXT:  // %bb.6: // %bb8
+; CHECK-NEXT:    cbnz w8, .LBB0_8
+; CHECK-NEXT:  // %bb.5: // %bb8
 ; CHECK-NEXT:    mov w20, #0 // =0x0
 ; CHECK-NEXT:    mov w8, w21
 ; CHECK-NEXT:    mov x21, x8
 ; CHECK-NEXT:    mov w8, w22
 ; CHECK-NEXT:    mov x22, x8
-; CHECK-NEXT:  .LBB0_7: // %bb10
+; CHECK-NEXT:  .LBB0_6: // %bb10
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    strb w20, [x19]
-; CHECK-NEXT:    cbnz x21, .LBB0_7
-; CHECK-NEXT:  // %bb.8: // %bb12
-; CHECK-NEXT:    // in Loop: Header=BB0_7 Depth=1
+; CHECK-NEXT:    cbnz x21, .LBB0_6
+; CHECK-NEXT:  // %bb.7: // %bb12
+; CHECK-NEXT:    // in Loop: Header=BB0_6 Depth=1
 ; CHECK-NEXT:    bl snork
-; CHECK-NEXT:    cbnz x22, .LBB0_7
-; CHECK-NEXT:  .LBB0_9:
+; CHECK-NEXT:    cbnz x22, .LBB0_6
+; CHECK-NEXT:  .LBB0_8:
 ; CHECK-NEXT:    mov w0, #0 // =0x0
 ; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload

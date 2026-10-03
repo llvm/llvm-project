@@ -1,5 +1,5 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -S -o - -passes=infer-address-spaces %s | FileCheck -check-prefixes=COMMON,AMDGCN %s
-; RUN: opt -S -o - -passes=infer-address-spaces -assume-default-is-flat-addrspace %s | FileCheck -check-prefixes=COMMON,NOTTI %s
+; RUN: opt -mtriple=amdgpu-amd-amdhsa -S -o - -passes=infer-address-spaces %s | FileCheck -check-prefixes=COMMON,AMDGCN %s
+; RUN: opt -S -o - -passes='infer-address-spaces<assume-default-is-flat-addrspace>' %s | FileCheck -check-prefixes=COMMON,NOTTI %s
 
 
 ; COMMON-LABEL: @noop_ptrint_pair(

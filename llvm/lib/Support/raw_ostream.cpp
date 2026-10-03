@@ -993,12 +993,20 @@ void buffer_ostream::anchor() {}
 
 void buffer_unique_ostream::anchor() {}
 
+static bool isNullDeviceName(StringRef OutputFileName) {
+#ifdef _WIN32
+  if (OutputFileName.equals_insensitive("NUL"))
+    return true;
+#endif
+  return OutputFileName == "/dev/null";
+}
+
 Error llvm::writeToOutput(StringRef OutputFileName,
                           std::function<Error(raw_ostream &)> Write) {
   if (OutputFileName == "-")
     return Write(outs());
 
-  if (OutputFileName == "/dev/null") {
+  if (isNullDeviceName(OutputFileName)) {
     raw_null_ostream Out;
     return Write(Out);
   }

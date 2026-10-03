@@ -8,9 +8,8 @@
 define i64 @load_bswap(ptr %p) {
 ; CHECK-LABEL: @load_bswap(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[TMP1]] to <8 x i64>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <8 x i64> [[TMP2]], <i64 56, i64 48, i64 40, i64 32, i64 24, i64 16, i64 8, i64 0>
-; CHECK-NEXT:    [[OR01234567:%.*]] = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> [[TMP3]])
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to i64
+; CHECK-NEXT:    [[OR01234567:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP2]])
 ; CHECK-NEXT:    ret i64 [[OR01234567]]
 ;
   %g1 = getelementptr inbounds %v8i8, ptr %p, i64 0, i32 1
@@ -61,9 +60,8 @@ define i64 @load_bswap(ptr %p) {
 define i64 @load_bswap_nop_shift(ptr %p) {
 ; CHECK-LABEL: @load_bswap_nop_shift(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[TMP1]] to <8 x i64>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <8 x i64> [[TMP2]], <i64 56, i64 48, i64 40, i64 32, i64 24, i64 16, i64 8, i64 0>
-; CHECK-NEXT:    [[OR01234567:%.*]] = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> [[TMP3]])
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to i64
+; CHECK-NEXT:    [[OR01234567:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP2]])
 ; CHECK-NEXT:    ret i64 [[OR01234567]]
 ;
   %g1 = getelementptr inbounds %v8i8, ptr %p, i64 0, i32 1
@@ -116,9 +114,7 @@ define i64 @load_bswap_nop_shift(ptr %p) {
 define i64 @load64le(ptr %arg) {
 ; CHECK-LABEL: @load64le(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[ARG:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[TMP1]] to <8 x i64>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <8 x i64> [[TMP2]], <i64 0, i64 8, i64 16, i64 24, i64 32, i64 40, i64 48, i64 56>
-; CHECK-NEXT:    [[O7:%.*]] = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> [[TMP3]])
+; CHECK-NEXT:    [[O7:%.*]] = bitcast <8 x i8> [[TMP1]] to i64
 ; CHECK-NEXT:    ret i64 [[O7]]
 ;
   %g1 = getelementptr inbounds i8, ptr %arg, i64 1
@@ -169,9 +165,7 @@ define i64 @load64le(ptr %arg) {
 define i64 @load64le_nop_shift(ptr %arg) {
 ; CHECK-LABEL: @load64le_nop_shift(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[ARG:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[TMP1]] to <8 x i64>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <8 x i64> [[TMP2]], <i64 0, i64 8, i64 16, i64 24, i64 32, i64 40, i64 48, i64 56>
-; CHECK-NEXT:    [[O7:%.*]] = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> [[TMP3]])
+; CHECK-NEXT:    [[O7:%.*]] = bitcast <8 x i8> [[TMP1]] to i64
 ; CHECK-NEXT:    ret i64 [[O7]]
 ;
   %g1 = getelementptr inbounds i8, ptr %arg, i64 1
@@ -559,7 +553,7 @@ define void @PR47450(ptr nocapture readonly %p) {
 ; CHECK-NEXT:    [[X:%.*]] = load i16, ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    [[Z:%.*]] = zext i16 [[X]] to i32
 ; CHECK-NEXT:    [[S:%.*]] = shl nuw nsw i32 [[Z]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[S]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[S]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr @output, align 16
 ; CHECK-NEXT:    ret void

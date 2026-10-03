@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -I%S %s -triple amdgcn-amd-amdhsa -emit-llvm -o - | FileCheck %s -check-prefix=AS
+// RUN: %clang_cc1 -I%S %s -triple amdgpu-amd-amdhsa -emit-llvm -o - | FileCheck %s -check-prefix=AS
 // RUN: %clang_cc1 -I%S %s -triple spirv64-amd-amdhsa -emit-llvm -o - | FileCheck %s -check-prefix=NONZERO-DEFAULT-AS
 // RUN: %clang_cc1 -I%S %s -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s -check-prefix=NO-AS
 #include <typeinfo>
@@ -15,8 +15,8 @@ class B : A {
 // NO-AS: @_ZTISt9type_info = external constant ptr
 // AS: @_ZTIi = external addrspace(1) constant ptr addrspace(1)
 // NO-AS: @_ZTIi = external constant ptr
-// AS: @_ZTI1A = linkonce_odr addrspace(1) constant { ptr addrspace(1), ptr addrspace(1) } { ptr addrspace(1) getelementptr inbounds (ptr addrspace(1), ptr addrspace(1) @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), ptr addrspace(1) @_ZTS1A }, comdat, align 8
-// NO-AS: @_ZTI1A = linkonce_odr constant { ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), ptr @_ZTS1A }, comdat, align 8
+// AS: @_ZTI1A = linkonce_odr addrspace(1) constant { ptr addrspace(1), ptr addrspace(1) } { ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @_ZTVN10__cxxabiv117__class_type_infoE, i64 16), ptr addrspace(1) @_ZTS1A }, comdat, align 8
+// NO-AS: @_ZTI1A = linkonce_odr constant { ptr, ptr } { ptr getelementptr inbounds (i8, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 16), ptr @_ZTS1A }, comdat, align 8
 // AS: @_ZTVN10__cxxabiv117__class_type_infoE = external addrspace(1) global [0 x ptr addrspace(1)]
 // NO-AS: @_ZTVN10__cxxabiv117__class_type_infoE = external global [0 x ptr]
 // AS: @_ZTS1A = linkonce_odr addrspace(1) constant [3 x i8] c"1A\00", comdat, align 1

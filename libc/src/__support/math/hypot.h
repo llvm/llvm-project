@@ -22,6 +22,79 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+
+namespace hypot_internal {
+
+// Both input are denormals and non-zero.  We scale them up and down by the
+// inverse of the smallest normal number: 2^-1022, so that the correct "hidden"
+// bit position is now 1.  And by adding and subtracting 1 from the results, we
+// can emulate the rounding behavior in the denormal range.
+LIBC_INLINE double hypot_denorm(double a, double b) {
+  using fputil::DoubleDouble;
+  constexpr double SCALE = 0x1.0p1022;
+  constexpr double SCALE_BACK = 0x1.0p-1022;
+
+  a *= SCALE;
+  b *= SCALE;
+
+  // See the comments in the main function for the detail explanation of the
+  // computations.
+
+  // sum.hi + sum.lo ~ a^2 + b^2.
+  DoubleDouble a_sq = fputil::exact_mult(a, a);
+  DoubleDouble b_sq = fputil::exact_mult(b, b);
+  DoubleDouble sum = fputil::exact_add(a_sq.hi, b_sq.hi);
+  sum.lo += a_sq.lo + b_sq.lo;
+
+  // |sqrt(sum.hi) - r_hi| < 2^-52.
+  double r_hi = fputil::sqrt<double>(sum.hi);
+  // r_inv ~ 1 / (2 * r_hi)
+  double r_inv = 0.5 / r_hi;
+  // Adjust correction if needed.
+  DoubleDouble r_h{0.0, r_hi};
+  double correction = 0.0;
+  if (r_hi < 1.0) {
+    // When r_hi < 1, the output is denormal.  We mimick rounding in denormal
+    // range with 1.0 + r_hi.
+    r_h = fputil::exact_add(1.0, r_hi);
+    correction = 1.0;
+  }
+  // r_hi^2
+  DoubleDouble r_sq = fputil::exact_mult(r_hi, r_hi);
+  // (hi + lo - r_hi^2)
+  double num_lo = (sum.lo - r_sq.lo) - (r_sq.hi - sum.hi);
+  // (hi + lo - r_hi^2) / (2 * r_hi)
+  double r_lo = fputil::multiply_add(num_lo, r_inv, r_h.lo);
+
+  constexpr double ERR = 0x1.0p-102;
+
+  // Ziv's rounding test.
+  double upper = r_h.hi + (r_lo + ERR);
+  double lower = r_h.hi + (r_lo - ERR);
+
+  if (LIBC_LIKELY(upper == lower)) {
+#ifdef LIBC_MATH_HAS_NO_EXCEPT
+    return (upper - correction) * SCALE_BACK;
+#else
+    // Check to raise underflow correctly.
+    DoubleDouble r = fputil::exact_add(r_h.hi, r_lo);
+    r.hi -= correction;
+    // Raise underflow if needed:
+    if ((r.hi < 1.0 && r.lo != 0.0) || (r.hi == 1.0 && r.lo < 0.0))
+      fputil::raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
+
+    return r.hi * SCALE_BACK;
+#endif // LIBC_MATH_HAS_NO_EXCEPT
+  }
+
+  return fputil::hypot(a * SCALE_BACK, b * SCALE_BACK);
+}
+
+} // namespace hypot_internal
+
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+
 LIBC_INLINE double hypot(double x, double y) {
   using FPBits = fputil::FPBits<double>;
   using DoubleDouble = fputil::DoubleDouble;
@@ -72,18 +145,50 @@ LIBC_INLINE double hypot(double x, double y) {
         return x;
       return y;
     }
+
+    // Check the exponent gap here so that all the follow up pre-scaling and
+    // overflow check won't generate spurious underflow exceptions.
+    if (LIBC_UNLIKELY(a_e - b_e >= (54U << (32 - 11)))) {
+      double x_abs = FPBits(x_u & FPBits::EXP_SIG_MASK).get_val();
+      double y_abs = FPBits(y_u & FPBits::EXP_SIG_MASK).get_val();
+      return x_abs + y_abs;
+    }
     //  Any scaling factor < 2^(-1024/2) = 2^-512 would work.
     scale = 0x1.0p-600;
     scale_back = 0x1.0p600;
     a *= scale;
     b *= scale;
-  } else if (LIBC_UNLIKELY(b_e <= ((FPBits::EXP_BIAS - 500) << (32 - 11)))) {
-    // The smaller magnitude is below 2^-500 (or 0), need to scale up to prevent
+    // Check for overflow to raise the exception correctly.
+#if !defined(LIBC_MATH_HAS_NO_EXCEPT)
+    // No overflow when calculating a^2 + b^2.
+    double asq = a * a;
+    double bsq = b * b;
+    double sumsq = asq + bsq;
+    // Overflow happens when:
+    //   2^600 * sqrt(a^2 + b^2) >= 2^1023 * (2 - 2^-53)
+    // Which is equivalent to:
+    //   sqrt(a^2 + b^2) >= 2^424 * (1 - 2^-54).
+    // Square both sides:
+    //   a^2 + b^2 >= 2^848 * (1 - 2^-53 + 2^-108).
+    // For a fast sufficient condition that can be done in double precision:
+    //   a^2 + b^2 >= 2^848.
+    if (sumsq >= 0x1.0p848)
+      return sumsq * scale_back;
+#endif // !LIBC_MATH_HAS_NO_EXCEPT
+  } else if (LIBC_UNLIKELY(b_e <= ((FPBits::EXP_BIAS - 400) << (32 - 11)))) {
+    // The smaller magnitude is below 2^-400 (or 0), need to scale up to prevent
     // underflow when squaring.
-    if ((x == 0.0) || (y == 0.0)) {
-      double x_abs = FPBits(x_u & FPBits::EXP_SIG_MASK).get_val();
-      double y_abs = FPBits(y_u & FPBits::EXP_SIG_MASK).get_val();
-      return x_abs + y_abs;
+    if (LIBC_UNLIKELY(a_e < (1U << (32 - 11)))) {
+      // Larger input is denormal, extra care is needed to perform the Ziv's
+      // accuracy test correctly as double-rounding errors might happen.
+      if ((x == 0.0) || (y == 0.0)) {
+        double x_abs = FPBits(x_u & FPBits::EXP_SIG_MASK).get_val();
+        double y_abs = FPBits(y_u & FPBits::EXP_SIG_MASK).get_val();
+        return x_abs + y_abs;
+      }
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+      return hypot_internal::hypot_denorm(a, b);
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     }
     //  Any scaling factor > 2^((1072 + 52)/2) = 2^562 would work.
     scale = 0x1.0p600;

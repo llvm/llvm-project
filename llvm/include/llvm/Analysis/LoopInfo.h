@@ -311,12 +311,13 @@ public:
   bool isCanonical(ScalarEvolution &SE) const;
 
   /// Return true if the Loop is in LCSSA form. If \p IgnoreTokens is set to
-  /// true, token values defined inside loop are allowed to violate LCSSA form.
+  /// true, token-like values defined inside loop are allowed to violate LCSSA
+  /// form.
   bool isLCSSAForm(const DominatorTree &DT, bool IgnoreTokens = true) const;
 
   /// Return true if this Loop and all inner subloops are in LCSSA form. If \p
-  /// IgnoreTokens is set to true, token values defined inside loop are allowed
-  /// to violate LCSSA form.
+  /// IgnoreTokens is set to true, token-like values defined inside loop are
+  /// allowed to violate LCSSA form.
   bool isRecursivelyLCSSAForm(const DominatorTree &DT, const LoopInfo &LI,
                               bool IgnoreTokens = true) const;
 
@@ -326,6 +327,13 @@ public:
 
   /// Return true if the loop body is safe to clone in practice.
   bool isSafeToClone() const;
+
+  /// Like `isSafeToClone`, but for transformations where the cloned loop
+  /// bodies may run conditionally. This additionally checks that we may form
+  /// phis for all values that are live-out from the loop (in particular that
+  /// no token-like values are live-out) and that there are no convergent calls
+  /// (which must not gain new control dependencies).
+  bool isSafeToCloneConditionally(const DominatorTree &DT) const;
 
   /// Returns true if the loop is annotated parallel.
   ///
@@ -416,7 +424,6 @@ private:
 
   friend class LoopInfoBase<BasicBlock, Loop>;
   friend class LoopBase<BasicBlock, Loop>;
-  explicit Loop(BasicBlock *BB) : LoopBase<BasicBlock, Loop>(BB) {}
   ~Loop() = default;
 };
 

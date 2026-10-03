@@ -5,7 +5,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-    @skipUnlessDarwin
+    @requireDarwin
     # LLDB ends up calling the user-defined function (but at least doesn't
     # crash).
     @skipIf(macos_version=["<", "13.0"])

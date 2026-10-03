@@ -231,7 +231,7 @@ void ThreadPlanCallFunction::DidPop() { DoTakedown(PlanSucceeded()); }
 
 void ThreadPlanCallFunction::GetDescription(Stream *s, DescriptionLevel level) {
   if (level == eDescriptionLevelBrief) {
-    s->Printf("Function call thread plan");
+    s->PutCString("Function call thread plan");
   } else {
     s->Printf("Thread plan to call 0x%" PRIx64,
               m_function_addr.GetLoadAddress(&GetTarget()));

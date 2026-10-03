@@ -48,9 +48,9 @@ void func() {
   int e2 = arr[1];
 }
 // CHECK: define{{.*}} void @_Z4funcv()
-// CHECK-NEXT: %[[ARR_ALLOCA:.*]] = alloca [10 x i32], i64 1, align 16
-// CHECK-NEXT: %[[INIT:.*]] = alloca i32, i64 1, align 4
-// CHECK-NEXT: %[[INIT_2:.*]] = alloca i32, i64 1, align 4
+// CHECK-NEXT: %[[ARR_ALLOCA:.*]] = alloca [10 x i32], align 16
+// CHECK-NEXT: %[[INIT:.*]] = alloca i32, align 4
+// CHECK-NEXT: %[[INIT_2:.*]] = alloca i32, align 4
 // CHECK-NEXT: %[[ELE_PTR:.*]] = getelementptr [10 x i32], ptr %[[ARR_ALLOCA]], i32 0, i64 0
 // CHECK-NEXT: %[[TMP:.*]] = load i32, ptr %[[ELE_PTR]], align 16
 // CHECK-NEXT: store i32 %[[TMP]], ptr %[[INIT]], align 4
@@ -63,7 +63,7 @@ void func2() {
 }
 
 // CHECK: define{{.*}} void @_Z5func2v()
-// CHECK:   %[[ARR:.*]] = alloca [2 x i32], i64 1, align 4
+// CHECK:   %[[ARR:.*]] = alloca [2 x i32], align 4
 // CHECK:   call void @llvm.memcpy{{.*}}(ptr align 4 %[[ARR]], ptr align 4 @[[FUNC2_ARR]], i64 8, i1 false)
 // CHECK:   ret void
 
@@ -71,7 +71,7 @@ void func3() {
   int arr3[2] = {5, 6};
 }
 // CHECK: define{{.*}} void @_Z5func3v()
-// CHECK:  %[[ARR_ALLOCA:.*]] = alloca [2 x i32], i64 1, align 4
+// CHECK:  %[[ARR_ALLOCA:.*]] = alloca [2 x i32], align 4
 // CHECK:  call void @llvm.memcpy{{.*}}(ptr align 4 %[[ARR_ALLOCA]], ptr align 4 @[[FUNC3_ARR]], i64 8, i1 false)
 
 void func4() {
@@ -79,8 +79,8 @@ void func4() {
   int e = arr[1][0];
 }
 // CHECK: define{{.*}} void @_Z5func4v()
-// CHECK:  %[[ARR_ALLOCA:.*]] = alloca [2 x [1 x i32]], i64 1, align 4
-// CHECK:  %[[INIT:.*]] = alloca i32, i64 1, align 4
+// CHECK:  %[[ARR_ALLOCA:.*]] = alloca [2 x [1 x i32]], align 4
+// CHECK:  %[[INIT:.*]] = alloca i32, align 4
 // CHECK:  call void @llvm.memcpy{{.*}}(ptr align 4 %[[ARR_ALLOCA]], ptr align 4 @[[FUNC4_ARR]], i64 8, i1 false)
 // CHECK:  %[[ARR_1:.*]] = getelementptr [2 x [1 x i32]], ptr %[[ARR_ALLOCA]], i32 0, i64 1
 // CHECK:  %[[ELE_PTR:.*]] = getelementptr [1 x i32], ptr %[[ARR_1]], i32 0, i64 0
@@ -91,7 +91,7 @@ void func5() {
   int arr[2][1] = {{5}};
 }
 // CHECK: define{{.*}} void @_Z5func5v()
-// CHECK:   %[[ARR:.*]] = alloca [2 x [1 x i32]], i64 1, align 4
+// CHECK:   %[[ARR:.*]] = alloca [2 x [1 x i32]], align 4
 // CHECK:   call void @llvm.memcpy{{.*}}(ptr align 4 %[[ARR]], ptr align 4 @[[FUNC5_ARR]], i64 8, i1 false)
 // CHECK:   ret void
 
@@ -100,8 +100,8 @@ void func6() {
   int arr[2] = { x, 5 };
 }
 // CHECK: define{{.*}} void @_Z5func6v()
-// CHECK:  %[[VAR:.*]] = alloca i32, i64 1, align 4
-// CHECK:  %[[ARR:.*]] = alloca [2 x i32], i64 1, align 4
+// CHECK:  %[[VAR:.*]] = alloca i32, align 4
+// CHECK:  %[[ARR:.*]] = alloca [2 x i32], align 4
 // CHECK:  store i32 4, ptr %[[VAR]], align 4
 // CHECK:  %[[ELE_0:.*]] = getelementptr i32, ptr %[[ARR]], i32 0
 // CHECK:  %[[TMP:.*]] = load i32, ptr %[[VAR]], align 4
@@ -113,14 +113,14 @@ void func7() {
   int* arr[1] = {};
 }
 // CHECK: define{{.*}} void @_Z5func7v()
-// CHECK:   %[[ARR:.*]] = alloca [1 x ptr], i64 1, align 8
+// CHECK:   %[[ARR:.*]] = alloca [1 x ptr], align 8
 // CHECK:   call void @llvm.memcpy{{.*}}(ptr align 8 %[[ARR]], ptr align 8 @[[FUNC7_ARR]], i64 8, i1 false)
 // CHECK:   ret void
 
 void func8(int p[10]) {}
 // CHECK: define{{.*}} void @_Z5func8Pi(ptr noundef {{%.*}})
-// CHECK-NEXT: alloca ptr, i64 1, align 8
+// CHECK-NEXT: alloca ptr, align 8
 
 void func9(int pp[10][5]) {}
 // CHECK: define{{.*}} void @_Z5func9PA5_i(ptr noundef {{%.*}})
-// CHECK-NEXT: alloca ptr, i64 1, align 8
+// CHECK-NEXT: alloca ptr, align 8

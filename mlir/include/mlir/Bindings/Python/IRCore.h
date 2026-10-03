@@ -365,6 +365,16 @@ enum class PyWalkOrder : std::underlying_type_t<MlirWalkOrder> {
   PostOrder = MlirWalkPostOrder
 };
 
+/// Flags controlling structural operation equivalence and hashing.
+enum class PyOperationEquivalenceFlags : std::underlying_type_t<
+    MlirOperationEquivalenceFlags> {
+  None = MLIR_OPERATION_EQUIVALENCE_NONE,
+  IgnoreLocations = MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS,
+  IgnoreDiscardableAttrs = MLIR_OPERATION_EQUIVALENCE_IGNORE_DISCARDABLE_ATTRS,
+  IgnoreProperties = MLIR_OPERATION_EQUIVALENCE_IGNORE_PROPERTIES,
+  IgnoreCommutativity = MLIR_OPERATION_EQUIVALENCE_IGNORE_COMMUTATIVITY
+};
+
 /// Python class mirroring the C MlirDiagnostic struct. Note that these structs
 /// are only valid for the duration of a diagnostic callback and attempting
 /// to access them outside of that will raise an exception. This applies to
@@ -1986,6 +1996,19 @@ public:
 };
 
 class MLIR_PYTHON_API_EXPORTED NoTerminator : public PyDynamicOpTrait {
+public:
+  static bool attach(const nanobind::object &opName, PyMlirContext &context);
+  static void bind(nanobind::module_ &m);
+};
+
+class MLIR_PYTHON_API_EXPORTED IsIsolatedFromAbove : public PyDynamicOpTrait {
+public:
+  static bool attach(const nanobind::object &opName, PyMlirContext &context);
+  static void bind(nanobind::module_ &m);
+};
+
+class MLIR_PYTHON_API_EXPORTED RecursiveMemoryEffects
+    : public PyDynamicOpTrait {
 public:
   static bool attach(const nanobind::object &opName, PyMlirContext &context);
   static void bind(nanobind::module_ &m);

@@ -18,6 +18,7 @@
 
 #include "count_new.h"
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 #include "../../GenerateInput.h"
 
 auto compute_median(auto first, auto last) {
@@ -36,7 +37,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto stable_partition) {
       benchmark::RegisterBenchmark(
           name,
-          [stable_partition](auto& st) {
+          [stable_partition](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             Container c;
@@ -79,7 +80,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto stable_partition) {
       benchmark::RegisterBenchmark(
           name,
-          [stable_partition](auto& st) {
+          [stable_partition](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             Container c;
@@ -122,7 +123,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto stable_partition) {
       benchmark::RegisterBenchmark(
           name,
-          [stable_partition](auto& st) {
+          [stable_partition](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             Container c;

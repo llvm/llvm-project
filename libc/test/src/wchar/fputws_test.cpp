@@ -25,8 +25,7 @@
 using LlvmLibcFputwsTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcFputwsTest, WriteWideString) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("fputws_string.test"));
+  const auto FILENAME = libc_make_test_file_path("fputws_string.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -92,8 +91,7 @@ TEST_F(LlvmLibcFputwsTest, WriteWideString) {
 }
 
 TEST_F(LlvmLibcFputwsTest, EmptyString) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("fputws_empty.test"));
+  const auto FILENAME = libc_make_test_file_path("fputws_empty.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -112,8 +110,7 @@ TEST_F(LlvmLibcFputwsTest, EmptyString) {
 }
 
 TEST_F(LlvmLibcFputwsTest, InvalidStream) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("fputws_invalid.test"));
+  const auto FILENAME = libc_make_test_file_path("fputws_invalid.test");
 
   // Create the file first
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
@@ -134,8 +131,7 @@ TEST_F(LlvmLibcFputwsTest, InvalidStream) {
 
 #if WCHAR_MAX > 0xFFFF
 TEST_F(LlvmLibcFputwsTest, EncodingErrorEILSEQ) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("fputws_eilseq.test"));
+  const auto FILENAME = libc_make_test_file_path("fputws_eilseq.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -152,8 +148,7 @@ TEST_F(LlvmLibcFputwsTest, EncodingErrorEILSEQ) {
 #endif
 
 TEST_F(LlvmLibcFputwsTest, ByteModeFailure) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("fputws_bytemode.test"));
+  const auto FILENAME = libc_make_test_file_path("fputws_bytemode.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w+");
   ASSERT_FALSE(file == nullptr);
 

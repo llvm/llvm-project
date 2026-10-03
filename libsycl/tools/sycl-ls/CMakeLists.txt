@@ -24,6 +24,9 @@ if (WIN32)
   # - LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR (0x100)
   # - LOAD_LIBRARY_SEARCH_SYSTEM32     (0x800)
   target_link_options(sycl-ls PRIVATE LINKER:/DEPENDENTLOADFLAG:0x900)
+  # We need exceptions, but they are disabled by default for clang-cl, so
+  # enable them.
+  target_compile_options(sycl-ls PRIVATE /EHsc)
 endif()
 install(TARGETS sycl-ls
   RUNTIME DESTINATION "bin" COMPONENT sycl-ls)

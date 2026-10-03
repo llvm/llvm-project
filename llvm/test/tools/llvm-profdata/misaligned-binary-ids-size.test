@@ -29,5 +29,5 @@ RUN: printf '\1\1\1\1\1\1\1\1' >> %t.profraw
 RUN: printf '\2\2\2\2\2\2\2\2' >> %t.profraw
 RUN: printf '\3\3\3\3\0\0\0\0' >> %t.profraw
 
-// RUN: not llvm-profdata show --binary-ids  %t.profraw 2>&1 | FileCheck %s
-// CHECK: invalid instrumentation profile data (file header is corrupt)
+RUN: not llvm-profdata show --binary-ids  %t.profraw 2>&1 | FileCheck %s
+CHECK: invalid instrumentation profile data (file header is corrupt): BinaryIdSize (63) is not a multiple of 8

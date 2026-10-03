@@ -89,6 +89,13 @@ subroutine intrinsic_error_skip_show_descriptor(n)
   call show_descriptor(d) ! ok, descriptor in managed memory
 end subroutine
 
+subroutine intrinsic_error_skip_len(cdchar)
+  character(len=*), device :: cdchar
+  integer :: ibuffsize
+  ibuffsize = len(cdchar) ! ok, descriptor is in managed memory
+end subroutine intrinsic_error_skip_len
+
+
 double complex function acc_routine_check(n, x, y)
   !$acc routine(acc_routine_check) vector
   implicit none

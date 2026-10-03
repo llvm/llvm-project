@@ -36,11 +36,6 @@ public:
   uint64_t ExitCount{0};
 
   // Most of the public interface is provided by LoopBase.
-
-protected:
-  friend class LoopInfoBase<BinaryBasicBlock, BinaryLoop>;
-  explicit BinaryLoop(BinaryBasicBlock *BB)
-      : LoopBase<BinaryBasicBlock, BinaryLoop>(BB) {}
 };
 
 class BinaryLoopInfo : public LoopInfoBase<BinaryBasicBlock, BinaryLoop> {

@@ -57,7 +57,7 @@ body:             |
     ; CHECK-NEXT: [[ANDXri:%[0-9]+]]:gpr64sp = ANDXri [[COPY]], 8060
     ; CHECK-NEXT: $x0 = COPY [[ANDXri]]
     %0:gpr(p0) = COPY $x0
-    %const:gpr(s64) = G_CONSTANT i64 -8
+    %const:gpr(i64) = G_CONSTANT i64 -8
     %1:gpr(p0) = G_PTRMASK %0, %const
     $x0 = COPY %1(p0)
 ...
@@ -119,23 +119,23 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr2:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: [[COPY5:%[0-9]+]]:gpr32all = COPY [[CSINCWr2]]
     ; CHECK-NEXT: $w0 = COPY [[COPY5]]
-    %0:gpr(s32) = COPY $w0
-    %1:gpr(s32) = G_ICMP intpred(eq), %0, %0
-    %6:gpr(s8) = G_TRUNC %1(s32)
-    %9:gpr(s32) = G_ANYEXT %6
-    $w0 = COPY %9(s32)
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = G_ICMP intpred(eq), %0, %0
+    %6:gpr(i8) = G_TRUNC %1(i32)
+    %9:gpr(i32) = G_ANYEXT %6
+    $w0 = COPY %9(i32)
 
-    %2:gpr(s64) = COPY $x0
-    %3:gpr(s32) = G_ICMP intpred(uge), %2, %2
-    %7:gpr(s8) = G_TRUNC %3(s32)
-    %10:gpr(s32) = G_ANYEXT %7
-    $w0 = COPY %10(s32)
+    %2:gpr(i64) = COPY $x0
+    %3:gpr(i32) = G_ICMP intpred(uge), %2, %2
+    %7:gpr(i8) = G_TRUNC %3(i32)
+    %10:gpr(i32) = G_ANYEXT %7
+    $w0 = COPY %10(i32)
 
     %4:gpr(p0) = COPY $x0
-    %5:gpr(s32) = G_ICMP intpred(ne), %4, %4
-    %8:gpr(s8) = G_TRUNC %5(s32)
-    %11:gpr(s32) = G_ANYEXT %8
-    $w0 = COPY %11(s32)
+    %5:gpr(i32) = G_ICMP intpred(ne), %4, %4
+    %8:gpr(i8) = G_TRUNC %5(i32)
+    %11:gpr(i32) = G_ANYEXT %8
+    $w0 = COPY %11(i32)
 ...
 
 ---
@@ -171,29 +171,29 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr4:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 14, implicit $nzcv
     ; CHECK-NEXT: [[COPY7:%[0-9]+]]:gpr32all = COPY [[CSINCWr4]]
     ; CHECK-NEXT: $w0 = COPY [[COPY7]]
-    %0:fpr(s32) = COPY $s0
-    %1:gpr(s32) = G_FCMP floatpred(one), %0, %0
-    %2:gpr(s8) = G_TRUNC %1(s32)
-    %3:gpr(s32) = G_ANYEXT %2
-    $w0 = COPY %3(s32)
+    %0:fpr(f32) = COPY $s0
+    %1:gpr(i32) = G_FCMP floatpred(one), %0, %0
+    %2:gpr(i8) = G_TRUNC %1(i32)
+    %3:gpr(i32) = G_ANYEXT %2
+    $w0 = COPY %3(i32)
 
-    %4:fpr(s64) = COPY $d0
-    %5:gpr(s32) = G_FCMP floatpred(uge), %4, %4
-    %6:gpr(s8) = G_TRUNC %5(s32)
-    %7:gpr(s32) = G_ANYEXT %6
-    $w0 = COPY %7(s32)
+    %4:fpr(f64) = COPY $d0
+    %5:gpr(i32) = G_FCMP floatpred(uge), %4, %4
+    %6:gpr(i8) = G_TRUNC %5(i32)
+    %7:gpr(i32) = G_ANYEXT %6
+    $w0 = COPY %7(i32)
 
-    %8:fpr(s32) = COPY $s0
-    %9:gpr(s32) = G_FCMP floatpred(true), %8, %8
-    %10:gpr(s8) = G_TRUNC %9(s32)
-    %11:gpr(s32) = G_ANYEXT %10
-    $w0 = COPY %11(s32)
+    %8:fpr(f32) = COPY $s0
+    %9:gpr(i32) = G_FCMP floatpred(true), %8, %8
+    %10:gpr(i8) = G_TRUNC %9(i32)
+    %11:gpr(i32) = G_ANYEXT %10
+    $w0 = COPY %11(i32)
 
-    %12:fpr(s64) = COPY $d0
-    %13:gpr(s32) = G_FCMP floatpred(false), %12, %12
-    %14:gpr(s8) = G_TRUNC %13(s32)
-    %15:gpr(s32) = G_ANYEXT %14
-    $w0 = COPY %15(s32)
+    %12:fpr(f64) = COPY $d0
+    %13:gpr(i32) = G_FCMP floatpred(false), %12, %12
+    %14:gpr(i8) = G_TRUNC %13(i32)
+    %15:gpr(i32) = G_ANYEXT %14
+    $w0 = COPY %15(i32)
 
 ...
 
@@ -223,12 +223,12 @@ body:             |
   bb.0:
     liveins: $s0, $w0
     successors: %bb.1
-    %0:fpr(s32) = COPY $s0
-    %3:gpr(s32) = COPY $w0
+    %0:fpr(i32) = COPY $s0
+    %3:gpr(i32) = COPY $w0
 
   bb.1:
     successors: %bb.1, %bb.2
-    %2:fpr(s32) = PHI %0, %bb.0, %2, %bb.1
+    %2:fpr(i32) = PHI %0, %bb.0, %2, %bb.1
     G_BRCOND %3, %bb.1
 
   bb.2:
@@ -263,17 +263,17 @@ body:             |
     ; CHECK-NEXT: [[ANDSWri2:%[0-9]+]]:gpr32 = ANDSWri [[COPY]], 0, implicit-def $nzcv
     ; CHECK-NEXT: [[CSELXr1:%[0-9]+]]:gpr64 = CSELXr [[COPY5]], [[COPY6]], 1, implicit $nzcv
     ; CHECK-NEXT: $x0 = COPY [[CSELXr1]]
-    %10:gpr(s32) = COPY $w0
+    %10:gpr(i32) = COPY $w0
 
-    %1:gpr(s32) = COPY $w1
-    %2:gpr(s32) = COPY $w2
-    %3:gpr(s32) = G_SELECT %10, %1, %2
-    $w0 = COPY %3(s32)
+    %1:gpr(i32) = COPY $w1
+    %2:gpr(i32) = COPY $w2
+    %3:gpr(i32) = G_SELECT %10, %1, %2
+    $w0 = COPY %3(i32)
 
-    %4:gpr(s64) = COPY $x0
-    %5:gpr(s64) = COPY $x1
-    %6:gpr(s64) = G_SELECT %10, %4, %5
-    $x0 = COPY %6(s64)
+    %4:gpr(i64) = COPY $x0
+    %5:gpr(i64) = COPY $x1
+    %6:gpr(i64) = G_SELECT %10, %4, %5
+    $x0 = COPY %6(i64)
 
     %7:gpr(p0) = COPY $x0
     %8:gpr(p0) = COPY $x1

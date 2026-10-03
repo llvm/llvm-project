@@ -9,5 +9,10 @@ executable("clang-ssaf-linker") {
     "//llvm/lib/Option",
     "//llvm/lib/Support",
   ]
-  sources = [ "SSAFLinker.cpp" ]
+  sources = [
+    "LinkCLI.cpp",
+    "MultiArchCreateCLI.cpp",
+    "SSAFLinker.cpp",
+    "StaticLibraryCreateCLI.cpp",
+  ]
 }

@@ -1,0 +1,31 @@
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// Round-trip tests:
+
+// Generate wpa.json from the C++ source file so the test stays in sync with
+// the extractor output rather than relying on a hand-crafted snapshot.
+// RUN: %clang_cc1 -fsyntax-only %S/type-constrained-pointers.cpp \
+// RUN:   --ssaf-extract-summaries=TypeConstrainedPointers \
+// RUN:   --ssaf-tu-summary-file=%t/tu.summary.json \
+// RUN:   --ssaf-compilation-unit-id="tu-1"
+// RUN: clang-ssaf-linker %t/tu.summary.json -o %t/lu.json
+// RUN: clang-ssaf-analyzer %t/lu.json -o %t/wpa.json \
+// RUN:   -a TypeConstrainedPointersAnalysisResult
+// RUN: clang-ssaf-format --type wpa %t/wpa.json -o %t/wpa-round-trip.json
+// RUN: diff %t/wpa.json %t/wpa-round-trip.json
+
+// RUN: clang-ssaf-format --type wpa %S/Inputs/wpa-result-empty.json -o %t/wpa-result-empty.json
+// RUN: diff %S/Inputs/wpa-result-empty.json %t/wpa-result-empty.json
+
+// Negative tests:
+
+// Missing the TypeConstrainedPointersAnalysisResult key in the result object.
+// RUN: not clang-ssaf-format --type wpa %S/Inputs/wpa-result-no-key.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-MISSING-KEY
+// CHECK-MISSING-KEY: saw an object of 1 key(s) but expected An object with a key TypeConstrainedPointersAnalysisResult
+
+// Array element is not an object.
+// RUN: not clang-ssaf-format --type wpa %S/Inputs/wpa-result-bad-id.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-BAD-ID
+// CHECK-BAD-ID: saw "not-an-object" but expected an object representing EntityId

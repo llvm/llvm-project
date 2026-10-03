@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -triple amdgcn-amd-amdhsa -fopenmp-is-target-device -Wno-unused-value %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-targets=amdgpu-amd-amdhsa -triple amdgpu-amd-amdhsa -fopenmp-is-target-device -Wno-unused-value %s
 
 void foo() {
 #pragma omp target

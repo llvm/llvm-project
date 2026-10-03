@@ -9,32 +9,64 @@
 #ifndef ORC_RT_UNITTEST_COMMONTESTUTILS_H
 #define ORC_RT_UNITTEST_COMMONTESTUTILS_H
 
-#include "orc-rt/Error.h"
-#include "orc-rt/ExecutorProcessInfo.h"
-#include "orc-rt/WrapperFunction.h"
-#include "orc-rt/move_only_function.h"
+// Helpers here must not depend on Bedrock: this header is included by
+// SupportTests translation units, which link Support alone. Bedrock-dependent
+// helpers belong in BedrockTestUtils.h. (Session is forward-declared below so
+// that the error-reporter helpers can also serve as Session error reporters;
+// they never use the Session, so this adds no link dependency.)
 
-#include "orc-rt-c/CoreTypes.h"
-#include "orc-rt-c/WrapperFunction.h"
+#include "orc-rt/support/Error.h"
+#include "orc-rt/support/WrapperFunction.h"
+#include "orc-rt/support/move_only_function.h"
+
+#include "orc-rt-c/support/CoreTypes.h"
+#include "orc-rt-c/support/WrapperFunction.h"
 
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <future>
+#include <string>
+#include <vector>
 
-inline void noErrors(orc_rt::Error Err) { orc_rt::cantFail(std::move(Err)); }
+#include "gtest/gtest.h"
 
-inline orc_rt::ExecutorProcessInfo mockExecutorProcessInfo() noexcept {
-  return orc_rt::ExecutorProcessInfo("arm64-apple-darwin", 16384);
-}
+namespace orc_rt {
+class Session;
+} // namespace orc_rt
 
-/// RunWrapperCall callback for tests that should never dispatch a wrapper
-/// call. Asserts on invocation.
-inline void noDispatch(orc_rt_SessionRef, uint64_t,
-                       orc_rt_WrapperFunctionReturn, orc_rt_WrapperFunction,
-                       orc_rt::WrapperFunctionBuffer) {
-  assert(false && "strictly no dispatching!");
-}
+namespace orc_rt::test {
+
+/// Error reporter for tests that expect no errors. Usable both as a plain
+/// error reporter and as a Session error reporter.
+///
+/// This is a function object rather than a pair of overloaded functions so
+/// that it can be passed to templated callable parameters (e.g.
+/// move_only_function's constructor): the name of an overload set can't be
+/// deduced.
+inline constexpr struct NoErrors {
+  void operator()(Error Err) const noexcept { cantFail(std::move(Err)); }
+  void operator()(Session &, Error Err) const noexcept {
+    cantFail(std::move(Err));
+  }
+} noErrors;
+
+/// ReportError callback for tests that records the message of every reported
+/// error, in the order reported. Like noErrors, usable both as a plain error
+/// reporter and as a Session error reporter.
+class AccumulateErrors {
+public:
+  AccumulateErrors(std::vector<std::string> &ErrMsgs) : ErrMsgs(ErrMsgs) {}
+
+  void operator()(Error Err) noexcept {
+    ErrMsgs.push_back(toString(std::move(Err)));
+  }
+
+  void operator()(Session &, Error Err) noexcept { (*this)(std::move(Err)); }
+
+private:
+  std::vector<std::string> &ErrMsgs;
+};
 
 template <size_t Idx = 0> class OpCounter {
 public:
@@ -90,16 +122,20 @@ template <size_t Idx> size_t OpCounter<Idx>::MoveAssignments = 0;
 template <size_t Idx> size_t OpCounter<Idx>::Destructions = 0;
 
 template <typename T>
-orc_rt::move_only_function<void(T)> waitFor(std::future<T> &F) {
+move_only_function<void(T) noexcept> waitFor(std::future<T> &F) {
   std::promise<T> P;
   F = P.get_future();
-  return [P = std::move(P)](T Val) mutable { P.set_value(std::move(Val)); };
+  return [P = std::move(P)](T Val) mutable noexcept {
+    P.set_value(std::move(Val));
+  };
 }
 
-inline orc_rt::move_only_function<void()> waitFor(std::future<void> &F) {
+inline move_only_function<void() noexcept> waitFor(std::future<void> &F) {
   std::promise<void> P;
   F = P.get_future();
-  return [P = std::move(P)]() mutable { P.set_value(); };
+  return [P = std::move(P)]() mutable noexcept { P.set_value(); };
 }
+
+} // namespace orc_rt::test
 
 #endif // ORC_RT_UNITTEST_COMMONTESTUTILS_H

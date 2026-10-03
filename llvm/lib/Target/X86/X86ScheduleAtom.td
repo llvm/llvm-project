@@ -383,7 +383,7 @@ def  : WriteRes<WriteVecMove,          [AtomPort0]>;
 def  : WriteRes<WriteVecMoveX,        [AtomPort01]>;
 defm : X86WriteResUnsupported<WriteVecMoveY>;
 defm : X86WriteResUnsupported<WriteVecMoveZ>;
-defm : X86WriteRes<WriteVecMoveToGpr,   [AtomPort0], 3, [3], 1>;
+defm : X86WriteRes<WriteVecMoveToGpr,   [AtomPort0], 4, [2], 1>;
 defm : X86WriteRes<WriteVecMoveFromGpr, [AtomPort0], 1, [1], 1>;
 
 defm : AtomWriteResPair<WriteVecALU,       [AtomPort01],  [AtomPort0], 1, 1>;
@@ -462,10 +462,10 @@ defm : X86WriteResPairUnsupported<WritePCmpEStrM>;
 // MOVMSK Instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-def  : WriteRes<WriteFMOVMSK,    [AtomPort0]> { let Latency = 3; let ReleaseAtCycles = [3]; }
-def  : WriteRes<WriteVecMOVMSK,  [AtomPort0]> { let Latency = 3; let ReleaseAtCycles = [3]; }
+def  : WriteRes<WriteFMOVMSK,    [AtomPort0]> { let Latency = 4; let ReleaseAtCycles = [2]; }
+def  : WriteRes<WriteVecMOVMSK,  [AtomPort0]> { let Latency = 4; let ReleaseAtCycles = [2]; }
 defm : X86WriteResUnsupported<WriteVecMOVMSKY>;
-def  : WriteRes<WriteMMXMOVMSK,  [AtomPort0]> { let Latency = 3; let ReleaseAtCycles = [3]; }
+def  : WriteRes<WriteMMXMOVMSK,  [AtomPort0]> { let Latency = 4; let ReleaseAtCycles = [2]; }
 
 ////////////////////////////////////////////////////////////////////////////////
 // AES instructions.

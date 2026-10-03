@@ -1,4 +1,4 @@
-# REQUIRES: object-emission,system-darwin
+# REQUIRES: object-emission,system-darwin,aarch64-registered-target
 # RUN: dsymutil --linker classic -oso-prepend-path %p/..  %p/../Inputs/fat-test.arm.dylib -o %t.dSYM
 # RUN: llvm-dwarfdump -a -v %t.dSYM/Contents/Resources/DWARF/fat-test.arm.dylib | FileCheck %s
 # RUN: dsymutil --linker classic -u %t.dSYM

@@ -12,8 +12,8 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr undef, align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr undef, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub <2 x float> zeroinitializer, [[TMP0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> <float 0.000000e+00, float poison>, float [[TMP2]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> <float poison, float 0.000000e+00>, float [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> <float 0.000000e+00, float poison>, float [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> <float poison, float 0.000000e+00>, float [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP4]], <2 x float> [[TMP3]], <2 x float> [[TMP6]])
 ; CHECK-NEXT:    br i1 false, label [[BB2:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb2:

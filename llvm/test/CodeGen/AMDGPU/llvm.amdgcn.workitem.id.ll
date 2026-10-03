@@ -1,10 +1,10 @@
-; RUN: opt -mtriple=amdgcn-- -passes=amdgpu-attributor -o %t.bc %s
-; RUN: llc -mtriple=amdgcn -mcpu=hawaii < %t.bc | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %t.bc | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
-; RUN: llc -mtriple=amdgcn-unknown-mesa3d -mcpu=hawaii < %t.bc | FileCheck -check-prefixes=ALL,MESA3D,UNPACKED %s
-; RUN: llc -mtriple=amdgcn-unknown-mesa3d -mcpu=tonga -mattr=-flat-for-global < %t.bc | FileCheck -check-prefixes=ALL,MESA3D,UNPACKED %s
-; RUN: llc -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx90a < %t.bc | FileCheck -check-prefixes=ALL,PACKED-TID %s
-; RUN: llc -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %t.bc | FileCheck -check-prefixes=ALL,PACKED-TID %s
+; RUN: opt -mtriple=amdgpu-- -passes=amdgpu-attributor -o %t.bc %s
+; RUN: llc -mtriple=amdgpu7.01 < %t.bc | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %t.bc | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
+; RUN: llc -mtriple=amdgpu7.01-unknown-mesa3d < %t.bc | FileCheck -check-prefixes=ALL,MESA3D,UNPACKED %s
+; RUN: llc -mtriple=amdgpu8.02-unknown-mesa3d -mattr=-flat-for-global < %t.bc | FileCheck -check-prefixes=ALL,MESA3D,UNPACKED %s
+; RUN: llc -mtriple=amdgpu9.0a-unknown-amdhsa < %t.bc | FileCheck -check-prefixes=ALL,PACKED-TID %s
+; RUN: llc -mtriple=amdgpu11.00-unknown-amdhsa -amdgpu-enable-vopd=0 < %t.bc | FileCheck -check-prefixes=ALL,PACKED-TID %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i32 @llvm.amdgcn.workitem.id.y() #0

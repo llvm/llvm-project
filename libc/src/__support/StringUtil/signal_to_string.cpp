@@ -8,9 +8,9 @@
 
 #include "signal_to_string.h"
 
-#include <signal.h>
 #include <stddef.h>
 
+#include "hdr/signal_macros.h"
 #include "platform_signals.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"

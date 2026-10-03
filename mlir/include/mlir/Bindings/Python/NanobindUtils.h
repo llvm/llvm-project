@@ -24,6 +24,16 @@
 #include <typeinfo>
 #include <variant>
 
+#if NB_VERSION_MAJOR >= 3
+template <bool IsTuple>
+struct std::iterator_traits<nanobind::detail::seq_iterator<IsTuple>> {
+  using value_type = nanobind::handle;
+  using reference = const value_type;
+  using pointer = void;
+  using difference_type = std::ptrdiff_t;
+  using iterator_category = std::forward_iterator_tag;
+};
+#else
 template <>
 struct std::iterator_traits<nanobind::detail::fast_iterator> {
   using value_type = nanobind::handle;
@@ -32,6 +42,7 @@ struct std::iterator_traits<nanobind::detail::fast_iterator> {
   using difference_type = std::ptrdiff_t;
   using iterator_category = std::forward_iterator_tag;
 };
+#endif
 
 namespace mlir {
 namespace python {
@@ -475,14 +486,12 @@ public:
            return nullptr;
          })},
         {0, nullptr}};
-    const std::type_info &elemTy = typeid(ElementTy);
-    PyObject *elemTyInfo = nanobind::detail::nb_type_lookup(&elemTy);
-    assert(elemTyInfo &&
-           "expected nb_type_lookup to succeed for Sliceable elemTy");
-    nanobind::handle elemTyName = nanobind::detail::nb_type_name(elemTyInfo);
+    nanobind::handle elemTyInfo = nanobind::type<ElementTy>();
+    assert(elemTyInfo.is_valid() &&
+           "expected nanobind::type to succeed for Sliceable elemTy");
+    nanobind::str elemTyName = nanobind::type_name(elemTyInfo);
     std::string sig = std::string("class ") + Derived::pyClassName +
-                      "(collections.abc.Sequence[" +
-                      nanobind::cast<std::string>(elemTyName) + "]";
+                      "(collections.abc.Sequence[" + elemTyName.c_str() + "]";
     if constexpr (!Derived::typeParams.empty()) {
       sig += ", typing.Generic[";
       for (size_t i = 0; i < Derived::typeParams.size(); ++i) {

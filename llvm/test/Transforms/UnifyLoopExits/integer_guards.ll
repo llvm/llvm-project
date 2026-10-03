@@ -78,7 +78,7 @@ define void @loop_two_exits_callbr(i1 %PredEntry, i1 %PredA) {
 ; CHECK:       A:
 ; CHECK-NEXT:    [[INC1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC2:%.*]], [[C:%.*]] ]
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDA:%.*]])
-; CHECK-NEXT:            to label [[A_TARGET_B:%.*]] [label %C]
+; CHECK-NEXT:            to label [[A_TARGET_B:%.*]] [label [[C]]]
 ; CHECK:       B:
 ; CHECK-NEXT:    tail call fastcc void @check(i32 1) #[[ATTR0]]
 ; CHECK-NEXT:    br label [[D:%.*]]
@@ -86,7 +86,7 @@ define void @loop_two_exits_callbr(i1 %PredEntry, i1 %PredA) {
 ; CHECK-NEXT:    [[INC2]] = add i32 [[INC1]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[INC2]], 10
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[CMP]])
-; CHECK-NEXT:            to label [[A]] [label %C.target.E]
+; CHECK-NEXT:            to label [[A]] [label [[C_TARGET_E:%.*]]]
 ; CHECK:       D:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       E:
@@ -96,7 +96,7 @@ define void @loop_two_exits_callbr(i1 %PredEntry, i1 %PredA) {
 ; CHECK:       C.target.E:
 ; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD]]
 ; CHECK:       loop.exit.guard:
-; CHECK-NEXT:    [[MERGED_BB_IDX:%.*]] = phi i32 [ 0, [[A_TARGET_B]] ], [ 1, [[C_TARGET_E:%.*]] ]
+; CHECK-NEXT:    [[MERGED_BB_IDX:%.*]] = phi i32 [ 0, [[A_TARGET_B]] ], [ 1, [[C_TARGET_E]] ]
 ; CHECK-NEXT:    [[B_PREDICATE:%.*]] = icmp eq i32 [[MERGED_BB_IDX]], 0
 ; CHECK-NEXT:    br i1 [[B_PREDICATE]], label [[B:%.*]], label [[E]]
 ;
@@ -106,7 +106,7 @@ define void @loop_two_exits_callbr(i1 %PredEntry, i1 %PredA) {
 ; BOOLEAN:       A:
 ; BOOLEAN-NEXT:    [[INC1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC2:%.*]], [[C:%.*]] ]
 ; BOOLEAN-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDA:%.*]])
-; BOOLEAN-NEXT:            to label [[A_TARGET_B:%.*]] [label %C]
+; BOOLEAN-NEXT:            to label [[A_TARGET_B:%.*]] [label [[C]]]
 ; BOOLEAN:       B:
 ; BOOLEAN-NEXT:    tail call fastcc void @check(i32 1) #[[ATTR0]]
 ; BOOLEAN-NEXT:    br label [[D:%.*]]
@@ -114,7 +114,7 @@ define void @loop_two_exits_callbr(i1 %PredEntry, i1 %PredA) {
 ; BOOLEAN-NEXT:    [[INC2]] = add i32 [[INC1]], 1
 ; BOOLEAN-NEXT:    [[CMP:%.*]] = icmp ult i32 [[INC2]], 10
 ; BOOLEAN-NEXT:    callbr void asm "", "r,!i"(i1 [[CMP]])
-; BOOLEAN-NEXT:            to label [[A]] [label %C.target.E]
+; BOOLEAN-NEXT:            to label [[A]] [label [[C_TARGET_E:%.*]]]
 ; BOOLEAN:       D:
 ; BOOLEAN-NEXT:    unreachable
 ; BOOLEAN:       E:
@@ -124,7 +124,7 @@ define void @loop_two_exits_callbr(i1 %PredEntry, i1 %PredA) {
 ; BOOLEAN:       C.target.E:
 ; BOOLEAN-NEXT:    br label [[LOOP_EXIT_GUARD]]
 ; BOOLEAN:       loop.exit.guard:
-; BOOLEAN-NEXT:    [[GUARD_B:%.*]] = phi i1 [ true, [[A_TARGET_B]] ], [ false, [[C_TARGET_E:%.*]] ]
+; BOOLEAN-NEXT:    [[GUARD_B:%.*]] = phi i1 [ true, [[A_TARGET_B]] ], [ false, [[C_TARGET_E]] ]
 ; BOOLEAN-NEXT:    br i1 [[GUARD_B]], label [[B:%.*]], label [[E]]
 ;
 entry:
@@ -142,6 +142,93 @@ C:
   %inc2 = add i32 %inc1, 1
   %cmp = icmp ult i32 %inc2, 10
   callbr void asm "","r,!i"(i1 %cmp) to label %A [label %E]
+
+D:
+  unreachable
+
+E:
+  ret void
+}
+
+define void @loop_two_exits_switch(i1 %PredEntry, i1 %PredA) {
+; CHECK-LABEL: @loop_two_exits_switch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i1 [[PREDENTRY:%.*]], label [[A:%.*]] [
+; CHECK-NEXT:      i1 false, label [[E:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       A:
+; CHECK-NEXT:    [[INC1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC2:%.*]], [[C:%.*]] ]
+; CHECK-NEXT:    switch i1 [[PREDA:%.*]], label [[A_TARGET_B:%.*]] [
+; CHECK-NEXT:      i1 false, label [[C]]
+; CHECK-NEXT:    ]
+; CHECK:       B:
+; CHECK-NEXT:    tail call fastcc void @check(i32 1) #[[ATTR0]]
+; CHECK-NEXT:    br label [[D:%.*]]
+; CHECK:       C:
+; CHECK-NEXT:    [[INC2]] = add i32 [[INC1]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[INC2]], 10
+; CHECK-NEXT:    switch i1 [[CMP]], label [[A]] [
+; CHECK-NEXT:      i1 false, label [[C_TARGET_E:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       D:
+; CHECK-NEXT:    unreachable
+; CHECK:       E:
+; CHECK-NEXT:    ret void
+; CHECK:       A.target.B:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD:%.*]]
+; CHECK:       C.target.E:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; CHECK:       loop.exit.guard:
+; CHECK-NEXT:    [[MERGED_BB_IDX:%.*]] = phi i32 [ 0, [[A_TARGET_B]] ], [ 1, [[C_TARGET_E]] ]
+; CHECK-NEXT:    [[B_PREDICATE:%.*]] = icmp eq i32 [[MERGED_BB_IDX]], 0
+; CHECK-NEXT:    br i1 [[B_PREDICATE]], label [[B:%.*]], label [[E]]
+;
+; BOOLEAN-LABEL: @loop_two_exits_switch(
+; BOOLEAN-NEXT:  entry:
+; BOOLEAN-NEXT:    switch i1 [[PREDENTRY:%.*]], label [[A:%.*]] [
+; BOOLEAN-NEXT:      i1 false, label [[E:%.*]]
+; BOOLEAN-NEXT:    ]
+; BOOLEAN:       A:
+; BOOLEAN-NEXT:    [[INC1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC2:%.*]], [[C:%.*]] ]
+; BOOLEAN-NEXT:    switch i1 [[PREDA:%.*]], label [[A_TARGET_B:%.*]] [
+; BOOLEAN-NEXT:      i1 false, label [[C]]
+; BOOLEAN-NEXT:    ]
+; BOOLEAN:       B:
+; BOOLEAN-NEXT:    tail call fastcc void @check(i32 1) #[[ATTR0]]
+; BOOLEAN-NEXT:    br label [[D:%.*]]
+; BOOLEAN:       C:
+; BOOLEAN-NEXT:    [[INC2]] = add i32 [[INC1]], 1
+; BOOLEAN-NEXT:    [[CMP:%.*]] = icmp ult i32 [[INC2]], 10
+; BOOLEAN-NEXT:    switch i1 [[CMP]], label [[A]] [
+; BOOLEAN-NEXT:      i1 false, label [[C_TARGET_E:%.*]]
+; BOOLEAN-NEXT:    ]
+; BOOLEAN:       D:
+; BOOLEAN-NEXT:    unreachable
+; BOOLEAN:       E:
+; BOOLEAN-NEXT:    ret void
+; BOOLEAN:       A.target.B:
+; BOOLEAN-NEXT:    br label [[LOOP_EXIT_GUARD:%.*]]
+; BOOLEAN:       C.target.E:
+; BOOLEAN-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; BOOLEAN:       loop.exit.guard:
+; BOOLEAN-NEXT:    [[GUARD_B:%.*]] = phi i1 [ true, [[A_TARGET_B]] ], [ false, [[C_TARGET_E]] ]
+; BOOLEAN-NEXT:    br i1 [[GUARD_B]], label [[B:%.*]], label [[E]]
+;
+entry:
+  switch i1 %PredEntry, label %A [ i1 0, label %E ]
+
+A:
+  %inc1 = phi i32 [ 0, %entry ], [ %inc2, %C ]
+  switch i1 %PredA, label %B [ i1 0, label %C ]
+
+B:
+  tail call fastcc void @check(i32 1) #0
+  br label %D
+
+C:
+  %inc2 = add i32 %inc1, 1
+  %cmp = icmp ult i32 %inc2, 10
+  switch i1 %cmp, label %A [ i1 0, label %E ]
 
 D:
   unreachable
@@ -285,13 +372,13 @@ define void @inner_loop_callbr(i1 %PredEntry, i1 %PredA, i1 %PredB) {
 ; CHECK:       B:
 ; CHECK-NEXT:    [[INNER1:%.*]] = phi i32 [ 0, [[A]] ], [ [[INNER2:%.*]], [[F:%.*]] ]
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDA:%.*]])
-; CHECK-NEXT:            to label [[D:%.*]] [label %B.target.B.target.C]
+; CHECK-NEXT:            to label [[D:%.*]] [label [[B_TARGET_B_TARGET_C:%.*]]]
 ; CHECK:       C:
 ; CHECK-NEXT:    tail call fastcc void @check(i32 1) #[[ATTR0]]
 ; CHECK-NEXT:    br label [[H:%.*]]
 ; CHECK:       D:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDB:%.*]])
-; CHECK-NEXT:            to label [[D_TARGET_D_TARGET_E:%.*]] [label %F]
+; CHECK-NEXT:            to label [[D_TARGET_D_TARGET_E:%.*]] [label [[F]]]
 ; CHECK:       E:
 ; CHECK-NEXT:    tail call fastcc void @check(i32 2) #[[ATTR0]]
 ; CHECK-NEXT:    br label [[H]]
@@ -299,12 +386,12 @@ define void @inner_loop_callbr(i1 %PredEntry, i1 %PredA, i1 %PredB) {
 ; CHECK-NEXT:    [[INNER2]] = add i32 [[INNER1]], 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[INNER2]], 20
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[CMP1]])
-; CHECK-NEXT:            to label [[B]] [label %F.target.G]
+; CHECK-NEXT:            to label [[B]] [label [[F_TARGET_G:%.*]]]
 ; CHECK:       G:
 ; CHECK-NEXT:    [[OUTER2]] = add i32 [[OUTER1]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[OUTER2]], 10
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[CMP2]])
-; CHECK-NEXT:            to label [[A]] [label %G.target.I]
+; CHECK-NEXT:            to label [[A]] [label [[G_TARGET_I:%.*]]]
 ; CHECK:       H:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       I:
@@ -316,7 +403,7 @@ define void @inner_loop_callbr(i1 %PredEntry, i1 %PredA, i1 %PredB) {
 ; CHECK:       G.target.I:
 ; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD]]
 ; CHECK:       loop.exit.guard:
-; CHECK-NEXT:    [[MERGED_BB_IDX:%.*]] = phi i32 [ 0, [[B_TARGET_C:%.*]] ], [ 1, [[D_TARGET_E:%.*]] ], [ 2, [[G_TARGET_I:%.*]] ]
+; CHECK-NEXT:    [[MERGED_BB_IDX:%.*]] = phi i32 [ 0, [[B_TARGET_C:%.*]] ], [ 1, [[D_TARGET_E:%.*]] ], [ 2, [[G_TARGET_I]] ]
 ; CHECK-NEXT:    [[C_PREDICATE:%.*]] = icmp eq i32 [[MERGED_BB_IDX]], 0
 ; CHECK-NEXT:    br i1 [[C_PREDICATE]], label [[C:%.*]], label [[LOOP_EXIT_GUARD1:%.*]]
 ; CHECK:       loop.exit.guard1:
@@ -329,7 +416,7 @@ define void @inner_loop_callbr(i1 %PredEntry, i1 %PredA, i1 %PredB) {
 ; CHECK:       F.target.G:
 ; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD2]]
 ; CHECK:       loop.exit.guard2:
-; CHECK-NEXT:    [[MERGED_BB_IDX4:%.*]] = phi i32 [ 0, [[B_TARGET_B_TARGET_C:%.*]] ], [ 1, [[D_TARGET_D_TARGET_E]] ], [ 2, [[F_TARGET_G:%.*]] ]
+; CHECK-NEXT:    [[MERGED_BB_IDX4:%.*]] = phi i32 [ 0, [[B_TARGET_B_TARGET_C]] ], [ 1, [[D_TARGET_D_TARGET_E]] ], [ 2, [[F_TARGET_G]] ]
 ; CHECK-NEXT:    [[B_TARGET_C_PREDICATE:%.*]] = icmp eq i32 [[MERGED_BB_IDX4]], 0
 ; CHECK-NEXT:    br i1 [[B_TARGET_C_PREDICATE]], label [[B_TARGET_C]], label [[LOOP_EXIT_GUARD3:%.*]]
 ; CHECK:       loop.exit.guard3:
@@ -345,13 +432,13 @@ define void @inner_loop_callbr(i1 %PredEntry, i1 %PredA, i1 %PredB) {
 ; BOOLEAN:       B:
 ; BOOLEAN-NEXT:    [[INNER1:%.*]] = phi i32 [ 0, [[A]] ], [ [[INNER2:%.*]], [[F:%.*]] ]
 ; BOOLEAN-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDA:%.*]])
-; BOOLEAN-NEXT:            to label [[D:%.*]] [label %B.target.B.target.C]
+; BOOLEAN-NEXT:            to label [[D:%.*]] [label [[B_TARGET_B_TARGET_C:%.*]]]
 ; BOOLEAN:       C:
 ; BOOLEAN-NEXT:    tail call fastcc void @check(i32 1) #[[ATTR0]]
 ; BOOLEAN-NEXT:    br label [[H:%.*]]
 ; BOOLEAN:       D:
 ; BOOLEAN-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDB:%.*]])
-; BOOLEAN-NEXT:            to label [[D_TARGET_D_TARGET_E:%.*]] [label %F]
+; BOOLEAN-NEXT:            to label [[D_TARGET_D_TARGET_E:%.*]] [label [[F]]]
 ; BOOLEAN:       E:
 ; BOOLEAN-NEXT:    tail call fastcc void @check(i32 2) #[[ATTR0]]
 ; BOOLEAN-NEXT:    br label [[H]]
@@ -359,12 +446,12 @@ define void @inner_loop_callbr(i1 %PredEntry, i1 %PredA, i1 %PredB) {
 ; BOOLEAN-NEXT:    [[INNER2]] = add i32 [[INNER1]], 1
 ; BOOLEAN-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[INNER2]], 20
 ; BOOLEAN-NEXT:    callbr void asm "", "r,!i"(i1 [[CMP1]])
-; BOOLEAN-NEXT:            to label [[B]] [label %F.target.G]
+; BOOLEAN-NEXT:            to label [[B]] [label [[F_TARGET_G:%.*]]]
 ; BOOLEAN:       G:
 ; BOOLEAN-NEXT:    [[OUTER2]] = add i32 [[OUTER1]], 1
 ; BOOLEAN-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[OUTER2]], 10
 ; BOOLEAN-NEXT:    callbr void asm "", "r,!i"(i1 [[CMP2]])
-; BOOLEAN-NEXT:            to label [[A]] [label %G.target.I]
+; BOOLEAN-NEXT:            to label [[A]] [label [[G_TARGET_I:%.*]]]
 ; BOOLEAN:       H:
 ; BOOLEAN-NEXT:    unreachable
 ; BOOLEAN:       I:
@@ -376,7 +463,7 @@ define void @inner_loop_callbr(i1 %PredEntry, i1 %PredA, i1 %PredB) {
 ; BOOLEAN:       G.target.I:
 ; BOOLEAN-NEXT:    br label [[LOOP_EXIT_GUARD]]
 ; BOOLEAN:       loop.exit.guard:
-; BOOLEAN-NEXT:    [[GUARD_C:%.*]] = phi i1 [ true, [[B_TARGET_C:%.*]] ], [ false, [[D_TARGET_E:%.*]] ], [ false, [[G_TARGET_I:%.*]] ]
+; BOOLEAN-NEXT:    [[GUARD_C:%.*]] = phi i1 [ true, [[B_TARGET_C:%.*]] ], [ false, [[D_TARGET_E:%.*]] ], [ false, [[G_TARGET_I]] ]
 ; BOOLEAN-NEXT:    [[GUARD_E:%.*]] = phi i1 [ false, [[B_TARGET_C]] ], [ true, [[D_TARGET_E]] ], [ false, [[G_TARGET_I]] ]
 ; BOOLEAN-NEXT:    br i1 [[GUARD_C]], label [[C:%.*]], label [[LOOP_EXIT_GUARD1:%.*]]
 ; BOOLEAN:       loop.exit.guard1:
@@ -388,7 +475,7 @@ define void @inner_loop_callbr(i1 %PredEntry, i1 %PredA, i1 %PredB) {
 ; BOOLEAN:       F.target.G:
 ; BOOLEAN-NEXT:    br label [[LOOP_EXIT_GUARD2]]
 ; BOOLEAN:       loop.exit.guard2:
-; BOOLEAN-NEXT:    [[GUARD_B_TARGET_C:%.*]] = phi i1 [ true, [[B_TARGET_B_TARGET_C:%.*]] ], [ false, [[D_TARGET_D_TARGET_E]] ], [ false, [[F_TARGET_G:%.*]] ]
+; BOOLEAN-NEXT:    [[GUARD_B_TARGET_C:%.*]] = phi i1 [ true, [[B_TARGET_B_TARGET_C]] ], [ false, [[D_TARGET_D_TARGET_E]] ], [ false, [[F_TARGET_G]] ]
 ; BOOLEAN-NEXT:    [[GUARD_D_TARGET_E:%.*]] = phi i1 [ false, [[B_TARGET_B_TARGET_C]] ], [ true, [[D_TARGET_D_TARGET_E]] ], [ false, [[F_TARGET_G]] ]
 ; BOOLEAN-NEXT:    br i1 [[GUARD_B_TARGET_C]], label [[B_TARGET_C]], label [[LOOP_EXIT_GUARD3:%.*]]
 ; BOOLEAN:       loop.exit.guard3:
@@ -425,6 +512,176 @@ G:
   %outer2 = add i32 %outer1, 1
   %cmp2 = icmp ult i32 %outer2, 10
   callbr void asm "", "r,!i"(i1 %cmp2) to label %A [label %I]
+
+H:
+  unreachable
+
+I:
+  ret void
+}
+
+define void @inner_loop_switch(i1 %PredEntry, i1 %PredA, i1 %PredB) {
+; CHECK-LABEL: @inner_loop_switch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i1 [[PREDENTRY:%.*]], label [[A:%.*]] [
+; CHECK-NEXT:      i1 false, label [[I:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       A:
+; CHECK-NEXT:    [[OUTER1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[OUTER2:%.*]], [[G:%.*]] ]
+; CHECK-NEXT:    br label [[B:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    [[INNER1:%.*]] = phi i32 [ 0, [[A]] ], [ [[INNER2:%.*]], [[F:%.*]] ]
+; CHECK-NEXT:    switch i1 [[PREDA:%.*]], label [[D:%.*]] [
+; CHECK-NEXT:      i1 false, label [[B_TARGET_B_TARGET_C:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       C:
+; CHECK-NEXT:    tail call fastcc void @check(i32 1) #[[ATTR0]]
+; CHECK-NEXT:    br label [[H:%.*]]
+; CHECK:       D:
+; CHECK-NEXT:    switch i1 [[PREDB:%.*]], label [[D_TARGET_D_TARGET_E:%.*]] [
+; CHECK-NEXT:      i1 false, label [[F]]
+; CHECK-NEXT:    ]
+; CHECK:       E:
+; CHECK-NEXT:    tail call fastcc void @check(i32 2) #[[ATTR0]]
+; CHECK-NEXT:    br label [[H]]
+; CHECK:       F:
+; CHECK-NEXT:    [[INNER2]] = add i32 [[INNER1]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[INNER2]], 20
+; CHECK-NEXT:    switch i1 [[CMP1]], label [[B]] [
+; CHECK-NEXT:      i1 false, label [[F_TARGET_G:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       G:
+; CHECK-NEXT:    [[OUTER2]] = add i32 [[OUTER1]], 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[OUTER2]], 10
+; CHECK-NEXT:    switch i1 [[CMP2]], label [[A]] [
+; CHECK-NEXT:      i1 false, label [[G_TARGET_I:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       H:
+; CHECK-NEXT:    unreachable
+; CHECK:       I:
+; CHECK-NEXT:    ret void
+; CHECK:       B.target.C:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD:%.*]]
+; CHECK:       D.target.E:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; CHECK:       G.target.I:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; CHECK:       loop.exit.guard:
+; CHECK-NEXT:    [[MERGED_BB_IDX:%.*]] = phi i32 [ 0, [[B_TARGET_C:%.*]] ], [ 1, [[D_TARGET_E:%.*]] ], [ 2, [[G_TARGET_I]] ]
+; CHECK-NEXT:    [[C_PREDICATE:%.*]] = icmp eq i32 [[MERGED_BB_IDX]], 0
+; CHECK-NEXT:    br i1 [[C_PREDICATE]], label [[C:%.*]], label [[LOOP_EXIT_GUARD1:%.*]]
+; CHECK:       loop.exit.guard1:
+; CHECK-NEXT:    [[E_PREDICATE:%.*]] = icmp eq i32 [[MERGED_BB_IDX]], 1
+; CHECK-NEXT:    br i1 [[E_PREDICATE]], label [[E:%.*]], label [[I]]
+; CHECK:       B.target.B.target.C:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD2:%.*]]
+; CHECK:       D.target.D.target.E:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD2]]
+; CHECK:       F.target.G:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD2]]
+; CHECK:       loop.exit.guard2:
+; CHECK-NEXT:    [[MERGED_BB_IDX4:%.*]] = phi i32 [ 0, [[B_TARGET_B_TARGET_C]] ], [ 1, [[D_TARGET_D_TARGET_E]] ], [ 2, [[F_TARGET_G]] ]
+; CHECK-NEXT:    [[B_TARGET_C_PREDICATE:%.*]] = icmp eq i32 [[MERGED_BB_IDX4]], 0
+; CHECK-NEXT:    br i1 [[B_TARGET_C_PREDICATE]], label [[B_TARGET_C]], label [[LOOP_EXIT_GUARD3:%.*]]
+; CHECK:       loop.exit.guard3:
+; CHECK-NEXT:    [[D_TARGET_E_PREDICATE:%.*]] = icmp eq i32 [[MERGED_BB_IDX4]], 1
+; CHECK-NEXT:    br i1 [[D_TARGET_E_PREDICATE]], label [[D_TARGET_E]], label [[G]]
+;
+; BOOLEAN-LABEL: @inner_loop_switch(
+; BOOLEAN-NEXT:  entry:
+; BOOLEAN-NEXT:    switch i1 [[PREDENTRY:%.*]], label [[A:%.*]] [
+; BOOLEAN-NEXT:      i1 false, label [[I:%.*]]
+; BOOLEAN-NEXT:    ]
+; BOOLEAN:       A:
+; BOOLEAN-NEXT:    [[OUTER1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[OUTER2:%.*]], [[G:%.*]] ]
+; BOOLEAN-NEXT:    br label [[B:%.*]]
+; BOOLEAN:       B:
+; BOOLEAN-NEXT:    [[INNER1:%.*]] = phi i32 [ 0, [[A]] ], [ [[INNER2:%.*]], [[F:%.*]] ]
+; BOOLEAN-NEXT:    switch i1 [[PREDA:%.*]], label [[D:%.*]] [
+; BOOLEAN-NEXT:      i1 false, label [[B_TARGET_B_TARGET_C:%.*]]
+; BOOLEAN-NEXT:    ]
+; BOOLEAN:       C:
+; BOOLEAN-NEXT:    tail call fastcc void @check(i32 1) #[[ATTR0]]
+; BOOLEAN-NEXT:    br label [[H:%.*]]
+; BOOLEAN:       D:
+; BOOLEAN-NEXT:    switch i1 [[PREDB:%.*]], label [[D_TARGET_D_TARGET_E:%.*]] [
+; BOOLEAN-NEXT:      i1 false, label [[F]]
+; BOOLEAN-NEXT:    ]
+; BOOLEAN:       E:
+; BOOLEAN-NEXT:    tail call fastcc void @check(i32 2) #[[ATTR0]]
+; BOOLEAN-NEXT:    br label [[H]]
+; BOOLEAN:       F:
+; BOOLEAN-NEXT:    [[INNER2]] = add i32 [[INNER1]], 1
+; BOOLEAN-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[INNER2]], 20
+; BOOLEAN-NEXT:    switch i1 [[CMP1]], label [[B]] [
+; BOOLEAN-NEXT:      i1 false, label [[F_TARGET_G:%.*]]
+; BOOLEAN-NEXT:    ]
+; BOOLEAN:       G:
+; BOOLEAN-NEXT:    [[OUTER2]] = add i32 [[OUTER1]], 1
+; BOOLEAN-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[OUTER2]], 10
+; BOOLEAN-NEXT:    switch i1 [[CMP2]], label [[A]] [
+; BOOLEAN-NEXT:      i1 false, label [[G_TARGET_I:%.*]]
+; BOOLEAN-NEXT:    ]
+; BOOLEAN:       H:
+; BOOLEAN-NEXT:    unreachable
+; BOOLEAN:       I:
+; BOOLEAN-NEXT:    ret void
+; BOOLEAN:       B.target.C:
+; BOOLEAN-NEXT:    br label [[LOOP_EXIT_GUARD:%.*]]
+; BOOLEAN:       D.target.E:
+; BOOLEAN-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; BOOLEAN:       G.target.I:
+; BOOLEAN-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; BOOLEAN:       loop.exit.guard:
+; BOOLEAN-NEXT:    [[GUARD_C:%.*]] = phi i1 [ true, [[B_TARGET_C:%.*]] ], [ false, [[D_TARGET_E:%.*]] ], [ false, [[G_TARGET_I]] ]
+; BOOLEAN-NEXT:    [[GUARD_E:%.*]] = phi i1 [ false, [[B_TARGET_C]] ], [ true, [[D_TARGET_E]] ], [ false, [[G_TARGET_I]] ]
+; BOOLEAN-NEXT:    br i1 [[GUARD_C]], label [[C:%.*]], label [[LOOP_EXIT_GUARD1:%.*]]
+; BOOLEAN:       loop.exit.guard1:
+; BOOLEAN-NEXT:    br i1 [[GUARD_E]], label [[E:%.*]], label [[I]]
+; BOOLEAN:       B.target.B.target.C:
+; BOOLEAN-NEXT:    br label [[LOOP_EXIT_GUARD2:%.*]]
+; BOOLEAN:       D.target.D.target.E:
+; BOOLEAN-NEXT:    br label [[LOOP_EXIT_GUARD2]]
+; BOOLEAN:       F.target.G:
+; BOOLEAN-NEXT:    br label [[LOOP_EXIT_GUARD2]]
+; BOOLEAN:       loop.exit.guard2:
+; BOOLEAN-NEXT:    [[GUARD_B_TARGET_C:%.*]] = phi i1 [ true, [[B_TARGET_B_TARGET_C]] ], [ false, [[D_TARGET_D_TARGET_E]] ], [ false, [[F_TARGET_G]] ]
+; BOOLEAN-NEXT:    [[GUARD_D_TARGET_E:%.*]] = phi i1 [ false, [[B_TARGET_B_TARGET_C]] ], [ true, [[D_TARGET_D_TARGET_E]] ], [ false, [[F_TARGET_G]] ]
+; BOOLEAN-NEXT:    br i1 [[GUARD_B_TARGET_C]], label [[B_TARGET_C]], label [[LOOP_EXIT_GUARD3:%.*]]
+; BOOLEAN:       loop.exit.guard3:
+; BOOLEAN-NEXT:    br i1 [[GUARD_D_TARGET_E]], label [[D_TARGET_E]], label [[G]]
+;
+entry:
+  switch i1 %PredEntry, label %A [ i1 0, label %I ]
+
+A:
+  %outer1 = phi i32 [ 0, %entry ], [ %outer2, %G ]
+  br label %B
+
+B:
+  %inner1 = phi i32 [ 0, %A ], [ %inner2, %F ]
+  switch i1 %PredA, label %D [ i1 0, label %C ]
+
+C:
+  tail call fastcc void @check(i32 1) #0
+  br label %H
+
+D:
+  switch i1 %PredB, label %E [ i1 0, label %F ]
+
+E:
+  tail call fastcc void @check(i32 2) #0
+  br label %H
+
+F:
+  %inner2 = add i32 %inner1, 1
+  %cmp1 = icmp ult i32 %inner2, 20
+  switch i1 %cmp1, label %B [ i1 0, label %G ]
+
+G:
+  %outer2 = add i32 %outer1, 1
+  %cmp2 = icmp ult i32 %outer2, 10
+  switch i1 %cmp2, label %A [ i1 0, label %I ]
 
 H:
   unreachable
@@ -585,25 +842,25 @@ define void @loop_five_exits_callbr(i1 %PredEntry, i1 %PredA, i1 %PredB, i1 %Pre
 ; CHECK:       A:
 ; CHECK-NEXT:    [[INC1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC2:%.*]], [[I:%.*]] ]
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDA:%.*]])
-; CHECK-NEXT:            to label [[A_TARGET_B:%.*]] [label %C]
+; CHECK-NEXT:            to label [[A_TARGET_B:%.*]] [label [[C:%.*]]]
 ; CHECK:       B:
 ; CHECK-NEXT:    tail call fastcc void @check(i32 1) #[[ATTR0]]
 ; CHECK-NEXT:    br label [[J:%.*]]
 ; CHECK:       C:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDB:%.*]])
-; CHECK-NEXT:            to label [[C_TARGET_D:%.*]] [label %E]
+; CHECK-NEXT:            to label [[C_TARGET_D:%.*]] [label [[E:%.*]]]
 ; CHECK:       D:
 ; CHECK-NEXT:    tail call fastcc void @check(i32 2) #[[ATTR0]]
 ; CHECK-NEXT:    br label [[J]]
 ; CHECK:       E:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDC:%.*]])
-; CHECK-NEXT:            to label [[E_TARGET_F:%.*]] [label %G]
+; CHECK-NEXT:            to label [[E_TARGET_F:%.*]] [label [[G:%.*]]]
 ; CHECK:       F:
 ; CHECK-NEXT:    tail call fastcc void @check(i32 3) #[[ATTR0]]
 ; CHECK-NEXT:    br label [[K:%.*]]
 ; CHECK:       G:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDD:%.*]])
-; CHECK-NEXT:            to label [[G_TARGET_H:%.*]] [label %I]
+; CHECK-NEXT:            to label [[G_TARGET_H:%.*]] [label [[I]]]
 ; CHECK:       H:
 ; CHECK-NEXT:    tail call fastcc void @check(i32 4) #[[ATTR0]]
 ; CHECK-NEXT:    br label [[K]]
@@ -611,7 +868,7 @@ define void @loop_five_exits_callbr(i1 %PredEntry, i1 %PredA, i1 %PredB, i1 %Pre
 ; CHECK-NEXT:    [[INC2]] = add i32 [[INC1]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[INC2]], 10
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[CMP]])
-; CHECK-NEXT:            to label [[A]] [label %I.target.L]
+; CHECK-NEXT:            to label [[A]] [label [[I_TARGET_L:%.*]]]
 ; CHECK:       J:
 ; CHECK-NEXT:    br label [[L]]
 ; CHECK:       K:
@@ -629,7 +886,7 @@ define void @loop_five_exits_callbr(i1 %PredEntry, i1 %PredA, i1 %PredB, i1 %Pre
 ; CHECK:       I.target.L:
 ; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD]]
 ; CHECK:       loop.exit.guard:
-; CHECK-NEXT:    [[MERGED_BB_IDX:%.*]] = phi i32 [ 0, [[A_TARGET_B]] ], [ 1, [[C_TARGET_D]] ], [ 2, [[E_TARGET_F]] ], [ 3, [[G_TARGET_H]] ], [ 4, [[I_TARGET_L:%.*]] ]
+; CHECK-NEXT:    [[MERGED_BB_IDX:%.*]] = phi i32 [ 0, [[A_TARGET_B]] ], [ 1, [[C_TARGET_D]] ], [ 2, [[E_TARGET_F]] ], [ 3, [[G_TARGET_H]] ], [ 4, [[I_TARGET_L]] ]
 ; CHECK-NEXT:    [[B_PREDICATE:%.*]] = icmp eq i32 [[MERGED_BB_IDX]], 0
 ; CHECK-NEXT:    br i1 [[B_PREDICATE]], label [[B:%.*]], label [[LOOP_EXIT_GUARD1:%.*]]
 ; CHECK:       loop.exit.guard1:
@@ -648,25 +905,25 @@ define void @loop_five_exits_callbr(i1 %PredEntry, i1 %PredA, i1 %PredB, i1 %Pre
 ; BOOLEAN:       A:
 ; BOOLEAN-NEXT:    [[INC1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC2:%.*]], [[I:%.*]] ]
 ; BOOLEAN-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDA:%.*]])
-; BOOLEAN-NEXT:            to label [[A_TARGET_B:%.*]] [label %C]
+; BOOLEAN-NEXT:            to label [[A_TARGET_B:%.*]] [label [[C:%.*]]]
 ; BOOLEAN:       B:
 ; BOOLEAN-NEXT:    tail call fastcc void @check(i32 1) #[[ATTR0]]
 ; BOOLEAN-NEXT:    br label [[J:%.*]]
 ; BOOLEAN:       C:
 ; BOOLEAN-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDB:%.*]])
-; BOOLEAN-NEXT:            to label [[C_TARGET_D:%.*]] [label %E]
+; BOOLEAN-NEXT:            to label [[C_TARGET_D:%.*]] [label [[E:%.*]]]
 ; BOOLEAN:       D:
 ; BOOLEAN-NEXT:    tail call fastcc void @check(i32 2) #[[ATTR0]]
 ; BOOLEAN-NEXT:    br label [[J]]
 ; BOOLEAN:       E:
 ; BOOLEAN-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDC:%.*]])
-; BOOLEAN-NEXT:            to label [[E_TARGET_F:%.*]] [label %G]
+; BOOLEAN-NEXT:            to label [[E_TARGET_F:%.*]] [label [[G:%.*]]]
 ; BOOLEAN:       F:
 ; BOOLEAN-NEXT:    tail call fastcc void @check(i32 3) #[[ATTR0]]
 ; BOOLEAN-NEXT:    br label [[K:%.*]]
 ; BOOLEAN:       G:
 ; BOOLEAN-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDD:%.*]])
-; BOOLEAN-NEXT:            to label [[G_TARGET_H:%.*]] [label %I]
+; BOOLEAN-NEXT:            to label [[G_TARGET_H:%.*]] [label [[I]]]
 ; BOOLEAN:       H:
 ; BOOLEAN-NEXT:    tail call fastcc void @check(i32 4) #[[ATTR0]]
 ; BOOLEAN-NEXT:    br label [[K]]
@@ -674,7 +931,7 @@ define void @loop_five_exits_callbr(i1 %PredEntry, i1 %PredA, i1 %PredB, i1 %Pre
 ; BOOLEAN-NEXT:    [[INC2]] = add i32 [[INC1]], 1
 ; BOOLEAN-NEXT:    [[CMP:%.*]] = icmp ult i32 [[INC2]], 10
 ; BOOLEAN-NEXT:    callbr void asm "", "r,!i"(i1 [[CMP]])
-; BOOLEAN-NEXT:            to label [[A]] [label %I.target.L]
+; BOOLEAN-NEXT:            to label [[A]] [label [[I_TARGET_L:%.*]]]
 ; BOOLEAN:       J:
 ; BOOLEAN-NEXT:    br label [[L]]
 ; BOOLEAN:       K:
@@ -692,7 +949,7 @@ define void @loop_five_exits_callbr(i1 %PredEntry, i1 %PredA, i1 %PredB, i1 %Pre
 ; BOOLEAN:       I.target.L:
 ; BOOLEAN-NEXT:    br label [[LOOP_EXIT_GUARD]]
 ; BOOLEAN:       loop.exit.guard:
-; BOOLEAN-NEXT:    [[GUARD_B:%.*]] = phi i1 [ true, [[A_TARGET_B]] ], [ false, [[C_TARGET_D]] ], [ false, [[E_TARGET_F]] ], [ false, [[G_TARGET_H]] ], [ false, [[I_TARGET_L:%.*]] ]
+; BOOLEAN-NEXT:    [[GUARD_B:%.*]] = phi i1 [ true, [[A_TARGET_B]] ], [ false, [[C_TARGET_D]] ], [ false, [[E_TARGET_F]] ], [ false, [[G_TARGET_H]] ], [ false, [[I_TARGET_L]] ]
 ; BOOLEAN-NEXT:    [[GUARD_D:%.*]] = phi i1 [ false, [[A_TARGET_B]] ], [ true, [[C_TARGET_D]] ], [ false, [[E_TARGET_F]] ], [ false, [[G_TARGET_H]] ], [ false, [[I_TARGET_L]] ]
 ; BOOLEAN-NEXT:    [[GUARD_F:%.*]] = phi i1 [ false, [[A_TARGET_B]] ], [ false, [[C_TARGET_D]] ], [ true, [[E_TARGET_F]] ], [ false, [[G_TARGET_H]] ], [ false, [[I_TARGET_L]] ]
 ; BOOLEAN-NEXT:    [[GUARD_H:%.*]] = phi i1 [ false, [[A_TARGET_B]] ], [ false, [[C_TARGET_D]] ], [ false, [[E_TARGET_F]] ], [ true, [[G_TARGET_H]] ], [ false, [[I_TARGET_L]] ]
@@ -751,6 +1008,192 @@ L:
   ret void
 }
 
+define void @loop_five_exits_switch(i1 %PredEntry, i1 %PredA, i1 %PredB, i1 %PredC, i1 %PredD) {
+; CHECK-LABEL: @loop_five_exits_switch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i1 [[PREDENTRY:%.*]], label [[A:%.*]] [
+; CHECK-NEXT:      i1 false, label [[L:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       A:
+; CHECK-NEXT:    [[INC1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC2:%.*]], [[I:%.*]] ]
+; CHECK-NEXT:    switch i1 [[PREDA:%.*]], label [[A_TARGET_B:%.*]] [
+; CHECK-NEXT:      i1 false, label [[C:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       B:
+; CHECK-NEXT:    tail call fastcc void @check(i32 1) #[[ATTR0]]
+; CHECK-NEXT:    br label [[J:%.*]]
+; CHECK:       C:
+; CHECK-NEXT:    switch i1 [[PREDB:%.*]], label [[C_TARGET_D:%.*]] [
+; CHECK-NEXT:      i1 false, label [[E:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       D:
+; CHECK-NEXT:    tail call fastcc void @check(i32 2) #[[ATTR0]]
+; CHECK-NEXT:    br label [[J]]
+; CHECK:       E:
+; CHECK-NEXT:    switch i1 [[PREDC:%.*]], label [[E_TARGET_F:%.*]] [
+; CHECK-NEXT:      i1 false, label [[G:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       F:
+; CHECK-NEXT:    tail call fastcc void @check(i32 3) #[[ATTR0]]
+; CHECK-NEXT:    br label [[K:%.*]]
+; CHECK:       G:
+; CHECK-NEXT:    switch i1 [[PREDD:%.*]], label [[G_TARGET_H:%.*]] [
+; CHECK-NEXT:      i1 false, label [[I]]
+; CHECK-NEXT:    ]
+; CHECK:       H:
+; CHECK-NEXT:    tail call fastcc void @check(i32 4) #[[ATTR0]]
+; CHECK-NEXT:    br label [[K]]
+; CHECK:       I:
+; CHECK-NEXT:    [[INC2]] = add i32 [[INC1]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[INC2]], 10
+; CHECK-NEXT:    switch i1 [[CMP]], label [[A]] [
+; CHECK-NEXT:      i1 false, label [[I_TARGET_L:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       J:
+; CHECK-NEXT:    br label [[L]]
+; CHECK:       K:
+; CHECK-NEXT:    br label [[L]]
+; CHECK:       L:
+; CHECK-NEXT:    ret void
+; CHECK:       A.target.B:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD:%.*]]
+; CHECK:       C.target.D:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; CHECK:       E.target.F:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; CHECK:       G.target.H:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; CHECK:       I.target.L:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; CHECK:       loop.exit.guard:
+; CHECK-NEXT:    [[MERGED_BB_IDX:%.*]] = phi i32 [ 0, [[A_TARGET_B]] ], [ 1, [[C_TARGET_D]] ], [ 2, [[E_TARGET_F]] ], [ 3, [[G_TARGET_H]] ], [ 4, [[I_TARGET_L]] ]
+; CHECK-NEXT:    [[B_PREDICATE:%.*]] = icmp eq i32 [[MERGED_BB_IDX]], 0
+; CHECK-NEXT:    br i1 [[B_PREDICATE]], label [[B:%.*]], label [[LOOP_EXIT_GUARD1:%.*]]
+; CHECK:       loop.exit.guard1:
+; CHECK-NEXT:    [[D_PREDICATE:%.*]] = icmp eq i32 [[MERGED_BB_IDX]], 1
+; CHECK-NEXT:    br i1 [[D_PREDICATE]], label [[D:%.*]], label [[LOOP_EXIT_GUARD2:%.*]]
+; CHECK:       loop.exit.guard2:
+; CHECK-NEXT:    [[F_PREDICATE:%.*]] = icmp eq i32 [[MERGED_BB_IDX]], 2
+; CHECK-NEXT:    br i1 [[F_PREDICATE]], label [[F:%.*]], label [[LOOP_EXIT_GUARD3:%.*]]
+; CHECK:       loop.exit.guard3:
+; CHECK-NEXT:    [[H_PREDICATE:%.*]] = icmp eq i32 [[MERGED_BB_IDX]], 3
+; CHECK-NEXT:    br i1 [[H_PREDICATE]], label [[H:%.*]], label [[L]]
+;
+; BOOLEAN-LABEL: @loop_five_exits_switch(
+; BOOLEAN-NEXT:  entry:
+; BOOLEAN-NEXT:    switch i1 [[PREDENTRY:%.*]], label [[A:%.*]] [
+; BOOLEAN-NEXT:      i1 false, label [[L:%.*]]
+; BOOLEAN-NEXT:    ]
+; BOOLEAN:       A:
+; BOOLEAN-NEXT:    [[INC1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC2:%.*]], [[I:%.*]] ]
+; BOOLEAN-NEXT:    switch i1 [[PREDA:%.*]], label [[A_TARGET_B:%.*]] [
+; BOOLEAN-NEXT:      i1 false, label [[C:%.*]]
+; BOOLEAN-NEXT:    ]
+; BOOLEAN:       B:
+; BOOLEAN-NEXT:    tail call fastcc void @check(i32 1) #[[ATTR0]]
+; BOOLEAN-NEXT:    br label [[J:%.*]]
+; BOOLEAN:       C:
+; BOOLEAN-NEXT:    switch i1 [[PREDB:%.*]], label [[C_TARGET_D:%.*]] [
+; BOOLEAN-NEXT:      i1 false, label [[E:%.*]]
+; BOOLEAN-NEXT:    ]
+; BOOLEAN:       D:
+; BOOLEAN-NEXT:    tail call fastcc void @check(i32 2) #[[ATTR0]]
+; BOOLEAN-NEXT:    br label [[J]]
+; BOOLEAN:       E:
+; BOOLEAN-NEXT:    switch i1 [[PREDC:%.*]], label [[E_TARGET_F:%.*]] [
+; BOOLEAN-NEXT:      i1 false, label [[G:%.*]]
+; BOOLEAN-NEXT:    ]
+; BOOLEAN:       F:
+; BOOLEAN-NEXT:    tail call fastcc void @check(i32 3) #[[ATTR0]]
+; BOOLEAN-NEXT:    br label [[K:%.*]]
+; BOOLEAN:       G:
+; BOOLEAN-NEXT:    switch i1 [[PREDD:%.*]], label [[G_TARGET_H:%.*]] [
+; BOOLEAN-NEXT:      i1 false, label [[I]]
+; BOOLEAN-NEXT:    ]
+; BOOLEAN:       H:
+; BOOLEAN-NEXT:    tail call fastcc void @check(i32 4) #[[ATTR0]]
+; BOOLEAN-NEXT:    br label [[K]]
+; BOOLEAN:       I:
+; BOOLEAN-NEXT:    [[INC2]] = add i32 [[INC1]], 1
+; BOOLEAN-NEXT:    [[CMP:%.*]] = icmp ult i32 [[INC2]], 10
+; BOOLEAN-NEXT:    switch i1 [[CMP]], label [[A]] [
+; BOOLEAN-NEXT:      i1 false, label [[I_TARGET_L:%.*]]
+; BOOLEAN-NEXT:    ]
+; BOOLEAN:       J:
+; BOOLEAN-NEXT:    br label [[L]]
+; BOOLEAN:       K:
+; BOOLEAN-NEXT:    br label [[L]]
+; BOOLEAN:       L:
+; BOOLEAN-NEXT:    ret void
+; BOOLEAN:       A.target.B:
+; BOOLEAN-NEXT:    br label [[LOOP_EXIT_GUARD:%.*]]
+; BOOLEAN:       C.target.D:
+; BOOLEAN-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; BOOLEAN:       E.target.F:
+; BOOLEAN-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; BOOLEAN:       G.target.H:
+; BOOLEAN-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; BOOLEAN:       I.target.L:
+; BOOLEAN-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; BOOLEAN:       loop.exit.guard:
+; BOOLEAN-NEXT:    [[GUARD_B:%.*]] = phi i1 [ true, [[A_TARGET_B]] ], [ false, [[C_TARGET_D]] ], [ false, [[E_TARGET_F]] ], [ false, [[G_TARGET_H]] ], [ false, [[I_TARGET_L]] ]
+; BOOLEAN-NEXT:    [[GUARD_D:%.*]] = phi i1 [ false, [[A_TARGET_B]] ], [ true, [[C_TARGET_D]] ], [ false, [[E_TARGET_F]] ], [ false, [[G_TARGET_H]] ], [ false, [[I_TARGET_L]] ]
+; BOOLEAN-NEXT:    [[GUARD_F:%.*]] = phi i1 [ false, [[A_TARGET_B]] ], [ false, [[C_TARGET_D]] ], [ true, [[E_TARGET_F]] ], [ false, [[G_TARGET_H]] ], [ false, [[I_TARGET_L]] ]
+; BOOLEAN-NEXT:    [[GUARD_H:%.*]] = phi i1 [ false, [[A_TARGET_B]] ], [ false, [[C_TARGET_D]] ], [ false, [[E_TARGET_F]] ], [ true, [[G_TARGET_H]] ], [ false, [[I_TARGET_L]] ]
+; BOOLEAN-NEXT:    br i1 [[GUARD_B]], label [[B:%.*]], label [[LOOP_EXIT_GUARD1:%.*]]
+; BOOLEAN:       loop.exit.guard1:
+; BOOLEAN-NEXT:    br i1 [[GUARD_D]], label [[D:%.*]], label [[LOOP_EXIT_GUARD2:%.*]]
+; BOOLEAN:       loop.exit.guard2:
+; BOOLEAN-NEXT:    br i1 [[GUARD_F]], label [[F:%.*]], label [[LOOP_EXIT_GUARD3:%.*]]
+; BOOLEAN:       loop.exit.guard3:
+; BOOLEAN-NEXT:    br i1 [[GUARD_H]], label [[H:%.*]], label [[L]]
+;
+entry:
+  switch i1 %PredEntry, label %A [ i1 0, label %L ]
+
+A:
+  %inc1 = phi i32 [ 0, %entry ], [ %inc2, %I ]
+  switch i1 %PredA, label %B [ i1 0, label %C ]
+
+B:
+  tail call fastcc void @check(i32 1) #0
+  br label %J
+
+C:
+  switch i1 %PredB, label %D [ i1 0, label %E ]
+
+D:
+  tail call fastcc void @check(i32 2) #0
+  br label %J
+
+E:
+  switch i1 %PredC, label %F [ i1 0, label %G ]
+
+F:
+  tail call fastcc void @check(i32 3) #0
+  br label %K
+
+G:
+  switch i1 %PredD, label %H [ i1 0, label %I ]
+
+H:
+  tail call fastcc void @check(i32 4) #0
+  br label %K
+
+I:
+  %inc2 = add i32 %inc1, 1
+  %cmp = icmp ult i32 %inc2, 10
+  switch i1 %cmp, label %A [ i1 0, label %L ]
+
+J:
+  br label %L
+
+K:
+  br label %L
+
+L:
+  ret void
+}
 
 declare void @check(i32 noundef %i) #0
 

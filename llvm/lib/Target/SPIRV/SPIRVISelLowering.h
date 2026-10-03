@@ -66,7 +66,7 @@ public:
 
   MVT getPreferredSwitchConditionType(LLVMContext &Context,
                                       EVT ConditionVT) const override {
-    return ConditionVT.getSimpleVT();
+    return MVT::i1;
   }
 
   bool enforcePtrTypeCompatibility(MachineInstr &I, unsigned PtrOpIdx,

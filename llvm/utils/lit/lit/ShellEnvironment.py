@@ -1,7 +1,11 @@
+from __future__ import annotations
+
+import io
 import os
 import platform
 import subprocess
 import tempfile
+from typing import BinaryIO, Protocol, TextIO
 
 import lit.util
 from lit.ShCommands import GlobItem
@@ -204,6 +208,67 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
         std_fds[index] = fd
 
     return std_fds
+
+
+def as_binary_reader(stream: None | int | io.TextIOBase | BinaryIO) -> BinaryIO:
+    """Adapts a builtin's stdin source into a binary, read()-able stream.
+
+    Args:
+        stream: Standard input source from pipeline dispatch. Supported types:
+            - None or subprocess sentinel (PIPE, DEVNULL, STDOUT) for no input
+            - Binary stream (BytesIO, temporary/spooled file, or 'rb' mode)
+            - Text stream (text-mode '<' redirect or upstream universal_newlines pipe)
+
+    Returns:
+        A binary, read()-able stream. Text streams are unwrapped to their
+        underlying buffer so an in-process builtin sees the same raw bytes a
+        child process would.
+    """
+    if stream is None or isinstance(stream, int):
+        # No real input to read.
+        return io.BytesIO(b"")
+    if isinstance(stream, io.TextIOBase):
+        buffer = getattr(stream, "buffer", None)
+        if buffer is not None:
+            return buffer
+        data = stream.read()
+        return io.BytesIO(data.encode() if isinstance(data, str) else data)
+    # Already a binary reader.
+    assert hasattr(stream, "read"), f"expected a binary reader, got {type(stream)!r}"
+    return stream
+
+
+class BinaryFileWriter:
+    """Writes bytes straight to a file descriptor, matching Popen's behavior.
+
+    Writes directly to the underlying file descriptor with os.write, bypassing
+    the wrapped file object's text-mode buffering and newline translation, so
+    the exact bytes passed in reach the fd unchanged.
+    """
+
+    # TODO: Replace __slots__ with @dataclass(slots=True)
+    # once the minimum Python version is bumped to 3.10
+    # https://github.com/llvm/llvm-project/issues/200531
+    __slots__ = ("fd",)
+
+    def __init__(self, fileobj: TextIO) -> None:
+        # Owned by opened_files, never closed here
+        self.fd = fileobj.fileno()
+
+    def write(self, data: bytes) -> int:
+        return os.write(self.fd, data)
+
+
+def binary_fd(fileobj: TextIO) -> BinaryFileWriter:
+    """Wraps a redirect file object as a byte-exact writer for in-process builtins."""
+    return BinaryFileWriter(fileobj)
+
+
+class ByteWriter(Protocol):
+    """Structural type for objects that support writing a bytes buffer."""
+
+    def write(self, data: bytes) -> object:
+        ...
 
 
 def expand_glob(arg, cwd):

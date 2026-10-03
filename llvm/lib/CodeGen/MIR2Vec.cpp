@@ -29,6 +29,8 @@ using namespace mir2vec;
 
 STATISTIC(MIRVocabMissCounter,
           "Number of lookups to MIR entities not present in the vocabulary");
+STATISTIC(MIRClasslessRegCounter,
+          "Number of register operands with no register class");
 
 namespace llvm {
 namespace mir2vec {
@@ -36,28 +38,29 @@ cl::OptionCategory MIR2VecCategory("MIR2Vec Options");
 
 // FIXME: Use a default vocab when not specified
 static cl::opt<std::string>
-    VocabFile("mir2vec-vocab-path", cl::Optional,
+    VocabFile("mir2vec-vocab-path",
               cl::desc("Path to the vocabulary file for MIR2Vec"), cl::init(""),
               cl::cat(MIR2VecCategory));
-cl::opt<float> OpcWeight("mir2vec-opc-weight", cl::Optional, cl::init(1.0),
+cl::opt<float> OpcWeight("mir2vec-opc-weight", cl::init(1.0),
                          cl::desc("Weight for machine opcode embeddings"),
                          cl::cat(MIR2VecCategory));
-cl::opt<float> CommonOperandWeight(
-    "mir2vec-common-operand-weight", cl::Optional, cl::init(1.0),
-    cl::desc("Weight for common operand embeddings"), cl::cat(MIR2VecCategory));
 cl::opt<float>
-    RegOperandWeight("mir2vec-reg-operand-weight", cl::Optional, cl::init(1.0),
+    CommonOperandWeight("mir2vec-common-operand-weight", cl::init(1.0),
+                        cl::desc("Weight for common operand embeddings"),
+                        cl::cat(MIR2VecCategory));
+cl::opt<float>
+    RegOperandWeight("mir2vec-reg-operand-weight", cl::init(1.0),
                      cl::desc("Weight for register operand embeddings"),
                      cl::cat(MIR2VecCategory));
 cl::opt<MIR2VecKind> MIR2VecEmbeddingKind(
-    "mir2vec-kind", cl::Optional,
+    "mir2vec-kind",
     cl::values(clEnumValN(MIR2VecKind::Symbolic, "symbolic",
                           "Generate symbolic embeddings for MIR")),
     cl::init(MIR2VecKind::Symbolic), cl::desc("MIR2Vec embedding kind"),
     cl::cat(MIR2VecCategory));
 
 static cl::opt<bool> PrintAllVocabEntries(
-    "mir2vec-print-all-vocab-entries", cl::Optional, cl::init(false),
+    "mir2vec-print-all-vocab-entries", cl::init(false),
     cl::desc("Print all vocabulary entries including zero embeddings"),
     cl::cat(MIR2VecCategory));
 
@@ -356,7 +359,8 @@ unsigned MIRVocabulary::getCommonOperandIndex(
   return static_cast<unsigned>(OperandType) - 1;
 }
 
-unsigned MIRVocabulary::getRegisterOperandIndex(Register Reg) const {
+std::optional<unsigned>
+MIRVocabulary::getRegisterOperandIndex(Register Reg) const {
   assert(!RegisterOperandNames.empty() && "Register operand mapping not built");
   assert(Reg.isValid() && "Invalid register; not expected here");
   assert((Reg.isPhysical() || Reg.isVirtual()) &&
@@ -370,13 +374,30 @@ unsigned MIRVocabulary::getRegisterOperandIndex(Register Reg) const {
   if (Reg.isPhysical())
     RegClass = TRI.getMinimalPhysRegClass(Reg);
   else
-    RegClass = MRI.getRegClass(Reg);
+    RegClass = MRI.getRegClassOrNull(Reg);
 
-  if (RegClass)
-    return RegClass->getID();
-  // Fallback for registers without a class (shouldn't happen)
-  llvm_unreachable("Register operand without a valid register class");
-  return 0;
+  // Not every register belongs to a register class. This can happen for
+  // physical registers, e.g. X86's $mxcsr and $fpcw or AMDGPU's $mode, for
+  // which getMinimalPhysRegClass() returns nullptr. It can also happen for
+  // generic virtual registers that have not yet been through (or completed)
+  // GlobalISel's register bank selection, and thus carry an LLT or a
+  // RegisterBank instead of a TargetRegisterClass, for which
+  // getRegClassOrNull() returns nullptr.
+  // TODO: Avoid special-casing these registers at every use site. Classless
+  // registers currently fall back to a zero embedding in operator[] and to
+  // VirtRegBase in getEntityIDForRegister(), which is the same ad-hoc handling
+  // the invalid/stack-slot cases already get. Give them a real vocabulary
+  // representation instead -- e.g. an explicit "no register class" entry, or
+  // keying generic vregs on their LLT/RegisterBank -- so that the lookup is
+  // total and the callers need no fallbacks.
+  if (!RegClass) {
+    LLVM_DEBUG(errs() << "MIR2Vec: No register class for register " << Reg.id()
+                      << "; using zero vector.\n");
+    ++MIRClasslessRegCounter;
+    return std::nullopt;
+  }
+
+  return RegClass->getID();
 }
 
 Expected<MIRVocabulary> MIRVocabulary::createDummyVocabForTest(
@@ -553,6 +574,9 @@ Embedding MIREmbedder::computeEmbeddings(const MachineBasicBlock &MBB) const {
 
 Embedding MIREmbedder::computeEmbeddings() const {
   Embedding MFuncVector(Dimension, 0);
+
+  if (MF.empty())
+    return MFuncVector;
 
   // Consider all reachable machine basic blocks in the function
   for (const auto *MBB : depth_first(&MF))

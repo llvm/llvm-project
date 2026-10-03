@@ -2,7 +2,7 @@
 # RUN: llc -mcpu=exynos-m5 -mtriple=aarch64 -enable-misched -passes=machine-scheduler -debug-only=machine-scheduler %s -o /dev/null 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
-# CHECK-LABEL: ********** MI Scheduling **********
+# CHECK-LABEL: Current Schedule Region
 # CHECK:       SU(0):   %0:fpr128 = COPY $q1
 # CHECK-NEXT:    # preds left       : 0
 # CHECK-NEXT:    # succs left       : 1

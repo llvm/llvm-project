@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa < %s | FileCheck -check-prefixes=GCN %s
 
 ; GCN-LABEL: .amdhsa_kernel test_notgsplit
 ; GCN: .amdhsa_tg_split 0

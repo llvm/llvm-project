@@ -8,7 +8,7 @@
 //
 // A SandboxIR function pass that builds regions from IR metadata and then runs
 // a pipeline of region passes on them. This is useful to test region passes in
-// isolation without relying on the output of the bottom-up vectorizer.
+// isolation without relying on the output of the bundle vectorizer.
 //
 
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_PASSES_REGIONSFROMMETADATA_H

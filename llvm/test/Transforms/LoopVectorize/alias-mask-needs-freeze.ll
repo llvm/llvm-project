@@ -6,10 +6,10 @@ define void @alias_mask_forked_pointer_needs_freeze(ptr %base1, ptr %base2,
 ; CHECK-LABEL: define void @alias_mask_forked_pointer_needs_freeze(
 ; CHECK-SAME: ptr [[BASE1:%.*]], ptr [[BASE2:%.*]], ptr [[DEST:%.*]], ptr [[PREDICATES:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[PREDICATES4:%.*]] = ptrtoaddr ptr [[PREDICATES]] to i64
-; CHECK-NEXT:    [[BASE23:%.*]] = ptrtoaddr ptr [[BASE2]] to i64
-; CHECK-NEXT:    [[BASE12:%.*]] = ptrtoaddr ptr [[BASE1]] to i64
 ; CHECK-NEXT:    [[DEST1:%.*]] = ptrtoaddr ptr [[DEST]] to i64
+; CHECK-NEXT:    [[BASE12:%.*]] = ptrtoaddr ptr [[BASE1]] to i64
+; CHECK-NEXT:    [[BASE23:%.*]] = ptrtoaddr ptr [[BASE2]] to i64
+; CHECK-NEXT:    [[PREDICATES4:%.*]] = ptrtoaddr ptr [[PREDICATES]] to i64
 ; CHECK-NEXT:    br label %[[VECTOR_CLAMPED_VF_CHECK:.*]]
 ; CHECK:       [[VECTOR_CLAMPED_VF_CHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 [[PREDICATES4]], i64 [[DEST1]], i64 4)
@@ -18,8 +18,7 @@ define void @alias_mask_forked_pointer_needs_freeze(ptr %base1, ptr %base2,
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 [[TMP1]], i64 [[TMP2]], i64 4)
 ; CHECK-NEXT:    [[TMP4:%.*]] = and <4 x i1> [[TMP0]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = freeze i64 [[BASE12]]
-; CHECK-NEXT:    [[TMP6:%.*]] = freeze i64 [[DEST1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 [[TMP5]], i64 [[TMP6]], i64 4)
+; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 [[TMP5]], i64 [[TMP2]], i64 4)
 ; CHECK-NEXT:    [[TMP8:%.*]] = and <4 x i1> [[TMP4]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext <4 x i1> [[TMP8]] to <4 x i64>
 ; CHECK-NEXT:    [[NUM_ACTIVE_LANES:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP9]])

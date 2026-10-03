@@ -59,7 +59,7 @@ define <vscale x 16 x i1> @reinterpret_bool_from_svcount(target("aarch64.svcount
 ; CHECK-LABEL: reinterpret_bool_from_svcount:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.taarch64.svcountt(target("aarch64.svcount") %pg)
+  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.from.svcount(target("aarch64.svcount") %pg)
   ret <vscale x 16 x i1> %out
 }
 
@@ -111,7 +111,7 @@ define target("aarch64.svcount") @reinterpret_bool_to_svcount(<vscale x 16 x i1>
 ; CHECK-LABEL: reinterpret_bool_to_svcount:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
-  %out = call target("aarch64.svcount") @llvm.aarch64.sve.convert.from.svbool.taarch64.svcountt(<vscale x 16 x i1> %pg)
+  %out = call target("aarch64.svcount") @llvm.aarch64.sve.convert.to.svcount(<vscale x 16 x i1> %pg)
   ret target("aarch64.svcount") %out
 }
 
@@ -183,22 +183,3 @@ define <vscale x 16 x i1> @reinterpret_scalar_bool_q(i1 %x){
   %out = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %.splat)
   ret <vscale x 16 x i1> %out
 }
-
-
-declare <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 immarg)
-declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 immarg)
-declare <vscale x 8 x i1> @llvm.aarch64.sve.cmpgt.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 8 x i16>)
-
-declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv16i1(<vscale x 16 x i1>)
-declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1>)
-declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1>)
-declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1>)
-declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv1i1(<vscale x 1 x i1>)
-declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.taarch64.svcountt(target("aarch64.svcount"))
-
-declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv16i1(<vscale x 16 x i1>)
-declare <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1>)
-declare <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1>)
-declare <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1>)
-declare <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1>)
-declare target("aarch64.svcount") @llvm.aarch64.sve.convert.from.svbool.taarch64.svcountt(<vscale x 16 x i1>)

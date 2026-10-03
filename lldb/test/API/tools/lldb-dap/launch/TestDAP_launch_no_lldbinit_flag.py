@@ -5,8 +5,8 @@ Test lldb-dap launch request.
 import os
 import tempfile
 
-from lldbsuite.test.tools.lldb_dap.dap_types import LaunchArgs
-from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.utils import DebugAdapterOptions
 
 
@@ -31,7 +31,7 @@ class TestDAP_launch_no_lldbinit_flag(DAPTestCaseBase):
             # temp dir and the --no-lldbinit flag.
             self.build()
             program = self.getBuildArtifact("a.out")
-            adapter = self.create_stdio_debug_adapter(
+            adapter = self.create_debug_adapter(
                 DebugAdapterOptions(
                     env={"HOME": temp_home},
                     args=["--no-lldbinit"],

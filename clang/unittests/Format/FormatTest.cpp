@@ -169,7 +169,6 @@ TEST_F(FormatTest, RemovesEmptyLines) {
   auto CustomStyle = getLLVMStyle();
   CustomStyle.BreakBeforeBraces = FormatStyle::BS_Custom;
   CustomStyle.BraceWrapping.AfterNamespace = true;
-  CustomStyle.KeepEmptyLines.AtStartOfBlock = false;
   verifyFormat("namespace N\n"
                "{\n"
                "\n"
@@ -396,7 +395,6 @@ TEST_F(FormatTest, RemovesEmptyLines) {
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterClass = true;
   Style.BraceWrapping.AfterFunction = true;
-  Style.KeepEmptyLines.AtStartOfBlock = false;
 
   verifyFormat("class Foo\n"
                "{\n"
@@ -4931,6 +4929,26 @@ TEST_F(FormatTest, IndentExternBlockStyle) {
                Style);
 }
 
+TEST_F(FormatTest, BraceWrappingAfterExportBlock) {
+  FormatStyle Style = getLLVMStyle();
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterExportBlock = true;
+  verifyFormat("export\n"
+               "{\n"
+               "  int foo();\n"
+               "}",
+               "export {\n"
+               "  int foo();\n"
+               "}",
+               Style);
+
+  Style.BraceWrapping.AfterExportBlock = false;
+  verifyFormat("export {\n"
+               "  int foo();\n"
+               "}",
+               Style);
+}
+
 TEST_F(FormatTest, FormatsInlineASM) {
   verifyFormat("asm(\"xyz\" : \"=a\"(a), \"=d\"(b) : \"a\"(data));");
   verifyFormat("asm(\"nop\" ::: \"memory\");");
@@ -7671,6 +7689,16 @@ TEST_F(FormatTest, BreakingBeforeNonAssignmentOperators) {
   verifyFormat("int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa =\n"
                "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                "    + bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb;",
+               Style);
+}
+
+TEST_F(FormatTest, EnumAssignmentContinuationIndentation) {
+  FormatStyle Style = getLLVMStyleWithColumns(30);
+  Style.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
+  verifyFormat("enum Flag {\n"
+               "  VeryLongFlagNameThatForcesBreak =\n"
+               "          1 << 2 << 3,\n"
+               "};",
                Style);
 }
 
@@ -15368,6 +15396,7 @@ TEST_F(FormatTest, CustomShortFunctionOptions) {
   // All functions should be on a single line if they fit
   verifyFormat("int f() { return 42; }", CustomAll);
   verifyFormat("int g() { return f() + h(); }", CustomAll);
+  verifyFormat("pair<int, int> g() { return {1, {}}; }", CustomAll);
   verifyFormat("class C {\n"
                "  int f() { return 42; }\n"
                "};",
@@ -22419,6 +22448,14 @@ TEST_F(FormatTest, DisableRegions) {
                  " #endif\n"
                  "#endif\n"
                  "// clang-format on");
+
+  verifyNoChange("// clang-format off\n"
+                 "\n"
+                 "\n"
+                 " int  i ;\n"
+                 "\n"
+                 "\n"
+                 "// clang-format on");
 }
 
 TEST_F(FormatTest, OneLineFormatOffRegex) {
@@ -22557,8 +22594,12 @@ TEST_F(FormatTest, DoNotCrashOnInvalidInput) {
   verifyNoCrash("        tst     %o5     ! are we doing the gray case?\n"
                 "LY52:                   ! [internal]");
   verifyNoCrash("operator foo *;");
+  verifyNoCrash("[[[a]]");
+  verifyNoCrash("[[[a]]]");
+  verifyNoCrash("[[ [a] ]]");
   verifyNoCrash(
       "#xxxx??x<xxxxxxx||??x<xxxxxxx and xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+  verifyNoCrash("a &alias & =");
 }
 
 TEST_F(FormatTest, FormatsTableGenCode) {
@@ -24672,6 +24713,98 @@ TEST_F(FormatTest, RequiresExpressionIndentation) {
                Style);
 }
 
+TEST_F(FormatTest, RequiresExpressionBraceWrapping) {
+  auto Style = getLLVMStyle();
+  EXPECT_FALSE(Style.BraceWrapping.AfterRequiresExpression);
+
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterRequiresExpression = true;
+
+  // Requires expressions that fit on a single line are not wrapped.
+  verifyFormat("template <typename T>\n"
+               "concept C = requires(T t) { t.foo(); };",
+               Style);
+  verifyFormat("static_assert(requires(int i) { i + 1; });", Style);
+
+  verifyFormat("template <typename T>\n"
+               "concept C = requires(T t)\n"
+               "{\n"
+               "  t.foo();\n"
+               "  t.bar();\n"
+               "};",
+               Style);
+
+  verifyFormat("template <typename T>\n"
+               "concept C = requires\n"
+               "{\n"
+               "  typename T::value_type;\n"
+               "  typename T::size_type;\n"
+               "};",
+               Style);
+
+  verifyFormat("template <typename T>\n"
+               "concept C = requires(T t)\n"
+               "{\n"
+               "  { t.foo() } -> std::same_as<int>;\n"
+               "};",
+               Style);
+
+  verifyFormat("template <typename T>\n"
+               "void bar(T)\n"
+               "  requires requires(T t)\n"
+               "  {\n"
+               "    t.foo();\n"
+               "    t.bar();\n"
+               "  };",
+               Style);
+
+  verifyFormat("template <typename T> void f() {\n"
+               "  if constexpr (requires(T t)\n"
+               "                {\n"
+               "                  { t.bar() } -> std::same_as<bool>;\n"
+               "                }) {\n"
+               "  }\n"
+               "}",
+               Style);
+
+  // The wrapped brace is aligned with the closing brace.
+  verifyFormat("template <typename T>\n"
+               "  requires Foo<T> &&\n"
+               "           requires(T t)\n"
+               "           {\n"
+               "             { t.foo() } -> std::same_as<int>;\n"
+               "           } &&\n"
+               "           requires(T t)\n"
+               "           {\n"
+               "             { t.bar() } -> std::same_as<bool>;\n"
+               "             --t;\n"
+               "           }\n"
+               "void bar(T);",
+               Style);
+
+  Style.RequiresExpressionIndentation = FormatStyle::REI_Keyword;
+  verifyFormat("template <typename T>\n"
+               "concept C = requires(T t)\n"
+               "            {\n"
+               "              typename T::value;\n"
+               "              requires requires(typename T::value v)\n"
+               "                       {\n"
+               "                         { t == v } -> std::same_as<bool>;\n"
+               "                       };\n"
+               "            };",
+               Style);
+  Style.RequiresExpressionIndentation = FormatStyle::REI_OuterScope;
+
+  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
+  verifyFormat("template <typename T>\n"
+               "concept Uart = requires(T a)\n"
+               "{\n"
+               "  { a.write() } -> std::convertible_to<std::size_t>;\n"
+               "  a.flush();\n"
+               "};",
+               Style);
+}
+
 TEST_F(FormatTest, StatementAttributeLikeMacros) {
   FormatStyle Style = getLLVMStyle();
   StringRef Source = "void Foo::slot() {\n"
@@ -25482,6 +25615,39 @@ TEST_F(FormatTest, KeepEmptyLinesAtEOF) {
   constexpr StringRef Code("int i;\n\n");
   verifyNoChange(Code, Style);
   verifyFormat(Code, "int i;\n\n\n", Style);
+}
+
+TEST_F(FormatTest, KeepEmptyLinesAtEndOfBlock) {
+  FormatStyle Style = getLLVMStyle();
+  Style.AllowShortFunctionsOnASingleLine =
+      FormatStyle::ShortFunctionStyle::setEmptyAndInline();
+  Style.KeepEmptyLines.AtEndOfBlock = true;
+  Style.MaxEmptyLinesToKeep = 2;
+
+  verifyFormat("void foo() {\n"
+               "  int i;\n"
+               "\n"
+               "\n"
+               "}",
+               "void foo() {\n"
+               "  int i;\n"
+               "\n"
+               "\n"
+               "\n"
+               "}",
+               Style);
+  verifyFormat("foo([]() {\n"
+               "  int i;\n"
+               "\n"
+               "\n"
+               "});",
+               "foo([]() {\n"
+               "  int i;\n"
+               "\n"
+               "\n"
+               "\n"
+               "});",
+               Style);
 }
 
 TEST_F(FormatTest, SpaceAfterUDL) {

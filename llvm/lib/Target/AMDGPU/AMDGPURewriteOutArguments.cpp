@@ -44,8 +44,10 @@
 #include "AMDGPU.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/MemoryDependenceAnalysis.h"
+#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
@@ -81,7 +83,9 @@ namespace {
 class AMDGPURewriteOutArguments : public FunctionPass {
 private:
   const DataLayout *DL = nullptr;
-  MemoryDependenceResults *MDA = nullptr;
+  MemorySSA *MSSA = nullptr;
+  MemorySSAUpdater *MSSAU = nullptr;
+  AAResults *AA = nullptr;
 
   Type *getStoredType(Value &Arg) const;
   Type *getOutArgumentType(Argument &Arg) const;
@@ -92,7 +96,8 @@ public:
   AMDGPURewriteOutArguments() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MemoryDependenceWrapperPass>();
+    AU.addRequired<MemorySSAWrapperPass>();
+    AU.addRequired<AAResultsWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
 
@@ -104,7 +109,7 @@ public:
 
 INITIALIZE_PASS_BEGIN(AMDGPURewriteOutArguments, DEBUG_TYPE,
                       "AMDGPU Rewrite Out Arguments", false, false)
-INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_END(AMDGPURewriteOutArguments, DEBUG_TYPE,
                     "AMDGPU Rewrite Out Arguments", false, false)
 
@@ -170,6 +175,48 @@ bool AMDGPURewriteOutArguments::doInitialization(Module &M) {
   return false;
 }
 
+static StoreInst *findStoreForOutArgument(BasicBlock *BB, Argument *OutArg,
+                                          MemorySSA &MSSA,
+                                          BatchAAResults &BAA) {
+  MemoryLocation ArgLoc = MemoryLocation::getBeforeOrAfter(OutArg);
+  const auto *Accesses = MSSA.getBlockAccesses(BB);
+  if (!Accesses)
+    return nullptr;
+
+  for (const MemoryAccess &Access : reverse(*Accesses)) {
+    const auto *UseOrDef = dyn_cast<MemoryUseOrDef>(&Access);
+    if (!UseOrDef)
+      continue;
+
+    Instruction *I = UseOrDef->getMemoryInst();
+
+    // Return the must-alias store to the out argument.
+    if (auto *Store = dyn_cast<StoreInst>(I))
+      if (Store->getPointerOperand() == OutArg)
+        return Store;
+
+    if (auto *FI = dyn_cast<FenceInst>(I))
+      if (FI->getOrdering() == AtomicOrdering::Release)
+        continue;
+
+    if (auto *LI = dyn_cast<LoadInst>(I)) {
+      if (LI->isAtomic()) {
+        // May-alias reads with monotonic ordering are ignored.
+        if (isStrongerThan(LI->getOrdering(), AtomicOrdering::Monotonic))
+          return nullptr;
+        continue;
+      }
+    }
+
+    // Any other memory access that may read or write the location prevents the
+    // rewrite.
+    if (isModOrRefSet(BAA.getModRefInfo(I, ArgLoc)))
+      return nullptr;
+  }
+
+  return nullptr;
+}
+
 bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
@@ -178,8 +225,6 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   if (F.isVarArg() || F.hasStructRetAttr() ||
       AMDGPU::isEntryFunctionCC(F.getCallingConv()))
     return false;
-
-  MDA = &getAnalysis<MemoryDependenceWrapperPass>().getMemDep();
 
   unsigned ReturnNumRegs = 0;
   // Maps an out-argument number to its field index in the return struct.
@@ -222,6 +267,13 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   if (Returns.empty())
     return false;
 
+  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
+
+  BatchAAResults BatchAA(*AA);
+  MemorySSAUpdater MSSAUpdater(MSSA);
+  MSSAU = &MSSAUpdater;
+
   bool Changing;
 
   do {
@@ -254,17 +306,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
       for (ReturnInst *RI : Returns) {
         BasicBlock *BB = RI->getParent();
 
-        MemDepResult Q = MDA->getPointerDependencyFrom(
-            MemoryLocation::getBeforeOrAfter(OutArg), true, BB->end(), BB, RI);
-        StoreInst *SI = nullptr;
-        if (Q.isDef())
-          SI = dyn_cast<StoreInst>(Q.getInst());
-
-        // MDA stops at the first may-aliasing store, which need not be to this
-        // argument; only fold a store whose pointer is exactly OutArg.
-        if (SI && SI->getPointerOperand() != OutArg)
-          SI = nullptr;
-
+        StoreInst *SI = findStoreForOutArgument(BB, OutArg, *MSSA, BatchAA);
         if (SI) {
           LLVM_DEBUG(dbgs() << "Found out argument store: " << *SI << '\n');
           ReplaceableStores.emplace_back(RI, SI);
@@ -291,6 +333,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
         }
 
         ValVec.emplace_back(OutArg, ReplVal);
+        MSSAU->removeMemoryAccess(Store.second);
         Store.second->eraseFromParent();
       }
 
@@ -325,18 +368,15 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   // off any return attributes, e.g. zeroext doesn't make sense with a struct.
   NewFunc->stealArgumentListFrom(F);
 
-  AttributeMask RetAttrs;
-  RetAttrs.addAttribute(Attribute::SExt);
-  RetAttrs.addAttribute(Attribute::ZExt);
-  RetAttrs.addAttribute(Attribute::NoAlias);
-  NewFunc->removeRetAttrs(RetAttrs);
+  NewFunc->removeRetAttrs(AttributeFuncs::typeIncompatible(
+      NewRetTy, NewFunc->getAttributes().getRetAttrs()));
   // TODO: How to preserve metadata?
 
   // Move the body of the function into the new rewritten function, and replace
   // this function with a stub.
   NewFunc->splice(NewFunc->begin(), &F);
 
-  for (std::pair<ReturnInst *, ReplacementVec> &Replacement : Replacements) {
+  for (auto &Replacement : Replacements) {
     ReturnInst *RI = Replacement.first;
     IRBuilder<> B(RI);
     B.SetCurrentDebugLocation(RI->getDebugLoc());

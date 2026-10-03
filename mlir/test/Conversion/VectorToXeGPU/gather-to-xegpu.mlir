@@ -15,8 +15,8 @@ gpu.func @load_1D_vector(%source: memref<8x16x32xf32>,
 // CHECK-SAME:   %[[INDICES:.+]]: vector<8xindex>
 // CHECK-SAME:   %[[MASK:.+]]: vector<8xi1>
 // CHECK-SAME:   %[[PASS_THRU:.+]]: vector<8xf32>) -> vector<8xf32> {
-// CHECK-COUNT2: arith.muli {{.*}} : index
-// CHECK-COUNT2: arith.addi {{.*}} : index
+// CHECK     :   arith.muli {{.*}} : index
+// CHECK     :   arith.addi {{.*}} : index
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8xindex>
 // CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], %[[INDICES]] : vector<8xindex>
 // CHECK:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<8x16x32xf32> -> index
@@ -42,8 +42,8 @@ gpu.func @load_2D_memref(%source: memref<8x32xf32>,
 // CHECK-SAME:   %[[INDICES:.+]]: vector<8xindex>
 // CHECK-SAME:   %[[MASK:.+]]: vector<8xi1>
 // CHECK-SAME:   %[[PASS_THRU:.+]]: vector<8xf32>) -> vector<8xf32> {
-// CHECK-COUNT1: arith.muli {{.*}} : index
-// CHECK-COUNT1: arith.addi {{.*}} : index
+// CHECK:        arith.muli {{.*}} : index
+// CHECK:        arith.addi {{.*}} : index
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8xindex>
 // CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], %[[INDICES]] : vector<8xindex>
 // CHECK:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<8x32xf32> -> index
@@ -69,8 +69,8 @@ gpu.func @load_2D_vector(%source: memref<8x16x32xf32>,
 // CHECK-SAME:   %[[INDICES:.+]]: vector<8x16xindex>
 // CHECK-SAME:   %[[MASK:.+]]: vector<8x16xi1>
 // CHECK-SAME:   %[[PASS_THRU:.+]]: vector<8x16xf32>) -> vector<8x16xf32> {
-// CHECK-COUNT2: arith.muli {{.*}} : index
-// CHECK-COUNT2: arith.addi {{.*}} : index
+// CHECK:        arith.muli {{.*}} : index
+// CHECK:        arith.addi {{.*}} : index
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8x16xindex>
 // CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], %[[INDICES]] : vector<8x16xindex>
 // CHECK:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<8x16x32xf32> -> index
@@ -97,8 +97,8 @@ gpu.func @load_dynamic_source(%source: memref<?x?x?xf32>,
 // CHECK-SAME:   %[[MASK:.+]]: vector<8x16xi1>
 // CHECK-SAME:   %[[PASS_THRU:.+]]: vector<8x16xf32>) -> vector<8x16xf32> {
 // CHECK:        memref.extract_strided_metadata %[[SRC]]
-// CHECK-COUNT2: arith.muli {{.*}} : index
-// CHECK-COUNT2: arith.addi {{.*}} : index
+// CHECK:        arith.muli {{.*}} : index
+// CHECK:        arith.addi {{.*}} : index
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8x16xindex>
 // CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], %[[INDICES]] : vector<8x16xindex>
 // CHECK:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<?x?x?xf32> -> index
@@ -125,8 +125,8 @@ gpu.func @load_dynamic_source2(%source: memref<?x8x16xf32>,
 // CHECK-SAME:   %[[MASK:.+]]: vector<8x16xi1>
 // CHECK-SAME:   %[[PASS_THRU:.+]]: vector<8x16xf32>) -> vector<8x16xf32> {
 // CHECK-NOT:    memref.extract_strided_metadata %[[SRC]]
-// CHECK-COUNT2: arith.muli {{.*}} : index
-// CHECK-COUNT2: arith.addi {{.*}} : index
+// CHECK:        arith.muli {{.*}} : index
+// CHECK:        arith.addi {{.*}} : index
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8x16xindex>
 // CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], %[[INDICES]] : vector<8x16xindex>
 // CHECK:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<?x8x16xf32> -> index
@@ -238,8 +238,8 @@ gpu.func @non_unit_inner_stride_3D(
 // CHECK:        %[[BB:.+]], %[[M_OFF:.+]], %[[SIZES:.+]]:3, %[[STRIDES:.+]]:3 = memref.extract_strided_metadata %[[SRC]]
 // CHECK:        arith.muli %[[OFF0]], %[[STRIDES]]#0 : index
 // CHECK:        arith.addi {{.*}} : index
-// CHECK-COUNT2: arith.muli {{.*}} : index
-// CHECK-COUNT2: arith.addi {{.*}} : index
+// CHECK:        arith.muli {{.*}} : index
+// CHECK:        arith.addi {{.*}} : index
 // CHECK:        %[[STRD_INDICES:.+]] = arith.muli {{.*}}%[[INDICES]]{{.*}} : vector<8xindex>
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}} : index to vector<8xindex>
 // CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], %[[STRD_INDICES]] : vector<8xindex>

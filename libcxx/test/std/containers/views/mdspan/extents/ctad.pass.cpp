@@ -13,8 +13,7 @@
 // explicit extents(Integrals...) -> see below;
 //   Constraints: (is_convertible_v<Integrals, size_t> && ...) is true.
 //
-// Remarks: The deduced type is dextents<size_t, sizeof...(Integrals)>.           // until C++26
-// Remarks: The deduced type is extents<size_t, maybe-static-ext<Integrals>...>.  // since C++26
+// Remarks: The deduced type is extents<size_t, maybe-static-ext<Integrals>...>.
 
 #include <cassert>
 #include <cstddef>
@@ -30,6 +29,9 @@ struct NoDefaultCtorIndex {
   constexpr NoDefaultCtorIndex(size_t val) : value(val) {}
   constexpr operator size_t() const noexcept { return value; }
 };
+
+template <std::size_t N>
+using size_ref_constant = std::integral_constant<const std::size_t&, std::integral_constant<std::size_t, N>::value>;
 
 template <class E, class Expected>
 constexpr void test(E e, Expected expected) {
@@ -47,13 +49,16 @@ constexpr bool test() {
        std::extents<std::size_t, D, D, D, D, D, D, D, D, D>(1, 2u, 3, 4, 5, 6, 7, 8, 9));
   test(std::extents(NoDefaultCtorIndex{1}, NoDefaultCtorIndex{2}), std::extents<std::size_t, D, D>(1, 2));
 
-#if _LIBCPP_STD_VER >= 26
   // P3029R1: deduction from `integral_constant`
   test(std::extents(std::integral_constant<size_t, 5>{}), std::extents<std::size_t, 5>());
   test(std::extents(std::integral_constant<size_t, 5>{}, 6), std::extents<std::size_t, 5, std::dynamic_extent>(6));
   test(std::extents(std::integral_constant<size_t, 5>{}, 6, std::integral_constant<size_t, 7>{}),
        std::extents<std::size_t, 5, std::dynamic_extent, 7>(6));
-#endif
+  // support for `T::value` of a reference type from P2781R9 `std::constant_wrapper`
+  test(std::extents(size_ref_constant<5>{}), std::extents<std::size_t, 5>());
+  test(std::extents(size_ref_constant<5>{}, 6), std::extents<std::size_t, 5, std::dynamic_extent>(6));
+  test(std::extents(std::integral_constant<size_t, 5>{}, 6, size_ref_constant<7>{}),
+       std::extents<std::size_t, 5, std::dynamic_extent, 7>(6));
 
   return true;
 }

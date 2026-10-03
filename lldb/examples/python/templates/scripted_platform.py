@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from typing import Optional
 
 import lldb
 
@@ -12,10 +13,10 @@ class ScriptedPlatform(metaclass=ABCMeta):
     overwritten by the inheriting class.
     """
 
-    processes = None
+    processes: Optional[dict[int, dict]] = None
 
     @abstractmethod
-    def __init__(self, exe_ctx, args):
+    def __init__(self, exe_ctx: lldb.SBExecutionContext, args: lldb.SBStructuredData):
         """Construct a scripted platform.
 
         Args:
@@ -26,7 +27,7 @@ class ScriptedPlatform(metaclass=ABCMeta):
         processes = []
 
     @abstractmethod
-    def list_processes(self):
+    def list_processes(self) -> dict[int, dict]:
         """Get a list of processes that are running or that can be attached to on the platform.
 
         .. code-block:: python
@@ -50,7 +51,7 @@ class ScriptedPlatform(metaclass=ABCMeta):
         """
         pass
 
-    def get_process_info(self, pid):
+    def get_process_info(self, pid: int) -> Optional[dict]:
         """Get the dictionary describing the process.
 
         Returns:
@@ -60,7 +61,7 @@ class ScriptedPlatform(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def attach_to_process(self, attach_info):
+    def attach_to_process(self, attach_info: lldb.SBAttachInfo) -> lldb.SBError:
         """Attach to a process.
 
         Args:
@@ -72,7 +73,7 @@ class ScriptedPlatform(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def launch_process(self, launch_info):
+    def launch_process(self, launch_info: lldb.SBLaunchInfo) -> lldb.SBError:
         """Launch a process.
 
         Args:
@@ -84,7 +85,7 @@ class ScriptedPlatform(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def kill_process(self, pid):
+    def kill_process(self, pid: int) -> lldb.SBError:
         """Kill a process.
 
         Args:

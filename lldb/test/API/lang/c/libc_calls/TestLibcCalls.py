@@ -15,7 +15,7 @@ LIBC_FUNCTIONS = [
 class LibcCallsTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIfRemote
     def test_libc_funcs_do_not_resolve_to_dyld(self):
         """The JIT-resolved address of each libc function must not lie in
@@ -54,7 +54,7 @@ class LibcCallsTestCase(TestBase):
                     resolved_module_name, "dyld", f"Called dyld version of {symbol}"
                 )
 
-    @skipIfWasm  # no expression evaluation
+    @requireExpressionEvaluation
     def test_libc_calls_succeed(self):
         """Calling memset/memcpy/memmove/memcmp from expressions must
         execute without trapping."""

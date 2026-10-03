@@ -10,6 +10,7 @@
 #define LLVM_CODEGEN_CALCSPILLWEIGHTS_H
 
 #include "llvm/CodeGen/SlotIndexes.h"
+#include <optional>
 
 namespace llvm {
 
@@ -50,6 +51,12 @@ class VirtRegMap;
     const MachineLoopInfo &Loops;
     ProfileSummaryInfo *PSI;
     const MachineBlockFrequencyInfo &MBFI;
+
+    /// Memoized llvm::shouldOptimizeForSize(&MF, PSI, &MBFI).
+    std::optional<bool> CachedOptForSize;
+
+    /// Lazily computes and caches the above.
+    bool getCachedOptimizeForSize();
 
     /// Returns true if Reg of live interval LI is used in instruction with many
     /// operands like STATEPOINT.

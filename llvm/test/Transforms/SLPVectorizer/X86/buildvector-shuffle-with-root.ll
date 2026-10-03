@@ -5,7 +5,7 @@ define void @test(i16 %arg) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: i16 [[ARG:%.*]]) {
 ; CHECK-NEXT:  [[BB:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i16> <i16 0, i16 poison>, i16 [[ARG]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i16> <i16 0, i16 poison>, i16 [[ARG]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = sitofp <2 x i16> [[TMP0]] to <2 x float>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> <float -0.000000e+00, float poison, float poison, float poison>, <4 x i32> <i32 4, i32 1, i32 poison, i32 poison>

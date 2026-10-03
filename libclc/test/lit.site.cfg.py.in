@@ -10,6 +10,8 @@ config.libclc_standalone_build = "@LIBCLC_STANDALONE_BUILD@"
 config.libclc_target = "@LIBCLC_TARGET@"
 config.libclc_target_arch = "@LIBCLC_TARGET_ARCH@"
 config.libclc_target_cpu = "@LIBCLC_TARGET_CPU@"
+config.libclc_test_arch = "@LIBCLC_TEST_ARCHITECTURE@"
+config.libclc_offload_libdir = "@LIBCLC_OFFLOAD_LIBDIR@"
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

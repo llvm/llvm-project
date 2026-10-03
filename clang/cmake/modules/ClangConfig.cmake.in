@@ -11,10 +11,11 @@ set(CLANG_CMAKE_DIR "@CLANG_CONFIG_CMAKE_DIR@")
 set(CLANG_INCLUDE_DIRS "@CLANG_CONFIG_INCLUDE_DIRS@")
 set(CLANG_LINK_CLANG_DYLIB "@CLANG_LINK_CLANG_DYLIB@")
 set(CLANG_DEFAULT_LINKER "@CLANG_DEFAULT_LINKER@")
+set(CLANG_DEFAULT_UNWINDLIB "@CLANG_DEFAULT_UNWINDLIB@")
 
-# Provide all our library targets to users.
-# Skip when cross-compiling, as host library targets are not usable.
-if(NOT CMAKE_CROSSCOMPILING)
+# Provide all our library targets to users. Skip when
+# LLVM_OMIT_EXPORTS_FROM_CONFIG flag is set.
+if(NOT LLVM_OMIT_EXPORTS_FROM_CONFIG)
   @CLANG_CONFIG_INCLUDE_EXPORTS@
 endif()
 

@@ -295,22 +295,6 @@ public:
 
   explicit operator bool() const { return !isNull(); }
 
-  // FIXME: Replace the uses of is(), get() and dyn_cast() with
-  //        isa<T>, cast<T> and the llvm::dyn_cast<T>
-
-  /// Test if the Union currently holds the type matching T.
-  template <typename T> [[deprecated("Use isa instead")]] bool is() const {
-    return isa<T>(*this);
-  }
-
-  /// Returns the value of the specified pointer type.
-  ///
-  /// If the specified pointer type is incorrect, assert.
-  template <typename T> [[deprecated("Use cast instead")]] T get() const {
-    assert(isa<T>(*this) && "Invalid accessor called");
-    return cast<T>(*this);
-  }
-
   /// Returns the current pointer if it is of the specified pointer type,
   /// otherwise returns null.
   template <typename T> inline T dyn_cast() const {

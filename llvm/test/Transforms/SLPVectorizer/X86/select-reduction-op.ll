@@ -4,7 +4,7 @@
 define i1 @src(i1 %cmp4.118.i) {
 ; CHECK-LABEL: define i1 @src(
 ; CHECK-SAME: i1 [[CMP4_118_I:%.*]]) {
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i1> <i1 poison, i1 true, i1 true, i1 true>, i1 [[CMP4_118_I]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i1> <i1 poison, i1 true, i1 true, i1 true>, i1 [[CMP4_118_I]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor <4 x i1> [[TMP4]], <i1 true, i1 poison, i1 poison, i1 poison>
 ; CHECK-NEXT:    [[DOTNOT7:%.*]] = xor i1 poison, true
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze <4 x i1> [[TMP5]]

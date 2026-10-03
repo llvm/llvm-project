@@ -11,6 +11,6 @@ function(add_example name)
     target_link_options(${name} PRIVATE -l:libllvmlibc.a)
   else()
     message(FATAL_ERROR "Either LLVM_LIBC_FULL_BUILD should be on or "
-                        "LIBC_OVERLAY_ARCHIVE_DIR should be set.")
+      "LIBC_OVERLAY_ARCHIVE_DIR should be set.")
   endif()
 endfunction()

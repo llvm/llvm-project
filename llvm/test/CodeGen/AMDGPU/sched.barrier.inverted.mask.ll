@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s -debug-only=igrouplp 2>&1 | FileCheck --check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgpu6.00 < %s -debug-only=igrouplp 2>&1 | FileCheck --check-prefixes=GCN %s
 
 
 

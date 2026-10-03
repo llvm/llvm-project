@@ -76,8 +76,16 @@ public:
 
 template <typename... Ts>
 raw_ostream &operator<<(raw_ostream &OS, format_object<Ts...> Fmt) {
-  OS <<
-      [&Fmt](char *Buf, size_t Size) -> int { return Fmt.snprint(Buf, Size); };
+  // Stream through an explicitly-typed function_ref. Passing the lambda
+  // directly is ambiguous when block pointer conversions are enabled due to a
+  // competing raw_ostream::operator<<(const void *) candidate. This ambiguity
+  // affects the Swift compiler because it contains Swift code that
+  // interoperates with C++ code that instantiates this template, and Swift's
+  // C++ interoperability enables block pointer conversions.
+  auto Print = [&Fmt](char *Buf, size_t Size) -> int {
+    return Fmt.snprint(Buf, Size);
+  };
+  OS << function_ref<int(char *, size_t)>(Print);
   return OS;
 }
 

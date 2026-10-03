@@ -36,6 +36,7 @@ add_mlir_dialect_library(MLIRMemRefTransforms
   MLIRMemRefDialect
   MLIRMemRefUtils
   MLIRPass
+  MLIRSCFDialect
   MLIRTensorDialect
   MLIRTransforms
   MLIRValueBoundsOpInterface

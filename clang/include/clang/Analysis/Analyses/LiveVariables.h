@@ -27,21 +27,26 @@ class SourceManager;
 
 class LiveVariables : public ManagedAnalysis {
 public:
+  // Canonicalization of these sets is a major performance loss here, so the
+  // non-canonicalizing form is selected at compile time.
+  template <typename T>
+  using SetTy =
+      llvm::ImmutableSet<T, llvm::ImutContainerInfo<T>, /*Canonicalize=*/false>;
+
   class LivenessValues {
   public:
-
-    llvm::ImmutableSet<const Expr *> liveExprs;
-    llvm::ImmutableSet<const VarDecl *> liveDecls;
-    llvm::ImmutableSet<const BindingDecl *> liveBindings;
+    SetTy<const Expr *> liveExprs;
+    SetTy<const VarDecl *> liveDecls;
+    SetTy<const BindingDecl *> liveBindings;
 
     bool operator==(const LivenessValues &V) const;
 
     LivenessValues()
       : liveExprs(nullptr), liveDecls(nullptr), liveBindings(nullptr) {}
 
-    LivenessValues(llvm::ImmutableSet<const Expr *> liveExprs,
-                   llvm::ImmutableSet<const VarDecl *> LiveDecls,
-                   llvm::ImmutableSet<const BindingDecl *> LiveBindings)
+    LivenessValues(SetTy<const Expr *> liveExprs,
+                   SetTy<const VarDecl *> LiveDecls,
+                   SetTy<const BindingDecl *> LiveBindings)
         : liveExprs(liveExprs), liveDecls(LiveDecls),
           liveBindings(LiveBindings) {}
 

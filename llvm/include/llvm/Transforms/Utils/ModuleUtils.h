@@ -138,10 +138,14 @@ LLVM_ABI std::string getUniqueModuleId(Module *M);
 
 /// Embed the memory buffer \p Buf into the module \p M as a global using the
 /// specified section name. Also provide a metadata entry to identify it in the
-/// module using the same section name.
-LLVM_ABI void embedBufferInModule(Module &M, MemoryBufferRef Buf,
-                                  StringRef SectionName,
-                                  Align Alignment = Align(1));
+/// module using the same section name. If \p SectionExclude is true !exclude
+/// is applied to the global in order to apply necessary linkage flags to
+/// exclude the section from a link. If false, apply !metadata_section_kind
+/// which results in no additional section linkage flags.
+LLVM_ABI GlobalVariable *embedBufferInModule(Module &M, MemoryBufferRef Buf,
+                                             StringRef SectionName,
+                                             Align Alignment = Align(1),
+                                             bool SectionExclude = true);
 
 /// Lower all calls to ifuncs by replacing uses with indirect calls loaded out
 /// of a global table initialized in a global constructor. This will introduce

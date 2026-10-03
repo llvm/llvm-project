@@ -366,9 +366,8 @@ bool VectorConvertRemove::checkHVXUses32(MachineInstr *MI,
                                          MachineInstr *UseMI) {
   Register convReg = MI->getOperand(0).getReg();
   // Iterate over all uses of the Def we are analyzing
-  for (auto &MO : make_range(MRI->use_begin(convReg), MRI->use_end())) {
-    MachineInstr *UMI = MO.getParent();
-    if (UMI == UseMI)
+  for (MachineInstr &UMI : MRI->use_instructions(convReg)) {
+    if (&UMI == UseMI)
       continue;
     // Since the convert cannot be deleted, we set the operand as NOT kill
     MI->getOperand(1).setIsKill(false);
@@ -383,9 +382,8 @@ bool VectorConvertRemove::checkHVXUses16(MachineInstr *MI,
                                          MachineInstr *UseMI) {
   Register convReg = MI->getOperand(0).getReg();
   // Iterate over all uses of the Def we are analyzing
-  for (auto &MO : make_range(MRI->use_begin(convReg), MRI->use_end())) {
-    MachineInstr *UMI = MO.getParent();
-    if (UMI == UseMI)
+  for (MachineInstr &UMI : MRI->use_instructions(convReg)) {
+    if (&UMI == UseMI)
       continue;
     // Since the convert cannot be deleted, we set the operand as NOT kill
     MI->getOperand(1).setIsKill(false);
@@ -1394,8 +1392,8 @@ bool HexagonXQFloatGenerator::convertNormalizeMultOp32(
         .addReg(R_mpy)
         .addReg(VR2);
     BuildMI(MBB, MI, DL, HII->get(Hexagon::V6_vmpy_qf32), Dest)
-        .addReg(input_mpy2)
-        .addReg(Reg2);
+        .addReg(Reg1)
+        .addReg(input_mpy2);
   } else {
     // we do nothing if the inputs are not fromadder/subtracter/multiplier unit
     return false;

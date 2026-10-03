@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa < %s | FileCheck -check-prefix=GCN %s
 
 @L = external local_unnamed_addr addrspace(3) global [9 x double], align 16
 @Ldisp = external local_unnamed_addr addrspace(3) global [96 x double], align 16
@@ -8,8 +8,9 @@
 ; to follow a base one.
 
 ; GCN-LABEL: {{^}}out_of_order_merge:
-; GCN-COUNT2: ds_read2_b64
-; GCN-COUNT3: ds_write_b64
+; GCN-COUNT-2: ds_read2_b64
+; GCN: ds_write_b128
+; GCN: ds_write_b64
 define amdgpu_kernel void @out_of_order_merge() {
 entry:
   %gep2 = getelementptr inbounds [96 x double], ptr addrspace(3) @Ldisp, i32 0, i32 1

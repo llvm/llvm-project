@@ -17,6 +17,8 @@
 #include "test/UnitTest/Test.h"
 
 #include "hdr/netinet_in_macros.h"
+#include "hdr/types/struct_group_req.h"
+#include "hdr/types/struct_group_source_req.h"
 #include "hdr/types/struct_in6_addr.h"
 #include "hdr/types/struct_ip_mreq.h"
 #include "hdr/types/struct_ip_mreq_source.h"
@@ -136,4 +138,21 @@ TEST(LlvmLibcNetinetInTest, IpOptionLayout) {
             static_cast<size_t>(0));
   EXPECT_EQ(offsetof(struct ipv6_mreq, ipv6mr_interface),
             static_cast<size_t>(16));
+}
+
+TEST(LlvmLibcNetinetInTest, GroupSourceOptionLayout) {
+  // 64 bit structures contain a padding after the interface field.
+  constexpr size_t INTERFACE_PADDING = sizeof(long) - sizeof(uint32_t);
+  EXPECT_EQ(sizeof(struct group_req), 132 + INTERFACE_PADDING);
+  EXPECT_EQ(sizeof(struct group_source_req), 260 + INTERFACE_PADDING);
+
+  EXPECT_EQ(offsetof(struct group_req, gr_interface), static_cast<size_t>(0));
+  EXPECT_EQ(offsetof(struct group_req, gr_group), 4 + INTERFACE_PADDING);
+
+  EXPECT_EQ(offsetof(struct group_source_req, gsr_interface),
+            static_cast<size_t>(0));
+  EXPECT_EQ(offsetof(struct group_source_req, gsr_group),
+            4 + INTERFACE_PADDING);
+  EXPECT_EQ(offsetof(struct group_source_req, gsr_source),
+            132 + INTERFACE_PADDING);
 }

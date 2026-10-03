@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class SIFixSGPRCopiesPass : public OptionalPassInfoMixin<SIFixSGPRCopiesPass> {
+class SIFixSGPRCopiesPass : public RequiredPassInfoMixin<SIFixSGPRCopiesPass> {
 public:
   SIFixSGPRCopiesPass() = default;
   PreservedAnalyses run(MachineFunction &MF,

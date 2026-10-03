@@ -18,18 +18,18 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %is_snan = call i1 @llvm.is.fpclass.f32(float +snan(0x42), i32 1) => T
-; CHECK-NEXT:   %is_qnan = call i1 @llvm.is.fpclass.f32(float +nan(0x42), i32 2) => T
-; CHECK-NEXT:   %is_nan = call i1 @llvm.is.fpclass.f32(float -nan(0x42), i32 3) => T
-; CHECK-NEXT:   %is_neg_inf = call i1 @llvm.is.fpclass.f32(float -inf, i32 4) => T
-; CHECK-NEXT:   %is_neg_normal = call i1 @llvm.is.fpclass.f32(float -1.000000e+00, i32 8) => T
-; CHECK-NEXT:   %is_neg_subnormal = call i1 @llvm.is.fpclass.f32(float -1.434930e-42, i32 16) => T
-; CHECK-NEXT:   %is_neg_zero = call i1 @llvm.is.fpclass.f32(float -0.000000e+00, i32 32) => T
-; CHECK-NEXT:   %is_pos_zero = call i1 @llvm.is.fpclass.f32(float 0.000000e+00, i32 64) => T
-; CHECK-NEXT:   %is_pos_subnormal = call i1 @llvm.is.fpclass.f32(float 1.434930e-42, i32 128) => T
-; CHECK-NEXT:   %is_pos_normal = call i1 @llvm.is.fpclass.f32(float 1.000000e+00, i32 256) => T
-; CHECK-NEXT:   %is_pos_inf = call i1 @llvm.is.fpclass.f32(float +inf, i32 512) => T
-; CHECK-NEXT:   %is_poison = call i1 @llvm.is.fpclass.f32(float poison, i32 256) => poison
-; CHECK-NEXT:   %is_vec = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> <float +snan(0x42), float poison, float 1.000000e+00, float -0.000000e+00>, i32 291) => { T, poison, T, T }
+; CHECK-NEXT:   %is_snan = call i1 @llvm.is.fpclass.f32(float +snan(0x42), /* (snan) */ i32 1) => T
+; CHECK-NEXT:   %is_qnan = call i1 @llvm.is.fpclass.f32(float +nan(0x42), /* (qnan) */ i32 2) => T
+; CHECK-NEXT:   %is_nan = call i1 @llvm.is.fpclass.f32(float -nan(0x42), /* (nan) */ i32 3) => T
+; CHECK-NEXT:   %is_neg_inf = call i1 @llvm.is.fpclass.f32(float -inf, /* (ninf) */ i32 4) => T
+; CHECK-NEXT:   %is_neg_normal = call i1 @llvm.is.fpclass.f32(float -1.000000e+00, /* (nnorm) */ i32 8) => T
+; CHECK-NEXT:   %is_neg_subnormal = call i1 @llvm.is.fpclass.f32(float -1.434930e-42, /* (nsub) */ i32 16) => T
+; CHECK-NEXT:   %is_neg_zero = call i1 @llvm.is.fpclass.f32(float -0.000000e+00, /* (nzero) */ i32 32) => T
+; CHECK-NEXT:   %is_pos_zero = call i1 @llvm.is.fpclass.f32(float 0.000000e+00, /* (pzero) */ i32 64) => T
+; CHECK-NEXT:   %is_pos_subnormal = call i1 @llvm.is.fpclass.f32(float 1.434930e-42, /* (psub) */ i32 128) => T
+; CHECK-NEXT:   %is_pos_normal = call i1 @llvm.is.fpclass.f32(float 1.000000e+00, /* (pnorm) */ i32 256) => T
+; CHECK-NEXT:   %is_pos_inf = call i1 @llvm.is.fpclass.f32(float +inf, /* (pinf) */ i32 512) => T
+; CHECK-NEXT:   %is_poison = call i1 @llvm.is.fpclass.f32(float poison, /* (pnorm) */ i32 256) => poison
+; CHECK-NEXT:   %is_vec = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> <float +snan(0x42), float poison, float 1.000000e+00, float -0.000000e+00>, /* (nan nzero pnorm) */ i32 291) => { T, poison, T, T }
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

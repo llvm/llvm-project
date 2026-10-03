@@ -302,3 +302,32 @@ namespace PseudoDtorOnGlobal {
     a.m.~T(); // both-note {{cannot modify an object that is visible outside}}
   }
 }
+
+namespace UninitializedAndLifetime {
+  struct A { int n; };
+  constexpr void use_after_destroy() {
+    A a; // both-note {{declared here}}
+    a.~A();
+    A b = a; // both-note {{in call}} \
+             // both-note {{read of object outside its lifetime}}
+  }
+  static_assert((use_after_destroy(), true)); // both-error {{not an integral constant expression}} \
+                                              // both-note {{in call}}
+}
+
+namespace UnionNoActivate {
+  struct A { int n; };
+  struct B { A a; };
+  constexpr A a = (A() = B().a);
+
+  union C {
+    int n;
+    A a;
+  };
+  constexpr bool g() { // both-error {{never produces a constant expression}}
+    C c = {.n = 1};
+    c.a.operator=(B{2}.a); // both-note 2{{member call on member 'a' of union with active member 'n' is not allowed in a constant expression}}
+    return c.a.n == 2;
+  }
+  static_assert(g()); // both-error {{constant expression}} both-note {{in call}}
+}

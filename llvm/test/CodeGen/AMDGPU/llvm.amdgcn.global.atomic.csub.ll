@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1030 | FileCheck %s -check-prefixes=GCN,PREGFX12
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1031 | FileCheck %s -check-prefixes=GCN,PREGFX12
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 | FileCheck %s -check-prefixes=GCN,GFX12PLUS
+; RUN: llc < %s -mtriple=amdgpu10.30 | FileCheck %s -check-prefixes=GCN,PREGFX12
+; RUN: llc < %s -mtriple=amdgpu10.31 | FileCheck %s -check-prefixes=GCN,PREGFX12
+; RUN: llc < %s -mtriple=amdgpu12.00 | FileCheck %s -check-prefixes=GCN,GFX12PLUS
 
 ; GCN-LABEL: {{^}}global_atomic_csub_rtn:
 ; PREGFX12: global_atomic_csub v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9:]+}}, s{{\[[0-9]+:[0-9]+\]}} glc

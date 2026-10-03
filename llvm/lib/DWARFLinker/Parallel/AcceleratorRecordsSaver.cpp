@@ -102,25 +102,46 @@ void AcceleratorRecordsSaver::save(const DWARFDebugInfoEntry *InputDieEntry,
   case dwarf::DW_TAG_shared_type:
   case dwarf::DW_TAG_immutable_type:
   case dwarf::DW_TAG_rvalue_reference_type: {
-    if (!AttrInfo.IsDeclaration && AttrInfo.Name != nullptr &&
-        !AttrInfo.Name->getKey().empty()) {
+    if (AttrInfo.IsDeclaration)
+      break;
+
+    // hashFullyQualifiedName() advances InputDIE along the specification and
+    // abstract origin chain, so the DIE's own attributes have to be read first.
+
+    // The linkage name may be attached to the declaration rather than to the
+    // definition.
+    if (!AttrInfo.MangledName)
+      if (const char *LinkageName = InputDIE.getLinkageName())
+        AttrInfo.MangledName =
+            GlobalData.getStringPool().insert(LinkageName).first;
+
+    uint64_t RuntimeLang =
+        dwarf::toUnsigned(InputDIE.find(dwarf::DW_AT_APPLE_runtime_class))
+            .value_or(0);
+
+    bool ObjCClassIsImplementation =
+        (RuntimeLang == dwarf::DW_LANG_ObjC ||
+         RuntimeLang == dwarf::DW_LANG_ObjC_plus_plus) &&
+        dwarf::toUnsigned(InputDIE.find(dwarf::DW_AT_APPLE_objc_complete_type))
+            .value_or(0);
+
+    if (AttrInfo.Name != nullptr && !AttrInfo.Name->getKey().empty()) {
       uint32_t Hash = hashFullyQualifiedName(InUnit, InputDIE);
-
-      uint64_t RuntimeLang =
-          dwarf::toUnsigned(InputDIE.find(dwarf::DW_AT_APPLE_runtime_class))
-              .value_or(0);
-
-      bool ObjCClassIsImplementation =
-          (RuntimeLang == dwarf::DW_LANG_ObjC ||
-           RuntimeLang == dwarf::DW_LANG_ObjC_plus_plus) &&
-          dwarf::toUnsigned(
-              InputDIE.find(dwarf::DW_AT_APPLE_objc_complete_type))
-              .value_or(0);
-
       saveTypeRecord(InputDieEntry, AttrInfo.Name, OutDIE,
                      InputDieEntry->getTag(), Hash, ObjCClassIsImplementation,
                      TypeEntry);
     }
+
+    // Swift carries a type's mangled name in DW_AT_linkage_name, which a
+    // consumer may look up on its own.
+    if (AttrInfo.MangledName != nullptr &&
+        RuntimeLang == dwarf::DW_LANG_Swift &&
+        !AttrInfo.MangledName->getKey().empty() &&
+        AttrInfo.MangledName != AttrInfo.Name)
+      saveTypeRecord(InputDieEntry, AttrInfo.MangledName, OutDIE,
+                     InputDieEntry->getTag(),
+                     djbHash(AttrInfo.MangledName->getKey()),
+                     ObjCClassIsImplementation, TypeEntry);
   } break;
   case dwarf::DW_TAG_namespace: {
     if (AttrInfo.Name == nullptr)

@@ -27,6 +27,7 @@
 
 namespace llvm {
 
+template <typename, unsigned> class EnumStrings;
 class MCAssembler;
 class MCContext;
 class MCCFIInstruction;
@@ -73,12 +74,8 @@ public:
                             /// quote, e.g., `'A`.
   };
 
-  // This describes a @ style relocation specifier (expr@specifier) supported by
-  // AsmParser::parsePrimaryExpr.
-  struct AtSpecifier {
-    uint32_t Kind;
-    StringRef Name;
-  };
+  /// Type for at specifiers. Currently, 16 bits is enough.
+  using AtSpecifierKind = uint16_t;
 
 protected:
   //===------------------------------------------------------------------===//
@@ -374,6 +371,9 @@ protected:
   /// absolute difference.
   bool DwarfFDESymbolsUseAbsDiff = false;
 
+  /// The optional specifier to use for the relative FDE symbol references.
+  uint16_t DwarfFDERelSymbolSpec = 0;
+
   /// True if DWARF `.file directory' directive syntax is used by
   /// default.
   bool EnableDwarfFileDirectoryDefault = true;
@@ -428,9 +428,11 @@ protected:
   // If true, use Motorola-style integers in Assembly (ex. $0ac).
   bool UseMotorolaIntegers = false;
 
-  llvm::DenseMap<uint32_t, StringRef> AtSpecifierToName;
-  llvm::StringMap<uint32_t> NameToAtSpecifier;
-  void initializeAtSpecifiers(ArrayRef<AtSpecifier>);
+  // This describes a @ style relocation specifier (expr@specifier) supported by
+  // AsmParser::parsePrimaryExpr.
+  llvm::DenseMap<AtSpecifierKind, StringRef> AtSpecifierToName;
+  llvm::StringMap<AtSpecifierKind> NameToAtSpecifier;
+  void initializeAtSpecifiers(EnumStrings<AtSpecifierKind, 1>);
 
   // Lowercase identifiers (e.g. register names, dialect keywords) that must be
   // quoted when used as a symbol name.
@@ -484,16 +486,15 @@ public:
                                                     unsigned Encoding,
                                                     MCStreamer &Streamer) const;
 
-  virtual const MCExpr *getExprForFDESymbol(const MCSymbol *Sym,
-                                            unsigned Encoding,
-                                            MCStreamer &Streamer) const;
+  const MCExpr *getExprForFDESymbol(const MCSymbol *Sym, unsigned Encoding,
+                                    MCStreamer &Streamer) const;
 
   /// Return true if C is an acceptable character inside a symbol name.
-  virtual bool isAcceptableChar(char C) const;
+  bool isAcceptableChar(char C) const;
 
   /// Return true if the identifier \p Name does not need quotes to be
   /// syntactically correct.
-  virtual bool isValidUnquotedName(StringRef Name) const;
+  bool isValidUnquotedName(StringRef Name) const;
 
   llvm::DenseSet<llvm::CachedHashStringRef> &getReservedIdentifiers() {
     return ReservedIdentifiers;
@@ -677,6 +678,21 @@ public:
             WinEHEncodingType != WinEH::EncodingType::X86);
   }
 
+  /// Returns true if the exception tables reference the per-invoke EH labels
+  /// emitted around invokes. 32-bit x86 SEH and Wasm do not.
+  bool usesPerInvokeEHLabels() const {
+    switch (ExceptionsType) {
+    case ExceptionHandling::WinEH:
+      // 32-bit x86 SEH uses a state table, not per-invoke IP-to-state ranges.
+      return WinEHEncodingType != WinEH::EncodingType::X86;
+    case ExceptionHandling::None:
+    case ExceptionHandling::Wasm:
+      return false;
+    default:
+      return true;
+    }
+  }
+
   bool doesDwarfUseRelocationsAcrossSections() const {
     return DwarfUsesRelocationsAcrossSections;
   }
@@ -721,7 +737,7 @@ public:
   }
 
   /// Set whether target want to use AsmParser to parse inlineasm.
-  virtual void setParseInlineAsmUsingAsmParser(bool Value) {
+  void setParseInlineAsmUsingAsmParser(bool Value) {
     ParseInlineAsmUsingAsmParser = Value;
   }
 
@@ -729,10 +745,7 @@ public:
   bool preserveAsmComments() const { return PreserveAsmComments; }
 
   /// Set whether assembly (inline or otherwise) should be parsed.
-  virtual void setPreserveAsmComments(bool Value) {
-    PreserveAsmComments = Value;
-  }
-
+  void setPreserveAsmComments(bool Value) { PreserveAsmComments = Value; }
 
   bool shouldUseLogicalShr() const { return UseLogicalShr; }
 

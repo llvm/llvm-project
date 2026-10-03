@@ -72,7 +72,7 @@ endmacro()
 # Assume that *_OVERLAY and *_FULL_BUILD args have been merged properly.
 macro(forward_arguments name_prefix output)
   set(${output} "")
-  
+
   foreach(argument ${LLVM_LIBC_OPTIONAL_ARGS})
     if(${name_prefix}_${argument})
       list(APPEND output ${argument})

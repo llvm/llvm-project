@@ -1,5 +1,4 @@
 ; RUN: llc -mtriple=lanai < %s | FileCheck %s
-; RUN: llc -enable-new-pm -mtriple=lanai < %s | FileCheck %s
 
 ; Native atomics are unsupported, so all are oversize.
 define void @test(ptr %a) nounwind {

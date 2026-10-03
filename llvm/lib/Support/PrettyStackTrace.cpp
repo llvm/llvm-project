@@ -31,8 +31,9 @@
 #include <cstring>
 #include <tuple>
 
-#ifdef HAVE_CRASHREPORTERCLIENT_H
+#if __has_include(<CrashReporterClient.h>)
 #include <CrashReporterClient.h>
+#define LLVM_HAVE_CRASHREPORTERCLIENT_H
 #endif
 
 using namespace llvm;
@@ -110,7 +111,7 @@ static void PrintCurStackTrace(raw_ostream &OS) {
 }
 
 // Integrate with crash reporter libraries.
-#if defined (__APPLE__) && defined(HAVE_CRASHREPORTERCLIENT_H)
+#if defined(__APPLE__) && defined(LLVM_HAVE_CRASHREPORTERCLIENT_H)
 //  If any clients of llvm try to link to libCrashReporterClient.a themselves,
 //  only one crash info struct will be used.
 extern "C" {
@@ -143,7 +144,7 @@ asm(".desc ___crashreporter_info__, 0x10");
 
 [[maybe_unused]] static void setCrashLogMessage(const char *msg);
 static void setCrashLogMessage(const char *msg) {
-#ifdef HAVE_CRASHREPORTERCLIENT_H
+#ifdef LLVM_HAVE_CRASHREPORTERCLIENT_H
   (void)CRSetCrashLogMessage(msg);
 #elif HAVE_CRASHREPORTER_INFO
   __crashreporter_info__ = msg;

@@ -13,7 +13,6 @@
 #include "clang/AST/APValue.h"
 #include "Linkage.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -282,9 +281,12 @@ APValue::Arr::Arr(unsigned NumElts, unsigned Size) :
   NumElts(NumElts), ArrSize(Size) {}
 APValue::Arr::~Arr() { delete [] Elts; }
 
-APValue::StructData::StructData(unsigned NumBases, unsigned NumFields) :
-  Elts(new APValue[NumBases+NumFields]),
-  NumBases(NumBases), NumFields(NumFields) {}
+APValue::StructData::StructData(unsigned NumBases, unsigned NumFields,
+                                unsigned NumVirtualBases)
+    : Elts(new APValue[NumBases + NumFields + NumVirtualBases]),
+      NumBases(NumBases), NumFields(NumFields),
+      NumVirtualBases(NumVirtualBases) {}
+
 APValue::StructData::~StructData() {
   delete [] Elts;
 }
@@ -302,12 +304,10 @@ APValue::APValue(const APValue &RHS)
     Kind = RHS.getKind();
     break;
   case Int:
-    MakeInt();
-    setInt(RHS.getInt());
+    MakeInt(RHS.getInt());
     break;
   case Float:
-    MakeFloat();
-    setFloat(RHS.getFloat());
+    MakeFloat(RHS.getFloat());
     break;
   case FixedPoint: {
     APFixedPoint FXCopy = RHS.getFixedPoint();
@@ -349,11 +349,14 @@ APValue::APValue(const APValue &RHS)
       getArrayFiller() = RHS.getArrayFiller();
     break;
   case Struct:
-    MakeStruct(RHS.getStructNumBases(), RHS.getStructNumFields());
+    MakeStruct(RHS.getStructNumBases(), RHS.getStructNumFields(),
+               RHS.getStructNumVirtualBases());
     for (unsigned I = 0, N = RHS.getStructNumBases(); I != N; ++I)
       getStructBase(I) = RHS.getStructBase(I);
     for (unsigned I = 0, N = RHS.getStructNumFields(); I != N; ++I)
       getStructField(I) = RHS.getStructField(I);
+    for (unsigned I = 0, N = RHS.getStructNumVirtualBases(); I != N; ++I)
+      getStructVirtualBase(I) = RHS.getStructVirtualBase(I);
     break;
   case Union:
     MakeUnion();
@@ -367,6 +370,10 @@ APValue::APValue(const APValue &RHS)
   case AddrLabelDiff:
     MakeAddrLabelDiff();
     setAddrLabelDiff(RHS.getAddrLabelDiffLHS(), RHS.getAddrLabelDiffRHS());
+    break;
+  case Reflection:
+    MakeReflection(RHS.getReflectionOperandKind(),
+                   RHS.getReflectionOpaqueOperand());
     break;
   }
 }
@@ -423,6 +430,8 @@ void APValue::DestroyDataAndMakeUninit() {
     ((MemberPointerData *)(char *)&Data)->~MemberPointerData();
   else if (Kind == AddrLabelDiff)
     ((AddrLabelDiffData *)(char *)&Data)->~AddrLabelDiffData();
+  else if (Kind == Reflection)
+    ((ReflectionData *)(char *)&Data)->~ReflectionData();
   Kind = None;
   AllowConstexprUnknown = false;
 }
@@ -432,6 +441,7 @@ bool APValue::needsCleanup() const {
   case None:
   case Indeterminate:
   case AddrLabelDiff:
+  case Reflection:
     return false;
   case Struct:
   case Union:
@@ -480,6 +490,37 @@ static void profileIntValue(llvm::FoldingSetNodeID &ID, const llvm::APInt &V) {
     ID.AddInteger((uint32_t)V.extractBitsAsZExtValue(std::min(32u, N - I), I));
 }
 
+/// Unwrap reflected type for profiling
+static void profileTypeReflection(llvm::FoldingSetNodeID &ID, QualType QT) {
+  // TODO(Reflection)
+
+  if (isTypeAliasAsReflectionName(QT)) {
+    if (const auto *TDT = QT->getAs<TypedefType>()) {
+      ID.AddBoolean(true);
+      ID.AddPointer(TDT->getDecl()->getCanonicalDecl());
+      return;
+    }
+  }
+
+  ID.AddBoolean(false);
+  QT.getCanonicalType().Profile(ID);
+}
+
+static void profileReflection(llvm::FoldingSetNodeID &ID, APValue V) {
+  ID.AddInteger(static_cast<int>(V.getReflectionOperandKind()));
+  switch (V.getReflectionOperandKind()) {
+  case ReflectionKind::Null:
+    return;
+  case ReflectionKind::Type: {
+    const TypeSourceInfo *Info =
+        static_cast<const TypeSourceInfo *>(V.getReflectionOpaqueOperand());
+    profileTypeReflection(ID, Info->getType());
+    return;
+  }
+  }
+  assert(false && "unknown or unimplemented reflection entities");
+}
+
 void APValue::Profile(llvm::FoldingSetNodeID &ID) const {
   // Note that our profiling assumes that only APValues of the same type are
   // ever compared. As a result, we don't consider collisions that could only
@@ -503,6 +544,8 @@ void APValue::Profile(llvm::FoldingSetNodeID &ID) const {
       getStructBase(I).Profile(ID);
     for (unsigned I = 0, N = getStructNumFields(); I != N; ++I)
       getStructField(I).Profile(ID);
+    for (unsigned I = 0, N = getStructNumVirtualBases(); I != N; ++I)
+      getStructVirtualBase(I).Profile(ID);
     return;
 
   case Union:
@@ -623,6 +666,9 @@ void APValue::Profile(llvm::FoldingSetNodeID &ID) const {
     ID.AddInteger(isMemberPointerToDerivedMember());
     for (const CXXRecordDecl *D : getMemberPointerPath())
       ID.AddPointer(D);
+    return;
+  case Reflection:
+    profileReflection(ID, *this);
     return;
   }
 
@@ -920,27 +966,32 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
   }
   case APValue::Struct: {
     Out << '{';
-    bool First = true;
+    llvm::ListSeparator Comma;
     const auto *RD = Ty->castAsRecordDecl();
     if (unsigned N = getStructNumBases()) {
       const CXXRecordDecl *CD = cast<CXXRecordDecl>(RD);
       CXXRecordDecl::base_class_const_iterator BI = CD->bases_begin();
       for (unsigned I = 0; I != N; ++I, ++BI) {
         assert(BI != CD->bases_end());
-        if (!First)
-          Out << ", ";
+        Out << Comma;
         getStructBase(I).printPretty(Out, Policy, BI->getType(), Ctx);
-        First = false;
       }
     }
     for (const auto *FI : RD->fields()) {
-      if (!First)
-        Out << ", ";
+      Out << Comma;
       if (FI->isUnnamedBitField())
         continue;
-      getStructField(FI->getFieldIndex()).
-        printPretty(Out, Policy, FI->getType(), Ctx);
-      First = false;
+      getStructField(FI->getFieldIndex())
+          .printPretty(Out, Policy, FI->getType(), Ctx);
+    }
+    if (unsigned N = getStructNumVirtualBases()) {
+      const CXXRecordDecl *CD = cast<CXXRecordDecl>(RD);
+      CXXRecordDecl::base_class_const_iterator BI = CD->vbases_begin();
+      for (unsigned I = 0; I != N; ++I, ++BI) {
+        assert(BI != CD->vbases_end());
+        Out << Comma;
+        getStructVirtualBase(I).printPretty(Out, Policy, BI->getType(), Ctx);
+      }
     }
     Out << '}';
     return;
@@ -966,6 +1017,19 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
     Out << "&&" << getAddrLabelDiffLHS()->getLabel()->getName();
     Out << " - ";
     Out << "&&" << getAddrLabelDiffRHS()->getLabel()->getName();
+    return;
+  case APValue::Reflection:
+    switch (getReflectionOperandKind()) {
+    case ReflectionKind::Null:
+      Out << "std::meta::info{}";
+      break;
+    case ReflectionKind::Type: {
+      const auto *TInfo =
+          static_cast<const TypeSourceInfo *>(getReflectionOpaqueOperand());
+      Out << "^^" << TInfo->getType().stream(Policy);
+      break;
+    }
+    }
     return;
   }
   llvm_unreachable("Unknown APValue kind!");
@@ -1039,7 +1103,7 @@ bool APValue::isNullPointer() const {
   return ((const LV *)(const char *)&Data)->IsNullPtr;
 }
 
-void APValue::setLValue(LValueBase B, const CharUnits &O, NoLValuePath,
+void APValue::setLValue(LValueBase B, CharUnits O, NoLValuePath,
                         bool IsNullPtr) {
   assert(isLValue() && "Invalid accessor");
   LV &LVal = *((LV *)(char *)&Data);
@@ -1051,7 +1115,7 @@ void APValue::setLValue(LValueBase B, const CharUnits &O, NoLValuePath,
 }
 
 MutableArrayRef<APValue::LValuePathEntry>
-APValue::setLValueUninit(LValueBase B, const CharUnits &O, unsigned Size,
+APValue::setLValueUninit(LValueBase B, CharUnits O, unsigned Size,
                          bool IsOnePastTheEnd, bool IsNullPtr) {
   assert(isLValue() && "Invalid accessor");
   LV &LVal = *((LV *)(char *)&Data);
@@ -1063,7 +1127,7 @@ APValue::setLValueUninit(LValueBase B, const CharUnits &O, unsigned Size,
   return {LVal.getPath(), Size};
 }
 
-void APValue::setLValue(LValueBase B, const CharUnits &O,
+void APValue::setLValue(LValueBase B, CharUnits O,
                         ArrayRef<LValuePathEntry> Path, bool IsOnePastTheEnd,
                         bool IsNullPtr) {
   MutableArrayRef<APValue::LValuePathEntry> InternalPath =
@@ -1157,6 +1221,7 @@ LinkageInfo LinkageComputer::getLVForValue(const APValue &V,
   case APValue::ComplexInt:
   case APValue::ComplexFloat:
   case APValue::Vector:
+  case APValue::Reflection:
   case APValue::Matrix:
     break;
 
@@ -1171,6 +1236,9 @@ LinkageInfo LinkageComputer::getLVForValue(const APValue &V,
         break;
     for (unsigned I = 0, N = V.getStructNumFields(); I != N; ++I)
       if (Merge(V.getStructField(I)))
+        break;
+    for (unsigned I = 0, N = V.getStructNumVirtualBases(); I != N; ++I)
+      if (Merge(V.getStructVirtualBase(I)))
         break;
     break;
   }

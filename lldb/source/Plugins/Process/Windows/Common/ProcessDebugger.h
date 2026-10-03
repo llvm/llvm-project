@@ -15,6 +15,7 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/Mutex.h"
@@ -67,6 +68,10 @@ public:
   virtual void OnDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
                              uint16_t length_lower_word);
   virtual void OnDebuggerError(const Status &error, uint32_t type);
+
+  static bool IsSystemDLL(llvm::StringRef path);
+
+  bool IsSystemModuleAddress(lldb::addr_t addr);
 
 protected:
   Status DetachProcess();

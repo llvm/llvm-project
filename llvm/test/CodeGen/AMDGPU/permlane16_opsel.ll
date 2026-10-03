@@ -1,7 +1,7 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1010 --stop-after=amdgpu-isel < %s | FileCheck -check-prefixes=SDAG,SDAG-GFX10 %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1010 --stop-after=instruction-select < %s | FileCheck -check-prefixes=GISEL %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 --stop-after=amdgpu-isel < %s | FileCheck -check-prefixes=SDAG,SDAG-GFX11 %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 --stop-after=instruction-select < %s | FileCheck -check-prefixes=GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu10.10 --stop-after=amdgpu-isel < %s | FileCheck -check-prefixes=SDAG,SDAG-GFX10 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu10.10 --stop-after=instruction-select < %s | FileCheck -check-prefixes=GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu11.00 --stop-after=amdgpu-isel < %s | FileCheck -check-prefixes=SDAG,SDAG-GFX11 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu11.00 --stop-after=instruction-select < %s | FileCheck -check-prefixes=GISEL %s
 
 declare i32 @llvm.amdgcn.permlane16(i32, i32, i32, i32, i1, i1)
 declare i32 @llvm.amdgcn.permlanex16(i32, i32, i32, i32, i1, i1)
@@ -170,7 +170,7 @@ define amdgpu_kernel void @v_permlanex16_b32_vss_fi_bc(ptr addrspace(1) %out, i3
 }
 
 define amdgpu_kernel void @v_permlane16_b32_tid_tid(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
-  ; SDAG-GFX10: V_PERMLANE16_B32_e64 0, {{%[0-9]+}}(s32), 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}(s32), 0, implicit $exec
+  ; SDAG-GFX10: V_PERMLANE16_B32_e64 0, {{%[0-9]+}}(i32), 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}(i32), 0, implicit $exec
   ; SDAG-GFX11: V_PERMLANE16_B32_e64 0, {{%[0-9]+}}, 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   ; GISEL: V_PERMLANE16_B32_e64 0, {{%[0-9]+}}, 0, {{%[0-9]+}}, 0, {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
@@ -180,7 +180,7 @@ define amdgpu_kernel void @v_permlane16_b32_tid_tid(ptr addrspace(1) %out, i32 %
 }
 
 define amdgpu_kernel void @v_permlane16_b32_undef_tid(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
-  ; SDAG-GFX10: V_PERMLANE16_B32_e64 0, {{%[0-9]+}}(s32), 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
+  ; SDAG-GFX10: V_PERMLANE16_B32_e64 0, {{%[0-9]+}}(i32), 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   ; SDAG-GFX11: V_PERMLANE16_B32_e64 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   ; GISEL: V_PERMLANE16_B32_e64 0, {{%[0-9]+}}, 0, {{%[0-9]+}}, 0, {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
@@ -191,7 +191,7 @@ define amdgpu_kernel void @v_permlane16_b32_undef_tid(ptr addrspace(1) %out, i32
 }
 
 define amdgpu_kernel void @v_permlane16_b32_i_tid(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
-  ; SDAG-GFX10: V_PERMLANE16_B32_e64 0, {{%[0-9]+}}(s32), 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
+  ; SDAG-GFX10: V_PERMLANE16_B32_e64 0, {{%[0-9]+}}(i32), 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   ; SDAG-GFX11: V_PERMLANE16_B32_e64 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   ; GISEL: V_PERMLANE16_B32_e64 0, {{%[0-9]+}}, 0, {{%[0-9]+}}, 0, {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
@@ -201,7 +201,7 @@ define amdgpu_kernel void @v_permlane16_b32_i_tid(ptr addrspace(1) %out, i32 %sr
 }
 
 define amdgpu_kernel void @v_permlane16_b32_i_tid_fi(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
-  ; SDAG-GFX10: V_PERMLANE16_B32_e64 4, {{%[0-9]+}}(s32), 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
+  ; SDAG-GFX10: V_PERMLANE16_B32_e64 4, {{%[0-9]+}}(i32), 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   ; SDAG-GFX11: V_PERMLANE16_B32_e64 4, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   ; GISEL: V_PERMLANE16_B32_e64 4, {{%[0-9]+}}, 0, {{%[0-9]+}}, 0, {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
@@ -212,7 +212,7 @@ define amdgpu_kernel void @v_permlane16_b32_i_tid_fi(ptr addrspace(1) %out, i32 
 }
 
 define amdgpu_kernel void @v_permlane16_b32_i_tid_bc(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
-  ; SDAG-GFX10: V_PERMLANE16_B32_e64 0, {{%[0-9]+}}(s32), 4, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
+  ; SDAG-GFX10: V_PERMLANE16_B32_e64 0, {{%[0-9]+}}(i32), 4, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   ; SDAG-GFX11: V_PERMLANE16_B32_e64 0, killed {{%[0-9]+}}, 4, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   ; GISEL: V_PERMLANE16_B32_e64 0, {{%[0-9]+}}, 4, {{%[0-9]+}}, 0, {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
@@ -223,7 +223,7 @@ define amdgpu_kernel void @v_permlane16_b32_i_tid_bc(ptr addrspace(1) %out, i32 
 }
 
 define amdgpu_kernel void @v_permlane16_b32_i_tid_fi_bc(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
-  ; SDAG-GFX10: V_PERMLANE16_B32_e64 4, {{%[0-9]+}}(s32), 4, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
+  ; SDAG-GFX10: V_PERMLANE16_B32_e64 4, {{%[0-9]+}}(i32), 4, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   ; SDAG-GFX11: V_PERMLANE16_B32_e64 4, killed {{%[0-9]+}}, 4, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   ; GISEL: V_PERMLANE16_B32_e64 4, {{%[0-9]+}}, 4, {{%[0-9]+}}, 0, {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
@@ -234,7 +234,7 @@ define amdgpu_kernel void @v_permlane16_b32_i_tid_fi_bc(ptr addrspace(1) %out, i
 }
 
 define amdgpu_kernel void @v_permlanex16_b32_tid_tid(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
-  ; SDAG-GFX10: V_PERMLANEX16_B32_e64 0, {{%[0-9]+}}(s32), 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}(s32), 0, implicit $exec
+  ; SDAG-GFX10: V_PERMLANEX16_B32_e64 0, {{%[0-9]+}}(i32), 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}(i32), 0, implicit $exec
   ; SDAG-GFX11: V_PERMLANEX16_B32_e64 0, {{%[0-9]+}}, 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   ; GISEL: V_PERMLANEX16_B32_e64 0, {{%[0-9]+}}, 0, {{%[0-9]+}}, 0, {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
@@ -244,7 +244,7 @@ define amdgpu_kernel void @v_permlanex16_b32_tid_tid(ptr addrspace(1) %out, i32 
 }
 
 define amdgpu_kernel void @v_permlanex16_b32_undef_tid(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
-  ; SDAG-GFX10: V_PERMLANEX16_B32_e64 0, {{%[0-9]+}}(s32), 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
+  ; SDAG-GFX10: V_PERMLANEX16_B32_e64 0, {{%[0-9]+}}(i32), 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   ; SDAG-GFX11: V_PERMLANEX16_B32_e64 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   ; GISEL: V_PERMLANEX16_B32_e64 0, {{%[0-9]+}}, 0, {{%[0-9]+}}, 0, {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
@@ -255,7 +255,7 @@ define amdgpu_kernel void @v_permlanex16_b32_undef_tid(ptr addrspace(1) %out, i3
 }
 
 define amdgpu_kernel void @v_permlanex16_b32_i_tid(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
-  ; SDAG-GFX10: V_PERMLANEX16_B32_e64 0, {{%[0-9]+}}(s32), 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
+  ; SDAG-GFX10: V_PERMLANEX16_B32_e64 0, {{%[0-9]+}}(i32), 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   ; SDAG-GFX11: V_PERMLANEX16_B32_e64 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   ; GISEL: V_PERMLANEX16_B32_e64 0, {{%[0-9]+}}, 0, {{%[0-9]+}}, 0, {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
@@ -265,7 +265,7 @@ define amdgpu_kernel void @v_permlanex16_b32_i_tid(ptr addrspace(1) %out, i32 %s
 }
 
 define amdgpu_kernel void @v_permlanex16_b32_i_tid_fi(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
-  ; SDAG-GFX10: V_PERMLANEX16_B32_e64 4, {{%[0-9]+}}(s32), 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
+  ; SDAG-GFX10: V_PERMLANEX16_B32_e64 4, {{%[0-9]+}}(i32), 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   ; SDAG-GFX11: V_PERMLANEX16_B32_e64 4, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   ; GISEL: V_PERMLANEX16_B32_e64 4, {{%[0-9]+}}, 0, {{%[0-9]+}}, 0, {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
@@ -276,7 +276,7 @@ define amdgpu_kernel void @v_permlanex16_b32_i_tid_fi(ptr addrspace(1) %out, i32
 }
 
 define amdgpu_kernel void @v_permlanex16_b32_i_tid_bc(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
-  ; SDAG-GFX10: V_PERMLANEX16_B32_e64 0, {{%[0-9]+}}(s32), 4, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
+  ; SDAG-GFX10: V_PERMLANEX16_B32_e64 0, {{%[0-9]+}}(i32), 4, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   ; SDAG-GFX11: V_PERMLANEX16_B32_e64 0, killed {{%[0-9]+}}, 4, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   ; GISEL: V_PERMLANEX16_B32_e64 0, {{%[0-9]+}}, 4, {{%[0-9]+}}, 0, {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
@@ -287,7 +287,7 @@ define amdgpu_kernel void @v_permlanex16_b32_i_tid_bc(ptr addrspace(1) %out, i32
 }
 
 define amdgpu_kernel void @v_permlanex16_b32_i_tid_fi_bc(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
-  ; SDAG-GFX10: V_PERMLANEX16_B32_e64 4, {{%[0-9]+}}(s32), 4, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
+  ; SDAG-GFX10: V_PERMLANEX16_B32_e64 4, {{%[0-9]+}}(i32), 4, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   ; SDAG-GFX11: V_PERMLANEX16_B32_e64 4, killed {{%[0-9]+}}, 4, killed {{%[0-9]+}}, 0, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   ; GISEL: V_PERMLANEX16_B32_e64 4, {{%[0-9]+}}, 4, {{%[0-9]+}}, 0, {{%[0-9]+}}, {{%[0-9]+}}, 0, implicit $exec
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()

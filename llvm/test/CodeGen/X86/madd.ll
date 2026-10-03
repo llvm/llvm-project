@@ -132,8 +132,8 @@ define i32 @_Z10test_shortPsS_i_256(ptr nocapture readonly, ptr nocapture readon
 ;
 ; AVX1-LABEL: _Z10test_shortPsS_i_256:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    xorl %ecx, %ecx
 ; AVX1-NEXT:    .p2align 4
 ; AVX1-NEXT:  .LBB1_1: # %vector.body
@@ -158,8 +158,8 @@ define i32 @_Z10test_shortPsS_i_256(ptr nocapture readonly, ptr nocapture readon
 ;
 ; AVX256-LABEL: _Z10test_shortPsS_i_256:
 ; AVX256:       # %bb.0: # %entry
-; AVX256-NEXT:    movl %edx, %eax
 ; AVX256-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX256-NEXT:    movl %edx, %eax
 ; AVX256-NEXT:    xorl %ecx, %ecx
 ; AVX256-NEXT:    .p2align 4
 ; AVX256-NEXT:  .LBB1_1: # %vector.body
@@ -241,8 +241,8 @@ define i32 @_Z10test_shortPsS_i_512(ptr nocapture readonly, ptr nocapture readon
 ;
 ; AVX1-LABEL: _Z10test_shortPsS_i_512:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    xorl %ecx, %ecx
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    .p2align 4
@@ -275,8 +275,8 @@ define i32 @_Z10test_shortPsS_i_512(ptr nocapture readonly, ptr nocapture readon
 ;
 ; AVX2-LABEL: _Z10test_shortPsS_i_512:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    xorl %ecx, %ecx
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    .p2align 4
@@ -302,8 +302,8 @@ define i32 @_Z10test_shortPsS_i_512(ptr nocapture readonly, ptr nocapture readon
 ;
 ; AVX512-LABEL: _Z10test_shortPsS_i_512:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    movl %edx, %eax
 ; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    movl %edx, %eax
 ; AVX512-NEXT:    xorl %ecx, %ecx
 ; AVX512-NEXT:    .p2align 4
 ; AVX512-NEXT:  .LBB2_1: # %vector.body
@@ -401,8 +401,8 @@ define i32 @_Z10test_shortPsS_i_1024(ptr nocapture readonly, ptr nocapture reado
 ;
 ; AVX1-LABEL: _Z10test_shortPsS_i_1024:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    xorl %ecx, %ecx
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
@@ -449,8 +449,8 @@ define i32 @_Z10test_shortPsS_i_1024(ptr nocapture readonly, ptr nocapture reado
 ;
 ; AVX2-LABEL: _Z10test_shortPsS_i_1024:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    xorl %ecx, %ecx
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
@@ -482,8 +482,8 @@ define i32 @_Z10test_shortPsS_i_1024(ptr nocapture readonly, ptr nocapture reado
 ;
 ; AVX512F-LABEL: _Z10test_shortPsS_i_1024:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    movl %edx, %eax
 ; AVX512F-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512F-NEXT:    movl %edx, %eax
 ; AVX512F-NEXT:    xorl %ecx, %ecx
 ; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512F-NEXT:    .p2align 4
@@ -514,8 +514,8 @@ define i32 @_Z10test_shortPsS_i_1024(ptr nocapture readonly, ptr nocapture reado
 ;
 ; AVX512BW-LABEL: _Z10test_shortPsS_i_1024:
 ; AVX512BW:       # %bb.0: # %entry
-; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    xorl %ecx, %ecx
 ; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512BW-NEXT:    .p2align 4
@@ -724,8 +724,8 @@ define i32 @_Z9test_charPcS_i_256(ptr nocapture readonly, ptr nocapture readonly
 ;
 ; AVX1-LABEL: _Z9test_charPcS_i_256:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    xorl %ecx, %ecx
 ; AVX1-NEXT:    .p2align 4
 ; AVX1-NEXT:  .LBB5_1: # %vector.body
@@ -751,8 +751,8 @@ define i32 @_Z9test_charPcS_i_256(ptr nocapture readonly, ptr nocapture readonly
 ;
 ; AVX256-LABEL: _Z9test_charPcS_i_256:
 ; AVX256:       # %bb.0: # %entry
-; AVX256-NEXT:    movl %edx, %eax
 ; AVX256-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX256-NEXT:    movl %edx, %eax
 ; AVX256-NEXT:    xorl %ecx, %ecx
 ; AVX256-NEXT:    .p2align 4
 ; AVX256-NEXT:  .LBB5_1: # %vector.body
@@ -873,8 +873,8 @@ define i32 @_Z9test_charPcS_i_512(ptr nocapture readonly, ptr nocapture readonly
 ;
 ; AVX1-LABEL: _Z9test_charPcS_i_512:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    xorl %ecx, %ecx
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    .p2align 4
@@ -909,8 +909,8 @@ define i32 @_Z9test_charPcS_i_512(ptr nocapture readonly, ptr nocapture readonly
 ;
 ; AVX2-LABEL: _Z9test_charPcS_i_512:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    xorl %ecx, %ecx
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    .p2align 4
@@ -937,8 +937,8 @@ define i32 @_Z9test_charPcS_i_512(ptr nocapture readonly, ptr nocapture readonly
 ;
 ; AVX512-LABEL: _Z9test_charPcS_i_512:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    movl %edx, %eax
 ; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    movl %edx, %eax
 ; AVX512-NEXT:    xorl %ecx, %ecx
 ; AVX512-NEXT:    .p2align 4
 ; AVX512-NEXT:  .LBB6_1: # %vector.body
@@ -1095,8 +1095,8 @@ define i32 @_Z9test_charPcS_i_1024(ptr nocapture readonly, ptr nocapture readonl
 ;
 ; AVX1-LABEL: _Z9test_charPcS_i_1024:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    xorl %ecx, %ecx
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
@@ -1147,8 +1147,8 @@ define i32 @_Z9test_charPcS_i_1024(ptr nocapture readonly, ptr nocapture readonl
 ;
 ; AVX2-LABEL: _Z9test_charPcS_i_1024:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    xorl %ecx, %ecx
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
@@ -1182,8 +1182,8 @@ define i32 @_Z9test_charPcS_i_1024(ptr nocapture readonly, ptr nocapture readonl
 ;
 ; AVX512F-LABEL: _Z9test_charPcS_i_1024:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    movl %edx, %eax
 ; AVX512F-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512F-NEXT:    movl %edx, %eax
 ; AVX512F-NEXT:    xorl %ecx, %ecx
 ; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512F-NEXT:    .p2align 4
@@ -1216,8 +1216,8 @@ define i32 @_Z9test_charPcS_i_1024(ptr nocapture readonly, ptr nocapture readonl
 ;
 ; AVX512BW-LABEL: _Z9test_charPcS_i_1024:
 ; AVX512BW:       # %bb.0: # %entry
-; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    xorl %ecx, %ecx
 ; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512BW-NEXT:    .p2align 4
@@ -1430,8 +1430,8 @@ define i32 @test_unsigned_short_256(ptr nocapture readonly, ptr nocapture readon
 ;
 ; AVX1-LABEL: test_unsigned_short_256:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    xorl %ecx, %ecx
 ; AVX1-NEXT:    .p2align 4
 ; AVX1-NEXT:  .LBB9_1: # %vector.body
@@ -1462,8 +1462,8 @@ define i32 @test_unsigned_short_256(ptr nocapture readonly, ptr nocapture readon
 ;
 ; AVX256-LABEL: test_unsigned_short_256:
 ; AVX256:       # %bb.0: # %entry
-; AVX256-NEXT:    movl %edx, %eax
 ; AVX256-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX256-NEXT:    movl %edx, %eax
 ; AVX256-NEXT:    xorl %ecx, %ecx
 ; AVX256-NEXT:    .p2align 4
 ; AVX256-NEXT:  .LBB9_1: # %vector.body
@@ -1600,8 +1600,8 @@ define i32 @test_unsigned_short_512(ptr nocapture readonly, ptr nocapture readon
 ;
 ; AVX1-LABEL: test_unsigned_short_512:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    xorl %ecx, %ecx
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    .p2align 4
@@ -1646,8 +1646,8 @@ define i32 @test_unsigned_short_512(ptr nocapture readonly, ptr nocapture readon
 ;
 ; AVX2-LABEL: test_unsigned_short_512:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    xorl %ecx, %ecx
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    .p2align 4
@@ -1678,8 +1678,8 @@ define i32 @test_unsigned_short_512(ptr nocapture readonly, ptr nocapture readon
 ;
 ; AVX512-LABEL: test_unsigned_short_512:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    movl %edx, %eax
 ; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    movl %edx, %eax
 ; AVX512-NEXT:    xorl %ecx, %ecx
 ; AVX512-NEXT:    .p2align 4
 ; AVX512-NEXT:  .LBB10_1: # %vector.body
@@ -1870,8 +1870,8 @@ define i32 @test_unsigned_short_1024(ptr nocapture readonly, ptr nocapture reado
 ;
 ; AVX1-LABEL: test_unsigned_short_1024:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    xorl %ecx, %ecx
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
@@ -1944,8 +1944,8 @@ define i32 @test_unsigned_short_1024(ptr nocapture readonly, ptr nocapture reado
 ;
 ; AVX2-LABEL: test_unsigned_short_1024:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    xorl %ecx, %ecx
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
@@ -1988,8 +1988,8 @@ define i32 @test_unsigned_short_1024(ptr nocapture readonly, ptr nocapture reado
 ;
 ; AVX512-LABEL: test_unsigned_short_1024:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    movl %edx, %eax
 ; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    movl %edx, %eax
 ; AVX512-NEXT:    xorl %ecx, %ecx
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    .p2align 4
@@ -3061,8 +3061,8 @@ define i64 @sum_and_sum_of_squares(ptr %a, i32 %n) {
 ;
 ; AVX1-LABEL: sum_and_sum_of_squares:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    movl %esi, %eax
 ; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    movl %esi, %eax
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    .p2align 4
 ; AVX1-NEXT:  .LBB35_1: # %vector.body
@@ -3104,8 +3104,8 @@ define i64 @sum_and_sum_of_squares(ptr %a, i32 %n) {
 ;
 ; AVX256-LABEL: sum_and_sum_of_squares:
 ; AVX256:       # %bb.0: # %entry
-; AVX256-NEXT:    movl %esi, %eax
 ; AVX256-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX256-NEXT:    movl %esi, %eax
 ; AVX256-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX256-NEXT:    .p2align 4
 ; AVX256-NEXT:  .LBB35_1: # %vector.body
@@ -3222,8 +3222,8 @@ define i32 @sum_of_square_differences(ptr %a, ptr %b, i32 %n) {
 ;
 ; AVX1-LABEL: sum_of_square_differences:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    xorl %ecx, %ecx
 ; AVX1-NEXT:    .p2align 4
 ; AVX1-NEXT:  .LBB36_1: # %vector.body
@@ -3250,8 +3250,8 @@ define i32 @sum_of_square_differences(ptr %a, ptr %b, i32 %n) {
 ;
 ; AVX256-LABEL: sum_of_square_differences:
 ; AVX256:       # %bb.0: # %entry
-; AVX256-NEXT:    movl %edx, %eax
 ; AVX256-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX256-NEXT:    movl %edx, %eax
 ; AVX256-NEXT:    xorl %ecx, %ecx
 ; AVX256-NEXT:    .p2align 4
 ; AVX256-NEXT:  .LBB36_1: # %vector.body

@@ -1,7 +1,7 @@
 ; RUN: opt < %s -S -passes=openmp-opt-cgscc | FileCheck %s
 ; RUN: opt < %s -S -passes=openmp-opt-cgscc -openmp-ir-builder-optimistic-attributes | FileCheck %s --check-prefix=OPTIMISTIC
 
-target triple = "amdgcn-amd-amdhsa"
+target triple = "amdgpu7.00-amd-amdhsa"
 
 define void @call_all(i64 %arg) {
   call void @__kmpc_syncwarp(i64 %arg)

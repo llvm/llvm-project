@@ -15,7 +15,6 @@ define %empty @ret_empty(i32 %n) {
 ; CHECK-LABEL: ret_empty(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ret;
   ret %empty zeroinitializer
@@ -25,7 +24,6 @@ define %empty @ret_empty(i32 %n) {
 define void @only_empty(%empty %z) {
 ; CHECK-LABEL: only_empty(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ret;
@@ -99,7 +97,6 @@ define void @caller() {
 ; CHECK-LABEL: caller(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .b32 param0;
@@ -135,13 +132,14 @@ define void @indirect_caller(ptr %fp) {
 ; CHECK-LABEL: indirect_caller(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:  prototype_4 : .callprototype ()_ (.param .b32 _);
+; CHECK:  $L__prototype_0: 
+; CHECK-NEXT:  .callprototype _ (.param .b32 _);
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [indirect_caller_param_0];
 ; CHECK-NEXT:    { // callseq 4, 0
 ; CHECK-NEXT:    .param .b32 param0;
 ; CHECK-NEXT:    st.param.b32 [param0], 42;
-; CHECK-NEXT:    call %rd1, (param0), prototype_4;
+; CHECK-NEXT:    call %rd1, (param0), $L__prototype_0;
 ; CHECK-NEXT:    } // callseq 4
 ; CHECK-NEXT:    ret;
   call void %fp(%empty zeroinitializer, i32 42)

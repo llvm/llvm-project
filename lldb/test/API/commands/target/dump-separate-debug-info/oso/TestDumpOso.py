@@ -25,7 +25,7 @@ class TestDumpOso(lldbtest.TestBase):
         return result
 
     @skipIfRemote
-    @skipUnlessDarwin
+    @requireDarwin
     def test_shows_oso_loaded_json_output(self):
         self.build(debug_info="dwarf")
         exe = self.getBuildArtifact("a.out")
@@ -47,7 +47,7 @@ class TestDumpOso(lldbtest.TestBase):
         self.assertTrue(osos[exe][foo_o]["loaded"])
 
     @skipIfRemote
-    @skipUnlessDarwin
+    @requireDarwin
     def test_shows_oso_not_loaded_json_output(self):
         self.build(debug_info="dwarf")
         exe = self.getBuildArtifact("a.out")
@@ -77,7 +77,7 @@ class TestDumpOso(lldbtest.TestBase):
         self.assertNotIn(foo_o, output[exe])
 
     @skipIfRemote
-    @skipUnlessDarwin
+    @requireDarwin
     def test_shows_oso_loaded_table_output(self):
         self.build(debug_info="dwarf")
         exe = self.getBuildArtifact("a.out")
@@ -103,7 +103,7 @@ class TestDumpOso(lldbtest.TestBase):
         )
 
     @skipIfRemote
-    @skipUnlessDarwin
+    @requireDarwin
     def test_shows_oso_not_loaded_table_output(self):
         self.build(debug_info="dwarf")
         exe = self.getBuildArtifact("a.out")
@@ -129,7 +129,7 @@ class TestDumpOso(lldbtest.TestBase):
         )
 
     @skipIfRemote
-    @skipUnlessDarwin
+    @requireDarwin
     def test_osos_loaded_symbols_on_demand(self):
         self.build(debug_info="dwarf")
         exe = self.getBuildArtifact("a.out")

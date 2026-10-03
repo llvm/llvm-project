@@ -102,6 +102,12 @@ public:
   /// Determine the number of elements in the SetVector.
   [[nodiscard]] size_type size() const { return vector_.size(); }
 
+  /// Reserve space in the SetVector if supported by the underlying containers.
+  void reserve(size_type Size) {
+    vector_.reserve(Size);
+    set_.reserve(Size);
+  }
+
   /// Get an iterator to the beginning of the SetVector.
   [[nodiscard]] iterator begin() { return vector_.begin(); }
 

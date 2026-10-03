@@ -103,6 +103,9 @@ class Clause<list<Spelling> ss> {
   // Spellings of the clause.
   list<Spelling> spellings = ss;
 
+  // Optional name for the generated enum (if different from spelling).
+  string name = ?;
+
   // Optional class holding value of the clause in clang AST.
   string clangClass = "";
 
@@ -166,8 +169,9 @@ def AS_Block : Association<"Block"> {}            // Block (incl. single
 def AS_Declaration : Association<"Declaration"> {}   // Declaration
 def AS_Delimited : Association<"Delimited"> {}    // Region delimited with
                                                   // begin/end
+def AS_Explicit : Association<"Explicit"> {}      // Explicit association
 def AS_LoopNest : Association<"LoopNest"> {}      // Loop nest
-def AS_LoopSeq : Association<"LoopSeq"> {}        // Loop sequence
+def AS_LoopSeq : Association<"LoopSequence"> {}   // Loop sequence
 def AS_Separating : Association<"Separating"> {}  // Separates parts of a
                                                   // construct
 
@@ -227,6 +231,9 @@ class Directive<list<Spelling> ss> {
   // Spellings of the directive.
   list<Spelling> spellings = ss;
 
+  // Optional name for the generated enum (if different from spelling).
+  string name = ?;
+
   // Clauses cannot appear twice in the three allowed lists below. Also, since
   // required implies allowed, the same clause cannot appear in both the
   // allowedClauses and requiredClauses lists.
@@ -261,4 +268,7 @@ class Directive<list<Spelling> ss> {
 
   // The languages that allow this directive. Default: all languages.
   list<SourceLanguage> languages = [L_C, L_Fortran];
+
+  // The OpenMP version at which the directive gained the "pure" property.
+  int pureSince = 0x7FFFFFFF;
 }

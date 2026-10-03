@@ -20,7 +20,6 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Error.h"
 
-#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/lldb-defines.h"
 #include <optional>
 
@@ -41,7 +40,7 @@ PdbIndex::PdbIndex() : m_cus(*this), m_va_to_modi(m_allocator) {}
 
 llvm::Expected<std::unique_ptr<PdbIndex>>
 PdbIndex::create(llvm::pdb::PDBFile *file) {
-  lldbassert(file);
+  assert(file);
 
   std::unique_ptr<PdbIndex> result(new PdbIndex());
   ASSIGN_PTR_OR_RETURN(result->m_dbi, file->getPDBDbiStream());
@@ -114,8 +113,7 @@ void PdbIndex::ParseSectionContribs() {
 }
 
 void PdbIndex::BuildAddrToSymbolMap(CompilandIndexItem &cci) {
-  lldbassert(cci.m_symbols_by_va.empty() &&
-             "Addr to symbol map is already built!");
+  assert(cci.m_symbols_by_va.empty() && "Addr to symbol map is already built!");
   uint16_t modi = cci.m_id.modi;
   const CVSymbolArray &syms = cci.m_debug_stream.getSymbolArray();
   for (auto iter = syms.begin(); iter != syms.end(); ++iter) {
@@ -187,7 +185,10 @@ std::vector<SymbolAndUid> PdbIndex::FindSymbolsByVa(lldb::addr_t va) {
 CVSymbol PdbIndex::ReadSymbolRecord(PdbCompilandSymId cu_sym) const {
   const CompilandIndexItem *cci = compilands().GetCompiland(cu_sym.modi);
   auto iter = cci->m_debug_stream.getSymbolArray().at(cu_sym.offset);
-  lldbassert(iter != cci->m_debug_stream.getSymbolArray().end());
+  if (iter == cci->m_debug_stream.getSymbolArray().end()) {
+    assert(false && "missing symbol");
+    return {};
+  }
   return *iter;
 }
 

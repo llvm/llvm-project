@@ -125,6 +125,11 @@ struct GPUToXeVMPipelineOptions
       llvm::cl::desc("Granularity of XeGPU operations to target: workgroup | "
                      "subgroup | lane"),
       llvm::cl::init("workgroup")};
+  PassOptions::Option<bool> enableVectorToXeGPU{
+      *this, "enable-vector-to-xegpu",
+      llvm::cl::desc("Run convert-vector-to-xegpu so the pipeline can accept "
+                     "vector dialect (one level above XeGPU) as entry IR"),
+      llvm::cl::init(false)};
   // General lowering controls.
   PassOptions::Option<bool> use64bitIndex{
       *this, "use-64bit-index",
@@ -140,7 +145,10 @@ struct GPUToXeVMPipelineOptions
       llvm::cl::init(false)};
   PassOptions::Option<std::string> binaryFormat{
       *this, "binary-format",
-      llvm::cl::desc("Final GPU binary emission format (e.g. fatbin)"),
+      llvm::cl::desc("Final GPU binary emission format (e.g. fatbin). Valid "
+                     "values are the set of values for the format argument of "
+                     "-gpu-module-to-binary pass plus a special value: skip, "
+                     "which skips invoking -gpu-module-to-binary pass."),
       llvm::cl::init("fatbin")};
   // Options mirroring xevm-attach-target (GpuXeVMAttachTarget).
   PassOptions::Option<std::string> xevmModuleMatcher{

@@ -33,7 +33,7 @@ define double @constant_fold_fmul_nan(ptr %p) {
 ; CHECK-NEXT:    mov x8, #9221120237041090560
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
-  %r = fmul double 0x7ff0000000000000, 0.0
+  %r = fmul double +inf, 0.0
   ret double %r
 }
 
@@ -45,7 +45,7 @@ define double @constant_fold_fadd_nan(ptr %p) {
 ; CHECK-NEXT:    mov x8, #9221120237041090560
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
-  %r = fadd double 0x7ff0000000000000, 0xfff0000000000000
+  %r = fadd double +inf, -inf
   ret double %r
 }
 
@@ -57,7 +57,7 @@ define double @constant_fold_fsub_nan(ptr %p) {
 ; CHECK-NEXT:    mov x8, #9221120237041090560
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
-  %r = fsub double 0x7ff0000000000000, 0x7ff0000000000000
+  %r = fsub double +inf, +inf
   ret double %r
 }
 
@@ -69,7 +69,7 @@ define double @constant_fold_fma_nan(ptr %p) {
 ; CHECK-NEXT:    mov x8, #9221120237041090560
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
-  %r =  call double @llvm.fma.f64(double 0x7ff0000000000000, double 0.0, double 42.0)
+  %r =  call double @llvm.fma.f64(double +inf, double 0.0, double 42.0)
   ret double %r
 }
 
@@ -77,7 +77,7 @@ define double @fdiv_nnan_nan_op0(double %x) {
 ; CHECK-LABEL: fdiv_nnan_nan_op0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
-  %r = fdiv nnan double 0xfff8000000000000, %x
+  %r = fdiv nnan double -qnan, %x
   ret double %r
 }
 
@@ -85,7 +85,7 @@ define double @fmul_nnan_nan_op1(double %x) {
 ; CHECK-LABEL: fmul_nnan_nan_op1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
-  %r = fmul nnan double %x, 0x7ff8000000000000
+  %r = fmul nnan double %x, +qnan
   ret double %r
 }
 
@@ -99,7 +99,7 @@ define double @fdiv_ninf_nan_op0(double %x) {
 ; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    fdiv d0, d1, d0
 ; CHECK-NEXT:    ret
-  %r = fdiv ninf double 0xfff8000000000000, %x
+  %r = fdiv ninf double -qnan, %x
   ret double %r
 }
 
@@ -113,7 +113,7 @@ define double @fadd_ninf_nan_op1(double %x) {
 ; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    fadd d0, d0, d1
 ; CHECK-NEXT:    ret
-  %r = fadd ninf double %x, 0x7ff8000000000000
+  %r = fadd ninf double %x, +qnan
   ret double %r
 }
 
@@ -121,7 +121,7 @@ define double @fdiv_ninf_inf_op0(double %x) {
 ; CHECK-LABEL: fdiv_ninf_inf_op0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
-  %r = fdiv ninf double 0x7ff0000000000000, %x
+  %r = fdiv ninf double +inf, %x
   ret double %r
 }
 
@@ -129,7 +129,7 @@ define double @fadd_ninf_inf_op1(double %x) {
 ; CHECK-LABEL: fadd_ninf_inf_op1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
-  %r = fadd ninf double %x, 0xfff0000000000000
+  %r = fadd ninf double %x, -inf
   ret double %r
 }
 
@@ -143,7 +143,7 @@ define double @fsub_nnan_inf_op0(double %x) {
 ; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    fsub d0, d1, d0
 ; CHECK-NEXT:    ret
-  %r = fsub nnan double 0x7ff0000000000000, %x
+  %r = fsub nnan double +inf, %x
   ret double %r
 }
 
@@ -157,7 +157,7 @@ define double @fmul_nnan_inf_op1(double %x) {
 ; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    fmul d0, d0, d1
 ; CHECK-NEXT:    ret
-  %r = fmul nnan double %x, 0xfff0000000000000
+  %r = fmul nnan double %x, -inf
   ret double %r
 }
 

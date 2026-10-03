@@ -65,10 +65,10 @@ body:             |
     ; CHECK-NEXT: G_STORE [[TRUNC]](i32), [[PTR_ADD]](p0) :: (store (s16) into unknown-address + 8, align 8)
     ; CHECK-NEXT: G_STORE [[LSHR]](i32), [[PTR_ADD3]](p0) :: (store (s8) into unknown-address + 10, align 2)
     %ptr:_(p0) = COPY $x0
-    %a:_(i88) = G_LOAD %ptr(p0) :: (load (s88))
-    %b:_(i88) = G_LOAD %ptr(p0) :: (load (s88))
+    %a:_(i88) = G_LOAD %ptr(p0) :: (load (i88))
+    %b:_(i88) = G_LOAD %ptr(p0) :: (load (i88))
     %and:_(i88) = G_AND %a, %b
-    G_STORE %and(i88), %ptr(p0) :: (store (s88))
+    G_STORE %and(i88), %ptr(p0) :: (store (i88))
 ...
 ---
 name:            test_s318_and

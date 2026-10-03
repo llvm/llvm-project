@@ -27,6 +27,7 @@ class MemoryBufferRef;
 } // namespace llvm
 
 namespace clang {
+class AtomicLineLogger;
 class InMemoryModuleCache;
 
 /// The address of an instance of this class represents the identity of a module
@@ -43,7 +44,13 @@ class ModuleCache {
   llvm::DenseMap<llvm::sys::fs::UniqueID, std::unique_ptr<ModuleCacheDirectory>>
       ByUID;
 
+protected:
+  /// A logger to record timestamp read/write and file read/write.
+  AtomicLineLogger &Logger;
+
 public:
+  explicit ModuleCache(AtomicLineLogger &Logger) : Logger(Logger) {}
+
   /// Returns an opaque pointer representing the module cache directory. This
   /// returns the same pointer regardless of the path spelling, as long as it
   /// resolves to the same file system entity. This also resolves links in the
@@ -82,6 +89,8 @@ public:
   read(StringRef FileName, off_t &Size, time_t &ModTime) = 0;
 
   virtual ~ModuleCache() = default;
+
+  AtomicLineLogger &getLogger() { return Logger; }
 };
 
 /// Creates new \c ModuleCache backed by a file system directory that may be

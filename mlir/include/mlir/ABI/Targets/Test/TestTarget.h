@@ -27,6 +27,7 @@
 #include "mlir/ABI/ABIRewriteContext.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/TypeRange.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "llvm/Support/Error.h"
 
@@ -44,7 +45,7 @@ namespace test {
 /// \param argTypes   Argument types of the function.
 /// \param returnType Return type of the function.
 /// \param dl         DataLayout used for size and alignment queries.
-FunctionClassification classify(ArrayRef<Type> argTypes, Type returnType,
+FunctionClassification classify(TypeRange argTypes, Type returnType,
                                 const DataLayout &dl);
 
 /// Parse a `FunctionClassification` from a plain MLIR DictionaryAttr.

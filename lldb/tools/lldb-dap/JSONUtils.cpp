@@ -359,14 +359,6 @@ bool ValuePointsToCode(lldb::SBValue v) {
   return line_entry.IsValid();
 }
 
-int64_t PackLocation(int64_t var_ref, bool is_value_location) {
-  return var_ref << 1 | is_value_location;
-}
-
-std::pair<int64_t, bool> UnpackLocation(int64_t location_id) {
-  return std::pair{location_id >> 1, location_id & 1};
-}
-
 /// See
 /// https://microsoft.github.io/debug-adapter-protocol/specification#Reverse_Requests_RunInTerminal
 llvm::json::Object CreateRunInTerminalReverseRequest(
@@ -445,10 +437,10 @@ static void FilterAndGetValueForKey(const lldb::SBStructuredData data,
     out.try_emplace(key_utf8, value.GetFloatValue());
     break;
   case lldb::eStructuredDataTypeUnsignedInteger:
-    out.try_emplace(key_utf8, value.GetIntegerValue((uint64_t)0));
+    out.try_emplace(key_utf8, value.GetUnsignedIntegerValue());
     break;
   case lldb::eStructuredDataTypeSignedInteger:
-    out.try_emplace(key_utf8, value.GetIntegerValue((int64_t)0));
+    out.try_emplace(key_utf8, value.GetSignedIntegerValue());
     break;
   case lldb::eStructuredDataTypeArray: {
     lldb::SBStream contents;

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}zext_or_operand_i64:
 ; GCN: buffer_load_dwordx2 v[[[LO:[0-9]+]]:[[HI:[0-9]+]]]

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -buffer-deallocation-pipeline --allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt %s -buffer-deallocation-pipeline | FileCheck %s
 
 func.func @gpu_launch() {
   %c1 = arith.constant 1 : index

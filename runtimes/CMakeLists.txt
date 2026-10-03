@@ -76,6 +76,16 @@ if(LLVM_BINARY_DIR)
   list(APPEND llvm_search_paths "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
   list(APPEND clang_search_paths "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/clang")
 endif()
+
+# Exports from LLVM and Clang may contain shared libraries. When targeting
+# platforms that lack shared library support, importing such
+# exports unrestrictedly will trigger an error. Set
+# LLVM_OMIT_EXPORTS_FROM_CONFIG flag to skip importing these exports
+# when the target platform does not support shared libraries.
+get_property(HAS_SHARED_SUPPORT GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS)
+if (NOT HAS_SHARED_SUPPORT)
+  set(LLVM_OMIT_EXPORTS_FROM_CONFIG ON)
+endif()
 find_package(LLVM PATHS ${llvm_search_paths} NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 find_package(Clang PATHS ${clang_search_paths} NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 
@@ -146,13 +156,6 @@ filter_prefixed("${CMAKE_ASM_IMPLICIT_INCLUDE_DIRECTORIES}" ${LLVM_BINARY_DIR} C
 # The compiler driver may be implicitly trying to link against libunwind,
 # which might not work if libunwind doesn't exist yet. Try to check if
 # --unwindlib=none is supported, and use that if possible.
-#
-# TODO: Note that this is problematic when LLVM_USE_SANITIZER is used
-# because some sanitizers require the unwinder and so the combination of
-# -fsanitize=... --unwindlib=none will always result in a linking error.
-# Currently, we counteract this issue by adding -fno-sanitize=all flag in
-# the project specific code within */cmake/config-ix.cmake files but that's
-# brittle. We should ideally move this to runtimes/CMakeLists.txt.
 llvm_check_compiler_linker_flag(C "--unwindlib=none" CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
 if (CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
   set(ORIG_CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
@@ -175,6 +178,13 @@ if (CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
   check_c_compiler_flag("--start-no-unused-arguments" C_SUPPORTS_START_NO_UNUSED_ARGUMENTS)
   if (C_SUPPORTS_START_NO_UNUSED_ARGUMENTS)
     set(CMAKE_REQUIRED_FLAGS "${ORIG_CMAKE_REQUIRED_FLAGS} --start-no-unused-arguments --unwindlib=none --end-no-unused-arguments")
+  endif()
+
+  # Some sanitizers require the unwinder, so the LLVM_USE_SANITIZER flags added
+  # by HandleLLVMOptions cannot link with --unwindlib=none. This only suppresses
+  # using sanitizers for the internal CMake compiler flag checks.
+  if (LLVM_USE_SANITIZER)
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -fno-sanitize=all")
   endif()
 endif()
 
@@ -235,8 +245,22 @@ message(STATUS "LLVM default target triple: ${LLVM_DEFAULT_TARGET_TRIPLE}")
 set(LLVM_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}")
 
 if(CMAKE_C_COMPILER_ID MATCHES "Clang")
-  include(NormalizeTriple)
-  normalize_triple("${CMAKE_C_COMPILER}" "${LLVM_DEFAULT_TARGET_TRIPLE}" LLVM_DEFAULT_TARGET_TRIPLE)
+  set(option_prefix "")
+  if (CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "MSVC")
+    set(option_prefix "/clang:")
+  endif()
+  set(print_target_triple ${CMAKE_C_COMPILER} ${option_prefix}--target=${LLVM_DEFAULT_TARGET_TRIPLE} ${option_prefix}-print-target-triple)
+  execute_process(COMMAND ${print_target_triple}
+    RESULT_VARIABLE result
+    OUTPUT_VARIABLE output
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(result EQUAL 0)
+    set(LLVM_DEFAULT_TARGET_TRIPLE ${output})
+  else()
+    string(REPLACE ";" " " print_target_triple "${print_target_triple}")
+    # TODO(#97876): Report an error.
+    message(WARNING "Failed to execute `${print_target_triple}` to normalize target triple.")
+  endif()
 endif()
 
 # Determine output and install paths based on LLVM_TARGET_TRIPLE

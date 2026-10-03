@@ -79,9 +79,13 @@ struct DeviceExprChecker
   using Base::operator();
   Result operator()(const evaluate::ProcedureDesignator &x) const {
     if (const Symbol * sym{x.GetInterfaceSymbol()}) {
-      const auto *subp{
-          sym->GetUltimate().detailsIf<semantics::SubprogramDetails>()};
+      const Symbol &ultimate{sym->GetUltimate()};
+      const auto *subp{ultimate.detailsIf<semantics::SubprogramDetails>()};
       if (subp) {
+        if (const auto &stmtFunction{subp->stmtFunction()};
+            stmtFunction && IsCUDADeviceContext(&ultimate.owner())) {
+          return (*this)(*stmtFunction);
+        }
         if (auto attrs{subp->cudaSubprogramAttrs()}) {
           if (*attrs == common::CUDASubprogramAttrs::HostDevice ||
               *attrs == common::CUDASubprogramAttrs::Device) {
@@ -98,9 +102,11 @@ struct DeviceExprChecker
                 "not yet implemented: CUDA dynamic parallelism"_err_en_US);
           }
         }
+        if (!subp->openACCRoutineInfos().empty()) {
+          return {};
+        }
       }
 
-      const Symbol &ultimate{sym->GetUltimate()};
       const Scope &scope{ultimate.owner()};
       const Symbol *mod{scope.IsModule() ? scope.symbol() : nullptr};
       // Allow ieee_arithmetic module functions to be called on the device.
@@ -829,17 +835,20 @@ void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
 
   int nbLhs{evaluate::GetNbOfCUDADeviceSymbols(assign->lhs)};
   int nbRhs{evaluate::GetNbOfUniqueCUDADeviceSymbols(assign->rhs)};
-  int nbRhsManaged{evaluate::GetNbOfCUDAManagedOrUnifiedSymbols(assign->rhs)};
+  int nbRhsManaged{
+      evaluate::GetNbOfUniqueCUDAManagedOrUnifiedSymbols(assign->rhs)};
 
   // device to host transfer with more than one device object on the rhs is not
-  // legal.
-  if (nbLhs == 0 && nbRhs > 1 && nbRhsManaged != nbRhs) {
+  // legal. Managed and unified objects are accessible from the host and are not
+  // counted.
+  if (nbLhs == 0 && nbRhs - nbRhsManaged > 1) {
     context_.Say(lhsLoc,
         "More than one reference to a CUDA object on the right hand side of the assignment"_err_en_US);
   }
 
   if (evaluate::HasCUDADeviceAttrs(assign->lhs) &&
-      evaluate::HasCUDAImplicitTransfer(assign->rhs)) {
+      (evaluate::HasCUDAImplicitTransfer(assign->rhs) &&
+          !evaluate::HasOnlyCUDAConstntImplicitTransfer(assign->rhs))) {
     if (GetNbOfCUDAManagedOrUnifiedSymbols(assign->lhs) == 1 &&
         GetNbOfCUDAManagedOrUnifiedSymbols(assign->rhs) == 1 && nbRhs == 1) {
       return; // This is a special case handled on the host.

@@ -59,10 +59,11 @@ public:
     const Type i8Type = rewriter.getI8Type();
     const Type intermediateType = cast<TensorType>(outputType).clone(i8Type);
 
-    auto inner =
-        tosa::CastOp::create(rewriter, op.getLoc(), intermediateType, input);
-    auto outer = tosa::CastOp::create(rewriter, op.getLoc(), outputType,
-                                      inner.getOutput());
+    auto inner = tosa::CastOp::create(rewriter, op.getLoc(), intermediateType,
+                                      input, /*input_unsigned*/ false);
+    auto outer =
+        tosa::CastOp::create(rewriter, op.getLoc(), outputType,
+                             inner.getOutput(), /*input_unsigned*/ false);
     rewriter.replaceOp(op, outer.getOutput());
     return success();
   }
@@ -91,12 +92,13 @@ public:
     const Type valuesI8Type = cast<TensorType>(valuesType).clone(i8Type);
     const Type resultI8Type = cast<TensorType>(resultType).clone(i8Type);
 
-    auto valuesToI8 =
-        tosa::CastOp::create(rewriter, op.getLoc(), valuesI8Type, values);
+    auto valuesToI8 = tosa::CastOp::create(rewriter, op.getLoc(), valuesI8Type,
+                                           values, /*input_unsigned*/ false);
     auto gatherI8 = tosa::GatherOp::create(rewriter, op.getLoc(), resultI8Type,
                                            valuesToI8.getOutput(), indices);
-    auto i8ToBool = tosa::CastOp::create(rewriter, op.getLoc(), resultType,
-                                         gatherI8.getOutput());
+    auto i8ToBool =
+        tosa::CastOp::create(rewriter, op.getLoc(), resultType,
+                             gatherI8.getOutput(), /*input_unsigned*/ false);
     rewriter.replaceOp(op, i8ToBool.getOutput());
     return success();
   }
@@ -129,14 +131,16 @@ public:
     const Type resultI8Type = cast<TensorType>(resultType).clone(i8Type);
 
     auto valuesInToI8 =
-        tosa::CastOp::create(rewriter, op.getLoc(), valuesInI8Type, valuesIn);
-    auto inputToI8 =
-        tosa::CastOp::create(rewriter, op.getLoc(), inputI8Type, input);
+        tosa::CastOp::create(rewriter, op.getLoc(), valuesInI8Type, valuesIn,
+                             /*input_unsigned*/ false);
+    auto inputToI8 = tosa::CastOp::create(rewriter, op.getLoc(), inputI8Type,
+                                          input, /*input_unsigned*/ false);
     auto scatterI8 = tosa::ScatterOp::create(
         rewriter, op.getLoc(), resultI8Type, valuesInToI8.getOutput(), indices,
         inputToI8.getOutput());
     auto i8ToBool = tosa::CastOp::create(rewriter, op.getLoc(), resultType,
-                                         scatterI8.getValuesOut());
+                                         scatterI8.getValuesOut(),
+                                         /*input_unsigned*/ false);
     rewriter.replaceOp(op, i8ToBool.getOutput());
     return success();
   }
@@ -149,6 +153,9 @@ static LogicalResult isMatMulTTypeCompatibleForDowngrade(tosa::MatMulTOp op) {
       getStorageElementTypeOrSelf(op.getOutput().getType());
 
   if (aElementType != bElementType)
+    return failure();
+
+  if (isa<BlockScaledType>(aElementType) || isa<BlockScaledType>(bElementType))
     return failure();
 
   if ((aElementType.isF16() && outputElementType.isF16()) ||
@@ -181,6 +188,11 @@ public:
     if (!aShape.hasRank() || !bShape.hasRank())
       return rewriter.notifyMatchFailure(op, "expected ranked A and B tensors");
 
+    // TOSA 1.0 MATMUL requires rank 3 inputs. MATMUL_T operations with other
+    // ranks require separate rank and batch broadcast legalization.
+    if (aShape.getRank() != 3 || bShape.getRank() != 3)
+      return rewriter.notifyMatchFailure(op, "expected rank 3 A and B tensors");
+
     const int64_t dSize = bShape.getDimSize(0);
     const int64_t nSize = aShape.getDimSize(0);
 
@@ -191,6 +203,12 @@ public:
         (dSize == 1 && ShapedType::isDynamic(nSize)))
       return rewriter.notifyMatchFailure(
           op, "expected known batch size for broadcast");
+
+    // TOSA 1.0 MATMUL does not broadcast batch dimensions. The lowering below
+    // handles broadcasting B by tiling it, but does not implement tiling A.
+    if (dSize != 1 && (nSize == 1 || ShapedType::isDynamic(nSize)))
+      return rewriter.notifyMatchFailure(
+          op, "cannot downgrade A batch broadcasting");
 
     const int64_t wSize = bShape.getDimSize(1);
     const int64_t cSize = bShape.getDimSize(2);

@@ -27,6 +27,8 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -61,6 +63,37 @@ class Value;
 class ValueRange;
 template <typename ValueRangeT>
 class ValueTypeRange;
+
+namespace detail {
+/// Append a present attribute-backed property to a dictionary's attributes.
+void appendAttributeProperty(llvm::SmallVectorImpl<NamedAttribute> &attrs,
+                             StringRef name, Attribute attr);
+
+/// Route legacy builder attributes to either the operation's properties or
+/// its discardable attribute dictionary. The callback handles conversion and
+/// diagnostics for the operation-specific properties.
+void splitPropertiesAndDiscardableAttributes(
+    OperationState &state, ArrayRef<NamedAttribute> attributes,
+    ArrayRef<StringRef> inherentNames,
+    llvm::function_ref<LogicalResult(DictionaryAttr)> setProperties);
+
+/// Assign a generated attribute-backed property after checking its type.
+/// Keep the conversion out of each operation's generated property setter.
+template <typename AttrT>
+LLVM_ATTRIBUTE_NOINLINE LogicalResult
+setAttributeProperty(AttrT &storage, Attribute attr, StringRef name,
+                     llvm::function_ref<InFlightDiagnostic()> emitError) {
+  if (!attr)
+    return success();
+  if (auto converted = llvm::dyn_cast<AttrT>(attr)) {
+    storage = converted;
+    return success();
+  }
+  emitError() << "Invalid attribute `" << name
+              << "` in property conversion: " << attr;
+  return failure();
+}
+} // namespace detail
 
 //===----------------------------------------------------------------------===//
 // PropertyRef
@@ -107,6 +140,7 @@ public:
   // class is defined below.
   using PopulateDefaultAttrsFn =
       llvm::unique_function<void(const OperationName &, NamedAttrList &) const>;
+  using InherentAttrVisitor = llvm::function_ref<void(StringRef, Attribute &)>;
   using PrintAssemblyFn =
       llvm::unique_function<void(Operation *, OpAsmPrinter &, StringRef) const>;
   using VerifyInvariantsFn =
@@ -136,7 +170,8 @@ public:
                                                      StringRef name) = 0;
     virtual void setInherentAttr(Operation *op, StringAttr name,
                                  Attribute value) = 0;
-    virtual void populateInherentAttrs(Operation *op, NamedAttrList &attrs) = 0;
+    virtual void walkInherentAttrs(Operation *op,
+                                   InherentAttrVisitor visitor) = 0;
     virtual LogicalResult
     verifyInherentAttrs(OperationName opName, NamedAttrList &attributes,
                         function_ref<InFlightDiagnostic()> emitError) = 0;
@@ -225,7 +260,7 @@ protected:
     std::optional<Attribute> getInherentAttr(Operation *op,
                                              StringRef name) final;
     void setInherentAttr(Operation *op, StringAttr name, Attribute value) final;
-    void populateInherentAttrs(Operation *op, NamedAttrList &attrs) final;
+    void walkInherentAttrs(Operation *op, InherentAttrVisitor visitor) final;
     LogicalResult
     verifyInherentAttrs(OperationName opName, NamedAttrList &attributes,
                         function_ref<InFlightDiagnostic()> emitError) final;
@@ -416,9 +451,15 @@ public:
     return getImpl()->setInherentAttr(op, name, value);
   }
 
-  void populateInherentAttrs(Operation *op, NamedAttrList &attrs) const {
-    return getImpl()->populateInherentAttrs(op, attrs);
+  /// Visit the inherent attributes stored in the properties of `op`. The
+  /// visitor may replace an attribute by assigning to the attribute value.
+  void walkInherentAttrs(Operation *op, InherentAttrVisitor visitor) const {
+    getImpl()->walkInherentAttrs(op, visitor);
   }
+
+  /// Append the inherent attributes stored in the properties of `op` to
+  /// `attrs`.
+  void populateInherentAttrs(Operation *op, NamedAttrList &attrs) const;
   /// This method exists for backward compatibility purpose when using
   /// properties to store inherent attributes, it enables validating the
   /// attributes when parsed from the older generic syntax pre-Properties.
@@ -607,11 +648,11 @@ public:
       llvm_unreachable(
           "Can't call setInherentAttr on operation with empty properties");
     }
-    void populateInherentAttrs(Operation *op, NamedAttrList &attrs) final {
+    void walkInherentAttrs(Operation *op, InherentAttrVisitor visitor) final {
       if constexpr (hasProperties) {
         auto concreteOp = cast<ConcreteOp>(op);
-        ConcreteOp::populateInherentAttrs(concreteOp->getContext(),
-                                          concreteOp.getProperties(), attrs);
+        ConcreteOp::walkInherentAttrs(concreteOp->getContext(),
+                                      concreteOp.getProperties(), visitor);
       }
     }
     LogicalResult
@@ -703,7 +744,11 @@ public:
   /// of operations they contain.
   template <typename T>
   static void insert(Dialect &dialect) {
-    insert(std::make_unique<Model<T>>(&dialect), T::getAttributeNames());
+    static_assert(sizeof(Model<T>) == sizeof(Impl));
+    static_assert(alignof(Model<T>) == alignof(Impl));
+    std::unique_ptr<Impl> ownedModel(new (allocateModelStorage())
+                                         Model<T>(&dialect));
+    insert(std::move(ownedModel), T::getAttributeNames());
   }
   /// The use of this method is in general discouraged in favor of
   /// 'insert<CustomOp>(dialect)'.
@@ -721,6 +766,9 @@ public:
   }
 
 private:
+  /// Allocate storage for one type-erased operation model.
+  static void *allocateModelStorage();
+
   RegisteredOperationName(Impl *impl) : OperationName(impl) {}
 
   /// Allow access to the constructor.
@@ -955,6 +1003,12 @@ private:
   mutable llvm::PointerIntPair<Attribute, 1, bool> dictionarySorted;
 };
 
+inline void OperationName::populateInherentAttrs(Operation *op,
+                                                 NamedAttrList &attrs) const {
+  walkInherentAttrs(
+      op, [&](StringRef name, Attribute &attr) { attrs.append(name, attr); });
+}
+
 //===----------------------------------------------------------------------===//
 // OperationState
 //===----------------------------------------------------------------------===//
@@ -984,9 +1038,11 @@ struct OperationState {
   Attribute propertiesAttr;
 
 private:
+  /// The deleter and setter are non-null whenever `properties` is, and are
+  /// only called after checking it.
   PropertyRef properties;
-  llvm::function_ref<void(PropertyRef)> propertiesDeleter;
-  llvm::function_ref<void(PropertyRef, const PropertyRef)> propertiesSetter;
+  void (*propertiesDeleter)(PropertyRef) = nullptr;
+  void (*propertiesSetter)(PropertyRef, const PropertyRef) = nullptr;
   friend class Operation;
 
 public:

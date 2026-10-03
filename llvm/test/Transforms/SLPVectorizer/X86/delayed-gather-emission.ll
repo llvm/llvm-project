@@ -21,13 +21,13 @@ define void @test() {
 ; CHECK-NEXT:    [[I:%.*]] = phi float [ [[DOTPRE]], [[BB1]] ], [ [[I2]], [[BB2]] ]
 ; CHECK-NEXT:    [[GULF_0]] = phi float [ [[FOXTROT_0]], [[BB1]] ], [ [[TMP6:%.*]], [[BB2]] ]
 ; CHECK-NEXT:    [[I1:%.*]] = load float, ptr poison, align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[I]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[GULF_0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[GULF_0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[I1]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[I]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[GULF_0]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[GULF_0]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[I1]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = fdiv <2 x float> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP6]] = extractelement <2 x float> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP6]] = extractelement <2 x float> [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[TMP4]], i64 1
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    tail call void @foo(float [[MUL]])
 ; CHECK-NEXT:    [[I2]] = load float, ptr poison, align 4

@@ -10,17 +10,17 @@ body: |
     ; CHECK-LABEL: name: v4s32
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %v1:_(<4 x s32>) = COPY $q0
-    ; CHECK-NEXT: %unmerge:_(<2 x s32>) = G_EXTRACT_SUBVECTOR %v1(<4 x s32>), 2
-    ; CHECK-NEXT: %fpext:_(<2 x s64>) = G_FPEXT %unmerge(<2 x s32>)
-    ; CHECK-NEXT: $q0 = COPY %fpext(<2 x s64>)
+    ; CHECK-NEXT: %v1:_(<4 x f32>) = COPY $q0
+    ; CHECK-NEXT: %unmerge:_(<2 x f32>) = G_EXTRACT_SUBVECTOR %v1(<4 x f32>), 2
+    ; CHECK-NEXT: %fpext:_(<2 x f64>) = G_FPEXT %unmerge(<2 x f32>)
+    ; CHECK-NEXT: $q0 = COPY %fpext(<2 x f64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %v1:_(<4 x s32>) = COPY $q0
-    %implicit:_(<4 x s32>) = G_IMPLICIT_DEF
-    %C:_(s32) = G_CONSTANT i32 8
-    %ext:_(<4 x s32>) = G_EXT %v1:_, %implicit:_, %C:_(s32)
-    %unmerge:_(<2 x s32>), %unused:_(<2 x s32>) = G_UNMERGE_VALUES %ext:_(<4 x s32>)
-    %fpext:_(<2 x s64>) = G_FPEXT %unmerge:_(<2 x s32>)
+    %v1:_(<4 x f32>) = COPY $q0
+    %implicit:_(<4 x f32>) = G_IMPLICIT_DEF
+    %C:_(i32) = G_CONSTANT i32 8
+    %ext:_(<4 x f32>) = G_EXT %v1:_, %implicit:_, %C:_(i32)
+    %unmerge:_(<2 x f32>), %unused:_(<2 x f32>) = G_UNMERGE_VALUES %ext:_(<4 x f32>)
+    %fpext:_(<2 x f64>) = G_FPEXT %unmerge:_(<2 x f32>)
     $q0 = COPY %fpext
     RET_ReallyLR implicit $q0
 ...
@@ -33,40 +33,17 @@ body: |
     ; CHECK-LABEL: name: v8s16
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %v1:_(<8 x s16>) = COPY $q0
-    ; CHECK-NEXT: %unmerge:_(<4 x s16>) = G_EXTRACT_SUBVECTOR %v1(<8 x s16>), 4
-    ; CHECK-NEXT: %fpext:_(<4 x s32>) = G_FPEXT %unmerge(<4 x s16>)
-    ; CHECK-NEXT: $q0 = COPY %fpext(<4 x s32>)
+    ; CHECK-NEXT: %v1:_(<8 x f16>) = COPY $q0
+    ; CHECK-NEXT: %unmerge:_(<4 x f16>) = G_EXTRACT_SUBVECTOR %v1(<8 x f16>), 4
+    ; CHECK-NEXT: %fpext:_(<4 x f32>) = G_FPEXT %unmerge(<4 x f16>)
+    ; CHECK-NEXT: $q0 = COPY %fpext(<4 x f32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %v1:_(<8 x s16>) = COPY $q0
-    %implicit:_(<8 x s16>) = G_IMPLICIT_DEF
-    %C:_(s32) = G_CONSTANT i32 8
-    %ext:_(<8 x s16>) = G_EXT %v1:_, %implicit:_, %C:_(s32)
-    %unmerge:_(<4 x s16>), %unused:_(<4 x s16>) = G_UNMERGE_VALUES %ext:_(<8 x s16>)
-    %fpext:_(<4 x s32>) = G_FPEXT %unmerge:_(<4 x s16>)
-    $q0 = COPY %fpext
-    RET_ReallyLR implicit $q0
-...
----
-name:            v16s8
-legalized:       true
-body: |
-  bb.0.entry:
-    liveins: $q0
-    ; CHECK-LABEL: name: v16s8
-    ; CHECK: liveins: $q0
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %v1:_(<16 x s8>) = COPY $q0
-    ; CHECK-NEXT: %unmerge:_(<8 x s8>) = G_EXTRACT_SUBVECTOR %v1(<16 x s8>), 8
-    ; CHECK-NEXT: %fpext:_(<8 x s16>) = G_FPEXT %unmerge(<8 x s8>)
-    ; CHECK-NEXT: $q0 = COPY %fpext(<8 x s16>)
-    ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %v1:_(<16 x s8>) = COPY $q0
-    %implicit:_(<16 x s8>) = G_IMPLICIT_DEF
-    %C:_(s32) = G_CONSTANT i32 8
-    %ext:_(<16 x s8>) = G_EXT %v1:_, %implicit:_, %C:_(s32)
-    %unmerge:_(<8 x s8>), %unused:_(<8 x s8>) = G_UNMERGE_VALUES %ext:_(<16 x s8>)
-    %fpext:_(<8 x s16>) = G_FPEXT %unmerge:_(<8 x s8>)
+    %v1:_(<8 x f16>) = COPY $q0
+    %implicit:_(<8 x f16>) = G_IMPLICIT_DEF
+    %C:_(i32) = G_CONSTANT i32 8
+    %ext:_(<8 x f16>) = G_EXT %v1:_, %implicit:_, %C:_(i32)
+    %unmerge:_(<4 x f16>), %unused:_(<4 x f16>) = G_UNMERGE_VALUES %ext:_(<8 x f16>)
+    %fpext:_(<4 x f32>) = G_FPEXT %unmerge:_(<4 x f16>)
     $q0 = COPY %fpext
     RET_ReallyLR implicit $q0
 ...
@@ -79,20 +56,20 @@ body: |
     ; CHECK-LABEL: name: skip_not_const
     ; CHECK: liveins: $q0, $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %v1:_(<16 x s8>) = COPY $q0
-    ; CHECK-NEXT: %implicit:_(<16 x s8>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: %C:_(s32) = COPY $w0
-    ; CHECK-NEXT: %ext:_(<16 x s8>) = G_EXT %v1, %implicit, %C(s32)
-    ; CHECK-NEXT: %unmerge:_(<8 x s8>) = G_EXTRACT_SUBVECTOR %ext(<16 x s8>), 0
-    ; CHECK-NEXT: %fpext:_(<8 x s16>) = G_FPEXT %unmerge(<8 x s8>)
-    ; CHECK-NEXT: $q0 = COPY %fpext(<8 x s16>)
+    ; CHECK-NEXT: %v1:_(<8 x f16>) = COPY $q0
+    ; CHECK-NEXT: %implicit:_(<8 x f16>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: %C:_(i32) = COPY $w0
+    ; CHECK-NEXT: %ext:_(<8 x f16>) = G_EXT %v1, %implicit, %C(i32)
+    ; CHECK-NEXT: %unmerge:_(<4 x f16>) = G_EXTRACT_SUBVECTOR %ext(<8 x f16>), 0
+    ; CHECK-NEXT: %fpext:_(<4 x f32>) = G_FPEXT %unmerge(<4 x f16>)
+    ; CHECK-NEXT: $q0 = COPY %fpext(<4 x f32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %v1:_(<16 x s8>) = COPY $q0
-    %implicit:_(<16 x s8>) = G_IMPLICIT_DEF
-    %C:_(s32) = COPY $w0
-    %ext:_(<16 x s8>) = G_EXT %v1:_, %implicit:_, %C:_(s32)
-    %unmerge:_(<8 x s8>), %unused:_(<8 x s8>) = G_UNMERGE_VALUES %ext:_(<16 x s8>)
-    %fpext:_(<8 x s16>) = G_FPEXT %unmerge:_(<8 x s8>)
+    %v1:_(<8 x f16>) = COPY $q0
+    %implicit:_(<8 x f16>) = G_IMPLICIT_DEF
+    %C:_(i32) = COPY $w0
+    %ext:_(<8 x f16>) = G_EXT %v1:_, %implicit:_, %C:_(i32)
+    %unmerge:_(<4 x f16>), %unused:_(<4 x f16>) = G_UNMERGE_VALUES %ext:_(<8 x f16>)
+    %fpext:_(<4 x f32>) = G_FPEXT %unmerge:_(<4 x f16>)
     $q0 = COPY %fpext
     RET_ReallyLR implicit $q0
 ...
@@ -105,24 +82,24 @@ body: |
     ; CHECK-LABEL: name: skip_not_unused
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %v1:_(<16 x s8>) = COPY $q0
-    ; CHECK-NEXT: %implicit:_(<16 x s8>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: %C:_(s32) = G_CONSTANT i32 8
-    ; CHECK-NEXT: %ext:_(<16 x s8>) = G_EXT %v1, %implicit, %C(s32)
-    ; CHECK-NEXT: %unmerge:_(<8 x s8>) = G_EXTRACT_SUBVECTOR %ext(<16 x s8>), 0
-    ; CHECK-NEXT: %unused:_(<8 x s8>) = G_EXTRACT_SUBVECTOR %ext(<16 x s8>), 8
-    ; CHECK-NEXT: %fpext:_(<8 x s16>) = G_FPEXT %unmerge(<8 x s8>)
-    ; CHECK-NEXT: %fpext2:_(<8 x s16>) = G_FPEXT %unused(<8 x s8>)
-    ; CHECK-NEXT: $q0 = COPY %fpext(<8 x s16>)
-    ; CHECK-NEXT: $q1 = COPY %fpext2(<8 x s16>)
+    ; CHECK-NEXT: %v1:_(<8 x f16>) = COPY $q0
+    ; CHECK-NEXT: %implicit:_(<8 x f16>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: %C:_(i32) = G_CONSTANT i32 8
+    ; CHECK-NEXT: %ext:_(<8 x f16>) = G_EXT %v1, %implicit, %C(i32)
+    ; CHECK-NEXT: %unmerge:_(<4 x f16>) = G_EXTRACT_SUBVECTOR %ext(<8 x f16>), 0
+    ; CHECK-NEXT: %unused:_(<4 x f16>) = G_EXTRACT_SUBVECTOR %ext(<8 x f16>), 4
+    ; CHECK-NEXT: %fpext:_(<4 x f32>) = G_FPEXT %unmerge(<4 x f16>)
+    ; CHECK-NEXT: %fpext2:_(<4 x f32>) = G_FPEXT %unused(<4 x f16>)
+    ; CHECK-NEXT: $q0 = COPY %fpext(<4 x f32>)
+    ; CHECK-NEXT: $q1 = COPY %fpext2(<4 x f32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0, implicit $q1
-    %v1:_(<16 x s8>) = COPY $q0
-    %implicit:_(<16 x s8>) = G_IMPLICIT_DEF
-    %C:_(s32) = G_CONSTANT i32 8
-    %ext:_(<16 x s8>) = G_EXT %v1:_, %implicit:_, %C:_(s32)
-    %unmerge:_(<8 x s8>), %unused:_(<8 x s8>) = G_UNMERGE_VALUES %ext:_(<16 x s8>)
-    %fpext:_(<8 x s16>) = G_FPEXT %unmerge:_(<8 x s8>)
-    %fpext2:_(<8 x s16>) = G_FPEXT %unused:_(<8 x s8>)
+    %v1:_(<8 x f16>) = COPY $q0
+    %implicit:_(<8 x f16>) = G_IMPLICIT_DEF
+    %C:_(i32) = G_CONSTANT i32 8
+    %ext:_(<8 x f16>) = G_EXT %v1:_, %implicit:_, %C:_(i32)
+    %unmerge:_(<4 x f16>), %unused:_(<4 x f16>) = G_UNMERGE_VALUES %ext:_(<8 x f16>)
+    %fpext:_(<4 x f32>) = G_FPEXT %unmerge:_(<4 x f16>)
+    %fpext2:_(<4 x f32>) = G_FPEXT %unused:_(<4 x f16>)
     $q0 = COPY %fpext
     $q1 = COPY %fpext2
     RET_ReallyLR implicit $q0, implicit $q1
@@ -136,20 +113,20 @@ body: |
     ; CHECK-LABEL: name: skip_borders
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %v1:_(<4 x s32>) = COPY $q0
-    ; CHECK-NEXT: %implicit:_(<4 x s32>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: %C:_(s32) = G_CONSTANT i32 9
-    ; CHECK-NEXT: %ext:_(<4 x s32>) = G_EXT %v1, %implicit, %C(s32)
-    ; CHECK-NEXT: %unmerge:_(<2 x s32>) = G_EXTRACT_SUBVECTOR %ext(<4 x s32>), 0
-    ; CHECK-NEXT: %fpext:_(<2 x s64>) = G_FPEXT %unmerge(<2 x s32>)
-    ; CHECK-NEXT: $q0 = COPY %fpext(<2 x s64>)
+    ; CHECK-NEXT: %v1:_(<4 x f32>) = COPY $q0
+    ; CHECK-NEXT: %implicit:_(<4 x f32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: %C:_(i32) = G_CONSTANT i32 9
+    ; CHECK-NEXT: %ext:_(<4 x f32>) = G_EXT %v1, %implicit, %C(i32)
+    ; CHECK-NEXT: %unmerge:_(<2 x f32>) = G_EXTRACT_SUBVECTOR %ext(<4 x f32>), 0
+    ; CHECK-NEXT: %fpext:_(<2 x f64>) = G_FPEXT %unmerge(<2 x f32>)
+    ; CHECK-NEXT: $q0 = COPY %fpext(<2 x f64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %v1:_(<4 x s32>) = COPY $q0
-    %implicit:_(<4 x s32>) = G_IMPLICIT_DEF
-    %C:_(s32) = G_CONSTANT i32 9
-    %ext:_(<4 x s32>) = G_EXT %v1:_, %implicit:_, %C:_(s32)
-    %unmerge:_(<2 x s32>), %unused:_(<2 x s32>) = G_UNMERGE_VALUES %ext:_(<4 x s32>)
-    %fpext:_(<2 x s64>) = G_FPEXT %unmerge:_(<2 x s32>)
+    %v1:_(<4 x f32>) = COPY $q0
+    %implicit:_(<4 x f32>) = G_IMPLICIT_DEF
+    %C:_(i32) = G_CONSTANT i32 9
+    %ext:_(<4 x f32>) = G_EXT %v1:_, %implicit:_, %C:_(i32)
+    %unmerge:_(<2 x f32>), %unused:_(<2 x f32>) = G_UNMERGE_VALUES %ext:_(<4 x f32>)
+    %fpext:_(<2 x f64>) = G_FPEXT %unmerge:_(<2 x f32>)
     $q0 = COPY %fpext
     RET_ReallyLR implicit $q0
 ...

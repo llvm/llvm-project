@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx9-4-generic -verify -emit-llvm -o - %s
+// RUN: %clang_cc1 -triple amdgpu9.4-amd-amdhsa -verify -emit-llvm -o - %s
 
 typedef unsigned int uint;
 typedef float  float2   __attribute__((ext_vector_type(2)));

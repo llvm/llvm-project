@@ -5,8 +5,8 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-TF-LABEL: define void @alias_mask(
 ; CHECK-TF-SAME: ptr noalias [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-TF-NEXT:  [[ENTRY:.*:]]
-; CHECK-TF-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; CHECK-TF-NEXT:    [[C1:%.*]] = ptrtoaddr ptr [[C]] to i64
+; CHECK-TF-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; CHECK-TF-NEXT:    br label %[[VECTOR_CLAMPED_VF_CHECK:.*]]
 ; CHECK-TF:       [[VECTOR_CLAMPED_VF_CHECK]]:
 ; CHECK-TF-NEXT:    [[ALIAS_MASK:%.*]] = call <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1.i64(i64 [[B2]], i64 [[C1]], i64 1)
@@ -65,9 +65,9 @@ define void @alias_mask_multiple(ptr %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-TF-LABEL: define void @alias_mask_multiple(
 ; CHECK-TF-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-TF-NEXT:  [[ENTRY:.*:]]
-; CHECK-TF-NEXT:    [[A3:%.*]] = ptrtoaddr ptr [[A]] to i64
-; CHECK-TF-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; CHECK-TF-NEXT:    [[C1:%.*]] = ptrtoaddr ptr [[C]] to i64
+; CHECK-TF-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
+; CHECK-TF-NEXT:    [[A3:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; CHECK-TF-NEXT:    br label %[[VECTOR_CLAMPED_VF_CHECK:.*]]
 ; CHECK-TF:       [[VECTOR_CLAMPED_VF_CHECK]]:
 ; CHECK-TF-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1.i64(i64 [[A3]], i64 [[C1]], i64 1)
@@ -130,8 +130,8 @@ define i8 @alias_masking_exit_value(ptr %ptrA, ptr %ptrB) {
 ; CHECK-TF-LABEL: define i8 @alias_masking_exit_value(
 ; CHECK-TF-SAME: ptr [[PTRA:%.*]], ptr [[PTRB:%.*]]) #[[ATTR0]] {
 ; CHECK-TF-NEXT:  [[ENTRY:.*:]]
-; CHECK-TF-NEXT:    [[PTRA2:%.*]] = ptrtoaddr ptr [[PTRA]] to i64
 ; CHECK-TF-NEXT:    [[PTRB1:%.*]] = ptrtoaddr ptr [[PTRB]] to i64
+; CHECK-TF-NEXT:    [[PTRA2:%.*]] = ptrtoaddr ptr [[PTRA]] to i64
 ; CHECK-TF-NEXT:    br label %[[VECTOR_CLAMPED_VF_CHECK:.*]]
 ; CHECK-TF:       [[VECTOR_CLAMPED_VF_CHECK]]:
 ; CHECK-TF-NEXT:    [[ALIAS_MASK:%.*]] = call <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1.i64(i64 [[PTRA2]], i64 [[PTRB1]], i64 1)
@@ -197,8 +197,8 @@ define i32 @partial_reduce(ptr %a, ptr %b, i64 %n) {
 ; CHECK-TF-LABEL: define i32 @partial_reduce(
 ; CHECK-TF-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-TF-NEXT:  [[ENTRY:.*:]]
-; CHECK-TF-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; CHECK-TF-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
+; CHECK-TF-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; CHECK-TF-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK-TF:       [[VECTOR_PH]]:
 ; CHECK-TF-NEXT:    [[ALIAS_MASK:%.*]] = call <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1.i64(i64 [[A2]], i64 [[B1]], i64 1)
@@ -215,7 +215,7 @@ define i32 @partial_reduce(ptr %a, ptr %b, i64 %n) {
 ; CHECK-TF:       [[VECTOR_BODY]]:
 ; CHECK-TF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK1:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH1]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ insertelement (<vscale x 4 x i32> zeroinitializer, i32 32, i32 0), %[[VECTOR_PH1]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-TF-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ insertelement (<vscale x 4 x i32> zeroinitializer, i32 32, i64 0), %[[VECTOR_PH1]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-TF-NEXT:    [[CLAMPED_HEADER_MASK:%.*]] = and <vscale x 16 x i1> [[ACTIVE_LANE_MASK1]], [[ALIAS_MASK]]
 ; CHECK-TF-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-TF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP2]], <vscale x 16 x i1> [[CLAMPED_HEADER_MASK]], <vscale x 16 x i8> poison)
@@ -265,8 +265,8 @@ define void @alias_mask_reverse_iterate(ptr noalias %ptrA, ptr %ptrB, ptr %ptrC,
 ; CHECK-TF-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-TF:       [[VECTOR_MEMCHECK]]:
 ; CHECK-TF-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-TF-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
-; CHECK-TF-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP1]], 1
+; CHECK-TF-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
+; CHECK-TF-NEXT:    [[TMP5:%.*]] = add i64 [[TMP1]], -1
 ; CHECK-TF-NEXT:    [[TMP2:%.*]] = sub i64 [[PTRB1]], [[PTRC2]]
 ; CHECK-TF-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP2]], 1
 ; CHECK-TF-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP5]]

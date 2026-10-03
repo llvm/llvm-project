@@ -38,7 +38,7 @@ void f1() {
 
 #pragma omp target enter data map(to : p[0 : 0]) // Implies: attach(auto)
   // clang-format off
-  // DEBUG: omptarget --> Treating ATTACH(auto) as ATTACH(always) because LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS is true
+  // DEBUG: --> Treating ATTACH(auto) as ATTACH(always) because LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS is true
   // clang-format on
 
 #pragma omp target map(present, alloc : p) map(from : p0_deviceaddr)

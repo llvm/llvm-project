@@ -3,26 +3,31 @@ add_header_library(
   HDRS
     socket_test_support.h
   DEPENDS
+    libc.hdr.fcntl_macros
     libc.hdr.sys_socket_macros
     libc.hdr.types.size_t
     libc.hdr.types.socklen_t
     libc.hdr.types.struct_sockaddr_un
     libc.src.__support.common
     libc.src.__support.CPP.string_view
+    libc.src.fcntl.open
     libc.src.string.strncpy
     libc.src.string.strnlen
+    libc.src.unistd.chdir
+    libc.src.unistd.close
+    libc.src.unistd.fchdir
 )
 
 add_custom_target(libc_sys_socket_unittests)
 
-add_libc_unittest(
+add_libc_test(
   socket_test
   SUITE
     libc_sys_socket_unittests
   SRCS
     socket_test.cpp
   DEPENDS
-    libc.include.sys_socket
+    libc.hdr.sys_socket_macros
     libc.src.errno.errno
     libc.src.sys.socket.socket
     libc.src.unistd.close
@@ -30,7 +35,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   bind_test
   SUITE
     libc_sys_socket_unittests
@@ -57,7 +62,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   connect_accept_test
   SUITE
     libc_sys_socket_unittests
@@ -87,7 +92,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   listen_test
   SUITE
     libc_sys_socket_unittests
@@ -109,7 +114,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   socketopt_test
   SUITE
     libc_sys_socket_unittests
@@ -129,22 +134,22 @@ add_libc_unittest(
     libc.src.sys.socket.socket
     libc.src.sys.socket.socketpair
     libc.src.sys.socket.recv
-    libc.src.time.clock_gettime
     libc.src.unistd.close
     libc.src.unistd.pipe
     libc.src.__support.CPP.scope
+    libc.src.__support.time.clock_gettime
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   socketpair_test
   SUITE
     libc_sys_socket_unittests
   SRCS
     socketpair_test.cpp
   DEPENDS
-    libc.include.sys_socket
+    libc.hdr.sys_socket_macros
     libc.src.errno.errno
     libc.src.sys.socket.socketpair
     libc.src.unistd.close
@@ -152,7 +157,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   sockatmark_test
   SUITE
     libc_sys_socket_unittests
@@ -161,6 +166,7 @@ add_libc_unittest(
   DEPENDS
     libc.hdr.sys_socket_macros
     libc.src.errno.errno
+    libc.src.sys.socket.send
     libc.src.sys.socket.sockatmark
     libc.src.sys.socket.socketpair
     libc.src.unistd.close
@@ -170,7 +176,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   sockname_test
   SUITE
     libc_sys_socket_unittests
@@ -178,7 +184,6 @@ add_libc_unittest(
     sockname_test.cpp
   DEPENDS
     .socket_test_support
-    libc.include.sys_socket
     libc.hdr.sys_socket_macros
     libc.hdr.types.sa_family_t
     libc.hdr.types.socklen_t
@@ -198,7 +203,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   send_recv_test
   SUITE
     libc_sys_socket_unittests
@@ -216,14 +221,14 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   sendto_recvfrom_test
   SUITE
     libc_sys_socket_unittests
   SRCS
     sendto_recvfrom_test.cpp
   DEPENDS
-    libc.include.sys_socket
+    libc.hdr.sys_socket_macros
     libc.src.errno.errno
     libc.src.sys.socket.socketpair
     libc.src.sys.socket.sendto
@@ -234,7 +239,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   sendrecvmmsg_test
   SUITE
     libc_sys_socket_unittests
@@ -256,7 +261,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   sendmsg_recvmsg_test
   SUITE
     libc_sys_socket_unittests
@@ -280,7 +285,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   shutdown_test
   SUITE
     libc_sys_socket_unittests
@@ -300,7 +305,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   sockaddr_storage_test
   SUITE
     libc_sys_socket_unittests
