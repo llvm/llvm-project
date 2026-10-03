@@ -6380,7 +6380,7 @@ def CIR_VecSplatOp : CIR_Op<"vec.splat", [
 //===----------------------------------------------------------------------===//
 
 def CIR_MatrixColumnMajorLoadOp : CIR_Op<"matrix.column_major_load", [
-  Pure,
+  DeclareOpInterfaceMethods<PromotableMemOpInterface>,
 ]> {
   let summary = "Matrix column major load";
   let description = [{
@@ -6408,7 +6408,7 @@ def CIR_MatrixColumnMajorLoadOp : CIR_Op<"matrix.column_major_load", [
   }];
 
   let arguments = (ins
-    CIR_PointerType:$value,
+    Arg<CIR_PointerType, "the address to store the value", [MemRead]>:$value,
     CIR_IntType:$stride,
     UnitAttr:$is_volatile
   );
