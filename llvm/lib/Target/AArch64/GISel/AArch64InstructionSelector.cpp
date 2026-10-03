@@ -3667,11 +3667,13 @@ bool AArch64InstructionSelector::selectMOPS(MachineInstr &GI,
   Register DefSize = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
   if (IsSet) {
     MIB.buildInstr(Mopcode, {DefDstPtr, DefSize},
-                   {DstPtrCopy, SizeCopy, SrcValCopy});
+                   {DstPtrCopy, SizeCopy, SrcValCopy})
+        .setOperandDead(5); // implicit-def $nzcv
   } else {
     Register DefSrcPtr = MRI.createVirtualRegister(&SrcValRegClass);
     MIB.buildInstr(Mopcode, {DefDstPtr, DefSrcPtr, DefSize},
-                   {DstPtrCopy, SrcValCopy, SizeCopy});
+                   {DstPtrCopy, SrcValCopy, SizeCopy})
+        .setOperandDead(6); // implicit-def $nzcv
   }
 
   GI.eraseFromParent();
@@ -6470,7 +6472,7 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
              Ty == LLT::fixed_vector(2, P0) || Ty == S64 || Ty == P0)
       Opc = AArch64::LD2i64;
     else
-      llvm_unreachable("Unexpected type for st2lane!");
+      llvm_unreachable("Unexpected type for ld2lane!");
     if (!selectVectorLoadLaneIntrinsic(Opc, 2, I))
       return false;
     break;
@@ -6536,7 +6538,7 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
              Ty == LLT::fixed_vector(2, P0) || Ty == S64 || Ty == P0)
       Opc = AArch64::LD3i64;
     else
-      llvm_unreachable("Unexpected type for st3lane!");
+      llvm_unreachable("Unexpected type for ld3lane!");
     if (!selectVectorLoadLaneIntrinsic(Opc, 3, I))
       return false;
     break;
@@ -6602,7 +6604,7 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
              Ty == LLT::fixed_vector(2, P0) || Ty == S64 || Ty == P0)
       Opc = AArch64::LD4i64;
     else
-      llvm_unreachable("Unexpected type for st4lane!");
+      llvm_unreachable("Unexpected type for ld4lane!");
     if (!selectVectorLoadLaneIntrinsic(Opc, 4, I))
       return false;
     break;
@@ -6856,6 +6858,7 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
     auto Memset = MIB.buildInstr(AArch64::MOPSMemorySetTaggingPseudo,
                                  {DstDef, SizeDef}, {DstUse, SizeUse, ValUse});
     Memset.cloneMemRefs(I);
+    Memset.setOperandDead(5); // implicit-def $nzcv
     constrainSelectedInstRegOperands(*Memset, TII, TRI, RBI);
     break;
   }

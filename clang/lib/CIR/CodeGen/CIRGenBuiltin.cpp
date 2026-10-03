@@ -1132,13 +1132,19 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
 static mlir::Type
 decodeFixedType(CIRGenFunction &cgf,
                 ArrayRef<llvm::Intrinsic::IITDescriptor> &infos,
-                mlir::MLIRContext *context) {
+                ArrayRef<mlir::Type> overloadTys, mlir::MLIRContext *context) {
   using namespace llvm::Intrinsic;
 
   IITDescriptor descriptor = infos.front();
   infos = infos.slice(1);
 
   switch (descriptor.Kind) {
+  case IITDescriptor::Overloaded:
+  case IITDescriptor::Match:
+    if (descriptor.getOverloadIndex() < overloadTys.size())
+      return overloadTys[descriptor.getOverloadIndex()];
+    cgf.cgm.errorNYI("Overloaded intrinsic type without overload types");
+    return cir::VoidType::get(context);
   case IITDescriptor::Void:
     return cir::VoidType::get(context);
   case IITDescriptor::Half:
@@ -1157,7 +1163,7 @@ decodeFixedType(CIRGenFunction &cgf,
     return cir::IntType::get(context, descriptor.IntegerWidth,
                              /*isSigned=*/true);
   case IITDescriptor::Vector: {
-    mlir::Type elementType = decodeFixedType(cgf, infos, context);
+    mlir::Type elementType = decodeFixedType(cgf, infos, overloadTys, context);
     unsigned numElements = descriptor.VectorWidth.getFixedValue();
     return cir::VectorType::get(elementType, numElements);
   }
@@ -1227,19 +1233,20 @@ static mlir::Value getCorrectedPtr(mlir::Value argValue, mlir::Type expectedTy,
   return builder.createBitcast(argValue, expectedTy);
 }
 
-static cir::FuncType getIntrinsicType(CIRGenFunction &cgf,
-                                      mlir::MLIRContext *context,
-                                      llvm::Intrinsic::ID id) {
+cir::FuncType
+CIRGenFunction::getIntrinsicType(llvm::Intrinsic::ID id,
+                                 ArrayRef<mlir::Type> overloadTys) {
   using namespace llvm::Intrinsic;
 
+  mlir::MLIRContext *context = &getMLIRContext();
   SmallVector<IITDescriptor, 8> table;
   auto [tableRef, _, isVarArg] = getIntrinsicInfoTableEntries(id, table);
 
-  mlir::Type resultTy = decodeFixedType(cgf, tableRef, context);
+  mlir::Type resultTy = decodeFixedType(*this, tableRef, overloadTys, context);
 
   SmallVector<mlir::Type, 8> argTypes;
   while (!tableRef.empty())
-    argTypes.push_back(decodeFixedType(cgf, tableRef, context));
+    argTypes.push_back(decodeFixedType(*this, tableRef, overloadTys, context));
 
   // CIR convention: no explicit void return type
   if (isa<cir::VoidType>(resultTy))
@@ -1811,8 +1818,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return RValue::get(nullptr);
   }
   case Builtin::BI__builtin_coro_noop:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_noop NYI");
-    return getUndefRValue(e->getType());
+    return RValue::get(emitCoroNoopBuiltinCall(e).getResult());
   case Builtin::BI__builtin_coro_destroy: {
     emitCoroDestroyBuiltinCall(e);
     return RValue::get(nullptr);
@@ -2430,6 +2436,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value len = emitScalarExpr(e->getArg(2));
     mlir::Value res = cir::MemChrOp::create(builder, getLoc(e->getExprLoc()),
                                             src, pattern, len);
+    // builtin_char_memchr needs its type converted to 'char', but MemChrOp is a
+    // 'void' result type.
+    res = builder.createBitcast(res, convertType(e->getType()));
     return RValue::get(res);
   }
   case Builtin::BImemcpy:
@@ -3173,6 +3182,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       llvm::Triple::getArchTypePrefix(getTarget().getTriple().getArch());
   if (!prefix.empty()) {
     intrinsicID = Intrinsic::getIntrinsicForClangBuiltin(prefix, name);
+    if (intrinsicID == Intrinsic::not_intrinsic && prefix == "spv" &&
+        getTarget().getTriple().getOS() == llvm::Triple::OSType::AMDHSA)
+      intrinsicID = Intrinsic::getIntrinsicForClangBuiltin("amdgcn", name);
     // NOTE we don't need to perform a compatibility flag check here since the
     // intrinsics are declared in Builtins*.def via LANGBUILTIN which filter the
     // MS builtins via ALL_MS_LANGUAGES and are filtered earlier.
@@ -3193,8 +3205,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     assert(name.starts_with("llvm.") && "expected llvm. prefix");
     name = name.drop_front(/*strlen("llvm.")=*/5);
 
-    cir::FuncType intrinsicType =
-        getIntrinsicType(*this, &getMLIRContext(), intrinsicID);
+    cir::FuncType intrinsicType = getIntrinsicType(intrinsicID);
 
     SmallVector<mlir::Value> args;
     const FunctionDecl *fd = e->getDirectCallee();
@@ -3361,6 +3372,11 @@ emitTargetArchBuiltinExpr(CIRGenFunction *cgf, unsigned builtinID,
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
     return cgf->emitRISCVBuiltinExpr(builtinID, e);
+  case llvm::Triple::spirv32:
+  case llvm::Triple::spirv64:
+    if (cgf->getTarget().getTriple().getOS() == llvm::Triple::OSType::AMDHSA)
+      return cgf->emitAMDGPUBuiltinExpr(builtinID, e);
+    return std::nullopt;
   default:
     return std::nullopt;
   }
