@@ -1092,6 +1092,18 @@ TEST_F(OpenACCUtilsLoopTest, CalculateTripCountNegativeStep) {
   EXPECT_EQ(getConstantIndex(tripCount), 10);
 }
 
+TEST_F(OpenACCUtilsLoopTest,
+       CalculateTripCountNegativeStepExclusiveUpperBound) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  // 10, 7 and 4 are iterated; the exclusive bound 1 is not.
+  Value tripCount = acc::calculateTripCount(
+      b, loc, createIndexConstant(10), createIndexConstant(1),
+      createIndexConstant(-3), /*inclusiveUpperbound=*/false);
+
+  EXPECT_EQ(getConstantIndex(tripCount), 3);
+}
+
 TEST_F(OpenACCUtilsLoopTest, CalculateTripCountCastsOperandsToIndex) {
   SmallVector<Type> argTypes(3, b.getI32Type());
   auto [module, funcOp] = createModuleWithFuncArgs(argTypes);
