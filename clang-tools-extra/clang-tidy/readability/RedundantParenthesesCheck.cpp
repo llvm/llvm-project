@@ -93,6 +93,8 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
 
 void RedundantParenthesesCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *PE = Result.Nodes.getNodeAs<ParenExpr>("dup");
+  if (PE->getLParen() == PE->getRParen())
+    return;
   diag(PE->getBeginLoc(), "redundant parentheses around expression")
       << createSpacedRemoval(PE->getLParen(), *Result.SourceManager,
                              getLangOpts())
