@@ -8956,6 +8956,109 @@ static bool mergeNestedCondBranch(CondBrInst *BI, DomTreeUpdater *DTU) {
   return true;
 }
 
+/// Hoist a branch condition shared by both successors of a conditional branch
+/// when they also share one destination:
+///
+///            bb0                                bb0
+///          br %c1                             br %c2
+///          /     \                           /      \
+///         T       F                         T        F
+///        /         \                       /          \
+///      bb1         bb2          ==>       |           bb1
+///    br %c2       br %c2                  |         br %c1
+///    /    \       /    \                  |         /     \
+///   T      F     T      F                 |        T       F
+///   |      |     |      |                 |        |       |
+///   |     bb4    |     bb5                |       bb4     bb5
+///    \          /                         |
+///     `-> bb3 <-'                        bb3
+///
+/// bb1 and bb2 contain only their branch and have bb0 as their only
+/// predecessor. On every path %c2 was already evaluated, so testing it first is
+/// safe; bb3 is now reached with one conditional branch instead of two.
+static bool hoistSharedCondFromSuccessors(CondBrInst *BI, DomTreeUpdater *DTU) {
+  BasicBlock *BB = BI->getParent();
+  BasicBlock *BB1 = BI->getSuccessor(0);
+  BasicBlock *BB2 = BI->getSuccessor(1);
+  if (BB1 == BB2)
+    return false;
+  auto GetOnlyBranch = [BB](BasicBlock *Succ) -> CondBrInst * {
+    if (Succ->getSinglePredecessor() != BB ||
+        &Succ->front() != Succ->getTerminator())
+      return nullptr;
+    return dyn_cast<CondBrInst>(Succ->getTerminator());
+  };
+  CondBrInst *BB1BI = GetOnlyBranch(BB1);
+  CondBrInst *BB2BI = GetOnlyBranch(BB2);
+  if (!BB1BI || !BB2BI || BB1BI->getCondition() != BB2BI->getCondition())
+    return false;
+
+  // Find the shared destination and the side it is on.
+  unsigned Idx;
+  if (BB1BI->getSuccessor(0) == BB2BI->getSuccessor(0))
+    Idx = 0;
+  else if (BB1BI->getSuccessor(1) == BB2BI->getSuccessor(1))
+    Idx = 1;
+  else
+    return false;
+  BasicBlock *BB3 = BB1BI->getSuccessor(Idx);
+  BasicBlock *BB4 = BB1BI->getSuccessor(1 - Idx);
+  BasicBlock *BB5 = BB2BI->getSuccessor(1 - Idx);
+  // Identical terminators and edges back to BB are left to other folds.
+  if (BB4 == BB5 || BB3 == BB4 || BB3 == BB5 || BB3 == BB || BB4 == BB ||
+      BB5 == BB)
+    return false;
+  // PHIs in BB3 must receive the same value from BB1 and BB2.
+  for (PHINode &PN : BB3->phis())
+    if (PN.getIncomingValueForBlock(BB1) != PN.getIncomingValueForBlock(BB2))
+      return false;
+
+  // BB3 is now reached from BB, and BB5 from BB1.
+  for (PHINode &PN : BB3->phis())
+    PN.setIncomingBlock(PN.getBasicBlockIndex(BB1), BB);
+  for (PHINode &PN : BB5->phis())
+    PN.addIncoming(PN.getIncomingValueForBlock(BB2), BB1);
+
+  uint64_t BBW[2], BB1W[2], BB2W[2];
+  bool HasWeight = false;
+  auto GetWeights = [&HasWeight](CondBrInst *Br, uint64_t *W) {
+    if (extractBranchWeights(*Br, W[0], W[1]))
+      HasWeight = true;
+    else
+      W[0] = W[1] = 1;
+  };
+  GetWeights(BI, BBW);
+  GetWeights(BB1BI, BB1W);
+  GetWeights(BB2BI, BB2W);
+
+  Value *Cond1 = BI->getCondition();
+  BI->setCondition(BB1BI->getCondition());
+  BI->setSuccessor(Idx, BB3);
+  BI->setSuccessor(1 - Idx, BB1);
+  BB1BI->setCondition(Cond1);
+  BB1BI->setSuccessor(0, BB4);
+  BB1BI->setSuccessor(1, BB5);
+
+  if (HasWeight) {
+    uint64_t Weights[2];
+    Weights[Idx] = BBW[0] * BB1W[Idx] + BBW[1] * BB2W[Idx];
+    Weights[1 - Idx] = BBW[0] * BB1W[1 - Idx] + BBW[1] * BB2W[1 - Idx];
+    setFittedBranchWeights(*BI, Weights, /*IsExpected=*/false,
+                           /*ElideAllZero=*/true);
+    uint64_t BB1Weights[2] = {BBW[0] * BB1W[1 - Idx], BBW[1] * BB2W[1 - Idx]};
+    setFittedBranchWeights(*BB1BI, BB1Weights, /*IsExpected=*/false,
+                           /*ElideAllZero=*/true);
+  }
+
+  // BB2 is now unreachable and is removed by the caller.
+  if (DTU)
+    DTU->applyUpdates({{DominatorTree::Delete, BB, BB2},
+                       {DominatorTree::Insert, BB, BB3},
+                       {DominatorTree::Delete, BB1, BB3},
+                       {DominatorTree::Insert, BB1, BB5}});
+  return true;
+}
+
 bool SimplifyCFGOpt::simplifyCondBranch(CondBrInst *BI, IRBuilder<> &Builder) {
   assert(
       !isa<ConstantInt>(BI->getCondition()) &&
@@ -9093,6 +9196,9 @@ bool SimplifyCFGOpt::simplifyCondBranch(CondBrInst *BI, IRBuilder<> &Builder) {
 
   // Look for nested conditional branches.
   if (mergeNestedCondBranch(BI, DTU))
+    return requestResimplify();
+
+  if (hoistSharedCondFromSuccessors(BI, DTU))
     return requestResimplify();
 
   return false;

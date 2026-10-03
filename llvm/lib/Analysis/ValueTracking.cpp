@@ -10296,6 +10296,27 @@ std::optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
   return std::nullopt;
 }
 
+// Returns a pair (Condition, ConditionIsTrue), where Condition is the
+// condition of PredBB's conditional branch and ConditionIsTrue says whether it
+// holds on the PredBB->SuccBB edge, or nullptr if there is no such branch.
+static std::pair<Value *, bool> getEdgeCondition(const BasicBlock *PredBB,
+                                                 const BasicBlock *SuccBB) {
+  // We need a conditional branch in the predecessor.
+  Value *PredCond;
+  BasicBlock *TrueBB, *FalseBB;
+  if (!match(PredBB->getTerminator(), m_Br(m_Value(PredCond), TrueBB, FalseBB)))
+    return {nullptr, false};
+
+  // The branch should get simplified. Don't bother simplifying this condition.
+  if (TrueBB == FalseBB)
+    return {nullptr, false};
+
+  assert((TrueBB == SuccBB || FalseBB == SuccBB) &&
+         "Predecessor block does not point to successor?");
+
+  return {PredCond, TrueBB == SuccBB};
+}
+
 // Returns a pair (Condition, ConditionIsTrue), where Condition is a branch
 // condition dominating ContextI or nullptr, if no condition is found.
 static std::pair<Value *, bool>
@@ -10310,21 +10331,7 @@ getDomPredecessorCondition(const Instruction *ContextI) {
   if (!PredBB)
     return {nullptr, false};
 
-  // We need a conditional branch in the predecessor.
-  Value *PredCond;
-  BasicBlock *TrueBB, *FalseBB;
-  if (!match(PredBB->getTerminator(), m_Br(m_Value(PredCond), TrueBB, FalseBB)))
-    return {nullptr, false};
-
-  // The branch should get simplified. Don't bother simplifying this condition.
-  if (TrueBB == FalseBB)
-    return {nullptr, false};
-
-  assert((TrueBB == ContextBB || FalseBB == ContextBB) &&
-         "Predecessor block does not point to successor?");
-
-  // Is this condition implied by the predecessor condition?
-  return {PredCond, TrueBB == ContextBB};
+  return getEdgeCondition(PredBB, ContextBB);
 }
 
 std::optional<bool> llvm::isImpliedByDomCondition(const Value *Cond,
@@ -10347,6 +10354,15 @@ std::optional<bool> llvm::isImpliedByDomCondition(CmpPredicate Pred,
     return isImpliedCondition(PredCond.first, Pred, LHS, RHS, DL,
                               PredCond.second);
   return std::nullopt;
+}
+
+std::optional<bool> llvm::isImpliedByEdgeCondition(
+    const BasicBlock *PredBB, const BasicBlock *SuccBB, CmpPredicate Pred,
+    const Value *LHS, const Value *RHS, const DataLayout &DL) {
+  auto [Cond, CondIsTrue] = getEdgeCondition(PredBB, SuccBB);
+  if (!Cond)
+    return std::nullopt;
+  return isImpliedCondition(Cond, Pred, LHS, RHS, DL, CondIsTrue);
 }
 
 static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
