@@ -4208,6 +4208,23 @@ the configuration (without a prefix: `Auto`).
   #include <vector> // FOOBAR pragma: keep
   ```
 
+(compactcaselabels)=
+
+**CompactCaseLabels** (`Boolean`) {versionbadge}`clang-format 1` {ref}`¶ <CompactCaseLabels>`
+
+: Keep the break keyword and the following case label on the same line.
+
+  ```c++
+  false:                         true:
+  switch (n) {                 switch (n) {
+    case 1:                      case 1:
+      foo();                       foo();
+      break;                     break; case 2:
+    case 2:                        bar();
+      bar();                   }
+  }
+  ```
+
 (compactnamespaces)=
 
 **CompactNamespaces** (`Boolean`) {versionbadge}`clang-format 5` {ref}`¶ <CompactNamespaces>`
@@ -5441,23 +5458,6 @@ the configuration (without a prefix: `Auto`).
   replaced with a single newline and form feed followed by the remaining
   newlines. (See
   www.gnu.org/prep/standards/html_node/Formatting.html#:~:text=formfeed.)
-
-(kwbreakbeforecaselabel)=
-
-**KwBreakBeforeCaseLabel** (`Boolean`) {ref}`¶ <KwBreakBeforeCaseLabel>`
-
-: Keep the break keyword and the following case label on the same line.
-
-  ```c++
-  false:                         true:
-  switch (foo) {                 switch (foo) {
-    case 1:                        case 1:
-      bar();                        bar();
-      break;                        break; case 2:
-    case 2:                         bar();
-      bar();                       }
-  }
-  ```
 
 (lambdabodyindentation)=
 
