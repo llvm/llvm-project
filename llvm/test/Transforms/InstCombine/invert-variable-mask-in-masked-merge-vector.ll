@@ -8,9 +8,10 @@
 
 define <2 x i4> @vector (<2 x i4> %x, <2 x i4> %y, <2 x i4> %m) {
 ; CHECK-LABEL: @vector(
-; CHECK-NEXT:    [[N0:%.*]] = xor <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = freeze <2 x i4> [[X1:%.*]]
+; CHECK-NEXT:    [[N0:%.*]] = xor <2 x i4> [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[N0]], [[M:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor <2 x i4> [[TMP1]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i4> [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %im = xor <2 x i4> %m, <i4 -1, i4 -1>
@@ -22,9 +23,10 @@ define <2 x i4> @vector (<2 x i4> %x, <2 x i4> %y, <2 x i4> %m) {
 
 define <3 x i4> @vector_poison (<3 x i4> %x, <3 x i4> %y, <3 x i4> %m) {
 ; CHECK-LABEL: @vector_poison(
-; CHECK-NEXT:    [[N0:%.*]] = xor <3 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = freeze <3 x i4> [[X1:%.*]]
+; CHECK-NEXT:    [[N0:%.*]] = xor <3 x i4> [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <3 x i4> [[N0]], [[M:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor <3 x i4> [[TMP1]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = xor <3 x i4> [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret <3 x i4> [[R]]
 ;
   %im = xor <3 x i4> %m, <i4 -1, i4 poison, i4 -1>
@@ -52,7 +54,8 @@ define <2 x i4> @in_constant_varx_mone_invmask(<2 x i4> %x, <2 x i4> %mask) {
 
 define <2 x i4> @in_constant_varx_6_invmask(<2 x i4> %x, <2 x i4> %mask) {
 ; CHECK-LABEL: @in_constant_varx_6_invmask(
-; CHECK-NEXT:    [[N0:%.*]] = xor <2 x i4> [[X:%.*]], splat (i4 6)
+; CHECK-NEXT:    [[X:%.*]] = freeze <2 x i4> [[X1:%.*]]
+; CHECK-NEXT:    [[N0:%.*]] = xor <2 x i4> [[X]], splat (i4 6)
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[N0]], [[MASK:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = xor <2 x i4> [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
@@ -66,7 +69,8 @@ define <2 x i4> @in_constant_varx_6_invmask(<2 x i4> %x, <2 x i4> %mask) {
 
 define <2 x i4> @in_constant_varx_6_invmask_nonsplat(<2 x i4> %x, <2 x i4> %mask) {
 ; CHECK-LABEL: @in_constant_varx_6_invmask_nonsplat(
-; CHECK-NEXT:    [[N0:%.*]] = xor <2 x i4> [[X:%.*]], <i4 6, i4 7>
+; CHECK-NEXT:    [[X:%.*]] = freeze <2 x i4> [[X1:%.*]]
+; CHECK-NEXT:    [[N0:%.*]] = xor <2 x i4> [[X]], <i4 6, i4 7>
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[N0]], [[MASK:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = xor <2 x i4> [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
@@ -80,7 +84,8 @@ define <2 x i4> @in_constant_varx_6_invmask_nonsplat(<2 x i4> %x, <2 x i4> %mask
 
 define <3 x i4> @in_constant_varx_6_invmask_poison(<3 x i4> %x, <3 x i4> %mask) {
 ; CHECK-LABEL: @in_constant_varx_6_invmask_poison(
-; CHECK-NEXT:    [[N0:%.*]] = xor <3 x i4> [[X:%.*]], <i4 6, i4 poison, i4 7>
+; CHECK-NEXT:    [[X:%.*]] = freeze <3 x i4> [[X1:%.*]]
+; CHECK-NEXT:    [[N0:%.*]] = xor <3 x i4> [[X]], <i4 6, i4 poison, i4 7>
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <3 x i4> [[N0]], [[MASK:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = xor <3 x i4> [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret <3 x i4> [[R]]
@@ -158,7 +163,8 @@ declare <2 x i4> @gen4()
 
 define <2 x i4> @c_1_0_0 (<2 x i4> %x, <2 x i4> %y, <2 x i4> %m) {
 ; CHECK-LABEL: @c_1_0_0(
-; CHECK-NEXT:    [[N0:%.*]] = xor <2 x i4> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = freeze <2 x i4> [[X1:%.*]]
+; CHECK-NEXT:    [[N0:%.*]] = xor <2 x i4> [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[N0]], [[M:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = xor <2 x i4> [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
@@ -172,7 +178,8 @@ define <2 x i4> @c_1_0_0 (<2 x i4> %x, <2 x i4> %y, <2 x i4> %m) {
 
 define <2 x i4> @c_0_1_0 (<2 x i4> %x, <2 x i4> %y, <2 x i4> %m) {
 ; CHECK-LABEL: @c_0_1_0(
-; CHECK-NEXT:    [[N0:%.*]] = xor <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = freeze <2 x i4> [[Y1:%.*]]
+; CHECK-NEXT:    [[N0:%.*]] = xor <2 x i4> [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[N0]], [[M:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = xor <2 x i4> [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
@@ -188,9 +195,10 @@ define <2 x i4> @c_0_0_1 (<2 x i4> %m) {
 ; CHECK-LABEL: @c_0_0_1(
 ; CHECK-NEXT:    [[X:%.*]] = call <2 x i4> @gen4()
 ; CHECK-NEXT:    [[Y:%.*]] = call <2 x i4> @gen4()
-; CHECK-NEXT:    [[N0:%.*]] = xor <2 x i4> [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze <2 x i4> [[X]]
+; CHECK-NEXT:    [[N0:%.*]] = xor <2 x i4> [[Y]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[N0]], [[M:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor <2 x i4> [[TMP1]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i4> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %im = xor <2 x i4> %m, <i4 -1, i4 -1>
@@ -204,9 +212,10 @@ define <2 x i4> @c_0_0_1 (<2 x i4> %m) {
 
 define <2 x i4> @c_1_1_0 (<2 x i4> %x, <2 x i4> %y, <2 x i4> %m) {
 ; CHECK-LABEL: @c_1_1_0(
-; CHECK-NEXT:    [[N0:%.*]] = xor <2 x i4> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = freeze <2 x i4> [[Y1:%.*]]
+; CHECK-NEXT:    [[N0:%.*]] = xor <2 x i4> [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[N0]], [[M:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor <2 x i4> [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i4> [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %im = xor <2 x i4> %m, <i4 -1, i4 -1>
@@ -219,7 +228,8 @@ define <2 x i4> @c_1_1_0 (<2 x i4> %x, <2 x i4> %y, <2 x i4> %m) {
 define <2 x i4> @c_1_0_1 (<2 x i4> %x, <2 x i4> %m) {
 ; CHECK-LABEL: @c_1_0_1(
 ; CHECK-NEXT:    [[Y:%.*]] = call <2 x i4> @gen4()
-; CHECK-NEXT:    [[N0:%.*]] = xor <2 x i4> [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = freeze <2 x i4> [[X1:%.*]]
+; CHECK-NEXT:    [[N0:%.*]] = xor <2 x i4> [[Y]], [[X]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[N0]], [[M:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = xor <2 x i4> [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
@@ -235,7 +245,8 @@ define <2 x i4> @c_1_0_1 (<2 x i4> %x, <2 x i4> %m) {
 define <2 x i4> @c_0_1_1 (<2 x i4> %y, <2 x i4> %m) {
 ; CHECK-LABEL: @c_0_1_1(
 ; CHECK-NEXT:    [[X:%.*]] = call <2 x i4> @gen4()
-; CHECK-NEXT:    [[N0:%.*]] = xor <2 x i4> [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = freeze <2 x i4> [[Y1:%.*]]
+; CHECK-NEXT:    [[N0:%.*]] = xor <2 x i4> [[X]], [[Y]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[N0]], [[M:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = xor <2 x i4> [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
@@ -252,9 +263,10 @@ define <2 x i4> @c_1_1_1 (<2 x i4> %m) {
 ; CHECK-LABEL: @c_1_1_1(
 ; CHECK-NEXT:    [[X:%.*]] = call <2 x i4> @gen4()
 ; CHECK-NEXT:    [[Y:%.*]] = call <2 x i4> @gen4()
-; CHECK-NEXT:    [[N0:%.*]] = xor <2 x i4> [[Y]], [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze <2 x i4> [[Y]]
+; CHECK-NEXT:    [[N0:%.*]] = xor <2 x i4> [[X]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[N0]], [[M:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor <2 x i4> [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i4> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %im = xor <2 x i4> %m, <i4 -1, i4 -1>
@@ -268,7 +280,8 @@ define <2 x i4> @c_1_1_1 (<2 x i4> %m) {
 
 define <2 x i4> @commutativity_constant_varx_6_invmask(<2 x i4> %x, <2 x i4> %mask) {
 ; CHECK-LABEL: @commutativity_constant_varx_6_invmask(
-; CHECK-NEXT:    [[N0:%.*]] = xor <2 x i4> [[X:%.*]], splat (i4 6)
+; CHECK-NEXT:    [[X:%.*]] = freeze <2 x i4> [[X1:%.*]]
+; CHECK-NEXT:    [[N0:%.*]] = xor <2 x i4> [[X]], splat (i4 6)
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[N0]], [[MASK:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = xor <2 x i4> [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
@@ -304,8 +317,10 @@ declare void @use4(<2 x i4>)
 
 define <2 x i4> @n_oneuse_D_is_ok (<2 x i4> %x, <2 x i4> %y, <2 x i4> %m) {
 ; CHECK-LABEL: @n_oneuse_D_is_ok(
-; CHECK-NEXT:    [[N0:%.*]] = xor <2 x i4> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[N0]], [[M:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = freeze <2 x i4> [[X1:%.*]]
+; CHECK-NEXT:    [[N0:%.*]] = xor <2 x i4> [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i4> [[Y]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[TMP2]], [[M:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = xor <2 x i4> [[TMP1]], [[X]]
 ; CHECK-NEXT:    call void @use4(<2 x i4> [[N0]])
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
