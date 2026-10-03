@@ -1310,7 +1310,8 @@ bool IsTransparentInterveningCode(const parser::ExecutionPartConstruct &x) {
 }
 
 template <typename T,
-    typename = std::enable_if_t<std::is_arithmetic_v<llvm::remove_cvref_t<T>>>>
+    typename = std::enable_if_t<
+        common::numeric_limits<llvm::remove_cvref_t<T>>::is_specialized>>
 WithReason<T> operator+(const WithReason<T> &a, const WithReason<T> &b) {
   if (a.value && b.value) {
     return WithReason<T>{
@@ -1320,7 +1321,8 @@ WithReason<T> operator+(const WithReason<T> &a, const WithReason<T> &b) {
 }
 
 template <typename T,
-    typename = std::enable_if_t<std::is_arithmetic_v<llvm::remove_cvref_t<T>>>>
+    typename = std::enable_if_t<
+        common::numeric_limits<llvm::remove_cvref_t<T>>::is_specialized>>
 WithReason<T> operator+(T a, const WithReason<T> &b) {
   return WithReason<T>{a, Reason()} + b;
 }

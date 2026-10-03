@@ -11,7 +11,6 @@
 #include "gtest/gtest.h"
 #include "flang-rt/runtime/type-code.h"
 #include "flang/Common/float128.h"
-#include "flang/Common/uint128.h"
 #include <vector>
 
 using namespace Fortran::runtime;
@@ -177,7 +176,7 @@ static void testBesselYnX0(
     EXPECT_EQ(
         (*result.ZeroBasedIndexedElement<CppTypeFor<TypeCategory::Real, KIND>>(
             j)),
-        (-Fortran::common::numeric_limits<
+        (-std::numeric_limits<
             CppTypeFor<TypeCategory::Real, KIND>>::infinity()));
   }
 }
