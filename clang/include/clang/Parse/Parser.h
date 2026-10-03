@@ -5294,12 +5294,12 @@ private:
   }
 
   struct ParsedSemantic {
-    StringRef Name = "";
+    IdentifierInfo *Name = nullptr;
     unsigned Index = 0;
     bool Explicit = false;
   };
 
-  ParsedSemantic ParseHLSLSemantic();
+  ParsedSemantic ParseHLSLSemantic() const;
 
   void ParseHLSLAnnotations(ParsedAttributes &Attrs,
                             SourceLocation *EndLoc = nullptr,
