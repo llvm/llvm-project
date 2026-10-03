@@ -2506,10 +2506,10 @@ def : AMDGPUMnemonicAlias<"v_perm_pk4_b8_u8", "v_perm_b32"> {
   let AssemblerPredicate = isGFX13Plus;
 }
 
-defm V_CVT_PK_FP8_F32         : VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12_not_gfx1250_gfx13<0x369, 0x37a, "v_cvt_pk_fp8_f32">;
+defm V_CVT_PK_FP8_F32         : VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12_not_gfx13<0x369, 0x37a, "v_cvt_pk_fp8_f32">;
 defm V_CVT_PK_FP8_F32_gfx1250 : VOP3Only_Realtriple_t16_and_fake16_gfx1250<0x369, "v_cvt_pk_fp8_f32">;
 defm V_CVT_PK_BF8_F32         : VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12_gfx13<0x36a, 0x37b, "v_cvt_pk_bf8_f32">;
-defm V_CVT_SR_FP8_F32_gfx12   : VOP3_Realtriple_with_name_gfx11_gfx12_not_gfx1250_gfx13<0x36b, 0x337, "V_CVT_SR_FP8_F32_gfx12", "v_cvt_sr_fp8_f32">;
+defm V_CVT_SR_FP8_F32_gfx12   : VOP3_Realtriple_with_name_gfx11_gfx12_not_gfx13<0x36b, 0x337, "V_CVT_SR_FP8_F32_gfx12", "v_cvt_sr_fp8_f32">;
 defm V_CVT_SR_FP8_F32_gfx1250 : VOP3Only_Realtriple_with_name_gfx1250<0x36b, "V_CVT_SR_FP8_F32_gfx1250", "v_cvt_sr_fp8_f32">;
 defm V_CVT_SR_BF8_F32_gfx12   : VOP3_Realtriple_with_name_gfx11_gfx12_gfx13<0x36c, 0x338, "V_CVT_SR_BF8_F32_gfx12", "v_cvt_sr_bf8_f32">;
 
