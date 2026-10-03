@@ -440,13 +440,15 @@ static StringRef GetDeferKeywordSpelling(Sema &S, SourceLocation DeferLoc) {
 }
 
 // Diagnose if the given statement is a redundant _Defer statement.
-static void CheckRedundantDeferStmt(Sema &S, Stmt *Body) {
+static bool CheckRedundantDeferStmt(Sema &S, Stmt *Body) {
   Stmt *Inner = Body->stripLabelLikeStatements();
   if (isa<DeferStmt>(Inner)) {
     SourceLocation DeferLoc = Inner->getBeginLoc();
     S.Diag(DeferLoc, diag::warn_redundant_defer)
         << Inner->getSourceRange() << GetDeferKeywordSpelling(S, DeferLoc);
+    return true;
   }
+  return false;
 }
 
 sema::CompoundScopeInfo &Sema::getCurCompoundScope() const {
@@ -1007,58 +1009,6 @@ public:
 };
 }
 
-static void DiagnoseIfStmtRedundantDeferBody(Sema &S, SourceLocation IfLoc,
-                                             Stmt *thenStmt) {
-  DeferStmt *Defer = dyn_cast_or_null<DeferStmt>(thenStmt);
-  if (Defer)
-    CheckRedundantDeferStmt(S, Defer);
-  else {
-    // If the body is a CompoundStmt, CheckRedundantDeferStmt() has
-    // already been called by Sema::ActOnCompoundStmt; the only
-    // thing left to do here is to issue the fix-it hint below.
-    CompoundStmt *Body = dyn_cast_or_null<CompoundStmt>(thenStmt);
-    if (Body && Body->size() == 1)
-      Defer = dyn_cast_or_null<DeferStmt>(Body->body_back());
-
-    if (!Defer)
-      // All good; no redundant defer statement to check.
-      return;
-  }
-
-  // The following is responsible for preparing a fix-it hint to replace
-  // occurrances of `if (X) _Defer Y` with `_Defer if (X) Y` or similar.
-
-  SmallVector<FixItHint, 2> DeferBraceRemoval;
-  CompoundStmt *DeferBody = dyn_cast_or_null<CompoundStmt>(Defer->getBody());
-
-  // Remove surrounding `{}` from the defer statement body if it is not needed,
-  // for example: `if (X) _Defer { foo(); }` -> `_Defer if (X) foo();`
-  // This can also apply when the if statement body is already a CompoundStmt,
-  // meaning that the original `{}` around the defer substatement would be
-  // redundant after applying the fix-it.
-  if (DeferBody && (DeferBody->size() == 1 ||
-                    (isa<CompoundStmt>(thenStmt) && DeferBody->size() != 0))) {
-    DeferBraceRemoval.push_back(FixItHint::CreateRemoval(SourceRange(
-        DeferBody->getLBracLoc(),
-        DeferBody->body_front()->getBeginLoc().getLocWithOffset(-1))));
-
-    DeferBraceRemoval.push_back(FixItHint::CreateRemoval(
-        SourceRange(DeferBody->body_back()->getEndLoc().getLocWithOffset(2),
-                    DeferBody->getRBracLoc())));
-  }
-
-  SourceLocation DeferLoc = Defer->getBeginLoc();
-  StringRef DeferSpelling = GetDeferKeywordSpelling(S, DeferLoc);
-
-  S.Diag(DeferLoc, diag::note_redundant_defer_if)
-      << DeferSpelling
-      << FixItHint::CreateInsertion(IfLoc, std::string(DeferSpelling) + " ")
-      << FixItHint::CreateRemoval(SourceRange(
-             DeferLoc,
-             SourceLocation(DeferLoc.getLocWithOffset(DeferSpelling.size()))))
-      << DeferBraceRemoval;
-}
-
 StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc,
                              IfStatementKind StatementKind,
                              SourceLocation LParenLoc, Stmt *InitStmt,
@@ -1083,7 +1033,9 @@ StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc,
   if (!ConstevalOrNegatedConsteval && !elseStmt)
     DiagnoseEmptyStmtBody(RParenLoc, thenStmt, diag::warn_empty_if_body);
 
-  DiagnoseIfStmtRedundantDeferBody(*this, IfLoc, thenStmt);
+  if (CheckRedundantDeferStmt(*this, thenStmt))
+    Diag(thenStmt->getBeginLoc(), diag::note_redundant_defer_if)
+        << GetDeferKeywordSpelling(*this, thenStmt->getBeginLoc());
   if (elseStmt)
     CheckRedundantDeferStmt(*this, elseStmt);
 
