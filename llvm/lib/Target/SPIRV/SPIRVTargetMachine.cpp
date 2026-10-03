@@ -46,7 +46,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
-  initializeSPIRVModuleAnalysisPass(PR);
+  initializeSPIRVModuleAnalysisWrapperPassPass(PR);
   initializeSPIRVAsmPrinterPass(PR);
   initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PR);
   initializeSPIRVStructurizerPass(PR);
