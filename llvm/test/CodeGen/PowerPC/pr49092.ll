@@ -10,12 +10,18 @@ define dso_local half @test2(i64 %a, i64 %b) local_unnamed_addr #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    addi r3, r3, 11
+; CHECK-NEXT:    sth r3, -2(r1)
+; CHECK-NEXT:    lhz r3, -2(r1)
+; CHECK-NEXT:    mtfprwz f1, r3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test2:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    add r3, r4, r3
 ; CHECK-P9-NEXT:    addi r3, r3, 11
+; CHECK-P9-NEXT:    sth r3, -2(r1)
+; CHECK-P9-NEXT:    addi r3, r1, -2
+; CHECK-P9-NEXT:    lxsihzx f1, 0, r3
 ; CHECK-P9-NEXT:    blr
 entry:
   %add = add i64 %b, %a
