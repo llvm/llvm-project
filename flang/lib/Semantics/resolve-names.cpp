@@ -646,7 +646,8 @@ public:
   Symbol *FindInTypeOrParents(const Scope &, const parser::Name &);
   Symbol *FindInTypeOrParents(const parser::Name &);
   Symbol *FindInScopeOrBlockConstructs(const Scope &, SourceName);
-  Symbol *FindSeparateModuleProcedureInterface(const parser::Name &);
+  Symbol *FindSeparateModuleProcedureInterface(
+      const parser::Name &, bool emitError = true);
   void EraseSymbol(const parser::Name &);
   void EraseSymbol(const Symbol &symbol) { currScope().erase(symbol.name()); }
   // Make a new symbol with the name and attrs of an existing one
@@ -5598,6 +5599,11 @@ void SubprogramVisitor::Post(const parser::FunctionStmt &stmt) {
 Symbol &SubprogramVisitor::PostSubprogramStmt() {
   Symbol &symbol{*currScope().symbol()};
   SetExplicitAttrs(symbol, EndAttrs());
+  if (symbol.get<SubprogramDetails>().moduleInterface()) {
+    // An omitted MODULE prefix accepted as an extension still defines the
+    // separate module procedure declared by the interface body.
+    SetExplicitAttr(symbol, Attr::MODULE);
+  }
   if (symbol.attrs().test(Attr::MODULE)) {
     symbol.attrs().set(Attr::EXTERNAL, false);
     symbol.implicitAttrs().set(Attr::EXTERNAL, false);
@@ -5848,7 +5854,7 @@ void SubprogramVisitor::PostEntryStmt(const parser::EntryStmt &stmt) {
 }
 
 Symbol *ScopeHandler::FindSeparateModuleProcedureInterface(
-    const parser::Name &name) {
+    const parser::Name &name, bool emitError) {
   auto *symbol{FindSymbol(name)};
   if (symbol && symbol->has<SubprogramNameDetails>()) {
     const Scope *parent{nullptr};
@@ -5867,7 +5873,9 @@ Symbol *ScopeHandler::FindSeparateModuleProcedureInterface(
     symbol = const_cast<Symbol *>(defnIface);
   }
   if (!IsSeparateModuleProcedureInterface(symbol)) {
-    Say(name, "'%s' was not declared a separate module procedure"_err_en_US);
+    if (emitError) {
+      Say(name, "'%s' was not declared a separate module procedure"_err_en_US);
+    }
     symbol = nullptr;
   }
   return symbol;
@@ -5932,6 +5940,25 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
       } else {
         EraseSymbol(name);
       }
+    }
+  } else if (isValid && !inInterfaceBlock() && !InModuleFile() &&
+      currScope().IsSubmodule() &&
+      context().IsEnabled(common::LanguageFeature::ImplicitModulePrefix)) {
+    // Repair only definitions in the current source: a module file already
+    // records whether its producer treated the subprogram as MODULE.
+    if (Symbol *iface{
+            FindSeparateModuleProcedureInterface(name, /*emitError=*/false)};
+        iface && &iface->owner() != &currScope()) {
+      // Repairing a same-scope interface would also require replacing its
+      // existing symbol, as the explicit MODULE path above does. That case
+      // seems less likely than a missing prefix on an ancestor interface.
+      moduleInterface = iface;
+      context().messages().Warn(/*isInModuleFile=*/false,
+          context().languageFeatures(),
+          common::LanguageFeature::ImplicitModulePrefix, name.source,
+          "Assuming a missing MODULE prefix on '%s' to repair the separate module procedure interface '%s:%s'"_port_en_US,
+          name.source, moduleInterface->owner().GetName().value(),
+          moduleInterface->name());
     }
   }
   Symbol *newSymbol{
@@ -6060,7 +6087,8 @@ const Symbol *SubprogramVisitor::CheckExtantProc(
 Symbol *SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
     Symbol::Flag subpFlag, const parser::LanguageBindingSpec *bindingSpec,
     bool hasModulePrefix) {
-  if (!inInterfaceBlock() && currScope().IsSubmodule() && !hasModulePrefix) {
+  if (!inInterfaceBlock() && currScope().IsSubmodule() && !hasModulePrefix &&
+      !context().IsEnabled(common::LanguageFeature::ImplicitModulePrefix)) {
     const Scope &parent{currScope().parent()};
     if (parent.IsModule() || parent.IsSubmodule()) {
       if (const Symbol *host{parent.FindSymbol(name.source)}) {

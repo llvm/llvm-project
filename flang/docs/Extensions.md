@@ -595,6 +595,17 @@ end program
   [-fimplicit-none-type-always]
 * Ignore occurrences of `IMPLICIT NONE` and `IMPLICIT NONE(TYPE)`
   [-fimplicit-none-type-never]
+* Treat a subprogram in a submodule as if it had a missing `MODULE` prefix
+  when its name matches a separate module procedure interface in an ancestor
+  module [-fimplicit-module-prefix]. This extension is disabled by default
+  because the unprefixed subprogram can instead be a conforming local
+  procedure. Without this extension, `-pedantic` or `-Wportability` diagnoses
+  a likely missing prefix without changing the program. When the extension
+  is enabled, `-Wimplicit-module-prefix` or `-pedantic` reports each repaired
+  prefix. Since the extension cannot distinguish a missing prefix from an
+  intentionally local procedure with the same name as an ancestor interface,
+  it can reject a conforming program when that interface is implemented in a
+  different submodule. This behavior is compatible with gfortran.
 * Old-style `PARAMETER pi=3.14` statement without parentheses
   [-falternative-parameter-statement]
 * `UNSIGNED` type (-funsigned)
