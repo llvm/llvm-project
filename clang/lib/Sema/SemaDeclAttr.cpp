@@ -5284,6 +5284,13 @@ AlwaysInlineAttr *Sema::mergeAlwaysInlineAttr(Decl *D,
   if (D->hasAttr<AlwaysInlineAttr>())
     return nullptr;
 
+  if (const auto *NoIPA = D->getAttr<NoIPAAttr>()) {
+    if (NoInlineAttr *NoInline = D->getAttr<NoInlineAttr>();
+        NoInline && NoInline->isImplicit() &&
+        NoInline->getLocation() == NoIPA->getLocation())
+      D->dropAttr<NoInlineAttr>();
+  }
+
   return ::new (Context) AlwaysInlineAttr(Context, CI);
 }
 
@@ -5360,6 +5367,14 @@ OptimizeNoneAttr *Sema::mergeOptimizeNoneAttr(Decl *D,
     return nullptr;
 
   return ::new (Context) OptimizeNoneAttr(Context, CI);
+}
+
+static void addImplicitNoInlineAttrForNoIPA(Sema &S, Decl *D,
+                                            const NoIPAAttr *A) {
+  if (!A || D->hasAttr<AlwaysInlineAttr>() || D->hasAttr<NoInlineAttr>())
+    return;
+
+  D->addAttr(NoInlineAttr::CreateImplicit(S.Context, A->getLocation()));
 }
 
 static void handleAlwaysInlineAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -8560,6 +8575,8 @@ void Sema::ProcessDeclAttributeList(
 
   for (const ParsedAttr &AL : AttrList)
     ProcessDeclAttribute(*this, D, AL, Options);
+
+  addImplicitNoInlineAttrForNoIPA(*this, D, D->getAttr<NoIPAAttr>());
 
   // FIXME: We should be able to handle these cases in TableGen.
   // GCC accepts
