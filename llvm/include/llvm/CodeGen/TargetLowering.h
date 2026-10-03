@@ -2175,8 +2175,14 @@ public:
   /// Return the preferred function alignment.
   Align getPrefFunctionAlignment() const { return PrefFunctionAlignment; }
 
-  /// Return the preferred loop alignment.
-  virtual Align getPrefLoopAlignment(MachineLoop *ML = nullptr) const;
+  /// Return the preferred loop alignment. \p BlockToAlign, when non-null, is
+  /// the block that will actually be aligned; after loop rotation this need not
+  /// be the LoopInfo header. Targets whose alignment depends on the block
+  /// contents should use it. Callers that are not aligning a particular block,
+  /// such as llvm-exegesis and ARM constant islands, leave it null.
+  virtual Align
+  getPrefLoopAlignment(MachineLoop *ML = nullptr,
+                       const MachineBasicBlock *BlockToAlign = nullptr) const;
 
   /// Return the maximum amount of bytes allowed to be emitted when padding for
   /// alignment
@@ -4837,6 +4843,11 @@ public:
   virtual bool isTypeDesirableForOp(unsigned /*Opc*/, EVT VT) const {
     // By default, assume all legal types are desirable.
     return isTypeLegal(VT);
+  }
+
+  /// Overload that takes the specific node being optimized.
+  virtual bool isTypeDesirableForOp(SDNode *N, EVT VT) const {
+    return isTypeDesirableForOp(N->getOpcode(), VT);
   }
 
   /// Return true if it is profitable for dag combiner to transform a floating

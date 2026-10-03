@@ -67,9 +67,6 @@ class LLVM_LIBRARY_VISIBILITY InstCombiner {
   TargetTransformInfo &TTIForTargetIntrinsicsOnly;
 
 public:
-  /// Maximum size of array considered when transforming.
-  uint64_t MaxArraySizeForCombine = 0;
-
   /// An IRBuilder that automatically inserts new instructions into the
   /// worklist.
   using BuilderTy = IRBuilder<TargetFolder, IRBuilderInstCombineInserter>;
