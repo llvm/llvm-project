@@ -1,0 +1,47 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+! These intrinsic-module procedures lower inline on both host and device.
+module c_pointer_calls
+  use iso_c_binding, only: c_ptr, c_funptr, c_associated, operator(==), operator(/=)
+  use __fortran_builtins, only: c_devptr => __builtin_c_devptr
+contains
+  attributes(host,device) subroutine both(p, q, f, g, d, e, result)
+    type(c_ptr), value :: p, q
+    type(c_funptr), value :: f, g
+    type(c_devptr), value :: d, e
+    logical :: result(8)
+    result(1) = c_associated(p)
+    result(2) = c_associated(p, q)
+    result(3) = c_associated(f)
+    result(4) = c_associated(f, g)
+    result(5) = p == q
+    result(6) = p /= q
+    result(7) = d == e
+    result(8) = d /= e
+  end subroutine
+  attributes(device) subroutine device(p, q, f, g, d, e, result)
+    type(c_ptr), value :: p, q
+    type(c_funptr), value :: f, g
+    type(c_devptr), value :: d, e
+    logical :: result(8)
+    result(1) = c_associated(p)
+    result(2) = c_associated(p, q)
+    result(3) = c_associated(f)
+    result(4) = c_associated(f, g)
+    result(5) = p == q
+    result(6) = p /= q
+    result(7) = d == e
+    result(8) = d /= e
+  end subroutine
+end module
+
+module ordinary_named_builtin
+contains
+  logical function c_associated_c_ptr()
+    c_associated_c_ptr = .true.
+  end function
+  attributes(host,device) subroutine caller(result)
+    logical :: result
+    !ERROR: 'c_associated_c_ptr' may not be called in device code
+    result = c_associated_c_ptr()
+  end subroutine
+end module
