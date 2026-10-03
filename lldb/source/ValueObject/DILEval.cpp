@@ -1364,8 +1364,14 @@ Interpreter::Visit(const BinaryOpNode &node) {
   bool rhs_is_literal = node.GetRHS().IsConstLiteral();
   lldb::TypeSystemSP lhs_system =
       lhs->GetCompilerType().GetTypeSystem().GetSharedPointer();
+  if (!lhs_system)
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "operand has no type system", node.GetLHS().GetLocation());
   lldb::TypeSystemSP rhs_system =
       rhs->GetCompilerType().GetTypeSystem().GetSharedPointer();
+  if (!rhs_system)
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "operand has no type system", node.GetRHS().GetLocation());
   if (lhs_system->GetPluginName() != rhs_system->GetPluginName()) {
     // TODO: Attempt to convert values to current CU's type system
     return llvm::make_error<DILDiagnosticError>(
