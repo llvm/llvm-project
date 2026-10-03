@@ -171,6 +171,10 @@ OmpStructureChecker::OmpStructureChecker(SemanticsContext &context)
 void OmpStructureChecker::Enter(const parser::ProgramUnit &) { //
   ClearLabels();
   declareVariantPairs_.clear();
+  // A REQUIRES directive with unified_address, unified_shared_memory, or
+  // reverse_offload must appear lexically before any device construct or
+  // device routine is scoped to a program unit.
+  deviceConstructFound_ = false;
 }
 
 void OmpStructureChecker::Leave(const parser::ProgramUnit &) {
@@ -2270,20 +2274,19 @@ void OmpStructureChecker::CheckInitOnDepobj(
           llvm::omp::getDescriptor(llvm::omp::Modifier::DepinfoModifier)};
       context_.Say(OmpGetModifierSource(modifiers, depInfo),
           "'%s' is not an allowed value of the '%s' modifier"_err_en_US,
-          parser::ToUpperCaseLetters(EnumToString(depKind)),
-          desc.getName().str());
+          parser::ToUpperCaseLetters(EnumToString(depKind)), desc.getName());
     }
   } else {
     auto &desc{llvm::omp::getDescriptor(llvm::omp::Modifier::DepinfoModifier)};
     context_.Say(initClause.source,
         "The '%s' modifier is required on a DEPOBJ construct"_err_en_US,
-        desc.getName().str());
+        desc.getName());
   }
   if (auto *prefType{OmpGetUniqueModifier<parser::OmpPreferType>(modifiers)}) {
     auto &desc{llvm::omp::getDescriptor(llvm::omp::Modifier::PreferType)};
     context_.Say(OmpGetModifierSource(modifiers, prefType),
         "The '%s' modifier is not allowed on a DEPOBJ construct"_err_en_US,
-        desc.getName().str());
+        desc.getName());
   }
 }
 
@@ -3814,9 +3817,6 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &x) {
           std::get<parser::OmpClause::Ordered>(clause->u)};
 
       if (orderedClause.v) {
-        CheckNotAllowedIfClause(
-            llvm::omp::Clause::OMPC_ordered, {llvm::omp::Clause::OMPC_linear});
-
         if (auto *clause2{FindClause(llvm::omp::Clause::OMPC_collapse)}) {
           const auto &collapseClause{
               std::get<parser::OmpClause::Collapse>(clause2->u)};
@@ -4612,10 +4612,10 @@ void OmpStructureChecker::CheckVarIsNotPartOfAnotherVar(
       if (clause.empty() &&
           llvm::omp::nonPartialVarSet.test(GetContext().directive)) {
         context_.Say(source, "%s cannot appear on the %s directive"_err_en_US,
-            kind.str(), ContextDirectiveAsFortran());
+            kind, ContextDirectiveAsFortran());
       } else {
-        context_.Say(source, "%s cannot appear in a %s clause"_err_en_US,
-            kind.str(), clause.str());
+        context_.Say(
+            source, "%s cannot appear in a %s clause"_err_en_US, kind, clause);
       }
     }
   }
@@ -5031,7 +5031,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
           llvm::omp::getDescriptor(llvm::omp::Modifier::AttachModifier)};
       context_.Say(OmpGetModifierSource(modifiers, attach),
           "The '%s' modifier can only appear on a map-entering construct or on a DECLARE_MAPPER directive"_err_en_US,
-          desc.getName().str());
+          desc.getName());
     }
 
     auto hasBasePointer{[&](const SomeExpr &item) {
@@ -5116,45 +5116,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
   }
 }
 
-void OmpStructureChecker::Enter(const parser::OmpClause::Schedule &x) {
-  const parser::OmpScheduleClause &scheduleClause = x.v;
-
-  // 2.7 Loop Construct Restriction
-  if (llvm::omp::allDoSet.test(GetContext().directive)) {
-    auto &modifiers{OmpGetModifiers(scheduleClause)};
-    auto kind{std::get<parser::OmpScheduleClause::Kind>(scheduleClause.t)};
-    auto &chunk{
-        std::get<std::optional<parser::ScalarIntExpr>>(scheduleClause.t)};
-    if (chunk) {
-      if (kind == parser::OmpScheduleClause::Kind::Runtime ||
-          kind == parser::OmpScheduleClause::Kind::Auto) {
-        context_.Say(GetContext().clauseSource,
-            "When SCHEDULE clause has %s specified, "
-            "it must not have chunk size specified"_err_en_US,
-            parser::ToUpperCaseLetters(
-                parser::OmpScheduleClause::EnumToString(kind)));
-      }
-      if (const auto &chunkExpr{std::get<std::optional<parser::ScalarIntExpr>>(
-              scheduleClause.t)}) {
-        RequiresPositiveParameter(
-            llvm::omp::Clause::OMPC_schedule, *chunkExpr, "chunk size");
-      }
-    }
-
-    auto *ordering{
-        OmpGetUniqueModifier<parser::OmpOrderingModifier>(modifiers)};
-    if (ordering &&
-        ordering->v == parser::OmpOrderingModifier::Value::Nonmonotonic) {
-      if (kind != parser::OmpScheduleClause::Kind::Dynamic &&
-          kind != parser::OmpScheduleClause::Kind::Guided) {
-        context_.Say(GetContext().clauseSource,
-            "The NONMONOTONIC modifier can only be specified with "
-            "SCHEDULE(DYNAMIC) or SCHEDULE(GUIDED)"_err_en_US);
-      }
-    }
-  }
-}
-
 void OmpStructureChecker::Enter(const parser::OmpClause::Device &x) {
   const parser::OmpDeviceClause &deviceClause{x.v};
   const auto &device{std::get<parser::ScalarIntExpr>(deviceClause.t)};
@@ -5185,7 +5146,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Device &x) {
               .getName()};
       context_.Say(OmpGetModifierSource(modifiers, deviceMod),
           "The ANCESTOR %s must not appear on the DEVICE clause on any directive other than the TARGET construct. Found on %s construct."_err_en_US,
-          name.str(), parser::omp::GetUpperName(dir, version));
+          name, parser::omp::GetUpperName(dir, version));
     }
   }
 }
@@ -5277,97 +5238,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
         context_.Say(GetContext().clauseSource,
             "An iterator-modifier may specify multiple locators, a DEPEND clause on a DEPOBJ construct must only specify one locator"_warn_en_US);
       }
-    }
-  }
-}
-
-void OmpStructureChecker::Enter(const parser::OmpClause::Doacross &x) {
-  CheckDoacross(x.v.v, llvm::omp::Clause::OMPC_doacross);
-}
-
-void OmpStructureChecker::CheckDoacross(
-    const parser::OmpDoacross &doa, llvm::omp::Clause clauseId) {
-  auto &iterVec{std::get<std::optional<parser::OmpIterationVector>>(doa.t)};
-
-  auto &modifiers{OmpGetModifiers(doa)};
-  auto &depType{*OmpGetUniqueModifier<parser::OmpDependenceType>(modifiers)};
-  if (depType.v == parser::OmpDependenceType::Value::Source) {
-    if (iterVec) {
-      context_.Say(OmpGetModifierSource(modifiers, &depType),
-          "Iteration vector may not be specified with SOURCE dependence type"_err_en_US);
-    }
-    return;
-  }
-  assert(depType.v == parser::OmpDependenceType::Value::Sink &&
-      "Unexpected dependence-type");
-  if (!iterVec) {
-    context_.Say(OmpGetModifierSource(modifiers, &depType),
-        "Iteration vector must be specified with SINK dependence type"_err_en_US);
-    return;
-  }
-
-  // Process SINK dependence type. SINK may only appear in an ORDER construct,
-  // which references a prior ORDERED(n) clause on a DO or SIMD construct
-  // that marks the top of the loop nest.
-
-  const std::list<parser::OmpIteration> &vec{iterVec->v};
-
-  // Check if the variables in the iteration vector are unique.
-  struct Less {
-    using Iterator = std::list<parser::OmpIteration>::const_iterator;
-    bool operator()(Iterator a, Iterator b) const {
-      auto namea{std::get<parser::Name>(a->t)};
-      auto nameb{std::get<parser::Name>(b->t)};
-      assert(namea.symbol && nameb.symbol && "Unresolved symbols");
-      // The non-determinism of the "<" doesn't matter, we only care about
-      // equality, i.e.  a == b  <=>  !(a < b) && !(b < a)
-      return reinterpret_cast<uintptr_t>(namea.symbol) <
-          reinterpret_cast<uintptr_t>(nameb.symbol);
-    }
-  };
-  if (auto maybeIter{FindDuplicate<Less>(vec)}) {
-    auto name{std::get<parser::Name>((*maybeIter)->t)};
-    context_.Say(name.source,
-        "Duplicate variable '%s' in the iteration vector"_err_en_US,
-        name.ToString());
-  }
-
-  // Check if the variables in the iteration vector are induction variables.
-  // Ignore any mismatch between the size of the iteration vector and the
-  // number of DO constructs on the stack. This is checked elsewhere.
-
-  std::set<const Symbol *> inductionVars;
-  for (const LoopOrConstruct &c : llvm::reverse(constructStack_)) {
-    if (auto *doc{std::get_if<const parser::DoConstruct *>(&c)}) {
-      // Do-construct, collect the induction variable.
-      if (auto &control{(*doc)->GetLoopControl()}) {
-        if (auto *b{std::get_if<parser::LoopControl::Bounds>(&control->u)}) {
-          inductionVars.insert(b->Name().thing.symbol);
-        }
-      }
-    } else {
-      // Omp-loop-construct, check if it's do/simd with an ORDERED clause.
-      auto *omp{std::get_if<const parser::OpenMPConstruct *>(&c)};
-      assert(omp && "Expecting OpenMPConstruct");
-      if (auto *loop{parser::Unwrap<parser::OpenMPLoopConstruct>(*omp)}) {
-        const parser::OmpDirectiveSpecification &beginSpec{loop->BeginDir()};
-        llvm::omp::Directive loopDir{beginSpec.DirId()};
-        if (loopDir == llvm::omp::OMPD_do || loopDir == llvm::omp::OMPD_simd) {
-          // If it has ORDERED clause, stop the traversal.
-          if (parser::omp::FindClause(
-                  beginSpec, llvm::omp::Clause::OMPC_ordered)) {
-            break;
-          }
-        }
-      }
-    }
-  }
-  for (const parser::OmpIteration &iter : vec) {
-    auto &name{std::get<parser::Name>(iter.t)};
-    if (!inductionVars.count(name.symbol)) {
-      context_.Say(name.source,
-          "The iteration vector element '%s' is not an induction variable within the ORDERED loop nest"_err_en_US,
-          name.ToString());
     }
   }
 }
@@ -5838,7 +5708,7 @@ void OmpStructureChecker::CheckUsesAllocatorsSpec(
           llvm::omp::getDescriptor(llvm::omp::Modifier::MemSpace).getName()};
       context_.Say(memSpaceSource,
           "The '%s' modifier must name a predefined memory space"_err_en_US,
-          name.str());
+          name);
     }
   }
 
@@ -6249,7 +6119,7 @@ void OmpStructureChecker::CheckCrayPointee(
             semantics::GetCrayPointer(*symbol).name().ToString() + "' instead";
       context_.Say(source,
           "Cray Pointee '%s' may not appear in %s clause%s"_err_en_US,
-          symbol->name(), clause.str(), suggestionMsg);
+          symbol->name(), clause, suggestionMsg);
     }
   }
 }
@@ -6686,7 +6556,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
                     llvm::omp::Modifier::DepinfoModifier)};
                 context_.Say(OmpGetModifierSource(modifiers, depInfo),
                     "The '%s' is not allowed on INTEROP construct"_err_en_US,
-                    desc.getName().str());
+                    desc.getName());
               }
               // A prefer_type foreign-runtime-identifier must be a
               // constant expression of integer OpenMP type or a base
@@ -6828,18 +6698,6 @@ void OmpStructureChecker::Leave(const parser::OpenMPInvalidDirective &x) {
   assert(GetContext().directive == llvm::omp::Directive::OMPD_unknown &&
       "Context mismatch");
   dirContext_.pop_back();
-}
-
-void OmpStructureChecker::Enter(const parser::OmpClause::Collapse &x) {
-  RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_collapse, x.v);
-}
-
-void OmpStructureChecker::Enter(const parser::OmpClause::Safelen &x) {
-  RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_safelen, x.v);
-}
-
-void OmpStructureChecker::Enter(const parser::OmpClause::Simdlen &x) {
-  RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_simdlen, x.v);
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::OmpxDynCgroupMem &x) {
