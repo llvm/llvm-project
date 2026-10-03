@@ -75,6 +75,125 @@ bool checkDevice(int64_t &DeviceID, ident_t *Loc) {
   return false;
 }
 
+struct __tgt_async_info_handle {
+  int64_t DeviceId;
+  AsyncInfoTy AsyncInfo;
+
+  __tgt_async_info_handle(int64_t DeviceId, DeviceTy &Device)
+      : DeviceId(DeviceId), AsyncInfo(Device) {}
+};
+
+EXTERN __tgt_async_info_handle *
+__tgt_async_info_create(int64_t DeviceId) {
+  assert(PM && "Runtime not initialized");
+
+  if (checkDevice(DeviceId, nullptr))
+    return nullptr;
+
+  auto DeviceOrErr = PM->getDevice(DeviceId);
+  if (!DeviceOrErr)
+    return nullptr;
+
+  return new __tgt_async_info_handle(DeviceId, *DeviceOrErr);
+}
+
+EXTERN int __tgt_async_info_synchronize(
+    __tgt_async_info_handle *Handle) {
+  if (!Handle)
+    return OFFLOAD_SUCCESS;
+
+  return Handle->AsyncInfo.synchronize();
+}
+
+EXTERN void __tgt_async_info_destroy(
+    __tgt_async_info_handle *Handle) {
+  if (!Handle)
+    return;
+
+  Handle->AsyncInfo.synchronize();
+  delete Handle;
+}
+
+template <typename TargetAsyncInfoTy>
+static inline int
+targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
+             int32_t ThreadLimit, void *HostPtr, KernelArgsTy *KernelArgs,
+             AsyncInfoTy *ExternalAsyncInfo = nullptr) {
+  assert(PM && "Runtime not initialized");
+  static_assert(std::is_convertible_v<TargetAsyncInfoTy &, AsyncInfoTy &>,
+                "Target AsyncInfoTy must be convertible to AsyncInfoTy.");
+
+  if (checkDevice(DeviceId, Loc))
+    return OMP_TGT_FAIL;
+
+  if (KernelArgs->Version > OMP_KERNEL_ARG_VERSION)
+    FATAL_MESSAGE(DeviceId, "Unsupported kernel argument version %u",
+                  KernelArgs->Version);
+
+  KernelArgs = upgradeKernelArgs(KernelArgs, NumTeams, ThreadLimit);
+
+  auto DeviceOrErr = PM->getDevice(DeviceId);
+  if (!DeviceOrErr)
+    FATAL_MESSAGE(DeviceId, "%s",
+                  toString(DeviceOrErr.takeError()).c_str());
+
+  std::optional<TargetAsyncInfoTy> OwnedAsyncInfo;
+
+  if (!ExternalAsyncInfo) {
+    OwnedAsyncInfo.emplace(*DeviceOrErr);
+    ExternalAsyncInfo = &*OwnedAsyncInfo;
+  }
+
+  AsyncInfoTy &AsyncInfo = *ExternalAsyncInfo;
+
+  OMPT_IF_BUILT(InterfaceRAII TargetRAII(
+      RegionInterface.getCallbacks<ompt_target>(), DeviceId,
+      /*CodePtr=*/HostPtr));
+
+  int Rc = target(Loc, *DeviceOrErr, HostPtr, *KernelArgs, AsyncInfo);
+
+  if (!OwnedAsyncInfo) {
+    handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
+    return Rc;
+  }
+
+  {
+    TIMESCOPE_WITH_DETAILS_AND_IDENT("Runtime: synchronize", "", Loc);
+    if (Rc == OFFLOAD_SUCCESS)
+      Rc = AsyncInfo.synchronize();
+  }
+
+  handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
+  return Rc;
+}
+
+EXTERN int __tgt_target_kernel_async(
+    ident_t *Loc, int64_t DeviceId, int32_t NumTeams, int32_t ThreadLimit,
+    void *HostPtr, KernelArgsTy *KernelArgs,
+    __tgt_async_info_handle *Handle) {
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
+
+  if (!Handle || !KernelArgs) {
+    handleTargetOutcome(false, Loc);
+    return OMP_TGT_FAIL;
+  }
+
+  int64_t ResolvedDeviceId = DeviceId;
+
+  if (checkDevice(ResolvedDeviceId, Loc))
+    return OMP_TGT_FAIL;
+
+  if (ResolvedDeviceId != Handle->DeviceId) {
+    handleTargetOutcome(false, Loc);
+    return OMP_TGT_FAIL;
+  }
+
+  return targetKernel<AsyncInfoTy>(
+      Loc, ResolvedDeviceId, NumTeams, ThreadLimit, HostPtr, KernelArgs,
+      &Handle->AsyncInfo);
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////
 /// adds requires flags
 EXTERN void __tgt_register_requires(int64_t Flags) {
