@@ -2355,10 +2355,14 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
 
   bool KCFI = MF.getFunction().getParent()->getModuleFlag("kcfi");
 
+  LLVM_DEBUG(dbgs() << "EstimateFunctionSizeInBytes(" << MF.getName()
+                    << "):\n");
+
   if (MF.shouldSplitStack()) {
     // Split stack prologue saves r4,r5; makes a copy of sp and loads
     // a literal; compares the two, and if sp < literal, pushes
     // further registers and calls __morestack.
+    LLVM_DEBUG(dbgs() << "  +0x24 bytes for split stack\n");
     FnSize += 0x24;
   }
 
@@ -2379,6 +2383,8 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
   // + stack realignment (8, if needed)
   // + make base pointer (2).
   unsigned PrologueSize = 2 + 4 * SavedHighRegs + 6 + 12 + 2;
+  LLVM_DEBUG(dbgs() << "  +" << Twine::utohexstr(PrologueSize)
+                    << " bytes for prologue\n");
   if (RegInfo->hasStackRealignment(MF))
     PrologueSize += 8;
   FnSize += PrologueSize;
@@ -2398,11 +2404,14 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
       // We might have to insert padding to align the start of this basic
       // block.
       unsigned Alignment = MBB.getMaxBytesForAlignment();
+      LLVM_DEBUG(dbgs() << "    0x" << Twine::utohexstr(FnSize) << " +"
+                        << Alignment << " realignment\n");
       FnSize += Alignment;
     }
 
     unsigned SizeBeforeThisBB = FnSize;
 
+    LLVM_DEBUG(dbgs() << "  " << printMBBReference(MBB) << ":\n");
     bool seenBranch = false, seenConstantLoad = false;
     for (auto &MI : MBB) {
       unsigned InstSize;
@@ -2503,6 +2512,8 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
         InstSize = TII.getInstSizeInBytes(MI);
         break;
       }
+      LLVM_DEBUG(dbgs() << "    0x" << Twine::utohexstr(FnSize) << " +"
+                        << InstSize << ": " << MI);
 
       FnSize += InstSize;
 
@@ -2514,6 +2525,8 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
                 MO->getPointerInfo().V);
         if (PSV && PSV->kind() == PseudoSourceValue::ConstantPool) {
           unsigned ConstSize = MO->getType().getSizeInBytes();
+          LLVM_DEBUG(dbgs() << "    0x" << Twine::utohexstr(FnSize) << " +"
+                            << ConstSize << ": constant pool entry\n");
           FnSize += ConstSize;
           seenConstantLoad = true;
         }
@@ -2523,6 +2536,8 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
       // of an epilogue. (We do this for each return, in case the
       // epilogue must be duplicated.)
       if (MI.isReturn() || TII.isTailCall(MI)) {
+        LLVM_DEBUG(dbgs() << "    0x" << Twine::utohexstr(FnSize) << " +"
+                          << EpilogueSize << ": epilogue\n");
         FnSize += EpilogueSize;
       }
 
@@ -2530,6 +2545,10 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
       // cost of a KCFI_CHECK_Thumb1 pseudo.
       if (KCFI && MI.isCall() && MI.getCFIType()) {
         const MCInstrDesc &MCID = TII.get(ARM::KCFI_CHECK_Thumb1);
+        LLVM_DEBUG(
+            dbgs() << "    0x" << Twine::utohexstr(FnSize) << " +"
+                   << MCID.getSize()
+                   << ": KCFI_CHECK_Thumb1 before the previous branch\n");
         FnSize += MCID.getSize();
       }
 
@@ -2541,6 +2560,8 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
     // count a branch + realignment to 4 bytes, in case we have to branch round
     // it.
     if (seenConstantLoad && !seenBranch) {
+      LLVM_DEBUG(dbgs() << "    0x" << Twine::utohexstr(FnSize)
+                        << " +4: in case of branching round a constant\n");
       FnSize += 4;
     }
 
@@ -2552,12 +2573,22 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
     // large is likely to have already gone over the "must stack LR" limit, we
     // can keep things simple by assuming we split at half that rate.
     unsigned BBSize = FnSize - SizeBeforeThisBB;
-    FnSize += 4 * BBSize / 512;
+    unsigned SplitBranches = 4 * BBSize / 512;
+    if (SplitBranches) {
+      LLVM_DEBUG(
+          dbgs()
+          << "    0x" << Twine::utohexstr(FnSize) << " +" << SplitBranches
+          << ": in case of splitting the block to branch round constants\n");
+      FnSize += SplitBranches;
+    }
   }
+  LLVM_DEBUG(dbgs() << "  trailers:\n");
   if (MF.getJumpTableInfo()) {
     for (auto &Table : MF.getJumpTableInfo()->getJumpTables()) {
       unsigned TableLen = Table.MBBs.size();
       unsigned TableSizeBytes = TableLen * 4;
+      LLVM_DEBUG(dbgs() << "    0x" << Twine::utohexstr(FnSize) << " +"
+                        << TableSizeBytes << ": jump table\n");
       FnSize += TableSizeBytes;
     }
   }
@@ -3007,11 +3038,12 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
                     << "; EstimatedFPStack: " << MaxFixedOffset - MaxFPOffset
                     << "; BigFrameOffsets: " << BigFrameOffsets << "\n");
 
-  if (!LRSpilled && AFI->isThumb1OnlyFunction()) {
+  if (AFI->isThumb1OnlyFunction()) {
     unsigned FnSize = EstimateFunctionSizeInBytes(MF, TII, STI, RegInfo,
                                                   SavedRegs, BigFrameOffsets);
+    AFI->setEstimatedFunctionSizeInBytes(FnSize);
 
-    if (FnSize >= (1 << 11)) {
+    if (!LRSpilled && FnSize >= (1 << 11)) {
       // Force LR to be spilled if the Thumb function size is > 2048. This
       // enables use of BL to implement far jump.
       CanEliminateFrame = false;
