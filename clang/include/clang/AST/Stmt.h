@@ -3109,7 +3109,8 @@ public:
   void setLabelDecl(LabelDecl *S) { TargetLabel = S; }
 
   /// If this is a named break/continue, get the loop or switch statement
-  /// that this targets.
+  /// that this targets. May return null if the target LabelStmt has not
+  /// yet been created.
   const Stmt *getNamedLoopOrSwitch() const;
 
   // Iterators
