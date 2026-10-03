@@ -11,3 +11,61 @@ define i1 @f0(ptr %a) nounwind {
   %d = fcmp ogt double %c, 0x41EFFFFFFFE00000
   ret i1 %d
 }
+
+define i1 @uitofp_nneg_i8_cmp_olt_above_smax(i8 %x) {
+; CHECK-LABEL: @uitofp_nneg_i8_cmp_olt_above_smax(
+; CHECK-NEXT:    ret i1 true
+;
+  %f = uitofp nneg i8 %x to float
+  %cmp = fcmp olt float %f, 1.280000e+02
+  ret i1 %cmp
+}
+
+define i1 @uitofp_nneg_i8_cmp_oge_above_smax(i8 %x) {
+; CHECK-LABEL: @uitofp_nneg_i8_cmp_oge_above_smax(
+; CHECK-NEXT:    ret i1 false
+;
+  %f = uitofp nneg i8 %x to float
+  %cmp = fcmp oge float %f, 1.280000e+02
+  ret i1 %cmp
+}
+
+define i1 @uitofp_nneg_i8_cmp_oeq_above_smax(i8 %x) {
+; CHECK-LABEL: @uitofp_nneg_i8_cmp_oeq_above_smax(
+; CHECK-NEXT:    ret i1 false
+;
+  %f = uitofp nneg i8 %x to float
+  %cmp = fcmp oeq float %f, 1.280000e+02
+  ret i1 %cmp
+}
+
+define i1 @uitofp_nneg_i8_cmp_one_above_smax(i8 %x) {
+; CHECK-LABEL: @uitofp_nneg_i8_cmp_one_above_smax(
+; CHECK-NEXT:    ret i1 true
+;
+  %f = uitofp nneg i8 %x to float
+  %cmp = fcmp one float %f, 1.280000e+02
+  ret i1 %cmp
+}
+
+; INT_MAX rounds to 2^31 in float, so this comparison is not always true.
+define i1 @uitofp_nneg_i32_cmp_olt_smax_plus_one_not_true(i32 %x) {
+; CHECK-LABEL: @uitofp_nneg_i32_cmp_olt_smax_plus_one_not_true(
+; CHECK-NEXT:    [[F:%.*]] = uitofp nneg i32 [[X:%.*]] to float
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[F]], f0x4F000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %f = uitofp nneg i32 %x to float
+  %cmp = fcmp olt float %f, 0x41E0000000000000
+  ret i1 %cmp
+}
+
+define i1 @uitofp_i8_no_nneg_cmp_olt_128_not_true(i8 %x) {
+; CHECK-LABEL: @uitofp_i8_no_nneg_cmp_olt_128_not_true(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %f = uitofp i8 %x to float
+  %cmp = fcmp olt float %f, 1.280000e+02
+  ret i1 %cmp
+}
