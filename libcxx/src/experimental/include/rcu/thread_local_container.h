@@ -45,6 +45,9 @@ class thread_local_container {
     thread_entry(thread_entry&&)      = delete;
 
     ~thread_entry() {
+      if constexpr (requires(Tp obj) { Tp::on_thread_exit(obj); }) {
+        Tp::on_thread_exit(instance_);
+      }
       pre_dtor_callback_(instance_);
       deregister_instance(instance_);
     }
