@@ -1373,8 +1373,9 @@ or throwing an exception.  It must take an integer and return a pointer.
 The sixth argument must be a reference to a global function that will
 be used to deallocate memory.  It must take a pointer and return `void`.
 
-The seventh argument points to an alloca of the coroutine function's return
-type in that function.  A non-unwind `llvm.coro.end` is followed by a load
+The seventh argument points to an alloca in the coroutine function with
+sufficient size and alignment for its return type.  The allocated type need
+not match the return type.  A non-unwind `llvm.coro.end` is followed by a load
 from this alloca and an explicit return.  This makes the return visible to
 interprocedural optimizations before the coroutine is split.  The alloca
 is not stored in the coroutine frame; `coro-split` replaces the load with

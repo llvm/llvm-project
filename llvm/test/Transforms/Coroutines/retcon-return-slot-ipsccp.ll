@@ -1,5 +1,5 @@
 ; RUN: opt -verify-each -passes='ipsccp' -S %s | FileCheck %s --check-prefix=PRE
-; RUN: opt -verify-each -passes='cgscc(function-attrs),ipsccp' -S %s | FileCheck %s --check-prefixes=PRE,ATTR
+; RUN: opt -verify-each -passes='cgscc(function-attrs),ipsccp' -S %s | FileCheck %s --check-prefix=PRE
 ; RUN: opt -verify-each -passes='thinlto<O2>' -S %s | FileCheck %s --check-prefix=POST
 
 ; An ICP-style direct/indirect call join must retain the direct return pair.
@@ -18,7 +18,7 @@ declare void @consume(ptr)
 define internal swiftcc { ptr, ptr } @accessor(ptr noalias %buffer,
                                                 ptr swiftself %object) #0 {
 entry:
-  %coro.ret = alloca { ptr, ptr }
+  %coro.ret = alloca [16 x i8], align 8
   %id = call token @llvm.coro.id.retcon.once(
       i32 32, i32 8, ptr %buffer, ptr @resume, ptr @malloc, ptr @free, ptr %coro.ret)
   %frame = call ptr @llvm.coro.begin(token %id, ptr null)
@@ -55,9 +55,8 @@ join:
   ret void
 }
 
-; ATTR: Function Attrs: noinline nounwind presplitcoroutine
 ; PRE-LABEL: define internal swiftcc { ptr, ptr } @accessor(
-; PRE: %coro.ret = alloca { ptr, ptr }
+; PRE: %coro.ret = alloca [16 x i8], align 8
 ; PRE: call token @llvm.coro.id.retcon.once({{.*}}ptr %coro.ret)
 ; PRE: load { ptr, ptr }, ptr %coro.ret
 ; PRE: ret { ptr, ptr }

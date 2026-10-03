@@ -2201,21 +2201,11 @@ static void addWillReturn(const SCCNodeSet &SCCNodes,
 static SCCNodesResult createSCCNodeSet(ArrayRef<Function *> Functions) {
   SCCNodesResult Res;
   for (Function *F : Functions) {
-    if (!F || F->hasOptNone() || F->hasFnAttribute(Attribute::Naked)) {
+    if (!F || F->hasOptNone() || F->hasFnAttribute(Attribute::Naked) ||
+        F->isPresplitCoroutine()) {
       // Omit any functions we're trying not to optimize from the set.
       continue;
     }
-
-    // Retcon coroutines model their return explicitly. Other coroutine ABIs
-    // can still have implicit returns before splitting, so keep excluding
-    // them from return-sensitive attribute inference.
-    if (F->isPresplitCoroutine() &&
-        none_of(instructions(*F), [](const Instruction &I) {
-          const auto *II = dyn_cast<IntrinsicInst>(&I);
-          return II && (II->getIntrinsicID() == Intrinsic::coro_id_retcon ||
-                        II->getIntrinsicID() == Intrinsic::coro_id_retcon_once);
-        }))
-      continue;
 
     Res.SCCNodes.insert(F);
   }

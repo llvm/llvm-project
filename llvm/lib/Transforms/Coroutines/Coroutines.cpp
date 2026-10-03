@@ -32,6 +32,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstddef>
+#include <optional>
 #include <utility>
 
 using namespace llvm;
@@ -642,11 +643,19 @@ void AnyCoroIdRetconInst::checkWellFormed() const {
     return;
   }
   auto *ReturnSlot = dyn_cast<AllocaInst>(getReturnSlot());
-  if (!ReturnSlot || ReturnSlot->getFunction() != getFunction() ||
-      ReturnSlot->getAllocatedType() != getFunction()->getReturnType())
+  if (!ReturnSlot || ReturnSlot->getFunction() != getFunction())
     fail(this,
-         "return slot of coro.id.retcon.* must be a return-typed "
-         "alloca in the coroutine function",
+         "return slot of coro.id.retcon.* must be an alloca in the "
+         "coroutine function",
+         getReturnSlot());
+  const DataLayout &DL = getModule()->getDataLayout();
+  Type *ReturnTy = getFunction()->getReturnType();
+  std::optional<TypeSize> SlotSize = ReturnSlot->getAllocationSize(DL);
+  if (!SlotSize ||
+      !TypeSize::isKnownGE(*SlotSize, DL.getTypeAllocSize(ReturnTy)) ||
+      ReturnSlot->getAlign() < DL.getABITypeAlign(ReturnTy))
+    fail(this,
+         "return slot of coro.id.retcon.* has insufficient size or alignment",
          getReturnSlot());
 }
 
