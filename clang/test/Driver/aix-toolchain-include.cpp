@@ -196,4 +196,13 @@
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-INCLUDE-LIBSTDCXX %s
 
-// CHECK-INCLUDE-LIBSTDCXX: LLVM ERROR: picking up libstdc++ headers is unimplemented on AIX
+// CHECK-INCLUDE-LIBSTDCXX: LLVM ERROR: picking up non-libc++ headers is unimplemented on AIX
+
+// Check powerpc64-ibm-aix, 64-bit. -stdlib=msvcstl invokes fatal error.
+// RUN: not --crash %clangxx %s 2>&1 -### \
+// RUN:        --target=powerpc64-ibm-aix \
+// RUN:        -stdlib=libstdc++ \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-INCLUDE-MSVCSTL %s
+
+// CHECK-INCLUDE-MSVCSTL: LLVM ERROR: picking up non-libc++ headers is unimplemented on AIX

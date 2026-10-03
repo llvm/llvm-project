@@ -101,8 +101,7 @@ public:
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
-  llvm::StringRef
-  GetCXXStdlibName(const llvm::opt::ArgList &DriverArgs) const override;
+
   void AddClangCXXStdlibIncludeArgs(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
@@ -161,8 +160,25 @@ protected:
   Tool *getTool(Action::ActionClass AC) const override;
   Tool *buildLinker() const override;
   Tool *buildAssembler() const override;
+  llvm::SmallVector<std::string>
+  getCXXStdlibIncludeDirs(const llvm::opt::ArgList &DriverArgs) const override;
 
 private:
+  CXXStdlibType GetDefaultCXXStdlibType() const override {
+    return ToolChain::CST_MSVCSTL;
+  }
+  RuntimeLibType GetDefaultRuntimeLibType() const override {
+    return ToolChain::RLT_VCRuntime;
+  }
+  UnwindLibType GetDefaultUnwindLibType() const override {
+    return ToolChain::UNW_VCRuntime;
+  }
+  void addMsvcstlIncludePaths(const llvm::opt::ArgList &DriverArgs,
+                              llvm::opt::ArgStringList &CC1Args) const;
+  void addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
+                             llvm::opt::ArgStringList &CC1Args) const;
+  void addLibStdCXXIncludePaths(const llvm::opt::ArgList &DriverArgs,
+                                llvm::opt::ArgStringList &CC1Args) const;
   std::optional<llvm::StringRef> WinSdkDir, WinSdkVersion, WinSysRoot;
   std::string VCToolChainPath;
   llvm::ToolsetLayout VSLayout = llvm::ToolsetLayout::OlderVS;
