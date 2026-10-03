@@ -4534,7 +4534,12 @@ struct AAIsDeadFunction : public AAIsDead {
   void initialize(Attributor &A) override {
     Function *F = getAnchorScope();
     assert(F && "Did expect an anchor function");
-    if (!isAssumedDeadInternalFunction(A)) {
+    // An AA that will not be updated is fixed pessimistically right after
+    // initialization, so an assumed-dead result would be discarded. Checking
+    // the call sites recursively initializes the liveness of every internal
+    // caller, which in CGSCC cleanup repeats for each callee SCC.
+    if (!A.shouldUpdateAA<AAIsDead>(getIRPosition()) ||
+        !isAssumedDeadInternalFunction(A)) {
       ToBeExploredFrom.insert(&F->getEntryBlock().front());
       assumeLive(A, F->getEntryBlock());
     }
