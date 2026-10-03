@@ -119,7 +119,6 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // libpthread has been folded into libc since Solaris 10, no need to do
     // anything for pthreads. Claim argument to avoid warning.
     Args.ClaimAllArgs(options::OPT_pthread);
-    Args.ClaimAllArgs(options::OPT_pthreads);
   }
 
   if (LinkerIsGnuLd) {
