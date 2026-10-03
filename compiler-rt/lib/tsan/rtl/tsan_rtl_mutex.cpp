@@ -594,8 +594,10 @@ void ReportDestroyLocked(ThreadState *thr, uptr pc, uptr addr,
     DynamicMutexSet mset;
     uptr tag;
     if (!RestoreStack(EventType::kLock, last_lock.sid(), last_lock.epoch(),
-                      addr, 0, kAccessWrite, &tid, &trace, mset, &tag))
+                      addr, 0, kAccessWrite, &tid, &trace, mset, &tag)) {
+      rep->~ScopedReport();
       return;
+    }
     rep->AddStack(trace, true);
     rep->AddLocation(addr, 1);
   }
