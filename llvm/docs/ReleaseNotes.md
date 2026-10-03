@@ -386,6 +386,13 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to Sanitizers
 
+* AddressSanitizer's `operator new` now calls the current
+  `std::new_handler` on allocation failure, as the C++ standard
+  requires. With `allocator_may_return_null=1`, throwing `operator new`
+  throws `std::bad_alloc` instead of aborting (on runtimes built with
+  exceptions), and nothrow `operator new` returns `nullptr`. By default
+  it still aborts once the handler chain is exhausted.
+
 ### Other Changes
 
 * `cas::ObjectStore::getMemoryBuffer()` was documented as returning a buffer
