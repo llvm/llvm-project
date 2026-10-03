@@ -1,8 +1,8 @@
 // REQUIRES: amdgpu-registered-target
 // REQUIRES: x86-registered-target
 
-// RUN: %clang_cc1 "-aux-triple" "x86_64-unknown-linux-gnu" "-triple" "r600-unknown-unknown"\
-// RUN:    -fcuda-is-device "-aux-target-cpu" "x86-64" -fsyntax-only -verify=r600 %s
+// RUN: %clang_cc1 "-aux-triple" "i386-unknown-linux-gnu" "-triple" "r600-unknown-unknown"\
+// RUN:    -fcuda-is-device "-aux-target-cpu" "i686" -fsyntax-only -verify=r600 %s
 
 // AMDGCN has storage-only support for bf16. R600 does not support it should error out when
 // it's the main target.
