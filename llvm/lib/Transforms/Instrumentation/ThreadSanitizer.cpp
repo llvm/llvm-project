@@ -303,6 +303,14 @@ void ThreadSanitizer::initialize(Module &M, const TargetLibraryInfo &TLI) {
         NamePart = "_fetch_xor";
       else if (Op == AtomicRMWInst::Nand)
         NamePart = "_fetch_nand";
+      else if (Op == AtomicRMWInst::Max)
+        NamePart = "_fetch_max";
+      else if (Op == AtomicRMWInst::Min)
+        NamePart = "_fetch_min";
+      else if (Op == AtomicRMWInst::UMax)
+        NamePart = "_fetch_umax";
+      else if (Op == AtomicRMWInst::UMin)
+        NamePart = "_fetch_umin";
       else
         continue;
       SmallString<32> RMWName("__tsan_atomic" + itostr(BitSize) + NamePart);

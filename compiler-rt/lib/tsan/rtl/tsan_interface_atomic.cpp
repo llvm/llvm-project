@@ -162,6 +162,40 @@ a128 func_nand(volatile a128 *v, a128 op) {
   return cmp;
 }
 
+a128 func_max(volatile a128* v, a128 op) {
+  SpinMutexLock lock(&mutex128);
+  a128 cmp = *v;
+  if (op > cmp)
+    *v = op;
+  return cmp;
+}
+
+a128 func_min(volatile a128* v, a128 op) {
+  SpinMutexLock lock(&mutex128);
+  a128 cmp = *v;
+  if (op < cmp)
+    *v = op;
+  return cmp;
+}
+
+a128 func_umax(volatile a128* v, a128 op) {
+  __extension__ typedef unsigned __int128 U;
+  SpinMutexLock lock(&mutex128);
+  a128 cmp = *v;
+  if ((U)op > (U)cmp)
+    *v = op;
+  return cmp;
+}
+
+a128 func_umin(volatile a128* v, a128 op) {
+  __extension__ typedef unsigned __int128 U;
+  SpinMutexLock lock(&mutex128);
+  a128 cmp = *v;
+  if ((U)op < (U)cmp)
+    *v = op;
+  return cmp;
+}
+
 a128 func_cas(volatile a128 *v, a128 cmp, a128 xch) {
   SpinMutexLock lock(&mutex128);
   a128 cur = *v;
@@ -170,6 +204,87 @@ a128 func_cas(volatile a128 *v, a128 cmp, a128 xch) {
   return cur;
 }
 #endif
+
+template <typename T>
+T func_max(volatile T* v, T op) {
+  T cmp = *v;
+  for (;;) {
+    if (cmp >= op)
+      return cmp;
+    T cur = __sync_val_compare_and_swap(v, cmp, op);
+    if (cmp == cur)
+      return cmp;
+    cmp = cur;
+  }
+}
+
+template <typename T>
+T func_min(volatile T* v, T op) {
+  T cmp = *v;
+  for (;;) {
+    if (cmp <= op)
+      return cmp;
+    T cur = __sync_val_compare_and_swap(v, cmp, op);
+    if (cmp == cur)
+      return cmp;
+    cmp = cur;
+  }
+}
+
+// Maps each signed interface type to its unsigned counterpart for use in
+// unsigned max/min comparisons.
+template <typename T>
+struct UnsignedFor;
+template <>
+struct UnsignedFor<a8> {
+  typedef unsigned char type;
+};
+template <>
+struct UnsignedFor<a16> {
+  typedef unsigned short type;
+};
+template <>
+struct UnsignedFor<a32> {
+  typedef unsigned int type;
+};
+template <>
+struct UnsignedFor<a64> {
+  typedef unsigned long type;
+};
+#if __TSAN_HAS_INT128
+template <>
+struct UnsignedFor<a128> {
+  __extension__ typedef unsigned __int128 type;
+};
+#endif
+
+template <typename T>
+T func_umax(volatile T* v, T op) {
+  typedef typename UnsignedFor<T>::type U;
+  T cmp = *v;
+  for (;;) {
+    if ((U)cmp >= (U)op)
+      return cmp;
+    T cur = __sync_val_compare_and_swap(v, cmp, op);
+    if (cmp == cur)
+      return cmp;
+    cmp = cur;
+  }
+}
+
+template <typename T>
+T func_umin(volatile T* v, T op) {
+  typedef typename UnsignedFor<T>::type U;
+  T cmp = *v;
+  for (;;) {
+    if ((U)cmp <= (U)op)
+      return cmp;
+    T cur = __sync_val_compare_and_swap(v, cmp, op);
+    if (cmp == cur)
+      return cmp;
+    cmp = cur;
+  }
+}
 
 template <typename T>
 static int AccessSize() {
@@ -407,6 +522,58 @@ struct OpFetchNand {
   [[maybe_unused]] static T Atomic(ThreadState* thr, uptr pc, morder mo,
                                    volatile T* a, T v) {
     return AtomicRMW<T, func_nand>(thr, pc, a, v, mo);
+  }
+};
+
+struct OpFetchMax {
+  template <typename T>
+  [[maybe_unused]] static T NoTsanAtomic(morder mo, volatile T* a, T v) {
+    return func_max(a, v);
+  }
+
+  template <typename T>
+  [[maybe_unused]] static T Atomic(ThreadState* thr, uptr pc, morder mo,
+                                   volatile T* a, T v) {
+    return AtomicRMW<T, func_max>(thr, pc, a, v, mo);
+  }
+};
+
+struct OpFetchMin {
+  template <typename T>
+  [[maybe_unused]] static T NoTsanAtomic(morder mo, volatile T* a, T v) {
+    return func_min(a, v);
+  }
+
+  template <typename T>
+  [[maybe_unused]] static T Atomic(ThreadState* thr, uptr pc, morder mo,
+                                   volatile T* a, T v) {
+    return AtomicRMW<T, func_min>(thr, pc, a, v, mo);
+  }
+};
+
+struct OpFetchUMax {
+  template <typename T>
+  [[maybe_unused]] static T NoTsanAtomic(morder mo, volatile T* a, T v) {
+    return func_umax(a, v);
+  }
+
+  template <typename T>
+  [[maybe_unused]] static T Atomic(ThreadState* thr, uptr pc, morder mo,
+                                   volatile T* a, T v) {
+    return AtomicRMW<T, func_umax>(thr, pc, a, v, mo);
+  }
+};
+
+struct OpFetchUMin {
+  template <typename T>
+  [[maybe_unused]] static T NoTsanAtomic(morder mo, volatile T* a, T v) {
+    return func_umin(a, v);
+  }
+
+  template <typename T>
+  [[maybe_unused]] static T Atomic(ThreadState* thr, uptr pc, morder mo,
+                                   volatile T* a, T v) {
+    return AtomicRMW<T, func_umin>(thr, pc, a, v, mo);
   }
 };
 
@@ -788,6 +955,114 @@ a128 __tsan_atomic128_fetch_nand(volatile a128 *a, a128 v, int mo) {
 #  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
+a8 __tsan_atomic8_fetch_max(volatile a8* a, a8 v, int mo) {
+  return AtomicImpl<OpFetchMax>(to_morder(mo), a, v);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+a16 __tsan_atomic16_fetch_max(volatile a16* a, a16 v, int mo) {
+  return AtomicImpl<OpFetchMax>(to_morder(mo), a, v);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+a32 __tsan_atomic32_fetch_max(volatile a32* a, a32 v, int mo) {
+  return AtomicImpl<OpFetchMax>(to_morder(mo), a, v);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+a64 __tsan_atomic64_fetch_max(volatile a64* a, a64 v, int mo) {
+  return AtomicImpl<OpFetchMax>(to_morder(mo), a, v);
+}
+
+#  if __TSAN_HAS_INT128
+SANITIZER_INTERFACE_ATTRIBUTE
+a128 __tsan_atomic128_fetch_max(volatile a128* a, a128 v, int mo) {
+  return AtomicImpl<OpFetchMax>(to_morder(mo), a, v);
+}
+#  endif
+
+SANITIZER_INTERFACE_ATTRIBUTE
+a8 __tsan_atomic8_fetch_min(volatile a8* a, a8 v, int mo) {
+  return AtomicImpl<OpFetchMin>(to_morder(mo), a, v);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+a16 __tsan_atomic16_fetch_min(volatile a16* a, a16 v, int mo) {
+  return AtomicImpl<OpFetchMin>(to_morder(mo), a, v);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+a32 __tsan_atomic32_fetch_min(volatile a32* a, a32 v, int mo) {
+  return AtomicImpl<OpFetchMin>(to_morder(mo), a, v);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+a64 __tsan_atomic64_fetch_min(volatile a64* a, a64 v, int mo) {
+  return AtomicImpl<OpFetchMin>(to_morder(mo), a, v);
+}
+
+#  if __TSAN_HAS_INT128
+SANITIZER_INTERFACE_ATTRIBUTE
+a128 __tsan_atomic128_fetch_min(volatile a128* a, a128 v, int mo) {
+  return AtomicImpl<OpFetchMin>(to_morder(mo), a, v);
+}
+#  endif
+
+SANITIZER_INTERFACE_ATTRIBUTE
+a8 __tsan_atomic8_fetch_umax(volatile a8* a, a8 v, int mo) {
+  return AtomicImpl<OpFetchUMax>(to_morder(mo), a, v);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+a16 __tsan_atomic16_fetch_umax(volatile a16* a, a16 v, int mo) {
+  return AtomicImpl<OpFetchUMax>(to_morder(mo), a, v);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+a32 __tsan_atomic32_fetch_umax(volatile a32* a, a32 v, int mo) {
+  return AtomicImpl<OpFetchUMax>(to_morder(mo), a, v);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+a64 __tsan_atomic64_fetch_umax(volatile a64* a, a64 v, int mo) {
+  return AtomicImpl<OpFetchUMax>(to_morder(mo), a, v);
+}
+
+#  if __TSAN_HAS_INT128
+SANITIZER_INTERFACE_ATTRIBUTE
+a128 __tsan_atomic128_fetch_umax(volatile a128* a, a128 v, int mo) {
+  return AtomicImpl<OpFetchUMax>(to_morder(mo), a, v);
+}
+#  endif
+
+SANITIZER_INTERFACE_ATTRIBUTE
+a8 __tsan_atomic8_fetch_umin(volatile a8* a, a8 v, int mo) {
+  return AtomicImpl<OpFetchUMin>(to_morder(mo), a, v);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+a16 __tsan_atomic16_fetch_umin(volatile a16* a, a16 v, int mo) {
+  return AtomicImpl<OpFetchUMin>(to_morder(mo), a, v);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+a32 __tsan_atomic32_fetch_umin(volatile a32* a, a32 v, int mo) {
+  return AtomicImpl<OpFetchUMin>(to_morder(mo), a, v);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+a64 __tsan_atomic64_fetch_umin(volatile a64* a, a64 v, int mo) {
+  return AtomicImpl<OpFetchUMin>(to_morder(mo), a, v);
+}
+
+#  if __TSAN_HAS_INT128
+SANITIZER_INTERFACE_ATTRIBUTE
+a128 __tsan_atomic128_fetch_umin(volatile a128* a, a128 v, int mo) {
+  return AtomicImpl<OpFetchUMin>(to_morder(mo), a, v);
+}
+#  endif
+
+SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_atomic8_compare_exchange_strong(volatile a8 *a, a8 *c, a8 v, int mo,
                                            int fmo) {
   return AtomicImpl<OpCAS>(to_morder(mo), to_morder(fmo), a, c, v);
@@ -1030,5 +1305,53 @@ void __tsan_go_atomic128_compare_exchange(ThreadState* thr, uptr cpc, uptr pc,
   *(bool*)(a + 40) = (cur == cmp);
 }
 #  endif
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __tsan_go_atomic32_fetch_max(ThreadState* thr, uptr cpc, uptr pc, u8* a) {
+  *(a32*)(a + 16) = AtomicGoRet<OpFetchMax>(thr, cpc, pc, mo_acq_rel, *(a32**)a,
+                                            *(a32*)(a + 8));
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __tsan_go_atomic64_fetch_max(ThreadState* thr, uptr cpc, uptr pc, u8* a) {
+  *(a64*)(a + 16) = AtomicGoRet<OpFetchMax>(thr, cpc, pc, mo_acq_rel, *(a64**)a,
+                                            *(a64*)(a + 8));
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __tsan_go_atomic32_fetch_min(ThreadState* thr, uptr cpc, uptr pc, u8* a) {
+  *(a32*)(a + 16) = AtomicGoRet<OpFetchMin>(thr, cpc, pc, mo_acq_rel, *(a32**)a,
+                                            *(a32*)(a + 8));
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __tsan_go_atomic64_fetch_min(ThreadState* thr, uptr cpc, uptr pc, u8* a) {
+  *(a64*)(a + 16) = AtomicGoRet<OpFetchMin>(thr, cpc, pc, mo_acq_rel, *(a64**)a,
+                                            *(a64*)(a + 8));
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __tsan_go_atomic32_fetch_umax(ThreadState* thr, uptr cpc, uptr pc, u8* a) {
+  *(a32*)(a + 16) = AtomicGoRet<OpFetchUMax>(thr, cpc, pc, mo_acq_rel,
+                                             *(a32**)a, *(a32*)(a + 8));
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __tsan_go_atomic64_fetch_umax(ThreadState* thr, uptr cpc, uptr pc, u8* a) {
+  *(a64*)(a + 16) = AtomicGoRet<OpFetchUMax>(thr, cpc, pc, mo_acq_rel,
+                                             *(a64**)a, *(a64*)(a + 8));
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __tsan_go_atomic32_fetch_umin(ThreadState* thr, uptr cpc, uptr pc, u8* a) {
+  *(a32*)(a + 16) = AtomicGoRet<OpFetchUMin>(thr, cpc, pc, mo_acq_rel,
+                                             *(a32**)a, *(a32*)(a + 8));
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __tsan_go_atomic64_fetch_umin(ThreadState* thr, uptr cpc, uptr pc, u8* a) {
+  *(a64*)(a + 16) = AtomicGoRet<OpFetchUMin>(thr, cpc, pc, mo_acq_rel,
+                                             *(a64**)a, *(a64*)(a + 8));
+}
 }  // extern "C"
 #endif  // #if !SANITIZER_GO
