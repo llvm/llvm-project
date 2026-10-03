@@ -139,7 +139,9 @@ void DwarfEmitterImpl::emitCompileUnitHeader(DwarfUnit &Unit) {
   Asm->emitInt16(Unit.getVersion());
 
   if (Unit.getVersion() >= 5) {
-    Asm->emitInt8(dwarf::DW_UT_compile);
+    dwarf::Tag RootTag = Unit.getTag();
+    Asm->emitInt8(RootTag == dwarf::DW_TAG_partial_unit ? dwarf::DW_UT_partial
+                                                        : dwarf::DW_UT_compile);
     Asm->emitInt8(Unit.getFormParams().AddrSize);
     // Proper offset to the abbreviations table will be set later.
     Asm->emitInt32(0);
