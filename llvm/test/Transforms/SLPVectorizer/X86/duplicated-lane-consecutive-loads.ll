@@ -12,14 +12,13 @@ define void @test(i64 %i) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: i64 [[I:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> poison, i64 [[I]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i64> [[TMP0]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i64> [[TMP6]], <i64 6, i64 8, i64 7, i64 7>
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr double, <4 x ptr> <ptr @src, ptr @src, ptr @src, ptr @src>, <4 x i64> [[TMP7]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 [[TMP8]], <4 x i1> splat (i1 true), <4 x double> poison)
+; CHECK-NEXT:    [[IDX_0:%.*]] = add i64 [[I]], 6
+; CHECK-NEXT:    [[GEP_0:%.*]] = getelementptr double, ptr @src, i64 [[IDX_0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <3 x double>, ptr [[GEP_0]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x double> [[TMP0]], <3 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = fsub <4 x double> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x double> [[TMP2]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP4:%.*]] = fcmp olt <4 x double> [[TMP3]], zeroinitializer
