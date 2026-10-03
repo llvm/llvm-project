@@ -5163,6 +5163,137 @@ TEST(CompletionTest, FuzzyMatchMacro) {
   }
 }
 
+static void configureHLSL(TestTU &TU, bool EnableMatrix = false) {
+  TU.Filename = "TestTU.hlsl";
+  TU.ExtraArgs.push_back("-x");
+  TU.ExtraArgs.push_back("hlsl");
+  if (EnableMatrix)
+    TU.ExtraArgs.push_back("-fenable-matrix");
+  TU.ExtraArgs.push_back("--target=dxil-pc-shadermodel6.3-library");
+}
+
+TEST(CompletionTest, HLSLVectorSwizzle) {
+  // v. -> suggests individual components, both xyzw and rgba sets.
+  Annotations Dot(R"hlsl(
+    typedef float float3 __attribute__((ext_vector_type(3)));
+    void main() {
+      float3 v;
+      v.^
+    }
+  )hlsl");
+  TestTU TUDot = TestTU::withCode(Dot.code());
+  configureHLSL(TUDot);
+  auto ResultsDot = completions(TUDot, Dot.point());
+  EXPECT_THAT(ResultsDot.Completions,
+              Contains(Field(&CodeCompletion::Name, "x")));
+  EXPECT_THAT(ResultsDot.Completions,
+              Contains(Field(&CodeCompletion::Name, "y")));
+  EXPECT_THAT(ResultsDot.Completions,
+              Contains(Field(&CodeCompletion::Name, "z")));
+  EXPECT_THAT(ResultsDot.Completions,
+              Contains(Field(&CodeCompletion::Name, "r")));
+  EXPECT_THAT(ResultsDot.Completions,
+              Contains(Field(&CodeCompletion::Name, "g")));
+  EXPECT_THAT(ResultsDot.Completions,
+              Contains(Field(&CodeCompletion::Name, "b")));
+  // float3 has no 4th component.
+  EXPECT_THAT(ResultsDot.Completions,
+              Not(Contains(Field(&CodeCompletion::Name, "w"))));
+  EXPECT_THAT(ResultsDot.Completions,
+              Not(Contains(Field(&CodeCompletion::Name, "a"))));
+
+  // v.x -> continuation locked to the xyzw set, rgba excluded.
+  Annotations Partial(R"hlsl(
+    typedef float float3 __attribute__((ext_vector_type(3)));
+    void main() {
+      float3 v;
+      v.x^
+    }
+  )hlsl");
+  TestTU TUPartial = TestTU::withCode(Partial.code());
+  configureHLSL(TUPartial);
+  auto ResultsPartial = completions(TUPartial, Partial.point());
+  EXPECT_THAT(ResultsPartial.Completions,
+              Contains(Field(&CodeCompletion::Name, "xx")));
+  EXPECT_THAT(ResultsPartial.Completions,
+              Contains(Field(&CodeCompletion::Name, "xy")));
+  EXPECT_THAT(ResultsPartial.Completions,
+              Contains(Field(&CodeCompletion::Name, "xz")));
+  EXPECT_THAT(ResultsPartial.Completions,
+              Not(Contains(Field(&CodeCompletion::Name, "xr"))));
+
+  // v.xr -> mixing xyzw and rgba is invalid, no suggestions.
+  Annotations Mixed(R"hlsl(
+    typedef float float3 __attribute__((ext_vector_type(3)));
+    void main() {
+      float3 v;
+      v.xr^
+    }
+  )hlsl");
+  TestTU TUMixed = TestTU::withCode(Mixed.code());
+  configureHLSL(TUMixed);
+  auto ResultsMixed = completions(TUMixed, Mixed.point());
+  EXPECT_THAT(ResultsMixed.Completions, IsEmpty());
+
+  // v.xyzw -> already at the 4-component maximum, no more suggestions.
+  Annotations MaxLen(R"hlsl(
+    typedef float float4 __attribute__((ext_vector_type(4)));
+    void main() {
+      float4 v;
+      v.xyzw^
+    }
+  )hlsl");
+  TestTU TUMaxLen = TestTU::withCode(MaxLen.code());
+  configureHLSL(TUMaxLen);
+  auto ResultsMaxLen = completions(TUMaxLen, MaxLen.point());
+  EXPECT_THAT(ResultsMaxLen.Completions, IsEmpty());
+}
+
+TEST(CompletionTest, HLSLMatrixSwizzle) {
+  // m. -> suggests individual matrix components (e.g., _m00, _11)
+  Annotations Dot(R"hlsl(
+    // Mocking a 4x4 matrix for the test environment
+    typedef float float4x4 __attribute__((matrix_type(4, 4)));
+    void main() {
+      float4x4 m;
+      m.^
+    }
+  )hlsl");
+  TestTU TUDot = TestTU::withCode(Dot.code());
+  configureHLSL(TUDot);
+  auto ResultsDot = completions(TUDot, Dot.point());
+
+  // 0-based indexing (_m00 to _m33)
+  EXPECT_THAT(ResultsDot.Completions,
+              Contains(Field(&CodeCompletion::Name, "_m00")));
+  EXPECT_THAT(ResultsDot.Completions,
+              Contains(Field(&CodeCompletion::Name, "_m33")));
+
+  // 1-based indexing (_11 to _44)
+  EXPECT_THAT(ResultsDot.Completions,
+              Contains(Field(&CodeCompletion::Name, "_11")));
+  EXPECT_THAT(ResultsDot.Completions,
+              Contains(Field(&CodeCompletion::Name, "_44")));
+
+  // m._m00_ -> continuation test (if your implementation supports
+  // multi-component matrix swizzle)
+  Annotations Partial(R"hlsl(
+    typedef float float4x4 __attribute__((matrix_type(4, 4)));
+    void main() {
+      float4x4 m;
+      m._m00^
+    }
+  )hlsl");
+  TestTU TUPartial = TestTU::withCode(Partial.code());
+  configureHLSL(TUPartial);
+  auto ResultsPartial = completions(TUPartial, Partial.point());
+
+  EXPECT_THAT(ResultsPartial.Completions,
+              Contains(Field(&CodeCompletion::Name, "_m00_m00")));
+  EXPECT_THAT(ResultsPartial.Completions,
+              Contains(Field(&CodeCompletion::Name, "_m00_m33")));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
