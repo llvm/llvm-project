@@ -30,7 +30,13 @@ class Value;
 
 class Float2IntPass : public OptionalPassInfoMixin<Float2IntPass> {
 public:
+  Float2IntPass(unsigned MaxIntegerBW = 64) : MaxIntegerBW(MaxIntegerBW) {}
+
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   // Glue for old PM.
   LLVM_ABI bool runImpl(Function &F, const DominatorTree &DT);
@@ -53,6 +59,9 @@ private:
   EquivalenceClasses<Instruction *> ECs;
   MapVector<Instruction *, Value *> ConvertedInsts;
   LLVMContext *Ctx;
+
+  /// Max integer bitwidth to consider in float2int.
+  const unsigned MaxIntegerBW;
 };
 }
 #endif // LLVM_TRANSFORMS_SCALAR_FLOAT2INT_H
