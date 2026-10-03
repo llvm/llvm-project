@@ -8257,6 +8257,62 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   return V;
 }
 
+SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
+                                             SDVTList VTList,
+                                             ArrayRef<SDValue> Ops,
+                                             SDNodeFlags Flags) {
+  if (VTList.NumVTs == 1)
+    return FoldConstantArithmetic(Opcode, DL, VTList.VTs[0], Ops, Flags);
+
+  switch (Opcode) {
+  case ISD::SADDO:
+  case ISD::UADDO:
+  case ISD::SSUBO:
+  case ISD::USUBO:
+  case ISD::SMULO:
+  case ISD::UMULO: {
+    // TODO: Support non-splat vector constants.
+    ConstantSDNode *C1 = isConstOrConstSplat(Ops[0]);
+    ConstantSDNode *C2 = isConstOrConstSplat(Ops[1]);
+    if (!C1 || !C2 || C1->isOpaque() || C2->isOpaque())
+      return SDValue();
+
+    const APInt &V1 = C1->getAPIntValue(), &V2 = C2->getAPIntValue();
+    bool Overflow;
+    APInt Result;
+    switch (Opcode) {
+    default:
+      llvm_unreachable("Unexpected overflow opcode");
+    case ISD::SADDO:
+      Result = V1.sadd_ov(V2, Overflow);
+      break;
+    case ISD::UADDO:
+      Result = V1.uadd_ov(V2, Overflow);
+      break;
+    case ISD::SSUBO:
+      Result = V1.ssub_ov(V2, Overflow);
+      break;
+    case ISD::USUBO:
+      Result = V1.usub_ov(V2, Overflow);
+      break;
+    case ISD::SMULO:
+      Result = V1.smul_ov(V2, Overflow);
+      break;
+    case ISD::UMULO:
+      Result = V1.umul_ov(V2, Overflow);
+      break;
+    }
+
+    EVT VT = VTList.VTs[0];
+    return getNode(ISD::MERGE_VALUES, DL, VTList,
+                   {getConstant(Result, DL, VT),
+                    getBoolConstant(Overflow, DL, VTList.VTs[1], VT)},
+                   Flags);
+  }
+  }
+  return SDValue();
+}
+
 SDValue SelectionDAG::foldConstantFPMath(unsigned Opcode, const SDLoc &DL,
                                          EVT VT, ArrayRef<SDValue> Ops) {
   // TODO: Add support for unary/ternary fp opcodes.
@@ -12027,6 +12083,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
     assert(Op.getOpcode() != ISD::DELETED_NODE &&
            "Operand is DELETED_NODE!");
 #endif
+
+  if (SDValue V = FoldConstantArithmetic(Opcode, DL, VTList, Ops, Flags))
+    return V;
 
   switch (Opcode) {
   case ISD::SADDO:

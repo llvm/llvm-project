@@ -143,3 +143,102 @@ define <4 x i32> @combine_vec_uadd_no_overflow(<4 x i32> %a0, <4 x i32> %a1, <4 
   %6 = select <4 x i1> %5, <4 x i32> %a2, <4 x i32> %4
   ret <4 x i32> %4
 }
+
+; fold (sadd c1, c2) -> c3 + overflow
+define { i32, i1 } @combine_sadd_constant_overflow() {
+; CHECK-LABEL: combine_sadd_constant_overflow:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
+; CHECK-NEXT:    movb $1, %dl
+; CHECK-NEXT:    retq
+  %x = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 2147483647, i32 1)
+  ret { i32, i1 } %x
+}
+
+define { i32, i1 } @combine_sadd_constant_no_overflow() {
+; CHECK-LABEL: combine_sadd_constant_no_overflow:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    retq
+  %x = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 2147483646, i32 1)
+  ret { i32, i1 } %x
+}
+
+define { <4 x i32>, <4 x i1> } @combine_vec_sadd_constant_overflow() {
+; SSE-LABEL: combine_vec_sadd_constant_overflow:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [2147483648,2147483648,2147483648,2147483648]
+; SSE-NEXT:    movaps {{.*#+}} xmm1 = [1,1,1,1]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_sadd_constant_overflow:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [2147483648,2147483648,2147483648,2147483648]
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1,1,1,1]
+; AVX-NEXT:    retq
+  %x = call { <4 x i32>, <4 x i1> } @llvm.sadd.with.overflow.v4i32(<4 x i32> splat (i32 2147483647), <4 x i32> splat (i32 1))
+  ret { <4 x i32>, <4 x i1> } %x
+}
+
+; fold (uadd c1, c2) -> c3 + overflow
+define { i32, i1 } @combine_uadd_constant_overflow() {
+; CHECK-LABEL: combine_uadd_constant_overflow:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    movb $1, %dl
+; CHECK-NEXT:    retq
+  %x = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 -1, i32 2)
+  ret { i32, i1 } %x
+}
+
+define { i32, i1 } @combine_uadd_constant_no_overflow() {
+; CHECK-LABEL: combine_uadd_constant_no_overflow:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $-1, %eax
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    retq
+  %x = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 -3, i32 2)
+  ret { i32, i1 } %x
+}
+
+define { <4 x i32>, <4 x i1> } @combine_vec_uadd_constant_overflow() {
+; SSE-LABEL: combine_vec_uadd_constant_overflow:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [1,1,1,1]
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_uadd_constant_overflow:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1,1,1,1]
+; AVX-NEXT:    vmovaps %xmm0, %xmm1
+; AVX-NEXT:    retq
+  %x = call { <4 x i32>, <4 x i1> } @llvm.uadd.with.overflow.v4i32(<4 x i32> splat (i32 -1), <4 x i32> splat (i32 2))
+  ret { <4 x i32>, <4 x i1> } %x
+}
+
+; Opaque constants (as created by constant hoisting) should not be folded.
+define { i64, i1 } @combine_sadd_constant_opaque() {
+; CHECK-LABEL: combine_sadd_constant_opaque:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movabsq $9223372036854775792, %rax # imm = 0x7FFFFFFFFFFFFFF0
+; CHECK-NEXT:    addq $100, %rax
+; CHECK-NEXT:    seto %dl
+; CHECK-NEXT:    retq
+  %c = bitcast i64 9223372036854775792 to i64
+  %x = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %c, i64 100)
+  ret { i64, i1 } %x
+}
+
+define { i64, i1 } @combine_uadd_constant_opaque() {
+; CHECK-LABEL: combine_uadd_constant_opaque:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movabsq $-1311768467463790320, %rax # imm = 0xEDCBA98765432110
+; CHECK-NEXT:    addq $-3, %rax
+; CHECK-NEXT:    setb %dl
+; CHECK-NEXT:    retq
+  %c = bitcast i64 -1311768467463790320 to i64
+  %x = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %c, i64 -3)
+  ret { i64, i1 } %x
+}
