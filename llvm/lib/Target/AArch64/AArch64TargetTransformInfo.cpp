@@ -3963,6 +3963,28 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   EVT SrcTy = TLI->getValueType(DL, Src);
   EVT DstTy = TLI->getValueType(DL, Dst);
 
+  // A bitcast that crosses register banks is costed as a vector insert/extract.
+  // Between the same register bank it is free. Note: Some costs are not handled
+  // well by this, like i1 vectors that need to be packed.
+  if (ISD == ISD::BITCAST && ST->isLittleEndian()) {
+    std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(Src);
+    std::pair<InstructionCost, MVT> DstLT = getTypeLegalizationCost(Dst);
+    bool SrcIsFloatOrVec =
+        SrcLT.second.isVector() || SrcLT.second.isFloatingPoint();
+    bool DstIsFloatOrVec =
+        DstLT.second.isVector() || DstLT.second.isFloatingPoint();
+    if (SrcIsFloatOrVec == DstIsFloatOrVec &&
+        (SrcLT.second.getSizeInBits() == DstLT.second.getSizeInBits() ||
+         (SrcLT.second.isScalableVector() &&
+          SrcLT.second.getScalarSizeInBits() != 1 &&
+          DstLT.second.getScalarSizeInBits() != 1)))
+      return 0;
+    return std::max(SrcLT.first, DstLT.first) *
+           (CostKind == TTI::TCK_CodeSize
+                ? 1
+                : ST->getVectorInsertExtractBaseCost());
+  }
+
   // From a vector to a scalarized vector will be an series of extract-element
   // and extends.
   if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
@@ -4470,16 +4492,6 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::FP_EXTEND, MVT::nxv2f64, MVT::nxv2f32, 1},
       {ISD::FP_EXTEND, MVT::nxv4f64, MVT::nxv4f32, 2},
       {ISD::FP_EXTEND, MVT::nxv8f64, MVT::nxv8f32, 6},
-
-      // Bitcasts from float to integer
-      {ISD::BITCAST, MVT::nxv2f16, MVT::nxv2i16, 0},
-      {ISD::BITCAST, MVT::nxv4f16, MVT::nxv4i16, 0},
-      {ISD::BITCAST, MVT::nxv2f32, MVT::nxv2i32, 0},
-
-      // Bitcasts from integer to float
-      {ISD::BITCAST, MVT::nxv2i16, MVT::nxv2f16, 0},
-      {ISD::BITCAST, MVT::nxv4i16, MVT::nxv4f16, 0},
-      {ISD::BITCAST, MVT::nxv2i32, MVT::nxv2f32, 0},
 
       // Add cost for extending to illegal -too wide- scalable vectors.
       // zero/sign extend are implemented by multiple unpack operations,
