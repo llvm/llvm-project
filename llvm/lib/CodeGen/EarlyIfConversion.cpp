@@ -1234,13 +1234,16 @@ bool EarlyIfConverter::shouldConvertIf() {
   // critical-path extension introduced by speculative instructions and selects.
   // Keep the existing budget for branches without a strongly preferred edge.
   const unsigned MispredictPenalty = STI->getMispredictionPenalty();
-  unsigned CritLimit = DataDependent ? MispredictPenalty : MispredictPenalty / 2;
-  if (!DataDependent) {
+  unsigned CritLimit;
+  if (DataDependent) {
+    CritLimit = MispredictPenalty;
+  } else {
     const BranchProbability ColdProb =
         std::min(MBPI->getEdgeProbability(IfConv.Head, IfConv.TBB),
                  MBPI->getEdgeProbability(IfConv.Head, IfConv.FBB));
-    if (ColdProb < BranchProbability(1, 100))
-      CritLimit = ColdProb.scale(MispredictPenalty);
+    CritLimit = ColdProb < BranchProbability(1, 100)
+                    ? ColdProb.scale(MispredictPenalty)
+                    : MispredictPenalty / 2;
   }
 
   MachineBasicBlock &MBB = *IfConv.Head;
