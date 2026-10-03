@@ -7308,8 +7308,10 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
     EmitIgnoredExpr(E->getArg(0));
     Arguments = drop_begin(Arguments, 1);
   }
+  // Overloaded operators retain their built-in operand sequencing.
   EmitCallArgs(Args, dyn_cast<FunctionProtoType>(FnType), Arguments,
-               E->getDirectCallee(), /*ParamsToSkip=*/0, Order);
+               E->getDirectCallee(), /*ParamsToSkip=*/0, Order,
+               /*IsOperatorCall=*/isa<CXXOperatorCallExpr>(E));
 
   const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeFreeFunctionCall(
       Args, FnType, /*ChainCall=*/Chain, getCurrentFunctionDecl());
