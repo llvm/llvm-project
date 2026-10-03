@@ -168,13 +168,9 @@ ScopedReportBase::ScopedReportBase(ReportType typ, uptr tag) {
   rep_ = New<ReportDesc>();
   rep_->typ = typ;
   rep_->tag = tag;
-  ctx->report_mtx.Lock();
 }
 
-ScopedReportBase::~ScopedReportBase() {
-  ctx->report_mtx.Unlock();
-  DestroyAndFree(rep_);
-}
+ScopedReportBase::~ScopedReportBase() { DestroyAndFree(rep_); }
 
 void ScopedReportBase::AddStack(StackTrace stack, bool suppressable) {
   ReportStack **rs = rep_->stacks.PushBack();
@@ -713,7 +709,7 @@ bool OutputReport(ThreadState *thr, ScopedReport &srep) {
   }
   PrintReport(rep);
   __tsan_on_report(rep);
-  ctx->nreported++;
+  atomic_fetch_add(&ctx->nreported, 1, memory_order_relaxed);
   if (flags()->halt_on_error)
     Die();
   thr->current_report = nullptr;
@@ -815,8 +811,8 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
 
   // Use alloca, because malloc during signal handling deadlocks
   ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
-  // Take a new scope as Apple platforms require the below locks released
-  // before symbolizing in order to avoid a deadlock
+  // Release locks before symbolizing and outputting the report to avoid
+  // deadlocks.
   {
     // We need to lock the slot during RestoreStack because it protects
     // the slot journal.
@@ -876,17 +872,11 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
         s[1].epoch() <= thr->last_sleep_clock.Get(s[1].sid()))
       rep->AddSleep(thr->last_sleep_stack_id);
 #endif
-
-#if SANITIZER_APPLE
-  }  // Close this scope to release the locks
-#endif
-    OutputReport(thr, *rep);
-
-    // Need to manually destroy this because we used placement new to allocate
-    rep->~ScopedReport();
-#if !SANITIZER_APPLE
   }
-#endif
+  OutputReport(thr, *rep);
+
+  // Need to manually destroy this because we used placement new to allocate
+  rep->~ScopedReport();
 }
 
 void PrintCurrentStack(ThreadState *thr, uptr pc) {

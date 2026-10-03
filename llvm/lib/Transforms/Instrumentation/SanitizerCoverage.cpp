@@ -775,8 +775,10 @@ GlobalVariable *ModuleSanitizerCoverage::CreateFunctionLocalArrayInSection(
       *CurModule, ArrayTy, false, GlobalVariable::PrivateLinkage,
       Constant::getNullValue(ArrayTy), "__sancov_gen_");
 
+  // noipa doesn't affect linkage, so it is ignored when deciding on a comdat.
   if (TargetTriple.supportsCOMDAT() &&
-      (F.hasComdat() || TargetTriple.isOSBinFormatELF() || !F.isInterposable()))
+      (F.hasComdat() || TargetTriple.isOSBinFormatELF() ||
+       !F.isInterposable(/*CheckNoIPA=*/false)))
     if (auto Comdat = getOrCreateFunctionComdat(F, TargetTriple))
       Array->setComdat(Comdat);
   Array->setSection(getSectionName(Section));
