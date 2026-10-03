@@ -367,6 +367,10 @@ enum ControlRecordTypes {
 
   /// Record code for the module build directory.
   MODULE_DIRECTORY,
+
+  /// Record code for the directories this AST file depends on the listing of.
+  /// Only emitted when non-empty.
+  MODULE_DIRECTORY_DEPENDENCIES,
 };
 
 /// Record types that occur within the options block inside

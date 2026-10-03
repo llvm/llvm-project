@@ -732,6 +732,9 @@ public:
                              const Twine &PathRelativeToRootModuleDirectory,
                              SourceLocation Loc = SourceLocation());
 
+  /// Record that \p Mod depends on the listing of \p Dir. \p Dir is a VFS path.
+  void recordDirectoryDependencies(Module *Mod, StringRef Dir);
+
   /// Sets the umbrella directory of the given module to the given directory.
   void setUmbrellaDirAsWritten(Module *Mod, DirectoryEntryRef UmbrellaDir,
                                const Twine &NameAsWritten,

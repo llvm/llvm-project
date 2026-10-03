@@ -1150,6 +1150,7 @@ static Language getLanguageFromOptions(const LangOptions &LangOpts) {
 std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
     SourceLocation ImportLoc, StringRef ModuleName, FrontendInputFile Input,
     StringRef OriginalModuleMapFile, StringRef ModuleFileName,
+    ArrayRef<std::string> DirectoryDependencies,
     std::optional<ThreadSafeCloneConfig> ThreadSafeConfig) {
   // Construct a compiler invocation for creating this module.
   auto Invocation = std::make_shared<CompilerInvocation>(getInvocation());
@@ -1262,6 +1263,11 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
 
   // Make a copy for the new instance.
   Instance.FailedModules = FailedModules;
+
+  // An inferred framework is built from module map text printed by this
+  // instance rather than by repeating the inference, so directories the
+  // inference enumerated (its Frameworks subdirectory) are only known here.
+  Instance.setInheritedDirectoryDependencies(DirectoryDependencies);
 
   // Pass along the GenModuleActionWrapper callback.
   Instance.setGenModuleActionWrapper(getGenModuleActionWrapper());
@@ -1440,7 +1446,7 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
         ImportLoc, ModuleName,
         FrontendInputFile(ModuleMapFilePath, IK, IsSystem),
         ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName,
-        std::move(ThreadSafeConfig));
+        Module->getDirectoryDependencies(), std::move(ThreadSafeConfig));
   }
 
   // FIXME: We only need to fake up an input file here as a way of
@@ -1458,7 +1464,7 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
       ImportLoc, ModuleName,
       FrontendInputFile(FakeModuleMapFile, IK, +Module->IsSystem),
       ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName,
-      std::move(ThreadSafeConfig));
+      Module->getDirectoryDependencies(), std::move(ThreadSafeConfig));
 
   std::unique_ptr<llvm::MemoryBuffer> ModuleMapBuffer =
       llvm::MemoryBuffer::getMemBufferCopy(InferredModuleMapContent);
