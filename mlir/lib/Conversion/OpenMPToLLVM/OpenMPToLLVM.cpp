@@ -185,7 +185,17 @@ void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
       [&](omp::MapBoundsType type) -> Type { return type; });
   converter.addConversion(
       [&](omp::AffinityEntryType type) -> Type { return type; });
-  converter.addConversion([&](omp::IteratedType type) -> Type { return type; });
+  // Unlike MapBoundsType/AffinityEntryType, the element type wrapped by
+  // IteratedType is a real (e.g. FIR) pointer-like type that does get
+  // converted elsewhere (e.g. omp.map.info's own result), so this type must
+  // be rebuilt with the element type converted too, or the omp.iterator op's
+  // declared type would go stale relative to its omp.yield operand.
+  converter.addConversion([&](omp::IteratedType type) -> Type {
+    Type convertedElementType = converter.convertType(type.getElementType());
+    if (!convertedElementType)
+      return nullptr;
+    return omp::IteratedType::get(type.getContext(), convertedElementType);
+  });
 
   // Add conversions for all OpenMP operations.
   addOpenMPOpConversions<
