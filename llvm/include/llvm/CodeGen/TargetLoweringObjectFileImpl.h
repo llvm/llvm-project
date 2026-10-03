@@ -188,7 +188,6 @@ public:
 
 class LLVM_ABI TargetLoweringObjectFileCOFF : public TargetLoweringObjectFile {
   mutable unsigned NextUniqueID = 0;
-  const TargetMachine *TM = nullptr;
 
 public:
   ~TargetLoweringObjectFileCOFF() override = default;

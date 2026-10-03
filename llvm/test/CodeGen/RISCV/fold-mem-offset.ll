@@ -730,3 +730,38 @@ entry:
   %add4 = add i8 %1, %0
   ret i8 %add4
 }
+
+%union.u0 = type { [0 x i8] }
+
+declare void @f4()
+
+; Make sure we don't crash when we find an global added to a frame index ADDI.
+define ptr @pr228053_frameindex_crash() {
+; CHECK-LABEL: pr228053_frameindex_crash:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    lui a0, %hi(f4)
+; CHECK-NEXT:    addi a0, a0, %lo(f4)
+; CHECK-NEXT:    addi a1, sp, 15
+; CHECK-NEXT:    add a0, a1, a0
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    ret
+;
+; ZBA-LABEL: pr228053_frameindex_crash:
+; ZBA:       # %bb.0: # %entry
+; ZBA-NEXT:    addi sp, sp, -16
+; ZBA-NEXT:    .cfi_def_cfa_offset 16
+; ZBA-NEXT:    lui a0, %hi(f4)
+; ZBA-NEXT:    addi a0, a0, %lo(f4)
+; ZBA-NEXT:    addi a1, sp, 15
+; ZBA-NEXT:    add a0, a1, a0
+; ZBA-NEXT:    addi sp, sp, 16
+; ZBA-NEXT:    .cfi_def_cfa_offset 0
+; ZBA-NEXT:    ret
+entry:
+  %un18 = alloca %union.u0, align 1
+  %arrayidx1 = getelementptr i8, ptr %un18, i64 ptrtoint (ptr @f4 to i64)
+  ret ptr %arrayidx1
+}

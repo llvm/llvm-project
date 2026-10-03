@@ -3322,6 +3322,16 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (Opts.UseClangIRPipeline && DashX.getLanguage() == Language::LLVM_IR)
     Opts.UseClangIRPipeline = false;
 
+  // Conversely, ClangIR input can only be consumed by the CIR pipeline, so it
+  // implies -fclangir, and is an error if that pipeline is not built in.
+  if (DashX.getLanguage() == Language::CIR) {
+#if CLANG_ENABLE_CIR
+    Opts.UseClangIRPipeline = true;
+#else
+    Diags.Report(diag::err_fe_cir_not_built);
+#endif
+  }
+
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
@@ -5289,6 +5299,7 @@ std::string CompilerInvocation::computeContextHash() const {
 
   HBuilder.add(getLangOpts().ObjCRuntime);
   HBuilder.addRange(getLangOpts().CommentOpts.BlockCommandNames);
+  HBuilder.add(getLangOpts().CommentOpts.RetainCommentsFromSystemHeaders);
 
   // Extend the signature with the target options.
   HBuilder.add(getTargetOpts().Triple, getTargetOpts().CPU,

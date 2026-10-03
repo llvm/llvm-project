@@ -204,7 +204,6 @@ class MipsAsmParser : public MCTargetAsmParser {
                                             const AsmToken &Token, SMLoc S);
   ParseStatus matchAnyRegisterWithoutDollar(OperandVector &Operands, SMLoc S);
   ParseStatus parseAnyRegister(OperandVector &Operands);
-  ParseStatus parseImm(OperandVector &Operands);
   ParseStatus parseJumpTarget(OperandVector &Operands);
   ParseStatus parseInvNum(OperandVector &Operands);
   ParseStatus parseRegisterList(OperandVector &Operands);
@@ -398,6 +397,7 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool parseSetNoCRCDirective();
   bool parseSetNoVirtDirective();
   bool parseSetNoGINVDirective();
+  bool parseSetNoEVADirective();
 
   bool parseSetAssignment();
 
@@ -441,11 +441,6 @@ class MipsAsmParser : public MCTargetAsmParser {
 
   bool processInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                           const MCSubtargetInfo *STI);
-
-  // Helper function that checks if the value of a vector index is within the
-  // boundaries of accepted values for each RegisterKind
-  // Example: INSERT.B $w0[n], $1 => 16 > n >= 0
-  bool validateMSAIndex(int Val, int RegKind);
 
   // Selects a new architecture by updating the FeatureBits with the necessary
   // info including implied dependencies.
@@ -7329,6 +7324,23 @@ bool MipsAsmParser::parseSetNoGINVDirective() {
   return false;
 }
 
+bool MipsAsmParser::parseSetNoEVADirective() {
+  MCAsmParser &Parser = getParser();
+  Parser.Lex(); // Eat "noeva".
+
+  // If this is not the end of the statement, report an error.
+  if (getLexer().isNot(AsmToken::EndOfStatement)) {
+    reportParseError("unexpected token, expected end of statement");
+    return false;
+  }
+
+  clearFeatureBits(Mips::FeatureEVA, "eva");
+
+  getTargetStreamer().emitDirectiveSetNoEVA();
+  Parser.Lex(); // Consume the EndOfStatement.
+  return false;
+}
+
 bool MipsAsmParser::parseSetPopDirective() {
   MCAsmParser &Parser = getParser();
   SMLoc Loc = getLexer().getLoc();
@@ -7577,6 +7589,10 @@ bool MipsAsmParser::parseSetFeature(uint64_t Feature) {
   case Mips::FeatureGINV:
     setFeatureBits(Mips::FeatureGINV, "ginv");
     getTargetStreamer().emitDirectiveSetGINV();
+    break;
+  case Mips::FeatureEVA:
+    setFeatureBits(Mips::FeatureEVA, "eva");
+    getTargetStreamer().emitDirectiveSetEVA();
     break;
   }
   return false;
@@ -7961,6 +7977,10 @@ bool MipsAsmParser::parseDirectiveSet() {
     return parseSetFeature(Mips::FeatureGINV);
   if (IdVal == "noginv")
     return parseSetNoGINVDirective();
+  if (IdVal == "eva")
+    return parseSetFeature(Mips::FeatureEVA);
+  if (IdVal == "noeva")
+    return parseSetNoEVADirective();
 
   // It is just an identifier, look for an assignment.
   return parseSetAssignment();
