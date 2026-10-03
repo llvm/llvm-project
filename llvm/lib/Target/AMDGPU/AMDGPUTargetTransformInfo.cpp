@@ -1098,21 +1098,26 @@ InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   };
 
   if (IsIntToFP) {
-    // A scalar load of 24, 40, 48 or 56 bits is split and its high part load
-    // extends the source. A constant or invariant load aligned to 4 bytes may
-    // be widened instead and then still needs the extension.
+    // A scalar load of a whole number of bytes that is not a power of two is
+    // split and its high part load extends the source. A constant address
+    // space or invariant global load aligned to 4 bytes may be widened instead
+    // and then still needs the extension. So does a buffer fat pointer load.
     const auto *Load =
         I && Src->isIntegerTy() && I->getOperand(0)->getType() == Src
             ? dyn_cast<LoadInst>(I->getOperand(0))
             : nullptr;
+    const unsigned AS = Load ? Load->getPointerAddressSpace() : 0;
     const bool LoadMayWiden =
         Load && Load->getAlign() >= Align(4) &&
-        (AMDGPU::isConstantAddressSpace(Load->getPointerAddressSpace()) ||
-         (Load->getPointerAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS &&
+        (AS == AMDGPUAS::CONSTANT_ADDRESS ||
+         AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
+         (AS == AMDGPUAS::GLOBAL_ADDRESS &&
           Load->hasMetadata(LLVMContext::MD_invariant_load)));
     const bool LoadExtends = Load && Load->isSimple() && Load->hasOneUse() &&
-                             !LoadMayWiden && SrcBits % 8 == 0 &&
-                             (SrcBits == 24 || (UsesInt64 && SrcBits < 64));
+                             !LoadMayWiden &&
+                             AS != AMDGPUAS::BUFFER_FAT_POINTER &&
+                             AS != AMDGPUAS::BUFFER_STRIDED_POINTER &&
+                             SrcBits % 8 == 0 && !isPowerOf2_32(SrcBits);
     const unsigned ExtOps =
         UsesInt64 && SrcBits < 64 && !LoadExtends ? (IsSigned ? 2 : 1) : 0;
     if (FPTy->isBFloatTy()) {
