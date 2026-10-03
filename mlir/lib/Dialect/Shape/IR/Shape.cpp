@@ -615,11 +615,15 @@ void AssumingAllOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 OpFoldResult AssumingAllOp::fold(FoldAdaptor adaptor) {
   // Iterate in reverse to first handle all constant operands. They are
   // guaranteed to be the tail of the inputs because this is commutative.
-  for (int idx = adaptor.getInputs().size() - 1; idx >= 0; idx--) {
+  int numInputs = adaptor.getInputs().size();
+  for (int idx = numInputs - 1; idx >= 0; idx--) {
     Attribute a = adaptor.getInputs()[idx];
-    // Cannot fold if any inputs are not constant;
-    if (!a)
-      return nullptr;
+    // Cannot fold if any inputs are not constant. The op's own result reports
+    // the inputs that the loop already erased as an in-place fold.
+    if (!a) {
+      bool erasedInputs = idx != numInputs - 1;
+      return erasedInputs ? OpFoldResult(getResult()) : OpFoldResult();
+    }
 
     // We do not need to keep statically known values after handling them in
     // this method.
