@@ -144,6 +144,8 @@ public:
     return true;
   }
 
+  virtual SmallVector<unsigned, 8> getAddressSpaces() const { return {}; }
+
   virtual unsigned getFlatAddressSpace() const { return -1; }
 
   virtual unsigned getAddressSpaceJoin(unsigned AS1, unsigned AS2) const {
