@@ -8,7 +8,7 @@ subroutine scalar_mold_allocation()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPscalar_mold_allocation() {
-! CHECK: %[[A:.*]] = fir.alloca !fir.box<!fir.heap<i32>> {bindc_name = "a", uniq_name = "_QFscalar_mold_allocationEa"}
+! CHECK: %[[A:.*]] = fir.alloca !fir.box<!fir.heap<i32>> <{bindc_name = "a", uniq_name = "_QFscalar_mold_allocationEa"}>
 ! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] {{.*}}
 ! CHECK: %[[A_BOX_NONE:.*]] = fir.convert %[[A_DECL]]#0 : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: fir.call @_FortranAAllocatableApplyMold(%[[A_BOX_NONE]], %{{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32) -> ()
@@ -21,7 +21,7 @@ subroutine array_scalar_mold_allocation()
 end subroutine array_scalar_mold_allocation
 
 ! CHECK-LABEL: func.func @_QParray_scalar_mold_allocation() {
-! CHECK: %[[A:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", uniq_name = "_QFarray_scalar_mold_allocationEa"}
+! CHECK: %[[A:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> <{bindc_name = "a", uniq_name = "_QFarray_scalar_mold_allocationEa"}>
 ! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] {{.*}}
 ! CHECK: %[[REF_BOX_A:.*]] = fir.convert %[[A_DECL]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: fir.call @_FortranAAllocatableApplyMold(%[[REF_BOX_A]], {{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32) -> ()

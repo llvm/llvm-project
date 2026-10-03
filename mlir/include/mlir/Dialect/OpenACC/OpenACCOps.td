@@ -534,6 +534,10 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
     but not checked for consistency). When the source language's arrays are
     not zero-based, the `startIdx` must specify the zero-position index.
 
+    `sourceExtent` is the extent of the corresponding dimension in the
+    original array. It may differ from `extent`, which describes the selected
+    section. When absent, the source extent is the same as `extent`.
+
     The `stride` represents the distance between consecutive elements. For
     multi-dimensional arrays, the `stride` for each outer dimension must account
     for the complete size of all inner dimensions.
@@ -570,6 +574,7 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
   let arguments = (ins Optional<IntOrIndex>:$lowerbound,
                        Optional<IntOrIndex>:$upperbound,
                        Optional<IntOrIndex>:$extent,
+                       Optional<IntOrIndex>:$sourceExtent,
                        Optional<IntOrIndex>:$stride,
                        DefaultValuedAttr<BoolAttr, "false">:$strideInBytes,
                        Optional<IntOrIndex>:$startIdx);
@@ -580,6 +585,7 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
         `lowerbound` `(` $lowerbound `:` type($lowerbound) `)`
       | `upperbound` `(` $upperbound `:` type($upperbound) `)`
       | `extent` `(` $extent `:` type($extent) `)`
+      | `sourceExtent` `(` $sourceExtent `:` type($sourceExtent) `)`
       | `stride` `(` $stride `:` type($stride) `)`
       | `startIdx` `(` $startIdx `:` type($startIdx) `)`
     ) (`strideInBytes` `(` $strideInBytes^ `)`)? attr-dict
@@ -592,7 +598,8 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
         build($_builder, $_state,
           ::mlir::acc::DataBoundsType::get($_builder.getContext()),
           /*lowerbound=*/{}, /*upperbound=*/{}, extent,
-          /*stride=*/{}, /*strideInBytes=*/$_builder.getBoolAttr(false),
+          /*sourceExtent=*/{}, /*stride=*/{},
+          /*strideInBytes=*/$_builder.getBoolAttr(false),
           /*startIdx=*/{});
       }]
     >,
@@ -601,10 +608,21 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
         build($_builder, $_state,
           ::mlir::acc::DataBoundsType::get($_builder.getContext()),
           lowerbound, upperbound, /*extent=*/{},
-          /*stride=*/{}, /*strideInBytes=*/$_builder.getBoolAttr(false),
+          /*sourceExtent=*/{}, /*stride=*/{},
+          /*strideInBytes=*/$_builder.getBoolAttr(false),
           /*startIdx=*/{});
       }]
-    >
+    >,
+    OpBuilder<(ins "::mlir::Type":$resultType,
+                   "::mlir::Value":$lowerbound,
+                   "::mlir::Value":$upperbound,
+                   "::mlir::Value":$extent,
+                   "::mlir::Value":$stride,
+                   "bool":$strideInBytes,
+                   "::mlir::Value":$startIdx), [{
+        build($_builder, $_state, resultType, lowerbound, upperbound, extent,
+              /*sourceExtent=*/{}, stride, strideInBytes, startIdx);
+      }]>
   ];
 }
 
@@ -713,6 +731,7 @@ class OpenACC_DataEntryOp<string mnemonic, string clause,
           DefaultValuedAttr<OpenACC_DataClauseAttr, clause>:$dataClause,
           DefaultValuedAttr<BoolAttr, "true">:$structured,
           DefaultValuedAttr<BoolAttr, "false">:$implicit,
+          UnitAttr:$synthetic,
           DefaultValuedAttr<OpenACC_DataClauseModifierAttr,
             "mlir::acc::DataClauseModifier::none">:$modifiers,
           OptionalAttr<StrAttr>:$name,
@@ -745,6 +764,10 @@ class OpenACC_DataEntryOp<string mnemonic, string clause,
     counters (2.6.7).
     - `implicit`: Whether this is an implicitly generated operation, such as copies
     done to satisfy "Variables with Implicitly Determined Data Attributes" in 2.6.2.
+    - `synthetic`: Whether the implementation created this operation for its own
+    bookkeeping instead of to represent a data attribute of the program being
+    compiled. Unlike an `implicit` operation, it has no counterpart in that
+    program, so it is not described to the user.
     - `modifiers`: Keeps track of the data clause modifiers (eg zero, readonly, etc)
     - `name`: Holds the name of variable as specified in user clause (including bounds).
 
@@ -808,6 +831,7 @@ class OpenACC_DataEntryOp<string mnemonic, string clause,
       | `dataClause` `(` enum($dataClause) `)`
       | `structured` `(` $structured `)`
       | `implicit` `(` $implicit `)`
+      | `synthetic` $synthetic
       | `name` `(` $name `)`
     ) prop-dict `->` type($accVar) attr-dict
   }];
@@ -829,7 +853,8 @@ class OpenACC_DataEntryOp<string mnemonic, string clause,
           /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
+          /*implicit=*/$_builder.getBoolAttr(implicit),
+          /*synthetic=*/nullptr, /*modifiers=*/nullptr,
           /*name=*/nullptr, /*recipe=*/nullptr);
       }]>,
     OpBuilder<(ins "::mlir::Value":$var,
@@ -847,7 +872,8 @@ class OpenACC_DataEntryOp<string mnemonic, string clause,
           /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
+          /*implicit=*/$_builder.getBoolAttr(implicit),
+          /*synthetic=*/nullptr, /*modifiers=*/nullptr,
           /*name=*/$_builder.getStringAttr(name), /*recipe=*/nullptr);
       }]>,
     OpBuilder<(ins "::mlir::Type":$accVarType, "::mlir::Value":$var,
@@ -878,7 +904,8 @@ class OpenACC_DataEntryOp<string mnemonic, string clause,
         // Builder provided to simplify building after recipe operand was added.
         build($_builder, $_state, accVarType, var, varType, varPtrPtr, bounds,
               asyncOperands, asyncOperandsDeviceType, asyncOnly, dataClause,
-              structured, implicit, modifiers, name, /*recipe=*/nullptr);
+              structured, implicit, /*synthetic=*/false, modifiers, name,
+              /*recipe=*/nullptr);
       }]>,
     ];
 }
@@ -1112,6 +1139,7 @@ class OpenACC_DataExitOp<string mnemonic, string clause,
                        DefaultValuedAttr<OpenACC_DataClauseAttr,clause>:$dataClause,
                        DefaultValuedAttr<BoolAttr, "true">:$structured,
                        DefaultValuedAttr<BoolAttr, "false">:$implicit,
+                       UnitAttr:$synthetic,
                        DefaultValuedAttr<OpenACC_DataClauseModifierAttr,
                          "mlir::acc::DataClauseModifier::none">:$modifiers,
                        OptionalAttr<StrAttr>:$name));
@@ -1135,6 +1163,10 @@ class OpenACC_DataExitOp<string mnemonic, string clause,
     counters (2.6.7).
     - `implicit`: Whether this is an implicitly generated operation, such as copies
     done to satisfy "Variables with Implicitly Determined Data Attributes" in 2.6.2.
+    - `synthetic`: Whether the implementation created this operation for its own
+    bookkeeping instead of to represent a data attribute of the program being
+    compiled. Unlike an `implicit` operation, it has no counterpart in that
+    program, so it is not described to the user.
     - `modifiers`: Keeps track of the data clause modifiers (eg zero, always, etc)
     - `name`: Holds the name of variable as specified in user clause (including bounds).
 
@@ -1202,6 +1234,7 @@ class OpenACC_DataExitOpWithVarPtr<string mnemonic, string clause>
         `dataClause` `(` enum($dataClause) `)`
       | `structured` `(` $structured `)`
       | `implicit` `(` $implicit `)`
+      | `synthetic` $synthetic
       | `name` `(` $name `)`
     )
     prop-dict attr-dict
@@ -1222,7 +1255,8 @@ class OpenACC_DataExitOpWithVarPtr<string mnemonic, string clause>
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
+          /*implicit=*/$_builder.getBoolAttr(implicit),
+          /*synthetic=*/nullptr, /*modifiers=*/nullptr,
           /*name=*/nullptr);
       }]>,
     OpBuilder<(ins "::mlir::Value":$accVar,
@@ -1240,7 +1274,8 @@ class OpenACC_DataExitOpWithVarPtr<string mnemonic, string clause>
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
+          /*implicit=*/$_builder.getBoolAttr(implicit),
+          /*synthetic=*/nullptr, /*modifiers=*/nullptr,
           /*name=*/$_builder.getStringAttr(name));
       }]>,
     OpBuilder<(ins "::mlir::Value":$accVar, "::mlir::Value":$var,
@@ -1253,7 +1288,8 @@ class OpenACC_DataExitOpWithVarPtr<string mnemonic, string clause>
       [{
         build($_builder, $_state, accVar, var, varType, bounds,
           asyncOperands, asyncOperandsDeviceType, asyncOnly, dataClause,
-          structured, implicit, ::mlir::acc::DataClauseModifier::none, name);
+          structured, implicit, /*synthetic=*/false,
+          ::mlir::acc::DataClauseModifier::none, name);
       }]>,
     ];
 
@@ -1280,6 +1316,7 @@ class OpenACC_DataExitOpNoVarPtr<string mnemonic, string clause>
         `dataClause` `(` enum($dataClause) `)`
       | `structured` `(` $structured `)`
       | `implicit` `(` $implicit `)`
+      | `synthetic` $synthetic
       | `name` `(` $name `)`
     )
     prop-dict attr-dict
@@ -1294,7 +1331,8 @@ class OpenACC_DataExitOpNoVarPtr<string mnemonic, string clause>
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
+          /*implicit=*/$_builder.getBoolAttr(implicit),
+          /*synthetic=*/nullptr, /*modifiers=*/nullptr,
           /*name=*/nullptr);
       }]>,
     OpBuilder<(ins "::mlir::Value":$accVar,
@@ -1306,7 +1344,8 @@ class OpenACC_DataExitOpNoVarPtr<string mnemonic, string clause>
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
-          /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
+          /*implicit=*/$_builder.getBoolAttr(implicit),
+          /*synthetic=*/nullptr, /*modifiers=*/nullptr,
           /*name=*/$_builder.getStringAttr(name));
       }]>,
     OpBuilder<(ins "::mlir::Value":$accVar, "::mlir::ValueRange":$bounds,
@@ -1318,7 +1357,8 @@ class OpenACC_DataExitOpNoVarPtr<string mnemonic, string clause>
       [{
         build($_builder, $_state, accVar, bounds, asyncOperands,
               asyncOperandsDeviceType, asyncOnly, dataClause, structured,
-              implicit, ::mlir::acc::DataClauseModifier::none, name);
+              implicit, /*synthetic=*/false,
+              ::mlir::acc::DataClauseModifier::none, name);
       }]>,
   ];
 
@@ -3808,6 +3848,7 @@ def OpenACC_OnDeviceOp : OpenACC_Op<"on_device"> {
   }];
 }
 
+include "mlir/Dialect/OpenACC/OpenACCCGEnums.td"
 include "mlir/Dialect/OpenACC/OpenACCCGAttributes.td"
 include "mlir/Dialect/OpenACC/OpenACCCGOps.td"
 

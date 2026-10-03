@@ -867,6 +867,149 @@ define i9 @rotr_zero_shift_guard_inverted_swapped(i9 %x, i9 %sh) {
   ret i9 %s
 }
 
+; Guard on rotate could be removed even when the shift amount is multiple of bitwidth and not necessarily zero.
+define i8 @rotl_shift_amount_multiple_of_bitwidth(i8 %x, i8 %sh) {
+; CHECK-LABEL: @rotl_shift_amount_multiple_of_bitwidth(
+; CHECK-NEXT:    [[F:%.*]] = call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 [[SH:%.*]])
+; CHECK-NEXT:    ret i8 [[F]]
+;
+  %r = and i8 %sh, 7
+  %c = icmp eq i8 %r, 0
+  %f = call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 %sh)
+  %s = select i1 %c, i8 %x, i8 %f
+  ret i8 %s
+}
+
+; Vector typed variant.
+define <4 x i8> @rotl_shift_amount_multiple_of_bitwidth_vector(
+; CHECK-LABEL: @rotl_shift_amount_multiple_of_bitwidth_vector(
+; CHECK-NEXT:    [[F:%.*]] = call <4 x i8> @llvm.fshl.v4i8(<4 x i8> [[X:%.*]], <4 x i8> [[X]], <4 x i8> [[SH:%.*]])
+; CHECK-NEXT:    ret <4 x i8> [[F]]
+;
+  <4 x i8> %x, <4 x i8> %sh) {
+  %r = and <4 x i8> %sh, <i8 7, i8 7, i8 7, i8 7>
+  %c = icmp eq <4 x i8> %r, zeroinitializer
+  %f = call <4 x i8> @llvm.fshl.v4i8(<4 x i8> %x, <4 x i8> %x, <4 x i8> %sh)
+  %s = select <4 x i1> %c, <4 x i8> %x, <4 x i8> %f
+  ret <4 x i8> %s
+}
+
+; Test rotr as well.
+define i8 @rotr_shift_amount_multiple_of_bitwidth(i8 %x, i8 %sh) {
+; CHECK-LABEL: @rotr_shift_amount_multiple_of_bitwidth(
+; CHECK-NEXT:    [[F:%.*]] = call i8 @llvm.fshr.i8(i8 [[X:%.*]], i8 [[X]], i8 [[SH:%.*]])
+; CHECK-NEXT:    ret i8 [[F]]
+;
+  %r = and i8 %sh, 7
+  %c = icmp eq i8 %r, 0
+  %f = call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 %sh)
+  %s = select i1 %c, i8 %x, i8 %f
+  ret i8 %s
+}
+
+; Test non-power-of-2 shift amount.
+define i3 @rotr_shift_amount_multiple_of_non_power_of_two_bitwidth(i3 %x, i3 %sh) {
+; CHECK-LABEL: @rotr_shift_amount_multiple_of_non_power_of_two_bitwidth(
+; CHECK-NEXT:    [[F:%.*]] = call i3 @llvm.fshr.i3(i3 [[X:%.*]], i3 [[X]], i3 [[SH:%.*]])
+; CHECK-NEXT:    ret i3 [[F]]
+;
+  %r = urem i3 %sh, 3
+  %c = icmp eq i3 %r, 0
+  %f = call i3 @llvm.fshr.i3(i3 %x, i3 %x, i3 %sh)
+  %s = select i1 %c, i3 %x, i3 %f
+  ret i3 %s
+}
+
+define i8 @rotl_shift_amount_multiple_of_bitwidth_wrong_select_op(i8 %x, i8 %y, i8 %sh) {
+; CHECK-LABEL: @rotl_shift_amount_multiple_of_bitwidth_wrong_select_op(
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[SH:%.*]], 7
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[R]], 0
+; CHECK-NEXT:    [[F:%.*]] = call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 [[SH]])
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 [[Y:%.*]], i8 [[F]]
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %r = and i8 %sh, 7
+  %c = icmp eq i8 %r, 0
+  %f = call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 %sh)
+  %s = select i1 %c, i8 %y, i8 %f
+  ret i8 %s
+}
+
+define i8 @rotl_shift_amount_multiple_of_bitwidth_wrong_mask(i8 %x, i8 %sh) {
+; CHECK-LABEL: @rotl_shift_amount_multiple_of_bitwidth_wrong_mask(
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[SH:%.*]], 15
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[R]], 0
+; CHECK-NEXT:    [[F:%.*]] = call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 [[SH]])
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 [[X]], i8 [[F]]
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %r = and i8 %sh, 15
+  %c = icmp eq i8 %r, 0
+  %f = call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 %sh)
+  %s = select i1 %c, i8 %x, i8 %f
+  ret i8 %s
+}
+
+define i8 @rotl_shift_amount_multiple_of_bitwidth_nonzero_cmp(i8 %x, i8 %sh) {
+; CHECK-LABEL: @rotl_shift_amount_multiple_of_bitwidth_nonzero_cmp(
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[SH:%.*]], 7
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[R]], 1
+; CHECK-NEXT:    [[F:%.*]] = call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 [[SH]])
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 [[X]], i8 [[F]]
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %r = and i8 %sh, 7
+  %c = icmp eq i8 %r, 1
+  %f = call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 %sh)
+  %s = select i1 %c, i8 %x, i8 %f
+  ret i8 %s
+}
+
+define i8 @fshl_shift_amount_multiple_of_bitwidth_non_rotate(i8 %x, i8 %y, i8 %sh) {
+; CHECK-LABEL: @fshl_shift_amount_multiple_of_bitwidth_non_rotate(
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[SH:%.*]], 7
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[R]], 0
+; CHECK-NEXT:    [[F:%.*]] = call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[SH]])
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 [[X]], i8 [[F]]
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %r = and i8 %sh, 7
+  %c = icmp eq i8 %r, 0
+  %f = call i8 @llvm.fshl.i8(i8 %x, i8 %y, i8 %sh)
+  %s = select i1 %c, i8 %x, i8 %f
+  ret i8 %s
+}
+
+define i3 @rotr_shift_amount_wrong_urem(i3 %x, i3 %sh) {
+; CHECK-LABEL: @rotr_shift_amount_wrong_urem(
+; CHECK-NEXT:    [[R:%.*]] = urem i3 [[SH:%.*]], 2
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i3 [[R]], 0
+; CHECK-NEXT:    [[F:%.*]] = call i3 @llvm.fshr.i3(i3 [[X:%.*]], i3 [[X]], i3 [[SH]])
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i3 [[X]], i3 [[F]]
+; CHECK-NEXT:    ret i3 [[S]]
+;
+  %r = urem i3 %sh, 2
+  %c = icmp eq i3 %r, 0
+  %f = call i3 @llvm.fshr.i3(i3 %x, i3 %x, i3 %sh)
+  %s = select i1 %c, i3 %x, i3 %f
+  ret i3 %s
+}
+
+define i3 @rotr_shift_amount_wrong_urem_operand(i3 %x, i3 %sh, i3 %guard_sh) {
+; CHECK-LABEL: @rotr_shift_amount_wrong_urem_operand(
+; CHECK-NEXT:    [[R:%.*]] = urem i3 [[GUARD_SH:%.*]], 3
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i3 [[R]], 0
+; CHECK-NEXT:    [[F:%.*]] = call i3 @llvm.fshr.i3(i3 [[X:%.*]], i3 [[X]], i3 [[SH:%.*]])
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i3 [[X]], i3 [[F]]
+; CHECK-NEXT:    ret i3 [[S]]
+;
+  %r = urem i3 %guard_sh, 3
+  %c = icmp eq i3 %r, 0
+  %f = call i3 @llvm.fshr.i3(i3 %x, i3 %x, i3 %sh)
+  %s = select i1 %c, i3 %x, i3 %f
+  ret i3 %s
+}
+
 ; Negative test - make sure we're matching the correct parameter of fshl.
 
 define i8 @fshl_zero_shift_guard_wrong_select_op(i8 %x, i8 %y, i8 %sh) {

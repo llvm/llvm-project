@@ -1,8 +1,5 @@
 # C++ Type Aware Allocators
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 

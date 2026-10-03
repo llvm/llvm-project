@@ -11,6 +11,10 @@
 #include "lldb/Host/File.h"
 #include "lldb/Utility/Instrumentation.h"
 
+#ifdef _WIN32
+#include <io.h>
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -67,6 +71,16 @@ SBFile::SBFile(int fd, const char *mode, bool transfer_ownership) {
   }
   m_opaque_sp =
       std::make_shared<NativeFile>(fd, options.get(), transfer_ownership);
+}
+
+int SBFile::OpenFdFromHandle(intptr_t handle, int flags) {
+#ifdef _WIN32
+  return _open_osfhandle(handle, flags);
+#else
+  (void)handle;
+  (void)flags;
+  return -1;
+#endif
 }
 
 SBError SBFile::Read(uint8_t *buf, size_t num_bytes, size_t *bytes_read) {

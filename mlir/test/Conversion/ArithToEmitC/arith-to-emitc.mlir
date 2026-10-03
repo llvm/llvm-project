@@ -89,6 +89,10 @@ func.func @arith_index(%arg0: i32, %arg1: i32) {
   %1 = arith.subi %cst0, %cst1 : index
   // CHECK: emitc.mul %[[CST0]], %[[CST1]] : (!emitc.size_t, !emitc.size_t) -> !emitc.size_t
   %2 = arith.muli %cst0, %cst1 : index
+  // CHECK: emitc.div %[[CST0]], %[[CST1]] : (!emitc.size_t, !emitc.size_t) -> !emitc.size_t
+  %3 = arith.divui %cst0, %cst1 : index
+  // CHECK: emitc.rem %[[CST0]], %[[CST1]] : (!emitc.size_t, !emitc.size_t) -> !emitc.size_t
+  %4 = arith.remui %cst0, %cst1 : index
 
   return
 }

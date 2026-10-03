@@ -26,7 +26,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -451,7 +450,7 @@ bool ARMBaseInstrInfo::PredicateInstruction(
       assert((MI.getOperand(1).isDead() ||
               MI.getOperand(1).getReg() != ARM::CPSR) &&
              "if conversion tried to stop defining used CPSR");
-      MI.getOperand(1).setReg(ARM::NoRegister);
+      MI.getOperand(1).setReg(Register());
     }
 
     return true;
@@ -647,6 +646,10 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
       Size = alignTo(Size, 4);
     return Size;
   }
+  case ARM::Int_eh_sjlj_longjmp:
+    return Subtarget.isTargetDarwin() || Subtarget.isTargetWindows() ? 16 : 20;
+  case ARM::tInt_eh_sjlj_longjmp:
+    return Subtarget.isTargetDarwin() || Subtarget.isTargetWindows() ? 10 : 12;
   }
 }
 
@@ -926,6 +929,22 @@ ARMBaseInstrInfo::describeLoadedValue(const MachineInstr &MI,
       return std::nullopt;
   }
   return TargetInstrInfo::describeLoadedValue(MI, Reg);
+}
+
+const MachineOperand &
+ARMBaseInstrInfo::getCalleeOperand(const MachineInstr &MI) const {
+  assert(MI.isCall());
+
+  switch (MI.getOpcode()) {
+  case ARM::tBL:
+  case ARM::tBLXi:
+  case ARM::tBLXr:
+  case ARM::tBLXr_noip:
+  case ARM::tBLXNSr:
+    return MI.getOperand(2);
+  default:
+    return TargetInstrInfo::getCalleeOperand(MI);
+  }
 }
 
 const MachineInstrBuilder &ARMBaseInstrInfo::AddDReg(MachineInstrBuilder &MIB,
@@ -6586,7 +6605,7 @@ public:
           .addReg(LoopDec->getOperand(0).getReg())
           .addImm(0)
           .addImm(ARMCC::AL)
-          .addReg(ARM::NoRegister);
+          .addReg(Register());
       Cond.push_back(MachineOperand::CreateImm(ARMCC::EQ));
       Cond.push_back(MachineOperand::CreateReg(ARM::CPSR, false));
       return {};

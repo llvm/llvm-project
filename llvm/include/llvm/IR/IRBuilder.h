@@ -123,7 +123,7 @@ protected:
   const IRBuilderFolder &Folder;
   const IRBuilderDefaultInserter &Inserter;
 
-  MDNode *DefaultFPMathTag;
+  MDNode *DefaultFPMathTag = nullptr;
   FastMathFlags FMF;
 
   bool IsFPConstrained = false;
@@ -134,10 +134,8 @@ protected:
 
 public:
   IRBuilderBase(LLVMContext &context, const IRBuilderFolder &Folder,
-                const IRBuilderDefaultInserter &Inserter, MDNode *FPMathTag,
-                ArrayRef<OperandBundleDef> OpBundles)
-      : Context(context), Folder(Folder), Inserter(Inserter),
-        DefaultFPMathTag(FPMathTag), DefaultOperandBundles(OpBundles) {
+                const IRBuilderDefaultInserter &Inserter)
+      : Context(context), Folder(Folder), Inserter(Inserter) {
     ClearInsertionPoint();
   }
 
@@ -202,11 +200,12 @@ public:
   }
 
   /// This specifies that created instructions should be inserted at
-  /// the specified point, but also requires that \p IP is dereferencable.
+  /// the specified point.
   void SetInsertPoint(BasicBlock::iterator IP) {
-    BB = IP->getParent();
+    BB = IP.getNodeParent();
     InsertPt = IP;
-    SetCurrentDebugLocation(IP->getStableDebugLoc());
+    if (IP != BB->end())
+      SetCurrentDebugLocation(IP->getStableDebugLoc());
   }
 
   /// This specifies that created instructions should inserted at the beginning
@@ -243,41 +242,22 @@ public:
   LLVM_ABI Type *getCurrentFunctionReturnType() const;
 
   /// InsertPoint - A saved insertion point.
-  class InsertPoint {
-    BasicBlock *Block = nullptr;
-    BasicBlock::iterator Point;
-
-  public:
-    /// Creates a new insertion point which doesn't point to anything.
-    InsertPoint() = default;
-
-    /// Creates a new insertion point at the given location.
-    InsertPoint(BasicBlock *InsertBlock, BasicBlock::iterator InsertPoint)
-        : Block(InsertBlock), Point(InsertPoint) {}
-
-    /// Returns true if this insert point is set.
-    bool isSet() const { return (Block != nullptr); }
-
-    BasicBlock *getBlock() const { return Block; }
-    BasicBlock::iterator getPoint() const { return Point; }
-  };
+  using InsertPoint = BasicBlock::iterator;
 
   /// Returns the current insert point.
-  InsertPoint saveIP() const {
-    return InsertPoint(GetInsertBlock(), GetInsertPoint());
-  }
+  InsertPoint saveIP() const { return GetInsertPoint(); }
 
   /// Returns the current insert point, clearing it in the process.
   InsertPoint saveAndClearIP() {
-    InsertPoint IP(GetInsertBlock(), GetInsertPoint());
+    InsertPoint IP(GetInsertPoint());
     ClearInsertionPoint();
     return IP;
   }
 
   /// Sets the current insert point to a previously-saved location.
   void restoreIP(InsertPoint IP) {
-    if (IP.isSet())
-      SetInsertPoint(IP.getBlock(), IP.getPoint());
+    if (IP.isValid())
+      SetInsertPoint(IP);
     else
       ClearInsertionPoint();
   }
@@ -363,20 +343,19 @@ public:
   // when the object is destroyed. This includes the debug location.
   class InsertPointGuard {
     IRBuilderBase &Builder;
-    AssertingVH<BasicBlock> Block;
     BasicBlock::iterator Point;
     DebugLoc DbgLoc;
 
   public:
     InsertPointGuard(IRBuilderBase &B)
-        : Builder(B), Block(B.GetInsertBlock()), Point(B.GetInsertPoint()),
+        : Builder(B), Point(B.GetInsertPoint()),
           DbgLoc(B.getCurrentDebugLocation()) {}
 
     InsertPointGuard(const InsertPointGuard &) = delete;
     InsertPointGuard &operator=(const InsertPointGuard &) = delete;
 
     ~InsertPointGuard() {
-      Builder.restoreIP(InsertPoint(Block, Point));
+      Builder.restoreIP(Point);
       Builder.SetCurrentDebugLocation(DbgLoc);
     }
   };
@@ -633,20 +612,18 @@ public:
         Ptr, Val, getInt64(Size), Align(Alignment), ElementSize, AAInfo);
   }
 
-  LLVM_ABI CallInst *CreateMalloc(Type *IntPtrTy, Type *AllocTy,
-                                  Value *AllocSize, Value *ArraySize,
+  LLVM_ABI CallInst *CreateMalloc(Type *IntPtrTy, Value *AllocSize,
+                                  Value *ArraySize,
                                   ArrayRef<OperandBundleDef> OpB,
                                   Function *MallocF = nullptr,
                                   const Twine &Name = "");
 
   /// CreateMalloc - Generate the IR for a call to malloc:
-  /// 1. Compute the malloc call's argument as the specified type's size,
-  ///    possibly multiplied by the array size if the array size is not
-  ///    constant 1.
+  /// 1. Compute the malloc call's argument as AllocSize, possibly multiplied
+  ///    by the array size if the array size is not constant 1.
   /// 2. Call malloc with that argument.
-  LLVM_ABI CallInst *CreateMalloc(Type *IntPtrTy, Type *AllocTy,
-                                  Value *AllocSize, Value *ArraySize,
-                                  Function *MallocF = nullptr,
+  LLVM_ABI CallInst *CreateMalloc(Type *IntPtrTy, Value *AllocSize,
+                                  Value *ArraySize, Function *MallocF = nullptr,
                                   const Twine &Name = "");
   /// Generate the IR for a call to the builtin free function.
   LLVM_ABI CallInst *CreateFree(Value *Source,
@@ -1747,7 +1724,7 @@ public:
   Value *CreateBinOpFMF(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
                         FMFSource FMFSource, const Twine &Name = "",
                         MDNode *FPMathTag = nullptr) {
-    if (Value *V = Folder.FoldBinOp(Opc, LHS, RHS))
+    if (Value *V = Folder.FoldBinOpFMF(Opc, LHS, RHS, FMFSource.get(FMF)))
       return V;
     Instruction *BinOp = BinaryOperator::Create(Opc, LHS, RHS);
     if (isa<FPMathOperator>(BinOp))
@@ -1868,11 +1845,16 @@ public:
   Value *CreateUnOp(Instruction::UnaryOps Opc,
                     Value *V, const Twine &Name = "",
                     MDNode *FPMathTag = nullptr) {
-    if (Value *Res = Folder.FoldUnOpFMF(Opc, V, FMF))
+    return CreateUnOpFMF(Opc, V, {}, Name, FPMathTag);
+  }
+
+  Value *CreateUnOpFMF(Instruction::UnaryOps Opc, Value *V, FMFSource FMFSource,
+                       const Twine &Name = "", MDNode *FPMathTag = nullptr) {
+    if (Value *Res = Folder.FoldUnOpFMF(Opc, V, FMFSource.get(FMF)))
       return Res;
     Instruction *UnOp = UnaryOperator::Create(Opc, V);
     if (isa<FPMathOperator>(UnOp))
-      setFPAttrs(UnOp, FPMathTag, FMF);
+      setFPAttrs(UnOp, FPMathTag, FMFSource.get(FMF));
     return Insert(UnOp, Name);
   }
 
@@ -2021,7 +2003,7 @@ public:
   Value *CreateGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
                    const Twine &Name = "",
                    GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, IdxList, NW))
+    if (auto *V = Folder.FoldGEP(BB->getDataLayout(), Ty, Ptr, IdxList, NW))
       return V;
     return Insert(GetElementPtrInst::Create(Ty, Ptr, IdxList, NW), Name);
   }
@@ -2746,6 +2728,20 @@ public:
     return Insert(new FreezeInst(V), Name);
   }
 
+  Value *CreateBitInsert(Value *Base, Value *Val, Value *Offset,
+                         const Twine &Name = "") {
+    if (Value *V = Folder.FoldBitInsert(Base, Val, Offset))
+      return V;
+    return Insert(BitInsertInst::Create(Base, Val, Offset), Name);
+  }
+
+  Value *CreateBitExtract(Type *Ty, Value *Src, Value *Offset,
+                          const Twine &Name = "") {
+    if (Value *V = Folder.FoldBitExtract(Ty, Src, Offset))
+      return V;
+    return Insert(BitExtractInst::Create(Ty, Src, Offset), Name);
+  }
+
   //===--------------------------------------------------------------------===//
   // Utility creation methods
   //===--------------------------------------------------------------------===//
@@ -2790,11 +2786,6 @@ public:
   /// different from pointer to i8, it's casted to pointer to i8 in the same
   /// address space before call and casted back to Ptr type after call.
   LLVM_ABI Value *CreateLaunderInvariantGroup(Value *Ptr);
-
-  /// \brief Create a strip.invariant.group intrinsic call. If Ptr type is
-  /// different from pointer to i8, it's casted to pointer to i8 in the same
-  /// address space before call and casted back to Ptr type after call.
-  LLVM_ABI Value *CreateStripInvariantGroup(Value *Ptr);
 
   /// Return a vector value that contains the vector V reversed
   LLVM_ABI Value *CreateVectorReverse(Value *V, const Twine &Name = "");
@@ -2913,58 +2904,40 @@ private:
   InserterTy Inserter;
 
 public:
-  IRBuilder(LLVMContext &C, FolderTy Folder, InserterTy Inserter,
-            MDNode *FPMathTag = nullptr,
-            ArrayRef<OperandBundleDef> OpBundles = {})
-      : IRBuilderBase(C, this->Folder, this->Inserter, FPMathTag, OpBundles),
-        Folder(Folder), Inserter(Inserter) {}
+  IRBuilder(LLVMContext &C, FolderTy Folder, InserterTy Inserter)
+      : IRBuilderBase(C, this->Folder, this->Inserter), Folder(Folder),
+        Inserter(Inserter) {}
 
-  IRBuilder(LLVMContext &C, FolderTy Folder, MDNode *FPMathTag = nullptr,
-            ArrayRef<OperandBundleDef> OpBundles = {})
-      : IRBuilderBase(C, this->Folder, this->Inserter, FPMathTag, OpBundles),
-        Folder(Folder) {}
+  IRBuilder(LLVMContext &C, FolderTy Folder)
+      : IRBuilderBase(C, this->Folder, this->Inserter), Folder(Folder) {}
 
-  explicit IRBuilder(LLVMContext &C, MDNode *FPMathTag = nullptr,
-                     ArrayRef<OperandBundleDef> OpBundles = {})
-      : IRBuilderBase(C, this->Folder, this->Inserter, FPMathTag, OpBundles) {}
+  explicit IRBuilder(LLVMContext &C)
+      : IRBuilderBase(C, this->Folder, this->Inserter) {}
 
-  explicit IRBuilder(BasicBlock *TheBB, FolderTy Folder,
-                     MDNode *FPMathTag = nullptr,
-                     ArrayRef<OperandBundleDef> OpBundles = {})
-      : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter,
-                      FPMathTag, OpBundles),
+  explicit IRBuilder(BasicBlock *TheBB, FolderTy Folder)
+      : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter),
         Folder(Folder) {
     SetInsertPoint(TheBB);
   }
 
-  explicit IRBuilder(BasicBlock *TheBB, MDNode *FPMathTag = nullptr,
-                     ArrayRef<OperandBundleDef> OpBundles = {})
-      : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter,
-                      FPMathTag, OpBundles) {
+  explicit IRBuilder(BasicBlock *TheBB)
+      : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter) {
     SetInsertPoint(TheBB);
   }
 
-  explicit IRBuilder(Instruction *IP, MDNode *FPMathTag = nullptr,
-                     ArrayRef<OperandBundleDef> OpBundles = {})
-      : IRBuilderBase(IP->getContext(), this->Folder, this->Inserter, FPMathTag,
-                      OpBundles) {
+  explicit IRBuilder(Instruction *IP)
+      : IRBuilderBase(IP->getContext(), this->Folder, this->Inserter) {
     SetInsertPoint(IP);
   }
 
-  IRBuilder(BasicBlock *TheBB, BasicBlock::iterator IP, FolderTy Folder,
-            MDNode *FPMathTag = nullptr,
-            ArrayRef<OperandBundleDef> OpBundles = {})
-      : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter,
-                      FPMathTag, OpBundles),
+  IRBuilder(BasicBlock *TheBB, BasicBlock::iterator IP, FolderTy Folder)
+      : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter),
         Folder(Folder) {
     SetInsertPoint(TheBB, IP);
   }
 
-  IRBuilder(BasicBlock *TheBB, BasicBlock::iterator IP,
-            MDNode *FPMathTag = nullptr,
-            ArrayRef<OperandBundleDef> OpBundles = {})
-      : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter,
-                      FPMathTag, OpBundles) {
+  IRBuilder(BasicBlock *TheBB, BasicBlock::iterator IP)
+      : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter) {
     SetInsertPoint(TheBB, IP);
   }
 
@@ -2977,20 +2950,16 @@ public:
 };
 
 template <typename FolderTy, typename InserterTy>
-IRBuilder(LLVMContext &, FolderTy, InserterTy, MDNode *,
-          ArrayRef<OperandBundleDef>) -> IRBuilder<FolderTy, InserterTy>;
-IRBuilder(LLVMContext &, MDNode *, ArrayRef<OperandBundleDef>) -> IRBuilder<>;
+IRBuilder(LLVMContext &, FolderTy, InserterTy)
+    -> IRBuilder<FolderTy, InserterTy>;
+IRBuilder(LLVMContext &) -> IRBuilder<>;
 template <typename FolderTy>
-IRBuilder(BasicBlock *, FolderTy, MDNode *, ArrayRef<OperandBundleDef>)
-    -> IRBuilder<FolderTy>;
-IRBuilder(BasicBlock *, MDNode *, ArrayRef<OperandBundleDef>) -> IRBuilder<>;
-IRBuilder(Instruction *, MDNode *, ArrayRef<OperandBundleDef>) -> IRBuilder<>;
+IRBuilder(BasicBlock *, FolderTy) -> IRBuilder<FolderTy>;
+IRBuilder(BasicBlock *) -> IRBuilder<>;
+IRBuilder(Instruction *) -> IRBuilder<>;
 template <typename FolderTy>
-IRBuilder(BasicBlock *, BasicBlock::iterator, FolderTy, MDNode *,
-          ArrayRef<OperandBundleDef>) -> IRBuilder<FolderTy>;
-IRBuilder(BasicBlock *, BasicBlock::iterator, MDNode *,
-          ArrayRef<OperandBundleDef>) -> IRBuilder<>;
-
+IRBuilder(BasicBlock *, BasicBlock::iterator, FolderTy) -> IRBuilder<FolderTy>;
+IRBuilder(BasicBlock *, BasicBlock::iterator) -> IRBuilder<>;
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(IRBuilder<>, LLVMBuilderRef)

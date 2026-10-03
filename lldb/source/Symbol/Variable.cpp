@@ -92,9 +92,6 @@ ConstString Variable::GetUnqualifiedName() const { return m_name; }
 bool Variable::NameMatches(ConstString name) const {
   if (m_name == name)
     return true;
-  SymbolContext variable_sc;
-  m_owner_scope->CalculateSymbolContext(&variable_sc);
-
   return m_mangled.NameMatches(name);
 }
 bool Variable::NameMatches(const RegularExpression &regex) const {

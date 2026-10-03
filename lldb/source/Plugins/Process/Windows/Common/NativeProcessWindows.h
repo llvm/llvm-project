@@ -14,6 +14,7 @@
 #include "lldb/lldb-forward.h"
 
 #include "IDebugDelegate.h"
+#include "LoadedModuleList.h"
 #include "ProcessDebugger.h"
 
 namespace lldb_private {
@@ -172,7 +173,8 @@ private:
                                          const ExceptionRecord &record);
 
   Status CacheLoadedModules();
-  std::map<lldb_private::FileSpec, lldb::addr_t> m_loaded_modules;
+
+  LoadedModuleList m_loaded_modules;
 
   /// Set whenever an OS DLL load/unload event has been seen since the last stop
   /// reply.

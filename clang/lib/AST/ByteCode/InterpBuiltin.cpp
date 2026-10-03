@@ -9,6 +9,7 @@
 #include "Boolean.h"
 #include "Char.h"
 #include "EvalEmitter.h"
+#include "Interp.h"
 #include "InterpBuiltinBitCast.h"
 #include "InterpHelpers.h"
 #include "PrimType.h"
@@ -22,6 +23,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/AllocToken.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SipHash.h"
 
 namespace clang {
@@ -164,6 +166,9 @@ static QualType getElemType(const Pointer &P) {
         ->getAsArrayTypeUnsafe()
         ->getElementType();
   }
+
+  if (P.isOpaquePointer() || P.isIntegralPointer())
+    return P.getType();
 
   const Descriptor *Desc = P.getFieldDesc();
   QualType T = Desc->getType();
@@ -409,7 +414,7 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   if (!StrPtr.isBlockPointer())
     return false;
 
-  if (!CheckDummy(S, OpPC, StrPtr.block(), AK_Read))
+  if (!CheckDummy(S, OpPC, StrPtr, AK_Read))
     return false;
 
   if (!StrPtr.getFieldDesc()->isPrimitiveArray())
@@ -858,11 +863,9 @@ static bool interp__builtin_expect(InterpState &S, CodePtr OpPC,
   if (NumArgs == 3)
     S.Stk.discard<Floating>();
   discard(S.Stk, ArgT);
+  // Top of the stack is now the first paramter. Leave it there as the return
+  // value.
 
-  APSInt Val;
-  if (!popToAPSInt(S.Stk, ArgT, Val))
-    return false;
-  pushInteger(S, Val, Call->getType());
   return true;
 }
 
@@ -1318,13 +1321,13 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
   }
   assert(FirstArgT == PT_Ptr);
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!Ptr.isBlockPointer()) {
+  if (!Ptr.isBlockPointer() && !Ptr.isOpaquePointer()) {
     S.FFDiag(Call->getArg(0), diag::note_constexpr_alignment_compute)
         << Alignment;
     return false;
   }
 
-  const ValueDecl *PtrDecl = Ptr.getDeclDesc()->asValueDecl();
+  const VarDecl *PtrDecl = Ptr.getRootVarDecl();
   // We need a pointer for a declaration here.
   if (!PtrDecl) {
     if (BuiltinOp == Builtin::BI__builtin_is_aligned)
@@ -1336,10 +1339,19 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  // For one-past-end pointers, we can't call getIndex() since it asserts.
-  // Use getNumElems() instead which gives the correct index for past-end.
-  unsigned PtrOffset =
-      Ptr.isElementPastEnd() ? Ptr.getNumElems() : Ptr.getIndex();
+  unsigned PtrOffset;
+  if (Ptr.isBlockPointer()) {
+    // For one-past-end pointers, we can't call getIndex() since it asserts.
+    // Use getNumElems() instead which gives the correct index for past-end.
+    PtrOffset = Ptr.isElementPastEnd() ? Ptr.getNumElems() : Ptr.getIndex();
+  } else {
+    if (std::optional<size_t> PtrOff =
+            Ptr.computeLayoutOffset(S.getASTContext()))
+      PtrOffset = *PtrOff;
+    else
+      return false;
+  }
+
   CharUnits BaseAlignment = S.getASTContext().getDeclAlign(PtrDecl);
   CharUnits PtrAlign =
       BaseAlignment.alignmentAtOffset(CharUnits::fromQuantity(PtrOffset));
@@ -1388,8 +1400,18 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
                                     ? llvm::alignDown(PtrOffset, Alignment64)
                                     : llvm::alignTo(PtrOffset, Alignment64));
 
-    S.Stk.push<Pointer>(Ptr.atIndex(NewOffset.getQuantity()));
-    return true;
+    if (Ptr.isBlockPointer()) {
+      S.Stk.push<Pointer>(Ptr.atIndex(NewOffset.getQuantity()));
+      return true;
+    }
+
+    assert(Ptr.isOpaquePointer());
+
+    APSInt APOffset =
+        APSInt(APInt(64, NewOffset.getQuantity(), /*IsSigned=*/true),
+               /*IsUnsigned=*/false);
+    return arrayElemPtrOpaque(S, OpPC, Ptr, std::move(APOffset),
+                              /*AllocReplace=*/true);
   }
 
   // Otherwise, we cannot constant-evaluate the result.
@@ -1420,9 +1442,9 @@ static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
   CharUnits Align = CharUnits::fromQuantity(Alignment.getZExtValue());
 
   // If there is a base object, then it must have the correct alignment.
-  if (Ptr.isBlockPointer()) {
+  if (Ptr.isBlockPointer() || Ptr.isOpaquePointer()) {
     CharUnits BaseAlignment;
-    if (const auto *VD = Ptr.getDeclDesc()->asValueDecl())
+    if (const auto *VD = Ptr.getRootVarDecl())
       BaseAlignment = ASTCtx.getDeclAlign(VD);
     else if (const auto *E = Ptr.getRootExpr())
       BaseAlignment = GetAlignOfExpr(ASTCtx, E, UETT_AlignOf);
@@ -1443,7 +1465,7 @@ static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
   if (ExtraOffset)
     AVOffset -= CharUnits::fromQuantity(ExtraOffset->getZExtValue());
   if (AVOffset.alignTo(Align) != AVOffset) {
-    if (Ptr.isBlockPointer())
+    if (Ptr.isBlockPointer() || Ptr.isOpaquePointer())
       S.CCEDiag(Call->getArg(0),
                 diag::note_constexpr_baa_insufficient_alignment)
           << 1 << AVOffset.getQuantity() << Align.getQuantity();
@@ -2105,6 +2127,68 @@ static bool isOneByteCharacterType(QualType T) {
   return T->isCharType() || T->isChar8Type();
 }
 
+// stdc_memreverse8(size_t N, unsigned char *P)
+static bool interp__builtin_stdc_memreverse8(InterpState &S, CodePtr OpPC,
+                                             const InterpFrame *Frame,
+                                             const CallExpr *Call) {
+  Pointer Ptr = S.Stk.pop<Pointer>();
+
+  uint64_t NElems;
+  if (!popToUInt64(S, Call->getArg(0), NElems))
+    return false;
+
+  if (Ptr.isZero()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_null)
+        << AK_Assign;
+    return false;
+  }
+
+  if (!isReadable(Ptr) && !Ptr.isOnePastEnd())
+    return false;
+
+  const Descriptor *Desc = Ptr.getFieldDesc();
+  bool IsArray = Desc->isArray();
+  QualType ElemTy = IsArray ? Desc->getElemQualType() : Desc->getType();
+
+  if (IsArray)
+    Ptr = Ptr.expand();
+
+  uint64_t BaseIdx = Ptr.getIndex();
+  uint64_t ArraySize = Ptr.getNumElems();
+  uint64_t RemainingElems = ArraySize - BaseIdx;
+  if (NElems > RemainingElems) {
+    uint64_t LastIndex = llvm::SaturatingAdd(BaseIdx, NElems - 1);
+    if (IsArray)
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
+          << LastIndex << /*array*/ 0 << ArraySize;
+    else
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
+          << LastIndex << /*non-array*/ 1;
+    return false;
+  }
+
+  if (NElems <= 1)
+    return true;
+
+  PrimType ElemT = *S.getContext().classify(ElemTy);
+
+  for (uint64_t I = 0, Half = NElems / 2; I < Half; ++I) {
+    Pointer LoPtr = Ptr.atIndex(BaseIdx + I);
+    Pointer HiPtr = Ptr.atIndex(BaseIdx + NElems - 1 - I);
+
+    if (!CheckLoad(S, OpPC, LoPtr, AK_Read) ||
+        !CheckLoad(S, OpPC, HiPtr, AK_Read) || !CheckStore(S, OpPC, LoPtr) ||
+        !CheckStore(S, OpPC, HiPtr))
+      return false;
+
+    INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                            { std::swap(LoPtr.deref<T>(), HiPtr.deref<T>()); });
+    LoPtr.initialize();
+    HiPtr.initialize();
+  }
+  return true;
+}
+
 static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const CallExpr *Call, unsigned ID) {
@@ -2123,10 +2207,6 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
     pushInteger(S, 0, Call->getType());
     return true;
   }
-
-  if (!PtrA.isReadablePointerType() || !PtrB.isReadablePointerType())
-    return false;
-
   bool IsWide =
       (ID == Builtin::BIwmemcmp || ID == Builtin::BI__builtin_wmemcmp);
 
@@ -2143,6 +2223,9 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
         << PtrB.getType();
     return false;
   }
+
+  if (!PtrA.isReadablePointerType() || !PtrB.isReadablePointerType())
+    return false;
 
   if (!CheckLoad(S, OpPC, PtrA, AK_Read) || !CheckLoad(S, OpPC, PtrB, AK_Read))
     return false;
@@ -2423,14 +2506,14 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
       return false;
     if (!CheckMutable(S, OpPC, Ptr))
       return false;
-    if (!CheckDummy(S, OpPC, Ptr.block(), AK_Read))
+    if (!CheckDummy(S, OpPC, Ptr, AK_Read))
       return false;
   }
 
   // Check if we're currently running an initializer.
   if (S.initializingBlock(Ptr.block()))
     return Error(2);
-  if (S.EvaluatingDecl && Ptr.getDeclDesc()->asVarDecl() == S.EvaluatingDecl)
+  if (S.EvaluatingDecl && Ptr.getRootVarDecl() == S.EvaluatingDecl)
     return Error(2);
 
   pushInteger(S, Result, Call->getType());
@@ -3671,9 +3754,9 @@ static bool evalICmpImm(uint8_t Imm, const APSInt &A, const APSInt &B,
   case 0x04: // _MM_CMPINT_NE
     return (A != B);
   case 0x05: // _MM_CMPINT_NLT
-    return IsUnsigned ? A.ugt(B) : A.sgt(B);
-  case 0x06: // _MM_CMPINT_NLE
     return IsUnsigned ? A.uge(B) : A.sge(B);
+  case 0x06: // _MM_CMPINT_NLE
+    return IsUnsigned ? A.ugt(B) : A.sgt(B);
   case 0x07: // _MM_CMPINT_TRUE
     return true;
   default:
@@ -4581,21 +4664,6 @@ static bool interp_builtin_ia32_cvt_vector_to_int(InterpState &S, CodePtr OpPC,
 
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
-  const ASTContext &ASTCtx = S.getASTContext();
-
-  // BuiltinID is the raw ID baked into the bytecode. The "is constant
-  // evaluated" gate needs the raw ID so that auxiliary-target IDs resolve into
-  // the correct (aux-target) builtin records.
-  if (!ASTCtx.BuiltinInfo.isConstantEvaluated(BuiltinID))
-    return Invalid(S, OpPC);
-
-  // Convert an auxiliary x86 target builtin ID to its canonical X86::BI* value
-  // so the target-specific cases below (and the handlers they call) match. This
-  // is a cheap integer operation (a single comparison for the common,
-  // target-independent case); we deliberately avoid re-deriving the ID from the
-  // call expression, which is comparatively slow.
-  BuiltinID = ConvertBuiltinIDToX86BuiltinID(ASTCtx, BuiltinID);
-
   const InterpFrame *Frame = S.Current;
   switch (BuiltinID) {
   case Builtin::BI__builtin_is_constant_evaluated:
@@ -5125,6 +5193,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_memreverse8u64:
     return interp__builtin_bswap(S, OpPC, Frame, Call);
 
+  case Builtin::BIstdc_memreverse8:
+  case Builtin::BI__builtin_stdc_memreverse8:
+    return interp__builtin_stdc_memreverse8(S, OpPC, Frame, Call);
+
   case Builtin::BI__atomic_always_lock_free:
   case Builtin::BI__atomic_is_lock_free:
     return interp__builtin_atomic_lock_free(S, OpPC, Frame, Call, BuiltinID);
@@ -5264,18 +5336,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return APInt(Src.getBitWidth(), Src.countTrailingZeros());
         });
 
-  case clang::X86::BI__builtin_ia32_pdep_si:
-  case clang::X86::BI__builtin_ia32_pdep_di:
-  case Builtin::BI__builtin_elementwise_pdep:
-    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
-                                                 llvm::APIntOps::pdep);
-
-  case clang::X86::BI__builtin_ia32_pext_si:
-  case clang::X86::BI__builtin_ia32_pext_di:
-  case Builtin::BI__builtin_elementwise_pext:
-    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
-                                                 llvm::APIntOps::pext);
-
   case clang::X86::BI__builtin_ia32_addcarryx_u32:
   case clang::X86::BI__builtin_ia32_addcarryx_u64:
     return interp__builtin_ia32_addcarry_subborrow(S, OpPC, Frame, Call,
@@ -5379,6 +5439,15 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
           return LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
         });
+
+  case Builtin::BI__builtin_elementwise_pdep:
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
+                                                 llvm::APIntOps::pdep);
+
+  case Builtin::BI__builtin_elementwise_pext:
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
+                                                 llvm::APIntOps::pext);
+
   case X86::BI__builtin_ia32_extract128i256:
   case X86::BI__builtin_ia32_vextractf128_pd256:
   case X86::BI__builtin_ia32_vextractf128_ps256:
@@ -6707,11 +6776,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_cvttps2dq256:
     return interp_builtin_ia32_cvt_vector_to_int(S, OpPC, Call);
   default:
-    S.FFDiag(S.Current->getLocation(OpPC),
-             diag::note_invalid_subexpr_in_const_expr)
-        << S.Current->getRange(OpPC);
-
-    return false;
+    return Invalid(S, OpPC);
   }
 
   llvm_unreachable("Unhandled builtin ID");
@@ -6859,26 +6924,34 @@ static void zeroAll(PtrView Dest) {
 }
 
 static bool copyComposite(InterpState &S, CodePtr OpPC, PtrView Src,
-                          PtrView Dest, bool Activate);
+                          PtrView Dest, bool Activate, bool Diagnose);
 static bool copyRecord(InterpState &S, CodePtr OpPC, PtrView Src, PtrView Dest,
-                       bool Activate = false) {
+                       bool Activate = false, bool Diagnose = true) {
   [[maybe_unused]] const Descriptor *SrcDesc = Src.getFieldDesc();
   const Descriptor *DestDesc = Dest.getFieldDesc();
 
   auto copyField = [&](const Record::Field &F, bool Activate) -> bool {
     PtrView DestField = Dest.atField(F.Offset);
-    if (OptPrimType FT = S.Ctx.classify(F.Decl->getType())) {
-      TYPE_SWITCH(*FT, {
-        DestField.deref<T>() = Src.atField(F.Offset).deref<T>();
-        if (Src.atField(F.Offset).isInitialized())
-          DestField.initialize();
-        if (Activate)
-          DestField.activate();
-      });
+    PtrView SrcField = Src.atField(F.Offset);
+
+    if (OptPrimType FT = F.T) {
+      if (!SrcField.isInitialized()) {
+        if (Diagnose)
+          return diagnoseUninitialized(S, OpPC, false, SrcField.block(),
+                                       SrcField.getLifetime(), AK_Read);
+        // Just skip.
+        return true;
+      }
+
+      TYPE_SWITCH(*FT, DestField.deref<T>() = SrcField.deref<T>(););
+      if (DestField.canBeInitialized())
+        DestField.initialize();
+      if (Activate)
+        DestField.activate();
       return true;
     }
-    // Composite field.
-    return copyComposite(S, OpPC, Src.atField(F.Offset), DestField, Activate);
+
+    return copyComposite(S, OpPC, SrcField, DestField, Activate, Diagnose);
   };
 
   assert(SrcDesc->isRecord());
@@ -6907,16 +6980,20 @@ static bool copyRecord(InterpState &S, CodePtr OpPC, PtrView Src, PtrView Dest,
 
   for (const Record::Base &B : R->bases()) {
     PtrView DestBase = Dest.atField(B.Offset);
-    if (!copyRecord(S, OpPC, Src.atField(B.Offset), DestBase, Activate))
+    if (!copyRecord(S, OpPC, Src.atField(B.Offset), DestBase, Activate,
+                    Diagnose))
       return false;
   }
 
   Dest.initialize();
+  if (Activate)
+    Dest.activate();
   return true;
 }
 
 static bool copyComposite(InterpState &S, CodePtr OpPC, PtrView Src,
-                          PtrView Dest, bool Activate = false) {
+                          PtrView Dest, bool Activate = false,
+                          bool Diagnose = false) {
   assert(Src.isLive() && Dest.isLive());
 
   [[maybe_unused]] const Descriptor *SrcDesc = Src.getFieldDesc();
@@ -6964,18 +7041,19 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, PtrView Src,
   if (DestDesc->isRecord()) {
     if (!SrcDesc->isRecord())
       return false;
-    return copyRecord(S, OpPC, Src, Dest, Activate);
+    return copyRecord(S, OpPC, Src, Dest, Activate, Diagnose);
   }
   return Invalid(S, OpPC);
 }
 
-bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest) {
+bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest,
+              bool Activate, bool Diagnose) {
   if (!Src.isBlockPointer() || Src.getFieldDesc()->isPrimitive())
     return false;
   if (!Dest.isBlockPointer() || Dest.getFieldDesc()->isPrimitive())
     return false;
 
-  return copyComposite(S, OpPC, Src.view(), Dest.view());
+  return copyComposite(S, OpPC, Src.view(), Dest.view(), Activate, Diagnose);
 }
 
 } // namespace interp
