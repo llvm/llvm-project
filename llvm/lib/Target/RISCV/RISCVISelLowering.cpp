@@ -13194,12 +13194,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Lo, Hi);
     }
 
-    if (VT == MVT::i32 && !Subtarget.is64Bit()) {
-      unsigned Opc = getRVPQFormatAccScalarOpcode(IntNo);
-      return DAG.getNode(Opc, DL, XLenVT, Rd, Rs1, Rs2);
-    }
-
-    if (VT == MVT::i64 && Subtarget.is64Bit()) {
+    if (VT == XLenVT) {
       unsigned Opc = getRVPQFormatAccScalarOpcode(IntNo);
       return DAG.getNode(Opc, DL, XLenVT, Rd, Rs1, Rs2);
     }
