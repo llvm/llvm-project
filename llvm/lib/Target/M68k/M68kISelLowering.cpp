@@ -214,14 +214,12 @@ M68kTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
 }
 
 Register
-M68kTargetLowering::getExceptionPointerRegister(ExceptionHandling EH,
-                                                const Constant *) const {
+M68kTargetLowering::getExceptionPointerRegister(const Constant *) const {
   return M68k::D0;
 }
 
 Register
-M68kTargetLowering::getExceptionSelectorRegister(ExceptionHandling EH,
-                                                 const Constant *) const {
+M68kTargetLowering::getExceptionSelectorRegister(const Constant *) const {
   return M68k::D1;
 }
 
