@@ -3461,11 +3461,9 @@ class MSA_FABS_PSEUDO_DESC_BASE<RegisterOperand ROWD,
             [(set ROWD:$wd, (fabs ROWS:$ws))]>;
 
 def FABS_W : MSA_FABS_PSEUDO_DESC_BASE<MSA128WOpnd>,
-             PseudoInstExpansion<(FMAX_A_W MSA128WOpnd:$wd, MSA128WOpnd:$ws,
-                                           MSA128WOpnd:$ws)>;
+             PseudoInstExpansion<(BCLRI_W MSA128WOpnd:$wd, MSA128WOpnd:$ws, 31)>;
 def FABS_D : MSA_FABS_PSEUDO_DESC_BASE<MSA128DOpnd>,
-             PseudoInstExpansion<(FMAX_A_D MSA128DOpnd:$wd, MSA128DOpnd:$ws,
-                                           MSA128DOpnd:$ws)>;
+             PseudoInstExpansion<(BCLRI_D MSA128DOpnd:$wd, MSA128DOpnd:$ws, 63)>;
 
 class MSABitconvertPat<ValueType DstVT, ValueType SrcVT,
                        RegisterClass DstRC, list<Predicate> preds = [HasMSA]> :
