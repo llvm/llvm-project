@@ -2731,6 +2731,14 @@ public:
     OutlineInfos.emplace_back(std::move(OI));
   }
 
+  /// Return true if \p Fn has a region registered for outlining that has not
+  /// been processed yet.
+  bool hasPendingOutlines(const Function *Fn) const {
+    return any_of(OutlineInfos, [Fn](const std::unique_ptr<OutlineInfo> &OI) {
+      return OI->getFunction() == Fn;
+    });
+  }
+
   /// An ordered map of auto-generated variables to their unique names.
   /// It stores variables with the following names: 1) ".gomp_critical_user_" +
   /// <critical_section_name> + ".var" for "omp critical" directives; 2)
