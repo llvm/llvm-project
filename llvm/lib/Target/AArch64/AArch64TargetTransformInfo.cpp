@@ -7463,7 +7463,7 @@ bool AArch64TTIImpl::isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
   if (!BaseGV && !BaseOffset && HasBaseReg && isa<ScalableVectorType>(Ty)) {
     EVT VT = getTLI()->getValueType(DL, Ty);
     uint64_t AccessNumBytes = VT.getStoreSize().getKnownMinValue();
-    if (AccessNumBytes >= 16 && getTLI()->getTypeAction(Ty->getContext(), VT) ==
+    if (AccessNumBytes > 16 && getTLI()->getTypeAction(Ty->getContext(), VT) ==
                                     TargetLowering::TypeSplitVector) {
       EVT LegalVT = getTLI()->getLegalTypeToTransformTo(Ty->getContext(), VT);
       uint64_t VecNumBytes = LegalVT.getStoreSize().getKnownMinValue();
