@@ -1232,8 +1232,14 @@ macro(add_llvm_executable name)
       NOT LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES AND
       NOT ARG_EXPORT_SYMBOLS)
     if(LLVM_LINKER_SUPPORTS_NO_EXPORTED_SYMBOLS)
-      set_property(TARGET ${name} APPEND_STRING PROPERTY
-        LINK_FLAGS " -Wl,-no_exported_symbols")
+      if (XCODE)
+        # warning: The OTHER_LDFLAGS build setting is not allowed to contain -no_exported_symbols, 
+        # use the dedicated LD_EXPORT_SYMBOLS build setting instead.
+        set_target_properties(${name} PROPERTIES LD_EXPORT_SYMBOLS NO)
+      else()
+        set_property(TARGET ${name} APPEND_STRING PROPERTY
+          LINK_FLAGS " -Wl,-no_exported_symbols")
+      endif()
     else()
       message(FATAL_ERROR
         "LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES cannot be disabled when linker does not support \"-no_exported_symbols\"")
