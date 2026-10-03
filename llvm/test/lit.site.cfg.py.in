@@ -33,6 +33,8 @@ config.llvm_bindings = "@LLVM_BINDINGS@".split(' ')
 config.target_os = "@HOST_OS@"
 config.host_cc = "@HOST_CC@"
 config.host_cxx = "@HOST_CXX@"
+config.host_cmake = "@CMAKE_COMMAND@"
+config.host_cmake_generator = "@CMAKE_GENERATOR@"
 # Note: ldflags can contain double-quoted paths, so must use single quotes here.
 config.host_ldflags = '@HOST_LDFLAGS@'
 config.llvm_use_intel_jitevents = @LLVM_USE_INTEL_JITEVENTS@
