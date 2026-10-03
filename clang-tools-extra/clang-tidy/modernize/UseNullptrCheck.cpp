@@ -500,13 +500,18 @@ private:
   bool PruneSubtree = false;
 };
 
+static constexpr char DefaultIgnoredTypes[] =
+    "_CmpUnspecifiedParam;"
+    "^std::__cmp_cat::__unspec;"
+    "^std::__cmp_cat::__literal_zero;";
+
 } // namespace
 
 UseNullptrCheck::UseNullptrCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       NullMacrosStr(Options.get("NullMacros", "NULL")),
-      IgnoredTypes(utils::options::parseStringList(Options.get(
-          "IgnoredTypes", "_CmpUnspecifiedParam;^std::__cmp_cat::__unspec"))),
+      IgnoredTypes(utils::options::parseStringList(
+          Options.get("IgnoredTypes", DefaultIgnoredTypes))),
       UseNullptrT(Options.get("UseNullptrT", true)),
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
                                                utils::IncludeSorter::IS_LLVM),
