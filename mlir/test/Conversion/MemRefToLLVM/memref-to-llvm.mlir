@@ -804,6 +804,31 @@ func.func @extract_strided_metadata(
 
 // -----
 
+// The fold of a static extract_strided_metadata must not create ops that the
+// conversion does not see.
+
+// CHECK-LABEL: func @extract_strided_metadata_static(
+// CHECK-NOT: arith.constant
+// CHECK: llvm.extractvalue %{{.*}}[3, 0]
+// CHECK-NOT: arith.constant
+// CHECK: return
+
+// CHECK-INTERFACE-LABEL: func @extract_strided_metadata_static(
+// CHECK-INTERFACE-NOT: arith.constant
+// CHECK-INTERFACE: llvm.extractvalue %{{.*}}[3, 0]
+// CHECK-INTERFACE-NOT: arith.constant
+// CHECK-INTERFACE: return
+
+func.func @extract_strided_metadata_static(%ref: memref<4x8xf32>)
+    -> (index, index, index) {
+  %base, %offset, %sizes:2, %strides:2 =
+    memref.extract_strided_metadata %ref : memref<4x8xf32>
+    -> memref<f32>, index, index, index, index, index
+  return %sizes#0, %sizes#1, %strides#0 : index, index, index
+}
+
+// -----
+
 // CHECK-LABEL: func @load_non_temporal(
 // CHECK-INTERFACE-LABEL: func @load_non_temporal(
 func.func @load_non_temporal(%arg0 : memref<32xf32, affine_map<(d0) -> (d0)>>) {
