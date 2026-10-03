@@ -10,6 +10,7 @@
 #define LLDB_INTERPRETER_INTERFACES_SCRIPTEDINTERFACE_H
 
 #include "ScriptedInterfaceUsages.h"
+#include "lldb/Interpreter/ScriptedInstanceRegistry.h"
 
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -27,7 +28,12 @@ namespace lldb_private {
 class ScriptedInterface {
 public:
   ScriptedInterface() = default;
-  virtual ~ScriptedInterface() = default;
+  virtual ~ScriptedInterface() { UnregisterInstance(); }
+
+  // Copies would share the registry entry, and the first one destroyed would
+  // drop it while the other is still alive.
+  ScriptedInterface(const ScriptedInterface &) = delete;
+  ScriptedInterface &operator=(const ScriptedInterface &) = delete;
 
   StructuredData::GenericSP GetScriptObjectInstance() {
     return m_object_instance_sp;
@@ -36,6 +42,8 @@ public:
   const std::optional<ScriptedMetadata> &GetScriptedMetadata() const {
     return m_scripted_metadata;
   }
+
+  virtual llvm::StringRef GetPluginName() = 0;
 
   /// Whether the user can invoke this extension directly, the way a scripted
   /// command can. Those never introduce the target's API mutex bypass, so at
@@ -101,8 +109,38 @@ public:
   }
 
 protected:
+  void RegisterInstance(const lldb::ScriptedInstanceRegistrySP &registry_sp,
+                        llvm::StringRef class_name) {
+    UnregisterInstance();
+    if (!registry_sp)
+      return;
+    ScriptedInstanceInfo info;
+    info.plugin_name = GetPluginName();
+    info.class_name = class_name.str();
+    if (m_object_instance_sp)
+      info.object_address =
+          reinterpret_cast<uintptr_t>(m_object_instance_sp->GetValue());
+    if (m_scripted_metadata) {
+      info.source_path = m_scripted_metadata->GetSourcePath();
+      info.args_sp = m_scripted_metadata->GetArgsSP();
+    }
+    m_registry_id = registry_sp->Add(std::move(info));
+    m_registry_wp = registry_sp;
+  }
+
   StructuredData::GenericSP m_object_instance_sp;
   std::optional<ScriptedMetadata> m_scripted_metadata;
+
+private:
+  void UnregisterInstance() {
+    // The interpreter owning the registry may already be gone.
+    if (auto registry_sp = m_registry_wp.lock())
+      registry_sp->Remove(m_registry_id);
+    m_registry_wp.reset();
+  }
+
+  lldb::ScriptedInstanceRegistryWP m_registry_wp;
+  uint64_t m_registry_id = 0;
 };
 } // namespace lldb_private
 

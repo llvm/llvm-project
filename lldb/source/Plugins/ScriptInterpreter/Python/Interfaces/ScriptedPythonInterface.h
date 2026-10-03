@@ -416,6 +416,35 @@ public:
 
     m_object_instance_sp = StructuredData::GenericSP(
         new StructuredPythonObject(std::move(result)));
+
+    std::string qualified_class_name = class_name.str();
+    PythonString obj_module_name =
+        obj_class.GetAttributeValue("__module__").AsType<PythonString>();
+    if (obj_module_name.IsValid()) {
+      if (qualified_class_name.empty())
+        qualified_class_name =
+            llvm::formatv("{0}.{1}", obj_module_name.GetString(),
+                          obj_class_name.GetString())
+                .str();
+      if (!m_scripted_metadata->GetSourcePath()) {
+        FileSpec source_path =
+            m_interpreter.GetImportedModulePath(obj_module_name.GetString());
+        // Only LoadScriptingModule records paths, so modules imported any
+        // other way need their __file__.
+        if (!source_path) {
+          if (llvm::Expected<FileSpec> path_or_err = GetScriptedModulePath())
+            source_path = *path_or_err;
+          else
+            LLDB_LOG_ERROR(GetLog(LLDBLog::Script), path_or_err.takeError(),
+                           "failed to find the file defining {1}: {0}",
+                           qualified_class_name);
+        }
+        m_scripted_metadata->SetSourcePath(source_path);
+      }
+    }
+    RegisterInstance(m_interpreter.GetScriptedInstanceRegistry(),
+                     qualified_class_name);
+
     return m_object_instance_sp;
   }
 
