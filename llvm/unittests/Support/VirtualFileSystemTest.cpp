@@ -312,6 +312,24 @@ TEST(VirtualFileSystemTest, GetRealPathInOverlay) {
   EXPECT_EQ(RealPath.str(), "/symlink");
 }
 
+TEST(VirtualFileSystemTest, OverlayWithUnavailableWorkingDirectory) {
+  class UnavailableWorkingDirectoryFS : public DummyFileSystem {
+    ErrorOr<std::string> getCurrentWorkingDirectory() const override {
+      return make_error_code(errc::no_such_file_or_directory);
+    }
+  };
+  auto Base = makeIntrusiveRefCnt<UnavailableWorkingDirectoryFS>();
+  auto Upper = makeIntrusiveRefCnt<DummyFileSystem>();
+  Upper->setCurrentWorkingDirectory("/upper");
+  Upper->addRegularFile("/foo");
+  auto Overlay = makeIntrusiveRefCnt<vfs::OverlayFileSystem>(Base);
+  Overlay->pushOverlay(Upper);
+  EXPECT_EQ(Overlay->getCurrentWorkingDirectory().getError(),
+            errc::no_such_file_or_directory);
+  EXPECT_EQ(*Upper->getCurrentWorkingDirectory(), "/upper");
+  EXPECT_TRUE(Overlay->status("/foo"));
+}
+
 TEST(VirtualFileSystemTest, OverlayFiles) {
   auto Base = makeIntrusiveRefCnt<DummyFileSystem>();
   auto Middle = makeIntrusiveRefCnt<DummyFileSystem>();

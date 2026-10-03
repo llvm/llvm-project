@@ -481,7 +481,8 @@ void OverlayFileSystem::pushOverlay(IntrusiveRefCntPtr<FileSystem> FS) {
   FSList.push_back(FS);
   // Synchronize added file systems by duplicating the working directory from
   // the first one in the list.
-  FS->setCurrentWorkingDirectory(getCurrentWorkingDirectory().get());
+  if (auto WorkingDir = getCurrentWorkingDirectory())
+    FS->setCurrentWorkingDirectory(*WorkingDir);
 }
 
 ErrorOr<Status> OverlayFileSystem::status(const Twine &Path) {
