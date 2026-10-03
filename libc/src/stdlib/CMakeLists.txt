@@ -846,6 +846,7 @@ add_entrypoint_object(
     ${exit_compile_options}
   DEPENDS
     ${exit_deps}
+    libc.src.stdio.fflush
 )
 
 add_header_library(
@@ -872,4 +873,3 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.system
 )
-

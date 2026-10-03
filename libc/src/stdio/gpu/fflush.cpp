@@ -13,7 +13,12 @@
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE_DECL {
-
+namespace GPU_FLUSH {
+// create a new namespace for gpu to differentiate which fflush
+// implementation we are using.
+//
+// TODO: don't forget to test, but how will I tests for GPU
+// TODO: Check it out.
 LLVM_LIBC_FUNCTION(int, fflush, (::FILE * stream)) {
   int ret;
   rpc::Client::Port port = rpc::client.open<LIBC_FFLUSH>();
@@ -25,6 +30,7 @@ LLVM_LIBC_FUNCTION(int, fflush, (::FILE * stream)) {
         ret = static_cast<int>(buffer->data[0]);
       });
   return ret;
+}
 }
 
 } // namespace LIBC_NAMESPACE_DECL
