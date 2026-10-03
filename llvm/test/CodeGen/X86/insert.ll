@@ -58,8 +58,8 @@ define i32 @sub8_32(i32 noundef %res, ptr %byte) {
 ;
 ; X64-LABEL: sub8_32:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movb (%rsi), %dil
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movb (%rsi), %al
 ; X64-NEXT:    retq
 entry:
   %and = and i32 %res, -256
@@ -81,8 +81,8 @@ define i32 @sub16_32(i32 noundef %res, ptr %byte) {
 ;
 ; X64-LABEL: sub16_32:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movw (%rsi), %di
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movw (%rsi), %ax
 ; X64-NEXT:    retq
 entry:
   %and = and i32 %res, -65536
