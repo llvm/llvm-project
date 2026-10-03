@@ -11371,7 +11371,7 @@ static bool checkSimdlenSafelenSpecified(Sema &S,
     // If both simdlen and safelen clauses are specified, the value of the
     // simdlen parameter must be less than or equal to the value of the safelen
     // parameter.
-    if (SimdlenRes > SafelenRes) {
+    if (llvm::APSInt::compareValues(SimdlenRes, SafelenRes) > 0) {
       S.Diag(SimdlenLength->getExprLoc(),
              diag::err_omp_wrong_simdlen_safelen_values)
           << SimdlenLength->getSourceRange() << SafelenLength->getSourceRange();
