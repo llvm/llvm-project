@@ -318,6 +318,8 @@ private:
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
   void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
   void CheckScanModifier(const parser::OmpClause::Reduction &x);
+  void CheckDoacross(
+      const parser::OmpDoacross &doa, llvm::omp::Clause clauseId);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
   void CheckUnrollFullTripCount(const parser::OpenMPLoopConstruct &x);
 
@@ -430,8 +432,6 @@ private:
   std::optional<IterTy> FindDuplicate(RangeTy &&);
 
   void CheckDependList(const parser::DataRef &);
-  void CheckDoacross(
-      const parser::OmpDoacross &doa, llvm::omp::Clause clauseId);
   void CheckDimsModifier(parser::CharBlock source, size_t numValues,
       const parser::OmpDimsModifier &x);
   void CheckTypeParamInquiry(const parser::CharBlock &source,
