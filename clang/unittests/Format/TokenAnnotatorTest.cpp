@@ -1358,6 +1358,20 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   EXPECT_TOKEN(Tokens[35], tok::identifier, TT_Unknown);
 
   Tokens = annotate("template <typename T>\n"
+                    "  requires(*T::value)\n"
+                    "struct Foo;");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TOKEN(Tokens[7], tok::star, TT_UnaryOperator);
+
+  Tokens = annotate("template <typename T>\n"
+                    "  requires(pred(&T::x))\n"
+                    "struct Foo;");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TOKEN(Tokens[9], tok::amp, TT_UnaryOperator);
+
+  Tokens = annotate("template <typename T>\n"
                     "void foo(T) noexcept requires Bar<T>;");
   ASSERT_EQ(Tokens.size(), 18u) << Tokens;
   EXPECT_TOKEN(Tokens[11], tok::kw_requires, TT_RequiresClause);
