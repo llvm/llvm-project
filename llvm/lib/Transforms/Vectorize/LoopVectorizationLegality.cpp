@@ -109,41 +109,53 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
   // Populate values with existing loop metadata.
   getHintsFromMetadata();
 
-  // force-vector-interleave overrides DisableInterleaving.
+  // The vector width is selected in increasing order of priority:
+  //  1. -force-vector-width
+  //  2. llvm.loop.vectorize.width metadata
+
+  // The interleave count is selected in increasing order of priority:
+  //  1. InterleaveOnlyWhenForced initializes IC to 1
+  //  2. llvm.loop.interleave.count metadata
+  //  3. -force-vector-interleave
+  // Note: If no IC is set, getInterleave() returns 1 when loop unrolling is
+  // disabled.
   if (VectorizerParams::isInterleaveForced())
     Interleave.Value = VectorizerParams::VectorizationInterleave;
 
-  // If the metadata doesn't explicitly specify whether to enable scalable
-  // vectorization, then decide based on the following criteria (increasing
-  // level of priority):
-  //  - Target default
-  //  - Metadata width
-  //  - Force option (always overrides)
-  if ((LoopVectorizeHints::ScalableForceKind)Scalable == SK_Unspecified) {
-    if (TTI)
-      Scalable = TTI->enableScalableVectorization() ? SK_PreferScalable
-                                                    : SK_FixedWidthOnly;
+  // Decide whether to enable scalable vectorisation
+  auto ComputeScalable =
+      [TTI](ScalableForceKind ForceScalableHint,
+            ScalableForceKind ForceScalableOpt, unsigned ForceWidth,
+            ElementCount ForceWidthOpt) -> ScalableForceKind {
+    // Loop hints have the highest precedence
+    assert(ForceScalableHint != SK_AlwaysScalable && "Unexpected loop hint.");
+    if (ForceScalableHint == SK_PreferScalable ||
+        ForceScalableHint == SK_FixedWidthOnly)
+      return ForceScalableHint;
 
-    if (Width.Value)
-      // If the width is set, but the metadata says nothing about the scalable
-      // property, then assume it concerns only a fixed-width UserVF.
-      // If width is not set, the flag takes precedence.
-      Scalable = SK_FixedWidthOnly;
-  }
+    // Then -scalable-vectorization=(always|off)
+    if (ForceScalableOpt == SK_AlwaysScalable ||
+        ForceScalableOpt == SK_FixedWidthOnly)
+      return ForceScalableOpt;
 
-  // If the flag is set to force any use of scalable vectors, override the loop
-  // hints.
-  if (ForceScalableVectorization.getValue() !=
-      LoopVectorizeHints::SK_Unspecified)
-    Scalable = ForceScalableVectorization.getValue();
+    // No direct preference, try to infer from a preferred VF.
+    if (ForceWidthOpt.isScalable() ||
+        (ForceWidth && ForceScalableOpt == SK_PreferScalable))
+      return SK_AlwaysScalable;
+    if (ForceWidth && ForceScalableOpt == SK_Unspecified)
+      return SK_FixedWidthOnly;
 
-  // If force-vector-width is scalable, force scalable vectorization.
-  if (VectorizerParams::VectorizationFactor.isScalable())
-    Scalable = SK_AlwaysScalable;
+    // Finally, listen to -scalable-vectorization=on or TTI.
+    if (ForceScalableOpt == SK_PreferScalable ||
+        (TTI && TTI->enableScalableVectorization()))
+      return SK_PreferScalable;
 
-  // Scalable vectorization is disabled if no preference is specified.
-  if ((LoopVectorizeHints::ScalableForceKind)Scalable == SK_Unspecified)
-    Scalable = SK_FixedWidthOnly;
+    // Preference unspecified, fallback to fixed-length vectorisation.
+    return SK_FixedWidthOnly;
+  };
+  Scalable =
+      ComputeScalable(ScalableForceKind(Scalable), ForceScalableVectorization,
+                      Width.Value, VectorizerParams::VectorizationFactor);
 
   if (IsVectorized.Value != 1)
     // If the vectorization width and interleaving count are both 1 then
