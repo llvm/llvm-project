@@ -33,6 +33,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
+#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
@@ -747,15 +748,52 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
   for (Type argTy : privateAttributions)
     body->addArgument(argTy, result.location);
   // Fill OperandSegmentSize Attribute.
-  SmallVector<int32_t, 12> segmentSizes(12, 1);
+  SmallVector<int32_t, 13> segmentSizes(13, 1);
   segmentSizes.front() = asyncDependencies.size();
   segmentSizes[7] = clusterSizeX ? 1 : 0;
   segmentSizes[8] = clusterSizeY ? 1 : 0;
   segmentSizes[9] = clusterSizeZ ? 1 : 0;
   segmentSizes[10] = dynamicSharedMemorySize ? 1 : 0;
   segmentSizes[11] = asyncObject ? 1 : 0;
+  segmentSizes[12] = 0;
   result.addAttribute(getOperandSegmentSizeAttr(),
                       builder.getDenseI32ArrayAttr(segmentSizes));
+}
+
+void LaunchOp::addCallingConventionArg(Value value, DictionaryAttr attrs) {
+  getCallingConventionMutable().append(value);
+  auto argAttrs = getArgAttrs();
+  if (!argAttrs && (!attrs || attrs.empty()))
+    return;
+
+  Builder builder(getContext());
+  DictionaryAttr emptyAttrs = builder.getDictionaryAttr({});
+  SmallVector<Attribute> newArgAttrs;
+  if (argAttrs)
+    llvm::append_range(newArgAttrs, argAttrs->getValue());
+  else
+    newArgAttrs.assign(getCallingConvention().size() - 1, emptyAttrs);
+  newArgAttrs.push_back(attrs && !attrs.empty() ? attrs : emptyAttrs);
+  setArgAttrsAttr(builder.getArrayAttr(newArgAttrs));
+}
+
+void LaunchOp::removeCallingConventionArg(unsigned index) {
+  assert(index < getCallingConvention().size() &&
+         "calling convention argument index out of range");
+  getCallingConventionMutable().erase(index, 1);
+  auto argAttrs = getArgAttrs();
+  if (!argAttrs)
+    return;
+
+  SmallVector<Attribute> newArgAttrs(argAttrs->begin(), argAttrs->end());
+  newArgAttrs.erase(newArgAttrs.begin() + index);
+  if (llvm::all_of(newArgAttrs, [](Attribute attr) {
+        return cast<DictionaryAttr>(attr).empty();
+      })) {
+    removeArgAttrsAttr();
+    return;
+  }
+  setArgAttrsAttr(ArrayAttr::get(getContext(), newArgAttrs));
 }
 
 KernelDim3 LaunchOp::getBlockIds() {
@@ -845,6 +883,21 @@ LogicalResult LaunchOp::verifyRegions() {
   if (getBody().empty()) {
     return emitOpError("body region is empty");
   }
+
+  if (auto argAttrs = getArgAttrs()) {
+    if (argAttrs->size() != getCallingConvention().size())
+      return emitOpError(
+          "arg_attrs must have one entry per calling convention operand");
+  }
+
+  SetVector<Value> capturedValues;
+  getUsedValuesDefinedAbove(getBody(), capturedValues);
+  for (Value value : getCallingConvention()) {
+    if (!capturedValues.contains(value))
+      return emitOpError(
+          "calling convention operands must be used in the launch body");
+  }
+
   unsigned actualNumRegionArgs = getBody().getNumArguments();
   unsigned expectedNumRegionArgs =
       getNumConfigRegionAttributes() + getNumWorkgroupAttributions();
@@ -937,6 +990,21 @@ void LaunchOp::print(OpAsmPrinter &p) {
   if (getCooperative())
     p << " cooperative";
 
+  if (!getCallingConvention().empty()) {
+    p << " calling_convention(";
+    auto argAttrs = getArgAttrs();
+    llvm::interleaveComma(
+        llvm::enumerate(getCallingConvention()), p, [&](auto pair) {
+          Value value = pair.value();
+          p << value << " : " << value.getType();
+          if (argAttrs) {
+            auto attrs = cast<DictionaryAttr>((*argAttrs)[pair.index()]);
+            p.printOptionalAttrDict(attrs.getValue());
+          }
+        });
+    p << ')';
+  }
+
   printAttributions(p, getWorkgroupKeyword(), getWorkgroupAttributionBBArgs());
   printAttributions(p, getPrivateKeyword(), getPrivateAttributions());
 
@@ -947,7 +1015,7 @@ void LaunchOp::print(OpAsmPrinter &p) {
       (*this)->getDiscardableAttrDictionary().getValue(), /*elidedAttrs=*/{
           LaunchOp::getOperandSegmentSizeAttr(),
           getWorkgroupAttributionsAttrName(), getCooperativeAttrName(),
-          moduleAttrName, functionAttrName});
+          moduleAttrName, functionAttrName, getArgAttrsAttrName()});
 }
 
 // Parse the size assignment blocks for blocks and threads.  These have the form
@@ -1110,6 +1178,31 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
   if (succeeded(parser.parseOptionalKeyword("cooperative")))
     result.addAttribute("cooperative", parser.getBuilder().getUnitAttr());
 
+  SmallVector<Attribute> argAttrs;
+  bool hasArgAttrs = false;
+  unsigned numCallingConventionOperands = 0;
+  if (succeeded(parser.parseOptionalKeyword("calling_convention"))) {
+    auto parseElement = [&]() -> ParseResult {
+      OpAsmParser::UnresolvedOperand operand;
+      Type type;
+      NamedAttrList attrs;
+      if (parser.parseOperand(operand) || parser.parseColonType(type) ||
+          parser.parseOptionalAttrDict(attrs) ||
+          parser.resolveOperand(operand, type, result.operands))
+        return failure();
+      hasArgAttrs |= !attrs.empty();
+      argAttrs.push_back(attrs.getDictionary(parser.getContext()));
+      ++numCallingConventionOperands;
+      return success();
+    };
+    if (parser.parseCommaSeparatedList(OpAsmParser::Delimiter::Paren,
+                                       parseElement))
+      return failure();
+    if (hasArgAttrs)
+      result.addAttribute(getArgAttrsAttrName(result.name),
+                          parser.getBuilder().getArrayAttr(argAttrs));
+  }
+
   // Create the region arguments: fixed launch-config args (`index`), then
   // workgroup / private attribution args. The workgroup count is stored in the
   // inherent `workgroup_attributions` attribute when non-zero.
@@ -1153,7 +1246,7 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.parseOptionalAttrDict(result.attributes))
     return failure();
 
-  SmallVector<int32_t, 12> segmentSizes(12, 1);
+  SmallVector<int32_t, 13> segmentSizes(13, 1);
   segmentSizes.front() = asyncDependencies.size();
 
   if (!hasCluster) {
@@ -1163,6 +1256,7 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
   }
   segmentSizes[10] = hasDynamicSharedMemorySize ? 1 : 0;
   segmentSizes[11] = hasAsyncObject ? 1 : 0;
+  segmentSizes[12] = numCallingConventionOperands;
   result.addAttribute(LaunchOp::getOperandSegmentSizeAttr(),
                       parser.getBuilder().getDenseI32ArrayAttr(segmentSizes));
   return success();
