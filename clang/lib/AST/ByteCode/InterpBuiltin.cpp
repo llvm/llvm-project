@@ -849,14 +849,15 @@ static bool interp__builtin_expect(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const CallExpr *Call) {
   // The return value is simply the value of the first parameter.
-  // We ignore the probability.
+  // We ignore the expected value and the probability.
   unsigned NumArgs = Call->getNumArgs();
-  assert(NumArgs == 2 || NumArgs == 3);
+  assert(NumArgs >= 1 && NumArgs <= 3);
 
   PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
   if (NumArgs == 3)
     S.Stk.discard<Floating>();
-  discard(S.Stk, ArgT);
+  if (NumArgs >= 2)
+    discard(S.Stk, ArgT);
   // Top of the stack is now the first paramter. Leave it there as the return
   // value.
 
@@ -4834,6 +4835,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case Builtin::BI__builtin_expect:
   case Builtin::BI__builtin_expect_with_probability:
+  case Builtin::BI__builtin_unpredictable:
     return interp__builtin_expect(S, OpPC, Frame, Call);
 
   case Builtin::BI__builtin_rotateleft8:
