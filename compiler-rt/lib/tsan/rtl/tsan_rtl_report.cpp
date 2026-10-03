@@ -713,7 +713,7 @@ bool OutputReport(ThreadState *thr, ScopedReport &srep) {
   }
   PrintReport(rep);
   __tsan_on_report(rep);
-  ctx->nreported++;
+  atomic_fetch_add(&ctx->nreported, 1, memory_order_relaxed);
   if (flags()->halt_on_error)
     Die();
   thr->current_report = nullptr;

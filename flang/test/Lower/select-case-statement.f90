@@ -180,7 +180,7 @@
     character(len=3) :: s
     n = 0
 
-    ! CHECK: %[[STR00:[0-9]+]] = fir.declare {{.*}} uniq_name = "_QQclX3030"}
+    ! CHECK: %[[STR00:[0-9]+]] = fir.declare {{.*}} uniq_name("_QQclX3030")
     ! CHECK: %[[STR00_CONV:[0-9]+]] = fir.convert %[[STR00]]
 
     ! CHECK-O0: fir.call @_FortranACharacterCompareScalar1({{.*}}, %[[STR00_CONV]]
@@ -193,14 +193,14 @@
       ! CHECK: fir.call @_FortranATrim
 
       ! All the strings in SELECT CASE
-      ! CHECK: %[[STR11:[0-9]+]] = fir.declare {{.*}} uniq_name = "_QQclX3131"}
-      ! CHECK: %[[STR22:[0-9]+]] = fir.declare {{.*}} uniq_name = "_QQclX3232"}
-      ! CHECK: %[[STR33:[0-9]+]] = fir.declare {{.*}} uniq_name = "_QQclX3333"}
-      ! CHECK: %[[STR44:[0-9]+]] = fir.declare {{.*}} uniq_name = "_QQclX3434"}
-      ! CHECK: %[[STR55:[0-9]+]] = fir.declare {{.*}} uniq_name = "_QQclX3535"}
-      ! CHECK: %[[STR66:[0-9]+]] = fir.declare {{.*}} uniq_name = "_QQclX3636"}
-      ! CHECK: %[[STR77:[0-9]+]] = fir.declare {{.*}} uniq_name = "_QQclX3737"}
-      ! CHECK: %[[STR88:[0-9]+]] = fir.declare {{.*}} uniq_name = "_QQclX3838"}
+      ! CHECK: %[[STR11:[0-9]+]] = fir.declare {{.*}} uniq_name("_QQclX3131")
+      ! CHECK: %[[STR22:[0-9]+]] = fir.declare {{.*}} uniq_name("_QQclX3232")
+      ! CHECK: %[[STR33:[0-9]+]] = fir.declare {{.*}} uniq_name("_QQclX3333")
+      ! CHECK: %[[STR44:[0-9]+]] = fir.declare {{.*}} uniq_name("_QQclX3434")
+      ! CHECK: %[[STR55:[0-9]+]] = fir.declare {{.*}} uniq_name("_QQclX3535")
+      ! CHECK: %[[STR66:[0-9]+]] = fir.declare {{.*}} uniq_name("_QQclX3636")
+      ! CHECK: %[[STR77:[0-9]+]] = fir.declare {{.*}} uniq_name("_QQclX3737")
+      ! CHECK: %[[STR88:[0-9]+]] = fir.declare {{.*}} uniq_name("_QQclX3838")
 
       ! == '11'
       ! CHECK-O0: %[[STR11_CONV:[0-9]+]] = fir.convert %[[STR11]]
@@ -281,7 +281,7 @@
   ! CHECK-LABEL: func @_QPscharacter2
   subroutine scharacter2(s)
     character(len=3) :: s
-    ! CHECK: %[[N:[0-9]+]] = fir.declare {{.*}} {uniq_name = "_QFscharacter2En"}
+    ! CHECK: %[[N:[0-9]+]] = fir.declare {{.*}} uniq_name("_QFscharacter2En")
     ! CHECK: fir.store %c-10_i32 to %[[N]] : !fir.ref<i32>
     n = -10
     ! CHECK: fir.call @_FortranATrim(

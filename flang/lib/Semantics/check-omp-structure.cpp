@@ -2270,20 +2270,19 @@ void OmpStructureChecker::CheckInitOnDepobj(
           llvm::omp::getDescriptor(llvm::omp::Modifier::DepinfoModifier)};
       context_.Say(OmpGetModifierSource(modifiers, depInfo),
           "'%s' is not an allowed value of the '%s' modifier"_err_en_US,
-          parser::ToUpperCaseLetters(EnumToString(depKind)),
-          desc.getName().str());
+          parser::ToUpperCaseLetters(EnumToString(depKind)), desc.getName());
     }
   } else {
     auto &desc{llvm::omp::getDescriptor(llvm::omp::Modifier::DepinfoModifier)};
     context_.Say(initClause.source,
         "The '%s' modifier is required on a DEPOBJ construct"_err_en_US,
-        desc.getName().str());
+        desc.getName());
   }
   if (auto *prefType{OmpGetUniqueModifier<parser::OmpPreferType>(modifiers)}) {
     auto &desc{llvm::omp::getDescriptor(llvm::omp::Modifier::PreferType)};
     context_.Say(OmpGetModifierSource(modifiers, prefType),
         "The '%s' modifier is not allowed on a DEPOBJ construct"_err_en_US,
-        desc.getName().str());
+        desc.getName());
   }
 }
 
@@ -3814,9 +3813,6 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &x) {
           std::get<parser::OmpClause::Ordered>(clause->u)};
 
       if (orderedClause.v) {
-        CheckNotAllowedIfClause(
-            llvm::omp::Clause::OMPC_ordered, {llvm::omp::Clause::OMPC_linear});
-
         if (auto *clause2{FindClause(llvm::omp::Clause::OMPC_collapse)}) {
           const auto &collapseClause{
               std::get<parser::OmpClause::Collapse>(clause2->u)};
@@ -4612,10 +4608,10 @@ void OmpStructureChecker::CheckVarIsNotPartOfAnotherVar(
       if (clause.empty() &&
           llvm::omp::nonPartialVarSet.test(GetContext().directive)) {
         context_.Say(source, "%s cannot appear on the %s directive"_err_en_US,
-            kind.str(), ContextDirectiveAsFortran());
+            kind, ContextDirectiveAsFortran());
       } else {
-        context_.Say(source, "%s cannot appear in a %s clause"_err_en_US,
-            kind.str(), clause.str());
+        context_.Say(
+            source, "%s cannot appear in a %s clause"_err_en_US, kind, clause);
       }
     }
   }
@@ -5031,7 +5027,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
           llvm::omp::getDescriptor(llvm::omp::Modifier::AttachModifier)};
       context_.Say(OmpGetModifierSource(modifiers, attach),
           "The '%s' modifier can only appear on a map-entering construct or on a DECLARE_MAPPER directive"_err_en_US,
-          desc.getName().str());
+          desc.getName());
     }
 
     auto hasBasePointer{[&](const SomeExpr &item) {
@@ -5185,7 +5181,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Device &x) {
               .getName()};
       context_.Say(OmpGetModifierSource(modifiers, deviceMod),
           "The ANCESTOR %s must not appear on the DEVICE clause on any directive other than the TARGET construct. Found on %s construct."_err_en_US,
-          name.str(), parser::omp::GetUpperName(dir, version));
+          name, parser::omp::GetUpperName(dir, version));
     }
   }
 }
@@ -5838,7 +5834,7 @@ void OmpStructureChecker::CheckUsesAllocatorsSpec(
           llvm::omp::getDescriptor(llvm::omp::Modifier::MemSpace).getName()};
       context_.Say(memSpaceSource,
           "The '%s' modifier must name a predefined memory space"_err_en_US,
-          name.str());
+          name);
     }
   }
 
@@ -6249,7 +6245,7 @@ void OmpStructureChecker::CheckCrayPointee(
             semantics::GetCrayPointer(*symbol).name().ToString() + "' instead";
       context_.Say(source,
           "Cray Pointee '%s' may not appear in %s clause%s"_err_en_US,
-          symbol->name(), clause.str(), suggestionMsg);
+          symbol->name(), clause, suggestionMsg);
     }
   }
 }
@@ -6686,7 +6682,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
                     llvm::omp::Modifier::DepinfoModifier)};
                 context_.Say(OmpGetModifierSource(modifiers, depInfo),
                     "The '%s' is not allowed on INTEROP construct"_err_en_US,
-                    desc.getName().str());
+                    desc.getName());
               }
               // A prefer_type foreign-runtime-identifier must be a
               // constant expression of integer OpenMP type or a base

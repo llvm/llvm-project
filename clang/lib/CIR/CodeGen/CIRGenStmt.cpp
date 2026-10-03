@@ -22,6 +22,7 @@
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtSYCL.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/StmtUtils.h"
 #include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
@@ -1022,6 +1023,7 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
       if (emitStmt(s.getInit(), /*useCurrentScope=*/true).failed())
         return mlir::failure();
     assert(!cir::MissingFeatures::loopInfoStack());
+    checkIfLoopMustProgress(s.getCond(), CodeGenUtils::hasEmptyLoopBody(s));
 
     // A condition variable's lifetime is a single iteration, so capture its
     // destructor and lifetime-end cleanups and emit them into the loop's
@@ -1108,6 +1110,7 @@ mlir::LogicalResult CIRGenFunction::emitDoStmt(const DoStmt &s) {
   auto doStmtBuilder = [&]() -> mlir::LogicalResult {
     mlir::LogicalResult loopRes = mlir::success();
     assert(!cir::MissingFeatures::loopInfoStack());
+    checkIfLoopMustProgress(s.getCond(), CodeGenUtils::hasEmptyLoopBody(s));
 
     doWhileOp = builder.createDoWhile(
         getLoc(s.getSourceRange()),
@@ -1155,6 +1158,7 @@ mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &s) {
   auto whileStmtBuilder = [&]() -> mlir::LogicalResult {
     mlir::LogicalResult loopRes = mlir::success();
     assert(!cir::MissingFeatures::loopInfoStack());
+    checkIfLoopMustProgress(s.getCond(), CodeGenUtils::hasEmptyLoopBody(s));
 
     // A condition variable's lifetime is a single iteration, so capture its
     // destructor and lifetime-end cleanups and emit them into the loop's
