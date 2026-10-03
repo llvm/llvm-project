@@ -101,6 +101,27 @@
 // RUN:   | FileCheck --check-prefix=CHECK-LA64-LD-OPTS %s
 // CHECK-LA64-LD-OPTS: ld{{.*}}" {{.*}} "-X" "--no-relax"
 //
+// Check that LoongArch does not pass crti.o/crtn.o to the linker:
+// the obsolete _init/_fini interface is not provided.
+//
+// RUN: %clang --target=loongarch64-freebsd -### %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-LA64-NOCRTI %s
+// CHECK-LA64-NOCRTI: crt1.o
+// CHECK-LA64-NOCRTI-NOT: crti.o
+// CHECK-LA64-NOCRTI: crtbegin{{S?}}.o
+// CHECK-LA64-NOCRTI: crtend{{S?}}.o
+// CHECK-LA64-NOCRTI-NOT: crtn.o
+//
+// Check the same for shared libraries.
+//
+// RUN: %clang --target=loongarch64-freebsd -shared -### %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-LA64-SHARED-NOCRTI %s
+// CHECK-LA64-SHARED-NOCRTI: --eh-frame-hdr
+// CHECK-LA64-SHARED-NOCRTI-NOT: crti.o
+// CHECK-LA64-SHARED-NOCRTI: crtbeginS.o
+// CHECK-LA64-SHARED-NOCRTI: crtendS.o
+// CHECK-LA64-SHARED-NOCRTI-NOT: crtn.o
+//
 // Check that the new linker flags are passed to FreeBSD
 // RUN: %clang --target=x86_64-pc-freebsd10.0 -m32 %s \
 // RUN:   --sysroot=%S/Inputs/multiarch_freebsd64_tree -### 2>&1 \
