@@ -57,6 +57,25 @@ void SPIRVCombinerHelper::applySPIRVDistance(MachineInstr &MI) const {
   MI.eraseFromParent();
 }
 
+/// Returns the scalar of an insert-into-lane-0 plus all-zero-shuffle splat.
+static Register getSplatScalar(Register Reg, MachineRegisterInfo &MRI) {
+  MachineInstr *ShuffleInstr = MRI.getVRegDef(Reg);
+  if (ShuffleInstr->getOpcode() != TargetOpcode::G_SHUFFLE_VECTOR)
+    return Register();
+  if (!all_of(cast<GShuffleVector>(ShuffleInstr)->getMask(),
+              [](int M) { return M == 0; }))
+    return Register();
+
+  MachineInstr *InsertInstr =
+      MRI.getVRegDef(ShuffleInstr->getOperand(1).getReg());
+  if (!isSpvIntrinsic(*InsertInstr, Intrinsic::spv_insertelt))
+    return Register();
+  if (!mi_match(InsertInstr->getOperand(4).getReg(), MRI, m_ZeroInt()))
+    return Register();
+
+  return InsertInstr->getOperand(3).getReg();
+}
+
 /// This match is part of a combine that
 /// rewrites X / length(X) to normalize(X)
 ///   (vXf32 (g_fdiv
@@ -70,23 +89,11 @@ bool SPIRVCombinerHelper::matchFDivToNormalize(MachineInstr &MI) const {
   Register NumeratorReg = MI.getOperand(1).getReg();
   Register DivisorReg = MI.getOperand(2).getReg();
 
-  // Match the divisor as a splat of length, inserted into lane 0.
-  MachineInstr *ShuffleInstr = MRI.getVRegDef(DivisorReg);
-  if (ShuffleInstr->getOpcode() != TargetOpcode::G_SHUFFLE_VECTOR)
+  // Match the divisor as a splat of length.
+  Register LengthReg = getSplatScalar(DivisorReg, MRI);
+  if (!LengthReg.isValid())
     return false;
-  if (!all_of(cast<GShuffleVector>(ShuffleInstr)->getMask(),
-              [](int M) { return M == 0; }))
-    return false;
-
-  MachineInstr *InsertInstr =
-      MRI.getVRegDef(ShuffleInstr->getOperand(1).getReg());
-  if (!isSpvIntrinsic(*InsertInstr, Intrinsic::spv_insertelt))
-    return false;
-  if (!mi_match(InsertInstr->getOperand(4).getReg(), MRI, m_ZeroInt()))
-    return false;
-
-  MachineInstr *LengthInstr =
-      MRI.getVRegDef(InsertInstr->getOperand(3).getReg());
+  MachineInstr *LengthInstr = MRI.getVRegDef(LengthReg);
   if (!isSpvIntrinsic(*LengthInstr, Intrinsic::spv_length))
     return false;
 
@@ -229,6 +236,68 @@ void SPIRVCombinerHelper::applySPIRVFaceForward(MachineInstr &MI) const {
       .addUse(TrueReg)      // N
       .addUse(DotOperand1)  // I
       .addUse(DotOperand2); // Ng
+
+  MI.eraseFromParent();
+}
+
+/// Ignores spv_assign_type and spv_assign_name, which the pre-legalizer drops.
+static bool hasOneRealUse(Register Reg, MachineRegisterInfo &MRI) {
+  return count_if(MRI.use_nodbg_instructions(Reg), [](MachineInstr &UseMI) {
+           return !isSpvIntrinsic(UseMI, Intrinsic::spv_assign_type) &&
+                  !isSpvIntrinsic(UseMI, Intrinsic::spv_assign_name);
+         }) == 1;
+}
+
+/// Rewrites exp2(sitofp(Exp)) * X to ldexp(X, Exp)
+///   (vXf32 (g_fmul
+///             (vXf32 (g_fexp2
+///                       (vXf32 splat (f32 (g_sitofp (i32 Exp))))))
+///             (vXf32 X)))
+/// ->
+///   (vXf32 (g_fldexp (vXf32 X) (i32 Exp)))
+///
+/// The exponent is restricted to a scalar i32, what OpenCL.std ldexp takes.
+/// Needs reassoc: the two differ once 2^Exp overflows or underflows.
+bool SPIRVCombinerHelper::matchFMulToLdexp(
+    MachineInstr &MI, std::pair<Register, Register> &MatchInfo) const {
+  if (!MI.getFlag(MachineInstr::MIFlag::FmReassoc))
+    return false;
+
+  auto TryMatch = [&](Register Exp2Reg, Register XReg) {
+    MachineInstr *Exp2Instr = MRI.getVRegDef(Exp2Reg);
+    if (Exp2Instr->getOpcode() != TargetOpcode::G_FEXP2 ||
+        !Exp2Instr->getFlag(MachineInstr::MIFlag::FmReassoc) ||
+        !hasOneRealUse(Exp2Reg, MRI))
+      return false;
+
+    Register ExpReg = Exp2Instr->getOperand(1).getReg();
+    if (MRI.getType(ExpReg).isVector()) {
+      ExpReg = getSplatScalar(ExpReg, MRI);
+      if (!ExpReg.isValid())
+        return false;
+    }
+
+    MachineInstr *ExpInstr = MRI.getVRegDef(ExpReg);
+    if (ExpInstr->getOpcode() != TargetOpcode::G_SITOFP)
+      return false;
+    Register IntExpReg = ExpInstr->getOperand(1).getReg();
+    if (MRI.getType(IntExpReg) != LLT::scalar(32))
+      return false;
+
+    MatchInfo = {XReg, IntExpReg};
+    return true;
+  };
+
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  return TryMatch(LHS, RHS) || TryMatch(RHS, LHS);
+}
+
+void SPIRVCombinerHelper::applySPIRVLdexp(
+    MachineInstr &MI, const std::pair<Register, Register> &MatchInfo) const {
+  Builder.setInstrAndDebugLoc(MI);
+  Builder.buildFLdexp(MI.getOperand(0).getReg(), MatchInfo.first,
+                      MatchInfo.second, MI.getFlags());
 
   MI.eraseFromParent();
 }
