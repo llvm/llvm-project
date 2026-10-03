@@ -328,6 +328,25 @@ jobs:
         release_dir=`find "$BUILD_PREFIX/build" -iname 'stage2-bins'`
         mv "$release_dir/$RELEASE_BINARY_FILENAME" .
 
+    - name: Enable NetFx3 (Windows ARM64)
+      if: runner.os == 'Windows' && runner.arch == 'ARM64'
+      shell: pwsh
+      run: |
+        $feature = Get-WindowsOptionalFeature -Online -FeatureName NetFx3
+        if ($feature.State -ne 'Enabled') {
+          $result = Enable-WindowsOptionalFeature -Online -FeatureName NetFx3 `
+            -All -NoRestart -ErrorAction Stop
+          if ($result.RestartNeeded) {
+            throw 'Enabling NetFx3 requires a restart; the runner image must have it pre-enabled.'
+          }
+        }
+        $framework = Get-ItemProperty `
+          -LiteralPath 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v3.5' `
+          -ErrorAction SilentlyContinue
+        if ($null -eq $framework -or $framework.Install -ne 1) {
+          throw 'NetFx3 did not register as installed after enabling the Windows feature.'
+        }
+
     # Wix is not installed by default on Windows ARM64
     - name: Install Wix (Windows ARM64)
       env:
@@ -346,6 +365,26 @@ jobs:
         INPUTS_RUNS_ON: ${{ inputs.runs-on }}
         LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
       run: |
+        function Move-ArtifactWithRetry {
+          param(
+            [Parameter(Mandatory)][string]$Source,
+            [Parameter(Mandatory)][string]$DestinationDirectory
+          )
+          $maxAttempts = 12
+          for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            try {
+              Move-Item -LiteralPath $Source -Destination $DestinationDirectory -ErrorAction Stop
+              return
+            } catch {
+              if ($attempt -eq $maxAttempts) {
+                throw "Could not move artifact '$Source' after $maxAttempts attempts: $($_.Exception.Message)"
+              }
+              Write-Warning "Artifact move attempt $attempt/$maxAttempts failed; retrying in 5 seconds: $($_.Exception.Message)"
+              Start-Sleep -Seconds 5
+            }
+          }
+        }
+
         subst S: "${{ github.workspace }}"
         cd S:\llvm\utils\release\
         $buildArgs = @{ Version = $env:LLVM_VERSION; FastBuild = $true; Unattended = $true }
@@ -357,13 +396,13 @@ jobs:
         & .\build_llvm_release.ps1 @buildArgs
         if ($env:INPUTS_RUNS_ON -eq "windows-11-arm") {
           $zstd = (Get-ChildItem -Recurse -Filter "zstd.exe" | Select-Object -First 1).fullName
-          mv $zstd $env:GITHUB_WORKSPACE
+          Move-ArtifactWithRetry -Source $zstd -DestinationDirectory $env:GITHUB_WORKSPACE
         }
         $installer = (Get-ChildItem -Recurse -Filter "LLVM-*.msi" | Select-Object -First 1).fullName
         $tarball = (Get-ChildItem -Recurse -Filter "*.tar.xz" | Select-Object -First 1).fullName
         # Move installer to top-level directory so it is easier to upload.
-        mv $installer $env:GITHUB_WORKSPACE
-        mv $tarball $env:GITHUB_WORKSPACE
+        Move-ArtifactWithRetry -Source $installer -DestinationDirectory $env:GITHUB_WORKSPACE
+        Move-ArtifactWithRetry -Source $tarball -DestinationDirectory $env:GITHUB_WORKSPACE
         echo "windows-installer-filename=$(Split-Path -Path $installer -Leaf)" >> $env:GITHUB_OUTPUT
     
     - name: Dump Wix logs
