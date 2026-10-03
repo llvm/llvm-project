@@ -581,6 +581,15 @@ static inline Type *restoreMutatedType(SPIRVGlobalRegistry *GR, Instruction *I,
   return Ty;
 }
 
+// Return the pointee type of the pointer member of AggrTy selected by Indices.
+// Untyped pointer members are lowered as pointers to i8.
+static Type *getMemberPointeeType(Type *AggrTy, ArrayRef<unsigned> Indices) {
+  Type *MemberTy = ExtractValueInst::getIndexedType(AggrTy, Indices);
+  if (Type *ElemTy = getPointeeType(MemberTy))
+    return ElemTy;
+  return IntegerType::getInt8Ty(AggrTy->getContext());
+}
+
 // Reconstruct type with nested element types according to deduced type info.
 // Return nullptr if no detailed type info is available.
 Type *SPIRVEmitIntrinsicsImpl::reconstructType(Value *Op,
@@ -1007,6 +1016,12 @@ Type *SPIRVEmitIntrinsicsImpl::deduceElementTypeHelper(
         isPointerTy(Src) && isPointerTy(Dest))
       Ty = deduceElementTypeHelper(Ref->getOperand(0), Visited,
                                    UnknownElemTypeI8);
+  } else if (auto *Ref = dyn_cast<ExtractValueInst>(I)) {
+    // An extracted pointer has the type of its aggregate member.
+    if (isPointerTy(I->getType()))
+      Ty = getMemberPointeeType(
+          reconstructType(Ref->getAggregateOperand(), false, false),
+          Ref->getIndices());
   } else if (auto *Ref = dyn_cast<AtomicCmpXchgInst>(I)) {
     Value *Op = Ref->getNewValOperand();
     if (isPointerTy(Op->getType()))
@@ -2334,6 +2349,16 @@ void SPIRVEmitIntrinsicsImpl::insertPtrCastOrAssignTypeInstr(Instruction *I,
     replacePointerOperandWithPtrCast(I, Pointer, OpTy, 0, B);
     if (isNestedPointer(OpTy))
       insertTodoType(Pointer);
+    return;
+  }
+
+  // An inserted pointer must have the type of its aggregate member.
+  if (auto *IVI = dyn_cast<InsertValueInst>(I)) {
+    Value *Op = IVI->getInsertedValueOperand();
+    if (isPointerTy(Op->getType()))
+      replacePointerOperandWithPtrCast(
+          I, Op, getMemberPointeeType(IVI->getType(), IVI->getIndices()),
+          InsertValueInst::getInsertedValueOperandIndex(), B);
     return;
   }
 
