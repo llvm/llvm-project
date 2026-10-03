@@ -75,6 +75,12 @@ struct reader_states {
 
   state_type debug_get_state() const noexcept { return state_.load(); }
 
+  static void on_thread_exit(const reader_states& states) {
+    _LIBCPP_ASSERT_UNCATEGORIZED(
+        states.is_quiescent_state(),
+        "rcu_domain::unlock must be called before exiting a thread if rcu_domain::lock is called");
+  }
+
 private:
   static uint16_t get_grace_period_phase(state_type state) noexcept { return state & grace_period_phase_mask; }
   static bool is_quiescent_state(state_type state) noexcept { return get_reader_nest_level(state) == 0; }
@@ -99,7 +105,7 @@ class rcu_domain_impl {
   // stage 0 queue is thread local. In case a thread dies with non-empty list in stage 0,
   // those nodes will be move into the orphaned_stage0_ on destruction
   rcu_singly_list_view retired_queue_stage0_;
-  std::mutex retired_queue_orphaned_stage0_mutex_;
+  std::mutex retired_queue_stage0_mutex_;
 
   using retired_queue_stage0_threadlocal_cache = thread_local_container<rcu_atomic_list_view, default_rcu_domain_tag>;
 
@@ -115,7 +121,7 @@ class rcu_domain_impl {
     retired_queue_stage0_threadlocal_cache::for_each([&working_queue](rcu_atomic_list_view& stage0_list) {
       working_queue.splice_back(stage0_list);
     });
-    std::unique_lock lk(retired_queue_orphaned_stage0_mutex_);
+    std::unique_lock lk(retired_queue_stage0_mutex_);
     working_queue.splice_back(retired_queue_stage0_);
     lk.unlock();
 
@@ -147,8 +153,8 @@ class rcu_domain_impl {
     return any_ongoing;
   }
 
-  void move_to_orphan_list_on_destruction(rcu_atomic_list_view& stage0_to_be_destroyed) noexcept {
-    std::lock_guard g(retired_queue_orphaned_stage0_mutex_);
+  void move_to_global_stage0_list_on_destruction(rcu_atomic_list_view& stage0_to_be_destroyed) noexcept {
+    std::lock_guard g(retired_queue_stage0_mutex_);
     retired_queue_stage0_.splice_back(stage0_to_be_destroyed);
   }
 
@@ -181,7 +187,7 @@ public:
 
   void retire(__rcu_node* node) noexcept {
     rcu_atomic_list_view& stage0_queue = retired_queue_stage0_threadlocal_cache::get_current_thread_instance(
-        function_ref(std::cw<&rcu_domain_impl::move_to_orphan_list_on_destruction>, this));
+        function_ref(std::cw<&rcu_domain_impl::move_to_global_stage0_list_on_destruction>, this));
     stage0_queue.push_front(node);
   }
 
