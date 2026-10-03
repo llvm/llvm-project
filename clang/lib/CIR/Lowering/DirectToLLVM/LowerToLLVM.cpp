@@ -51,6 +51,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -1280,21 +1281,47 @@ getLLVMMemOrder(std::optional<cir::MemOrder> memorder) {
   llvm_unreachable("unknown memory order");
 }
 
-static llvm::StringRef getLLVMSyncScope(cir::SyncScopeKind syncScope) {
+static llvm::StringRef getLLVMSyncScope(cir::SyncScopeKind syncScope,
+                                        mlir::ModuleOp moduleOp) {
   switch (syncScope) {
   case cir::SyncScopeKind::SingleThread:
+  case cir::SyncScopeKind::HIPSingleThread:
     return "singlethread";
-  case cir::SyncScopeKind::Workgroup:
-    return "block";
-  default:
+  case cir::SyncScopeKind::System:
+  case cir::SyncScopeKind::HIPSystem:
+  case cir::SyncScopeKind::OpenCLAllSVMDevices:
     return "";
+  case cir::SyncScopeKind::Device:
+  case cir::SyncScopeKind::HIPAgent:
+  case cir::SyncScopeKind::OpenCLDevice:
+    return "agent";
+  case cir::SyncScopeKind::Workgroup:
+  case cir::SyncScopeKind::HIPWorkgroup:
+  case cir::SyncScopeKind::OpenCLWorkGroup: {
+    // NVPTX uses "block" for workgroup sync scope; AMDGPU uses "workgroup".
+    auto tripleAttr = moduleOp->getAttrOfType<mlir::StringAttr>(
+        cir::CIRDialect::getTripleAttrName());
+    if (tripleAttr && llvm::Triple(tripleAttr.getValue()).isNVPTX())
+      return "block";
+    return "workgroup";
   }
+  case cir::SyncScopeKind::Wavefront:
+  case cir::SyncScopeKind::HIPWavefront:
+    return "wavefront";
+  case cir::SyncScopeKind::Cluster:
+  case cir::SyncScopeKind::HIPCluster:
+    return "cluster";
+  case cir::SyncScopeKind::OpenCLSubGroup:
+    return "sub_group";
+  }
+  llvm_unreachable("unknown sync scope");
 }
 
 static std::optional<llvm::StringRef>
-getLLVMSyncScope(std::optional<cir::SyncScopeKind> syncScope) {
+getLLVMSyncScope(std::optional<cir::SyncScopeKind> syncScope,
+                 mlir::ModuleOp moduleOp) {
   if (syncScope.has_value())
-    return getLLVMSyncScope(*syncScope);
+    return getLLVMSyncScope(*syncScope, moduleOp);
   return std::nullopt;
 }
 
@@ -1308,7 +1335,8 @@ mlir::LogicalResult CIRToLLVMAtomicCmpXchgOpLowering::matchAndRewrite(
       rewriter, op.getLoc(), adaptor.getPtr(), expected, desired,
       getLLVMMemOrder(adaptor.getSuccOrder()),
       getLLVMMemOrder(adaptor.getFailOrder()),
-      getLLVMSyncScope(op.getSyncScope()));
+      getLLVMSyncScope(op.getSyncScope(),
+                       op->getParentOfType<mlir::ModuleOp>()));
 
   cmpxchg.setAlignment(adaptor.getAlignment());
   cmpxchg.setWeak(adaptor.getWeak());
@@ -1329,7 +1357,8 @@ mlir::LogicalResult CIRToLLVMAtomicXchgOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   assert(!cir::MissingFeatures::atomicSyncScopeID());
   mlir::LLVM::AtomicOrdering llvmOrder = getLLVMMemOrder(adaptor.getMemOrder());
-  llvm::StringRef llvmSyncScope = getLLVMSyncScope(adaptor.getSyncScope());
+  llvm::StringRef llvmSyncScope = getLLVMSyncScope(
+      op.getSyncScope(), op->getParentOfType<mlir::ModuleOp>());
   rewriter.replaceOpWithNewOp<mlir::LLVM::AtomicRMWOp>(
       op, mlir::LLVM::AtomicBinOp::xchg, adaptor.getPtr(), adaptor.getVal(),
       llvmOrder, llvmSyncScope, /*alignment=*/0, op.getIsVolatile());
@@ -1382,7 +1411,8 @@ mlir::LogicalResult CIRToLLVMAtomicFenceOpLowering::matchAndRewrite(
   mlir::LLVM::AtomicOrdering llvmOrder = getLLVMMemOrder(adaptor.getOrdering());
 
   auto fence = mlir::LLVM::FenceOp::create(rewriter, op.getLoc(), llvmOrder);
-  fence.setSyncscope(getLLVMSyncScope(adaptor.getSyncscope()));
+  fence.setSyncscope(getLLVMSyncScope(op.getSyncscope(),
+                                      op->getParentOfType<mlir::ModuleOp>()));
 
   rewriter.replaceOp(op, fence);
 
@@ -1525,12 +1555,40 @@ mlir::LogicalResult CIRToLLVMAtomicFetchOpLowering::matchAndRewrite(
   }
 
   mlir::LLVM::AtomicOrdering llvmOrder = getLLVMMemOrder(op.getMemOrder());
-  llvm::StringRef llvmSyncScope = getLLVMSyncScope(op.getSyncScope());
+  llvm::StringRef llvmSyncScope = getLLVMSyncScope(
+      op.getSyncScope(), op->getParentOfType<mlir::ModuleOp>());
   mlir::LLVM::AtomicBinOp llvmBinOp =
       getLLVMAtomicBinOp(op.getBinop(), isInt, isSignedInt);
   auto rmwVal = mlir::LLVM::AtomicRMWOp::create(
       rewriter, op.getLoc(), llvmBinOp, adaptor.getPtr(), adaptor.getVal(),
       llvmOrder, llvmSyncScope, /*alignment=*/0, op.getIsVolatile());
+
+  // CIRGen decides the metadata for a C++/HIP atomic from the atomic options
+  // in effect, so those markers are simply carried across.
+  for (llvm::StringRef marker :
+       {cir::CIRDialect::getAMDGPUNoFineGrainedMemoryAttrName(),
+        cir::CIRDialect::getAMDGPUNoRemoteMemoryAttrName(),
+        cir::CIRDialect::getAMDGPUIgnoreDenormalModeAttrName()})
+    if (mlir::Attribute a = op->getAttr(marker))
+      rmwVal->setAttr(marker, a);
+
+  // The AMDGPU raw hardware atomic builtins need metadata for the backend to
+  // select the native instruction. LDS atomics are always native, so the
+  // metadata is only needed for the global and flat address spaces.
+  if (op->hasAttr(cir::CIRDialect::getAMDGPURawAtomicAttrName())) {
+    auto ptrTy =
+        mlir::cast<mlir::LLVM::LLVMPointerType>(adaptor.getPtr().getType());
+    if (ptrTy.getAddressSpace() != llvm::AMDGPUAS::LOCAL_ADDRESS) {
+      mlir::UnitAttr unit = rewriter.getUnitAttr();
+      rmwVal->setAttr(cir::CIRDialect::getAMDGPUNoFineGrainedMemoryAttrName(),
+                      unit);
+      // Denormal flushing only matters for a float add.
+      if (llvmBinOp == mlir::LLVM::AtomicBinOp::fadd &&
+          mlir::isa<cir::SingleType>(op.getVal().getType()))
+        rmwVal->setAttr(cir::CIRDialect::getAMDGPUIgnoreDenormalModeAttrName(),
+                        unit);
+    }
+  }
 
   mlir::Value result = rmwVal.getResult();
   if (!op.getFetchFirst()) {
@@ -2447,8 +2505,8 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
 
   assert(!cir::MissingFeatures::lowerModeOptLevel());
 
-  std::optional<llvm::StringRef> llvmSyncScope =
-      getLLVMSyncScope(op.getSyncScope());
+  std::optional<llvm::StringRef> llvmSyncScope = getLLVMSyncScope(
+      op.getSyncScope(), op->getParentOfType<mlir::ModuleOp>());
 
   mlir::LLVM::LoadOp newLoad = mlir::LLVM::LoadOp::create(
       rewriter, op->getLoc(), llvmTy, adaptor.getAddr(), alignment,
@@ -2510,8 +2568,8 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
                                    op.getValue().getType(), adaptor.getValue());
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
 
-  std::optional<llvm::StringRef> llvmSyncScope =
-      getLLVMSyncScope(op.getSyncScope());
+  std::optional<llvm::StringRef> llvmSyncScope = getLLVMSyncScope(
+      op.getSyncScope(), op->getParentOfType<mlir::ModuleOp>());
 
   mlir::LLVM::StoreOp storeOp = mlir::LLVM::StoreOp::create(
       rewriter, op->getLoc(), value, adaptor.getAddr(), alignment,
