@@ -2096,8 +2096,13 @@ bool IndVarSimplify::run(Loop *L) {
   // loop into any instructions outside of the loop that use the final values
   // of the current expressions.
   if (ReplaceExitValue != NeverRepl) {
-    if (int Rewrites = rewriteLoopExitValues(L, LI, TLI, SE, TTI, Rewriter, DT,
-                                             ReplaceExitValue, DeadInsts)) {
+    // Allow disjoint or replacement here: exit-value expansions are not rolled
+    // back, and DeadInsts is drained after Rewriter.clear().
+    Rewriter.setDisjointOrReplacementSink(&DeadInsts);
+    int Rewrites = rewriteLoopExitValues(L, LI, TLI, SE, TTI, Rewriter, DT,
+                                         ReplaceExitValue, DeadInsts);
+    Rewriter.setDisjointOrReplacementSink(nullptr);
+    if (Rewrites) {
       NumReplaced += Rewrites;
       Changed = true;
     }
