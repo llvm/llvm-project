@@ -250,7 +250,7 @@ SymbolTags computeSymbolTags(const NamedDecl &ND) {
   SymbolTags Result = 0;
   const auto IsDef = isUniqueDefinition(&ND);
 
-  if (ND.isDeprecated())
+  if (ND.isDeprecatedInAnyTargetPlatform())
     Result |= toSymbolTagBitmask(SymbolTag::Deprecated);
 
   if (isConst(&ND))
@@ -563,7 +563,7 @@ std::optional<DocumentSymbol> declToSym(ASTContext &Ctx, const NamedDecl &ND) {
   DocumentSymbol SI;
   SI.name = getSymbolName(Ctx, ND);
   SI.kind = SK;
-  SI.deprecated = ND.isDeprecated();
+  SI.deprecated = ND.isDeprecatedInAnyTargetPlatform();
   SI.range = Range{sourceLocToPosition(SM, SymbolRange->getBegin()),
                    sourceLocToPosition(SM, SymbolRange->getEnd())};
   SI.detail = getSymbolDetail(Ctx, ND);
