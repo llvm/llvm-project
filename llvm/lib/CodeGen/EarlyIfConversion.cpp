@@ -1225,7 +1225,7 @@ bool EarlyIfConverter::shouldConvertIf() {
 
   // Set a somewhat arbitrary limit on the critical path extension we accept.
   // When hard-to-predict analysis is enabled, use full MispredictPenalty for
-  // hard-to-predict branches, half for others. Otherwise use half for all.
+  // hard-to-predict branches, half for others unless strongly biased.
   bool DataDependent = false;
   if (EnableDataDependentBranchAnalysis)
     DataDependent = isConditionDataDependent();
@@ -1233,16 +1233,14 @@ bool EarlyIfConverter::shouldConvertIf() {
   // A strongly biased branch has little misprediction cost to hide the
   // critical-path extension introduced by speculative instructions and selects.
   // Keep the existing budget for branches without a strongly preferred edge.
-  unsigned CritLimit = DataDependent ? STI->getMispredictionPenalty()
-                                     : STI->getMispredictionPenalty() / 2;
+  const unsigned MispredictPenalty = STI->getMispredictionPenalty();
+  unsigned CritLimit = DataDependent ? MispredictPenalty : MispredictPenalty / 2;
   if (!DataDependent) {
-    BranchProbability TBBProb =
-        MBPI->getEdgeProbability(IfConv.Head, IfConv.TBB);
-    BranchProbability FBBProb =
-        MBPI->getEdgeProbability(IfConv.Head, IfConv.FBB);
-    BranchProbability ColdProb = std::min(TBBProb, FBBProb);
+    const BranchProbability ColdProb =
+        std::min(MBPI->getEdgeProbability(IfConv.Head, IfConv.TBB),
+                 MBPI->getEdgeProbability(IfConv.Head, IfConv.FBB));
     if (ColdProb < BranchProbability(1, 100))
-      CritLimit = ColdProb.scale(STI->getMispredictionPenalty());
+      CritLimit = ColdProb.scale(MispredictPenalty);
   }
 
   MachineBasicBlock &MBB = *IfConv.Head;
