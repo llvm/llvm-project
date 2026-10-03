@@ -1795,6 +1795,85 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// A payload op without results contributes nothing to the value handle.
+
+func.func private @void_callee(i32)
+func.func @get_all_results_of_op_without_results(%arg0: i32) {
+  call @void_callee(%arg0) : (i32) -> ()
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
+    %call = transform.structured.match ops{["func.call"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %results = transform.get_result %call[all] : (!transform.any_op) -> !transform.any_value
+    %p = transform.num_associations %results : (!transform.any_value) -> !transform.param<i64>
+    // expected-remark @below {{0}}
+    transform.debug.emit_param_as_remark %p : !transform.param<i64>
+    transform.yield
+  }
+}
+
+// -----
+
+func.func private @void_callee(i32)
+func.func @get_result_of_op_without_results(%arg0: i32) {
+  // expected-note @below {{while considering positions of this payload operation}}
+  call @void_callee(%arg0) : (i32) -> ()
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
+    %call = transform.structured.match ops{["func.call"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{position overflow 0 (updated from 0) for maximum 0}}
+    %result = transform.get_result %call[0] : (!transform.any_op) -> !transform.any_value
+    transform.debug.emit_remark_at %result, "call result" : !transform.any_value
+    transform.yield
+  }
+}
+
+// -----
+
+func.func private @void_callee(i32)
+func.func @get_last_result_of_op_without_results(%arg0: i32) {
+  // expected-note @below {{while considering positions of this payload operation}}
+  call @void_callee(%arg0) : (i32) -> ()
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
+    %call = transform.structured.match ops{["func.call"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{position underflow -1 (updated from -1)}}
+    %result = transform.get_result %call[-1] : (!transform.any_op) -> !transform.any_value
+    transform.debug.emit_remark_at %result, "call result" : !transform.any_value
+    transform.yield
+  }
+}
+
+// -----
+
+// A payload op without operands contributes nothing to the value handle.
+
+func.func @get_all_operands_of_op_without_operands() -> index {
+  %c = arith.constant 0 : index
+  return %c : index
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
+    %cst = transform.structured.match ops{["arith.constant"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %operands = transform.get_operand %cst[all] : (!transform.any_op) -> !transform.any_value
+    %p = transform.num_associations %operands : (!transform.any_value) -> !transform.param<i64>
+    // expected-remark @below {{0}}
+    transform.debug.emit_param_as_remark %p : !transform.param<i64>
+    transform.yield
+  }
+}
+
+// -----
+
 module @named_inclusion attributes { transform.with_named_sequence } {
 
   transform.named_sequence @foo(%arg0: !transform.any_op {transform.readonly}) -> () {
