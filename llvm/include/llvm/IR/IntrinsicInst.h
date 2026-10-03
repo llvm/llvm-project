@@ -1832,6 +1832,13 @@ public:
   }
 };
 
+/// Returns true if \p U is the oracle operand of an llvm.speculative.load.
+LLVM_ABI bool isSpeculativeLoadOracleUse(const Use &U);
+
+/// Returns true if \p F is used, and only used, as the oracle operand of
+/// llvm.speculative.load. No code needs to be emitted for such functions.
+LLVM_ABI bool isSpeculativeLoadOracle(const Function &F);
+
 } // end namespace llvm
 
 #endif // LLVM_IR_INTRINSICINST_H

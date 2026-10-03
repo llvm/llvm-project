@@ -376,6 +376,13 @@ bool SelectionDAGISelLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (MF.getProperties().hasSelected())
     return false;
 
+  // Make sure oracle functions are deleted.
+  Function &F = MF.getFunction();
+  if (isSpeculativeLoadOracle(F)) {
+    F.setLinkage(GlobalValue::AvailableExternallyLinkage);
+    return false;
+  }
+
   // Do some sanity-checking on the command-line options.
   if (EnableFastISelAbort && !Selector->TM.Options.EnableFastISel)
     reportFatalUsageError("-fast-isel-abort > 0 requires -fast-isel");
