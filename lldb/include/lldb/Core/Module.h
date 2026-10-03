@@ -474,6 +474,13 @@ public:
     m_remote_install_file = file;
   }
 
+  /// Return the FileSpec for the SymbolFile, if this Module has one.
+  /// A Module may have debug information from the ObjectFile; do not
+  /// use the presence of a SymbolFile FileSpec as a way to detect if
+  /// debug information is present.  Module::GetSymbolFile will return
+  /// the binary that contains debug information, which may be the
+  /// same result that Module::GetObjectFile returns when they are in
+  /// the same binary.
   const FileSpec &GetSymbolFileFileSpec() const { return m_symfile_spec; }
 
   ModuleSpecList GetSeparateDebugInfoFiles();
@@ -611,8 +618,12 @@ public:
   /// can_create is true, this function will find the best SymbolFile plug-in
   /// that can use the current object file. feedback_strm, if not null, is used
   /// to report the details of the search process.
+  /// user_interrupted, if not nullptr, is used to report if a user interrupt
+  /// was received, and no further processing/searching should be done by the
+  /// caller.
   virtual SymbolFile *GetSymbolFile(bool can_create = true,
-                                    Stream *feedback_strm = nullptr);
+                                    Stream *feedback_strm = nullptr,
+                                    bool *user_interrupted = nullptr);
 
   /// Like GetSymbolFile, but the returned handle holds the Module mutex for
   /// its lifetime.

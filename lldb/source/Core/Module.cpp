@@ -972,7 +972,10 @@ DebuggersOwningModuleRequestingInterruption(Module &module) {
   return interruptors;
 }
 
-SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {
+SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm,
+                                  bool *user_interrupted) {
+  if (user_interrupted)
+    *user_interrupted = false;
   if (!m_did_load_symfile.load()) {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (!m_did_load_symfile.load() && can_create) {
@@ -984,6 +987,8 @@ SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {
                               "Interrupted fetching symbols for module {0}",
                               this->GetFileSpec());
         }
+        if (user_interrupted)
+          *user_interrupted = true;
         return nullptr;
       }
       ObjectFile *obj_file = GetObjectFile();
@@ -1257,7 +1262,7 @@ void Module::SectionFileAddressesChanged() {
 }
 
 UnwindTable &Module::GetUnwindTable() {
-  if (!m_symfile_spec)
+  if (!m_symfile_up)
     SymbolLocator::DownloadSymbolFileAsync(GetUUID());
   return m_unwind_table;
 }

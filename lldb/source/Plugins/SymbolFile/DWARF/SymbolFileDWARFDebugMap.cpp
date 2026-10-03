@@ -186,9 +186,11 @@ public:
 
   ~DebugMapModule() override = default;
 
-  SymbolFile *
-  GetSymbolFile(bool can_create = true,
-                lldb_private::Stream *feedback_strm = nullptr) override {
+  SymbolFile *GetSymbolFile(bool can_create = true,
+                            lldb_private::Stream *feedback_strm = nullptr,
+                            bool *user_interrupted = nullptr) override {
+    if (user_interrupted)
+      *user_interrupted = false;
     // Scope for locker
     if (m_symfile_up.get() || !can_create)
       return m_symfile_up ? m_symfile_up->GetSymbolFile() : nullptr;
