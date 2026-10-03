@@ -136,6 +136,14 @@ def relocatable : Flag<["--", "-"], "relocatable">,
     HelpText<"Link device code to create a relocatable offloading application">;
 def r : Flag<["-"], "r">, Alias<relocatable>;
 
+// ld64-style (Darwin) linker options. These are only defined so that they are
+// not mistaken for the options they are a prefix of, `-l<libname>` and
+// `-o <path>`; they are forwarded to the linker unchanged.
+def lto_library : Separate<["-"], "lto_library">, Flags<[HelpHidden]>,
+  MetaVarName<"<path>">, HelpText<"Path to libLTO.dylib for ld64">;
+def object_path_lto : Separate<["-"], "object_path_lto">, Flags<[HelpHidden]>,
+  MetaVarName<"<path>">, HelpText<"Path ld64 writes its LTO output to">;
+
 // link.exe-style linker options.
 def out : Joined<["/", "-", "/?", "-?"], "out:">, Flags<[HelpHidden]>;
 def libpath : Joined<["/", "-", "/?", "-?"], "libpath:">, Flags<[HelpHidden]>;

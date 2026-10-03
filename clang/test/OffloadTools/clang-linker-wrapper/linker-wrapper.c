@@ -77,6 +77,15 @@ __attribute__((visibility("protected"), used)) int x;
 // HOST-LINK: ld.lld{{.*}}-a -b -c {{.*}}.o -o a.out
 // HOST-LINK-NOT: ld.lld{{.*}}-abc
 
+// The ld64 options that begin with `-l` or `-o` must not be mistaken for
+// `-l<libname>` and `-o <path>`; clang's Darwin toolchain passes them.
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o
+// RUN: clang-linker-wrapper --dry-run --host-triple=x86_64-apple-macosx15.0.0 \
+// RUN:   --linker-path=/usr/bin/ld -lto_library /lib/libLTO.dylib \
+// RUN:   -object_path_lto /tmp/lto.o %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=LD64-LINK
+
+// LD64-LINK: ld{{.*}}-lto_library /lib/libLTO.dylib -object_path_lto /tmp/lto.o {{.*}}.o -o a.out
+
 // RUN: llvm-offload-binary -o %t-lib.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70 \
 // RUN:   --image=file=%t.elf.o,kind=cuda,triple=nvptx64-nvidia-cuda,arch=sm_52
