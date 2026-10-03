@@ -413,10 +413,9 @@ define <3 x i32> @test_compress_narrow(<3 x i32> %vec, <3 x i1> %mask) {
 ; CHECK-NEXT:    movi.2d v1, #0000000000000000
 ; CHECK-NEXT:    mov x11, sp
 ; CHECK-NEXT:    str s0, [sp]
-; CHECK-NEXT:    mov.h v1[0], w0
-; CHECK-NEXT:    mov.h v1[1], w1
-; CHECK-NEXT:    mov.h v1[2], w2
-; CHECK-NEXT:    ushll.4s v1, v1, #0
+; CHECK-NEXT:    mov.s v1[0], w0
+; CHECK-NEXT:    mov.s v1[1], w1
+; CHECK-NEXT:    mov.s v1[2], w2
 ; CHECK-NEXT:    shl.4s v1, v1, #31
 ; CHECK-NEXT:    cmlt.4s v1, v1, #0
 ; CHECK-NEXT:    mov.s w8, v1[1]
