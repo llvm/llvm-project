@@ -608,3 +608,27 @@ define i1 @cmp_load_multiple_indices2(i32 %idx, i32 %idx2) {
   %cmp = icmp eq i16 %load, 0
   ret i1 %cmp
 }
+
+define i1 @cmp_load_multiplied_index(i32 %X) {
+; CHECK-LABEL: @cmp_load_multiplied_index(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul nuw nsw i32 %X, 3
+  %gep = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 %mul
+  %load = load i16, ptr %gep
+  %cmp = icmp eq i16 %load, 81
+  ret i1 %cmp
+}
+
+define i1 @cmp_load_shifted_index(i32 %X) {
+; CHECK-LABEL: @cmp_load_shifted_index(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nuw nsw i32 %X, 3
+  %gep = getelementptr inbounds [10 x i16], ptr @G16, i32 0, i32 %shl
+  %load = load i16, ptr %gep
+  %cmp = icmp eq i16 %load, 68
+  ret i1 %cmp
+}
