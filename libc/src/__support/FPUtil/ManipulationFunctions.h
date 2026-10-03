@@ -32,13 +32,13 @@ template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE constexpr T frexp(T x, int &exp) {
   FPBits<T> bits(x);
   if (bits.is_inf_or_nan()) {
-#ifdef LIBC_FREXP_INF_NAN_EXPONENT
+#ifdef LIBC_COPT_FREXP_INF_NAN_EXPONENT
     // The value written back to the second parameter when calling
     // frexp/frexpf/frexpl` with `+/-Inf`/`NaN` is unspecified in the standard.
     // Set the exp value for Inf/NaN inputs explicitly to
-    // LIBC_FREXP_INF_NAN_EXPONENT if it is defined.
-    exp = LIBC_FREXP_INF_NAN_EXPONENT;
-#endif // LIBC_FREXP_INF_NAN_EXPONENT
+    // LIBC_COPT_FREXP_INF_NAN_EXPONENT if it is defined.
+    exp = LIBC_COPT_FREXP_INF_NAN_EXPONENT;
+#endif // LIBC_COPT_FREXP_INF_NAN_EXPONENT
     return x;
   }
   if (bits.is_zero()) {
