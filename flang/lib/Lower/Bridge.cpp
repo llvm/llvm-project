@@ -4386,6 +4386,17 @@ private:
         activeConstructStack.back().stmtCtx;
     const Fortran::lower::SomeExpr *expr = Fortran::semantics::GetExpr(
         std::get<Fortran::parser::Scalar<Fortran::parser::Expr>>(stmt.t));
+    // Semantics already turned enumeration CASE values into ordinals.
+    std::optional<Fortran::lower::SomeExpr> enumOrdinal;
+    if (const auto *derived = std::get_if<
+            Fortran::evaluate::Expr<Fortran::evaluate::SomeDerived>>(&expr->u))
+      if (const auto *spec =
+              Fortran::evaluate::GetDerivedTypeSpec(derived->GetType());
+          spec && Fortran::semantics::IsEnumerationType(spec->typeSymbol())) {
+        enumOrdinal = Fortran::evaluate::MakeEnumerationIntCall(
+            Fortran::evaluate::Expr<Fortran::evaluate::SomeDerived>{*derived});
+        expr = &*enumOrdinal;
+      }
     bool isCharSelector = isCharacterCategory(expr->GetType()->category());
     bool isLogicalSelector = isLogicalCategory(expr->GetType()->category());
     mlir::MLIRContext *context = builder->getContext();
