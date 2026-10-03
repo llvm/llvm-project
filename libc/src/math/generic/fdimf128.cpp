@@ -15,6 +15,7 @@ namespace LIBC_NAMESPACE_DECL {
 using LIBC_NAMESPACE::fputil::Float128;
 
 LLVM_LIBC_FUNCTION(float128, fdimf128, (float128 x, float128 y)) {
+  LIBC_FENV_ACCESS_ON
   return cpp::bit_cast<float128>(
       math::fdimf128(cpp::bit_cast<Float128>(x), cpp::bit_cast<Float128>(y)));
 }
