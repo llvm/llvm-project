@@ -35,6 +35,11 @@ public:
 
   virtual llvm::StringRef GetPluginName() = 0;
 
+  /// Name of the DynamicLoader plugin that LLDB should use for the
+  /// accelerator connection owned by this plugin. An empty name leaves
+  /// DynamicLoader selection to LLDB.
+  virtual llvm::StringRef GetDynamicLoaderPluginName() { return {}; }
+
   virtual std::optional<AcceleratorActions> GetInitializeActions() = 0;
 
   virtual llvm::Expected<AcceleratorBreakpointHitResponse>

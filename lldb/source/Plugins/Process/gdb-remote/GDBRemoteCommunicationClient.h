@@ -371,14 +371,13 @@ public:
   /// response.
   bool GetWasmInstanceSupported();
 
-  /// Send the "jAcceleratorPluginInitialize" packet and return the actions
-  /// requested by each accelerator plugin installed in lldb-server. The packet
-  /// is only sent if the lldb-server advertised accelerator plugin support via
-  /// "accelerator-plugins+" in its qSupported response; otherwise (and when no
-  /// plugin returns actions) this returns an empty vector. Errors are returned
-  /// for the caller to report.
-  llvm::Expected<std::vector<AcceleratorActions>>
-  GetAcceleratorInitializeActions();
+  /// Send the "jAcceleratorPluginInitialize" packet and return its response.
+  /// The packet is only sent if lldb-server advertised accelerator plugin
+  /// support via "accelerator-plugins+" in its qSupported response; otherwise
+  /// this returns an empty response. Errors are returned for the caller to
+  /// report.
+  llvm::Expected<AcceleratorInitializeResponse>
+  GetAcceleratorInitializeResponse();
 
   /// Send the "jAcceleratorPluginBreakpointHit" packet to notify the
   /// accelerator plugin that one of its requested breakpoints was hit, and
@@ -388,6 +387,11 @@ public:
   /// that case. Errors are returned for the caller to report.
   llvm::Expected<AcceleratorBreakpointHitResponse>
   AcceleratorBreakpointHit(const AcceleratorBreakpointHitArgs &args);
+
+  /// Returns std::nullopt if the packet failed or the response did not parse.
+  std::optional<AcceleratorDynamicLoaderResponse>
+  GetAcceleratorDynamicLoaderLibraryInfos(
+      const AcceleratorDynamicLoaderArgs &args);
 
   LazyBool SupportsAllocDeallocMemory() // const
   {

@@ -2906,7 +2906,7 @@ will fail.
 
 ```
 LLDB SENDS:    jAcceleratorPluginInitialize
-STUB REPLIES:  [<accelerator_action>,...]
+STUB REPLIES:  {"actions":[<accelerator_action>,...],"dyld_plugin_name":<string>}
 ```
 
 Each `accelerator_action` is a JSON object with the following required fields:
@@ -2917,14 +2917,22 @@ Each `accelerator_action` is a JSON object with the following required fields:
 | `session_name` | string  | Human-readable label for the accelerator target, stored on the Target object to distinguish it from the CPU target (e.g. `"AMD GPU Session"`). May be empty. |
 | `identifier`   | integer | Identifier for this action, unique within the scope of its `plugin_name`. To refer to a specific action, use the combination of `plugin_name` and `identifier`. |
 
+The `jAcceleratorPluginInitialize` response may also include a
+`dyld_plugin_name` string. This names the LLDB `DynamicLoader`
+plugin to use for the current GDB-remote connection. LLDB selects that plugin
+explicitly; if the field is absent or empty, LLDB uses its normal automatic
+selection. A server for an accelerator connection can use this field to select
+either LLDB's generic `accelerator-gdb-remote` loader or a vendor-specific
+loader without requiring an architecture check in LLDB.
+
 There can be multiple accelerator plugins installed, each with a globally
-unique `plugin_name`. The response is a JSON array with one entry per
+unique `plugin_name`. The response's `actions` array has one entry per
 installed plugin.
 
 Example:
 ```
 LLDB SENDS:    jAcceleratorPluginInitialize
-STUB REPLIES:  [{"plugin_name":"amdgpu","session_name":"AMD GPU Session","identifier":0}]
+STUB REPLIES:  {"actions":[{"plugin_name":"amdgpu","session_name":"AMD GPU Session","identifier":0}],"dyld_plugin_name":"accelerator-gdb-remote"}
 ```
 
 If no accelerator plugins are installed, the server does not advertise the

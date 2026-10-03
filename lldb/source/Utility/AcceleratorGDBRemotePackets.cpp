@@ -124,6 +124,26 @@ json::Value toJSON(const AcceleratorActions &data) {
   return obj;
 }
 
+bool fromJSON(const Value &value, AcceleratorInitializeResponse &data,
+              Path path) {
+  // Older servers returned the actions array directly.
+  if (value.getAsArray()) {
+    data.dyld_plugin_name = std::nullopt;
+    return json::fromJSON(value, data.actions, path);
+  }
+
+  ObjectMapper o(value, path);
+  return o && o.map("actions", data.actions) &&
+         o.mapOptional("dyld_plugin_name", data.dyld_plugin_name);
+}
+
+json::Value toJSON(const AcceleratorInitializeResponse &data) {
+  Object obj{{"actions", data.actions}};
+  if (data.dyld_plugin_name)
+    obj["dyld_plugin_name"] = *data.dyld_plugin_name;
+  return obj;
+}
+
 bool fromJSON(const Value &value, AcceleratorBreakpointHitResponse &data,
               Path path) {
   ObjectMapper o(value, path);

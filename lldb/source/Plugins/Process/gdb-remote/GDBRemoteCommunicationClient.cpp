@@ -239,15 +239,13 @@ bool GDBRemoteCommunicationClient::GetWasmInstanceSupported() {
   return m_supports_wasm_instance == eLazyBoolYes;
 }
 
-llvm::Expected<std::vector<AcceleratorActions>>
-GDBRemoteCommunicationClient::GetAcceleratorInitializeActions() {
-  // Get the initial actions (e.g. breakpoints to set) requested by any
-  // accelerator plugins using the "jAcceleratorPluginInitialize" packet. This
-  // is sent once when a native process is launched or attached. The empty
-  // state (no plugins / no actions) is modelled as an empty vector; errors are
-  // returned to the caller to report.
+llvm::Expected<AcceleratorInitializeResponse>
+GDBRemoteCommunicationClient::GetAcceleratorInitializeResponse() {
+  // Get the initial actions (e.g. breakpoints to set) and connection settings
+  // requested by accelerator plugins. This is sent once when a process is
+  // launched or attached.
   if (!GetAcceleratorPluginsSupported())
-    return std::vector<AcceleratorActions>();
+    return AcceleratorInitializeResponse();
 
   StringExtractorGDBRemote response;
   response.SetResponseValidatorToJSON();
@@ -257,23 +255,23 @@ GDBRemoteCommunicationClient::GetAcceleratorInitializeActions() {
         "failed to send jAcceleratorPluginInitialize packet");
 
   if (response.IsUnsupportedResponse())
-    return std::vector<AcceleratorActions>();
+    return AcceleratorInitializeResponse();
 
   if (response.IsErrorResponse())
     return response.GetStatus().takeError();
 
-  llvm::Expected<std::vector<AcceleratorActions>> actions =
-      llvm::json::parse<std::vector<AcceleratorActions>>(response.Peek(),
-                                                         "AcceleratorActions");
-  if (actions)
-    return actions;
+  llvm::Expected<AcceleratorInitializeResponse> initialize_response =
+      llvm::json::parse<AcceleratorInitializeResponse>(
+          response.Peek(), "AcceleratorInitializeResponse");
+  if (initialize_response)
+    return initialize_response;
 
   // A bare JSON parse error (e.g. "missing comma at line 4") is meaningless on
   // its own, so include both the full response and the parse error; the caller
   // logs this and the user can spot the problem in the response.
   return llvm::createStringErrorV(
       "malformed jAcceleratorPluginInitialize response '{0}': {1}",
-      response.GetStringRef(), llvm::toString(actions.takeError()));
+      response.GetStringRef(), llvm::toString(initialize_response.takeError()));
 }
 
 llvm::Expected<AcceleratorBreakpointHitResponse>
@@ -304,6 +302,29 @@ GDBRemoteCommunicationClient::AcceleratorBreakpointHit(
   return llvm::createStringErrorV(
       "malformed jAcceleratorPluginBreakpointHit response '{0}': {1}",
       response.GetStringRef(), llvm::toString(hit_response.takeError()));
+}
+
+std::optional<AcceleratorDynamicLoaderResponse>
+GDBRemoteCommunicationClient::GetAcceleratorDynamicLoaderLibraryInfos(
+    const AcceleratorDynamicLoaderArgs &args) {
+  StreamGDBRemote packet;
+  packet.PutCString("jAcceleratorPluginGetDynamicLoaderLibraryInfo:");
+  packet.PutAsJSON(args, /*hex_ascii=*/false);
+
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(packet.GetString(), response) !=
+          PacketResult::Success ||
+      response.IsErrorResponse())
+    return std::nullopt;
+
+  llvm::Expected<AcceleratorDynamicLoaderResponse> parsed =
+      llvm::json::parse<AcceleratorDynamicLoaderResponse>(
+          response.Peek(), "AcceleratorDynamicLoaderResponse");
+  if (!parsed) {
+    llvm::consumeError(parsed.takeError());
+    return std::nullopt;
+  }
+  return *parsed;
 }
 
 bool GDBRemoteCommunicationClient::QueryNoAckModeSupported() {

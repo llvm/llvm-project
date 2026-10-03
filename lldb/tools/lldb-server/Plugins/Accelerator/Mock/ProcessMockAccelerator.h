@@ -12,6 +12,9 @@
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Utility/ArchSpec.h"
 
+#include <string>
+#include <utility>
+
 namespace lldb_private {
 namespace lldb_server {
 
@@ -22,7 +25,11 @@ class ProcessMockAccelerator : public NativeProcessProtocol {
 public:
   class Manager : public NativeProcessProtocol::Manager {
   public:
-    using NativeProcessProtocol::Manager::Manager;
+    Manager(MainLoop &mainloop, ArchSpec arch,
+            std::string dynamic_loader_library_path)
+        : NativeProcessProtocol::Manager(mainloop), m_arch(std::move(arch)),
+          m_dynamic_loader_library_path(
+              std::move(dynamic_loader_library_path)) {}
 
     llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
     Launch(ProcessLaunchInfo &launch_info,
@@ -34,9 +41,15 @@ public:
     Extension GetSupportedExtensions() const override {
       return Extension::address_spaces;
     }
+
+  private:
+    ArchSpec m_arch;
+    std::string m_dynamic_loader_library_path;
   };
 
-  ProcessMockAccelerator(lldb::pid_t pid, NativeDelegate &delegate);
+  ProcessMockAccelerator(lldb::pid_t pid, ArchSpec arch,
+                         std::string dynamic_loader_library_path,
+                         NativeDelegate &delegate);
 
   Status Resume(const ResumeActionList &resume_actions) override;
   Status Halt() override;
@@ -66,8 +79,13 @@ public:
 
   std::vector<AddressSpaceInfo> GetAddressSpaces() override;
 
+  std::optional<AcceleratorDynamicLoaderResponse>
+  GetAcceleratorDynamicLoaderLibraryInfos(
+      const AcceleratorDynamicLoaderArgs &args) override;
+
 private:
-  mutable ArchSpec m_arch;
+  ArchSpec m_arch;
+  std::string m_dynamic_loader_library_path;
 };
 
 } // namespace lldb_server

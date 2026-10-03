@@ -9,7 +9,6 @@
 #include "ProcessMockAccelerator.h"
 #include "ThreadMockAccelerator.h"
 
-#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "llvm/Support/Error.h"
 
@@ -26,7 +25,8 @@ static constexpr lldb::tid_t kMockTid = 3456;
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
 ProcessMockAccelerator::Manager::Launch(ProcessLaunchInfo &launch_info,
                                         NativeDelegate &native_delegate) {
-  return std::make_unique<ProcessMockAccelerator>(kMockPid, native_delegate);
+  return std::make_unique<ProcessMockAccelerator>(
+      kMockPid, m_arch, m_dynamic_loader_library_path, native_delegate);
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
@@ -36,9 +36,12 @@ ProcessMockAccelerator::Manager::Attach(lldb::pid_t pid,
                                  "accelerator process");
 }
 
-ProcessMockAccelerator::ProcessMockAccelerator(lldb::pid_t pid,
-                                               NativeDelegate &delegate)
-    : NativeProcessProtocol(pid, /*terminal_fd=*/-1, delegate) {
+ProcessMockAccelerator::ProcessMockAccelerator(
+    lldb::pid_t pid, ArchSpec arch, std::string dynamic_loader_library_path,
+    NativeDelegate &delegate)
+    : NativeProcessProtocol(pid, /*terminal_fd=*/-1, delegate),
+      m_arch(std::move(arch)),
+      m_dynamic_loader_library_path(std::move(dynamic_loader_library_path)) {
   m_state = eStateStopped;
   UpdateThreads();
 }
@@ -99,8 +102,6 @@ size_t ProcessMockAccelerator::UpdateThreads() {
 }
 
 const ArchSpec &ProcessMockAccelerator::GetArchitecture() const {
-  if (!m_arch.IsValid())
-    m_arch = HostInfo::GetArchitecture();
   return m_arch;
 }
 
@@ -128,4 +129,16 @@ ProcessMockAccelerator::GetFileLoadAddress(const llvm::StringRef &file_name,
 std::vector<AddressSpaceInfo> ProcessMockAccelerator::GetAddressSpaces() {
   return {{"global", 1, /*is_thread_specific=*/false},
           {"local", 2, /*is_thread_specific=*/true}};
+}
+
+std::optional<AcceleratorDynamicLoaderResponse>
+ProcessMockAccelerator::GetAcceleratorDynamicLoaderLibraryInfos(
+    const AcceleratorDynamicLoaderArgs &args) {
+  AcceleratorDynamicLoaderResponse response;
+  AcceleratorDynamicLoaderLibraryInfo info;
+  info.pathname = m_dynamic_loader_library_path;
+  info.load = true;
+  info.load_address = 0x10000000;
+  response.library_infos.push_back(std::move(info));
+  return response;
 }

@@ -68,11 +68,18 @@ class MockAcceleratorPacketsTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.add_qSupported_packets()
         self.expect_gdbremote_sequence()
 
-        actions = self.send_and_decode_json("jAcceleratorPluginInitialize")
+        response = self.send_and_decode_json("jAcceleratorPluginInitialize")
+        self.assertIsInstance(response, dict)
+        self.assertIn("actions", response)
+        actions = response["actions"]
         self.assertIsInstance(actions, list)
 
         mock_action = get_accelerator_action(actions, "mock")
         self.assertIsNotNone(mock_action)
+        # The native connection must not select the accelerator target's
+        # dynamic loader. That is advertised by the second LLGS connection.
+        self.assertNotIn("dyld_plugin_name", response)
+        self.assertNotIn("dyld_plugin_name", mock_action)
         self.assertIn("breakpoints", mock_action)
 
         breakpoints = mock_action["breakpoints"]

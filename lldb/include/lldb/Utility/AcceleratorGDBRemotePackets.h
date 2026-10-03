@@ -150,6 +150,15 @@ bool fromJSON(const llvm::json::Value &value, AcceleratorActions &data,
               llvm::json::Path path);
 llvm::json::Value toJSON(const AcceleratorActions &data);
 
+struct AcceleratorInitializeResponse {
+  std::vector<AcceleratorActions> actions;
+  std::optional<std::string> dyld_plugin_name;
+};
+
+bool fromJSON(const llvm::json::Value &value,
+              AcceleratorInitializeResponse &data, llvm::json::Path path);
+llvm::json::Value toJSON(const AcceleratorInitializeResponse &data);
+
 /// Response from the plugin when a breakpoint is hit.
 struct AcceleratorBreakpointHitResponse {
   /// Set to true if this breakpoint should be disabled.
