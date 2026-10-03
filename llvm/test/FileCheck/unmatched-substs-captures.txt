@@ -16,7 +16,8 @@ DEFINE: %{opts} =
 DEFINE: %{run} = \
 DEFINE:  %ProtectFileCheckOutput \
 DEFINE:  not FileCheck %{opts} %t/check.txt < %t/input.txt 2>&1 | \
-DEFINE:    FileCheck %s -match-full-lines -strict-whitespace -check-prefixes
+DEFINE:    FileCheck %s -match-full-lines -strict-whitespace \
+DEFINE:              -DCHK_FILE=%t/check.txt -check-prefixes
 
 REDEFINE: %{opts} = -dump-input=never
 RUN: %{run} ERR
@@ -106,10 +107,12 @@ DMP-VV-NEXT:not:2'4                pattern attempts to capture variables: "STR_N
 DMP-VV-NEXT:check:3       ^~~
    DMP-NEXT:check:4'0       { } search range (exclusive bounds)
    DMP-NEXT:check:4'1           error: no match found in search range
-   DMP-NEXT:check:4'2           with "STR_OLD" equal to "abc"
-   DMP-NEXT:check:4'3           with "NUM_OLD + 1" equal to "17"
-   DMP-NEXT:check:4'4           with "NUM_NEW:456" equal to "456"
-   DMP-NEXT:check:4'5           pattern attempts to capture variables: "STR_NEW", "clang", "NUM_NEW"
+   DMP-NEXT:check:4'2           for: CHECK: {{\[}}[STR_OLD]] {{\[}}[STR_NEW:xyz]] {{\[}}[clang::optnone]] {{\[}}[#NUM_OLD + 1]] {{\[}}[#NUM_NEW:456]]
+   DMP-NEXT:check:4'3           at: [[CHK_FILE]]:4
+   DMP-NEXT:check:4'4           with "STR_OLD" equal to "abc"
+   DMP-NEXT:check:4'5           with "NUM_OLD + 1" equal to "17"
+   DMP-NEXT:check:4'6           with "NUM_NEW:456" equal to "456"
+   DMP-NEXT:check:4'7           pattern attempts to capture variables: "STR_NEW", "clang", "NUM_NEW"
    DMP-NEXT:>>>>>>
 
 ;--- check.txt
