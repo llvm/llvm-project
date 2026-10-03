@@ -14,6 +14,9 @@
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
+
+#include <algorithm>
 
 namespace llvm::ubi {
 
@@ -1127,6 +1130,7 @@ bool Context::free(const MemoryObject &Obj) {
 
   UsedMem -= std::max(It->second->getSize(), static_cast<uint64_t>(1));
 
+  clearNoAliasState(*It->second);
   MemoryObject &MutableObj = *It->second;
   MutableObj.State = MemoryObjectState::Freed;
   MutableObj.Bytes.clear();
@@ -1147,8 +1151,34 @@ Pointer Context::deriveFromMemoryObject(IntrusiveRefCntPtr<MemoryObject> Obj) {
 }
 
 void Context::exposeProvenance(Provenance &Prov) {
-  if (Prov.Wildcard)
+  if (Prov.Wildcard) {
+    if (!Prov.NoAliasNode)
+      return;
+    // Flatten the snapshot using the new parameter's identity. Do not resolve
+    // the wildcard at its current address: pointer arithmetic may reach any
+    // allocation allowed by that snapshot. Append after iterating the lists.
+    SmallVector<IntrusiveRefCntPtr<Provenance>, 4> Exposures;
+    const auto &Wildcard = *Prov.Wildcard;
+    for (auto &[Address, Set] : ExposedProvenances) {
+      if (Prov.Obj && Prov.Obj->getAddress() != Address)
+        continue;
+      if (!Wildcard.ActiveMask.isZero() && Wildcard.BaseAddress != Address)
+        continue;
+      for (auto [I, Entry] : enumerate(Set.List)) {
+        if (Wildcard.ActiveMask.isZero()) {
+          if (Entry.Generation > Wildcard.Generation)
+            break;
+        } else if (I >= Wildcard.ActiveMask.getBitWidth() ||
+                   !Wildcard.ActiveMask[I]) {
+          continue;
+        }
+        Exposures.push_back(Entry.Prov->getWithNoAliasNode(Prov.NoAliasNode));
+      }
+    }
+    for (auto &Exposure : Exposures)
+      exposeProvenance(*Exposure);
     return;
+  }
   MemoryObject *Obj = Prov.getMemoryObject();
   if (!Obj)
     return;
@@ -1161,13 +1191,22 @@ void Context::exposeProvenance(Provenance &Prov) {
 MemoryObject *
 Context::checkProvenance(const Pointer &Ptr,
                          function_ref<bool(const Provenance &)> Check,
-                         bool HasSideEffect) {
+                         bool HasSideEffect, uint64_t *ResolvedNoAliasNode) {
+  if (ResolvedNoAliasNode)
+    *ResolvedNoAliasNode = 0;
   auto &Prov = Ptr.provenance();
   if (!Check(Prov))
     return nullptr;
+  // A noalias parameter retagged from a wildcard keeps its explicit node.
+  // Resolve the allocation for bounds/provenance, but do not replace that
+  // node with the exposed candidates used by the wildcard mechanism.
+  const uint64_t ExplicitNoAliasNode = Prov.NoAliasNode;
   // Early return for concrete provenances.
-  if (!Prov.Wildcard)
+  if (!Prov.Wildcard) {
+    if (ResolvedNoAliasNode)
+      *ResolvedNoAliasNode = Prov.NoAliasNode;
     return Prov.Obj.get();
+  }
 
   MemoryObject *MO = nullptr;
   APInt &Mask = Prov.Wildcard->ActiveMask;
@@ -1190,6 +1229,9 @@ Context::checkProvenance(const Pointer &Ptr,
         Set.List.begin(),
         upper_bound(Set.List,
                     ExposedProvenance{nullptr, Prov.Wildcard->Generation}));
+    // A snapshot can predate every exposure of this particular allocation.
+    if (!ProvenanceCount)
+      return nullptr;
     if (HasSideEffect) {
       Mask = APInt::getAllOnes(ProvenanceCount);
       Prov.Wildcard->BaseAddress = BaseAddress;
@@ -1216,6 +1258,8 @@ Context::checkProvenance(const Pointer &Ptr,
   }
 
   bool Valid = false;
+  std::optional<uint64_t> CommonNode;
+  bool AmbiguousNode = false;
   for (uint32_t I = 0; I != ProvenanceCount; ++I) {
     assert((!HasSideEffect || !Mask.isZero()) &&
            "Mask must be initialized if HasSideEffect is true.");
@@ -1223,13 +1267,24 @@ Context::checkProvenance(const Pointer &Ptr,
       continue;
     if (Check(*(*List)[I].Prov)) {
       Valid = true;
-      // Early return as we don't need to update the Mask.
-      if (!HasSideEffect)
+      if (ResolvedNoAliasNode) {
+        uint64_t Node = (*List)[I].Prov->NoAliasNode;
+        if (!CommonNode)
+          CommonNode = Node;
+        else if (*CommonNode != Node)
+          AmbiguousNode = true;
+      }
+      // Inspect every candidate when returning its common noalias ancestry.
+      if (!HasSideEffect && !ResolvedNoAliasNode)
         break;
     } else if (HasSideEffect)
       Mask.clearBit(I);
   }
 
+  if (Valid && ResolvedNoAliasNode)
+    *ResolvedNoAliasNode = ExplicitNoAliasNode ? ExplicitNoAliasNode
+                           : AmbiguousNode     ? 0
+                                               : CommonNode.value_or(0);
   return Valid ? MO : nullptr;
 }
 
@@ -1336,6 +1391,386 @@ bool MemoryObject::isHeapAllocated() const {
   }
 
   llvm_unreachable("Unknown MemAllocKind");
+}
+
+uint64_t Context::resolveNoAliasNode(const Provenance &Prov,
+                                     const MemoryObject &MO) const {
+  if (Prov.NoAliasNode || !Prov.Wildcard)
+    return Prov.NoAliasNode;
+  const auto It = ExposedProvenances.find(MO.getAddress());
+  if (It == ExposedProvenances.end())
+    return 0;
+  const auto &Wildcard = *Prov.Wildcard;
+  if (!Wildcard.ActiveMask.isZero() && Wildcard.BaseAddress != MO.getAddress())
+    return 0;
+  std::optional<uint64_t> CommonNode;
+  for (auto [I, Entry] : enumerate(It->second.List)) {
+    if (Wildcard.ActiveMask.isZero()) {
+      if (Entry.Generation > Wildcard.Generation)
+        break;
+    } else if (I >= Wildcard.ActiveMask.getBitWidth() ||
+               !Wildcard.ActiveMask[I]) {
+      continue;
+    }
+    uint64_t Node = Entry.Prov->NoAliasNode;
+    if (!CommonNode)
+      CommonNode = Node;
+    else if (*CommonNode != Node)
+      return 0;
+  }
+  return CommonNode.value_or(0);
+}
+
+bool Context::isNoAliasAncestor(uint64_t Ancestor, uint64_t Descendant,
+                                const MemoryObject &MO) const {
+  if (!Ancestor || !Descendant)
+    return false;
+  // Inactive nodes retain parent links: returned and escaped pointers can
+  // still be based on an active ancestor.
+  for (uint64_t NodeID = Descendant; NodeID;) {
+    if (NodeID == Ancestor)
+      return true;
+    const auto It = NoAliasNodes.find(NodeID);
+    if (It == NoAliasNodes.end())
+      return false;
+    NodeID = resolveNoAliasNode(*It->second.Parent, MO);
+  }
+  return false;
+}
+
+StringRef Context::getNoAliasAccessKindName(NoAliasAccessKind Kind) {
+  switch (Kind) {
+  case NoAliasAccessKind::Read:
+    return "read";
+  case NoAliasAccessKind::Write:
+    return "write";
+  case NoAliasAccessKind::Deallocate:
+    return "deallocation";
+  }
+  llvm_unreachable("Unknown NoAliasAccessKind");
+}
+
+std::string Context::getNoAliasNodeName(uint64_t NodeID) {
+  if (!NodeID)
+    return "raw/root";
+  std::string S;
+  raw_string_ostream OS(S);
+  OS << "node #" << NodeID;
+  return S;
+}
+
+std::string Context::getNoAliasActivationName(uint64_t ActivationID) {
+  std::string S;
+  raw_string_ostream OS(S);
+  OS << "activation #" << ActivationID;
+  return S;
+}
+
+std::string Context::getNoAliasObjectName(const MemoryObject &MO) {
+  if (MO.getName().empty()) {
+    std::string S;
+    raw_string_ostream OS(S);
+    OS << "object at 0x";
+    OS.write_hex(MO.getAddress());
+    return S;
+  }
+  return ("'" + MO.getName() + "'").str();
+}
+
+void Context::appendNoAliasEvent(std::string Msg) {
+  NoAliasEvents.push_back(std::move(Msg));
+}
+
+uint64_t Context::classifyNoAliasAccess(const NoAliasActivation &Activation,
+                                        const MemoryObject &MO,
+                                        uint64_t AccessNode) const {
+  for (uint64_t NodeID : Activation.Nodes) {
+    const auto It = NoAliasNodes.find(NodeID);
+    if (It == NoAliasNodes.end() || !It->second.Active ||
+        (It->second.Object && It->second.Object != &MO))
+      continue;
+    if (isNoAliasAncestor(NodeID, AccessNode, MO))
+      return NodeID;
+  }
+  return 0;
+}
+
+bool Context::updateNoAliasAccesses(NoAliasActivation &Activation,
+                                    MemoryObject &MO, uint64_t Begin,
+                                    uint64_t End, uint64_t AccessClass,
+                                    NoAliasAccessKind Kind,
+                                    uint64_t ActivationID) {
+  assert(Begin < End && "empty accesses should not reach noalias tracking");
+
+  SmallVector<NoAliasAccessRun, 4> NewRuns;
+  auto AppendRun = [&](uint64_t RunBegin, uint64_t RunEnd,
+                       NoAliasAccessSummary Summary) {
+    if (RunBegin == RunEnd)
+      return;
+    if (!NewRuns.empty() && NewRuns.back().End == RunBegin &&
+        NewRuns.back().Summary == Summary) {
+      NewRuns.back().End = RunEnd;
+      return;
+    }
+    NewRuns.push_back({RunBegin, RunEnd, Summary});
+  };
+
+  auto DescribeSummary = [&](raw_ostream &OS,
+                             const NoAliasAccessSummary &Summary) {
+    if (Summary.MultipleClasses) {
+      OS << "reads by multiple access classes";
+      return;
+    }
+    OS << (Summary.HasWrite ? "access including a write by " : "reads by ")
+       << getNoAliasNodeName(Summary.AccessClass);
+  };
+
+  auto AppendTransitioned = [&](uint64_t RunBegin, uint64_t RunEnd,
+                                const NoAliasAccessSummary *Old) -> bool {
+    if (RunBegin == RunEnd)
+      return true;
+
+    const bool IsWrite = Kind != NoAliasAccessKind::Read;
+    NoAliasAccessSummary New{AccessClass, false, IsWrite};
+    if (Old) {
+      New = *Old;
+      if (Old->MultipleClasses) {
+        if (IsWrite)
+          New.HasWrite = true;
+      } else if (Old->AccessClass == AccessClass) {
+        New.HasWrite |= IsWrite;
+      } else if (Old->HasWrite || IsWrite) {
+        New.MultipleClasses = true;
+        New.HasWrite = true;
+      } else {
+        New.AccessClass = 0;
+        New.MultipleClasses = true;
+      }
+    }
+
+    if (New.MultipleClasses && New.HasWrite) {
+      std::string S;
+      raw_string_ostream OS(S);
+      OS << "noalias violation: " << getNoAliasAccessKindName(Kind)
+         << " through " << getNoAliasNodeName(AccessClass) << " on "
+         << getNoAliasObjectName(MO) << " bytes [" << RunBegin << ", " << RunEnd
+         << ") combines multiple access classes with a write in "
+         << getNoAliasActivationName(ActivationID);
+      LastNoAliasError = std::move(S);
+      appendNoAliasEvent(LastNoAliasError);
+      return false;
+    }
+
+    std::string S;
+    raw_string_ostream OS(S);
+    OS << getNoAliasActivationName(ActivationID) << ' '
+       << getNoAliasAccessKindName(Kind) << " through "
+       << getNoAliasNodeName(AccessClass) << " on " << getNoAliasObjectName(MO)
+       << " bytes [" << RunBegin << ", " << RunEnd << "): ";
+    if (Old)
+      DescribeSummary(OS, *Old);
+    else
+      OS << "unaccessed";
+    OS << " -> ";
+    DescribeSummary(OS, New);
+    appendNoAliasEvent(std::move(S));
+    AppendRun(RunBegin, RunEnd, New);
+    return true;
+  };
+
+  auto &Runs = Activation.Accesses[&MO];
+  uint64_t Cur = Begin;
+  bool InsertedAccessTail = false;
+  for (const NoAliasAccessRun &Run : Runs) {
+    if (Run.End <= Begin) {
+      AppendRun(Run.Begin, Run.End, Run.Summary);
+      continue;
+    }
+    if (Run.Begin >= End) {
+      if (!InsertedAccessTail) {
+        if (!AppendTransitioned(Cur, End, nullptr))
+          return false;
+        InsertedAccessTail = true;
+      }
+      AppendRun(Run.Begin, Run.End, Run.Summary);
+      continue;
+    }
+
+    if (Run.Begin < Begin)
+      AppendRun(Run.Begin, Begin, Run.Summary);
+
+    const uint64_t OverlapBegin = std::max(Cur, Run.Begin);
+    if (!AppendTransitioned(Cur, OverlapBegin, nullptr))
+      return false;
+
+    const uint64_t OverlapEnd = std::min(End, Run.End);
+    if (!AppendTransitioned(OverlapBegin, OverlapEnd, &Run.Summary))
+      return false;
+    Cur = OverlapEnd;
+
+    if (Run.End > End) {
+      AppendRun(End, Run.End, Run.Summary);
+      InsertedAccessTail = true;
+    }
+  }
+  if (!InsertedAccessTail) {
+    if (!AppendTransitioned(Cur, End, nullptr))
+      return false;
+  }
+
+  Runs = std::move(NewRuns);
+  return true;
+}
+
+uint64_t Context::beginNoAliasActivation() {
+  if (!ExperimentalNoAlias)
+    return 0;
+  const uint64_t ActivationID = NextNoAliasActivation++;
+  NoAliasActivations.try_emplace(ActivationID);
+  return ActivationID;
+}
+
+Pointer Context::createNoAliasPointer(const Pointer &Ptr,
+                                      uint64_t ActivationID) {
+  if (!ExperimentalNoAlias || !ActivationID)
+    return Ptr;
+
+  if (!Ptr.getMemoryObject() && !Ptr.provenance().isWildcard())
+    return Ptr;
+  // An unresolved wildcard can reach an allocation via arithmetic before its
+  // first access. Track foreign accesses from entry, without resolving or
+  // dereferencing the parameter.
+  MemoryObject *MO =
+      Ptr.provenance().isWildcard() ? nullptr : Ptr.getMemoryObject();
+
+  auto ActivationIt = NoAliasActivations.find(ActivationID);
+  assert(ActivationIt != NoAliasActivations.end() &&
+         "Noalias activation must be live before creating a parameter node.");
+
+  const uint64_t NodeID = NextNoAliasNode++;
+  uint64_t Parent = Ptr.getNoAliasNodeID();
+  // If the parent node was pruned after its activation ended, the incoming
+  // pointer is treated as a raw/root-derived pointer for this new activation.
+  if (Parent && NoAliasNodes.find(Parent) == NoAliasNodes.end())
+    Parent = 0;
+  NoAliasNode Node;
+  Node.Parent = &Ptr.provenance();
+  Node.Object = MO;
+  Node.Active = true;
+  NoAliasNodes.try_emplace(NodeID, std::move(Node));
+  ActivationIt->second.Nodes.push_back(NodeID);
+
+  auto &Activations =
+      MO ? NoAliasActivationsByObject[MO] : WildcardNoAliasActivations;
+  if (std::find(Activations.begin(), Activations.end(), ActivationID) ==
+      Activations.end())
+    Activations.push_back(ActivationID);
+
+  std::string S;
+  raw_string_ostream OS(S);
+  OS << "created protector " << getNoAliasNodeName(NodeID) << " for "
+     << (MO ? getNoAliasObjectName(*MO) : "wildcard provenance") << " in "
+     << getNoAliasActivationName(ActivationID) << " based on "
+     << getNoAliasNodeName(Parent);
+  appendNoAliasEvent(std::move(S));
+  return Ptr.getWithNoAliasNode(NodeID);
+}
+
+bool Context::accessNoAlias(MemoryObject &MO, uint64_t Offset, uint64_t Size,
+                            uint64_t AccessNode, NoAliasAccessKind Kind) {
+  if (!ExperimentalNoAlias || !Size)
+    return true;
+
+  auto It = NoAliasActivationsByObject.find(&MO);
+  if (It == NoAliasActivationsByObject.end() &&
+      WildcardNoAliasActivations.empty())
+    return true;
+
+  SmallVector<uint64_t, 4> Activations(WildcardNoAliasActivations.begin(),
+                                       WildcardNoAliasActivations.end());
+  if (It != NoAliasActivationsByObject.end())
+    for (uint64_t ID : It->second)
+      if (!is_contained(Activations, ID))
+        Activations.push_back(ID);
+
+  const uint64_t End = Offset + Size;
+  uint32_t CheckedActivations = 0;
+  for (uint64_t ActivationID : Activations) {
+    auto ActivationIt = NoAliasActivations.find(ActivationID);
+    if (ActivationIt == NoAliasActivations.end())
+      continue;
+    ++CheckedActivations;
+    const uint64_t AccessClass =
+        classifyNoAliasAccess(ActivationIt->second, MO, AccessNode);
+    if (!updateNoAliasAccesses(ActivationIt->second, MO, Offset, End,
+                               AccessClass, Kind, ActivationID))
+      return false;
+  }
+
+  if (CheckedActivations) {
+    std::string S;
+    raw_string_ostream OS(S);
+    OS << getNoAliasAccessKindName(Kind) << " through "
+       << getNoAliasNodeName(AccessNode) << " on " << getNoAliasObjectName(MO)
+       << " bytes [" << Offset << ", " << End << ") checked "
+       << CheckedActivations << " active noalias activation"
+       << (CheckedActivations == 1 ? "" : "s");
+    appendNoAliasEvent(std::move(S));
+  }
+  return true;
+}
+
+void Context::endNoAliasActivation(uint64_t ActivationID) {
+  if (!ExperimentalNoAlias)
+    return;
+
+  auto ActivationIt = NoAliasActivations.find(ActivationID);
+  if (ActivationIt == NoAliasActivations.end())
+    return;
+
+  SmallVector<uint64_t, 4> Nodes(ActivationIt->second.Nodes.begin(),
+                                 ActivationIt->second.Nodes.end());
+  for (uint64_t NodeID : Nodes) {
+    auto NodeIt = NoAliasNodes.find(NodeID);
+    if (NodeIt == NoAliasNodes.end())
+      continue;
+    MemoryObject *MO = NodeIt->second.Object;
+    NodeIt->second.Active = false;
+    auto ObjectIt = NoAliasActivationsByObject.find(MO);
+    if (ObjectIt == NoAliasActivationsByObject.end())
+      continue;
+    auto &IDs = ObjectIt->second;
+    IDs.erase(std::remove(IDs.begin(), IDs.end(), ActivationID), IDs.end());
+    if (IDs.empty())
+      NoAliasActivationsByObject.erase(ObjectIt);
+  }
+  llvm::erase(WildcardNoAliasActivations, ActivationID);
+  appendNoAliasEvent("ended " + getNoAliasActivationName(ActivationID));
+  NoAliasActivations.erase(ActivationIt);
+  // A node ID may survive in SSA values or memory after its call returns.
+  // Reclaim the ancestry only when no active protector can distinguish it
+  // from the root. IDs are never reused, so later retags can safely use root.
+  if (NoAliasActivations.empty())
+    NoAliasNodes.clear();
+}
+
+SmallVector<std::string, 4> Context::takeNoAliasEvents() {
+  SmallVector<std::string, 8> Events;
+  Events.swap(NoAliasEvents);
+  return Events;
+}
+
+void Context::clearNoAliasState(const MemoryObject &MO) {
+  if (!ExperimentalNoAlias)
+    return;
+
+  for (auto &[ID, Activation] : NoAliasActivations)
+    Activation.Accesses.erase(const_cast<MemoryObject *>(&MO));
+  // No valid access can use a concrete pointer to this allocation again.
+  // Also remove inactive nodes before their raw Object pointer can dangle.
+  NoAliasNodes.remove_if(
+      [&](const auto &Entry) { return Entry.second.Object == &MO; });
+  NoAliasActivationsByObject.erase(const_cast<MemoryObject *>(&MO));
 }
 
 } // namespace llvm::ubi

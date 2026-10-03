@@ -19,6 +19,7 @@
 #include <map>
 #include <optional>
 #include <random>
+#include <string>
 
 namespace llvm::ubi {
 
@@ -101,6 +102,8 @@ struct ProgramExitInfo {
   }
 };
 
+enum class NoAliasAccessKind { Read, Write, Deallocate };
+
 class MemoryObject : public RefCountedBase<MemoryObject> {
   uint64_t Address;
   uint64_t Size;
@@ -178,6 +181,7 @@ public:
     return true;
   }
   virtual void onProgramExit(const ProgramExitInfo &ExitInfo) {}
+  virtual bool onNoAliasEvent(StringRef Msg) { return true; }
   virtual bool onPrint(StringRef Msg) {
     outs() << Msg;
     outs().flush();
@@ -237,6 +241,7 @@ class Context {
   UndefValueBehavior UndefBehavior = UndefValueBehavior::NonDeterministic;
   NaNPropagationBehavior NaNBehavior = NaNPropagationBehavior::NonDeterministic;
   bool FusedMultiplyAdd = false;
+  bool ExperimentalNoAlias = false;
 
   std::mt19937_64 Rng;
   /// Always returns a random APInt value. It is not controlled by
@@ -291,6 +296,57 @@ class Context {
 
   /// Get the tag for the given pointer provenance.
   APInt getTag(uint32_t BitWidth, Provenance &Prov);
+
+  /// Summary of the access classes that touched a byte range during one
+  /// dynamic function activation. Multiple access classes are permitted only
+  /// while every access is a read.
+  struct NoAliasAccessSummary {
+    uint64_t AccessClass = 0;
+    bool MultipleClasses = false;
+    bool HasWrite = false;
+
+    bool operator==(const NoAliasAccessSummary &Other) const {
+      return AccessClass == Other.AccessClass &&
+             MultipleClasses == Other.MultipleClasses &&
+             HasWrite == Other.HasWrite;
+    }
+  };
+
+  struct NoAliasAccessRun {
+    uint64_t Begin;
+    uint64_t End;
+    NoAliasAccessSummary Summary;
+  };
+
+  /// A noalias access class created by retagging a function argument. Parent
+  /// retains the incoming provenance, whose ancestry may still be wildcard.
+  /// Nodes carry no memory state;
+  /// they are used only to classify accesses in active function activations.
+  struct NoAliasNode {
+    IntrusiveRefCntPtr<Provenance> Parent;
+    // Null for wildcard provenance: this node may access any allocation its
+    // provenance permits, including one reached by pointer arithmetic.
+    MemoryObject *Object = nullptr;
+    bool Active = false;
+  };
+
+  struct NoAliasActivation {
+    SmallVector<uint64_t, 4> Nodes;
+    DenseMap<MemoryObject *, SmallVector<NoAliasAccessRun, 1>> Accesses;
+  };
+
+  // ID 0 is reserved for the raw/root access class and for no activation.
+  uint64_t NextNoAliasNode = 1;
+  uint64_t NextNoAliasActivation = 1;
+  DenseMap<uint64_t, NoAliasNode> NoAliasNodes;
+  DenseMap<uint64_t, NoAliasActivation> NoAliasActivations;
+  DenseMap<MemoryObject *, SmallVector<uint64_t, 2>> NoAliasActivationsByObject;
+  SmallVector<uint64_t, 2> WildcardNoAliasActivations;
+
+  // noalias-related diagnostics
+  std::string LastNoAliasError;
+  SmallVector<std::string, 4> NoAliasEvents;
+
   AnyValue fromBytes(ConstBytesView Bytes, Type *Ty, uint32_t OffsetInBits,
                      bool CheckPaddingBits, bool *ContainsUndefinedBits);
   void toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,
@@ -303,6 +359,26 @@ class Context {
   AnyValue computeScaledPtrAdd(const AnyValue &Ptr, const AnyValue &Index,
                                const APInt &Scale, GEPNoWrapFlags Flags,
                                AnyValue &AccumulatedOffset);
+
+  /// Return whether \p Ancestor is on \p Descendant's noalias parent chain.
+  /// This relation defines whether an access is local to a protected node.
+  bool isNoAliasAncestor(uint64_t Ancestor, uint64_t Descendant,
+                         const MemoryObject &MO) const;
+  /// Resolve ancestry from the still-eligible exposure candidates for MO.
+  /// Distinct candidate nodes fall back to the raw/root class.
+  uint64_t resolveNoAliasNode(const Provenance &Prov,
+                              const MemoryObject &MO) const;
+  static StringRef getNoAliasAccessKindName(NoAliasAccessKind Kind);
+  static std::string getNoAliasNodeName(uint64_t NodeID);
+  static std::string getNoAliasActivationName(uint64_t ActivationID);
+  static std::string getNoAliasObjectName(const MemoryObject &MO);
+  void appendNoAliasEvent(std::string Msg);
+  uint64_t classifyNoAliasAccess(const NoAliasActivation &Activation,
+                                 const MemoryObject &MO,
+                                 uint64_t AccessNode) const;
+  bool updateNoAliasAccesses(NoAliasActivation &Activation, MemoryObject &MO,
+                             uint64_t Begin, uint64_t End, uint64_t AccessClass,
+                             NoAliasAccessKind Kind, uint64_t ActivationID);
 
   // Constants
   // Use std::map to avoid iterator/reference invalidation.
@@ -341,6 +417,7 @@ public:
   void setMaxSteps(uint32_t MS) { MaxSteps = MS; }
   void setMaxStackDepth(uint32_t Depth) { MaxStackDepth = Depth; }
   void setFusedMultiplyAdd(bool F) { FusedMultiplyAdd = F; }
+  void setExperimentalNoAlias(bool Enabled) { ExperimentalNoAlias = Enabled; }
   uint64_t getMemoryLimit() const { return MaxMem; }
   uint32_t getVScale() const { return VScale; }
   uint32_t getMaxSteps() const { return MaxSteps; }
@@ -351,6 +428,7 @@ public:
   UndefValueBehavior getEffectiveUndefValueBehavior() const;
   NaNPropagationBehavior getEffectiveNaNPropagationBehavior() const;
   bool fuseMultiplyAdd() const { return FusedMultiplyAdd; }
+  bool isExperimentalNoAliasEnabled() const { return ExperimentalNoAlias; }
   void setUndefValueBehavior(UndefValueBehavior UB) { UndefBehavior = UB; }
   void setNaNPropagationBehavior(NaNPropagationBehavior NaNBehav) {
     NaNBehavior = NaNBehav;
@@ -396,8 +474,9 @@ public:
   /// Derive a pointer from a memory object with offset 0.
   /// Please use Pointer's interface for further manipulations.
   Pointer deriveFromMemoryObject(IntrusiveRefCntPtr<MemoryObject> Obj);
-  /// Mark this provenance as exposed. It is no-op if it is not associated with
-  /// a memory object or a wildcard provenance.
+  /// Mark this provenance as exposed. Retagged wildcard provenances expose
+  /// their noalias identity for each eligible allocation in their snapshot.
+  /// Untagged wildcard provenances and nullary provenances need no exposure.
   void exposeProvenance(Provenance &Prov);
   /// A helper to check both concrete and wildcard provenance. Please don't
   /// report UB inside the \p Check callback due to the existence of wildcard
@@ -406,10 +485,13 @@ public:
   /// within the bounds of the returned memory object. But the state is not
   /// checked, for better diagnostic messages. If \p HasSideEffect is true, some
   /// invalid provenances will be masked out. Note that in this case the caller
-  /// must report UB when the result is nullptr.
+  /// must report UB when the result is nullptr. If ResolvedNoAliasNode is set,
+  /// return the wrapper's explicit noalias node or the common node of the
+  /// eligible exposed candidates; disagreeing candidates use raw/root (zero).
   MemoryObject *checkProvenance(const Pointer &Ptr,
                                 function_ref<bool(const Provenance &)> Check,
-                                bool HasSideEffect = true);
+                                bool HasSideEffect = true,
+                                uint64_t *ResolvedNoAliasNode = nullptr);
   /// Returns the snapshot of currently exposed provenances.
   IntrusiveRefCntPtr<Provenance> getWildcardProvenance();
   /// Convert byte sequence to a value of the given type. Uninitialized bits are
@@ -437,6 +519,21 @@ public:
 
   Function *getTargetFunction(const Pointer &Ptr);
   BasicBlock *getTargetBlock(const Pointer &Ptr);
+
+  /// Begin one dynamic function activation containing noalias parameters.
+  uint64_t beginNoAliasActivation();
+  /// Create an access class for a noalias parameter in \p ActivationID.
+  Pointer createNoAliasPointer(const Pointer &Ptr, uint64_t ActivationID);
+  /// Apply an access to every active activation protecting \p MO.
+  bool accessNoAlias(MemoryObject &MO, uint64_t Offset, uint64_t Size,
+                     uint64_t AccessNode, NoAliasAccessKind Kind);
+  /// End an activation and discard its access summaries, preserving ancestry
+  /// for escaped pointers while any other activation remains active.
+  void endNoAliasActivation(uint64_t ActivationID);
+  StringRef getLastNoAliasError() const { return LastNoAliasError; }
+  SmallVector<std::string, 4> takeNoAliasEvents();
+  /// Drop noalias state for an object \p MO that is no longer usable.
+  void clearNoAliasState(const MemoryObject &MO);
 
   /// Initialize global variables and function/block objects. This function
   /// should be called before executing any function. Returns false if the

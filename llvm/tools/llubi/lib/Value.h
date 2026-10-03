@@ -196,6 +196,10 @@ class Provenance : public RefCountedBase<Provenance> {
   // A zero tag is invalid.
   APInt Tag;
 
+  // A protected parameter gets its own provenance identity. Integer casts
+  // expose that identity without adding state to integer values.
+  uint64_t NoAliasNode = 0;
+
   // Null if it is concrete.
   IntrusiveRefCntPtr<WildcardProvenance> Wildcard;
 
@@ -214,6 +218,8 @@ public:
   IntrusiveRefCntPtr<Provenance> getWithKnownMemoryObject(MemoryObject &Obj);
   MemoryObject *getMemoryObject() const { return Obj.get(); }
   bool isWildcard() const { return Wildcard != nullptr; }
+  uint64_t getNoAliasNodeID() const { return NoAliasNode; }
+  IntrusiveRefCntPtr<Provenance> getWithNoAliasNode(uint64_t NodeID);
 };
 
 class Pointer {
@@ -234,13 +240,18 @@ public:
     return Pointer(Prov, NewAddr);
   }
   Pointer getWithNewProvenance(IntrusiveRefCntPtr<Provenance> NewProv) const {
-    return Pointer(NewProv, Address);
+    return Pointer(std::move(NewProv), Address);
+  }
+  Pointer getWithNoAliasNode(uint64_t NewNoAliasNode) const {
+    return Pointer(Prov->getWithNoAliasNode(NewNoAliasNode), Address);
   }
   static AnyValue null(unsigned AS, const DataLayout &DL);
   bool isNullPtr(unsigned AS, const DataLayout &DL) const;
   void print(raw_ostream &OS) const;
   const APInt &address() const { return Address; }
   Provenance &provenance() const { return *Prov; }
+  MemoryObject *getMemoryObject() const { return Prov->getMemoryObject(); }
+  uint64_t getNoAliasNodeID() const { return Prov->getNoAliasNodeID(); }
 };
 
 /// Represents a scalar byte value. If the value is not byte-sized, the high
