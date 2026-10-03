@@ -7391,6 +7391,22 @@ bool CodeGenPrepare::optimizeExtUses(Instruction *I) {
       continue;
 
     // Both src and def are live in this block. Rewrite the use.
+    // Reuse an extension directly when a wider extension of the same kind is
+    // free for its users.
+    // Going through a truncation instead can hide an extending-load
+    // opportunity.
+    if (I->getOpcode() == User->getOpcode() &&
+        User->getType()->getScalarSizeInBits() >
+            I->getType()->getScalarSizeInBits()) {
+      U = I;
+      if (TLI->isExtFree(User)) {
+        ++NumExtUses;
+        MadeChange = true;
+        continue;
+      }
+      U = Src;
+    }
+
     Instruction *&InsertedTrunc = InsertedTruncs[UserBB];
 
     if (!InsertedTrunc) {
