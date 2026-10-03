@@ -2,6 +2,10 @@
 //
 // REQUIRES: has_sancovcc,stable-runtime,x86_64-linux
 //
+
+// rtsan doesn't currently support coverage
+// UNSUPPORTED: rtsan
+
 // RUN: rm -rf %t_workdir
 // RUN: mkdir -p %t_workdir
 // RUN: cd %t_workdir
