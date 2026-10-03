@@ -430,17 +430,6 @@ void Sema::ActOnFinishOfCompoundStmt() {
   PopCompoundScope();
 }
 
-// Returns the given statement as if its labels and attributes were
-// stripped, if any.
-static Stmt *GetInnermostStatement(Stmt *Outer) {
-  if (isa<LabelStmt>(Outer))
-    Outer = cast<LabelStmt>(Outer)->getInnermostLabeledStmt();
-  if (isa<AttributedStmt>(Outer))
-    Outer = cast<AttributedStmt>(Outer)->getSubStmt();
-
-  return Outer;
-}
-
 static StringRef GetDeferKeywordSpelling(Sema &S, SourceLocation DeferLoc) {
   StringRef DeferSpelling =
       S.PP.getLastMacroWithSpelling(DeferLoc, {tok::kw__Defer});
@@ -452,7 +441,7 @@ static StringRef GetDeferKeywordSpelling(Sema &S, SourceLocation DeferLoc) {
 
 // Diagnose if the given statement is a redundant _Defer statement.
 static void CheckRedundantDeferStmt(Sema &S, Stmt *Body) {
-  Stmt *Inner = GetInnermostStatement(Body);
+  Stmt *Inner = Body->stripLabelLikeStatements();
   if (isa<DeferStmt>(Inner)) {
     SourceLocation DeferLoc = Inner->getBeginLoc();
     S.Diag(DeferLoc, diag::warn_redundant_defer)
@@ -504,7 +493,7 @@ StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
   // or a plain `return` statement.
   if (NumElts > 1) {
     for (unsigned i = 0; i != NumElts - 1; ++i) {
-      Stmt *Inner = GetInnermostStatement(Elts[i + 1]);
+      Stmt *Inner = Elts[i + 1]->stripLabelLikeStatements();
       if (isa<BreakStmt, ContinueStmt>(Inner) ||
           (isa<ReturnStmt>(Inner) && !cast<ReturnStmt>(Inner)->getRetValue()))
         CheckRedundantDeferStmt(*this, Elts[i]);
