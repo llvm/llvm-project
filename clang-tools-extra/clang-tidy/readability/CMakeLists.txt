@@ -23,6 +23,7 @@ add_clang_library(clangTidyReadabilityModule STATIC
   FunctionSizeCheck.cpp
   IdentifierLengthCheck.cpp
   IdentifierNamingCheck.cpp
+  BlockSizeCheck.cpp
   ImplicitBoolConversionCheck.cpp
   InconsistentIfElseBracesCheck.cpp
   RedundantInlineSpecifierCheck.cpp
