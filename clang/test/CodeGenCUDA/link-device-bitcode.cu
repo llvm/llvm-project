@@ -29,8 +29,11 @@
 // RUN:    | FileCheck %s -check-prefix CHECK-IR-NLD
 //
 // Make sure NVVMReflect pass is enabled in NVPTX back-end.
+// -debug-pass=Structure only reports the legacy codegen pipeline, so pin this
+// run to the legacy PM.
 // RUN: %clang_cc1 -triple nvptx-unknown-cuda -fcuda-is-device \
 // RUN:    -mlink-builtin-bitcode %t.bc -S -o /dev/null %s \
+// RUN:    -fenable-new-pm-codegen=force-disable \
 // RUN:    -mllvm -debug-pass=Structure 2>&1 \
 // RUN:    | FileCheck %s -check-prefix CHECK-REFLECT
 
