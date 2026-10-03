@@ -79,4 +79,5 @@ bool LazyMachineBlockFrequencyInfoPass::runOnMachineFunction(
   return false;
 }
 
-LazyMachineBlockFrequencyInfoPass::~LazyMachineBlockFrequencyInfoPass() = default;
+LazyMachineBlockFrequencyInfoPass::~LazyMachineBlockFrequencyInfoPass() =
+    default;
