@@ -1900,8 +1900,8 @@ static SDValue convertLocVTToValVT(SelectionDAG &DAG, const SDLoc &DL,
   if (VA.isExtInLoc())
     Value = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), Value);
   else if (VA.getLocInfo() == CCValAssign::BCvt) {
-    // If this is a short vector argument loaded from the stack,
-    // extend from i64 to full vector size and then bitcast.
+    // If the argument is a short vector loaded from the stack,
+    // extend it from i64 to the full vector size and then perform a bitcast.
     assert(VA.getLocVT() == MVT::i64);
     assert(VA.getValVT().isVector());
     Value = DAG.getBuildVector(MVT::v2i64, DL, {Value, DAG.getUNDEF(MVT::i64)});
@@ -1924,7 +1924,8 @@ static SDValue convertValVTToLocVT(SelectionDAG &DAG, const SDLoc &DL,
   case CCValAssign::AExt:
     return DAG.getNode(ISD::ANY_EXTEND, DL, VA.getLocVT(), Value);
   case CCValAssign::BCvt: {
-    assert(VA.getLocVT() == MVT::i64 || VA.getLocVT() == MVT::i128);
+    assert(VA.getLocVT() == MVT::i64 || VA.getLocVT() == MVT::i128 ||
+           VA.getLocVT() == MVT::v16i8);
     assert(VA.getValVT().isVector() || VA.getValVT() == MVT::f32 ||
            VA.getValVT() == MVT::f64 || VA.getValVT() == MVT::f128);
     // For an f32 vararg we need to first promote it to an f64 and then
@@ -2431,10 +2432,11 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
       ArgValue = convertValVTToLocVT(DAG, DL, VA, ArgValue);
 
     if (VA.isRegLoc()) {
-      // In XPLINK64, for the 128-bit vararg case, ArgValue is bitcasted to a
-      // MVT::i128 type. We decompose the 128-bit type to a pair of its high
-      // and low values.
-      if (VA.getLocVT() == MVT::i128)
+      // i128 in a GR128 register pair (e.g. R2Q) must be decomposed into
+      // hi/lo GPR halves. i128 assigned to a VR128 vector register (V24-V31)
+      // is passed directly — do not decompose in that case.
+      if (VA.getLocVT() == MVT::i128 &&
+          !SystemZ::VR128BitRegClass.contains(VA.getLocReg()))
         ArgValue = lowerI128ToGR128(DAG, ArgValue);
       // Queue up the argument copies and emit them at the end.
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), ArgValue));
@@ -2608,9 +2610,10 @@ bool SystemZTargetLowering::CanLowerReturn(
     const Type *RetTy) const {
   // Special case that we cannot easily detect in RetCC_SystemZ since
   // i128 may not be a legal type.
-  for (auto &Out : Outs)
-    if (Out.ArgVT.isScalarInteger() && Out.ArgVT.getSizeInBits() > 64)
-      return false;
+  if (!Subtarget.isTargetzOS())
+    for (auto &Out : Outs)
+      if (Out.ArgVT.isScalarInteger() && Out.ArgVT.getSizeInBits() > 64)
+        return false;
 
   SmallVector<CCValAssign, 16> RetLocs;
   CCState RetCCInfo(CallConv, IsVarArg, MF, RetLocs, Context);
