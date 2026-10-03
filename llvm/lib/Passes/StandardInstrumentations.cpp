@@ -1090,8 +1090,16 @@ bool OptPassGateInstrumentation::shouldRun(StringRef PassName, IRUnitRef IR) {
   if (isIgnored(PassName))
     return true;
 
+  StringRef FuncName;
+  if (const auto *F = dyn_cast<Function>(IR))
+    FuncName = F->getName();
+  else if (const auto *L = dyn_cast<Loop>(IR))
+    FuncName = L->getHeader()->getParent()->getName();
+  else if (const auto *MF = dyn_cast<MachineFunction>(IR))
+    FuncName = MF->getName();
+
   bool ShouldRun =
-      Context.getOptPassGate().shouldRunPass(PassName, getIRName(IR));
+      Context.getOptPassGate().shouldRunPass(PassName, getIRName(IR), FuncName);
   if (!ShouldRun && !this->HasWrittenIR && !OptBisectPrintIRPath.empty()) {
     // FIXME: print IR if limit is higher than number of opt-bisect
     // invocations

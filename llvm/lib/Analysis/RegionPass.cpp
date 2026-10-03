@@ -299,8 +299,9 @@ static std::string getDescription(const Region &R) {
 bool RegionPass::skipRegion(Region &R) const {
   Function &F = *R.getEntry()->getParent();
   const OptPassGate &Gate = F.getContext().getOptPassGate();
+
   if (Gate.isEnabled() &&
-      !Gate.shouldRunPass(this->getPassName(), getDescription(R)))
+      !Gate.shouldRunPass(this->getPassName(), getDescription(R), F.getName()))
     return true;
 
   if (F.hasOptNone()) {
