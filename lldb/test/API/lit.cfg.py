@@ -198,6 +198,10 @@ if lldb_use_simulator:
 # kind, so prevent them from running at the same time.
 lit_config.parallelism_groups["apple-simulator"] = 1
 
+# Avoid CPU contention by only running one test at a time if the tests launches
+# multiple threads.
+lit_config.parallelism_groups["multiple-threads"] = 1
+
 # Set a default per-test timeout of 10 minutes. Setting a timeout per test
 # requires that killProcessAndChildren() is supported on the platform and
 # lit complains if the value is set but it is not supported.
