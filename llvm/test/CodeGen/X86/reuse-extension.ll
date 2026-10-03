@@ -92,4 +92,3 @@ join:
   %result = zext i32 %sum to i64
   ret i64 %result
 }
-
