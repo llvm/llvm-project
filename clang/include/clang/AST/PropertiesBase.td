@@ -130,6 +130,13 @@ def LValuePathSerializationHelper :
     PropertyType<"APValue::LValuePathSerializationHelper"> {
   let BufferElementTypes = [ LValuePathEntry ];
 }
+def MatrixLayoutKind : EnumPropertyType<"MatrixType::LayoutKind"> {
+  let PackOptional =
+    "value.value_or(static_cast<MatrixType::LayoutKind>(2))";
+  let UnpackOptional =
+    "value == static_cast<MatrixType::LayoutKind>(2) ? std::nullopt : "
+    "std::optional<MatrixType::LayoutKind>(value)";
+}
 def NestedNameSpecifier : PropertyType<"NestedNameSpecifier">;
 def NestedNameSpecifierKind : EnumPropertyType<"NestedNameSpecifier::Kind">;
 def OverloadedOperatorKind : EnumPropertyType;
@@ -600,6 +607,31 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
         base, offset, pathLength, isLValueOnePastTheEnd, isNullPtr).data();
     llvm::copy(lvaluePath->Path, path);
     return result;
+  }]>;
+}
+
+def ReflectionKind : EnumPropertyType<"ReflectionKind">;
+
+let Class = PropertyTypeCase<APValue, "Reflection"> in {
+  def : Property<"reflectionKind", ReflectionKind> {
+    let Read = [{ node.getReflectionOperandKind() }];
+  }
+  def : Property<"reflectionType", QualType> {
+    let Conditional = [{ reflectionKind == ReflectionKind::Type }];
+    let Read = [{
+      QualType::getFromOpaquePtr(node.getReflectionOpaqueOperand())
+    }];
+  }
+  def : Creator<[{
+    switch (reflectionKind) {
+    // TODO(Reflection): Add support for TypeSourceInfo, NamespaceReference
+    // TemplateReference and DeclRefExpr
+    case ReflectionKind::Null:
+      return APValue(reflectionKind, nullptr);
+    case ReflectionKind::Type:
+      return APValue(reflectionKind, (*reflectionType).getAsOpaquePtr());
+    }
+    llvm_unreachable("unimplemented or unknow reflection entities");
   }]>;
 }
 

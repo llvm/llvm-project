@@ -51,7 +51,6 @@
 #include <__type_traits/remove_extent.h>
 #include <__type_traits/remove_pointer.h>
 #include <__type_traits/remove_reference.h>
-#include <__type_traits/type_identity.h>
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>
 #include <__utility/exception_guard.h>

@@ -141,6 +141,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fdatasync
+  SRCS
+    fdatasync.cpp
+  HDRS
+    ../fdatasync.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fdatasync
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   fork
   SRCS
     fork.cpp
@@ -213,8 +227,10 @@ add_entrypoint_object(
   HDRS
     ../execv.h
   DEPENDS
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.execve
     libc.src.errno.errno
     libc.src.unistd.environ
 )
@@ -226,8 +242,10 @@ add_entrypoint_object(
   HDRS
     ../execve.h
   DEPENDS
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.execve
     libc.src.errno.errno
 )
 
@@ -507,6 +525,19 @@ add_object_library(
 )
 
 add_entrypoint_object(
+  pause
+  SRCS
+    pause.cpp
+  HDRS
+    ../pause.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.pause
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   pipe
   SRCS
     pipe.cpp
@@ -755,6 +786,7 @@ add_entrypoint_object(
   HDRS
     ../sysconf.h
   DEPENDS
+    libc.hdr.limits_macros
     libc.hdr.unistd_macros
     libc.hdr.sys_auxv_macros
     libc.hdr.sys_resource_macros

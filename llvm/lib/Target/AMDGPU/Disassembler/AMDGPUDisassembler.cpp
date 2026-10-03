@@ -101,6 +101,9 @@ void AMDGPUDisassembler::emitTargetIDIfSupported(raw_ostream &OS,
 
   // Add xnack and sramecc from ELF flags (v4 format)
   if (CodeObjectVersion >= AMDGPU::AMDHSA_COV4) {
+    // Hardwired-on features are not selectable target-ID modifiers.
+    bool SramEccHardwiredOn = TargetID.isSramEccSupported() &&
+                              !STI.hasFeature(AMDGPU::FeatureSRAMECCOnOffModes);
     unsigned SrameccSetting = EFlags & ELF::EF_AMDGPU_FEATURE_SRAMECC_V4;
     switch (SrameccSetting) {
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4:
@@ -110,11 +113,13 @@ void AMDGPUDisassembler::emitTargetIDIfSupported(raw_ostream &OS,
       break;
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_OFF_V4:
       TargetID.setSramEccSetting(AMDGPU::TargetIDSetting::Off);
-      OS << ":sramecc-";
+      if (!SramEccHardwiredOn)
+        OS << ":sramecc-";
       break;
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_ON_V4:
       TargetID.setSramEccSetting(AMDGPU::TargetIDSetting::On);
-      OS << ":sramecc+";
+      if (!SramEccHardwiredOn)
+        OS << ":sramecc+";
       break;
     }
 
@@ -266,6 +271,16 @@ static DecodeStatus decodeRsrcReg128(MCInst &Inst, unsigned Imm,
   // 0-127: Uniform-direct resource in SGPRs (SReg_128).
   if (Imm < 128)
     OpWidth = 128;
+  return decodeRsrcRegOp(Inst, Imm, 0, Decoder, OpWidth);
+}
+
+static DecodeStatus decodeRsrcReg256(MCInst &Inst, unsigned Imm,
+                                     uint64_t /* Addr */,
+                                     const MCDisassembler *Decoder) {
+  unsigned OpWidth = 32;
+  // 0-127: Uniform-direct resource in SGPRs (SReg_256).
+  if (Imm < 128)
+    OpWidth = 256;
   return decodeRsrcRegOp(Inst, Imm, 0, Decoder, OpWidth);
 }
 
@@ -1504,7 +1519,8 @@ void AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     return;
 
   int NewOpcode =
-      AMDGPU::getMIMGOpcode(Info->BaseOpcode, Info->MIMGEncoding, DstSize, AddrSize);
+      AMDGPU::getMIMGOpcode(Info->BaseOpcode, Info->MIMGEncoding, DstSize,
+                            AddrSize, Info->IndexedRsrc, Info->IndexedSamp);
   if (NewOpcode == -1)
     return;
 

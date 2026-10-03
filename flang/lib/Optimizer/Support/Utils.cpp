@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "mlir/IR/SymbolTable.h"
 
 fir::TypeInfoOp fir::lookupTypeInfoOp(fir::RecordType recordType,
                                       mlir::ModuleOp module,
@@ -149,7 +150,30 @@ std::optional<bool> fir::isNewAllocationResult(mlir::OpResult result) {
   return false;
 }
 
+mlir::FunctionOpInterface
+fir::getPresentedFunction(mlir::FunctionOpInterface func) {
+  if (std::optional<llvm::StringRef> original =
+          cuf::getDeviceCopyOf(func.getOperation()))
+    if (auto originalFunc = mlir::SymbolTable::lookupNearestSymbolFrom<
+            mlir::FunctionOpInterface>(
+            func.getOperation(),
+            mlir::StringAttr::get(func.getContext(), *original)))
+      return originalFunc;
+  return func;
+}
+
+mlir::FunctionOpInterface fir::getPresentedCallee(mlir::Operation *call,
+                                                  mlir::SymbolRefAttr callee) {
+  if (!callee)
+    return nullptr;
+  auto func =
+      mlir::SymbolTable::lookupNearestSymbolFrom<mlir::FunctionOpInterface>(
+          call, callee);
+  return func ? getPresentedFunction(func) : nullptr;
+}
+
 std::string fir::getPresentableFunctionName(mlir::FunctionOpInterface func) {
+  func = getPresentedFunction(func);
   if (func.getName() == fir::NameUniquer::doProgramEntry()) {
     // Main program entry is all uppercase - to avoid name conflicts. But
     // from a reporting perspective, keep it lowercase for consistency with

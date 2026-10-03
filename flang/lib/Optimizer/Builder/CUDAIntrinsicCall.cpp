@@ -456,6 +456,10 @@ static constexpr IntrinsicHandler cudaHandlers[]{
          &CI::genMatchAnySync),
      {{{"mask", asValue}, {"value", asValue}}},
      /*isElemental=*/false},
+    {"on_device",
+     static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(&CI::genOnDevice),
+     {},
+     /*isElemental=*/false},
     {"syncthreads",
      static_cast<CUDAIntrinsicLibrary::SubroutineGenerator>(
          &CI::genSyncThreads),
@@ -644,7 +648,8 @@ static_assert(fir::isSorted(cudaHandlers) && "map must be sorted");
 
 const IntrinsicHandler *findCUDAIntrinsicHandler(llvm::StringRef name,
                                                  bool isBindcCall) {
-  if (isBindcCall)
+  // cudadevice declares on_device() with bind(c).
+  if (isBindcCall && name != "on_device")
     return nullptr;
   auto compare = [](const IntrinsicHandler &cudaHandler, llvm::StringRef name) {
     return name.compare(cudaHandler.name) > 0;
@@ -652,6 +657,14 @@ const IntrinsicHandler *findCUDAIntrinsicHandler(llvm::StringRef name,
   auto result = llvm::lower_bound(cudaHandlers, name, compare);
   return result != std::end(cudaHandlers) && result->name == name ? result
                                                                   : nullptr;
+}
+
+mlir::Value
+CUDAIntrinsicLibrary::genOnDevice(mlir::Type resultType,
+                                  llvm::ArrayRef<mlir::Value> args) {
+  assert(args.empty() && "on_device takes no arguments");
+  mlir::Value onDevice = cuf::OnDeviceOp::create(builder, loc);
+  return builder.createConvert(loc, resultType, onDevice);
 }
 
 static mlir::Value convertPtrToNVVMSpace(fir::FirOpBuilder &builder,
@@ -977,7 +990,8 @@ CUDAIntrinsicLibrary::genBarrierArrive(mlir::Type resultType,
   assert(args.size() == 1);
   mlir::Value barrier = convertPtrToNVVMSpace(
       builder, loc, args[0], mlir::NVVM::NVVMMemorySpace::Shared);
-  return mlir::NVVM::MBarrierArriveOp::create(builder, loc, resultType, barrier)
+  return mlir::NVVM::MBarrierArriveOp::create(builder, loc, resultType, barrier,
+                                              /*count=*/nullptr)
       .getResult(0);
 }
 

@@ -871,7 +871,7 @@ def : InstRW<[GenericWriteFPUMoveGPRFPU], (instrs BuildPairF64,
                                            MFC1, MFC1_D64, MFHC1_D32,
                                            MFHC1_D64, MTC1, MTC1_D64,
                                            MTHC1_D32, MTHC1_D64,
-                                           BuildPairF64_FPR, ExtractElementF64_FPR)>;
+                                           BuildPairF64_FPR)>;
 
 // swc1, swxc1
 def : InstRW<[GenericWriteFPUStore], (instrs SDC1, SDC164, SDXC1, SDXC164,
@@ -1449,6 +1449,7 @@ def : InstRW<[GenericWriteMSAShortInt], (instregex "^INSERT_[BHWD]$")>;
 def : InstRW<[GenericWriteMSAShortInt], (instregex "^(SLD|SLDI)_[BHWD]$")>;
 def : InstRW<[GenericWriteMSAShortInt], (instregex "^(BSET|BSETI)_[BHWD]$")>;
 def : InstRW<[GenericWriteMSAShortInt], (instregex "^(BCLR|BCLRI)_[BHWD]$")>;
+def : InstRW<[GenericWriteMSAShortInt], (instregex "^FABS_(W|D)$")>;
 def : InstRW<[GenericWriteMSAShortInt], (instregex "^(BNEG|BNEGI)_[BHWD]$")>;
 def : InstRW<[GenericWriteMSAShortInt], (instregex "^(BSEL_V|BSELI_B)$")>;
 def : InstRW<[GenericWriteMSAShortInt], (instregex "^BMN*Z.*$")>;
@@ -1508,7 +1509,6 @@ def : InstRW<[GenericWriteFPUS], (instregex "^FCULE_(W|D)$")>;
 def : InstRW<[GenericWriteFPUS], (instregex "^FCULT_(W|D)$")>;
 def : InstRW<[GenericWriteFPUS], (instregex "^FCUNE_(W|D)$")>;
 def : InstRW<[GenericWriteFPUS], (instregex "^FCUN_(W|D)$")>;
-def : InstRW<[GenericWriteFPUS], (instregex "^FABS_(W|D)$")>;
 def : InstRW<[GenericWriteFPUS], (instregex "^FFINT_(U|S)_(W|D)$")>;
 def : InstRW<[GenericWriteFPUS], (instregex "^FFQL_(W|D)$")>;
 def : InstRW<[GenericWriteFPUS], (instregex "^FFQR_(W|D)$")>;

@@ -41,10 +41,10 @@
 #include "llvm/Frontend/OpenMP/OMP.inc"
 
 namespace llvm::omp {
-static ClauseSet privateSet{
+static Clauses privateSet{
     Clause::OMPC_private, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate};
-static ClauseSet privateReductionSet{
-    ClauseSet{Clause::OMPC_reduction} | privateSet};
+static Clauses privateReductionSet{
+    Clauses{Clause::OMPC_reduction} | privateSet};
 } // namespace llvm::omp
 
 namespace Fortran::semantics {
@@ -74,14 +74,14 @@ using AppliedModifier = AppliedModifierInfo::ElementTy;
 using SymbolSourceMap = std::multimap<const Symbol *, parser::CharBlock>;
 // Multimap to check the triple <current_dir, enclosing_dir, enclosing_clause>
 using DirectivesClauseTriple = std::multimap<llvm::omp::Directive,
-    std::pair<llvm::omp::Directive, const llvm::omp::ClauseSet>>;
+    std::pair<llvm::omp::Directive, const llvm::omp::Clauses>>;
 
 using OmpStructureCheckerBase = DirectiveStructureChecker<llvm::omp::Directive,
-    llvm::omp::Clause, parser::OmpClause, llvm::omp::ClauseSet>;
+    llvm::omp::Clause, parser::OmpClause, llvm::omp::Clauses>;
 
 template <>
-void IterateOverMembers(const llvm::omp::ClauseSet &set,
-    std::function<void(llvm::omp::Clause)> func);
+void IterateOverMembers(
+    const llvm::omp::Clauses &set, std::function<void(llvm::omp::Clause)> func);
 
 class OmpStructureChecker : public OmpStructureCheckerBase {
 public:
@@ -318,6 +318,8 @@ private:
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
   void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
   void CheckScanModifier(const parser::OmpClause::Reduction &x);
+  void CheckDoacross(
+      const parser::OmpDoacross &doa, llvm::omp::Clause clauseId);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
   void CheckUnrollFullTripCount(const parser::OpenMPLoopConstruct &x);
 
@@ -365,9 +367,9 @@ private:
       const AppliedModifierInfo &info);
   bool VerifyModifierUltimate(parser::omp::WithSource<llvm::omp::Clause> clause,
       const AppliedModifierInfo &info);
-  bool VerifyModifiers(parser::omp::WithSource<llvm::omp::Clause> clause,
+  bool VerifyModifierSyntax(parser::omp::WithSource<llvm::omp::Clause> clause,
       const AppliedModifierInfo &info);
-  void VerifyModifiers(const parser::OmpClause &x);
+  void VerifyModifierSyntax(const parser::OmpClause &x);
 
   // check-omp-structure.cpp
   using ClauseIterator =
@@ -375,6 +377,8 @@ private:
   bool IsAllowedClause(llvm::omp::Clause clauseId);
   bool CheckAllowedClause(llvm::omp::Clause clauseId,
       parser::CharBlock clauseSource, llvm::omp::Directive dirId);
+  void SetAllowedClauseOverride(llvm::omp::Clause clauseId,
+      llvm::omp::Directive dirId, llvm::omp::Version since);
   void CheckArgumentObjectKind(const parser::OmpClause &x);
   void CheckDirectiveSpelling(
       parser::CharBlock spelling, llvm::omp::Directive id);
@@ -391,7 +395,7 @@ private:
       llvm::iterator_range<ClauseIterator> endClauses);
   void AnalyzeObject(const parser::OmpObject &object);
   std::pair<const parser::OmpClause *, const parser::OmpClause *>
-  FindMutuallyExclusiveClauses(llvm::omp::ClauseSet exclusive,
+  FindMutuallyExclusiveClauses(llvm::omp::Clauses exclusive,
       const std::vector<const parser::OmpClause *> &clauses);
 
   const parser::OpenMPConstruct *GetCurrentConstruct() const;
@@ -408,9 +412,9 @@ private:
   void CheckStructureComponent(
       const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
   bool HasInvalidWorksharingNesting(
-      const parser::OmpDirectiveName &name, const llvm::omp::DirectiveSet &);
+      const parser::OmpDirectiveName &name, const llvm::omp::Directives &);
 
-  bool IsCloselyNestedRegion(const llvm::omp::DirectiveSet &set);
+  bool IsCloselyNestedRegion(const llvm::omp::Directives &set);
   bool IsNestedInDirective(llvm::omp::Directive directive);
   bool IsCombinedParallelWorksharing(llvm::omp::Directive directive) const;
   bool InTargetRegion();
@@ -419,6 +423,7 @@ private:
   bool HasRequires(llvm::omp::Clause req);
   void CheckAllowedMapTypes(
       parser::OmpMapType::Value, llvm::ArrayRef<parser::OmpMapType::Value>);
+  void CheckCloseModifierOnMapMembers();
 
   llvm::StringRef getClauseName(llvm::omp::Clause clause) override;
   llvm::StringRef getDirectiveName(llvm::omp::Directive directive) override;
@@ -429,8 +434,6 @@ private:
   std::optional<IterTy> FindDuplicate(RangeTy &&);
 
   void CheckDependList(const parser::DataRef &);
-  void CheckDoacross(
-      const parser::OmpDoacross &doa, llvm::omp::Clause clauseId);
   void CheckDimsModifier(parser::CharBlock source, size_t numValues,
       const parser::OmpDimsModifier &x);
   void CheckTypeParamInquiry(const parser::CharBlock &source,

@@ -88,6 +88,14 @@ if(NOT "${LIBC_TEST_FLOAT_RANGE_COUNT}" MATCHES "^[1-9][0-9]*$")
     "Expected a positive integer.")
 endif()
 
+set(LIBC_TEST_MAX_CONCURRENCY "" CACHE STRING
+  "Maximum number of threads/concurrency for libc tests (empty for hardware concurrency).")
+if(LIBC_TEST_MAX_CONCURRENCY AND NOT "${LIBC_TEST_MAX_CONCURRENCY}" MATCHES "^[1-9][0-9]*$")
+  message(FATAL_ERROR
+    "Invalid LIBC_TEST_MAX_CONCURRENCY: ${LIBC_TEST_MAX_CONCURRENCY}. "
+    "Expected a positive integer.")
+endif()
+
 set(LIBC_LINK_OPTIONS_DEFAULT "" CACHE STRING "Arguments used when linking.")
 set(LIBC_TEST_LINK_OPTIONS_DEFAULT "" CACHE STRING "Common link options for all the tests.")
 
@@ -119,44 +127,85 @@ set(LIBC_TEST_HERMETIC_ONLY "" OFF CACHE BOOL "Only enable hermetic tests.")
 
 list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT ${LIBC_COMMON_TUNE_OPTIONS})
 
-# Check --print-resource-dir to find the compiler resource dir if this flag
-# is supported by the compiler.
-execute_process(
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-  COMMAND ${CMAKE_CXX_COMPILER} --print-resource-dir
-  RESULT_VARIABLE COMMAND_RETURN_CODE
-  OUTPUT_VARIABLE COMPILER_RESOURCE_DIR
-)
-# Retrieve the host compiler's resource dir.
-if(COMMAND_RETURN_CODE EQUAL 0)
-  set(COMPILER_RESOURCE_DIR
-    "${COMPILER_RESOURCE_DIR}" CACHE PATH "path to compiler resource dir"
-  )
-  message(STATUS "Set COMPILER_RESOURCE_DIR to "
-    "${COMPILER_RESOURCE_DIR} using --print-resource-dir")
-else()
-  # Try with GCC option: -print-search-dirs, which will output in the form:
-  #   install: <path>
-  #   programs: ........
-  # So we try to capture the <path> after "install: " in the first line of the
-  # output.
-  execute_process(
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    COMMAND ${CMAKE_CXX_COMPILER} -print-search-dirs
-    RESULT_VARIABLE COMMAND_RETURN_CODE
-    OUTPUT_VARIABLE COMPILER_RESOURCE_DIR
-  )
-  if(COMMAND_RETURN_CODE EQUAL 0)
-    string(REPLACE " " ";" COMPILER_RESOURCE_DIR ${COMPILER_RESOURCE_DIR})
-    string(REPLACE "\n" ";" COMPILER_RESOURCE_DIR "${COMPILER_RESOURCE_DIR}")
-    list(GET COMPILER_RESOURCE_DIR 1 COMPILER_RESOURCE_DIR)
-    message(STATUS "Set COMPILER_RESOURCE_DIR to "
-      "${COMPILER_RESOURCE_DIR} using --print-search-dirs")
-  else()
+# Find the compiler resource dir for compilers that support it.
+if(NOT COMPILER_RESOURCE_DIR)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    execute_process(
+      COMMAND ${CMAKE_CXX_COMPILER} --print-resource-dir
+      RESULT_VARIABLE COMMAND_RETURN_CODE
+      OUTPUT_VARIABLE RES_DIR
+      ERROR_QUIET
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(COMMAND_RETURN_CODE EQUAL 0)
+      set(COMPILER_RESOURCE_DIR
+        "${RES_DIR}" CACHE PATH "path to compiler resource dir"
+      )
+      message(STATUS "Set COMPILER_RESOURCE_DIR to "
+        "${COMPILER_RESOURCE_DIR} using --print-resource-dir")
+    endif()
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    execute_process(
+      COMMAND ${CMAKE_CXX_COMPILER} -print-search-dirs
+      RESULT_VARIABLE COMMAND_RETURN_CODE
+      OUTPUT_VARIABLE RES_DIR
+      ERROR_QUIET
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(COMMAND_RETURN_CODE EQUAL 0 AND RES_DIR MATCHES "install:[ \t]*([^\r\n]+)")
+      string(STRIP "${CMAKE_MATCH_1}" RES_DIR)
+      set(COMPILER_RESOURCE_DIR
+        "${RES_DIR}" CACHE PATH "path to compiler resource dir"
+      )
+      message(STATUS "Set COMPILER_RESOURCE_DIR to "
+        "${COMPILER_RESOURCE_DIR} using --print-search-dirs")
+    endif()
+  elseif(MSVC)
     if(LIBC_TARGET_OS_IS_GPU)
       message(FATAL_ERROR "COMPILER_RESOURCE_DIR must be set for GPU builds")
     else()
-      set(COMPILER_RESOURCE_DIR OFF)
+      set(COMPILER_RESOURCE_DIR OFF CACHE PATH "path to compiler resource dir")
+      message(STATUS "COMPILER_RESOURCE_DIR not set (not supported by MSVC)")
+    endif()
+  else()
+    # Try generic options for other compilers.
+    execute_process(
+      COMMAND ${CMAKE_CXX_COMPILER} --print-resource-dir
+      RESULT_VARIABLE COMMAND_RETURN_CODE
+      OUTPUT_VARIABLE RES_DIR
+      ERROR_QUIET
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(COMMAND_RETURN_CODE EQUAL 0)
+      set(COMPILER_RESOURCE_DIR
+        "${RES_DIR}" CACHE PATH "path to compiler resource dir"
+      )
+      message(STATUS "Set COMPILER_RESOURCE_DIR to "
+        "${COMPILER_RESOURCE_DIR} using --print-resource-dir")
+    else()
+      execute_process(
+        COMMAND ${CMAKE_CXX_COMPILER} -print-search-dirs
+        RESULT_VARIABLE COMMAND_RETURN_CODE
+        OUTPUT_VARIABLE RES_DIR
+        ERROR_QUIET
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+      )
+      if(COMMAND_RETURN_CODE EQUAL 0 AND RES_DIR MATCHES "install:[ \t]*([^\r\n]+)")
+        string(STRIP "${CMAKE_MATCH_1}" RES_DIR)
+        set(COMPILER_RESOURCE_DIR
+          "${RES_DIR}" CACHE PATH "path to compiler resource dir"
+        )
+        message(STATUS "Set COMPILER_RESOURCE_DIR to "
+          "${COMPILER_RESOURCE_DIR} using --print-search-dirs")
+      endif()
+    endif()
+  endif()
+
+  if(NOT COMPILER_RESOURCE_DIR AND NOT MSVC)
+    if(LIBC_TARGET_OS_IS_GPU)
+      message(FATAL_ERROR "COMPILER_RESOURCE_DIR must be set for GPU builds")
+    else()
+      set(COMPILER_RESOURCE_DIR OFF CACHE PATH "path to compiler resource dir")
       message(STATUS "COMPILER_RESOURCE_DIR not set
                       --print-resource-dir not supported by host compiler")
     endif()

@@ -1180,6 +1180,9 @@ bool RegAllocFastImpl::defineVirtReg(MachineInstr &MI, unsigned OpNum,
       }
 
       LRI->LastUse = nullptr;
+    } else if (!LRI->LastUse) {
+      // No spill was inserted, so nothing below reads this def.
+      MO.setIsDead(true);
     }
     // A def above spills only if a displacement above reloads again.
     LRI->LiveOut = false;

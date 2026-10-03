@@ -172,6 +172,9 @@ def SIbuffer_load_format_tfe : SDNode <"AMDGPUISD::BUFFER_LOAD_FORMAT_TFE", SDTB
 def SIbuffer_load_format_d16 : SDNode <"AMDGPUISD::BUFFER_LOAD_FORMAT_D16",
                                 SDTBufferLoad,
                                 [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
+def SIbuffer_load_format_d16_tfe : SDNode <"AMDGPUISD::BUFFER_LOAD_FORMAT_D16_TFE",
+                                    SDTBufferLoad,
+                                    [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
 
 def SDTBufferStore : SDTypeProfile<0, 8,
     [                    // vdata
@@ -3094,6 +3097,7 @@ def VOP_F16_F16_I16 : VOPProfile <[f16, f16, i16, untyped]>;
 def VOP_F16_F16_I32 : VOPProfile <[f16, f16, i32, untyped]>;
 def VOP_I16_I16_I16 : VOPProfile <[i16, i16, i16, untyped]>;
 def VOP_I16_I16_I16_ARITH : VOPProfile <[i16, i16, i16, untyped], /*EnableClamp=*/1>;
+def VOP_I16_I16_I32 : VOPProfile <[i16, i16, i32, untyped]>;
 def VOP_BF16_BF16_BF16 : VOPProfile <[bf16, bf16, bf16, untyped]>;
 
 def VOP_I16_I16_I16_I16 : VOPProfile <[i16, i16, i16, i16, untyped]>;

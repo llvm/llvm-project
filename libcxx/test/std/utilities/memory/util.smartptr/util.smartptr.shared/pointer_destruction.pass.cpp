@@ -15,13 +15,12 @@
 // XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 #include <cassert>
-#include <cstddef>
 #include <memory>
 #include <utility>
 
 #include "test_macros.h"
 
-static std::size_t pointer_count = 0;
+static size_t pointer_count = 0;
 
 template <class T>
 struct Pointer {
