@@ -10,7 +10,13 @@ from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase, DAPTestSession
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs, StoppedEvent, ThreadsArgs
 
 
-@skipIfWindows  # This is flakey on Windows: llvm.org/pr24668, llvm.org/pr38373
+# Needs both threads' breakpoint hits in one stop.
+# The in-process Windows plugin (ProcessWindows) reports one thread's exception
+# per stop.
+# lldb-server puts every hit that is already queued into the one stop, but
+# on a loaded machine the second thread can reach the trap only after the stop
+# was so it still flakes there.
+@skipIfWindows
 @skipIfLinux
 @requireThreadSupport
 class TestDAP_stopped_events(DAPTestCaseBase):
