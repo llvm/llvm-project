@@ -5652,7 +5652,7 @@ LoopVectorizationPlanner::computeBestVF() {
     return {VectorizationFactor(FirstPlan.getSingleVF(), 0, 0), &FirstPlan};
   }
 
-  if (hasPlanWithVF(UserVF) && hasForcedEpilogueVF() && VPlans.size() == 2) {
+  if (FirstPlan.hasVF(UserVF) && hasForcedEpilogueVF() && VPlans.size() == 2) {
     assert(VPlans[0]->getSingleVF() == UserVF &&
            "expected second plan to be for the forced UserVF");
     assert(VPlans[1]->getSingleVF() == EpilogueVectorizationForceVF &&
@@ -5793,6 +5793,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   RUN_VPLAN_PASS(VPlanTransforms::replicateByVF, BestVPlan, BestVF);
   bool HasBranchWeights =
       hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator());
+  RUN_VPLAN_PASS(VPlanTransforms::attachSpeculativeLoadChecks, BestVPlan,
+                 BestVF, PSE, OrigLoop, HasBranchWeights);
   if (HasBranchWeights) {
     std::optional<unsigned> VScale = Config.getVScaleForTuning();
     RUN_VPLAN_PASS(VPlanTransforms::addBranchWeightToMiddleTerminator,
@@ -6539,6 +6541,19 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
     RUN_VPLAN_PASS(VPlanTransforms::optimizeInductionLiveOutUsers, *Plan, PSE,
                    OrigLoop);
     return Plan;
+  }
+
+  if (auto *Oracle = vputils::findSpeculativeLoadOracle(*Plan)) {
+    auto IsLegal = [&](ElementCount VF) {
+      return all_of(Oracle->users(), [&](VPUser *U) {
+        auto *R = cast<VPWidenIntrinsicRecipe>(U);
+        return TTI.isLegalSpeculativeLoad(
+            toVectorTy(R->getScalarType(), VF),
+            R->getOperand(0)->getScalarType()->getPointerAddressSpace());
+      });
+    };
+    if (!LoopVectorizationPlanner::getDecisionAndClampRange(IsLegal, Range))
+      return nullptr;
   }
 
   using namespace llvm::VPlanPatternMatch;
@@ -8031,6 +8046,15 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     LLVM_DEBUG(dbgs() << "LV: Not interleaving due to EE with side effects.\n");
     IntDiagMsg = {"EEWithSideEffectsPreventsInterleaving",
                   "Unable to interleave due to early exit with side effects."};
+    InterleaveLoop = false;
+    IC = 1;
+  }
+
+  // FIXME: Enable interleaving for plans with speculative loads.
+  if (InterleaveLoop && vputils::findSpeculativeLoadOracle(*BestPlanPtr)) {
+    LLVM_DEBUG(dbgs() << "LV: Not interleaving loop with speculative loads.\n");
+    IntDiagMsg = {"SpeculativeLoadPreventsInterleaving",
+                  "Unable to interleave loop using speculative loads."};
     InterleaveLoop = false;
     IC = 1;
   }
