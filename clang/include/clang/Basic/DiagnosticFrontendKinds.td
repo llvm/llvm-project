@@ -567,4 +567,11 @@ def warn_dyndbg_unable_to_create_target : Warning<
 
 def err_dyndbg_no_instrumentation : Error<
     "'-fdynamic-debugging' unsupported with instrumentation (PGO/code coverage)">;
+
+def warn_fe_backend_uninitialized : Warning<
+  "field is uninitialized when used here">,
+  InGroup<Uninitialized>, DefaultIgnore;
+def warn_fe_backend_maybe_uninitialized : Warning<
+  "field may be uninitialized when used here">,
+  InGroup<UninitializedMaybe>, DefaultIgnore;
 }
