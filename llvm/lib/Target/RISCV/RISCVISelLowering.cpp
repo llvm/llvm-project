@@ -18118,8 +18118,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         Opc = RISCVISD::PSSHAR;
         ShAmt = DAG.getNode(ISD::AND, DL, XLenVT, ShAmt,
                             DAG.getConstant(31, DL, XLenVT));
-        ShAmt = DAG.getNode(ISD::SUB, DL, XLenVT,
-                            DAG.getConstant(0, DL, XLenVT), ShAmt);
+        ShAmt = DAG.getNegative(ShAmt, DL, XLenVT);
         break;
       }
 
