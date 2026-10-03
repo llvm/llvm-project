@@ -482,6 +482,15 @@ bool GreedyPatternRewriteDriver::processWorklist() {
       }
     });
 
+    // Folding an operation that uses its own result can loop forever, so
+    // skip it. Such operations are legal in unreachable code.
+    if (llvm::any_of(op->getOperands(), [op](Value operand) {
+          return operand.getDefiningOp() == op;
+        })) {
+      LLVM_DEBUG(logResultWithLine("failure", "operation uses its own result"));
+      continue;
+    }
+
     // If the operation is trivially dead - remove it.
     if (isOpTriviallyDead(op)) {
       rewriter.eraseOp(op);

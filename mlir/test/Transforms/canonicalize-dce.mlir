@@ -187,3 +187,23 @@ func.func @f() {
   %0 = "test.test_effects_result"() : () -> i32
   return
 }
+
+// -----
+
+// Test case: Terminate when a block becomes unreachable while patterns run.
+
+// CHECK:      func @f
+// CHECK-NEXT:   return
+
+func.func @f(%cond: i1, %init: i32) {
+  %true = arith.constant true
+  %c1 = arith.constant 1 : i32
+  cf.cond_br %true, ^exit, ^header(%init : i32)
+^header(%iv: i32):
+  cf.cond_br %cond, ^exit, ^latch
+^latch:
+  %next = arith.addi %iv, %c1 : i32
+  cf.br ^header(%next : i32)
+^exit:
+  return
+}
