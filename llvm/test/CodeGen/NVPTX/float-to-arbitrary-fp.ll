@@ -767,7 +767,7 @@ define <3 x i8> @to_f8e4m3fn_v3f32(<3 x float> %x) {
 ; CHECK-LABEL: to_f8e4m3fn_v3f32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<31>;
-; CHECK-NEXT:    .reg .b32 %r<174>;
+; CHECK-NEXT:    .reg .b32 %r<173>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [to_f8e4m3fn_v3f32_param_0];
@@ -969,9 +969,9 @@ define <3 x i8> @to_f8e4m3fn_v3f32(<3 x float> %x) {
 ; CHECK-NEXT:    setp.nan.f32 %p30, %r1, %r1;
 ; CHECK-NEXT:    selp.b32 %r169, 127, %r168, %p30;
 ; CHECK-NEXT:    prmt.b32 %r170, %r169, %r114, 0x3340U;
-; CHECK-NEXT:    prmt.b32 %r171, %r59, %r172, 0x3340U;
-; CHECK-NEXT:    prmt.b32 %r173, %r170, %r171, 0x5410U;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r173;
+; CHECK-NEXT:    prmt.b32 %r171, %r59, 0, 0x3340U;
+; CHECK-NEXT:    prmt.b32 %r172, %r170, %r171, 0x5410U;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r172;
 ; CHECK-NEXT:    ret;
   %r = call <3 x i8> @llvm.convert.to.arbitrary.fp.v3i8.v3f32(<3 x float> %x, metadata !"Float8E4M3FN", metadata !"round.tonearest", i1 false)
   ret <3 x i8> %r
