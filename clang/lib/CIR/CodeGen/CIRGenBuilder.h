@@ -539,7 +539,8 @@ public:
     if (destType == addr.getElementType())
       return addr;
 
-    auto ptrTy = getPointerTo(destType);
+    auto srcPtrTy = mlir::cast<cir::PointerType>(addr.getPointer().getType());
+    auto ptrTy = getPointerTo(destType, srcPtrTy.getAddrSpace());
     return Address(createBitcast(loc, addr.getPointer(), ptrTy), destType,
                    addr.getAlignment());
   }
