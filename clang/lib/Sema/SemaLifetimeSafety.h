@@ -606,8 +606,11 @@ private:
 
   std::pair<SourceLocation, std::string>
   getLifetimeBoundFixIt(const ParmVarDecl *Decl) {
+    SourceLocation EndLoc = Decl->getEndLoc();
+    EndLoc = S.getSourceManager().getExpansionRange(EndLoc).getEnd();
+
     SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
-        Decl->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
+        EndLoc, 0, S.getSourceManager(), S.getLangOpts());
     bool LeadingSpace = true;
 
     if (!Decl->getIdentifier()) {
@@ -628,8 +631,11 @@ private:
   std::pair<SourceLocation, std::string>
   getLifetimeBoundFixIt(const CXXMethodDecl *MD) {
     const auto MDL = MD->getTypeSourceInfo()->getTypeLoc();
+    SourceLocation EndLoc = MDL.getEndLoc();
+    EndLoc = S.getSourceManager().getExpansionRange(EndLoc).getEnd();
+
     SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
-        MDL.getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
+        EndLoc, 0, S.getSourceManager(), S.getLangOpts());
 
     if (const auto *FPT = MD->getType()->getAs<FunctionProtoType>();
         FPT && FPT->hasTrailingReturn()) {
