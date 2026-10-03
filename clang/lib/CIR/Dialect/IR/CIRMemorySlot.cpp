@@ -171,7 +171,7 @@ bool cir::CopyOp::canUsesBeRemoved(
 }
 
 //===----------------------------------------------------------------------===//
-// Interfaces for LoadOp
+// Interfaces for MatrixColumnMajorLoadOp
 //===----------------------------------------------------------------------===//
 
 bool cir::MatrixColumnMajorLoadOp::loadsFrom(const MemorySlot &slot) {
