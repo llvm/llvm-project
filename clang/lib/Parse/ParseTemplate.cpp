@@ -1392,9 +1392,16 @@ bool Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
         Template, TemplateArgs, OpenLoc);
   };
 
+  // Nested template-ids (e.g. `S<S<S<...>>>`) recurse through the parser's
+  // type/template disambiguation machinery, which is deeply recursive. Run the
+  // parse with the stack guard so that a deeply nested argument list (see
+  // https://github.com/llvm/llvm-project/issues/224114) continues on a fresh
+  // stack instead of overflowing the parser's stack.
   do {
     PreferredType.enterFunctionArgument(Tok.getLocation(), RunSignatureHelp);
-    ParsedTemplateArgument Arg = ParseTemplateArgument();
+    ParsedTemplateArgument Arg;
+    StackHandler.runWithSufficientStackSpace(
+        OpenLoc, [&Arg, this] { Arg = ParseTemplateArgument(); });
     SourceLocation EllipsisLoc;
     if (TryConsumeToken(tok::ellipsis, EllipsisLoc))
       Arg = Actions.ActOnPackExpansion(Arg, EllipsisLoc);
