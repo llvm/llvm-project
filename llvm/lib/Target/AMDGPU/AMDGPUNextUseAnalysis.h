@@ -309,6 +309,8 @@ public:
                            UseDistancePair *FurthestSubreg = nullptr,
                            DenseMap<const MachineOperand *, UseDistancePair>
                                *RelevantUses = nullptr) const;
+
+  void updateInstrIds(const MachineInstr *MI) const;
 };
 
 //==============================================================================
