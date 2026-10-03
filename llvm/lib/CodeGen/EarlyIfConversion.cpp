@@ -1230,8 +1230,20 @@ bool EarlyIfConverter::shouldConvertIf() {
   if (EnableDataDependentBranchAnalysis)
     DataDependent = isConditionDataDependent();
 
+  // A strongly biased branch has little misprediction cost to hide the
+  // critical-path extension introduced by speculative instructions and selects.
+  // Keep the existing budget for branches without a strongly preferred edge.
   unsigned CritLimit = DataDependent ? STI->getMispredictionPenalty()
                                      : STI->getMispredictionPenalty() / 2;
+  if (!DataDependent) {
+    BranchProbability TBBProb =
+        MBPI->getEdgeProbability(IfConv.Head, IfConv.TBB);
+    BranchProbability FBBProb =
+        MBPI->getEdgeProbability(IfConv.Head, IfConv.FBB);
+    BranchProbability ColdProb = std::min(TBBProb, FBBProb);
+    if (ColdProb < BranchProbability(1, 100))
+      CritLimit = ColdProb.scale(STI->getMispredictionPenalty());
+  }
 
   MachineBasicBlock &MBB = *IfConv.Head;
   MachineOptimizationRemarkEmitter MORE(*MBB.getParent(), nullptr);
@@ -1444,9 +1456,8 @@ EarlyIfConverterPass::run(MachineFunction &MF,
   MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   MachineLoopInfo &LI = MFAM.getResult<MachineLoopAnalysis>(MF);
   MachineTraceMetrics &MTM = MFAM.getResult<MachineTraceMetricsAnalysis>(MF);
-  MachineBranchProbabilityInfo *MBPI = nullptr;
-  if (EnableDataDependentBranchAnalysis)
-    MBPI = &MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
+  MachineBranchProbabilityInfo *MBPI =
+      &MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
 
   EarlyIfConverter Impl(MDT, LI, MTM, MBPI);
   bool Changed = Impl.run(MF);
@@ -1469,9 +1480,8 @@ bool EarlyIfConverterLegacy::runOnMachineFunction(MachineFunction &MF) {
   MachineLoopInfo &LI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   MachineTraceMetrics &MTM =
       getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
-  MachineBranchProbabilityInfo *MBPI = nullptr;
-  if (EnableDataDependentBranchAnalysis)
-    MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+  MachineBranchProbabilityInfo *MBPI =
+      &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
 
   return EarlyIfConverter(MDT, LI, MTM, MBPI).run(MF);
 }
