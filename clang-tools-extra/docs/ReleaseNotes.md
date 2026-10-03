@@ -205,6 +205,13 @@ infrastructure are described first, followed by tool-specific sections.
 - Improved {doc}`cppcoreguidelines-use-enum-class
   <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check by omitting unnamed enums from the `enum class` requirement, as previously the check suggested users an ill-formed fix.
 
+- Improved {doc}`cppcoreguidelines-virtual-class-destructor
+  <clang-tidy/checks/cppcoreguidelines/virtual-class-destructor>` check by
+  emitting the diagnostic and its fix-it notes at the destructor's location
+  instead of the class name, whenever the destructor is user-declared. The
+  diagnostics are still emitted at the class name for implicitly declared
+  destructors.
+
 - Improved {doc}`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check:
 
