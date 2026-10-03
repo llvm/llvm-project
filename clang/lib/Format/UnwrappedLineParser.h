@@ -153,7 +153,9 @@ private:
   bool parseBracedList(bool IsAngleBracket = false, bool IsEnum = false);
   bool parseParens(TokenType StarAndAmpTokenType = TT_Unknown,
                    bool InMacroCall = false);
-  void parseSquare(bool LambdaIntroducer = false);
+  // SkipLambda means the square does not begin a lambda expression. The opening
+  // square bracket is assumed to be consumed when it is true.
+  void parseSquare(bool SkipLambda = false);
   void keepAncestorBraces();
   void parseUnbracedBody(bool CheckEOF = false);
   void handleAttributes();
