@@ -18275,6 +18275,25 @@ libc_function(
     ],
 )
 
+############################## sys/prctl targets ##############################
+
+libc_function(
+    name = "prctl",
+    srcs = ["src/sys/prctl/linux/prctl.cpp"],
+    hdrs = ["src/sys/prctl/prctl.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
 ############################# sys/resource targets #############################
 
 libc_function(
