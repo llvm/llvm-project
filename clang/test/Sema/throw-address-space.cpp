@@ -29,7 +29,16 @@ void test_catch() {
                           // expected-error@-1 {{cannot catch reference with non-default address space}}
   }
   try {
-  } catch (as1_int_ptr &p) { // expected-error {{cannot catch reference with non-default address space}}
+  } catch (as1_int_ptr &p) { // expected-error {{cannot catch pointer with non-default address space}}
+  }
+  try {
+  } catch (as1_int *&p) { // expected-error {{cannot catch pointer with non-default address space}}
+  }
+  try {
+  } catch (int *[[clang::address_space(1)]] &p) { // expected-error {{cannot catch pointer with non-default address space}}
+  }
+  try {
+  } catch (int *[[clang::address_space(1)]] *p) { // expected-error {{cannot catch pointer with non-default address space}}
   }
   try {
   } catch (int &p) { // ok
@@ -38,6 +47,6 @@ void test_catch() {
   } catch (int *&p) { // ok
   }
   try {
-  } catch (as1_int p) { // ok: by-value, Mode == 0
+  } catch (as1_int p) { // ok
   }
 }
