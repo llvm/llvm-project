@@ -13,8 +13,8 @@
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=OPENMP
 
 // OPENMP: llvm-offload-binary{{.*}} {{.*}}.o --image=kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70,file={{.*}}.o --image=kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx90a,file={{.*}}.o
-// OPENMP: clang{{.*}} --target=nvptx64-nvidia-cuda -march=sm_70
-// OPENMP: clang{{.*}} --target=amdgcn-amd-amdhsa -mcpu=gfx90a
+// OPENMP: clang{{.*}} --target=nvptx64-nvidia-cuda -march=sm_70{{.*}} -v{{$}}
+// OPENMP: clang{{.*}} --target=amdgcn-amd-amdhsa -mcpu=gfx90a{{.*}} -v{{$}}
 // OPENMP: llvm-offload-binary{{.*}} -o {{.*}}.offload --image=file={{.*}}.img,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70
 // OPENMP: llvm-offload-binary{{.*}} -o {{.*}}.offload --image=file={{.*}}.img,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx90a
 // OPENMP: llvm-offload-wrapper{{.*}} --kind=openmp --triple=x86_64-unknown-linux-gnu -o [[BC:.*]].bc {{.*}}.offload {{.*}}.offload
@@ -42,8 +42,8 @@
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=CUDA
 
 // CUDA: llvm-offload-binary{{.*}} {{.*}}.o --image=kind=cuda,triple=nvptx64-nvidia-cuda,arch=sm_70,file={{.*}}.o --image=kind=cuda,triple=nvptx64-nvidia-cuda,arch=sm_52,file={{.*}}.o
-// CUDA: clang{{.*}} --target=nvptx64-nvidia-cuda -march=sm_70
-// CUDA: clang{{.*}} --target=nvptx64-nvidia-cuda -march=sm_52
+// CUDA: clang{{.*}} --target=nvptx64-nvidia-cuda -march=sm_70{{.*}} -v{{$}}
+// CUDA: clang{{.*}} --target=nvptx64-nvidia-cuda -march=sm_52{{.*}} -v{{$}}
 // CUDA: fatbinary{{.*}}--create [[FB:.*]].fatbin {{.*}}--image3=kind=elf,sm=70{{.*}}--image3=kind=elf,sm=52
 // CUDA: llvm-offload-wrapper{{.*}} --kind=cuda --triple=x86_64-unknown-linux-gnu -o [[BC:.*]].bc [[FB]].fatbin
 // CUDA: clang{{.*}} --no-default-config --target=x86_64-unknown-linux-gnu -c -fPIC -o {{.*}}.cuda.image.wrapper{{.*}}.o [[BC]].bc
@@ -59,8 +59,8 @@
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=HIP
 
 // HIP: llvm-offload-binary{{.*}} {{.*}}.o --image=kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx90a,file={{.*}}.o --image=kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx908,file={{.*}}.o
-// HIP: clang{{.*}} --target=amdgcn-amd-amdhsa -mcpu=gfx90a
-// HIP: clang{{.*}} --target=amdgcn-amd-amdhsa -mcpu=gfx908
+// HIP: clang{{.*}} --target=amdgcn-amd-amdhsa -mcpu=gfx90a{{.*}} -v{{$}}
+// HIP: clang{{.*}} --target=amdgcn-amd-amdhsa -mcpu=gfx908{{.*}} -v{{$}}
 // HIP: clang-offload-bundler{{.*}}-targets=host-x86_64-unknown-linux-gnu,hip-amdgcn-amd-amdhsa--gfx90a,hip-amdgcn-amd-amdhsa--gfx908{{.*}}-output=[[FB:.*]].hipfb
 // HIP: llvm-offload-wrapper{{.*}} --kind=hip --triple=x86_64-unknown-linux-gnu -o [[BC:.*]].bc [[FB]].hipfb
 // HIP: clang{{.*}} --no-default-config --target=x86_64-unknown-linux-gnu -c -fPIC -o {{.*}}.hip.image.wrapper{{.*}}.o [[BC]].bc
@@ -76,7 +76,7 @@
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=SYCL
 
 // SYCL: llvm-offload-binary{{.*}} {{.*}}.o --image=kind=sycl,triple=spirv64-unknown-unknown,arch=generic,file={{.*}}.o
-// SYCL: clang{{.*}} --target=spirv64-unknown-unknown {{.*}} --sycl-link{{$}}
+// SYCL: clang{{.*}} --target=spirv64-unknown-unknown {{.*}} --sycl-link -v{{$}}
 // SYCL: llvm-offload-wrapper{{.*}} --kind=sycl --triple=x86_64-unknown-linux-gnu -o [[BC:.*]].bc {{.*}}.img
 // SYCL: clang{{.*}} --no-default-config --target=x86_64-unknown-linux-gnu -c -fPIC -o {{.*}}.sycl.image.wrapper{{.*}}.o [[BC]].bc
 
