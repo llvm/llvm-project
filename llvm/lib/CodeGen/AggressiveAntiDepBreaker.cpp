@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
@@ -34,6 +35,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <optional>
 
 using namespace llvm;
 
@@ -182,6 +184,214 @@ void AggressiveAntiDepBreaker::StartBlock(MachineBasicBlock *BB) {
 void AggressiveAntiDepBreaker::FinishBlock() {
   delete State;
   State = nullptr;
+}
+
+namespace {
+
+struct LoopCarriedRename {
+  SmallVector<MachineOperand *, 8> Refs;
+  BitVector Candidates;
+};
+
+static bool overlapsReg(const MachineOperand &MO, MCRegister Reg,
+                        const TargetRegisterInfo &TRI) {
+  return MO.isReg() && MO.getReg().isPhysical() &&
+         TRI.regsOverlap(MO.getReg(), Reg);
+}
+
+static std::optional<LoopCarriedRename>
+findLoopCarriedRename(MachineBasicBlock &MBB, MCRegister Reg,
+                      const TargetInstrInfo &TII,
+                      const TargetRegisterInfo &TRI) {
+  LoopCarriedRename Rename{{}, BitVector(TRI.getNumRegs(), true)};
+  enum class ScanPhase { BeforeFirstDef, RenameRange, AfterSecondDef };
+  ScanPhase Phase = ScanPhase::BeforeFirstDef;
+  bool FoundUseInRenameRange = false;
+  bool FoundUseAfterSecondDef = false;
+
+  auto AddRenameRef = [&](MachineOperand &MO) {
+    if (!MO.isDebug()) {
+      const TargetRegisterClass *RC =
+          MO.getParent()->getRegClassConstraint(MO.getOperandNo(), &TII, &TRI);
+      if (!RC)
+        return false;
+      Rename.Candidates &= TRI.getAllocatableSet(*MBB.getParent(), RC);
+    }
+    Rename.Refs.push_back(&MO);
+    return true;
+  };
+
+  for (MachineInstr &MI : MBB) {
+    if (MI.isBundle())
+      return std::nullopt;
+    if (MI.isDebugInstr()) {
+      if (Phase == ScanPhase::RenameRange) {
+        for (MachineOperand &MO : MI.operands()) {
+          if (!overlapsReg(MO, Reg, TRI))
+            continue;
+          if (MI.isDebugPHI())
+            continue;
+          if (MO.getReg() != Reg)
+            return std::nullopt;
+          if (!AddRenameRef(MO))
+            return std::nullopt;
+        }
+      }
+      continue;
+    }
+    if (MI.isCall() || MI.isInlineAsm() || TII.isPredicated(MI))
+      return std::nullopt;
+    for (const MachineOperand &MO : MI.operands())
+      if (MO.isRegMask())
+        return std::nullopt;
+
+    bool HasFullDef = false;
+    for (MachineOperand &MO : MI.operands()) {
+      if (!overlapsReg(MO, Reg, TRI))
+        continue;
+      if (MO.getReg() != Reg || MO.getSubReg())
+        return std::nullopt;
+      if (MO.isDef() && !MO.isImplicit())
+        HasFullDef = true;
+    }
+
+    if (Phase == ScanPhase::BeforeFirstDef) {
+      for (MachineOperand &MO : MI.operands())
+        if (overlapsReg(MO, Reg, TRI) && MO.readsReg())
+          return std::nullopt;
+      if (!HasFullDef)
+        continue;
+
+      Phase = ScanPhase::RenameRange;
+      for (MachineOperand &MO : MI.operands()) {
+        if (!overlapsReg(MO, Reg, TRI))
+          continue;
+        if (MO.readsReg() || MO.isImplicit() || !MO.isRenamable())
+          return std::nullopt;
+        if (!AddRenameRef(MO))
+          return std::nullopt;
+      }
+      continue;
+    }
+
+    if (Phase == ScanPhase::RenameRange) {
+      if (HasFullDef) {
+        Phase = ScanPhase::AfterSecondDef;
+        for (MachineOperand &MO : MI.operands()) {
+          if (!overlapsReg(MO, Reg, TRI))
+            continue;
+          if (MO.getReg() != Reg || MO.getSubReg() || MO.isImplicit())
+            return std::nullopt;
+          if (MO.isDef()) {
+            if (MO.isEarlyClobber())
+              return std::nullopt;
+            continue;
+          }
+          if (MO.readsReg()) {
+            if (MO.isTied() || !MO.isRenamable())
+              return std::nullopt;
+            if (!AddRenameRef(MO))
+              return std::nullopt;
+            FoundUseInRenameRange = true;
+          }
+        }
+        continue;
+      }
+
+      for (MachineOperand &MO : MI.operands()) {
+        if (!overlapsReg(MO, Reg, TRI))
+          continue;
+        if (MO.getReg() != Reg || MO.getSubReg() || MO.isDef() ||
+            MO.isImplicit() || !MO.readsReg() || !MO.isRenamable())
+          return std::nullopt;
+        if (!AddRenameRef(MO))
+          return std::nullopt;
+        FoundUseInRenameRange = true;
+      }
+      continue;
+    }
+
+    for (MachineOperand &MO : MI.operands())
+      if (overlapsReg(MO, Reg, TRI) && MO.readsReg())
+        FoundUseAfterSecondDef = true;
+  }
+
+  if (Phase != ScanPhase::AfterSecondDef || !FoundUseInRenameRange ||
+      !FoundUseAfterSecondDef)
+    return std::nullopt;
+
+  return Rename;
+}
+
+} // namespace
+
+void AggressiveAntiDepBreaker::BreakLoopCarriedAntiDependencies(
+    MachineBasicBlock &MBB, const MachineLoopInfo &MLI) {
+  const MachineLoop *Loop = MLI.getLoopFor(&MBB);
+  if (!Loop || Loop->getHeader() != &MBB || Loop->getNumBlocks() != 1 ||
+      !MBB.isSuccessor(&MBB))
+    return;
+
+  // Track every register unit referenced or clobbered anywhere in the block.
+  LiveRegUnits UnavailableUnits(*TRI);
+  // Preserve the conservative whole-register treatment of boundary liveness.
+  for (const auto &LI : MBB.liveins())
+    UnavailableUnits.addReg(LI.PhysReg);
+  for (const MachineBasicBlock *Succ : MBB.successors())
+    for (const auto &LI : Succ->liveins())
+      UnavailableUnits.addReg(LI.PhysReg);
+  const BitVector Pristine =
+      MBB.getParent()->getFrameInfo().getPristineRegs(*MBB.getParent());
+  for (unsigned Reg : Pristine.set_bits())
+    UnavailableUnits.addReg(MCRegister(Reg));
+
+  SmallVector<MCRegister, 8> DefRegs;
+  BitVector Seen(TRI->getNumRegs());
+  for (MachineInstr &MI : MBB) {
+    if (MI.isBundle())
+      return;
+    UnavailableUnits.accumulate(MI);
+    // Keep the whole-block-unused policy for physical register operands that
+    // accumulate() ignores, such as undef uses.
+    for (const MachineOperand &MO : MI.operands())
+      if (MO.isReg() && MO.getReg() && MO.getReg().isPhysical() &&
+          !MO.isDef() && !MO.readsReg())
+        UnavailableUnits.addReg(MO.getReg().asMCReg());
+    if (MI.isDebugOrPseudoInstr())
+      continue;
+    for (MachineOperand &MO : MI.operands()) {
+      if (!MO.isReg() || !MO.isDef() || MO.isImplicit() ||
+          !MO.getReg().isPhysical() || !MO.getReg() || MO.getSubReg())
+        continue;
+      MCRegister Reg = MO.getReg().asMCReg();
+      if (!Seen.test(Reg.id())) {
+        Seen.set(Reg.id());
+        DefRegs.push_back(Reg);
+      }
+    }
+  }
+
+  for (MCRegister Reg : DefRegs) {
+    std::optional<LoopCarriedRename> Rename =
+        findLoopCarriedRename(MBB, Reg, *TII, *TRI);
+    if (!Rename)
+      continue;
+
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+    for (MCRegister NewReg : RegClassInfo.getOrder(RC)) {
+      if (NewReg == Reg || !Rename->Candidates.test(NewReg.id()) ||
+          !MRI.isAllocatable(NewReg) || !UnavailableUnits.available(NewReg))
+        continue;
+
+      LLVM_DEBUG(dbgs() << "Breaking loop-carried anti-dependence on "
+                        << printReg(Reg, TRI) << " using "
+                        << printReg(NewReg, TRI) << '\n');
+      for (MachineOperand *MO : Rename->Refs)
+        MO->setReg(NewReg);
+      UnavailableUnits.addReg(NewReg);
+      break;
+    }
+  }
 }
 
 void AggressiveAntiDepBreaker::Observe(MachineInstr &MI, unsigned Count,
