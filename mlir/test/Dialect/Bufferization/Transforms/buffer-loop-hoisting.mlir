@@ -570,35 +570,95 @@ func.func @loop_unreachable_parent() {
 
 // -----
 
-// An exit alias, invariant extent and unrelated carried buffer permit hoisting.
+// An exit alias does not carry the allocation back to before.
 // CHECK-LABEL: func @while_exit_alias(
-// CHECK-SAME: %{{.*}}: index, %[[SIZE:.*]]: index,
-//      CHECK: %[[ALLOC:.*]] = memref.alloc(%[[SIZE]])
-// CHECK-NEXT: %[[LAST:.*]]:2 = scf.while
+//      CHECK: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: %[[LAST:.*]] = scf.while
 // CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
-//      CHECK: scf.condition{{.*}} %[[ALLOC]], %{{.*}}
-//      CHECK: ^bb0(%[[CURRENT:.*]]: memref<?xindex>, %[[KEEP:.*]]: memref<1xindex>):
+//      CHECK: scf.condition{{.*}} %[[ALLOC]]
+//      CHECK: ^bb0(%[[CURRENT:.*]]: memref<1xindex>):
 // CHECK-NEXT: %{{.*}} = memref.load %[[CURRENT]]
-//      CHECK: scf.yield %{{.*}}, %[[KEEP]]
-//      CHECK: %[[VIEW:.*]] = memref.subview %[[LAST]]#0
-//      CHECK: %[[CAST:.*]] = memref.cast %[[VIEW]]
-//      CHECK: memref.load %[[CAST]]
-func.func @while_exit_alias(%n: index, %size: index, %other: memref<1xindex>) -> index {
+//      CHECK: memref.load %[[LAST]]
+func.func @while_exit_alias(%n: index) -> index {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
-  %last:2 = scf.while (%i = %c0, %keep = %other)
-      : (index, memref<1xindex>) -> (memref<?xindex>, memref<1xindex>) {
-    %buffer = memref.alloc(%size) : memref<?xindex>
-    memref.store %i, %buffer[%c0] : memref<?xindex>
+  %last = scf.while (%i = %c0) : (index) -> memref<1xindex> {
+    %buffer = memref.alloc() : memref<1xindex>
+    memref.store %i, %buffer[%c0] : memref<1xindex>
     %continue = arith.cmpi slt, %i, %n : index
-    scf.condition(%continue) %buffer, %keep : memref<?xindex>, memref<1xindex>
+    scf.condition(%continue) %buffer : memref<1xindex>
   } do {
-  ^bb0(%current: memref<?xindex>, %keep: memref<1xindex>):
-    %value = memref.load %current[%c0] : memref<?xindex>
+  ^bb0(%current: memref<1xindex>):
+    %value = memref.load %current[%c0] : memref<1xindex>
     %next = arith.addi %value, %c1 : index
-    scf.yield %next, %keep : index, memref<1xindex>
+    scf.yield %next : index
   }
-  %view = memref.subview %last#0[0] [1] [1] : memref<?xindex> to memref<1xindex>
+  %result = memref.load %last[%c0] : memref<1xindex>
+  return %result : index
+}
+
+// -----
+
+// A loop-invariant allocation extent permits hoisting with an exit alias.
+// CHECK-LABEL: func @while_exit_alias_invariant_extent(
+// CHECK-SAME: %{{.*}}: i1, %[[SIZE:.*]]: index)
+// CHECK: %[[ALLOC:.*]] = memref.alloc(%[[SIZE]])
+// CHECK-NEXT: %{{.*}} = scf.while
+// CHECK-NEXT: scf.condition{{.*}} %[[ALLOC]]
+func.func @while_exit_alias_invariant_extent(%condition: i1, %size: index) {
+  %last = scf.while () : () -> memref<?xindex> {
+    %buffer = memref.alloc(%size) : memref<?xindex>
+    scf.condition(%condition) %buffer : memref<?xindex>
+  } do {
+  ^bb0(%current: memref<?xindex>):
+    scf.yield
+  }
+  return
+}
+
+// -----
+
+// An unrelated buffer may be carried to before while the allocation is hoisted.
+// CHECK-LABEL: func @while_exit_alias_unrelated_carried(
+// CHECK: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: %{{.*}}:2 = scf.while
+// CHECK-NEXT: scf.condition{{.*}} %[[ALLOC]], %{{.*}}
+// CHECK: ^bb0(%{{.*}}: memref<1xindex>, %[[KEEP:.*]]: memref<1xindex>):
+// CHECK-NEXT: scf.yield %[[KEEP]]
+func.func @while_exit_alias_unrelated_carried(%condition: i1, %other: memref<1xindex>) {
+  %last:2 = scf.while (%keep = %other)
+      : (memref<1xindex>) -> (memref<1xindex>, memref<1xindex>) {
+    %buffer = memref.alloc() : memref<1xindex>
+    scf.condition(%condition) %buffer, %keep : memref<1xindex>, memref<1xindex>
+  } do {
+  ^bb0(%current: memref<1xindex>, %keep: memref<1xindex>):
+    scf.yield %keep : memref<1xindex>
+  }
+  return
+}
+
+// -----
+
+// Casts and subviews of the loop result are included in the alias check.
+// CHECK-LABEL: func @while_exit_alias_view(
+// CHECK: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: %[[LAST:.*]] = scf.while
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+// CHECK: scf.condition{{.*}} %[[ALLOC]]
+// CHECK: %[[VIEW:.*]] = memref.subview %[[LAST]]
+// CHECK-NEXT: %[[CAST:.*]] = memref.cast %[[VIEW]]
+// CHECK-NEXT: %{{.*}} = memref.load %[[CAST]]
+func.func @while_exit_alias_view(%condition: i1) -> index {
+  %c0 = arith.constant 0 : index
+  %last = scf.while () : () -> memref<2xindex> {
+    %buffer = memref.alloc() : memref<2xindex>
+    memref.store %c0, %buffer[%c0] : memref<2xindex>
+    scf.condition(%condition) %buffer : memref<2xindex>
+  } do {
+  ^bb0(%current: memref<2xindex>):
+    scf.yield
+  }
+  %view = memref.subview %last[0] [1] [1] : memref<2xindex> to memref<1xindex>
   %cast = memref.cast %view : memref<1xindex> to memref<?xindex>
   %result = memref.load %cast[%c0] : memref<?xindex>
   return %result : index
@@ -657,6 +717,37 @@ func.func @no_hoist_while_exit_capture(%condition: i1) {
   }
   func.call @capture(%last) : (memref<1xindex>) -> ()
   return
+}
+
+// -----
+
+// A loop result used in a nested region is outside the supported alias uses.
+// CHECK-LABEL: func @no_hoist_while_exit_nested_region(
+// CHECK-NOT: memref.alloc
+// CHECK: %[[LAST:.*]] = scf.while
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+// CHECK-NEXT: scf.condition{{.*}} %[[ALLOC]]
+// CHECK: scf.if
+// CHECK-NEXT: %[[VALUE:.*]] = memref.load %[[LAST]]
+// CHECK-NEXT: scf.yield %[[VALUE]] : index
+func.func @no_hoist_while_exit_nested_region(%condition: i1, %read: i1) -> index {
+  %c0 = arith.constant 0 : index
+  %last = scf.while () : () -> memref<1xindex> {
+    %buffer = memref.alloc() : memref<1xindex>
+    memref.store %c0, %buffer[%c0] : memref<1xindex>
+    scf.condition(%condition) %buffer : memref<1xindex>
+  } do {
+  ^bb0(%current: memref<1xindex>):
+    scf.yield
+  }
+  %result = scf.if %read -> (index) {
+    %value = memref.load %last[%c0] : memref<1xindex>
+    scf.yield %value : index
+  } else {
+    scf.yield %c0 : index
+  }
+  return %result : index
 }
 
 // -----

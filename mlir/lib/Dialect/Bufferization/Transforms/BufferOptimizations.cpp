@@ -77,8 +77,7 @@ canHoistFromWhile(scf::WhileOp loop,
                   const BufferViewFlowAnalysis::ValueSetT &aliases) {
   // Further hoisting across an enclosing loop with unmodeled parallel
   // execution could share the allocation across iterations.
-  if (!isa<FunctionOpInterface>(loop->getParentOp()) ||
-      !loop->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
+  if (!isa<FunctionOpInterface>(loop->getParentOp()))
     return false;
 
   // Check all aliases, including loop results: memory effects alone do not rule
@@ -229,15 +228,11 @@ struct BufferAllocationHoistingStateBase {
   /// The current placement block (if any).
   Block *placementBlock;
 
-  /// The forward alias closure of the current allocation.
-  const BufferViewFlowAnalysis::ValueSetT &aliases;
-
   /// Initializes the state base.
-  BufferAllocationHoistingStateBase(
-      DominanceInfo *dominators, Value allocValue, Block *placementBlock,
-      const BufferViewFlowAnalysis::ValueSetT &aliases)
+  BufferAllocationHoistingStateBase(DominanceInfo *dominators, Value allocValue,
+                                    Block *placementBlock)
       : dominators(dominators), allocValue(allocValue),
-        placementBlock(placementBlock), aliases(aliases) {}
+        placementBlock(placementBlock) {}
 };
 
 /// Implements the actual hoisting logic for allocation nodes.
@@ -376,7 +371,11 @@ private:
 /// that hoists allocations into dominator blocks while keeping them inside of
 /// loops.
 struct BufferAllocationHoistingState : BufferAllocationHoistingStateBase {
-  using BufferAllocationHoistingStateBase::BufferAllocationHoistingStateBase;
+  BufferAllocationHoistingState(DominanceInfo *dominators, Value allocValue,
+                                Block *placementBlock,
+                                const BufferViewFlowAnalysis::ValueSetT &)
+      : BufferAllocationHoistingStateBase(dominators, allocValue,
+                                          placementBlock) {}
 
   /// Computes the upper bound for the placement block search.
   Block *computeUpperBound(Block *dominatorBlock, Block *dependencyBlock) {
@@ -410,10 +409,18 @@ struct BufferAllocationHoistingState : BufferAllocationHoistingStateBase {
 /// A state implementation compatible with the `BufferAllocationHoisting` class
 /// that hoists allocations out of loops.
 struct BufferAllocationLoopHoistingState : BufferAllocationHoistingStateBase {
-  using BufferAllocationHoistingStateBase::BufferAllocationHoistingStateBase;
+  /// The forward alias closure of the current allocation.
+  const BufferViewFlowAnalysis::ValueSetT &aliases;
 
   /// Remembers the dominator block of all aliases.
   Block *aliasDominatorBlock = nullptr;
+
+  BufferAllocationLoopHoistingState(
+      DominanceInfo *dominators, Value allocValue, Block *placementBlock,
+      const BufferViewFlowAnalysis::ValueSetT &aliases)
+      : BufferAllocationHoistingStateBase(dominators, allocValue,
+                                          placementBlock),
+        aliases(aliases) {}
 
   /// Computes the upper bound for the placement block search.
   Block *computeUpperBound(Block *dominatorBlock, Block *dependencyBlock) {

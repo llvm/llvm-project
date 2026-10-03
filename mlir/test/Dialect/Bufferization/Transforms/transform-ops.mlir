@@ -349,3 +349,37 @@ module attributes {transform.with_named_sequence} {
     return %result : index
   }
 }
+
+// -----
+
+// Targeting the module still keeps the allocation inside the non-isolated
+// function, even when the allocation size is captured from outside it.
+// CHECK-LABEL: module attributes
+// CHECK: %[[SIZE:.*]] = arith.constant 4 : index
+// CHECK-NOT: memref.alloc
+// CHECK: test.conversion_func_op @buffer_loop_hoisting_nonisolated_function(
+// CHECK: %[[ALLOC:.*]] = memref.alloc(%[[SIZE]])
+// CHECK-NEXT: %[[LAST:.*]] = scf.while
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+// CHECK: scf.condition{{.*}} %[[ALLOC]]
+// CHECK: memref.load %[[LAST]]
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    transform.bufferization.buffer_loop_hoisting %root : !transform.any_op
+    transform.yield
+  }
+  %size = arith.constant 4 : index
+  test.conversion_func_op @buffer_loop_hoisting_nonisolated_function(%condition: i1) {
+    %c0 = arith.constant 0 : index
+    %last = scf.while () : () -> memref<?xindex> {
+      %buffer = memref.alloc(%size) : memref<?xindex>
+      memref.store %c0, %buffer[%c0] : memref<?xindex>
+      scf.condition(%condition) %buffer : memref<?xindex>
+    } do {
+    ^bb0(%current: memref<?xindex>):
+      scf.yield
+    }
+    %result = memref.load %last[%c0] : memref<?xindex>
+    "test.return"() : () -> ()
+  }
+}
