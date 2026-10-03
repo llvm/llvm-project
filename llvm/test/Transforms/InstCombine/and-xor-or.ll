@@ -5313,3 +5313,74 @@ define i1 @test_and_xor_freely_invertable_multiuse(i32 %x, i32 %y, i1 %z) {
   %and = and i1 %xor, %z
   ret i1 %and
 }
+
+define i1 @fold_unsigned_range_with_small_complement(i8 %x) {
+; CHECK-LABEL: define {{[^@]+}}@fold_unsigned_range_with_small_complement
+; CHECK-SAME: (i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], -3
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP1]], 8
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %v1 = add i8 %x, -8
+  %v3 = icmp ugt i8 %v1, 2
+  %v5 = icmp eq i8 %v1, 1
+  %r = or i1 %v3, %v5
+  ret i1 %r
+}
+
+define i1 @fold_unsigned_range_with_small_complement_commuted(i8 %x) {
+; CHECK-LABEL: define {{[^@]+}}@fold_unsigned_range_with_small_complement_commuted
+; CHECK-SAME: (i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], -3
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP1]], 8
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %v1 = add i8 %x, -8
+  %v3 = icmp ugt i8 %v1, 2
+  %v5 = icmp eq i8 %v1, 1
+  %r = or i1 %v5, %v3
+  ret i1 %r
+}
+
+define i1 @fold_unsigned_range_with_wraparound(i8 %x) {
+; CHECK-LABEL: define {{[^@]+}}@fold_unsigned_range_with_wraparound
+; CHECK-SAME: (i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[X]], -10
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[X]], -8
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %v1 = add i8 %x, 10
+  %v3 = icmp ugt i8 %v1, 2
+  %v5 = icmp eq i8 %v1, 1
+  %r = or i1 %v3, %v5
+  ret i1 %r
+}
+
+define i1 @fold_unsigned_range_without_hole(i8 %x) {
+; CHECK-LABEL: define {{[^@]+}}@fold_unsigned_range_without_hole
+; CHECK-SAME: (i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X]], -11
+; CHECK-NEXT:    [[V3:%.*]] = icmp ult i8 [[TMP1]], -3
+; CHECK-NEXT:    ret i1 [[V3]]
+;
+  %v1 = add i8 %x, -8
+  %v3 = icmp ugt i8 %v1, 2
+  %v5 = icmp eq i8 %v1, 5
+  %r = or i1 %v3, %v5
+  ret i1 %r
+}
+
+define i1 @do_not_expand_large_complement(i8 %x) {
+; CHECK-LABEL: define {{[^@]+}}@do_not_expand_large_complement
+; CHECK-SAME: (i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X]], -13
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[TMP1]], -4
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %v1 = add i8 %x, -8
+  %v3 = icmp ugt i8 %v1, 4
+  %v5 = icmp eq i8 %v1, 0
+  %r = or i1 %v3, %v5
+  ret i1 %r
+}
