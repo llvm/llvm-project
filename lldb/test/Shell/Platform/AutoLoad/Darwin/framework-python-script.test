@@ -1,0 +1,46 @@
+# REQUIRES: python, system-darwin
+#
+# Tests that we load a Python script from inside a .framework bundle and the
+# various ways target.load-script-from-symbol-file controls that behaviour.
+#
+# The binary is deliberately built without debug info, so there is no dSYM and
+# no symbol file: shipping scripts in a framework is a distribution mechanism
+# in its own right and must not depend on either.
+
+# RUN: split-file %s %t
+# RUN: mkdir -p %t/TestFramework.framework/Resources/Python
+# RUN: %clang_host %t/main.c -o %t/TestFramework.framework/TestFramework
+# RUN: cp %t/framework_script.py %t/TestFramework.framework/Resources/Python/TestFramework.py
+#
+# RUN: %lldb -b \
+# RUN:   -o 'settings set target.load-script-from-symbol-file false' \
+# RUN:   -o 'target create %t/TestFramework.framework/TestFramework' 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not=FRAMEWORK_SCRIPT --implicit-check-not=warning
+#
+# RUN: %lldb -b \
+# RUN:   -o 'settings set target.load-script-from-symbol-file warn' \
+# RUN:   -o 'target create %t/TestFramework.framework/TestFramework' 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not=FRAMEWORK_SCRIPT --check-prefix=CHECK-WARN --strict-whitespace
+#
+# RUN: %lldb -b \
+# RUN:   -o 'settings set target.load-script-from-symbol-file true' \
+# RUN:   -o 'target create %t/TestFramework.framework/TestFramework' 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not=warning --check-prefix=CHECK-LOADED
+
+# CHECK-WARN:      warning: 'TestFramework' contains an untrusted debug script. To run this script in this debug session:
+# CHECK-WARN-EMPTY:
+# CHECK-WARN-NEXT:{{^}}    command script import "{{.*}}/TestFramework.framework/Resources/Python/TestFramework.py"
+# CHECK-WARN-EMPTY:
+# CHECK-WARN-NEXT: To run all discovered debug scripts in this session:
+# CHECK-WARN-EMPTY:
+# CHECK-WARN-NEXT:{{^}}    settings set target.load-script-from-symbol-file true
+
+# CHECK-LOADED: FRAMEWORK_SCRIPT
+
+#--- main.c
+int main() { return 0; }
+
+#--- framework_script.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("FRAMEWORK_SCRIPT", file=sys.stderr)
