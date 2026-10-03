@@ -6,8 +6,8 @@
 ! CHECK-LABEL: func.func private @_copy_ref_class_ptr_none(
 ! CHECK-SAME:    %arg0: [[TYPE:!fir.ref<!fir.class<!fir.ptr<none>>>]],
 ! CHECK-SAME:    %arg1: [[TYPE]]) attributes {llvm.linkage = #llvm.linkage<internal>} {
-! CHECK:   %[[DST:.*]]:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_copy_ref_class_ptr_none_dst"}
-! CHECK:   %[[SRC:.*]]:2 = hlfir.declare %arg1 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_copy_ref_class_ptr_none_src"}
+! CHECK:   %[[DST:.*]]:2 = hlfir.declare %arg0 uniq_name("_copy_ref_class_ptr_none_dst") fortran_attrs<pointer>
+! CHECK:   %[[SRC:.*]]:2 = hlfir.declare %arg1 uniq_name("_copy_ref_class_ptr_none_src") fortran_attrs<pointer>
 ! CHECK:   %[[LD:.*]] = fir.load %[[SRC]]#0 : [[TYPE]]
 ! CHECK:   fir.store %[[LD]] to %[[DST]]#0 : [[TYPE]]
 ! CHECK:   return
