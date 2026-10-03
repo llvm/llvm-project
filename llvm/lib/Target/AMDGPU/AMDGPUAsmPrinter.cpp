@@ -837,12 +837,16 @@ const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
   }
 
+  const MCExpr *KernelCodePropExpr =
+      MCConstantExpr::create(KernelCodeProperties, Ctx);
+  // The dynamic-stack bit is reserved in code objects before V5.
+  if (CodeObjectVersion < AMDGPU::AMDHSA_COV5)
+    return KernelCodePropExpr;
+
   // CurrentProgramInfo.DynamicCallStack is a MCExpr and could be
   // un-evaluatable at this point so it cannot be conditionally checked here.
   // Instead, we'll directly shift the possibly unknown MCExpr into its place
   // and bitwise-or it into KernelCodeProperties.
-  const MCExpr *KernelCodePropExpr =
-      MCConstantExpr::create(KernelCodeProperties, Ctx);
   const MCExpr *OrValue = MCConstantExpr::create(
       amdhsa::KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK_SHIFT, Ctx);
   OrValue = MCBinaryExpr::createShl(CurrentProgramInfo.DynamicCallStack,
