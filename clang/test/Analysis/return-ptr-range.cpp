@@ -8,7 +8,7 @@ int arr[10]; // expected-note{{Original object declared here}} expected-note{{Or
 int *ptr;
 
 int *test_global_ptr() {
-  do { // expected-note{{Loop condition is false.  Exiting loop}}
+  do { // expected-note{{Loop condition is false. Exiting loop}}
     int x = conjure_index();
     ptr = arr + x; // expected-note{{Value assigned to 'ptr'}}
     if (x != 20) // expected-note{{Assuming 'x' is equal to 20}}
@@ -22,7 +22,7 @@ int *test_global_ptr() {
 
 int *test_local_ptr() {
   int *local_ptr;
-  do { // expected-note{{Loop condition is false.  Exiting loop}}
+  do { // expected-note{{Loop condition is false. Exiting loop}}
     int x = conjure_index();
     local_ptr = arr + x; // expected-note{{Value assigned to 'local_ptr'}}
     if (x != 20) // expected-note{{Assuming 'x' is equal to 20}}

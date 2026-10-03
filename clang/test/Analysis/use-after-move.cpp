@@ -303,8 +303,8 @@ void loopTest() {
   }
   {
     A a;
-    for (int i = 0; i < 2; i++) { // peaceful-note    {{Loop condition is true.  Entering loop body}}
-                                  // peaceful-note@-1 {{Loop condition is true.  Entering loop body}}
+    for (int i = 0; i < 2; i++) { // peaceful-note    {{Loop condition is true. Entering loop body}}
+                                  // peaceful-note@-1 {{Loop condition is true. Entering loop body}}
                                   // peaceful-note@-2 {{Loop condition is false. Execution jumps to the end of the function}}
       rightRefCall(std::move(a)); // no-warning
     }
@@ -317,8 +317,8 @@ void loopTest() {
   }
   {
     A a;
-    for (int i = 0; i < 2; i++) { // peaceful-note    {{Loop condition is true.  Entering loop body}}
-                                  // peaceful-note@-1 {{Loop condition is true.  Entering loop body}}
+    for (int i = 0; i < 2; i++) { // peaceful-note    {{Loop condition is true. Entering loop body}}
+                                  // peaceful-note@-1 {{Loop condition is true. Entering loop body}}
                                   // peaceful-note@-2 {{Loop condition is false. Execution jumps to the end of the function}}
       leftRefCall(a);             // no-warning
     }
@@ -331,8 +331,8 @@ void loopTest() {
   }
   {
     A a;
-    for (int i = 0; i < 2; i++) { // peaceful-note    {{Loop condition is true.  Entering loop body}}
-                                  // peaceful-note@-1 {{Loop condition is true.  Entering loop body}}
+    for (int i = 0; i < 2; i++) { // peaceful-note    {{Loop condition is true. Entering loop body}}
+                                  // peaceful-note@-1 {{Loop condition is true. Entering loop body}}
                                   // peaceful-note@-2 {{Loop condition is false. Execution jumps to the end of the function}}
       constCopyOrMoveCall(a);     // no-warning
     }
@@ -345,8 +345,8 @@ void loopTest() {
   }
   {
     A a;
-    for (int i = 0; i < 2; i++) { // peaceful-note    {{Loop condition is true.  Entering loop body}}
-                                  // peaceful-note@-1 {{Loop condition is true.  Entering loop body}}
+    for (int i = 0; i < 2; i++) { // peaceful-note    {{Loop condition is true. Entering loop body}}
+                                  // peaceful-note@-1 {{Loop condition is true. Entering loop body}}
                                   // peaceful-note@-2 {{Loop condition is false. Execution jumps to the end of the function}}
       moveInsideFunctionCall(a);  // no-warning
     }
@@ -359,16 +359,16 @@ void loopTest() {
   }
   {
     A a;
-    for (int i = 0; i < 2; i++) { // peaceful-note    {{Loop condition is true.  Entering loop body}}
-                                  // peaceful-note@-1 {{Loop condition is true.  Entering loop body}}
+    for (int i = 0; i < 2; i++) { // peaceful-note    {{Loop condition is true. Entering loop body}}
+                                  // peaceful-note@-1 {{Loop condition is true. Entering loop body}}
                                   // peaceful-note@-2 {{Loop condition is false. Execution jumps to the end of the function}}
       copyOrMoveCall(a);          // no-warning
     }
   }
   {
     A a;
-    for (int i = 0; i < bignum(); i++) { // peaceful-note    {{Loop condition is true.  Entering loop body}}
-                                         // peaceful-note@-1 {{Loop condition is true.  Entering loop body}}
+    for (int i = 0; i < bignum(); i++) { // peaceful-note    {{Loop condition is true. Entering loop body}}
+                                         // peaceful-note@-1 {{Loop condition is true. Entering loop body}}
       constCopyOrMoveCall(std::move(a)); // peaceful-note {{Object 'a' is moved}}
                                          // peaceful-warning@-1 {{Moved-from object 'a' is moved}}
                                          // peaceful-note@-2    {{Moved-from object 'a' is moved}}
