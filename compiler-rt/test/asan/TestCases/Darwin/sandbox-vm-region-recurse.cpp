@@ -1,4 +1,5 @@
-// Check that if mach_vm_region_recurse is disallowed by sandbox, we report a message saying so.
+// Check that if mach_vm_region_recurse is disallowed by sandbox, we report a
+// hint but still gracefully proceed with shadow placement and detect errors.
 
 // RUN: %clangxx_asan -O0 %s -o %t
 // RUN: not %run sandbox-exec -p '(version 1)(allow default)(deny syscall-mig (kernel-mig-routine mach_vm_region_recurse))' %t 2>&1 | FileCheck --check-prefix=CHECK-DENY %s
@@ -20,7 +21,6 @@ int main() {
   free(x);
   return x[5];
   // CHECK-ALLOW: {{.*ERROR: AddressSanitizer: heap-use-after-free on address}}
-  // CHECK-DENY-NOT: {{.*ERROR: AddressSanitizer: heap-use-after-free on address}}
   // CHECK-ALLOW: {{READ of size 1 at 0x.* thread T0}}
   // CHECK-ALLOW: {{    #0 0x.* in main}}
   // CHECK-ALLOW: {{freed by thread T0 here:}}
@@ -30,4 +30,5 @@ int main() {
   // CHECK-ALLOW: {{    #0 0x.* in malloc}}
   // CHECK-ALLOW: {{    #1 0x.* in main}}
   // CHECK-DENY: {{.*HINT: Ensure mach_vm_region_recurse is allowed under sandbox}}
+  // CHECK-DENY: {{.*ERROR: AddressSanitizer: heap-use-after-free on address}}
 }
