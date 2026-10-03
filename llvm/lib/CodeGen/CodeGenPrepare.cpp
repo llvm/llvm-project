@@ -7391,20 +7391,17 @@ bool CodeGenPrepare::optimizeExtUses(Instruction *I) {
       continue;
 
     // Both src and def are live in this block. Rewrite the use.
-    // Reuse an extension directly when a wider extension of the same kind is
-    // free for its users.
+    // Reuse a zero extension directly when a wider zero extension is free.
     // Going through a truncation instead can hide an extending-load
     // opportunity.
-    if (I->getOpcode() == User->getOpcode() &&
+    if (isa<ZExtInst>(I) && isa<ZExtInst>(User) &&
         User->getType()->getScalarSizeInBits() >
-            I->getType()->getScalarSizeInBits()) {
+            I->getType()->getScalarSizeInBits() &&
+        TLI->isZExtFree(I->getType(), User->getType())) {
       U = I;
-      if (TLI->isExtFree(User)) {
-        ++NumExtUses;
-        MadeChange = true;
-        continue;
-      }
-      U = Src;
+      ++NumExtUses;
+      MadeChange = true;
+      continue;
     }
 
     Instruction *&InsertedTrunc = InsertedTruncs[UserBB];
