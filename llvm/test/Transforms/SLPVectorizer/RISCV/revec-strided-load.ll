@@ -194,8 +194,8 @@ entry:
 define void @non_aligned_stride_scalar(ptr %in0, ptr %out0) {
 ; CHECK-LABEL: @non_aligned_stride_scalar(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <5 x i8> @llvm.masked.load.v5i8.p0(ptr align 2 [[IN0:%.*]], <5 x i1> <i1 true, i1 true, i1 false, i1 true, i1 true>, <5 x i8> poison)
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <5 x i8> [[TMP0]], <5 x i8> poison, <4 x i32> <i32 0, i32 1, i32 3, i32 4>
+; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i16> @llvm.experimental.vp.strided.load.v2i16.p0.i64(ptr align 2 [[IN0:%.*]], i64 3, <2 x i1> splat (i1 true), i32 2)
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i16> [[TMP0]] to <4 x i8>
 ; CHECK-NEXT:    store <4 x i8> [[TMP1]], ptr [[OUT0:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
