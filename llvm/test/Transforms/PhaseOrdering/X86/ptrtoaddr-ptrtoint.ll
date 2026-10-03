@@ -136,9 +136,6 @@ define i64 @cse_two_guards(ptr %base, i64 %n, ptr %cmp) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[LOOP1_INC_PREHEADER41:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP4]], 1152921504606846972
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[N_VEC]], 48
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i64 [[N_FR]], 2
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -146,6 +143,9 @@ define i64 @cse_two_guards(ptr %base, i64 %n, ptr %cmp) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[N_VEC]], 48
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i64 [[N_FR]], 2
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = zext i1 [[TMP7]] to i64
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP4]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[LOOP2_BODY_LR_PH:.*]], label %[[LOOP1_INC_PREHEADER41]]
@@ -171,8 +171,6 @@ define i64 @cse_two_guards(ptr %base, i64 %n, ptr %cmp) {
 ; CHECK:       [[VECTOR_PH19]]:
 ; CHECK-NEXT:    [[N_VEC21:%.*]] = and i64 [[TMP28]], 1152921504606846974
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT22:%.*]] = insertelement <2 x double> poison, double [[TMP9]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[N_VEC21]], 48
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i64, ptr [[CMP]], align 8, !alias.scope [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT24:%.*]] = insertelement <2 x i64> poison, i64 [[TMP12]], i64 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = uitofp <2 x i64> [[BROADCAST_SPLATINSERT24]] to <2 x double>
@@ -202,12 +200,14 @@ define i64 @cse_two_guards(ptr %base, i64 %n, ptr %cmp) {
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT33]], [[N_VEC21]]
 ; CHECK-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK34:.*]], label %[[VECTOR_BODY28]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK34]]:
+; CHECK-NEXT:    [[TMP29:%.*]] = mul i64 [[N_VEC21]], 48
+; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP29]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = tail call i64 @llvm.experimental.vector.extract.last.active.v2i64(<2 x i64> [[TMP24]], <2 x i1> [[TMP23]], i64 [[TMP0]])
 ; CHECK-NEXT:    [[CMP_N35:%.*]] = icmp eq i64 [[TMP28]], [[N_VEC21]]
 ; CHECK-NEXT:    br i1 [[CMP_N35]], label %[[RET]], label %[[LOOP2_BODY_PREHEADER]]
 ; CHECK:       [[LOOP2_BODY_PREHEADER]]:
 ; CHECK-NEXT:    [[RES12_PH:%.*]] = phi i64 [ [[TMP0]], %[[VECTOR_MEMCHECK]] ], [ [[TMP0]], %[[LOOP2_BODY_LR_PH]] ], [ [[TMP26]], %[[MIDDLE_BLOCK34]] ]
-; CHECK-NEXT:    [[IT2_010_PH:%.*]] = phi ptr [ [[BASE]], %[[VECTOR_MEMCHECK]] ], [ [[BASE]], %[[LOOP2_BODY_LR_PH]] ], [ [[TMP11]], %[[MIDDLE_BLOCK34]] ]
+; CHECK-NEXT:    [[IT2_010_PH:%.*]] = phi ptr [ [[BASE]], %[[VECTOR_MEMCHECK]] ], [ [[BASE]], %[[LOOP2_BODY_LR_PH]] ], [ [[TMP30]], %[[MIDDLE_BLOCK34]] ]
 ; CHECK-NEXT:    br label %[[LOOP2_BODY:.*]]
 ; CHECK:       [[LOOP1_INC]]:
 ; CHECK-NEXT:    [[R8:%.*]] = phi i64 [ [[SEL]], %[[LOOP1_INC]] ], [ [[R8_PH]], %[[LOOP1_INC_PREHEADER41]] ]
@@ -330,7 +330,7 @@ define i1 @lambda(ptr %lam, ptr %cmp) {
 
 define ptr @gep_base_cancel(ptr %p, ptr %end, ptr noalias %a) {
 ; CHECK-LABEL: define noundef ptr @gep_base_cancel(
-; CHECK-SAME: ptr nofree readonly captures(address) [[P:%.*]], ptr nofree readnone captures(address) [[END:%.*]], ptr noalias nofree captures(address, ret: address, provenance) [[A:%.*]]) local_unnamed_addr #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: ptr nofree readonly captures(address) [[P:%.*]], ptr nofree readnone captures(address) [[END:%.*]], ptr noalias nofree captures(address, ret: address, provenance) [[A:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[IN_BOUNDS6:%.*]] = icmp ult ptr [[P]], [[END]]
 ; CHECK-NEXT:    br i1 [[IN_BOUNDS6]], label %[[BODY_PREHEADER:.*]], label %[[COMMON_RET:.*]]
