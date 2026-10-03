@@ -653,3 +653,54 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
   LatchBr->setOperand(
       0, Builder.createICmp(CmpInst::ICMP_EQ, AVLNext, Plan.getZero(AVLTy)));
 }
+
+void VPlanTransforms::foldPredicateMerge(VPlan &Plan, VPCostContext &CostCtx) {
+  if (Plan.hasScalarVFOnly())
+    return;
+
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      // Wrap in-loop operations and the vp.merge (cleanup tail poison) to
+      // expression recipes since the vp.merge will be optmized out in the
+      // backend.
+      VPValue *True;
+      if (!match(&R,
+                 m_Intrinsic<Intrinsic::vp_merge>(m_VPValue(), m_VPValue(True),
+                                                  m_VPValue(), m_VPValue())))
+        continue;
+      auto *VPMerge = cast<VPWidenIntrinsicRecipe>(&R);
+      if (!True->hasOneUse())
+        continue;
+
+      // Query TTI to check if vp.merge can be folded.
+      if (any_of(Plan.vectorFactors(), [&](ElementCount VF) {
+            return VPMerge->computeCost(VF, CostCtx) != 0;
+          }))
+        continue;
+
+      VPSingleDefRecipe *InLoopOp =
+          dyn_cast<VPSingleDefRecipe>(VPMerge->getOperand(1));
+      // TODO: Support cmp-select reductions.
+      if (!InLoopOp || !isa<VPWidenRecipe, VPWidenIntrinsicRecipe>(InLoopOp) ||
+          match(InLoopOp, m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
+        continue;
+
+      // Only convert the in-loop operations with tail-folding predication to
+      // expression recipe.
+      if (!all_of(VPMerge->users(), [](VPUser *U) {
+            if (auto *R = dyn_cast<VPSingleDefRecipe>(U))
+              return isa<VPReductionPHIRecipe>(R) ||
+                     match(R, m_ComputeReductionResult(m_VPValue()));
+            return false;
+          }))
+        continue;
+
+      VPBasicBlock *VPBB = VPMerge->getParent();
+      auto IP = std::next(VPMerge->getIterator());
+      auto *Expr = new VPExpressionRecipe(InLoopOp, VPMerge);
+      Expr->insertBefore(*VPBB, IP);
+      VPMerge->replaceAllUsesWith(Expr);
+    }
+  }
+}

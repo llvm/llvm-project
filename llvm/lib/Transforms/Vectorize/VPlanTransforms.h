@@ -655,6 +655,10 @@ struct VPlanTransforms {
   static void narrowInductionTruncates(VPlan &Plan, VFRange &Range,
                                        const TargetTransformInfo &TTI,
                                        PredicatedScalarEvolution &PSE);
+
+  /// Wrap recipes in \p Plan into expression recipes based on \p CostCtx to
+  /// reduce cost/register pressure.
+  static void foldPredicateMerge(VPlan &Plan, VPCostContext &CostCtx);
 };
 
 } // namespace llvm
