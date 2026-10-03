@@ -135,7 +135,6 @@ class VectorLegalizer {
   SDValue ExpandVSELECT(SDNode *Node);
   SDValue ExpandVP_MERGE(SDNode *Node);
   SDValue ExpandVP_REM(SDNode *Node);
-  SDValue ExpandGET_ACTIVE_LANE_MASK(SDNode *N);
   SDValue ExpandLOOP_DEPENDENCE_MASK(SDNode *N);
   SDValue ExpandMaskedBinOp(SDNode *N);
   SDValue ExpandSELECT(SDNode *Node);
@@ -1317,7 +1316,7 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     Results.push_back(TLI.expandCMP(Node, DAG));
     return;
   case ISD::GET_ACTIVE_LANE_MASK:
-    if (SDValue R = ExpandGET_ACTIVE_LANE_MASK(Node))
+    if (SDValue R = TLI.expandGetActiveLaneMask(Node, DAG))
       Results.push_back(R);
     return;
   case ISD::LOOP_DEPENDENCE_WAR_MASK:
@@ -1741,47 +1740,6 @@ SDValue VectorLegalizer::ExpandVP_REM(SDNode *Node) {
   SDValue Div = DAG.getNode(DivOpc, DL, VT, Dividend, Divisor, Mask, EVL);
   SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, Divisor, Div);
   return DAG.getNode(ISD::SUB, DL, VT, Dividend, Mul);
-}
-
-SDValue VectorLegalizer::ExpandGET_ACTIVE_LANE_MASK(SDNode *N) {
-  SDLoc DL(N);
-
-  SDValue Start = N->getOperand(0);
-  SDValue End = N->getOperand(1);
-  EVT VT = N->getValueType(0);
-  EVT OpVT = Start.getValueType();
-
-  if (VT.isScalableVector())
-    return SDValue();
-
-  // Try a promoted comparison type to simplify saturation.
-  EVT PromoteVT = VT.changeVectorElementType(*DAG.getContext(), OpVT);
-  if (TLI.isTypeLegal(PromoteVT) &&
-      isUIntN(OpVT.getScalarSizeInBits(), VT.getVectorNumElements())) {
-    SDValue StartV = DAG.getSplat(PromoteVT, DL, Start);
-    SDValue Seq = DAG.getStepVector(DL, PromoteVT);
-    Seq = DAG.getNode(ISD::UADDSAT, DL, PromoteVT, Seq, StartV);
-
-    EVT MaskVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
-                                        PromoteVT);
-    SDValue EndV = DAG.getSplat(PromoteVT, DL, End);
-    SDValue Mask = DAG.getSetCC(DL, MaskVT, Seq, EndV, ISD::SETULT);
-    return DAG.getBoolExtOrTrunc(Mask, DL, VT, PromoteVT);
-  }
-
-  // Is VT's element type big enough to hold all rebased indices?
-  if (!isUIntN(VT.getScalarSizeInBits(), VT.getVectorNumElements()))
-    return SDValue();
-
-  // Rebase and saturate the termination value.
-  SDValue Max = DAG.getConstant(maxUIntN(VT.getScalarSizeInBits()), DL, OpVT);
-  End = DAG.getNode(ISD::USUBSAT, DL, OpVT, End, Start);
-  End = DAG.getNode(ISD::UMIN, DL, OpVT, End, Max);
-
-  // cmp <0, 1, 2, 3...>, End
-  SDValue EndV = DAG.getSplat(VT, DL, End);
-  SDValue StepVector = DAG.getStepVector(DL, VT);
-  return DAG.getSetCC(DL, VT, StepVector, EndV, ISD::SETULT);
 }
 
 SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
