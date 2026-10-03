@@ -38,6 +38,8 @@ enum class HashFunctionMode {
 
 namespace llvm {
 
+class ProfileSummaryInfo;
+
 // A vector of locations (the pair of (instruction, operand) indices) reachable
 // from a parameter.
 using ParamLocs = SmallVector<IndexPair, 4>;
@@ -53,6 +55,10 @@ class GlobalMergeFunc {
   std::unique_ptr<StableFunctionMap> LocalFunctionMap;
 
   const ModuleSummaryIndex *Index;
+
+  void analyze(Module &M, const ProfileSummaryInfo *PSI);
+  bool merge(Module &M, const StableFunctionMap *FunctionMap,
+             const ProfileSummaryInfo *PSI);
 
 public:
   /// The suffix used to identify the merged function that parameterizes
