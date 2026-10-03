@@ -740,6 +740,7 @@ public:
                                             GetElementPtrInst *GEP,
                                             CmpInst &ICI,
                                             ConstantInt *AndCst = nullptr);
+  Instruction *foldFCmpIntToFP(FCmpInst &I);
   Instruction *foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,
                                     Constant *RHSC);
   Instruction *foldICmpAddOpConst(Value *X, const APInt &C, CmpPredicate Pred);
