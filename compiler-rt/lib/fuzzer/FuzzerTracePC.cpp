@@ -384,6 +384,37 @@ void TracePC::HandleCmp(uintptr_t PC, T Arg1, T Arg2) {
   ValueProfileMap.AddValue(PC * 128 + 64 + AbsoluteDistance);
 }
 
+ATTRIBUTE_NO_SANITIZE_ALL
+void TracePC::HandleDataflow(uintptr_t PC, uint32_t Loc, const void *Ptr,
+                             uint32_t Size, const uint64_t *Offsets,
+                             uint32_t NumFields) {
+  if (!Ptr)
+    return;  // argument optimized away, or skipped (base-pointer inline asm)
+  const uint8_t *Base = reinterpret_cast<const uint8_t *>(Ptr);
+  auto Load = [](const uint8_t *P, uint64_t N) -> uint64_t {
+    uint64_t V = 0;
+    if (N > sizeof(V))
+      N = sizeof(V);
+    __builtin_memcpy(&V, P, static_cast<size_t>(N));
+    return V;
+  };
+  // Bind the value to its site (PC, argument/return, field) so the same value
+  // seen at different sites stays distinct, then fold it into the value profile:
+  // a never-before-seen value at that site becomes a new feature (this mirrors
+  // kcov-dataflow's (pc, value) coverage). Consumed only under -use_value_profile.
+  auto Fold = [&](uint32_t FieldId, uint64_t V) {
+    uintptr_t Idx = (PC * 3 + Loc) ^ (FieldId * 0x9E3779B1u) ^ V;
+    ValueProfileMap.AddValueModPrime(Idx);
+  };
+  if (Offsets && NumFields) {
+    // Struct arg/return: Offsets is {off0, sz0, off1, sz1, ...}; read each field.
+    for (uint32_t i = 0; i < NumFields && i < 32; i++)
+      Fold(i + 1, Load(Base + Offsets[i * 2], Offsets[i * 2 + 1]));
+  } else if (Size) {
+    Fold(0, Load(Base, Size));
+  }
+}
+
 ATTRIBUTE_NO_SANITIZE_MEMORY
 static size_t InternalStrnlen(const char *S, size_t MaxLen) {
   size_t Len = 0;
@@ -476,6 +507,27 @@ ATTRIBUTE_TARGET_POPCNT
 void __sanitizer_cov_trace_cmp8(uint64_t Arg1, uint64_t Arg2) {
   uintptr_t PC = reinterpret_cast<uintptr_t>(GET_CALLER_PC());
   fuzzer::TPC.HandleCmp(PC, Arg1, Arg2);
+}
+
+// Dataflow coverage (-fsanitize-coverage=trace-args,trace-ret). Unlike the cmp
+// callbacks, PC is passed by the instrumentation (the function address), not via
+// GET_CALLER_PC. Folds the observed argument/return value into the value profile.
+ATTRIBUTE_INTERFACE
+ATTRIBUTE_NO_SANITIZE_ALL
+void __sanitizer_cov_trace_args(uint64_t PC, uint32_t ArgIdx, uint32_t ArgSize,
+                                const void *Arg, const uint64_t *Offsets,
+                                uint32_t NumFields) {
+  fuzzer::TPC.HandleDataflow(static_cast<uintptr_t>(PC), ArgIdx, Arg, ArgSize,
+                             Offsets, NumFields);
+}
+
+ATTRIBUTE_INTERFACE
+ATTRIBUTE_NO_SANITIZE_ALL
+void __sanitizer_cov_trace_ret(uint64_t PC, uint32_t RetSize, const void *Ret,
+                               const uint64_t *Offsets, uint32_t NumFields) {
+  // 0xFFFF distinguishes the return site from arguments sharing this PC.
+  fuzzer::TPC.HandleDataflow(static_cast<uintptr_t>(PC), 0xFFFF, Ret, RetSize,
+                             Offsets, NumFields);
 }
 
 ATTRIBUTE_INTERFACE
