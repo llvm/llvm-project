@@ -492,6 +492,12 @@ features cannot lower the translation-unit ABI level;
 
 - Improved how Unicode characters are displayed in diagnostic messages.
 
+- Clang no longer retains source comments in the AST when nothing will read them
+  back. Comments are now collected only when they may be consumed (e.g. with
+  ``-fparse-all-comments``, when ``-Wdocumentation`` is enabled, when emitting a
+  PCH/module, or during code completion), reducing memory overhead for typical
+  compilations.
+
 - `-Wtautological-pointer-compare` and `-Wpointer-bool-conversion` now
   diagnose a reference to a function (e.g. of type `void (&)()`) compared
   against or converted to a null pointer, the same as a bare function name.
@@ -585,6 +591,7 @@ features cannot lower the translation-unit ABI level;
   (e.g. `({ s.b; })`) was not subject to integer promotion, unlike an ordinary
   bit-field access. (#GH221542)
 - No longer crashing due to follow-on diagnostics when there is an invalid operand in a logical operator involving a vector operand. (#GH227588)
+- Fixed assertion failures caused by stale linkage information when an extern variable or function declaration is merged with a preceding static declaration. (#GH204759, #GH204754)
 - Fixed a crash due to typo correction mishandling custom keywords `_virtual_inheritance` and `_multiple_inheritance` in `-fms-compatibility` mode. (#GH228003)
   
 #### Bug Fixes to Compiler Builtins
@@ -602,6 +609,10 @@ features cannot lower the translation-unit ABI level;
   reference to a vector type; `vec_step` (in C++ for OpenCL) and
   `__builtin_ptrauth_type_discriminator` similarly no longer accept reference
   types that their evaluation silently mishandled. (#GH216997)
+- Fixed a crash when constant-evaluating `__builtin_align_up`, `__builtin_align_down`,
+  or `__builtin_is_aligned` with pointers without an underlying object. Null pointers 
+  are handled as aligned values, while other base-less pointers are rejected during constant
+  evaluation.
 
 #### Bug Fixes to Attribute Support
 
@@ -804,6 +815,11 @@ features cannot lower the translation-unit ABI level;
   take effect, causing them to be dropped from llvm.used and omitted from
   the object file. (#GH226572)
 
+- Fixed an assertion failure when the initializer of a variable template
+  specialization with a deduced type is instantiated from inside a lambda in
+  the initializer of another specialization of the same variable template.
+  (#GH134148)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -989,6 +1005,9 @@ features cannot lower the translation-unit ABI level;
 - `QualifierOrder` now supports `typedef`, `consteval`, `constinit`,
   `thread_local`, `extern`, `mutable`, `signed`, `unsigned`, `long`, `short`,
   and `explicit` declaration specifiers.
+- Extend `IndentAccessModifiers` with `AfterFirstAccessModifier` to indent
+  members before the first explicit access modifier by one level. Existing
+  configuration values `true` and `false` remain supported.
 
 ### libclang
 
