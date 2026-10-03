@@ -11,7 +11,7 @@ define void @_start() {
 ; CHECK-NEXT:    movzbl -9(%rsp), %ecx
 ; CHECK-NEXT:    movzbl -10(%rsp), %edx
 ; CHECK-NEXT:    movzbl -11(%rsp), %esi
-; CHECK-NEXT:    movzbl %cl, %edi
+; CHECK-NEXT:    movl %ecx, %edi
 ; CHECK-NEXT:    shrb %cl
 ; CHECK-NEXT:    movb %cl, -2(%rsp)
 ; CHECK-NEXT:    andl $31, %eax
