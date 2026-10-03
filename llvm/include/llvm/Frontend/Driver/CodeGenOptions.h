@@ -13,7 +13,9 @@
 #ifndef LLVM_FRONTEND_DRIVER_CODEGENOPTIONS_H
 #define LLVM_FRONTEND_DRIVER_CODEGENOPTIONS_H
 
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
+#include <optional>
 #include <string>
 
 namespace llvm {
@@ -23,6 +25,30 @@ enum class VectorLibrary;
 } // namespace llvm
 
 namespace llvm::driver {
+/// Driver options which affect the target's frame pointer policy. Frontends
+/// are responsible for translating their option table into this structure.
+struct FramePointerOptions {
+  /// Whether an optimization level other than -O0 is enabled.
+  bool Optimized = false;
+
+  /// Whether instrumentation such as -pg requires a frame pointer.
+  bool InstrumentationRequiresFramePointer = false;
+
+  /// Explicit overrides for non-leaf frame records, leaf frame records, and
+  /// reserving the frame pointer register, respectively.
+  std::optional<bool> EnableFramePointer;
+  std::optional<bool> EnableLeafFramePointer;
+  std::optional<bool> ReserveFramePointerRegister;
+
+  bool MaintainValidFrameChain = false;
+  bool FramePointerImpliesLeaf = false;
+};
+
+/// Determine the frame pointer policy for \p TargetTriple.
+LLVM_ABI llvm::FramePointerKind
+getFramePointerKind(const llvm::Triple &TargetTriple,
+                    const FramePointerOptions &Opts);
+
 // The current supported vector libraries in enum \VectorLibrary are 9(including
 // the NoLibrary). Changing the bitcount from 3 to 4 so that more than 8 values
 // can be supported. Now the maximum number of vector libraries supported

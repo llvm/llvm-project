@@ -6,11 +6,11 @@ add_llvm_component_library(LLVMFrontendDriver
 
   DEPENDS
   LLVMAnalysis
-  LLVMTargetParser
 
   LINK_COMPONENTS
   Core
   Support
+  TargetParser
   Analysis
   Instrumentation
   )
