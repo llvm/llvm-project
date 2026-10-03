@@ -161,6 +161,53 @@ TEST(JSONTest, Object) {
   EXPECT_EQ(R"({"a":1,"c":3})", s(std::move(O)));
 }
 
+TEST(JSONTest, ObjectKeyCopyAssignment) {
+  ObjectKey Destination(std::string("owned"));
+  ObjectKey Source("borrowed");
+
+  Destination = Source;
+
+  // Assignment itself updates Data correctly.
+  EXPECT_EQ("borrowed", Destination.str());
+
+  // Copying Destination must preserve its current logical value.
+  // Without Owned.reset() in copy assignment, this incorrectly becomes "owned".
+  ObjectKey Copy = Destination;
+  EXPECT_EQ("borrowed", Copy.str());
+}
+
+TEST(JSONTest, CopyValueAfterErasingOwnedObjectKey) {
+  Object OriginalObject;
+  OriginalObject.try_emplace(std::string("removed"), 1);
+  OriginalObject.try_emplace(std::string("remaining"), 2);
+
+  ASSERT_TRUE(OriginalObject.erase("removed"));
+  EXPECT_EQ(nullptr, OriginalObject.get("removed"));
+  EXPECT_EQ(1u, OriginalObject.size());
+
+  Value Original = std::move(OriginalObject);
+  Value Copy = Original;
+
+  const Object *CopiedObject = Copy.getAsObject();
+  ASSERT_NE(nullptr, CopiedObject);
+
+  // An erased owned key must not reappear after copying the JSON value.
+  EXPECT_EQ(nullptr, CopiedObject->get("removed"));
+  EXPECT_EQ(std::optional<int64_t>(2), CopiedObject->getInteger("remaining"));
+  EXPECT_EQ(1u, CopiedObject->size());
+}
+
+TEST(JSONTest, AssignFromNestedValue) {
+  std::string Expected(1024, 'x');
+  Value Document = Object{{"payload", Expected}};
+
+  const Value &Payload = *Document.getAsObject()->get("payload");
+  Document = Payload;
+
+  ASSERT_TRUE(Document.getAsString());
+  EXPECT_EQ(Expected, *Document.getAsString());
+}
+
 TEST(JSONTest, Parse) {
   auto Compare = [](llvm::StringRef S, Value Expected) {
     if (auto E = parse(S)) {
