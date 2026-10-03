@@ -416,3 +416,18 @@ func.func @transfer_write_unroll_dynamic_index(%mem : memref<4x4xf32>, %vec : ve
   vector.transfer_write %vec, %mem[%idx, %idx] : vector<4x2xf32>, memref<4x4xf32>
   return
 }
+
+// -----
+
+// ALL-LABEL: func @vector_gather_unroll_alignment(
+//       ALL:   vector.gather {{.*}} alignment = 8 : memref<?x?x?xf32>, vector<2x2xindex>, vector<2x2xi1>, vector<2x2xf32> into vector<2x2xf32>
+//       ALL:   vector.gather {{.*}} alignment = 8 : memref<?x?x?xf32>, vector<2x2xindex>, vector<2x2xi1>, vector<2x2xf32> into vector<2x2xf32>
+//   ALL-NOT:   vector.gather
+func.func @vector_gather_unroll_alignment(%mem : memref<?x?x?xf32>,
+                                          %indices : vector<2x4xindex>,
+                                          %mask : vector<2x4xi1>,
+                                          %pass_thru : vector<2x4xf32>) -> vector<2x4xf32> {
+  %c0 = arith.constant 0 : index
+  %res = vector.gather %mem[%c0, %c0, %c0] [%indices], %mask, %pass_thru alignment = 8 : memref<?x?x?xf32>, vector<2x4xindex>, vector<2x4xi1>, vector<2x4xf32> into vector<2x4xf32>
+  return %res : vector<2x4xf32>
+}
