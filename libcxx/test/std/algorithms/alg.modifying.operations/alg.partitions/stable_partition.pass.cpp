@@ -16,7 +16,9 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "count_new.h"
@@ -330,8 +332,44 @@ TEST_CONSTEXPR_CXX26 bool test() {
   return true;
 }
 
+#if TEST_STD_VER >= 11 && !defined(TEST_HAS_NO_EXCEPTIONS) && !defined(TEST_COMPILER_GCC)
+// [alg.partitions]: Apply the predicate N = last - first times.
+void test_predicate_complexity() {
+  typedef std::pair<int, int> P;
+  const std::size_t sizes[] = {4, 5, 16, 17, 1000};
+  for (std::size_t n : sizes) {
+    std::vector<P> v;
+    v.reserve(n);
+    for (std::size_t i = 0; i + 1 < n; ++i)
+      v.push_back(P(1, static_cast<int>(i)));
+    v.push_back(P(2, static_cast<int>(n - 1)));
+
+    int count = 0;
+    auto pred = [&count](const P& p) {
+      ++count;
+      return p.first % 2 == 0;
+    };
+
+    getGlobalMemCounter()->throw_after = 0;
+    P* r                               = std::stable_partition(v.data(), v.data() + n, pred);
+    getGlobalMemCounter()->reset();
+
+    assert(static_cast<std::size_t>(count) == n); // Exactly N predicate applications.
+
+    // Result is correctly partitioned and iterator is at correct location.
+    assert(r == v.data() + 1);
+    assert(v[0].first % 2 == 0);
+    for (std::size_t i = 1; i < n; ++i)
+      assert(v[i].first % 2 != 0 && v[i].second == static_cast<int>(i - 1));
+  }
+}
+#endif // TEST_STD_VER >= 11 && !defined(TEST_HAS_NO_EXCEPTIONS) && !defined(TEST_COMPILER_GCC)
+
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 11 && !defined(TEST_HAS_NO_EXCEPTIONS) && !defined(TEST_COMPILER_GCC)
+  test_predicate_complexity();
+#endif
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif
