@@ -47,6 +47,14 @@ static Instruction &findInstructionByName(Function *F, StringRef Name) {
   llvm_unreachable("Expected value not found");
 }
 
+static Value &findArgumentByName(Function *F, StringRef Name) {
+  for (Value &V : F->args())
+    if (V.getName() == Name)
+      return V;
+
+  llvm_unreachable("Expected argument not found");
+}
+
 class ValueTrackingTest : public testing::Test {
 protected:
   std::unique_ptr<Module> parseModule(StringRef Assembly) {
@@ -3409,6 +3417,108 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
     EXPECT_TRUE(haveNoCommonBitsSet(RHS2, LHS2, DL));
     EXPECT_EQ(NoCommonBitsSetResult::Known,
               getNoCommonBitsSetResult(RHS2, LHS2, DL));
+  }
+}
+
+TEST_F(ValueTrackingTest, HaveCommonLowBits) {
+  {
+    // A value trivially shares the same lower bits with itself.
+    auto M = parseModule(R"(
+  define i32 @test(i32 %X) {
+    ret i32 %X 
+  })");
+    auto *F = M->getFunction("test");
+    auto *X = &findArgumentByName(F, "X");
+    AssumptionCache AC(*F);
+    SimplifyQuery SQ(M->getDataLayout());
+
+    EXPECT_TRUE(
+        haveCommonLowBits(X, X, X->getType()->getPrimitiveSizeInBits(), SQ));
+  }
+  {
+    // Two different values trivially have zero bits in common.
+    auto M = parseModule(R"(
+  define i32 @test(i32 %X, i32 %Y) {
+    ret i32 %X 
+  })");
+    auto *F = M->getFunction("test");
+    auto *X = &findArgumentByName(F, "X");
+    auto *Y = &findArgumentByName(F, "Y");
+    AssumptionCache AC(*F);
+    SimplifyQuery SQ(M->getDataLayout());
+
+    EXPECT_TRUE(haveCommonLowBits(X, Y, 0, SQ));
+    EXPECT_TRUE(haveCommonLowBits(Y, X, 0, SQ));
+    EXPECT_FALSE(haveCommonLowBits(X, Y, 1, SQ));
+    EXPECT_FALSE(haveCommonLowBits(Y, X, 1, SQ));
+  }
+  {
+    // A value has the same lower bits as its extension.
+    auto M = parseModule(R"(
+  define i64 @test(i32 %X) {
+    %Y = zext i32 %X to i64
+    %Z = sext i32 %X to i64
+    ret i64 %Y 
+  })");
+    auto *F = M->getFunction("test");
+    auto *X = &findArgumentByName(F, "X");
+    auto *Y = &findInstructionByName(F, "Y");
+    auto *Z = &findInstructionByName(F, "Z");
+    AssumptionCache AC(*F);
+    SimplifyQuery SQ(M->getDataLayout());
+
+    auto Size = X->getType()->getPrimitiveSizeInBits();
+    EXPECT_TRUE(haveCommonLowBits(X, Y, Size, SQ));
+    EXPECT_TRUE(haveCommonLowBits(Y, X, Size, SQ));
+    EXPECT_TRUE(haveCommonLowBits(X, Z, Size, SQ));
+    EXPECT_TRUE(haveCommonLowBits(Z, X, Size, SQ));
+  }
+  {
+    // If we zext nneg a value, it only shares the lower bits if it's
+    // non-negative.
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+
+  define i64 @test(i32 %X, i32 %Y) {
+    %res = icmp sge i32 %X, 0
+    call void @llvm.assume(i1 %res)
+
+    %A = zext nneg i32 %X to i64
+    %B = zext nneg i32 %Y to i64
+    ret i64 %A 
+  })");
+    auto *F = M->getFunction("test");
+    auto *X = &findArgumentByName(F, "X");
+    auto *Y = &findArgumentByName(F, "Y");
+    auto *A = &findInstructionByName(F, "A");
+    auto *B = &findInstructionByName(F, "B");
+    AssumptionCache AC(*F);
+    SimplifyQuery SQ(M->getDataLayout(), /*DT=*/nullptr, &AC, /*CtxI=*/B);
+
+    auto Size = X->getType()->getPrimitiveSizeInBits();
+    EXPECT_TRUE(haveCommonLowBits(X, A, Size, SQ));
+    EXPECT_TRUE(haveCommonLowBits(A, X, Size, SQ));
+    EXPECT_FALSE(haveCommonLowBits(Y, B, Size, SQ));
+    EXPECT_FALSE(haveCommonLowBits(B, Y, Size, SQ));
+  }
+  {
+    // We can trivially detect common lower bits for constants.
+    auto M = parseModule(R"(
+  define i32 @test() {
+    %X = add i32 1, 0
+    %Y = add i32 1, 2
+    ret i32 %X 
+  })");
+    auto *F = M->getFunction("test");
+    auto *X = &findInstructionByName(F, "X");
+    auto *Y = &findInstructionByName(F, "Y");
+    AssumptionCache AC(*F);
+    SimplifyQuery SQ(M->getDataLayout());
+
+    EXPECT_TRUE(haveCommonLowBits(X, Y, 1, SQ));
+    EXPECT_TRUE(haveCommonLowBits(Y, X, 1, SQ));
+    EXPECT_FALSE(haveCommonLowBits(X, Y, 2, SQ));
+    EXPECT_FALSE(haveCommonLowBits(Y, X, 2, SQ));
   }
 }
 
