@@ -132,6 +132,16 @@ namespace Intrinsic {
 typedef unsigned ID;
 }
 
+/// Return true if the target supports a masked load or store of \p ScalarTy.
+LLVM_ABI bool isLegalMaskedLoadOrStore(const TargetTransformInfo &TTI,
+                                       bool IsLoad, Type *ScalarTy,
+                                       Align Alignment, unsigned AddressSpace);
+
+/// Return true if the target supports a gather or scatter of \p ScalarTy.
+LLVM_ABI bool isLegalGatherOrScatter(const TargetTransformInfo &TTI,
+                                     bool IsLoad, Type *ScalarTy,
+                                     Align Alignment, ElementCount VF);
+
 /// Identify if the intrinsic is trivially vectorizable.
 /// This method returns true if the intrinsic's argument types are all scalars
 /// for the scalar form of the intrinsic and all vectors (or scalars handled by

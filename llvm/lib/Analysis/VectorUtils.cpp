@@ -39,6 +39,21 @@ static cl::opt<unsigned> MaxInterleaveGroupFactor(
     cl::desc("Maximum factor for an interleaved access group (default = 8)"),
     cl::init(8));
 
+bool llvm::isLegalMaskedLoadOrStore(const TargetTransformInfo &TTI, bool IsLoad,
+                                    Type *ScalarTy, Align Alignment,
+                                    unsigned AddressSpace) {
+  return IsLoad ? TTI.isLegalMaskedLoad(ScalarTy, Alignment, AddressSpace)
+                : TTI.isLegalMaskedStore(ScalarTy, Alignment, AddressSpace);
+}
+
+bool llvm::isLegalGatherOrScatter(const TargetTransformInfo &TTI, bool IsLoad,
+                                  Type *ScalarTy, Align Alignment,
+                                  ElementCount VF) {
+  Type *VectorTy = toVectorTy(ScalarTy, VF);
+  return IsLoad ? TTI.isLegalMaskedGather(VectorTy, Alignment)
+                : TTI.isLegalMaskedScatter(VectorTy, Alignment);
+}
+
 /// Return true if all of the intrinsic's arguments and return type are scalars
 /// for the scalar form of the intrinsic, and vectors for the vector form of the
 /// intrinsic (except operands that are marked as always being scalar by
