@@ -578,7 +578,7 @@ define void @call_no_fast(ptr %x) {
 define void @select_nnan(ptr %d, <4 x i1> %m, <4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: @select_nnan(
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr float, ptr [[D:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[M:%.*]], <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select nnan <4 x i1> [[M:%.*]], <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]]
 ; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[P1]], align 4
 ; CHECK-NEXT:    ret void
 ;
