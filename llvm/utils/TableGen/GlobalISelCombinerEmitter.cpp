@@ -1353,8 +1353,10 @@ bool CombineRuleBuilder::checkSemantics() {
       }
       break;
     }
-    case BI_ReplaceReg: {
-      // (GIReplaceReg can only be used on the root instruction)
+    case BI_ReplaceReg:
+    case BI_ReplaceRegWithConstant:
+    case BI_ReplaceRegWithFConstant: {
+      // (can only be used on the root instruction)
       // TODO: When we allow rewriting non-root instructions, also allow this.
       StringRef OldRegName = BIP->getOperand(0).getOperandName();
       auto *Def = MatchOpTable.getDef(OldRegName);
@@ -1367,6 +1369,12 @@ bool CombineRuleBuilder::checkSemantics() {
         PrintError(Name + " cannot replace '" + OldRegName +
                    "': this builtin can only replace a register defined by the "
                    "match root");
+        return false;
+      }
+      if ((BIP->getBuiltinKind() == BI_ReplaceRegWithConstant ||
+           BIP->getBuiltinKind() == BI_ReplaceRegWithFConstant) &&
+          !BIP->getOperand(1).hasImmValue()) {
+        PrintError(Name + " expects an immediate value as its second operand");
         return false;
       }
       break;
@@ -2203,6 +2211,37 @@ bool CombineRuleBuilder::emitBuiltinApplyPattern(
     }
     // checkSemantics should have ensured that we can only rewrite the root.
     // Ensure we're deleting it.
+    assert(MatchOpTable.getDef(Old) == MatchRoot);
+    return true;
+  }
+  case BI_ReplaceRegWithConstant: {
+    StringRef Old = P.getOperand(0).getOperandName();
+    int64_t Val = P.getOperand(1).getImmValue();
+
+    auto &OldOM = M.getOperandMatcher(Old);
+    unsigned TempRegID = M.allocateTempRegID();
+    auto InsertIt = M.insertAction<MakeTempRegisterAction>(
+        M.actions_begin(), OldOM.getTempTypeIdx(M), TempRegID);
+    M.insertAction<BuildConstantAction>(++InsertIt, TempRegID, Val);
+
+    M.addAction<ReplaceRegAction>(OldOM.getInsnVarID(), OldOM.getOpIdx(),
+                                  TempRegID);
+    assert(MatchOpTable.getDef(Old) == MatchRoot);
+    return true;
+  }
+  case BI_ReplaceRegWithFConstant: {
+    StringRef Old = P.getOperand(0).getOperandName();
+    // Imm is the IEEE bit pattern of $reg's (scalar) type.
+    int64_t Val = P.getOperand(1).getImmValue();
+
+    auto &OldOM = M.getOperandMatcher(Old);
+    unsigned TempRegID = M.allocateTempRegID();
+    auto InsertIt = M.insertAction<MakeTempRegisterAction>(
+        M.actions_begin(), OldOM.getTempTypeIdx(M), TempRegID);
+    M.insertAction<BuildFConstantAction>(++InsertIt, TempRegID, Val);
+
+    M.addAction<ReplaceRegAction>(OldOM.getInsnVarID(), OldOM.getOpIdx(),
+                                  TempRegID);
     assert(MatchOpTable.getDef(Old) == MatchRoot);
     return true;
   }
