@@ -405,6 +405,8 @@ define i64 @sdiv64_pow2_8589934592(i64 %a) {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    srai a2, a1, 31
 ; RV32I-NEXT:    srli a3, a1, 31
+; RV32I-NEXT:    slli a2, a2, 1
+; RV32I-NEXT:    or a2, a3, a2
 ; RV32I-NEXT:    add a2, a0, a2
 ; RV32I-NEXT:    add a1, a1, a3
 ; RV32I-NEXT:    sltu a0, a2, a0
@@ -430,6 +432,8 @@ define i64 @sdiv64_pow2_negative_8589934592(i64 %a) {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    srai a2, a1, 31
 ; RV32I-NEXT:    srli a3, a1, 31
+; RV32I-NEXT:    slli a2, a2, 1
+; RV32I-NEXT:    or a2, a3, a2
 ; RV32I-NEXT:    add a2, a0, a2
 ; RV32I-NEXT:    add a1, a1, a3
 ; RV32I-NEXT:    sltu a0, a2, a0

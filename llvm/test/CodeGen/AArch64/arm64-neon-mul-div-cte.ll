@@ -8,9 +8,9 @@ define <16 x i8> @div16xi8(<16 x i8> %x) {
 ; CHECK-SD-NEXT:    movi v1.16b, #41
 ; CHECK-SD-NEXT:    smull2 v2.8h, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    smull v0.8h, v0.8b, v1.8b
-; CHECK-SD-NEXT:    uzp2 v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    sshr v0.16b, v0.16b, #2
-; CHECK-SD-NEXT:    usra v0.16b, v0.16b, #7
+; CHECK-SD-NEXT:    uzp2 v1.16b, v0.16b, v2.16b
+; CHECK-SD-NEXT:    sshr v0.16b, v1.16b, #2
+; CHECK-SD-NEXT:    usra v0.16b, v1.16b, #7
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: div16xi8:
@@ -35,9 +35,9 @@ define <8 x i16> @div8xi16(<8 x i16> %x) {
 ; CHECK-SD-NEXT:    smull2 v2.4s, v0.8h, v1.8h
 ; CHECK-SD-NEXT:    smull v1.4s, v0.4h, v1.4h
 ; CHECK-SD-NEXT:    uzp2 v1.8h, v1.8h, v2.8h
-; CHECK-SD-NEXT:    add v0.8h, v1.8h, v0.8h
-; CHECK-SD-NEXT:    sshr v0.8h, v0.8h, #12
-; CHECK-SD-NEXT:    usra v0.8h, v0.8h, #15
+; CHECK-SD-NEXT:    add v1.8h, v1.8h, v0.8h
+; CHECK-SD-NEXT:    sshr v0.8h, v1.8h, #12
+; CHECK-SD-NEXT:    usra v0.8h, v1.8h, #15
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: div8xi16:

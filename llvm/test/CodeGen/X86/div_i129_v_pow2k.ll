@@ -141,8 +141,7 @@ define i129 @v_sdiv_exact_i129_v_pow2k(i129 %lhs) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdx, %rcx
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    andl $1, %ecx
-; X64-NEXT:    movq %rcx, %rdx
+; X64-NEXT:    andl $1, %edx
 ; X64-NEXT:    negq %rdx
 ; X64-NEXT:    shrdq $33, %rsi, %rax
 ; X64-NEXT:    shldq $31, %rsi, %rdx
@@ -150,12 +149,12 @@ define i129 @v_sdiv_exact_i129_v_pow2k(i129 %lhs) nounwind {
 ;
 ; X64-O0-LABEL: v_sdiv_exact_i129_v_pow2k:
 ; X64-O0:       # %bb.0:
+; X64-O0-NEXT:    movq %rdx, %rcx
 ; X64-O0-NEXT:    movq %rdi, %rax
 ; X64-O0-NEXT:    shrdq $33, %rsi, %rax
-; X64-O0-NEXT:    movl %edx, %ecx
-; X64-O0-NEXT:    andl $1, %ecx
-; X64-O0-NEXT:    # kill: def $rcx killed $ecx
-; X64-O0-NEXT:    movq %rcx, %rdx
+; X64-O0-NEXT:    movl %ecx, %edx
+; X64-O0-NEXT:    andl $1, %edx
+; X64-O0-NEXT:    # kill: def $rdx killed $edx
 ; X64-O0-NEXT:    negq %rdx
 ; X64-O0-NEXT:    shldq $31, %rsi, %rdx
 ; X64-O0-NEXT:    retq
