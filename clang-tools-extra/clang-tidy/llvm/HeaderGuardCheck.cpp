@@ -8,6 +8,7 @@
 
 #include "HeaderGuardCheck.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
 namespace clang::tidy::llvm_check {
@@ -16,9 +17,48 @@ LLVMHeaderGuardCheck::LLVMHeaderGuardCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : HeaderGuardCheck(Name, Context) {}
 
+// Attempt to find the root of the LLVM project monorepo by walking up the
+// directory tree from Filename and looking for a ".git" file/directory.
+// This allows us to find the root even when working in git worktrees with
+// arbitrary names.
+std::string
+LLVMHeaderGuardCheck::findLLVMProjectRoot(StringRef Filename) const {
+  SmallString<256> Path = Filename;
+  SmallString<256> Parent = llvm::sys::path::parent_path(Path);
+  while (!Parent.empty() && Parent != Path) {
+    Path = Parent;
+
+    // Check for .git (file or directory) which indicates the root of the
+    // git repository or worktree.
+    SmallString<256> GitPath = Path;
+    llvm::sys::path::append(GitPath, ".git");
+    if (llvm::sys::fs::exists(GitPath))
+      return std::string(Path);
+
+    Parent = llvm::sys::path::parent_path(Path);
+  }
+  return "";
+}
+
 std::string LLVMHeaderGuardCheck::getHeaderGuard(StringRef Filename,
                                                  StringRef OldGuard) {
-  std::string Guard = tooling::getAbsolutePath(Filename);
+  const std::string AbsolutePath = tooling::getAbsolutePath(Filename);
+  std::string Guard = AbsolutePath;
+
+  // Check for "/llvm-project/" using a path with normalized slashes to ensure
+  // Windows paths (which use backslashes) are matched correctly.
+  const std::string CanonicalPath =
+      llvm::sys::path::convert_to_slash(AbsolutePath);
+  if (!StringRef(CanonicalPath).contains("/llvm-project/")) {
+    const std::string Root = findLLVMProjectRoot(AbsolutePath);
+    if (!Root.empty()) {
+      StringRef RelativePath = StringRef(AbsolutePath).substr(Root.size());
+      if (!RelativePath.empty() &&
+          llvm::sys::path::is_separator(RelativePath.front()))
+        RelativePath = RelativePath.drop_front();
+      Guard = ("/llvm-project/" + RelativePath).str();
+    }
+  }
 
   // When running under Windows, need to convert the path separators from
   // `\` to `/`.
