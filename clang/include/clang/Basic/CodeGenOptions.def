@@ -438,6 +438,9 @@ VALUE_CODEGENOPT(StackProtectorGuardOffset, 32, INT_MAX, Benign)
 /// The width to use for the stack protector guard value.
 VALUE_CODEGENOPT(StackProtectorGuardValueWidth, 32, UINT_MAX, Benign)
 
+/// The trap immediate emitted by the -fstack-limit-variable check on overflow.
+VALUE_CODEGENOPT(StackLimitTrapNumber, 32, 255, Benign)
+
 /// Number of path components to strip when emitting checks. (0 == full
 /// filename)
 VALUE_CODEGENOPT(EmitCheckPathComponentsToStrip, 32, 0, Benign)
