@@ -133,6 +133,16 @@ __attribute__((visibility("protected"), used)) int x;
 // HIP: clang{{.*}} -o [[IMG_GFX908:.+]] -dumpdir a.out.amdgpu9.08.gfx908.img. --target=amdgpu9.08-amd-amdhsa -mcpu=gfx908
 // HIP: clang-offload-bundler{{.*}}-type=o -bundle-align=4096 -compress -compression-level=6 -targets=host-x86_64-unknown-linux-gnu,hip-amdgcn-amd-amdhsa--gfx90a,hip-amdgcn-amd-amdhsa--gfx908 -input={{/dev/null|NUL}} -input=[[IMG_GFX90A]] -input=[[IMG_GFX908]] -output={{.*}}.hipfb
 
+// The host entry is a bundle entry ID like any other, so it must name a four
+// component triple even if the host triple was spelled with fewer.
+// RUN: llvm-offload-binary -o %t.out \
+// RUN:   --image=file=%t.elf.o,kind=hip,triple=amdgpu9.0a-amd-amdhsa,arch=gfx90a
+// RUN: clang-linker-wrapper --dry-run --host-triple=x86_64-apple-macosx15.0.0 \
+// RUN:   --emit-fatbin-only --linker-path=/usr/bin/ld %t.out -o %t.hipfb 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=HIP-HOST-TRIPLE
+
+// HIP-HOST-TRIPLE: clang-offload-bundler{{.*}} -targets=host-x86_64-apple-macosx15.0.0-unknown,hip-amdgpu9.0a-amd-amdhsa--gfx90a
+
 // RUN: llvm-offload-binary -o %t.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgpu9.08-amd-amdhsa,arch=gfx908 \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70
