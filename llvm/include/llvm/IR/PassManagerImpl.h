@@ -180,6 +180,7 @@ inline void AnalysisManager<IRUnitT, ExtraArgTs...>::invalidate(
   if (ResultsListI == AnalysisResultLists.end())
     return;
   AnalysisResultListT &ResultsList = ResultsListI->second;
+  bool AnyInvalidated = false;
   for (auto &AnalysisResultPair : ResultsList) {
     // This is basically the same thing as Invalidator::invalidate, but we
     // can't call it here because we're operating on the type-erased result.
@@ -189,24 +190,27 @@ inline void AnalysisManager<IRUnitT, ExtraArgTs...>::invalidate(
     auto &Result = *AnalysisResultPair.second;
 
     auto IMapI = IsResultInvalidated.find(ID);
-    if (IMapI != IsResultInvalidated.end())
+    if (IMapI != IsResultInvalidated.end()) {
       // This result was already handled via the Invalidator.
+      AnyInvalidated |= IMapI->second;
       continue;
+    }
 
     // Try to invalidate the result, giving it the Invalidator so it can
     // recursively query for any dependencies it has and record the result.
     // Note that we cannot reuse 'IMapI' here or pre-insert the ID, as
     // Result.invalidate may insert things into the map, invalidating our
     // iterator.
-    bool Inserted =
-        IsResultInvalidated.insert({ID, Result.invalidate(IR, PA, Inv)}).second;
+    bool Invalidated = Result.invalidate(IR, PA, Inv);
+    AnyInvalidated |= Invalidated;
+    bool Inserted = IsResultInvalidated.insert({ID, Invalidated}).second;
     (void)Inserted;
     assert(Inserted && "Should never have already inserted this ID, likely "
                        "indicates a cycle!");
   }
 
   // Now erase the results that were marked above as invalidated.
-  if (!IsResultInvalidated.empty()) {
+  if (AnyInvalidated) {
     size_t WriteIdx = 0;
     for (size_t ReadIdx = 0, E = ResultsList.size(); ReadIdx < E; ++ReadIdx) {
       AnalysisKey *ID = ResultsList[ReadIdx].first;
