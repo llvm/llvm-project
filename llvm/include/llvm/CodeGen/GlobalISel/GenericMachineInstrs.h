@@ -72,6 +72,9 @@ public:
   /// Returns the size in bits of the memory access.
   LocationSize getMemSizeInBits() const { return getMMO().getSizeInBits(); }
 
+  /// Returns the cache hint metadata for this memory access.
+  const MDNode *getMemCacheHint() const { return getMMO().getMemCacheHint(); }
+
   static bool classof(const MachineInstr *MI) {
     return GenericMachineInstr::classof(MI) && MI->hasOneMemOperand();
   }
@@ -191,9 +194,6 @@ public:
   const MDNode *getRanges() const {
     return getMMO().getRanges();
   }
-
-  /// Returns the cache hint metadata for this load.
-  const MDNode *getMemCacheHint() const { return getMMO().getMemCacheHint(); }
 
   static bool classof(const MachineInstr *MI) {
     switch (MI->getOpcode()) {
