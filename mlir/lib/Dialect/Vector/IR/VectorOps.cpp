@@ -239,8 +239,10 @@ static bool isSplatWriteConsistentWithMaskedRead(vector::TransferWriteOp write,
 
 bool mlir::vector::checkSameValueRAW(vector::TransferWriteOp defWrite,
                                      vector::TransferReadOp read) {
-  // An enclosing vector.mask leaves some lanes unwritten or padded, so the
-  // read does not see the written vector as a whole.
+  // An enclosing vector.mask may leave some lanes unwritten or padded, so the
+  // read may not see the written vector as a whole. This conservatively
+  // includes all-true masks. MaskOp::fold removes them during canonicalization,
+  // so this only matters when a caller such as transferOpflowOpt runs first.
   if (defWrite.isMasked() || read.isMasked())
     return false;
   return !defWrite.hasOutOfBoundsDim() &&
@@ -253,9 +255,11 @@ bool mlir::vector::checkSameValueRAW(vector::TransferWriteOp defWrite,
 
 bool mlir::vector::checkSameValueWAW(vector::TransferWriteOp write,
                                      vector::TransferWriteOp priorWrite) {
-  // A write under an enclosing vector.mask does not overwrite all lanes of
-  // the prior write. Only the later write needs checking: a region-masked
-  // prior write is still dead if the later write fully overwrites it.
+  // A write under an enclosing vector.mask may not overwrite all lanes of the
+  // prior write. This conservatively includes all-true masks, which
+  // MaskOp::fold removes during canonicalization. Only the later write needs
+  // checking: a region-masked prior write is still dead if the later write
+  // fully overwrites it.
   if (write.isMasked())
     return false;
   return priorWrite.getIndices() == write.getIndices() &&
