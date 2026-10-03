@@ -10182,13 +10182,16 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
         !has_single_bit(NumUniqueScalarValues) &&
         UniquePositions.size() * 2 < NumUniqueScalarValues)
       return std::make_pair(false, false);
-    auto CheckLoads = [&](ArrayRef<Value *> Loads, bool IncludeGather) {
+    auto GetLoadsState = [&](ArrayRef<Value *> Loads) {
       assert(S && S.getOpcode() == Instruction::Load && "Expected load.");
       BoUpSLP::OrdersType Order;
       SmallVector<Value *> PointerOps;
       BoUpSLP::StridedPtrInfo SPtrInfo;
-      BoUpSLP::LoadsState Res = R.canVectorizeLoads(Loads, S.getMainOp(), Order,
-                                                    PointerOps, SPtrInfo);
+      return R.canVectorizeLoads(Loads, S.getMainOp(), Order, PointerOps,
+                                 SPtrInfo);
+    };
+    auto CheckLoads = [&](ArrayRef<Value *> Loads, bool IncludeGather) {
+      BoUpSLP::LoadsState Res = GetLoadsState(Loads);
       return (IncludeGather && Res == BoUpSLP::LoadsState::Gather) ||
              Res == BoUpSLP::LoadsState::ScatterVectorize ||
              Res == BoUpSLP::LoadsState::StridedVectorize ||
@@ -10270,8 +10273,27 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
     if (S && S.getOpcode() == Instruction::Load) {
       bool UniquesVectorized =
           CheckLoads(UniqueValues, /*IncludeGather=*/false);
-      if (UniquesVectorized || CheckLoads(VL, /*IncludeGather=*/false))
-        return std::make_pair(true, !UniquesVectorized);
+      if (UniquesVectorized || CheckLoads(VL, /*IncludeGather=*/false)) {
+        bool UseOriginal = !UniquesVectorized;
+        // The unique loads are consecutive: pack them unless the masked
+        // gather of the originals is cheaper than the wide load + reshuffle.
+        if (UseOriginal &&
+            GetLoadsState(UniqueValues) == BoUpSLP::LoadsState::Vectorize) {
+          auto *LI0 = cast<LoadInst>(S.getMainOp());
+          InstructionCost PackCost =
+              ReusesCost + TTI.getMemoryOpCost(
+                               Instruction::Load, UniquesVecTy, LI0->getAlign(),
+                               LI0->getPointerAddressSpace(), CostKind,
+                               TTI::getOperandInfo(LI0->getPointerOperand()));
+          InstructionCost GatherCost = TTI.getMemIntrinsicInstrCost(
+              MemIntrinsicCostAttributes(
+                  Intrinsic::masked_gather, VecTy, LI0->getPointerOperand(),
+                  /*VariableMask=*/false, computeCommonAlignment<LoadInst>(VL)),
+              CostKind);
+          UseOriginal = GatherCost < PackCost;
+        }
+        return std::make_pair(true, UseOriginal);
+      }
     }
     bool CanSkipBVCost =
         (!BuildGatherOnly && !RequireScheduling) || R.hasSameNode(S, VL);
