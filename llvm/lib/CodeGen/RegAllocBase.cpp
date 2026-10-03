@@ -57,15 +57,17 @@ bool RegAllocBase::VerifyEnabled = false;
 // Pin the vtable to this file.
 void RegAllocBase::anchor() {}
 
-void RegAllocBase::init(VirtRegMap &vrm, LiveIntervals &lis,
-                        LiveRegMatrix &mat) {
+void RegAllocBase::init(VirtRegMap &vrm, LiveIntervals &lis, LiveRegMatrix &mat,
+                        RegisterClassInfo &rci) {
   TRI = &vrm.getTargetRegInfo();
   MRI = &vrm.getRegInfo();
   VRM = &vrm;
   LIS = &lis;
   Matrix = &mat;
+  RegClassInfo = &rci;
   MRI->freezeReservedRegs();
-  RegClassInfo.runOnMachineFunction(vrm.getMachineFunction());
+  // Keep the shared analysis in step with the set just frozen.
+  RegClassInfo->updateReservedRegs(MRI->getReservedRegs());
   FailedVRegs.clear();
 }
 
@@ -226,7 +228,7 @@ MCPhysReg RegAllocBase::getErrorAssignment(const TargetRegisterClass &RC,
   const Function &Fn = MF.getFunction();
   LLVMContext &Context = Fn.getContext();
 
-  ArrayRef<MCPhysReg> AllocOrder = RegClassInfo.getOrder(&RC);
+  ArrayRef<MCPhysReg> AllocOrder = RegClassInfo->getOrder(&RC);
   if (AllocOrder.empty()) {
     // If the allocation order is empty, it likely means all registers in the
     // class are reserved. We still to need to pick something, so look at the
