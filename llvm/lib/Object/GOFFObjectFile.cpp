@@ -384,6 +384,12 @@ Expected<StringRef> GOFFObjectFile::getSymbolName(SymbolRef Symbol) const {
   return getSymbolName(Symbol.getRawDataRefImpl());
 }
 
+Expected<StringRef> GOFFObjectFile::getSymbolName(uint32_t SymIndex) const {
+  DataRefImpl Symb;
+  Symb.d.a = SymIndex;
+  return getSymbolName(Symb);
+}
+
 Expected<uint64_t> GOFFObjectFile::getSymbolAddress(DataRefImpl Symb) const {
   uint32_t Offset;
   const uint8_t *EsdRecord = getSymbolEsdRecord(Symb);
@@ -416,6 +422,13 @@ bool GOFFObjectFile::isSymbolUnresolved(DataRefImpl Symb) const {
       return true;
   }
   return false;
+}
+
+bool GOFFObjectFile::isEDSymbol(DataRefImpl Symb) const {
+  const uint8_t *Record = getSymbolEsdRecord(Symb);
+  GOFF::ESDSymbolType SymbolType;
+  ESDRecord::getSymbolType(Record, SymbolType);
+  return (SymbolType == GOFF::ESD_ST_ElementDefinition);
 }
 
 bool GOFFObjectFile::isSymbolIndirect(DataRefImpl Symb) const {
@@ -517,6 +530,20 @@ GOFFObjectFile::getSymbolSection(DataRefImpl Symb) const {
     return section_iterator(SectionRef(Sec, this));
 
   const uint8_t *SymEsdRecord = EsdPtrs[Symb.d.a];
+  // check if this is a ED symbol.
+  if (!SkipEDSymbols && isEDSymbol(Symb)) {
+    for (size_t I = 0, E = SectionList.size(); I < E; ++I) {
+      const uint8_t *SectionEdRecord = getSectionEdEsdRecord(I);
+      if (SymEsdRecord == SectionEdRecord) {
+        Sec.d.a = I;
+        return section_iterator(SectionRef(Sec, this));
+      }
+    }
+    return createStringError(llvm::errc::invalid_argument,
+                             "No section found for ED symbol with id " +
+                                 std::to_string(Symb.d.a));
+  }
+
   uint32_t SymEdId;
   ESDRecord::getParentEsdId(SymEsdRecord, SymEdId);
   const uint8_t *SymEdRecord = EsdPtrs[SymEdId];
@@ -653,6 +680,48 @@ Expected<StringRef> GOFFObjectFile::getSectionName(DataRefImpl Sec) const {
   return Name;
 }
 
+Error GOFFObjectFile::getSectionUniqueName(
+    DataRefImpl Sec, SmallVectorImpl<char> &Result) const {
+
+  SectionEntryImpl EsdIds = SectionList[Sec.d.a];
+
+  const uint8_t *EsdRecord = EsdPtrs[EsdIds.d.a];
+  uint32_t ParentEsdId = 0;
+  ESDRecord::getParentEsdId(EsdRecord, ParentEsdId);
+  assert(ParentEsdId && "Should have parent");
+
+  DataRefImpl ParentEdSym;
+  ParentEdSym.d.a = ParentEsdId;
+  const uint8_t *ParentRecord = getSymbolEsdRecord(ParentEdSym);
+  GOFF::ESDSymbolType ParentSymbolType;
+  ESDRecord::getSymbolType(ParentRecord, ParentSymbolType);
+  assert(ParentSymbolType == GOFF::ESD_ST_SectionDefinition && "Not SD");
+
+  Expected<StringRef> ParentNameOrErr = getSymbolName(ParentEdSym);
+  if (!ParentNameOrErr)
+    return ParentNameOrErr.takeError();
+
+  Result.append(ParentNameOrErr->begin(), ParentNameOrErr->end());
+
+  Expected<StringRef> NameOrErr = getSymbolName(EsdIds.d.a);
+  if (!NameOrErr)
+    return NameOrErr.takeError();
+
+  Result.append(1, '.');
+  Result.append(NameOrErr->begin(), NameOrErr->end());
+
+  if (EsdIds.d.b) {
+    Expected<StringRef> PrNameOrErr = getSymbolName(EsdIds.d.b);
+    if (!PrNameOrErr)
+      return PrNameOrErr.takeError();
+
+    Result.append(1, '.');
+    Result.append(PrNameOrErr->begin(), PrNameOrErr->end());
+  }
+
+  return Error::success();
+}
+
 uint64_t GOFFObjectFile::getSectionAddress(DataRefImpl Sec) const {
   uint32_t Offset;
   const uint8_t *EsdRecord = getSectionEdEsdRecord(Sec);
@@ -780,11 +849,10 @@ void GOFFObjectFile::moveSymbolNext(DataRefImpl &Symb) const {
     if (const uint8_t *EsdRecord = EsdPtrs[I]) {
       GOFF::ESDSymbolType SymbolType;
       ESDRecord::getSymbolType(EsdRecord, SymbolType);
-      // Skip EDs - i.e. section symbols.
-      bool IgnoreSpecialGOFFSymbols = true;
-      bool SkipSymbol = ((SymbolType == GOFF::ESD_ST_ElementDefinition) ||
-                         (SymbolType == GOFF::ESD_ST_SectionDefinition)) &&
-                        IgnoreSpecialGOFFSymbols;
+      // Skip section symbols, including SDs and, if flagged, EDs.
+      bool SkipSymbol =
+          ((SymbolType == GOFF::ESD_ST_SectionDefinition) ||
+           (SymbolType == GOFF::ESD_ST_ElementDefinition && SkipEDSymbols));
       if (!SkipSymbol) {
         Symb.d.a = I;
         return;
