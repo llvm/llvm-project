@@ -366,3 +366,24 @@ func.func @no_inplace_extract_fold_of_speculative_constant(%a: f32, %b: f32) -> 
 ^bb2:
   return %e : f32
 }
+
+// -----
+
+// SCCP uses the replaced results of a partial fold. The kept result is
+// overdefined, so the merged block argument does not become a constant.
+
+// CHECK-LABEL: func @partial_fold_kept_result
+// CHECK-SAME: (%[[ARG0:[a-z0-9]+]]: i32, %[[COND:[a-z0-9]+]]: i1)
+func.func @partial_fold_kept_result(%arg0: i32, %cond: i1) -> (i32, i32, i32) {
+  // CHECK-DAG: %[[C42:[a-z0-9_]+]] = "test.constant"() <{value = 42 : i32}> : () -> i32
+  // CHECK-DAG: %[[C1:[a-z0-9_]+]] = arith.constant 1 : i32
+  %c1 = arith.constant 1 : i32
+  // CHECK: %[[RES:[a-z0-9]+]]:3 = "test.op_partial_fold"(%[[ARG0]])
+  %0:3 = "test.op_partial_fold"(%arg0) : (i32) -> (i32, i32, i32)
+  // CHECK: cf.cond_br %[[COND]], ^bb1(%[[RES]]#2 : i32), ^bb1(%[[C1]] : i32)
+  cf.cond_br %cond, ^bb1(%0#2 : i32), ^bb1(%c1 : i32)
+// CHECK: ^bb1(%[[MERGED:[a-z0-9]+]]: i32):
+^bb1(%merged: i32):
+  // CHECK: return %[[C42]], %[[RES]]#1, %[[MERGED]]
+  return %0#0, %0#1, %merged : i32, i32, i32
+}
