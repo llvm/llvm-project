@@ -4674,7 +4674,8 @@ GDBRemoteCommunicationServerLLGS::Handle_jAcceleratorPluginInitialize(
       accelerator_actions.push_back(std::move(*actions));
   }
   StreamGDBRemote response;
-  response.PutAsJSONArray(accelerator_actions, /*hex_ascii=*/false);
+  response.PutAsJSONArray<AcceleratorActions>(accelerator_actions,
+                                              /*hex_ascii=*/false);
   return SendPacketNoLock(response.GetString());
 }
 
