@@ -535,6 +535,10 @@ More calling conventions can be added/defined on an as-needed basis, to
 support Pascal conventions or any other well-known target-independent
 convention.
 
+The target-specific calling conventions are documented in their respective
+target documentation. In particular, the X86 WinCall calling convention
+(spelled ``x86_wincallcc`` in IR) is described in {doc}`WinCall`.
+
 (visibilitystyles)=
 
 ### Visibility Styles
