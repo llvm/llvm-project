@@ -923,7 +923,6 @@ def vector_insert : SDNode<"ISD::INSERT_VECTOR_ELT",
 def concat_vectors : SDNode<"ISD::CONCAT_VECTORS",
     SDTypeProfile<1, 2, [SDTCisSubVecOfVec<1, 0>, SDTCisSameAs<1, 2>]>,[]>;
 
-// This operator does subvector type checking.
 def extract_subvector : SDNode<"ISD::EXTRACT_SUBVECTOR", SDTSubVecExtract, []>;
 def insert_subvector : SDNode<"ISD::INSERT_SUBVECTOR", SDTSubVecInsert, []>;
 
