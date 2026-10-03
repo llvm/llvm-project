@@ -900,6 +900,10 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(versions);
   KEYWORD(memProf);
   KEYWORD(notcold);
+  KEYWORD(sectionInfo);
+  KEYWORD(sectionName);
+  KEYWORD(outputSectionName);
+  KEYWORD(keep);
 
 #undef KEYWORD
 
