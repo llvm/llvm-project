@@ -2850,7 +2850,6 @@ struct FormatStyle {
   ///        bar();                   }
   ///    }
   /// \endcode
-  /// \version 1
   bool CompactCaseLabels;
 
   /// If `true`, consecutive namespace declarations will be on the same
