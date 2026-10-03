@@ -39,7 +39,6 @@
 #include "Plugins/DynamicLoader/MacOSX-DYLD/DynamicLoaderMacOSXDYLD.h"
 #include "Plugins/DynamicLoader/Static/DynamicLoaderStatic.h"
 #include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
-#include "Plugins/Platform/MacOSX/PlatformDarwinKernel.h"
 
 #include <memory>
 
