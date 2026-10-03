@@ -133,10 +133,12 @@ OMPLoopBasedDirective::tryToFindNextInnerLoop(Stmt *CurStmt,
         for (Stmt *S : CS->body()) {
           if (!S)
             continue;
-          // Peek past an OMPCanonicalLoop wrapper and/or an intra-tile hint to
-          // check whether this child is loop-like; keep the original (wrapped)
-          // node in CurStmt so the hint still reaches the loop-analysis
+          // Peek past a single-child container so a nested loop or
+          // loop-transformation directive (e.g. `#pragma omp reverse` inside
+          // the body of an outer loop) is recognized here. Preserve any
+          // intra-tile hint wrapper so it still reaches the loop-analysis
           // callback.
+          S = ignoreContainersKeepingIntraTileHint(S);
           Stmt *Inner = S;
           if (auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(Inner))
             Inner = CanonLoop->getLoopStmt();
@@ -152,7 +154,7 @@ OMPLoopBasedDirective::tryToFindNextInnerLoop(Stmt *CurStmt,
             CurStmt = S;
             continue;
           }
-          S = S->IgnoreContainers();
+          S = OMPLoopBasedDirective::ignoreIntraTileHint(S);
           if (auto *InnerCS = dyn_cast_or_null<CompoundStmt>(S))
             NextStatements.push_back(InnerCS);
         }
@@ -174,9 +176,18 @@ bool OMPLoopBasedDirective::doForAllLoops(
     Stmt *CurStmt, bool TryImperfectlyNestedLoops, unsigned NumLoops,
     llvm::function_ref<bool(unsigned, Stmt *, Stmt *)> Callback,
     llvm::function_ref<void(OMPLoopTransformationDirective *)>
-        OnTransformationCallback) {
+        OnTransformationCallback,
+    bool RelaxNestForPeeledTransformation) {
   CurStmt = ignoreContainersKeepingIntraTileHint(CurStmt);
   for (unsigned Cnt = 0; Cnt < NumLoops; ++Cnt) {
+    // If we peel a loop-transformation directive, the enclosing ForStmt is
+    // compiler-synthesized and its body may hold helper statements (e.g.
+    // `reverse` injects `.reversed.iv` and update exprs) before the next
+    // loop. When the caller opts in via RelaxNestForPeeledTransformation, scan
+    // it as an imperfect nest so that, e.g., `omp tile` followed by
+    // `omp reverse` is accepted. Callers that require a perfect for-loop nest
+    // after peeling (e.g. `omp flatten`) leave the flag false.
+    bool PeeledTransformation = false;
     while (true) {
       auto *Dir = dyn_cast<OMPLoopTransformationDirective>(CurStmt);
       if (!Dir)
@@ -202,6 +213,7 @@ bool OMPLoopBasedDirective::doForAllLoops(
       }
 
       CurStmt = TransformedStmt;
+      PeeledTransformation = true;
     }
     if (auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(CurStmt))
       CurStmt = CanonLoop->getLoopStmt();
@@ -224,7 +236,9 @@ bool OMPLoopBasedDirective::doForAllLoops(
       CurStmt = cast<CXXForRangeStmt>(LoopStmt)->getBody();
     }
     CurStmt = OMPLoopBasedDirective::tryToFindNextInnerLoop(
-        CurStmt, TryImperfectlyNestedLoops);
+        CurStmt,
+        TryImperfectlyNestedLoops ||
+            (RelaxNestForPeeledTransformation && PeeledTransformation));
   }
   return true;
 }

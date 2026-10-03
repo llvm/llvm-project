@@ -913,6 +913,12 @@ public:
   /// nullptr if the loop has no such hint. Callers that need the hint (see
   /// checkOpenMPIterationSpace) can peel \p HintWrapper themselves; everyone
   /// else can ignore it.
+  ///
+  /// \p RelaxNestForPeeledTransformation opts into treating the body of a
+  /// peeled loop-transformation directive as an imperfectly nested loop, so
+  /// e.g. `omp tile` accepts a nested `omp reverse` even though the transform
+  /// injects helper statements around the inner loop. Callers that require a
+  /// strict for-loop nest after peeling (e.g. `omp flatten`) leave it false.
   static bool
   doForAllLoops(Stmt *CurStmt, bool TryImperfectlyNestedLoops,
                 unsigned NumLoops,
@@ -920,25 +926,29 @@ public:
                                         Stmt * /*HintWrapper*/)>
                     Callback,
                 llvm::function_ref<void(OMPLoopTransformationDirective *)>
-                    OnTransformationCallback);
+                    OnTransformationCallback,
+                bool RelaxNestForPeeledTransformation = false);
   static bool
   doForAllLoops(Stmt *CurStmt, bool TryImperfectlyNestedLoops,
                 unsigned NumLoops,
                 llvm::function_ref<bool(unsigned, Stmt *)> Callback,
                 llvm::function_ref<void(OMPLoopTransformationDirective *)>
-                    OnTransformationCallback) {
+                    OnTransformationCallback,
+                bool RelaxNestForPeeledTransformation = false) {
     auto &&NewCallback = [Callback](unsigned Cnt, Stmt *Loop, Stmt *) {
       return Callback(Cnt, Loop);
     };
     return doForAllLoops(CurStmt, TryImperfectlyNestedLoops, NumLoops,
-                         NewCallback, OnTransformationCallback);
+                         NewCallback, OnTransformationCallback,
+                         RelaxNestForPeeledTransformation);
   }
   static bool
   doForAllLoops(const Stmt *CurStmt, bool TryImperfectlyNestedLoops,
                 unsigned NumLoops,
                 llvm::function_ref<bool(unsigned, const Stmt *)> Callback,
                 llvm::function_ref<void(const OMPLoopTransformationDirective *)>
-                    OnTransformationCallback) {
+                    OnTransformationCallback,
+                bool RelaxNestForPeeledTransformation = false) {
     auto &&NewCallback = [Callback](unsigned Cnt, Stmt *CurStmt) {
       return Callback(Cnt, CurStmt);
     };
@@ -947,28 +957,31 @@ public:
           OnTransformationCallback(A);
         };
     return doForAllLoops(const_cast<Stmt *>(CurStmt), TryImperfectlyNestedLoops,
-                         NumLoops, NewCallback, NewTransformCb);
+                         NumLoops, NewCallback, NewTransformCb,
+                         RelaxNestForPeeledTransformation);
   }
 
   /// Calls the specified callback function for all the loops in \p CurStmt,
   /// from the outermost to the innermost.
-  static bool
-  doForAllLoops(Stmt *CurStmt, bool TryImperfectlyNestedLoops,
-                unsigned NumLoops,
-                llvm::function_ref<bool(unsigned, Stmt *)> Callback) {
+  static bool doForAllLoops(Stmt *CurStmt, bool TryImperfectlyNestedLoops,
+                            unsigned NumLoops,
+                            llvm::function_ref<bool(unsigned, Stmt *)> Callback,
+                            bool RelaxNestForPeeledTransformation = false) {
     auto &&TransformCb = [](OMPLoopTransformationDirective *) {};
     return doForAllLoops(CurStmt, TryImperfectlyNestedLoops, NumLoops, Callback,
-                         TransformCb);
+                         TransformCb, RelaxNestForPeeledTransformation);
   }
   static bool
   doForAllLoops(const Stmt *CurStmt, bool TryImperfectlyNestedLoops,
                 unsigned NumLoops,
-                llvm::function_ref<bool(unsigned, const Stmt *)> Callback) {
+                llvm::function_ref<bool(unsigned, const Stmt *)> Callback,
+                bool RelaxNestForPeeledTransformation = false) {
     auto &&NewCallback = [Callback](unsigned Cnt, const Stmt *CurStmt) {
       return Callback(Cnt, CurStmt);
     };
     return doForAllLoops(const_cast<Stmt *>(CurStmt), TryImperfectlyNestedLoops,
-                         NumLoops, NewCallback);
+                         NumLoops, NewCallback,
+                         RelaxNestForPeeledTransformation);
   }
 
   /// Calls the specified callback function for all the loop bodies in \p
