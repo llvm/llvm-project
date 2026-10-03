@@ -17,8 +17,7 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(15) %in)
 ; GFX1250-SDAG-NEXT:    v_nop
 ; GFX1250-SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x2c nv
-; GFX1250-SDAG-NEXT:    s_mov_b32 m0, 1
-; GFX1250-SDAG-NEXT:    s_wakeup_barrier m0
+; GFX1250-SDAG-NEXT:    s_wakeup_barrier 1
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_and_b32 m0, s0, 63
 ; GFX1250-SDAG-NEXT:    s_wakeup_barrier m0
@@ -41,6 +40,24 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(15) %in)
     ret void
 }
 
+
+define void @wakeup_barrier_null_bar() {
+; GFX1250-SDAG-LABEL: wakeup_barrier_null_bar:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-NEXT:    s_wakeup_barrier 0
+; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-GISEL-LABEL: wakeup_barrier_null_bar:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GISEL-NEXT:    s_wakeup_barrier 0
+; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+    call void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(15) null)
+    ret void
+}
 
 declare void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(15)) #1
 

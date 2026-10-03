@@ -1718,6 +1718,9 @@ Example usage:
 Note that the lowering for these examples is not yet implemented and will
 be added in future changes.
 
+The NULL named barrier (needed for un-joining a barrier) is represented in IR by
+``ptr addrspace(15) nullptr``.
+
 LLVM IR Intrinsics
 ------------------
 
