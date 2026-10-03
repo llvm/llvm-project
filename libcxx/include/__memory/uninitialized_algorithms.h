@@ -337,6 +337,44 @@ __uninitialized_relocate(_ContiguousIterator __first, _ContiguousIterator __last
   }
 }
 
+// __uninitialized_relocate relocates the objects in [__first, __last) into __result element-by-element from __first to
+// __last. Relocation means that the objects in [__first, __last) are placed into __result as-if by move-construct and
+// destroy, except that the move constructor and destructor may never be called if they are known to be equivalent to a
+// memcpy.
+//
+// Preconditions:  At __result there is no object and [__first, __last) contains objects
+// Postconditions: If no exceptions were thrown, __result contains the objects from [__first, __last), otherwise it
+//                 doesn't contain any objects.
+//                 [__first, __last) doesn't contain any objects.
+template <class _ContiguousIterator>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __uninitialized_relocate_backward(
+    _ContiguousIterator __first, _ContiguousIterator __last, _ContiguousIterator __result) {
+  static_assert(__libcpp_is_contiguous_iterator<_ContiguousIterator>::value, "");
+  using _ValueType = typename iterator_traits<_ContiguousIterator>::value_type;
+
+  if (__libcpp_is_constant_evaluated() || !__is_trivially_relocatable_v<_ValueType>) {
+    size_t __count = __last - __first;
+    __result += __count;
+    size_t __i = 0;
+
+    auto __guard = std::__make_exception_guard([&] {
+      std::__destroy(__result, __result + __i);
+      std::__destroy(__first, __last);
+    });
+
+    for (; __i != __count; ++__i) {
+      std::__construct_at(std::__to_address(--__result), std::move(*--__last));
+      std::__destroy_at(std::__to_address(__last));
+    }
+    __guard.__complete();
+  } else {
+    // Casting to void* to suppress clang complaining that this is technically UB.
+    __builtin_memmove(static_cast<void*>(std::__to_address(__result)),
+                      std::__to_address(__first),
+                      sizeof(_ValueType) * (__last - __first));
+  }
+}
+
 template <class _Alloc, class _Iter>
 class _AllocatorDestroyRangeReverse {
 public:
