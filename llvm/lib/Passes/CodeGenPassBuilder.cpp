@@ -469,7 +469,7 @@ void CodeGenPassBuilder::addPassesToHandleExceptions(PassManagerWrapper &PMW) {
     // on catchpads and cleanuppads because it does not outline them into
     // funclets. Catchswitch blocks are not lowered in SelectionDAG, so we
     // should remove PHIs there.
-    addFunctionPass(WinEHPreparePass(/*DemoteCatchSwitchPHIOnly=*/false), PMW);
+    addFunctionPass(WinEHPreparePass(), PMW);
     break;
   case ExceptionHandling::Default:
   case ExceptionHandling::None:
@@ -875,10 +875,12 @@ Error CodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
       RequireAnalysisPass<MachineLoopAnalysis, MachineFunction>(), PMW);
   addMachineFunctionPass(PHIEliminationPass(), PMW);
 
-  // Eventually, we want to run LiveIntervals before PHI elimination.
-  if (Opt.EarlyLiveIntervals)
-    addMachineFunctionPass(
-        RequireAnalysisPass<LiveIntervalsAnalysis, MachineFunction>(), PMW);
+  // LiveIntervals is computed unconditionally before TwoAddressInstruction so
+  // that pass can rely on it instead of LiveVariables. This is a step toward
+  // removing LiveVariables entirely.
+  // FIXME: Eventually, we want to run LiveIntervals before PHI elimination.
+  addMachineFunctionPass(
+      RequireAnalysisPass<LiveIntervalsAnalysis, MachineFunction>(), PMW);
 
   addMachineFunctionPass(TwoAddressInstructionPass(), PMW);
   addMachineFunctionPass(RegisterCoalescerPass(), PMW);

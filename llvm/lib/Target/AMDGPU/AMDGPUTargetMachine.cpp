@@ -768,6 +768,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUWaitSGPRHazardsLegacyPass(*PR);
   initializeAMDGPUPreloadKernelArgumentsLegacyPass(*PR);
   initializeAMDGPUUniformIntrinsicCombineLegacyPass(*PR);
+  initializeSIPostRA16BitMovFoldingLegacyPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -1198,7 +1199,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
       });
 }
 
-bool AMDGPUTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
+bool AMDGPUTargetMachine::isNoopAddrSpaceCast(const DataLayout &DL,
+                                              unsigned SrcAS,
                                               unsigned DestAS) const {
   return AMDGPU::isFlatGlobalAddrSpace(SrcAS) &&
          AMDGPU::isFlatGlobalAddrSpace(DestAS);
@@ -1854,12 +1856,8 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   if (EnableDCEInRA)
     insertPass(&DetectDeadLanesID, &DeadMachineInstructionElimID);
 
-  // FIXME: when an instruction has a Killed operand, and the instruction is
-  // inside a bundle, seems only the BUNDLE instruction appears as the Kills of
-  // the register in LiveVariables, this would trigger a failure in verifier,
-  // we should fix it and enable the verifier.
   if (OptVGPRLiveRange)
-    insertPass(&LiveVariablesID, &SIOptimizeVGPRLiveRangeLegacyID);
+    insertPass(&MachineLoopInfoID, &SIOptimizeVGPRLiveRangeLegacyID);
 
   // This must be run immediately after phi elimination and before
   // TwoAddressInstructions, otherwise the processing of the tied operand of
@@ -2033,6 +2031,8 @@ void GCNPassConfig::addPreEmitPass() {
   if (isPassEnabled(EnableVOPD, CodeGenOptLevel::Less))
     addPass(&GCNCreateVOPDID);
   addPass(createSIMemoryLegalizerPass());
+  if (getOptLevel() > CodeGenOptLevel::None)
+    addPass(&SIPostRA16BitMovFoldingLegacyID);
   addPass(createSIInsertWaitcntsPass());
 
   addPass(createSIModeRegisterPass());
@@ -2658,12 +2658,8 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
   if (EnableDCEInRA)
     insertPass<DetectDeadLanesPass>(DeadMachineInstructionElimPass());
 
-  // FIXME: when an instruction has a Killed operand, and the instruction is
-  // inside a bundle, seems only the BUNDLE instruction appears as the Kills of
-  // the register in LiveVariables, this would trigger a failure in verifier,
-  // we should fix it and enable the verifier.
   if (OptVGPRLiveRange)
-    insertPass<RequireAnalysisPass<LiveVariablesAnalysis, MachineFunction>>(
+    insertPass<RequireAnalysisPass<MachineLoopAnalysis, MachineFunction>>(
         SIOptimizeVGPRLiveRangePass());
 
   // This must be run immediately after phi elimination and before
@@ -2778,6 +2774,8 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   }
 
   addMachineFunctionPass(SIMemoryLegalizerPass(), PMW);
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addMachineFunctionPass(SIPostRA16BitMovFoldingPass(), PMW);
   addMachineFunctionPass(SIInsertWaitcntsPass(), PMW);
 
   addMachineFunctionPass(SIModeRegisterPass(), PMW);

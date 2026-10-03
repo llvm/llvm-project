@@ -57,12 +57,7 @@ static cl::alias BasicAggregationAlias("ba",
 
 static cl::opt<bool> DeprecatedBasicAggregationNl(
     "nl", cl::desc("Alias for --basic-events (deprecated. Use --ba)"),
-    cl::cat(AggregatorCategory), cl::ReallyHidden,
-    cl::callback([](const bool &Enabled) {
-      errs()
-          << "BOLT-WARNING: '-nl' is deprecated, please use '--ba' instead.\n";
-      BasicAggregation = Enabled;
-    }));
+    cl::cat(AggregatorCategory), cl::ReallyHidden);
 
 cl::opt<bool> ArmSPE("spe", cl::desc("Enable Arm SPE mode."),
                      cl::cat(AggregatorCategory));
@@ -88,12 +83,12 @@ static cl::list<unsigned long long>
     FilterPID("pid",
               cl::desc("only use samples from process with specified PID(s) "
                        "(comma-separated)"),
-              cl::CommaSeparated, cl::ZeroOrMore, cl::cat(AggregatorCategory));
+              cl::CommaSeparated, cl::cat(AggregatorCategory));
 
 static cl::opt<bool> ImputeTraceFallthrough(
     "impute-trace-fall-through",
     cl::desc("impute missing fall-throughs for branch-only traces"),
-    cl::Optional, cl::cat(AggregatorCategory));
+    cl::cat(AggregatorCategory));
 
 static cl::opt<bool>
 IgnoreBuildID("ignore-build-id",
@@ -110,7 +105,6 @@ static cl::opt<unsigned long long>
 MaxSamples("max-samples",
   cl::init(-1ULL),
   cl::desc("maximum number of samples to read from LBR profile"),
-  cl::Optional,
   cl::Hidden,
   cl::cat(AggregatorCategory));
 
@@ -139,7 +133,6 @@ static cl::opt<bool>
 TimeAggregator("time-aggr",
   cl::desc("time BOLT aggregator"),
   cl::init(false),
-  cl::ZeroOrMore,
   cl::cat(AggregatorCategory));
 
 } // namespace opts
@@ -924,6 +917,11 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   // Turn on heatmap building if requested by --heatmap flag.
   if (!opts::HeatmapMode && opts::HeatmapOutput.getNumOccurrences())
     opts::HeatmapMode = opts::HeatmapModeKind::HM_Optional;
+
+  if (opts::DeprecatedBasicAggregationNl.getNumOccurrences()) {
+    errs() << "BOLT-WARNING: '-nl' is deprecated, please use '--ba' instead.\n";
+    opts::BasicAggregation = opts::DeprecatedBasicAggregationNl;
+  }
 
   this->BC = &BC;
 

@@ -27,7 +27,7 @@ func.func @where_self_overlap(%x: !fir.ref<!fir.array<10xi32>>, %mask: !fir.ref<
 }
 // CHECK-LABEL:   func.func @where_self_overlap(
 // CHECK-NOT:       fir.alloca index
-// CHECK:           %[[ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} {bindc_name = ".tmp.where", uniq_name = ""}
+// CHECK:           %[[ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} <{bindc_name = ".tmp.where", uniq_name = ""}>
 // CHECK:           %[[SHAPE:.*]] = fir.shape_shift %{{.*}}, %{{.*}} : (index, index) -> !fir.shapeshift<1>
 // CHECK:           %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]](%[[SHAPE]]) {uniq_name = ".tmp.where"} : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
 // First loop: save the RHS values, addressed by the loop induction variable.
@@ -92,7 +92,7 @@ func.func @nested_forall_2d(%arr: !fir.box<!fir.array<?x?xi32>>) {
 }
 // CHECK-LABEL:   func.func @nested_forall_2d(
 // CHECK-NOT:       fir.alloca index
-// CHECK:           %[[ALLOC:.*]] = fir.allocmem !fir.array<?x?xi32>, %{{.*}}, %{{.*}} {bindc_name = ".tmp.forall", uniq_name = ""}
+// CHECK:           %[[ALLOC:.*]] = fir.allocmem !fir.array<?x?xi32>, %{{.*}}, %{{.*}} <{bindc_name = ".tmp.forall", uniq_name = ""}>
 // CHECK:           %[[SHAPE:.*]] = fir.shape_shift %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (index, index, index, index) -> !fir.shapeshift<2>
 // CHECK:           %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]](%[[SHAPE]]) {uniq_name = ".tmp.forall"} : (!fir.heap<!fir.array<?x?xi32>>, !fir.shapeshift<2>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.heap<!fir.array<?x?xi32>>)
 // CHECK:           fir.do_loop %[[I0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
@@ -150,7 +150,7 @@ func.func @forall_negative_step(%arg0: !fir.ref<!fir.array<10xi32>>) {
 // CHECK:           %[[C_NEG1:.*]] = arith.constant -1 : index
 // CHECK:           %[[C1:.*]] = arith.constant 1 : index
 // CHECK:           %[[C10:.*]] = arith.constant 10 : index
-// CHECK:           %[[ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} {bindc_name = ".tmp.forall", uniq_name = ""}
+// CHECK:           %[[ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} <{bindc_name = ".tmp.forall", uniq_name = ""}>
 // CHECK:           %[[SHAPE:.*]] = fir.shape_shift %[[C1]], %{{.*}} : (index, index) -> !fir.shapeshift<1>
 // CHECK:           %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]](%[[SHAPE]]) {uniq_name = ".tmp.forall"} : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
 // CHECK:           fir.do_loop %[[IV0:.*]] = %[[C10]] to %[[C1]] step %[[C_NEG1]] {
@@ -199,7 +199,7 @@ func.func @forall_non_unit_step(%arg0: !fir.ref<!fir.array<10xi32>>) {
 // Counter-based HomogeneousScalarStack: a fir.alloca index counter and a
 // plain fir.shape (no shift), with the temp indexed through the counter.
 // CHECK:           %[[CTR:.*]] = fir.alloca index
-// CHECK:           %[[ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} {bindc_name = ".tmp.forall", uniq_name = ""}
+// CHECK:           %[[ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} <{bindc_name = ".tmp.forall", uniq_name = ""}>
 // CHECK:           %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
 // CHECK:           hlfir.declare %[[ALLOC]](%[[SHAPE]]) {uniq_name = ".tmp.forall"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
 // CHECK:           fir.load %[[CTR]] : !fir.ref<index>

@@ -22,7 +22,7 @@ define i32 @simple_find_last_reduction(i64 %N, ptr %data, i32 %a) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[TMP5]], <vscale x 4 x i1> zeroinitializer, i32 [[TMP1]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = freeze <vscale x 4 x i1> [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP7]])
-; CHECK-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i1> [[TMP0]]
+; CHECK-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i1> [[TMP0]]
 ; CHECK-NEXT:    [[TMP10]] = select i1 [[TMP8]], <vscale x 4 x i32> [[VP_OP_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP11]], [[IV]]
@@ -88,7 +88,7 @@ define i32 @non_speculatable_find_last_reduction(ptr noalias %a, ptr noalias %b,
 ; CHECK-NEXT:    [[VP_OP_LOAD5:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP7]], <vscale x 4 x i1> [[TMP5]], i32 [[TMP1]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = freeze <vscale x 4 x i1> [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP9]])
-; CHECK-NEXT:    [[TMP11]] = select i1 [[TMP10]], <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i1> [[TMP0]]
+; CHECK-NEXT:    [[TMP11]] = select i1 [[TMP10]], <vscale x 4 x i1> [[TMP9]], <vscale x 4 x i1> [[TMP0]]
 ; CHECK-NEXT:    [[TMP12]] = select i1 [[TMP10]], <vscale x 4 x i32> [[VP_OP_LOAD5]], <vscale x 4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP13]], [[IV]]
@@ -96,8 +96,7 @@ define i32 @non_speculatable_find_last_reduction(ptr noalias %a, ptr noalias %b,
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[IF_THEN:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <vscale x 4 x i32> [[BROADCAST_SPLAT2]], i64 0
-; CHECK-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32> [[TMP12]], <vscale x 4 x i1> [[TMP11]], i32 [[TMP15]])
+; CHECK-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32> [[TMP12]], <vscale x 4 x i1> [[TMP11]], i32 [[DEFAULT_VAL]])
 ; CHECK-NEXT:    br label %[[LATCH:.*]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    ret i32 [[SELECT_DATA_LCSSA]]

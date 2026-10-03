@@ -1497,36 +1497,6 @@ Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
   return Builder.CreateExtractElement(TmpVec, Builder.getInt32(0));
 }
 
-Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
-                                  Value *InitVal, PHINode *OrigPhi) {
-  Value *NewVal = nullptr;
-
-  // First use the original phi to determine the new value we're trying to
-  // select from in the loop.
-  SelectInst *SI = nullptr;
-  for (auto *U : OrigPhi->users()) {
-    if ((SI = dyn_cast<SelectInst>(U)))
-      break;
-  }
-  assert(SI && "One user of the original phi should be a select");
-
-  if (SI->getTrueValue() == OrigPhi)
-    NewVal = SI->getFalseValue();
-  else {
-    assert(SI->getFalseValue() == OrigPhi &&
-           "At least one input to the select should be the original Phi");
-    NewVal = SI->getTrueValue();
-  }
-
-  // If any predicate is true it means that we want to select the new value.
-  Value *AnyOf =
-      Src->getType()->isVectorTy() ? Builder.CreateOrReduce(Src) : Src;
-  // The compares in the loop may yield poison, which propagates through the
-  // bitwise ORs. Freeze it here before the condition is used.
-  AnyOf = Builder.CreateFreeze(AnyOf);
-  return Builder.CreateSelect(AnyOf, NewVal, InitVal, "rdx.select");
-}
-
 Value *llvm::getReductionIdentity(Intrinsic::ID RdxID, Type *Ty,
                                   FastMathFlags Flags) {
   bool Negative = false;

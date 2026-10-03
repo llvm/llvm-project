@@ -279,7 +279,8 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
     return convertSVEBuiltinType(BT);
 
   case BuiltinType::SveCount:
-    return Builder.getSVECountType(getTypeAlign(QT));
+    return Builder.getScalablePredicateOrCountVectorType(
+        getTypeAlign(QT), llvm::abi::VectorKind::SVECount);
 
   // TODO: __mfp8 has no floating-point semantics of its own, so representing
   // it needs a decision about how the ABI library should model opaque

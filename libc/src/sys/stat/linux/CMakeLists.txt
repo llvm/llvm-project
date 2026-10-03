@@ -6,9 +6,10 @@ add_entrypoint_object(
     ../chmod.h
   DEPENDS
     libc.hdr.types.mode_t
-    libc.hdr.fcntl_macros
     libc.src.__support.OSUtil.linux.syscall_wrappers.chmod
-    libc.src.errno.errno
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(
@@ -85,6 +86,23 @@ add_entrypoint_object(
     libc.hdr.sys_stat_macros
     libc.hdr.types.mode_t
     libc.src.__support.OSUtil.linux.syscall_wrappers.mknodat
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  mknod
+  SRCS
+    mknod.cpp
+  HDRS
+    ../mknod.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.types.dev_t
+    libc.hdr.types.mode_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mknodat
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 

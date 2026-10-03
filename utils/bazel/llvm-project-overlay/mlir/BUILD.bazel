@@ -450,6 +450,7 @@ cc_library(
     hdrs = glob([
         "include/mlir/IR/*.h",
     ]) + [
+        "include/mlir/Dialect/Utils/StaticValueUtils.h",
         "include/mlir/IR/PDLPatternMatch.h.inc",
         "include/mlir/Interfaces/CallInterfaces.h",
         "include/mlir/Interfaces/FoldInterfaces.h",
@@ -7554,8 +7555,10 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":MathDialect",
+        ":MathTransforms",
         ":Pass",
         ":Transforms",
+        ":TransformUtils",
         ":VectorDialect",
         ":XeVMDialect",
         "//llvm:Support",

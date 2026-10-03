@@ -144,7 +144,7 @@ public:
   /// type is the integer type that corresponds to the bit width of the value.
   LLVM_ABI static ConstantInt *get(LLVMContext &Context, const APInt &V);
 
-  /// Return a ConstantInt constructed from the string strStart with the given
+  /// Return a ConstantInt constructed from the string Str with the given
   /// radix.
   LLVM_ABI static ConstantInt *get(IntegerType *Ty, StringRef Str,
                                    uint8_t Radix);

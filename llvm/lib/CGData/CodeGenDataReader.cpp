@@ -28,12 +28,6 @@ static cl::opt<bool> IndexedCodeGenDataReadFunctionMapNames(
 
 namespace llvm {
 
-cl::opt<bool> IndexedCodeGenDataLazyLoading(
-    "indexed-codegen-data-lazy-loading", cl::init(false), cl::Hidden,
-    cl::desc(
-        "Lazily load indexed CodeGenData. Enable to save memory and time "
-        "for final consumption of the indexed CodeGenData in production."));
-
 static Expected<std::unique_ptr<MemoryBuffer>>
 setupMemoryBuffer(const Twine &Filename, vfs::FileSystem &FS) {
   auto BufferOrErr = Filename.str() == "-" ? MemoryBuffer::getSTDIN()
@@ -124,7 +118,7 @@ Error IndexedCodeGenDataReader::read() {
       return error(cgdata_error::eof);
     FunctionMapRecord.setReadStableFunctionMapNames(
         IndexedCodeGenDataReadFunctionMapNames);
-    if (IndexedCodeGenDataLazyLoading)
+    if (LazyLoading)
       FunctionMapRecord.lazyDeserialize(std::move(SharedDataBuffer),
                                         Header.StableFunctionMapOffset);
     else
@@ -135,23 +129,26 @@ Error IndexedCodeGenDataReader::read() {
 }
 
 Expected<std::unique_ptr<CodeGenDataReader>>
-CodeGenDataReader::create(const Twine &Path, vfs::FileSystem &FS) {
+CodeGenDataReader::create(const Twine &Path, vfs::FileSystem &FS,
+                          bool LazyLoading) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path, FS);
   if (Error E = BufferOrError.takeError())
     return std::move(E);
-  return CodeGenDataReader::create(std::move(BufferOrError.get()));
+  return CodeGenDataReader::create(std::move(BufferOrError.get()), LazyLoading);
 }
 
 Expected<std::unique_ptr<CodeGenDataReader>>
-CodeGenDataReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
+CodeGenDataReader::create(std::unique_ptr<MemoryBuffer> Buffer,
+                          bool LazyLoading) {
   if (Buffer->getBufferSize() == 0)
     return make_error<CGDataError>(cgdata_error::empty_cgdata);
 
   std::unique_ptr<CodeGenDataReader> Reader;
   // Create the reader.
   if (IndexedCodeGenDataReader::hasFormat(*Buffer))
-    Reader = std::make_unique<IndexedCodeGenDataReader>(std::move(Buffer));
+    Reader = std::make_unique<IndexedCodeGenDataReader>(std::move(Buffer),
+                                                        LazyLoading);
   else if (TextCodeGenDataReader::hasFormat(*Buffer))
     Reader = std::make_unique<TextCodeGenDataReader>(std::move(Buffer));
   else

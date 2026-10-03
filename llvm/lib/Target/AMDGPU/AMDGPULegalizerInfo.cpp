@@ -696,21 +696,17 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   :  ST(ST_) {
   using namespace TargetOpcode;
 
-  auto GetAddrSpacePtr = [&TM](unsigned AS) {
-    return LLT::pointer(AS, TM.getPointerSizeInBits(AS));
-  };
-
-  const LLT GlobalPtr = GetAddrSpacePtr(AMDGPUAS::GLOBAL_ADDRESS);
-  const LLT ConstantPtr = GetAddrSpacePtr(AMDGPUAS::CONSTANT_ADDRESS);
-  const LLT Constant32Ptr = GetAddrSpacePtr(AMDGPUAS::CONSTANT_ADDRESS_32BIT);
-  const LLT LocalPtr = GetAddrSpacePtr(AMDGPUAS::LOCAL_ADDRESS);
-  const LLT RegionPtr = GetAddrSpacePtr(AMDGPUAS::REGION_ADDRESS);
-  const LLT FlatPtr = GetAddrSpacePtr(AMDGPUAS::FLAT_ADDRESS);
-  const LLT PrivatePtr = GetAddrSpacePtr(AMDGPUAS::PRIVATE_ADDRESS);
-  const LLT BufferFatPtr = GetAddrSpacePtr(AMDGPUAS::BUFFER_FAT_POINTER);
-  const LLT RsrcPtr = GetAddrSpacePtr(AMDGPUAS::BUFFER_RESOURCE);
+  const LLT GlobalPtr = LLT::pointer(AMDGPUAS::GLOBAL_ADDRESS, 64);
+  const LLT ConstantPtr = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
+  const LLT Constant32Ptr = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS_32BIT, 32);
+  const LLT LocalPtr = LLT::pointer(AMDGPUAS::LOCAL_ADDRESS, 32);
+  const LLT RegionPtr = LLT::pointer(AMDGPUAS::REGION_ADDRESS, 32);
+  const LLT FlatPtr = LLT::pointer(AMDGPUAS::FLAT_ADDRESS, 64);
+  const LLT PrivatePtr = LLT::pointer(AMDGPUAS::PRIVATE_ADDRESS, 32);
+  const LLT BufferFatPtr = LLT::pointer(AMDGPUAS::BUFFER_FAT_POINTER, 160);
+  const LLT RsrcPtr = LLT::pointer(AMDGPUAS::BUFFER_RESOURCE, 128);
   const LLT BufferStridedPtr =
-      GetAddrSpacePtr(AMDGPUAS::BUFFER_STRIDED_POINTER);
+      LLT::pointer(AMDGPUAS::BUFFER_STRIDED_POINTER, 192);
 
   const LLT CodePtr = FlatPtr;
 
@@ -2590,7 +2586,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   // flag; otherwise we need to guess.
   const bool IsNonNull = MI.getFlag(MachineInstr::MIFlag::NonNull);
 
-  if (TM.isNoopAddrSpaceCast(SrcAS, DestAS)) {
+  if (TM.isNoopAddrSpaceCast(MF.getDataLayout(), SrcAS, DestAS)) {
     MI.setDesc(B.getTII().get(TargetOpcode::G_BITCAST));
     return true;
   }

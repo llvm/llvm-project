@@ -598,9 +598,6 @@ public:
                        unsigned ASId, PredicatedScalarEvolution &PSE,
                        bool NeedsFreeze);
 
-  /// No run-time memory checking is necessary.
-  bool empty() const { return Pointers.empty(); }
-
   /// Generate the checks and store it.  This also performs the grouping
   /// of pointers to reduce the number of memchecks necessary.
   LLVM_ABI void generateChecks(MemoryDepChecker::DepCandidates &DepCands);
@@ -770,9 +767,6 @@ public:
   /// Returns true if value \p V is loop invariant.
   LLVM_ABI bool isInvariant(Value *V) const;
 
-  unsigned getNumStores() const { return NumStores; }
-  unsigned getNumLoads() const { return NumLoads;}
-
   /// The diagnostics report generated for the analysis.  E.g. why we
   /// couldn't analyze the loop.
   const OptimizationRemarkAnalysis *getReport() const { return Report.get(); }
@@ -873,9 +867,6 @@ private:
   /// Determines whether we should generate partial runtime checks when not all
   /// memory accesses could be analyzed.
   bool AllowPartial;
-
-  unsigned NumLoads = 0;
-  unsigned NumStores = 0;
 
   /// Cache the result of analyzeLoop.
   bool CanVecMem = false;

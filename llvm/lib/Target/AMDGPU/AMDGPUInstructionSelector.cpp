@@ -877,8 +877,6 @@ bool AMDGPUInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
 
   const TargetRegisterClass *SrcRC =
       TRI.getRegClassForSizeOnBank(SrcSize, *SrcBank);
-  if (!SrcRC || !RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI))
-    return false;
 
   // Note we could have mixed SGPR and VGPR destination banks for an SGPR
   // source, and this relies on the fact that the same subregister indices are
@@ -895,10 +893,11 @@ bool AMDGPUInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
     } else {
       BuildMI(*BB, &MI, DL, TII.get(TargetOpcode::COPY), DstReg)
           .addReg(SrcReg, {}, SubRegs[I]);
+
+      // Make sure the subregister index is valid for the source register.
+      SrcRC = TRI.getSubClassWithSubReg(SrcRC, SubRegs[I]);
     }
 
-    // Make sure the subregister index is valid for the source register.
-    SrcRC = TRI.getSubClassWithSubReg(SrcRC, SubRegs[I]);
     if (!SrcRC || !RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI))
       return false;
 

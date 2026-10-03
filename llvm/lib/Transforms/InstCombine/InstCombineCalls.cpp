@@ -53,6 +53,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -997,6 +998,13 @@ static bool inputDenormalIsDAZ(const Function &F, const Type *Ty) {
   return F.getDenormalMode(Ty->getFltSemantics()).inputsAreZero();
 }
 
+/// Flushing a denormal to +0.0 breaks f(-x) = -f(x) for odd f.
+static bool mayFlushDenormalsToPositiveZero(const CallInst *CI) {
+  DenormalMode Mode = CI->getFunction()->getDenormalMode(
+      CI->getType()->getScalarType()->getFltSemantics());
+  return Mode.inputsMayBePositiveZero() || Mode.outputsMayBePositiveZero();
+}
+
 /// \returns the compare predicate type if the test performed by
 /// llvm.is.fpclass(x, \p Mask) is equivalent to fcmp o__ x, 0.0 with the
 /// floating-point environment assumed for \p F for type \p Ty
@@ -1207,7 +1215,7 @@ static std::optional<bool> getKnownSign(Value *Op, const SimplifyQuery &SQ) {
 
   Value *X, *Y;
   if (match(Op, m_NSWSub(m_Value(X), m_Value(Y))))
-    return isImpliedByDomCondition(ICmpInst::ICMP_SLT, X, Y, SQ.CxtI, SQ.DL);
+    return isImpliedByDomCondition(ICmpInst::ICMP_SLT, X, Y, SQ.CtxI, SQ.DL);
 
   return std::nullopt;
 }
@@ -1219,7 +1227,7 @@ static std::optional<bool> getKnownSignOrZero(Value *Op,
 
   Value *X, *Y;
   if (match(Op, m_NSWSub(m_Value(X), m_Value(Y))))
-    return isImpliedByDomCondition(ICmpInst::ICMP_SLE, X, Y, SQ.CxtI, SQ.DL);
+    return isImpliedByDomCondition(ICmpInst::ICMP_SLE, X, Y, SQ.CtxI, SQ.DL);
 
   return std::nullopt;
 }
@@ -2556,8 +2564,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         X->getType()->isIntOrIntVectorTy(1)) {
       Type *Ty = II->getType();
       APInt SignBit = APInt::getSignMask(Ty->getScalarSizeInBits());
-      return SelectInst::Create(X, ConstantInt::get(Ty, SignBit),
-                                ConstantInt::getNullValue(Ty));
+      SelectInst *SI = SelectInst::Create(X, ConstantInt::get(Ty, SignBit),
+                                          ConstantInt::getNullValue(Ty));
+      // Mark the branch weights explicitly unknown as in the general case we
+      // cannot infer the probability of the condition without additional value
+      // profiling.
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE, &F);
+      return SI;
     }
 
     if (Instruction *crossLogicOpFold =
@@ -3415,7 +3428,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::tan:
   case Intrinsic::tanh: {
     Value *X;
-    if (match(II->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X))))) {
+    if (match(II->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X)))) &&
+        !mayFlushDenormalsToPositiveZero(II)) {
       // f(-x) --> -f(x)
       // for f in {sin, sinh, tan, tanh}
       Value *NewFunc = Builder.CreateUnaryIntrinsic(IID, X, II);
@@ -4146,13 +4160,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Type *ReturnType = II->getType();
     // (extract_vector (insert_vector InsertTuple, InsertValue, InsertIdx),
     // ExtractIdx)
-    unsigned ExtractIdx = cast<ConstantInt>(Idx)->getZExtValue();
+    uint64_t ExtractIdx = cast<ConstantInt>(Idx)->getZExtValue();
     Value *InsertTuple, *InsertIdx, *InsertValue;
     if (match(Vec, m_Intrinsic<Intrinsic::vector_insert>(m_Value(InsertTuple),
                                                          m_Value(InsertValue),
                                                          m_Value(InsertIdx))) &&
         InsertValue->getType() == ReturnType) {
-      unsigned Index = cast<ConstantInt>(InsertIdx)->getZExtValue();
+      uint64_t Index = cast<ConstantInt>(InsertIdx)->getZExtValue();
       // Case where we get the same index right after setting it.
       // extract.vector(insert.vector(InsertTuple, InsertValue, Idx), Idx) -->
       // InsertValue

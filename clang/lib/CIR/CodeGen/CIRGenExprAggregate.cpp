@@ -18,6 +18,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/CodeGenUtils/ExprUtils.h"
@@ -208,8 +209,7 @@ public:
       mlir::Value sizeVal = cgf.getBuilder().getConstInt(
           loc, cgf.sizeTy,
           cgf.getContext().getTypeSizeInChars(e->getType()).getQuantity());
-      cgf.getBuilder().createMemCpy(loc, destAddress.getPointer(),
-                                    sourceAddress.getPointer(), sizeVal);
+      cgf.getBuilder().createMemCpy(loc, destAddress, sourceAddress, sizeVal);
 
       break;
     }
@@ -326,17 +326,18 @@ public:
     Visit(ge->getResultExpr());
   }
   void VisitCoawaitExpr(CoawaitExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCoawaitExpr");
+    cgf.emitCoawaitExpr(*e, dest, dest.isIgnored());
   }
   void VisitCoyieldExpr(CoyieldExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCoyieldExpr");
+    cgf.emitCoyieldExpr(*e, dest, dest.isIgnored());
   }
-  void VisitUnaryCoawait(UnaryOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitUnaryCoawait");
-  }
+  void VisitUnaryCoawait(UnaryOperator *e) { Visit(e->getSubExpr()); }
   void VisitUnaryExtension(UnaryOperator *e) { Visit(e->getSubExpr()); }
   void VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *e) {
     Visit(e->getReplacement());
+  }
+  void VisitPackIndexingExpr(PackIndexingExpr *e) {
+    Visit(e->getSelectedExpr());
   }
   void VisitConstantExpr(ConstantExpr *e) {
     ensureDest(cgf.getLoc(e->getSourceRange()), e->getType());
@@ -462,7 +463,12 @@ public:
     mlir::Location loc = cgf.getLoc(e->getSourceRange());
 
     CIRGenFunction::OpaqueValueMapping binding(cgf, e);
-    CIRGenFunction::ConditionalEvaluation eval(cgf);
+
+    // Emit the condition before opening the conditional evaluation, so that
+    // the cleanup scope of any temporary the condition creates encloses the
+    // one the evaluation opens.
+    mlir::Value condV = cgf.emitOpOnBoolExpr(loc, e->getCond());
+    CIRGenFunction::ConditionalEvaluation eval(cgf, loc);
 
     // Save whether the destination's lifetime is externally managed.
     bool isExternallyDestructed = dest.isExternallyDestructed();
@@ -471,10 +477,10 @@ public:
         e->getType().isDestructedType() == QualType::DK_nontrivial_c_struct;
     isExternallyDestructed |= destructNonTrivialCStruct;
 
-    // emitIfOnBoolExpr terminates each region; an unconditional yield here
+    // emitIfOnBoolValue terminates each region; an unconditional yield here
     // would keep alive the dead block a noreturn arm leaves behind.
-    cgf.emitIfOnBoolExpr(
-        e->getCond(),
+    cgf.emitIfOnBoolValue(
+        condV, loc,
         /*thenBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           eval.beginEvaluation();

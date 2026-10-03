@@ -699,7 +699,10 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
     switch (separator_type) {
     case '-':
       expr_is_ptr = true;
-      if (var_expr.size() >= 2 && var_expr[1] != '>')
+      // A '-' only continues the path as the first character of "->"; a
+      // trailing '-' with no operand, or any other next character, is
+      // malformed.
+      if (var_expr.size() < 2 || var_expr[1] != '>')
         return ValueObjectSP();
 
       // If we have a non-pointer type with a synthetic value then lets check if

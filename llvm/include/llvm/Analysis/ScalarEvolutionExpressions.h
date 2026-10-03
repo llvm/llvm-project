@@ -210,8 +210,8 @@ public:
 
   ArrayRef<SCEVUse> operands() const { return ArrayRef(Operands, NumOperands); }
 
-  NoWrapFlags getNoWrapFlags(NoWrapFlags Mask = FlagsMask) const {
-    return static_cast<NoWrapFlags>(SubclassData) & Mask;
+  SCEVFlags getNoWrapFlags(SCEVFlags Mask = FlagsNoWrapMask) const {
+    return static_cast<SCEVFlags>(SubclassData) & Mask & SCEV::FlagsNoWrapMask;
   }
 
   bool hasNoUnsignedWrap() const { return getNoWrapFlags(FlagNUW) != FlagNone; }
@@ -228,7 +228,6 @@ public:
            S->getSCEVType() == scSequentialUMinExpr ||
            S->getSCEVType() == scAddRecExpr;
   }
-  static bool classof(const SCEVUse *U) { return classof(U->getPointer()); }
 };
 
 /// This node is the base class for n'ary commutative operators.
@@ -247,8 +246,11 @@ public:
   }
 
   /// Set flags for a non-recurrence without clearing previously set flags.
-  void setNoWrapFlags(NoWrapFlags Flags) {
+  void setFlags(SCEVFlags Flags) {
     SubclassData |= static_cast<unsigned short>(Flags);
+  }
+  void setNoWrapFlags(SCEVFlags Flags) {
+    setFlags(Flags & SCEV::FlagsNoWrapMask);
   }
 };
 
@@ -273,7 +275,6 @@ class SCEVAddExpr : public SCEVCommutativeExpr {
 public:
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const SCEV *S) { return S->getSCEVType() == scAddExpr; }
-  static bool classof(const SCEVUse *U) { return classof(U->getPointer()); }
 };
 
 /// This node represents multiplication of some number of SCEVs.
@@ -286,7 +287,6 @@ class SCEVMulExpr : public SCEVCommutativeExpr {
 public:
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const SCEV *S) { return S->getSCEVType() == scMulExpr; }
-  static bool classof(const SCEVUse *U) { return classof(U->getPointer()); }
 };
 
 /// This class represents a binary unsigned division operation.
@@ -365,7 +365,9 @@ public:
   /// Set flags for a recurrence without clearing any previously set flags.
   /// For AddRec, either NUW or NSW implies NW. Keep track of this fact here
   /// to make it easier to propagate flags.
-  void setNoWrapFlags(NoWrapFlags Flags) {
+  void setNoWrapFlags(SCEVFlags Flags) {
+    if (!any(Flags & FlagsNoWrapMask))
+      return;
     if (any(Flags & (FlagNUW | FlagNSW)))
       Flags = ScalarEvolution::setFlags(Flags, FlagNW);
     SubclassData |= static_cast<unsigned short>(Flags);
@@ -380,8 +382,7 @@ public:
   /// number. Takes an explicit list of operands to represent an AddRec.
   LLVM_ABI static SCEVUse
   evaluateAtIteration(ArrayRef<SCEVUse> Operands, const SCEV *It,
-                      ScalarEvolution &SE,
-                      SCEV::NoWrapFlags UseFlags = SCEV::FlagNone);
+                      ScalarEvolution &SE, SCEVFlags UseFlags = SCEV::FlagNone);
 
   /// Return the value of this recurrences when its loop exits, i.e. its value
   /// at the loop's exact backedge-taken count, or SCEVCouldNotCompute if that
@@ -507,8 +508,11 @@ class SCEVSequentialMinMaxExpr : public SCEVNAryExpr {
   }
 
   /// Set flags for a non-recurrence without clearing previously set flags.
-  void setNoWrapFlags(NoWrapFlags Flags) {
+  void setFlags(SCEVFlags Flags) {
     SubclassData |= static_cast<unsigned short>(Flags);
+  }
+  void setNoWrapFlags(SCEVFlags Flags) {
+    setFlags(Flags & SCEV::FlagsNoWrapMask);
   }
 
 protected:
@@ -539,7 +543,6 @@ public:
   static bool classof(const SCEV *S) {
     return isSequentialMinMaxType(S->getSCEVType());
   }
-  static bool classof(const SCEVUse *U) { return classof(U->getPointer()); }
 };
 
 /// This class represents a sequential/in-order unsigned minimum selection.
@@ -1001,8 +1004,9 @@ private:
 };
 
 template <typename SCEVPtrT>
-inline SCEVUseT<SCEVPtrT>::SCEVUseT(SCEVPtrT S, SCEVNoWrapFlags Flags)
-    : Base(S, 0) {
+inline SCEVUseT<SCEVPtrT>::SCEVUseT(SCEVPtrT S, SCEVFlags Flags) : Base(S, 0) {
+  assert((Flags & SCEVFlags::FlagsNoWrapMask) == Flags &&
+         "Expected only no-wrap flags");
   if (any(Flags)) {
     assert((isa<SCEVAddExpr, SCEVMulExpr, SCEVAddRecExpr>(S)) &&
            "use flags require an expression that can carry no-wrap flags");
@@ -1013,9 +1017,8 @@ inline SCEVUseT<SCEVPtrT>::SCEVUseT(SCEVPtrT S, SCEVNoWrapFlags Flags)
 }
 
 template <typename SCEVPtrT>
-inline SCEVNoWrapFlags
-SCEVUseT<SCEVPtrT>::getNoWrapFlags(SCEVNoWrapFlags Mask) const {
-  SCEVNoWrapFlags Flags = SCEVNoWrapFlags::FlagNone;
+inline SCEVFlags SCEVUseT<SCEVPtrT>::getNoWrapFlags(SCEVFlags Mask) const {
+  SCEVFlags Flags = SCEVFlags::FlagNone;
   if (auto *NAry = dyn_cast<SCEVNAryExpr>(Base::getPointer()))
     Flags = NAry->getNoWrapFlags();
   return (Flags | getUseNoWrapFlags()) & Mask;

@@ -14814,18 +14814,18 @@ define void @flat_atomic_add_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
 ; GFX950-NEXT:    ;;#ASMSTART
-; GFX950-NEXT:    ; def v[0:1]
+; GFX950-NEXT:    ; def v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
 ; GFX950-NEXT:    s_cbranch_scc0 .LBB196_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.global
-; GFX950-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX950-NEXT:    flat_atomic_add_x2 v[2:3], v[2:3], v[0:1] sc0
+; GFX950-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX950-NEXT:    flat_atomic_add_x2 v[0:1], v[0:1], v[2:3] sc0
 ; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-NEXT:    s_mov_b64 s[2:3], 0
 ; GFX950-NEXT:    s_branch .LBB196_3
 ; GFX950-NEXT:  .LBB196_2:
 ; GFX950-NEXT:    s_mov_b64 s[2:3], -1
-; GFX950-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX950-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX950-NEXT:  .LBB196_3: ; %Flow
 ; GFX950-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
@@ -14834,14 +14834,14 @@ define void @flat_atomic_add_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
-; GFX950-NEXT:    scratch_load_dwordx2 v[2:3], off, s0
+; GFX950-NEXT:    scratch_load_dwordx2 v[0:1], off, s0
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-NEXT:    v_lshl_add_u64 v[0:1], v[2:3], 0, v[0:1]
-; GFX950-NEXT:    scratch_store_dwordx2 off, v[0:1], s0
+; GFX950-NEXT:    v_lshl_add_u64 v[2:3], v[0:1], 0, v[2:3]
+; GFX950-NEXT:    scratch_store_dwordx2 off, v[2:3], s0
 ; GFX950-NEXT:  .LBB196_5: ; %atomicrmw.end
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    ;;#ASMSTART
-; GFX950-NEXT:    ; use v[2:3]
+; GFX950-NEXT:    ; use v[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x i64], ptr %ptr, i64 0, i64 10

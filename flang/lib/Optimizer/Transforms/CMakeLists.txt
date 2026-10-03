@@ -16,7 +16,6 @@ add_flang_library(FIRTransforms
   CUDA/CUFDeviceFuncTransform.cpp
   CUDA/CUFDeviceGlobal.cpp
   CUDA/CUFDuplicateDeviceFunc.cpp
-  CUDA/CUFFunctionRewrite.cpp
   CUDA/CUFGPUToLLVMConversion.cpp
   CUDA/CUFLaunchAttachAttr.cpp
   CUDA/CUFOpConversion.cpp
@@ -93,6 +92,7 @@ add_flang_library(FIRTransforms
   MLIRMathTransforms
   MLIRNVVMDialect
   MLIROpenACCDialect
+  MLIROpenACCUtils
   MLIROpenMPDialect
   MLIRTransformUtils
 )

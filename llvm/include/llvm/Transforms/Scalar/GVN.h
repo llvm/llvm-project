@@ -26,6 +26,7 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Transforms/Scalar/GVNValueTable.h"
 #include <cstdint>
 #include <optional>
 #include <utility>
@@ -116,6 +117,84 @@ struct GVNOptions {
   }
 };
 
+/// A mapping from value numbers to lists of Value*'s that
+/// have that value number. Use getLeaders to query it.
+class GVNLeaderMap {
+public:
+  struct LeaderTableEntry {
+    // Use AssertingVH here to catch dangling Value*'s in the leader table.
+    // Will crash if the value gets deleted before the AssertingVH is
+    // destroyed.
+    AssertingVH<Value> Val;
+    const BasicBlock *BB;
+    LeaderTableEntry(Value *V, const BasicBlock *BB) : Val(V), BB(BB) {}
+  };
+
+private:
+  struct LeaderListNode {
+    LeaderTableEntry Entry;
+    LeaderListNode *Next;
+    LeaderListNode(Value *V, const BasicBlock *BB, LeaderListNode *Next)
+        : Entry(V, BB), Next(Next) {}
+  };
+  DenseMap<uint32_t, LeaderListNode> NumToLeaders;
+  BumpPtrAllocator TableAllocator;
+
+public:
+  class leader_iterator {
+    const LeaderListNode *Current;
+
+  public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = const LeaderTableEntry;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
+    leader_iterator(const LeaderListNode *C) : Current(C) {}
+    leader_iterator &operator++() {
+      assert(Current && "Dereferenced end of leader list!");
+      Current = Current->Next;
+      return *this;
+    }
+    bool operator==(const leader_iterator &Other) const {
+      return Current == Other.Current;
+    }
+    bool operator!=(const leader_iterator &Other) const {
+      return Current != Other.Current;
+    }
+    reference operator*() const { return Current->Entry; }
+  };
+
+  iterator_range<leader_iterator> getLeaders(uint32_t N) {
+    auto I = NumToLeaders.find(N);
+    if (I == NumToLeaders.end()) {
+      return iterator_range(leader_iterator(nullptr), leader_iterator(nullptr));
+    }
+
+    return iterator_range(leader_iterator(&I->second),
+                          leader_iterator(nullptr));
+  }
+
+  LLVM_ABI void insert(uint32_t N, Value *V, const BasicBlock *BB);
+  LLVM_ABI void erase(uint32_t N, Instruction *I, const BasicBlock *BB);
+  void clear() {
+    // Manually destroy non-head nodes (in BumpPtrAllocator) to properly
+    // clean up AssertingVH handles before Reset(). Head nodes are destroyed
+    // by NumToLeaders.clear() below.
+    for (auto &[_, HeadNode] : NumToLeaders) {
+      LeaderListNode *N = HeadNode.Next;
+      while (N) {
+        auto *Next = N->Next;
+        N->~LeaderListNode();
+        N = Next;
+      }
+    }
+    NumToLeaders.clear();
+    TableAllocator.Reset();
+  }
+};
+
 /// The core GVN pass object.
 ///
 /// FIXME: We should have a good summary of the GVN algorithm implemented by
@@ -152,95 +231,6 @@ public:
   LLVM_ABI bool isMemDepEnabled() const;
   LLVM_ABI bool isMemorySSAEnabled() const;
 
-  /// This class holds the mapping between values and value numbers.  It is used
-  /// as an efficient mechanism to determine the expression-wise equivalence of
-  /// two values.
-  class ValueTable {
-    DenseMap<Value *, uint32_t> ValueNumbering;
-    DenseMap<Expression, uint32_t> ExpressionNumbering;
-
-    // Expressions is the vector of Expression. ExprIdx is the mapping from
-    // value number to the index of Expression in Expressions. We use it
-    // instead of a DenseMap because filling such mapping is faster than
-    // filling a DenseMap and the compile time is a little better.
-    uint32_t NextExprNumber = 0;
-
-    std::vector<Expression> Expressions;
-    std::vector<uint32_t> ExprIdx;
-
-    // Value number to PHINode mapping. Used for phi-translate in scalarpre.
-    DenseMap<uint32_t, PHINode *> NumberingPhi;
-
-    // Value number to BasicBlock mapping. Used for phi-translate across
-    // MemoryPhis.
-    DenseMap<uint32_t, BasicBlock *> NumberingBB;
-
-    // Cache for phi-translate in scalarpre.
-    using PhiTranslateMap =
-        DenseMap<std::pair<uint32_t, const BasicBlock *>, uint32_t>;
-    PhiTranslateMap PhiTranslateTable;
-
-    AAResults *AA = nullptr;
-    MemoryDependenceResults *MD = nullptr;
-    bool IsMDEnabled = false;
-    MemorySSA *MSSA = nullptr;
-    bool IsMSSAEnabled = false;
-    DominatorTree *DT = nullptr;
-
-    uint32_t NextValueNumber = 1;
-
-    Expression createExpr(Instruction *I);
-    Expression createCmpExpr(unsigned Opcode, CmpInst::Predicate Predicate,
-                             Value *LHS, Value *RHS);
-    Expression createExtractValueExpr(ExtractValueInst *EI);
-    Expression createGEPExpr(GetElementPtrInst *GEP);
-    uint32_t lookupOrAddCall(CallInst *C);
-    uint32_t computeLoadStoreVN(Instruction *I);
-    uint32_t phiTranslateImpl(const BasicBlock *BB, const BasicBlock *PhiBlock,
-                              uint32_t Num, GVNPass &GVN);
-    bool areCallValsEqual(uint32_t Num, uint32_t NewNum, const BasicBlock *Pred,
-                          const BasicBlock *PhiBlock, GVNPass &GVN);
-    std::pair<uint32_t, bool> assignExpNewValueNum(Expression &Exp);
-    bool areAllValsInBB(uint32_t Num, const BasicBlock *BB, GVNPass &GVN);
-    void addMemoryStateToExp(Instruction *I, Expression &Exp);
-
-  public:
-    LLVM_ABI ValueTable();
-    LLVM_ABI ValueTable(const ValueTable &Arg);
-    LLVM_ABI ValueTable(ValueTable &&Arg);
-    LLVM_ABI ~ValueTable();
-    LLVM_ABI ValueTable &operator=(const ValueTable &Arg);
-
-    LLVM_ABI uint32_t lookupOrAdd(MemoryAccess *MA);
-    LLVM_ABI uint32_t lookupOrAdd(Value *V);
-    LLVM_ABI uint32_t lookup(Value *V, bool Verify = true) const;
-    LLVM_ABI uint32_t lookupOrAddCmp(unsigned Opcode, CmpInst::Predicate Pred,
-                                     Value *LHS, Value *RHS);
-    LLVM_ABI uint32_t lookupPtrToInt(Value *Ptr, Type *Ty);
-    LLVM_ABI uint32_t phiTranslate(const BasicBlock *BB,
-                                   const BasicBlock *PhiBlock, uint32_t Num,
-                                   GVNPass &GVN);
-    LLVM_ABI void eraseTranslateCacheEntry(uint32_t Num,
-                                           const BasicBlock &CurrBlock);
-    LLVM_ABI bool exists(Value *V) const;
-    LLVM_ABI void add(Value *V, uint32_t Num);
-    LLVM_ABI void clear();
-    LLVM_ABI void erase(Value *V);
-    void setAliasAnalysis(AAResults *A) { AA = A; }
-    AAResults *getAliasAnalysis() const { return AA; }
-    void setMemDep(MemoryDependenceResults *M, bool MDEnabled = true) {
-      MD = M;
-      IsMDEnabled = MDEnabled;
-    }
-    void setMemorySSA(MemorySSA *M, bool MSSAEnabled = false) {
-      MSSA = M;
-      IsMSSAEnabled = MSSAEnabled;
-    }
-    void setDomTree(DominatorTree *D) { DT = D; }
-    uint32_t getNextUnusedValueNumber() { return NextValueNumber; }
-    LLVM_ABI void verifyRemoved(const Value *) const;
-  };
-
 private:
   friend class GVNLegacyPass;
   friend struct DenseMapInfo<Expression>;
@@ -256,87 +246,9 @@ private:
   AAResults *AA = nullptr;
   MemorySSAUpdater *MSSAU = nullptr;
 
-  ValueTable VN;
+  GVNValueTable VN;
 
-  /// A mapping from value numbers to lists of Value*'s that
-  /// have that value number.  Use findLeader to query it.
-  class LeaderMap {
-  public:
-    struct LeaderTableEntry {
-      // Use AssertingVH here to catch dangling Value*'s in the leader table.
-      // Will crash if the value gets deleted before the AssertingVH is
-      // destroyed.
-      AssertingVH<Value> Val;
-      const BasicBlock *BB;
-      LeaderTableEntry(Value *V, const BasicBlock *BB) : Val(V), BB(BB) {}
-    };
-
-  private:
-    struct LeaderListNode {
-      LeaderTableEntry Entry;
-      LeaderListNode *Next;
-      LeaderListNode(Value *V, const BasicBlock *BB, LeaderListNode *Next)
-          : Entry(V, BB), Next(Next) {}
-    };
-    DenseMap<uint32_t, LeaderListNode> NumToLeaders;
-    BumpPtrAllocator TableAllocator;
-
-  public:
-    class leader_iterator {
-      const LeaderListNode *Current;
-
-    public:
-      using iterator_category = std::forward_iterator_tag;
-      using value_type = const LeaderTableEntry;
-      using difference_type = std::ptrdiff_t;
-      using pointer = value_type *;
-      using reference = value_type &;
-
-      leader_iterator(const LeaderListNode *C) : Current(C) {}
-      leader_iterator &operator++() {
-        assert(Current && "Dereferenced end of leader list!");
-        Current = Current->Next;
-        return *this;
-      }
-      bool operator==(const leader_iterator &Other) const {
-        return Current == Other.Current;
-      }
-      bool operator!=(const leader_iterator &Other) const {
-        return Current != Other.Current;
-      }
-      reference operator*() const { return Current->Entry; }
-    };
-
-    iterator_range<leader_iterator> getLeaders(uint32_t N) {
-      auto I = NumToLeaders.find(N);
-      if (I == NumToLeaders.end()) {
-        return iterator_range(leader_iterator(nullptr),
-                              leader_iterator(nullptr));
-      }
-
-      return iterator_range(leader_iterator(&I->second),
-                            leader_iterator(nullptr));
-    }
-
-    LLVM_ABI void insert(uint32_t N, Value *V, const BasicBlock *BB);
-    LLVM_ABI void erase(uint32_t N, Instruction *I, const BasicBlock *BB);
-    void clear() {
-      // Manually destroy non-head nodes (in BumpPtrAllocator) to properly
-      // clean up AssertingVH handles before Reset(). Head nodes are destroyed
-      // by NumToLeaders.clear() below.
-      for (auto &[_, HeadNode] : NumToLeaders) {
-        LeaderListNode *N = HeadNode.Next;
-        while (N) {
-          auto *Next = N->Next;
-          N->~LeaderListNode();
-          N = Next;
-        }
-      }
-      NumToLeaders.clear();
-      TableAllocator.Reset();
-    }
-  };
-  LeaderMap LeaderTable;
+  GVNLeaderMap LeaderTable;
 
   // Map the block to reversed postorder traversal number. It is used to
   // find back edge easily.
@@ -515,20 +427,6 @@ private:
 /// Create a legacy GVN pass.
 LLVM_ABI FunctionPass *createGVNPass(bool ScalarPRE);
 LLVM_ABI FunctionPass *createGVNPass();
-
-/// A simple and fast domtree-based GVN pass to hoist common expressions
-/// from sibling branches.
-struct GVNHoistPass : OptionalPassInfoMixin<GVNHoistPass> {
-  /// Run the pass over the function.
-  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-};
-
-/// Uses an "inverted" value numbering to decide the similarity of
-/// expressions and sinks similar expressions into successors.
-struct GVNSinkPass : OptionalPassInfoMixin<GVNSinkPass> {
-  /// Run the pass over the function.
-  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-};
 
 } // end namespace llvm
 
