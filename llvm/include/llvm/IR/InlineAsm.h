@@ -93,6 +93,9 @@ public:
   /// specified constraint string is legal for the type.
   LLVM_ABI static Error verify(FunctionType *Ty, StringRef Constraints);
 
+  /// Check if the inline asm modifies memory.
+  bool modMemory() const;
+
   // Constraint String Parsing
   enum ConstraintPrefix {
     isInput,            // 'x'
