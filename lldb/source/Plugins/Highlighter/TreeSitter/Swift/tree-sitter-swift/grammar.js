@@ -824,7 +824,7 @@ module.exports = grammar({
                                      "type",
                                      $._possibly_implicitly_unwrapped_type))))),
     self_expression : ($) => "self",
-    super_expression : ($) => seq("super"),
+    super_expression : ($) => "super",
     _else_options : ($) => choice($._block, $.if_statement),
     if_statement : ($) => prec.right(
                      PRECS["if"],
@@ -1512,7 +1512,7 @@ module.exports = grammar({
     mutation_modifier : ($) => choice("mutating", "nonmutating"),
     property_modifier : ($) => choice("static", "dynamic", "optional", "class",
                                       "distributed"),
-    inheritance_modifier : ($) => choice("final"),
+    inheritance_modifier : ($) => "final",
     parameter_modifier : ($) => choice("inout", "@escaping", "@autoclosure",
                                        $._parameter_ownership_modifier),
     ownership_modifier : ($) => choice("weak", "unowned", "unowned(safe)",
@@ -1558,8 +1558,8 @@ module.exports = grammar({
                            // string literals cannot be used inside `token()`
                            // and we need that to ensure we get the right
                            // precedence.
-                           seq(/error([^\r\n]*)/), seq(/warning([^\r\n]*)/),
-                           seq(/sourceLocation([^\r\n]*)/)))),
+                           /error([^\r\n]*)/, /warning([^\r\n]*)/,
+                           /sourceLocation([^\r\n]*)/))),
     // Dumping ground for any nodes that used to exist in the grammar, but have
     // since been removed for whatever
     // reason.
