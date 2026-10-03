@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Interpreter/ErrorRecovery.h"
+#include "ErrorRecovery.h"
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -212,7 +212,7 @@ void DeclStateReverter::detachFromDCLookup(Decl *D, PTUID ID) {
 template <typename DeclT>
 DeclT *DeclStateReverter::findSurvivor(DeclT *D, PTUID ID) const {
   for (Decl *It = D->getMostRecentDecl(); It; It = It->getPreviousDecl()) {
-    if (!PTUSlabCheckpoints.isFromThisPTU(D, ID))
+    if (!PTUSlabCheckpoints.isFromThisPTU(It, ID))
       return dyn_cast<DeclT>(It);
   }
   return nullptr;
@@ -310,7 +310,7 @@ uint32_t PTUMutationActions::DeclNeedingTracking(DeclShape S, const Decl *D) {
     // memory restoration, so we can keep it commented out for now.
     // if (const Type *T = DeclStateReverter::getRawTypeForDecl(RD);
     //     !T || T->isCanonicalUnqualified())
-    //   Kinds |= uint32_t(MutationType::TypeForDecl);
+    //   Kinds |= uint32_t(MutationKind::TypeForDecl);
     if (RD->hasDefinition() && RD == RD->getDefinition()) {
       // Do we really need to create a DefData chain here? Usually, an implicit
       // decl can be mutated later after the definition. If it is already wired
@@ -322,7 +322,7 @@ uint32_t PTUMutationActions::DeclNeedingTracking(DeclShape S, const Decl *D) {
           RD->needsImplicitCopyAssignment() ||
           RD->needsImplicitMoveConstructor() ||
           RD->needsImplicitMoveAssignment() || RD->needsImplicitDestructor())
-        Kinds |= uint32_t(MutationType::DefinitionData);
+        Kinds |= uint32_t(MutationKind::DefinitionData);
     }
     if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
       // If SpecializationKind == TSK_ExplicitSpecialization, there is less
@@ -332,10 +332,10 @@ uint32_t PTUMutationActions::DeclNeedingTracking(DeclShape S, const Decl *D) {
       // with no separate record of the previous value. The footprint chain is
       // the only place where the previous value is stored.
       if (Spec->getSpecializationKind() != TSK_ExplicitSpecialization)
-        Kinds |= uint32_t(MutationType::SpecInfo);
+        Kinds |= uint32_t(MutationKind::SpecInfo);
     } else if (const auto *MSI = RD->getMemberSpecializationInfo()) {
       if (MSI->getTemplateSpecializationKind() != TSK_ExplicitSpecialization)
-        Kinds |= uint32_t(MutationType::MemberSpecInfo);
+        Kinds |= uint32_t(MutationKind::MemberSpecInfo);
     }
     return Kinds;
   }
@@ -349,17 +349,17 @@ uint32_t PTUMutationActions::DeclNeedingTracking(DeclShape S, const Decl *D) {
                 FPT->getExceptionSpecType() == EST_Uninstantiated ||
                 FPT->getExceptionSpecType() == EST_DependentNoexcept ||
                 FPT->getExceptionSpecType() == EST_Unparsed))
-      Kinds |= uint32_t(MutationType::ExceptionSpec);
+      Kinds |= uint32_t(MutationKind::ExceptionSpec);
     if (FD->getReturnType()->isUndeducedType())
       // Deduced return type is changed before
       // the listener notify, so save it beforehand.
-      Kinds |= uint32_t(MutationType::DeducedReturnType);
+      Kinds |= uint32_t(MutationKind::DeducedReturnType);
     if (FD->getTemplateSpecializationInfo() &&
         FD->getTemplateSpecializationKind() != TSK_ExplicitSpecialization)
-      Kinds |= uint32_t(MutationType::SpecInfo);
+      Kinds |= uint32_t(MutationKind::SpecInfo);
     if (const auto *MSI = FD->getMemberSpecializationInfo()) {
       if (MSI->getTemplateSpecializationKind() != TSK_ExplicitSpecialization)
-        Kinds |= uint32_t(MutationType::MemberSpecInfo);
+        Kinds |= uint32_t(MutationKind::MemberSpecInfo);
     }
 
     return Kinds;
@@ -369,10 +369,10 @@ uint32_t PTUMutationActions::DeclNeedingTracking(DeclShape S, const Decl *D) {
     uint32_t Kinds = 0;
     if (const auto *Spec = dyn_cast<VarTemplateSpecializationDecl>(VD)) {
       if (Spec->getSpecializationKind() != TSK_ExplicitSpecialization)
-        Kinds |= uint32_t(MutationType::SpecInfo);
+        Kinds |= uint32_t(MutationKind::SpecInfo);
     } else if (const auto *MSI = VD->getMemberSpecializationInfo()) {
       if (MSI->getTemplateSpecializationKind() != TSK_ExplicitSpecialization)
-        Kinds |= uint32_t(MutationType::MemberSpecInfo);
+        Kinds |= uint32_t(MutationKind::MemberSpecInfo);
     }
     // EvaluatedStmt::WasEvaluated is set the first time this variable is
     // constant-evaluated, which can happen in any PTU long after the VarDecl
@@ -381,7 +381,7 @@ uint32_t PTUMutationActions::DeclNeedingTracking(DeclShape S, const Decl *D) {
     // hidden kind that we have to check here.
     if (const EvaluatedStmt *Eval = VD->getEvaluatedStmt();
         !Eval || !Eval->WasEvaluated)
-      Kinds |= uint32_t(MutationType::EvaluatedValue);
+      Kinds |= uint32_t(MutationKind::EvaluatedValue);
 
     return Kinds;
   }
@@ -393,12 +393,12 @@ uint32_t PTUMutationActions::DeclNeedingTracking(DeclShape S, const Decl *D) {
     // its comment for details.
     // if (const Type *T = DeclStateReverter::getRawTypeForDecl(ED);
     //     !T || T->isCanonicalUnqualified())
-    //   Kinds |= uint32_t(MutationType::TypeForDecl);
+    //   Kinds |= uint32_t(MutationKind::TypeForDecl);
     //
     if (const auto *MSI = ED->getMemberSpecializationInfo()) {
       // Same terminal-state exclusion as the other MSI-backed cases above.
       if (MSI->getTemplateSpecializationKind() != TSK_ExplicitSpecialization)
-        Kinds |= uint32_t(MutationType::MemberSpecInfo);
+        Kinds |= uint32_t(MutationKind::MemberSpecInfo);
     }
     return Kinds;
   }
@@ -411,12 +411,12 @@ uint32_t PTUMutationActions::DeclNeedingTracking(DeclShape S, const Decl *D) {
         cast<RedeclarableTemplateDecl>(D->getCanonicalDecl());
     if (!DeclStateReverter::isCommonPtrValid(RT) &&
         !HiddenMutationTracker.isTrackedFor(
-            RT, uint32_t(MutationType::TemplateCommon))) {
+            RT, uint32_t(MutationKind::TemplateCommon))) {
       // No listener reports these Common changes, so use hidden tracking.
-      Kinds |= uint32_t(MutationType::TemplateCommon);
+      Kinds |= uint32_t(MutationKind::TemplateCommon);
     } else if (const auto *CTD = dyn_cast<ClassTemplateDecl>(RT)) {
       if (!DeclStateReverter::isTemplateCanonInjectedTSTValid(CTD))
-        Kinds |= uint32_t(MutationType::CanonInjectedTST);
+        Kinds |= uint32_t(MutationKind::CanonInjectedTST);
     }
     return Kinds;
   }
@@ -427,7 +427,7 @@ uint32_t PTUMutationActions::DeclNeedingTracking(DeclShape S, const Decl *D) {
     // never changes again for this decl.
     // const auto *TD = cast<TypedefNameDecl>(D);
     // if (!DeclStateReverter::getRawTypeForDecl(TD))
-    //   return uint32_t(MutationType::TypeForDecl);
+    //   return uint32_t(MutationKind::TypeForDecl);
     return 0;
   }
   case DeclShape::None:
@@ -438,7 +438,7 @@ uint32_t PTUMutationActions::DeclNeedingTracking(DeclShape S, const Decl *D) {
 
 template <typename T>
 static bool differsFromLast(IncrementalStateTracker &Tracker, const Decl *Owner,
-                            MutationType K, const T &LiveValue) {
+                            MutationKind K, const T &LiveValue) {
   const auto *Last = Tracker.getFootprints().mostRecent<T>(Owner, K);
   assert(Last && "baseline missing at verify time");
   return !Last || *Last != LiveValue;
@@ -474,72 +474,72 @@ uint32_t PTUMutationActions::confirmMutation(const Decl *D, DeclShape S,
   switch (S) {
   case DeclShape::Class: {
     const auto *RD = cast<CXXRecordDecl>(D);
-    if (FlaggedKinds & uint32_t(MutationType::TypeForDecl)) {
+    if (FlaggedKinds & uint32_t(MutationKind::TypeForDecl)) {
       // No listener at all for this mutation. why it is commented out:
       // Requires friend access to TypeDecl and was added for
       // memory restoration, so we can keep it commented out for now.
       // const Type *Now = DeclStateReverter::getRawTypeForDecl(RD);
-      // if (differsFromLast(Tracker, RD, MutationType::TypeForDecl, Now))
-      //   Verified |= uint32_t(MutationType::TypeForDecl);
+      // if (differsFromLast(Tracker, RD, MutationKind::TypeForDecl, Now))
+      //   Verified |= uint32_t(MutationKind::TypeForDecl);
     }
-    if (FlaggedKinds & uint32_t(MutationType::SpecInfo)) {
+    if (FlaggedKinds & uint32_t(MutationKind::SpecInfo)) {
       if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(RD))
-        if (differsFromLast(Tracker, Spec, MutationType::SpecInfo,
+        if (differsFromLast(Tracker, Spec, MutationKind::SpecInfo,
                             Footprint<SpecializationFootprint>(*Spec)))
-          Verified |= uint32_t(MutationType::SpecInfo);
-    } else if (FlaggedKinds & uint32_t(MutationType::MemberSpecInfo)) {
-      if (differsFromLast(Tracker, RD, MutationType::MemberSpecInfo,
+          Verified |= uint32_t(MutationKind::SpecInfo);
+    } else if (FlaggedKinds & uint32_t(MutationKind::MemberSpecInfo)) {
+      if (differsFromLast(Tracker, RD, MutationKind::MemberSpecInfo,
                           Footprint<MemberSpecializationFootprint>(*RD)))
-        Verified |= uint32_t(MutationType::MemberSpecInfo);
+        Verified |= uint32_t(MutationKind::MemberSpecInfo);
     }
     break;
   }
   case DeclShape::Function: {
     const auto *FD = cast<FunctionDecl>(D);
-    if (FlaggedKinds & uint32_t(MutationType::SpecInfo)) {
-      if (differsFromLast(Tracker, FD, MutationType::SpecInfo,
+    if (FlaggedKinds & uint32_t(MutationKind::SpecInfo)) {
+      if (differsFromLast(Tracker, FD, MutationKind::SpecInfo,
                           Footprint<FunctionSpecializationFootprint>(*FD)))
-        Verified |= uint32_t(MutationType::SpecInfo);
-    } else if (FlaggedKinds & uint32_t(MutationType::MemberSpecInfo)) {
-      if (differsFromLast(Tracker, FD, MutationType::MemberSpecInfo,
+        Verified |= uint32_t(MutationKind::SpecInfo);
+    } else if (FlaggedKinds & uint32_t(MutationKind::MemberSpecInfo)) {
+      if (differsFromLast(Tracker, FD, MutationKind::MemberSpecInfo,
                           Footprint<MemberSpecializationFootprint>(*FD)))
-        Verified |= uint32_t(MutationType::MemberSpecInfo);
+        Verified |= uint32_t(MutationKind::MemberSpecInfo);
     }
     break;
   }
   case DeclShape::Var: {
     const auto *VD = cast<VarDecl>(D);
-    if (FlaggedKinds & uint32_t(MutationType::EvaluatedValue) &&
+    if (FlaggedKinds & uint32_t(MutationKind::EvaluatedValue) &&
         Tracker.getHiddenMutationTracker().isTrackedFor(
-            VD, uint32_t(MutationType::EvaluatedValue))) {
+            VD, uint32_t(MutationKind::EvaluatedValue))) {
       // No chain to compare against -- write-once field.
       const EvaluatedStmt *Eval = VD->getEvaluatedStmt();
       if (Eval && Eval->WasEvaluated)
-        Verified |= uint32_t(MutationType::EvaluatedValue);
+        Verified |= uint32_t(MutationKind::EvaluatedValue);
     }
-    if (FlaggedKinds & uint32_t(MutationType::SpecInfo)) {
+    if (FlaggedKinds & uint32_t(MutationKind::SpecInfo)) {
       if (const auto *Spec = dyn_cast<VarTemplateSpecializationDecl>(VD))
-        if (differsFromLast(Tracker, Spec, MutationType::SpecInfo,
+        if (differsFromLast(Tracker, Spec, MutationKind::SpecInfo,
                             Footprint<VarSpecializationFootprint>(*Spec)))
-          Verified |= uint32_t(MutationType::SpecInfo);
-    } else if (FlaggedKinds & uint32_t(MutationType::MemberSpecInfo)) {
-      if (differsFromLast(Tracker, VD, MutationType::MemberSpecInfo,
+          Verified |= uint32_t(MutationKind::SpecInfo);
+    } else if (FlaggedKinds & uint32_t(MutationKind::MemberSpecInfo)) {
+      if (differsFromLast(Tracker, VD, MutationKind::MemberSpecInfo,
                           Footprint<MemberSpecializationFootprint>(*VD)))
-        Verified |= uint32_t(MutationType::MemberSpecInfo);
+        Verified |= uint32_t(MutationKind::MemberSpecInfo);
     }
     break;
   }
   case DeclShape::Enum: {
     const auto *ED = cast<EnumDecl>(D);
-    if (FlaggedKinds & uint32_t(MutationType::TypeForDecl)) {
+    if (FlaggedKinds & uint32_t(MutationKind::TypeForDecl)) {
       // const Type *Now = DeclStateReverter::getRawTypeForDecl(ED);
-      // if (differsFromLast(Tracker, ED, MutationType::TypeForDecl, Now))
-      //   Verified |= uint32_t(MutationType::TypeForDecl);
+      // if (differsFromLast(Tracker, ED, MutationKind::TypeForDecl, Now))
+      //   Verified |= uint32_t(MutationKind::TypeForDecl);
     }
-    if (FlaggedKinds & uint32_t(MutationType::MemberSpecInfo)) {
-      if (differsFromLast(Tracker, ED, MutationType::MemberSpecInfo,
+    if (FlaggedKinds & uint32_t(MutationKind::MemberSpecInfo)) {
+      if (differsFromLast(Tracker, ED, MutationKind::MemberSpecInfo,
                           Footprint<MemberSpecializationFootprint>(*ED)))
-        Verified |= uint32_t(MutationType::MemberSpecInfo);
+        Verified |= uint32_t(MutationKind::MemberSpecInfo);
     }
     break;
   }
@@ -548,29 +548,29 @@ uint32_t PTUMutationActions::confirmMutation(const Decl *D, DeclShape S,
     // modifications, and CommonPtr is shared across the redeclaration chain.
     // Any modification to CommonPtr is reflected in the canonical declaration.
     const auto *RT = cast<RedeclarableTemplateDecl>(D)->getCanonicalDecl();
-    if (FlaggedKinds & uint32_t(MutationType::TemplateCommon) &&
+    if (FlaggedKinds & uint32_t(MutationKind::TemplateCommon) &&
         Tracker.getHiddenMutationTracker().isTrackedFor(
-            RT, uint32_t(MutationType::TemplateCommon))) {
+            RT, uint32_t(MutationKind::TemplateCommon))) {
       // No chain to compare against -- write-once.
       if (DeclStateReverter::isCommonPtrValid(RT))
-        Verified |= uint32_t(MutationType::TemplateCommon);
+        Verified |= uint32_t(MutationKind::TemplateCommon);
     }
-    if (FlaggedKinds & uint32_t(MutationType::CanonInjectedTST) &&
+    if (FlaggedKinds & uint32_t(MutationKind::CanonInjectedTST) &&
         Tracker.getHiddenMutationTracker().isTrackedFor(
-            RT, uint32_t(MutationType::CanonInjectedTST))) {
+            RT, uint32_t(MutationKind::CanonInjectedTST))) {
       if (const auto *CTD = dyn_cast<ClassTemplateDecl>(RT))
         if (DeclStateReverter::isTemplateCanonInjectedTSTValid(CTD))
-          Verified |= uint32_t(MutationType::CanonInjectedTST);
+          Verified |= uint32_t(MutationKind::CanonInjectedTST);
     }
     break;
   }
   case DeclShape::Typedef: {
     const auto *TD = cast<TypedefNameDecl>(D);
-    if (FlaggedKinds & uint32_t(MutationType::TypeForDecl) &&
+    if (FlaggedKinds & uint32_t(MutationKind::TypeForDecl) &&
         Tracker.getHiddenMutationTracker().isTrackedFor(
-            TD, uint32_t(MutationType::TypeForDecl))) {
+            TD, uint32_t(MutationKind::TypeForDecl))) {
       // if (DeclStateReverter::getRawTypeForDecl(TD))
-      //   Verified |= uint32_t(MutationType::TypeForDecl);
+      //   Verified |= uint32_t(MutationKind::TypeForDecl);
     }
     break;
   }
@@ -612,7 +612,7 @@ void SweepTracker::sweep(PTUMutationActions &Act, OnConfirmedFn OnConfirmed) {
 /// Not all hidden mutations are tracked here; they are tracked in
 /// SweepTracker. This logic applies only to listener-unconfirmed mutations.
 static constexpr uint32_t KindsNeedingVerification =
-    uint32_t(MutationType::SpecInfo) | uint32_t(MutationType::MemberSpecInfo);
+    uint32_t(MutationKind::SpecInfo) | uint32_t(MutationKind::MemberSpecInfo);
 
 /// Start tracking D for mutation kinds that need verification.
 /// Called when a new mutation is committed or an undone mutation is restored.
@@ -652,14 +652,14 @@ void PTUStateInfo::verifyMutations(PTUMutationActions &Actions) {
   Mutations.remove_if([&](auto &Entry) -> bool {
     const Decl *D = Entry.first;
     MutationRecord &Rec = Entry.second;
-    uint32_t Flagged = Rec.MutationType & KindsNeedingVerification;
+    uint32_t Flagged = Rec.MutationFlags & KindsNeedingVerification;
     if (!Flagged)
       return false;
     uint32_t Confirmed = Actions.confirmMutation(D, Rec.S, Flagged);
     /// untrack kind from SweepTracker if confirmed.
     Actions.untrackIfClosed(D, Rec.S, Confirmed);
-    Rec.MutationType = (Rec.MutationType & ~Flagged) | Confirmed;
-    return Rec.MutationType == 0;
+    Rec.MutationFlags = (Rec.MutationFlags & ~Flagged) | Confirmed;
+    return Rec.MutationFlags == 0;
   });
 }
 
@@ -741,27 +741,29 @@ public:
     /// Use the canonical decl because redecl unlinking should happen once per
     /// redecl chain, not once per individual decl. A PTU can contain multiple
     /// redecls, so we perform the unlinking only once.
-    bool DetachFromRedecl = !RepairedChains.count(Canon) &&
-                            D->getPreviousDecl() &&
-                            !Tracker.isFromThisPTU(Canon, ID);
+    bool FirstVisit = !RepairedChains.count(Canon);
+    bool detachRedecl =
+        D->getPreviousDecl() && !Tracker.isFromThisPTU(Canon, ID);
 
-    if (needsDefDataDetach(D))
+    if (FirstVisit && needsDefDataDetach(D))
       Reverter.detachDefData(D);
 
-    if (const DeclContext *DC = D->getDeclContext()->getPrimaryContext();
-        TouchedDC.contains(DC))
-      Reverter.detachFromDCLookup(const_cast<Decl *>(D), ID);
+    if (FirstVisit) {
+      if (const DeclContext *DC = D->getDeclContext()->getPrimaryContext();
+          TouchedDC.contains(DC))
+        Reverter.detachFromDCLookup(const_cast<Decl *>(D), ID);
 
-    if (DetachFromRedecl) {
-      RepairedChains.insert(Canon);
-      Reverter.detachFromRedeclChain(D, ID);
+      if (detachRedecl) {
+        Reverter.detachFromRedeclChain(D, ID);
+        RepairedChains.insert(Canon);
+      }
     }
 
     if (const auto *RT = dyn_cast<RedeclarableTemplateDecl>(D)) {
       const NamedDecl *Templated = RT->getTemplatedDecl();
       if (needsDefDataDetach(Templated))
         Reverter.detachDefData(Templated);
-      if (DetachFromRedecl)
+      if (detachRedecl)
         Reverter.detachFromRedeclChain(Templated, ID);
     }
 
@@ -812,16 +814,16 @@ void PTUMutationActions::commitMembers(PTUID ID, const DeclContext *Members) {
 void PTUMutationActions::commitClass(PTUID ID, const CXXRecordDecl *RD,
                                      MutationRecord &Rec, bool IsNew) {
 
-  using ClassMutation = MutationType;
+  using ClassMutation = MutationKind;
 
   if (Rec.has(ClassMutation::TypeForDecl)) {
     // Require friend grant to TypeDecl.
     // for (const TagDecl *Redecl : RD->redecls()) {
     //   const auto *Last = Tracker.getFootprints().mostRecent<const Type *>(
-    //       Redecl, MutationType::TypeForDecl);
+    //       Redecl, MutationKind::TypeForDecl);
     //   const Type *LastKnown = Last ? *Last : nullptr;
     //   if (LastKnown != cast<TypeDecl>(Redecl)->getTypeForDecl())
-    //     Tracker.commitFootprint(Redecl, MutationType::TypeForDecl, ID,
+    //     Tracker.commitFootprint(Redecl, MutationKind::TypeForDecl, ID,
     //                             LastKnown);
     // }
   }
@@ -829,7 +831,7 @@ void PTUMutationActions::commitClass(PTUID ID, const CXXRecordDecl *RD,
   if (Rec.has(ClassMutation::DefinitionInstantiate) ||
       Rec.has(ClassMutation::DefinitionData)) {
     Tracker.commitFootprint(
-        RD, MutationType::DefinitionData, ID,
+        RD, MutationKind::DefinitionData, ID,
         DeclStateReverter::createDefinitionDataFootprint(*RD));
 
     if (Rec.has(ClassMutation::DefinitionInstantiate)) {
@@ -842,7 +844,7 @@ void PTUMutationActions::commitClass(PTUID ID, const CXXRecordDecl *RD,
     const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(RD);
     if (Spec) {
       Tracker.commitFootprint(
-          Spec, MutationType::SpecInfo, ID,
+          Spec, MutationKind::SpecInfo, ID,
           DeclStateReverter::createFootprint<SpecializationFootprint>(*Spec));
       /// Member declarations are instantiated eagerly with the class
       /// definition, egardless of TSK; only their definitions are deferred.
@@ -855,18 +857,18 @@ void PTUMutationActions::commitClass(PTUID ID, const CXXRecordDecl *RD,
       // (SpecInfo/MemberSpecInfo) once the missing notifier
       // (ASTMutationListener) is added for (SpecInfo/MemberSpecInfo).
       syncSweepTracking(Spec, DeclShape::Class,
-                        uint32_t(MutationType::SpecInfo), IsNew);
+                        uint32_t(MutationKind::SpecInfo), IsNew);
     }
   }
 
   if (Rec.has(ClassMutation::MemberSpecInfo)) {
     if (RD->getMemberSpecializationInfo()) {
       Tracker.commitFootprint(
-          RD, MutationType::MemberSpecInfo, ID,
+          RD, MutationKind::MemberSpecInfo, ID,
           DeclStateReverter::createFootprint<MemberSpecializationFootprint>(
               *RD));
       syncSweepTracking(RD, DeclShape::Class,
-                        uint32_t(MutationType::MemberSpecInfo), IsNew);
+                        uint32_t(MutationKind::MemberSpecInfo), IsNew);
     }
   }
 }
@@ -874,45 +876,45 @@ void PTUMutationActions::commitClass(PTUID ID, const CXXRecordDecl *RD,
 void PTUMutationActions::commitFunction(PTUID ID, const FunctionDecl *FD,
                                         MutationRecord &Rec, bool IsNew) {
 
-  if (Rec.has(MutationType::ExceptionSpec) ||
-      Rec.has(MutationType::DeducedReturnType)) {
+  if (Rec.has(MutationKind::ExceptionSpec) ||
+      Rec.has(MutationKind::DeducedReturnType)) {
     for (const FunctionDecl *Redecl : FD->redecls()) {
       if (IsNew) {
-        Tracker.commitFootprint(Redecl, MutationType::ExceptionSpec, ID,
+        Tracker.commitFootprint(Redecl, MutationKind::ExceptionSpec, ID,
                                 Redecl->getType());
       } else {
         const auto *Last = Tracker.Footprints.mostRecent<QualType>(
-            Redecl, MutationType::ExceptionSpec);
+            Redecl, MutationKind::ExceptionSpec);
         QualType LastKnown = Last ? *Last : QualType();
         if (LastKnown != Redecl->getType())
-          Tracker.commitFootprint(Redecl, MutationType::ExceptionSpec, ID,
+          Tracker.commitFootprint(Redecl, MutationKind::ExceptionSpec, ID,
                                   LastKnown);
       }
     }
   }
 
-  //   if (!IsNew && Rec.has(MutationType::DefinitionInstantiate)) {
+  //   if (!IsNew && Rec.has(MutationKind::DefinitionInstantiate)) {
   //   }
 
-  if (Rec.has(MutationType::SpecInfo)) {
+  if (Rec.has(MutationKind::SpecInfo)) {
     assert(FD->getTemplateSpecializationKind() != TSK_Undeclared &&
            "SpecInfoChanged on a function with no specialization info");
     Tracker.commitFootprint(
-        FD, MutationType::SpecInfo, ID,
+        FD, MutationKind::SpecInfo, ID,
         DeclStateReverter::createFootprint<FunctionSpecializationFootprint>(
             *FD));
-    syncSweepTracking(FD, DeclShape::Function, uint32_t(MutationType::SpecInfo),
+    syncSweepTracking(FD, DeclShape::Function, uint32_t(MutationKind::SpecInfo),
                       IsNew);
   }
 
-  if (Rec.has(MutationType::MemberSpecInfo)) {
+  if (Rec.has(MutationKind::MemberSpecInfo)) {
     if (FD->getMemberSpecializationInfo()) {
       Tracker.commitFootprint(
-          FD, MutationType::MemberSpecInfo, ID,
+          FD, MutationKind::MemberSpecInfo, ID,
           DeclStateReverter::createFootprint<MemberSpecializationFootprint>(
               *FD));
       syncSweepTracking(FD, DeclShape::Function,
-                        uint32_t(MutationType::MemberSpecInfo), IsNew);
+                        uint32_t(MutationKind::MemberSpecInfo), IsNew);
     }
   }
 }
@@ -922,41 +924,41 @@ void PTUMutationActions::commitVar(PTUID ID, const VarDecl *VD,
 
   // EvaluatedStmt / APValue: set on the first constant evaluation of the
   // variable, which can happen in a later PTU.
-  if (Rec.has(MutationType::EvaluatedValue)) {
+  if (Rec.has(MutationKind::EvaluatedValue)) {
     // No footprint: this is a write-once field with a fixed null
     // initial state, so there is no baseline to track.
     if (IsNew) {
       // Track the VarDecl so a later sweep can detect when WasEvaluated flips.
       // There is no listener for this mutation.
-      HiddenMutationTracker.track(VD, uint32_t(MutationType::EvaluatedValue));
+      HiddenMutationTracker.track(VD, uint32_t(MutationKind::EvaluatedValue));
     } else {
       // This is the confirmation from SweepTracker::sweep(). Since this is a
       // write-once field, it is now settled and no longer needs tracking.
       // restoreVar() will re-track it if a rollback reverts the mutation.
-      HiddenMutationTracker.untrack(VD, uint32_t(MutationType::EvaluatedValue));
+      HiddenMutationTracker.untrack(VD, uint32_t(MutationKind::EvaluatedValue));
     }
   }
 
-  //   if (!IsNew && Rec.has(MutationType::DefinitionInstantiate)) {
+  //   if (!IsNew && Rec.has(MutationKind::DefinitionInstantiate)) {
   //   }
 
-  if (Rec.has(MutationType::SpecInfo)) {
+  if (Rec.has(MutationKind::SpecInfo)) {
     const auto *Spec = cast<VarTemplateSpecializationDecl>(VD);
     Tracker.commitFootprint(
-        Spec, MutationType::SpecInfo, ID,
+        Spec, MutationKind::SpecInfo, ID,
         DeclStateReverter::createFootprint<VarSpecializationFootprint>(*Spec));
-    syncSweepTracking(Spec, DeclShape::Var, uint32_t(MutationType::SpecInfo),
+    syncSweepTracking(Spec, DeclShape::Var, uint32_t(MutationKind::SpecInfo),
                       IsNew);
   }
 
-  if (Rec.has(MutationType::MemberSpecInfo)) {
+  if (Rec.has(MutationKind::MemberSpecInfo)) {
     if (VD->getMemberSpecializationInfo()) {
       Tracker.commitFootprint(
-          VD, MutationType::MemberSpecInfo, ID,
+          VD, MutationKind::MemberSpecInfo, ID,
           DeclStateReverter::createFootprint<MemberSpecializationFootprint>(
               *VD));
       syncSweepTracking(VD, DeclShape::Var,
-                        uint32_t(MutationType::MemberSpecInfo), IsNew);
+                        uint32_t(MutationKind::MemberSpecInfo), IsNew);
     }
   }
 }
@@ -964,29 +966,29 @@ void PTUMutationActions::commitVar(PTUID ID, const VarDecl *VD,
 void PTUMutationActions::commitEnum(PTUID ID, const EnumDecl *ED,
                                     MutationRecord &Rec, bool IsNew) {
 
-  if (Rec.has(MutationType::TypeForDecl)) {
+  if (Rec.has(MutationKind::TypeForDecl)) {
     // for (const TagDecl *Redecl : ED->redecls()) {
     //   const Type *Now = Redecl->getTypeForDecl();
     //   const Type *LastKnown = nullptr;
     //   if (!IsNew) {
     //     const auto *Last = Tracker.getFootprints().mostRecent<const Type *>(
-    //         Redecl, MutationType::TypeForDecl);
+    //         Redecl, MutationKind::TypeForDecl);
     //     LastKnown = Last ? *Last : nullptr;
     //   }
     //   if (IsNew || (LastKnown != Now))
-    //     Tracker.commitFootprint(Redecl, MutationType::TypeForDecl, ID,
+    //     Tracker.commitFootprint(Redecl, MutationKind::TypeForDecl, ID,
     //                             LastKnown);
     // }
   }
 
-  if (Rec.has(MutationType::MemberSpecInfo)) {
+  if (Rec.has(MutationKind::MemberSpecInfo)) {
     if (ED->getMemberSpecializationInfo()) {
       Tracker.commitFootprint(
-          ED, MutationType::MemberSpecInfo, ID,
+          ED, MutationKind::MemberSpecInfo, ID,
           DeclStateReverter::createFootprint<MemberSpecializationFootprint>(
               *ED));
       syncSweepTracking(ED, DeclShape::Enum,
-                        uint32_t(MutationType::MemberSpecInfo), IsNew);
+                        uint32_t(MutationKind::MemberSpecInfo), IsNew);
     }
   }
 }
@@ -995,32 +997,32 @@ void PTUMutationActions::commitTemplate(PTUID ID,
                                         const RedeclarableTemplateDecl *RT,
                                         MutationRecord &Rec, bool IsNew) {
   const RedeclarableTemplateDecl *RTCanon = RT->getCanonicalDecl();
-  if (Rec.has(MutationType::TemplateCommon)) {
+  if (Rec.has(MutationKind::TemplateCommon)) {
     if (IsNew)
       HiddenMutationTracker.track(RTCanon,
-                                  uint32_t(MutationType::TemplateCommon));
+                                  uint32_t(MutationKind::TemplateCommon));
     else
       HiddenMutationTracker.untrack(RTCanon,
-                                    uint32_t(MutationType::TemplateCommon));
+                                    uint32_t(MutationKind::TemplateCommon));
   }
 
-  if (Rec.has(MutationType::CanonInjectedTST)) {
+  if (Rec.has(MutationKind::CanonInjectedTST)) {
     if (IsNew)
       HiddenMutationTracker.track(RTCanon,
-                                  uint32_t(MutationType::CanonInjectedTST));
+                                  uint32_t(MutationKind::CanonInjectedTST));
     else
       HiddenMutationTracker.untrack(RTCanon,
-                                    uint32_t(MutationType::CanonInjectedTST));
+                                    uint32_t(MutationKind::CanonInjectedTST));
   }
 }
 
 void PTUMutationActions::commitTypedef(PTUID ID, const TypedefNameDecl *TD,
                                        MutationRecord &Rec, bool IsNew) {
-  if (Rec.has(MutationType::TypeForDecl)) {
+  if (Rec.has(MutationKind::TypeForDecl)) {
     if (IsNew)
-      HiddenMutationTracker.track(TD, uint32_t(MutationType::TypeForDecl));
+      HiddenMutationTracker.track(TD, uint32_t(MutationKind::TypeForDecl));
     else
-      HiddenMutationTracker.untrack(TD, uint32_t(MutationType::TypeForDecl));
+      HiddenMutationTracker.untrack(TD, uint32_t(MutationKind::TypeForDecl));
   }
 }
 
@@ -1040,7 +1042,8 @@ void PTUMutationActions::commitDecl(PTUID ID, const Decl *D,
 
 void PTUMutationActions::commit(TranslationUnitDecl *ThisTU) {
   PTUStateInfo &Cur = Tracker.current();
-  assert(!Cur.Commited);
+  assert(!Cur.Commited && "Current PTUState is already commited");
+  Cur.ThisPTU = ThisTU;
   PTUID ID = Cur.ID;
 
   // 1. Verify any unconfirmed mutation (see : KindNeedingVerification) reported
@@ -1091,109 +1094,106 @@ void PTUMutationActions::commit(TranslationUnitDecl *ThisTU) {
 /// unlinking state, it should be added based on the corresponding
 /// DeclShape -> mutation type relationship.
 
-void PTUMutationActions::restoreClass(PTUID ID, const CXXRecordDecl *RD,
+void PTUMutationActions::restoreClass(PTUID ID, CXXRecordDecl *RD,
                                       MutationRecord &Rec) {
 
-  if (Rec.has(MutationType::DefinitionInstantiate) ||
-      Rec.has(MutationType::DefinitionData)) {
-    if (Rec.has(MutationType::DefinitionInstantiate)) {
-      DeclStateReverter::revertDefinitionArrival(
-          const_cast<CXXRecordDecl *>(RD));
+  if (Rec.has(MutationKind::DefinitionInstantiate) ||
+      Rec.has(MutationKind::DefinitionData)) {
+    if (Rec.has(MutationKind::DefinitionInstantiate)) {
+      DeclStateReverter::revertDefinitionArrival(RD);
     } else if (const auto *Restored =
                    Tracker.getFootprints().mostRecent<DefinitionDataFootprint>(
-                       RD, MutationType::DefinitionData)) {
-      DeclStateReverter::restoreDefinitionDataFootprint(
-          *Restored, *const_cast<CXXRecordDecl *>(RD));
+                       RD, MutationKind::DefinitionData)) {
+      DeclStateReverter::restoreDefinitionDataFootprint(*Restored, *RD);
     }
   }
 
-  if (Rec.has(MutationType::TypeForDecl)) {
+  if (Rec.has(MutationKind::TypeForDecl)) {
     // for (const TagDecl *Redecl : RD->redecls()) {
     //   const auto *Last = Tracker.Footprints.mostRecent<const Type *>(
-    //       Redecl, MutationType::TypeForDecl);
+    //       Redecl, MutationKind::TypeForDecl);
     //   const Type *LastKnown = Last ? *Last : nullptr;
     //   TODO: need to handle?
     // }
   }
 
-  if (Rec.has(MutationType::SpecInfo)) {
+  if (Rec.has(MutationKind::SpecInfo)) {
     // Only a specialization can carry this kind; a plain CXXRecordDecl
     // reaching here means a note*() wrapper passed the wrong kind.
-    const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(RD);
+    auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(RD);
     assert(Spec && "SpecializationAdded noted on a non-specialization");
     if (const SpecializationFootprint *Restored =
             Tracker.getFootprints().mostRecent<SpecializationFootprint>(
-                Spec, MutationType::SpecInfo))
-      DeclStateReverter::restoreFootprint<SpecializationFootprint>(
-          *Restored, *const_cast<ClassTemplateSpecializationDecl *>(Spec));
-    trackForSweep(Spec, uint32_t(MutationType::SpecInfo));
+                Spec, MutationKind::SpecInfo))
+      DeclStateReverter::restoreFootprint<SpecializationFootprint>(*Restored,
+                                                                   *Spec);
+    trackForSweep(Spec, uint32_t(MutationKind::SpecInfo));
   }
 
-  if (Rec.has(MutationType::MemberSpecInfo)) {
+  if (Rec.has(MutationKind::MemberSpecInfo)) {
     // A nested member of a class template – its MSI kind or
     // point-of-instantiation changed.
     assert(RD->getMemberSpecializationInfo());
     if (const MemberSpecializationFootprint *Restored =
             Tracker.getFootprints().mostRecent<MemberSpecializationFootprint>(
-                RD, MutationType::MemberSpecInfo))
+                RD, MutationKind::MemberSpecInfo))
       DeclStateReverter::restoreFootprint<MemberSpecializationFootprint>(
-          *Restored, *const_cast<CXXRecordDecl *>(RD));
-    trackForSweep(RD, uint32_t(MutationType::MemberSpecInfo));
+          *Restored, *RD);
+    trackForSweep(RD, uint32_t(MutationKind::MemberSpecInfo));
   }
 }
 
-void PTUMutationActions::restoreFunction(PTUID ID, const FunctionDecl *FD,
+void PTUMutationActions::restoreFunction(PTUID ID, FunctionDecl *FD,
                                          MutationRecord &Rec) {
 
   // FunctionType is shared across the whole redeclaration chain.
   // Resolving a deferred noexcept or deducing an auto return updates the
   // type for every redecl, including ones owned by earlier PTUs, so each
   // redecl needs to be recorded rather than just FD’s own.
-  if (Rec.has(MutationType::ExceptionSpec) ||
-      Rec.has(MutationType::DeducedReturnType)) {
-    for (const FunctionDecl *Redecl : FD->redecls()) {
+  if (Rec.has(MutationKind::ExceptionSpec) ||
+      Rec.has(MutationKind::DeducedReturnType)) {
+    for (FunctionDecl *Redecl : FD->redecls()) {
       const auto *Last = Tracker.getFootprints().mostRecent<QualType>(
-          Redecl, MutationType::ExceptionSpec);
+          Redecl, MutationKind::ExceptionSpec);
       QualType LastKnown = Last ? *Last : QualType();
       if (LastKnown != Redecl->getType())
-        const_cast<FunctionDecl *>(Redecl)->setType(LastKnown);
+        Redecl->setType(LastKnown);
     }
   }
 
-  if (Rec.has(MutationType::DefinitionInstantiate))
-    DeclStateReverter::revertDefinitionArrival(const_cast<FunctionDecl *>(FD));
+  if (Rec.has(MutationKind::DefinitionInstantiate))
+    DeclStateReverter::revertDefinitionArrival(FD);
 
-  if (Rec.has(MutationType::SpecInfo)) {
+  if (Rec.has(MutationKind::SpecInfo)) {
     // A function template specialization is a plain FunctionDecl carrying
     // FunctionTemplateSpecializationInfo.
     assert(FD->getTemplateSpecializationKind() != TSK_Undeclared &&
            "SpecInfoChanged on a function with no specialization info");
     if (const auto *Restored =
             Tracker.getFootprints().mostRecent<FunctionSpecializationFootprint>(
-                FD, MutationType::SpecInfo))
+                FD, MutationKind::SpecInfo))
       DeclStateReverter::restoreFootprint<FunctionSpecializationFootprint>(
-          *Restored, *const_cast<FunctionDecl *>(FD));
-    const_cast<FunctionDecl *>(FD)->setInstantiationIsPending(false);
-    trackForSweep(FD, uint32_t(MutationType::SpecInfo));
+          *Restored, *FD);
+    FD->setInstantiationIsPending(false);
+    trackForSweep(FD, uint32_t(MutationKind::SpecInfo));
   }
 
-  if (Rec.has(MutationType::MemberSpecInfo)) {
+  if (Rec.has(MutationKind::MemberSpecInfo)) {
     assert(FD->getMemberSpecializationInfo());
     if (const auto *Restored =
             Tracker.getFootprints().mostRecent<MemberSpecializationFootprint>(
-                FD, MutationType::MemberSpecInfo))
+                FD, MutationKind::MemberSpecInfo))
       DeclStateReverter::restoreFootprint<MemberSpecializationFootprint>(
-          *Restored, *const_cast<FunctionDecl *>(FD));
-    const_cast<FunctionDecl *>(FD)->setInstantiationIsPending(false);
-    trackForSweep(FD, uint32_t(MutationType::MemberSpecInfo));
+          *Restored, *FD);
+    FD->setInstantiationIsPending(false);
+    trackForSweep(FD, uint32_t(MutationKind::MemberSpecInfo));
   }
 }
 
-void PTUMutationActions::restoreTemplate(PTUID ID,
-                                         const RedeclarableTemplateDecl *TD,
+void PTUMutationActions::restoreTemplate(PTUID ID, RedeclarableTemplateDecl *TD,
                                          MutationRecord &Rec) {
 
-  if (Rec.has(MutationType::TemplateCommon)) {
+  if (Rec.has(MutationKind::TemplateCommon)) {
     // TODO: call DeclStateReverter to detech all decl's common ptr if canon
     // decl of template ie being tracked;
     // DeclStateReverter::resetTemplateCommonBase(
@@ -1205,97 +1205,95 @@ void PTUMutationActions::restoreTemplate(PTUID ID,
     //
     // TODO: Track only the canonical decl.
     HiddenMutationTracker.track(TD,
-                                uint32_t(MutationType::TemplateCommon) |
-                                    uint32_t(MutationType::CanonInjectedTST));
-  } else if (Rec.has(MutationType::CanonInjectedTST)) {
-    if (const auto *CTD = dyn_cast<ClassTemplateDecl>(TD)) {
-      DeclStateReverter::resetCanonInjectedTST(
-          *const_cast<ClassTemplateDecl *>(CTD));
-      HiddenMutationTracker.track(TD, uint32_t(MutationType::CanonInjectedTST));
+                                uint32_t(MutationKind::TemplateCommon) |
+                                    uint32_t(MutationKind::CanonInjectedTST));
+  } else if (Rec.has(MutationKind::CanonInjectedTST)) {
+    if (auto *CTD = dyn_cast<ClassTemplateDecl>(TD)) {
+      DeclStateReverter::resetCanonInjectedTST(*CTD);
+      HiddenMutationTracker.track(TD, uint32_t(MutationKind::CanonInjectedTST));
     }
   }
 
-  if (Rec.has(MutationType::SpecializationAdded))
+  if (Rec.has(MutationKind::SpecializationAdded))
     DeclStateReverter::removeSpecializations(Tracker.getPTUSlabCheckpoints(),
                                              TD, ID);
 }
 
-void PTUMutationActions::restoreTypedef(PTUID ID, const TypedefNameDecl *TD,
+void PTUMutationActions::restoreTypedef(PTUID ID, TypedefNameDecl *TD,
                                         MutationRecord &Rec) {
-  if (Rec.has(MutationType::TypeForDecl)) {
-    // DeclStateReverter::resetTypeForDecl(const_cast<TypedefNameDecl *>(TD));
-    // HiddenMutationTracker.track(TD, uint32_t(MutationType::TypeForDecl));
+  if (Rec.has(MutationKind::TypeForDecl)) {
+    // DeclStateReverter::resetTypeForDecl(TD);
+    // HiddenMutationTracker.track(TD, uint32_t(MutationKind::TypeForDecl));
   }
 }
 
-void PTUMutationActions::restoreVar(PTUID ID, const VarDecl *VD,
+void PTUMutationActions::restoreVar(PTUID ID, VarDecl *VD,
                                     MutationRecord &Rec) {
   // EvaluatedStmt::WasEvaluated is write-once, so a recorded entry means this
   // PTU confirmed the evaluation.
-  if (Rec.has(MutationType::EvaluatedValue)) {
+  if (Rec.has(MutationKind::EvaluatedValue)) {
     // VD cached evaluation came from this PTU.
     // Reset it and track it again so a later PTU can re-trigger evaluation.
     if (EvaluatedStmt *Eval = VD->getEvaluatedStmt()) {
       Eval->WasEvaluated = false;
       Eval->Evaluated = APValue();
     }
-    HiddenMutationTracker.track(VD, uint32_t(MutationType::EvaluatedValue));
+    HiddenMutationTracker.track(VD, uint32_t(MutationKind::EvaluatedValue));
   }
 
-  if (Rec.has(MutationType::DefinitionInstantiate)) {
+  if (Rec.has(MutationKind::DefinitionInstantiate)) {
     DeclStateReverter::revertDefinitionArrival(const_cast<VarDecl *>(VD));
   }
 
-  if (Rec.has(MutationType::SpecInfo)) {
-    const auto *Spec = cast<VarTemplateSpecializationDecl>(VD);
+  if (Rec.has(MutationKind::SpecInfo)) {
+    auto *Spec = cast<VarTemplateSpecializationDecl>(VD);
     if (const auto *Restored =
             Tracker.getFootprints().mostRecent<VarSpecializationFootprint>(
-                Spec, MutationType::SpecInfo))
-      DeclStateReverter::restoreFootprint<VarSpecializationFootprint>(
-          *Restored, *const_cast<VarTemplateSpecializationDecl *>(Spec));
-    trackForSweep(VD, uint32_t(MutationType::SpecInfo));
+                Spec, MutationKind::SpecInfo))
+      DeclStateReverter::restoreFootprint<VarSpecializationFootprint>(*Restored,
+                                                                      *Spec);
+    trackForSweep(VD, uint32_t(MutationKind::SpecInfo));
   }
 
-  if (Rec.has(MutationType::MemberSpecInfo)) {
+  if (Rec.has(MutationKind::MemberSpecInfo)) {
     assert(VD->getMemberSpecializationInfo());
     if (const auto *Restored =
             Tracker.Footprints.mostRecent<MemberSpecializationFootprint>(
-                VD, MutationType::MemberSpecInfo))
+                VD, MutationKind::MemberSpecInfo))
       DeclStateReverter::restoreFootprint<MemberSpecializationFootprint>(
-          *Restored, *const_cast<VarDecl *>(VD));
-    trackForSweep(VD, uint32_t(MutationType::MemberSpecInfo));
+          *Restored, *VD);
+    trackForSweep(VD, uint32_t(MutationKind::MemberSpecInfo));
   }
 }
 
-void PTUMutationActions::restoreEnum(PTUID ID, const EnumDecl *ED,
+void PTUMutationActions::restoreEnum(PTUID ID, EnumDecl *ED,
                                      MutationRecord &Rec) {
 
-  if (Rec.has(MutationType::TypeForDecl)) {
+  if (Rec.has(MutationKind::TypeForDecl)) {
     // for (const TagDecl *Redecl : ED->redecls()) {
     //   const auto *Last = Tracker.Footprints.mostRecent<const Type *>(
-    //       Redecl, MutationType::TypeForDecl);
+    //       Redecl, MutationKind::TypeForDecl);
     //   const Type *LastKnown = Last ? *Last : nullptr;
     //   TODO: need to handle?
     // }
   }
 
-  if (Rec.has(MutationType::DefinitionInstantiate))
+  if (Rec.has(MutationKind::DefinitionInstantiate))
     DeclStateReverter::revertDefinitionArrival(const_cast<EnumDecl *>(ED));
 
-  if (Rec.has(MutationType::MemberSpecInfo)) {
+  if (Rec.has(MutationKind::MemberSpecInfo)) {
     assert(ED->getMemberSpecializationInfo());
     if (const auto *Restored =
             Tracker.getFootprints().mostRecent<MemberSpecializationFootprint>(
-                ED, MutationType::MemberSpecInfo))
+                ED, MutationKind::MemberSpecInfo))
       DeclStateReverter::restoreFootprint<MemberSpecializationFootprint>(
-          *Restored, *const_cast<EnumDecl *>(ED));
+          *Restored, *ED);
 
-    trackForSweep(ED, uint32_t(MutationType::MemberSpecInfo));
+    trackForSweep(ED, uint32_t(MutationKind::MemberSpecInfo));
   }
 }
 
-void PTUMutationActions::restoreDecl(PTUID ID, const Decl *D,
-                                     MutationRecord &Rec) {
+void PTUMutationActions::restoreDecl(PTUID ID, Decl *D, MutationRecord &Rec) {
   switch (Rec.S) {
 #define DECL_SHAPE(NAME, TYPE)                                                 \
   case DeclShape::NAME:                                                        \
@@ -1362,7 +1360,7 @@ void PTUMutationActions::restore(TranslationUnitDecl *ThisTU) {
   //    previous state. Here, we restore each mutated declaration using its most
   //    recent state in IncrementalStateTracker (i.e., the PTU(N-1) state).
   for (auto &[D, Rec] : Cur.Mutations)
-    restoreDecl(ID, D, Rec);
+    restoreDecl(ID, const_cast<Decl *>(D), Rec);
 
   DeclStateReverter Detacher(Tracker.getPTUSlabCheckpoints());
   // 3. Cur.ImplicitDecls: Declarations created by this PTU. Unlink them from
@@ -1436,7 +1434,7 @@ void PTUMutationRecorder::CompletedTagDefinition(const TagDecl *D) {
 
   DeclShape S = classifyShape(D);
 
-  Cur.noteMutated(D, S, MutationType::DefinitionInstantiate);
+  Cur.noteMutated(D, S, MutationKind::DefinitionInstantiate);
 
   /// Handle this for MemberSpec because the notifier does not guarantee whether
   /// it fires before or after the mutation. We cannot reliably compare the
@@ -1444,13 +1442,13 @@ void PTUMutationRecorder::CompletedTagDefinition(const TagDecl *D) {
   if (S == DeclShape::Enum) {
     if (const EnumDecl *ED = dyn_cast<EnumDecl>(D);
         ED && ED->getMemberSpecializationInfo())
-      Cur.noteMutated(D, S, MutationType::MemberSpecInfo);
+      Cur.noteMutated(D, S, MutationKind::MemberSpecInfo);
   } else if (S == DeclShape::Class) {
     if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D);
         RD && RD->getMemberSpecializationInfo())
-      Cur.noteMutated(D, S, MutationType::MemberSpecInfo);
+      Cur.noteMutated(D, S, MutationKind::MemberSpecInfo);
     if (isa<ClassTemplateSpecializationDecl>(D))
-      Cur.noteMutated(D, S, MutationType::SpecInfo);
+      Cur.noteMutated(D, S, MutationKind::SpecInfo);
   }
 }
 
@@ -1481,7 +1479,7 @@ void PTUMutationRecorder::AddedCXXImplicitMember(const CXXRecordDecl *RD,
   if (Tracker.isFromThisPTU(RD, Cur.ID))
     return;
 
-  Cur.noteMutated(RD, DeclShape::Class, MutationType::DefinitionData);
+  Cur.noteMutated(RD, DeclShape::Class, MutationKind::DefinitionData);
 }
 
 template <typename TemplateT, typename SpecT>
@@ -1497,26 +1495,26 @@ void PTUMutationRecorder::noteTemplateDeclMutation(const TemplateT *TD,
     return;
   }
 
-  Cur.noteMutated(TD, DeclShape::Template, MutationType::SpecializationAdded);
+  Cur.noteMutated(TD, DeclShape::Template, MutationKind::SpecializationAdded);
 }
 
 void PTUMutationRecorder::AddedCXXTemplateSpecialization(
     const ClassTemplateDecl *TD, const ClassTemplateSpecializationDecl *D) {
-  noteTemplateDeclMutation(TD, TD, DeclShape::Class);
+  noteTemplateDeclMutation(TD, D, DeclShape::Class);
 }
 
 void PTUMutationRecorder::AddedCXXTemplateSpecialization(
     const VarTemplateDecl *TD, const VarTemplateSpecializationDecl *D) {
-  noteTemplateDeclMutation(TD, TD, DeclShape::Var);
+  noteTemplateDeclMutation(TD, D, DeclShape::Var);
 }
 
 void PTUMutationRecorder::AddedCXXTemplateSpecialization(
     const FunctionTemplateDecl *TD, const FunctionDecl *D) {
-  noteTemplateDeclMutation(TD, TD, DeclShape::Function);
+  noteTemplateDeclMutation(TD, D, DeclShape::Function);
 }
 
 void PTUMutationRecorder::noteExceptionSpecMutation(const FunctionDecl *FD,
-                                                    MutationType K) {
+                                                    MutationKind K) {
   PTUStateInfo &Cur = Tracker.current();
   if (Tracker.isFromThisPTU(FD, Cur.ID))
     return;
@@ -1529,7 +1527,7 @@ void PTUMutationRecorder::ResolvedExceptionSpec(const FunctionDecl *FD) {
 
 void PTUMutationRecorder::DeducedReturnType(const FunctionDecl *FD,
                                             QualType ReturnType) {
-  noteExceptionSpecMutation(FD, MutationType::DeducedReturnType);
+  noteExceptionSpecMutation(FD, MutationKind::DeducedReturnType);
 }
 
 void PTUMutationRecorder::noteDefinitionInstantiated(const Decl *D) {
@@ -1545,7 +1543,7 @@ void PTUMutationRecorder::noteDefinitionInstantiated(const Decl *D) {
       Cur.ImplicitDecls.insert(D);
     return;
   }
-  Cur.noteMutated(D, classifyShape(D), MutationType::DefinitionInstantiate);
+  Cur.noteMutated(D, classifyShape(D), MutationKind::DefinitionInstantiate);
 }
 
 /// InstantiationRequested fires when Sema decides a template entity needs
@@ -1564,22 +1562,22 @@ void PTUMutationRecorder::InstantiationRequested(const ValueDecl *D) {
   }
 
   DeclShape S;
-  MutationType K = MutationType::None;
+  MutationKind K = MutationKind::None;
 
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     S = DeclShape::Function;
     if (FD->getMemberSpecializationInfo())
-      K = MutationType::MemberSpecInfo;
+      K = MutationKind::MemberSpecInfo;
     else if (FD->getTemplateSpecializationKind() != TSK_Undeclared)
-      K = MutationType::SpecInfo;
+      K = MutationKind::SpecInfo;
     else
       return; // neither -- nothing this notifier can be about
   } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
     S = DeclShape::Var;
     if (VD->getMemberSpecializationInfo())
-      K = MutationType::MemberSpecInfo;
+      K = MutationKind::MemberSpecInfo;
     else if (isa<VarTemplateSpecializationDecl>(VD))
-      K = MutationType::SpecInfo;
+      K = MutationKind::SpecInfo;
     else
       return;
   } else {

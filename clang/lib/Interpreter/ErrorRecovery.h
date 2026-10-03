@@ -433,6 +433,7 @@ struct MutationRecord {
   };
 
   enum class MutationKind : uint32_t {
+    None = 0,
     // ---- Common ----
     DefinitionInstantiate = 1 << 0, // Class, Function, Var
     SpecInfo = 1 << 1,              // Class, Function, Var  (Spec)
@@ -448,20 +449,19 @@ struct MutationRecord {
 
     TemplateCommon = 1 << 4,   // Template CommonBase
     CanonInjectedTST = 1 << 5, // Template CommonBase Type
-    None = 1 << 24,
   };
 
   DeclShape S = DeclShape::None;
-  uint32_t MutationType = 0; // what this decl can ever have
+  uint32_t MutationFlags = 0; // what this decl can ever have
 
-  void add(MutationKind K) { MutationType |= uint32_t(K); }
-  void add(uint32_t K) { MutationType |= uint32_t(K); }
-  bool has(MutationKind K) const { return MutationType & uint32_t(K); }
-  void clear(MutationKind K) { MutationType &= ~uint32_t(K); }
+  void add(MutationKind K) { MutationFlags |= uint32_t(K); }
+  void add(uint32_t K) { MutationFlags |= uint32_t(K); }
+  bool has(MutationKind K) const { return MutationFlags & uint32_t(K); }
+  void clear(MutationKind K) { MutationFlags &= ~uint32_t(K); }
 };
 
 using DeclShape = MutationRecord::DeclShape;
-using MutationType = MutationRecord::MutationKind;
+using MutationKind = MutationRecord::MutationKind;
 
 using FootprintValue =
     std::variant<DefinitionDataFootprint, SpecializationFootprint,
@@ -474,14 +474,14 @@ struct FootprintSnapshot {
 };
 
 class FootprintStore {
-  llvm::DenseMap<std::pair<const Decl *, MutationType>,
+  llvm::DenseMap<std::pair<const Decl *, MutationKind>,
                  llvm::SmallVector<FootprintSnapshot, 2>>
       Store;
 
 public:
   // commit decl state owner+mutation_kind -> Footprint.
   template <typename T>
-  void commit(const Decl *Owner, MutationType K, PTUID ID, const T &Fresh) {
+  void commit(const Decl *Owner, MutationKind K, PTUID ID, const T &Fresh) {
     auto &History = Store[{Owner, K}];
     if (!History.empty() && std::get<T>(History.back().Data) == Fresh)
       return;
@@ -491,7 +491,7 @@ public:
   // nullptr means either "no history at all" or "history exists but the
   // most recent entry isn't a T".
   template <typename T>
-  const T *mostRecent(const Decl *Owner, MutationType K) const {
+  const T *mostRecent(const Decl *Owner, MutationKind K) const {
     auto It = Store.find({Owner, K});
     if (It == Store.end() || It->second.empty())
       return nullptr;
@@ -500,7 +500,7 @@ public:
 
   /// Drop every entry with ID >= \p ID for this (Owner, K), erasing the
   /// key entirely once its history is empty.
-  void removeFrom(const Decl *Owner, MutationType K, PTUID ID) {
+  void removeFrom(const Decl *Owner, MutationKind K, PTUID ID) {
     auto It = Store.find({Owner, K});
     if (It == Store.end())
       return;
@@ -528,7 +528,7 @@ struct PTUStateInfo {
 
   /// Every (Owner, Kind) key this PTU's own commit() wrote a FootprintStore
   /// entry for.
-  llvm::SmallVector<std::pair<const Decl *, MutationType>, 8> TouchedFootprints;
+  llvm::SmallVector<std::pair<const Decl *, MutationKind>, 8> TouchedFootprints;
 
   explicit PTUStateInfo(PTUID ID) : ID(ID) {}
 
@@ -654,7 +654,7 @@ public:
   // (Owner, K), so undoLastEntries() knows what to remove if the PTU is rolled
   // back without committing.
   template <typename T>
-  void commitFootprint(const Decl *Owner, MutationType K, PTUID ID,
+  void commitFootprint(const Decl *Owner, MutationKind K, PTUID ID,
                        const T &Fresh) {
     Footprints.commit(Owner, K, ID, Fresh);
     current().TouchedFootprints.emplace_back(Owner, K);
@@ -702,6 +702,7 @@ private:
 class SemaCacheReverter {
   Sema &SemaRef;
   IncrementalStateTracker &Tracker;
+
 public:
   explicit SemaCacheReverter(Sema &S, IncrementalStateTracker &Tracker)
       : SemaRef(S), Tracker(Tracker) {}
@@ -756,21 +757,21 @@ private:
   void commitTypedef(PTUID ID, const TypedefNameDecl *ED, MutationRecord &Rec,
                      bool IsNew);
 
-  void restoreClass(PTUID ID, const CXXRecordDecl *RD, MutationRecord &Rec);
+  void restoreClass(PTUID ID, CXXRecordDecl *RD, MutationRecord &Rec);
 
-  void restoreFunction(PTUID ID, const FunctionDecl *FD, MutationRecord &Rec);
+  void restoreFunction(PTUID ID, FunctionDecl *FD, MutationRecord &Rec);
 
-  void restoreTemplate(PTUID ID, const RedeclarableTemplateDecl *TD,
+  void restoreTemplate(PTUID ID, RedeclarableTemplateDecl *TD,
                        MutationRecord &Rec);
 
-  void restoreVar(PTUID ID, const VarDecl *VD, MutationRecord &Rec);
+  void restoreVar(PTUID ID, VarDecl *VD, MutationRecord &Rec);
 
-  void restoreEnum(PTUID ID, const EnumDecl *ED, MutationRecord &Rec);
+  void restoreEnum(PTUID ID, EnumDecl *ED, MutationRecord &Rec);
 
-  void restoreTypedef(PTUID ID, const TypedefNameDecl *TD, MutationRecord &Rec);
+  void restoreTypedef(PTUID ID, TypedefNameDecl *TD, MutationRecord &Rec);
 
 public:
-  void restoreDecl(PTUID ID, const Decl *D, MutationRecord &Rec);
+  void restoreDecl(PTUID ID, Decl *D, MutationRecord &Rec);
   void commitDecl(PTUID ID, const Decl *D, MutationRecord &Rec,
                   bool IsNew = false);
   // Actual commit action: updates IncrementalStateTracker tracking info for
@@ -794,7 +795,7 @@ private:
                                 DeclShape S);
 
   void noteExceptionSpecMutation(const FunctionDecl *FD,
-                                 MutationType K = MutationType::ExceptionSpec);
+                                 MutationKind K = MutationKind::ExceptionSpec);
 
   void noteDefinitionInstantiated(const Decl *D);
 
