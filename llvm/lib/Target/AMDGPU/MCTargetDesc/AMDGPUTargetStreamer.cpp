@@ -772,6 +772,7 @@ void AMDGPUTargetAsmStreamer::emitAMDGPUInfo(
         OS << "\t\t.amdgpu_num_agpr " << Info->NumAccVGPR << '\n';
       OS << "\t\t.amdgpu_private_segment_size " << Info->PrivateSegmentSize
          << '\n';
+      OS << "\t\t.amdgpu_occupancy " << Info->Occupancy << '\n';
     }
     for (MCSymbol *Res : Uses)
       OS << "\t\t.amdgpu_use " << Res->getName() << '\n';
@@ -1246,6 +1247,7 @@ void AMDGPUTargetELFStreamer::emitAMDGPUInfo(
         EmitU32Entry(AMDGPU::InfoKind::INFO_NUM_AGPR, Info->NumAccVGPR);
       EmitU32Entry(AMDGPU::InfoKind::INFO_PRIVATE_SEGMENT_SIZE,
                    Info->PrivateSegmentSize);
+      EmitU32Entry(AMDGPU::InfoKind::INFO_OCCUPANCY, Info->Occupancy);
     }
 
     for (MCSymbol *Res : Uses)
