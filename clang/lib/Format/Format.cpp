@@ -1377,7 +1377,7 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.BreakTemplateDeclarations);
     IO.mapOptional("ColumnLimit", Style.ColumnLimit);
     IO.mapOptional("CommentPragmas", Style.CommentPragmas);
-    IO.mapOptional("CompactCaseLabels ", Style.CompactCaseLabels);
+    IO.mapOptional("CompactCaseLabels", Style.CompactCaseLabels);
     IO.mapOptional("CompactNamespaces", Style.CompactNamespaces);
     IO.mapOptional("ConstructorInitializerIndentWidth",
                    Style.ConstructorInitializerIndentWidth);
