@@ -247,6 +247,26 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
       Name = Context.BuiltinInfo.getName(BuiltinID).substr(10);
   }
 
+  // Look up the corresponding standard library C function in the AST. Unlike
+  // normal function calls where Sema performs name lookup and lazily
+  // deserializes declarations from Clang Modules (PCMs), built-in library
+  // function calls (e.g. __builtin_hypotf) bypass Sema name lookup for the C
+  // function name ("hypotf"). Explicitly looking up the name in
+  // TranslationUnitDecl triggers ASTReader to lazily deserialize any
+  // module-defined declaration (such as MSVC UCRT's inline hypotf wrapper). If
+  // a definition is found, use GetAddrOfFunction to properly emit its
+  // definition and dependencies.
+  DeclarationName DecName = &Context.Idents.get(Name);
+  DeclContext::lookup_result Decls =
+      Context.getTranslationUnitDecl()->lookup(DecName);
+  for (NamedDecl *ND : Decls) {
+    if (auto *TargetFD = dyn_cast<FunctionDecl>(ND)) {
+      if (TargetFD->isExternC() && TargetFD->hasBody()) {
+        return GetAddrOfFunction(TargetFD);
+      }
+    }
+  }
+
   llvm::FunctionType *Ty =
     cast<llvm::FunctionType>(getTypes().ConvertType(FD->getType()));
 
