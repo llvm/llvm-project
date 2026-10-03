@@ -207,7 +207,7 @@ static void RegisterPassPlugins(const Config &Conf, PassBuilder &PB) {
 
   // Load requested pass plugins and let them register pass builder callbacks
   for (auto &PluginFN : Conf.PassPluginFilenames) {
-    auto PassPlugin = PassPlugin::Load(PluginFN);
+    auto PassPlugin = PassPlugin::load(PluginFN);
     if (!PassPlugin)
       reportFatalUsageError(PassPlugin.takeError());
     PassPlugin->registerPassBuilderCallbacks(PB);
@@ -335,6 +335,9 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   PB.registerFunctionAnalyses(FAM);
   PB.registerLoopAnalyses(LAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+  if (Conf.PassBuilderCallback)
+    Conf.PassBuilderCallback(PB);
 
   ModulePassManager MPM;
 
@@ -712,7 +715,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   // When linking an ELF shared object, dso_local should be dropped. We
   // conservatively do this for -fpic.
   bool ClearDSOLocalOnDeclarations =
-      TM->getTargetTriple().isOSBinFormatELF() &&
+      Mod.getTargetTriple().isOSBinFormatELF() &&
       TM->getRelocationModel() != Reloc::Static &&
       Mod.getPIELevel() == PIELevel::Default;
   renameModuleForThinLTO(Mod, CombinedIndex, ClearDSOLocalOnDeclarations);

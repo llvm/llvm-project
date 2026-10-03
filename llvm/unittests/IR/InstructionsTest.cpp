@@ -960,19 +960,15 @@ TEST_F(ModuleWithFunctionTest, DropPoisonGeneratingFlags) {
 
 TEST(InstructionsTest, GEPIndices) {
   LLVMContext Context;
-  IRBuilder<NoFolder> Builder(Context);
-  Type *ElementTy = Builder.getInt8Ty();
+  Type *ElementTy = Type::getInt8Ty(Context);
+  Type *IdxTy = Type::getInt32Ty(Context);
   Type *ArrTy = ArrayType::get(ArrayType::get(ElementTy, 64), 64);
-  Value *Indices[] = {
-    Builder.getInt32(0),
-    Builder.getInt32(13),
-    Builder.getInt32(42) };
+  Value *Indices[] = {ConstantInt::get(IdxTy, 0), ConstantInt::get(IdxTy, 13),
+                      ConstantInt::get(IdxTy, 42)};
 
-  Value *V = Builder.CreateGEP(
+  auto *GEPI = GetElementPtrInst::Create(
       ArrTy, UndefValue::get(PointerType::getUnqual(Context)), Indices);
-  ASSERT_TRUE(isa<GetElementPtrInst>(V));
 
-  auto *GEPI = cast<GetElementPtrInst>(V);
   ASSERT_NE(GEPI->idx_begin(), GEPI->idx_end());
   ASSERT_EQ(GEPI->idx_end(), std::next(GEPI->idx_begin(), 3));
   EXPECT_EQ(Indices[0], GEPI->idx_begin()[0]);

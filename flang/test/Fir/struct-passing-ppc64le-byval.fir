@@ -79,4 +79,12 @@ func.func @csub5(%arg0: !fir.type<_QFcsub5Tdt1{xdt0:!fir.type<_QFcsub5Tdt0{f1:co
 func.func @csub6(%arg0: !fir.type<_QFcsub6Tdt1{xdt0:!fir.type<_QFcsub6Tdt0{f1:complex<f32>}>,x1:f64}> {fir.bindc_name = "arg"}) attributes {fir.bindc_name = "csub6"} { return }
 //CHECK-LABEL: func.func @csub6(%arg0: !fir.array<2xi64> {fir.bindc_name = "arg"}) attributes {fir.bindc_name = "csub6"}
 
+// tail-padded struct: f128 (16B, align 16) + i8 (1B, align 1).
+// Store size = 17B; allocation size = alignTo(17, 16) = 32B.
+// nElem = ceil(32*8/64) = 4 -> [4 x i64].
+// clang --target=powerpc64le-unknown-linux-gnu confirms [2 x i128] = 4 doublewords.
+// The old unrounded size (17B) gave nElem=3 ([3 x i64]) -- a live C-interop ABI bug.
+func.func @csub_tailpad_f128_i8(%arg0: !fir.type<t{x:f128,c:i8}> {fir.bindc_name = "arg"}) attributes {fir.bindc_name = "csub_tailpad_f128_i8"} { return }
+//CHECK-LABEL: func.func @csub_tailpad_f128_i8(%arg0: !fir.array<4xi64> {fir.bindc_name = "arg"}) attributes {fir.bindc_name = "csub_tailpad_f128_i8"}
+
 }

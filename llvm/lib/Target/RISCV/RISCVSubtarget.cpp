@@ -261,12 +261,6 @@ unsigned RISCVSubtarget::getMinRVVVectorSizeInBits() const {
   return RVVVectorBitsMin;
 }
 
-unsigned RISCVSubtarget::getMaxLMULForFixedLengthVectors() const {
-  assert(hasVInstructions() &&
-         "Tried to get vector length without Zve or V extension support!");
-  return 8;
-}
-
 bool RISCVSubtarget::useRVVForFixedLengthVectors() const {
   return hasVInstructions() &&
          getMinRVVVectorSizeInBits() >= RISCV::RVVBitsPerBlock;

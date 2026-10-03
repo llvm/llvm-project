@@ -561,7 +561,7 @@ def EXT32 : MxExt<MxType32d, MxType16d>;
 def : Pat<(sext_inreg i16:$src, i8),  (EXT16 $src)>;
 def : Pat<(sext_inreg i32:$src, i16), (EXT32 $src)>;
 def : Pat<(sext_inreg i32:$src, i8),
-          (EXT32 (MOVXd32d16 (EXT16 (EXTRACT_SUBREG $src, MxSubRegIndex16Lo))))>;
+          (EXT32 (MOVXr32r16 (EXT16 (EXTRACT_SUBREG $src, MxSubRegIndex16Lo))))>;
 
 
 //===----------------------------------------------------------------------===//
@@ -669,22 +669,22 @@ def : Pat<(urem i8:$dst, i8:$opd),
 // RR i16
 def : Pat<(sdiv i16:$dst, i16:$opd),
           (EXTRACT_SUBREG
-            (SDIVd32d16 (MOVSXd32d16 $dst), $opd),
+            (SDIVd32d16 (MOVSXr32r16 $dst), $opd),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(udiv i16:$dst, i16:$opd),
           (EXTRACT_SUBREG
-            (UDIVd32d16 (MOVZXd32d16 $dst), $opd),
+            (UDIVd32d16 (MOVZXd32r16 $dst), $opd),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(srem i16:$dst, i16:$opd),
           (EXTRACT_SUBREG
-            (SWAP (SDIVd32d16 (MOVSXd32d16 $dst), $opd)),
+            (SWAP (SDIVd32d16 (MOVSXr32r16 $dst), $opd)),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(urem i16:$dst, i16:$opd),
           (EXTRACT_SUBREG
-            (SWAP (UDIVd32d16 (MOVZXd32d16 $dst), $opd)),
+            (SWAP (UDIVd32d16 (MOVZXd32r16 $dst), $opd)),
              MxSubRegIndex16Lo)>;
 
 // RI i8
@@ -711,22 +711,22 @@ def : Pat<(urem i8:$dst, Mxi8immSExt8:$opd),
 // RI i16
 def : Pat<(sdiv i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
-            (SDIVd32i16 (MOVSXd32d16 $dst), imm:$opd),
+            (SDIVd32i16 (MOVSXr32r16 $dst), imm:$opd),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(udiv i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
-            (UDIVd32i16 (MOVZXd32d16 $dst), imm:$opd),
+            (UDIVd32i16 (MOVZXd32r16 $dst), imm:$opd),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(srem i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
-            (SWAP (SDIVd32i16 (MOVSXd32d16 $dst), imm:$opd)),
+            (SWAP (SDIVd32i16 (MOVSXr32r16 $dst), imm:$opd)),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(urem i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
-            (SWAP (UDIVd32i16 (MOVZXd32d16 $dst), imm:$opd)),
+            (SWAP (UDIVd32i16 (MOVZXd32r16 $dst), imm:$opd)),
              MxSubRegIndex16Lo)>;
 
 
@@ -738,17 +738,17 @@ def UMULd32d32 : MxDiMuOp_DD_Long<"mulu.l", MxUMul, 0x130, /*SIGNED*/false>;
 // RR
 def : Pat<(mul i16:$dst, i16:$opd),
           (EXTRACT_SUBREG
-            (SMULd32d16 (MOVXd32d16 $dst), $opd),
+            (SMULd32d16 (MOVXr32r16 $dst), $opd),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(mulhs i16:$dst, i16:$opd),
           (EXTRACT_SUBREG
-            (SWAP (SMULd32d16 (MOVXd32d16 $dst), $opd)),
+            (SWAP (SMULd32d16 (MOVXr32r16 $dst), $opd)),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(mulhu i16:$dst, i16:$opd),
           (EXTRACT_SUBREG
-            (SWAP (UMULd32d16 (MOVXd32d16 $dst), $opd)),
+            (SWAP (UMULd32d16 (MOVXr32r16 $dst), $opd)),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(mul i32:$dst, i32:$opd), (SMULd32d32 $dst, $opd)>;
@@ -757,17 +757,17 @@ def : Pat<(mul i32:$dst, i32:$opd), (SMULd32d32 $dst, $opd)>;
 // RI
 def : Pat<(mul i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
-            (SMULd32i16 (MOVXd32d16 $dst), imm:$opd),
+            (SMULd32i16 (MOVXr32r16 $dst), imm:$opd),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(mulhs i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
-            (SWAP (SMULd32i16 (MOVXd32d16 $dst), imm:$opd)),
+            (SWAP (SMULd32i16 (MOVXr32r16 $dst), imm:$opd)),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(mulhu i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
-            (SWAP (UMULd32i16 (MOVXd32d16 $dst), imm:$opd)),
+            (SWAP (UMULd32i16 (MOVXr32r16 $dst), imm:$opd)),
              MxSubRegIndex16Lo)>;
 
 

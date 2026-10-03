@@ -365,15 +365,14 @@ RT_API_ATTRS void CreatePartialReductionResult(Descriptor &result,
   }
 }
 
-RT_OFFLOAD_API_GROUP_END
-
-// The ShallowCopyModifiedSuffix family is deliberately outside the offload
-// API group: its only caller is CopyOutAssign, which is host-only, and
-// instantiating it for the device would only add dead device code.
+// The ShallowCopyModifiedSuffix family must stay inside the offload API
+// group: its callers CopyOutAssignDirect and CopyOutAssign are offload API
+// entry points (see the RT_EXT_API_GROUP markers in assign.cpp), so offload
+// builds compile and call them in device code.
 // Compares one element bitwise. As in the ShallowCopy* helpers above, the
 // compile-time element size lets the compiler inline the comparison.
 template <typename P>
-static inline bool ElementIsModified(
+static inline RT_API_ATTRS bool ElementIsModified(
     const char *toAt, const char *fromAt, std::size_t elementBytes) {
   constexpr std::size_t typeElementBytes{sizeof(P)};
   if constexpr (typeElementBytes != 1) {
@@ -401,7 +400,7 @@ static inline RT_API_ATTRS void CopyElement(
 // copy-out never traverses the data more than once nor stores more elements
 // than the unconditional copy would.
 template <typename P, int RANK = -1>
-static void ShallowCopyModifiedSuffixInner(const Descriptor &to,
+static RT_API_ATTRS void ShallowCopyModifiedSuffixInner(const Descriptor &to,
     const Descriptor &from, bool toIsContiguous, bool fromIsContiguous) {
   std::size_t elementBytes{to.ElementBytes()};
   std::size_t n{to.Elements()};
@@ -458,7 +457,7 @@ static void ShallowCopyModifiedSuffixInner(const Descriptor &to,
 }
 
 template <typename P>
-static void ShallowCopyModifiedSuffixRank(const Descriptor &to,
+static RT_API_ATTRS void ShallowCopyModifiedSuffixRank(const Descriptor &to,
     const Descriptor &from, bool toIsContiguous, bool fromIsContiguous) {
   INTERNAL_CHECK(to.rank() == from.rank());
   // Mirror ShallowCopyRank's rank specialization policy.
@@ -486,7 +485,8 @@ static void ShallowCopyModifiedSuffixRank(const Descriptor &to,
   }
 }
 
-void ShallowCopyModifiedSuffix(const Descriptor &to, const Descriptor &from) {
+RT_API_ATTRS void ShallowCopyModifiedSuffix(
+    const Descriptor &to, const Descriptor &from) {
   bool toIsContiguous{to.IsContiguous()};
   bool fromIsContiguous{from.IsContiguous()};
   std::size_t elementBytes{to.ElementBytes()};
@@ -527,4 +527,6 @@ void ShallowCopyModifiedSuffix(const Descriptor &to, const Descriptor &from) {
         to, from, toIsContiguous, fromIsContiguous);
   }
 }
+
+RT_OFFLOAD_API_GROUP_END
 } // namespace Fortran::runtime

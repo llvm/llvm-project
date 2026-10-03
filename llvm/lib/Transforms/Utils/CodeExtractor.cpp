@@ -455,14 +455,14 @@ Instruction *CodeExtractor::allocateVar(IRBuilder<>::InsertPoint AllocaIP,
                                         const Twine &Name,
                                         AddrSpaceCastInst **CastedAlloc) {
   // An alloca needs no debug location, so the one passed in goes unused here.
-  const DataLayout &DL = AllocaIP.getBlock()->getModule()->getDataLayout();
-  Instruction *Alloca = new AllocaInst(VarType, DL.getAllocaAddrSpace(),
-                                       nullptr, Name, AllocaIP.getPoint());
+  BasicBlock *BB = AllocaIP.getNodeParent();
+  const DataLayout &DL = BB->getDataLayout();
+  Instruction *Alloca =
+      new AllocaInst(VarType, DL.getAllocaAddrSpace(), nullptr, Name, AllocaIP);
 
   if (CastedAlloc && ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
     *CastedAlloc = new AddrSpaceCastInst(
-        Alloca, PointerType::get(AllocaIP.getBlock()->getContext(), 0),
-        Name + ".ascast");
+        Alloca, PointerType::get(BB->getContext(), 0), Name + ".ascast");
     (*CastedAlloc)->insertAfter(Alloca->getIterator());
   }
   return Alloca;
@@ -1326,13 +1326,16 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
   for (auto [Input, NewVal] : zip_equal(Inputs, NewValues)) {
     SmallVector<DbgVariableRecord *, 1> DPUsers;
     findDbgUsers(Input, DPUsers);
-    DIExpression *Expr = DIB.createExpression();
 
-    // Iterate the debud users of the Input values. If they are in the extracted
+    // Iterate the debug users of the Input values. If they are in the extracted
     // function then update their location with the new value. If they are in
     // the parent function then create a similar debug record.
-    for (auto *DVR : DPUsers)
+    for (auto *DVR : DPUsers) {
+      DIExpression *Expr = DVR->getNumVariableLocationOps() == 1
+                               ? DVR->getExpression()
+                               : DIB.createExpression();
       UpdateOrInsertDebugRecord(DVR, Input, NewVal, Expr, DVR->isDbgDeclare());
+    }
   }
 
   auto IsInvalidLocation = [&NewFunc](Value *Location) {
@@ -1904,9 +1907,8 @@ CallInst *CodeExtractor::emitReplacerCall(
       continue;
 
     Value *OutAlloc =
-        allocateVar(IRBuilder<>::InsertPoint(
-                        AllocaBlock, AllocaBlock->getFirstInsertionPt()),
-                    DL, output->getType(), output->getName() + ".loc");
+        allocateVar(AllocaBlock->getFirstInsertionPt(), DL, output->getType(),
+                    output->getName() + ".loc");
     params.push_back(OutAlloc);
     ReloadOutputs.push_back(OutAlloc);
   }
@@ -1914,9 +1916,8 @@ CallInst *CodeExtractor::emitReplacerCall(
   Instruction *Struct = nullptr;
   if (!StructValues.empty()) {
     AddrSpaceCastInst *StructSpaceCast = nullptr;
-    Struct = allocateVar(IRBuilder<>::InsertPoint(
-                             AllocaBlock, AllocaBlock->getFirstInsertionPt()),
-                         DL, StructArgTy, "structArg", &StructSpaceCast);
+    Struct = allocateVar(AllocaBlock->getFirstInsertionPt(), DL, StructArgTy,
+                         "structArg", &StructSpaceCast);
     if (StructSpaceCast)
       params.push_back(StructSpaceCast);
     else
@@ -2060,25 +2061,22 @@ CallInst *CodeExtractor::emitReplacerCall(
                                        {}, call);
 
   // Deallocate intermediate variables if they need explicit deallocation.
-  auto deallocVars = [&](BasicBlock *DeallocBlock,
-                         BasicBlock::iterator DeallocIP) {
+  auto deallocVars = [&](BasicBlock::iterator DeallocIP) {
     int Index = 0;
     for (Value *Output : outputs) {
       if (!StructValues.contains(Output))
-        deallocateVar(IRBuilder<>::InsertPoint(DeallocBlock, DeallocIP), DL,
-                      ReloadOutputs[Index++], Output->getType());
+        deallocateVar(DeallocIP, DL, ReloadOutputs[Index++], Output->getType());
     }
 
     if (Struct)
-      deallocateVar(IRBuilder<>::InsertPoint(DeallocBlock, DeallocIP), DL,
-                    Struct, StructArgTy);
+      deallocateVar(DeallocIP, DL, Struct, StructArgTy);
   };
 
   if (DeallocationBlocks.empty()) {
-    deallocVars(codeReplacer, codeReplacer->end());
+    deallocVars(codeReplacer->end());
   } else {
     for (BasicBlock *DeallocationBlock : DeallocationBlocks)
-      deallocVars(DeallocationBlock, DeallocationBlock->getFirstInsertionPt());
+      deallocVars(DeallocationBlock->getFirstInsertionPt());
   }
 
   return call;

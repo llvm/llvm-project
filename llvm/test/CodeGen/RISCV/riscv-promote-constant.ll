@@ -37,7 +37,7 @@ define double @multiple_doubles(double %a, double %b) {
 ; CHECK-LABEL: define double @multiple_doubles(
 ; CHECK-SAME: double [[A:%.*]], double [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[DOUBLE_VAL1:%.*]] = load double, ptr getelementptr inbounds ([2 x double], ptr @.promoted_doubles.multiple_doubles, i64 0, i64 1), align 8
+; CHECK-NEXT:    [[DOUBLE_VAL1:%.*]] = load double, ptr getelementptr inbounds (i8, ptr @.promoted_doubles.multiple_doubles, i64 8), align 8
 ; CHECK-NEXT:    [[ADD3:%.*]] = load double, ptr @.promoted_doubles.multiple_doubles, align 8
 ; CHECK-NEXT:    [[ADD2:%.*]] = fadd double [[A]], [[ADD3]]
 ; CHECK-NEXT:    [[ADD4:%.*]] = fadd double [[B]], [[DOUBLE_VAL1]]
@@ -80,14 +80,14 @@ define double @multiple_doubles_multi_bb(double %a, i1 %cond) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_TRUE:.*]], label %[[IF_FALSE:.*]]
 ; CHECK:       [[IF_TRUE]]:
-; CHECK-NEXT:    [[DOUBLE_VAL2:%.*]] = load double, ptr getelementptr inbounds ([2 x double], ptr @.promoted_doubles.multiple_doubles_multi_bb, i64 0, i64 1), align 8
+; CHECK-NEXT:    [[DOUBLE_VAL2:%.*]] = load double, ptr getelementptr inbounds (i8, ptr @.promoted_doubles.multiple_doubles_multi_bb, i64 8), align 8
 ; CHECK-NEXT:    [[DOUBLE_VAL:%.*]] = load double, ptr @.promoted_doubles.multiple_doubles_multi_bb, align 8
 ; CHECK-NEXT:    [[ADD_T:%.*]] = fadd double [[A]], [[DOUBLE_VAL]]
 ; CHECK-NEXT:    [[MUL_T:%.*]] = fmul double [[ADD_T]], [[DOUBLE_VAL2]]
 ; CHECK-NEXT:    [[SUB_T:%.*]] = fsub double [[MUL_T]], [[DOUBLE_VAL]]
 ; CHECK-NEXT:    br label %[[IF_END:.*]]
 ; CHECK:       [[IF_FALSE]]:
-; CHECK-NEXT:    [[DOUBLE_VAL3:%.*]] = load double, ptr getelementptr inbounds ([2 x double], ptr @.promoted_doubles.multiple_doubles_multi_bb, i64 0, i64 1), align 8
+; CHECK-NEXT:    [[DOUBLE_VAL3:%.*]] = load double, ptr getelementptr inbounds (i8, ptr @.promoted_doubles.multiple_doubles_multi_bb, i64 8), align 8
 ; CHECK-NEXT:    [[DOUBLE_VAL1:%.*]] = load double, ptr @.promoted_doubles.multiple_doubles_multi_bb, align 8
 ; CHECK-NEXT:    [[ADD_F:%.*]] = fadd double [[A]], [[DOUBLE_VAL1]]
 ; CHECK-NEXT:    [[MUL_F:%.*]] = fmul double [[ADD_F]], [[DOUBLE_VAL3]]
@@ -130,7 +130,7 @@ define double @multiple_doubles_phi(double %a, i1 %cond) {
 ; CHECK-NEXT:    br label %[[IF_END]]
 ; CHECK:       [[IF_END]]:
 ; CHECK-NEXT:    [[PHI_VAL:%.*]] = phi double [ [[DOUBLE_VAL]], %[[IF_THEN]] ], [ [[A]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[DOUBLE_VAL1:%.*]] = load double, ptr getelementptr inbounds ([2 x double], ptr @.promoted_doubles.multiple_doubles_phi, i64 0, i64 1), align 8
+; CHECK-NEXT:    [[DOUBLE_VAL1:%.*]] = load double, ptr getelementptr inbounds (i8, ptr @.promoted_doubles.multiple_doubles_phi, i64 8), align 8
 ; CHECK-NEXT:    [[RES:%.*]] = fadd double [[PHI_VAL]], [[DOUBLE_VAL1]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;

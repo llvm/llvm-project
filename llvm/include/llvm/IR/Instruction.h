@@ -951,10 +951,6 @@ public:
   /// llvm.lifetime.end marker.
   LLVM_ABI bool isLifetimeStartOrEnd() const LLVM_READONLY;
 
-  /// Return true if the instruction is a llvm.launder.invariant.group or
-  /// llvm.strip.invariant.group.
-  LLVM_ABI bool isLaunderOrStripInvariantGroup() const LLVM_READONLY;
-
   /// Return true if the instruction is a DbgInfoIntrinsic or PseudoProbeInst.
   LLVM_ABI bool isDebugOrPseudoInst() const LLVM_READONLY;
 

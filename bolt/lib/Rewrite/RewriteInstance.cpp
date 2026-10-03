@@ -48,10 +48,12 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Object/Decompressor.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
@@ -61,6 +63,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cstring>
 #include <fstream>
 #include <memory>
 #include <optional>
@@ -193,7 +196,6 @@ LiteThresholdPct("lite-threshold-pct",
             "threshold of 90 means only top 10 percent of functions with "
             "profile will be processed."),
   cl::init(0),
-  cl::ZeroOrMore,
   cl::Hidden,
   cl::cat(BoltOptCategory));
 
@@ -284,7 +286,6 @@ static cl::opt<bool>
 UseGnuStack("use-gnu-stack",
   cl::desc("use GNU_STACK program header for new segment (workaround for "
            "issues with strip/objcopy)"),
-  cl::ZeroOrMore,
   cl::cat(BoltCategory));
 
 static cl::opt<uint64_t> CustomAllocationVMA(
@@ -320,7 +321,7 @@ static cl::list<GadgetKindBitmask> GadgetScannersToRun(
         clEnumValN(GS_PTRAUTH_ALL_MASK, "ptrauth-all",
                    "All Pointer Authentication scanners"),
         clEnumValN(GS_ALL_MASK, "all", "All implemented scanners")),
-    cl::ZeroOrMore, cl::CommaSeparated, cl::cat(BinaryAnalysisCategory));
+    cl::CommaSeparated, cl::cat(BinaryAnalysisCategory));
 
 // Primary targets for hooking runtime library initialization hooking
 // with fallback to next item in case if current item is not available
@@ -342,7 +343,7 @@ cl::opt<RuntimeLibInitHookTarget> RuntimeLibInitHook(
                clEnumValN(RLIH_INIT, "init", "use ELF DT_INIT entry"),
                clEnumValN(RLIH_INIT_ARRAY, "init_array",
                           "use ELF .init_array entry")),
-    cl::ZeroOrMore, cl::cat(BoltOptCategory));
+    cl::cat(BoltOptCategory));
 
 } // namespace opts
 
@@ -392,6 +393,38 @@ MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
 } // namespace llvm
 
 namespace {
+
+static Error reportDecompressionError(StringRef SectionName, Error E) {
+  return createStringError("failed to decompress section '" + SectionName +
+                           "': " + toString(std::move(E)));
+}
+
+static Error validateCompressedDebugSections(const ELFObjectFileBase &File) {
+  for (const SectionRef &Section : File.sections()) {
+    Expected<StringRef> NameOrErr = Section.getName();
+    if (!NameOrErr)
+      return NameOrErr.takeError();
+
+    if (!RewriteInstance::isDebugSection(*NameOrErr) || !Section.isCompressed())
+      continue;
+
+    Expected<StringRef> SectionContentsOrErr = Section.getContents();
+    if (!SectionContentsOrErr)
+      return SectionContentsOrErr.takeError();
+
+    Expected<Decompressor> DecompressorOrErr =
+        Decompressor::create(*NameOrErr, *SectionContentsOrErr,
+                             File.isLittleEndian(), File.is64Bit());
+    if (!DecompressorOrErr)
+      return reportDecompressionError(*NameOrErr,
+                                      DecompressorOrErr.takeError());
+
+    SmallVector<uint8_t, 0> DecompressedContents;
+    if (Error E = DecompressorOrErr->resizeAndDecompress(DecompressedContents))
+      return reportDecompressionError(*NameOrErr, std::move(E));
+  }
+  return Error::success();
+}
 
 bool refersToReorderedSection(ErrorOr<BinarySection &> Section) {
   return llvm::any_of(opts::ReorderData, [&](const std::string &SectionName) {
@@ -450,6 +483,13 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
       return;
     } else {
       Features.reset(new SubtargetFeatures(*FeaturesOrErr));
+    }
+  }
+
+  if (opts::UpdateDebugSections) {
+    if (Error E = validateCompressedDebugSections(*File)) {
+      Err = std::move(E);
+      return;
     }
   }
 
@@ -2456,17 +2496,9 @@ Error RewriteInstance::readSpecialSections() {
     check_error(SectionNameOrErr.takeError(), "cannot get section name");
     StringRef SectionName = *SectionNameOrErr;
 
-    // Detect a debug section and check if it's compressed.
-    // Compressed debug sections currently aren't supported.
+    // Detect a debug section.
     if (isDebugSection(SectionName)) {
       HasDebugInfo = true;
-      if (opts::UpdateDebugSections && isCompressedDebugSection(Section)) {
-        return createStringError(errc::not_supported,
-                                 Twine("compressed debug section '") +
-                                     SectionName +
-                                     "' detected. --update-debug-sections "
-                                     "requires uncompressed debug info");
-      }
     }
 
     if (Error E = Section.getContents().takeError())
@@ -4470,111 +4502,17 @@ void RewriteInstance::mapFileSections(BOLTLinker::SectionMapper MapSection) {
   }
 }
 
-namespace {
-
-/// Defines the strict weak ordering for BOLT-produced code sections.
-class CodeSectionOrder {
-public:
-  CodeSectionOrder(StringRef ColdSectionName, StringRef HotTextMoverSectionName,
-                   StringRef MainSectionName, StringRef WarmSectionName,
-                   bool HotText, bool HotFunctionsAtEnd)
-      : ColdSectionName(ColdSectionName),
-        HotTextMoverSectionName(HotTextMoverSectionName),
-        MainSectionName(MainSectionName), WarmSectionName(WarmSectionName),
-        HotText(HotText), HotFunctionsAtEnd(HotFunctionsAtEnd) {}
-
-  bool operator()(StringRef AName, StringRef BName) const {
-    const SectionKind AKind = getKind(AName);
-    const SectionKind BKind = getKind(BName);
-    const unsigned ARank = getRank(AKind);
-    const unsigned BRank = getRank(BKind);
-    if (ARank != BRank)
-      return ARank < BRank;
-
-    if (AKind == SectionKind::Cold) {
-      if (AName.size() != BName.size())
-        return HotFunctionsAtEnd ? AName.size() > BName.size()
-                                 : AName.size() < BName.size();
-      if (AName != BName)
-        return HotFunctionsAtEnd ? AName > BName : AName < BName;
-    }
-
-    return false;
-  }
-
-private:
-  enum class SectionKind { Mover, Main, Warm, Cold, Other };
-
-  SectionKind getKind(StringRef Name) const {
-    if (HotText && Name == HotTextMoverSectionName)
-      return SectionKind::Mover;
-    if (Name == MainSectionName)
-      return SectionKind::Main;
-    if (Name == WarmSectionName)
-      return SectionKind::Warm;
-    if (Name.starts_with(ColdSectionName))
-      return SectionKind::Cold;
-    return SectionKind::Other;
-  }
-
-  unsigned getRank(SectionKind Kind) const {
-    if (Kind == SectionKind::Mover)
-      return 0;
-    if (HotFunctionsAtEnd) {
-      switch (Kind) {
-      case SectionKind::Other:
-        return 1;
-      case SectionKind::Cold:
-        return 2;
-      case SectionKind::Warm:
-        return 3;
-      case SectionKind::Main:
-        return 4;
-      case SectionKind::Mover:
-        llvm_unreachable("handled above");
-      }
-    }
-    switch (Kind) {
-    case SectionKind::Main:
-      return 1;
-    case SectionKind::Warm:
-      return 2;
-    case SectionKind::Cold:
-      return 3;
-    case SectionKind::Other:
-      return 4;
-    case SectionKind::Mover:
-      llvm_unreachable("handled above");
-    }
-    llvm_unreachable("unknown section kind");
-  }
-
-  StringRef ColdSectionName;
-  StringRef HotTextMoverSectionName;
-  StringRef MainSectionName;
-  StringRef WarmSectionName;
-  bool HotText;
-  bool HotFunctionsAtEnd;
-};
-
-} // namespace
-
 std::vector<BinarySection *> RewriteInstance::getCodeSections() {
   std::vector<BinarySection *> CodeSections;
   for (BinarySection &Section : BC->textSections())
     if (Section.hasValidSectionID())
       CodeSections.emplace_back(&Section);
 
-  const CodeSectionOrder CompareSections(
-      BC->getColdCodeSectionName(), BC->getHotTextMoverSectionName(),
-      BC->getMainCodeSectionName(), BC->getWarmCodeSectionName(), opts::HotText,
-      opts::HotFunctionsAtEnd);
-
   // Determine the order of sections.
-  llvm::stable_sort(CodeSections,
-                    [&](const BinarySection *A, const BinarySection *B) {
-                      return CompareSections(A->getName(), B->getName());
-                    });
+  llvm::stable_sort(
+      CodeSections, [&](const BinarySection *A, const BinarySection *B) {
+        return BC->compareSectionNames(A->getName(), B->getName());
+      });
 
 #ifndef NDEBUG
   // Verify that the order of sections and functions is consistent.
@@ -4584,7 +4522,7 @@ std::vector<BinarySection *> RewriteInstance::getCodeSections() {
 
   uint32_t LastIndex = 0;
   for (const BinaryFunction *BF : BC->getOutputBinaryFunctions()) {
-    if (!BF->isEmitted() || BF->isPatch())
+    if (!BF->isEmitted() || BF->isPatch() || BF->isThunk())
       continue;
 
     ErrorOr<BinarySection &> Sec = BF->getCodeSection();
@@ -5182,6 +5120,66 @@ uint64_t appendPadding(raw_pwrite_stream &OS, uint64_t Offset,
 }
 
 template <typename ELFT>
+static Expected<uint64_t>
+writeCompressedDebugSection(StringRef SectionName,
+                            ArrayRef<uint8_t> CompressedSection,
+                            raw_ostream &OS, StringRef UncompressedSection) {
+  using ChdrTy = typename ELFT::Chdr;
+
+  if (CompressedSection.size() < sizeof(ChdrTy)) {
+    return createStringError(
+        errc::invalid_argument,
+        "Compressed debug section '" + SectionName +
+            "' is too small to contain a valid compression header.");
+  }
+
+  // Copy the InputHeader from the compressed section to the new recompressed
+  // section as they remain unchanged.
+  ChdrTy InputHeader{};
+  std::memcpy(&InputHeader, CompressedSection.data(), sizeof(ChdrTy));
+
+  DebugCompressionType CompressionMethod;
+  switch (InputHeader.ch_type) {
+  case ELF::ELFCOMPRESS_ZLIB:
+    CompressionMethod = DebugCompressionType::Zlib;
+    break;
+  case ELF::ELFCOMPRESS_ZSTD:
+    CompressionMethod = DebugCompressionType::Zstd;
+    break;
+  default:
+    return createStringError(
+        errc::not_supported,
+        "Unsupported compression method for debug section '" + SectionName +
+            "'");
+  }
+
+  // Ensure the compression method is supported by the current build.
+  if (const char *Reason = compression::getReasonIfUnsupported(
+          compression::formatFor(CompressionMethod))) {
+    return createStringError(errc::not_supported,
+                             "Compression method for debug section '" +
+                                 SectionName + "' is not supported: " + Reason);
+  }
+
+  SmallVector<uint8_t, 0> CompressedData;
+  compression::compress(compression::Params(CompressionMethod),
+                        arrayRefFromStringRef(UncompressedSection),
+                        CompressedData);
+
+  ChdrTy OutputHeader{};
+  OutputHeader.ch_type = InputHeader.ch_type;
+  OutputHeader.ch_addralign = InputHeader.ch_addralign;
+  OutputHeader.ch_size = UncompressedSection.size();
+
+  OS.write(reinterpret_cast<const char *>(&OutputHeader), sizeof(ChdrTy));
+  OS.write(reinterpret_cast<const char *>(CompressedData.data()),
+           CompressedData.size());
+
+  // Return the total size of the compressed section.
+  return sizeof(ChdrTy) + CompressedData.size();
+}
+
+template <typename ELFT>
 void RewriteInstance::rewriteNoteSections(ELFObjectFile<ELFT> *File) {
   using ShdrTy = typename ELFT::Shdr;
 
@@ -5236,7 +5234,9 @@ void RewriteInstance::rewriteNoteSections(ELFObjectFile<ELFT> *File) {
         DataWritten = true;
 
         // Add padding as the section extension might rely on the alignment.
-        Size = appendPadding(OS, Size, Section.sh_addralign);
+        if (!(Section.sh_flags & ELF::SHF_COMPRESSED)) {
+          Size = appendPadding(OS, Size, Section.sh_addralign);
+        }
       }
     }
 
@@ -5247,7 +5247,34 @@ void RewriteInstance::rewriteNoteSections(ELFObjectFile<ELFT> *File) {
     if (BSec->getAllocAddress()) {
       assert(!DataWritten && "Writing section twice.");
       (void)DataWritten;
-      Size += BSec->write(OS);
+
+      // If this is a debug-section and it is has been de-compressed.
+      if (isDebugSection(SectionName) &&
+          (Section.sh_flags & ELF::SHF_COMPRESSED)) {
+        // Get the uncompressed section data from the BinarySection.
+        Expected<ArrayRef<uint8_t>> UncompressedDataOrErr =
+            Obj.getSectionContents(Section);
+        if (!UncompressedDataOrErr) {
+          consumeError(UncompressedDataOrErr.takeError());
+          report_fatal_error("Failed to get uncompressed data for section '" +
+                             SectionName + "'");
+        }
+
+        // Write the re-compressed section to the output stream.
+        Expected<uint64_t> CompressedSizeOrErr =
+            writeCompressedDebugSection<ELFT>(SectionName,
+                                              *UncompressedDataOrErr, OS,
+                                              BSec->getOutputContents());
+        if (!CompressedSizeOrErr) {
+          consumeError(CompressedSizeOrErr.takeError());
+          report_fatal_error("Failed to write re-compressed debug section '" +
+                             SectionName + "'");
+        }
+
+        Size += *CompressedSizeOrErr;
+      } else {
+        Size += BSec->write(OS);
+      }
     }
 
     BSec->setOutputFileOffset(NextAvailableOffset);
@@ -6796,45 +6823,84 @@ void RewriteInstance::rewriteFunctionsInPlace(raw_fd_ostream &OS) {
   }
 }
 
-void RewriteInstance::zeroPaddingForReusedSections(raw_fd_ostream &OS) {
-  // The output starts as a byte-for-byte copy of the input, so alignment
-  // padding after BOLT-written sections could retain stale data from the
-  // original binary. Zero the padding as if we were writing sections onto
-  // new file offset (i.e., not reusing old existing sections).
+std::optional<std::pair<uint64_t, uint64_t>>
+RewriteInstance::getReusedInputFileRange() const {
+  auto makeRange =
+      [this](uint64_t Start,
+             uint64_t Size) -> std::optional<std::pair<uint64_t, uint64_t>> {
+    const uint64_t End = std::min(Start + Size, FirstNonAllocatableOffset);
+    if (End <= Start)
+      return std::nullopt;
+    return std::make_pair(Start, End);
+  };
 
-  // Collect file offsets of all sections (allocatable and non-allocatable)
-  // that occupy file bytes.
-  SmallVector<uint64_t, 16> SectionStarts;
-  for (BinarySection &Section : BC->sections()) {
-    if (Section.isVirtual())
-      continue;
-    uint64_t Offset = Section.getOutputFileOffset();
-    if (!Offset)
-      Offset = Section.getInputFileOffset();
-    if (Offset)
-      SectionStarts.push_back(Offset);
-  }
-  llvm::sort(SectionStarts);
+  if (opts::UseOldText)
+    return makeRange(BC->OldTextSectionOffset, BC->OldTextSectionSize);
 
-  uint64_t SavedPos = OS.tell();
+  return std::nullopt;
+}
+
+void RewriteInstance::zeroStaleBytesInReusedRegion(raw_fd_ostream &OS) {
+  // The output starts as a byte-for-byte copy of the input, so every byte of a
+  // reused input region that the new layout does not cover would otherwise
+  // retain stale data from the original binary. Holes could appear on both
+  // sides of the new content:
+  //
+  //   * trailing - the new content is more compact than the input it replaces;
+  //
+  //   * leading  - the region does not start at the alignment boundary
+  //                required by the new code (--align-text), or the code was
+  //                packed against the end of the region
+  //                (--hot-functions-at-end).
+  //
+  // Overwrite all of them, as if the content had been written to a fresh file
+  // offset instead of onto existing sections.
+  std::optional<std::pair<uint64_t, uint64_t>> Range =
+      getReusedInputFileRange();
+  if (!Range)
+    return;
+  const uint64_t RegionStart = Range->first;
+  const uint64_t RegionEnd = Range->second;
+
+  // Collect the file extents holding content that has to be preserved, i.e.
+  // every section that occupies bytes in the output.
+  SmallVector<std::pair<uint64_t, uint64_t>, 16> Preserved;
   for (BinarySection &Section : BC->allocatableSections()) {
-    if (!Section.isFinalized() || !Section.getOutputData())
+    if (Section.isLinkOnly() || Section.isVirtual() || !Section.getOutputSize())
       continue;
-    if (Section.isLinkOnly() || !Section.getOutputSize())
+    const uint64_t Start = Section.getOutputFileOffset();
+    const uint64_t End = Start + Section.getOutputSize();
+    if (End <= RegionStart || Start >= RegionEnd)
       continue;
-    if (!(Section.getELFFlags() & ELF::SHF_EXECINSTR))
-      continue;
-    uint64_t SecEnd = Section.getOutputFileOffset() + Section.getOutputSize();
-    auto It = llvm::upper_bound(SectionStarts, SecEnd - 1);
-    if (It != SectionStarts.end()) {
-      uint64_t NextStart = *It;
-      if (NextStart > SecEnd) {
-        OS.seek(SecEnd);
-        OS.write_zeros(NextStart - SecEnd);
-      }
-    }
+    Preserved.emplace_back(std::max(Start, RegionStart),
+                           std::min(End, RegionEnd));
   }
+  llvm::sort(Preserved);
+
+  const uint64_t SavedPos = OS.tell();
+  uint64_t Cursor = RegionStart;
+  uint64_t NumBytesZeroed = 0;
+  auto zeroUpTo = [&](uint64_t To) {
+    if (To <= Cursor)
+      return;
+    NumBytesZeroed += To - Cursor;
+    OS.seek(Cursor);
+    OS.write_zeros(To - Cursor);
+    Cursor = To;
+  };
+
+  for (const std::pair<uint64_t, uint64_t> &Extent : Preserved) {
+    zeroUpTo(Extent.first);
+    Cursor = std::max(Cursor, Extent.second);
+  }
+  zeroUpTo(RegionEnd);
   OS.seek(SavedPos);
+
+  if (opts::Verbosity >= 1 && NumBytesZeroed)
+    BC->outs() << "BOLT-INFO: zeroed " << NumBytesZeroed
+               << " stale bytes in reused input region (file offset) [0x"
+               << Twine::utohexstr(RegionStart) << ", 0x"
+               << Twine::utohexstr(RegionEnd) << ")\n";
 }
 
 void RewriteInstance::rewriteFile() {
@@ -6927,7 +6993,7 @@ void RewriteInstance::rewriteFile() {
   rewriteNoteSections();
 
   if (opts::UseOldText)
-    zeroPaddingForReusedSections(OS);
+    zeroStaleBytesInReusedRegion(OS);
 
   if (BC->HasRelocations) {
     patchELFAllocatableRelaSections();
@@ -7045,6 +7111,11 @@ void RewriteInstance::writeEHFrameHeader() {
     EHFrameHdrSec.setOutputAddress(EHFrameHdrOutputAddress);
     EHFrameHdrSec.setOutputName(getEHFrameHdrSectionName());
   }
+
+  // Byte 3 of the header is the table encoding.
+  if (NewEHFrameHdr[3] == (dwarf::DW_EH_PE_datarel | dwarf::DW_EH_PE_sdata8))
+    BC->outs() << "BOLT-INFO: using DW_EH_PE_sdata8 encoding in "
+               << getEHFrameHdrSectionName() << '\n';
 
   Out->os().seek(EHFrameHdrFileOffset);
   Out->os().write(NewEHFrameHdr.data(), NewEHFrameHdr.size());

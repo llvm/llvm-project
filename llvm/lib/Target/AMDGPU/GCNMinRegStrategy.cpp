@@ -145,8 +145,8 @@ GCNMinRegScheduler::Candidate* GCNMinRegScheduler::pickCandidate() {
     Num = findMax(Num, [=](const Candidate &C) {
       const auto *SU = C.SU;
       int Res = getNotReadySuccessors(SU);
-      LLVM_DEBUG(dbgs() << "SU(" << SU->NodeNum << ") would left non-ready "
-                        << Res << " successors, metric = " << -Res << '\n');
+      LLVM_DEBUG(dbgs() << *SU << " would left non-ready " << Res
+                        << " successors, metric = " << -Res << '\n');
       return -Res;
     });
     if (Num == 1) break;
@@ -156,7 +156,7 @@ GCNMinRegScheduler::Candidate* GCNMinRegScheduler::pickCandidate() {
     Num = findMax(Num, [=](const Candidate &C) {
       const auto *SU = C.SU;
       auto Res = getReadySuccessors(SU);
-      LLVM_DEBUG(dbgs() << "SU(" << SU->NodeNum << ") would make ready " << Res
+      LLVM_DEBUG(dbgs() << *SU << " would make ready " << Res
                         << " successors, metric = " << Res << '\n');
       return Res;
     });
@@ -198,13 +198,13 @@ void GCNMinRegScheduler::bumpPredsPriority(const SUnit *SchedSU, int Priority) {
         Worklist.push_back(P.getSUnit());
     }
   }
-  LLVM_DEBUG(dbgs() << "Make the predecessors of SU(" << SchedSU->NodeNum
-                    << ")'s non-ready successors of " << Priority
+  LLVM_DEBUG(dbgs() << "Make the predecessors of " << *SchedSU
+                    << "'s non-ready successors of " << Priority
                     << " priority in ready queue: ");
   for (auto &C : RQ) {
     if (Set.count(C.SU)) {
       C.Priority = Priority;
-      LLVM_DEBUG(dbgs() << " SU(" << C.SU->NodeNum << ')');
+      LLVM_DEBUG(dbgs() << ' ' << *C.SU);
     }
   }
   LLVM_DEBUG(dbgs() << '\n');

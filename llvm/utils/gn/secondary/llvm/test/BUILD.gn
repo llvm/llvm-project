@@ -65,6 +65,7 @@ write_lit_config("lit_site_cfg") {
     "LLVM_APPEND_VC_REV=0",
     "LLVM_ENABLE_FFI=0",
     "LLVM_ENABLE_HTTPLIB=0",
+    "LLVM_ENABLE_LZMA=0",  # FIXME: gn arg, use in llvm-config.h
     "LLVM_ENABLE_PROFCHECK=0",
     "LLVM_FORCE_VC_REVISION=",
     "LLVM_HAS_LOGF128=0",

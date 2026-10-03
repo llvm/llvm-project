@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "InterpState.h"
+#include "EvalSettings.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
 #include "Program.h"
+#include "Reflect.h"
 #include "State.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
@@ -17,33 +19,45 @@
 using namespace clang;
 using namespace clang::interp;
 
-InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
-                         FrameAllocator &FrameAlloc, Context &Ctx,
-                         SourceMapper *M)
-    : State(Ctx.getASTContext(), Parent.getEvalStatus()), M(M),
+InterpState::InterpState(const EvalSettings &Settings, Program &P,
+                         InterpStack &Stk, FrameAllocator &FrameAlloc,
+                         Context &Ctx, SourceMapper *M)
+    : State(Ctx.getASTContext(), Settings.EvalStatus), M(M),
       FrameAlloc(FrameAlloc), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
       Current(&BottomFrame), StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
       InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
-  InConstantContext = Parent.InConstantContext;
+  InConstantContext = Settings.InConstantContext;
   CheckingPotentialConstantExpression =
-      Parent.CheckingPotentialConstantExpression;
-  CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
-  EvalMode = Parent.EvalMode;
+      Settings.CheckingPotentialConstantExpression;
+  CheckingForUndefinedBehavior = Settings.CheckingForUndefinedBehavior;
+  EvalMode = Settings.EvalMode;
 }
 
-InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
-                         FrameAllocator &FrameAlloc,
-
+InterpState::InterpState(const EvalSettings &Settings, Program &P,
+                         InterpStack &Stk, FrameAllocator &FrameAlloc,
                          Context &Ctx, const Function *Func)
-    : State(Ctx.getASTContext(), Parent.getEvalStatus()), M(nullptr),
+    : State(Ctx.getASTContext(), Settings.EvalStatus), M(nullptr),
       FrameAlloc(FrameAlloc), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
       Current(&BottomFrame), StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
       InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
-  InConstantContext = Parent.InConstantContext;
+  InConstantContext = Settings.InConstantContext;
   CheckingPotentialConstantExpression =
-      Parent.CheckingPotentialConstantExpression;
-  CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
-  EvalMode = Parent.EvalMode;
+      Settings.CheckingPotentialConstantExpression;
+  CheckingForUndefinedBehavior = Settings.CheckingForUndefinedBehavior;
+  EvalMode = Settings.EvalMode;
+}
+
+InterpState::InterpState(Expr::EvalStatus &Status, Program &P, InterpStack &Stk,
+                         FrameAllocator &FrameAlloc, Context &Ctx,
+                         SourceMapper *M)
+    : State(Ctx.getASTContext(), Status), M(M), FrameAlloc(FrameAlloc), P(P),
+      Stk(Stk), Ctx(Ctx), BottomFrame(*this), Current(&BottomFrame),
+      StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
+      InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
+  InConstantContext = true;
+  CheckingPotentialConstantExpression = false;
+  CheckingForUndefinedBehavior = true;
+  EvalMode = EvaluationMode::ConstantExpression;
 }
 
 bool InterpState::inConstantContext() const {

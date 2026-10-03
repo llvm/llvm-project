@@ -210,7 +210,8 @@ struct DescriptorTableView : RootParameterView {
     Current += sizeof(uint32_t);
 
     Table.Ranges.Data = ParamData.substr(2 * sizeof(uint32_t),
-                                         Table.NumRanges * Table.Ranges.Stride);
+                                         static_cast<size_t>(Table.NumRanges) *
+                                             Table.Ranges.Stride);
     return Table;
   }
 };
@@ -490,7 +491,6 @@ private:
   Error parseHash(StringRef Part);
   Error parseRootSignature(StringRef Part);
   Error parsePSVInfo(StringRef Part);
-  Error parseSignature(StringRef Part, DirectX::Signature &Array);
   Error parseCompilerVersionInfo(StringRef Part);
   Error parseSourceInfo(StringRef Part);
   Error parsePrivateData(StringRef Part);
