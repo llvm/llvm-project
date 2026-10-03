@@ -1133,4 +1133,76 @@ define void @loaded_constant_scalars_to_fp(ptr addrspace(4) %p, ptr addrspace(6)
   ret void
 }
 
+define void @loaded_buffer_scalars_to_fp(ptr addrspace(7) %p, ptr addrspace(9) %q) {
+; NO16BIT-LABEL: 'loaded_buffer_scalars_to_fp'
+; NO16BIT:  Cost Model: Found an estimated cost of 3 for instruction: %ash = sitofp i24 %a to half
+; NO16BIT:  Cost Model: Found an estimated cost of 9 for instruction: %buf = uitofp i48 %b to float
+; NO16BIT:  Cost Model: Found an estimated cost of 5 for instruction: %csd = sitofp i24 %c to double
+; NO16BIT:  Cost Model: Found an estimated cost of 14 for instruction: %dsf = sitofp i56 %d to float
+;
+; GFX9-LABEL: 'loaded_buffer_scalars_to_fp'
+; GFX9:  Cost Model: Found an estimated cost of 3 for instruction: %ash = sitofp i24 %a to half
+; GFX9:  Cost Model: Found an estimated cost of 9 for instruction: %buf = uitofp i48 %b to float
+; GFX9:  Cost Model: Found an estimated cost of 5 for instruction: %csd = sitofp i24 %c to double
+; GFX9:  Cost Model: Found an estimated cost of 14 for instruction: %dsf = sitofp i56 %d to float
+;
+; GFX9-NOSDWA-LABEL: 'loaded_buffer_scalars_to_fp'
+; GFX9-NOSDWA:  Cost Model: Found an estimated cost of 3 for instruction: %ash = sitofp i24 %a to half
+; GFX9-NOSDWA:  Cost Model: Found an estimated cost of 9 for instruction: %buf = uitofp i48 %b to float
+; GFX9-NOSDWA:  Cost Model: Found an estimated cost of 5 for instruction: %csd = sitofp i24 %c to double
+; GFX9-NOSDWA:  Cost Model: Found an estimated cost of 14 for instruction: %dsf = sitofp i56 %d to float
+;
+; GFX11-FAKE16-LABEL: 'loaded_buffer_scalars_to_fp'
+; GFX11-FAKE16:  Cost Model: Found an estimated cost of 3 for instruction: %ash = sitofp i24 %a to half
+; GFX11-FAKE16:  Cost Model: Found an estimated cost of 9 for instruction: %buf = uitofp i48 %b to float
+; GFX11-FAKE16:  Cost Model: Found an estimated cost of 5 for instruction: %csd = sitofp i24 %c to double
+; GFX11-FAKE16:  Cost Model: Found an estimated cost of 14 for instruction: %dsf = sitofp i56 %d to float
+;
+; GFX11-TRUE16-LABEL: 'loaded_buffer_scalars_to_fp'
+; GFX11-TRUE16:  Cost Model: Found an estimated cost of 3 for instruction: %ash = sitofp i24 %a to half
+; GFX11-TRUE16:  Cost Model: Found an estimated cost of 9 for instruction: %buf = uitofp i48 %b to float
+; GFX11-TRUE16:  Cost Model: Found an estimated cost of 5 for instruction: %csd = sitofp i24 %c to double
+; GFX11-TRUE16:  Cost Model: Found an estimated cost of 14 for instruction: %dsf = sitofp i56 %d to float
+;
+; GFX950-LABEL: 'loaded_buffer_scalars_to_fp'
+; GFX950:  Cost Model: Found an estimated cost of 3 for instruction: %ash = sitofp i24 %a to half
+; GFX950:  Cost Model: Found an estimated cost of 9 for instruction: %buf = uitofp i48 %b to float
+; GFX950:  Cost Model: Found an estimated cost of 2 for instruction: %csd = sitofp i24 %c to double
+; GFX950:  Cost Model: Found an estimated cost of 14 for instruction: %dsf = sitofp i56 %d to float
+;
+; GFX1250-FAKE16-LABEL: 'loaded_buffer_scalars_to_fp'
+; GFX1250-FAKE16:  Cost Model: Found an estimated cost of 3 for instruction: %ash = sitofp i24 %a to half
+; GFX1250-FAKE16:  Cost Model: Found an estimated cost of 9 for instruction: %buf = uitofp i48 %b to float
+; GFX1250-FAKE16:  Cost Model: Found an estimated cost of 5 for instruction: %csd = sitofp i24 %c to double
+; GFX1250-FAKE16:  Cost Model: Found an estimated cost of 14 for instruction: %dsf = sitofp i56 %d to float
+;
+; GFX1250-TRUE16-LABEL: 'loaded_buffer_scalars_to_fp'
+; GFX1250-TRUE16:  Cost Model: Found an estimated cost of 3 for instruction: %ash = sitofp i24 %a to half
+; GFX1250-TRUE16:  Cost Model: Found an estimated cost of 9 for instruction: %buf = uitofp i48 %b to float
+; GFX1250-TRUE16:  Cost Model: Found an estimated cost of 5 for instruction: %csd = sitofp i24 %c to double
+; GFX1250-TRUE16:  Cost Model: Found an estimated cost of 14 for instruction: %dsf = sitofp i56 %d to float
+;
+; GFX6-SIZE-LABEL: 'loaded_buffer_scalars_to_fp'
+; GFX6-SIZE:  Cost Model: Found an estimated cost of 3 for instruction: %ash = sitofp i24 %a to half
+; GFX6-SIZE:  Cost Model: Found an estimated cost of 9 for instruction: %buf = uitofp i48 %b to float
+; GFX6-SIZE:  Cost Model: Found an estimated cost of 3 for instruction: %csd = sitofp i24 %c to double
+; GFX6-SIZE:  Cost Model: Found an estimated cost of 14 for instruction: %dsf = sitofp i56 %d to float
+;
+; GFX9-SIZE-LABEL: 'loaded_buffer_scalars_to_fp'
+; GFX9-SIZE:  Cost Model: Found an estimated cost of 3 for instruction: %ash = sitofp i24 %a to half
+; GFX9-SIZE:  Cost Model: Found an estimated cost of 9 for instruction: %buf = uitofp i48 %b to float
+; GFX9-SIZE:  Cost Model: Found an estimated cost of 3 for instruction: %csd = sitofp i24 %c to double
+; GFX9-SIZE:  Cost Model: Found an estimated cost of 14 for instruction: %dsf = sitofp i56 %d to float
+;
+  %a = load i24, ptr addrspace(7) %p
+  %ash = sitofp i24 %a to half
+  %b = load i48, ptr addrspace(7) %p
+  %buf = uitofp i48 %b to float
+  %c = load i24, ptr addrspace(9) %q
+  %csd = sitofp i24 %c to double
+  %d = load i56, ptr addrspace(9) %q
+  %dsf = sitofp i56 %d to float
+  ret void
+}
+
 !0 = !{}
