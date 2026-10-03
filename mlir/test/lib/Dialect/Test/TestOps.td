@@ -2741,6 +2741,32 @@ def TestValueWithBoundsOp : TEST_Op<"value_with_bounds", [
   let assemblyFormat = "prop-dict attr-dict";
 }
 
+def TestMergeValuesOp : TEST_Op<"merge_values", [
+    DeclareOpInterfaceMethods<ValueBoundsOpInterface, ["populateBoundsForIndexValue"]>
+  ]> {
+  let description = [{
+    Creates an index value whose possible origins are the variadic `candidates`.
+    This operation exists to test atomic merge collection: its ValueBounds
+    implementation passes all operands to one `addMerge` call.
+  }];
+  let arguments = (ins Variadic<Index>:$candidates);
+  let results = (outs Index:$result);
+  let assemblyFormat = "$candidates attr-dict `:` type($result)";
+}
+
+def TestMergeDifferentDimsOp : TEST_Op<"merge_different_dims", [
+    DeclareOpInterfaceMethods<ValueBoundsOpInterface, ["populateBoundsForShapedValueDim"]>
+  ]> {
+  let description = [{
+    Test-only shaped merge whose result dimension 0 may originate from
+    `lhs` dimension 1 or `rhs` dimension 0. This intentionally relates
+    different dimensions to exercise the independent dimension parameters of
+    `addMerge`.
+  }];
+  let arguments = (ins AnyRankedTensor:$lhs, AnyRankedTensor:$rhs);
+  let results = (outs AnyRankedTensor:$result);
+}
+
 
 def ReifyBoundOp : TEST_Op<"reify_bound", [Pure]> {
   let description = [{

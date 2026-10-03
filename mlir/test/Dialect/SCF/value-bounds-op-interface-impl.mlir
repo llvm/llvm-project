@@ -192,6 +192,40 @@ func.func @scf_if_dynamic(%a: index, %b: index, %c : i1) {
 
 // -----
 
+// A merge may depend on another merge. The common solver must revisit the
+// outer relationship after deriving the inner relationship's envelope.
+// CHECK-LABEL: func @scf_if_nested_merge(
+func.func @scf_if_nested_merge(%c1 : i1, %c2 : i1) {
+  // Consume the constants in the input IR before matching the newly reified
+  // lower and upper bounds below.
+  // CHECK: arith.constant 4 : index
+  // CHECK: arith.constant 9 : index
+  // CHECK: arith.constant 12 : index
+  %c4 = arith.constant 4 : index
+  %c9 = arith.constant 9 : index
+  %c12 = arith.constant 12 : index
+  %inner = scf.if %c1 -> index {
+    scf.yield %c4 : index
+  } else {
+    scf.yield %c9 : index
+  }
+  %outer = scf.if %c2 -> index {
+    scf.yield %inner : index
+  } else {
+    scf.yield %c12 : index
+  }
+
+  // CHECK: %[[c4:.*]] = arith.constant 4 : index
+  // CHECK: %[[c13:.*]] = arith.constant 13 : index
+  %lb = "test.reify_bound"(%outer) {type = "LB"} : (index) -> (index)
+  %ub = "test.reify_bound"(%outer) {type = "UB"} : (index) -> (index)
+  // CHECK: "test.some_use"(%[[c4]], %[[c13]])
+  "test.some_use"(%lb, %ub) : (index, index) -> ()
+  return
+}
+
+// -----
+
 func.func @scf_if_no_affine_bound(%a: index, %b: index, %c : i1) {
   %r = scf.if %c -> index {
     scf.yield %a : index
