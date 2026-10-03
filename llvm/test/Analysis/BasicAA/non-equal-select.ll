@@ -1,4 +1,6 @@
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes=aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
+target datalayout = "e-p:64:64-p1:64:64:64:32"
+
 @G = global [10 x i32] zeroinitializer, align 4
 
 define void @select_in_gep1(i1 %c, i64 %x) {
@@ -77,7 +79,6 @@ entry:
   ret void
 }
 
-
 ; CHECK-LABEL: Function: select_offsets_zext_gap
 ; CHECK: NoAlias: i32* %p, i32* %q
 define void @select_offsets_zext_gap(ptr %base, i1 %c, i32 %x) {
@@ -126,5 +127,35 @@ define void @select_offsets_zext_overlap(ptr %base, i1 %c, i32 %x) {
   %q = getelementptr i8, ptr %qbase, i64 -1
   store i32 0, ptr %p, align 1
   store i32 0, ptr %q, align 1
+  ret void
+}
+
+; CHECK-LABEL: Function: select_offsets_trunc_gap
+; CHECK: NoAlias: i32 addrspace(1)* %p, i32 addrspace(1)* %q
+define void @select_offsets_trunc_gap(ptr addrspace(1) %base, i1 %c, i64 %x) {
+  %a = add i64 %x, 1
+  %b = add i64 %x, 2
+  %d = add i64 %x, 5
+  %s = select i1 %c, i64 %a, i64 %b
+  %p = getelementptr i32, ptr addrspace(1) %base, i64 %s
+  %qbase = getelementptr i32, ptr addrspace(1) %base, i64 %d
+  %q = getelementptr i8, ptr addrspace(1) %qbase, i64 1
+  store i32 0, ptr addrspace(1) %p, align 1
+  store i32 0, ptr addrspace(1) %q, align 1
+  ret void
+}
+
+; CHECK-LABEL: Function: select_offsets_trunc_wrap
+; CHECK: MayAlias: i32 addrspace(1)* %p, i32 addrspace(1)* %q
+define void @select_offsets_trunc_wrap(ptr addrspace(1) %base, i1 %c, i64 %x) {
+  %a = add i64 %x, 1
+  %b = add i64 %x, 2
+  %d = add i64 %x, 4294967297
+  %s = select i1 %c, i64 %a, i64 %b
+  %p = getelementptr i32, ptr addrspace(1) %base, i64 %s
+  %qbase = getelementptr i32, ptr addrspace(1) %base, i64 %d
+  %q = getelementptr i8, ptr addrspace(1) %qbase, i64 0
+  store i32 0, ptr addrspace(1) %p, align 1
+  store i32 0, ptr addrspace(1) %q, align 1
   ret void
 }

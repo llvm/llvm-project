@@ -2102,8 +2102,7 @@ bool BasicAAResult::computeConstantOffsetHeuristic(const DecomposedGEP &GEP,
 
   const VariableGEPIndex &Var0 = GEP.VarIndices[0], &Var1 = GEP.VarIndices[1];
 
-  if (Var0.Val.TruncBits != 0 || !Var0.Val.hasSameCastsAs(Var1.Val) ||
-      !Var0.hasNegatedScaleOf(Var1) ||
+  if (!Var0.Val.hasSameCastsAs(Var1.Val) || !Var0.hasNegatedScaleOf(Var1) ||
       Var0.Val.V->getType() != Var1.Val.V->getType())
     return false;
 
@@ -2119,9 +2118,12 @@ bool BasicAAResult::computeConstantOffsetHeuristic(const DecomposedGEP &GEP,
       LinearExpression E1 = GetLinearExpression(CastedValue(V1), DL, 0, AC, DT);
       if (E0.Scale == E1.Scale && E0.Val.hasSameCastsAs(E1.Val) &&
           isValueEqualInPotentialCycles(E0.Val.V, E1.Val.V, AAQI)) {
+        APInt Diff = E0.Offset - E1.Offset;
+        if (Var0.Val.TruncBits)
+          Diff = Diff.trunc(Diff.getBitWidth() - Var0.Val.TruncBits);
         if (!Var0.Val.ZExtBits && !Var0.Val.SExtBits &&
             Var0.Val.getBitWidth() == GEP.Offset.getBitWidth()) {
-          APInt Offset = (E0.Offset - E1.Offset) * Var0.Scale;
+          APInt Offset = Diff * Var0.Scale;
           if (Var0.IsNegated)
             Offset = -Offset;
           Offset += GEP.Offset;
@@ -2130,7 +2132,6 @@ bool BasicAAResult::computeConstantOffsetHeuristic(const DecomposedGEP &GEP,
 
         // Extensions may change the direction of the difference on wrapping,
         // but preserve its minimum absolute distance in the source type.
-        APInt Diff = E0.Offset - E1.Offset;
         APInt MinDiff = APIntOps::umin(Diff, -Diff);
         APInt MinDiffBytes =
             MinDiff.zextOrTrunc(Var0.Scale.getBitWidth()) * Var0.Scale.abs();
@@ -2148,6 +2149,9 @@ bool BasicAAResult::computeConstantOffsetHeuristic(const DecomposedGEP &GEP,
     if (Check(Check, Var0.Val.V, Var1.Val.V))
       return true;
   }
+
+  if (Var0.Val.TruncBits)
+    return false;
 
   // We'll strip off the Extensions of Var0 and Var1 and do another round
   // of GetLinearExpression decomposition. In the example above, if Var0
