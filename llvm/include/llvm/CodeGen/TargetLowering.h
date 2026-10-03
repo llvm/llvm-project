@@ -4511,6 +4511,10 @@ public:
   /// KnownZero elements for the expression (used to simplify the caller).
   /// The KnownUndef/Zero elements may only be accurate for those bits
   /// in the DemandedMask.
+  /// KnownUndef only reports elements known to be undef; elements that are
+  /// (only) known to be poison are never reported as undef, because
+  /// undef-keyed folds substitute a chosen concrete value for those elements,
+  /// which is invalid for poison - consuming a poison element yields poison.
   /// \p AssumeSingleUse When this parameter is true, this function will
   ///    attempt to simplify \p Op even if there are multiple uses.
   ///    Callers are responsible for correctly updating the DAG based on the
@@ -4611,7 +4615,9 @@ public:
   /// elements, returning true on success. Otherwise, analyze the expression and
   /// return a mask of KnownUndef and KnownZero elements for the expression
   /// (used to simplify the caller). The KnownUndef/Zero elements may only be
-  /// accurate for those bits in the DemandedMask.
+  /// accurate for those bits in the DemandedMask. As with
+  /// SimplifyDemandedVectorElts, poison elements must never be reported as
+  /// KnownUndef.
   virtual bool SimplifyDemandedVectorEltsForTargetNode(
       SDValue Op, const APInt &DemandedElts, APInt &KnownUndef,
       APInt &KnownZero, TargetLoweringOpt &TLO, unsigned Depth = 0) const;
