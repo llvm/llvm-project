@@ -172,6 +172,16 @@ namespace {
       return PseudoOpc < TE.PseudoOpc;
     }
   };
+
+  constexpr Register CalleeSavedFPRegs[] = {
+      ARM::S16, ARM::S17, ARM::S18, ARM::S19, ARM::S20, ARM::S21,
+      ARM::S22, ARM::S23, ARM::S24, ARM::S25, ARM::S26, ARM::S27,
+      ARM::S28, ARM::S29, ARM::S30, ARM::S31};
+
+  constexpr Register CalleeSavedRegs[] = {ARM::R4, ARM::R5, ARM::R6,  ARM::R7,
+                                          ARM::R8, ARM::R9, ARM::R10, ARM::R11};
+  constexpr ArrayRef<Register> CalleeSavedLoRegs{CalleeSavedRegs, 4};
+  constexpr ArrayRef<Register> CalleeSavedHiRegs{CalleeSavedRegs + 4, 4};
 }
 
 static const NEONLdStTableEntry NEONLdStTable[] = {
@@ -1637,7 +1647,7 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV81(MachineBasicBlock &MBB,
         BuildMI(MBB, MBBI, DL, TII->get(ARM::VSTMSDB_UPD), ARM::SP)
             .addReg(ARM::SP)
             .add(predOps(ARMCC::AL));
-    for (Register Reg = ARM::S16; Reg <= ARM::S31; ++Reg)
+    for (Register Reg : CalleeSavedFPRegs)
       VPUSH.addReg(Reg);
 
     // Clear FP registers with a VSCCLRM.
@@ -1842,7 +1852,7 @@ void ARMExpandPseudo::CMSERestoreFPRegsV81(
         BuildMI(MBB, MBBI, DL, TII->get(ARM::VLDMSIA_UPD), ARM::SP)
             .addReg(ARM::SP)
             .add(predOps(ARMCC::AL));
-    for (Register Reg = ARM::S16; Reg <= ARM::S31; ++Reg)
+    for (Register Reg : CalleeSavedFPRegs)
       VPOP.addReg(Reg, RegState::Define);
   }
 }
@@ -2107,10 +2117,11 @@ static void CMSEPushCalleeSaves(const TargetInstrInfo &TII,
                                 Register JumpReg, const LivePhysRegs &LiveRegs,
                                 bool Thumb1Only) {
   const DebugLoc &DL = MBBI->getDebugLoc();
+
   if (Thumb1Only) { // push Lo and Hi regs separately
     MachineInstrBuilder PushMIB =
         BuildMI(MBB, MBBI, DL, TII.get(ARM::tPUSH)).add(predOps(ARMCC::AL));
-    for (Register Reg = ARM::R4; Reg < ARM::R8; ++Reg) {
+    for (Register Reg : CalleeSavedLoRegs) {
       PushMIB.addReg(
           Reg, getUndefRegState(Reg != JumpReg && !LiveRegs.contains(Reg)));
     }
@@ -2122,21 +2133,19 @@ static void CMSEPushCalleeSaves(const TargetInstrInfo &TII,
     // memory, and allow us to later pop them with a single instructions.
     // FIXME: Could also use any of r0-r3 that are free (including in the
     // first PUSH above).
-    const Register LoRegs[] = {ARM::R7, ARM::R6, ARM::R5, ARM::R4};
-    const Register HiRegs[] = {ARM::R11, ARM::R10, ARM::R9, ARM::R8};
-    unsigned HiIdx = 0;
-    for (Register LoReg : LoRegs) {
+    unsigned HiIdx = CalleeSavedHiRegs.size() - 1;
+    for (Register LoReg : llvm::reverse(CalleeSavedLoRegs)) {
       if (JumpReg == LoReg)
         continue;
       BuildMI(MBB, MBBI, DL, TII.get(ARM::tMOVr), LoReg)
-          .addReg(HiRegs[HiIdx],
-                  getUndefRegState(!LiveRegs.contains(HiRegs[HiIdx])))
+          .addReg(CalleeSavedHiRegs[HiIdx], getUndefRegState(!LiveRegs.contains(
+                                                CalleeSavedHiRegs[HiIdx])))
           .add(predOps(ARMCC::AL));
-      ++HiIdx;
+      --HiIdx;
     }
     MachineInstrBuilder PushMIB2 =
         BuildMI(MBB, MBBI, DL, TII.get(ARM::tPUSH)).add(predOps(ARMCC::AL));
-    for (Register Reg = ARM::R4; Reg < ARM::R8; ++Reg) {
+    for (Register Reg : CalleeSavedLoRegs) {
       if (Reg == JumpReg)
         continue;
       PushMIB2.addReg(Reg, RegState::Kill);
@@ -2159,7 +2168,7 @@ static void CMSEPushCalleeSaves(const TargetInstrInfo &TII,
         BuildMI(MBB, MBBI, DL, TII.get(ARM::t2STMDB_UPD), ARM::SP)
             .addReg(ARM::SP)
             .add(predOps(ARMCC::AL));
-    for (Register Reg = ARM::R4; Reg < ARM::R12; ++Reg) {
+    for (Register Reg : CalleeSavedRegs) {
       PushMIB.addReg(
           Reg, getUndefRegState(Reg != JumpReg && !LiveRegs.contains(Reg)));
     }
@@ -2189,7 +2198,8 @@ static void CMSEPopCalleeSaves(const TargetInstrInfo &TII,
         BuildMI(MBB, MBBI, DL, TII.get(ARM::t2LDMIA_UPD), ARM::SP)
             .addReg(ARM::SP)
             .add(predOps(ARMCC::AL));
-    for (Register Reg = ARM::R4; Reg < ARM::R12; ++Reg)
+
+    for (Register Reg : CalleeSavedRegs)
       PopMIB.addReg(Reg, RegState::Define);
   }
 }
