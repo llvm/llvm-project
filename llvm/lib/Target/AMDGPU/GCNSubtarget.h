@@ -49,9 +49,11 @@ public:
 
   // Following 2 enums are documented at:
   //   - https://llvm.org/docs/AMDGPUUsage.html#trap-handler-abi
+  //   - https://llvm.org/docs/AMDGPUUsage.html#amdgpu-amdpal-trap-handler-abi
   enum class TrapHandlerAbi {
     NONE = 0x00,
     AMDHSA = 0x01,
+    AMDPAL = 0x02,
   };
 
   enum class TrapID {
@@ -256,7 +258,11 @@ public:
   bool hasAsyncMark() const { return hasVMemToLDSLoad() || HasAsynccnt; }
 
   TrapHandlerAbi getTrapHandlerAbi() const {
-    return isAmdHsaOS() ? TrapHandlerAbi::AMDHSA : TrapHandlerAbi::NONE;
+    if (isAmdHsaOS())
+      return TrapHandlerAbi::AMDHSA;
+    if (isAmdPalOS())
+      return TrapHandlerAbi::AMDPAL;
+    return TrapHandlerAbi::NONE;
   }
 
   bool supportsGetDoorbellID() const {

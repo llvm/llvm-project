@@ -128,6 +128,30 @@ s_decperflevel 0x1234
 s_ttracedata
 // GFX13: s_ttracedata                            ; encoding: [0x00,0x00,0x96,0xbf]
 
+s_cbranch_cdbgsys 0
+// GFX13: s_cbranch_cdbgsys 0                     ; encoding: [0x00,0x00,0x97,0xbf]
+
+s_cbranch_cdbgsys 0x1234
+// GFX13: s_cbranch_cdbgsys 4660                  ; encoding: [0x34,0x12,0x97,0xbf]
+
+s_cbranch_cdbguser 0
+// GFX13: s_cbranch_cdbguser 0                    ; encoding: [0x00,0x00,0x98,0xbf]
+
+s_cbranch_cdbguser 0x1234
+// GFX13: s_cbranch_cdbguser 4660                 ; encoding: [0x34,0x12,0x98,0xbf]
+
+s_cbranch_cdbgsys_or_user 0
+// GFX13: s_cbranch_cdbgsys_or_user 0             ; encoding: [0x00,0x00,0x99,0xbf]
+
+s_cbranch_cdbgsys_or_user 0x1234
+// GFX13: s_cbranch_cdbgsys_or_user 4660          ; encoding: [0x34,0x12,0x99,0xbf]
+
+s_cbranch_cdbgsys_and_user 0
+// GFX13: s_cbranch_cdbgsys_and_user 0            ; encoding: [0x00,0x00,0x9a,0xbf]
+
+s_cbranch_cdbgsys_and_user 0x1234
+// GFX13: s_cbranch_cdbgsys_and_user 4660         ; encoding: [0x34,0x12,0x9a,0xbf]
+
 s_endpgm_saved
 // GFX13: s_endpgm_saved                          ; encoding: [0x00,0x00,0x9b,0xbf]
 
