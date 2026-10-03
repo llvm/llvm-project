@@ -1,0 +1,192 @@
+# RUN: rm -rf %t
+# RUN: split-file %s %t
+# RUN: "%cmake_exe" -S %t/valid -B %t/valid-build -G "%cmake_generator" \
+# RUN:   -DMLIR_DIR=%mlir_cmake_dir -DCMAKE_C_COMPILER=%host_cc \
+# RUN:   -DCMAKE_CXX_COMPILER=%host_cxx 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=VALID
+# RUN: "%cmake_exe" --build %t/valid-build --target obj.HeaderConsumer --parallel 4
+# RUN: "%cmake_exe" --build %t/valid-build --target clean
+# RUN: "%cmake_exe" --build %t/valid-build --target obj.LinkConsumer --parallel 4
+# RUN: "%cmake_exe" --build %t/valid-build --target clean
+# RUN: "%cmake_exe" --build %t/valid-build --target SharedHeaderConsumer --parallel 4
+# RUN: not "%cmake_exe" -S %t/invalid -B %t/invalid-build \
+# RUN:   -G "%cmake_generator" -DMLIR_DIR=%mlir_cmake_dir \
+# RUN:   -DCMAKE_C_COMPILER=%host_cc -DCMAKE_CXX_COMPILER=%host_cxx 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=INVALID
+
+# VALID: -- Generated header dependency checks passed
+# INVALID-DAG: BadConsumer: HEADER_LIBS 'MisspelledProvider' is not a target
+# INVALID-DAG: BadConsumer: HEADER_LIBS 'ProviderIncGen' must name a library, not UTILITY
+# INVALID-DAG: BadConsumer: HEADER_LIBS 'NotALibrary' must name a library, not EXECUTABLE
+# INVALID-DAG: BadConsumer: HEADER_LIBS '$<$<BOOL:1>:Provider>' is not a literal target
+
+#--- common.cmake
+find_package(MLIR REQUIRED CONFIG)
+list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}" "${LLVM_CMAKE_DIR}")
+include(TableGen)
+include(AddLLVM)
+include(AddMLIR)
+include(HandleLLVMOptions)
+set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/bin)
+set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/lib)
+
+foreach(target
+    Provider Base Conditional LinkOnly Disabled Plain InterfaceOnly
+    CycleA CycleB HeaderA HeaderB HeaderBase 3rdParty)
+  set(LLVM_COMMON_DEPENDS)
+  set(output ${CMAKE_CURRENT_BINARY_DIR}/${target}.h.inc)
+  add_custom_command(OUTPUT ${output}
+    COMMAND ${CMAKE_COMMAND} -E touch ${output})
+  set(TABLEGEN_OUTPUT ${output})
+  add_public_tablegen_target(${target}IncGen)
+endforeach()
+add_custom_target(SourceGenerator COMMAND ${CMAKE_COMMAND} -E false)
+# Keep the fixture libraries from inheriting all preceding TableGen targets.
+set(LLVM_COMMON_DEPENDS)
+
+#--- valid/CMakeLists.txt
+cmake_minimum_required(VERSION 3.20)
+project(HeaderDependencies LANGUAGES C CXX)
+include(../common.cmake)
+
+add_library(Imported UNKNOWN IMPORTED)
+set_target_properties(Imported PROPERTIES
+  IMPORTED_LOCATION /absolute/libimported.a)
+add_library(ImportedAlias ALIAS Imported)
+
+# Consumers precede providers to exercise deferred forward resolution.
+add_mlir_library(LinkConsumer empty.cpp DISABLE_INSTALL
+  LINK_LIBS PlainProvider /absolute/libunused.a -lpthread ImportedAlias
+  PRIVATE ProviderAlias "$<$<BOOL:0>:DisabledProvider>"
+  PUBLIC "$<$<BOOL:1>:ConditionalProvider>" "$<LINK_ONLY:LinkOnlyProvider>"
+    "$<$<BOOL:1>:3rdPartyProvider>"
+  INTERFACE InterfaceOnlyProvider)
+add_mlir_library(CycleConsumer empty.cpp DISABLE_INSTALL
+  LINK_LIBS PRIVATE CycleA)
+add_mlir_library(HeaderConsumer empty.cpp DISABLE_INSTALL
+  HEADER_LIBS HeaderAlias)
+add_mlir_library(PostHocConsumer empty.cpp DISABLE_INSTALL)
+add_mlir_library(PostHocInterfaceConsumer empty.cpp DISABLE_INSTALL)
+add_mlir_library(SharedHeaderConsumer empty.cpp SHARED STANDALONE DISABLE_INSTALL
+  HEADER_LIBS HeaderAlias)
+target_include_directories(SharedHeaderConsumer PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_compile_definitions(SharedHeaderConsumer PRIVATE CHECK_HEADER_HEADERS)
+target_include_directories(obj.HeaderConsumer PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_compile_definitions(obj.HeaderConsumer PRIVATE CHECK_HEADER_HEADERS)
+target_include_directories(obj.LinkConsumer PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_compile_definitions(obj.LinkConsumer PRIVATE CHECK_LINK_HEADERS)
+
+add_mlir_library(Provider empty.cpp DISABLE_INSTALL
+  DEPENDS ProviderIncGen SourceGenerator
+  LINK_LIBS PUBLIC Base)
+add_library(ProviderAlias ALIAS Provider)
+add_mlir_library(Base empty.cpp DISABLE_INSTALL DEPENDS BaseIncGen)
+add_mlir_library(ConditionalProvider empty.cpp DISABLE_INSTALL
+  DEPENDS ConditionalIncGen)
+add_mlir_library(LinkOnlyProvider empty.cpp DISABLE_INSTALL
+  DEPENDS LinkOnlyIncGen)
+add_mlir_library(DisabledProvider empty.cpp DISABLE_INSTALL
+  DEPENDS DisabledIncGen)
+add_mlir_library(PlainProvider empty.cpp DISABLE_INSTALL
+  DEPENDS PlainIncGen)
+add_mlir_library(InterfaceOnlyProvider empty.cpp DISABLE_INSTALL
+  DEPENDS InterfaceOnlyIncGen)
+add_mlir_library(3rdPartyProvider empty.cpp DISABLE_INSTALL
+  DEPENDS 3rdPartyIncGen)
+
+# Mutual static-library links must not become strong target cycles.
+add_mlir_library(CycleA empty.cpp DISABLE_INSTALL
+  DEPENDS CycleAIncGen LINK_LIBS PRIVATE CycleB)
+add_mlir_library(CycleB empty.cpp DISABLE_INSTALL
+  DEPENDS CycleBIncGen LINK_LIBS CycleA)
+
+# HEADER_LIBS follows nested and link relationships while tolerating cycles.
+add_mlir_library(HeaderA empty.cpp DISABLE_INSTALL
+  DEPENDS HeaderAIncGen
+  HEADER_LIBS HeaderB
+  LINK_LIBS PUBLIC HeaderBase)
+add_library(HeaderAlias ALIAS HeaderA)
+add_mlir_library(HeaderB empty.cpp DISABLE_INSTALL
+  DEPENDS HeaderBIncGen HEADER_LIBS HeaderA)
+add_mlir_library(HeaderBase empty.cpp DISABLE_INSTALL
+  DEPENDS HeaderBaseIncGen)
+
+mlir_target_link_libraries(PostHocConsumer PRIVATE ProviderAlias
+  INTERFACE InterfaceOnlyProvider)
+mlir_target_link_libraries(PostHocInterfaceConsumer INTERFACE InterfaceOnlyProvider)
+add_subdirectory(local-providers)
+
+function(expect_header_libraries target expected)
+  get_target_property(actual ${target} LINK_LIBRARIES)
+  list(FILTER actual INCLUDE REGEX "^llvm\\.headers\\.")
+  list(SORT actual)
+  list(SORT expected)
+  if(NOT "${actual}" STREQUAL "${expected}")
+    message(FATAL_ERROR
+      "${target}: expected dependencies '${expected}', got '${actual}'")
+  endif()
+endfunction()
+
+function(check_dependencies)
+  # Record direct header interfaces only. The subsequent clean object builds
+  # verify that CMake follows their transitive and cyclic dependencies.
+  expect_header_libraries(obj.LinkConsumer
+    "llvm.headers.3rdPartyProvider;llvm.headers.ConditionalProvider;llvm.headers.DisabledProvider;llvm.headers.LinkOnlyProvider;llvm.headers.PlainProvider;llvm.headers.Provider")
+  expect_header_libraries(obj.CycleConsumer "llvm.headers.CycleA")
+  expect_header_libraries(obj.HeaderConsumer "llvm.headers.HeaderA")
+  expect_header_libraries(HeaderConsumer "llvm.headers.HeaderA")
+  expect_header_libraries(obj.PostHocConsumer "llvm.headers.Provider")
+  expect_header_libraries(obj.PostHocInterfaceConsumer "")
+  expect_header_libraries(obj.LocalHeaderConsumer "")
+  expect_header_libraries(SharedHeaderConsumer "llvm.headers.HeaderA")
+  message(STATUS "Generated header dependency checks passed")
+endfunction()
+# The dependency resolvers were deferred first and therefore run before this.
+cmake_language(DEFER CALL check_dependencies)
+
+#--- valid/empty.cpp
+#ifdef CHECK_HEADER_HEADERS
+#include "HeaderA.h.inc"
+#include "HeaderB.h.inc"
+#include "HeaderBase.h.inc"
+#endif
+#ifdef CHECK_LINK_HEADERS
+#include "Provider.h.inc"
+#include "Base.h.inc"
+#include "Conditional.h.inc"
+#include "LinkOnly.h.inc"
+#include "Disabled.h.inc"
+#include "Plain.h.inc"
+#include "3rdParty.h.inc"
+#endif
+void empty() {}
+
+#--- valid/Provider.td
+// Only configuration is under test.
+
+#--- valid/local-providers/CMakeLists.txt
+# Non-global imported targets and aliases are visible only in this directory.
+add_mlir_library(LocalHeaderConsumer empty.cpp DISABLE_INSTALL
+  HEADER_LIBS LocalImported LocalImportedAlias)
+add_library(LocalImported INTERFACE IMPORTED)
+add_library(LocalImportedAlias ALIAS LocalImported)
+
+#--- valid/local-providers/empty.cpp
+void localEmpty() {}
+
+#--- invalid/CMakeLists.txt
+cmake_minimum_required(VERSION 3.20)
+project(HeaderDependenciesInvalid LANGUAGES C CXX)
+include(../common.cmake)
+add_executable(NotALibrary empty.cpp)
+add_mlir_library(Provider empty.cpp DISABLE_INSTALL
+  DEPENDS ProviderIncGen)
+add_mlir_library(BadConsumer empty.cpp DISABLE_INSTALL
+  HEADER_LIBS MisspelledProvider ProviderIncGen NotALibrary
+  "$<$<BOOL:1>:Provider>")
+
+#--- invalid/empty.cpp
+void empty() {}
+
+#--- invalid/Provider.td
+// Only configuration is under test.
