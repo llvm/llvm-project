@@ -2758,27 +2758,9 @@ addr_t Process::CallocateMemory(size_t size, uint32_t permissions,
 bool Process::CanJIT() {
   if (m_can_jit == eCanJITDontKnow) {
     Log *log = GetLog(LLDBLog::Process);
-    Status err;
-
-    uint64_t allocated_memory = AllocateMemory(
-        8, ePermissionsReadable | ePermissionsWritable | ePermissionsExecutable,
-        err);
-
-    if (err.Success()) {
-      m_can_jit = eCanJITYes;
-      LLDB_LOGF(log,
-                "Process::%s pid %" PRIu64
-                " allocation test passed, CanJIT () is true",
-                __FUNCTION__, GetID());
-    } else {
-      m_can_jit = eCanJITNo;
-      LLDB_LOGF(log,
-                "Process::%s pid %" PRIu64
-                " allocation test failed, CanJIT () is false: %s",
-                __FUNCTION__, GetID(), err.AsCString());
-    }
-
-    DeallocateMemory(allocated_memory);
+    m_can_jit = DoCanAllocateMemory() ? eCanJITYes : eCanJITNo;
+    LLDB_LOGF(log, "Process::%s pid %" PRIu64 " CanJIT () is %s", __FUNCTION__,
+              GetID(), m_can_jit == eCanJITYes ? "true" : "false");
   }
 
   return m_can_jit == eCanJITYes;
@@ -3502,8 +3484,13 @@ void Process::CompleteAttach() {
     }
   }
   if (new_executable_module_sp) {
-    GetTarget().SetExecutableModule(new_executable_module_sp,
-                                    eLoadDependentsNo);
+    // Replacing an executable clears the images, which would drop the
+    // modules the loader already found.
+    if (GetTarget().GetExecutableModulePointer())
+      GetTarget().RebuildModuleListWithExecutable(new_executable_module_sp,
+                                                  eLoadDependentsNo);
+    else
+      GetTarget().MarkExecutableModule(new_executable_module_sp);
     if (log) {
       ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
       LLDB_LOGF(
