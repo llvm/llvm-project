@@ -89,6 +89,7 @@ protected:
         L, *LI, IntegerType::get(*Ctx, 64), PSE, /*LVer=*/nullptr,
         [this]() -> const BranchProbabilityInfo & { return *BPI; });
 
+    OptimizationRemarkEmitter ORE(&F);
     if (Style) {
       Inductions.clear();
       // handleUncountableEarlyExits requires induction phi recipes.
@@ -99,17 +100,16 @@ protected:
       }
       VPDominatorTree VPDT(*Plan);
       VPlanTransforms::createHeaderPhiRecipes(
-          *Plan, PSE, *L, VPDT, Inductions,
+          *Plan, PSE, *L, &ORE, VPDT, Inductions,
           MapVector<PHINode *, RecurrenceDescriptor>(),
           SmallPtrSet<const PHINode *, 1>(), SmallPtrSet<PHINode *, 1>(),
           /*AllowReordering=*/false);
     }
 
-    if (Style) {
-      OptimizationRemarkEmitter ORE(&F);
+    if (Style)
       VPlanTransforms::handleUncountableEarlyExits(*Plan, &ORE, L, PSE, *DT,
                                                    AC.get(), *Style);
-    } else
+    else
       VPlanTransforms::handleCountableEarlyExits(*Plan);
     VPlanTransforms::addMiddleCheck(*Plan);
 
