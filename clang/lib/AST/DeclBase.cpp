@@ -1914,6 +1914,20 @@ DeclContext::lookup(DeclarationName Name) const {
   if (getDeclKind() == Decl::LinkageSpec || getDeclKind() == Decl::Export)
     return getParent()->lookup(Name);
 
+  // Handle a complete local map directly. A formerly primary context can
+  // retain a map after redeclaration linking, so verify its current identity.
+  // External sources can add names or storage flags while loading later
+  // redeclarations; they must go through lookupImpl even with a local map.
+  if (LookupPtr && !hasExternalVisibleStorage() &&
+      !hasLazyLocalLexicalLookups() && !hasLazyExternalLexicalLookups() &&
+      !getParentASTContext().getExternalSource() &&
+      this == getPrimaryContext()) {
+    StoredDeclsMap::iterator I = LookupPtr->find(Name);
+    if (I == LookupPtr->end())
+      return {};
+    return I->second.getLookupResult();
+  }
+
   return getPrimaryContext()->lookupImpl(Name, this);
 }
 
