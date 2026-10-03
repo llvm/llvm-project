@@ -25,6 +25,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/EscapeAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
@@ -84,6 +85,24 @@ static cl::opt<bool>
     ClOmitNonCaptured("tsan-omit-by-pointer-capturing", cl::init(true),
                       cl::desc("Omit accesses due to pointer capturing"),
                       cl::Hidden);
+// Eliminates redundant TSan instrumentation for accesses to objects that are
+// provably thread-local (non-escaping).
+//
+// An allocation (stack or heap) is considered non-escaping if its address
+// cannot become visible to another thread before the current function returns.
+// This is determined by EscapeAnalysis (llvm/Analysis/EscapeAnalysis.h), which
+// extends CaptureTracking with a MemorySSA-driven backward walk to detect
+// indirect escapes through memory (e.g., a pointer stored into a local slot
+// that is later loaded and passed to an external call).
+//
+// Accesses to non-escaping objects cannot participate in data races, so their
+// TSan instrumentation is sound to omit. See EscapeAnalysis for the full
+// correctness argument.
+static cl::opt<bool> ClUseEscapeAnalysis(
+    "tsan-use-escape-analysis", cl::init(true),
+    cl::desc("Use EscapeAnalysis to omit instrumentation of non-escaping "
+             "allocations"),
+    cl::Hidden);
 
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
@@ -96,6 +115,8 @@ STATISTIC(NumOmittedReadsFromConstantGlobals,
           "Number of reads from constant globals");
 STATISTIC(NumOmittedReadsFromVtable, "Number of vtable reads");
 STATISTIC(NumOmittedNonCaptured, "Number of accesses ignored due to capturing");
+STATISTIC(NumOmittedByEscapeAnalysis,
+          "Number of accesses ignored due to EscapeAnalysis");
 
 const char kTsanModuleCtorName[] = "tsan.module_ctor";
 const char kTsanInitName[] = "__tsan_init";
@@ -109,7 +130,9 @@ namespace {
 /// ensures the __tsan_init function is in the list of global constructors for
 /// the module.
 struct ThreadSanitizer {
-  ThreadSanitizer() {
+  ThreadSanitizer(const TargetLibraryInfo &TLI, EscapeAnalysisInfo *EAI,
+                  MemorySSA *MSSA, LoopInfo *LI)
+      : TLI(TLI), EAI(EAI), MSSA(MSSA), LI(LI) {
     // Check options and warn user.
     if (ClInstrumentReadBeforeWrite && ClCompoundReadBeforeWrite) {
       errs()
@@ -118,7 +141,7 @@ struct ThreadSanitizer {
     }
   }
 
-  bool sanitizeFunction(Function &F, const TargetLibraryInfo &TLI);
+  bool sanitizeFunction(Function &F);
 
 private:
   // Internal Instruction wrapper that contains more information about the
@@ -139,11 +162,15 @@ private:
   bool instrumentAtomic(Instruction *I, const DataLayout &DL);
   bool instrumentMemIntrinsic(Instruction *I);
   void chooseInstructionsToInstrument(SmallVectorImpl<Instruction *> &Local,
-                                      SmallVectorImpl<InstructionInfo> &All,
-                                      const DataLayout &DL);
+                                      SmallVectorImpl<InstructionInfo> &All);
   bool addrPointsToConstantData(Value *Addr);
   int getMemoryAccessFuncIndex(Type *OrigTy, Value *Addr, const DataLayout &DL);
   void InsertRuntimeIgnores(Function &F);
+
+  const TargetLibraryInfo &TLI;
+  EscapeAnalysisInfo *EAI = nullptr;
+  MemorySSA *MSSA = nullptr;
+  LoopInfo *LI = nullptr;
 
   Type *IntptrTy;
   FunctionCallee TsanFuncEntry;
@@ -186,8 +213,18 @@ void insertModuleCtor(Module &M) {
 
 PreservedAnalyses ThreadSanitizerPass::run(Function &F,
                                            FunctionAnalysisManager &FAM) {
-  ThreadSanitizer TSan;
-  if (TSan.sanitizeFunction(F, FAM.getResult<TargetLibraryAnalysis>(F)))
+  MemorySSA *MSSA = nullptr;
+  LoopInfo *LI = nullptr;
+  EscapeAnalysisInfo *EAI = nullptr;
+
+  if (ClUseEscapeAnalysis) {
+    MSSA = &FAM.getResult<MemorySSAAnalysis>(F).getMSSA();
+    LI = &FAM.getResult<LoopAnalysis>(F);
+    EAI = &FAM.getResult<EscapeAnalysis>(F);
+  }
+
+  ThreadSanitizer TSan(FAM.getResult<TargetLibraryAnalysis>(F), EAI, MSSA, LI);
+  if (TSan.sanitizeFunction(F))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
 }
@@ -407,6 +444,7 @@ bool ThreadSanitizer::addrPointsToConstantData(Value *Addr) {
 // Currently handled:
 //  - read-before-write (within same BB, no calls between)
 //  - not captured variables
+//  - non-escaping allocations (if -tsan-use-escape-analysis)
 //
 // We do not handle some of the patterns that should not survive
 // after the classic compiler optimizations.
@@ -417,7 +455,7 @@ bool ThreadSanitizer::addrPointsToConstantData(Value *Addr) {
 // 'All' is a vector of insns that will be instrumented.
 void ThreadSanitizer::chooseInstructionsToInstrument(
     SmallVectorImpl<Instruction *> &Local,
-    SmallVectorImpl<InstructionInfo> &All, const DataLayout &DL) {
+    SmallVectorImpl<InstructionInfo> &All) {
   DenseMap<Value *, size_t> WriteTargets; // Map of addresses to index in All
   // Iterate from the end.
   for (Instruction *I : reverse(Local)) {
@@ -452,15 +490,42 @@ void ThreadSanitizer::chooseInstructionsToInstrument(
       }
     }
 
-    const AllocaInst *AI = findAllocaForValue(Addr);
-    // Instead of Addr, we should check whether its base pointer is captured.
-    if (AI && !PointerMayBeCaptured(AI, /*ReturnCaptures=*/true) &&
-        ClOmitNonCaptured) {
-      // The variable is addressable but not captured, so it cannot be
-      // referenced from a different thread and participate in a data race
-      // (see llvm/Analysis/CaptureTracking.h for details).
-      NumOmittedNonCaptured++;
-      continue;
+    // Omit instrumentation for accesses to objects that cannot be referenced
+    // from another thread, and thus cannot participate in a data race. This is
+    // gated by -tsan-omit-by-pointer-capturing; -tsan-use-escape-analysis
+    // selects the more precise EscapeAnalysis-based implementation over the
+    // legacy CaptureTracking check.
+    if (ClOmitNonCaptured) {
+      if (ClUseEscapeAnalysis) {
+        SmallPtrSet<const Value *, 8> BaseObjs;
+        bool IsComplete = false;
+        getUnderlyingObjectsThroughLoads(Addr, MSSA, BaseObjs, &TLI, LI,
+                                         &IsComplete);
+        // Only omit when the base objects are fully resolved and known. An
+        // empty set with no incompleteness signalled would otherwise be
+        // treated as "nothing escapes"; require at least one identified base.
+        bool IsEscaped = !IsComplete || BaseObjs.empty();
+        for (const Value *Obj : BaseObjs) {
+          if (EAI->isEscaping(*Obj)) {
+            IsEscaped = true;
+            break;
+          }
+        }
+        if (!IsEscaped) {
+          NumOmittedByEscapeAnalysis++;
+          continue;
+        }
+      } else {
+        // Instead of Addr, we should check whether its base pointer is
+        // captured. The variable is addressable but not captured, so it cannot
+        // be referenced from a different thread and participate in a data race
+        // (see llvm/Analysis/CaptureTracking.h for details).
+        const AllocaInst *AI = findAllocaForValue(Addr);
+        if (AI && !PointerMayBeCaptured(AI, /*ReturnCaptures=*/true)) {
+          NumOmittedNonCaptured++;
+          continue;
+        }
+      }
     }
 
     // Instrument this instruction.
@@ -495,8 +560,7 @@ void ThreadSanitizer::InsertRuntimeIgnores(Function &F) {
   }
 }
 
-bool ThreadSanitizer::sanitizeFunction(Function &F,
-                                       const TargetLibraryInfo &TLI) {
+bool ThreadSanitizer::sanitizeFunction(Function &F) {
   // This is required to prevent instrumenting call to __tsan_init from within
   // the module constructor.
   if (F.getName() == kTsanModuleCtorName)
@@ -538,11 +602,10 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
         if (isa<MemIntrinsic>(Inst))
           MemIntrinCalls.push_back(&Inst);
         HasCalls = true;
-        chooseInstructionsToInstrument(LocalLoadsAndStores, AllLoadsAndStores,
-                                       DL);
+        chooseInstructionsToInstrument(LocalLoadsAndStores, AllLoadsAndStores);
       }
     }
-    chooseInstructionsToInstrument(LocalLoadsAndStores, AllLoadsAndStores, DL);
+    chooseInstructionsToInstrument(LocalLoadsAndStores, AllLoadsAndStores);
   }
 
   // We have collected all loads and stores.
