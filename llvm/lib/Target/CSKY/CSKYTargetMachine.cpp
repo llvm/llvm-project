@@ -26,7 +26,7 @@
 
 using namespace llvm;
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCSKYTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCSKYTarget() {
   RegisterTargetMachine<CSKYTargetMachine> X(getTheCSKYTarget());
 
   PassRegistry *Registry = PassRegistry::getPassRegistry();
