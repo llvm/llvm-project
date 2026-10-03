@@ -5268,7 +5268,13 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
     ObjectEntityDetails dummyDetails{true};
     if (auto *dummySymbol{FindInScope(currScope().parent(), dummyName)}) {
       if (auto *d{dummySymbol->GetType()}) {
-        dummyDetails.set_type(*d);
+        if (d->IsAssumedType()) {
+          Say(dummyName.source,
+              "Statement function dummy argument '%s' cannot have assumed type"_err_en_US,
+              dummyName.source);
+        } else {
+          dummyDetails.set_type(*d);
+        }
       }
     }
     Symbol &dummy{MakeSymbol(dummyName, std::move(dummyDetails))};
