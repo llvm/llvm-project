@@ -47,6 +47,9 @@ public:
   bool m_stop_at_entry;
   std::map<lldb::tid_t, lldb::ThreadSP> m_new_threads;
   std::set<lldb::tid_t> m_exited_threads;
+  /// TIDs of the threads DebugBreakProcess() injects into the inferior. They
+  /// start at ntdll!DbgUiRemoteBreakin and exist only to run one int3.
+  std::set<lldb::tid_t> m_break_in_threads;
 };
 
 class ProcessDebugger {
@@ -58,7 +61,8 @@ public:
   virtual void OnDebuggerConnected(lldb::addr_t image_base);
   virtual ExceptionResult OnDebugException(bool first_chance,
                                            const ExceptionRecord &record);
-  virtual void OnCreateThread(const HostThread &thread);
+  virtual void OnCreateThread(const HostThread &thread,
+                              lldb::addr_t start_address);
   virtual void OnExitThread(lldb::tid_t thread_id, uint32_t exit_code);
   virtual DllEventAction OnLoadDll(const ModuleSpec &module_spec,
                                    lldb::addr_t module_addr,
@@ -72,6 +76,13 @@ public:
   static bool IsSystemDLL(llvm::StringRef path);
 
   bool IsSystemModuleAddress(lldb::addr_t addr);
+
+  /// Whether `thread_id` is a break-in thread: one the OS injected into the
+  /// inferior on our behalf when HaltProcess() called DebugBreakProcess().
+  /// Such a thread runs ntdll!DbgUiRemoteBreakin, whose only job is to execute
+  /// an int3, so the EXCEPTION_BREAKPOINT it raises is the debugger's own
+  /// interrupt rather than anything the inferior did.
+  bool IsBreakInThread(lldb::tid_t thread_id);
 
 protected:
   Status DetachProcess();
