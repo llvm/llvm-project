@@ -1936,11 +1936,11 @@ public:
     return offset - data_offset;
   }
 
-  virtual bool ParseVendorDWARFOpcode(
-      uint8_t op, const llvm::DataExtractor &opcodes, lldb::offset_t &offset,
-
-      RegisterContext *reg_ctx, lldb::RegisterKind reg_kind,
-      std::vector<lldb_private::Value> &stack) const override {
+  virtual bool
+  ParseVendorDWARFOpcode(uint8_t op, const llvm::DataExtractor &opcodes,
+                         lldb::offset_t &offset, RegisterContext *reg_ctx,
+                         lldb::RegisterKind reg_kind,
+                         DWARFExpression::Stack &stack) const override {
     if (op != DW_OP_WASM_location) {
       return false;
     }
@@ -2410,6 +2410,85 @@ TEST_F(DWARFExpressionMockProcessTest, deref_register) {
   EXPECT_THAT_EXPECTED(
       Eval({DW_OP_breg0, 1, DW_OP_deref}),
       ExpectLoadAddress(0x08070605, Value::ContextType::Invalid));
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_drop_location_description) {
+  TestContext test_ctx;
+  MockMemory::Map memory = {{{0x4, 2}, {0x1, 0x2}}};
+  ASSERT_TRUE(CreateTestContext(&test_ctx, "i386-pc-linux",
+                                RegisterValue(uint32_t{0x504}), memory));
+
+  MockDwarfDelegate delegate = MockDwarfDelegate::Dwarf5();
+  auto Eval = [&](llvm::ArrayRef<uint8_t> expr_data) {
+    ExecutionContext exe_ctx(test_ctx.process_sp);
+    return Evaluate(expr_data, {}, &delegate, &exe_ctx,
+                    test_ctx.reg_ctx_sp.get());
+  };
+
+  // Dropping a register location restores the memory location underneath it.
+  EXPECT_THAT_EXPECTED(
+      Eval({DW_OP_lit4, DW_OP_reg0, DW_OP_drop, DW_OP_deref_size, 2}),
+      ExpectLoadAddress(0x0201));
+
+  // Dropping the only implicit location clears its location state before the
+  // following memory location is pushed.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_implicit_value, 1, 0, DW_OP_drop, DW_OP_lit4,
+                             DW_OP_deref_size, 2}),
+                       ExpectLoadAddress(0x0201));
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_swap_rot_location_description) {
+  TestContext test_ctx;
+  MockMemory::Map memory = {{{0x4, 2}, {0x1, 0x2}}};
+  ASSERT_TRUE(CreateTestContext(&test_ctx, "i386-pc-linux",
+                                RegisterValue(uint32_t{0x504}), memory));
+
+  MockDwarfDelegate delegate = MockDwarfDelegate::Dwarf5();
+  auto Eval = [&](llvm::ArrayRef<uint8_t> expr_data) {
+    ExecutionContext exe_ctx(test_ctx.process_sp);
+    return Evaluate(expr_data, {}, &delegate, &exe_ctx,
+                    test_ctx.reg_ctx_sp.get());
+  };
+
+  // Swapping a register location with the memory location underneath keeps
+  // each entry's location kind with its value: the new top is a memory
+  // location and is dereferenced as an address.
+  EXPECT_THAT_EXPECTED(
+      Eval({DW_OP_lit4, DW_OP_reg0, DW_OP_swap, DW_OP_deref_size, 2}),
+      ExpectLoadAddress(0x0201));
+
+  // Rotating the top three entries keeps each entry's location kind with its
+  // value: the new top (lit4) is a memory location.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_lit5, DW_OP_lit4, DW_OP_reg0, DW_OP_rot,
+                             DW_OP_deref_size, 2}),
+                       ExpectLoadAddress(0x0201));
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_copy_location_description) {
+  TestContext test_ctx;
+  MockMemory::Map memory = {{{0x4, 2}, {0x1, 0x2}}};
+  ASSERT_TRUE(CreateTestContext(&test_ctx, "i386-pc-linux",
+                                RegisterValue(uint32_t{0x504}), memory));
+
+  MockDwarfDelegate delegate = MockDwarfDelegate::Dwarf5();
+  auto Eval = [&](llvm::ArrayRef<uint8_t> expr_data) {
+    ExecutionContext exe_ctx(test_ctx.process_sp);
+    return Evaluate(expr_data, {}, &delegate, &exe_ctx,
+                    test_ctx.reg_ctx_sp.get());
+  };
+
+  // Copying a register location keeps the copied entry's kind: dereferencing
+  // the new top truncates the register value instead of reading memory.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_reg0, DW_OP_dup, DW_OP_deref_size, 2}),
+                       ExpectLoadAddress(0x0504));
+
+  EXPECT_THAT_EXPECTED(
+      Eval({DW_OP_reg0, DW_OP_lit4, DW_OP_over, DW_OP_deref_size, 2}),
+      ExpectLoadAddress(0x0504));
+
+  EXPECT_THAT_EXPECTED(
+      Eval({DW_OP_reg0, DW_OP_lit4, DW_OP_pick, 1, DW_OP_deref_size, 2}),
+      ExpectLoadAddress(0x0504));
 }
 
 TEST_F(DWARFExpressionMockProcessTest, deref_implicit_value) {
