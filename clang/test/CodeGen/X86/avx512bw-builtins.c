@@ -626,11 +626,11 @@ void test_store_mask64(__mmask64 *A, __m512i B, __m512i C) {
   _store_mask64(A, _mm512_cmpneq_epu8_mask(B, C));
 }
 
-__mmask64 test_mm512_mask_cmpeq_epi8_mask(__m512i __a, __m512i __b) {
-  // CHECK-LABEL: test_mm512_cmpeq_epi8_mask
+__mmask64 test_mm512_mask_cmpeq_epi8_mask(__mmask64 __u, __m512i __a, __m512i __b) {
+  // CHECK-LABEL: test_mm512_mask_cmpeq_epi8_mask
   // CHECK: icmp eq <64 x i8> %{{.*}}, %{{.*}}
   // CHECK: and <64 x i1> %{{.*}}, %{{.*}}
-  return (__mmask64)_mm512_cmpeq_epi8_mask(__a, __b);
+  return (__mmask64)_mm512_mask_cmpeq_epi8_mask(__u, __a, __b);
 }
 TEST_CONSTEXPR(_mm512_mask_cmpeq_epi8_mask(
     (__mmask64)0x00000000FFFFFFFFull,
