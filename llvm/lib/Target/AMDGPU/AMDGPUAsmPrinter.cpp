@@ -118,6 +118,9 @@ AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
                                    std::unique_ptr<MCStreamer> Streamer)
     : AsmPrinter(TM, std::move(Streamer)) {
   assert(OutStreamer && "AsmPrinter constructed without streamer");
+  // AMDGPU describes a pointer's address space with its own attribute rather
+  // than DW_AT_address_class.
+  TypeAddressSpaceAttribute = dwarf::DW_AT_LLVM_address_space;
   GetResourceUsage = [this](MachineFunction &MF)
       -> const AMDGPUResourceUsageAnalysisImpl::SIFunctionResourceInfo * {
     if (auto *ResourceUsageW =
