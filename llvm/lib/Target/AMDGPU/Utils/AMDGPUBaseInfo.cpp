@@ -1307,19 +1307,6 @@ unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo &STI) {
   return 256;
 }
 
-unsigned getAddressableNumVGPRs(const MCSubtargetInfo &STI,
-                                unsigned DynamicVGPRBlockSize) {
-  const auto &Features = STI.getFeatureBits();
-  if (Features.test(FeatureGFX90AInsts))
-    return 512;
-
-  if (DynamicVGPRBlockSize != 0) {
-    // On GFX12 we can allocate at most MaxDynamicVGPRBlocks blocks of VGPRs.
-    return MaxDynamicVGPRBlocks * DynamicVGPRBlockSize;
-  }
-  return getAddressableNumArchVGPRs(STI);
-}
-
 unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo &STI,
                                       unsigned NumVGPRs,
                                       unsigned DynamicVGPRBlockSize) {
@@ -1382,7 +1369,7 @@ unsigned getMinNumVGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
   bool IsWave32 = STI.getFeatureBits().test(FeatureWavefrontSize32);
   unsigned TotNumVGPRs = AMDGPU::getTotalNumVGPRs(Kind, IsWave32);
   unsigned AddrsableNumVGPRs =
-      getAddressableNumVGPRs(STI, DynamicVGPRBlockSize);
+      AMDGPU::getAddressableNumVGPRs(Kind, IsWave32, DynamicVGPRBlockSize);
   unsigned Granule =
       AMDGPU::getVGPRAllocGranule(Kind, IsWave32, DynamicVGPRBlockSize);
   unsigned MaxNumVGPRs = alignDown(TotNumVGPRs / WavesPerEU, Granule);
@@ -1416,7 +1403,7 @@ unsigned getMaxNumVGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
                                      AMDGPU::getVGPRAllocGranule(
                                          Kind, IsWave32, DynamicVGPRBlockSize));
   unsigned AddressableNumVGPRs =
-      getAddressableNumVGPRs(STI, DynamicVGPRBlockSize);
+      AMDGPU::getAddressableNumVGPRs(Kind, IsWave32, DynamicVGPRBlockSize);
   return std::min(MaxNumVGPRs, AddressableNumVGPRs);
 }
 

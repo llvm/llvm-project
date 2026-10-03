@@ -871,14 +871,8 @@ public:
 
   /// \returns Addressable number of VGPRs supported by the subtarget.
   unsigned getAddressableNumVGPRs(unsigned DynamicVGPRBlockSize) const {
-    // Dynamic VGPR mode is a per-kernel mode, so it is not covered by the
-    // TargetParser query.
-    if (DynamicVGPRBlockSize != 0) {
-      return AMDGPU::IsaInfo::getAddressableNumVGPRs(*this,
-                                                     DynamicVGPRBlockSize);
-    }
     return AMDGPU::getAddressableNumVGPRs(getTargetID().getGPUKind(),
-                                          isWave32());
+                                          isWave32(), DynamicVGPRBlockSize);
   }
 
   /// \returns the minimum number of VGPRs that will prevent achieving more than

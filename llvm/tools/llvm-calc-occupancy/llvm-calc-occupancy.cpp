@@ -218,8 +218,7 @@ int main(int argc, char **argv) {
   unsigned NumWorkGroupSIMDs = ST.getNumWorkGroupSIMDs();
   unsigned LocalMemSize = AMDGPU::IsaInfo::getLocalMemorySize(STI);
   unsigned AddrLocalMem = AMDGPU::IsaInfo::getAddressableLocalMemorySize(STI);
-  unsigned AddrVGPRs =
-      AMDGPU::IsaInfo::getAddressableNumVGPRs(STI, DynVGPRBlockSize);
+  unsigned AddrVGPRs = ST.getAddressableNumVGPRs(DynVGPRBlockSize);
   unsigned AddrSGPRs = ST.getAddressableNumSGPRs();
   unsigned MaxWGSize = AMDGPU::getMaxFlatWorkGroupSize();
 
