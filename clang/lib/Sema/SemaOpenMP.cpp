@@ -23296,19 +23296,16 @@ OMPClause *SemaOpenMP::ActOnOpenMPCopyprivateClause(ArrayRef<Expr *> VarList,
       //  threadprivate or private in the enclosing context.
       if (DVar.CKind == OMPC_unknown) {
         DVar = DSAStack->getImplicitDSA(D, false);
-        if (DVar.CKind == OMPC_shared) {
-          Diag(ELoc, diag::err_omp_required_access)
-              << getOpenMPClauseNameForDiag(OMPC_copyprivate)
-              << "threadprivate or private in the enclosing context";
-          reportOriginalDsa(SemaRef, DSAStack, D, DVar);
-          continue;
-        }
         // A data member is private only if an enclosing construct captured it.
-        if (isa<FieldDecl>(D) && !SemaRef.CurContext->isDependentContext() &&
-            !isOpenMPCapturedDecl(D)) {
+        const bool IsShared = DVar.CKind == OMPC_shared;
+        if (IsShared ||
+            (isa<FieldDecl>(D) && !SemaRef.CurContext->isDependentContext() &&
+             !isOpenMPCapturedDecl(D))) {
           Diag(ELoc, diag::err_omp_required_access)
               << getOpenMPClauseNameForDiag(OMPC_copyprivate)
               << "threadprivate or private in the enclosing context";
+          if (IsShared)
+            reportOriginalDsa(SemaRef, DSAStack, D, DVar);
           continue;
         }
       }
@@ -23355,10 +23352,11 @@ OMPClause *SemaOpenMP::ActOnOpenMPCopyprivateClause(ArrayRef<Expr *> VarList,
 
     // No need to mark vars as copyprivate, they are already threadprivate or
     // implicitly private.
-    assert(VD || SemaRef.CurContext->isDependentContext() ||
+    const bool IsBindingDecl = isa<BindingDecl>(D);
+    assert(VD || IsBindingDecl || SemaRef.CurContext->isDependentContext() ||
            isOpenMPCapturedDecl(D));
     Vars.push_back(
-        (VD || SemaRef.CurContext->isDependentContext())
+        (VD || IsBindingDecl || SemaRef.CurContext->isDependentContext())
             ? RefExpr->IgnoreParens()
             : buildCapture(SemaRef, D, SimpleRefExpr, /*WithInit=*/false));
     SrcExprs.push_back(PseudoSrcExpr);
