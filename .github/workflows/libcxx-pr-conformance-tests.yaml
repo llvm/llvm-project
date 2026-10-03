@@ -39,7 +39,7 @@ jobs:
     if: github.repository_owner == 'llvm'
     runs-on: llvm-premerge-linux-32-runners
     container:
-      image: ghcr.io/llvm/libcxx-linux-builder:d79f222aea61926e7c81fa8908b12f52ea70111f
+      image: ghcr.io/llvm/libcxx-linux-builder:09a061222344326184524d731a076eb6067ae433
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -68,6 +68,7 @@ jobs:
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
         shell: bash
         run: |
+          git config --global --add safe.directory '*'
           python3 -m venv --system-site-packages .venv
           source .venv/bin/activate
           pip install -r libcxx/test/requirements.txt
@@ -90,7 +91,7 @@ jobs:
     if: github.repository_owner == 'llvm'
     runs-on: llvm-premerge-linux-32-runners
     container:
-      image: ghcr.io/llvm/libcxx-linux-builder:d79f222aea61926e7c81fa8908b12f52ea70111f
+      image: ghcr.io/llvm/libcxx-linux-builder:09a061222344326184524d731a076eb6067ae433
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -123,6 +124,7 @@ jobs:
       - name: ${{ matrix.config }}
         shell: bash
         run: |
+          git config --global --add safe.directory '*'
           python3 -m venv --system-site-packages .venv
           source .venv/bin/activate
           pip install -r libcxx/test/requirements.txt
@@ -145,7 +147,7 @@ jobs:
     if: github.repository_owner == 'llvm'
     runs-on: llvm-premerge-linux-32-runners
     container:
-      image: ghcr.io/llvm/libcxx-linux-builder:d79f222aea61926e7c81fa8908b12f52ea70111f
+      image: ghcr.io/llvm/libcxx-linux-builder:09a061222344326184524d731a076eb6067ae433
     needs: [ stage2 ]
     continue-on-error: false
     strategy:
@@ -188,6 +190,7 @@ jobs:
       - name: ${{ matrix.config }}
         shell: bash
         run: |
+          git config --global --add safe.directory '*'
           python3 -m venv --system-site-packages .venv
           source .venv/bin/activate
           pip install -r libcxx/test/requirements.txt
