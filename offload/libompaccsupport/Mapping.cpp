@@ -107,32 +107,40 @@ int MappingInfoTy::disassociatePtr(void *HstPtrBegin) {
     REPORT() << "Association not found";
     return OFFLOAD_FAIL;
   }
-  // Mapping exists
-  HostDataToTargetTy &HDTT = *It->HDTT;
-  std::lock_guard<HostDataToTargetTy> LG(HDTT);
 
-  if (HDTT.getHoldRefCount()) {
-    // This is based on OpenACC 3.1, sec 3.2.33 "acc_unmap_data", L3656-3657:
-    // "It is an error to call acc_unmap_data if the structured reference
-    // count for the pointer is not zero."
-    REPORT() << "Trying to disassociate a pointer with a non-zero "
-             << "hold reference count";
-    return OFFLOAD_FAIL;
-  }
+  // Mapping exists. The per-entry mutex is a member of HostDataToTargetTy, so
+  // it must be released before the entry is destroyed.
+  HostDataToTargetTy *Entry = It->HDTT;
+  void *Event = nullptr;
+  {
+    std::lock_guard<HostDataToTargetTy> LG(*Entry);
 
-  if (HDTT.isDynRefCountInf()) {
+    if (Entry->getHoldRefCount()) {
+      // This is based on OpenACC 3.1, sec 3.2.33 "acc_unmap_data", L3656-3657:
+      // "It is an error to call acc_unmap_data if the structured reference
+      // count for the pointer is not zero."
+      REPORT() << "Trying to disassociate a pointer with a non-zero "
+               << "hold reference count";
+      return OFFLOAD_FAIL;
+    }
+
+    if (!Entry->isDynRefCountInf()) {
+      REPORT() << "Trying to disassociate a pointer which was not mapped via "
+               << "omp_target_associate_ptr";
+      return OFFLOAD_FAIL;
+    }
+
     ODBG(ODT_Mapping) << "Association found, removing it";
-    void *Event = HDTT.getEvent();
-    delete &HDTT;
-    if (Event)
-      Device.destroyEvent(Event);
-    HDTTMap->erase(It);
-    return Device.notifyDataUnmapped(HstPtrBegin);
+    Event = Entry->getEvent();
   }
 
-  REPORT() << "Trying to disassociate a pointer which was not mapped via "
-           << "omp_target_associate_ptr";
-  return OFFLOAD_FAIL;
+  // Remove the mapping whether or not this entry has a transfer event.
+  HDTTMap->erase(It);
+  if (Event)
+    Device.destroyEvent(Event);
+  int Ret = Device.notifyDataUnmapped(HstPtrBegin);
+  delete Entry;
+  return Ret;
 }
 
 LookupResult MappingInfoTy::lookupMapping(HDTTMapAccessorTy &HDTTMap,
