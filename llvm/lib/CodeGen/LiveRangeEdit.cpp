@@ -161,6 +161,8 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
   // Update the call info.
   if (UseMI->shouldUpdateAdditionalCallInfo())
     UseMI->getMF()->moveAdditionalCallInfo(UseMI, FoldMI);
+  if (TheDelegate)
+    TheDelegate->LRE_WillEraseInstruction(UseMI);
   UseMI->eraseFromParent();
   DefMI->addRegisterDead(LI->reg(), nullptr);
   Dead.push_back(DefMI);
@@ -415,8 +417,7 @@ void LiveRangeEdit::eliminateDeadDefs(SmallVectorImpl<MachineInstr *> &Dead,
 
 // Keep track of new virtual registers created via
 // MachineRegisterInfo::createVirtualRegister.
-void
-LiveRangeEdit::MRI_NoteNewVirtualRegister(Register VReg) {
+void LiveRangeEdit::MRI_NoteNewVirtualRegister(Register VReg) {
   if (VRM)
     VRM->grow();
 

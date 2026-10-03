@@ -70,6 +70,7 @@ bool RISCVExpandPseudoPostRAImpl::expandMI(
     MachineBasicBlock::iterator &NextMBBI) const {
   switch (MBBI->getOpcode()) {
   case RISCV::PseudoMovImm:
+  case RISCV::PseudoTestFoldableADDI:
     return expandMovImm(MBB, MBBI);
   case RISCV::PseudoMovAddr:
     return expandMovAddr(MBB, MBBI);
