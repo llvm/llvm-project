@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// The test needs a SIGABRT handler to run, which WASI does not deliver.
+// XFAIL: LIBCXX-WASI-FIXME
+
 // Test that the default verbose termination function aborts the program.
 // XFAIL: availability-verbose_abort-missing
 

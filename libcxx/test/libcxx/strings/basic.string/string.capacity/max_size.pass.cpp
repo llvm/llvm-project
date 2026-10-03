@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// The test has no expected max_size for wasm.
+// UNSUPPORTED: LIBCXX-WASI-FIXME
+
 // <string>
 
 // This test ensures that the correct max_size() is returned depending on the platform.

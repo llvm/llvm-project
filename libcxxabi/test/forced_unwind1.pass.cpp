@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// libunwind's wasm implementation does not provide _Unwind_ForcedUnwind.
+// UNSUPPORTED: LIBCXX-WASI-FIXME
+
 // _Unwind_ForcedUnwind raised exception can be caught by catch (...) and be
 // rethrown. If not rethrown, exception_cleanup will be called.
 

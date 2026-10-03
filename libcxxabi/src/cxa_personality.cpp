@@ -720,6 +720,9 @@ static void scan_eh_tab(scan_results &results, _Unwind_Action actions,
     const uint8_t* lpStart = lpStartEncoding == DW_EH_PE_omit
                                  ? (const uint8_t*)funcStart
                                  : (const uint8_t*)readEncodedPointer(&lsda, lpStartEncoding, base);
+#if defined(__USING_SJLJ_EXCEPTIONS__) || defined(__WASM_EXCEPTIONS__)
+    (void)lpStart; // When using SjLj/Wasm exceptions, lpStart is never used
+#endif
     uint8_t ttypeEncoding = *lsda++;
     if (ttypeEncoding != DW_EH_PE_omit)
     {

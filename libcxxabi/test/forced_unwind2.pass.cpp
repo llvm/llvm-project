@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// libunwind's wasm implementation does not provide _Unwind_ForcedUnwind.
+// UNSUPPORTED: LIBCXX-WASI-FIXME
+
 // Forced unwinding causes std::terminate when going through noexcept.
 
 // UNSUPPORTED: no-exceptions, c++03

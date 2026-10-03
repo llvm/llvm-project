@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// wasi-libc defines WINT_MIN and WINT_MAX as unsigned, while the compiler
+// makes wint_t signed for wasm.
+// XFAIL: LIBCXX-WASI-FIXME
+
 // test <cstdint>
 
 #include <cstdint>
