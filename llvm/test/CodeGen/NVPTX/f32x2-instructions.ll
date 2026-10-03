@@ -423,53 +423,43 @@ define <2 x float> @test_fdiv(<2 x float> %a, <2 x float> %b) #0 {
 define <2 x float> @test_frem(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-NOF32X2-LABEL: test_frem(
 ; CHECK-NOF32X2:       {
-; CHECK-NOF32X2-NEXT:    .reg .pred %p<3>;
-; CHECK-NOF32X2-NEXT:    .reg .b32 %r<15>;
+; CHECK-NOF32X2-NEXT:    .reg .b32 %r<13>;
 ; CHECK-NOF32X2-EMPTY:
 ; CHECK-NOF32X2-NEXT:  // %bb.0:
 ; CHECK-NOF32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_frem_param_1];
 ; CHECK-NOF32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_frem_param_0];
-; CHECK-NOF32X2-NEXT:    div.rn.f32 %r5, %r2, %r4;
+; CHECK-NOF32X2-NEXT:    div.rn.f32 %r5, %r1, %r3;
 ; CHECK-NOF32X2-NEXT:    cvt.rzi.f32.f32 %r6, %r5;
 ; CHECK-NOF32X2-NEXT:    neg.f32 %r7, %r6;
-; CHECK-NOF32X2-NEXT:    fma.rn.f32 %r8, %r7, %r4, %r2;
-; CHECK-NOF32X2-NEXT:    testp.infinite.f32 %p1, %r4;
-; CHECK-NOF32X2-NEXT:    selp.f32 %r9, %r2, %r8, %p1;
-; CHECK-NOF32X2-NEXT:    div.rn.f32 %r10, %r1, %r3;
-; CHECK-NOF32X2-NEXT:    cvt.rzi.f32.f32 %r11, %r10;
-; CHECK-NOF32X2-NEXT:    neg.f32 %r12, %r11;
-; CHECK-NOF32X2-NEXT:    fma.rn.f32 %r13, %r12, %r3, %r1;
-; CHECK-NOF32X2-NEXT:    testp.infinite.f32 %p2, %r3;
-; CHECK-NOF32X2-NEXT:    selp.f32 %r14, %r1, %r13, %p2;
-; CHECK-NOF32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r14, %r9};
+; CHECK-NOF32X2-NEXT:    fma.rn.f32 %r8, %r7, %r3, %r1;
+; CHECK-NOF32X2-NEXT:    div.rn.f32 %r9, %r2, %r4;
+; CHECK-NOF32X2-NEXT:    cvt.rzi.f32.f32 %r10, %r9;
+; CHECK-NOF32X2-NEXT:    neg.f32 %r11, %r10;
+; CHECK-NOF32X2-NEXT:    fma.rn.f32 %r12, %r11, %r4, %r2;
+; CHECK-NOF32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r8, %r12};
 ; CHECK-NOF32X2-NEXT:    ret;
 ;
 ; CHECK-F32X2-LABEL: test_frem(
 ; CHECK-F32X2:       {
-; CHECK-F32X2-NEXT:    .reg .pred %p<3>;
-; CHECK-F32X2-NEXT:    .reg .b32 %r<15>;
+; CHECK-F32X2-NEXT:    .reg .b32 %r<13>;
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
 ; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_frem_param_1];
 ; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_frem_param_0];
-; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
-; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-F32X2-NEXT:    div.rn.f32 %r5, %r4, %r2;
+; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd2;
+; CHECK-F32X2-NEXT:    div.rn.f32 %r5, %r1, %r3;
 ; CHECK-F32X2-NEXT:    cvt.rzi.f32.f32 %r6, %r5;
 ; CHECK-F32X2-NEXT:    neg.f32 %r7, %r6;
-; CHECK-F32X2-NEXT:    fma.rn.f32 %r8, %r7, %r2, %r4;
-; CHECK-F32X2-NEXT:    testp.infinite.f32 %p1, %r2;
-; CHECK-F32X2-NEXT:    selp.f32 %r9, %r4, %r8, %p1;
-; CHECK-F32X2-NEXT:    div.rn.f32 %r10, %r3, %r1;
-; CHECK-F32X2-NEXT:    cvt.rzi.f32.f32 %r11, %r10;
-; CHECK-F32X2-NEXT:    neg.f32 %r12, %r11;
-; CHECK-F32X2-NEXT:    fma.rn.f32 %r13, %r12, %r1, %r3;
-; CHECK-F32X2-NEXT:    testp.infinite.f32 %p2, %r1;
-; CHECK-F32X2-NEXT:    selp.f32 %r14, %r3, %r13, %p2;
-; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r14, %r9};
+; CHECK-F32X2-NEXT:    fma.rn.f32 %r8, %r7, %r3, %r1;
+; CHECK-F32X2-NEXT:    div.rn.f32 %r9, %r2, %r4;
+; CHECK-F32X2-NEXT:    cvt.rzi.f32.f32 %r10, %r9;
+; CHECK-F32X2-NEXT:    neg.f32 %r11, %r10;
+; CHECK-F32X2-NEXT:    fma.rn.f32 %r12, %r11, %r4, %r2;
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r8, %r12};
 ; CHECK-F32X2-NEXT:    ret;
-  %r = frem <2 x float> %a, %b
+  %r = frem afn <2 x float> %a, %b
   ret <2 x float> %r
 }
 
@@ -803,53 +793,43 @@ define <2 x float> @test_fdiv_ftz(<2 x float> %a, <2 x float> %b) #2 {
 define <2 x float> @test_frem_ftz(<2 x float> %a, <2 x float> %b) #2 {
 ; CHECK-NOF32X2-LABEL: test_frem_ftz(
 ; CHECK-NOF32X2:       {
-; CHECK-NOF32X2-NEXT:    .reg .pred %p<3>;
-; CHECK-NOF32X2-NEXT:    .reg .b32 %r<15>;
+; CHECK-NOF32X2-NEXT:    .reg .b32 %r<13>;
 ; CHECK-NOF32X2-EMPTY:
 ; CHECK-NOF32X2-NEXT:  // %bb.0:
 ; CHECK-NOF32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_frem_ftz_param_1];
 ; CHECK-NOF32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_frem_ftz_param_0];
-; CHECK-NOF32X2-NEXT:    div.rn.ftz.f32 %r5, %r2, %r4;
+; CHECK-NOF32X2-NEXT:    div.rn.ftz.f32 %r5, %r1, %r3;
 ; CHECK-NOF32X2-NEXT:    cvt.rzi.ftz.f32.f32 %r6, %r5;
 ; CHECK-NOF32X2-NEXT:    neg.ftz.f32 %r7, %r6;
-; CHECK-NOF32X2-NEXT:    fma.rn.ftz.f32 %r8, %r7, %r4, %r2;
-; CHECK-NOF32X2-NEXT:    testp.infinite.f32 %p1, %r4;
-; CHECK-NOF32X2-NEXT:    selp.f32 %r9, %r2, %r8, %p1;
-; CHECK-NOF32X2-NEXT:    div.rn.ftz.f32 %r10, %r1, %r3;
-; CHECK-NOF32X2-NEXT:    cvt.rzi.ftz.f32.f32 %r11, %r10;
-; CHECK-NOF32X2-NEXT:    neg.ftz.f32 %r12, %r11;
-; CHECK-NOF32X2-NEXT:    fma.rn.ftz.f32 %r13, %r12, %r3, %r1;
-; CHECK-NOF32X2-NEXT:    testp.infinite.f32 %p2, %r3;
-; CHECK-NOF32X2-NEXT:    selp.f32 %r14, %r1, %r13, %p2;
-; CHECK-NOF32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r14, %r9};
+; CHECK-NOF32X2-NEXT:    fma.rn.ftz.f32 %r8, %r7, %r3, %r1;
+; CHECK-NOF32X2-NEXT:    div.rn.ftz.f32 %r9, %r2, %r4;
+; CHECK-NOF32X2-NEXT:    cvt.rzi.ftz.f32.f32 %r10, %r9;
+; CHECK-NOF32X2-NEXT:    neg.ftz.f32 %r11, %r10;
+; CHECK-NOF32X2-NEXT:    fma.rn.ftz.f32 %r12, %r11, %r4, %r2;
+; CHECK-NOF32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r8, %r12};
 ; CHECK-NOF32X2-NEXT:    ret;
 ;
 ; CHECK-F32X2-LABEL: test_frem_ftz(
 ; CHECK-F32X2:       {
-; CHECK-F32X2-NEXT:    .reg .pred %p<3>;
-; CHECK-F32X2-NEXT:    .reg .b32 %r<15>;
+; CHECK-F32X2-NEXT:    .reg .b32 %r<13>;
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
 ; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_frem_ftz_param_1];
 ; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_frem_ftz_param_0];
-; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
-; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-F32X2-NEXT:    div.rn.ftz.f32 %r5, %r4, %r2;
+; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd2;
+; CHECK-F32X2-NEXT:    div.rn.ftz.f32 %r5, %r1, %r3;
 ; CHECK-F32X2-NEXT:    cvt.rzi.ftz.f32.f32 %r6, %r5;
 ; CHECK-F32X2-NEXT:    neg.ftz.f32 %r7, %r6;
-; CHECK-F32X2-NEXT:    fma.rn.ftz.f32 %r8, %r7, %r2, %r4;
-; CHECK-F32X2-NEXT:    testp.infinite.f32 %p1, %r2;
-; CHECK-F32X2-NEXT:    selp.f32 %r9, %r4, %r8, %p1;
-; CHECK-F32X2-NEXT:    div.rn.ftz.f32 %r10, %r3, %r1;
-; CHECK-F32X2-NEXT:    cvt.rzi.ftz.f32.f32 %r11, %r10;
-; CHECK-F32X2-NEXT:    neg.ftz.f32 %r12, %r11;
-; CHECK-F32X2-NEXT:    fma.rn.ftz.f32 %r13, %r12, %r1, %r3;
-; CHECK-F32X2-NEXT:    testp.infinite.f32 %p2, %r1;
-; CHECK-F32X2-NEXT:    selp.f32 %r14, %r3, %r13, %p2;
-; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r14, %r9};
+; CHECK-F32X2-NEXT:    fma.rn.ftz.f32 %r8, %r7, %r3, %r1;
+; CHECK-F32X2-NEXT:    div.rn.ftz.f32 %r9, %r2, %r4;
+; CHECK-F32X2-NEXT:    cvt.rzi.ftz.f32.f32 %r10, %r9;
+; CHECK-F32X2-NEXT:    neg.ftz.f32 %r11, %r10;
+; CHECK-F32X2-NEXT:    fma.rn.ftz.f32 %r12, %r11, %r4, %r2;
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r8, %r12};
 ; CHECK-F32X2-NEXT:    ret;
-  %r = frem <2 x float> %a, %b
+  %r = frem afn <2 x float> %a, %b
   ret <2 x float> %r
 }
 
