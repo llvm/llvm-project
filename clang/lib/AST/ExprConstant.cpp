@@ -62,6 +62,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/CRC.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
@@ -10671,6 +10672,20 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!getAlignmentArgument(E->getArg(1), E->getArg(0)->getType(), Info,
                               Alignment))
       return false;
+
+    if (!Result.Base) {
+      // Null pointers are always aligned and align_up/align_down preserve null.
+      if (Result.Offset.isZero())
+        return true;
+
+      // Non-null pointers without a base (for example, integer-to-pointer
+      // casts such as (void *)32) do not have enough information to perform
+      // pointer arithmetic during constant evaluation.
+      Info.FFDiag(E->getArg(0), diag::note_constexpr_alignment_adjust)
+          << Alignment;
+      return false;
+    }
+
     CharUnits BaseAlignment = getBaseAlignment(Info, Result);
     CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(Result.Offset);
     // For align_up/align_down, we can return the same value if the alignment
@@ -17044,15 +17059,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     // CRC32C polynomial (iSCSI polynomial, bit-reversed)
     static const uint32_t CRC32C_POLY = 0x82F63B78;
 
-    // Process each byte
-    uint32_t Result = static_cast<uint32_t>(CRCVal);
-    for (unsigned I = 0; I != DataBytes; ++I) {
-      uint8_t Byte = static_cast<uint8_t>((DataVal >> (I * 8)) & 0xFF);
-      Result ^= Byte;
-      for (int J = 0; J != 8; ++J) {
-        Result = (Result >> 1) ^ ((Result & 1) ? CRC32C_POLY : 0);
-      }
-    }
+    uint32_t Result = llvm::calculateReflectedCRC32(
+        static_cast<uint32_t>(CRCVal), DataVal, DataBytes, CRC32C_POLY);
 
     return Success(Result, E);
   };
@@ -17116,6 +17124,18 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       // If we evaluated a pointer, check the minimum known alignment.
       LValue Ptr;
       Ptr.setFrom(Info.Ctx, Src);
+      if (!Ptr.Base) {
+        // Null pointers are always aligned.
+        if (Ptr.Offset.isZero())
+          return Success(1, E);
+
+        Info.FFDiag(E->getArg(0), diag::note_constexpr_alignment_compute)
+            << Alignment;
+        // Reject non-null pointers without an underlying object.
+        // Do not interpret the pointer offset as an integer address.
+        return false;
+      }
+
       CharUnits BaseAlignment = getBaseAlignment(Info, Ptr);
       CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(Ptr.Offset);
       // We can return true if the known alignment at the computed offset is

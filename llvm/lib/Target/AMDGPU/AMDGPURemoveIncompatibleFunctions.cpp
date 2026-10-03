@@ -39,7 +39,7 @@ public:
   bool checkFunction(Function &F);
 
   bool run(Module &M) {
-    assert(TM->getTargetTriple().isAMDGCN());
+    assert(M.getTargetTriple().isAMDGCN());
 
     SmallVector<Function *, 4> FnsToDelete;
     for (Function &F : M) {

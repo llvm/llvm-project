@@ -6302,6 +6302,9 @@ void AArch64TTIImpl::getUnrollingPreferences(
         return;
       }
 
+      // The cost is only compared against Aarch64ForceUnrollThreshold below.
+      if (Cost >= Aarch64ForceUnrollThreshold)
+        continue;
       SmallVector<const Value *, 4> Operands(I.operand_values());
       Cost += getInstructionCost(&I, Operands,
                                  TargetTransformInfo::TCK_SizeAndLatency);
