@@ -101,3 +101,142 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+func.func @insert_prefetch_loop_local_offset(%arg0: memref<128x?xf16>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c16 = arith.constant 16 : index
+  %k = memref.dim %arg0, %c1 : memref<128x?xf16>
+  scf.for %iv = %c0 to %k step %c16 {
+    %remaining = arith.subi %k, %iv : index
+    %size = arith.minsi %remaining, %c16 : index
+    %tile = memref.subview %arg0[0, %iv] [128, %size] [1, 1]
+        : memref<128x?xf16> to memref<128x?xf16, strided<[?, 1], offset: ?>>
+    %desc = xegpu.create_nd_tdesc %tile
+        : memref<128x?xf16, strided<[?, 1], offset: ?>>
+          -> !xegpu.tensor_desc<128x16xf16>
+    %offset = arith.addi %iv, %c0 : index
+    %load = xegpu.load_nd %desc[0, %offset]
+        : !xegpu.tensor_desc<128x16xf16> -> vector<128x16xf16>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %load = transform.structured.match ops{["xegpu.load_nd"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    // expected-error@below {{loop-local prefetch requires zero load offsets}}
+    %desc = transform.xegpu.insert_prefetch %load nb_prefetch = 1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @insert_prefetch_no_iv(%arg0: memref<128x128xf16>) {
+  %c0 = arith.constant 0 : index
+  %c16 = arith.constant 16 : index
+  %c128 = arith.constant 128 : index
+  %desc = xegpu.create_nd_tdesc %arg0
+      : memref<128x128xf16> -> !xegpu.tensor_desc<16x16xf16>
+  scf.for %iv = %c0 to %c128 step %c16 {
+    %load = xegpu.load_nd %desc[0, 0]
+        : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %load = transform.structured.match ops{["xegpu.load_nd"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    // expected-error@below {{prefetch load offsets must directly use the loop induction variable}}
+    %desc = transform.xegpu.insert_prefetch %load nb_prefetch = 1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @insert_prefetch_derived_load_offset(%arg0: memref<128x128xf16>) {
+  %c0 = arith.constant 0 : index
+  %c16 = arith.constant 16 : index
+  %c128 = arith.constant 128 : index
+  %desc = xegpu.create_nd_tdesc %arg0
+      : memref<128x128xf16> -> !xegpu.tensor_desc<16x16xf16>
+  scf.for %iv = %c0 to %c128 step %c16 {
+    %offset = arith.addi %iv, %c0 : index
+    %load = xegpu.load_nd %desc[%offset, %iv]
+        : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %load = transform.structured.match ops{["xegpu.load_nd"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    // expected-error@below {{prefetch load offsets must use the induction variable directly or be loop-invariant}}
+    %desc = transform.xegpu.insert_prefetch %load nb_prefetch = 1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @insert_prefetch_no_subview_iv(%arg0: memref<128x?xf16>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c16 = arith.constant 16 : index
+  %k = memref.dim %arg0, %c1 : memref<128x?xf16>
+  scf.for %iv = %c0 to %k step %c16 {
+    %tile = memref.subview %arg0[0, 0] [128, 16] [1, 1]
+        : memref<128x?xf16> to memref<128x16xf16, strided<[?, 1]>>
+    %desc = xegpu.create_nd_tdesc %tile
+        : memref<128x16xf16, strided<[?, 1]>>
+          -> !xegpu.tensor_desc<128x16xf16>
+    %load = xegpu.load_nd %desc[0, 0]
+        : !xegpu.tensor_desc<128x16xf16> -> vector<128x16xf16>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %load = transform.structured.match ops{["xegpu.load_nd"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    // expected-error@below {{loop-local prefetch requires a subview offset that directly uses the loop induction variable}}
+    %desc = transform.xegpu.insert_prefetch %load nb_prefetch = 1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @insert_prefetch_derived_subview_offset(%arg0: memref<128x?xf16>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c16 = arith.constant 16 : index
+  %k = memref.dim %arg0, %c1 : memref<128x?xf16>
+  scf.for %iv = %c0 to %k step %c16 {
+    %offset = arith.addi %iv, %c0 : index
+    %remaining = arith.subi %k, %iv : index
+    %size = arith.minsi %remaining, %c16 : index
+    %tile = memref.subview %arg0[0, %offset] [128, %size] [1, 1]
+        : memref<128x?xf16> to memref<128x?xf16, strided<[?, 1], offset: ?>>
+    %desc = xegpu.create_nd_tdesc %tile
+        : memref<128x?xf16, strided<[?, 1], offset: ?>>
+          -> !xegpu.tensor_desc<128x16xf16>
+    %load = xegpu.load_nd %desc[0, 0]
+        : !xegpu.tensor_desc<128x16xf16> -> vector<128x16xf16>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %load = transform.structured.match ops{["xegpu.load_nd"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    // expected-error@below {{prefetch subview offsets must use the induction variable directly or be loop-invariant}}
+    %desc = transform.xegpu.insert_prefetch %load nb_prefetch = 1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}

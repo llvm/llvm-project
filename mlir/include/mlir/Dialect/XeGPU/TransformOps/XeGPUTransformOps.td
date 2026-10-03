@@ -152,8 +152,9 @@ def InsertPrefetchOp : Op<Transform_Dialect, "xegpu.insert_prefetch", [
   let description = [{
     Inserts `xegpu.prefetch_nd` operations for the given `xegpu.load_nd` op.
     The load op must reside within the `scf.for` loop. Number of prefetch steps
-    is set by the `nb_prefetch` argument (default value is 1). Returns a handle
-    to the created `xegpu.create_nd_desc` op.
+    is set by the `nb_prefetch` argument (default value is 1).
+
+    Returns a handle to the created `xegpu.create_nd_tdesc` ops.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,

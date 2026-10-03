@@ -8,10 +8,14 @@
 
 #include "mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 
 #include <optional>
@@ -348,6 +352,48 @@ void transform::SetGPULaunchThreadsOp::getEffects(
   modifiesPayload(effects);
 }
 
+/// Collect the pure loop-local producer slice (i.e. set of ops) needed to
+/// recreate a descriptor for another iteration. Values defined above the loop
+/// are reused.
+static LogicalResult
+collectLoopLocalDescriptorDependancyChain(Value value, scf::ForOp forOp,
+                                          SmallPtrSetImpl<Operation *> &seen,
+                                          SmallVectorImpl<Operation *> &slice) {
+  if (auto arg = dyn_cast<BlockArgument>(value))
+    return forOp.isDefinedOutsideOfLoop(arg) || arg == forOp.getInductionVar()
+               ? success()
+               : failure();
+
+  Operation *def = value.getDefiningOp();
+  if (forOp.isDefinedOutsideOfLoop(value))
+    return success();
+  if (def->getBlock() != forOp.getBody() || def->getNumRegions() != 0 ||
+      !isMemoryEffectFree(def))
+    return failure();
+  if (!seen.insert(def).second)
+    return success();
+  for (Value operand : def->getOperands())
+    if (failed(collectLoopLocalDescriptorDependancyChain(operand, forOp, seen,
+                                                         slice)))
+      return failure();
+  slice.push_back(def);
+  return success();
+}
+
+/// Clone the loop-local producer slice with the current induction variable
+/// replaced by the iteration that should be prefetched.
+static xegpu::CreateNdDescOp
+clonePrefetchDescriptor(transform::TransformRewriter &rewriter,
+                        scf::ForOp forOp, xegpu::CreateNdDescOp descOp,
+                        ArrayRef<Operation *> slice, Value iteration) {
+  IRMapping mapping;
+  mapping.map(forOp.getInductionVar(), iteration);
+  for (Operation *op : slice)
+    rewriter.clone(*op, mapping);
+  return mapping.lookup(descOp.getResult())
+      .getDefiningOp<xegpu::CreateNdDescOp>();
+}
+
 DiagnosedSilenceableFailure
 transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
                                    transform::TransformResults &results,
@@ -399,26 +445,109 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
     return diag;
   }
 
-  // Find descriptor op.
+  // Find the load's descriptor and distinguish the two supported forms:
+  // (1) a descriptor outside the loop with the loop induction variable in a
+  //     load offset, or
+  // (2) a descriptor is created off of a subview. This subview must carry the
+  //     loop induction variable in its offsets. It is expected that load
+  //     offsets are zero.
   auto maybeDescOp =
       findProducerOfType<xegpu::CreateNdDescOp>(loadOp.getResult());
   if (!maybeDescOp)
     return emitSilenceableFailure(getLoc()) << "Could not find descriptor op.";
   auto descOp = *maybeDescOp;
+  bool loopLocalDesc = forOp->isAncestor(descOp);
+  SmallVector<OpFoldResult> loadOffsets = loadOp.getMixedOffsets();
+  if (loopLocalDesc) {
+    // Case 2: the loop position must come from a subview, not load_nd.
+    if (!areAllConstantIntValue(loadOffsets, 0))
+      return emitSilenceableFailure(getLoc())
+             << "loop-local prefetch requires zero load offsets";
+  } else {
+    // Case 1: at least one load offset must be the induction variable itself.
+    // Every other offset must already be available before the loop.
+    bool loadUsesIV = false;
+    for (OpFoldResult offset : loadOffsets) {
+      auto value = dyn_cast<Value>(offset);
+      if (!value)
+        continue;
+      if (value == forOp.getInductionVar()) {
+        loadUsesIV = true;
+        continue;
+      }
+      if (!forOp.isDefinedOutsideOfLoop(value))
+        return emitSilenceableFailure(getLoc())
+               << "prefetch load offsets must use the induction variable "
+                  "directly or be loop-invariant";
+    }
+    if (!loadUsesIV)
+      return emitSilenceableFailure(getLoc())
+             << "prefetch load offsets must directly use the loop induction "
+                "variable";
+  }
 
-  // Clone desc op outside the loop.
+  SmallVector<Operation *> descSlice;
+  if (loopLocalDesc) {
+    // Case 2: cloning a future subview needs a boundary-checking descriptor
+    // and a side-effect-free chain of producers from within the loop body.
+    if (!descOp.getType().getBoundaryCheck())
+      return emitSilenceableFailure(getLoc())
+             << "loop-local prefetch requires descriptor boundary_check";
+
+    SmallPtrSet<Operation *, 8> seen;
+    if (failed(collectLoopLocalDescriptorDependancyChain(
+            descOp.getResult(), forOp, seen, descSlice)))
+      return emitSilenceableFailure(getLoc())
+             << "prefetch descriptor depends on unsupported loop-local values";
+
+    // A local subview must carry the induction variable directly in an
+    // offset. Its remaining offsets must be reusable in the prologue.
+    bool hasSubview = false;
+    bool subviewUsesIV = false;
+    for (Operation *op : descSlice) {
+      auto subview = dyn_cast<memref::SubViewOp>(op);
+      if (!subview)
+        continue;
+      hasSubview = true;
+      for (OpFoldResult offset : subview.getMixedOffsets()) {
+        auto value = dyn_cast<Value>(offset);
+        if (!value)
+          continue;
+        if (value == forOp.getInductionVar()) {
+          subviewUsesIV = true;
+          continue;
+        }
+        if (!forOp.isDefinedOutsideOfLoop(value))
+          return emitSilenceableFailure(getLoc())
+                 << "prefetch subview offsets must use the induction variable "
+                    "directly or be loop-invariant";
+      }
+    }
+    if (!hasSubview || !subviewUsesIV)
+      return emitSilenceableFailure(getLoc())
+             << "loop-local prefetch requires a subview offset that directly "
+                "uses the loop induction variable";
+  }
+
+  // Case 1 shares one descriptor across all prefetches. Case 2 recreates its
+  // loop-local descriptor at each prefetch site below.
   rewriter.setInsertionPoint(forOp);
-  auto newDescOp =
-      cast<xegpu::CreateNdDescOp>(rewriter.clone(*descOp.getOperation()));
+  xegpu::CreateNdDescOp newDescOp;
+  if (!loopLocalDesc)
+    newDescOp =
+        cast<xegpu::CreateNdDescOp>(rewriter.clone(*descOp.getOperation()));
 
-  // Clone reduction loop to emit initial prefetches.
-  // Compute upper bound of the init loop: start + nbPrefetch * step.
+  // Warm up the first nbPrefetch tiles before the load loop. Case 2 clamps
+  // this prologue to the runtime bound so its subviews remain in-bounds.
   auto nbPrefetchCst =
       arith::ConstantIndexOp::create(rewriter, forOp.getLoc(), nbPrefetch);
   auto nbStep = rewriter.createOrFold<arith::MulIOp>(
       forOp.getLoc(), nbPrefetchCst, forOp.getStep());
   auto initUpBound = rewriter.createOrFold<arith::AddIOp>(
       forOp.getLoc(), forOp.getLowerBound(), nbStep);
+  if (loopLocalDesc)
+    initUpBound = arith::MinSIOp::create(rewriter, forOp.getLoc(), initUpBound,
+                                         forOp.getUpperBound());
   auto initForOp =
       scf::ForOp::create(rewriter, forOp.getLoc(), forOp.getLowerBound(),
                          initUpBound, forOp.getStep());
@@ -427,10 +556,13 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
   auto readCacheHint =
       xegpu::CachePolicyAttr::get(ctx, xegpu::CachePolicy::CACHED);
 
-  // Modify loadOp mixedOffsets by replacing the for loop induction variable
-  // with the given value.
+  // Case 1 substitutes the iteration into load_nd's direct-IV offset. In
+  // case 2 the cloned subview carries the iteration, so load offsets stay zero.
   auto getPrefetchOffsets =
       [&](Value replacementVal) -> SmallVector<OpFoldResult> {
+    if (loopLocalDesc)
+      return getAsIndexOpFoldResult(
+          ctx, SmallVector<int64_t>(loadOffsets.size(), 0));
     IRMapping mapping;
     mapping.map(forOp.getInductionVar(), replacementVal);
     SmallVector<Value> dynamicOffsets =
@@ -441,31 +573,54 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
     return getMixedValues(constOffsets, dynamicOffsets, ctx);
   };
 
-  // Insert prefetch op in init loop.
-  // Replace induction var with the init loop induction var.
+  // Issue warmup prefetches. Case 2 clones the subview and descriptor with the
+  // prologue induction variable replacing the load loop's variable.
   rewriter.setInsertionPointToStart(initForOp.getBody());
-  xegpu::PrefetchNdOp::create(rewriter, newDescOp.getLoc(),
-                              newDescOp.getResult(),
+  xegpu::CreateNdDescOp initDescOp =
+      loopLocalDesc
+          ? clonePrefetchDescriptor(rewriter, forOp, descOp, descSlice,
+                                    initForOp.getInductionVar())
+          : newDescOp;
+  xegpu::PrefetchNdOp::create(rewriter, initDescOp.getLoc(),
+                              initDescOp.getResult(),
                               getPrefetchOffsets(initForOp.getInductionVar()),
                               readCacheHint, readCacheHint, readCacheHint,
                               /*layout=*/nullptr);
 
-  // Insert prefetch op in main loop.
-  // Calculate prefetch offset after the init prefetches have been issued.
+  // Prefetch nbPrefetch steps ahead at the start of each load-loop iteration.
   rewriter.setInsertionPointToStart(forOp.getBody());
   auto prefetchOffset = arith::AddIOp::create(rewriter, forOp.getLoc(),
                                               forOp.getInductionVar(), nbStep);
-  // Replace induction var with correct offset.
-  xegpu::PrefetchNdOp::create(rewriter, newDescOp.getLoc(),
-                              newDescOp.getResult(),
+  xegpu::CreateNdDescOp mainDescOp = newDescOp;
+  if (loopLocalDesc) {
+    // A descriptor's boundary check does not make an out-of-bounds subview
+    // valid. Only build the future subview while its iteration is in range.
+    auto inBounds = arith::CmpIOp::create(
+        rewriter, forOp.getLoc(), arith::CmpIPredicate::slt, prefetchOffset,
+        forOp.getUpperBound());
+    auto ifOp = scf::IfOp::create(rewriter, forOp.getLoc(), inBounds,
+                                  /*withElseRegion=*/false);
+    rewriter.setInsertionPointToStart(ifOp.thenBlock());
+    mainDescOp = clonePrefetchDescriptor(rewriter, forOp, descOp, descSlice,
+                                         prefetchOffset);
+  }
+  // Replace induction var with the future tile's offset.
+  xegpu::PrefetchNdOp::create(rewriter, mainDescOp.getLoc(),
+                              mainDescOp.getResult(),
                               getPrefetchOffsets(prefetchOffset), readCacheHint,
                               readCacheHint, readCacheHint, /*layout=*/nullptr);
 
-  // Unroll the init loop.
-  if (failed(loopUnrollFull(initForOp)))
+  // Case 1 has a fixed-count prologue that can be unrolled. Case 2 keeps its
+  // runtime-bounded prologue as a loop.
+  if (!loopLocalDesc && failed(loopUnrollFull(initForOp)))
     return emitSilenceableFailure(getLoc()) << "Failed to unroll the loop";
 
-  results.set(llvm::cast<OpResult>(getResult()), {newDescOp});
+  // Return both descriptors for case 2 so callers can annotate both prefetch
+  // sites; case 1 has only the shared descriptor.
+  if (loopLocalDesc)
+    results.set(llvm::cast<OpResult>(getResult()), {initDescOp, mainDescOp});
+  else
+    results.set(llvm::cast<OpResult>(getResult()), {newDescOp});
 
   return DiagnosedSilenceableFailure::success();
 }
