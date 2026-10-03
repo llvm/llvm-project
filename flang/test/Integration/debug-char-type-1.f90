@@ -16,10 +16,12 @@ program test
 end program test
 
 ! CHECK-DAG: !DIGlobalVariable(name: "str"{{.*}}type: ![[TY40:[0-9]+]]{{.*}})
-! CHECK-DAG: ![[TY40]] = !DIStringType(size: 320, encoding: DW_ATE_ASCII)
+! CHECK-DAG: ![[TY40]] = !DIStringType(size: 320, encoding: DW_ATE_ASCII, charType: ![[CHAR1:[0-9]+]])
+! CHECK-DAG: ![[CHAR1]] = !DIBasicType(name: "character(kind=1)", size: 8, encoding: DW_ATE_ASCII)
 ! CHECK-DAG: !DIGlobalVariable(name: "str2"{{.*}}type: ![[TY:[0-9]+]]{{.*}})
-! CHECK-DAG: ![[TY]] = !DIStringType(stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref), encoding: DW_ATE_ASCII)
+! CHECK-DAG: ![[TY]] = !DIStringType(stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref), encoding: DW_ATE_ASCII, charType: ![[CHAR1]])
 ! CHECK-DAG: !DILocalVariable(name: "first"{{.*}}type: ![[TY8:[0-9]+]])
-! CHECK-DAG: ![[TY8]] = !DIStringType(size: 256, encoding: DW_ATE_UCS)
+! CHECK-DAG: ![[TY8]] = !DIStringType(size: 256, encoding: DW_ATE_UCS, charType: ![[CHAR4:[0-9]+]])
+! CHECK-DAG: ![[CHAR4]] = !DIBasicType(name: "character(kind=4)", size: 32, encoding: DW_ATE_UCS)
 ! CHECK-DAG: !DILocalVariable(name: "second"{{.*}}type: ![[TY10:[0-9]+]])
-! CHECK-DAG: ![[TY10]] = !DIStringType(size: 80, encoding: DW_ATE_ASCII)
+! CHECK-DAG: ![[TY10]] = !DIStringType(size: 80, encoding: DW_ATE_ASCII, charType: ![[CHAR1]])
