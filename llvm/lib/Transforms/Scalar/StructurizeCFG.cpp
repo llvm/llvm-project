@@ -76,8 +76,8 @@ static bool isIsland(const BasicBlock *BB) {
 }
 
 /// True if \p R is an island whose targets already form a structured fan: the
-/// island is the region entry, and every other node is a non-region straigt arm
-/// that is entered only from the island and leaves only to the region exit.
+/// island is the region entry, and every other node is a non-region straight
+/// arm that is entered only from the island and leaves only to the region exit.
 ///
 /// Such a region is already a well-formed single-entry/single-exit selection,
 /// so structurization has nothing to fix. Running the island transform on it
@@ -87,8 +87,12 @@ static bool isIsland(const BasicBlock *BB) {
 ///
 /// Islands with several edges to one target are excluded: collapsing those
 /// edges is not an optimization but a requirement since nothing else in the
-/// pass maintains a target's phis accross multiple edges from the same
+/// pass maintains a target's phis across multiple edges from the same
 /// predecessor, so they always take the normal path.
+///
+/// Islands that target their own block are excluded as well: such a region is
+/// a loop, not a selection, and leaving its back edge unhandled while the
+/// surrounding region is structurized breaks the CFG.
 static bool isAlreadyStructuredIsland(Region *R) {
   BasicBlock *Entry = R->getEntry();
   BasicBlock *Exit = R->getExit();
@@ -97,9 +101,11 @@ static bool isAlreadyStructuredIsland(Region *R) {
 
   SmallPtrSet<const BasicBlock *, 4> Seen;
   const Instruction *Term = Entry->getTerminator();
-  for (unsigned I = 0, E = Term->getNumSuccessors(); I != E; ++I)
-    if (!Seen.insert(Term->getSuccessor(I)).second)
+  for (unsigned I = 0, E = Term->getNumSuccessors(); I != E; ++I) {
+    BasicBlock *Succ = Term->getSuccessor(I);
+    if (Succ == Entry || !Seen.insert(Succ).second)
       return false;
+  }
 
   for (RegionNode *N : R->elements()) {
     if (N->isSubRegion())

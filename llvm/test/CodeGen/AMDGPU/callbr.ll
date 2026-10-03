@@ -42,10 +42,14 @@ define void @callbr_self_loop(i1 %c) {
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_branch .LBB1_1
-; CHECK-NEXT:  .LBB1_2: ; Inline asm indirect target
-; CHECK-NEXT:    ; %callbr.target.ret
+; CHECK-NEXT:  ; %bb.2: ; %callbr.target.callbr
+; CHECK-NEXT:    ; in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:    s_cbranch_execnz .LBB1_1
+; CHECK-NEXT:    s_branch .LBB1_4
+; CHECK-NEXT:  .LBB1_3: ; Inline asm indirect target
+; CHECK-NEXT:    ; %callbr.target.callbr.target.ret
 ; CHECK-NEXT:    ; Label of block must be emitted
+; CHECK-NEXT:  .LBB1_4: ; %ret
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   br label %callbr
 callbr:
@@ -53,3 +57,71 @@ callbr:
 ret:
   ret void
 }
+
+; A loop with a divergent latch whose header is a callbr. The loop must keep a
+; break mask (s_or/s_andn2 of exec) so that lanes leaving the loop early are
+; re-enabled at the exit.
+define amdgpu_kernel void @callbr_header_divergent_loop(ptr addrspace(1) %out) {
+; CHECK-LABEL: callbr_header_divergent_loop:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; CHECK-NEXT:    s_mov_b32 s4, 0
+; CHECK-NEXT:    s_mov_b64 s[2:3], 0
+; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, 1
+; CHECK-NEXT:    v_mov_b32_e32 v3, 2
+; CHECK-NEXT:  .LBB2_1: ; %header
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:  ; %bb.2: ; %ft
+; CHECK-NEXT:    ; in Loop: Header=BB2_1 Depth=1
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    global_store_dword v1, v2, s[0:1]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:  .LBB2_3: ; %latch
+; CHECK-NEXT:    ; in Loop: Header=BB2_1 Depth=1
+; CHECK-NEXT:    s_add_i32 s4, s4, 1
+; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc, s4, v0
+; CHECK-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; CHECK-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; CHECK-NEXT:    s_cbranch_execnz .LBB2_1
+; CHECK-NEXT:    s_branch .LBB2_5
+; CHECK-NEXT:  .LBB2_4: ; Inline asm indirect target
+; CHECK-NEXT:    ; %ind
+; CHECK-NEXT:    ; in Loop: Header=BB2_1 Depth=1
+; CHECK-NEXT:    ; Label of block must be emitted
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    global_store_dword v1, v3, s[0:1]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_branch .LBB2_3
+; CHECK-NEXT:  .LBB2_5: ; %exit
+; CHECK-NEXT:    s_or_b64 exec, exec, s[2:3]
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, 3
+; CHECK-NEXT:    global_store_dword v0, v1, s[0:1]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_endpgm
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  br label %header
+header:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %latch ]
+  callbr void asm sideeffect "", "!i"() to label %ft [label %ind]
+ft:
+  store volatile i32 1, ptr addrspace(1) %out
+  br label %latch
+ind:
+  store volatile i32 2, ptr addrspace(1) %out
+  br label %latch
+latch:
+  %i.next = add i32 %i, 1
+  %cc = icmp ult i32 %i.next, %tid
+  br i1 %cc, label %header, label %exit
+exit:
+  store volatile i32 3, ptr addrspace(1) %out
+  ret void
+}
+
+declare i32 @llvm.amdgcn.workitem.id.x()
