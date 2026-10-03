@@ -2338,7 +2338,13 @@ bool GVNPassImpl::performLoopLoadPRE(LoadInst *Load,
 
   // Make sure the memory at this pointer cannot be freed, therefore we can
   // safely reload from it after clobber.
-  if (LoadPtr->canBeFreed())
+  //
+  // The header load has already dereferenced LoadPtr on this iteration, so
+  // only a deallocation between that load and the reload in LoopBlock can make
+  // the same address unsafe to read again. Check every path between these two
+  // points for an instruction that may deallocate the memory.
+  if (LoadPtr->canBeFreed() &&
+      !willNotFreeBetween(Load, LoopBlock->getTerminator(), DT))
     return false;
 
   // TODO: Support critical edge splitting if blocker has more than 1 successor.
