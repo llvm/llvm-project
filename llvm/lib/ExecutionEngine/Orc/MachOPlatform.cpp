@@ -14,6 +14,7 @@
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
+#include "llvm/ExecutionEngine/Orc/BindCallControllerHandlerSPS.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/MachOBuilder.h"
 #include "llvm/ExecutionEngine/Orc/SPSProxySpec.h"
@@ -445,8 +446,7 @@ ArrayRef<std::pair<const char *, const char *>>
 MachOPlatform::standardLazyCompilationAliases() {
   static const std::pair<const char *, const char *>
       StandardLazyCompilationAliases[] = {
-          {"__orc_rt_reenter", "__orc_rt_sysv_reenter"},
-          {"__orc_rt_resolve_tag", "___orc_rt_resolve_tag"}};
+          {"__orc_rt_reenter", "__orc_rt_sysv_reenter"}};
 
   return ArrayRef<std::pair<const char *, const char *>>(
       StandardLazyCompilationAliases);
@@ -625,21 +625,19 @@ MachOPlatform::MachOPlatform(
 }
 
 Error MachOPlatform::associateRuntimeSupportFunctions() {
-  ExecutionSession::JITDispatchHandlerAssociationMap WFs;
-
   using PushInitializersSPSSig =
       SPSExpected<SPSMachOJITDylibDepInfoMap>(SPSExecutorAddr);
-  WFs[ES.intern("___orc_rt_macho_push_initializers_tag")] =
-      ES.wrapAsyncWithSPS<PushInitializersSPSSig>(
-          this, &MachOPlatform::rt_pushInitializers);
-
   using PushSymbolsSPSSig =
       SPSError(SPSExecutorAddr, SPSSequence<SPSTuple<SPSString, bool>>);
-  WFs[ES.intern("___orc_rt_macho_push_symbols_tag")] =
-      ES.wrapAsyncWithSPS<PushSymbolsSPSSig>(this,
-                                             &MachOPlatform::rt_pushSymbols);
 
-  return ES.registerJITDispatchHandlers(PlatformJD, std::move(WFs));
+  return ES.registerCallControllerHandlers(
+      PlatformJD,
+      bindCallControllerHandlerSPS<PushInitializersSPSSig>(
+          SymbolNameSpec::c("__orc_rt_macho_push_initializers_tag"), this,
+          &MachOPlatform::rt_pushInitializers),
+      bindCallControllerHandlerSPS<PushSymbolsSPSSig>(
+          SymbolNameSpec::c("__orc_rt_macho_push_symbols_tag"), this,
+          &MachOPlatform::rt_pushSymbols));
 }
 
 void MachOPlatform::pushInitializersLoop(

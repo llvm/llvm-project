@@ -700,7 +700,8 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
     if (Kind.isReadOnly() || Kind.isReadOnlyWithRel() || Kind.isData() ||
         Kind.isBSS()) {
       AddSectionPrefix =
-          !SectionPrefix.starts_with(".hot") || PreserveHotDataSectionPrefix;
+          TM.getEnableStaticDataPartitioning() &&
+          (!SectionPrefix.starts_with(".hot") || PreserveHotDataSectionPrefix);
     }
 
     if (AddSectionPrefix) {
@@ -2904,18 +2905,21 @@ MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
 
 MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
     const Function &F, const MCSymbol &FnSym, const TargetMachine &TM) const {
-  std::string Name = ".gcc_exception_table." + F.getName().str();
+  std::string Name = "GCC_except." + F.getName().str();
 
+  MCSectionGOFF *SD = getContext().getGOFFSection(
+      SectionKind::getMetadata(), Name,
+      GOFF::SDAttr{GOFF::ESD_TA_Unspecified, GOFF::ESD_BSC_Section});
   MCSectionGOFF *WSA = getContext().getGOFFSection(
       SectionKind::getMetadata(), GOFF::CLASS_WSA,
       GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
                    GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
-                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0, 0},
-      static_cast<MCSectionGOFF *>(TextSection)->getParent());
-  WSA->setAlignment(Align(4)); // Fullword
+                   GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_0, 0},
+      SD);
+  WSA->setAlignment(Align(8));
   return getContext().getGOFFSection(
       SectionKind::getData(), Name,
-      GOFF::PRAttr{true, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
+      GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
                    GOFF::ESD_LT_XPLink, GOFF::ESD_BSC_Section, 0},
       WSA);
 }

@@ -685,6 +685,10 @@ public:
   /// Add requires decl to internal vector
   void addRequiresDecl(OMPRequiresDecl *RD) { RequiresDecls.push_back(RD); }
 
+  ArrayRef<const OMPRequiresDecl *> getRequiresDecls() const {
+    return RequiresDecls;
+  }
+
   /// Checks if the defined 'requires' directive has specified type of clause.
   template <typename ClauseType> bool hasRequiresDeclWithClause() const {
     return llvm::any_of(RequiresDecls, [](const OMPRequiresDecl *D) {
@@ -2079,6 +2083,14 @@ void SemaOpenMP::InitDataSharingAttributesStack() {
 }
 
 #define DSAStack static_cast<DSAStackTy *>(VarDataSharingAttributesStack)
+
+void SemaOpenMP::addRequiresDecl(OMPRequiresDecl *D) {
+  DSAStack->addRequiresDecl(D);
+}
+
+ArrayRef<const OMPRequiresDecl *> SemaOpenMP::getRequiresDecls() const {
+  return DSAStack->getRequiresDecls();
+}
 
 void SemaOpenMP::pushOpenMPFunctionRegion() { DSAStack->pushFunction(); }
 
@@ -11359,7 +11371,7 @@ static bool checkSimdlenSafelenSpecified(Sema &S,
     // If both simdlen and safelen clauses are specified, the value of the
     // simdlen parameter must be less than or equal to the value of the safelen
     // parameter.
-    if (SimdlenRes > SafelenRes) {
+    if (llvm::APSInt::compareValues(SimdlenRes, SafelenRes) > 0) {
       S.Diag(SimdlenLength->getExprLoc(),
              diag::err_omp_wrong_simdlen_safelen_values)
           << SimdlenLength->getSourceRange() << SafelenLength->getSourceRange();
