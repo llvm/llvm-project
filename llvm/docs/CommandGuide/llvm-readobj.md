@@ -176,7 +176,9 @@ Display the call graph section entries i.e. for each function
 its identifying information, each of its direct callees' information
 and for each indirect callee a 64-bit number representing the callee's
 function signature. This information can be used to reconstruct
-the program call graph.
+the program call graph. For relocatable object files, each function and
+direct callee is reported as the symbol and addend of the relocation that
+applies to its address.
 :::
 
 :::{option} --cg-profile

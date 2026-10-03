@@ -200,19 +200,52 @@ Sections:
     ]
 ...
 
-## Check missing relocation information.
+## Check that a single warning is reported when a SHT_LLVM_CALL_GRAPH section in
+## a relocatable object file has no relocation section, and that each address
+## field is then identified by its offset.
 # RUN: yaml2obj --docnum=6 %s -o %t11
 # RUN: llvm-readobj --elf-output-style=GNU --call-graph-info %t11 2>&1 | count 0
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t11 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t11 --check-prefixes=WARN-MISSING-INFO
+# RUN:   FileCheck %s -DFILE=%t11 --implicit-check-not=warning: \
+# RUN:     --check-prefixes=WARN-MISSING-INFO,LLVM-MISSING-INFO
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t11 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t11 --check-prefixes=WARN-MISSING-INFO
+# RUN:   FileCheck %s -DFILE=%t11 --implicit-check-not=warning: \
+# RUN:     --check-prefixes=WARN-MISSING-INFO,JSON-MISSING-INFO
 
 # WARN-MISSING-INFO: warning: '[[FILE]]': SHT_LLVM_CALL_GRAPH type section has unknown type ID for 2 indirect targets
-# WARN-MISSING-INFO: warning: '[[FILE]]': missing relocation for symbol at offset 2
-# WARN-MISSING-INFO: warning: '[[FILE]]': missing relocation for symbol at offset 19
-# WARN-MISSING-INFO: warning: '[[FILE]]': missing relocation for symbol at offset 29
-# WARN-MISSING-INFO: warning: '[[FILE]]': missing relocation for symbol at offset 56
+# WARN-MISSING-INFO: warning: '[[FILE]]': unable to get relocation section for SHT_LLVM_CALL_GRAPH section with index 2
+
+# LLVM-MISSING-INFO:      CallGraph [
+# LLVM-MISSING-INFO-NEXT:   Function {
+# LLVM-MISSING-INFO-NEXT:     Offset: 0x2
+# LLVM-MISSING-INFO-NEXT:     Version: 0
+# LLVM-MISSING-INFO-NEXT:     IsIndirectTarget: Yes
+# LLVM-MISSING-INFO-NEXT:     TypeID: 0x0
+# LLVM-MISSING-INFO-NEXT:     NumDirectCallees: 1
+# LLVM-MISSING-INFO-NEXT:     DirectCallees [
+# LLVM-MISSING-INFO-NEXT:       {
+# LLVM-MISSING-INFO-NEXT:         Offset: 0x13
+# LLVM-MISSING-INFO-NEXT:       }
+# LLVM-MISSING-INFO-NEXT:     ]
+# LLVM-MISSING-INFO-NEXT:     NumIndirectTargetTypeIDs: 0
+# LLVM-MISSING-INFO-NEXT:     IndirectTypeIDs: []
+# LLVM-MISSING-INFO-NEXT:   }
+# LLVM-MISSING-INFO-NEXT:   Function {
+# LLVM-MISSING-INFO-NEXT:     Offset: 0x1D
+# LLVM-MISSING-INFO:        Function {
+# LLVM-MISSING-INFO-NEXT:     Offset: 0x38
+
+# JSON-MISSING-INFO:      "Function": {
+# JSON-MISSING-INFO-NEXT:   "Offset": 2,
+# JSON-MISSING-INFO:        "DirectCallees": [
+# JSON-MISSING-INFO-NEXT:     {
+# JSON-MISSING-INFO-NEXT:       "Offset": 19
+# JSON-MISSING-INFO-NEXT:     }
+# JSON-MISSING-INFO-NEXT:   ],
+# JSON-MISSING-INFO:        "Function": {
+# JSON-MISSING-INFO-NEXT:   "Offset": 29,
+# JSON-MISSING-INFO:        "Function": {
+# JSON-MISSING-INFO-NEXT:   "Offset": 56,
 
 --- !ELF
 FileHeader:
@@ -271,14 +304,17 @@ Symbols:
   - Name:  baz
 ...
 
-## Check warning when the relocation section linked to SHT_LLVM_CALL_GRAPH has an invalid sh_link.
+## Check warning when the relocation section linked to SHT_LLVM_CALL_GRAPH has
+## an invalid sh_link. The entry is still dumped and identified by its offset.
 # RUN: yaml2obj --docnum=7 -DLINK=255 -DINFO=.llvm_call_graph %s -o %t13
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t13 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t13 --check-prefix=INVALID-RELA-LINK
+# RUN:   FileCheck %s -DFILE=%t13 --check-prefixes=INVALID-RELA-LINK,INVALID-RELA-LINK-LLVM
 # RUN: llvm-readobj --elf-output-style=JSON --call-graph-info %t13 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t13 --check-prefix=INVALID-RELA-LINK
 
-# INVALID-RELA-LINK: warning: '[[FILE]]': invalid section linked to SHT_RELA section with index 2: invalid section index: 255
+# INVALID-RELA-LINK: warning: '[[FILE]]': unable to locate a symbol table for SHT_RELA section with index 2: invalid section index: 255
+# INVALID-RELA-LINK-LLVM:      Function {
+# INVALID-RELA-LINK-LLVM-NEXT:   Offset: 0x2
 
 ## Check warning when getSectionAndRelocations fails to read sections.
 # RUN: yaml2obj --docnum=7 -DLINK=0 -DINFO=255 %s -o %t14
@@ -288,6 +324,15 @@ Symbols:
 # RUN:   FileCheck %s -DFILE=%t14 --check-prefix=ERR-READ-SECTION
 
 # ERR-READ-SECTION: warning: '[[FILE]]': unable to read SHT_LLVM_CALL_GRAPH section: SHT_RELA section with index 2: failed to get a relocated section: invalid section index: 255
+
+## Check warning when a relocation in SHT_LLVM_CALL_GRAPH references an invalid symbol index.
+# RUN: yaml2obj --docnum=7 -DLINK=.symtab -DINFO=.llvm_call_graph -DSYM=255 %s -o %t15
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t15 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t15 --check-prefix=INVALID-REL-SYM
+# RUN: llvm-readobj --elf-output-style=JSON --call-graph-info %t15 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t15 --check-prefix=INVALID-REL-SYM
+
+# INVALID-REL-SYM: warning: '[[FILE]]': unable to read an entry with index 255 from SHT_SYMTAB section with index 3: can't read an entry at 0x17e8: it goes past the end of the section (0x30)
 
 --- !ELF
 FileHeader:
@@ -310,7 +355,57 @@ Sections:
     Info: [[INFO]]
     Relocations:
       - Offset: 0x2
-        Symbol: foo
+        Symbol: [[SYM=foo]]
         Type:   R_X86_64_64
 Symbols:
   - Name: foo
+...
+
+## Check that a warning is reported when more than one relocation, or no
+## relocation, applies to an address field, and that the field is then
+## identified by its offset.
+# RUN: yaml2obj --docnum=8 %s -o %t16
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t16 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t16 --implicit-check-not=warning: \
+# RUN:     --check-prefixes=MULTI-RELOC,UNRESOLVED
+# RUN: yaml2obj --docnum=8 -DOFFSET1=0x3 -DOFFSET2=0x4 %s -o %t17
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t17 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t17 --implicit-check-not=warning: \
+# RUN:     --check-prefixes=NO-RELOC,UNRESOLVED
+
+# MULTI-RELOC: warning: '[[FILE]]': more than one relocation at offset 0x2 in SHT_LLVM_CALL_GRAPH section with index 1
+# NO-RELOC:    warning: '[[FILE]]': no relocation at offset 0x2 in SHT_LLVM_CALL_GRAPH section with index 1
+
+# UNRESOLVED:      CallGraph [
+# UNRESOLVED-NEXT:   Function {
+# UNRESOLVED-NEXT:     Offset: 0x2
+# UNRESOLVED-NEXT:     Version: 0
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name: .llvm_call_graph
+    Type: SHT_LLVM_CALL_GRAPH
+    ContentArray: [
+        '0', ## Format version number
+        '0', ## Flags
+        '0', '0', '0', '0', '0', '0', '0', '0', ## foo()'s address
+        '0', '0', '0', '0', '0', '0', '0', '0', ## foo()'s TypeID
+      ]
+  - Name: .rela.llvm_call_graph
+    Type: SHT_RELA
+    Info: .llvm_call_graph
+    Relocations:
+      - Offset: [[OFFSET1=0x2]]
+        Symbol: foo
+        Type:   R_X86_64_64
+      - Offset: [[OFFSET2=0x2]]
+        Symbol: bar
+        Type:   R_X86_64_64
+Symbols:
+  - Name: foo
+  - Name: bar
