@@ -8649,9 +8649,9 @@ def CIR_VAArgOp : CIR_Op<"va_arg"> {
 // and a destructor pointer as SSA operands. Null RTTI and destructor pointers
 // are represented by typed null values. The zero-operand form represents a
 // rethrow. Since every normal throw lowers to the same `__cxa_throw` symbol,
-// the address spaces of these three operands must be consistent across the
-// module. Subclasses contribute any additional traits, successors and assembly
-// format pieces.
+// the exception and destructor pointers use the module's default address space
+// and the RTTI pointer uses its global address space. Subclasses contribute any
+// additional traits, successors and assembly format pieces.
 class CIR_ThrowOpBase<string mnemonic, list<Trait> traits = []>
     : CIR_Op<mnemonic, !listconcat(traits, [AttrSizedOperandSegments])> {
   let arguments = (ins
