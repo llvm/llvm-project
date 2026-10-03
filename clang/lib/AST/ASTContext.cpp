@@ -3288,6 +3288,21 @@ ASTContext::getASTObjCInterfaceLayout(const ObjCInterfaceDecl *D) const {
   return getObjCLayout(D);
 }
 
+std::optional<unsigned>
+ASTContext::getFieldIndex(const RecordDecl *RD, const FieldDecl *Field) const {
+  if (Field->getParent() != RD)
+    return std::nullopt;
+
+  // Designators skip unnamed bitfields; subtract the ones before Field.
+  auto [It, Inserted] = UnnamedBitFieldIndices.try_emplace(RD);
+  if (Inserted)
+    for (const FieldDecl *FI : RD->fields())
+      if (FI->isUnnamedBitField())
+        It->second.push_back(FI->getFieldIndex());
+  unsigned Index = Field->getFieldIndex();
+  return Index - (llvm::lower_bound(It->second, Index) - It->second.begin());
+}
+
 static auto getCanonicalTemplateArguments(const ASTContext &C,
                                           ArrayRef<TemplateArgument> Args,
                                           bool &AnyNonCanonArgs) {
