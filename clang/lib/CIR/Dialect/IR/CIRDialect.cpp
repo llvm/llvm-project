@@ -13,6 +13,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
@@ -33,8 +34,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/LogicalResult.h"
-
-#include <array>
 
 using namespace mlir;
 using namespace cir;
@@ -4678,29 +4677,6 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
 // ThrowOp / TryThrowOp
 //===----------------------------------------------------------------------===//
 
-using ThrowAddressSpaces = std::array<mlir::ptr::MemorySpaceAttrInterface, 3>;
-
-template <typename ThrowOpTy>
-static std::optional<ThrowAddressSpaces> getThrowAddressSpaces(ThrowOpTy op) {
-  if (!op.getExceptionPtr() || !op.getTypeInfo() || !op.getDtor())
-    return std::nullopt;
-
-  return ThrowAddressSpaces{
-      mlir::cast<cir::PointerType>(op.getExceptionPtr().getType())
-          .getAddrSpace(),
-      mlir::cast<cir::PointerType>(op.getTypeInfo().getType()).getAddrSpace(),
-      mlir::cast<cir::PointerType>(op.getDtor().getType()).getAddrSpace()};
-}
-
-static std::optional<ThrowAddressSpaces>
-getThrowAddressSpaces(mlir::Operation *op) {
-  if (auto throwOp = mlir::dyn_cast<cir::ThrowOp>(op))
-    return getThrowAddressSpaces(throwOp);
-  if (auto tryThrowOp = mlir::dyn_cast<cir::TryThrowOp>(op))
-    return getThrowAddressSpaces(tryThrowOp);
-  return std::nullopt;
-}
-
 template <typename ThrowOpTy>
 static mlir::LogicalResult verifyThrowOpImpl(ThrowOpTy op) {
   bool hasExceptionPtr = static_cast<bool>(op.getExceptionPtr());
@@ -4719,28 +4695,27 @@ static mlir::LogicalResult verifyThrowOpImpl(ThrowOpTy op) {
   if (!module)
     return op.emitOpError("expects an enclosing module");
 
-  mlir::Operation *firstThrow = nullptr;
-  std::optional<ThrowAddressSpaces> expectedAddressSpaces;
-  module.walk([&](mlir::Operation *candidate) {
-    expectedAddressSpaces = getThrowAddressSpaces(candidate);
-    if (!expectedAddressSpaces)
-      return mlir::WalkResult::advance();
-    firstThrow = candidate;
-    return mlir::WalkResult::interrupt();
-  });
+  cir::CIRDataLayout dataLayout(module);
+  auto defaultAddrSpace = dataLayout.getDefaultAddrSpace(op.getContext());
+  auto globalAddrSpace = dataLayout.getGlobalAddrSpace(op.getContext());
 
-  assert(expectedAddressSpaces && firstThrow &&
-         "the operation being verified provides a throw signature");
-  if (*expectedAddressSpaces == *getThrowAddressSpaces(op))
-    return mlir::success();
+  auto getAddrSpace = [](mlir::Value operand) {
+    return mlir::cast<cir::PointerType>(operand.getType()).getAddrSpace();
+  };
 
-  mlir::InFlightDiagnostic diag = op.emitOpError(
-      "operand address spaces must match the first non-rethrow cir.throw or "
-      "cir.try_throw in the module");
-  diag.attachNote(firstThrow->getLoc())
-      << "the module's __cxa_throw address-space signature is established "
-         "here";
-  return mlir::failure();
+  if (getAddrSpace(op.getExceptionPtr()) != defaultAddrSpace)
+    return op.emitOpError(
+        "exception pointer must use the module's default address space");
+
+  if (getAddrSpace(op.getTypeInfo()) != globalAddrSpace)
+    return op.emitOpError(
+        "type_info pointer must use the module's global address space");
+
+  if (getAddrSpace(op.getDtor()) != defaultAddrSpace)
+    return op.emitOpError(
+        "destructor pointer must use the module's default address space");
+
+  return mlir::success();
 }
 
 mlir::LogicalResult cir::ThrowOp::verify() { return verifyThrowOpImpl(*this); }

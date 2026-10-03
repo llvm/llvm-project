@@ -31,6 +31,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
@@ -117,6 +118,8 @@ private:
 
   cir::VoidType voidType;
   cir::PointerType voidPtrType;
+  cir::PointerType cxaThrowVoidPtrType;
+  cir::PointerType globalVoidPtrType;
   cir::PointerType u8PtrType;
   cir::IntType u32Type;
   cir::IntType s32Type;
@@ -139,9 +142,7 @@ private:
 
   void ensureRuntimeDecls(mlir::Location loc);
   void ensureClangCallTerminate(mlir::Location loc);
-  void ensureCxaThrowDecl(mlir::Location loc, cir::PointerType exceptionPtrType,
-                          cir::PointerType typeInfoPtrType,
-                          cir::PointerType dtorPtrType);
+  void ensureCxaThrowDecl(mlir::Location loc);
   void ensureCxaRethrowDecl(mlir::Location loc);
   void ensureCxaCallUnexpectedDecl(mlir::Location loc);
   mlir::Block *buildTerminateBlock(cir::FuncOp funcOp, mlir::Location loc);
@@ -166,6 +167,11 @@ mlir::LogicalResult ItaniumEHLowering::run() {
   // TODO(cir): Move these to the base class if they are also needed for MSVC.
   voidType = cir::VoidType::get(ctx);
   voidPtrType = cir::PointerType::get(voidType);
+  cir::CIRDataLayout dataLayout(mod);
+  auto defaultAddrSpace = dataLayout.getDefaultAddrSpace(ctx);
+  auto globalAddrSpace = dataLayout.getGlobalAddrSpace(ctx);
+  cxaThrowVoidPtrType = cir::PointerType::get(voidType, defaultAddrSpace);
+  globalVoidPtrType = cir::PointerType::get(voidType, globalAddrSpace);
   auto u8Type = cir::IntType::get(ctx, 8, /*isSigned=*/false);
   u8PtrType = cir::PointerType::get(u8Type);
   u32Type = cir::IntType::get(ctx, 32, /*isSigned=*/false);
@@ -269,17 +275,13 @@ void ItaniumEHLowering::ensureClangCallTerminate(mlir::Location loc) {
 ///
 ///   void __cxa_throw(void *exception, global void *type_info, void *dtor);
 ///
-/// The type-info pointer may use a target-specific global address space, so
-/// derive the declaration from the typed throw operands instead of assuming
-/// that all three pointers use the default address space.
-void ItaniumEHLowering::ensureCxaThrowDecl(mlir::Location loc,
-                                           cir::PointerType exceptionPtrType,
-                                           cir::PointerType typeInfoPtrType,
-                                           cir::PointerType dtorPtrType) {
+/// The type-info pointer may use a target-specific global address space. The
+/// exception and destructor pointers use the target's default address space.
+void ItaniumEHLowering::ensureCxaThrowDecl(mlir::Location loc) {
   if (cxaThrowFunc)
     return;
   auto throwFuncTy = cir::FuncType::get(
-      {exceptionPtrType, typeInfoPtrType, dtorPtrType}, voidType,
+      {cxaThrowVoidPtrType, globalVoidPtrType, cxaThrowVoidPtrType}, voidType,
       /*isVarArg=*/false);
   cxaThrowFunc =
       getOrCreateRuntimeFuncDecl(mod, loc, "__cxa_throw", throwFuncTy);
@@ -934,22 +936,19 @@ mlir::LogicalResult ItaniumEHLowering::lowerTryThrow(cir::TryThrowOp op) {
     return mlir::success();
   }
 
-  auto castToVoidPtr = [&](mlir::Value value) -> mlir::Value {
-    auto ptrType = mlir::cast<cir::PointerType>(value.getType());
-    auto targetType = cir::PointerType::get(voidType, ptrType.getAddrSpace());
+  auto castToVoidPtr = [&](mlir::Value value,
+                           cir::PointerType targetType) -> mlir::Value {
     if (value.getType() == targetType)
       return value;
     return cir::CastOp::create(builder, loc, targetType, cir::CastKind::bitcast,
                                value);
   };
 
-  mlir::Value exnPtr = castToVoidPtr(op.getExceptionPtr());
-  mlir::Value typeInfo = castToVoidPtr(op.getTypeInfo());
-  mlir::Value dtor = castToVoidPtr(op.getDtor());
+  mlir::Value exnPtr = castToVoidPtr(op.getExceptionPtr(), cxaThrowVoidPtrType);
+  mlir::Value typeInfo = castToVoidPtr(op.getTypeInfo(), globalVoidPtrType);
+  mlir::Value dtor = castToVoidPtr(op.getDtor(), cxaThrowVoidPtrType);
 
-  ensureCxaThrowDecl(loc, mlir::cast<cir::PointerType>(exnPtr.getType()),
-                     mlir::cast<cir::PointerType>(typeInfo.getType()),
-                     mlir::cast<cir::PointerType>(dtor.getType()));
+  ensureCxaThrowDecl(loc);
 
   cir::TryCallOp::create(
       builder, loc, mlir::FlatSymbolRefAttr::get(cxaThrowFunc), voidType,
