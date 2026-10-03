@@ -360,3 +360,89 @@ define i1 @negative_mul_rhs_maybe_zero(i8 %x, i8 %c) {
   %cmp = icmp uge i8 %prod, %x
   ret i1 %cmp
 }
+
+define i1 @ctpop_ule(i64 %x) {
+; CHECK-LABEL: define i1 @ctpop_ule(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %count = call i64 @llvm.ctpop.i64(i64 %x)
+  %cmp = icmp ule i64 %count, %x
+  ret i1 %cmp
+}
+
+define i1 @ctpop_ugt(i64 %x) {
+; CHECK-LABEL: define i1 @ctpop_ugt(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 false
+;
+  %count = call i64 @llvm.ctpop.i64(i64 %x)
+  %cmp = icmp ugt i64 %count, %x
+  ret i1 %cmp
+}
+
+define i1 @ctpop_uge_commuted(i64 %x) {
+; CHECK-LABEL: define i1 @ctpop_uge_commuted(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %count = call i64 @llvm.ctpop.i64(i64 %x)
+  %cmp = icmp uge i64 %x, %count
+  ret i1 %cmp
+}
+
+define i1 @ctpop_ule_i2(i2 %x) {
+; CHECK-LABEL: define i1 @ctpop_ule_i2(
+; CHECK-SAME: i2 [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %count = call i2 @llvm.ctpop.i2(i2 %x)
+  %cmp = icmp ule i2 %count, %x
+  ret i1 %cmp
+}
+
+define i1 @ctpop_ugt_i2(i2 %x) {
+; CHECK-LABEL: define i1 @ctpop_ugt_i2(
+; CHECK-SAME: i2 [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 false
+;
+  %count = call i2 @llvm.ctpop.i2(i2 %x)
+  %cmp = icmp ugt i2 %count, %x
+  ret i1 %cmp
+}
+
+define <2 x i1> @ctpop_ule_vec(<2 x i8> %x) {
+; CHECK-LABEL: define <2 x i1> @ctpop_ule_vec(
+; CHECK-SAME: <2 x i8> [[X:%.*]]) {
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
+;
+  %count = call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> %x)
+  %cmp = icmp ule <2 x i8> %count, %x
+  ret <2 x i1> %cmp
+}
+
+; Negative test - wrong predicate, ctpop(X) ult X does not always hold (X = 0).
+define i1 @ctpop_ult_fail(i64 %x) {
+; CHECK-LABEL: define i1 @ctpop_ult_fail(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[COUNT:%.*]] = call i64 @llvm.ctpop.i64(i64 [[X]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[COUNT]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %count = call i64 @llvm.ctpop.i64(i64 %x)
+  %cmp = icmp ult i64 %count, %x
+  ret i1 %cmp
+}
+
+; Negative test - RHS is not the ctpop operand.
+define i1 @ctpop_ule_unrelated_fail(i64 %x, i64 %y) {
+; CHECK-LABEL: define i1 @ctpop_ule_unrelated_fail(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:    [[COUNT:%.*]] = call i64 @llvm.ctpop.i64(i64 [[X]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i64 [[COUNT]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %count = call i64 @llvm.ctpop.i64(i64 %x)
+  %cmp = icmp ule i64 %count, %y
+  ret i1 %cmp
+}
