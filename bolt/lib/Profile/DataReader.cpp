@@ -634,13 +634,13 @@ void DataReader::convertBranchData(BinaryFunction &BF) const {
   if (!FBD)
     return;
 
-  // Profile information for calls.
+  // Profile information for transfers out of a function.
   //
   // There are 3 cases that we annotate differently:
-  //   1) Conditional tail calls that could be mispredicted.
+  //   1) Conditional tail calls and conditional external branches.
   //   2) Indirect calls to multiple destinations with mispredictions.
   //      Before we validate CFG we have to handle indirect branches here too.
-  //   3) Regular direct calls. The count could be different from containing
+  //   3) Other direct transfers. Their count could differ from the containing
   //      basic block count. Keep this data in case we find it useful.
   //
   for (BranchInfo &BI : FBD->Data) {
@@ -650,7 +650,8 @@ void DataReader::convertBranchData(BinaryFunction &BF) const {
 
     MCInst *Instr = BF.getInstructionAtOffset(BI.From.Offset);
     if (!Instr ||
-        (!BC.MIB->isCall(*Instr) && !BC.MIB->isIndirectBranch(*Instr)))
+        (!BC.MIB->isCall(*Instr) && !BC.MIB->isIndirectBranch(*Instr) &&
+         !BC.MIB->isExternalBranch(*Instr)))
       continue;
 
     auto setOrUpdateAnnotation = [&](StringRef Name, uint64_t Count) {
@@ -677,6 +678,9 @@ void DataReader::convertBranchData(BinaryFunction &BF) const {
       setOrUpdateAnnotation("CTCMispredCount", BI.Mispreds);
     } else {
       setOrUpdateAnnotation("Count", BI.Branches);
+      if (BC.MIB->isExternalBranch(*Instr) &&
+          BC.MIB->isConditionalBranch(*Instr))
+        setOrUpdateAnnotation("MispredCount", BI.Mispreds);
     }
   }
 }

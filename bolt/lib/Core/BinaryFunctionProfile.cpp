@@ -132,9 +132,8 @@ void BinaryFunction::postProcessProfile() {
         ++SuccBIIter;
       }
 
-      // Set the execution count of the basic block to be the maximum execution
-      // count across the indirect branches, indirect calls and call
-      // instructions. All other instructions can be ignored.
+      // Set the execution count of the basic block to the maximum count across
+      // indirect branches, calls and external branches.
       uint64_t MaxCount = BB->getExecutionCount();
       for (MCInst &Inst : *BB) {
         uint64_t ExecCount = 0;
@@ -144,7 +143,7 @@ void BinaryFunction::postProcessProfile() {
             for (IndirectCallProfile &Entry : *ICSP)
               ExecCount += Entry.Count;
           }
-        } else if (BC.MIB->isCall(Inst)) {
+        } else if (BC.MIB->isCall(Inst) || BC.MIB->isExternalBranch(Inst)) {
           if (auto Count = BC.MIB->tryGetAnnotationAs<uint64_t>(Inst, "Count"))
             ExecCount = *Count;
         }
