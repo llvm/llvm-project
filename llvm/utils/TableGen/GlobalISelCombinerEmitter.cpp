@@ -2525,7 +2525,8 @@ void GICombinerEmitter::emitRuleConfigImpl(raw_ostream &OS) {
        << "  if (!MaybeRange)\n"
        << "    return false;\n"
        << "  for (auto I = MaybeRange->first; I < MaybeRange->second; ++I)\n"
-       << "    DisabledRules." << (Enabled ? "reset" : "set") << "(I);\n"
+       << "    DisabledRules." << (Enabled ? "reset" : "set")
+       << "(static_cast<unsigned>(I));\n"
        << "  return true;\n"
        << "}\n\n";
   }
