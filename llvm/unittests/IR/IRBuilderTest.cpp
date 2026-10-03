@@ -202,8 +202,7 @@ TEST_F(IRBuilderTest, IntrinsicsWithScalableVectors) {
   Args.push_back(UndefValue::get(SrcVecTy));
 
   Call = Builder.CreateIntrinsicWithoutFolding(
-      Intrinsic::aarch64_sve_fcvtzs_i32f16, Args, nullptr,
-      "aarch64.sve.fcvtzs.i32f16");
+      Intrinsic::aarch64_sve_fcvtzs_i32f16, Args, "aarch64.sve.fcvtzs.i32f16");
   FTy = Call->getFunctionType();
   EXPECT_EQ(FTy->getReturnType(), DstVecTy);
   for (unsigned i = 0; i != Args.size(); ++i)
@@ -221,9 +220,8 @@ TEST_F(IRBuilderTest, IntrinsicsWithScalableVectors) {
   Args.push_back(UndefValue::get(PredTy));
   Args.push_back(UndefValue::get(VecTy));
 
-  Call = Builder.CreateIntrinsicWithoutFolding(Intrinsic::masked_load,
-                                               {VecTy, PtrToVecTy}, Args,
-                                               nullptr, "masked.load");
+  Call = Builder.CreateIntrinsicWithoutFolding(
+      Intrinsic::masked_load, {VecTy, PtrToVecTy}, Args, "masked.load");
   FTy = Call->getFunctionType();
   EXPECT_EQ(FTy->getReturnType(), VecTy);
   for (unsigned i = 0; i != Args.size(); ++i)
