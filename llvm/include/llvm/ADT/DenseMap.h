@@ -1043,7 +1043,15 @@ public:
     return *this;
   }
 
-protected:
+  /// Return the approximate size (in bytes) of the actual map.
+  /// This is just the raw memory used by DenseMap.
+  /// If entries are pointers to objects, the size of the referenced objects
+  /// are not included.
+  [[nodiscard]] size_t getMemorySize() const {
+    return llvm::densemap::detail::allocBytes<BucketT>(getNumBuckets());
+  }
+
+private:
   StorageT Storage;
 
   struct ExactBucketCount {};
@@ -1158,7 +1166,6 @@ protected:
     }
   }
 
-private:
   /// Erase the entry at \p TheBucket and close the resulting hole via Knuth
   /// TAOCP 6.4 Algorithm R.
   LLVM_ATTRIBUTE_NOINLINE void eraseFromFilledBucket(BucketT *TheBucket) {
@@ -1341,15 +1348,6 @@ private:
       // Hash collision: continue linear probing.
       BucketNo = (BucketNo + 1) & Mask;
     }
-  }
-
-public:
-  /// Return the approximate size (in bytes) of the actual map.
-  /// This is just the raw memory used by DenseMap.
-  /// If entries are pointers to objects, the size of the referenced objects
-  /// are not included.
-  [[nodiscard]] size_t getMemorySize() const {
-    return llvm::densemap::detail::allocBytes<BucketT>(getNumBuckets());
   }
 };
 
