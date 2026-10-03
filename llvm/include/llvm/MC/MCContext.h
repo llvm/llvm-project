@@ -838,6 +838,7 @@ public:
   }
 
   bool hadError() { return HadError; }
+  void setHadError() { HadError = true; }
   LLVM_ABI void diagnose(const SMDiagnostic &SMD);
   LLVM_ABI void reportError(SMLoc L, const Twine &Msg);
   LLVM_ABI void reportWarning(SMLoc L, const Twine &Msg);

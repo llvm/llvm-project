@@ -801,6 +801,9 @@ void MCObjectStreamer::emitAddrsigSym(const MCSymbol *Sym) {
 }
 
 void MCObjectStreamer::finishImpl() {
+  if (getContext().hadError())
+    return;
+
   getContext().RemapDebugPaths();
 
   // If we are generating dwarf for assembly source files dump out the sections.

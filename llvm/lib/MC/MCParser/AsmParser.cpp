@@ -1073,6 +1073,9 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
     Out.finish(Lexer.getLoc());
   }
 
+  if (HadError && NoFinalize)
+    getContext().setHadError();
+
   return HadError || getContext().hadError();
 }
 
