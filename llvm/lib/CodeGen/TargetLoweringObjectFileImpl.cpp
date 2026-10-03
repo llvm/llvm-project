@@ -1694,6 +1694,12 @@ void TargetLoweringObjectFileMachO::getNameWithPrefix(
 //                                  COFF
 //===----------------------------------------------------------------------===//
 
+TargetLoweringObjectFileCOFF::TargetLoweringObjectFileCOFF() {
+  // COFF only supports 32 bit section relative relocations, so all TLS offsets
+  // need to be encoded as 32 bit.
+  Support64BitDebugThreadLocalLocation = false;
+}
+
 static unsigned
 getCOFFSectionFlags(SectionKind K, const TargetMachine &TM) {
   unsigned Flags = 0;
