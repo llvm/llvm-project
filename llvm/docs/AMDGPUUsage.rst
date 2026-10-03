@@ -667,6 +667,18 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                            work-item
                                                                            IDs
 
+     ``gfx1250``                 ``amdgpu12``     APU   - sramecc        - Architected                   *TBA*
+     ``-strict``                 ``.50s``                                  flat
+                                                                           scratch                         .. TODO::
+                                                                         - Packed
+                                                                           work-item                         Add product
+                                                                           IDs                               names.
+                                                                         - Globally
+                                                                           Accessible
+                                                                           Scratch
+                                                                         - Workgroup
+                                                                           Clusters
+
      ``gfx1250``                 ``amdgpu12.50``  APU   - sramecc        - Architected                   *TBA*
                                                                            flat
                                                                            scratch                         .. TODO::
