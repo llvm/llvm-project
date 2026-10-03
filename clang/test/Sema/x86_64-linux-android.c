@@ -7,4 +7,4 @@ extern int a1_i[__alignof(long double) == 16 ? 1 : -1];
 // Verify that long double is 128 bit IEEEquad
 
 long double foo = 1.0E4000L;
-// CHECK: long double foo = 1.00000000000000000000000000000000004E+4000L;
+// CHECK: long double foo = 1.0E+4000L;
