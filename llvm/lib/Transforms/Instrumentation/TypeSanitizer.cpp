@@ -29,6 +29,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/TBAAMetadata.h"
 #include "llvm/IR/Type.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CommandLine.h"
@@ -273,24 +274,61 @@ static std::string encodeName(StringRef Name) {
   return Output;
 }
 
+using TBAAMemberList = SmallVectorImpl<std::pair<const MDNode *, uint64_t>>;
+
+/// Return the MDString naming the type described by \p N, or nullptr if \p N
+/// is not a well-formed type node.
+static MDString *getTypeNameNode(const MDNode *N) {
+  if (!N->getNumOperands())
+    return nullptr;
+  return dyn_cast<MDString>(TBAAStructTypeNode(N).getId());
+}
+
+/// Collect the (member type node, offset) pairs that \p N contributes to its
+/// TySan type descriptor, appending them to \p Members.
+///
+/// In the old format a scalar type node's parent occupies the first field
+/// slot, so scalars and structs are both covered by the field list. The new
+/// format keeps the parent in a separate operand and gives a scalar no fields
+/// at all, so it is added explicitly here. The runtime depends on this:
+/// getRootTD() follows Members[0] to find the root of the TBAA tree.
+static bool collectTypeMembers(const MDNode *N, TBAAMemberList &Members) {
+  TBAAStructTypeNode TypeNode(N);
+  unsigned NumFields = TypeNode.getNumFields();
+
+  if (TypeNode.isNewFormat() && NumFields == 0) {
+    // A scalar, or a struct with no fields. Either way the parent is the only
+    // edge towards the root.
+    const auto *Parent = dyn_cast<MDNode>(N->getOperand(0));
+    if (!Parent)
+      return false;
+    Members.emplace_back(Parent, 0);
+    return true;
+  }
+
+  for (unsigned I = 0; I != NumFields; ++I)
+    Members.emplace_back(TypeNode.getFieldType(I).getNode(),
+                         TypeNode.getFieldOffset(I));
+
+  return true;
+}
+
 std::string
 TypeSanitizer::getAnonymousStructIdentifier(const MDNode *MD,
                                             TypeNameMapTy &TypeNames) {
   MD5 Hash;
 
-  for (int i = 1, e = MD->getNumOperands(); i < e; i += 2) {
-    const MDNode *MemberNode = dyn_cast<MDNode>(MD->getOperand(i));
-    if (!MemberNode)
-      return "";
+  SmallVector<std::pair<const MDNode *, uint64_t>> Members;
+  if (!collectTypeMembers(MD, Members))
+    return "";
 
+  for (const auto &[MemberNode, Offset] : Members) {
     auto TNI = TypeNames.find(MemberNode);
     std::string MemberName;
     if (TNI != TypeNames.end()) {
       MemberName = TNI->second;
     } else {
-      if (MemberNode->getNumOperands() < 1)
-        return "";
-      MDString *MemberNameNode = dyn_cast<MDString>(MemberNode->getOperand(0));
+      MDString *MemberNameNode = getTypeNameNode(MemberNode);
       if (!MemberNameNode)
         return "";
       MemberName = MemberNameNode->getString().str();
@@ -304,8 +342,6 @@ TypeSanitizer::getAnonymousStructIdentifier(const MDNode *MD,
     Hash.update(MemberName);
     Hash.update("\0");
 
-    uint64_t Offset =
-        mdconst::extract<ConstantInt>(MD->getOperand(i + 1))->getZExtValue();
     Hash.update(utostr(Offset));
     Hash.update("\0");
   }
@@ -318,10 +354,7 @@ TypeSanitizer::getAnonymousStructIdentifier(const MDNode *MD,
 bool TypeSanitizer::generateBaseTypeDescriptor(
     const MDNode *MD, TypeDescriptorsMapTy &TypeDescriptors,
     TypeNameMapTy &TypeNames, Module &M) {
-  if (MD->getNumOperands() < 1)
-    return false;
-
-  MDString *NameNode = dyn_cast<MDString>(MD->getOperand(0));
+  MDString *NameNode = getTypeNameNode(MD);
   if (!NameNode)
     return false;
 
@@ -340,12 +373,12 @@ bool TypeSanitizer::generateBaseTypeDescriptor(
     return true;
   }
 
-  SmallVector<std::pair<Constant *, uint64_t>> Members;
-  for (int i = 1, e = MD->getNumOperands(); i < e; i += 2) {
-    const MDNode *MemberNode = dyn_cast<MDNode>(MD->getOperand(i));
-    if (!MemberNode)
-      return false;
+  SmallVector<std::pair<const MDNode *, uint64_t>> MemberNodes;
+  if (!collectTypeMembers(MD, MemberNodes))
+    return false;
 
+  SmallVector<std::pair<Constant *, uint64_t>> Members;
+  for (const auto &[MemberNode, Offset] : MemberNodes) {
     Constant *Member;
     auto TDI = TypeDescriptors.find(MemberNode);
     if (TDI != TypeDescriptors.end()) {
@@ -357,9 +390,6 @@ bool TypeSanitizer::generateBaseTypeDescriptor(
 
       Member = TypeDescriptors[MemberNode];
     }
-
-    uint64_t Offset =
-        mdconst::extract<ConstantInt>(MD->getOperand(i + 1))->getZExtValue();
 
     Members.push_back(std::make_pair(Member, Offset));
   }
