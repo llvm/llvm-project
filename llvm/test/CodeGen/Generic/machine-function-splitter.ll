@@ -704,6 +704,62 @@ lpad:
   resume { ptr, i32 } %2
 }
 
+define void @foo24(i1 zeroext %0) nounwind !prof !29 {
+; MFS-DEFAULTS-LABEL: foo24
+; MFS-DEFAULTS:       foo24.cold:
+  br i1 %0, label %2, label %4, !prof !31
+
+2:                                                ; preds = %1
+  %3 = call i32 @bar()
+  br label %6
+
+4:                                                ; preds = %1
+  %5 = call i32 @baz()
+  br label %6
+
+6:                                                ; preds = %4, %2
+  %7 = tail call i32 @qux()
+  ret void
+}
+
+define void @foo25(i1 zeroext %0) nounwind !prof !29 !section_prefix !30 {
+; MFS-DEFAULTS: .section .text.startup.
+; MFS-DEFAULTS-LABEL: foo25
+; MFS-DEFAULTS-NOT:   foo25.cold:
+  br i1 %0, label %2, label %4, !prof !31
+
+2:                                                ; preds = %1
+  %3 = call i32 @bar()
+  br label %6
+
+4:                                                ; preds = %1
+  %5 = call i32 @baz()
+  br label %6
+
+6:                                                ; preds = %4, %2
+  %7 = tail call i32 @qux()
+  ret void
+}
+
+define void @foo26(i1 zeroext %0) nounwind !prof !29 !section_prefix !32 {
+; MFS-DEFAULTS: .section .text.exit.
+; MFS-DEFAULTS-LABEL: foo26
+; MFS-DEFAULTS-NOT:   foo26.cold:
+  br i1 %0, label %2, label %4, !prof !31
+
+2:                                                ; preds = %1
+  %3 = call i32 @bar()
+  br label %6
+
+4:                                                ; preds = %1
+  %5 = call i32 @baz()
+  br label %6
+
+6:                                                ; preds = %4, %2
+  %7 = tail call i32 @qux()
+  ret void
+}
+
 declare i32 @bar()
 declare i32 @baz()
 declare i32 @bam()
@@ -743,3 +799,7 @@ declare i32 @__gxx_personality_v0(...)
 !26 = !{!"branch_weights", i32 1000, i32 6000}
 !27 = !{!"function_entry_count", i64 10000}
 !28 = !{!"branch_weights", i32 0, i32 4000, i32 4000, i32 0, i32 0}
+!29 = !{!"function_entry_count", i64 50}
+!30 = !{!"section_prefix", !"startup"}
+!31 = !{!"branch_weights", i32 50, i32 0}
+!32 = !{!"section_prefix", !"exit"}
