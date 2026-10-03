@@ -7434,7 +7434,7 @@ static void preparePlanForEpilogueVectorLoop(
   Increment->replaceAllUsesWith(OffsetIVInc);
   OffsetIVInc->setOperand(0, Increment);
 
-  DenseMap<VPValue *, VPValue *> ToFrozen;
+  SmallDenseMap<VPValue *, VPValue *, 8> ToFrozen;
 
   // Resume values must be created in the vector preheader.
   VPBasicBlock *VectorPH = Plan.getVectorPreheader();
@@ -7501,7 +7501,7 @@ static void preparePlanForEpilogueVectorLoop(
         // TODO: materializeBroadcasts does not cover values in the vector
         // preheader.
         ReductionPhi->setStartValue(
-            PHBuilder.createNaryOp(VPInstruction::Broadcast, {ResumeVPV}));
+            PHBuilder.createNaryOp(VPInstruction::Broadcast, ResumeVPV));
         continue;
       } else {
         auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
