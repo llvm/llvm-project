@@ -1001,6 +1001,9 @@ features cannot lower the translation-unit ABI level;
 - `QualifierOrder` now supports `typedef`, `consteval`, `constinit`,
   `thread_local`, `extern`, `mutable`, `signed`, `unsigned`, `long`, `short`,
   and `explicit` declaration specifiers.
+- Extend `IndentAccessModifiers` with `AfterFirstAccessModifier` to indent
+  members before the first explicit access modifier by one level. Existing
+  configuration values `true` and `false` remain supported.
 
 ### libclang
 
