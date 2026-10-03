@@ -2035,6 +2035,22 @@ TEST_F(FormatTestJS, ImportWrapping) {
                "  }    from\n"
                "      'some/path/longer/than/column/limit/module.js'  ; ",
                Style);
+
+  // https://github.com/llvm/llvm-project/issues/52935
+  // With ColumnLimit = 0 and JavaScriptWrapImports disabled, imports must not
+  // be force-wrapped, while existing line breaks are left as they are.
+  Style = getGoogleJSStyleWithColumns(0);
+  Style.JavaScriptWrapImports = false;
+  verifyFormat("import {aaa, bbb, ccc} from 'abc';", Style);
+  verifyFormat("export {aaa, bbb, ccc} from 'abc';", Style);
+  // Existing line breaks are preserved rather than re-added, so check that the
+  // already-wrapped form is left unchanged (without messing it up first).
+  const char *Wrapped = "import {\n"
+                        "  aaa,\n"
+                        "  bbb,\n"
+                        "  ccc\n"
+                        "} from 'abc';";
+  verifyFormat(Wrapped, Wrapped, Style);
 }
 
 TEST_F(FormatTestJS, TemplateStrings) {
