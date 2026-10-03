@@ -25,6 +25,8 @@ math_test(name = "acosf16")
 
 math_test(name = "acoshf16")
 
+math_test(name = "acospif")
+
 math_test(name = "acospif16")
 
 math_test(
@@ -41,6 +43,8 @@ math_test(name = "asinf16")
 math_test(name = "asinhf")
 
 math_test(name = "asinhf16")
+
+math_test(name = "asinpif")
 
 math_test(name = "asinpif16")
 
@@ -132,6 +136,11 @@ math_test(
     deps = [
         "//libc:__support_fputil_bfloat16",
     ],
+)
+
+math_test(
+    name = "iscanonicalf",
+    hdrs = ["IsCanonicalTest.h"],
 )
 
 math_test(
@@ -444,6 +453,8 @@ math_test(
     name = "sqrtf16",
     hdrs = ["SqrtTest.h"],
 )
+
+math_test(name = "rsqrtf")
 
 math_test(name = "rsqrtf16")
 
@@ -2311,6 +2322,8 @@ math_test(name = "cospif16")
 
 math_test(name = "exp10f16")
 
+math_test(name = "exp10m1f")
+
 math_test(name = "exp10m1f16")
 
 math_test(name = "exp2f16")
@@ -2337,6 +2350,11 @@ math_test(
 )
 
 math_test(
+    name = "issignalingf",
+    hdrs = ["IsSignalingTest.h"],
+)
+
+math_test(
     name = "issignalingf16",
     hdrs = ["IsSignalingTest.h"],
 )
@@ -2359,12 +2377,22 @@ math_test(name = "log10p1f16")
 
 math_test(name = "logf16")
 
+math_test(name = "lgammaf")
+
 math_test(name = "lgammaf16")
 
 math_test(
     name = "nanbf16",
     deps = [
         "//libc:__support_fputil_bfloat16",
+        "//libc:__support_macros_sanitizer",
+        "//libc:hdr_signal_macros",
+    ],
+)
+
+math_test(
+    name = "nanf",
+    deps = [
         "//libc:__support_macros_sanitizer",
         "//libc:hdr_signal_macros",
     ],
