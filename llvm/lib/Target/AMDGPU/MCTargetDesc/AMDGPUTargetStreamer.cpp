@@ -948,6 +948,10 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsV4() {
     break;
   }
   // sramecc.
+  // Hardwired-on SRAMECC is implied by the processor, not an ELF mode.
+  if (!STI.hasFeature(AMDGPU::FeatureSRAMECCOnOffModes))
+    return EFlagsV4;
+
   switch (getTargetID()->getSramEccSetting()) {
   case AMDGPU::TargetIDSetting::Unsupported:
     EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4;
