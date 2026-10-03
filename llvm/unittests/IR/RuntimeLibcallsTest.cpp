@@ -185,4 +185,13 @@ TEST(RuntimeLibcallsTest, LibcallForIntrinsic) {
             RTLIB::UNKNOWN_LIBCALL);
 }
 
+TEST(RuntimeLibcallsTest, DefaultExceptionModel) {
+  Triple TT("x86_64-unknown-linux-gnu");
+  RTLIB::RuntimeLibcallsInfo DefaultInfo(TT);
+  EXPECT_TRUE(DefaultInfo.isAvailable(RTLIB::impl__Unwind_Resume));
+
+  RTLIB::RuntimeLibcallsInfo NoneInfo(TT, ExceptionHandling::None);
+  EXPECT_FALSE(NoneInfo.isAvailable(RTLIB::impl__Unwind_Resume));
+}
+
 } // namespace
