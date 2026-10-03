@@ -243,6 +243,11 @@ void CGRecordLowering::setBitFieldInfo(
   Info.StorageOffset = StartOffset;
   if (Info.Size > Info.StorageSize)
     Info.Size = Info.StorageSize;
+  // CGBitFieldInfo::MakeInfo does the same clamp
+  llvm::Type *FieldType = Types.ConvertTypeForMem(FD->getType());
+  unsigned FieldTypeSize = DataLayout.getTypeAllocSizeInBits(FieldType);
+  if (Info.Size > FieldTypeSize)
+    Info.Size = FieldTypeSize;
   // Reverse the bit offsets for big endian machines. Because we represent
   // a bitfield as a single large integer load, we can imagine the bits
   // counting from the most-significant-bit instead of the
