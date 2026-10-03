@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<opt-isl;ast>' -polly-print-ast -disable-output < %s | FileCheck %s
-; RUN: opt %loadNPMPolly '-passes=polly-custom<opt-isl;ast>' -polly-print-ast -polly-distribute-point-loops=false -disable-output < %s | FileCheck %s --check-prefix=FUSED
+; RUN: opt %loadNPMPolly '-passes=polly-custom<opt-isl;ast>' -plugin-arg=Polly,-polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<opt-isl;ast>' -plugin-arg=Polly,-polly-print-ast -plugin-arg=Polly,-polly-distribute-point-loops=false -disable-output < %s | FileCheck %s --check-prefix=FUSED
 ;
 ; Distribute the innermost point loop of a time tiled stencil over its
 ; statements.
