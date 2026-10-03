@@ -521,8 +521,7 @@ private:
   bool SelectCMP_SWAP(SDNode *N);
 
   AArch64MemoryHint decodeMemoryHintFlags(MachineMemOperand *MMO) const;
-  bool isAtomicSTSHH_KEEP(SDNode *N) const;
-  bool isAtomicSTSHH_STRM(SDNode *N) const;
+  bool isAtomicMemoryHint(SDNode *N, AArch64MemoryHint Hint) const;
 
   bool SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift,
                           bool Negate);
@@ -4677,14 +4676,9 @@ AArch64DAGToDAGISel::decodeMemoryHintFlags(MachineMemOperand *MMO) const {
   return toAArch64MemoryHint(MemoryHint);
 }
 
-bool AArch64DAGToDAGISel::isAtomicSTSHH_KEEP(SDNode *N) const {
-  return decodeMemoryHintFlags(cast<MemSDNode>(N)->getMemOperand()) ==
-         AArch64MemoryHint::STSHH_KEEP;
-}
-
-bool AArch64DAGToDAGISel::isAtomicSTSHH_STRM(SDNode *N) const {
-  return decodeMemoryHintFlags(cast<MemSDNode>(N)->getMemOperand()) ==
-         AArch64MemoryHint::STSHH_STRM;
+bool AArch64DAGToDAGISel::isAtomicMemoryHint(SDNode *N,
+                                             AArch64MemoryHint Hint) const {
+  return decodeMemoryHintFlags(cast<MemSDNode>(N)->getMemOperand()) == Hint;
 }
 
 bool AArch64DAGToDAGISel::SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm,
