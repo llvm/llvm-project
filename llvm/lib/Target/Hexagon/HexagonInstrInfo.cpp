@@ -807,6 +807,21 @@ public:
 std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
 HexagonInstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
   // We really "analyze" only hardware loops right now.
+  const MachineRegisterInfo &MRI = LoopBB->getParent()->getRegInfo();
+  for (const MachineInstr &MI : *LoopBB) {
+    // Modulo variable expansion mishandles scalar 64-bit values written by a
+    // double-word store.  Vector stores and double-word loads are safe: they
+    // do not create the problematic recurrence.
+    if (!MI.mayStore())
+      continue;
+    for (const MachineOperand &MO : MI.operands())
+      if (MO.isReg() && MO.getReg().isVirtual() &&
+          Hexagon::DoubleRegsRegClass.hasSubClassEq(
+              MRI.getRegClass(MO.getReg())) &&
+          MRI.getType(MO.getReg()).isScalar(64))
+        return nullptr;
+  }
+
   MachineBasicBlock::iterator I = LoopBB->getFirstTerminator();
 
   if (I != LoopBB->end() && isEndLoopN(I->getOpcode())) {
