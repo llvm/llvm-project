@@ -11,6 +11,7 @@
 // (bug report: https://llvm.org/PR58392)
 // Check that vector constructors don't leak memory when an operation inside the constructor throws an exception
 
+#include <cassert>
 #include <cstddef>
 #include <memory>
 #include <type_traits>
@@ -26,6 +27,7 @@ int main(int, char**) {
   try { // vector()
     AllocVec vec;
     (void)vec;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
@@ -33,6 +35,7 @@ int main(int, char**) {
   try { // Throw in vector(size_type) from type
     std::vector<throwing_t> get_alloc(1);
     (void)get_alloc;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
@@ -43,14 +46,16 @@ int main(int, char**) {
     throwing_t v(throw_after);
     std::vector<throwing_t> get_alloc(1, v);
     (void)get_alloc;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
 
   try { // Throw in vector(size_type, const allocator_type&) from allocator
-    throwing_allocator<int> alloc(/*throw_on_ctor = */ false, /*throw_on_copy = */ true);
-    AllocVec get_alloc(0, alloc);
+    throwing_allocator<int> alloc((throwing_on_allocation_tag()));
+    AllocVec get_alloc(1, alloc);
     (void)get_alloc;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
@@ -58,6 +63,7 @@ int main(int, char**) {
   try { // Throw in vector(size_type, const allocator_type&) from the type
     std::vector<throwing_t> vec(1, std::allocator<throwing_t>());
     (void)vec;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
@@ -68,6 +74,7 @@ int main(int, char**) {
     throwing_t v(throw_after);
     std::vector<throwing_t> vec(1, v, std::allocator<throwing_t>());
     (void)vec;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
@@ -76,6 +83,7 @@ int main(int, char**) {
     std::vector<int> vec(
         (throwing_iterator<int, std::input_iterator_tag>()), throwing_iterator<int, std::input_iterator_tag>(2));
     (void)vec;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
@@ -84,6 +92,7 @@ int main(int, char**) {
     std::vector<int> vec(
         (throwing_iterator<int, std::forward_iterator_tag>()), throwing_iterator<int, std::forward_iterator_tag>(2));
     (void)vec;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
@@ -92,6 +101,7 @@ int main(int, char**) {
     int a[] = {1, 2};
     AllocVec vec(cpp17_input_iterator<int*>(a), cpp17_input_iterator<int*>(a + 2));
     (void)vec;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
@@ -101,6 +111,7 @@ int main(int, char**) {
     std::vector<int> vec(
         throwing_iterator<int, std::input_iterator_tag>(), throwing_iterator<int, std::input_iterator_tag>(2), alloc);
     (void)vec;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
@@ -111,24 +122,27 @@ int main(int, char**) {
                          throwing_iterator<int, std::forward_iterator_tag>(2),
                          alloc);
     (void)vec;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
 
   try { // Throw in vector(InputIterator, InputIterator, const allocator_type&) from allocator
     int a[] = {1, 2};
-    throwing_allocator<int> alloc(/*throw_on_ctor = */ false, /*throw_on_copy = */ true);
+    throwing_allocator<int> alloc((throwing_on_allocation_tag()));
     AllocVec vec(cpp17_input_iterator<int*>(a), cpp17_input_iterator<int*>(a + 2), alloc);
     (void)vec;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
 
   try { // Throw in vector(InputIterator, InputIterator, const allocator_type&) from allocator
     int a[] = {1, 2};
-    throwing_allocator<int> alloc(/*throw_on_ctor = */ false, /*throw_on_copy = */ true);
+    throwing_allocator<int> alloc((throwing_on_allocation_tag()));
     AllocVec vec(forward_iterator<int*>(a), forward_iterator<int*>(a + 2), alloc);
     (void)vec;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
@@ -139,6 +153,7 @@ int main(int, char**) {
     vec.emplace_back(throw_after);
     auto vec2 = vec;
     (void)vec2;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
@@ -149,6 +164,7 @@ int main(int, char**) {
     vec.emplace_back(throw_after);
     std::vector<throwing_t> vec2(vec, std::allocator<int>());
     (void)vec2;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
@@ -160,6 +176,7 @@ int main(int, char**) {
     vec.insert(vec.end(), 6, v);
     std::vector<throwing_t, test_allocator<throwing_t> > vec2(std::move(vec), test_allocator<throwing_t>(2));
     (void)vec2;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
@@ -169,6 +186,7 @@ int main(int, char**) {
     int throw_after = 1;
     std::vector<throwing_t> vec({throwing_t(throw_after)});
     (void)vec;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
@@ -177,6 +195,7 @@ int main(int, char**) {
     int throw_after = 1;
     std::vector<throwing_t> vec({throwing_t(throw_after)}, std::allocator<throwing_t>());
     (void)vec;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
