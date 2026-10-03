@@ -77,7 +77,14 @@ module;
 #  endif // __has_include(<stdfloat>)
 #endif // _WIN32
 
+#ifdef _LIBCPP_COMPILER_CLANG_BASED
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreserved-module-identifier"
+#endif
 export module std.compat;
+#ifdef _LIBCPP_COMPILER_CLANG_BASED
+#pragma clang diagnostic pop
+#endif
 export import std;
 
 
