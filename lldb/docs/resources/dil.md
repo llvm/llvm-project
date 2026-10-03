@@ -7,27 +7,59 @@ some additional information for LLDB developers.
 
 ## Background: What is DIL and why did we implement it?
 
-As the name implies, the Data Inspection Language is a language that was created
-specifically to improve the stability and performance of program data
-introspection in LLDB, particularly when that introspection requires evaluating
-any simple expressions (which is often the case when data formatters and
-synthetic children are involved).
+In the context of LLDB, an **expression path** is the structured syntax used to
+navigate and access specific fields, members, or elements within a data
+structure starting from a root variable. A **path expression** is an expression
+consisting entirely of such structured syntax (and starting from a root
+variable).
 
-Prior to the introduction of DIL, nearly all expression evaluations in LLDB had
-to be done through the full expression evaluator. This is a heavy-weight
-mechanism that uses Clang to fully parse C++ expressions, building up Clang ASTs
-to represent the expressions and then evaluating these Clang ASTs within the
-current LLDB context. This approach has historically had several drawbacks,
-including being somewhat slow and also sometimes crashing (mostly due to Clang
-being designed to expect complete, correct programs rather than partial contexts
-and expressions).
+LLDB has always had two modes for accessing values in your program: path
+expressions, that commands like `frame variable` could understand and interpret;
+and "other" expressions, which could contain path expressions, but usually also
+included other pieces written in a source language, and which could be passed to
+the `expression` (aka `expr`) command. These "other" expressions were evaluated
+using a language-accurate parser for that language, and the results were
+obtained by running code in the target program.
 
-DIL was designed to address these issues by avoiding Clang altogether. Instead,
-it defines its own simple grammar, AST representation, lexer, parser and
-interpreter. By bypassing Clang, and only handling comparatively simple
-expressions, DIL can be both faster and more stable than the full expression
-evaluator.
+LLDB's path expressions, however, are not necessarily a direct representation of
+the type layout of structures in your program. Instead they grew from the
+observation that very often the most useful representation of a value is not the
+underlying layout of the object (particularly for container classes). In fact,
+users who are not data type maintainers are more likely to be confused if shown
+the underlying layout of the object. Users generally want to see the semantic
+meaning of the object, not its implementation.
 
+LLDB solves this problem by using Data Formatters that take the types in the
+type system and produce an alternate layout for the types that correspond to how
+the class is used (what the user really wants to see), not how it is
+implemented. The path expressions give you access to these re-formatted
+representations. In addition, these re-formatted representations allow LLDB to
+display the dynamic type of an object, not just the static type. But these
+re-formatted representations mean nothing to the underlying source language, so
+you cannot use them in the expression evaluator (which is based on the source
+language). This severely limited the utility of the reformatted values, since
+there was no way to perform logic operations (or other simple expression
+evaluation) on them.
+
+The Data Inspection Language (DIL) was designed to solve this problem. As the
+name implies, the DIL is a language that was created specifically to _improve
+the performance_ and _expand the capabilities_ of program data introspection in
+LLDB, particularly when that introspection requires evaluating simple
+expressions (which is often the case when data formatters and synthetic children
+are involved).
+
+The full expression evaluator uses Clang to fully parse C++ expressions,
+building up Clang ASTs to represent the expressions and then evaluating these
+Clang ASTs within the current LLDB context, by running code in the target. This
+is a very flexible mechanism, and can have true source language fidelity, but it
+can also be a bit slow.
+
+DIL was explicitly designed for speed. It addresses these issues by avoiding
+Clang altogether. Instead, it defines its own simple grammar, AST
+representation, lexer, parser and interpreter. By working on the reformatted
+values instead of the raw types, the DIL also allows you to not just view but
+write tests and other simple expressions using the values as they are shown to
+the user.
 
 ## The DIL Language
 
@@ -83,7 +115,7 @@ Most of the time, this is not a problem, as the two different execution paths
 will usually return the same value for the same expression. HOWEVER, there are
 cases where they will both return apparently valid but DIFFERENT RESULTS. One
 example of this is in the case of operator overloading. If DIL is used in a
-situation where an operator has an overloaded definition, DIL will probably
+situation where an operator has an overloaded definition, DIL will
 ignore the overloaded definition, and therefore return a result different from
 what you might expect. The full expression evaluator handles operator
 overloading properly.
@@ -96,64 +128,52 @@ on the full expression evaluator. For more information on this, see the section
 
 ## Where and how DIL is used in LLDB
 
-### Historical Background: `frame variable`, `print`, and `expr` commands
+### `frame variable`, `print`, and `expr` commands
 
-The LLDB interactive commands for examining program variables can be rather
-confusing. Currently there are three main commands that allow users to look at
-the values of program data, and to evaluate various types of expressions on
-them. These three commands are:
+LLDB has three main commands that allow users to look at the values of program
+data, and to evaluate various types of expressions on them. These three commands
+are:
 
 - `frame variable`, aka `frame var` or `v`
 - `dwim-print`, aka `print` or `p`
-- `expr`
-
-As if that were not confusing enough, `dwim-print` did not exist
-until 2022. Before that, `print` and `p` were abbreviations for `expr`.
-
-So what do these various commands do, and how did we get into this confusing
-mess?
-
-Originally, `frame variable` was meant to allow only plain access to
-variables. It recognized and handled a few basic operators as part of this:
-Address-of, pointer dereferencing, finding fields/members, and vector/array
-indexing. Any more complicated expression evaluation was meant to go through the
-expression evaluator. The expectation was that users would use `v` for simple
-accesses and `p` for more complex evaluations.
-
-The problem was that nearly all the users who came to LLDB were coming from using
-GDB. GDB did not have two separate commands -- it used `p` (`print`) for
-everything. So LLDB users were almost always using `p`, which was sometimes
-surprisingly slow or even crashed (see Background above, for more information).
-
-In an attempt to help properly direct more of the calls that should be going
-through `frame variable`, `dwim-print` was introduced in 2022. 'dwim' stands for
-'do-what-I-mean'. `dwim-print` looks at the expression and attempts to decide
-whether it could/should be handled by `frame variable` or whether it really
-needs the full expression evaluator, and calls the appropriate mechanism
-accordingly.
-
-DIL is now the default implementation for `frame variable` (aka `v`), so now
-that command is capable of handling many expressions that formerly needed to go
-through the full expression evaluator.
-
-`dwim-print` (aka `print` or `p`) still dispatches expressions based on what the
-original `frame variable` implementation could handle, not what DIL can do.
+- `expression`, aka `expr`
 
 
-### `frame variable`, `print` and `expr` commands today
+Historically `frame variable` was intended to handle path expressions (including
+re-formatted values), and `expression` was intended to handle any other
+expressions users wanted to evaluate.
 
-DIL is now the default implementation underlying the `frame variable` command
-(`v` for short). This is now the recommended way for users to request to see the
-values of their variables, and to evaluate simple expressions on them.
+
+`dwim-print` was introduced in 2022.  Before that time, `p` was an abbreviation
+for `expr`. The problem was that many LLDB users came to LLDB from GDB, where
+there was only one command either for accessing variable values (expression
+paths) or for evaluating more complex expressions. The single GDB command was
+`print`, usually abbreviated `p`. The result of this was that many LLDB users
+would just use `p` all the time, including times when it wasn't really necessary
+or even appropriate. `dwim-print` was introduced in an attempt to alleviate this
+problem. "dwim" stands for "do-what-I-mean". `dwim-print` looks at the
+expression and attempts to decide whether it could/should be handled by `frame
+variable` or whether it really needs the full expression evaluator, and calls
+the appropriate mechanism accordingly.  Since `p` was made an abbreviation for
+`dwim-print`, this went a long way towards solving the problem of users calling
+into the full expression evaluator when they shouldn't.
+
+
+After being introduced in 2025, DIL became the default implementation for `frame
+variable` (aka `v`), so now that command is capable of handling many expressions
+that formerly needed to go through the full expression evaluator. This is now
+the recommended way for users to request to see the values of their variables,
+and to evaluate simple expressions on them.
+
 
 For full or complex expressions (e.g. things involving function calls or
 templates), users should still use the full expression evaluator (`expr`).
 
-Using `dwim-print`, `print` or `p` still works, and will dispatch things as it
-always has (old `frame var` things to `frame var` and everything else to
-`expr`). However, users should probably use either `v` or `expr` to explicitly
-choose the path they really want.
 
+Currently`dwim-print` (aka `print` or `p`) still dispatches expressions based on
+what the original `frame variable` implementation could handle, not what DIL can
+do. Therefore it is better for users to use either `v` or `expr` to explicitly
+choose the evaluation mechanism they really want.
 
 ### User options and flags to control using DIL
 
