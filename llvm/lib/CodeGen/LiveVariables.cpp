@@ -825,7 +825,8 @@ void LiveVariables::addNewBlock(MachineBasicBlock *BB,
 
     // All registers used by PHI nodes in SuccBB must be live through BB.
     for (unsigned i = 1, e = BBI->getNumOperands(); i != e; i += 2)
-      if (BBI->getOperand(i+1).getMBB() == BB)
+      if (BBI->getOperand(i + 1).getMBB() == BB &&
+          BBI->getOperand(i).readsReg())
         getVarInfo(BBI->getOperand(i).getReg()).AliveBlocks.set(NumNew);
   }
 
