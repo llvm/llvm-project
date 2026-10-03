@@ -85,13 +85,23 @@ void DWARFDebugRangeList::dump(raw_ostream &OS) const {
 }
 
 DWARFAddressRangesVector DWARFDebugRangeList::getAbsoluteRanges(
-    std::optional<object::SectionedAddress> BaseAddr) const {
+    std::optional<object::SectionedAddress> BaseAddr,
+    bool IsXCOFFTombstone) const {
   DWARFAddressRangesVector Res;
   // debug_addr can't use the max integer tombstone because that's used for the
   // base address specifier entry - so use max-1.
   uint64_t Tombstone = dwarf::computeTombstoneAddress(AddressSize) - 1;
   for (const RangeListEntry &RLE : Entries) {
     if (RLE.isBaseAddressSelectionEntry(AddressSize)) {
+      // On XCOFF, the linker tombstones garbage-collected code with the same
+      // address (the max representable address) that DWARF reserves for a
+      // base address selection entry. LLVM does not emit real base address
+      // selection entries for XCOFF, so any entry that looks like one here
+      // is actually a tombstoned, garbage-collected range: treat it as
+      // empty/dead instead of shifting subsequent entries by its
+      // (meaningless) "end address".
+      if (IsXCOFFTombstone)
+        continue;
       BaseAddr = {RLE.EndAddress, RLE.SectionIndex};
       continue;
     }

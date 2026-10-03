@@ -72,8 +72,17 @@ public:
   /// getAbsoluteRanges - Returns absolute address ranges defined by this range
   /// list. Has to be passed base address of the compile unit referencing this
   /// range list.
+  ///
+  /// \param IsXCOFFTombstone must be set for XCOFF objects, where the linker
+  /// tombstones garbage-collected code with an address that is
+  /// indistinguishable, in this legacy .debug_ranges encoding, from a DWARF
+  /// base address selection entry. When set, an entry whose start address is
+  /// the tombstone value is treated as an empty/dead range instead of a base
+  /// address selection entry, since LLVM does not otherwise emit base
+  /// address selection entries for XCOFF.
   LLVM_ABI DWARFAddressRangesVector
-  getAbsoluteRanges(std::optional<object::SectionedAddress> BaseAddr) const;
+  getAbsoluteRanges(std::optional<object::SectionedAddress> BaseAddr,
+                     bool IsXCOFFTombstone = false) const;
 };
 
 } // end namespace llvm
