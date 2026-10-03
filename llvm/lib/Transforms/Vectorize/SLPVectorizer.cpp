@@ -481,6 +481,10 @@ public:
     Keep,
     /// Every clean bundle loses its saving.
     Cancel,
+    /// Only the clean bundles feeding a cast whose lanes get wider than the
+    /// loaded type before they leave the tree lose their saving, unless the
+    /// loaded or the widened lanes are of a packed type.
+    CancelWidened,
   };
 
   /// Calculates the cost of the subtrees, trims non-profitable ones and returns
@@ -2491,14 +2495,29 @@ private:
       const SmallDenseSet<unsigned, 8> &NodesToKeepBWs, unsigned &MaxDepthLevel,
       bool &IsProfitableToDemote, bool IsTruncRoot) const;
 
+  /// \returns the widest type the lanes of \p TE reach before they leave the
+  /// tree through a reduction, an external use or a user that is neither a
+  /// cast nor narrowed. With \p ApplyMinBWs the lanes are first narrowed to
+  /// their minimum bit widths, as the vector code is.
+  /// \p HasExternalUses tells whether a node has scalars used outside of the
+  /// tree.
+  Type *getWidestLaneType(
+      const TreeEntry &TE, bool ApplyMinBWs,
+      function_ref<bool(const TreeEntry &)> HasExternalUses) const;
+
+  /// \returns true if two lanes of \p Ty fit a scalar register as a legal
+  /// vector type, so the target has packed arithmetic on them.
+  bool isPackedLaneType(Type *Ty) const;
+
   /// \returns the load saving credited to the vectorized load bundle \p TE
   /// that never materializes on a target whose consecutive scalar loads
   /// coalesce into the same wide access, or zero if \p LoadSavings keeps it.
   /// Only clean bundles with no reordering, reuse or bit-width reduction lose
-  /// the saving.
-  InstructionCost
-  getCoalescedLoadPhantomSaving(const TreeEntry &TE,
-                                CoalescedLoadSavings LoadSavings) const;
+  /// the saving. \p HasExternalUses tells whether a node has scalars used
+  /// outside of the tree.
+  InstructionCost getCoalescedLoadPhantomSaving(
+      const TreeEntry &TE, CoalescedLoadSavings LoadSavings,
+      function_ref<bool(const TreeEntry &)> HasExternalUses) const;
 
   /// Builds the list of reorderable operands on the edges \p Edges of the \p
   /// UserTE, which allow reordering (i.e. the operands can be reordered because
@@ -13431,12 +13450,16 @@ InstructionCost BoUpSLP::getUnfusedFMulsPenalty(const TreeEntry &TE) const {
 
 /// \returns which load bundles of a reduction over \p VL lose the saving they
 /// are credited for although their scalar loads coalesce anyway. A reduction
-/// that would lose an fma has a stake in every load bundle, and any other
-/// reduction keeps every saving. A reassociable reduction loses no fma because
-/// its vector fmuls fuse into the reduction.
+/// that would lose an fma has a stake in every load bundle, an integer
+/// reduction only in the bundles whose lanes get widened, the same as an
+/// elementwise tree, and any other reduction keeps every saving. A
+/// reassociable reduction loses no fma because its vector fmuls fuse into the
+/// reduction.
 static BoUpSLP::CoalescedLoadSavings
 getReductionCoalescedLoadSavings(RecurKind RdxKind, FastMathFlags RdxFMF,
                                  ArrayRef<Value *> VL) {
+  if (RecurrenceDescriptor::isIntegerRecurrenceKind(RdxKind))
+    return BoUpSLP::CoalescedLoadSavings::CancelWidened;
   if (RdxKind != RecurKind::FAdd || !RdxFMF.allowContract() ||
       RdxFMF.allowReassoc() || none_of(VL, [](Value *V) {
         return match(V,
@@ -18594,9 +18617,51 @@ bool BoUpSLP::isTreeNotExtendable() const {
   return Res;
 }
 
-InstructionCost
-BoUpSLP::getCoalescedLoadPhantomSaving(const TreeEntry &TE,
-                                       CoalescedLoadSavings LoadSavings) const {
+Type *BoUpSLP::getWidestLaneType(
+    const TreeEntry &TE, bool ApplyMinBWs,
+    function_ref<bool(const TreeEntry &)> HasExternalUses) const {
+  Type *WidestTy = nullptr;
+  auto Widen = [&](Type *Ty) {
+    if (!WidestTy ||
+        DL->getTypeSizeInBits(Ty) > DL->getTypeSizeInBits(WidestTy))
+      WidestTy = Ty;
+  };
+  for (const TreeEntry *E = &TE;;) {
+    Type *OrigTy = E->Scalars.front()->getType()->getScalarType();
+    Type *Ty = OrigTy;
+    if (auto It = MinBWs.find(E);
+        ApplyMinBWs && It != MinBWs.end() &&
+        It->second.first < DL->getTypeSizeInBits(Ty) && !HasExternalUses(*E))
+      Ty = IntegerType::get(Ty->getContext(), It->second.first);
+    Widen(Ty);
+    const TreeEntry *UserTE = E->UserTreeIndex.UserTE;
+    if (!UserTE) {
+      if (ApplyMinBWs && UserIgnoreList && E == &getRootNode())
+        Widen(getReductionType()->getScalarType());
+      else
+        Widen(OrigTy);
+      return WidestTy;
+    }
+    if (!UserTE->hasState() || UserTE->isGather() ||
+        (!Instruction::isCast(UserTE->getOpcode()) &&
+         !MinBWs.contains(UserTE))) {
+      Widen(OrigTy);
+      return WidestTy;
+    }
+    E = UserTE;
+  }
+}
+
+bool BoUpSLP::isPackedLaneType(Type *Ty) const {
+  unsigned Bits = DL->getTypeSizeInBits(Ty);
+  unsigned RegBits =
+      TTI->getRegisterBitWidth(TargetTransformInfo::RGK_Scalar).getFixedValue();
+  return 2 * Bits <= RegBits && TTI->isTypeLegal(FixedVectorType::get(Ty, 2));
+}
+
+InstructionCost BoUpSLP::getCoalescedLoadPhantomSaving(
+    const TreeEntry &TE, CoalescedLoadSavings LoadSavings,
+    function_ref<bool(const TreeEntry &)> HasExternalUses) const {
   if (LoadSavings == CoalescedLoadSavings::Keep)
     return 0;
   if (!TE.hasState() || TE.isGather() || TE.getOpcode() != Instruction::Load ||
@@ -18616,6 +18681,20 @@ BoUpSLP::getCoalescedLoadPhantomSaving(const TreeEntry &TE,
   if (!TTI->consecutiveLoadsCoalesce(LI0->getType(), TE.Scalars.size(),
                                      BestAlign, LI0->getPointerAddressSpace()))
     return 0;
+  if (LoadSavings == CoalescedLoadSavings::CancelWidened) {
+    const TreeEntry *UserTE = TE.UserTreeIndex.UserTE;
+    if (!UserTE || UserTE->isGather() || !UserTE->hasState() ||
+        !Instruction::isCast(UserTE->getOpcode()))
+      return 0;
+    Type *LoadedTy = LI0->getType()->getScalarType();
+    Type *WidestTy =
+        getWidestLaneType(*UserTE, /*ApplyMinBWs=*/true, HasExternalUses);
+    if (DL->getTypeSizeInBits(WidestTy) <= DL->getTypeSizeInBits(LoadedTy) ||
+        isPackedLaneType(LoadedTy) ||
+        isPackedLaneType(
+            getWidestLaneType(*UserTE, /*ApplyMinBWs=*/false, HasExternalUses)))
+      return 0;
+  }
   InstructionCost ScalarLdCost = 0;
   for (Value *V : TE.Scalars) {
     auto *LI = cast<LoadInst>(V);
@@ -19486,6 +19565,12 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
       return false;
     return IsExternallyUsedV(V);
   };
+  auto HasExternalUses = [&](const TreeEntry &TE) {
+    return any_of(TE.Scalars, [&](Value *V) {
+      return !(TE.hasCopyableElements() && TE.isCopyableElement(V)) &&
+             IsExternallyUsedV(V);
+    });
+  };
   InstructionCost Cost = 0;
   SmallDenseMap<const TreeEntry *, uint64_t> EntryToScale;
   uint64_t PrevScale = 0;
@@ -19523,7 +19608,7 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
            "Expected gather nodes with users only.");
 
     InstructionCost C = getEntryCost(&TE, VectorizedVals, CheckedExtracts);
-    C += getCoalescedLoadPhantomSaving(TE, LoadSavings);
+    C += getCoalescedLoadPhantomSaving(TE, LoadSavings, HasExternalUses);
     uint64_t Scale = 0;
     bool CostIsFree = C == 0;
     // For gather/buildvector (and split-vectorize) entries, prefer the
@@ -19726,7 +19811,7 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
   };
   auto RecostEntry = [&](const TreeEntry *TE) {
     InstructionCost C = getEntryCost(TE, VectorizedVals, CheckedExtracts);
-    C += getCoalescedLoadPhantomSaving(*TE, LoadSavings);
+    C += getCoalescedLoadPhantomSaving(*TE, LoadSavings, HasExternalUses);
     if (!C.isValid() || C == 0)
       return C;
     uint64_t Scale = EntryToScale.lookup(TE);
@@ -29719,7 +29804,7 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
 
   InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable(
       /*VectorizedVals=*/{}, /*RdxRoot=*/nullptr,
-      BoUpSLP::CoalescedLoadSavings::Keep);
+      BoUpSLP::CoalescedLoadSavings::CancelWidened);
   R.buildExternalUses();
 
   Size = R.getCanonicalGraphSize() - R.getNumSplatSubtreeEntries();
@@ -30803,7 +30888,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       R.computeMinimumValueSizes();
       InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable(
           /*VectorizedVals=*/{}, /*RdxRoot=*/nullptr,
-          BoUpSLP::CoalescedLoadSavings::Keep);
+          BoUpSLP::CoalescedLoadSavings::CancelWidened);
       R.buildExternalUses();
 
       InstructionCost Cost = R.getTreeCost(TreeCost);

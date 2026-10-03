@@ -21,21 +21,68 @@ define i32 @dot8_sext_i8(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; CHECK-SAME: ptr addrspace(1) [[A:%.*]], ptr addrspace(1) [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[PA0:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[A]], i32 0
+; CHECK-NEXT:    [[LA0:%.*]] = load i8, ptr addrspace(1) [[PA0]], align 1
+; CHECK-NEXT:    [[XA0:%.*]] = sext i8 [[LA0]] to i32
 ; CHECK-NEXT:    [[PB0:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[B]], i32 0
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr addrspace(1) [[PA0]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = sext <4 x i8> [[TMP0]] to <4 x i32>
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr addrspace(1) [[PB0]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i8> [[TMP2]] to <4 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw <4 x i32> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[LB0:%.*]] = load i8, ptr addrspace(1) [[PB0]], align 1
+; CHECK-NEXT:    [[XB0:%.*]] = sext i8 [[LB0]] to i32
+; CHECK-NEXT:    [[M0:%.*]] = mul nsw i32 [[XA0]], [[XB0]]
+; CHECK-NEXT:    [[PA1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[A]], i32 1
+; CHECK-NEXT:    [[LA1:%.*]] = load i8, ptr addrspace(1) [[PA1]], align 1
+; CHECK-NEXT:    [[XA1:%.*]] = sext i8 [[LA1]] to i32
+; CHECK-NEXT:    [[PB1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[B]], i32 1
+; CHECK-NEXT:    [[LB1:%.*]] = load i8, ptr addrspace(1) [[PB1]], align 1
+; CHECK-NEXT:    [[XB1:%.*]] = sext i8 [[LB1]] to i32
+; CHECK-NEXT:    [[M1:%.*]] = mul nsw i32 [[XA1]], [[XB1]]
+; CHECK-NEXT:    [[R1:%.*]] = add nsw i32 [[M0]], [[M1]]
+; CHECK-NEXT:    [[PA2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[A]], i32 2
+; CHECK-NEXT:    [[LA2:%.*]] = load i8, ptr addrspace(1) [[PA2]], align 1
+; CHECK-NEXT:    [[XA2:%.*]] = sext i8 [[LA2]] to i32
+; CHECK-NEXT:    [[PB2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[B]], i32 2
+; CHECK-NEXT:    [[LB2:%.*]] = load i8, ptr addrspace(1) [[PB2]], align 1
+; CHECK-NEXT:    [[XB2:%.*]] = sext i8 [[LB2]] to i32
+; CHECK-NEXT:    [[M2:%.*]] = mul nsw i32 [[XA2]], [[XB2]]
+; CHECK-NEXT:    [[R2:%.*]] = add nsw i32 [[R1]], [[M2]]
+; CHECK-NEXT:    [[PA3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[A]], i32 3
+; CHECK-NEXT:    [[LA3:%.*]] = load i8, ptr addrspace(1) [[PA3]], align 1
+; CHECK-NEXT:    [[XA3:%.*]] = sext i8 [[LA3]] to i32
+; CHECK-NEXT:    [[PB3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[B]], i32 3
+; CHECK-NEXT:    [[LB3:%.*]] = load i8, ptr addrspace(1) [[PB3]], align 1
+; CHECK-NEXT:    [[XB3:%.*]] = sext i8 [[LB3]] to i32
+; CHECK-NEXT:    [[M3:%.*]] = mul nsw i32 [[XA3]], [[XB3]]
+; CHECK-NEXT:    [[R3:%.*]] = add nsw i32 [[R2]], [[M3]]
 ; CHECK-NEXT:    [[PA4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[A]], i32 4
+; CHECK-NEXT:    [[LA4:%.*]] = load i8, ptr addrspace(1) [[PA4]], align 1
+; CHECK-NEXT:    [[XA4:%.*]] = sext i8 [[LA4]] to i32
 ; CHECK-NEXT:    [[PB4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[B]], i32 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i8>, ptr addrspace(1) [[PA4]], align 1
-; CHECK-NEXT:    [[TMP6:%.*]] = sext <4 x i8> [[TMP5]] to <4 x i32>
-; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x i8>, ptr addrspace(1) [[PB4]], align 1
-; CHECK-NEXT:    [[TMP8:%.*]] = sext <4 x i8> [[TMP7]] to <4 x i32>
-; CHECK-NEXT:    [[TMP9:%.*]] = mul nsw <4 x i32> [[TMP6]], [[TMP8]]
-; CHECK-NEXT:    [[RDX_OP:%.*]] = add <4 x i32> [[TMP4]], [[TMP9]]
-; CHECK-NEXT:    [[R7:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[RDX_OP]])
+; CHECK-NEXT:    [[LB4:%.*]] = load i8, ptr addrspace(1) [[PB4]], align 1
+; CHECK-NEXT:    [[XB4:%.*]] = sext i8 [[LB4]] to i32
+; CHECK-NEXT:    [[M4:%.*]] = mul nsw i32 [[XA4]], [[XB4]]
+; CHECK-NEXT:    [[R4:%.*]] = add nsw i32 [[R3]], [[M4]]
+; CHECK-NEXT:    [[PA5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[A]], i32 5
+; CHECK-NEXT:    [[LA5:%.*]] = load i8, ptr addrspace(1) [[PA5]], align 1
+; CHECK-NEXT:    [[XA5:%.*]] = sext i8 [[LA5]] to i32
+; CHECK-NEXT:    [[PB5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[B]], i32 5
+; CHECK-NEXT:    [[LB5:%.*]] = load i8, ptr addrspace(1) [[PB5]], align 1
+; CHECK-NEXT:    [[XB5:%.*]] = sext i8 [[LB5]] to i32
+; CHECK-NEXT:    [[M5:%.*]] = mul nsw i32 [[XA5]], [[XB5]]
+; CHECK-NEXT:    [[R5:%.*]] = add nsw i32 [[R4]], [[M5]]
+; CHECK-NEXT:    [[PA6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[A]], i32 6
+; CHECK-NEXT:    [[LA6:%.*]] = load i8, ptr addrspace(1) [[PA6]], align 1
+; CHECK-NEXT:    [[XA6:%.*]] = sext i8 [[LA6]] to i32
+; CHECK-NEXT:    [[PB6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[B]], i32 6
+; CHECK-NEXT:    [[LB6:%.*]] = load i8, ptr addrspace(1) [[PB6]], align 1
+; CHECK-NEXT:    [[XB6:%.*]] = sext i8 [[LB6]] to i32
+; CHECK-NEXT:    [[M6:%.*]] = mul nsw i32 [[XA6]], [[XB6]]
+; CHECK-NEXT:    [[R6:%.*]] = add nsw i32 [[R5]], [[M6]]
+; CHECK-NEXT:    [[PA7:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[A]], i32 7
+; CHECK-NEXT:    [[LA7:%.*]] = load i8, ptr addrspace(1) [[PA7]], align 1
+; CHECK-NEXT:    [[XA7:%.*]] = sext i8 [[LA7]] to i32
+; CHECK-NEXT:    [[PB7:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[B]], i32 7
+; CHECK-NEXT:    [[LB7:%.*]] = load i8, ptr addrspace(1) [[PB7]], align 1
+; CHECK-NEXT:    [[XB7:%.*]] = sext i8 [[LB7]] to i32
+; CHECK-NEXT:    [[M7:%.*]] = mul nsw i32 [[XA7]], [[XB7]]
+; CHECK-NEXT:    [[R7:%.*]] = add nsw i32 [[R6]], [[M7]]
 ; CHECK-NEXT:    ret i32 [[R7]]
 ;
 entry:
@@ -110,10 +157,20 @@ define i32 @sum4_zext_i8(ptr addrspace(1) %a) {
 ; CHECK-SAME: ptr addrspace(1) [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[PA0:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[A]], i32 0
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr addrspace(1) [[PA0]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i16>
-; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[TMP1]])
-; CHECK-NEXT:    [[R3:%.*]] = zext i16 [[TMP2]] to i32
+; CHECK-NEXT:    [[LA0:%.*]] = load i8, ptr addrspace(1) [[PA0]], align 1
+; CHECK-NEXT:    [[XA0:%.*]] = zext i8 [[LA0]] to i32
+; CHECK-NEXT:    [[PA1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[A]], i32 1
+; CHECK-NEXT:    [[LA1:%.*]] = load i8, ptr addrspace(1) [[PA1]], align 1
+; CHECK-NEXT:    [[XA1:%.*]] = zext i8 [[LA1]] to i32
+; CHECK-NEXT:    [[R1:%.*]] = add nsw i32 [[XA0]], [[XA1]]
+; CHECK-NEXT:    [[PA2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[A]], i32 2
+; CHECK-NEXT:    [[LA2:%.*]] = load i8, ptr addrspace(1) [[PA2]], align 1
+; CHECK-NEXT:    [[XA2:%.*]] = zext i8 [[LA2]] to i32
+; CHECK-NEXT:    [[R2:%.*]] = add nsw i32 [[R1]], [[XA2]]
+; CHECK-NEXT:    [[PA3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[A]], i32 3
+; CHECK-NEXT:    [[LA3:%.*]] = load i8, ptr addrspace(1) [[PA3]], align 1
+; CHECK-NEXT:    [[XA3:%.*]] = zext i8 [[LA3]] to i32
+; CHECK-NEXT:    [[R3:%.*]] = add nsw i32 [[R2]], [[XA3]]
 ; CHECK-NEXT:    ret i32 [[R3]]
 ;
 entry:
@@ -191,10 +248,20 @@ define void @sum4_zext_i8_loop(ptr addrspace(1) %a, ptr addrspace(1) %out) {
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[OFF:%.*]] = shl i32 [[I]], 2
 ; CHECK-NEXT:    [[PA0:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[A]], i32 [[OFF]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr addrspace(1) [[PA0]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i16>
-; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[TMP1]])
-; CHECK-NEXT:    [[R3:%.*]] = zext i16 [[TMP2]] to i32
+; CHECK-NEXT:    [[LA0:%.*]] = load i8, ptr addrspace(1) [[PA0]], align 1
+; CHECK-NEXT:    [[XA0:%.*]] = zext i8 [[LA0]] to i32
+; CHECK-NEXT:    [[PA1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PA0]], i32 1
+; CHECK-NEXT:    [[LA1:%.*]] = load i8, ptr addrspace(1) [[PA1]], align 1
+; CHECK-NEXT:    [[XA1:%.*]] = zext i8 [[LA1]] to i32
+; CHECK-NEXT:    [[R1:%.*]] = add nsw i32 [[XA0]], [[XA1]]
+; CHECK-NEXT:    [[PA2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PA0]], i32 2
+; CHECK-NEXT:    [[LA2:%.*]] = load i8, ptr addrspace(1) [[PA2]], align 1
+; CHECK-NEXT:    [[XA2:%.*]] = zext i8 [[LA2]] to i32
+; CHECK-NEXT:    [[R2:%.*]] = add nsw i32 [[R1]], [[XA2]]
+; CHECK-NEXT:    [[PA3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PA0]], i32 3
+; CHECK-NEXT:    [[LA3:%.*]] = load i8, ptr addrspace(1) [[PA3]], align 1
+; CHECK-NEXT:    [[XA3:%.*]] = zext i8 [[LA3]] to i32
+; CHECK-NEXT:    [[R3:%.*]] = add nsw i32 [[R2]], [[XA3]]
 ; CHECK-NEXT:    [[PO:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT]], i32 [[I]]
 ; CHECK-NEXT:    store i32 [[R3]], ptr addrspace(1) [[PO]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
@@ -239,10 +306,20 @@ define i32 @sum4_zext_i8_lds_a4(ptr addrspace(3) %a) {
 ; CHECK-SAME: ptr addrspace(3) [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[PA0:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[A]], i32 0
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr addrspace(3) [[PA0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i16>
-; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[TMP1]])
-; CHECK-NEXT:    [[R3:%.*]] = zext i16 [[TMP2]] to i32
+; CHECK-NEXT:    [[LA0:%.*]] = load i8, ptr addrspace(3) [[PA0]], align 4
+; CHECK-NEXT:    [[XA0:%.*]] = zext i8 [[LA0]] to i32
+; CHECK-NEXT:    [[PA1:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[A]], i32 1
+; CHECK-NEXT:    [[LA1:%.*]] = load i8, ptr addrspace(3) [[PA1]], align 1
+; CHECK-NEXT:    [[XA1:%.*]] = zext i8 [[LA1]] to i32
+; CHECK-NEXT:    [[R1:%.*]] = add nsw i32 [[XA0]], [[XA1]]
+; CHECK-NEXT:    [[PA2:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[A]], i32 2
+; CHECK-NEXT:    [[LA2:%.*]] = load i8, ptr addrspace(3) [[PA2]], align 2
+; CHECK-NEXT:    [[XA2:%.*]] = zext i8 [[LA2]] to i32
+; CHECK-NEXT:    [[R2:%.*]] = add nsw i32 [[R1]], [[XA2]]
+; CHECK-NEXT:    [[PA3:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[A]], i32 3
+; CHECK-NEXT:    [[LA3:%.*]] = load i8, ptr addrspace(3) [[PA3]], align 1
+; CHECK-NEXT:    [[XA3:%.*]] = zext i8 [[LA3]] to i32
+; CHECK-NEXT:    [[R3:%.*]] = add nsw i32 [[R2]], [[XA3]]
 ; CHECK-NEXT:    ret i32 [[R3]]
 ;
 entry:
@@ -309,21 +386,68 @@ define i32 @dot8_sext_i8_lds_a16(ptr addrspace(3) %a, ptr addrspace(3) %b) {
 ; CHECK-SAME: ptr addrspace(3) [[A:%.*]], ptr addrspace(3) [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[PA0:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[A]], i32 0
+; CHECK-NEXT:    [[LA0:%.*]] = load i8, ptr addrspace(3) [[PA0]], align 16
+; CHECK-NEXT:    [[XA0:%.*]] = sext i8 [[LA0]] to i32
 ; CHECK-NEXT:    [[PB0:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[B]], i32 0
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr addrspace(3) [[PA0]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = sext <4 x i8> [[TMP0]] to <4 x i32>
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr addrspace(3) [[PB0]], align 16
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i8> [[TMP2]] to <4 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw <4 x i32> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[LB0:%.*]] = load i8, ptr addrspace(3) [[PB0]], align 16
+; CHECK-NEXT:    [[XB0:%.*]] = sext i8 [[LB0]] to i32
+; CHECK-NEXT:    [[M0:%.*]] = mul nsw i32 [[XA0]], [[XB0]]
+; CHECK-NEXT:    [[PA1:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[A]], i32 1
+; CHECK-NEXT:    [[LA1:%.*]] = load i8, ptr addrspace(3) [[PA1]], align 1
+; CHECK-NEXT:    [[XA1:%.*]] = sext i8 [[LA1]] to i32
+; CHECK-NEXT:    [[PB1:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[B]], i32 1
+; CHECK-NEXT:    [[LB1:%.*]] = load i8, ptr addrspace(3) [[PB1]], align 1
+; CHECK-NEXT:    [[XB1:%.*]] = sext i8 [[LB1]] to i32
+; CHECK-NEXT:    [[M1:%.*]] = mul nsw i32 [[XA1]], [[XB1]]
+; CHECK-NEXT:    [[R1:%.*]] = add nsw i32 [[M0]], [[M1]]
+; CHECK-NEXT:    [[PA2:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[A]], i32 2
+; CHECK-NEXT:    [[LA2:%.*]] = load i8, ptr addrspace(3) [[PA2]], align 2
+; CHECK-NEXT:    [[XA2:%.*]] = sext i8 [[LA2]] to i32
+; CHECK-NEXT:    [[PB2:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[B]], i32 2
+; CHECK-NEXT:    [[LB2:%.*]] = load i8, ptr addrspace(3) [[PB2]], align 2
+; CHECK-NEXT:    [[XB2:%.*]] = sext i8 [[LB2]] to i32
+; CHECK-NEXT:    [[M2:%.*]] = mul nsw i32 [[XA2]], [[XB2]]
+; CHECK-NEXT:    [[R2:%.*]] = add nsw i32 [[R1]], [[M2]]
+; CHECK-NEXT:    [[PA3:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[A]], i32 3
+; CHECK-NEXT:    [[LA3:%.*]] = load i8, ptr addrspace(3) [[PA3]], align 1
+; CHECK-NEXT:    [[XA3:%.*]] = sext i8 [[LA3]] to i32
+; CHECK-NEXT:    [[PB3:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[B]], i32 3
+; CHECK-NEXT:    [[LB3:%.*]] = load i8, ptr addrspace(3) [[PB3]], align 1
+; CHECK-NEXT:    [[XB3:%.*]] = sext i8 [[LB3]] to i32
+; CHECK-NEXT:    [[M3:%.*]] = mul nsw i32 [[XA3]], [[XB3]]
+; CHECK-NEXT:    [[R3:%.*]] = add nsw i32 [[R2]], [[M3]]
 ; CHECK-NEXT:    [[PA4:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[A]], i32 4
+; CHECK-NEXT:    [[LA4:%.*]] = load i8, ptr addrspace(3) [[PA4]], align 4
+; CHECK-NEXT:    [[XA4:%.*]] = sext i8 [[LA4]] to i32
 ; CHECK-NEXT:    [[PB4:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[B]], i32 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i8>, ptr addrspace(3) [[PA4]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = sext <4 x i8> [[TMP5]] to <4 x i32>
-; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x i8>, ptr addrspace(3) [[PB4]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = sext <4 x i8> [[TMP7]] to <4 x i32>
-; CHECK-NEXT:    [[TMP9:%.*]] = mul nsw <4 x i32> [[TMP6]], [[TMP8]]
-; CHECK-NEXT:    [[RDX_OP:%.*]] = add <4 x i32> [[TMP4]], [[TMP9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[RDX_OP]])
+; CHECK-NEXT:    [[LB4:%.*]] = load i8, ptr addrspace(3) [[PB4]], align 4
+; CHECK-NEXT:    [[XB4:%.*]] = sext i8 [[LB4]] to i32
+; CHECK-NEXT:    [[M4:%.*]] = mul nsw i32 [[XA4]], [[XB4]]
+; CHECK-NEXT:    [[R4:%.*]] = add nsw i32 [[R3]], [[M4]]
+; CHECK-NEXT:    [[PA5:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[A]], i32 5
+; CHECK-NEXT:    [[LA5:%.*]] = load i8, ptr addrspace(3) [[PA5]], align 1
+; CHECK-NEXT:    [[XA5:%.*]] = sext i8 [[LA5]] to i32
+; CHECK-NEXT:    [[PB5:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[B]], i32 5
+; CHECK-NEXT:    [[LB5:%.*]] = load i8, ptr addrspace(3) [[PB5]], align 1
+; CHECK-NEXT:    [[XB5:%.*]] = sext i8 [[LB5]] to i32
+; CHECK-NEXT:    [[M5:%.*]] = mul nsw i32 [[XA5]], [[XB5]]
+; CHECK-NEXT:    [[R5:%.*]] = add nsw i32 [[R4]], [[M5]]
+; CHECK-NEXT:    [[PA6:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[A]], i32 6
+; CHECK-NEXT:    [[LA6:%.*]] = load i8, ptr addrspace(3) [[PA6]], align 2
+; CHECK-NEXT:    [[XA6:%.*]] = sext i8 [[LA6]] to i32
+; CHECK-NEXT:    [[PB6:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[B]], i32 6
+; CHECK-NEXT:    [[LB6:%.*]] = load i8, ptr addrspace(3) [[PB6]], align 2
+; CHECK-NEXT:    [[XB6:%.*]] = sext i8 [[LB6]] to i32
+; CHECK-NEXT:    [[M6:%.*]] = mul nsw i32 [[XA6]], [[XB6]]
+; CHECK-NEXT:    [[R6:%.*]] = add nsw i32 [[R5]], [[M6]]
+; CHECK-NEXT:    [[PA7:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[A]], i32 7
+; CHECK-NEXT:    [[LA7:%.*]] = load i8, ptr addrspace(3) [[PA7]], align 1
+; CHECK-NEXT:    [[XA7:%.*]] = sext i8 [[LA7]] to i32
+; CHECK-NEXT:    [[PB7:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[B]], i32 7
+; CHECK-NEXT:    [[LB7:%.*]] = load i8, ptr addrspace(3) [[PB7]], align 1
+; CHECK-NEXT:    [[XB7:%.*]] = sext i8 [[LB7]] to i32
+; CHECK-NEXT:    [[M7:%.*]] = mul nsw i32 [[XA7]], [[XB7]]
+; CHECK-NEXT:    [[TMP10:%.*]] = add nsw i32 [[R6]], [[M7]]
 ; CHECK-NEXT:    ret i32 [[TMP10]]
 ;
 entry:
