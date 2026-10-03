@@ -335,9 +335,10 @@ bool CodeGen::isEmptyRecordForLayout(const ASTContext &Context, QualType T) {
   return true;
 }
 
-const Type *CodeGen::isSingleElementStruct(QualType T, ASTContext &Context) {
+const Type *CodeGen::isSingleElementStruct(QualType T, ASTContext &Context,
+                                           bool AllowUnions) {
   const auto *RD = T->getAsRecordDecl();
-  if (!RD)
+  if (!RD || (!AllowUnions && RD->isUnion()))
     return nullptr;
 
   if (RD->hasFlexibleArrayMember())
@@ -358,7 +359,7 @@ const Type *CodeGen::isSingleElementStruct(QualType T, ASTContext &Context) {
 
       // If this is non-empty and not a single element struct, the composite
       // cannot be a single element struct.
-      Found = isSingleElementStruct(I.getType(), Context);
+      Found = isSingleElementStruct(I.getType(), Context, AllowUnions);
       if (!Found)
         return nullptr;
     }
@@ -387,7 +388,7 @@ const Type *CodeGen::isSingleElementStruct(QualType T, ASTContext &Context) {
     if (!isAggregateTypeForABI(FT)) {
       Found = FT.getTypePtr();
     } else {
-      Found = isSingleElementStruct(FT, Context);
+      Found = isSingleElementStruct(FT, Context, AllowUnions);
       if (!Found)
         return nullptr;
     }
