@@ -285,15 +285,13 @@ define void @larger_smull(ptr nocapture noundef readonly %x, i16 noundef %y, ptr
 ; CHECK-SD-NEXT:    b.eq .LBB3_8
 ; CHECK-SD-NEXT:  .LBB3_6: // %for.body.preheader1
 ; CHECK-SD-NEXT:    sxth w10, w1
-; CHECK-SD-NEXT:    add x11, x2, x9, lsl #2
-; CHECK-SD-NEXT:    add x12, x0, x9, lsl #1
-; CHECK-SD-NEXT:    sub x8, x8, x9
 ; CHECK-SD-NEXT:  .LBB3_7: // %for.body
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-SD-NEXT:    ldrsh w9, [x12], #2
-; CHECK-SD-NEXT:    subs x8, x8, #1
-; CHECK-SD-NEXT:    mul w9, w9, w10
-; CHECK-SD-NEXT:    str w9, [x11], #4
+; CHECK-SD-NEXT:    ldrsh w11, [x0, x9, lsl #1]
+; CHECK-SD-NEXT:    mul w11, w11, w10
+; CHECK-SD-NEXT:    str w11, [x2, x9, lsl #2]
+; CHECK-SD-NEXT:    add x9, x9, #1
+; CHECK-SD-NEXT:    cmp x8, x9
 ; CHECK-SD-NEXT:    b.ne .LBB3_7
 ; CHECK-SD-NEXT:  .LBB3_8: // %for.cond.cleanup
 ; CHECK-SD-NEXT:    ret
@@ -301,7 +299,7 @@ define void @larger_smull(ptr nocapture noundef readonly %x, i16 noundef %y, ptr
 ; CHECK-GI-LABEL: larger_smull:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    cmp w3, #0
-; CHECK-GI-NEXT:    b.le .LBB3_7
+; CHECK-GI-NEXT:    b.le .LBB3_6
 ; CHECK-GI-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-GI-NEXT:    sxth w8, w1
 ; CHECK-GI-NEXT:    mov x10, xzr
@@ -332,19 +330,16 @@ define void @larger_smull(ptr nocapture noundef readonly %x, i16 noundef %y, ptr
 ; CHECK-GI-NEXT:    b.ne .LBB3_3
 ; CHECK-GI-NEXT:  // %bb.4: // %middle.block
 ; CHECK-GI-NEXT:    cmp x10, x9
-; CHECK-GI-NEXT:    b.eq .LBB3_7
-; CHECK-GI-NEXT:  .LBB3_5: // %for.body.preheader1
-; CHECK-GI-NEXT:    add x11, x2, x10, lsl #2
-; CHECK-GI-NEXT:    add x12, x0, x10, lsl #1
-; CHECK-GI-NEXT:    sub x9, x9, x10
-; CHECK-GI-NEXT:  .LBB3_6: // %for.body
+; CHECK-GI-NEXT:    b.eq .LBB3_6
+; CHECK-GI-NEXT:  .LBB3_5: // %for.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-GI-NEXT:    ldrsh w10, [x12], #2
-; CHECK-GI-NEXT:    subs x9, x9, #1
-; CHECK-GI-NEXT:    mul w10, w10, w8
-; CHECK-GI-NEXT:    str w10, [x11], #4
-; CHECK-GI-NEXT:    b.ne .LBB3_6
-; CHECK-GI-NEXT:  .LBB3_7: // %for.cond.cleanup
+; CHECK-GI-NEXT:    ldrsh w11, [x0, x10, lsl #1]
+; CHECK-GI-NEXT:    mul w11, w11, w8
+; CHECK-GI-NEXT:    str w11, [x2, x10, lsl #2]
+; CHECK-GI-NEXT:    add x10, x10, #1
+; CHECK-GI-NEXT:    cmp x9, x10
+; CHECK-GI-NEXT:    b.ne .LBB3_5
+; CHECK-GI-NEXT:  .LBB3_6: // %for.cond.cleanup
 ; CHECK-GI-NEXT:    ret
 entry:
   %conv1 = sext i16 %y to i32
@@ -445,16 +440,14 @@ define void @larger_umull(ptr nocapture noundef readonly %x, i16 noundef %y, ptr
 ; CHECK-SD-NEXT:    cmp x9, x8
 ; CHECK-SD-NEXT:    b.eq .LBB4_8
 ; CHECK-SD-NEXT:  .LBB4_6: // %for.body.preheader1
-; CHECK-SD-NEXT:    add x10, x2, x9, lsl #2
-; CHECK-SD-NEXT:    add x11, x0, x9, lsl #1
-; CHECK-SD-NEXT:    and w12, w1, #0xffff
-; CHECK-SD-NEXT:    sub x8, x8, x9
+; CHECK-SD-NEXT:    and w10, w1, #0xffff
 ; CHECK-SD-NEXT:  .LBB4_7: // %for.body
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-SD-NEXT:    ldrh w9, [x11], #2
-; CHECK-SD-NEXT:    subs x8, x8, #1
-; CHECK-SD-NEXT:    mul w9, w9, w12
-; CHECK-SD-NEXT:    str w9, [x10], #4
+; CHECK-SD-NEXT:    ldrh w11, [x0, x9, lsl #1]
+; CHECK-SD-NEXT:    mul w11, w11, w10
+; CHECK-SD-NEXT:    str w11, [x2, x9, lsl #2]
+; CHECK-SD-NEXT:    add x9, x9, #1
+; CHECK-SD-NEXT:    cmp x8, x9
 ; CHECK-SD-NEXT:    b.ne .LBB4_7
 ; CHECK-SD-NEXT:  .LBB4_8: // %for.cond.cleanup
 ; CHECK-SD-NEXT:    ret
@@ -495,16 +488,14 @@ define void @larger_umull(ptr nocapture noundef readonly %x, i16 noundef %y, ptr
 ; CHECK-GI-NEXT:    cmp x8, x9
 ; CHECK-GI-NEXT:    b.eq .LBB4_7
 ; CHECK-GI-NEXT:  .LBB4_5: // %for.body.preheader1
-; CHECK-GI-NEXT:    add x10, x2, x8, lsl #2
-; CHECK-GI-NEXT:    add x11, x0, x8, lsl #1
-; CHECK-GI-NEXT:    and w12, w1, #0xffff
-; CHECK-GI-NEXT:    sub x8, x9, x8
+; CHECK-GI-NEXT:    and w10, w1, #0xffff
 ; CHECK-GI-NEXT:  .LBB4_6: // %for.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-GI-NEXT:    ldrh w9, [x11], #2
-; CHECK-GI-NEXT:    subs x8, x8, #1
-; CHECK-GI-NEXT:    mul w9, w9, w12
-; CHECK-GI-NEXT:    str w9, [x10], #4
+; CHECK-GI-NEXT:    ldrh w11, [x0, x8, lsl #1]
+; CHECK-GI-NEXT:    mul w11, w11, w10
+; CHECK-GI-NEXT:    str w11, [x2, x8, lsl #2]
+; CHECK-GI-NEXT:    add x8, x8, #1
+; CHECK-GI-NEXT:    cmp x9, x8
 ; CHECK-GI-NEXT:    b.ne .LBB4_6
 ; CHECK-GI-NEXT:  .LBB4_7: // %for.cond.cleanup
 ; CHECK-GI-NEXT:    ret

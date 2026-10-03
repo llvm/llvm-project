@@ -303,19 +303,21 @@ for.exit:                                 ; preds = %for.cond1.for.cond
 define void @one_dimensional_with_store(ptr %a, ptr %b, ptr %c, i32 %N) {
 ; CHECK-LABEL: one_dimensional_with_store:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, w3
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w9, w3
 ; CHECK-NEXT:  .LBB4_1: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr x9, [x0], #8
-; CHECK-NEXT:    ldr w10, [x1]
-; CHECK-NEXT:    ldr w9, [x9]
+; CHECK-NEXT:    ldr x10, [x0, x8, lsl #3]
+; CHECK-NEXT:    ldr w11, [x1]
+; CHECK-NEXT:    ldr w10, [x10]
+; CHECK-NEXT:    rev w11, w11
 ; CHECK-NEXT:    rev w10, w10
-; CHECK-NEXT:    rev w9, w9
-; CHECK-NEXT:    cmp w9, w10
-; CHECK-NEXT:    cset w9, hi
-; CHECK-NEXT:    csinv w9, w9, wzr, hs
-; CHECK-NEXT:    subs x8, x8, #1
-; CHECK-NEXT:    strb w9, [x2], #1
+; CHECK-NEXT:    cmp w10, w11
+; CHECK-NEXT:    cset w10, hi
+; CHECK-NEXT:    csinv w10, w10, wzr, hs
+; CHECK-NEXT:    strb w10, [x2, x8]
+; CHECK-NEXT:    add x8, x8, #1
+; CHECK-NEXT:    cmp x9, x8
 ; CHECK-NEXT:    b.ne .LBB4_1
 ; CHECK-NEXT:  // %bb.2: // %for.exit
 ; CHECK-NEXT:    ret
