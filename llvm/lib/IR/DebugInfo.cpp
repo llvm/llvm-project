@@ -1941,6 +1941,16 @@ LLVMMetadataRef LLVMDIBuilderGetOrCreateSubrange(LLVMDIBuilderRef Builder,
   return wrap(unwrap(Builder)->getOrCreateSubrange(Lo, Count));
 }
 
+LLVMMetadataRef LLVMDIBuilderGetOrCreateDynamicSubrange(
+                                                    LLVMDIBuilderRef Builder,
+                                                    LLVMMetadataRef Count,
+                                                    LLVMMetadataRef LowerBound,
+                                                    LLVMMetadataRef UpperBound,
+                                                    LLVMMetadataRef Stride) {
+  return wrap(unwrap(Builder)->getOrCreateSubrange(
+      unwrap(Count), unwrap(LowerBound), unwrap(UpperBound), unwrap(Stride)));
+}
+
 LLVMMetadataRef LLVMDIBuilderGetOrCreateArray(LLVMDIBuilderRef Builder,
                                               LLVMMetadataRef *Data,
                                               size_t Length) {
