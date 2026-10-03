@@ -1059,8 +1059,7 @@
 
         function omp_get_dyn_gprivate_memspace(access_group)
           import
-          integer(omp_memspace_handle_kind)
-     &      omp_get_dyn_gprivate_memspace
+          integer(omp_memspace_handle_kind)omp_get_dyn_gprivate_memspace
           integer(omp_access_kind), value, optional :: access_group
         end function omp_get_dyn_gprivate_memspace
 
