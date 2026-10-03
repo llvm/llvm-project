@@ -1794,8 +1794,7 @@ define i32 @pr171435_1(ptr noundef %arg) {
 ; CHECK:       [[BB_2]]:
 ; CHECK-NEXT:    br label %[[BB_3]]
 ; CHECK:       [[BB_3]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[LOAD]], %[[BB_1]] ], [ 0, %[[BB_2]] ]
-; CHECK-NEXT:    [[PHI_FR:%.*]] = freeze i32 [[PHI]]
+; CHECK-NEXT:    [[PHI_FR:%.*]] = phi i32 [ [[LOAD]], %[[BB_1]] ], [ 0, %[[BB_2]] ]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[PHI_FR]], -8
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[GETELEMENTPTR]], align 4
 ; CHECK-NEXT:    ret i32 0
