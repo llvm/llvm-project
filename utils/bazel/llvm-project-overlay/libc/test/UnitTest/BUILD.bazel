@@ -101,6 +101,11 @@ libc_test_library(
             "//libc:waitpid",
         ],
         "//conditions:default": [],
+    }) + select({
+        "//libc:full_build_linux": [
+            "//libc:prctl",
+        ],
+        "//conditions:default": [],
     }),
     # Force linking in this library's `main()` to surface
     # a duplicate symbol error if a test defines its own main.
