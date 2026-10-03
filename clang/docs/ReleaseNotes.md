@@ -194,6 +194,10 @@ features cannot lower the translation-unit ABI level;
   them to an enumeration type with a fixed `bool` underlying type. This
   resolves [CWG1094](https://wg21.link/cwg1094).
 
+- Implemented [CWG2900](https://wg21.link/cwg2900), removing an ambiguity
+  when partial ordering constant template parameters declared
+  with placeholder types.
+
 ### C Language Changes
 
 #### C2y Feature Support
