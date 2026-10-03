@@ -168,28 +168,23 @@ exit:
 define i32 @test_nusw_gep_with_load_user_outside_loop(ptr %A) {
 ; CHECK-LABEL: 'test_nusw_gep_with_load_user_outside_loop'
 ; CHECK-NEXT:    loop.header:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            store i32 0, ptr %A, align 4 ->
-; CHECK-NEXT:            store i32 0, ptr %gep, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: (-392 + %A) High: (8 + %A))
-; CHECK-NEXT:            Member: {(4 + %A),+,-4}<nw><%loop.header>
+; CHECK-NEXT:          (Low: (-400 + %A) High: (4 + %A))
+; CHECK-NEXT:            Member: {(-4 + %A),+,-4}<nw><%loop.header>
 ; CHECK-NEXT:            Member: %A
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {true,+,true}<%loop.header> Added Flags: <nusw>
+; CHECK-NEXT:      {true,+,true}<%loop.header> Added Flags: <irr>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep = getelementptr nusw i32, ptr %A, i64 %and:
 ; CHECK-NEXT:        ((4 * (zext i1 {true,+,true}<%loop.header> to i64))<nuw><nsw> + %A)
-; CHECK-NEXT:        --> {(4 + %A),+,-4}<nw><%loop.header>
+; CHECK-NEXT:        --> {(-4 + %A),+,-4}<nw><%loop.header>
 ;
 entry:
   br label %loop.header
