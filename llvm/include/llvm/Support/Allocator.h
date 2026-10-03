@@ -28,6 +28,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <new>
 #include <optional>
 #include <utility>
 
@@ -476,9 +477,20 @@ operator new(size_t Size,
              llvm::BumpPtrAllocatorImpl<AllocatorT, SlabSize, SizeThreshold,
                                         GrowthDelay, MinAlign> &Allocator) {
   // alignof(T) is unknown but Size%alignof(T)==0, so the lowest set bit of Size
-  // bounds it (capped at alignof(max_align_t)).
-  auto S = Size | alignof(std::max_align_t);
+  // bounds it. If it's greater than the default new alignment, the other
+  // overload (operator new(size_t, align_val_t, ...)) will be called, so cap
+  // our guess there.
+  auto S = Size | __STDCPP_DEFAULT_NEW_ALIGNMENT__;
   return Allocator.Allocate(Size, llvm::Align(S & -S));
+}
+
+template <typename AllocatorT, size_t SlabSize, size_t SizeThreshold,
+          size_t GrowthDelay, size_t MinAlign>
+void *
+operator new(size_t Size, std::align_val_t Align,
+             llvm::BumpPtrAllocatorImpl<AllocatorT, SlabSize, SizeThreshold,
+                                        GrowthDelay, MinAlign> &Allocator) {
+  return Allocator.Allocate(Size, (size_t)Align);
 }
 
 template <typename AllocatorT, size_t SlabSize, size_t SizeThreshold,
