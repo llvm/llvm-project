@@ -72,6 +72,9 @@ __riscv_save_4:
   sw     s1, 52(sp)
   sw     s0, 56(sp)
   sw     ra, 60(sp)
+#if defined(__riscv_shadow_stack)
+  sspush ra
+#endif
   add    sp, sp, t1
   jr     t0
 
@@ -92,6 +95,9 @@ __riscv_save_0:
   sw      s1,  4(sp)
   sw      s0,  8(sp)
   sw      ra,  12(sp)
+#if defined(__riscv_shadow_stack)
+  sspush ra
+#endif
   jr      t0
 
 #else
@@ -103,6 +109,9 @@ __riscv_save_2:
   sw      s1,  0(sp)
   sw      s0,  4(sp)
   sw      ra,  8(sp)
+#if defined(__riscv_shadow_stack)
+  sspush ra
+#endif
   jr      t0
 
   .globl  __riscv_save_1
@@ -111,6 +120,9 @@ __riscv_save_1:
   addi    sp, sp, -8
   sw      s0,  0(sp)
   sw      ra,  4(sp)
+#if defined(__riscv_shadow_stack)
+  sspush ra
+#endif
   jr      t0
 
   .globl  __riscv_save_0
@@ -118,6 +130,9 @@ __riscv_save_1:
 __riscv_save_0:
   addi    sp, sp, -4
   sw      ra,  0(sp)
+#if defined(__riscv_shadow_stack)
+  sspush ra
+#endif
   jr      t0
 
 #endif
@@ -199,6 +214,9 @@ __riscv_save_2:
   sd     s1, 88(sp)
   sd     s0, 96(sp)
   sd     ra, 104(sp)
+#if defined(__riscv_shadow_stack)
+  sspush ra
+#endif
   add    sp, sp, t1
   jr     t0
 
@@ -211,6 +229,9 @@ __riscv_save_0:
   addi   sp, sp, -16
   sd     s0, 0(sp)
   sd     ra, 8(sp)
+#if defined(__riscv_shadow_stack)
+  sspush ra
+#endif
   jr     t0
 
 #else
@@ -222,6 +243,9 @@ __riscv_save_2:
   sw      s1, 0(sp)
   sw      s0, 8(sp)
   sw      ra, 16(sp)
+#if defined(__riscv_shadow_stack)
+  sspush ra
+#endif
   jr      t0
 
   .globl  __riscv_save_1
@@ -230,6 +254,9 @@ __riscv_save_1:
   addi    sp, sp, -16
   sw      s0, 0(sp)
   sw      ra, 8(sp)
+#if defined(__riscv_shadow_stack)
+  sspush ra
+#endif
   jr      t0
 
   .globl  __riscv_save_0
@@ -237,6 +264,9 @@ __riscv_save_1:
 __riscv_save_0:
   addi    sp, sp, -8
   sw      ra,  0(sp)
+#if defined(__riscv_shadow_stack)
+  sspush ra
+#endif
   jr      t0
 
 #endif
