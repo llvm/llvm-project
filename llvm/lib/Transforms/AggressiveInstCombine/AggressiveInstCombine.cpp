@@ -1251,12 +1251,9 @@ static bool tryToRecognizeTableBasedLog2(LoadInst *LI, Type *AccessType,
 //
 // Shares the load/GEP/offset match with the cttz and log2 recognizers above;
 // see tryToRecognizeTableBasedPatterns().
-static bool tryToRecognizeTableBasedLowBitsMask(LoadInst *LI, Type *AccessType,
-                                                GlobalVariable *GVTable,
-                                                Value *GepIdx,
-                                                const APInt &GEPScale,
-                                                const DataLayout &DL,
-                                                TargetTransformInfo &TTI) {
+static bool tryToRecognizeTableBasedLowBitsMask(
+    LoadInst *LI, Type *AccessType, GlobalVariable *GVTable, Value *GepIdx,
+    const APInt &GEPScale, const DataLayout &DL, TargetTransformInfo &TTI) {
   // The value must be exactly the table element; refuse volatile/atomic loads.
   if (!LI->isSimple())
     return false;
