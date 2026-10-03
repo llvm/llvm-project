@@ -1359,8 +1359,8 @@ llvm::MDNode *CodeGenFunction::buildAllocToken(QualType AllocType) {
     // An empty type name denotes an unknown type.
     if (!ATMD)
       ATMD = llvm::AllocTokenMetadata{{}, false};
-    // Use the function containing the allocation (for lambdas, the call
-    // operator; for blocks and captured statements, the enclosing function).
+    // Use the function containing the allocation. For lambdas, use the call
+    // operator. For blocks and captured statements, use the enclosing function.
     // Allocations outside of any function (e.g. global initializers) use "".
     const Decl *D =
         isa_and_nonnull<FunctionDecl>(CurCodeDecl) ? CurCodeDecl : CurFuncDecl;
