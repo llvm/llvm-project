@@ -29,6 +29,7 @@
 #include "llvm/IR/ConstantRangeList.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugInfoODRUniquer.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalIFunc.h"
@@ -528,6 +529,9 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
     return error(ForwardRefValIDs.begin()->second.second,
                  "use of undefined value '@" +
                      Twine(ForwardRefValIDs.begin()->first) + "'");
+
+  if (Context.isODRUniquingDebugTypes())
+    Context.getDebugTypeODRUniquer()->finalizeUnresolvedSubprogramDecls();
 
   // Resolve metadata cycles.
   for (auto &N : NumberedMetadata) {
@@ -6399,13 +6403,45 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
     return error(
         Loc,
         "missing 'distinct', required for !DISubprogram that is a Definition");
-  Result = GET_OR_DISTINCT(
-      DISubprogram,
-      (Context, scope.Val, name.Val, linkageName.Val, file.Val, line.Val,
-       type.Val, scopeLine.Val, containingType.Val, virtualIndex.Val,
-       thisAdjustment.Val, flags.Val, SPFlags, unit.Val, templateParams.Val,
-       declaration.Val, retainedNodes.Val, thrownTypes.Val, annotations.Val,
-       targetFuncName.Val, keyInstructions.Val));
+
+  Result = nullptr;
+  bool MaybeODRUnique = Context.isODRUniquingDebugTypes() && !IsDistinct &&
+                        !(SPFlags & DISubprogram::SPFlagDefinition) &&
+                        linkageName.Val;
+
+  if (MaybeODRUnique) {
+    if (DIScope *Scope = dyn_cast<DIScope>(scope.Val)) {
+      Result = Context.getDebugTypeODRUniquer()->getODRSubprogramDecl(
+          Scope, linkageName.Val->getString());
+    } else {
+      // The scope is a temporary forward reference, meaning we can't perform
+      // ODR-uniquing yet. In order to perform ODR uniquing later the SP must
+      // be replacable, so create a temporary one.
+      TempDISubprogram Tmp = DISubprogram::getTemporary(
+          Context, scope.Val, name.Val, linkageName.Val, file.Val, line.Val,
+          type.Val, scopeLine.Val, containingType.Val, virtualIndex.Val,
+          thisAdjustment.Val, flags.Val, SPFlags, unit.Val, templateParams.Val,
+          declaration.Val, retainedNodes.Val, thrownTypes.Val, annotations.Val,
+          targetFuncName.Val, keyInstructions.Val);
+      Result = Tmp.get();
+      Context.getDebugTypeODRUniquer()->addUnresolvedODRSubprogramDecl(
+          std::move(Tmp));
+      return false;
+    }
+  }
+
+  if (!Result)
+    Result = GET_OR_DISTINCT(
+        DISubprogram,
+        (Context, scope.Val, name.Val, linkageName.Val, file.Val, line.Val,
+         type.Val, scopeLine.Val, containingType.Val, virtualIndex.Val,
+         thisAdjustment.Val, flags.Val, SPFlags, unit.Val, templateParams.Val,
+         declaration.Val, retainedNodes.Val, thrownTypes.Val, annotations.Val,
+         targetFuncName.Val, keyInstructions.Val));
+
+  if (MaybeODRUnique)
+    Context.getDebugTypeODRUniquer()->addSubprogramDecl(
+        cast<DISubprogram>(Result));
 
   if (IsDistinct)
     NewDistinctSPs.push_back(cast<DISubprogram>(Result));

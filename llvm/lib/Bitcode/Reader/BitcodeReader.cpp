@@ -59,6 +59,7 @@
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/IR/TrackingMDRef.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
@@ -7248,8 +7249,8 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
     stripDebugInfo(*F);
 
   // Finish fn->subprogram upgrade for materialized functions.
-  if (DISubprogram *SP = MDLoader->lookupSubprogramForFunction(F))
-    F->setSubprogram(SP);
+  if (TrackingMDNodeRef SP = MDLoader->lookupSubprogramForFunction(F))
+    F->setSubprogram(cast<DISubprogram>(SP));
 
   // Check if the TBAA Metadata are valid, otherwise we will need to strip them.
   if (!MDLoader->isStrippingTBAA()) {
