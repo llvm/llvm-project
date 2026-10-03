@@ -429,6 +429,13 @@ public:
     return false;
   }
 
+  virtual bool
+  hasMultiVectorLoadStore(unsigned NumVectors, TTI::MaskSource Mask,
+                          VectorType *VectorTy, bool IsStore,
+                          std::optional<Instruction::CastOps> CastHint) const {
+    return false;
+  }
+
   virtual bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
                                             Align Alignment,
                                             unsigned AddrSpace) const {
