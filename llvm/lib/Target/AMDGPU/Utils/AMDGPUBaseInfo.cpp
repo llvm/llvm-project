@@ -3389,8 +3389,20 @@ struct AlwaysUniform {
 };
 const AlwaysUniform *lookupAlwaysUniform(unsigned Intr);
 
+struct AsyncIntrinsic {
+  unsigned Intr;
+};
+const AsyncIntrinsic *lookupAsyncIntrinsic(unsigned Intr);
+
+struct AsyncLDSDMAIntrinsic {
+  unsigned Intr;
+};
+const AsyncLDSDMAIntrinsic *lookupAsyncLDSDMAIntrinsic(unsigned Intr);
+
 #define GET_SourcesOfDivergence_IMPL
 #define GET_UniformIntrinsics_IMPL
+#define GET_AsyncIntrinsics_IMPL
+#define GET_AsyncLDSDMAIntrinsics_IMPL
 #define GET_Gfx9BufferFormat_IMPL
 #define GET_Gfx10BufferFormat_IMPL
 #define GET_Gfx11PlusBufferFormat_IMPL
@@ -3407,44 +3419,11 @@ bool isIntrinsicAlwaysUniform(unsigned IntrID) {
   return lookupAlwaysUniform(IntrID);
 }
 
-bool isAsyncIntrinsic(unsigned IntrID) {
-  switch (IntrID) {
-  case Intrinsic::amdgcn_raw_buffer_load_lds:
-  case Intrinsic::amdgcn_raw_buffer_load_async_lds:
-  case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
-  case Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds:
-  case Intrinsic::amdgcn_struct_buffer_load_lds:
-  case Intrinsic::amdgcn_struct_buffer_load_async_lds:
-  case Intrinsic::amdgcn_struct_ptr_buffer_load_lds:
-  case Intrinsic::amdgcn_struct_ptr_buffer_load_async_lds:
-  case Intrinsic::amdgcn_load_to_lds:
-  case Intrinsic::amdgcn_load_async_to_lds:
-  case Intrinsic::amdgcn_global_load_lds:
-  case Intrinsic::amdgcn_global_load_async_lds:
-  case Intrinsic::amdgcn_cluster_load_async_to_lds_b8:
-  case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
-  case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
-  case Intrinsic::amdgcn_cluster_load_async_to_lds_b128:
-  case Intrinsic::amdgcn_global_load_async_to_lds_b8:
-  case Intrinsic::amdgcn_global_load_async_to_lds_b32:
-  case Intrinsic::amdgcn_global_load_async_to_lds_b64:
-  case Intrinsic::amdgcn_global_load_async_to_lds_b128:
-  case Intrinsic::amdgcn_global_store_async_from_lds_b8:
-  case Intrinsic::amdgcn_global_store_async_from_lds_b32:
-  case Intrinsic::amdgcn_global_store_async_from_lds_b64:
-  case Intrinsic::amdgcn_global_store_async_from_lds_b128:
-  case Intrinsic::amdgcn_tensor_load_to_lds:
-  case Intrinsic::amdgcn_tensor_store_from_lds:
-  case Intrinsic::amdgcn_asyncmark:
-  case Intrinsic::amdgcn_wait_asyncmark:
-  case Intrinsic::amdgcn_s_wait_asynccnt:
-  case Intrinsic::amdgcn_s_wait_tensorcnt:
-  case Intrinsic::amdgcn_ds_atomic_async_barrier_arrive_b64:
-    return true;
-  default:
-    return false;
-  }
+bool isAsyncLDSDMAIntrinsic(unsigned IntrID) {
+  return lookupAsyncLDSDMAIntrinsic(IntrID);
 }
+
+bool isAsyncIntrinsic(unsigned IntrID) { return lookupAsyncIntrinsic(IntrID); }
 
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
                                                   uint8_t NumComponents,

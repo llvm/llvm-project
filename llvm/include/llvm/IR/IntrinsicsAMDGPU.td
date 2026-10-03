@@ -40,6 +40,25 @@ class AMDGPURsrcIntrinsic<int rsrcarg, bit isimage = false> {
   bit IsImage = isimage;
 }
 
+// Marker classes for asynchronous operations.
+class AMDGPUAsyncIntrinsic {
+  Intrinsic Intr = !cast<Intrinsic>(NAME);
+}
+
+// DMA transfers between global memory and LDS.
+class AMDGPULDSDMAIntrinsic : AMDGPUAsyncIntrinsic;
+
+// DMA transfers between global memory and LDS tracked with asyncmarks.
+class AMDGPUAsyncLDSDMAIntrinsic : AMDGPUAsyncIntrinsic;
+
+// Operation tracked by ASYNCcnt.
+class AMDGPUAsyncCntIntrinsic : AMDGPUAsyncIntrinsic;
+
+// Operation tracked by TENSORcnt.
+class AMDGPUTensorCntIntrinsic : AMDGPUAsyncIntrinsic;
+
+class AMDGPUAsyncMarkIntrinsic : AMDGPUAsyncIntrinsic;
+
 let TargetPrefix = "r600" in {
 
   multiclass AMDGPUReadPreloadRegisterIntrinsic_xyz<
@@ -2167,8 +2186,10 @@ class AMDGPURawBufferLoadLDS : Intrinsic <
    ImmArg<ArgIndex<6>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
 
 let TargetFeatures = "vmem-to-lds-load-insts" in {
-  def int_amdgcn_raw_buffer_load_lds : AMDGPURawBufferLoadLDS;
-  def int_amdgcn_raw_buffer_load_async_lds : AMDGPURawBufferLoadLDS;
+  def int_amdgcn_raw_buffer_load_lds : AMDGPURawBufferLoadLDS,
+        AMDGPULDSDMAIntrinsic;
+  def int_amdgcn_raw_buffer_load_async_lds : AMDGPURawBufferLoadLDS,
+        AMDGPUAsyncLDSDMAIntrinsic;
 } // End TargetFeatures = "vmem-to-lds-load-insts"
 
 class AMDGPURawPtrBufferLoadLDS :
@@ -2195,9 +2216,11 @@ class AMDGPURawPtrBufferLoadLDS :
 
 let TargetFeatures = "vmem-to-lds-load-insts" in {
   def int_amdgcn_raw_ptr_buffer_load_lds : AMDGPURawPtrBufferLoadLDS,
-        ClangBuiltin<"__builtin_amdgcn_raw_ptr_buffer_load_lds">;
+        ClangBuiltin<"__builtin_amdgcn_raw_ptr_buffer_load_lds">,
+        AMDGPULDSDMAIntrinsic;
   def int_amdgcn_raw_ptr_buffer_load_async_lds : AMDGPURawPtrBufferLoadLDS,
-        ClangBuiltin<"__builtin_amdgcn_raw_ptr_buffer_load_async_lds">;
+        ClangBuiltin<"__builtin_amdgcn_raw_ptr_buffer_load_async_lds">,
+        AMDGPUAsyncLDSDMAIntrinsic;
 } // End TargetFeatures = "vmem-to-lds-load-insts"
 
 
@@ -2221,8 +2244,10 @@ class AMDGPUStructBufferLoadLDS : Intrinsic <
    ImmArg<ArgIndex<7>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
 
 let TargetFeatures = "vmem-to-lds-load-insts" in {
-  def int_amdgcn_struct_buffer_load_lds : AMDGPUStructBufferLoadLDS;
-  def int_amdgcn_struct_buffer_load_async_lds : AMDGPUStructBufferLoadLDS;
+  def int_amdgcn_struct_buffer_load_lds : AMDGPUStructBufferLoadLDS,
+    AMDGPULDSDMAIntrinsic;
+  def int_amdgcn_struct_buffer_load_async_lds : AMDGPUStructBufferLoadLDS,
+    AMDGPUAsyncLDSDMAIntrinsic;
 } // End TargetFeatures = "vmem-to-lds-load-insts"
 
 class AMDGPUStructPtrBufferLoadLDS :
@@ -2250,9 +2275,11 @@ class AMDGPUStructPtrBufferLoadLDS :
 
 let TargetFeatures = "vmem-to-lds-load-insts" in {
   def int_amdgcn_struct_ptr_buffer_load_lds : AMDGPUStructPtrBufferLoadLDS,
-    ClangBuiltin<"__builtin_amdgcn_struct_ptr_buffer_load_lds">;
+    ClangBuiltin<"__builtin_amdgcn_struct_ptr_buffer_load_lds">,
+    AMDGPULDSDMAIntrinsic;
   def int_amdgcn_struct_ptr_buffer_load_async_lds : AMDGPUStructPtrBufferLoadLDS,
-    ClangBuiltin<"__builtin_amdgcn_struct_ptr_buffer_load_async_lds">;
+    ClangBuiltin<"__builtin_amdgcn_struct_ptr_buffer_load_async_lds">,
+    AMDGPUAsyncLDSDMAIntrinsic;
 } // End TargetFeatures = "vmem-to-lds-load-insts"
 
 def int_amdgcn_s_buffer_prefetch_data : DefaultAttrsIntrinsic <
@@ -2978,8 +3005,8 @@ class AMDGPULoadToLDS :
      NoCapture<ArgIndex<1>>, WriteOnly<ArgIndex<1>>,
      ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, IntrNoCallback, IntrNoFree],
      "", [SDNPMemOperand]>;
-def int_amdgcn_load_to_lds : AMDGPULoadToLDS;
-def int_amdgcn_load_async_to_lds : AMDGPULoadToLDS;
+def int_amdgcn_load_to_lds : AMDGPULoadToLDS, AMDGPULDSDMAIntrinsic;
+def int_amdgcn_load_async_to_lds : AMDGPULoadToLDS, AMDGPUAsyncLDSDMAIntrinsic;
 
 class AMDGPUGlobalLoadLDS : Intrinsic<
           [],
@@ -2997,8 +3024,11 @@ class AMDGPUGlobalLoadLDS : Intrinsic<
            ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>,
            IntrNoCallback, IntrNoFree],
           "", [SDNPMemOperand]>;
-def int_amdgcn_global_load_lds : AMDGPUGlobalLoadLDS, ClangBuiltin<"__builtin_amdgcn_global_load_lds">;
-def int_amdgcn_global_load_async_lds : AMDGPUGlobalLoadLDS, ClangBuiltin<"__builtin_amdgcn_global_load_async_lds">;
+def int_amdgcn_global_load_lds : AMDGPUGlobalLoadLDS,
+  ClangBuiltin<"__builtin_amdgcn_global_load_lds">, AMDGPULDSDMAIntrinsic;
+def int_amdgcn_global_load_async_lds : AMDGPUGlobalLoadLDS,
+  ClangBuiltin<"__builtin_amdgcn_global_load_async_lds">,
+  AMDGPUAsyncLDSDMAIntrinsic;
 
 // This is IntrHasSideEffects because it reads from a volatile hardware register.
 let TargetFeatures = "pops-exiting-wave-id" in
@@ -3008,14 +3038,16 @@ def int_amdgcn_pops_exiting_wave_id :
 // Sets a marker in the stream of async requests. Modelled as InaccessibleMem.
 def int_amdgcn_asyncmark : ClangBuiltin<"__builtin_amdgcn_asyncmark">,
   Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrWillReturn,
-                     IntrNoCallback, IntrNoFree]>;
+                     IntrNoCallback, IntrNoFree]>,
+  AMDGPUAsyncMarkIntrinsic;
 
 // Waits until the Nth previous marker is completed, if it exists.
 def int_amdgcn_wait_asyncmark :
     ClangBuiltin<"__builtin_amdgcn_wait_asyncmark">,
     Intrinsic<[], [llvm_i16_ty],
               [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects,
-               IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+               IntrWillReturn, IntrNoCallback, IntrNoFree]>,
+    AMDGPUAsyncMarkIntrinsic;
 
 //===----------------------------------------------------------------------===//
 // GFX10 Intrinsics
@@ -3927,16 +3959,19 @@ class AMDGPUWaitAsyncIntrinsic :
    IntrNoFree]>;
 
 def int_amdgcn_s_wait_asynccnt :
-    ClangBuiltin<"__builtin_amdgcn_s_wait_asynccnt">, AMDGPUWaitAsyncIntrinsic;
+    ClangBuiltin<"__builtin_amdgcn_s_wait_asynccnt">, AMDGPUWaitAsyncIntrinsic,
+    AMDGPUAsyncCntIntrinsic;
 def int_amdgcn_s_wait_tensorcnt :
-    ClangBuiltin<"__builtin_amdgcn_s_wait_tensorcnt">, AMDGPUWaitAsyncIntrinsic;
+    ClangBuiltin<"__builtin_amdgcn_s_wait_tensorcnt">, AMDGPUWaitAsyncIntrinsic,
+    AMDGPUTensorCntIntrinsic;
 
 def int_amdgcn_ds_atomic_async_barrier_arrive_b64 :
   ClangBuiltin<"__builtin_amdgcn_ds_atomic_async_barrier_arrive_b64">,
   Intrinsic<[], [local_ptr_ty],
             // Atomically updates LDS and also ASYNC_CNT which is modeled as InaccessibleMem.
             [IntrConvergent, IntrWillReturn, IntrInaccessibleMemOrArgMemOnly, IntrNoCallback, IntrNoFree],
-            "", [SDNPMemOperand]>;
+            "", [SDNPMemOperand]>,
+  AMDGPUAsyncCntIntrinsic;
 
 def int_amdgcn_ds_atomic_barrier_arrive_rtn_b64 :
   ClangBuiltin<"__builtin_amdgcn_ds_atomic_barrier_arrive_rtn_b64">,
@@ -4097,7 +4132,7 @@ def int_amdgcn_fdiv_fast : PureIntrinsic<
   [llvm_float_ty], [llvm_float_ty, llvm_float_ty]>;
 
 // Async instructions increment ASYNCcnt which is modeled as InaccessibleMem.
-class AMDGPUAsyncClusterLoadLDS : Intrinsic <
+class AMDGPUAsyncClusterLoadLDS : AMDGPUAsyncCntIntrinsic, Intrinsic <
   [],
   [global_ptr_ty,          // Base global pointer to load from
    local_ptr_ty,           // LDS base pointer to store to
@@ -4111,7 +4146,7 @@ class AMDGPUAsyncClusterLoadLDS : Intrinsic <
   "", [SDNPMemOperand]
 >;
 
-class AMDGPUAsyncGlobalLoadToLDS : Intrinsic <
+class AMDGPUAsyncGlobalLoadToLDS : AMDGPUAsyncCntIntrinsic, Intrinsic <
   [],
   [global_ptr_ty,          // Base global pointer to load from
    local_ptr_ty,           // LDS base pointer to store to.
@@ -4124,7 +4159,7 @@ class AMDGPUAsyncGlobalLoadToLDS : Intrinsic <
   "", [SDNPMemOperand]
 >;
 
-class AMDGPUAsyncGlobalStoreFromLDS : Intrinsic <
+class AMDGPUAsyncGlobalStoreFromLDS : AMDGPUAsyncCntIntrinsic, Intrinsic <
   [],
   [global_ptr_ty,          // Base global pointer to store to
    local_ptr_ty,           // LDS base pointer to load from
@@ -4404,7 +4439,7 @@ def int_amdgcn_swmmac_i32_16x16x128_iu8     : AMDGPUSWmmacIntrinsicABIdxClamp<ll
 }
 
 class AMDGPUTensorLoadStore:
-  Intrinsic<
+  AMDGPUTensorCntIntrinsic, Intrinsic<
     [],
     [llvm_v4i32_ty, // D# group 0
      llvm_v8i32_ty, // D# group 1
