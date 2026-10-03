@@ -1647,6 +1647,11 @@ mlir::Value CIRGenModule::emitNullConstant(QualType t, mlir::Location loc) {
   return builder.getConstant(loc, emitNullConstantAttr(t));
 }
 
+mlir::Value CIRGenModule::getNullPointer(cir::PointerType ptrTy, QualType qt,
+                                         mlir::Location loc) {
+  return getTargetCIRGenInfo().getNullPointer(*this, ptrTy, qt, loc);
+}
+
 mlir::TypedAttr CIRGenModule::emitNullConstantAttr(QualType t) {
   if (t->getAs<PointerType>())
     return builder.getConstNullPtrAttr(getTypes().convertTypeForMem(t));

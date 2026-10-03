@@ -89,9 +89,40 @@ public:
       ft = getABIInfo().cgt.getASTContext().adjustFunctionType(
           ft, ft->getExtInfo().withCallingConv(CC_DeviceKernel));
   }
+
+  mlir::Value getNullPointer(CIRGenModule &cgm, cir::PointerType ptrTy,
+                             QualType qt, mlir::Location loc) const override;
 };
 
 } // namespace
+
+// The bit pattern of null in non-generic AS is unspecified for SPIR(-V), so
+// materialize it via an address space cast from null in generic AS.
+mlir::Value
+CommonSPIRTargetCIRGenInfo::getNullPointer(CIRGenModule &cgm,
+                                           cir::PointerType ptrTy, QualType qt,
+                                           mlir::Location loc) const {
+  LangAS as = qt->getUnqualifiedDesugaredType()->isNullPtrType()
+                  ? LangAS::Default
+                  : qt->getPointeeType().getAddressSpace();
+  unsigned asAsInt = static_cast<unsigned>(as);
+  unsigned firstTargetASAsInt =
+      static_cast<unsigned>(LangAS::FirstTargetAddressSpace);
+  unsigned codeSectionINTELAS = firstTargetASAsInt + 9;
+  // As per SPV_INTEL_function_pointers, it is illegal to addrspacecast
+  // function pointers to/from the generic AS.
+  bool isFunctionPtrAS =
+      cgm.getTriple().isSPIRV() && asAsInt == codeSectionINTELAS;
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  if (as == LangAS::Default || as == LangAS::opencl_generic ||
+      as == LangAS::opencl_constant || isFunctionPtrAS)
+    return builder.getNullPtr(ptrTy, loc);
+
+  cir::PointerType genericPtrTy =
+      builder.getPointerTo(ptrTy.getPointee(), LangAS::opencl_generic);
+  return builder.createAddrSpaceCast(loc, builder.getNullPtr(genericPtrTy, loc),
+                                     ptrTy);
+}
 
 std::unique_ptr<TargetCIRGenInfo>
 clang::CIRGen::createCommonSPIRTargetCIRGenInfo(CIRGenTypes &cgt) {
