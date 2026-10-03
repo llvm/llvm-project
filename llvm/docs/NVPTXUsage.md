@@ -1028,6 +1028,141 @@ If the given pointer in the generic address space refers to memory which falls
 within the state space of the intrinsic (and therefore could be safely address
 space casted to this space), 1 is returned, otherwise 0 is returned.
 
+### Structured Sparsity Intrinsics
+
+The `llvm.nvvm.spcompress.*` and `llvm.nvvm.spdecompress.*` intrinsics model
+the PTX `spcompress` and `spdecompress` instructions. They require PTX ISA 9.4
+and `sm_107a`.
+
+The intrinsic types representing `mdata`, `cdata`, and `data` are overloaded.
+The packed metadata remains a bundle of 32-bit registers: one register is
+represented by `i32`, and `N` registers are represented by `<N x i32>`. The
+`cdata` and `data` vectors instead use one `i8` or `i16` lane per logical
+element. Lowering packs these lanes into 32-bit PTX register operands and pads
+an incomplete final register when necessary. The actual intrinsic names
+include the corresponding LLVM overload suffixes.
+
+The immediate qualifiers have the following encodings:
+
+| Argument    | Values                | PTX qualifiers                  |
+| ----------- | --------------------- | ------------------------------- |
+| `%idx_size` | `2`, `4`              | `.b2`, `.b4`                    |
+| `%num_tgt`  | `2`, `4`, `8`, `16`   | target group size in `.sp::X:Y` |
+
+The PTX element-size qualifier (`.b8` or `.b16`) is inferred from the `i8` or
+`i16` element type. The repeat-factor qualifier is inferred from the bundle
+sizes. `%num_tgt` is `4` for `spcompress`.
+
+#### '`llvm.nvvm.spcompress`' Intrinsic
+
+##### Syntax:
+
+```llvm
+declare {MDataTy, CDataTy} @llvm.nvvm.spcompress(
+    DataTy %data, i32 %spdesc, i32 immarg %idx_size,
+    i32 immarg %num_tgt)
+```
+
+##### Overview:
+
+This intrinsic compresses the dense vector `%data` using 2:4 structured
+sparsity. `%num_tgt` specifies the target group size and must be `4`; the
+source-to-target ratio is inferred from the `CDataTy` and `DataTy` vector
+lengths. In `.sp::X:Y`, `Y` is `%num_tgt` and
+`X = Y * num_elements(CDataTy) / num_elements(DataTy)`; the division must be
+exact. It returns the selected element indices as `mdata` and the selected
+elements as `cdata`. The number of 32-bit registers in each bundle is:
+
+| Bundle  | Register count                            |
+| ------- | ----------------------------------------- |
+| `data`  | `2 * num`                                 |
+| `cdata` | `num`                                     |
+| `mdata` | `ceil(num * %idx_size / elem_size)`       |
+
+Here, `elem_size` is the scalar bit width of `DataTy` and `CDataTy`. Both types
+must use the same `i8` or `i16` element type. `num` is half the number of
+registers in `DataTy` and determines the PTX repeat-factor qualifier (`.x1`,
+`.x2`, ..., `.x64`).
+
+The combined `mdata`, `cdata`, and `data` bundle size must not exceed 253
+registers.
+
+The `%spdesc` operand specifies the selection operation and the element data
+type:
+
+| Bits | Description         | Values                                                                    |
+| ---- | ------------------- | ------------------------------------------------------------------------- |
+| 0-1  | Selection operation | `0`: max, `1`: maxabs, `2`: min, `3`: minabs                              |
+| 2-4  | Element data type   | `0`: f16/u8, `1`: bf16/s8, `2`: e5m2, `3`: e4m3, `4`: e3m2, `5`: e2m3     |
+| 5-31 | Reserved            | `0`                                                                       |
+
+The element data type selected by `%spdesc` must be consistent with the scalar
+element type of `DataTy` and `CDataTy`. When the metadata occupies less than 32
+bits, it is zero-extended to fill its `i32` register.
+The operation treats negative zero as less than positive zero. NaN elements
+are always selected; when multiple selections satisfy the same comparison,
+the selected indices are implementation-specific.
+
+For more information, see the
+[PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-spcompress).
+
+#### '`llvm.nvvm.spdecompress`' Intrinsic
+
+##### Syntax:
+
+```llvm
+declare DataTy @llvm.nvvm.spdecompress(
+    MDataTy %mdata, CDataTy %cdata, i32 immarg %idx_size,
+    i32 immarg %num_tgt)
+```
+
+##### Overview:
+
+This intrinsic decompresses the structured sparse vector `%cdata` into a dense
+`data` vector. `%num_tgt` specifies `Y`, the number of dense elements in each
+target group. The source group size `X` in `.sp::X:Y` is calculated from the
+vector lengths as:
+
+`X = Y * num_elements(CDataTy) / num_elements(DataTy)`
+
+The division must be exact. For example, two compressed lanes for every four
+result lanes with `%num_tgt = 4` select `.sp::2:4`. Dense positions not selected
+by the metadata are set to zero.
+
+Let `Y` be `%num_tgt`. The repeat factor `num` and source group size `X` are:
+
+- `num = num_elements(DataTy) / Y`.
+- `X = num_elements(CDataTy) / num`.
+
+The number of 32-bit PTX registers in each bundle is:
+
+| Bundle  | Register count                                    |
+| ------- | ------------------------------------------------- |
+| `mdata` | `ceil(X * %idx_size * num / 32)`                  |
+| `cdata` | `ceil(X * elem_size * num / 32)`                  |
+| `data`  | `ceil(Y * elem_size * num / 32)`                  |
+
+Here, `elem_size` is the common `i8` or `i16` scalar bit width of `CDataTy` and
+`DataTy`. `num` determines the PTX repeat-factor qualifier (`.x1`, `.x2`, ...,
+`.x64`). Padding needed to fill the final compressed-data register is added
+internally during lowering and is not represented in `CDataTy`.
+
+The following conditions must hold:
+
+- `X:Y` is one of `1:2`, `1:4`, `1:8`, `1:16`, `2:4`, `2:8`, `2:16`,
+  `4:8`, or `4:16`; consequently, `X < Y`.
+- `X * elem_size <= 32`.
+- `%idx_size` is `2` only when `Y <= 4`.
+- `32 <= Y * elem_size * num <= 4096`.
+- The combined `mdata`, `cdata`, and `data` bundle size does not exceed 253
+  registers.
+
+The behavior is implementation-specific if a metadata index does not identify
+a position in its target group.
+
+For more information, see the
+[PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-spdecompress).
+
 ### Narrow Floating-Point Conversion intrinsics
 
 These intrinsics perform conversions involving narrow floating-point formats.
