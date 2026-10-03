@@ -6126,12 +6126,14 @@ APFloat APFloat::getConstant(MathConstant C, const fltSemantics &Sem,
   assert((Value.Significand[0] % 2 != 0) &&
          "Significand must be odd (round-to-odd)");
 
+  // Constructing the APFloat value from an APInt and scaling with scalbn should
+  // be exact.
   APFloat Val(semMathConstant);
   [[maybe_unused]] opStatus FromInt = Val.convertFromAPInt(
       APInt(MathConstantValue::rawPrecision(), Value.Significand),
-      /*IsSigned=*/false, rmNearestTiesToEven);
+      /*IsSigned=*/false, rmTowardZero);
   assert(FromInt == opOK && "Significand does not fit semMathConstant");
-  Val = scalbn(Val, Value.Exponent, rmNearestTiesToEven);
+  Val = scalbn(Val, Value.Exponent, rmTowardZero);
 
   // The value shall be negated prior to rounding.
   if (Negative)
