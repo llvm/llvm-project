@@ -1533,9 +1533,7 @@ const Stmt *LabelStmt::getInnermostLabeledStmt() const {
 }
 
 const Stmt *LoopControlStmt::getNamedLoopOrSwitch() const {
-  if (!hasLabelTarget())
-    return nullptr;
-
+  assert(hasLabelTarget());
   LabelStmt *Label = getLabelDecl()->getStmt();
   return Label ? Label->getInnermostLabeledStmt() : nullptr;
 }

@@ -7184,7 +7184,8 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
     return false;
 
   OptLabelTy TargetLabel = std::nullopt;
-  const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
+  const Stmt *TargetLoop =
+      S->hasLabelTarget() ? S->getNamedLoopOrSwitch() : nullptr;
   const VariableScope<Emitter> *BreakScope = nullptr;
 
   if (!TargetLoop) {
@@ -7224,7 +7225,8 @@ bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
     return false;
 
   OptLabelTy TargetLabel = std::nullopt;
-  const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
+  const Stmt *TargetLoop =
+      S->hasLabelTarget() ? S->getNamedLoopOrSwitch() : nullptr;
   const VariableScope<Emitter> *ContinueScope = nullptr;
 
   if (!TargetLoop) {
