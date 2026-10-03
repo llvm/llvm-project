@@ -132,31 +132,31 @@ multiclass VOP3_VOP3PInst_t16<string OpName, VOP3P_Mix_Profile P> {
 def V_PK_VOP2_F64_Profile : VOP3P_Profile<VOP_V2F64_V2F64_V2F64, VOP3_PACKED> {
   let HasOpSel = 0;
   let HasOMod = 0;
-  let Src0RC64 = VSrc_v2f64;
-  let Src1RC64 = VSrc_v2f64;
+  let Src0RC64 = VSrc_NoLit64_v2f64;
+  let Src1RC64 = VSrc_NoLit64_v2f64;
 }
 
 def V_PK_VOP3_F64_Profile : VOP3P_Profile<VOP_V2F64_V2F64_V2F64_V2F64, VOP3_PACKED> {
   let HasOpSel = 0;
   let HasOMod = 0;
-  let Src0RC64 = VSrc_v2f64;
-  let Src1RC64 = VSrc_v2f64;
-  let Src2RC64 = VSrc_v2f64;
+  let Src0RC64 = VSrc_NoLit64_v2f64;
+  let Src1RC64 = VSrc_NoLit64_v2f64;
+  let Src2RC64 = VSrc_NoLit64_v2f64;
 }
 
 def V_PK_VOP2_I64_Profile : VOP3P_Profile<VOP_V2I64_V2I64_V2I64, VOP3_PACKED> {
   let HasOpSel = 0;
-  let Src0RC64 = VSrc_v2b64;
-  let Src1RC64 = VSrc_v2b64;
+  let Src0RC64 = VSrc_NoLit64_v2b64;
+  let Src1RC64 = VSrc_NoLit64_v2b64;
 }
 
 def V_PK_LSHL_ADD_U64_Profile : VOP3P_Profile<VOP_V2I64_V2I64_V2I32_V2I64, VOP3_PACKED> {
   let HasOpSel = 0;
   let HasClamp = 0;
   let HasNeg = 0;
-  let Src0RC64 = VSrc_v2b64;
+  let Src0RC64 = VSrc_NoLit64_v2b64;
   let Src1RC64 = VSrc_v2b32;
-  let Src2RC64 = VSrc_v2b64;
+  let Src2RC64 = VSrc_NoLit64_v2b64;
   let InsVOP3P = getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
                           HasClamp, HasModifiers, HasSrc2Mods,
                           HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret;
