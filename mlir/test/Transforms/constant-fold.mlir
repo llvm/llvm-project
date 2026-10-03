@@ -907,3 +907,101 @@ func.func @subview_scalar_fold(%arg0: memref<f32>) -> memref<f32> {
   %c = memref.subview %arg0[] [] [] : memref<f32> to memref<f32>
   return %c : memref<f32>
 }
+
+// -----
+
+// CHECK-LABEL: func @partial_fold
+// CHECK-SAME: (%[[ARG0:[a-z0-9]+]]: i32)
+func.func @partial_fold(%arg0: i32) -> (i32, i32, i32) {
+  // CHECK-NEXT: %[[C42:[a-z0-9_]+]] = "test.constant"() <{value = 42 : i32}> : () -> i32
+  // CHECK-NEXT: %[[RES:[a-z0-9]+]]:3 = "test.op_partial_fold"(%[[ARG0]])
+  %0:3 = "test.op_partial_fold"(%arg0) : (i32) -> (i32, i32, i32)
+  // CHECK-NEXT: return %[[C42]], %[[ARG0]], %[[RES]]#2
+  return %0#0, %0#1, %0#2 : i32, i32, i32
+}
+
+// -----
+
+// CHECK-LABEL: func @partial_fold_in_place
+// CHECK-SAME: (%[[ARG0:[a-z0-9]+]]: i32)
+func.func @partial_fold_in_place(%arg0: i32) -> (i32, i32) {
+  // CHECK-NEXT: %{{[a-z0-9_]+}}, %[[KEPT:[a-z0-9_]+]] = "test.op_partial_fold_in_place"(%[[ARG0]]) <{folded}>
+  %0:2 = "test.op_partial_fold_in_place"(%arg0) : (i32) -> (i32, i32)
+  // CHECK-NEXT: return %[[ARG0]], %[[KEPT]]
+  return %0#0, %0#1 : i32, i32
+}
+
+// -----
+
+// The folder does not materialize a replaced result without uses.
+// CHECK-LABEL: func @partial_fold_dead_replaced_results
+// CHECK-SAME: (%[[ARG0:[a-z0-9]+]]: i32)
+func.func @partial_fold_dead_replaced_results(%arg0: i32) -> i32 {
+  // CHECK-NEXT: %[[RES:[a-z0-9]+]]:3 = "test.op_partial_fold"(%[[ARG0]])
+  %0:3 = "test.op_partial_fold"(%arg0) : (i32) -> (i32, i32, i32)
+  // CHECK-NEXT: return %[[RES]]#2
+  return %0#2 : i32
+}
+
+// -----
+
+// The folder skips the unmaterializable result, because it has no uses. The
+// fold then replaces every result and the folder erases the op.
+// CHECK-LABEL: func @fold_dead_unmaterializable_result
+// CHECK-SAME: (%[[ARG0:[a-z0-9]+]]: i32)
+func.func @fold_dead_unmaterializable_result(%arg0: i32) -> (i32, i32) {
+  // CHECK-NEXT: %[[C42:[a-z0-9_]+]] = "test.constant"() <{value = 42 : i32}> : () -> i32
+  %0:3 = "test.op_fold_unmaterializable"(%arg0) : (i32) -> (i32, i32, i32)
+  // CHECK-NEXT: return %[[C42]], %[[ARG0]]
+  return %0#0, %0#1 : i32, i32
+}
+
+// -----
+
+// CHECK-LABEL: func @partial_fold_unmaterializable
+func.func @partial_fold_unmaterializable() -> (i32, i32, i32) {
+  // CHECK-NEXT: %[[RES:[a-z0-9]+]]:3 = "test.op_partial_fold_unmaterializable"()
+  %0:3 = "test.op_partial_fold_unmaterializable"() : () -> (i32, i32, i32)
+  // CHECK-NEXT: return %[[RES]]#0, %[[RES]]#1, %[[RES]]#2
+  return %0#0, %0#1, %0#2 : i32, i32, i32
+}
+
+// -----
+
+// The fold of the first op reuses the constant 42 from the fold of the last op,
+// and then fails. The failure must not erase the reused constant, because the
+// return uses it.
+// CHECK-LABEL: func @fold_unmaterializable_reused_constant
+// CHECK-SAME: (%[[ARG0:[a-z0-9]+]]: i32)
+func.func @fold_unmaterializable_reused_constant(%arg0: i32)
+    -> (i32, i32, i32, i32, i32, i32, i32) {
+  // CHECK-NEXT: %[[C43:[a-z0-9_]+]] = arith.constant 43 : i32
+  // CHECK-NEXT: %[[C42:[a-z0-9_]+]] = "test.constant"() <{value = 42 : i32}> : () -> i32
+  // CHECK-NEXT: %[[RES_0:[a-z0-9]+]]:3 = "test.op_partial_fold_unmaterializable"()
+  %0:3 = "test.op_partial_fold_unmaterializable"() : () -> (i32, i32, i32)
+  %c43 = arith.constant 43 : i32
+  // CHECK-NEXT: %[[RES_1:[a-z0-9]+]]:3 = "test.op_partial_fold"(%[[ARG0]])
+  %1:3 = "test.op_partial_fold"(%arg0) : (i32) -> (i32, i32, i32)
+  // CHECK-NEXT: return %[[RES_0]]#0, %[[RES_0]]#1, %[[RES_0]]#2, %[[C43]], %[[C42]], %[[ARG0]], %[[RES_1]]#2
+  return %0#0, %0#1, %0#2, %c43, %1#0, %1#1, %1#2
+      : i32, i32, i32, i32, i32, i32, i32
+}
+
+// -----
+
+// The fold of the first op replaces every result. It reuses the constant 42,
+// and then fails. The failure must not erase the reused constant, because the
+// return uses it.
+// CHECK-LABEL: func @full_fold_unmaterializable_reused_constant
+// CHECK-SAME: (%[[ARG0:[a-z0-9]+]]: i32)
+func.func @full_fold_unmaterializable_reused_constant(%arg0: i32)
+    -> (i32, i32, i32, i32, i32) {
+  // CHECK-NEXT: %[[C43:[a-z0-9_]+]] = arith.constant 43 : i32
+  // CHECK-NEXT: %[[C42:[a-z0-9_]+]] = "test.constant"() <{value = 42 : i32}> : () -> i32
+  // CHECK-NEXT: %[[RES:[a-z0-9]+]]:3 = "test.op_fold_unmaterializable"(%[[ARG0]])
+  %0:3 = "test.op_fold_unmaterializable"(%arg0) : (i32) -> (i32, i32, i32)
+  %c43 = arith.constant 43 : i32
+  %c42 = "test.constant"() <{value = 42 : i32}> : () -> i32
+  // CHECK-NEXT: return %[[RES]]#0, %[[RES]]#1, %[[RES]]#2, %[[C43]], %[[C42]]
+  return %0#0, %0#1, %0#2, %c43, %c42 : i32, i32, i32, i32, i32
+}

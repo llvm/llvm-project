@@ -37,11 +37,13 @@ public:
         rewriter(ctx, listener) {}
 
   /// Tries to perform folding on the given `op`, including unifying
-  /// deduplicated constants. If successful, replaces `op`'s uses with
-  /// folded results, and returns success. If the op was completely folded it is
-  /// erased. If it is just updated in place, `inPlaceUpdate` is set to true.
-  /// On success() and when in-place, the folder is invoked until
-  /// `maxIterations` is reached (default INT_MAX).
+  /// deduplicated constants. If successful, replaces the uses of the replaced
+  /// results of `op` that have uses with folded results, and returns success.
+  /// If the fold replaced every result, the op is erased. Otherwise, the op
+  /// stays and `inPlaceUpdate` is set to true. Constants are only created at
+  /// the start of the entry block of the insertion region, and on failure `op`
+  /// is not changed. On success() and when in-place, the folder is invoked
+  /// until `maxIterations` is reached (default INT_MAX).
   LogicalResult tryToFold(Operation *op, bool *inPlaceUpdate = nullptr,
                           int maxIterations = INT_MAX);
 
@@ -83,15 +85,9 @@ private:
   /// owned by this folder.
   bool isFolderOwnedConstant(Operation *op) const;
 
-  /// Tries to perform folding on the given `op`. If successful, populates
-  /// `results` with the results of the folding.
-  /// On success() and when in-place, the folder is invoked until
-  /// `maxIterations` is reached (default INT_MAX).
-  LogicalResult tryToFold(Operation *op, SmallVectorImpl<Value> &results,
-                          int maxIterations = INT_MAX);
-
   /// Try to process a set of fold results. Populates `results` on success,
-  /// otherwise leaves it unchanged.
+  /// otherwise leaves it unchanged. A null fold result gives a null entry in
+  /// `results`.
   LogicalResult processFoldResults(Operation *op,
                                    SmallVectorImpl<Value> &results,
                                    ArrayRef<OpFoldResult> foldResults);

@@ -87,26 +87,58 @@ LogicalResult OperationFolder::tryToFold(Operation *op, bool *inPlaceUpdate,
   }
 
   // Try to fold the operation.
+  OpFoldResults foldResults = op->fold();
+  if (foldResults.failed())
+    return failure();
+  bool modifiedInPlace = false;
+  int count = 1;
+  do {
+    modifiedInPlace |= foldResults.modifiedInPlace();
+    LDBG() << "Folded in place #" << count
+           << " times: " << OpWithFlags(op, OpPrintingFlags().skipRegions());
+  } while (count++ < maxIterations && !foldResults.replacesAny() &&
+           (foldResults = op->fold()).succeeded());
+
+  // Materialize the replaced results that have uses. On failure, `results`
+  // stays empty and no result is replaced.
   SmallVector<Value, 8> results;
-  if (failed(tryToFold(op, results, maxIterations)))
+  if (foldResults.replacesAny()) {
+    SmallVector<OpFoldResult, 8> liveFoldResults;
+    for (auto [result, foldResult] :
+         llvm::zip_equal(op->getResults(), foldResults.getReplacements()))
+      liveFoldResults.push_back(result.use_empty() ? OpFoldResult()
+                                                   : foldResult);
+    (void)processFoldResults(op, results, liveFoldResults);
+  }
+
+  // Constant folding succeeded. Replace all of the result values and erase the
+  // operation.
+  if (!results.empty() && foldResults.replacesAll()) {
+    notifyRemoval(op);
+    rewriter.replaceOp(op, results);
+    return success();
+  }
+
+  // The op survives. Replace the uses of each replaced result.
+  bool replacedUses = false;
+  for (auto [result, replacement] : llvm::zip(op->getResults(), results)) {
+    if (!replacement)
+      continue;
+    rewriter.replaceAllUsesWith(result, replacement);
+    replacedUses = true;
+  }
+  if (!modifiedInPlace && !replacedUses)
     return failure();
 
-  // Check to see if the operation was just updated in place.
-  if (results.empty()) {
-    if (inPlaceUpdate)
-      *inPlaceUpdate = true;
+  if (inPlaceUpdate)
+    *inPlaceUpdate = true;
+  if (modifiedInPlace) {
     if (auto *rewriteListener = dyn_cast_if_present<RewriterBase::Listener>(
             rewriter.getListener())) {
       // Folding API does not notify listeners, so we have to notify manually.
       rewriteListener->notifyOperationModified(op);
     }
-    return success();
   }
-
-  // Constant folding succeeded. Replace all of the result values and erase the
-  // operation.
-  notifyRemoval(op);
-  rewriter.replaceOp(op, results);
   return success();
 }
 
@@ -223,26 +255,6 @@ bool OperationFolder::isFolderOwnedConstant(Operation *op) const {
   return referencedDialects.count(op);
 }
 
-/// Tries to perform folding on the given `op`. If successful, populates
-/// `results` with the results of the folding.
-LogicalResult OperationFolder::tryToFold(Operation *op,
-                                         SmallVectorImpl<Value> &results,
-                                         int maxIterations) {
-  SmallVector<OpFoldResult, 8> foldResults;
-  if (failed(op->fold(foldResults)))
-    return failure();
-  int count = 1;
-  do {
-    LDBG() << "Folded in place #" << count
-           << " times: " << OpWithFlags(op, OpPrintingFlags().skipRegions());
-  } while (count++ < maxIterations && foldResults.empty() &&
-           succeeded(op->fold(foldResults)));
-
-  if (failed(processFoldResults(op, results, foldResults)))
-    return failure();
-  return success();
-}
-
 LogicalResult
 OperationFolder::processFoldResults(Operation *op,
                                     SmallVectorImpl<Value> &results,
@@ -261,10 +273,19 @@ OperationFolder::processFoldResults(Operation *op,
   // Get the constant map for the insertion region of this operation.
   auto &uniquedConstants = foldScopes[insertRegion];
 
+  // Constants that must move before `op`. They move only after every result
+  // materialized, because the cleanup on failure erases each op before the
+  // insertion point, and a moved constant can already have uses.
+  SmallVector<Operation *, 2> constantsToMove;
+
   // Create the result constants and replace the results.
   auto *dialect = op->getDialect();
   for (unsigned i = 0, e = op->getNumResults(); i != e; ++i) {
-    assert(!foldResults[i].isNull() && "expected valid OpFoldResult");
+    // A null fold result gives a null result.
+    if (!foldResults[i]) {
+      results.emplace_back();
+      continue;
+    }
 
     // Check if the result was an SSA value.
     if (auto repl = llvm::dyn_cast_if_present<Value>(foldResults[i])) {
@@ -281,9 +302,8 @@ OperationFolder::processFoldResults(Operation *op,
       // Ensure that this constant dominates the operation we are replacing it
       // with. This may not automatically happen if the operation being folded
       // was inserted before the constant within the insertion block.
-      Block *opBlock = op->getBlock();
-      if (opBlock == constOp->getBlock() && &opBlock->front() != constOp)
-        constOp->moveBefore(&opBlock->front());
+      if (op->getBlock() == constOp->getBlock())
+        constantsToMove.push_back(constOp);
 
       results.push_back(constOp->getResult(0));
       continue;
@@ -300,6 +320,11 @@ OperationFolder::processFoldResults(Operation *op,
     return failure();
   }
 
+  for (Operation *constOp : constantsToMove) {
+    Block *opBlock = constOp->getBlock();
+    if (&opBlock->front() != constOp)
+      constOp->moveBefore(&opBlock->front());
+  }
   return success();
 }
 
