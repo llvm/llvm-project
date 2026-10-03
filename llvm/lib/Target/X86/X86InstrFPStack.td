@@ -16,29 +16,29 @@
 // Clobbers EFLAGS due to OR instruction used internally.
 // FIXME: Can we model this in SelectionDAG?
 let usesCustomInserter = 1, hasNoSchedulingInfo = 1, Defs = [EFLAGS] in {
-  def FP32_TO_INT16_IN_MEM : PseudoI<(outs), (ins i16mem:$dst, RFP32:$src),
+  def FP32_TO_INT16_IN_MEM : PseudoI<(outs), (ins i16mem_norex2:$dst, RFP32:$src),
                               [(X86fp_to_i16mem RFP32:$src, addr:$dst)]>;
-  def FP32_TO_INT32_IN_MEM : PseudoI<(outs), (ins i32mem:$dst, RFP32:$src),
+  def FP32_TO_INT32_IN_MEM : PseudoI<(outs), (ins i32mem_norex2:$dst, RFP32:$src),
                               [(X86fp_to_i32mem RFP32:$src, addr:$dst)]>;
-  def FP32_TO_INT64_IN_MEM : PseudoI<(outs), (ins i64mem:$dst, RFP32:$src),
+  def FP32_TO_INT64_IN_MEM : PseudoI<(outs), (ins i64mem_norex2:$dst, RFP32:$src),
                               [(X86fp_to_i64mem RFP32:$src, addr:$dst)]>;
-  def FP64_TO_INT16_IN_MEM : PseudoI<(outs), (ins i16mem:$dst, RFP64:$src),
+  def FP64_TO_INT16_IN_MEM : PseudoI<(outs), (ins i16mem_norex2:$dst, RFP64:$src),
                               [(X86fp_to_i16mem RFP64:$src, addr:$dst)]>;
-  def FP64_TO_INT32_IN_MEM : PseudoI<(outs), (ins i32mem:$dst, RFP64:$src),
+  def FP64_TO_INT32_IN_MEM : PseudoI<(outs), (ins i32mem_norex2:$dst, RFP64:$src),
                               [(X86fp_to_i32mem RFP64:$src, addr:$dst)]>;
-  def FP64_TO_INT64_IN_MEM : PseudoI<(outs), (ins i64mem:$dst, RFP64:$src),
+  def FP64_TO_INT64_IN_MEM : PseudoI<(outs), (ins i64mem_norex2:$dst, RFP64:$src),
                               [(X86fp_to_i64mem RFP64:$src, addr:$dst)]>;
-  def FP80_TO_INT16_IN_MEM : PseudoI<(outs), (ins i16mem:$dst, RFP80:$src),
+  def FP80_TO_INT16_IN_MEM : PseudoI<(outs), (ins i16mem_norex2:$dst, RFP80:$src),
                               [(X86fp_to_i16mem RFP80:$src, addr:$dst)]>;
-  def FP80_TO_INT32_IN_MEM : PseudoI<(outs), (ins i32mem:$dst, RFP80:$src),
+  def FP80_TO_INT32_IN_MEM : PseudoI<(outs), (ins i32mem_norex2:$dst, RFP80:$src),
                               [(X86fp_to_i32mem RFP80:$src, addr:$dst)]>;
-  def FP80_TO_INT64_IN_MEM : PseudoI<(outs), (ins i64mem:$dst, RFP80:$src),
+  def FP80_TO_INT64_IN_MEM : PseudoI<(outs), (ins i64mem_norex2:$dst, RFP80:$src),
                               [(X86fp_to_i64mem RFP80:$src, addr:$dst)]>;
 
   def FP80_ADDr : PseudoI<(outs RFP80:$dst), (ins RFP80:$src1, RFP80:$src2),
                           [(set RFP80:$dst,
                                 (any_X86fp80_add  RFP80:$src1, RFP80:$src2))]>;
-  def FP80_ADDm32 : PseudoI<(outs RFP80:$dst), (ins RFP80:$src1, f32mem:$src2),
+  def FP80_ADDm32 : PseudoI<(outs RFP80:$dst), (ins RFP80:$src1, f32mem_norex2:$src2),
                             [(set RFP80:$dst,
                                   (any_X86fp80_add RFP80:$src1,
                                                    (f80 (extloadf32 addr:$src2))))]>;
@@ -90,35 +90,35 @@ multiclass FPBinary<SDPatternOperator OpNode, Format fp, string asmstring,
                     bit Forward = 1> {
 // ST(0) = ST(0) + [mem]
 def _Fp32m  : FpIf32<(outs RFP32:$dst),
-                     (ins RFP32:$src1, f32mem:$src2), OneArgFPRW,
+                     (ins RFP32:$src1, f32mem_norex2:$src2), OneArgFPRW,
                   [!if(Forward,
                        (set RFP32:$dst,
                         (OpNode RFP32:$src1, (loadf32 addr:$src2))),
                        (set RFP32:$dst,
                         (OpNode (loadf32 addr:$src2), RFP32:$src1)))]>;
 def _Fp64m  : FpIf64<(outs RFP64:$dst),
-                     (ins RFP64:$src1, f64mem:$src2), OneArgFPRW,
+                     (ins RFP64:$src1, f64mem_norex2:$src2), OneArgFPRW,
                   [!if(Forward,
                        (set RFP64:$dst,
                         (OpNode RFP64:$src1, (loadf64 addr:$src2))),
                        (set RFP64:$dst,
                         (OpNode (loadf64 addr:$src2), RFP64:$src1)))]>;
 def _Fp64m32: FpIf64<(outs RFP64:$dst),
-                     (ins RFP64:$src1, f32mem:$src2), OneArgFPRW,
+                     (ins RFP64:$src1, f32mem_norex2:$src2), OneArgFPRW,
                   [!if(Forward,
                        (set RFP64:$dst,
                         (OpNode RFP64:$src1, (f64 (extloadf32 addr:$src2)))),
                        (set RFP64:$dst,
                         (OpNode (f64 (extloadf32 addr:$src2)), RFP64:$src1)))]>;
 def _Fp80m32: FpI_<(outs RFP80:$dst),
-                   (ins RFP80:$src1, f32mem:$src2), OneArgFPRW,
+                   (ins RFP80:$src1, f32mem_norex2:$src2), OneArgFPRW,
                   [!if(Forward,
                        (set RFP80:$dst,
                         (OpNode RFP80:$src1, (f80 (extloadf32 addr:$src2)))),
                        (set RFP80:$dst,
                         (OpNode (f80 (extloadf32 addr:$src2)), RFP80:$src1)))]>;
 def _Fp80m64: FpI_<(outs RFP80:$dst),
-                   (ins RFP80:$src1, f64mem:$src2), OneArgFPRW,
+                   (ins RFP80:$src1, f64mem_norex2:$src2), OneArgFPRW,
                   [!if(Forward,
                        (set RFP80:$dst,
                         (OpNode RFP80:$src1, (f80 (extloadf64 addr:$src2)))),
@@ -131,42 +131,42 @@ let mayLoad = 1 in
 def _F64m  : FPI<0xDC, fp, (outs), (ins f64mem:$src),
                  !strconcat("f", asmstring, "{l}\t$src")>;
 // ST(0) = ST(0) + [memint]
-def _FpI16m32 : FpIf32<(outs RFP32:$dst), (ins RFP32:$src1, i16mem:$src2),
+def _FpI16m32 : FpIf32<(outs RFP32:$dst), (ins RFP32:$src1, i16mem_norex2:$src2),
                        OneArgFPRW,
                        [!if(Forward,
                             (set RFP32:$dst,
                              (OpNode RFP32:$src1, (X86fild16 addr:$src2))),
                             (set RFP32:$dst,
                              (OpNode (X86fild16 addr:$src2), RFP32:$src1)))]>;
-def _FpI32m32 : FpIf32<(outs RFP32:$dst), (ins RFP32:$src1, i32mem:$src2),
+def _FpI32m32 : FpIf32<(outs RFP32:$dst), (ins RFP32:$src1, i32mem_norex2:$src2),
                        OneArgFPRW,
                        [!if(Forward,
                             (set RFP32:$dst,
                              (OpNode RFP32:$src1, (X86fild32 addr:$src2))),
                             (set RFP32:$dst,
                              (OpNode (X86fild32 addr:$src2), RFP32:$src1)))]>;
-def _FpI16m64 : FpIf64<(outs RFP64:$dst), (ins RFP64:$src1, i16mem:$src2),
+def _FpI16m64 : FpIf64<(outs RFP64:$dst), (ins RFP64:$src1, i16mem_norex2:$src2),
                        OneArgFPRW,
                        [!if(Forward,
                             (set RFP64:$dst,
                              (OpNode RFP64:$src1, (X86fild16 addr:$src2))),
                             (set RFP64:$dst,
                              (OpNode (X86fild16 addr:$src2), RFP64:$src1)))]>;
-def _FpI32m64 : FpIf64<(outs RFP64:$dst), (ins RFP64:$src1, i32mem:$src2),
+def _FpI32m64 : FpIf64<(outs RFP64:$dst), (ins RFP64:$src1, i32mem_norex2:$src2),
                        OneArgFPRW,
                        [!if(Forward,
                             (set RFP64:$dst,
                              (OpNode RFP64:$src1, (X86fild32 addr:$src2))),
                             (set RFP64:$dst,
                              (OpNode (X86fild32 addr:$src2), RFP64:$src1)))]>;
-def _FpI16m80 : FpI_<(outs RFP80:$dst), (ins RFP80:$src1, i16mem:$src2),
+def _FpI16m80 : FpI_<(outs RFP80:$dst), (ins RFP80:$src1, i16mem_norex2:$src2),
                      OneArgFPRW,
                      [!if(Forward,
                           (set RFP80:$dst,
                            (OpNode RFP80:$src1, (X86fild16 addr:$src2))),
                           (set RFP80:$dst,
                            (OpNode (X86fild16 addr:$src2), RFP80:$src1)))]>;
-def _FpI32m80 : FpI_<(outs RFP80:$dst), (ins RFP80:$src1, i32mem:$src2),
+def _FpI32m80 : FpI_<(outs RFP80:$dst), (ins RFP80:$src1, i32mem_norex2:$src2),
                      OneArgFPRW,
                      [!if(Forward,
                           (set RFP80:$dst,
@@ -385,80 +385,80 @@ let mayRaiseFPException = 1 in {
 // Floating point loads & stores.
 let SchedRW = [WriteLoad], Uses = [FPCW] in {
 let canFoldAsLoad = 1 in {
-def LD_Fp32m   : FpIf32<(outs RFP32:$dst), (ins f32mem:$src), ZeroArgFP,
+def LD_Fp32m   : FpIf32<(outs RFP32:$dst), (ins f32mem_norex2:$src), ZeroArgFP,
                   [(set RFP32:$dst, (loadf32 addr:$src))]>;
-def LD_Fp64m : FpIf64<(outs RFP64:$dst), (ins f64mem:$src), ZeroArgFP,
+def LD_Fp64m : FpIf64<(outs RFP64:$dst), (ins f64mem_norex2:$src), ZeroArgFP,
                   [(set RFP64:$dst, (loadf64 addr:$src))]>;
-def LD_Fp80m   : FpI_<(outs RFP80:$dst), (ins f80mem:$src), ZeroArgFP,
+def LD_Fp80m   : FpI_<(outs RFP80:$dst), (ins f80mem_norex2:$src), ZeroArgFP,
                   [(set RFP80:$dst, (loadf80 addr:$src))]>;
 } // canFoldAsLoad
-def LD_Fp32m64 : FpIf64<(outs RFP64:$dst), (ins f32mem:$src), ZeroArgFP,
+def LD_Fp32m64 : FpIf64<(outs RFP64:$dst), (ins f32mem_norex2:$src), ZeroArgFP,
                   [(set RFP64:$dst, (f64 (extloadf32 addr:$src)))]>;
-def LD_Fp64m80 : FpI_<(outs RFP80:$dst), (ins f64mem:$src), ZeroArgFP,
+def LD_Fp64m80 : FpI_<(outs RFP80:$dst), (ins f64mem_norex2:$src), ZeroArgFP,
                   [(set RFP80:$dst, (f80 (extloadf64 addr:$src)))]>;
-def LD_Fp32m80 : FpI_<(outs RFP80:$dst), (ins f32mem:$src), ZeroArgFP,
+def LD_Fp32m80 : FpI_<(outs RFP80:$dst), (ins f32mem_norex2:$src), ZeroArgFP,
                   [(set RFP80:$dst, (f80 (extloadf32 addr:$src)))]>;
 let mayRaiseFPException = 0 in {
-def ILD_Fp16m32: FpIf32<(outs RFP32:$dst), (ins i16mem:$src), ZeroArgFP,
+def ILD_Fp16m32: FpIf32<(outs RFP32:$dst), (ins i16mem_norex2:$src), ZeroArgFP,
                   [(set RFP32:$dst, (X86fild16 addr:$src))]>;
-def ILD_Fp32m32: FpIf32<(outs RFP32:$dst), (ins i32mem:$src), ZeroArgFP,
+def ILD_Fp32m32: FpIf32<(outs RFP32:$dst), (ins i32mem_norex2:$src), ZeroArgFP,
                   [(set RFP32:$dst, (X86fild32 addr:$src))]>;
-def ILD_Fp64m32: FpIf32<(outs RFP32:$dst), (ins i64mem:$src), ZeroArgFP,
+def ILD_Fp64m32: FpIf32<(outs RFP32:$dst), (ins i64mem_norex2:$src), ZeroArgFP,
                   [(set RFP32:$dst, (X86fild64 addr:$src))]>;
-def ILD_Fp16m64: FpIf64<(outs RFP64:$dst), (ins i16mem:$src), ZeroArgFP,
+def ILD_Fp16m64: FpIf64<(outs RFP64:$dst), (ins i16mem_norex2:$src), ZeroArgFP,
                   [(set RFP64:$dst, (X86fild16 addr:$src))]>;
-def ILD_Fp32m64: FpIf64<(outs RFP64:$dst), (ins i32mem:$src), ZeroArgFP,
+def ILD_Fp32m64: FpIf64<(outs RFP64:$dst), (ins i32mem_norex2:$src), ZeroArgFP,
                   [(set RFP64:$dst, (X86fild32 addr:$src))]>;
-def ILD_Fp64m64: FpIf64<(outs RFP64:$dst), (ins i64mem:$src), ZeroArgFP,
+def ILD_Fp64m64: FpIf64<(outs RFP64:$dst), (ins i64mem_norex2:$src), ZeroArgFP,
                   [(set RFP64:$dst, (X86fild64 addr:$src))]>;
-def ILD_Fp16m80: FpI_<(outs RFP80:$dst), (ins i16mem:$src), ZeroArgFP,
+def ILD_Fp16m80: FpI_<(outs RFP80:$dst), (ins i16mem_norex2:$src), ZeroArgFP,
                   [(set RFP80:$dst, (X86fild16 addr:$src))]>;
-def ILD_Fp32m80: FpI_<(outs RFP80:$dst), (ins i32mem:$src), ZeroArgFP,
+def ILD_Fp32m80: FpI_<(outs RFP80:$dst), (ins i32mem_norex2:$src), ZeroArgFP,
                   [(set RFP80:$dst, (X86fild32 addr:$src))]>;
-def ILD_Fp64m80: FpI_<(outs RFP80:$dst), (ins i64mem:$src), ZeroArgFP,
+def ILD_Fp64m80: FpI_<(outs RFP80:$dst), (ins i64mem_norex2:$src), ZeroArgFP,
                   [(set RFP80:$dst, (X86fild64 addr:$src))]>;
 } // mayRaiseFPException = 0
 } // SchedRW
 
 let SchedRW = [WriteStore], Uses = [FPCW] in {
-def ST_Fp32m   : FpIf32<(outs), (ins f32mem:$op, RFP32:$src), OneArgFP,
+def ST_Fp32m   : FpIf32<(outs), (ins f32mem_norex2:$op, RFP32:$src), OneArgFP,
                   [(store RFP32:$src, addr:$op)]>;
-def ST_Fp64m32 : FpIf64<(outs), (ins f32mem:$op, RFP64:$src), OneArgFP,
+def ST_Fp64m32 : FpIf64<(outs), (ins f32mem_norex2:$op, RFP64:$src), OneArgFP,
                   [(truncstoref32 RFP64:$src, addr:$op)]>;
-def ST_Fp64m   : FpIf64<(outs), (ins f64mem:$op, RFP64:$src), OneArgFP,
+def ST_Fp64m   : FpIf64<(outs), (ins f64mem_norex2:$op, RFP64:$src), OneArgFP,
                   [(store RFP64:$src, addr:$op)]>;
-def ST_Fp80m32 : FpI_<(outs), (ins f32mem:$op, RFP80:$src), OneArgFP,
+def ST_Fp80m32 : FpI_<(outs), (ins f32mem_norex2:$op, RFP80:$src), OneArgFP,
                   [(truncstoref32 RFP80:$src, addr:$op)]>;
-def ST_Fp80m64 : FpI_<(outs), (ins f64mem:$op, RFP80:$src), OneArgFP,
+def ST_Fp80m64 : FpI_<(outs), (ins f64mem_norex2:$op, RFP80:$src), OneArgFP,
                   [(truncstoref64 RFP80:$src, addr:$op)]>;
 // FST does not support 80-bit memory target; FSTP must be used.
 
 let mayStore = 1, hasSideEffects = 0 in {
-def ST_FpP32m    : FpIf32<(outs), (ins f32mem:$op, RFP32:$src), OneArgFP, []>;
-def ST_FpP64m32  : FpIf64<(outs), (ins f32mem:$op, RFP64:$src), OneArgFP, []>;
-def ST_FpP64m    : FpIf64<(outs), (ins f64mem:$op, RFP64:$src), OneArgFP, []>;
-def ST_FpP80m32  : FpI_<(outs), (ins f32mem:$op, RFP80:$src), OneArgFP, []>;
-def ST_FpP80m64  : FpI_<(outs), (ins f64mem:$op, RFP80:$src), OneArgFP, []>;
+def ST_FpP32m    : FpIf32<(outs), (ins f32mem_norex2:$op, RFP32:$src), OneArgFP, []>;
+def ST_FpP64m32  : FpIf64<(outs), (ins f32mem_norex2:$op, RFP64:$src), OneArgFP, []>;
+def ST_FpP64m    : FpIf64<(outs), (ins f64mem_norex2:$op, RFP64:$src), OneArgFP, []>;
+def ST_FpP80m32  : FpI_<(outs), (ins f32mem_norex2:$op, RFP80:$src), OneArgFP, []>;
+def ST_FpP80m64  : FpI_<(outs), (ins f64mem_norex2:$op, RFP80:$src), OneArgFP, []>;
 } // mayStore
 
-def ST_FpP80m    : FpI_<(outs), (ins f80mem:$op, RFP80:$src), OneArgFP,
+def ST_FpP80m    : FpI_<(outs), (ins f80mem_norex2:$op, RFP80:$src), OneArgFP,
                     [(store RFP80:$src, addr:$op)]>;
 
 let mayStore = 1, hasSideEffects = 0 in {
-def IST_Fp16m32  : FpIf32<(outs), (ins i16mem:$op, RFP32:$src), OneArgFP, []>;
-def IST_Fp32m32  : FpIf32<(outs), (ins i32mem:$op, RFP32:$src), OneArgFP,
+def IST_Fp16m32  : FpIf32<(outs), (ins i16mem_norex2:$op, RFP32:$src), OneArgFP, []>;
+def IST_Fp32m32  : FpIf32<(outs), (ins i32mem_norex2:$op, RFP32:$src), OneArgFP,
                           [(X86fist32 RFP32:$src, addr:$op)]>;
-def IST_Fp64m32  : FpIf32<(outs), (ins i64mem:$op, RFP32:$src), OneArgFP,
+def IST_Fp64m32  : FpIf32<(outs), (ins i64mem_norex2:$op, RFP32:$src), OneArgFP,
                           [(X86fist64 RFP32:$src, addr:$op)]>;
-def IST_Fp16m64  : FpIf64<(outs), (ins i16mem:$op, RFP64:$src), OneArgFP, []>;
-def IST_Fp32m64  : FpIf64<(outs), (ins i32mem:$op, RFP64:$src), OneArgFP,
+def IST_Fp16m64  : FpIf64<(outs), (ins i16mem_norex2:$op, RFP64:$src), OneArgFP, []>;
+def IST_Fp32m64  : FpIf64<(outs), (ins i32mem_norex2:$op, RFP64:$src), OneArgFP,
                           [(X86fist32 RFP64:$src, addr:$op)]>;
-def IST_Fp64m64  : FpIf64<(outs), (ins i64mem:$op, RFP64:$src), OneArgFP,
+def IST_Fp64m64  : FpIf64<(outs), (ins i64mem_norex2:$op, RFP64:$src), OneArgFP,
                           [(X86fist64 RFP64:$src, addr:$op)]>;
-def IST_Fp16m80  : FpI_<(outs), (ins i16mem:$op, RFP80:$src), OneArgFP, []>;
-def IST_Fp32m80  : FpI_<(outs), (ins i32mem:$op, RFP80:$src), OneArgFP,
+def IST_Fp16m80  : FpI_<(outs), (ins i16mem_norex2:$op, RFP80:$src), OneArgFP, []>;
+def IST_Fp32m80  : FpI_<(outs), (ins i32mem_norex2:$op, RFP80:$src), OneArgFP,
                         [(X86fist32 RFP80:$src, addr:$op)]>;
-def IST_Fp64m80  : FpI_<(outs), (ins i64mem:$op, RFP80:$src), OneArgFP,
+def IST_Fp64m80  : FpI_<(outs), (ins i64mem_norex2:$op, RFP80:$src), OneArgFP,
                         [(X86fist64 RFP80:$src, addr:$op)]>;
 } // mayStore
 } // SchedRW, Uses = [FPCW]
@@ -488,23 +488,23 @@ def IST_FP64m : FPI<0xDF, MRM7m, (outs), (ins i64mem:$dst), "fistp{ll}\t$dst">;
 
 // FISTTP requires SSE3 even though it's a FPStack op.
 let Predicates = [HasSSE3], SchedRW = [WriteStore], Uses = [FPCW] in {
-def ISTT_Fp16m32 : FpI_<(outs), (ins i16mem:$op, RFP32:$src), OneArgFP,
+def ISTT_Fp16m32 : FpI_<(outs), (ins i16mem_norex2:$op, RFP32:$src), OneArgFP,
                     [(X86fp_to_i16mem RFP32:$src, addr:$op)]>;
-def ISTT_Fp32m32 : FpI_<(outs), (ins i32mem:$op, RFP32:$src), OneArgFP,
+def ISTT_Fp32m32 : FpI_<(outs), (ins i32mem_norex2:$op, RFP32:$src), OneArgFP,
                     [(X86fp_to_i32mem RFP32:$src, addr:$op)]>;
-def ISTT_Fp64m32 : FpI_<(outs), (ins i64mem:$op, RFP32:$src), OneArgFP,
+def ISTT_Fp64m32 : FpI_<(outs), (ins i64mem_norex2:$op, RFP32:$src), OneArgFP,
                     [(X86fp_to_i64mem RFP32:$src, addr:$op)]>;
-def ISTT_Fp16m64 : FpI_<(outs), (ins i16mem:$op, RFP64:$src), OneArgFP,
+def ISTT_Fp16m64 : FpI_<(outs), (ins i16mem_norex2:$op, RFP64:$src), OneArgFP,
                     [(X86fp_to_i16mem RFP64:$src, addr:$op)]>;
-def ISTT_Fp32m64 : FpI_<(outs), (ins i32mem:$op, RFP64:$src), OneArgFP,
+def ISTT_Fp32m64 : FpI_<(outs), (ins i32mem_norex2:$op, RFP64:$src), OneArgFP,
                     [(X86fp_to_i32mem RFP64:$src, addr:$op)]>;
-def ISTT_Fp64m64 : FpI_<(outs), (ins i64mem:$op, RFP64:$src), OneArgFP,
+def ISTT_Fp64m64 : FpI_<(outs), (ins i64mem_norex2:$op, RFP64:$src), OneArgFP,
                     [(X86fp_to_i64mem RFP64:$src, addr:$op)]>;
-def ISTT_Fp16m80 : FpI_<(outs), (ins i16mem:$op, RFP80:$src), OneArgFP,
+def ISTT_Fp16m80 : FpI_<(outs), (ins i16mem_norex2:$op, RFP80:$src), OneArgFP,
                     [(X86fp_to_i16mem RFP80:$src, addr:$op)]>;
-def ISTT_Fp32m80 : FpI_<(outs), (ins i32mem:$op, RFP80:$src), OneArgFP,
+def ISTT_Fp32m80 : FpI_<(outs), (ins i32mem_norex2:$op, RFP80:$src), OneArgFP,
                     [(X86fp_to_i32mem RFP80:$src, addr:$op)]>;
-def ISTT_Fp64m80 : FpI_<(outs), (ins i64mem:$op, RFP80:$src), OneArgFP,
+def ISTT_Fp64m80 : FpI_<(outs), (ins i64mem_norex2:$op, RFP80:$src), OneArgFP,
                     [(X86fp_to_i64mem RFP80:$src, addr:$op)]>;
 } // Predicates = [HasSSE3]
 
