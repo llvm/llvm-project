@@ -497,6 +497,13 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
     OS << "\"\n";
   }
 
+  for (StringRef Dir : ExcludedDirsAsWritten) {
+    OS.indent(Indent + 2);
+    OS << "exclude umbrella \"";
+    OS.write_escaped(Dir);
+    OS << "\"\n";
+  }
+
   if (!ConfigMacros.empty() || ConfigMacrosExhaustive) {
     OS.indent(Indent + 2);
     OS << "config_macros ";
