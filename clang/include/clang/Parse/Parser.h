@@ -7092,10 +7092,22 @@ public:
   bool ParseOpenMPReservedLocator(OpenMPClauseKind Kind,
                                   SemaOpenMP::OpenMPVarListDataTy &Data,
                                   const LangOptions &LangOpts);
+
+  /// Parses one bound of an OpenMP 6.0 'adjust_args' parameter range, which may
+  /// be 'omp_num_args' with an optional logical offset, or the whole
+  /// parameter-list item when no range colon follows it.
+  bool ParseOpenMPAdjustArgsBound(OMPAdjustArgsItem::Bound &Bound);
+
+  /// Parses an OpenMP 6.0 'adjust_args' parameter list, whose items may be
+  /// parameter names, positions, or ranges with optional bounds.
+  /// Returns true on error.
+  bool ParseOpenMPAdjustArgsList(SmallVectorImpl<OMPAdjustArgsItem> &Items);
+
   /// Parses clauses with list.
   bool ParseOpenMPVarList(OpenMPDirectiveKind DKind, OpenMPClauseKind Kind,
                           SmallVectorImpl<Expr *> &Vars,
-                          SemaOpenMP::OpenMPVarListDataTy &Data);
+                          SemaOpenMP::OpenMPVarListDataTy &Data,
+                          SmallVectorImpl<OMPAdjustArgsItem> &AdjustArgsItems);
 
   /// Parses the mapper modifier in map, to, and from clauses.
   bool parseMapperModifier(SemaOpenMP::OpenMPVarListDataTy &Data);

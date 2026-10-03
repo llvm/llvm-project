@@ -31,6 +31,18 @@ using namespace clang;
 using namespace llvm;
 using namespace omp;
 
+OMPAdjustArgsClause *
+OMPAdjustArgsClause::Create(const ASTContext &C,
+                            OpenMPAdjustArgsOpKind AdjustOp,
+                            OpenMPNeedDevicePtrModifier NeedDevicePtrModifier,
+                            ArrayRef<OMPAdjustArgsItem> Items) {
+  void *Mem = C.Allocate(totalSizeToAlloc<OMPAdjustArgsItem>(Items.size()));
+  auto *Clause = new (Mem)
+      OMPAdjustArgsClause(AdjustOp, NeedDevicePtrModifier, Items.size());
+  llvm::copy(Items, Clause->getTrailingObjects());
+  return Clause;
+}
+
 OMPClause::child_range OMPClause::children() {
   switch (getClauseKind()) {
   default:
@@ -3239,5 +3251,98 @@ bool TargetOMPContext::matchesISATrait(StringRef RawString) const {
     return It->second;
   if (!FeatureValidityCheck(RawString))
     DiagUnknownTrait(RawString);
+  return false;
+}
+
+/// Evaluate one bound of an 'adjust_args' parameter range: either an
+/// 'omp_num_args [+- logical_offset]' expression, or a plain constant integer
+/// expression. An omitted bound leaves Result unchanged. Returns false if the
+/// bound is dependent or not constant.
+static bool evalOMPAdjustArgsBound(const OMPAdjustArgsItem::Bound &Bound,
+                                   unsigned NumArgs, const ASTContext &Ctx,
+                                   int64_t &Result) {
+  if (Bound.Kind == OMPAdjustArgsItem::Bound::Omitted)
+    return true;
+  if (Bound.Kind == OMPAdjustArgsItem::Bound::NumArgs) {
+    int64_t Offset = 0;
+    if (const Expr *OffsetExpr = Bound.E) {
+      if (OffsetExpr->isValueDependent())
+        return false;
+      std::optional<llvm::APSInt> Val = OffsetExpr->getIntegerConstantExpr(Ctx);
+      if (!Val)
+        return false;
+      Offset = Val->getLimitedValue(INT32_MAX);
+    }
+    Result = static_cast<int64_t>(NumArgs) +
+             (Bound.IsSubtraction ? -Offset : Offset);
+    return true;
+  }
+  if (Bound.Kind != OMPAdjustArgsItem::Bound::Expression || !Bound.E)
+    return false;
+  const Expr *E = Bound.E->IgnoreParenImpCasts();
+  if (E->isValueDependent())
+    return false;
+  std::optional<llvm::APSInt> Val = E->getIntegerConstantExpr(Ctx);
+  if (!Val)
+    return false;
+  Result = Val->getLimitedValue(INT32_MAX);
+  return true;
+}
+
+bool clang::resolveOMPAdjustArgsItem(const OMPAdjustArgsItem &Item,
+                                     const FunctionDecl *FD, unsigned NumArgs,
+                                     const ASTContext &Ctx,
+                                     SmallVectorImpl<unsigned> &Positions) {
+  auto AppendIfInRange = [&](int64_t Pos) {
+    if (Pos >= 1 && Pos <= static_cast<int64_t>(NumArgs))
+      Positions.push_back(static_cast<unsigned>(Pos));
+  };
+
+  // A parameter range 'lb:ub'. An omitted lb defaults to 1, an omitted ub to
+  // 'NumArgs' (OpenMP 6.0 [5.2.1]).
+  if (Item.Kind == OMPAdjustArgsItem::Range) {
+    int64_t Lower = 1;
+    int64_t Upper = NumArgs;
+    if (!evalOMPAdjustArgsBound(Item.Lower, NumArgs, Ctx, Lower) ||
+        !evalOMPAdjustArgsBound(Item.Upper, NumArgs, Ctx, Upper))
+      return false;
+    // An out-of-range literal bound must not turn this into an
+    // unbounded loop.
+    Lower = std::max<int64_t>(Lower, 1);
+    Upper = std::min<int64_t>(Upper, NumArgs);
+    if (Lower > Upper)
+      return true;
+    for (int64_t Pos : llvm::seq_inclusive<int64_t>(Lower, Upper))
+      AppendIfInRange(Pos);
+    return true;
+  }
+
+  if (!Item.E)
+    return false;
+  const Expr *E = Item.E->IgnoreParenImpCasts();
+
+  // A named parameter list item.
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+    const auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl());
+    if (!PVD)
+      return false;
+    unsigned Index = PVD->getFunctionScopeIndex();
+    if (FD->getNumParams() > Index &&
+        FD->getParamDecl(Index)->getCanonicalDecl() == PVD->getCanonicalDecl())
+      AppendIfInRange(static_cast<int64_t>(Index) + 1);
+    return true;
+  }
+
+  // The position of a parameter, given as a constant integer expression.
+  if (E->getType()->isIntegerType()) {
+    if (E->isValueDependent())
+      return false;
+    std::optional<llvm::APSInt> Val = E->getIntegerConstantExpr(Ctx);
+    if (!Val)
+      return false;
+    AppendIfInRange(Val->getLimitedValue(INT32_MAX));
+    return true;
+  }
+
   return false;
 }
