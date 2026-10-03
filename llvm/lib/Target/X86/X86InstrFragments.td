@@ -375,6 +375,8 @@ def X86eh_sjlj_setup_dispatch : SDNode<"X86ISD::EH_SJLJ_SETUP_DISPATCH",
 // the list of operands.
 def X86tcret : SDNode<"X86ISD::TC_RETURN", SDT_X86TCRET,
                         [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
+def X86tcret_r10 : SDNode<"X86ISD::TC_RETURN_R10", SDT_X86TCRET,
+                          [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 // Pseudo for a tail call return to a global address that must be called via
 // a memory address (i.e., not loaded into a register then called).

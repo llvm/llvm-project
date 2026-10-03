@@ -1074,6 +1074,7 @@ unsigned X86RegisterInfo::findDeadCallerSavedReg(
   case X86::TCRETURNmi:
   case X86::TCRETURNdi64:
   case X86::TCRETURNri64:
+  case X86::TCRETURNri64_R10:
   case X86::TCRETURNri64_ImpCall:
   case X86::TCRETURNmi64:
   case X86::TCRETURN_WINmi64:
