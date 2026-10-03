@@ -1174,8 +1174,12 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
     Previous = dyn_cast<Instruction>(PrevPhi->getIncomingValueForBlock(Latch));
   }
 
-  if (!Previous || !TheLoop->contains(Previous) || isa<PHINode>(Previous))
+  if (!Previous || isa<PHINode>(Previous))
     return false;
+
+  // Handle recurrences with a loop-invariant latch value.
+  if (!TheLoop->contains(Previous))
+    return DT->dominates(Previous, Phi);
 
   // Ensure every user of the phi node (recursively) is dominated by the
   // previous value. The dominance requirement ensures the loop vectorizer will
