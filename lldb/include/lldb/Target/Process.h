@@ -1864,6 +1864,10 @@ public:
     return LLDB_INVALID_ADDRESS;
   }
 
+  /// Determines whether DoAllocateMemory is expected to succeed, without
+  /// running code in the process.
+  virtual bool DoCanAllocateMemory() { return false; }
+
   virtual Status WriteObjectFile(std::vector<ObjectFile::LoadableData> entries);
 
   /// The public interface to allocating memory in the process.

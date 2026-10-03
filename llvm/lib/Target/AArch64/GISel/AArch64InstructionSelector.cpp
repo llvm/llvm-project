@@ -7339,6 +7339,20 @@ AArch64InstructionSelector::selectShiftMask(MachineOperand &Root) const {
       ShAmtReg = AndSrcReg;
   }
 
+  // If shifting by X+/-N where N == 0 mod ShiftWidth, then just shift by X
+  // to avoid the ADD/SUB. The low log2(ShiftWidth) bits are unchanged, so the
+  // shift can use X directly; the original ADD/SUB stays for any other users.
+  Register AddSrcReg;
+  int64_t AddImm;
+  if ((mi_match(ShAmtReg, MRI,
+                m_GAdd(m_Reg(AddSrcReg), m_ICstOrSplat(AddImm))) ||
+       mi_match(ShAmtReg, MRI,
+                m_GSub(m_Reg(AddSrcReg), m_ICstOrSplat(AddImm)))) &&
+      (AddImm % ShiftWidth == 0)) {
+    ShAmtReg = AddSrcReg;
+    return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(ShAmtReg); }}};
+  }
+
   // Only succeed if we changed the shift amount; otherwise let other
   // patterns (e.g. zext GPR32 -> SUBREG_TO_REG) match instead.
   if (ShAmtReg == Root.getReg())

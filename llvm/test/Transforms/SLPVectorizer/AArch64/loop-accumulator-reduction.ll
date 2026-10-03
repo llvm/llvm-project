@@ -1351,3 +1351,109 @@ exit:
   %res = phi double [ %sum, %loop ], [ %sum2, %loop2 ]
   ret double %res
 }
+
+; The root of the fadd chain is accumulated through the loop phi. The scalar
+; chain is bound by its latency, the fusion of the root into it must not keep
+; the chain scalar.
+define double @loop_acc_fmul_chain(ptr %a, ptr %b, i64 %n, i64 %na, i64 %nb, double %alpha) {
+; CHECK-LABEL: define double @loop_acc_fmul_chain(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]], i64 [[NA:%.*]], i64 [[NB:%.*]], double [[ALPHA:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[ALPHA]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[K:%.*]] = phi i64 [ [[K_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[DOT1:%.*]] = phi double [ [[OP_RDX1:%.*]], %[[LOOP]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; CHECK-NEXT:    [[AM0:%.*]] = mul nuw nsw i64 [[K]], [[NA]]
+; CHECK-NEXT:    [[PA0:%.*]] = getelementptr double, ptr [[A]], i64 [[AM0]]
+; CHECK-NEXT:    [[A0:%.*]] = load double, ptr [[PA0]], align 8
+; CHECK-NEXT:    [[SCALED0:%.*]] = fmul fast double [[A0]], [[ALPHA]]
+; CHECK-NEXT:    [[BM0:%.*]] = mul nuw nsw i64 [[K]], [[NB]]
+; CHECK-NEXT:    [[PB0:%.*]] = getelementptr double, ptr [[B]], i64 [[BM0]]
+; CHECK-NEXT:    [[B0:%.*]] = load double, ptr [[PB0]], align 8
+; CHECK-NEXT:    [[PROD0:%.*]] = fmul fast double [[SCALED0]], [[B0]]
+; CHECK-NEXT:    [[ADD0:%.*]] = fadd fast double [[PROD0]], [[DOT1]]
+; CHECK-NEXT:    [[K1:%.*]] = add nuw nsw i64 [[K]], 1
+; CHECK-NEXT:    [[PA1:%.*]] = getelementptr double, ptr [[A]], i64 [[K1]]
+; CHECK-NEXT:    [[A1:%.*]] = load double, ptr [[PA1]], align 8
+; CHECK-NEXT:    [[SCALED1:%.*]] = fmul fast double [[A1]], [[ALPHA]]
+; CHECK-NEXT:    [[BM1:%.*]] = mul nuw nsw i64 [[K1]], [[NB]]
+; CHECK-NEXT:    [[PB1:%.*]] = getelementptr double, ptr [[B]], i64 [[BM1]]
+; CHECK-NEXT:    [[B1:%.*]] = load double, ptr [[PB1]], align 8
+; CHECK-NEXT:    [[PROD1:%.*]] = fmul fast double [[SCALED1]], [[B1]]
+; CHECK-NEXT:    [[ADD1:%.*]] = fadd fast double [[PROD1]], [[ADD0]]
+; CHECK-NEXT:    [[K2:%.*]] = add nuw nsw i64 [[K]], 2
+; CHECK-NEXT:    [[PA2:%.*]] = getelementptr double, ptr [[A]], i64 [[K2]]
+; CHECK-NEXT:    [[BM2:%.*]] = mul nuw nsw i64 [[K2]], [[NB]]
+; CHECK-NEXT:    [[PB2:%.*]] = getelementptr double, ptr [[B]], i64 [[BM2]]
+; CHECK-NEXT:    [[B2:%.*]] = load double, ptr [[PB2]], align 8
+; CHECK-NEXT:    [[K3:%.*]] = add nuw nsw i64 [[K]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[PA2]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <2 x double> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
+; CHECK-NEXT:    [[PROD2:%.*]] = fmul fast double [[TMP4]], [[B2]]
+; CHECK-NEXT:    [[DOT:%.*]] = fadd fast double [[PROD2]], [[ADD1]]
+; CHECK-NEXT:    [[BM3:%.*]] = mul nuw nsw i64 [[K3]], [[NB]]
+; CHECK-NEXT:    [[PB3:%.*]] = getelementptr double, ptr [[B]], i64 [[BM3]]
+; CHECK-NEXT:    [[B3:%.*]] = load double, ptr [[PB3]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
+; CHECK-NEXT:    [[OP_RDX:%.*]] = fmul fast double [[TMP5]], [[B3]]
+; CHECK-NEXT:    [[OP_RDX1]] = fadd fast double [[OP_RDX]], [[DOT]]
+; CHECK-NEXT:    [[K_NEXT]] = add nuw nsw i64 [[K]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[K_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP15:%.*]] = phi double [ [[OP_RDX1]], %[[LOOP]] ]
+; CHECK-NEXT:    ret double [[TMP15]]
+;
+entry:
+  br label %loop
+
+loop:
+  %k = phi i64 [ %k.next, %loop ], [ 0, %entry ]
+  %dot = phi double [ %add3, %loop ], [ 0.000000e+00, %entry ]
+  %am0 = mul nuw nsw i64 %k, %na
+  %pa0 = getelementptr double, ptr %a, i64 %am0
+  %a0 = load double, ptr %pa0, align 8
+  %scaled0 = fmul fast double %a0, %alpha
+  %bm0 = mul nuw nsw i64 %k, %nb
+  %pb0 = getelementptr double, ptr %b, i64 %bm0
+  %b0 = load double, ptr %pb0, align 8
+  %prod0 = fmul fast double %scaled0, %b0
+  %add0 = fadd fast double %prod0, %dot
+  %k1 = add nuw nsw i64 %k, 1
+  %pa1 = getelementptr double, ptr %a, i64 %k1
+  %a1 = load double, ptr %pa1, align 8
+  %scaled1 = fmul fast double %a1, %alpha
+  %bm1 = mul nuw nsw i64 %k1, %nb
+  %pb1 = getelementptr double, ptr %b, i64 %bm1
+  %b1 = load double, ptr %pb1, align 8
+  %prod1 = fmul fast double %scaled1, %b1
+  %add1 = fadd fast double %prod1, %add0
+  %k2 = add nuw nsw i64 %k, 2
+  %pa2 = getelementptr double, ptr %a, i64 %k2
+  %a2 = load double, ptr %pa2, align 8
+  %scaled2 = fmul fast double %a2, %alpha
+  %bm2 = mul nuw nsw i64 %k2, %nb
+  %pb2 = getelementptr double, ptr %b, i64 %bm2
+  %b2 = load double, ptr %pb2, align 8
+  %prod2 = fmul fast double %scaled2, %b2
+  %add2 = fadd fast double %prod2, %add1
+  %k3 = add nuw nsw i64 %k, 3
+  %pa3 = getelementptr double, ptr %a, i64 %k3
+  %a3 = load double, ptr %pa3, align 8
+  %scaled3 = fmul fast double %a3, %alpha
+  %bm3 = mul nuw nsw i64 %k3, %nb
+  %pb3 = getelementptr double, ptr %b, i64 %bm3
+  %b3 = load double, ptr %pb3, align 8
+  %prod3 = fmul fast double %scaled3, %b3
+  %add3 = fadd fast double %prod3, %add2
+  %k.next = add nuw nsw i64 %k, 4
+  %cmp = icmp eq i64 %k.next, %n
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  %res = phi double [ %add3, %loop ]
+  ret double %res
+}
