@@ -134,7 +134,7 @@ private:
   arglist_type Args;
 
   using OptRange = std::pair<unsigned, unsigned>;
-  static OptRange emptyRange() { return {-1u, 0u}; }
+  static OptRange emptyRange() { return {~0u, 0u}; }
 
   /// The first and last index of each different OptSpecifier ID.
   DenseMap<unsigned, OptRange> OptRanges;

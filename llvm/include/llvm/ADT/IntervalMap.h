@@ -327,7 +327,7 @@ public:
       // We want to shrink, copy to sib.
       unsigned Count = std::min({unsigned(-Add), Size, N - SSize});
       transferToLeftSib(Size, Sib, SSize, Count);
-      return -Count;
+      return -(int)Count;
     }
   }
 };

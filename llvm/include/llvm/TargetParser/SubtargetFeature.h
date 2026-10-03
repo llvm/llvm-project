@@ -57,7 +57,7 @@ public:
   }
 
   FeatureBitset &set() {
-    llvm::fill(Bits, -1ULL);
+    llvm::fill(Bits, ~0ULL);
     return *this;
   }
 

@@ -40,7 +40,7 @@ private:
       : LowPC(LowPC), Length(HighPC - LowPC), CUOffset(CUOffset) {}
 
     void setHighPC(uint64_t HighPC) {
-      if (HighPC == -1ULL || HighPC <= LowPC)
+      if (HighPC == ~0ULL || HighPC <= LowPC)
         Length = 0;
       else
         Length = HighPC - LowPC;
@@ -49,7 +49,7 @@ private:
     uint64_t HighPC() const {
       if (Length)
         return LowPC + Length;
-      return -1ULL;
+      return ~0ULL;
     }
 
     bool operator<(const Range &other) const {
