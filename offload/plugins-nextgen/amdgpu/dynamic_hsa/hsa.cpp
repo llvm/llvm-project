@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DynamicLibrary.h"
 
 #include "Shared/Debug.h"
@@ -19,6 +21,7 @@
 #include "hsa.h"
 #include "hsa_ext_amd.h"
 #include <memory>
+#include <utility>
 
 using namespace llvm::offload::debug;
 
@@ -96,14 +99,48 @@ DLWRAP_FINALIZE()
 #define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
 #endif
 
+/// Stand-in for an optional function that the HSA runtime does not provide.
+template <typename FuncTy> struct UnavailableTy;
+template <typename... ArgsTy>
+struct UnavailableTy<hsa_status_t (*)(ArgsTy...)> {
+  static hsa_status_t call(ArgsTy...) { return HSA_STATUS_ERROR; }
+};
+
+#define OPTIONAL_SYMBOL(SYMBOL)                                                \
+  {#SYMBOL, reinterpret_cast<void *>(&UnavailableTy<decltype(&SYMBOL)>::call)}
+
+/// The functions that are newer than version 1.0 of the AMD extension. If the
+/// runtime lacks one, calls to it fail instead of preventing the plugin from
+/// loading.
+static const std::pair<llvm::StringRef, void *> OptionalSymbols[] = {
+    OPTIONAL_SYMBOL(hsa_amd_vmem_address_reserve),
+    OPTIONAL_SYMBOL(hsa_amd_vmem_address_free),
+    OPTIONAL_SYMBOL(hsa_amd_vmem_handle_create),
+    OPTIONAL_SYMBOL(hsa_amd_vmem_handle_release),
+    OPTIONAL_SYMBOL(hsa_amd_vmem_map),
+    OPTIONAL_SYMBOL(hsa_amd_vmem_unmap),
+    OPTIONAL_SYMBOL(hsa_amd_vmem_set_access),
+};
+
+#undef OPTIONAL_SYMBOL
+
 static bool resolveSymbols(llvm::sys::DynamicLibrary &Lib, const char *Name) {
   for (size_t I = 0; I < dlwrap::size(); I++) {
     const char *Sym = dlwrap::symbol(I);
 
     void *P = Lib.getAddressOfSymbol(Sym);
     if (P == nullptr) {
-      ODBG(OLDT_Init) << "Unable to find '" << Sym << "' in '" << Name << "'!";
-      return false;
+      const auto *It = llvm::find_if(
+          OptionalSymbols, [&](const auto &S) { return S.first == Sym; });
+      if (It == std::end(OptionalSymbols)) {
+        ODBG(OLDT_Init) << "Unable to find '" << Sym << "' in '" << Name
+                        << "'!";
+        return false;
+      }
+      ODBG(OLDT_Init) << "Optional '" << Sym << "' is unavailable in '" << Name
+                      << "'";
+      *dlwrap::pointer(I) = It->second;
+      continue;
     }
     ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << Sym
                     << ") -> " << P;
