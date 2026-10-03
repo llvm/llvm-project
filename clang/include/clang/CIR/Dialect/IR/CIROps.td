@@ -6408,7 +6408,7 @@ def CIR_MatrixColumnMajorLoadOp : CIR_Op<"matrix.column_major_load", [
   }];
 
   let arguments = (ins
-    Arg<CIR_PointerType, "the address to store the value", [MemRead]>:$value,
+    Arg<CIR_PointerType, "the address to load from", [MemRead]>:$value,
     CIR_IntType:$stride,
     UnitAttr:$is_volatile
   );
