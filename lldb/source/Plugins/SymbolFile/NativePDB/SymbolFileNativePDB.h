@@ -158,8 +158,8 @@ public:
 
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
-  llvm::pdb::PDBFile &GetPDBFile() { return m_index->pdb(); }
-  const llvm::pdb::PDBFile &GetPDBFile() const { return m_index->pdb(); }
+  llvm::pdb::PDBFile &GetPDBFile() { return *m_pdb_file; }
+  const llvm::pdb::PDBFile &GetPDBFile() const { return *m_pdb_file; }
 
   PdbIndex &GetIndex() { return *m_index; };
 
@@ -301,7 +301,17 @@ private:
   // pdb debug info.
   lldb::user_id_t anonymous_id = LLDB_INVALID_UID - 1;
 
+  /// Builds m_index on first use. PdbIndex::create eagerly parses the DBI,
+  /// type (TPI/IPI) and symbol-record streams — for large PDBs that is most
+  /// of the file materialized on the private heap — so it must not run
+  /// during abilities probing, only when debug info is actually consumed
+  /// (InitializeObject / symtab construction).
+  PdbIndex *GetOrCreateIndex();
+
   std::unique_ptr<llvm::pdb::PDBFile> m_file_up;
+  /// The matched PDB file (owned by m_file_up, or by the ObjectFilePDB when
+  /// the module's object file IS the PDB). Set by CalculateAbilities.
+  llvm::pdb::PDBFile *m_pdb_file = nullptr;
   std::unique_ptr<PdbIndex> m_index;
 
   llvm::DenseMap<lldb::user_id_t, lldb::VariableSP> m_global_vars;
