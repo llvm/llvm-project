@@ -514,24 +514,27 @@ define void @test12() "aarch64_pstate_sm_body" {
 define void @test13(ptr %ptr) nounwind "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: test13:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Spill
-; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    mov z0.s, #0 // =0x0
-; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    addsvl x8, x8, #-1
 ; CHECK-NEXT:    cbnz x8, .LBB14_2
 ; CHECK-NEXT:  // %bb.1:
-; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    str x0, [sp, #8] // 8-byte Spill
+; CHECK-NEXT:    ldr z0, [x8] // 16-byte Folded Reload
 ; CHECK-NEXT:    bl callee_farg_fret
-; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    rdvl x8, #1
@@ -540,19 +543,23 @@ define void @test13(ptr %ptr) nounwind "aarch64_pstate_sm_enabled" {
 ; CHECK-NEXT:  .LBB14_2:
 ; CHECK-NEXT:    brk #0x1
 ; CHECK-NEXT:  .LBB14_3:
-; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    ldr z0, [x8] // 16-byte Folded Reload
 ; CHECK-NEXT:    bl callee_farg_fret
-; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    str z0, [x19]
+; CHECK-NEXT:    add x9, sp, #16
+; CHECK-NEXT:    ldr x8, [sp, #8] // 8-byte Reload
+; CHECK-NEXT:    ldr z0, [x9] // 16-byte Folded Reload
+; CHECK-NEXT:    str z0, [x8]
 ; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Reload
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %res0 = call <vscale x 4 x float> @callee_farg_fret(<vscale x 4 x float> zeroinitializer)
   %res1 = call <vscale x 4 x float> @callee_farg_fret(<vscale x 4 x float> %res0)
