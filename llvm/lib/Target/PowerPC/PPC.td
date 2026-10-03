@@ -177,6 +177,11 @@ def FeaturePartwordAtomic : SubtargetFeature<"partword-atomics",
 def FeatureQuadwordAtomic : SubtargetFeature<"quadword-atomics",
                                              "HasQuadwordAtomics", "true",
                                              "Enable lqarx and stqcx.">;
+// Set on CPUs that keep the larx reservation across a fence before the stcx.
+def FeatureFenceKeepsReservation :
+  SubtargetFeature<"fence-keeps-reservation", "FenceKeepsReservation", "true",
+                   "A fence between larx and stcx. keeps the reservation", [],
+                   InlineIgnore>;
 def FeatureInvariantFunctionDescriptors :
   SubtargetFeature<"invariant-function-descriptors",
                    "HasInvariantFunctionDescriptors", "true",
@@ -489,7 +494,8 @@ def ProcessorFeatures {
                                                   DeprecatedDST,
                                                   FeatureTwoConstNR,
                                                   FeatureUnalignedFloats,
-                                                  FeatureISA2_06];
+                                                  FeatureISA2_06,
+                                                  FeatureFenceKeepsReservation];
   list<SubtargetFeature> P7SpecificFeatures = [];
   list<SubtargetFeature> P7Features =
     !listconcat(P7InheritableFeatures, P7SpecificFeatures);
