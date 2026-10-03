@@ -113,7 +113,8 @@ enum class SCEVFlags {
   FlagNUW = (1 << 1), // No unsigned wrap.
   FlagNSW = (1 << 2), // No signed wrap.
   FlagsNoWrapMask = (1 << 3) - 1,
-  FlagsMask = (1 << 3) - 1,
+  FlagExact = (1 << 3), // Exact flag.
+  FlagsMask = (1 << 4) - 1,
   LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/FlagsMask)
 };
 
@@ -135,7 +136,7 @@ struct SCEVUseT : private PointerIntPair<SCEVPtrT, 2> {
   template <typename OtherPtrT, typename = std::enable_if_t<
                                     std::is_convertible_v<OtherPtrT, SCEVPtrT>>>
   SCEVUseT(const SCEVUseT<OtherPtrT> &Other)
-      : SCEVUseT(Other.getPointer(), Other.getUseNoWrapFlags()) {}
+      : SCEVUseT(Other.getPointer(), Other.getUseFlags()) {}
 
   operator SCEVPtrT() const { return getPointer(); }
   SCEVPtrT operator->() const { return getPointer(); }
@@ -154,16 +155,14 @@ struct SCEVUseT : private PointerIntPair<SCEVPtrT, 2> {
   /// flags and the underlying SCEV's flags, masked by \p Mask.
   SCEVFlags getNoWrapFlags(SCEVFlags Mask = SCEVFlags::FlagsNoWrapMask) const;
 
+  /// Return the flags for this SCEVUse, masked for the exact flag.
+  SCEVFlags getExactFlag() const;
+
   /// Return only the use-specific flags without the underlying SCEV's flags.
   SCEVFlags getUseNoWrapFlags() const {
     return getUseFlags() & SCEVFlags::FlagsNoWrapMask;
   }
-  SCEVFlags getUseFlags() const {
-    SCEVFlags UseFlags = static_cast<SCEVFlags>(Base::getInt() << 1);
-    if (any(UseFlags & (SCEVFlags::FlagNUW | SCEVFlags::FlagNSW)))
-      UseFlags |= SCEVFlags::FlagNW;
-    return UseFlags;
-  }
+  SCEVFlags getUseFlags() const;
 
   bool operator==(const SCEVUseT &RHS) const {
     return getOpaqueValue() == RHS.getOpaqueValue();
@@ -250,7 +249,7 @@ struct CastInfo<SCEVUseT<ToSCEVPtrT>, SCEVUse,
 
   static bool isPossible(const SCEVUse &U) { return isa<To>(U.getPointer()); }
   static CastReturnType doCast(const SCEVUse &U) {
-    return CastReturnType(cast<To>(U.getPointer()), U.getUseNoWrapFlags());
+    return CastReturnType(cast<To>(U.getPointer()), U.getUseFlags());
   }
   static CastReturnType castFailed() { return CastReturnType(nullptr); }
   static CastReturnType doCastIfPossible(const SCEVUse &U) {
@@ -300,6 +299,7 @@ public:
   static constexpr auto FlagNSW = SCEVFlags::FlagNSW;
   static constexpr auto FlagsNoWrapMask = SCEVFlags::FlagsNoWrapMask;
   static constexpr auto FlagsMask = SCEVFlags::FlagsMask;
+  static constexpr auto FlagExact = SCEVFlags::FlagExact;
 
   explicit SCEV(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
                 unsigned short ExpressionSize, Type *Ty)
@@ -780,7 +780,8 @@ public:
     SmallVector<SCEVUse, 3> Ops = {Op0, Op1, Op2};
     return getMulExpr(Ops, Flags, Depth);
   }
-  LLVM_ABI const SCEV *getUDivExpr(SCEVUse LHS, SCEVUse RHS);
+  LLVM_ABI SCEVUse getUDivExpr(SCEVUse LHS, SCEVUse RHS,
+                               SCEVFlagsPair Flags = {});
   LLVM_ABI const SCEV *getUDivExactExpr(SCEVUse LHS, SCEVUse RHS);
   LLVM_ABI const SCEV *getURemExpr(SCEVUse LHS, SCEVUse RHS);
   LLVM_ABI SCEVUse getAddRecExpr(SCEVUse Start, SCEVUse Step, const Loop *L,
@@ -2559,7 +2560,7 @@ private:
                                     SCEVFlags Flags);
 
   // Get UDiv expression already created or create a new one.
-  const SCEV *getOrCreateUDivExpr(SCEVUse LHS, SCEVUse RHS);
+  const SCEV *getOrCreateUDivExpr(SCEVUse LHS, SCEVUse RHS, SCEVFlags Flags);
 
   /// Return x if \p Val is f(x) where f is a 1-1 function.
   const SCEV *stripInjectiveFunctions(const SCEV *Val) const;
@@ -2797,11 +2798,13 @@ template <> inline const SCEV *SCEVUseT<const SCEV *>::getCanonical() const {
 template <typename SCEVPtrT>
 void SCEVUseT<SCEVPtrT>::print(raw_ostream &OS) const {
   getPointer()->print(OS);
-  SCEVFlags Flags = getUseNoWrapFlags();
+  SCEVFlags Flags = getUseFlags();
   if (any(Flags & SCEV::FlagNUW))
     OS << "<u nuw>";
   if (any(Flags & SCEV::FlagNSW))
     OS << "<u nsw>";
+  if (any(Flags & SCEV::FlagExact))
+    OS << "<u exact>";
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
