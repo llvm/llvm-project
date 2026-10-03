@@ -167,6 +167,13 @@ endif()
 # TableGen
 add_subdirectory(utils/TableGen)
 
+add_subdirectory(include)
+
+get_property(LLDB_TABLEGEN_TARGETS GLOBAL PROPERTY LLDB_TABLEGEN_TARGETS)
+add_custom_target(lldb-header-tablegen-targets DEPENDS ${LLDB_TABLEGEN_TARGETS})
+set_target_properties(lldb-header-tablegen-targets PROPERTIES FOLDER "lldb/Tablegenning/Targets")
+list(APPEND LLVM_COMMON_DEPENDS lldb-header-tablegen-targets)
+
 add_subdirectory(source)
 add_subdirectory(tools)
 add_subdirectory(docs)

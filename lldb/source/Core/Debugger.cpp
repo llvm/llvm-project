@@ -116,105 +116,12 @@ static std::mutex &GetDebuggerListMutex() {
 static Debugger::DebuggerList *g_debugger_list_ptr = nullptr;
 static llvm::DefaultThreadPool *g_thread_pool = nullptr;
 
-static constexpr OptionEnumValueElement g_show_disassembly_enum_values[] = {
-    {
-        lldb::eStopDisassemblyTypeNever,
-        "never",
-        "Never show disassembly when displaying a stop context.",
-    },
-    {
-        lldb::eStopDisassemblyTypeNoDebugInfo,
-        "no-debuginfo",
-        "Show disassembly when there is no debug information.",
-    },
-    {
-        lldb::eStopDisassemblyTypeNoSource,
-        "no-source",
-        "Show disassembly when there is no source information, or the source "
-        "file "
-        "is missing when displaying a stop context.",
-    },
-    {
-        lldb::eStopDisassemblyTypeAlways,
-        "always",
-        "Always show disassembly when displaying a stop context.",
-    },
-};
-
-static constexpr OptionEnumValueElement g_language_enumerators[] = {
-    {
-        eScriptLanguageNone,
-        "none",
-        "Disable scripting languages.",
-    },
-    {
-        eScriptLanguagePython,
-        "python",
-        "Select python as the default scripting language.",
-    },
-    {
-        eScriptLanguageDefault,
-        "default",
-        "Select the lldb default as the default scripting language.",
-    },
-};
-
-static constexpr OptionEnumValueElement g_dwim_print_verbosities[] = {
-    {eDWIMPrintVerbosityNone, "none",
-     "Use no verbosity when running dwim-print."},
-    {eDWIMPrintVerbosityExpression, "expression",
-     "Use partial verbosity when running dwim-print - display a message when "
-     "`expression` evaluation is used."},
-    {eDWIMPrintVerbosityFull, "full",
-     "Use full verbosity when running dwim-print."},
-};
-
-static constexpr OptionEnumValueElement s_stop_show_column_values[] = {
-    {
-        eStopShowColumnAnsiOrCaret,
-        "ansi-or-caret",
-        "Highlight the stop column with ANSI terminal codes when color/ANSI "
-        "mode is enabled; otherwise, fall back to using a text-only caret (^) "
-        "as if \"caret-only\" mode was selected.",
-    },
-    {
-        eStopShowColumnAnsi,
-        "ansi",
-        "Highlight the stop column with ANSI terminal codes when running LLDB "
-        "with color/ANSI enabled.",
-    },
-    {
-        eStopShowColumnCaret,
-        "caret",
-        "Highlight the stop column with a caret character (^) underneath the "
-        "stop column. This method introduces a new line in source listings "
-        "that display thread stop locations.",
-    },
-    {
-        eStopShowColumnNone,
-        "none",
-        "Do not highlight the stop column.",
-    },
-};
-
-static constexpr OptionEnumValueElement g_show_autosuggestion_enum_values[] = {
-    {
-        eAutosuggestionOff,
-        "false",
-        "Do not show any autosuggestion.",
-    },
-    {
-        eAutosuggestionOn,
-        "true",
-        "Show a suggestion sourced from previously entered commands.",
-    },
-    {
-        eAutosuggestionTabMode,
-        "tab-mode",
-        "Show the prefix that tab completion would insert for the current "
-        "line.",
-    },
-};
+#define LLDB_ENUMS_show_disassembly_enum_values
+#define LLDB_ENUMS_language_enumerators
+#define LLDB_ENUMS_dwim_print_verbosities
+#define LLDB_ENUMS_stop_show_column_values
+#define LLDB_ENUMS_show_autosuggestion_enum_values
+#include "DebuggerEnums.inc"
 
 #define LLDB_PROPERTIES_debugger
 #include "CoreProperties.inc"

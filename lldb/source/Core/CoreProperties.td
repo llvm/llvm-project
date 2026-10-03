@@ -146,7 +146,7 @@ let Definition = "debugger", Path = "" in {
     Desc<"If true, LLDB will add a marker to delimit hidden frames in backtraces.">;
   def StopShowColumn: Property<"stop-show-column", "Enum">,
     DefaultEnumValue<"eStopShowColumnAnsiOrCaret">,
-    EnumValues<"OptionEnumValues(s_stop_show_column_values)">,
+    EnumValues<"OptionEnumValues(g_stop_show_column_values)">,
     Desc<"If true, LLDB will use the column information from the debug info to mark the current position when displaying a stopped context.">;
   def StopShowColumnAnsiPrefix: Property<"stop-show-column-ansi-prefix", "String">,
     Global,

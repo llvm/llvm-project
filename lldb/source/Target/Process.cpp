@@ -120,18 +120,8 @@ public:
   }
 };
 
-static constexpr OptionEnumValueElement g_follow_fork_mode_values[] = {
-    {
-        eFollowParent,
-        "parent",
-        "Continue tracing the parent process and detach the child.",
-    },
-    {
-        eFollowChild,
-        "child",
-        "Trace the child process and detach the parent.",
-    },
-};
+#define LLDB_ENUMS_follow_fork_mode_values
+#include "ProcessEnums.inc"
 
 static constexpr unsigned g_string_read_width = 256;
 
