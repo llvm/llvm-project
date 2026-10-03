@@ -485,6 +485,15 @@ void TableGenTextFile::initialize(
 void TableGenTextFile::getLocationsOf(
     const llvm::lsp::URIForFile &uri, const llvm::lsp::Position &defPos,
     std::vector<llvm::lsp::Location> &locations) {
+
+  // Check if position is on an include directive and jump to included file.
+  for (const lsp::SourceMgrInclude &include : parsedIncludes) {
+    if (include.range.contains(defPos)) {
+      locations.push_back(llvm::lsp::Location(include.uri, llvm::lsp::Range()));
+      return;
+    }
+  }
+
   SMLoc posLoc = defPos.getAsSMLoc(sourceMgr);
   const TableGenIndexSymbol *symbol = index.lookup(posLoc);
   if (!symbol)
