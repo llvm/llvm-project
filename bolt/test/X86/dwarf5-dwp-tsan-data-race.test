@@ -8,7 +8,7 @@
 ; RUN: %clang %cflags -gdwarf-5 -gsplit-dwarf=split main.o helper.o -o main.exe
 ; RUN: llvm-dwp -e main.exe -o main.exe.dwp
 ; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections \
-; RUN:   --thread-count=4 --cu-processing-batch-size=4 --dwp=main.exe.dwp 2>&1 | FileCheck %s
+; RUN:   --thread-count=4 --dwp=main.exe.dwp 2>&1 | FileCheck %s
 ; RUN: llvm-dwarfdump --debug-info -r 0 main.dwo.dwo | FileCheck -check-prefix=BOLT-DWO-DWO-MAIN %s
 ; RUN: llvm-dwarfdump --debug-info -r 0 helper.dwo.dwo | FileCheck -check-prefix=BOLT-DWO-DWO-HELPER %s
 
