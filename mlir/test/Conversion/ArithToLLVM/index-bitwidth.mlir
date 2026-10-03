@@ -58,6 +58,20 @@ func.func @resource_index_constant() -> vector<2xindex> {
   return %0 : vector<2xindex>
 }
 
+// The sum's type must be converted to the configured index width when building
+// the LLVM struct that holds the sum and overflow indicator.
+
+// CHECK32-LABEL: @addui_extended_index
+//       CHECK32:   "llvm.intr.uadd.with.overflow"{{.*}} : (i32, i32) -> !llvm.struct<(i32, i1)>
+// CHECK64-LABEL: @addui_extended_index
+//       CHECK64:   "llvm.intr.uadd.with.overflow"{{.*}} : (i64, i64) -> !llvm.struct<(i64, i1)>
+// CHECK128-LABEL: @addui_extended_index
+//       CHECK128:   "llvm.intr.uadd.with.overflow"{{.*}} : (i128, i128) -> !llvm.struct<(i128, i1)>
+func.func @addui_extended_index(%a: index, %b: index) -> (index, i1) {
+  %sum, %overflow = arith.addui_extended %a, %b : index, i1
+  return %sum, %overflow : index, i1
+}
+
 {-#
   dialect_resources: {
     builtin: {
