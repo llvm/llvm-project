@@ -73,13 +73,17 @@ spirv::mapMemorySpaceToVulkanStorageClass(Attribute memorySpaceAttr) {
   auto intAttr = dyn_cast<IntegerAttr>(memorySpaceAttr);
   if (!intAttr)
     return std::nullopt;
-  unsigned memorySpace = intAttr.getInt();
+  // The integer may be signless, signed or unsigned and of any width; read
+  // the raw value instead of a typed accessor that asserts on a mismatch.
+  std::optional<uint64_t> memorySpace = intAttr.getValue().tryZExtValue();
+  if (!memorySpace)
+    return std::nullopt;
 
 #define STORAGE_SPACE_MAP_FN(storage, space)                                   \
   case space:                                                                  \
     return storage;
 
-  switch (memorySpace) {
+  switch (*memorySpace) {
     VULKAN_STORAGE_SPACE_MAP_LIST(STORAGE_SPACE_MAP_FN)
   default:
     break;
@@ -127,13 +131,17 @@ spirv::mapMemorySpaceToOpenCLStorageClass(Attribute memorySpaceAttr) {
   auto intAttr = dyn_cast<IntegerAttr>(memorySpaceAttr);
   if (!intAttr)
     return std::nullopt;
-  unsigned memorySpace = intAttr.getInt();
+  // The integer may be signless, signed or unsigned and of any width; read
+  // the raw value instead of a typed accessor that asserts on a mismatch.
+  std::optional<uint64_t> memorySpace = intAttr.getValue().tryZExtValue();
+  if (!memorySpace)
+    return std::nullopt;
 
 #define STORAGE_SPACE_MAP_FN(storage, space)                                   \
   case space:                                                                  \
     return storage;
 
-  switch (memorySpace) {
+  switch (*memorySpace) {
     OPENCL_STORAGE_SPACE_MAP_LIST(STORAGE_SPACE_MAP_FN)
   default:
     break;
