@@ -88,6 +88,7 @@ void SPIRVCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
     if (getOptLevel() != CodeGenOptLevel::None) {
       addModulePass(SPIRVFinalizeShaderLinkagePass(getTM()), PMW);
     }
+    addModulePass(SPIRVRemoveUnusedResourcesPass(), PMW);
   } else {
     // Variadic function calls aren't supported in shader code.
     // This needs to come before SPIRVPrepareFunctions because this
