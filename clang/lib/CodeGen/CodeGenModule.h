@@ -1586,6 +1586,10 @@ public:
   llvm::GlobalValue::LinkageTypes
   getLLVMLinkageVarDefinition(const VarDecl *VD);
 
+  /// Returns true if the initializer of \p D must not be constant-folded,
+  /// because other translation units might initialize it dynamically.
+  bool mustDynamicallyInitialize(const VarDecl &D);
+
   /// Emit all the global annotations.
   void EmitGlobalAnnotations();
 

@@ -224,10 +224,6 @@ void CodeGenFunction::EmitVarDecl(const VarDecl &D) {
     llvm::GlobalValue::LinkageTypes Linkage =
         CGM.getLLVMLinkageVarDefinition(&D);
 
-    // FIXME: We need to force the emission/use of a guard variable for
-    // some variables even if we can constant-evaluate them because
-    // we can't guarantee every translation unit will constant-evaluate them.
-
     return EmitStaticVarDecl(D, Linkage);
   }
 
@@ -361,7 +357,9 @@ llvm::GlobalVariable *
 CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
                                                llvm::GlobalVariable *GV) {
   ConstantEmitter emitter(*this);
-  llvm::Constant *Init = emitter.tryEmitForInitializer(D);
+  llvm::Constant *Init = CGM.mustDynamicallyInitialize(D)
+                             ? nullptr
+                             : emitter.tryEmitForInitializer(D);
 
   // If constant emission failed, then this should be a C++ static
   // initializer.
