@@ -15,6 +15,7 @@
 #include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/FloatingPointPredicateUtils.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/IR/ConstantFold.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
@@ -4049,7 +4050,39 @@ static Value *foldBitmaskMul(Value *Op0, Value *Op1,
   return nullptr;
 }
 
+/// (X binop C1) |disjoint C2 -> X binop (C1 binop C2), where binop is add or
+/// xor. A defined disjoint or is equivalent to add and xor, so the operations
+/// can be reassociated.
+Value *InstCombinerImpl::foldDisjointOrOfAddOrXor(Value *BinOp, Value *C) {
+  Value *X;
+  Constant *C1, *C2;
+  if (!match(BinOp, m_c_BinOp(m_Value(X), m_Constant(C1))) ||
+      !match(C, m_Constant(C2)))
+    return nullptr;
+
+  auto *BO = cast<BinaryOperator>(BinOp);
+  auto Opcode = BO->getOpcode();
+  if (Opcode != Instruction::Add && Opcode != Instruction::Xor)
+    return nullptr;
+
+  Constant *NewC = ConstantFoldBinaryInstruction(Opcode, C1, C2);
+  if (!NewC)
+    return nullptr;
+
+  if (Opcode == Instruction::Xor)
+    return Builder.CreateXor(X, NewC);
+
+  // The disjoint or is a non-overflowing add. Signed no-wrap also requires
+  // that the reassociated constant sum does not overflow.
+  bool NSW = BO->hasNoSignedWrap() && willNotOverflowSignedAdd(C1, C2, *BO);
+  return Builder.CreateAdd(X, NewC, "", BO->hasNoUnsignedWrap(), NSW);
+}
+
 Value *InstCombinerImpl::foldDisjointOr(Value *LHS, Value *RHS) {
+  if (Value *Res = foldDisjointOrOfAddOrXor(LHS, RHS))
+    return Res;
+  if (Value *Res = foldDisjointOrOfAddOrXor(RHS, LHS))
+    return Res;
   if (Value *Res = foldBitmaskMul(LHS, RHS, Builder))
     return Res;
   if (Value *Res = foldIntegerRepackThroughZExt(LHS, RHS, Builder))
