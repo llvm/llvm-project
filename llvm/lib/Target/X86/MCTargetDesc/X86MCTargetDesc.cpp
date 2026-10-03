@@ -608,6 +608,11 @@ public:
   std::optional<uint64_t>
   getMemoryOperandRelocationOffset(const MCInst &Inst,
                                    uint64_t Size) const override;
+  std::optional<MCSemExpr> evaluateDefinedValue(const MCInst &Inst,
+                                                MCRegister Reg) const override;
+  std::vector<MCSemAddrExpr>
+  evaluateStoreAddress(const MCInst &Inst) const override;
+  std::vector<MCSemExpr> getStoredValue(const MCInst &Inst) const override;
 };
 
 #define GET_STIPREDICATE_DEFS_FOR_MC_ANALYSIS
@@ -781,6 +786,125 @@ X86MCInstrAnalysis::getMemoryOperandRelocationOffset(const MCInst &Inst,
   // rip-relative ModR/M immediate is 32 bits.
   assert(Size > 4 && "invalid instruction size for rip-relative lea");
   return Size - 4;
+}
+
+/// Return a 64-bit memory address with at most one base or index register.
+/// Addresses requiring two register terms are not handled yet.
+static std::optional<MCSemAddrExpr>
+getSimpleMemoryAddress(const MCInst &Inst, const MCInstrInfo &Info) {
+  // Address-size overrides require truncation, which MCSemAddrExpr cannot
+  // express. The callers currently only handle 64-bit MOV instructions.
+  if (Inst.getFlags() & X86::IP_HAS_AD_SIZE)
+    return std::nullopt;
+
+  int MemOpStart = X86II::getMemoryOperandIdx(Info.get(Inst.getOpcode()));
+  if (MemOpStart < 0)
+    return std::nullopt;
+
+  const MCOperand &Base = Inst.getOperand(MemOpStart + X86::AddrBaseReg);
+  const MCOperand &Scale = Inst.getOperand(MemOpStart + X86::AddrScaleAmt);
+  const MCOperand &Index = Inst.getOperand(MemOpStart + X86::AddrIndexReg);
+  const MCOperand &Disp = Inst.getOperand(MemOpStart + X86::AddrDisp);
+  const MCOperand &Segment = Inst.getOperand(MemOpStart + X86::AddrSegmentReg);
+
+  if (!Base.isReg() || !Scale.isImm() || !Index.isReg() || !Disp.isImm() ||
+      !Segment.isReg() || Segment.getReg())
+    return std::nullopt;
+
+  MCRegister BaseReg = Base.getReg();
+  MCRegister IndexReg = Index.getReg();
+  const MCRegisterClass &GR64 = getX86MCRegisterClass(X86::GR64RegClassID);
+  // GR64 includes RIP, but RIP-relative addressing uses the next instruction's
+  // address. Exclude it explicitly, along with 32-bit address registers.
+  if (BaseReg == X86::RIP || IndexReg == X86::RIP ||
+      (BaseReg && !GR64.contains(BaseReg)) ||
+      (IndexReg && !GR64.contains(IndexReg)))
+    return std::nullopt;
+
+  if (BaseReg && IndexReg)
+    return std::nullopt;
+
+  if (IndexReg) {
+    int64_t IndexScale = Scale.getImm();
+    assert((IndexScale == 1 || IndexScale == 2 || IndexScale == 4 ||
+            IndexScale == 8) &&
+           "Invalid X86 index scale");
+    return MCSemAddrExpr::createReg(IndexScale, IndexReg, Disp.getImm());
+  }
+
+  // Without an index register, use the form 1 * BaseReg + Disp.
+  if (BaseReg)
+    return MCSemAddrExpr::createReg(1, BaseReg, Disp.getImm());
+  return MCSemAddrExpr::createConst(Disp.getImm());
+}
+
+std::optional<MCSemExpr>
+X86MCInstrAnalysis::evaluateDefinedValue(const MCInst &Inst,
+                                         MCRegister Reg) const {
+  switch (Inst.getOpcode()) {
+  case X86::PUSH64r:
+    if (Reg == X86::RSP)
+      return MCSemExpr::createReg(1, X86::RSP, -8);
+    return std::nullopt;
+  case X86::POP64r:
+    if (Reg == X86::RSP)
+      return MCSemExpr::createReg(1, X86::RSP, 8);
+    if (Inst.getOperand(0).isReg() && Reg == Inst.getOperand(0).getReg())
+      return MCSemExpr::createMem(1, MCSemAddrExpr::createReg(1, X86::RSP, 0),
+                                  0);
+    return std::nullopt;
+  case X86::MOV64rr:
+    if (Inst.getOperand(0).isReg() && Inst.getOperand(1).isReg() &&
+        Reg == Inst.getOperand(0).getReg())
+      return MCSemExpr::createReg(1, Inst.getOperand(1).getReg(), 0);
+    return std::nullopt;
+  case X86::MOV64rm:
+    if (Inst.getOperand(0).isReg() && Reg == Inst.getOperand(0).getReg()) {
+      if (std::optional<MCSemAddrExpr> Address =
+              getSimpleMemoryAddress(Inst, *Info))
+        return MCSemExpr::createMem(1, *Address, 0);
+    }
+    return std::nullopt;
+  }
+
+  return std::nullopt;
+}
+
+std::vector<MCSemAddrExpr>
+X86MCInstrAnalysis::evaluateStoreAddress(const MCInst &Inst) const {
+  switch (Inst.getOpcode()) {
+  case X86::PUSH64r:
+    return {MCSemAddrExpr::createReg(1, X86::RSP, -8)};
+  case X86::MOV64mr:
+    if (std::optional<MCSemAddrExpr> Address =
+            getSimpleMemoryAddress(Inst, *Info))
+      return {*Address};
+    return {};
+  }
+
+  return {};
+}
+
+std::vector<MCSemExpr>
+X86MCInstrAnalysis::getStoredValue(const MCInst &Inst) const {
+  switch (Inst.getOpcode()) {
+  case X86::PUSH64r:
+    if (Inst.getOperand(0).isReg())
+      return {MCSemExpr::createReg(1, Inst.getOperand(0).getReg(), 0)};
+    return {};
+  case X86::MOV64mr: {
+    int MemOpStart = X86II::getMemoryOperandIdx(Info->get(Inst.getOpcode()));
+    if (MemOpStart < 0 || !getSimpleMemoryAddress(Inst, *Info))
+      return {};
+    const MCOperand &Source =
+        Inst.getOperand(MemOpStart + X86::AddrNumOperands);
+    if (Source.isReg())
+      return {MCSemExpr::createReg(1, Source.getReg(), 0)};
+    return {};
+  }
+  }
+
+  return {};
 }
 
 } // end of namespace X86_MC
