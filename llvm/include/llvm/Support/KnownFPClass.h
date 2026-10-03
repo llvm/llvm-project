@@ -441,14 +441,22 @@ struct KnownFPClass {
   // Propagate knowledge for operations whose result sign is the xor of the
   // operand signs, such as multiply and divide. This only rules out possible
   // non-NaN sign classes. NaNs do not have a constrained sign class here.
-  void propagateXorSign(const KnownFPClass &LHS, const KnownFPClass &RHS) {
+  void propagateXorSign(const KnownFPClass &LHS, const KnownFPClass &RHS,
+                        DenormalMode Mode) {
+    const bool LHSCannotHavePositiveInput =
+        LHS.isKnownNever(fcPositive) && LHS.isKnownNeverLogicalPosZero(Mode);
+    const bool RHSCannotHavePositiveInput =
+        RHS.isKnownNever(fcPositive) && RHS.isKnownNeverLogicalPosZero(Mode);
     if ((LHS.isKnownNever(fcNegative) && RHS.isKnownNever(fcNegative)) ||
-        (LHS.isKnownNever(fcPositive) && RHS.isKnownNever(fcPositive)))
+        (LHSCannotHavePositiveInput && RHSCannotHavePositiveInput))
       knownNot(fcNegative);
 
-    if ((LHS.isKnownNever(fcPositive) && RHS.isKnownNever(fcNegative)) ||
-        (LHS.isKnownNever(fcNegative) && RHS.isKnownNever(fcPositive)))
-      knownNot(fcPositive);
+    if ((LHSCannotHavePositiveInput && RHS.isKnownNever(fcNegative)) ||
+        (LHS.isKnownNever(fcNegative) && RHSCannotHavePositiveInput)) {
+      knownNot(fcPosInf | fcPosNormal | fcPosSubnormal);
+      if (!Mode.outputsMayBePositiveZero())
+        knownNot(fcPosZero);
+    }
   }
 
   /// Propagate knowledge from a source value that could be a denormal or
