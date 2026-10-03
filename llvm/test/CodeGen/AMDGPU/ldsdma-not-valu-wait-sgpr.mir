@@ -21,7 +21,7 @@ body: |
     ; CHECK-NEXT: $m0 = IMPLICIT_DEF
     ; CHECK-NEXT: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr4, implicit $exec
     ; CHECK-NEXT: $sgpr5 = V_READFIRSTLANE_B32 $vgpr3, implicit $exec
-    ; CHECK-NEXT: GLOBAL_LOAD_LDS_DWORD_SADDR $sgpr4_sgpr5, $vgpr0, 0, 0, 0, implicit $m0, implicit $exec
+    ; CHECK-NEXT: GLOBAL_LOAD_LDS_DWORD_SADDR $sgpr4_sgpr5, $vgpr0, 0, 0, implicit $m0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     $exec_lo = IMPLICIT_DEF
     $vgpr0 = IMPLICIT_DEF
@@ -32,6 +32,6 @@ body: |
     $m0 = IMPLICIT_DEF
     $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr4, implicit $exec
     $sgpr5 = V_READFIRSTLANE_B32 $vgpr3, implicit $exec
-    GLOBAL_LOAD_LDS_DWORD_SADDR $sgpr4_sgpr5, $vgpr0, 0, 0, 0, implicit $m0, implicit $exec
+    GLOBAL_LOAD_LDS_DWORD_SADDR $sgpr4_sgpr5, $vgpr0, 0, 0, implicit $m0, implicit $exec
     S_ENDPGM 0
 ...
