@@ -389,7 +389,7 @@ bool ShadowStackGCLoweringImpl::runOnFunction(Function &F,
   // shadow stack.
   while (isa<StoreInst>(IP))
     ++IP;
-  AtEntry.SetInsertPoint(IP->getParent(), IP);
+  AtEntry.SetInsertPoint(IP);
 
   // Push the entry onto the shadow stack.
   // Next pointer is at offset 0, so it's just the frame pointer

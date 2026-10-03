@@ -1145,7 +1145,7 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
 
   // Create the PHI.
   BasicBlock *Header = L->getHeader();
-  Builder.SetInsertPoint(Header, Header->begin());
+  Builder.SetInsertPoint(Header->begin());
   PHINode *PN =
       Builder.CreatePHI(ExpandTy, pred_size(Header), Twine(IVName) + ".iv");
 
@@ -1744,7 +1744,7 @@ Value *SCEVExpander::expand(SCEVUse S) {
     return I->second;
 
   SCEVInsertPointGuard Guard(Builder, this);
-  Builder.SetInsertPoint(InsertPt->getParent(), InsertPt);
+  Builder.SetInsertPoint(InsertPt);
 
   // Expand the expression into instructions.
   Value *V = findExistingExpansionAndDropPoisonFlags(S, &*InsertPt);

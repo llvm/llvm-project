@@ -3240,7 +3240,7 @@ void CodeGenFunction::EmitAArch64MultiVersionResolver(
     }
 
     if (!AArch64CpuInitialized) {
-      Builder.SetInsertPoint(CurBlock, CurBlock->begin());
+      Builder.SetInsertPoint(CurBlock->begin());
       EmitAArch64CpuInit();
       AArch64CpuInitialized = true;
       Builder.SetInsertPoint(CurBlock);

@@ -15,6 +15,7 @@ static_library("CodeGenUtils") {
     "ExprUtils.cpp",
     "FunctionUtils.cpp",
     "ItaniumCXXABIUtils.cpp",
+    "ModuleUtils.cpp",
     "StmtUtils.cpp",
   ]
 }
