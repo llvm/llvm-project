@@ -1253,6 +1253,8 @@ public:
 
   virtual bool allowVectorElementIndexingUsingGEP() const { return true; }
 
+  virtual bool allowLoadWidening() const { return true; }
+
   virtual bool isUniform(const Instruction *I,
                          const SmallBitVector &UniformArgs) const {
     llvm_unreachable("target must implement isUniform for Custom uniformity");
