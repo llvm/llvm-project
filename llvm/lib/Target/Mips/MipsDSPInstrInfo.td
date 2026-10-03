@@ -1311,14 +1311,14 @@ def : BitconvertPat<f32, v4i8, FGR32, DSPR>;
 def : BitconvertPat<v2i16, f32, DSPR, FGR32>;
 def : BitconvertPat<v4i8, f32, DSPR, FGR32>;
 
-def : DSPPat<(v2i16 (load addr:$a)),
-             (v2i16 (COPY_TO_REGCLASS (LW addr:$a), DSPR))>;
-def : DSPPat<(v4i8 (load addr:$a)),
-             (v4i8 (COPY_TO_REGCLASS (LW addr:$a), DSPR))>;
-def : DSPPat<(store (v2i16 DSPR:$val), addr:$a),
-             (SW (COPY_TO_REGCLASS DSPR:$val, GPR32), addr:$a)>;
-def : DSPPat<(store (v4i8 DSPR:$val), addr:$a),
-             (SW (COPY_TO_REGCLASS DSPR:$val, GPR32), addr:$a)>;
+def : DSPPat<(v2i16 (load (addr MemBase:$a_base, iPTR:$a_offset))),
+             (v2i16 (COPY_TO_REGCLASS (LW $a_base, $a_offset), DSPR))>;
+def : DSPPat<(v4i8 (load (addr MemBase:$a_base, iPTR:$a_offset))),
+             (v4i8 (COPY_TO_REGCLASS (LW $a_base, $a_offset), DSPR))>;
+def : DSPPat<(store (v2i16 DSPR:$val), (addr MemBase:$a_base, iPTR:$a_offset)),
+             (SW (COPY_TO_REGCLASS DSPR:$val, GPR32), $a_base, $a_offset)>;
+def : DSPPat<(store (v4i8 DSPR:$val), (addr MemBase:$a_base, iPTR:$a_offset)),
+             (SW (COPY_TO_REGCLASS DSPR:$val, GPR32), $a_base, $a_offset)>;
 
 // Binary operations.
 class DSPBinPat<Instruction Inst, ValueType ValTy, SDPatternOperator Node,

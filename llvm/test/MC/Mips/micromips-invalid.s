@@ -89,3 +89,13 @@
   jraddiusp 125     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 7-bit unsigned immediate and multiple of 4
   jraddiusp 132     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected both 7-bit unsigned immediate and multiple of 4
   lwu $32, 4096($32)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid register number
+
+# Memory bases and offsets are checked independently.
+  lbu16 $3, 15($16)          # CHECK: :[[@LINE]]:13: error: immediate operand value out of range
+  lhu16 $3, 1($16)           # CHECK: :[[@LINE]]:13: error: immediate operand value out of range
+  lw16 $3, 64($16)           # CHECK: :[[@LINE]]:12: error: immediate operand value out of range
+  lbu16 $3, symbol($16)      # CHECK: :[[@LINE]]:13: error: expected immediate operand kind
+  lbu16 $3, 0($f2)           # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
+  lbu16 $3, 0($8)            # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
+  lwm16 $16-$17, $ra, 8($fp) # CHECK: :[[@LINE]]:25: error: invalid operand for instruction
+  lw $3, 0($f2)              # CHECK: :[[@LINE]]:12: error: invalid operand for instruction

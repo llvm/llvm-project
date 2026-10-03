@@ -384,11 +384,12 @@ class MSA_I10_FMT<bits<3> major, bits<2> df, bits<6> minor>: MSAInst {
 }
 
 class MSA_MI10_FMT<bits<2> df, bits<4> minor>: MSAInst {
-  bits<21> addr;
+  bits<10> offset;
+  bits<5> base;
   bits<5> wd;
 
-  let Inst{25-16} = addr{9-0};
-  let Inst{15-11} = addr{20-16};
+  let Inst{25-16} = offset;
+  let Inst{15-11} = base;
   let Inst{10-6} = wd;
   let Inst{5-2} = minor;
   let Inst{1-0} = df;

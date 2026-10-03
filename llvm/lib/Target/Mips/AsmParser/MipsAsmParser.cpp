@@ -198,6 +198,8 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool ParseDirective(AsmToken DirectiveID) override;
 
   ParseStatus parseMemOperand(OperandVector &Operands);
+  ParseStatus parseMemOffsetOperand(OperandVector &Operands);
+  const MCExpr *parseMemOffset();
   ParseStatus matchAnyRegisterNameWithoutDollar(OperandVector &Operands,
                                                 StringRef Identifier, SMLoc S);
   ParseStatus matchAnyRegisterWithoutDollar(OperandVector &Operands,
@@ -208,6 +210,7 @@ class MipsAsmParser : public MCTargetAsmParser {
   ParseStatus parseInvNum(OperandVector &Operands);
   ParseStatus parseRegisterList(OperandVector &Operands);
   const MCExpr *parseRelocExpr();
+  bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) override;
 
   bool searchSymbolAlias(OperandVector &Operands);
 
@@ -1208,24 +1211,24 @@ public:
     addExpr(Inst, Expr);
   }
 
-  void addMemOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 2 && "Invalid number of operands!");
-
-    Inst.addOperand(MCOperand::createReg(AsmParser.getABI().ArePtrs64bit()
-                                             ? getMemBase()->getGPR64Reg()
-                                             : getMemBase()->getGPR32Reg()));
-
-    const MCExpr *Expr = getMemOff();
-    addExpr(Inst, Expr);
+  void addPtrRegOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(
+        AsmParser.getABI().ArePtrs64bit() ? getGPR64Reg() : getGPR32Reg()));
   }
 
-  void addMicroMipsMemOperands(MCInst &Inst, unsigned N) const {
+  void addMemOperands(MCInst &Inst, unsigned N) const {
     assert(N == 2 && "Invalid number of operands!");
+    getMemBase()->addPtrRegOperands(Inst, 1);
+    addExpr(Inst, getMemOff());
+  }
 
-    Inst.addOperand(MCOperand::createReg(getMemBase()->getGPRMM16Reg()));
+  bool isSPAsmReg() const { return isGPRAsmReg() && RegIdx.Index == 29; }
+  bool isGPAsmReg() const { return isGPRAsmReg() && RegIdx.Index == 28; }
 
-    const MCExpr *Expr = getMemOff();
-    addExpr(Inst, Expr);
+  bool isSImmPtr() const {
+    return AsmParser.getABI().ArePtrs64bit() ? isScaledSImm<64, 0>()
+                                             : isScaledSImm<32, 0>();
   }
 
   void addRegListOperands(MCInst &Inst, unsigned N) const {
@@ -1300,65 +1303,13 @@ public:
 
   bool isMem() const override { return Kind == k_Memory; }
 
-  bool isConstantMemOff() const {
-    return isMem() && isa<MCConstantExpr>(getMemOff());
-  }
+  bool isMemOperand() const { return isMem() && getMemBase()->isGPRAsmReg(); }
 
   // Allow relocation operators.
-  template <unsigned Bits, unsigned ShiftAmount = 0>
-  bool isMemWithSimmOffset() const {
-    if (!isMem())
-      return false;
-    if (!getMemBase()->isGPRAsmReg())
-      return false;
-    if (isa<MCSpecifierExpr>(getMemOff()) ||
-        (isConstantMemOff() &&
-         isShiftedInt<Bits, ShiftAmount>(getConstantMemOff())))
-      return true;
-    MCValue Res;
-    bool IsReloc = getMemOff()->evaluateAsRelocatable(Res, nullptr);
-    return IsReloc && isShiftedInt<Bits, ShiftAmount>(Res.getConstant());
-  }
-
-  bool isMemWithPtrSizeOffset() const {
-    if (!isMem())
-      return false;
-    if (!getMemBase()->isGPRAsmReg())
-      return false;
-    const unsigned PtrBits = AsmParser.getABI().ArePtrs64bit() ? 64 : 32;
-    if (isa<MCSpecifierExpr>(getMemOff()) ||
-        (isConstantMemOff() && isIntN(PtrBits, getConstantMemOff())))
-      return true;
-    MCValue Res;
-    bool IsReloc = getMemOff()->evaluateAsRelocatable(Res, nullptr);
-    return IsReloc && isIntN(PtrBits, Res.getConstant());
-  }
-
-  bool isMemWithGRPMM16Base() const {
-    return isMem() && getMemBase()->isMM16AsmReg();
-  }
-
-  template <unsigned Bits> bool isMemWithUimmOffsetSP() const {
-    return isMem() && isConstantMemOff() && isUInt<Bits>(getConstantMemOff())
-      && getMemBase()->isRegIdx() && (getMemBase()->getGPR32Reg() == Mips::SP);
-  }
-
-  template <unsigned Bits> bool isMemWithUimmWordAlignedOffsetSP() const {
-    return isMem() && isConstantMemOff() && isUInt<Bits>(getConstantMemOff())
-      && (getConstantMemOff() % 4 == 0) && getMemBase()->isRegIdx()
-      && (getMemBase()->getGPR32Reg() == Mips::SP);
-  }
-
-  template <unsigned Bits> bool isMemWithSimmWordAlignedOffsetGP() const {
-    return isMem() && isConstantMemOff() && isInt<Bits>(getConstantMemOff())
-      && (getConstantMemOff() % 4 == 0) && getMemBase()->isRegIdx()
-      && (getMemBase()->getGPR32Reg() == Mips::GP);
-  }
-
-  template <unsigned Bits, unsigned ShiftLeftAmount>
+  template <unsigned Bits, unsigned ShiftLeftAmount, int Bias = 0>
   bool isScaledUImm() const {
-    return isConstantImm() &&
-           isShiftedUInt<Bits, ShiftLeftAmount>(getConstantImm());
+    return isConstantImm() && isShiftedUInt<Bits, ShiftLeftAmount>(
+                                  uint64_t(getConstantImm()) - Bias);
   }
 
   template <unsigned Bits, unsigned ShiftLeftAmount>
@@ -1370,6 +1321,8 @@ public:
     // offset in case of relocations.
     if (Kind != k_Immediate)
       return false;
+    if (isa<MCSpecifierExpr>(getImm()))
+      return true;
     MCValue Res;
     bool Success = getImm()->evaluateAsRelocatable(Res, nullptr);
     return Success && isShiftedInt<Bits, ShiftLeftAmount>(Res.getConstant());
@@ -1447,10 +1400,6 @@ public:
   const MCExpr *getMemOff() const {
     assert((Kind == k_Memory) && "Invalid access!");
     return Mem.Off;
-  }
-
-  int64_t getConstantMemOff() const {
-    return static_cast<const MCConstantExpr *>(getMemOff())->getValue();
   }
 
   const SmallVectorImpl<MCRegister> &getRegList() const {
@@ -1580,14 +1529,14 @@ public:
   }
 
   bool isMM16AsmReg() const {
-    if (!(isRegIdx() && RegIdx.Kind))
+    if (!isGPRAsmReg())
       return false;
     return ((RegIdx.Index >= 2 && RegIdx.Index <= 7)
             || RegIdx.Index == 16 || RegIdx.Index == 17);
 
   }
   bool isMM16AsmRegZero() const {
-    if (!(isRegIdx() && RegIdx.Kind))
+    if (!isGPRAsmReg())
       return false;
     return (RegIdx.Index == 0 ||
             (RegIdx.Index >= 2 && RegIdx.Index <= 7) ||
@@ -5939,6 +5888,10 @@ bool MipsAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         return Error(IDLoc, "too few operands for instruction");
 
       ErrorLoc = Operands[ErrorInfo]->getStartLoc();
+      if (Operands[ErrorInfo]->isMem())
+        ErrorLoc = static_cast<MipsOperand &>(*Operands[ErrorInfo])
+                       .getMemBase()
+                       ->getStartLoc();
       if (ErrorLoc == SMLoc())
         ErrorLoc = IDLoc;
     }
@@ -6003,6 +5956,13 @@ bool MipsAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     // operand to avoid confusing the user.
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected 6-bit unsigned immediate");
+  case Match_ConstantMemOffset:
+    if (ErrorInfo < Operands.size() &&
+        !static_cast<MipsOperand &>(*Operands[ErrorInfo]).isConstantImm())
+      return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                   "expected immediate operand kind");
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "immediate operand value out of range");
   case Match_UImm5_Lsl2:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected both 7-bit unsigned immediate and multiple of 4");
@@ -6136,7 +6096,8 @@ void MipsAsmParser::ConvertXWPOperands(MCInst &Inst,
   ((MipsOperand &)*Operands[1]).addGPR32ZeroAsmRegOperands(Inst, 1);
   MCRegister NextReg = nextReg(((MipsOperand &)*Operands[1]).getGPR32Reg());
   Inst.addOperand(MCOperand::createReg(NextReg));
-  ((MipsOperand &)*Operands[2]).addMemOperands(Inst, 2);
+  static_cast<MipsOperand &>(*Operands[4]).addPtrRegOperands(Inst, 1);
+  static_cast<MipsOperand &>(*Operands[2]).addImmOperands(Inst, 1);
 }
 
 void
@@ -6249,9 +6210,18 @@ MCRegister MipsAsmParser::getReg(int RC, int RegNo) {
   return getContext().getRegisterInfo()->getRegClass(RC).getRegister(RegNo);
 }
 
-// Parse an expression with optional relocation operator prefixes (e.g. %lo).
-// Some weird expressions allowed by gas are not supported for simplicity,
-// e.g. "%lo foo", "(%lo(foo))", "%lo(foo)+1".
+// Recognize relocation specifiers so the common parser can handle arithmetic
+// around them, such as %lo(8) + symbol.
+bool MipsAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
+  if (getLexer().isNot(AsmToken::Percent))
+    return getParser().parsePrimaryExpr(Res, EndLoc);
+  Res = parseRelocExpr();
+  EndLoc = getLexer().getLoc();
+  return !Res;
+}
+
+// Parse an expression with optional, possibly nested relocation specifiers.
+// The opening parentheses are required, unlike the GAS form "%lo foo".
 const MCExpr *MipsAsmParser::parseRelocExpr() {
   auto getOp = [](StringRef Op) {
     return StringSwitch<Mips::Specifier>(Op)
@@ -6399,138 +6369,72 @@ ParseStatus MipsAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
   return (Reg == (unsigned)-1) ? ParseStatus::NoMatch : ParseStatus::Success;
 }
 
+const MCExpr *MipsAsmParser::parseMemOffset() {
+  // An omitted expression, as in ($sp), denotes zero.
+  if (getLexer().is(AsmToken::LParen) &&
+      getLexer().peekTok().is(AsmToken::Dollar))
+    return MCConstantExpr::create(0, getContext());
+
+  const MCExpr *Offset;
+  if (getParser().parseExpression(Offset))
+    return nullptr;
+  int64_t Value;
+  if (Offset->evaluateAsAbsolute(Value))
+    return MCConstantExpr::create(Value, getContext());
+  return Offset;
+}
+
+ParseStatus MipsAsmParser::parseMemOffsetOperand(OperandVector &Operands) {
+  SMLoc S = getLexer().getLoc();
+  const MCExpr *Offset = parseMemOffset();
+  if (!Offset)
+    return ParseStatus::Failure;
+
+  SMLoc E = getLexer().getLoc();
+  Operands.push_back(MipsOperand::CreateImm(Offset, S, E, *this));
+
+  if (getLexer().is(AsmToken::LParen)) {
+    StringRef Mnemonic = static_cast<MipsOperand &>(*Operands[0]).getToken();
+    return parseParenSuffix(Mnemonic, Operands) ? ParseStatus::Failure
+                                                : ParseStatus::Success;
+  }
+
+  // A memory address without an explicit base uses $zero.
+  // FIXME: GAS can expand arbitrary symbolic addresses. Ideally, a pseudo
+  // instruction should handle these instead of supplying a default $zero base.
+  Operands.push_back(MipsOperand::CreateToken("(", E, *this));
+  Operands.push_back(MipsOperand::createGPRReg(
+      0, "0", getContext().getRegisterInfo(), E, E, *this));
+  Operands.push_back(MipsOperand::CreateToken(")", E, *this));
+  return ParseStatus::Success;
+}
+
 ParseStatus MipsAsmParser::parseMemOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
-  LLVM_DEBUG(dbgs() << "parseMemOperand\n");
-  const MCExpr *IdVal = nullptr;
-  SMLoc S;
-  bool isParenExpr = false;
-  ParseStatus Res = ParseStatus::NoMatch;
-  // First operand is the offset.
-  S = Parser.getTok().getLoc();
+  SMLoc S = Parser.getTok().getLoc();
+  const MCExpr *Address = parseMemOffset();
+  if (!Address)
+    return ParseStatus::Failure;
 
-  if (getLexer().getKind() == AsmToken::LParen) {
-    Parser.Lex();
-    isParenExpr = true;
+  SMLoc E = Parser.getTok().getLoc();
+  if (getLexer().isNot(AsmToken::LParen)) {
+    Operands.push_back(MipsOperand::CreateImm(Address, S, E, *this));
+    return ParseStatus::Success;
   }
 
-  if (getLexer().getKind() != AsmToken::Dollar) {
-    IdVal = parseRelocExpr();
-    if (!IdVal)
-      return ParseStatus::Failure;
-    if (isParenExpr && Parser.parseRParen())
-      return ParseStatus::Failure;
+  Parser.Lex(); // Eat '('.
+  ParseStatus Result = parseAnyRegister(Operands);
+  if (!Result.isSuccess())
+    return Result;
+  if (Parser.parseRParen())
+    return ParseStatus::Failure;
 
-    const AsmToken &Tok = Parser.getTok(); // Get the next token.
-    if (Tok.isNot(AsmToken::LParen)) {
-      MipsOperand &Mnemonic = static_cast<MipsOperand &>(*Operands[0]);
-      if (Mnemonic.getToken() == "la" || Mnemonic.getToken() == "dla") {
-        SMLoc E =
-            SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
-        Operands.push_back(MipsOperand::CreateImm(IdVal, S, E, *this));
-        return ParseStatus::Success;
-      }
-      if (Tok.is(AsmToken::EndOfStatement)) {
-        SMLoc E =
-            SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
-
-        // Zero register assumed, add a memory operand with ZERO as its base.
-        // "Base" will be managed by k_Memory.
-        auto Base = MipsOperand::createGPRReg(
-            0, "0", getContext().getRegisterInfo(), S, E, *this);
-        Operands.push_back(
-            MipsOperand::CreateMem(std::move(Base), IdVal, S, E, *this));
-        return ParseStatus::Success;
-      }
-      MCBinaryExpr::Opcode Opcode;
-      // GAS and LLVM treat comparison operators different. GAS will generate -1
-      // or 0, while LLVM will generate 0 or 1. Since a comparsion operator is
-      // highly unlikely to be found in a memory offset expression, we don't
-      // handle them.
-      switch (Tok.getKind()) {
-      case AsmToken::Plus:
-        Opcode = MCBinaryExpr::Add;
-        Parser.Lex();
-        break;
-      case AsmToken::Minus:
-        Opcode = MCBinaryExpr::Sub;
-        Parser.Lex();
-        break;
-      case AsmToken::Star:
-        Opcode = MCBinaryExpr::Mul;
-        Parser.Lex();
-        break;
-      case AsmToken::Pipe:
-        Opcode = MCBinaryExpr::Or;
-        Parser.Lex();
-        break;
-      case AsmToken::Amp:
-        Opcode = MCBinaryExpr::And;
-        Parser.Lex();
-        break;
-      case AsmToken::LessLess:
-        Opcode = MCBinaryExpr::Shl;
-        Parser.Lex();
-        break;
-      case AsmToken::GreaterGreater:
-        Opcode = MCBinaryExpr::LShr;
-        Parser.Lex();
-        break;
-      case AsmToken::Caret:
-        Opcode = MCBinaryExpr::Xor;
-        Parser.Lex();
-        break;
-      case AsmToken::Slash:
-        Opcode = MCBinaryExpr::Div;
-        Parser.Lex();
-        break;
-      case AsmToken::Percent:
-        Opcode = MCBinaryExpr::Mod;
-        Parser.Lex();
-        break;
-      default:
-        return Error(Parser.getTok().getLoc(), "'(' or expression expected");
-      }
-      const MCExpr * NextExpr;
-      if (getParser().parseExpression(NextExpr))
-        return ParseStatus::Failure;
-      IdVal = MCBinaryExpr::create(Opcode, IdVal, NextExpr, getContext());
-    }
-
-    Parser.Lex(); // Eat the '(' token.
-  }
-
-  Res = parseAnyRegister(Operands);
-  if (!Res.isSuccess())
-    return Res;
-
-  if (Parser.getTok().isNot(AsmToken::RParen))
-    return Error(Parser.getTok().getLoc(), "')' expected");
-
-  SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
-
-  Parser.Lex(); // Eat the ')' token.
-
-  if (!IdVal)
-    IdVal = MCConstantExpr::create(0, getContext());
-
-  // Replace the register operand with the memory operand.
-  std::unique_ptr<MipsOperand> op(
+  std::unique_ptr<MipsOperand> Base(
       static_cast<MipsOperand *>(Operands.back().release()));
-  // Remove the register from the operands.
-  // "op" will be managed by k_Memory.
   Operands.pop_back();
-  // Add the memory operand.
-  if (const MCBinaryExpr *BE = dyn_cast<MCBinaryExpr>(IdVal)) {
-    int64_t Imm;
-    if (IdVal->evaluateAsAbsolute(Imm))
-      IdVal = MCConstantExpr::create(Imm, getContext());
-    else if (BE->getLHS()->getKind() != MCExpr::SymbolRef)
-      IdVal = MCBinaryExpr::create(BE->getOpcode(), BE->getRHS(), BE->getLHS(),
-                                   getContext());
-  }
-
-  Operands.push_back(MipsOperand::CreateMem(std::move(op), IdVal, S, E, *this));
+  E = Base->getEndLoc();
+  Operands.push_back(
+      MipsOperand::CreateMem(std::move(Base), Address, S, E, *this));
   return ParseStatus::Success;
 }
 
@@ -6817,8 +6721,7 @@ ParseStatus MipsAsmParser::parseRegisterList(OperandVector &Operands) {
 
   SMLoc E = Parser.getTok().getLoc();
   Operands.push_back(MipsOperand::CreateRegList(Regs, S, E, *this));
-  parseMemOperand(Operands);
-  return ParseStatus::Success;
+  return parseMemOffsetOperand(Operands);
 }
 
 /// Sometimes (i.e. load/stores) the operand may be followed immediately by
@@ -6910,30 +6813,22 @@ bool MipsAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
   // Read the remaining operands.
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
-    // Read the first operand.
-    if (parseOperand(Operands, Name)) {
-      SMLoc Loc = getLexer().getLoc();
-      return Error(Loc, "unexpected token in argument list");
-    }
-    if (getLexer().is(AsmToken::LBrac) && parseBracketSuffix(Name, Operands))
-      return true;
-    // AFAIK, parenthesis suffixes are never on the first operand
-
-    while (getLexer().is(AsmToken::Comma)) {
-      Parser.Lex(); // Eat the comma.
+    do {
+      bool IsFirstOperand = Operands.size() == 1;
       // Parse and remember the operand.
       if (parseOperand(Operands, Name)) {
         SMLoc Loc = getLexer().getLoc();
         return Error(Loc, "unexpected token in argument list");
       }
-      // Parse bracket and parenthesis suffixes before we iterate
+      // Parse suffixes before we iterate. First operands handle parentheses
+      // through their custom parser.
       if (getLexer().is(AsmToken::LBrac)) {
         if (parseBracketSuffix(Name, Operands))
           return true;
-      } else if (getLexer().is(AsmToken::LParen) &&
+      } else if (!IsFirstOperand && getLexer().is(AsmToken::LParen) &&
                  parseParenSuffix(Name, Operands))
         return true;
-    }
+    } while (parseOptionalToken(AsmToken::Comma));
   }
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
     SMLoc Loc = getLexer().getLoc();
