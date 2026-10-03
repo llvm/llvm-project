@@ -1820,7 +1820,7 @@ Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
 }
 
 // Checks for issues that are common to `for`/`while` statements.
-static void CheckConditionalLoop(Sema &S, Expr *CondExpr, Stmt *Body) {
+static void CheckLoopBody(Sema &S, Expr *CondExpr, Stmt *Body) {
   // Check for comma operator misuse.
   if (CondExpr &&
       !S.Diags.isIgnored(diag::warn_comma_operator, CondExpr->getExprLoc()))
@@ -1860,7 +1860,7 @@ StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
 
   auto CondVal = Cond.get();
 
-  CheckConditionalLoop(*this, CondVal.second, Body);
+  CheckLoopBody(*this, CondVal.second, Body);
 
   return WhileStmt::Create(Context, CondVal.first, CondVal.second, Body,
                            WhileLoc, LParenLoc, RParenLoc);
@@ -2344,7 +2344,7 @@ StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
                                      Body);
   CheckForRedundantIteration(*this, third.get(), Body);
 
-  CheckConditionalLoop(*this, Second.get().second, Body);
+  CheckLoopBody(*this, Second.get().second, Body);
 
   Expr *Third = third.release().getAs<Expr>();
 
