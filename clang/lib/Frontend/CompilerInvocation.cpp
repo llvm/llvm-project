@@ -5348,6 +5348,8 @@ std::string CompilerInvocation::computeContextHash() const {
       HBuilder.add(UserEntry);
     }
 
+    HBuilder.addRange(getFrontendOpts().ModuleMapFiles);
+
     HBuilder.addRange(hsOpts.VFSOverlayFiles);
 
     const DiagnosticOptions &diagOpts = getDiagnosticOpts();
