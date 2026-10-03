@@ -43,7 +43,8 @@ bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
 
 /// Returns the byte stride if \p Stride is a constant, or nullptr otherwise.
 ConstantInt *getStrideBytesIfConstant(Value *Stride, Type *ScalarTy,
-                                      Type *StrideTy, const DataLayout &DL);
+                                      const DataLayout &DL,
+                                      bool IsReverse = false);
 
 /// Calculates minimal alignment as a common alignment.
 template <typename T> Align computeCommonAlignment(ArrayRef<Value *> VL);

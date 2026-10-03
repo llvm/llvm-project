@@ -14610,8 +14610,7 @@ void BoUpSLP::transformNodes() {
                 BaseLI->getPointerAddressSpace(), CostKind,
                 TTI::getOperandInfo(BaseLI->getPointerOperand())) +
             getShuffleCost(*TTI, TTI::SK_Reverse, VecTy, CostKind, Mask);
-        Type *StrideTy = DL->getIndexType(
-            cast<LoadInst>(E.Scalars.front())->getPointerOperand()->getType());
+        Type *StrideTy = DL->getIndexType(BaseLI->getPointerOperandType());
         InstructionCost StridedCost = TTI->getMemIntrinsicInstrCost(
             MemIntrinsicCostAttributes(
                 Intrinsic::experimental_vp_strided_load, VecTy,
@@ -14653,8 +14652,7 @@ void BoUpSLP::transformNodes() {
                                  BaseSI->getPointerAddressSpace(), CostKind,
                                  getOperandInfo(E.getOperand(0))) +
             getShuffleCost(*TTI, TTI::SK_Reverse, VecTy, CostKind, Mask);
-        Type *StrideTy = DL->getIndexType(
-            cast<StoreInst>(E.Scalars.front())->getPointerOperand()->getType());
+        Type *StrideTy = DL->getIndexType(BaseSI->getPointerOperandType());
         InstructionCost StridedCost = TTI->getMemIntrinsicInstrCost(
             MemIntrinsicCostAttributes(
                 Intrinsic::experimental_vp_strided_store, VecTy,
@@ -17484,8 +17482,10 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         Align CommonAlignment =
             computeCommonAlignment<LoadInst>(UniqueValues.getArrayRef());
         Type *StrideTy = DL->getIndexType(LI0->getPointerOperand()->getType());
+        bool IsReverse =
+            !E->ReorderIndices.empty() && isReverseOrder(E->ReorderIndices);
         Value *Stride = getStrideBytesIfConstant(SPtrInfo.StrideVal, ScalarTy,
-                                                 StrideTy, *DL);
+                                                 *DL, IsReverse);
         VecLdCost = TTI->getMemIntrinsicInstrCost(
             MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_load,
                                        StridedLoadTy, LI0->getPointerOperand(),
@@ -17604,10 +17604,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         assert(StridedStoreTy && "Missing StridedPointerInfo for tree entry.");
         Align CommonAlignment =
             computeCommonAlignment<StoreInst>(UniqueValues.getArrayRef());
-        Type *StrideTy =
-            DL->getIndexType(BaseSI->getPointerOperand()->getType());
-        Value *Stride = getStrideBytesIfConstant(SPtrInfo.StrideVal, ScalarTy,
-                                                 StrideTy, *DL);
+        Value *Stride =
+            getStrideBytesIfConstant(SPtrInfo.StrideVal, ScalarTy, *DL);
         VecStCost = TTI->getMemIntrinsicInstrCost(
             MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_store,
                                        StridedStoreTy,
