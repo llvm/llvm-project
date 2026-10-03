@@ -684,9 +684,9 @@ struct LinearizeVectorLoad final : public OpConversionPattern<vector::LoadOp> {
 
     auto linearTy = typeConverter->convertType<VectorType>(vecTy);
 
-    auto newLoad =
-        vector::LoadOp::create(rewriter, loadOp.getLoc(), linearTy,
-                               adaptor.getBase(), adaptor.getIndices());
+    auto newLoad = vector::LoadOp::create(
+        rewriter, loadOp.getLoc(), linearTy, adaptor.getBase(),
+        adaptor.getIndices(), loadOp.getNontemporal(), loadOp.getMaybeAlign());
     rewriter.replaceOp(loadOp, newLoad.getResult());
     return success();
   }
@@ -731,7 +731,8 @@ struct LinearizeVectorStore final
 
     rewriter.replaceOpWithNewOp<vector::StoreOp>(
         storeOp, adaptor.getValueToStore(), adaptor.getBase(),
-        adaptor.getIndices());
+        adaptor.getIndices(), storeOp.getNontemporal(),
+        storeOp.getMaybeAlign());
     return success();
   }
 };
