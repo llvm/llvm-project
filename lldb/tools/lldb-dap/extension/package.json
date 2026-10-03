@@ -33,7 +33,7 @@
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "^18.19.41",
-    "@types/tabulator-tables": "^6.2.10",
+    "@types/tabulator-tables": "^6.3.4",
     "@types/vscode": "1.90.0",
     "@types/vscode-webview": "^1.57.5",
     "@vscode/debugprotocol": "^1.68.0",
@@ -46,7 +46,7 @@
     "prettier": "^3.4.2",
     "prettier-plugin-curly": "^0.3.1",
     "prettier-plugin-organize-imports": "^4.3.0",
-    "tabulator-tables": "^6.3.1",
+    "tabulator-tables": "^6.5.2",
     "typescript": "^5.7.3"
   },
   "activationEvents": [
