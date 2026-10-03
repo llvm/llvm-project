@@ -1314,14 +1314,15 @@ DISubprogram::DISubprogram(LLVMContext &C, StorageType Storage, unsigned Line,
 }
 DISubprogram::DISPFlags
 DISubprogram::toSPFlags(bool IsLocalToUnit, bool IsDefinition, bool IsOptimized,
-                        unsigned Virtuality, bool IsMainSubprogram) {
+                        unsigned Virtuality, unsigned Defaulted,
+                        bool IsMainSubprogram) {
   // We're assuming virtuality is the low-order field.
   static_assert(int(SPFlagVirtual) == int(dwarf::DW_VIRTUALITY_virtual) &&
                     int(SPFlagPureVirtual) ==
                         int(dwarf::DW_VIRTUALITY_pure_virtual),
                 "Virtuality constant mismatch");
   return static_cast<DISPFlags>(
-      (Virtuality & SPFlagVirtuality) |
+      (Virtuality & SPFlagVirtuality) | (Defaulted & SPFlagDefaulted) |
       (IsLocalToUnit ? SPFlagLocalToUnit : SPFlagZero) |
       (IsDefinition ? SPFlagDefinition : SPFlagZero) |
       (IsOptimized ? SPFlagOptimized : SPFlagZero) |
@@ -1378,6 +1379,7 @@ StringRef DISubprogram::getFlagString(DISPFlags Flag) {
   switch (Flag) {
   // Appease a warning.
   case SPFlagVirtuality:
+  case SPFlagDefaulted:
     return "";
 #define HANDLE_DISP_FLAG(ID, NAME)                                             \
   case SPFlag##NAME:                                                           \
