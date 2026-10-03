@@ -205,6 +205,7 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $script:ReleaseScriptPath = $PSCommandPath
+$script:MinimumCMakeVersion = [version]'3.31.0'
 
 # Save the console mode so we can restore it at exit. Child processes
 # (cmake, ninja, link.exe, etc.) sometimes disable virtual terminal
@@ -506,6 +507,76 @@ function Find-Wix314Bin {
     return $null
 }
 
+function Get-CMakeVersion {
+    param([Parameter(Mandatory)][string]$Path)
+
+    try {
+        $versionOutput = (& $Path --version 2>&1 | Out-String)
+        if ($LASTEXITCODE -ne 0 -or
+            $versionOutput -notmatch '(?m)^cmake version (\d+(?:\.\d+){1,3})\s*$') {
+            return $null
+        }
+        return [version]$Matches[1]
+    } catch {
+        return $null
+    }
+}
+
+function Find-CMakeExecutable {
+    # Prefer the first usable version on PATH, then the standard CMake
+    # installation, and finally CMake bundled with any Visual Studio instance.
+    $candidates = @()
+    foreach ($pathDir in ($env:PATH -split ';')) {
+        if ($pathDir) {
+            $candidates += Join-Path $pathDir 'cmake.exe'
+        }
+    }
+
+    if ($env:ProgramFiles) {
+        $candidates += Join-Path $env:ProgramFiles 'CMake\bin\cmake.exe'
+    }
+
+    $vsInstallPaths = @()
+    if ($env:VSINSTALLDIR) {
+        $vsInstallPaths += $env:VSINSTALLDIR
+    }
+    $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    if (Test-Path -LiteralPath $vswhere -PathType Leaf) {
+        try {
+            $vsInstallPaths += @(& $vswhere -all -products '*' -property installationPath 2>$null)
+        } catch {
+            # CMake may still be available through PATH or the standard install.
+        }
+    }
+    foreach ($vsInstallPath in ($vsInstallPaths | Where-Object { $_ } | Select-Object -Unique)) {
+        $candidates += Join-Path $vsInstallPath 'Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe'
+    }
+
+    foreach ($candidate in ($candidates | Select-Object -Unique)) {
+        if (-not (Test-Path -LiteralPath $candidate -PathType Leaf)) { continue }
+
+        $version = Get-CMakeVersion -Path $candidate
+        if ($null -eq $version -or $version -lt $script:MinimumCMakeVersion) {
+            if ($null -ne $version) {
+                Write-SubStep "Ignoring CMake $version at $candidate; LLVM requires $($script:MinimumCMakeVersion) or newer."
+            }
+            continue
+        }
+
+        # Put the selected directory first so every later `cmake` invocation
+        # uses the validated executable, even if an older one appeared earlier.
+        $binDir = Split-Path -Parent $candidate
+        $otherPaths = @($env:PATH -split ';' | Where-Object {
+            $_ -and $_.TrimEnd('\') -ine $binDir.TrimEnd('\')
+        })
+        $env:PATH = (@($binDir) + $otherPaths) -join ';'
+        Write-SubStep "CMake ${version}: $candidate"
+        return $candidate
+    }
+
+    return $null
+}
+
 function Find-SevenZipExecutable {
     $candidates = @()
     $command = Get-Command 7z -CommandType Application -ErrorAction SilentlyContinue
@@ -588,7 +659,6 @@ function Get-MissingPrerequisites {
         "$env:ProgramFiles\Git\usr\bin"                     # sh, bash, sed, grep (needed by tests)
         "${env:ProgramFiles(x86)}\GnuWin32\bin"             # make (GnuWin32 default)
         "$env:ProgramFiles\GnuWin32\bin"                    # make (alt location)
-        "$env:ProgramFiles\CMake\bin"                       # cmake
     )
     foreach ($dir in $pathFixups) {
         if ((Test-Path $dir) -and ($env:PATH -notlike "*$dir*")) {
@@ -596,6 +666,8 @@ function Get-MissingPrerequisites {
             Write-SubStep "Added to PATH: $dir"
         }
     }
+
+    $cmakePath = Find-CMakeExecutable
 
     # CPack finds WiX through PATH. An older candle/light pair can appear
     # before the installed 3.14 tools (for example, in an Unreal SDK).
@@ -608,7 +680,6 @@ function Get-MissingPrerequisites {
 
     # Check all required tools.
     $required = @(
-        @{ Name = "CMake";      Cmd = "cmake" }
         @{ Name = "Ninja";      Cmd = "ninja" }
         @{ Name = "Python";     Cmd = "python" }
         @{ Name = "7-Zip";      Cmd = "7z" }
@@ -645,6 +716,10 @@ function Get-MissingPrerequisites {
         } else {
             $missing += $tool.Name
         }
+    }
+
+    if (-not $cmakePath) {
+        $missing += "CMake $($script:MinimumCMakeVersion) or newer"
     }
 
     if (-not $ForceMSVC) {
@@ -867,6 +942,9 @@ function Install-Prerequisites {
         }
         Invoke-ElevatedPrerequisiteInstallation
         Update-PathAfterPrerequisites
+        if (-not (Find-CMakeExecutable)) {
+            throw "CMake $($script:MinimumCMakeVersion) or newer could not be found after prerequisite installation."
+        }
         Install-PythonPsutilForRequestedArchitectures
         return
     }
@@ -877,6 +955,7 @@ function Install-Prerequisites {
     $wingetPath = Find-WingetExecutable
 
     # Version requirements for the release build:
+    #   - CMake 3.31 or newer
     #   - NetFx3 (.NET Framework 3.5) for WiX Toolset 3.14
     #   - Python 3.13 for all architectures
     #   - SWIG 4 or newer for LLDB (install the latest available WinGet version)
@@ -903,7 +982,8 @@ function Install-Prerequisites {
             -not (Test-ExecutableVersion -Path $cmd.Source)) {
             $cmd = $null
         }
-        $existingPath = if ($tool.Name -eq 'wix') { Find-Wix314Bin }
+        $existingPath = if ($tool.Name -eq 'cmake') { Find-CMakeExecutable }
+            elseif ($tool.Name -eq 'wix') { Find-Wix314Bin }
             elseif ($tool.Name -eq '7z') { Find-SevenZipExecutable }
             elseif ($tool.Name -eq 'make') { Find-MakeExecutable }
             elseif ($cmd) { $cmd.Source }
@@ -944,6 +1024,12 @@ function Install-Prerequisites {
                     Write-SubStep "GNU Make verified: $makePath"
                     continue
                 }
+            }
+            if ($tool.Name -eq 'cmake') {
+                if (-not (Find-CMakeExecutable)) {
+                    throw "CMake installation finished, but version $($script:MinimumCMakeVersion) or newer could not be found."
+                }
+                continue
             }
             if ($installExitCode -ne 0) {
                 if ($tool.Name -eq 'wix') {
@@ -1007,6 +1093,9 @@ function Install-Prerequisites {
 
     # Get-MissingPrerequisites will add non-standard paths such as GnuWin32.
     Update-PathAfterPrerequisites
+    if (-not (Find-CMakeExecutable)) {
+        throw "CMake $($script:MinimumCMakeVersion) or newer could not be found after prerequisite installation."
+    }
     Install-PythonPsutilForRequestedArchitectures
 }
 
