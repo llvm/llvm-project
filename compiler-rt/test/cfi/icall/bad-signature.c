@@ -12,8 +12,8 @@
 void f() {}
 
 int main() {
-  // CFI: 1
-  // NCFI: 1
+  // CFI: {{^1$}}
+  // NCFI: {{^1$}}
   fprintf(stderr, "1\n");
 
   // CFI-DIAG: runtime error: control flow integrity check for type 'void (int)' failed during indirect function call
@@ -21,7 +21,7 @@ int main() {
   // CFI-DIAG: SUMMARY: UndefinedBehaviorSanitizer: cfi-icall
   ((void (*)(int))f)(42); // UB here
 
-  // CFI-NOT: 2
-  // NCFI: 2
+  // CFI-NOT: {{^2$}}
+  // NCFI: {{^2$}}
   fprintf(stderr, "2\n");
 }
