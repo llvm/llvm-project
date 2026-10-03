@@ -79,6 +79,5 @@ if (str1.compare(str2)) {
 }
 ```
 
-If {option}`StringLikeClasses` contains
-`CustomString`, the check will suggest
+If {option}`StringLikeClasses` contains `CustomString`, the check will suggest
 replacing `compare` with equality operator.
