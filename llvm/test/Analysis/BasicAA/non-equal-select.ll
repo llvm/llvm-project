@@ -17,9 +17,8 @@ entry:
 
 define void @select_in_gep2(i1 %c, i64 %x) {
 entry:
-  ; TODO: should be "NoAlias" here as well.
 ; CHECK-LABEL: Function: select_in_gep2
-; CHECK: MayAlias:     i32* %arrayidx1, i32* %arrayidx2
+; CHECK: NoAlias:      i32* %arrayidx1, i32* %arrayidx2
   %add1_ = add nsw i64 %x, 1
   %add2_ = add nsw i64 %x, 2
   %add3_ = add nsw i64 %x, 3

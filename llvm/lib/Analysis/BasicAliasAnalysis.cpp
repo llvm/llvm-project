@@ -2107,6 +2107,38 @@ bool BasicAAResult::computeConstantOffsetHeuristic(const DecomposedGEP &GEP,
       Var0.Val.V->getType() != Var1.Val.V->getType())
     return false;
 
+  // Without extensions, matching linear expressions have an exact modular
+  // difference. Check each select alternative before losing that correlation.
+  if (!AAQI.MayBeCrossIteration && !Var0.Val.ZExtBits && !Var0.Val.SExtBits &&
+      Var0.Val.getBitWidth() == GEP.Offset.getBitWidth() &&
+      (isa<SelectInst>(Var0.Val.V) || isa<SelectInst>(Var1.Val.V))) {
+    unsigned Budget = 8;
+    auto Check = [&](auto &&Check, const Value *V0, const Value *V1) -> bool {
+      if (!Budget)
+        return false;
+      --Budget;
+      LinearExpression E0 = GetLinearExpression(CastedValue(V0), DL, 0, AC, DT);
+      LinearExpression E1 = GetLinearExpression(CastedValue(V1), DL, 0, AC, DT);
+      if (E0.Scale == E1.Scale && E0.Val.hasSameCastsAs(E1.Val) &&
+          isValueEqualInPotentialCycles(E0.Val.V, E1.Val.V, AAQI)) {
+        APInt Offset = (E0.Offset - E1.Offset) * Var0.Scale;
+        if (Var0.IsNegated)
+          Offset = -Offset;
+        Offset += GEP.Offset;
+        return Offset.uge(V2Size) && (-Offset).uge(V1Size);
+      }
+      if (const auto *SI = dyn_cast<SelectInst>(V0))
+        return Check(Check, SI->getTrueValue(), V1) &&
+               Check(Check, SI->getFalseValue(), V1);
+      if (const auto *SI = dyn_cast<SelectInst>(V1))
+        return Check(Check, V0, SI->getTrueValue()) &&
+               Check(Check, V0, SI->getFalseValue());
+      return false;
+    };
+    if (Check(Check, Var0.Val.V, Var1.Val.V))
+      return true;
+  }
+
   // We'll strip off the Extensions of Var0 and Var1 and do another round
   // of GetLinearExpression decomposition. In the example above, if Var0
   // is zext(%x + 1) we should get V1 == %x and V1Offset == 1.
