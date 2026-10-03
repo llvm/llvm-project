@@ -7,6 +7,7 @@ declare void @use(ptr)
 
 define ptr @gep_gep_same_index(ptr %p, i64 %x) {
 ;
+;
 ; CHECK-LABEL: define ptr @gep_gep_same_index(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[G2_IDX:%.*]] = shl i64 [[X]], 4
@@ -19,6 +20,7 @@ define ptr @gep_gep_same_index(ptr %p, i64 %x) {
 }
 
 define ptr @gep_gep_same_index_no_flags(ptr %p, i64 %x) {
+;
 ;
 ; CHECK-LABEL: define ptr @gep_gep_same_index_no_flags(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
@@ -34,6 +36,7 @@ define ptr @gep_gep_same_index_no_flags(ptr %p, i64 %x) {
 ; Different indices.
 define ptr @gep_gep_different_index(ptr %p, i64 %x, i64 %y) {
 ;
+;
 ; CHECK-LABEL: define ptr @gep_gep_different_index(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[X]]
@@ -45,12 +48,16 @@ define ptr @gep_gep_different_index(ptr %p, i64 %x, i64 %y) {
   ret ptr %g2
 }
 
+; Each pair is merged. Merging the two identical shifts is left to CSE.
 define ptr @gep_gep_gep_gep_same_index(ptr %p, i64 %x) {
+;
 ;
 ; CHECK-LABEL: define ptr @gep_gep_gep_gep_same_index(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[X]], 5
-; CHECK-NEXT:    [[G4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP1]]
+; CHECK-NEXT:    [[G2_IDX:%.*]] = shl i64 [[X]], 4
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[G2_IDX]]
+; CHECK-NEXT:    [[G4_IDX:%.*]] = shl i64 [[X]], 4
+; CHECK-NEXT:    [[G4:%.*]] = getelementptr inbounds i8, ptr [[G2]], i64 [[G4_IDX]]
 ; CHECK-NEXT:    ret ptr [[G4]]
 ;
   %g1 = getelementptr inbounds double, ptr %p, i64 %x
@@ -62,6 +69,7 @@ define ptr @gep_gep_gep_gep_same_index(ptr %p, i64 %x) {
 
 ; The inner gep has another use: don't merge.
 define ptr @gep_gep_same_index_extra_use(ptr %p, i64 %x) {
+;
 ;
 ; CHECK-LABEL: define ptr @gep_gep_same_index_extra_use(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
@@ -79,6 +87,7 @@ define ptr @gep_gep_same_index_extra_use(ptr %p, i64 %x) {
 ; Different source element types.
 define ptr @gep_gep_same_index_different_types(ptr %p, i64 %x) {
 ;
+;
 ; CHECK-LABEL: define ptr @gep_gep_same_index_different_types(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[X]]
@@ -88,4 +97,17 @@ define ptr @gep_gep_same_index_different_types(ptr %p, i64 %x) {
   %g1 = getelementptr inbounds i32, ptr %p, i64 %x
   %g2 = getelementptr inbounds i64, ptr %g1, i64 %x
   ret ptr %g2
+}
+
+; Vector of indices.
+define <2 x ptr> @gep_gep_same_index_vector(ptr %p, <2 x i64> %x) {
+; CHECK-LABEL: define <2 x ptr> @gep_gep_same_index_vector(
+; CHECK-SAME: ptr [[P:%.*]], <2 x i64> [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[X]], splat (i64 1)
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], <2 x i64> [[TMP1]]
+; CHECK-NEXT:    ret <2 x ptr> [[G2]]
+;
+  %g1 = getelementptr inbounds double, ptr %p, <2 x i64> %x
+  %g2 = getelementptr inbounds double, <2 x ptr> %g1, <2 x i64> %x
+  ret <2 x ptr> %g2
 }
