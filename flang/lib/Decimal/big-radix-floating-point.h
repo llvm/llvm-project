@@ -149,8 +149,7 @@ private:
   // Sets *this to an unsigned integer value.
   // Returns any remainder.
   template <typename UINT> RT_API_ATTRS UINT SetTo(UINT n) {
-    static_assert(
-        std::is_same_v<UINT, common::uint128_t> || std::is_unsigned_v<UINT>);
+    static_assert(!common::numeric_limits<UINT>::is_signed);
     SetToZero();
     while (n != 0) {
       auto q{n / 10u};
