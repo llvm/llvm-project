@@ -2937,16 +2937,19 @@ basic_string<_CharT, _Traits, _Allocator>::__assign_trivial(_Iterator __first, _
   size_type __old_size = size();
   size_type __cap      = capacity();
   if (__cap < __n) {
-    // Unlike `append` functions, if the input range points into the string itself, there is no case that the input
-    // range could get invalidated by reallocation:
-    // 1. If the input range is a subset of the string itself, its size cannot exceed the capacity of the string,
-    //    thus no reallocation would happen.
-    // 2. In the exotic case where the input range is the byte representation of the string itself, the string
-    //    object itself stays valid even if reallocation happens.
-    size_type __sz = size();
-    __grow_by_without_replace(__cap, __n - __cap, __sz, 0, __sz);
-    __annotate_increase(__n);
-  } else if (__n > __old_size)
+    // __cap < __n does not mean the range is outside the string: it can be [data(), data() + size() + 1) of a full
+    // buffer, or the bytes of the object itself. Copy into the new buffer before releasing the old one.
+    __long __buffer = __allocate_long_buffer(__alloc_, __n, __get_amortized_growth_capacity(__n));
+    auto __end      = __copy_non_overlapping_range(__first, __last, std::__to_address(__buffer.__data_));
+    traits_type::assign(*__end, value_type());
+
+    __annotate_delete();
+    auto __guard = std::__make_scope_guard(__annotate_new_size(*this));
+    __reset_internal_buffer(__buffer);
+    return;
+  }
+
+  if (__n > __old_size)
     __annotate_increase(__n - __old_size);
   pointer __p = __get_pointer();
   for (; __first != __last; ++__p, (void)++__first)
