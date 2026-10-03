@@ -21,6 +21,15 @@ TEST(SBLineEntryTest, SetLineAndColumn) {
   const uint32_t line_no = line_entry.GetLine();
   const uint32_t column_no = line_entry.GetColumn();
 
-  EXPECT_EQ(line_no, line_no);
+  EXPECT_EQ(line_no, expected_line_no);
   EXPECT_EQ(column_no, expected_column_no);
+
+  // Check args constructor.
+  lldb::SBFileSpec filespec("/some/random/path",
+                            /*resolve=*/false);
+  auto cline_entry =
+      lldb::SBLineEntry(filespec, expected_line_no, expected_column_no);
+  EXPECT_EQ(cline_entry.GetFileSpec(), filespec);
+  EXPECT_EQ(cline_entry.GetLine(), expected_line_no);
+  EXPECT_EQ(cline_entry.GetColumn(), expected_column_no);
 }
