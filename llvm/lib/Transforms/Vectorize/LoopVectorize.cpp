@@ -6468,7 +6468,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
       return nullptr;
     }
   } else {
-    RUN_VPLAN_PASS(VPlanTransforms::handleCountableEarlyExits, *VPlan0);
+    RUN_VPLAN_PASS(VPlanTransforms::handleCountableEarlyExits, *VPlan0,
+                   CM->isEpilogueAllowed());
   }
 
   RUN_VPLAN_PASS(VPlanTransforms::createLoopRegions, *VPlan0,
@@ -6548,21 +6549,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   // Build initial VPlan: Scan the body of the loop in a topological order to
   // visit each basic block after having visited its predecessor basic blocks.
   // ---------------------------------------------------------------------------
-
-  bool RequiresScalarEpilogueCheck =
-      LoopVectorizationPlanner::getDecisionAndClampRange(
-          [this](ElementCount VF) {
-            return !CM->requiresScalarEpilogue(VF.isVector());
-          },
-          Range);
-  // Update the branch in the middle block if a scalar epilogue is required.
-  VPBasicBlock *MiddleVPBB = Plan->getMiddleBlock();
-  if (!RequiresScalarEpilogueCheck && MiddleVPBB->getNumSuccessors() == 2) {
-    auto *BranchOnCond = cast<VPInstruction>(MiddleVPBB->getTerminator());
-    assert(MiddleVPBB->getSuccessors()[1] == Plan->getScalarPreheader() &&
-           "second successor must be scalar preheader");
-    BranchOnCond->setOperand(0, Plan->getFalse());
-  }
 
   // Don't use getDecisionAndClampRange here, because we don't know the UF
   // so this function is better to be conservative, rather than to split
@@ -6716,6 +6702,12 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   if (!RUN_VPLAN_PASS(VPlanTransforms::handleFindLastReductions, *Plan))
     return nullptr;
 
+  // Interleave memory: for each Interleave Group we marked earlier as relevant
+  // for this VPlan, replace the Recipes widening its memory instructions with a
+  // single VPInterleaveRecipe at its insertion point.
+  RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
+                 InterleaveGroups, CM->isEpilogueAllowed());
+
   RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, *Plan, false);
 
   // Create partial reduction recipes for scaled reductions and transform
@@ -6725,12 +6717,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
                  Range);
   RUN_VPLAN_PASS(VPlanTransforms::convertToAbstractRecipes, *Plan, CostCtx,
                  Range);
-
-  // Interleave memory: for each Interleave Group we marked earlier as relevant
-  // for this VPlan, replace the Recipes widening its memory instructions with a
-  // single VPInterleaveRecipe at its insertion point.
-  RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
-                 InterleaveGroups, CM->isEpilogueAllowed());
 
   // Convert memory recipes to strided access recipes if the strided access is
   // legal and profitable.
