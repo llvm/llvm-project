@@ -2850,7 +2850,18 @@ TEST_F(FormatTest, FormatsSwitchStatementCompactCaseLabels) {
 
   Style.IndentCaseLabels = true;
   verifyFormat("switch (n) {\n"
-               "  break; case 0:;\n"
+               "  break; case 0:\n"
+               "    foo();\n"
+               "  [[fallthrough]]; case 1:\n"
+               "    bar();\n"
+               "}",
+               Style);
+
+  verifyFormat("switch (n) {\n"
+               "  break; case 0: {\n"
+               "    return false;\n"
+               "  }\n"
+               "  [[fallthrough]]; default:;\n"
                "}",
                Style);
 

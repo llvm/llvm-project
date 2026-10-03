@@ -344,17 +344,6 @@ bool UnwrappedLineParser::precededByCommentOrPPDirective() const {
          (Previous->IsMultiline || Previous->NewlinesBefore > 0);
 }
 
-bool UnwrappedLineParser::linePrecededByKwBreak() const {
-  if (Lines.empty() || Lines.back().Tokens.empty())
-    return false;
-  const UnwrappedLine &PreviousLine = Lines.back();
-
-  if (PreviousLine.Level > Line->Level)
-    return false;
-
-  return PreviousLine.Tokens.front().Tok->is(tok::kw_break);
-}
-
 /// Parses a level, that is ???.
 /// \param OpeningBrace Opening brace (\p nullptr if absent) of that level.
 /// \param IfKind The \p if statement kind in the level.
@@ -3482,11 +3471,6 @@ void UnwrappedLineParser::parseLabel(bool IsGotoLabel) {
   const auto IndentGotoLabel = Style.IndentGotoLabels;
   const auto OldLineLevel = Line->Level;
   auto &Level = Line->Level;
-
-  if (!IsGotoLabel && Style.CompactCaseLabels && linePrecededByKwBreak()) {
-    assert(OldLineLevel > 0);
-    Lines.back().Level = OldLineLevel - 1;
-  }
 
   if (IsGotoLabel && IndentGotoLabel == FormatStyle::IGLS_NoIndent)
     Level = 0;

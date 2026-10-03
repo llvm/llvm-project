@@ -281,11 +281,13 @@ private:
         return MergedLines;
     }
 
-    // Handle case labels preceded by a break statement.
+    // Optionally merge preceding `break` or `[[fallthrough]]` with case label
+    // when at compatible levels, preserving label's indent.
     if (Style.CompactCaseLabels &&
         NextLine.First->isOneOf(tok::kw_case, tok::kw_default) &&
-        TheLine->endsWith(tok::semi, tok::kw_break) &&
-        TheLine->Level <= NextLine.Level) {
+        endsWithKwBreakOrFallthrough(TheLine) &&
+        TheLine->Level <= NextLine.Level + 1) {
+      IndentTracker.nextLine(NextLine);
       return 1;
     }
 
@@ -669,6 +671,12 @@ private:
     }
 
     return 0;
+  }
+
+  static bool endsWithKwBreakOrFallthrough(const AnnotatedLine *Line) {
+    return (Line->endsWith(tok::semi, tok::kw_break)) ||
+           (Line->startsWith(TT_AttributeLSquare) &&
+            Line->endsWith(tok::semi, TT_AttributeRSquare));
   }
 
   unsigned
