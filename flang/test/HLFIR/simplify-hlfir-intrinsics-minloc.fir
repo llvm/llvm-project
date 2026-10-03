@@ -1,7 +1,7 @@
 // RUN: fir-opt %s --simplify-hlfir-intrinsics | FileCheck %s
 
 func.func @test_1d_total_expr(%input: !hlfir.expr<?xi32>, %mask: !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<1xi32> {
-  %0 = hlfir.minloc %input mask %mask {fastmath = #arith.fastmath<contract>} : (!hlfir.expr<?xi32>, !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<1xi32>
+  %0 = hlfir.minloc %input mask %mask fastmath(contract) : (!hlfir.expr<?xi32>, !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<1xi32>
   return %0 : !hlfir.expr<1xi32>
 }
 // CHECK-LABEL:   func.func @test_1d_total_expr(
@@ -14,7 +14,7 @@ func.func @test_1d_total_expr(%input: !hlfir.expr<?xi32>, %mask: !hlfir.expr<?x!
 // CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i32
 // CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.array<1xi32>
 // CHECK:           %[[VAL_8:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?xi32>) -> !fir.shape<1>
-// CHECK:           %[[VAL_9:.*]] = hlfir.get_extent %[[VAL_8]] {dim = 0 : index} : (!fir.shape<1>) -> index
+// CHECK:           %[[VAL_9:.*]] = hlfir.get_extent %[[VAL_8]] dim(0) : (!fir.shape<1>) -> index
 // CHECK:           %[[VAL_10:.*]]:3 = fir.do_loop %[[VAL_11:.*]] = %[[VAL_3]] to %[[VAL_9]] step %[[VAL_3]] unordered iter_args(%[[VAL_12:.*]] = %[[VAL_6]], %[[VAL_13:.*]] = %[[VAL_5]], %[[VAL_14:.*]] = %[[VAL_4]]) -> (i32, i32, i1) {
 // CHECK:             %[[VAL_15:.*]] = hlfir.apply %[[VAL_1]], %[[VAL_11]] : (!hlfir.expr<?x!fir.logical<4>>, index) -> !fir.logical<4>
 // CHECK:             %[[VAL_16:.*]] = fir.convert %[[VAL_15]] : (!fir.logical<4>) -> i1
@@ -39,7 +39,7 @@ func.func @test_1d_total_expr(%input: !hlfir.expr<?xi32>, %mask: !hlfir.expr<?x!
 
 func.func @test_1d_dim_expr(%input: !hlfir.expr<?xf32>, %mask: !hlfir.expr<?x!fir.logical<4>>) -> i32 {
   %dim = arith.constant 1 : i16
-  %0 = hlfir.minloc %input dim %dim mask %mask {fastmath = #arith.fastmath<contract>} : (!hlfir.expr<?xf32>, i16, !hlfir.expr<?x!fir.logical<4>>) -> i32
+  %0 = hlfir.minloc %input dim %dim mask %mask fastmath(contract) : (!hlfir.expr<?xf32>, i16, !hlfir.expr<?x!fir.logical<4>>) -> i32
   return %0 : i32
 }
 // CHECK-LABEL:   func.func @test_1d_dim_expr(
@@ -51,7 +51,7 @@ func.func @test_1d_dim_expr(%input: !hlfir.expr<?xf32>, %mask: !hlfir.expr<?x!fi
 // CHECK:           %[[VAL_5:.*]] = arith.constant 3.40282347E+38 : f32
 // CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i32
 // CHECK:           %[[VAL_7:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?xf32>) -> !fir.shape<1>
-// CHECK:           %[[VAL_8:.*]] = hlfir.get_extent %[[VAL_7]] {dim = 0 : index} : (!fir.shape<1>) -> index
+// CHECK:           %[[VAL_8:.*]] = hlfir.get_extent %[[VAL_7]] dim(0) : (!fir.shape<1>) -> index
 // CHECK:           %[[VAL_9:.*]]:3 = fir.do_loop %[[VAL_10:.*]] = %[[VAL_3]] to %[[VAL_8]] step %[[VAL_3]] iter_args(%[[VAL_11:.*]] = %[[VAL_6]], %[[VAL_12:.*]] = %[[VAL_5]], %[[VAL_13:.*]] = %[[VAL_4]]) -> (i32, f32, i1) {
 // CHECK:             %[[VAL_14:.*]] = hlfir.apply %[[VAL_1]], %[[VAL_10]] : (!hlfir.expr<?x!fir.logical<4>>, index) -> !fir.logical<4>
 // CHECK:             %[[VAL_15:.*]] = fir.convert %[[VAL_14]] : (!fir.logical<4>) -> i1
@@ -76,7 +76,7 @@ func.func @test_1d_dim_expr(%input: !hlfir.expr<?xf32>, %mask: !hlfir.expr<?x!fi
 // CHECK:         }
 
 func.func @test_1d_total_var(%input: !fir.box<!fir.array<?xf32>>, %mask: !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<1xi16> {
-  %0 = hlfir.minloc %input mask %mask {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xf32>>, !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<1xi16>
+  %0 = hlfir.minloc %input mask %mask fastmath(contract) : (!fir.box<!fir.array<?xf32>>, !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<1xi16>
   return %0 : !hlfir.expr<1xi16>
 }
 // CHECK-LABEL:   func.func @test_1d_total_var(
@@ -122,7 +122,7 @@ func.func @test_1d_total_var(%input: !fir.box<!fir.array<?xf32>>, %mask: !hlfir.
 
 func.func @test_1d_dim_var(%input: !fir.box<!fir.array<?xf64>>, %mask: !hlfir.expr<?x!fir.logical<4>>) -> i64 {
   %dim = arith.constant 1 : i32
-  %0 = hlfir.minloc %input dim %dim mask %mask {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xf64>>, i32, !hlfir.expr<?x!fir.logical<4>>) -> i64
+  %0 = hlfir.minloc %input dim %dim mask %mask fastmath(contract) : (!fir.box<!fir.array<?xf64>>, i32, !hlfir.expr<?x!fir.logical<4>>) -> i64
   return %0 : i64
 }
 // CHECK-LABEL:   func.func @test_1d_dim_var(
@@ -163,7 +163,7 @@ func.func @test_1d_dim_var(%input: !fir.box<!fir.array<?xf64>>, %mask: !hlfir.ex
 // CHECK:         }
 
 func.func @test_total_expr(%input: !hlfir.expr<?x?x?xf32>, %mask: !hlfir.expr<?x?x?x!fir.logical<4>>) -> !hlfir.expr<3xi32> {
-  %0 = hlfir.minloc %input mask %mask {fastmath = #arith.fastmath<reassoc>} : (!hlfir.expr<?x?x?xf32>, !hlfir.expr<?x?x?x!fir.logical<4>>) -> !hlfir.expr<3xi32>
+  %0 = hlfir.minloc %input mask %mask fastmath(reassoc) : (!hlfir.expr<?x?x?xf32>, !hlfir.expr<?x?x?x!fir.logical<4>>) -> !hlfir.expr<3xi32>
   return %0 : !hlfir.expr<3xi32>
 }
 // CHECK-LABEL:   func.func @test_total_expr(
@@ -178,9 +178,9 @@ func.func @test_total_expr(%input: !hlfir.expr<?x?x?xf32>, %mask: !hlfir.expr<?x
 // CHECK:           %[[VAL_8:.*]] = arith.constant 0 : i32
 // CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.array<3xi32>
 // CHECK:           %[[VAL_10:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x?x?xf32>) -> !fir.shape<3>
-// CHECK:           %[[VAL_11:.*]] = hlfir.get_extent %[[VAL_10]] {dim = 0 : index} : (!fir.shape<3>) -> index
-// CHECK:           %[[VAL_12:.*]] = hlfir.get_extent %[[VAL_10]] {dim = 1 : index} : (!fir.shape<3>) -> index
-// CHECK:           %[[VAL_13:.*]] = hlfir.get_extent %[[VAL_10]] {dim = 2 : index} : (!fir.shape<3>) -> index
+// CHECK:           %[[VAL_11:.*]] = hlfir.get_extent %[[VAL_10]] dim(0) : (!fir.shape<3>) -> index
+// CHECK:           %[[VAL_12:.*]] = hlfir.get_extent %[[VAL_10]] dim(1) : (!fir.shape<3>) -> index
+// CHECK:           %[[VAL_13:.*]] = hlfir.get_extent %[[VAL_10]] dim(2) : (!fir.shape<3>) -> index
 // CHECK:           %[[VAL_14:.*]]:5 = fir.do_loop %[[VAL_15:.*]] = %[[VAL_5]] to %[[VAL_13]] step %[[VAL_5]] unordered iter_args(%[[VAL_16:.*]] = %[[VAL_8]], %[[VAL_17:.*]] = %[[VAL_8]], %[[VAL_18:.*]] = %[[VAL_8]], %[[VAL_19:.*]] = %[[VAL_7]], %[[VAL_20:.*]] = %[[VAL_6]]) -> (i32, i32, i32, f32, i1) {
 // CHECK:             %[[VAL_21:.*]]:5 = fir.do_loop %[[VAL_22:.*]] = %[[VAL_5]] to %[[VAL_12]] step %[[VAL_5]] unordered iter_args(%[[VAL_23:.*]] = %[[VAL_16]], %[[VAL_24:.*]] = %[[VAL_17]], %[[VAL_25:.*]] = %[[VAL_18]], %[[VAL_26:.*]] = %[[VAL_19]], %[[VAL_27:.*]] = %[[VAL_20]]) -> (i32, i32, i32, f32, i1) {
 // CHECK:               %[[VAL_28:.*]]:5 = fir.do_loop %[[VAL_29:.*]] = %[[VAL_5]] to %[[VAL_11]] step %[[VAL_5]] unordered iter_args(%[[VAL_30:.*]] = %[[VAL_23]], %[[VAL_31:.*]] = %[[VAL_24]], %[[VAL_32:.*]] = %[[VAL_25]], %[[VAL_33:.*]] = %[[VAL_26]], %[[VAL_34:.*]] = %[[VAL_27]]) -> (i32, i32, i32, f32, i1) {
@@ -223,7 +223,7 @@ func.func @test_total_expr(%input: !hlfir.expr<?x?x?xf32>, %mask: !hlfir.expr<?x
 
 func.func @test_partial_var(%input: !fir.box<!fir.array<?x?x?xf32>>, %mask: !fir.box<!fir.array<?x?x?x!fir.logical<4>>>) -> !hlfir.expr<?x?xi32> {
   %dim = arith.constant 2 : i32
-  %0 = hlfir.minloc %input dim %dim mask %mask {fastmath = #arith.fastmath<reassoc>} : (!fir.box<!fir.array<?x?x?xf32>>, i32, !fir.box<!fir.array<?x?x?x!fir.logical<4>>>) -> !hlfir.expr<?x?xi32>
+  %0 = hlfir.minloc %input dim %dim mask %mask fastmath(reassoc) : (!fir.box<!fir.array<?x?x?xf32>>, i32, !fir.box<!fir.array<?x?x?x!fir.logical<4>>>) -> !hlfir.expr<?x?xi32>
   return %0 : !hlfir.expr<?x?xi32>
 }
 // CHECK-LABEL:   func.func @test_partial_var(
@@ -295,7 +295,7 @@ func.func @test_partial_var(%input: !fir.box<!fir.array<?x?x?xf32>>, %mask: !fir
 // CHECK:         }
 
 func.func @test_total_expr_nomask(%input: !hlfir.expr<?x?x?xf32>) -> !hlfir.expr<3xi32> {
-  %0 = hlfir.minloc %input {fastmath = #arith.fastmath<reassoc>} : (!hlfir.expr<?x?x?xf32>) -> !hlfir.expr<3xi32>
+  %0 = hlfir.minloc %input fastmath(reassoc) : (!hlfir.expr<?x?x?xf32>) -> !hlfir.expr<3xi32>
   return %0 : !hlfir.expr<3xi32>
 }
 // CHECK-LABEL:   func.func @test_total_expr_nomask(
@@ -310,9 +310,9 @@ func.func @test_total_expr_nomask(%input: !hlfir.expr<?x?x?xf32>) -> !hlfir.expr
 // CHECK:           %[[VAL_8:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.array<3xi32>
 // CHECK:           %[[VAL_10:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x?x?xf32>) -> !fir.shape<3>
-// CHECK:           %[[VAL_11:.*]] = hlfir.get_extent %[[VAL_10]] {dim = 0 : index} : (!fir.shape<3>) -> index
-// CHECK:           %[[VAL_12:.*]] = hlfir.get_extent %[[VAL_10]] {dim = 1 : index} : (!fir.shape<3>) -> index
-// CHECK:           %[[VAL_13:.*]] = hlfir.get_extent %[[VAL_10]] {dim = 2 : index} : (!fir.shape<3>) -> index
+// CHECK:           %[[VAL_11:.*]] = hlfir.get_extent %[[VAL_10]] dim(0) : (!fir.shape<3>) -> index
+// CHECK:           %[[VAL_12:.*]] = hlfir.get_extent %[[VAL_10]] dim(1) : (!fir.shape<3>) -> index
+// CHECK:           %[[VAL_13:.*]] = hlfir.get_extent %[[VAL_10]] dim(2) : (!fir.shape<3>) -> index
 // CHECK:           %[[VAL_14:.*]] = arith.cmpi ne, %[[VAL_11]], %[[VAL_8]] : index
 // CHECK:           %[[VAL_15:.*]] = arith.cmpi ne, %[[VAL_12]], %[[VAL_8]] : index
 // CHECK:           %[[VAL_16:.*]] = arith.andi %[[VAL_14]], %[[VAL_15]] : i1
@@ -358,7 +358,7 @@ func.func @test_total_expr_nomask(%input: !hlfir.expr<?x?x?xf32>) -> !hlfir.expr
 
 func.func @test_partial_var_nomask(%input: !fir.box<!fir.array<?x?x?xf32>>) -> !hlfir.expr<?x?xi32> {
   %dim = arith.constant 2 : i32
-  %0 = hlfir.minloc %input dim %dim {fastmath = #arith.fastmath<reassoc>} : (!fir.box<!fir.array<?x?x?xf32>>, i32) -> !hlfir.expr<?x?xi32>
+  %0 = hlfir.minloc %input dim %dim fastmath(reassoc) : (!fir.box<!fir.array<?x?x?xf32>>, i32) -> !hlfir.expr<?x?xi32>
   return %0 : !hlfir.expr<?x?xi32>
 }
 // CHECK-LABEL:   func.func @test_partial_var_nomask(
@@ -419,7 +419,7 @@ func.func @test_partial_var_nomask(%input: !fir.box<!fir.array<?x?x?xf32>>) -> !
 
 // Test that 'nnan' allows using LARGEST value as the reduction init.
 func.func @test_total_expr_nnan(%input: !hlfir.expr<?x?x?xf32>) -> !hlfir.expr<3xi32> {
-  %0 = hlfir.minloc %input {fastmath = #arith.fastmath<nnan>} : (!hlfir.expr<?x?x?xf32>) -> !hlfir.expr<3xi32>
+  %0 = hlfir.minloc %input fastmath(nnan) : (!hlfir.expr<?x?x?xf32>) -> !hlfir.expr<3xi32>
   return %0 : !hlfir.expr<3xi32>
 }
 // CHECK-LABEL:   func.func @test_total_expr_nnan(
@@ -432,9 +432,9 @@ func.func @test_total_expr_nnan(%input: !hlfir.expr<?x?x?xf32>) -> !hlfir.expr<3
 // CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i32
 // CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.array<3xi32>
 // CHECK:           %[[VAL_8:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x?x?xf32>) -> !fir.shape<3>
-// CHECK:           %[[VAL_9:.*]] = hlfir.get_extent %[[VAL_8]] {dim = 0 : index} : (!fir.shape<3>) -> index
-// CHECK:           %[[VAL_10:.*]] = hlfir.get_extent %[[VAL_8]] {dim = 1 : index} : (!fir.shape<3>) -> index
-// CHECK:           %[[VAL_11:.*]] = hlfir.get_extent %[[VAL_8]] {dim = 2 : index} : (!fir.shape<3>) -> index
+// CHECK:           %[[VAL_9:.*]] = hlfir.get_extent %[[VAL_8]] dim(0) : (!fir.shape<3>) -> index
+// CHECK:           %[[VAL_10:.*]] = hlfir.get_extent %[[VAL_8]] dim(1) : (!fir.shape<3>) -> index
+// CHECK:           %[[VAL_11:.*]] = hlfir.get_extent %[[VAL_8]] dim(2) : (!fir.shape<3>) -> index
 // CHECK:           %[[VAL_12:.*]]:4 = fir.do_loop %[[VAL_13:.*]] = %[[VAL_4]] to %[[VAL_11]] step %[[VAL_4]] iter_args(%[[VAL_14:.*]] = %[[VAL_6]], %[[VAL_15:.*]] = %[[VAL_6]], %[[VAL_16:.*]] = %[[VAL_6]], %[[VAL_17:.*]] = %[[VAL_5]]) -> (i32, i32, i32, f32) {
 // CHECK:             %[[VAL_18:.*]]:4 = fir.do_loop %[[VAL_19:.*]] = %[[VAL_4]] to %[[VAL_10]] step %[[VAL_4]] iter_args(%[[VAL_20:.*]] = %[[VAL_14]], %[[VAL_21:.*]] = %[[VAL_15]], %[[VAL_22:.*]] = %[[VAL_16]], %[[VAL_23:.*]] = %[[VAL_17]]) -> (i32, i32, i32, f32) {
 // CHECK:               %[[VAL_24:.*]]:4 = fir.do_loop %[[VAL_25:.*]] = %[[VAL_4]] to %[[VAL_9]] step %[[VAL_4]] iter_args(%[[VAL_26:.*]] = %[[VAL_20]], %[[VAL_27:.*]] = %[[VAL_21]], %[[VAL_28:.*]] = %[[VAL_22]], %[[VAL_29:.*]] = %[[VAL_23]]) -> (i32, i32, i32, f32) {

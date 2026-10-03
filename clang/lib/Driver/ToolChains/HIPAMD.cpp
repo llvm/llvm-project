@@ -53,19 +53,19 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
                                          const llvm::opt::ArgList &Args) const {
   // Construct lld command.
   // The output from ld.lld is an HSA code object file.
-  ArgStringList LldArgs{"-flavor",
-                        "gnu",
-                        "-m",
-                        "elf64_amdgpu",
-                        "--no-undefined",
-                        "-shared",
-                        "-plugin-opt=-amdgpu-internalize-symbols"};
+  const ToolChain &TC = getToolChain();
+  LTOKind LTOMode = TC.getLTOMode(Args, Action::OFK_HIP);
+  ArgStringList LldArgs{"-flavor",        "gnu",    "-m", "elf64_amdgpu",
+                        "--no-undefined", "-shared"};
+  // Native object references are invisible when LTO compiles bitcode libraries
+  // in a non-LTO link, so library definitions must remain external.
+  if (LTOMode != LTOK_None)
+    LldArgs.push_back("-plugin-opt=-amdgpu-internalize-symbols");
   if (Args.hasArg(options::OPT_hipstdpar))
     LldArgs.push_back("-plugin-opt=-amdgpu-enable-hipstdpar");
 
-  auto &TC = getToolChain();
   auto &D = TC.getDriver();
-  bool IsThinLTO = TC.getLTOMode(Args, Action::OFK_HIP) == LTOK_Thin;
+  bool IsThinLTO = LTOMode == LTOK_Thin;
   addLTOOptions(TC, Args, LldArgs, Output, Inputs, IsThinLTO);
 
   // Extract all the -m options

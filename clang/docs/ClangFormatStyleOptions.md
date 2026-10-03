@@ -5388,10 +5388,21 @@ the configuration (without a prefix: `Auto`).
 
   ```c++
   KeepEmptyLines:
+    AtEndOfBlock: false
     AtEndOfFile: false
     AtStartOfBlock: false
     AtStartOfFile: false
   ```
+
+  - `bool AtEndOfBlock` Keep empty lines at end of a block.
+
+    ```c++
+    true:                                  false:
+    if (foo) {                     vs.     if (foo) {
+      bar();                                 bar();
+                                           }
+    }
+    ```
 
   - `bool AtEndOfFile` Keep empty lines at end of file.
 
@@ -7004,6 +7015,29 @@ the configuration (without a prefix: `Auto`).
     true:                      false:
     #include "A2.h"     vs.    #include "A10.h"
     #include "A10.h"           #include "A2.h"
+    ```
+
+  - `bool FilesBeforeFolders` When `true`, sort includes so that files in a directory appear
+    before subdirectories at each level, recursively. Within a level,
+    files and folders are each sorted alphabetically.
+    When `false` (default), sorts includes purely alphabetically.
+
+    This option is a secondary sort key within each `Priority` group
+    defined by `IncludeCategories`. Includes in different `Priority`
+    groups are still separated by that primary ordering.
+
+    ```c++
+    true:                             false (default):
+    #include "x.h"             vs.    #include "bar/alpha/e.h"
+    #include "y.h"                    #include "bar/alpha/f.h"
+    #include "z.h"                    #include "bar/beta/d.h"
+    #include "bar/g.h"                #include "bar/g.h"
+    #include "bar/h.h"                #include "bar/h.h"
+    #include "bar/i.h"                #include "bar/i.h"
+    #include "bar/alpha/e.h"          #include "foo/a.h"
+    #include "bar/alpha/f.h"          #include "x.h"
+    #include "bar/beta/d.h"           #include "y.h"
+    #include "foo/a.h"                #include "z.h"
     ```
 
 

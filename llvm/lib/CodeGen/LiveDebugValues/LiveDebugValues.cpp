@@ -128,7 +128,7 @@ void LiveDebugValuesPass::printPipeline(
 bool LiveDebugValuesLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto *TPC = &getAnalysis<TargetPassConfig>();
   return LiveDebugValues().run(
-      MF, TPC->getTM<TargetMachine>().Options.ShouldEmitDebugEntryValues());
+      MF, TPC->getTM<TargetMachine>().shouldEmitDebugEntryValues());
 }
 
 bool LiveDebugValues::run(MachineFunction &MF,

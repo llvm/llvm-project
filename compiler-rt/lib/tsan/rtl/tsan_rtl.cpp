@@ -819,12 +819,12 @@ int Finalize(ThreadState *thr) {
 
   ThreadFinalize(thr);
 
-  if (ctx->nreported) {
+  if (u32 nreported = atomic_load_relaxed(&ctx->nreported)) {
     failed = true;
 #if !SANITIZER_GO
-    Printf("ThreadSanitizer: reported %d warnings\n", ctx->nreported);
+    Printf("ThreadSanitizer: reported %u warnings\n", nreported);
 #else
-    Printf("Found %d data race(s)\n", ctx->nreported);
+    Printf("Found %u data race(s)\n", nreported);
 #endif
   }
 

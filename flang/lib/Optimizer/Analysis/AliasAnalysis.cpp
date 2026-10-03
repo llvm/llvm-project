@@ -24,6 +24,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -234,9 +235,45 @@ static fir::AliasAnalysis::Source mergeRegionBranchPredecessorSources(
 
   fir::AliasAnalysis::SourceKind mergedKind;
   fir::AliasAnalysis::Source::Attributes mergedAttrs;
-  if (!allKindsSame) {
+  // Every predecessor is a null address, so the join is too. Distinct nulls
+  // and differing attributes still name no object, whether or not the null
+  // is defined inside this branch.
+  bool allNull = llvm::all_of(sources, [](const fir::AliasAnalysis::Source &s) {
+    return s.kind == fir::AliasAnalysis::SourceKind::Null;
+  });
+  if (allNull) {
+    mergedKind = fir::AliasAnalysis::SourceKind::Null;
+    mergedAttrs = allAttrsSame ? sources[0].attributes
+                               : fir::AliasAnalysis::Source::Attributes{};
+  } else if (!allKindsSame) {
+    // A null address names no object. If every other predecessor is an
+    // allocation defined inside this branch, the join is considered an
+    // allocation.
     mergedKind = fir::AliasAnalysis::SourceKind::Unknown;
     mergedAttrs = {};
+    auto branchOp = mlir::dyn_cast<mlir::RegionBranchOpInterface>(
+        mlir::cast<mlir::OpResult>(fallbackValue).getOwner());
+    const fir::AliasAnalysis::Source *allocSrc = nullptr;
+    bool onlyAllocOrNull = branchOp != nullptr;
+    if (branchOp) {
+      for (const fir::AliasAnalysis::Source &src : sources) {
+        if (src.kind == fir::AliasAnalysis::SourceKind::Allocate) {
+          if (!originIsInsideRegionBranch(branchOp, src) ||
+              (allocSrc && allocSrc->attributes != src.attributes)) {
+            onlyAllocOrNull = false;
+            break;
+          }
+          allocSrc = &src;
+        } else if (src.kind != fir::AliasAnalysis::SourceKind::Null) {
+          onlyAllocOrNull = false;
+          break;
+        }
+      }
+    }
+    if (onlyAllocOrNull && allocSrc) {
+      mergedKind = fir::AliasAnalysis::SourceKind::Allocate;
+      mergedAttrs = allocSrc->attributes;
+    }
   } else if (!allAttrsSame) {
     mergedKind = fir::AliasAnalysis::SourceKind::Unknown;
     mergedAttrs = {};
@@ -475,7 +512,8 @@ bool AliasAnalysis::Source::isFortranUserVariable() const {
 }
 
 bool AliasAnalysis::Source::mayBeDummyArgOrHostAssoc() const {
-  return kind != SourceKind::Allocate && kind != SourceKind::Global;
+  return kind != SourceKind::Null && kind != SourceKind::Allocate &&
+         kind != SourceKind::Global;
 }
 
 bool AliasAnalysis::Source::mayBePtrDummyArgOrHostAssoc() const {
@@ -490,7 +528,7 @@ bool AliasAnalysis::Source::mayBePtrDummyArgOrHostAssoc() const {
 }
 
 bool AliasAnalysis::Source::mayBeActualArg() const {
-  return kind != SourceKind::Allocate;
+  return kind != SourceKind::Null && kind != SourceKind::Allocate;
 }
 
 bool AliasAnalysis::Source::mayBeActualArgWithPtr(
@@ -748,6 +786,13 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   // Disambiguate data and descriptors addresses.
   if (noAliasBasedOnType(lhs, rhs))
     return AliasResult::NoAlias;
+
+  // A null address aliases nothing. Same-value pairs already returned
+  // MustAlias above.
+  if (lhsSrc.kind == SourceKind::Null || rhsSrc.kind == SourceKind::Null) {
+    LLVM_DEBUG(llvm::dbgs() << "  no alias: null address\n");
+    return AliasResult::NoAlias;
+  }
 
   // Indirect case currently not handled. Conservatively assume
   // it aliases with everything
@@ -1046,6 +1091,11 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
   fir::AliasAnalysis::Source varSrc =
       getSource(var, /*getLastInstantiationPoint=*/true,
                 /*collectScopedOrigins=*/false);
+  // A null address names no object, so a call cannot read or write it.
+  // This includes an absent optional passed as an actual argument: the
+  // corresponding dummy must not be referenced.
+  if (varSrc.kind == fir::AliasAnalysis::SourceKind::Null)
+    return ModRefResult::getNoModRef();
   // If the variable is not a user variable, we cannot safely assume that
   // Fortran semantics apply (e.g., a bare alloca/allocmem result may very well
   // be placed in an allocatable/pointer descriptor and escape).
@@ -1081,23 +1131,281 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
         !isSavedLocal(varSrc))
       return ModRefResult::getModAndRef();
   }
-  // 2. Check if the variable is passed via the arguments.
-  for (auto arg : call.getArgs()) {
-    if (fir::conformsWithPassByRef(arg.getType()) && !alias(arg, var).isNo()) {
-      // TODO: intent(in) would allow returning Ref here. This can be obtained
-      // in the func.func attributes for direct calls, but the module lookup is
-      // linear with the number of MLIR symbols, which would introduce a pseudo
-      // quadratic behavior num_calls * num_func.
+  // 2. Check if the variable is passed via the arguments. A dummy with a
+  // declared intent is a read, a write, or both. intent(out) is a write for
+  // a trivial non-pointer, non-allocatable dummy, and a read and a write
+  // otherwise. An argument with no visible intent stays ModAndRef. The
+  // callee is resolved through the cached symbol table.
+  mlir::func::FuncOp callee;
+  if (std::optional<mlir::SymbolRefAttr> calleeAttr = call.getCallee()) {
+    if (const mlir::SymbolTable *symTab = getNearestSymbolTable(call))
+      callee =
+          symTab->lookup<mlir::func::FuncOp>(calleeAttr->getLeafReference());
+  }
+  auto args = call.getArgs();
+  const bool intentsAvailable = callee && !callee.isDeclaration() &&
+                                args.size() == callee.getNumArguments();
+  ModRefResult modRef = ModRefResult::getNoModRef();
+  for (auto [idx, arg] : llvm::enumerate(args)) {
+    if (!fir::conformsWithPassByRef(arg.getType()) || alias(arg, var).isNo())
+      continue;
+    if (!intentsAvailable)
       return ModRefResult::getModAndRef();
+    std::optional<fir::FortranDummyIntent> intent =
+        fir::getFortranDummyIntent(callee, idx);
+    if (!intent || *intent == fir::FortranDummyIntent::InOut)
+      return ModRefResult::getModAndRef();
+    if (*intent == fir::FortranDummyIntent::In) {
+      modRef = modRef.merge(ModRefResult::getRef());
+      continue;
+    }
+    if (*intent == fir::FortranDummyIntent::Out) {
+      // A pure write only for a non-pointer, non-allocatable dummy whose
+      // element type is trivial. An allocatable is read on entry so it can
+      // be deallocated, and finalization of a derived type may read it.
+      mlir::Type ty = callee.getArgument(idx).getType();
+      if (fir::isPointerType(ty) || fir::isAllocatableType(ty) ||
+          !fir::isa_trivial(fir::getFortranElementType(ty)))
+        return ModRefResult::getModAndRef();
+      modRef = modRef.merge(ModRefResult::getMod());
+      continue;
+    }
+    return ModRefResult::getModAndRef();
+  }
+  return modRef;
+}
+
+AliasAnalysis::AliasAnalysis(AliasAnalysisRecursiveEffectsCache &cacheRef)
+    : cache(&cacheRef) {
+  cacheRef.aa = this;
+}
+
+AliasAnalysis::AliasAnalysis(AliasAnalysis &&other) noexcept
+    : symTabMap(std::move(other.symTabMap)),
+      domInfoCache(std::move(other.domInfoCache)),
+      sortedScopeCache(std::move(other.sortedScopeCache)),
+      multiScopeCache(std::move(other.multiScopeCache)),
+      getSourceCache(std::move(other.getSourceCache)),
+      sourceCacheEnabled(other.sourceCacheEnabled),
+      sourceCacheHits(other.sourceCacheHits),
+      sourceCacheMisses(other.sourceCacheMisses), cache(other.cache) {
+  other.cache = nullptr;
+  if (cache)
+    cache->aa = this;
+}
+
+AliasAnalysis::~AliasAnalysis() {
+  if (cache)
+    cache->aa = nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// AliasAnalysisRecursiveEffectsCache
+//===----------------------------------------------------------------------===//
+
+void AliasAnalysisRecursiveEffectsCache::buildSummary(mlir::Region &region,
+                                                      Summary &out) {
+  for (mlir::Operation &op : region.getOps())
+    buildSummary(&op, out);
+}
+
+void AliasAnalysisRecursiveEffectsCache::buildSummary(mlir::Operation *op,
+                                                      Summary &out) {
+  // fir.call: defer the entire analysis to per-query getCallModRef. Recording
+  // its generic interface effects here on top would over-pessimize: the
+  // uncached path only falls through to interface analysis when
+  // getCallModRef itself returns ModAndRef.
+  if (llvm::isa<fir::CallOp>(op)) {
+    CallInfo ci;
+    ci.op = op;
+    ci.isFortranUserProcedure = aa->isCallToFortranUserProcedure(op);
+    out.calls.push_back(ci);
+    return;
+  }
+
+  bool isRecursive = op->hasTrait<mlir::OpTrait::HasRecursiveMemoryEffects>();
+  if (isRecursive) {
+    for (mlir::Region &r : op->getRegions())
+      buildSummary(r, out);
+  }
+
+  auto iface = dyn_cast<MemoryEffectOpInterface>(op);
+
+  if (!iface) {
+    // No effect interface and not handled by the recursive branch: must
+    // conservatively assume both Mod and Ref (this mirrors the uncached
+    // AliasAnalysis::getModRef which returns ModAndRef in this case).
+    if (!isRecursive) {
+      out.hasUnknownWrite = true;
+      out.hasUnknownRead = true;
+    }
+    return;
+  }
+
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  iface.getEffects(effects);
+
+  for (const MemoryEffects::EffectInstance &effect : effects) {
+    if (isa<MemoryEffects::Allocate, MemoryEffects::Free>(effect.getEffect()))
+      continue;
+
+    mlir::SideEffects::Resource *resource = effect.getResource();
+
+    if (!resource->isAddressable())
+      continue;
+
+    bool isRead = isa<MemoryEffects::Read>(effect.getEffect());
+    bool isWrite = isa<MemoryEffects::Write>(effect.getEffect());
+    mlir::Value v = effect.getValue();
+
+    if (!v) {
+      if (isRead)
+        out.hasUnknownRead = true;
+      if (isWrite)
+        out.hasUnknownWrite = true;
+      continue;
+    }
+
+    if (isRead)
+      out.readLocations.push_back(v);
+
+    if (isWrite)
+      out.writeLocations.push_back(v);
+  }
+}
+
+ModRefResult
+AliasAnalysisRecursiveEffectsCache::getModRefFromSummary(mlir::Operation *op,
+                                                         mlir::Value location) {
+  assert(aa &&
+         "cache used without a linked fir::AliasAnalysis; this should only "
+         "be invoked from AliasAnalysis::getModRef when the back-pointer is "
+         "set");
+  auto it = summaries.find(op);
+
+  if (it == summaries.end()) {
+    ++summaryMisses;
+    Summary s;
+    buildSummary(op, s);
+    it = summaries.try_emplace(op, std::move(s)).first;
+  } else {
+    ++summaryHits;
+  }
+
+  const Summary &s = it->second;
+  bool mod = s.hasUnknownWrite;
+  bool ref = s.hasUnknownRead;
+
+  if (!mod) {
+    for (mlir::Value v : s.writeLocations) {
+      if (!aa->alias(v, location).isNo()) {
+        mod = true;
+        break;
+      }
     }
   }
-  // The call cannot access the variable.
+
+  if (!ref) {
+    for (mlir::Value v : s.readLocations) {
+      if (!aa->alias(v, location).isNo()) {
+        ref = true;
+        break;
+      }
+    }
+  }
+
+  if (mod && ref)
+    return ModRefResult::getModAndRef();
+
+  for (const CallInfo &ci : s.calls) {
+    mlir::Operation *call = ci.op;
+
+    if (ci.isFortranUserProcedure) {
+      ModRefResult cr = aa->getCallModRef(call, location);
+
+      if (cr != ModRefResult::getModAndRef()) {
+        if (cr.isMod())
+          mod = true;
+
+        if (cr.isRef())
+          ref = true;
+
+        if (mod && ref)
+          break;
+
+        continue;
+      }
+      // Fall through to interface analysis below.
+    }
+    // Either getCallModRef gave conservative ModAndRef, or the callee is
+    // not a Fortran user procedure (in which case getCallModRef would
+    // unconditionally return ModAndRef). Mirror the uncached fall-through
+    // to MemoryEffectOpInterface for additional precision.
+    auto iface = dyn_cast<MemoryEffectOpInterface>(call);
+
+    if (!iface) {
+      mod = true;
+      ref = true;
+      break;
+    }
+
+    SmallVector<MemoryEffects::EffectInstance> callEffects;
+    iface.getEffects(callEffects);
+
+    for (const MemoryEffects::EffectInstance &effect : callEffects) {
+      if (isa<MemoryEffects::Allocate, MemoryEffects::Free>(effect.getEffect()))
+        continue;
+
+      mlir::SideEffects::Resource *resource = effect.getResource();
+
+      if (!resource->isAddressable())
+        continue;
+
+      AliasResult ar = AliasResult::MayAlias;
+
+      if (mlir::Value v = effect.getValue())
+        ar = aa->alias(v, location);
+
+      if (ar.isNo())
+        continue;
+
+      if (isa<MemoryEffects::Read>(effect.getEffect()))
+        ref = true;
+
+      if (isa<MemoryEffects::Write>(effect.getEffect()))
+        mod = true;
+
+      if (mod && ref)
+        break;
+    }
+
+    if (mod && ref)
+      break;
+  }
+
+  if (mod && ref)
+    return ModRefResult::getModAndRef();
+
+  if (mod)
+    return ModRefResult::getMod();
+
+  if (ref)
+    return ModRefResult::getRef();
+
   return ModRefResult::getNoModRef();
 }
 
 /// This is mostly inspired by MLIR::LocalAliasAnalysis, except that
 /// fir.call's are handled in a special way.
 ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
+  // If this AliasAnalysis is linked with a cache, route ops with
+  // HasRecursiveMemoryEffects through it. Non-recursive ops fall through to
+  // the inline path below; the cache eventually delegates back to
+  // alias()/getCallModRef() on this instance, which never re-enter this
+  // routing check, so there is no risk of infinite recursion.
+  if (cache && op->hasTrait<mlir::OpTrait::HasRecursiveMemoryEffects>())
+    return cache->getModRefFromSummary(op, location);
+
   if (auto call = llvm::dyn_cast<fir::CallOp>(op)) {
     ModRefResult result = getCallModRef(call, location);
     if (result != ModRefResult::getModAndRef())
@@ -1311,23 +1619,40 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
           approximateSource = true;
         })
         .Case([&](fir::AbsentOp op) {
-          // Although fir.absent is not a local allocation, we treat it
-          // similarly so that it can be disambiguated that it doesn't alias any
-          // other values. Two entities coming from separate fir.absent ops
-          // also do not alias each other.
-          type = SourceKind::Allocate;
+          // fir.absent lowers to a null pointer. Distinct fir.absent values
+          // do not alias each other.
+          type = SourceKind::Null;
           breakFromLoop = true;
         })
-        .Case([&](fir::LoadOp op) {
+        .Case([&](fir::ZeroOp op) {
+          // Address-typed fir.zero_bits lowers to a null pointer. A zero
+          // value of any other type is not an address.
+          if (fir::isa_ref_type(op.getType())) {
+            type = SourceKind::Null;
+            breakFromLoop = true;
+            return;
+          }
+          defOp = nullptr;
+          breakFromLoop = true;
+        })
+        .Case([&](fir::FortranObjectLoadOpInterface op) {
+          // Keyed off the interface rather than fir::LoadOp so that any
+          // operation yielding a value read from memory participates in the
+          // walk. The interface reports provenance only, which is all this
+          // walk needs; it does not promise the operation is a pure load.
+          // Keep this ahead of the FortranObjectViewOpInterface case below,
+          // which would otherwise win for an operation implementing both.
+          mlir::Value loadSource = op.getLoadSource(opResult);
+
           // If load is inside target and it points to mapped item,
           // continue tracking.
-          Operation *loadMemrefOp = op.getMemref().getDefiningOp();
+          Operation *loadMemrefOp = loadSource.getDefiningOp();
           bool isDeclareOp =
               llvm::isa_and_present<fir::DeclareOp>(loadMemrefOp) ||
               llvm::isa_and_present<hlfir::DeclareOp>(loadMemrefOp);
           if (isDeclareOp &&
               llvm::isa<omp::TargetOp>(loadMemrefOp->getParentOp())) {
-            v = op.getMemref();
+            v = loadSource;
             defOp = v.getDefiningOp();
             return;
           }
@@ -1353,7 +1678,7 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
             // Passing true here would stop the inner walk at the declare
             // and force SourceKind::Indirect, which spuriously coarsens
             // getCallModRef (e.g. for box_addr of allocatable dummies).
-            auto boxSrc = getSource(op.getMemref(),
+            auto boxSrc = getSource(loadSource,
                                     /*getLastInstantiationPoint=*/false,
                                     collectScopedOrigins);
             attributes |= boxSrc.attributes;
@@ -1422,8 +1747,9 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
                 }
               }
               if (!classified) {
-                if (boxSrc.kind == SourceKind::Allocate) {
-                  type = SourceKind::Allocate;
+                if (boxSrc.kind == SourceKind::Allocate ||
+                    boxSrc.kind == SourceKind::Null) {
+                  type = boxSrc.kind;
                   v = def;
                   defOp = nullptr;
                 } else if (boxSrc.kind == SourceKind::HostAssoc) {

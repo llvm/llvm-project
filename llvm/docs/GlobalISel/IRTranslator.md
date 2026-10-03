@@ -1,4 +1,4 @@
-(irtranslator)=
+(ir-translator)=
 
 # IRTranslator
 
@@ -74,7 +74,7 @@ backends, `CallLowering` makes available a few helpers and interfaces:
   for invoking a given `ValueAssigner` and `ValueHandler` on a series of
   `ArgInfo` objects.
 
-(irtranslator-aggregates)=
+(ir-translator-aggregates)=
 
 ### Aggregates
 
@@ -95,7 +95,7 @@ information on vregs).
 See [PR26161](https://llvm.org/PR26161): [GlobalISel] Value to vreg during
 IR to MachineInstr translation for aggregate type
 
-(irtranslator-constants)=
+(ir-translator-constants)=
 
 ## Translation of Constants
 
@@ -112,7 +112,7 @@ spills and reloads in an -O0 pipeline, as these virtual registers can have long
 live ranges. This can be mitigated by running a [localizer](https://github.com/llvm/llvm-project/blob/main/llvm/lib/CodeGen/GlobalISel/Localizer.cpp)
 after the translator.
 
-(irtranslator-byte-type)=
+(ir-translator-byte-type)=
 
 ## Translation of the Byte Type
 

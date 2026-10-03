@@ -76,6 +76,7 @@
 ; O0-NEXT:     x86-return-thunks
 ; O0-NEXT:     cfi-instr-inserter
 ; O0-NEXT:     x86-lvi-ret
+; O0-NEXT:     unpack-mi-bundles
 ; O0-NEXT:     verify
 ; O0-NEXT:     x86-asm-printer
 ; O0-NEXT:   free-machine-function
@@ -155,6 +156,7 @@
 ; O2-NEXT:     require<live-vars>
 ; O2-NEXT:     require<machine-loops>
 ; O2-NEXT:     phi-node-elimination
+; O2-NEXT:     require<live-intervals>
 ; O2-NEXT:     two-address-instruction
 ; O2-NEXT:     register-coalescer
 ; O2-NEXT:     rename-independent-subregs
@@ -203,6 +205,7 @@
 ; O2-NEXT:     x86-return-thunks
 ; O2-NEXT:     cfi-instr-inserter
 ; O2-NEXT:     x86-lvi-ret
+; O2-NEXT:     unpack-mi-bundles
 ; O2-NEXT:     verify
 ; O2-NEXT:     x86-asm-printer
 ; O2-NEXT:   free-machine-function
@@ -277,6 +280,7 @@
 ; O0-WINDOWS-NEXT:     x86-avoid-trailing-call
 ; O0-WINDOWS-NEXT:     eh-cont-guard-targets
 ; O0-WINDOWS-NEXT:     x86-lvi-ret
+; O0-WINDOWS-NEXT:     unpack-mi-bundles
 ; O0-WINDOWS-NEXT:     x86-wineh-unwindv2
 ; O0-WINDOWS-NEXT:     verify
 ; O0-WINDOWS-NEXT:     x86-asm-printer
@@ -358,6 +362,7 @@
 ; O3-WINDOWS-NEXT:     require<live-vars>
 ; O3-WINDOWS-NEXT:     require<machine-loops>
 ; O3-WINDOWS-NEXT:     phi-node-elimination
+; O3-WINDOWS-NEXT:     require<live-intervals>
 ; O3-WINDOWS-NEXT:     two-address-instruction
 ; O3-WINDOWS-NEXT:     register-coalescer
 ; O3-WINDOWS-NEXT:     rename-independent-subregs
@@ -407,6 +412,7 @@
 ; O3-WINDOWS-NEXT:     x86-avoid-trailing-call
 ; O3-WINDOWS-NEXT:     eh-cont-guard-targets
 ; O3-WINDOWS-NEXT:     x86-lvi-ret
+; O3-WINDOWS-NEXT:     unpack-mi-bundles
 ; O3-WINDOWS-NEXT:     x86-wineh-unwindv2
 ; O3-WINDOWS-NEXT:     verify
 ; O3-WINDOWS-NEXT:     x86-asm-printer

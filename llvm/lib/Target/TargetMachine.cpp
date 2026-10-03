@@ -43,9 +43,21 @@ TargetMachine::TargetMachine(const Target &T, StringRef DataLayoutString,
     : TheTarget(T), DL(DataLayoutString), TargetTriple(TT),
       TargetCPU(std::string(CPU)), TargetFS(std::string(FS)), AsmInfo(nullptr),
       MRI(nullptr), MII(nullptr), STI(nullptr), RequireStructuredCFG(false),
-      O0WantsFastISel(false), Options(Options) {}
+      O0WantsFastISel(false), SupportsDefaultOutlining(false),
+      SupportsDebugEntryValues(false), Options(Options) {}
 
 TargetMachine::~TargetMachine() = default;
+
+/// NOTE: There are targets that still do not support the debug entry values
+/// production and that is being controlled with the SupportsDebugEntryValues.
+/// In addition, SCE debugger does not have the feature implemented, so prefer
+/// not to emit the debug entry values in that case.
+/// The EnableDebugEntryValues can be used for the testing purposes.
+bool TargetMachine::shouldEmitDebugEntryValues() const {
+  return (SupportsDebugEntryValues &&
+          Options.DebuggerTuning != DebuggerKind::SCE) ||
+         Options.EnableDebugEntryValues;
+}
 
 Expected<std::unique_ptr<MCStreamer>>
 TargetMachine::createMCStreamer(raw_pwrite_stream &Out,
@@ -319,15 +331,6 @@ TargetIRAnalysis TargetMachine::getTargetIRAnalysis() const {
   // dependency.
   return TargetIRAnalysis(
       [this](const Function &F) { return this->getTargetTransformInfo(F); });
-}
-
-std::pair<int, int> TargetMachine::parseBinutilsVersion(StringRef Version) {
-  if (Version == "none")
-    return {INT_MAX, INT_MAX}; // Make binutilsIsAtLeast() return true.
-  std::pair<int, int> Ret;
-  if (!Version.consumeInteger(10, Ret.first) && Version.consume_front("."))
-    Version.consumeInteger(10, Ret.second);
-  return Ret;
 }
 
 StringRef TargetMachine::getTargetABIName(const Module &M) const {

@@ -73,8 +73,15 @@ bool clang::CIRGen::isEmptyRecordForABI(const ASTContext &context, QualType t) {
 
 bool clang::CIRGen::isEmptyFieldForABI(const ASTContext &context,
                                        const FieldDecl *fd) {
+  // A zero-width bit-field holds no bits, so it holds no data.  Any other
+  // unnamed bit-field is real storage that the x86-64 classifier gives the
+  // eightbyte classes of a named bit-field, so it does hold data.
+  //
+  // FIXME: this needs an ABI compatibility check.  Clang used to ignore every
+  // unnamed bit-field here, and the older compatibility levels have to keep
+  // that answer once there is a switch to ask.
   if (fd->isUnnamedBitField())
-    return true;
+    return fd->isZeroLengthBitField();
 
   QualType ft = fd->getType();
 

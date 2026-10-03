@@ -43,7 +43,6 @@ executable("llvm-tblgen") {
     "InstrDocsEmitter.cpp",
     "InstrInfoEmitter.cpp",
     "MacroFusionPredicatorEmitter.cpp",
-    "OptionParserEmitter.cpp",
     "OptionRSTEmitter.cpp",
     "PseudoLoweringEmitter.cpp",
     "RegisterBankEmitter.cpp",

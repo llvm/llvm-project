@@ -23,6 +23,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
+#include "llvm/Support/AArch64MemoryHints.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -89,6 +90,9 @@ public:
   bool SelectLogicalShiftedRegister(SDValue N, SDValue &Reg, SDValue &Shift) {
     return SelectShiftedRegister(N, true, Reg, Shift);
   }
+  template <unsigned ShiftWidth>
+  bool SelectShiftMask(SDValue N, SDValue &ShAmt);
+
   bool SelectAddrModeIndexed7S8(SDValue N, SDValue &Base, SDValue &OffImm) {
     return SelectAddrModeIndexed7S(N, 1, Base, OffImm);
   }
@@ -516,6 +520,10 @@ private:
 
   bool SelectCMP_SWAP(SDNode *N);
 
+  AArch64MemoryHint decodeMemoryHintFlags(MachineMemOperand *MMO) const;
+  bool isAtomicSTSHH_KEEP(SDNode *N) const;
+  bool isAtomicSTSHH_STRM(SDNode *N) const;
+
   bool SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift,
                           bool Negate);
   bool SelectSVEAddSubImm(SDLoc DL, APInt Value, MVT VT, SDValue &Imm,
@@ -638,9 +646,11 @@ static APInt DecodeFMOVImm(uint64_t Imm, unsigned RegWidth) {
 }
 
 // Decodes the raw integer splat value from a NEON splat operation.
-static std::optional<APInt> DecodeNEONSplat(SDValue N) {
+static std::optional<APInt> DecodeNEONSplat(SDValue N,
+                                            const AArch64Subtarget *Subtarget) {
   assert(N.getValueType().isInteger() && "Only integers are supported");
-  if (N->getOpcode() == AArch64ISD::NVCAST)
+  if (N->getOpcode() == AArch64ISD::NVCAST ||
+      (N->getOpcode() == ISD::BITCAST && Subtarget->isLittleEndian()))
     N = N->getOperand(0);
   unsigned SplatWidth = N.getScalarValueSizeInBits();
   if (N.getOpcode() == AArch64ISD::FMOV)
@@ -669,9 +679,10 @@ static std::optional<APInt> DecodeNEONSplat(SDValue N) {
 
 // If \p N is a NEON splat operation (movi, fmov, etc), return the splat value
 // matching the element size of N.
-static std::optional<APInt> GetNEONSplatValue(SDValue N) {
+static std::optional<APInt>
+GetNEONSplatValue(SDValue N, const AArch64Subtarget *Subtarget) {
   unsigned SplatWidth = N.getScalarValueSizeInBits();
-  if (std::optional<APInt> SplatVal = DecodeNEONSplat(N)) {
+  if (std::optional<APInt> SplatVal = DecodeNEONSplat(N, Subtarget)) {
     if (SplatVal->getBitWidth() <= SplatWidth)
       return APInt::getSplat(SplatWidth, *SplatVal);
     if (SplatVal->isSplat(SplatWidth))
@@ -682,7 +693,7 @@ static std::optional<APInt> GetNEONSplatValue(SDValue N) {
 
 bool AArch64DAGToDAGISel::SelectNEONSplatOfSVELogicalImm(SDValue N,
                                                          SDValue &Imm) {
-  std::optional<APInt> ImmVal = GetNEONSplatValue(N);
+  std::optional<APInt> ImmVal = GetNEONSplatValue(N, Subtarget);
   if (!ImmVal)
     return false;
   uint64_t Encoding;
@@ -696,7 +707,7 @@ bool AArch64DAGToDAGISel::SelectNEONSplatOfSVELogicalImm(SDValue N,
 
 bool AArch64DAGToDAGISel::SelectNEONSplatOfSVEAddSubImm(SDValue N, SDValue &Imm,
                                                         SDValue &Shift) {
-  if (std::optional<APInt> ImmVal = GetNEONSplatValue(N))
+  if (std::optional<APInt> ImmVal = GetNEONSplatValue(N, Subtarget))
     return SelectSVEAddSubImm(SDLoc(N), *ImmVal,
                               N.getValueType().getScalarType().getSimpleVT(),
                               Imm, Shift,
@@ -706,13 +717,13 @@ bool AArch64DAGToDAGISel::SelectNEONSplatOfSVEAddSubImm(SDValue N, SDValue &Imm,
 
 bool AArch64DAGToDAGISel::SelectNEONSplatOfSVEArithSImm(SDValue N,
                                                         SDValue &Imm) {
-  if (std::optional<APInt> ImmVal = GetNEONSplatValue(N))
+  if (std::optional<APInt> ImmVal = GetNEONSplatValue(N, Subtarget))
     return SelectSVESignedArithImm(SDLoc(N), *ImmVal, Imm);
   return false;
 }
 
 bool AArch64DAGToDAGISel::SelectNEONSplatOfSImm8(SDValue N, SDValue &Imm) {
-  std::optional<APInt> ImmAPIntVal = GetNEONSplatValue(N);
+  std::optional<APInt> ImmAPIntVal = GetNEONSplatValue(N, Subtarget);
   if (!ImmAPIntVal)
     return false;
 
@@ -725,7 +736,7 @@ bool AArch64DAGToDAGISel::SelectNEONSplatOfSImm8(SDValue N, SDValue &Imm) {
 }
 
 bool AArch64DAGToDAGISel::SelectNEONSplatOfUImm8(SDValue N, SDValue &Imm) {
-  std::optional<APInt> ImmAPIntVal = GetNEONSplatValue(N);
+  std::optional<APInt> ImmAPIntVal = GetNEONSplatValue(N, Subtarget);
   if (!ImmAPIntVal)
     return false;
 
@@ -747,9 +758,10 @@ bool AArch64DAGToDAGISel::SelectInlineAsmMemoryOperand(
   case InlineAsm::ConstraintCode::o:
   case InlineAsm::ConstraintCode::Q:
     // We need to make sure that this one operand does not end up in XZR, thus
-    // require the address to be in a PointerRegClass register.
-    const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
-    const TargetRegisterClass *TRC = TRI->getPointerRegClass();
+    // require the address to be in a pointer register.
+    const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+    const TargetRegisterClass *TRC =
+        TII->getInlineAsmMemoryOperandRegClass(ConstraintID);
     SDLoc dl(Op);
     SDValue RC = CurDAG->getTargetConstant(TRC->getID(), dl, MVT::i64);
     SDValue NewOp =
@@ -760,6 +772,24 @@ bool AArch64DAGToDAGISel::SelectInlineAsmMemoryOperand(
     return false;
   }
   return true;
+}
+
+template <unsigned ShiftWidth>
+bool AArch64DAGToDAGISel::SelectShiftMask(SDValue N, SDValue &ShAmt) {
+  // AArch64 shift instructions only use the low log2(ShiftWidth) bits of the
+  // shift amount. If the shift amount has a redundant AND mask that covers
+  // those bits, we can remove it. Return false if nothing was combined so
+  // other patterns (e.g. zext/sext GPR32 → SUBREG_TO_REG) can match.
+  if (N.getOpcode() == ISD::AND && isa<ConstantSDNode>(N.getOperand(1)) &&
+      N.getValueType() == (ShiftWidth == 32 ? MVT::i32 : MVT::i64)) {
+    uint64_t Mask = N.getConstantOperandVal(1);
+    // Remove AND if the mask covers at least the low log2(ShiftWidth) bits.
+    if ((unsigned)llvm::countr_one(Mask) >= Log2_32(ShiftWidth)) {
+      ShAmt = N.getOperand(0);
+      return true;
+    }
+  }
+  return false;
 }
 
 /// SelectArithImmed - Select an immediate value that can be represented as
@@ -1196,6 +1226,12 @@ bool AArch64DAGToDAGISel::SelectArithExtendedRegister(SDValue N, SDValue &Reg,
         isDef32(Reg))
       return false;
   }
+
+  // Don't match if the sext can be folded with an asr to form an SBFX.
+  if (Ext == AArch64_AM::SXTW && Reg.getOpcode() == ISD::SRA &&
+      Reg.getValueType() == MVT::i32 &&
+      isa<ConstantSDNode>(Reg.getOperand(1)) && Reg.hasOneUse())
+    return false;
 
   // AArch64 mandates that the RHS of the operation must use the smallest
   // register class that could contain the size being extended from.  Thus,
@@ -4608,6 +4644,34 @@ bool AArch64DAGToDAGISel::SelectCMP_SWAP(SDNode *N) {
   CurDAG->RemoveDeadNode(N);
 
   return true;
+}
+
+AArch64MemoryHint
+AArch64DAGToDAGISel::decodeMemoryHintFlags(MachineMemOperand *MMO) const {
+  int MemoryHint = -1;
+  const MDNode *MemCacheHint = MMO->getMemCacheHint();
+  if (!MemCacheHint)
+    return AArch64MemoryHint::NONE;
+
+  for (unsigned I = 0; I + 1 < MemCacheHint->getNumOperands(); I += 2) {
+    if (MemCacheHint->getOperand(I).equalsStr("aarch64.mem_hint")) {
+      const Metadata *Val = MemCacheHint->getOperand(I + 1).get();
+      MemoryHint = cast<ConstantInt>(cast<ConstantAsMetadata>(Val)->getValue())
+                       ->getZExtValue();
+    }
+  }
+
+  return toAArch64MemoryHint(MemoryHint);
+}
+
+bool AArch64DAGToDAGISel::isAtomicSTSHH_KEEP(SDNode *N) const {
+  return decodeMemoryHintFlags(cast<MemSDNode>(N)->getMemOperand()) ==
+         AArch64MemoryHint::STSHH_KEEP;
+}
+
+bool AArch64DAGToDAGISel::isAtomicSTSHH_STRM(SDNode *N) const {
+  return decodeMemoryHintFlags(cast<MemSDNode>(N)->getMemOperand()) ==
+         AArch64MemoryHint::STSHH_STRM;
 }
 
 bool AArch64DAGToDAGISel::SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm,
