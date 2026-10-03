@@ -620,6 +620,13 @@ static Value *simplifyAddInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
       match(Op0, m_Sub(m_Value(Y), m_Specific(Op1))))
     return Y;
 
+  // (X & Y) + ((X & Y) ^ Y) -> Y: the addends partition the set bits of Y.
+  if ((match(Op1, m_c_Xor(m_Specific(Op0), m_Value(Y))) &&
+       match(Op0, m_c_And(m_Value(), m_Specific(Y)))) ||
+      (match(Op0, m_c_Xor(m_Specific(Op1), m_Value(Y))) &&
+       match(Op1, m_c_And(m_Value(), m_Specific(Y)))))
+    return Y;
+
   // X + ~X -> -1   since   ~X = -X-1
   Type *Ty = Op0->getType();
   if (match(Op0, m_Not(m_Specific(Op1))) || match(Op1, m_Not(m_Specific(Op0))))
