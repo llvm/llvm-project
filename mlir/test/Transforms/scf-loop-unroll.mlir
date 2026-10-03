@@ -13,8 +13,8 @@ func.func @scf_loop_unroll_single(%arg0 : f32, %arg1 : f32) -> f32 {
   }
   // CHECK:      %[[SUM:.*]] = scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[V0:.*]] =
   // CHECK-NEXT:   %[[V1:.*]] = arith.addf %[[V0]]
-  // CHECK-NEXT:   %[[V2:.*]] = arith.addf %[[V1]]
-  // CHECK-NEXT:   %[[V3:.*]] = arith.addf %[[V2]]
+  // CHECK-NEXT:   %[[V2:.*]] = arith.addf %{{.*}}, %[[V1]]
+  // CHECK-NEXT:   %[[V3:.*]] = arith.addf %{{.*}}, %[[V2]]
   // CHECK-NEXT:   scf.yield %[[V3]]
   // CHECK-NEXT: }
   // CHECK-NEXT: %[[RES:.*]] = arith.addf %[[SUM]],
@@ -71,9 +71,9 @@ func.func @scf_loop_unroll_full_single(%arg : index) -> index {
   return %4 : index
   // UNROLL-FULL: %[[C1:.*]] = arith.constant 1 : index
   // UNROLL-FULL: %[[V0:.*]] = arith.addi %[[ARG]], %[[C1]] : index
-  // UNROLL-FULL: %[[V1:.*]] = arith.addi %[[V0]], %[[ARG]] : index
-  // UNROLL-FULL: %[[V2:.*]] = arith.addi %[[V1]], %[[ARG]] : index
-  // UNROLL-FULL: %[[V3:.*]] = arith.addi %[[V2]], %[[ARG]] : index
+  // UNROLL-FULL: %[[V1:.*]] = arith.addi %[[ARG]], %[[V0]] : index
+  // UNROLL-FULL: %[[V2:.*]] = arith.addi %[[ARG]], %[[V1]] : index
+  // UNROLL-FULL: %[[V3:.*]] = arith.addi %[[ARG]], %[[V2]] : index
   // UNROLL-FULL: return %[[V3]] : index
 }
 

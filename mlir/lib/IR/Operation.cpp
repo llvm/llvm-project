@@ -873,8 +873,37 @@ OpTrait::impl::foldCommutative(Operation *op, ArrayRef<Attribute> operands,
   auto *firstConstantIt = llvm::find_if_not(op->getOpOperands(), isNonConstant);
   auto *newConstantIt = std::stable_partition(
       firstConstantIt, op->getOpOperands().end(), isNonConstant);
-  // Return success if the op was modified.
-  return success(firstConstantIt != newConstantIt);
+  // Re-run the fold with the updated operand order before applying any other
+  // normalization below. The `operands` attributes still correspond to the
+  // original operand order.
+  if (firstConstantIt != newConstantIt)
+    return success();
+
+  // For binary operations, place the result of a commutative operation after
+  // an operand that it directly uses. For example:
+  //
+  //   commutative(commutative(x, y), x)
+  //     -> commutative(x, commutative(x, y))
+  //
+  // Besides providing a useful canonical form, this lets operation folders
+  // match nested commutative expressions in only one operand position. Do not
+  // move constants or reorder mutually dependent values, which can occur in
+  // graph regions.
+  if (op->getNumOperands() != 2 || operands[1])
+    return failure();
+
+  Value lhs = op->getOperand(0);
+  Value rhs = op->getOperand(1);
+  auto directlyUses = [](Value value, Value operand) {
+    Operation *definingOp = value.getDefiningOp();
+    return definingOp && definingOp->hasTrait<OpTrait::IsCommutative>() &&
+           llvm::is_contained(definingOp->getOperands(), operand);
+  };
+  if (!directlyUses(lhs, rhs) || directlyUses(rhs, lhs))
+    return failure();
+
+  op->setOperands({rhs, lhs});
+  return success();
 }
 
 OpFoldResult OpTrait::impl::foldIdempotent(Operation *op) {
