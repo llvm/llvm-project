@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "PluginManager.h"
-#include "OffloadPolicy.h"
 #include "OpenMP/OMPT/Interface.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
@@ -41,10 +40,6 @@ GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform);
 
 void PluginManager::init() {
   TIMESCOPE();
-  if (OffloadPolicy::isOffloadDisabled()) {
-    ODBG(ODT_Init) << "Offload is disabled. Skipping plugin initialization";
-    return;
-  }
 
   ODBG(ODT_Init) << "Loading RTLs";
   if (ol_result_t Res = olInit(nullptr))
