@@ -51,7 +51,10 @@ class Remark(yaml.YAMLObject):
 
     @classmethod
     def demangle(cls, name):
-        if not cls.demangler_proc or cls.demangler_owner_pid != os.getpid():
+        # Start a demangler on first use in each process. Workers created by
+        # `fork` inherit the parent's class state, including its pipes, so
+        # compare against the current pid rather than just checking for None.
+        if cls.demangler_owner_pid != os.getpid():
             cls.demangler_proc = subprocess.Popen(
                 cls.demangler_cmd.split(),
                 stdin=subprocess.PIPE,
