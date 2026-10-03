@@ -125,6 +125,8 @@ INTERCEPTOR(void *, calloc, uptr nmemb, uptr size) {
 }
 
 INTERCEPTOR(void, free, void *ptr) {
+  if (UNLIKELY(!ptr))
+    return;
   if (DlsymAlloc::PointerIsMine(ptr))
     return DlsymAlloc::Free(ptr);
   REAL(free)(ptr);
