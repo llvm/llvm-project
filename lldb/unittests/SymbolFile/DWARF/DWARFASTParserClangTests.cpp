@@ -622,8 +622,15 @@ TEST_F(DWARFASTParserClangTests, TestDefaultTemplateParamParsing) {
 }
 
 TEST_F(DWARFASTParserClangTests, TestSpecDeclExistsError) {
-  // Tests that parsing a ClassTemplateSpecializationDecl that already exists
-  // is handled gracefully.
+  // Tests that parsing a second class DIE whose template arguments collapse to
+  // an already-existing ClassTemplateSpecializationDecl is handled gracefully.
+  // The malformed input drops DW_TAG_template_value_parameter entries, which
+  // makes two distinct specializations look structurally identical. Rather than
+  // failing to parse the second type (which would leave members referring to it
+  // with a null type and crash data formatters), the parser falls back to a
+  // plain, non-template record type. Critically, neither resulting type may end
+  // up inheriting from itself, which used to cause infinite recursion during
+  // layout.
   auto BufferOrError = llvm::MemoryBuffer::getFile(
       GetInputFilePath("DW_AT_spec_decl_exists-test.yaml"), /*IsText=*/true);
   ASSERT_TRUE(BufferOrError);
@@ -643,7 +650,23 @@ TEST_F(DWARFASTParserClangTests, TestSpecDeclExistsError) {
 
   ASSERT_EQ(specializations.size(), 2U);
   ASSERT_NE(specializations[0], nullptr);
-  ASSERT_EQ(specializations[1], nullptr);
+  ASSERT_NE(specializations[1], nullptr);
+
+  // Completing each type must not recurse infinitely, and no type may inherit
+  // from itself.
+  for (auto const &type_sp : specializations) {
+    CompilerType ct = type_sp->GetFullCompilerType();
+    auto const *record = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(
+        ClangUtil::GetAsTagDecl(ct));
+    ASSERT_NE(record, nullptr);
+    if (!record->hasDefinition())
+      continue;
+    for (clang::CXXBaseSpecifier const &base : record->bases()) {
+      clang::CXXRecordDecl const *base_decl =
+          base.getType()->getAsCXXRecordDecl();
+      EXPECT_NE(base_decl, record);
+    }
+  }
 }
 
 TEST_F(DWARFASTParserClangTests, TestUniqueDWARFASTTypeMap_CppInsertMapFind) {
