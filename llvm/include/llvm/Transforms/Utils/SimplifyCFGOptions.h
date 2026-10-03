@@ -33,6 +33,7 @@ struct SimplifyCFGOptions {
   bool SimplifyCondBranch = true;
   bool SpeculateBlocks = true;
   bool SpeculateUnpredictables = false;
+  bool FoldCondStoreToSelect = false;
 
   AssumptionCache *AC = nullptr;
 
@@ -88,6 +89,10 @@ struct SimplifyCFGOptions {
   }
   SimplifyCFGOptions &speculateUnpredictables(bool B) {
     SpeculateUnpredictables = B;
+    return *this;
+  }
+  SimplifyCFGOptions &foldCondStoreToSelect(bool B) {
+    FoldCondStoreToSelect = B;
     return *this;
   }
 };
