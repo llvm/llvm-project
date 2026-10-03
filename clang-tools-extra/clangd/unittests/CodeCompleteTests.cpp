@@ -5163,6 +5163,55 @@ TEST(CompletionTest, FuzzyMatchMacro) {
   }
 }
 
+static void configureHLSL(TestTU &TU, bool EnableMatrix = false) {
+  TU.Filename = "TestTU.hlsl";
+  TU.ExtraArgs.push_back("-x");
+  TU.ExtraArgs.push_back("hlsl");
+  if (EnableMatrix)
+    TU.ExtraArgs.push_back("-fenable-matrix");
+  TU.ExtraArgs.push_back("--target=dxil-pc-shadermodel6.3-library");
+}
+
+TEST(CompletionTest, HLSLBracketAttributes) {
+  Annotations DeclContext(R"hlsl(
+    [^]
+    void main() {}
+  )hlsl");
+
+  TestTU TUDecl = TestTU::withCode(DeclContext.code());
+  configureHLSL(TUDecl);
+  auto ResultsDecl = completions(TUDecl, DeclContext.point());
+
+  EXPECT_THAT(ResultsDecl.Completions,
+              Contains(Field(&CodeCompletion::Name, "numthreads")));
+  EXPECT_THAT(ResultsDecl.Completions,
+              Contains(Field(&CodeCompletion::Name, "WaveSize")));
+  EXPECT_THAT(ResultsDecl.Completions,
+              Not(Contains(Field(&CodeCompletion::Name, "unroll"))));
+  EXPECT_THAT(ResultsDecl.Completions,
+              Not(Contains(Field(&CodeCompletion::Name, "SV_Target"))));
+
+  Annotations StmtContext(R"hlsl(
+    void main() {
+      [^]
+      for (int i = 0; i < 4; i++) {}
+    }
+  )hlsl");
+
+  TestTU TUStmt = TestTU::withCode(StmtContext.code());
+  configureHLSL(TUStmt);
+  auto ResultsStmt = completions(TUStmt, StmtContext.point());
+
+  EXPECT_THAT(ResultsStmt.Completions,
+              Contains(Field(&CodeCompletion::Name, "unroll")));
+  EXPECT_THAT(ResultsStmt.Completions,
+              Contains(Field(&CodeCompletion::Name, "loop")));
+  EXPECT_THAT(ResultsStmt.Completions,
+              Not(Contains(Field(&CodeCompletion::Name, "numthreads"))));
+  EXPECT_THAT(ResultsStmt.Completions,
+              Not(Contains(Field(&CodeCompletion::Name, "SV_Target"))));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
