@@ -87,6 +87,16 @@ else()
   set(test_logger_osutil "libc.src.__support.OSUtil.osutil")
 endif()
 
+if(LIBC_TARGET_OS STREQUAL "linux")
+  set(libctest_syscall_wrappers
+    libc.src.__support.OSUtil.linux.syscall_wrappers.close
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
+    libc.src.__support.OSUtil.linux.syscall_wrappers.munmap
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
+    libc.src.__support.OSUtil.linux.syscall_wrappers.write
+  )
+endif()
+
 add_unittest_framework_library(
   LibcTest
   SRCS
@@ -112,6 +122,7 @@ add_unittest_framework_library(
     libc.src.__support.macros.properties.compiler
     libc.src.__support.uint128
     ${test_logger_osutil}
+    ${libctest_syscall_wrappers}
 )
 
 add_unittest_framework_library(
