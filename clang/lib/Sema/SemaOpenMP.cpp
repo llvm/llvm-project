@@ -17444,26 +17444,21 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
         /*AllowExplicit=*/true));
   };
 
-  // Divisors in index recovery use max(1, N) so a zero trip count does not
-  // warn.
+  // Divisors in index recovery use (N == 0 ? 1 : N) so a zero trip count does
+  // not warn.
   auto MakeDivisorInIVTy = [&](unsigned I) -> Expr * {
     Expr *N = MakeNumIterationsInIVTy(I);
     Expr *NCmp = MakeNumIterationsInIVTy(I);
-    auto MakeOne = [&]() -> ExprResult {
-      return SemaRef.PerformImplicitConversion(
-          SemaRef.ActOnIntegerConstant(CondLoc, 1).get(), IVTy,
-          AssignmentAction::Converting, /*AllowExplicit=*/true);
+    auto MakeCst = [&](uint64_t V) -> Expr * {
+      return IntegerLiteral::Create(Context, llvm::APInt(IVWidth, V), IVTy,
+                                    CondLoc);
     };
-    ExprResult OneCmp = MakeOne();
-    ExprResult OneVal = MakeOne();
-    if (!OneCmp.isUsable() || !OneVal.isUsable())
-      return N;
-    ExprResult TooSmall =
-        SemaRef.BuildBinOp(CurScope, CondLoc, BO_LT, NCmp, OneCmp.get());
-    if (!TooSmall.isUsable())
+    ExprResult IsZero =
+        SemaRef.BuildBinOp(CurScope, CondLoc, BO_EQ, NCmp, MakeCst(0));
+    if (!IsZero.isUsable())
       return N;
     return AssertSuccess(SemaRef.ActOnConditionalOp(
-        CondLoc, CondLoc, TooSmall.get(), OneVal.get(), N));
+        CondLoc, CondLoc, IsZero.get(), MakeCst(1), N));
   };
 
   // \code{.cpp}
