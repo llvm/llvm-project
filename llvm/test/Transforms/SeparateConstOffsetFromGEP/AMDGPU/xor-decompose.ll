@@ -418,3 +418,43 @@ entry:
   store <8 x half> %v0, ptr addrspace(3) %ptr, align 16
   ret void
 }
+
+; A chain of value xors feeding an LDS GEP: the disjoint high bit (2048) folds
+; into the addressing offset while the low bit (4) stays in the innermost xor.
+define amdgpu_kernel void @test_chain(ptr addrspace(3) %ptr, i32 %x, i32 %n0) {
+; CHECK-LABEL: define amdgpu_kernel void @test_chain(
+; CHECK-SAME: ptr addrspace(3) [[PTR:%.*]], i32 [[X:%.*]], i32 [[N0:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[BASE:%.*]] = and i32 [[X]], 1023
+; CHECK-NEXT:    [[NUM0:%.*]] = and i32 [[N0]], 1023
+; CHECK-NEXT:    [[A1:%.*]] = xor i32 [[BASE]], 4
+; CHECK-NEXT:    [[B2:%.*]] = xor i32 [[A1]], [[NUM0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr half, ptr addrspace(3) [[PTR]], i32 [[B2]]
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP0]], i32 4096
+; CHECK-NEXT:    [[V:%.*]] = load <8 x half>, ptr addrspace(3) [[GEP3]], align 16
+; CHECK-NEXT:    store <8 x half> [[V]], ptr addrspace(3) [[PTR]], align 16
+; CHECK-NEXT:    ret void
+;
+; GVN-LABEL: define amdgpu_kernel void @test_chain(
+; GVN-SAME: ptr addrspace(3) [[PTR:%.*]], i32 [[X:%.*]], i32 [[N0:%.*]]) {
+; GVN-NEXT:  [[ENTRY:.*:]]
+; GVN-NEXT:    [[BASE:%.*]] = and i32 [[X]], 1023
+; GVN-NEXT:    [[NUM0:%.*]] = and i32 [[N0]], 1023
+; GVN-NEXT:    [[A1:%.*]] = xor i32 [[BASE]], 4
+; GVN-NEXT:    [[B2:%.*]] = xor i32 [[A1]], [[NUM0]]
+; GVN-NEXT:    [[TMP0:%.*]] = getelementptr half, ptr addrspace(3) [[PTR]], i32 [[B2]]
+; GVN-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP0]], i32 4096
+; GVN-NEXT:    [[V:%.*]] = load <8 x half>, ptr addrspace(3) [[GEP3]], align 16
+; GVN-NEXT:    store <8 x half> [[V]], ptr addrspace(3) [[PTR]], align 16
+; GVN-NEXT:    ret void
+;
+entry:
+  %base = and i32 %x, 1023
+  %num0 = and i32 %n0, 1023
+  %a = xor i32 %base, 2052
+  %b = xor i32 %a, %num0
+  %gep = getelementptr half, ptr addrspace(3) %ptr, i32 %b
+  %v = load <8 x half>, ptr addrspace(3) %gep, align 16
+  store <8 x half> %v, ptr addrspace(3) %ptr, align 16
+  ret void
+}

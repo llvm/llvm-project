@@ -161,3 +161,111 @@ entry:
   store i32 0, ptr %gep
   ret void
 }
+
+; The special constant is buried under a chain of value xors. Bit 11 (2048) is
+; known-zero in base, num0 and num1, so it is extracted as the offset while bit 2
+; (4) stays in the innermost xor.
+define ptr @xor_decompose_chain(ptr %p, i32 %x, i32 %n0, i32 %n1) {
+; CHECK-LABEL: define ptr @xor_decompose_chain(
+; CHECK-SAME: ptr [[P:%.*]], i32 [[X:%.*]], i32 [[N0:%.*]], i32 [[N1:%.*]]) {
+; CHECK-NEXT:    [[BASE:%.*]] = and i32 [[X]], 1023
+; CHECK-NEXT:    [[NUM0:%.*]] = and i32 [[N0]], 1023
+; CHECK-NEXT:    [[NUM1:%.*]] = and i32 [[N1]], 1023
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[NUM1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[NUM0]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[BASE]] to i64
+; CHECK-NEXT:    [[A1:%.*]] = xor i64 [[TMP3]], 4
+; CHECK-NEXT:    [[B2:%.*]] = xor i64 [[A1]], [[TMP2]]
+; CHECK-NEXT:    [[C3:%.*]] = xor i64 [[B2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[C3]], 2
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP4]]
+; CHECK-NEXT:    [[UGLYGEP4:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 8192
+; CHECK-NEXT:    ret ptr [[UGLYGEP4]]
+;
+  %base = and i32 %x, 1023
+  %num0 = and i32 %n0, 1023
+  %num1 = and i32 %n1, 1023
+  %a = xor i32 %base, 2052
+  %b = xor i32 %a, %num0
+  %c = xor i32 %b, %num1
+  %gep = getelementptr i32, ptr %p, i32 %c
+  ret ptr %gep
+}
+
+; Negative: num0 may have bit 11 set, so 2048 is not disjoint from the whole
+; chain and nothing is extracted.
+define ptr @xor_decompose_chain_sibling_not_disjoint(ptr %p, i32 %x, i32 %n0, i32 %n1) {
+; CHECK-LABEL: define ptr @xor_decompose_chain_sibling_not_disjoint(
+; CHECK-SAME: ptr [[P:%.*]], i32 [[X:%.*]], i32 [[N0:%.*]], i32 [[N1:%.*]]) {
+; CHECK-NEXT:    [[BASE:%.*]] = and i32 [[X]], 1023
+; CHECK-NEXT:    [[NUM0:%.*]] = and i32 [[N0]], 4095
+; CHECK-NEXT:    [[NUM1:%.*]] = and i32 [[N1]], 1023
+; CHECK-NEXT:    [[A:%.*]] = xor i32 [[BASE]], 2052
+; CHECK-NEXT:    [[B:%.*]] = xor i32 [[A]], [[NUM0]]
+; CHECK-NEXT:    [[C:%.*]] = xor i32 [[B]], [[NUM1]]
+; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[C]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P]], i64 [[IDXPROM]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %base = and i32 %x, 1023
+  %num0 = and i32 %n0, 4095
+  %num1 = and i32 %n1, 1023
+  %a = xor i32 %base, 2052
+  %b = xor i32 %a, %num0
+  %c = xor i32 %b, %num1
+  %gep = getelementptr i32, ptr %p, i32 %c
+  ret ptr %gep
+}
+
+; The whole constant is disjoint through the chain: both bit 11 and bit 2 are
+; known-zero in every operand, so 2052 is fully extracted and the innermost xor
+; folds away.
+define ptr @xor_decompose_chain_full(ptr %p, i32 %x, i32 %n0, i32 %n1) {
+; CHECK-LABEL: define ptr @xor_decompose_chain_full(
+; CHECK-SAME: ptr [[P:%.*]], i32 [[X:%.*]], i32 [[N0:%.*]], i32 [[N1:%.*]]) {
+; CHECK-NEXT:    [[BASE:%.*]] = and i32 [[X]], 3
+; CHECK-NEXT:    [[NUM0:%.*]] = and i32 [[N0]], 3
+; CHECK-NEXT:    [[NUM1:%.*]] = and i32 [[N1]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[NUM1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[NUM0]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[BASE]] to i64
+; CHECK-NEXT:    [[B2:%.*]] = xor i64 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[C3:%.*]] = xor i64 [[B2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[C3]], 2
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP4]]
+; CHECK-NEXT:    [[UGLYGEP4:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 8208
+; CHECK-NEXT:    ret ptr [[UGLYGEP4]]
+;
+  %base = and i32 %x, 3
+  %num0 = and i32 %n0, 3
+  %num1 = and i32 %n1, 3
+  %a = xor i32 %base, 2052
+  %b = xor i32 %a, %num0
+  %c = xor i32 %b, %num1
+  %gep = getelementptr i32, ptr %p, i32 %c
+  ret ptr %gep
+}
+
+; A sext wrapping the chain distributes over the traced xor nodes.
+define ptr @xor_decompose_chain_sext(ptr %p, i16 %x, i16 %n0) {
+; CHECK-LABEL: define ptr @xor_decompose_chain_sext(
+; CHECK-SAME: ptr [[P:%.*]], i16 [[X:%.*]], i16 [[N0:%.*]]) {
+; CHECK-NEXT:    [[BASE:%.*]] = and i16 [[X]], 1023
+; CHECK-NEXT:    [[NUM0:%.*]] = and i16 [[N0]], 1023
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[NUM0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i16 [[BASE]] to i64
+; CHECK-NEXT:    [[A1:%.*]] = xor i64 [[TMP2]], 4
+; CHECK-NEXT:    [[B2:%.*]] = xor i64 [[A1]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[B2]], 2
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP3]]
+; CHECK-NEXT:    [[UGLYGEP3:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 8192
+; CHECK-NEXT:    ret ptr [[UGLYGEP3]]
+;
+  %base = and i16 %x, 1023
+  %num0 = and i16 %n0, 1023
+  %a = xor i16 %base, 2052
+  %b = xor i16 %a, %num0
+  %idx = sext i16 %b to i64
+  %gep = getelementptr i32, ptr %p, i64 %idx
+  ret ptr %gep
+}
