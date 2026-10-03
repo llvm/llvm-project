@@ -942,6 +942,26 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     }
     return false;
   };
+
+  auto ShouldBreakAfterOpeningBracket = [&](const FormatToken &Tok) {
+    // Suppose that IsOpeningBracket returned true for a Tok
+
+    // Corresponds to BreakAfterOpenBracketBracedList
+    if (Tok.is(tok::l_brace))
+      return true;
+
+    const auto *Before = Tok.Previous;
+    if (!Before)
+      return false;
+
+    // Corresponds to BreakAfterOpenBracketIf, BreakAfterOpenBracketLoop,
+    // BreakAfterOpenBracketSwitch, BreakAfterOpenBracketFunction.
+    return Before->isIf() || Before->isLoop(Style) ||
+           Before->is(tok::kw_switch) ||
+           (!Before->is(TT_CastRParen) &&
+            !(Style.isJavaScript() && Tok.is(Keywords.kw_await)));
+  };
+
   auto IsFunctionCallParen = [](const FormatToken &Tok) {
     return Tok.is(tok::l_paren) && Tok.ParameterCount > 0 && Tok.Previous &&
            Tok.Previous->is(tok::identifier);
@@ -997,12 +1017,9 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   };
   if (IsOpeningBracket(Previous) &&
       (State.Column > getNewLineColumn(State).Total ||
-       // IsOpeningBracket checks BreakAfterOpenBracketBracedList before its
-       // (!Tok.Previous) shortcut. All other true returns with a preceding
-       // token require a BreakAfterOpenBracket* option.
        // Only forbid later breaks if a break here is possible to prevent
        // alternatives from being blocked.
-       ((Previous.Previous || Previous.is(tok::l_brace)) && canBreak(State))) &&
+       (ShouldBreakAfterOpeningBracket(Previous) && canBreak(State))) &&
       // Don't do this for simple (no expressions) one-argument function calls
       // as that feels like needlessly wasting whitespace, e.g.:
       //
