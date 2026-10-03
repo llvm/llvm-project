@@ -2542,9 +2542,6 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
         "Attributes 'noinline and alwaysinline' are incompatible!", V);
 
   if (Attrs.hasFnAttr(Attribute::OptimizeNone)) {
-    Check(Attrs.hasFnAttr(Attribute::NoInline),
-          "Attribute 'optnone' requires 'noinline'!", V);
-
     Check(!Attrs.hasFnAttr(Attribute::OptimizeForSize),
           "Attributes 'optsize and optnone' are incompatible!", V);
 
