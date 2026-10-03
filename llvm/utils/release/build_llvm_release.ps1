@@ -418,7 +418,7 @@ function Test-ExecutableVersion {
     }
 }
 
-function Get-ForwardSlashPath {
+function ConvertTo-ForwardSlashPath {
     <#
     .SYNOPSIS
         Convert backslashes to forward slashes (CMake expects this for compiler paths).
@@ -1524,7 +1524,7 @@ function Build-LibXml2 {
         $otherFlags = $cache.OtherFlags
         Invoke-NativeCommand cmake -GNinja -C $cache.CacheFile @otherFlags $SourceDir
         Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs install
-        $script:LibXmlInstallDir = Get-ForwardSlashPath (Join-Path $PWD 'install')
+        $script:LibXmlInstallDir = ConvertTo-ForwardSlashPath (Join-Path $PWD 'install')
     } finally {
         Pop-Location
     }
@@ -1562,7 +1562,7 @@ function Build-Zlib {
         $otherFlags = $cache.OtherFlags
         Invoke-NativeCommand cmake -GNinja -C $cache.CacheFile @otherFlags $SourceDir
         Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs install
-        $script:ZlibInstallDir = Get-ForwardSlashPath (Join-Path $PWD 'install')
+        $script:ZlibInstallDir = ConvertTo-ForwardSlashPath (Join-Path $PWD 'install')
     } finally {
         Pop-Location
     }
@@ -1612,7 +1612,7 @@ function Build-Zstd {
         $otherFlags = $cache.OtherFlags
         Invoke-NativeCommand cmake -GNinja -C $cache.CacheFile @otherFlags "$SourceDir/build/cmake"
         Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs install
-        $script:ZstdInstallDir = Get-ForwardSlashPath (Join-Path $PWD 'install')
+        $script:ZstdInstallDir = ConvertTo-ForwardSlashPath (Join-Path $PWD 'install')
     } finally {
         Pop-Location
     }
@@ -1661,7 +1661,7 @@ function New-PGOProfile {
         $otherFlags = $cache.OtherFlags
         Invoke-NativeCommand cmake -GNinja -C $cache.CacheFile @otherFlags "$LlvmSrc/llvm"
         Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs clang
-        $instrumentedClang = Get-ForwardSlashPath (Join-Path $PWD 'bin' 'clang-cl.exe')
+        $instrumentedClang = ConvertTo-ForwardSlashPath (Join-Path $PWD 'bin' 'clang-cl.exe')
     } finally {
         Pop-Location
     }
@@ -1690,7 +1690,7 @@ function New-PGOProfile {
     }
 
     # Merge profiles
-    $resolvedProfilePath = Get-ForwardSlashPath $ProfilePath
+    $resolvedProfilePath = ConvertTo-ForwardSlashPath $ProfilePath
     Invoke-NativeCommand "$Stage1BinDir/llvm-profdata" merge `
         -output="$resolvedProfilePath" "$InstrumentDir/profiles/*.profraw"
 
@@ -1940,16 +1940,16 @@ function Build-Architecture {
         Assert-PathExists -Path $libxmlInstallPath -Description 'libxml2 install directory'
         Assert-PathExists -Path $zlibInstallPath -Description 'zlib install directory'
         Assert-PathExists -Path $zstdInstallPath -Description 'zstd install directory'
-        $script:LibXmlInstallDir = Get-ForwardSlashPath $libxmlInstallPath
-        $script:ZlibInstallDir = Get-ForwardSlashPath $zlibInstallPath
-        $script:ZstdInstallDir = Get-ForwardSlashPath $zstdInstallPath
+        $script:LibXmlInstallDir = ConvertTo-ForwardSlashPath $libxmlInstallPath
+        $script:ZlibInstallDir = ConvertTo-ForwardSlashPath $zlibInstallPath
+        $script:ZstdInstallDir = ConvertTo-ForwardSlashPath $zstdInstallPath
     }
     $libxmlDir = $script:LibXmlInstallDir
     $zlibDir = $script:ZlibInstallDir
     $zstdDir = $script:ZstdInstallDir
 
     # The stage 1 bootstrap tools are needed by PGO and stage 2.
-    $stage1BinDir = Get-ForwardSlashPath (Join-Path $BuildDir $stage1Name 'bin')
+    $stage1BinDir = ConvertTo-ForwardSlashPath (Join-Path $BuildDir $stage1Name 'bin')
 
     # Compute cmakeFlags (always needed, cheap -- derived from parameters)
     $cmakeFlags = $CommonCMakeFlags + @(
@@ -2049,7 +2049,7 @@ function Build-Architecture {
         } else {
             Write-Step "Skipping PGO (-StartAt $($script:StartAtStep))"
             Assert-PathExists -Path $profileFile -Description 'PGO profile data'
-            $script:PGOProfilePath = Get-ForwardSlashPath $profileFile
+            $script:PGOProfilePath = ConvertTo-ForwardSlashPath $profileFile
         }
         $profilePath = $script:PGOProfilePath
 
