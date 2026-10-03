@@ -6331,15 +6331,17 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) const {
     // of a real template argument.
     // FIXME: It would be more faithful to model this as something like an
     // lvalue-to-rvalue conversion applied to a const-qualified lvalue.
-    ExprValueKind VK;
-    if (T->isRecordType()) {
+    ExprValueKind VK = VK_PRValue;
+    if (NTTP->getType()->isReferenceType()) {
+      // As in Sema::BuildDeclarationNameExpr, a parameter of reference
+      // type, even an rvalue reference, is an lvalue.
+      VK = VK_LValue;
+    } else if (T->isRecordType()) {
       // C++ [temp.param]p8: An id-expression naming a non-type
       // template-parameter of class type T denotes a static storage duration
       // object of type const T.
       T.addConst();
       VK = VK_LValue;
-    } else {
-      VK = Expr::getValueKindForType(NTTP->getType());
     }
     Expr *E = new (*this)
         DeclRefExpr(*this, NTTP, /*RefersToEnclosingVariableOrCapture=*/false,

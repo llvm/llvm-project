@@ -788,6 +788,13 @@ features cannot lower the translation-unit ABI level;
 - Fixed deduction of the template parameters appearing in the type of a
   constant template parameter of reference type. (#GH40328)
 
+- Template template parameters of the form `template <X &> class` no longer reject
+  template template arguments with the same parameters.
+
+- Fixed an assertion when matching a template template argument against a
+  template template parameter whose constant template parameter is declared
+  as `auto &&`.
+
 - Fixed an issue where an explicit specialization of a constexpr variable would
   result in a link error. (#GH219796)
 
