@@ -1,0 +1,210 @@
+; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -verify-machineinstrs %s -o - | FileCheck %s
+;
+; Rescheduling an already-scheduled physreg copy next to its user must not
+; leave stale read-undef flags behind. A stale flag makes a later GCN
+; reschedule stage drop a true data dependency, orphaning the copy and
+; crashing in LiveIntervals::HMEditor::handleMoveDown with "Must have
+; following segment".
+; Recomputing the flags must also preserve read-undef on the first subregister
+; definition, so that it does not read undefined lanes.
+;
+; CHECK-LABEL: kernel:
+; CHECK: v_cvt_scalef32_pk32_fp6_bf16 v[0:5], v[8:23]
+; CHECK: ds_write_b128
+; CHECK: s_endpgm
+
+target datalayout = "e-m:e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
+target triple = "amdgpu9.50-amd-amdhsa"
+
+define amdgpu_kernel void @kernel(ptr addrspace(1) inreg %0, ptr addrspace(1) %1, float %2, float %3, float %4, float %5, float %6, float %7, float %8, float %9, float %10, float %11, float %12, float %13, i1 %14, <8 x half> %15, float %16, float %17, float %18, <8 x half> %19, half %20, <8 x half> %21, half %22, float %23, i32 %24, <2 x float> %25, <2 x float> %26, i64 %27, i32 %28) {
+  %30 = tail call i32 @llvm.amdgcn.workgroup.id.x()
+  %31 = tail call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) null, i32 0, i32 0, i32 0)
+  %32 = fmul float %9, 0.000000e+00
+  %33 = fmul float %7, 0.000000e+00
+  %34 = fmul float %2, 0.000000e+00
+  %35 = fmul float %8, 0.000000e+00
+  %36 = fmul float %6, 0.000000e+00
+  %37 = fmul float %5, 0.000000e+00
+  %38 = fmul float %4, 0.000000e+00
+  %39 = fmul float %3, 0.000000e+00
+  %40 = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) %0, i16 0, i64 0, i32 0)
+  %41 = tail call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) %40, i32 0, i32 0, i32 0)
+  %42 = zext i1 %14 to i32
+  %43 = tail call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) null, i32 %42, i32 0, i32 0)
+  %44 = bitcast <4 x i32> %43 to <8 x half>
+  %45 = extractelement <8 x half> %44, i64 3
+  %46 = bitcast <4 x i32> %41 to <8 x half>
+  %47 = extractelement <8 x half> %46, i64 0
+  %48 = fpext half %47 to float
+  %49 = tail call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) %40, i32 1, i32 0, i32 0)
+  %50 = tail call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) %1, i16 0, i64 0, i32 0)
+  %51 = tail call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) %50, i32 0, i32 0, i32 0)
+  %52 = bitcast <4 x i32> %49 to <8 x half>
+  %53 = extractelement <8 x half> %52, i64 2
+  %54 = bitcast <4 x i32> %51 to <8 x half>
+  %55 = extractelement <8 x half> %54, i64 2
+  %56 = extractelement <8 x half> %54, i64 5
+  %57 = fpext half %56 to float
+  %58 = fadd float %57, 0.000000e+00
+  %59 = tail call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) null, i32 -2147483648, i32 0, i32 0)
+  %60 = select i1 %14, float %2, float 0.000000e+00
+  %61 = fadd float %11, 0.000000e+00
+  %62 = extractelement <8 x half> %44, i64 0
+  %63 = fpext half %62 to float
+  %64 = fadd float %61, %63
+  %65 = extractelement <8 x half> %52, i64 0
+  %66 = fpext half %65 to float
+  %67 = extractelement <8 x half> %54, i64 0
+  %68 = fpext half %67 to float
+  %69 = fadd float %66, %68
+  %70 = bitcast <4 x i32> %59 to <8 x half>
+  %71 = extractelement <8 x half> %70, i64 0
+  %72 = fpext half %71 to float
+  %73 = fadd float %5, 0.000000e+00
+  %74 = fadd float %9, 0.000000e+00
+  %75 = extractelement <8 x half> %44, i64 4
+  %76 = fpext half %75 to float
+  %77 = fadd float %74, %76
+  %78 = fadd float %10, 0.000000e+00
+  %79 = extractelement <8 x half> %70, i64 4
+  %80 = fpext half %79 to float
+  %81 = fadd float %12, 0.000000e+00
+  %82 = extractelement <8 x half> %44, i64 7
+  %83 = fpext half %82 to float
+  %84 = extractelement <8 x half> %70, i64 7
+  %85 = fadd float %4, 0.000000e+00
+  %86 = fadd float %7, 0.000000e+00
+  %87 = fpext half %45 to float
+  %88 = fadd float %86, %87
+  %89 = fadd float %85, %88
+  %90 = fadd float %8, 0.000000e+00
+  %91 = fadd float %3, 0.000000e+00
+  %92 = fadd float %48, 0.000000e+00
+  %93 = fadd float %91, %92
+  %94 = fpext half %53 to float
+  %95 = fpext half %55 to float
+  %96 = fadd float %94, %95
+  %97 = fadd float %93, %96
+  %98 = fadd float %60, %64
+  %99 = fadd float %69, %72
+  %100 = fadd float %98, %99
+  %101 = icmp slt i32 %28, 0
+  %102 = select i1 %101, float +qnan, float %4
+  %103 = fadd float %100, %102
+  %104 = select i1 %14, float 1.000000e+00, float 0.000000e+00
+  %105 = fadd float %2, 0.000000e+00
+  %106 = fadd float %104, %105
+  %107 = extractelement <8 x half> %54, i64 6
+  %108 = fpext half %107 to float
+  %109 = fadd float %18, %3
+  %110 = fadd float %109, %58
+  %111 = fadd float %73, %77
+  %112 = fadd float %78, %80
+  %113 = fadd float %111, %112
+  %114 = fadd float %89, %90
+  %115 = fadd float %97, %103
+  %116 = fadd float %114, %115
+  %117 = fadd float %113, %116
+  %118 = fadd float %6, 0.000000e+00
+  %119 = fadd float %81, %83
+  %120 = fadd float %118, %119
+  %121 = fadd float %16, 0.000000e+00
+  %122 = fpext half %84 to float
+  %123 = fadd float %121, %122
+  %124 = fadd float %120, %123
+  %125 = fadd float %106, %108
+  %126 = fadd float %110, %117
+  %127 = fadd float %125, %126
+  %128 = fadd float %124, %127
+  store float %128, ptr addrspace(3) null, align 4
+  %129 = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %130 = and i32 %129, 255
+  %131 = getelementptr [4 x i8], ptr addrspace(3) null, i32 %130
+  store float 0.000000e+00, ptr addrspace(3) %131, align 4
+  %132 = fadd float %32, %33
+  %133 = fadd float %34, %132
+  %134 = fadd float %35, %133
+  %135 = fadd float %36, %134
+  %136 = fadd float %37, %135
+  %137 = fadd float %38, %136
+  %138 = fadd float %39, %137
+  store float %138, ptr addrspace(3) null, align 4
+  %139 = tail call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) null, i32 0, i32 0, i32 0)
+  %140 = bitcast <4 x i32> %139 to <8 x half>
+  %141 = shufflevector <8 x half> %46, <8 x half> zeroinitializer, <2 x i32> <i32 4, i32 5>
+  %142 = fpext <2 x half> %141 to <2 x float>
+  %143 = shufflevector <8 x half> %140, <8 x half> zeroinitializer, <2 x i32> <i32 4, i32 5>
+  %144 = fpext <2 x half> %143 to <2 x float>
+  %145 = fadd <2 x float> %142, %144
+  %146 = bitcast <4 x i32> %31 to <8 x half>
+  %147 = shufflevector <8 x half> %146, <8 x half> zeroinitializer, <2 x i32> <i32 4, i32 5>
+  %148 = fpext <2 x half> %147 to <2 x float>
+  %149 = fadd <2 x float> %145, %148
+  %150 = load <4 x i32>, ptr addrspace(3) null, align 16
+  %151 = fptrunc <2 x float> %149 to <2 x bfloat>
+  %152 = bitcast <2 x bfloat> %151 to i32
+  %153 = insertelement <1 x i32> zeroinitializer, i32 %152, i64 0
+  store <1 x i32> %153, ptr addrspace(3) null, align 4
+  %154 = load <4 x i32>, ptr addrspace(3) null, align 16
+  %155 = extractelement <4 x i32> %154, i64 3
+  tail call void @llvm.amdgcn.wave.barrier()
+  %156 = load <4 x i32>, ptr addrspace(3) null, align 16
+  %157 = extractelement <4 x i32> %156, i64 3
+  %158 = fadd <2 x float> %25, %26
+  %159 = fptrunc <2 x float> %158 to <2 x bfloat>
+  %160 = bitcast <2 x bfloat> %159 to i32
+  %161 = insertelement <1 x i32> zeroinitializer, i32 %160, i64 0
+  store <1 x i32> %161, ptr addrspace(3) null, align 4
+  %162 = extractelement <4 x i32> %150, i64 0
+  %163 = extractelement <4 x i32> %156, i64 0
+  %164 = extractelement <4 x i32> %154, i64 0
+  %165 = load <4 x i32>, ptr addrspace(3) null, align 16
+  %166 = extractelement <4 x i32> %165, i64 0
+  %167 = extractelement <4 x i32> %150, i64 2
+  %168 = extractelement <4 x i32> %156, i64 2
+  %169 = extractelement <4 x i32> %154, i64 2
+  %170 = extractelement <4 x i32> %150, i64 1
+  %171 = extractelement <4 x i32> %156, i64 1
+  %172 = extractelement <4 x i32> %154, i64 1
+  %173 = extractelement <4 x i32> %165, i64 1
+  %174 = extractelement <4 x i32> %150, i64 3
+  %175 = tail call { i64, i64, i64 } asm "v_cvt_scalef32_pk32_fp6_bf16 v[0:5], v[8:23], $19", "=&{v[0:1]},=&{v[2:3]},=&{v[4:5]},{v8},{v9},{v10},{v11},{v12},{v13},{v14},{v15},{v16},{v17},{v18},{v19},{v20},{v21},{v22},{v23},v"(i32 %162, i32 %163, i32 %164, i32 %166, i32 %167, i32 %168, i32 %169, i32 0, i32 %170, i32 %171, i32 %172, i32 %173, i32 %174, i32 %157, i32 %155, i32 0, float 0.000000e+00)
+  %176 = extractvalue { i64, i64, i64 } %175, 2
+  %177 = insertelement <2 x i64> zeroinitializer, i64 %176, i64 0
+  store <2 x i64> %177, ptr addrspace(3) null, align 16
+  tail call void @llvm.amdgcn.raw.ptr.buffer.store.i64(i64 %27, ptr addrspace(8) null, i32 -2147483648, i32 0, i32 0)
+  ret void
+
+; uselistorder directives
+  uselistorder <8 x half> %44, { 0, 1, 3, 2 }
+  uselistorder <8 x half> %52, { 1, 0 }
+  uselistorder <8 x half> %54, { 0, 3, 1, 2 }
+}
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x() #0
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare noundef i32 @llvm.amdgcn.workgroup.id.x() #0
+
+; Function Attrs: nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none)
+declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) readnone, i16, i64, i32) #1
+
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: read)
+declare <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) readonly captures(none), i32, i32, i32 immarg) #2
+
+; Function Attrs: convergent nocallback nofree nounwind willreturn
+declare void @llvm.amdgcn.wave.barrier() #3
+
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: write)
+declare void @llvm.amdgcn.raw.ptr.buffer.store.i64(i64, ptr addrspace(8) writeonly captures(none), i32, i32, i32 immarg) #4
+
+; uselistorder directives
+uselistorder ptr @llvm.amdgcn.make.buffer.rsrc.p8.p1, { 1, 0 }
+uselistorder ptr @llvm.amdgcn.raw.ptr.buffer.load.v4i32, { 6, 5, 4, 3, 2, 1, 0 }
+
+attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #1 = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
+attributes #3 = { convergent nocallback nofree nounwind willreturn }
+attributes #4 = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
