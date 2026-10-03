@@ -2841,8 +2841,8 @@ struct FormatStyle {
   /// Keep the break keyword and the following case label on the same line.
   ///
   /// \code
-  ///    false:                         true:
-  ///    switch (n) {                 switch (n) {
+  ///    false:                       true:
+  ///    switch (n) {      vs.        switch (n) {
   ///      case 1:                      case 1:
   ///        foo();                       foo();
   ///        break;                     break; case 2:
