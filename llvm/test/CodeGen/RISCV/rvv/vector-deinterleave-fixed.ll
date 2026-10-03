@@ -76,11 +76,13 @@ define {<2 x i64>, <2 x i64>} @vector_deinterleave_v2i64_v4i64(<4 x i64> %vec) {
 ; V:       # %bb.0:
 ; V-NEXT:    vsetivli zero, 2, e64, m2, ta, ma
 ; V-NEXT:    vslidedown.vi v10, v8, 2
-; V-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; V-NEXT:    vmv.v.i v0, 1
+; V-NEXT:    vmv1r.v v9, v8
+; V-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; V-NEXT:    vslideup.vi v9, v10, 1
+; V-NEXT:    vsetivli zero, 1, e64, m1, tu, ma
+; V-NEXT:    vslidedown.vi v10, v8, 1
+; V-NEXT:    vmv1r.v v8, v9
 ; V-NEXT:    vmv1r.v v9, v10
-; V-NEXT:    vslidedown.vi v9, v8, 1, v0.t
-; V-NEXT:    vslideup.vi v8, v10, 1
 ; V-NEXT:    ret
 ;
 ; ZVZIP-LABEL: vector_deinterleave_v2i64_v4i64:
@@ -802,11 +804,13 @@ define {<2 x double>, <2 x double>} @vector_deinterleave_v2f64_v4f64(<4 x double
 ; V:       # %bb.0:
 ; V-NEXT:    vsetivli zero, 2, e64, m2, ta, ma
 ; V-NEXT:    vslidedown.vi v10, v8, 2
-; V-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; V-NEXT:    vmv.v.i v0, 1
+; V-NEXT:    vmv1r.v v9, v8
+; V-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; V-NEXT:    vslideup.vi v9, v10, 1
+; V-NEXT:    vsetivli zero, 1, e64, m1, tu, ma
+; V-NEXT:    vslidedown.vi v10, v8, 1
+; V-NEXT:    vmv1r.v v8, v9
 ; V-NEXT:    vmv1r.v v9, v10
-; V-NEXT:    vslidedown.vi v9, v8, 1, v0.t
-; V-NEXT:    vslideup.vi v8, v10, 1
 ; V-NEXT:    ret
 ;
 ; ZVZIP-LABEL: vector_deinterleave_v2f64_v4f64:
