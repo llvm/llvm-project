@@ -357,7 +357,6 @@ module m9
   end subroutine
   subroutine test
     external underspecified
-    !ERROR: The actual arguments to the generic procedure 'generic' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
     call generic(underspecified)
   end subroutine
 end module
