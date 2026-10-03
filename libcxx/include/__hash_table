@@ -1054,6 +1054,14 @@ private:
     }
   }
 
+  _LIBCPP_HIDE_FROM_ABI void __deallocate_node_list(__next_pointer __ptr, size_type __count) _NOEXCEPT {
+    for (size_t __i = 0; __i != __count; ++__i) {
+      auto __next = __ptr->__next_;
+      __deallocate_node(__ptr->__upcast());
+      __ptr = __next;
+    }
+  }
+
   _LIBCPP_HIDE_FROM_ABI __next_pointer __detach() _NOEXCEPT;
 
   template <class _From, class _ValueT = _Tp, __enable_if_t<__is_hash_value_type<_ValueT>::value, int> = 0>
@@ -1191,7 +1199,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::~__hash_table() {
   static_assert(is_copy_constructible<hasher>::value, "Hasher must be copy-constructible.");
 #endif
 
-  __deallocate_node_list(__first_node_.__next_);
+  __deallocate_node_list(__first_node_.__next_, size());
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -1267,7 +1275,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::operator=(const __hash_table& __other)
   // At this point we either have consumed the whole incoming hash table, or we don't have any more nodes to reuse in
   // the destination. Either continue with constructing new nodes, or deallocate the left over nodes.
   if (__own_iter->__next_) {
-    __deallocate_node_list(__own_iter->__next_);
+    __deallocate_node_list(__own_iter->__next_, __size_ - __other.size());
     __own_iter->__next_ = nullptr;
   } else {
     __copy_construct(__other_iter, __own_iter, __current_chash);
@@ -1416,7 +1424,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::end() const _NOEXCEPT {
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 void __hash_table<_Tp, _Hash, _Equal, _Alloc>::clear() _NOEXCEPT {
   if (size() > 0) {
-    __deallocate_node_list(__first_node_.__next_);
+    __deallocate_node_list(__first_node_.__next_, size());
     __first_node_.__next_ = nullptr;
     size_type __bc        = bucket_count();
     for (size_type __i = 0; __i < __bc; ++__i)
