@@ -192,9 +192,11 @@ void DynamicLoaderPOSIXDYLD::DidLaunch() {
 Status DynamicLoaderPOSIXDYLD::CanLoadImage() { return Status(); }
 
 void DynamicLoaderPOSIXDYLD::SetLoadedModule(const ModuleSP &module_sp,
-                                             addr_t link_map_addr) {
+                                             addr_t link_map_addr,
+                                             addr_t base_addr,
+                                             bool base_addr_is_offset) {
   llvm::sys::ScopedWriter lock(m_loaded_modules_rw_mutex);
-  m_loaded_modules[module_sp] = link_map_addr;
+  m_loaded_modules[module_sp] = {link_map_addr, base_addr, base_addr_is_offset};
 }
 
 void DynamicLoaderPOSIXDYLD::UnloadModule(const ModuleSP &module_sp) {
@@ -202,8 +204,8 @@ void DynamicLoaderPOSIXDYLD::UnloadModule(const ModuleSP &module_sp) {
   m_loaded_modules.erase(module_sp);
 }
 
-std::optional<lldb::addr_t>
-DynamicLoaderPOSIXDYLD::GetLoadedModuleLinkAddr(const ModuleSP &module_sp) {
+std::optional<DynamicLoaderPOSIXDYLD::LoadedModuleInfo>
+DynamicLoaderPOSIXDYLD::GetLoadedModuleInfo(const ModuleSP &module_sp) {
   llvm::sys::ScopedReader lock(m_loaded_modules_rw_mutex);
   auto it = m_loaded_modules.find(module_sp);
   if (it != m_loaded_modules.end())
@@ -211,11 +213,41 @@ DynamicLoaderPOSIXDYLD::GetLoadedModuleLinkAddr(const ModuleSP &module_sp) {
   return std::nullopt;
 }
 
+Status DynamicLoaderPOSIXDYLD::ReplaceModule(const ModuleSP &old_module_sp,
+                                             const ModuleSP &new_module_sp) {
+  // Load the replacement the same way the old module was loaded, which also
+  // carries the link map address across so its thread locals resolve.
+  LoadedModuleInfo info;
+  if (std::optional<LoadedModuleInfo> loaded =
+          GetLoadedModuleInfo(old_module_sp);
+      loaded && loaded->base_addr != LLDB_INVALID_ADDRESS) {
+    info = *loaded;
+  } else if (ObjectFile *object_file = old_module_sp->GetObjectFile()) {
+    // Post mortem processes build their module list from the core file rather
+    // than by walking the rendezvous, so there is nothing recorded here for
+    // them. Fall back to where the module says it is.
+    Address base = object_file->GetBaseAddress();
+    if (base.IsValid())
+      info.base_addr = base.GetLoadAddress(&m_process->GetTarget());
+    if (loaded)
+      info.link_map_addr = loaded->link_map_addr;
+  }
+
+  if (info.base_addr == LLDB_INVALID_ADDRESS)
+    return Status::FromErrorStringWithFormatv(
+        "'{0}' is not loaded at a known address", old_module_sp->GetFileSpec());
+
+  UnloadSections(old_module_sp);
+  UpdateLoadedSections(new_module_sp, info.link_map_addr, info.base_addr,
+                       info.base_addr_is_offset);
+  return Status();
+}
+
 void DynamicLoaderPOSIXDYLD::UpdateLoadedSections(ModuleSP module,
                                                   addr_t link_map_addr,
                                                   addr_t base_addr,
                                                   bool base_addr_is_offset) {
-  SetLoadedModule(module, link_map_addr);
+  SetLoadedModule(module, link_map_addr, base_addr, base_addr_is_offset);
 
   UpdateLoadedSectionsCommon(module, base_addr, base_addr_is_offset);
 }
@@ -841,8 +873,8 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
                                            const lldb::ThreadSP thread,
                                            lldb::addr_t tls_file_addr) {
   Log *log = GetLog(LLDBLog::DynamicLoader);
-  std::optional<addr_t> link_map_addr_opt = GetLoadedModuleLinkAddr(module_sp);
-  if (!link_map_addr_opt.has_value()) {
+  std::optional<LoadedModuleInfo> info = GetLoadedModuleInfo(module_sp);
+  if (!info.has_value()) {
     LLDB_LOG(
         log,
         "GetThreadLocalData error: module({0}) not found in loaded modules",
@@ -850,7 +882,7 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
     return LLDB_INVALID_ADDRESS;
   }
 
-  addr_t link_map = link_map_addr_opt.value();
+  addr_t link_map = info->link_map_addr;
   if (link_map == LLDB_INVALID_ADDRESS || link_map == 0) {
     LLDB_LOGF(log,
               "GetThreadLocalData error: invalid link map address=0x%" PRIx64,
