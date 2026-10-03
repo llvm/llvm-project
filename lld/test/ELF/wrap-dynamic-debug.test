@@ -1,0 +1,135 @@
+# REQUIRES: x86
+
+## This test simulates the input from dynamic debugging objects to test ELF LLD's handling
+## of option `--wrap=<symbol>`.
+
+# RUN: rm -rf %t && split-file %s %t && cd %t
+
+## Create object without dynamic debugging.
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux test.s -o test.o
+
+## Create the "outer" optimized objects.
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux foo.s -o foo.o
+
+## Create and embed the "inner" unoptimized objects to simulate dynamic debugging objects.
+## Note that the embedded `.debug_llvm_dyndbg` section should be aligned to 8.
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux foo-unopt.s -o foo-unopt.o
+# RUN: llvm-objcopy --add-section=.debug_llvm_dyndbg=foo-unopt.o foo.o
+# RUN: llvm-objcopy --set-section-type=.debug_llvm_dyndbg=0x6fff4c10 \
+# RUN:              --set-section-alignment=.debug_llvm_dyndbg=8 foo.o
+
+## Link with wrapping.
+# RUN: ld.lld --wrap=f --wrap=g --wrap=h -o out test.o foo.o
+# RUN: llvm-readelf -s out | FileCheck %s
+
+# CHECK: Symbol table '.symtab' contains 8 entries:
+# CHECK:      {{.*}} 0 FUNC GLOBAL DEFAULT [[#]] _start
+# CHECK-NEXT: {{.*}} 0 FUNC GLOBAL DEFAULT [[#]] g
+# CHECK-NEXT: {{.*}} 0 FUNC GLOBAL DEFAULT [[#]] h
+# CHECK-NEXT: {{.*}} 0 FUNC GLOBAL DEFAULT [[#]] foo
+# CHECK-NEXT: {{.*}} 0 FUNC GLOBAL DEFAULT [[#]] __wrap_f
+# CHECK-NEXT: {{.*}} 0 FUNC GLOBAL DEFAULT [[#]] __wrap_g
+# CHECK-NEXT: {{.*}} 0 FUNC GLOBAL DEFAULT [[#]] __wrap_h
+
+## Extract and check "inner" ELF.
+# RUN: llvm-objcopy --dump-section=.debug_llvm_dyndbg=in-dd.o out /dev/null
+# RUN: llvm-readelf -rs in-dd.o | FileCheck --check-prefix=IN %s
+
+# IN: Relocation section '.rela.text' at offset {{.*}} contains 5 entries:
+# IN:      R_X86_64_PLT32 0000000000000000 __wrap_f - 4
+# IN-NEXT: R_X86_64_PLT32 0000000000000000 __wrap_g - 4
+# IN-NEXT: R_X86_64_PLT32 0000000000000000 __wrap_h - 4
+# IN-NEXT: R_X86_64_PLT32 0000000000000000 g - 4
+# IN-NEXT: R_X86_64_PLT32 0000000000000000 h - 4
+
+# IN: Symbol table '.symtab' contains 11 entries:
+# IN:      {{.*}} 0 FUNC    GLOBAL HIDDEN  [[#]] __dyndbg.foo
+# IN-NEXT: {{.*}} 0 NOTYPE  GLOBAL DEFAULT UND   g
+# IN-NEXT: {{.*}} 0 NOTYPE  GLOBAL DEFAULT UND   h
+# IN-NEXT: {{.*}} 0 FUNC    GLOBAL HIDDEN  [[#]] __dyndbg.__wrap_f
+# IN-NEXT: {{.*}} 0 FUNC    GLOBAL HIDDEN  [[#]] __dyndbg.__wrap_g
+# IN-NEXT: {{.*}} 0 FUNC    GLOBAL HIDDEN  [[#]] __dyndbg.__wrap_h
+# IN-NEXT: {{.*}} 0 NOTYPE  GLOBAL DEFAULT UND   __wrap_f
+# IN-NEXT: {{.*}} 0 NOTYPE  GLOBAL DEFAULT UND   __wrap_g
+# IN-NEXT: {{.*}} 0 NOTYPE  GLOBAL DEFAULT UND   __wrap_h
+
+#--- test.s
+.global _start
+.type _start,@function
+_start:
+  ret
+
+.global g
+.type g,@function
+g:
+  ret
+
+.global h
+.type h,@function
+h:
+  ret
+
+#--- foo.s
+## Optimized version of "foo"
+
+.global foo
+.type foo,@function
+foo:
+  call f
+  call g
+  ret
+
+## Wrapped but does not call "real".
+.global __wrap_f
+.type __wrap_f,@function
+__wrap_f:
+  ret
+
+## Wrapped that calls "real".
+.global __wrap_g
+.type __wrap_g,@function
+__wrap_g:
+  call __real_g
+  ret
+
+## Wrapped that calls "real" but only used in "inner" unopt.
+.global __wrap_h
+.type __wrap_h,@function
+__wrap_h:
+  call __real_h
+  ret
+
+#--- foo-unopt.s
+## Unoptimized version of "foo"
+
+.global __dyndbg.foo
+.hidden __dyndbg.foo
+.type __dyndbg.foo,@function
+__dyndbg.foo:
+  call f
+  call g
+  call h
+  ret
+
+## Wrapped but does not call "real".
+.global __dyndbg.__wrap_f
+.hidden __dyndbg.__wrap_f
+.type __dyndbg.__wrap_f,@function
+__dyndbg.__wrap_f:
+  ret
+
+## Wrapped that calls "real".
+.global __dyndbg.__wrap_g
+.hidden __dyndbg.__wrap_g
+.type __dyndbg.__wrap_g,@function
+__dyndbg.__wrap_g:
+  call __real_g
+  ret
+
+## Wrapped that calls "real" but only used in "inner" unopt.
+.global __dyndbg.__wrap_h
+.hidden __dyndbg.__wrap_h
+.type __dyndbg.__wrap_h,@function
+__dyndbg.__wrap_h:
+  call __real_h
+  ret
