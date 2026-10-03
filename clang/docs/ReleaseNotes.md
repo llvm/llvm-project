@@ -578,6 +578,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
 - Fixed a bug where preprocessor directives following comments were not correctly recognized when using -C. (#GH48361)
 - Fixed a crash when declaring a member template within a local class inside an OpenMP region. (#GH216052)
+- Fixed a crash when an OpenMP `copyprivate` clause names a non-static data member that is not private in the
+  enclosing context, which is now diagnosed, a data member inside a member function template, or a structured
+  binding. (#GH217893)
 - Fixed an assertion failure when a variable implicitly mapped by an OpenMP `target` directive has a class type
   (such as `std::map`) whose mapper lookup instantiates a class template specialization. (#GH154704)
 - Fixed a bug where repeated #imports of modular headers in non-modular compilation were translated to #pragma clang module import. (#GH216924)
