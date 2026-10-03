@@ -879,8 +879,7 @@ static LogicalResult foldCopyOfCast(CopyOp op) {
   return failure();
 }
 
-LogicalResult CopyOp::fold(FoldAdaptor adaptor,
-                           SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults CopyOp::fold(FoldAdaptor adaptor) {
 
   /// copy(memrefcast) -> copy
   return foldCopyOfCast(*this);
@@ -890,8 +889,7 @@ LogicalResult CopyOp::fold(FoldAdaptor adaptor,
 // DeallocOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult DeallocOp::fold(FoldAdaptor adaptor,
-                              SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults DeallocOp::fold(FoldAdaptor adaptor) {
   /// dealloc(memrefcast) -> dealloc
   return foldMemRefCast(*this);
 }
@@ -1402,8 +1400,7 @@ LogicalResult DmaStartOp::verify() {
   return success();
 }
 
-LogicalResult DmaStartOp::fold(FoldAdaptor adaptor,
-                               SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults DmaStartOp::fold(FoldAdaptor adaptor) {
   /// dma_start(memrefcast) -> dma_start
   return foldMemRefCast(*this);
 }
@@ -1432,8 +1429,7 @@ void DmaStartOp::setMemrefsAndIndices(RewriterBase &rewriter, Value newSrc,
 // DmaWaitOp
 // ---------------------------------------------------------------------------
 
-LogicalResult DmaWaitOp::fold(FoldAdaptor adaptor,
-                              SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults DmaWaitOp::fold(FoldAdaptor adaptor) {
   /// dma_wait(memrefcast) -> dma_wait
   return foldMemRefCast(*this);
 }
@@ -1499,58 +1495,29 @@ void ExtractStridedMetadataOp::getAsmResultNames(
   }
 }
 
-/// Helper function to perform the replacement of all constant uses of `values`
-/// by a materialized constant extracted from `maybeConstants`.
-/// `values` and `maybeConstants` are expected to have the same size.
-template <typename Container>
-static bool replaceConstantUsesOf(OpBuilder &rewriter, Location loc,
-                                  Container values,
-                                  ArrayRef<OpFoldResult> maybeConstants) {
-  assert(values.size() == maybeConstants.size() &&
-         " expected values and maybeConstants of the same size");
-  bool atLeastOneReplacement = false;
-  for (auto [maybeConstant, result] : llvm::zip(maybeConstants, values)) {
-    // Don't materialize a constant if there are no uses: this would indice
-    // infinite loops in the driver.
-    if (result.use_empty() || maybeConstant == getAsOpFoldResult(result))
-      continue;
-    assert(isa<Attribute>(maybeConstant) &&
-           "The constified value should be either unchanged (i.e., == result) "
-           "or a constant");
-    Value constantVal = arith::ConstantIndexOp::create(
-        rewriter, loc,
-        llvm::cast<IntegerAttr>(cast<Attribute>(maybeConstant)).getInt());
-    for (Operation *op : llvm::make_early_inc_range(result.getUsers())) {
-      // modifyOpInPlace: lambda cannot capture structured bindings in C++17
-      // yet.
-      op->replaceUsesOfWith(result, constantVal);
-      atLeastOneReplacement = true;
-    }
-  }
-  return atLeastOneReplacement;
-}
+OpFoldResults ExtractStridedMetadataOp::fold(FoldAdaptor adaptor) {
+  OpFoldResults results(getOperation());
+  auto replaceIfConstant = [&](Value result, OpFoldResult cst) {
+    if (auto attr = dyn_cast_if_present<Attribute>(cst))
+      results.replace(result, attr);
+  };
+  // Read the constants before the cast rewrite: a memref.cast result type can
+  // be more static than its source.
+  replaceIfConstant(getOffset(), getConstifiedMixedOffset());
+  for (auto [size, cst] :
+       llvm::zip_equal(getSizes(), getConstifiedMixedSizes()))
+    replaceIfConstant(size, cst);
+  for (auto [stride, cst] :
+       llvm::zip_equal(getStrides(), getConstifiedMixedStrides()))
+    replaceIfConstant(stride, cst);
 
-LogicalResult
-ExtractStridedMetadataOp::fold(FoldAdaptor adaptor,
-                               SmallVectorImpl<OpFoldResult> &results) {
-  OpBuilder builder(*this);
-
-  bool atLeastOneReplacement = replaceConstantUsesOf(
-      builder, getLoc(), ArrayRef<TypedValue<IndexType>>(getOffset()),
-      getConstifiedMixedOffset());
-  atLeastOneReplacement |= replaceConstantUsesOf(builder, getLoc(), getSizes(),
-                                                 getConstifiedMixedSizes());
-  atLeastOneReplacement |= replaceConstantUsesOf(
-      builder, getLoc(), getStrides(), getConstifiedMixedStrides());
-
-  // extract_strided_metadata(cast(x)) -> extract_strided_metadata(x).
+  // extract_strided_metadata(cast(x)) -> extract_strided_metadata(x)
   if (auto prev = getSource().getDefiningOp<CastOp>())
     if (isa<MemRefType>(prev.getSource().getType())) {
       getSourceMutable().assign(prev.getSource());
-      atLeastOneReplacement = true;
+      results.setModifiedInPlace();
     }
-
-  return success(atLeastOneReplacement);
+  return results;
 }
 
 SmallVector<OpFoldResult> ExtractStridedMetadataOp::getConstifiedMixedSizes() {
@@ -1992,8 +1959,7 @@ LogicalResult PrefetchOp::verify() {
   return success();
 }
 
-LogicalResult PrefetchOp::fold(FoldAdaptor adaptor,
-                               SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults PrefetchOp::fold(FoldAdaptor adaptor) {
   // prefetch(memrefcast) -> prefetch
   return foldMemRefCast(*this);
 }
@@ -3069,8 +3035,7 @@ ReshapeOp::bubbleDownCasts(OpBuilder &builder) {
 // StoreOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult StoreOp::fold(FoldAdaptor adaptor,
-                            SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults StoreOp::fold(FoldAdaptor adaptor) {
   /// store(memrefcast) -> store
   return foldMemRefCast(*this, getValueToStore());
 }

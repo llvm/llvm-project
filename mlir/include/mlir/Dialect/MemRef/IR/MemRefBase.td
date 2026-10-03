@@ -28,6 +28,7 @@ def MemRef_Dialect : Dialect {
     "ub::UBDialect"
   ];
   let hasConstantMaterializer = 1;
+  let useOpFoldResults = 1;
 }
 
 #endif // MEMREF_BASE
