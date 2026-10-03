@@ -149,3 +149,21 @@ float test_length_float4(float4 p0)
 {
   return length(p0);
 }
+
+// CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z18test_length_float5Dv5_f(
+// CHECK-SAME: <5 x float> noundef nofpclass(nan inf) [[P0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[HLSL_DOT_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn float @llvm.dx.fdot.v5f32(<5 x float> nofpclass(nan inf) [[P0]], <5 x float> nofpclass(nan inf) [[P0]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) float @llvm.sqrt.f32(float [[HLSL_DOT_I]])
+// CHECK-NEXT:    ret float [[TMP0]]
+//
+// SPVCHECK-LABEL: define hidden spir_func noundef nofpclass(nan inf) float @_Z18test_length_float5Dv5_f(
+// SPVCHECK-SAME: <5 x float> noundef nofpclass(nan inf) [[P0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// SPVCHECK-NEXT:  [[ENTRY:.*:]]
+// SPVCHECK-NEXT:    [[SPV_LENGTH_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) float @llvm.spv.length.v5f32(<5 x float> nofpclass(nan inf) [[P0]])
+// SPVCHECK-NEXT:    ret float [[SPV_LENGTH_I]]
+//
+float test_length_float5(vector<float, 5> p0)
+{
+  return length(p0);
+}

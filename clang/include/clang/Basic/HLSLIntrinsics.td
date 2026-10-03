@@ -1155,6 +1155,7 @@ Length is based on the following formula: sqrt(x[0]^2 + x[1]^2 + ...).
   let Args = [Varying];
   let ReturnType = VaryingElemType;
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
   let VaryingScalar = 1;
   let VaryingVecSizes = [2, 3, 4];
   let VaryingMatDims = [];
@@ -1315,6 +1316,7 @@ Normalize is based on the following formula: x / length(x).
   let ParamNames = ["x"];
   let Body = "return x / length(x);";
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
