@@ -554,18 +554,18 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
     break;
   case AMDGPU::G_FMAXNUM:
   case AMDGPU::G_FMAXNUM_IEEE:
+  case AMDGPU::G_FMAXIMUMNUM:
     AMDGPUOpc = AMDGPU::G_AMDGPU_FMAX3;
     break;
   case AMDGPU::G_FMINNUM:
   case AMDGPU::G_FMINNUM_IEEE:
+  case AMDGPU::G_FMINIMUMNUM:
     AMDGPUOpc = AMDGPU::G_AMDGPU_FMIN3;
     break;
   case AMDGPU::G_FMAXIMUM:
-  case AMDGPU::G_FMAXIMUMNUM:
     AMDGPUOpc = AMDGPU::G_AMDGPU_FMAXIMUM3;
     break;
   case AMDGPU::G_FMINIMUM:
-  case AMDGPU::G_FMINIMUMNUM:
     AMDGPUOpc = AMDGPU::G_AMDGPU_FMINIMUM3;
     break;
   default:
