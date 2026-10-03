@@ -54,6 +54,50 @@ static int getNumBits(Type type) {
 }
 
 namespace {
+struct MemoryRequirements {
+  spirv::MemoryAccessAttr memoryAccess;
+  IntegerAttr alignment;
+};
+} // namespace
+
+/// PhysicalStorageBuffer pointers always need Aligned, derived from pointee
+/// size unless preferredAlignment is set; other storage classes may omit it.
+static FailureOr<MemoryRequirements>
+calculateMemoryRequirements(Value accessedPtr, uint64_t preferredAlignment) {
+  if (preferredAlignment >= std::numeric_limits<uint32_t>::max())
+    return failure();
+
+  MLIRContext *ctx = accessedPtr.getContext();
+  auto ptrType = cast<spirv::PointerType>(accessedPtr.getType());
+  bool mayOmitAlignment =
+      !preferredAlignment &&
+      ptrType.getStorageClass() != spirv::StorageClass::PhysicalStorageBuffer;
+  if (mayOmitAlignment)
+    return MemoryRequirements{spirv::MemoryAccessAttr{}, IntegerAttr{}};
+
+  // PhysicalStorageBuffer pointers require Aligned.
+  std::optional<int64_t> sizeInBytes;
+  Type pointeeType = ptrType.getPointeeType();
+  if (auto scalarType = dyn_cast<spirv::ScalarType>(pointeeType)) {
+    sizeInBytes = scalarType.getSizeInBytes();
+  } else if (auto vecType = dyn_cast<VectorType>(pointeeType)) {
+    if (auto scalarElem = dyn_cast<spirv::ScalarType>(vecType.getElementType()))
+      if (auto elemSize = scalarElem.getSizeInBytes())
+        sizeInBytes = *elemSize * vecType.getNumElements();
+  }
+
+  if (!sizeInBytes)
+    return failure();
+
+  auto memoryAccess =
+      spirv::MemoryAccessAttr::get(ctx, spirv::MemoryAccess::Aligned);
+  uint64_t alignmentValue =
+      preferredAlignment ? preferredAlignment : *sizeInBytes;
+  auto alignment = IntegerAttr::get(IntegerType::get(ctx, 32), alignmentValue);
+  return MemoryRequirements{memoryAccess, alignment};
+}
+
+namespace {
 
 struct VectorShapeCast final : public OpConversionPattern<vector::ShapeCastOp> {
   using Base::Base;
@@ -764,22 +808,6 @@ struct VectorLoadOpConverter final
 
     auto vectorPtrType = spirv::PointerType::get(spirvVectorType, storageClass);
 
-    std::optional<uint64_t> alignment = loadOp.getAlignment();
-    if (alignment > std::numeric_limits<uint32_t>::max()) {
-      return rewriter.notifyMatchFailure(loadOp,
-                                         "invalid alignment requirement");
-    }
-
-    auto memoryAccess = spirv::MemoryAccess::None;
-    spirv::MemoryAccessAttr memoryAccessAttr;
-    IntegerAttr alignmentAttr;
-    if (alignment.has_value()) {
-      memoryAccess |= spirv::MemoryAccess::Aligned;
-      memoryAccessAttr =
-          spirv::MemoryAccessAttr::get(rewriter.getContext(), memoryAccess);
-      alignmentAttr = rewriter.getI32IntegerAttr(alignment.value());
-    }
-
     // For single element vectors, we don't need to bitcast the access chain to
     // the original vector type. Both is going to be the same, a pointer
     // to a scalar.
@@ -789,9 +817,15 @@ struct VectorLoadOpConverter final
             : spirv::BitcastOp::create(rewriter, loc, vectorPtrType,
                                        accessChain);
 
-    rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp, spirvVectorType,
-                                               castedAccessChain,
-                                               memoryAccessAttr, alignmentAttr);
+    auto memoryRequirements = calculateMemoryRequirements(
+        castedAccessChain, loadOp.getAlignment().value_or(0));
+    if (failed(memoryRequirements))
+      return rewriter.notifyMatchFailure(
+          loadOp, "failed to determine memory requirements");
+
+    auto [memoryAccess, alignment] = *memoryRequirements;
+    rewriter.replaceOpWithNewOp<spirv::LoadOp>(
+        loadOp, spirvVectorType, castedAccessChain, memoryAccess, alignment);
 
     return success();
   }
@@ -820,12 +854,6 @@ struct VectorStoreOpConverter final
       return rewriter.notifyMatchFailure(
           storeOp, "failed to get memref element pointer");
 
-    std::optional<uint64_t> alignment = storeOp.getAlignment();
-    if (alignment > std::numeric_limits<uint32_t>::max()) {
-      return rewriter.notifyMatchFailure(storeOp,
-                                         "invalid alignment requirement");
-    }
-
     spirv::StorageClass storageClass = attr.getValue();
     auto vectorType = storeOp.getVectorType();
     // Use the converted vector type instead of original (single element vector
@@ -845,19 +873,16 @@ struct VectorStoreOpConverter final
             : spirv::BitcastOp::create(rewriter, loc, vectorPtrType,
                                        accessChain);
 
-    auto memoryAccess = spirv::MemoryAccess::None;
-    spirv::MemoryAccessAttr memoryAccessAttr;
-    IntegerAttr alignmentAttr;
-    if (alignment.has_value()) {
-      memoryAccess |= spirv::MemoryAccess::Aligned;
-      memoryAccessAttr =
-          spirv::MemoryAccessAttr::get(rewriter.getContext(), memoryAccess);
-      alignmentAttr = rewriter.getI32IntegerAttr(alignment.value());
-    }
+    auto memoryRequirements = calculateMemoryRequirements(
+        castedAccessChain, storeOp.getAlignment().value_or(0));
+    if (failed(memoryRequirements))
+      return rewriter.notifyMatchFailure(
+          storeOp, "failed to determine memory requirements");
 
-    rewriter.replaceOpWithNewOp<spirv::StoreOp>(
-        storeOp, castedAccessChain, adaptor.getValueToStore(), memoryAccessAttr,
-        alignmentAttr);
+    auto [memoryAccess, alignment] = *memoryRequirements;
+    rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, castedAccessChain,
+                                                adaptor.getValueToStore(),
+                                                memoryAccess, alignment);
 
     return success();
   }
