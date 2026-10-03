@@ -959,7 +959,9 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
         if (auto *LI = dyn_cast<LoadInst>(U)) {
           GVAlign = std::max(GVAlign, LI->getAlign());
         } else if (auto *SI = dyn_cast<StoreInst>(U)) {
-          GVAlign = std::max(GVAlign, SI->getAlign());
+          // Skip the store that stores the allocation into GV.
+          if (SI->getPointerOperand()->stripPointerCasts() != GV)
+            GVAlign = std::max(GVAlign, SI->getAlign());
         } else if (auto *GEPI = dyn_cast<GetElementPtrInst>(U)) {
           Worklist.push_back(GEPI);
           continue;

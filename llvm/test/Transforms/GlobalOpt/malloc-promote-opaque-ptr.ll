@@ -9,15 +9,15 @@ declare noalias ptr @malloc(i64) allockind("alloc,uninitialized") allocsize(0)
 
 ;.
 ; CHECK: @g1.body.0 = internal unnamed_addr global i64 undef, align 8
-; CHECK: @g2.body.0 = internal unnamed_addr global i32 undef, align 8
+; CHECK: @g2.body.0 = internal unnamed_addr global i32 undef, align 4
 ; CHECK: @g2.body.1 = internal unnamed_addr global i32 undef, align 4
 ; CHECK: @g2.body.2 = internal unnamed_addr global i32 undef, align 4
-; CHECK: @g3.body = internal unnamed_addr global [8 x i8] undef, align 8
+; CHECK: @g3.body = internal unnamed_addr global [8 x i8] undef, align 4
 ;.
 define void @test_store(i64 %a, i32 %b) {
 ; CHECK-LABEL: @test_store(
 ; CHECK-NEXT:    store i64 [[A:%.*]], ptr @g1.body.0, align 8
-; CHECK-NEXT:    store i32 [[B:%.*]], ptr @g2.body.0, align 8
+; CHECK-NEXT:    store i32 [[B:%.*]], ptr @g2.body.0, align 4
 ; CHECK-NEXT:    store i32 [[B]], ptr @g2.body.1, align 4
 ; CHECK-NEXT:    store i32 [[B]], ptr @g2.body.2, align 4
 ; CHECK-NEXT:    store i64 [[A]], ptr @g3.body, align 4
@@ -55,7 +55,7 @@ define void @test_store(i64 %a, i32 %b) {
 define void @test_load() {
 ; CHECK-LABEL: @test_load(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @g1.body.0, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @g2.body.0, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @g2.body.0, align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr @g2.body.1, align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr @g2.body.2, align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr @g3.body, align 4
