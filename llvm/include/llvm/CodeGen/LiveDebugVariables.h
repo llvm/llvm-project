@@ -29,7 +29,9 @@
 namespace llvm {
 
 template <typename T> class ArrayRef;
+template <typename T> class SmallVectorImpl;
 class LiveIntervals;
+class SlotIndex;
 class VirtRegMap;
 
 class LiveDebugVariables {
@@ -51,6 +53,10 @@ public:
   /// that happened during register allocation.
   /// @param VRM Rename virtual registers according to map.
   LLVM_ABI void emitDebugValues(VirtRegMap *VRM);
+
+  /// Append every SlotIndex this analysis holds across the register allocator.
+  LLVM_ABI void
+  appendReferencedIndexes(SmallVectorImpl<SlotIndex> &Indexes) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// dump - Print data structures to dbgs().

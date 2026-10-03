@@ -254,6 +254,11 @@ public:
 
   SlotIndexes *getSlotIndexes() const { return Indexes; }
 
+  /// Append every SlotIndex reachable from the live intervals, register unit
+  /// ranges and register mask slots. See SlotIndexes::compactIndexes.
+  LLVM_ABI void
+  appendReferencedIndexes(SmallVectorImpl<SlotIndex> &Indexes) const;
+
   /// Returns true if the specified machine instr has been removed or was
   /// never entered in the map.
   bool isNotInMIMap(const MachineInstr &Instr) const {
