@@ -890,9 +890,6 @@ for.body:
 define void @simple_urem_multi_latch_non_canonical(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-LABEL: simple_urem_multi_latch_non_canonical:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    je .LBB15_6
-; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
@@ -900,9 +897,11 @@ define void @simple_urem_multi_latch_non_canonical(i32 %N, i32 %rem_amt) nounwin
 ; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    movl %edi, %ebp
-; CHECK-NEXT:    decl %ebp
+; CHECK-NEXT:    subl $1, %ebp
+; CHECK-NEXT:    jb .LBB15_5
+; CHECK-NEXT:  # %bb.1: # %for.body.preheader
+; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    xorl %r12d, %r12d
 ; CHECK-NEXT:    xorl %r14d, %r14d
 ; CHECK-NEXT:    xorl %r13d, %r13d
@@ -928,7 +927,7 @@ define void @simple_urem_multi_latch_non_canonical(i32 %N, i32 %rem_amt) nounwin
 ; CHECK-NEXT:    callq do_stuff1@PLT
 ; CHECK-NEXT:    cmpl %r13d, %ebp
 ; CHECK-NEXT:    jne .LBB15_3
-; CHECK-NEXT:  # %bb.5:
+; CHECK-NEXT:  .LBB15_5: # %for.cond.cleanup
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12
@@ -936,7 +935,6 @@ define void @simple_urem_multi_latch_non_canonical(i32 %N, i32 %rem_amt) nounwin
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    popq %rbp
-; CHECK-NEXT:  .LBB15_6: # %for.cond.cleanup
 ; CHECK-NEXT:    retq
 entry:
   %cmp3.not = icmp eq i32 %N, 0
