@@ -223,40 +223,11 @@ int FunctionComparator::cmpMDNode(const MDNode *L, const MDNode *R) const {
     return -1;
   if (!R)
     return 1;
-  // TODO: Note that as this is metadata, it is possible to drop and/or merge
-  // this data when considering functions to merge. Thus this comparison would
-  // return 0 (i.e. equivalent), but merging would become more complicated
-  // because the ranges would need to be unioned. It is not likely that
-  // functions differ ONLY in this metadata if they are actually the same
-  // function semantically.
   if (int Res = cmpNumbers(L->getNumOperands(), R->getNumOperands()))
     return Res;
   for (size_t I = 0; I < L->getNumOperands(); ++I)
     if (int Res = cmpMetadata(L->getOperand(I), R->getOperand(I)))
       return Res;
-  return 0;
-}
-
-int FunctionComparator::cmpInstMetadata(Instruction const *L,
-                                        Instruction const *R) const {
-  /// These metadata affects the other optimization passes by making assertions
-  /// or constraints.
-  /// Values that carry different expectations should be considered different.
-  SmallVector<std::pair<unsigned, MDNode *>> MDL, MDR;
-  L->getAllMetadataOtherThanDebugLoc(MDL);
-  R->getAllMetadataOtherThanDebugLoc(MDR);
-  if (MDL.size() > MDR.size())
-    return 1;
-  else if (MDL.size() < MDR.size())
-    return -1;
-  for (size_t I = 0, N = MDL.size(); I < N; ++I) {
-    auto const [KeyL, ML] = MDL[I];
-    auto const [KeyR, MR] = MDR[I];
-    if (int Res = cmpNumbers(KeyL, KeyR))
-      return Res;
-    if (int Res = cmpMDNode(ML, MR))
-      return Res;
-  }
   return 0;
 }
 
@@ -700,10 +671,8 @@ int FunctionComparator::cmpOperations(const Instruction *L,
     if (int Res =
             cmpOrderings(LI->getOrdering(), cast<LoadInst>(R)->getOrdering()))
       return Res;
-    if (int Res = cmpNumbers(LI->getSyncScopeID(),
-                             cast<LoadInst>(R)->getSyncScopeID()))
-      return Res;
-    return cmpInstMetadata(L, R);
+    return cmpNumbers(LI->getSyncScopeID(),
+                      cast<LoadInst>(R)->getSyncScopeID());
   }
   if (const StoreInst *SI = dyn_cast<StoreInst>(L)) {
     if (int Res =
@@ -731,11 +700,9 @@ int FunctionComparator::cmpOperations(const Instruction *L,
     if (int Res = cmpOperandBundlesSchema(*CBL, *CBR))
       return Res;
     if (const CallInst *CI = dyn_cast<CallInst>(L))
-      if (int Res = cmpNumbers(CI->getTailCallKind(),
-                               cast<CallInst>(R)->getTailCallKind()))
-        return Res;
-    return cmpMDNode(L->getMetadata(LLVMContext::MD_range),
-                     R->getMetadata(LLVMContext::MD_range));
+      return cmpNumbers(CI->getTailCallKind(),
+                        cast<CallInst>(R)->getTailCallKind());
+    return 0;
   }
   if (const SwitchInst *SI = dyn_cast<SwitchInst>(L)) {
     for (auto [LCase, RCase] : zip(SI->cases(), cast<SwitchInst>(R)->cases()))
