@@ -38261,7 +38261,8 @@ void X86TargetLowering::emitSetJmpShadowStackFix(MachineInstr &MI,
   BuildMI(*MBB, MI, MIMD, TII->get(XorRROpc))
       .addDef(ZReg)
       .addReg(ZReg, RegState::Undef)
-      .addReg(ZReg, RegState::Undef);
+      .addReg(ZReg, RegState::Undef)
+      .setOperandDead(3); // implicit-def $eflags
 
   // Read the current SSP Register value to the zeroed register.
   Register SSPCopyReg = MRI.createVirtualRegister(PtrRC);
@@ -38406,7 +38407,8 @@ X86TargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
 
   // mainMBB:
   //  EAX = 0
-  BuildMI(mainMBB, MIMD, TII->get(X86::MOV32r0), mainDstReg);
+  BuildMI(mainMBB, MIMD, TII->get(X86::MOV32r0), mainDstReg)
+      .setOperandDead(1); // implicit-def $eflags
   mainMBB->addSuccessor(sinkMBB);
 
   // sinkMBB:
@@ -38504,7 +38506,8 @@ X86TargetLowering::emitLongJmpShadowStackFix(MachineInstr &MI,
 
   // Initialize a register with zero.
   Register ZReg = MRI.createVirtualRegister(&X86::GR32RegClass);
-  BuildMI(checkSspMBB, MIMD, TII->get(X86::MOV32r0), ZReg);
+  BuildMI(checkSspMBB, MIMD, TII->get(X86::MOV32r0), ZReg)
+      .setOperandDead(1); // implicit-def $eflags
 
   if (PVT == MVT::i64) {
     Register TmpZReg = MRI.createVirtualRegister(PtrRC);
@@ -38569,7 +38572,8 @@ X86TargetLowering::emitLongJmpShadowStackFix(MachineInstr &MI,
   Register SspFirstShrReg = MRI.createVirtualRegister(PtrRC);
   BuildMI(fixShadowMBB, MIMD, TII->get(ShrRIOpc), SspFirstShrReg)
       .addReg(SspSubReg)
-      .addImm(Offset);
+      .addImm(Offset)
+      .setOperandDead(3); // implicit-def $eflags
 
   // Increase SSP when looking only on the lower 8 bits of the delta.
   unsigned IncsspOpc = (PVT == MVT::i64) ? X86::INCSSPQ : X86::INCSSPD;
@@ -38593,7 +38597,8 @@ X86TargetLowering::emitLongJmpShadowStackFix(MachineInstr &MI,
   Register SspAfterShlReg = MRI.createVirtualRegister(PtrRC);
   BuildMI(fixShadowLoopPrepareMBB, MIMD, TII->get(ShlR1Opc), SspAfterShlReg)
       .addReg(SspSecondShrReg)
-      .addImm(1);
+      .addImm(1)
+      .setOperandDead(3); // implicit-def $eflags
 
   // Save the value 128 to a register (will be used next with incssp).
   Register Value128InReg = MRI.createVirtualRegister(PtrRC);
