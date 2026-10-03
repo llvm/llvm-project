@@ -374,17 +374,20 @@ define i1 @cmp32_volatile(ptr %p) {
 define i32 @add_ugt(i32 %a, ptr %p) {
 ; X64-LABEL: add_ugt:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpl (%rsi), %edi
-; X64-NEXT:    adcl $0, %eax
+; X64-NEXT:    seta %al
+; X64-NEXT:    addl %edi, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: add_ugt:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl (%ecx), %eax
-; X86-NEXT:    adcl $0, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    cmpl (%ecx), %edx
+; X86-NEXT:    seta %al
+; X86-NEXT:    addl %edx, %eax
 ; X86-NEXT:    retl
   %v = load atomic i32, ptr %p seq_cst, align 4
   %c = icmp ugt i32 %a, %v
@@ -397,16 +400,20 @@ define i32 @sub_ugt(i32 %a, ptr %p) {
 ; X64-LABEL: sub_ugt:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    cmpl (%rsi), %edi
-; X64-NEXT:    sbbl $0, %eax
+; X64-NEXT:    seta %cl
+; X64-NEXT:    subl %ecx, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: sub_ugt:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    cmpl (%ecx), %eax
-; X86-NEXT:    sbbl $0, %eax
+; X86-NEXT:    seta %dl
+; X86-NEXT:    subl %edx, %eax
 ; X86-NEXT:    retl
   %v = load atomic i32, ptr %p seq_cst, align 4
   %c = icmp ugt i32 %a, %v
