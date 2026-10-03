@@ -1447,6 +1447,24 @@ private:
     const StringRef &operator*() && = delete;
   };
 
+  /// Returns where a loaded module keeps the input file with path \p Path and
+  /// size \p Size, or an invalid \c FID if no loaded module has a copy of it.
+  serialization::InputFileLoc getLoadedFileLoc(StringRef Path, off_t Size);
+
+  /// An input file recorded by a loaded module file. \c InputID is the file's
+  /// ID within the module's input file table.
+  struct LoadedInputModuleFile {
+    ModuleFile *F;
+    unsigned InputID;
+  };
+
+  /// Input files of loaded modules, keyed by the size the module recorded for
+  /// them. A size does not identify a file, so a lookup must confirm the match.
+  std::optional<llvm::DenseMap<off_t, SmallVector<LoadedInputModuleFile, 1>>>
+      LoadedInputFiles;
+
+  void buildLoadedInputFiles();
+
 public:
   /// Get the buffer for resolving paths.
   SmallString<0> &getPathBuf() { return PathBuf; }
