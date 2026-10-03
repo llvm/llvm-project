@@ -41,7 +41,7 @@ size_t c32rtomb(char* s, char32_t c32, mbstate_t* ps);
 #else
 #  include <__config>
 #  include <__cstddef/size_t.h>
-
+#  include <__fwd/mbstate_t.h>
 #  include <uchar.h>
 
 #  ifndef _LIBCPP_UCHAR_H
@@ -59,8 +59,6 @@ size_t c32rtomb(char* s, char32_t c32, mbstate_t* ps);
 #  if !defined(_LIBCPP_CXX03_LANG)
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-using ::mbstate_t _LIBCPP_USING_IF_EXISTS;
 
 #    if _LIBCPP_HAS_C8RTOMB_MBRTOC8
 using ::mbrtoc8 _LIBCPP_USING_IF_EXISTS;
