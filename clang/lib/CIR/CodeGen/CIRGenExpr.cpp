@@ -1387,11 +1387,16 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
 
   // The index must always be an integer, which is not an aggregate.  Emit it
   // in lexical order (this complexity is, sadly, required by C++17).
-  assert((e->getIdx() == e->getLHS() || e->getIdx() == e->getRHS()) &&
-         "index was neither LHS nor RHS");
+  mlir::Value idxPre = (e->getLHS() == e->getIdx())
+                           ? emitScalarExpr(e->getIdx())
+                           : mlir::Value();
 
-  auto emitIdxAfterBase = [&](bool promote) -> mlir::Value {
-    mlir::Value idx = emitScalarExpr(e->getIdx());
+  auto emitIdxAfterBase = [&, idxPre](bool promote) -> mlir::Value {
+    mlir::Value idx = idxPre;
+    if (e->getLHS() != e->getIdx()) {
+      assert(e->getRHS() == e->getIdx() && "index was neither LHS nor RHS");
+      idx = emitScalarExpr(e->getIdx());
+    }
 
     assert(!cir::MissingFeatures::sanitizers());
 
@@ -1415,13 +1420,16 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
 
     return idx;
   };
+  // This is captured by value above, using it after this is an error, so clear
+  // it to make sure no one is depending on it (mirrors classic codegen).
+  idxPre = mlir::Value();
 
   // If the base is a vector type, then we are forming a vector element
   // with this subscript.
   if (e->getBase()->getType()->isSubscriptableVectorType() &&
       !isa<ExtVectorElementExpr>(e->getBase())) {
-    const mlir::Value idx = emitIdxAfterBase(/*promote=*/false);
     const LValue lv = emitLValue(e->getBase());
+    const mlir::Value idx = emitIdxAfterBase(/*promote=*/false);
     return LValue::makeVectorElt(lv.getAddress(), idx, e->getBase()->getType(),
                                  lv.getBaseInfo());
   }
@@ -1433,11 +1441,10 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
     return {};
   }
 
-  mlir::Value idx = emitIdxAfterBase(/*promote=*/true);
-
   // Handle the extvector case we ignored above.
   if (isa<ExtVectorElementExpr>(e->getBase())) {
     const LValue lv = emitLValue(e->getBase());
+    const mlir::Value idx = emitIdxAfterBase(/*promote=*/true);
     Address addr = emitExtVectorElementLValue(lv, cgm.getLoc(e->getExprLoc()));
 
     QualType elementType = lv.getType()->castAs<VectorType>()->getElementType();
@@ -1455,6 +1462,7 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
     // it.  It needs to be emitted first in case it's what captures
     // the VLA bounds.
     Address addr = emitPointerWithAlignment(e->getBase());
+    mlir::Value idx = emitIdxAfterBase(/*promote=*/true);
 
     // The element count here is the total number of non-VLA elements.
     mlir::Value numElements = getVLASize(vla).numElts;
@@ -1484,6 +1492,7 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
       arrayLV = emitArraySubscriptExpr(ase);
     else
       arrayLV = emitLValue(array);
+    mlir::Value idx = emitIdxAfterBase(/*promote=*/true);
 
     // Propagate the alignment from the array itself to the result.
     const Address addr = emitArraySubscriptPtr(
@@ -1506,6 +1515,7 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
 
   LValueBaseInfo eltBaseInfo;
   const Address ptrAddr = emitPointerWithAlignment(e->getBase(), &eltBaseInfo);
+  const mlir::Value idx = emitIdxAfterBase(/*promote=*/true);
   // Propagate the alignment from the array itself to the result.
   const Address addxr = emitArraySubscriptPtr(
       *this, cgm.getLoc(e->getBeginLoc()), cgm.getLoc(e->getEndLoc()), ptrAddr,
