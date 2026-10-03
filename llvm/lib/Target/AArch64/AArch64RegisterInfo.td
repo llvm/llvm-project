@@ -804,6 +804,15 @@ def XSeqPairs : RegisterTuples<[sube64, subo64],
                                [(decimate (rotl GPR64, 0), 2),
                                 (decimate (rotl GPR64, 1), 2)]>;
 
+// Dummy zero register for use in SYSP XZR/XZR pair as tablegen doesn't allow
+// the same physical sub-register to appear twice in one register pair.
+def DUMMY_XZR : AArch64Reg<31, ""> {
+  let isConstant = 1;
+}
+
+def XZR_XZR : RegisterTuples<[sube64, subo64],
+                             [(add DUMMY_XZR), (add XZR)]>;
+
 def WSeqPairsClass   : RegisterClass<"AArch64", [untyped], 32,
                                      (add WSeqPairs)>{
   let Size = 64;
@@ -812,9 +821,14 @@ def XSeqPairsClass   : RegisterClass<"AArch64", [untyped], 64,
                                      (add XSeqPairs)>{
   let Size = 128;
 }
+def SyspPairsClass   : RegisterClass<"AArch64", [untyped], 64,
+                                     (add XSeqPairs)>{
+  let Size = 128;
+}
 
 
-let RenderMethod = "addRegOperands", ParserMethod="tryParseGPRSeqPair" in {
+let RenderMethod = "addRegOperands",
+    ParserMethod="tryParseConsecutiveGPRSeqPair<false>" in {
   def WSeqPairsAsmOperandClass : AsmOperandClass { let Name = "WSeqPair"; }
   def XSeqPairsAsmOperandClass : AsmOperandClass { let Name = "XSeqPair"; }
 }
@@ -832,14 +846,14 @@ def MrrsMssrPairClassOperand :
     RegisterOperand<XSeqPairsClass, "printGPRSeqPairsClassOperand<64>"> {
   let ParserMatchClass = XSeqPairsAsmOperandClass;
 }
-def SyspXzrPairOperandMatcherClass : AsmOperandClass {
-  let Name = "SyspXzrPair";
-  let RenderMethod = "addSyspXzrPairOperand";
-  let ParserMethod = "tryParseSyspXzrPair";
+def SyspPairOperandMatcherClass : AsmOperandClass {
+  let Name = "SyspPair";
+  let RenderMethod = "addRegOperands";
+  let ParserMethod = "tryParseConsecutiveGPRSeqPair<true>";
 }
-def SyspXzrPairOperand :
-    RegisterOperand<GPR64, "printSyspXzrPair"> { // needed to allow alias with XZR operand
-  let ParserMatchClass = SyspXzrPairOperandMatcherClass;
+def SyspPairOperand :
+    RegisterOperand<SyspPairsClass, "printGPRSeqPairsClassOperand<64>"> {
+  let ParserMatchClass = SyspPairOperandMatcherClass;
 }
 
 
