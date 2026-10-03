@@ -51,8 +51,9 @@ void AMDGPUTargetStreamer::initializeTargetID(const MCSubtargetInfo &STI,
   assert(TargetID == std::nullopt && "TargetID can only be initialized once");
   // Apply xnack/sramecc from subtarget features only in MC contexts
   // (assembler), not in codegen where they come from module flags
-  TargetID = AMDGPU::createAMDGPUTargetID(
-      STI, ApplyFeatureString ? STI.getFeatureString() : "");
+  TargetID = AMDGPU::TargetID::createFromSubtargetFeatures(
+      STI.getTargetTriple(), STI.getCPU(),
+      ApplyFeatureString ? STI.getFeatureString() : "");
 }
 
 bool AMDGPUTargetStreamer::EmitHSAMetadataV3(StringRef HSAMetadataString) {

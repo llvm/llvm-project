@@ -223,7 +223,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     : // clang-format off
     AMDGPUGenSubtargetInfo(TT, GPU, /*TuneCPU*/ GPU, FS),
     AMDGPUSubtarget(TT),
-    TargetID(AMDGPU::createAMDGPUTargetID(*this, "")),
+    TargetID(AMDGPU::TargetID::createFromSubtargetFeatures(TT, GPU, "")),
     InstrItins(getInstrItineraryForCPU(GPU)),
     BufferOOBRelaxed(BufferOOBRelaxed),
     TBufferOOBRelaxed(TBufferOOBRelaxed),
@@ -577,7 +577,7 @@ unsigned GCNSubtarget::getBaseMaxNumSGPRs(
   }
 
   if (hasSGPRInitBug())
-    MaxNumSGPRs = AMDGPU::IsaInfo::FIXED_NUM_SGPRS_FOR_INIT_BUG;
+    MaxNumSGPRs = AMDGPU::FIXED_NUM_SGPRS_FOR_INIT_BUG;
 
   return std::min(MaxNumSGPRs - ReservedNumSGPRs, MaxAddressableNumSGPRs);
 }

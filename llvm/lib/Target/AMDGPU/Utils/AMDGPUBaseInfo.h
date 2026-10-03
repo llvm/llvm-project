@@ -161,20 +161,9 @@ struct WMMAInstInfo {
 #define GET_WMMAInstInfoTable_DECL
 #include "AMDGPUGenSearchableTables.inc"
 
-using TargetIDSetting = AMDGPU::TargetIDSetting;
-using TargetID = AMDGPU::TargetID;
-
-/// Construct TargetID from MCSubtargetInfo. \p FeatureString is used to
-/// determine explicitly requested xnack/sramecc settings.
-TargetID createAMDGPUTargetID(const MCSubtargetInfo &STI,
-                              StringRef FeatureString);
-
 namespace IsaInfo {
 
-enum {
-  FIXED_NUM_SGPRS_FOR_INIT_BUG = AMDGPU::FIXED_NUM_SGPRS_FOR_INIT_BUG,
-  TRAP_NUM_SGPRS = 16
-};
+enum { TRAP_NUM_SGPRS = 16 };
 
 /// Returns true if \p Lhs and \p Rhs are incompatible (both specific but
 /// different).
@@ -188,13 +177,6 @@ unsigned getInstCacheLineSize(const MCSubtargetInfo &STI);
 
 /// \returns Wavefront size for given subtarget \p STI.
 unsigned getWavefrontSize(const MCSubtargetInfo &STI);
-
-/// \returns Local memory size in bytes for given subtarget \p STI.
-unsigned getLocalMemorySize(const MCSubtargetInfo &STI);
-
-/// \returns Maximum addressable local memory size in bytes for given subtarget
-/// \p STI.
-unsigned getAddressableLocalMemorySize(const MCSubtargetInfo &STI);
 
 /// \returns Maximum number of work groups per compute unit for given subtarget
 /// \p STI and limited by given \p FlatWorkGroupSize.
@@ -236,10 +218,6 @@ unsigned getNumSGPRBlocks(const MCSubtargetInfo &STI, unsigned NumSGPRs);
 /// For subtargets with a unified VGPR file and mixed ArchVGPR/AGPR usage,
 /// returns the allocation granule for ArchVGPRs.
 unsigned getArchVGPRAllocGranule();
-
-/// \returns Addressable number of architectural VGPRs for a given subtarget \p
-/// STI.
-unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo &STI);
 
 /// \returns Minimum number of VGPRs that meets given number of waves per
 /// execution unit requirement for given subtarget \p STI.

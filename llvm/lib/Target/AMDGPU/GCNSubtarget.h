@@ -866,7 +866,12 @@ public:
   /// \returns Addressable number of architectural VGPRs supported by the
   /// subtarget.
   unsigned getAddressableNumArchVGPRs() const {
-    return AMDGPU::IsaInfo::getAddressableNumArchVGPRs(*this);
+    // The TargetParser query includes AGPRs on targets with a unified register
+    // file, but only 256 registers are architectural VGPRs.
+    if (hasGFX90AInsts())
+      return 256;
+    return AMDGPU::getAddressableNumVGPRs(getTargetID().getGPUKind(),
+                                          isWave32());
   }
 
   /// \returns Addressable number of VGPRs supported by the subtarget.

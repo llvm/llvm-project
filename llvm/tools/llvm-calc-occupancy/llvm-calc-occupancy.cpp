@@ -216,8 +216,8 @@ int main(int argc, char **argv) {
   unsigned WaveSize = AMDGPU::IsaInfo::getWavefrontSize(STI);
   unsigned MaxWaves = ST.getMaxWavesPerEU();
   unsigned NumWorkGroupSIMDs = ST.getNumWorkGroupSIMDs();
-  unsigned LocalMemSize = AMDGPU::IsaInfo::getLocalMemorySize(STI);
-  unsigned AddrLocalMem = AMDGPU::IsaInfo::getAddressableLocalMemorySize(STI);
+  unsigned LocalMemSize = ST.getLocalMemorySize();
+  unsigned AddrLocalMem = ST.getAddressableLocalMemorySize();
   unsigned AddrVGPRs = ST.getAddressableNumVGPRs(DynVGPRBlockSize);
   unsigned AddrSGPRs = ST.getAddressableNumSGPRs();
   unsigned MaxWGSize = AMDGPU::getMaxFlatWorkGroupSize();
