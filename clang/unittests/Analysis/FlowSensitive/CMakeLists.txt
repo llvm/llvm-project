@@ -29,6 +29,7 @@ add_clang_unittest(ClangAnalysisFlowSensitiveTests
   UncheckedStatusOrAccessModelTestFixture.cpp
   ValueTest.cpp
   WatchedLiteralsSolverTest.cpp
+  Z3SolverTest.cpp
   CLANG_LIBS
   clangAST
   clangASTMatchers
