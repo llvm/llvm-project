@@ -193,6 +193,11 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   const GCNSubtarget &STM = MF->getSubtarget<GCNSubtarget>();
   const Function &F = MF->getFunction();
 
+  // If ICache prefetch is enabled, create the function end symbol early so it
+  // can be referenced by the prefetch MCExprs during instruction emission.
+  if (MFI.hasICachePrefetch())
+    PrefetchEndSym = createTempSymbol("pref_func_end");
+
   // TODO: We're checking this late, would be nice to check it earlier.
   if (STM.requiresCodeObjectV6() && CodeObjectVersion < AMDGPU::AMDHSA_COV6) {
     reportFatalUsageError(
@@ -218,6 +223,15 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
 
   if (STM.isAmdHsaOS())
     HSAMetadataStream->emitKernel(*MF, CurrentProgramInfo);
+}
+
+void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
+  // Emit the label for the prefetch end symbol if ICache prefetch is enabled.
+  // This symbol was created in emitFunctionBodyStart for this function.
+  if (PrefetchEndSym) {
+    OutStreamer->emitLabel(PrefetchEndSym);
+  }
+  PrefetchEndSym = nullptr;
 }
 
 /// Set bits in a kernel descriptor MCExpr field:
@@ -249,15 +263,23 @@ void AMDGPUAsmPrinter::endFunction(const MachineFunction *MF) {
   // size. At this point .Lfunc_end has been emitted (by the base AsmPrinter)
   // right after the function code, so (Lfunc_end - func_sym) gives the
   // exact function code size in bytes.
+  //
+  // When explicit ICache prefetch is enabled, INST_PREF_SIZE prefetches the
+  // initial cache-line prefix and enables scalar prefetch for the first WGP
+  // wave.
   if (STM.hasInstPrefSize()) {
-    const MCExpr *CodeSizeExpr = MCBinaryExpr::createSub(
-        MCSymbolRefExpr::create(getFunctionEnd(), OutContext),
-        MCSymbolRefExpr::create(CurrentFnSym, OutContext), OutContext);
-
     uint32_t Mask, Shift, Width, CacheLineSize;
     STM.getInstPrefSizeArgs(Mask, Shift, Width, CacheLineSize);
-    const MCExpr *InstPrefSize =
-        AMDGPUMCExpr::createInstPrefSize(CodeSizeExpr, Ctx);
+
+    const MCExpr *InstPrefSize;
+    if (MFI.hasICachePrefetch()) {
+      InstPrefSize = MCConstantExpr::create(MFI.getICachePrefetchLines(), Ctx);
+    } else {
+      const MCExpr *CodeSizeExpr = MCBinaryExpr::createSub(
+          MCSymbolRefExpr::create(getFunctionEnd(), OutContext),
+          MCSymbolRefExpr::create(CurrentFnSym, OutContext), OutContext);
+      InstPrefSize = AMDGPUMCExpr::createInstPrefSize(CodeSizeExpr, Ctx);
+    }
     KD.compute_pgm_rsrc3 =
         setBits(KD.compute_pgm_rsrc3, InstPrefSize, Mask, Shift, Ctx);
   }

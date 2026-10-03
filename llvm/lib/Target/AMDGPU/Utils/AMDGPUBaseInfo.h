@@ -186,6 +186,10 @@ inline bool targetIDSettingsConflict(TargetIDSetting Lhs, TargetIDSetting Rhs) {
 /// \returns Instruction cache line size in bytes for given subtarget \p STI.
 unsigned getInstCacheLineSize(const MCSubtargetInfo &STI);
 
+/// \returns Instruction cache size in bytes for given subtarget \p STI, or
+/// zero if the subtarget does not provide an instruction-cache policy.
+unsigned getInstCacheSize(const MCSubtargetInfo &STI);
+
 /// \returns Wavefront size for given subtarget \p STI.
 unsigned getWavefrontSize(const MCSubtargetInfo &STI);
 

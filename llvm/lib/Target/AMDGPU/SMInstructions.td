@@ -8,6 +8,9 @@
 
 def smrd_offset_8 : ImmOperand<i32, "SMRDOffset8", 1>;
 
+// Prefetch sdata operand - accepts immediates or MCExpr for ICache prefetch.
+def PrefetchSdata : ImmOperand<i8, "PrefetchSdata", 1>;
+
 let EncoderMethod = "getSMEMOffsetEncoding",
     DecoderMethod = "decodeSMEMOffset" in {
 def SMEMOffset : ImmOperand<i32, "SMEMOffset", 1>;
@@ -239,7 +242,7 @@ class SM_WaveId_Pseudo<string opName, SDPatternOperator node> : SM_Pseudo<
 
 class SM_Prefetch_Pseudo <string opName, RegisterClass baseClass, bit hasSBase>
   : SM_Pseudo<opName, (outs), !con(!if(hasSBase, (ins baseClass:$sbase), (ins)),
-                                   (ins SMEMOffset:$offset, SReg_32:$soffset, i8imm:$sdata, CPol_0:$cpol)),
+                                   (ins SMEMOffset:$offset, SReg_32:$soffset, PrefetchSdata:$sdata, CPol_0:$cpol)),
               !if(hasSBase, " $sbase,", "") # " $offset, $soffset, $sdata$cpol"> {
   // Mark prefetches as both load and store to prevent reordering with loads
   // and stores. This is also needed for pattern to match prefetch intrinsic.

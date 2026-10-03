@@ -966,6 +966,7 @@ public:
   bool isSMRDOffset8() const;
   bool isSMEMOffset() const;
   bool isSMRDLiteralOffset() const;
+  bool isPrefetchSdata() const;
   bool isDPP8() const;
   bool isDPPCtrl() const;
   bool isBLGP() const;
@@ -9569,6 +9570,14 @@ bool AMDGPUOperand::isSMRDOffset8() const {
 
 bool AMDGPUOperand::isSMEMOffset() const {
   // Offset range is checked later by validator.
+  // Also accept prefetch offset expressions for ICache prefetch instructions.
+  if (isExpr()) {
+    if (Expr->getKind() == MCExpr::Target) {
+      const AMDGPUMCExpr *AExpr = static_cast<const AMDGPUMCExpr *>(Expr);
+      if (AExpr->getKind() == AMDGPUMCExpr::AGVK_PrefetchOffset)
+        return true;
+    }
+  }
   return isImmLiteral();
 }
 
@@ -9576,6 +9585,18 @@ bool AMDGPUOperand::isSMRDLiteralOffset() const {
   // 32-bit literals are only supported on CI and we only want to use them
   // when the offset is > 8-bits.
   return isImmLiteral() && !isUInt<8>(getImm()) && isUInt<32>(getImm());
+}
+
+bool AMDGPUOperand::isPrefetchSdata() const {
+  // Accept immediates (u8) or prefetch cachelines expressions.
+  if (isExpr()) {
+    if (Expr->getKind() == MCExpr::Target) {
+      const AMDGPUMCExpr *AExpr = static_cast<const AMDGPUMCExpr *>(Expr);
+      if (AExpr->getKind() == AMDGPUMCExpr::AGVK_PrefetchCachelines)
+        return true;
+    }
+  }
+  return isImmLiteral() && isUInt<8>(getImm());
 }
 
 //===----------------------------------------------------------------------===//
@@ -9658,6 +9679,8 @@ bool AMDGPUAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
                   .Case("alignto", AGVK::AGVK_AlignTo)
                   .Case("occupancy", AGVK::AGVK_Occupancy)
                   .Case("instprefsize", AGVK::AGVK_InstPrefSize)
+                  .Case("prefetchcachelines", AGVK::AGVK_PrefetchCachelines)
+                  .Case("prefetchoffset", AGVK::AGVK_PrefetchOffset)
                   .Default(AGVK::AGVK_None);
 
     if (VK != AGVK::AGVK_None && peekToken().is(AsmToken::LParen)) {
