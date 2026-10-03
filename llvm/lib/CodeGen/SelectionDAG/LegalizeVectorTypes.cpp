@@ -5680,7 +5680,19 @@ SDValue DAGTypeLegalizer::WidenVecRes_CMP(SDNode *N) {
     return DAG.getNode(N->getOpcode(), dl, WidenResVT, LHS, RHS);
   }
 
-  return DAG.UnrollVectorOp(N, WidenResVT.getVectorNumElements());
+  if (!OpVT.isSimple() || OpVT.isScalableVector() ||
+      OpVT.getScalarSizeInBits() < 2 || TLI.shouldUnrollVectorCMP(OpVT))
+    return DAG.UnrollVectorOp(N, WidenResVT.getVectorNumElements());
+
+  SDValue Cmp = DAG.getNode(N->getOpcode(), dl, OpVT, LHS, RHS);
+  if (TLI.getOperationAction(N->getOpcode(), OpVT) == TargetLowering::Expand)
+    Cmp = TLI.expandCMP(Cmp.getNode(), DAG);
+  EVT ResEltVT = WidenResVT.getVectorElementType();
+  Cmp =
+      DAG.getSExtOrTrunc(Cmp, dl, OpVT.changeVectorElementType(Ctxt, ResEltVT));
+  if (OpVT.getVectorNumElements() < WidenResVT.getVectorNumElements())
+    return DAG.getInsertSubvector(dl, DAG.getUNDEF(WidenResVT), Cmp, 0);
+  return DAG.getExtractSubvector(dl, WidenResVT, Cmp, 0);
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_BinaryWithExtraScalarOp(SDNode *N) {
