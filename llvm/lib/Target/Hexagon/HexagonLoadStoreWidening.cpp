@@ -956,7 +956,7 @@ bool HexagonLoadStoreWidening::processBasicBlock(MachineBasicBlock &MBB) {
   bool Changed = false;
 
   // To prevent long compile time check for max BB size.
-  if (MBB.size() > MaxMBBSizeForLoadStoreWidening)
+  if (MBB.sizeWithoutDebugLargerThan(MaxMBBSizeForLoadStoreWidening))
     return false;
 
   createGroups(MBB, SGs);
