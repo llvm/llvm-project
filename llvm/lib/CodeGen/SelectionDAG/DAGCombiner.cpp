@@ -3024,10 +3024,12 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
 
     // (X + Y) + X --> Y + (X + X)
     SDValue X, Y, InnerAdd;
-    if (sd_match(
-            N, m_Add(m_OneUse(m_Value(InnerAdd, m_Add(m_Value(X), m_Value(Y)))),
-                     m_Deferred(X)))) {
-      if (X != Y) {
+    if (sd_match(N, m_Add(m_Value(X),
+                          m_OneUse(m_Value(
+                              InnerAdd, m_Add(m_Deferred(X), m_Value(Y))))))) {
+      // X may be an opaque constant that will get reassociated back outside
+      // which will cause an infinite loop.
+      if (X != Y && !isa<ConstantSDNode>(X)) {
         // Redistribute shared NUW flag.
         // TODO: If NSW+NUW occurs on both adds, that can be redistributed too.
         SDNodeFlags NewFlags =

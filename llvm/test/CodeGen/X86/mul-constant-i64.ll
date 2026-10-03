@@ -683,18 +683,13 @@ define i64 @test_mul_by_21(i64 %x) {
 define i64 @test_mul_by_22(i64 %x) {
 ; X86-LABEL: test_mul_by_22:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    leal (%ecx,%ecx,4), %eax
-; X86-NEXT:    leal (%ecx,%eax,4), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal (%eax,%eax,4), %ecx
+; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    leal (%eax,%ecx,4), %ecx
 ; X86-NEXT:    movl $22, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
 ; X86-NEXT:    addl %ecx, %edx
-; X86-NEXT:    addl %esi, %edx
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X86-NOOPT-LABEL: test_mul_by_22:
@@ -708,15 +703,15 @@ define i64 @test_mul_by_22(i64 %x) {
 ; X64-HSW-LABEL: test_mul_by_22:
 ; X64-HSW:       # %bb.0:
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi,4), %rax
+; X64-HSW-NEXT:    addq %rdi, %rdi
 ; X64-HSW-NEXT:    leaq (%rdi,%rax,4), %rax
-; X64-HSW-NEXT:    addq %rdi, %rax
 ; X64-HSW-NEXT:    retq
 ;
 ; X64-JAG-LABEL: test_mul_by_22:
 ; X64-JAG:       # %bb.0:
 ; X64-JAG-NEXT:    leaq (%rdi,%rdi,4), %rax
+; X64-JAG-NEXT:    addq %rdi, %rdi
 ; X64-JAG-NEXT:    leaq (%rdi,%rax,4), %rax
-; X64-JAG-NEXT:    addq %rdi, %rax
 ; X64-JAG-NEXT:    retq
 ;
 ; X64-SLM-LABEL: test_mul_by_22:
@@ -990,8 +985,8 @@ define i64 @test_mul_by_29(i64 %x) {
 ; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    leal (%ecx,%ecx,8), %eax
-; X86-NEXT:    leal (%eax,%eax,2), %esi
 ; X86-NEXT:    addl %ecx, %ecx
+; X86-NEXT:    leal (%eax,%eax,2), %esi
 ; X86-NEXT:    movl $29, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
 ; X86-NEXT:    addl %ecx, %edx
