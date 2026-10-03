@@ -2101,6 +2101,10 @@ protected:
   /// another pointer.
   mutable Decl *LastDecl = nullptr;
 
+  /// Caches DeclContext's ASTContext. Used by Decl::getASTContext().
+  mutable ASTContext *CachedASTContext = nullptr;
+  friend class Decl;
+
   /// Build up a chain of declarations.
   ///
   /// \returns the first/last pair of declarations.
