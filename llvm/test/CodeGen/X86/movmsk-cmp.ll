@@ -4421,8 +4421,8 @@ define i32 @PR39665_c_ray(<2 x double> %x, <2 x double> %y) {
 define i32 @PR39665_c_ray_select(<2 x double> %x, <2 x double> %y) {
 ; SSE-LABEL: PR39665_c_ray_select:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    cmpltpd %xmm0, %xmm1
-; SSE-NEXT:    movmskpd %xmm1, %eax
+; SSE-NEXT:    cmpnlepd %xmm1, %xmm0
+; SSE-NEXT:    movmskpd %xmm0, %eax
 ; SSE-NEXT:    cmpl $3, %eax
 ; SSE-NEXT:    movl $42, %ecx
 ; SSE-NEXT:    movl $99, %eax
@@ -4431,7 +4431,7 @@ define i32 @PR39665_c_ray_select(<2 x double> %x, <2 x double> %y) {
 ;
 ; AVX1OR2-LABEL: PR39665_c_ray_select:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vcmpltpd %xmm0, %xmm1, %xmm0
+; AVX1OR2-NEXT:    vcmpnlepd %xmm1, %xmm0, %xmm0
 ; AVX1OR2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX1OR2-NEXT:    vtestpd %xmm1, %xmm0
 ; AVX1OR2-NEXT:    movl $42, %ecx
@@ -4443,7 +4443,7 @@ define i32 @PR39665_c_ray_select(<2 x double> %x, <2 x double> %y) {
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; KNL-NEXT:    vcmpltpd %zmm0, %zmm1, %k0
+; KNL-NEXT:    vcmpnlepd %zmm1, %zmm0, %k0
 ; KNL-NEXT:    knotw %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    testb $3, %al
@@ -4455,7 +4455,7 @@ define i32 @PR39665_c_ray_select(<2 x double> %x, <2 x double> %y) {
 ;
 ; SKX-LABEL: PR39665_c_ray_select:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vcmpltpd %xmm0, %xmm1, %k0
+; SKX-NEXT:    vcmpnlepd %xmm1, %xmm0, %k0
 ; SKX-NEXT:    knotw %k0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    testb $3, %al
