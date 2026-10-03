@@ -1266,6 +1266,11 @@ public:
 
   unsigned getIROrder() const { return IROrder; }
   const DebugLoc &getDebugLoc() const { return DL; }
+
+  /// Merge the source location without changing the IR order.
+  void mergeDebugLoc(const DebugLoc &Other) {
+    DL = DebugLoc::getMergedLocation(DL, Other);
+  }
 };
 
 // Define inline functions from the SDValue class.
