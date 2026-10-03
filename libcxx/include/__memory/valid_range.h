@@ -59,11 +59,14 @@ __assume_valid_range([[__maybe_unused__]] _Iter&& __first, [[__maybe_unused__]] 
                 is_same<__remove_cvref_t<_Iter>, __remove_cvref_t<_Sent>>::value) {
     _LIBCPP_ASSERT_INTERNAL(std::__is_valid_range(std::__to_address(__first), std::__to_address(__last)),
                             "Valid range assumption does not hold");
+    // We use const_cast to strip volatile-ness because the builtins take plain pointers.
     if (!__libcpp_is_constant_evaluated()) {
-      using __value_type = typename iterator_traits<__remove_cvref_t<_Iter>>::value_type;
-      __builtin_assume_dereferenceable(std::__to_address(__first), (__last - __first) * sizeof(__value_type));
-      (void)std::__assume_aligned<_LIBCPP_ALIGNOF(__value_type)>(std::__to_address(__first));
-      (void)std::__assume_aligned<_LIBCPP_ALIGNOF(__value_type)>(std::__to_address(__last));
+      using __value_type        = typename iterator_traits<__remove_cvref_t<_Iter>>::value_type;
+      __value_type* __first_ptr = const_cast<__value_type*>(std::__to_address(__first));
+      __value_type* __last_ptr  = const_cast<__value_type*>(std::__to_address(__last));
+      __builtin_assume_dereferenceable(__first_ptr, (__last_ptr - __first_ptr) * sizeof(__value_type));
+      (void)std::__assume_aligned<_LIBCPP_ALIGNOF(__value_type)>(__first_ptr);
+      (void)std::__assume_aligned<_LIBCPP_ALIGNOF(__value_type)>(__last_ptr);
     }
   }
 #endif
