@@ -69,6 +69,7 @@ SystemZSubtarget::SystemZSubtarget(const Triple &TT, const std::string &CPU,
                                    const std::string &FS,
                                    const TargetMachine &TM)
     : SystemZGenSubtargetInfo(TT, CPU, TuneCPU, FS), TargetTriple(TT),
+      In64BitMode(TargetTriple.isArch64Bit()),
       SpecialRegisters(initializeSpecialRegisters()),
       InstrInfo(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
       TLInfo(TM, *this), FrameLowering(SystemZFrameLowering::create(*this)) {}

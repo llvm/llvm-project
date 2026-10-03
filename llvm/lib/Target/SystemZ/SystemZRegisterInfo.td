@@ -374,3 +374,19 @@ foreach I = 0-15 in {
 }
 defm CR64 : SystemZRegClass<"CR64", [i64], 64,
                             (add (sequence "C%u", 0, 15)), [], 0>;
+
+// Register classes based on HwMode.
+def ADDRbit : RegClassByHwMode<[Amode64,   Amode32,   NoVecHwMode],
+                             [ADDR64Bit, ADDR32Bit, ADDR64Bit]>;
+
+def GRbit : RegClassByHwMode<[Amode64, Amode32, NoVecHwMode],
+                          [GR64Bit, GR32Bit, GR64Bit]>;
+
+def GRAsmOperand : AsmOperandClass {
+  let Name = "GR";
+  let ParserMethod = "parseGR";
+  let RenderMethod = "addRegOperands";
+}
+def GR : RegisterOperand<GRbit> {
+  let ParserMatchClass = GRAsmOperand;
+}

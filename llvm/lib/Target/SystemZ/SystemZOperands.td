@@ -7,6 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+// HwMode-dependent immediates
+//===----------------------------------------------------------------------===//
+
+def XLenVT : ValueTypeByHwMode<[Amode64, Amode32],
+                               [i64,     i32]>;
+
+//===----------------------------------------------------------------------===//
 // Class definitions
 //===----------------------------------------------------------------------===//
 
@@ -82,33 +89,18 @@ class PCRelAddress<ValueType vt, string self, AsmOperandClass asmop>
 }
 
 // Constructs an AsmOperandClass for addressing mode FORMAT, treating the
-// registers as having BITSIZE bits and displacements as having DISPSIZE bits.
+// displacements as having DISPSIZE bits.
 // LENGTH is "LenN" for addresses with an N-bit length field, otherwise it
 // is "".
-class AddressAsmOperand<string format, string bitsize, string dispsize,
-                        string length = "">
+class AddressAsmOperand<string format, string dispsize, string length = "">
   : AsmOperandClass {
-  let Name = format#bitsize#"Disp"#dispsize#length;
-  let ParserMethod = "parse"#format#bitsize;
+  let Name = format#"Disp"#dispsize#length;
+  let ParserMethod = "parse"#format;
   let RenderMethod = "add"#format#"Operands";
 }
 
-// Constructs an instruction operand for an addressing mode.  FORMAT,
-// BITSIZE, DISPSIZE and LENGTH are the parameters to an associated
-// AddressAsmOperand.  OPERANDS is a list of individual operands
-// (base register, displacement, etc.).
-class AddressOperand<string bitsize, string dispsize, string length,
-                     string format, dag operands>
-  : Operand<!cast<ValueType>("i"#bitsize)> {
-  let PrintMethod = "print"#format#"Operand";
-  let OperandType = "OPERAND_MEMORY";
-  let MIOperandInfo = operands;
-  let ParserMatchClass =
-    !cast<AddressAsmOperand>(format#bitsize#"Disp"#dispsize#length);
-}
-
 // Constructs both a DAG pattern and instruction operand for an addressing mode.
-// FORMAT, BITSIZE, DISPSIZE and LENGTH are the parameters to an associated
+// FORMAT, DISPSIZE and LENGTH are the parameters to an associated
 // AddressAsmOperand.  OPERANDS is a list of NUMOPS individual operands
 // (base register, displacement, etc.).  SELTYPE is the type of the memory
 // operand for selection purposes; sometimes we want different selection
@@ -116,56 +108,65 @@ class AddressOperand<string bitsize, string dispsize, string length,
 // a suffix appended to the displacement for selection purposes;
 // e.g. we want to reject small 20-bit displacements if a 12-bit form
 // also exists, but we want to accept them otherwise.
-class AddressingMode<string seltype, string bitsize, string dispsize,
+// VT overrides the ComplexPattern value type (default XLenVT; use i32 for shift addressing modes).
+class AddressingMode<string seltype, string dispsize,
                      string suffix, string length, int numops, string format,
-                     dag operands>
-  : ComplexPattern<!cast<ValueType>("i"#bitsize), numops,
+                     dag operands, ValueType vt = XLenVT>
+  : ComplexPattern<vt, numops,
                    "select"#seltype#dispsize#suffix#length,
                    [add, sub, or, frameindex, z_adjdynalloc]>,
-    AddressOperand<bitsize, dispsize, length, format, operands>;
+    Operand<vt> {
+  let PrintMethod = "print"#format#"Operand";
+  let OperandType = "OPERAND_MEMORY";
+  let MIOperandInfo = operands;
+  let ParserMatchClass =
+    !cast<AddressAsmOperand>(format#"Disp"#dispsize#length);
+}
+
+class BDModeI32<string type, string dispsize, string suffix>
+  : AddressingMode<type, dispsize, suffix, "", 2, "BDAddr",
+                   (ops ADDR32, !cast<Operand>("disp"#dispsize#"imm32")), i32>;
 
 // An addressing mode with a base and displacement but no index.
-class BDMode<string type, string bitsize, string dispsize, string suffix>
-  : AddressingMode<type, bitsize, dispsize, suffix, "", 2, "BDAddr",
-                   (ops !cast<RegisterOperand>("ADDR"#bitsize),
-                        !cast<Operand>("disp"#dispsize#"imm"#bitsize))>;
+class BDMode<string type, string dispsize, string suffix>
+  : AddressingMode<type, dispsize, suffix, "", 2, "BDAddr",
+                   (ops ADDRbit,
+                        !cast<Operand>("disp"#dispsize#"immXLen"))>;
 
 // An addressing mode with a base, displacement and index.
-class BDXMode<string type, string bitsize, string dispsize, string suffix>
-  : AddressingMode<type, bitsize, dispsize, suffix, "", 3, "BDXAddr",
-                   (ops !cast<RegisterOperand>("ADDR"#bitsize),
-                        !cast<Operand>("disp"#dispsize#"imm"#bitsize),
-                        !cast<RegisterOperand>("ADDR"#bitsize))>;
+class BDXMode<string type, string dispsize, string suffix>
+  : AddressingMode<type, dispsize, suffix, "", 3, "BDXAddr",
+                   (ops ADDRbit,
+                        !cast<Operand>("disp"#dispsize#"immXLen"),
+                        ADDRbit)>;
 
 // A BDMode paired with an immediate length operand of LENSIZE bits.
-class BDLMode<string type, string bitsize, string dispsize, string suffix,
-              string lensize>
-  : AddressingMode<type, bitsize, dispsize, suffix, "Len"#lensize, 3,
-                   "BDLAddr",
-                   (ops !cast<RegisterOperand>("ADDR"#bitsize),
-                        !cast<Operand>("disp"#dispsize#"imm"#bitsize),
-                        !cast<Operand>("len"#lensize#"imm"#bitsize))>;
+class BDLMode<string type, string dispsize, string suffix, string lensize>
+  : AddressingMode<type, dispsize, suffix, "Len"#lensize, 3, "BDLAddr",
+                   (ops ADDRbit,
+                        !cast<Operand>("disp"#dispsize#"immXLen"),
+                        !cast<Operand>("len"#lensize#"immXLen"))>;
 
 // A BDMode paired with a register length operand.
-class BDRMode<string type, string bitsize, string dispsize, string suffix>
-  : AddressingMode<type, bitsize, dispsize, suffix, "", 3, "BDRAddr",
-                   (ops !cast<RegisterOperand>("ADDR"#bitsize),
-                        !cast<Operand>("disp"#dispsize#"imm"#bitsize),
-                        !cast<RegisterOperand>("GR"#bitsize))>;
+class BDRMode<string type, string dispsize, string suffix>
+  : AddressingMode<type, dispsize, suffix, "", 3, "BDRAddr",
+                   (ops ADDRbit,
+                        !cast<Operand>("disp"#dispsize#"immXLen"),
+                        GR)>;
 
 // An addressing mode with a base, displacement and a vector index.
-class BDVMode<string bitsize, string dispsize>
-  : AddressOperand<bitsize, dispsize, "", "BDVAddr",
-                   (ops !cast<RegisterOperand>("ADDR"#bitsize),
-                        !cast<Operand>("disp"#dispsize#"imm"#bitsize),
-                        !cast<RegisterOperand>("VR128"))>;
+class BDVMode<string dispsize>
+  : AddressingMode<"BDVAddr", dispsize, "", "", 3, "BDVAddr",
+                   (ops ADDRbit,
+                        !cast<Operand>("disp"#dispsize#"immXLen"),
+                        VR128)>;
 
 // An addressing mode with a base, 32-bit displacement and 32-bit index.
-class LXAMode<string bitsize, string dispsize>
-  : AddressOperand<bitsize, dispsize, "", "LXAAddr",
-                   (ops !cast<RegisterOperand>("ADDR"#bitsize),
+class LXAMode<string dispsize>
+  : AddressingMode<"LXAAddr", dispsize, "", "", 3, "LXAAddr",
+                   (ops ADDRbit,
                         !cast<Operand>("disp"#dispsize#"imm32"),
-                        !cast<RegisterOperand>("ADDR32"))>;
+                        ADDR32)>;
 
 //===----------------------------------------------------------------------===//
 // Extracting immediate operands from nodes
@@ -565,6 +566,22 @@ def len8imm64 : Imm64 {
 }
 
 //===----------------------------------------------------------------------===//
+// HwMode-dependent immediates
+//===----------------------------------------------------------------------===//
+
+// Hardware-aware length immediates
+def len4immXLen : ImmLeaf<XLenVT, [{}]>, Operand<XLenVT> {
+  let EncoderMethod = "getLenEncoding<SystemZ::FK_390_U4Imm>";
+  let DecoderMethod = "decodeLenOperand<4>";
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+def len8immXLen : ImmLeaf<XLenVT, [{}]>, Operand<XLenVT> {
+  let EncoderMethod = "getLenEncoding<SystemZ::FK_390_U8Imm>";
+  let DecoderMethod = "decodeLenOperand<8>";
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
+//===----------------------------------------------------------------------===//
 // Floating-point immediates
 //===----------------------------------------------------------------------===//
 
@@ -643,6 +660,7 @@ let EncoderMethod = "getImmOpValue<SystemZ::FK_390_U12Imm>",
     DecoderMethod = "decodeU12ImmOperand" in {
   def disp12imm32 : DispOp<i32, [{ return Imm.isIntN(12); }]>;
   def disp12imm64 : DispOp<i64, [{ return Imm.isIntN(12); }]>;
+  def disp12immXLen : DispOp<XLenVT, [{ return Imm.isIntN(12); }]>;
 }
 
 // 20-bit displacement operands.
@@ -650,19 +668,18 @@ let EncoderMethod = "getImmOpValue<SystemZ::FK_390_S20Imm>",
     DecoderMethod = "decodeS20ImmOperand" in {
   def disp20imm32 : DispOp<i32, [{ return Imm.isSignedIntN(20); }]>;
   def disp20imm64 : DispOp<i64, [{ return Imm.isSignedIntN(20); }]>;
+  def disp20immXLen : DispOp<XLenVT, [{ return Imm.isSignedIntN(20); }]>;
 }
 
-def BDAddr32Disp12      : AddressAsmOperand<"BDAddr",   "32", "12">;
-def BDAddr32Disp20      : AddressAsmOperand<"BDAddr",   "32", "20">;
-def BDAddr64Disp12      : AddressAsmOperand<"BDAddr",   "64", "12">;
-def BDAddr64Disp20      : AddressAsmOperand<"BDAddr",   "64", "20">;
-def BDXAddr64Disp12     : AddressAsmOperand<"BDXAddr",  "64", "12">;
-def BDXAddr64Disp20     : AddressAsmOperand<"BDXAddr",  "64", "20">;
-def BDLAddr64Disp12Len4 : AddressAsmOperand<"BDLAddr",  "64", "12", "Len4">;
-def BDLAddr64Disp12Len8 : AddressAsmOperand<"BDLAddr",  "64", "12", "Len8">;
-def BDRAddr64Disp12     : AddressAsmOperand<"BDRAddr",  "64", "12">;
-def BDVAddr64Disp12     : AddressAsmOperand<"BDVAddr",  "64", "12">;
-def LXAAddr64Disp20     : AddressAsmOperand<"LXAAddr",  "64", "20">;
+def BDAddrDisp12 : AddressAsmOperand<"BDAddr", "12">;
+def BDAddrDisp20 : AddressAsmOperand<"BDAddr", "20">;
+def BDXAddrDisp12 : AddressAsmOperand<"BDXAddr", "12">;
+def BDXAddrDisp20 : AddressAsmOperand<"BDXAddr", "20">;
+def BDLAddrDisp12Len4 : AddressAsmOperand<"BDLAddr", "12", "Len4">;
+def BDLAddrDisp12Len8 : AddressAsmOperand<"BDLAddr", "12", "Len8">;
+def BDRAddrDisp12 : AddressAsmOperand<"BDRAddr", "12">;
+def BDVAddrDisp12 : AddressAsmOperand<"BDVAddr", "12">;
+def LXAAddrDisp20 : AddressAsmOperand<"LXAAddr", "20">;
 
 // DAG patterns and operands for addressing modes.  Each mode has
 // the form <type><range><group>[<len>] where:
@@ -692,27 +709,27 @@ def LXAAddr64Disp20     : AddressAsmOperand<"LXAAddr",  "64", "20">;
 //
 //   <empty>  : there is no length field
 //   len8     : the length field is 8 bits, with a range of [1, 0x100].
-def shift12only       : BDMode <"BDAddr",   "32", "12", "Only">;
-def shift20only       : BDMode <"BDAddr",   "32", "20", "Only">;
-def bdaddr12only      : BDMode <"BDAddr",   "64", "12", "Only">;
-def bdaddr12pair      : BDMode <"BDAddr",   "64", "12", "Pair">;
-def bdaddr20only      : BDMode <"BDAddr",   "64", "20", "Only">;
-def bdaddr20pair      : BDMode <"BDAddr",   "64", "20", "Pair">;
-def mviaddr12pair     : BDMode <"MVIAddr",  "64", "12", "Pair">;
-def mviaddr20pair     : BDMode <"MVIAddr",  "64", "20", "Pair">;
-def bdxaddr12only     : BDXMode<"BDXAddr",  "64", "12", "Only">;
-def bdxaddr12pair     : BDXMode<"BDXAddr",  "64", "12", "Pair">;
-def bdxaddr20only     : BDXMode<"BDXAddr",  "64", "20", "Only">;
-def bdxaddr20only128  : BDXMode<"BDXAddr",  "64", "20", "Only128">;
-def bdxaddr20pair     : BDXMode<"BDXAddr",  "64", "20", "Pair">;
-def dynalloc12only    : BDXMode<"DynAlloc", "64", "12", "Only">;
-def laaddr12pair      : BDXMode<"LAAddr",   "64", "12", "Pair">;
-def laaddr20pair      : BDXMode<"LAAddr",   "64", "20", "Pair">;
-def lxaaddr20only     : LXAMode<            "64", "20">;
-def bdladdr12onlylen4 : BDLMode<"BDLAddr",  "64", "12", "Only", "4">;
-def bdladdr12onlylen8 : BDLMode<"BDLAddr",  "64", "12", "Only", "8">;
-def bdraddr12only     : BDRMode<"BDRAddr",  "64", "12", "Only">;
-def bdvaddr12only     : BDVMode<            "64", "12">;
+def shift12only       : BDModeI32<"BDAddr", "12", "Only">;
+def shift20only       : BDModeI32<"BDAddr", "20", "Only">;
+def lxaaddr20only     : LXAMode<"20">;
+def bdladdr12onlylen4 : BDLMode<"BDLAddr", "12", "Only", "4">;
+def bdladdr12onlylen8 : BDLMode<"BDLAddr", "12", "Only", "8">;
+def bdraddr12only     : BDRMode<"BDRAddr", "12", "Only">;
+def bdvaddr12only     : BDVMode<"12">;
+def bdaddr12only      : BDMode<"BDAddr", "12", "Only">;
+def bdaddr12pair      : BDMode<"BDAddr", "12", "Pair">;
+def bdaddr20only      : BDMode<"BDAddr", "20", "Only">;
+def bdaddr20pair      : BDMode<"BDAddr", "20", "Pair">;
+def mviaddr12pair     : BDMode<"MVIAddr", "12", "Pair">;
+def mviaddr20pair     : BDMode<"MVIAddr", "20", "Pair">;
+def bdxaddr12only     : BDXMode<"BDXAddr", "12", "Only">;
+def bdxaddr12pair     : BDXMode<"BDXAddr", "12", "Pair">;
+def bdxaddr20only     : BDXMode<"BDXAddr", "20", "Only">;
+def bdxaddr20only128  : BDXMode<"BDXAddr", "20", "Only128">;
+def bdxaddr20pair     : BDXMode<"BDXAddr", "20", "Pair">;
+def dynalloc12only    : BDXMode<"DynAlloc", "12", "Only">;
+def laaddr12pair      : BDXMode<"LAAddr", "12", "Pair">;
+def laaddr20pair      : BDXMode<"LAAddr", "20", "Pair">;
 
 // 12-bit unsigned displacement variants (for NI, OI, XI)
 def bdaddr12off1 : ComplexPattern<i64, 2, "selectBDAddr12off1">;
