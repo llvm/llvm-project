@@ -34,6 +34,10 @@ AST_MATCHER(ParenExpr, isInMacro) {
          E->getBeginLoc().isMacroID() || E->getEndLoc().isMacroID();
 }
 
+AST_MATCHER(ParenExpr, isWritten) {
+  return Node.getLParen() != Node.getRParen();
+}
+
 AST_MATCHER(TypeLoc, isTypeOfExprTypeLoc) {
   return !Node.getUnqualifiedLoc().getAs<TypeOfExprTypeLoc>().isNull();
 }
@@ -82,6 +86,7 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
                     callExpr(unless(cxxOperatorCallExpr(
                         unless(hasAnyOperatorName("()", "[]"))))),
                     arraySubscriptExpr())),
+                isWritten(),
                 unless(anyOf(isInMacro(),
                              // sizeof(...) is common used.
                              hasParent(unaryExprOrTypeTraitExpr()),
@@ -93,8 +98,6 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
 
 void RedundantParenthesesCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *PE = Result.Nodes.getNodeAs<ParenExpr>("dup");
-  if (PE->getLParen() == PE->getRParen())
-    return;
   diag(PE->getBeginLoc(), "redundant parentheses around expression")
       << createSpacedRemoval(PE->getLParen(), *Result.SourceManager,
                              getLangOpts())
