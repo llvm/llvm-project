@@ -1683,6 +1683,55 @@ void hlfir::EOShiftOp::getEffects(
 }
 
 //===----------------------------------------------------------------------===//
+// PackOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult hlfir::PackOp::verify() {
+  hlfir::ExprType resultType = mlir::cast<hlfir::ExprType>(getType());
+  mlir::Value array = getArray();
+  auto arrayType = mlir::cast<fir::SequenceType>(
+      hlfir::getFortranElementOrSequenceType(array.getType()));
+  if (auto match = areMatchingTypes(
+          *this, hlfir::getFortranElementType(resultType),
+          arrayType.getElementType(),
+          /*allowCharacterLenMismatch=*/!useStrictIntrinsicVerifier);
+      match.failed())
+    return emitOpError("ARRAY and the result must have the same element type");
+  if (hlfir::isPolymorphicType(resultType) !=
+      hlfir::isPolymorphicType(array.getType()))
+    return emitOpError("ARRAY must be polymorphic iff result is polymorphic");
+  if (resultType.getRank() != 1)
+    return emitOpError("result must be of rank 1");
+  if (!hlfir::isMaskArgument(getMask().getType()))
+    return emitOpError("MASK must be of logical type");
+
+  mlir::Type maskSeqTy =
+      hlfir::getFortranElementOrSequenceType(getMask().getType());
+  if (auto maskArrayType = mlir::dyn_cast<fir::SequenceType>(maskSeqTy)) {
+    llvm::ArrayRef<int64_t> arrayShape = arrayType.getShape();
+    llvm::ArrayRef<int64_t> maskShape = maskArrayType.getShape();
+    if (maskShape.size() != arrayShape.size())
+      return emitOpError("MASK must be conformable to ARRAY");
+    if (useStrictIntrinsicVerifier) {
+      constexpr int64_t unknownExtent = fir::SequenceType::getUnknownExtent();
+      for (std::size_t i = 0; i < arrayShape.size(); ++i) {
+        if (arrayShape[i] != maskShape[i] && arrayShape[i] != unknownExtent &&
+            maskShape[i] != unknownExtent)
+          return emitOpError("MASK must be conformable to ARRAY");
+      }
+    }
+  }
+  return mlir::success();
+}
+
+void hlfir::PackOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
+}
+
+//===----------------------------------------------------------------------===//
 // ReshapeOp
 //===----------------------------------------------------------------------===//
 
@@ -1708,7 +1757,7 @@ llvm::LogicalResult hlfir::ReshapeOp::verify() {
       hlfir::getFortranElementOrSequenceType(shape.getType()));
   if (shapeArrayType.getDimension() != 1)
     return emitOpError("SHAPE must be an array of rank 1");
-  if (!mlir::isa<mlir::IntegerType>(shapeArrayType.getElementType()))
+  if (!fir::isa_integer(shapeArrayType.getElementType()))
     return emitOpError("SHAPE must be an integer array");
   if (shapeArrayType.hasDynamicExtents())
     return emitOpError("SHAPE must have known size");
