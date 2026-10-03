@@ -19,7 +19,7 @@ define dso_local i32 @copy_noalias(ptr noalias nocapture %a, ptr nocapture reado
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i64 [[TMP0]], 12
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[A:%.*]], ptr align 4 [[B:%.*]], i64 [[TMP1]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[A:%.*]], ptr align 4 [[B:%.*]], i64 range(i64 0, 25769803765) [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
@@ -130,7 +130,7 @@ define dso_local void @copy_noalias_read(ptr noalias nocapture %x, ptr noalias n
 ; CHECK-NEXT:    [[S_PROMOTED:%.*]] = load i32, ptr [[S:%.*]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i64 [[TMP0]], 6
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[X:%.*]], ptr align 1 [[Y:%.*]], i64 [[TMP1]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[X:%.*]], ptr align 1 [[Y:%.*]], i64 range(i64 0, 12884901883) [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.for.cond.cleanup_crit_edge:
 ; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ]
@@ -199,7 +199,7 @@ define dso_local i32 @copy_noalias_negative_stride(ptr noalias nocapture %arg, p
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[ARG2]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i64 [[TMP1]], 12
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARG:%.*]], ptr align 4 [[ARG1:%.*]], i64 [[TMP2]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARG:%.*]], ptr align 4 [[ARG1:%.*]], i64 range(i64 0, 25769803777) [[TMP2]], i1 false)
 ; CHECK-NEXT:    br label [[BB6:%.*]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    br label [[BB5]]
@@ -312,7 +312,7 @@ define dso_local i32 @copy_noalias_packed(ptr noalias nocapture %a, ptr nocaptur
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i64 [[TMP0]], 9
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[A:%.*]], ptr align 1 [[B:%.*]], i64 [[TMP1]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[A:%.*]], ptr align 1 [[B:%.*]], i64 range(i64 0, 19327352824) [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
@@ -361,7 +361,7 @@ define dso_local i32 @copy_noalias_aligned(ptr noalias nocapture %a, ptr nocaptu
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[A:%.*]], ptr align 16 [[B:%.*]], i64 [[TMP1]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[A:%.*]], ptr align 16 [[B:%.*]], i64 range(i64 0, 34359738353) [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
