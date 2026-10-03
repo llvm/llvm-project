@@ -141,7 +141,7 @@ static bool TypeHasMayAlias(QualType QTy) {
 }
 
 /// Check if the given type is a valid base type to be used in access tags.
-static bool isValidBaseType(QualType QTy) {
+static bool isValidBaseType(QualType QTy, bool NewStructPathTBAA) {
   if (const auto *RD = QTy->getAsRecordDecl()) {
     // Incomplete types are not valid base access types.
     if (!RD->isCompleteDefinition())
@@ -149,8 +149,8 @@ static bool isValidBaseType(QualType QTy) {
     if (RD->hasFlexibleArrayMember())
       return false;
     // RD can be struct, union, class, interface or enum.
-    // For now, we only handle struct and class.
-    if (RD->isStruct() || RD->isClass())
+    // The new format can represent overlapping union members.
+    if (RD->isStruct() || RD->isClass() || (NewStructPathTBAA && RD->isUnion()))
       return true;
   }
   return false;
@@ -389,7 +389,7 @@ llvm::MDNode *CodeGenTBAA::getTypeInfo(QualType QTy) {
   // be considered may-alias too.
   // TODO: Combine getTypeInfo() and getValidBaseTypeInfo() into a single
   // function.
-  if (isValidBaseType(QTy))
+  if (isValidBaseType(QTy, CodeGenOpts.NewStructPathTBAA))
     return getValidBaseTypeInfo(QTy);
 
   const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
@@ -538,9 +538,10 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
         const CXXRecordDecl *BaseRD = BaseQTy->getAsCXXRecordDecl();
         if (BaseRD->isEmpty())
           continue;
-        llvm::MDNode *TypeNode = isValidBaseType(BaseQTy)
-                                     ? getValidBaseTypeInfo(BaseQTy)
-                                     : getTypeInfo(BaseQTy);
+        llvm::MDNode *TypeNode =
+            isValidBaseType(BaseQTy, CodeGenOpts.NewStructPathTBAA)
+                ? getValidBaseTypeInfo(BaseQTy)
+                : getTypeInfo(BaseQTy);
         if (!TypeNode)
           return nullptr;
         uint64_t Offset = Layout.getBaseClassOffset(BaseRD).getQuantity();
@@ -563,9 +564,10 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
       if (Field->isZeroSize(Context) || Field->isUnnamedBitField())
         continue;
       QualType FieldQTy = Field->getType();
-      llvm::MDNode *TypeNode = isValidBaseType(FieldQTy)
-                                   ? getValidBaseTypeInfo(FieldQTy)
-                                   : getTypeInfo(FieldQTy);
+      llvm::MDNode *TypeNode =
+          isValidBaseType(FieldQTy, CodeGenOpts.NewStructPathTBAA)
+              ? getValidBaseTypeInfo(FieldQTy)
+              : getTypeInfo(FieldQTy);
       if (!TypeNode)
         return nullptr;
 
@@ -575,6 +577,12 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
       Fields.push_back(llvm::MDBuilder::TBAAStructField(Offset, Size,
                                                         TypeNode));
     }
+
+    // New struct-path TBAA represents all union members at offset zero. Keep
+    // their actual types so a whole-union access aliases pointers to any of
+    // its members. Accesses through union member expressions remain may-alias.
+    assert((!RD->isUnion() || CodeGenOpts.NewStructPathTBAA) &&
+           "Union base types require new struct-path TBAA");
 
     SmallString<256> OutName;
     if (Features.CPlusPlus) {
@@ -604,7 +612,8 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
 }
 
 llvm::MDNode *CodeGenTBAA::getValidBaseTypeInfo(QualType QTy) {
-  assert(isValidBaseType(QTy) && "Must be a valid base type");
+  assert(isValidBaseType(QTy, CodeGenOpts.NewStructPathTBAA) &&
+         "Must be a valid base type");
 
   const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
 
@@ -623,7 +632,9 @@ llvm::MDNode *CodeGenTBAA::getValidBaseTypeInfo(QualType QTy) {
 }
 
 llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
-  return isValidBaseType(QTy) ? getValidBaseTypeInfo(QTy) : nullptr;
+  return isValidBaseType(QTy, CodeGenOpts.NewStructPathTBAA)
+             ? getValidBaseTypeInfo(QTy)
+             : nullptr;
 }
 
 llvm::MDNode *CodeGenTBAA::getAccessTagInfo(TBAAAccessInfo Info) {
