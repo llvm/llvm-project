@@ -76,6 +76,36 @@ RestrictStatepointRemat("restrict-statepoint-remat",
                        cl::desc("Restrict remat for statepoint operands"));
 
 namespace {
+static LaneBitmask spilledLanes(const MachineInstr &MI,
+                                const LiveIntervals &LIS,
+                                const MachineRegisterInfo &MRI,
+                                const TargetInstrInfo &TII,
+                                const TargetRegisterInfo &TRI) {
+  int FrameIndex;
+  Register Reg = TII.isStoreToStackSlot(MI, FrameIndex);
+  assert(Reg.isValid() && "Missing spill source");
+  const MachineOperand *SpillOp = MI.findRegisterUseOperand(Reg, nullptr);
+  assert(SpillOp && "Missing spill source operand");
+  unsigned SubReg = SpillOp->getSubReg();
+  LaneBitmask SpillMask = SubReg            ? TRI.getSubRegIndexLaneMask(SubReg)
+                          : Reg.isVirtual() ? MRI.getMaxLaneMaskForVReg(Reg)
+                                            : LaneBitmask::getAll();
+  if (!Reg.isVirtual())
+    return SpillMask;
+
+  assert(LIS.hasInterval(Reg) && "Spill source has no live interval");
+  const LiveInterval &LI = LIS.getInterval(Reg);
+  if (!LI.hasSubRanges())
+    return SpillMask;
+
+  SlotIndex Idx = LIS.getInstructionIndex(MI).getRegSlot(true);
+  LaneBitmask Mask;
+  for (const LiveInterval::SubRange &S : LI.subranges())
+    if (S.liveAt(Idx))
+      Mask |= S.LaneMask & SpillMask;
+  return Mask;
+}
+
 class HoistSpillHelper : private LiveRangeEdit::Delegate {
   MachineFunction &MF;
   LiveIntervals &LIS;
@@ -111,7 +141,7 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
   bool isSpillCandBB(LiveInterval &OrigLI, VNInfo &OrigVNI,
                      MachineBasicBlock &BB, Register &LiveReg);
 
-  void rmRedundantSpills(
+  bool rmRedundantSpills(
       SmallPtrSet<MachineInstr *, 16> &Spills,
       SmallVectorImpl<MachineInstr *> &SpillsToRm,
       DenseMap<MachineDomTreeNode *, MachineInstr *> &SpillBBToSpill);
@@ -1558,7 +1588,7 @@ bool HoistSpillHelper::isSpillCandBB(LiveInterval &OrigLI, VNInfo &OrigVNI,
 
 /// Remove redundant spills in the same BB. Save those redundant spills in
 /// SpillsToRm, and save the spill to keep and its BB in SpillBBToSpill map.
-void HoistSpillHelper::rmRedundantSpills(
+bool HoistSpillHelper::rmRedundantSpills(
     SmallPtrSet<MachineInstr *, 16> &Spills,
     SmallVectorImpl<MachineInstr *> &SpillsToRm,
     DenseMap<MachineDomTreeNode *, MachineInstr *> &SpillBBToSpill) {
@@ -1574,6 +1604,12 @@ void HoistSpillHelper::rmRedundantSpills(
       SlotIndex CIdx = LIS.getInstructionIndex(*CurrentSpill);
       MachineInstr *SpillToRm = (CIdx > PIdx) ? CurrentSpill : PrevSpill;
       MachineInstr *SpillToKeep = (CIdx > PIdx) ? PrevSpill : CurrentSpill;
+      // Only sound if SpillToKeep stores every lane SpillToRm stores.
+      if (MRI.subRegLivenessEnabled() &&
+          (spilledLanes(*SpillToRm, LIS, MRI, TII, TRI) &
+           ~spilledLanes(*SpillToKeep, LIS, MRI, TII, TRI))
+              .any())
+        return false;
       SpillsToRm.push_back(SpillToRm);
       SpillBBToSpill[MDT.getNode(Block)] = SpillToKeep;
     } else {
@@ -1582,6 +1618,7 @@ void HoistSpillHelper::rmRedundantSpills(
   }
   for (auto *const SpillToRm : SpillsToRm)
     Spills.erase(SpillToRm);
+  return true;
 }
 
 /// Starting from \p Root find a top-down traversal order of the dominator
@@ -1690,7 +1727,11 @@ void HoistSpillHelper::runHoistSpills(
   // Map from BB to the first spill inside of it.
   DenseMap<MachineDomTreeNode *, MachineInstr *> SpillBBToSpill;
 
-  rmRedundantSpills(Spills, SpillsToRm, SpillBBToSpill);
+  const size_t SpillsToRmSize = SpillsToRm.size();
+  if (!rmRedundantSpills(Spills, SpillsToRm, SpillBBToSpill)) {
+    SpillsToRm.resize(SpillsToRmSize);
+    return;
+  }
 
   MachineBasicBlock *Root = LIS.getMBBFromIndex(OrigVNI.def);
   getVisitOrders(Root, Spills, Orders, SpillsToRm, SpillsToKeep,
