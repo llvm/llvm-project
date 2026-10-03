@@ -47,7 +47,7 @@ void AMDGPUInstrPostProcess::postProcessInstruction(Instruction &Inst,
 // which are lost during the MCInst -> mca::Instruction lowering.
 void AMDGPUInstrPostProcess::processWaitCnt(Instruction &Inst,
                                             const MCInst &MCI) {
-  for (int Idx = 0, N = MCI.size(); Idx < N; Idx++) {
+  for (int Idx = 0, N = static_cast<int>(MCI.size()); Idx < N; Idx++) {
     MCAOperand Op;
     const MCOperand &MCOp = MCI.getOperand(Idx);
     if (MCOp.isReg()) {
@@ -207,16 +207,16 @@ void AMDGPUCustomBehaviour::computeWaitCnt(const InstRef &IR, unsigned &Vmcnt,
     // for each case. There are more clever ways to avoid this
     // extra switch and anyone can feel free to implement one of them.
     case AMDGPU::S_WAITCNT_EXPCNT_gfx10:
-      Expcnt = OpImm->getImm();
+      Expcnt = static_cast<unsigned>(OpImm->getImm());
       break;
     case AMDGPU::S_WAITCNT_LGKMCNT_gfx10:
-      Lgkmcnt = OpImm->getImm();
+      Lgkmcnt = static_cast<unsigned>(OpImm->getImm());
       break;
     case AMDGPU::S_WAITCNT_VMCNT_gfx10:
-      Vmcnt = OpImm->getImm();
+      Vmcnt = static_cast<unsigned>(OpImm->getImm());
       break;
     case AMDGPU::S_WAITCNT_VSCNT_gfx10:
-      Vscnt = OpImm->getImm();
+      Vscnt = static_cast<unsigned>(OpImm->getImm());
       break;
     }
     return;
@@ -224,7 +224,7 @@ void AMDGPUCustomBehaviour::computeWaitCnt(const InstRef &IR, unsigned &Vmcnt,
   case AMDGPU::S_WAITCNT_gfx10:
   case AMDGPU::S_WAITCNT_gfx6_gfx7:
   case AMDGPU::S_WAITCNT_vi:
-    unsigned WaitCnt = Inst.getOperand(0)->getImm();
+    unsigned WaitCnt = static_cast<unsigned>(Inst.getOperand(0)->getImm());
     AMDGPU::decodeWaitcnt(IV, WaitCnt, Vmcnt, Expcnt, Lgkmcnt);
     return;
   }
@@ -246,7 +246,7 @@ void AMDGPUCustomBehaviour::generateWaitCntInfo() {
 
   for (const auto &EN : llvm::enumerate(SrcMgr.getInstructions())) {
     const std::unique_ptr<Instruction> &Inst = EN.value();
-    unsigned Index = EN.index();
+    unsigned Index = static_cast<unsigned>(EN.index());
     unsigned Opcode = Inst->getOpcode();
     const MCInstrDesc &MCID = MCII.get(Opcode);
     if (SIInstrFlags::isDS(MCID) && SIInstrFlags::usesLGKM_CNT(MCID)) {
