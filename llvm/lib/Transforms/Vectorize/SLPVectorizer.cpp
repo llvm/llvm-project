@@ -23792,13 +23792,41 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     assert(OpTE1.isSame(
                ArrayRef(E->Scalars).take_front(OpTE1.getVectorFactor())) &&
            "Expected same first part of scalars.");
-    Value *Op1 = vectorizeTree(&OpTE1);
     TreeEntry &OpTE2 =
         *VectorizableTree[E->CombinedEntriesWithIndices.back().first];
     assert(
         OpTE2.isSame(ArrayRef(E->Scalars).take_back(OpTE2.getVectorFactor())) &&
         "Expected same second part of scalars.");
+    // The vector values, used by the operands, may be already materialized in
+    // the current block *after* the insertion point, computed for this node. It
+    // happens for the split nodes with the PHI main op: the insertion point of
+    // such a node is the first non-PHI instruction of the block, while the
+    // reuse shuffle of an already vectorized PHI node is materialized at the
+    // first insertion point, i.e. right after all PHIs. The operands may reuse
+    // such a value directly or via a gather node, so advance the insertion
+    // point past all vector values, emitted for the nodes with the same
+    // scalars, otherwise the shuffles are emitted before the values they
+    // consume.
+    auto AdvanceInsertPointPast = [&](Value *V) {
+      auto *I = dyn_cast_or_null<Instruction>(V);
+      // PHIs always dominate the rest of the block.
+      if (!I || isa<PHINode>(I) || I->getParent() != Builder.GetInsertBlock())
+        return;
+      BasicBlock::iterator InsertPt = Builder.GetInsertPoint();
+      if (InsertPt == I->getParent()->end() || !I->comesBefore(&*InsertPt))
+        Builder.SetInsertPoint(I->getParent(), std::next(I->getIterator()));
+    };
+    for (const TreeEntry *OpTE : {&OpTE1, &OpTE2}) {
+      AdvanceInsertPointPast(OpTE->VectorizedValue);
+      for (Value *V : OpTE->Scalars)
+        for (const TreeEntry *TE : getTreeEntries(V))
+          AdvanceInsertPointPast(TE->VectorizedValue);
+    }
+    Value *Op1 = vectorizeTree(&OpTE1);
     Value *Op2 = vectorizeTree(&OpTE2);
+    // Same for the emitted operands themselves.
+    AdvanceInsertPointPast(Op1);
+    AdvanceInsertPointPast(Op2);
     auto GetOperandSignedness = [&](const TreeEntry *OpE) {
       bool IsSigned = false;
       auto It = MinBWs.find(OpE);
