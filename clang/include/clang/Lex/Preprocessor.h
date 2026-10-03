@@ -2051,9 +2051,11 @@ public:
                             void *AnnotationVal);
 
   /// Determine whether it's possible for a future call to Lex to produce an
-  /// annotation token created by a previous call to EnterAnnotationToken.
+  /// annotation token created by a previous call to EnterAnnotationToken,
+  /// or if the parser is currently holding an annotation token that was just
+  /// retrieved from the cache.
   bool mightHavePendingAnnotationTokens() {
-    return CurLexerCallback != CLK_Lexer;
+    return CurLexerCallback != CLK_Lexer || !CachedTokens.empty();
   }
 
   /// Update the current token to represent the provided
