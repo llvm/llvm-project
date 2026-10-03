@@ -1341,7 +1341,21 @@ SampleProfileReaderExtBinaryBase::readStringBasedProfileSymbolList() {
   if (!ProfSymList)
     ProfSymList = std::make_unique<ProfileSymbolList>();
 
-  if (std::error_code EC = ProfSymList->read(Data, End - Data))
+  // With a module, the list is only queried for the names of functions in it
+  // (SampleProfileLoader and SampleProfileMatcher), so keep only those instead
+  // of hashing every symbol of the profiled binary into one huge set.
+  std::optional<DenseSet<StringRef>> Filter;
+  if (M) {
+    Filter.emplace();
+    for (const Function &F : *M) {
+      Filter->insert(F.getName());
+      Filter->insert(FunctionSamples::getCanonicalFnName(F));
+      Filter->insert(FunctionSamples::getCanonicalFnName(F.getName()));
+    }
+  }
+
+  if (std::error_code EC =
+          ProfSymList->read(Data, End - Data, Filter ? &*Filter : nullptr))
     return EC;
 
   Data = End;
