@@ -1714,6 +1714,7 @@ static Error mergeSampleProfile(const WeightedFileVector &Inputs,
   sampleprof::ProfileSymbolList WriterList;
   std::optional<bool> ProfileIsProbeBased;
   std::optional<bool> ProfileIsCS;
+  std::unique_ptr<memprof::DataAccessProfData> DataAccessProfData;
   for (const auto &Input : Inputs) {
     auto FS = vfs::getRealFileSystem();
     auto ReaderOrErr = SampleProfileReader::create(Input.Filename, Context, *FS,
@@ -1770,6 +1771,10 @@ static Error mergeSampleProfile(const WeightedFileVector &Inputs,
       }
     }
 
+    if (std::unique_ptr<memprof::DataAccessProfData> DataProf =
+            Reader->takeDataAccessProfileData())
+      DataAccessProfData = std::move(DataProf);
+
     if (!DropProfileSymbolList) {
       std::unique_ptr<sampleprof::ProfileSymbolList> ReaderList =
           Reader->getProfileSymbolList();
@@ -1819,6 +1824,9 @@ static Error mergeSampleProfile(const WeightedFileVector &Inputs,
   auto Buffer = std::move(*BufferOrErr);
   handleExtBinaryWriter(*Writer, OutputFormat, Buffer.get(), WriterList,
                         CompressAllSections, UseMD5, GenPartialProfile);
+
+  if (DataAccessProfData)
+    Writer->setDataAccessProfData(std::move(DataAccessProfData));
 
   // If OutputSizeLimit is 0 (default), it is the same as write().
   if (std::error_code EC =

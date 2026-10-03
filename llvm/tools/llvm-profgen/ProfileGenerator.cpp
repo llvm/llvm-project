@@ -170,6 +170,9 @@ void ProfileGeneratorBase::write(std::unique_ptr<SampleProfileWriter> Writer,
     Writer->setProfileSymbolList(&SymbolList);
   }
 
+  if (DataAccessProfileData && !DataAccessProfileData->empty())
+    Writer->setDataAccessProfData(std::move(DataAccessProfileData));
+
   if (std::error_code EC = Writer->write(ProfileMap))
     exitWithError(std::move(EC));
 }

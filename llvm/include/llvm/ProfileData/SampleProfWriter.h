@@ -135,6 +135,11 @@ public:
   virtual void setUseMD5IndexedTables() {}
   virtual void setUseCompositeProfile(bool /*Enable*/) {}
 
+  void
+  setDataAccessProfData(std::unique_ptr<memprof::DataAccessProfData> Data) {
+    DataAccessProfileData = std::move(Data);
+  }
+
   void setFormatVersion(uint64_t V) {
     assert(sampleprof::formatVersionIsSupported(V) &&
            "Unsupported format version");
@@ -151,6 +156,10 @@ protected:
 
   // Write function profiles to the profile file.
   virtual std::error_code writeFuncProfiles(const SampleProfileMap &ProfileMap);
+
+  virtual std::error_code writeDataAccessProfiles() {
+    return sampleprof_error::success;
+  }
 
   std::error_code writeWithSizeLimitInternal(SampleProfileMap &ProfileMap,
                                              size_t OutputSizeLimit,
@@ -175,6 +184,8 @@ protected:
 
   /// Format version to write.
   uint64_t FormatVersion = sampleprof::DefaultVersion;
+
+  std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData;
 };
 
 /// Sample-based profile writer (text format).
@@ -190,6 +201,8 @@ protected:
     LineCount = 0;
     return sampleprof_error::success;
   }
+
+  std::error_code writeDataAccessProfiles() override;
 
   void setUseCtxSplitLayout() override { MarkFlatProfiles = true; }
 
@@ -283,7 +296,8 @@ const std::array<SmallVector<SecHdrTableEntry, 8>, NumOfLayout>
                                           {SecFuncOffsetTable, 0, 0, 0, 0},
                                           {SecLBRProfile, 0, 0, 0, 0},
                                           {SecProfileSymbolList, 0, 0, 0, 0},
-                                          {SecFuncMetadata, 0, 0, 0, 0}}),
+                                          {SecFuncMetadata, 0, 0, 0, 0},
+                                          {SecDataAccessProfile, 0, 0, 0, 0}}),
         // CtxSplitLayout
         SmallVector<SecHdrTableEntry, 8>(
             {{SecProfSummary, 0, 0, 0, 0},
@@ -299,7 +313,8 @@ const std::array<SmallVector<SecHdrTableEntry, 8>, NumOfLayout>
              {SecLBRProfile, static_cast<uint64_t>(SecCommonFlags::SecFlagFlat),
               0, 0, 0},
              {SecProfileSymbolList, 0, 0, 0, 0},
-             {SecFuncMetadata, 0, 0, 0, 0}}),
+             {SecFuncMetadata, 0, 0, 0, 0},
+             {SecDataAccessProfile, 0, 0, 0, 0}}),
 };
 
 class LLVM_ABI SampleProfileWriterExtBinaryBase
@@ -411,6 +426,7 @@ protected:
   std::error_code writeProfileSymbolListSection();
   std::error_code writeStringBasedProfileSymbolListSection();
   std::error_code writeMD5ProfileSymbolListSection();
+  std::error_code writeDataAccessProfiles() override;
 
   SectionLayout SecLayout = DefaultLayout;
   // Specifiy the order of sections in section header table. Note
