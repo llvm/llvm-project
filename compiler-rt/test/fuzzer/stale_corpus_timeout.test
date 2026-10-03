@@ -1,0 +1,15 @@
+RUN: %cpp_compiler %S/SingleMemcmpTest.cpp -o %t-SingleMemcmpTest
+
+STALE_CORPUS_TIMEOUT-NOT: Done 100000000 runs
+STALE_CORPUS_TIMEOUT: Done {{[0-9]+}} runs in {{[0-9]}} second(s), {{[0-9]}} second(s) without new corpus
+
+# does it work?
+RUN: %run %t-SingleMemcmpTest -seed=1 -runs=100000000 -stale_corpus_timeout=2 -use_cmp=0 2>&1 | FileCheck %s --check-prefix=STALE_CORPUS_TIMEOUT
+
+# same for -fork
+
+STALE_CORPUS_TIMEOUT_FORK-NOT: INFO: fuzzed for {{[0-9]+}} iterations
+STALE_CORPUS_TIMEOUT_FORK: INFO: no new corpus for {{[0-9]+}} seconds
+
+# does it work?
+RUN: %run %t-SingleMemcmpTest -runs=100000000 -stale_corpus_timeout=2 -use_cmp=0 -fork=1 2>&1 | FileCheck %s --check-prefix=STALE_CORPUS_TIMEOUT_FORK

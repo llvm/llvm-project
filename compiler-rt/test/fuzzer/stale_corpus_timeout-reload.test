@@ -1,0 +1,15 @@
+RUN: %cpp_compiler %S/CleanseTest.cpp -o %t-CleanseTest
+
+# total time - double digits, without new corpus - one digit
+STALE_CORPUS_TIMEOUT: Done {{.*}} runs in {{[0-9][0-9]}} second(s), {{[0-9]}} second(s) without new corpus
+
+# is timer updated with a new input?
+RUN: rm -rf %t-1
+RUN: mkdir -p %t-1
+RUN: %python -c "import subprocess, time, sys, os; p = subprocess.Popen([sys.argv[1], '-seed=1', '-stale_corpus_timeout=7', '-mutate_depth=0', sys.argv[2]], stdout=subprocess.PIPE, stderr=subprocess.PIPE); time.sleep(4); open(os.path.join(sys.argv[2], 'new'), 'w').write(' 1   5    A         '); _, stderr = p.communicate(); sys.stdout.buffer.write(stderr)" %t-CleanseTest %t-1 | FileCheck %s --check-prefix=STALE_CORPUS_TIMEOUT
+
+
+# max_total_time may be triggered first
+RUN: rm -rf %t-2
+RUN: mkdir -p %t-2
+RUN: %python -c "import subprocess, time, sys, os; p = subprocess.Popen([sys.argv[1], '-seed=1', '-stale_corpus_timeout=10', '-max_total_time=10', '-mutate_depth=0', sys.argv[2]], stdout=subprocess.PIPE, stderr=subprocess.PIPE); time.sleep(4); open(os.path.join(sys.argv[2], 'new'), 'w').write(' 1   5    A         '); _, stderr = p.communicate(); sys.stdout.buffer.write(stderr)" %t-CleanseTest %t-2 | FileCheck %s --check-prefix=STALE_CORPUS_TIMEOUT
