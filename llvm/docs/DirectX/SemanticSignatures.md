@@ -147,6 +147,16 @@ in-memory element representation they operate on is declared in
 
 [SemanticSignaturePacking.h]: https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Frontend/HLSL/SemanticSignaturePacking.h
 
+### Selecting a Packing Mode
+
+Clang packs semantic signatures before emitting `dx.semantic.signatures`
+metadata. For signatures connecting programmable shader stages, the default is
+prefix-stable packing. Use `-fdx-semantic-signature-packing-mode=prefix-stable`
+or `-fdx-semantic-signature-packing-mode=optimized` to select the mode explicitly.
+In DXC driver mode, the corresponding flags are `-pack-prefix-stable` and
+`-pack-optimized`. These options do not affect vertex shader inputs, which always
+use stacked packing, or pixel shader outputs, which always use indexed packing.
+
 ### Prefix-Stable Packing
 
 Prefix-stable packing is used for signatures that connect programmable shader
