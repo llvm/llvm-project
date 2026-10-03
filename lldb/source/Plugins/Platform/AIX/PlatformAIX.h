@@ -50,6 +50,11 @@ public:
   lldb::UnwindPlanSP GetTrapHandlerUnwindPlan(const ArchSpec &arch,
                                               ConstString name) override;
 
+  bool IsTrapHandlerAddress(lldb::addr_t pc) const override;
+
+  lldb::UnwindPlanSP GetTrapHandlerUnwindPlan(const ArchSpec &arch,
+                                              lldb::addr_t pc) override;
+
   MmapArgList GetMmapArgumentList(const ArchSpec &arch, lldb::addr_t addr,
                                   lldb::addr_t length, unsigned prot,
                                   unsigned flags, lldb::addr_t fd,

@@ -46,6 +46,7 @@ add_lldb_library(lldbPluginProcessUtility
   RegisterContextPOSIX_riscv32.cpp
   RegisterContextPOSIX_powerpc.cpp
   RegisterContextPOSIX_ppc64le.cpp
+  RegisterContextPOSIX_ppc64.cpp
   RegisterContextPOSIX_riscv64.cpp
   RegisterContextPOSIX_s390x.cpp
   RegisterContextPOSIX_x86.cpp

@@ -128,6 +128,40 @@ ThreadPlanCallFunction::ThreadPlanCallFunction(
 }
 
 ThreadPlanCallFunction::ThreadPlanCallFunction(
+    Thread &thread, const Address &function, const Address &toc,
+    const CompilerType &return_type,
+    llvm::ArrayRef<addr_t> args, const EvaluateExpressionOptions &options)
+    : ThreadPlan(ThreadPlan::eKindCallFunction, "Call function plan", thread,
+                 eVoteNoOpinion, eVoteNoOpinion),
+      m_valid(false), m_stop_other_threads(options.GetStopOthers()),
+      m_unwind_on_error(options.DoesUnwindOnError()),
+      m_ignore_breakpoints(options.DoesIgnoreBreakpoints()),
+      m_debug_execution(options.GetDebug()),
+      m_trap_exceptions(options.GetTrapExceptions()), m_function_addr(function),
+      m_function_sp(0), m_takedown_done(false),
+      m_should_clear_objc_exception_bp(false),
+      m_should_clear_cxx_exception_bp(false),
+      m_stop_address(LLDB_INVALID_ADDRESS), m_return_type(return_type) {
+  lldb::addr_t start_load_addr = LLDB_INVALID_ADDRESS;
+  lldb::addr_t function_load_addr = LLDB_INVALID_ADDRESS;
+  lldb::addr_t toc_addr = LLDB_INVALID_ADDRESS;
+  ABI *abi = nullptr;
+
+  if (!ConstructorSetup(thread, abi, start_load_addr, function_load_addr))
+    return;
+
+  toc_addr = toc.GetLoadAddress(&GetTarget());
+
+  if (!abi->PrepareTrivialCall(thread, m_function_sp, function_load_addr,
+                               toc_addr, start_load_addr, args))
+    return;
+
+  ReportRegisterState("Function call was set up.  Register state was:");
+
+  m_valid = true;
+}
+
+ThreadPlanCallFunction::ThreadPlanCallFunction(
     Thread &thread, const Address &function,
     const EvaluateExpressionOptions &options)
     : ThreadPlan(ThreadPlan::eKindCallFunction, "Call function plan", thread,
