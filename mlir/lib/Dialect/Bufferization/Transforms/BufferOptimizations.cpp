@@ -69,21 +69,16 @@ static bool isSequentialLoop(Operation *op) {
   return !op->hasTrait<OpTrait::HasParallelRegion>() && isLoop(op);
 }
 
-/// Returns true if an allocation in the before region can be reused across
-/// iterations when its aliases have a common dominator outside the while loop.
+/// Returns true if an allocation can be reused across iterations when its
+/// aliases have a common dominator outside the while loop.
 /// `aliases` must contain the complete forward alias set of the allocation.
 static bool
-canHoistFromWhile(memref::AllocOp alloc, scf::WhileOp loop,
+canHoistFromWhile(scf::WhileOp loop,
                   const BufferViewFlowAnalysis::ValueSetT &aliases) {
   // Further hoisting across an enclosing loop with unmodeled parallel
   // execution could share the allocation across iterations.
   if (!isa<FunctionOpInterface>(loop->getParentOp()) ||
       !loop->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
-    return false;
-
-  // The single-block before region executes on entry, even if the condition
-  // is initially false. The after region may be skipped.
-  if (alloc->getBlock() != loop.getBeforeBody())
     return false;
 
   // Check all aliases, including loop results: memory effects alone do not rule
@@ -349,7 +344,7 @@ private:
         if (parentOp == scopeOp ||
             parentOp->hasTrait<OpTrait::IsIsolatedFromAbove>() ||
             !isKnownControlFlowInterface(parentOp) ||
-            !state.isLegalPlacement(parentOp, scopeOp))
+            !state.isLegalPlacement(parentOp))
           break;
         // Move to our parent block by notifying the current StateT
         // implementation.
@@ -398,9 +393,7 @@ struct BufferAllocationHoistingState : BufferAllocationHoistingStateBase {
   }
 
   /// Returns true if the given operation does not represent a loop.
-  bool isLegalPlacement(Operation *op, Operation *scopeOp) {
-    return !isLoop(op);
-  }
+  bool isLegalPlacement(Operation *op) { return !isLoop(op); }
 
   /// Returns true if the given operation should be considered for hoisting.
   static bool shouldHoistOpType(Operation *op) {
@@ -431,22 +424,15 @@ struct BufferAllocationLoopHoistingState : BufferAllocationHoistingStateBase {
   }
 
   /// Returns true if the allocation can be moved across the given loop.
-  bool isLegalPlacement(Operation *op, Operation *scopeOp) {
+  bool isLegalPlacement(Operation *op) {
     if (!isSequentialLoop(op))
       return false;
     if (!dominators->dominates(aliasDominatorBlock, op->getBlock()))
       return true;
     auto loop = dyn_cast<scf::WhileOp>(op);
-    auto alloc = allocValue.getDefiningOp<memref::AllocOp>();
-    if (!loop || !alloc)
+    if (!loop || !allocValue.getDefiningOp<memref::AllocOp>())
       return false;
-    // Moving outside the analysis scope leaves liveness information
-    // unavailable. An unreachable parent block has no dominator node for the
-    // placement walk.
-    if (!scopeOp->isProperAncestor(op) ||
-        !dominators->isReachableFromEntry(op->getBlock()))
-      return false;
-    return canHoistFromWhile(alloc, loop, aliases);
+    return canHoistFromWhile(loop, aliases);
   }
 
   /// Returns true if the given operation should be considered for hoisting.

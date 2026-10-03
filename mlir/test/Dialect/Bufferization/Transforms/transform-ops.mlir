@@ -333,7 +333,6 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.any_op
     transform.bufferization.buffer_loop_hoisting %func : !transform.any_op
-    transform.bufferization.buffer_loop_hoisting %func : !transform.any_op
     transform.yield
   }
   func.func @buffer_loop_hoisting_function_scope(%condition: i1) -> index {

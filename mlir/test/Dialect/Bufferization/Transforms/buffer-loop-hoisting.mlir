@@ -922,15 +922,14 @@ func.func @no_hoist_while_alloca(%condition: i1) {
 
 // -----
 
-// Conservatively exclude unreachable parent blocks from the fallback.
-// CHECK-LABEL: func @no_hoist_while_unreachable_parent(
+// Hoist into the unreachable parent block, then stop the placement walk there.
+// CHECK-LABEL: func @while_unreachable_parent(
 // CHECK: return
 // CHECK: ^bb1:
-// CHECK-NOT: memref.alloc
-// CHECK: scf.while
-// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+// CHECK: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: scf.while
 // CHECK-NEXT: scf.condition{{.*}} %[[ALLOC]]
-func.func @no_hoist_while_unreachable_parent() {
+func.func @while_unreachable_parent() {
   return
 ^dead:
   %false = arith.constant false
@@ -939,6 +938,29 @@ func.func @no_hoist_while_unreachable_parent() {
     scf.condition(%false) %buffer : memref<1xindex>
   } do {
   ^bb0(%current: memref<1xindex>):
+    scf.yield
+  }
+  return
+}
+
+// -----
+
+// Storing an alias as a value can expose the buffer to later iterations.
+// CHECK-LABEL: func @no_hoist_while_store_alias(
+// CHECK-SAME: %{{.*}}: i1, %[[HOLDER:.*]]: memref<memref<1xindex>>
+// CHECK-NOT: memref.alloc
+// CHECK: scf.while
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: scf.condition{{.*}} %[[ALLOC]]
+// CHECK: ^bb0(%[[CURRENT:.*]]: memref<1xindex>):
+// CHECK-NEXT: memref.store %[[CURRENT]], %[[HOLDER]][]
+func.func @no_hoist_while_store_alias(%condition: i1, %holder: memref<memref<1xindex>>) {
+  %last = scf.while () : () -> memref<1xindex> {
+    %buffer = memref.alloc() : memref<1xindex>
+    scf.condition(%condition) %buffer : memref<1xindex>
+  } do {
+  ^bb0(%current: memref<1xindex>):
+    memref.store %current, %holder[] : memref<memref<1xindex>>
     scf.yield
   }
   return

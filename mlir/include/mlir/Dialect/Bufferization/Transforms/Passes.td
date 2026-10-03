@@ -308,10 +308,10 @@ def BufferLoopHoistingPass : Pass<"buffer-loop-hoisting", "func::FuncOp"> {
 
     `memref.alloc` operations directly in the `before` region of `scf.while`
     may also be hoisted when their buffers are forwarded through loop results.
-    This extension requires a loop directly in an isolated function body, in a
-    reachable block and strictly inside the transformation target. No alias may
-    be carried back to `before`, and all alias uses, including uses of loop
-    results, must permit reusing the allocation across iterations.
+    This extension requires a loop directly in an isolated function body and
+    strictly inside the transformation target. No alias may be carried back to
+    `before`, and all alias uses, including uses of loop results, must permit
+    reusing the allocation across iterations.
   }];
 }
 
