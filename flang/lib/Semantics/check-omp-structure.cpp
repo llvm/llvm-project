@@ -171,6 +171,10 @@ OmpStructureChecker::OmpStructureChecker(SemanticsContext &context)
 void OmpStructureChecker::Enter(const parser::ProgramUnit &) { //
   ClearLabels();
   declareVariantPairs_.clear();
+  // A REQUIRES directive with unified_address, unified_shared_memory, or
+  // reverse_offload must appear lexically before any device construct or
+  // device routine is scoped to a program unit.
+  deviceConstructFound_ = false;
 }
 
 void OmpStructureChecker::Leave(const parser::ProgramUnit &) {
