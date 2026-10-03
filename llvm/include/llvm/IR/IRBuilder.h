@@ -117,6 +117,8 @@ class IRBuilderBase {
   DebugLoc StoredDL;
 
 protected:
+  // TODO: Remove this in favor of InsertPt.getNodeParent(), so they cannot
+  // go out of sync.
   BasicBlock *BB;
   BasicBlock::iterator InsertPt;
   LLVMContext &Context;
