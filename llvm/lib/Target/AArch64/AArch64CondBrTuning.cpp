@@ -23,13 +23,19 @@
 /// 3) sub w8, w0, w1       -> subs w8, w0, w1   ; w8 has multiple uses.
 ///    tbz w8, #31, .LBB6_2 -> b.pl .LBB6_2
 ///
+/// 4) lsr x8, x0, 32    ->  mov	w9, #4294967296   ; will be hoisted
+///    cbz x8, .LBB0_0   ->  cmp	x8, x9            ; fused with bcc
+///                      ->  b.lo .LBB0_0
+///
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -45,8 +51,10 @@ using namespace llvm;
 
 namespace {
 class AArch64CondBrTuning : public MachineFunctionPass {
+  const AArch64Subtarget *STI;
   const AArch64InstrInfo *TII;
   const TargetRegisterInfo *TRI;
+  const MachineLoopInfo *MLI;
 
   MachineRegisterInfo *MRI;
 
@@ -63,6 +71,7 @@ private:
                                         bool Is64Bit);
   MachineInstr *convertToCondBr(MachineInstr &MI);
   bool tryToTuneBranch(MachineInstr &MI, MachineInstr &DefMI);
+  bool tryTransformShiftBranch(MachineBasicBlock &MBB, MachineInstr &MI) const;
 };
 } // end anonymous namespace
 
@@ -73,7 +82,15 @@ INITIALIZE_PASS(AArch64CondBrTuning, "aarch64-cond-br-tuning",
 
 void AArch64CondBrTuning::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
+  AU.addPreserved<MachineLoopInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
+}
+
+static bool isNZCVLiveout(const MachineBasicBlock &MBB) {
+  return any_of(MBB.successors(), [](const MachineBasicBlock *SuccMBB) {
+    return SuccMBB->isLiveIn(AArch64::NZCV);
+  });
 }
 
 MachineInstr *AArch64CondBrTuning::getOperandDef(const MachineOperand &MO) {
@@ -202,7 +219,7 @@ bool AArch64CondBrTuning::tryToTuneBranch(MachineInstr &MI,
 
       // There must not be any instruction between DefMI and MI that clobbers or
       // reads NZCV.
-      if (isNZCVTouchedInInstructionRange(DefMI, MI, TRI))
+      if (isNZCVTouchedInInstructionRange(*DefMI.getNextNode(), MI, TRI))
         return false;
 
       NewCmp = tryConvertToFlagSetting(DefMI, IsFlagSetting, /*Is64Bit=*/false);
@@ -261,7 +278,7 @@ bool AArch64CondBrTuning::tryToTuneBranch(MachineInstr &MI,
         return false;
       // There must not be any instruction between DefMI and MI that clobbers or
       // reads NZCV.
-      if (isNZCVTouchedInInstructionRange(DefMI, MI, TRI))
+      if (isNZCVTouchedInInstructionRange(*DefMI.getNextNode(), MI, TRI))
         return false;
 
       NewCmp = tryConvertToFlagSetting(DefMI, IsFlagSetting, /*Is64Bit=*/true);
@@ -296,6 +313,105 @@ bool AArch64CondBrTuning::tryToTuneBranch(MachineInstr &MI,
   return true;
 }
 
+/// Try to transform lsr + cbz/cbnz instruction pairs into a cmp + bcc pair.
+/// This will require an additional instruction to materialize the cmp
+/// immediate, but it saves an instruction when the imm mat instruction
+/// can be hoisted out of the block and the cmp + bcc instructions are fused.
+bool AArch64CondBrTuning::tryTransformShiftBranch(MachineBasicBlock &MBB,
+                                                  MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  default:
+    break;
+  case AArch64::CBNZW:
+  case AArch64::CBZW: {
+    const Register CondReg = MI.getOperand(0).getReg();
+    if (!CondReg.isVirtual() || !MRI->hasOneNonDBGUse(CondReg))
+      return false;
+
+    MachineInstr &CondDef = *MRI->getUniqueVRegDef(CondReg);
+    if (CondDef.getOpcode() != AArch64::UBFMWri ||
+        CondDef.getOperand(3).getImm() != 31)
+      return false;
+
+    // NZCV can't be live after the last non-terminator in the block for the
+    // transformation to work. At this point we know it's not live after MI,
+    // so we only have to check the rest of the range here.
+    if (isNZCVTouchedInInstructionRange(*MBB.getFirstTerminator(), MI, TRI))
+      return false;
+
+    const uint64_t ShiftAmt = CondDef.getOperand(2).getImm();
+    const uint64_t CmpImm = 1ULL << ShiftAmt;
+
+    const AArch64CC::CondCode CC =
+        (MI.getOpcode() == AArch64::CBZW) ? AArch64CC::LO : AArch64CC::HS;
+
+    const Register ImmReg = MRI->createVirtualRegister(&AArch64::GPR32RegClass);
+
+    BuildMI(MBB, MBB.getFirstTerminator(), CondDef.getDebugLoc(),
+            TII->get(AArch64::MOVi32imm))
+        .addDef(ImmReg)
+        .addImm(CmpImm);
+
+    BuildMI(MBB, MBB.getFirstTerminator(), CondDef.getDebugLoc(),
+            TII->get(AArch64::SUBSWrr))
+        .addDef(AArch64::WZR)
+        .addReg(CondDef.getOperand(1).getReg())
+        .addReg(ImmReg);
+
+    BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(AArch64::Bcc))
+        .addImm(CC)
+        .addMBB(MI.getOperand(1).getMBB());
+
+    CondDef.eraseFromParent();
+    MI.eraseFromParent();
+    return true;
+  }
+  case AArch64::CBNZX:
+  case AArch64::CBZX: {
+    const Register CondReg = MI.getOperand(0).getReg();
+    if (!CondReg.isVirtual() || !MRI->hasOneNonDBGUse(CondReg))
+      return false;
+
+    MachineInstr &CondDef = *MRI->getUniqueVRegDef(CondReg);
+    if (CondDef.getOpcode() != AArch64::UBFMXri ||
+        CondDef.getOperand(3).getImm() != 63)
+      return false;
+
+    if (isNZCVTouchedInInstructionRange(*MBB.getFirstTerminator(), MI, TRI))
+      return false;
+
+    const uint64_t ShiftAmt = CondDef.getOperand(2).getImm();
+    const uint64_t CmpImm = 1ULL << ShiftAmt;
+
+    const AArch64CC::CondCode CC =
+        (MI.getOpcode() == AArch64::CBZX) ? AArch64CC::LO : AArch64CC::HS;
+
+    const Register ImmReg = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
+
+    BuildMI(MBB, MBB.getFirstTerminator(), CondDef.getDebugLoc(),
+            TII->get(AArch64::MOVi64imm))
+        .addDef(ImmReg)
+        .addImm(CmpImm);
+
+    BuildMI(MBB, MBB.getFirstTerminator(), CondDef.getDebugLoc(),
+            TII->get(AArch64::SUBSXrr))
+        .addDef(AArch64::XZR)
+        .addReg(CondDef.getOperand(1).getReg())
+        .addReg(ImmReg);
+
+    BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(AArch64::Bcc))
+        .addImm(CC)
+        .addMBB(MI.getOperand(1).getMBB());
+
+    CondDef.eraseFromParent();
+    MI.eraseFromParent();
+    return true;
+  }
+  }
+
+  return false;
+}
+
 bool AArch64CondBrTuning::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -304,8 +420,10 @@ bool AArch64CondBrTuning::runOnMachineFunction(MachineFunction &MF) {
       dbgs() << "********** AArch64 Conditional Branch Tuning  **********\n"
              << "********** Function: " << MF.getName() << '\n');
 
-  TII = static_cast<const AArch64InstrInfo *>(MF.getSubtarget().getInstrInfo());
-  TRI = MF.getSubtarget().getRegisterInfo();
+  STI = &MF.getSubtarget<AArch64Subtarget>();
+  TII = static_cast<const AArch64InstrInfo *>(STI->getInstrInfo());
+  TRI = STI->getRegisterInfo();
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   MRI = &MF.getRegInfo();
 
   bool Changed = false;
@@ -335,6 +453,27 @@ bool AArch64CondBrTuning::runOnMachineFunction(MachineFunction &MF) {
       }
     }
   }
+
+  if (!STI->hasCmpBccFusion())
+    return Changed;
+
+  for (const MachineLoop *ML : *MLI) {
+    for (MachineBasicBlock *MBB : ML->blocks()) {
+      if (isNZCVLiveout(*MBB))
+        continue;
+
+      for (MachineInstr &MI : reverse(MBB->terminators())) {
+        if (MI.readsRegister(AArch64::NZCV, TRI))
+          break;
+
+        if (tryTransformShiftBranch(*MBB, MI)) {
+          Changed = true;
+          break;
+        }
+      }
+    }
+  }
+
   return Changed;
 }
 
