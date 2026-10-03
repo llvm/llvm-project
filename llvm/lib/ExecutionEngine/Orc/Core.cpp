@@ -1462,16 +1462,15 @@ Expected<DenseMap<JITDylib *, SymbolMap>> Platform::lookupInitSymbols(
         JITDylibSearchOrder({{JD, JITDylibLookupFlags::MatchAllSymbols}}),
         std::move(Names), SymbolState::Ready,
         [&, JD](Expected<SymbolMap> Result) {
-          {
-            std::lock_guard<std::mutex> Lock(LookupMutex);
-            --Count;
-            if (Result) {
-              assert(!CompoundResult.count(JD) &&
-                     "Duplicate JITDylib in lookup?");
-              CompoundResult[JD] = std::move(*Result);
-            } else
-              CompoundErr =
-                  joinErrors(std::move(CompoundErr), Result.takeError());
+          std::lock_guard<std::mutex> Lock(LookupMutex);
+          --Count;
+          if (Result) {
+            assert(!CompoundResult.count(JD) &&
+                   "Duplicate JITDylib in lookup?");
+            CompoundResult[JD] = std::move(*Result);
+          } else {
+            CompoundErr =
+                joinErrors(std::move(CompoundErr), Result.takeError());
           }
           CV.notify_one();
         },
