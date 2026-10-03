@@ -317,7 +317,6 @@ struct Context {
 
   MetaMap metamap;
 
-  Mutex report_mtx;
   atomic_uint32_t nreported;
   atomic_uint64_t last_symbolize_time_ns;
 
