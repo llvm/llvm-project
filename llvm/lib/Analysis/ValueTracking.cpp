@@ -93,7 +93,7 @@ static cl::opt<unsigned> DomConditionsMaxUses("dom-conditions-max-uses",
 
 /// Maximum number of instructions to check between assume and context
 /// instruction.
-static constexpr unsigned MaxInstrsToCheckForFree = 32;
+static constexpr unsigned MaxInstrsToCheckForFree = 200;
 
 template <typename InstTy>
 static bool matchTwoInputRecurrence(const PHINode *PN, InstTy *&Inst,

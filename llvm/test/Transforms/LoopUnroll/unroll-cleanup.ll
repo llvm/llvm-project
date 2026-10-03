@@ -22,29 +22,34 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @_Z3fn1v(ptr %r, ptr %a) #0 {
 ; CHECK-LABEL: define void @_Z3fn1v(
 ; CHECK-SAME: ptr nofree writeonly captures(none) [[R:%.*]], ptr nofree readonly captures(none) [[A:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[T:%.*]] = load i32, ptr @b, align 4
 ; CHECK-NEXT:    [[TOBOOL20:%.*]] = icmp eq i32 [[T]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL20]], label %[[FOR_END6:.*]], label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[T2_PRE2:%.*]] = load i32, ptr @c, align 4
+; CHECK-NEXT:    br label %[[FOR_BODY1:.*]]
 ; CHECK:       [[FOR_COND_LOOPEXIT_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    [[ADD_PTR_LCSSA:%.*]] = phi ptr [ [[ADD_PTR_LCSSA_UNR:%.*]], %[[FOR_BODY3_PROL_LOOPEXIT:.*]] ], [ [[ADD_PTR_1:%.*]], %[[FOR_INC_1:.*]] ]
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A_021:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[T2:%.*]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[TMP1]]
+; CHECK-NEXT:    [[T2_PRE:%.*]] = load i32, ptr @c, align 4
 ; CHECK-NEXT:    [[T1_PRE:%.*]] = load i32, ptr @b, align 4
 ; CHECK-NEXT:    br label %[[FOR_COND_LOOPEXIT:.*]]
 ; CHECK:       [[FOR_COND_LOOPEXIT]]:
-; CHECK-NEXT:    [[T1:%.*]] = phi i32 [ [[T12:%.*]], %[[FOR_BODY]] ], [ [[T1_PRE]], %[[FOR_COND_LOOPEXIT_LOOPEXIT]] ]
-; CHECK-NEXT:    [[R_1_LCSSA:%.*]] = phi ptr [ [[R_022:%.*]], %[[FOR_BODY]] ], [ [[ADD_PTR_LCSSA]], %[[FOR_COND_LOOPEXIT_LOOPEXIT]] ]
-; CHECK-NEXT:    [[A_1_LCSSA:%.*]] = phi ptr [ [[A_021]], %[[FOR_BODY]] ], [ [[SCEVGEP1]], %[[FOR_COND_LOOPEXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    [[T1:%.*]] = phi i32 [ [[T15:%.*]], %[[FOR_BODY1]] ], [ [[T1_PRE]], %[[FOR_COND_LOOPEXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    [[T23:%.*]] = phi i32 [ 0, %[[FOR_BODY1]] ], [ [[T2_PRE]], %[[FOR_COND_LOOPEXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    [[R_1_LCSSA:%.*]] = phi ptr [ [[R_022:%.*]], %[[FOR_BODY1]] ], [ [[ADD_PTR_LCSSA]], %[[FOR_COND_LOOPEXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    [[A_1_LCSSA:%.*]] = phi ptr [ [[A_021]], %[[FOR_BODY1]] ], [ [[SCEVGEP1]], %[[FOR_COND_LOOPEXIT_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[T1]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL]], label %[[FOR_END6]], label %[[FOR_BODY]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[T12]] = phi i32 [ [[T1]], %[[FOR_COND_LOOPEXIT]] ], [ [[T]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[R_022]] = phi ptr [ [[R_1_LCSSA]], %[[FOR_COND_LOOPEXIT]] ], [ [[R]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[A_021]] = phi ptr [ [[A_1_LCSSA]], %[[FOR_COND_LOOPEXIT]] ], [ [[A]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[T2]] = load i32, ptr @c, align 4
+; CHECK-NEXT:    br i1 [[TOBOOL]], label %[[FOR_END6]], label %[[FOR_BODY1]]
+; CHECK:       [[FOR_BODY1]]:
+; CHECK-NEXT:    [[T15]] = phi i32 [ [[T1]], %[[FOR_COND_LOOPEXIT]] ], [ [[T]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[T2]] = phi i32 [ [[T23]], %[[FOR_COND_LOOPEXIT]] ], [ [[T2_PRE2]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[R_022]] = phi ptr [ [[R_1_LCSSA]], %[[FOR_COND_LOOPEXIT]] ], [ [[R]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[A_021]] = phi ptr [ [[A_1_LCSSA]], %[[FOR_COND_LOOPEXIT]] ], [ [[A]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TOBOOL215:%.*]] = icmp eq i32 [[T2]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL215]], label %[[FOR_COND_LOOPEXIT]], label %[[FOR_BODY3_PREHEADER:.*]]
 ; CHECK:       [[FOR_BODY3_PREHEADER]]:
