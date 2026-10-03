@@ -29,6 +29,7 @@ def Affine_Dialect : Dialect {
   let cppNamespace = "::mlir::affine";
   let hasConstantMaterializer = 1;
   let dependentDialects = ["arith::ArithDialect", "ub::UBDialect"];
+  let useOpFoldResults = 1;
 }
 
 // Base class for Affine dialect ops.

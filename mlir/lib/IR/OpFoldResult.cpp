@@ -45,8 +45,26 @@ OpFoldResults::OpFoldResults(OpFoldResult replacement) {
     replacements.push_back(replacement);
 }
 
+OpFoldResults::OpFoldResults(Value replacement)
+    : OpFoldResults(OpFoldResult(replacement)) {}
+
 OpFoldResults::OpFoldResults(std::initializer_list<OpFoldResult> list)
     : OpFoldResults(ArrayRef<OpFoldResult>(list)) {}
+
+OpFoldResults::OpFoldResults(Operation *op) {
+  assert(op && "expected a non-null operation");
+  replacements.resize(op->getNumResults());
+}
+
+void OpFoldResults::replace(Value result, OpFoldResult replacement) {
+  auto opResult = dyn_cast_if_present<OpResult>(result);
+  assert(opResult && "expected an OpResult");
+  unsigned resultIndex = opResult.getResultNumber();
+  assert(resultIndex < replacements.size() && "result index out of range");
+  if (dyn_cast_if_present<Value>(replacement) == result)
+    replacement = OpFoldResult();
+  replacements[resultIndex] = replacement;
+}
 
 OpFoldResults OpFoldResults::fromLegacy(LogicalResult status,
                                         ArrayRef<OpFoldResult> results) {

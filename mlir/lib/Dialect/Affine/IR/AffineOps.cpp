@@ -2022,8 +2022,7 @@ LogicalResult AffineDmaStartOp::verify() {
   return success();
 }
 
-LogicalResult AffineDmaStartOp::fold(FoldAdaptor adaptor,
-                                     SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults AffineDmaStartOp::fold(FoldAdaptor adaptor) {
   /// dma_start(memrefcast) -> dma_start
   return memref::foldMemRefCast(*this);
 }
@@ -2112,8 +2111,7 @@ LogicalResult AffineDmaWaitOp::verify() {
   return success();
 }
 
-LogicalResult AffineDmaWaitOp::fold(FoldAdaptor adaptor,
-                                    SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults AffineDmaWaitOp::fold(FoldAdaptor adaptor) {
   /// dma_wait(memrefcast) -> dma_wait
   return memref::foldMemRefCast(*this);
 }
@@ -2566,16 +2564,16 @@ static std::optional<uint64_t> getTrivialConstantTripCount(AffineForOp forOp) {
 }
 
 /// Fold the empty loop.
-static SmallVector<OpFoldResult> AffineForEmptyLoopFolder(AffineForOp forOp) {
+static FailureOr<OpFoldResults> AffineForEmptyLoopFolder(AffineForOp forOp) {
   if (!llvm::hasSingleElement(*forOp.getBody()))
-    return {};
+    return failure();
   if (forOp.getNumResults() == 0)
-    return {};
+    return failure();
   std::optional<uint64_t> tripCount = getTrivialConstantTripCount(forOp);
   if (tripCount == 0) {
     // The initial values of the iteration arguments would be the op's
     // results.
-    return forOp.getInits();
+    return OpFoldResults(forOp.getInits());
   }
   SmallVector<Value, 4> replacements;
   auto yieldOp = cast<AffineYieldOp>(forOp.getBody()->getTerminator());
@@ -2588,7 +2586,7 @@ static SmallVector<OpFoldResult> AffineForEmptyLoopFolder(AffineForOp forOp) {
     // TODO: It should be possible to perform a replacement by computing the
     // last value of the IV based on the bounds and the step.
     if (val == forOp.getInductionVar())
-      return {};
+      return failure();
     if (iterArgIt == iterArgs.end()) {
       // `val` is defined outside of the loop.
       assert(forOp.isDefinedOutsideOfLoop(val) &&
@@ -2606,12 +2604,12 @@ static SmallVector<OpFoldResult> AffineForEmptyLoopFolder(AffineForOp forOp) {
   // defined outside of the loop or any iterArg out of order.
   if (!tripCount.has_value() &&
       (hasValDefinedOutsideLoop || iterArgsNotInOrder))
-    return {};
+    return failure();
   // Bail out when the loop iterates more than once and it returns any iterArg
   // out of order.
   if (tripCount.has_value() && tripCount.value() >= 2 && iterArgsNotInOrder)
-    return {};
-  return llvm::to_vector_of<OpFoldResult>(replacements);
+    return failure();
+  return OpFoldResults(replacements);
 }
 
 /// Canonicalize the bounds of the given loop.
@@ -2650,25 +2648,17 @@ static bool hasTrivialZeroTripCount(AffineForOp op) {
   return getTrivialConstantTripCount(op) == 0;
 }
 
-LogicalResult AffineForOp::fold(FoldAdaptor adaptor,
-                                SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults AffineForOp::fold(FoldAdaptor adaptor) {
   bool folded = succeeded(foldLoopBounds(*this));
   folded |= succeeded(canonicalizeLoopBounds(*this));
-  if (hasTrivialZeroTripCount(*this) && getNumResults() != 0) {
-    // The initial values of the loop-carried variables (iter_args) are the
-    // results of the op. But this must be avoided for an affine.for op that
-    // does not return any results. Since ops that do not return results cannot
-    // be folded away, we would enter an infinite loop of folds on the same
-    // affine.for op.
-    results.assign(getInits().begin(), getInits().end());
-    folded = true;
-  }
-  SmallVector<OpFoldResult> foldResults = AffineForEmptyLoopFolder(*this);
-  if (!foldResults.empty()) {
-    results.assign(foldResults);
-    folded = true;
-  }
-  return success(folded);
+  OpFoldResults results;
+  if (FailureOr<OpFoldResults> emptyLoop = AffineForEmptyLoopFolder(*this);
+      succeeded(emptyLoop))
+    results = std::move(*emptyLoop);
+  else if (hasTrivialZeroTripCount(*this))
+    results = getInits();
+  results.setModifiedInPlace(folded);
+  return results;
 }
 
 OperandRange AffineForOp::getEntrySuccessorOperands(RegionSuccessor successor) {
@@ -3348,7 +3338,7 @@ static void composeSetAndOperands(IntegerSet &set,
 }
 
 /// Canonicalize an affine if op's conditional (integer set + operands).
-LogicalResult AffineIfOp::fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &) {
+OpFoldResults AffineIfOp::fold(FoldAdaptor) {
   auto set = getIntegerSet();
   SmallVector<Value, 4> operands(getOperands());
   composeSetAndOperands(set, operands);
@@ -3610,8 +3600,7 @@ void AffineStoreOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<SimplifyAffineOp<AffineStoreOp>>(context);
 }
 
-LogicalResult AffineStoreOp::fold(FoldAdaptor adaptor,
-                                  SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults AffineStoreOp::fold(FoldAdaptor adaptor) {
   /// store(memrefcast) -> store
   return memref::foldMemRefCast(*this, getValueToStore());
 }
@@ -4063,8 +4052,7 @@ void AffinePrefetchOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<SimplifyAffineOp<AffinePrefetchOp>>(context);
 }
 
-LogicalResult AffinePrefetchOp::fold(FoldAdaptor adaptor,
-                                     SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults AffinePrefetchOp::fold(FoldAdaptor adaptor) {
   /// prefetch(memrefcast) -> prefetch
   return memref::foldMemRefCast(*this);
 }
@@ -4398,8 +4386,7 @@ static LogicalResult canonicalizeLoopBounds(AffineParallelOp op) {
   return success();
 }
 
-LogicalResult AffineParallelOp::fold(FoldAdaptor adaptor,
-                                     SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults AffineParallelOp::fold(FoldAdaptor adaptor) {
   return canonicalizeLoopBounds(*this);
 }
 
@@ -5033,9 +5020,26 @@ foldCstValueToCstAttrBasis(ArrayRef<OpFoldResult> mixedBasis,
   return staticBasis;
 }
 
-LogicalResult
-AffineDelinearizeIndexOp::fold(FoldAdaptor adaptor,
-                               SmallVectorImpl<OpFoldResult> &result) {
+/// Return the constant results of `op` for the constant `linearIndex`. The
+/// basis must be static.
+static SmallVector<OpFoldResult>
+foldConstantLinearIndex(AffineDelinearizeIndexOp op, int64_t linearIndex) {
+  Type attrType = op.getLinearIndex().getType();
+  SmallVector<OpFoldResult> result;
+  int64_t highPart = linearIndex;
+  ArrayRef<int64_t> staticBasis = op.getStaticBasis();
+  if (op.hasOuterBound())
+    staticBasis = staticBasis.drop_front();
+  for (int64_t modulus : llvm::reverse(staticBasis)) {
+    result.push_back(IntegerAttr::get(attrType, llvm::mod(highPart, modulus)));
+    highPart = llvm::divideFloorSigned(highPart, modulus);
+  }
+  result.push_back(IntegerAttr::get(attrType, highPart));
+  std::reverse(result.begin(), result.end());
+  return result;
+}
+
+OpFoldResults AffineDelinearizeIndexOp::fold(FoldAdaptor adaptor) {
   std::optional<SmallVector<int64_t>> maybeStaticBasis =
       foldCstValueToCstAttrBasis(getMixedBasis(), getDynamicBasisMutable(),
                                  adaptor.getDynamicBasis());
@@ -5045,30 +5049,21 @@ AffineDelinearizeIndexOp::fold(FoldAdaptor adaptor,
   }
   // If we won't be doing any division or modulo (no basis or the one basis
   // element is purely advisory), simply return the input value.
-  if (getNumResults() == 1) {
-    result.push_back(getLinearIndex());
-    return success();
-  }
+  if (getNumResults() == 1)
+    return getLinearIndex();
 
-  if (adaptor.getLinearIndex() == nullptr)
-    return failure();
+  if (adaptor.getLinearIndex() && adaptor.getDynamicBasis().empty())
+    return foldConstantLinearIndex(
+        *this, cast<IntegerAttr>(adaptor.getLinearIndex()).getInt());
 
-  if (!adaptor.getDynamicBasis().empty())
-    return failure();
-
-  int64_t highPart = cast<IntegerAttr>(adaptor.getLinearIndex()).getInt();
-  Type attrType = getLinearIndex().getType();
-
-  ArrayRef<int64_t> staticBasis = getStaticBasis();
-  if (hasOuterBound())
-    staticBasis = staticBasis.drop_front();
-  for (int64_t modulus : llvm::reverse(staticBasis)) {
-    result.push_back(IntegerAttr::get(attrType, llvm::mod(highPart, modulus)));
-    highPart = llvm::divideFloorSigned(highPart, modulus);
-  }
-  result.push_back(IntegerAttr::get(attrType, highPart));
-  std::reverse(result.begin(), result.end());
-  return success();
+  // A unit basis element makes its result 0, whatever the linear index is.
+  OpFoldResults results(getOperation());
+  Attribute zero =
+      Builder(getContext()).getZeroAttr(getLinearIndex().getType());
+  for (auto [result, basis] : llvm::zip_equal(getResults(), getPaddedBasis()))
+    if (basis && isConstantIntValue(basis, 1))
+      results.replace(result, zero);
+  return results;
 }
 
 SmallVector<OpFoldResult> AffineDelinearizeIndexOp::getEffectiveBasis() {

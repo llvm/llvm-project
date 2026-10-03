@@ -99,6 +99,7 @@ public:
   /// fold fails. Unlike `OpFoldResult fold`, the op's own result does not mean
   /// in place; use success() or setModifiedInPlace() for an in-place change.
   OpFoldResults(OpFoldResult replacement);
+  OpFoldResults(Value replacement);
   /// One replacement per result.
   OpFoldResults(std::initializer_list<OpFoldResult> list);
   /// One replacement per range element. An empty range is a failure.
@@ -111,6 +112,9 @@ public:
   OpFoldResults(RangeT &&range) {
     llvm::append_range(replacements, range);
   }
+  /// Incremental form: every result is kept and the op is not changed in
+  /// place.
+  explicit OpFoldResults(Operation *op);
 
   /// Convert the result of a legacy vector fold with the strict legacy
   /// contract: failure stays failure, success with an empty vector means "in
@@ -118,6 +122,12 @@ public:
   static OpFoldResults fromLegacy(LogicalResult status,
                                   ArrayRef<OpFoldResult> results);
 
+  /// Set the replacement of `result`, which must be a result of the op. If
+  /// another op owns `result`, the behavior is undefined. The object must
+  /// already hold one replacement per result, for example from
+  /// OpFoldResults(op). A null replacement, or `replacement == result`, keeps
+  /// the result. The last write wins.
+  void replace(Value result, OpFoldResult replacement);
   /// Set whether the fold changed the op in place (operands, attributes,
   /// properties, or regions).
   void setModifiedInPlace(bool modified = true);

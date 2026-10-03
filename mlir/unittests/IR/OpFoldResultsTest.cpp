@@ -326,6 +326,43 @@ TEST_F(OpFoldResultsTest, ProducerInPlaceBit) {
   EXPECT_FALSE(result.replacesAll());
 }
 
+TEST_F(OpFoldResultsTest, ValueReplacement) {
+  Operation *producer = createOp({i32});
+  Operation *op = createOp({i32});
+  Value value = producer->getResult(0);
+
+  NormalizedOpFoldResults result = normalize(op, value);
+  EXPECT_TRUE(result.replacesAll());
+  EXPECT_EQ(result.getReplacements()[0], OpFoldResult(value));
+
+  EXPECT_TRUE(failed(normalize(op, Value())));
+  EXPECT_TRUE(failed(normalize(op, op->getResult(0))));
+}
+
+TEST_F(OpFoldResultsTest, IncrementalForm) {
+  Operation *op = createOp({i32, i32, i32});
+  Attribute first = builder.getI32IntegerAttr(1);
+  Attribute second = builder.getI32IntegerAttr(2);
+
+  EXPECT_TRUE(failed(normalize(op, OpFoldResults(op))));
+
+  OpFoldResults results(op);
+  results.replace(op->getResult(0), first);
+  results.replace(op->getResult(0), second);
+  results.replace(op->getResult(1), first);
+  // A replacement by the op's own result keeps that result.
+  results.replace(op->getResult(1), op->getResult(1));
+  results.replace(op->getResult(2), first);
+  results.replace(op->getResult(2), OpFoldResult());
+  NormalizedOpFoldResults result = normalize(op, std::move(results));
+  EXPECT_TRUE(result.replacesAny());
+  EXPECT_FALSE(result.replacesAll());
+  ASSERT_EQ(result.getReplacements().size(), 3u);
+  EXPECT_EQ(result.getReplacements()[0], OpFoldResult(second));
+  EXPECT_FALSE(result.getReplacements()[1]);
+  EXPECT_FALSE(result.getReplacements()[2]);
+}
+
 TEST_F(OpFoldResultsTest, FromLegacy) {
   Operation *op = createOp({i32, i32});
   Attribute attr = builder.getI32IntegerAttr(7);

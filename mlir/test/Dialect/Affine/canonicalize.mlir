@@ -2653,3 +2653,40 @@ func.func @compose_into_access_keeps_alignment(%memref: memref<100xi32>, %i: ind
   affine.store %val, %memref[%idx] { alignment = 16 } : memref<100xi32>
   return
 }
+
+// -----
+
+// In a graph region, an init of a zero-trip loop can be an earlier result of
+// the same loop. The fold also replaces that result, so it must not apply.
+
+// CHECK-LABEL: func @zero_trip_for_graph_region_backward_chain
+// CHECK-BOTTOM-UP-LABEL: func @zero_trip_for_graph_region_backward_chain
+func.func @zero_trip_for_graph_region_backward_chain(%x: i32) {
+  test.graph_region {
+    // CHECK: %[[FOR:.+]]:2 = affine.for %{{.+}} = 0 to 0 iter_args(%{{.+}} = %{{.+}}, %{{.+}} = %[[FOR]]#0) -> (i32, i32)
+    // CHECK-BOTTOM-UP: %[[FOR:.+]]:2 = affine.for %{{.+}} = 0 to 0 iter_args(%{{.+}} = %{{.+}}, %{{.+}} = %[[FOR]]#0) -> (i32, i32)
+    %r:2 = affine.for %i = 0 to 0 iter_args(%a = %x, %b = %r#0) -> (i32, i32) {
+      affine.yield %a, %b : i32, i32
+    }
+    "test.use"(%r#0, %r#1) : (i32, i32) -> ()
+  }
+  return
+}
+
+// -----
+
+// Same as above, but the inits form a cycle.
+
+// CHECK-LABEL: func @zero_trip_for_graph_region_cycle
+// CHECK-BOTTOM-UP-LABEL: func @zero_trip_for_graph_region_cycle
+func.func @zero_trip_for_graph_region_cycle() {
+  test.graph_region {
+    // CHECK: %[[FOR:.+]]:2 = affine.for %{{.+}} = 0 to 0 iter_args(%{{.+}} = %[[FOR]]#1, %{{.+}} = %[[FOR]]#0) -> (i32, i32)
+    // CHECK-BOTTOM-UP: %[[FOR:.+]]:2 = affine.for %{{.+}} = 0 to 0 iter_args(%{{.+}} = %[[FOR]]#1, %{{.+}} = %[[FOR]]#0) -> (i32, i32)
+    %r:2 = affine.for %i = 0 to 0 iter_args(%a = %r#1, %b = %r#0) -> (i32, i32) {
+      affine.yield %a, %b : i32, i32
+    }
+    "test.use"(%r#0, %r#1) : (i32, i32) -> ()
+  }
+  return
+}
