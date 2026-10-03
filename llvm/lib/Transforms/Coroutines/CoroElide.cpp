@@ -237,6 +237,31 @@ void CoroIdElider::elideHeapAllocations(uint64_t FrameSize, Align FrameAlign) {
     CB->eraseFromParent();
   }
 
+  // Once all coro.subfn.addr calls have been devirtualized, the function
+  // pointers stored in the frame header are only read by coro.done (which
+  // tests against null). Replace stores of the subfunction addresses to the
+  // frame with a non-null integer sentinel so that GlobalDCE can delete the
+  // out-of-line subfunctions after inlining.
+  ConstantArray *Resumers = CoroId->getInfo().Resumers;
+  Constant *ResumeFn =
+      Resumers->getAggregateElement(CoroSubFnInst::ResumeIndex);
+  Constant *DestroyFn =
+      Resumers->getAggregateElement(CoroSubFnInst::DestroyIndex);
+  Constant *CleanupFn =
+      Resumers->getAggregateElement(CoroSubFnInst::CleanupIndex);
+  Constant *SentinelPtr = ConstantExpr::getIntToPtr(
+      ConstantInt::get(Type::getInt32Ty(C), 1), PointerType::getUnqual(C));
+  for (Instruction &I : instructions(*FEI.ContainingFunction)) {
+    if (auto *SI = dyn_cast<StoreInst>(&I)) {
+      Value *V = SI->getValueOperand();
+      if (V == ResumeFn || V == DestroyFn || V == CleanupFn) {
+        SI->setOperand(0, SentinelPtr);
+      }
+    }
+  }
+  if (CoroId->use_empty())
+    CoroId->eraseFromParent();
+
   // Since now coroutine frame lives on the stack we need to make sure that
   // any tail call referencing it, must be made non-tail call.
   removeTailCallAttribute(Frame, AA);
