@@ -437,6 +437,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.termios.tcgetsid
     libc.src.termios.tcsendbreak
     libc.src.termios.tcsetattr
+    libc.src.termios.tcsetwinsize
 
     # unistd.h entrypoints
     libc.src.unistd.alarm
