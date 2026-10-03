@@ -219,7 +219,9 @@ OpFoldResult MyOp::fold(FoldAdaptor adaptor) {
 }
 ```
 
-Otherwise, the following is generated:
+Otherwise (zero results, more than one result, or a variadic or optional
+result), if the dialect sets the `useOpFoldResults` bit, the following is
+generated:
 
 ```c++
 /// Implementations of this hook can only perform the following changes to the
@@ -229,18 +231,70 @@ Otherwise, the following is generated:
 ///     return failure.
 ///  2. They can mutate the operation in place, without changing anything else
 ///     in the IR. In this case, return success.
-///  3. They can return a list of existing values or attribute that can be used
-///     instead of the operation. In this case, fill in the results list and
-///     return success. The results list must correspond 1-1 with the results of
-///     the operation, partial folding is not supported. The caller will remove
-///     the operation and use those results instead.
+///  3. They can return one replacement for each result. A replacement that is
+///     an existing value or an attribute replaces the result. A replacement
+///     that is null or the result itself keeps the result. The caller removes
+///     the operation only if every result is replaced.
 ///
-/// Note that this mechanism cannot be used to remove 0-result operations.
+/// Cases 2 and 3 can occur together. In this case, the fold must call
+/// `setModifiedInPlace()` on the returned `OpFoldResults`.
+OpFoldResults MyOp::fold(FoldAdaptor adaptor) {
+  ...
+}
+```
+
+A fold can replace some results and keep the others. The operation stays in
+the IR and gives the kept results. For example, a fold of
+`arith.mulsi_extended(x, 1)` can replace the low result with `x` and keep the
+high result:
+
+```c++
+OpFoldResults MulSIExtendedOp::fold(FoldAdaptor adaptor) {
+  // mulsi_extended(x, 1): the low half is x. The high half needs new
+  // operations, so the fold keeps it.
+  if (matchPattern(adaptor.getRhs(), m_One()))
+    return {getLhs(), nullptr};
+  return failure();
+}
+```
+
+To set the replacements one at a time, construct
+`OpFoldResults(getOperation())`, which keeps every result, and call `replace`
+for each replaced result.
+
+These rules also apply:
+
+- A fold that keeps every result and does not change the operation in place
+  must return failure.
+- An in-place change must keep every result correct on its own. A caller can
+  apply it and drop the replacements, for example when a constant fails to
+  materialize.
+- A replacement can be another result of the same operation only if the fold
+  keeps that result. In a graph region or in an unreachable block, a forwarding
+  fold can break this rule. The replacements of such a fold are dropped, but
+  not those of a trait fold or of a `DialectFoldInterface` fold.
+- A zero-result operation can only fold in place.
+- A caller can skip a replaced result that has no uses. It then does not
+  materialize a constant for that result.
+- If `MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS` is set, the greedy pattern
+  rewrite driver reports a fatal error when a fold changes the operation and
+  returns failure, or changes an operation that stays and omits the in-place
+  mark.
+
+If the dialect does not set `useOpFoldResults`, the following legacy form is
+generated instead:
+
+```c++
 LogicalResult MyOp::fold(FoldAdaptor adaptor,
                          SmallVectorImpl<OpFoldResult> &results) {
   ...
 }
 ```
+
+The legacy form does not support partial folds. The fold returns failure, or
+returns success with an empty list for an in-place change, or fills in one
+non-null entry for each result and returns success. The legacy form exists only
+for the transition to `OpFoldResults`.
 
 In the above, for each method a `FoldAdaptor` is provided with getters for
 each of the operands, returning the corresponding constant attribute. These

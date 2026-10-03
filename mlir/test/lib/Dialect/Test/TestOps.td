@@ -1692,6 +1692,16 @@ def TestOpPartialFoldAnchor : TEST_Op<"op_partial_fold_anchor"> {
   let results = (outs I32, I32, I32);
 }
 
+// Op for testing the check for an in-place change without an in-place mark.
+// The first fold sets `folded` but does not mark the in-place change. Every
+// fold replaces `forwarded` with the operand and keeps `kept`.
+def TestOpPartialFoldUnmarkedInPlace
+    : TEST_Op<"op_partial_fold_unmarked_in_place"> {
+  let arguments = (ins I32:$operand, UnitAttr:$folded);
+  let results = (outs I32:$forwarded, I32:$kept);
+  let hasFolder = 1;
+}
+
 def TestAddIOp : TEST_Op<"addi"> {
   let arguments = (ins AnyTypeOf<[I32, TestI32]>:$op1,
                        AnyTypeOf<[I32, TestI32]>:$op2);

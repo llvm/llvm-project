@@ -1191,7 +1191,10 @@ patterns. If `hasCanonicalizer` is 0, then an implementation of
 ### `hasFolder`
 
 This boolean field indicate whether general folding rules have been defined for
-this operation. If it is `1`, then `::fold()` should be defined.
+this operation. If it is `1`, then `::fold()` should be defined. For an
+operation that does not have exactly one fixed result, the dialect bit
+`useOpFoldResults` selects the form of `::fold()`. See
+[Canonicalizing with the `fold` method](../Canonicalization.md#canonicalizing-with-the-fold-method).
 
 ### Extra declarations
 

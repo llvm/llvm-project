@@ -356,6 +356,15 @@ protected:
   /// reached. Return `true` if any IR was changed.
   bool processWorklist();
 
+  /// The outcome of applyFoldResults.
+  enum class FoldOutcome { NoProgress, Erased, Changed };
+
+  /// Apply the successful fold result `foldResults` of `op`: replace the op or
+  /// the uses of its replaced results, and notify the listener of an in-place
+  /// change.
+  FoldOutcome applyFoldResults(Operation *op,
+                               const NormalizedOpFoldResults &foldResults);
+
   /// The pattern rewriter that is used for making IR modifications and is
   /// passed to rewrite patterns.
   PatternRewriter rewriter;
@@ -496,67 +505,33 @@ bool GreedyPatternRewriteDriver::processWorklist() {
     // Attribute and then immediately be rematerialized as a constant op, which
     // is then put on the worklist.
     if (config.isFoldingEnabled() && !op->hasTrait<OpTrait::ConstantLike>()) {
-      SmallVector<OpFoldResult> foldResults;
-      if (succeeded(op->fold(foldResults))) {
-        LLVM_DEBUG(logResultWithLine("success", "operation was folded"));
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+      OperationFingerPrint fingerPrintBeforeFold(op, /*includeNested=*/false);
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+      NormalizedOpFoldResults foldResults = op->fold();
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+      // Take the second finger print before any replacement: in a graph region
+      // or an unreachable block, a replacement can change the operands of the
+      // op itself.
+      bool foldChangedOp = fingerPrintBeforeFold !=
+                           OperationFingerPrint(op, /*includeNested=*/false);
+      if (failed(foldResults) && foldChangedOp)
+        llvm::report_fatal_error(
+            "fold returned failure but changed the operation");
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+      if (succeeded(foldResults)) {
 #ifndef NDEBUG
         Operation *dumpRootOp = getDumpRootOp(op);
 #endif // NDEBUG
-        if (foldResults.empty()) {
-          // Op was modified in-place.
-          notifyOperationModified(op);
-          changed = true;
-          LLVM_DEBUG(logSuccessfulFolding(dumpRootOp));
+        FoldOutcome outcome = applyFoldResults(op, foldResults);
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-          expensiveChecks.notifyFoldingSuccess();
+        if (outcome != FoldOutcome::Erased && foldChangedOp &&
+            !foldResults.modifiedInPlace())
+          llvm::report_fatal_error(
+              "fold changed the operation without an in-place mark");
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-          continue;
-        }
-
-        // Op results can be replaced with `foldResults`.
-        assert(foldResults.size() == op->getNumResults() &&
-               "folder produced incorrect number of results");
-        OpBuilder::InsertionGuard g(rewriter);
-        rewriter.setInsertionPoint(op);
-        SmallVector<Value> replacements;
-        SmallVector<Operation *> materializedConstants;
-        bool materializationSucceeded = true;
-        for (auto [ofr, resultType] :
-             llvm::zip_equal(foldResults, op->getResultTypes())) {
-          if (auto value = dyn_cast<Value>(ofr)) {
-            assert(value.getType() == resultType &&
-                   "folder produced value of incorrect type");
-            replacements.push_back(value);
-            continue;
-          }
-          // Materialize Attributes as SSA values.
-          Operation *constOp = op->getDialect()->materializeConstant(
-              rewriter, cast<Attribute>(ofr), resultType, op->getLoc());
-
-          if (!constOp) {
-            // If materialization fails, erase only the constants that were
-            // materialized for the previous results. Values that the folder
-            // returned existed before the fold, so they must stay.
-            for (Operation *cst : materializedConstants) {
-              assert(cst->use_empty() &&
-                     "materialized constant has uses before replacement");
-              rewriter.eraseOp(cst);
-            }
-
-            materializationSucceeded = false;
-            break;
-          }
-
-          assert(constOp->hasTrait<OpTrait::ConstantLike>() &&
-                 "materializeConstant produced op that is not a ConstantLike");
-          assert(constOp->getResultTypes()[0] == resultType &&
-                 "materializeConstant produced incorrect result type");
-          materializedConstants.push_back(constOp);
-          replacements.push_back(constOp->getResult(0));
-        }
-
-        if (materializationSucceeded) {
-          rewriter.replaceOp(op, replacements);
+        if (outcome != FoldOutcome::NoProgress) {
+          LLVM_DEBUG(logResultWithLine("success", "operation was folded"));
           changed = true;
           LLVM_DEBUG(logSuccessfulFolding(dumpRootOp));
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
@@ -634,6 +609,35 @@ bool GreedyPatternRewriteDriver::processWorklist() {
   }
 
   return changed;
+}
+
+GreedyPatternRewriteDriver::FoldOutcome
+GreedyPatternRewriteDriver::applyFoldResults(
+    Operation *op, const NormalizedOpFoldResults &foldResults) {
+  bool replacedUses = false;
+  if (foldResults.replacesAny()) {
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPoint(op);
+    // A full fold materializes every result, because replaceOp gives the
+    // listeners a value for each result.
+    FailureOr<SmallVector<Value>> replacements =
+        rewriter.materializeFoldResults(
+            op, foldResults, /*liveOnly=*/!foldResults.replacesAll());
+    if (succeeded(replacements)) {
+      if (foldResults.replacesAll()) {
+        rewriter.replaceOp(op, *replacements);
+        return FoldOutcome::Erased;
+      }
+      replacedUses = replaceFoldedResultUses(rewriter, op, *replacements);
+    }
+  }
+  if (foldResults.modifiedInPlace())
+    notifyOperationModified(op);
+  if (!replacedUses && !foldResults.modifiedInPlace())
+    return FoldOutcome::NoProgress;
+  // The op survives a partial fold, so it can fold again.
+  addToWorklist(op);
+  return FoldOutcome::Changed;
 }
 
 void GreedyPatternRewriteDriver::addToWorklist(Operation *op) {

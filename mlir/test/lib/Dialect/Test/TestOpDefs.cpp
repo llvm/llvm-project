@@ -245,6 +245,17 @@ OpFoldResults TestOpFoldUnmaterializable::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// TestOpPartialFoldUnmarkedInPlace
+//===----------------------------------------------------------------------===//
+
+OpFoldResults TestOpPartialFoldUnmarkedInPlace::fold(FoldAdaptor adaptor) {
+  // The missing setModifiedInPlace() is the defect under test.
+  if (!getFolded())
+    setFolded(true);
+  return {getOperand(), OpFoldResult()};
+}
+
+//===----------------------------------------------------------------------===//
 // TestOpInPlaceFold
 //===----------------------------------------------------------------------===//
 
