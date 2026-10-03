@@ -78,7 +78,11 @@ public:
   void schedule() override;
 
   RegisterClassInfo *getRegClassInfo() { return RegClassInfo; }
-  int getBBSize() { return BB->size(); }
+  unsigned getBBSize() const {
+    auto NonDebugInstrs = instructionsWithoutDebug(
+        BB->instr_begin(), BB->instr_end(), /*SkipPseudoOp=*/false);
+    return std::distance(NonDebugInstrs.begin(), NonDebugInstrs.end());
+  }
 };
 
 //===----------------------------------------------------------------------===//
