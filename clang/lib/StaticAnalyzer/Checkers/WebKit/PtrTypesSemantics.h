@@ -21,6 +21,7 @@ class CXXBaseSpecifier;
 class CXXMethodDecl;
 class CXXRecordDecl;
 class Decl;
+class FieldDecl;
 class FunctionDecl;
 class NamedDecl;
 class QualType;
