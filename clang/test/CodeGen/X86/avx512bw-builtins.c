@@ -950,7 +950,7 @@ TEST_CONSTEXPR(_mm512_mask_cmpgt_epu16_mask(
                                2,      9,      4,      9,      6,      9,      8,      9,
                                0,  32767,  32768,  65535,      0,  32767,  32768,  65535,
                            65535,  32768,  32768,  65535,  65535,  65535,  65535,  65535 })
-) == (__mmask32)0x0000aa55u);
+) == (__mmask32)0x000055aau);
 
 __mmask32 test_mm512_cmpgt_epu16_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: test_mm512_cmpgt_epu16_mask
