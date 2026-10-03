@@ -95,9 +95,9 @@ public:
   void Leave(const parser::MainProgram &);
   void Enter(const parser::BlockData &);
   void Leave(const parser::BlockData &);
-  void Enter(const parser::Module &);
+  bool Enter(const parser::Module &);
   void Leave(const parser::Module &);
-  void Enter(const parser::Submodule &);
+  bool Enter(const parser::Submodule &);
   void Leave(const parser::Submodule &);
   void Enter(const parser::SubroutineStmt &);
   void Enter(const parser::EndSubroutineStmt &);
