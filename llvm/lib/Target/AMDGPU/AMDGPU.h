@@ -117,6 +117,7 @@ FunctionPass *createAMDGPUNextUseAnalysisLegacyPass();
 FunctionPass *createAMDGPUNextUseAnalysisPrinterLegacyPass();
 FunctionPass *createSIFixSGPRCopiesLegacyPass();
 FunctionPass *createSIMemoryLegalizerPass();
+FunctionPass *createAMDGPUNewInsertWaitcntsPass();
 FunctionPass *createSIInsertWaitcntsPass();
 FunctionPass *createSIPreAllocateWWMRegsLegacyPass();
 FunctionPass *createSIFormMemoryClausesLegacyPass();
@@ -619,6 +620,9 @@ extern char &SIInsertHardClausesID;
 
 void initializeSIInsertWaitcntsLegacyPass(PassRegistry &);
 extern char &SIInsertWaitcntsID;
+
+void initializeAMDGPUNewInsertWaitcntsLegacyPass(PassRegistry &);
+extern char &AMDGPUNewInsertWaitcntsID;
 
 void initializeSIFormMemoryClausesLegacyPass(PassRegistry &);
 extern char &SIFormMemoryClausesID;
