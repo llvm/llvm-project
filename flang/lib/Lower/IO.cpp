@@ -1143,8 +1143,8 @@ static void logicalToBoolRef(mlir::Location loc, fir::FirOpBuilder &builder,
   auto logicalValue = fir::LoadOp::create(builder, loc, addr);
   auto boolValue =
       builder.createConvert(loc, builder.getI1Type(), logicalValue);
-  auto boolAddr = builder.createConvert(
-      loc, builder.getRefType(builder.getI1Type()), addr);
+  auto boolAddr =
+      builder.createConvert(loc, builder.getRefType(builder.getI1Type()), addr);
   fir::StoreOp::create(builder, loc, boolValue, boolAddr);
 }
 

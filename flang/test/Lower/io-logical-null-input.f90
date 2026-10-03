@@ -10,7 +10,7 @@ subroutine read_logical(l)
   logical :: l
   read (*, *) l
 end subroutine
-! CHECK:  %[[L:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFread_logicalEl"}
+! CHECK:  %[[L:.*]]:2 = hlfir.declare {{.*}}"_QFread_logicalEl"
 ! CHECK:  %[[ARG:.*]] = fir.convert %[[L]]#0 : (!fir.ref<!fir.logical<4>>) -> !fir.ref<i1>
 ! CHECK:  %[[OLD:.*]] = fir.load %[[L]]#0 : !fir.ref<!fir.logical<4>>
 ! CHECK:  %[[B:.*]] = fir.convert %[[OLD]] : (!fir.logical<4>) -> i1
