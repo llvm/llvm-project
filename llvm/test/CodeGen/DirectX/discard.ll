@@ -23,7 +23,7 @@ entry:
 define void @test_vector(<4 x float> noundef %p) #0 {
 entry:
   %0 = fcmp olt <4 x float> %p, zeroinitializer
-  %1 = call i1 @llvm.dx.any.v4i1(<4 x i1> %0)
+  %1 = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> %0)
   call void @llvm.dx.discard(i1 %1)
   ret void
 }
