@@ -5257,6 +5257,42 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
             "one locator"_err_en_US);
       }
     }
+    // [5.0:256:1-2], [5.1:288:19-20], [5.2:323:1-2]
+    // With the DEPOBJ dependence type, array sections cannot be specified and
+    // the list items must be depend objects (scalar integer variables of kind
+    // omp_depend_kind, which is c_intptr_t). This does not apply on the DEPOBJ
+    // construct itself, where the DEPOBJ dependence type is already disallowed.
+    bool isDepobjType{dir != llvm::omp::OMPD_depobj &&
+        taskDep->GetTaskDepType() ==
+            parser::OmpTaskDependenceType::Value::Depobj};
+    auto checkDepobjVar = [&](const parser::OmpObject &object) {
+      const parser::Designator *designator{GetDesignatorFromObj(object)};
+      if (!designator) {
+        context_.Say(GetContext().clauseSource,
+            "A list item in a DEPEND clause with the DEPOBJ dependence type must be a depend object"_err_en_US);
+        return;
+      }
+      evaluate::ExpressionAnalyzer ea{context_};
+      auto restore{ea.AllowWholeAssumedSizeArray(true)};
+      MaybeExpr expr{ea.Analyze(*designator)};
+      if (!expr) {
+        return;
+      }
+      if (expr->Rank() != 0) {
+        context_.Say(GetContext().clauseSource,
+            "Array sections cannot be specified in a DEPEND clause with the DEPOBJ dependence type"_err_en_US);
+        return;
+      }
+      // A depend object is a scalar integer of omp_depend_kind (c_intptr_t).
+      std::optional<evaluate::DynamicType> type{expr->GetType()};
+      int depobjKind{static_cast<int>(
+          context_.targetCharacteristics().integerKindForPointer())};
+      if (!type || type->category() != evaluate::TypeCategory::Integer ||
+          type->kind() != depobjKind) {
+        context_.Say(GetContext().clauseSource,
+            "A list item in a DEPEND clause with the DEPOBJ dependence type must be a depend object (a scalar integer variable of kind omp_depend_kind)"_err_en_US);
+      }
+    };
     for (const auto &object : objList.v) {
       if (const auto *name{GetCommonBlockFromObj(object)}) {
         context_.Say(GetContext().clauseSource,
@@ -5264,10 +5300,14 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
             "clause"_err_en_US,
             name->ToString());
       } else if (auto *dataRef{GetDataRefFromObj(object)}) {
-        CheckDependList(*dataRef);
-        if (const auto *arr{GetArrayElementFromObj(object)}) {
-          CheckArraySection(
-              *arr, GetLastName(*dataRef), llvm::omp::Clause::OMPC_depend);
+        if (isDepobjType) {
+          checkDepobjVar(object);
+        } else {
+          CheckDependList(*dataRef);
+          if (const auto *arr{GetArrayElementFromObj(object)}) {
+            CheckArraySection(
+                *arr, GetLastName(*dataRef), llvm::omp::Clause::OMPC_depend);
+          }
         }
       }
     }
