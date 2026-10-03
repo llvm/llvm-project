@@ -1652,6 +1652,18 @@ LogicalResult ResolveLayoutConflicts::assignResultLayout(OpResult &result) {
   return success();
 }
 
+// Clones the trivially-rematerializable producer subtree of `value`.
+static OpResult cloneRematerializableSubtree(OpBuilder &builder, Value value) {
+  Operation *producerOp = value.getDefiningOp();
+  builder.setInsertionPointAfter(producerOp);
+  Operation *clone = builder.clone(*producerOp);
+  for (OpOperand &cloneOperand : clone->getOpOperands())
+    if (isa<VectorType>(cloneOperand.get().getType()))
+      cloneOperand.set(
+          cloneRematerializableSubtree(builder, cloneOperand.get()));
+  return clone->getResult(cast<OpResult>(value).getResultNumber());
+}
+
 LogicalResult
 ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
   Value vectorValue = operand.get();
@@ -1711,10 +1723,7 @@ ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
       producerOp && producerOp->getNumResults() == 1 &&
       isa<OpResult>(vectorValue) &&
       xegpu::isTriviallyRematerializable(producerOp)) {
-    builder.setInsertionPointAfter(producerOp);
-    Operation *clone = builder.clone(*producerOp);
-    OpResult cloneResult = clone->getResult(0);
-    // Drop the inherited producer layout so the new layout takes effect
+    OpResult cloneResult = cloneRematerializableSubtree(builder, vectorValue);
     xegpu::removeLayoutAttr(cloneResult);
     xegpu::setDistributeLayoutAttr(cloneResult, consumerLayout);
     operand.set(cloneResult);
