@@ -1086,7 +1086,6 @@ __DEVICE__ unsigned int __vabsdiffs2(unsigned int __a, unsigned int __b) {
           : "r"(__a), "r"(__b), "r"(0));
   return r;
 }
-
 __DEVICE__ unsigned int __vabsdiffs4(unsigned int __a, unsigned int __b) {
   unsigned int r;
   __asm__("vabsdiff4.s32.s32.s32 %0,%1,%2,%3;"
@@ -1404,7 +1403,6 @@ __DEVICE__ unsigned int __vhaddu2(unsigned int __a, unsigned int __b) {
 __DEVICE__ unsigned int __vhaddu4(unsigned int __a, unsigned int __b) {
   return (((__a ^ __b) >> 1) & ~0x80808080u) + (__a & __b);
 }
-
 __DEVICE__ unsigned int __vmaxs2(unsigned int __a, unsigned int __b) {
   unsigned int r;
   if ((__a & 0x8000) && (__b & 0x8000)) {
@@ -1496,7 +1494,6 @@ __DEVICE__ unsigned int __vsadu4(unsigned int __a, unsigned int __b) {
           : "r"(__a), "r"(__b), "r"(0));
   return r;
 }
-
 __DEVICE__ unsigned int __vsub2(unsigned int __a, unsigned int __b) {
   unsigned int r;
   __asm__("vsub2.u32.u32.u32 %0,%1,%2,%3;"
@@ -1505,7 +1502,6 @@ __DEVICE__ unsigned int __vsub2(unsigned int __a, unsigned int __b) {
   return r;
 }
 __DEVICE__ unsigned int __vneg2(unsigned int __a) { return __vsub2(0, __a); }
-
 __DEVICE__ unsigned int __vsub4(unsigned int __a, unsigned int __b) {
   unsigned int r;
   __asm__("vsub4.u32.u32.u32 %0,%1,%2,%3;"
@@ -1549,6 +1545,750 @@ __DEVICE__ unsigned int __vsubus4(unsigned int __a, unsigned int __b) {
   return r;
 }
 #endif // CUDA_VERSION >= 9020
+
+#if CUDA_VERSION >= 13030
+typedef _Float16 _Float16x2 __attribute__((ext_vector_type(2)));
+
+// fp16 conversion functions
+__DEVICE__ unsigned short __f16_double2half(double __a) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_double2half(__a));
+}
+__DEVICE__ unsigned short __f16_float2half_rn(float __a) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_float2half_rn(__a));
+}
+__DEVICE__ unsigned short __f16_float2half_rz(float __a) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_float2half_rz(__a));
+}
+__DEVICE__ unsigned short __f16_float2half_rd(float __a) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_float2half_rd(__a));
+}
+__DEVICE__ unsigned short __f16_float2half_ru(float __a) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_float2half_ru(__a));
+}
+__DEVICE__ unsigned int __f16_float2half2_rn(float __a) {
+  return __builtin_bit_cast(unsigned int, __nv_f16_float2half2_rn(__a));
+}
+__DEVICE__ unsigned int __f16_floats2half2_rn(float __a, float __b) {
+  return __builtin_bit_cast(unsigned int, __nv_f16_floats2half2_rn(__a, __b));
+}
+__DEVICE__ float __f16_half2float(unsigned short __a) {
+  return __nv_f16_half2float(__builtin_bit_cast(_Float16, __a));
+}
+__DEVICE__ float __f16_low2float(unsigned int __a) {
+  return __nv_f16_low2float(__builtin_bit_cast(_Float16x2, __a));
+}
+__DEVICE__ float __f16_high2float(unsigned int __a) {
+  return __nv_f16_high2float(__builtin_bit_cast(_Float16x2, __a));
+}
+__DEVICE__ signed char __f16_half2char_rz(unsigned short __h) {
+  return __nv_f16_half2char_rz(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ unsigned char __f16_half2uchar_rz(unsigned short __h) {
+  return __nv_f16_half2uchar_rz(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ short __f16_half2short_rz(unsigned short __h) {
+  return __nv_f16_half2short_rz(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ unsigned short __f16_half2ushort_rz(unsigned short __h) {
+  return __nv_f16_half2ushort_rz(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ int __f16_half2int_rz(unsigned short __h) {
+  return __nv_f16_half2int_rz(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ unsigned int __f16_half2uint_rz(unsigned short __h) {
+  return __nv_f16_half2uint_rz(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ long long __f16_half2ll_rz(unsigned short __h) {
+  return __nv_f16_half2ll_rz(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ unsigned long long __f16_half2ull_rz(unsigned short __h) {
+  return __nv_f16_half2ull_rz(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ float2 __f16_half22float2(unsigned int __a) {
+  return __nv_f16_half22float2(__builtin_bit_cast(_Float16x2, __a));
+}
+__DEVICE__ int __f16_half2int_rn(unsigned short __h) {
+  return __nv_f16_half2int_rn(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ int __f16_half2int_rd(unsigned short __h) {
+  return __nv_f16_half2int_rd(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ int __f16_half2int_ru(unsigned short __h) {
+  return __nv_f16_half2int_ru(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ unsigned short __f16_int2half_rn(int __i) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_int2half_rn(__i));
+}
+__DEVICE__ unsigned short __f16_int2half_rz(int __i) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_int2half_rz(__i));
+}
+__DEVICE__ unsigned short __f16_int2half_rd(int __i) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_int2half_rd(__i));
+}
+__DEVICE__ unsigned short __f16_int2half_ru(int __i) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_int2half_ru(__i));
+}
+__DEVICE__ short __f16_half2short_rn(unsigned short __h) {
+  return __nv_f16_half2short_rn(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ short __f16_half2short_rd(unsigned short __h) {
+  return __nv_f16_half2short_rd(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ short __f16_half2short_ru(unsigned short __h) {
+  return __nv_f16_half2short_ru(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ unsigned short __f16_short2half_rn(short __i) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_short2half_rn(__i));
+}
+__DEVICE__ unsigned short __f16_short2half_rz(short __i) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_short2half_rz(__i));
+}
+__DEVICE__ unsigned short __f16_short2half_rd(short __i) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_short2half_rd(__i));
+}
+__DEVICE__ unsigned short __f16_short2half_ru(short __i) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_short2half_ru(__i));
+}
+__DEVICE__ unsigned int __f16_half2uint_rn(unsigned short __h) {
+  return __nv_f16_half2uint_rn(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ unsigned int __f16_half2uint_rd(unsigned short __h) {
+  return __nv_f16_half2uint_rd(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ unsigned int __f16_half2uint_ru(unsigned short __h) {
+  return __nv_f16_half2uint_ru(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ unsigned short __f16_uint2half_rn(unsigned int __i) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_uint2half_rn(__i));
+}
+__DEVICE__ unsigned short __f16_uint2half_rz(unsigned int __i) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_uint2half_rz(__i));
+}
+__DEVICE__ unsigned short __f16_uint2half_rd(unsigned int __i) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_uint2half_rd(__i));
+}
+__DEVICE__ unsigned short __f16_uint2half_ru(unsigned int __i) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_uint2half_ru(__i));
+}
+__DEVICE__ unsigned short __f16_half2ushort_rn(unsigned short __h) {
+  return __nv_f16_half2ushort_rn(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ unsigned short __f16_half2ushort_rd(unsigned short __h) {
+  return __nv_f16_half2ushort_rd(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ unsigned short __f16_half2ushort_ru(unsigned short __h) {
+  return __nv_f16_half2ushort_ru(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ unsigned short __f16_ushort2half_rn(unsigned short __i) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_ushort2half_rn(__i));
+}
+__DEVICE__ unsigned short __f16_ushort2half_rz(unsigned short __i) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_ushort2half_rz(__i));
+}
+__DEVICE__ unsigned short __f16_ushort2half_rd(unsigned short __i) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_ushort2half_rd(__i));
+}
+__DEVICE__ unsigned short __f16_ushort2half_ru(unsigned short __i) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_ushort2half_ru(__i));
+}
+__DEVICE__ unsigned long long __f16_half2ull_rn(unsigned short __h) {
+  return __nv_f16_half2ull_rn(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ unsigned long long __f16_half2ull_rd(unsigned short __h) {
+  return __nv_f16_half2ull_rd(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ unsigned long long __f16_half2ull_ru(unsigned short __h) {
+  return __nv_f16_half2ull_ru(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ unsigned short __f16_ull2half_rn(unsigned long long __i) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_ull2half_rn(__i));
+}
+__DEVICE__ unsigned short __f16_ull2half_rz(unsigned long long __i) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_ull2half_rz(__i));
+}
+__DEVICE__ unsigned short __f16_ull2half_rd(unsigned long long __i) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_ull2half_rd(__i));
+}
+__DEVICE__ unsigned short __f16_ull2half_ru(unsigned long long __i) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_ull2half_ru(__i));
+}
+__DEVICE__ long long __f16_half2ll_rn(unsigned short __h) {
+  return __nv_f16_half2ll_rn(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ long long __f16_half2ll_rd(unsigned short __h) {
+  return __nv_f16_half2ll_rd(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ long long __f16_half2ll_ru(unsigned short __h) {
+  return __nv_f16_half2ll_ru(__builtin_bit_cast(_Float16, __h));
+}
+__DEVICE__ unsigned short __f16_ll2half_rn(long long __i) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_ll2half_rn(__i));
+}
+__DEVICE__ unsigned short __f16_ll2half_rz(long long __i) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_ll2half_rz(__i));
+}
+__DEVICE__ unsigned short __f16_ll2half_rd(long long __i) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_ll2half_rd(__i));
+}
+__DEVICE__ unsigned short __f16_ll2half_ru(long long __i) {
+  return __builtin_bit_cast(unsigned short, __nv_f16_ll2half_ru(__i));
+}
+
+// fp16 rounding functions
+__DEVICE__ unsigned short __f16_trunc(unsigned short __x) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_trunc(__builtin_bit_cast(_Float16, __x)));
+}
+__DEVICE__ unsigned short __f16_ceil(unsigned short __x) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_ceil(__builtin_bit_cast(_Float16, __x)));
+}
+__DEVICE__ unsigned short __f16_floor(unsigned short __x) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_floor(__builtin_bit_cast(_Float16, __x)));
+}
+__DEVICE__ unsigned short __f16_rint(unsigned short __x) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_rint(__builtin_bit_cast(_Float16, __x)));
+}
+__DEVICE__ unsigned int __f16x2_trunc(unsigned int __x) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_trunc(__builtin_bit_cast(_Float16x2, __x)));
+}
+__DEVICE__ unsigned int __f16x2_floor(unsigned int __x) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_floor(__builtin_bit_cast(_Float16x2, __x)));
+}
+__DEVICE__ unsigned int __f16x2_ceil(unsigned int __x) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_ceil(__builtin_bit_cast(_Float16x2, __x)));
+}
+__DEVICE__ unsigned int __f16x2_rint(unsigned int __x) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_rint(__builtin_bit_cast(_Float16x2, __x)));
+}
+
+// half2 utilities
+__DEVICE__ unsigned int __f16_lows2half2(unsigned int __a, unsigned int __b) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16_lows2half2(__builtin_bit_cast(_Float16x2, __a),
+                                        __builtin_bit_cast(_Float16x2, __b)));
+}
+__DEVICE__ unsigned int __f16_highs2half2(unsigned int __a, unsigned int __b) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16_highs2half2(__builtin_bit_cast(_Float16x2, __a),
+                                         __builtin_bit_cast(_Float16x2, __b)));
+}
+__DEVICE__ unsigned short __f16_low2half(unsigned int __a) {
+  return __builtin_bit_cast(
+      unsigned short, __nv_f16_low2half(__builtin_bit_cast(_Float16x2, __a)));
+}
+__DEVICE__ unsigned int __f16_low2half2(unsigned int __a) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16_low2half2(__builtin_bit_cast(_Float16x2, __a)));
+}
+__DEVICE__ unsigned int __f16_high2half2(unsigned int __a) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16_high2half2(__builtin_bit_cast(_Float16x2, __a)));
+}
+__DEVICE__ unsigned short __f16_high2half(unsigned int __a) {
+  return __builtin_bit_cast(
+      unsigned short, __nv_f16_high2half(__builtin_bit_cast(_Float16x2, __a)));
+}
+__DEVICE__ unsigned int __f16_halves2half2(unsigned short __a,
+                                           unsigned short __b) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16_halves2half2(__builtin_bit_cast(_Float16, __a),
+                                          __builtin_bit_cast(_Float16, __b)));
+}
+__DEVICE__ unsigned int __f16_half2half2(unsigned short __a) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16_half2half2(__builtin_bit_cast(_Float16, __a)));
+}
+__DEVICE__ unsigned int __f16_lowhigh2highlow(unsigned int __a) {
+  return __builtin_bit_cast(
+      unsigned int,
+      __nv_f16_lowhigh2highlow(__builtin_bit_cast(_Float16x2, __a)));
+}
+
+// fp16 comparison functions
+__DEVICE__ unsigned short __f16_max(unsigned short __x, unsigned short __y) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_max(__builtin_bit_cast(_Float16, __x),
+                                         __builtin_bit_cast(_Float16, __y)));
+}
+__DEVICE__ unsigned short __f16_min(unsigned short __x, unsigned short __y) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_min(__builtin_bit_cast(_Float16, __x),
+                                         __builtin_bit_cast(_Float16, __y)));
+}
+__DEVICE__ unsigned int __f16x2_max(unsigned int __x, unsigned int __y) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_max(__builtin_bit_cast(_Float16x2, __x),
+                                   __builtin_bit_cast(_Float16x2, __y)));
+}
+__DEVICE__ unsigned int __f16x2_min(unsigned int __x, unsigned int __y) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_min(__builtin_bit_cast(_Float16x2, __x),
+                                   __builtin_bit_cast(_Float16x2, __y)));
+}
+__DEVICE__ unsigned int __f16x2_eq(unsigned int __a, unsigned int __b) {
+  return __builtin_bit_cast(unsigned int,
+                            __nv_f16x2_eq(__builtin_bit_cast(_Float16x2, __a),
+                                          __builtin_bit_cast(_Float16x2, __b)));
+}
+__DEVICE__ unsigned int __f16x2_ne(unsigned int __a, unsigned int __b) {
+  return __builtin_bit_cast(unsigned int,
+                            __nv_f16x2_ne(__builtin_bit_cast(_Float16x2, __a),
+                                          __builtin_bit_cast(_Float16x2, __b)));
+}
+__DEVICE__ unsigned int __f16x2_le(unsigned int __a, unsigned int __b) {
+  return __builtin_bit_cast(unsigned int,
+                            __nv_f16x2_le(__builtin_bit_cast(_Float16x2, __a),
+                                          __builtin_bit_cast(_Float16x2, __b)));
+}
+__DEVICE__ unsigned int __f16x2_ge(unsigned int __a, unsigned int __b) {
+  return __builtin_bit_cast(unsigned int,
+                            __nv_f16x2_ge(__builtin_bit_cast(_Float16x2, __a),
+                                          __builtin_bit_cast(_Float16x2, __b)));
+}
+__DEVICE__ unsigned int __f16x2_lt(unsigned int __a, unsigned int __b) {
+  return __builtin_bit_cast(unsigned int,
+                            __nv_f16x2_lt(__builtin_bit_cast(_Float16x2, __a),
+                                          __builtin_bit_cast(_Float16x2, __b)));
+}
+__DEVICE__ unsigned int __f16x2_gt(unsigned int __a, unsigned int __b) {
+  return __builtin_bit_cast(unsigned int,
+                            __nv_f16x2_gt(__builtin_bit_cast(_Float16x2, __a),
+                                          __builtin_bit_cast(_Float16x2, __b)));
+}
+__DEVICE__ unsigned int __f16x2_equ(unsigned int __a, unsigned int __b) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_equ(__builtin_bit_cast(_Float16x2, __a),
+                                   __builtin_bit_cast(_Float16x2, __b)));
+}
+__DEVICE__ unsigned int __f16x2_neu(unsigned int __a, unsigned int __b) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_neu(__builtin_bit_cast(_Float16x2, __a),
+                                   __builtin_bit_cast(_Float16x2, __b)));
+}
+__DEVICE__ unsigned int __f16x2_leu(unsigned int __a, unsigned int __b) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_leu(__builtin_bit_cast(_Float16x2, __a),
+                                   __builtin_bit_cast(_Float16x2, __b)));
+}
+__DEVICE__ unsigned int __f16x2_geu(unsigned int __a, unsigned int __b) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_geu(__builtin_bit_cast(_Float16x2, __a),
+                                   __builtin_bit_cast(_Float16x2, __b)));
+}
+__DEVICE__ unsigned int __f16x2_ltu(unsigned int __a, unsigned int __b) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_ltu(__builtin_bit_cast(_Float16x2, __a),
+                                   __builtin_bit_cast(_Float16x2, __b)));
+}
+__DEVICE__ unsigned int __f16x2_gtu(unsigned int __a, unsigned int __b) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_gtu(__builtin_bit_cast(_Float16x2, __a),
+                                   __builtin_bit_cast(_Float16x2, __b)));
+}
+__DEVICE__ unsigned int __f16x2_eq_mask(unsigned int __a, unsigned int __b) {
+  return __nv_f16x2_eq_mask(__builtin_bit_cast(_Float16x2, __a),
+                            __builtin_bit_cast(_Float16x2, __b));
+}
+__DEVICE__ unsigned int __f16x2_ne_mask(unsigned int __a, unsigned int __b) {
+  return __nv_f16x2_ne_mask(__builtin_bit_cast(_Float16x2, __a),
+                            __builtin_bit_cast(_Float16x2, __b));
+}
+__DEVICE__ unsigned int __f16x2_le_mask(unsigned int __a, unsigned int __b) {
+  return __nv_f16x2_le_mask(__builtin_bit_cast(_Float16x2, __a),
+                            __builtin_bit_cast(_Float16x2, __b));
+}
+__DEVICE__ unsigned int __f16x2_ge_mask(unsigned int __a, unsigned int __b) {
+  return __nv_f16x2_ge_mask(__builtin_bit_cast(_Float16x2, __a),
+                            __builtin_bit_cast(_Float16x2, __b));
+}
+__DEVICE__ unsigned int __f16x2_lt_mask(unsigned int __a, unsigned int __b) {
+  return __nv_f16x2_lt_mask(__builtin_bit_cast(_Float16x2, __a),
+                            __builtin_bit_cast(_Float16x2, __b));
+}
+__DEVICE__ unsigned int __f16x2_gt_mask(unsigned int __a, unsigned int __b) {
+  return __nv_f16x2_gt_mask(__builtin_bit_cast(_Float16x2, __a),
+                            __builtin_bit_cast(_Float16x2, __b));
+}
+__DEVICE__ unsigned int __f16x2_equ_mask(unsigned int __a, unsigned int __b) {
+  return __nv_f16x2_equ_mask(__builtin_bit_cast(_Float16x2, __a),
+                             __builtin_bit_cast(_Float16x2, __b));
+}
+__DEVICE__ unsigned int __f16x2_neu_mask(unsigned int __a, unsigned int __b) {
+  return __nv_f16x2_neu_mask(__builtin_bit_cast(_Float16x2, __a),
+                             __builtin_bit_cast(_Float16x2, __b));
+}
+__DEVICE__ unsigned int __f16x2_leu_mask(unsigned int __a, unsigned int __b) {
+  return __nv_f16x2_leu_mask(__builtin_bit_cast(_Float16x2, __a),
+                             __builtin_bit_cast(_Float16x2, __b));
+}
+__DEVICE__ unsigned int __f16x2_geu_mask(unsigned int __a, unsigned int __b) {
+  return __nv_f16x2_geu_mask(__builtin_bit_cast(_Float16x2, __a),
+                             __builtin_bit_cast(_Float16x2, __b));
+}
+__DEVICE__ unsigned int __f16x2_ltu_mask(unsigned int __a, unsigned int __b) {
+  return __nv_f16x2_ltu_mask(__builtin_bit_cast(_Float16x2, __a),
+                             __builtin_bit_cast(_Float16x2, __b));
+}
+__DEVICE__ unsigned int __f16x2_gtu_mask(unsigned int __a, unsigned int __b) {
+  return __nv_f16x2_gtu_mask(__builtin_bit_cast(_Float16x2, __a),
+                             __builtin_bit_cast(_Float16x2, __b));
+}
+__DEVICE__ unsigned short __f16_eq(unsigned short __a, unsigned short __b) {
+  return __nv_f16_eq(__builtin_bit_cast(_Float16, __a),
+                     __builtin_bit_cast(_Float16, __b));
+}
+__DEVICE__ unsigned short __f16_ne(unsigned short __a, unsigned short __b) {
+  return __nv_f16_ne(__builtin_bit_cast(_Float16, __a),
+                     __builtin_bit_cast(_Float16, __b));
+}
+__DEVICE__ unsigned short __f16_le(unsigned short __a, unsigned short __b) {
+  return __nv_f16_le(__builtin_bit_cast(_Float16, __a),
+                     __builtin_bit_cast(_Float16, __b));
+}
+__DEVICE__ unsigned short __f16_ge(unsigned short __a, unsigned short __b) {
+  return __nv_f16_ge(__builtin_bit_cast(_Float16, __a),
+                     __builtin_bit_cast(_Float16, __b));
+}
+__DEVICE__ unsigned short __f16_lt(unsigned short __a, unsigned short __b) {
+  return __nv_f16_lt(__builtin_bit_cast(_Float16, __a),
+                     __builtin_bit_cast(_Float16, __b));
+}
+__DEVICE__ unsigned short __f16_gt(unsigned short __a, unsigned short __b) {
+  return __nv_f16_gt(__builtin_bit_cast(_Float16, __a),
+                     __builtin_bit_cast(_Float16, __b));
+}
+__DEVICE__ unsigned short __f16_equ(unsigned short __a, unsigned short __b) {
+  return __nv_f16_equ(__builtin_bit_cast(_Float16, __a),
+                      __builtin_bit_cast(_Float16, __b));
+}
+__DEVICE__ unsigned short __f16_neu(unsigned short __a, unsigned short __b) {
+  return __nv_f16_neu(__builtin_bit_cast(_Float16, __a),
+                      __builtin_bit_cast(_Float16, __b));
+}
+__DEVICE__ unsigned short __f16_leu(unsigned short __a, unsigned short __b) {
+  return __nv_f16_leu(__builtin_bit_cast(_Float16, __a),
+                      __builtin_bit_cast(_Float16, __b));
+}
+__DEVICE__ unsigned short __f16_geu(unsigned short __a, unsigned short __b) {
+  return __nv_f16_geu(__builtin_bit_cast(_Float16, __a),
+                      __builtin_bit_cast(_Float16, __b));
+}
+__DEVICE__ unsigned short __f16_ltu(unsigned short __a, unsigned short __b) {
+  return __nv_f16_ltu(__builtin_bit_cast(_Float16, __a),
+                      __builtin_bit_cast(_Float16, __b));
+}
+__DEVICE__ unsigned short __f16_gtu(unsigned short __a, unsigned short __b) {
+  return __nv_f16_gtu(__builtin_bit_cast(_Float16, __a),
+                      __builtin_bit_cast(_Float16, __b));
+}
+
+// fp16 arithmetic functions
+__DEVICE__ unsigned int __f16x2_add(unsigned int __a, unsigned int __b) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_add(__builtin_bit_cast(_Float16x2, __a),
+                                   __builtin_bit_cast(_Float16x2, __b)));
+}
+__DEVICE__ unsigned int __f16x2_sub(unsigned int __a, unsigned int __b) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_sub(__builtin_bit_cast(_Float16x2, __a),
+                                   __builtin_bit_cast(_Float16x2, __b)));
+}
+__DEVICE__ unsigned int __f16x2_mul(unsigned int __a, unsigned int __b) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_mul(__builtin_bit_cast(_Float16x2, __a),
+                                   __builtin_bit_cast(_Float16x2, __b)));
+}
+__DEVICE__ unsigned int __f16x2_add_sat(unsigned int __a, unsigned int __b) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_add_sat(__builtin_bit_cast(_Float16x2, __a),
+                                       __builtin_bit_cast(_Float16x2, __b)));
+}
+__DEVICE__ unsigned int __f16x2_sub_sat(unsigned int __a, unsigned int __b) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_sub_sat(__builtin_bit_cast(_Float16x2, __a),
+                                       __builtin_bit_cast(_Float16x2, __b)));
+}
+__DEVICE__ unsigned int __f16x2_mul_sat(unsigned int __a, unsigned int __b) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_mul_sat(__builtin_bit_cast(_Float16x2, __a),
+                                       __builtin_bit_cast(_Float16x2, __b)));
+}
+__DEVICE__ unsigned int __f16x2_add_rn(unsigned int __a, unsigned int __b) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_add_rn(__builtin_bit_cast(_Float16x2, __a),
+                                      __builtin_bit_cast(_Float16x2, __b)));
+}
+__DEVICE__ unsigned int __f16x2_sub_rn(unsigned int __a, unsigned int __b) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_sub_rn(__builtin_bit_cast(_Float16x2, __a),
+                                      __builtin_bit_cast(_Float16x2, __b)));
+}
+__DEVICE__ unsigned int __f16x2_mul_rn(unsigned int __a, unsigned int __b) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_mul_rn(__builtin_bit_cast(_Float16x2, __a),
+                                      __builtin_bit_cast(_Float16x2, __b)));
+}
+__DEVICE__ unsigned int __f16x2_fma(unsigned int __a, unsigned int __b,
+                                    unsigned int __c) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_fma(__builtin_bit_cast(_Float16x2, __a),
+                                   __builtin_bit_cast(_Float16x2, __b),
+                                   __builtin_bit_cast(_Float16x2, __c)));
+}
+__DEVICE__ unsigned int __f16x2_fma_sat(unsigned int __a, unsigned int __b,
+                                        unsigned int __c) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_fma_sat(__builtin_bit_cast(_Float16x2, __a),
+                                       __builtin_bit_cast(_Float16x2, __b),
+                                       __builtin_bit_cast(_Float16x2, __c)));
+}
+__DEVICE__ unsigned int __f16x2_div(unsigned int __a, unsigned int __b) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_div(__builtin_bit_cast(_Float16x2, __a),
+                                   __builtin_bit_cast(_Float16x2, __b)));
+}
+__DEVICE__ unsigned short __f16_add(unsigned short __a, unsigned short __b) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_add(__builtin_bit_cast(_Float16, __a),
+                                         __builtin_bit_cast(_Float16, __b)));
+}
+__DEVICE__ unsigned short __f16_sub(unsigned short __a, unsigned short __b) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_sub(__builtin_bit_cast(_Float16, __a),
+                                         __builtin_bit_cast(_Float16, __b)));
+}
+__DEVICE__ unsigned short __f16_mul(unsigned short __a, unsigned short __b) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_mul(__builtin_bit_cast(_Float16, __a),
+                                         __builtin_bit_cast(_Float16, __b)));
+}
+__DEVICE__ unsigned short __f16_add_sat(unsigned short __a,
+                                        unsigned short __b) {
+  return __builtin_bit_cast(
+      unsigned short, __nv_f16_add_sat(__builtin_bit_cast(_Float16, __a),
+                                       __builtin_bit_cast(_Float16, __b)));
+}
+__DEVICE__ unsigned short __f16_sub_sat(unsigned short __a,
+                                        unsigned short __b) {
+  return __builtin_bit_cast(
+      unsigned short, __nv_f16_sub_sat(__builtin_bit_cast(_Float16, __a),
+                                       __builtin_bit_cast(_Float16, __b)));
+}
+__DEVICE__ unsigned short __f16_mul_sat(unsigned short __a,
+                                        unsigned short __b) {
+  return __builtin_bit_cast(
+      unsigned short, __nv_f16_mul_sat(__builtin_bit_cast(_Float16, __a),
+                                       __builtin_bit_cast(_Float16, __b)));
+}
+__DEVICE__ unsigned short __f16_add_rn(unsigned short __a, unsigned short __b) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_add_rn(__builtin_bit_cast(_Float16, __a),
+                                            __builtin_bit_cast(_Float16, __b)));
+}
+__DEVICE__ unsigned short __f16_sub_rn(unsigned short __a, unsigned short __b) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_sub_rn(__builtin_bit_cast(_Float16, __a),
+                                            __builtin_bit_cast(_Float16, __b)));
+}
+__DEVICE__ unsigned short __f16_mul_rn(unsigned short __a, unsigned short __b) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_mul_rn(__builtin_bit_cast(_Float16, __a),
+                                            __builtin_bit_cast(_Float16, __b)));
+}
+__DEVICE__ unsigned short __f16_fma(unsigned short __a, unsigned short __b,
+                                    unsigned short __c) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_fma(__builtin_bit_cast(_Float16, __a),
+                                         __builtin_bit_cast(_Float16, __b),
+                                         __builtin_bit_cast(_Float16, __c)));
+}
+__DEVICE__ unsigned short __f16_div(unsigned short __a, unsigned short __b) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_div(__builtin_bit_cast(_Float16, __a),
+                                         __builtin_bit_cast(_Float16, __b)));
+}
+__DEVICE__ unsigned short __f16_fma_sat(unsigned short __a, unsigned short __b,
+                                        unsigned short __c) {
+  return __builtin_bit_cast(
+      unsigned short, __nv_f16_fma_sat(__builtin_bit_cast(_Float16, __a),
+                                       __builtin_bit_cast(_Float16, __b),
+                                       __builtin_bit_cast(_Float16, __c)));
+}
+
+// fp16 transcendental functions
+__DEVICE__ unsigned short __f16_sin(unsigned short __x) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_sin(__builtin_bit_cast(_Float16, __x)));
+}
+__DEVICE__ unsigned int __f16x2_sin(unsigned int __x) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_sin(__builtin_bit_cast(_Float16x2, __x)));
+}
+__DEVICE__ unsigned short __f16_cos(unsigned short __x) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_cos(__builtin_bit_cast(_Float16, __x)));
+}
+__DEVICE__ unsigned int __f16x2_cos(unsigned int __x) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_cos(__builtin_bit_cast(_Float16x2, __x)));
+}
+__DEVICE__ unsigned short __f16_exp(unsigned short __x) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_exp(__builtin_bit_cast(_Float16, __x)));
+}
+__DEVICE__ unsigned int __f16x2_exp(unsigned int __x) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_exp(__builtin_bit_cast(_Float16x2, __x)));
+}
+__DEVICE__ unsigned short __f16_tanh(unsigned short __x) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_tanh(__builtin_bit_cast(_Float16, __x)));
+}
+__DEVICE__ unsigned int __f16x2_tanh(unsigned int __x) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_tanh(__builtin_bit_cast(_Float16x2, __x)));
+}
+__DEVICE__ unsigned short __f16_tanh_approx(unsigned short __x) {
+  return __builtin_bit_cast(
+      unsigned short, __nv_f16_tanh_approx(__builtin_bit_cast(_Float16, __x)));
+}
+__DEVICE__ unsigned int __f16x2_tanh_approx(unsigned int __x) {
+  return __builtin_bit_cast(
+      unsigned int,
+      __nv_f16x2_tanh_approx(__builtin_bit_cast(_Float16x2, __x)));
+}
+__DEVICE__ unsigned short __f16_exp2(unsigned short __x) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_exp2(__builtin_bit_cast(_Float16, __x)));
+}
+__DEVICE__ unsigned int __f16x2_exp2(unsigned int __x) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_exp2(__builtin_bit_cast(_Float16x2, __x)));
+}
+__DEVICE__ unsigned short __f16_exp10(unsigned short __x) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_exp10(__builtin_bit_cast(_Float16, __x)));
+}
+__DEVICE__ unsigned int __f16x2_exp10(unsigned int __x) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_exp10(__builtin_bit_cast(_Float16x2, __x)));
+}
+__DEVICE__ unsigned short __f16_log2(unsigned short __x) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_log2(__builtin_bit_cast(_Float16, __x)));
+}
+__DEVICE__ unsigned int __f16x2_log2(unsigned int __x) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_log2(__builtin_bit_cast(_Float16x2, __x)));
+}
+__DEVICE__ unsigned short __f16_log(unsigned short __x) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_log(__builtin_bit_cast(_Float16, __x)));
+}
+__DEVICE__ unsigned int __f16x2_log(unsigned int __x) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_log(__builtin_bit_cast(_Float16x2, __x)));
+}
+__DEVICE__ unsigned short __f16_log10(unsigned short __x) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_log10(__builtin_bit_cast(_Float16, __x)));
+}
+__DEVICE__ unsigned int __f16x2_log10(unsigned int __x) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_log10(__builtin_bit_cast(_Float16x2, __x)));
+}
+__DEVICE__ unsigned int __f16x2_rcp(unsigned int __x) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_rcp(__builtin_bit_cast(_Float16x2, __x)));
+}
+__DEVICE__ unsigned short __f16_rcp(unsigned short __x) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_rcp(__builtin_bit_cast(_Float16, __x)));
+}
+__DEVICE__ unsigned short __f16_rsqrt(unsigned short __x) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_rsqrt(__builtin_bit_cast(_Float16, __x)));
+}
+__DEVICE__ unsigned int __f16x2_rsqrt(unsigned int __x) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_rsqrt(__builtin_bit_cast(_Float16x2, __x)));
+}
+__DEVICE__ unsigned int __f16x2_sqrt(unsigned int __x) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_sqrt(__builtin_bit_cast(_Float16x2, __x)));
+}
+__DEVICE__ unsigned short __f16_sqrt(unsigned short __x) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_sqrt(__builtin_bit_cast(_Float16, __x)));
+}
+__DEVICE__ unsigned int __f16x2_isnan(unsigned int __x) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_isnan(__builtin_bit_cast(_Float16x2, __x)));
+}
+__DEVICE__ unsigned short __f16_isnan(unsigned short __x) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_isnan(__builtin_bit_cast(_Float16, __x)));
+}
+__DEVICE__ unsigned int __f16x2_neg(unsigned int __x) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_neg(__builtin_bit_cast(_Float16x2, __x)));
+}
+__DEVICE__ unsigned short __f16_neg(unsigned short __x) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_neg(__builtin_bit_cast(_Float16, __x)));
+}
+__DEVICE__ unsigned int __f16x2_abs(unsigned int __x) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_abs(__builtin_bit_cast(_Float16x2, __x)));
+}
+__DEVICE__ unsigned short __f16_abs(unsigned short __x) {
+  return __builtin_bit_cast(unsigned short,
+                            __nv_f16_abs(__builtin_bit_cast(_Float16, __x)));
+}
+__DEVICE__ unsigned short __f16_max_nan(unsigned short __x,
+                                        unsigned short __y) {
+  return __builtin_bit_cast(
+      unsigned short, __nv_f16_max_nan(__builtin_bit_cast(_Float16, __x),
+                                       __builtin_bit_cast(_Float16, __y)));
+}
+__DEVICE__ unsigned short __f16_min_nan(unsigned short __x,
+                                        unsigned short __y) {
+  return __builtin_bit_cast(
+      unsigned short, __nv_f16_min_nan(__builtin_bit_cast(_Float16, __x),
+                                       __builtin_bit_cast(_Float16, __y)));
+}
+__DEVICE__ unsigned short __f16_fma_relu(unsigned short __x, unsigned short __y,
+                                         unsigned short __z) {
+  return __builtin_bit_cast(
+      unsigned short, __nv_f16_fma_relu(__builtin_bit_cast(_Float16, __x),
+                                        __builtin_bit_cast(_Float16, __y),
+                                        __builtin_bit_cast(_Float16, __z)));
+}
+__DEVICE__ unsigned int __f16x2_max_nan(unsigned int __x, unsigned int __y) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_max_nan(__builtin_bit_cast(_Float16x2, __x),
+                                       __builtin_bit_cast(_Float16x2, __y)));
+}
+__DEVICE__ unsigned int __f16x2_min_nan(unsigned int __x, unsigned int __y) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_min_nan(__builtin_bit_cast(_Float16x2, __x),
+                                       __builtin_bit_cast(_Float16x2, __y)));
+}
+__DEVICE__ unsigned int __f16x2_fma_relu(unsigned int __x, unsigned int __y,
+                                         unsigned int __z) {
+  return __builtin_bit_cast(
+      unsigned int, __nv_f16x2_fma_relu(__builtin_bit_cast(_Float16x2, __x),
+                                        __builtin_bit_cast(_Float16x2, __y),
+                                        __builtin_bit_cast(_Float16x2, __z)));
+}
+#endif // CUDA_VERSION >= 13030
 
 // For OpenMP we require the user to include <time.h> as we need to know what
 // clock_t is on the system.
