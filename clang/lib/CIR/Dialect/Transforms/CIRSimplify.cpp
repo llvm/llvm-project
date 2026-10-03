@@ -311,9 +311,16 @@ struct SimplifySwitch : public OpRewritePattern<SwitchOp> {
     };
 
     for (CaseOp c : cases) {
-      if (!cascadingCases.empty() &&
-          !isa_and_nonnull<CaseOp>(c->getPrevNode())) {
+      // Cascading cases must be textually adjacent to the previously
+      // collected cascading case. This is false when something is in the
+      // way (e.g. a goto) or when the previous cascading case was found
+      // nested inside a sibling case's body (e.g. a case label that falls
+      // through into a compound statement) rather than next to `c`.
+      bool isAdjacentToLastCascadingCase =
+          !cascadingCases.empty() &&
+          c->getPrevNode() == cascadingCases.back().getOperation();
 
+      if (!cascadingCases.empty() && !isAdjacentToLastCascadingCase) {
         if (cascadingCases.size() > 1)
           mergeLastCascadingAndFlush();
         else

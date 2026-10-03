@@ -329,12 +329,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 
 // Integer arithmetic ops.
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
-  def int_x86_sse2_pmulhu_w : ClangBuiltin<"__builtin_ia32_pmulhuw128">,
-      DefaultAttrsIntrinsic<[llvm_v8i16_ty], [llvm_v8i16_ty,
-                             llvm_v8i16_ty], [IntrNoMem, Commutative]>;
-  def int_x86_sse2_pmulh_w : ClangBuiltin<"__builtin_ia32_pmulhw128">,
-      DefaultAttrsIntrinsic<[llvm_v8i16_ty], [llvm_v8i16_ty,
-                             llvm_v8i16_ty], [IntrNoMem, Commutative]>;
   def int_x86_sse2_pmadd_wd : ClangBuiltin<"__builtin_ia32_pmaddwd128">,
       DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_v8i16_ty,
                              llvm_v8i16_ty], [IntrNoMem, Commutative]>;
@@ -1336,12 +1330,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 
 // Integer arithmetic ops.
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
-  def int_x86_avx2_pmulhu_w : ClangBuiltin<"__builtin_ia32_pmulhuw256">,
-      DefaultAttrsIntrinsic<[llvm_v16i16_ty], [llvm_v16i16_ty,
-                             llvm_v16i16_ty], [IntrNoMem, Commutative]>;
-  def int_x86_avx2_pmulh_w : ClangBuiltin<"__builtin_ia32_pmulhw256">,
-      DefaultAttrsIntrinsic<[llvm_v16i16_ty], [llvm_v16i16_ty,
-                             llvm_v16i16_ty], [IntrNoMem, Commutative]>;
   def int_x86_avx2_pmadd_wd : ClangBuiltin<"__builtin_ia32_pmaddwd256">,
       DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_v16i16_ty,
                              llvm_v16i16_ty], [IntrNoMem, Commutative]>;
@@ -3760,12 +3748,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 }
 // Integer arithmetic ops
 let TargetPrefix = "x86" in {
-  def int_x86_avx512_pmulhu_w_512 : ClangBuiltin<"__builtin_ia32_pmulhuw512">,
-      DefaultAttrsIntrinsic<[llvm_v32i16_ty], [llvm_v32i16_ty, llvm_v32i16_ty],
-                            [IntrNoMem, Commutative]>;
-  def int_x86_avx512_pmulh_w_512 : ClangBuiltin<"__builtin_ia32_pmulhw512">,
-      DefaultAttrsIntrinsic<[llvm_v32i16_ty], [llvm_v32i16_ty, llvm_v32i16_ty],
-                            [IntrNoMem, Commutative]>;
   def int_x86_avx512_pavg_b_512 : ClangBuiltin<"__builtin_ia32_pavgb512">,
       DefaultAttrsIntrinsic<[llvm_v64i8_ty], [llvm_v64i8_ty, llvm_v64i8_ty],
                             [IntrNoMem]>;
