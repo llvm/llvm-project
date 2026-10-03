@@ -1,9 +1,5 @@
 # Capturing configuration information in the headers
 
-```{contents}
-:local: true
-```
-
 ## The Problem
 
 libc++ supports building the library with a number of different configuration options.

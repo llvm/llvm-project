@@ -2,10 +2,6 @@
 
 # Adding New CI Jobs
 
-:::{contents}
-:local: true
-:::
-
 ## Adding The Job
 
 libc++ uses Buildkite for running its CI. Setting up new CI jobs is easy, and

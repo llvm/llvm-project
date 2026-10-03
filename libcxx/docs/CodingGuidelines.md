@@ -2,10 +2,6 @@
 
 # libc++ Coding Guidelines
 
-```{contents}
-:local: true
-```
-
 ## Use `__ugly_names` for implementation details
 
 Libc++ uses `__ugly_names` or `_UglyNames` for implementation details. These names are reserved for implementations,

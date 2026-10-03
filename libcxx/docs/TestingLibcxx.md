@@ -2,10 +2,6 @@
 
 # Testing libc++
 
-:::{contents}
-:local: true
-:::
-
 ## Getting Started
 
 libc++ uses LIT to configure and run its tests.
