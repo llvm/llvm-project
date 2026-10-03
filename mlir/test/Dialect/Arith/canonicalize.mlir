@@ -2542,7 +2542,7 @@ func.func @mulsiExtendedOneRhsSplat(%arg0: vector<3xi32>) -> (vector<3xi32>, vec
 //  CHECK-SAME:   (%[[ARG:.+]]: i1) -> (i1, i1)
 //  CHECK-NEXT:   %[[T:.+]]  = arith.constant true
 //  CHECK-NEXT:   %[[LOW:.+]], %[[HIGH:.+]] = arith.mulsi_extended %[[ARG]], %[[T]] : i1
-//  CHECK-NEXT:   return %[[LOW]], %[[HIGH]] : i1, i1
+//  CHECK-NEXT:   return %[[ARG]], %[[HIGH]] : i1, i1
 func.func @mulsiExtendedOneRhsI1(%arg0: i1) -> (i1, i1) {
   %one = arith.constant true
   %low, %high = arith.mulsi_extended %arg0, %one: i1
@@ -2553,7 +2553,7 @@ func.func @mulsiExtendedOneRhsI1(%arg0: i1) -> (i1, i1) {
 //  CHECK-SAME:   (%[[ARG:.+]]: vector<3xi1>) -> (vector<3xi1>, vector<3xi1>)
 //  CHECK-NEXT:   %[[TS:.+]]  = arith.constant dense<true> : vector<3xi1>
 //  CHECK-NEXT:   %[[LOW:.+]], %[[HIGH:.+]] = arith.mulsi_extended %[[ARG]], %[[TS]] : vector<3xi1>
-//  CHECK-NEXT:   return %[[LOW]], %[[HIGH]] : vector<3xi1>, vector<3xi1>
+//  CHECK-NEXT:   return %[[ARG]], %[[HIGH]] : vector<3xi1>, vector<3xi1>
 func.func @mulsiExtendedOneRhsSplatI1(%arg0: vector<3xi1>) -> (vector<3xi1>, vector<3xi1>) {
   %one = arith.constant dense<true> : vector<3xi1>
   %low, %high = arith.mulsi_extended %arg0, %one: vector<3xi1>

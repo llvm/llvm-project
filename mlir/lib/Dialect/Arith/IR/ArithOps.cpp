@@ -473,18 +473,14 @@ static APInt calculateUnsignedOverflow(const APInt &sum, const APInt &operand) {
   return sum.ult(operand) ? APInt::getAllOnes(1) : APInt::getZero(1);
 }
 
-LogicalResult
-arith::AddUIExtendedOp::fold(FoldAdaptor adaptor,
-                             SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults arith::AddUIExtendedOp::fold(FoldAdaptor adaptor) {
   Type overflowTy = getOverflow().getType();
   // addui_extended(x, 0) -> x, false
   if (matchPattern(getRhs(), m_Zero())) {
     Builder builder(getContext());
     auto falseValue = builder.getZeroAttr(overflowTy);
 
-    results.push_back(getLhs());
-    results.push_back(falseValue);
-    return success();
+    return {getLhs(), falseValue};
   }
 
   // addui_extended(constant_a, constant_b) -> constant_sum, constant_carry
@@ -495,11 +491,8 @@ arith::AddUIExtendedOp::fold(FoldAdaptor adaptor,
           adaptor.getOperands(),
           [](APInt a, const APInt &b) { return std::move(a) + b; })) {
     // If any operand is poison, propagate poison to both results.
-    if (matchPattern(sumAttr, ub::m_Poison())) {
-      results.push_back(sumAttr);
-      results.push_back(sumAttr);
-      return success();
-    }
+    if (matchPattern(sumAttr, ub::m_Poison()))
+      return {sumAttr, sumAttr};
     Attribute overflowAttr = constFoldBinaryOp<IntegerAttr>(
         ArrayRef({sumAttr, adaptor.getLhs()}),
         getI1SameShape(llvm::cast<TypedAttr>(sumAttr).getType()),
@@ -507,9 +500,7 @@ arith::AddUIExtendedOp::fold(FoldAdaptor adaptor,
     if (!overflowAttr)
       return failure();
 
-    results.push_back(sumAttr);
-    results.push_back(overflowAttr);
-    return success();
+    return {sumAttr, overflowAttr};
   }
 
   return failure();
@@ -537,18 +528,14 @@ static APInt calculateUnsignedBorrow(const APInt &lhs, const APInt &rhs) {
   return lhs.ult(rhs) ? APInt::getAllOnes(1) : APInt::getZero(1);
 }
 
-LogicalResult
-arith::SubUIExtendedOp::fold(FoldAdaptor adaptor,
-                             SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults arith::SubUIExtendedOp::fold(FoldAdaptor adaptor) {
   Type borrowTy = getBorrow().getType();
   // subui_extended(x, 0) -> x, false
   if (matchPattern(getRhs(), m_Zero())) {
     Builder builder(getContext());
     auto falseValue = builder.getZeroAttr(borrowTy);
 
-    results.push_back(getLhs());
-    results.push_back(falseValue);
-    return success();
+    return {getLhs(), falseValue};
   }
 
   // subui_extended(x, x) -> 0, false
@@ -564,9 +551,7 @@ arith::SubUIExtendedOp::fold(FoldAdaptor adaptor,
     if (!zeroDiff)
       return failure();
 
-    results.push_back(zeroDiff);
-    results.push_back(falseValue);
-    return success();
+    return {zeroDiff, falseValue};
   }
 
   // subui_extended(constant_a, constant_b) -> constant_diff, constant_borrow
@@ -574,11 +559,8 @@ arith::SubUIExtendedOp::fold(FoldAdaptor adaptor,
           adaptor.getOperands(),
           [](APInt a, const APInt &b) { return std::move(a) - b; })) {
     // If any operand is poison, propagate poison to both results.
-    if (matchPattern(diffAttr, ub::m_Poison())) {
-      results.push_back(diffAttr);
-      results.push_back(diffAttr);
-      return success();
-    }
+    if (matchPattern(diffAttr, ub::m_Poison()))
+      return {diffAttr, diffAttr};
     Attribute borrowAttr = constFoldBinaryOp<IntegerAttr>(
         adaptor.getOperands(),
         getI1SameShape(llvm::cast<TypedAttr>(diffAttr).getType()),
@@ -586,9 +568,7 @@ arith::SubUIExtendedOp::fold(FoldAdaptor adaptor,
     if (!borrowAttr)
       return failure();
 
-    results.push_back(diffAttr);
-    results.push_back(borrowAttr);
-    return success();
+    return {diffAttr, borrowAttr};
   }
 
   return failure();
@@ -703,15 +683,11 @@ arith::MulSIExtendedOp::getShapeForUnroll() {
   return std::nullopt;
 }
 
-LogicalResult
-arith::MulSIExtendedOp::fold(FoldAdaptor adaptor,
-                             SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults arith::MulSIExtendedOp::fold(FoldAdaptor adaptor) {
   // mulsi_extended(x, 0) -> 0, 0
   if (matchPattern(adaptor.getRhs(), m_Zero())) {
     Attribute zero = adaptor.getRhs();
-    results.push_back(zero);
-    results.push_back(zero);
-    return success();
+    return {zero, zero};
   }
 
   // mulsi_extended(cst_a, cst_b) -> cst_low, cst_high
@@ -723,10 +699,12 @@ arith::MulSIExtendedOp::fold(FoldAdaptor adaptor,
                                                         llvm::APIntOps::mulhs);
     assert(highAttr && "Unexpected constant-folding failure");
 
-    results.push_back(lowAttr);
-    results.push_back(highAttr);
-    return success();
+    return {lowAttr, highAttr};
   }
+
+  // mulsi_extended(x, 1) -> low = x; keep high.
+  if (matchPattern(adaptor.getRhs(), m_One()))
+    return {getLhs(), nullptr};
 
   return failure();
 }
@@ -747,24 +725,18 @@ arith::MulUIExtendedOp::getShapeForUnroll() {
   return std::nullopt;
 }
 
-LogicalResult
-arith::MulUIExtendedOp::fold(FoldAdaptor adaptor,
-                             SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults arith::MulUIExtendedOp::fold(FoldAdaptor adaptor) {
   // mului_extended(x, 0) -> 0, 0
   if (matchPattern(adaptor.getRhs(), m_Zero())) {
     Attribute zero = adaptor.getRhs();
-    results.push_back(zero);
-    results.push_back(zero);
-    return success();
+    return {zero, zero};
   }
 
   // mului_extended(x, 1) -> x, 0
   if (matchPattern(adaptor.getRhs(), m_One())) {
     Builder builder(getContext());
     Attribute zero = builder.getZeroAttr(getLhs().getType());
-    results.push_back(getLhs());
-    results.push_back(zero);
-    return success();
+    return {getLhs(), zero};
   }
 
   // mului_extended(cst_a, cst_b) -> cst_low, cst_high
@@ -776,9 +748,7 @@ arith::MulUIExtendedOp::fold(FoldAdaptor adaptor,
                                                         llvm::APIntOps::mulhu);
     assert(highAttr && "Unexpected constant-folding failure");
 
-    results.push_back(lowAttr);
-    results.push_back(highAttr);
-    return success();
+    return {lowAttr, highAttr};
   }
 
   return failure();
