@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # ===- cindex-includes.py - cindex/Python Inclusion Graph -----*- python -*--===#
 #

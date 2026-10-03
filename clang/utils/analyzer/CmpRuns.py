@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 CmpRuns - A simple tool for comparing two static analyzer runs to determine
