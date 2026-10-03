@@ -15,7 +15,7 @@ bazel_dep(name = "rules_cc", version = "0.2.25")
 
 # Keep below 2.0: from 2.0.0, py_binary on Windows requires symlink privileges
 # (https://github.com/bazel-contrib/rules_python/issues/3792).
-bazel_dep(name = "rules_python", version = "1.8.4")
+bazel_dep(name = "rules_python", version = "1.9.0")
 bazel_dep(name = "rules_shell", version = "0.8.0")
 
 # Latest pins: track upstream freely. No compatibility contract -- bump to
@@ -33,6 +33,9 @@ bazel_dep(name = "nanobind", version = "2.12.0.bcr.1")
 bazel_dep(name = "libpfm", version = "4.13.0", repo_name = "pfm")
 bazel_dep(name = "vulkan_headers", version = "1.4.349")
 bazel_dep(name = "xz", version = "5.4.5.bcr.9", repo_name = "llvm_xz")
+
+# Old version brought in transitively that uses transitive includes newer libc++ pruned
+bazel_dep(name = "rules_cc_autoconf", version = "0.24.0", repo_name = None)
 
 bazel_dep(name = "emsdk", version = "6.0.2", dev_dependency = True)
 bazel_dep(name = "llvm", version = "0.8.20", dev_dependency = True)
