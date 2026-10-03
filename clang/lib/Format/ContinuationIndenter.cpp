@@ -944,21 +944,21 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   };
 
   auto ShouldBreakAfterOpeningBracket = [&](const FormatToken &Tok) {
-    // Suppose that IsOpeningBracket returned true for a Tok
+    assert(IsOpeningBracket(Tok));
 
-    // Corresponds to BreakAfterOpenBracketBracedList
+    // Corresponds to BreakAfterOpenBracketBracedList.
     if (Tok.is(tok::l_brace))
       return true;
 
-    const auto *Before = Tok.Previous;
-    if (!Before)
+    const auto *Previous = Tok.Previous;
+    if (!Previous)
       return false;
 
     // Corresponds to BreakAfterOpenBracketIf, BreakAfterOpenBracketLoop,
     // BreakAfterOpenBracketSwitch, BreakAfterOpenBracketFunction.
-    return Before->isIf() || Before->isLoop(Style) ||
-           Before->is(tok::kw_switch) ||
-           (!Before->is(TT_CastRParen) &&
+    return Previous->isIf() || Previous->isLoop(Style) ||
+           Previous->is(tok::kw_switch) ||
+           (!Previous->is(TT_CastRParen) &&
             !(Style.isJavaScript() && Tok.is(Keywords.kw_await)));
   };
 
