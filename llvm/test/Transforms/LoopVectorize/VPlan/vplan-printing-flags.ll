@@ -121,7 +121,7 @@ define void @cast_flags_single(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:      EMIT vp<%step.add> = add nuw vp<[[VP8]]>, vp<[[VP5]]>
 ; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = icmp ule vp<[[VP8]]>, vp<[[VP3]]>
 ; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = icmp ule vp<%step.add>, vp<[[VP3]]>
-; CHECK-NEXT:      vp<[[VP11:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP6]]> * ir<1>
+; CHECK-NEXT:      EMIT-SCALAR vp<[[VP11:%[0-9]+]]> = trunc vp<[[VP6]]> to i16
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.store: {

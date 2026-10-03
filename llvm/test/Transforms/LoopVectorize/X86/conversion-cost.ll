@@ -8,7 +8,7 @@ define void @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-LABEL: define void @conversion_cost1(
 ; CHECK-SAME: i32 [[N:%.*]], ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[N]], 3
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[ITER_CHECK:.*]], [[DOT_CRIT_EDGE:label %.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[ITER_CHECK:.*]], label %[[DOT_CRIT_EDGE:.*]]
 ; CHECK:       [[ITER_CHECK]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[N]], -3
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
@@ -43,7 +43,7 @@ define void @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], [[DOT_CRIT_EDGE_LOOPEXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[DOT_CRIT_EDGE_LOOPEXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 16
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
@@ -52,8 +52,8 @@ define void @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP4]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 3, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[N_MOD_VF2:%.*]] = and i64 [[TMP3]], 15
 ; CHECK-NEXT:    [[N_VEC3:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 3, [[N_VEC3]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[BC_RESUME_VAL]] to i8
+; CHECK-NEXT:    [[TMP18:%.*]] = add i64 3, [[N_VEC3]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[TMP9]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <16 x i8> [[BROADCAST_SPLAT]], <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>
@@ -70,11 +70,11 @@ define void @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N8:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC3]]
-; CHECK-NEXT:    br i1 [[CMP_N8]], [[DOT_CRIT_EDGE_LOOPEXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
+; CHECK-NEXT:    br i1 [[CMP_N8]], label %[[DOT_CRIT_EDGE_LOOPEXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi i64 [ [[TMP8]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP4]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 3, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi i64 [ [[TMP18]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP4]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 3, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[DOTLR_PH:.*]]
-; CHECK:       [[_LR_PH:.*:]]
+; CHECK:       [[DOTLR_PH]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[DOTLR_PH]] ], [ [[BC_RESUME_VAL8]], %[[VEC_EPILOG_SCALAR_PH]] ]
 ; CHECK-NEXT:    [[TMP13:%.*]] = trunc i64 [[INDVARS_IV]] to i8
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDVARS_IV]]
@@ -82,10 +82,10 @@ define void @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], [[DOT_CRIT_EDGE_LOOPEXIT]], label %[[DOTLR_PH]], !llvm.loop [[LOOP5:![0-9]+]]
-; CHECK:       [[__CRIT_EDGE_LOOPEXIT:.*:]]
-; CHECK-NEXT:    br [[DOT_CRIT_EDGE]]
-; CHECK:       [[__CRIT_EDGE:.*:]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[DOT_CRIT_EDGE_LOOPEXIT]], label %[[DOTLR_PH]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:       [[DOT_CRIT_EDGE_LOOPEXIT]]:
+; CHECK-NEXT:    br label %[[DOT_CRIT_EDGE]]
+; CHECK:       [[DOT_CRIT_EDGE]]:
 ; CHECK-NEXT:    ret void
 ;
   %1 = icmp sgt i32 %n, 3
@@ -109,8 +109,8 @@ define void @conversion_cost2(i32 %n, ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-LABEL: define void @conversion_cost2(
 ; CHECK-SAME: i32 [[N:%.*]], ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[N]], 9
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[DOTLR_PH_PREHEADER:.*]], [[DOT_CRIT_EDGE:label %.*]]
-; CHECK:       [[_LR_PH_PREHEADER:.*:]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[DOTLR_PH_PREHEADER:.*]], label %[[DOT_CRIT_EDGE:.*]]
+; CHECK:       [[DOTLR_PH_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[N]], -9
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
@@ -134,11 +134,11 @@ define void @conversion_cost2(i32 %n, ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], [[DOT_CRIT_EDGE_LOOPEXIT:label %.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[DOT_CRIT_EDGE_LOOPEXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ 9, %[[DOTLR_PH_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[DOTLR_PH:.*]]
-; CHECK:       [[_LR_PH:.*:]]
+; CHECK:       [[DOTLR_PH]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[DOTLR_PH]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[INDVARS_IV]], 3
 ; CHECK-NEXT:    [[TOFP:%.*]] = sitofp i64 [[ADD]] to float
@@ -147,10 +147,10 @@ define void @conversion_cost2(i32 %n, ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], [[DOT_CRIT_EDGE_LOOPEXIT]], label %[[DOTLR_PH]], !llvm.loop [[LOOP7:![0-9]+]]
-; CHECK:       [[__CRIT_EDGE_LOOPEXIT:.*:]]
-; CHECK-NEXT:    br [[DOT_CRIT_EDGE]]
-; CHECK:       [[__CRIT_EDGE:.*:]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[DOT_CRIT_EDGE_LOOPEXIT]], label %[[DOTLR_PH]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK:       [[DOT_CRIT_EDGE_LOOPEXIT]]:
+; CHECK-NEXT:    br label %[[DOT_CRIT_EDGE]]
+; CHECK:       [[DOT_CRIT_EDGE]]:
 ; CHECK-NEXT:    ret void
 ;
   %1 = icmp sgt i32 %n, 9

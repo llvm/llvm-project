@@ -68,8 +68,8 @@ define void @many_deps(ptr noalias %buckets, ptr %array, ptr %indices, ptr %othe
 ; NORMAL_DEP_LIMIT:       vector.ph:
 ; NORMAL_DEP_LIMIT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; NORMAL_DEP_LIMIT-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; NORMAL_DEP_LIMIT-NEXT:    [[TMP7:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
 ; NORMAL_DEP_LIMIT-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP1]] to i32
+; NORMAL_DEP_LIMIT-NEXT:    [[TMP7:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
 ; NORMAL_DEP_LIMIT-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP9]], i64 0
 ; NORMAL_DEP_LIMIT-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; NORMAL_DEP_LIMIT-NEXT:    br label [[FOR_BODY:%.*]]

@@ -143,9 +143,9 @@ define i8 @alias_masking_exit_value(ptr %ptrA, ptr %ptrB) {
 ; CHECK-TF-NEXT:    [[TMP8:%.*]] = or i1 [[VF_IS_SCALAR]], [[VF_STEP_OVERFLOW]]
 ; CHECK-TF-NEXT:    br i1 [[TMP8]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-TF:       [[VECTOR_PH]]:
+; CHECK-TF-NEXT:    [[TMP6:%.*]] = trunc i32 [[TMP5]] to i8
 ; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 0, i32 1000)
 ; CHECK-TF-NEXT:    [[TMP12:%.*]] = call <vscale x 16 x i8> @llvm.stepvector.nxv16i8()
-; CHECK-TF-NEXT:    [[TMP6:%.*]] = trunc i32 [[TMP5]] to i8
 ; CHECK-TF-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[TMP6]], i64 0
 ; CHECK-TF-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 ; CHECK-TF-NEXT:    br label %[[VECTOR_BODY:.*]]

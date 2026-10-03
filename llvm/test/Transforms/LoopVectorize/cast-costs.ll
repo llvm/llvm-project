@@ -4,9 +4,6 @@
 
 define void @trunc_store(ptr %dst) {
 ; CHECK-LABEL: 'trunc_store'
-; CHECK:  Cost of 1 for VF 2: EMIT-SCALAR vp<[[VP5:%[0-9]+]]> = trunc vp<[[VP4:%[0-9]+]]> to i8
-; CHECK:  Cost of 1 for VF 4: EMIT-SCALAR vp<[[VP5]]> = trunc vp<[[VP4]]> to i8
-;
 entry:
   br label %loop
 
