@@ -161,6 +161,16 @@ public:
     return *this;
   }
 
+  /// Whether to allow unverifiable IR during pattern rewrites.
+  ///
+  /// Note: Verifiability is only actually checked if the build option
+  /// `MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS` is enabled.
+  bool isUnverifiableIRAllowed() const { return allowUnverifiableIR; }
+  GreedyRewriteConfig &setAllowUnverifiableIR(bool allow = true) {
+    allowUnverifiableIR = allow;
+    return *this;
+  }
+
 private:
   Region *scope = nullptr;
   bool useTopDownTraversal = false;
@@ -173,6 +183,7 @@ private:
   bool fold = true;
   bool cseConstants = true;
   bool cseBetweenIterations = false;
+  bool allowUnverifiableIR = false;
 };
 
 //===----------------------------------------------------------------------===//
