@@ -4,9 +4,7 @@
 define i1 @unsigned_oeq(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i1 @unsigned_oeq(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[FA:%.*]] = uitofp i32 [[A]] to double
-; CHECK-NEXT:    [[FB:%.*]] = uitofp i32 [[B]] to double
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[FA]], [[FB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fa = uitofp i32 %a to double
@@ -18,9 +16,7 @@ define i1 @unsigned_oeq(i32 %a, i32 %b) {
 define i1 @signed_ueq(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i1 @signed_ueq(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[FA:%.*]] = sitofp i32 [[A]] to double
-; CHECK-NEXT:    [[FB:%.*]] = sitofp i32 [[B]] to double
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq double [[FA]], [[FB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fa = sitofp i32 %a to double
@@ -32,9 +28,7 @@ define i1 @signed_ueq(i32 %a, i32 %b) {
 define i1 @unsigned_one(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i1 @unsigned_one(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[FA:%.*]] = uitofp i32 [[A]] to double
-; CHECK-NEXT:    [[FB:%.*]] = uitofp i32 [[B]] to double
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp one double [[FA]], [[FB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fa = uitofp i32 %a to double
@@ -46,9 +40,7 @@ define i1 @unsigned_one(i32 %a, i32 %b) {
 define i1 @signed_une(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i1 @signed_une(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[FA:%.*]] = sitofp i32 [[A]] to double
-; CHECK-NEXT:    [[FB:%.*]] = sitofp i32 [[B]] to double
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[FA]], [[FB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fa = sitofp i32 %a to double
@@ -60,9 +52,7 @@ define i1 @signed_une(i32 %a, i32 %b) {
 define i1 @unsigned_olt(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i1 @unsigned_olt(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[FA:%.*]] = uitofp i32 [[A]] to double
-; CHECK-NEXT:    [[FB:%.*]] = uitofp i32 [[B]] to double
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[FA]], [[FB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fa = uitofp i32 %a to double
@@ -74,9 +64,7 @@ define i1 @unsigned_olt(i32 %a, i32 %b) {
 define i1 @signed_ult(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i1 @signed_ult(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[FA:%.*]] = sitofp i32 [[A]] to double
-; CHECK-NEXT:    [[FB:%.*]] = sitofp i32 [[B]] to double
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult double [[FA]], [[FB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fa = sitofp i32 %a to double
@@ -88,9 +76,7 @@ define i1 @signed_ult(i32 %a, i32 %b) {
 define i1 @unsigned_ole(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i1 @unsigned_ole(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[FA:%.*]] = uitofp i32 [[A]] to double
-; CHECK-NEXT:    [[FB:%.*]] = uitofp i32 [[B]] to double
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole double [[FA]], [[FB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fa = uitofp i32 %a to double
@@ -102,9 +88,7 @@ define i1 @unsigned_ole(i32 %a, i32 %b) {
 define i1 @signed_ule(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i1 @signed_ule(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[FA:%.*]] = sitofp i32 [[A]] to double
-; CHECK-NEXT:    [[FB:%.*]] = sitofp i32 [[B]] to double
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule double [[FA]], [[FB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fa = sitofp i32 %a to double
@@ -116,9 +100,7 @@ define i1 @signed_ule(i32 %a, i32 %b) {
 define i1 @unsigned_ogt(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i1 @unsigned_ogt(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[FA:%.*]] = uitofp i32 [[A]] to double
-; CHECK-NEXT:    [[FB:%.*]] = uitofp i32 [[B]] to double
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt double [[FA]], [[FB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fa = uitofp i32 %a to double
@@ -130,9 +112,7 @@ define i1 @unsigned_ogt(i32 %a, i32 %b) {
 define i1 @signed_ugt(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i1 @signed_ugt(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[FA:%.*]] = sitofp i32 [[A]] to double
-; CHECK-NEXT:    [[FB:%.*]] = sitofp i32 [[B]] to double
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt double [[FA]], [[FB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fa = sitofp i32 %a to double
@@ -144,9 +124,7 @@ define i1 @signed_ugt(i32 %a, i32 %b) {
 define i1 @unsigned_oge(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i1 @unsigned_oge(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[FA:%.*]] = uitofp i32 [[A]] to double
-; CHECK-NEXT:    [[FB:%.*]] = uitofp i32 [[B]] to double
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge double [[FA]], [[FB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fa = uitofp i32 %a to double
@@ -158,9 +136,7 @@ define i1 @unsigned_oge(i32 %a, i32 %b) {
 define i1 @signed_uge(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i1 @signed_uge(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[FA:%.*]] = sitofp i32 [[A]] to double
-; CHECK-NEXT:    [[FB:%.*]] = sitofp i32 [[B]] to double
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge double [[FA]], [[FB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fa = sitofp i32 %a to double
@@ -172,9 +148,8 @@ define i1 @signed_uge(i32 %a, i32 %b) {
 define i1 @unsigned_mixed_widths(i16 %a, i32 %b) {
 ; CHECK-LABEL: define i1 @unsigned_mixed_widths(
 ; CHECK-SAME: i16 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[FA:%.*]] = uitofp i16 [[A]] to double
-; CHECK-NEXT:    [[FB:%.*]] = uitofp i32 [[B]] to double
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[FA]], [[FB]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[A]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[B]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fa = uitofp i16 %a to double
@@ -186,9 +161,8 @@ define i1 @unsigned_mixed_widths(i16 %a, i32 %b) {
 define i1 @signed_mixed_widths(i8 %a, i16 %b) {
 ; CHECK-LABEL: define i1 @signed_mixed_widths(
 ; CHECK-SAME: i8 [[A:%.*]], i16 [[B:%.*]]) {
-; CHECK-NEXT:    [[FA:%.*]] = sitofp i8 [[A]] to float
-; CHECK-NEXT:    [[FB:%.*]] = sitofp i16 [[B]] to float
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[FA]], [[FB]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[A]] to i16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i16 [[B]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fa = sitofp i8 %a to float
@@ -200,9 +174,7 @@ define i1 @signed_mixed_widths(i8 %a, i16 %b) {
 define i1 @unsigned_float_exact_boundary(i24 %a, i24 %b) {
 ; CHECK-LABEL: define i1 @unsigned_float_exact_boundary(
 ; CHECK-SAME: i24 [[A:%.*]], i24 [[B:%.*]]) {
-; CHECK-NEXT:    [[FA:%.*]] = uitofp i24 [[A]] to float
-; CHECK-NEXT:    [[FB:%.*]] = uitofp i24 [[B]] to float
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[FA]], [[FB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i24 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fa = uitofp i24 %a to float
@@ -228,9 +200,7 @@ define i1 @unsigned_float_inexact(i25 %a, i25 %b) {
 define i1 @signed_float_exact_boundary(i25 %a, i25 %b) {
 ; CHECK-LABEL: define i1 @signed_float_exact_boundary(
 ; CHECK-SAME: i25 [[A:%.*]], i25 [[B:%.*]]) {
-; CHECK-NEXT:    [[FA:%.*]] = sitofp i25 [[A]] to float
-; CHECK-NEXT:    [[FB:%.*]] = sitofp i25 [[B]] to float
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[FA]], [[FB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i25 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fa = sitofp i25 %a to float
@@ -270,9 +240,7 @@ define i1 @unsigned_double_inexact(i64 %a, i64 %b) {
 define <4 x i1> @unsigned_vector(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: define <4 x i1> @unsigned_vector(
 ; CHECK-SAME: <4 x i16> [[A:%.*]], <4 x i16> [[B:%.*]]) {
-; CHECK-NEXT:    [[FA:%.*]] = uitofp <4 x i16> [[A]] to <4 x float>
-; CHECK-NEXT:    [[FB:%.*]] = uitofp <4 x i16> [[B]] to <4 x float>
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule <4 x float> [[FA]], [[FB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule <4 x i16> [[A]], [[B]]
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
   %fa = uitofp <4 x i16> %a to <4 x float>
