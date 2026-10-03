@@ -104,33 +104,61 @@ LLVM_DUMP_METHOD void SDep::dump(const TargetRegisterInfo *TRI) const {
 }
 
 bool SUnit::addPred(const SDep &D, bool Required) {
-  // If this node already has this dependence, don't add a redundant one.
-  for (SDep &PredDep : Preds) {
-    // Zero-latency weak edges may be added purely for heuristic ordering. Don't
-    // add them if another kind of edge already exists.
-    if (!Required && PredDep.getSUnit() == D.getSUnit())
-      return false;
-    if (PredDep.overlaps(D)) {
-      // Extend the latency if needed. Equivalent to
-      // removePred(PredDep) + addPred(D).
-      if (PredDep.getLatency() < D.getLatency()) {
-        SUnit *PredSU = PredDep.getSUnit();
-        // Find the corresponding successor in N.
-        SDep ForwardD = PredDep;
-        ForwardD.setSUnit(this);
-        for (SDep &SuccDep : PredSU->Succs) {
-          if (SuccDep == ForwardD) {
-            SuccDep.setLatency(D.getLatency());
-            break;
-          }
-        }
-        PredDep.setLatency(D.getLatency());
-        // Changing latency, dirty the involved SUnits.
-        this->setDepthDirty();
-        D.getSUnit()->setHeightDirty();
+  bool NeedPerPredChecks = true;
+  // We can skip the per-pred checks below if we see that that D's SUnit is
+  // already in PredsSet.
+  if (Preds.size() >= 16) {
+    if (!PredsSet) {
+      PredsSet = std::make_unique<BitVector>();
+      for (const SDep &PredDep : Preds) {
+        unsigned Idx = PredDep.getSUnit()->NodeNum;
+        if (Idx >= PredsSet->size())
+          PredsSet->resize(Idx + 1);
+        PredsSet->set(Idx);
       }
-      return false;
     }
+    unsigned Idx = D.getSUnit()->NodeNum;
+    if (Idx >= PredsSet->size() || !PredsSet->test(Idx)) {
+      NeedPerPredChecks = false;
+    }
+  }
+
+  if (NeedPerPredChecks) {
+    // If this node already has this dependence, don't add a redundant one.
+    for (SDep &PredDep : Preds) {
+      // Zero-latency weak edges may be added purely for heuristic ordering.
+      // Don't add them if another kind of edge already exists.
+      if (!Required && PredDep.getSUnit() == D.getSUnit())
+        return false;
+      if (PredDep.overlaps(D)) {
+        // Extend the latency if needed. Equivalent to
+        // removePred(PredDep) + addPred(D).
+        if (PredDep.getLatency() < D.getLatency()) {
+          SUnit *PredSU = PredDep.getSUnit();
+          // Find the corresponding successor in N.
+          SDep ForwardD = PredDep;
+          ForwardD.setSUnit(this);
+          for (SDep &SuccDep : PredSU->Succs) {
+            if (SuccDep == ForwardD) {
+              SuccDep.setLatency(D.getLatency());
+              break;
+            }
+          }
+          PredDep.setLatency(D.getLatency());
+          // Changing latency, dirty the involved SUnits.
+          this->setDepthDirty();
+          D.getSUnit()->setHeightDirty();
+        }
+        return false;
+      }
+    }
+  }
+
+  if (PredsSet) {
+    unsigned Idx = D.getSUnit()->NodeNum;
+    if (Idx >= PredsSet->size())
+      PredsSet->resize(Idx + 1);
+    PredsSet->set(Idx);
   }
   // Now add a corresponding succ to N.
   SDep P = D;
