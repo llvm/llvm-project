@@ -1223,6 +1223,10 @@ void WasmObjectWriter::writeLinkingMetaDataSection(
     endSection(SubSection);
   }
 
+  startSection(SubSection, wasm::WASM_TARGET_ARCH);
+  writeString(TargetObjectWriter->is64Bit() ? "wasm64" : "wasm32");
+  endSection(SubSection);
+
   endSection(Section);
 }
 
