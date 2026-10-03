@@ -1806,6 +1806,8 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
     return parseRangeAttr(B);
   case Attribute::Initializes:
     return parseInitializesAttr(B);
+  case Attribute::WriteRange:
+    return parseWriteRangeAttr(B);
   case Attribute::Captures:
     return parseCapturesAttr(B);
   default:
@@ -3538,6 +3540,51 @@ bool LLParser::parseInitializesAttr(AttrBuilder &B) {
   if (!CRLOrNull.has_value())
     return tokError("Invalid (unordered or overlapping) range list");
   B.addInitializesAttr(*CRLOrNull);
+  return false;
+}
+
+/// parseWriteRangeAttr
+///   ::= writerange((Lo1,Hi1),(Lo2,Hi2),...)
+bool LLParser::parseWriteRangeAttr(AttrBuilder &B) {
+  Lex.Lex();
+
+  auto ParseAPSInt = [&](APInt &Val) {
+    if (Lex.getKind() != lltok::APSInt)
+      return tokError("expected integer");
+    Val = Lex.getAPSIntVal().extend(64);
+    Lex.Lex();
+    return false;
+  };
+
+  if (parseToken(lltok::lparen, "expected '('"))
+    return true;
+
+  SmallVector<ConstantRange, 2> RangeList;
+  do {
+    APInt Lower, Upper;
+    if (parseToken(lltok::lparen, "expected '('"))
+      return true;
+
+    if (ParseAPSInt(Lower) || parseToken(lltok::comma, "expected ','") ||
+        ParseAPSInt(Upper))
+      return true;
+
+    if (Lower == Upper)
+      return tokError("the range should not represent the full or empty set!");
+
+    if (parseToken(lltok::rparen, "expected ')'"))
+      return true;
+
+    RangeList.push_back(ConstantRange(Lower, Upper));
+  } while (EatIfPresent(lltok::comma));
+
+  if (parseToken(lltok::rparen, "expected ')'"))
+    return true;
+
+  auto CRLOrNull = ConstantRangeList::getConstantRangeList(RangeList);
+  if (!CRLOrNull.has_value())
+    return tokError("Invalid (unordered or overlapping) range list");
+  B.addWriteRangeAttr(*CRLOrNull);
   return false;
 }
 
