@@ -1860,7 +1860,15 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
   case SVE::BI__builtin_sve_svdupq_n_u32:
   case SVE::BI__builtin_sve_svdupq_n_f32:
   case SVE::BI__builtin_sve_svdupq_n_s32:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
+
   case SVE::BI__builtin_sve_svpfalse_b:
+    return builder.getNullValue(convertType(expr->getType()),
+                                getLoc(expr->getExprLoc()));
+
   case SVE::BI__builtin_sve_svpfalse_c:
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
