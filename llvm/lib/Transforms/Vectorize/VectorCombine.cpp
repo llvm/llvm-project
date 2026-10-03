@@ -281,8 +281,11 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   auto *MinVecTy = VectorType::get(ScalarTy, MinVecNumElts, false);
   unsigned OffsetEltIndex = 0;
   Align Alignment = Load->getAlign();
+  // Ignore frees because the existing load proves that the object has not been
+  // freed. Allocations cannot shrink, so this is sufficient.
   if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1),
-                                   SQ.getWithInstruction(Load))) {
+                                   SQ.getWithInstruction(Load),
+                                   /*IgnoreFree=*/true)) {
     // It is not safe to load directly from the pointer, but we can still peek
     // through gep offsets and check if it safe to load from a base address with
     // updated alignment. If it is, we can shuffle the element(s) into place
@@ -309,7 +312,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
     OffsetEltIndex = OffsetEltIndexAP.getZExtValue();
 
     if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1),
-                                     SQ.getWithInstruction(Load)))
+                                     SQ.getWithInstruction(Load),
+                                     /*IgnoreFree=*/true))
       return false;
 
     // Update alignment with offset value. Note that the offset could be negated
@@ -394,8 +398,11 @@ bool VectorCombine::widenSubvectorLoad(Instruction &I) {
   Value *SrcPtr = Load->getPointerOperand()->stripPointerCasts();
   assert(isa<PointerType>(SrcPtr->getType()) && "Expected a pointer type");
   Align Alignment = Load->getAlign();
+  // Ignore frees because the existing load proves that the object has not been
+  // freed. Allocations cannot shrink, so this is sufficient.
   if (!isSafeToLoadUnconditionally(SrcPtr, Ty, Align(1),
-                                   SQ.getWithInstruction(Load)))
+                                   SQ.getWithInstruction(Load),
+                                   /*IgnoreFree=*/true))
     return false;
 
   Alignment = std::max(SrcPtr->getPointerAlignment(*DL), Alignment);
