@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=store '-passes=polly-custom<simplify-0;optree;delicm;simplify-1;opt-isl;ast>' -polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=store '-passes=polly-custom<simplify-0;optree;delicm;simplify-1;opt-isl;ast>' -plugin-arg=Polly,-polly-print-ast -disable-output < %s | FileCheck %s
 ;
 ; Do not distribute the innermost point loop if the statements in it depend on
 ; each other in both directions.
