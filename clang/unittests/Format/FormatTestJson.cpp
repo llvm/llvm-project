@@ -27,7 +27,7 @@ protected:
 
     // Mock up what ClangFormat.cpp will do for JSON by adding a variable
     // to trick JSON into being JavaScript
-    if (Style.isJson() && !Style.DisableFormat) {
+    if (Style.isJson() && !Style.DisableFormat.DisablePostPreprocessorFormatting) {
       auto Err = Replaces.add(
           tooling::Replacement(tooling::Replacement("", 0, 0, "x = ")));
       if (Err)
@@ -227,7 +227,7 @@ TEST_F(FormatTestJson, DisableJsonFormat) {
   // Since we have to disable formatting to run this test, we shall refrain from
   // calling test::messUp lest we change the unformatted code and cannot format
   // it back to how it started.
-  Style.DisableFormat = true;
+  Style.DisableFormat.DisablePostPreprocessorFormatting = true;
   verifyFormatStable("{}", Style);
   verifyFormatStable("{\n"
                      "  \"name\": 1\n"
