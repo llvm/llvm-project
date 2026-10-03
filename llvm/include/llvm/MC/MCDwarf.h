@@ -22,6 +22,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/StringSaver.h"
 #include <cassert>
@@ -531,6 +532,7 @@ public:
     OpGnuArgsSize,
     OpLabel,
     OpValOffset,
+    OpLLVMDefCfaAddressLinear,
     OpLLVMRegisterPair,
     OpLLVMVectorRegisters,
     OpLLVMVectorOffset,
@@ -562,6 +564,18 @@ public:
   // Held in ExtraFields when OpLabel.
   struct LabelFields {
     MCSymbol *CfiLabel = nullptr;
+  };
+
+  struct CfaRegisterTerm {
+    unsigned Register;
+    unsigned DerefSize;
+    unsigned Scale;
+  };
+  /// Held in ExtraFields when OpLLVMDefCfaAddressLinear.
+  struct CfaAddressLinearFields {
+    std::optional<CfaRegisterTerm> Source;
+    int64_t Offset;
+    unsigned AddressSpace;
   };
   /// Held in ExtraFields when OpLLVMRegisterPair.
   struct RegisterPairFields {
@@ -610,8 +624,8 @@ public:
 
 private:
   MCSymbol *Label;
-  std::variant<CommonFields, EscapeFields, LabelFields, RegisterPairFields,
-               VectorRegistersFields, VectorOffsetFields,
+  std::variant<CommonFields, EscapeFields, LabelFields, CfaAddressLinearFields,
+               RegisterPairFields, VectorRegistersFields, VectorOffsetFields,
                VectorRegisterMaskFields, LLVMSetRAStateFields>
       ExtraFields;
   OpType Operation;
@@ -770,6 +784,19 @@ public:
   static MCCFIInstruction createLabel(MCSymbol *L, MCSymbol *CfiLabel,
                                       SMLoc Loc) {
     return {OpLabel, L, LabelFields{CfiLabel}, Loc};
+  }
+
+  /// .cfi_llvm_def_cfa_address_linear  defines the CFA as follows.
+  /// With Source, the address is read(Register, DerefSize) * Scale + Offset,
+  /// interpreting the result in AddressSpace.
+  /// Without Source, Offset alone defines the address.
+  static MCCFIInstruction createLLVMDefCfaAddressLinear(
+      MCSymbol *L, std::optional<CfaRegisterTerm> Source, int64_t Offset,
+      unsigned AddressSpace, SMLoc Loc = {}) {
+    assert((!Source || isUInt<8>(Source->DerefSize)) &&
+           "DW_OP_deref_size operand is too large");
+    return {OpLLVMDefCfaAddressLinear, L,
+            CfaAddressLinearFields{Source, Offset, AddressSpace}, Loc};
   }
 
   /// .cfi_llvm_register_pair Previous value of Register is saved in R1:R2.
