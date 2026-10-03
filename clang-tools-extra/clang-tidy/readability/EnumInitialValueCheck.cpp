@@ -15,6 +15,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace clang::ast_matchers;
 
@@ -74,6 +75,34 @@ static bool isInitializedByLiteral(const EnumConstantDecl *Enumerator) {
   return Init->isIntegerConstantExpr(Enumerator->getASTContext());
 }
 
+/// Returns true if all but the last enumerator are explicitly initialized
+/// with consecutive (potentially negated) integer literal values and the
+/// last enumerator's value is left implicit, e.g.
+///   enum E { A = 10, B = 11, C = 12, Size };
+static bool hasConsecutiveInitialValuesExceptLast(const EnumDecl &Node) {
+  const llvm::SmallVector<const EnumConstantDecl *> Enumerators(
+      Node.enumerator_begin(), Node.enumerator_end());
+  if (Enumerators.size() < 2)
+    return false;
+
+  const EnumConstantDecl *const LastEnumerator = Enumerators.back();
+  if (LastEnumerator->getInitExpr() != nullptr)
+    return false;
+
+  const EnumConstantDecl *const FirstEnumerator = Enumerators.front();
+  if (!isInitializedByLiteral(FirstEnumerator))
+    return false;
+
+  llvm::APSInt PrevValue = FirstEnumerator->getInitVal();
+  for (size_t I = 1, E = Enumerators.size() - 1; I < E; ++I) {
+    const EnumConstantDecl *const Enumerator = Enumerators[I];
+    if (!isInitializedByLiteral(Enumerator) ||
+        Enumerator->getInitVal() != ++PrevValue)
+      return false;
+  }
+  return LastEnumerator->getInitVal() == ++PrevValue;
+}
+
 static void cleanInitialValue(const DiagnosticBuilder &Diag,
                               const EnumConstantDecl *ECD,
                               const SourceManager &SM,
@@ -101,10 +130,13 @@ AST_MATCHER(EnumDecl, isMacro) {
   return Loc.isMacroID();
 }
 
-AST_MATCHER_P(EnumDecl, hasConsistentInitialValues, bool, AllowSelfRefs) {
+AST_MATCHER_P2(EnumDecl, hasConsistentInitialValues, bool, AllowSelfRefs, bool,
+               AllowConsecutiveExceptLast) {
   return isNoneEnumeratorsInitialized(Node, AllowSelfRefs) ||
          isOnlyFirstEnumeratorInitialized(Node, AllowSelfRefs) ||
-         areAllEnumeratorsInitialized(Node);
+         areAllEnumeratorsInitialized(Node) ||
+         (AllowConsecutiveExceptLast &&
+          hasConsecutiveInitialValuesExceptLast(Node));
 }
 
 AST_MATCHER_P(EnumDecl, hasZeroInitialValueForFirstEnumerator, bool,
@@ -164,7 +196,9 @@ EnumInitialValueCheck::EnumInitialValueCheck(StringRef Name,
       AllowExplicitSequentialInitialValues(
           Options.get("AllowExplicitSequentialInitialValues", true)),
       AllowReferencedInitialValues(
-          Options.get("AllowReferencedInitialValues", false)) {}
+          Options.get("AllowReferencedInitialValues", false)),
+      AllowConsecutiveInitialValuesExceptLast(
+          Options.get("AllowConsecutiveInitialValuesExceptLast", false)) {}
 
 void EnumInitialValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AllowExplicitZeroFirstInitialValue",
@@ -173,14 +207,18 @@ void EnumInitialValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
                 AllowExplicitSequentialInitialValues);
   Options.store(Opts, "AllowReferencedInitialValues",
                 AllowReferencedInitialValues);
+  Options.store(Opts, "AllowConsecutiveInitialValuesExceptLast",
+                AllowConsecutiveInitialValuesExceptLast);
 }
 
 void EnumInitialValueCheck::registerMatchers(MatchFinder *Finder) {
   const bool AllowSelfRefs = AllowReferencedInitialValues;
-  Finder->addMatcher(enumDecl(isDefinition(), unless(isMacro()),
-                              unless(hasConsistentInitialValues(AllowSelfRefs)))
-                         .bind("inconsistent"),
-                     this);
+  Finder->addMatcher(
+      enumDecl(isDefinition(), unless(isMacro()),
+               unless(hasConsistentInitialValues(
+                   AllowSelfRefs, AllowConsecutiveInitialValuesExceptLast)))
+          .bind("inconsistent"),
+      this);
   if (!AllowExplicitZeroFirstInitialValue)
     Finder->addMatcher(
         enumDecl(isDefinition(),
