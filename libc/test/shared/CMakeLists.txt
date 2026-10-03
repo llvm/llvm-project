@@ -334,6 +334,7 @@ else()
       libc.src.__support.math.log10f
       libc.src.__support.math.log1p
       libc.src.__support.math.log1pf
+      libc.src.__support.math.log1pf16
       libc.src.__support.math.log2
       libc.src.__support.math.logb
       libc.src.__support.math.log2f
