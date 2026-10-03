@@ -334,8 +334,8 @@ added in the future:
     implementations according to different features. In this case, a
     TTI interface `useFastCCForInternalCall` must return false when
     any caller functions and the callee belong to different implementations.
-    {ref}`Tail calls <tail call section>` can only be optimized when this, the tailcc, the GHC or the
-    HiPE convention is used.
+    {ref}`Tail calls <tail call section>` can only be optimized when this, the tailcc,
+    the swifttailcc, the GHC or the HiPE convention is used.
     This calling convention does not support varargs and requires the prototype
     of all callees to exactly match the prototype of the function definition.
 
@@ -500,7 +500,7 @@ added in the future:
     tail call optimized. This calling convention is equivalent to fastcc,
     except for an additional guarantee that tail calls will be produced
     whenever possible. {ref}`Tail calls <tail call section>` can only be optimized when this, the fastcc,
-    the GHC or the HiPE convention is used.
+    the swifttailcc, the GHC or the HiPE convention is used.
     This calling convention does not support varargs and requires the prototype of
     all callees to exactly match the prototype of the function definition.
 
