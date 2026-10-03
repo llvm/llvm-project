@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ABI/TargetInfo.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <cstdint>
 
@@ -45,6 +48,98 @@ bool TargetInfo::isPromotableInteger(const IntegerType *IT) const {
 ArgInfo TargetInfo::getNaturalAlignIndirect(const Type *Ty, unsigned AddrSpace,
                                             bool ByVal) const {
   return ArgInfo::getIndirect(Ty->getAlignment(), ByVal, AddrSpace);
+}
+
+const Type *TargetInfo::getI8Array(uint64_t NumBytes) const {
+  assert(NumBytes != 0 && "empty padding");
+  const Type *I8 = TB.getIntegerType(8, llvm::Align(1), /*Signed=*/false);
+  return TB.getArrayType(I8, NumBytes, NumBytes * 8);
+}
+
+const Type *TargetInfo::getStructOfTypes(llvm::ArrayRef<const Type *> Elems,
+                                         bool Packed) const {
+  assert(!Elems.empty() && "empty coerce sequence");
+  llvm::SmallVector<FieldInfo, 8> Fields;
+  Fields.reserve(Elems.size());
+  for (const Type *Elt : Elems)
+    Fields.emplace_back(Elt, /*OffsetInBits=*/0);
+
+  StructPacking Pack = Packed ? StructPacking::Packed : StructPacking::Default;
+  return TB.getRecordType(Fields, llvm::TypeSize::getFixed(0), llvm::Align(1),
+                          /*UnadjustedAlign=*/llvm::Align(1), Pack);
+}
+
+const Type *TargetInfo::convertTypeForMem(const Type *Ty) const {
+  if (const auto *AT = dyn_cast<ArrayType>(Ty)) {
+    if (AT->isMatrixType())
+      return Ty;
+    const Type *Elt = convertTypeForMem(AT->getElementType());
+    if (Elt == AT->getElementType())
+      return Ty;
+    assert(AT->getSizeInBits().isFixed() &&
+           "converted array element changes a scalable size");
+    return TB.getArrayType(Elt, AT->getNumElements(),
+                           AT->getSizeInBits().getFixedValue());
+  }
+
+  const auto *RT = dyn_cast<RecordType>(Ty);
+  if (!RT || RT->isUnion())
+    return Ty;
+
+  // Current callers can't get here with virtual bases. If we need to handle
+  // virtual bases in the future, we'll need explicit handling for that below.
+  assert(RT->getNumVirtualBaseClasses() == 0 && "record has a virtual base");
+
+  llvm::SmallVector<FieldInfo, 8> Members;
+  for (const FieldInfo &Base : RT->getBaseClasses()) {
+    if (!Base.FieldType->isEmptyRecord())
+      Members.push_back(FieldInfo(Base.FieldType, Base.OffsetInBits));
+  }
+  for (const FieldInfo &Field : RT->getFields()) {
+    if (!Field.isEmpty())
+      Members.push_back(FieldInfo(Field.FieldType, Field.OffsetInBits));
+  }
+  llvm::stable_sort(Members, [](const FieldInfo &A, const FieldInfo &B) {
+    return A.OffsetInBits < B.OffsetInBits;
+  });
+
+  llvm::SmallVector<FieldInfo, 8> Fields;
+  uint64_t Current = 0;
+  for (const FieldInfo &Member : Members) {
+    assert(!Member.FieldType->getSizeInBits().isScalable() &&
+           "scalable member has no fixed offset");
+    if (Member.OffsetInBits > Current) {
+      uint64_t AlignBits = Member.FieldType->getAlignment().value() * 8;
+      uint64_t Natural = llvm::alignTo(Current, AlignBits);
+      if (Member.OffsetInBits != Natural) {
+        uint64_t PadBits = Member.OffsetInBits - Current;
+        assert(PadBits % 8 == 0 && "padding is not a whole number of bytes");
+        Fields.emplace_back(getI8Array(PadBits / 8), Current);
+      }
+    }
+    Fields.emplace_back(convertTypeForMem(Member.FieldType),
+                        Member.OffsetInBits);
+    uint64_t End =
+        Member.OffsetInBits + Member.FieldType->getSizeInBits().getFixedValue();
+    if (End > Current)
+      Current = End;
+  }
+
+  if (RT->getSizeInBits().isFixed()) {
+    uint64_t Size = RT->getSizeInBits().getFixedValue();
+    if (Size > Current) {
+      uint64_t AlignBits = RT->getAlignment().value() * 8;
+      if (Size != llvm::alignTo(Current, AlignBits)) {
+        uint64_t PadBits = Size - Current;
+        assert(PadBits % 8 == 0 &&
+               "tail padding is not a whole number of bytes");
+        Fields.emplace_back(getI8Array(PadBits / 8), Current);
+      }
+    }
+  }
+
+  return TB.getRecordType(Fields, RT->getSizeInBits(), RT->getAlignment(),
+                          RT->getUnadjustedAlignment());
 }
 
 RecordArgABI TargetInfo::getRecordArgABI(const RecordType *RT) const {

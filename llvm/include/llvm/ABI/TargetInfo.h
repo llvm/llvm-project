@@ -101,6 +101,24 @@ protected:
   }
   LLVM_ABI ArgInfo getNaturalAlignIndirect(const Type *Ty, unsigned AddrSpace,
                                            bool ByVal = true) const;
+
+  /// An array of \p NumBytes i8 elements, the padding element of a
+  /// coerce-and-expand type.
+  LLVM_ABI const Type *getI8Array(uint64_t NumBytes) const;
+
+  /// In-memory form of \p Ty. A record becomes one field list: non-empty
+  /// bases and fields in offset order, with an array of i8 where a member
+  /// sits at an offset alignment does not account for. A record with a
+  /// virtual base has no layout here. An array is rebuilt when its element
+  /// type changes. Any other type is returned unchanged.
+  LLVM_ABI const Type *convertTypeForMem(const Type *Ty) const;
+
+  /// A record with one field per element of \p Elems, each at offset 0.
+  /// \p Packed selects a packed record, which has no alignment padding
+  /// between fields.
+  LLVM_ABI const Type *getStructOfTypes(ArrayRef<const Type *> Elems,
+                                        bool Packed) const;
+
   LLVM_ABI bool isAggregateTypeForABI(const Type *Ty) const;
 
   /// If Ty is a transparent union, return its first field type; otherwise
