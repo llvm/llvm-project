@@ -25,6 +25,9 @@
 #  include <wctype.h>
 #endif
 
+// Forward declare for _XOPEN_SOURCE=500 and _XOPEN_SOURCE=600
+extern "C" locale_t __libcpp_aix_uselocale(locale_t) noexcept __asm__("uselocale");
+
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
@@ -33,11 +36,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __locale {
 
 struct __locale_guard {
-  _LIBCPP_HIDE_FROM_ABI __locale_guard(locale_t __loc) : __old_loc_(::uselocale(__loc)) {}
+  _LIBCPP_HIDE_FROM_ABI __locale_guard(locale_t __loc) : __old_loc_(__libcpp_aix_uselocale(__loc)) {}
 
   _LIBCPP_HIDE_FROM_ABI ~__locale_guard() {
     if (__old_loc_)
-      ::uselocale(__old_loc_);
+      __libcpp_aix_uselocale(__old_loc_);
   }
 
   locale_t __old_loc_;
