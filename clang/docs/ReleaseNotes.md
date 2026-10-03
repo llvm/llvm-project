@@ -304,7 +304,8 @@ features cannot lower the translation-unit ABI level;
   `__builtin_strlcpy` is called with a size argument larger than the destination buffer.
 
 - `-Wfortify-source` now diagnoses when `recv` or `recvfrom` is called with a
-  size argument larger than the destination buffer.
+  size argument larger than the destination buffer, or when `send` or `sendto`
+  is called with a size argument larger than the source buffer.
 
 - `-Wfortify-source` now diagnoses when `poll`, `ppoll`, or `ppoll64` is called
   with a descriptor count whose total size exceeds the `fds` array size.

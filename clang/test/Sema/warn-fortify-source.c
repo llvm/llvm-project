@@ -33,11 +33,16 @@ extern int sprintf(char *str, const char *format, ...);
 // Also test the Windows winsock2.h signature where len is a signed int.
 int recv(int, char *, int, int);
 int recvfrom(int, char *, int, int, struct sockaddr *, int *);
+int send(int, const char *, int, int);
+int sendto(int, const char *, int, int, const struct sockaddr *, int);
 typedef unsigned int nfds_t;
 #else
 void *memcpy(void *dst, const void *src, size_t c);
 ssize_t recv(int, void *, size_t, int);
 ssize_t recvfrom(int, void *, size_t, int, struct sockaddr *, socklen_t *);
+ssize_t send(int, const void *, size_t, int);
+ssize_t sendto(int, const void *, size_t, int, const struct sockaddr *,
+               socklen_t);
 typedef unsigned long nfds_t;
 #endif
 int poll(struct pollfd *, nfds_t, int);
@@ -338,6 +343,49 @@ void call_recv_runtime(int fd, int n) {
   recv(fd, buf, n, 0);
   recvfrom(fd, buf, n, 0, (struct sockaddr *)0, 0);
 }
+
+void call_send(int fd) {
+  char buf[10];
+  send(fd, buf, 0, 0);
+  send(fd, buf, 10, 0);
+  send(fd, buf, 11, 0); // expected-warning {{'send' will always read past the end of the source buffer; source buffer has size 10, but the size is 11}}
+  send(fd, buf, -1, 0); // expected-warning {{'send' will always read past the end of the source buffer; source buffer has size 10, but the size is 18446744073709551615}}
+}
+
+void call_sendto(int fd) {
+  char buf[10];
+  sendto(fd, buf, 0, 0, (const struct sockaddr *)0, 0);
+  sendto(fd, buf, 10, 0, (const struct sockaddr *)0, 0);
+  sendto(fd, buf, 11, 0, (const struct sockaddr *)0, 0); // expected-warning {{'sendto' will always read past the end of the source buffer; source buffer has size 10, but the size is 11}}
+  sendto(fd, buf, -1, 0, (const struct sockaddr *)0, 0); // expected-warning {{'sendto' will always read past the end of the source buffer; source buffer has size 10, but the size is 18446744073709551615}}
+}
+
+void call_send_subobject(int fd) {
+  struct {
+    char first[10];
+    char second[20];
+  } s;
+  send(fd, s.first, 35, 0); // expected-warning {{'send' will always read past the end of the source buffer; source buffer has size 30, but the size is 35}}
+}
+
+void call_send_runtime(int fd, int n) {
+  char buf[10];
+  send(fd, buf, n, 0);
+  sendto(fd, buf, n, 0, (const struct sockaddr *)0, 0);
+}
+
+#if !defined(__cplusplus) && !defined(USE_BUILTINS)
+typedef union {
+  const struct sockaddr *__sockaddr__;
+} __CONST_SOCKADDR_ARG __attribute__((__transparent_union__));
+ssize_t sendto(int, const void *, size_t, int, __CONST_SOCKADDR_ARG, socklen_t);
+
+void call_sendto_transparent_union(int fd, const struct sockaddr *addr) {
+  char buf[10];
+  sendto(fd, buf, 10, 0, addr, 0);
+  sendto(fd, buf, 11, 0, addr, 0); // expected-warning {{'sendto' will always read past the end of the source buffer; source buffer has size 10, but the size is 11}}
+}
+#endif
 
 void call_poll(void) {
   struct pollfd fds[2];
