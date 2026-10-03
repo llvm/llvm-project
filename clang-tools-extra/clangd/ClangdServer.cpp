@@ -268,8 +268,15 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
         std::move(BGOpts));
     AddIndex(BackgroundIdx.get());
   }
+  const SymbolIndex *ProjectIndex = Index;
   if (DynamicIdx)
     AddIndex(DynamicIdx.get());
+  NavigationIndex = Index;
+  if (DynamicIdx && ProjectIndex) {
+    ProjectDefinitionIdx = std::make_unique<ProjectDefinitionIndex>(
+        DynamicIdx.get(), ProjectIndex);
+    NavigationIndex = ProjectDefinitionIdx.get();
+  }
 
   if (Opts.FeatureModules) {
     FeatureModule::Facilities F{
@@ -814,7 +821,7 @@ void ClangdServer::locateSymbolAt(PathRef File, Position Pos,
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
-    CB(clangd::locateSymbolAt(InpAST->AST, Pos, Index));
+    CB(clangd::locateSymbolAt(InpAST->AST, Pos, NavigationIndex));
   };
 
   WorkScheduler->runWithAST("Definitions", File, std::move(Action));

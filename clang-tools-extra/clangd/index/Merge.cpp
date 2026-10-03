@@ -122,6 +122,35 @@ void MergedIndex::lookup(
       Callback(*Sym);
 }
 
+void ProjectDefinitionIndex::lookup(
+    const LookupRequest &Req,
+    llvm::function_ref<void(const Symbol &)> Callback) const {
+  trace::Span Tracer("ProjectDefinitionIndex lookup");
+  SymbolSlab::Builder DynamicSymbols;
+  Dynamic->lookup(Req, [&](const Symbol &S) { DynamicSymbols.insert(S); });
+
+  auto RemainingIDs = Req.IDs;
+  auto DynamicContainsFile = Dynamic->indexedFiles();
+  auto ProjectContainsFile = Project->indexedFiles();
+  Project->lookup(Req, [&](const Symbol &ProjectSymbol) {
+    RemainingIDs.erase(ProjectSymbol.ID);
+    if (const Symbol *DynamicSymbol = DynamicSymbols.find(ProjectSymbol.ID)) {
+      Symbol Result = mergeSymbol(*DynamicSymbol, ProjectSymbol);
+      if (ProjectSymbol.Definition && DynamicSymbol->Definition &&
+          !isIndexAuthoritative(ProjectContainsFile, *DynamicSymbol))
+        Result.Definition = ProjectSymbol.Definition;
+      return Callback(Result);
+    }
+
+    if (isIndexAuthoritative(DynamicContainsFile, ProjectSymbol))
+      return;
+    Callback(ProjectSymbol);
+  });
+  for (const auto &ID : RemainingIDs)
+    if (const Symbol *S = DynamicSymbols.find(ID))
+      Callback(*S);
+}
+
 bool MergedIndex::refs(const RefsRequest &Req,
                        llvm::function_ref<void(const Ref &)> Callback) const {
   trace::Span Tracer("MergedIndex refs");

@@ -43,6 +43,7 @@
 
 namespace clang {
 namespace clangd {
+class ProjectDefinitionIndex;
 /// Manages a collection of source files and derived data (ASTs, indexes),
 /// and provides language-aware features such as code completion.
 ///
@@ -494,12 +495,16 @@ private:
   //   - the static index passed to the constructor
   //   - a merged view of a static and dynamic index (MergedIndex)
   const SymbolIndex *Index = nullptr;
+  // Index used for navigation. Usually Index, but when both dynamic and
+  // project indexes exist this applies project-aware definition selection.
+  const SymbolIndex *NavigationIndex = nullptr;
   // If present, an index of symbols in open files. Read via *Index.
   std::unique_ptr<FileIndex> DynamicIdx;
   // If present, the new "auto-index" maintained in background threads.
   std::unique_ptr<BackgroundIndex> BackgroundIdx;
   // Storage for merged views of the various indexes.
   std::vector<std::unique_ptr<SymbolIndex>> MergedIdx;
+  std::unique_ptr<ProjectDefinitionIndex> ProjectDefinitionIdx;
   // Manage module files.
   ModulesBuilder *ModulesManager = nullptr;
 
