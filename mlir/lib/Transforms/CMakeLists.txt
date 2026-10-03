@@ -30,6 +30,7 @@ add_mlir_library(MLIRTransforms
   MLIRTransformsPassIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAffineDialect
   MLIRAnalysis
   MLIRFunctionInterfaces
   MLIRLoopLikeInterface
