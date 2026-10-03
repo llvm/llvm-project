@@ -16681,6 +16681,23 @@ TEST_F(FormatTest, CountsCharactersInMultilineRawStringLiterals) {
                " R\"(single line raw string)\" + bbbbbb);");
 }
 
+TEST_F(FormatTest, MultilineRawStringWidthWithCRLF) {
+  auto Style = getWebKitStyle();
+  Style.ColumnLimit = 23;
+  Style.AllowAllArgumentsOnNextLine = false;
+  Style.PackArguments.BinPack = FormatStyle::BPAS_OnePerLine;
+
+  // The raw string's first line reaches ColumnLimit; CR must not add a column.
+  verifyFormat("x = a ? f(R\"(aaaaaaaaaa\n)\",\n"
+               "            b)\n"
+               "      : g();",
+               "x = a ? f(R\"(aaaaaaaaaa\n)\", b) : g();", Style);
+  verifyFormat("x = a ? f(R\"(aaaaaaaaaa\r\n)\",\r\n"
+               "            b)\r\n"
+               "      : g();",
+               "x = a ? f(R\"(aaaaaaaaaa\r\n)\", b) : g();", Style);
+}
+
 TEST_F(FormatTest, SkipsUnknownStringLiterals) {
   verifyFormat("string a = \"unterminated;");
   verifyFormat("function(\"unterminated,\n"
