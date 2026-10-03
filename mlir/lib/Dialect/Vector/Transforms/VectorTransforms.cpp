@@ -1449,10 +1449,8 @@ public:
         VectorType::get(vtp.getShape(), rewriter.getI1Type(),
                         vtp.getScalableDims()),
         b);
-    if (xferOp.getMask()) {
-      // Intersect the in-bounds with the mask specified as an op parameter.
-      mask = arith::AndIOp::create(rewriter, loc, mask, xferOp.getMask());
-    }
+    // Intersect the in-bounds with the mask specified as an op parameter.
+    mask = combineMasks(rewriter, loc, mask, xferOp.getMask());
 
     rewriter.modifyOpInPlace(xferOp, [&]() {
       xferOp.getMaskMutable().assign(mask);
