@@ -25,15 +25,38 @@ InterpStack::~InterpStack() {
     std::free(Chunk->Next);
   if (Chunk)
     std::free(Chunk);
+
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+// Clang and GCC complain that `offsetof` isn't allowed on non-standard-layout
+// types. However, it works just fine.
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#endif
+  TYPE_SWITCH(PrimType(), {
+    using Frame = StackFrame<T>;
+    static_assert(offsetof(Frame, PT) == sizeof(Frame) - 1);
+  });
+
+#if __has_cpp_attribute(no_unique_address)
+  TYPE_SWITCH(PrimType(), {
+    using Frame = StackFrame<T>;
+    // Currently we don't need to use extra memory to store the type information
+    // for any PrimType on 64 bit platforms. Nothing breaks if this changes, but
+    // it would result in 8 extra bytes used just for the type information.
+    static_assert(sizeof(void *) != 8 || sizeof(Frame) == sizeof(T) ||
+                  sizeof(T) < sizeof(void *));
+  });
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 }
 
 // We keep the last chunk around to reuse.
 void InterpStack::clear() {
-  for (PrimType Item : llvm::reverse(ItemTypes)) {
-    TYPE_SWITCH(Item, { this->discard<T>(); });
+  while (!empty()) {
+    TYPE_SWITCH(getTopFrameType(), { this->discard<T>(); });
   }
-  assert(ItemTypes.empty());
-  assert(empty());
 }
 
 void InterpStack::clearTo(size_t NewSize) {
@@ -43,12 +66,8 @@ void InterpStack::clearTo(size_t NewSize) {
     return;
 
   assert(NewSize <= size());
-  for (PrimType Item : llvm::reverse(ItemTypes)) {
-    TYPE_SWITCH(Item, { this->discard<T>(); });
-
-    if (size() == NewSize)
-      break;
-  }
+  while (size() != NewSize)
+    TYPE_SWITCH(getTopFrameType(), { this->discard<T>(); });
 
   // Note: discard() above already removed the types from ItemTypes.
   assert(size() == NewSize);
@@ -84,16 +103,15 @@ void InterpStack::shrinkSlow(size_t Size) {
 }
 
 void InterpStack::dump() const {
-  llvm::errs() << "Items: " << ItemTypes.size() << ". Size: " << size() << '\n';
-  if (ItemTypes.empty())
-    return;
+  llvm::errs() << "Size: " << size() << '\n';
 
   size_t Index = 0;
   size_t Offset = 0;
 
   // The type of the item on the top of the stack is inserted to the back
   // of the vector, so the iteration has to happen backwards.
-  for (PrimType Item : llvm::reverse(ItemTypes)) {
+  while (Offset != size()) {
+    PrimType Item = *static_cast<PrimType *>(peekData(Offset + 1));
     Offset += align(primSize(Item));
 
     llvm::errs() << Index << '/' << Offset << ": ";
@@ -110,5 +128,5 @@ void InterpStack::dump() const {
 void InterpStack::discardSlow() {
   assert(!empty());
 
-  TYPE_SWITCH(ItemTypes.back(), { discard<T>(); });
+  TYPE_SWITCH(getTopFrameType(), { discard<T>(); });
 }
