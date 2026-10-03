@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <ctime>
 #include <iostream>
 #include <set>
 #include <string>
@@ -25,6 +26,19 @@
 
 #define STR(S) MAKE_STRING(CharT, S)
 #define SV(S) MAKE_STRING_VIEW(CharT, S)
+
+inline bool glibc_strftime_uses_tm_zone() {
+#if defined(__GLIBC__)
+  // Some vendors backport https://sourceware.org/bugzilla/show_bug.cgi?id=24054
+  // without changing the glibc version number, so probe the behavior directly.
+  std::tm time{};
+  time.tm_zone = "UTC";
+  char buffer[4]{};
+  return std::strftime(buffer, sizeof(buffer), "%Z", &time) == 3 && std::string_view(buffer) == "UTC";
+#else
+  return false;
+#endif
+}
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
 template <class CharT>
@@ -36,10 +50,15 @@ using format_context = std::format_context;
 
 template <class CharT, class... Args>
 void check(std::basic_string_view<CharT> expected, test_format_string<CharT, Args...> fmt, Args&&... args) {
+  std::basic_string<CharT> adjusted{expected};
+  if (glibc_strftime_uses_tm_zone()) {
+    for (std::size_t pos = 0; (pos = adjusted.find(SV("GMT"), pos)) != std::basic_string<CharT>::npos; pos += 3)
+      adjusted.replace(pos, 3, SV("UTC"));
+  }
   std::basic_string<CharT> out = std::format(fmt, std::forward<Args>(args)...);
-  TEST_REQUIRE(out == expected,
+  TEST_REQUIRE(out == adjusted,
                TEST_WRITE_CONCATENATED(
-                   "\nFormat string   ", fmt.get(), "\nExpected output ", expected, "\nActual output   ", out, '\n'));
+                   "\nFormat string   ", fmt.get(), "\nExpected output ", adjusted, "\nActual output   ", out, '\n'));
 }
 
 template <class CharT, class... Args>
