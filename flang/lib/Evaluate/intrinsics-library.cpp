@@ -14,7 +14,7 @@
 #include "flang/Evaluate/intrinsics-library.h"
 #include "fold-implementation.h"
 #include "host.h"
-#include "flang/Common/erfc-scaled.h"
+#include "flang/Common/erfc-scaled-accurate.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/static-multimap-view.h"
 #include "flang/Evaluate/expression.h"
@@ -235,7 +235,8 @@ struct HostRuntimeLibrary<HostT, LibraryVersion::Libm> {
       FolderFactory<F, F{std::cosh}>::Create("cosh"),
       FolderFactory<F, F{std::erf}>::Create("erf"),
       FolderFactory<F, F{std::erfc}>::Create("erfc"),
-      FolderFactory<F, F{common::ErfcScaled}>::Create("erfc_scaled"),
+      FolderFactory<F, F{common::ErfcScaledAccurate<HostT>}>::Create(
+          "erfc_scaled"),
       FolderFactory<F, F{std::exp}>::Create("exp"),
       FolderFactory<F, F{std::tgamma}>::Create("gamma"),
       FolderFactory<F, F{std::log}>::Create("log"),
@@ -247,7 +248,8 @@ struct HostRuntimeLibrary<HostT, LibraryVersion::Libm> {
       FolderFactory<F, F{std::tan}>::Create("tan"),
       FolderFactory<F, F{std::tanh}>::Create("tanh"),
   };
-  // Note: cmath does not have modulo and erfc_scaled equivalent
+  // Note: cmath does not have a modulo equivalent; erfc_scaled is folded
+  // through flang/Common/erfc-scaled-accurate.h.
 
   // Note regarding  lack of bessel function support:
   // C++17 defined standard Bessel math functions std::cyl_bessel_j
@@ -435,7 +437,8 @@ struct HostRuntimeLibrary<std::complex<double>, LibraryVersion::Libm> {
 #endif // _AIX
 
 // Note regarding cmath:
-//  - cmath does not have modulo and erfc_scaled equivalent
+//  - cmath does not have a modulo equivalent (erfc_scaled, which it also
+//    lacks, is folded through flang/Common/erfc-scaled-accurate.h)
 //  - C++17 defined standard Bessel math functions std::cyl_bessel_j
 //    and std::cyl_neumann that can be used for Fortran j and y
 //    bessel functions. However, they are not yet implemented in
@@ -516,6 +519,22 @@ template <> struct HostRuntimeLibrary<double, LibraryVersion::LibmExtensions> {
 #endif // _WIN32
 
 #if HAS_QUADMATHLIB
+// Math policy routing flang/Common/erfc-scaled-accurate.h to libquadmath.
+// Do not use std::numeric_limits<__float128> here: libstdc++ leaves it
+// unspecialized (all members zero).
+struct ErfcScaledQuadPolicy {
+  static __float128 Exp(__float128 x) { return ::expq(x); }
+  static __float128 Erfc(__float128 x) { return ::erfcq(x); }
+  static __float128 Fma(__float128 x, __float128 y, __float128 z) {
+    return ::fmaq(x, y, z);
+  }
+  // Not HUGE_VALQ: it expands to __builtin_huge_valq(), which clang does not
+  // implement. INFINITY converts exactly (same as flang-rt's math-entries.h).
+  static __float128 Infinity() { return INFINITY; }
+};
+static __float128 ErfcScaledF128(__float128 x) {
+  return common::ErfcScaledAccurate<__float128, ErfcScaledQuadPolicy>(x);
+}
 template <> struct HostRuntimeLibrary<__float128, LibraryVersion::Libm> {
   using F = FuncPointer<__float128, __float128>;
   using F2 = FuncPointer<__float128, __float128, __float128>;
@@ -538,6 +557,7 @@ template <> struct HostRuntimeLibrary<__float128, LibraryVersion::Libm> {
       FolderFactory<F, F{::coshq}>::Create("cosh"),
       FolderFactory<F, F{::erfq}>::Create("erf"),
       FolderFactory<F, F{::erfcq}>::Create("erfc"),
+      FolderFactory<F, F{&ErfcScaledF128}>::Create("erfc_scaled"),
       FolderFactory<F, F{::expq}>::Create("exp"),
       FolderFactory<F, F{::tgammaq}>::Create("gamma"),
       FolderFactory<F, F{::logq}>::Create("log"),
