@@ -134,6 +134,13 @@ infrastructure are described first, followed by tool-specific sections.
 
   Detects malformed regex patterns defined in a single string literal.
 
+- New {doc}`misc-use-bulk-insert
+  <clang-tidy/checks/misc/use-bulk-insert>` check.
+
+  Detects range-based `for` loops that insert elements into associative
+  containers one at a time and suggests replacing them with a bulk
+  `insert()` call.
+
 - New {doc}`modernize-use-to-underlying
   <clang-tidy/checks/modernize/use-to-underlying>` check.
 

@@ -36,6 +36,7 @@
 #include "UnusedParametersCheck.h"
 #include "UnusedUsingDeclsCheck.h"
 #include "UseAnonymousNamespaceCheck.h"
+#include "UseBulkInsertCheck.h"
 #include "UseInternalLinkageCheck.h"
 
 namespace clang::tidy {
@@ -96,6 +97,7 @@ public:
         "misc-unused-using-decls");
     CheckFactories.registerCheck<UseAnonymousNamespaceCheck>(
         "misc-use-anonymous-namespace");
+    CheckFactories.registerCheck<UseBulkInsertCheck>("misc-use-bulk-insert");
     CheckFactories.registerCheck<UseInternalLinkageCheck>(
         "misc-use-internal-linkage");
   }
