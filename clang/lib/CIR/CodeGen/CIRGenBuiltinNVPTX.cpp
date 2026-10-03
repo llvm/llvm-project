@@ -1042,7 +1042,8 @@ static mlir::Value packArgsIntoNVPTXFormatBuffer(CIRGenFunction &cgf,
 
   for (auto [i, arg] : llvm::enumerate(llvm::drop_begin(args))) {
     mlir::Value member = builder.createGetMember(
-        loc, cir::PointerType::get(argTypes[i]), alloca, /*name=*/"",
+        loc, cir::PointerType::get(argTypes[i], allocaAddr.getAddressSpace()),
+        alloca, /*name=*/"",
         /*index=*/i);
     auto abiAlign = clang::CharUnits::fromQuantity(
         dataLayout.getABITypeAlign(argTypes[i]).value());
