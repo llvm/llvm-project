@@ -12,6 +12,7 @@
 
 #include "flang/Lower/Bridge.h"
 
+#include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CUDA.h"
@@ -66,6 +67,7 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Support/Flags.h"
+#include "flang/Support/PluginDirectives.h"
 #include "flang/Support/Version.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -692,52 +694,145 @@ public:
     finalizeOpenMPLowering(globalOmpRequiresSymbols);
   }
 
-  /// Attach the directives defined by plugins to the operations of their
-  /// subjects in this module (a func.func for a procedure, a fir.global for a
-  /// variable), as a `fir.directives` array of dictionaries:
+  /// What semantics lets a plugin directive refer to: a subprogram or an
+  /// external procedure, a variable, or a COMMON block. Nothing else has an
+  /// operation (or even a mangled name).
+  static bool
+  isPluginDirectiveReferable(const Fortran::semantics::Symbol &sym) {
+    if (Fortran::semantics::IsProcedure(sym)) {
+      return !sym.has<Fortran::semantics::GenericDetails>() &&
+             !Fortran::semantics::IsDummy(sym) &&
+             !Fortran::semantics::IsProcedurePointer(sym) &&
+             !Fortran::semantics::IsStmtFunction(sym) &&
+             !sym.attrs().test(Fortran::semantics::Attr::INTRINSIC);
+    }
+    return sym.has<Fortran::semantics::ObjectEntityDetails>() ||
+           sym.has<Fortran::semantics::CommonBlockDetails>();
+  }
+
+  /// The operation of a procedure or variable that a plugin directive names,
+  /// declared if need be (as a reference to it would): procedures, and
+  /// variables of modules, which may be another module's.
+  mlir::Operation *
+  getOrDeclarePluginDirectiveSymbol(const Fortran::semantics::Symbol &sym) {
+    if (!isPluginDirectiveReferable(sym)) {
+      return nullptr;
+    }
+    mlir::ModuleOp module{getModuleOp()};
+    if (mlir::Operation *op = module.lookupSymbol(mangleName(sym)))
+      return op;
+    if (Fortran::semantics::IsProcedure(sym)) {
+      mlir::func::FuncOp func = Fortran::lower::getOrDeclareFunction(
+          Fortran::evaluate::ProcedureDesignator{sym}, *this);
+      return func.getOperation();
+    }
+    if (sym.has<Fortran::semantics::ObjectEntityDetails>() &&
+        sym.owner().IsModule()) {
+      return Fortran::lower::declareModuleVariable(*this, sym).getOperation();
+    }
+    return nullptr;
+  }
+
+  /// A real literal argument of a plugin directive, as a float attribute of
+  /// its kind.
+  mlir::Attribute genPluginDirectiveRealAttr(
+      const Fortran::parser::SignedRealLiteralConstant &x) {
+    Fortran::evaluate::ExpressionAnalyzer ea{bridge.getSemanticsContext()};
+    Fortran::semantics::MaybeExpr expr{ea.Analyze(x)};
+    if (!expr)
+      return {};
+    *expr = Fortran::evaluate::Fold(
+        bridge.getSemanticsContext().foldingContext(), std::move(*expr));
+    const auto *real{
+        std::get_if<Fortran::evaluate::Expr<Fortran::evaluate::SomeReal>>(
+            &expr->u)};
+    if (!real)
+      return {};
+    return Fortran::common::visit(
+        [&](const auto &kindExpr) -> mlir::Attribute {
+          using T = typename std::decay_t<decltype(kindExpr)>::Result;
+          std::optional<Fortran::evaluate::Scalar<T>> value{
+              Fortran::evaluate::GetScalarConstantValue<T>(kindExpr)};
+          if (!value)
+            return {};
+          llvm::APFloat f{builder->getKindMap().getFloatSemantics(T::kind),
+                          value->DumpHexadecimal()};
+          return mlir::FloatAttr::get(builder->getRealType(T::kind), f);
+        },
+        real->u);
+  }
+
+  /// A directive defined by a plugin as a dictionary attribute:
   ///   {prefix = "enzyme", keyword = "custom_rule",
   ///    args = {reverse = @_QMmPrev, ...}}
-  /// Procedure and variable arguments are symbol references, declaring the
-  /// procedure or module variable if this module does not yet; the plugin's
-  /// passes give them a meaning.
-  void lowerPluginDirectives() {
+  /// The arguments are its keyword arguments. Procedure and variable
+  /// arguments are symbol references, declaring the procedure or module
+  /// variable if this module does not yet; the plugin's passes give them a
+  /// meaning.
+  mlir::DictionaryAttr
+  genPluginDirectiveAttr(const Fortran::parser::CompilerDirective &directive) {
     mlir::ModuleOp module{getModuleOp()};
     mlir::MLIRContext *ctx{module.getContext()};
-    // What semantics lets a directive refer to: a subprogram or an external
-    // procedure, a variable, or a COMMON block. Nothing else has an operation
-    // (or even a mangled name).
-    auto isReferable{[](const Fortran::semantics::Symbol &sym) {
-      if (Fortran::semantics::IsProcedure(sym)) {
-        return !sym.has<Fortran::semantics::GenericDetails>() &&
-               !Fortran::semantics::IsDummy(sym) &&
-               !Fortran::semantics::IsProcedurePointer(sym) &&
-               !Fortran::semantics::IsStmtFunction(sym) &&
-               !sym.attrs().test(Fortran::semantics::Attr::INTRINSIC);
+    const auto &[prefix, keyword, args]{
+        std::get<Fortran::parser::CompilerDirective::Plugin>(directive.u).t};
+    llvm::SmallVector<mlir::NamedAttribute> argAttrs;
+    for (const Fortran::parser::CompilerDirective::Plugin::Arg &arg : args) {
+      const auto &argKeyword{std::get<0>(arg.t)};
+      if (!argKeyword) {
+        continue; // the subject, or the variables of a loop directive
       }
-      return sym.has<Fortran::semantics::ObjectEntityDetails>() ||
-             sym.has<Fortran::semantics::CommonBlockDetails>();
-    }};
-    // The operation of a procedure or variable, declared if need be (as a
-    // reference to it would): procedures, and variables of modules, which
-    // may be another module's.
-    auto getOrDeclare{[&](const Fortran::semantics::Symbol &sym)
-                          -> mlir::Operation * {
-      if (!isReferable(sym)) {
-        return nullptr;
-      }
-      if (mlir::Operation *op = module.lookupSymbol(mangleName(sym)))
-        return op;
-      if (Fortran::semantics::IsProcedure(sym)) {
-        mlir::func::FuncOp func = Fortran::lower::getOrDeclareFunction(
-            Fortran::evaluate::ProcedureDesignator{sym}, *this);
-        return func.getOperation();
-      }
-      if (sym.has<Fortran::semantics::ObjectEntityDetails>() &&
-          sym.owner().IsModule()) {
-        return Fortran::lower::declareModuleVariable(*this, sym).getOperation();
-      }
-      return nullptr;
-    }};
+      mlir::Attribute value{Fortran::common::visit(
+          Fortran::common::visitors{
+              [&](const Fortran::parser::Name &n) -> mlir::Attribute {
+                if (!n.symbol) {
+                  return mlir::StringAttr::get(ctx, n.ToString());
+                }
+                mlir::Operation *op{
+                    getOrDeclarePluginDirectiveSymbol(n.symbol->GetUltimate())};
+                if (!op) {
+                  return mlir::StringAttr::get(ctx, n.ToString());
+                }
+                return mlir::FlatSymbolRefAttr::get(
+                    mlir::SymbolTable::getSymbolName(op));
+              },
+              [&](const Fortran::parser::CompilerDirective::Plugin::CommonBlock
+                      &c) -> mlir::Attribute {
+                std::string name{c.v.symbol ? mangleName(*c.v.symbol)
+                                            : c.v.ToString()};
+                if (!module.lookupSymbol(name)) {
+                  return mlir::StringAttr::get(ctx, c.v.ToString());
+                }
+                return mlir::FlatSymbolRefAttr::get(ctx, name);
+              },
+              [&](std::uint64_t n) -> mlir::Attribute {
+                return builder->getI64IntegerAttr(n);
+              },
+              [&](const Fortran::parser::SignedRealLiteralConstant &r)
+                  -> mlir::Attribute { return genPluginDirectiveRealAttr(r); },
+              [&](const std::string &str) -> mlir::Attribute {
+                return mlir::StringAttr::get(ctx, str);
+              },
+          },
+          std::get<1>(arg.t))};
+      if (value)
+        argAttrs.push_back(
+            builder->getNamedAttr(argKeyword->ToString(), value));
+    }
+    return builder->getDictionaryAttr({
+        builder->getNamedAttr("prefix",
+                              builder->getStringAttr(prefix.ToString())),
+        builder->getNamedAttr("keyword",
+                              builder->getStringAttr(keyword.ToString())),
+        builder->getNamedAttr("args", builder->getDictionaryAttr(argAttrs)),
+    });
+  }
+
+  /// Attach the directives defined by plugins to the operations of their
+  /// subjects in this module (a func.func for a procedure, a fir.global for a
+  /// variable), as a `fir.directives` array of the dictionaries of
+  /// genPluginDirectiveAttr.
+  void lowerPluginDirectives() {
+    mlir::ModuleOp module{getModuleOp()};
     for (const auto &[subject, directive, fromModFile] :
          bridge.getSemanticsContext().GetPluginDirectives()) {
       const Fortran::semantics::Symbol &ultimate{subject->GetUltimate()};
@@ -747,68 +842,130 @@ public:
       // those it uses.
       mlir::Operation *target{nullptr};
       if (!fromModFile)
-        target = getOrDeclare(ultimate);
-      else if (isReferable(ultimate))
+        target = getOrDeclarePluginDirectiveSymbol(ultimate);
+      else if (isPluginDirectiveReferable(ultimate))
         target = module.lookupSymbol(mangleName(ultimate));
       if (!target) {
         continue; // neither defined nor referenced here
       }
-      const auto &[prefix, keyword, args]{
-          std::get<Fortran::parser::CompilerDirective::Plugin>(directive->u).t};
-      llvm::SmallVector<mlir::NamedAttribute> argAttrs;
-      for (const Fortran::parser::CompilerDirective::Plugin::Arg &arg : args) {
-        const auto &argKeyword{std::get<0>(arg.t)};
-        if (!argKeyword) {
-          continue; // the subject
-        }
-        mlir::Attribute value{Fortran::common::visit(
-            Fortran::common::visitors{
-                [&](const Fortran::parser::Name &n) -> mlir::Attribute {
-                  if (!n.symbol) {
-                    return mlir::StringAttr::get(ctx, n.ToString());
-                  }
-                  mlir::Operation *op{getOrDeclare(n.symbol->GetUltimate())};
-                  if (!op) {
-                    return mlir::StringAttr::get(ctx, n.ToString());
-                  }
-                  return mlir::FlatSymbolRefAttr::get(
-                      mlir::SymbolTable::getSymbolName(op));
-                },
-                [&](const Fortran::parser::CompilerDirective::Plugin::
-                        CommonBlock &c) -> mlir::Attribute {
-                  std::string name{c.v.symbol ? mangleName(*c.v.symbol)
-                                              : c.v.ToString()};
-                  if (!module.lookupSymbol(name)) {
-                    return mlir::StringAttr::get(ctx, c.v.ToString());
-                  }
-                  return mlir::FlatSymbolRefAttr::get(ctx, name);
-                },
-                [&](std::uint64_t n) -> mlir::Attribute {
-                  return builder->getI64IntegerAttr(n);
-                },
-                [&](const std::string &str) -> mlir::Attribute {
-                  return mlir::StringAttr::get(ctx, str);
-                },
-            },
-            std::get<1>(arg.t))};
-        argAttrs.push_back(
-            builder->getNamedAttr(argKeyword->ToString(), value));
-      }
-      mlir::Attribute entry{builder->getDictionaryAttr({
-          builder->getNamedAttr("prefix",
-                                builder->getStringAttr(prefix.ToString())),
-          builder->getNamedAttr("keyword",
-                                builder->getStringAttr(keyword.ToString())),
-          builder->getNamedAttr("args", builder->getDictionaryAttr(argAttrs)),
-      })};
       llvm::SmallVector<mlir::Attribute> entries;
       if (auto existing{
               target->getAttrOfType<mlir::ArrayAttr>("fir.directives")})
         entries.append(existing.begin(), existing.end());
-      entries.push_back(entry);
+      entries.push_back(genPluginDirectiveAttr(*directive));
       target->setAttr("fir.directives", builder->getArrayAttr(entries));
     }
   }
+
+  /// A directive defined by a plugin for the loop that follows it, with its
+  /// variables evaluated in front of the loop.
+  struct PluginLoopDirective {
+    const Fortran::parser::CompilerDirective *directive;
+    llvm::SmallVector<mlir::Value> operands;
+  };
+  using PluginLoopDirectives = llvm::SmallVector<PluginLoopDirective, 1>;
+
+  static bool
+  isPluginLoopDirective(const Fortran::parser::CompilerDirective &dir) {
+    const auto *plugin{
+        std::get_if<Fortran::parser::CompilerDirective::Plugin>(&dir.u)};
+    if (!plugin)
+      return false;
+    const auto &[prefix, keyword, args]{plugin->t};
+    const Fortran::common::PluginDirectiveSpec *spec{
+        Fortran::common::lookupPluginDirective(prefix.ToString(),
+                                               keyword.ToString())};
+    return spec &&
+           spec->subject == Fortran::common::PluginDirectiveSubject::Loop;
+  }
+
+  /// Evaluate the variables of the plugin directives among the directives of
+  /// a loop, at the insertion point in front of it: a variable as its
+  /// address, or its descriptor if it has one (an allocatable or pointer as
+  /// its target's, as it is in front of the loop); a COMMON block as the
+  /// address of its storage.
+  PluginLoopDirectives genPluginLoopDirectiveOperands(
+      llvm::ArrayRef<const Fortran::parser::CompilerDirective *> dirs) {
+    PluginLoopDirectives result;
+    for (const Fortran::parser::CompilerDirective *dir : dirs) {
+      if (!isPluginLoopDirective(*dir))
+        continue;
+      mlir::Location loc = genLocation(dir->source);
+      PluginLoopDirective &directive = result.emplace_back();
+      directive.directive = dir;
+      for (const Fortran::parser::CompilerDirective::Plugin::Arg &arg :
+           std::get<2>(
+               std::get<Fortran::parser::CompilerDirective::Plugin>(dir->u)
+                   .t)) {
+        if (std::get<0>(arg.t))
+          continue; // a keyword argument
+        const auto &value{std::get<1>(arg.t)};
+        if (const auto *name{std::get_if<Fortran::parser::Name>(&value)}) {
+          std::optional<Fortran::lower::SomeExpr> expr{
+              Fortran::evaluate::AsGenericExpr(*name->symbol)};
+          assert(expr && "plugin directive variable is not a designator");
+          Fortran::lower::StatementContext stmtCtx;
+          hlfir::Entity var{Fortran::lower::convertExprToHLFIR(
+              loc, *this, *expr, localSymbols, stmtCtx)};
+          var = hlfir::derefPointersAndAllocatables(loc, *builder, var);
+          stmtCtx.finalizeAndReset();
+          directive.operands.push_back(var.getBase());
+        } else if (const auto *common{std::get_if<
+                       Fortran::parser::CompilerDirective::Plugin::CommonBlock>(
+                       &value)}) {
+          fir::GlobalOp global{
+              builder->getNamedGlobal(mangleName(*common->v.symbol))};
+          assert(global && "plugin directive COMMON block is not lowered");
+          directive.operands.push_back(fir::AddrOfOp::create(
+              *builder, loc, fir::ReferenceType::get(global.getType()),
+              global.getSymbol()));
+        }
+      }
+    }
+    return result;
+  }
+
+  /// At the start of a loop body, the markers of the plugin directives of the
+  /// loop: calls of `__flang_directive.<prefix>.<keyword>`, which nothing
+  /// defines, with the variables evaluated in front of the loop and the
+  /// directive as their `fir.directive` attribute. The plugin's passes replace
+  /// them.
+  void genPluginLoopDirectiveMarkers(PluginLoopDirectives &directives) {
+    for (PluginLoopDirective &directive : directives) {
+      mlir::Location loc = genLocation(directive.directive->source);
+      const auto &[prefix, keyword,
+                   args]{std::get<Fortran::parser::CompilerDirective::Plugin>(
+                             directive.directive->u)
+                             .t};
+      llvm::SmallVector<mlir::Type> types;
+      for (mlir::Value v : directive.operands)
+        types.push_back(v.getType());
+      mlir::FunctionType ty{
+          mlir::FunctionType::get(builder->getContext(), types, {})};
+      std::string base{"__flang_directive." + prefix.ToString() + "." +
+                       keyword.ToString()};
+      std::string name{base};
+      mlir::func::FuncOp callee;
+      for (unsigned n{1};; ++n) {
+        callee = builder->getNamedFunction(name);
+        if (!callee) {
+          callee = builder->createFunction(loc, name, ty);
+          break;
+        }
+        if (callee.getFunctionType() == ty)
+          break;
+        name = base + "." + std::to_string(n); // other variables' types
+      }
+      auto call{fir::CallOp::create(*builder, loc, callee, directive.operands)};
+      call->setAttr("fir.directive",
+                    genPluginDirectiveAttr(*directive.directive));
+    }
+    directives.clear();
+  }
+
+  /// Plugin loop directive markers for the evaluation that starts the body
+  /// of an unstructured loop, emitted once its block is started.
+  PluginLoopDirectives *pendingPluginLoopDirectives = nullptr;
 
   /// Declare a function.
   void declareFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
@@ -1928,7 +2085,8 @@ private:
   void
   genDoWhileAsSCFWhile(const Fortran::parser::ScalarLogicalExpr &whileCondition,
                        Fortran::lower::pft::Evaluation &doConstructEval,
-                       Fortran::lower::pft::Evaluation &doStmtEval) {
+                       Fortran::lower::pft::Evaluation &doStmtEval,
+                       PluginLoopDirectives &pluginLoopDirectives) {
     mlir::Location loc = toLocation();
 
     auto scfWhile =
@@ -1951,6 +2109,7 @@ private:
     mlir::Block *afterBlock =
         builder->createBlock(&scfWhile.getAfter(), scfWhile.getAfter().end());
     builder->setInsertionPointToStart(afterBlock);
+    genPluginLoopDirectiveMarkers(pluginLoopDirectives);
 
     // Lower nested evaluations excluding the loop control statement (the
     // NonLabelDoStmt) and the EndDoStmt.
@@ -2861,8 +3020,10 @@ private:
   /// same context flag, same region, same blocks. They may be branch targets
   /// from outside the loop, so their blocks have to stay in the enclosing
   /// region. Only what lies strictly between them goes inside the wrap.
-  void genLoopBodyEvaluations(Fortran::lower::pft::Evaluation &eval,
-                              bool unstructuredContext) {
+  void
+  genLoopBodyEvaluations(Fortran::lower::pft::Evaluation &eval,
+                         bool unstructuredContext,
+                         PluginLoopDirectives *pluginLoopDirectives = nullptr) {
     Fortran::lower::pft::EvaluationList &list = eval.getNestedEvaluations();
     auto iter = list.begin();
     auto end = std::prev(list.end());
@@ -2877,6 +3038,14 @@ private:
     mlir::Block *savedEndDoBlock = nullptr;
     mlir::scf::ExecuteRegionOp wrapOp =
         wrapUnstructuredBody(eval, yieldBlock, savedEndDoBlock);
+    // The markers of plugin loop directives start the body: here, or in the
+    // block the first evaluation of an unstructured body starts.
+    if (pluginLoopDirectives && !pluginLoopDirectives->empty()) {
+      if (unstructuredContext || wrapOp)
+        pendingPluginLoopDirectives = pluginLoopDirectives;
+      else
+        genPluginLoopDirectiveMarkers(*pluginLoopDirectives);
+    }
     for (; iter != end; ++iter)
       genFIR(*iter, unstructuredContext || wrapOp);
     closeUnstructuredBodyWrap(wrapOp, eval, yieldBlock, savedEndDoBlock);
@@ -3022,6 +3191,13 @@ private:
       headerBlock = createNextBeginBlock();
     };
 
+    // The plugin directives of the loop: their variables are evaluated in
+    // front of the loop, for markers at the start of its body.
+    PluginLoopDirectives pluginLoopDirectives;
+    auto genPluginLoopDirectivesInFront = [&]() {
+      pluginLoopDirectives = genPluginLoopDirectiveOperands(doStmtEval.dirs);
+    };
+
     IncrementLoopNestInfo incrementLoopNestInfo;
     const Fortran::parser::ScalarLogicalExpr *whileCondition = nullptr;
     bool infiniteLoop = !loopControl.has_value();
@@ -3030,6 +3206,7 @@ private:
       // Infinite loops are never wrappable; maybeWrapAndRecalc is a no-op here,
       // but call it for uniformity so wrapOp stays null.
       maybeWrapAndRecalc();
+      genPluginLoopDirectivesInFront();
       startBlock(headerBlock);
     } else if ((whileCondition =
                     std::get_if<Fortran::parser::ScalarLogicalExpr>(
@@ -3040,13 +3217,16 @@ private:
       // PFT branch analysis), allowing the loop to exit only when the condition
       // becomes false.
       if (!unstructuredContext) {
-        genDoWhileAsSCFWhile(*whileCondition, eval, doStmtEval);
+        genPluginLoopDirectivesInFront();
+        genDoWhileAsSCFWhile(*whileCondition, eval, doStmtEval,
+                             pluginLoopDirectives);
         return;
       }
 
       assert(unstructuredContext && "while loop must be unstructured");
       maybeStartBlock(preheaderBlock); // no block or empty block
       maybeWrapAndRecalc();
+      genPluginLoopDirectivesInFront();
       startBlock(headerBlock);
       genConditionalBranch(*whileCondition, bodyBlock, exitBlock);
     } else if (const auto *bounds =
@@ -3104,14 +3284,16 @@ private:
       localSymbols.pushScope();
 
     // Increment loop begin code. (Infinite/while code was already generated.)
-    if (!infiniteLoop && !whileCondition)
+    if (!infiniteLoop && !whileCondition) {
+      genPluginLoopDirectivesInFront();
       genFIRIncrementLoopBegin(incrementLoopNestInfo, doStmtEval.dirs);
+    }
 
     // The loop control is structured, but the body may hold raw branching
     // confined to it. Wrap the body, leaving the loop control outside, so the
     // structured loop op's single-block region stays well formed.
     // Loop body code.
-    genLoopBodyEvaluations(eval, unstructuredContext);
+    genLoopBodyEvaluations(eval, unstructuredContext, &pluginLoopDirectives);
     auto iter = std::prev(eval.getNestedEvaluations().end());
 
     // An EndDoStmt in unstructured code may start a new block.
@@ -3119,6 +3301,10 @@ private:
     assert(endDoEval.getIf<Fortran::parser::EndDoStmt>() && "no enddo stmt");
     if (unstructuredContext)
       maybeStartBlock(endDoEval.block);
+    // An empty body did not take the markers of plugin loop directives.
+    if (pendingPluginLoopDirectives == &pluginLoopDirectives)
+      pendingPluginLoopDirectives = nullptr;
+    genPluginLoopDirectiveMarkers(pluginLoopDirectives);
 
     // Loop end code.
     if (infiniteLoop || whileCondition)
@@ -3915,6 +4101,10 @@ private:
             },
             [&](const Fortran::parser::CompilerDirective::Simd &) {
               attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::Plugin &) {
+              if (isPluginLoopDirective(dir))
+                attachDirectiveToLoop(dir, &eval);
             },
             [&](const auto &) {}},
         dir.u);
@@ -6410,6 +6600,10 @@ private:
       maybeStartBlock(eval.isConstruct() && eval.lowerAsStructured()
                           ? eval.getFirstNestedEvaluation().block
                           : eval.block);
+    if (PluginLoopDirectives *pending = pendingPluginLoopDirectives) {
+      pendingPluginLoopDirectives = nullptr;
+      genPluginLoopDirectiveMarkers(*pending);
+    }
 
     if (eval.skipNextLowering) {
       eval.skipNextLowering = false;

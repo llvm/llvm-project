@@ -10,9 +10,9 @@
 
 subroutine s
   ! CHECK: error: malformed argument list of a directive defined by a plugin
-  !dir$ example callback(handler=s, priority=1.5)
+  !dir$ example callback(handler=s, priority=1+2)
   ! CHECK: error: malformed argument list of a directive defined by a plugin
-  !dir$ example callback(handler=s, priority=-1)
+  !dir$ example callback(handler=s, priority=*)
   ! CHECK: error: malformed argument list of a directive defined by a plugin
   !dir$ example callback(handler=s) trailing
   ! CHECK-NOT: Unrecognized compiler directive

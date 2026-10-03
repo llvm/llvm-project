@@ -11558,104 +11558,147 @@ void ResolveNamesVisitor::ResolvePluginDirective(
     return symbol;
   }};
 
-  // The subject: a leading positional name, or the enclosing subprogram.
-  std::optional<common::PluginDirectiveArgKind> subjectKind;
-  if (spec->subject == common::PluginDirectiveSubject::Procedure) {
-    subjectKind = common::PluginDirectiveArgKind::Procedure;
-  } else if (spec->subject == common::PluginDirectiveSubject::Variable) {
-    subjectKind = common::PluginDirectiveArgKind::Variable;
-  }
   auto it{args.begin()};
-  const Symbol *subject{nullptr};
-  const parser::Name *subjectNamePtr{nullptr};
-  if (it != args.end() && !std::get<0>(it->t)) {
-    const auto &value{std::get<1>(it->t)};
-    if (const auto *name{std::get_if<parser::Name>(&value)}) {
-      subjectNamePtr = name;
-      subject = resolve(*name, subjectKind);
-    } else if (const auto *common{
-                   std::get_if<parser::CompilerDirective::Plugin::CommonBlock>(
-                       &value)}) {
-      subjectNamePtr = &common->v;
-      subject = resolveCommon(common->v);
-    } else {
+  std::vector<const Symbol *> subjects;
+  bool ok{true};
+  if (spec->subject == common::PluginDirectiveSubject::Loop) {
+    // The variables of a directive for the loop that follows it, in front of
+    // its other arguments; lowering passes them to the plugin.
+    unsigned count{0};
+    for (; it != args.end() && !std::get<0>(it->t); ++it, ++count) {
+      const auto &value{std::get<1>(it->t)};
+      if (const auto *name{std::get_if<parser::Name>(&value)}) {
+        if (const Symbol *symbol{
+                resolve(*name, common::PluginDirectiveArgKind::Variable)}) {
+          // In a specification part, a variable declared only by a type
+          // declaration statement is still an entity.
+          const Symbol &ultimate{symbol->GetUltimate()};
+          if (!IsVariableName(*symbol) &&
+              !(ultimate.has<EntityDetails>() && !isProcedure(ultimate) &&
+                  !IsNamedConstant(ultimate))) {
+            Say(*name, "'%s' is not a variable"_err_en_US);
+            ok = false;
+          }
+        } else {
+          ok = false;
+        }
+      } else if (const auto *common{std::get_if<
+                     parser::CompilerDirective::Plugin::CommonBlock>(&value)}) {
+        ok &= resolveCommon(common->v) != nullptr;
+      } else {
+        Say(x.source,
+            "The variables of a '%s %s' directive must be names or COMMON blocks"_err_en_US,
+            prefix.ToString(), keyword.ToString());
+        ok = false;
+      }
+    }
+    if (count < spec->minPositional) {
       Say(x.source,
-          "The subject of a '%s %s' directive must be a name or a COMMON block"_err_en_US,
+          "A '%s %s' directive needs at least %d variable(s)"_err_en_US,
+          prefix.ToString(), keyword.ToString(),
+          static_cast<int>(spec->minPositional));
+      ok = false;
+    }
+  } else {
+    // The subject: a leading positional name, or the enclosing subprogram.
+    std::optional<common::PluginDirectiveArgKind> subjectKind;
+    if (spec->subject == common::PluginDirectiveSubject::Procedure) {
+      subjectKind = common::PluginDirectiveArgKind::Procedure;
+    } else if (spec->subject == common::PluginDirectiveSubject::Variable) {
+      subjectKind = common::PluginDirectiveArgKind::Variable;
+    }
+    const Symbol *subject{nullptr};
+    const parser::Name *subjectNamePtr{nullptr};
+    if (it != args.end() && !std::get<0>(it->t)) {
+      const auto &value{std::get<1>(it->t)};
+      if (const auto *name{std::get_if<parser::Name>(&value)}) {
+        subjectNamePtr = name;
+        subject = resolve(*name, subjectKind);
+      } else if (const auto *common{std::get_if<
+                     parser::CompilerDirective::Plugin::CommonBlock>(&value)}) {
+        subjectNamePtr = &common->v;
+        subject = resolveCommon(common->v);
+      } else {
+        Say(x.source,
+            "The subject of a '%s %s' directive must be a name or a COMMON block"_err_en_US,
+            prefix.ToString(), keyword.ToString());
+        return;
+      }
+      if (!subject) {
+        return;
+      }
+      ++it;
+    } else if (spec->subject != common::PluginDirectiveSubject::Variable) {
+      const Symbol *scopeSymbol{currScope().symbol()};
+      if (scopeSymbol && scopeSymbol->has<SubprogramDetails>()) {
+        subject = scopeSymbol;
+      }
+    }
+    if (!subject) {
+      Say(x.source,
+          "A '%s %s' directive must name what it applies to, or appear in a subprogram"_err_en_US,
           prefix.ToString(), keyword.ToString());
       return;
     }
-    if (!subject) {
+    const parser::Name &subjectName{subjectNamePtr ? *subjectNamePtr : keyword};
+    if (subject->has<CommonBlockDetails>()) {
+      if (subjectKind == common::PluginDirectiveArgKind::Procedure) {
+        Say(subjectName, "'%s' is not a procedure"_err_en_US);
+        return;
+      }
+    } else if (!checkKind(subjectName, subject, subjectKind)) {
       return;
     }
-    ++it;
-  } else if (spec->subject != common::PluginDirectiveSubject::Variable) {
-    const Symbol *scopeSymbol{currScope().symbol()};
-    if (scopeSymbol && scopeSymbol->has<SubprogramDetails>()) {
-      subject = scopeSymbol;
+    // A name of the host (e.g. a procedure's own name, in it) is host
+    // associated; the directive is on the host's symbol, which a module file
+    // declares.
+    while (const auto *host{subject->detailsIf<HostAssocDetails>()}) {
+      subject = &host->symbol();
     }
-  }
-  if (!subject) {
-    Say(x.source,
-        "A '%s %s' directive must name what it applies to, or appear in a subprogram"_err_en_US,
-        prefix.ToString(), keyword.ToString());
-    return;
-  }
-  const parser::Name &subjectName{subjectNamePtr ? *subjectNamePtr : keyword};
-  if (subject->has<CommonBlockDetails>()) {
-    if (subjectKind == common::PluginDirectiveArgKind::Procedure) {
-      Say(subjectName, "'%s' is not a procedure"_err_en_US);
-      return;
-    }
-  } else if (!checkKind(subjectName, subject, subjectKind)) {
-    return;
-  }
-  // A generic interface stands for all of its specific procedures, also
-  // private ones and those of other modules, which a directive elsewhere
-  // could not name. Not for a directive with procedure arguments, which
-  // each specific procedure would need its own of.
-  // A name of the host (e.g. a procedure's own name, in it) is host
-  // associated; the directive is on the host's symbol, which a module file
-  // declares.
-  while (const auto *host{subject->detailsIf<HostAssocDetails>()}) {
-    subject = &host->symbol();
-  }
-  std::vector<const Symbol *> subjects{subject};
-  if (const auto *generic{subject->GetUltimate().detailsIf<GenericDetails>()}) {
-    bool takesProcedures{false};
-    for (const common::PluginDirectiveArg &a : spec->args) {
-      takesProcedures |= a.kind == common::PluginDirectiveArgKind::Procedure;
-    }
-    if (takesProcedures) {
-      Say(subjectName.source,
-          "'%s' is a generic interface; a '%s %s' directive must name one of its specific procedures"_err_en_US,
-          subjectName.ToString(), prefix.ToString(), keyword.ToString());
-      return;
-    }
-    subjects.clear();
-    for (const Symbol &specific : generic->specificProcs()) {
-      subjects.push_back(&specific);
-    }
-    if (const Symbol *specific{generic->specific()}; specific &&
-        std::find(subjects.begin(), subjects.end(), specific) ==
-            subjects.end()) {
-      subjects.push_back(specific);
-    }
-    if (subjects.empty()) {
-      Say(subjectName.source,
-          "Generic interface '%s' has no specific procedures"_err_en_US,
-          subjectName.ToString());
-      return;
+    // A generic interface stands for all of its specific procedures, also
+    // private ones and those of other modules, which a directive elsewhere
+    // could not name. Not for a directive with procedure arguments, which
+    // each specific procedure would need its own of.
+    subjects.push_back(subject);
+    if (const auto *generic{
+            subject->GetUltimate().detailsIf<GenericDetails>()}) {
+      bool takesProcedures{false};
+      for (const common::PluginDirectiveArg &a : spec->args) {
+        takesProcedures |= a.kind == common::PluginDirectiveArgKind::Procedure;
+      }
+      if (takesProcedures) {
+        Say(subjectName.source,
+            "'%s' is a generic interface; a '%s %s' directive must name one of its specific procedures"_err_en_US,
+            subjectName.ToString(), prefix.ToString(), keyword.ToString());
+        return;
+      }
+      subjects.clear();
+      for (const Symbol &specific : generic->specificProcs()) {
+        subjects.push_back(&specific);
+      }
+      if (const Symbol *specific{generic->specific()}; specific &&
+          std::find(subjects.begin(), subjects.end(), specific) ==
+              subjects.end()) {
+        subjects.push_back(specific);
+      }
+      if (subjects.empty()) {
+        Say(subjectName.source,
+            "Generic interface '%s' has no specific procedures"_err_en_US,
+            subjectName.ToString());
+        return;
+      }
     }
   }
 
   // The other arguments are keyword arguments.
   std::set<std::string> seen;
-  bool ok{true};
   for (; it != args.end(); ++it) {
     const auto &maybeKeyword{std::get<0>(it->t)};
     if (!maybeKeyword) {
       Say(x.source,
-          "Only the first argument of a '%s %s' directive may be positional"_err_en_US,
+          spec->subject == common::PluginDirectiveSubject::Loop
+              ? "The variables of a '%s %s' directive must come before its other arguments"_err_en_US
+              : "Only the first argument of a '%s %s' directive may be positional"_err_en_US,
           prefix.ToString(), keyword.ToString());
       ok = false;
       continue;
@@ -11712,8 +11755,18 @@ void ResolveNamesVisitor::ResolvePluginDirective(
         ok = false;
       }
       break;
+    case common::PluginDirectiveArgKind::Real:
+      if (!std::holds_alternative<std::uint64_t>(value) &&
+          !std::holds_alternative<parser::SignedRealLiteralConstant>(value)) {
+        Say(maybeKeyword->source,
+            "Argument '%s' must be a real or integer literal"_err_en_US,
+            argName);
+        ok = false;
+      }
+      break;
     case common::PluginDirectiveArgKind::String:
-      if (std::holds_alternative<std::uint64_t>(value)) {
+      if (std::holds_alternative<std::uint64_t>(value) ||
+          std::holds_alternative<parser::SignedRealLiteralConstant>(value)) {
         Say(maybeKeyword->source,
             "Argument '%s' must be a character literal or a name"_err_en_US,
             argName);
