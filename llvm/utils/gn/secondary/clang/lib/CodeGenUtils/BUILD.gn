@@ -7,11 +7,14 @@ static_library("CodeGenUtils") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "BackendDiagnosticHandler.cpp",
     "CallUtils.cpp",
     "ClassUtils.cpp",
     "CodeGenUtils.cpp",
+    "EHPersonality.cpp",
     "ExprUtils.cpp",
     "FunctionUtils.cpp",
     "ItaniumCXXABIUtils.cpp",
+    "StmtUtils.cpp",
   ]
 }

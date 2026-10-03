@@ -290,6 +290,12 @@ mlir::Block *fir::getAllocaBlock(mlir::Region &region) {
             mlir::dyn_cast<mlir::acc::ComputeRegionOpInterface>(parent))
       return accComputeRegionIface.getAllocaBlock();
 
+    // Offload regions are isolated from above, so allocas cannot be hoisted
+    // past them.
+    if (auto accOffloadRegionIface =
+            mlir::dyn_cast<mlir::acc::OffloadRegionOpInterface>(parent))
+      return &accOffloadRegionIface.getOffloadRegion().front();
+
     if (auto ompOutlineableIface =
             mlir::dyn_cast<mlir::omp::OutlineableOpenMPOpInterface>(parent))
       return ompOutlineableIface.getAllocaBlock();
