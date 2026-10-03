@@ -2166,7 +2166,15 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
                          m_Value(Z))) ||
       match(&I, m_c_FAdd(m_OneUse(m_FDiv(m_Value(X), m_FNeg(m_Value(Y)))),
                          m_Value(Z)))) {
-    Value *XY = Builder.CreateFDivFMF(X, Y, &I);
+    Value *LHS = I.getOperand(0);
+    Value *RHS = I.getOperand(1);
+    BinaryOperator *DivInst;
+    if (auto *Inst = dyn_cast<BinaryOperator>(LHS)) {
+      DivInst = Inst;
+    } else {
+      DivInst = cast<BinaryOperator>(RHS);
+    }
+    Value *XY = Builder.CreateFDivFMF(X, Y, DivInst);
     return BinaryOperator::CreateFSubFMF(Z, XY, &I);
   }
 
