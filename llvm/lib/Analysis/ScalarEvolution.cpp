@@ -14611,10 +14611,6 @@ bool ScalarEvolution::properlyDominates(const SCEV *S, const BasicBlock *BB) {
   return getBlockDisposition(S, BB) == ProperlyDominatesBlock;
 }
 
-bool ScalarEvolution::hasOperand(const SCEV *S, const SCEV *Op) const {
-  return SCEVExprContains(S, [&](const SCEV *Expr) { return Expr == Op; });
-}
-
 void ScalarEvolution::forgetBackedgeTakenCounts(const Loop *L,
                                                 bool Predicated) {
   auto &BECounts =

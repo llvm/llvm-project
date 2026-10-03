@@ -609,6 +609,10 @@ features cannot lower the translation-unit ABI level;
   reference to a vector type; `vec_step` (in C++ for OpenCL) and
   `__builtin_ptrauth_type_discriminator` similarly no longer accept reference
   types that their evaluation silently mishandled. (#GH216997)
+- Fixed a crash when constant-evaluating `__builtin_align_up`, `__builtin_align_down`,
+  or `__builtin_is_aligned` with pointers without an underlying object. Null pointers 
+  are handled as aligned values, while other base-less pointers are rejected during constant
+  evaluation.
 
 #### Bug Fixes to Attribute Support
 
@@ -659,6 +663,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed a bug where top-level CV qualifiers (such as ``const``) were dropped from pointers modified by Microsoft pointer attributes (like ``__ptr32`` and ``__ptr64``) and WebAssembly's ``__funcref``.
 
 - Fixed a bug where we accepted ``__super`` being qualified by a scope specifier, causing codegen to assertion fail elsewhere. (#GH212988)
+- Fixed an assertion when typo correction replaced or dropped the qualifier of
+  a name such as `foo::S<int>` while the parser was deciding whether a
+  parenthesized construct like `(void(foo::S<int>))` is a type-id or an
+  expression. (#GH221890)
 - Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
 
 - Fixed a crash when a using-declaration naming an unresolvable member of a
@@ -1001,6 +1009,9 @@ features cannot lower the translation-unit ABI level;
 - `QualifierOrder` now supports `typedef`, `consteval`, `constinit`,
   `thread_local`, `extern`, `mutable`, `signed`, `unsigned`, `long`, `short`,
   and `explicit` declaration specifiers.
+- Extend `IndentAccessModifiers` with `AfterFirstAccessModifier` to indent
+  members before the first explicit access modifier by one level. Existing
+  configuration values `true` and `false` remain supported.
 
 ### libclang
 
@@ -1083,6 +1094,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 - Mapping of expressions with base-pointers through a user-defined mapper (e.g.
   `map(s.p[0:n])`) now conforms to OpenMP's conditional pointer-attachment,
   matching the behavior of such maps outside a mapper.
+- Fixed a crash when the `safelen` and `simdlen` clauses of an OpenMP directive
+  have arguments of different integer types. (#GH108367)
 - The `holds` clause on the `assume` directive now lowers side-effect-free
   conditions to `llvm.assume`, enabling downstream optimizations. Previously
   the clause was parsed but its condition was discarded without effect.
