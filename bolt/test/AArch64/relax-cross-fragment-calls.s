@@ -36,10 +36,12 @@
 # RUN: %clang %cflags -Wl,-q -Wl,-e,A %s -o %t -nostdlib
 # RUN: link_fdata --no-lbr %s %t %t.fdata
 # RUN: llvm-strip --strip-unneeded %t
-# RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --split-functions --relax-exp \
+# RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --split-functions \
+# RUN:   --compact-code-model --relax-exp \
 # RUN:   | FileCheck %s --check-prefix=CHECK-BOLT
 # RUN: llvm-bolt %t -o %t.hfe.bolt --data %t.fdata --split-functions \
-# RUN:   --relax-exp --hot-functions-at-end \
+# RUN:   --compact-code-model --relax-exp \
+# RUN:   --hot-functions-at-end \
 # RUN:   | FileCheck %s --check-prefix=CHECK-BOLT-HFE
 # RUN: llvm-readelf -S %t.bolt | FileCheck %s --check-prefix=CHECK-SECTIONS
 # RUN: llvm-objdump -d \
@@ -52,24 +54,16 @@
 # CHECK-BOLT: BOLT-INFO: built 4 function fragment cluster(s)
 # CHECK-BOLT-NEXT: BOLT-INFO: cluster: 0
 # CHECK-BOLT-NEXT: BOLT-INFO:   2 fragment(s)
-# CHECK-BOLT-NEXT: BOLT-INFO:   88080456 estimated bytes without thunks
-# CHECK-BOLT-NEXT: BOLT-INFO:   40 estimated thunk bytes
-# CHECK-BOLT-NEXT: BOLT-INFO:   12 actual thunk bytes
+# CHECK-BOLT-NEXT: BOLT-INFO:   88080424 estimated bytes
 # CHECK-BOLT-NEXT: BOLT-INFO: cluster: 1
 # CHECK-BOLT-NEXT: BOLT-INFO:   2 fragment(s)
-# CHECK-BOLT-NEXT: BOLT-INFO:   88080448 estimated bytes without thunks
-# CHECK-BOLT-NEXT: BOLT-INFO:   40 estimated thunk bytes
-# CHECK-BOLT-NEXT: BOLT-INFO:   24 actual thunk bytes
+# CHECK-BOLT-NEXT: BOLT-INFO:   88080424 estimated bytes
 # CHECK-BOLT-NEXT: BOLT-INFO: cluster: 2
 # CHECK-BOLT-NEXT: BOLT-INFO:   2 fragment(s)
-# CHECK-BOLT-NEXT: BOLT-INFO:   88080440 estimated bytes without thunks
-# CHECK-BOLT-NEXT: BOLT-INFO:   56 estimated thunk bytes
-# CHECK-BOLT-NEXT: BOLT-INFO:   16 actual thunk bytes
+# CHECK-BOLT-NEXT: BOLT-INFO:   88080408 estimated bytes
 # CHECK-BOLT-NEXT: BOLT-INFO: cluster: 3
 # CHECK-BOLT-NEXT: BOLT-INFO:   2 fragment(s)
-# CHECK-BOLT-NEXT: BOLT-INFO:   88080448 estimated bytes without thunks
-# CHECK-BOLT-NEXT: BOLT-INFO:   40 estimated thunk bytes
-# CHECK-BOLT-NEXT: BOLT-INFO:   28 actual thunk bytes
+# CHECK-BOLT-NEXT: BOLT-INFO:   88080416 estimated bytes
 # CHECK-BOLT: BOLT-INFO: relaxed 2 calls with short thunks
 # CHECK-BOLT: BOLT-INFO: relaxed 4 calls with long thunks
 # CHECK-BOLT: BOLT-INFO: 2 short thunks created
@@ -81,24 +75,16 @@
 # CHECK-BOLT-HFE: BOLT-INFO: built 4 function fragment cluster(s)
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO: cluster: 0
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO:   2 fragment(s)
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   88080440 estimated bytes without thunks
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   40 estimated thunk bytes
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   24 actual thunk bytes
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   88080408 estimated bytes
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO: cluster: 1
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO:   2 fragment(s)
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   88080448 estimated bytes without thunks
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   56 estimated thunk bytes
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   20 actual thunk bytes
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   88080416 estimated bytes
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO: cluster: 2
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO:   2 fragment(s)
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   88080456 estimated bytes without thunks
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   56 estimated thunk bytes
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   20 actual thunk bytes
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   88080424 estimated bytes
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO: cluster: 3
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO:   2 fragment(s)
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   88080448 estimated bytes without thunks
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   24 estimated thunk bytes
-# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   8 actual thunk bytes
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   88080424 estimated bytes
 # CHECK-BOLT-HFE: BOLT-INFO: relaxed 3 calls with short thunks
 # CHECK-BOLT-HFE: BOLT-INFO: relaxed 2 calls with long thunks
 # CHECK-BOLT-HFE: BOLT-INFO: 3 short thunks created
