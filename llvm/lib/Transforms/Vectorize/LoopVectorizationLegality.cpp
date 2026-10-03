@@ -918,7 +918,8 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
 
   if (CI && !getVectorIntrinsicIDForCall(CI, TLI) &&
       !(CI->getCalledFunction() && TLI &&
-        (!VFDatabase::getMappings(*CI).empty() || isTLIScalarize(*TLI, *CI)))) {
+        (!VFDatabase::getMappings(*CI, TTI).empty() ||
+         isTLIScalarize(*TLI, *CI)))) {
     // If the call is a recognized math libary call, it is likely that
     // we can vectorize it given loosened floating-point constraints.
     bool IsMathLibCall =
@@ -964,7 +965,7 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
 
   // If we found a vectorized variant of a function, note that so LV can
   // make better decisions about maximum VF.
-  if (CI && !VFDatabase::getMappings(*CI).empty())
+  if (CI && !VFDatabase::getMappings(*CI, TTI).empty())
     VecCallVariantsFound = true;
 
   // Check that the instruction return and stored types are vectorizable.
@@ -1363,7 +1364,7 @@ bool LoopVectorizationLegality::blockCanBePredicated(
     // TODO: Allow other calls if they have appropriate attributes... readonly
     // and argmemonly?
     if (CallInst *CI = dyn_cast<CallInst>(&I))
-      if (VFDatabase::hasMaskedVariant(*CI)) {
+      if (VFDatabase::hasMaskedVariant(*CI, std::nullopt, TTI)) {
         MaskedOp.insert(CI);
         continue;
       }
