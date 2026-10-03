@@ -280,6 +280,9 @@ private:
   Value *CreateFunctionLocalGateCmp(IRBuilder<> &IRB);
   void InjectCoverageAtBlock(Function &F, BasicBlock &BB, size_t Idx,
                              Value *&FunctionGateCmp, bool IsLeafFunc);
+  CallInst *createRuntimeCall(IRBuilder<> &IRB, FunctionCallee Callee,
+                              ArrayRef<Value *> Args = {});
+  void addFuncletBundles(Function &F);
   Function *CreateInitCallsForSections(Module &M, const char *CtorName,
                                        const char *InitFunctionName, Type *Ty,
                                        const char *Section);
@@ -318,6 +321,9 @@ private:
   GlobalVariable *FunctionBoolArray;        // for inline-bool-flag.
   GlobalVariable *FunctionPCsArray;         // for pc-table.
   GlobalVariable *FunctionCFsArray;         // for control flow table
+  // Runtime calls inserted into the current function, for
+  // addFuncletBundles().
+  SmallVector<CallInst *, 16> RuntimeCalls;
   SmallVector<GlobalValue *, 20> GlobalsToAppendToUsed;
   SmallVector<GlobalValue *, 20> GlobalsToAppendToCompilerUsed;
 
@@ -763,9 +769,58 @@ void ModuleSanitizerCoverage::instrumentFunction(Function &F) {
   InjectTraceForDiv(F, DivTraceTargets);
   InjectTraceForGep(F, GepTraceTargets);
   InjectTraceForLoadsAndStores(F, Loads, Stores);
+  // Before InjectTraceForExits(), whose EscapeEnumerator may turn the calls
+  // into invokes. The calls it inserts precede returns and resumes, which are
+  // never in a funclet.
+  addFuncletBundles(F);
 
   if (Options.TracePCEntryExit)
     InjectTraceForExits(F);
+}
+
+CallInst *ModuleSanitizerCoverage::createRuntimeCall(IRBuilder<> &IRB,
+                                                     FunctionCallee Callee,
+                                                     ArrayRef<Value *> Args) {
+  CallInst *CI = IRB.CreateCall(Callee, Args);
+  RuntimeCalls.push_back(CI);
+  return CI;
+}
+
+// With scoped EH (MSVC C++), a call inside a funclet must name the funclet's
+// pad in a "funclet" operand bundle. WinEHPrepare takes a call without one for
+// a call that does not belong to the funclet and replaces it, and all that
+// follows it in its block, with unreachable: a catch handler that compares an
+// integer or makes an indirect call would lose its body. Give each runtime
+// call the bundle of the funclet it is in.
+void ModuleSanitizerCoverage::addFuncletBundles(Function &F) {
+  SmallVector<CallInst *, 16> Calls;
+  std::swap(Calls, RuntimeCalls);
+  if (Calls.empty() || !F.hasPersonalityFn() ||
+      !isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
+    return;
+
+  DenseMap<BasicBlock *, ColorVector> BlockColors = colorEHFunclets(F);
+  for (CallInst *CI : Calls) {
+    const ColorVector &Colors = BlockColors[CI->getParent()];
+    // Unreachable blocks have no color; they are deleted later.
+    if (Colors.empty())
+      continue;
+    // A bundle names one pad.
+    if (Colors.size() != 1) {
+      F.getContext().emitError("Instruction's BasicBlock is not monochromatic");
+      continue;
+    }
+    BasicBlock *Color = Colors.front();
+    BasicBlock::iterator Pad = Color->getFirstNonPHIIt();
+    if (Pad == Color->end() || !Pad->isEHPad())
+      continue;
+    OperandBundleDef OB("funclet", &*Pad);
+    CallBase *NewCall = CallBase::addOperandBundle(CI, LLVMContext::OB_funclet,
+                                                   OB, CI->getIterator());
+    NewCall->copyMetadata(*CI);
+    CI->replaceAllUsesWith(NewCall);
+    CI->eraseFromParent();
+  }
 }
 
 GlobalVariable *ModuleSanitizerCoverage::CreateFunctionLocalArrayInSection(
@@ -903,7 +958,8 @@ void ModuleSanitizerCoverage::InjectCoverageForIndirectCalls(
     Value *Callee = CB.getCalledOperand();
     if (isa<InlineAsm>(Callee))
       continue;
-    IRB.CreateCall(SanCovTracePCIndir, IRB.CreatePointerCast(Callee, IntptrTy));
+    createRuntimeCall(IRB, SanCovTracePCIndir,
+                      IRB.CreatePointerCast(Callee, IntptrTy));
   }
 }
 
@@ -947,9 +1003,9 @@ void ModuleSanitizerCoverage::InjectTraceForSwitch(
       if (Options.GatedCallbacks) {
         auto GateBranch = CreateGateBranch(F, FunctionGateCmp, I);
         IRBuilder<> GateIRB(GateBranch);
-        GateIRB.CreateCall(SanCovTraceSwitchFunction, {Cond, GV});
+        createRuntimeCall(GateIRB, SanCovTraceSwitchFunction, {Cond, GV});
       } else {
-        IRB.CreateCall(SanCovTraceSwitchFunction, {Cond, GV});
+        createRuntimeCall(IRB, SanCovTraceSwitchFunction, {Cond, GV});
       }
     }
   }
@@ -969,8 +1025,8 @@ void ModuleSanitizerCoverage::InjectTraceForDiv(
     if (CallbackIdx < 0)
       continue;
     auto Ty = Type::getIntNTy(*C, TypeSize);
-    IRB.CreateCall(SanCovTraceDivFunction[CallbackIdx],
-                   {IRB.CreateIntCast(A1, Ty, true)});
+    createRuntimeCall(IRB, SanCovTraceDivFunction[CallbackIdx],
+                      {IRB.CreateIntCast(A1, Ty, true)});
   }
 }
 
@@ -980,8 +1036,8 @@ void ModuleSanitizerCoverage::InjectTraceForGep(
     InstrumentationIRBuilder IRB(GEP);
     for (Use &Idx : GEP->indices())
       if (!isa<ConstantInt>(Idx) && Idx->getType()->isIntegerTy())
-        IRB.CreateCall(SanCovTraceGepFunction,
-                       {IRB.CreateIntCast(Idx, IntptrTy, true)});
+        createRuntimeCall(IRB, SanCovTraceGepFunction,
+                          {IRB.CreateIntCast(Idx, IntptrTy, true)});
   }
 }
 
@@ -1002,7 +1058,7 @@ void ModuleSanitizerCoverage::InjectTraceForLoadsAndStores(
     int Idx = CallbackIdx(LI->getType());
     if (Idx < 0)
       continue;
-    IRB.CreateCall(SanCovLoadFunction[Idx], Ptr);
+    createRuntimeCall(IRB, SanCovLoadFunction[Idx], Ptr);
   }
   for (auto *SI : Stores) {
     InstrumentationIRBuilder IRB(SI);
@@ -1010,7 +1066,7 @@ void ModuleSanitizerCoverage::InjectTraceForLoadsAndStores(
     int Idx = CallbackIdx(SI->getValueOperand()->getType());
     if (Idx < 0)
       continue;
-    IRB.CreateCall(SanCovStoreFunction[Idx], Ptr);
+    createRuntimeCall(IRB, SanCovStoreFunction[Idx], Ptr);
   }
 }
 
@@ -1059,11 +1115,13 @@ void ModuleSanitizerCoverage::InjectTraceForCmp(
       if (Options.GatedCallbacks) {
         auto GateBranch = CreateGateBranch(F, FunctionGateCmp, I);
         IRBuilder<> GateIRB(GateBranch);
-        GateIRB.CreateCall(CallbackFunc, {GateIRB.CreateIntCast(A0, Ty, true),
-                                          GateIRB.CreateIntCast(A1, Ty, true)});
+        createRuntimeCall(GateIRB, CallbackFunc,
+                          {GateIRB.CreateIntCast(A0, Ty, true),
+                           GateIRB.CreateIntCast(A1, Ty, true)});
       } else {
-        IRB.CreateCall(CallbackFunc, {IRB.CreateIntCast(A0, Ty, true),
-                                      IRB.CreateIntCast(A1, Ty, true)});
+        createRuntimeCall(
+            IRB, CallbackFunc,
+            {IRB.CreateIntCast(A0, Ty, true), IRB.CreateIntCast(A1, Ty, true)});
       }
     }
   }
@@ -1092,7 +1150,7 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
     FunctionCallee Callee = IsEntryBB && Options.TracePCEntryExit
                                 ? SanCovTracePCEntry
                                 : SanCovTracePC;
-    IRB.CreateCall(Callee)
+    createRuntimeCall(IRB, Callee)
         ->setCannotMerge(); // gets the PC using GET_CALLER_PC.
   }
   if (Options.TracePCGuard) {
@@ -1102,9 +1160,10 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
       Instruction *I = &*IP;
       auto GateBranch = CreateGateBranch(F, FunctionGateCmp, I);
       IRBuilder<> GateIRB(GateBranch);
-      GateIRB.CreateCall(SanCovTracePCGuard, GuardPtr)->setCannotMerge();
+      createRuntimeCall(GateIRB, SanCovTracePCGuard, GuardPtr)
+          ->setCannotMerge();
     } else {
-      IRB.CreateCall(SanCovTracePCGuard, GuardPtr)->setCannotMerge();
+      createRuntimeCall(IRB, SanCovTracePCGuard, GuardPtr)->setCannotMerge();
     }
   }
   if (Options.Inline8bitCounters) {
@@ -1168,7 +1227,7 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
           EstimatedStackSize >= Options.StackDepthCallbackMin) {
         if (InsertBefore)
           IRB.SetInsertPoint(InsertBefore);
-        auto Call = IRB.CreateCall(SanCovStackDepthCallback);
+        auto Call = createRuntimeCall(IRB, SanCovStackDepthCallback);
         if (EntryLoc)
           Call->setDebugLoc(EntryLoc);
         Call->setCannotMerge();
