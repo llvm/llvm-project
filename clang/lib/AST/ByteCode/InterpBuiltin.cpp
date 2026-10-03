@@ -4709,6 +4709,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_inff128:
     return interp__builtin_inf(S, OpPC, Frame, Call);
 
+  case Builtin::BIcopysign:
+  case Builtin::BIcopysignf:
+  case Builtin::BIcopysignl:
   case Builtin::BI__builtin_copysign:
   case Builtin::BI__builtin_copysignf:
   case Builtin::BI__builtin_copysignl:
