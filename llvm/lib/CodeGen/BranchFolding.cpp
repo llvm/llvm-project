@@ -1586,7 +1586,8 @@ ReoptimizeBlock:
     // If we have a block that consists of a single conditional branch
     // instruction that is exactly identical to the terminator in the previous
     // block, we can remove this block.
-    if (MBB->size() == 1 && PrevBB.canFallThrough() && CurTBB == PriorTBB &&
+    if (MBB->getFirstNonDebugInstr() == MBB->getLastNonDebugInstr() &&
+        PrevBB.canFallThrough() && CurTBB == PriorTBB &&
         areConditionalsEqual(CurCond, PriorCond)) {
       // We remove the branch from the previous basic block rather than this
       // one in case there are other blocks that specifically branch to this
