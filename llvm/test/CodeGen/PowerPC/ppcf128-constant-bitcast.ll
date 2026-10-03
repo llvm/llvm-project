@@ -52,3 +52,38 @@ define i64 @extract_low64() {
   %trunc = trunc i128 %cast to i64
   ret i64 %trunc
 }
+
+define i64 @extract_high64_both_nonzero() {
+; BE-LABEL: extract_high64_both_nonzero:
+; BE:       # %bb.0:
+; BE-NEXT:    li 3, 1023
+; BE-NEXT:    rldic 3, 3, 52, 2
+; BE-NEXT:    blr
+;
+; LE-LABEL: extract_high64_both_nonzero:
+; LE:       # %bb.0:
+; LE-NEXT:    li 3, 963
+; LE-NEXT:    rldic 3, 3, 52, 2
+; LE-NEXT:    blr
+  %cast = bitcast ppc_fp128 0xM3FF00000000000003C30000000000000 to i128
+  %shift = lshr i128 %cast, 64
+  %trunc = trunc i128 %shift to i64
+  ret i64 %trunc
+}
+
+define i64 @extract_low64_both_nonzero() {
+; BE-LABEL: extract_low64_both_nonzero:
+; BE:       # %bb.0:
+; BE-NEXT:    li 3, 963
+; BE-NEXT:    rldic 3, 3, 52, 2
+; BE-NEXT:    blr
+;
+; LE-LABEL: extract_low64_both_nonzero:
+; LE:       # %bb.0:
+; LE-NEXT:    li 3, 1023
+; LE-NEXT:    rldic 3, 3, 52, 2
+; LE-NEXT:    blr
+  %cast = bitcast ppc_fp128 0xM3FF00000000000003C30000000000000 to i128
+  %trunc = trunc i128 %cast to i64
+  ret i64 %trunc
+}
