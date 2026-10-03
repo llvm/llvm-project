@@ -1368,11 +1368,13 @@ static bool tryToRecognizeTableBasedPatterns(Instruction &I,
 
 /// This is used by foldLoadsRecursive() to capture a Root Load node which is
 /// of type or(load, load) and recursively build the wide load. Also capture the
-/// shift amount, zero extend type and loadSize.
+/// shift amount, zero extend type and loadSize. BSwap indicates the loads
+/// are combined in the opposite byte order of the target and need a bswap.
 struct LoadOps {
   LoadInst *Root = nullptr;
   LoadInst *RootInsert = nullptr;
   bool FoundRoot = false;
+  bool BSwap = false;
   uint64_t LoadSize = 0;
   uint64_t Shift = 0;
   Type *ZextType;
@@ -1382,6 +1384,8 @@ struct LoadOps {
 // Identify and Merge consecutive loads recursively which is of the form
 // (ZExt(L1) << shift1) | (ZExt(L2) << shift2) -> ZExt(L3) << shift1
 // (ZExt(L1) << shift1) | ZExt(L2) -> ZExt(L3)
+// If the loads are i8 and in the opposite byte order of the target, L3 is
+// combined with a bswap.
 static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
                                AliasAnalysis &AA, bool IsRoot = false) {
   uint64_t ShAmt2;
@@ -1477,6 +1481,10 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
       return false;
   }
 
+  // LI2 is always a single load. LI1 is only a single load if this is the
+  // first pair in the chain. A bswap is only possible if all loads are i8.
+  bool AllBytes = LoadSize2 == 8 && (LOps.FoundRoot || LoadSize1 == 8);
+
   // Make sure Load with lower Offset is at LI1
   bool Reverse = false;
   if (Offset2.slt(Offset1)) {
@@ -1487,10 +1495,6 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
     std::swap(LoadSize1, LoadSize2);
     Reverse = true;
   }
-
-  // Big endian swap the shifts
-  if (IsBigEndian)
-    std::swap(ShAmt1, ShAmt2);
 
   // First load is always LI1. This is where we put the new load.
   // Use the merged load size available from LI1 for forward loads.
@@ -1503,11 +1507,31 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
 
   // Verify if shift amount and load index aligns and verifies that loads
   // are consecutive.
-  uint64_t ShiftDiff = IsBigEndian ? LoadSize2 : LoadSize1;
   uint64_t PrevSize =
       DL.getTypeStoreSize(IntegerType::get(LI1->getContext(), LoadSize1));
-  if ((ShAmt2 - ShAmt1) != ShiftDiff || (Offset2 - Offset1) != PrevSize)
+  if ((Offset2 - Offset1) != PrevSize)
     return false;
+
+  // Check if the shift amounts match the byte order.
+  auto ShiftsMatch = [&](bool BigEndian) {
+    uint64_t LoShAmt = BigEndian ? ShAmt2 : ShAmt1;
+    uint64_t HiShAmt = BigEndian ? ShAmt1 : ShAmt2;
+    uint64_t ShiftDiff = BigEndian ? LoadSize2 : LoadSize1;
+    return (HiShAmt - LoShAmt) == ShiftDiff;
+  };
+
+  // The byte order of the chain is determined by the first pair. If the
+  // shifts don't match the target byte order, try the opposite byte order.
+  bool BSwap = LOps.FoundRoot ? LOps.BSwap : !ShiftsMatch(IsBigEndian);
+  if (BSwap && !AllBytes)
+    return false;
+  bool EffectiveBigEndian = IsBigEndian != BSwap;
+  if (!ShiftsMatch(EffectiveBigEndian))
+    return false;
+
+  // Big endian swap the shifts
+  if (EffectiveBigEndian)
+    std::swap(ShAmt1, ShAmt2);
 
   // Reject if the combined size of the loads exceeds the target type size.
   // This avoids attempting to emit an invalid ZExt (from wider to narrower
@@ -1524,6 +1548,7 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
   }
   LOps.LoadSize = LoadSize1 + LoadSize2;
   LOps.RootInsert = Start;
+  LOps.BSwap = BSwap;
 
   // Concatenate the AATags of the Merged Loads.
   LOps.AATags = AATags1.concat(AATags2);
@@ -1557,12 +1582,28 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
   if (!Allowed)
     return false;
 
+  // Require at least 4 bytes when forming load+bswap to avoid regressions.
+  if (LOps.BSwap && LOps.LoadSize < 32)
+    return false;
+
   unsigned AS = LI1->getPointerAddressSpace();
   unsigned Fast = 0;
   Allowed = TTI.allowsMisalignedMemoryAccesses(I.getContext(), LOps.LoadSize,
                                                AS, LI1->getAlign(), &Fast);
   if (!Allowed || !Fast)
     return false;
+
+  IntegerType *WiderType = IntegerType::get(I.getContext(), LOps.LoadSize);
+
+  // Check the target has an efficient bswap if the loads are in the opposite
+  // byte order of the target.
+  if (LOps.BSwap) {
+    IntrinsicCostAttributes Attrs(Intrinsic::bswap, WiderType, {WiderType});
+    InstructionCost Cost = TTI.getIntrinsicInstrCost(
+        Attrs, TargetTransformInfo::TCK_SizeAndLatency);
+    if (Cost > 2 * TargetTransformInfo::TCC_Basic)
+      return false;
+  }
 
   // Get the Index and Ptr for the new GEP.
   Value *Load1Ptr = LI1->getPointerOperand();
@@ -1574,7 +1615,6 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     Load1Ptr = Builder.CreatePtrAdd(Load1Ptr, Builder.getInt(Offset1));
   }
   // Generate wider load.
-  IntegerType *WiderType = IntegerType::get(I.getContext(), LOps.LoadSize);
   NewLoad = Builder.CreateAlignedLoad(WiderType, Load1Ptr, LI1->getAlign(),
                                       LI1->isVolatile(), "");
   NewLoad->takeName(LI1);
@@ -1583,6 +1623,10 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     NewLoad->setAAMetadata(LOps.AATags);
 
   Value *NewOp = NewLoad;
+  // Reverse the bytes if needed.
+  if (LOps.BSwap)
+    NewOp = Builder.CreateUnaryIntrinsic(Intrinsic::bswap, NewOp);
+
   // Zero extend if needed.
   NewOp = Builder.CreateZExt(NewOp, LOps.ZextType);
 
