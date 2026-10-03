@@ -21,8 +21,8 @@
 #include "clang/Basic/SourceManager.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/GlobPattern.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Timer.h"
+#include "llvm/Support/raw_ostream.h"
 using namespace clang;
 
 //===----------------------------------------------------------------------===//
@@ -209,22 +209,23 @@ clang::CreateASTPrinter(std::unique_ptr<raw_ostream> Out,
 
 std::unique_ptr<ASTConsumer>
 clang::CreateASTDumper(std::unique_ptr<raw_ostream> Out, StringRef FilterString,
-                       StringRef FilterPath, bool DumpDecls,
-                       bool Deserialize, bool DumpLookups,
-                       bool DumpDeclTypes, ASTDumpOutputFormat Format) {
+                       StringRef FilterPath, bool DumpDecls, bool Deserialize,
+                       bool DumpLookups, bool DumpDeclTypes,
+                       ASTDumpOutputFormat Format) {
   assert((DumpDecls || Deserialize || DumpLookups) && "nothing to dump");
-  return std::make_unique<ASTPrinter>(
-      std::move(Out),
-      Deserialize ? ASTPrinter::DumpFull
-                  : DumpDecls ? ASTPrinter::Dump : ASTPrinter::None,
-      Format, FilterString, FilterPath, DumpLookups, DumpDeclTypes);
+  return std::make_unique<ASTPrinter>(std::move(Out),
+                                      Deserialize ? ASTPrinter::DumpFull
+                                      : DumpDecls ? ASTPrinter::Dump
+                                                  : ASTPrinter::None,
+                                      Format, FilterString, FilterPath,
+                                      DumpLookups, DumpDeclTypes);
 }
 
 std::unique_ptr<ASTConsumer>
 clang::CreateASTDumper(raw_ostream &Out, StringRef FilterString,
-                       StringRef FilterPath, bool DumpDecls,
-                       bool Deserialize, bool DumpLookups,
-                       bool DumpDeclTypes, ASTDumpOutputFormat Format) {
+                       StringRef FilterPath, bool DumpDecls, bool Deserialize,
+                       bool DumpLookups, bool DumpDeclTypes,
+                       ASTDumpOutputFormat Format) {
   assert((DumpDecls || Deserialize || DumpLookups) && "nothing to dump");
   return std::make_unique<ASTPrinter>(Out,
                                       Deserialize ? ASTPrinter::DumpFull
