@@ -433,7 +433,32 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
   // If this is a macro expansion in the "#if !defined(x)" line for the file,
   // then the macro could expand to different things in other contexts, we need
   // to disable the optimization in this case.
-  if (CurPPLexer) CurPPLexer->MIOpt.ExpandedMacro();
+  if (CurPPLexer) {
+    CurPPLexer->MIOpt.ExpandedMacro();
+
+    // [lex.pptoken]/5.4.2:
+    //    a *header-name* ([lex.header]) is only formed [...] immediately after
+    //    the `include` or `embed` preprocessing token in a `#include`
+    //    ([cpp.include]) or `#embed` ([cpp.embed]) directive, respectively
+    //    [...]
+    //
+    //    A preprocessing token is considered to be immediately after another
+    //    preprocessing token if the preprocessing tokens are on the same
+    //    logical source line and there are no intervening preprocessing tokens.
+    //
+    // #define EMPTY
+    // #include EMPTY "name with \"quotes\".h"
+    //
+    // Therefore a *header-name* is not formed if the `"name...` is not
+    // immediately after `include`. So it should be lex as a string literal
+    // token that terminates at the final `"`, not a *header-name* token that
+    // terminates at the `\"`.
+    //
+    // A macro name is an intervening preprocessing token, even if it expands
+    // to nothing. Subsequent source tokens must use ordinary tokenization.
+    if (CurPPLexer->LexingIncludeFilename)
+      CurPPLexer->ParsingFilename = false;
+  }
 
   // If this is a builtin macro, like __LINE__ or _Pragma, handle it specially.
   if (MI->isBuiltinMacro()) {

@@ -29,8 +29,8 @@ PreprocessorLexer::PreprocessorLexer(Preprocessor *pp, FileID fid)
 /// After the preprocessor has parsed a \#include, lex and
 /// (potentially) macro expand the filename.
 void PreprocessorLexer::LexIncludeFilename(Token &FilenameTok) {
-  assert(ParsingFilename == false && "reentered LexIncludeFilename");
-
+  assert(!LexingIncludeFilename && "reentered LexIncludeFilename");
+  LexingIncludeFilename = true;
   // We are now parsing a filename!
   ParsingFilename = true;
 
@@ -42,6 +42,7 @@ void PreprocessorLexer::LexIncludeFilename(Token &FilenameTok) {
 
   // We should have obtained the filename now.
   ParsingFilename = false;
+  LexingIncludeFilename = false;
 }
 
 /// getFileEntry - Return the FileEntry corresponding to this FileID.  Like

@@ -52,6 +52,9 @@ protected:
   /// True after \#include; turns \<xx> or "xxx" into a tok::header_name token.
   bool ParsingFilename = false;
 
+  /// True while LexIncludeFilename is active.
+  bool LexingIncludeFilename = false;
+
   /// True if in raw mode.
   ///
   /// Raw mode disables interpretation of tokens and is a far faster mode to

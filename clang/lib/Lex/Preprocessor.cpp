@@ -1123,7 +1123,7 @@ bool Preprocessor::LexHeaderName(Token &FilenameTok, bool AllowMacroExpansion) {
   if (CurPPLexer) {
     // Avoid nested header-name lexing when macro expansion recurses
     // __has_include(__has_include))
-    if (CurPPLexer->ParsingFilename)
+    if (CurPPLexer->LexingIncludeFilename)
       LexUnexpandedToken(FilenameTok);
     else
       CurPPLexer->LexIncludeFilename(FilenameTok);
