@@ -872,17 +872,17 @@ projectDimsPosIntoReassocPos(ArrayRef<int64_t> dimsPos,
 ///
 /// %expand = tensor.expand_shape %in [[0], [1, 2]]
 ///     : tensor<?x64xf32> into tensor<?x4x16xf32>
-/// %pack = linalg.pack %expand outer_dims_perm = [0, 1]
+/// %pack = linalg.pack %expand outer_dims_perm = [1, 2, 0]
 ///     inner_dims_pos = [2] inner_tiles = [8] into %empty
-///     : tensor<?x4x16xf32> -> tensor<?x4x2x8xf32>
+///     : tensor<?x4x16xf32> -> tensor<4x2x?x8xf32>
 ///
 /// can be transformed into:
 ///
-/// %pack = linalg.pack %in outer_dims_perm = [1, 2]
+/// %pack = linalg.pack %in outer_dims_perm = [1, 0]
 ///     inner_dims_pos = [1] inner_tiles = [8] into %empty
-///     : tensor<?x64xf32> -> tensor<?x8x8xf32>
-/// %expand = tensor.expand_shape %pack [[0], [1, 2], [3]]
-///     : tensor<?x8x8xf32> into tensor<?x4x2x8xf32>
+///     : tensor<?x64xf32> -> tensor<8x?x8xf32>
+/// %expand = tensor.expand_shape %pack [[0, 1], [2], [3]]
+///     : tensor<8x?x8xf32> into tensor<4x2x?x8xf32>
 static LogicalResult
 bubbleUpPackOpThroughExpandShape(tensor::ExpandShapeOp expandOp,
                                  linalg::PackOp packOp,
@@ -893,17 +893,31 @@ bubbleUpPackOpThroughExpandShape(tensor::ExpandShapeOp expandOp,
   if (!packOp.hasPureTensorSemantics())
     return failure();
 
-  // Outer dimensions permutation is not supported currently.
-  // TODO: Handle outer_dims_perm variants.
+  SmallVector<ReassociationIndices, 4> reassoc =
+      expandOp.getReassociationIndices();
+  if (expandOp.getSrcType().getRank() == 0)
+    return rewriter.notifyMatchFailure(packOp, "rank-0 expand source");
+
+  // The permutation can be bubbled up only if it moves each expanded group as
+  // a whole and in order, e.g. with [[0, 1], [2]], [2, 0, 1] becomes [1, 0]
+  // while [1, 0, 2] is rejected. A group that is split or reordered does not
+  // survive the round trip through the source dims.
   ArrayRef<int64_t> outerDimsPerm = packOp.getOuterDimsPerm();
+  SmallVector<int64_t> newOuterDimsPerm;
   if (!outerDimsPerm.empty() && !isIdentityPermutation(outerDimsPerm)) {
-    return rewriter.notifyMatchFailure(packOp,
-                                       "non-identity outer dims perm NYI");
+    newOuterDimsPerm = projectDimsPosIntoReassocPos(
+        /*dimsPos=*/outerDimsPerm, /*reassocIndices=*/reassoc);
+    newOuterDimsPerm.erase(llvm::unique(newOuterDimsPerm),
+                           newOuterDimsPerm.end());
+    SmallVector<int64_t> expandedPerm;
+    for (int64_t pos : newOuterDimsPerm)
+      llvm::append_range(expandedPerm, reassoc[pos]);
+    if (!llvm::equal(expandedPerm, outerDimsPerm))
+      return rewriter.notifyMatchFailure(
+          packOp, "outer dims perm must move expanded dims together");
   }
 
   // Validate dimensions' relations between shape expansion and packing.
-  SmallVector<ReassociationIndices, 4> reassoc =
-      expandOp.getReassociationIndices();
   ArrayRef<int64_t> packInnerDims = packOp.getInnerDimsPos();
   llvm::SetVector<int64_t> packDimsPos(llvm::from_range, packInnerDims);
 
@@ -936,16 +950,13 @@ bubbleUpPackOpThroughExpandShape(tensor::ExpandShapeOp expandOp,
       projectDimsPosIntoReassocPos(packInnerDims, reassoc);
 
   // Project the shape expansion to new packed shape.
-  // The pack.outer_dims_perm is restricted to identity so, the permutation can
-  // be omitted for simplicity.
-  // TODO: Account for outer dimensions permutation.
   //
   // If reassociation is not possible, then reordering cannot happen.
   // This can be caused by pack padding affecting previously expanded
   // dimensions or packing extending dimensions.
   RankedTensorType newPackType = linalg::PackOp::inferPackedTensorType(
       expandOp.getSrcType(), packOp.getStaticInnerTiles(),
-      projectedInnerDimsPos, /*outerDimsPerm=*/SmallVector<int64_t>{});
+      projectedInnerDimsPos, /*outerDimsPerm=*/newOuterDimsPerm);
   auto reassocExpand =
       getReassociationIndicesForReshape(newPackType, packOp.getDestType());
   if (!reassocExpand)
@@ -954,11 +965,11 @@ bubbleUpPackOpThroughExpandShape(tensor::ExpandShapeOp expandOp,
 
   Value destTensor = linalg::PackOp::createDestinationTensor(
       rewriter, packOp.getLoc(), expandOp.getSrc(), packOp.getMixedTiles(),
-      projectedInnerDimsPos, /*outerDimsPerm=*/SmallVector<int64_t>{});
+      projectedInnerDimsPos, /*outerDimsPerm=*/newOuterDimsPerm);
   PackOp packedVal = linalg::PackOp::create(
       rewriter, packOp.getLoc(), expandOp.getSrc(), destTensor,
       projectedInnerDimsPos, packOp.getMixedTiles(), packOp.getPaddingValue(),
-      /*outerDimsPerm=*/SmallVector<int64_t>{});
+      /*outerDimsPerm=*/newOuterDimsPerm);
 
   Value newExpandOp = tensor::ExpandShapeOp::create(
       rewriter, packOp.getLoc(), packOp.getDestType(), packedVal.getResult(),
