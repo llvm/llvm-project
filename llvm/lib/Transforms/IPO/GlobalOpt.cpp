@@ -932,6 +932,35 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
   // Alignment of the return value of the allocator call.
   Align GVAlign = CI->getPointerAlignment(DL);
 
+  // The allocation is in local `CI` and also stored in global `GV`. The
+  // alignment of the allocation should be at least as high as to satisfy the
+  // highest alignment of the uses of these, to avoid making the program less
+  // defined.
+  {
+    SmallPtrSet<const Value *, 4> Visited;
+    SmallVector<const Value *, 4> Worklist;
+    Worklist.push_back(CI);
+    Worklist.push_back(GV);
+
+    while (!Worklist.empty()) {
+      const Value *V = Worklist.pop_back_val();
+      if (!Visited.insert(V).second)
+        continue;
+
+      for (const Use &VUse : V->uses()) {
+        const User *U = VUse.getUser();
+        if (auto *LI = dyn_cast<LoadInst>(U)) {
+          GVAlign = std::max(GVAlign, LI->getAlign());
+        } else if (auto *SI = dyn_cast<StoreInst>(U)) {
+          GVAlign = std::max(GVAlign, SI->getAlign());
+        } else if (auto *GEPI = dyn_cast<GetElementPtrInst>(U)) {
+          Worklist.push_back(GEPI);
+          continue;
+        }
+      }
+    }
+  }
+
   // Only specify the global alignment if it increases the preferred alignment.
   // Otherwise leave it unset to allow other optimizations to increase it.
   if (GVAlign > DL.getPreferredAlign(NewGV)) {
