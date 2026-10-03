@@ -343,6 +343,14 @@ struct CastedValue {
     return CastedValue(NewV, ZExtBits, SExtBits + ExtendBy, 0, IsNonNegative);
   }
 
+  /// Replace V with trunc(NewV).
+  CastedValue withTruncOfValue(const Value *NewV) const {
+    unsigned TruncateBy = NewV->getType()->getPrimitiveSizeInBits() -
+                          V->getType()->getPrimitiveSizeInBits();
+    return CastedValue(NewV, ZExtBits, SExtBits, TruncBits + TruncateBy,
+                       IsNonNegative);
+  }
+
   APInt evaluateWith(APInt N) const {
     assert(N.getBitWidth() == V->getType()->getPrimitiveSizeInBits() &&
            "Incompatible bit width");
@@ -516,6 +524,10 @@ static LinearExpression GetLinearExpression(
       return E;
     }
   }
+
+  if (const auto *Trunc = dyn_cast<TruncInst>(Val.V))
+    return GetLinearExpression(Val.withTruncOfValue(Trunc->getOperand(0)), DL,
+                               Depth + 1, AC, DT);
 
   if (const auto *ZExt = dyn_cast<ZExtInst>(Val.V))
     return GetLinearExpression(
@@ -2102,8 +2114,7 @@ bool BasicAAResult::computeConstantOffsetHeuristic(const DecomposedGEP &GEP,
 
   const VariableGEPIndex &Var0 = GEP.VarIndices[0], &Var1 = GEP.VarIndices[1];
 
-  if (Var0.Val.TruncBits != 0 || !Var0.Val.hasSameCastsAs(Var1.Val) ||
-      !Var0.hasNegatedScaleOf(Var1) ||
+  if (!Var0.Val.hasSameCastsAs(Var1.Val) || !Var0.hasNegatedScaleOf(Var1) ||
       Var0.Val.V->getType() != Var1.Val.V->getType())
     return false;
 
@@ -2126,8 +2137,10 @@ bool BasicAAResult::computeConstantOffsetHeuristic(const DecomposedGEP &GEP,
   // minimum difference between the two. The minimum distance may occur due to
   // wrapping; consider "add i3 %i, 5": if %i == 7 then 7 + 5 mod 8 == 4, and so
   // the minimum distance between %i and %i + 5 is 3.
-  APInt MinDiff = E0.Offset - E1.Offset, Wrapped = -MinDiff;
-  MinDiff = APIntOps::umin(MinDiff, Wrapped);
+  APInt MinDiff = E0.Offset - E1.Offset;
+  if (Var0.Val.TruncBits)
+    MinDiff = MinDiff.trunc(MinDiff.getBitWidth() - Var0.Val.TruncBits);
+  MinDiff = APIntOps::umin(MinDiff, -MinDiff);
   APInt MinDiffBytes =
     MinDiff.zextOrTrunc(Var0.Scale.getBitWidth()) * Var0.Scale.abs();
 
