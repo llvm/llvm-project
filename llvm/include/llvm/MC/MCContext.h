@@ -162,6 +162,9 @@ private:
   /// We have three labels represented by the pairs (1, 0), (2, 0) and (1, 1)
   DenseMap<std::pair<unsigned, unsigned>, MCSymbol *> LocalSymbols;
 
+  /// Recording SymbolLocs.
+  DenseMap<const MCSymbol *, SMLoc> SymbolLocs;
+
   /// Keeps track of labels that are used in inline assembly.
   StringMap<MCSymbol *, BumpPtrAllocator &> InlineAsmUsedLabelNames;
 
@@ -480,6 +483,17 @@ public:
   ///
   /// \param Name - The symbol name, which must be unique across all symbols.
   LLVM_ABI MCSymbol *getOrCreateSymbol(const Twine &Name);
+
+  /// Set the initial source location for a symbol.
+  void setSymbolLoc(const MCSymbol *Sym, SMLoc Loc) {
+    if (Sym && Loc.isValid() && !SymbolLocs.count(Sym))
+      SymbolLocs[Sym] = Loc;
+  }
+
+  /// Get the recorded source location for a symbol.
+  SMLoc getSymbolLoc(const MCSymbol *Sym) const {
+    return SymbolLocs.lookup(Sym);
+  }
 
   /// Variant of getOrCreateSymbol that handles backslash-escaped symbols.
   /// For example, parse "a\"b\\" as a"\.
