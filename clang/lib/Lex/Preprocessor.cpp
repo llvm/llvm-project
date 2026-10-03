@@ -119,6 +119,7 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
   NumCachedTokenLexers = 0;
   PragmasEnabled = true;
   ParsingIfOrElifDirective = false;
+  ParsingEmbedParameters = false;
   PreprocessedOutput = false;
 
   // We haven't read anything from the external source.
@@ -879,6 +880,10 @@ void Preprocessor::updateOutOfDateIdentifier(const IdentifierInfo &II) const {
   getExternalSource()->updateOutOfDateIdentifier(II);
 }
 
+static bool isProtectedEmbedParameterName(const IdentifierInfo *II) {
+  return llvm::is_contained(PPEmbedParameterIdentNames, II->getName());
+}
+
 /// HandleIdentifier - This callback is invoked when the lexer reads an
 /// identifier.  This callback looks up the identifier in the map and/or
 /// potentially macro expands it or turns it into a named token (like 'for').
@@ -922,6 +927,24 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
   if (const MacroDefinition MD = getMacroDefinition(&II)) {
     const auto *MI = MD.getMacroInfo();
     assert(MI && "macro definition with no macro info?");
+    // C++ [cpp.pre]/p4, [cpp.cond]/p9: if one of the pp-tokens of a #embed
+    // directive (or a has-embed-expression) is the identifier limit, prefix,
+    // suffix, or if_empty and that identifier is defined as a macro, the
+    // program is ill-formed.
+    //
+    // Thus, do not continue processing if compiling for C++. C doesn't have
+    // this restriction however, so only issue a warning for C if -Wc++-compat
+    // is enabled.
+    if (ParsingEmbedParameters && isProtectedEmbedParameterName(&II)) {
+      Diag(Identifier, getLangOpts().CPlusPlus
+                           ? diag::err_pp_embed_parameter_is_macro
+                           : diag::warn_c_pp_embed_parameter_is_macro)
+          << &II << isParsingIfOrElifDirective();
+      Diag(MI->getDefinitionLoc(), diag::note_macro_here) << &II;
+      if (getLangOpts().CPlusPlus)
+        return true;
+    }
+
     if (!DisableMacroExpansion) {
       if (!Identifier.isExpandDisabled() && MI->isEnabled()) {
         // C99 6.10.3p10: If the preprocessing token immediately after the
