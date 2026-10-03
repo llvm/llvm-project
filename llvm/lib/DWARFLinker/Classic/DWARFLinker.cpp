@@ -1493,14 +1493,12 @@ unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
     return 0;
   }
 
-  if (InputDIE.getTag() == dwarf::DW_TAG_compile_unit &&
-      AttrSpec.Attr == dwarf::DW_AT_low_pc) {
+  if (Unit.isUnitRootDIE(Die) && AttrSpec.Attr == dwarf::DW_AT_low_pc) {
     if (std::optional<uint64_t> LowPC = Unit.getLowPc())
       Addr = *LowPC;
     else
       return 0;
-  } else if (InputDIE.getTag() == dwarf::DW_TAG_compile_unit &&
-             AttrSpec.Attr == dwarf::DW_AT_high_pc) {
+  } else if (Unit.isUnitRootDIE(Die) && AttrSpec.Attr == dwarf::DW_AT_high_pc) {
     if (uint64_t HighPc = Unit.getHighPc())
       Addr = HighPc;
     else
@@ -1647,8 +1645,7 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
     Value = *Offset;
     AttrSpec.Form = dwarf::DW_FORM_sec_offset;
     AttrSize = Unit.getOrigUnit().getFormParams().getDwarfOffsetByteSize();
-  } else if (AttrSpec.Attr == dwarf::DW_AT_high_pc &&
-             Die.getTag() == dwarf::DW_TAG_compile_unit) {
+  } else if (AttrSpec.Attr == dwarf::DW_AT_high_pc && Unit.isUnitRootDIE(Die)) {
     std::optional<uint64_t> LowPC = Unit.getLowPc();
     if (!LowPC)
       return 0;
@@ -1667,10 +1664,9 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
     return 0;
   }
 
-  // A compile unit's high_pc comes from the unit's own linked range and spans
-  // every symbol in it.
-  if (AttrSpec.Attr == dwarf::DW_AT_high_pc &&
-      Die.getTag() != dwarf::DW_TAG_compile_unit)
+  // A unit's high_pc comes from the unit's own linked range and spans every
+  // symbol in it.
+  if (AttrSpec.Attr == dwarf::DW_AT_high_pc && !Unit.isUnitRootDIE(Die))
     Value = constrainHighPC(InputDIE, Value, /*IsLength=*/true, Info.PCOffset,
                             *File.Addresses);
 
@@ -2013,8 +2009,8 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
     }
   }
 
-  if (Unit.getOrigUnit().getVersion() >= 5 && !AttrInfo.AttrStrOffsetBaseSeen &&
-      Die->getTag() == dwarf::DW_TAG_compile_unit) {
+  if (Die == Unit.getOutputUnitDIE() && Unit.getOrigUnit().getVersion() >= 5 &&
+      !AttrInfo.AttrStrOffsetBaseSeen) {
     // No DW_AT_str_offsets_base seen, add it to the DIE.
     Die->addValue(DIEAlloc, dwarf::DW_AT_str_offsets_base,
                   dwarf::DW_FORM_sec_offset, DIEInteger(8));
