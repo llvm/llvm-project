@@ -4572,6 +4572,22 @@ private:
     return false;
   }
 
+  // Return true if any instruction reachable from V through pointer-forwarding
+  // uses (GEPs, casts, selects) is volatile.
+  static bool hasVolatileUser(const Value &V) {
+    SmallVector<const Value *, 4> Worklist(V.users());
+    while (!Worklist.empty()) {
+      if (const auto *I = dyn_cast<Instruction>(Worklist.pop_back_val())) {
+        if (I->isVolatile())
+          return true;
+        if (isa<GetElementPtrInst, BitCastInst, AddrSpaceCastInst, SelectInst>(
+                I))
+          append_range(Worklist, I->users());
+      }
+    }
+    return false;
+  }
+
   // Unfold gep (select cond, ptr1, ptr2), idx
   //   => select cond, gep(ptr1, idx), gep(ptr2, idx)
   // and  gep ptr, (select cond, idx1, idx2)
@@ -4676,7 +4692,12 @@ private:
     // To prevent infinitely expanding recursive phis, bail if the GEP pointer
     // operand (looking through the phi if it is the phi we want to unfold) is
     // an instruction besides a static alloca.
-    PHINode *Phi = dyn_cast<PHINode>(GEPI.getPointerOperand());
+    Value *PtrOp = GEPI.getPointerOperand();
+    PHINode *Phi = dyn_cast<PHINode>(PtrOp->stripPointerCasts());
+    bool CrossesAddressSpace =
+        Phi && PtrOp->getType()->getPointerAddressSpace() !=
+                   Phi->getType()->getPointerAddressSpace();
+    auto PhiOpNum = 0;
     auto IsInvalidPointerOperand = [](Value *V) {
       if (!isa<Instruction>(V))
         return false;
@@ -4693,12 +4714,13 @@ private:
     }
     // Check whether the GEP has exactly one phi operand (including the pointer
     // operand) and all indices will become constant after the transform.
-    for (Value *Op : GEPI.indices()) {
+    for (auto& Op : GEPI.indices()) {
       if (auto *SI = dyn_cast<PHINode>(Op)) {
         if (Phi)
           return false;
 
         Phi = SI;
+        PhiOpNum =  Op.getOperandNo();
         if (!all_of(Phi->incoming_values(),
                     [](Value *V) { return isa<ConstantInt>(V); }))
           return false;
@@ -4712,17 +4734,16 @@ private:
     if (!Phi)
       return false;
 
+    if (CrossesAddressSpace && hasVolatileUser(GEPI))
+      return false;
+
     LLVM_DEBUG(dbgs() << "  Rewriting gep(phi) -> phi(gep):\n";
                dbgs() << "    original: " << *Phi << "\n";
                dbgs() << "              " << GEPI << "\n";);
 
     auto GetNewOps = [&](Value *PhiOp) {
-      SmallVector<Value *> NewOps;
-      for (Value *Op : GEPI.operands())
-        if (Op == Phi)
-          NewOps.push_back(PhiOp);
-        else
-          NewOps.push_back(Op);
+      SmallVector<Value *> NewOps(GEPI.operands());
+      NewOps[PhiOpNum] = PhiOp;
       return NewOps;
     };
 
@@ -4745,13 +4766,19 @@ private:
         NewGEP =
             IRB.CreateGEP(SourceTy, NewOps[0], ArrayRef(NewOps).drop_front(),
                           Phi->getName() + ".sroa.gep", GEPI.getNoWrapFlags());
+        NewGEP = IRB.CreateAddrSpaceCast(NewGEP, GEPI.getPointerOperandType(),
+                                         NewGEP->getName() + ".cast");
       }
       NewPhi->addIncoming(NewGEP, BB);
     }
 
     Visited.erase(&GEPI);
     GEPI.replaceAllUsesWith(NewPhi);
-    GEPI.eraseFromParent();
+    RecursivelyDeleteTriviallyDeadInstructions(
+        &GEPI, nullptr, nullptr, [&](Value *V) {
+          if (auto *I = dyn_cast<Instruction>(V))
+            Visited.erase(I);
+        });
     Visited.insert(NewPhi);
     enqueueUsers(*NewPhi);
 
