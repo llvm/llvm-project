@@ -135,7 +135,7 @@ class SourceFileRenderer:
         # Column is the number of characters *including* tabs, keep those and
         # replace everything else with spaces.
         indent = line[: max(r.Column, 1) - 1]
-        indent = re.sub("\S", " ", indent)
+        indent = re.sub(r"\S", " ", indent)
 
         # Create expanded message and link if we have a multiline message.
         lines = r.message.split("\n")
