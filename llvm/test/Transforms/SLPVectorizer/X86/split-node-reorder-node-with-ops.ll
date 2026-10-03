@@ -39,24 +39,13 @@ define void @test(i32 %0, i8 %1, i64 %2, float %3) {
 ; CHECK-NEXT:    [[TMP30:%.*]] = call <8 x float> @llvm.fabs.v8f32(<8 x float> [[TMP29]])
 ; CHECK-NEXT:    [[TMP31:%.*]] = bitcast <8 x float> [[TMP30]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP32:%.*]] = icmp ult <8 x i32> [[TMP31]], splat (i32 1325400064)
-; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <8 x i1> [[TMP32]], i64 6
-; CHECK-NEXT:    [[TMP34:%.*]] = select i1 [[TMP33]], i64 0, i64 2147483648
-; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <8 x i1> [[TMP32]], i64 5
-; CHECK-NEXT:    [[TMP36:%.*]] = select i1 [[TMP35]], i64 0, i64 4286578688
+; CHECK-NEXT:    [[TMP40:%.*]] = select <8 x i1> [[TMP32]], <8 x i64> zeroinitializer, <8 x i64> <i64 8388608, i64 32768, i64 8388608, i64 32768, i64 128, i64 4286578688, i64 2147483648, i64 128>
+; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <8 x i64> [[TMP40]], i64 5
+; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <8 x i64> [[TMP40]], i64 6
 ; CHECK-NEXT:    [[TMP37:%.*]] = or i64 [[TMP34]], [[TMP36]]
-; CHECK-NEXT:    [[TMP38:%.*]] = extractelement <8 x i1> [[TMP32]], i64 7
-; CHECK-NEXT:    [[TMP39:%.*]] = select i1 [[TMP38]], i64 0, i64 128
-; CHECK-NEXT:    [[TMP40:%.*]] = extractelement <8 x i1> [[TMP32]], i64 4
-; CHECK-NEXT:    [[TMP41:%.*]] = select i1 [[TMP40]], i64 0, i64 128
-; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <8 x i1> [[TMP32]], i64 2
-; CHECK-NEXT:    [[TMP43:%.*]] = select i1 [[TMP42]], i64 0, i64 8388608
-; CHECK-NEXT:    [[TMP44:%.*]] = extractelement <8 x i1> [[TMP32]], i64 3
-; CHECK-NEXT:    [[TMP45:%.*]] = select i1 [[TMP44]], i64 0, i64 32768
+; CHECK-NEXT:    [[TMP43:%.*]] = extractelement <8 x i64> [[TMP40]], i64 2
+; CHECK-NEXT:    [[TMP45:%.*]] = extractelement <8 x i64> [[TMP40]], i64 3
 ; CHECK-NEXT:    [[TMP46:%.*]] = or i64 [[TMP43]], [[TMP45]]
-; CHECK-NEXT:    [[TMP47:%.*]] = extractelement <8 x i1> [[TMP32]], i64 0
-; CHECK-NEXT:    [[TMP48:%.*]] = select i1 [[TMP47]], i64 0, i64 8388608
-; CHECK-NEXT:    [[TMP49:%.*]] = extractelement <8 x i1> [[TMP32]], i64 1
-; CHECK-NEXT:    [[TMP50:%.*]] = select i1 [[TMP49]], i64 0, i64 32768
 ; CHECK-NEXT:    br label %[[BB59:.*]]
 ; CHECK:       [[BB58:.*]]:
 ; CHECK-NEXT:    unreachable
@@ -84,8 +73,10 @@ define void @test(i32 %0, i8 %1, i64 %2, float %3) {
 ; CHECK-NEXT:    [[TMP70:%.*]] = select i1 [[TMP69]], i64 0, i64 32768
 ; CHECK-NEXT:    [[TMP71:%.*]] = or i64 [[TMP68]], [[TMP70]]
 ; CHECK-NEXT:    [[TMP72:%.*]] = or i64 [[TMP71]], [[TMP66]]
+; CHECK-NEXT:    [[TMP39:%.*]] = extractelement <8 x i64> [[TMP40]], i64 7
 ; CHECK-NEXT:    [[TMP73:%.*]] = or i64 [[TMP72]], [[TMP39]]
 ; CHECK-NEXT:    store i64 [[TMP73]], ptr null, align 1
+; CHECK-NEXT:    [[TMP41:%.*]] = extractelement <8 x i64> [[TMP40]], i64 4
 ; CHECK-NEXT:    store i64 [[TMP41]], ptr null, align 1
 ; CHECK-NEXT:    [[TMP74:%.*]] = extractelement <8 x i1> [[TMP61]], i64 3
 ; CHECK-NEXT:    [[TMP75:%.*]] = select i1 [[TMP74]], i64 0, i64 -9223372036854775808
@@ -98,7 +89,9 @@ define void @test(i32 %0, i8 %1, i64 %2, float %3) {
 ; CHECK-NEXT:    [[TMP81:%.*]] = select i1 [[TMP80]], i64 0, i64 2147483648
 ; CHECK-NEXT:    [[TMP82:%.*]] = extractelement <8 x i1> [[TMP61]], i64 0
 ; CHECK-NEXT:    [[TMP83:%.*]] = select i1 [[TMP82]], i64 0, i64 128
+; CHECK-NEXT:    [[TMP50:%.*]] = extractelement <8 x i64> [[TMP40]], i64 1
 ; CHECK-NEXT:    [[TMP84:%.*]] = or i64 [[TMP83]], [[TMP50]]
+; CHECK-NEXT:    [[TMP48:%.*]] = extractelement <8 x i64> [[TMP40]], i64 0
 ; CHECK-NEXT:    [[TMP85:%.*]] = or i64 [[TMP84]], [[TMP48]]
 ; CHECK-NEXT:    [[TMP86:%.*]] = or i64 [[TMP85]], [[TMP81]]
 ; CHECK-NEXT:    store i64 [[TMP86]], ptr null, align 1
