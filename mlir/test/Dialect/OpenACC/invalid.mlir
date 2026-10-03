@@ -992,3 +992,13 @@ func.func @verify_parallel_async_missing_device_type(%arg0: i64) {
   }) : (i64) -> ()
   return
 }
+
+// -----
+
+func.func @host_data_block_arg(%arg0: memref<?xf32>) {
+  // expected-error@+1 {{expect data entry operation as defining op}}
+  acc.host_data dataOperands(%arg0 : memref<?xf32>) {
+    acc.terminator
+  }
+  return
+}
