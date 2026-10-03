@@ -41,7 +41,6 @@
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/CompletionRequest.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -1004,9 +1003,10 @@ bool FormatEntity::Formatter::DumpValue(Stream &s,
     llvm::StringRef special_directions;
     if (close_bracket_index != llvm::StringRef::npos &&
         subpath.size() > close_bracket_index) {
-      ConstString additional_data(subpath.drop_front(close_bracket_index + 1));
-      special_directions_stream.Printf("${%svar%s", do_deref_pointer ? "*" : "",
-                                       additional_data.GetCString());
+      llvm::StringRef additional_data(
+          subpath.drop_front(close_bracket_index + 1));
+      special_directions_stream << llvm::formatv(
+          "$\{{0}var{1}", do_deref_pointer ? "*" : "", additional_data);
 
       if (entry.fmt != eFormatDefault) {
         const char format_char =
