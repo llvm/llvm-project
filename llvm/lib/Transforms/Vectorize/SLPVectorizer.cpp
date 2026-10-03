@@ -29397,6 +29397,19 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
     R.clearReductionData();
     collectSeedInstructions(BB);
 
+    if (VectorizeNonPowerOf2) {
+      // Analyze complete NPOT reduction chains before partial store trees can
+      // mark their leaves as failed reduction candidates.
+      SmallVector<WeakTrackingVH> ReductionRoots;
+      for (Instruction &I : reverse(*BB))
+        if (isReductionStoreChainRoot(&I))
+          ReductionRoots.emplace_back(&I);
+      for (Value *V : ReductionRoots)
+        if (auto *I = dyn_cast_or_null<Instruction>(V); I && !R.isDeleted(I))
+          Changed |= vectorizeRootInstruction(nullptr, I, BB, R, FMACandidates);
+      collectSeedInstructions(BB);
+    }
+
     // Vectorize trees that end at stores.
     if (!Stores.empty()) {
       LLVM_DEBUG(dbgs() << "SLP: Found stores for " << Stores.size()
@@ -31179,6 +31192,14 @@ private:
       }
     }
   }
+
+  /// Returns the saving from folding the reduction leaves and result into a
+  /// compatible bundle of consecutive store consumers.
+  InstructionCost getConsumerBundleBenefit(BoUpSLP &V, ArrayRef<Value *> VL,
+                                           bool IsSeedRoot,
+                                           const DataLayout &DL,
+                                           TargetTransformInfo &TTI,
+                                           const TargetLibraryInfo &TLI) const;
 
 public:
   HorizontalReduction() = default;
@@ -33082,6 +33103,13 @@ public:
                           << " for reduction\n");
         if (!Cost.isValid())
           break;
+        InstructionCost ConsumerBenefit =
+            getConsumerBundleBenefit(V, VL, IsSeedRoot, DL, *TTI, TLI);
+        bool UseCombinedCost = ConsumerBenefit.isValid() &&
+                               ConsumerBenefit > SLPCostThreshold &&
+                               Cost - ConsumerBenefit < -SLPCostThreshold;
+        if (UseCombinedCost)
+          Cost -= ConsumerBenefit;
         if (Cost >= -SLPCostThreshold) {
           V.getORE()->emit([&]() {
             return OptimizationRemarkMissed(SV_NAME, "HorSLPNotBeneficial",
@@ -34782,11 +34810,155 @@ private:
     return nullptr;
   }
 };
+
+InstructionCost HorizontalReduction::getConsumerBundleBenefit(
+    BoUpSLP &V, ArrayRef<Value *> VL, bool IsSeedRoot, const DataLayout &DL,
+    TargetTransformInfo &TTI, const TargetLibraryInfo &TLI) const {
+  if (!IsSeedRoot || !ReductionRoot->hasOneUse())
+    return 0;
+
+  SmallVector<Instruction *> Consumers;
+  for (const BoUpSLP::ExternalUser &EU : V.ExternalUses) {
+    auto *User = dyn_cast_or_null<Instruction>(EU.User);
+    if (!User || !User->hasOneUse())
+      return 0;
+    Consumers.push_back(User);
+  }
+  if (Consumers.size() != VL.size())
+    return 0;
+
+  auto *RootUser = dyn_cast<Instruction>(*ReductionRoot->user_begin());
+  if (!RootUser || !RootUser->hasOneUse())
+    return 0;
+  Consumers.push_back(RootUser);
+  SmallVector<Value *> ConsumerVals(Consumers.begin(), Consumers.end());
+  if (!getSameOpcode(ConsumerVals, TLI) ||
+      !all_of(Consumers, IsaPred<CastInst>))
+    return 0;
+
+  SmallVector<StoreInst *> Sinks;
+  for (Instruction *Consumer : Consumers) {
+    auto *SI = dyn_cast<StoreInst>(*Consumer->user_begin());
+    if (!SI || SI->getParent() != cast<Instruction>(ReductionRoot)->getParent())
+      return 0;
+    Sinks.push_back(SI);
+  }
+
+  Instruction *FirstSink = *llvm::min_element(
+      Sinks, [](Instruction *L, Instruction *R) { return L->comesBefore(R); });
+  Instruction *LastSink = *llvm::max_element(
+      Sinks, [](Instruction *L, Instruction *R) { return L->comesBefore(R); });
+  for (Instruction *I = FirstSink; I != LastSink->getNextNode();
+       I = I->getNextNode())
+    if (I->mayReadOrWriteMemory() && !is_contained(Sinks, I) &&
+        !V.isVectorized(I))
+      return 0;
+
+  Type *ScalarTy = Sinks.front()->getValueOperand()->getType();
+  SmallVector<Value *> PointerOps;
+  for (StoreInst *SI : Sinks) {
+    if (SI->getValueOperand()->getType() != ScalarTy)
+      return 0;
+    PointerOps.push_back(SI->getPointerOperand());
+  }
+  BoUpSLP::OrdersType StoreOrder;
+  if (!sortPtrAccesses(PointerOps, ScalarTy, DL, *V.SE, StoreOrder) ||
+      !V.canFormVector(Sinks, StoreOrder))
+    return 0;
+  if (StoreOrder.empty()) {
+    StoreOrder.resize(Sinks.size());
+    std::iota(StoreOrder.begin(), StoreOrder.end(), 0);
+  } else {
+    SmallVector<int> InverseOrder;
+    inversePermutation(StoreOrder, InverseOrder);
+    StoreOrder.assign(InverseOrder.begin(), InverseOrder.end());
+  }
+
+  Type *SourceScalarTy = Consumers.front()->getOperand(0)->getType();
+  if (any_of(Consumers, [SourceScalarTy](Instruction *I) {
+        return I->getOperand(0)->getType() != SourceScalarTy;
+      }))
+    return 0;
+
+  TTI::TargetCostKind CK = V.getCostKind();
+  InstructionCost ScalarConsumerCost = 0, ScalarStoreCost = 0;
+  for (auto [Consumer, SI] : zip(Consumers, Sinks)) {
+    ScalarConsumerCost += TTI.getInstructionCost(Consumer, CK);
+    ScalarStoreCost +=
+        TTI.getMemoryOpCost(Instruction::Store, ScalarTy, SI->getAlign(),
+                            SI->getPointerAddressSpace(), CK,
+                            TTI::getOperandInfo(SI->getValueOperand()), SI);
+  }
+
+  auto *LeafVecTy = FixedVectorType::get(SourceScalarTy, VL.size());
+  InstructionCost ExtractCost = TTI.getScalarizationOverhead(
+      LeafVecTy, APInt::getAllOnes(VL.size()), /*Insert=*/false,
+      /*Extract=*/true, CK);
+  auto *SourceVecTy = FixedVectorType::get(SourceScalarTy, Sinks.size());
+  auto *VecTy = FixedVectorType::get(ScalarTy, Sinks.size());
+  InstructionCost VectorCastCost =
+      TTI.getCastInstrCost(Consumers.front()->getOpcode(), VecTy, SourceVecTy,
+                           TTI::CastContextHint::None, CK);
+  SmallVector<int> ResizeMask(Sinks.size(), PoisonMaskElem);
+  auto RootLane = find(StoreOrder, Sinks.size() - 1);
+  assert(RootLane != StoreOrder.end() && "Expected root consumer lane");
+  for (auto [Lane, OriginalLane] : enumerate(StoreOrder))
+    if (OriginalLane + 1 != Sinks.size())
+      ResizeMask[Lane] = OriginalLane;
+  InstructionCost ShuffleCost = getShuffleCost(TTI, TTI::SK_PermuteSingleSrc,
+                                               SourceVecTy, CK, ResizeMask);
+  InstructionCost InsertCost = TTI.getVectorInstrCost(
+      Instruction::InsertElement, SourceVecTy, CK,
+      std::distance(StoreOrder.begin(), RootLane), ReductionRoot);
+  StoreInst *BaseSI = Sinks.front();
+  InstructionCost VectorStoreCost =
+      TTI.getMemoryOpCost(Instruction::Store, VecTy, BaseSI->getAlign(),
+                          BaseSI->getPointerAddressSpace(), CK);
+  InstructionCost ScalarCost =
+      ScalarConsumerCost + ScalarStoreCost + ExtractCost;
+  InstructionCost VectorCost =
+      VectorCastCost + ShuffleCost + InsertCost + VectorStoreCost;
+  LLVM_DEBUG(dbgs() << "SLP: downstream bundle costs: scalar-users="
+                    << ScalarConsumerCost << ", scalar-stores="
+                    << ScalarStoreCost << ", extracts=" << ExtractCost
+                    << ", vector-user=" << VectorCastCost
+                    << ", shuffle=" << ShuffleCost << ", insert=" << InsertCost
+                    << ", vector-store=" << VectorStoreCost << "\n");
+  return ScalarCost - VectorCost;
+}
 } // end anonymous namespace
 
 /// Gets recurrence kind from the specified value.
 static RecurKind getRdxKind(Value *V) {
   return HorizontalReduction::getRdxKind(V);
+}
+
+bool SLPVectorizerPass::isReductionStoreChainRoot(Instruction *I) const {
+  RecurKind Kind = getRdxKind(I);
+  if (!I->hasOneUse() || Kind == RecurKind::None)
+    return false;
+  auto *Cast = dyn_cast<CastInst>(*I->user_begin());
+  if (!Cast || !Cast->hasOneUse() || !isa<StoreInst>(*Cast->user_begin()))
+    return false;
+
+  unsigned NumLeaves = 0;
+  SmallVector<Instruction *> Worklist(1, I);
+  SmallPtrSet<Instruction *, 8> Visited;
+  while (!Worklist.empty()) {
+    Instruction *Op = Worklist.pop_back_val();
+    if (!Visited.insert(Op).second)
+      continue;
+    for (Value *V : Op->operand_values()) {
+      if (isa<Function>(V))
+        continue;
+      if (auto *Child = dyn_cast<Instruction>(V);
+          Child && getRdxKind(Child) == Kind)
+        Worklist.push_back(Child);
+      else
+        ++NumLeaves;
+    }
+  }
+  return NumLeaves >= 3 && !has_single_bit(NumLeaves);
 }
 static std::optional<unsigned> getAggregateSize(Instruction *InsertInst) {
   if (auto *IE = dyn_cast<InsertElementInst>(InsertInst))
