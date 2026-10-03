@@ -84,7 +84,10 @@ struct SemanticSignatureElement {
   uint8_t Cols;
   uint32_t StartRow = UnallocatedRow;
   uint8_t StartCol = UnallocatedCol;
+  // Register-relative components accessed by the shader, including conditional
+  // accesses. Input program signatures call this field AlwaysReads.
   uint8_t UsageMask = 0;
+  // Element-relative dynamically indexed components, as in DXIL and PSV.
   uint8_t DynIndexMask = 0;
   uint32_t GSStream = 0;
 
@@ -110,7 +113,7 @@ struct SemanticSignatureElement {
   uint8_t getAlwaysReadsMask() const { return UsageMask; }
 
   uint8_t getNeverWritesMask() const {
-    return static_cast<uint8_t>(~UsageMask & getDeclaredMask());
+    return static_cast<uint8_t>(~UsageMask & 0xF);
   }
 
   dxbc::SigMinPrecision getMinPrecision(bool UseMinPrecision) const {

@@ -13,6 +13,7 @@
 
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
+#include "DXILSignatureAnalysis.h"
 #include "DirectX.h"
 #include "DirectXIRPasses/DXILAttributes.h"
 #include "DirectXIRPasses/PointerTypeAnalysis.h"
@@ -204,6 +205,7 @@ public:
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<DXILResourceWrapperPass>();
     AU.addPreserved<RootSignatureAnalysisWrapper>();
+    AU.addPreserved<SignatureAnalysisWrapper>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
   }
   static char ID; // Pass identification.

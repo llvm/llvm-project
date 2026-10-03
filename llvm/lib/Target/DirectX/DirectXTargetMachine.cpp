@@ -28,6 +28,7 @@
 #include "DXILResourceImplicitBinding.h"
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
+#include "DXILSignatureAnalysis.h"
 #include "DXILTranslateMetadata.h"
 #include "DXILWriter/DXILWriterPass.h"
 #include "DirectX.h"
@@ -84,6 +85,7 @@ LLVMInitializeDirectXTarget() {
   initializeDXILPostOptimizationValidationLegacyPass(*PR);
   initializeShaderFlagsAnalysisWrapperPass(*PR);
   initializeRootSignatureAnalysisWrapperPass(*PR);
+  initializeSignatureAnalysisWrapperPass(*PR);
   initializeDXILFinalizeLinkageLegacyPass(*PR);
   initializeDXILPrettyPrinterLegacyPass(*PR);
   initializeDXILForwardHandleAccessesLegacyPass(*PR);
