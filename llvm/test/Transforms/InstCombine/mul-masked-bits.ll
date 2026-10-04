@@ -249,3 +249,88 @@ define <2 x i64> @vector_mul_bit_x0_y0(<2 x i64> %x, <2 x i64> %y) {
   %mul = mul <2 x i64> %and1, %and2
   ret <2 x i64> %mul
 }
+
+; %phase is 0 or 2, so %local is 0 or 18 (0b10010): every bit other than
+; bits 1 and 4 is known zero.
+define i32 @mul_pow2_or_zero_redundant_mask(i32 %x) {
+; CHECK-LABEL: @mul_pow2_or_zero_redundant_mask(
+; CHECK-NEXT:    [[PHASE:%.*]] = and i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[LOCAL:%.*]] = mul nuw nsw i32 [[PHASE]], 9
+; CHECK-NEXT:    ret i32 [[LOCAL]]
+;
+  %phase = and i32 %x, 2
+  %local = mul i32 %phase, 9
+  %masked = and i32 %local, 22
+  ret i32 %masked
+}
+
+define i32 @mul_pow2_or_zero_disjoint_xor(i32 %x) {
+; CHECK-LABEL: @mul_pow2_or_zero_disjoint_xor(
+; CHECK-NEXT:    [[PHASE:%.*]] = and i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[LOCAL:%.*]] = mul nuw nsw i32 [[PHASE]], 9
+; CHECK-NEXT:    [[ADDR:%.*]] = or disjoint i32 [[LOCAL]], 44
+; CHECK-NEXT:    ret i32 [[ADDR]]
+;
+  %phase = and i32 %x, 2
+  %local = mul i32 %phase, 9
+  %addr = xor i32 %local, 44
+  ret i32 %addr
+}
+
+; The power-of-two-or-zero value is the first operand, the other one is
+; not a constant: %m is 0 or %o << 2, and %o only has bits 0 and 2.
+define i8 @mul_pow2_or_zero_lhs_variable(i8 %x, i8 %y) {
+; CHECK-LABEL: @mul_pow2_or_zero_lhs_variable(
+; CHECK-NEXT:    [[O:%.*]] = and i8 [[Y:%.*]], 5
+; CHECK-NEXT:    [[P:%.*]] = and i8 [[X:%.*]], 4
+; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i8 [[P]], [[O]]
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %o = and i8 %y, 5
+  %p = and i8 %x, 4
+  %m = mul i8 %p, %o
+  %r = and i8 %m, 20
+  ret i8 %r
+}
+
+define <2 x i8> @mul_pow2_or_zero_redundant_mask_splat(<2 x i8> %x) {
+; CHECK-LABEL: @mul_pow2_or_zero_redundant_mask_splat(
+; CHECK-NEXT:    [[PHASE:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 2)
+; CHECK-NEXT:    [[LOCAL:%.*]] = mul nuw nsw <2 x i8> [[PHASE]], splat (i8 9)
+; CHECK-NEXT:    ret <2 x i8> [[LOCAL]]
+;
+  %phase = and <2 x i8> %x, <i8 2, i8 2>
+  %local = mul <2 x i8> %phase, <i8 9, i8 9>
+  %masked = and <2 x i8> %local, <i8 22, i8 22>
+  ret <2 x i8> %masked
+}
+
+; Negative test: %phase can be 0, 2, 4 or 6, so it is not a power of two
+; or zero.
+define i8 @mul_two_unknown_bits_mask(i8 %x) {
+; CHECK-LABEL: @mul_two_unknown_bits_mask(
+; CHECK-NEXT:    [[PHASE:%.*]] = and i8 [[X:%.*]], 6
+; CHECK-NEXT:    [[LOCAL:%.*]] = mul nuw nsw i8 [[PHASE]], 9
+; CHECK-NEXT:    [[MASKED:%.*]] = and i8 [[LOCAL]], 22
+; CHECK-NEXT:    ret i8 [[MASKED]]
+;
+  %phase = and i8 %x, 6
+  %local = mul i8 %phase, 9
+  %masked = and i8 %local, 22
+  ret i8 %masked
+}
+
+; Negative test: %local is 0 or 18, and the mask clears bit 1, so it is
+; still needed.
+define i8 @mul_pow2_or_zero_mask_needed(i8 %x) {
+; CHECK-LABEL: @mul_pow2_or_zero_mask_needed(
+; CHECK-NEXT:    [[PHASE:%.*]] = and i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[LOCAL:%.*]] = mul nuw nsw i8 [[PHASE]], 9
+; CHECK-NEXT:    [[MASKED:%.*]] = and i8 [[LOCAL]], 16
+; CHECK-NEXT:    ret i8 [[MASKED]]
+;
+  %phase = and i8 %x, 2
+  %local = mul i8 %phase, 9
+  %masked = and i8 %local, 16
+  ret i8 %masked
+}
