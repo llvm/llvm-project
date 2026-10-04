@@ -43,6 +43,7 @@
 #include "X86.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -349,6 +350,45 @@ static bool isCompressibleMaskedBlendUse(unsigned BlendOpc, unsigned UseOpc) {
   }
 }
 
+// Collect debug users reached from MBB before MaskReg is redefined. Return
+// false if an ordinary use is reached, since the transformation would change
+// its value.
+static bool collectReachableMaskDebugUsers(
+    Register MaskReg, MachineBasicBlock &MBB, const TargetRegisterInfo *TRI,
+    SmallVectorImpl<MachineInstr *> &MaskDebugUsers) {
+  SmallPtrSet<MachineBasicBlock *, 8> Visited;
+  SmallVector<MachineBasicBlock *, 8> Worklist;
+  Visited.insert(&MBB);
+  for (MachineBasicBlock *Succ : MBB.successors())
+    Worklist.push_back(Succ);
+
+  while (!Worklist.empty()) {
+    MachineBasicBlock *UseMBB = Worklist.pop_back_val();
+    if (!Visited.insert(UseMBB).second)
+      continue;
+
+    bool ReachesSuccessors = true;
+    for (MachineInstr &UseMI : *UseMBB) {
+      if (UseMI.isDebugInstr()) {
+        if (UseMI.readsRegister(MaskReg, TRI))
+          MaskDebugUsers.push_back(&UseMI);
+        continue;
+      }
+      if (UseMI.readsRegister(MaskReg, TRI))
+        return false;
+      if (UseMI.modifiesRegister(MaskReg, TRI)) {
+        ReachesSuccessors = false;
+        break;
+      }
+    }
+
+    if (ReachesSuccessors)
+      for (MachineBasicBlock *Succ : UseMBB->successors())
+        Worklist.push_back(Succ);
+  }
+  return true;
+}
+
 // Try to compress mask producer chains:
 //   vpmov*2m %xmm0, %k0       ->  (erase this)
 //   kmov* %k0, %eax           ->  vmovmskp* %xmm0, %eax
@@ -449,10 +489,18 @@ static bool tryCompressMaskProducer(MachineInstr &MI, MachineBasicBlock &MBB,
 
   MachineInstr *KMovMI = nullptr;
   MachineInstr *BlendMI = nullptr;
+  SmallVector<MachineInstr *> MaskDebugUsers;
   bool BlendIsMaskedBlend = false;
+  bool MaskRegReachesSuccessors = true;
 
   for (MachineInstr &CurMI : llvm::make_range(
            std::next(MachineBasicBlock::iterator(MI)), MBB.end())) {
+    if (CurMI.isDebugInstr()) {
+      if (CurMI.readsRegister(MaskReg, TRI))
+        MaskDebugUsers.push_back(&CurMI);
+      continue;
+    }
+
     if (CurMI.readsRegister(MaskReg, TRI)) {
       if (KMovMI || BlendMI)
         return false; // Fail: Mask has MULTIPLE uses
@@ -490,6 +538,7 @@ static bool tryCompressMaskProducer(MachineInstr &MI, MachineBasicBlock &MBB,
     if (CurMI.modifiesRegister(MaskReg, TRI)) {
       if (!KMovMI && !BlendMI)
         return false; // Mask clobbered before use
+      MaskRegReachesSuccessors = false;
       break;
     }
 
@@ -514,10 +563,18 @@ static bool tryCompressMaskProducer(MachineInstr &MI, MachineBasicBlock &MBB,
       return false;
   }
 
-  // Check if MaskReg is used in any other basic blocks
-  for (const MachineInstr &UseMI : MRI->use_instructions(MaskReg))
-    if (UseMI.getParent() != &MBB)
+  bool HasCrossBlockDebugUsers = false;
+  for (MachineInstr &UseMI : MRI->use_instructions(MaskReg)) {
+    if (UseMI.getParent() == &MBB)
+      continue;
+    if (!UseMI.isDebugInstr())
       return false;
+    HasCrossBlockDebugUsers = true;
+  }
+
+  if (MaskRegReachesSuccessors && HasCrossBlockDebugUsers &&
+      !collectReachableMaskDebugUsers(MaskReg, MBB, TRI, MaskDebugUsers))
+    return false;
 
   // Apply the transformation
   MachineInstr *NewMI = nullptr;
@@ -567,6 +624,17 @@ static bool tryCompressMaskProducer(MachineInstr &MI, MachineBasicBlock &MBB,
   }
   assert(NewMI && "Expected a compressed instruction");
   NewMI->setAsmPrinterFlag(X86::AC_EVEX_2_VEX);
+
+  // The compressed sequence no longer defines MaskReg. Invalidate its debug
+  // users rather than leaving them referring to a stale physical register.
+  for (MachineInstr *DebugMI : MaskDebugUsers) {
+    if (DebugMI->isDebugPHI())
+      ToErase.push_back(DebugMI);
+    else {
+      assert(DebugMI->isDebugValue() && "Unexpected mask debug user");
+      DebugMI->setDebugValueUndef();
+    }
+  }
   ToErase.push_back(&MI);
   if (ConstantDefOnlyFeedsCmp && MI.getOperand(2).isKill())
     ToErase.push_back(ConstantDef);
