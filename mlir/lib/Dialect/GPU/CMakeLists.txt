@@ -9,6 +9,7 @@ add_mlir_dialect_library(MLIRGPUDialect
   DEPENDS
   MLIRGPUOpsIncGen
   MLIRGPUOpsAttributesIncGen
+  MLIRGPUTypeConstraintsIncGen
   MLIRGPUOpsEnumsGen
   MLIRGPUOpInterfacesIncGen
   MLIRGPUCompilationAttrInterfacesIncGen
