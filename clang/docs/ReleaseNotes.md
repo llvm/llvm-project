@@ -257,6 +257,10 @@ features cannot lower the translation-unit ABI level;
 - Added `__builtin_sort_pack` to sort a pack of types using the same
   order as `__builtin_type_order`.
 
+- Added the `__scoped_atomic_nontemporal_load_n` and
+  `__scoped_atomic_nontemporal_store_n` builtins, which emit scoped atomic
+  loads and stores carrying `!nontemporal` metadata.
+
 ### New Compiler Flags
 
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics

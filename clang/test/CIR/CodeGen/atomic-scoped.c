@@ -81,6 +81,43 @@ void scoped_atomic_store_n(int *ptr, int value) {
   // OGCG: store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4
 }
 
+void scoped_atomic_nontemporal_load_n(int *ptr) {
+  // CIR-LABEL: @scoped_atomic_nontemporal_load_n
+  // LLVM-LABEL: @scoped_atomic_nontemporal_load_n
+  // OGCG-LABEL: @scoped_atomic_nontemporal_load_n
+
+  int x;
+  x = __scoped_atomic_nontemporal_load_n(ptr, __ATOMIC_RELAXED, __MEMORY_SCOPE_SINGLE);
+  // CIR-BEFORE-TL: %{{.+}} = cir.load nontemporal align(4) syncscope(single_thread) atomic(relaxed) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // CIR: %{{.+}} = cir.load nontemporal align(4) syncscope(system) atomic(relaxed) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // LLVM: %{{.+}} = load atomic i32, ptr %{{.+}} monotonic, align 4, !nontemporal
+  // OGCG: %{{.+}} = load atomic i32, ptr %{{.+}} monotonic, align 4, !nontemporal
+
+  x = __scoped_atomic_nontemporal_load_n(ptr, __ATOMIC_ACQUIRE, __MEMORY_SCOPE_SYSTEM);
+  // CIR-BEFORE-TL: %{{.+}} = cir.load nontemporal align(4) syncscope(system) atomic(acquire) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // CIR: %{{.+}} = cir.load nontemporal align(4) syncscope(system) atomic(acquire) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // LLVM: %{{.+}} = load atomic i32, ptr %{{.+}} acquire, align 4, !nontemporal
+  // OGCG: %{{.+}} = load atomic i32, ptr %{{.+}} acquire, align 4, !nontemporal
+}
+
+void scoped_atomic_nontemporal_store_n(int *ptr, int value) {
+  // CIR-LABEL: @scoped_atomic_nontemporal_store_n
+  // LLVM-LABEL: @scoped_atomic_nontemporal_store_n
+  // OGCG-LABEL: @scoped_atomic_nontemporal_store_n
+
+  __scoped_atomic_nontemporal_store_n(ptr, value, __ATOMIC_RELAXED, __MEMORY_SCOPE_SINGLE);
+  // CIR-BEFORE-TL: cir.store nontemporal align(4) syncscope(single_thread) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+  // CIR: cir.store nontemporal align(4) syncscope(system) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+  // LLVM: store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4, !nontemporal
+  // OGCG: store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4, !nontemporal
+
+  __scoped_atomic_nontemporal_store_n(ptr, value, __ATOMIC_RELEASE, __MEMORY_SCOPE_SYSTEM);
+  // CIR-BEFORE-TL: cir.store nontemporal align(4) syncscope(system) atomic(release) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+  // CIR: cir.store nontemporal align(4) syncscope(system) atomic(release) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+  // LLVM: store atomic i32 %{{.+}}, ptr %{{.+}} release, align 4, !nontemporal
+  // OGCG: store atomic i32 %{{.+}}, ptr %{{.+}} release, align 4, !nontemporal
+}
+
 void scoped_atomic_exchange(int *ptr, int *value, int *old) {
   // CIR-BEFORE-TL-LABEL: @scoped_atomic_exchange
   // CIR-LABEL: @scoped_atomic_exchange

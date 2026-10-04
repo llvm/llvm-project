@@ -2443,6 +2443,18 @@ def ScopedAtomicStoreN : AtomicBuiltin {
   let Prototype = "void(...)";
 }
 
+def ScopedAtomicNontemporalLoadN : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_nontemporal_load_n"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicNontemporalStoreN : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_nontemporal_store_n"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ScopedAtomicExchange : AtomicBuiltin {
   let Spellings = ["__scoped_atomic_exchange"];
   let Attributes = [CustomTypeChecking];

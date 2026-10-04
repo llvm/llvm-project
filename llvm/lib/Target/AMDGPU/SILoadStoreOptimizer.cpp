@@ -964,11 +964,77 @@ static void addDefsUsesToList(const MachineInstr &MI,
   }
 }
 
+// Monotonic loads and stores of global memory through global instructions are
+// the only ordered accesses this pass merges. A wider global instruction keeps
+// each naturally aligned dword and qword it covers single-copy atomic, so every
+// original access stays atomic after the merge. Cooperative atomics are
+// excluded because their per-lane width is part of their semantics.
+static bool isMergeableAtomic(const MachineInstr &MI) {
+  if (!SIInstrInfo::isFLATGlobal(MI) || !MI.hasOneMemOperand())
+    return false;
+  const MachineMemOperand *MMO = *MI.memoperands_begin();
+  return MMO->getSuccessOrdering() == AtomicOrdering::Monotonic &&
+         !MMO->isVolatile() && !(MMO->getFlags() & MOCooperative) &&
+         MMO->getAddrSpace() == AMDGPUAS::GLOBAL_ADDRESS;
+}
+
+// Ordered accesses may only be merged with each other, and only when the merged
+// access can carry the ordering, scope and cache policy of both.
+static bool orderedAccessesCanBeCombined(const MachineInstr &A,
+                                         const MachineInstr &B) {
+  bool AOrdered = A.hasOrderedMemoryRef();
+  if (AOrdered != B.hasOrderedMemoryRef())
+    return false;
+  if (!AOrdered)
+    return true;
+  if (!isMergeableAtomic(A) || !isMergeableAtomic(B))
+    return false;
+  const MachineMemOperand *MMOa = *A.memoperands_begin();
+  const MachineMemOperand *MMOb = *B.memoperands_begin();
+  return MMOa->getSuccessOrdering() == MMOb->getSuccessOrdering() &&
+         MMOa->getSyncScopeID() == MMOb->getSyncScopeID() &&
+         MMOa->isNonTemporal() == MMOb->isNonTemporal();
+}
+
+// MachineInstr::mayAlias reports that two loads never alias, but two atomic
+// loads of the same location must stay in program order.
+static bool atomicLoadsMayAlias(const SIInstrInfo &TII, AliasAnalysis *AA,
+                                const MachineInstr &A, const MachineInstr &B) {
+  if (TII.areMemAccessesTriviallyDisjoint(A, B))
+    return false;
+  if (!A.hasOneMemOperand() || !B.hasOneMemOperand())
+    return true;
+  const MachineMemOperand *MMOa = *A.memoperands_begin();
+  const MachineMemOperand *MMOb = *B.memoperands_begin();
+  const Value *ValA = MMOa->getValue();
+  const Value *ValB = MMOb->getValue();
+  if (!ValA || !ValB)
+    return true;
+  if (ValA == ValB) {
+    LocationSize SizeA = MMOa->getSize();
+    LocationSize SizeB = MMOb->getSize();
+    if (!SizeA.hasValue() || !SizeB.hasValue() || SizeA.isScalable() ||
+        SizeB.isScalable())
+      return true;
+    int64_t OffsetA = MMOa->getOffset();
+    int64_t OffsetB = MMOb->getOffset();
+    return OffsetA < OffsetB + int64_t(SizeB.getValue().getFixedValue()) &&
+           OffsetB < OffsetA + int64_t(SizeA.getValue().getFixedValue());
+  }
+  if (!AA)
+    return true;
+  return !AA->isNoAlias(MemoryLocation::getAfter(ValA),
+                        MemoryLocation::getAfter(ValB));
+}
+
 bool SILoadStoreOptimizer::canSwapInstructions(
     const DenseSet<Register> &ARegDefs, const DenseSet<Register> &ARegUses,
     const MachineInstr &A, const MachineInstr &B) const {
   if (A.mayLoadOrStore() && B.mayLoadOrStore() &&
       (A.mayStore() || B.mayStore()) && A.mayAlias(AA, B, true))
+    return false;
+  if (A.mayLoad() && B.mayLoad() && A.hasOrderedMemoryRef() &&
+      B.hasOrderedMemoryRef() && atomicLoadsMayAlias(*TII, AA, A, B))
     return false;
   for (const auto &BOp : B.operands()) {
     if (!BOp.isReg())
@@ -1283,6 +1349,14 @@ SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
 
   if (getInstSubclass(CI.I->getOpcode(), *TII) !=
       getInstSubclass(Paired.I->getOpcode(), *TII))
+    return nullptr;
+
+  if (!orderedAccessesCanBeCombined(*CI.I, *Paired.I))
+    return nullptr;
+
+  // Only form atomic accesses of 2 or 4 dwords.
+  if (CI.I->hasOrderedMemoryRef() && CI.Width + Paired.Width != 2 &&
+      CI.Width + Paired.Width != 4)
     return nullptr;
 
   // Check both offsets (or masks for MIMG) can be combined and fit in the
@@ -2645,9 +2719,11 @@ SILoadStoreOptimizer::collectMergeableInsts(
     if (promoteConstantOffsetToImm(MI, Visited, AnchorList))
       Modified = true;
 
-    // Treat volatile accesses, ordered accesses and unmodeled side effects as
-    // barriers. We can look after this barrier for separate merges.
-    if (MI.hasOrderedMemoryRef() || MI.hasUnmodeledSideEffects()) {
+    // Treat volatile accesses, ordered accesses other than mergeable monotonic
+    // atomics, and unmodeled side effects as barriers. We can look after this
+    // barrier for separate merges.
+    if ((MI.hasOrderedMemoryRef() && !isMergeableAtomic(MI)) ||
+        MI.hasUnmodeledSideEffects()) {
       LLVM_DEBUG(dbgs() << "Breaking search on barrier: " << MI);
 
       // Search will resume after this instruction in a separate merge list.

@@ -247,6 +247,12 @@ Makes programs 10x faster by doing Special New Thing.
   * `llvm.amdgcn.icmp`
   * `llvm.amdgcn.fcmp`
 
+* `!nontemporal` is now honored on monotonic atomic loads and stores, combined
+  with the cache policy required by their scope.
+
+* Adjacent monotonic atomic global loads and stores with the same scope and
+  nontemporal hint can now be merged into a wider instruction.
+
 ### Changes to the ARM Backend
 
 * Using the hard-float procedure call standard without floating-point registers

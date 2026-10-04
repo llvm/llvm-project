@@ -7076,6 +7076,7 @@ public:
     switch (getOp()) {
     case AO__atomic_load_n:
     case AO__scoped_atomic_load_n:
+    case AO__scoped_atomic_nontemporal_load_n:
     case AO__c11_atomic_load:
     case AO__opencl_atomic_load:
     case AO__hip_atomic_load:

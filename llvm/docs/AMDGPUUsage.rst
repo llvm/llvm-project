@@ -7537,6 +7537,12 @@ Only the instructions related to the memory model are given; additional
 being used. These may be able to be combined with the memory model ``s_waitcnt``
 instructions as described above.
 
+A monotonic atomic load or store that has ``!nontemporal`` metadata uses the
+code sequence given for its scope, and additionally applies the nontemporal
+cache policy that the corresponding non-atomic ``nontemporal`` load or store
+would use. Applying the hint never removes the cache policy required by the
+scope. ``!nontemporal`` on atomics with any other ordering is ignored.
+
 The AMDGPU backend supports the following memory models:
 
   HSA Memory Model [HSA]_

@@ -180,3 +180,51 @@ float ff4a(_Bool *c) {
 void fi8a(long long *p) {
   __scoped_atomic_store_n(p, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
 }
+
+struct S { int a[4]; };
+
+void fi9a(int *i, long long *ll, float *f, double *d, int **pp, const int *ci,
+          struct S *s) {
+  *i = __scoped_atomic_nontemporal_load_n(i, __ATOMIC_RELAXED); // expected-error {{too few arguments to function call, expected 3, have 2}}
+  *i = __scoped_atomic_nontemporal_load_n(i, __ATOMIC_RELAXED, 42); // expected-error {{synchronization scope argument to atomic operation is invalid}}
+  *i = __scoped_atomic_nontemporal_load_n(i, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+  *ll = __scoped_atomic_nontemporal_load_n(ll, __ATOMIC_RELAXED, __MEMORY_SCOPE_WVFRNT);
+  *f = __scoped_atomic_nontemporal_load_n(f, __ATOMIC_RELAXED, __MEMORY_SCOPE_DEVICE);
+  *d = __scoped_atomic_nontemporal_load_n(d, __ATOMIC_RELAXED, __MEMORY_SCOPE_WRKGRP);
+  *pp = __scoped_atomic_nontemporal_load_n(pp, __ATOMIC_RELAXED, __MEMORY_SCOPE_SINGLE);
+  *i = __scoped_atomic_nontemporal_load_n(ci, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+  *i = __scoped_atomic_nontemporal_load_n(1, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM); // expected-error {{address argument to atomic builtin must be a pointer ('int' invalid)}}
+  (void)__scoped_atomic_nontemporal_load_n(s, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM); // expected-error {{must be a pointer to integer, pointer or supported floating point type}}
+}
+
+void fi9b(int *i) {
+  (void)__scoped_atomic_nontemporal_load_n(i, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+  (void)__scoped_atomic_nontemporal_load_n(i, __ATOMIC_CONSUME, __MEMORY_SCOPE_SYSTEM);
+  (void)__scoped_atomic_nontemporal_load_n(i, __ATOMIC_ACQUIRE, __MEMORY_SCOPE_SYSTEM);
+  (void)__scoped_atomic_nontemporal_load_n(i, __ATOMIC_RELEASE, __MEMORY_SCOPE_SYSTEM); // expected-warning {{memory order argument to atomic operation is invalid}}
+  (void)__scoped_atomic_nontemporal_load_n(i, __ATOMIC_ACQ_REL, __MEMORY_SCOPE_SYSTEM); // expected-warning {{memory order argument to atomic operation is invalid}}
+  (void)__scoped_atomic_nontemporal_load_n(i, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);
+}
+
+void fi9c(int *i, long long *ll, float *f, double *d, int **pp, const int *ci,
+          struct S *s, struct S v) {
+  __scoped_atomic_nontemporal_store_n(i, 1, __ATOMIC_RELAXED); // expected-error {{too few arguments to function call, expected 4, have 3}}
+  __scoped_atomic_nontemporal_store_n(i, 1, __ATOMIC_RELAXED, 42); // expected-error {{synchronization scope argument to atomic operation is invalid}}
+  __scoped_atomic_nontemporal_store_n(i, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+  __scoped_atomic_nontemporal_store_n(ll, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_WVFRNT);
+  __scoped_atomic_nontemporal_store_n(f, 1.0f, __ATOMIC_RELAXED, __MEMORY_SCOPE_DEVICE);
+  __scoped_atomic_nontemporal_store_n(d, 1.0, __ATOMIC_RELAXED, __MEMORY_SCOPE_WRKGRP);
+  __scoped_atomic_nontemporal_store_n(pp, i, __ATOMIC_RELAXED, __MEMORY_SCOPE_SINGLE);
+  __scoped_atomic_nontemporal_store_n(ci, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM); // expected-error {{address argument to atomic operation must be a pointer to non-const type ('const int *' invalid)}}
+  __scoped_atomic_nontemporal_store_n(1, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM); // expected-error {{address argument to atomic builtin must be a pointer ('int' invalid)}}
+  __scoped_atomic_nontemporal_store_n(s, v, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM); // expected-error {{must be a pointer to integer, pointer or supported floating point type}}
+}
+
+void fi9d(int *i) {
+  __scoped_atomic_nontemporal_store_n(i, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+  __scoped_atomic_nontemporal_store_n(i, 1, __ATOMIC_CONSUME, __MEMORY_SCOPE_SYSTEM); // expected-warning {{memory order argument to atomic operation is invalid}}
+  __scoped_atomic_nontemporal_store_n(i, 1, __ATOMIC_ACQUIRE, __MEMORY_SCOPE_SYSTEM); // expected-warning {{memory order argument to atomic operation is invalid}}
+  __scoped_atomic_nontemporal_store_n(i, 1, __ATOMIC_RELEASE, __MEMORY_SCOPE_SYSTEM);
+  __scoped_atomic_nontemporal_store_n(i, 1, __ATOMIC_ACQ_REL, __MEMORY_SCOPE_SYSTEM); // expected-warning {{memory order argument to atomic operation is invalid}}
+  __scoped_atomic_nontemporal_store_n(i, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);
+}

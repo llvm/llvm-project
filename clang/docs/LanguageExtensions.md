@@ -5034,6 +5034,35 @@ whole system, the current device, an OpenCL workgroup, wavefront, or just a
 single thread. If these are used on a target that does not support atomic
 scopes, then they will behave exactly as the standard GNU atomic builtins.
 
+Clang also provides scoped atomic loads and stores that carry a nontemporal
+hint:
+
+```c
+T __scoped_atomic_nontemporal_load_n(T *ptr, int order, int scope);
+void __scoped_atomic_nontemporal_store_n(T *ptr, T val, int order, int scope);
+```
+
+They accept the same types, orderings and scopes as
+`__scoped_atomic_load_n` and `__scoped_atomic_store_n`, and behave exactly as
+those builtins, except that the generated atomic `load` or `store` also carries
+`!nontemporal` metadata. As with `__builtin_nontemporal_load` and
+`__builtin_nontemporal_store`, the hint does not change the semantics of the
+access, and a target may ignore it. The AMDGPU backend honors it on relaxed
+(monotonic) loads and stores, combining the nontemporal cache policy with the
+policy required by the scope.
+
+A typical use is polling a flag that another agent writes:
+
+```c
+while (__scoped_atomic_nontemporal_load_n(flag, __ATOMIC_RELAXED,
+                                          __MEMORY_SCOPE_WVFRNT) != expected)
+  ;
+```
+
+Unlike a `__builtin_nontemporal_load`, the access is atomic, so it cannot be
+torn, hoisted out of the loop, or combined with other loads of the same
+location.
+
 ### Low-level ARM exclusive memory builtins
 
 Clang provides overloaded builtins giving direct access to the three key ARM
