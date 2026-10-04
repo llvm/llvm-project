@@ -1473,10 +1473,14 @@ FormatToken *FormatTokenLexer::getNextToken() {
     Column += FormatTok->ColumnWidth;
   } else {
     FormatTok->IsMultiline = true;
+    // Exclude the '\r' of a CRLF line ending from the first line's width.
+    StringRef FirstLine = Text.substr(0, FirstNewlinePos);
+    if (FirstLine.ends_with("\r"))
+      FirstLine = FirstLine.drop_back();
     // FIXME: ColumnWidth actually depends on the start column, we need to
     // take this into account when the token is moved.
     FormatTok->ColumnWidth = encoding::columnWidthWithTabs(
-        Text.substr(0, FirstNewlinePos), Column, Style.TabWidth, Encoding);
+        FirstLine, Column, Style.TabWidth, Encoding);
 
     // The last line of the token always starts in column 0.
     // Thus, the length can be precomputed even in the presence of tabs.
