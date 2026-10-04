@@ -10,6 +10,7 @@
 #define LLVM_CLANG_LEX_TEXTENCODING_H
 
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace llvm {
@@ -17,16 +18,34 @@ class TextEncodingConverter;
 } // namespace llvm
 
 namespace clang {
-enum ConversionAction { CA_NoConversion, CA_ToLiteralEncoding };
+enum ConversionAction {
+  CA_NoConversion,
+  CA_ToSystemEncoding,
+  CA_ToLiteralEncoding
+};
 
 class TextEncoding {
   llvm::StringRef LiteralEncoding;
   std::unique_ptr<llvm::TextEncodingConverter> ToLiteralEncodingConverter;
 
+  // Only non-null on z/OS, where the system default encoding is IBM-1047.
+  // This converts UTF-8 to IBM-1047 for asm string literals so that
+  // octal/hex escape sequences are interpreted as IBM-1047 code points,
+  // regardless of -fexec-charset.
+  std::unique_ptr<llvm::TextEncodingConverter> ToIBM1047Converter;
+  std::unique_ptr<llvm::TextEncodingConverter> FromIBM1047Converter;
+
 public:
   llvm::TextEncodingConverter *getConverter(ConversionAction Action) const;
+
+  /// Returns the converter from IBM-1047 to UTF-8, or nullptr if not on z/OS.
+  llvm::TextEncodingConverter *getFromIBM1047Converter() const {
+    return FromIBM1047Converter.get();
+  }
+
   static std::error_code
-  setConvertersFromOptions(TextEncoding &TE, const clang::LangOptions &Opts);
+  setConvertersFromOptions(TextEncoding &TE, const clang::LangOptions &Opts,
+                           clang::TargetInfo &TInfo);
 
   llvm::StringRef getLiteralEncoding() { return LiteralEncoding; }
 };
