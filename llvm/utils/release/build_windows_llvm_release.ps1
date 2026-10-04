@@ -64,31 +64,31 @@
     Display this help message and exit.
 
 .EXAMPLE
-    .\build_llvm_release.ps1
+    .\build_windows_llvm_release.ps1
     Build for the current process architecture using the local source tree.
 
 .EXAMPLE
-    .\build_llvm_release.ps1 -Version 19.1.0 -DownloadSource
+    .\build_windows_llvm_release.ps1 -Version 19.1.0 -DownloadSource
     Download version 19.1.0 sources and build for the current process architecture.
 
 .EXAMPLE
-    .\build_llvm_release.ps1 -InstallPrerequisites
+    .\build_windows_llvm_release.ps1 -InstallPrerequisites
     Install prerequisites, then build for the current process architecture.
 
 .EXAMPLE
-    .\build_llvm_release.ps1 -Unattended -InstallPrerequisites
+    .\build_windows_llvm_release.ps1 -Unattended -InstallPrerequisites
     From an elevated shell, install prerequisites and build without prompts.
 
 .EXAMPLE
-    .\build_llvm_release.ps1 -StartAt stage2
+    .\build_windows_llvm_release.ps1 -StartAt stage2
     Resume from stage 2 (reuses the stage 1 bootstrap compiler and PGO profile).
 
 .EXAMPLE
-    .\build_llvm_release.ps1 -StartAt package
+    .\build_windows_llvm_release.ps1 -StartAt package
     Resume at WiX MSI packaging, then regenerate the portable archive.
 
 .EXAMPLE
-    .\build_llvm_release.ps1 -StartAt ""
+    .\build_windows_llvm_release.ps1 -StartAt ""
     Display the list of available build steps and exit.
 
 .NOTES
