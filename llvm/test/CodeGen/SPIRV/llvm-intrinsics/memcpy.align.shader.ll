@@ -10,8 +10,8 @@
 ; CHECK-DAG: OpName %[[#Src:]] "src"
 
 %struct.S = type { i32, i32 }
-@dst = internal addrspace(3) global %struct.S undef, align 8
-@src = internal addrspace(3) global %struct.S undef, align 8
+@dst = internal addrspace(3) global %struct.S poison, align 8
+@src = internal addrspace(3) global %struct.S poison, align 8
 
 ; CHECK: %[[#Main]] = OpFunction
 define void @main() #0 {
