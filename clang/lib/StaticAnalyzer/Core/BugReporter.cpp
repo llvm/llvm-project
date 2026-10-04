@@ -98,7 +98,7 @@ void BugReporterContext::anchor() {}
 
 namespace {
 
-/// A (CallPiece, node assiciated with its CallEnter) pair.
+/// A (CallPiece, node associated with its CallEnter) pair.
 using CallWithEntry =
     std::pair<PathDiagnosticCallPiece *, const ExplodedNode *>;
 using CallWithEntryStack = SmallVector<CallWithEntry, 6>;
@@ -972,7 +972,7 @@ void PathDiagnosticBuilder::generateMinimalDiagForBlockEdge(
 
       C.getActivePath().push_front(
           std::make_shared<PathDiagnosticControlFlowPiece>(
-              Start, End, "Loop condition is false.  Exiting loop"));
+              Start, End, "Loop condition is false. Exiting loop"));
     }
     break;
 
@@ -996,7 +996,7 @@ void PathDiagnosticBuilder::generateMinimalDiagForBlockEdge(
 
       C.getActivePath().push_front(
           std::make_shared<PathDiagnosticControlFlowPiece>(
-              Start, End, "Loop condition is true.  Entering loop body"));
+              Start, End, "Loop condition is true. Entering loop body"));
     }
 
     break;
@@ -2257,7 +2257,7 @@ static void insertToInterestingnessMap(
   // Even if this symbol/region was already marked as interesting as a
   // condition, if we later mark it as interesting again but with
   // thorough tracking, overwrite it. Entities marked with thorough
-  // interestiness are the most important (or most interesting, if you will),
+  // interestingness are the most important (or most interesting, if you will),
   // and we wouldn't like to downplay their importance.
 
   switch (TKind) {
@@ -2343,7 +2343,7 @@ PathSensitiveBugReport::getInterestingnessKind(SVal V) const {
   if (!SKind)
     return RKind;
 
-  // If either is marked with throrough tracking, return that, we wouldn't like
+  // If either is marked with thorough tracking, return that, we wouldn't like
   // to downplay a note's importance by 'only' mentioning it as a condition.
   switch(*RKind) {
     case bugreporter::TrackingKind::Thorough:
@@ -2728,7 +2728,7 @@ BugPathInfo *BugPathGetter::getNextBugPath() {
 }
 
 /// CompactMacroExpandedPieces - This function postprocesses a PathDiagnostic
-/// object and collapses PathDiagosticPieces that are expanded by macros.
+/// object and collapses PathDiagnosticPieces that are expanded by macros.
 static void CompactMacroExpandedPieces(PathPieces &path,
                                        const SourceManager& SM) {
   using MacroStackTy = std::vector<
@@ -2984,7 +2984,7 @@ void BugReporter::emitReport(std::unique_ptr<BugReport> R) {
   llvm::FoldingSetNodeID ID;
   R->Profile(ID);
 
-  // Lookup the equivance class.  If there isn't one, create it.
+  // Lookup the equivalence class.  If there isn't one, create it.
   llvm::FoldingSetInsertToken InsertToken;
   BugReportEquivClass *EQ = EQClasses.lookup(ID, InsertToken);
 
