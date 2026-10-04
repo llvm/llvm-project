@@ -28,6 +28,7 @@
 #include <__pstl/cpu_algos/search.h>
 #include <__pstl/cpu_algos/search_n.h>
 #include <__pstl/cpu_algos/stable_sort.h>
+#include <__pstl/cpu_algos/swap_ranges.h>
 #include <__pstl/cpu_algos/transform.h>
 #include <__pstl/cpu_algos/transform_inclusive_scan_init.h>
 #include <__pstl/cpu_algos/transform_reduce.h>
@@ -157,6 +158,10 @@ struct __search_n<__std_thread_backend_tag, _ExecutionPolicy>
 template <class _ExecutionPolicy>
 struct __stable_sort<__std_thread_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_stable_sort<__std_thread_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __swap_ranges<__std_thread_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_swap_ranges<__std_thread_backend_tag, _ExecutionPolicy> {};
 
 template <class _ExecutionPolicy>
 struct __transform<__std_thread_backend_tag, _ExecutionPolicy>

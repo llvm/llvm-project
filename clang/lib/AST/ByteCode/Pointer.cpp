@@ -251,17 +251,16 @@ bool Pointer::operator==(const Pointer &P) const {
 }
 
 APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
-  llvm::SmallVector<APValue::LValuePathEntry, 5> Path;
 
   if (isZero())
-    return APValue(APValue::LValueBase(), CharUnits::Zero(), Path,
+    return APValue(APValue::LValueBase(), CharUnits::Zero(), {},
                    /*IsOnePastEnd=*/false, /*IsNullPtr=*/true);
 
   switch (StorageKind) {
   case Storage::Int:
     return APValue(static_cast<const Expr *>(nullptr),
                    CharUnits::fromQuantity(asIntPointer().Value + this->Offset),
-                   Path,
+                   {},
                    /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
   case Storage::Block:
     // See below.
@@ -281,13 +280,15 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
                    CharUnits::Zero(), {},
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
   } break;
-  case Storage::String:
+  case Storage::String: {
+    llvm::SmallVector<APValue::LValuePathEntry, 1> Path;
     if (Offset != 0 || Str.Decayed)
       Path.push_back(APValue::LValuePathEntry::ArrayIndex(Offset));
 
     return APValue(APValue::LValueBase(Str.Base),
                    CharUnits::fromQuantity(Offset * elemSize()), Path,
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
+  }
   case Storage::Opaque: {
     bool ValidBase = Opaque.hasValidBase() || this->Offset <= 1;
 
@@ -307,6 +308,7 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
     // For valid bases, assemble the LValuePath.
     APValue Result;
     if (ValidBase) {
+      llvm::SmallVector<APValue::LValuePathEntry, 5> Path;
       for (const PointerPathEntry &Entry : Opaque.path()) {
         switch (Entry.Kind) {
         case PointerPathEntry::Field:
@@ -368,6 +370,7 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   // Build the path into the object.
   bool OnePastEnd = isOnePastEnd() && !isZeroSizeArray();
 
+  llvm::SmallVector<APValue::LValuePathEntry, 5> Path;
   PtrView Ptr = view();
   while (Ptr.isField() || Ptr.isArrayElement()) {
 
@@ -724,28 +727,6 @@ std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
   return toAPValue(Ctx).getAsString(Ctx, Ty);
 }
 
-bool Pointer::isInitialized() const {
-  if (!isBlockPointer())
-    return true;
-
-  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
-      Offset == BS.Base) {
-    const auto &GD = block()->getBlockDesc<GlobalInlineDescriptor>();
-    return GD.InitState == GlobalInitState::Initialized;
-  }
-
-  assert(BS.Pointee && "Cannot check if null pointer was initialized");
-  const Descriptor *Desc = getFieldDesc();
-  assert(Desc);
-  if (Desc->isPrimitiveArray())
-    return isElementInitialized(getIndex());
-
-  if (asBlockPointer().Base == 0)
-    return true;
-  // Field has its bit in an inline descriptor.
-  return getInlineDesc()->IsInitialized;
-}
-
 bool PtrView::isElementInitialized(unsigned Index) const {
   const Descriptor *Desc = getFieldDesc();
   assert(Desc);
@@ -826,6 +807,12 @@ void PtrView::setLifeState(Lifetime L) const {
 }
 
 void PtrView::initialize() const {
+  // FIXME: This happens when the control flow jumps right into a scope, e.g. in
+  // switch_into_init_stmt in constant-expression-cxx2a.cpp. I.e. we have never
+  // initialized the scope via an InitScope op.
+  if (LLVM_UNLIKELY(!Pointee->isInitialized()))
+    Pointee->invokeCtor();
+
   if (isRoot() && Base == sizeof(GlobalInlineDescriptor) && Offset == Base) {
     auto &GD = Pointee->getBlockDesc<GlobalInlineDescriptor>();
     GD.InitState = GlobalInitState::Initialized;
@@ -852,6 +839,12 @@ void PtrView::initializeElement(unsigned Index) const {
     return;
 
   assert(Index < getFieldDesc()->getNumElems());
+
+  // FIXME: This happens when the control flow jumps right into a scope, e.g. in
+  // switch_into_init_stmt in constant-expression-cxx2a.cpp. I.e. we have never
+  // initialized the scope via an InitScope op.
+  if (LLVM_UNLIKELY(!Pointee->isInitialized()))
+    Pointee->invokeCtor();
 
   InitMapPtr &IM = getInitMap();
   if (IM.allInitialized())
@@ -1330,8 +1323,12 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 }
 
 const VarDecl *Pointer::getRootVarDecl() const {
+  return dyn_cast_if_present<VarDecl>(getRootValueDecl());
+}
+
+const ValueDecl *Pointer::getRootValueDecl() const {
   if (isBlockPointer())
-    return getDeclDesc()->asVarDecl();
+    return getDeclDesc()->asValueDecl();
   if (isOpaquePointer())
     return Opaque.getBaseDecl();
   return nullptr;

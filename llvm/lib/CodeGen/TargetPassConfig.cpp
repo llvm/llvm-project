@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/CSEConfigBase.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
+#include "llvm/CodeGen/MachineBlockHashInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/Passes.h"
@@ -227,10 +228,6 @@ static cl::opt<bool> MISchedPostRA(
     cl::desc(
         "Run MachineScheduler post regalloc (independent of preRA sched)"));
 
-// Experimental option to run live interval analysis early.
-static cl::opt<bool> EarlyLiveIntervals("early-live-intervals", cl::Hidden,
-    cl::desc("Run live interval analysis earlier in the pipeline"));
-
 static cl::opt<bool> DisableReplaceWithVecLib(
     "disable-replace-with-vec-lib", cl::Hidden,
     cl::desc("Disable replace with vector math call pass"));
@@ -294,12 +291,6 @@ static cl::opt<bool> BasicBlockSectionMatchInfer(
     "basic-block-section-match-infer",
     cl::desc(
         "Enable matching and inference when generating basic block sections"),
-    cl::init(false));
-
-cl::opt<bool> EmitBBHash(
-    "emit-bb-hash",
-    cl::desc(
-        "Emit the hash of basic block in the SHT_LLVM_BB_ADDR_MAP section."),
     cl::init(false));
 
 /// Allow standard passes to be disabled by command line options. This supports
@@ -527,7 +518,6 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_OPTION(PrintAfterISel)
   SET_OPTION(FSProfileFile)
   SET_OPTION(EnableGCEmptyBlocks)
-  SET_OPTION(EarlyLiveIntervals)
   SET_OPTION(EnableBlockPlacementStats)
   SET_OPTION(EnableGlobalMergeFunc)
   SET_OPTION(EnableImplicitNullChecks)
@@ -1259,7 +1249,7 @@ void TargetPassConfig::addMachinePasses() {
       getOptLevel() != CodeGenOptLevel::None &&
       EnableMachineOutliner != RunOutliner::NeverOutline) {
     if (EnableMachineOutliner != RunOutliner::TargetDefault ||
-        TM->Options.SupportsDefaultOutlining)
+        TM->supportsDefaultOutlining())
       addPass(createMachineOutlinerPass(EnableMachineOutliner));
   }
 
@@ -1309,7 +1299,7 @@ void TargetPassConfig::addMachinePasses() {
   // address map (or both).
   if (TM->getBBSectionsType() != llvm::BasicBlockSection::None ||
       TM->Options.BBAddrMap) {
-    if (EmitBBHash || BasicBlockSectionMatchInfer)
+    if (shouldEmitBBHash() || BasicBlockSectionMatchInfer)
       addPass(llvm::createMachineBlockHashInfoPass());
     if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
       addPass(llvm::createBasicBlockSectionsProfileReaderWrapperPass(
@@ -1518,9 +1508,11 @@ void TargetPassConfig::addOptimizedRegAlloc() {
   addPass(&MachineLoopInfoID);
   addPass(&PHIEliminationID);
 
-  // Eventually, we want to run LiveIntervals before PHI elimination.
-  if (EarlyLiveIntervals)
-    addPass(&LiveIntervalsID);
+  // LiveIntervals is computed unconditionally before TwoAddressInstruction so
+  // that pass can rely on it instead of LiveVariables. This is a step toward
+  // removing LiveVariables entirely.
+  // FIXME: Eventually, we want to run LiveIntervals before PHI elimination.
+  addPass(&LiveIntervalsID);
 
   addPass(&TwoAddressInstructionPassID);
   addPass(&RegisterCoalescerID);

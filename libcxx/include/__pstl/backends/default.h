@@ -133,6 +133,10 @@ namespace __pstl {
 // ------------------
 // - sort
 //
+// swap_ranges family
+// ------------
+// No other algorithms based on swap_ranges
+//
 // transform_reduce and transform_reduce_binary family
 // ---------------------------------------------------
 // - count_if

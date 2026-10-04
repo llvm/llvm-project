@@ -1,5 +1,5 @@
 ; RUN: opt -passes=loop-vectorize -force-vector-width=8 -enable-epilogue-vectorization \
-; RUN:     -epilogue-vectorization-force-VF=4 -vplan-print-metadata=false -disable-output \
+; RUN:     -epilogue-vectorization-force-VF=4 -disable-output \
 ; RUN:     -vplan-print-after=printFinalVPlan %s 2>&1 | FileCheck %s
 
 ; Check how plans for epilogue vectorization are represented in VPlan.
@@ -928,4 +928,68 @@ bail:
 
 done:
   ret i32 0
+}
+
+; AnyOf and FindIV reductions adjust the resume value of the main loop in the
+; preheader of the epilogue vector loop.
+define i32 @any_of_resume(ptr noalias %src, i64 %n) {
+; CHECK-LABEL: VPlan for loop in 'any_of_resume'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK:       vec.epilog.ph:
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = and ir<%n>, ir<3>
+; CHECK-NEXT:    EMIT vp<%n.vec> = sub ir<%n>, vp<[[VP3]]>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = icmp ne ir<%bc.merge.rdx>, ir<0>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = broadcast vp<[[VP4]]>
+; CHECK-NEXT:  Successor(s): vec.epilog.vector.body
+; CHECK-EMPTY:
+; CHECK-NEXT:  vec.epilog.vector.body:
+; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<%vec.epilog.resume.val>, vec.epilog.ph ], [ vp<%index.next>, vec.epilog.vector.body ]
+; CHECK-NEXT:    WIDEN-REDUCTION-PHI ir<%rdx> = phi (any-of) vp<[[VP5]]>, vp<{{.+}}>
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %rdx = phi i32 [ 0, %entry ], [ %sel, %loop ]
+  %gep = getelementptr inbounds i8, ptr %src, i64 %iv
+  %l = load i8, ptr %gep
+  %c = icmp eq i8 %l, 0
+  %sel = select i1 %c, i32 1, i32 %rdx
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 %sel
+}
+
+define i64 @find_iv_resume(ptr noalias %a, i64 %n) {
+; CHECK-LABEL: VPlan for loop in 'find_iv_resume'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK:       vec.epilog.ph:
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = and ir<%n>, ir<3>
+; CHECK-NEXT:    EMIT vp<%n.vec> = sub ir<%n>, vp<[[VP3]]>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = icmp eq ir<%bc.merge.rdx>, ir<3>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = select vp<[[VP4]]>, ir<-9223372036854775808>, ir<%bc.merge.rdx>
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = broadcast vp<[[VP5]]>
+; CHECK:       vec.epilog.vector.body:
+; CHECK:         WIDEN-REDUCTION-PHI ir<%rdx> = phi (find-iv) vp<[[VP6]]>, ir<%sel>
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %rdx = phi i64 [ 3, %entry ], [ %sel, %loop ]
+  %gep = getelementptr inbounds i64, ptr %a, i64 %iv
+  %l = load i64, ptr %gep
+  %c = icmp eq i64 %l, 3
+  %sel = select i1 %c, i64 %iv, i64 %rdx
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i64 %sel
 }

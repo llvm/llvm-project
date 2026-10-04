@@ -11,6 +11,8 @@
 ; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64I-SMALL
 ; RUN: llc -mtriple=riscv64 -code-model=medium -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64I-MEDIUM
+; RUN: llc -mtriple=riscv64 -code-model=large -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64I-LARGE
 ; RUN: llc -mtriple=riscv64 -relocation-model=pic -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64I-PIC
 ; RUN: llc -mtriple=riscv32 -code-model=small -verify-machineinstrs -riscv-min-jump-table-entries=7 < %s \
@@ -290,6 +292,41 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV64I-MEDIUM-NEXT:    sw a0, 0(a1)
 ; RV64I-MEDIUM-NEXT:  .LBB1_9: # %exit
 ; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: above_threshold:
+; RV64I-LARGE:       # %bb.0: # %entry
+; RV64I-LARGE-NEXT:    li a2, 5
+; RV64I-LARGE-NEXT:    addi a0, a0, -1
+; RV64I-LARGE-NEXT:    bltu a2, a0, .LBB1_9
+; RV64I-LARGE-NEXT:  # %bb.1: # %entry
+; RV64I-LARGE-NEXT:  .Lpcrel_hi0:
+; RV64I-LARGE-NEXT:    auipc a2, %pcrel_hi(.LJTI1_0)
+; RV64I-LARGE-NEXT:    slli a0, a0, 3
+; RV64I-LARGE-NEXT:    addi a2, a2, %pcrel_lo(.Lpcrel_hi0)
+; RV64I-LARGE-NEXT:    add a0, a2, a0
+; RV64I-LARGE-NEXT:    ld a0, 0(a0)
+; RV64I-LARGE-NEXT:    jr a0
+; RV64I-LARGE-NEXT:  .LBB1_2: # %bb1
+; RV64I-LARGE-NEXT:    li a0, 4
+; RV64I-LARGE-NEXT:    j .LBB1_8
+; RV64I-LARGE-NEXT:  .LBB1_3: # %bb5
+; RV64I-LARGE-NEXT:    li a0, 100
+; RV64I-LARGE-NEXT:    j .LBB1_8
+; RV64I-LARGE-NEXT:  .LBB1_4: # %bb3
+; RV64I-LARGE-NEXT:    li a0, 2
+; RV64I-LARGE-NEXT:    j .LBB1_8
+; RV64I-LARGE-NEXT:  .LBB1_5: # %bb4
+; RV64I-LARGE-NEXT:    li a0, 1
+; RV64I-LARGE-NEXT:    j .LBB1_8
+; RV64I-LARGE-NEXT:  .LBB1_6: # %bb2
+; RV64I-LARGE-NEXT:    li a0, 3
+; RV64I-LARGE-NEXT:    j .LBB1_8
+; RV64I-LARGE-NEXT:  .LBB1_7: # %bb6
+; RV64I-LARGE-NEXT:    li a0, 200
+; RV64I-LARGE-NEXT:  .LBB1_8: # %exit
+; RV64I-LARGE-NEXT:    sw a0, 0(a1)
+; RV64I-LARGE-NEXT:  .LBB1_9: # %exit
+; RV64I-LARGE-NEXT:    ret
 ;
 ; RV64I-PIC-LABEL: above_threshold:
 ; RV64I-PIC:       # %bb.0: # %entry
