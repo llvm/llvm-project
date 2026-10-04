@@ -1451,6 +1451,53 @@ upper 32 bits of the generic pointer.
 As the LDS aperture is defined by its 16 most significant bits, we can theoretically
 support up to ``(1 << 16) - 1`` synthetic apertures safely.
 
+.. _amdgpu-clusters:
+
+Clusters
+--------
+
+On targets that support workgroup clusters (for example ``gfx1250``), the
+workgroups of a grid can be grouped into *clusters*. A cluster is a fixed-size
+block of workgroups that are co-scheduled on the same shader engine so that
+they can cooperate more closely than workgroups in different clusters.
+
+On each subtarget, the maximum size of a cluster is limited by the number of
+WGPs on a shader engine; each workgroup in a cluster runs on a separate WGP. A
+WGP may simultaneously host workgroups from different clusters. Clusters may be
+1D, 2D, or 3D. The cluster dimensions are specified with the
+``"amdgpu-cluster-dims"`` function attribute (see
+:ref:`amdgpu-llvm-ir-attributes-table`). A value of ``0,0,0`` disables
+clustering for the function.
+
+Every workgroup in a cluster is the same size, and every cluster in a dispatch
+is the same size.
+
+Within a cluster, several workgroups can combine matching load requests via
+:ref:`cluster multicast DMA operations <amdgpu-cluster-multicast-dma>` so that
+each populates its own LDS from a single shared fetch of global memory. The
+``cluster`` memory scope (see
+:ref:`amdgpu-memory-scopes`) synchronizes operations performed by threads in
+workgroups of the same cluster. On targets that do not support clusters,
+``cluster`` scope behaves like ``agent`` scope.
+
+A workgroup can query its position within the grid and its cluster using the
+following intrinsics:
+
+* ``llvm.amdgcn.cluster.id.{x,y,z}`` -- the coordinates of this workgroup's
+  cluster within the grid.
+* ``llvm.amdgcn.cluster.workgroup.id.{x,y,z}`` -- the coordinates of this
+  workgroup within its cluster.
+* ``llvm.amdgcn.cluster.workgroup.flat.id`` -- this workgroup's position within
+  its cluster: a value between ``0`` and the number of workgroups in the
+  cluster minus one, assigned to each workgroup in the cluster. Every wave in
+  the workgroup is initialized with its workgroup's value. This is the same
+  index used to select destination workgroups in the mask of a
+  :ref:`cluster multicast DMA <amdgpu-cluster-multicast-dma>`.
+* ``llvm.amdgcn.cluster.workgroup.max.id.{x,y,z}`` -- the largest workgroup
+  index within the cluster in each dimension.
+* ``llvm.amdgcn.cluster.workgroup.max.flat.id`` -- the largest flattened
+  workgroup within the cluster.
+
 .. _amdgpu-memory-scopes:
 
 Memory Scopes
