@@ -334,6 +334,7 @@ endif()
 if (LIBCXX_ENABLE_THREADS)
   list(APPEND LIBCXX_EXPERIMENTAL_SOURCES
     experimental/include/rcu/rcu_list.h
+    experimental/include/rcu/thread_local_container.h
     experimental/rcu.cpp
     )
 endif()
