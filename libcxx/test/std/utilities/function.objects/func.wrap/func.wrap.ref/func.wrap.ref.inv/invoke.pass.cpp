@@ -93,6 +93,11 @@ struct TrackCopyMove {
   }
 };
 
+struct StaticallyCallable {
+  static inline int static_call_count = 0;
+  static int operator()() noexcept { static_call_count++; return 42; }
+};
+
 void test_default() {
   {
     std::function_ref<void()> f = [] {};
@@ -194,6 +199,14 @@ void test_default() {
     };
     std::function_ref<void(TrackCopyMove)> f = lambda;
     f(TrackCopyMove{});
+  }
+  {
+    // Non-void static operator() can bind to function_ref<void()>
+    StaticallyCallable sc;
+    std::function_ref<void()> f = sc;
+    StaticallyCallable::static_call_count = 0;
+    f();
+    assert(StaticallyCallable::static_call_count == 1);
   }
 }
 
@@ -298,6 +311,14 @@ void test_const() {
     };
     std::function_ref<void(TrackCopyMove) const> f = lambda;
     f(TrackCopyMove{});
+  }
+  {
+    // Non-void static operator() can bind to function_ref<void()>
+    StaticallyCallable sc;
+    std::function_ref<void() const> f = sc;
+    StaticallyCallable::static_call_count = 0;
+    f();
+    assert(StaticallyCallable::static_call_count == 1);
   }
 }
 
@@ -404,6 +425,14 @@ void test_noexcept() {
     std::function_ref<void(TrackCopyMove) noexcept> f = lambda;
     f(TrackCopyMove{});
   }
+  {
+    // Non-void static operator() can bind to function_ref<void()>
+    StaticallyCallable sc;
+    std::function_ref<void() noexcept> f = sc;
+    StaticallyCallable::static_call_count = 0;
+    f();
+    assert(StaticallyCallable::static_call_count == 1);
+  }
 }
 
 void test_const_noexcept() {
@@ -508,6 +537,14 @@ void test_const_noexcept() {
     };
     std::function_ref<void(TrackCopyMove) const noexcept> f = lambda;
     f(TrackCopyMove{});
+  }
+  {
+    // Non-void static operator() can bind to function_ref<void()>
+    StaticallyCallable sc;
+    std::function_ref<void() const noexcept> f = sc;
+    StaticallyCallable::static_call_count = 0;
+    f();
+    assert(StaticallyCallable::static_call_count == 1);
   }
 }
 
