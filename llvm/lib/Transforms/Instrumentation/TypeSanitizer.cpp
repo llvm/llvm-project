@@ -377,7 +377,10 @@ bool TypeSanitizer::generateBaseTypeDescriptor(
     TDSubData.push_back(C);
   };
 
-  PushTDSub(ConstantInt::get(IntptrTy, 2));
+  int TDTag = 2; // 2 is for structs
+  if (Name == "TysanConservativeTBAA")
+    TDTag = 3; // 3 is for TDs that conservatively alias with everything
+  PushTDSub(ConstantInt::get(IntptrTy, TDTag));
   PushTDSub(ConstantInt::get(IntptrTy, Members.size()));
 
   // Types that are in an anonymous namespace are local to this module.
