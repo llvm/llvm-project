@@ -17532,6 +17532,31 @@ VarDecl *Sema::BuildExceptionDeclaration(Scope *S, TypeSourceInfo *TInfo,
     Invalid = true;
   }
 
+  // Reject catch types that need a cross-AS conversion.
+  // cause runtimes don't yet support cross-address-
+  // space conversions
+  if (Mode == 1) {
+    if (ExDeclType.getAddressSpace() != LangAS::Default ||
+        BaseType.getAddressSpace() != LangAS::Default) {
+      Diag(Loc, diag::err_throw_or_catch_address_space_qualified_ptr)
+          << /*IsCatch=*/1 << /*IsRef=*/0 << ExDeclType;
+      Invalid = true;
+    }
+  } else if (Mode == 2) {
+    if (const PointerType *PT = BaseType->getAs<PointerType>()) {
+      if (BaseType.getAddressSpace() != LangAS::Default ||
+          PT->getPointeeType().getAddressSpace() != LangAS::Default) {
+        Diag(Loc, diag::err_throw_or_catch_address_space_qualified_ptr)
+            << /*IsCatch=*/1 << /*IsRef=*/0 << ExDeclType;
+        Invalid = true;
+      }
+    } else if (BaseType.getAddressSpace() != LangAS::Default) {
+      Diag(Loc, diag::err_throw_or_catch_address_space_qualified_ptr)
+          << /*IsCatch=*/1 << /*IsRef=*/1 << ExDeclType;
+      Invalid = true;
+    }
+  }
+
   if (!Invalid && Mode != 1 && BaseType->isSizelessType()) {
     Diag(Loc, diag::err_catch_sizeless) << (Mode == 2 ? 1 : 0) << BaseType;
     Invalid = true;

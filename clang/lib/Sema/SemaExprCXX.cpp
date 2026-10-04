@@ -993,6 +993,14 @@ bool Sema::CheckCXXThrowOperand(SourceLocation ThrowLoc,
     return true;
   }
 
+  // Reject throwing of ptr's involving non-default address spaces runtimes
+  // cannot perform cross-address-space conversions yet.
+  if (isPointer && Ty.getAddressSpace() != LangAS::Default) {
+    Diag(ThrowLoc, diag::err_throw_or_catch_address_space_qualified_ptr)
+        << /*IsCatch=*/0 << /*IsRef=*/0 << E->getType() << E->getSourceRange();
+    return true;
+  }
+
   if (!isPointer || !Ty->isVoidType()) {
     if (RequireCompleteType(ThrowLoc, Ty,
                             isPointer ? diag::err_throw_incomplete_ptr
