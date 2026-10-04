@@ -212,6 +212,8 @@ static bool shouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
             Name.starts_with("pmin") ||       // Added in 3.9
             Name.starts_with("pmovsx") ||     // Added in 3.9
             Name.starts_with("pmovzx") ||     // Added in 3.9
+            Name.starts_with("pmulh.w") ||    // Added in 24.0
+            Name.starts_with("pmulhu.w") ||   // Added in 24.0
             Name == "pmul.dq" ||              // Added in 7.0
             Name == "pmulu.dq" ||             // Added in 7.0
             Name.starts_with("psll.dq") ||    // Added in 3.7
@@ -438,6 +440,8 @@ static bool shouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
             Name == "kxor.w" ||                 // Added in 7.0
             Name.starts_with("padds.") ||       // Added in 8.0
             Name.starts_with("pbroadcast") ||   // Added in 3.9
+            Name.starts_with("pmulh.w") ||      // Added in 24.0
+            Name.starts_with("pmulhu.w") ||     // Added in 24.0
             Name.starts_with("prol") ||         // Added in 8.0
             Name.starts_with("pror") ||         // Added in 8.0
             Name.starts_with("psll.dq") ||      // Added in 3.9
@@ -490,6 +494,8 @@ static bool shouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
             Name == "pmaxu.b" ||           // Added in 3.9
             Name == "pmins.w" ||           // Added in 3.9
             Name == "pminu.b" ||           // Added in 3.9
+            Name == "pmulh.w" ||           // Added in 24.0
+            Name == "pmulhu.w" ||          // Added in 24.0
             Name == "pmulu.dq" ||          // Added in 7.0
             Name.starts_with("pshuf") ||   // Added in 3.9
             Name.starts_with("psll.dq") || // Added in 3.7
@@ -3057,24 +3063,16 @@ static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
       IID = Intrinsic::x86_avx512_pmul_hr_sw_512;
     else
       llvm_unreachable("Unexpected intrinsic");
-  } else if (Name.starts_with("pmulh.w.")) {
-    if (VecWidth == 128)
-      IID = Intrinsic::x86_sse2_pmulh_w;
-    else if (VecWidth == 256)
-      IID = Intrinsic::x86_avx2_pmulh_w;
-    else if (VecWidth == 512)
-      IID = Intrinsic::x86_avx512_pmulh_w_512;
-    else
-      llvm_unreachable("Unexpected intrinsic");
-  } else if (Name.starts_with("pmulhu.w.")) {
-    if (VecWidth == 128)
-      IID = Intrinsic::x86_sse2_pmulhu_w;
-    else if (VecWidth == 256)
-      IID = Intrinsic::x86_avx2_pmulhu_w;
-    else if (VecWidth == 512)
-      IID = Intrinsic::x86_avx512_pmulhu_w_512;
-    else
-      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.starts_with("pmulh.w")) {
+    assert((VecWidth == 128 || VecWidth == 256 || VecWidth == 512) &&
+           "Unexpected intrinsic");
+    Rep = upgradeX86BinaryIntrinsics(Builder, CI, Intrinsic::smulh);
+    return true;
+  } else if (Name.starts_with("pmulhu.w")) {
+    assert((VecWidth == 128 || VecWidth == 256 || VecWidth == 512) &&
+           "Unexpected intrinsic");
+    Rep = upgradeX86BinaryIntrinsics(Builder, CI, Intrinsic::umulh);
+    return true;
   } else if (Name.starts_with("pmaddw.d.")) {
     if (VecWidth == 128)
       IID = Intrinsic::x86_sse2_pmadd_wd;
@@ -3773,6 +3771,12 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
              Name == "sse41.pminud" || Name.starts_with("avx2.pminu") ||
              Name.starts_with("avx512.mask.pminu")) {
     Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::umin);
+  } else if (Name == "sse2.pmulh.w" || Name.starts_with("avx2.pmulh.w") ||
+             Name.starts_with("avx512.pmulh.w")) {
+    Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::smulh);
+  } else if (Name == "sse2.pmulhu.w" || Name.starts_with("avx2.pmulhu.w") ||
+             Name.starts_with("avx512.pmulhu.w")) {
+    Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::umulh);
   } else if (Name == "sse2.pmulu.dq" || Name == "avx2.pmulu.dq" ||
              Name == "avx512.pmulu.dq.512" ||
              Name.starts_with("avx512.mask.pmulu.dq.")) {
@@ -5762,10 +5766,9 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     return;
 
   LLVMContext &C = CI->getContext();
-  IRBuilder<> Builder(C);
+  IRBuilder<> Builder(CI->getParent(), CI->getIterator());
   if (isa<FPMathOperator>(CI))
     Builder.setFastMathFlags(CI->getFastMathFlags());
-  Builder.SetInsertPoint(CI->getParent(), CI->getIterator());
 
   if (!NewFn) {
     // Get the Function's name.
