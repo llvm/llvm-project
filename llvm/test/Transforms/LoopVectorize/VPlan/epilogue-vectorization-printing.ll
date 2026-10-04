@@ -938,12 +938,13 @@ define i32 @any_of_resume(ptr noalias %src, i64 %n) {
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = and ir<%n>, ir<3>
 ; CHECK-NEXT:    EMIT vp<%n.vec> = sub ir<%n>, vp<[[VP3]]>
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = broadcast ir<[[ADJ:%.+]]>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = icmp ne ir<%bc.merge.rdx>, ir<0>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = broadcast vp<[[VP4]]>
 ; CHECK-NEXT:  Successor(s): vec.epilog.vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vec.epilog.vector.body:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<%vec.epilog.resume.val>, vec.epilog.ph ], [ vp<%index.next>, vec.epilog.vector.body ]
-; CHECK-NEXT:    WIDEN-REDUCTION-PHI ir<%rdx> = phi (any-of) vp<[[VP4]]>, vp<{{.+}}>
+; CHECK-NEXT:    WIDEN-REDUCTION-PHI ir<%rdx> = phi (any-of) vp<[[VP5]]>, vp<{{.+}}>
 ;
 entry:
   br label %loop
@@ -969,9 +970,11 @@ define i64 @find_iv_resume(ptr noalias %a, i64 %n) {
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = and ir<%n>, ir<3>
 ; CHECK-NEXT:    EMIT vp<%n.vec> = sub ir<%n>, vp<[[VP3]]>
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = broadcast ir<[[ADJ:%.+]]>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = icmp eq ir<%bc.merge.rdx>, ir<3>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = select vp<[[VP4]]>, ir<-9223372036854775808>, ir<%bc.merge.rdx>
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = broadcast vp<[[VP5]]>
 ; CHECK:       vec.epilog.vector.body:
-; CHECK:         WIDEN-REDUCTION-PHI ir<%rdx> = phi (find-iv) vp<[[VP4]]>, ir<%sel>
+; CHECK:         WIDEN-REDUCTION-PHI ir<%rdx> = phi (find-iv) vp<[[VP6]]>, ir<%sel>
 ;
 entry:
   br label %loop
