@@ -32,6 +32,54 @@ define amdgpu_cs void @atomic_store_f32x2_monotonic_agent(<2 x float> %in, ptr a
   ret void
 }
 
+define amdgpu_cs void @atomic_store_f32x2_monotonic_agent_elementwise(<2 x float> %in, ptr addrspace(1) %out) {
+; GFX9-LABEL: atomic_store_f32x2_monotonic_agent_elementwise:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: atomic_store_f32x2_monotonic_agent_elementwise:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: atomic_store_f32x2_monotonic_agent_elementwise:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: atomic_store_f32x2_monotonic_agent_elementwise:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_store_b64 v[2:3], v[0:1], off scope:SCOPE_DEV
+; GFX12-NEXT:    s_endpgm
+  store atomic elementwise <2 x float> %in, ptr addrspace(1) %out syncscope("agent") monotonic, align 4
+  ret void
+}
+
+define amdgpu_cs void @atomic_store_f32x2_unordered_agent_elementwise(<2 x float> %in, ptr addrspace(1) %out) {
+; GFX9-LABEL: atomic_store_f32x2_unordered_agent_elementwise:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: atomic_store_f32x2_unordered_agent_elementwise:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: atomic_store_f32x2_unordered_agent_elementwise:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: atomic_store_f32x2_unordered_agent_elementwise:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX12-NEXT:    s_endpgm
+  store atomic elementwise <2 x float> %in, ptr addrspace(1) %out syncscope("agent") unordered, align 4
+  ret void
+}
+
 define amdgpu_cs void @atomic_store_f32x2_seq_cst_agent(<2 x float> %in, ptr addrspace(1) %out) {
 ; GFX9-LABEL: atomic_store_f32x2_seq_cst_agent:
 ; GFX9:       ; %bb.0:
@@ -77,6 +125,30 @@ define amdgpu_cs void @atomic_store_f32x2_seq_cst_wavefront(<2 x float> %in, ptr
 ; GFX12-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GFX12-NEXT:    s_endpgm
   store atomic <2 x float> %in, ptr addrspace(1) %out syncscope("wavefront") seq_cst, align 8
+  ret void
+}
+
+define amdgpu_cs void @atomic_store_f32x2_monotonic_wavefront_elementwise(<2 x float> %in, ptr addrspace(1) %out) {
+; GFX9-LABEL: atomic_store_f32x2_monotonic_wavefront_elementwise:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: atomic_store_f32x2_monotonic_wavefront_elementwise:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: atomic_store_f32x2_monotonic_wavefront_elementwise:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: atomic_store_f32x2_monotonic_wavefront_elementwise:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX12-NEXT:    s_endpgm
+  store atomic elementwise <2 x float> %in, ptr addrspace(1) %out syncscope("wavefront") monotonic, align 4
   ret void
 }
 

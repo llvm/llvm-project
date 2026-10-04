@@ -48,6 +48,86 @@ define amdgpu_cs void @atomic_load_f32x2_monotonic_agent(ptr addrspace(1) %p, pt
   ret void
 }
 
+define amdgpu_cs void @atomic_load_f32x2_monotonic_agent_elementwise(ptr addrspace(1) %p, ptr addrspace(1) %out) {
+; GFX9-LABEL: atomic_load_f32x2_monotonic_agent_elementwise:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off glc
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX9-NEXT:    global_store_dword v[2:3], v0, off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: atomic_load_f32x2_monotonic_agent_elementwise:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off glc dlc
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX10-NEXT:    global_store_dword v[2:3], v0, off
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: atomic_load_f32x2_monotonic_agent_elementwise:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off glc
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX11-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: atomic_load_f32x2_monotonic_agent_elementwise:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_load_b64 v[0:1], v[0:1], off scope:SCOPE_DEV
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX12-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX12-NEXT:    s_endpgm
+  %a0 = load atomic elementwise <2 x float>, ptr addrspace(1) %p syncscope("agent") monotonic, align 4
+  %num1 = extractelement <2 x float> %a0, i32 0
+  %num2 = extractelement <2 x float> %a0, i32 1
+  %res = fadd float %num1, %num2
+  store float %res, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define amdgpu_cs void @atomic_load_f32x2_unordered_agent_elementwise(ptr addrspace(1) %p, ptr addrspace(1) %out) {
+; GFX9-LABEL: atomic_load_f32x2_unordered_agent_elementwise:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX9-NEXT:    global_store_dword v[2:3], v0, off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: atomic_load_f32x2_unordered_agent_elementwise:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX10-NEXT:    global_store_dword v[2:3], v0, off
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: atomic_load_f32x2_unordered_agent_elementwise:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX11-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: atomic_load_f32x2_unordered_agent_elementwise:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX12-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX12-NEXT:    s_endpgm
+  %a0 = load atomic elementwise <2 x float>, ptr addrspace(1) %p syncscope("agent") unordered, align 4
+  %num1 = extractelement <2 x float> %a0, i32 0
+  %num2 = extractelement <2 x float> %a0, i32 1
+  %res = fadd float %num1, %num2
+  store float %res, ptr addrspace(1) %out, align 4
+  ret void
+}
+
 define amdgpu_cs void @atomic_load_f32x2_seq_cst_agent(ptr addrspace(1) %p, ptr addrspace(1) %out) {
 ; GFX9-LABEL: atomic_load_f32x2_seq_cst_agent:
 ; GFX9:       ; %bb.0:
@@ -127,6 +207,46 @@ define amdgpu_cs void @atomic_load_f32x2_monotonic_wavefront(ptr addrspace(1) %p
 ; GFX12-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX12-NEXT:    s_endpgm
   %a0 = load atomic <2 x float>, ptr addrspace(1) %p syncscope("wavefront") monotonic, align 8
+  %num1 = extractelement <2 x float> %a0, i32 0
+  %num2 = extractelement <2 x float> %a0, i32 1
+  %res = fadd float %num1, %num2
+  store float %res, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define amdgpu_cs void @atomic_load_f32x2_monotonic_wavefront_elementwise(ptr addrspace(1) %p, ptr addrspace(1) %out) {
+; GFX9-LABEL: atomic_load_f32x2_monotonic_wavefront_elementwise:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX9-NEXT:    global_store_dword v[2:3], v0, off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: atomic_load_f32x2_monotonic_wavefront_elementwise:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX10-NEXT:    global_store_dword v[2:3], v0, off
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: atomic_load_f32x2_monotonic_wavefront_elementwise:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX11-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: atomic_load_f32x2_monotonic_wavefront_elementwise:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX12-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX12-NEXT:    s_endpgm
+  %a0 = load atomic elementwise <2 x float>, ptr addrspace(1) %p syncscope("wavefront") monotonic, align 4
   %num1 = extractelement <2 x float> %a0, i32 0
   %num2 = extractelement <2 x float> %a0, i32 1
   %res = fadd float %num1, %num2
