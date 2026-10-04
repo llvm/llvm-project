@@ -8,18 +8,18 @@
 
 // <deque>
 
-//       reference operator[](size_type __i);
-// const_reference operator[](size_type __i) const;
+//       reference operator[](size_type __i);       // constexpr since C++26
+// const_reference operator[](size_type __i) const; // constexpr since C++26
 //
-//       reference at(size_type __i);
-// const_reference at(size_type __i) const;
+//       reference at(size_type __i);       // constexpr since C++26
+// const_reference at(size_type __i) const; // constexpr since C++26
 //
-//       reference front();
-// const_reference front() const;
+//       reference front();       // constexpr since C++26
+// const_reference front() const; // constexpr since C++26
 //
 //       reference back();
-// const_reference back() const;
-// libc++ marks these as 'noexcept'
+// const_reference back() const;    // constexpr since C++26
+// libc++ marks these as 'noexcept' // constexpr since C++26
 
 #include "asan_testing.h"
 #include <deque>
@@ -29,7 +29,7 @@
 #include "test_macros.h"
 
 template <class C>
-C make(int size, int start = 0) {
+TEST_CONSTEXPR_CXX26 C make(int size, int start = 0) {
   const int b = 4096 / sizeof(int);
   int init    = 0;
   if (start > 0) {
@@ -47,7 +47,7 @@ C make(int size, int start = 0) {
   return c;
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef std::deque<int> C;
     C c = make<std::deque<int> >(10);
@@ -117,6 +117,14 @@ int main(int, char**) {
     assert(c.back() == 9);
     LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
   }
+#endif
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;

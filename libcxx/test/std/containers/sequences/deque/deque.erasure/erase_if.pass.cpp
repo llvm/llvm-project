@@ -13,7 +13,7 @@
 
 // template <class T, class Allocator, class Predicate>
 //   typename deque<T, Allocator>::size_type
-//   erase_if(deque<T, Allocator>& c, Predicate pred);
+//   erase_if(deque<T, Allocator>& c, Predicate pred);  // constexpr since C++26
 
 #include "asan_testing.h"
 #include <deque>
@@ -23,7 +23,7 @@
 #include "min_allocator.h"
 
 template <class S, class Pred>
-void test0(S s, Pred p, S expected, std::size_t expected_erased_count) {
+TEST_CONSTEXPR_CXX26 void test0(S s, Pred p, S expected, std::size_t expected_erased_count) {
   ASSERT_SAME_TYPE(typename S::size_type, decltype(std::erase_if(s, p)));
   assert(expected_erased_count == std::erase_if(s, p));
   assert(s == expected);
@@ -31,7 +31,7 @@ void test0(S s, Pred p, S expected, std::size_t expected_erased_count) {
 }
 
 template <typename S>
-void test() {
+TEST_CONSTEXPR_CXX26 void test() {
   auto is1   = [](auto v) { return v == 1; };
   auto is2   = [](auto v) { return v == 2; };
   auto is3   = [](auto v) { return v == 3; };
@@ -68,7 +68,13 @@ void test() {
   test0(S({1, 2, 3}), False, S({1, 2, 3}), 0);
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool tests() {
+  {
+    std::deque<int> d = {1, 2, 1, 3};
+    assert(std::erase(d, 1) == 2);
+    assert((d == std::deque<int>{2, 3}));
+  }
+
   test<std::deque<int>>();
   test<std::deque<int, min_allocator<int>>>();
   test<std::deque<int, safe_allocator<int>>>();
@@ -76,6 +82,14 @@ int main(int, char**) {
 
   test<std::deque<long>>();
   test<std::deque<double>>();
+  return true;
+}
+
+int main(int, char**) {
+  tests();
+#if TEST_STD_VER >= 26
+  static_assert(tests());
+#endif
 
   return 0;
 }
