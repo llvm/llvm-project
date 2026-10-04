@@ -446,8 +446,8 @@ def GenericWriteCOP0Short : SchedWriteRes<[GenericIssueCOP0]>;
 def : InstRW<[GenericWriteCOP0TLB], (instrs TLBP, TLBR, TLBWI, TLBWR)>;
 def : InstRW<[GenericWriteCOP0TLB], (instrs TLBINV, TLBINVF)>;
 
-def : InstRW<[GenericReadCOP0], (instrs MFC0)>;
-def : InstRW<[GenericWriteCOP0], (instrs MTC0)>;
+def : InstRW<[GenericReadCOP0], (instrs MFC0, MFC0_MM)>;
+def : InstRW<[GenericWriteCOP0], (instrs MTC0, MTC0_MM)>;
 
 def : InstRW<[GenericWriteCOP0], (instrs EVP, DVP)>;
 
