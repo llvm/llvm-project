@@ -286,7 +286,7 @@ public:
   }
 
   bool maybeMoveFast(DenseMapStorage &&Other) {
-    swap(Other);
+    *this = Other;
     return true;
   }
 };
