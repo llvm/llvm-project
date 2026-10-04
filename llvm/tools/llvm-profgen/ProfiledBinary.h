@@ -283,6 +283,13 @@ class ProfiledBinary {
   // An array of Addresses of all instructions sorted in increasing order. The
   // sorting is needed to fast advance to the next forward/backward instruction.
   std::vector<uint64_t> CodeAddressVec;
+  // Addresses that end an inferred executable range: transfer instructions,
+  // traps, SVC, and the last instructions before a code gap or a function
+  // boundary. Sorted in increasing order and filled on the first findRangeEnd
+  // query, so an input that needs no range inference never pays for it.
+  std::vector<uint64_t> RangeEnds;
+  // Whether RangeEnds has been built, which its emptiness does not indicate.
+  bool RangeEndsBuilt = false;
   // A set of call instruction addresses. Used by virtual unwinding.
   DenseSet<uint64_t> CallAddressSet;
   // A set of return instruction addresses. Used by virtual unwinding.
@@ -295,6 +302,10 @@ class ProfiledBinary {
   DenseSet<uint64_t> IndirectBranchAddressSet;
   // A set of branch target addresses (destinations of branches/calls).
   DenseSet<uint64_t> BranchTargetAddressSet;
+  // A set of the addresses of non-transfer instructions that stop range
+  // inference: traps and the AArch64 SVC system call. buildRangeEnds ends an
+  // inferred range there.
+  DenseSet<uint64_t> RangeStopAddressSet;
 
   // Estimate and track function prolog and epilog ranges.
   PrologEpilogTracker ProEpilogTracker;
@@ -421,6 +432,9 @@ class ProfiledBinary {
   bool dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
                           SectionSymbolsTy &Symbols,
                           const object::SectionRef &Section);
+  /// Collect the addresses that end an inferred executable range into
+  /// RangeEnds. Called on the first findRangeEnd query.
+  void buildRangeEnds();
   /// Symbolize a given instruction pointer and return a full call context.
   SampleContextFrameVector symbolize(const InstructionPointer &IP,
                                      bool UseCanonicalFnName = false,
@@ -509,6 +523,16 @@ public:
     return BranchAddressSet.count(Address) || RetAddressSet.count(Address) ||
            CallAddressSet.count(Address);
   }
+
+  // Return the end of the executable range that starts at Address: the nearest
+  // instruction at or after it that is a transfer, trap, or SVC, without
+  // crossing a code gap or a function boundary, or the last instruction before
+  // either boundary. Return zero when Address is not an instruction, and
+  // Address itself when no function range covers it, which keeps an inferred
+  // range out of code that may belong to another function. Set *Uncovered, when
+  // given, to whether the range had to be reduced to Address; it is assigned on
+  // every path.
+  uint64_t findRangeEnd(uint64_t Address, bool *Uncovered = nullptr);
 
   bool rangeCrossUncondBranch(uint64_t Start, uint64_t End) {
     if (Start >= End)
