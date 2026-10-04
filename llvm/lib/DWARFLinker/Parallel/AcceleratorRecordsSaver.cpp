@@ -51,7 +51,8 @@ static uint32_t hashFullyQualifiedName(CompileUnit &InputCU, DWARFDie &InputDIE,
     Name = "(anonymous namespace)";
 
   DWARFDie ParentDie = InputDIE.getParent();
-  if (!ParentDie.isValid() || ParentDie.getTag() == dwarf::DW_TAG_compile_unit)
+  if (!ParentDie.isValid() ||
+      CompileUnit::isUnitRootDIE(CU->getDIEIndex(ParentDie)))
     return djbHash(Name ? Name : "", djbHash(ChildRecurseDepth ? "" : "::"));
 
   return djbHash(
