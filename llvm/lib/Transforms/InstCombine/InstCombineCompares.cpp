@@ -107,18 +107,18 @@ class NormalizedIntCompare {
       return Cached;
     Value *Result;
     if (auto *SI = dyn_cast<SelectInst>(V)) {
-      Result = Builder.CreateSelect(SI->getCondition(),
-                                    build(SI->getTrueValue(), Builder),
-                                    build(SI->getFalseValue(), Builder));
+      Value *TrueVal = build(SI->getTrueValue(), Builder);
+      Value *FalseVal = build(SI->getFalseValue(), Builder);
+      Result = Builder.CreateSelect(SI->getCondition(), TrueVal, FalseVal);
     } else if (auto IsMin = isMinimum(V)) {
       auto *II = cast<IntrinsicInst>(V);
       bool IsSigned = CastOpcode == Instruction::SIToFP;
       Intrinsic::ID ID = *IsMin
                              ? (IsSigned ? Intrinsic::smin : Intrinsic::umin)
                              : (IsSigned ? Intrinsic::smax : Intrinsic::umax);
-      Result = Builder.CreateBinaryIntrinsic(
-          ID, build(II->getArgOperand(0), Builder),
-          build(II->getArgOperand(1), Builder));
+      Value *LHS = build(II->getArgOperand(0), Builder);
+      Value *RHS = build(II->getArgOperand(1), Builder);
+      Result = Builder.CreateBinaryIntrinsic(ID, LHS, RHS);
     } else {
       auto *I = cast<Instruction>(V);
       Result = I->getOpcode() == Instruction::FDiv
@@ -177,8 +177,9 @@ public:
     default:
       return nullptr;
     }
-    return new ICmpInst(Pred, build(I.getOperand(0), Builder),
-                        build(I.getOperand(1), Builder));
+    Value *LHS = build(I.getOperand(0), Builder);
+    Value *RHS = build(I.getOperand(1), Builder);
+    return new ICmpInst(Pred, LHS, RHS);
   }
 };
 
