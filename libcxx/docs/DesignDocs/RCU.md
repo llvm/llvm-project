@@ -1,18 +1,15 @@
-====================
-``<rcu>`` Design
-====================
+# `<rcu>` Design
 
-.. contents::
-   :local:
-   :depth: 2
+:::{contents}
+:local: true
+:depth: 2
+:::
 
+## Introduction
 
-Introduction
-============
-
-This is the C++ paper `Read-Copy Update (RCU) <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2545r4.pdf>`__.
-There are three designs discussed in the paper `Supplementary Material for User-Level Implementations of
-Read-Copy Update <http://www.rdrop.com/users/paulmck/RCU/urcu-supp-accepted.2011.08.30a.pdf>`__
+This is the C++ paper [Read-Copy Update (RCU)](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2545r4.pdf).
+There are three designs discussed in the paper [Supplementary Material for User-Level Implementations of
+Read-Copy Update](http://www.rdrop.com/users/paulmck/RCU/urcu-supp-accepted.2011.08.30a.pdf).
 
 - Quiescent-State-Based Reclamation RCU
 - General-Purpose RCU
@@ -20,10 +17,9 @@ Read-Copy Update <http://www.rdrop.com/users/paulmck/RCU/urcu-supp-accepted.2011
 
 libc++ adopted a variation that closely resembles the "General-Purpose RCU" design in the above paper.
 
-Synopsis
-========
-::
+## Synopsis
 
+```cpp
   class rcu_domain {
   public:
     void lock() noexcept;
@@ -47,13 +43,14 @@ Synopsis
   public:
     void retire(D d = D(), rcu_domain& dom = rcu_default_domain()) noexcept;
   };
+```
 
-Background Information
-======================
+## Background Information
 
 `rcu` is an alternative to read-write locks and it is suitable for read-mostly data structures.
-Here is an example usage ::
+Here is an example usage
 
+```cpp
   struct Data { /* members */ };
   std::atomic<Data*> data_;
 
@@ -85,6 +82,7 @@ Here is an example usage ::
       std::this_thread::sleep(1s);
     }
   }
+```
 
 There are several key properties that an implementation of `rcu` must satisfy:
 
@@ -102,12 +100,11 @@ There are several key properties that an implementation of `rcu` must satisfy:
 - The threads that are participating in `rcu` must be known by the `rcu` implementation.
 
 
-Adopted Design
-==============
+## Adopted Design
 
 The core idea of `rcu` can be described by this image from lwn.net
 
-.. image:: https://static.lwn.net/images/ns/kernel/rcu/GracePeriodGood.png
+![image](https://static.lwn.net/images/ns/kernel/rcu/GracePeriodGood.png)
 
 - Each row is a thread. The last row is the collector thread and the rows above are the reader threads.
 - Each "Reader" block represents a critical section, which starts with `rcu_domain::lock` and ends with `rcu_domain::unlock` .
@@ -135,8 +132,7 @@ When `rcu_synchronize`/`rcu_barrier` returns, we can be sure that all the reader
 The paper explains why we need to wait two phases instead of just one phase in detail. The key point is that, if we only wait for the readers in the previous phase to exit,
 there might be a late reader that enters the critical section after we flip the global state and before we wait for the previous phase's readers to exit.
 
-Implementation Terminology
----------------------------
+### Implementation Terminology
 
 - reader: A thread that calls `rcu_domain::lock` and `rcu_domain::unlock` to enter and exit the critical section.
 
@@ -146,11 +142,9 @@ Implementation Terminology
 - grace period: Any time period during which every thread has been in at least one quiescent state is a grace period.
   The grace period cannot end until all pre-existing readers have exited their critical sections. (see the image above)
 
-Implementation Details
-----------------------
+### Implementation Details
 
-`class thread_local_container`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#### `class thread_local_container`
 
 A helper class that manages thread local objects. It provides APIs to get the `thread_local` object for the current thread, and to iterate through all the `thread_local` objects from all threads.
 It only contains `static` member variables and functions.
@@ -160,8 +154,7 @@ the contention on the `mutex` should be low.
 
 TODO: We need to replace `mutex` as all non allocating APIs in `rcu` are designed to be `noexcept` and `mutex` can throw.
 
-`struct reader_states`
-~~~~~~~~~~~~~~~~~~~~~~
+#### `struct reader_states`
 
 It defines the state of each reader thread. The state is essentially a pair of `(phase, lock_nested_level)` merged into a single `uint16_t` . 
 
@@ -169,19 +162,16 @@ It defines the state of each reader thread. The state is essentially a pair of `
 - `lock_nested_level` is the nested level of the `rcu_domain::lock` . As you can call `rcu_domain::lock` multiple times in the same thread, we need to keep track of the nested level.
   When `lock_nested_level` is `0`, it means the current thread is in a quiescent state (not in a critical section).
 
-`class rcu_singly_list_view`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#### `class rcu_singly_list_view`
 
 A helper class that provides a view of the intrusive singly linked list of `__rcu_node` s. It also stores the back pointer of the list to make the splice back operation more efficient.
 It provides APIs to splice from another `rcu_singly_list_view` or  `rcu_atomic_list_view`, and to iterate through the list.
 
-`class rcu_atomic_list_view`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#### `class rcu_atomic_list_view`
 
 A thread safe helper class that provides a view of the intrusive singly linked list of `__rcu_node` s. It provides APIs to push a node into the list, or to be spliced to another `rcu_singly_list_view`.
 
-`class rcu_domain_impl`
-~~~~~~~~~~~~~~~~~~~~~~~~
+#### `class rcu_doain_impl`
 
 This is the main class that implements the `rcu` logic. It contains
 
@@ -201,25 +191,21 @@ This is the main class that implements the `rcu` logic. It contains
 
 The domain has few operations:
 
-`lock`
-^^^^^^
+##### `lock`
 
 - If the current thread was in quiescent state, record the current global phase and set the nested level to 1. 
 - If the current thread was already in a critical section, just increment the nested level.
 
-`unlock`
-^^^^^^^^
+##### `unlock`
 
 - Decrement the nested level. 
 - If the nested level becomes 0, the thread is now in a quiescent state, we can notify the waiting collector thread if there is any.
 
-`retire`
-^^^^^^^^
+##### `retire`
 
 - We need to push the retired callback to the `retired_queue_stage0_`
 
-`synchronize`
-^^^^^^^^^^^^^
+##### `synchronize`
 
 - We need to go through two phases of grace period
 - For each phase of the grace period, we need to flip the phase, and wait until all the reading threads are either
@@ -251,39 +237,37 @@ The domain has few operations:
 - Note: stage 0 queue is not guarded by `grace_period_mutex_`
 
 
-Design Questions
-================
+## Design Questions
 
-What thread(s) should the deleters run on
------------------------------------------
+### What thread(s) should the deleters run on
 
 Paul E. McKenney suggested to run those deleters on a background thread:
 
-  Folly currently uses an "inline executor", though some would like a
-  separate thread in some cases.  The userspace RCU library always uses
-  background threads.  By default only one, but there are ways to configure
-  more. 
+>  Folly currently uses an "inline executor", though some would like a
+>  separate thread in some cases.  The userspace RCU library always uses
+>  background threads.  By default only one, but there are ways to configure
+>  more. 
 
 We have doubts on this. As a standard library, we usually don't spin threads for users. And Paul E. McKenney 
 has pointed out that:
 
-  Each library will have its own rules.
-  One advantage of an inline executor is that the deleters apply
-  backpressure against threads that flood the system with either .retire()
-  or rcu_retire().  Some compensation for the additional deadlocks,
-  I guess.  But you can get the same effect by properly restricting where
-  the background threads run.
+> Each library will have its own rules.
+> One advantage of an inline executor is that the deleters apply
+> backpressure against threads that flood the system with either .retire()
+> or rcu_retire().  Some compensation for the additional deadlocks,
+> I guess.  But you can get the same effect by properly restricting where
+> the background threads run.
 
 And Thomas Rodgers (libstdc++ contributor) also said:
 
-  We don't normally do this, no, and I don't think I'd ever directly pursue such an approach in isolation. If, 
-  on the other hand I could derive a permission from the user of library to create threads, by explicit use 
-  of a system thread pool executor, perhaps then it would be ok to also use that executor to run other background
-  threads for things like this. Having said that, I think that is something that SG1 should probably discuss. On the
-  one hand spinning up a 'system' thread pool is going be potentially expensive and if the library user has done so,
-  you probably would not release those resources until termination. So, in that sense, you've 'paid' for a background
-  thread. But on the other hand, users of the library might find it surprising that then gave the library permission
-  to also do work on those threads in ways they might not expect.
+> We don't normally do this, no, and I don't think I'd ever directly pursue such an approach in isolation. If, 
+> on the other hand I could derive a permission from the user of library to create threads, by explicit use 
+> of a system thread pool executor, perhaps then it would be ok to also use that executor to run other background
+> threads for things like this. Having said that, I think that is something that SG1 should probably discuss. On the
+> one hand spinning up a 'system' thread pool is going be potentially expensive and if the library user has done so,
+> you probably would not release those resources until termination. So, in that sense, you've 'paid' for a background
+> thread. But on the other hand, users of the library might find it surprising that then gave the library permission
+> to also do work on those threads in ways they might not expect.
 
 In libc++'s design, we would like to follow Folly's approach to run these deleters inline when 
 `rcu_barrier` is called.
@@ -291,8 +275,7 @@ In libc++'s design, we would like to follow Folly's approach to run these delete
 If we create a libc++ owned collector thread that performs stage migration and potentially stage 2 collection, there is a challenge that creating that thread is something each platform would have to teach us how to do
 (e.g. embedded threads can't actually create a thread with the `std::thread` constructor). There's also no precedent for libc++ to create a thread on the user's behalf.
 
-When should we run the deleters
--------------------------------
+### When should we run the deleters
 
 If we were to use the background thread approach, the deleters can be evaluated at any time after the readers have exited
 their critical sections and objects are safe to reclaim. e.g. drain the queue periodically. However, if we were to run the deleters
@@ -321,15 +304,14 @@ them will make `rcu_retire` take more time to return. But not running them will 
 for a longer time. In an extreme case, if the user never calls `rcu_barrier` after calling `rcu_retire`,
 the retired objects will never be reclaimed (without a background thread to drain the queue).
 
-Almost all APIs are `noexcept` . Is it designed to avoid memory allocation and avoid using `mutex` ?
------------------------------------------------------------------------------------------------------
+### Almost all APIs are `noexcept`. Is it designed to avoid memory allocation and avoid using `mutex` ?
 
 We should avoid using `mutex` as much as we can. However, both Folly and Paul's implementation use `mutex` in some places.
 
 Paul E. McKenney mentioned that:
 
-  On the non-noexcept nature of mutexes, the best I could do was to say
-  that my reference implementation acquired its pthread_mutexes from C
+> On the non-noexcept nature of mutexes, the best I could do was to say
+> that my reference implementation acquired its pthread_mutexes from C
 
 There are few places that might need to use `mutex`:
 
@@ -340,12 +322,23 @@ There are few places that might need to use `mutex`:
 
 - The destruction of a thread, which might need to do some clean up work for the `rcu` states.
 
+These are how other implemetations deal with this:
+
+- Folly implementation marks `rcu` functions that lock a `mutex` as `noexcept`, and allow the program to `std::terminate` in case a `mutex` lock failure.
+
+- `liburcu` does something very similar. In case the `pthread_mutexes` locking returns an error code, the library will `abort` the program.
+
+libc++ adopts a similar design where a `mutex::lock` failure inside `rcu` operations results in `std::terminate`.
+
 Memory Allocation can throw as well. Luckily `rcu_retire` is not marked as `noexcept` in the paper, as `rcu_retire` is
 likely to allocate memory to create a type erased object into the deleter queue.
 
 However, there are other places where it might need to allocate memory. For example, see Folly's comments
-`here <https://github.com/facebook/folly/blob/c83b50725f554c4912a73b676746242a22211eca/folly/synchronization/Rcu.h#L343>`__ ::
+[here](https://github.com/facebook/folly/blob/c83b50725f554c4912a73b676746242a22211eca/folly/synchronization/Rcu.h#L343):
 
+
+```cpp
+  /*
    * Note that despite the function being marked noexcept, an allocation
    * may take place in folly::ThreadLocal the first time a thread enters a read
    * region. Regardless, for now, we're marking this as noexcept to match the
@@ -357,6 +350,7 @@ However, there are other places where it might need to allocate memory. For exam
     counters_.increment(version_.load(std::memory_order_acquire));
   }
   FOLLY_ALWAYS_INLINE void unlock() noexcept { counters_.decrement(); }
+```
 
 In libc++'s design, we will start with as less `mutex` usage as possible. In places where it is unavoidable, we could either
 wrap the internal API with a while loop, or use the `atomic_unique_lock` that we introduced with `stop_token` implementations.
@@ -364,15 +358,14 @@ For memory allocations, we will only need them the first time we create some rcu
 We will consider whether we accepts a `terminate` call if this fails to allocate.
 
 
-How does `rcu` know about a thread?
-------------------------------------
+### How does `rcu` know about a thread?
 
 All design options require the `rcu_domain` to know whether a thread is in a critical section and stores each thread's state.
 The question is how does the `rcu_domain` know about a thread?
 
 Paul E. McKenney suggested that:
 
-  In a library, I also suggest automating each thread's initial call to register_thread().
+>  In a library, I also suggest automating each thread's initial call to register_thread().
 
 There are few options to automate the thread registration:
 
@@ -392,62 +385,61 @@ Folly uses the second approach to automate the thread registration. Another cave
 
 In libc++'s design, we will also use the second approach to automate the thread registration.
 
-Is `rcu_domain` singleton?
---------------------------
+### Is `rcu_domain` singleton?
 
-The APIs take a reference to `rcu_domain` with default value::
+The APIs take a reference to `rcu_domain` with default value
 
-    void rcu_synchronize(rcu_domain& dom = rcu_default_domain()) noexcept;
+```cpp
+void rcu_synchronize(rcu_domain& dom = rcu_default_domain()) noexcept;
 
-    void rcu_barrier(rcu_domain& dom = rcu_default_domain()) noexcept;
+void rcu_barrier(rcu_domain& dom = rcu_default_domain()) noexcept;
 
-    template<class T, class D = default_delete<T>>
-    void rcu_retire(T* p, D d = D(), rcu_domain& dom = rcu_default_domain());
+template<class T, class D = default_delete<T>>
+void rcu_retire(T* p, D d = D(), rcu_domain& dom = rcu_default_domain());
+```
 
-However, the class `rcu_domain` has no user visible constructors::
+However, the class `rcu_domain` has no user visible constructors
 
-    class rcu_domain {
-      public:
-        rcu_domain(const rcu_domain&) = delete;
-        rcu_domain& operator=(const rcu_domain&) = delete;
-    };
+```cpp
+class rcu_domain {
+  public:
+    rcu_domain(const rcu_domain&) = delete;
+    rcu_domain& operator=(const rcu_domain&) = delete;
+};
+```
 
 Paul E. McKenney confirmed that:
 
-  Yes, right now, just the one instance.  Right now, its only purpose is to support C++ RAII RCU readers.
-  Later, we might add the ability to create separate RCU instances, similar to SRCU in the Linux kernel.
+ > Yes, right now, just the one instance.  Right now, its only purpose is to support C++ RAII RCU readers.
+ > Later, we might add the ability to create separate RCU instances, similar to SRCU in the Linux kernel.
 
 Thomas Rodgers (libstdc++'s RCU implementer) also said:
 
-  Currently, liburcu doesn't actually support discrete domains, so internal to the shared library there is
-  only a single static instance of a type that wraps the relevant operations from the liburcu sources.
-  The `uintptr_t`` member is initialized with the address of this instance, and its size. Future implementations
-  could do something different behind this ABI contract, including a non-liburcu based approach. 
+>  Currently, liburcu doesn't actually support discrete domains, so internal to the shared library there is
+>  only a single static instance of a type that wraps the relevant operations from the liburcu sources.
+>  The `uintptr_t`` member is initialized with the address of this instance, and its size. Future implementations
+>  could do something different behind this ABI contract, including a non-liburcu based approach. 
 
 In libc++'s design, we will follow the same singleton pattern to simplify the design and implementation. Otherwise,
 lots of thread local storages will require a per-instance state.
 
-What about the ABI?
--------------------
+### What about the ABI?
 
 The `rcu` library most functions are non-template. So it is possible to put the entire implementation details inside the dylib.
 
-Existing Implementations
-========================
+## Existing Implementations
 
-The C++ paper `Read-Copy Update (RCU) <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2545r4.pdf>`__
+The C++ paper [Read-Copy Update (RCU)](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2545r4.pdf)
 discussed two reference implementations:
 
 - Folly
 - liburcu
 
-Folly
------
+### Folly
 
-liburcu
--------
+### liburcu
 
-There are 4 flavors of `rcu` implementations in liburcu (see doc `here <https://github.com/urcu/userspace-rcu/blob/master/README.md#usage-of-all-urcu-libraries>`__):
+There are 4 flavors of `rcu` implementations in liburcu (see doc [here](https://github.com/urcu/userspace-rcu/blob/master/README.md#usage-of-all-urcu-libraries>)):
 
 - `memb`
 - `qsbr`
@@ -455,10 +447,9 @@ There are 4 flavors of `rcu` implementations in liburcu (see doc `here <https://
 - `bp`
 
 
-libstdc++
----------
+### libstdc++
 
-According to Thomas Rodgers (libstdc++'s RCU implementer), their plan is to embed the subset of `liburcu` that implements the `memb`` and `mb` RCU flavors, with `memb` being the preferred choice, 
+According to Thomas Rodgers (libstdc++'s RCU implementer), their plan is to embed the subset of `liburcu` that implements the `memb` and `mb` RCU flavors, with `memb` being the preferred choice, 
 based on the presence of `SYS_membarrier` . Because `liburcu` is license compatible with libstdc++ they can directly embed the relevant source from `liburcu`
 
 
