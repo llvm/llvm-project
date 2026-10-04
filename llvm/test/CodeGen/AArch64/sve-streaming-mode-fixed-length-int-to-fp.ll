@@ -2826,11 +2826,11 @@ define void @scvtf_v16i32_v16f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #208]
 ; NONEON-NOSVE-NEXT:    scvtf d1, w9
 ; NONEON-NOSVE-NEXT:    scvtf d0, w8
-; NONEON-NOSVE-NEXT:    ldr w8, [sp, #268]
+; NONEON-NOSVE-NEXT:    add x9, sp, #264
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #224]
-; NONEON-NOSVE-NEXT:    scvtf d1, w8
-; NONEON-NOSVE-NEXT:    ldr w8, [sp, #264]
+; NONEON-NOSVE-NEXT:    ldp w8, w9, [x9]
 ; NONEON-NOSVE-NEXT:    ldp q4, q6, [sp, #208]
+; NONEON-NOSVE-NEXT:    scvtf d1, w9
 ; NONEON-NOSVE-NEXT:    scvtf d0, w8
 ; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #88]
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #240]
