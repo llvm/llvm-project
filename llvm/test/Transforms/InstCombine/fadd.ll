@@ -45,6 +45,31 @@ define double @fdiv_fneg1(double %x, double %y, double %pz) {
   ret double %r
 }
 
+define double @fdiv_fneg1_ninf(double %x, double %y, double %z) {
+; CHECK-LABEL: @fdiv_fneg1_ninf(
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv ninf double [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fsub ninf double [[Z:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %nx = fneg double %x
+  %d  = fdiv ninf double %nx, %y
+  %r  = fadd ninf double %z, %d
+  ret double %r
+}
+
+; Negative case: ninf of fadd shouldn't propagate to fdiv.
+define double @fdiv_fneg1_ninf_does_not_propagate_to_div(double %x, double %y, double %z) {
+; CHECK-LABEL: @fdiv_fneg1_ninf_does_not_propagate_to_div(
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv double [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fsub ninf double [[Z:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %nx = fneg double %x
+  %d  = fdiv double %nx, %y
+  %r  = fadd ninf double %z, %d
+  ret double %r
+}
+
 ; Z + (Y / -X) --> Z - (Y / X)
 
 define <2 x double> @fdiv_fneg2(<2 x double> %x, <2 x double> %y, <2 x double> %pz) {
@@ -59,6 +84,31 @@ define <2 x double> @fdiv_fneg2(<2 x double> %x, <2 x double> %y, <2 x double> %
   %div = fdiv <2 x double> %y, %neg
   %r = fadd <2 x double> %z, %div
   ret <2 x double> %r
+}
+
+define double @fdiv_fneg2_ninf(double %x, double %y, double %z) {
+; CHECK-LABEL: @fdiv_fneg2_ninf(
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv ninf double [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fsub ninf double [[Z:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %nx = fneg double %x
+  %d  = fdiv ninf double %y, %nx
+  %r  = fadd ninf double %z, %d
+  ret double %r
+}
+
+; Negative case: ninf of fadd shouldn't propagate to fdiv.
+define double @fdiv_fneg2_ninf_does_not_propagate_to_div(double %x, double %y, double %z) {
+; CHECK-LABEL: @fdiv_fneg2_ninf_does_not_propagate_to_div(
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv double [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fsub ninf double [[Z:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %nx = fneg double %x
+  %d  = fdiv double %y, %nx
+  %r  = fadd ninf double %z, %d
+  ret double %r
 }
 
 ; Z + (-X * Y) --> Z - (X * Y)
@@ -111,6 +161,31 @@ define double @fdiv_fneg1_commute(double %x, double %y, double %pz) {
   ret double %r
 }
 
+define double @fdiv_fneg1_commute_ninf(double %x, double %y, double %z) {
+; CHECK-LABEL: @fdiv_fneg1_commute_ninf(
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv ninf double [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fsub ninf double [[Z:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %nx = fneg double %x
+  %d  = fdiv ninf double %nx, %y
+  %r  = fadd ninf double %d, %z
+  ret double %r
+}
+
+; Negative case: ninf of fadd shouldn't propagate to fdiv.
+define double @fdiv_fneg1_commute_ninf_does_not_propagate_to_div(double %x, double %y, double %z) {
+; CHECK-LABEL: @fdiv_fneg1_commute_ninf_does_not_propagate_to_div(
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv double [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fsub ninf double [[Z:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %nx = fneg double %x
+  %d  = fdiv double %nx, %y
+  %r  = fadd ninf double %d, %z
+  ret double %r
+}
+
 ; (Y / -X) + Z --> Z - (Y / X)
 
 define <2 x double> @fdiv_fneg2_commute(<2 x double> %x, <2 x double> %y, <2 x double> %pz) {
@@ -125,6 +200,31 @@ define <2 x double> @fdiv_fneg2_commute(<2 x double> %x, <2 x double> %y, <2 x d
   %div = fdiv <2 x double> %y, %neg
   %r = fadd <2 x double> %div, %z
   ret <2 x double> %r
+}
+
+define double @fdiv_fneg2_commute_ninf(double %x, double %y, double %z) {
+; CHECK-LABEL: @fdiv_fneg2_commute_ninf(
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv ninf double [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fsub ninf double [[Z:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %nx = fneg double %x
+  %d  = fdiv ninf double %y, %nx
+  %r  = fadd ninf double %d, %z
+  ret double %r
+}
+
+; Negative case: ninf of fadd shouldn't propagate to fdiv.
+define double @fdiv_fneg2_commute_ninf_does_not_propagate_to_div(double %x, double %y, double %z) {
+; CHECK-LABEL: @fdiv_fneg2_commute_ninf_does_not_propagate_to_div(
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv double [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fsub ninf double [[Z:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %nx = fneg double %x
+  %d  = fdiv double %y, %nx
+  %r  = fadd ninf double %d, %z
+  ret double %r
 }
 
 ; (-X * Y) + Z --> Z - (X * Y)
