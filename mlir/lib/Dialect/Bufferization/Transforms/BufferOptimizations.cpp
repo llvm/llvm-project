@@ -18,8 +18,11 @@
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/Pass.h"
 
@@ -64,6 +67,49 @@ static bool isLoop(Operation *op) {
 /// semantics.
 static bool isSequentialLoop(Operation *op) {
   return !op->hasTrait<OpTrait::HasParallelRegion>() && isLoop(op);
+}
+
+/// Returns true if an allocation can be reused across iterations when its
+/// aliases have a common dominator outside the while loop.
+/// `aliases` must contain the complete forward alias set of the allocation.
+static bool
+canHoistFromWhile(scf::WhileOp loop,
+                  const BufferViewFlowAnalysis::ValueSetT &aliases) {
+  // Further hoisting across an enclosing loop with unmodeled parallel
+  // execution could share the allocation across iterations.
+  if (!isa<FunctionOpInterface>(loop->getParentOp()))
+    return false;
+
+  // Check all aliases, including loop results: memory effects alone do not rule
+  // out capture or uses that depend on allocation identity or lifetime.
+  for (Value alias : aliases) {
+    if (!isa<BaseMemRefType>(alias.getType()))
+      return false;
+    for (OpOperand &use : alias.getUses()) {
+      Operation *user = use.getOwner();
+      if (user->getParentOp() != loop && user->getBlock() != loop->getBlock())
+        return false;
+      if (auto load = dyn_cast<memref::LoadOp>(user)) {
+        if (load.getInvariant())
+          return false;
+        continue;
+      }
+      if (auto store = dyn_cast<memref::StoreOp>(user)) {
+        if (store.getMemref() != alias)
+          return false;
+        continue;
+      }
+      // ViewLikeOpInterface describes aliases but does not guarantee that
+      // changing allocation identity preserves the view's access semantics.
+      if (isa<memref::CastOp, memref::SubViewOp>(user))
+        continue;
+      // scf.condition only forwards memrefs to after or to the loop results.
+      // Reject scf.yield to keep aliases out of the next iteration.
+      if (user != loop.getConditionOp().getOperation())
+        return false;
+    }
+  }
+  return true;
 }
 
 /// Returns true if the given operation implements the AllocationOpInterface
@@ -222,7 +268,8 @@ public:
       Block *dominatorBlock =
           findCommonDominator(allocValue, resultAliases, dominators);
       // Init the initial hoisting state.
-      StateT state(&dominators, allocValue, allocValue.getParentBlock());
+      StateT state(&dominators, allocValue, allocValue.getParentBlock(),
+                   resultAliases);
       // Check for additional allocation dependencies to compute an upper bound
       // for hoisting.
       Block *dependencyBlock = nullptr;
@@ -324,7 +371,11 @@ private:
 /// that hoists allocations into dominator blocks while keeping them inside of
 /// loops.
 struct BufferAllocationHoistingState : BufferAllocationHoistingStateBase {
-  using BufferAllocationHoistingStateBase::BufferAllocationHoistingStateBase;
+  BufferAllocationHoistingState(DominanceInfo *dominators, Value allocValue,
+                                Block *placementBlock,
+                                const BufferViewFlowAnalysis::ValueSetT &)
+      : BufferAllocationHoistingStateBase(dominators, allocValue,
+                                          placementBlock) {}
 
   /// Computes the upper bound for the placement block search.
   Block *computeUpperBound(Block *dominatorBlock, Block *dependencyBlock) {
@@ -358,10 +409,18 @@ struct BufferAllocationHoistingState : BufferAllocationHoistingStateBase {
 /// A state implementation compatible with the `BufferAllocationHoisting` class
 /// that hoists allocations out of loops.
 struct BufferAllocationLoopHoistingState : BufferAllocationHoistingStateBase {
-  using BufferAllocationHoistingStateBase::BufferAllocationHoistingStateBase;
+  /// The forward alias closure of the current allocation.
+  const BufferViewFlowAnalysis::ValueSetT &aliases;
 
   /// Remembers the dominator block of all aliases.
   Block *aliasDominatorBlock = nullptr;
+
+  BufferAllocationLoopHoistingState(
+      DominanceInfo *dominators, Value allocValue, Block *placementBlock,
+      const BufferViewFlowAnalysis::ValueSetT &aliases)
+      : BufferAllocationHoistingStateBase(dominators, allocValue,
+                                          placementBlock),
+        aliases(aliases) {}
 
   /// Computes the upper bound for the placement block search.
   Block *computeUpperBound(Block *dominatorBlock, Block *dependencyBlock) {
@@ -371,14 +430,16 @@ struct BufferAllocationLoopHoistingState : BufferAllocationHoistingStateBase {
     return dependencyBlock ? dependencyBlock : nullptr;
   }
 
-  /// Returns true if the given operation represents a loop with sequential
-  /// execution semantics and one of the aliases caused the
-  /// `aliasDominatorBlock` to be "above" the block of the given loop operation.
-  /// If this is the case, it indicates that the allocation is passed via a back
-  /// edge.
+  /// Returns true if the allocation can be moved across the given loop.
   bool isLegalPlacement(Operation *op) {
-    return isSequentialLoop(op) &&
-           !dominators->dominates(aliasDominatorBlock, op->getBlock());
+    if (!isSequentialLoop(op))
+      return false;
+    if (!dominators->dominates(aliasDominatorBlock, op->getBlock()))
+      return true;
+    auto loop = dyn_cast<scf::WhileOp>(op);
+    if (!loop || !allocValue.getDefiningOp<memref::AllocOp>())
+      return false;
+    return canHoistFromWhile(loop, aliases);
   }
 
   /// Returns true if the given operation should be considered for hoisting.
