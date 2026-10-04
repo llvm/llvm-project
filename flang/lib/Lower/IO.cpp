@@ -1132,6 +1132,22 @@ static void boolRefToLogical(mlir::Location loc, fir::FirOpBuilder &builder,
   fir::StoreOp::create(builder, loc, logicalValue, addr);
 }
 
+/// Store the current value of a LOGICAL as a `bool` into the first byte of its
+/// storage before passing it to the runtime as a `bool&`. If the runtime does
+/// not set it (e.g. a null value in list-directed or namelist input), the
+/// following boolRefToLogical then keeps the old value. Without this, the old
+/// value would be lost on big-endian targets, where the first byte of a
+/// LOGICAL(4) .TRUE. is zero.
+static void logicalToBoolRef(mlir::Location loc, fir::FirOpBuilder &builder,
+                             mlir::Value addr) {
+  auto logicalValue = fir::LoadOp::create(builder, loc, addr);
+  auto boolValue =
+      builder.createConvert(loc, builder.getI1Type(), logicalValue);
+  auto boolAddr =
+      builder.createConvert(loc, builder.getRefType(builder.getI1Type()), addr);
+  fir::StoreOp::create(builder, loc, boolValue, boolAddr);
+}
+
 static mlir::Value
 createIoRuntimeCallForItem(Fortran::lower::AbstractConverter &converter,
                            mlir::Location loc, mlir::func::FuncOp inputFunc,
@@ -1167,10 +1183,13 @@ createIoRuntimeCallForItem(Fortran::lower::AbstractConverter &converter,
               mlir::cast<mlir::IntegerType>(itemTy).getWidth() / 8)));
     }
   }
-  auto call = fir::CallOp::create(builder, loc, inputFunc, inputFuncArgs);
   auto itemAddr = fir::getBase(item);
   auto itemTy = fir::unwrapRefType(itemAddr.getType());
-  if (mlir::isa<fir::LogicalType>(itemTy))
+  bool isLogical = mlir::isa<fir::LogicalType>(itemTy);
+  if (isLogical)
+    logicalToBoolRef(loc, builder, itemAddr);
+  auto call = fir::CallOp::create(builder, loc, inputFunc, inputFuncArgs);
+  if (isLogical)
     boolRefToLogical(loc, builder, itemAddr);
   return call.getResult(0);
 }
