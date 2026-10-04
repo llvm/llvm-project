@@ -3,7 +3,8 @@
 
 define ptr @f(ptr %buffer, i32 %n) presplitcoroutine {
 entry:
-  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate)
+  %coro.ret = alloca ptr
+  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate, ptr %coro.ret)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   %value0 = call i32 (...) @llvm.coro.suspend.retcon.i32()
   %sum0 = call i32 @add(i32 %n, i32 %value0)
@@ -16,10 +17,11 @@ entry:
   %sum5 = call i32 @add(i32 %sum4, i32 %value2)
   call void @print(i32 %sum5)
   call void @llvm.coro.end(ptr %hdl, i1 0, token none)
-  unreachable
+  %coro.ret.load = load ptr, ptr %coro.ret
+  ret ptr %coro.ret.load
 }
 
-declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr)
+declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i32 @llvm.coro.suspend.retcon.i32(...)
 declare void @llvm.coro.end(ptr, i1, token)
@@ -35,6 +37,7 @@ declare void @print(i32)
 
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CORO_RET:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @allocate(i32 20)
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[BUFFER:%.*]], align 8
 ; CHECK-NEXT:    store i32 [[N:%.*]], ptr [[TMP0]], align 4

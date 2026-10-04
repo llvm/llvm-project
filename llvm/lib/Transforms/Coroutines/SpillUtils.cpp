@@ -434,6 +434,13 @@ static void collectFrameAlloca(AllocaInst *AI, const coro::Shape &Shape,
   if (AI == Shape.SwitchLowering.PromiseAlloca)
     return;
 
+  // The return slot expresses a retcon coroutine's pre-split return. It is
+  // not coroutine-frame state: CoroSplit replaces the post-coro.end load with
+  // the concrete ABI return before execution.
+  if ((Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce) &&
+      AI == Shape.getRetconCoroId()->getReturnSlot())
+    return;
+
   // The __coro_gro alloca should outlive the promise, make sure we
   // keep it outside the frame.
   if (AI->hasMetadata(LLVMContext::MD_coro_outside_frame))
