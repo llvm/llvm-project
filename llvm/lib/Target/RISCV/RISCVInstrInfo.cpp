@@ -3560,8 +3560,7 @@ bool RISCVInstrInfo::isLdStSafeToPair(const MachineInstr &LdSt,
 
 bool RISCVInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
-    const TargetRegisterInfo *TRI) const {
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width) const {
   if (!LdSt.mayLoadOrStore())
     return false;
 
@@ -3596,7 +3595,8 @@ bool RISCVInstrInfo::getMemOperandsWithOffsetWidth(
   }
   const MachineOperand *BaseOp;
   OffsetIsScalable = false;
-  if (!getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, Width, TRI))
+  if (!getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, Width,
+                                    &getRegisterInfo()))
     return false;
   BaseOps.push_back(BaseOp);
   return true;
@@ -4143,12 +4143,12 @@ std::optional<RegImmPair> RISCVInstrInfo::isAddImmediate(const MachineInstr &MI,
 }
 
 // MIR printer helper function to annotate Operands with a comment.
-std::string RISCVInstrInfo::createMIROperandComment(
-    const MachineInstr &MI, const MachineOperand &Op, unsigned OpIdx,
-    const TargetRegisterInfo *TRI) const {
+std::string RISCVInstrInfo::createMIROperandComment(const MachineInstr &MI,
+                                                    const MachineOperand &Op,
+                                                    unsigned OpIdx) const {
   // Print a generic comment for this operand if there is one.
   std::string GenericComment =
-      TargetInstrInfo::createMIROperandComment(MI, Op, OpIdx, TRI);
+      TargetInstrInfo::createMIROperandComment(MI, Op, OpIdx);
   if (!GenericComment.empty())
     return GenericComment;
 

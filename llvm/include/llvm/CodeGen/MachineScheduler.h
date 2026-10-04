@@ -1413,19 +1413,16 @@ protected:
 /// reduce reordering due to store clustering.
 LLVM_ABI std::unique_ptr<ScheduleDAGMutation>
 createLoadClusterDAGMutation(const TargetInstrInfo *TII,
-                             const TargetRegisterInfo *TRI,
                              bool ReorderWhileClustering = false);
 
 /// If ReorderWhileClustering is set to true, no attempt will be made to
 /// reduce reordering due to store clustering.
 LLVM_ABI std::unique_ptr<ScheduleDAGMutation>
 createStoreClusterDAGMutation(const TargetInstrInfo *TII,
-                              const TargetRegisterInfo *TRI,
                               bool ReorderWhileClustering = false);
 
 LLVM_ABI std::unique_ptr<ScheduleDAGMutation>
-createCopyConstrainDAGMutation(const TargetInstrInfo *TII,
-                               const TargetRegisterInfo *TRI);
+createCopyConstrainDAGMutation(const TargetInstrInfo *TII);
 
 /// Create the standard converging machine scheduler. This will be used as the
 /// default scheduler if the target does not set a default.
@@ -1439,7 +1436,7 @@ ScheduleDAGMILive *createSchedLive(MachineSchedContext *C) {
   // FIXME: extend the mutation API to allow earlier mutations to instantiate
   // data and pass it to later mutations. Have a single mutation that gathers
   // the interesting nodes in one pass.
-  DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
+  DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII));
   return DAG;
 }
 
