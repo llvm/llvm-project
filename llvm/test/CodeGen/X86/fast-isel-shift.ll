@@ -26,8 +26,8 @@ define i32 @shl_i32(i32 %a, i32 %b) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $esi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $edi
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY killed [[COPY1]]
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY killed [[COPY]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY [[COPY1]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY [[COPY]]
   ; CHECK-NEXT:   $ecx = COPY [[COPY3]]
   ; CHECK-NEXT:   $cl = KILL killed $ecx
   ; CHECK-NEXT:   [[SHL32rCL:%[0-9]+]]:gr32 = SHL32rCL [[COPY2]], implicit-def dead $eflags, implicit $cl
@@ -44,8 +44,8 @@ define i32 @lshr_i32(i32 %a, i32 %b) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $esi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $edi
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY killed [[COPY1]]
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY killed [[COPY]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY [[COPY1]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY [[COPY]]
   ; CHECK-NEXT:   $ecx = COPY [[COPY3]]
   ; CHECK-NEXT:   $cl = KILL killed $ecx
   ; CHECK-NEXT:   [[SHR32rCL:%[0-9]+]]:gr32 = SHR32rCL [[COPY2]], implicit-def dead $eflags, implicit $cl
@@ -62,8 +62,8 @@ define i64 @ashr_i64(i64 %a, i64 %b) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rsi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY killed [[COPY1]]
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr64 = COPY killed [[COPY]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY [[COPY1]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr64 = COPY [[COPY]]
   ; CHECK-NEXT:   $rcx = COPY [[COPY3]]
   ; CHECK-NEXT:   $cl = KILL killed $rcx
   ; CHECK-NEXT:   [[SAR64rCL:%[0-9]+]]:gr64 = SAR64rCL [[COPY2]], implicit-def dead $eflags, implicit $cl
