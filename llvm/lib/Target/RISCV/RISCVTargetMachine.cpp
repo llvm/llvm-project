@@ -91,9 +91,9 @@ static cl::opt<bool>
                            cl::desc("Enable the loop data prefetch pass"),
                            cl::init(true));
 
-static cl::opt<bool> DisableVectorMaskMutation(
-    "riscv-disable-vector-mask-mutation",
-    cl::desc("Disable the vector mask scheduling mutation"), cl::init(false),
+static cl::opt<bool> EnableVectorMaskMutation(
+    "riscv-vector-mask-mutation",
+    cl::desc("Enable the vector mask scheduling mutation"), cl::init(true),
     cl::Hidden);
 
 static cl::opt<bool>
@@ -296,7 +296,7 @@ RISCVTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
     DAG->addMutation(createStoreClusterDAGMutation(
         DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
 
-  if (!DisableVectorMaskMutation && ST.hasVInstructions())
+  if (EnableVectorMaskMutation && ST.hasVInstructions())
     DAG->addMutation(createRISCVVectorMaskDAGMutation(DAG->TRI));
 
   return DAG;

@@ -84,7 +84,7 @@ static cl::opt<int>
               cl::init(3));
 
 static cl::opt<bool>
-    ReassocShlAddiAdd("reassoc-shl-addi-add", cl::Hidden,
+    ReassocShlAddiAdd("riscv-reassoc-shl-addi-add", cl::Hidden,
                       cl::desc("Swap add and addi in cases where the add may "
                                "be combined with a shift"),
                       cl::init(true));
