@@ -6061,6 +6061,89 @@ APFloat APFloat::getAllOnesValue(const fltSemantics &Semantics) {
   return APFloat(Semantics, APInt::getAllOnes(Semantics.sizeInBits));
 }
 
+// Stores mathematical constants as APInt * 2^exponent. Each constant is rounded
+// via round-to-odd (jamming), so the LSB should be set. These constants are of
+// sufficient precision for f128 and ppcf128. More precision will be needed if
+// we add support for f256 in the future.
+struct MathConstantValue {
+  uint64_t Significand[2];
+  int Exponent;
+  // Precision of the mathematical constants, currently 128 bits.
+  static constexpr unsigned rawPrecision() {
+    return sizeof(Significand) * CHAR_BIT;
+  }
+  // The maximum precision that we can safely round to. We need at least two
+  // additional bits of precision to avoid double-rounding.
+  static constexpr unsigned roundedPrecision() { return rawPrecision() - 2; }
+};
+
+// IEEEQuad is the highest precision type we currently support.
+static constexpr unsigned PrecisionOfIEEEQuad = 113;
+
+static_assert(MathConstantValue::roundedPrecision() >= PrecisionOfIEEEQuad,
+              "Stored constants are too narrow for the supported semantics");
+
+// Internal semantics used to store mathematical constants at a high precision.
+// Uses the exponent range of IEEEquad. sizeInBits is unused, since nothing
+// bitcasts this format.
+static constexpr fltSemantics semMathConstant = {
+    /*maxExponent=*/16383, /*minExponent=*/-16382,
+    /*precision=*/MathConstantValue::rawPrecision(),
+    /*sizeInBits=*/0};
+
+static constexpr MathConstantValue MathConstantValues[] = {
+    {{0xafdc5620273d3cf1, 0xadf85458a2bb4a9a}, -126}, // e
+    {{0xbe87fed0691d3e89, 0xb8aa3b295c17f0bb}, -127}, // log2e
+    {{0x355baaafad33dc33, 0xde5bd8a937287195}, -129}, // log10e
+    {{0xc4c6628b80dc1cd1, 0xc90fdaa22168c234}, -126}, // pi
+    {{0xfc2757d1f534ddc1, 0xa2f9836e4e441529}, -129}, // inv_pi
+    {{0x71d48a7f6bfec345, 0x906eba8214db688d}, -128}, // inv_sqrtpi
+    {{0xc9e3b39803f2f6af, 0xb17217f7d1cf79ab}, -128}, // ln2
+    {{0xea56d62b82d30a29, 0x935d8dddaaa8ac16}, -126}, // ln10
+    {{0x597d89b3754abe9f, 0xb504f333f9de6484}, -127}, // sqrt2
+    {{0x92ba16b83c5c1dc5, 0xddb3d742c265539d}, -127}, // sqrt3
+    {{0x0c7c0f257d92be83, 0x93cd3a2c8198e269}, -128}, // inv_sqrt3
+    {{0xd1be3f810152cb57, 0x93c467e37db0c7a4}, -128}, // egamma
+    {{0xf9ce60302e76e41b, 0xcf1bbcdcbfa53e0a}, -127}, // phi
+};
+
+static_assert(std::size(MathConstantValues) ==
+                  static_cast<size_t>(APFloat::MathConstant::phi) + 1,
+              "MathConstantValues is out of sync with APFloat::MathConstant");
+
+APFloat APFloat::getConstant(MathConstant C, const fltSemantics &Sem,
+                             bool Negative, roundingMode RM) {
+  assert(static_cast<size_t>(C) < std::size(MathConstantValues) &&
+         "Unknown mathematical constant");
+
+  // We special case semPPCDoubleDouble since it has a precision of 0.
+  assert((&Sem == &semPPCDoubleDouble ||
+          (Sem.precision > 0 &&
+           Sem.precision <= MathConstantValue::roundedPrecision())) &&
+         "Precision exceeds the stored constants (or semantics is invalid)");
+
+  const MathConstantValue &Value = MathConstantValues[static_cast<size_t>(C)];
+  assert((Value.Significand[0] % 2 != 0) &&
+         "Significand must be odd (round-to-odd)");
+
+  // Constructing the APFloat value from an APInt and scaling with scalbn should
+  // be exact.
+  APFloat Val(semMathConstant);
+  [[maybe_unused]] opStatus FromInt = Val.convertFromAPInt(
+      APInt(MathConstantValue::rawPrecision(), Value.Significand),
+      /*IsSigned=*/false, rmTowardZero);
+  assert(FromInt == opOK && "Significand does not fit semMathConstant");
+  Val = scalbn(Val, Value.Exponent, rmTowardZero);
+
+  // The value shall be negated prior to rounding.
+  if (Negative)
+    Val.changeSign();
+
+  bool LosesInfo;
+  Val.convert(Sem, RM, &LosesInfo);
+  return Val;
+}
+
 void APFloat::print(raw_ostream &OS) const {
   SmallVector<char, 16> Buffer;
   toString(Buffer);
