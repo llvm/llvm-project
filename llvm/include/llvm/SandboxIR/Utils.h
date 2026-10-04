@@ -16,6 +16,7 @@
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/SandboxIR/Function.h"
@@ -131,6 +132,15 @@ public:
   static bool verifyFunction(const Function *F, raw_ostream &OS) {
     const auto &LLVMF = *cast<llvm::Function>(F->Val);
     return llvm::verifyFunction(LLVMF, &OS);
+  }
+
+  static bool TTIAllowsMisalignedMemoryAccesses(TargetTransformInfo &TTI,
+                                                Context &Ctx, unsigned BitWidth,
+                                                unsigned AddressSpace = 0,
+                                                Align Alignment = Align(1),
+                                                unsigned *Fast = nullptr) {
+    return TTI.allowsMisalignedMemoryAccesses(Ctx.LLVMCtx, BitWidth,
+                                              AddressSpace, Alignment, Fast);
   }
 };
 
