@@ -1373,6 +1373,20 @@ public:
   /// \return the number of registers in the target-provided register class.
   LLVM_ABI unsigned getNumberOfRegisters(unsigned ClassID) const;
 
+  /// \return A conservative bound on the number of registers \p F can use
+  /// before the register allocator is likely to spill, or std::nullopt if the
+  /// target has no meaningful bound to report.
+  ///
+  /// The budget is a property of the function, not only of the subtarget: it
+  /// may depend on attributes that constrain how many registers the function
+  /// is permitted to use. So two functions in the same module can have
+  /// different budgets.
+  ///
+  /// It is intended for heuristics deciding whether a
+  /// transform is about to make register pressure a problem, and staying below.
+  /// Not a guarantee that no spilling occurs.
+  LLVM_ABI std::optional<unsigned> getRegisterBudget(const Function &F) const;
+
   /// \return true if the target supports load/store that enables fault
   /// suppression of memory operands when the source condition is false.
   LLVM_ABI bool hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const;
