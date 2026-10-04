@@ -18351,6 +18351,31 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i32)
         return;
 
+      // A simple single-use sign-extending i32 load can use lwu directly.
+      // Widening these operands and using clmul avoids the shifts required by
+      // the general register-input lowering below.
+      auto IsSingleUseLoad = [](SDValue Op) {
+        if (Op.getOpcode() != ISD::TRUNCATE || !Op.hasOneUse())
+          return false;
+        auto *Load = dyn_cast<LoadSDNode>(Op.getOperand(0));
+        return Load && Load->isSimple() && !Load->isIndexed() &&
+               Load->getExtensionType() == ISD::SEXTLOAD &&
+               Load->getMemoryVT() == MVT::i32 && Op.getOperand(0).hasOneUse();
+      };
+      if (IntNo == Intrinsic::riscv_clmulh && Subtarget.hasStdExtZbkc() &&
+          IsSingleUseLoad(N->getOperand(1)) &&
+          IsSingleUseLoad(N->getOperand(2))) {
+        SDValue NewOp0 =
+            DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, N->getOperand(1));
+        SDValue NewOp1 =
+            DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, N->getOperand(2));
+        SDValue Res = DAG.getNode(ISD::CLMUL, DL, MVT::i64, NewOp0, NewOp1);
+        Res = DAG.getNode(ISD::SRL, DL, MVT::i64, Res,
+                          DAG.getConstant(32, DL, MVT::i64));
+        Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+        return;
+      }
+
       // Extend inputs to XLen, and shift by 32. This will add 64 trailing zeros
       // to the full 128-bit clmul result of multiplying two xlen values.
       // Perform clmulr or clmulh on the shifted values. Finally, extract the
