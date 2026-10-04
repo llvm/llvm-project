@@ -64,15 +64,14 @@ private:
   using __pointer _LIBCPP_NODEBUG = add_pointer_t<_Tp>;
 
 public:
+#  ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
+  using iterator = std::__bounded_iter<__pointer>;
+#  else
   using iterator =
       conditional_t< std::__range_fits_in_alignment(alignof(_Tp), 1),
                      std::__static_packed_bounded_iterator<__pointer, 1>,
-#  ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
-                     std::__bounded_iter<__pointer>
-#  else
-                     std::__capacity_aware_iterator<__pointer, 1>
+                     std::__capacity_aware_iterator<__pointer, 1> >;
 #  endif
-                     >;
 };
 
 template <class _Tp>
@@ -286,15 +285,15 @@ public:
     requires __has_iterator_
   {
     using __pointer _LIBCPP_NODEBUG = add_pointer_t<_Tp>;
+#  ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
+    return std::__make_bounded_iter<__pointer>(__value_, __value_, __value_ + this->has_value() ? 1 : 0);
+#  else
     if constexpr (std::__range_fits_in_alignment(alignof(_Tp&), 1)) {
       return std::__make_static_packed_bounded_iter<__pointer, 1>(__value_, 0);
     } else {
-#  ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
-      return std::__make_bounded_iter<__pointer>(__value_, __value_, __value_ + this->has_value() ? 1 : 0);
-#  else
       return std::__make_capacity_aware_iterator<__pointer, 1>(__value_);
-#  endif
     }
+#  endif
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI auto end() const noexcept

@@ -690,12 +690,21 @@ private:
 
   template <class _Up = _Tp, bool = std::__range_fits_in_alignment(alignof(_Up), 1)>
   struct __iterator {
+#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
+    using __type _LIBCPP_NODEBUG       = std::__bounded_iter<__pointer>;
+    using __const_type _LIBCPP_NODEBUG = std::__bounded_iter<__const_pointer>;
+#    else
     using __type _LIBCPP_NODEBUG       = std::__static_packed_bounded_iterator<__pointer, 1>;
     using __const_type _LIBCPP_NODEBUG = std::__static_packed_bounded_iterator<__const_pointer, 1>;
+#    endif
 
     template <class _PtrType>
-    static auto __make(_PtrType __p, unsigned) noexcept {
+    static auto __make(_PtrType __p, [[__maybe_unused__]] unsigned __end_offset) noexcept {
+#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
+      return std::__make_bounded_iter<_PtrType>(__p, __p, __p + __end_offset)
+#    else
       return std::__make_static_packed_bounded_iter<_PtrType, 1>(__p, 0);
+#    endif
     }
   };
 

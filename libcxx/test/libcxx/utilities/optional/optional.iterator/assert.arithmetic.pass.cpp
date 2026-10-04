@@ -18,12 +18,11 @@
 
 #include "check_assertion.h"
 
-// If T fits the requirements for __static_packed_bounded_iterator, optional<T>'s iterator will always be that,
-// regardless of if the ABI switch is on or off. This is because it has less overhead than bounded_iter while providing the same guarantees for the on case,
-// while for the off case, it has more guarantees than __capacity_aware_iterator while occupying the same amount of space.
+// If the ABI switch is off:
+// If T fits the requirements for __static_packed_bounded_iterator, optional<T>'s iterator will be that.
 // Otherwise, optional<T>'s iterator is __capacity_aware_iterator.
 void test_packed() {
-  // int has enough room, 3 bits free -> 0-2 range
+  // int has enough room, 2 bits free -> 0-2 range
   { // operator++
     std::optional<int> o{1};
     auto i = o.end();
@@ -44,13 +43,8 @@ void test_packed() {
         i--, "__static_packed_bounded_iterator::operator--: Attempt to rewind an iterator past the start");
   }
 
-  { // operator*
-    std::optional<int> o;
-    auto i = o.begin();
-
-    TEST_LIBCPP_ASSERT_FAILURE(
-        *i, "__static_packed_bounded_iterator::operator*: Attempt to dereference an iterator at the end");
-  }
+  // Notice that we do not have an operator* test as __static_packed_bounded_iterator doesn't know if the current item it's pointing at
+  // is valid, and can only guarantee that any dereference is not out of bounds of the container's range
 
   { // operator[]
     std::optional<int> o{1};
