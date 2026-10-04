@@ -112,6 +112,33 @@ func.func @canonicalize_buffer_cast_of_tensor_load_to_copy(
 
 // -----
 
+// Regression test for #83276: to_buffer(to_tensor(x)) with a strided/offset
+// source and an identity (zero-offset, contiguous) destination must emit an
+// alloc+copy rather than a memref.cast that would silently strip the offset
+// metadata, causing wrong-value loads in the consumer.
+//
+// CHECK-LABEL: func @to_buffer_identity_layout_requires_copy(
+// CHECK-SAME:    %[[M:.*]]: memref<?xf32, strided<[1], offset: ?>>)
+// CHECK-SAME:    -> memref<?xf32>
+//  CHECK-NOT: bufferization.to_tensor
+//  CHECK-NOT: bufferization.to_buffer
+//  CHECK-NOT: memref.cast
+//      CHECK: %[[C0:.*]] = arith.constant 0 : index
+//      CHECK: %[[DIM:.*]] = memref.dim %[[M]], %[[C0]]
+//      CHECK: %[[ALLOC:.*]] = memref.alloc(%[[DIM]]) : memref<?xf32>
+//      CHECK: memref.copy %[[M]], %[[ALLOC]]
+// CHECK-SAME:   memref<?xf32, strided<[1], offset: ?>> to memref<?xf32>
+//      CHECK: return %[[ALLOC]]
+func.func @to_buffer_identity_layout_requires_copy(
+  %arg0: memref<?xf32, strided<[1], offset: ?>>)
+  -> memref<?xf32>
+{
+  %0 = bufferization.to_tensor %arg0 : memref<?xf32, strided<[1], offset: ?>> to tensor<?xf32>
+  %1 = bufferization.to_buffer %0 : tensor<?xf32> to memref<?xf32>
+  return %1 : memref<?xf32>
+}
+
+// -----
 
 // Basic folding of tensor.dim(to_tensor(m)) -> memref.dim(m).
 // CHECK-LABEL: func @dim_of_tensor_load(

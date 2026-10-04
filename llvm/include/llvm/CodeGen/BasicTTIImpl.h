@@ -68,7 +68,8 @@ class ScalarEvolution;
 class SCEV;
 class TargetMachine;
 
-extern LLVM_ABI cl::opt<unsigned> PartialUnrollingThreshold;
+/// Returns -partial-unrolling-threshold if specified.
+LLVM_ABI std::optional<unsigned> getPartialUnrollingThreshold();
 
 /// Base class which can be used to help build a TTI implementation.
 ///
@@ -763,8 +764,8 @@ public:
 
     unsigned MaxOps;
     const TargetSubtargetInfo *ST = getST();
-    if (PartialUnrollingThreshold.getNumOccurrences() > 0)
-      MaxOps = PartialUnrollingThreshold;
+    if (std::optional<unsigned> Threshold = getPartialUnrollingThreshold())
+      MaxOps = *Threshold;
     else if (ST->getSchedModel().LoopMicroOpBufferSize > 0)
       MaxOps = ST->getSchedModel().LoopMicroOpBufferSize;
     else

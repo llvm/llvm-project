@@ -21,7 +21,8 @@
 #define _LIBSYCL_END_UNVERSIONED_NAMESPACE_SYCL }
 
 #define _LIBSYCL_BEGIN_NAMESPACE_SYCL                                          \
-  _LIBSYCL_BEGIN_UNVERSIONED_NAMESPACE_SYCL inline namespace _LIBSYCL_ABI_NAMESPACE {
+  _LIBSYCL_BEGIN_UNVERSIONED_NAMESPACE_SYCL                                    \
+  inline namespace _LIBSYCL_ABI_NAMESPACE {
 #define _LIBSYCL_END_NAMESPACE_SYCL                                            \
   }                                                                            \
   _LIBSYCL_END_UNVERSIONED_NAMESPACE_SYCL

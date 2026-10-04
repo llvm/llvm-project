@@ -2273,9 +2273,7 @@ static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
 
   // Create new remainder with induction variable.
   Type *Ty = Rem->getType();
-  IRBuilder<> Builder(Rem->getContext());
-
-  Builder.SetInsertPoint(LoopIncrPN);
+  IRBuilder<> Builder(LoopIncrPN);
   PHINode *NewRem = Builder.CreatePHI(Ty, 2);
 
   Builder.SetInsertPoint(cast<Instruction>(
@@ -2672,8 +2670,7 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
     FreshBBs.insert(EndBlock);
 
   // Set up a builder to create a compare, conditional branch, and PHI.
-  IRBuilder<> Builder(CountZeros->getContext());
-  Builder.SetInsertPoint(StartBlock->getTerminator());
+  IRBuilder<> Builder(StartBlock->getTerminator());
   Builder.SetCurrentDebugLocation(CountZeros->getDebugLoc());
 
   // Replace the unconditional branch that was created by the first split with
@@ -2689,7 +2686,7 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
 
   // Create a PHI in the end block to select either the output of the intrinsic
   // or the bit width of the operand.
-  Builder.SetInsertPoint(EndBlock, EndBlock->begin());
+  Builder.SetInsertPoint(EndBlock->begin());
   PHINode *PN = Builder.CreatePHI(Ty, 2, "ctz");
   replaceAllUsesWith(CountZeros, PN, FreshBBs, IsHugeFunc);
   Value *BitWidth = Builder.getInt(APInt(SizeInBits, SizeInBits));
@@ -3456,27 +3453,6 @@ class TypePromotionTransaction {
       }
 
       Inst->getParent()->reinsertInstInDbgRecords(Inst, BeforeDbgRecord);
-    }
-  };
-
-  /// Move an instruction before another.
-  class InstructionMoveBefore : public TypePromotionAction {
-    /// Original position of the instruction.
-    InsertionHandler Position;
-
-  public:
-    /// Move \p Inst before \p Before.
-    InstructionMoveBefore(Instruction *Inst, BasicBlock::iterator Before)
-        : TypePromotionAction(Inst), Position(Inst) {
-      LLVM_DEBUG(dbgs() << "Do: move: " << *Inst << "\nbefore: " << *Before
-                        << "\n");
-      Inst->moveBefore(Before);
-    }
-
-    /// Move the instruction back to its original position.
-    void undo() override {
-      LLVM_DEBUG(dbgs() << "Undo: moveBefore: " << *Inst << "\n");
-      Position.insert(Inst);
     }
   };
 
@@ -6599,7 +6575,7 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   OldTerminator->eraseFromParent();
 
   // BB overflow.res:
-  Builder.SetInsertPoint(OverflowResBB, OverflowResBB->getFirstInsertionPt());
+  Builder.SetInsertPoint(OverflowResBB->getFirstInsertionPt());
   // Create PHI nodes to merge results from no.overflow BB and overflow BB to
   // replace the extract instructions.
   PHINode *OverflowResPHI = Builder.CreatePHI(Ty, 2),
@@ -6626,7 +6602,7 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   I->removeFromParent();
   // BB overflow:
   I->insertInto(OverflowBB, OverflowBB->end());
-  Builder.SetInsertPoint(OverflowBB, OverflowBB->end());
+  Builder.SetInsertPoint(OverflowBB->end());
   Value *MulOverflow = Builder.CreateExtractValue(I, {0}, "mul.overflow");
   Value *OverflowFlag = Builder.CreateExtractValue(I, {1}, "overflow.flag");
   Builder.CreateBr(OverflowResBB);
@@ -7968,8 +7944,7 @@ bool CodeGenPrepare::optimizeShuffleVectorInst(ShuffleVectorInst *SVI) {
       FixedVectorType::get(NewType, SVIVecType->getNumElements());
 
   // Create a bitcast (shuffle (insert (bitcast(..))))
-  IRBuilder<> Builder(SVI->getContext());
-  Builder.SetInsertPoint(SVI);
+  IRBuilder<> Builder(SVI);
   Value *BC1 = Builder.CreateBitCast(
       cast<Instruction>(SVI->getOperand(0))->getOperand(1), NewType);
   Value *Shuffle = Builder.CreateVectorSplat(NewVecType->getNumElements(), BC1);
@@ -8411,16 +8386,13 @@ public:
   /// Check if it is profitable to promote \p ToBePromoted
   /// by moving downward the transition through.
   bool shouldPromote(const Instruction *ToBePromoted) const {
+    if (!isSafeToSpeculativelyExecuteWithVariableReplaced(ToBePromoted))
+      return false;
     // Promote only if all the operands can be statically expanded.
     // Indeed, we do not want to introduce any new kind of transitions.
     for (const Use &U : ToBePromoted->operands()) {
       const Value *Val = U.get();
       if (Val == getEndOfTransition()) {
-        // If the use is a division and the transition is on the rhs,
-        // we cannot promote the operation, otherwise we may create a
-        // division by zero.
-        if (canCauseUndefinedBehavior(ToBePromoted, U.getOperandNo()))
-          return false;
         continue;
       }
       if (!isa<ConstantInt>(Val) && !isa<UndefValue>(Val) &&
@@ -8664,8 +8636,7 @@ static bool splitMergedValStore(StoreInst &SI, const DataLayout &DL,
     return false;
 
   // Start to split store.
-  IRBuilder<> Builder(SI.getContext());
-  Builder.SetInsertPoint(&SI);
+  IRBuilder<> Builder(&SI);
 
   // If LValue/HValue is a bitcast in another BB, create a new one in current
   // BB so it may be merged with the splitted stores by dag combiner.
