@@ -252,12 +252,12 @@ struct llvm::TimeTraceProfiler {
           auto &IE = Entries[Idx + 1 + I];
           IE.StartUs = std::clamp(IE.StartUs, PStart, PEnd);
         }
-        TimePointType NextRawStart = E.Start + E.Duration;
+        TimePointType NextRawStart = E.End;
         for (int32_t C = E.LastChildIdx; C != -1;
              C = Entries[C].PrevSiblingIdx) {
           auto &Child = Entries[C];
           if (Child.EventType == TimeTraceEventType::CompleteEvent ||
-              Child.Start + Child.Duration <= NextRawStart) {
+              Child.End <= NextRawStart) {
             Child.StartUs = std::min(Child.StartUs, MaxEnd - Child.DurUs);
             MaxEnd = Child.StartUs;
             NextRawStart = Child.Start;
