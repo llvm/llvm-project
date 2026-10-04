@@ -4998,6 +4998,49 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                                getASTContext().UnsignedIntTy);
     break;
   }
+  case Builtin::BI__builtin_hlsl_unpack_u8u16: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+    if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(0),
+                            getASTContext().UInt8_4PackedTy))
+      return true;
+    QualType RetTy =
+        SemaRef.Context.getExtVectorType(getASTContext().UnsignedShortTy, 4);
+    TheCall->setType(RetTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_unpack_u8u32: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+    if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(0),
+                            getASTContext().UInt8_4PackedTy))
+      return true;
+    QualType RetTy =
+        SemaRef.Context.getExtVectorType(getASTContext().UnsignedIntTy, 4);
+    TheCall->setType(RetTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_unpack_s8s16: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+    if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(0),
+                            getASTContext().Int8_4PackedTy))
+      return true;
+    QualType RetTy =
+        SemaRef.Context.getExtVectorType(getASTContext().ShortTy, 4);
+    TheCall->setType(RetTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_unpack_s8s32: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+    if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(0),
+                            getASTContext().Int8_4PackedTy))
+      return true;
+    QualType RetTy = SemaRef.Context.getExtVectorType(getASTContext().IntTy, 4);
+    TheCall->setType(RetTy);
+    break;
+  }
   }
   return false;
 }

@@ -1927,3 +1927,27 @@ let VaryingLongVector = 1;
 let IsConvergent = 1;
 let Availability = SM6_0;
 }
+
+def hlsl_unpack_u8u16 : HLSLBuiltin<"unpack_u8u16", "__builtin_hlsl_unpack_u8u16"> {
+  let Args = [UInt8PackedTy];
+  let ReturnType = VectorType<UInt16Ty, 4>;
+  let Availability = SM6_6;
+}
+
+def hlsl_unpack_u8u32 : HLSLBuiltin<"unpack_u8u32", "__builtin_hlsl_unpack_u8u32"> {
+  let Args = [UInt8PackedTy];
+  let ReturnType = VectorType<UIntTy, 4>;
+  let Availability = SM6_6;
+}
+
+def hlsl_unpack_s8s16 : HLSLBuiltin<"unpack_s8s16", "__builtin_hlsl_unpack_s8s16"> {
+  let Args = [Int8PackedTy];
+  let ReturnType = VectorType<Int16Ty, 4>;
+  let Availability = SM6_6;
+}
+
+def hlsl_unpack_s8s32 : HLSLBuiltin<"unpack_s8s32", "__builtin_hlsl_unpack_s8s32"> {
+  let Args = [Int8PackedTy];
+  let ReturnType = VectorType<IntTy, 4>;
+  let Availability = SM6_6;
+}

@@ -376,4 +376,8 @@ def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty]
   def int_spv_packhalf2x16 : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty], [IntrNoMem]>;
 
 
+  def int_spv_unpack_u8u16 : DefaultAttrsIntrinsic<[llvm_v4i16_ty], [llvm_i32_ty], [IntrNoMem]>;
+  def int_spv_unpack_u8u32 : DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_i32_ty], [IntrNoMem]>;
+  def int_spv_unpack_s8s16 : DefaultAttrsIntrinsic<[llvm_v4i16_ty], [llvm_i32_ty], [IntrNoMem]>;
+  def int_spv_unpack_s8s32 : DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_i32_ty], [IntrNoMem]>;
 }
