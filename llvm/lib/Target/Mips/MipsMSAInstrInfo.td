@@ -1891,15 +1891,11 @@ class FCUEQ_W_DESC : MSA_3RF_DESC_BASE<"fcueq.w", vfsetueq_v4f32, MSA128WOpnd>,
 class FCUEQ_D_DESC : MSA_3RF_DESC_BASE<"fcueq.d", vfsetueq_v2f64, MSA128DOpnd>,
                      IsCommutable;
 
-class FCULE_W_DESC : MSA_3RF_DESC_BASE<"fcule.w", vfsetule_v4f32, MSA128WOpnd>,
-                     IsCommutable;
-class FCULE_D_DESC : MSA_3RF_DESC_BASE<"fcule.d", vfsetule_v2f64, MSA128DOpnd>,
-                     IsCommutable;
+class FCULE_W_DESC : MSA_3RF_DESC_BASE<"fcule.w", vfsetule_v4f32, MSA128WOpnd>;
+class FCULE_D_DESC : MSA_3RF_DESC_BASE<"fcule.d", vfsetule_v2f64, MSA128DOpnd>;
 
-class FCULT_W_DESC : MSA_3RF_DESC_BASE<"fcult.w", vfsetult_v4f32, MSA128WOpnd>,
-                     IsCommutable;
-class FCULT_D_DESC : MSA_3RF_DESC_BASE<"fcult.d", vfsetult_v2f64, MSA128DOpnd>,
-                     IsCommutable;
+class FCULT_W_DESC : MSA_3RF_DESC_BASE<"fcult.w", vfsetult_v4f32, MSA128WOpnd>;
+class FCULT_D_DESC : MSA_3RF_DESC_BASE<"fcult.d", vfsetult_v2f64, MSA128DOpnd>;
 
 class FCUN_W_DESC : MSA_3RF_DESC_BASE<"fcun.w", vfsetun_v4f32, MSA128WOpnd>,
                     IsCommutable;
