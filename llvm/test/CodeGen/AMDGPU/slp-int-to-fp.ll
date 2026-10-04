@@ -343,20 +343,20 @@ define void @sitofp_i8_scaled_to_float(ptr addrspace(1) noalias %out, ptr addrsp
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    global_load_dwordx2 v[2:3], v[2:3], off
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-NEXT:    v_cvt_f32_i32_sdwa v7, sext(v2) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1
 ; GFX90A-NEXT:    v_cvt_f32_i32_sdwa v6, sext(v2) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
-; GFX90A-NEXT:    v_cvt_f32_i32_sdwa v9, sext(v2) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3
+; GFX90A-NEXT:    v_cvt_f32_i32_sdwa v7, sext(v2) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1
 ; GFX90A-NEXT:    v_cvt_f32_i32_sdwa v8, sext(v2) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
-; GFX90A-NEXT:    v_cvt_f32_i32_sdwa v11, sext(v3) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1
-; GFX90A-NEXT:    v_cvt_f32_i32_sdwa v10, sext(v3) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
-; GFX90A-NEXT:    v_cvt_f32_i32_sdwa v13, sext(v3) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3
-; GFX90A-NEXT:    v_cvt_f32_i32_sdwa v12, sext(v3) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
-; GFX90A-NEXT:    v_pk_mul_f32 v[6:7], v[6:7], v[4:5] op_sel_hi:[1,0]
+; GFX90A-NEXT:    v_cvt_f32_i32_sdwa v9, sext(v2) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3
+; GFX90A-NEXT:    v_cvt_f32_i32_sdwa v2, sext(v3) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
+; GFX90A-NEXT:    v_cvt_f32_i32_sdwa v10, sext(v3) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
+; GFX90A-NEXT:    v_cvt_f32_i32_sdwa v11, sext(v3) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3
+; GFX90A-NEXT:    v_cvt_f32_i32_sdwa v3, sext(v3) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1
 ; GFX90A-NEXT:    v_pk_mul_f32 v[8:9], v[8:9], v[4:5] op_sel_hi:[1,0]
-; GFX90A-NEXT:    v_pk_mul_f32 v[2:3], v[10:11], v[4:5] op_sel_hi:[1,0]
-; GFX90A-NEXT:    v_pk_mul_f32 v[4:5], v[12:13], v[4:5] op_sel_hi:[1,0]
+; GFX90A-NEXT:    v_pk_mul_f32 v[6:7], v[6:7], v[4:5] op_sel_hi:[1,0]
+; GFX90A-NEXT:    v_pk_mul_f32 v[12:13], v[10:11], v[4:5] op_sel_hi:[1,0]
+; GFX90A-NEXT:    v_pk_mul_f32 v[10:11], v[2:3], v[4:5] op_sel_hi:[1,0]
 ; GFX90A-NEXT:    global_store_dwordx4 v[0:1], v[6:9], off
-; GFX90A-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off offset:16
+; GFX90A-NEXT:    global_store_dwordx4 v[0:1], v[10:13], off offset:16
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;

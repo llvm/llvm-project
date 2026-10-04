@@ -327,11 +327,10 @@ define void @store4_sitofp(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    global_load_dword v0, v[0:1], off
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-NEXT:    v_ashrrev_i16_e32 v1, 8, v0
-; GFX90A-NEXT:    v_cvt_f32_i32_sdwa v7, sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3
-; GFX90A-NEXT:    v_cvt_f32_i32_sdwa v6, sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
 ; GFX90A-NEXT:    v_cvt_f32_i32_sdwa v4, sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
-; GFX90A-NEXT:    v_cvt_f32_i32_sdwa v5, sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0
+; GFX90A-NEXT:    v_cvt_f32_i32_sdwa v5, sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1
+; GFX90A-NEXT:    v_cvt_f32_i32_sdwa v6, sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
+; GFX90A-NEXT:    v_cvt_f32_i32_sdwa v7, sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3
 ; GFX90A-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
@@ -392,10 +391,12 @@ define void @zext4_bv_loop(ptr addrspace(1) %a, ptr addrspace(1) %out) {
 ; GFX90A-LABEL: zext4_bv_loop:
 ; GFX90A:       ; %bb.0: ; %entry
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, 1, v0
+; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], 0
 ; GFX90A-NEXT:  .LBB4_1: ; %loop
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX90A-NEXT:    global_load_dword v6, v[0:1], off
+; GFX90A-NEXT:    global_load_dword v6, v[0:1], off offset:-1
 ; GFX90A-NEXT:    s_add_u32 s6, s6, 1
 ; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, 4, v0
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
@@ -417,12 +418,14 @@ define void @zext4_bv_loop(ptr addrspace(1) %a, ptr addrspace(1) %out) {
 ; GFX1030-LABEL: zext4_bv_loop:
 ; GFX1030:       ; %bb.0: ; %entry
 ; GFX1030-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1030-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 1
+; GFX1030-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX1030-NEXT:    v_mov_b32_e32 v4, 0xffff
 ; GFX1030-NEXT:    s_mov_b64 s[6:7], 0
 ; GFX1030-NEXT:    .p2align 6
 ; GFX1030-NEXT:  .LBB4_1: ; %loop
 ; GFX1030-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1030-NEXT:    global_load_dword v7, v[0:1], off
+; GFX1030-NEXT:    global_load_dword v7, v[0:1], off offset:-1
 ; GFX1030-NEXT:    s_add_u32 s6, s6, 1
 ; GFX1030-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 4
 ; GFX1030-NEXT:    s_addc_u32 s7, s7, 0
@@ -444,10 +447,11 @@ define void @zext4_bv_loop(ptr addrspace(1) %a, ptr addrspace(1) %out) {
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_add_nc_u64_e32 v[0:1], 1, v[0:1]
 ; GFX1250-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX1250-NEXT:  .LBB4_1: ; %loop
 ; GFX1250-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1250-NEXT:    global_load_b32 v6, v[0:1], off
+; GFX1250-NEXT:    global_load_b32 v6, v[0:1], off offset:-1
 ; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 1
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[0:1], 4, v[0:1]
@@ -501,51 +505,21 @@ define i32 @dot8_sext_i8(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off
 ; GFX90A-NEXT:    global_load_dwordx2 v[6:7], v[2:3], off
-; GFX90A-NEXT:    s_waitcnt vmcnt(1)
-; GFX90A-NEXT:    v_lshrrev_b16_e32 v0, 8, v4
-; GFX90A-NEXT:    v_lshrrev_b16_e32 v1, 8, v5
+; GFX90A-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-NEXT:    v_lshrrev_b16_e32 v2, 8, v6
-; GFX90A-NEXT:    v_lshrrev_b16_e32 v3, 8, v7
-; GFX90A-NEXT:    v_mul_i32_i24_sdwa v8, sext(v4), sext(v6) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_0
-; GFX90A-NEXT:    v_mul_i32_i24_sdwa v9, sext(v4), sext(v6) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_2
-; GFX90A-NEXT:    v_mul_i32_i24_sdwa v4, sext(v4), sext(v6) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_3
-; GFX90A-NEXT:    v_mul_i32_i24_sdwa v6, sext(v5), sext(v7) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_0
-; GFX90A-NEXT:    v_mul_i32_i24_sdwa v10, sext(v5), sext(v7) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_2
-; GFX90A-NEXT:    v_mul_i32_i24_sdwa v5, sext(v5), sext(v7) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_3
-; GFX90A-NEXT:    v_mul_i32_i24_sdwa v0, sext(v0), sext(v2) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_0
-; GFX90A-NEXT:    v_mul_i32_i24_sdwa v1, sext(v1), sext(v3) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_0
-; GFX90A-NEXT:    v_add_u32_e32 v4, v4, v5
-; GFX90A-NEXT:    v_add_u32_e32 v2, v9, v10
-; GFX90A-NEXT:    v_add_u32_e32 v3, v8, v6
-; GFX90A-NEXT:    v_add3_u32 v0, v0, v1, v4
-; GFX90A-NEXT:    v_add3_u32 v0, v3, v2, v0
+; GFX90A-NEXT:    v_dot4c_i32_i8_e32 v0, v4, v6
+; GFX90A-NEXT:    v_dot4c_i32_i8_e32 v0, v5, v7
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1030-LABEL: dot8_sext_i8:
 ; GFX1030:       ; %bb.0: ; %entry
 ; GFX1030-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1030-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
-; GFX1030-NEXT:    global_load_dwordx2 v[2:3], v[2:3], off
-; GFX1030-NEXT:    s_waitcnt vmcnt(1)
-; GFX1030-NEXT:    v_lshrrev_b16 v4, 8, v0
-; GFX1030-NEXT:    v_lshrrev_b16 v5, 8, v1
+; GFX1030-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off
+; GFX1030-NEXT:    global_load_dwordx2 v[1:2], v[2:3], off
+; GFX1030-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1030-NEXT:    s_waitcnt vmcnt(0)
-; GFX1030-NEXT:    v_lshrrev_b16 v6, 8, v2
-; GFX1030-NEXT:    v_lshrrev_b16 v7, 8, v3
-; GFX1030-NEXT:    v_mul_i32_i24_sdwa v8, sext(v0), sext(v2) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_0
-; GFX1030-NEXT:    v_mul_i32_i24_sdwa v9, sext(v0), sext(v2) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_2
-; GFX1030-NEXT:    v_mul_i32_i24_sdwa v0, sext(v0), sext(v2) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_3
-; GFX1030-NEXT:    v_mul_i32_i24_sdwa v2, sext(v1), sext(v3) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_3
-; GFX1030-NEXT:    v_mul_i32_i24_sdwa v10, sext(v1), sext(v3) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_0
-; GFX1030-NEXT:    v_mul_i32_i24_sdwa v1, sext(v1), sext(v3) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_2
-; GFX1030-NEXT:    v_mul_i32_i24_sdwa v3, sext(v4), sext(v6) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_0
-; GFX1030-NEXT:    v_mul_i32_i24_sdwa v4, sext(v5), sext(v7) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_0
-; GFX1030-NEXT:    v_add_nc_u32_e32 v0, v0, v2
-; GFX1030-NEXT:    v_add_nc_u32_e32 v2, v8, v10
-; GFX1030-NEXT:    v_add_nc_u32_e32 v1, v9, v1
-; GFX1030-NEXT:    v_add3_u32 v0, v3, v4, v0
-; GFX1030-NEXT:    v_add3_u32 v0, v2, v1, v0
+; GFX1030-NEXT:    v_dot4c_i32_i8 v0, v4, v1
+; GFX1030-NEXT:    v_dot4c_i32_i8 v0, v5, v2
 ; GFX1030-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: dot8_sext_i8:
@@ -554,39 +528,11 @@ define i32 @dot8_sext_i8(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_load_b64 v[4:5], v[0:1], off
 ; GFX1250-NEXT:    global_load_b64 v[6:7], v[2:3], off
-; GFX1250-NEXT:    s_wait_loadcnt 0x1
-; GFX1250-NEXT:    s_wait_xcnt 0x1
-; GFX1250-NEXT:    v_lshrrev_b16 v0.l, 8, v4.l
-; GFX1250-NEXT:    v_lshrrev_b16 v1.l, 8, v5.l
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_lshrrev_b16 v8.l, 8, v6.l
-; GFX1250-NEXT:    v_lshrrev_b16 v9.l, 8, v7.l
-; GFX1250-NEXT:    v_dual_ashrrev_i32 v12, 24, v5 :: v_dual_ashrrev_i32 v14, 24, v7
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_dual_ashrrev_i32 v2, 24, v4 :: v_dual_ashrrev_i32 v10, 24, v6
-; GFX1250-NEXT:    v_bfe_i32 v13, v5, 16, 8
-; GFX1250-NEXT:    v_bfe_i32 v5, v5, 0, 8
-; GFX1250-NEXT:    v_bfe_i32 v15, v7, 16, 8
-; GFX1250-NEXT:    v_bfe_i32 v7, v7, 0, 8
-; GFX1250-NEXT:    v_bfe_i32 v0, v0, 0, 8
-; GFX1250-NEXT:    v_bfe_i32 v8, v8, 0, 8
-; GFX1250-NEXT:    v_bfe_i32 v1, v1, 0, 8
-; GFX1250-NEXT:    v_bfe_i32 v9, v9, 0, 8
-; GFX1250-NEXT:    v_mul_i32_i24_e32 v12, v12, v14
-; GFX1250-NEXT:    v_bfe_i32 v3, v4, 0, 8
-; GFX1250-NEXT:    v_bfe_i32 v4, v4, 16, 8
-; GFX1250-NEXT:    v_bfe_i32 v11, v6, 0, 8
-; GFX1250-NEXT:    v_bfe_i32 v6, v6, 16, 8
-; GFX1250-NEXT:    v_mul_i32_i24_e32 v5, v5, v7
-; GFX1250-NEXT:    v_mul_i32_i24_e32 v7, v13, v15
-; GFX1250-NEXT:    v_mul_i32_i24_e32 v0, v0, v8
-; GFX1250-NEXT:    v_mul_i32_i24_e32 v1, v1, v9
-; GFX1250-NEXT:    v_mad_i32_i24 v2, v2, v10, v12
-; GFX1250-NEXT:    v_mad_i32_i24 v3, v3, v11, v5
-; GFX1250-NEXT:    v_mad_i32_i24 v4, v4, v6, v7
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_add3_u32 v0, v0, v1, v2
-; GFX1250-NEXT:    v_add3_u32 v0, v3, v4, v0
+; GFX1250-NEXT:    s_wait_xcnt 0x1
+; GFX1250-NEXT:    v_dot4_i32_iu8 v0, v4, v6, 0 neg_lo:[1,1,0]
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_dot4_i32_iu8 v0, v5, v7, v0 neg_lo:[1,1,0]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %pa0 = getelementptr inbounds i8, ptr addrspace(1) %a, i32 0
@@ -660,35 +606,22 @@ define i32 @sum4_zext_i8(ptr addrspace(1) %a) {
 ; GFX90A:       ; %bb.0: ; %entry
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    global_load_dword v0, v[0:1], off
-; GFX90A-NEXT:    s_movk_i32 s4, 0xff
-; GFX90A-NEXT:    s_mov_b32 s5, 0x5040100
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    v_lshrrev_b32_e32 v1, 24, v0
-; GFX90A-NEXT:    v_lshrrev_b16_e32 v2, 8, v0
-; GFX90A-NEXT:    v_and_b32_sdwa v3, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX90A-NEXT:    v_and_b32_e32 v0, 0xff, v0
-; GFX90A-NEXT:    v_perm_b32 v0, v2, v0, s5
-; GFX90A-NEXT:    v_perm_b32 v1, v1, v3, s5
-; GFX90A-NEXT:    v_pk_add_u16 v0, v0, v1
-; GFX90A-NEXT:    v_add_u16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX90A-NEXT:    v_add_u32_sdwa v2, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_1
+; GFX90A-NEXT:    v_bfe_u32 v0, v0, 16, 8
+; GFX90A-NEXT:    v_add3_u32 v0, v2, v0, v1
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1030-LABEL: sum4_zext_i8:
 ; GFX1030:       ; %bb.0: ; %entry
 ; GFX1030-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1030-NEXT:    global_load_dword v0, v[0:1], off
-; GFX1030-NEXT:    v_mov_b32_e32 v1, 0xff
 ; GFX1030-NEXT:    s_waitcnt vmcnt(0)
-; GFX1030-NEXT:    v_lshrrev_b32_e32 v2, 24, v0
-; GFX1030-NEXT:    v_lshrrev_b16 v3, 8, v0
-; GFX1030-NEXT:    v_and_b32_e32 v4, 0xff, v0
-; GFX1030-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX1030-NEXT:    v_perm_b32 v1, v3, v4, 0x5040100
-; GFX1030-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
-; GFX1030-NEXT:    v_pk_add_u16 v0, v1, v0
-; GFX1030-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX1030-NEXT:    v_add_nc_u16 v0, v0, v1
-; GFX1030-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX1030-NEXT:    v_lshrrev_b32_e32 v1, 24, v0
+; GFX1030-NEXT:    v_add_nc_u32_sdwa v2, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_1
+; GFX1030-NEXT:    v_bfe_u32 v0, v0, 16, 8
+; GFX1030-NEXT:    v_add3_u32 v0, v2, v0, v1
 ; GFX1030-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: sum4_zext_i8:
@@ -696,18 +629,15 @@ define i32 @sum4_zext_i8(ptr addrspace(1) %a) {
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX1250-NEXT:    s_mov_b32 s0, 0xff
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_lshrrev_b32_e32 v1, 24, v0
-; GFX1250-NEXT:    v_lshrrev_b16 v2.h, 8, v0.l
-; GFX1250-NEXT:    v_and_b16 v3.l, 0xff, v0.h
-; GFX1250-NEXT:    v_and_b16 v2.l, 0xff, v0.l
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_mov_b16_e32 v3.h, v1.l
-; GFX1250-NEXT:    v_pk_add_u16 v0, v2, v3
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
-; GFX1250-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
+; GFX1250-NEXT:    v_dual_lshrrev_b32 v3, 24, v0 :: v_dual_bitop2_b32 v1, s0, v0 bitop3:0x40
+; GFX1250-NEXT:    v_bfe_u32 v2, v0, 8, 8
+; GFX1250-NEXT:    v_bfe_u32 v0, v0, 16, 8
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_add_nc_u32_e32 v1, v1, v2
+; GFX1250-NEXT:    v_add3_u32 v0, v1, v0, v3
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %pa0 = getelementptr inbounds i8, ptr addrspace(1) %a, i32 0
@@ -931,52 +861,22 @@ define i32 @dot8_sext_i8_lds_a16(ptr addrspace(3) %a, ptr addrspace(3) %b) {
 ; GFX90A:       ; %bb.0: ; %entry
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    ds_read_b64 v[2:3], v0
-; GFX90A-NEXT:    ds_read_b64 v[0:1], v1
-; GFX90A-NEXT:    s_waitcnt lgkmcnt(1)
-; GFX90A-NEXT:    v_lshrrev_b16_e32 v4, 8, v2
-; GFX90A-NEXT:    v_lshrrev_b16_e32 v5, 8, v3
+; GFX90A-NEXT:    ds_read_b64 v[4:5], v1
+; GFX90A-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    v_lshrrev_b16_e32 v6, 8, v0
-; GFX90A-NEXT:    v_lshrrev_b16_e32 v7, 8, v1
-; GFX90A-NEXT:    v_mul_i32_i24_sdwa v8, sext(v2), sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_0
-; GFX90A-NEXT:    v_mul_i32_i24_sdwa v4, sext(v4), sext(v6) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_0
-; GFX90A-NEXT:    v_mul_i32_i24_sdwa v6, sext(v2), sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_2
-; GFX90A-NEXT:    v_mul_i32_i24_sdwa v0, sext(v2), sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_3
-; GFX90A-NEXT:    v_mul_i32_i24_sdwa v2, sext(v3), sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_0
-; GFX90A-NEXT:    v_mul_i32_i24_sdwa v5, sext(v5), sext(v7) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_0
-; GFX90A-NEXT:    v_mul_i32_i24_sdwa v7, sext(v3), sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_2
-; GFX90A-NEXT:    v_mul_i32_i24_sdwa v1, sext(v3), sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_3
-; GFX90A-NEXT:    v_add_u32_e32 v0, v0, v1
-; GFX90A-NEXT:    v_add_u32_e32 v1, v6, v7
-; GFX90A-NEXT:    v_add_u32_e32 v2, v8, v2
-; GFX90A-NEXT:    v_add3_u32 v0, v4, v5, v0
-; GFX90A-NEXT:    v_add3_u32 v0, v2, v1, v0
+; GFX90A-NEXT:    v_dot4c_i32_i8_e32 v0, v2, v4
+; GFX90A-NEXT:    v_dot4c_i32_i8_e32 v0, v3, v5
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1030-LABEL: dot8_sext_i8_lds_a16:
 ; GFX1030:       ; %bb.0: ; %entry
 ; GFX1030-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1030-NEXT:    ds_read_b64 v[2:3], v0
-; GFX1030-NEXT:    ds_read_b64 v[0:1], v1
-; GFX1030-NEXT:    s_waitcnt lgkmcnt(1)
-; GFX1030-NEXT:    v_lshrrev_b16 v4, 8, v2
-; GFX1030-NEXT:    v_lshrrev_b16 v5, 8, v3
+; GFX1030-NEXT:    ds_read_b64 v[4:5], v1
+; GFX1030-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1030-NEXT:    v_lshrrev_b16 v6, 8, v0
-; GFX1030-NEXT:    v_lshrrev_b16 v7, 8, v1
-; GFX1030-NEXT:    v_mul_i32_i24_sdwa v8, sext(v2), sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_0
-; GFX1030-NEXT:    v_mul_i32_i24_sdwa v9, sext(v2), sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_2
-; GFX1030-NEXT:    v_mul_i32_i24_sdwa v0, sext(v2), sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_3
-; GFX1030-NEXT:    v_mul_i32_i24_sdwa v2, sext(v3), sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_3
-; GFX1030-NEXT:    v_mul_i32_i24_sdwa v10, sext(v3), sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_0
-; GFX1030-NEXT:    v_mul_i32_i24_sdwa v1, sext(v3), sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_2
-; GFX1030-NEXT:    v_mul_i32_i24_sdwa v3, sext(v4), sext(v6) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_0
-; GFX1030-NEXT:    v_mul_i32_i24_sdwa v4, sext(v5), sext(v7) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_0
-; GFX1030-NEXT:    v_add_nc_u32_e32 v0, v0, v2
-; GFX1030-NEXT:    v_add_nc_u32_e32 v2, v8, v10
-; GFX1030-NEXT:    v_add_nc_u32_e32 v1, v9, v1
-; GFX1030-NEXT:    v_add3_u32 v0, v3, v4, v0
-; GFX1030-NEXT:    v_add3_u32 v0, v2, v1, v0
+; GFX1030-NEXT:    v_dot4c_i32_i8 v0, v2, v4
+; GFX1030-NEXT:    v_dot4c_i32_i8 v0, v3, v5
 ; GFX1030-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: dot8_sext_i8_lds_a16:
@@ -985,37 +885,10 @@ define i32 @dot8_sext_i8_lds_a16(ptr addrspace(3) %a, ptr addrspace(3) %b) {
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    ds_load_b64 v[2:3], v0
 ; GFX1250-NEXT:    ds_load_b64 v[0:1], v1
-; GFX1250-NEXT:    s_wait_dscnt 0x1
-; GFX1250-NEXT:    v_lshrrev_b16 v4.l, 8, v2.l
-; GFX1250-NEXT:    v_lshrrev_b16 v5.l, 8, v3.l
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
-; GFX1250-NEXT:    v_lshrrev_b16 v8.l, 8, v0.l
-; GFX1250-NEXT:    v_lshrrev_b16 v9.l, 8, v1.l
-; GFX1250-NEXT:    v_dual_ashrrev_i32 v12, 24, v3 :: v_dual_ashrrev_i32 v14, 24, v1
-; GFX1250-NEXT:    v_dual_ashrrev_i32 v6, 24, v2 :: v_dual_ashrrev_i32 v10, 24, v0
-; GFX1250-NEXT:    v_bfe_i32 v13, v3, 16, 8
-; GFX1250-NEXT:    v_bfe_i32 v3, v3, 0, 8
-; GFX1250-NEXT:    v_bfe_i32 v15, v1, 16, 8
-; GFX1250-NEXT:    v_bfe_i32 v1, v1, 0, 8
-; GFX1250-NEXT:    v_bfe_i32 v4, v4, 0, 8
-; GFX1250-NEXT:    v_bfe_i32 v8, v8, 0, 8
-; GFX1250-NEXT:    v_bfe_i32 v5, v5, 0, 8
-; GFX1250-NEXT:    v_bfe_i32 v9, v9, 0, 8
-; GFX1250-NEXT:    v_mul_i32_i24_e32 v12, v12, v14
-; GFX1250-NEXT:    v_bfe_i32 v7, v2, 0, 8
-; GFX1250-NEXT:    v_bfe_i32 v2, v2, 16, 8
-; GFX1250-NEXT:    v_bfe_i32 v11, v0, 0, 8
-; GFX1250-NEXT:    v_bfe_i32 v0, v0, 16, 8
-; GFX1250-NEXT:    v_mul_i32_i24_e32 v1, v3, v1
-; GFX1250-NEXT:    v_mul_i32_i24_e32 v3, v13, v15
-; GFX1250-NEXT:    v_mul_i32_i24_e32 v4, v4, v8
-; GFX1250-NEXT:    v_mul_i32_i24_e32 v5, v5, v9
-; GFX1250-NEXT:    v_mad_i32_i24 v6, v6, v10, v12
-; GFX1250-NEXT:    v_mad_i32_i24 v1, v7, v11, v1
-; GFX1250-NEXT:    v_mad_i32_i24 v0, v2, v0, v3
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_add3_u32 v2, v4, v5, v6
-; GFX1250-NEXT:    v_add3_u32 v0, v1, v0, v2
+; GFX1250-NEXT:    v_dot4_i32_iu8 v0, v2, v0, 0 neg_lo:[1,1,0]
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_dot4_i32_iu8 v0, v3, v1, v0 neg_lo:[1,1,0]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %pa0 = getelementptr inbounds i8, ptr addrspace(3) %a, i32 0
