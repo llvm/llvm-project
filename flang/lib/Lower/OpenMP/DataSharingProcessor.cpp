@@ -123,7 +123,7 @@ void DataSharingProcessor::processStep1(
 
   privatize(clauseOps, dir);
 
-  insertBarrier(clauseOps);
+  insertBarrier(clauseOps, dir);
 }
 
 void DataSharingProcessor::processStep2(mlir::Operation *op, bool isLoop) {
@@ -382,7 +382,12 @@ bool DataSharingProcessor::needBarrier() {
 }
 
 void DataSharingProcessor::insertBarrier(
-    mlir::omp::PrivateClauseOps *clauseOps) {
+    mlir::omp::PrivateClauseOps *clauseOps,
+    std::optional<llvm::omp::Directive> dir) {
+  // Task privates are set up by the encountering thread only; no barrier.
+  if (dir && llvm::omp::taskGeneratingSet.test(*dir))
+    return;
+
   if (!needBarrier())
     return;
 

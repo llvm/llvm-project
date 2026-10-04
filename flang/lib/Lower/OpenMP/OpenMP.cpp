@@ -5178,7 +5178,7 @@ static mlir::omp::TaskloopContextOp genStandaloneTaskloop(
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
                            enableDelayedPrivatization, symTable);
-  dsp.processStep1(&taskloopClauseOps);
+  dsp.processStep1(&taskloopClauseOps, llvm::omp::Directive::OMPD_taskloop);
 
   if (hasPrivatizedArrayElementReduction(inReductionObjects,
                                          dsp.getAllSymbolsToPrivatize()))
