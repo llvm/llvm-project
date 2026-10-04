@@ -39,7 +39,7 @@ struct LoadedShard {
 
 /// Loads all shards for the TU \p MainFile from \p Storage.
 std::vector<LoadedShard>
-loadIndexShards(llvm::ArrayRef<Path> MainFiles,
+loadIndexShards(llvm::ArrayRef<std::string> MainFiles,
                 BackgroundIndexStorage::Factory &IndexStorageFactory,
                 const GlobalCompilationDatabase &CDB);
 
