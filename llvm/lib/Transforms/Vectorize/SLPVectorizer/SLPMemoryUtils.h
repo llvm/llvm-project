@@ -82,7 +82,7 @@ bool isMaskedLoadCompress(
     const TargetTransformInfo::TargetCostKind CostKind,
     const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec);
 
-/// Checks if the simple loads of \p VL, mixed with the non-poison undef lanes,
+/// Checks if the simple loads of \p VL, mixed with the undef and poison lanes,
 /// can be replaced by a single load of the whole \p VL width. The loads must be
 /// consecutive and match their lanes, and the whole accessed range must be safe
 /// to load unconditionally.

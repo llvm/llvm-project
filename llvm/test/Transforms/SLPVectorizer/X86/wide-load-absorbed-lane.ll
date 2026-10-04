@@ -15,9 +15,10 @@ define void @absorbed_first(i32 noundef %x) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @in, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze <4 x i32> [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 poison, i32 0, i32 0, i32 0>
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i32> <i32 0, i32 5, i32 7, i32 9>, [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i32> [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i32> <i32 0, i32 5, i32 7, i32 9>, [[TMP6]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr @out, align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -45,9 +46,10 @@ define void @absorbed_middle(i32 noundef %x) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @in, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze <4 x i32> [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 poison, i32 0>
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i32> <i32 3, i32 5, i32 0, i32 9>, [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i32> [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i32> <i32 3, i32 5, i32 0, i32 9>, [[TMP6]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr @out, align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -75,9 +77,10 @@ define void @absorbed_last(i32 noundef %x) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @in, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze <4 x i32> [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 poison>
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i32> <i32 3, i32 5, i32 7, i32 0>, [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i32> [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i32> <i32 3, i32 5, i32 7, i32 0>, [[TMP6]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr @out, align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -108,9 +111,10 @@ define void @store_to_absorbed_lane(i32 noundef %x) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @in, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze <4 x i32> [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 poison, i32 0, i32 0, i32 0>
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i32> <i32 0, i32 5, i32 7, i32 9>, [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i32> [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i32> <i32 0, i32 5, i32 7, i32 9>, [[TMP6]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr @out, align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -385,9 +389,10 @@ define void @or_disjoint_absorbed_first(i32 noundef %x) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @in, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze <4 x i32> [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 poison, i32 0, i32 0, i32 0>
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i32> <i32 -1, i32 256, i32 512, i32 1024>, [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i32> [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i32> <i32 -1, i32 256, i32 512, i32 1024>, [[TMP6]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr @out, align 16
 ; CHECK-NEXT:    ret void
 ;

@@ -380,7 +380,7 @@ bool canWidenLoadsOverUndefLanes(ArrayRef<Value *> VL, const DataLayout &DL,
   Value *Ptr0 = FirstLI->getPointerOperand();
   LoadInst *LastLI = FirstLI;
   for (auto [Lane, V] : enumerate(VL)) {
-    if (isa<UndefValue>(V) && !isa<PoisonValue>(V))
+    if (isa<UndefValue>(V))
       continue;
     auto *LI = dyn_cast<LoadInst>(V);
     if (!LI || !LI->isSimple() || mustSuppressSpeculation(*LI))

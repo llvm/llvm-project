@@ -14,9 +14,10 @@ define void @mul_by_index(i32 noundef %x) {
 ; AVX2-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr @in, align 4
 ; AVX2-NEXT:    [[TMP1:%.*]] = freeze <8 x i32> [[TMP0]]
 ; AVX2-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[X]], i64 0
-; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP2]], <8 x i32> poison, <8 x i32> zeroinitializer
+; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP2]], <8 x i32> poison, <8 x i32> <i32 poison, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
 ; AVX2-NEXT:    [[TMP4:%.*]] = add <8 x i32> [[TMP1]], [[TMP3]]
-; AVX2-NEXT:    [[TMP5:%.*]] = mul <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[TMP4]]
+; AVX2-NEXT:    [[TMP6:%.*]] = freeze <8 x i32> [[TMP4]]
+; AVX2-NEXT:    [[TMP5:%.*]] = mul <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[TMP6]]
 ; AVX2-NEXT:    store <8 x i32> [[TMP5]], ptr @out, align 16
 ; AVX2-NEXT:    ret void
 ;
@@ -28,7 +29,8 @@ define void @mul_by_index(i32 noundef %x) {
 ; SSE4-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
 ; SSE4-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; SSE4-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP1]], [[TMP3]]
-; SSE4-NEXT:    [[TMP5:%.*]] = mul <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[TMP4]]
+; SSE4-NEXT:    [[TMP9:%.*]] = freeze <4 x i32> [[TMP4]]
+; SSE4-NEXT:    [[TMP5:%.*]] = mul <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[TMP9]]
 ; SSE4-NEXT:    store <4 x i32> [[TMP5]], ptr @out, align 16
 ; SSE4-NEXT:    [[TMP6:%.*]] = load <4 x i32>, ptr getelementptr inbounds nuw (i8, ptr @in, i64 16), align 16
 ; SSE4-NEXT:    [[TMP7:%.*]] = add <4 x i32> [[TMP6]], [[TMP3]]
@@ -77,8 +79,9 @@ define void @mul_by_index_nsw(i32 noundef %x) {
 ; AVX2-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr @in, align 4
 ; AVX2-NEXT:    [[TMP1:%.*]] = freeze <8 x i32> [[TMP0]]
 ; AVX2-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[X]], i64 0
-; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP2]], <8 x i32> poison, <8 x i32> zeroinitializer
-; AVX2-NEXT:    [[TMP4:%.*]] = add <8 x i32> [[TMP1]], [[TMP3]]
+; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP2]], <8 x i32> poison, <8 x i32> <i32 poison, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
+; AVX2-NEXT:    [[TMP6:%.*]] = add nsw <8 x i32> [[TMP1]], [[TMP3]]
+; AVX2-NEXT:    [[TMP4:%.*]] = freeze <8 x i32> [[TMP6]]
 ; AVX2-NEXT:    [[TMP5:%.*]] = mul <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[TMP4]]
 ; AVX2-NEXT:    store <8 x i32> [[TMP5]], ptr @out, align 16
 ; AVX2-NEXT:    ret void
@@ -90,7 +93,8 @@ define void @mul_by_index_nsw(i32 noundef %x) {
 ; SSE4-NEXT:    [[TMP1:%.*]] = freeze <4 x i32> [[TMP0]]
 ; SSE4-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
 ; SSE4-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
-; SSE4-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP1]], [[TMP3]]
+; SSE4-NEXT:    [[TMP9:%.*]] = add nsw <4 x i32> [[TMP1]], [[TMP3]]
+; SSE4-NEXT:    [[TMP4:%.*]] = freeze <4 x i32> [[TMP9]]
 ; SSE4-NEXT:    [[TMP5:%.*]] = mul <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[TMP4]]
 ; SSE4-NEXT:    store <4 x i32> [[TMP5]], ptr @out, align 16
 ; SSE4-NEXT:    [[TMP6:%.*]] = load <4 x i32>, ptr getelementptr inbounds nuw (i8, ptr @in, i64 16), align 16
@@ -139,9 +143,10 @@ define void @and_with_zero_lane(i32 noundef %x) {
 ; AVX2-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr @in, align 4
 ; AVX2-NEXT:    [[TMP1:%.*]] = freeze <8 x i32> [[TMP0]]
 ; AVX2-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[X]], i64 0
-; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP2]], <8 x i32> poison, <8 x i32> zeroinitializer
+; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP2]], <8 x i32> poison, <8 x i32> <i32 poison, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
 ; AVX2-NEXT:    [[TMP4:%.*]] = add <8 x i32> [[TMP1]], [[TMP3]]
-; AVX2-NEXT:    [[TMP5:%.*]] = and <8 x i32> <i32 0, i32 15, i32 255, i32 4095, i32 65535, i32 1048575, i32 16777215, i32 268435455>, [[TMP4]]
+; AVX2-NEXT:    [[TMP6:%.*]] = freeze <8 x i32> [[TMP4]]
+; AVX2-NEXT:    [[TMP5:%.*]] = and <8 x i32> <i32 0, i32 15, i32 255, i32 4095, i32 65535, i32 1048575, i32 16777215, i32 268435455>, [[TMP6]]
 ; AVX2-NEXT:    store <8 x i32> [[TMP5]], ptr @out, align 16
 ; AVX2-NEXT:    ret void
 ;
@@ -153,7 +158,8 @@ define void @and_with_zero_lane(i32 noundef %x) {
 ; SSE4-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
 ; SSE4-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; SSE4-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP1]], [[TMP3]]
-; SSE4-NEXT:    [[TMP5:%.*]] = and <4 x i32> <i32 0, i32 15, i32 255, i32 4095>, [[TMP4]]
+; SSE4-NEXT:    [[TMP9:%.*]] = freeze <4 x i32> [[TMP4]]
+; SSE4-NEXT:    [[TMP5:%.*]] = and <4 x i32> <i32 0, i32 15, i32 255, i32 4095>, [[TMP9]]
 ; SSE4-NEXT:    store <4 x i32> [[TMP5]], ptr @out, align 16
 ; SSE4-NEXT:    [[TMP6:%.*]] = load <4 x i32>, ptr getelementptr inbounds nuw (i8, ptr @in, i64 16), align 16
 ; SSE4-NEXT:    [[TMP7:%.*]] = add <4 x i32> [[TMP6]], [[TMP3]]
@@ -204,8 +210,8 @@ define void @mul_by_index_poison_x(i32 %x) {
 ; AVX2-NEXT:    [[TMP1:%.*]] = freeze <8 x i32> [[TMP0]]
 ; AVX2-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[X]], i64 0
 ; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP2]], <8 x i32> poison, <8 x i32> <i32 poison, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
-; AVX2-NEXT:    [[TMP4:%.*]] = freeze <8 x i32> [[TMP3]]
-; AVX2-NEXT:    [[TMP5:%.*]] = add <8 x i32> [[TMP1]], [[TMP4]]
+; AVX2-NEXT:    [[TMP4:%.*]] = add <8 x i32> [[TMP1]], [[TMP3]]
+; AVX2-NEXT:    [[TMP5:%.*]] = freeze <8 x i32> [[TMP4]]
 ; AVX2-NEXT:    [[TMP6:%.*]] = mul <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[TMP5]]
 ; AVX2-NEXT:    store <8 x i32> [[TMP6]], ptr @out, align 16
 ; AVX2-NEXT:    ret void
@@ -217,8 +223,8 @@ define void @mul_by_index_poison_x(i32 %x) {
 ; SSE4-NEXT:    [[TMP1:%.*]] = freeze <4 x i32> [[TMP0]]
 ; SSE4-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
 ; SSE4-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
-; SSE4-NEXT:    [[TMP4:%.*]] = freeze <4 x i32> [[TMP3]]
-; SSE4-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP1]], [[TMP4]]
+; SSE4-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP1]], [[TMP3]]
+; SSE4-NEXT:    [[TMP5:%.*]] = freeze <4 x i32> [[TMP4]]
 ; SSE4-NEXT:    [[TMP6:%.*]] = mul <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[TMP5]]
 ; SSE4-NEXT:    store <4 x i32> [[TMP6]], ptr @out, align 16
 ; SSE4-NEXT:    [[TMP7:%.*]] = load <4 x i32>, ptr getelementptr inbounds nuw (i8, ptr @in, i64 16), align 16
