@@ -5,8 +5,11 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define double @adjacent(double %x, double %y, ptr %errno)  {
 ; CHECK-LABEL: @adjacent(
-; CHECK-NEXT:    [[S:%.*]] = call double @sin(double [[X:%.*]])
-; CHECK-NEXT:    [[C:%.*]] = call double @cos(double [[X]])
+; CHECK-NEXT:    [[SIN_OUT:%.*]] = alloca double, align 8
+; CHECK-NEXT:    [[COS_OUT:%.*]] = alloca double, align 8
+; CHECK-NEXT:    call void @sincos(double [[X:%.*]], ptr nonnull [[SIN_OUT]], ptr nonnull [[COS_OUT]])
+; CHECK-NEXT:    [[S:%.*]] = load double, ptr [[SIN_OUT]], align 8
+; CHECK-NEXT:    [[C:%.*]] = load double, ptr [[COS_OUT]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = fadd double [[S]], [[C]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
@@ -18,8 +21,11 @@ define double @adjacent(double %x, double %y, ptr %errno)  {
 
 define float @reverse_float(float %x, float %y, ptr %errno)  {
 ; CHECK-LABEL: @reverse_float(
-; CHECK-NEXT:    [[S:%.*]] = call float @cosf(float [[X:%.*]])
-; CHECK-NEXT:    [[C:%.*]] = call float @sinf(float [[X]])
+; CHECK-NEXT:    [[SIN_OUT:%.*]] = alloca float, align 4
+; CHECK-NEXT:    [[COS_OUT:%.*]] = alloca float, align 4
+; CHECK-NEXT:    call void @sincosf(float [[X:%.*]], ptr nonnull [[SIN_OUT]], ptr nonnull [[COS_OUT]])
+; CHECK-NEXT:    [[C:%.*]] = load float, ptr [[SIN_OUT]], align 4
+; CHECK-NEXT:    [[S:%.*]] = load float, ptr [[COS_OUT]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = fadd float [[S]], [[C]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -31,8 +37,11 @@ define float @reverse_float(float %x, float %y, ptr %errno)  {
 
 define double @pure_between(double %x, double %y, ptr %errno)  {
 ; CHECK-LABEL: @pure_between(
-; CHECK-NEXT:    [[S:%.*]] = call double @sin(double [[X:%.*]])
-; CHECK-NEXT:    [[C:%.*]] = call double @cos(double [[X]])
+; CHECK-NEXT:    [[SIN_OUT:%.*]] = alloca double, align 8
+; CHECK-NEXT:    [[COS_OUT:%.*]] = alloca double, align 8
+; CHECK-NEXT:    call void @sincos(double [[X:%.*]], ptr nonnull [[SIN_OUT]], ptr nonnull [[COS_OUT]])
+; CHECK-NEXT:    [[S:%.*]] = load double, ptr [[SIN_OUT]], align 8
+; CHECK-NEXT:    [[C:%.*]] = load double, ptr [[COS_OUT]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = fadd double [[S]], [[C]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
@@ -90,8 +99,11 @@ define double @intervening_call(double %x, double %y, ptr %errno)  {
 
 define double @strict(double %x, double %y, ptr %errno) strictfp {
 ; CHECK-LABEL: @strict(
-; CHECK-NEXT:    [[S:%.*]] = call double @sin(double [[X:%.*]])
-; CHECK-NEXT:    [[C:%.*]] = call double @cos(double [[X]])
+; CHECK-NEXT:    [[SIN_OUT:%.*]] = alloca double, align 8
+; CHECK-NEXT:    [[COS_OUT:%.*]] = alloca double, align 8
+; CHECK-NEXT:    call void @sincos(double [[X:%.*]], ptr nonnull [[SIN_OUT]], ptr nonnull [[COS_OUT]])
+; CHECK-NEXT:    [[S:%.*]] = load double, ptr [[SIN_OUT]], align 8
+; CHECK-NEXT:    [[C:%.*]] = load double, ptr [[COS_OUT]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = fadd double [[S]], [[C]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
