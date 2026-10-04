@@ -62,7 +62,6 @@
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 
 #include <algorithm>
-#include <limits>
 #include <memory>
 #include <optional>
 #include <string>
@@ -1396,11 +1395,8 @@ private:
         // Each body runs once per wrapper entry. Without a callsite weight,
         // sample PGO treats these calls as cold.
         if (WrapperCount && SampleProfile) {
-          uint64_t Count = *WrapperCount;
-          uint32_t Weight = Count > std::numeric_limits<uint32_t>::max()
-                                ? std::numeric_limits<uint32_t>::max()
-                                : static_cast<uint32_t>(Count);
-          setBranchWeights(*NewCI, {Weight}, /*IsExpected=*/false);
+          setFittedBranchWeights(*NewCI, {*WrapperCount},
+                                 /*IsExpected=*/false);
         }
 
         // Forward parameter attributes from the callback to the callee.
