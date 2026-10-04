@@ -83,12 +83,15 @@ LLVM_ABI bool formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
 ///
 /// If \p InsertedPHIs is not nullptr, inserted phis will be added to this
 /// vector.
+///
+/// Pass \p MSSAU when preserving MemorySSA: lifetime markers may be removed.
 LLVM_ABI bool
 formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
                          const DominatorTree &DT, const LoopInfo &LI,
                          ScalarEvolution *SE,
                          SmallVectorImpl<PHINode *> *PHIsToRemove = nullptr,
-                         SmallVectorImpl<PHINode *> *InsertedPHIs = nullptr);
+                         SmallVectorImpl<PHINode *> *InsertedPHIs = nullptr,
+                         MemorySSAUpdater *MSSAU = nullptr);
 
 /// Put loop into LCSSA form.
 ///
@@ -101,9 +104,11 @@ formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
 ///
 /// If ScalarEvolution is passed in, it will be preserved.
 ///
+/// Pass \p MSSAU when preserving MemorySSA: lifetime markers may be removed.
+///
 /// Returns true if any modifications are made to the loop.
 LLVM_ABI bool formLCSSA(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
-                        ScalarEvolution *SE);
+                        ScalarEvolution *SE, MemorySSAUpdater *MSSAU = nullptr);
 
 /// Put a loop nest into LCSSA form.
 ///
@@ -113,9 +118,12 @@ LLVM_ABI bool formLCSSA(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
 ///
 /// If ScalarEvolution is passed in, it will be preserved.
 ///
+/// Pass \p MSSAU when preserving MemorySSA: lifetime markers may be removed.
+///
 /// Returns true if any modifications are made to the loop.
 LLVM_ABI bool formLCSSARecursively(Loop &L, const DominatorTree &DT,
-                                   const LoopInfo *LI, ScalarEvolution *SE);
+                                   const LoopInfo *LI, ScalarEvolution *SE,
+                                   MemorySSAUpdater *MSSAU = nullptr);
 
 /// Flags controlling how much is checked when sinking or hoisting
 /// instructions.  The number of memory access in the loop (and whether there
