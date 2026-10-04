@@ -14400,13 +14400,14 @@ SDValue RISCVTargetLowering::lowerVPREDUCE(SDValue Op,
   MVT VecVT = VecEVT.getSimpleVT();
   unsigned RVVOpcode = getRVVReductionOp(Opc);
 
+  SDValue VL = Op.getOperand(3);
+  SDValue Mask = Op.getOperand(2);
   if (VecVT.isFixedLengthVector()) {
     auto ContainerVT = getContainerForFixedLengthVector(VecVT);
     Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
+    Mask = convertToScalableVector(getMaskTypeFor(ContainerVT), Mask, DAG,
+                                   Subtarget);
   }
-
-  SDValue VL = Op.getOperand(3);
-  SDValue Mask = Op.getOperand(2);
   SDValue Res =
       lowerReductionSeq(RVVOpcode, Op.getSimpleValueType(), Op.getOperand(0),
                         Vec, Mask, VL, DL, DAG, Subtarget);

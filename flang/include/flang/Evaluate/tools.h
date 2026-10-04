@@ -1556,8 +1556,8 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   return !lhsIsHost || rhsNbSymbols > 0;
 }
 
-/// Check if the expression is a mix of host and device variables that require
-/// implicit data transfer.
+/// Check if the expression uses device data in an operation evaluated on the
+/// host, which requires an implicit data transfer.
 bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr);
 
 /// Check if the expression is a mix of host and constant variables.
