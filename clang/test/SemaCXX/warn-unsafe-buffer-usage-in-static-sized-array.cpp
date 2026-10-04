@@ -21,6 +21,16 @@ struct Foo {
 
 void foo2(Foo &f, unsigned idx) { f.member_buffer[idx] = 0; }
 
+struct Trailing {
+  int len;
+  int buffer[10];
+};
+
+// The trailing member is a flexible array member under the default
+// -fstrict-flex-arrays=0 (see the -flex-arrays.cpp test), but a constant index
+// within its declared size is safe regardless.
+void trailing_constant_idx(Trailing *t) { t->buffer[9] = 0; }
+
 void constant_idx_safe(unsigned idx) {
   int buffer[10];
   buffer[9] = 0;

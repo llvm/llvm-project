@@ -520,6 +520,11 @@ features cannot lower the translation-unit ABI level;
   for pointer arithmetic on statically-sized arrays when the offset is a
   non-negative constant within the array bounds.
 
+- `-Wno-unsafe-buffer-usage-in-static-sized-array` no longer suppresses warnings
+  for subscripts on a trailing array member that `-fstrict-flex-arrays` treats
+  as a flexible array member, since `-fsanitize=array-bounds` does not check
+  those accesses.
+
 - `-Wc++98-compat` now diagnoses explicit conversion functions in C++20 and
   later, matching the behavior in C++11 through C++17. (#GH161689)
 
