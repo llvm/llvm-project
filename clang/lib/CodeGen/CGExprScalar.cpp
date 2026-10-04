@@ -651,6 +651,7 @@ public:
   Value *VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E);
   Value *VisitShuffleVectorExpr(ShuffleVectorExpr *E);
   Value *VisitConvertVectorExpr(ConvertVectorExpr *E);
+  Value *VisitElementwiseSaturatingCastExpr(ElementwiseSaturatingCastExpr *E);
   Value *VisitMemberExpr(MemberExpr *E);
   Value *VisitExtVectorElementExpr(Expr *E) { return EmitLoadOfLValue(E); }
   Value *VisitMatrixElementExpr(Expr *E) { return EmitLoadOfLValue(E); }
@@ -2141,6 +2142,98 @@ Value *ScalarExprEmitter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
   }
 
   return Res;
+}
+
+Value *ScalarExprEmitter::VisitElementwiseSaturatingCastExpr(
+    ElementwiseSaturatingCastExpr *E) {
+  Value *Src = CGF.EmitScalarExpr(E->getSrcExpr());
+  QualType SrcType = E->getSrcExpr()->getType();
+  QualType DstType = E->getType();
+
+  assert((SrcType->isIntegerType() || SrcType->isVectorType()) &&
+         "Elementwise saturating cast source must be an integer or vector");
+  assert((DstType->isIntegerType() || DstType->isVectorType()) &&
+         "Elementwise saturating cast destination must be an integer or "
+         "vector");
+
+  const auto *SrcVecTy = SrcType->getAs<VectorType>();
+  const auto *DstVecTy = DstType->getAs<VectorType>();
+  assert((SrcVecTy == nullptr) == (DstVecTy == nullptr) &&
+         "Elementwise saturating cast source and destination must both be "
+         "scalars or vectors");
+  if (SrcVecTy)
+    assert(SrcVecTy->getNumElements() == DstVecTy->getNumElements() &&
+           "Elementwise saturating cast vectors must have the same length");
+
+  QualType SrcEltType = SrcVecTy ? SrcVecTy->getElementType() : SrcType;
+  QualType DstEltType = DstVecTy ? DstVecTy->getElementType() : DstType;
+  assert(SrcEltType->isIntegerType() &&
+         "Elementwise saturating cast source element must be an integer");
+  assert(DstEltType->isIntegerType() &&
+         "Elementwise saturating cast destination element must be an integer");
+
+  llvm::Type *SrcIRTy = Src->getType();
+  llvm::Type *DstIRTy = CGF.ConvertType(DstType);
+  unsigned SrcBits = CGF.getContext().getIntWidth(SrcEltType);
+  unsigned DstBits = CGF.getContext().getIntWidth(DstEltType);
+  bool SrcSigned = SrcEltType->isSignedIntegerOrEnumerationType();
+  bool DstSigned = DstEltType->isSignedIntegerOrEnumerationType();
+  auto MakeConstant = [&](const llvm::APInt &Bound) -> Value * {
+    llvm::Constant *ConstantValue =
+        llvm::ConstantInt::get(CGF.getLLVMContext(), Bound);
+    if (SrcIRTy->isVectorTy())
+      return llvm::ConstantVector::getSplat(
+          cast<llvm::VectorType>(SrcIRTy)->getElementCount(), ConstantValue);
+    return ConstantValue;
+  };
+
+  if (!SrcSigned && !DstSigned) {
+    if (SrcBits <= DstBits)
+      return CGF.Builder.CreateIntCast(Src, DstIRTy, /*isSigned=*/false,
+                                       "sat.cast");
+    Value *Result = CGF.Builder.CreateBinaryIntrinsic(
+        llvm::Intrinsic::umin, Src,
+        MakeConstant(llvm::APInt::getMaxValue(DstBits).zext(SrcBits)), nullptr,
+        "sat.cast");
+    return CGF.Builder.CreateIntCast(Result, DstIRTy, /*isSigned=*/false,
+                                     "sat.cast");
+  } else if (!SrcSigned && DstSigned) {
+    if (SrcBits < DstBits)
+      return CGF.Builder.CreateIntCast(Src, DstIRTy, /*isSigned=*/false,
+                                       "sat.cast");
+    llvm::APInt DstMax = llvm::APInt::getSignedMaxValue(DstBits);
+    if (SrcBits > DstBits)
+      DstMax = DstMax.zext(SrcBits);
+    Value *Result = CGF.Builder.CreateBinaryIntrinsic(
+        llvm::Intrinsic::umin, Src, MakeConstant(DstMax), nullptr, "sat.cast");
+    return CGF.Builder.CreateIntCast(Result, DstIRTy, /*isSigned=*/false,
+                                     "sat.cast");
+  } else if (SrcSigned && !DstSigned) {
+    Value *Result = CGF.Builder.CreateBinaryIntrinsic(
+        llvm::Intrinsic::smax, Src, MakeConstant(llvm::APInt(SrcBits, 0)),
+        nullptr, "sat.cast");
+    if (SrcBits > DstBits)
+      Result = CGF.Builder.CreateBinaryIntrinsic(
+          llvm::Intrinsic::smin, Result,
+          MakeConstant(llvm::APInt::getMaxValue(DstBits).zext(SrcBits)),
+          nullptr, "sat.cast");
+    return CGF.Builder.CreateIntCast(Result, DstIRTy, /*isSigned=*/false,
+                                     "sat.cast");
+  } else {
+    if (SrcBits <= DstBits)
+      return CGF.Builder.CreateIntCast(Src, DstIRTy, /*isSigned=*/true,
+                                       "sat.cast");
+    Value *Result = CGF.Builder.CreateBinaryIntrinsic(
+        llvm::Intrinsic::smax, Src,
+        MakeConstant(llvm::APInt::getSignedMinValue(DstBits).sext(SrcBits)),
+        nullptr, "sat.cast");
+    Result = CGF.Builder.CreateBinaryIntrinsic(
+        llvm::Intrinsic::smin, Result,
+        MakeConstant(llvm::APInt::getSignedMaxValue(DstBits).sext(SrcBits)),
+        nullptr, "sat.cast");
+    return CGF.Builder.CreateIntCast(Result, DstIRTy, /*isSigned=*/true,
+                                     "sat.cast");
+  }
 }
 
 Value *ScalarExprEmitter::VisitMemberExpr(MemberExpr *E) {

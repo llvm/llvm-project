@@ -12039,6 +12039,8 @@ namespace {
     bool VisitUnaryOperator(const UnaryOperator *E);
     bool VisitCallExpr(const CallExpr *E);
     bool VisitConvertVectorExpr(const ConvertVectorExpr *E);
+    bool
+    VisitElementwiseSaturatingCastExpr(const ElementwiseSaturatingCastExpr *E);
     bool VisitShuffleVectorExpr(const ShuffleVectorExpr *E);
 
     // FIXME: Missing: conditional operator (for GNU
@@ -15400,6 +15402,26 @@ bool VectorExprEvaluator::VisitConvertVectorExpr(const ConvertVectorExpr *E) {
   return Success(APValue(ResultElements.data(), ResultElements.size()), E);
 }
 
+bool VectorExprEvaluator::VisitElementwiseSaturatingCastExpr(
+    const ElementwiseSaturatingCastExpr *E) {
+  APValue Source;
+  if (!EvaluateAsRValue(Info, E->getSrcExpr(), Source))
+    return false;
+
+  QualType DestTy = E->getType()->castAs<VectorType>()->getElementType();
+
+  unsigned SourceLen = Source.getVectorLength();
+  SmallVector<APValue, 4> ResultElements;
+  ResultElements.reserve(SourceLen);
+  for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum)
+    ResultElements.push_back(
+        APValue(Source.getVectorElt(EltNum).getInt().extOrTruncSat(
+            Info.Ctx.getIntWidth(DestTy),
+            DestTy->isUnsignedIntegerOrEnumerationType())));
+
+  return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+}
+
 static bool handleVectorShuffle(EvalInfo &Info, const ShuffleVectorExpr *E,
                                 QualType ElemType, APValue const &VecVal1,
                                 APValue const &VecVal2, unsigned EltNum,
@@ -16146,6 +16168,8 @@ public:
   bool VisitUnaryOperator(const UnaryOperator *E);
 
   bool VisitCastExpr(const CastExpr* E);
+  bool
+  VisitElementwiseSaturatingCastExpr(const ElementwiseSaturatingCastExpr *E);
   bool VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *E);
 
   bool VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E) {
@@ -20310,6 +20334,17 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   llvm_unreachable("unknown cast resulting in integral value");
 }
 
+bool IntExprEvaluator::VisitElementwiseSaturatingCastExpr(
+    const ElementwiseSaturatingCastExpr *E) {
+  APSInt Source;
+  if (!EvaluateInteger(E->getSrcExpr(), Source, Info))
+    return false;
+  return Success(
+      Source.extOrTruncSat(Info.Ctx.getIntWidth(E->getType()),
+                           E->getType()->isUnsignedIntegerOrEnumerationType()),
+      E);
+}
+
 bool IntExprEvaluator::VisitUnaryReal(const UnaryOperator *E) {
   if (E->getSubExpr()->getType()->isAnyComplexType()) {
     ComplexValue LV;
@@ -22675,6 +22710,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::ObjCAvailabilityCheckExprClass:
   case Expr::ShuffleVectorExprClass:
   case Expr::ConvertVectorExprClass:
+  case Expr::ElementwiseSaturatingCastExprClass:
   case Expr::BlockExprClass:
   case Expr::NoStmtClass:
   case Expr::OpaqueValueExprClass:

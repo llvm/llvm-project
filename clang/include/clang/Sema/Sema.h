@@ -2729,6 +2729,12 @@ public:
                                SourceLocation BuiltinLoc,
                                SourceLocation RParenLoc);
 
+  /// ElementwiseSaturatingCastExpr - Handle
+  /// __builtin_elementwise_saturating_cast.
+  ExprResult ElementwiseSaturatingCastExpr(Expr *E, TypeSourceInfo *TInfo,
+                                           SourceLocation BuiltinLoc,
+                                           SourceLocation RParenLoc);
+
   static StringRef GetFormatStringTypeName(FormatStringType FST);
   static FormatStringType GetFormatStringType(StringRef FormatFlavor);
   static FormatStringType GetFormatStringType(const FormatAttr *Format);
@@ -7720,6 +7726,11 @@ public:
   ExprResult ActOnConvertVectorExpr(Expr *E, ParsedType ParsedDestTy,
                                     SourceLocation BuiltinLoc,
                                     SourceLocation RParenLoc);
+
+  ExprResult ActOnElementwiseSaturatingCastExpr(Expr *E,
+                                                ParsedType ParsedDestTy,
+                                                SourceLocation BuiltinLoc,
+                                                SourceLocation RParenLoc);
 
   //===---------------------------- OpenCL Features -----------------------===//
 

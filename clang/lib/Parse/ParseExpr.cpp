@@ -1092,6 +1092,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
   case tok::kw___builtin_choose_expr:
   case tok::kw___builtin_astype: // primary-expression: [OCL] as_type()
   case tok::kw___builtin_convertvector:
+  case tok::kw___builtin_elementwise_saturating_cast:
   case tok::kw___builtin_COLUMN:
   case tok::kw___builtin_FILE:
   case tok::kw___builtin_FILE_NAME:
@@ -2558,7 +2559,8 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
                                   ConsumeParen());
     break;
   }
-  case tok::kw___builtin_convertvector: {
+  case tok::kw___builtin_convertvector:
+  case tok::kw___builtin_elementwise_saturating_cast: {
     // The first argument is an expression to be converted, followed by a comma.
     ExprResult Expr(ParseAssignmentExpression());
     if (Expr.isInvalid()) {
@@ -2571,7 +2573,7 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
       return ExprError();
     }
 
-    // Second argument is the type to bitcast to.
+    // Second argument is the destination type.
     TypeResult DestTy = ParseTypeName();
     if (DestTy.isInvalid())
       return ExprError();
@@ -2583,8 +2585,13 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
       return ExprError();
     }
 
-    Res = Actions.ActOnConvertVectorExpr(Expr.get(), DestTy.get(), StartLoc,
-                                         ConsumeParen());
+    SourceLocation RParenLoc = ConsumeParen();
+    if (T == tok::kw___builtin_convertvector)
+      Res = Actions.ActOnConvertVectorExpr(Expr.get(), DestTy.get(), StartLoc,
+                                           RParenLoc);
+    else
+      Res = Actions.ActOnElementwiseSaturatingCastExpr(Expr.get(), DestTy.get(),
+                                                       StartLoc, RParenLoc);
     break;
   }
   case tok::kw___builtin_COLUMN:

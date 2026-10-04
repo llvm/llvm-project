@@ -1465,6 +1465,15 @@ void ASTStmtReader::VisitConvertVectorExpr(ConvertVectorExpr *E) {
         FPOptionsOverride::getFromOpaqueInt(Record.readInt()));
 }
 
+void ASTStmtReader::VisitElementwiseSaturatingCastExpr(
+    ElementwiseSaturatingCastExpr *E) {
+  VisitExpr(E);
+  E->BuiltinLoc = readSourceLocation();
+  E->RParenLoc = readSourceLocation();
+  E->TInfo = readTypeSourceInfo();
+  E->SrcExpr = Record.readSubExpr();
+}
+
 void ASTStmtReader::VisitBlockExpr(BlockExpr *E) {
   VisitExpr(E);
   E->setBlockDecl(readDeclAs<BlockDecl>());
@@ -3560,6 +3569,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = ConvertVectorExpr::CreateEmpty(Context, HasFPFeatures);
       break;
     }
+
+    case EXPR_ELEMENTWISE_SATURATING_CAST:
+      S = new (Context) ElementwiseSaturatingCastExpr(Empty);
+      break;
 
     case EXPR_BLOCK:
       S = new (Context) BlockExpr(Empty);

@@ -4815,6 +4815,30 @@ bool Compiler<Emitter>::VisitConvertVectorExpr(const ConvertVectorExpr *E) {
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::VisitElementwiseSaturatingCastExpr(
+    const ElementwiseSaturatingCastExpr *E) {
+  QualType ReturnType = E->getType();
+  OptPrimType ReturnT = classify(E);
+
+  if (!Initializing && !ReturnT && !ReturnType->isVoidType()) {
+    UnsignedOrNone LocalIndex = allocateLocal(E);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+  }
+
+  if (!this->visit(E->getSrcExpr()))
+    return false;
+  if (!this->emitElementwiseSaturatingCast(E, E))
+    return false;
+
+  if (DiscardResult && !ReturnType->isVoidType())
+    return this->emitPop(ReturnT.value_or(PT_Ptr), E);
+  return true;
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::VisitShuffleVectorExpr(const ShuffleVectorExpr *E) {
   // FIXME: Unary shuffle with mask not currently supported.
   if (E->getNumSubExprs() == 2)
@@ -6297,7 +6321,6 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
     if (!this->visitAsLValue(E->getArg(1)))
       return false;
   } break;
-
   default:
     if (!Context::isUnevaluatedBuiltin(BuiltinID)) {
       // Put arguments on the stack.

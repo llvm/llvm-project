@@ -37,6 +37,28 @@ APSInt::APSInt(StringRef Str) {
   *this = APSInt(Tmp, /*isUnsigned=*/true);
 }
 
+APSInt APSInt::extOrTruncSat(uint32_t width, bool toUnsigned) const {
+  if (IsUnsigned && toUnsigned) {
+    if (width >= getBitWidth())
+      return extend(width);
+    return APSInt(truncUSat(width), /*isUnsigned=*/true);
+  } else if (IsUnsigned) {
+    if (width > getBitWidth())
+      return APSInt(zext(width), /*isUnsigned=*/false);
+    return APSInt(truncUSat(width - 1).zext(width),
+                  /*isUnsigned=*/false);
+  } else if (toUnsigned) {
+    if (width >= getBitWidth())
+      return APSInt(sext(width + 1).truncSSatU(width),
+                    /*isUnsigned=*/true);
+    return APSInt(truncSSatU(width), /*isUnsigned=*/true);
+  } else {
+    if (width >= getBitWidth())
+      return APSInt(sext(width), /*isUnsigned=*/false);
+    return truncSat(width);
+  }
+}
+
 void APSInt::Profile(FoldingSetNodeID& ID) const {
   ID.AddInteger((unsigned) (IsUnsigned ? 1 : 0));
   APInt::Profile(ID);

@@ -6787,6 +6787,59 @@ ExprResult Sema::ConvertVectorExpr(Expr *E, TypeSourceInfo *TInfo,
                                    RParenLoc, CurFPFeatureOverrides());
 }
 
+ExprResult Sema::ElementwiseSaturatingCastExpr(Expr *E, TypeSourceInfo *TInfo,
+                                               SourceLocation BuiltinLoc,
+                                               SourceLocation RParenLoc) {
+  ExprValueKind VK = VK_PRValue;
+  ExprObjectKind OK = OK_Ordinary;
+  QualType DstTy = TInfo->getType();
+
+  ExprResult Source = BuiltinVectorMathConversions(*this, E);
+  if (Source.isInvalid())
+    return ExprError();
+
+  QualType SourceTy = Source.get()->getType();
+  if (SourceTy->isDependentType() || DstTy->isDependentType())
+    return ElementwiseSaturatingCastExpr::Create(Context, Source.get(), TInfo,
+                                                 Context.DependentTy, VK, OK,
+                                                 BuiltinLoc, RParenLoc);
+
+  if (checkMathBuiltinElementType(*this, Source.get()->getBeginLoc(), SourceTy,
+                                  EltwiseBuiltinArgTyRestriction::IntegerTy, 1))
+    return ExprError();
+  if (checkMathBuiltinElementType(*this, TInfo->getTypeLoc().getBeginLoc(),
+                                  DstTy,
+                                  EltwiseBuiltinArgTyRestriction::IntegerTy, 2))
+    return ExprError();
+
+  const auto *SourceVecTy = SourceTy->getAs<VectorType>();
+  const auto *DestVecTy = DstTy->getAs<VectorType>();
+  if (DestVecTy && !SourceVecTy)
+    return ExprError(
+        Diag(BuiltinLoc, diag::err_vec_builtin_non_vector)
+        << &Context.Idents.get("__builtin_elementwise_saturating_cast") << false
+        << SourceRange(E->getBeginLoc(), RParenLoc));
+
+  if (SourceVecTy && DestVecTy &&
+      SourceVecTy->getNumElements() != DestVecTy->getNumElements())
+    return ExprError(
+        Diag(BuiltinLoc, diag::err_typecheck_vector_lengths_not_equal)
+        << SourceTy << DstTy << false
+        << SourceRange(E->getBeginLoc(), RParenLoc));
+
+  QualType ResultTy = DstTy;
+  if (SourceVecTy && !DestVecTy) {
+    ResultTy =
+        SourceVecTy->isExtVectorType()
+            ? Context.getExtVectorType(DstTy, SourceVecTy->getNumElements())
+            : Context.getVectorType(DstTy, SourceVecTy->getNumElements(),
+                                    VectorKind::Generic);
+  }
+
+  return ElementwiseSaturatingCastExpr::Create(
+      Context, Source.get(), TInfo, ResultTy, VK, OK, BuiltinLoc, RParenLoc);
+}
+
 bool Sema::BuiltinPrefetch(CallExpr *TheCall) {
   unsigned NumArgs = TheCall->getNumArgs();
 

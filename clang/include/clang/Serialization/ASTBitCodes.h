@@ -1771,6 +1771,9 @@ enum StmtCode {
   /// A ConvertVectorExpr record.
   EXPR_CONVERT_VECTOR,
 
+  /// An ElementwiseSaturatingCastExpr record.
+  EXPR_ELEMENTWISE_SATURATING_CAST,
+
   /// BlockExpr
   EXPR_BLOCK,
 
