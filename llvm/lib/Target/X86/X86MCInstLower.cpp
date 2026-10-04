@@ -321,6 +321,9 @@ MCOperand X86MCInstLower::LowerSymbolOperand(const MachineOperand &MO,
       Expr = MCSymbolRefExpr::create(Label, Ctx);
     }
     break;
+  case X86II::MO_COFF_IMGREL32:
+    Expr = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_COFF_IMGREL32, Ctx);
+    break;
   }
 
   if (!Expr)
