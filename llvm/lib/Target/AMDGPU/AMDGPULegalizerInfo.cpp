@@ -1366,7 +1366,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   if (ST.hasSALUFloatInsts())
     FCmpBuilder.legalForCartesianProduct({I32}, {F16, F32});
 
-  FCmpBuilder.widenScalarToNextPow2(1).minScalar(1, F32).scalarize(0);
+  FCmpBuilder.widenScalarFor({{I1, BF16}}, changeElementTo(1, F32))
+      .widenScalarToNextPow2(1)
+      .minScalar(1, F32)
+      .scalarize(0);
 
   getActionDefinitionsBuilder(G_FPOW)
       .customFor({F32})
