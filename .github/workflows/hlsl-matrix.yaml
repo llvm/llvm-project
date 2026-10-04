@@ -21,10 +21,9 @@ jobs:
       fail-fast: false
       matrix:
         runs-on:
-          - hlsl-macos
+          - windows-2022
 
     uses: ./.github/workflows/hlsl-test-all.yaml
     with:
-      SKU: hlsl-macos
-      TestTarget: check-hlsl-clang-mtl # TODO: This target changes based on SKU
-      LLVM-ref: ${{ github.ref }}
+      SKU: ${{ matrix.runs-on }}
+      TestTarget: check-hlsl-clang-warp-d3d12
