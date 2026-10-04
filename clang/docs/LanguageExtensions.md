@@ -6591,8 +6591,137 @@ When `#pragma comment(copyright, ...)` appears in a C++20 module interface
 unit, the copyright string is embedded only in the object file compiled from
 that interface unit. Importing TUs do not re-emit the string.
 
-(langext-evaluating-object-size)=
+## Preserving Identifying Variables with -mloadtime-comment-vars
 
+The `-mloadtime-comment-vars=` flag accepts a comma-separated list of
+mangled variable names that should be preserved in the final object file as
+loadtime identifying strings. This is an AIX-specific feature; on other
+targets the compiler emits a warning. Names are matched against each
+variable's mangled name, and unrecognised names are silently ignored.
+
+This flag complements `#pragma comment(copyright, ...)` for codebases that
+already use the traditional UNIX convention of embedding identifying strings
+directly in source variables rather than via a pragma.
+
+Syntax:
+
+```console
+-mloadtime-comment-vars=<var1>[,<var2>,...]
+```
+
+The option can be repeated; the names from all occurrences are combined.
+
+In C, variable names are not mangled, so the mangled name is identical to the source
+identifier (for example, `sccsid`). In C++, the mangled name follows the
+Itanium C++ ABI, so a namespace-scoped or internal-linkage variable (for
+example, a file-scope `static`) must be named using its mangled form:
+
+```c++
+namespace N { char sccsid[] = "@(#) MyApp Version 1.0"; }   // N::sccsid -> _ZN1N6sccsidE
+static char build[] = "@(#) Level 42";                      // build     -> _ZL5build
+```
+
+```console
+-mloadtime-comment-vars=_ZN1N6sccsidE,_ZL5build
+```
+
+A variable declared with C language linkage (`extern "C"`) is not mangled and
+is named by its identifier. A variable in an unnamed namespace is mangled with
+the unnamed-namespace marker, for example `namespace { char anon[]; }` is
+`_ZN12_GLOBAL__N_14anonE`. Names are matched exactly against the mangled name;
+surrounding whitespace is not trimmed, so `-mloadtime-comment-vars=foo, bar`
+names `foo` and ` bar`. A variable given an assembler label with `asm("label")`
+is named by that label.
+
+Valid variable types:
+
+A variable named in the list must meet all of these conditions to be
+preserved:
+
+- It must be defined at file or namespace scope; `inline`, `constexpr`, and
+  `constinit` variables are supported. A name-matched function-local `static`
+  variable, static data member, or variable template specialization is not
+  supported and is diagnosed.
+- Its type must be a character pointer (`char *`, `const char *`) or a
+  character array (`char[]`, `const char[]`). The character type must be plain
+  `char`: variables of `signed char`, `unsigned char`, and the wide and
+  Unicode character types (`wchar_t`, `char8_t`, `char16_t`, `char32_t`) are
+  not matched.
+- It must have static storage duration and must not be `volatile`-qualified.
+- It must be constant-initialized, so that the string is present in the object
+  at load time. A dynamically initialized variable (whose value is computed by
+  a start-up constructor) is not preserved.
+- A character *pointer* must be initialized directly with a string literal (for
+  example, `char *p = "@(#) ...";`). A pointer bound to some other object
+  -- even a constant one, such as another character array or the result of a
+  `constexpr` function returning the address of an external array -- does not
+  itself carry the identifying string and is not preserved. The expected
+  behavior is that the identifying string is present in the object file
+  compiled from the defining translation unit itself, not merely in the final
+  linked output.
+
+A variable that is named in the list but is `volatile`-qualified, does not
+have static storage duration (for example, a `thread_local` variable), is
+dynamically initialized, or is a pointer not bound to a string literal, is
+diagnosed with a warning and is not preserved. The same applies to name-matched
+variables of unsupported kinds: function-local `static` variables, static data
+members, and variable template specializations (an explicit specialization is
+diagnosed at its definition, an implicit one in each translation unit that
+instantiates it). A name-matched variable of any other type -- for example, an
+`int` or a `struct` -- is likewise diagnosed. These diagnostics are in the
+`-Wloadtime-comment-var` group. A definition without an initializer is
+silently skipped. Names that match no variable defined in the translation unit
+are also silently ignored, since the option is typically given to every
+compilation of a build.
+
+For C++20 modules, a named variable defined in a module unit is processed
+using the option as specified when the module unit itself is compiled -- in a
+two-phase build, when the module interface file is produced. Giving the option
+to an importing translation unit has no effect on variables owned by the
+module. Retention of a variable to load time depends on the linker retaining
+function definitions from the translation unit that was compiled to preserve
+it, since those functions carry the references that keep the string alive. An
+`inline` variable is preserved in the object files for the module unit and for
+every importing translation unit that re-emits it. A variable attached to a
+named module is matched by its module-attached mangled name (for example,
+`export char ver[];` in module `M` is `_ZW1M3ver`). The same applies to a
+precompiled header: the option must be present when the PCH is built.
+
+Example:
+
+```c
+static char *sccsid = "@(#) MyApp Version 1.0";
+static char  version[] = "@(#) Built 2026-05-24";
+
+void foo() {}
+```
+
+Compiled with:
+
+```console
+clang -target powerpc64-ibm-aix \
+  -mloadtime-comment-vars=sccsid,version \
+  -c source.c -o source.o
+```
+
+Both `sccsid` and `version` are retained in the object file.
+
+```console
+$ what source.o
+source.o:
+         MyApp Version 1.0
+         Built 2026-05-24
+```
+
+### Interaction with `#pragma comment(copyright, ...)`
+
+The two mechanisms can be used together in the same translation unit. The
+pragma produces a dedicated `__loadtime_comment_str` symbol placed in the
+`__loadtime_comment` section, while `-mloadtime-comment-vars` preserves
+the named source variables in place using `.ref` directives. Both sets of
+strings appear in the final object file independently.
+
+(langext-evaluating-object-size)=
 ## Evaluating Object Size
 
 Clang supports the builtins `__builtin_object_size` and
