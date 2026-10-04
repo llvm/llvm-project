@@ -2176,6 +2176,14 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
                                           QualType Type, const LValue &LVal,
                                           ConstantExprKind Kind,
                                           CheckedTemporaries &CheckedTemps) {
+  if (Info.getLangOpts().C23 && !LVal.isNullPointer()) {
+    auto D = Info.EvaluatingDecl;
+    if (auto *ValD = D.dyn_cast<const ValueDecl *>())
+      if (auto *VarD = dyn_cast<VarDecl>(ValD))
+        if (VarD->isConstexpr())
+          return false;
+  }
+
   bool IsReferenceType = Type->isReferenceType();
 
   APValue::LValueBase Base = LVal.getLValueBase();
