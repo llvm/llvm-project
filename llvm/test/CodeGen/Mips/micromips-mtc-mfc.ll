@@ -27,8 +27,6 @@ define double @foo(double %a, double %b) {
 ; MM6-NEXT:    mtc1 $zero, $f1 # encoding: [0x54,0x01,0x28,0x3b]
 ; MM6-NEXT:    mthc1 $zero, $f1 # encoding: [0x54,0x01,0x38,0x3b]
 ; MM6-NEXT:    cmp.ule.d $f1, $f12, $f1 # encoding: [0x54,0x2c,0x09,0xd5]
-; MM6-NEXT:    mfc1 $2, $f1 # encoding: [0x44,0x02,0x08,0x00]
-; MM6-NEXT:    andi16 $2, $2, 1 # encoding: [0x2d,0x21]
 ; MM6-NEXT:    jrc $ra # encoding: [0x45,0xbf]
 entry:
   %cmp = fcmp ogt double %a, 0.000000e+00
@@ -62,4 +60,26 @@ entry:
   %z = fcmp olt double %x, %y
   %r = select i1 %z, double %x, double %y
   ret double %r
+}
+
+; Keep the predicate live as an integer so the MFC1 encoding remains covered
+; even when the redundant branch in foo is eliminated.
+define i32 @compare_result(double %a, double %b) {
+; MM2-LABEL: compare_result:
+; MM2:       # %bb.0:
+; MM2-NEXT:    li16 $2, 1 # encoding: [0xed,0x01]
+; MM2-NEXT:    li16 $3, 0 # encoding: [0xed,0x80]
+; MM2-NEXT:    c.olt.d $f12, $f14 # encoding: [0x55,0xcc,0x05,0x3c]
+; MM2-NEXT:    jr $ra # encoding: [0x00,0x1f,0x0f,0x3c]
+; MM2-NEXT:    movf $2, $3, $fcc0 # encoding: [0x54,0x43,0x01,0x7b]
+;
+; MM6-LABEL: compare_result:
+; MM6:       # %bb.0:
+; MM6-NEXT:    cmp.lt.d $f0, $f12, $f14 # encoding: [0x55,0xcc,0x01,0x15]
+; MM6-NEXT:    mfc1 $2, $f0 # encoding: [0x54,0x40,0x20,0x3b]
+; MM6-NEXT:    andi16 $2, $2, 1 # encoding: [0x2d,0x21]
+; MM6-NEXT:    jrc $ra # encoding: [0x45,0xbf]
+  %c = fcmp olt double %a, %b
+  %r = zext i1 %c to i32
+  ret i32 %r
 }

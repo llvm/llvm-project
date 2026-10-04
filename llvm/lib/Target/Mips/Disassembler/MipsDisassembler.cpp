@@ -995,28 +995,6 @@ static DecodeStatus DecodeFCCRegisterClass(MCInst &Inst, unsigned RegNo,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeFGR32CCRegisterClass(MCInst &Inst, unsigned RegNo,
-                                               uint64_t Address,
-                                               const MCDisassembler *Decoder) {
-  if (RegNo > 31)
-    return MCDisassembler::Fail;
-
-  MCRegister Reg = getReg(Decoder, Mips::FGR32CCRegClassID, RegNo);
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeFGR64CCRegisterClass(MCInst &Inst, unsigned RegNo,
-                                               uint64_t Address,
-                                               const MCDisassembler *Decoder) {
-  if (RegNo > 31)
-    return MCDisassembler::Fail;
-
-  MCRegister Reg = getReg(Decoder, Mips::FGR64CCRegClassID, RegNo);
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
-}
-
 static DecodeStatus DecodeMem(MCInst &Inst, unsigned Insn, uint64_t Address,
                               const MCDisassembler *Decoder) {
   int Offset = SignExtend32<16>(Insn & 0xffff);
