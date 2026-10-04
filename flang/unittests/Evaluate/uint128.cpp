@@ -3,6 +3,7 @@
 #include "flang/Testing/testing.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cinttypes>
+#include <limits>
 
 #if (defined __GNUC__ || defined __clang__) && defined __SIZEOF_INT128__
 #define HAS_NATIVE_UINT128_T 1
@@ -113,6 +114,34 @@ static void TestVsNative() {
 }
 #endif
 
+template <typename T> static void TestNumericLimitsEquivalence() {
+  using Std = std::numeric_limits<T>;
+  using Detail = Fortran::common::detail::numeric_limits<T>;
+  using Common = Fortran::common::numeric_limits<T>;
+
+  // Our implementation in Detail must be equivalent to Std
+  // (if Std supports __int128).
+  if constexpr (Std::is_specialized) {
+    TEST(Detail::is_specialized == Std::is_specialized);
+    TEST(Detail::is_signed == Std::is_signed);
+    TEST(Detail::is_integer == Std::is_integer);
+    TEST(Detail::min() == Std::min());
+    TEST(Detail::max() == Std::max());
+    TEST(Detail::lowest() == Std::lowest());
+  } else {
+    llvm::outs() << "std::numeric_limits is not specialized for this type\n";
+  }
+
+  // Common may refer to either Std to Detail; in either case it must be
+  // identical.
+  TEST(Detail::is_specialized == Common::is_specialized);
+  TEST(Detail::is_integer == Common::is_integer);
+  TEST(Detail::is_signed == Common::is_signed);
+  TEST(Detail::min() == Common::min());
+  TEST(Detail::max() == Common::max());
+  TEST(Detail::lowest() == Common::lowest());
+}
+
 int main() {
   for (std::uint64_t j{0}; j < 64; ++j) {
     Test(j);
@@ -125,6 +154,10 @@ int main() {
 #if HAS_NATIVE_UINT128_T
   llvm::outs() << "Environment has native __uint128_t\n";
   TestVsNative();
+  TestNumericLimitsEquivalence<__int128_t>();
+  TestNumericLimitsEquivalence<__uint128_t>();
+  TestNumericLimitsEquivalence<const __int128_t>();
+  TestNumericLimitsEquivalence<const __uint128_t>();
 #else
   llvm::outs() << "Environment lacks native __uint128_t\n";
 #endif

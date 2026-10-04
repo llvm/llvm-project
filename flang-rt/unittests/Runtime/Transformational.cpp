@@ -176,7 +176,7 @@ static void testBesselYnX0(
     EXPECT_EQ(
         (*result.ZeroBasedIndexedElement<CppTypeFor<TypeCategory::Real, KIND>>(
             j)),
-        (-std::numeric_limits<
+        (-Fortran::common::numeric_limits<
             CppTypeFor<TypeCategory::Real, KIND>>::infinity()));
   }
 }

@@ -53,9 +53,9 @@ private:
       64 - common::LeadingZeroBitCount(uint64Radix)};
   using Digit = common::HostUnsignedIntType<minDigitBits>;
   static constexpr Digit radix{uint64Radix};
-  static_assert(radix < std::numeric_limits<Digit>::max() / 1000,
+  static_assert(radix < common::numeric_limits<Digit>::max() / 1000,
       "radix is somehow too big");
-  static_assert(radix > std::numeric_limits<Digit>::max() / 10000,
+  static_assert(radix > common::numeric_limits<Digit>::max() / 10000,
       "radix is somehow too small");
 
   // The base-2 logarithm of the least significant bit that can arise
@@ -149,8 +149,7 @@ private:
   // Sets *this to an unsigned integer value.
   // Returns any remainder.
   template <typename UINT> RT_API_ATTRS UINT SetTo(UINT n) {
-    static_assert(
-        std::is_same_v<UINT, common::uint128_t> || std::is_unsigned_v<UINT>);
+    static_assert(!common::numeric_limits<UINT>::is_signed);
     SetToZero();
     while (n != 0) {
       auto q{n / 10u};
