@@ -152,3 +152,95 @@ define { i64, i1 } @combine_umul_constant_opaque() {
   %x = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 3, i64 %c)
   ret { i64, i1 } %x
 }
+
+; fold (smul c1, c2) -> c3 + overflow
+define { i32, i1 } @combine_smul_constant_overflow() {
+; CHECK-LABEL: combine_smul_constant_overflow:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $-2, %eax
+; CHECK-NEXT:    movb $1, %dl
+; CHECK-NEXT:    retq
+  %x = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 2147483647, i32 2)
+  ret { i32, i1 } %x
+}
+
+define { i32, i1 } @combine_smul_constant_no_overflow() {
+; CHECK-LABEL: combine_smul_constant_no_overflow:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $2147483646, %eax # imm = 0x7FFFFFFE
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    retq
+  %x = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 1073741823, i32 2)
+  ret { i32, i1 } %x
+}
+
+define { <4 x i32>, <4 x i1> } @combine_vec_smul_constant_overflow() {
+; SSE-LABEL: combine_vec_smul_constant_overflow:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [4294967294,4294967294,4294967294,4294967294]
+; SSE-NEXT:    movaps {{.*#+}} xmm1 = [1,1,1,1]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_smul_constant_overflow:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [4294967294,4294967294,4294967294,4294967294]
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1,1,1,1]
+; AVX-NEXT:    retq
+  %x = call { <4 x i32>, <4 x i1> } @llvm.smul.with.overflow.v4i32(<4 x i32> splat (i32 2147483647), <4 x i32> splat (i32 2))
+  ret { <4 x i32>, <4 x i1> } %x
+}
+
+; fold (umul c1, c2) -> c3 + overflow
+define { i32, i1 } @combine_umul_constant_overflow() {
+; CHECK-LABEL: combine_umul_constant_overflow:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $-2, %eax
+; CHECK-NEXT:    movb $1, %dl
+; CHECK-NEXT:    retq
+  %x = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 -1, i32 2)
+  ret { i32, i1 } %x
+}
+
+define { i32, i1 } @combine_umul_constant_no_overflow() {
+; CHECK-LABEL: combine_umul_constant_no_overflow:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $-2, %eax
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    retq
+  %x = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 2147483647, i32 2)
+  ret { i32, i1 } %x
+}
+
+define { <4 x i32>, <4 x i1> } @combine_vec_umul_constant_overflow() {
+; SSE-LABEL: combine_vec_umul_constant_overflow:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [4294967294,4294967294,4294967294,4294967294]
+; SSE-NEXT:    movaps {{.*#+}} xmm1 = [1,1,1,1]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_umul_constant_overflow:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [4294967294,4294967294,4294967294,4294967294]
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1,1,1,1]
+; AVX-NEXT:    retq
+  %x = call { <4 x i32>, <4 x i1> } @llvm.umul.with.overflow.v4i32(<4 x i32> splat (i32 -1), <4 x i32> splat (i32 2))
+  ret { <4 x i32>, <4 x i1> } %x
+}
+
+; Non-splat constants are not folded by the combine, and are instead folded
+; when the node is expanded during legalization.
+define { <4 x i32>, <4 x i1> } @combine_vec_umul_constant_overflow_nonsplat() {
+; SSE-LABEL: combine_vec_umul_constant_overflow_nonsplat:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [4294967294,4294967294,4294967294,4294967292]
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_umul_constant_overflow_nonsplat:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967294,4294967294,4294967294,4294967292]
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    retq
+  %x = call { <4 x i32>, <4 x i1> } @llvm.umul.with.overflow.v4i32(<4 x i32> <i32 -1, i32 -1, i32 -1, i32 -2>, <4 x i32> splat (i32 2))
+  ret { <4 x i32>, <4 x i1> } %x
+}
