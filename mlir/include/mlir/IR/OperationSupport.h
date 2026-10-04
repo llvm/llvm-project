@@ -20,6 +20,7 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/IR/Location.h"
+#include "mlir/IR/OpFoldResult.h"
 #include "mlir/IR/TypeRange.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
@@ -52,7 +53,6 @@ class OpAsmParser;
 class OpAsmPrinter;
 class OperandRange;
 class OperandRangeRange;
-class OpFoldResult;
 class Pattern;
 class Region;
 class ResultRange;
@@ -131,8 +131,8 @@ private:
 
 class OperationName {
 public:
-  using FoldHookFn = llvm::unique_function<LogicalResult(
-      Operation *, ArrayRef<Attribute>, SmallVectorImpl<OpFoldResult> &) const>;
+  using FoldHookFn = llvm::unique_function<OpFoldResults(
+      Operation *, ArrayRef<Attribute>) const>;
   using HasTraitFn = llvm::unique_function<bool(TypeID) const>;
   using ParseAssemblyFn =
       llvm::unique_function<ParseResult(OpAsmParser &, OperationState &)>;
@@ -154,8 +154,7 @@ public:
   /// may not be populated.
   struct InterfaceConcept {
     virtual ~InterfaceConcept() = default;
-    virtual LogicalResult foldHook(Operation *, ArrayRef<Attribute>,
-                                   SmallVectorImpl<OpFoldResult> &) = 0;
+    virtual OpFoldResults foldHook(Operation *, ArrayRef<Attribute>) = 0;
     virtual void getCanonicalizationPatterns(RewritePatternSet &,
                                              MLIRContext *) = 0;
     virtual bool hasTrait(TypeID) = 0;
@@ -247,8 +246,7 @@ protected:
         : Impl(name, dialect, typeID, std::move(interfaceMap)) {
       propertiesTypeID = TypeID::get<Attribute>();
     }
-    LogicalResult foldHook(Operation *, ArrayRef<Attribute>,
-                           SmallVectorImpl<OpFoldResult> &) final;
+    OpFoldResults foldHook(Operation *, ArrayRef<Attribute>) final;
     void getCanonicalizationPatterns(RewritePatternSet &, MLIRContext *) final;
     bool hasTrait(TypeID) final;
     OperationName::ParseAssemblyFn getParseAssemblyFn() final;
@@ -297,24 +295,35 @@ public:
   /// can implement this to provide simplifications rules that are applied by
   /// the Builder::createOrFold API and the canonicalization pass.
   ///
-  /// This is an intentionally limited interface - implementations of this
-  /// hook can only perform the following changes to the operation:
+  /// This is an intentionally limited interface. The returned OpFoldResults
+  /// holds either no slot or one slot per result of the operation, and an
+  /// in-place bit:
   ///
-  ///  1. They can leave the operation alone and without changing the IR, and
-  ///     return failure.
-  ///  2. They can mutate the operation in place, without changing anything
-  ///     else in the IR. In this case, return success.
-  ///  3. They can return a list of existing values that can be used instead
-  ///     of the operation. In this case, fill in the results list and return
-  ///     success. The caller will remove the operation and use those results
-  ///     instead.
+  ///  1. A slot holds an Attribute (replace the result with a constant), a
+  ///     Value (replace the result with that value), or null or the result
+  ///     itself (keep the result). Slot i may hold result j only if slot j
+  ///     keeps its result. In a graph region, a forwarding fold can break this
+  ///     rule; then its replacements are dropped.
+  ///  2. A failure replaces no result and has no in-place mark. The IR must be
+  ///     unchanged.
+  ///  3. The hook can mutate the operation in place, without changing anything
+  ///     else in the IR. In this case, it marks the result as modified in
+  ///     place. The operation must still verify.
+  ///  4. The hook can replace some but not all results and also mutate the
+  ///     operation in place. The operation stays.
+  ///  5. If the operation has results and every slot is replaced, the caller
+  ///     removes the operation and uses the replacements instead, even if the
+  ///     hook also mutated it in place.
+  ///
+  /// The hook creates no operations and changes no IR outside the operation. A
+  /// replacement Value must exist before the fold, must have the type of the
+  /// result that it replaces, and must dominate the operation.
   ///
   /// This allows expression of some simple in-place canonicalizations (e.g.
   /// "x+0 -> x", "min(x,y,x,z) -> min(x,y,z)", "x+y-x -> y", etc), as well as
   /// generalized constant folding.
-  LogicalResult foldHook(Operation *op, ArrayRef<Attribute> operands,
-                         SmallVectorImpl<OpFoldResult> &results) const {
-    return getImpl()->foldHook(op, operands, results);
+  OpFoldResults foldHook(Operation *op, ArrayRef<Attribute> operands) const {
+    return getImpl()->foldHook(op, operands);
   }
 
   /// This hook returns any canonicalization pattern rewrites that the
@@ -600,9 +609,8 @@ public:
                TypeID::get<ConcreteOp>(), ConcreteOp::getInterfaceMap()) {
       propertiesTypeID = TypeID::get<Properties>();
     }
-    LogicalResult foldHook(Operation *op, ArrayRef<Attribute> attrs,
-                           SmallVectorImpl<OpFoldResult> &results) final {
-      return ConcreteOp::getFoldHookFn()(op, attrs, results);
+    OpFoldResults foldHook(Operation *op, ArrayRef<Attribute> attrs) final {
+      return ConcreteOp::getFoldHookFn()(op, attrs);
     }
     void getCanonicalizationPatterns(RewritePatternSet &set,
                                      MLIRContext *context) final {
