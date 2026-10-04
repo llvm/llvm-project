@@ -2842,7 +2842,7 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
   // cannot rely on the linker replacing the tail call with a return.
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
     const GlobalValue *GV = G->getGlobal();
-    const Triple &TT = getTargetMachine().getTargetTriple();
+    const Triple &TT = GV->getParent()->getTargetTriple();
     if (GV->hasExternalWeakLinkage() &&
         (!TT.isOSWindows() || TT.isOSBinFormatELF() ||
          TT.isOSBinFormatMachO())) {
