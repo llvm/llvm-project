@@ -79,9 +79,9 @@ A minimum ELF file that can be used by linker should have following sections pro
 
 - Dynamic string table (`.dynstr` section).
 
-- Version symbol table (``.gnu.version`` section). (optional)
+- Version symbol table (`.gnu.version` section). (optional)
 
-- Version definition table (``.gnu.version_d`` section). (optional)
+- Version definition table (`.gnu.version_d` section). (optional)
 
 - Dynamic table (`.dynamic` section).
 
@@ -198,4 +198,3 @@ of an object is not a useful part of the abi to track.
 
 If {program}`llvm-ifs` succeeds, it will exit with 0. Otherwise, if an
 error occurs, it will exit with a non-zero value.
-
