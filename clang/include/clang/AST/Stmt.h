@@ -3111,6 +3111,7 @@ public:
   /// If this is a named break/continue, get the loop or switch statement
   /// that this targets. May return null if the target LabelStmt has not
   /// yet been created.
+  /// \pre `hasLabelTarget()`
   const Stmt *getNamedLoopOrSwitch() const;
 
   // Iterators
