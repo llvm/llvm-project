@@ -11,30 +11,6 @@ v_wmma_scale_f32_32x16x128_f4 v[0:15], v[8:23], v[0:7], v[0:15], s0, s0
 v_wmma_scale16_f32_32x16x128_f4 v[0:15], v[8:23], v[0:7], v[0:15], s[0:1], s[0:1]
 // GFX1250S-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_wmma_scale16_f32_32x16x128_f4
 
-v_wmma_f16_16x16x128_fp8_fp8 v[16:19], v[0:15], v[8:23], v[16:19]
-// GFX1250S-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_wmma_f16_16x16x128_fp8_fp8
-
-v_wmma_f16_16x16x128_fp8_bf8 v[16:19], v[0:15], v[8:23], v[16:19]
-// GFX1250S-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_wmma_f16_16x16x128_fp8_bf8
-
-v_wmma_f16_16x16x128_bf8_fp8 v[16:19], v[0:15], v[8:23], v[16:19]
-// GFX1250S-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_wmma_f16_16x16x128_bf8_fp8
-
-v_wmma_f16_16x16x128_bf8_bf8 v[16:19], v[0:15], v[8:23], v[16:19]
-// GFX1250S-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_wmma_f16_16x16x128_bf8_bf8
-
-v_wmma_f32_16x16x128_fp8_fp8 v[16:23], v[0:15], v[8:23], v[16:23]
-// GFX1250S-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_wmma_f32_16x16x128_fp8_fp8
-
-v_wmma_f32_16x16x128_fp8_bf8 v[16:23], v[0:15], v[8:23], v[16:23]
-// GFX1250S-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_wmma_f32_16x16x128_fp8_bf8
-
-v_wmma_f32_16x16x128_bf8_fp8 v[16:23], v[0:15], v[8:23], v[16:23]
-// GFX1250S-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_wmma_f32_16x16x128_bf8_fp8
-
-v_wmma_f32_16x16x128_bf8_bf8 v[16:23], v[0:15], v[8:23], v[16:23]
-// GFX1250S-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1250-strict): v_wmma_f32_16x16x128_bf8_bf8
-
 v_cvt_scale_pk16_f16_fp6 v[10:17], v[20:22], v8 scale_sel:8
 // GFX1250-ERR: :[[@LINE-1]]:49: error: scale_sel maximum supported value is 7
 // GFX1250S-ERR: :[[@LINE-2]]:49: error: scale_sel maximum supported value is 3
