@@ -39,6 +39,152 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
+namespace {
+
+// Recover integer operands from a bounded tree of normalized conversions.
+// The normalization must preserve the order of every representable input.
+class NormalizedIntCompare {
+  const APFloat *Divisor = nullptr;
+  Type *IntTy = nullptr;
+  unsigned CastOpcode = 0;
+  unsigned NumVisited = 0;
+  SmallDenseMap<Value *, Value *, 16> IntegerValues;
+
+  static std::optional<bool> isMinimum(Value *V) {
+    auto *II = dyn_cast<IntrinsicInst>(V);
+    if (!II)
+      return std::nullopt;
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::minnum:
+    case Intrinsic::minimum:
+    case Intrinsic::minimumnum:
+      return true;
+    case Intrinsic::maxnum:
+    case Intrinsic::maximum:
+    case Intrinsic::maximumnum:
+      return false;
+    default:
+      return std::nullopt;
+    }
+  }
+
+  bool analyze(Value *V, bool IsNormalized = false, unsigned Depth = 0) {
+    if (Depth == 8 || ++NumVisited > 32)
+      return false;
+
+    Value *X;
+    const APFloat *C;
+    if (match(V, m_FDiv(m_Value(X), m_APFloat(C)))) {
+      if (IsNormalized || !C->isFinite() || C->isNegative() || C->isZero() ||
+          (Divisor && !Divisor->bitwiseIsEqual(*C)))
+        return false;
+      Divisor = C;
+      return analyze(X, true, Depth + 1);
+    }
+    if (auto *SI = dyn_cast<SelectInst>(V))
+      return analyze(SI->getTrueValue(), IsNormalized, Depth + 1) &&
+             analyze(SI->getFalseValue(), IsNormalized, Depth + 1);
+    if (isMinimum(V)) {
+      auto *II = cast<IntrinsicInst>(V);
+      return analyze(II->getArgOperand(0), IsNormalized, Depth + 1) &&
+             analyze(II->getArgOperand(1), IsNormalized, Depth + 1);
+    }
+    auto *CI = dyn_cast<CastInst>(V);
+    if (!IsNormalized || !CI ||
+        (CI->getOpcode() != Instruction::UIToFP &&
+         CI->getOpcode() != Instruction::SIToFP) ||
+        (CastOpcode && CastOpcode != CI->getOpcode()))
+      return false;
+    CastOpcode = CI->getOpcode();
+    Type *Ty = CI->getOperand(0)->getType();
+    if (!IntTy || Ty->getScalarSizeInBits() > IntTy->getScalarSizeInBits())
+      IntTy = Ty;
+    return true;
+  }
+
+  Value *build(Value *V, IRBuilderBase &Builder) {
+    if (Value *Cached = IntegerValues.lookup(V))
+      return Cached;
+    Value *Result;
+    if (auto *SI = dyn_cast<SelectInst>(V)) {
+      Value *TrueVal = build(SI->getTrueValue(), Builder);
+      Value *FalseVal = build(SI->getFalseValue(), Builder);
+      Result = Builder.CreateSelect(SI->getCondition(), TrueVal, FalseVal);
+    } else if (auto IsMin = isMinimum(V)) {
+      auto *II = cast<IntrinsicInst>(V);
+      bool IsSigned = CastOpcode == Instruction::SIToFP;
+      Intrinsic::ID ID = *IsMin
+                             ? (IsSigned ? Intrinsic::smin : Intrinsic::umin)
+                             : (IsSigned ? Intrinsic::smax : Intrinsic::umax);
+      Value *LHS = build(II->getArgOperand(0), Builder);
+      Value *RHS = build(II->getArgOperand(1), Builder);
+      Result = Builder.CreateBinaryIntrinsic(ID, LHS, RHS);
+    } else {
+      auto *I = cast<Instruction>(V);
+      Result = I->getOpcode() == Instruction::FDiv
+                   ? build(I->getOperand(0), Builder)
+                   : Builder.CreateIntCast(I->getOperand(0), IntTy,
+                                           CastOpcode == Instruction::SIToFP);
+    }
+    IntegerValues[V] = Result;
+    return Result;
+  }
+
+public:
+  Instruction *fold(FCmpInst &I, IRBuilderBase &Builder) {
+    int Precision = I.getOperand(0)->getType()->getFPMantissaWidth();
+    if (Precision < 0 || !analyze(I.getOperand(0)) || !analyze(I.getOperand(1)))
+      return nullptr;
+    bool IsSigned = CastOpcode == Instruction::SIToFP;
+    unsigned MagnitudeBits = IntTy->getScalarSizeInBits() - IsSigned;
+    // Leave two bits of precision so the rounding errors of two quotients
+    // cannot bridge the distance between adjacent integer inputs.
+    if (MagnitudeBits + 2 > unsigned(Precision))
+      return nullptr;
+    APFloat Min = APFloat::getOne(Divisor->getSemantics());
+    APFloat Max = scalbn(Min, MagnitudeBits, APFloat::rmTowardPositive);
+    Min.divide(*Divisor, APFloat::rmTowardZero);
+    Max.divide(*Divisor, APFloat::rmTowardPositive);
+    if (!Min.isNormal() || !Max.isNormal())
+      return nullptr;
+
+    CmpInst::Predicate Pred;
+    switch (I.getPredicate()) {
+    case FCmpInst::FCMP_OEQ:
+    case FCmpInst::FCMP_UEQ:
+      Pred = ICmpInst::ICMP_EQ;
+      break;
+    case FCmpInst::FCMP_ONE:
+    case FCmpInst::FCMP_UNE:
+      Pred = ICmpInst::ICMP_NE;
+      break;
+    case FCmpInst::FCMP_OLT:
+    case FCmpInst::FCMP_ULT:
+      Pred = IsSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
+      break;
+    case FCmpInst::FCMP_OLE:
+    case FCmpInst::FCMP_ULE:
+      Pred = IsSigned ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE;
+      break;
+    case FCmpInst::FCMP_OGT:
+    case FCmpInst::FCMP_UGT:
+      Pred = IsSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
+      break;
+    case FCmpInst::FCMP_OGE:
+    case FCmpInst::FCMP_UGE:
+      Pred = IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
+      break;
+    default:
+      return nullptr;
+    }
+    Value *LHS = build(I.getOperand(0), Builder);
+    Value *RHS = build(I.getOperand(1), Builder);
+    return new ICmpInst(Pred, LHS, RHS);
+  }
+};
+
+} // namespace
+
 // How many times is a select replaced by one of its operands?
 STATISTIC(NumSel, "Number of select opts");
 
@@ -9410,6 +9556,9 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       return new ICmpInst(IntPred, MaskX, ConstantInt::getNullValue(IntTy));
     }
   }
+
+  if (Instruction *V = NormalizedIntCompare().fold(I, Builder))
+    return V;
 
   // Handle fcmp with instruction LHS and constant RHS.
   Instruction *LHSI;
