@@ -22,6 +22,7 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
@@ -223,6 +224,65 @@ static void gatherEscapingMemrefs(unsigned id, const MemRefDependenceGraph &mdg,
     if (isEscapingMemref(memref, &mdg.block))
       escapingMemRefs.insert(memref);
   }
+}
+
+/// Returns true if the candidate loop nest has opaque effects on any
+/// producer-consumer memref. An effect is treated as opaque when:
+///   1) the candidate contains non-affine memory effects on the memref, or
+///   2) the memref has a non-dereferencing user in the candidate loop nest
+///      (for example `func.call`), which can observe/reorder whole-buffer
+///      effects across consumer iterations.
+///
+/// Note: mere "escaping" via block arguments (used for private-memref
+/// decisions) is NOT sufficient to block fusion.
+static bool
+hasOpaqueEffectOnPCMemrefs(const MemRefDependenceGraph::Node &node,
+                           const DenseSet<Value> &producerConsumerMemrefs) {
+  if (producerConsumerMemrefs.empty())
+    return false;
+
+  // Non-affine memory ops collected on the candidate node.
+  auto touchesPCMemref = [&](Operation *op) {
+    if (auto effectOp = dyn_cast<MemoryEffectOpInterface>(op)) {
+      SmallVector<MemoryEffects::EffectInstance> effects;
+      effectOp.getEffects(effects);
+      return llvm::any_of(effects, [&](const auto &effect) {
+        if (!isa<MemoryEffects::Read, MemoryEffects::Write,
+                 MemoryEffects::Free>(effect.getEffect()))
+          return false;
+        // Value-less effects may access any PC memref, just as in the
+        // dependence analysis. They have no proven affine footprint.
+        return !effect.getValue() ||
+               producerConsumerMemrefs.contains(effect.getValue());
+      });
+    }
+    // Ops without an effect model (e.g. func.call) were conservatively
+    // recorded because they take a memref operand.
+    if (op->hasTrait<OpTrait::HasRecursiveMemoryEffects>())
+      return false;
+    return llvm::any_of(op->getOperands(), [&](Value operand) {
+      return producerConsumerMemrefs.contains(operand);
+    });
+  };
+
+  if (llvm::any_of(node.memrefLoads, touchesPCMemref) ||
+      llvm::any_of(node.memrefStores, touchesPCMemref) ||
+      llvm::any_of(node.memrefFrees, touchesPCMemref))
+    return true;
+
+  // Fusion reorders operations in the candidate nests relative to each other.
+  // Users outside the candidates are handled by the dependence graph and must
+  // not blanket-block fusion (for example, intervening reads or returns).
+  for (Value memref : producerConsumerMemrefs) {
+    bool hasOpaqueUser = llvm::any_of(memref.getUsers(), [&](Operation *user) {
+      if (!node.op->isProperAncestor(user))
+        return false;
+      return !isa<AffineMapAccessInterface>(*user);
+    });
+    if (hasOpaqueUser)
+      return true;
+  }
+  return false;
 }
 
 // Sinks all sequential loops to the innermost levels (while preserving
@@ -950,6 +1010,14 @@ public:
         // memrefs passed to function calls, etc.).
         DenseSet<Value> srcEscapingMemRefs;
         gatherEscapingMemrefs(srcNode->id, *mdg, srcEscapingMemRefs);
+
+        // Opaque/non-affine effects on a PC memref are a hard legality
+        // barrier: fusion can reorder them across consumer iterations.
+        if (hasOpaqueEffectOnPCMemrefs(*srcNode, producerConsumerMemrefs) ||
+            hasOpaqueEffectOnPCMemrefs(*dstNode, producerConsumerMemrefs)) {
+          LDBG() << "Skipping fusion due to opaque effects on PC memref";
+          continue;
+        }
 
         // Compute an operation list insertion point for the fused loop
         // nest which preserves dependences.
