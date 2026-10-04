@@ -3438,6 +3438,14 @@ ExpandShiftWithKnownAmountBit(SDNode *N, SDValue &Lo, SDValue &Hi) {
   APInt HighBitMask = APInt::getHighBitsSet(ShBits, ShBits - Log2_32(NVTBits));
   KnownBits Known = DAG.computeKnownBits(Amt);
 
+  // Recognize a masked shift amount structurally, so that termination of
+  // ExpandIntRes_ShiftThroughStack does not depend on computeKnownBits (which
+  // may be disabled via -dag-disable-known-bits).
+  if (Amt.getOpcode() == ISD::AND)
+    if (auto *C = dyn_cast<ConstantSDNode>(Amt.getOperand(1)))
+      if (!C->getAPIntValue().intersects(HighBitMask))
+        Known.Zero |= HighBitMask;
+
   // If we don't know anything about the high bits, exit.
   if (((Known.Zero | Known.One) & HighBitMask) == 0)
     return false;

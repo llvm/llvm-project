@@ -35,6 +35,7 @@
 #include "llvm/IR/FMF.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Target/TargetMachine.h"
@@ -43,6 +44,11 @@
 
 using namespace llvm;
 using namespace MIPatternMatch;
+
+static cl::opt<bool> DisableGISelKnownBits(
+    "gisel-disable-known-bits", cl::Hidden, cl::init(false),
+    cl::desc("Disable GlobalISel known bits and num sign bits analyses "
+             "(always return unknown)"));
 
 char llvm::GISelValueTrackingAnalysisLegacy::ID = 0;
 
@@ -277,6 +283,9 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
 
   unsigned BitWidth = DstTy.getScalarSizeInBits();
   Known = KnownBits(BitWidth); // Don't know anything
+
+  if (DisableGISelKnownBits)
+    return;
 
   // Depth may get bigger than max depth if it gets passed to a different
   // GISelValueTracking object.
@@ -2456,6 +2465,9 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
                                                 unsigned Depth) {
   MachineInstr &MI = *MRI.getVRegDef(R);
   unsigned Opcode = MI.getOpcode();
+
+  if (DisableGISelKnownBits)
+    return 1;
 
   if (Opcode == TargetOpcode::G_CONSTANT)
     return MI.getOperand(1).getCImm()->getValue().getNumSignBits();

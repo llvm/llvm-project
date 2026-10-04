@@ -3551,10 +3551,10 @@ static bool isBitfieldPositioningOpFromAnd(SelectionDAG *CurDAG, SDValue Op,
   //   1) (AndImm & (1 << POS) == 0)
   //   2) the result of AND is not zero at POS bit (according to NonZeroBits)
   //
-  // 1) and 2) don't agree so something must be wrong (e.g., in
-  // 'SelectionDAG::computeKnownBits')
-  assert((~AndImm & NonZeroBits) == 0 &&
-         "Something must be wrong (e.g., in SelectionDAG::computeKnownBits)");
+  // 1) and 2) don't agree, which can happen if known bits analysis is
+  // imprecise (e.g., disabled via -dag-disable-known-bits). Bail out.
+  if ((~AndImm & NonZeroBits) != 0)
+    return false;
 
   SDValue AndOp0 = Op.getOperand(0);
 
