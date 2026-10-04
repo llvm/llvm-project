@@ -337,16 +337,44 @@ transformTemplateParam(Sema &SemaRef, DeclContext *DC,
   return NewTTP;
 }
 
+// Whether all of the packs in `Unexpanded` have arguments of known size in
+// `Args`, as opposed to being rewritten to refer to another parameter pack.
+bool packsHaveKnownSize(ArrayRef<UnexpandedParameterPack> Unexpanded,
+                        const MultiLevelTemplateArgumentList &Args) {
+  if (Unexpanded.empty())
+    return false;
+  for (UnexpandedParameterPack UPP : Unexpanded) {
+    if (isa_and_present<VarDecl>(dyn_cast<NamedDecl *>(UPP.first)))
+      return false;
+    std::optional<std::pair<unsigned, unsigned>> DepthAndIndex =
+        getDepthAndIndex(UPP);
+    if (!DepthAndIndex)
+      return false;
+    auto [Depth, Index] = *DepthAndIndex;
+    if (Depth >= Args.getNumLevels() || !Args.hasTemplateArgument(Depth, Index))
+      return false;
+    const TemplateArgument &Arg = Args(Depth, Index);
+    if (Arg.getKind() != TemplateArgument::Pack ||
+        llvm::any_of(Arg.pack_elements(), [](const TemplateArgument &TA) {
+          return TA.isPackExpansion() && !TA.getNumExpansions();
+        }))
+      return false;
+  }
+  return true;
+}
+
 NonTypeTemplateParmDecl *
 transformTemplateParam(Sema &SemaRef, DeclContext *DC,
                        NonTypeTemplateParmDecl *TTP, unsigned NewDepth,
                        unsigned NewIndex,
                        MultiLevelTemplateArgumentList &Args) {
-  NonTypeTemplateParmDecl *NewTTP;
+  TypeSourceInfo *TSI = TTP->getTypeSourceInfo();
+  SmallVector<TypeSourceInfo *, 4> ExpandedTypeSourceInfos;
+  SmallVector<QualType, 4> ExpandedTypes;
+  bool IsExpandedParameterPack = false;
   if (TTP->isExpandedParameterPack()) {
-    SmallVector<TypeSourceInfo *, 4> ExpandedTypeSourceInfos(
-        TTP->getNumExpansionTypes());
-    SmallVector<QualType, 4> ExpandedTypes(TTP->getNumExpansionTypes());
+    ExpandedTypeSourceInfos.resize(TTP->getNumExpansionTypes());
+    ExpandedTypes.resize(TTP->getNumExpansionTypes());
     for (unsigned I = 0, N = TTP->getNumExpansionTypes(); I != N; ++I) {
       TypeSourceInfo *NewTSI =
           SemaRef.SubstType(TTP->getExpansionTypeSourceInfo(I), Args,
@@ -360,13 +388,55 @@ transformTemplateParam(Sema &SemaRef, DeclContext *DC,
       ExpandedTypeSourceInfos[I] = NewTSI;
       ExpandedTypes[I] = NewT;
     }
+    IsExpandedParameterPack = true;
+  } else if (TTP->isPackExpansion()) {
+    // If the packs named by the parameter's type have arguments of known size,
+    // expand the parameter as template instantiation would.
+    PackExpansionTypeLoc ExpansionTL =
+        TSI->getTypeLoc().castAs<PackExpansionTypeLoc>();
+    TypeLoc Pattern = ExpansionTL.getPatternLoc();
+    SmallVector<UnexpandedParameterPack, 2> Unexpanded;
+    SemaRef.collectUnexpandedParameterPacks(Pattern, Unexpanded);
+    if (packsHaveKnownSize(Unexpanded, Args)) {
+      bool Expand = true;
+      bool RetainExpansion = false;
+      UnsignedOrNone NumExpansions =
+          ExpansionTL.getTypePtr()->getNumExpansions();
+      if (SemaRef.CheckParameterPacksForExpansion(
+              ExpansionTL.getEllipsisLoc(), Pattern.getSourceRange(),
+              Unexpanded, Args, /*FailOnPackProducingTemplates=*/true, Expand,
+              RetainExpansion, NumExpansions))
+        return nullptr;
+      if (Expand) {
+        for (unsigned I = 0; I != *NumExpansions; ++I) {
+          Sema::ArgPackSubstIndexRAII SubstIndex(SemaRef, I);
+          TypeSourceInfo *NewTSI = SemaRef.SubstType(
+              Pattern, Args, TTP->getLocation(), TTP->getDeclName());
+          if (!NewTSI)
+            return nullptr;
+
+          QualType NewT = SemaRef.CheckNonTypeTemplateParameterType(
+              NewTSI, TTP->getLocation());
+          if (NewT.isNull())
+            return nullptr;
+
+          ExpandedTypeSourceInfos.push_back(NewTSI);
+          ExpandedTypes.push_back(NewT);
+        }
+        IsExpandedParameterPack = true;
+      }
+    }
+  }
+
+  NonTypeTemplateParmDecl *NewTTP;
+  if (IsExpandedParameterPack) {
     NewTTP = NonTypeTemplateParmDecl::Create(
         SemaRef.Context, DC, TTP->getBeginLoc(), TTP->getLocation(), NewDepth,
-        NewIndex, TTP->getIdentifier(), TTP->getType(),
-        TTP->getTypeSourceInfo(), ExpandedTypes, ExpandedTypeSourceInfos);
+        NewIndex, TTP->getIdentifier(), TTP->getType(), TSI, ExpandedTypes,
+        ExpandedTypeSourceInfos);
   } else {
-    TypeSourceInfo *NewTSI = SemaRef.SubstType(
-        TTP->getTypeSourceInfo(), Args, TTP->getLocation(), TTP->getDeclName());
+    TypeSourceInfo *NewTSI =
+        SemaRef.SubstType(TSI, Args, TTP->getLocation(), TTP->getDeclName());
     assert(NewTSI);
 
     QualType NewT =
@@ -378,11 +448,10 @@ transformTemplateParam(Sema &SemaRef, DeclContext *DC,
         NewIndex, TTP->getIdentifier(), NewT, TTP->isParameterPack(), NewTSI);
   }
 
-  if (TypeSourceInfo *TSI = TTP->getTypeSourceInfo();
-      AutoTypeLoc AutoLoc = TSI->getTypeLoc().getContainedAutoTypeLoc()) {
+  if (AutoTypeLoc AutoLoc = TSI->getTypeLoc().getContainedAutoTypeLoc()) {
     if (AutoLoc.isConstrained()) {
       SourceLocation EllipsisLoc;
-      if (TTP->isExpandedParameterPack())
+      if (IsExpandedParameterPack)
         EllipsisLoc =
             TSI->getTypeLoc().getAs<PackExpansionTypeLoc>().getEllipsisLoc();
       else if (auto *Constraint = dyn_cast_if_present<CXXFoldExpr>(
@@ -424,15 +493,53 @@ transformTemplateParam(Sema &SemaRef, DeclContext *DC,
                        TemplateTemplateParmDecl *TTP, unsigned NewDepth,
                        unsigned NewIndex, MultiLevelTemplateArgumentList &Args,
                        bool EvaluateConstraint) {
-  TemplateTemplateParmDecl *NewTTP;
+  SmallVector<TemplateParameterList *, 4> ExpandedTPLs;
+  bool IsExpandedParameterPack = false;
   if (TTP->isExpandedParameterPack()) {
-    SmallVector<TemplateParameterList *, 4> ExpandedTPLs(
-        TTP->getNumExpansionTemplateParameters());
+    ExpandedTPLs.resize(TTP->getNumExpansionTemplateParameters());
     for (unsigned I = 0, N = TTP->getNumExpansionTemplateParameters(); I != N;
-         ++I)
+         ++I) {
       ExpandedTPLs[I] = transformTemplateParameters(
           SemaRef, DC, TTP->getExpansionTemplateParameters(I), Args,
           NewDepth + 1, EvaluateConstraint);
+      if (!ExpandedTPLs[I])
+        return nullptr;
+    }
+    IsExpandedParameterPack = true;
+  } else if (TTP->isPackExpansion()) {
+    SmallVector<UnexpandedParameterPack, 2> Unexpanded;
+    SemaRef.collectUnexpandedParameterPacks(TTP->getTemplateParameters(),
+                                            Unexpanded);
+    if (packsHaveKnownSize(Unexpanded, Args)) {
+      bool Expand = true;
+      bool RetainExpansion = false;
+      UnsignedOrNone NumExpansions = std::nullopt;
+      if (SemaRef.CheckParameterPacksForExpansion(
+              TTP->getLocation(),
+              TTP->getTemplateParameters()->getSourceRange(), Unexpanded, Args,
+              /*FailOnPackProducingTemplates=*/true, Expand, RetainExpansion,
+              NumExpansions))
+        return nullptr;
+      if (Expand) {
+        for (unsigned I = 0; I != *NumExpansions; ++I) {
+          Sema::ArgPackSubstIndexRAII SubstIndex(SemaRef, I);
+          // The same template parameters are transformed for each expansion.
+          LocalInstantiationScope Scope(SemaRef,
+                                        /*CombineWithOuterScope=*/true);
+          TemplateParameterList *Expansion = transformTemplateParameters(
+              SemaRef, DC, TTP->getTemplateParameters(), Args, NewDepth + 1,
+              EvaluateConstraint);
+          if (!Expansion)
+            return nullptr;
+          ExpandedTPLs.push_back(Expansion);
+        }
+        IsExpandedParameterPack = true;
+      }
+    }
+  }
+
+  TemplateTemplateParmDecl *NewTTP;
+  if (IsExpandedParameterPack) {
     NewTTP = TemplateTemplateParmDecl::Create(
         SemaRef.Context, DC, TTP->getLocation(), NewDepth, NewIndex,
         TTP->getIdentifier(), TTP->templateParameterKind(),
@@ -442,6 +549,8 @@ transformTemplateParam(Sema &SemaRef, DeclContext *DC,
     TemplateParameterList *NewTPL =
         transformTemplateParameters(SemaRef, DC, TTP->getTemplateParameters(),
                                     Args, NewDepth + 1, EvaluateConstraint);
+    if (!NewTPL)
+      return nullptr;
     NewTTP = TemplateTemplateParmDecl::Create(
         SemaRef.Context, DC, TTP->getLocation(), NewDepth, NewIndex,
         TTP->isParameterPack(), TTP->getIdentifier(),
@@ -489,6 +598,8 @@ transformTemplateParameters(Sema &SemaRef, DeclContext *DC,
     Params[I] = transformTemplateParameter(SemaRef, DC, TPL->getParam(I), Args,
                                            /*NewIndex=*/I, NewDepth,
                                            EvaluateConstraint);
+    if (!Params[I])
+      return nullptr;
   }
   return TemplateParameterList::Create(
       SemaRef.Context, TPL->getTemplateLoc(), TPL->getLAngleLoc(), Params,
@@ -1028,6 +1139,8 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
     NamedDecl *NewParam = transformTemplateParameter(
         SemaRef, AliasTemplate->getDeclContext(), TP, Args,
         /*NewIndex=*/N++, getDepthAndIndex(TP).first + AdjustDepth);
+    if (!NewParam)
+      return nullptr;
 
     TemplateArgument NewTemplateArgument =
         Context.getInjectedTemplateArg(NewParam);
@@ -1054,6 +1167,8 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
       NamedDecl *NewParam = transformTemplateParameter(
           SemaRef, F->getDeclContext(), TP, Args,
           /*NewIndex=*/N++, getDepthAndIndex(TP).first + AdjustDepth);
+      if (!NewParam)
+        return nullptr;
       assert(TemplateArgsForBuildingRC[Index].isNull());
       TemplateArgsForBuildingRC[Index] =
           Context.getInjectedTemplateArg(NewParam);
@@ -1352,6 +1467,8 @@ CXXDeductionGuideDecl *BuildDeductionGuideForTypeAlias(
     NamedDecl *NewParam = transformTemplateParameter(
         SemaRef, AliasTemplate->getDeclContext(), TP, Args,
         /*NewIndex=*/FPrimeTemplateParams.size(), getDepthAndIndex(TP).first);
+    if (!NewParam)
+      return nullptr;
     FPrimeTemplateParams.push_back(NewParam);
 
     TemplateArgument NewTemplateArgument =
@@ -1428,6 +1545,8 @@ CXXDeductionGuideDecl *BuildDeductionGuideForTypeAlias(
     NamedDecl *NewParam = transformTemplateParameter(
         SemaRef, F->getDeclContext(), TP, Args, FPrimeTemplateParams.size(),
         getDepthAndIndex(TP).first);
+    if (!NewParam)
+      return nullptr;
     FPrimeTemplateParams.push_back(NewParam);
 
     assert(TemplateArgsForBuildingFPrime[FTemplateParamIdx].isNull() &&

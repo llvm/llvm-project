@@ -697,6 +697,20 @@ features cannot lower the translation-unit ABI level;
 - Fixed concept evaluation bugs where some declarations were not added to
   the current instantiation scope. (#GH198052)
 
+- Fixed crashes when building the deduction guides of an alias template from a
+  constructor whose own template parameter packs are declared over, or expanded
+  together with, a parameter pack of the class template that the alias template
+  specifies. (#GH193217)
+
+- Fixed an assertion failure when an empty pack is deduced for a template
+  parameter pack that was itself expanded from another pack, such as `Ns` in
+  `template <Ts... Ns>` in a member template of a specialization whose `Ts` is
+  empty.
+
+- Fixed a rejected-valid case in CTAD from a constructor template with a
+  parameter such as `tuple<pair<Ts, Us>...>`, whose nested pack expansion
+  names packs of both the class template and the constructor template.
+
 - Fixed a crash when a lambda parameter pack was given a default argument that
   is a pack expansion referencing an enclosing function's parameter pack (e.g.
   `[](Types... = args...) {}`). Clang now diagnoses the illegal default
