@@ -30579,6 +30579,12 @@ SDValue DAGCombiner::visitGET_FPENV_MEM(SDNode *N) {
       !StNode->getChain().reachesChainWithoutSideEffects(SDValue(LdNode, 1)))
     return SDValue();
 
+  // The new node replaces N, so the store address must not depend on N (for
+  // example through a CopyFromReg chained after the load), or the DAG would
+  // become cyclic.
+  if (StNode->getBasePtr()->hasPredecessor(N))
+    return SDValue();
+
   // Create new node GET_FPENV_MEM, which uses the store address to write FP
   // environment.
   SDValue Res = DAG.getGetFPEnv(Chain, SDLoc(N), StNode->getBasePtr(), MemVT,
