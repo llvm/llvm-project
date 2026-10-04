@@ -37,6 +37,7 @@
 #include <flang/Semantics/symbol.h>
 #include <flang/Semantics/tools.h>
 #include <flang/Semantics/type.h>
+#include <flang/Support/Flags.h>
 #include <flang/Utils/OpenMP.h>
 #include <llvm/ADT/STLExtras.h>
 #include <llvm/ADT/SmallPtrSet.h>
@@ -76,7 +77,13 @@ namespace Fortran {
 namespace lower {
 namespace omp {
 bool requiresImplicitDefaultDeclareMapper(
-    const semantics::DerivedTypeSpec &typeSpec) {
+    const semantics::DerivedTypeSpec &typeSpec,
+    bool enableImplicitDefaultMapperAllocatableMembers) {
+  // If disabled via -fno-implicit-default-mapper-allocatable-members
+  // return false, as we do not need to emit allocatable member maps.
+  if (!enableImplicitDefaultMapperAllocatableMembers)
+    return false;
+
   llvm::SmallPtrSet<const semantics::DerivedTypeSpec *, 8> visited;
 
   std::function<bool(const semantics::DerivedTypeSpec &)> requiresMapper =
@@ -1267,8 +1274,8 @@ mlir::FlatSymbolRefAttr resolveMapperId(
       bool isImplicitMap =
           (mapTypeBits & mlir::omp::ClauseMapFlags::implicit) ==
           mlir::omp::ClauseMapFlags::implicit;
-      bool needsDefaultMapper =
-          requiresImplicitDefaultDeclareMapper(*objectTypeSpec);
+      bool needsDefaultMapper = requiresImplicitDefaultDeclareMapper(
+          *objectTypeSpec, enableImplicitDefaultMapperAllocatableMembers);
       // For implicit captures, avoid synthesizing default mappers for
       // pointer entities (which can over-map pointer payloads) and for
       // plain non-allocatable/non-pointer entities. Keep implicit mapper
