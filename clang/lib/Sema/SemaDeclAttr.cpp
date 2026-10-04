@@ -8805,6 +8805,16 @@ void Sema::DeclApplyPragmaWeak(Scope *S, NamedDecl *ND, const WeakInfo &W) {
   if (W.getAlias()) { // clone decl, impersonate __attribute(weak,alias(...))
     IdentifierInfo *NDId = ND->getIdentifier();
     NamedDecl *NewD = DeclClonePragmaWeak(ND, W.getAlias(), W.getLocation());
+    // The clone is not a redeclaration of any existing declaration of the weak
+    // name, so it does not inherit attributes written on one. Carry over an
+    // explicit visibility, which would otherwise be lost and replaced by the
+    // -fvisibility default. GCC uses the visibility of the weak name's own
+    // declaration here, not that of the aliasee. This lookup has to happen
+    // before the PushOnScopeChains() below, which would make it find NewD.
+    if (NamedDecl *WeakND = LookupSingleName(S, W.getAlias(), W.getLocation(),
+                                             LookupOrdinaryName))
+      if (const auto *VA = WeakND->getAttr<VisibilityAttr>())
+        NewD->addAttr(VA->clone(Context));
     NewD->addAttr(
         AliasAttr::CreateImplicit(Context, NDId->getName(), W.getLocation()));
     NewD->addAttr(WeakAttr::CreateImplicit(Context, W.getLocation()));
