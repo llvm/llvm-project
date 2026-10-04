@@ -3354,7 +3354,23 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
   if (auto OptAPInt = Op->bitcastToAPInt()) {
     // We know all of the bits for a constant!
-    return KnownBits::makeConstant(*std::move(OptAPInt));
+    APInt V = *std::move(OptAPInt);
+
+    // Swap the low-order and high-order double of a ppc_fp128 when casting to
+    // i128, see #44482.
+    //
+    // A ppc_fp128 is two doubles, with the high-order double stored at the
+    // lower address. Reading that as an integer therefore puts the high-order
+    // double in the high 64 bits on big-endian targets and in the low 64 bits
+    // on little-endian targets.
+    //
+    // But APFloat::bitcastToAPInt is endianness-agnostic and always places the
+    // high-order double in the low 64 bits. Hence the two doubles must be
+    // flipped on big-endian targets.
+    if (getDataLayout().isBigEndian() && Op.getValueType() == MVT::ppcf128)
+      V = V.rotl(64);
+
+    return KnownBits::makeConstant(V);
   }
 
   if (Depth >= MaxRecursionDepth)
@@ -15232,24 +15248,28 @@ SDValue SelectionDAG::getPartialReduceMLS(unsigned Opc, const SDLoc &DL,
 /// \param LibFunc Reference to library function (value of RTLIB::Libcall).
 /// \param Ptr Pointer used to save/load state.
 /// \param InChain Ingoing token chain.
+/// \param Node Node being legalized
 /// \returns Outgoing chain token.
 SDValue SelectionDAG::makeStateFunctionCall(unsigned LibFunc, SDValue Ptr,
-                                            SDValue InChain,
-                                            const SDLoc &DLoc) {
+                                            SDValue InChain, SDNode *Node) {
   assert(InChain.getValueType() == MVT::Other && "Expected token chain");
-  TargetLowering::ArgListTy Args;
-  Args.emplace_back(Ptr, Ptr.getValueType().getTypeForEVT(*getContext()));
   RTLIB::LibcallImpl LibcallImpl =
       Libcalls->getLibcallImpl(static_cast<RTLIB::Libcall>(LibFunc));
-  if (LibcallImpl == RTLIB::Unsupported)
-    reportFatalUsageError("emitting call to unsupported libcall");
+  if (LibcallImpl == RTLIB::Unsupported) {
+    getContext()->emitError(Twine("no libcall available for ") +
+                            Node->getOperationName(this));
+    return InChain;
+  }
 
+  TargetLowering::ArgListTy Args;
+  Args.emplace_back(Ptr, Ptr.getValueType().getTypeForEVT(*getContext()));
   SDValue Callee =
       getExternalSymbol(LibcallImpl, TLI->getPointerTy(getDataLayout()));
   TargetLowering::CallLoweringInfo CLI(*this);
-  CLI.setDebugLoc(DLoc).setChain(InChain).setLibCallee(
-      Libcalls->getLibcallImplCallingConv(LibcallImpl),
-      Type::getVoidTy(*getContext()), Callee, std::move(Args));
+  CLI.setDebugLoc(SDLoc(Node))
+      .setChain(InChain)
+      .setLibCallee(Libcalls->getLibcallImplCallingConv(LibcallImpl),
+                    Type::getVoidTy(*getContext()), Callee, std::move(Args));
   return TLI->LowerCallTo(CLI).second;
 }
 
