@@ -99,16 +99,13 @@ define double @intervening_call(double %x, double %y, ptr %errno)  {
 
 define double @strict(double %x, double %y, ptr %errno) strictfp {
 ; CHECK-LABEL: @strict(
-; CHECK-NEXT:    [[SIN_OUT:%.*]] = alloca double, align 8
-; CHECK-NEXT:    [[COS_OUT:%.*]] = alloca double, align 8
-; CHECK-NEXT:    call void @sincos(double [[X:%.*]], ptr nonnull [[SIN_OUT]], ptr nonnull [[COS_OUT]])
-; CHECK-NEXT:    [[S:%.*]] = load double, ptr [[SIN_OUT]], align 8
-; CHECK-NEXT:    [[C:%.*]] = load double, ptr [[COS_OUT]], align 8
+; CHECK-NEXT:    [[S:%.*]] = call double @sin(double [[X:%.*]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[C:%.*]] = call double @cos(double [[X]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[R:%.*]] = fadd double [[S]], [[C]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %s = call double @sin(double %x)
-  %c = call double @cos(double %x)
+  %s = call double @sin(double %x) strictfp
+  %c = call double @cos(double %x) strictfp
   %r = fadd double %s, %c
   ret double %r
 }
