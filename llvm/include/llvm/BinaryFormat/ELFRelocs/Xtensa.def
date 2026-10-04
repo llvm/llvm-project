@@ -58,3 +58,16 @@ ELF_RELOC(R_XTENSA_TLS_TPOFF,        53)
 ELF_RELOC(R_XTENSA_TLS_FUNC,         54)
 ELF_RELOC(R_XTENSA_TLS_ARG,          55)
 ELF_RELOC(R_XTENSA_TLS_CALL,         56)
+ELF_RELOC(R_XTENSA_PDIFF8,           57)
+ELF_RELOC(R_XTENSA_PDIFF16,          58)
+ELF_RELOC(R_XTENSA_PDIFF32,          59)
+ELF_RELOC(R_XTENSA_NDIFF8,           60)
+ELF_RELOC(R_XTENSA_NDIFF16,          61)
+ELF_RELOC(R_XTENSA_NDIFF32,          62)
+// Positive same-section difference encoded as uleb128; rewritten in
+// place after relaxation without changing the section size.
+ELF_RELOC(R_XTENSA_PDIFF_ULEB128,    63)
+// Absolute 32-bit relocation with the addend in r_addend (same computation
+// as a standard R_XTENSA_32 S + A). Distinct from GNU R_XTENSA_32, which
+// stores the addend in the relocated word (partial_inplace).
+ELF_RELOC(R_XTENSA_32_ABS,    64)
