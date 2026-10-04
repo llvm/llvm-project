@@ -6,9 +6,14 @@
 
 define <8 x half> @afn_fma(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 ; FMA-LABEL: afn_fma:
-; FMA:         vfmadd213sd
-; FMA-COUNT-8: callq __truncdfhf2@PLT
-; FMA:         retq
+; FMA:       # %bb.0:
+; FMA-NEXT:    vcvtph2ps %xmm2, %ymm2
+; FMA-NEXT:    vcvtph2ps %xmm0, %ymm0
+; FMA-NEXT:    vcvtph2ps %xmm1, %ymm1
+; FMA-NEXT:    vfmadd213ps {{.*#+}} ymm1 = (ymm0 * ymm1) + ymm2
+; FMA-NEXT:    vcvtps2ph $4, %ymm1, %xmm0
+; FMA-NEXT:    vzeroupper
+; FMA-NEXT:    retq
 ;
 ; NOFMA-LABEL: afn_fma:
 ; NOFMA:         callq fma@PLT
@@ -61,14 +66,11 @@ define <8 x half> @contract_fma(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 define <8 x half> @fast_fma(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 ; FMA-LABEL: fast_fma:
 ; FMA:       # %bb.0:
+; FMA-NEXT:    vcvtph2ps %xmm2, %ymm2
+; FMA-NEXT:    vcvtph2ps %xmm0, %ymm0
 ; FMA-NEXT:    vcvtph2ps %xmm1, %ymm1
-; FMA-NEXT:    vcvtph2ps %xmm0, %ymm0
-; FMA-NEXT:    vmulps %ymm1, %ymm0, %ymm0
-; FMA-NEXT:    vcvtps2ph $4, %ymm0, %xmm0
-; FMA-NEXT:    vcvtph2ps %xmm0, %ymm0
-; FMA-NEXT:    vcvtph2ps %xmm2, %ymm1
-; FMA-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; FMA-NEXT:    vcvtps2ph $4, %ymm0, %xmm0
+; FMA-NEXT:    vfmadd213ps {{.*#+}} ymm1 = (ymm0 * ymm1) + ymm2
+; FMA-NEXT:    vcvtps2ph $4, %ymm1, %xmm0
 ; FMA-NEXT:    vzeroupper
 ; FMA-NEXT:    retq
 ;
