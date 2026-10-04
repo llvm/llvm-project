@@ -37,15 +37,15 @@ difficult to navigate. We would appreciate help with:
      undocumented attributes</a>,</li>
   <li>documenting <a href="https://github.com/llvm/llvm-project/blob/main/clang/include/clang/Basic/DiagnosticDocs.td">
       diagnostic group flags</a> (adding code examples of what is diagnosed, or
-      other relevant information), or</li>
+      other relevant information),</li>
   <li>documenting <a href="https://github.com/llvm/llvm-project/blob/main/clang/include/clang/Options/Options.td">
-      command line options</a>, or</li>
+      command-line options</a>,</li>
   <li>help with completing other missing documentation.</li>
 </ul>
 These projects are independent of each other.</li>
 
 <li><b>Complete the investigation into Clang's C conformance</b>: Clang's
-<a href="c_status.html">C status page</a> contain a number of entries marked as
+<a href="c_status.html">C status page</a> contains a number of entries marked as
 <code>Unknown</code>. Completing the investigation involves adding
 <a href="https://github.com/llvm/llvm-project/tree/main/clang/test/C">test
 coverage</a> for the various standards papers and updating the documentation
@@ -97,7 +97,7 @@ great application of this functionality, which generates code documentation
 from source code. The tool is in early stages of development and could use more
 dedicated effort to complete the implementation.</li>
 
-<li><b>Self-testing using clang</b>: There are several neat ways to
+<li><b>Self-testing using Clang</b>: There are several neat ways to
 improve the quality of clang by self-testing. Some examples:
 <ul>
   <li>Improve the reliability of AST printing and serialization by
@@ -142,7 +142,7 @@ current Host to the identified Target.</p>
 
 <p>The second stage would be to produce a configuration file (that can be used
 independently of the Host) so that Clang can read it and not need a gazillion
-of command-line options. Such file should be simple JSON / INI or anything that
+of command-line options. Such a file should be simple JSON / INI or anything that
 a text editor could change.</p></li>
 </ul>
 
