@@ -1,0 +1,60 @@
+# Attributes in Clang
+
+
+```{program} clang
+```
+
+## Introduction
+
+This page lists the attributes currently supported by Clang.
+
+:::{include} AttributeReference/AArch64SMEAttributes.md
+:::
+
+:::{include} AttributeReference/AMDGPUAttributes.md
+:::
+
+:::{include} AttributeReference/CallingConventions.md
+:::
+
+:::{include} AttributeReference/ConsumedAnnotationChecking.md
+:::
+
+:::{include} AttributeReference/CustomizingSwiftImport.md
+:::
+
+:::{include} AttributeReference/DeclarationAttributes.md
+:::
+
+:::{include} AttributeReference/FieldAttributes.md
+:::
+
+:::{include} AttributeReference/FunctionAttributes.md
+:::
+
+:::{include} AttributeReference/HandleAttributes.md
+:::
+
+:::{include} AttributeReference/NullabilityAttributes.md
+:::
+
+:::{include} AttributeReference/OpenCLAddressSpaces.md
+:::
+
+:::{include} AttributeReference/PerformanceConstraintAttributes.md
+:::
+
+:::{include} AttributeReference/StatementAttributes.md
+:::
+
+:::{include} AttributeReference/TypeAttributes.md
+:::
+
+:::{include} AttributeReference/TypeSafetyChecking.md
+:::
+
+:::{include} AttributeReference/Undocumented.md
+:::
+
+:::{include} AttributeReference/VariableAttributes.md
+:::
