@@ -109,28 +109,29 @@ define void @vld3(ptr nocapture readonly %pSrc, ptr noalias nocapture %pDst, i32
 ; CHECK-IADISABLED:       .Lfunc_begin1:
 ; CHECK-IADISABLED-NEXT:    .cfi_startproc
 ; CHECK-IADISABLED-NEXT:  // %bb.0: // %entry
+; CHECK-IADISABLED-NEXT:    adrp x8, .LCPI1_0
+; CHECK-IADISABLED-NEXT:    adrp x9, .LCPI1_1
+; CHECK-IADISABLED-NEXT:    adrp x10, .LCPI1_2
+; CHECK-IADISABLED-NEXT:    ldr q0, [x8, :lo12:.LCPI1_0]
+; CHECK-IADISABLED-NEXT:    ldr q1, [x9, :lo12:.LCPI1_1]
+; CHECK-IADISABLED-NEXT:    ldr q2, [x10, :lo12:.LCPI1_2]
 ; CHECK-IADISABLED-NEXT:    mov x8, xzr
 ; CHECK-IADISABLED-NEXT:  .LBB1_1: // %vector.body
 ; CHECK-IADISABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IADISABLED-NEXT:    ldp q0, q1, [x0]
-; CHECK-IADISABLED-NEXT:    ldr q4, [x0, #32]
-; CHECK-IADISABLED-NEXT:    add x0, x0, #48
-; CHECK-IADISABLED-NEXT:    fmul v4.4s, v4.4s, v4.4s
-; CHECK-IADISABLED-NEXT:    fmul v0.4s, v0.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    fmul v1.4s, v1.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    mov v2.16b, v0.16b
-; CHECK-IADISABLED-NEXT:    rev64 v3.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    mov v2.s[1], v0.s[3]
-; CHECK-IADISABLED-NEXT:    mov v3.s[0], v0.s[1]
-; CHECK-IADISABLED-NEXT:    mov v2.s[2], v1.s[2]
-; CHECK-IADISABLED-NEXT:    mov v1.s[0], v0.s[2]
-; CHECK-IADISABLED-NEXT:    mov v3.s[3], v4.s[2]
-; CHECK-IADISABLED-NEXT:    mov v2.s[3], v4.s[1]
-; CHECK-IADISABLED-NEXT:    mov v1.s[2], v4.s[0]
-; CHECK-IADISABLED-NEXT:    fadd v0.4s, v3.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    mov v1.s[3], v4.s[3]
-; CHECK-IADISABLED-NEXT:    fadd v0.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    str q0, [x1, x8]
+; CHECK-IADISABLED-NEXT:    ldp q4, q3, [x0, #16]
+; CHECK-IADISABLED-NEXT:    ldr q5, [x0], #48
+; CHECK-IADISABLED-NEXT:    fmul v18.4s, v3.4s, v3.4s
+; CHECK-IADISABLED-NEXT:    fmul v17.4s, v4.4s, v4.4s
+; CHECK-IADISABLED-NEXT:    fmul v16.4s, v5.4s, v5.4s
+; CHECK-IADISABLED-NEXT:    tbl v3.16b, { v16.16b, v17.16b }, v0.16b
+; CHECK-IADISABLED-NEXT:    tbl v4.16b, { v16.16b, v17.16b }, v1.16b
+; CHECK-IADISABLED-NEXT:    mov v3.s[3], v18.s[1]
+; CHECK-IADISABLED-NEXT:    mov v4.s[3], v18.s[2]
+; CHECK-IADISABLED-NEXT:    mov v17.s[0], v16.s[2]
+; CHECK-IADISABLED-NEXT:    fadd v3.4s, v4.4s, v3.4s
+; CHECK-IADISABLED-NEXT:    tbl v4.16b, { v17.16b, v18.16b }, v2.16b
+; CHECK-IADISABLED-NEXT:    fadd v3.4s, v3.4s, v4.4s
+; CHECK-IADISABLED-NEXT:    str q3, [x1, x8]
 ; CHECK-IADISABLED-NEXT:    add x8, x8, #16
 ; CHECK-IADISABLED-NEXT:    cmp x8, #1, lsl #12 // =4096
 ; CHECK-IADISABLED-NEXT:    b.ne .LBB1_1
@@ -221,37 +222,39 @@ define void @vld4(ptr nocapture readonly %pSrc, ptr noalias nocapture %pDst, i32
 ; CHECK-IADISABLED:       .Lfunc_begin2:
 ; CHECK-IADISABLED-NEXT:    .cfi_startproc
 ; CHECK-IADISABLED-NEXT:  // %bb.0: // %entry
+; CHECK-IADISABLED-NEXT:    adrp x8, .LCPI2_0
+; CHECK-IADISABLED-NEXT:    adrp x9, .LCPI2_1
+; CHECK-IADISABLED-NEXT:    ldr q0, [x8, :lo12:.LCPI2_0]
+; CHECK-IADISABLED-NEXT:    ldr q1, [x9, :lo12:.LCPI2_1]
 ; CHECK-IADISABLED-NEXT:    mov x8, xzr
 ; CHECK-IADISABLED-NEXT:  .LBB2_1: // %vector.body
 ; CHECK-IADISABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IADISABLED-NEXT:    ldp q0, q1, [x0]
+; CHECK-IADISABLED-NEXT:    ldp q5, q2, [x0, #32]
 ; CHECK-IADISABLED-NEXT:    add x9, x1, x8
-; CHECK-IADISABLED-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-IADISABLED-NEXT:    ldp q4, q3, [x0], #64
 ; CHECK-IADISABLED-NEXT:    add x8, x8, #32
+; CHECK-IADISABLED-NEXT:    fmul v7.4s, v2.4s, v2.4s
 ; CHECK-IADISABLED-NEXT:    cmp x8, #2, lsl #12 // =8192
-; CHECK-IADISABLED-NEXT:    add x0, x0, #64
-; CHECK-IADISABLED-NEXT:    fmul v1.4s, v1.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    fmul v0.4s, v0.4s, v0.4s
 ; CHECK-IADISABLED-NEXT:    fmul v3.4s, v3.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    fmul v2.4s, v2.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    uzp2 v4.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    zip1 v6.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    trn2 v7.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    zip1 v5.4s, v2.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    zip2 v1.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    uzp2 v0.4s, v4.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    trn1 v4.4s, v2.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    zip2 v3.4s, v2.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    ext v2.16b, v2.16b, v5.16b, #8
-; CHECK-IADISABLED-NEXT:    mov v7.d[1], v5.d[1]
-; CHECK-IADISABLED-NEXT:    mov v1.d[1], v4.d[1]
-; CHECK-IADISABLED-NEXT:    mov v0.d[1], v3.d[1]
-; CHECK-IADISABLED-NEXT:    mov v6.d[1], v2.d[1]
-; CHECK-IADISABLED-NEXT:    fadd v0.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    fadd v2.4s, v7.4s, v6.4s
-; CHECK-IADISABLED-NEXT:    zip2 v1.4s, v2.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    zip1 v0.4s, v2.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    stp q0, q1, [x9]
+; CHECK-IADISABLED-NEXT:    fmul v6.4s, v5.4s, v5.4s
+; CHECK-IADISABLED-NEXT:    fmul v2.4s, v4.4s, v4.4s
+; CHECK-IADISABLED-NEXT:    tbl v5.16b, { v6.16b, v7.16b }, v0.16b
+; CHECK-IADISABLED-NEXT:    zip1 v16.4s, v6.4s, v7.4s
+; CHECK-IADISABLED-NEXT:    trn1 v18.4s, v6.4s, v7.4s
+; CHECK-IADISABLED-NEXT:    zip1 v4.4s, v2.4s, v3.4s
+; CHECK-IADISABLED-NEXT:    trn2 v17.4s, v2.4s, v3.4s
+; CHECK-IADISABLED-NEXT:    zip2 v6.4s, v6.4s, v7.4s
+; CHECK-IADISABLED-NEXT:    zip2 v7.4s, v2.4s, v3.4s
+; CHECK-IADISABLED-NEXT:    tbl v2.16b, { v2.16b, v3.16b }, v1.16b
+; CHECK-IADISABLED-NEXT:    mov v4.d[1], v5.d[1]
+; CHECK-IADISABLED-NEXT:    mov v17.d[1], v16.d[1]
+; CHECK-IADISABLED-NEXT:    mov v7.d[1], v18.d[1]
+; CHECK-IADISABLED-NEXT:    mov v2.d[1], v6.d[1]
+; CHECK-IADISABLED-NEXT:    fadd v3.4s, v17.4s, v4.4s
+; CHECK-IADISABLED-NEXT:    fadd v2.4s, v2.4s, v7.4s
+; CHECK-IADISABLED-NEXT:    zip2 v4.4s, v3.4s, v2.4s
+; CHECK-IADISABLED-NEXT:    zip1 v2.4s, v3.4s, v2.4s
+; CHECK-IADISABLED-NEXT:    stp q2, q4, [x9]
 ; CHECK-IADISABLED-NEXT:    b.ne .LBB2_1
 ; CHECK-IADISABLED-NEXT:  // %bb.2: // %while.end
 ; CHECK-IADISABLED-NEXT:    ret
@@ -513,28 +516,29 @@ define void @vld3_multiuse(ptr nocapture readonly %pSrc, ptr noalias nocapture %
 ; CHECK-IADISABLED:       .Lfunc_begin5:
 ; CHECK-IADISABLED-NEXT:    .cfi_startproc
 ; CHECK-IADISABLED-NEXT:  // %bb.0: // %entry
+; CHECK-IADISABLED-NEXT:    adrp x8, .LCPI5_0
+; CHECK-IADISABLED-NEXT:    adrp x9, .LCPI5_1
+; CHECK-IADISABLED-NEXT:    adrp x10, .LCPI5_2
+; CHECK-IADISABLED-NEXT:    ldr q0, [x8, :lo12:.LCPI5_0]
+; CHECK-IADISABLED-NEXT:    ldr q1, [x9, :lo12:.LCPI5_1]
+; CHECK-IADISABLED-NEXT:    ldr q2, [x10, :lo12:.LCPI5_2]
 ; CHECK-IADISABLED-NEXT:    mov x8, xzr
 ; CHECK-IADISABLED-NEXT:  .LBB5_1: // %vector.body
 ; CHECK-IADISABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IADISABLED-NEXT:    ldp q0, q1, [x0]
-; CHECK-IADISABLED-NEXT:    ldr q4, [x0, #32]
-; CHECK-IADISABLED-NEXT:    add x0, x0, #48
-; CHECK-IADISABLED-NEXT:    fmul v4.4s, v4.4s, v4.4s
-; CHECK-IADISABLED-NEXT:    fmul v0.4s, v0.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    fmul v1.4s, v1.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    mov v2.16b, v0.16b
-; CHECK-IADISABLED-NEXT:    rev64 v3.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    mov v2.s[1], v0.s[3]
-; CHECK-IADISABLED-NEXT:    mov v3.s[0], v0.s[1]
-; CHECK-IADISABLED-NEXT:    mov v2.s[2], v1.s[2]
-; CHECK-IADISABLED-NEXT:    mov v1.s[0], v0.s[2]
-; CHECK-IADISABLED-NEXT:    mov v3.s[3], v4.s[2]
-; CHECK-IADISABLED-NEXT:    mov v2.s[3], v4.s[1]
-; CHECK-IADISABLED-NEXT:    mov v1.s[2], v4.s[0]
-; CHECK-IADISABLED-NEXT:    fadd v0.4s, v3.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    mov v1.s[3], v4.s[3]
-; CHECK-IADISABLED-NEXT:    fadd v0.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    str q0, [x1, x8]
+; CHECK-IADISABLED-NEXT:    ldp q4, q3, [x0, #16]
+; CHECK-IADISABLED-NEXT:    ldr q5, [x0], #48
+; CHECK-IADISABLED-NEXT:    fmul v18.4s, v3.4s, v3.4s
+; CHECK-IADISABLED-NEXT:    fmul v17.4s, v4.4s, v4.4s
+; CHECK-IADISABLED-NEXT:    fmul v16.4s, v5.4s, v5.4s
+; CHECK-IADISABLED-NEXT:    tbl v3.16b, { v16.16b, v17.16b }, v0.16b
+; CHECK-IADISABLED-NEXT:    tbl v4.16b, { v16.16b, v17.16b }, v1.16b
+; CHECK-IADISABLED-NEXT:    mov v3.s[3], v18.s[1]
+; CHECK-IADISABLED-NEXT:    mov v4.s[3], v18.s[2]
+; CHECK-IADISABLED-NEXT:    mov v17.s[0], v16.s[2]
+; CHECK-IADISABLED-NEXT:    fadd v3.4s, v4.4s, v3.4s
+; CHECK-IADISABLED-NEXT:    tbl v4.16b, { v17.16b, v18.16b }, v2.16b
+; CHECK-IADISABLED-NEXT:    fadd v3.4s, v3.4s, v4.4s
+; CHECK-IADISABLED-NEXT:    str q3, [x1, x8]
 ; CHECK-IADISABLED-NEXT:    add x8, x8, #16
 ; CHECK-IADISABLED-NEXT:    cmp x8, #1, lsl #12 // =4096
 ; CHECK-IADISABLED-NEXT:    b.ne .LBB5_1
@@ -623,37 +627,39 @@ define void @vld4_multiuse(ptr nocapture readonly %pSrc, ptr noalias nocapture %
 ; CHECK-IADISABLED:       .Lfunc_begin6:
 ; CHECK-IADISABLED-NEXT:    .cfi_startproc
 ; CHECK-IADISABLED-NEXT:  // %bb.0: // %entry
+; CHECK-IADISABLED-NEXT:    adrp x8, .LCPI6_0
+; CHECK-IADISABLED-NEXT:    adrp x9, .LCPI6_1
+; CHECK-IADISABLED-NEXT:    ldr q0, [x8, :lo12:.LCPI6_0]
+; CHECK-IADISABLED-NEXT:    ldr q1, [x9, :lo12:.LCPI6_1]
 ; CHECK-IADISABLED-NEXT:    mov x8, xzr
 ; CHECK-IADISABLED-NEXT:  .LBB6_1: // %vector.body
 ; CHECK-IADISABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IADISABLED-NEXT:    ldp q0, q1, [x0]
+; CHECK-IADISABLED-NEXT:    ldp q5, q2, [x0, #32]
 ; CHECK-IADISABLED-NEXT:    add x9, x1, x8
-; CHECK-IADISABLED-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-IADISABLED-NEXT:    ldp q4, q3, [x0], #64
 ; CHECK-IADISABLED-NEXT:    add x8, x8, #32
+; CHECK-IADISABLED-NEXT:    fmul v7.4s, v2.4s, v2.4s
 ; CHECK-IADISABLED-NEXT:    cmp x8, #2, lsl #12 // =8192
-; CHECK-IADISABLED-NEXT:    add x0, x0, #64
-; CHECK-IADISABLED-NEXT:    fmul v1.4s, v1.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    fmul v0.4s, v0.4s, v0.4s
 ; CHECK-IADISABLED-NEXT:    fmul v3.4s, v3.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    fmul v2.4s, v2.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    uzp2 v4.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    zip1 v6.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    trn2 v7.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    zip1 v5.4s, v2.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    zip2 v1.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    uzp2 v0.4s, v4.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    trn1 v4.4s, v2.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    zip2 v3.4s, v2.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    ext v2.16b, v2.16b, v5.16b, #8
-; CHECK-IADISABLED-NEXT:    mov v7.d[1], v5.d[1]
-; CHECK-IADISABLED-NEXT:    mov v1.d[1], v4.d[1]
-; CHECK-IADISABLED-NEXT:    mov v0.d[1], v3.d[1]
-; CHECK-IADISABLED-NEXT:    mov v6.d[1], v2.d[1]
-; CHECK-IADISABLED-NEXT:    fadd v0.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    fadd v2.4s, v7.4s, v6.4s
-; CHECK-IADISABLED-NEXT:    zip2 v1.4s, v2.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    zip1 v0.4s, v2.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    stp q0, q1, [x9]
+; CHECK-IADISABLED-NEXT:    fmul v6.4s, v5.4s, v5.4s
+; CHECK-IADISABLED-NEXT:    fmul v2.4s, v4.4s, v4.4s
+; CHECK-IADISABLED-NEXT:    tbl v5.16b, { v6.16b, v7.16b }, v0.16b
+; CHECK-IADISABLED-NEXT:    zip1 v16.4s, v6.4s, v7.4s
+; CHECK-IADISABLED-NEXT:    trn1 v18.4s, v6.4s, v7.4s
+; CHECK-IADISABLED-NEXT:    zip1 v4.4s, v2.4s, v3.4s
+; CHECK-IADISABLED-NEXT:    trn2 v17.4s, v2.4s, v3.4s
+; CHECK-IADISABLED-NEXT:    zip2 v6.4s, v6.4s, v7.4s
+; CHECK-IADISABLED-NEXT:    zip2 v7.4s, v2.4s, v3.4s
+; CHECK-IADISABLED-NEXT:    tbl v2.16b, { v2.16b, v3.16b }, v1.16b
+; CHECK-IADISABLED-NEXT:    mov v4.d[1], v5.d[1]
+; CHECK-IADISABLED-NEXT:    mov v17.d[1], v16.d[1]
+; CHECK-IADISABLED-NEXT:    mov v7.d[1], v18.d[1]
+; CHECK-IADISABLED-NEXT:    mov v2.d[1], v6.d[1]
+; CHECK-IADISABLED-NEXT:    fadd v3.4s, v17.4s, v4.4s
+; CHECK-IADISABLED-NEXT:    fadd v2.4s, v2.4s, v7.4s
+; CHECK-IADISABLED-NEXT:    zip2 v4.4s, v3.4s, v2.4s
+; CHECK-IADISABLED-NEXT:    zip1 v2.4s, v3.4s, v2.4s
+; CHECK-IADISABLED-NEXT:    stp q2, q4, [x9]
 ; CHECK-IADISABLED-NEXT:    b.ne .LBB6_1
 ; CHECK-IADISABLED-NEXT:  // %bb.2: // %while.end
 ; CHECK-IADISABLED-NEXT:    ret
