@@ -29466,7 +29466,20 @@ SDValue X86TargetLowering::LowerSET_ROUNDING(SDValue Op,
 
 const unsigned X87StateSize = 28;
 const unsigned FPStateSize = 32;
-[[maybe_unused]] const unsigned FPStateSizeInBits = FPStateSize * 8;
+const unsigned FPStateSizeInBits = FPStateSize * 8;
+
+// The X86 FP environment is 256 bits (x87 environment plus MXCSR). Report an
+// error for other widths rather than reading or writing past the memory
+// operand.
+static bool checkFPStateWidth(SDValue Op, EVT MemVT, SelectionDAG &DAG) {
+  if (MemVT.getSizeInBits() == FPStateSizeInBits)
+    return true;
+  DAG.getContext()->emitError(Twine("unsupported type for ") +
+                              Op->getOperationName(&DAG) +
+                              ": the X86 floating-point environment is " +
+                              Twine(FPStateSizeInBits) + " bits");
+  return false;
+}
 
 SDValue X86TargetLowering::LowerGET_FPENV_MEM(SDValue Op,
                                               SelectionDAG &DAG) const {
@@ -29476,7 +29489,8 @@ SDValue X86TargetLowering::LowerGET_FPENV_MEM(SDValue Op,
   SDValue Ptr = Op->getOperand(1);
   auto *Node = cast<FPStateAccessSDNode>(Op);
   EVT MemVT = Node->getMemoryVT();
-  assert(MemVT.getSizeInBits() == FPStateSizeInBits);
+  if (!checkFPStateWidth(Op, MemVT, DAG))
+    return Chain;
   MachineMemOperand *MMO = cast<FPStateAccessSDNode>(Op)->getMemOperand();
 
   // Get x87 state, if it presents.
@@ -29542,7 +29556,8 @@ SDValue X86TargetLowering::LowerSET_FPENV_MEM(SDValue Op,
   SDValue Ptr = Op->getOperand(1);
   auto *Node = cast<FPStateAccessSDNode>(Op);
   EVT MemVT = Node->getMemoryVT();
-  assert(MemVT.getSizeInBits() == FPStateSizeInBits);
+  if (!checkFPStateWidth(Op, MemVT, DAG))
+    return Chain;
   MachineMemOperand *MMO = cast<FPStateAccessSDNode>(Op)->getMemOperand();
   return createSetFPEnvNodes(Ptr, Chain, DL, MemVT, MMO, DAG, Subtarget);
 }
