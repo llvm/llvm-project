@@ -9785,6 +9785,40 @@ def CIR_MemChrOp : CIR_Op<"libc.memchr",
 }
 
 //===----------------------------------------------------------------------===//
+// OffloadPrintfOp
+//===----------------------------------------------------------------------===//
+
+def CIR_OffloadPrintfOp : CIR_Op<"offload.printf"> {
+  let summary = "Device-side printf in offload code";
+  let description = [{
+    Represents a call to `printf` in device code. The target has no libc
+    `printf` to call, so the op is expanded into the target's printf runtime
+    sequence when lowering to LLVM.
+
+    `format` is the format string and `args` are the remaining arguments,
+    after the default argument promotions. `result` is what `printf` returns
+    on the target.
+
+    Example:
+
+    ```
+    %r = cir.offload.printf(%fmt, %v) : (!cir.ptr<!s8i>, !s32i) -> !s32i
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_PtrToChar8Type:$format,
+    Variadic<AnyTypeOf<[CIR_AnyIntType, CIR_AnyFloatType, CIR_AnyPtrType]>>:$args
+  );
+
+  let results = (outs CIR_SInt32:$result);
+
+  let assemblyFormat = [{
+    `(` $format (`,` $args^)? `)` attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // LaunderOp
 //===----------------------------------------------------------------------===//
 
