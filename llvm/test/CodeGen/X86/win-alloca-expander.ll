@@ -25,30 +25,26 @@ bb1:
   %saved_stack = tail call ptr @llvm.stacksave()
 
   %p1 = alloca %struct.S
-; We know the %esp offset from above, so there is no need to touch the stack
-; before adjusting it.
-; CHECK: subl $1024, %esp
-
   %p2 = alloca %struct.T
-; The offset is now 2048 bytes, so allocating a T must touch the stack again.
+; MergeAllocas coalesces these two textually-adjacent allocas into a single
+; 4024-byte allocation before instruction selection. Combined with the 1024
+; bytes %p0 already used, that exceeds the stack probe size, so the merged
+; allocation needs its own touch-and-sub -- still fewer total instructions
+; than touching %p1 and %p2 separately would have been.
 ; CHECK: pushl %eax
-; CHECK: subl $2996, %esp
+; CHECK: subl $4020, %esp
 
   call void @f(ptr %p0)
 ; CHECK: calll
 
   %p3 = alloca %struct.T
-; The call above touched the stack, so there is room for a T object.
-; CHECK: subl $3000, %esp
-
   %p4 = alloca %struct.U
-; The U object is large enough to require stack probing.
-; CHECK: movl $10000, %eax
-; CHECK: calll __chkstk
-
   %p5 = alloca %struct.T
-; The stack probing above touched the tip of the stack, so there's room for a T.
-; CHECK: subl $3000, %esp
+; MergeAllocas coalesces these three textually-adjacent allocas into a
+; single 16000-byte allocation, which is large enough to require stack
+; probing on its own.
+; CHECK: movl $16000, %eax
+; CHECK: calll __chkstk
 
   call void @llvm.stackrestore(ptr %saved_stack)
   %p6 = alloca %struct.S

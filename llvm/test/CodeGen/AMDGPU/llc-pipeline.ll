@@ -317,10 +317,13 @@
 ; GCN-O1-NEXT:        Insert stack protectors
 ; GCN-O1-NEXT:        Dominator Tree Construction
 ; GCN-O1-NEXT:        Cycle Info Analysis
-; GCN-O1-NEXT:        Uniformity Analysis
+; GCN-O1-NEXT:        Post-Dominator Tree Construction
+; GCN-O1-NEXT:        Branch Probability Analysis
 ; GCN-O1-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-NEXT:        Function Alias Analysis Results
-; GCN-O1-NEXT:        Post-Dominator Tree Construction
+; GCN-O1-NEXT:        Merge adjacent fixed-size allocas
+; GCN-O1-NEXT:        Uniformity Analysis
+; GCN-O1-NEXT:        Function Alias Analysis Results
 ; GCN-O1-NEXT:        Branch Probability Analysis
 ; GCN-O1-NEXT:        Assignment Tracking Analysis
 ; GCN-O1-NEXT:        Lazy Branch Probability Analysis
@@ -641,10 +644,13 @@
 ; GCN-O1-OPTS-NEXT:        Insert stack protectors
 ; GCN-O1-OPTS-NEXT:        Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Cycle Info Analysis
-; GCN-O1-OPTS-NEXT:        Uniformity Analysis
+; GCN-O1-OPTS-NEXT:        Post-Dominator Tree Construction
+; GCN-O1-OPTS-NEXT:        Branch Probability Analysis
 ; GCN-O1-OPTS-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-OPTS-NEXT:        Function Alias Analysis Results
-; GCN-O1-OPTS-NEXT:        Post-Dominator Tree Construction
+; GCN-O1-OPTS-NEXT:        Merge adjacent fixed-size allocas
+; GCN-O1-OPTS-NEXT:        Uniformity Analysis
+; GCN-O1-OPTS-NEXT:        Function Alias Analysis Results
 ; GCN-O1-OPTS-NEXT:        Branch Probability Analysis
 ; GCN-O1-OPTS-NEXT:        Assignment Tracking Analysis
 ; GCN-O1-OPTS-NEXT:        Lazy Branch Probability Analysis
@@ -977,10 +983,13 @@
 ; GCN-O2-NEXT:        Insert stack protectors
 ; GCN-O2-NEXT:        Dominator Tree Construction
 ; GCN-O2-NEXT:        Cycle Info Analysis
-; GCN-O2-NEXT:        Uniformity Analysis
+; GCN-O2-NEXT:        Post-Dominator Tree Construction
+; GCN-O2-NEXT:        Branch Probability Analysis
 ; GCN-O2-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O2-NEXT:        Function Alias Analysis Results
-; GCN-O2-NEXT:        Post-Dominator Tree Construction
+; GCN-O2-NEXT:        Merge adjacent fixed-size allocas
+; GCN-O2-NEXT:        Uniformity Analysis
+; GCN-O2-NEXT:        Function Alias Analysis Results
 ; GCN-O2-NEXT:        Branch Probability Analysis
 ; GCN-O2-NEXT:        Assignment Tracking Analysis
 ; GCN-O2-NEXT:        Lazy Branch Probability Analysis
@@ -1329,10 +1338,13 @@
 ; GCN-O3-NEXT:        Insert stack protectors
 ; GCN-O3-NEXT:        Dominator Tree Construction
 ; GCN-O3-NEXT:        Cycle Info Analysis
-; GCN-O3-NEXT:        Uniformity Analysis
+; GCN-O3-NEXT:        Post-Dominator Tree Construction
+; GCN-O3-NEXT:        Branch Probability Analysis
 ; GCN-O3-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:        Function Alias Analysis Results
-; GCN-O3-NEXT:        Post-Dominator Tree Construction
+; GCN-O3-NEXT:        Merge adjacent fixed-size allocas
+; GCN-O3-NEXT:        Uniformity Analysis
+; GCN-O3-NEXT:        Function Alias Analysis Results
 ; GCN-O3-NEXT:        Branch Probability Analysis
 ; GCN-O3-NEXT:        Assignment Tracking Analysis
 ; GCN-O3-NEXT:        Lazy Branch Probability Analysis

@@ -161,6 +161,7 @@
 #include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/CodeGen/MachineVerifier.h"
+#include "llvm/CodeGen/MergeAllocas.h"
 #include "llvm/CodeGen/OptimizePHIs.h"
 #include "llvm/CodeGen/PEI.h"
 #include "llvm/CodeGen/PHIElimination.h"
