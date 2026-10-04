@@ -228,6 +228,35 @@ class SPIRVLegalizePointerCastImpl {
     return nullptr;
   }
 
+  // Rebuild a typed logical access chain from a folded byte-offset GEP.
+  Value *rebuildLogicalGEP(IRBuilder<> &B, Value *Ptr, Type *AccessTy) {
+    auto *GEP = dyn_cast<GEPOperator>(Ptr);
+    if (!GEP)
+      return nullptr;
+
+    const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+    unsigned IndexBits = DL.getIndexTypeSizeInBits(Ptr->getType());
+    APInt Offset(IndexBits, 0);
+    if (!GEP->accumulateConstantOffset(DL, Offset))
+      return nullptr;
+
+    Value *BasePtr = GEP->getPointerOperand();
+    Type *ElemTy = GR->findDeducedElementType(BasePtr);
+    if (!ElemTy || !ElemTy->isSized())
+      return nullptr;
+
+    SmallVector<APInt> Indices = DL.getGEPIndicesForOffset(ElemTy, Offset);
+    if (!Offset.isZero() || ElemTy != AccessTy)
+      return nullptr;
+
+    SmallVector<Value *> Args{B.getInt1(GEP->isInBounds()), BasePtr};
+    for (const APInt &Index : Indices)
+      Args.push_back(ConstantInt::get(B.getContext(), Index));
+
+    return B.CreateIntrinsic(Intrinsic::spv_gep,
+                             {Ptr->getType(), BasePtr->getType()}, {Args});
+  }
+
   Value *gepByteOffset(IRBuilder<> &B, Value *BasePtr, unsigned ByteOffset) {
     if (ByteOffset == 0)
       return BasePtr;
@@ -359,6 +388,9 @@ class SPIRVLegalizePointerCastImpl {
     if (!CastedElemTy || CastedElemTy != AccessTy)
       return false;
 
+    if (Value *LogicalGEP = rebuildLogicalGEP(B, OriginalPtr, AccessTy))
+      OriginalPtr = LogicalGEP;
+
     Align Alignment = IllegalLoad->getAlign();
     if (shouldReinterpretByteWise(B, AccessTy, OriginalPtr)) {
       const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
@@ -396,6 +428,9 @@ class SPIRVLegalizePointerCastImpl {
     Type *CastedElemTy = GR->findDeducedElementType(CastedPtr);
     if (!CastedElemTy || CastedElemTy != AccessTy)
       return false;
+
+    if (Value *LogicalGEP = rebuildLogicalGEP(B, OriginalPtr, AccessTy))
+      OriginalPtr = LogicalGEP;
 
     if (shouldReinterpretByteWise(B, AccessTy, OriginalPtr)) {
       const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
