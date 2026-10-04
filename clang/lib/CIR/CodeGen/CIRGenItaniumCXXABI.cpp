@@ -1807,8 +1807,8 @@ mlir::Value CIRGenItaniumCXXABI::getCXXDestructorImplicitParam(
 // to the throw block and create a block for the remaining operations.
 static void insertThrowAndSplit(mlir::OpBuilder &builder, mlir::Location loc,
                                 mlir::Value exceptionPtr = {},
-                                mlir::FlatSymbolRefAttr typeInfo = {},
-                                mlir::FlatSymbolRefAttr dtor = {}) {
+                                mlir::Value typeInfo = {},
+                                mlir::Value dtor = {}) {
   mlir::Block *currentBlock = builder.getInsertionBlock();
   mlir::Region *region = currentBlock->getParent();
 
@@ -1865,11 +1865,16 @@ void CIRGenItaniumCXXABI::emitThrow(CIRGenFunction &cgf,
   CharUnits exnAlign = cgf.getContext().getExnObjectAlignment();
   cgf.emitAnyExprToExn(e->getSubExpr(), Address(exceptionPtr, exnAlign));
 
-  // Get the RTTI symbol address.
-  auto typeInfo = mlir::cast<cir::GlobalViewAttr>(
+  // Materialize the RTTI address as an SSA value. Device compilation may
+  // suppress RTTI emission, in which case this is a typed null pointer in the
+  // target's global address space instead of a view of an RTTI global.
+  auto typeInfoAttr = mlir::cast<mlir::TypedAttr>(
       cgm.getAddrOfRTTIDescriptor(subExprLoc, clangThrowType,
                                   /*forEH=*/true));
-  assert(!typeInfo.getIndices() && "expected no indirection");
+  if (auto globalView = mlir::dyn_cast<cir::GlobalViewAttr>(typeInfoAttr))
+    assert(!globalView.getIndices() && "expected no indirection");
+  mlir::Value typeInfo =
+      cir::ConstantOp::create(builder, subExprLoc, typeInfoAttr);
 
   // The address of the destructor.
   //
@@ -1879,21 +1884,26 @@ void CIRGenItaniumCXXABI::emitThrow(CIRGenFunction &cgf,
   // Lowering pass to skip passing the trivial function.
   //
   const auto *cxxrd = clangThrowType->getAsCXXRecordDecl();
-  mlir::FlatSymbolRefAttr dtor{};
+  cir::PointerType dtorTy = builder.getVoidPtrTy();
+  mlir::Value dtor = builder.getNullPtr(dtorTy, subExprLoc);
   if (cxxrd && !cxxrd->hasTrivialDestructor()) {
     // __cxa_throw is declared to take its destructor as void (*)(void *). We
     // must match that if function pointers can be authenticated with a
     // discriminator based on their type.
     assert(!cir::MissingFeatures::pointerAuthentication());
     CXXDestructorDecl *dtorD = cxxrd->getDestructor();
-    dtor = mlir::FlatSymbolRefAttr::get(
-        cgm.getAddrOfCXXStructor(GlobalDecl(dtorD, Dtor_Complete))
-            .getSymNameAttr());
+    cir::FuncOp dtorFunc =
+        cgm.getAddrOfCXXStructor(GlobalDecl(dtorD, Dtor_Complete));
+    cir::PointerType dtorFuncPtrTy =
+        builder.getPointerTo(dtorFunc.getFunctionType());
+    dtor = cir::GetGlobalOp::create(builder, subExprLoc, dtorFuncPtrTy,
+                                    dtorFunc.getSymName());
+    dtor = builder.createBitcast(dtor, dtorTy);
   }
 
   // Now throw the exception.
   mlir::Location loc = cgf.getLoc(e->getSourceRange());
-  insertThrowAndSplit(builder, loc, exceptionPtr, typeInfo.getSymbol(), dtor);
+  insertThrowAndSplit(builder, loc, exceptionPtr, typeInfo, dtor);
 }
 
 CIRGenCXXABI *clang::CIRGen::CreateCIRGenItaniumCXXABI(CIRGenModule &cgm) {

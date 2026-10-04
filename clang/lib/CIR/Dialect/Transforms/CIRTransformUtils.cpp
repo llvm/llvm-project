@@ -124,8 +124,8 @@ mlir::Block *cir::replaceThrowWithTryThrow(cir::ThrowOp throwOp,
   // Build the try_throw to replace the original throw.
   rewriter.setInsertionPoint(throwOp);
   auto tryThrowOp = cir::TryThrowOp::create(
-      rewriter, loc, throwOp.getExceptionPtr(), throwOp.getTypeInfoAttr(),
-      throwOp.getDtorAttr(), normalDest, unwindDest);
+      rewriter, loc, throwOp.getExceptionPtr(), throwOp.getTypeInfo(),
+      throwOp.getDtor(), normalDest, unwindDest);
 
   // The shared inherent state is already set by TryThrowOp::create. Preserve
   // only auxiliary metadata here.

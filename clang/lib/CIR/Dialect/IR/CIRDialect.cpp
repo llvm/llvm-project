@@ -13,6 +13,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
@@ -4910,16 +4911,43 @@ void InlineAsmOp::getEffects(
 
 template <typename ThrowOpTy>
 static mlir::LogicalResult verifyThrowOpImpl(ThrowOpTy op) {
-  if (op.rethrows())
+  bool hasExceptionPtr = static_cast<bool>(op.getExceptionPtr());
+  bool hasTypeInfo = static_cast<bool>(op.getTypeInfo());
+  bool hasDtor = static_cast<bool>(op.getDtor());
+
+  if (!hasExceptionPtr && !hasTypeInfo && !hasDtor)
     return mlir::success();
 
-  if (op.getNumOperands() != 0) {
-    if (op.getTypeInfo())
-      return mlir::success();
-    return op.emitOpError() << "'type_info' symbol attribute missing";
-  }
+  if (!hasExceptionPtr || !hasTypeInfo || !hasDtor)
+    return op.emitOpError()
+           << "must have either no operands for a rethrow or exception, "
+              "type_info, and destructor pointer operands for a throw";
 
-  return mlir::failure();
+  auto module = op->template getParentOfType<mlir::ModuleOp>();
+  if (!module)
+    return op.emitOpError("expects an enclosing module");
+
+  cir::CIRDataLayout dataLayout(module);
+  auto defaultAddrSpace = dataLayout.getDefaultAddrSpace(op.getContext());
+  auto globalAddrSpace = dataLayout.getGlobalAddrSpace(op.getContext());
+
+  auto getAddrSpace = [](mlir::Value operand) {
+    return mlir::cast<cir::PointerType>(operand.getType()).getAddrSpace();
+  };
+
+  if (getAddrSpace(op.getExceptionPtr()) != defaultAddrSpace)
+    return op.emitOpError(
+        "exception pointer must use the module's default address space");
+
+  if (getAddrSpace(op.getTypeInfo()) != globalAddrSpace)
+    return op.emitOpError(
+        "type_info pointer must use the module's global address space");
+
+  if (getAddrSpace(op.getDtor()) != defaultAddrSpace)
+    return op.emitOpError(
+        "destructor pointer must use the module's default address space");
+
+  return mlir::success();
 }
 
 mlir::LogicalResult cir::ThrowOp::verify() { return verifyThrowOpImpl(*this); }

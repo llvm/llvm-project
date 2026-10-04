@@ -4719,29 +4719,19 @@ mlir::LogicalResult CIRToLLVMThrowOpLowering::matchAndRewrite(
     return mlir::success();
   }
 
-  auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+  mlir::Value exceptionPtr = adaptor.getExceptionPtr();
+  mlir::Value typeInfo = adaptor.getTypeInfo();
+  mlir::Value dtor = adaptor.getDtor();
   auto fnTy = mlir::LLVM::LLVMFunctionType::get(
-      voidTy, {llvmPtrTy, llvmPtrTy, llvmPtrTy});
+      voidTy, {exceptionPtr.getType(), typeInfo.getType(), dtor.getType()});
 
-  // Get or create `declare void @__cxa_throw(ptr, ptr, ptr)`
+  // Get or create the __cxa_throw declaration with the operand pointer types.
   const llvm::StringRef fnName = "__cxa_throw";
   createLLVMFuncOpIfNotExist(rewriter, symbolTables, op, fnName, fnTy);
 
-  mlir::Value typeInfo = mlir::LLVM::AddressOfOp::create(
-      rewriter, loc, mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
-      adaptor.getTypeInfoAttr());
-
-  mlir::Value dtor;
-  if (op.getDtor()) {
-    dtor = mlir::LLVM::AddressOfOp::create(rewriter, loc, llvmPtrTy,
-                                           adaptor.getDtorAttr());
-  } else {
-    dtor = mlir::LLVM::ZeroOp::create(rewriter, loc, llvmPtrTy);
-  }
-
   auto cxaThrowCall = mlir::LLVM::CallOp::create(
       rewriter, loc, mlir::TypeRange{}, fnName,
-      mlir::ValueRange{adaptor.getExceptionPtr(), typeInfo, dtor});
+      mlir::ValueRange{exceptionPtr, typeInfo, dtor});
 
   rewriter.replaceOp(op, cxaThrowCall);
   return mlir::success();
