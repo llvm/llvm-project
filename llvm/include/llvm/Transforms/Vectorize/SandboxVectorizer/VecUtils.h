@@ -19,6 +19,7 @@
 #include "llvm/SandboxIR/Utils.h"
 #include "llvm/Support/Compiler.h"
 #include <iterator>
+#include <numeric>
 
 namespace llvm {
 /// Traits for DenseMap.
@@ -170,6 +171,7 @@ public:
                                         const DataLayout &DL) {
     assert(!Bndl.empty() && "Expected non-empty Bndl!");
     unsigned TotalBits = 0;
+    unsigned GCDBits = 0;
     unsigned MinElmBits = std::numeric_limits<unsigned>::max();
     Type *MinElmTy = nullptr;
     for (T *V : Bndl) {
@@ -177,13 +179,20 @@ public:
 
       unsigned ElmBits = Utils::getNumBits(ElmTy, DL);
       TotalBits += ElmBits * VecUtils::getNumLanes(V);
+      GCDBits = std::gcd(GCDBits, ElmBits);
       if (ElmBits < MinElmBits) {
         MinElmBits = ElmBits;
         MinElmTy = ElmTy;
       }
     }
-    unsigned NumElms = TotalBits / MinElmBits;
-    return FixedVectorType::get(MinElmTy, NumElms);
+    // The GCD is the size of the narrowest type unless it does not divide the
+    // rest, like i24 and i32, in which case no type in Bndl has that size and
+    // we fall back to an integer.
+    Type *VecElmTy = GCDBits == MinElmBits
+                         ? MinElmTy
+                         : IntegerType::get(MinElmTy->getContext(), GCDBits);
+    unsigned NumElms = TotalBits / GCDBits;
+    return FixedVectorType::get(VecElmTy, NumElms);
   }
 
   static Type *getCombinedVectorTypeFor(std::initializer_list<Value *> Bndl,
