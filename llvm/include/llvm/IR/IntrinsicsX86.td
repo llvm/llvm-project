@@ -235,6 +235,19 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_sse_sfence : ClangBuiltin<"__builtin_ia32_sfence">,
               Intrinsic<[], [], []>;
+
+  // Non-temporal store of the second operand to the pointer, as an opaque
+  // operation. It selects the same instructions (MOVNTI, MOVNTPS, MOVNTPD,
+  // MOVNTDQ) as a store with !nontemporal metadata, but like the MOVNTQ,
+  // MOVDIRI and MOVDIR64B intrinsics it has no memory attributes: the
+  // optimizer treats it as a call that may access any memory, not as an
+  // ordinary store. Non-temporal stores are weakly ordered, and how
+  // !nontemporal stores interact with LLVM's memory model and optimizations
+  // is not specified (see #64521), so this gives frontends a defined
+  // alternative to inline assembly. Ordering it with other threads still
+  // needs an SFENCE. A vector store requires the pointer to be aligned to the
+  // vector's size.
+  def int_x86_movnt : Intrinsic<[], [llvm_ptr_ty, llvm_any_ty], []>;
 }
 
 // Control register.

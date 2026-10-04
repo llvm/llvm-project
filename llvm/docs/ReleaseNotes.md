@@ -302,6 +302,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Added assembler and code generation support for the `AVX10_V2_AUX`
   instruction set.
+* Added the `llvm.x86.movnt` intrinsic: a non-temporal store (`MOVNTI`,
+  `MOVNTPS`, `MOVNTPD` or `MOVNTDQ`) that is not optimized as an ordinary
+  store, like the existing `MOVNTQ`, `MOVDIRI` and `MOVDIR64B` intrinsics.
 
 ### Changes to the OCaml bindings
 
