@@ -6304,6 +6304,12 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
   if (DL->getTypeSizeInBits(ScalarTy) != DL->getTypeAllocSizeInBits(ScalarTy))
     return LoadsState::Gather;
 
+  // The undef lanes are covered by a single wide load of the consecutive loads.
+  if (any_of(VL, IsaPred<UndefValue>))
+    return canWidenLoadsOverUndefLanes(VL, *DL, *SE, *AC, *DT, *TLI)
+               ? LoadsState::Vectorize
+               : LoadsState::Gather;
+
   // Make sure all loads in the bundle are simple - we can't vectorize
   // atomic or volatile loads.
   PointerOps.clear();
@@ -10758,9 +10764,11 @@ class InstructionsCompatibilityAnalysis {
   /// instruction and its actual operands should be returned, or it is a
   /// copyable element and its should be represented as idempotent instruction.
   /// \p SelfOp selects the op(V, V) modeling for a copyable lane instead of
-  /// op(V, identity).
+  /// op(V, identity). \p UndefPlaceholder selects op(V, undef) for the
+  /// absorbing constant V.
   SmallVector<Value *> getOperands(const InstructionsState &S, Value *V,
-                                   bool SelfOp) const {
+                                   bool SelfOp,
+                                   bool UndefPlaceholder = false) const {
     if (SelfOp)
       return {V, V};
     if (isa<PoisonValue>(V)) {
@@ -10802,7 +10810,35 @@ class InstructionsCompatibilityAnalysis {
       return {ConstantExpr::getTrunc(cast<Constant>(V),
                                      cast<CastInst>(MainOp)->getSrcTy())};
     assert(isSupportedMainOp(MainOp) && "Unsupported opcode");
+    Type *Ty = V->getType();
+    if (UndefPlaceholder && V == ConstantExpr::getBinOpAbsorber(MainOpcode, Ty))
+      return {V, UndefValue::get(Ty)};
+    if (isa<UndefValue>(V) && isUndefTolerantBinOp(MainOp))
+      return {V, V};
     return {V, selectBestIdempotentValue()};
+  }
+
+  /// Checks if the lanes with the absorbing constant may use undef as the other
+  /// operand: the other operands of the remaining lanes are the binary
+  /// operators of the different loads, whose undef lane is covered by the wide
+  /// load.
+  bool canUseUndefPlaceholders(const InstructionsState &S,
+                               ArrayRef<Value *> VL) const {
+    Constant *Absorber =
+        ConstantExpr::getBinOpAbsorber(MainOpcode, VL.front()->getType());
+    if (!Absorber || !is_contained(VL, Absorber))
+      return false;
+    SmallPtrSet<const LoadInst *, 8> Loads;
+    return all_of(VL, [&](Value *V) {
+      if (isa<PoisonValue>(V) || S.isCopyableElement(V))
+        return true;
+      SmallVector<Value *> Ops = convertTo(cast<Instruction>(V), S).second;
+      return count_if(Ops, IsaPred<Constant>) == 1 &&
+             any_of(Ops, [&](Value *Op) {
+               const LoadInst *LI = getLoadOfUndefTolerantBinOp(Op);
+               return LI && Loads.insert(LI).second;
+             });
+    });
   }
 
   /// Returns the copyable lanes of an idempotent binop to be modeled as
@@ -11278,6 +11314,18 @@ public:
       if (SelectOp)
         return InstructionsState(SelectOp, SelectOp);
     }
+    // The undef lanes among the loads are the copyable elements, covered by a
+    // single wide load.
+    if (!S && VectorizeCopyableElements &&
+        all_of(VL, IsaPred<LoadInst, UndefValue>) && any_of(VL, [](Value *V) {
+          return isa<UndefValue>(V) && !isa<PoisonValue>(V);
+        })) {
+      SmallVector<Value *> Loads(make_isa_range<LoadInst>(VL));
+      if (Loads.size() > 1 && allSameBlock(Loads)) {
+        auto *LI = cast<LoadInst>(Loads.front());
+        return InstructionsState(LI, LI, /*HasCopyables=*/true);
+      }
+    }
     if (S && S.isAltShuffle()) {
       Type *ScalarTy = S.getMainOp()->getType();
       auto *VecTy = cast<VectorType>(getWidenedType(ScalarTy, VL.size()));
@@ -11548,6 +11596,11 @@ public:
                         BoUpSLP::ValueList(VL.size(), MainOp->getOperand(0)));
         return Operands;
       }
+      // The undef lanes of the loads have no pointer operands.
+      if (MainOpcode == Instruction::Load) {
+        buildOriginalOperands(S, VL, Operands);
+        return Operands;
+      }
       // Excludes the trailing callee operand (2 for min/max, 3 for fmuladd).
       // getNumberOfPotentiallyCommutativeOps collapses fmuladd to 2 and must
       // not be used here. Only the 2-operand case is commutative-normalized.
@@ -11559,10 +11612,11 @@ public:
       Operands.assign(NumMainOpOperands,
                       BoUpSLP::ValueList(VL.size(), nullptr));
       SmallPtrSet<const Value *, 4> SelfOpLanes = findSelfOpLanes(S, VL, R);
+      const bool UndefPlaceholders = canUseUndefPlaceholders(S, VL);
       // Populate operands for every lane.
       for (auto [Idx, V] : enumerate(VL)) {
         SmallVector<Value *> OperandsForValue =
-            getOperands(S, V, SelfOpLanes.contains(V));
+            getOperands(S, V, SelfOpLanes.contains(V), UndefPlaceholders);
         for (auto [OperandIdx, Operand] : enumerate(OperandsForValue))
           Operands[OperandIdx][Idx] = Operand;
       }
@@ -14744,7 +14798,7 @@ void BoUpSLP::transformNodes() {
     case Instruction::Load: {
       // No need to reorder masked gather loads, just reorder the scalar
       // operands.
-      if (E.State != TreeEntry::Vectorize)
+      if (E.State != TreeEntry::Vectorize || E.hasCopyableElements())
         break;
       Type *ScalarTy = E.getMainOp()->getType();
       auto *VecTy =
@@ -17623,7 +17677,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
 
         } else {
           VecLdCost = TTI->getMemoryOpCost(
-              Instruction::Load, VecTy, LI0->getAlign(),
+              Instruction::Load, VecTy,
+              commonAlignment(LI0->getAlign(), getVectorLoadShift(E->Scalars)),
               LI0->getPointerAddressSpace(), CostKind,
               TTI::getOperandInfo(LI0->getPointerOperand()));
         }
@@ -17726,9 +17781,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       return Cost;
 
     // Estimate cost of GEPs since this tree node is a terminator.
-    SmallVector<Value *> PointerOps(VL.size());
-    for (auto [I, V] : enumerate(VL))
-      PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
+    SmallVector<Value *> PointerOps;
+    for (LoadInst *LI : make_isa_range<LoadInst>(VL))
+      PointerOps.push_back(LI->getPointerOperand());
     return Cost + GetGEPCostDiff(PointerOps, LI0->getPointerOperand());
   }
   case Instruction::Store: {
@@ -24008,18 +24063,29 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (!AllNoInfs)
         I->setHasNoInfs(false);
     }
-    // Copyable lanes modeled as op(V, V) do not preserve the disjoint flag:
-    // or disjoint(V, V) is poison unless V is zero. Matched by value, so
-    // operand reordering does not affect the detection.
+    // Copyable lanes modeled as op(V, V) or op(V, undef) do not preserve the
+    // disjoint flag: or disjoint(V, V) is poison unless V is zero, and the
+    // undef operand may be any value. Matched by value, so operand reordering
+    // does not affect the detection.
     auto *PDI = dyn_cast<PossiblyDisjointInst>(I);
     if (E->hasCopyableElements() && PDI &&
         any_of(enumerate(E->Scalars), [&](const auto &P) {
           Value *Scalar = P.value();
+          auto IsScalarOrUndef = [Scalar](Value *Op) {
+            return Op == Scalar || isa<UndefValue>(Op);
+          };
           return E->isCopyableElement(Scalar) && !match(Scalar, m_Zero()) &&
-                 E->getOperand(0)[P.index()] == Scalar &&
-                 E->getOperand(1)[P.index()] == Scalar;
+                 IsScalarOrUndef(E->getOperand(0)[P.index()]) &&
+                 IsScalarOrUndef(E->getOperand(1)[P.index()]);
         }))
       PDI->setIsDisjoint(false);
+    // The undef copyable lanes are modeled as op(undef, undef), which must not
+    // overflow into poison.
+    if (E->hasCopyableElements() && isUndefTolerantBinOp(I) &&
+        any_of(E->Scalars, [&](Value *Scalar) {
+          return isa<UndefValue>(Scalar) && E->isCopyableElement(Scalar);
+        }))
+      I->dropPoisonGeneratingFlags();
     // Drop nuw flags for abs(sub(commutative), true).
     if (!MinBWs.contains(E) && Opcode == Instruction::Sub &&
         (E->hasCopyableElements() || any_of(Scalars, [](Value *Scalar) {
@@ -24663,6 +24729,24 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     case Instruction::Xor: {
       setInsertPointAfterBundle(E);
 
+      // The lanes with the absorbing constant use undef as the other operand.
+      // Freeze the operand, if it may be poison, to keep these lanes equal to
+      // the constant.
+      auto FreezeUndefPlaceholders = [&](Value *Op, unsigned OpIdx) {
+        if (!E->hasCopyableElements() ||
+            none_of(zip(E->Scalars, E->getOperand(OpIdx)),
+                    [&](const auto &P) {
+                      auto [Scalar, OpScalar] = P;
+                      return E->isCopyableElement(Scalar) &&
+                             !isa<UndefValue>(Scalar) &&
+                             isa<UndefValue>(OpScalar) &&
+                             !isa<PoisonValue>(OpScalar);
+                    }) ||
+            isGuaranteedNotToBePoison(Op, AC))
+          return Op;
+        return Builder.CreateFreeze(Op);
+      };
+
       if (E->hasReassocScalars()) {
         // Vectorize operand columns, then combine pairwise in a balanced
         // tree; negated columns (flattened subtracts) are subtracted from
@@ -24713,7 +24797,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             continue;
           const bool Negated = E->isReassocNegatedOp(Idx);
           (Negated ? NegOps : Ops)
-              .push_back(GetCastOperand(Idx, vectorizeOperand(E, Idx)));
+              .push_back(GetCastOperand(
+                  Idx, FreezeUndefPlaceholders(vectorizeOperand(E, Idx), Idx)));
           (Negated ? NegScalarOps : ScalarOps)
               .emplace_back(E->getOperand(Idx).begin(),
                             E->getOperand(Idx).end());
@@ -24870,6 +24955,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           }
         }
       }
+      LHS = FreezeUndefPlaceholders(LHS, 0);
+      RHS = FreezeUndefPlaceholders(RHS, 1);
       if (LHS->getType() != VecTy || RHS->getType() != VecTy) {
         assert((It != MinBWs.end() || getOperandEntry(E, 0)->isGather() ||
                 getOperandEntry(E, 1)->isGather() ||
@@ -24931,7 +25018,13 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       FixedVectorType *StridedLoadTy = nullptr;
       Value *PO = LI->getPointerOperand();
       if (E->State == TreeEntry::Vectorize) {
-        NewLI = Builder.CreateAlignedLoad(VecTy, PO, LI->getAlign());
+        const uint64_t Shift = getVectorLoadShift(E->Scalars);
+        if (Shift)
+          PO = Builder.CreatePtrAdd(
+              PO, ConstantInt::getSigned(DL->getIndexType(PO->getType()),
+                                         -static_cast<int64_t>(Shift)));
+        NewLI = Builder.CreateAlignedLoad(
+            VecTy, PO, commonAlignment(LI->getAlign(), Shift));
       } else if (E->State == TreeEntry::CompressVectorize) {
         auto [CompressMask, LoadVecTy, InterleaveFactor, IsMasked] =
             CompressEntryToData.at(E);
@@ -25048,13 +25141,20 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         Align CommonAlignment = computeCommonAlignment<LoadInst>(E->Scalars);
         NewLI = Builder.CreateMaskedGather(VecTy, VecPtr, CommonAlignment);
       }
+      // The wide load also reads the memory of the undef lanes, so the metadata
+      // of the scalar loads does not apply.
       Value *V = (E->State == TreeEntry::CompressVectorize ||
-                  E->State == TreeEntry::BlendedLoadVectorize)
+                  E->State == TreeEntry::BlendedLoadVectorize ||
+                  E->hasCopyableElements())
                      ? NewLI
                      : PropagateIRFlags(NewLI);
 
       if (StridedLoadTy != VecTy)
         V = Builder.CreateBitOrPointerCast(V, VecTy);
+      // The memory of the undef lanes may hold poison, but the lanes must not
+      // be poison.
+      if (E->hasCopyableElements())
+        V = Builder.CreateFreeze(V);
       V = FinalShuffle(V, E);
       E->VectorizedValue = V;
       ++NumVectorInstructions;

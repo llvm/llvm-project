@@ -45,6 +45,21 @@ bool isBinOpIdentityConstant(const Value *V, unsigned Opcode) {
   return CI && ConstantExpr::getBinOpIdentity(Opcode, CI->getType()) == CI;
 }
 
+bool isUndefTolerantBinOp(const Value *V) {
+  const BinaryOperator *BO;
+  return match(V, m_BinOp(BO)) && BO->getType()->isIntOrIntVectorTy() &&
+         !BO->isShift() && !BO->isIntDivRem();
+}
+
+const LoadInst *getLoadOfUndefTolerantBinOp(const Value *V) {
+  if (!isUndefTolerantBinOp(V))
+    return nullptr;
+  for (const Value *Op : cast<BinaryOperator>(V)->operands())
+    if (const auto *LI = dyn_cast<LoadInst>(Op))
+      return LI;
+  return nullptr;
+}
+
 unsigned getReassocCombineOpcode(unsigned Opcode) {
   switch (Opcode) {
   case Instruction::Sub:
