@@ -1407,25 +1407,45 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
   // the value's type) unconditionally within the loop header without
   // introducing a new fault.
   SmallPtrSet<Value *, 8> SafePointers;
+  ScalarEvolution &SE = *PSE.getSE();
+  DenseMap<std::pair<const SCEV *, Type *>, Instruction *> SafeAccesses;
 
   // Collect safe addresses.
   for (BasicBlock *BB : TheLoop->blocks()) {
     if (!blockNeedsPredication(BB)) {
-      for (Instruction &I : *BB)
-        if (auto *Ptr = getLoadStorePointerOperand(&I))
-          SafePointers.insert(Ptr);
-      continue;
+      for (Instruction &I : *BB) {
+        auto *Ptr = getLoadStorePointerOperand(&I);
+        if (!Ptr)
+          continue;
+        SafePointers.insert(Ptr);
+        bool IsSimple = isa<LoadInst>(I) ? cast<LoadInst>(I).isSimple()
+                                         : cast<StoreInst>(I).isSimple();
+        Type *Ty = getLoadStoreType(&I);
+        if (!IsSimple || Ty->isVectorTy())
+          continue;
+        auto Key = std::make_pair(SE.getSCEV(Ptr), Ty);
+        auto [It, Inserted] = SafeAccesses.try_emplace(Key, &I);
+        if (!Inserted &&
+            getLoadStoreAlignment(&I) > getLoadStoreAlignment(It->second))
+          It->second = &I;
+      }
     }
+  }
+
+  for (BasicBlock *BB : TheLoop->blocks()) {
+    if (!blockNeedsPredication(BB))
+      continue;
 
     // For a block which requires predication, a address may be safe to access
     // in the loop w/o predication if we can prove dereferenceability facts
     // sufficient to ensure it'll never fault within the loop. For the moment,
     // we restrict this to loads; stores are more complicated due to
     // concurrency restrictions.
-    ScalarEvolution &SE = *PSE.getSE();
     SmallVector<const SCEVPredicate *, 4> Predicates;
     for (Instruction &I : *BB) {
       LoadInst *LI = dyn_cast<LoadInst>(&I);
+      if (!LI || SafePointers.contains(LI->getPointerOperand()))
+        continue;
 
       // Make sure we can execute all computations feeding into Ptr in the loop
       // w/o triggering UB and that none of the out-of-loop operands are poison.
@@ -1434,7 +1454,14 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
       // because flags will be dropped when executing them unconditionally.
       // TODO: Results could be improved by considering poison-propagation
       // properties of visited ops.
-      auto CanSpeculatePointerOp = [this](Value *Ptr) {
+      auto CanSpeculatePointerOp = [this](Value *Ptr, Value *KnownSafePtr) {
+        auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+        auto *SafeGEP = dyn_cast_or_null<GetElementPtrInst>(KnownSafePtr);
+        // Identical operands and flags inherit the unconditional access's
+        // non-poison guarantee, including operands defined outside the loop.
+        if (GEP && SafeGEP && GEP->isIdenticalTo(SafeGEP))
+          return true;
+
         SmallVector<Value *> Worklist = {Ptr};
         SmallPtrSet<Value *, 4> Visited;
         while (!Worklist.empty()) {
@@ -1471,11 +1498,21 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
       // Pass the Predicates pointer to isDereferenceableAndAlignedInLoop so
       // that it will consider loops that need guarding by SCEV checks. The
       // vectoriser will generate these checks if we decide to vectorise.
-      if (LI && !LI->getType()->isVectorTy() && !mustSuppressSpeculation(*LI) &&
-          CanSpeculatePointerOp(LI->getPointerOperand()) &&
-          isDereferenceableAndAlignedInLoop(LI, TheLoop, SE, *DT, AC,
-                                            &Predicates))
-        SafePointers.insert(LI->getPointerOperand());
+      if (!LI->getType()->isVectorTy() && !mustSuppressSpeculation(*LI)) {
+        // Equivalent pointers need not be represented by the same SSA value.
+        // Require the same access type and sufficient alignment.
+        auto It = SafeAccesses.find(
+            {SE.getSCEV(LI->getPointerOperand()), LI->getType()});
+        bool HasSafeAccess =
+            LI->isSimple() && It != SafeAccesses.end() &&
+            getLoadStoreAlignment(It->second) >= LI->getAlign();
+        Value *KnownSafePtr =
+            HasSafeAccess ? getLoadStorePointerOperand(It->second) : nullptr;
+        if (CanSpeculatePointerOp(LI->getPointerOperand(), KnownSafePtr) &&
+            (HasSafeAccess || isDereferenceableAndAlignedInLoop(
+                                  LI, TheLoop, SE, *DT, AC, &Predicates)))
+          SafePointers.insert(LI->getPointerOperand());
+      }
       Predicates.clear();
     }
   }
