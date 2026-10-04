@@ -290,8 +290,8 @@ define <3 x half> @test_fmin_legacy_ule_v3f16_fast(<3 x half> %a, <3 x half> %b)
 ; GFX9-LABEL: test_fmin_legacy_ule_v3f16_fast:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_min_f16 v1, v1, v3
 ; GFX9-NEXT:    v_pk_min_f16 v0, v0, v2
+; GFX9-NEXT:    v_pk_min_f16 v1, v1, v3
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: test_fmin_legacy_ule_v3f16_fast:
