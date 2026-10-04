@@ -483,7 +483,11 @@ BitcodeReaderBase::readNameFromStrtab(ArrayRef<uint64_t> Record) {
   if (!UseStrtab)
     return {"", Record};
   // Invalid reference. Let the caller complain about the record being empty.
-  if (Record[0] + Record[1] > Strtab.size())
+  // Both values are read from the file. Compare without adding them: the sum
+  // wraps for a large strtab_offset, which would pass this check and yield a
+  // StringRef pointing outside the string table.
+  if (Record.size() < 2 || Record[0] > Strtab.size() ||
+      Record[1] > Strtab.size() - Record[0])
     return {"", {}};
   return {StringRef(Strtab.data() + Record[0], Record[1]), Record.slice(2)};
 }
