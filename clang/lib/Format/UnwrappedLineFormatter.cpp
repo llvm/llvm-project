@@ -282,6 +282,16 @@ private:
         return MergedLines;
     }
 
+    // Optionally merge preceding `break` or `[[fallthrough]]` with case label
+    // when at compatible levels, preserving label's indent.
+    if (Style.CompactCaseLabels &&
+        NextLine.First->isOneOf(tok::kw_case, tok::kw_default) &&
+        endsWithKwBreakOrFallthrough(TheLine) &&
+        TheLine->Level <= NextLine.Level + 1) {
+      IndentTracker.nextLine(NextLine);
+      return 1;
+    }
+
     const auto *PreviousLine = I != AnnotatedLines.begin() ? I[-1] : nullptr;
 
     // Handle blocks where the brace has already been wrapped.
@@ -662,6 +672,12 @@ private:
     }
 
     return 0;
+  }
+
+  static bool endsWithKwBreakOrFallthrough(const AnnotatedLine *Line) {
+    return (Line->endsWith(tok::semi, tok::kw_break)) ||
+           (Line->startsWith(TT_AttributeLSquare) &&
+            Line->endsWith(tok::semi, TT_AttributeRSquare));
   }
 
   unsigned
