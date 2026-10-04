@@ -17,40 +17,99 @@ define amdgpu_kernel void @dotconv(ptr addrspace(1) noalias readonly align 4 %in
 ; CHECK-NEXT:    [[SEXT_I:%.*]] = shl i64 [[CALL_I]], 32
 ; CHECK-NEXT:    [[IDX_EXT_I:%.*]] = ashr exact i64 [[SEXT_I]], 32
 ; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds [4 x i8], ptr addrspace(1) [[IN]], i64 [[IDX_EXT_I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr addrspace(1) [[ADD_PTR_I]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x float>, ptr addrspace(1) [[MASK]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul contract <16 x float> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[MUL_I:%.*]] = extractelement <16 x float> [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(1) [[ADD_PTR_I]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[MASK]], align 4
+; CHECK-NEXT:    [[MUL_I:%.*]] = fmul contract float [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[ADD_I:%.*]] = fadd contract float [[MUL_I]], 0.000000e+00
-; CHECK-NEXT:    [[MUL_I_1:%.*]] = extractelement <16 x float> [[TMP2]], i64 1
+; CHECK-NEXT:    [[ARRAYIDX_I_1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[ADD_PTR_I]], i64 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX_I_1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3_I_1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[MASK]], i64 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX3_I_1]], align 4
+; CHECK-NEXT:    [[MUL_I_1:%.*]] = fmul contract float [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[ADD_I_1:%.*]] = fadd contract float [[ADD_I]], [[MUL_I_1]]
-; CHECK-NEXT:    [[MUL_I_2:%.*]] = extractelement <16 x float> [[TMP2]], i64 2
+; CHECK-NEXT:    [[ARRAYIDX_I_2:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[ADD_PTR_I]], i64 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX_I_2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3_I_2:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[MASK]], i64 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX3_I_2]], align 4
+; CHECK-NEXT:    [[MUL_I_2:%.*]] = fmul contract float [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[ADD_I_2:%.*]] = fadd contract float [[ADD_I_1]], [[MUL_I_2]]
-; CHECK-NEXT:    [[MUL_I_3:%.*]] = extractelement <16 x float> [[TMP2]], i64 3
+; CHECK-NEXT:    [[ARRAYIDX_I_3:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[ADD_PTR_I]], i64 12
+; CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX_I_3]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3_I_3:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[MASK]], i64 12
+; CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX3_I_3]], align 4
+; CHECK-NEXT:    [[MUL_I_3:%.*]] = fmul contract float [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    [[ADD_I_3:%.*]] = fadd contract float [[ADD_I_2]], [[MUL_I_3]]
-; CHECK-NEXT:    [[MUL_I_4:%.*]] = extractelement <16 x float> [[TMP2]], i64 4
+; CHECK-NEXT:    [[ARRAYIDX_I_4:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[ADD_PTR_I]], i64 16
+; CHECK-NEXT:    [[TMP8:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX_I_4]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3_I_4:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[MASK]], i64 16
+; CHECK-NEXT:    [[TMP9:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX3_I_4]], align 4
+; CHECK-NEXT:    [[MUL_I_4:%.*]] = fmul contract float [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    [[ADD_I_4:%.*]] = fadd contract float [[ADD_I_3]], [[MUL_I_4]]
-; CHECK-NEXT:    [[MUL_I_5:%.*]] = extractelement <16 x float> [[TMP2]], i64 5
+; CHECK-NEXT:    [[ARRAYIDX_I_5:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[ADD_PTR_I]], i64 20
+; CHECK-NEXT:    [[TMP10:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX_I_5]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3_I_5:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[MASK]], i64 20
+; CHECK-NEXT:    [[TMP11:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX3_I_5]], align 4
+; CHECK-NEXT:    [[MUL_I_5:%.*]] = fmul contract float [[TMP10]], [[TMP11]]
 ; CHECK-NEXT:    [[ADD_I_5:%.*]] = fadd contract float [[ADD_I_4]], [[MUL_I_5]]
-; CHECK-NEXT:    [[MUL_I_6:%.*]] = extractelement <16 x float> [[TMP2]], i64 6
+; CHECK-NEXT:    [[ARRAYIDX_I_6:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[ADD_PTR_I]], i64 24
+; CHECK-NEXT:    [[TMP12:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX_I_6]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3_I_6:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[MASK]], i64 24
+; CHECK-NEXT:    [[TMP13:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX3_I_6]], align 4
+; CHECK-NEXT:    [[MUL_I_6:%.*]] = fmul contract float [[TMP12]], [[TMP13]]
 ; CHECK-NEXT:    [[ADD_I_6:%.*]] = fadd contract float [[ADD_I_5]], [[MUL_I_6]]
-; CHECK-NEXT:    [[MUL_I_7:%.*]] = extractelement <16 x float> [[TMP2]], i64 7
+; CHECK-NEXT:    [[ARRAYIDX_I_7:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[ADD_PTR_I]], i64 28
+; CHECK-NEXT:    [[TMP14:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX_I_7]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3_I_7:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[MASK]], i64 28
+; CHECK-NEXT:    [[TMP15:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX3_I_7]], align 4
+; CHECK-NEXT:    [[MUL_I_7:%.*]] = fmul contract float [[TMP14]], [[TMP15]]
 ; CHECK-NEXT:    [[ADD_I_7:%.*]] = fadd contract float [[ADD_I_6]], [[MUL_I_7]]
-; CHECK-NEXT:    [[MUL_I_8:%.*]] = extractelement <16 x float> [[TMP2]], i64 8
+; CHECK-NEXT:    [[ARRAYIDX_I_8:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[ADD_PTR_I]], i64 32
+; CHECK-NEXT:    [[TMP16:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX_I_8]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3_I_8:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[MASK]], i64 32
+; CHECK-NEXT:    [[TMP17:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX3_I_8]], align 4
+; CHECK-NEXT:    [[MUL_I_8:%.*]] = fmul contract float [[TMP16]], [[TMP17]]
 ; CHECK-NEXT:    [[ADD_I_8:%.*]] = fadd contract float [[ADD_I_7]], [[MUL_I_8]]
-; CHECK-NEXT:    [[MUL_I_9:%.*]] = extractelement <16 x float> [[TMP2]], i64 9
+; CHECK-NEXT:    [[ARRAYIDX_I_9:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[ADD_PTR_I]], i64 36
+; CHECK-NEXT:    [[TMP18:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX_I_9]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3_I_9:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[MASK]], i64 36
+; CHECK-NEXT:    [[TMP19:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX3_I_9]], align 4
+; CHECK-NEXT:    [[MUL_I_9:%.*]] = fmul contract float [[TMP18]], [[TMP19]]
 ; CHECK-NEXT:    [[ADD_I_9:%.*]] = fadd contract float [[ADD_I_8]], [[MUL_I_9]]
-; CHECK-NEXT:    [[MUL_I_10:%.*]] = extractelement <16 x float> [[TMP2]], i64 10
+; CHECK-NEXT:    [[ARRAYIDX_I_10:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[ADD_PTR_I]], i64 40
+; CHECK-NEXT:    [[TMP20:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX_I_10]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3_I_10:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[MASK]], i64 40
+; CHECK-NEXT:    [[TMP21:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX3_I_10]], align 4
+; CHECK-NEXT:    [[MUL_I_10:%.*]] = fmul contract float [[TMP20]], [[TMP21]]
 ; CHECK-NEXT:    [[ADD_I_10:%.*]] = fadd contract float [[ADD_I_9]], [[MUL_I_10]]
-; CHECK-NEXT:    [[MUL_I_11:%.*]] = extractelement <16 x float> [[TMP2]], i64 11
+; CHECK-NEXT:    [[ARRAYIDX_I_11:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[ADD_PTR_I]], i64 44
+; CHECK-NEXT:    [[TMP22:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX_I_11]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3_I_11:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[MASK]], i64 44
+; CHECK-NEXT:    [[TMP23:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX3_I_11]], align 4
+; CHECK-NEXT:    [[MUL_I_11:%.*]] = fmul contract float [[TMP22]], [[TMP23]]
 ; CHECK-NEXT:    [[ADD_I_11:%.*]] = fadd contract float [[ADD_I_10]], [[MUL_I_11]]
-; CHECK-NEXT:    [[MUL_I_12:%.*]] = extractelement <16 x float> [[TMP2]], i64 12
+; CHECK-NEXT:    [[ARRAYIDX_I_12:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[ADD_PTR_I]], i64 48
+; CHECK-NEXT:    [[TMP24:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX_I_12]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3_I_12:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[MASK]], i64 48
+; CHECK-NEXT:    [[TMP25:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX3_I_12]], align 4
+; CHECK-NEXT:    [[MUL_I_12:%.*]] = fmul contract float [[TMP24]], [[TMP25]]
 ; CHECK-NEXT:    [[ADD_I_12:%.*]] = fadd contract float [[ADD_I_11]], [[MUL_I_12]]
-; CHECK-NEXT:    [[MUL_I_13:%.*]] = extractelement <16 x float> [[TMP2]], i64 13
+; CHECK-NEXT:    [[ARRAYIDX_I_13:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[ADD_PTR_I]], i64 52
+; CHECK-NEXT:    [[TMP26:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX_I_13]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3_I_13:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[MASK]], i64 52
+; CHECK-NEXT:    [[TMP27:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX3_I_13]], align 4
+; CHECK-NEXT:    [[MUL_I_13:%.*]] = fmul contract float [[TMP26]], [[TMP27]]
 ; CHECK-NEXT:    [[ADD_I_13:%.*]] = fadd contract float [[ADD_I_12]], [[MUL_I_13]]
-; CHECK-NEXT:    [[MUL_I_14:%.*]] = extractelement <16 x float> [[TMP2]], i64 14
+; CHECK-NEXT:    [[ARRAYIDX_I_14:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[ADD_PTR_I]], i64 56
+; CHECK-NEXT:    [[TMP28:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX_I_14]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3_I_14:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[MASK]], i64 56
+; CHECK-NEXT:    [[TMP29:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX3_I_14]], align 4
+; CHECK-NEXT:    [[MUL_I_14:%.*]] = fmul contract float [[TMP28]], [[TMP29]]
 ; CHECK-NEXT:    [[ADD_I_14:%.*]] = fadd contract float [[ADD_I_13]], [[MUL_I_14]]
-; CHECK-NEXT:    [[MUL_I_15:%.*]] = extractelement <16 x float> [[TMP2]], i64 15
+; CHECK-NEXT:    [[ARRAYIDX_I_15:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[ADD_PTR_I]], i64 60
+; CHECK-NEXT:    [[TMP30:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX_I_15]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3_I_15:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[MASK]], i64 60
+; CHECK-NEXT:    [[TMP31:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX3_I_15]], align 4
+; CHECK-NEXT:    [[MUL_I_15:%.*]] = fmul contract float [[TMP30]], [[TMP31]]
 ; CHECK-NEXT:    [[ADD_I_15:%.*]] = fadd contract float [[ADD_I_14]], [[MUL_I_15]]
 ; CHECK-NEXT:    [[ARRAYIDX5_I:%.*]] = getelementptr inbounds [4 x i8], ptr addrspace(1) [[OUT]], i64 [[IDX_EXT_I]]
 ; CHECK-NEXT:    store float [[ADD_I_15]], ptr addrspace(1) [[ARRAYIDX5_I]], align 4
@@ -167,70 +226,36 @@ declare i64 @_Z13get_global_idj(i32 noundef)
 ; coalesced loads and stay scalar too.
 
 define float @dot_i16_window(ptr addrspace(1) %a, ptr addrspace(1) %b, float %acc) {
-; GFX9-LABEL: define float @dot_i16_window(
-; GFX9-SAME: ptr addrspace(1) [[A:%.*]], ptr addrspace(1) [[B:%.*]], float [[ACC:%.*]]) {
-; GFX9-NEXT:  [[ENTRY:.*:]]
-; GFX9-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr addrspace(1) [[A]], align 2
-; GFX9-NEXT:    [[TMP1:%.*]] = sitofp <4 x i16> [[TMP0]] to <4 x float>
-; GFX9-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr addrspace(1) [[B]], align 4
-; GFX9-NEXT:    [[TMP3:%.*]] = fmul contract <4 x float> [[TMP1]], [[TMP2]]
-; GFX9-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP3]], i64 0
-; GFX9-NEXT:    [[S0:%.*]] = fadd contract float [[ACC]], [[TMP4]]
-; GFX9-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP3]], i64 1
-; GFX9-NEXT:    [[S1:%.*]] = fadd contract float [[S0]], [[TMP5]]
-; GFX9-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP3]], i64 2
-; GFX9-NEXT:    [[S2:%.*]] = fadd contract float [[S1]], [[TMP6]]
-; GFX9-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[TMP3]], i64 3
-; GFX9-NEXT:    [[S3:%.*]] = fadd contract float [[S2]], [[TMP7]]
-; GFX9-NEXT:    ret float [[S3]]
-;
-; GFX1030-LABEL: define float @dot_i16_window(
-; GFX1030-SAME: ptr addrspace(1) [[A:%.*]], ptr addrspace(1) [[B:%.*]], float [[ACC:%.*]]) {
-; GFX1030-NEXT:  [[ENTRY:.*:]]
-; GFX1030-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr addrspace(1) [[A]], align 2
-; GFX1030-NEXT:    [[TMP1:%.*]] = sitofp <4 x i16> [[TMP0]] to <4 x float>
-; GFX1030-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr addrspace(1) [[B]], align 4
-; GFX1030-NEXT:    [[TMP3:%.*]] = fmul contract <4 x float> [[TMP1]], [[TMP2]]
-; GFX1030-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP3]], i64 0
-; GFX1030-NEXT:    [[S0:%.*]] = fadd contract float [[ACC]], [[TMP4]]
-; GFX1030-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP3]], i64 1
-; GFX1030-NEXT:    [[S1:%.*]] = fadd contract float [[S0]], [[TMP5]]
-; GFX1030-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP3]], i64 2
-; GFX1030-NEXT:    [[S2:%.*]] = fadd contract float [[S1]], [[TMP6]]
-; GFX1030-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[TMP3]], i64 3
-; GFX1030-NEXT:    [[S3:%.*]] = fadd contract float [[S2]], [[TMP7]]
-; GFX1030-NEXT:    ret float [[S3]]
-;
-; GFX1250-LABEL: define float @dot_i16_window(
-; GFX1250-SAME: ptr addrspace(1) [[A:%.*]], ptr addrspace(1) [[B:%.*]], float [[ACC:%.*]]) {
-; GFX1250-NEXT:  [[ENTRY:.*:]]
-; GFX1250-NEXT:    [[A1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[A]], i64 2
-; GFX1250-NEXT:    [[A2:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[A]], i64 4
-; GFX1250-NEXT:    [[A3:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[A]], i64 6
-; GFX1250-NEXT:    [[B1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[B]], i64 4
-; GFX1250-NEXT:    [[B2:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[B]], i64 8
-; GFX1250-NEXT:    [[B3:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[B]], i64 12
-; GFX1250-NEXT:    [[I0:%.*]] = load i16, ptr addrspace(1) [[A]], align 2
-; GFX1250-NEXT:    [[I1:%.*]] = load i16, ptr addrspace(1) [[A1]], align 2
-; GFX1250-NEXT:    [[I2:%.*]] = load i16, ptr addrspace(1) [[A2]], align 2
-; GFX1250-NEXT:    [[I3:%.*]] = load i16, ptr addrspace(1) [[A3]], align 2
-; GFX1250-NEXT:    [[F0:%.*]] = sitofp i16 [[I0]] to float
-; GFX1250-NEXT:    [[F1:%.*]] = sitofp i16 [[I1]] to float
-; GFX1250-NEXT:    [[F2:%.*]] = sitofp i16 [[I2]] to float
-; GFX1250-NEXT:    [[F3:%.*]] = sitofp i16 [[I3]] to float
-; GFX1250-NEXT:    [[W0:%.*]] = load float, ptr addrspace(1) [[B]], align 4
-; GFX1250-NEXT:    [[W1:%.*]] = load float, ptr addrspace(1) [[B1]], align 4
-; GFX1250-NEXT:    [[W2:%.*]] = load float, ptr addrspace(1) [[B2]], align 4
-; GFX1250-NEXT:    [[W3:%.*]] = load float, ptr addrspace(1) [[B3]], align 4
-; GFX1250-NEXT:    [[M0:%.*]] = fmul contract float [[F0]], [[W0]]
-; GFX1250-NEXT:    [[M1:%.*]] = fmul contract float [[F1]], [[W1]]
-; GFX1250-NEXT:    [[M2:%.*]] = fmul contract float [[F2]], [[W2]]
-; GFX1250-NEXT:    [[M3:%.*]] = fmul contract float [[F3]], [[W3]]
-; GFX1250-NEXT:    [[S0:%.*]] = fadd contract float [[ACC]], [[M0]]
-; GFX1250-NEXT:    [[S1:%.*]] = fadd contract float [[S0]], [[M1]]
-; GFX1250-NEXT:    [[S2:%.*]] = fadd contract float [[S1]], [[M2]]
-; GFX1250-NEXT:    [[S3:%.*]] = fadd contract float [[S2]], [[M3]]
-; GFX1250-NEXT:    ret float [[S3]]
+; CHECK-LABEL: define float @dot_i16_window(
+; CHECK-SAME: ptr addrspace(1) [[A:%.*]], ptr addrspace(1) [[B:%.*]], float [[ACC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[A]], i64 2
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[A]], i64 4
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[A]], i64 6
+; CHECK-NEXT:    [[B1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[B]], i64 4
+; CHECK-NEXT:    [[B2:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[B]], i64 8
+; CHECK-NEXT:    [[B3:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[B]], i64 12
+; CHECK-NEXT:    [[I0:%.*]] = load i16, ptr addrspace(1) [[A]], align 2
+; CHECK-NEXT:    [[I1:%.*]] = load i16, ptr addrspace(1) [[A1]], align 2
+; CHECK-NEXT:    [[I2:%.*]] = load i16, ptr addrspace(1) [[A2]], align 2
+; CHECK-NEXT:    [[I3:%.*]] = load i16, ptr addrspace(1) [[A3]], align 2
+; CHECK-NEXT:    [[F0:%.*]] = sitofp i16 [[I0]] to float
+; CHECK-NEXT:    [[F1:%.*]] = sitofp i16 [[I1]] to float
+; CHECK-NEXT:    [[F2:%.*]] = sitofp i16 [[I2]] to float
+; CHECK-NEXT:    [[F3:%.*]] = sitofp i16 [[I3]] to float
+; CHECK-NEXT:    [[W0:%.*]] = load float, ptr addrspace(1) [[B]], align 4
+; CHECK-NEXT:    [[W1:%.*]] = load float, ptr addrspace(1) [[B1]], align 4
+; CHECK-NEXT:    [[W2:%.*]] = load float, ptr addrspace(1) [[B2]], align 4
+; CHECK-NEXT:    [[W3:%.*]] = load float, ptr addrspace(1) [[B3]], align 4
+; CHECK-NEXT:    [[M0:%.*]] = fmul contract float [[F0]], [[W0]]
+; CHECK-NEXT:    [[M1:%.*]] = fmul contract float [[F1]], [[W1]]
+; CHECK-NEXT:    [[M2:%.*]] = fmul contract float [[F2]], [[W2]]
+; CHECK-NEXT:    [[M3:%.*]] = fmul contract float [[F3]], [[W3]]
+; CHECK-NEXT:    [[S0:%.*]] = fadd contract float [[ACC]], [[M0]]
+; CHECK-NEXT:    [[S1:%.*]] = fadd contract float [[S0]], [[M1]]
+; CHECK-NEXT:    [[S2:%.*]] = fadd contract float [[S1]], [[M2]]
+; CHECK-NEXT:    [[S3:%.*]] = fadd contract float [[S2]], [[M3]]
+; CHECK-NEXT:    ret float [[S3]]
 ;
 entry:
   %a1 = getelementptr inbounds nuw i8, ptr addrspace(1) %a, i64 2
@@ -276,24 +301,51 @@ define float @dot8_ordered_loop(ptr addrspace(1) noalias readonly align 4 %a0, p
 ; CHECK-NEXT:    [[OFF:%.*]] = shl i64 [[I]], 3
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A0]], i64 [[OFF]]
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B0]], i64 [[OFF]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr addrspace(1) [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x float>, ptr addrspace(1) [[B]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul contract <8 x float> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[M0:%.*]] = extractelement <8 x float> [[TMP2]], i64 0
+; CHECK-NEXT:    [[LA0:%.*]] = load float, ptr addrspace(1) [[A]], align 4
+; CHECK-NEXT:    [[LB0:%.*]] = load float, ptr addrspace(1) [[B]], align 4
+; CHECK-NEXT:    [[M0:%.*]] = fmul contract float [[LA0]], [[LB0]]
 ; CHECK-NEXT:    [[R0:%.*]] = fadd contract float [[ACC]], [[M0]]
-; CHECK-NEXT:    [[M1:%.*]] = extractelement <8 x float> [[TMP2]], i64 1
+; CHECK-NEXT:    [[PA1:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 1
+; CHECK-NEXT:    [[LA1:%.*]] = load float, ptr addrspace(1) [[PA1]], align 4
+; CHECK-NEXT:    [[PB1:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 1
+; CHECK-NEXT:    [[LB1:%.*]] = load float, ptr addrspace(1) [[PB1]], align 4
+; CHECK-NEXT:    [[M1:%.*]] = fmul contract float [[LA1]], [[LB1]]
 ; CHECK-NEXT:    [[R1:%.*]] = fadd contract float [[R0]], [[M1]]
-; CHECK-NEXT:    [[M2:%.*]] = extractelement <8 x float> [[TMP2]], i64 2
+; CHECK-NEXT:    [[PA2:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 2
+; CHECK-NEXT:    [[LA2:%.*]] = load float, ptr addrspace(1) [[PA2]], align 4
+; CHECK-NEXT:    [[PB2:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 2
+; CHECK-NEXT:    [[LB2:%.*]] = load float, ptr addrspace(1) [[PB2]], align 4
+; CHECK-NEXT:    [[M2:%.*]] = fmul contract float [[LA2]], [[LB2]]
 ; CHECK-NEXT:    [[R2:%.*]] = fadd contract float [[R1]], [[M2]]
-; CHECK-NEXT:    [[M3:%.*]] = extractelement <8 x float> [[TMP2]], i64 3
+; CHECK-NEXT:    [[PA3:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 3
+; CHECK-NEXT:    [[LA3:%.*]] = load float, ptr addrspace(1) [[PA3]], align 4
+; CHECK-NEXT:    [[PB3:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 3
+; CHECK-NEXT:    [[LB3:%.*]] = load float, ptr addrspace(1) [[PB3]], align 4
+; CHECK-NEXT:    [[M3:%.*]] = fmul contract float [[LA3]], [[LB3]]
 ; CHECK-NEXT:    [[R3:%.*]] = fadd contract float [[R2]], [[M3]]
-; CHECK-NEXT:    [[M4:%.*]] = extractelement <8 x float> [[TMP2]], i64 4
+; CHECK-NEXT:    [[PA4:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 4
+; CHECK-NEXT:    [[LA4:%.*]] = load float, ptr addrspace(1) [[PA4]], align 4
+; CHECK-NEXT:    [[PB4:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 4
+; CHECK-NEXT:    [[LB4:%.*]] = load float, ptr addrspace(1) [[PB4]], align 4
+; CHECK-NEXT:    [[M4:%.*]] = fmul contract float [[LA4]], [[LB4]]
 ; CHECK-NEXT:    [[R4:%.*]] = fadd contract float [[R3]], [[M4]]
-; CHECK-NEXT:    [[M5:%.*]] = extractelement <8 x float> [[TMP2]], i64 5
+; CHECK-NEXT:    [[PA5:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 5
+; CHECK-NEXT:    [[LA5:%.*]] = load float, ptr addrspace(1) [[PA5]], align 4
+; CHECK-NEXT:    [[PB5:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 5
+; CHECK-NEXT:    [[LB5:%.*]] = load float, ptr addrspace(1) [[PB5]], align 4
+; CHECK-NEXT:    [[M5:%.*]] = fmul contract float [[LA5]], [[LB5]]
 ; CHECK-NEXT:    [[R5:%.*]] = fadd contract float [[R4]], [[M5]]
-; CHECK-NEXT:    [[M6:%.*]] = extractelement <8 x float> [[TMP2]], i64 6
+; CHECK-NEXT:    [[PA6:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 6
+; CHECK-NEXT:    [[LA6:%.*]] = load float, ptr addrspace(1) [[PA6]], align 4
+; CHECK-NEXT:    [[PB6:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 6
+; CHECK-NEXT:    [[LB6:%.*]] = load float, ptr addrspace(1) [[PB6]], align 4
+; CHECK-NEXT:    [[M6:%.*]] = fmul contract float [[LA6]], [[LB6]]
 ; CHECK-NEXT:    [[R6:%.*]] = fadd contract float [[R5]], [[M6]]
-; CHECK-NEXT:    [[M7:%.*]] = extractelement <8 x float> [[TMP2]], i64 7
+; CHECK-NEXT:    [[PA7:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 7
+; CHECK-NEXT:    [[LA7:%.*]] = load float, ptr addrspace(1) [[PA7]], align 4
+; CHECK-NEXT:    [[PB7:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 7
+; CHECK-NEXT:    [[LB7:%.*]] = load float, ptr addrspace(1) [[PB7]], align 4
+; CHECK-NEXT:    [[M7:%.*]] = fmul contract float [[LA7]], [[LB7]]
 ; CHECK-NEXT:    [[R7]] = fadd contract float [[R6]], [[M7]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[I_NEXT]], 16
@@ -372,25 +424,52 @@ define float @dot8_ordered_lds_a16(ptr addrspace(3) %a, ptr addrspace(3) %b, flo
 ; CHECK-SAME: ptr addrspace(3) [[A:%.*]], ptr addrspace(3) [[B:%.*]], float [[ACC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[PA0:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[A]], i32 0
+; CHECK-NEXT:    [[LA0:%.*]] = load float, ptr addrspace(3) [[PA0]], align 16
 ; CHECK-NEXT:    [[PB0:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[B]], i32 0
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr addrspace(3) [[PA0]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x float>, ptr addrspace(3) [[PB0]], align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul contract <8 x float> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x float> [[TMP2]], i64 0
+; CHECK-NEXT:    [[LB0:%.*]] = load float, ptr addrspace(3) [[PB0]], align 16
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul contract float [[LA0]], [[LB0]]
 ; CHECK-NEXT:    [[S0:%.*]] = fadd contract float [[ACC]], [[TMP3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x float> [[TMP2]], i64 1
+; CHECK-NEXT:    [[PA1:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[A]], i32 1
+; CHECK-NEXT:    [[LA1:%.*]] = load float, ptr addrspace(3) [[PA1]], align 4
+; CHECK-NEXT:    [[PB1:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[B]], i32 1
+; CHECK-NEXT:    [[LB1:%.*]] = load float, ptr addrspace(3) [[PB1]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul contract float [[LA1]], [[LB1]]
 ; CHECK-NEXT:    [[S1:%.*]] = fadd contract float [[S0]], [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x float> [[TMP2]], i64 2
+; CHECK-NEXT:    [[PA2:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[A]], i32 2
+; CHECK-NEXT:    [[LA2:%.*]] = load float, ptr addrspace(3) [[PA2]], align 8
+; CHECK-NEXT:    [[PB2:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[B]], i32 2
+; CHECK-NEXT:    [[LB2:%.*]] = load float, ptr addrspace(3) [[PB2]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul contract float [[LA2]], [[LB2]]
 ; CHECK-NEXT:    [[S2:%.*]] = fadd contract float [[S1]], [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x float> [[TMP2]], i64 3
+; CHECK-NEXT:    [[PA3:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[A]], i32 3
+; CHECK-NEXT:    [[LA3:%.*]] = load float, ptr addrspace(3) [[PA3]], align 4
+; CHECK-NEXT:    [[PB3:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[B]], i32 3
+; CHECK-NEXT:    [[LB3:%.*]] = load float, ptr addrspace(3) [[PB3]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul contract float [[LA3]], [[LB3]]
 ; CHECK-NEXT:    [[S3:%.*]] = fadd contract float [[S2]], [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x float> [[TMP2]], i64 4
+; CHECK-NEXT:    [[PA4:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[A]], i32 4
+; CHECK-NEXT:    [[LA4:%.*]] = load float, ptr addrspace(3) [[PA4]], align 16
+; CHECK-NEXT:    [[PB4:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[B]], i32 4
+; CHECK-NEXT:    [[LB4:%.*]] = load float, ptr addrspace(3) [[PB4]], align 16
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul contract float [[LA4]], [[LB4]]
 ; CHECK-NEXT:    [[S4:%.*]] = fadd contract float [[S3]], [[TMP7]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x float> [[TMP2]], i64 5
+; CHECK-NEXT:    [[PA5:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[A]], i32 5
+; CHECK-NEXT:    [[LA5:%.*]] = load float, ptr addrspace(3) [[PA5]], align 4
+; CHECK-NEXT:    [[PB5:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[B]], i32 5
+; CHECK-NEXT:    [[LB5:%.*]] = load float, ptr addrspace(3) [[PB5]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul contract float [[LA5]], [[LB5]]
 ; CHECK-NEXT:    [[S5:%.*]] = fadd contract float [[S4]], [[TMP8]]
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x float> [[TMP2]], i64 6
+; CHECK-NEXT:    [[PA6:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[A]], i32 6
+; CHECK-NEXT:    [[LA6:%.*]] = load float, ptr addrspace(3) [[PA6]], align 8
+; CHECK-NEXT:    [[PB6:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[B]], i32 6
+; CHECK-NEXT:    [[LB6:%.*]] = load float, ptr addrspace(3) [[PB6]], align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul contract float [[LA6]], [[LB6]]
 ; CHECK-NEXT:    [[S6:%.*]] = fadd contract float [[S5]], [[TMP9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <8 x float> [[TMP2]], i64 7
+; CHECK-NEXT:    [[PA7:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[A]], i32 7
+; CHECK-NEXT:    [[LA7:%.*]] = load float, ptr addrspace(3) [[PA7]], align 4
+; CHECK-NEXT:    [[PB7:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[B]], i32 7
+; CHECK-NEXT:    [[LB7:%.*]] = load float, ptr addrspace(3) [[PB7]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = fmul contract float [[LA7]], [[LB7]]
 ; CHECK-NEXT:    [[S7:%.*]] = fadd contract float [[S6]], [[TMP10]]
 ; CHECK-NEXT:    ret float [[S7]]
 ;
@@ -454,30 +533,134 @@ entry:
 ; fmul lane by lane and every lane still fuses with its fadd, so it keeps the
 ; vector form.
 define float @dot8_ordered_noacc(ptr addrspace(1) noalias readonly align 4 %a, ptr addrspace(1) noalias readonly align 4 %b) {
-; CHECK-LABEL: define float @dot8_ordered_noacc(
-; CHECK-SAME: ptr addrspace(1) noalias readonly align 4 [[A:%.*]], ptr addrspace(1) noalias readonly align 4 [[B:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[PA0:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 0
-; CHECK-NEXT:    [[PB0:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 0
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr addrspace(1) [[PA0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x float>, ptr addrspace(1) [[PB0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul contract <8 x float> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x float> [[TMP2]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x float> [[TMP2]], i64 1
-; CHECK-NEXT:    [[S1:%.*]] = fadd contract float [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x float> [[TMP2]], i64 2
-; CHECK-NEXT:    [[S2:%.*]] = fadd contract float [[S1]], [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x float> [[TMP2]], i64 3
-; CHECK-NEXT:    [[S3:%.*]] = fadd contract float [[S2]], [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x float> [[TMP2]], i64 4
-; CHECK-NEXT:    [[S4:%.*]] = fadd contract float [[S3]], [[TMP7]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x float> [[TMP2]], i64 5
-; CHECK-NEXT:    [[S5:%.*]] = fadd contract float [[S4]], [[TMP8]]
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x float> [[TMP2]], i64 6
-; CHECK-NEXT:    [[S6:%.*]] = fadd contract float [[S5]], [[TMP9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <8 x float> [[TMP2]], i64 7
-; CHECK-NEXT:    [[S7:%.*]] = fadd contract float [[S6]], [[TMP10]]
-; CHECK-NEXT:    ret float [[S7]]
+; GFX9-LABEL: define float @dot8_ordered_noacc(
+; GFX9-SAME: ptr addrspace(1) noalias readonly align 4 [[A:%.*]], ptr addrspace(1) noalias readonly align 4 [[B:%.*]]) {
+; GFX9-NEXT:  [[ENTRY:.*:]]
+; GFX9-NEXT:    [[PA0:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 0
+; GFX9-NEXT:    [[LA0:%.*]] = load float, ptr addrspace(1) [[PA0]], align 4
+; GFX9-NEXT:    [[PB0:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 0
+; GFX9-NEXT:    [[LB0:%.*]] = load float, ptr addrspace(1) [[PB0]], align 4
+; GFX9-NEXT:    [[M0:%.*]] = fmul contract float [[LA0]], [[LB0]]
+; GFX9-NEXT:    [[PA1:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 1
+; GFX9-NEXT:    [[LA1:%.*]] = load float, ptr addrspace(1) [[PA1]], align 4
+; GFX9-NEXT:    [[PB1:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 1
+; GFX9-NEXT:    [[LB1:%.*]] = load float, ptr addrspace(1) [[PB1]], align 4
+; GFX9-NEXT:    [[M1:%.*]] = fmul contract float [[LA1]], [[LB1]]
+; GFX9-NEXT:    [[S1:%.*]] = fadd contract float [[M0]], [[M1]]
+; GFX9-NEXT:    [[PA2:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 2
+; GFX9-NEXT:    [[LA2:%.*]] = load float, ptr addrspace(1) [[PA2]], align 4
+; GFX9-NEXT:    [[PB2:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 2
+; GFX9-NEXT:    [[LB2:%.*]] = load float, ptr addrspace(1) [[PB2]], align 4
+; GFX9-NEXT:    [[M2:%.*]] = fmul contract float [[LA2]], [[LB2]]
+; GFX9-NEXT:    [[S2:%.*]] = fadd contract float [[S1]], [[M2]]
+; GFX9-NEXT:    [[PA3:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 3
+; GFX9-NEXT:    [[LA3:%.*]] = load float, ptr addrspace(1) [[PA3]], align 4
+; GFX9-NEXT:    [[PB3:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 3
+; GFX9-NEXT:    [[LB3:%.*]] = load float, ptr addrspace(1) [[PB3]], align 4
+; GFX9-NEXT:    [[M3:%.*]] = fmul contract float [[LA3]], [[LB3]]
+; GFX9-NEXT:    [[S3:%.*]] = fadd contract float [[S2]], [[M3]]
+; GFX9-NEXT:    [[PA4:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 4
+; GFX9-NEXT:    [[LA4:%.*]] = load float, ptr addrspace(1) [[PA4]], align 4
+; GFX9-NEXT:    [[PB4:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 4
+; GFX9-NEXT:    [[LB4:%.*]] = load float, ptr addrspace(1) [[PB4]], align 4
+; GFX9-NEXT:    [[M4:%.*]] = fmul contract float [[LA4]], [[LB4]]
+; GFX9-NEXT:    [[S4:%.*]] = fadd contract float [[S3]], [[M4]]
+; GFX9-NEXT:    [[PA5:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 5
+; GFX9-NEXT:    [[LA5:%.*]] = load float, ptr addrspace(1) [[PA5]], align 4
+; GFX9-NEXT:    [[PB5:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 5
+; GFX9-NEXT:    [[LB5:%.*]] = load float, ptr addrspace(1) [[PB5]], align 4
+; GFX9-NEXT:    [[M5:%.*]] = fmul contract float [[LA5]], [[LB5]]
+; GFX9-NEXT:    [[S5:%.*]] = fadd contract float [[S4]], [[M5]]
+; GFX9-NEXT:    [[PA6:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 6
+; GFX9-NEXT:    [[LA6:%.*]] = load float, ptr addrspace(1) [[PA6]], align 4
+; GFX9-NEXT:    [[PB6:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 6
+; GFX9-NEXT:    [[LB6:%.*]] = load float, ptr addrspace(1) [[PB6]], align 4
+; GFX9-NEXT:    [[M6:%.*]] = fmul contract float [[LA6]], [[LB6]]
+; GFX9-NEXT:    [[S6:%.*]] = fadd contract float [[S5]], [[M6]]
+; GFX9-NEXT:    [[PA7:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 7
+; GFX9-NEXT:    [[LA7:%.*]] = load float, ptr addrspace(1) [[PA7]], align 4
+; GFX9-NEXT:    [[PB7:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 7
+; GFX9-NEXT:    [[LB7:%.*]] = load float, ptr addrspace(1) [[PB7]], align 4
+; GFX9-NEXT:    [[M7:%.*]] = fmul contract float [[LA7]], [[LB7]]
+; GFX9-NEXT:    [[S7:%.*]] = fadd contract float [[S6]], [[M7]]
+; GFX9-NEXT:    ret float [[S7]]
+;
+; GFX1030-LABEL: define float @dot8_ordered_noacc(
+; GFX1030-SAME: ptr addrspace(1) noalias readonly align 4 [[A:%.*]], ptr addrspace(1) noalias readonly align 4 [[B:%.*]]) {
+; GFX1030-NEXT:  [[ENTRY:.*:]]
+; GFX1030-NEXT:    [[PA0:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 0
+; GFX1030-NEXT:    [[PB0:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 0
+; GFX1030-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr addrspace(1) [[PA0]], align 4
+; GFX1030-NEXT:    [[TMP1:%.*]] = load <8 x float>, ptr addrspace(1) [[PB0]], align 4
+; GFX1030-NEXT:    [[TMP2:%.*]] = fmul contract <8 x float> [[TMP0]], [[TMP1]]
+; GFX1030-NEXT:    [[TMP3:%.*]] = extractelement <8 x float> [[TMP2]], i64 0
+; GFX1030-NEXT:    [[TMP4:%.*]] = extractelement <8 x float> [[TMP2]], i64 1
+; GFX1030-NEXT:    [[S1:%.*]] = fadd contract float [[TMP3]], [[TMP4]]
+; GFX1030-NEXT:    [[TMP5:%.*]] = extractelement <8 x float> [[TMP2]], i64 2
+; GFX1030-NEXT:    [[S2:%.*]] = fadd contract float [[S1]], [[TMP5]]
+; GFX1030-NEXT:    [[TMP6:%.*]] = extractelement <8 x float> [[TMP2]], i64 3
+; GFX1030-NEXT:    [[S3:%.*]] = fadd contract float [[S2]], [[TMP6]]
+; GFX1030-NEXT:    [[TMP7:%.*]] = extractelement <8 x float> [[TMP2]], i64 4
+; GFX1030-NEXT:    [[S4:%.*]] = fadd contract float [[S3]], [[TMP7]]
+; GFX1030-NEXT:    [[TMP8:%.*]] = extractelement <8 x float> [[TMP2]], i64 5
+; GFX1030-NEXT:    [[S5:%.*]] = fadd contract float [[S4]], [[TMP8]]
+; GFX1030-NEXT:    [[TMP9:%.*]] = extractelement <8 x float> [[TMP2]], i64 6
+; GFX1030-NEXT:    [[S6:%.*]] = fadd contract float [[S5]], [[TMP9]]
+; GFX1030-NEXT:    [[TMP10:%.*]] = extractelement <8 x float> [[TMP2]], i64 7
+; GFX1030-NEXT:    [[S7:%.*]] = fadd contract float [[S6]], [[TMP10]]
+; GFX1030-NEXT:    ret float [[S7]]
+;
+; GFX1250-LABEL: define float @dot8_ordered_noacc(
+; GFX1250-SAME: ptr addrspace(1) noalias readonly align 4 [[A:%.*]], ptr addrspace(1) noalias readonly align 4 [[B:%.*]]) {
+; GFX1250-NEXT:  [[ENTRY:.*:]]
+; GFX1250-NEXT:    [[PA0:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 0
+; GFX1250-NEXT:    [[LA0:%.*]] = load float, ptr addrspace(1) [[PA0]], align 4
+; GFX1250-NEXT:    [[PB0:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 0
+; GFX1250-NEXT:    [[LB0:%.*]] = load float, ptr addrspace(1) [[PB0]], align 4
+; GFX1250-NEXT:    [[M0:%.*]] = fmul contract float [[LA0]], [[LB0]]
+; GFX1250-NEXT:    [[PA1:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 1
+; GFX1250-NEXT:    [[LA1:%.*]] = load float, ptr addrspace(1) [[PA1]], align 4
+; GFX1250-NEXT:    [[PB1:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 1
+; GFX1250-NEXT:    [[LB1:%.*]] = load float, ptr addrspace(1) [[PB1]], align 4
+; GFX1250-NEXT:    [[M1:%.*]] = fmul contract float [[LA1]], [[LB1]]
+; GFX1250-NEXT:    [[S1:%.*]] = fadd contract float [[M0]], [[M1]]
+; GFX1250-NEXT:    [[PA2:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 2
+; GFX1250-NEXT:    [[LA2:%.*]] = load float, ptr addrspace(1) [[PA2]], align 4
+; GFX1250-NEXT:    [[PB2:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 2
+; GFX1250-NEXT:    [[LB2:%.*]] = load float, ptr addrspace(1) [[PB2]], align 4
+; GFX1250-NEXT:    [[M2:%.*]] = fmul contract float [[LA2]], [[LB2]]
+; GFX1250-NEXT:    [[S2:%.*]] = fadd contract float [[S1]], [[M2]]
+; GFX1250-NEXT:    [[PA3:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 3
+; GFX1250-NEXT:    [[LA3:%.*]] = load float, ptr addrspace(1) [[PA3]], align 4
+; GFX1250-NEXT:    [[PB3:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 3
+; GFX1250-NEXT:    [[LB3:%.*]] = load float, ptr addrspace(1) [[PB3]], align 4
+; GFX1250-NEXT:    [[M3:%.*]] = fmul contract float [[LA3]], [[LB3]]
+; GFX1250-NEXT:    [[S3:%.*]] = fadd contract float [[S2]], [[M3]]
+; GFX1250-NEXT:    [[PA4:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 4
+; GFX1250-NEXT:    [[LA4:%.*]] = load float, ptr addrspace(1) [[PA4]], align 4
+; GFX1250-NEXT:    [[PB4:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 4
+; GFX1250-NEXT:    [[LB4:%.*]] = load float, ptr addrspace(1) [[PB4]], align 4
+; GFX1250-NEXT:    [[M4:%.*]] = fmul contract float [[LA4]], [[LB4]]
+; GFX1250-NEXT:    [[S4:%.*]] = fadd contract float [[S3]], [[M4]]
+; GFX1250-NEXT:    [[PA5:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 5
+; GFX1250-NEXT:    [[LA5:%.*]] = load float, ptr addrspace(1) [[PA5]], align 4
+; GFX1250-NEXT:    [[PB5:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 5
+; GFX1250-NEXT:    [[LB5:%.*]] = load float, ptr addrspace(1) [[PB5]], align 4
+; GFX1250-NEXT:    [[M5:%.*]] = fmul contract float [[LA5]], [[LB5]]
+; GFX1250-NEXT:    [[S5:%.*]] = fadd contract float [[S4]], [[M5]]
+; GFX1250-NEXT:    [[PA6:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 6
+; GFX1250-NEXT:    [[LA6:%.*]] = load float, ptr addrspace(1) [[PA6]], align 4
+; GFX1250-NEXT:    [[PB6:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 6
+; GFX1250-NEXT:    [[LB6:%.*]] = load float, ptr addrspace(1) [[PB6]], align 4
+; GFX1250-NEXT:    [[M6:%.*]] = fmul contract float [[LA6]], [[LB6]]
+; GFX1250-NEXT:    [[S6:%.*]] = fadd contract float [[S5]], [[M6]]
+; GFX1250-NEXT:    [[PA7:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[A]], i64 7
+; GFX1250-NEXT:    [[LA7:%.*]] = load float, ptr addrspace(1) [[PA7]], align 4
+; GFX1250-NEXT:    [[PB7:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[B]], i64 7
+; GFX1250-NEXT:    [[LB7:%.*]] = load float, ptr addrspace(1) [[PB7]], align 4
+; GFX1250-NEXT:    [[M7:%.*]] = fmul contract float [[LA7]], [[LB7]]
+; GFX1250-NEXT:    [[S7:%.*]] = fadd contract float [[S6]], [[M7]]
+; GFX1250-NEXT:    ret float [[S7]]
 ;
 entry:
   %pa0 = getelementptr inbounds float, ptr addrspace(1) %a, i64 0
@@ -541,26 +724,67 @@ define float @dot8_sitofp_i16(ptr addrspace(1) noalias readonly align 16 %a, ptr
 ; GFX9-SAME: ptr addrspace(1) noalias readonly align 16 [[A:%.*]], ptr addrspace(1) noalias readonly align 16 [[B:%.*]]) {
 ; GFX9-NEXT:  [[ENTRY:.*:]]
 ; GFX9-NEXT:    [[PA0:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[A]], i64 0
+; GFX9-NEXT:    [[LA0:%.*]] = load i16, ptr addrspace(1) [[PA0]], align 16
+; GFX9-NEXT:    [[FA0:%.*]] = sitofp i16 [[LA0]] to float
 ; GFX9-NEXT:    [[PB0:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[B]], i64 0
-; GFX9-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr addrspace(1) [[PA0]], align 16
-; GFX9-NEXT:    [[TMP1:%.*]] = sitofp <8 x i16> [[TMP0]] to <8 x float>
-; GFX9-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr addrspace(1) [[PB0]], align 16
-; GFX9-NEXT:    [[TMP3:%.*]] = sitofp <8 x i16> [[TMP2]] to <8 x float>
-; GFX9-NEXT:    [[TMP4:%.*]] = fmul contract <8 x float> [[TMP1]], [[TMP3]]
-; GFX9-NEXT:    [[TMP5:%.*]] = extractelement <8 x float> [[TMP4]], i64 0
-; GFX9-NEXT:    [[TMP6:%.*]] = extractelement <8 x float> [[TMP4]], i64 1
+; GFX9-NEXT:    [[LB0:%.*]] = load i16, ptr addrspace(1) [[PB0]], align 16
+; GFX9-NEXT:    [[FB0:%.*]] = sitofp i16 [[LB0]] to float
+; GFX9-NEXT:    [[TMP5:%.*]] = fmul contract float [[FA0]], [[FB0]]
+; GFX9-NEXT:    [[PA1:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[A]], i64 1
+; GFX9-NEXT:    [[LA1:%.*]] = load i16, ptr addrspace(1) [[PA1]], align 2
+; GFX9-NEXT:    [[FA1:%.*]] = sitofp i16 [[LA1]] to float
+; GFX9-NEXT:    [[PB1:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[B]], i64 1
+; GFX9-NEXT:    [[LB1:%.*]] = load i16, ptr addrspace(1) [[PB1]], align 2
+; GFX9-NEXT:    [[FB1:%.*]] = sitofp i16 [[LB1]] to float
+; GFX9-NEXT:    [[TMP6:%.*]] = fmul contract float [[FA1]], [[FB1]]
 ; GFX9-NEXT:    [[S1:%.*]] = fadd contract float [[TMP5]], [[TMP6]]
-; GFX9-NEXT:    [[TMP7:%.*]] = extractelement <8 x float> [[TMP4]], i64 2
+; GFX9-NEXT:    [[PA2:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[A]], i64 2
+; GFX9-NEXT:    [[LA2:%.*]] = load i16, ptr addrspace(1) [[PA2]], align 4
+; GFX9-NEXT:    [[FA2:%.*]] = sitofp i16 [[LA2]] to float
+; GFX9-NEXT:    [[PB2:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[B]], i64 2
+; GFX9-NEXT:    [[LB2:%.*]] = load i16, ptr addrspace(1) [[PB2]], align 4
+; GFX9-NEXT:    [[FB2:%.*]] = sitofp i16 [[LB2]] to float
+; GFX9-NEXT:    [[TMP7:%.*]] = fmul contract float [[FA2]], [[FB2]]
 ; GFX9-NEXT:    [[S2:%.*]] = fadd contract float [[S1]], [[TMP7]]
-; GFX9-NEXT:    [[TMP8:%.*]] = extractelement <8 x float> [[TMP4]], i64 3
+; GFX9-NEXT:    [[PA3:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[A]], i64 3
+; GFX9-NEXT:    [[LA3:%.*]] = load i16, ptr addrspace(1) [[PA3]], align 2
+; GFX9-NEXT:    [[FA3:%.*]] = sitofp i16 [[LA3]] to float
+; GFX9-NEXT:    [[PB3:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[B]], i64 3
+; GFX9-NEXT:    [[LB3:%.*]] = load i16, ptr addrspace(1) [[PB3]], align 2
+; GFX9-NEXT:    [[FB3:%.*]] = sitofp i16 [[LB3]] to float
+; GFX9-NEXT:    [[TMP8:%.*]] = fmul contract float [[FA3]], [[FB3]]
 ; GFX9-NEXT:    [[S3:%.*]] = fadd contract float [[S2]], [[TMP8]]
-; GFX9-NEXT:    [[TMP9:%.*]] = extractelement <8 x float> [[TMP4]], i64 4
+; GFX9-NEXT:    [[PA4:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[A]], i64 4
+; GFX9-NEXT:    [[LA4:%.*]] = load i16, ptr addrspace(1) [[PA4]], align 8
+; GFX9-NEXT:    [[FA4:%.*]] = sitofp i16 [[LA4]] to float
+; GFX9-NEXT:    [[PB4:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[B]], i64 4
+; GFX9-NEXT:    [[LB4:%.*]] = load i16, ptr addrspace(1) [[PB4]], align 8
+; GFX9-NEXT:    [[FB4:%.*]] = sitofp i16 [[LB4]] to float
+; GFX9-NEXT:    [[TMP9:%.*]] = fmul contract float [[FA4]], [[FB4]]
 ; GFX9-NEXT:    [[S4:%.*]] = fadd contract float [[S3]], [[TMP9]]
-; GFX9-NEXT:    [[TMP10:%.*]] = extractelement <8 x float> [[TMP4]], i64 5
+; GFX9-NEXT:    [[PA5:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[A]], i64 5
+; GFX9-NEXT:    [[LA5:%.*]] = load i16, ptr addrspace(1) [[PA5]], align 2
+; GFX9-NEXT:    [[FA5:%.*]] = sitofp i16 [[LA5]] to float
+; GFX9-NEXT:    [[PB5:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[B]], i64 5
+; GFX9-NEXT:    [[LB5:%.*]] = load i16, ptr addrspace(1) [[PB5]], align 2
+; GFX9-NEXT:    [[FB5:%.*]] = sitofp i16 [[LB5]] to float
+; GFX9-NEXT:    [[TMP10:%.*]] = fmul contract float [[FA5]], [[FB5]]
 ; GFX9-NEXT:    [[S5:%.*]] = fadd contract float [[S4]], [[TMP10]]
-; GFX9-NEXT:    [[TMP11:%.*]] = extractelement <8 x float> [[TMP4]], i64 6
+; GFX9-NEXT:    [[PA6:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[A]], i64 6
+; GFX9-NEXT:    [[LA6:%.*]] = load i16, ptr addrspace(1) [[PA6]], align 4
+; GFX9-NEXT:    [[FA6:%.*]] = sitofp i16 [[LA6]] to float
+; GFX9-NEXT:    [[PB6:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[B]], i64 6
+; GFX9-NEXT:    [[LB6:%.*]] = load i16, ptr addrspace(1) [[PB6]], align 4
+; GFX9-NEXT:    [[FB6:%.*]] = sitofp i16 [[LB6]] to float
+; GFX9-NEXT:    [[TMP11:%.*]] = fmul contract float [[FA6]], [[FB6]]
 ; GFX9-NEXT:    [[S6:%.*]] = fadd contract float [[S5]], [[TMP11]]
-; GFX9-NEXT:    [[TMP12:%.*]] = extractelement <8 x float> [[TMP4]], i64 7
+; GFX9-NEXT:    [[PA7:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[A]], i64 7
+; GFX9-NEXT:    [[LA7:%.*]] = load i16, ptr addrspace(1) [[PA7]], align 2
+; GFX9-NEXT:    [[FA7:%.*]] = sitofp i16 [[LA7]] to float
+; GFX9-NEXT:    [[PB7:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[B]], i64 7
+; GFX9-NEXT:    [[LB7:%.*]] = load i16, ptr addrspace(1) [[PB7]], align 2
+; GFX9-NEXT:    [[FB7:%.*]] = sitofp i16 [[LB7]] to float
+; GFX9-NEXT:    [[TMP12:%.*]] = fmul contract float [[FA7]], [[FB7]]
 ; GFX9-NEXT:    [[S7:%.*]] = fadd contract float [[S6]], [[TMP12]]
 ; GFX9-NEXT:    ret float [[S7]]
 ;

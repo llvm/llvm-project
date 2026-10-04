@@ -473,11 +473,23 @@ public:
 
   TargetTransformInfo::TargetCostKind getCostKind() const { return CostKind; }
 
+  /// Which vectorized load bundles lose the load saving that never
+  /// materializes on targets whose consecutive scalar loads coalesce into the
+  /// same wide access.
+  enum class CoalescedLoadSavings {
+    /// Every bundle keeps its saving.
+    Keep,
+    /// Every clean bundle loses its saving.
+    Cancel,
+  };
+
   /// Calculates the cost of the subtrees, trims non-profitable ones and returns
-  /// final cost.
+  /// final cost. \p LoadSavings selects the load bundles whose saving is
+  /// cancelled.
   InstructionCost
-  calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals = {},
-                                        Instruction *RdxRoot = nullptr);
+  calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
+                                        Instruction *RdxRoot,
+                                        CoalescedLoadSavings LoadSavings);
 
   /// Finds i1 and/or nodes whose operand nodes are booleanized wide leaves
   /// (one-use truncs of wide values or zero-tests of values from [0, 1]) and
@@ -2478,6 +2490,15 @@ private:
       SmallVectorImpl<unsigned> &ToDemote, DenseSet<const TreeEntry *> &Visited,
       const SmallDenseSet<unsigned, 8> &NodesToKeepBWs, unsigned &MaxDepthLevel,
       bool &IsProfitableToDemote, bool IsTruncRoot) const;
+
+  /// \returns the load saving credited to the vectorized load bundle \p TE
+  /// that never materializes on a target whose consecutive scalar loads
+  /// coalesce into the same wide access, or zero if \p LoadSavings keeps it.
+  /// Only clean bundles with no reordering, reuse or bit-width reduction lose
+  /// the saving.
+  InstructionCost
+  getCoalescedLoadPhantomSaving(const TreeEntry &TE,
+                                CoalescedLoadSavings LoadSavings) const;
 
   /// Builds the list of reorderable operands on the edges \p Edges of the \p
   /// UserTE, which allow reordering (i.e. the operands can be reordered because
@@ -13408,6 +13429,23 @@ InstructionCost BoUpSLP::getUnfusedFMulsPenalty(const TreeEntry &TE) const {
   return Penalty;
 }
 
+/// \returns which load bundles of a reduction over \p VL lose the saving they
+/// are credited for although their scalar loads coalesce anyway. A reduction
+/// that would lose an fma has a stake in every load bundle, and any other
+/// reduction keeps every saving. A reassociable reduction loses no fma because
+/// its vector fmuls fuse into the reduction.
+static BoUpSLP::CoalescedLoadSavings
+getReductionCoalescedLoadSavings(RecurKind RdxKind, FastMathFlags RdxFMF,
+                                 ArrayRef<Value *> VL) {
+  if (RdxKind != RecurKind::FAdd || !RdxFMF.allowContract() ||
+      RdxFMF.allowReassoc() || none_of(VL, [](Value *V) {
+        return match(V,
+                     m_OneUse(m_AllowContract(m_FMul(m_Value(), m_Value()))));
+      }))
+    return BoUpSLP::CoalescedLoadSavings::Keep;
+  return BoUpSLP::CoalescedLoadSavings::Cancel;
+}
+
 // A poor-throughput entry's real vector-vs-scalar savings (fdiv/frem/fsqrt)
 // are already folded into TreeCost like any other entry, including all
 // shuffle/insert/extract overhead elsewhere in the tree. So bypassing the
@@ -18556,6 +18594,43 @@ bool BoUpSLP::isTreeNotExtendable() const {
   return Res;
 }
 
+InstructionCost
+BoUpSLP::getCoalescedLoadPhantomSaving(const TreeEntry &TE,
+                                       CoalescedLoadSavings LoadSavings) const {
+  if (LoadSavings == CoalescedLoadSavings::Keep)
+    return 0;
+  if (!TE.hasState() || TE.isGather() || TE.getOpcode() != Instruction::Load ||
+      TE.State != TreeEntry::Vectorize || TE.getInterleaveFactor())
+    return 0;
+  if (DeletedNodes.contains(&TE) || TransformedToGatherNodes.contains(&TE))
+    return 0;
+  if (!TE.ReuseShuffleIndices.empty() || !TE.ReorderIndices.empty() ||
+      MinBWs.contains(&TE))
+    return 0;
+  if (!all_of(TE.Scalars, IsaPred<LoadInst>))
+    return 0;
+  auto *LI0 = cast<LoadInst>(TE.getMainOp());
+  Align BestAlign = LI0->getAlign();
+  for (Value *V : TE.Scalars)
+    BestAlign = std::max(BestAlign, cast<LoadInst>(V)->getAlign());
+  if (!TTI->consecutiveLoadsCoalesce(LI0->getType(), TE.Scalars.size(),
+                                     BestAlign, LI0->getPointerAddressSpace()))
+    return 0;
+  InstructionCost ScalarLdCost = 0;
+  for (Value *V : TE.Scalars) {
+    auto *LI = cast<LoadInst>(V);
+    ScalarLdCost +=
+        TTI->getMemoryOpCost(Instruction::Load, LI->getType(), LI->getAlign(),
+                             LI->getPointerAddressSpace(), CostKind,
+                             TTI::getOperandInfo(LI->getPointerOperand()), LI);
+  }
+  Type *VecTy = getWidenedType(LI0->getType(), TE.Scalars.size());
+  InstructionCost VecLdCost = TTI->getMemoryOpCost(
+      Instruction::Load, VecTy, LI0->getAlign(), LI0->getPointerAddressSpace(),
+      CostKind, TTI::getOperandInfo(LI0->getPointerOperand()));
+  return ScalarLdCost - VecLdCost;
+}
+
 InstructionCost BoUpSLP::getSpillCost() {
   // Walk the vectorizable tree from the root towards its leaves, tracking
   // which vectorized operand values would be live across each tree edge
@@ -19322,9 +19397,9 @@ void BoUpSLP::detectBooleanizedNodes() {
   }
 }
 
-InstructionCost
-BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
-                                               Instruction *RdxRoot) {
+InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
+    ArrayRef<Value *> VectorizedVals, Instruction *RdxRoot,
+    CoalescedLoadSavings LoadSavings) {
   // FIXME: support buildvector of the gather nodes with struct types.
   if (any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
         return TE->isGather() &&
@@ -19448,6 +19523,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
            "Expected gather nodes with users only.");
 
     InstructionCost C = getEntryCost(&TE, VectorizedVals, CheckedExtracts);
+    C += getCoalescedLoadPhantomSaving(TE, LoadSavings);
     uint64_t Scale = 0;
     bool CostIsFree = C == 0;
     // For gather/buildvector (and split-vectorize) entries, prefer the
@@ -19650,6 +19726,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   };
   auto RecostEntry = [&](const TreeEntry *TE) {
     InstructionCost C = getEntryCost(TE, VectorizedVals, CheckedExtracts);
+    C += getCoalescedLoadPhantomSaving(*TE, LoadSavings);
     if (!C.isValid() || C == 0)
       return C;
     uint64_t Scale = EntryToScale.lookup(TE);
@@ -29640,7 +29717,9 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
   R.transformNodes();
   R.computeMinimumValueSizes();
 
-  InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable();
+  InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable(
+      /*VectorizedVals=*/{}, /*RdxRoot=*/nullptr,
+      BoUpSLP::CoalescedLoadSavings::Keep);
   R.buildExternalUses();
 
   Size = R.getCanonicalGraphSize() - R.getNumSplatSubtreeEntries();
@@ -30722,7 +30801,9 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       }
       R.transformNodes();
       R.computeMinimumValueSizes();
-      InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable();
+      InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable(
+          /*VectorizedVals=*/{}, /*RdxRoot=*/nullptr,
+          BoUpSLP::CoalescedLoadSavings::Keep);
       R.buildExternalUses();
 
       InstructionCost Cost = R.getTreeCost(TreeCost);
@@ -33025,7 +33106,9 @@ public:
         }
         V.transformNodes();
         V.computeMinimumValueSizes();
-        InstructionCost TreeCost = V.calculateTreeCostAndTrimNonProfitable(VL);
+        InstructionCost TreeCost = V.calculateTreeCostAndTrimNonProfitable(
+            VL, /*RdxRoot=*/nullptr,
+            getReductionCoalescedLoadSavings(RdxKind, RdxFMF, VL));
         // A negated slice is subtracted in the final combine, it cannot be
         // accumulated lane-wise.
         const bool LoopAccCandidate =
@@ -33679,8 +33762,9 @@ public:
 
       V.transformNodes();
       V.computeMinimumValueSizes();
-      InstructionCost TreeCost =
-          V.calculateTreeCostAndTrimNonProfitable(VL, RdxRootInst);
+      InstructionCost TreeCost = V.calculateTreeCostAndTrimNonProfitable(
+          VL, RdxRootInst,
+          getReductionCoalescedLoadSavings(RdxKind, RdxFMF, VL));
       V.buildExternalUses(LocalExternallyUsedValues);
 
       InstructionCost VectorCost, RdxOpCost;
