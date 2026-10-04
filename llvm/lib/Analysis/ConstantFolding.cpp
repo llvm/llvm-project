@@ -2431,6 +2431,30 @@ Constant *constantFoldVectorReduce(Intrinsic::ID IID, Constant *Op) {
 static Constant *constantFoldVectorPartialReduceAdd(Constant *Acc,
                                                     Constant *Input,
                                                     const DataLayout &DL) {
+  if (Input->isNullValue())
+    return Acc;
+
+  if (auto *AccTy = dyn_cast<ScalableVectorType>(Acc->getType())) {
+    auto *InputTy = dyn_cast<ScalableVectorType>(Input->getType());
+    Constant *Splat = Input->getSplatValue();
+    if (!InputTy || !Splat)
+      return nullptr;
+
+    // The vscale factors cancel, so each result lane accumulates a constant
+    // number of input elements.
+    unsigned Ratio = InputTy->getMinNumElements() / AccTy->getMinNumElements();
+    Constant *Sum = ConstantFoldBinaryOpOperands(
+        Instruction::Mul, Splat,
+        ConstantInt::get(Splat->getType(), Ratio, /*IsSigned=*/false,
+                         /*ImplicitTrunc=*/true),
+        DL);
+    if (!Sum)
+      return nullptr;
+    return ConstantFoldBinaryOpOperands(
+        Instruction::Add, Acc,
+        ConstantVector::getSplat(AccTy->getElementCount(), Sum), DL);
+  }
+
   auto *AccTy = cast<FixedVectorType>(Acc->getType());
   // A fixed result type does not guarantee a fixed input type.
   auto *InputTy = dyn_cast<FixedVectorType>(Input->getType());
@@ -4589,6 +4613,8 @@ static Constant *ConstantFoldScalableVectorCall(
     ArrayRef<Constant *> Operands, const DataLayout &DL,
     const TargetLibraryInfo *TLI, const CallBase *Call) {
   switch (IntrinsicID) {
+  case Intrinsic::vector_partial_reduce_add:
+    return constantFoldVectorPartialReduceAdd(Operands[0], Operands[1], DL);
   case Intrinsic::aarch64_sve_convert_from_svbool: {
     Constant *Src = Operands[0];
     if (!Src->isNullValue())
