@@ -2836,11 +2836,62 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
     }
     return false;
   };
+  // Handle shuffle(binop(x,y),binop(z,w)) where (x, z) or (y, w) are permutes
+  // of the same value, so that shuffle of permutes on either operand of the
+  // binop can be merged into a single permute.
+  FixedVectorType *SrcTy0 = BinOpTy, *SrcTy1 = BinOpTy;
+  auto MergePermutes = [&](Value *&A, Value *&B, MutableArrayRef<int> Mask,
+                           TargetTransformInfo::ShuffleKind &SK,
+                           FixedVectorType *&SrcTy) -> bool {
+    auto GetSource = [](Value *Op) -> std::pair<Value *, ArrayRef<int>> {
+      Value *InnerOp;
+      ArrayRef<int> InnerMask;
+      if (match(Op, m_OneUse(m_Shuffle(m_Value(InnerOp), m_Undef(),
+                                       m_Mask(InnerMask)))) &&
+          all_of(InnerMask, [InnerOp](int M) {
+            auto *VTy = cast<FixedVectorType>(InnerOp->getType());
+            return M < (int)VTy->getNumElements();
+          }))
+        return {InnerOp, InnerMask};
+      return {Op, {}};
+    };
+    auto [V, MaskA] = GetSource(A);
+    auto [VB, MaskB] = GetSource(B);
+    if (VB != V)
+      return false;
+    auto *VTy = cast<FixedVectorType>(V->getType());
+    for (int &M : Mask) {
+      if (M < 0)
+        continue;
+      if (M < (int)NumSrcElts)
+        M = MaskA.empty() ? M : MaskA[M];
+      else
+        M = MaskB.empty() ? M - NumSrcElts : MaskB[M - NumSrcElts];
+    }
+    // If the merged shuffle is an identity apart from poison lanes, refine
+    // those lanes to make it a pure identity so that it folds away to V.
+    if (ShuffleVectorInst::isIdentityMask(Mask, VTy->getNumElements()))
+      std::iota(Mask.begin(), Mask.end(), 0);
+    // A permute is only removed if the binop using it is removed too.
+    bool RemoveA = !MaskA.empty() && LHS->hasOneUser();
+    bool RemoveB = !MaskB.empty() && RHS->hasOneUser();
+    if (RemoveA)
+      OldCost += TTI.getInstructionCost(cast<Instruction>(A), CostKind);
+    if (RemoveB)
+      OldCost += TTI.getInstructionCost(cast<Instruction>(B), CostKind);
+    A = V;
+    B = PoisonValue::get(VTy);
+    SK = TargetTransformInfo::SK_PermuteSingleSrc;
+    SrcTy = VTy;
+    return RemoveA || RemoveB;
+  };
   bool ReducedInstCount = false;
   ReducedInstCount |= MergeInner(X, 0, NewMask0, CostKind);
   ReducedInstCount |= MergeInner(Y, 0, NewMask1, CostKind);
   ReducedInstCount |= MergeInner(Z, NumSrcElts, NewMask0, CostKind);
   ReducedInstCount |= MergeInner(W, NumSrcElts, NewMask1, CostKind);
+  ReducedInstCount |= MergePermutes(X, Z, NewMask0, SK0, SrcTy0);
+  ReducedInstCount |= MergePermutes(Y, W, NewMask1, SK1, SrcTy1);
   bool SingleSrcBinOp = (X == Y) && (Z == W) && (NewMask0 == NewMask1);
   // SingleSrcBinOp only reduces instruction count if we also eliminate the
   // original binop(s). If binops have multiple uses, they won't be eliminated.
@@ -2860,10 +2911,10 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   auto *ShuffleCmpTy =
       FixedVectorType::get(BinOpTy->getElementType(), ShuffleDstTy);
   InstructionCost NewCost = TTI.getShuffleCost(
-      SK0, ShuffleCmpTy, BinOpTy, CostKind, NewMask0, 0, nullptr, {X, Z});
+      SK0, ShuffleCmpTy, SrcTy0, CostKind, NewMask0, 0, nullptr, {X, Z});
   if (!SingleSrcBinOp)
-    NewCost += TTI.getShuffleCost(SK1, ShuffleCmpTy, BinOpTy, CostKind,
-                                  NewMask1, 0, nullptr, {Y, W});
+    NewCost += TTI.getShuffleCost(SK1, ShuffleCmpTy, SrcTy1, CostKind, NewMask1,
+                                  0, nullptr, {Y, W});
 
   if (PredLHS == CmpInst::BAD_ICMP_PREDICATE) {
     NewCost += TTI.getArithmeticInstrCost(LHS->getOpcode(), ShuffleDstTy,
