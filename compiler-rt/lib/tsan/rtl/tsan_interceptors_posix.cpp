@@ -2179,8 +2179,8 @@ static void ReportErrnoSpoiling(ThreadState *thr, uptr pc, int sig) {
   // Use alloca, because malloc during signal handling deadlocks
   ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
   bool suppressed;
-  // Take a new scope as Apple platforms require the below locks released
-  // before symbolizing in order to avoid a deadlock
+  // Release locks before symbolizing and outputting the report to avoid
+  // deadlocks.
   {
     ThreadRegistryLock l(&ctx->thread_registry);
     new (rep) ScopedReport(ReportTypeErrnoInSignal);
@@ -2188,17 +2188,12 @@ static void ReportErrnoSpoiling(ThreadState *thr, uptr pc, int sig) {
     suppressed = IsFiredSuppression(ctx, ReportTypeErrnoInSignal, stack);
     if (!suppressed)
       rep->AddStack(stack, true);
-#if SANITIZER_APPLE
-  }  // Close this scope to release the locks before writing report
-#endif
-    if (!suppressed)
-      OutputReport(thr, *rep);
-
-    // Need to manually destroy this because we used placement new to allocate
-    rep->~ScopedReport();
-#if !SANITIZER_APPLE
   }
-#endif
+  if (!suppressed)
+    OutputReport(thr, *rep);
+
+  // Need to manually destroy this because we used placement new to allocate
+  rep->~ScopedReport();
 }
 
 static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,
