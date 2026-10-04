@@ -23,6 +23,7 @@
 #include "llvm/Support/AllocatorBase.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -40,6 +41,12 @@ namespace detail {
 LLVM_ABI void printBumpPtrAllocatorStats(unsigned NumSlabs, size_t TotalMemory);
 
 } // end namespace detail
+
+struct SlabCheckPoint {
+  unsigned SlabIdx;
+  const char *CurPtr;
+  unsigned CustomSlabCount;
+};
 
 /// Allocate memory in an ever growing pool, as if by bump-pointer.
 ///
@@ -241,6 +248,34 @@ public:
   using AllocatorBase<BumpPtrAllocatorImpl>::Deallocate;
 
   size_t GetNumSlabs() const { return Slabs.size() + CustomSizedSlabs.size(); }
+
+  SlabCheckPoint CheckPoint() const {
+    return {Slabs.empty() ? 0u : static_cast<unsigned int>(Slabs.size() - 1),
+            CurPtr, static_cast<unsigned int>(CustomSizedSlabs.size())};
+  }
+
+  bool isAfterCheckpoint(const void *Ptr, const SlabCheckPoint &CP) const {
+    const char *P = static_cast<const char *>(Ptr);
+
+    // From the checkpoint's slab onward, memory after CurPtr is new.
+    // All later slabs are new. If CurPtr is null, slab 0 is all new.
+    for (unsigned I = CP.SlabIdx, E = Slabs.size(); I < E; ++I) {
+      const char *S = static_cast<const char *>(Slabs[I]);
+      const char *Lo = (I == CP.SlabIdx && CP.CurPtr) ? CP.CurPtr : S;
+      if (P >= Lo && P < S + computeSlabSize(I))
+        return true;
+    }
+
+    // Custom-sized slabs are allocated whole, so the index alone decides.
+    for (unsigned I = CP.CustomSlabCount, E = CustomSizedSlabs.size(); I < E;
+         ++I) {
+      const char *S = static_cast<const char *>(CustomSizedSlabs[I].first);
+      if (P >= S && P < S + CustomSizedSlabs[I].second)
+        return true;
+    }
+
+    return false;
+  }
 
   /// \return An index uniquely and reproducibly identifying
   /// an input pointer \p Ptr in the given allocator.

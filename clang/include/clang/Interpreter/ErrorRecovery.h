@@ -1,0 +1,958 @@
+//===--- ErrorRecovery.h - Errory Recovery Impl --------------*- C++
+//-*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This header provides the main error-recovery component for supporting
+// error recovery in clang-repl.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_CLANG_INTERPRETER_ERROR_RECOVERY_H
+#define LLVM_CLANG_INTERPRETER_ERROR_RECOVERY_H
+
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTMutationListener.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
+#include "llvm/ADT/BitVector.h"
+#include <variant>
+
+namespace clang {
+class ASTContext;
+class Sema;
+
+/// Index of a per PTU State.
+using PTUID = unsigned;
+
+/// A snapshot of the DefinitionData bits and bitfields that can change
+/// after a class gets a special implicit member added.
+struct DefinitionDataFootprint {
+#define FIELD(Name, Width, Merge) unsigned Name : Width;
+#include "clang/AST/CXXRecordDeclDefinitionBits.def"
+
+  bool operator==(const DefinitionDataFootprint &O) const {
+#define FIELD(Name, Width, Merge)                                              \
+  if (Name != O.Name)                                                          \
+    return false;
+#include "clang/AST/CXXRecordDeclDefinitionBits.def"
+    return true;
+  }
+  bool operator!=(const DefinitionDataFootprint &O) const {
+    return !(*this == O);
+  }
+
+  // void update(const CXXRecordDecl &Live) {
+  //   DeclStateReverter::createDefinitionDataFootprint(*this, Live);
+  // }
+
+  // void restore(CXXRecordDecl &Live) const {
+  //   DeclStateReverter::restoreDefinitionDataFootprint(*this, Live);
+  // }
+};
+
+// Stores the state of a class template specialization. Tracks its
+// specialization kind, point of instantiation, source location, and lexical
+// declaration context so the state can be compared and restored.
+struct SpecializationFootprint {
+  unsigned SpecializationKind : 3;
+  SourceLocation PointOfInstantiation;
+  SourceLocation Location;
+  const DeclContext *LexicalDC;
+
+  bool operator==(const SpecializationFootprint &O) const {
+    return SpecializationKind == O.SpecializationKind &&
+           PointOfInstantiation == O.PointOfInstantiation &&
+           Location == O.Location && LexicalDC == O.LexicalDC;
+  }
+  bool operator!=(const SpecializationFootprint &O) const {
+    return !(*this == O);
+  }
+
+  void update(const ClassTemplateSpecializationDecl &Live) {
+    SpecializationKind = Live.getSpecializationKind();
+    PointOfInstantiation = Live.getPointOfInstantiation();
+    Location = Live.getLocation();
+    LexicalDC = Live.getLexicalDeclContext();
+  }
+
+  void restore(ClassTemplateSpecializationDecl &Live) const {
+    Live.setSpecializationKind(
+        static_cast<TemplateSpecializationKind>(SpecializationKind));
+    Live.setPointOfInstantiation(PointOfInstantiation);
+    Live.setLocation(Location);
+    Live.setLexicalDeclContext(const_cast<DeclContext *>(LexicalDC));
+  }
+};
+
+// Stores the state of a variable template specialization. Tracks its
+// specialization kind and point of instantiation so the state can be
+// compared and restored.
+struct VarSpecializationFootprint {
+  unsigned SpecializationKind : 3;
+  SourceLocation PointOfInstantiation;
+
+  bool operator==(const VarSpecializationFootprint &O) const {
+    return SpecializationKind == O.SpecializationKind &&
+           PointOfInstantiation == O.PointOfInstantiation;
+  }
+  bool operator!=(const VarSpecializationFootprint &O) const {
+    return !(*this == O);
+  }
+
+  void update(const VarTemplateSpecializationDecl &Live) {
+    SpecializationKind = Live.getSpecializationKind();
+    PointOfInstantiation = Live.getPointOfInstantiation();
+  }
+
+  void restore(VarTemplateSpecializationDecl &Live) const {
+    Live.setSpecializationKind(
+        static_cast<TemplateSpecializationKind>(SpecializationKind));
+    Live.setPointOfInstantiation(PointOfInstantiation);
+  }
+};
+
+// Stores the state of a function template specialization. Tracks its
+// specialization kind, point of instantiation, source location, lexical
+// declaration context, and constexpr state so the state can be compared
+// and restored.
+struct FunctionSpecializationFootprint {
+  unsigned SpecializationKind : 3;
+  SourceLocation PointOfInstantiation;
+  SourceLocation Location;
+  const DeclContext *LexicalDC;
+  ConstexprSpecKind ConstexprKind;
+
+  bool operator==(const FunctionSpecializationFootprint &O) const {
+    return SpecializationKind == O.SpecializationKind &&
+           PointOfInstantiation == O.PointOfInstantiation &&
+           Location == O.Location && LexicalDC == O.LexicalDC &&
+           ConstexprKind == O.ConstexprKind;
+  }
+  bool operator!=(const FunctionSpecializationFootprint &O) const {
+    return !(*this == O);
+  }
+
+  void update(const FunctionDecl &Live) {
+    SpecializationKind = Live.getTemplateSpecializationKind();
+    PointOfInstantiation = Live.getPointOfInstantiation();
+    Location = Live.getLocation();
+    LexicalDC = Live.getLexicalDeclContext();
+    ConstexprKind = Live.getConstexprKind();
+  }
+
+  void restore(FunctionDecl &Live) const {
+    Live.setTemplateSpecializationKind(
+        static_cast<TemplateSpecializationKind>(SpecializationKind),
+        PointOfInstantiation);
+    Live.setLocation(Location);
+    Live.setLexicalDeclContext(const_cast<DeclContext *>(LexicalDC));
+    Live.setConstexprKind(ConstexprKind);
+  }
+};
+
+// Stores the state of an ordinary class member created from a class template
+// instantiation. Tracks its specialization kind and point of instantiation
+// so the state can be compared and restored.
+struct MemberSpecializationFootprint {
+  unsigned SpecializationKind : 3;
+  SourceLocation PointOfInstantiation;
+
+  bool operator==(const MemberSpecializationFootprint &O) const {
+    return SpecializationKind == O.SpecializationKind &&
+           PointOfInstantiation == O.PointOfInstantiation;
+  }
+  bool operator!=(const MemberSpecializationFootprint &O) const {
+    return !(*this == O);
+  }
+
+  template <typename OwnerT> void update(const OwnerT &Live) {
+    const MemberSpecializationInfo *MSI = Live.getMemberSpecializationInfo();
+    SpecializationKind = MSI->getTemplateSpecializationKind();
+    PointOfInstantiation = MSI->getPointOfInstantiation();
+  }
+
+  template <typename OwnerT> void restore(OwnerT &Live) const {
+    MemberSpecializationInfo *MSI = Live.getMemberSpecializationInfo();
+    MSI->setTemplateSpecializationKind(
+        static_cast<TemplateSpecializationKind>(SpecializationKind));
+    MSI->setPointOfInstantiation(PointOfInstantiation);
+  }
+};
+
+class PTUMutationActions;
+class PTUCheckpointLedger;
+
+class DeclStateReverter {
+private:
+  struct TemplateCommonAccess : RedeclarableTemplateDecl {
+    using RedeclarableTemplateDecl::Common;
+  };
+
+  static void clearCommonPtr(const RedeclarableTemplateDecl &RT) {
+    static_cast<const TemplateCommonAccess &>(RT).Common = nullptr;
+  }
+
+  struct ClassTemplateCommonAccess : ClassTemplateDecl {
+    using ClassTemplateDecl::getCommonPtr;
+  };
+
+  struct ClassTemplateSpecAccess : ClassTemplateDecl {
+    using ClassTemplateDecl::getSpecializations;
+  };
+  struct FunctionTemplateSpecAccess : FunctionTemplateDecl {
+    using FunctionTemplateDecl::getSpecializations;
+  };
+  struct VarTemplateSpecAccess : VarTemplateDecl {
+    using VarTemplateDecl::getSpecializations;
+  };
+
+  static void clearCanonInjectedTST(ClassTemplateDecl &CTD) {
+    auto *Ptr = static_cast<ClassTemplateCommonAccess &>(CTD).getCommonPtr();
+    Ptr->CanonInjectedTST = CanQualType();
+  }
+
+  // DeclContext::FirstDecl/LastDecl -- protected.
+  struct DeclContextLinkAccess : DeclContext {
+    using DeclContext::FirstDecl;
+    using DeclContext::LastDecl;
+  };
+
+  static void clearDeclContextChain(DeclContext &DC) {
+    auto &Access = static_cast<DeclContextLinkAccess &>(DC);
+    Access.FirstDecl = nullptr;
+    Access.LastDecl = nullptr;
+  }
+
+  struct TagDeclDefinitionAccess : TagDecl {
+    using TagDecl::setBeingDefined;
+  };
+
+  static void clearBeingDefined(TagDecl &TD) {
+    static_cast<TagDeclDefinitionAccess &>(TD).setBeingDefined(false);
+  }
+
+  struct DeclLexicalLinkAccess : Decl {
+    using Decl::NextInContextAndBits;
+  };
+
+  static void clearNextInContext(Decl &D) {
+    static_cast<DeclLexicalLinkAccess &>(D).NextInContextAndBits.setPointer(
+        nullptr);
+  }
+
+  template <typename decl_type>
+  struct RedeclLinkAccess : Redeclarable<decl_type> {
+    using Redeclarable<decl_type>::RedeclLink;
+  };
+
+  template <typename decl_type>
+  static void setLatestRedecl(Redeclarable<decl_type> &D, decl_type *Latest) {
+    static_cast<RedeclLinkAccess<decl_type> &>(D).RedeclLink.setLatest(Latest);
+  }
+
+protected:
+  static DefinitionDataFootprint
+  createDefinitionDataFootprint(const CXXRecordDecl &RD);
+
+  static void restoreDefinitionDataFootprint(const DefinitionDataFootprint &FP,
+                                             CXXRecordDecl &RD);
+
+  // Generic across every other footprint type exclusing DefinitionDataFootprint
+  // -- SpecializationFootprint, VarSpecializationFootprint,
+  // FunctionSpecializationFootprint, MemberSpecializationFootprint.
+  template <typename FootprintT, typename OwnerT>
+  static FootprintT createFootprint(const OwnerT &Owner) {
+    FootprintT FP;
+    FP.update(Owner);
+    return FP;
+  }
+  template <typename FootprintT, typename OwnerT>
+  static void restoreFootprint(const FootprintT &FP, OwnerT &Owner) {
+    FP.restore(Owner);
+  }
+
+  static void revertDefinitionArrival(Decl *D);
+
+  // True if Common could still be created later -- i.e. nobody has called
+  // getCommonPtr() anywhere in this template's redecl chain yet.
+  static bool isCommonPtrValid(const RedeclarableTemplateDecl *RT) {
+    return static_cast<const TemplateCommonAccess *>(RT)->Common != nullptr;
+  }
+
+  // True if CanonInjectedTST could still be cached later. Only valid to
+  // call once Common itself is confirmed to exist.
+  static bool isTemplateCanonInjectedTSTValid(const ClassTemplateDecl *CTD) {
+    auto *Ptr =
+        static_cast<const ClassTemplateCommonAccess *>(CTD)->getCommonPtr();
+    return !Ptr->CanonInjectedTST.isNull();
+  }
+
+  // Write-once fields, fixed null prior state, so revert is a
+  // direct reset, not a snapshot restore.
+  static void resetTemplateCommonBase(RedeclarableTemplateDecl &RT) {
+    clearCommonPtr(RT);
+  }
+
+  static void resetCanonInjectedTST(ClassTemplateDecl &CTD) {
+    clearCanonInjectedTST(CTD);
+  }
+
+  // Specializations are appended in commit order, and rollback is strictly
+  // LIFO (only the most recently committed PTU is ever rolled back).
+  static void removeSpecializations(PTUCheckpointLedger &Ledger,
+                                    const RedeclarableTemplateDecl *TD,
+                                    PTUID ID);
+
+  // static const Type *getRawTypeForDecl(const TypeDecl *TD) {
+  //   return TD->TypeForDecl;
+  // }
+
+  // static bool needToTrackTypeForDecl(const TypeDecl *TD) {
+  //   const Type *T = getRawTypeForDecl(TD);
+  //   return !T || T->isCanonicalUnqualified();
+  // }
+
+  // static void resetTypeForDecl(TypeDecl *TD) { TD->TypeForDecl = nullptr; }
+
+private:
+  PTUCheckpointLedger &PTUSlabCheckpoints;
+
+public:
+  friend PTUMutationActions;
+
+  explicit DeclStateReverter(PTUCheckpointLedger &Ledger)
+      : PTUSlabCheckpoints(Ledger) {}
+
+  static bool isExtensibleContainer(const Decl *D) {
+    return isa<NamespaceDecl>(D) || isa<CXXRecordDecl>(D);
+  }
+
+  static bool hasNoPreviousDecl(Decl *D) {
+    return D->getPreviousDecl() == nullptr;
+  }
+
+  void detachDefData(const Decl *D);
+
+  static void detachCommonBase(const RedeclarableTemplateDecl *RT);
+
+  void detachFromDCLookup(Decl *D, PTUID ID);
+
+  void detachFromExternCLookup(Decl *D, DeclContext *ExternCCtx, PTUID ID);
+
+  static void removeFromIdResolver(Sema &S, NamedDecl *D);
+
+  template <typename DeclT> DeclT *findSurvivor(DeclT *D, PTUID ID) const;
+
+  template <typename decl_type>
+  void patchRedeclLink(Redeclarable<decl_type> *D, decl_type *Survivor) {
+    setLatestRedecl<decl_type>(*D->getFirstDecl(), Survivor);
+  }
+
+  void detachFromRedeclChain(const Decl *D, PTUID ID);
+
+  void repairLexicalChain(DeclContext &DC, PTUID ID);
+
+private:
+  NamedDecl *tryDetachRedeclChain(Decl *D, PTUID ID);
+};
+
+/// Maps addresses to the PTU that allocated them, by keeping the slab
+/// checkpoint taken before each PTU began.
+class PTUCheckpointLedger {
+  const ASTContext &Ctx;
+  llvm::SmallVector<llvm::SlabCheckPoint, 16> CheckpointBeforePTU;
+  llvm::BitVector Dead;
+
+  bool isAfter(const void *Ptr, PTUID ID) const {
+    return Ctx.getAllocator().isAfterCheckpoint(Ptr, CheckpointBeforePTU[ID]);
+  }
+
+public:
+  explicit PTUCheckpointLedger(const ASTContext &Ctx) : Ctx(Ctx) {}
+
+  /// Called once, right before parsing PTU \p ID begins.
+  void recordCheckpoint(PTUID ID, llvm::SlabCheckPoint CP) {
+    assert(ID == CheckpointBeforePTU.size() &&
+           "PTUs must be recorded in order");
+    CheckpointBeforePTU.push_back(CP);
+    Dead.push_back(false);
+  }
+
+  /// Was \p Ptr allocated during PTU \p ID or later?
+  bool isFromThisPTU(const void *Ptr, PTUID ID) const {
+    assert(ID < CheckpointBeforePTU.size());
+    assert(!Dead[ID] &&
+           "querying provenance against a PTU that no longer exists");
+    return isAfter(Ptr, ID);
+  }
+
+  /// The PTU that allocated \p Ptr, or nullopt if it predates the oldest
+  /// recorded checkpoint. The newest ID whose checkpoint \p Ptr is after.
+  std::optional<PTUID> attribute(const void *Ptr) const {
+    size_t Lo = 0, Hi = CheckpointBeforePTU.size();
+    std::optional<PTUID> Result;
+    while (Lo < Hi) {
+      size_t Mid = Lo + (Hi - Lo) / 2;
+      if (isAfter(Ptr, Mid)) {
+        Result = static_cast<PTUID>(Mid);
+        Lo = Mid + 1;
+      } else {
+        Hi = Mid;
+      }
+    }
+    assert((!Result || !Dead[*Result]) &&
+           "Ptr belongs to a PTU that was already rolled back");
+    return Result;
+  }
+
+  /// FIXME: Pop back CheckpointBeforePTU once memory restoration is supported.
+  /// For now, there is no memory restoration, so mark it dead.
+  void markDead(PTUID ID) {
+    assert(ID < Dead.size());
+    Dead[ID] = true;
+  }
+};
+
+struct MutationRecord {
+  enum class DeclShape : uint16_t {
+    None = 0,
+    // Base shapes -- what the decl fundamentally is. Exactly one is set.
+    Class = 1 << 0,    // CXXRecordDecl/TagDecl: DefinitionData, TypeForDecl
+    Function = 1 << 1, // FunctionDecl: exception spec, deduced return, body
+    Var = 1 << 2,      // VarDecl: cached constant-eval result
+    Enum = 1 << 3,     // EnumDecl: TypeForDecl
+    Template = 1 << 4, // RedeclarableTemplateDecl: spec list grows
+    Typedef = 1 << 5,  // TypedefDecl/TypeAliasDecl: TypeForDecl.
+  };
+
+  enum class MutationKind : uint32_t {
+    // ---- Common ----
+    DefinitionInstantiate = 1 << 0, // Class, Function, Var
+    SpecInfo = 1 << 1,              // Class, Function, Var  (Spec)
+    MemberSpecInfo = 1 << 2,        // Class, Function, Var, Enum (Member)
+    TypeForDecl = 1 << 3,           // Class, Enum
+
+    // ---- Shape-specific ----
+    DefinitionData = 1 << 8,       // Class only
+    ExceptionSpec = 1 << 9,        // Function only
+    DeducedReturnType = 1 << 10,   // Function only
+    EvaluatedValue = 1 << 11,      // Var only
+    SpecializationAdded = 1 << 12, // Template only
+
+    TemplateCommon = 1 << 4,   // Template CommonBase
+    CanonInjectedTST = 1 << 5, // Template CommonBase Type
+    None = 1 << 24,
+  };
+
+  DeclShape S = DeclShape::None;
+  uint32_t MutationType = 0; // what this decl can ever have
+
+  void add(MutationKind K) { MutationType |= uint32_t(K); }
+  void add(uint32_t K) { MutationType |= uint32_t(K); }
+  bool has(MutationKind K) const { return MutationType & uint32_t(K); }
+  void clear(MutationKind K) { MutationType &= ~uint32_t(K); }
+};
+
+using DeclShape = MutationRecord::DeclShape;
+using MutationType = MutationRecord::MutationKind;
+
+using FootprintValue =
+    std::variant<DefinitionDataFootprint, SpecializationFootprint,
+                 VarSpecializationFootprint, FunctionSpecializationFootprint,
+                 MemberSpecializationFootprint, QualType, const Type *>;
+
+struct FootprintSnapshot {
+  PTUID ID;
+  FootprintValue Data;
+};
+
+class FootprintStore {
+  llvm::DenseMap<std::pair<const Decl *, MutationType>,
+                 llvm::SmallVector<FootprintSnapshot, 2>>
+      Store;
+
+public:
+  // commit decl state owner+mutation_kind -> Footprint.
+  template <typename T>
+  void commit(const Decl *Owner, MutationType K, PTUID ID, const T &Fresh) {
+    auto &History = Store[{Owner, K}];
+    if (!History.empty() && std::get<T>(History.back().Data) == Fresh)
+      return;
+    History.push_back(FootprintSnapshot{ID, FootprintValue(Fresh)});
+  }
+
+  // nullptr means either "no history at all" or "history exists but the
+  // most recent entry isn't a T".
+  template <typename T>
+  const T *mostRecent(const Decl *Owner, MutationType K) const {
+    auto It = Store.find({Owner, K});
+    if (It == Store.end() || It->second.empty())
+      return nullptr;
+    return std::get_if<T>(&It->second.back().Data);
+  }
+
+  /// Drop every entry with ID >= \p ID for this (Owner, K), erasing the
+  /// key entirely once its history is empty.
+  void removeFrom(const Decl *Owner, MutationType K, PTUID ID) {
+    auto It = Store.find({Owner, K});
+    if (It == Store.end())
+      return;
+    auto &History = It->second;
+    while (!History.empty() && History.back().ID >= ID)
+      History.pop_back();
+    if (History.empty())
+      Store.erase(It);
+  }
+};
+
+struct PTUStateInfo {
+  PTUID ID;
+  const TranslationUnitDecl *ThisPTU; // current info
+
+  llvm::MapVector<const Decl *, MutationRecord> Mutations;
+
+  llvm::SmallPtrSet<const Decl *, 4> ImplicitDecls;
+
+  /// Set exactly when AddedCXXImplicitMember fires this PTU.
+  bool HadImplicitCXXMember = false;
+
+  /// here touched info mean other this belongs to other PTUs;
+  llvm::SmallPtrSet<const DeclContext *, 4> TouchedDC;
+
+  /// Every (Owner, Kind) key this PTU's own commit() wrote a FootprintStore
+  /// entry for.
+  llvm::SmallVector<std::pair<const Decl *, MutationType>, 8> TouchedFootprints;
+
+  explicit PTUStateInfo(PTUID ID) : ID(ID) {}
+
+  template <typename KindT>
+  void noteMutated(const Decl *D, DeclShape S, KindT K) {
+    if (!D->isDefinedOutsideFunctionOrMethod())
+      return;
+    auto [It, Inserted] = Mutations.try_emplace(D);
+    if (Inserted) {
+      It->second.S = S;
+    }
+
+    assert(It->second.S == S && "same decl noted under two different shapes");
+
+    It->second.add(K);
+  }
+
+  void verifyMutations(PTUMutationActions &Actions);
+
+  // False until this PTU is actually committed.
+  // PTUMutationActions uses this to decide what "undo" should do:
+  // - If this PTU was never committed, nothing was added to the chain,
+  //   so we just restore the last PTU that was committed.
+  // - If this PTU was already committed (for example, by using %undo),
+  //   first remove the entries created by this PTU, then restore the
+  //   state from before this PTU was added.
+  bool Commited = false;
+};
+
+//===----------------------------------------------------------------------===//
+// SweepTracker -- Tracks declarations whose mutations cannot be reported
+// directly by an ASTMutationListener.
+//
+// Each Decl is tracked with the hidden mutation kinds that are still possible.
+// At commit time, sweep() checks the tracked kinds to find mutations made by
+// the current PTU. Once a mutation kind is confirmed or can no longer happen,
+// it is removed from tracking.
+//
+// During restore, a mutation kind can be tracked again so its mutation sites
+// can be restored when needed.
+//===----------------------------------------------------------------------===//
+class SweepTracker {
+  llvm::DenseMap<const Decl *, uint32_t> Active;
+
+public:
+  void track(const Decl *D, uint32_t HiddenBits) {
+    if (HiddenBits)
+      Active[D] |= HiddenBits;
+  }
+
+  bool isTrackedFor(const Decl *D, uint32_t Flag) const {
+    auto It = Active.find(D);
+    return It != Active.end() && (It->second & Flag);
+  }
+
+  void untrack(const Decl *D, uint32_t Flag) {
+    auto It = Active.find(D);
+    if (It == Active.end())
+      return;
+    It->second &= ~Flag;
+    if (!It->second)
+      Active.erase(It);
+  }
+
+  // removes every Active entry whose decl matches Predicate.
+  template <typename PredicateFn> void untrackIf(PredicateFn Predicate) {
+    llvm::SmallVector<const Decl *, 8> Stale;
+    for (auto &Entry : Active)
+      if (Predicate(Entry.getFirst()))
+        Stale.push_back(Entry.getFirst());
+    for (const Decl *D : Stale)
+      Active.erase(D);
+  }
+
+  // Call at commit/restore time. OnConfirmed is invoked as
+  // (const Decl *D, DeclShape S, uint32_t ConfirmedKinds) for every decl
+  // that had something newly confirmed this sweep.
+  template <typename OnConfirmedFn>
+  void sweep(PTUMutationActions &Act, OnConfirmedFn OnConfirmed);
+};
+
+// enum class LangMode : uint8_t {
+//   C,   // no DefinitionData, no templates, no implicit special members
+//   CXX, // full set
+// };
+
+// Overall flow:
+// - Track changes made by other PTUs so they can be applied to the relevant
+//   chains/mutations when those PTUs are committed.
+// - On rollback of a committed PTU, remove the entries created by that PTU
+//   and restore the state that existed before it.
+// - On rollback of a PTU that was never committed, restore the chain to its
+//   current mostRecent() state, since this PTU never added anything to it.
+// - For the current PTU, collect newly added declarations that are
+//   modifiable/visible to other PTUs. Local-only declarations are not exposed.
+//
+// In short, this keeps the shared declaration state in sync across PTUs.
+class IncrementalStateTracker {
+private:
+  ASTContext &Ctx;
+  // Only needed so remove stale
+  // Sema::SpecialMemberCache entries for decls this PTU created.
+  Sema &SemaRef;
+  PTUCheckpointLedger PTUSlabCheckpoints;
+  PTUID NextID = 0;
+
+  mutable std::vector<PTUStateInfo> PTUStack;
+
+  // One relation for every tracked footprint/value kind.
+  FootprintStore Footprints;
+
+  // Tracks hidden mutations for all supported Decl kinds in one shared tracker,
+  // so they can be restored correctly during rollback.
+  SweepTracker HiddenMutationTracker;
+
+  friend class PTUMutationActions;
+
+public:
+  IncrementalStateTracker(ASTContext &Ctx, Sema &S)
+      : Ctx(Ctx), SemaRef(S), PTUSlabCheckpoints(Ctx) {}
+
+  // Writes a new value to FootprintStore and records that this PTU touched
+  // (Owner, K), so undoLastEntries() knows what to remove if the PTU is rolled
+  // back without committing.
+  template <typename T>
+  void commitFootprint(const Decl *Owner, MutationType K, PTUID ID,
+                       const T &Fresh) {
+    Footprints.commit(Owner, K, ID, Fresh);
+    current().TouchedFootprints.emplace_back(Owner, K);
+  }
+
+  FootprintStore &getFootprints() { return Footprints; }
+
+  PTUStateInfo &current() const {
+    assert(!PTUStack.empty() && "no PTU has been started");
+    return PTUStack.back();
+  }
+
+  PTUID currentID() const { return current().ID; }
+  bool hasOpenPTU() const { return !PTUStack.empty(); }
+
+  void beginPTU(llvm::SlabCheckPoint CP) {
+    PTUID ID = NextID++;
+    PTUSlabCheckpoints.recordCheckpoint(ID, CP);
+    PTUStack.emplace_back(ID);
+  }
+
+  bool isFromThisPTU(const void *Ptr, PTUID ID) const {
+    return PTUSlabCheckpoints.isFromThisPTU(Ptr, ID);
+  }
+  bool isFromCurrentPTU(const void *Ptr) const {
+    return isFromThisPTU(Ptr, currentID());
+  }
+
+  SweepTracker &getHiddenMutationTracker() { return HiddenMutationTracker; }
+  PTUCheckpointLedger &getPTUSlabCheckpoints() { return PTUSlabCheckpoints; }
+  Sema &getSema() const { return SemaRef; }
+  ASTContext &getASTContext() const { return Ctx; }
+
+  void undoLastEntries();
+
+private:
+  void popCurrentPTU() {
+    PTUID ID = currentID();
+    PTUStack.pop_back();
+    PTUSlabCheckpoints.markDead(ID);
+  }
+};
+
+// Once place to revert Sema specific cache.
+class SemaCacheReverter {
+  Sema &SemaRef;
+  IncrementalStateTracker &Tracker;
+public:
+  explicit SemaCacheReverter(Sema &S, IncrementalStateTracker &Tracker)
+      : SemaRef(S), Tracker(Tracker) {}
+
+  // Sema::SpecialMemberCache stores the CXXMethodDecl* resolved by a previous
+  // LookupSpecialMember() call for each (RD, kind+qualifiers). Remove entries
+  // whose cached method belongs to the PTU being rolled back.
+  void restoreSpecialMemberCache(PTUID ID);
+};
+
+class PTUMutationActions {
+private:
+  IncrementalStateTracker &Tracker;
+  SweepTracker &HiddenMutationTracker;
+  SemaCacheReverter SemaCache;
+  DeclStateReverter Reverter;
+
+public:
+  explicit PTUMutationActions(IncrementalStateTracker &Tracker)
+      : Tracker(Tracker),
+        HiddenMutationTracker(Tracker.getHiddenMutationTracker()),
+        SemaCache(Tracker.getSema(), Tracker),
+        Reverter(Tracker.getPTUSlabCheckpoints()) {}
+
+  template <typename DeclStatePolicyT>
+  void walkDecls(const DeclContext *DC, DeclStatePolicyT &Policy);
+
+  uint32_t DeclNeedingTracking(DeclShape S, const Decl *D);
+
+  uint32_t confirmMutation(const Decl *D, DeclShape S, uint32_t FlaggedKinds);
+
+  void trackForSweep(const Decl *D, uint32_t Kinds);
+
+  void untrackIfClosed(const Decl *D, DeclShape S, uint32_t Confirmed);
+
+  void syncSweepTracking(const Decl *D, DeclShape S, uint32_t Kinds,
+                         bool IsNew);
+
+private:
+  void commitMembers(PTUID ID, const DeclContext *Members);
+
+  void commitClass(PTUID ID, const CXXRecordDecl *RD, MutationRecord &Rec,
+                   bool IsNew);
+  void commitFunction(PTUID ID, const FunctionDecl *FD, MutationRecord &Rec,
+                      bool IsNew);
+  void commitVar(PTUID ID, const VarDecl *VD, MutationRecord &Rec, bool IsNew);
+
+  void commitEnum(PTUID ID, const EnumDecl *ED, MutationRecord &Rec,
+                  bool IsNew);
+  void commitTemplate(PTUID ID, const RedeclarableTemplateDecl *ED,
+                      MutationRecord &Rec, bool IsNew);
+  void commitTypedef(PTUID ID, const TypedefNameDecl *ED, MutationRecord &Rec,
+                     bool IsNew);
+
+  void restoreClass(PTUID ID, const CXXRecordDecl *RD, MutationRecord &Rec);
+
+  void restoreFunction(PTUID ID, const FunctionDecl *FD, MutationRecord &Rec);
+
+  void restoreTemplate(PTUID ID, const RedeclarableTemplateDecl *TD,
+                       MutationRecord &Rec);
+
+  void restoreVar(PTUID ID, const VarDecl *VD, MutationRecord &Rec);
+
+  void restoreEnum(PTUID ID, const EnumDecl *ED, MutationRecord &Rec);
+
+  void restoreTypedef(PTUID ID, const TypedefNameDecl *TD, MutationRecord &Rec);
+
+public:
+  void restoreDecl(PTUID ID, const Decl *D, MutationRecord &Rec);
+  void commitDecl(PTUID ID, const Decl *D, MutationRecord &Rec,
+                  bool IsNew = false);
+  // Actual commit action: updates IncrementalStateTracker tracking info for
+  // decls from the previous PTU after a successful PTU. And add tracking info
+  // for newly created Decls
+  //
+  void commit(TranslationUnitDecl *MostRecentTU);
+
+  // Restore action: restores decls from the previous PTU using
+  // IncrementalStateTracker tracking info and unlinks decls created by this
+  // PTU.
+  void restore(TranslationUnitDecl *MostRecentTU);
+};
+
+class PTUMutationRecorder : public ASTMutationListener {
+private:
+  IncrementalStateTracker &Tracker;
+
+  template <typename TemplateT, typename SpecT>
+  void noteTemplateDeclMutation(const TemplateT *TD, const SpecT *Spec,
+                                DeclShape S);
+
+  void noteExceptionSpecMutation(const FunctionDecl *FD,
+                                 MutationType K = MutationType::ExceptionSpec);
+
+  void noteDefinitionInstantiated(const Decl *D);
+
+public:
+  PTUMutationRecorder(IncrementalStateTracker &Tracker) : Tracker(Tracker) {}
+
+  /// A new TagDecl definition was completed.
+  void CompletedTagDefinition(const TagDecl *D) override;
+
+  /// A new declaration with name has been added to a DeclContext.
+  void AddedVisibleDecl(const DeclContext *DC, const Decl *D) override;
+
+  /// An implicit member was added after the definition was completed.
+  void AddedCXXImplicitMember(const CXXRecordDecl *RD, const Decl *D) override;
+
+  /// A template specialization (or partial one) was added to the
+  /// template declaration.
+  void AddedCXXTemplateSpecialization(
+      const ClassTemplateDecl *TD,
+      const ClassTemplateSpecializationDecl *D) override;
+
+  /// A template specialization (or partial one) was added to the
+  /// template declaration.
+  void AddedCXXTemplateSpecialization(
+      const VarTemplateDecl *TD,
+      const VarTemplateSpecializationDecl *D) override;
+
+  /// A template specialization (or partial one) was added to the
+  /// template declaration.
+  void AddedCXXTemplateSpecialization(const FunctionTemplateDecl *TD,
+                                      const FunctionDecl *D) override;
+
+  /// A function's exception specification has been evaluated or
+  /// instantiated.
+  void ResolvedExceptionSpec(const FunctionDecl *FD) override;
+
+  /// A function's return type has been deduced.
+  void DeducedReturnType(const FunctionDecl *FD, QualType ReturnType) override;
+
+  /// A virtual destructor's operator delete has been resolved.
+  void ResolvedOperatorDelete(const CXXDestructorDecl *DD,
+                              const FunctionDecl *Delete,
+                              Expr *ThisArg) override {}
+
+  /// A virtual destructor's operator global delete has been resolved.
+  void ResolvedOperatorGlobDelete(const CXXDestructorDecl *DD,
+                                  const FunctionDecl *GlobDelete) override {}
+
+  /// A virtual destructor's operator array delete has been resolved.
+  void ResolvedOperatorArrayDelete(const CXXDestructorDecl *DD,
+                                   const FunctionDecl *ArrayDelete) override {}
+
+  /// A virtual destructor's operator global array delete has been resolved.
+  void ResolvedOperatorGlobArrayDelete(
+      const CXXDestructorDecl *DD,
+      const FunctionDecl *GlobArrayDelete) override {}
+
+  /// An implicit member got a definition.
+  void CompletedImplicitDefinition(const FunctionDecl *D) override {
+    noteDefinitionInstantiated(D);
+  }
+
+  /// The instantiation of a templated function or variable was
+  /// requested. In particular, the point of instantiation and template
+  /// specialization kind of \p D may have changed.
+  void InstantiationRequested(const ValueDecl *D) override;
+
+  /// A templated variable's definition was implicitly instantiated.
+  void VariableDefinitionInstantiated(const VarDecl *D) override {
+    noteDefinitionInstantiated(D);
+  }
+
+  /// A function template's definition was instantiated.
+  void FunctionDefinitionInstantiated(const FunctionDecl *D) override {
+    noteDefinitionInstantiated(D);
+  }
+
+  /// A default argument was instantiated.
+  void DefaultArgumentInstantiated(const ParmVarDecl *D) override {}
+
+  /// A default member initializer was instantiated.
+  void DefaultMemberInitializerInstantiated(const FieldDecl *D) override {}
+
+  /// A new objc category class was added for an interface.
+  void AddedObjCCategoryToInterface(const ObjCCategoryDecl *CatD,
+                                    const ObjCInterfaceDecl *IFD) override {}
+
+  /// A declaration is marked used which was not previously marked used.
+  ///
+  /// \param D the declaration marked used
+  void DeclarationMarkedUsed(const Decl *D) override {}
+
+  /// A declaration is marked as OpenMP threadprivate which was not
+  /// previously marked as threadprivate.
+  ///
+  /// \param D the declaration marked OpenMP threadprivate.
+  void DeclarationMarkedOpenMPThreadPrivate(const Decl *D) override {}
+
+  /// A declaration is marked as OpenMP groupprivate which was not
+  /// previously marked as groupprivate.
+  ///
+  /// \param D the declaration marked OpenMP groupprivate.
+  void DeclarationMarkedOpenMPGroupPrivate(const Decl *D) override {}
+
+  /// A declaration is marked as OpenMP declaretarget which was not
+  /// previously marked as declaretarget.
+  ///
+  /// \param D the declaration marked OpenMP declaretarget.
+  /// \param Attr the added attribute.
+  void DeclarationMarkedOpenMPDeclareTarget(const Decl *D,
+                                            const Attr *Attr) override {}
+
+  /// A declaration is marked as a variable with OpenMP allocator.
+  ///
+  /// \param D the declaration marked as a variable with OpenMP allocator.
+  void DeclarationMarkedOpenMPAllocate(const Decl *D, const Attr *A) override {}
+
+  /// A declaration is marked as an OpenMP indirect call target.
+  ///
+  /// \param D the declaration marked as an indirect call target.
+  void DeclarationMarkedOpenMPIndirectCall(const Decl *D) override {}
+
+  /// A definition has been made visible by being redefined locally.
+  ///
+  /// \param D The definition that was previously not visible.
+  /// \param M The containing module in which the definition was made visible,
+  ///        if any.
+  void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) override {}
+
+  /// An attribute was added to a RecordDecl
+  ///
+  /// \param Attr The attribute that was added to the Record
+  ///
+  /// \param Record The RecordDecl that got a new attribute
+  void AddedAttributeToRecord(const Attr *Attr,
+                              const RecordDecl *Record) override {}
+
+  /// An mangling number was added to a Decl
+  ///
+  /// \param D The decl that got a mangling number
+  ///
+  /// \param Number The mangling number that was added to the Decl
+  void AddedManglingNumber(const Decl *D, unsigned Number) override {}
+
+  /// An static local number was added to a Decl
+  ///
+  /// \param D The decl that got a static local number
+  ///
+  /// \param Number The static local number that was added to the Decl
+  void AddedStaticLocalNumbers(const Decl *D, unsigned Number) override {}
+
+  /// An anonymous namespace was added the translation unit decl
+  ///
+  /// \param TU The translation unit decl that got a new anonymous namespace
+  ///
+  /// \param AnonNamespace The anonymous namespace that was added
+  void AddedAnonymousNamespace(const TranslationUnitDecl *TU,
+                               NamespaceDecl *AnonNamespace) override {}
+};
+} // end namespace clang
+#endif // LLVM_CLANG_INTERPRETER_ERROR_RECOVERY_H
