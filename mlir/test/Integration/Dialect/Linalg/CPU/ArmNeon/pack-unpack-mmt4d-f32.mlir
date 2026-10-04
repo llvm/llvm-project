@@ -2,8 +2,7 @@
 
 // DEFINE: %{compile} = mlir-opt %s \
 // DEFINE:   -transform-interpreter -test-transform-dialect-erase-schedule \
-// DEFINE:   -cse -canonicalize -convert-vector-to-scf \
-// DEFINE:   -convert-vector-to-llvm="enable-arm-neon" -test-lower-to-llvm \
+// DEFINE:   -cse -canonicalize  -test-lower-to-llvm \
 // DEFINE:   -o %t
 
 // DEFINE: %{run} = %mcr_aarch64_cmd %t -e main -entry-point-result=void --march=aarch64 --mattr="+neon" \
@@ -30,20 +29,14 @@
 /// (implemented in @matmul).
 ///
 /// NOTES ON IMPLEMENTATION
-/// 1. @matmul is only lowered via `-test-lower-to-llvm`, with no tiling or
-///    vectorization -- it's there to provide a reference check, not to
+/// 1. linalg.matmul is only lowered via `-test-lower-to-llvm`, with no tiling or
+///    vectorization - it's there to provide a reference check, not to
 ///    demonstrate a lowering path.
 ///
-/// 2. NEON has no instruction that multiplies two f32 matrices in one go, so
-///    the inner tile is (M0, N0, K0) = (4, 4, 1): every vector.contract is a
-///    rank-1 update, lowered to outer products, i.e. one `fmla` per row of
-///    the 4x4 accumulator tile.
+/// 2. Packing gives the tiles a statically-known shape (no masking in the
+///    mmt4d loop) and makes them contiguous in memory.
 ///
-/// 3. Packing is still worthwhile without a dedicated instruction: it gives
-///    the tiles a statically-known shape (no masking in the mmt4d loop) and
-///    makes them contiguous in memory.
-///
-/// 4. The MMT4D and Pack/Unpack Ops are kept in separate functions to isolate
+/// 3. The MMT4D and Pack/Unpack Ops are kept in separate functions to isolate
 ///    the corresponding lowering and lowering configs.
 //===----------------------------------------------------------------------===//
 

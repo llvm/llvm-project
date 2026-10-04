@@ -20,9 +20,6 @@
 /// static shapes in pack-unpack-mmt4d-f32.mlir, the tile sizes here don't
 /// evenly divide the matrix dimensions, so this is also the variant that
 /// exercises masked vectorization (masks computed from runtime dimensions).
-///
-/// NOTES ON IMPLEMENTATION
-/// 1. NEON has no scalable vectors: N0 = 4 matches a full 128-bit register.
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
