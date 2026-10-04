@@ -42,13 +42,9 @@ using namespace llvm;
 
 namespace WebAssembly {
 extern cl::opt<bool> WasmDisableExplicitLocals;
-extern cl::opt<bool> WasmEnableEmSjLj;
-extern cl::opt<bool> WasmEnableSjLj;
 } // namespace WebAssembly
 
 using llvm::WebAssembly::WasmDisableExplicitLocals;
-using llvm::WebAssembly::WasmEnableEmSjLj;
-using llvm::WebAssembly::WasmEnableSjLj;
 
 namespace {
 
@@ -124,9 +120,8 @@ void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   // TargetPassConfig::addPassesToHandleExceptions, but that runs after these IR
   // passes and Emscripten SjLj handling expects all invokes to be lowered
   // before.
-  bool EnableEmEH = TM.Options.ExceptionModel == ExceptionHandling::Emscripten;
-  bool EnableWasmEH = TM.Options.ExceptionModel == ExceptionHandling::Wasm;
-  if (!EnableEmEH && !EnableWasmEH) {
+  ExceptionHandling EH = TM.Options.ExceptionModel;
+  if (EH != ExceptionHandling::Emscripten && EH != ExceptionHandling::Wasm) {
     addFunctionPass(LowerInvokePass(), PMW);
     // The lower invoke pass may create unreachable code. Remove it in order not
     // to process dead blocks in setjmp/longjmp handling.
@@ -137,10 +132,8 @@ void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   // done in WasmEHPrepare pass, Wasm SjLj preparation shares libraries and
   // transformation algorithms with Emscripten SjLj, so we run
   // LowerEmscriptenEHSjLj pass also when Wasm SjLj is enabled.
-  if (EnableEmEH || WasmEnableEmSjLj || WasmEnableSjLj) {
-    flushFPMsToMPM(PMW);
-    addModulePass(WebAssemblyLowerEmscriptenEHSjLjPass(EnableEmEH), PMW);
-  }
+  flushFPMsToMPM(PMW);
+  addModulePass(WebAssemblyLowerEmscriptenEHSjLjPass(EH), PMW);
 
   // Expand indirectbr instructions to switches.
   addFunctionPass(IndirectBrExpandPass(TM), PMW);
@@ -152,8 +145,7 @@ void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
 }
 
 void WebAssemblyCodeGenPassBuilder::addISelPrepare(PassManagerWrapper &PMW) {
-  if (TM.Options.ExceptionModel == ExceptionHandling::Wasm)
-    addFunctionPass(WasmEHPreparePass(), PMW);
+  addFunctionPass(WasmEHPreparePass(TM.Options.ExceptionModel), PMW);
 
   // We need to move reference type allocas to WASM_ADDRESS_SPACE_VAR so that
   // loads and stores are promoted to local.gets/local.sets.
@@ -259,8 +251,7 @@ void WebAssemblyCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
 
   // Do various transformations for exception handling.
   // Every CFG-changing optimizations should come before this.
-  if (TM.Options.ExceptionModel == ExceptionHandling::Wasm)
-    addMachineFunctionPass(WebAssemblyLateEHPreparePass(), PMW);
+  addMachineFunctionPass(WebAssemblyLateEHPreparePass(), PMW);
 
   // Now that we have a prologue and epilogue and all frame indices are
   // rewritten, eliminate SP and FP. This allows them to be stackified,

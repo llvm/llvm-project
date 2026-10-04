@@ -35,15 +35,19 @@ class FunctionPass;
 // LLVM IR passes.
 class WebAssemblyLowerEmscriptenEHSjLjPass
     : public RequiredPassInfoMixin<WebAssemblyLowerEmscriptenEHSjLjPass> {
-  bool EnableEmEH;
+  /// Model to assume if the module has no "exception-model" flag.
+  ExceptionHandling DefaultEH;
 
 public:
-  WebAssemblyLowerEmscriptenEHSjLjPass(bool EnableEmEH = false)
-      : EnableEmEH(EnableEmEH) {}
+  WebAssemblyLowerEmscriptenEHSjLjPass(
+      ExceptionHandling DefaultEH = ExceptionHandling::Default)
+      : DefaultEH(DefaultEH) {}
+
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
-ModulePass *createWebAssemblyLowerEmscriptenEHSjLjLegacyPass(bool EnableEmEH);
+ModulePass *createWebAssemblyLowerEmscriptenEHSjLjLegacyPass(
+    ExceptionHandling DefaultEH = ExceptionHandling::Default);
 
 class WebAssemblyAddMissingPrototypesPass
     : public RequiredPassInfoMixin<WebAssemblyAddMissingPrototypesPass> {
