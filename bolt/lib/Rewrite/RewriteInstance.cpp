@@ -264,6 +264,17 @@ SkipFunctionNamesFile("skip-funcs-file",
   cl::Hidden,
   cl::cat(BoltCategory));
 
+static cl::list<std::string>
+    SkipFunctionNamesNR("skip-funcs-no-regex", cl::CommaSeparated,
+                        cl::desc("list of functions to skip (non-regex)"),
+                        cl::value_desc("func1,func2,func3,..."), cl::Hidden,
+                        cl::cat(BoltCategory));
+
+static cl::opt<std::string> SkipFunctionNamesFileNR(
+    "skip-funcs-file-no-regex",
+    cl::desc("file with list of functions to skip (non-regex)"), cl::Hidden,
+    cl::cat(BoltCategory));
+
 static cl::opt<bool> TrapOldCode(
     "trap-old-code",
     cl::desc("insert traps in old function bodies (relocation mode)"),
@@ -876,7 +887,8 @@ Error RewriteInstance::run() {
 
   preprocessProfileData();
 
-  selectFunctionsToProcess();
+  if (Error E = selectFunctionsToProcess())
+    return E;
 
   readDebugInfo();
 
@@ -3712,24 +3724,29 @@ void RewriteInstance::selectFunctionsToPrint() {
   populateFunctionNames(opts::PrintOnlyFile, opts::PrintOnly);
 }
 
-void RewriteInstance::selectFunctionsToProcess() {
+Error RewriteInstance::selectFunctionsToProcess() {
   // Extend the list of functions to process or skip from a file.
   populateFunctionNames(opts::FunctionNamesFile, opts::ForceFunctionNames);
   populateFunctionNames(opts::SkipFunctionNamesFile, opts::SkipFunctionNames);
   populateFunctionNames(opts::FunctionNamesFileNR, opts::ForceFunctionNamesNR);
-
-  // Make a set of functions to process to speed up lookups.
-  std::unordered_set<std::string> ForceFunctionsNR(
-      opts::ForceFunctionNamesNR.begin(), opts::ForceFunctionNamesNR.end());
+  populateFunctionNames(opts::SkipFunctionNamesFileNR,
+                        opts::SkipFunctionNamesNR);
 
   if ((!opts::ForceFunctionNames.empty() ||
        !opts::ForceFunctionNamesNR.empty()) &&
-      !opts::SkipFunctionNames.empty()) {
-    BC->errs()
-        << "BOLT-ERROR: cannot select functions to process and skip at the "
-           "same time. Please use only one type of selection.\n";
-    exit(1);
-  }
+      (!opts::SkipFunctionNames.empty() || !opts::SkipFunctionNamesNR.empty()))
+    return createStringError(
+        errc::invalid_argument,
+        "cannot select functions to process and skip at the same time; "
+        "please use only one type of selection");
+
+  // Make sets of exact function names to speed up lookups.
+  StringSet<> ForceFunctionsNR;
+  for (const std::string &Name : opts::ForceFunctionNamesNR)
+    ForceFunctionsNR.insert(Name);
+  StringSet<> SkipFunctionsNR;
+  for (const std::string &Name : opts::SkipFunctionNamesNR)
+    SkipFunctionsNR.insert(Name);
 
   uint64_t LiteThresholdExecCount = 0;
   if (opts::LiteThresholdPct) {
@@ -3775,6 +3792,12 @@ void RewriteInstance::selectFunctionsToProcess() {
     if (opts::MaxFunctions.getNumOccurrences() &&
         NumFunctionsToProcess >= opts::MaxFunctions)
       return true;
+    // Check explicit binary function names first; checking regexes is costly.
+    for (const StringRef Name : Function.getNames())
+      if (SkipFunctionsNR.contains(Name))
+        return true;
+
+    // Check regexes only after explicit names.
     for (std::string &Name : opts::SkipFunctionNames)
       if (Function.hasNameRegex(Name))
         return true;
@@ -3793,14 +3816,14 @@ void RewriteInstance::selectFunctionsToProcess() {
 
     // If the list is not empty, only process functions from the list.
     if (!opts::ForceFunctionNames.empty() || !ForceFunctionsNR.empty()) {
+      // Check explicit binary function names first; checking regexes is costly.
+      for (const StringRef Name : Function.getNames())
+        if (ForceFunctionsNR.contains(Name))
+          return true;
+
       // Regex check (-funcs and -funcs-file options).
       for (std::string &Name : opts::ForceFunctionNames)
         if (Function.hasNameRegex(Name))
-          return true;
-
-      // Non-regex check (-funcs-no-regex and -funcs-file-no-regex).
-      for (const StringRef Name : Function.getNames())
-        if (ForceFunctionsNR.count(Name.str()))
           return true;
 
       return false;
@@ -3860,7 +3883,7 @@ void RewriteInstance::selectFunctionsToProcess() {
   }
 
   if (!BC->HasSplitFunctions)
-    return;
+    return Error::success();
 
   // Fragment overrides:
   // - If the fragment must be skipped, then the parent must be skipped as well.
@@ -3904,6 +3927,7 @@ void RewriteInstance::selectFunctionsToProcess() {
         BC->outs() << "BOLT-INFO: processing ending on " << Function << '\n';
     }
   }
+  return Error::success();
 }
 
 void RewriteInstance::readDebugInfo() {
