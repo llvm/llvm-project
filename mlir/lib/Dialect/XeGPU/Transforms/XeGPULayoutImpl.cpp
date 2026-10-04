@@ -1277,13 +1277,10 @@ compute2DBlockIOLaneLayout(ArrayRef<int64_t> instShape, int64_t subgroupSize,
 ///    carries several lanes, whether the source is loaded from memory or is a
 ///    dpas result, so putting them there matches what the producer did.
 ///
-/// 3. Raise lane_data on exactly one dim, so the lane holds a run of elements
-///    along that dim and reduces the run with one vector op instead of one
-///    element at a time. The run is at most `maxReduceVectorSize` long.
-///
-///    Which dim: it must be reduced, hold more than one element, and have
-///    lane_layout 1, so a lane owns the whole run it reduces. Among the
-///    innermost two dims, the innermost eligible one is used.
+/// 3. Raise lane_data on the innermost dim, so the lane holds a run of elements
+///    along it and reduces the run with one vector op instead of one element at
+///    a time. The run is at most `maxReduceVectorSize` long. The dim must also
+///    be reduced and have lane_layout 1.
 ///
 ///    How much: `maxReduceVectorSize / product(lane_data)`, multiplied onto the
 ///    dim's existing lane_data and capped by its extent.
@@ -1365,20 +1362,12 @@ computeReductionLaneLayoutAndData(
       maxReduceVectorSize /
       std::min(computeProduct(laneData), maxReduceVectorSize);
 
-  // Exactly one dim carries the vector: it must be unsplit by lanes (so the
-  // lane owns it whole), reduced (that is what the vector feeds), and non-unit.
-  auto canCarryVector = [&](int i) {
-    return laneLayout[i] == 1 && isReduced(i) && srcShape[i] > 1;
-  };
-  int vectorDim = -1;
-  if (canCarryVector(innermost))
-    vectorDim = innermost;
-  else if (srcRank >= 2 && canCarryVector(innermost - 1))
-    vectorDim = innermost - 1;
+  bool canCarryVector = laneLayout[innermost] == 1 && isReduced(innermost) &&
+                        srcShape[innermost] > 1;
 
-  if (vectorBudget > 1 && vectorDim >= 0)
-    laneData[vectorDim] =
-        std::min(vectorBudget * laneData[vectorDim], srcShape[vectorDim]);
+  if (vectorBudget > 1 && canCarryVector)
+    laneData[innermost] =
+        std::min(vectorBudget * laneData[innermost], srcShape[innermost]);
 
   SmallVector<int64_t> instData(srcRank);
   for (int i = 0; i < srcRank; ++i)
@@ -2477,10 +2466,10 @@ xegpu::completeDpasMxLaneLayoutFromInstData(
 ///   3. Lane layout - Default (lanes on innermost dim):
 ///      srcShape=[32, 64], reductionDims=[0], subgroupSize=16
 ///      * Source Layout (decided by this function):
-///        laneLayout=[1, 16], laneData=[16, 1] (returned sliced over dim 0).
+///        laneLayout=[1, 16], laneData=[1, 1] (returned sliced over dim 0).
 ///      The innermost dim is not reduced, so lanes stay on it. Reduced dim 0 is
-///      then lane-free and takes the per-lane reduce vector:
-///      laneData[0] = min(maxReduceVectorSize, 32) = 16.
+///      then lane-free, but it is not the innermost dim, so it takes no reduce
+///      vector and the reduction runs one element at a time.
 ///
 ///   4. Lane layout - Switch (lanes moved off the reduction dim):
 ///      srcShape=[32, 64], reductionDims=[1], subgroupSize=16
@@ -2497,12 +2486,11 @@ xegpu::completeDpasMxLaneLayoutFromInstData(
 ///   scalar):
 ///      srcShape=[32, 64], reductionDims=[0, 1], subgroupSize=16
 ///      * Source Layout (decided by this function):
-///        laneLayout=[1, 16], laneData=[16, 1] (returned sliced over dims
+///        laneLayout=[1, 16], laneData=[1, 1] (returned sliced over dims
 ///        [0,1]).
 ///      Both dims are reduced, so this is not a *sole* innermost reduction; the
 ///      switch condition (example 4) does not apply and lanes stay on the
-///      innermost dim. Reduced dim 0 is lane-free, so it takes the reduce
-///      vector. The cross-lane reduction over dim 1 here is unavoidable.
+///      innermost dim. The cross-lane reduction over dim 1 is unavoidable.
 ///
 ///   6. Lane layout - No switch when the consumer slices the reduction dim:
 ///      srcShape=[32, 64], reductionDims=[1], subgroupSize=16
