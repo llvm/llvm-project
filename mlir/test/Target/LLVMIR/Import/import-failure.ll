@@ -302,6 +302,16 @@ define void @deref(i64 %0) {
 
 ; // -----
 
+; CHECK: warning: unhandled metadata: ![[RANGE:[0-9]+]] = !{i32 0, i32 2, i32 4, i32 6} on %{{.*}} = load i32, ptr %{{.*}}, align 4, !range ![[RANGE]]
+define i32 @multi_range(ptr %ptr) {
+  %1 = load i32, ptr %ptr, !range !0
+  ret i32 %1
+}
+
+!0 = !{i32 0, i32 2, i32 4, i32 6}
+
+; // -----
+
 ; CHECK:      import-failure.ll
 ; CHECK-SAME: warning: unhandled data layout token: ni:42
 target datalayout = "e-ni:42-i64:64"

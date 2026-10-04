@@ -92,6 +92,7 @@ getSupportedMetadataImpl(llvm::LLVMContext &llvmContext) {
       llvm::LLVMContext::MD_alias_scope,
       llvm::LLVMContext::MD_dereferenceable,
       llvm::LLVMContext::MD_dereferenceable_or_null,
+      llvm::LLVMContext::MD_range,
       llvm::LLVMContext::MD_mmra,
       llvmContext.getMDKindID(vecTypeHintMDName),
       llvmContext.getMDKindID(workGroupSizeHintMDName),
@@ -253,6 +254,24 @@ static LogicalResult setDereferenceableAttr(const llvm::MDNode *node,
     return failure();
 
   iface.setDereferenceable(*dereferenceable);
+  return success();
+}
+
+/// Fails on multi-range metadata since ConstantRangeAttr holds one range.
+static LogicalResult setRangeAttr(const llvm::MDNode *node, Operation *op) {
+  auto loadOp = dyn_cast<LoadOp>(op);
+  if (!loadOp || node->getNumOperands() != 2)
+    return failure();
+
+  auto *lower =
+      llvm::mdconst::dyn_extract<llvm::ConstantInt>(node->getOperand(0));
+  auto *upper =
+      llvm::mdconst::dyn_extract<llvm::ConstantInt>(node->getOperand(1));
+  if (!lower || !upper)
+    return failure();
+
+  loadOp.setRangeAttr(ConstantRangeAttr::get(
+      op->getContext(), lower->getValue(), upper->getValue()));
   return success();
 }
 
@@ -509,6 +528,8 @@ public:
       return setDereferenceableAttr(
           node, llvm::LLVMContext::MD_dereferenceable_or_null, op,
           moduleImport);
+    if (kind == llvm::LLVMContext::MD_range)
+      return setRangeAttr(node, op);
     if (kind == llvm::LLVMContext::MD_mmra)
       return setMmraAttr(node, op, moduleImport);
     llvm::LLVMContext &context = node->getContext();
