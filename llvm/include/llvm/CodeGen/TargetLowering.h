@@ -5870,6 +5870,13 @@ public:
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandCTTZ(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Expands a CTTZ node into a sequence of floating point operations.
+  /// Uses ctz(x) == log2(x & -x), extracting the exponent of the
+  /// exact f64 conversion of the isolated lowest set bit.
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandCTTZWithFP(SDNode *N, SelectionDAG &DAG) const;
+
   /// Expand VP_CTTZ_ELTS/VP_CTTZ_ELTS_ZERO_POISON nodes.
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.

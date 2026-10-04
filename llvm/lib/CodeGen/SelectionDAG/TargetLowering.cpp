@@ -11205,6 +11205,83 @@ SDValue TargetLowering::CTTZTableLookup(SDNode *Node, SelectionDAG &DAG,
                        DAG.getConstant(BitWidth, DL, VT), ExtLoad);
 }
 
+SDValue TargetLowering::expandCTTZWithFP(SDNode *Node,
+                                           SelectionDAG &DAG) const {
+  // For nonzero x: ctz(x) == log2(x & -x). The isolated lowest set bit is a
+  // power of two, so its conversion to f64 is exact and log2 can be read off
+  // the f64 exponent:
+  //   f64 f = (f64)(x & -x);
+  //   u64 i = bitcast<u64>(f);
+  //   ctz(x) = (u32)(i >> 52) - 1023;
+  // Ref: graphics.stanford.edu/~seander/bithacks.html#ZerosOnRightFloatCast
+  SDLoc dl(Node);
+  EVT VT = Node->getValueType(0);
+  SDValue Op = Node->getOperand(0);
+
+  // Only i32 elements are supported for now: every power of two that fits in
+  // i32 is exactly representable in f64.
+  if (VT.getScalarType() != MVT::i32)
+    return SDValue();
+
+  // Requires hard-float f64 conversion support.
+  if (!isTypeLegal(MVT::f64) ||
+      !isOperationLegalOrCustom(ISD::UINT_TO_FP, MVT::f64))
+    return SDValue();
+
+  // The scalar path extracts the f64 exponent through i64, which must be a
+  // legal type. (The vector path may use wider-than-legal vectors; those are
+  // split by later legalization, as with the integer CTPOP expansion.)
+  if (!VT.isVector() && !isTypeLegal(MVT::i64))
+    return SDValue();
+
+  // Isolate the lowest set bit. For x == 0 this yields 0, which the zero
+  // handling below (or zero-poison semantics) takes care of.
+  SDValue LowBit =
+      DAG.getNode(ISD::AND, dl, VT, Op, DAG.getNegative(Op, dl, VT));
+
+  // Convert to f64 and extract the exponent.
+  constexpr unsigned MantissaBits = 52;
+  constexpr unsigned ExponentBias = 1023;
+  SDValue ExpTrunc;
+  if (VT.isVector()) {
+    unsigned NumElts = VT.getVectorNumElements();
+    EVT FloatVT = VT.changeVectorElementType(*DAG.getContext(), MVT::f64);
+    SmallVector<SDValue, 4> FloatElts;
+    for (unsigned i = 0; i < NumElts; i++) {
+      SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32, LowBit,
+                                DAG.getIntPtrConstant(i, dl));
+      FloatElts.push_back(DAG.getNode(ISD::UINT_TO_FP, dl, MVT::f64, Elt));
+    }
+    SDValue Float = DAG.getBuildVector(FloatVT, dl, FloatElts);
+    EVT FloatBitsVT = FloatVT.changeVectorElementTypeToInteger();
+    SDValue FloatBits = DAG.getNode(ISD::BITCAST, dl, FloatBitsVT, Float);
+    SDValue Exp = DAG.getNode(ISD::SRL, dl, FloatBitsVT, FloatBits,
+                              DAG.getShiftAmountConstant(MantissaBits,
+                                                         FloatBitsVT, dl));
+    ExpTrunc = DAG.getNode(ISD::TRUNCATE, dl, VT, Exp);
+  } else {
+    SDValue Float = DAG.getNode(ISD::UINT_TO_FP, dl, MVT::f64, LowBit);
+    SDValue FloatBits = DAG.getNode(ISD::BITCAST, dl, MVT::i64, Float);
+    SDValue Exp = DAG.getNode(ISD::SRL, dl, MVT::i64, FloatBits,
+                              DAG.getShiftAmountConstant(MantissaBits,
+                                                         MVT::i64, dl));
+    ExpTrunc = DAG.getNode(ISD::TRUNCATE, dl, VT, Exp);
+  }
+  SDValue NonZeroRes = DAG.getNode(ISD::SUB, dl, VT, ExpTrunc,
+                                   DAG.getConstant(ExponentBias, dl, VT));
+
+  // CTTZ_ZERO_POISON need not handle the x == 0 case.
+  if (Node->getOpcode() == ISD::CTTZ_ZERO_POISON)
+    return NonZeroRes;
+
+  EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  SDValue SrcIsZero =
+      DAG.getSetCC(dl, SetCCVT, Op, DAG.getConstant(0, dl, VT), ISD::SETEQ);
+  return DAG.getSelect(dl, VT, SrcIsZero,
+                       DAG.getConstant(VT.getScalarSizeInBits(), dl, VT),
+                       NonZeroRes);
+}
+
 SDValue TargetLowering::expandCTTZ(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc dl(Node);
   EVT VT = Node->getValueType(0);
@@ -11243,6 +11320,14 @@ SDValue TargetLowering::expandCTTZ(SDNode *Node, SelectionDAG &DAG) const {
   if (!VT.isVector() && !isOperationLegalOrCustomOrPromote(ISD::CTPOP, VT) &&
       !isOperationLegal(ISD::CTLZ, VT))
     if (SDValue V = CTTZTableLookup(Node, DAG, dl, VT, Op, NumBitsPerElt))
+      return V;
+
+  // If the target has no cheap integer CTPOP/CTLZ expansion but supports f64
+  // conversion, count trailing zeros via the floating-point exponent:
+  // ctz(x) == log2(x & -x) for nonzero x. See expandCTTZWithFP.
+  if (!isOperationLegalOrCustomOrPromote(ISD::CTPOP, VT) &&
+      !isOperationLegalOrCustom(ISD::CTLZ, VT))
+    if (SDValue V = expandCTTZWithFP(Node, DAG))
       return V;
 
   bool UseCTLZ =
