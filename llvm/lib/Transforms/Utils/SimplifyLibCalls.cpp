@@ -3199,6 +3199,67 @@ Value *LibCallSimplifier::optimizeSymmetric(CallInst *CI, LibFunc Func,
   }
 }
 
+Value *LibCallSimplifier::optimizeSinCos(CallInst *CI, LibFunc Func,
+                                         IRBuilderBase &B) {
+  bool IsSin = Func == LibFunc_sin || Func == LibFunc_sinf;
+  LibFunc OtherFunc = CI->getType()->isFloatTy()
+                          ? (IsSin ? LibFunc_cosf : LibFunc_sinf)
+                          : (IsSin ? LibFunc_cos : LibFunc_sin);
+  LibFunc CombinedFunc =
+      CI->getType()->isFloatTy() ? LibFunc_sincosf : LibFunc_sincos;
+  Module *M = CI->getModule();
+  const Triple &T = M->getTargetTriple();
+  // Initially restrict effectful pairing to the GNU libm implementation.
+  if (!T.isOSLinux() || !T.isGNUEnvironment() ||
+      !isLibFuncEmittable(M, TLI, CombinedFunc) ||
+      CI->getCallingConv() != CallingConv::C || CI->hasOperandBundles() ||
+      CI->isMustTailCall() || CI->isConvergent() ||
+      DL.getAllocaAddrSpace() != 0)
+    return nullptr;
+
+  CallInst *Other = nullptr;
+  unsigned NumVisited = 0;
+  for (Instruction *I = CI->getNextNode(); I && ++NumVisited <= 16;
+       I = I->getNextNode()) {
+    if (auto *Call = dyn_cast<CallInst>(I)) {
+      Function *Callee = Call->getCalledFunction();
+      if (Callee && TLI->getLibFunc(*Callee) == OtherFunc &&
+          Call->arg_size() == 1 &&
+          Call->getArgOperand(0) == CI->getArgOperand(0) &&
+          Call->getCallingConv() == CallingConv::C &&
+          !Call->hasOperandBundles() && !Call->isMustTailCall() &&
+          !Call->isStrictFP() && !Call->isConvergent() &&
+          !Call->isNoBuiltin()) {
+        Other = Call;
+        break;
+      }
+    }
+    // Reads can observe errno from the first call, and writes can reset it.
+    // Do not move effects across either kind of access or an early exit.
+    if (I->mayReadOrWriteMemory() || I->mayHaveSideEffects() ||
+        I->isTerminator())
+      break;
+  }
+  if (!Other)
+    return nullptr;
+
+  Type *Ty = CI->getType();
+  IRBuilder<> EntryBuilder(
+      &*CI->getFunction()->getEntryBlock().getFirstInsertionPt());
+  Value *SinOut = EntryBuilder.CreateAlloca(Ty, nullptr, "sin.out");
+  Value *CosOut = EntryBuilder.CreateAlloca(Ty, nullptr, "cos.out");
+  FunctionCallee Callee =
+      getOrInsertLibFunc(M, *TLI, CombinedFunc, B.getVoidTy(), Ty,
+                         SinOut->getType(), CosOut->getType());
+  // Keep the combined operation as an effectful libcall, not a pure intrinsic.
+  B.CreateCall(Callee, {CI->getArgOperand(0), SinOut, CosOut});
+  Value *Sin = B.CreateLoad(Ty, SinOut, "sin");
+  Value *Cos = B.CreateLoad(Ty, CosOut, "cos");
+  replaceAllUsesWith(Other, IsSin ? Cos : Sin);
+  eraseFromParent(Other);
+  return IsSin ? Sin : Cos;
+}
+
 Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, bool IsSin, IRBuilderBase &B) {
   // Make sure the prototype is as expected, otherwise the rest of the
   // function is probably invalid and likely to abort.
@@ -4180,11 +4241,17 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_cospi:
     return optimizeSinCosPi(CI, /*IsSin*/false, Builder);
   case LibFunc_sinf:
+    if (!CI->doesNotAccessMemory())
+      return optimizeSinCos(CI, Func, Builder);
+    [[fallthrough]];
   case LibFunc_sinl:
     if (CI->doesNotAccessMemory())
       return replaceUnaryCall(CI, Builder, Intrinsic::sin);
     return nullptr;
   case LibFunc_cosf:
+    if (!CI->doesNotAccessMemory())
+      return optimizeSinCos(CI, Func, Builder);
+    [[fallthrough]];
   case LibFunc_cosl:
     if (CI->doesNotAccessMemory())
       return replaceUnaryCall(CI, Builder, Intrinsic::cos);
@@ -4276,7 +4343,7 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
     if (CI->doesNotAccessMemory())
       return replaceUnaryCall(
           CI, Builder, Func == LibFunc_sin ? Intrinsic::sin : Intrinsic::cos);
-    return nullptr;
+    return optimizeSinCos(CI, Func, Builder);
   case LibFunc_acos:
   case LibFunc_acosh:
   case LibFunc_asin:
