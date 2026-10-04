@@ -7,14 +7,22 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains double-precision e^x function
+/// This file contains the shared statically-rounded exp(x) function
 ///
 //===----------------------------------------------------------------------===//
 
-#include "src/math/exp.h"
-#include "src/__support/math/exp.h"
+#ifndef LLVM_LIBC_SHARED_MATH_STATIC_ROUNDING_EXP_H
+#define LLVM_LIBC_SHARED_MATH_STATIC_ROUNDING_EXP_H
+
+#include "shared/libc_common.h"
+#include "src/__support/math/exp_integer_eval.h"
+
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(double, exp, (double x)) { return math::exp(x); }
+using math::static_rounding::exp;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_STATIC_ROUNDING_EXP_H
