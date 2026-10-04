@@ -21,6 +21,7 @@
 #include "llvm/IR/Mangler.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/COFFModuleDefinition.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/Parallel.h"
@@ -244,17 +245,31 @@ void SymbolTable::reportUndefinedSymbol(const UndefinedDiag &undefDiag) {
   }
 }
 
-void SymbolTable::loadMinGWSymbols() {
+void SymbolTable::loadMinGWSymbols(bool loadStdcallFixups,
+                                   bool loadAutoImports) {
+  SmallPtrSet<Symbol *, 8> seen;
   std::vector<Symbol *> undefs;
+  auto addUndefined = [&](Symbol *sym) {
+    auto *undef = dyn_cast_or_null<Undefined>(sym);
+    if (!undef || undef->getWeakAlias() || !seen.insert(sym).second)
+      return;
+    undefs.push_back(sym);
+  };
   for (auto &i : symMap) {
     Symbol *sym = i.second;
-    auto *undef = dyn_cast<Undefined>(sym);
-    if (!undef)
-      continue;
-    if (undef->getWeakAlias())
-      continue;
-    undefs.push_back(sym);
+    if (sym->hasUndefinedReference)
+      addUndefined(sym);
   }
+
+  // References from replaceable COMDAT groups are provisional until the
+  // final prevailing group is known. Let the MinGW fixup pass inspect them so
+  // that it can load a provider which may affect COMDAT selection, but do not
+  // publish them through markReferenced(). If their group survives, they are
+  // attributed normally by resolveDeferredReferences().
+  for (SectionChunk *chunk : deferredReferenceChunks)
+    if (!chunk->isDiscardedByCOMDAT())
+      for (Symbol *sym : chunk->symbols())
+        addUndefined(sym);
 
   for (auto sym : undefs) {
     auto *undef = dyn_cast<Undefined>(sym);
@@ -264,7 +279,7 @@ void SymbolTable::loadMinGWSymbols() {
       continue;
     StringRef name = undef->getName();
 
-    if (machine == I386 && ctx.config.stdcallFixup) {
+    if (loadStdcallFixups && machine == I386 && ctx.config.stdcallFixup) {
       // Check if we can resolve an undefined decorated symbol by finding
       // the intended target as an undecorated symbol (only with a leading
       // underscore).
@@ -297,7 +312,7 @@ void SymbolTable::loadMinGWSymbols() {
       }
     }
 
-    if (ctx.config.autoImport) {
+    if (loadAutoImports && ctx.config.autoImport) {
       if (name.starts_with("__imp_"))
         continue;
       // If we have an undefined symbol, but we have a lazy symbol we could
@@ -430,7 +445,10 @@ void SymbolTable::reportUnresolvable() {
   for (auto &i : symMap) {
     Symbol *sym = i.second;
     auto *undef = dyn_cast<Undefined>(sym);
-    if (!undef || sym->deferUndefined)
+    // Definitions from discarded COMDATs are represented as Undefined so
+    // that they no longer participate in symbol-table consumers. Do not
+    // diagnose them unless a real undefined reference was also observed.
+    if (!undef || !sym->hasUndefinedReference || sym->deferUndefined)
       continue;
     if (undef->getWeakAlias())
       continue;
@@ -525,19 +543,17 @@ void SymbolTable::resolveRemainingUndefines(std::vector<Undefined *> &aliases) {
 }
 
 std::pair<Symbol *, bool> SymbolTable::insert(StringRef name) {
-  bool inserted = false;
   Symbol *&sym = symMap[CachedHashStringRef(name)];
-  if (!sym) {
-    sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
-    sym->isUsedInRegularObj = false;
-    sym->pendingArchiveLoad = false;
-    sym->canInline = true;
-    inserted = true;
+  if (sym)
+    return {sym, false};
 
-    if (isEC() && name.starts_with("EXP+"))
-      expSymbols.push_back(sym);
-  }
-  return {sym, inserted};
+  // Give the symbol slot a valid dynamic type immediately. Besides making the
+  // default state explicit, this ensures replaceSymbol() never reads fields
+  // through a pointer to storage in which no Symbol object exists yet.
+  sym = new (make<SymbolUnion>()) Undefined(name);
+  if (isEC() && name.starts_with("EXP+"))
+    expSymbols.push_back(sym);
+  return {sym, true};
 }
 
 std::pair<Symbol *, bool> SymbolTable::insert(StringRef name, InputFile *file) {
@@ -685,15 +701,667 @@ void SymbolTable::initializeSameAddressThunks() {
 }
 
 Symbol *SymbolTable::addUndefined(StringRef name, InputFile *f,
-                                  bool overrideLazy) {
-  auto [s, wasInserted] = insert(name, f);
-  if (wasInserted || (s->isLazy() && overrideLazy)) {
-    replaceSymbol<Undefined>(s, name);
+                                  bool overrideLazy, bool markReference) {
+  Symbol *s = markReference ? insert(name, f).first : insert(name).first;
+  if (markReference)
+    s->hasUndefinedReference = true;
+
+  if (!s->isLazy())
     return s;
-  }
-  if (s->isLazy())
+
+  if (overrideLazy)
+    return replaceSymbol<Undefined>(s, name);
+
+  if (markReference)
     forceLazy(s);
   return s;
+}
+
+Symbol *SymbolTable::addDiscardedDefinition(StringRef name) {
+  return insert(name).first;
+}
+
+Symbol *SymbolTable::canonicalizeDeferredCOMDATSymbol(Symbol *symbol) const {
+  if (Symbol *source = deferredComdatLeaderSources.lookup(symbol))
+    return source;
+  return symbol;
+}
+
+bool SymbolTable::hasDeferredCOMDATWork() const {
+  return !deferredSymbols.empty() || !deferredSymbolSources.empty() ||
+         !deferredSymbolsToResolve.empty() ||
+         !deferredReferenceChunks.empty() || !deferredDuplicates.empty();
+}
+
+static bool mayBeReplacedByLargerCOMDAT(Symbol *s) {
+  auto *d = dyn_cast<DefinedRegular>(s);
+  // Bitcode definitions use shared fake ANY chunks for all symbols, not just
+  // members of a replaceable COMDAT. Treating those chunks as provisional
+  // would defer unrelated strong/weak resolution and can mark multiple LTO
+  // definitions as prevailing.
+  if (!d || !d->data || !isa<ObjFile>(d->file))
+    return false;
+  SectionChunk *chunk = d->getChunk();
+  if (chunk->sym == d)
+    return false;
+  return chunk->isInReplaceableCOMDATGroup();
+}
+
+static bool shouldReplaceWeakAlias(SymbolTable &symtab, InputFile *f,
+                                   Symbol *source, Symbol *currentTarget,
+                                   bool currentIsAntiDep, Symbol *target,
+                                   bool isAntiDep) {
+  if (currentTarget && currentTarget != target) {
+    // Ignore duplicated anti-dependency symbols.
+    if (isAntiDep)
+      return false;
+    if (!currentIsAntiDep) {
+      // Weak aliases as produced by GCC are named in the form
+      // .weak.<weaksymbol>.<othersymbol>, where <othersymbol> is the name of
+      // another symbol emitted near the weak symbol.
+      if (symtab.ctx.config.allowDuplicateWeak) {
+        auto isAbsZero = [](Symbol *sym) -> bool {
+          auto *absolute = dyn_cast<DefinedAbsolute>(sym);
+          return absolute && absolute->getVA() == 0;
+        };
+        // If the alias we had points at absolute zero, and we get another weak
+        // symbol which isn't absolute zero, prefer that one.
+        return isAbsZero(currentTarget) && !isAbsZero(target);
+      }
+      symtab.reportDuplicate(source, f);
+    }
+  }
+  return true;
+}
+
+void SymbolTable::addWeakAlias(InputFile *f, Symbol *source, Symbol *target,
+                               bool isAntiDep) {
+  auto *u = dyn_cast<Undefined>(source);
+  if (!u) {
+    // A definition suppresses weak aliases. Remember every alias for a regular
+    // definition that may later be discarded with its COMDAT group. If that
+    // happens, replaying the aliases in input order preserves the usual
+    // conflict diagnostics and allowDuplicateWeak precedence.
+    if (mayBeReplacedByLargerCOMDAT(source))
+      deferredWeakAliases[source].suppressed.push_back({f, target, isAntiDep});
+    return;
+  }
+
+  if (shouldReplaceWeakAlias(*this, f, source, u->weakAlias, u->isAntiDep,
+                             target, isAntiDep)) {
+    u->setWeakAlias(target, isAntiDep);
+    if (source->hasUndefinedReference && u->isECAlias(machine))
+      markReferenced(target);
+  }
+}
+
+void SymbolTable::markReferenced(Symbol *symbol, bool forceLazyProvider) {
+  bool wasReferenced = symbol->hasUndefinedReference;
+  symbol->hasUndefinedReference = true;
+  symbol->isUsedInRegularObj = true;
+  if (forceLazyProvider && symbol->isLazy() && !symbol->pendingArchiveLoad)
+    forceLazy(symbol);
+  if (!wasReferenced)
+    if (auto *undefined = dyn_cast<Undefined>(symbol);
+        undefined && undefined->weakAlias && undefined->isECAlias(machine))
+      markReferenced(undefined->weakAlias, forceLazyProvider);
+}
+
+void SymbolTable::addReference(Symbol *symbol) {
+  if (symbol)
+    markReferenced(symbol);
+}
+
+void SymbolTable::deferSectionReferences(SectionChunk *chunk) {
+  if (!chunk->isDiscardedByCOMDAT())
+    deferredReferenceChunks.push_back(chunk);
+}
+
+void SymbolTable::addUnrelocatedReference(Symbol *symbol) {
+  if (symbol)
+    markReferenced(symbol);
+}
+
+void SymbolTable::resolveDeferredReferences() {
+  SmallVector<SectionChunk *, 0> chunks;
+  chunks.swap(deferredReferenceChunks);
+  for (SectionChunk *chunk : chunks) {
+    if (chunk->isDiscardedByCOMDAT())
+      continue;
+    for (Symbol *symbol : chunk->symbols())
+      if (symbol)
+        markReferenced(symbol);
+  }
+}
+
+void SymbolTable::finalizeDeferredSymbols() {
+  SmallVector<Symbol *, 0> sources;
+  sources.swap(deferredSymbolSources);
+  replayDeferredSources(sources, /*importThunks=*/false, /*final=*/true);
+  replayDeferredSources(sources, /*importThunks=*/true, /*final=*/true);
+  assert(deferredSymbols.empty() && "deferred providers were not replayed");
+  deferredProviders.clear();
+  updateDeferredImportLiveness();
+
+  SmallVector<DeferredDuplicate, 0> duplicates;
+  duplicates.swap(deferredDuplicates);
+  for (const DeferredDuplicate &duplicate : duplicates)
+    if (!duplicate.chunk->isDiscardedByCOMDAT())
+      reportDuplicate(duplicate.existing, duplicate.newFile, duplicate.chunk,
+                      duplicate.sectionOffset);
+}
+
+void SymbolTable::restoreDeferredSymbolState(Undefined *source) {
+  if (deferredWeakAliases.empty() && deferredSymbols.empty())
+    return;
+
+  auto it = deferredWeakAliases.find(source);
+  if (it != deferredWeakAliases.end()) {
+    DeferredWeakAliases aliases = std::move(it->second);
+    deferredWeakAliases.erase(it);
+    if (aliases.initialTarget)
+      source->setWeakAlias(aliases.initialTarget, aliases.initialIsAntiDep);
+    for (const DeferredWeakAlias &alias : aliases.suppressed)
+      addWeakAlias(alias.file, source, alias.target, alias.isAntiDep);
+  }
+
+  if (deferredSymbols.contains(source) &&
+      deferredSymbolsQueued.insert(source).second)
+    deferredSymbolsToResolve.push_back(source);
+}
+
+Symbol *SymbolTable::cloneDeferredSymbol(Symbol *symbol) {
+  switch (symbol->kind()) {
+  case Symbol::DefinedRegularKind:
+    llvm_unreachable("regular deferred providers use descriptors");
+  case Symbol::DefinedCommonKind:
+    return make<DefinedCommon>(*cast<DefinedCommon>(symbol));
+  case Symbol::DefinedLocalImportKind:
+    return make<DefinedLocalImport>(*cast<DefinedLocalImport>(symbol));
+  case Symbol::DefinedImportThunkKind: {
+    auto *thunk = cast<DefinedImportThunk>(symbol);
+    auto *copy = make<DefinedImportThunk>(*thunk);
+    deferredImportThunks[copy] = {thunk->wrappedSym->file,
+                                  thunk->wrappedSym->getName()};
+    return copy;
+  }
+  case Symbol::DefinedImportDataKind:
+    return make<DefinedImportData>(*cast<DefinedImportData>(symbol));
+  case Symbol::DefinedAbsoluteKind:
+    return make<DefinedAbsolute>(*cast<DefinedAbsolute>(symbol));
+  case Symbol::DefinedSyntheticKind:
+    return make<DefinedSynthetic>(*cast<DefinedSynthetic>(symbol));
+  case Symbol::LazyArchiveKind:
+    return make<LazyArchive>(*cast<LazyArchive>(symbol));
+  case Symbol::LazyObjectKind:
+    return make<LazyObject>(*cast<LazyObject>(symbol));
+  case Symbol::LazyDLLSymbolKind:
+    return make<LazyDLLSymbol>(*cast<LazyDLLSymbol>(symbol));
+  case Symbol::UndefinedKind:
+    llvm_unreachable("an undefined symbol is not a deferred provider");
+  }
+  llvm_unreachable("unknown deferred symbol kind");
+}
+
+void SymbolTable::appendDeferredProvider(Symbol *source,
+                                         DeferredProvider provider) {
+  auto [it, inserted] = deferredSymbols.try_emplace(source);
+  if (inserted)
+    deferredSymbolSources.push_back(source);
+
+  if (deferredProviders.size() >= noDeferredProvider)
+    Fatal(ctx) << "too many deferred COMDAT providers";
+  DeferredProviderId id =
+      static_cast<DeferredProviderId>(deferredProviders.size());
+  deferredProviders.push_back(provider);
+  DeferredSourceState &state = it->second;
+  if (state.last == noDeferredProvider)
+    state.first = id;
+  else
+    deferredProviders[state.last].next = id;
+  state.last = id;
+}
+
+void SymbolTable::deferDefinedSymbol(Symbol *source, Symbol *provider,
+                                     bool isUsedInRegularObj, Symbol *parent) {
+  provider->isUsedInRegularObj = isUsedInRegularObj;
+  if (auto *common = dyn_cast<DefinedCommon>(provider))
+    if (CommonChunk *chunk = common->getChunk())
+      chunk->live = false;
+  if (auto *data = dyn_cast<DefinedImportData>(provider)) {
+    deferredImportFiles.insert(data->file);
+    data->file->live = false;
+  }
+  if (auto *thunk = dyn_cast<DefinedImportThunk>(provider)) {
+    thunk->getChunk()->live = false;
+    auto it = deferredImportThunks.find(provider);
+    assert(it != deferredImportThunks.end() &&
+           "deferred import thunk has no import metadata");
+    deferredImportFiles.insert(it->second.file);
+  }
+
+  DeferredProvider deferred;
+  deferred.symbol = provider;
+  deferred.parent = parent;
+  appendDeferredProvider(source, deferred);
+}
+
+void SymbolTable::deferRegularSymbol(Symbol *source, InputFile *file,
+                                     const coff_symbol_generic *coffSym,
+                                     SectionChunk *chunk, uint32_t value,
+                                     bool isWeak, Symbol *parent) {
+  DeferredProvider provider;
+  provider.regularFile = file;
+  provider.regularSym = coffSym;
+  provider.regularChunk = chunk;
+  provider.parent = parent;
+  provider.regularValue = value;
+  provider.isRegular = true;
+  provider.regularIsWeak = isWeak;
+  appendDeferredProvider(source, provider);
+}
+
+template <typename T>
+static void updateDeferredImportField(T *&field, const Symbol *source,
+                                      const Symbol *provider, T *selected) {
+  // ImportFile caches derived pointers into replaceable SymbolUnion storage.
+  // Compare addresses without dereferencing an object whose lifetime may have
+  // ended in replaceSymbol().
+  const void *address = field;
+  if (address == source || address == provider)
+    field = selected;
+}
+
+void SymbolTable::replayDeferredSymbol(Symbol *source,
+                                       DeferredProviderId providerId) {
+  DeferredProvider &deferred = deferredProviders[providerId];
+  if (Symbol *parent = deferred.parent) {
+    auto selection = deferredComdatSelections.find(parent);
+    assert(selection != deferredComdatSelections.end() &&
+           "deferred COMDAT child replayed before its leader");
+    if (!selection->second)
+      return;
+  }
+
+  StringRef name = source->getName();
+  if (deferred.isRegular) {
+    if (deferred.regularChunk && deferred.regularChunk->isDiscardedByCOMDAT())
+      return;
+    addRegular(deferred.regularFile, name, deferred.regularSym,
+               deferred.regularChunk, deferred.regularValue,
+               deferred.regularIsWeak);
+    return;
+  }
+
+  Symbol *provider = deferred.symbol;
+  assert(provider && "non-regular deferred provider has no symbol payload");
+  switch (provider->kind()) {
+  case Symbol::DefinedRegularKind: {
+    auto *regular = cast<DefinedRegular>(provider);
+    SectionChunk *chunk = regular->data ? regular->getChunk() : nullptr;
+    if (chunk && chunk->isDiscardedByCOMDAT())
+      return;
+    const coff_symbol_generic *coffSym = nullptr;
+    uint32_t value = 0;
+    if (isa<ObjFile>(regular->file)) {
+      coffSym = regular->getCOFFSymbol().getGeneric();
+      value = regular->getValue();
+    }
+    if (regular->isCOMDAT) {
+      auto recordSelection = [&](bool selected) {
+        deferredComdatSelections[provider] = selected;
+        if (!selected)
+          return;
+        if (Symbol *old = selectedDeferredComdats.lookup(source))
+          deferredComdatSelections[old] = false;
+        selectedDeferredComdats[source] = provider;
+      };
+
+      if (!isa<DefinedRegular>(source)) {
+        replaceSymbol<DefinedRegular>(source, *regular);
+        if (chunk && isa<ObjFile>(regular->file))
+          chunk->sym = cast<DefinedRegular>(source);
+        recordSelection(true);
+      } else {
+        auto *existing = cast<DefinedRegular>(source);
+        auto *file = dyn_cast_or_null<ObjFile>(regular->file);
+        if (!existing->isCOMDAT) {
+          reportDuplicate(source, regular->file, chunk, value);
+          if (chunk && file)
+            file->discardCOMDATGroup(chunk);
+          recordSelection(false);
+        } else if (chunk && file) {
+          COMDATType selection = chunk->selection;
+          if (SectionChunk *replaced = file->handleComdatSelection(
+                  chunk, selection, existing, value, /*def=*/nullptr)) {
+            replaced->file->discardCOMDATGroup(replaced);
+            replaceSymbol<DefinedRegular>(source, *regular);
+            chunk->setSelection(selection);
+            chunk->sym = cast<DefinedRegular>(source);
+            recordSelection(true);
+          } else {
+            file->discardCOMDATGroup(chunk);
+            recordSelection(false);
+          }
+        } else {
+          recordSelection(false);
+        }
+      }
+      deferredComdatLeaderSources.erase(provider);
+      return;
+    }
+    addRegular(regular->file, name, coffSym, chunk, value, regular->isWeak);
+    return;
+  }
+  case Symbol::DefinedCommonKind: {
+    auto *common = cast<DefinedCommon>(provider);
+    const coff_symbol_generic *coffSym = nullptr;
+    if (isa<ObjFile>(common->file))
+      coffSym = common->getCOFFSymbol().getGeneric();
+    addCommon(common->file, name, common->getSize(), coffSym,
+              common->getChunk());
+    return;
+  }
+  case Symbol::DefinedImportDataKind: {
+    auto *data = cast<DefinedImportData>(provider);
+    DefinedImportData *selected =
+        addImportData(name, data->file, data->location);
+    if (selected && selected->file != data->file)
+      selected = nullptr;
+    updateDeferredImportField(data->file->impSym, source, provider, selected);
+    updateDeferredImportField(data->file->impECSym, source, provider, selected);
+    updateDeferredImportField(data->file->auxImpCopySym, source, provider,
+                              selected);
+    return;
+  }
+  case Symbol::DefinedImportThunkKind: {
+    auto *thunk = cast<DefinedImportThunk>(provider);
+    auto infoIt = deferredImportThunks.find(provider);
+    assert(infoIt != deferredImportThunks.end() &&
+           "deferred import thunk replay has no import metadata");
+    DeferredImportThunk info = infoIt->second;
+    deferredImportThunks.erase(infoIt);
+    auto *importData =
+        dyn_cast_or_null<DefinedImportData>(find(info.importName));
+    if (importData && importData->file != info.file)
+      importData = nullptr;
+    Defined *selected =
+        importData ? addImportThunk(name, importData, thunk->getChunk())
+                   : nullptr;
+    if (selected &&
+        (!isa<DefinedImportThunk>(selected) ||
+         cast<DefinedImportThunk>(selected)->wrappedSym->file != info.file))
+      selected = nullptr;
+    thunk->getChunk()->live = selected && !ctx.config.doGC;
+    updateDeferredImportField(info.file->thunkSym, source, provider, selected);
+    updateDeferredImportField(info.file->auxThunkSym, source, provider,
+                              selected);
+    if (info.file->impchkThunk == thunk->getChunk()) {
+      if (selected)
+        info.file->impchkThunk->sym = selected;
+      else
+        info.file->impchkThunk = nullptr;
+    }
+    return;
+  }
+  case Symbol::DefinedAbsoluteKind:
+    addAbsolute(name, cast<DefinedAbsolute>(provider)->getVA());
+    return;
+  case Symbol::DefinedSyntheticKind:
+    addSynthetic(name, cast<DefinedSynthetic>(provider)->getChunk());
+    return;
+  case Symbol::DefinedLocalImportKind:
+    if (isa<Undefined>(source) || source->isLazy())
+      replaceSymbol<DefinedLocalImport>(source,
+                                        *cast<DefinedLocalImport>(provider));
+    else
+      reportDuplicate(source, nullptr);
+    return;
+  case Symbol::LazyArchiveKind: {
+    auto *lazy = cast<LazyArchive>(provider);
+    addLazyArchive(lazy->file, lazy->sym);
+    return;
+  }
+  case Symbol::LazyObjectKind: {
+    auto *lazy = cast<LazyObject>(provider);
+    addLazyObject(lazy->file, name);
+    return;
+  }
+  case Symbol::LazyDLLSymbolKind: {
+    auto *lazy = cast<LazyDLLSymbol>(provider);
+    addLazyDLLSymbol(lazy->file, lazy->sym, name);
+    return;
+  }
+  case Symbol::UndefinedKind:
+    llvm_unreachable("an undefined symbol is not a deferred provider");
+  }
+  llvm_unreachable("unknown deferred symbol kind");
+}
+
+void SymbolTable::replayDeferredSources(ArrayRef<Symbol *> sources,
+                                        bool importThunks, bool final) {
+  auto isComdatLeader = [&](DeferredProviderId id) {
+    Symbol *provider = deferredProviders[id].symbol;
+    auto *regular = dyn_cast_or_null<DefinedRegular>(provider);
+    return regular && regular->isCOMDAT;
+  };
+  auto isImportThunk = [&](DeferredProviderId id) {
+    return isa_and_nonnull<DefinedImportThunk>(deferredProviders[id].symbol);
+  };
+  auto canReplay = [&](Symbol *source) {
+    return final || isa<Undefined>(source) ||
+           !mayBeReplacedByLargerCOMDAT(source);
+  };
+
+  auto replayProviders = [&](Symbol *source, bool replayComdatLeaders) {
+    auto deferred = deferredSymbols.find(source);
+    if (deferred == deferredSymbols.end() || !canReplay(source))
+      return;
+
+    DeferredSourceState state = deferred->second;
+    DeferredProviderId replayFirst = noDeferredProvider;
+    DeferredProviderId replayLast = noDeferredProvider;
+    DeferredProviderId remainingFirst = noDeferredProvider;
+    DeferredProviderId remainingLast = noDeferredProvider;
+
+    auto append = [&](DeferredProviderId id, DeferredProviderId &first,
+                      DeferredProviderId &last) {
+      if (last == noDeferredProvider)
+        first = id;
+      else
+        deferredProviders[last].next = id;
+      last = id;
+    };
+
+    for (DeferredProviderId id = state.first; id != noDeferredProvider;) {
+      assert(id < deferredProviders.size() &&
+             "deferred provider list contains an invalid id");
+      DeferredProvider &provider = deferredProviders[id];
+      DeferredProviderId next = provider.next;
+      Symbol *parent = provider.parent;
+      bool awaitsParent = parent && !deferredComdatSelections.contains(parent);
+      if (isImportThunk(id) != importThunks ||
+          isComdatLeader(id) != replayComdatLeaders ||
+          (!replayComdatLeaders && awaitsParent))
+        append(id, remainingFirst, remainingLast);
+      else
+        append(id, replayFirst, replayLast);
+      id = next;
+    }
+
+    if (remainingLast != noDeferredProvider)
+      deferredProviders[remainingLast].next = noDeferredProvider;
+    if (replayLast != noDeferredProvider)
+      deferredProviders[replayLast].next = noDeferredProvider;
+
+    if (remainingFirst == noDeferredProvider) {
+      deferredSymbols.erase(deferred);
+    } else {
+      deferred->second.first = remainingFirst;
+      deferred->second.last = remainingLast;
+    }
+
+    if (replayFirst == noDeferredProvider)
+      return;
+
+    replayingDeferredSymbols = true;
+    for (DeferredProviderId id = replayFirst; id != noDeferredProvider;) {
+      DeferredProviderId next = deferredProviders[id].next;
+      replayDeferredSymbol(source, id);
+      id = next;
+    }
+    replayingDeferredSymbols = false;
+    updateDeferredCommonLiveness(replayFirst, source);
+    if (!deferredSymbols.contains(source))
+      deferredWeakAliases.erase(source);
+  };
+
+  auto hasComdatLeader = [&](const DeferredSourceState &state) {
+    for (DeferredProviderId id = state.first; id != noDeferredProvider;
+         id = deferredProviders[id].next)
+      if (isComdatLeader(id))
+        return true;
+    return false;
+  };
+
+  // Collect leader sources first. The common no-dependency case should not pay
+  // for a DenseMap or graph arrays.
+  SmallVector<Symbol *, 8> leaderSources;
+  SmallPtrSet<Symbol *, 8> leaderSourceSet;
+  if (!importThunks) {
+    for (Symbol *source : sources) {
+      auto deferred = deferredSymbols.find(source);
+      if (deferred == deferredSymbols.end())
+        continue;
+      if (canReplay(source) && hasComdatLeader(deferred->second) &&
+          leaderSourceSet.insert(source).second)
+        leaderSources.push_back(source);
+    }
+  }
+
+  auto getDependency = [&](Symbol *source) -> Symbol * {
+    Symbol *dependency = nullptr;
+    if (auto *regular = dyn_cast<DefinedRegular>(source);
+        regular && regular->data) {
+      SectionChunk *chunk = regular->getChunk();
+      if (chunk->isInReplaceableCOMDATGroup() && chunk->sym != regular)
+        dependency = chunk->sym;
+    }
+    if (Symbol *dependencySource =
+            deferredComdatLeaderSources.lookup(dependency))
+      dependency = dependencySource;
+    return dependency;
+  };
+
+  if (!leaderSources.empty()) {
+    bool hasDependencies = false;
+    for (Symbol *source : leaderSources) {
+      Symbol *dependency = getDependency(source);
+      if (dependency && leaderSourceSet.contains(dependency)) {
+        hasDependencies = true;
+        break;
+      }
+    }
+
+    if (!hasDependencies) {
+      for (Symbol *source : leaderSources)
+        replayProviders(source, /*replayComdatLeaders=*/true);
+    } else {
+      if (leaderSources.size() >= noDeferredProvider)
+        Fatal(ctx) << "too many deferred COMDAT leader sources";
+
+      DenseMap<Symbol *, uint32_t> leaderIndex;
+      leaderIndex.reserve(leaderSources.size());
+      for (uint32_t i = 0; i != leaderSources.size(); ++i)
+        leaderIndex.try_emplace(leaderSources[i], i);
+
+      static constexpr uint32_t noLeader = ~uint32_t{0};
+      SmallVector<uint32_t, 0> firstChild(leaderSources.size(), noLeader);
+      SmallVector<uint32_t, 0> lastChild(leaderSources.size(), noLeader);
+      SmallVector<uint32_t, 0> nextSibling(leaderSources.size(), noLeader);
+      SmallVector<uint32_t, 8> worklist;
+
+      for (uint32_t i = 0; i != leaderSources.size(); ++i) {
+        Symbol *dependency = getDependency(leaderSources[i]);
+        auto dependencyIt = leaderIndex.find(dependency);
+        if (!dependency || dependencyIt == leaderIndex.end()) {
+          worklist.push_back(i);
+          continue;
+        }
+
+        uint32_t parent = dependencyIt->second;
+        if (lastChild[parent] == noLeader)
+          firstChild[parent] = i;
+        else
+          nextSibling[lastChild[parent]] = i;
+        lastChild[parent] = i;
+      }
+
+      SmallVector<uint8_t, 0> replayed(leaderSources.size(), 0);
+      for (size_t i = 0; i != worklist.size(); ++i) {
+        uint32_t sourceIndex = worklist[i];
+        if (replayed[sourceIndex])
+          continue;
+        replayed[sourceIndex] = 1;
+        replayProviders(leaderSources[sourceIndex],
+                        /*replayComdatLeaders=*/true);
+
+        for (uint32_t child = firstChild[sourceIndex]; child != noLeader;
+             child = nextSibling[child])
+          worklist.push_back(child);
+      }
+
+      // Cyclic dependencies cannot be topologically ordered. Preserve input
+      // order for every source that was not reached from a root.
+      for (uint32_t i = 0; i != leaderSources.size(); ++i)
+        if (!replayed[i])
+          replayProviders(leaderSources[i], /*replayComdatLeaders=*/true);
+    }
+  }
+
+  // Leader selection is now final, so child providers can be published in one
+  // linear pass.
+  for (Symbol *source : sources)
+    replayProviders(source, /*replayComdatLeaders=*/false);
+}
+
+void SymbolTable::updateDeferredCommonLiveness(DeferredProviderId firstProvider,
+                                               Symbol *source) {
+  CommonChunk *selected = nullptr;
+  if (auto *common = dyn_cast<DefinedCommon>(source))
+    selected = common->getChunk();
+  for (DeferredProviderId id = firstProvider; id != noDeferredProvider;
+       id = deferredProviders[id].next) {
+    const DeferredProvider &deferred = deferredProviders[id];
+    if (deferred.isRegular)
+      continue;
+    Symbol *provider = deferred.symbol;
+    if (auto *common = dyn_cast<DefinedCommon>(provider))
+      if (CommonChunk *chunk = common->getChunk())
+        chunk->live = chunk == selected;
+  }
+}
+
+void SymbolTable::updateDeferredImportLiveness() {
+  for (ImportFile *file : deferredImportFiles) {
+    auto isSelected = [&](DefinedImportData *symbol) {
+      return symbol && isa<DefinedImportData>(symbol) && symbol->file == file;
+    };
+    bool selected = isSelected(file->impSym);
+    if (isArm64EC(file->getMachineType()))
+      selected = selected && isSelected(file->impECSym) &&
+                 isSelected(file->auxImpCopySym);
+    file->live = selected && !ctx.config.doGC;
+  }
+}
+
+void SymbolTable::resolveDeferredSymbols() {
+  SmallVector<Symbol *, 0> symbols;
+  symbols.swap(deferredSymbolsToResolve);
+  deferredSymbolsQueued.clear();
+  replayDeferredSources(symbols, /*importThunks=*/false, /*final=*/false);
+  replayDeferredSources(symbols, /*importThunks=*/true, /*final=*/false);
+  updateDeferredImportLiveness();
 }
 
 Symbol *SymbolTable::addGCRoot(StringRef name, bool aliasEC) {
@@ -754,6 +1422,8 @@ bool checkLazyECPair(SymbolTable *symtab, StringRef name, InputFile *f) {
   Symbol *sym = symtab->find(pairName);
   if (!sym)
     return true;
+  if (mayBeReplacedByLargerCOMDAT(sym))
+    return true;
   if (sym->pendingArchiveLoad)
     return false;
   if (auto u = dyn_cast<Undefined>(sym))
@@ -768,9 +1438,13 @@ void SymbolTable::addLazyArchive(ArchiveFile *f, const Archive::Symbol &sym) {
   StringRef name = sym.getName();
   if (isEC() && !checkLazyECPair<LazyArchive>(this, name, f))
     return;
-  auto [s, wasInserted] = insert(name);
-  if (wasInserted) {
+  Symbol *s = insert(name).first;
+  if (isa<Undefined>(s) && !s->hasUndefinedReference) {
     replaceSymbol<LazyArchive>(s, f, sym);
+    return;
+  }
+  if (!replayingDeferredSymbols && mayBeReplacedByLargerCOMDAT(s)) {
+    deferDefinedSymbol(s, make<LazyArchive>(f, sym), false);
     return;
   }
   auto *u = dyn_cast<Undefined>(s);
@@ -784,9 +1458,13 @@ void SymbolTable::addLazyObject(InputFile *f, StringRef n) {
   assert(f->lazy);
   if (isEC() && !checkLazyECPair<LazyObject>(this, n, f))
     return;
-  auto [s, wasInserted] = insert(n, f);
-  if (wasInserted) {
+  Symbol *s = insert(n, f).first;
+  if (isa<Undefined>(s) && !s->hasUndefinedReference) {
     replaceSymbol<LazyObject>(s, f, n);
+    return;
+  }
+  if (!replayingDeferredSymbols && mayBeReplacedByLargerCOMDAT(s)) {
+    deferDefinedSymbol(s, make<LazyObject>(f, n), false);
     return;
   }
   auto *u = dyn_cast<Undefined>(s);
@@ -799,9 +1477,13 @@ void SymbolTable::addLazyObject(InputFile *f, StringRef n) {
 
 void SymbolTable::addLazyDLLSymbol(DLLFile *f, DLLFile::Symbol *sym,
                                    StringRef n) {
-  auto [s, wasInserted] = insert(n);
-  if (wasInserted) {
+  Symbol *s = insert(n).first;
+  if (isa<Undefined>(s) && !s->hasUndefinedReference) {
     replaceSymbol<LazyDLLSymbol>(s, f, sym, n);
+    return;
+  }
+  if (!replayingDeferredSymbols && mayBeReplacedByLargerCOMDAT(s)) {
+    deferDefinedSymbol(s, make<LazyDLLSymbol>(f, sym, n), false);
     return;
   }
   auto *u = dyn_cast<Undefined>(s);
@@ -876,6 +1558,10 @@ void SymbolTable::reportDuplicate(Symbol *existing, InputFile *newFile,
 Symbol *SymbolTable::addAbsolute(StringRef n, COFFSymbolRef sym) {
   auto [s, wasInserted] = insert(n, nullptr);
   s->isUsedInRegularObj = true;
+  if (!replayingDeferredSymbols && mayBeReplacedByLargerCOMDAT(s)) {
+    deferDefinedSymbol(s, make<DefinedAbsolute>(ctx, n, sym), true);
+    return s;
+  }
   if (wasInserted || isa<Undefined>(s) || s->isLazy())
     replaceSymbol<DefinedAbsolute>(s, ctx, n, sym);
   else if (auto *da = dyn_cast<DefinedAbsolute>(s)) {
@@ -889,6 +1575,10 @@ Symbol *SymbolTable::addAbsolute(StringRef n, COFFSymbolRef sym) {
 Symbol *SymbolTable::addAbsolute(StringRef n, uint64_t va) {
   auto [s, wasInserted] = insert(n, nullptr);
   s->isUsedInRegularObj = true;
+  if (!replayingDeferredSymbols && mayBeReplacedByLargerCOMDAT(s)) {
+    deferDefinedSymbol(s, make<DefinedAbsolute>(ctx, n, va), true);
+    return s;
+  }
   if (wasInserted || isa<Undefined>(s) || s->isLazy())
     replaceSymbol<DefinedAbsolute>(s, ctx, n, va);
   else if (auto *da = dyn_cast<DefinedAbsolute>(s)) {
@@ -912,24 +1602,132 @@ Symbol *SymbolTable::addSynthetic(StringRef n, Chunk *c) {
 Symbol *SymbolTable::addRegular(InputFile *f, StringRef n,
                                 const coff_symbol_generic *sym, SectionChunk *c,
                                 uint32_t sectionOffset, bool isWeak) {
-  auto [s, wasInserted] = insert(n, f);
-  if (wasInserted || !isa<DefinedRegular>(s) || s->isWeak)
-    replaceSymbol<DefinedRegular>(s, f, n, /*IsCOMDAT*/ false,
-                                  /*IsExternal*/ true, sym, c, isWeak);
-  else if (!isWeak)
-    reportDuplicate(s, f, c, sectionOffset);
+  Symbol *s = insert(n, f).first;
+  if (auto *undefined = dyn_cast<Undefined>(s);
+      undefined && !undefined->weakAlias)
+    return replaceSymbol<DefinedRegular>(s, f, n, /*IsCOMDAT=*/false,
+                                         /*IsExternal=*/true, sym, c, isWeak);
+
+  if (replayingDeferredSymbols) {
+    if (!isa<DefinedRegular>(s) || s->isWeak)
+      return replaceSymbol<DefinedRegular>(s, f, n, /*IsCOMDAT=*/false,
+                                           /*IsExternal=*/true, sym, c, isWeak);
+    if (!isWeak)
+      reportDuplicate(s, f, c, sectionOffset);
+    return s;
+  }
+
+  bool provisional =
+      isa<ObjFile>(f) && c && c->isInReplaceableCOMDATGroup() && c->sym != s;
+  bool existingProvisional = mayBeReplacedByLargerCOMDAT(s);
+
+  // Keep the normal symbol insertion path compact. In particular, a new
+  // secondary COMDAT definition normally replaces an unaliased Undefined and
+  // needs no deferred state at all.
+  if (LLVM_LIKELY(!existingProvisional && !provisional)) {
+    if (!isa<DefinedRegular>(s) || s->isWeak)
+      return replaceSymbol<DefinedRegular>(s, f, n, /*IsCOMDAT=*/false,
+                                           /*IsExternal=*/true, sym, c, isWeak);
+    if (!isWeak)
+      reportDuplicate(s, f, c, sectionOffset);
+    return s;
+  }
+
+  return addRegularWithDeferredCOMDAT(f, n, sym, c, sectionOffset, isWeak, s,
+                                      provisional, existingProvisional);
+}
+
+LLVM_ATTRIBUTE_NOINLINE Symbol *SymbolTable::addRegularWithDeferredCOMDAT(
+    InputFile *f, StringRef n, const coff_symbol_generic *sym, SectionChunk *c,
+    uint32_t sectionOffset, bool isWeak, Symbol *s, bool provisional,
+    bool existingProvisional) {
+  assert(!replayingDeferredSymbols && (provisional || existingProvisional) &&
+         "deferred COMDAT path requires a provisional definition");
+
+  // Replacing an undefined symbol destroys its selected weak alias. Preserve
+  // that state only when the replacement can itself be discarded later.
+  if (provisional) {
+    if (auto *undefined = dyn_cast<Undefined>(s);
+        undefined && undefined->weakAlias) {
+      auto [it, inserted] = deferredWeakAliases.try_emplace(s);
+      if (inserted) {
+        it->second.initialTarget = undefined->weakAlias;
+        it->second.initialIsAntiDep = undefined->isAntiDep;
+      }
+    }
+  }
+
+  // If a provider was registered before this provisional definition, retain
+  // it before replacing the symbol-table slot. DefinedRegular providers stay
+  // in the slot (the normal first-definition rule) and therefore cannot be
+  // lost when this group is discarded.
+  if (provisional && !isa<Undefined>(s) &&
+      (!isa<DefinedRegular>(s) || s->isWeak)) {
+    if (auto *regular = dyn_cast<DefinedRegular>(s)) {
+      const coff_symbol_generic *providerSym = nullptr;
+      uint32_t providerValue = 0;
+      if (isa<ObjFile>(regular->file)) {
+        providerSym = regular->getCOFFSymbol().getGeneric();
+        providerValue = regular->getValue();
+      }
+      deferRegularSymbol(s, regular->file, providerSym,
+                         regular->data ? regular->getChunk() : nullptr,
+                         providerValue, regular->isWeak);
+    } else {
+      deferDefinedSymbol(s, cloneDeferredSymbol(s), s->isUsedInRegularObj);
+    }
+  }
+
+  // A permanent strong regular/COMDAT provider that precedes the provisional
+  // group remains the prevailing definition. Delay its duplicate diagnostic
+  // until we know whether the new group survives. If the existing definition
+  // is itself provisional, retain the new provider below: the existing group
+  // may be discarded by a later LARGEST selection.
+  if (provisional && isa<DefinedRegular>(s) && !s->isWeak &&
+      !existingProvisional) {
+    deferredDuplicates.push_back({c, s, f, sectionOffset});
+    return s;
+  }
+
+  if (existingProvisional) {
+    deferRegularSymbol(s, f, sym, c, sectionOffset, isWeak);
+    return s;
+  }
+
+  if (!isa<DefinedRegular>(s) || s->isWeak) {
+    s = replaceSymbol<DefinedRegular>(s, f, n, /*IsCOMDAT=*/false,
+                                      /*IsExternal=*/true, sym, c, isWeak);
+  } else {
+    if (!isWeak)
+      reportDuplicate(s, f, c, sectionOffset);
+  }
   return s;
+}
+
+Symbol *SymbolTable::addDeferredComdatRegular(BitcodeFile *f, StringRef n,
+                                              SectionChunk *c, bool isWeak,
+                                              Symbol *comdatLeader) {
+  Symbol *source = insert(n, f).first;
+  deferRegularSymbol(source, f, /*coffSym=*/nullptr, c, /*value=*/0, isWeak,
+                     comdatLeader);
+  return source;
 }
 
 std::pair<DefinedRegular *, bool>
 SymbolTable::addComdat(InputFile *f, StringRef n,
                        const coff_symbol_generic *sym) {
-  auto [s, wasInserted] = insert(n, f);
-  if (wasInserted || !isa<DefinedRegular>(s)) {
-    replaceSymbol<DefinedRegular>(s, f, n, /*IsCOMDAT*/ true,
-                                  /*IsExternal*/ true, sym, nullptr);
-    return {cast<DefinedRegular>(s), true};
+  Symbol *s = insert(n, f).first;
+  if (!replayingDeferredSymbols && mayBeReplacedByLargerCOMDAT(s)) {
+    auto *provider = make<DefinedRegular>(f, n, /*IsCOMDAT=*/true,
+                                          /*IsExternal=*/true, sym, nullptr);
+    deferredComdatLeaderSources[provider] = s;
+    deferDefinedSymbol(s, provider, !isa<BitcodeFile>(f));
+    return {provider, true};
   }
+  if (!isa<DefinedRegular>(s))
+    return {replaceSymbol<DefinedRegular>(s, f, n, /*IsCOMDAT=*/true,
+                                          /*IsExternal=*/true, sym, nullptr),
+            true};
   auto *existingSymbol = cast<DefinedRegular>(s);
   if (!existingSymbol->isCOMDAT)
     reportDuplicate(s, f);
@@ -939,11 +1737,16 @@ SymbolTable::addComdat(InputFile *f, StringRef n,
 Symbol *SymbolTable::addCommon(InputFile *f, StringRef n, uint64_t size,
                                const coff_symbol_generic *sym, CommonChunk *c) {
   auto [s, wasInserted] = insert(n, f);
-  if (wasInserted || !isa<DefinedCOFF>(s))
+  if (!replayingDeferredSymbols && mayBeReplacedByLargerCOMDAT(s)) {
+    deferDefinedSymbol(s, make<DefinedCommon>(f, n, size, sym, c), true);
+    return s;
+  }
+  if (wasInserted || !isa<DefinedCOFF>(s)) {
     replaceSymbol<DefinedCommon>(s, f, n, size, sym, c);
-  else if (auto *dc = dyn_cast<DefinedCommon>(s))
+  } else if (auto *dc = dyn_cast<DefinedCommon>(s)) {
     if (size > dc->getSize())
       replaceSymbol<DefinedCommon>(s, f, n, size, sym, c);
+  }
   return s;
 }
 
@@ -951,6 +1754,11 @@ DefinedImportData *SymbolTable::addImportData(StringRef n, ImportFile *f,
                                               Chunk *&location) {
   auto [s, wasInserted] = insert(n, nullptr);
   s->isUsedInRegularObj = true;
+  if (!replayingDeferredSymbols && mayBeReplacedByLargerCOMDAT(s)) {
+    auto *provider = make<DefinedImportData>(n, f, location);
+    deferDefinedSymbol(s, provider, true);
+    return provider;
+  }
   if (wasInserted || isa<Undefined>(s) || s->isLazy()) {
     replaceSymbol<DefinedImportData>(s, n, f, location);
     return cast<DefinedImportData>(s);
@@ -964,6 +1772,12 @@ Defined *SymbolTable::addImportThunk(StringRef name, DefinedImportData *id,
                                      ImportThunkChunk *chunk) {
   auto [s, wasInserted] = insert(name, nullptr);
   s->isUsedInRegularObj = true;
+  if (!replayingDeferredSymbols && mayBeReplacedByLargerCOMDAT(s)) {
+    auto *provider = make<DefinedImportThunk>(ctx, name, id, chunk);
+    deferredImportThunks[provider] = {id->file, id->getName()};
+    deferDefinedSymbol(s, provider, true);
+    return provider;
+  }
   if (wasInserted || isa<Undefined>(s) || s->isLazy()) {
     replaceSymbol<DefinedImportThunk>(s, ctx, name, id, chunk);
     return cast<Defined>(s);
@@ -1413,6 +2227,8 @@ void SymbolTable::resolveAlternateNames() {
     StringRef to = pair.second;
     Symbol *sym = find(from);
     if (!sym)
+      continue;
+    if (!sym->hasUndefinedReference)
       continue;
     if (auto *u = dyn_cast<Undefined>(sym)) {
       if (u->weakAlias) {
