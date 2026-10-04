@@ -176,6 +176,16 @@ private:
   // used on a newly inserted instruction before returning from PreEmitNoops.
   void runOnInstruction(MachineInstr *MI);
 
+  /// Wait states required after \p MI, or nullopt if \p MI is not waited for.
+  /// Must return nullopt for terminators.
+  typedef function_ref<std::optional<int>(const MachineInstr &)> WindowForFn;
+
+  /// Returns the largest WindowFor(I) - distance(I) over the instructions
+  /// preceding the one being checked within \p MaxWindow, which must bound
+  /// every window WindowFor can return, and zero if it accepts none. Each
+  /// window is paired with the distance to the instruction that supplied it.
+  int getMaxWindowDeficit(int MaxWindow, WindowForFn WindowFor) const;
+
   int getWaitStatesSince(IsHazardFn IsHazard, int Limit,
                          GetNumWaitStatesFn GetNumWaitStates) const;
   int getWaitStatesSince(IsHazardFn IsHazard, int Limit) const;
