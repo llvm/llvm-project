@@ -1063,7 +1063,8 @@ foreach I = {4, 5, 6, 9, 10, 11} in
 
 foreach I = {1, 2, 3} in
   def simm10_lsl # I : Operand<i32> {
-    let DecoderMethod = "DecodeSImmWithOffsetAndScale<10, " # I # ">";
+    let DecoderMethod =
+        "DecodeSImmWithOffsetAndScale<10, 0, " # !shl(1, I) # ">";
     let ParserMatchClass =
         !cast<AsmOperandClass>("ConstantSImm10Lsl" # I # "AsmOperandClass");
   }
@@ -1082,8 +1083,8 @@ foreach I = {5, 10} in
   }
 
 def simm7_lsl2 : Operand<OtherVT> {
-  let EncoderMethod = "getSImm7Lsl2Encoding";
-  let DecoderMethod = "DecodeSImmWithOffsetAndScale<" # I # ", 0, 4>";
+  let EncoderMethod = "getScaledImmOpValue<2>";
+  let DecoderMethod = "DecodeSImmWithOffsetAndScale<7, 0, 4>";
   let ParserMatchClass = ConstantSImm7Lsl2AsmOperandClass;
 }
 
@@ -1120,30 +1121,6 @@ def li16_imm : Operand<i32> {
   let ParserMatchClass = ConstantUImm7Sub1AsmOperandClass;
 }
 
-def MipsMemAsmOperand : AsmOperandClass {
-  let Name = "Mem";
-  let ParserMethod = "parseMemOperand";
-}
-
-class MipsMemSimmAsmOperand<int Width, int Shift = 0> : AsmOperandClass {
-  let Name = "MemOffsetSimm" # Width # "_" # Shift;
-  let SuperClasses = [MipsMemAsmOperand];
-  let RenderMethod = "addMemOperands";
-  let ParserMethod = "parseMemOperand";
-  let PredicateMethod = "isMemWithSimmOffset<" # Width # ", " # Shift # ">";
-  let DiagnosticType = !if(!eq(Shift, 0), "MemSImm" # Width,
-                                          "MemSImm" # Width # "Lsl" # Shift);
-}
-
-def MipsMemSimmPtrAsmOperand : AsmOperandClass {
-  let Name = "MemOffsetSimmPtr";
-  let SuperClasses = [MipsMemAsmOperand];
-  let RenderMethod = "addMemOperands";
-  let ParserMethod = "parseMemOperand";
-  let PredicateMethod = "isMemWithPtrSizeOffset";
-  let DiagnosticType = "MemSImmPtr";
-}
-
 def MipsInvertedImmoperand : AsmOperandClass {
   let Name = "InvNum";
   let RenderMethod = "addImmOperands";
@@ -1158,55 +1135,94 @@ def InvertedImOperand64 : Operand<i64> {
   let ParserMatchClass = MipsInvertedImmoperand;
 }
 
-class mem_generic : Operand<iPTR> {
-  let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops mips_ptr_rc, simm16);
-  let EncoderMethod = "getMemEncoding";
-  let ParserMatchClass = MipsMemAsmOperand;
+// Memory base registers follow the ABI pointer width.
+def PtrRegAsmOperand : MipsAsmRegOperand {
+  let Name = "PtrReg";
+  let PredicateMethod = "isGPRAsmReg";
+  let RenderMethod = "addPtrRegOperands";
+}
+
+def MemBase : RegisterOperand<mips_ptr_rc> {
+  let ParserMatchClass = PtrRegAsmOperand;
+  let DecoderMethod = "DecodePtrRegisterClass";
   let OperandType = "OPERAND_MEMORY";
 }
 
-// Address operand
-def mem : mem_generic;
+def AnyOffsetAsmOperand : AsmOperandClass {
+  let ParserMethod = "parseMemOffsetOperand";
+  let Name = "AnyOffset";
+  let RenderMethod = "addImmOperands";
+  let PredicateMethod = "isImm";
+}
 
-// MSA specific address operand
-def mem_msa : mem_generic {
-  let MIOperandInfo = (ops mips_ptr_rc, simm10);
-  let EncoderMethod = "getMSAMemEncoding";
+def SImmPtrAsmOperand : AsmOperandClass {
+  let ParserMethod = "parseMemOffsetOperand";
+  let Name = "SImmPtr";
+  let SuperClasses = [AnyOffsetAsmOperand];
+  let RenderMethod = "addImmOperands";
+  let PredicateMethod = "isSImmPtr";
+  let DiagnosticType = "MemSImmPtr";
+}
+
+class SImmOffsetAsmOperand<int Bits, int Shift = 0,
+                          string Diagnostic =
+                              !if(!eq(Shift, 0), "MemSImm" # Bits,
+                                  "MemSImm" # Bits # "Lsl" # Shift)>
+    : AsmOperandClass {
+  let ParserMethod = "parseMemOffsetOperand";
+  let Name = "SImmOffset" # Bits # "_" # Shift;
+  let SuperClasses = [SImmPtrAsmOperand];
+  let RenderMethod = "addImmOperands";
+  let PredicateMethod = "isScaledSImm<" # Bits # ", " # Shift # ">";
+  let DiagnosticType = Diagnostic;
+}
+
+// Retain memory offset metadata for assembler macro expansion.
+class MemoryOffset<Operand Offset, AsmOperandClass MatchClass>
+    : Operand<Offset.Type> {
+  let EncoderMethod = Offset.EncoderMethod;
+  let DecoderMethod = Offset.DecoderMethod;
+  let ParserMatchClass = MatchClass;
+  let OperandType = "OPERAND_MEMORY";
+}
+
+def imm_offset : MemoryOffset<i32imm, AnyOffsetAsmOperand> {
+  let DecoderMethod = "DecodeSImmWithOffsetAndScale<16>";
 }
 
 def simm12 : Operand<i32> {
-  let DecoderMethod = "DecodeSimm12";
+  let DecoderMethod = "DecodeSImmWithOffsetAndScale<12>";
 }
 
-def mem_simm9_exp : mem_generic {
-  let MIOperandInfo = (ops mips_ptr_rc, simm9);
-  let ParserMatchClass = MipsMemSimmPtrAsmOperand;
+foreach I = {9, 10, 11, 12, 16} in
+  def mem_simm # I : MemoryOffset<!cast<Operand>("simm" # I),
+                                 SImmOffsetAsmOperand<I>>;
+
+foreach I = {1, 2, 3} in
+  def mem_simm10_lsl # I : MemoryOffset<!cast<Operand>("simm10_lsl" # I),
+                                       SImmOffsetAsmOperand<10, I>> {
+    let EncoderMethod = "getScaledImmOpValue<" # I  # ">";
+  }
+
+def mem_simmptr : MemoryOffset<simm16, SImmPtrAsmOperand>;
+// These offsets permit values that require assembler macro expansion.
+def mem_simm9_exp : MemoryOffset<simm9, SImmPtrAsmOperand> {
   let OperandNamespace = "MipsII";
   let OperandType = "OPERAND_MEM_SIMM9";
 }
 
-foreach I = {9, 10, 11, 12, 16} in
-  def mem_simm # I : mem_generic {
-    let MIOperandInfo = (ops mips_ptr_rc, !cast<Operand>("simm" # I));
-    let ParserMatchClass = MipsMemSimmAsmOperand<I>;
-  }
-
-foreach I = {1, 2, 3} in
-  def mem_simm10_lsl # I : mem_generic {
-    let MIOperandInfo = (ops mips_ptr_rc, !cast<Operand>("simm10_lsl" # I));
-    let EncoderMethod = "getMemEncoding<" # I  # ">";
-    let ParserMatchClass = MipsMemSimmAsmOperand<10, I>;
-  }
-
-def mem_simmptr : mem_generic {
-  let ParserMatchClass = MipsMemSimmPtrAsmOperand;
+// Load-address macros retain their compound address operand.
+def MipsMemAsmOperand : AsmOperandClass {
+  let Name = "Mem";
+  let ParserMethod = "parseMemOperand";
+  let PredicateMethod = "isMemOperand";
+  let RenderMethod = "addMemOperands";
 }
 
-def mem_ea : Operand<iPTR> {
-  let PrintMethod = "printMemOperandEA";
-  let MIOperandInfo = (ops mips_ptr_rc, simm16);
-  let EncoderMethod = "getMemEncoding";
+def mem : Operand<iPTR> {
+  let MIOperandInfo = (ops MemBase, imm_offset);
+  let ParserMatchClass = MipsMemAsmOperand;
+  let PrintMethod = "printMemOperand";
   let OperandType = "OPERAND_MEMORY";
 }
 
@@ -1422,9 +1438,10 @@ class LoadUpper<string opstr, RegisterOperand RO, Operand Imm>:
 class LoadMemory<string opstr, DAGOperand RO, DAGOperand MO,
                  SDPatternOperator OpNode = null_frag,
                  ComplexPattern Addr = addr> :
-  InstSE<(outs RO:$rt), (ins MO:$addr), !strconcat(opstr, "\t$rt, $addr"),
-         [(set RO:$rt, (OpNode Addr:$addr))], FrmI, opstr> {
-  let DecoderMethod = "DecodeMem";
+  InstSE<(outs RO:$rt), (ins MemBase:$base, MO:$offset),
+         !strconcat(opstr, "\t$rt, ${offset}(${base})"),
+         [(set RO:$rt, (OpNode (Addr MemBase:$base, iPTR:$offset)))],
+         FrmI, opstr> {
   let canFoldAsLoad = 1;
   string BaseOpcode = opstr;
   let mayLoad = 1;
@@ -1432,73 +1449,75 @@ class LoadMemory<string opstr, DAGOperand RO, DAGOperand MO,
 
 class Load<string opstr, DAGOperand RO, SDPatternOperator OpNode = null_frag,
            ComplexPattern Addr = addr> :
-  LoadMemory<opstr, RO, mem, OpNode, Addr>;
+  LoadMemory<opstr, RO, imm_offset, OpNode, Addr>;
 
 class StoreMemory<string opstr, DAGOperand RO, DAGOperand MO,
-            SDPatternOperator OpNode = null_frag,
-            ComplexPattern Addr = addr> :
-  InstSE<(outs), (ins RO:$rt, MO:$addr), !strconcat(opstr, "\t$rt, $addr"),
-         [(OpNode RO:$rt, Addr:$addr)], FrmI, opstr> {
-  let DecoderMethod = "DecodeMem";
+                  SDPatternOperator OpNode = null_frag,
+                  ComplexPattern Addr = addr> :
+  InstSE<(outs), (ins RO:$rt, MemBase:$base, MO:$offset),
+         !strconcat(opstr, "\t$rt, ${offset}(${base})"),
+         [(OpNode RO:$rt, (Addr MemBase:$base, iPTR:$offset))], FrmI, opstr> {
   string BaseOpcode = opstr;
   let mayStore = 1;
 }
 
 class Store<string opstr, DAGOperand RO, SDPatternOperator OpNode = null_frag,
-            ComplexPattern Addr = addr, DAGOperand MO = mem> :
+            ComplexPattern Addr = addr, DAGOperand MO = imm_offset> :
   StoreMemory<opstr, RO, MO, OpNode, Addr>;
 
 // Load/Store Left/Right
 let canFoldAsLoad = 1 in
 class LoadLeftRight<string opstr, SDNode OpNode, RegisterOperand RO> :
-  InstSE<(outs RO:$rt), (ins mem:$addr, RO:$src),
-         !strconcat(opstr, "\t$rt, $addr"),
-         [(set RO:$rt, (OpNode addr:$addr, RO:$src))], FrmI> {
-  let DecoderMethod = "DecodeMem";
+  InstSE<(outs RO:$rt), (ins MemBase:$base, imm_offset:$offset, RO:$src),
+         !strconcat(opstr, "\t$rt, ${offset}(${base})"),
+         [(set RO:$rt, (OpNode (addr MemBase:$base, iPTR:$offset), RO:$src))],
+         FrmI> {
   string Constraints = "$src = $rt";
   let BaseOpcode = opstr;
 }
 
 class StoreLeftRight<string opstr, SDNode OpNode, RegisterOperand RO> :
-  InstSE<(outs), (ins RO:$rt, mem:$addr), !strconcat(opstr, "\t$rt, $addr"),
-         [(OpNode RO:$rt, addr:$addr)], FrmI> {
-  let DecoderMethod = "DecodeMem";
+  InstSE<(outs), (ins RO:$rt, MemBase:$base, imm_offset:$offset),
+         !strconcat(opstr, "\t$rt, ${offset}(${base})"),
+         [(OpNode RO:$rt, (addr MemBase:$base, iPTR:$offset))], FrmI> {
   let BaseOpcode = opstr;
 }
 
 // COP2 Load/Store
 class LW_FT2<string opstr, RegisterOperand RC,
-             SDPatternOperator OpNode= null_frag> :
-  InstSE<(outs RC:$rt), (ins mem_simm16:$addr),
-         !strconcat(opstr, "\t$rt, $addr"),
-         [(set RC:$rt, (OpNode addrDefault:$addr))], FrmFI, opstr> {
-  let DecoderMethod = "DecodeFMem2";
+             SDPatternOperator OpNode = null_frag> :
+  InstSE<(outs RC:$rt), (ins MemBase:$base, mem_simm16:$offset),
+         !strconcat(opstr, "\t$rt, ${offset}(${base})"),
+         [(set RC:$rt, (OpNode (addrDefault MemBase:$base, iPTR:$offset)))],
+         FrmFI, opstr> {
   let mayLoad = 1;
 }
 
 class SW_FT2<string opstr, RegisterOperand RC,
-             SDPatternOperator OpNode= null_frag> :
-  InstSE<(outs), (ins RC:$rt, mem_simm16:$addr),
-         !strconcat(opstr, "\t$rt, $addr"),
-         [(OpNode RC:$rt, addrDefault:$addr)], FrmFI, opstr> {
-  let DecoderMethod = "DecodeFMem2";
+             SDPatternOperator OpNode = null_frag> :
+  InstSE<(outs), (ins RC:$rt, MemBase:$base, mem_simm16:$offset),
+         !strconcat(opstr, "\t$rt, ${offset}(${base})"),
+         [(OpNode RC:$rt, (addrDefault MemBase:$base, iPTR:$offset))],
+         FrmFI, opstr> {
   let mayStore = 1;
 }
 
 // COP3 Load/Store
 class LW_FT3<string opstr, RegisterOperand RC,
-             SDPatternOperator OpNode= null_frag> :
-  InstSE<(outs RC:$rt), (ins mem:$addr), !strconcat(opstr, "\t$rt, $addr"),
-         [(set RC:$rt, (OpNode addrDefault:$addr))], FrmFI, opstr> {
-  let DecoderMethod = "DecodeFMem3";
+             SDPatternOperator OpNode = null_frag> :
+  InstSE<(outs RC:$rt), (ins MemBase:$base, imm_offset:$offset),
+         !strconcat(opstr, "\t$rt, ${offset}(${base})"),
+         [(set RC:$rt, (OpNode (addrDefault MemBase:$base, iPTR:$offset)))],
+         FrmFI, opstr> {
   let mayLoad = 1;
 }
 
 class SW_FT3<string opstr, RegisterOperand RC,
-             SDPatternOperator OpNode= null_frag> :
-  InstSE<(outs), (ins RC:$rt, mem:$addr), !strconcat(opstr, "\t$rt, $addr"),
-         [(OpNode RC:$rt, addrDefault:$addr)], FrmFI, opstr> {
-  let DecoderMethod = "DecodeFMem3";
+             SDPatternOperator OpNode = null_frag> :
+  InstSE<(outs), (ins RC:$rt, MemBase:$base, imm_offset:$offset),
+         !strconcat(opstr, "\t$rt, ${offset}(${base})"),
+         [(OpNode RC:$rt, (addrDefault MemBase:$base, iPTR:$offset))],
+         FrmFI, opstr> {
   let mayStore = 1;
 }
 
@@ -1689,10 +1708,10 @@ class SYNC_FT<string opstr> :
          [(MipsSync timmZExt5:$stype)], FrmOther, opstr>;
 
 class SYNCI_FT<string opstr, DAGOperand MO> :
-  InstSE<(outs), (ins MO:$addr), !strconcat(opstr, "\t$addr"), [],
+  InstSE<(outs), (ins MemBase:$base, MO:$offset),
+         !strconcat(opstr, "\t${offset}(${base})"), [],
          FrmOther, opstr> {
   let hasSideEffects = 1;
-  let DecoderMethod = "DecodeSyncI";
 }
 
 let hasSideEffects = 1, isCTI = 1 in {
@@ -1773,12 +1792,13 @@ class MoveToLOHI<string opstr, RegisterOperand RO, list<Register> DefRegs>:
 }
 
 class EffectiveAddress<string opstr, RegisterOperand RO> :
-  InstSE<(outs RO:$rt), (ins mem_ea:$addr), !strconcat(opstr, "\t$rt, $addr"),
-         [(set RO:$rt, addr:$addr)], FrmI,
+  InstSE<(outs RO:$rt), (ins MemBase:$base, simm16:$offset),
+         !strconcat(opstr, "\t$rt, $base, $offset"),
+         [(set RO:$rt, (addr MemBase:$base, simm16:$offset))], FrmI,
          !strconcat(opstr, "_lea")> {
   let isCodeGenOnly = 1;
   let hasNoSchedulingInfo = 1;
-  let DecoderMethod = "DecodeMem";
+  let FastISelShouldIgnore = 1;
 }
 
 // Count Leading Ones/Zeros in Word
@@ -1872,17 +1892,16 @@ class AtomicCmpSwapSubwordPostRA<RegisterClass RC> :
   let Predicates = [NotR5900];
 }
 
-class LLBase<string opstr, RegisterOperand RO, DAGOperand MO = mem> :
-  InstSE<(outs RO:$rt), (ins MO:$addr), !strconcat(opstr, "\t$rt, $addr"),
+class LLBase<string opstr, RegisterOperand RO, DAGOperand MO = imm_offset> :
+  InstSE<(outs RO:$rt), (ins MemBase:$base, MO:$offset),
+         !strconcat(opstr, "\t$rt, ${offset}(${base})"),
          [], FrmI, opstr> {
-  let DecoderMethod = "DecodeMem";
   let mayLoad = 1;
 }
 
 class SCBase<string opstr, RegisterOperand RO> :
-  InstSE<(outs RO:$dst), (ins RO:$rt, mem:$addr),
-         !strconcat(opstr, "\t$rt, $addr"), [], FrmI> {
-  let DecoderMethod = "DecodeMem";
+  InstSE<(outs RO:$dst), (ins RO:$rt, MemBase:$base, imm_offset:$offset),
+         !strconcat(opstr, "\t$rt, ${offset}(${base})"), [], FrmI> {
   let mayStore = 1;
   let Constraints = "$rt = $dst";
 }
@@ -2559,16 +2578,14 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def TLBWR : MMRel, TLB<"tlbwr">, COP0_TLB_FM<0x06>, ISA_MIPS1;
 }
 class CacheOp<string instr_asm, Operand MemOpnd> :
-    InstSE<(outs), (ins  MemOpnd:$addr, uimm5:$hint),
-           !strconcat(instr_asm, "\t$hint, $addr"), [], FrmOther,
-           instr_asm> {
-  let DecoderMethod = "DecodeCacheOp";
-}
+    InstSE<(outs), (ins MemBase:$base, MemOpnd:$offset, uimm5:$hint),
+           !strconcat(instr_asm, "\t$hint, ${offset}(${base})"), [], FrmOther,
+           instr_asm>;
 
 let AdditionalPredicates = [NotInMicroMips] in {
-  def CACHE : MMRel, CacheOp<"cache", mem>, CACHEOP_FM<0b101111>,
+  def CACHE : MMRel, CacheOp<"cache", mem_simmptr>, CACHEOP_FM<0b101111>,
               INSN_MIPS3_32_NOT_32R6_64R6;
-  def PREF :  MMRel, CacheOp<"pref", mem>, CACHEOP_FM<0b110011>,
+  def PREF :  MMRel, CacheOp<"pref", mem_simmptr>, CACHEOP_FM<0b110011>,
               INSN_MIPS3_32_NOT_32R6_64R6;
 }
 // FIXME: We are missing the prefx instruction.
@@ -3129,37 +3146,46 @@ def : MipsInstAlias<"remu $rd, $imm", (URemIMacro GPR32Opnd:$rd, GPR32Opnd:$rd,
                                        simm32_relaxed:$imm), 0>,
       ISA_MIPS1_NOT_32R6_64R6;
 
-def Ulh : MipsAsmPseudoInst<(outs GPR32Opnd:$rt), (ins mem:$addr),
-                            "ulh\t$rt, $addr">; //, ISA_MIPS1_NOT_32R6_64R6;
+def Ulh : MipsAsmPseudoInst<(outs GPR32Opnd:$rt),
+                            (ins MemBase:$base, imm_offset:$offset),
+                            "ulh\t$rt, ${offset}(${base})">; //, ISA_MIPS1_NOT_32R6_64R6;
 
-def Ulhu : MipsAsmPseudoInst<(outs GPR32Opnd:$rt), (ins mem:$addr),
-                             "ulhu\t$rt, $addr">; //, ISA_MIPS1_NOT_32R6_64R6;
+def Ulhu : MipsAsmPseudoInst<(outs GPR32Opnd:$rt),
+                             (ins MemBase:$base, imm_offset:$offset),
+                             "ulhu\t$rt, ${offset}(${base})">; //, ISA_MIPS1_NOT_32R6_64R6;
 
-def Ulw : MipsAsmPseudoInst<(outs GPR32Opnd:$rt), (ins mem:$addr),
-                            "ulw\t$rt, $addr">; //, ISA_MIPS1_NOT_32R6_64R6;
+def Ulw : MipsAsmPseudoInst<(outs GPR32Opnd:$rt),
+                            (ins MemBase:$base, imm_offset:$offset),
+                            "ulw\t$rt, ${offset}(${base})">; //, ISA_MIPS1_NOT_32R6_64R6;
 
-def Ush : MipsAsmPseudoInst<(outs GPR32Opnd:$rt), (ins mem:$addr),
-                            "ush\t$rt, $addr">; //, ISA_MIPS1_NOT_32R6_64R6;
+def Ush : MipsAsmPseudoInst<(outs GPR32Opnd:$rt),
+                            (ins MemBase:$base, imm_offset:$offset),
+                            "ush\t$rt, ${offset}(${base})">; //, ISA_MIPS1_NOT_32R6_64R6;
 
-def Usw : MipsAsmPseudoInst<(outs GPR32Opnd:$rt), (ins mem:$addr),
-                            "usw\t$rt, $addr">; //, ISA_MIPS1_NOT_32R6_64R6;
+def Usw : MipsAsmPseudoInst<(outs GPR32Opnd:$rt),
+                            (ins MemBase:$base, imm_offset:$offset),
+                            "usw\t$rt, ${offset}(${base})">; //, ISA_MIPS1_NOT_32R6_64R6;
 
 def LDMacro : MipsAsmPseudoInst<(outs GPR32Opnd:$rt),
-                                (ins mem_simm16:$addr), "ld $rt, $addr">,
-                                ISA_MIPS1_NOT_MIPS3;
+                                (ins MemBase:$base, mem_simm16:$offset),
+                                "ld $rt, ${offset}(${base})">,
+              ISA_MIPS1_NOT_MIPS3;
 def SDMacro : MipsAsmPseudoInst<(outs GPR32Opnd:$rt),
-                                (ins mem_simm16:$addr), "sd $rt, $addr">,
-                                ISA_MIPS1_NOT_MIPS3;
+                                (ins MemBase:$base, mem_simm16:$offset),
+                                "sd $rt, ${offset}(${base})">,
+              ISA_MIPS1_NOT_MIPS3;
 //===----------------------------------------------------------------------===//
 //  Arbitrary patterns that map to one or more instructions
 //===----------------------------------------------------------------------===//
 
 // Load/store pattern templates.
 class LoadRegImmPat<Instruction LoadInst, ValueType ValTy, PatFrag Node> :
-  MipsPat<(ValTy (Node addrRegImm:$a)), (LoadInst addrRegImm:$a)>;
+  MipsPat<(ValTy (Node (addrRegImm MemBase:$a_base, iPTR:$a_offset))),
+          (LoadInst $a_base, $a_offset)>;
 
 class StoreRegImmPat<Instruction StoreInst, ValueType ValTy> :
-  MipsPat<(store ValTy:$v, addrRegImm:$a), (StoreInst ValTy:$v, addrRegImm:$a)>;
+  MipsPat<(store ValTy:$v, (addrRegImm MemBase:$a_base, iPTR:$a_offset)),
+          (StoreInst ValTy:$v, $a_base, $a_offset)>;
 
 // Materialize constants.
 multiclass MaterializeImms<ValueType VT, Register ZEROReg,
@@ -3289,12 +3315,16 @@ let AdditionalPredicates = [NotInMicroMips] in {
 
 // extended loads
 let AdditionalPredicates = [NotInMicroMips] in {
-  def : MipsPat<(i32 (extloadi1  addr:$src)), (LBu addr:$src)>, ISA_MIPS1;
-  def : MipsPat<(i32 (extloadi8  addr:$src)), (LBu addr:$src)>, ISA_MIPS1;
-  def : MipsPat<(i32 (extloadi16 addr:$src)), (LHu addr:$src)>, ISA_MIPS1;
+  def : MipsPat<(i32 (extloadi1  (addr MemBase:$src_base, iPTR:$src_offset))),
+                (LBu $src_base, $src_offset)>, ISA_MIPS1;
+  def : MipsPat<(i32 (extloadi8  (addr MemBase:$src_base, iPTR:$src_offset))),
+                (LBu $src_base, $src_offset)>, ISA_MIPS1;
+  def : MipsPat<(i32 (extloadi16 (addr MemBase:$src_base, iPTR:$src_offset))),
+                (LHu $src_base, $src_offset)>, ISA_MIPS1;
 
   // peepholes
-  def : MipsPat<(store (i32 0), addr:$dst), (SW ZERO, addr:$dst)>, ISA_MIPS1;
+  def : MipsPat<(store (i32 0), (addr MemBase:$dst_base, iPTR:$dst_offset)),
+                (SW ZERO, $dst_base, $dst_offset)>, ISA_MIPS1;
 }
 
 // brcond patterns
@@ -3403,17 +3433,23 @@ let AdditionalPredicates = [NotInMicroMips] in {
   }
 
   // Atomic load patterns.
-  def : MipsPat<(atomic_load_asext_8 addr:$a), (LB addr:$a)>, ISA_MIPS1;
-  def : MipsPat<(atomic_load_asext_16 addr:$a), (LH addr:$a)>, ISA_MIPS1;
-  def : MipsPat<(atomic_load_nonext_32 addr:$a), (LW addr:$a)>, ISA_MIPS1;
+  def : MipsPat<(atomic_load_asext_8 (addr MemBase:$a_base, iPTR:$a_offset)),
+                (LB $a_base, $a_offset)>, ISA_MIPS1;
+  def : MipsPat<(atomic_load_asext_16 (addr MemBase:$a_base, iPTR:$a_offset)),
+                (LH $a_base, $a_offset)>, ISA_MIPS1;
+  def : MipsPat<(atomic_load_nonext_32 (addr MemBase:$a_base, iPTR:$a_offset)),
+                (LW $a_base, $a_offset)>, ISA_MIPS1;
 
   // Atomic store patterns.
-  def : MipsPat<(atomic_store_8 GPR32:$v, addr:$a), (SB GPR32:$v, addr:$a)>,
-        ISA_MIPS1;
-  def : MipsPat<(atomic_store_16 GPR32:$v, addr:$a), (SH GPR32:$v, addr:$a)>,
-        ISA_MIPS1;
-  def : MipsPat<(atomic_store_32 GPR32:$v, addr:$a), (SW GPR32:$v, addr:$a)>,
-        ISA_MIPS1;
+  def : MipsPat<(atomic_store_8 GPR32:$v,
+                                (addr MemBase:$a_base, iPTR:$a_offset)),
+                (SB GPR32:$v, $a_base, $a_offset)>, ISA_MIPS1;
+  def : MipsPat<(atomic_store_16 GPR32:$v,
+                                 (addr MemBase:$a_base, iPTR:$a_offset)),
+                (SH GPR32:$v, $a_base, $a_offset)>, ISA_MIPS1;
+  def : MipsPat<(atomic_store_32 GPR32:$v,
+                                 (addr MemBase:$a_base, iPTR:$a_offset)),
+                (SW GPR32:$v, $a_base, $a_offset)>, ISA_MIPS1;
 }
 
 //===----------------------------------------------------------------------===//
