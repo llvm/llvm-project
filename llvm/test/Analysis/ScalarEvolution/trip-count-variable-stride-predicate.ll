@@ -29,3 +29,37 @@ loop:
 exit:
   ret void
 }
+
+define void @converging_ivs_bounded_stride(i64 %left_start, i64 %right_start, i32 %stride_i32, ptr %p) {
+; CHECK-LABEL: 'converging_ivs_bounded_stride'
+; CHECK-NEXT:  Determining loop execution counts for: @converging_ivs_bounded_stride
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((((-1 * ((zext i32 %stride_i32 to i64) + %left_start)<nsw>) + (-1 * (1 umin ((-1 * ((zext i32 %stride_i32 to i64) + %left_start)<nsw>) + ((-1 + %right_start)<nsw> smax ((zext i32 %stride_i32 to i64) + %left_start)<nsw>))))<nuw><nsw> + ((-1 + %right_start)<nsw> smax ((zext i32 %stride_i32 to i64) + %left_start)<nsw>)) /u (1 + (1 umax (zext i32 %stride_i32 to i64)))<nuw><nsw>) + (1 umin ((-1 * ((zext i32 %stride_i32 to i64) + %left_start)<nsw>) + ((-1 + %right_start)<nsw> smax ((zext i32 %stride_i32 to i64) + %left_start)<nsw>))))
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: (zext i32 %stride_i32 to i64) sgt) 0
+; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 -1
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: (zext i32 %stride_i32 to i64) sgt) 0
+; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is ((((-1 * ((zext i32 %stride_i32 to i64) + %left_start)<nsw>) + (-1 * (1 umin ((-1 * ((zext i32 %stride_i32 to i64) + %left_start)<nsw>) + ((-1 + %right_start)<nsw> smax ((zext i32 %stride_i32 to i64) + %left_start)<nsw>))))<nuw><nsw> + ((-1 + %right_start)<nsw> smax ((zext i32 %stride_i32 to i64) + %left_start)<nsw>)) /u (1 + (1 umax (zext i32 %stride_i32 to i64)))<nuw><nsw>) + (1 umin ((-1 * ((zext i32 %stride_i32 to i64) + %left_start)<nsw>) + ((-1 + %right_start)<nsw> smax ((zext i32 %stride_i32 to i64) + %left_start)<nsw>))))
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: (zext i32 %stride_i32 to i64) sgt) 0
+;
+entry:
+  %stride = zext i32 %stride_i32 to i64
+  br label %loop
+
+loop:
+  %left = phi i64 [ %left_start, %entry ], [ %left.next, %loop ]
+  %right = phi i64 [ %right_start, %entry ], [ %right.next, %loop ]
+  %gep = getelementptr i64, ptr %p, i64 %left
+  store i64 %left, ptr %gep
+  %left.next = add nsw i64 %left, %stride
+  %right.next = add nsw i64 %right, -1
+  %cmp = icmp slt i64 %left.next, %right.next
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
