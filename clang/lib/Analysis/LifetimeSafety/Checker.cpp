@@ -277,7 +277,7 @@ public:
       const Expr *MovedExpr = Warning.MovedExpr;
       SourceLocation ExpiryLoc = Warning.ExpiryLoc;
 
-      if (const auto *UF = CausingFact.dyn_cast<const UseFact *>()) {
+      if (const auto *UF = dyn_cast<const UseFact *>(CausingFact)) {
         llvm::SmallVector<const Expr *> ExprChain =
             getExprChain(LoanPropagation.buildOriginFlowChain(UF, LID, Cfg));
         if (Warning.InvalidatedByExpr) {
@@ -298,7 +298,7 @@ public:
                                           MovedExpr, ExpiryLoc, ExprChain);
 
       } else if (const auto *OEF =
-                     CausingFact.dyn_cast<const OriginEscapesFact *>()) {
+                     dyn_cast<const OriginEscapesFact *>(CausingFact)) {
         if (Warning.InvalidatedByExpr) {
           if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF)) {
             // Invalidated object escapes to a field.

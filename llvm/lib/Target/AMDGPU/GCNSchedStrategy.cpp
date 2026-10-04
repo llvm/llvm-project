@@ -568,7 +568,7 @@ SUnit *GCNSchedStrategy::pickNodeBidirectional(bool &IsTopNode,
   } else {
     LLVM_DEBUG(traceCandidate(BotCand));
 #ifndef NDEBUG
-    if (VerifyScheduling) {
+    if (shouldVerifyScheduling()) {
       SchedCandidate TCand;
       TCand.reset(CandPolicy());
       pickNodeFromQueue(Bot, BotPolicy, DAG->getBotRPTracker(), TCand,
@@ -593,7 +593,7 @@ SUnit *GCNSchedStrategy::pickNodeBidirectional(bool &IsTopNode,
   } else {
     LLVM_DEBUG(traceCandidate(TopCand));
 #ifndef NDEBUG
-    if (VerifyScheduling) {
+    if (shouldVerifyScheduling()) {
       SchedCandidate TCand;
       TCand.reset(CandPolicy());
       pickNodeFromQueue(Top, TopPolicy, DAG->getTopRPTracker(), TCand,

@@ -486,18 +486,10 @@ FailureOr<int64_t> LayoutInfoPropagation::getNumSgOrFail(
       return llvm::product_of(sgLayout);
   }
   // Otherwise fall back to the kernel's known_block_size.
-  if (auto gpuFunc = op->getParentOfType<gpu::GPUFuncOp>()) {
-    std::optional<ArrayRef<int32_t>> knownBlockSize =
-        gpuFunc.getKnownBlockSize();
-    if (knownBlockSize) {
-      bool isPowerOf2Block = llvm::all_of(*knownBlockSize, [](int32_t dim) {
-        return dim > 0 && llvm::isPowerOf2_32(dim);
-      });
-      int64_t numSg = llvm::product_of(*knownBlockSize) / sgSize;
-      if (isPowerOf2Block && numSg > 0)
-        return numSg;
-    }
-  }
+  if (FailureOr<int64_t> numSg =
+          xegpu::getNumSubgroupsFromBlockSize(op, sgSize);
+      succeeded(numSg))
+    return *numSg;
   // Only subgroup mode needs the count; elsewhere a missing one is benign.
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
     markFailure(op, "Unable to determine the number of subgroups for the "
@@ -672,8 +664,23 @@ void LayoutInfoPropagation::visitShapeCastOp(
   auto resultLayoutAttr =
       dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
 
-  xegpu::DistributeLayoutAttr srcLayoutAttr =
-      xegpu::inferShapeCastSourceLayout(resultLayoutAttr, resShape, srcShape);
+  auto requiredResLayoutAttr = xegpu::setupShapeCastResultLayout(
+      layoutKind, shapeCast.getSourceVectorType(),
+      shapeCast.getResultVectorType(), resultLayoutAttr);
+  // The consumer layout cannot be expressed on the source: no lane_data makes
+  // each lane's data a contiguous run of the collapsed source dim. shape_cast
+  // is not an anchor op, so warn and leave the value un-laid-out instead of
+  // propagating a layout that would move data between lanes.
+  if (!requiredResLayoutAttr) {
+    shapeCast.emitWarning("Failed to infer source layout for shape_cast; the "
+                          "result layout required by its consumers cannot be "
+                          "collapsed onto the source shape.");
+    return;
+  }
+  xegpu::setTemporaryLayout(shapeCast->getResult(0), requiredResLayoutAttr);
+
+  xegpu::DistributeLayoutAttr srcLayoutAttr = xegpu::inferShapeCastSourceLayout(
+      requiredResLayoutAttr, resShape, srcShape);
   // shape_cast is not an anchor op: another consumer of the source value may
   // still supply a valid layout, so warn instead of stopping the propagation.
   if (!srcLayoutAttr) {

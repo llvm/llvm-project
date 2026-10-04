@@ -1497,7 +1497,7 @@ Value *AtomicExpandImpl::insertRMWLLSCLoop(
   // (50/50) to prevent misleading optimizations.
   setExplicitlyUnknownBranchWeightsIfProfiled(*CondBr, DEBUG_TYPE);
 
-  Builder.SetInsertPoint(ExitBB, ExitBB->begin());
+  Builder.SetInsertPoint(ExitBB->begin());
   return Loaded;
 }
 
@@ -1737,7 +1737,7 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   // succeeded or not. We expose this to later passes by converting any
   // subsequent "icmp eq/ne %loaded, %oldval" into a use of an appropriate
   // PHI.
-  Builder.SetInsertPoint(ExitBB, ExitBB->begin());
+  Builder.SetInsertPoint(ExitBB->begin());
   PHINode *LoadedExit =
       Builder.CreatePHI(UnreleasedLoad->getType(), 2, "loaded.exit");
   LoadedExit->addIncoming(LoadedTryStore, SuccessBB);
@@ -1750,7 +1750,7 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   // a type wider than the one in the cmpxchg instruction.
   Value *LoadedFull = LoadedExit;
 
-  Builder.SetInsertPoint(ExitBB, std::next(Success->getIterator()));
+  Builder.SetInsertPoint(std::next(Success->getIterator()));
   Value *Loaded = extractMaskedValue(Builder, LoadedFull, PMV);
 
   // Look for any users of the cmpxchg that are just comparing the loaded value
@@ -1903,7 +1903,7 @@ Value *AtomicExpandImpl::insertRMWCmpXchgLoop(
   // to prevent misleading optimizations.
   setExplicitlyUnknownBranchWeightsIfProfiled(*CondBr, DEBUG_TYPE);
 
-  Builder.SetInsertPoint(ExitBB, ExitBB->begin());
+  Builder.SetInsertPoint(ExitBB->begin());
   return NewLoaded;
 }
 

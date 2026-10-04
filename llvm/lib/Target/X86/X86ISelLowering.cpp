@@ -34825,14 +34825,15 @@ static SDValue LowerPARTIAL_REDUCE_MLA(SDValue Op,
   if (VT.is512BitVector() && !Has512)
     return splitVectorOp(Op, DAG, DL);
 
-  // The dot products take their i8/i16 elements packed in i32 lanes.
-  LHS = DAG.getBitcast(VT, LHS);
-  RHS = DAG.getBitcast(VT, RHS);
-
-  // Without VLX only the 512-bit EVEX form exists, so use that unless the VEX
-  // encoding is available.
-  if (!VT.is512BitVector() && !Subtarget.hasVLX() && !HasVEX)
-    return getAVX512Node(Opc, DL, VT, {Acc, LHS, RHS}, DAG, Subtarget);
+  // Without VLX only the 512-bit EVEX form exists, so widen to that and extract
+  // unless the VEX encoding is available.
+  if (!VT.is512BitVector() && !Subtarget.hasVLX() && !HasVEX) {
+    Acc = widenSubVector(Acc, false, Subtarget, DAG, DL, 512);
+    LHS = widenSubVector(LHS, false, Subtarget, DAG, DL, 512);
+    RHS = widenSubVector(RHS, false, Subtarget, DAG, DL, 512);
+    SDValue Res = DAG.getNode(Opc, DL, MVT::v16i32, Acc, LHS, RHS);
+    return extractSubVector(Res, 0, DAG, DL, VT.getSizeInBits());
+  }
 
   return DAG.getNode(Opc, DL, VT, Acc, LHS, RHS);
 }
@@ -64315,7 +64316,7 @@ SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc &dl,
     // Upon ISEL, the pattern will convert it to jmp with NoTrack prefix.
     SDValue Chain = Value;
     // Jump table debug info is only needed if CodeView is enabled.
-    if (DAG.getTarget().getTargetTriple().isOSBinFormatCOFF())
+    if (M->getTargetTriple().isOSBinFormatCOFF())
       Chain = DAG.getJumpTableDebugInfo(JTI, Chain, dl);
     return DAG.getNode(X86ISD::NT_BRIND, dl, MVT::Other, Chain, Addr);
   }

@@ -2686,7 +2686,7 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
 
   // Create a PHI in the end block to select either the output of the intrinsic
   // or the bit width of the operand.
-  Builder.SetInsertPoint(EndBlock, EndBlock->begin());
+  Builder.SetInsertPoint(EndBlock->begin());
   PHINode *PN = Builder.CreatePHI(Ty, 2, "ctz");
   replaceAllUsesWith(CountZeros, PN, FreshBBs, IsHugeFunc);
   Value *BitWidth = Builder.getInt(APInt(SizeInBits, SizeInBits));
@@ -6575,7 +6575,7 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   OldTerminator->eraseFromParent();
 
   // BB overflow.res:
-  Builder.SetInsertPoint(OverflowResBB, OverflowResBB->getFirstInsertionPt());
+  Builder.SetInsertPoint(OverflowResBB->getFirstInsertionPt());
   // Create PHI nodes to merge results from no.overflow BB and overflow BB to
   // replace the extract instructions.
   PHINode *OverflowResPHI = Builder.CreatePHI(Ty, 2),
@@ -6602,7 +6602,7 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   I->removeFromParent();
   // BB overflow:
   I->insertInto(OverflowBB, OverflowBB->end());
-  Builder.SetInsertPoint(OverflowBB, OverflowBB->end());
+  Builder.SetInsertPoint(OverflowBB->end());
   Value *MulOverflow = Builder.CreateExtractValue(I, {0}, "mul.overflow");
   Value *OverflowFlag = Builder.CreateExtractValue(I, {1}, "overflow.flag");
   Builder.CreateBr(OverflowResBB);

@@ -792,7 +792,7 @@ static void expandFPToI(Instruction *FPToI, bool IsSaturating, bool IsSigned) {
   Builder.CreateBr(End);
 
   // cleanup:
-  Builder.SetInsertPoint(End, End->begin());
+  Builder.SetInsertPoint(End->begin());
   PHINode *Retval0 = Builder.CreatePHI(FPToI->getType(), 3 + IsSaturating);
 
   if (IsSaturating)
@@ -1217,7 +1217,7 @@ static void expandIToFP(Instruction *IToFP) {
   Builder.CreateBr(End);
 
   // return:
-  Builder.SetInsertPoint(End, End->begin());
+  Builder.SetInsertPoint(End->begin());
   PHINode *Retval0 = Builder.CreatePHI(IToFP->getType(), 2);
   Retval0->addIncoming(A4, IfEnd26);
   Retval0->addIncoming(ConstantFP::getZero(IToFP->getType(), false), Entry);
