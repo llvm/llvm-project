@@ -13,6 +13,7 @@
 #include "ClauseProcessor.h"
 #include "Utils.h"
 
+#include "flang/Evaluate/tools.h"
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/OpenMP/Clauses.h"
@@ -23,6 +24,7 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Utils/OpenMP.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 
@@ -256,23 +258,24 @@ static IteratorRange lowerIteratorRange(
   mlir::Value ubVal =
       fir::getBase(converter.genExprValue(toEvExpr(ubExpr), stmtCtx));
 
-  auto toIndex = [](fir::FirOpBuilder &builder, mlir::Location loc,
-                    mlir::Value v) -> mlir::Value {
-    if (v.getType().isIndex())
-      return v;
-    return fir::ConvertOp::create(builder, loc, builder.getIndexType(), v);
-  };
+  mlir::Value stVal;
+  if (stExpr)
+    stVal = fir::getBase(converter.genExprValue(toEvExpr(*stExpr), stmtCtx));
 
-  r.lb = toIndex(builder, loc, lbVal);
-  r.ub = toIndex(builder, loc, ubVal);
+  // Use index when it can represent the source range, but retain wider
+  // integers for the bounds, step and induction value when necessary.
+  unsigned width = converter.genType(*r.ivSym).getIntOrFloatBitWidth();
+  for (mlir::Value value : {lbVal, ubVal, stVal})
+    if (value)
+      width = std::max(width, value.getType().getIntOrFloatBitWidth());
+  mlir::Type rangeTy = builder.getIndexType();
+  if (width > builder.getDataLayout().getTypeSizeInBits(rangeTy))
+    rangeTy = builder.getIntegerType(width);
 
-  if (stExpr) {
-    mlir::Value stVal =
-        fir::getBase(converter.genExprValue(toEvExpr(*stExpr), stmtCtx));
-    r.step = toIndex(builder, loc, stVal);
-  } else {
-    r.step = mlir::arith::ConstantIndexOp::create(builder, loc, 1);
-  }
+  r.lb = builder.createConvert(loc, rangeTy, lbVal);
+  r.ub = builder.createConvert(loc, rangeTy, ubVal);
+  r.step = stVal ? builder.createConvert(loc, rangeTy, stVal)
+                 : builder.createIntegerConstant(loc, rangeTy, 1);
 
   return r;
 }
@@ -298,6 +301,7 @@ static mlir::Value buildIteratorOp(Fortran::lower::AbstractConverter &converter,
   auto itOp = mlir::omp::IteratorOp::create(
       builder, loc, iterTy, mlir::ValueRange{lbs}, mlir::ValueRange{ubs},
       mlir::ValueRange{steps});
+  itOp.setLoopInclusive(true);
 
   mlir::OpBuilder::InsertionGuard guard(builder);
 
@@ -307,7 +311,7 @@ static mlir::Value buildIteratorOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Value> ivs;
   ivs.reserve(ranges.size());
   for (size_t i = 0; i < ranges.size(); ++i)
-    ivs.push_back(body->addArgument(builder.getIndexType(), loc));
+    ivs.push_back(body->addArgument(ranges[i].lb.getType(), loc));
 
   Fortran::lower::SymMap &symMap = converter.getSymbolMap();
   Fortran::lower::SymMapScope scope(symMap);
@@ -337,12 +341,52 @@ static mlir::Value buildIteratorOp(Fortran::lower::AbstractConverter &converter,
   return itOp.getResult();
 }
 
+// Build an omp.iterator that yields a map entry for one locator.
+static mlir::Value buildIteratedMapEntry(
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::semantics::SemanticsContext &semaCtx, mlir::Location loc,
+    llvm::ArrayRef<IteratorRange> iteratorRanges, const omp::Object &object,
+    const evaluate::ArrayRef &arrayRef, llvm::StringRef mapperIdName,
+    mlir::omp::ClauseMapFlags mapTypeBits, llvm::omp::Directive directive) {
+  mlir::Type ptrTy =
+      mlir::LLVM::LLVMPointerType::get(&converter.getMLIRContext());
+  mlir::Type iterTy =
+      mlir::omp::IteratedType::get(&converter.getMLIRContext(), ptrTy);
+
+  return buildIteratorOp(
+      converter, loc, iterTy, iteratorRanges,
+      [&](fir::FirOpBuilder &builder, mlir::Location loc,
+          llvm::ArrayRef<mlir::Value> /*ivs*/) -> mlir::Value {
+        lower::StatementContext iterStmtCtx;
+        IteratorMapInfo mapInfo = genIteratorMapInfo(
+            converter, builder, semaCtx, iterStmtCtx, object, arrayRef, loc);
+
+        // Keep the array base in var_ptr so element and whole-array maps share
+        // a base address. Bounds select the data for this iteration; descriptor
+        // parent and attachment maps are not part of these entries.
+        mlir::Value baseAddr = mapInfo.entity.getBase();
+        if (mlir::isa<fir::BaseBoxType>(baseAddr.getType()))
+          baseAddr = fir::BoxAddrOp::create(builder, loc, baseAddr);
+        mlir::FlatSymbolRefAttr mapperId =
+            resolveMapperId(converter, loc, object, mapperIdName, mapTypeBits,
+                            directive, /*hasParentObj=*/false);
+        mlir::omp::MapInfoOp mapOp = utils::openmp::createMapInfoOp(
+            builder, loc, baseAddr, /*varPtrPtr=*/mlir::Value{},
+            /*name=*/"", mapInfo.bounds, /*members=*/{},
+            /*membersIndex=*/mlir::ArrayAttr{}, mapTypeBits,
+            mlir::omp::VariableCaptureKind::ByRef, ptrTy,
+            /*partialMap=*/false, mapperId, baseAddr.getType());
+        return mapOp.getResult();
+      });
+}
+
 template <typename ClauseTuple>
 static void collectIteratorIVs(
     const ClauseTuple &clause, Fortran::lower::AbstractConverter &converter,
     Fortran::lower::StatementContext &stmtCtx,
     llvm::SmallVectorImpl<IteratorRange> &iteratorRanges,
-    llvm::SmallPtrSetImpl<const Fortran::semantics::Symbol *> &ivSyms) {
+    llvm::SmallPtrSetImpl<const Fortran::semantics::Symbol *> *ivSyms =
+        nullptr) {
   auto &iteratorModifier =
       std::get<std::optional<omp::clause::Iterator>>(clause.t);
   if (!iteratorModifier.has_value())
@@ -355,8 +399,9 @@ static void collectIteratorIVs(
     iteratorRanges.push_back(lowerIteratorRange<Fortran::evaluate::SomeType>(
         converter, itSpec, stmtCtx, clauseLocation));
 
-  for (const IteratorRange &r : iteratorRanges)
-    ivSyms.insert(&r.ivSym->GetUltimate());
+  if (ivSyms)
+    for (const IteratorRange &r : iteratorRanges)
+      ivSyms->insert(&r.ivSym->GetUltimate());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1051,7 +1096,7 @@ bool ClauseProcessor::processAffinity(
 
         auto &iteratorModifier =
             std::get<std::optional<omp::clause::Iterator>>(clause.t);
-        collectIteratorIVs(clause, converter, stmtCtx, iteratorRanges, ivSyms);
+        collectIteratorIVs(clause, converter, stmtCtx, iteratorRanges, &ivSyms);
 
         TodoLocators(clauseLocation, objects);
 
@@ -1514,7 +1559,7 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
 
     llvm::SmallVector<IteratorRange> iteratorRanges;
     llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 4> ivSyms;
-    collectIteratorIVs(clause, converter, stmtCtx, iteratorRanges, ivSyms);
+    collectIteratorIVs(clause, converter, stmtCtx, iteratorRanges, &ivSyms);
 
     mlir::Type ptrTy =
         mlir::LLVM::LLVMPointerType::get(&converter.getMLIRContext());
@@ -1943,6 +1988,98 @@ void ClauseProcessor::processMapObjects(
   }
 }
 
+// Lower iterator-dependent locators to mapIterated and other locators to
+// mapVars.
+void ClauseProcessor::processMapObjectsWithIterator(
+    lower::StatementContext &stmtCtx, mlir::Location clauseLocation,
+    const omp::ObjectList &objects,
+    llvm::ArrayRef<IteratorRange> iteratorRanges,
+    mlir::omp::ClauseMapFlags mapTypeBits,
+    std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
+    mlir::omp::MapClauseOps &result, llvm::SmallVectorImpl<Object> &mapObjects,
+    llvm::StringRef mapperIdNameRef, bool isMotionModifier,
+    llvm::omp::Directive directive) const {
+  if (iteratorRanges.empty()) {
+    processMapObjects(stmtCtx, clauseLocation, objects, mapTypeBits,
+                      parentMemberIndices, result.mapVars, mapObjects,
+                      mapperIdNameRef, isMotionModifier, directive);
+    return;
+  }
+
+  auto declareMapper = mlir::dyn_cast_if_present<mlir::omp::DeclareMapperOp>(
+      converter.getFirOpBuilder().getRegion().getParentOp());
+  auto isDeclareMapperVariable =
+      [&](const IteratorMapObjectAnalysis &analysis) {
+        if (!declareMapper || !analysis.rootSym)
+          return false;
+
+        mlir::Value rootAddress = converter.getSymbolAddress(*analysis.rootSym);
+        while (rootAddress) {
+          if (auto declare = rootAddress.getDefiningOp<hlfir::DeclareOp>()) {
+            rootAddress = declare.getMemref();
+            continue;
+          }
+          if (auto declare = rootAddress.getDefiningOp<fir::DeclareOp>()) {
+            rootAddress = declare.getMemref();
+            continue;
+          }
+          break;
+        }
+
+        return rootAddress == declareMapper.getRegion().front().getArgument(0);
+      };
+
+  constexpr mlir::omp::ClauseMapFlags unsupportedReferenceModifiers =
+      mlir::omp::ClauseMapFlags::ref_ptr | mlir::omp::ClauseMapFlags::ref_ptee |
+      mlir::omp::ClauseMapFlags::attach_always |
+      mlir::omp::ClauseMapFlags::attach_never |
+      mlir::omp::ClauseMapFlags::attach_auto;
+  bool hasUnsupportedReferenceModifier =
+      (mapTypeBits & unsupportedReferenceModifiers) !=
+      mlir::omp::ClauseMapFlags::none;
+
+  // Objects in an iterator-modified clause may independently reference
+  // iterator variables, so handle each object separately.
+  for (const omp::Object &object : objects) {
+    llvm::SmallPtrSet<const semantics::Symbol *, 4> referencedSymbols;
+    if (const auto &ref = object.ref())
+      for (const semantics::SymbolRef &symbol : evaluate::CollectSymbols(*ref))
+        referencedSymbols.insert(&symbol->GetUltimate());
+
+    llvm::SmallVector<IteratorRange> objectRanges;
+    for (const IteratorRange &range : iteratorRanges)
+      if (referencedSymbols.contains(&range.ivSym->GetUltimate()))
+        objectRanges.push_back(range);
+
+    if (!objectRanges.empty()) {
+      if (hasUnsupportedReferenceModifier)
+        TODO(clauseLocation,
+             "iterator modifier with reference or attach modifier");
+      IteratorMapObjectAnalysis analysis = analyzeIteratorMapObject(object);
+      bool isMapperVariable = isDeclareMapperVariable(analysis);
+      if (analysis.isDerivedTypeMember && !isMapperVariable)
+        TODO(clauseLocation, "iterator modifier with derived type member map");
+      if (declareMapper && analysis.rootSym && !isMapperVariable)
+        TODO(clauseLocation,
+             "iterator modifier with locator outside declare mapper variable");
+      if (!analysis.arrayRef)
+        TODO(clauseLocation, "object type not supported by iterator modifier");
+      if (const auto *symbol{object.sym()};
+          symbol && semantics::IsOptional(*symbol))
+        TODO(clauseLocation, "iterator modifier with optional locator");
+      result.mapIterated.push_back(buildIteratedMapEntry(
+          converter, semaCtx, clauseLocation, objectRanges, object,
+          *analysis.arrayRef, mapperIdNameRef, mapTypeBits, directive));
+      continue;
+    }
+
+    omp::ObjectList singleObj{object};
+    processMapObjects(stmtCtx, clauseLocation, singleObj, mapTypeBits,
+                      parentMemberIndices, result.mapVars, mapObjects,
+                      mapperIdNameRef, isMotionModifier, directive);
+  }
+}
+
 /// Extract and mangle the mapper identifier name from a mapper clause.
 /// Returns "__implicit_mapper" if no mapper is specified, or "default" if
 /// the default mapper is specified, otherwise returns the mangled mapper name.
@@ -2062,15 +2199,24 @@ bool ClauseProcessor::processMap(
       }
     }
 
-    if (iterator)
-      TODO(currentLocation,
-           "Support for iterator modifiers is not implemented yet");
     TodoLocators(currentLocation, objects);
 
-    processMapObjects(stmtCtx, clauseLocation,
-                      std::get<omp::ObjectList>(clause.t), mapTypeBits,
-                      parentMemberIndices, result.mapVars, *ptrMapObjects,
-                      mapperIdName, /*isMotionModifier=*/false, directive);
+    llvm::SmallVector<IteratorRange> iteratorRanges;
+    if (iterator) {
+      // An executable target region needs a stable base capture for every
+      // iterated map object used in its body. Without such a capture, implicit
+      // mapping adds an ordinary whole-object map and changes the requested
+      // extent and direction. Reject this until omp.target can represent those
+      // captures separately from runtime map entries.
+      if (directive == llvm::omp::Directive::OMPD_target)
+        TODO(clauseLocation, "TARGET construct with MAP iterator modifier");
+
+      collectIteratorIVs(clause, converter, stmtCtx, iteratorRanges);
+    }
+    processMapObjectsWithIterator(
+        stmtCtx, clauseLocation, objects, iteratorRanges, mapTypeBits,
+        parentMemberIndices, result, *ptrMapObjects, mapperIdName,
+        /*isMotionModifier=*/false, directive);
   };
 
   bool clauseFound = findRepeatableClause<omp::clause::Map>(process);
@@ -2085,6 +2231,11 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
   std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
   llvm::SmallVector<Object> mapObjects;
 
+  // OMPD_unknown allows the mapper resolver to synthesize default mappers for
+  // target update. Passing OMPD_target_update would disable that synthesis.
+  constexpr llvm::omp::Directive mapperDirective =
+      llvm::omp::Directive::OMPD_unknown;
+
   auto callbackFn = [&](const auto &clause, const parser::CharBlock &source) {
     mlir::Location clauseLocation = converter.genLocation(source);
     const auto &[expectation, mapper, iterator, objects] = clause.t;
@@ -2096,16 +2247,17 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
     if (expectation && *expectation == omp::clause::To::Expectation::Present)
       mapTypeBits |= mlir::omp::ClauseMapFlags::present;
 
-    // Support motion modifiers: iterator.
     std::string mapperIdName = getMapperIdentifier(converter, mapper);
 
-    if (iterator)
-      TODO(clauseLocation, "Iterator modifier is not supported yet");
     TodoLocators(clauseLocation, objects);
 
-    processMapObjects(stmtCtx, clauseLocation, objects, mapTypeBits,
-                      parentMemberIndices, result.mapVars, mapObjects,
-                      mapperIdName, /*isMotionModifier=*/true);
+    llvm::SmallVector<IteratorRange> iteratorRanges;
+    if (iterator)
+      collectIteratorIVs(clause, converter, stmtCtx, iteratorRanges);
+    processMapObjectsWithIterator(
+        stmtCtx, clauseLocation, objects, iteratorRanges, mapTypeBits,
+        parentMemberIndices, result, mapObjects, mapperIdName,
+        /*isMotionModifier=*/true, mapperDirective);
   };
 
   bool clauseFound = findRepeatableClause<omp::clause::To>(callbackFn);
