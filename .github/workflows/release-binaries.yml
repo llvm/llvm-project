@@ -159,11 +159,6 @@ jobs:
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_ARCHS=$arches -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_BUILTIN_ARCHS=$arches"
         fi
 
-        if [ "$RUNNER_OS" = "Windows" ]; then
-          # The build times out on Windows, so we need to disable LTO.
-          target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
-        fi
-
         case "$INPUTS_RUNS_ON" in
           ubuntu-22.04* | windows-2022)
             build_runs_on="depot-$INPUTS_RUNS_ON-16"
@@ -227,6 +222,10 @@ jobs:
     - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
       with:
         python-version: '3.14.7'
+
+    - name: Install Python psutil (Windows)
+      if: runner.os == 'Windows'
+      run: python -m pip install --disable-pip-version-check --no-input psutil
 
     # For some reason this is needed on Windows or else the build system can't find python3.lib.
     - name: Setup Python library path
@@ -329,6 +328,25 @@ jobs:
         release_dir=`find "$BUILD_PREFIX/build" -iname 'stage2-bins'`
         mv "$release_dir/$RELEASE_BINARY_FILENAME" .
 
+    - name: Enable NetFx3 (Windows ARM64)
+      if: runner.os == 'Windows' && runner.arch == 'ARM64'
+      shell: pwsh
+      run: |
+        $feature = Get-WindowsOptionalFeature -Online -FeatureName NetFx3
+        if ($feature.State -ne 'Enabled') {
+          $result = Enable-WindowsOptionalFeature -Online -FeatureName NetFx3 `
+            -All -NoRestart -ErrorAction Stop
+          if ($result.RestartNeeded) {
+            throw 'Enabling NetFx3 requires a restart; the runner image must have it pre-enabled.'
+          }
+        }
+        $framework = Get-ItemProperty `
+          -LiteralPath 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v3.5' `
+          -ErrorAction SilentlyContinue
+        if ($null -eq $framework -or $framework.Install -ne 1) {
+          throw 'NetFx3 did not register as installed after enabling the Windows feature.'
+        }
+
     # Wix is not installed by default on Windows ARM64
     - name: Install Wix (Windows ARM64)
       env:
@@ -342,23 +360,49 @@ jobs:
     - name: Build Windows
       id: build-windows
       if: runner.os == 'Windows'
+      shell: pwsh
       env:
         INPUTS_RUNS_ON: ${{ inputs.runs-on }}
         LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
-        EXTRA_ARGS: ${{ case(needs.prepare.outputs.build-runs-on == 'windows-11-arm', '--fast-build', '--fast-build') }}
       run: |
-        subst S: ${{ github.workspace }}
+        function Move-ArtifactWithRetry {
+          param(
+            [Parameter(Mandatory)][string]$Source,
+            [Parameter(Mandatory)][string]$DestinationDirectory
+          )
+          $maxAttempts = 12
+          for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            try {
+              Move-Item -LiteralPath $Source -Destination $DestinationDirectory -ErrorAction Stop
+              return
+            } catch {
+              if ($attempt -eq $maxAttempts) {
+                throw "Could not move artifact '$Source' after $maxAttempts attempts: $($_.Exception.Message)"
+              }
+              Write-Warning "Artifact move attempt $attempt/$maxAttempts failed; retrying in 5 seconds: $($_.Exception.Message)"
+              Start-Sleep -Seconds 5
+            }
+          }
+        }
+
+        subst S: "${{ github.workspace }}"
         cd S:\llvm\utils\release\
-        .\build_llvm_release.bat "--$($env:RUNNER_ARCH.ToLower())" --version $env:LLVM_VERSION --local-python --skip-checkout $env:EXTRA_ARGS
+        $buildArgs = @{ Version = $env:LLVM_VERSION; FastBuild = $true; Unattended = $true }
+        switch ($env:RUNNER_ARCH) {
+          'X64'   { $buildArgs['x64'] = $true }
+          'ARM64' { $buildArgs['arm64'] = $true }
+          default { throw "Unsupported Windows runner architecture: $env:RUNNER_ARCH" }
+        }
+        & .\build_llvm_release.ps1 @buildArgs
         if ($env:INPUTS_RUNS_ON -eq "windows-11-arm") {
           $zstd = (Get-ChildItem -Recurse -Filter "zstd.exe" | Select-Object -First 1).fullName
-          mv $zstd $env:GITHUB_WORKSPACE
+          Move-ArtifactWithRetry -Source $zstd -DestinationDirectory $env:GITHUB_WORKSPACE
         }
         $installer = (Get-ChildItem -Recurse -Filter "LLVM-*.msi" | Select-Object -First 1).fullName
         $tarball = (Get-ChildItem -Recurse -Filter "*.tar.xz" | Select-Object -First 1).fullName
         # Move installer to top-level directory so it is easier to upload.
-        mv $installer $env:GITHUB_WORKSPACE
-        mv $tarball $env:GITHUB_WORKSPACE
+        Move-ArtifactWithRetry -Source $installer -DestinationDirectory $env:GITHUB_WORKSPACE
+        Move-ArtifactWithRetry -Source $tarball -DestinationDirectory $env:GITHUB_WORKSPACE
         echo "windows-installer-filename=$(Split-Path -Path $installer -Leaf)" >> $env:GITHUB_OUTPUT
     
     - name: Dump Wix logs
@@ -367,7 +411,7 @@ jobs:
         LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
         BUILD_DIR_SUFFIX: ${{ case(runner.arch == 'ARM64', 'arm64', 'amd64') }}
       run: |
-        cat S:/llvm/utils/release/llvm_package_$($env:LLVM_VERSION)/build_$($env:BUILD_DIR_SUFFIX)/_CPack_Packages/win64/WIX/wix.log
+        cat S:/llvm/utils/release/llvm_package_$($env:LLVM_VERSION)/build_$($env:BUILD_DIR_SUFFIX)_stage2/_CPack_Packages/win64/WIX/wix.log
 
     - name: Create zstd compressed tarball
       shell: bash
