@@ -3044,8 +3044,8 @@ def AtomicReadOp : OpenACC_Op<"atomic.read", [AtomicReadOpInterface]> {
     The operand `v` is the address where the value is stored after reading.
   }];
 
-  let arguments = (ins OpenACC_PointerLikeType:$x,
-                       OpenACC_PointerLikeType:$v,
+  let arguments = (ins Arg<OpenACC_PointerLikeType, "", [MemRead]>:$x,
+                       Arg<OpenACC_PointerLikeType, "", [MemWrite]>:$v,
                        TypeAttr:$element_type, Optional<I1>:$ifCond);
   let assemblyFormat = [{
     oilist(
