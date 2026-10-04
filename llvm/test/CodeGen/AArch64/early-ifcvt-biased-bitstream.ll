@@ -6,7 +6,7 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-define i32 @decode_bits(ptr %counts, i64 %count, i64 %bits, i32 %initial, ptr %out) {
+define i32 @decode_bits(ptr %counts, i64 %count, i64 %bits, i32 %initial, ptr %out) nounwind {
 ; CHECK-LABEL: decode_bits:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $w3 killed $w3 def $x3
@@ -64,7 +64,7 @@ exit:
   ret i32 %nextconsumed
 }
 
-define i32 @decode_bits_balanced(ptr %counts, i64 %count, i64 %bits, i32 %initial, ptr %out) {
+define i32 @decode_bits_balanced(ptr %counts, i64 %count, i64 %bits, i32 %initial, ptr %out) nounwind {
 ; CHECK-LABEL: decode_bits_balanced:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $w3 killed $w3 def $x3
