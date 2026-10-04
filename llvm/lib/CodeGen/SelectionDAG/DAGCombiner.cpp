@@ -5076,7 +5076,8 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
   }
 
   // fold (mul (add x, c1), c2) -> (add (mul x, c2), c1*c2)
-  if (sd_match(N0, m_SpecificOpc(ISD::ADD)) && isConstantOrConstantVector(N1) &&
+  if (sd_match(N0, m_SpecificOpc<ISD::ADD>()) &&
+      isConstantOrConstantVector(N1) &&
       isConstantOrConstantVector(N0.getOperand(1)) &&
       isMulAddWithConstProfitable(N, N0, N1))
     return DAG.getNode(
@@ -11940,7 +11941,7 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
           N0,
           m_OneUse(m_BitwiseLogic(
               m_Value(X),
-              m_OneUse(m_Shl(m_Value(ZExtY, m_SpecificOpc(ISD::ZERO_EXTEND)),
+              m_OneUse(m_Shl(m_Value(ZExtY, m_SpecificOpc<ISD::ZERO_EXTEND>()),
                              m_Specific(N1))))))) {
     unsigned NumLeadingZeros = ZExtY.getScalarValueSizeInBits() -
                                ZExtY.getOperand(0).getScalarValueSizeInBits();
@@ -12148,15 +12149,15 @@ SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
     unsigned C1Expected = IsFSHL ? BitWidth - ShAmt : ShAmt;
 
     if ((sd_match(N0, m_Srl(m_Value(Val), m_SpecificInt(C0Expected))) ||
-         sd_match(N0, m_Node(ISD::FSHR, m_Value(), m_Value(Val),
-                             m_SpecificInt(C0Expected))) ||
-         sd_match(N0, m_Node(ISD::FSHL, m_Value(), m_Value(Val),
-                             m_SpecificInt(C1Expected)))) &&
+         sd_match(N0, m_Node<ISD::FSHR>(m_Value(), m_Value(Val),
+                                        m_SpecificInt(C0Expected))) ||
+         sd_match(N0, m_Node<ISD::FSHL>(m_Value(), m_Value(Val),
+                                        m_SpecificInt(C1Expected)))) &&
         (sd_match(N1, m_Shl(m_Specific(Val), m_SpecificInt(C1Expected))) ||
-         sd_match(N1, m_Node(ISD::FSHL, m_Specific(Val), m_Value(),
-                             m_SpecificInt(C1Expected))) ||
-         sd_match(N1, m_Node(ISD::FSHR, m_Specific(Val), m_Value(),
-                             m_SpecificInt(C0Expected)))))
+         sd_match(N1, m_Node<ISD::FSHL>(m_Specific(Val), m_Value(),
+                                        m_SpecificInt(C1Expected))) ||
+         sd_match(N1, m_Node<ISD::FSHR>(m_Specific(Val), m_Value(),
+                                        m_SpecificInt(C0Expected)))))
       return Val;
 
     // fold (fshl ld1, ld0, c) -> (ld0[ofs]) iff ld0 and ld1 are consecutive.
@@ -27607,8 +27608,7 @@ static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
                                              bool LegalOperations) {
   SDValue A, B;
   ArrayRef<int> M0, M1;
-  if (!sd_match(N,
-                m_Node(ISD::CONCAT_VECTORS,
+  if (!sd_match(N, m_Node<ISD::CONCAT_VECTORS>(
                        m_OneUse(m_Shuffle(m_NUses<2>(m_Value(A)),
                                           m_NUses<2>(m_Value(B)), m_Mask(M0))),
                        m_OneUse(m_Shuffle(m_Deferred(A), m_Deferred(B),

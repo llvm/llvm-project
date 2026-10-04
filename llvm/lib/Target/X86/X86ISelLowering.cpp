@@ -53462,11 +53462,11 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
     if (TLI.isTypeLegal(VT) && TLI.isTypeLegal(CondVT) &&
         (VT.is512BitVector() || Subtarget.hasVLX()) &&
         (VT.getScalarSizeInBits() >= 32 || Subtarget.hasBWI()) &&
-        sd_match(
-            N,
-            m_And(m_Value(X),
-                  m_OneUse(m_SExt(m_Value(
-                      Y, m_SpecificVT(CondVT, m_SpecificOpc(ISD::SETCC)))))))) {
+        sd_match(N,
+                 m_And(m_Value(X),
+                       m_OneUse(m_SExt(m_Value(
+                           Y, m_SpecificVT(CondVT,
+                                           m_SpecificOpc<ISD::SETCC>()))))))) {
       return DAG.getSelect(dl, VT, Y, X,
                            getZeroVector(VT.getSimpleVT(), Subtarget, DAG, dl));
     }
@@ -60351,12 +60351,12 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
     return SDValue();
 
   SDValue Op0, Op1, Accum;
-  if (!sd_match(N, m_Add(m_Value(Op0, m_SpecificOpc(ISD::BUILD_VECTOR)),
-                         m_Value(Op1, m_SpecificOpc(ISD::BUILD_VECTOR)))) &&
+  if (!sd_match(N, m_Add(m_Value(Op0, m_SpecificOpc<ISD::BUILD_VECTOR>()),
+                         m_Value(Op1, m_SpecificOpc<ISD::BUILD_VECTOR>()))) &&
       !sd_match(N,
-                m_Add(m_Value(Op0, m_SpecificOpc(ISD::BUILD_VECTOR)),
+                m_Add(m_Value(Op0, m_SpecificOpc<ISD::BUILD_VECTOR>()),
                       m_Add(m_Value(Accum),
-                            m_Value(Op1, m_SpecificOpc(ISD::BUILD_VECTOR))))))
+                            m_Value(Op1, m_SpecificOpc<ISD::BUILD_VECTOR>())))))
     return SDValue();
 
   // Check if one of Op0,Op1 is of the form:
