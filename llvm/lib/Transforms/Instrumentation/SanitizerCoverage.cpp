@@ -776,9 +776,12 @@ GlobalVariable *ModuleSanitizerCoverage::CreateFunctionLocalArrayInSection(
       Constant::getNullValue(ArrayTy), "__sancov_gen_");
 
   // noipa doesn't affect linkage, so it is ignored when deciding on a comdat.
+  // An unnamed function (e.g. one created by MergeFunctions) can't get a comdat
+  // named after it, so its arrays are retained through llvm.used instead.
   if (TargetTriple.supportsCOMDAT() &&
-      (F.hasComdat() || TargetTriple.isOSBinFormatELF() ||
-       !F.isInterposable(/*CheckNoIPA=*/false)))
+      (F.hasComdat() ||
+       (F.hasName() && (TargetTriple.isOSBinFormatELF() ||
+                        !F.isInterposable(/*CheckNoIPA=*/false)))))
     if (auto Comdat = getOrCreateFunctionComdat(F, TargetTriple))
       Array->setComdat(Comdat);
   Array->setSection(getSectionName(Section));
