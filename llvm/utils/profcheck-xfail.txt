@@ -36,7 +36,6 @@ Transforms/InstCombine/fcmp-select.ll
 Transforms/InstCombine/ffs-1.ll
 Transforms/InstCombine/ffs-i16.ll
 Transforms/InstCombine/fmul.ll
-Transforms/InstCombine/fneg.ll
 Transforms/InstCombine/ldexp-ext.ll
 Transforms/InstCombine/ldexp.ll
 Transforms/InstCombine/logical-select.ll
@@ -56,7 +55,6 @@ Transforms/InstCombine/select-factorize.ll
 Transforms/InstCombine/select-min-max.ll
 Transforms/InstCombine/select-of-symmetric-selects.ll
 Transforms/InstCombine/select-select.ll
-Transforms/InstCombine/simplify-demanded-fpclass.ll
 Transforms/InstCombine/sink-not-into-another-hand-of-logical-and.ll
 Transforms/InstCombine/sink-not-into-another-hand-of-logical-or.ll
 Transforms/InstCombine/strrchr-3.ll
