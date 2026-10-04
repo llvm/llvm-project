@@ -1882,6 +1882,7 @@ public:
   void setRParenLoc(SourceLocation L) { RParenLoc = L; }
 
   /// Determine whether this expression models list-initialization.
+  /// FIXME: We should use a bit to represent it.
   bool isListInitialization() const { return LParenLoc.isInvalid(); }
 
   SourceLocation getBeginLoc() const LLVM_READONLY;

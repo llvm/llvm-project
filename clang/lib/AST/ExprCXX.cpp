@@ -978,7 +978,6 @@ CXXFunctionalCastExpr *CXXFunctionalCastExpr::CreateListInitializer(
     CastKind K, Expr *Op, const CXXCastPath *BasePath, FPOptionsOverride FPO,
     SourceLocation R) {
   // List-initialization is represented by the null LParen location.
-  // FIXME: We should use a bit to represent it.
   return Create(C, T, VK, Written, K, Op, BasePath, FPO, SourceLocation(), R);
 }
 
