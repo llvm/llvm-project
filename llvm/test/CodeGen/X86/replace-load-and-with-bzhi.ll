@@ -16,7 +16,7 @@
 @fill_table64 = internal unnamed_addr constant [64 x i64] [i64 0, i64 1, i64 3, i64 7, i64 15, i64 31, i64 63, i64 127, i64 255, i64 511, i64 1023, i64 2047, i64 4095, i64 8191, i64 16383, i64 32767, i64 65535, i64 131071, i64 262143, i64 524287, i64 1048575, i64 2097151, i64 4194303, i64 8388607, i64 16777215, i64 33554431, i64 67108863, i64 134217727, i64 268435455, i64 536870911, i64 1073741823, i64 2147483647, i64 4294967295, i64 8589934591, i64 17179869183, i64 34359738367, i64 68719476735, i64 137438953471, i64 274877906943, i64 549755813887, i64 1099511627775, i64 2199023255551, i64 4398046511103, i64 8796093022207, i64 17592186044415, i64 35184372088831, i64 70368744177663, i64 140737488355327, i64 281474976710655, i64 562949953421311, i64 1125899906842623, i64 2251799813685247, i64 4503599627370495, i64 9007199254740991, i64 18014398509481983, i64 36028797018963967, i64 72057594037927935, i64 144115188075855871, i64 288230376151711743, i64 576460752303423487, i64 1152921504606846975, i64 2305843009213693951, i64 4611686018427387903, i64 9223372036854775807], align 16
 @fill_table64_partial = internal unnamed_addr constant [51 x i64] [i64 0, i64 1, i64 3, i64 7, i64 15, i64 31, i64 63, i64 127, i64 255, i64 511, i64 1023, i64 2047, i64 4095, i64 8191, i64 16383, i64 32767, i64 65535, i64 131071, i64 262143, i64 524287, i64 1048575, i64 2097151, i64 4194303, i64 8388607, i64 16777215, i64 33554431, i64 67108863, i64 134217727, i64 268435455, i64 536870911, i64 1073741823, i64 2147483647, i64 4294967295, i64 8589934591, i64 17179869183, i64 34359738367, i64 68719476735, i64 137438953471, i64 274877906943, i64 549755813887, i64 1099511627775, i64 2199023255551, i64 4398046511103, i64 8796093022207, i64 17592186044415, i64 35184372088831, i64 70368744177663, i64 140737488355327, i64 281474976710655, i64 562949953421311, i64 1125899906842623], align 16
 
-define i32 @f32_bzhi(i32 %x, i32 %y) local_unnamed_addr {
+define i32 @f32_bzhi(i32 %x, i32 %y) local_unnamed_addr nounwind {
 ; X64-LABEL: f32_bzhi:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    bzhil %esi, %edi, %eax
@@ -35,7 +35,7 @@ entry:
   ret i32 %and
 }
 
-define i32 @f32_bzhi_commute(i32 %x, i32 %y) local_unnamed_addr {
+define i32 @f32_bzhi_commute(i32 %x, i32 %y) local_unnamed_addr nounwind {
 ; X64-LABEL: f32_bzhi_commute:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    bzhil %esi, %edi, %eax
@@ -54,7 +54,7 @@ entry:
   ret i32 %and
 }
 
-define i32 @f32_bzhi_partial(i32 %x, i32 %y) local_unnamed_addr {
+define i32 @f32_bzhi_partial(i32 %x, i32 %y) local_unnamed_addr nounwind {
 ; X64-LABEL: f32_bzhi_partial:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    bzhil %esi, %edi, %eax
@@ -73,7 +73,7 @@ entry:
   ret i32 %and
 }
 
-define i32 @f32_bzhi_partial_commute(i32 %x, i32 %y) local_unnamed_addr {
+define i32 @f32_bzhi_partial_commute(i32 %x, i32 %y) local_unnamed_addr nounwind {
 ; X64-LABEL: f32_bzhi_partial_commute:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    bzhil %esi, %edi, %eax
@@ -92,7 +92,7 @@ entry:
   ret i32 %and
 }
 
-define i64 @f64_bzhi(i64 %x, i64 %y) local_unnamed_addr {
+define i64 @f64_bzhi(i64 %x, i64 %y) local_unnamed_addr nounwind {
 ; X64-LABEL: f64_bzhi:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    bzhiq %rsi, %rdi, %rax
@@ -113,7 +113,7 @@ entry:
   ret i64 %and
 }
 
-define i64 @f64_bzhi_commute(i64 %x, i64 %y) local_unnamed_addr {
+define i64 @f64_bzhi_commute(i64 %x, i64 %y) local_unnamed_addr nounwind {
 ; X64-LABEL: f64_bzhi_commute:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    bzhiq %rsi, %rdi, %rax
@@ -134,7 +134,7 @@ entry:
   ret i64 %and
 }
 
-define i64 @f64_bzhi_partial(i64 %x, i64 %y) local_unnamed_addr {
+define i64 @f64_bzhi_partial(i64 %x, i64 %y) local_unnamed_addr nounwind {
 ; X64-LABEL: f64_bzhi_partial:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    bzhiq %rsi, %rdi, %rax
@@ -155,7 +155,7 @@ entry:
   ret i64 %and
 }
 
-define i64 @f64_bzhi_partial_commute(i64 %x, i64 %y) local_unnamed_addr {
+define i64 @f64_bzhi_partial_commute(i64 %x, i64 %y) local_unnamed_addr nounwind {
 ; X64-LABEL: f64_bzhi_partial_commute:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    bzhiq %rsi, %rdi, %rax
@@ -182,7 +182,7 @@ entry:
 ; its low y bits.
 
 ; fill_table32[2 * y].
-define i32 @f32_bzhi_wrong_scale(i32 %x, i64 %y) local_unnamed_addr {
+define i32 @f32_bzhi_wrong_scale(i32 %x, i64 %y) local_unnamed_addr nounwind {
 ; X64-STATIC-LABEL: f32_bzhi_wrong_scale:
 ; X64-STATIC:       # %bb.0: # %entry
 ; X64-STATIC-NEXT:    movl %edi, %eax
@@ -211,7 +211,7 @@ entry:
 }
 
 ; Only the low half of fill_table32[y].
-define i32 @f32_bzhi_extload(i32 %x, i64 %y) local_unnamed_addr {
+define i32 @f32_bzhi_extload(i32 %x, i64 %y) local_unnamed_addr nounwind {
 ; X64-STATIC-LABEL: f32_bzhi_extload:
 ; X64-STATIC:       # %bb.0: # %entry
 ; X64-STATIC-NEXT:    movzwl fill_table32(,%rsi,4), %eax
@@ -241,7 +241,7 @@ entry:
 }
 
 ; fill_table32[y + 1]: the mask of y + 1 bits.
-define i32 @f32_bzhi_i8_gep_offset(i32 %x, i64 %y) local_unnamed_addr {
+define i32 @f32_bzhi_i8_gep_offset(i32 %x, i64 %y) local_unnamed_addr nounwind {
 ; X64-STATIC-LABEL: f32_bzhi_i8_gep_offset:
 ; X64-STATIC:       # %bb.0: # %entry
 ; X64-STATIC-NEXT:    movl %edi, %eax
@@ -271,7 +271,7 @@ entry:
 }
 
 ; A whole array past fill_table32.
-define i32 @f32_bzhi_row1(i32 %x, i64 %y) local_unnamed_addr {
+define i32 @f32_bzhi_row1(i32 %x, i64 %y) local_unnamed_addr nounwind {
 ; X64-STATIC-LABEL: f32_bzhi_row1:
 ; X64-STATIC:       # %bb.0: # %entry
 ; X64-STATIC-NEXT:    movl %edi, %eax
