@@ -11,7 +11,6 @@
 #define _LIBCPP___RCU_RCU_LIST_H
 
 #include <__config>
-#include <__functional/function.h>
 #include <__rcu/rcu_domain.h>
 #include <atomic>
 #include <type_traits>

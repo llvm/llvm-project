@@ -85,8 +85,6 @@ public:
   rcu_domain& operator=(const rcu_domain&) = delete;
   ~rcu_domain();
 
-  void __debug_print_all_reader_states_in_hex();
-
   void lock() noexcept;
 
   _LIBCPP_HIDE_FROM_ABI bool try_lock() noexcept {
