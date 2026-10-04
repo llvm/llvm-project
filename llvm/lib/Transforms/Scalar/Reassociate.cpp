@@ -196,12 +196,13 @@ static BinaryOperator *isFMulAddCandidate(Value *V) {
   };
   BinaryOperator *Mul = nullptr;
   Value *OtherOp = nullptr;
-  // Keep constants, nested additions and other contractible multiplies visible
-  // to the enclosing expression so they can participate in folding,
-  // reassociation and factorization.
+  // Keep constants, nested additions, other contractible multiplies and shared
+  // addends visible to the enclosing expression so they can participate in
+  // folding, reassociation and factorization.
   if (!match(FAdd, m_c_FAdd(ContractableFMul(Mul), m_Value(OtherOp))) ||
       isa<Constant>(OtherOp) || isReassociableOp(OtherOp, Instruction::FAdd) ||
-      match(OtherOp, m_AllowContract(m_FMul(m_Value(), m_Value()))))
+      match(OtherOp, m_AllowContract(m_FMul(m_Value(), m_Value()))) ||
+      !OtherOp->hasOneUse())
     return nullptr;
   return Mul;
 }
