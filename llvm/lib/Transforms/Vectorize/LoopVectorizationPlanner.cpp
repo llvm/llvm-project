@@ -692,15 +692,8 @@ void VFSelectionContext::collectInLoopReductions() {
         RdxDesc.getReductionOpChain(Phi, const_cast<Loop *>(TheLoop));
     bool InLoop = !ReductionOperations.empty();
 
-    if (InLoop) {
+    if (InLoop)
       InLoopReductions.insert(Phi);
-      // Add the elements to InLoopReductionImmediateChains for cost modelling.
-      Instruction *LastChain = Phi;
-      for (auto *I : ReductionOperations) {
-        InLoopReductionImmediateChains[I] = LastChain;
-        LastChain = I;
-      }
-    }
     LLVM_DEBUG(dbgs() << "LV: Using " << (InLoop ? "inloop" : "out of loop")
                       << " reduction for phi: " << *Phi << "\n");
   }
@@ -914,7 +907,8 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
   // non-latch exits properly.  It may be fine, but it needs auditted and
   // tested.
   // TODO: Add support for loops with an early exit.
-  if (OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch())
+  if (OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch() ||
+      Legal->hasUncountableEarlyExit())
     return false;
 
   return true;

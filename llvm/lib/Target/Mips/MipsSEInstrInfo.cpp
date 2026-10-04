@@ -955,7 +955,7 @@ void MipsSEInstrInfo::expandEhReturn(MachineBasicBlock &MBB,
   unsigned ADDU = ABI.GetPtrAdduOp();
   unsigned SP = Subtarget.isGP64bit() ? Mips::SP_64 : Mips::SP;
   unsigned RA = Subtarget.isGP64bit() ? Mips::RA_64 : Mips::RA;
-  unsigned T9 = Subtarget.isGP64bit() ? Mips::T9_64 : Mips::T9;
+  unsigned T9 = ABI.getTempReg(9, Subtarget.isGP64bit());
   unsigned ZERO = Subtarget.isGP64bit() ? Mips::ZERO_64 : Mips::ZERO;
   Register OffsetReg = I->getOperand(0).getReg();
   Register TargetReg = I->getOperand(1).getReg();

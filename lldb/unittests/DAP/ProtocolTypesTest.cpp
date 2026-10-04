@@ -326,8 +326,7 @@ TEST(ProtocolTypesTest, Scope) {
   ASSERT_THAT_EXPECTED(deserialized_scope, llvm::Succeeded());
   EXPECT_EQ(scope.name, deserialized_scope->name);
   EXPECT_EQ(scope.presentationHint, deserialized_scope->presentationHint);
-  EXPECT_EQ(scope.variablesReference.AsUInt32(),
-            deserialized_scope->variablesReference.AsUInt32());
+  EXPECT_EQ(scope.variablesReference, deserialized_scope->variablesReference);
   EXPECT_EQ(scope.namedVariables, deserialized_scope->namedVariables);
   EXPECT_EQ(scope.indexedVariables, deserialized_scope->indexedVariables);
   EXPECT_EQ(scope.expensive, deserialized_scope->expensive);

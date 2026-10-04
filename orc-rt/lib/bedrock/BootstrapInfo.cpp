@@ -19,13 +19,13 @@
 namespace orc_rt {
 
 BootstrapInfo::BootstrapInfo(Session &S, SimpleSymbolTable Symbols,
-                             ValueMap Values)
+                             ValueMap Values) noexcept
     : S(S), Symbols(std::move(Symbols)), Values(std::move(Values)) {}
 
 Expected<BootstrapInfo>
 BootstrapInfo::CreateDefault(Session &S,
                              InitialSymbolsBuilder AddInitialSymbols,
-                             InitialValuesBuilder AddInitialValues) {
+                             InitialValuesBuilder AddInitialValues) noexcept {
 
   SimpleSymbolTable InitialSymbols;
   // Add session symbol.
