@@ -29,6 +29,7 @@
 #include "llvm/Support/Unicode.h"
 #include "llvm/Support/WithColor.h"
 #include <cctype>
+#include <clocale>
 #include <cwctype>
 #include <string>
 
