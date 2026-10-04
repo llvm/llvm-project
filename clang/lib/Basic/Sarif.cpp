@@ -344,21 +344,24 @@ SarifDocumentWriter::createCodeFlow(ArrayRef<ThreadFlow> ThreadFlows) {
 
 void SarifDocumentWriter::createRun(StringRef ShortToolName,
                                     StringRef LongToolName,
-                                    StringRef ToolVersion) {
+                                    StringRef ToolVersion,
+                                    StringRef InformationUri) {
   // Clear resources associated with a previous run.
   endRun();
 
   // Signify a new run has begun.
   Closed = false;
+  StringRef EffectiveInformationUri =
+      InformationUri.empty() ? "https://clang.llvm.org/docs/UsersManual.html"
+                             : InformationUri;
 
-  json::Object Tool{
-      {"driver",
-       json::Object{{"name", ShortToolName},
-                    {"fullName", LongToolName},
-                    {"language", "en-US"},
-                    {"version", ToolVersion},
-                    {"informationUri",
-                     "https://clang.llvm.org/docs/UsersManual.html"}}}};
+  json::Object Tool{{"driver", json::Object{{"name", ShortToolName},
+                                            {"fullName", LongToolName},
+                                            {"language", "en-US"},
+                                            {"version", ToolVersion},
+                                            {"informationUri",
+                                             EffectiveInformationUri},
+                                            {"rules", json::Array{}}}}};
   json::Object TheRun{{"tool", std::move(Tool)},
                       {"results", {}},
                       {"artifacts", {}},
@@ -409,9 +412,9 @@ void SarifDocumentWriter::appendResult(const SarifResult &Result) {
 
   if (!Result.RelatedLocations.empty()) {
     json::Array ReLocs;
-    for (auto &Range : Result.RelatedLocations) {
-      ReLocs.emplace_back(createLocation(createPhysicalLocation(Range)));
-    }
+    for (const auto &[Range, Message] : Result.RelatedLocations)
+      ReLocs.emplace_back(
+          createLocation(createPhysicalLocation(Range), Message));
     Ret["relatedLocations"] = std::move(ReLocs);
   }
 
