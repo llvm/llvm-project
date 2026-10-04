@@ -1842,7 +1842,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #87
+  ; CHECK: call void @f.nobuiltin() #90
 
   call fastcc noalias ptr @f.noalias() noinline
   ; CHECK: call fastcc noalias ptr @f.noalias() #12
@@ -2551,6 +2551,15 @@ define void @denormal_fpenv__preservesign_preservesign_float_dynamic_dynamic() d
   ret void
 }
 
+; CHECK: declare ptr @f.allockind_free_poisons_memory(ptr) #87
+declare ptr @f.allockind_free_poisons_memory(ptr) allockind("free,poisons_memory")
+
+; CHECK: declare ptr @f.allockind_alloc_address_unpredictable(i64) #88
+declare ptr @f.allockind_alloc_address_unpredictable(i64) allockind("alloc,address_unpredictable")
+
+; CHECK: declare ptr @f.allockind_alloc_disjoint(i64) #89
+declare ptr @f.allockind_alloc_disjoint(i64) allockind("alloc,alloc_disjoint")
+
 ; CHECK: attributes #0 = { alignstack=4 }
 ; CHECK: attributes #1 = { alignstack=8 }
 ; CHECK: attributes #2 = { alwaysinline }
@@ -2638,7 +2647,10 @@ define void @denormal_fpenv__preservesign_preservesign_float_dynamic_dynamic() d
 ; CHECK: attributes #84 = { denormal_fpenv(float: dynamic|positivezero) }
 ; CHECK: attributes #85 = { denormal_fpenv(float: dynamic) }
 ; CHECK: attributes #86 = { denormal_fpenv(preservesign, float: dynamic) }
-; CHECK: attributes #87 = { builtin }
+; CHECK: attributes #87 = { allockind("free,poisons_memory") }
+; CHECK: attributes #88 = { allockind("alloc,address_unpredictable") }
+; CHECK: attributes #89 = { allockind("alloc,alloc_disjoint") }
+; CHECK: attributes #90 = { builtin }
 
 ;; Metadata
 

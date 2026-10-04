@@ -2643,9 +2643,14 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
           "'allockind()' requires exactly one of alloc, realloc, and free");
     if ((Type == AllocFnKind::Free) &&
         ((K & (AllocFnKind::Uninitialized | AllocFnKind::Zeroed |
-               AllocFnKind::Aligned)) != AllocFnKind::Unknown))
-      CheckFailed("'allockind(\"free\")' doesn't allow uninitialized, zeroed, "
-                  "or aligned modifiers.");
+               AllocFnKind::Aligned | AllocFnKind::AddressUnpredictable |
+               AllocFnKind::AllocDisjoint)) != AllocFnKind::Unknown))
+      CheckFailed(
+          "'allockind(\"free\")' doesn't allow uninitialized, zeroed, aligned, "
+          "address_unpredictable or alloc_disjoint modifiers.");
+    if ((Type != AllocFnKind::Free) &&
+        ((K & AllocFnKind::PoisonsMemory) != AllocFnKind::Unknown))
+      CheckFailed("'allockind(\"poisons_memory\")' requires free");
     AllocFnKind ZeroedUninit = AllocFnKind::Uninitialized | AllocFnKind::Zeroed;
     if ((K & ZeroedUninit) == ZeroedUninit)
       CheckFailed("'allockind()' can't be both zeroed and uninitialized");

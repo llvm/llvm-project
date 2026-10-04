@@ -2723,6 +2723,12 @@ bool LLParser::parseAllocKind(AllocFnKind &Kind) {
       Kind |= AllocFnKind::Zeroed;
     } else if (A == "aligned") {
       Kind |= AllocFnKind::Aligned;
+    } else if (A == "address_unpredictable") {
+      Kind |= AllocFnKind::AddressUnpredictable;
+    } else if (A == "alloc_disjoint") {
+      Kind |= AllocFnKind::AllocDisjoint;
+    } else if (A == "poisons_memory") {
+      Kind |= AllocFnKind::PoisonsMemory;
     } else {
       return error(KindLoc, Twine("unknown allockind ") + A);
     }
