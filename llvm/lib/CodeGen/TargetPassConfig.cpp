@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/CSEConfigBase.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
+#include "llvm/CodeGen/MachineBlockHashInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/Passes.h"
@@ -290,12 +291,6 @@ static cl::opt<bool> BasicBlockSectionMatchInfer(
     "basic-block-section-match-infer",
     cl::desc(
         "Enable matching and inference when generating basic block sections"),
-    cl::init(false));
-
-cl::opt<bool> EmitBBHash(
-    "emit-bb-hash",
-    cl::desc(
-        "Emit the hash of basic block in the SHT_LLVM_BB_ADDR_MAP section."),
     cl::init(false));
 
 /// Allow standard passes to be disabled by command line options. This supports
@@ -1304,7 +1299,7 @@ void TargetPassConfig::addMachinePasses() {
   // address map (or both).
   if (TM->getBBSectionsType() != llvm::BasicBlockSection::None ||
       TM->Options.BBAddrMap) {
-    if (EmitBBHash || BasicBlockSectionMatchInfer)
+    if (shouldEmitBBHash() || BasicBlockSectionMatchInfer)
       addPass(llvm::createMachineBlockHashInfoPass());
     if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
       addPass(llvm::createBasicBlockSectionsProfileReaderWrapperPass(
