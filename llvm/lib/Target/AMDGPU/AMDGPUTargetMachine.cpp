@@ -29,6 +29,7 @@
 #include "AMDGPULowerVGPREncoding.h"
 #include "AMDGPUMacroFusion.h"
 #include "AMDGPUNextUseAnalysis.h"
+#include "AMDGPUOptimizeVGPREncoding.h"
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUPreloadKernArgProlog.h"
 #include "AMDGPUPrepareAGPRAlloc.h"
@@ -709,6 +710,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIPeepholeSDWALegacyPass(*PR);
   initializeSIShrinkInstructionsLegacyPass(*PR);
   initializeSIOptimizeExecMaskingPreRALegacyPass(*PR);
+  initializeAMDGPUOptimizeVGPREncodingLegacyPass(*PR);
   initializeSIOptimizeVGPRLiveRangeLegacyPass(*PR);
   initializeAMDGPUNextUseAnalysisLegacyPassPass(*PR);
   initializeAMDGPUNextUseAnalysisPrinterLegacyPassPass(*PR);
@@ -1890,6 +1892,7 @@ bool GCNPassConfig::addPreRewrite() {
     addPass(&GCNNSAReassignID);
 
   addPass(&AMDGPURewriteAGPRCopyMFMALegacyID);
+  addPass(&SIAMDGPUOptimizeVGPREncodingLegacyID);
   return true;
 }
 
@@ -2586,6 +2589,7 @@ void AMDGPUCodeGenPassBuilder::addPreRewrite(PassManagerWrapper &PMW) {
   }
 
   addMachineFunctionPass(AMDGPURewriteAGPRCopyMFMAPass(), PMW);
+  addMachineFunctionPass(AMDGPUOptimizeVGPREncodingPass(), PMW);
 }
 
 void AMDGPUCodeGenPassBuilder::addMachineSSAOptimization(
