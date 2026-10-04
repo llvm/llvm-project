@@ -53,6 +53,16 @@ public:
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
+  /// Xtensa reads constant pool entries with L32R, which loads the *contents*
+  /// of a PC-relative literal. There is no instruction that materializes the
+  /// address of a literal, so a constant pool base plus a variable offset
+  /// cannot be selected. Keep DAGCombiner from turning a select of two FP
+  /// constants into such an indexed constant pool load. Doing so would also be
+  /// a pessimization here: the branch it replaces is cheaper than the extra
+  /// address arithmetic and load.
+  bool reduceSelectOfFPConstantLoads(EVT CmpOpVT) const override {
+    return false;
+  }
 
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
