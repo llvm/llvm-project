@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineCFGPrinter.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -38,7 +39,7 @@ static cl::opt<bool>
 
 static void writeMCFGToDotFile(MachineFunction &MF) {
   std::string Filename =
-      (MCFGDotFilenamePrefix + "." + MF.getName() + ".dot").str();
+      (Twine(MCFGDotFilenamePrefix) + "." + MF.getName() + ".dot").str();
   errs() << "Writing '" << Filename << "'...";
 
   std::error_code EC;

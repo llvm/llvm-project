@@ -12,6 +12,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -241,8 +242,8 @@ std::string prettifyFunctionName(StringRef FunctionName) {
   auto ParentName = deconstructOpenMPKernelName(FunctionName, LineNo);
   if (LineNo == 0)
     return FunctionName.str();
-  return ("omp target in " + ParentName + " @ " + std::to_string(LineNo) +
-          " (" + FunctionName + ")")
+  return (Twine("omp target in ") + ParentName + " @ " + Twine(LineNo) + " (" +
+          FunctionName + ")")
       .str();
 }
 
