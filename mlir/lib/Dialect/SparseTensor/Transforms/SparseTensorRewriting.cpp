@@ -1358,6 +1358,34 @@ struct CrdTranslateRewriter : public OpRewritePattern<CrdTranslateOp> {
   }
 };
 
+/// Count entries in loose-compressed tensors with an O(n) traversal of their
+/// stored elements instead of a constant-time buffer-size query. This is
+/// necessary because the values buffer may contain holes.
+struct NumberOfEntriesRewriter : public OpRewritePattern<NumberOfEntriesOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(NumberOfEntriesOp op,
+                                PatternRewriter &rewriter) const override {
+    if (!llvm::any_of(getSparseTensorType(op.getTensor()).getLvlTypes(),
+                      isLooseCompressedLT))
+      return failure();
+
+    Location loc = op.getLoc();
+    Value zero = constantIndex(rewriter, loc, 0);
+    Value one = constantIndex(rewriter, loc, 1);
+    auto count =
+        ForeachOp::create(rewriter, loc, op.getTensor(), ValueRange{zero},
+                          [one](OpBuilder &builder, Location loc, ValueRange,
+                                Value, ValueRange iterArgs) {
+                            Value next = arith::AddIOp::create(
+                                builder, loc, iterArgs.front(), one);
+                            sparse_tensor::YieldOp::create(builder, loc, next);
+                          });
+    rewriter.replaceOp(op, count.getResults());
+    return success();
+  }
+};
+
 /// Sparse rewriting rule for the foreach operator.
 struct ForeachRewriter : public OpRewritePattern<ForeachOp> {
 public:
@@ -1620,8 +1648,8 @@ void mlir::populateLowerSparseOpsToForeachPatterns(RewritePatternSet &patterns,
                ReshapeRewriter<tensor::CollapseShapeOp>,
                Sparse2SparseReshapeRewriter<tensor::ExpandShapeOp>,
                Sparse2SparseReshapeRewriter<tensor::CollapseShapeOp>,
-               SparseTensorDimOpRewriter, TensorReshapeRewriter, OutRewriter>(
-      patterns.getContext());
+               SparseTensorDimOpRewriter, TensorReshapeRewriter,
+               NumberOfEntriesRewriter, OutRewriter>(patterns.getContext());
 
   if (enableConvert)
     patterns.add<DirectConvertRewriter>(patterns.getContext());
