@@ -769,9 +769,10 @@ void RuntimePointerChecking::groupChecks(
 
   unsigned TotalComparisons = 0;
 
-  DenseMap<Value *, SmallVector<unsigned>> PositionMap;
+  DenseMap<MemoryDepChecker::MemAccessInfo, SmallVector<unsigned>> PositionMap;
   for (unsigned Index = 0; Index < Pointers.size(); ++Index)
-    PositionMap[Pointers[Index].PointerValue].push_back(Index);
+    PositionMap[{Pointers[Index].PointerValue, Pointers[Index].IsWritePtr}]
+        .push_back(Index);
 
   // We need to keep track of what pointers we've already seen so we
   // don't process them twice.
@@ -804,15 +805,9 @@ void RuntimePointerChecking::groupChecks(
     // the order in which unions and insertions are performed on the
     // equivalence class, the iteration order is deterministic.
     for (auto M : DepCands.members(Access)) {
-      auto PointerI = PositionMap.find(M.getPointer());
-      // If we can't find the pointer in PositionMap that means we can't
-      // generate a memcheck for it.
-      if (PointerI == PositionMap.end())
-        continue;
-      for (unsigned Pointer : PointerI->second) {
+      for (unsigned Pointer : PositionMap.lookup(M)) {
+        assert(Seen.insert(Pointer).second && "pointer already processed");
         bool Merged = false;
-        // Mark this pointer as seen.
-        Seen.insert(Pointer);
 
         // Go through all the existing sets and see if we can find one
         // which can include this pointer.
