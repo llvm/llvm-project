@@ -240,11 +240,10 @@ private:
         succeeded(
             isCompatible<arith::ExtUIOp>(rewriter, op2, nxnxv4i32, nxv4i16));
 
-    if (!isF16Compatible && !isBF16Compatible && !isI16Compatible &&
-        !isUI16Compatible)
-      return failure();
-
-    return success();
+    return (isF16Compatible || isBF16Compatible || isI16Compatible ||
+            isUI16Compatible)
+               ? success()
+               : failure();
   }
 };
 
