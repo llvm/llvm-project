@@ -701,7 +701,7 @@ private:
     template <class _PtrType>
     static auto __make(_PtrType __p, [[__maybe_unused__]] unsigned __end_offset) noexcept {
 #    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
-      return std::__make_bounded_iter<_PtrType>(__p, __p, __p + __end_offset)
+      return std::__make_bounded_iter<_PtrType>(__p, __p, __p + __end_offset);
 #    else
       return std::__make_static_packed_bounded_iter<_PtrType, 1>(__p, 0);
 #    endif
@@ -721,7 +721,7 @@ private:
     template <class _PtrType>
     static auto __make(_PtrType __p, [[__maybe_unused__]] unsigned __end_offset) noexcept {
 #    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
-      return std::__make_bounded_iter<_PtrType>(__p, __p, __p + __end_offset)
+      return std::__make_bounded_iter<_PtrType>(__p, __p, __p + __end_offset);
 #    else
       return std::__make_capacity_aware_iterator<_PtrType, 1>(__p);
 #    endif
