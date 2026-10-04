@@ -710,6 +710,12 @@ public:
     return ConvergentFunctions;
   }
 
+  /// Return true if bounds attributes follow the -fbounds-safety programming
+  /// model, including its attributes-only mode.
+  ///
+  /// Always false until that model is implemented upstream.
+  bool hasBoundsSafetyAttributes() const { return false; }
+
   /// Return true if atomicrmw operations targeting allocations in private
   /// memory are undefined.
   bool threadPrivateMemoryAtomicsAreUndefined() const {
