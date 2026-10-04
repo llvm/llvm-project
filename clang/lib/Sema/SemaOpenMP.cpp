@@ -19373,12 +19373,6 @@ OMPClause *SemaOpenMP::ActOnOpenMPSizesClause(ArrayRef<Expr *> SizeExprs,
     bool IsValid = isNonNegativeIntegerValue(SizeExpr, SemaRef, OMPC_sizes,
                                              /*StrictlyPositive=*/true);
 
-    // isNonNegativeIntegerValue returns true for non-integral types (but still
-    // emits error diagnostic), so check for the expected type explicitly.
-    QualType SizeTy = SizeExpr->getType();
-    if (!SizeTy->isIntegerType())
-      IsValid = false;
-
     // Handling in templates is tricky. There are four possibilities to
     // consider:
     //
