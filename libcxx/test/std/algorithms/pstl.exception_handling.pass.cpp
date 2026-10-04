@@ -491,6 +491,23 @@ int main(int, char**) {
       }
 
       {
+        auto unary  = maybe_throw(tokens[5], [](int x) -> int { return x * 2; });
+        auto binary = maybe_throw(tokens[5], [](int x, int y) -> int { return x * y; });
+
+        // transform_inclusive_scan(first, last, dest, unary_op)
+        assert_non_throwing([=, &policy] {
+          (void)std::transform_inclusive_scan(
+              policy, std::move(first1), std::move(last1), std::move(dest), binary, unary);
+        });
+
+        // transform_inclusive_scan(first, last, dest, unary_op, init)
+        assert_non_throwing([=, &policy] {
+          (void)std::transform_inclusive_scan(
+              policy, std::move(first1), std::move(last1), std::move(dest), binary, unary, init);
+        });
+      }
+
+      {
         auto reduction        = maybe_throw(tokens[5], [](int x, int y) -> int { return x + y; });
         auto transform_unary  = maybe_throw(tokens[6], [](int x) -> int { return x * 2; });
         auto transform_binary = maybe_throw(tokens[6], [](int x, int y) -> int { return x * y; });
