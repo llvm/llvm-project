@@ -39,7 +39,7 @@ difficult to navigate. We would appreciate help with:
       diagnostic group flags</a> (adding code examples of what is diagnosed, or
       other relevant information),</li>
   <li>documenting <a href="https://github.com/llvm/llvm-project/blob/main/clang/include/clang/Options/Options.td">
-      command-line options</a>,</li>
+      command-line options</a>, or</li>
   <li>help with completing other missing documentation.</li>
 </ul>
 These projects are independent of each other.</li>
@@ -79,7 +79,7 @@ defect reports and updating the documentation accordingly.</li>
 <li><b>Bug triage</b>: Clang's <a href="https://github.com/llvm/llvm-project/issues">
 issue tracker</a> currently has over 20,000 open issues, many of which are not
 appropriately tagged, are no longer reproducible, could use a reduced test case,
-or otherwise needs some manual interaction. We can always use help with
+or otherwise need some manual interaction. We can always use help with
 <a href="https://llvm.org/docs/BugLifeCycle.html#triaging-bugs">bug triage and
 issue tracker maintenance</a>.
 </li>
@@ -98,14 +98,14 @@ from source code. The tool is in early stages of development and could use more
 dedicated effort to complete the implementation.</li>
 
 <li><b>Self-testing using Clang</b>: There are several neat ways to
-improve the quality of clang by self-testing. Some examples:
+improve the quality of Clang by self-testing. Some examples:
 <ul>
   <li>Improve the reliability of AST printing and serialization by
-  ensuring that the AST produced by clang on an input doesn't change
+  ensuring that the AST produced by Clang on an input doesn't change
   when it is reparsed or unserialized.
 
   <li>Improve parser reliability and error generation by automatically
-  or randomly changing the input checking that clang doesn't crash and
+  or randomly changing the input checking that Clang doesn't crash and
   that it doesn't generate excessive errors for small input
   changes. Manipulating the input at both the text and token levels is
   likely to produce interesting test cases.
@@ -120,13 +120,13 @@ improve the quality of clang by self-testing. Some examples:
 
 <li><b>StringRef'ize APIs</b>: A thankless but incredibly useful project is
 StringRef'izing (converting to use <tt>llvm::StringRef</tt> instead of <tt>const
-char *</tt> or <tt>std::string</tt>) various clang interfaces. This generally
+char *</tt> or <tt>std::string</tt>) various Clang interfaces. This generally
 simplifies the code and makes it more efficient.</li>
 
 <li><b>Configuration Manager</b>: Clang/LLVM works on a large number of
 architectures and operating systems and can cross-compile to a similarly large
-number of configurations, but the pitfalls of choosing the command-line
-options, making sure the right sub-architecture is chosen and that the correct
+number of configurations, but choosing the right command-line
+options, the right sub-architecture, and the right
 optional elements of your particular system can be a pain.
 
 <p>A tool that would investigate hosts and targets, and store the configuration
@@ -142,7 +142,7 @@ current Host to the identified Target.</p>
 
 <p>The second stage would be to produce a configuration file (that can be used
 independently of the Host) so that Clang can read it and not need a gazillion
-of command-line options. Such a file should be simple JSON / INI or anything that
+command-line options. Such a file should be simple JSON / INI or anything that
 a text editor could change.</p></li>
 </ul>
 
