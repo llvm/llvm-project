@@ -29,6 +29,8 @@ struct XCOFFSymbolInfoTy {
 
 struct SymbolInfoTy {
   uint64_t Addr;
+  // ELF symbol size, or zero if unknown.
+  uint64_t Size = 0;
   StringRef Name;
   // XCOFF uses XCOFFSymInfo. Other targets use Type.
   XCOFFSymbolInfoTy XCOFFSymInfo;
