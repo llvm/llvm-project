@@ -58,14 +58,9 @@ static void ReportMutexMisuse(ThreadState *thr, uptr pc, ReportType typ,
   VarSizeStackTrace trace;
   ObtainCurrentStack(thr, pc, &trace);
   ScopedReport rep(typ);
-  // Release locks before symbolizing and outputting the report to avoid
-  // deadlocks.
-  {
-    ThreadRegistryLock l(&ctx->thread_registry);
-    rep.AddMutex(addr, creation_stack_id);
-    rep.AddStack(trace, true);
-    rep.AddLocation(addr, 1);
-  }
+  rep.AddMutex(addr, creation_stack_id);
+  rep.AddStack(trace, true);
+  rep.AddLocation(addr, 1);
   OutputReport(thr, rep);
 }
 
@@ -534,28 +529,23 @@ void ReportDeadlock(ThreadState *thr, uptr pc, DDReport *r) {
     return;
   uptr dummy_pc = 0x42;
   ScopedReport rep(ReportTypeDeadlock);
-  // Release locks before symbolizing and outputting the report to avoid
-  // deadlocks.
-  {
-    ThreadRegistryLock l(&ctx->thread_registry);
-    for (int i = 0; i < r->n; i++) {
-      rep.AddMutex(r->loop[i].mtx_ctx0, r->loop[i].stk[0]);
-      rep.AddUniqueTid((int)r->loop[i].thr_ctx);
-      rep.AddThread((int)r->loop[i].thr_ctx);
-    }
-    for (int i = 0; i < r->n; i++) {
-      for (int j = 0; j < (flags()->second_deadlock_stack ? 2 : 1); j++) {
-        u32 stk = r->loop[i].stk[j];
-        StackTrace stack;
-        if (stk && stk != kInvalidStackID) {
-          stack = StackDepotGet(stk);
-        } else {
-          // Sometimes we fail to extract the stack trace (FIXME: investigate),
-          // but we should still produce some stack trace in the report.
-          stack = StackTrace(&dummy_pc, 1);
-        }
-        rep.AddStack(stack, true);
+  for (int i = 0; i < r->n; i++) {
+    rep.AddMutex(r->loop[i].mtx_ctx0, r->loop[i].stk[0]);
+    rep.AddUniqueTid((int)r->loop[i].thr_ctx);
+    rep.AddThread((int)r->loop[i].thr_ctx);
+  }
+  for (int i = 0; i < r->n; i++) {
+    for (int j = 0; j < (flags()->second_deadlock_stack ? 2 : 1); j++) {
+      u32 stk = r->loop[i].stk[j];
+      StackTrace stack;
+      if (stk && stk != kInvalidStackID) {
+        stack = StackDepotGet(stk);
+      } else {
+        // Sometimes we fail to extract the stack trace (FIXME: investigate),
+        // but we should still produce some stack trace in the report.
+        stack = StackTrace(&dummy_pc, 1);
       }
+      rep.AddStack(stack, true);
     }
   }
   OutputReport(thr, rep);
@@ -583,15 +573,10 @@ void ReportDestroyLocked(ThreadState *thr, uptr pc, uptr addr,
   ObtainCurrentStack(thr, pc, &trace);
 
   ScopedReport rep(ReportTypeMutexDestroyLocked);
-  // Release locks before symbolizing and outputting the report to avoid
-  // deadlocks.
-  {
-    ThreadRegistryLock l0(&ctx->thread_registry);
-    rep.AddMutex(addr, creation_stack_id);
-    rep.AddStack(trace, true);
-    rep.AddStack(last_lock_stack, true);
-    rep.AddLocation(addr, 1);
-  }
+  rep.AddMutex(addr, creation_stack_id);
+  rep.AddStack(trace, true);
+  rep.AddStack(last_lock_stack, true);
+  rep.AddLocation(addr, 1);
   OutputReport(thr, rep);
 }
 
