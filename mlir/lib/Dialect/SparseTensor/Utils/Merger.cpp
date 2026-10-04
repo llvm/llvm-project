@@ -226,7 +226,7 @@ Merger::Merger(unsigned numInputOutputTensors, unsigned numLoops,
     : outTensor(numInputOutputTensors - 1),
       syntheticTensor(numInputOutputTensors),
       numTensors(numInputOutputTensors + 1), numLoops(numLoops),
-      hasSparseOut(false),
+      hasSparseOut(false), outStructure(std::nullopt),
       lvlTypes(numTensors,
                std::vector<LevelType>(numLoops, LevelFormat::Undef)),
       loopToLvl(numTensors,
@@ -668,6 +668,53 @@ bool Merger::isSingleCondition(TensorId t, ExprId e) const {
   llvm_unreachable("unexpected kind");
 }
 
+bool Merger::isConditionedOn(TensorId t, ExprId e,
+                             std::optional<TensorId> equivalent) const {
+  assert(isValidTensorId(t));
+  const auto &expr = exp(e);
+  switch (expr.kind) {
+  case TensorExp::Kind::kTensor:
+    return expr.tensor == t || expr.tensor == equivalent;
+  case TensorExp::Kind::kMulF:
+  case TensorExp::Kind::kMulC:
+  case TensorExp::Kind::kMulI:
+  case TensorExp::Kind::kAndI:
+    return isConditionedOn(t, expr.children.e0, equivalent) ||
+           isConditionedOn(t, expr.children.e1, equivalent);
+  case TensorExp::Kind::kAddF:
+  case TensorExp::Kind::kAddC:
+  case TensorExp::Kind::kAddI:
+  case TensorExp::Kind::kSubF:
+  case TensorExp::Kind::kSubC:
+  case TensorExp::Kind::kSubI:
+  case TensorExp::Kind::kOrI:
+  case TensorExp::Kind::kXorI:
+    return isConditionedOn(t, expr.children.e0, equivalent) &&
+           isConditionedOn(t, expr.children.e1, equivalent);
+  case TensorExp::Kind::kDivF:
+  case TensorExp::Kind::kDivC:
+  case TensorExp::Kind::kDivS:
+  case TensorExp::Kind::kDivU:
+  case TensorExp::Kind::kShrS:
+  case TensorExp::Kind::kShrU:
+  case TensorExp::Kind::kShlI:
+    return isConditionedOn(t, expr.children.e0, equivalent);
+  case TensorExp::Kind::kBinaryBranch:
+  case TensorExp::Kind::kSelect:
+  case TensorExp::Kind::kUnary:
+  case TensorExp::Kind::kBinary:
+  case TensorExp::Kind::kReduce:
+  case TensorExp::Kind::kCmpF:
+  case TensorExp::Kind::kCmpI:
+  case TensorExp::Kind::kDenseOp:
+    return false;
+  default:
+    if (getExpArity(expr.kind) == ExpArity::kUnary)
+      return isConditionedOn(t, expr.children.e0, equivalent);
+    return false;
+  }
+}
+
 bool Merger::hasAnySparse(const BitVector &bits) const {
   for (TensorLoopId b : bits.set_bits()) {
     const auto lt = getLvlType(b);
@@ -959,6 +1006,8 @@ LatSetId Merger::buildLattices(ExprId e, LoopId i) {
     TensorId t = syntheticTensor;
     if (kind == TensorExp::Kind::kTensor) {
       t = expr.tensor;
+      if (outStructure && t == outTensor)
+        t = *outStructure;
       if (hasSparseOut && t == outTensor)
         t = syntheticTensor;
     }
