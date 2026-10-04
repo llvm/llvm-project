@@ -251,6 +251,11 @@ cir::CoroSizeOp CIRGenFunction::emitCoroSizeBuiltinCall(const CallExpr *e) {
   return cir::CoroSizeOp::create(cgm.getBuilder(), loc);
 }
 
+cir::CoroAlignOp CIRGenFunction::emitCoroAlignBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  return cir::CoroAlignOp::create(cgm.getBuilder(), loc);
+}
+
 cir::CoroPromiseOp
 CIRGenFunction::emitCoroPromiseBuiltinCall(const CallExpr *e) {
   mlir::Location loc = getLoc(e->getBeginLoc());

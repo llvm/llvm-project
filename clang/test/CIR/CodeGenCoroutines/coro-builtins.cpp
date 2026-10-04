@@ -34,6 +34,11 @@ void f(int n) {
 
   // LLVM: %[[NOOP:.*]] = call ptr @llvm.coro.noop()
 
+  __builtin_coro_align();
+  // CIR: %[[ALIGN:.*]] = cir.coro.intrinsic.align() : () -> !u64i
+
+  // LLVM: %[[ALIGN:.*]] = call i64 @llvm.coro.align.i64()
+
   __builtin_coro_begin(myAlloc(__builtin_coro_size()));
   // TODO(CIR): Support both variants of the coroutine size intrinsic, matching
   // `llvm.coro.size.i32` and `llvm.coro.size.i64`.
