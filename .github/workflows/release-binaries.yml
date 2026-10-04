@@ -388,11 +388,6 @@ jobs:
         subst S: "${{ github.workspace }}"
         cd S:\llvm\utils\release\
         $buildArgs = @{ Version = $env:LLVM_VERSION; FastBuild = $true; Unattended = $true }
-        switch ($env:RUNNER_ARCH) {
-          'X64'   { $buildArgs['x64'] = $true }
-          'ARM64' { $buildArgs['arm64'] = $true }
-          default { throw "Unsupported Windows runner architecture: $env:RUNNER_ARCH" }
-        }
         & .\build_llvm_release.ps1 @buildArgs
         if ($env:INPUTS_RUNS_ON -eq "windows-11-arm") {
           $zstd = (Get-ChildItem -Recurse -Filter "zstd.exe" | Select-Object -First 1).fullName
