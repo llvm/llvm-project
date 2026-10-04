@@ -80,3 +80,26 @@ func.func @test_fold_nofold_nocse() -> (i32, i32, i32, i32, i32, i32) {
   return %0, %1, %2, %c0, %c1, %c2 : i32, i32, i32, i32, i32, i32
 }
 
+
+// CHECK-LABEL: func @create_or_fold_partial
+// CHECK-SAME: (%[[ARG0:[a-z0-9]+]]: i32)
+// NOCSE-LABEL: func @create_or_fold_partial
+// NOCSE-SAME: (%[[ARG0:[a-z0-9]+]]: i32)
+// NOFOLD-LABEL: func @create_or_fold_partial
+// NOFOLD-SAME: (%[[ARG0:[a-z0-9]+]]: i32)
+func.func @create_or_fold_partial(%arg0: i32) -> (i32, i32, i32) {
+  // The multi-result createOrFold keeps the new operation, because the fold
+  // keeps result 2. The NOFOLD run disables the driver fold, so only
+  // createOrFold folds there.
+  // CHECK-DAG: %[[C42:[a-z0-9_]+]] = "test.constant"() <{value = 42 : i32}> : () -> i32
+  // CHECK-DAG: %[[OP:[a-z0-9]+]]:3 = "test.op_partial_fold"(%[[ARG0]])
+  // CHECK: return %[[C42]], %[[ARG0]], %[[OP]]#2
+  // NOCSE-DAG: %[[C42:[a-z0-9_]+]] = "test.constant"() <{value = 42 : i32}> : () -> i32
+  // NOCSE-DAG: %[[OP:[a-z0-9]+]]:3 = "test.op_partial_fold"(%[[ARG0]])
+  // NOCSE: return %[[C42]], %[[ARG0]], %[[OP]]#2
+  // NOFOLD-DAG: %[[C42:[a-z0-9_]+]] = "test.constant"() <{value = 42 : i32}> : () -> i32
+  // NOFOLD-DAG: %[[OP:[a-z0-9]+]]:3 = "test.op_partial_fold"(%[[ARG0]])
+  // NOFOLD: return %[[C42]], %[[ARG0]], %[[OP]]#2
+  %0:3 = "test.op_partial_fold_anchor"(%arg0) : (i32) -> (i32, i32, i32)
+  return %0#0, %0#1, %0#2 : i32, i32, i32
+}

@@ -517,7 +517,9 @@ public:
 
   /// Create an operation of specific op type at the current insertion point,
   /// and immediately try to fold it. This functions populates 'results' with
-  /// the results of the operation.
+  /// the results of the operation. If the fold replaces only some results, the
+  /// operation stays, and `results` holds the replacements and the kept
+  /// results of the operation.
   ///
   /// Note: This performs opportunistic eager folding during IR construction.
   /// The folders are designed to operate efficiently on canonical IR, which
@@ -536,16 +538,28 @@ public:
     if (block)
       block->getOperations().insert(insertPoint, op);
 
-    // Attempt to fold the operation.
-    if (succeeded(tryFold(op, results)) && !results.empty()) {
-      // Erase the operation, if the fold removed the need for this operation.
-      // Note: The fold already populated the results in this case.
-      op->erase();
-      return;
-    }
-
+    // Attempt to fold the operation. The new op has no uses yet, so every
+    // replaced result gets a value.
     ResultRange opResults = op->getResults();
     results.assign(opResults.begin(), opResults.end());
+    OpFoldResults foldResults = tryFold(op);
+    if (foldResults.replacesAny()) {
+      FailureOr<SmallVector<Value>> replacements =
+          materializeFoldResults(op, foldResults, /*liveOnly=*/false);
+      if (succeeded(replacements)) {
+        for (auto [result, replacement] :
+             llvm::zip_equal(results, *replacements))
+          if (replacement)
+            result = replacement;
+        // Erase the operation, if the fold removed the need for this
+        // operation.
+        if (foldResults.replacesAll()) {
+          op->erase();
+          return;
+        }
+      }
+    }
+
     if (block && listener)
       listener->notifyOperationInserted(op, /*previous=*/{});
   }
@@ -564,8 +578,7 @@ public:
   std::enable_if_t<OpTy::template hasTrait<OpTrait::ZeroResults>(), OpTy>
   createOrFold(Location location, Args &&...args) {
     auto op = OpTy::create(*this, location, std::forward<Args>(args)...);
-    SmallVector<Value, 0> unused;
-    (void)tryFold(op.getOperation(), unused);
+    (void)tryFold(op.getOperation());
 
     // Folding cannot remove a zero-result operation, so for convenience we
     // continue to return it.

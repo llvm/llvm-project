@@ -120,6 +120,23 @@ public:
   }
 };
 
+/// This pattern exercises the multi-result createOrFold API with a partial
+/// folder. The fold keeps one result, so the new operation stays in the
+/// output next to the replacement values.
+struct PartialFoldingPattern
+    : public OpRewritePattern<TestOpPartialFoldAnchor> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(TestOpPartialFoldAnchor op,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<Value> results;
+    rewriter.createOrFold<TestOpPartialFold>(
+        results, op.getLoc(), TypeRange(op->getResultTypes()), op.getOperand());
+    rewriter.replaceOp(op, results);
+    return success();
+  }
+};
+
 /// This pattern creates a foldable operation at the entry point of the block.
 /// This tests the situation where the operation folder will need to replace an
 /// operation with a previously created constant that does not initially
@@ -484,7 +501,7 @@ struct TestGreedyPatternDriver
     populateWithGenerated(patterns);
 
     // Verify named pattern is generated with expected name.
-    patterns.add<FoldingPattern, TestNamedPatternRule,
+    patterns.add<FoldingPattern, PartialFoldingPattern, TestNamedPatternRule,
                  FolderInsertBeforePreviouslyFoldedConstantPattern,
                  FolderCommutativeOp2WithConstant, HoistEligibleOps,
                  MakeOpEligible>(&getContext());

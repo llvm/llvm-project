@@ -1693,6 +1693,13 @@ def TestOpPartialFold : TEST_Op<"op_partial_fold", [NoMemoryEffect]> {
   let hasFolder = 1;
 }
 
+// Anchor op for the pattern that builds `test.op_partial_fold` with the
+// multi-result `createOrFold`.
+def TestOpPartialFoldAnchor : TEST_Op<"op_partial_fold_anchor"> {
+  let arguments = (ins I32:$operand);
+  let results = (outs I32, I32, I32);
+}
+
 // Op for testing a partial fold together with an in-place change. The first
 // fold sets `folded`, marks the in-place change, replaces `forwarded` with the
 // operand, and keeps `kept`. Later folds fail.
