@@ -388,7 +388,7 @@ jobs:
         subst S: "${{ github.workspace }}"
         cd S:\llvm\utils\release\
         $buildArgs = @{ Version = $env:LLVM_VERSION; FastBuild = $true; Unattended = $true }
-        & .\build_llvm_release.ps1 @buildArgs
+        & .\build_windows_llvm_release.ps1 @buildArgs
         if ($env:INPUTS_RUNS_ON -eq "windows-11-arm") {
           $zstd = (Get-ChildItem -Recurse -Filter "zstd.exe" | Select-Object -First 1).fullName
           Move-ArtifactWithRetry -Source $zstd -DestinationDirectory $env:GITHUB_WORKSPACE
