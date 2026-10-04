@@ -1968,10 +1968,11 @@ bool SPIRVInstructionSelector::selectBitcast(Register ResVReg,
   return selectUnOp(ResVReg, ResType, I, SPIRV::OpBitcast);
 }
 
-static void
-addMemoryOperands(const MachineMemOperand *MemOp, MachineInstrBuilder &MIB,
-                  MachineIRBuilder &MIRBuilder, SPIRVGlobalRegistry &GR,
-                  std::optional<Align> Align = std::nullopt) {
+static void addMemoryOperands(const MachineMemOperand *MemOp,
+                              MachineInstrBuilder &MIB,
+                              MachineIRBuilder &MIRBuilder,
+                              SPIRVGlobalRegistry &GR,
+                              std::optional<Align> Align = std::nullopt) {
   const SPIRVSubtarget *ST =
       static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
   uint32_t SpvMemOp = static_cast<uint32_t>(SPIRV::MemoryOperand::None);

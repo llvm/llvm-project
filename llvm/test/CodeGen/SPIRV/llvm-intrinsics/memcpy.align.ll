@@ -15,6 +15,8 @@ entry:
   %0 = bitcast ptr %b to ptr
   call void @llvm.lifetime.start.p0(i64 8, ptr %0)
   %1 = bitcast ptr %b to ptr
+; Both pointers explicitly have alignment 4, so one mask applies to both
+; in every SPIR-V version.
   call void @llvm.memcpy.p0.p2.i32(ptr align 4 %1, ptr addrspace(2) align 4 @__const.foo.b, i32 8, i1 false)
 ; CHECK: OpCopyMemorySized %[[#]] %[[#]] %[[#]] Aligned 4{{$}}
   %b1 = getelementptr inbounds %struct.A, ptr %agg.result, i32 0, i32 1
@@ -54,6 +56,18 @@ entry:
 ; SPV14: OpCopyMemorySized %[[#]] %[[#PTR2]] %[[#]] Aligned 4 Aligned 8{{$}}
   %4 = bitcast ptr %a to ptr
   call void @llvm.lifetime.end.p0(i64 16, ptr %4)
+  ret void
+}
+
+; An unspecified source alignment defaults to 1. Before SPIR-V 1.4 the
+; shared alignment must therefore be 1, even when the destination is aligned.
+; CHECK: %[[#]] = OpFunction
+; SPV13: OpCopyMemorySized %[[#]] %[[#]] %[[#]] Aligned 1{{$}}
+; SPV14: OpCopyMemorySized %[[#]] %[[#]] %[[#]] Aligned 4 Aligned 1{{$}}
+; CHECK: OpFunctionEnd
+define spir_func void @unspecified_source_alignment(ptr %dst, ptr addrspace(2) %src) {
+entry:
+  call void @llvm.memcpy.p0.p2.i32(ptr align 4 %dst, ptr addrspace(2) %src, i32 8, i1 false)
   ret void
 }
 
