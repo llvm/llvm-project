@@ -8,7 +8,11 @@
 
 // <rcu>
 
+// UNSUPPORTED: no-threads
+// XFAIL: libcpp-has-no-experimental-rcu
+// XFAIL: availability-rcu-missing
 // REQUIRES: can-test-hardening-assertions-extensive
+// REQUIRES: std-at-least-c++26
 
 #include <rcu>
 #include <thread>

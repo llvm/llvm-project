@@ -8,6 +8,7 @@
 //
 // UNSUPPORTED: no-threads
 // XFAIL: libcpp-has-no-experimental-rcu
+// XFAIL: availability-rcu-missing
 // REQUIRES: std-at-least-c++26
 
 // void rcu_synchronize(rcu_domain& dom = rcu_default_domain()) noexcept;
