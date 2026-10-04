@@ -10,9 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "RecordTypeConverter.h"
 #include "TargetLowering/LowerModule.h"
 #include "TargetLowering/TargetLoweringInfo.h"
 
+#include "mlir/IR/AttrTypeSubElements.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -38,13 +40,72 @@ struct TargetLoweringPass
   void runOnOperation() override;
 };
 
+/// Converts LangAddressSpaceAttr → TargetAddressSpaceAttr inside types,
+/// rebuilding only records that reach a language address space.
+class TargetLoweringTypeConverter : public cir::RecordRewritingTypeConverter {
+public:
+  TargetLoweringTypeConverter(mlir::MLIRContext &ctx,
+                              const cir::TargetLoweringInfo &targetInfo)
+      : RecordRewritingTypeConverter(ctx), targetInfo(targetInfo) {
+    addConversion([this](cir::PointerType type) -> mlir::Type {
+      mlir::Type pointee = convertType(type.getPointee());
+      if (!pointee)
+        return {};
+      mlir::ptr::MemorySpaceAttrInterface addrSpace = type.getAddrSpace();
+      if (auto langAS =
+              mlir::dyn_cast_if_present<cir::LangAddressSpaceAttr>(addrSpace))
+        addrSpace = lowerAddrSpace(type.getContext(), langAS);
+      return cir::PointerType::get(type.getContext(), pointee, addrSpace);
+    });
+  }
+
+  mlir::ptr::MemorySpaceAttrInterface
+  lowerAddrSpace(mlir::MLIRContext *ctx,
+                 cir::LangAddressSpaceAttr langAS) const {
+    unsigned targetAS =
+        targetInfo.getTargetAddrSpaceFromCIRAddrSpace(langAS.getValue());
+    if (targetAS == 0)
+      return {};
+    return cir::TargetAddressSpaceAttr::get(ctx, targetAS);
+  }
+
+  /// Convert the types nested in \p attr, e.g. the type of a constant.
+  mlir::Attribute convertAttr(mlir::Attribute attr) const {
+    return attrReplacer.replace(attr);
+  }
+
+protected:
+  bool typeMayChange(mlir::Type type) const override {
+    auto ptrTy = mlir::dyn_cast<cir::PointerType>(type);
+    return ptrTy && mlir::isa_and_present<cir::LangAddressSpaceAttr>(
+                        ptrTy.getAddrSpace());
+  }
+
+private:
+  const cir::TargetLoweringInfo &targetInfo;
+  mutable mlir::AttrTypeReplacer attrReplacer = [this] {
+    mlir::AttrTypeReplacer replacer;
+    replacer.addReplacement(
+        [this](mlir::Type type)
+            -> std::optional<std::pair<mlir::Type, mlir::WalkResult>> {
+          mlir::Type converted = convertType(type);
+          if (!converted)
+            return std::nullopt;
+          // Already converted; don't walk into it.
+          return std::make_pair(converted, mlir::WalkResult::skip());
+        });
+    return replacer;
+  }();
+};
+
 /// A generic target lowering pattern that matches any CIR op whose operand or
 /// result types need address space conversion. Clones the op with converted
 /// types.
 class CIRGenericTargetLoweringPattern : public mlir::ConversionPattern {
 public:
-  CIRGenericTargetLoweringPattern(mlir::MLIRContext *context,
-                                  const mlir::TypeConverter &typeConverter)
+  CIRGenericTargetLoweringPattern(
+      mlir::MLIRContext *context,
+      const TargetLoweringTypeConverter &typeConverter)
       : mlir::ConversionPattern(typeConverter, MatchAnyOpTypeTag(),
                                 /*benefit=*/1, context) {}
 
@@ -73,9 +134,7 @@ public:
     mlir::OperationState loweredOpState(op->getLoc(), op->getName());
     loweredOpState.addOperands(operands);
 
-    // Preserve auxiliary metadata verbatim. Convert only inherent TypeAttrs and
-    // pointer constants so address-space-bearing operation semantics (e.g.
-    // AllocaOp's allocaType) stay in sync with the converted result types.
+    // Preserve auxiliary metadata verbatim.
     loweredOpState.propertiesAttr = op->getPropertiesAsAttribute();
     loweredOpState.addAttributes(op->getDiscardableAttrDictionary().getValue());
 
@@ -96,15 +155,13 @@ public:
     }
 
     mlir::Operation *loweredOp = rewriter.create(loweredOpState);
+    // Keep inherent attributes (e.g. allocaType, constants) in sync with the
+    // converted types.
+    const auto *tlTypeConverter =
+        static_cast<const TargetLoweringTypeConverter *>(typeConverter);
     loweredOp->getName().walkInherentAttrs(
         loweredOp, [&](llvm::StringRef, mlir::Attribute &attr) {
-          if (auto typeAttr = mlir::dyn_cast<mlir::TypeAttr>(attr))
-            attr = mlir::TypeAttr::get(
-                typeConverter->convertType(typeAttr.getValue()));
-          else if (auto ptrAttr = mlir::dyn_cast<cir::ConstPtrAttr>(attr))
-            attr = cir::ConstPtrAttr::get(
-                typeConverter->convertType(ptrAttr.getType()),
-                ptrAttr.getValue());
+          attr = tlTypeConverter->convertAttr(attr);
         });
     rewriter.replaceOp(op, loweredOp);
     return mlir::success();
@@ -116,34 +173,26 @@ public:
 /// TypeConverter won't reach it automatically.
 class CIRGlobalOpTargetLowering
     : public mlir::OpConversionPattern<cir::GlobalOp> {
-  const cir::TargetLoweringInfo &targetInfo;
-
 public:
   CIRGlobalOpTargetLowering(mlir::MLIRContext *context,
-                            const mlir::TypeConverter &typeConverter,
-                            const cir::TargetLoweringInfo &targetInfo)
+                            const TargetLoweringTypeConverter &typeConverter)
       : mlir::OpConversionPattern<cir::GlobalOp>(typeConverter, context,
-                                                 /*benefit=*/1),
-        targetInfo(targetInfo) {}
+                                                 /*benefit=*/1) {}
 
   mlir::LogicalResult
   matchAndRewrite(cir::GlobalOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    mlir::Type loweredSymTy = getTypeConverter()->convertType(op.getSymType());
+    const auto *typeConverter =
+        static_cast<const TargetLoweringTypeConverter *>(getTypeConverter());
+    mlir::Type loweredSymTy = typeConverter->convertType(op.getSymType());
     if (!loweredSymTy)
       return mlir::failure();
 
     // Convert the addr_space attribute.
     mlir::ptr::MemorySpaceAttrInterface addrSpace = op.getAddrSpaceAttr();
     if (auto langAS =
-            mlir::dyn_cast_if_present<cir::LangAddressSpaceAttr>(addrSpace)) {
-      unsigned targetAS =
-          targetInfo.getTargetAddrSpaceFromCIRAddrSpace(langAS.getValue());
-      addrSpace =
-          targetAS == 0
-              ? nullptr
-              : cir::TargetAddressSpaceAttr::get(op.getContext(), targetAS);
-    }
+            mlir::dyn_cast_if_present<cir::LangAddressSpaceAttr>(addrSpace))
+      addrSpace = typeConverter->lowerAddrSpace(op.getContext(), langAS);
 
     // Only rewrite if something actually changed.
     if (loweredSymTy == op.getSymType() && addrSpace == op.getAddrSpaceAttr())
@@ -152,6 +201,8 @@ public:
     auto newOp = mlir::cast<cir::GlobalOp>(rewriter.clone(*op.getOperation()));
     newOp.setSymType(loweredSymTy);
     newOp.setAddrSpaceAttr(addrSpace);
+    if (mlir::Attribute init = newOp.getInitialValueAttr())
+      newOp.setInitialValueAttr(typeConverter->convertAttr(init));
     rewriter.replaceOp(op, newOp);
     return mlir::success();
   }
@@ -218,55 +269,6 @@ static void convertSyncScopeIfPresent(mlir::Operation *op,
   }
 }
 
-/// Prepare the type converter for the target lowering pass.
-/// Converts LangAddressSpaceAttr → TargetAddressSpaceAttr inside pointer types.
-static void
-prepareTargetLoweringTypeConverter(mlir::TypeConverter &converter,
-                                   const cir::TargetLoweringInfo &targetInfo) {
-  converter.addConversion([](mlir::Type type) { return type; });
-
-  converter.addConversion([&converter,
-                           &targetInfo](cir::PointerType type) -> mlir::Type {
-    mlir::Type pointee = converter.convertType(type.getPointee());
-    if (!pointee)
-      return {};
-    auto addrSpace = type.getAddrSpace();
-    if (auto langAS =
-            mlir::dyn_cast_if_present<cir::LangAddressSpaceAttr>(addrSpace)) {
-      unsigned targetAS =
-          targetInfo.getTargetAddrSpaceFromCIRAddrSpace(langAS.getValue());
-      addrSpace =
-          targetAS == 0
-              ? nullptr
-              : cir::TargetAddressSpaceAttr::get(type.getContext(), targetAS);
-    }
-    return cir::PointerType::get(type.getContext(), pointee, addrSpace);
-  });
-
-  converter.addConversion([&converter](cir::ArrayType type) -> mlir::Type {
-    mlir::Type loweredElementType =
-        converter.convertType(type.getElementType());
-    if (!loweredElementType)
-      return {};
-    return cir::ArrayType::get(loweredElementType, type.getSize());
-  });
-
-  converter.addConversion([&converter](cir::FuncType type) -> mlir::Type {
-    llvm::SmallVector<mlir::Type> loweredInputTypes;
-    loweredInputTypes.reserve(type.getNumInputs());
-    if (mlir::failed(
-            converter.convertTypes(type.getInputs(), loweredInputTypes)))
-      return {};
-
-    mlir::Type loweredReturnType = converter.convertType(type.getReturnType());
-    if (!loweredReturnType)
-      return {};
-
-    return cir::FuncType::get(loweredInputTypes, loweredReturnType,
-                              /*isVarArg=*/type.getVarArg());
-  });
-}
-
 static void
 populateTargetLoweringConversionTarget(mlir::ConversionTarget &target,
                                        const mlir::TypeConverter &tc) {
@@ -311,12 +313,10 @@ void TargetLoweringPass::runOnOperation() {
   });
 
   // Address space conversion: LangAddressSpaceAttr → TargetAddressSpaceAttr.
-  mlir::TypeConverter typeConverter;
-  prepareTargetLoweringTypeConverter(typeConverter, targetInfo);
+  TargetLoweringTypeConverter typeConverter(*mod.getContext(), targetInfo);
 
   mlir::RewritePatternSet patterns(mod.getContext());
-  patterns.add<CIRGlobalOpTargetLowering>(mod.getContext(), typeConverter,
-                                          targetInfo);
+  patterns.add<CIRGlobalOpTargetLowering>(mod.getContext(), typeConverter);
   patterns.add<CIRFuncOpTargetLowering>(typeConverter, mod.getContext());
   patterns.add<CIRGenericTargetLoweringPattern>(mod.getContext(),
                                                 typeConverter);
@@ -330,6 +330,8 @@ void TargetLoweringPass::runOnOperation() {
 
   if (failed(mlir::applyPartialConversion(ops, target, std::move(patterns))))
     signalPassFailure();
+
+  typeConverter.restoreRecordTypeNames();
 }
 
 std::unique_ptr<Pass> mlir::createTargetLoweringPass() {
