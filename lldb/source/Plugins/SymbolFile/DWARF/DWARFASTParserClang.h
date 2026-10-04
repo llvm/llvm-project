@@ -207,6 +207,10 @@ protected:
       DelayedPropertyList &delayed_properties,
       lldb_private::ClangASTImporter::LayoutInfo &layout_info);
 
+  /// Scans \a parent_die's DW_TAG_property children for a
+  /// DW_TAG_property_getter with a DW_AT_property_forward attribute, and
+  /// returns a map from each such property's name to the name of the member
+  /// it forwards to (its backing storage).
   PropertyBackingStorageNames ParsePropertyBackingStorageNames(
       const lldb_private::plugin::dwarf::DWARFDIE &parent_die);
 

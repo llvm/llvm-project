@@ -44,6 +44,18 @@ public:
 private:
   void DoExecute(llvm::StringRef command, CommandReturnObject &result) override;
 
+  /// Rewrites a dotted expression path (e.g. `parent.child.name`) into one
+  /// that names backing storage members directly, for components that
+  /// resolve to a synthesized property rather than a real member.
+  ///
+  /// Walks the path component by component, starting from \a expr's first
+  /// component resolved as a frame variable. For each subsequent component,
+  /// a plain child lookup is tried first; only if that fails is the type
+  /// asked for the property's backing storage name, and the lookup retried
+  /// with that name.
+  ///
+  /// \return The rewritten path, or an empty string if nothing needed
+  /// rewriting (including if \a expr could not be fully resolved at all).
   std::string RewritePathForBackingStorage(llvm::StringRef expr,
                                            StackFrame &frame,
                                            lldb::DynamicValueType use_dynamic);
