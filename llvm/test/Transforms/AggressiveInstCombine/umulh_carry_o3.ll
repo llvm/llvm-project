@@ -2,25 +2,14 @@
 ; RUN: opt < %s -O3 -S | FileCheck %s
 
 define i32 @mul_carry_add_carry_to_crosssum(i32 %x, i32 %y) {
-; CHECK-LABEL: define i32 @mul_carry_add_carry_to_crosssum(
+; CHECK-LABEL: define range(i32 0, -1) i32 @mul_carry_add_carry_to_crosssum(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X]], 16
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 65535
-; CHECK-NEXT:    [[SHR1:%.*]] = lshr i32 [[Y]], 16
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[Y]], 65535
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[AND2]], [[SHR]]
-; CHECK-NEXT:    [[MUL3:%.*]] = mul nuw i32 [[SHR1]], [[AND]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[MUL3]], [[MUL]]
-; CHECK-NEXT:    [[MUL4:%.*]] = mul nuw i32 [[AND2]], [[AND]]
-; CHECK-NEXT:    [[SHR5:%.*]] = lshr i32 [[MUL4]], 16
-; CHECK-NEXT:    [[ADD6:%.*]] = add i32 [[ADD]], [[SHR5]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD6]], [[MUL]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 65536, i32 0
-; CHECK-NEXT:    [[MUL8:%.*]] = mul nuw i32 [[SHR1]], [[SHR]]
-; CHECK-NEXT:    [[SHR10:%.*]] = lshr i32 [[ADD6]], 16
-; CHECK-NEXT:    [[ADD9:%.*]] = add nuw i32 [[SHR10]], [[MUL8]]
-; CHECK-NEXT:    [[ADD11:%.*]] = add i32 [[ADD9]], [[COND]]
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[X]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[Y]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 32
+; CHECK-NEXT:    [[ADD11:%.*]] = trunc nuw i64 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[ADD11]]
 ;
 entry:
