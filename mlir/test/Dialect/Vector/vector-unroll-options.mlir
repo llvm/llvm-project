@@ -888,3 +888,107 @@ func.func @vector_multi_reduction_rank_mismatch(%v : vector<2x2x4xf32>, %acc: ve
 //       CHECK:   %[[V1:.*]] = vector.insert_strided_slice %[[R1]], %[[V0]] offsets = [0, 0], strides = [1, 1] : vector<1x2xf32> into vector<2x2xf32>
 //       CHECK:   %[[V2:.*]] = vector.insert_strided_slice %[[R3]], %[[V1]] offsets = [1, 0], strides = [1, 1] : vector<1x2xf32> into vector<2x2xf32>
 //       CHECK:   return %[[V2]] : vector<2x2xf32>
+
+// -----
+
+func.func @vector_broadcast_rank_mismatch(%arg0: vector<4x8xi16>) -> vector<1x4x8xi16> {
+  %0 = vector.broadcast %arg0 : vector<4x8xi16> to vector<1x4x8xi16>
+  return %0 : vector<1x4x8xi16>
+}
+
+// CHECK-LABEL: func @vector_broadcast_rank_mismatch
+// CHECK-SAME: (%[[SRC:.*]]: vector<4x8xi16>) -> vector<1x4x8xi16>
+// CHECK-NOT: vector.broadcast
+// CHECK-NEXT: %[[INIT:.*]] = arith.constant dense<0> : vector<1x4x8xi16>
+// CHECK-NEXT: %[[SLICE0:.*]] = vector.extract_strided_slice %[[SRC]] offsets = [0, 0], sizes = [2, 2], strides = [1, 1] : vector<4x8xi16> to vector<2x2xi16>
+// CHECK-NEXT: %[[BCAST0:.*]] = vector.broadcast %[[SLICE0]] : vector<2x2xi16> to vector<1x2x2xi16>
+// CHECK-NEXT: %[[RESULT0:.*]] = vector.insert_strided_slice %[[BCAST0]], %[[INIT]] offsets = [0, 0, 0], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<1x4x8xi16>
+// CHECK-NEXT: %[[SLICE1:.*]] = vector.extract_strided_slice %[[SRC]] offsets = [0, 2], sizes = [2, 2], strides = [1, 1] : vector<4x8xi16> to vector<2x2xi16>
+// CHECK-NEXT: %[[BCAST1:.*]] = vector.broadcast %[[SLICE1]] : vector<2x2xi16> to vector<1x2x2xi16>
+// CHECK-NEXT: %[[RESULT1:.*]] = vector.insert_strided_slice %[[BCAST1]], %[[RESULT0]] offsets = [0, 0, 2], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<1x4x8xi16>
+// CHECK-NEXT: %[[SLICE2:.*]] = vector.extract_strided_slice %[[SRC]] offsets = [0, 4], sizes = [2, 2], strides = [1, 1] : vector<4x8xi16> to vector<2x2xi16>
+// CHECK-NEXT: %[[BCAST2:.*]] = vector.broadcast %[[SLICE2]] : vector<2x2xi16> to vector<1x2x2xi16>
+// CHECK-NEXT: %[[RESULT2:.*]] = vector.insert_strided_slice %[[BCAST2]], %[[RESULT1]] offsets = [0, 0, 4], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<1x4x8xi16>
+// CHECK-NEXT: %[[SLICE3:.*]] = vector.extract_strided_slice %[[SRC]] offsets = [0, 6], sizes = [2, 2], strides = [1, 1] : vector<4x8xi16> to vector<2x2xi16>
+// CHECK-NEXT: %[[BCAST3:.*]] = vector.broadcast %[[SLICE3]] : vector<2x2xi16> to vector<1x2x2xi16>
+// CHECK-NEXT: %[[RESULT3:.*]] = vector.insert_strided_slice %[[BCAST3]], %[[RESULT2]] offsets = [0, 0, 6], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<1x4x8xi16>
+// CHECK-NEXT: %[[SLICE4:.*]] = vector.extract_strided_slice %[[SRC]] offsets = [2, 0], sizes = [2, 2], strides = [1, 1] : vector<4x8xi16> to vector<2x2xi16>
+// CHECK-NEXT: %[[BCAST4:.*]] = vector.broadcast %[[SLICE4]] : vector<2x2xi16> to vector<1x2x2xi16>
+// CHECK-NEXT: %[[RESULT4:.*]] = vector.insert_strided_slice %[[BCAST4]], %[[RESULT3]] offsets = [0, 2, 0], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<1x4x8xi16>
+// CHECK-NEXT: %[[SLICE5:.*]] = vector.extract_strided_slice %[[SRC]] offsets = [2, 2], sizes = [2, 2], strides = [1, 1] : vector<4x8xi16> to vector<2x2xi16>
+// CHECK-NEXT: %[[BCAST5:.*]] = vector.broadcast %[[SLICE5]] : vector<2x2xi16> to vector<1x2x2xi16>
+// CHECK-NEXT: %[[RESULT5:.*]] = vector.insert_strided_slice %[[BCAST5]], %[[RESULT4]] offsets = [0, 2, 2], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<1x4x8xi16>
+// CHECK-NEXT: %[[SLICE6:.*]] = vector.extract_strided_slice %[[SRC]] offsets = [2, 4], sizes = [2, 2], strides = [1, 1] : vector<4x8xi16> to vector<2x2xi16>
+// CHECK-NEXT: %[[BCAST6:.*]] = vector.broadcast %[[SLICE6]] : vector<2x2xi16> to vector<1x2x2xi16>
+// CHECK-NEXT: %[[RESULT6:.*]] = vector.insert_strided_slice %[[BCAST6]], %[[RESULT5]] offsets = [0, 2, 4], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<1x4x8xi16>
+// CHECK-NEXT: %[[SLICE7:.*]] = vector.extract_strided_slice %[[SRC]] offsets = [2, 6], sizes = [2, 2], strides = [1, 1] : vector<4x8xi16> to vector<2x2xi16>
+// CHECK-NEXT: %[[BCAST7:.*]] = vector.broadcast %[[SLICE7]] : vector<2x2xi16> to vector<1x2x2xi16>
+// CHECK-NEXT: %[[RESULT7:.*]] = vector.insert_strided_slice %[[BCAST7]], %[[RESULT6]] offsets = [0, 2, 6], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<1x4x8xi16>
+// CHECK-NOT: vector.broadcast
+// CHECK-NEXT: return %[[RESULT7]] : vector<1x4x8xi16>
+// CHECK-NOT: vector.broadcast
+// CHECK-NEXT: }
+
+// -----
+
+func.func @vector_broadcast_rank_mismatch_unit_dim(%arg0: vector<1x8xi16>) -> vector<2x4x8xi16> {
+  %0 = vector.broadcast %arg0 : vector<1x8xi16> to vector<2x4x8xi16>
+  return %0 : vector<2x4x8xi16>
+}
+
+// CHECK-LABEL: func @vector_broadcast_rank_mismatch_unit_dim
+// CHECK-SAME: (%[[SRC:.*]]: vector<1x8xi16>) -> vector<2x4x8xi16>
+// CHECK-NOT: vector.broadcast
+// CHECK-NEXT: %[[INIT:.*]] = arith.constant dense<0> : vector<2x4x8xi16>
+// CHECK-NEXT: %[[SLICE0:.*]] = vector.extract_strided_slice %[[SRC]] offsets = [0, 0], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+// CHECK-NEXT: %[[BCAST0:.*]] = vector.broadcast %[[SLICE0]] : vector<1x2xi16> to vector<1x2x2xi16>
+// CHECK-NEXT: %[[RESULT0:.*]] = vector.insert_strided_slice %[[BCAST0]], %[[INIT]] offsets = [0, 0, 0], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+// CHECK-NEXT: %[[SLICE1:.*]] = vector.extract_strided_slice %[[SRC]] offsets = [0, 2], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+// CHECK-NEXT: %[[BCAST1:.*]] = vector.broadcast %[[SLICE1]] : vector<1x2xi16> to vector<1x2x2xi16>
+// CHECK-NEXT: %[[RESULT1:.*]] = vector.insert_strided_slice %[[BCAST1]], %[[RESULT0]] offsets = [0, 0, 2], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+// CHECK-NEXT: %[[SLICE2:.*]] = vector.extract_strided_slice %[[SRC]] offsets = [0, 4], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+// CHECK-NEXT: %[[BCAST2:.*]] = vector.broadcast %[[SLICE2]] : vector<1x2xi16> to vector<1x2x2xi16>
+// CHECK-NEXT: %[[RESULT2:.*]] = vector.insert_strided_slice %[[BCAST2]], %[[RESULT1]] offsets = [0, 0, 4], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+// CHECK-NEXT: %[[SLICE3:.*]] = vector.extract_strided_slice %[[SRC]] offsets = [0, 6], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+// CHECK-NEXT: %[[BCAST3:.*]] = vector.broadcast %[[SLICE3]] : vector<1x2xi16> to vector<1x2x2xi16>
+// CHECK-NEXT: %[[RESULT3:.*]] = vector.insert_strided_slice %[[BCAST3]], %[[RESULT2]] offsets = [0, 0, 6], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+// CHECK-NEXT: %[[SLICE4:.*]] = vector.extract_strided_slice %[[SRC]] offsets = [0, 0], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+// CHECK-NEXT: %[[BCAST4:.*]] = vector.broadcast %[[SLICE4]] : vector<1x2xi16> to vector<1x2x2xi16>
+// CHECK-NEXT: %[[RESULT4:.*]] = vector.insert_strided_slice %[[BCAST4]], %[[RESULT3]] offsets = [0, 2, 0], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+// CHECK-NEXT: %[[SLICE5:.*]] = vector.extract_strided_slice %[[SRC]] offsets = [0, 2], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+// CHECK-NEXT: %[[BCAST5:.*]] = vector.broadcast %[[SLICE5]] : vector<1x2xi16> to vector<1x2x2xi16>
+// CHECK-NEXT: %[[RESULT5:.*]] = vector.insert_strided_slice %[[BCAST5]], %[[RESULT4]] offsets = [0, 2, 2], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+// CHECK-NEXT: %[[SLICE6:.*]] = vector.extract_strided_slice %[[SRC]] offsets = [0, 4], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+// CHECK-NEXT: %[[BCAST6:.*]] = vector.broadcast %[[SLICE6]] : vector<1x2xi16> to vector<1x2x2xi16>
+// CHECK-NEXT: %[[RESULT6:.*]] = vector.insert_strided_slice %[[BCAST6]], %[[RESULT5]] offsets = [0, 2, 4], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+// CHECK-NEXT: %[[SLICE7:.*]] = vector.extract_strided_slice %[[SRC]] offsets = [0, 6], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+// CHECK-NEXT: %[[BCAST7:.*]] = vector.broadcast %[[SLICE7]] : vector<1x2xi16> to vector<1x2x2xi16>
+// CHECK-NEXT: %[[RESULT7:.*]] = vector.insert_strided_slice %[[BCAST7]], %[[RESULT6]] offsets = [0, 2, 6], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+// CHECK-NEXT: %[[SLICE8:.*]] = vector.extract_strided_slice %[[SRC]] offsets = [0, 0], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+// CHECK-NEXT: %[[BCAST8:.*]] = vector.broadcast %[[SLICE8]] : vector<1x2xi16> to vector<1x2x2xi16>
+// CHECK-NEXT: %[[RESULT8:.*]] = vector.insert_strided_slice %[[BCAST8]], %[[RESULT7]] offsets = [1, 0, 0], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+// CHECK-NEXT: %[[SLICE9:.*]] = vector.extract_strided_slice %[[SRC]] offsets = [0, 2], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+// CHECK-NEXT: %[[BCAST9:.*]] = vector.broadcast %[[SLICE9]] : vector<1x2xi16> to vector<1x2x2xi16>
+// CHECK-NEXT: %[[RESULT9:.*]] = vector.insert_strided_slice %[[BCAST9]], %[[RESULT8]] offsets = [1, 0, 2], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+// CHECK-NEXT: %[[SLICE10:.*]] = vector.extract_strided_slice %[[SRC]] offsets = [0, 4], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+// CHECK-NEXT: %[[BCAST10:.*]] = vector.broadcast %[[SLICE10]] : vector<1x2xi16> to vector<1x2x2xi16>
+// CHECK-NEXT: %[[RESULT10:.*]] = vector.insert_strided_slice %[[BCAST10]], %[[RESULT9]] offsets = [1, 0, 4], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+// CHECK-NEXT: %[[SLICE11:.*]] = vector.extract_strided_slice %[[SRC]] offsets = [0, 6], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+// CHECK-NEXT: %[[BCAST11:.*]] = vector.broadcast %[[SLICE11]] : vector<1x2xi16> to vector<1x2x2xi16>
+// CHECK-NEXT: %[[RESULT11:.*]] = vector.insert_strided_slice %[[BCAST11]], %[[RESULT10]] offsets = [1, 0, 6], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+// CHECK-NEXT: %[[SLICE12:.*]] = vector.extract_strided_slice %[[SRC]] offsets = [0, 0], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+// CHECK-NEXT: %[[BCAST12:.*]] = vector.broadcast %[[SLICE12]] : vector<1x2xi16> to vector<1x2x2xi16>
+// CHECK-NEXT: %[[RESULT12:.*]] = vector.insert_strided_slice %[[BCAST12]], %[[RESULT11]] offsets = [1, 2, 0], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+// CHECK-NEXT: %[[SLICE13:.*]] = vector.extract_strided_slice %[[SRC]] offsets = [0, 2], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+// CHECK-NEXT: %[[BCAST13:.*]] = vector.broadcast %[[SLICE13]] : vector<1x2xi16> to vector<1x2x2xi16>
+// CHECK-NEXT: %[[RESULT13:.*]] = vector.insert_strided_slice %[[BCAST13]], %[[RESULT12]] offsets = [1, 2, 2], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+// CHECK-NEXT: %[[SLICE14:.*]] = vector.extract_strided_slice %[[SRC]] offsets = [0, 4], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+// CHECK-NEXT: %[[BCAST14:.*]] = vector.broadcast %[[SLICE14]] : vector<1x2xi16> to vector<1x2x2xi16>
+// CHECK-NEXT: %[[RESULT14:.*]] = vector.insert_strided_slice %[[BCAST14]], %[[RESULT13]] offsets = [1, 2, 4], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+// CHECK-NEXT: %[[SLICE15:.*]] = vector.extract_strided_slice %[[SRC]] offsets = [0, 6], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+// CHECK-NEXT: %[[BCAST15:.*]] = vector.broadcast %[[SLICE15]] : vector<1x2xi16> to vector<1x2x2xi16>
+// CHECK-NEXT: %[[RESULT15:.*]] = vector.insert_strided_slice %[[BCAST15]], %[[RESULT14]] offsets = [1, 2, 6], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+// CHECK-NOT: vector.broadcast
+// CHECK-NEXT: return %[[RESULT15]] : vector<2x4x8xi16>
+// CHECK-NOT: vector.broadcast
+// CHECK-NEXT: }
