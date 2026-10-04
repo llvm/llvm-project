@@ -53840,6 +53840,21 @@ static SDValue combineOrCmpEqZeroToCtlzSrl(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), N->getValueType(0), Ret);
 }
 
+/// Find a SRL by 1 node that uses the same operand as D, if it exists.
+/// This is used to detect patterns where both (and D, 1) and (srl D, 1)
+/// are computed, allowing us to use the carry flag from SHR for both.
+static SDNode *findSrlBy1User(SDValue D) {
+  for (SDNode *User : D.getNode()->users()) {
+    if (User->getOpcode() == ISD::SRL && User->getOperand(0) == D) {
+      if (auto *ShAmtC = dyn_cast<ConstantSDNode>(User->getOperand(1))) {
+        if (ShAmtC->getZExtValue() == 1)
+          return User;
+      }
+    }
+  }
+  return nullptr;
+}
+
 /// If this is an add or subtract where one operand is produced by a cmp+setcc,
 /// then try to convert it to an ADC or SBB. This replaces TEST+SET+{ADD/SUB}
 /// with CMP+{ADC, SBB}.
@@ -53858,12 +53873,34 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
 
   X86::CondCode CC;
   SDValue EFLAGS;
+  SDNode *SrlBy1Node = nullptr;
   if (Y.getOpcode() == X86ISD::SETCC && Y.hasOneUse()) {
     CC = (X86::CondCode)Y.getConstantOperandVal(0);
     EFLAGS = Y.getOperand(1);
   } else if (Y.getOpcode() == ISD::AND && isOneConstant(Y.getOperand(1)) &&
              Y.hasOneUse()) {
-    EFLAGS = LowerAndToBT(Y, ISD::SETNE, DL, DAG, CC);
+    // Check if we have both (and D, 1) and (srl D, 1) for the same D.
+    // If so, we can use X86ISD::SHR_FLAG to get both the shifted result
+    // and the carry flag (which contains the LSB), avoiding a separate BT.
+    SDValue D = Y.getOperand(0);
+    SrlBy1Node = findSrlBy1User(D);
+    if (SrlBy1Node) {
+      // Create X86ISD::SHR_FLAG which produces (D >> 1, EFLAGS with CF = D & 1)
+      EVT SrlVT = SrlBy1Node->getValueType(0);
+      SDVTList VTs = DAG.getVTList(SrlVT, MVT::i32);
+      SDValue ShAmt = DAG.getConstant(1, DL, MVT::i8);
+      SDValue ShrFlag = DAG.getNode(X86ISD::SHR_FLAG, DL, VTs, D, ShAmt);
+
+      // Replace uses of the original SRL with the shifted result from SHR_FLAG
+      DAG.ReplaceAllUsesOfValueWith(SDValue(SrlBy1Node, 0),
+                                    ShrFlag.getValue(0));
+
+      // Use the EFLAGS output from SHR_FLAG
+      EFLAGS = ShrFlag.getValue(1);
+      CC = X86::COND_B; // CF is set when (D & 1) is 1
+    } else {
+      EFLAGS = LowerAndToBT(Y, ISD::SETNE, DL, DAG, CC);
+    }
   }
 
   if (!EFLAGS)
