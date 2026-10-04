@@ -7470,6 +7470,39 @@ AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
   return InstructionCost::getInvalid();
 }
 
+bool AArch64TTIImpl::isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
+                                           int64_t BaseOffset, bool HasBaseReg,
+                                           int64_t Scale, unsigned AddrSpace,
+                                           Instruction *I,
+                                           int64_t ScalableOffset) const {
+  // LSR can make an illegal scalable vector access easier to split and combine
+  // by preferring a base+register+scalable-offset form. Note: This is an LSR
+  // preference rather than a legal machine addressing mode.
+  if (!BaseGV && !BaseOffset && HasBaseReg && isa<ScalableVectorType>(Ty)) {
+    EVT VT = getTLI()->getValueType(DL, Ty);
+    uint64_t AccessNumBytes = VT.getStoreSize().getKnownMinValue();
+    if (AccessNumBytes > 16 && getTLI()->getTypeAction(Ty->getContext(), VT) ==
+                                    TargetLowering::TypeSplitVector) {
+      EVT LegalVT = getTLI()->getLegalTypeToTransformTo(Ty->getContext(), VT);
+      uint64_t VecNumBytes = LegalVT.getStoreSize().getKnownMinValue();
+      if (LegalVT.getVectorElementType() == VT.getVectorElementType() &&
+          VecNumBytes <= 16 && AccessNumBytes % VecNumBytes == 0 &&
+          isPowerOf2_64(VecNumBytes)) {
+        // Don't prefer scaled access if the type may need splitting. Only the
+        // first access can use the scaled offset. Latter accesses need to
+        // materialize a new base + mul vl offset.
+        if (Scale)
+          return false;
+        if (ScalableOffset && ScalableOffset % VecNumBytes == 0)
+          return true;
+      }
+    }
+  }
+
+  return BaseT::isLegalAddressingMode(Ty, BaseGV, BaseOffset, HasBaseReg, Scale,
+                                      AddrSpace, I, ScalableOffset);
+}
+
 bool AArch64TTIImpl::shouldTreatInstructionLikeSelect(
     const Instruction *I) const {
   if (EnableOrLikeSelectOpt) {
