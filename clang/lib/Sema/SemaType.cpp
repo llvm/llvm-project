@@ -2470,7 +2470,7 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *SizeExpr,
   bool IsNoBoolVecLang = getLangOpts().OpenCL || getLangOpts().OpenCLCPlusPlus;
   if ((!T->isDependentType() && !T->isIntegerType() &&
        !T->isRealFloatingType()) ||
-      (IsNoBoolVecLang && T->isBooleanType())) {
+      T->isEnumeralType() || (IsNoBoolVecLang && T->isBooleanType())) {
     Diag(AttrLoc, diag::err_attribute_invalid_vector_type) << T;
     return QualType();
   }
