@@ -803,9 +803,9 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       if (!vputils::isSingleScalar(Def) && !vputils::onlyFirstLaneUsed(Def))
         continue;
 
-      // TODO: Support scalarizing ExtractValue.
-      if (match(Def,
-                m_Binary<Instruction::ExtractValue>(m_VPValue(), m_VPValue())))
+      // A widened ExtractValue extracts from a struct of vectors.
+      if (!RepR && match(Def, m_Binary<Instruction::ExtractValue>(m_VPValue(),
+                                                                  m_VPValue())))
         continue;
 
       auto *Clone = VPBuilder::createSingleScalarOp(
@@ -5964,6 +5964,10 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
 
       // If executing other lanes produces side-effects we can't avoid them.
       if (VPI.mayHaveSideEffects())
+        continue;
+
+      // ExtractValue takes the shape of its aggregate, decided later.
+      if (VPI.getOpcode() == Instruction::ExtractValue)
         continue;
 
       // We want to drop the mask operand, verify we can safely do that.

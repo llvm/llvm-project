@@ -348,13 +348,6 @@ inline VPInstruction_match<VPInstruction::BuildVector> m_BuildVector() {
   return m_VPInstruction<VPInstruction::BuildVector>();
 }
 
-/// BuildStructVector matches only its opcode, w/o matching its operands as the
-/// number of operands is not fixed.
-inline VPInstruction_match<VPInstruction::BuildStructVector>
-m_BuildStructVector() {
-  return m_VPInstruction<VPInstruction::BuildStructVector>();
-}
-
 template <typename Op0_t>
 inline VPInstruction_match<Instruction::Freeze, Op0_t>
 m_Freeze(const Op0_t &Op0) {
