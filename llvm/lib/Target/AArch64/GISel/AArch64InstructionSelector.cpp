@@ -906,7 +906,9 @@ static bool selectDebugInstr(MachineInstr &I, MachineRegisterInfo &MRI,
         dyn_cast<const TargetRegisterClass *>(RegClassOrBank);
     if (!RC) {
       const RegisterBank &RB = *cast<const RegisterBank *>(RegClassOrBank);
-      RC = getRegClassForTypeOnBank(Ty, RB);
+      // Debug instructions are selected before the defs of their operands.
+      // Use the widest class so that they do not narrow the class those get.
+      RC = getRegClassForTypeOnBank(Ty, RB, /*GetAllRegSet=*/true);
       if (!RC) {
         LLVM_DEBUG(
             dbgs() << "Warning: DBG_VALUE operand has unexpected size/bank\n");
@@ -2598,7 +2600,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
           return false;
         }
         const RegisterBank &RB = *cast<const RegisterBank *>(RegClassOrBank);
-        DefRC = getRegClassForTypeOnBank(DefTy, RB);
+        // Like COPY, use the widest class, which matches what a debug use
+        // may already have set.
+        DefRC = getRegClassForTypeOnBank(DefTy, RB, /*GetAllRegSet=*/true);
         if (!DefRC) {
           LLVM_DEBUG(dbgs() << "PHI operand has unexpected size/bank\n");
           return false;
