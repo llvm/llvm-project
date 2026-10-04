@@ -1416,49 +1416,72 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   case TargetOpcode::G_FMA:
   case TargetOpcode::G_STRICT_FMA:
   case TargetOpcode::G_FMAD: {
-    if ((InterestedClasses & fcNegative) == fcNone)
-      break;
-
     Register A = MI.getOperand(1).getReg();
     Register B = MI.getOperand(2).getReg();
     Register C = MI.getOperand(3).getReg();
 
+    // Match (-x) * x or x * (-x).
+    Register NegSrc;
+
+    if (mi_match(A, MRI, m_GFNeg(m_SpecificReg(B))))
+      NegSrc = B;
+    else if (mi_match(B, MRI, m_GFNeg(m_SpecificReg(A))))
+      NegSrc = A;
+
+    // Result is non-positive or NaN.
+    if (NegSrc.isValid() &&
+        (InterestedClasses & (fcPositive | fcNan)) == fcNone) {
+      break;
+    }
+
+    // For x * x, result is positive or NaN.
+    if (!NegSrc.isValid() && (InterestedClasses & fcNegative) == fcNone) {
+      break;
+    }
+
     DenormalMode Mode =
         MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
 
-    if (A == B && isGuaranteedNotToBeUndef(A, MRI, Depth + 1)) {
-      // x * x + y
+    if ((A == B && isGuaranteedNotToBeUndef(A, MRI, Depth + 1)) ||
+        (NegSrc.isValid() &&
+         isGuaranteedNotToBeUndef(NegSrc, MRI, Depth + 1))) {
+      Register Src = NegSrc.isValid() ? NegSrc : A;
       KnownFPClass KnownSrc, KnownAddend;
+
       computeKnownFPClass(C, DemandedElts, InterestedClasses, KnownAddend,
                           Depth + 1);
-      computeKnownFPClass(A, DemandedElts, InterestedClasses, KnownSrc,
+      computeKnownFPClass(Src, DemandedElts, InterestedClasses, KnownSrc,
                           Depth + 1);
+
       if (KnownNotFromFlags) {
         KnownSrc.knownNot(KnownNotFromFlags);
         KnownAddend.knownNot(KnownNotFromFlags);
       }
-      Known = KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode);
-    } else {
-      KnownFPClass KnownSrc[3];
-      computeKnownFPClass(A, DemandedElts, InterestedClasses, KnownSrc[0],
-                          Depth + 1);
-      if (KnownSrc[0].isUnknown())
-        break;
-      computeKnownFPClass(B, DemandedElts, InterestedClasses, KnownSrc[1],
-                          Depth + 1);
-      if (KnownSrc[1].isUnknown())
-        break;
-      computeKnownFPClass(C, DemandedElts, InterestedClasses, KnownSrc[2],
-                          Depth + 1);
-      if (KnownSrc[2].isUnknown())
-        break;
-      if (KnownNotFromFlags) {
-        KnownSrc[0].knownNot(KnownNotFromFlags);
-        KnownSrc[1].knownNot(KnownNotFromFlags);
-        KnownSrc[2].knownNot(KnownNotFromFlags);
-      }
-      Known = KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode);
+
+      Known = NegSrc.isValid()
+                  ? KnownFPClass::fma_neg_square(KnownSrc, KnownAddend, Mode)
+                  : KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode);
+      break;
     }
+
+    KnownFPClass KnownSrc[3];
+    computeKnownFPClass(A, DemandedElts, InterestedClasses, KnownSrc[0],
+                        Depth + 1);
+    if (KnownSrc[0].isUnknown())
+      break;
+    computeKnownFPClass(B, DemandedElts, InterestedClasses, KnownSrc[1],
+                        Depth + 1);
+    if (KnownSrc[1].isUnknown())
+      break;
+    computeKnownFPClass(C, DemandedElts, InterestedClasses, KnownSrc[2],
+                        Depth + 1);
+    if (KnownSrc[2].isUnknown())
+      break;
+    if (KnownNotFromFlags) {
+      for (KnownFPClass &K : KnownSrc)
+        K.knownNot(KnownNotFromFlags);
+    }
+    Known = KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode);
     break;
   }
   case TargetOpcode::G_FSQRT:
@@ -1895,6 +1918,21 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownSrc, Depth + 1);
       Known = KnownFPClass::square(KnownSrc, Mode);
     } else {
+      // -X * X and X * -X cases.
+      Register Src;
+      if (mi_match(LHS, MRI, m_GFNeg(m_SpecificReg(RHS)))) {
+        Src = RHS;
+      } else if (mi_match(RHS, MRI, m_GFNeg(m_SpecificReg(LHS)))) {
+        Src = LHS;
+      }
+
+      if (Src.isValid() && isGuaranteedNotToBeUndef(Src, MRI, Depth + 1)) {
+        KnownFPClass KnownSrc;
+        computeKnownFPClass(Src, DemandedElts, fcAllFlags, KnownSrc, Depth + 1);
+        Known = KnownFPClass::neg_square(KnownSrc, Mode);
+        break;
+      }
+
       // If RHS is a scalar constant, use the more precise APFloat overload.
       auto RHSCst = GFConstant::getConstant(RHS, MRI);
       if (RHSCst && RHSCst->getKind() == GFConstant::GFConstantKind::Scalar) {
