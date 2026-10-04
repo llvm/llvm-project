@@ -125,7 +125,7 @@ LIST_EXPF_TESTS(IntegerEval, LIBC_NAMESPACE::math::integer_eval::expf,
                 /*check_exception_and_errno=*/false, /*check_errno=*/false)
 
 static float expf_static_rounding(float x) {
-  return LIBC_NAMESPACE::shared::math::static_rounding::expf(
+  return LIBC_NAMESPACE::math::static_rounding::expf(
       x, LIBC_NAMESPACE::fputil::quick_get_round());
 }
 
