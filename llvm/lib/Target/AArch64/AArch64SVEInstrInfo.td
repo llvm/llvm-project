@@ -1187,6 +1187,10 @@ let Predicates = [HasSVE_or_SME] in {
 
   def EXT_ZZI_CONSTRUCTIVE : UnpredRegImmPseudo<ZPR8, imm0_255>;
 
+  let AddedComplexity = 3 in 
+  def : Pat<(nxv16i8 (AArch64ext nxv16i8:$Zs, nxv16i8:$Zs, (i32 imm0_255:$imm))),
+            (EXT_ZZI_CONSTRUCTIVE ZPR:$Zs, imm0_255:$imm)>;
+  
   defm RBIT_ZPmZ : sve_int_perm_rev_rbit<"rbit", AArch64rbit_mt>;
   defm REVB_ZPmZ : sve_int_perm_rev_revb<"revb", AArch64revb_mt>;
   defm REVH_ZPmZ : sve_int_perm_rev_revh<"revh", AArch64revh_mt>;
