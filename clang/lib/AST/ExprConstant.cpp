@@ -10978,9 +10978,8 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   }
 }
 
-static bool EvaluateArrayNewInitList(EvalInfo &Info, LValue &This,
-                                     APValue &Result, const InitListExpr *ILE,
-                                     QualType AllocType);
+static bool EvaluateArrayNewInit(EvalInfo &Info, LValue &This, APValue &Result,
+                                 const Expr *Init, QualType AllocType);
 static bool EvaluateArrayNewConstructExpr(EvalInfo &Info, LValue &This,
                                           APValue &Result,
                                           const CXXConstructExpr *CCE,
@@ -11050,7 +11049,7 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
   }
 
   const Expr *Init = E->getInitializer();
-  const InitListExpr *ResizedArrayILE = nullptr;
+  const Expr *ResizedArrayInit = nullptr;
   const CXXConstructExpr *ResizedArrayCCE = nullptr;
   bool ValueInit = false;
 
@@ -11119,10 +11118,11 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
         return false;
       }
 
-      // If the sizes differ, we must have an initializer list, and we need
-      // special handling for this case when we initialize.
+      // Array initialization can use either braces or parentheses. If the
+      // sizes differ, evaluate it with the allocated bound rather than the
+      // bound used when checking the initializer.
       if (InitBound != AllocBound)
-        ResizedArrayILE = cast<InitListExpr>(Init);
+        ResizedArrayInit = Init;
     }
 
     AllocType = Info.Ctx.getConstantArrayType(AllocType, ArrayBound, nullptr,
@@ -11220,9 +11220,8 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
     ImplicitValueInitExpr VIE(AllocType);
     if (!EvaluateInPlace(*Val, Info, Result, &VIE))
       return false;
-  } else if (ResizedArrayILE) {
-    if (!EvaluateArrayNewInitList(Info, Result, *Val, ResizedArrayILE,
-                                  AllocType))
+  } else if (ResizedArrayInit) {
+    if (!EvaluateArrayNewInit(Info, Result, *Val, ResizedArrayInit, AllocType))
       return false;
   } else if (ResizedArrayCCE) {
     if (!EvaluateArrayNewConstructExpr(Info, Result, *Val, ResizedArrayCCE,
@@ -15651,14 +15650,17 @@ static bool EvaluateArray(const Expr *E, const LValue &This,
   return ArrayExprEvaluator(Info, This, Result).Visit(E);
 }
 
-static bool EvaluateArrayNewInitList(EvalInfo &Info, LValue &This,
-                                     APValue &Result, const InitListExpr *ILE,
-                                     QualType AllocType) {
-  assert(!ILE->isValueDependent());
-  assert(ILE->isPRValue() && ILE->getType()->isArrayType() &&
+static bool EvaluateArrayNewInit(EvalInfo &Info, LValue &This, APValue &Result,
+                                 const Expr *Init, QualType AllocType) {
+  assert(!Init->isValueDependent());
+  assert(Init->isPRValue() && Init->getType()->isArrayType() &&
          "not an array prvalue");
-  return ArrayExprEvaluator(Info, This, Result)
-      .VisitInitListExpr(ILE, AllocType);
+  ArrayExprEvaluator Evaluator(Info, This, Result);
+  if (const auto *ILE = dyn_cast<InitListExpr>(Init))
+    return Evaluator.VisitInitListExpr(ILE, AllocType);
+  const auto *PLIE = cast<CXXParenListInitExpr>(Init);
+  return Evaluator.VisitCXXParenListOrInitListExpr(
+      PLIE, PLIE->getInitExprs(), PLIE->getArrayFiller(), AllocType);
 }
 
 static bool EvaluateArrayNewConstructExpr(EvalInfo &Info, LValue &This,
