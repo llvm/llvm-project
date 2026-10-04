@@ -672,8 +672,23 @@ void LayoutInfoPropagation::visitShapeCastOp(
   auto resultLayoutAttr =
       dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
 
-  xegpu::DistributeLayoutAttr srcLayoutAttr =
-      xegpu::inferShapeCastSourceLayout(resultLayoutAttr, resShape, srcShape);
+  auto requiredResLayoutAttr = xegpu::setupShapeCastResultLayout(
+      layoutKind, shapeCast.getSourceVectorType(),
+      shapeCast.getResultVectorType(), resultLayoutAttr);
+  // The consumer layout cannot be expressed on the source: no lane_data makes
+  // each lane's data a contiguous run of the collapsed source dim. shape_cast
+  // is not an anchor op, so warn and leave the value un-laid-out instead of
+  // propagating a layout that would move data between lanes.
+  if (!requiredResLayoutAttr) {
+    shapeCast.emitWarning("Failed to infer source layout for shape_cast; the "
+                          "result layout required by its consumers cannot be "
+                          "collapsed onto the source shape.");
+    return;
+  }
+  xegpu::setTemporaryLayout(shapeCast->getResult(0), requiredResLayoutAttr);
+
+  xegpu::DistributeLayoutAttr srcLayoutAttr = xegpu::inferShapeCastSourceLayout(
+      requiredResLayoutAttr, resShape, srcShape);
   // shape_cast is not an anchor op: another consumer of the source value may
   // still supply a valid layout, so warn instead of stopping the propagation.
   if (!srcLayoutAttr) {
