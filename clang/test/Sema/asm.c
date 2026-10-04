@@ -404,3 +404,16 @@ void test20(char x) {
   asm ("fabs" : "=t" (d): "0" (v)); // expected-error {{unsupported inline asm: input with type 'int2' (vector of 2 'int' values) matching output with type 'double'}}
   asm ("fabs" : "=t" (v): "0" (d)); // expected-error {{unsupported inline asm: input with type 'double' matching output with type 'int2' (vector of 2 'int' values)}}
 }
+
+// GH204773
+void test21(int x) {
+  asm ("{cmpl{l}\t$d,%c0;je\t1f;addw{l}\t$d,%c0;jmp\t2f;1:decl\t%c0;2:}" : : "g"(x)); // expected-error {{nested assembler dialect alternatives in inline assembly string}}
+  asm ("{addl %0, %0|add %0, %0}" : : "r"(x)); // ok
+  asm ("{a|b}{c|d}" : : "r"(x)); // ok
+  asm ("{a|b" : : "r"(x)); // expected-error {{unterminated assembler dialect alternative in inline assembly string}}
+  asm ("{" : : "r"(x)); // expected-error {{unterminated assembler dialect alternative in inline assembly string}}
+  asm ("a}b|c" : : "r"(x)); // ok
+  asm ("%{%{%}%}" : : "r"(x)); // ok, escaped braces
+  asm ("{%{a%}|b}" : : "r"(x)); // ok
+  asm ("{{"); // ok, simple asm
+}
