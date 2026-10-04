@@ -1562,6 +1562,16 @@ public:
   LLVM_ABI static OperandValueInfo commonOperandInfo(const Value *X,
                                                      const Value *Y);
 
+  /// Represents a hint about the users of the context instruction passed to
+  /// getArithmeticInstrCost. A vectorizer prices the vector form of an
+  /// instruction with that instruction as the context, the hint says whether
+  /// the users of the context use the priced operation as well.
+  enum class ContextUsersHint : uint8_t {
+    Kept,      ///< The users of the context use the priced operation.
+    Extracted, ///< The lanes of the priced operation are extracted or
+               ///< shuffled before they reach the users of the context.
+  };
+
   /// This is an approximation of reciprocal throughput of a math/logic op.
   /// A higher cost indicates less expected throughput.
   /// From Agner Fog's guides, reciprocal throughput is "the average number of
@@ -1580,12 +1590,14 @@ public:
   /// provide even more information.
   /// \p TLibInfo is used to search for platform specific vector library
   /// functions for instructions that might be converted to calls (e.g. frem).
+  /// \p UsersHint says whether the users of \p CtxI use the priced operation.
   LLVM_ABI InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {}, const Instruction *CtxI = nullptr,
-      const TargetLibraryInfo *TLibInfo = nullptr) const;
+      const TargetLibraryInfo *TLibInfo = nullptr,
+      ContextUsersHint UsersHint = ContextUsersHint::Kept) const;
 
   /// Returns the cost estimation for alternating opcode pattern that can be
   /// lowered to a single instruction on the target. In X86 this is for the
