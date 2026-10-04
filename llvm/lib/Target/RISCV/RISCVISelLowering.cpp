@@ -18195,8 +18195,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
                Load->getExtensionType() == ISD::SEXTLOAD &&
                Load->getMemoryVT() == MVT::i32 && Op.getOperand(0).hasOneUse();
       };
-      if (IntNo == Intrinsic::riscv_clmulh &&
-          (Subtarget.hasStdExtZbc() || Subtarget.hasStdExtZbkc()) &&
+      if (IntNo == Intrinsic::riscv_clmulh && Subtarget.hasStdExtZbkc() &&
           IsSingleUseLoad(N->getOperand(1)) &&
           IsSingleUseLoad(N->getOperand(2))) {
         SDValue NewOp0 =
