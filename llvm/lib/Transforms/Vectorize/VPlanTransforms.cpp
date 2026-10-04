@@ -3789,6 +3789,24 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
   return nullptr;
 }
 
+using ExtendKind = TTI::PartialReductionExtendKind;
+
+static ExtendKind getPartialReductionExtendKind(VPWidenCastRecipe *Cast) {
+  return TTI::getPartialReductionExtendKind(Cast->getOpcode());
+}
+
+/// Returns true if the narrow \p Mul in ext(mul(ext(A), ext(B))) or
+/// ext(mul(ext(A), C)) cannot wrap.
+static bool canFoldOuterExtendIntoMul(ExtendKind ExtKind, VPWidenRecipe *Mul,
+                                      Type *LHSSrcTy, Type *RHSSrcTy) {
+  if (Mul->getScalarType()->getScalarSizeInBits() >=
+      LHSSrcTy->getScalarSizeInBits() + RHSSrcTy->getScalarSizeInBits())
+    return true;
+  if (ExtKind == ExtendKind::PR_ZeroExtend)
+    return Mul->hasNoUnsignedWrap() || Mul->hasNoSignedWrap();
+  return ExtKind == ExtendKind::PR_SignExtend && Mul->hasNoSignedWrap();
+}
+
 /// This function tries convert extended in-loop reductions to
 /// VPExpressionRecipe and clamp the \p Range if it is beneficial
 /// and valid. The created VPExpressionRecipe must be decomposed to its
@@ -4953,7 +4971,6 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
 
 namespace {
 
-using ExtendKind = TTI::PartialReductionExtendKind;
 struct ReductionExtend {
   Type *SrcType = nullptr;
   ExtendKind Kind = ExtendKind::PR_None;
@@ -5068,10 +5085,12 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *Op) {
     auto *Mul = cast<VPWidenRecipe>(Ext->getOperand(0));
     auto *MulLHS = cast<VPWidenCastRecipe>(Mul->getOperand(0));
     auto *MulRHS = cast<VPWidenCastRecipe>(Mul->getOperand(1));
-    if (!Mul->hasOneUse() ||
-        (Ext->getOpcode() != MulLHS->getOpcode() && MulLHS != MulRHS) ||
-        MulLHS->getOpcode() != MulRHS->getOpcode())
-      return Op;
+    assert(Mul->hasOneUse() && Ext->getOpcode() == MulLHS->getOpcode() &&
+           MulLHS->getOpcode() == MulRHS->getOpcode() &&
+           canFoldOuterExtendIntoMul(getPartialReductionExtendKind(Ext), Mul,
+                                     MulLHS->getOperand(0)->getScalarType(),
+                                     MulRHS->getOperand(0)->getScalarType()) &&
+           "Expected the outer extend to be foldable");
     VPBuilder Builder(Mul);
     auto *NewLHS = Builder.createWidenCast(
         MulLHS->getOpcode(), MulLHS->getOperand(0), Ext->getScalarType());
@@ -5290,10 +5309,6 @@ getPartialReductionLinkCost(VPCostContext &CostCtx,
       CostCtx.CostKind, Flags);
 }
 
-static ExtendKind getPartialReductionExtendKind(VPWidenCastRecipe *Cast) {
-  return TTI::getPartialReductionExtendKind(Cast->getOpcode());
-}
-
 /// Checks if \p Op (which is an operand of \p UpdateR) is an extended reduction
 /// operand. This is an operand where the source of the value (e.g. a load) has
 /// been extended (sext, zext, or fpext) before it is used in the reduction.
@@ -5403,6 +5418,13 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
     RHSInputType = RHSCast->getOperand(0)->getScalarType();
     RHSExtendKind = getPartialReductionExtendKind(RHSCast);
   }
+
+  // The outer extend can only be treated as extending the operands of the mul
+  // if the narrow mul cannot wrap.
+  if (OuterExtKind && MulOp->getOpcode() == Instruction::Mul &&
+      !canFoldOuterExtendIntoMul(LHSExtendKind, MulOp, LHSInputType,
+                                 RHSInputType))
+    return std::nullopt;
 
   return ExtendedReductionOperand{
       MulOp, {LHSInputType, LHSExtendKind}, {RHSInputType, RHSExtendKind}};
