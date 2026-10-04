@@ -9,9 +9,9 @@
     Performs a 2-stage build with a ThinLTO final stage and optional PGO.
     Can bootstrap a fresh VM by installing all prerequisites.
 
-    By default, builds x64 using the local source tree and auto-detected
-    Python. Use -DownloadSource to download a tagged release tarball
-    instead.
+    Builds for the architecture reported by PROCESSOR_ARCHITECTURE, using the
+    local source tree and auto-detected Python. Use -DownloadSource to download
+    a tagged release tarball instead.
 
     Build steps (in order):
       1. libxml2   - Build libxml2, zlib, and zstd (inside stage 1 directory)
@@ -24,12 +24,6 @@
 .PARAMETER Version
     LLVM version string (e.g. "19.1.0"). If omitted, auto-detected from
     the source tree.
-
-.PARAMETER x64
-    Build for x64 (64-bit). This is the default if no architecture is specified.
-
-.PARAMETER arm64
-    Build for ARM64 (AArch64).
 
 .PARAMETER DownloadSource
     Download and extract the tagged release source tarball from GitHub
@@ -46,7 +40,7 @@
 .PARAMETER InstallPrerequisites
     Install build prerequisites (NetFx3, Visual Studio, official LLVM release,
     CMake, Python and its psutil module, etc.) before building.
-    When used with -arm64, also installs ARM64 Python for LLDB.
+    On ARM64, also installs ARM64 Python for LLDB.
     Requests administrator elevation once for the entire prerequisite
     installation when the current shell is not elevated.
 
@@ -71,30 +65,26 @@
 
 .EXAMPLE
     .\build_llvm_release.ps1
-    Full x64 build using the local source tree.
-
-.EXAMPLE
-    .\build_llvm_release.ps1 -arm64
-    Build for ARM64.
+    Build for the current process architecture using the local source tree.
 
 .EXAMPLE
     .\build_llvm_release.ps1 -Version 19.1.0 -DownloadSource
-    Download version 19.1.0 sources and build x64.
+    Download version 19.1.0 sources and build for the current process architecture.
 
 .EXAMPLE
-    .\build_llvm_release.ps1 -InstallPrerequisites -x64
-    Install prerequisites, then do a full x64 build.
+    .\build_llvm_release.ps1 -InstallPrerequisites
+    Install prerequisites, then build for the current process architecture.
 
 .EXAMPLE
     .\build_llvm_release.ps1 -Unattended -InstallPrerequisites
     From an elevated shell, install prerequisites and build without prompts.
 
 .EXAMPLE
-    .\build_llvm_release.ps1 -x64 -StartAt stage2
+    .\build_llvm_release.ps1 -StartAt stage2
     Resume from stage 2 (reuses the stage 1 bootstrap compiler and PGO profile).
 
 .EXAMPLE
-    .\build_llvm_release.ps1 -x64 -StartAt package
+    .\build_llvm_release.ps1 -StartAt package
     Resume at WiX MSI packaging, then regenerate the portable archive.
 
 .EXAMPLE
@@ -102,11 +92,13 @@
     Display the list of available build steps and exit.
 
 .NOTES
-    Python is auto-detected from PATH for x64 builds. For ARM64 builds,
+    PROCESSOR_ARCHITECTURE must be AMD64 or ARM64. Python is auto-detected from
+    PATH for AMD64 builds. For ARM64 builds,
     the script probes standard install locations for ARM64 Python. Use
     -InstallPrerequisites to install it automatically.
 
     Environment variables:
+      PROCESSOR_ARCHITECTURE - Selects the build architecture (AMD64 or ARM64).
       LLVM_NINJA_OVERRIDE  - Override the ninja binary and optionally provide
                              extra flags. The first token is the executable,
                              remaining tokens are prepended to every ninja
@@ -116,8 +108,6 @@
 
 param(
     [string]$Version,
-    [switch]$x64,
-    [switch]$arm64,
     [switch]$DownloadSource,
     [switch]$ForceMSVC,
     [switch]$FastBuild,
@@ -206,6 +196,11 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $script:ReleaseScriptPath = $PSCommandPath
 $script:MinimumCMakeVersion = [version]'3.31.0'
+$script:BuildArch = switch ($env:PROCESSOR_ARCHITECTURE) {
+    'AMD64' { 'amd64' }
+    'ARM64' { 'arm64' }
+    default { throw "Unsupported PROCESSOR_ARCHITECTURE: '$env:PROCESSOR_ARCHITECTURE'. Expected AMD64 or ARM64." }
+}
 
 # Save the console mode so we can restore it at exit. Child processes
 # (cmake, ninja, link.exe, etc.) sometimes disable virtual terminal
@@ -237,11 +232,6 @@ public static class ConsoleMode {
     $script:SavedConsoleMode = [ConsoleMode]::Get()
 } catch {
     # Non-fatal; we just won't be able to restore the console mode.
-}
-
-# Default to x64 if no architecture specified
-if (-not $x64 -and -not $arm64) {
-    $x64 = $true
 }
 
 #===============================================================================
@@ -741,7 +731,7 @@ function Get-MissingPrerequisites {
             $missing += 'Python psutil'
         }
     }
-    if ($arm64) {
+    if ($script:BuildArch -eq 'arm64') {
         $arm64Python = Get-PythonExecutableForArch -Arch 'arm64'
         if ($arm64Python -and $arm64Python -ne $hostPython) {
             if (Test-PythonPsutil -PythonExecutable $arm64Python) {
@@ -859,7 +849,6 @@ function Update-PathAfterPrerequisites {
 function Invoke-ElevatedPrerequisiteInstallation {
     $scriptPath = $script:ReleaseScriptPath.Replace("'", "''")
     $invocation = "& '$scriptPath' -InstallPrerequisites -PrerequisitesOnly"
-    if ($arm64) { $invocation += ' -arm64' }
     if ($ForceMSVC) { $invocation += ' -ForceMSVC' }
     # Keep the elevated window open so the user can review the result.
     $pauseCommand = if (-not $Unattended) {
@@ -1067,10 +1056,10 @@ function Install-Prerequisites {
         }
     }
 
-    # Install per-architecture Python for cross-arch builds (LLDB needs matching Python).
-    # The main Python install above covers the host architecture (typically x64).
+    # Install ARM64 Python when building ARM64 so LLDB uses a matching Python.
+    # The main Python install above covers the runner's default architecture.
     $archPython = @()
-    if ($arm64) { $archPython += @{ Arch = 'arm64'; Suffix = '-arm64' } }
+    if ($script:BuildArch -eq 'arm64') { $archPython += @{ Arch = 'arm64'; Suffix = '-arm64' } }
     foreach ($ap in $archPython) {
         $basePath = "$env:LOCALAPPDATA\Programs\Python"
         $existing = if (Test-Path $basePath) {
@@ -1284,7 +1273,7 @@ function Install-PythonPsutilForRequestedArchitectures {
         throw 'Python was installed, but its executable could not be found to install psutil.'
     }
     $pythonExecutables = @($hostPython)
-    if ($arm64) {
+    if ($script:BuildArch -eq 'arm64') {
         $arm64Python = Get-PythonExecutableForArch -Arch 'arm64'
         if ($arm64Python) { $pythonExecutables += $arm64Python }
     }
@@ -1372,7 +1361,7 @@ function Find-Python {
         }
         $pythonHome = Split-Path -Parent $pythonExecutable
     } else {
-        # Cross-arch build: probe standard per-arch install locations.
+        # ARM64 build: probe the standard ARM64 Python install location.
         # Python installs to %LOCALAPPDATA%\Programs\Python\Python3XX-arm64
         $suffix = '-arm64'
         $basePath = "$env:LOCALAPPDATA\Programs\Python"
@@ -1392,7 +1381,7 @@ function Find-Python {
                     Write-Warning ("No per-arch Python found for $Arch (looked in $basePath\Python3*$suffix).`n" +
                         "  Falling back to PATH Python: $pythonHome`n" +
                         "  LLDB may not work correctly for the $Arch target.`n" +
-                        "  Run with -InstallPrerequisites -$Arch to install the correct Python.")
+                        "  Run with -InstallPrerequisites to install architecture-matched Python.")
                 }
             } else {
                 throw ("Cannot find Python for $Arch. No per-arch install in $basePath and no python in PATH.`n" +
@@ -2253,7 +2242,7 @@ Write-Step "Configuration"
 Write-Host "  Revision:        $revision"
 Write-Host "  Package version: $packageVersion"
 Write-Host "  Build dir:       $buildDir"
-Write-Host "  Architectures:   $((@('x64','arm64') | Where-Object { (Get-Variable $_ -ValueOnly) }) -join ', ')"
+Write-Host "  Architecture:    $script:BuildArch"
 
 if ($StartAt) {
     # Resuming from a specific step: validate that the build directory exists.
@@ -2420,8 +2409,7 @@ try {
         UseFastBuild        = $FastBuild
     }
 
-    if ($x64)   { Build-Architecture -Arch 'amd64'  @buildParams }
-    if ($arm64) { Build-Architecture -Arch 'arm64'  @buildParams }
+    Build-Architecture -Arch $script:BuildArch @buildParams
 
     Write-Step "Build complete!"
     Write-Host "Packages are in: $buildDir" -ForegroundColor Green
