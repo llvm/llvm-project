@@ -581,6 +581,18 @@ getRequiredHandleType(const CallExpr *E, unsigned ArgNo) {
   return getHandleAttributedType(E->getArg(ArgNo)->getType());
 }
 
+static const FieldDecl *getResourceHandleField(QualType ResourceTy) {
+  const CXXRecordDecl *ResourceDecl = ResourceTy->getAsCXXRecordDecl();
+  assert(ResourceDecl && "resource must be a record type");
+
+  IdentifierInfo &II = ResourceDecl->getASTContext().Idents.get("__handle");
+  for (const Decl *D : ResourceDecl->lookup(&II))
+    if (const auto *Field = dyn_cast<FieldDecl>(D))
+      return Field;
+
+  llvm_unreachable("resource handle field not found");
+}
+
 static llvm::Type *getOffsetType(CodeGenModule &CGM,
                                  const HLSLAttributedResourceType *RT) {
   const auto &Attrs = RT->getAttrs();
@@ -1766,6 +1778,25 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Intrinsic::ID ID =
         CGM.getHLSLRuntime().getGroupMemoryBarrierWithGroupSyncIntrinsic();
     return EmitIntrinsicCall(ID);
+  }
+  case Builtin::BI__builtin_hlsl_barrier: {
+    Value *SemanticFlags = EmitScalarExpr(E->getArg(1));
+    if (E->getArg(0)->getType()->isUnsignedIntegerType()) {
+      Value *MemoryFlags = EmitScalarExpr(E->getArg(0));
+      Intrinsic::ID ID = CGM.getHLSLRuntime().getBarrierByMemoryTypeIntrinsic();
+      return EmitIntrinsicCall(ID, {},
+                               ArrayRef<Value *>{MemoryFlags, SemanticFlags});
+    }
+
+    const FieldDecl *HandleField =
+        getResourceHandleField(E->getArg(0)->getType());
+    LValue Resource = EmitLValue(E->getArg(0));
+    LValue Handle = EmitLValueForField(Resource, HandleField);
+    Value *HandleValue =
+        EmitLoadOfLValue(Handle, E->getArg(0)->getExprLoc()).getScalarVal();
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getBarrierByMemoryHandleIntrinsic();
+    return EmitIntrinsicCall(ID, ArrayRef<llvm::Type *>{HandleValue->getType()},
+                             ArrayRef<Value *>{HandleValue, SemanticFlags});
   }
   case Builtin::BI__builtin_hlsl_elementwise_ddx_coarse: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));

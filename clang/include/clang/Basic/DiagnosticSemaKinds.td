@@ -13860,6 +13860,14 @@ def err_invalid_hlsl_resource_type: Error<
   "invalid __hlsl_resource_t type attributes">;
 
 def err_hlsl_spirv_only: Error<"%0 is only available for the SPIR-V target">;
+def err_hlsl_dxil_only: Error<"%0 is only available for the DirectX target">;
+def err_hlsl_invalid_barrier_memory_flags: Error<
+  "invalid MemoryTypeFlags for Barrier operation; expected 0, ALL_MEMORY, or "
+  "some combination of UAV_MEMORY, GROUP_SHARED_MEMORY, NODE_INPUT_MEMORY, "
+  "NODE_OUTPUT_MEMORY flags">;
+def err_hlsl_invalid_barrier_semantic_flags: Error<
+  "invalid SemanticFlags for Barrier operation; expected 0 or some "
+  "combination of GROUP_SYNC, GROUP_SCOPE, DEVICE_SCOPE flags">;
 def err_hlsl_vk_literal_must_contain_constant: Error<"the argument to vk::Literal must be a vk::integral_constant">;
 
 def err_hlsl_invalid_rootsig_value : Error<"value must be in the range [%0, %1]">;

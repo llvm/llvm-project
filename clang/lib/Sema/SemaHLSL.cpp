@@ -4237,6 +4237,68 @@ static bool CheckInterlockedBuiltin(Sema &S, CallExpr *TheCall,
 // returning an ExprError
 bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_barrier: {
+    if (SemaRef.checkArgCount(TheCall, 2))
+      return true;
+
+    if (SemaRef.Context.getTargetInfo().getTriple().getArch() !=
+        llvm::Triple::dxil) {
+      SemaRef.Diag(TheCall->getExprLoc(), diag::err_hlsl_dxil_only)
+          << "Barrier";
+      return true;
+    }
+
+    Expr *MemoryArg = TheCall->getArg(0);
+    if (MemoryArg->getType()->isUnsignedIntegerType()) {
+      std::optional<llvm::APSInt> MemoryFlags =
+          MemoryArg->getIntegerConstantExpr(SemaRef.Context);
+      if (!MemoryFlags) {
+        SemaRef.Diag(MemoryArg->getExprLoc(),
+                     diag::err_constant_integer_arg_type)
+            << "Barrier";
+        return true;
+      }
+      if ((MemoryFlags->getZExtValue() & ~0xfULL) != 0) {
+        SemaRef.Diag(MemoryArg->getExprLoc(),
+                     diag::err_hlsl_invalid_barrier_memory_flags);
+        return true;
+      }
+    } else {
+      const HLSLAttributedResourceType *ResTy =
+          HLSLAttributedResourceType::findHandleTypeOnResource(
+              MemoryArg->getType().getTypePtr());
+      if (!ResTy) {
+        SemaRef.Diag(MemoryArg->getExprLoc(),
+                     diag::err_typecheck_expect_hlsl_resource)
+            << MemoryArg->getType();
+        return true;
+      }
+      if (ResTy->getAttrs().ResourceClass != ResourceClass::UAV) {
+        SemaRef.Diag(MemoryArg->getExprLoc(),
+                     diag::err_invalid_hlsl_resource_type)
+            << MemoryArg->getType();
+        return true;
+      }
+    }
+
+    Expr *SemanticArg = TheCall->getArg(1);
+    std::optional<llvm::APSInt> SemanticFlags =
+        SemanticArg->getIntegerConstantExpr(SemaRef.Context);
+    if (!SemanticFlags) {
+      SemaRef.Diag(SemanticArg->getExprLoc(),
+                   diag::err_constant_integer_arg_type)
+          << "Barrier";
+      return true;
+    }
+    if ((SemanticFlags->getZExtValue() & ~0x7ULL) != 0) {
+      SemaRef.Diag(SemanticArg->getExprLoc(),
+                   diag::err_hlsl_invalid_barrier_semantic_flags);
+      return true;
+    }
+
+    TheCall->setType(SemaRef.Context.VoidTy);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_adduint64: {
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;
