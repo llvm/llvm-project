@@ -162,7 +162,6 @@ headers_not_available = list(map(Header, [
     "hazard_pointer",
     "inplace_vector",
     "linalg",
-    "rcu",
     "spanstream",
     "stacktrace",
     "stdfloat",

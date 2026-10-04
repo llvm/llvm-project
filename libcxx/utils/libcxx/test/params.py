@@ -370,6 +370,7 @@ DEFAULT_PARAMETERS = [
             AddFeature("libcpp-has-no-experimental-tzdb"),
             AddFeature("libcpp-has-no-experimental-syncstream"),
             AddFeature("libcpp-has-no-experimental-hardening-observe-semantic"),
+            AddFeature("libcpp-has-no-experimental-rcu"),
         ],
     ),
     # TODO: This can be improved once we use a version of GoogleBenchmark that supports the dry-run mode.
