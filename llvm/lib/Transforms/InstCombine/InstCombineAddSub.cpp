@@ -3168,17 +3168,27 @@ static Instruction *foldFNegIntoConstant(Instruction &I, const DataLayout &DL) {
 
 Instruction *InstCombinerImpl::hoistFNegAboveFMulFDiv(Value *FNegOp,
                                                       Instruction &FMFSource) {
+  // ninf on the fneg does not apply to the operands of the fmul/fdiv, e.g.
+  // -(inf * nan) is not inf, so only keep it if the fmul/fdiv has it too.
+  auto GetFMF = [&]() {
+    FastMathFlags FMF = FMFSource.getFastMathFlags();
+    FMF.setNoInfs(FMF.noInfs() && cast<Instruction>(FNegOp)->hasNoInfs());
+    return FMF;
+  };
+
   Value *X, *Y;
   if (match(FNegOp, m_FMul(m_Value(X), m_Value(Y)))) {
     // Push into RHS which is more likely to simplify (const or another fneg).
     // FIXME: It would be better to invert the transform.
-    return cast<Instruction>(Builder.CreateFMulFMF(
-        X, Builder.CreateFNegFMF(Y, &FMFSource), &FMFSource));
+    FastMathFlags FMF = GetFMF();
+    return cast<Instruction>(
+        Builder.CreateFMulFMF(X, Builder.CreateFNegFMF(Y, FMF), FMF));
   }
 
   if (match(FNegOp, m_FDiv(m_Value(X), m_Value(Y)))) {
-    auto *FDiv = cast<Instruction>(Builder.CreateFDivFMF(
-        Builder.CreateFNegFMF(X, &FMFSource), Y, &FMFSource));
+    FastMathFlags FMF = GetFMF();
+    auto *FDiv = cast<Instruction>(
+        Builder.CreateFDivFMF(Builder.CreateFNegFMF(X, FMF), Y, FMF));
     FDiv->copyMetadata(*cast<Instruction>(FNegOp));
     return FDiv;
   }
