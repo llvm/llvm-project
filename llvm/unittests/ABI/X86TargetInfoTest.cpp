@@ -22,7 +22,6 @@ namespace {
 using namespace llvm;
 
 using ABIType = llvm::abi::Type;
-using llvm::abi::ABICompatInfo;
 using llvm::abi::ArgInfo;
 using llvm::abi::createX86_64TargetInfo;
 using llvm::abi::FieldInfo;
@@ -31,6 +30,7 @@ using llvm::abi::RecordFlags;
 using llvm::abi::StructPacking;
 using llvm::abi::TargetInfo;
 using llvm::abi::TypeBuilder;
+using llvm::abi::X86ABICompatInfo;
 using llvm::abi::X86AVXABILevel;
 
 class X86TargetInfoTest : public ::testing::Test {
@@ -64,9 +64,9 @@ protected:
             RecordFlags::CanPassInRegisters)) {}
 
   std::unique_ptr<TargetInfo> target() const {
-    return createX86_64TargetInfo(const_cast<TypeBuilder &>(TB),
-                                  X86AVXABILevel::None,
-                                  /*Has64BitPointers=*/true, ABICompatInfo());
+    return createX86_64TargetInfo(
+        const_cast<TypeBuilder &>(TB), X86AVXABILevel::None,
+        /*Has64BitPointers=*/true, X86ABICompatInfo());
   }
 
   const ABIType *unionOf(llvm::ArrayRef<FieldInfo> Fields, uint64_t SizeInBits,
@@ -151,6 +151,7 @@ TEST_F(X86TargetInfoTest, AtomicRecordIsIndirect) {
   ASSERT_TRUE(Info.isIndirect());
   EXPECT_TRUE(Info.getIndirectByVal());
   EXPECT_EQ(Info.getIndirectAlign(), llvm::Align(8));
+  EXPECT_EQ(Info.getIndirectAddrSpace(), 0u);
 }
 
 // Atomic fields classify Memory rather than inheriting the underlying float's
@@ -169,6 +170,7 @@ TEST_F(X86TargetInfoTest, RecordOfAtomicFloatsIsIndirect) {
   ASSERT_TRUE(Info.isIndirect());
   EXPECT_TRUE(Info.getIndirectByVal());
   EXPECT_EQ(Info.getIndirectAlign(), llvm::Align(8));
+  EXPECT_EQ(Info.getIndirectAddrSpace(), 0u);
 }
 
 // Without the atomic wrappers, the same record is passed in an SSE register.

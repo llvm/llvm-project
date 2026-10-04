@@ -6,6 +6,11 @@
 // RUN: fir-opt --split-input-file --cuf-transform-device-func="check-io-output-descriptor=true" \
 // RUN:   --verify-diagnostics %s
 
+// The check must also hold when cuf-duplicate-device-func has run first, as in
+// the driver pipeline: runtime declarations are not given device copies.
+// RUN: fir-opt --split-input-file --cuf-duplicate-device-func \
+// RUN:   --cuf-transform-device-func="check-io-output-descriptor=true" --verify-diagnostics %s
+
 func.func private @_FortranAioOutputDescriptor(!fir.ref<i8>, !fir.box<none>) -> i1
 
 func.func @_QPsub_aio_device(%arg0: !fir.ref<i8>, %arg1: !fir.box<none>) attributes {cuf.proc_attr = #cuf.cuda_proc<device>} {

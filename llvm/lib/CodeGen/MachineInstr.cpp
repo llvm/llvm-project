@@ -1131,6 +1131,20 @@ int MachineInstr::findRegisterUseOperandIdx(Register Reg,
   return -1;
 }
 
+bool MachineInstr::hasTiedAndOtherReadOf(Register Reg, unsigned SubReg) const {
+  bool Tied = false;
+  unsigned Reads = 0;
+  for (const MachineOperand &MO : all_uses()) {
+    if (MO.getReg() != Reg || MO.getSubReg() != SubReg)
+      continue;
+    ++Reads;
+    // A tie its def already satisfies is not rewritten.
+    Tied |= MO.isTied() &&
+            getOperand(findTiedOperandIdx(getOperandNo(&MO))).getReg() != Reg;
+  }
+  return Tied && Reads > 1;
+}
+
 /// readsWritesVirtualRegister - Return a pair of bools (reads, writes)
 /// indicating if this instruction reads or writes Reg. This also considers
 /// partial defines.

@@ -40,20 +40,20 @@ cl::OptionCategory IR2VecCategory("IR2Vec Options");
 
 // FIXME: Use a default vocab when not specified
 cl::opt<std::string>
-    VocabFile("ir2vec-vocab-path", cl::Optional,
+    VocabFile("ir2vec-vocab-path",
               cl::desc("Path to the vocabulary file for IR2Vec"), cl::init(""),
               cl::cat(IR2VecCategory));
-cl::opt<float> OpcWeight("ir2vec-opc-weight", cl::Optional, cl::init(1.0),
+cl::opt<float> OpcWeight("ir2vec-opc-weight", cl::init(1.0),
                          cl::desc("Weight for opcode embeddings"),
                          cl::cat(IR2VecCategory));
-cl::opt<float> TypeWeight("ir2vec-type-weight", cl::Optional, cl::init(0.5),
+cl::opt<float> TypeWeight("ir2vec-type-weight", cl::init(0.5),
                           cl::desc("Weight for type embeddings"),
                           cl::cat(IR2VecCategory));
-cl::opt<float> ArgWeight("ir2vec-arg-weight", cl::Optional, cl::init(0.2),
+cl::opt<float> ArgWeight("ir2vec-arg-weight", cl::init(0.2),
                          cl::desc("Weight for argument embeddings"),
                          cl::cat(IR2VecCategory));
 cl::opt<IR2VecKind> IR2VecEmbeddingKind(
-    "ir2vec-kind", cl::Optional,
+    "ir2vec-kind",
     cl::values(clEnumValN(IR2VecKind::Symbolic, "symbolic",
                           "Generate symbolic embeddings"),
                clEnumValN(IR2VecKind::FlowAware, "flow-aware",

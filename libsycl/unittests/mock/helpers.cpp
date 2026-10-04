@@ -172,9 +172,8 @@ void mock::MockLiboffload::initDefault() {
         EXPECT_NE(Devices, nullptr);
         EXPECT_NE(Context, nullptr);
 
-        for (size_t I = 0; I < NumDevices; ++I) {
+        for (size_t I = 0; I < NumDevices; ++I)
           EXPECT_NE(Devices[I], nullptr);
-        }
 
         // Preserve the first device in payload for tests that may need to
         // inspect what device set the context was created from.
@@ -259,9 +258,8 @@ void mock::MockLiboffload::initDefault() {
                         size_t NumEvents) -> ol_result_t {
         EXPECT_NE(Queue, nullptr);
         EXPECT_NE(Events, nullptr);
-        for (size_t I = 0; I < NumEvents; ++I) {
+        for (size_t I = 0; I < NumEvents; ++I)
           EXPECT_NE(Events[I], nullptr);
-        }
         return OL_SUCCESS;
       });
 
@@ -290,9 +288,8 @@ void mock::MockLiboffload::initDefault() {
         std::ignore = Properties;
         EXPECT_TRUE(NumArgs == 0 || ArgPtrs != nullptr);
         EXPECT_EQ(!ArgPtrs, !ArgSizes);
-        for (size_t I = 0; I < NumArgs; ++I) {
+        for (size_t I = 0; I < NumArgs; ++I)
           EXPECT_TRUE(ArgSizes[I] == 0 || ArgPtrs[I] != nullptr);
-        }
         return OL_SUCCESS;
       });
 
@@ -314,6 +311,20 @@ void mock::MockLiboffload::initDefault() {
         EXPECT_NE(SrcDevice, nullptr);
         return OL_SUCCESS;
       });
+
+  ON_CALL(*this, olMemFill)
+      .WillByDefault([](ol_queue_handle_t Queue, void *Ptr, size_t PatternSize,
+                        const void *PatternPtr,
+                        size_t FillSize) -> ol_result_t {
+        EXPECT_NE(Queue, nullptr);
+        EXPECT_NE(Ptr, nullptr);
+        EXPECT_GT(PatternSize, 0);
+        EXPECT_NE(PatternPtr, nullptr);
+        EXPECT_GT(FillSize, 0);
+        EXPECT_EQ(FillSize % PatternSize, 0);
+        return OL_SUCCESS;
+      });
+
   ON_CALL(*this, olMemPrefetch)
       .WillByDefault([](ol_queue_handle_t Queue, size_t Count,
                         const void **Mems, const size_t *Sizes,
@@ -327,6 +338,7 @@ void mock::MockLiboffload::initDefault() {
         EXPECT_EQ(Flags, OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE);
         return OL_SUCCESS;
       });
+
   ON_CALL(*this, olGetMemInfo)
       .WillByDefault([this](ol_context_handle_t Context, const void *Ptr,
                             ol_mem_info_t PropName, size_t PropSize,
@@ -381,25 +393,24 @@ void mock::MockLiboffload::initDefault() {
           });
 
   ON_CALL(*this, olMemAllocAligned)
-      .WillByDefault([this](ol_context_handle_t Context,
-                            ol_device_handle_t Device,
-                            ol_alloc_type_t AllocType, size_t Size,
-                            size_t Alignment,
-                            void **AllocationOut) -> ol_result_t {
-        EXPECT_NE(Context, nullptr);
-        EXPECT_NE(Device, nullptr);
-        EXPECT_TRUE(AllocType == OL_ALLOC_TYPE_DEVICE ||
-                    AllocType == OL_ALLOC_TYPE_MANAGED);
-        EXPECT_GT(Size, 0);
-        EXPECT_GT(Alignment, 0);
-        if ((Alignment & (Alignment - 1)) != 0) {
-          return makeEmptyStrError(OL_ERRC_INVALID_ARGUMENT);
-        }
-        EXPECT_NE(AllocationOut, nullptr);
+      .WillByDefault(
+          [this](ol_context_handle_t Context, ol_device_handle_t Device,
+                 ol_alloc_type_t AllocType, size_t Size, size_t Alignment,
+                 void **AllocationOut) -> ol_result_t {
+            EXPECT_NE(Context, nullptr);
+            EXPECT_NE(Device, nullptr);
+            EXPECT_TRUE(AllocType == OL_ALLOC_TYPE_DEVICE ||
+                        AllocType == OL_ALLOC_TYPE_MANAGED);
+            EXPECT_GT(Size, 0);
+            EXPECT_GT(Alignment, 0);
+            if ((Alignment & (Alignment - 1)) != 0) {
+              return makeEmptyStrError(OL_ERRC_INVALID_ARGUMENT);
+            }
+            EXPECT_NE(AllocationOut, nullptr);
 
-        *AllocationOut = mock::createDummyHandle<void *>();
-        return OL_SUCCESS;
-      });
+            *AllocationOut = mock::createDummyHandle<void *>();
+            return OL_SUCCESS;
+          });
 
   ON_CALL(*this, olMemAllocAlignedHost)
       .WillByDefault([this](ol_context_handle_t Context,

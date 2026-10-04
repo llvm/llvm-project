@@ -12,18 +12,19 @@
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 
 using namespace llvm;
@@ -283,10 +284,13 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
     Value *NC;
     if (Idx == 0)
       // Case 2, use parallel or.
-      NC = Builder.CreateOr(PC, CC);
+      NC = Builder.CreateLogicalOr(PC, CC);
     else
       // Case 1, use parallel and.
-      NC = Builder.CreateAnd(PC, CC);
+      NC = Builder.CreateLogicalAnd(PC, CC);
+
+    if (SelectInst *SI = dyn_cast<SelectInst>(NC))
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
 
     PBI->replaceUsesOfWith(CC, NC);
     PC = NC;
@@ -477,7 +481,6 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
   FirstEntryBlock->splice(FirstEntryBlock->end(), SecondEntryBlock);
   CondBrInst *PBI = cast<CondBrInst>(FirstEntryBlock->getTerminator());
   assert(PBI->getCondition() == CInst2);
-  BasicBlock *SaveInsertBB = Builder.GetInsertBlock();
   BasicBlock::iterator SaveInsertPt = Builder.GetInsertPoint();
   Builder.SetInsertPoint(PBI);
   if (InvertCond2) {
@@ -485,7 +488,7 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
   }
   Value *NC = Builder.CreateBinOp(CombineOp, CInst1, PBI->getCondition());
   PBI->replaceUsesOfWith(PBI->getCondition(), NC);
-  Builder.SetInsertPoint(SaveInsertBB, SaveInsertPt);
+  Builder.SetInsertPoint(SaveInsertPt);
 
   // Remove IfTrue1
   if (IfTrue1 != FirstEntryBlock) {

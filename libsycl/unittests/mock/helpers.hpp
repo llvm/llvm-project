@@ -29,14 +29,14 @@
 namespace mock {
 
 struct ol_dummy_handle_t {
-  ol_dummy_handle_t(size_t DataSize = 0) : MStorage(DataSize) {}
+  explicit ol_dummy_handle_t(size_t DataSize = 0) : MStorage(DataSize) {}
   ol_dummy_handle_t(unsigned char *Data, size_t Size) : MStorage(Size) {
     std::memcpy(MStorage.data(), Data, Size);
   }
 
   std::vector<unsigned char> MStorage;
 
-  template <typename T> const T getDataAs() const {
+  template <typename T> T getDataAs() const {
     assert(MStorage.size() >= sizeof(T));
     return *reinterpret_cast<const T *>(MStorage.data());
   }
@@ -127,6 +127,9 @@ public:
               (ol_queue_handle_t Queue, void *DstPtr,
                ol_device_handle_t DstDevice, const void *SrcPtr,
                ol_device_handle_t SrcDevice, size_t Size));
+  MOCK_METHOD(ol_result_t, olMemFill,
+              (ol_queue_handle_t Queue, void *Ptr, size_t PatternSize,
+               const void *PatternPtr, size_t FillSize));
   MOCK_METHOD(ol_result_t, olMemPrefetch,
               (ol_queue_handle_t Queue, size_t Count, const void **Mems,
                const size_t *Sizes, ol_mem_migration_flags_t Flags));
@@ -157,7 +160,10 @@ public:
   ol_device_handle_t getHostOLDevice() { return HostDevice; }
 
 private:
+  /// Installs the default single gpu-device configuration.
   void initDefault();
+
+  friend class MockWrapper;
 
   std::unordered_map<ol_errc_t, ol_error_struct_t> Errors;
   ol_platform_handle_t DefaultPlatform{};
@@ -179,8 +185,14 @@ _LIB_EXPORT MockLiboffload &getMockLiboffload();
 class MockWrapper {
 public:
   MockWrapper() : Mock(getMockLiboffload()) {}
-  ~MockWrapper() { ::testing::Mock::VerifyAndClearExpectations(&Mock); }
-  MockLiboffload &get() { return Mock; };
+
+  // VerifyAndClear verifies all expectations and drops the default actions.
+  ~MockWrapper() {
+    EXPECT_TRUE(::testing::Mock::VerifyAndClear(&Mock));
+    Mock.initDefault();
+  }
+
+  MockLiboffload &get() { return Mock; }
 
 private:
   MockLiboffload &Mock;

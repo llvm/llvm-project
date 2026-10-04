@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -std=c++20 -Wno-unused-value -verify=expected %s
-// RUN: %clang_cc1 -std=c++23 -Wno-unused-value -verify=expected %s
-// RUN: %clang_cc1 -std=c++20 -Wno-unused-value -verify=expected,bytecode %s \
-// RUN:   -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 -Wno-unused-value -verify %s
+// RUN: %clang_cc1 -std=c++23 -Wno-unused-value -verify %s
+// RUN: %clang_cc1 -std=c++20 -Wno-unused-value -verify %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++23 -Wno-unused-value -verify %s -fexperimental-new-constant-interpreter
 
 namespace lifetime {
 
@@ -69,25 +69,22 @@ namespace immediate {
 struct Inner {
   int a;
   static consteval int decrement(int &x) {
-    return --x; // bytecode-note {{modification of object of const-qualified type 'const int' is not allowed in a constant expression}}
+    return --x;
   }
   // FIXME: The aggregate result object does not exist yet when the immediate
   // invocation is checked, so reading 'a' fails. This is long-standing and is
   // independent of which full-expression the initializer belongs to.
   int b = decrement(a); // expected-error {{call to consteval function 'immediate::Inner::decrement' is not a constant expression}} \
                         // expected-note {{implicit use of 'this' pointer is only allowed within the evaluation of a call to a 'constexpr' member function}} \
-                        // expected-note {{declared here}} \
-                        // bytecode-note {{in call to 'decrement(Inner{1}.a)'}}
+                        // expected-note {{declared here}}
 };
 
 struct Outer {
   const Inner &inner = Inner{1}; // expected-note {{in the default initializer of 'b'}}
 };
 
-constexpr int value = Outer{}.inner.a; // bytecode-error {{constexpr variable 'value' must be initialized by a constant expression}} \
-                                       // bytecode-note {{declared here}}
-static_assert(value == 0); // bytecode-error {{static assertion expression is not an integral constant expression}} \
-                           // bytecode-note {{initializer of 'value' is not a constant expression}}
+constexpr int value = Outer{}.inner.a;
+static_assert(value == 0);
 
 consteval unsigned currentLine(unsigned line = __builtin_LINE()) {
   return line;

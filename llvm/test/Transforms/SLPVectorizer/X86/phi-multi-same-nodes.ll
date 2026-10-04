@@ -19,9 +19,6 @@ define void @test() {
 ; CHECK-NEXT:      i32 19, label %[[BB4]]
 ; CHECK-NEXT:    ]
 ; CHECK:       [[BB1]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = ashr <2 x i32> zeroinitializer, <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> zeroinitializer, <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> [[TMP1]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    switch i32 0, label %[[BB4]] [
 ; CHECK-NEXT:      i32 -4, label %[[BB4]]
 ; CHECK-NEXT:      i32 -1, label %[[BB4]]
@@ -37,7 +34,7 @@ define void @test() {
 ; CHECK-NEXT:      i32 19, label %[[BB4]]
 ; CHECK-NEXT:    ]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x i32> [ [[TMP2]], %[[BB1]] ], [ [[TMP2]], %[[BB1]] ], [ [[TMP2]], %[[BB1]] ], [ [[TMP2]], %[[BB1]] ], [ [[TMP2]], %[[BB1]] ], [ [[TMP2]], %[[BB1]] ], [ [[TMP2]], %[[BB1]] ], [ [[TMP2]], %[[BB1]] ], [ [[TMP2]], %[[BB1]] ], [ [[TMP2]], %[[BB1]] ], [ [[TMP2]], %[[BB1]] ], [ zeroinitializer, %[[BB]] ], [ zeroinitializer, %[[BB]] ], [ zeroinitializer, %[[BB]] ], [ zeroinitializer, %[[BB]] ], [ zeroinitializer, %[[BB]] ], [ zeroinitializer, %[[BB]] ], [ zeroinitializer, %[[BB]] ], [ zeroinitializer, %[[BB]] ], [ zeroinitializer, %[[BB]] ], [ zeroinitializer, %[[BB]] ], [ zeroinitializer, %[[BB]] ], [ zeroinitializer, %[[BB]] ], [ [[TMP2]], %[[BB1]] ], [ [[TMP2]], %[[BB1]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ zeroinitializer, %[[BB1]] ], [ zeroinitializer, %[[BB1]] ], [ zeroinitializer, %[[BB1]] ], [ zeroinitializer, %[[BB1]] ], [ zeroinitializer, %[[BB1]] ], [ zeroinitializer, %[[BB1]] ], [ zeroinitializer, %[[BB1]] ], [ zeroinitializer, %[[BB1]] ], [ zeroinitializer, %[[BB1]] ], [ zeroinitializer, %[[BB1]] ], [ zeroinitializer, %[[BB1]] ], [ zeroinitializer, %[[BB]] ], [ zeroinitializer, %[[BB]] ], [ zeroinitializer, %[[BB]] ], [ zeroinitializer, %[[BB]] ], [ zeroinitializer, %[[BB]] ], [ zeroinitializer, %[[BB]] ], [ zeroinitializer, %[[BB]] ], [ zeroinitializer, %[[BB]] ], [ zeroinitializer, %[[BB]] ], [ zeroinitializer, %[[BB]] ], [ zeroinitializer, %[[BB]] ], [ zeroinitializer, %[[BB]] ], [ zeroinitializer, %[[BB1]] ], [ zeroinitializer, %[[BB1]] ]
 ; CHECK-NEXT:    ret void
 ;
 bb:

@@ -432,4 +432,28 @@ define i1 @pr68751(i128 %arg) {
   ret i1 %cmp
 }
 
+; The fact %c.2 is implied by the single row added for %c.1. Multiplying
+; coefficients would overflow during Fourier-Motzkin elimination.
+define i1 @fact_implied_by_single_row_coefficient_overflow(i64 %x, i64 %y) {
+; CHECK-LABEL: @fact_implied_by_single_row_coefficient_overflow(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S:%.*]] = shl nuw i64 [[X:%.*]], 33
+; CHECK-NEXT:    [[T:%.*]] = shl nuw i64 [[Y:%.*]], 33
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i64 [[S]], [[T]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i64 [[S]], [[T]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_2]])
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %s = shl nuw i64 %x, 33
+  %t = shl nuw i64 %y, 33
+  %c.1 = icmp ult i64 %s, %t
+  call void @llvm.assume(i1 %c.1)
+  %c.2 = icmp ule i64 %s, %t
+  call void @llvm.assume(i1 %c.2)
+  %c.3 = icmp ule i64 %s, %t
+  ret i1 %c.3
+}
+
 declare void @llvm.assume(i1)

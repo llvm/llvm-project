@@ -14,6 +14,7 @@
 
 #include "llvm/ExecutionEngine/Orc/Debugging/DebugInfoSupport.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
+#include "llvm/ExecutionEngine/Orc/SPSProxySpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 
 #define DEBUG_TYPE "orc"
@@ -21,6 +22,21 @@
 using namespace llvm;
 using namespace llvm::orc;
 using namespace llvm::jitlink;
+
+// Controller-interface descriptors for the executor's perf-support wrapper
+// calls.
+namespace llvm::orc::perf_sps_ci {
+struct RegisterPerfStart {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("llvm_orc_registerJITLoaderPerfStart");
+  using SPSSig = void();
+};
+struct RegisterPerfEnd {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("llvm_orc_registerJITLoaderPerfEnd");
+  using SPSSig = void();
+};
+} // namespace llvm::orc::perf_sps_ci
 
 namespace {
 
@@ -76,12 +92,8 @@ Expected<std::string> createX64EHFrameHeader(Section &EHFrame,
   return HeaderContent;
 }
 
-constexpr SymbolNameSpec RegisterPerfStartSymbolName =
-    SymbolNameSpec::verbatim("llvm_orc_registerJITLoaderPerfStart");
-constexpr SymbolNameSpec RegisterPerfEndSymbolName =
-    SymbolNameSpec::verbatim("llvm_orc_registerJITLoaderPerfEnd");
 constexpr SymbolNameSpec RegisterPerfImplSymbolName =
-    SymbolNameSpec::verbatim("llvm_orc_registerJITLoaderPerfImpl");
+    SymbolNameSpec::c("llvm_orc_registerJITLoaderPerfImpl");
 
 static PerfJITCodeLoadRecord
 getCodeLoadRecord(const Symbol &Sym, std::atomic<uint64_t> &CodeIndex) {
@@ -256,14 +268,28 @@ PerfSupportPlugin::PerfSupportPlugin(ExecutorProcessControl &EPC,
                                      ExecutorAddr RegisterPerfEndAddr,
                                      ExecutorAddr RegisterPerfImplAddr,
                                      bool EmitDebugInfo, bool EmitUnwindInfo)
-    : EPC(EPC), RegisterPerfStartAddr(RegisterPerfStartAddr),
-      RegisterPerfEndAddr(RegisterPerfEndAddr),
+    : EPC(EPC), RegisterPerfStart(
+                    sps::ProxySpec<Proxy<void()>,
+                                   perf_sps_ci::RegisterPerfStart>::dispatch,
+                    RegisterPerfStartAddr),
+      RegisterPerfEnd(
+          sps::ProxySpec<Proxy<void()>, perf_sps_ci::RegisterPerfEnd>::dispatch,
+          RegisterPerfEndAddr),
       RegisterPerfImplAddr(RegisterPerfImplAddr), CodeIndex(0),
       EmitDebugInfo(EmitDebugInfo), EmitUnwindInfo(EmitUnwindInfo) {
-  cantFail(EPC.callSPSWrapper<void()>(RegisterPerfStartAddr));
+  cantFail(RegisterPerfStart(EPC.getExecutionSession()));
 }
 PerfSupportPlugin::~PerfSupportPlugin() {
-  cantFail(EPC.callSPSWrapper<void()>(RegisterPerfEndAddr));
+  // FIXME: End message from destructor is unreliable. Executor-side perf
+  //        support (currently JITLoaderPerf.cpp in OrcTargetProcess) should be
+  //        reimplemented as a service in the new ORC runtime, where cleanup
+  //        can be run as an on-shutdown event.
+  //
+  // For now, switch to async dispatch here so that a message failure doesn't
+  // load to a crash when we try to read from a std::future whose std::promise
+  // has been destoryed.
+  RegisterPerfEnd([](Error Err) { consumeError(std::move(Err)); },
+                  EPC.getExecutionSession());
 }
 
 void PerfSupportPlugin::modifyPassConfig(MaterializationResponsibility &MR,
@@ -291,8 +317,8 @@ PerfSupportPlugin::Create(ExecutorProcessControl &EPC, JITDylib &JD,
   }
   ExecutorAddr StartAddr, EndAddr, ImplAddr;
   if (auto Err = lookupAndApply(
-          JD, {recordAddr(RegisterPerfStartSymbolName, &StartAddr),
-               recordAddr(RegisterPerfEndSymbolName, &EndAddr),
+          JD, {recordAddr(perf_sps_ci::RegisterPerfStart::Name, &StartAddr),
+               recordAddr(perf_sps_ci::RegisterPerfEnd::Name, &EndAddr),
                recordAddr(RegisterPerfImplSymbolName, &ImplAddr)}))
     return std::move(Err);
   return std::make_unique<PerfSupportPlugin>(EPC, StartAddr, EndAddr, ImplAddr,

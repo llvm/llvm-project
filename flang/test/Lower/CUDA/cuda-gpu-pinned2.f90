@@ -11,6 +11,6 @@ end
 ! NOCUDA-NOT: cuf.allocate
 ! NOCUDA-NOT: cuf.deallocate
 
-! CUDA: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {data_attr = #cuf.cuda<pinned>} -> i32
-! CUDA: cuf.deallocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {data_attr = #cuf.cuda<pinned>} -> i32
+! CUDA: cuf.allocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> data_attr(pinned) -> i32
+! CUDA: cuf.deallocate %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> data_attr(pinned) -> i32
 

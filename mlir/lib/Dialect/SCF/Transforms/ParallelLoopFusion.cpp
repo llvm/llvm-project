@@ -63,7 +63,8 @@ static bool hasNestedParallelOp(ParallelOp ploop) {
 /// Verify equal iteration spaces.
 static bool equalIterationSpaces(ParallelOp firstPloop,
                                  ParallelOp secondPloop) {
-  if (firstPloop.getNumLoops() != secondPloop.getNumLoops())
+  if (firstPloop.getNumLoops() != secondPloop.getNumLoops() ||
+      firstPloop.getUnsignedCmp() != secondPloop.getUnsignedCmp())
     return false;
 
   // Two bounds match if they are the same value, or if both are constants
@@ -779,8 +780,9 @@ interchangeLoops(OpBuilder &builder, ParallelOp &loop,
       applyPermutation(SmallVector<Value>(loop.getUpperBound()), indices);
   SmallVector<Value> newStep =
       applyPermutation(SmallVector<Value>(loop.getStep()), indices);
-  auto newOp = ParallelOp::create(builder, loop.getLoc(), newLB, newUB, newStep,
-                                  loop.getInitVals(), nullptr);
+  auto newOp =
+      ParallelOp::create(builder, loop.getLoc(), newLB, newUB, newStep,
+                         loop.getInitVals(), nullptr, loop.getUnsignedCmp());
   auto ivs = loop.getInductionVars();
   SmallVector<Value> newIvs = applyPermutation(
       newOp.getInductionVars(), invertPermutationVector(indices));
@@ -964,9 +966,10 @@ static void applyLoopFusion(ParallelOp &firstPloop, ParallelOp &secondPloop,
 
   IRRewriter b(builder);
   b.setInsertionPoint(secondPloop);
-  auto newSecondPloop = ParallelOp::create(
-      b, secondPloop.getLoc(), secondPloop.getLowerBound(),
-      secondPloop.getUpperBound(), secondPloop.getStep(), newInitVars);
+  auto newSecondPloop =
+      ParallelOp::create(b, secondPloop.getLoc(), secondPloop.getLowerBound(),
+                         secondPloop.getUpperBound(), secondPloop.getStep(),
+                         newInitVars, nullptr, secondPloop.getUnsignedCmp());
 
   Block *newBlock = newSecondPloop.getBody();
   auto term1 = cast<ReduceOp>(block1->getTerminator());

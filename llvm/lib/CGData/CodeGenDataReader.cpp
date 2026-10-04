@@ -11,28 +11,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CGData/CodeGenDataReader.h"
+#include "CGDataOptions.h"
 #include "llvm/CGData/OutlinedHashTreeRecord.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 #define DEBUG_TYPE "cg-data-reader"
 
 using namespace llvm;
 
-static cl::opt<bool> IndexedCodeGenDataReadFunctionMapNames(
-    "indexed-codegen-data-read-function-map-names", cl::init(true), cl::Hidden,
-    cl::desc("Read function map names in indexed CodeGenData. Can be "
-             "disabled to save memory and time for final consumption of the "
-             "indexed CodeGenData in production."));
-
 namespace llvm {
-
-cl::opt<bool> IndexedCodeGenDataLazyLoading(
-    "indexed-codegen-data-lazy-loading", cl::init(false), cl::Hidden,
-    cl::desc(
-        "Lazily load indexed CodeGenData. Enable to save memory and time "
-        "for final consumption of the indexed CodeGenData in production."));
 
 static Expected<std::unique_ptr<MemoryBuffer>>
 setupMemoryBuffer(const Twine &Filename, vfs::FileSystem &FS) {
@@ -123,8 +111,8 @@ Error IndexedCodeGenDataReader::read() {
     if (Ptr >= End)
       return error(cgdata_error::eof);
     FunctionMapRecord.setReadStableFunctionMapNames(
-        IndexedCodeGenDataReadFunctionMapNames);
-    if (IndexedCodeGenDataLazyLoading)
+        CGDataOptions::Global.indexed_codegen_data_read_function_map_names);
+    if (LazyLoading)
       FunctionMapRecord.lazyDeserialize(std::move(SharedDataBuffer),
                                         Header.StableFunctionMapOffset);
     else
@@ -135,23 +123,26 @@ Error IndexedCodeGenDataReader::read() {
 }
 
 Expected<std::unique_ptr<CodeGenDataReader>>
-CodeGenDataReader::create(const Twine &Path, vfs::FileSystem &FS) {
+CodeGenDataReader::create(const Twine &Path, vfs::FileSystem &FS,
+                          bool LazyLoading) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path, FS);
   if (Error E = BufferOrError.takeError())
     return std::move(E);
-  return CodeGenDataReader::create(std::move(BufferOrError.get()));
+  return CodeGenDataReader::create(std::move(BufferOrError.get()), LazyLoading);
 }
 
 Expected<std::unique_ptr<CodeGenDataReader>>
-CodeGenDataReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
+CodeGenDataReader::create(std::unique_ptr<MemoryBuffer> Buffer,
+                          bool LazyLoading) {
   if (Buffer->getBufferSize() == 0)
     return make_error<CGDataError>(cgdata_error::empty_cgdata);
 
   std::unique_ptr<CodeGenDataReader> Reader;
   // Create the reader.
   if (IndexedCodeGenDataReader::hasFormat(*Buffer))
-    Reader = std::make_unique<IndexedCodeGenDataReader>(std::move(Buffer));
+    Reader = std::make_unique<IndexedCodeGenDataReader>(std::move(Buffer),
+                                                        LazyLoading);
   else if (TextCodeGenDataReader::hasFormat(*Buffer))
     Reader = std::make_unique<TextCodeGenDataReader>(std::move(Buffer));
   else
