@@ -108,7 +108,8 @@ void X86SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
     const X86Subtarget &Subtarget =
         DAG.getMachineFunction().getSubtarget<X86Subtarget>();
     SDValue Target = N->getOperand(1);
-    bool IsDirect = isa<GlobalAddressSDNode>(Target) || isa<ExternalSymbolSDNode>(Target);
+    bool IsDirect =
+        isa<GlobalAddressSDNode>(Target) || isa<ExternalSymbolSDNode>(Target);
     bool WantI64 =
         IsDirect ? Subtarget.isTarget64BitLP64() : Subtarget.is64Bit();
     EVT ExpectedVT = WantI64 ? MVT::i64 : MVT::i32;
