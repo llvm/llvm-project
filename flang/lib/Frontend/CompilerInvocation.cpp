@@ -2049,6 +2049,19 @@ void CompilerInvocation::setDefaultPredefinitions() {
     fortranOptions.predefinitions.emplace_back("__s390x__", "1");
     fortranOptions.predefinitions.emplace_back("__s390x", "1");
     break;
+  case llvm::Triple::ArchType::wasm32:
+    // Match Clang's WebAssembly target defines.
+    fortranOptions.predefinitions.emplace_back("__wasm__", "1");
+    fortranOptions.predefinitions.emplace_back("__wasm", "1");
+    fortranOptions.predefinitions.emplace_back("__wasm32__", "1");
+    fortranOptions.predefinitions.emplace_back("__wasm32", "1");
+    break;
+  case llvm::Triple::ArchType::wasm64:
+    fortranOptions.predefinitions.emplace_back("__wasm__", "1");
+    fortranOptions.predefinitions.emplace_back("__wasm", "1");
+    fortranOptions.predefinitions.emplace_back("__wasm64__", "1");
+    fortranOptions.predefinitions.emplace_back("__wasm64", "1");
+    break;
   }
 }
 
