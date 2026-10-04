@@ -1095,7 +1095,6 @@ private:
   }
 
   // Move key/value from Src to Dst.
-  // Src is left in a valid but empty state.
   static LLVM_ATTRIBUTE_NOINLINE void moveFrom(StorageT &Dst, StorageT &Src) {
     assert(Dst.getNumEntries() == 0 &&
            "moveFrom requires an empty destination");
