@@ -110,6 +110,7 @@ if (LLVM_ENABLE_SPHINX)
     set(clang_generated_docs
       AttributeReference.md
       _generated/AttributeReference.split.md
+      _generated/AttributeReferenceSyntaxes.json
       DiagnosticsReference.md
       AMDGPUBuiltinReference.rst
       ClangCommandLineReference.md
@@ -156,6 +157,7 @@ if (LLVM_ENABLE_SPHINX)
     set(attr_reference_split_input "${CMAKE_CURRENT_BINARY_DIR}/_generated/AttributeReference.split.md")
     set(attr_reference_split_stamp "${CMAKE_CURRENT_BINARY_DIR}/_generated/AttributeReferenceSplit.stamp")
     gen_sphinx_file_from_td(_generated/AttributeReference.split.md -gen-attr-docs ../include/clang/Basic/Attr.td "")
+    gen_sphinx_file_from_td(_generated/AttributeReferenceSyntaxes.json -gen-attr-doc-syntaxes ../include/clang/Basic/Attr.td "${docs_targets}")
     add_custom_command(
       OUTPUT "${attr_reference_split_stamp}"
       COMMAND "${CMAKE_COMMAND}" -E rm -rf
