@@ -21,15 +21,20 @@ static pthread_key_t key;
 static atomic_int ready = 0;
 
 static void key_destructor(void *arg) {
+  // ASan and LSan defer thread unregistration to the final
+  // (PTHREAD_DESTRUCTOR_ITERATIONS) TSD destruction pass by re-setting their
+  // pthread_key_t on earlier passes. Because the sanitizer creates its key
+  // during .preinit_array (key index 0) and main() creates `key` later (key
+  // index 1), also re-setting `key` for PTHREAD_DESTRUCTOR_ITERATIONS passes
+  // ensures that on the final pass glibc's __nptl_deallocate_tsd() invokes the
+  // sanitizer destructor (index 0) first and this destructor (index 1)
+  // immediately after, before __libc_thread_freeres() runs.
   uintptr_t iter = (uintptr_t)arg;
   if (iter > 1) {
     int res = pthread_setspecific(key, (void *)(iter - 1));
     assert(res == 0);
     return;
   }
-  // On the last iteration (PTHREAD_DESTRUCTOR_ITERATIONS), the sanitizer's TSD
-  // destructor (registered earlier with a lower key index) has already run,
-  // while glibc's __libc_thread_freeres() has not yet freed the dlerror buffer.
   atomic_store(&ready, 1);
   sleep(10);
 }
