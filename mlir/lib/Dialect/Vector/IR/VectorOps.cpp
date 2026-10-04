@@ -1487,12 +1487,12 @@ static SmallVector<IntType> extractVector(ArrayAttr arrayAttr) {
 /// BEFORE:
 /// ```mlir
 /// %0 = vector.extract %v[1, 2] : vector<3x4x5xf32>
-/// %1 = vector.extract %0[%c0, 3] : vector<5xf32>
+/// %1 = vector.extract %0[%idx, 3] : vector<5xf32>
 /// ```
 ///
 /// AFTER:
 /// ```mlir
-/// %1 = vector.extract %v[1, 2, %c0, 3] : vector<3x4x5xf32>
+/// %1 = vector.extract %v[1, 2, %idx, 3] : vector<3x4x5xf32>
 /// ```
 static LogicalResult foldExtractOpFromExtractChain(ExtractOp extractOp) {
   if (!extractOp.getSource().getDefiningOp<ExtractOp>())
