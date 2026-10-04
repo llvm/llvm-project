@@ -503,6 +503,48 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   return nullptr;
 }
 
+/// select C, f(..., X, ...), f(..., Y, ...) --> f(..., select C, X, Y, ...)
+static Instruction *
+foldSelectIntoIntrinsicArg(SelectInst &SI, IntrinsicInst *TII,
+                           IntrinsicInst *FII,
+                           InstCombiner::BuilderTy &Builder) {
+  if (TII->getCalledFunction() != FII->getCalledFunction())
+    return nullptr;
+
+  std::optional<unsigned> DiffArgNo;
+  for (unsigned I = 0, E = TII->arg_size(); I != E; ++I) {
+    if (TII->getArgOperand(I) == FII->getArgOperand(I))
+      continue;
+    if (DiffArgNo)
+      return nullptr;
+    DiffArgNo = I;
+  }
+  if (!DiffArgNo)
+    return nullptr;
+
+  // A select cannot feed a parameter that requires an immediate.
+  if (TII->paramHasAttr(*DiffArgNo, Attribute::ImmArg))
+    return nullptr;
+
+  Value *TV = TII->getArgOperand(*DiffArgNo);
+  Value *FV = FII->getArgOperand(*DiffArgNo);
+  // powi keeps a scalar exponent even in its vector form.
+  if (SI.getCondition()->getType()->isVectorTy() &&
+      !TV->getType()->isVectorTy())
+    return nullptr;
+  // Constant args may enable cheaper lowering, e.g. pow(X, 2.0) -> X * X.
+  if (isa<Constant>(TV) || isa<Constant>(FV))
+    return nullptr;
+
+  SmallVector<Value *> Args(TII->args());
+  Args[*DiffArgNo] =
+      Builder.CreateSelect(SI.getCondition(), TV, FV, SI.getName() + ".v", &SI);
+  auto *NewCall = CallInst::Create(TII->getCalledFunction(), Args);
+  NewCall->copyIRFlags(TII);
+  NewCall->andIRFlags(FII);
+  return NewCall;
+}
+
 /// This transforms patterns of the form:
 ///   select cond, intrinsic(x, ...), intrinsic(y, ...)
 /// into:
@@ -544,6 +586,9 @@ Instruction *InstCombinerImpl::foldSelectIntrinsic(SelectInst &SI) {
     return replaceInstUsesWith(SI, NewCall);
   }
   default:
+    if (isTriviallyVectorizable(IID))
+      return foldSelectIntoIntrinsicArg(SI, LHSIntrinsic, RHSIntrinsic,
+                                        Builder);
     return nullptr;
   }
 }
