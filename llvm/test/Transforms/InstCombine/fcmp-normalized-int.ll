@@ -3,11 +3,7 @@
 
 define i1 @unsigned_lt(i16 %x, i16 %y) {
 ; CHECK-LABEL: @unsigned_lt(
-; CHECK-NEXT:    [[A:%.*]] = uitofp i16 [[X:%.*]] to double
-; CHECK-NEXT:    [[B:%.*]] = uitofp i16 [[Y:%.*]] to double
-; CHECK-NEXT:    [[NA:%.*]] = fdiv double [[A]], 6.553500e+04
-; CHECK-NEXT:    [[NB:%.*]] = fdiv double [[B]], 6.553500e+04
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[NA]], [[NB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a = uitofp i16 %x to double
@@ -20,11 +16,7 @@ define i1 @unsigned_lt(i16 %x, i16 %y) {
 
 define i1 @signed_ge(i16 %x, i16 %y) {
 ; CHECK-LABEL: @signed_ge(
-; CHECK-NEXT:    [[A:%.*]] = sitofp i16 [[X:%.*]] to double
-; CHECK-NEXT:    [[B:%.*]] = sitofp i16 [[Y:%.*]] to double
-; CHECK-NEXT:    [[NA:%.*]] = fdiv double [[A]], 6.553500e+04
-; CHECK-NEXT:    [[NB:%.*]] = fdiv double [[B]], 6.553500e+04
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge double [[NA]], [[NB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i16 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a = sitofp i16 %x to double
@@ -37,11 +29,7 @@ define i1 @signed_ge(i16 %x, i16 %y) {
 
 define i1 @unsigned_eq(i16 %x, i16 %y) {
 ; CHECK-LABEL: @unsigned_eq(
-; CHECK-NEXT:    [[A:%.*]] = uitofp i16 [[X:%.*]] to double
-; CHECK-NEXT:    [[B:%.*]] = uitofp i16 [[Y:%.*]] to double
-; CHECK-NEXT:    [[NA:%.*]] = fdiv double [[A]], 6.553500e+04
-; CHECK-NEXT:    [[NB:%.*]] = fdiv double [[B]], 6.553500e+04
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq double [[NA]], [[NB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a = uitofp i16 %x to double
@@ -54,11 +42,7 @@ define i1 @unsigned_eq(i16 %x, i16 %y) {
 
 define <2 x i1> @vector_lt(<2 x i16> %x, <2 x i16> %y) {
 ; CHECK-LABEL: @vector_lt(
-; CHECK-NEXT:    [[A:%.*]] = uitofp <2 x i16> [[X:%.*]] to <2 x double>
-; CHECK-NEXT:    [[B:%.*]] = uitofp <2 x i16> [[Y:%.*]] to <2 x double>
-; CHECK-NEXT:    [[NA:%.*]] = fdiv <2 x double> [[A]], splat (double 6.553500e+04)
-; CHECK-NEXT:    [[NB:%.*]] = fdiv <2 x double> [[B]], splat (double 6.553500e+04)
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <2 x double> [[NA]], [[NB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i16> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %a = uitofp <2 x i16> %x to <2 x double>
@@ -156,12 +140,8 @@ define i1 @overflow(i16 %x, i16 %y) {
 
 define i1 @select_normalized(i16 %x, i16 %y, i16 %z, i1 %c) {
 ; CHECK-LABEL: @select_normalized(
-; CHECK-NEXT:    [[D:%.*]] = uitofp i16 [[Z:%.*]] to double
-; CHECK-NEXT:    [[ND:%.*]] = fdiv double [[D]], 6.553500e+04
 ; CHECK-NEXT:    [[S_V_V:%.*]] = select i1 [[C:%.*]], i16 [[X:%.*]], i16 [[Y:%.*]]
-; CHECK-NEXT:    [[S_V:%.*]] = uitofp i16 [[S_V_V]] to double
-; CHECK-NEXT:    [[S:%.*]] = fdiv double [[S_V]], 6.553500e+04
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt double [[S]], [[ND]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i16 [[S_V_V]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a = uitofp i16 %x to double
@@ -177,14 +157,9 @@ define i1 @select_normalized(i16 %x, i16 %y, i16 %z, i1 %c) {
 
 define i1 @normalize_minmax(i16 %x, i16 %y, i16 %z) {
 ; CHECK-LABEL: @normalize_minmax(
-; CHECK-NEXT:    [[A:%.*]] = sitofp i16 [[X:%.*]] to double
-; CHECK-NEXT:    [[B:%.*]] = sitofp i16 [[Y:%.*]] to double
-; CHECK-NEXT:    [[D:%.*]] = sitofp i16 [[Z:%.*]] to double
-; CHECK-NEXT:    [[LO:%.*]] = call double @llvm.minnum.f64(double [[A]], double [[B]])
-; CHECK-NEXT:    [[HI:%.*]] = call double @llvm.maxnum.f64(double [[A]], double [[D]])
-; CHECK-NEXT:    [[NA:%.*]] = fdiv double [[LO]], 6.553500e+04
-; CHECK-NEXT:    [[NB:%.*]] = fdiv double [[HI]], 6.553500e+04
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[NA]], [[NB]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.smin.i16(i16 [[X:%.*]], i16 [[Y:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.smax.i16(i16 [[X]], i16 [[Z:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a = sitofp i16 %x to double
