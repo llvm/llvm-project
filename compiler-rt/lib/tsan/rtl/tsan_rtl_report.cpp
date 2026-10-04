@@ -140,9 +140,6 @@ bool ShouldReport(ThreadState *thr, ReportType typ) {
   // Taking any locking in the fork context can lead to deadlocks.
   // If any locks are already taken, it's too late to do this check.
   CheckedMutex::CheckNoLocks();
-  // For the same reason check we didn't lock thread_registry yet.
-  if (SANITIZER_DEBUG)
-    ThreadRegistryLock l(&ctx->thread_registry);
   if (!flags()->report_bugs || thr->suppress_reports)
     return false;
   switch (typ) {
