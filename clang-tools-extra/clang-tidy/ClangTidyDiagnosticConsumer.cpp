@@ -245,15 +245,24 @@ void ClangTidyContext::setCurrentFile(StringRef File) {
   WarningAsErrorFilter = std::make_unique<CachedGlobList>(
       StringRef(getOptions().WarningsAsErrors.value_or("")));
   static const std::vector<std::string> EmptyFileExtensions;
-  if (!parseFileExtensions(getOptions().HeaderFileExtensions
-                               ? *getOptions().HeaderFileExtensions
-                               : EmptyFileExtensions,
-                           HeaderFileExtensions))
+  const bool ValidHeaderFileExtensions = parseFileExtensions(
+      getOptions().HeaderFileExtensions ? *getOptions().HeaderFileExtensions
+                                        : EmptyFileExtensions,
+      HeaderFileExtensions);
+  const bool ValidImplementationFileExtensions =
+      parseFileExtensions(getOptions().ImplementationFileExtensions
+                              ? *getOptions().ImplementationFileExtensions
+                              : EmptyFileExtensions,
+                          ImplementationFileExtensions);
+
+  // The constructor calls this before a DiagnosticsEngine is attached. Every
+  // translation unit calls it again once the engine exists, so configuration
+  // problems are still reported for each file that is analyzed.
+  if (!DiagEngine)
+    return;
+  if (!ValidHeaderFileExtensions)
     this->configurationDiag("Invalid header file extensions");
-  if (!parseFileExtensions(getOptions().ImplementationFileExtensions
-                               ? *getOptions().ImplementationFileExtensions
-                               : EmptyFileExtensions,
-                           ImplementationFileExtensions))
+  if (!ValidImplementationFileExtensions)
     this->configurationDiag("Invalid implementation file extensions");
 }
 
