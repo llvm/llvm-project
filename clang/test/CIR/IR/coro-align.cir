@@ -1,0 +1,11 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!u64i = !cir.int<u, 64>
+
+module {
+  cir.func @test_coro_align() -> !u64i {
+    // CHECK: %0 = cir.coro.intrinsic.align() : () -> !u64i
+    %0 = cir.coro.intrinsic.align() : () -> !u64i
+    cir.return %0 : !u64i
+  }
+}

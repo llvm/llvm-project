@@ -5138,6 +5138,20 @@ def CIR_CoroSizeOp : CIR_CoroIntrinsicOp<"size", (ins),
 }
 
 //===----------------------------------------------------------------------===//
+// Coroutine intrinsic AlignOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroAlignOp : CIR_CoroIntrinsicOp<"align", (ins),
+    (outs CIR_UInt64:$result)> {
+  let summary = "Represents llvm.coro.align";
+  let description = [{
+    Returns the alignment requirement, in bytes, of the coroutine frame.
+  }];
+  let llvmOp = "CoroAlignOp";
+}
+
+
+//===----------------------------------------------------------------------===//
 // Coroutine intrinsic PromiseOp
 //===----------------------------------------------------------------------===//
 

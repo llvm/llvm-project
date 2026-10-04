@@ -1,0 +1,11 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s
+
+!u64i = !cir.int<u, 64>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @test_coro_align() -> !u64i {
+    // CHECK: %0 = llvm.intr.coro.align : i64
+    %0 = cir.coro.intrinsic.align() : () -> !u64i
+    cir.return %0 : !u64i
+  }
+}

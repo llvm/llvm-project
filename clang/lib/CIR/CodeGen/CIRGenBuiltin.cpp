@@ -1829,8 +1829,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_suspend NYI");
     return getUndefRValue(e->getType());
   case Builtin::BI__builtin_coro_align:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_align NYI");
-    return getUndefRValue(e->getType());
+    return RValue::get(emitCoroAlignBuiltinCall(e).getResult());
 
   case Builtin::BI__builtin_coro_frame: {
     return emitCoroutineFrame();
