@@ -28426,12 +28426,34 @@ bool X86::isExtendedSwiftAsyncFrameSupported(const X86Subtarget &Subtarget,
   return !MF.getTarget().getMCAsmInfo().usesWindowsCFI();
 }
 
+// Lower llvm.x86.movnt to a non-temporal store, which selects the same MOVNT
+// instructions as a !nontemporal store. The store is also volatile, so the
+// backend doesn't merge, eliminate or reorder it with other memory accesses,
+// matching the intrinsic's opaque IR semantics.
+static SDValue lowerX86MOVNT(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  SDValue Chain = N->getOperand(0);
+  SDValue Ptr = N->getOperand(2);
+  SDValue Val = N->getOperand(3);
+  EVT VT = Val.getValueType();
+  // MOVNTI has no alignment requirement; the vector forms require the pointer
+  // to be aligned to the vector's size, as documented on the intrinsic.
+  Align Alignment =
+      VT.isVector() ? Align(VT.getStoreSize().getFixedValue()) : Align(1);
+  return DAG.getStore(Chain, DL, Val, Ptr, MachinePointerInfo(), Alignment,
+                      MachineMemOperand::MOVolatile |
+                          MachineMemOperand::MONonTemporal);
+}
+
 static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
                                       SelectionDAG &DAG) {
   unsigned IntNo = Op.getConstantOperandVal(1);
   const IntrinsicData *IntrData = getIntrinsicWithChain(IntNo);
   if (!IntrData) {
     switch (IntNo) {
+
+    case Intrinsic::x86_movnt:
+      return lowerX86MOVNT(Op.getNode(), DAG);
 
     case Intrinsic::swift_async_context_addr: {
       SDLoc dl(Op);
@@ -64004,6 +64026,11 @@ static SDValue combineINTRINSIC_VOID(SDNode *N, SelectionDAG &DAG,
 
   if (IntrData && IntrData->Type == INTR_TYPE_CAST_MMX)
     return FixupMMXIntrinsicTypes(N, DAG);
+
+  // Before type legalization, so that a vector wider than the target's
+  // registers is split like any other store.
+  if (IntNo == Intrinsic::x86_movnt)
+    return lowerX86MOVNT(N, DAG);
 
   return SDValue();
 }
