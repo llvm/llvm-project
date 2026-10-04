@@ -355,6 +355,11 @@ Makes programs 10x faster by doing Special New Thing.
 * llvm-rc now supports `/showIncludes` to report header and resource-file
   dependencies in a format compatible with Ninja's `deps = msvc` mode.
 
+* llvm-cov now supports an opt-in `-respect-coverage-exclusion-markers` option
+  for excluding coverage associated with `LLVM_COVERAGE_EXCLUDE_LINE` and
+  `LLVM_COVERAGE_EXCLUDE_START`/`LLVM_COVERAGE_EXCLUDE_STOP` source markers.
+  The corresponding `LCOV_EXCL_*` markers are also recognized.
+
 ### Changes to LLDB
 
 * `platform.plugin.wasm.runtime-args` now precede the port argument on the Wasm

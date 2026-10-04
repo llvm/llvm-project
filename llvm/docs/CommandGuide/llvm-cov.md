@@ -289,6 +289,18 @@ Skip source code files with file paths that match the given regular expression.
 Only include source code files with file paths that match the given regular expression.
 :::
 
+:::{option} -respect-coverage-exclusion-markers
+Exclude lines containing `LLVM_COVERAGE_EXCLUDE_LINE` or `LCOV_EXCL_LINE`, and
+ranges delimited by `LLVM_COVERAGE_EXCLUDE_START`/`LLVM_COVERAGE_EXCLUDE_STOP`
+or `LCOV_EXCL_START`/`LCOV_EXCL_STOP`. The two spellings may be mixed. The
+start-marker line is excluded; the stop-marker line is not. Unmatched or
+overlapping range markers are errors.
+Unlike LCOV, a function record is excluded only when all of its code regions
+in the reported file are excluded.
+Markers are read from source files at report time, and an unavailable source
+file needed for the requested output is an error. Defaults to false.
+:::
+
 :::{option} -format=<FORMAT>
 Use the specified output format. The supported formats are: "text", "html".
 :::
@@ -449,6 +461,18 @@ Show statistics for all function instantiations. Defaults to false.
 Skip source code files with file paths that match the given regular expression.
 :::
 
+:::{option} -respect-coverage-exclusion-markers
+Exclude lines containing `LLVM_COVERAGE_EXCLUDE_LINE` or `LCOV_EXCL_LINE`, and
+ranges delimited by `LLVM_COVERAGE_EXCLUDE_START`/`LLVM_COVERAGE_EXCLUDE_STOP`
+or `LCOV_EXCL_START`/`LCOV_EXCL_STOP`. The two spellings may be mixed. The
+start-marker line is excluded; the stop-marker line is not. Unmatched or
+overlapping range markers are errors.
+Unlike LCOV, a function record is excluded only when all of its code regions
+in the reported file are excluded.
+Markers are read from source files at report time, and an unavailable source
+file needed for the requested output is an error. Defaults to false.
+:::
+
 :::{option} -compilation-dir=<dir>
 Directory used as a base for relative coverage mapping paths. Only applicable
 when binaries have been compiled with one of `-fcoverage-prefix-map`
@@ -530,6 +554,18 @@ format rather than text.
 Skip source code files with file paths that match the given regular expression.
 :::
 
+:::{option} -respect-coverage-exclusion-markers
+Exclude lines containing `LLVM_COVERAGE_EXCLUDE_LINE` or `LCOV_EXCL_LINE`, and
+ranges delimited by `LLVM_COVERAGE_EXCLUDE_START`/`LLVM_COVERAGE_EXCLUDE_STOP`
+or `LCOV_EXCL_START`/`LCOV_EXCL_STOP`. The two spellings may be mixed. The
+start-marker line is excluded; the stop-marker line is not. Unmatched or
+overlapping range markers are errors.
+Unlike LCOV, a function record is excluded only when all of its code regions
+in the reported file are excluded.
+Markers are read from source files at report time, and an unavailable source
+file needed for the requested output is an error. Defaults to false.
+:::
+
 :::{option} -skip-expansions
 Skip exporting macro expansion coverage data.
 :::
@@ -596,4 +632,3 @@ output file typically bears the {program}`.covmapping` extension.
 
 The {program}`.covmapping` files can be read back by `llvm-cov` just as
 ordinary binary files.
-
