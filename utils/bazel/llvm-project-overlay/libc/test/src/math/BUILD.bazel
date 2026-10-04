@@ -878,6 +878,13 @@ math_mpfr_test(
     ],
 )
 
+math_mpfr_test(
+    name = "tanhbf16",
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
 math_mpfr_test(name = "tanhf")
 
 math_mpfr_test(
