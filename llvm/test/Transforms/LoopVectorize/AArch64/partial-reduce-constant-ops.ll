@@ -157,7 +157,7 @@ define i32 @red_zext_mul_by_256(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[NEXT_GEP]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl <16 x i32> [[TMP3]], splat (i32 8)
-; CHECK-NEXT:    [[TMP5]] = add <16 x i32> [[VEC_PHI]], [[TMP4]]
+; CHECK-NEXT:    [[TMP5]] = call <16 x i32> @llvm.vector.partial.reduce.add.v16i32.v16i32(<16 x i32> [[VEC_PHI]], <16 x i32> [[TMP4]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -291,7 +291,7 @@ define i32 @red_sext_mul_by_128(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[NEXT_GEP]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl <16 x i32> [[TMP3]], splat (i32 7)
-; CHECK-NEXT:    [[TMP5]] = add <16 x i32> [[VEC_PHI]], [[TMP4]]
+; CHECK-NEXT:    [[TMP5]] = call <16 x i32> @llvm.vector.partial.reduce.add.v16i32.v16i32(<16 x i32> [[VEC_PHI]], <16 x i32> [[TMP4]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
@@ -358,7 +358,7 @@ define i32 @red_sext_mul_by_255(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[NEXT_GEP]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <16 x i32> [[TMP3]], splat (i32 255)
-; CHECK-NEXT:    [[TMP5]] = add <16 x i32> [[VEC_PHI]], [[TMP4]]
+; CHECK-NEXT:    [[TMP5]] = call <16 x i32> @llvm.vector.partial.reduce.add.v16i32.v16i32(<16 x i32> [[VEC_PHI]], <16 x i32> [[TMP4]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
@@ -424,7 +424,7 @@ define i32 @red_sext_mul_by_256(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[NEXT_GEP]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl <16 x i32> [[TMP3]], splat (i32 8)
-; CHECK-NEXT:    [[TMP5]] = add <16 x i32> [[VEC_PHI]], [[TMP4]]
+; CHECK-NEXT:    [[TMP5]] = call <16 x i32> @llvm.vector.partial.reduce.add.v16i32.v16i32(<16 x i32> [[VEC_PHI]], <16 x i32> [[TMP4]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]

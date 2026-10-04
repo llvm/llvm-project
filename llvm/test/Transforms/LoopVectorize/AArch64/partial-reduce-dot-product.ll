@@ -1876,7 +1876,7 @@ define i64 @not_dotp_ext_outside_plan(ptr %a, i16 %b, i64 %n) #0 {
 ; CHECK-INTERLEAVE1-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[TMP0]], align 2
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP1:%.*]] = zext <8 x i16> [[WIDE_LOAD]] to <8 x i64>
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP2:%.*]] = mul nuw nsw <8 x i64> [[TMP1]], [[BROADCAST_SPLAT]]
-; CHECK-INTERLEAVE1-NEXT:    [[TMP3]] = add <8 x i64> [[TMP2]], [[VEC_PHI]]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP3]] = call <8 x i64> @llvm.vector.partial.reduce.add.v8i64.v8i64(<8 x i64> [[VEC_PHI]], <8 x i64> [[TMP2]])
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-INTERLEAVE1-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
@@ -1913,8 +1913,8 @@ define i64 @not_dotp_ext_outside_plan(ptr %a, i16 %b, i64 %n) #0 {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = zext <8 x i16> [[WIDE_LOAD2]] to <8 x i64>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = mul nuw nsw <8 x i64> [[TMP2]], [[BROADCAST_SPLAT]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = mul nuw nsw <8 x i64> [[TMP3]], [[BROADCAST_SPLAT]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP6]] = add <8 x i64> [[TMP4]], [[VEC_PHI]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP7]] = add <8 x i64> [[TMP5]], [[VEC_PHI1]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP6]] = call <8 x i64> @llvm.vector.partial.reduce.add.v8i64.v8i64(<8 x i64> [[VEC_PHI]], <8 x i64> [[TMP4]])
+; CHECK-INTERLEAVED-NEXT:    [[TMP7]] = call <8 x i64> @llvm.vector.partial.reduce.add.v8i64.v8i64(<8 x i64> [[VEC_PHI1]], <8 x i64> [[TMP5]])
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
@@ -1947,7 +1947,7 @@ define i64 @not_dotp_ext_outside_plan(ptr %a, i16 %b, i64 %n) #0 {
 ; CHECK-MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[TMP0]], align 2
 ; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = zext <8 x i16> [[WIDE_LOAD]] to <8 x i64>
 ; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = mul nuw nsw <8 x i64> [[TMP1]], [[BROADCAST_SPLAT]]
-; CHECK-MAXBW-NEXT:    [[TMP3]] = add <8 x i64> [[TMP2]], [[VEC_PHI]]
+; CHECK-MAXBW-NEXT:    [[TMP3]] = call <8 x i64> @llvm.vector.partial.reduce.add.v8i64.v8i64(<8 x i64> [[VEC_PHI]], <8 x i64> [[TMP2]])
 ; CHECK-MAXBW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-MAXBW-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-MAXBW-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
@@ -2005,7 +2005,7 @@ define i64 @not_dotp_ext_outside_plan2(ptr %a, i16 %b, i64 %n) #0 {
 ; CHECK-INTERLEAVE1-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[TMP0]], align 2
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP1:%.*]] = zext <8 x i16> [[WIDE_LOAD]] to <8 x i64>
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP2:%.*]] = mul nuw nsw <8 x i64> [[BROADCAST_SPLAT]], [[TMP1]]
-; CHECK-INTERLEAVE1-NEXT:    [[TMP3]] = add <8 x i64> [[TMP2]], [[VEC_PHI]]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP3]] = call <8 x i64> @llvm.vector.partial.reduce.add.v8i64.v8i64(<8 x i64> [[VEC_PHI]], <8 x i64> [[TMP2]])
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-INTERLEAVE1-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
@@ -2042,8 +2042,8 @@ define i64 @not_dotp_ext_outside_plan2(ptr %a, i16 %b, i64 %n) #0 {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = zext <8 x i16> [[WIDE_LOAD2]] to <8 x i64>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = mul nuw nsw <8 x i64> [[BROADCAST_SPLAT]], [[TMP2]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = mul nuw nsw <8 x i64> [[BROADCAST_SPLAT]], [[TMP3]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP6]] = add <8 x i64> [[TMP4]], [[VEC_PHI]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP7]] = add <8 x i64> [[TMP5]], [[VEC_PHI1]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP6]] = call <8 x i64> @llvm.vector.partial.reduce.add.v8i64.v8i64(<8 x i64> [[VEC_PHI]], <8 x i64> [[TMP4]])
+; CHECK-INTERLEAVED-NEXT:    [[TMP7]] = call <8 x i64> @llvm.vector.partial.reduce.add.v8i64.v8i64(<8 x i64> [[VEC_PHI1]], <8 x i64> [[TMP5]])
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
@@ -2076,7 +2076,7 @@ define i64 @not_dotp_ext_outside_plan2(ptr %a, i16 %b, i64 %n) #0 {
 ; CHECK-MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[TMP0]], align 2
 ; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = zext <8 x i16> [[WIDE_LOAD]] to <8 x i64>
 ; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = mul nuw nsw <8 x i64> [[BROADCAST_SPLAT]], [[TMP1]]
-; CHECK-MAXBW-NEXT:    [[TMP3]] = add <8 x i64> [[TMP2]], [[VEC_PHI]]
+; CHECK-MAXBW-NEXT:    [[TMP3]] = call <8 x i64> @llvm.vector.partial.reduce.add.v8i64.v8i64(<8 x i64> [[VEC_PHI]], <8 x i64> [[TMP2]])
 ; CHECK-MAXBW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-MAXBW-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-MAXBW-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]

@@ -289,7 +289,7 @@ define float @fadd_red_fast(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-NOTF-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NOTF-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NOTF-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP2]], align 4
-; CHECK-NOTF-NEXT:    [[TMP3]] = fadd fast <vscale x 4 x float> [[WIDE_LOAD]], [[VEC_PHI]]
+; CHECK-NOTF-NEXT:    [[TMP3]] = call fast <vscale x 4 x float> @llvm.vector.partial.reduce.fadd.nxv4f32.nxv4f32(<vscale x 4 x float> [[VEC_PHI]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; CHECK-NOTF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NOTF-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NOTF-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -399,7 +399,7 @@ define float @fadd_red_fast(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-TF-NORED-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-TF-NORED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
 ; CHECK-TF-NORED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP2]], align 4
-; CHECK-TF-NORED-NEXT:    [[TMP3]] = fadd fast <vscale x 4 x float> [[WIDE_LOAD]], [[VEC_PHI]]
+; CHECK-TF-NORED-NEXT:    [[TMP3]] = call fast <vscale x 4 x float> @llvm.vector.partial.reduce.fadd.nxv4f32.nxv4f32(<vscale x 4 x float> [[VEC_PHI]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; CHECK-TF-NORED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-TF-NORED-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-TF-NORED-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
@@ -509,7 +509,7 @@ define float @fadd_red_fast(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-NEOVERSE-V1-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEOVERSE-V1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEOVERSE-V1-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP2]], align 4
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP3]] = fadd fast <vscale x 4 x float> [[WIDE_LOAD]], [[VEC_PHI]]
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP3]] = call fast <vscale x 4 x float> @llvm.vector.partial.reduce.fadd.nxv4f32.nxv4f32(<vscale x 4 x float> [[VEC_PHI]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; CHECK-NEOVERSE-V1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEOVERSE-V1-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEOVERSE-V1-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
