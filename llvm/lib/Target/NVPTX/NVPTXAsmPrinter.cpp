@@ -248,6 +248,7 @@ private:
   void emitGlobalAlias(const Module &M, const GlobalAlias &GA) override;
   void emitHeader(Module &M, const NVPTXSubtarget &STI);
   void emitKernelFunctionDirectives(const Function &F, raw_ostream &O) const;
+  void emitFunctionDirectives(const Function &F, raw_ostream &O) const;
   void emitFunctionParamList(const Function *, raw_ostream &O);
   void setAndEmitFunctionVirtualRegisters(const MachineFunction &MF);
   void encodeDebugInfoRegisterNumbers(const MachineFunction &MF);
@@ -271,6 +272,14 @@ private:
       return !isKernelFunction(V);
     else
       return true;
+  }
+
+  /// Should the abi_preserve directives of \p F be emitted? They are a parse
+  /// error on a .entry, and unassemblable on targets that cannot express them,
+  /// so the attributes are ignored in both cases.
+  bool shouldEmitABIPreserve(const Function &F) const {
+    return !isKernelFunction(F) &&
+           TM.getSubtarget<NVPTXSubtarget>(F).hasABIPreserve();
   }
 
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
@@ -715,6 +724,25 @@ static void printReturnValClause(const OwnerT *Owner, StringRef Name,
   O << ") ";
 }
 
+// Print the abi_preserve directives of \p ABI as Prefix, the directives joined
+// by Sep, then Suffix. Prints nothing when \p ABI has no directives.
+static void printABIPreserve(const ABIPreserve &ABI, raw_ostream &O,
+                             StringRef Prefix, StringRef Sep,
+                             StringRef Suffix) {
+  if (ABI.empty())
+    return;
+
+  O << Prefix;
+  ListSeparator LS(Sep);
+  for (const auto &[Attr, RegCount] : ABI) {
+    // The directive is the attribute name without its "nvvm" namespace, e.g.
+    // "nvvm.abi_preserve" selects ".abi_preserve".
+    assert(Attr.contains('.') && "expected a namespaced NVVM attribute");
+    O << LS << Attr.substr(Attr.find('.')) << ' ' << RegCount;
+  }
+  O << Suffix;
+}
+
 void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
                                         MCSymbol *PrototypeSymbol) const {
   const DataLayout &DL = getDataLayout();
@@ -756,6 +784,11 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
   O << ")";
   if (shouldEmitPTXNoReturn(CB))
     O << " .noreturn";
+  // Print the abi_preserve directives carried by the callsite. A prototype sits
+  // in the caller's body, so only the target gate applies here.
+  if (STI.hasABIPreserve())
+    printABIPreserve(getABIPreserve(CB), O, /*Prefix=*/" ", /*Sep=*/" ",
+                     /*Suffix=*/"");
   O << ";\n";
 
   OutStreamer->emitRawText(O.str());
@@ -844,8 +877,7 @@ void NVPTXAsmPrinter::emitFunctionEntryLabel() {
   if (isKernelFunction(*F))
     emitKernelFunctionDirectives(*F, O);
 
-  if (shouldEmitPTXNoReturn(*F))
-    O << ".noreturn";
+  emitFunctionDirectives(*F, O);
 
   OutStreamer->emitRawText(O.str());
 
@@ -886,6 +918,19 @@ void NVPTXAsmPrinter::emitFunctionBodyStart() {
 
 void NVPTXAsmPrinter::emitFunctionBodyEnd() {
   VRegMapping.clear();
+}
+
+// PTX permits these directives only between the .func directive and the
+// function body, so they are emitted here, after the parameter list and before
+// the opening brace.
+void NVPTXAsmPrinter::emitFunctionDirectives(const Function &F,
+                                             raw_ostream &O) const {
+  if (shouldEmitPTXNoReturn(F))
+    O << ".noreturn\n";
+
+  if (shouldEmitABIPreserve(F))
+    printABIPreserve(getABIPreserve(F), O, /*Prefix=*/"", /*Sep=*/"\n",
+                     /*Suffix=*/"\n");
 }
 
 const MCSymbol *NVPTXAsmPrinter::getFunctionFrameSymbol() const {
@@ -1011,8 +1056,14 @@ void NVPTXAsmPrinter::emitDeclarationWithName(const Function *F, MCSymbol *S,
   O << "\n";
   emitFunctionParamList(F, O);
   O << "\n";
-  if (shouldEmitPTXNoReturn(*F))
+  const bool NoReturn = shouldEmitPTXNoReturn(*F);
+  if (NoReturn)
     O << ".noreturn";
+  // Print abi_preserve directives regardless of whether F is a definition or a
+  // declaration. They must not run into a preceding .noreturn.
+  if (shouldEmitABIPreserve(*F))
+    printABIPreserve(getABIPreserve(*F), O, /*Prefix=*/NoReturn ? " " : "",
+                     /*Sep=*/" ", /*Suffix=*/"");
   O << ";\n";
 }
 

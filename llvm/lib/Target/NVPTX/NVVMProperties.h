@@ -14,7 +14,9 @@
 #ifndef LLVM_LIB_TARGET_NVPTX_NVVMPROPERTIES_H
 #define LLVM_LIB_TARGET_NVPTX_NVVMPROPERTIES_H
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/Alignment.h"
@@ -58,6 +60,16 @@ std::optional<unsigned> getMaxNReg(const Function &);
 bool hasBlocksAreClusters(const Function &);
 
 bool isParamGridConstant(const Argument &);
+
+/// Maps the name of each nvvm.abi_preserve* attribute that is present to its
+/// register count, in PTX emission order. An absent attribute has no entry.
+using ABIPreserve = SmallMapVector<StringRef, unsigned, 2>;
+
+/// On a function, the attributes are looked up on the function definition or
+/// declaration. On a callsite, the attributes are looked up on the call only;
+/// they are not inherited from the callee.
+ABIPreserve getABIPreserve(const Function &);
+ABIPreserve getABIPreserve(const CallBase &);
 
 inline MaybeAlign getStackAlign(const Function &F, unsigned Index) {
   return F.getAttributes().getAttributes(Index).getStackAlignment();

@@ -25,7 +25,6 @@
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/NVVMAttributes.h"
-#include <functional>
 #include <map>
 #include <mutex>
 #include <numeric>
@@ -293,6 +292,38 @@ std::optional<unsigned> llvm::getMaxNReg(const Function &F) {
 
 bool llvm::hasBlocksAreClusters(const Function &F) {
   return F.hasFnAttribute(NVVMAttr::BlocksAreClusters);
+}
+
+// Look the attribute up on the callsite only.
+static std::optional<unsigned> getFnAttrParsedInt(const CallBase &CB,
+                                                  StringRef Attr) {
+  const Attribute A = CB.getAttributes().getFnAttr(Attr);
+  if (!A.isValid())
+    return std::nullopt;
+
+  unsigned Value;
+  if (A.getValueAsString().getAsInteger(10, Value)) {
+    CB.getContext().emitError("can't parse integer attribute " +
+                              A.getValueAsString() + " in " + Attr);
+    return std::nullopt;
+  }
+  return Value;
+}
+
+ABIPreserve llvm::getABIPreserve(const Function &F) {
+  ABIPreserve ABI;
+  for (StringLiteral Attr : NVVMAttr::AbiPreserveAttrs)
+    if (const std::optional<unsigned> RegCount = getFnAttrParsedInt(F, Attr))
+      ABI[Attr] = *RegCount;
+  return ABI;
+}
+
+ABIPreserve llvm::getABIPreserve(const CallBase &CB) {
+  ABIPreserve ABI;
+  for (StringLiteral Attr : NVVMAttr::AbiPreserveAttrs)
+    if (const std::optional<unsigned> RegCount = getFnAttrParsedInt(CB, Attr))
+      ABI[Attr] = *RegCount;
+  return ABI;
 }
 
 bool llvm::isParamGridConstant(const Argument &Arg) {
