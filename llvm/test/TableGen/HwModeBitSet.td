@@ -129,7 +129,11 @@ def foo : Instruction {
 }
 
 // CHECK-SUBTARGET-LABEL: struct TestTargetGenMCSubtargetInfo : public MCSubtargetInfo {
-// CHECK-SUBTARGET:         unsigned resolveVariantSchedClass(unsigned SchedClass,
+// CHECK-SUBTARGET:         std::unique_ptr<MCSubtargetInfo> clone() const final {
+// CHECK-SUBTARGET-NEXT:      return std::make_unique<TestTargetGenMCSubtargetInfo>(*this);
+// CHECK-SUBTARGET-NEXT:    }
+// CHECK-SUBTARGET-EMPTY:
+// CHECK-SUBTARGET-NEXT:    unsigned resolveVariantSchedClass(unsigned SchedClass,
 // CHECK-SUBTARGET-NEXT:        const MCInst *MI, const MCInstrInfo *MCII,
 // CHECK-SUBTARGET-NEXT:        unsigned CPUID) const final {
 // CHECK-SUBTARGET-NEXT:      return TestTarget_MC::resolveVariantSchedClassImpl(SchedClass, MI, MCII, *this, CPUID);
