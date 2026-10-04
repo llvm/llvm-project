@@ -2553,8 +2553,8 @@ cases. This will typically be used in conjunction with
 ------------------------------------------
 
 This is generic IR metadata for floating-point :ref:`atomicrmw
-<i_atomicrmw>` operations; see `'atomic.ignore.denormal.mode' Metadata
-<https://llvm.org/docs/LangRef.html#atomic-ignore-denormal-mode-metadata>`_
+<i_atomicrmw>` operations; see :ref:`'atomic.ignore.denormal.mode' Metadata
+<md_atomic.ignore.denormal.mode>`
 in the language reference for its definition. It is required to emit a
 native atomic instruction for AMDGPU global memory, which
 unconditionally flushes float denormals.
