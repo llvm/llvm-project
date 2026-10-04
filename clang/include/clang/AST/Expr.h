@@ -1095,8 +1095,12 @@ public:
 /// Describes the kind of result that can be tail-allocated.
 enum class ConstantResultStorageKind { None, Int64, APValue };
 
-/// ConstantExpr - An expression that occurs in a constant context and
+/// An expression that occurs in a constant context and
 /// optionally the result of evaluating the expression.
+///
+/// \invariant The subexpression of a ConstantExpr and its APValue must have the
+/// same value category. In practice, this means that an lvalue subexpression
+/// must also have an APValue of type LValue.
 class ConstantExpr final
     : public FullExpr,
       private llvm::TrailingObjects<ConstantExpr, APValue, uint64_t> {
@@ -1161,6 +1165,12 @@ public:
   }
 
   void SetResult(APValue Value, const ASTContext &Context) {
+    if (getSubExpr()->isGLValue())
+      assert(Value.isLValue() &&
+             "SubExpr and APValue value category must match");
+    else
+      assert(getSubExpr()->isPRValue());
+
     MoveIntoResult(Value, Context);
   }
   void MoveIntoResult(APValue &Value, const ASTContext &Context);
