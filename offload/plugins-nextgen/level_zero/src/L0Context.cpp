@@ -94,9 +94,8 @@ Error L0ContextTy::init() {
   ODBG(OLDT_Init) << "  zeDriverGetDefaultContext: "
                   << (DriverGetDefaultContext.available() ? "yes" : "no");
 
-  if (!LaunchKernelWithArguments)
-    LaunchKernelWithArguments.loadExperimental(
-        zeDriver, "zeCommandListAppendLaunchKernelWithArguments");
+  LaunchKernelWithArguments.loadExperimental(
+      zeDriver, "zeCommandListAppendLaunchKernelWithArguments");
 
   if (!KernelGetArgumentSize)
     KernelGetArgumentSize.loadExperimental(zeDriver,
@@ -110,13 +109,10 @@ Error L0ContextTy::init() {
     CommandListAppendHostFunction.loadExperimental(
         zeDriver, "zexCommandListAppendHostFunction");
 
-  if (!DriverGetDefaultContext)
-    DriverGetDefaultContext.loadExperimental(zeDriver,
-                                             "zeDriverGetDefaultContext");
-
-  if (!IntelGetDriverVersionString)
-    IntelGetDriverVersionString.loadExperimental(
-        zeDriver, "zeIntelGetDriverVersionString");
+  DriverGetDefaultContext.loadExperimental(zeDriver,
+                                           "zeDriverGetDefaultContext");
+  IntelGetDriverVersionString.loadExperimental(zeDriver,
+                                               "zeIntelGetDriverVersionString");
 
   ODBG(OLDT_Init) << "APIs supported by the context with added extensions: ";
   ODBG(OLDT_Init) << "  zeCommandListAppendLaunchKernelWithArguments: "
