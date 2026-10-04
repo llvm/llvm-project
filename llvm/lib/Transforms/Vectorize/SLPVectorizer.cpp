@@ -30649,8 +30649,8 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       SmallVector<Value *> Ops(ActualVF, nullptr);
       unsigned Idx = 0;
       SmallPtrSet<const Value *, 8> Taken;
-      bool DependentSkipped = false;
-      for (Value *V : VL.drop_front(I)) {
+      std::optional<unsigned> FirstSkipped;
+      for (auto [Off, V] : enumerate(VL.drop_front(I))) {
         // Check that a previous iteration of this loop did not delete the
         // Value.
         auto *Inst = dyn_cast<Instruction>(V);
@@ -30661,7 +30661,8 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         if (StandaloneSeeds && Inst &&
             any_of(Inst->operand_values(),
                    [&](const Value *Op) { return Taken.contains(Op); })) {
-          DependentSkipped = true;
+          if (!FirstSkipped)
+            FirstSkipped = I + Off;
           continue;
         }
         Ops[Idx] = V;
@@ -30674,7 +30675,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       // Not enough vectorizable instructions - exit. A skipped dependent seed
       // may start the next window, so the scan must not stop because of it.
       if (Idx != ActualVF) {
-        if (!DependentSkipped)
+        if (!FirstSkipped)
           break;
         continue;
       }
@@ -30727,8 +30728,9 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
                          << ore::NV("TreeSize", R.getTreeSize()));
 
         R.vectorizeTree();
-        // Move to the next bundle.
-        I += VF - 1;
+        // Move to the next bundle. The skipped dependent seeds are fed by the
+        // vectorized lanes now, the next bundle starts from the first of them.
+        I = FirstSkipped ? *FirstSkipped - 1 : I + VF - 1;
         NextInst = I + 1;
         Changed = true;
       } else {
@@ -34009,6 +34011,15 @@ private:
           return cast<Instruction>(U);
       return cast<Instruction>(RdxVal);
     };
+    // The root is accumulated through the phi of its loop.
+    const bool IsLoopCarriedRoot =
+        RdxKind == RecurKind::FAdd &&
+        any_of(ReductionRoot->users(), [&](User *U) {
+          auto *Phi = dyn_cast<PHINode>(U);
+          return Phi &&
+                 DT.dominates(Phi->getParent(),
+                              cast<Instruction>(ReductionRoot)->getParent());
+        });
     auto EvaluateScalarCost =
         [&](function_ref<InstructionCost(Instruction *)> GenCostFn) {
           InstructionCost Cost = 0;
@@ -34032,8 +34043,11 @@ private:
             for (User *U : RdxVal->users()) {
               auto *RdxOp = cast<Instruction>(U);
               // The reduction root is used outside of the reduction any
-              // number of times, its fmul operand is still fused into it.
-              if ((RdxKind == RecurKind::FAdd && RdxOp == ReductionRoot) ||
+              // number of times, its fmul operand is still fused into it. The
+              // loop-carried chain is bound by its latency, so the fusion does
+              // not make it cheaper than the vector code, which cuts the chain.
+              if ((RdxKind == RecurKind::FAdd && RdxOp == ReductionRoot &&
+                   !IsLoopCarriedRoot) ||
                   hasRequiredNumberOfUses(IsCmpSelMinMax, RdxOp)) {
                 InstructionsState RdxOpS = RdxKind == RecurKind::FAdd
                                                ? getSameOpcode(RdxOp, TLI)

@@ -269,10 +269,6 @@ public:
     return true;
   }
 
-  // Put the zombie instance in a known good state after a move.
-  // deallocateBuckets() already resets to the empty state.
-  void kill() { deallocateBuckets(); }
-
   static unsigned roundUpNumBuckets(unsigned MinNumBuckets) {
     return std::max(64u, MinNumBuckets);
   }
@@ -485,13 +481,6 @@ public:
     setLarge(allocate_buffer(allocBytes<BucketT>(Num), allocAlign<BucketT>()),
              Num);
     return true;
-  }
-
-  // Put the zombie instance in a known good state after a move.
-  void kill() {
-    deallocateBuckets();
-    Small = false;
-    storage.Large = LargeRep{nullptr, nullptr, 0};
   }
 
   static unsigned roundUpNumBuckets(unsigned MinNumBuckets) {
@@ -762,11 +751,11 @@ public:
     auto [Reallocate, NewNumBuckets] = Storage.planShrinkAndClear();
     destroyAll();
     if (!Reallocate) {
-      initEmpty();
+      initEmpty(Storage);
       return;
     }
     Storage.deallocateBuckets();
-    initWithExactBucketCount(NewNumBuckets);
+    initWithExactBucketCount(Storage, NewNumBuckets);
   }
 
   /// Return true if the specified key is in the map, false otherwise.
@@ -1002,7 +991,7 @@ public:
   /// that this number of elements can be inserted in the map without grow().
   explicit DenseMapBase(unsigned NumElementsToReserve) {
     initWithExactBucketCount(
-        getMinBucketToReserveForEntries(NumElementsToReserve));
+        Storage, getMinBucketToReserveForEntries(NumElementsToReserve));
   }
 
   DenseMapBase(const DenseMapBase &other) : DenseMapBase() {
@@ -1038,7 +1027,7 @@ public:
   DenseMapBase &operator=(DenseMapBase &&other) {
     this->destroyAll();
     Storage.deallocateBuckets();
-    this->initWithExactBucketCount(0);
+    initWithExactBucketCount(Storage, 0);
     this->swap(other);
     return *this;
   }
@@ -1054,19 +1043,22 @@ public:
 private:
   StorageT Storage;
 
-  struct ExactBucketCount {};
-
   using Rep = llvm::densemap::detail::StorageRep<BucketT>;
 
-  DenseMapBase(unsigned NumBuckets, ExactBucketCount) {
-    initWithExactBucketCount(NumBuckets);
+  static void initEmpty(StorageT &S) {
+    S.setNumEntries(0);
+
+    assert((S.getNumBuckets() & (S.getNumBuckets() - 1)) == 0 &&
+           "# initial buckets must be a power of two!");
+    if (S.getNumBuckets())
+      llvm::densemap::detail::clearUsed(S.getUsed(), S.getNumBuckets());
   }
 
-  void initWithExactBucketCount(unsigned NewNumBuckets) {
-    if (Storage.allocateBuckets(NewNumBuckets))
-      initEmpty();
+  static void initWithExactBucketCount(StorageT &S, unsigned NewNumBuckets) {
+    if (S.allocateBuckets(NewNumBuckets))
+      initEmpty(S);
     else
-      setNumEntries(0);
+      S.setNumEntries(0);
   }
 
   void destroyAll() {
@@ -1087,15 +1079,6 @@ private:
     });
   }
 
-  void initEmpty() {
-    setNumEntries(0);
-
-    assert((getNumBuckets() & (getNumBuckets() - 1)) == 0 &&
-           "# initial buckets must be a power of two!");
-    if (getNumBuckets())
-      llvm::densemap::detail::clearUsed(getUsed(), getNumBuckets());
-  }
-
   /// Returns the number of buckets to allocate to ensure that the DenseMap can
   /// accommodate \p NumEntries without need to grow().
   unsigned getMinBucketToReserveForEntries(unsigned NumEntries) {
@@ -1111,27 +1094,27 @@ private:
     return llvm::densemap::detail::hasherFor<KeyT, KeyInfoT>();
   }
 
-  // Move key/value from Other to *this.
-  // Other is left in a valid but empty state.
-  LLVM_ATTRIBUTE_NOINLINE void moveFrom(DenseMapBase &Other) {
-    assert(getNumEntries() == 0 && "moveFrom requires an empty destination");
-    BucketT *OtherB = Other.getBuckets();
-    UsedT *OtherU = Other.getUsed();
-    const unsigned E = Other.getNumBuckets();
-    UsedT *U = getUsed();
-    BucketT *B = getBuckets();
-    const unsigned Mask = getNumBuckets() - 1;
-    llvm::densemap::detail::forEachUsed(OtherU, E, [&](unsigned I) {
+  // Move key/value from Src to Dst.
+  static LLVM_ATTRIBUTE_NOINLINE void moveFrom(StorageT &Dst, StorageT &Src) {
+    assert(Dst.getNumEntries() == 0 &&
+           "moveFrom requires an empty destination");
+    BucketT *SrcB = Src.getBuckets();
+    UsedT *SrcU = Src.getUsed();
+    const unsigned E = Src.getNumBuckets();
+    UsedT *U = Dst.getUsed();
+    BucketT *B = Dst.getBuckets();
+    const unsigned Mask = Dst.getNumBuckets() - 1;
+    llvm::densemap::detail::forEachUsed(SrcU, E, [&](unsigned I) {
       // Find the first empty slot on this key's probe chain; there is no equal
       // key in the destination, so nothing to compare against.
-      unsigned BucketNo = KeyInfoT::getHashValue(OtherB[I].getFirst()) & Mask;
+      unsigned BucketNo = KeyInfoT::getHashValue(SrcB[I].getFirst()) & Mask;
       while (llvm::densemap::detail::used(U, BucketNo))
         BucketNo = (BucketNo + 1) & Mask;
-      llvm::densemap::detail::relocateBucket(B + BucketNo, &OtherB[I]);
+      llvm::densemap::detail::relocateBucket(B + BucketNo, &SrcB[I]);
       llvm::densemap::detail::setUsed(U, BucketNo);
     });
-    setNumEntries(Other.getNumEntries());
-    Other.Storage.kill();
+    Dst.setNumEntries(Src.getNumEntries());
+    Src.deallocateBuckets();
   }
 
   LLVM_ATTRIBUTE_NOINLINE void copyFrom(const DenseMapBase &other) {
@@ -1253,12 +1236,13 @@ private:
       Storage.grow(MinNumBuckets, hasher());
     } else {
       unsigned NumBuckets = StorageT::roundUpNumBuckets(MinNumBuckets);
-      DenseMapBase Tmp(NumBuckets, ExactBucketCount{});
-      Tmp.moveFrom(*this);
-      if (Storage.maybeMoveFast(std::move(Tmp.Storage)))
+      StorageT Tmp;
+      initWithExactBucketCount(Tmp, NumBuckets);
+      moveFrom(Tmp, Storage);
+      if (Storage.maybeMoveFast(std::move(Tmp)))
         return;
-      initWithExactBucketCount(NumBuckets);
-      moveFrom(Tmp);
+      initWithExactBucketCount(Storage, NumBuckets);
+      moveFrom(Storage, Tmp);
     }
   }
 
