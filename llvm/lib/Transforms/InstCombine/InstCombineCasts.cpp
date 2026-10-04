@@ -1943,37 +1943,8 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     return CI;
   }
 
-  // Try to extend the entire expression tree to the wide destination type.
-  bool ShouldExtendExpression = true;
-  Value *TruncSrc = nullptr;
-  // It is not desirable to extend expression in the trunc + sext pattern when
-  // destination type is narrower than original (pre-trunc) type.
-  if (match(Src, m_Trunc(m_Value(TruncSrc))))
-    if (TruncSrc->getType()->getScalarSizeInBits() > DestBitSize)
-      ShouldExtendExpression = false;
-  if (ShouldExtendExpression && shouldChangeType(SrcTy, DestTy) &&
-      TypeEvaluationHelper::canEvaluateSExtd(Src, DestTy)) {
-    // Okay, we can transform this!  Insert the new expression now.
-    LLVM_DEBUG(
-        dbgs() << "ICE: EvaluateInDifferentType converting expression type"
-                  " to avoid sign extend: "
-               << Sext << '\n');
-    Value *Res = EvaluateInDifferentType(Src, DestTy, true);
-    assert(Res->getType() == DestTy);
-
-    // If the high bits are already filled with sign bit, just replace this
-    // cast with the result.
-    if (ComputeNumSignBits(Res, &Sext) > DestBitSize - SrcBitSize)
-      return replaceInstUsesWith(Sext, Res);
-
-    // We need to emit a shl + ashr to do the sign extend.
-    Value *ShAmt = ConstantInt::get(DestTy, DestBitSize - SrcBitSize);
-    return BinaryOperator::CreateAShr(Builder.CreateShl(Res, ShAmt, "sext"),
-                                      ShAmt);
-  }
-
-  Value *X = TruncSrc;
-  if (X) {
+  Value *X;
+  if (match(Src, m_Trunc(m_Value(X)))) {
     // If the input has more sign bits than bits truncated, then convert
     // directly to final type.
     unsigned XBitSize = X->getType()->getScalarSizeInBits();
@@ -2007,6 +1978,35 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
       Value *Ashr = Builder.CreateAShr(Y, C->getZExtValue());
       return CastInst::CreateIntegerCast(Ashr, DestTy, /* isSigned */ true);
     }
+  }
+
+  // Try to extend the entire expression tree to the wide destination type.
+  bool ShouldExtendExpression = true;
+  Value *TruncSrc = nullptr;
+  // It is not desirable to extend expression in the trunc + sext pattern when
+  // destination type is narrower than original (pre-trunc) type.
+  if (match(Src, m_Trunc(m_Value(TruncSrc))))
+    if (TruncSrc->getType()->getScalarSizeInBits() > DestBitSize)
+      ShouldExtendExpression = false;
+  if (ShouldExtendExpression && shouldChangeType(SrcTy, DestTy) &&
+      TypeEvaluationHelper::canEvaluateSExtd(Src, DestTy)) {
+    // Okay, we can transform this!  Insert the new expression now.
+    LLVM_DEBUG(
+        dbgs() << "ICE: EvaluateInDifferentType converting expression type"
+                  " to avoid sign extend: "
+               << Sext << '\n');
+    Value *Res = EvaluateInDifferentType(Src, DestTy, true);
+    assert(Res->getType() == DestTy);
+
+    // If the high bits are already filled with sign bit, just replace this
+    // cast with the result.
+    if (ComputeNumSignBits(Res, &Sext) > DestBitSize - SrcBitSize)
+      return replaceInstUsesWith(Sext, Res);
+
+    // We need to emit a shl + ashr to do the sign extend.
+    Value *ShAmt = ConstantInt::get(DestTy, DestBitSize - SrcBitSize);
+    return BinaryOperator::CreateAShr(Builder.CreateShl(Res, ShAmt, "sext"),
+                                      ShAmt);
   }
 
   if (auto *Cmp = dyn_cast<ICmpInst>(Src))
