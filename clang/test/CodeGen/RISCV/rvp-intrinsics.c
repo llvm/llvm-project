@@ -5512,6 +5512,84 @@ int32x2_t test_pwsla_s_i32x2(int16x2_t rs1, unsigned shamt) {
   return __riscv_pwsla_s_i32x2(rs1, shamt);
 }
 
+// CHECK-LABEL: define dso_local i32 @test_pnsrl_s_u8x4(
+// RV32-SAME: i64 noundef [[RS1_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-SAME: i64 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <4 x i16>
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i8> @llvm.riscv.pnsrl.v4i8.v4i16(<4 x i16> [[TMP0]], i32 [[SHAMT]])
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i8> [[TMP1]] to i32
+// CHECK-NEXT:    ret i32 [[TMP2]]
+//
+uint8x4_t test_pnsrl_s_u8x4(uint16x4_t rs1, unsigned shamt) {
+  return __riscv_pnsrl_s_u8x4(rs1, shamt);
+}
+
+// CHECK-LABEL: define dso_local i32 @test_pnsrl_s_u16x2(
+// RV32-SAME: i64 noundef [[RS1_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-SAME: i64 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
+// CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i16> @llvm.riscv.pnsrl.v2i16.v2i32(<2 x i32> [[TMP0]], i32 [[SHAMT]])
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i16> [[TMP1]] to i32
+// CHECK-NEXT:    ret i32 [[TMP2]]
+//
+uint16x2_t test_pnsrl_s_u16x2(uint32x2_t rs1, unsigned shamt) {
+  return __riscv_pnsrl_s_u16x2(rs1, shamt);
+}
+
+// CHECK-LABEL: define dso_local i32 @test_pnsra_s_i8x4(
+// RV32-SAME: i64 noundef [[RS1_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-SAME: i64 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <4 x i16>
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i8> @llvm.riscv.pnsra.v4i8.v4i16(<4 x i16> [[TMP0]], i32 [[SHAMT]])
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i8> [[TMP1]] to i32
+// CHECK-NEXT:    ret i32 [[TMP2]]
+//
+int8x4_t test_pnsra_s_i8x4(int16x4_t rs1, unsigned shamt) {
+  return __riscv_pnsra_s_i8x4(rs1, shamt);
+}
+
+// CHECK-LABEL: define dso_local i32 @test_pnsra_s_i16x2(
+// RV32-SAME: i64 noundef [[RS1_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-SAME: i64 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
+// CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i16> @llvm.riscv.pnsra.v2i16.v2i32(<2 x i32> [[TMP0]], i32 [[SHAMT]])
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i16> [[TMP1]] to i32
+// CHECK-NEXT:    ret i32 [[TMP2]]
+//
+int16x2_t test_pnsra_s_i16x2(int32x2_t rs1, unsigned shamt) {
+  return __riscv_pnsra_s_i16x2(rs1, shamt);
+}
+
+// CHECK-LABEL: define dso_local i32 @test_pnsrar_s_i8x4(
+// RV32-SAME: i64 noundef [[RS1_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-SAME: i64 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <4 x i16>
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i8> @llvm.riscv.pnsrar.v4i8.v4i16(<4 x i16> [[TMP0]], i32 [[SHAMT]])
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i8> [[TMP1]] to i32
+// CHECK-NEXT:    ret i32 [[TMP2]]
+//
+int8x4_t test_pnsrar_s_i8x4(int16x4_t rs1, unsigned shamt) {
+  return __riscv_pnsrar_s_i8x4(rs1, shamt);
+}
+
+// CHECK-LABEL: define dso_local i32 @test_pnsrar_s_i16x2(
+// RV32-SAME: i64 noundef [[RS1_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-SAME: i64 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <2 x i32>
+// CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i16> @llvm.riscv.pnsrar.v2i16.v2i32(<2 x i32> [[TMP0]], i32 [[SHAMT]])
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i16> [[TMP1]] to i32
+// CHECK-NEXT:    ret i32 [[TMP2]]
+//
+int16x2_t test_pnsrar_s_i16x2(int32x2_t rs1, unsigned shamt) {
+  return __riscv_pnsrar_s_i16x2(rs1, shamt);
+}
+
 // CHECK-LABEL: define dso_local i64 @test_pwadd_i16x4(
 // CHECK-SAME: i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]

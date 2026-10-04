@@ -25,6 +25,10 @@ const char* DladdrSelfFName(void);
 // into account.
 char* DladdrElfHeaderBase(void* ld, char* addr);
 
+// Clears any pending dlerror() message on the current thread so that glibc
+// frees its per-thread error buffer before the thread is unregistered.
+void ClearDlerror();
+
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_DL_H
