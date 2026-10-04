@@ -1926,9 +1926,22 @@ OptimizeFunctions(Module &M,
 
   ChangeableCCCacheTy ChangeableCCCache;
   std::vector<Function *> AllCallsCold;
-  for (Function &F : llvm::make_early_inc_range(M))
-    if (hasOnlyColdCalls(F, GetBFI, ChangeableCCCache))
-      AllCallsCold.push_back(&F);
+  // This is a preprocessing step to determine if any function in the module
+  // can use Cold calling convention. This is supposed to help compile time
+  // on targets that do not use Cold for any function. Note this loop cannot
+  // be fused with the following loop.
+  bool CanUseColdCCForAnyColdCall = false;
+  for (Function &F : llvm::make_early_inc_range(M)) {
+    if (!F.isIntrinsic() && GetTTI(F).useColdCCForColdCall(F)) {
+      CanUseColdCCForAnyColdCall = true;
+      break;
+    }
+  }
+
+  if (EnableColdCCStressTest || CanUseColdCCForAnyColdCall)
+    for (Function &F : llvm::make_early_inc_range(M))
+      if (hasOnlyColdCalls(F, GetBFI, ChangeableCCCache))
+        AllCallsCold.push_back(&F);
 
   // Optimize functions.
   for (Function &F : llvm::make_early_inc_range(M)) {
