@@ -494,30 +494,35 @@ X86LoadValueInjectionLoadHardeningImpl::getGadgetGraph(
       [&](MachineBasicBlock *MBB, GraphIter GI, unsigned ParentDepth) {
         unsigned LoopDepth = MLI.getLoopDepth(MBB);
         if (!MBB->empty()) {
-          // Always add the first instruction in each block
-          auto NI = MBB->begin();
-          auto BeginBB = MaybeAddNode(&*NI);
-          Builder.addEdge(ParentDepth, GI, BeginBB.first);
-          if (!BlocksVisited.insert(MBB).second)
-            return;
+          // Always add the first non-debug instruction in each block
+          auto NI = MBB->getFirstNonDebugInstr(/*SkipPseudoOp=*/false);
+          if (NI != MBB->end()) {
+            auto BeginBB = MaybeAddNode(&*NI);
+            Builder.addEdge(ParentDepth, GI, BeginBB.first);
+            if (!BlocksVisited.insert(MBB).second)
+              return;
 
-          // Add any instructions within the block that are gadget components
-          GI = BeginBB.first;
-          while (++NI != MBB->end()) {
-            auto Ref = NodeMap.find(&*NI);
-            if (Ref != NodeMap.end()) {
-              Builder.addEdge(LoopDepth, GI, Ref->getSecond());
-              GI = Ref->getSecond();
+            // Add any instructions within the block that are gadget components
+            GI = BeginBB.first;
+            while (++NI != MBB->end()) {
+              auto Ref = NodeMap.find(&*NI);
+              if (Ref != NodeMap.end()) {
+                Builder.addEdge(LoopDepth, GI, Ref->getSecond());
+                GI = Ref->getSecond();
+              }
             }
-          }
 
-          // Always add the terminator instruction, if one exists
-          auto T = MBB->getFirstTerminator();
-          if (T != MBB->end()) {
-            auto EndBB = MaybeAddNode(&*T);
-            if (EndBB.second)
-              Builder.addEdge(LoopDepth, GI, EndBB.first);
-            GI = EndBB.first;
+            // Always add the terminator instruction, if one exists
+            auto T = MBB->getFirstTerminator();
+            if (T != MBB->end()) {
+              auto EndBB = MaybeAddNode(&*T);
+              if (EndBB.second)
+                Builder.addEdge(LoopDepth, GI, EndBB.first);
+              GI = EndBB.first;
+            }
+          } else {
+            if (!BlocksVisited.insert(MBB).second)
+              return;
           }
         }
         for (MachineBasicBlock *Succ : MBB->successors())
