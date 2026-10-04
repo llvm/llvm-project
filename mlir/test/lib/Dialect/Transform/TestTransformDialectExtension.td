@@ -16,6 +16,7 @@
 
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 include "mlir/Dialect/Transform/Interfaces/MatchInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
@@ -584,18 +585,36 @@ def TestInitializerExtensionOp
   let cppNamespace = "::mlir::test";
 }
 
+// The fold functions that `transform.test_fold` can call.
+def TestFoldApi : I32EnumAttr<"TestFoldApi", "", [
+    I32EnumAttrCase<"Fold", 0, "fold">,
+    I32EnumAttrCase<"TryFold", 1, "try_fold">,
+    I32EnumAttrCase<"Materialize", 2, "materialize">,
+  ]> {
+  let cppNamespace = "::mlir::test";
+}
+
 def TestFoldOp
   : Op<Transform_Dialect, "test_fold",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let description = [{
-    Folds each target op with `Operation::fold` and emits the fold result as a
-    remark on the target op. The remark says "failure", "in place", or lists
-    one entry per result, followed by "in place" if the fold also changed the
-    op in place.
+    Folds each target op and emits the fold result as a remark on the target
+    op. The remark says "failure", "in place", or lists one entry per result,
+    followed by "in place" if the fold also changed the op in place. `api`
+    selects the fold function: `fold` (`Operation::fold`), `try_fold`
+    (`OpBuilder::tryFold`), or `materialize` (`OpBuilder::tryFold`, then
+    `OpBuilder::materializeFoldResults` before the target op, with `live_only`
+    as the `liveOnly` argument). `materialize` emits a second remark with the
+    materialized values.
   }];
-  let arguments = (ins TransformHandleTypeInterface:$target);
-  let assemblyFormat = "$target attr-dict `:` type($target)";
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                   DefaultValuedAttr<TestFoldApi, "TestFoldApi::Fold">:$api,
+                   UnitAttr:$live_only);
+  let assemblyFormat = [{
+    $target (`api` `=` $api^)? (`live_only` $live_only^)? attr-dict `:`
+    type($target)
+  }];
   let cppNamespace = "::mlir::test";
 }
 
