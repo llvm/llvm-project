@@ -149,3 +149,17 @@ OpFoldResults detail::convertLegacyFoldResults(LogicalResult status,
          "legacy fold returned a null result");
   return results;
 }
+
+void detail::dropReplacementsOfReplacedResults(Operation *op,
+                                               OpFoldResults &result) {
+  bool namesReplacedResult =
+      llvm::any_of(result.getReplacements(), [&](OpFoldResult replacement) {
+        auto opResult = dyn_cast_if_present<OpResult>(
+            dyn_cast_if_present<Value>(replacement));
+        return opResult && opResult.getOwner() == op &&
+               result[opResult.getResultNumber()];
+      });
+  if (!namesReplacedResult)
+    return;
+  result = success(result.modifiedInPlace());
+}
