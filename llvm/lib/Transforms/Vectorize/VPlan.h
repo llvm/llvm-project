@@ -358,11 +358,11 @@ public:
   /// Return the cost of the block.
   virtual InstructionCost cost(ElementCount VF, VPCostContext &Ctx) = 0;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printAsOperand(raw_ostream &OS, bool PrintType = false) const {
     OS << getName();
   }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print plain-text dump of this VPBlockBase to \p O, prefixing all lines
   /// with \p Indent. \p SlotTracker is used to print unnamed VPValue's using
   /// consequtive numbers.
@@ -5039,6 +5039,10 @@ public:
 
   const DataLayout &getDataLayout() const {
     return getScalarHeader()->getIRBasicBlock()->getDataLayout();
+  }
+
+  Function *getIRFunction() const {
+    return getScalarHeader()->getIRBasicBlock()->getParent();
   }
 
   void addVF(ElementCount VF) { VFs.insert(VF); }

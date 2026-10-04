@@ -431,8 +431,9 @@ public:
           TargetLibraryInfo *TLi, AAResults *Aa, LoopInfo *Li,
           DominatorTree *Dt, AssumptionCache *AC, DemandedBits *DB,
           const DataLayout *DL, OptimizationRemarkEmitter *ORE)
-      : BatchAA(*Aa), F(Func), SE(Se), TTI(Tti), TLI(TLi), LI(Li), DT(Dt),
-        AC(AC), DB(DB), DL(DL), ORE(ORE), CostKind(getSLPCostKind(Func)),
+      : AA(Aa), BatchAA(std::in_place, *Aa), F(Func), SE(Se), TTI(Tti),
+        TLI(TLi), LI(Li), DT(Dt), AC(AC), DB(DB), DL(DL), ORE(ORE),
+        CostKind(getSLPCostKind(Func)),
         Builder(Se->getContext(), TargetFolder(*DL)) {
     CodeMetrics::collectEphemeralValues(F, AC, EphValues);
     // Use the vector register size specified by the target unless overridden
@@ -2298,7 +2299,7 @@ public:
       salvageDebugInfo(*I);
       ArrayRef<TreeEntry *> Entries = getTreeEntries(I);
       for (Use &U : I->operands()) {
-        if (auto *OpI = dyn_cast_if_present<Instruction>(U.get());
+        if (auto *OpI = dyn_cast<Instruction>(U.get());
             OpI && !DeletedInstructions.contains(OpI) && OpI->hasOneUser() &&
             wouldInstructionBeTriviallyDead(OpI, TLI) &&
             !ExternalUseReplacements.contains(OpI) &&
@@ -2325,7 +2326,7 @@ public:
     // Process the dead instruction list until empty.
     while (!DeadInsts.empty()) {
       Value *V = DeadInsts.pop_back_val();
-      Instruction *VI = cast_or_null<Instruction>(V);
+      Instruction *VI = cast<Instruction>(V);
       if (!VI || !VI->getParent())
         continue;
       assert(isInstructionTriviallyDead(VI, TLI) &&
@@ -3689,7 +3690,7 @@ private:
     auto Res = AliasCache.try_emplace(Key);
     if (!Res.second)
       return Res.first->second;
-    bool Aliased = isModOrRefSet(BatchAA.getModRefInfo(Inst2, Loc1));
+    bool Aliased = isModOrRefSet(BatchAA->getModRefInfo(Inst2, Loc1));
     // Store the result in the cache.
     Res.first->getSecond() = Aliased;
     return Aliased;
@@ -3785,10 +3786,12 @@ private:
   /// TODO: consider moving this to the AliasAnalysis itself.
   SmallDenseMap<AliasCacheKey, bool> AliasCache;
 
-  // Cache for pointerMayBeCaptured calls inside AA.  This is preserved
-  // globally through SLP because we don't perform any action which
-  // invalidates capture results.
-  BatchAAResults BatchAA;
+  AAResults *AA;
+
+  // Cache for pointerMayBeCaptured calls inside AA. Vectorizing a tree can
+  // create new captures (e.g. a pointer inserted into a vector of pointers
+  // feeding a masked gather), so this is reset after each vectorized tree.
+  std::optional<BatchAAResults> BatchAA;
 
   /// Temporary store for deleted instructions. Instructions will be deleted
   /// eventually when the BoUpSLP is destructed.  The deferral is required to
@@ -6704,7 +6707,7 @@ static bool areTwoInsertFromSameBuildVector(
       if ((IE1 != VU && !IE1->hasOneUse()) || IsReusedIdx)
         IE1 = nullptr;
       else
-        IE1 = dyn_cast_or_null<InsertElementInst>(GetBaseOperand(IE1));
+        IE1 = dyn_cast_if_present<InsertElementInst>(GetBaseOperand(IE1));
     }
     if (IE2 && IE2 != VU) {
       unsigned Idx2 = getElementIndex(IE2).value_or(*Idx1);
@@ -6713,7 +6716,7 @@ static bool areTwoInsertFromSameBuildVector(
       if ((IE2 != V && !IE2->hasOneUse()) || IsReusedIdx)
         IE2 = nullptr;
       else
-        IE2 = dyn_cast_or_null<InsertElementInst>(GetBaseOperand(IE2));
+        IE2 = dyn_cast_if_present<InsertElementInst>(GetBaseOperand(IE2));
     }
   } while (!IsReusedIdx && (IE1 || IE2));
   return false;
@@ -10179,13 +10182,16 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
         !has_single_bit(NumUniqueScalarValues) &&
         UniquePositions.size() * 2 < NumUniqueScalarValues)
       return std::make_pair(false, false);
-    auto CheckLoads = [&](ArrayRef<Value *> Loads, bool IncludeGather) {
+    auto GetLoadsState = [&](ArrayRef<Value *> Loads) {
       assert(S && S.getOpcode() == Instruction::Load && "Expected load.");
       BoUpSLP::OrdersType Order;
       SmallVector<Value *> PointerOps;
       BoUpSLP::StridedPtrInfo SPtrInfo;
-      BoUpSLP::LoadsState Res = R.canVectorizeLoads(Loads, S.getMainOp(), Order,
-                                                    PointerOps, SPtrInfo);
+      return R.canVectorizeLoads(Loads, S.getMainOp(), Order, PointerOps,
+                                 SPtrInfo);
+    };
+    auto CheckLoads = [&](ArrayRef<Value *> Loads, bool IncludeGather) {
+      BoUpSLP::LoadsState Res = GetLoadsState(Loads);
       return (IncludeGather && Res == BoUpSLP::LoadsState::Gather) ||
              Res == BoUpSLP::LoadsState::ScatterVectorize ||
              Res == BoUpSLP::LoadsState::StridedVectorize ||
@@ -10267,8 +10273,27 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
     if (S && S.getOpcode() == Instruction::Load) {
       bool UniquesVectorized =
           CheckLoads(UniqueValues, /*IncludeGather=*/false);
-      if (UniquesVectorized || CheckLoads(VL, /*IncludeGather=*/false))
-        return std::make_pair(true, !UniquesVectorized);
+      if (UniquesVectorized || CheckLoads(VL, /*IncludeGather=*/false)) {
+        bool UseOriginal = !UniquesVectorized;
+        // The unique loads are consecutive: pack them unless the masked
+        // gather of the originals is cheaper than the wide load + reshuffle.
+        if (UseOriginal &&
+            GetLoadsState(UniqueValues) == BoUpSLP::LoadsState::Vectorize) {
+          auto *LI0 = cast<LoadInst>(S.getMainOp());
+          InstructionCost PackCost =
+              ReusesCost + TTI.getMemoryOpCost(
+                               Instruction::Load, UniquesVecTy, LI0->getAlign(),
+                               LI0->getPointerAddressSpace(), CostKind,
+                               TTI::getOperandInfo(LI0->getPointerOperand()));
+          InstructionCost GatherCost = TTI.getMemIntrinsicInstrCost(
+              MemIntrinsicCostAttributes(
+                  Intrinsic::masked_gather, VecTy, LI0->getPointerOperand(),
+                  /*VariableMask=*/false, computeCommonAlignment<LoadInst>(VL)),
+              CostKind);
+          UseOriginal = GatherCost < PackCost;
+        }
+        return std::make_pair(true, UseOriginal);
+      }
     }
     bool CanSkipBVCost =
         (!BuildGatherOnly && !RequireScheduling) || R.hasSameNode(S, VL);
@@ -20471,7 +20496,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     // If found user is an insertelement, do not calculate extract cost but try
     // to detect it as a final shuffled/identity match.
     // TODO: what if a user is insertvalue when REVEC is enabled?
-    if (auto *VU = dyn_cast_or_null<InsertElementInst>(EU.User);
+    if (auto *VU = dyn_cast_if_present<InsertElementInst>(EU.User);
         VU && VU->getOperand(1) == EU.Scalar) {
       if (auto *FTy = dyn_cast<FixedVectorType>(VU->getType())) {
         if (!UsedInserts.insert(VU).second)
@@ -20749,7 +20774,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       }
     } else {
       ExtraCost = ScaleCost(ExtraCost, *Entry, EU.Scalar,
-                            cast_or_null<Instruction>(EU.User));
+                            cast_if_present<Instruction>(EU.User));
     }
 
     ExtractCost += ExtraCost;
@@ -21199,8 +21224,9 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
   const BasicBlock *TEInsertBlock = nullptr;
   // Main node of PHI entries keeps the correct order of operands/incoming
   // blocks.
-  if (auto *PHI = dyn_cast_or_null<PHINode>(
-          TEUseEI.UserTE->hasState() ? TEUseEI.UserTE->getMainOp() : nullptr);
+  if (auto *PHI = TEUseEI.UserTE->hasState()
+                      ? dyn_cast<PHINode>(TEUseEI.UserTE->getMainOp())
+                      : nullptr;
       PHI && TEUseEI.UserTE->State != TreeEntry::SplitVectorize) {
     TEInsertBlock = PHI->getIncomingBlock(TEUseEI.EdgeIdx);
     TEInsertPt = TEInsertBlock->getTerminator();
@@ -22151,7 +22177,7 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
     Res = FindLastInst();
     if (ArrayRef<TreeEntry *> Entries = getTreeEntries(Res); !Entries.empty()) {
       for (auto *E : Entries) {
-        auto *I = dyn_cast_or_null<Instruction>(E->VectorizedValue);
+        auto *I = dyn_cast_if_present<Instruction>(E->VectorizedValue);
         if (!I)
           I = &getLastInstructionInBundle(E);
         if (Res->getParent() == I->getParent() && Res->comesBefore(I))
@@ -22298,20 +22324,18 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
       (GatheredLoadsEntriesFirst.has_value() &&
        E->Idx >= *GatheredLoadsEntriesFirst && !E->isGather() &&
        E->getOpcode() == Instruction::Load)) {
-    Builder.SetInsertPoint(LastInst->getParent(), LastInstIt);
+    Builder.SetInsertPoint(LastInstIt);
   } else {
     // Set the insertion point after the last instruction in the bundle. Set the
     // debug location to Front.
-    Builder.SetInsertPoint(
-        LastInst->getParent(),
-        LastInst->getNextNode()->getIterator());
+    Builder.SetInsertPoint(LastInst->getNextNode()->getIterator());
     if (Instruction *Res = LastInstructionToPos.lookup(LastInst)) {
-      Builder.SetInsertPoint(LastInst->getParent(), Res->getIterator());
+      Builder.SetInsertPoint(Res->getIterator());
     } else {
       Res = Builder.CreateAlignedLoad(Builder.getPtrTy(),
                                       PoisonValue::get(Builder.getPtrTy()),
                                       MaybeAlign());
-      Builder.SetInsertPoint(LastInst->getParent(), Res->getIterator());
+      Builder.SetInsertPoint(Res->getIterator());
       eraseInstruction(Res);
       if (E->State != TreeEntry::SplitVectorize)
         LastInstructionToPos.try_emplace(LastInst, Res);
@@ -22445,7 +22469,7 @@ Value *BoUpSLP::gather(
   SmallVector<int> Mask(VL.size());
   std::iota(Mask.begin(), Mask.end(), 0);
   Value *OriginalRoot = Root;
-  if (auto *SV = dyn_cast_or_null<ShuffleVectorInst>(Root);
+  if (auto *SV = dyn_cast_if_present<ShuffleVectorInst>(Root);
       SV && isa<PoisonValue>(SV->getOperand(1)) &&
       SV->getOperand(0)->getType() == VecTy) {
     Root = SV->getOperand(0);
@@ -24099,15 +24123,13 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
               E != &getRootNode() || E->UserTreeIndex) &&
              "PHI reordering is free.");
       auto *PH = cast<PHINode>(VL0);
-      Builder.SetInsertPoint(PH->getParent(),
-                             PH->getParent()->getFirstNonPHIIt());
+      Builder.SetInsertPoint(PH->getParent()->getFirstNonPHIIt());
       Builder.SetCurrentDebugLocation(getDebugLocFromPHI(*PH));
       PHINode *NewPhi = Builder.CreatePHI(VecTy, PH->getNumIncomingValues());
       Value *V = NewPhi;
 
       // Adjust insertion point once all PHI's have been generated.
-      Builder.SetInsertPoint(PH->getParent(),
-                             PH->getParent()->getFirstInsertionPt());
+      Builder.SetInsertPoint(PH->getParent()->getFirstInsertionPt());
       Builder.SetCurrentDebugLocation(getDebugLocFromPHI(*PH));
 
       V = FinalShuffle(V, E);
@@ -24271,8 +24293,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             if (!Ins->hasOneUse())
               break;
             Op = Ins;
-            Ins =
-                dyn_cast_or_null<Instruction>(Ins->getUniqueUndroppableUser());
+            Ins = dyn_cast_if_present<Instruction>(
+                Ins->getUniqueUndroppableUser());
           } while (Ins && Ins->getOperand(0) == Op);
           SmallBitVector UseMask =
               buildUseMask(NumElts, InsertMask, UseMask::UndefsAsMask);
@@ -26073,10 +26095,9 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   versionBlocksForRuntimeChecks();
 
   if (ReductionRoot)
-    Builder.SetInsertPoint(ReductionRoot->getParent(),
-                           ReductionRoot->getIterator());
+    Builder.SetInsertPoint(ReductionRoot->getIterator());
   else
-    Builder.SetInsertPoint(&F->getEntryBlock(), F->getEntryBlock().begin());
+    Builder.SetInsertPoint(F->getEntryBlock().begin());
 
   // Vectorize gather operands of the nodes with the external uses only.
   SmallVector<std::pair<TreeEntry *, Instruction *>> GatherEntries;
@@ -26486,19 +26507,15 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
       if (auto *VecI = dyn_cast<Instruction>(Vec)) {
         if (auto *PHI = dyn_cast<PHINode>(VecI)) {
           if (PHI->getParent()->isLandingPad())
-            Builder.SetInsertPoint(
-                PHI->getParent(),
-                std::next(
-                    PHI->getParent()->getLandingPadInst()->getIterator()));
+            Builder.SetInsertPoint(std::next(
+                PHI->getParent()->getLandingPadInst()->getIterator()));
           else
-            Builder.SetInsertPoint(PHI->getParent(),
-                                   PHI->getParent()->getFirstNonPHIIt());
+            Builder.SetInsertPoint(PHI->getParent()->getFirstNonPHIIt());
         } else {
-          Builder.SetInsertPoint(VecI->getParent(),
-                                 std::next(VecI->getIterator()));
+          Builder.SetInsertPoint(std::next(VecI->getIterator()));
         }
       } else {
-        Builder.SetInsertPoint(&F->getEntryBlock(), F->getEntryBlock().begin());
+        Builder.SetInsertPoint(F->getEntryBlock().begin());
       }
       Value *NewInst = ExtractAndExtendIfNeeded(Vec);
       // Required to update internally referenced instructions.
@@ -26538,10 +26555,8 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
               IRBuilderBase::InsertPointGuard Guard(Builder);
               if (auto *IVec = dyn_cast<PHINode>(Vec)) {
                 if (IVec->getParent()->isLandingPad())
-                  Builder.SetInsertPoint(IVec->getParent(),
-                                         std::next(IVec->getParent()
-                                                       ->getLandingPadInst()
-                                                       ->getIterator()));
+                  Builder.SetInsertPoint(std::next(
+                      IVec->getParent()->getLandingPadInst()->getIterator()));
                 else
                   Builder.SetInsertPoint(
                       IVec->getParent()->getFirstNonPHIOrDbgOrLifetime());
@@ -26596,8 +26611,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
             Instruction *IncomingTerminator =
                 PH->getIncomingBlock(I)->getTerminator();
             if (isa<CatchSwitchInst>(IncomingTerminator)) {
-              Builder.SetInsertPoint(VecI->getParent(),
-                                     std::next(VecI->getIterator()));
+              Builder.SetInsertPoint(std::next(VecI->getIterator()));
             } else {
               Builder.SetInsertPoint(PH->getIncomingBlock(I)->getTerminator());
             }
@@ -26618,7 +26632,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
         }
       }
     } else {
-      Builder.SetInsertPoint(&F->getEntryBlock(), F->getEntryBlock().begin());
+      Builder.SetInsertPoint(F->getEntryBlock().begin());
       Value *NewInst = ExtractAndExtendIfNeeded(Vec);
       User->replaceUsesOfWith(Scalar, NewInst);
     }
@@ -26934,6 +26948,12 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   // - instructions are not deleted until later.
   removeInstructionsAndOperands(ArrayRef(RemovedInsts), VectorValuesAndScales);
 
+  // The new vector code may capture pointers that were previously not captured
+  // (e.g. the pointer operands of a masked gather), so the capture results
+  // cached in BatchAA are stale. Alias queries against the new instructions
+  // would otherwise treat such pointers as inaccessible to them.
+  BatchAA.emplace(*AA);
+
   Builder.ClearInsertionPoint();
   InstrElementSize.clear();
 
@@ -26943,8 +26963,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
                                       It != MinBWs.end() &&
                                       ReductionBitWidth != It->second.first) {
     IRBuilder<>::InsertPointGuard Guard(Builder);
-    Builder.SetInsertPoint(ReductionRoot->getParent(),
-                           ReductionRoot->getIterator());
+    Builder.SetInsertPoint(ReductionRoot->getIterator());
     if (isReducedBitcastRoot() || isReducedCmpBitcastRoot()) {
       Vec = Builder.CreateIntCast(Vec, Builder.getIntNTy(ReductionBitWidth),
                                   It->second.second);
@@ -32660,6 +32679,11 @@ public:
     for (unsigned I = 0, E = ReducedVals.size(); I < E; ++I) {
       ArrayRef<Value *> OrigReducedVals = ReducedVals[I];
       InstructionsState S = States[I];
+      // The main operation of a state with copyable elements may be deleted
+      // during previous vectorization attempts, the state is not usable then.
+      if (S && S.areInstructionsWithCopyableElements() &&
+          V.isDeleted(S.getMainOp()))
+        S = InstructionsState::invalid();
       SmallVector<Value *> Candidates;
       Candidates.reserve(2 * OrigReducedVals.size());
       SmallVector<Value *> TrackedToOrig;
