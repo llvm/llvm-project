@@ -207,7 +207,6 @@ public:
       ready_callbacks.for_each([](auto* node) { node->__callback_(node); });
     }
   }
-
 };
 } // namespace
 
