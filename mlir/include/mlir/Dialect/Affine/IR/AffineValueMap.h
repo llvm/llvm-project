@@ -49,11 +49,24 @@ public:
   /// operands, but the result count remains the same.
   void composeSimplifyAndCanonicalize();
 
+  /// Combine corresponding results of 'a' and 'b' using 'expr'. The expression
+  /// may refer only to d0 and d1, which stand for the corresponding results of
+  /// 'a' and 'b'. For example, difference() uses `d0 - d1`, and sum() uses
+  /// `d0 + d1`.
+  static void combine(const AffineValueMap &a, const AffineValueMap &b,
+                      AffineExpr expr, AffineValueMap *res);
+
   /// Return the value map that is the difference of value maps 'a' and 'b',
   /// represented as an affine map and its operands. The output map + operands
   /// are canonicalized and simplified.
   static void difference(const AffineValueMap &a, const AffineValueMap &b,
                          AffineValueMap *res);
+
+  /// Return the value map that is the sum of value maps 'a' and 'b',
+  /// represented as an affine map and its operands. The output map + operands
+  /// are canonicalized and simplified.
+  static void sum(const AffineValueMap &a, const AffineValueMap &b,
+                  AffineValueMap *res);
 
   /// Return true if the idx^th result can be proved to be a multiple of
   /// 'factor', false otherwise.
