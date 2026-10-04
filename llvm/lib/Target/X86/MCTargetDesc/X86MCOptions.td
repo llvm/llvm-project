@@ -38,8 +38,8 @@ defm : ValueField<"x86-pad-max-prefix-size", "std::optional<unsigned>", "std::nu
   "Maximum number of prefixes to use for padding">;
 
 // MCTargetDesc/X86MCAsmInfo.cpp
-defm : BoolField<"mark-data-regions", "true",
-  "Mark code section jump table data regions">;
 defm : EnumField<"x86-asm-syntax", "X86::AsmWriterFlavorTy", "X86::ATT",
   "att,intel", ["X86::ATT", "X86::Intel"],
   "Select the assembly style for input">;
+defm : BoolField<"mark-data-regions", "true",
+  "Mark code section jump table data regions">;

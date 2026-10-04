@@ -45,8 +45,6 @@ defm : BoolField<"x86-promote-anyext-load", "true",
   "Enable promoting aligned anyext load to wider load">;
 
 // X86ISelLowering.cpp
-defm : BoolField<"mul-constant-optimization", "true",
-  "Replace 'mul x, Const' with more effective instructions like SHIFT, LEA, etc">;
 defm : ValueField<"x86-br-merging-base-cost", "int", "2",
   "Sets the cost threshold for when multiple conditionals will be merged into one branch versus be split in multiple branches. "
   "Merging conditionals saves branches at the cost of additional instructions. This value sets the instruction cost limit, below which conditionals will be merged, and above which conditionals will be split. Set to -1 to never merge branches">;
@@ -61,6 +59,8 @@ defm : ValueField<"x86-br-merging-unlikely-bias", "int", "-1",
 defm : ValueField<"x86-experimental-pref-innermost-loop-alignment", "std::optional<int>", "std::nullopt",
   "Sets the preferable loop alignment for experiments (as log2 bytes) for innermost loops only. "
   "If specified, this option overrides alignment set by x86-experimental-pref-loop-alignment">;
+defm : BoolField<"mul-constant-optimization", "true",
+  "Replace 'mul x, Const' with more effective instructions like SHIFT, LEA, etc">;
 defm : BoolField<"x86-widen-shift", "true",
   "Replace narrow shifts with wider shifts">;
 
@@ -75,6 +75,8 @@ defm : BoolField<"x86-use-vzeroupper", "true",
 // X86InstrInfo.cpp
 defm : BoolField<"disable-spill-fusing", "false",
   "Disable fusing of spill code into instructions">;
+defm : ValueField<"x86-max-nf-conversions-for-cmp-reuse", "unsigned", "6",
+  "Maximum number of NF conversions allowed to reuse EFLAGS from a producer dominating a multi-predecessor block">;
 defm : ValueField<"partial-reg-update-clearance", "unsigned", "64",
   "Clearance between two register writes for inserting XOR to avoid partial register update">;
 defm : BoolField<"print-failed-fuse-candidates", "false",
@@ -83,8 +85,6 @@ defm : BoolField<"remat-pic-stub-load", "false",
   "Re-materialize load from stub in PIC mode">;
 defm : ValueField<"undef-reg-clearance", "unsigned", "128",
   "How many idle instructions we would like before certain undef register reads">;
-defm : ValueField<"x86-max-nf-conversions-for-cmp-reuse", "unsigned", "6",
-  "Maximum number of NF conversions allowed to reuse EFLAGS from a producer dominating a multi-predecessor block">;
 
 // X86LoadValueInjectionLoadHardening.cpp
 defm : BoolField<"x86-lvi-load-dot", "false",
