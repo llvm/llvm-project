@@ -907,11 +907,15 @@ static bool hasConcreteDef(Value *V) {
   return hasConcreteDefImpl(V, Visited, 0);
 }
 
-/// Return true if the given phi is a "counter" in L.  A counter is an
-/// add recurance (of integer or pointer type) with an arbitrary start, and a
-/// step of 1.  Note that L must have exactly one latch.
-static bool isLoopCounter(PHINode* Phi, Loop *L,
-                          ScalarEvolution *SE) {
+static bool isUnitStride(const SCEV *Step, Type *Ty) {
+  return Step->isOne() || (Ty->isIntegerTy() && Step->isAllOnesValue());
+}
+
+/// Return true if the given phi is a "counter" in L. A counter is an add
+/// recurrence with an arbitrary start and a unit step. Integer counters may
+/// count up or down, while pointer counters may only count up. Note that L
+/// must have exactly one latch.
+static bool isLoopCounter(PHINode *Phi, Loop *L, ScalarEvolution *SE) {
   assert(Phi->getParent() == L->getHeader());
   assert(L->getLoopLatch());
 
@@ -919,7 +923,10 @@ static bool isLoopCounter(PHINode* Phi, Loop *L,
     return false;
 
   const SCEV *S = SE->getSCEV(Phi);
-  if (!match(S, m_scev_AffineAddRec(m_SCEV(), m_scev_One(), m_SpecificLoop(L))))
+  const SCEV *Step;
+  if (!match(S,
+             m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step), m_SpecificLoop(L))) ||
+      !isUnitStride(Step, Phi->getType()))
     return false;
 
   int LatchIdx = Phi->getBasicBlockIndex(L->getLoopLatch());
@@ -928,7 +935,7 @@ static bool isLoopCounter(PHINode* Phi, Loop *L,
           isa<SCEVAddRecExpr>(SE->getSCEV(IncV)));
 }
 
-/// Search the loop header for a loop counter (anadd rec w/step of one)
+/// Search the loop header for a loop counter (an add rec with a unit step)
 /// suitable for use by LFTR.  If multiple counters are available, select the
 /// "best" one based profitable heuristics.
 ///
@@ -1021,7 +1028,8 @@ static Value *genLoopLimit(PHINode *IndVar, BasicBlock *ExitingBB,
   assert(isLoopCounter(IndVar, L, SE));
   assert(ExitCount->getType()->isIntegerTy() && "exit count must be integer");
   const SCEVAddRecExpr *AR = cast<SCEVAddRecExpr>(SE->getSCEV(IndVar));
-  assert(AR->getStepRecurrence(*SE)->isOne() && "only handles unit stride");
+  assert(isUnitStride(AR->getStepRecurrence(*SE), IndVar->getType()) &&
+         "only handles unit stride");
 
   // For integer IVs, truncate the IV before computing the limit unless we
   // know apriori that the limit must be a constant when evaluated in the
@@ -1052,7 +1060,7 @@ static Value *genLoopLimit(PHINode *IndVar, BasicBlock *ExitingBB,
 }
 
 /// This method rewrites the exit condition of the loop to be a canonical !=
-/// comparison against the incremented loop induction variable.  This pass is
+/// comparison against the updated loop induction variable.  This pass is
 /// able to rewrite the exit tests of any loop where the SCEV analysis can
 /// determine a loop-invariant trip count of the loop, which is actually a much
 /// broader range than just linear tests.
@@ -1065,13 +1073,13 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
   Instruction * const IncVar =
     cast<Instruction>(IndVar->getIncomingValueForBlock(L->getLoopLatch()));
 
-  // Initialize CmpIndVar to the preincremented IV.
+  // Initialize CmpIndVar to the pre-update IV.
   Value *CmpIndVar = IndVar;
   bool UsePostInc = false;
 
   // If the exiting block is the same as the backedge block, we prefer to
-  // compare against the post-incremented value, otherwise we must compare
-  // against the preincremented value.
+  // compare against the post-update value, otherwise we must compare
+  // against the pre-update value.
   if (ExitingBB == L->getLoopLatch()) {
     // For pointer IVs, we chose to not strip inbounds which requires us not
     // to add a potentially UB introducing use.  We need to either a) show
@@ -1096,7 +1104,7 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
              IndVar->getType()->isPointerTy() &&
          "genLoopLimit missed a cast");
 
-  // It may be necessary to drop nowrap flags on the incrementing instruction
+  // It may be necessary to drop nowrap flags on the IV update instruction
   // if either LFTR moves from a pre-inc check to a post-inc check (in which
   // case the increment might have previously been poison on the last iteration
   // only) or if LFTR switches to a different IV that was previously dynamically
