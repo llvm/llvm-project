@@ -1,0 +1,211 @@
+## Check that the parallel linker keeps import entries in plain DWARF when the
+## unit holding them also has a type that moves to the artificial type unit. The
+## DW_TAG_compile_unit run is the control.
+##
+## U01:  struct T {};
+##       namespace ns { struct S {}; using ::T; }
+##       using ns::S;
+## U02:  namespace ns { struct R {}; }
+##       DW_TAG_imported_unit -> U01
+## U03:  DW_TAG_imported_unit -> U02
+##       ns::R foo1() { ... }        // DW_FORM_ref_addr reference into U02
+##
+## FIXME: Also link the classic linker once #219621 is fixed.
+
+# RUN: yaml2obj %s -DROOT=DW_TAG_compile_unit -DUNITTYPE=DW_UT_compile -o %t.cu.o
+# RUN: llvm-dwarfutil --linker parallel %t.cu.o %t.cu.out
+# RUN: llvm-dwarfdump --debug-info %t.cu.out | FileCheck %s -DROOT=DW_TAG_compile_unit \
+# RUN:   --implicit-check-not=DW_TAG_imported_unit --implicit-check-not=DW_TAG_imported_declaration
+
+# RUN: yaml2obj %s -DROOT=DW_TAG_partial_unit -DUNITTYPE=DW_UT_partial -o %t.pu.o
+# RUN: llvm-dwarfutil --linker parallel %t.pu.o %t.pu.out
+# RUN: llvm-dwarfdump --debug-info %t.pu.out | FileCheck %s -DROOT=DW_TAG_partial_unit \
+# RUN:   --implicit-check-not=DW_TAG_imported_unit --implicit-check-not=DW_TAG_imported_declaration
+
+## The types and the using-declaration nested in ns move into the type unit.
+# CHECK:          DW_AT_name ("__artificial_type_unit")
+# CHECK:          DW_TAG_namespace
+# CHECK-NEXT:       DW_AT_name ("ns")
+# CHECK:            DW_TAG_imported_declaration
+# CHECK-NEXT:         DW_AT_import ({{.*}} "T")
+# CHECK:        0x[[R:[0-9a-f]{8}]]: DW_TAG_structure_type
+# CHECK-NEXT:       DW_AT_name ("R")
+# CHECK:        0x[[S:[0-9a-f]{8}]]: DW_TAG_structure_type
+# CHECK-NEXT:       DW_AT_name ("S")
+
+## The import entries directly under the unit roots stay there.
+# CHECK:        0x[[U01:[0-9a-f]{8}]]: [[ROOT]]
+# CHECK-NEXT:     DW_AT_producer ("by_hand")
+# CHECK-NEXT:     DW_AT_name ("U01")
+# CHECK:          DW_TAG_imported_declaration
+# CHECK-NEXT:       DW_AT_import (0x00000000[[S]] "S")
+# CHECK:        0x[[U02:[0-9a-f]{8}]]: [[ROOT]]
+# CHECK-NEXT:     DW_AT_producer ("by_hand")
+# CHECK-NEXT:     DW_AT_name ("U02")
+# CHECK:          DW_TAG_imported_unit
+# CHECK-NEXT:       DW_AT_import (0x00000000[[U01]] "U01")
+# CHECK:          DW_TAG_compile_unit
+# CHECK-NEXT:     DW_AT_producer ("by_hand")
+# CHECK-NEXT:     DW_AT_name ("U03")
+# CHECK:          DW_TAG_imported_unit
+# CHECK-NEXT:       DW_AT_import (0x00000000[[U02]] "U02")
+# CHECK:          DW_TAG_subprogram
+# CHECK-NEXT:       DW_AT_name ("foo1")
+# CHECK:            DW_AT_type (0x00000000[[R]] "ns::R")
+
+## The roots carry DW_AT_str_offsets_base, which the linker adds only to a
+## DW_TAG_compile_unit root (#219365).
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1130
+    Size:            0x10
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "0400000005000000"
+DWARF:
+  debug_abbrev:
+    - ID:    0
+      Table:
+      - Tag:      [[ROOT]]
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_namespace
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_imported_unit
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_import
+            Form:      DW_FORM_ref_addr
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+      - Tag:      DW_TAG_imported_declaration
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_import
+            Form:      DW_FORM_ref_addr
+  debug_info:
+    - Version:  5
+      UnitType: [[UNITTYPE]]
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U01
+            - Value: 0x04
+            - Value: 0x8
+        - AbbrCode: 3
+          Values:
+            - CStr: T
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: ns
+        - AbbrCode: 3
+          Values:
+            - CStr: S
+            - Value: 0x8
+        - AbbrCode: 7
+          Values:
+            - Value: 0x1f
+        - AbbrCode: 0
+        - AbbrCode: 7
+          Values:
+            - Value: 0x27
+        - AbbrCode: 0
+    - Version:  5
+      UnitType: [[UNITTYPE]]
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U02
+            - Value: 0x04
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: ns
+        - AbbrCode: 3
+          Values:
+            - CStr: R
+            - Value: 0x8
+        - AbbrCode: 0
+        - AbbrCode: 5
+          Values:
+            - Value: 0x0c
+        - AbbrCode: 0
+    - Version:  5
+      UnitType: DW_UT_compile
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 4
+          Values:
+            - CStr: by_hand
+            - CStr: U03
+            - Value: 0x04
+            - Value: 0x1130
+            - Value: 0x10
+            - Value: 0x8
+        - AbbrCode: 5
+          Values:
+            - Value: 0x43
+        - AbbrCode: 6
+          Values:
+            - CStr: foo1
+            - Value: 0x1130
+            - Value: 0x10
+            - Value: 0x5a
+        - AbbrCode: 0
+...
