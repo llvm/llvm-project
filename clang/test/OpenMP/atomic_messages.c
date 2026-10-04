@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -ferror-limit 100 %s -Wuninitialized
-// RUN: %clang_cc1 -DOMP51 -verify=expected,omp50,omp51 -fopenmp -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -ferror-limit 150 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -ferror-limit 150 %s -Wuninitialized
+// RUN: %clang_cc1 -DOMP51 -verify=expected,omp50,omp51 -fopenmp -ferror-limit 150 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -ferror-limit 100 %s -Wuninitialized
-// RUN: %clang_cc1 -DOMP51 -verify=expected,omp50,omp51 -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 150 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -ferror-limit 150 %s -Wuninitialized
+// RUN: %clang_cc1 -DOMP51 -verify=expected,omp50,omp51 -fopenmp-simd -ferror-limit 150 %s -Wuninitialized
 
 void xxx(int argc) {
   int x; // expected-note {{initialize the variable 'x' to silence this warning}}
@@ -395,6 +395,26 @@ void hint(void) {
   a += 1;
 #pragma omp atomic hint(1) hint(1) // omp45-error 2 {{unexpected OpenMP clause 'hint' in directive '#pragma omp atomic'}} expected-error {{directive '#pragma omp atomic' cannot contain more than one 'hint' clause}}
   a += 1;
+}
+
+void gh107979(void) {
+  int x = 0, v = 0;
+#pragma omp atomic
+  0--; // expected-error {{expression is not assignable}}
+#pragma omp atomic
+  --0; // expected-error {{expression is not assignable}}
+#pragma omp atomic
+  0++; // expected-error {{expression is not assignable}}
+#pragma omp atomic update
+  0 += 1; // expected-error {{expression is not assignable}}
+#pragma omp atomic
+  x += 0--; // expected-error {{expression is not assignable}}
+#pragma omp atomic capture
+  v = 0--; // expected-error {{expression is not assignable}}
+#pragma omp atomic capture
+  { v = x; x += 0--; } // expected-error {{expression is not assignable}}
+#pragma omp atomic
+  x--;
 }
 
 #ifdef OMP51

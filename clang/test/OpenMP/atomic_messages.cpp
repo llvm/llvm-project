@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -ferror-limit 150 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -ferror-limit 150 %s -Wuninitialized
-// RUN: %clang_cc1 -DOMP51 -verify=expected,omp50,omp51 -fopenmp -ferror-limit 150 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -ferror-limit 200 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -ferror-limit 200 %s -Wuninitialized
+// RUN: %clang_cc1 -DOMP51 -verify=expected,omp50,omp51 -fopenmp -ferror-limit 200 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 150 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -ferror-limit 150 %s -Wuninitialized
-// RUN: %clang_cc1 -DOMP51 -verify=expected,omp50,omp51 -fopenmp-simd -ferror-limit 150 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 200 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -ferror-limit 200 %s -Wuninitialized
+// RUN: %clang_cc1 -DOMP51 -verify=expected,omp50,omp51 -fopenmp-simd -ferror-limit 200 %s -Wuninitialized
 
 int foo() {
 L1:
@@ -990,6 +990,26 @@ int mixed() {
 #endif
   // expected-note@+1 {{in instantiation of function template specialization 'mixed<int>' requested here}}
   return mixed<int>();
+}
+
+void gh107979() {
+  int x = 0, v = 0;
+#pragma omp atomic
+  0--; // expected-error {{expression is not assignable}}
+#pragma omp atomic
+  --0; // expected-error {{expression is not assignable}}
+#pragma omp atomic
+  0++; // expected-error {{expression is not assignable}}
+#pragma omp atomic update
+  0 += 1; // expected-error {{expression is not assignable}}
+#pragma omp atomic
+  x += 0--; // expected-error {{expression is not assignable}}
+#pragma omp atomic capture
+  v = 0--; // expected-error {{expression is not assignable}}
+#pragma omp atomic capture
+  { v = x; x += 0--; } // expected-error {{expression is not assignable}}
+#pragma omp atomic
+  x--;
 }
 
 #ifdef OMP51
