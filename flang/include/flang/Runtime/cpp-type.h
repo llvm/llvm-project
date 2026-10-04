@@ -17,7 +17,7 @@
 #include "flang/Common/uint128.h"
 #include "flang/Runtime/complex.h"
 #include <cstdint>
-#if __cplusplus >= 202302
+#if __cplusplus >= 202302 && __has_include(<stdfloat>)
 #include <stdfloat>
 #endif
 #include <type_traits>
