@@ -32,15 +32,26 @@
 
 #include "GCNPreRAOptimizations.h"
 #include "AMDGPU.h"
+#include "GCNPreRAAntiHints.h"
 #include "GCNSubtarget.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/Register.h"
+#include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-pre-ra-optimizations"
+
+static cl::opt<bool>
+    EnableAntiHints("amdgpu-anti-hints", cl::Hidden,
+                    cl::desc("Enable register allocation anti-hints."),
+                    cl::init(true));
 
 namespace {
 
@@ -50,6 +61,7 @@ private:
   const SIRegisterInfo *TRI;
   MachineRegisterInfo *MRI;
   LiveIntervals *LIS;
+  TargetSchedModel SchedModel;
 
   bool processReg(Register Reg);
   void hintTrue16Copy(const MachineInstr &MI);
@@ -303,6 +315,14 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
   TII = ST.getInstrInfo();
   MRI = &MF.getRegInfo();
   TRI = ST.getRegisterInfo();
+
+  // Anti-hints only steer register allocation, so they do not count as a
+  // modification of the function.
+  if (EnableAntiHints) {
+    SchedModel.init(&ST);
+    AMDGPU::HazardContext HCtx{TII, TRI, MRI, LIS, &ST, &SchedModel};
+    AMDGPU::applyAntiHintRules(MF, HCtx);
+  }
 
   bool Changed = false;
 
