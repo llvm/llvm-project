@@ -155,10 +155,13 @@ define i1 @select_normalized(i16 %x, i16 %y, i16 %z, i1 %c) {
   ret i1 %cmp
 }
 
+; The independent min/max calls may be emitted in either order.
+; UTC_ARGS: --disable
 define i1 @normalize_minmax(i16 %x, i16 %y, i16 %z) {
 ; CHECK-LABEL: @normalize_minmax(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.smin.i16(i16 [[X:%.*]], i16 [[Y:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.smax.i16(i16 [[X]], i16 [[Z:%.*]])
+; CHECK-SAME: i16 [[X:%.*]], i16 [[Y:%.*]], i16 [[Z:%.*]])
+; CHECK-DAG:    [[TMP1:%.*]] = call i16 @llvm.smin.i16(i16 [[X]], i16 [[Y]])
+; CHECK-DAG:    [[TMP2:%.*]] = call i16 @llvm.smax.i16(i16 [[X]], i16 [[Z]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -173,6 +176,7 @@ define i1 @normalize_minmax(i16 %x, i16 %y, i16 %z) {
   ret i1 %cmp
 }
 
+; UTC_ARGS: --enable
 define i1 @mixed_normalized(i16 %x, i16 %y, i16 %z, i1 %c) {
 ; CHECK-LABEL: @mixed_normalized(
 ; CHECK-NEXT:    [[A:%.*]] = uitofp i16 [[X:%.*]] to double
