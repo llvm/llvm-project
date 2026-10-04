@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/fenv_macros.h"
 #include "shared/math.h"
+#include "shared/static_rounding_math.h"
 #include "src/__support/FPUtil/float128.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -99,7 +101,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
   EXPECT_FP_EQ(0.0f16, setpayloadsigf16_res);
   float16 neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();
   EXPECT_FP_EQ(neg_min_denormal, LIBC_NAMESPACE::shared::nextdownf16(0.0f16));
-  float16 min_denormal = FPBits::min_subnormal(Sign ::POS).get_val();
+  float16 min_denormal = FPBits::min_subnormal(Sign::POS).get_val();
   EXPECT_FP_EQ(min_denormal, LIBC_NAMESPACE::shared::nextupf16(0.0f16));
 
   EXPECT_FP_EQ(0.0f16, LIBC_NAMESPACE::shared::nextafterf16(0.0f16, 0.0f16));
@@ -255,7 +257,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   EXPECT_FP_EQ(0.0f, setpayloadsigf_res);
   float neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();
   EXPECT_FP_EQ(neg_min_denormal, LIBC_NAMESPACE::shared::nextdownf(0.0f));
-  float min_denormal = FPBits::min_subnormal(Sign ::POS).get_val();
+  float min_denormal = FPBits::min_subnormal(Sign::POS).get_val();
   EXPECT_FP_EQ(min_denormal, LIBC_NAMESPACE::shared::nextupf(0.0f));
   EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::nextafterf(0.0f, 0.0f));
 
@@ -390,7 +392,7 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_FP_EQ(0.0, setpayloadsig_res);
   double neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();
   EXPECT_FP_EQ(neg_min_denormal, LIBC_NAMESPACE::shared::nextdown(0.0));
-  double min_denormal = FPBits::min_subnormal(Sign ::POS).get_val();
+  double min_denormal = FPBits::min_subnormal(Sign::POS).get_val();
   EXPECT_FP_EQ(min_denormal, LIBC_NAMESPACE::shared::nextup(0.0));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::nextafter(0.0, 0.0));
 
@@ -511,7 +513,7 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
 
   long double neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();
   EXPECT_FP_EQ(neg_min_denormal, LIBC_NAMESPACE::shared::nextdownl(0.0L));
-  long double min_denormal = FPBits::min_subnormal(Sign ::POS).get_val();
+  long double min_denormal = FPBits::min_subnormal(Sign::POS).get_val();
   EXPECT_FP_EQ(min_denormal, LIBC_NAMESPACE::shared::nextupl(0.0L));
   EXPECT_FP_EQ(0.0L, LIBC_NAMESPACE::shared::nexttowardl(0.0L, 0.0L));
   EXPECT_FP_EQ(0.0L, LIBC_NAMESPACE::shared::nextafterl(0.0L, 0.0L));
@@ -698,7 +700,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
   float128 neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();
   EXPECT_FP_EQ(neg_min_denormal,
                LIBC_NAMESPACE::shared::nextdownf128(float128(0.0)));
-  float128 min_denormal = FPBits::min_subnormal(Sign ::POS).get_val();
+  float128 min_denormal = FPBits::min_subnormal(Sign::POS).get_val();
   EXPECT_FP_EQ(min_denormal, LIBC_NAMESPACE::shared::nextupf128(float128(0.0)));
   EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::nextafterf128(
                                   float128(0.0), float128(0.0)));
@@ -815,7 +817,7 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   bfloat16 neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();
   EXPECT_FP_EQ(neg_min_denormal,
                LIBC_NAMESPACE::shared::nextdownbf16(bfloat16(0.0)));
-  bfloat16 min_denormal = FPBits::min_subnormal(Sign ::POS).get_val();
+  bfloat16 min_denormal = FPBits::min_subnormal(Sign::POS).get_val();
   EXPECT_FP_EQ(min_denormal, LIBC_NAMESPACE::shared::nextupbf16(bfloat16(0.0)));
 
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::nextafterbf16(
@@ -903,4 +905,93 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
                LIBC_NAMESPACE::shared::roundevenbf16(bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::tanbf16(bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::truncbf16(bfloat16(0.0)));
+}
+
+TEST(LlvmLibcSharedMathTest, StaticRounding) {
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
+
+  EXPECT_FP_EQ(
+      1.0f, LIBC_NAMESPACE::shared::static_rounding::expf(0.0f, FE_TONEAREST));
+  EXPECT_FP_EQ(
+      1.0f, LIBC_NAMESPACE::shared::static_rounding::exp2f(0.0f, FE_TONEAREST));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::shared::static_rounding::exp10f(
+                         0.0f, FE_TONEAREST));
+
+  EXPECT_FP_EQ(
+      2.0f, LIBC_NAMESPACE::shared::static_rounding::exp2f(1.0f, FE_TONEAREST));
+  EXPECT_FP_EQ(0.5f, LIBC_NAMESPACE::shared::static_rounding::exp2f(
+                         -1.0f, FE_TONEAREST));
+  EXPECT_FP_EQ(10.0f, LIBC_NAMESPACE::shared::static_rounding::exp10f(
+                          1.0f, FE_TONEAREST));
+  EXPECT_FP_EQ(100.0f, LIBC_NAMESPACE::shared::static_rounding::exp10f(
+                           2.0f, FE_TONEAREST));
+
+  EXPECT_FP_EQ(0x1.5bf0a8p+1f, LIBC_NAMESPACE::shared::static_rounding::expf(
+                                   1.0f, FE_TONEAREST));
+  EXPECT_FP_EQ(0x1.5bf0aap+1f,
+               LIBC_NAMESPACE::shared::static_rounding::expf(1.0f, FE_UPWARD));
+  EXPECT_FP_EQ(0x1.5bf0a8p+1f, LIBC_NAMESPACE::shared::static_rounding::expf(
+                                   1.0f, FE_DOWNWARD));
+  EXPECT_FP_EQ(0x1.5bf0a8p+1f, LIBC_NAMESPACE::shared::static_rounding::expf(
+                                   1.0f, FE_TOWARDZERO));
+
+  EXPECT_FP_EQ(0x1.6a09e6p+0f, LIBC_NAMESPACE::shared::static_rounding::exp2f(
+                                   0.5f, FE_TONEAREST));
+  EXPECT_FP_EQ(0x1.6a09e8p+0f,
+               LIBC_NAMESPACE::shared::static_rounding::exp2f(0.5f, FE_UPWARD));
+  EXPECT_FP_EQ(0x1.6a09e6p+0f, LIBC_NAMESPACE::shared::static_rounding::exp2f(
+                                   0.5f, FE_DOWNWARD));
+  EXPECT_FP_EQ(0x1.6a09e6p+0f, LIBC_NAMESPACE::shared::static_rounding::exp2f(
+                                   0.5f, FE_TOWARDZERO));
+
+  EXPECT_FP_EQ(0x1.94c584p+1f, LIBC_NAMESPACE::shared::static_rounding::exp10f(
+                                   0.5f, FE_TONEAREST));
+  EXPECT_FP_EQ(0x1.94c584p+1f, LIBC_NAMESPACE::shared::static_rounding::exp10f(
+                                   0.5f, FE_UPWARD));
+  EXPECT_FP_EQ(0x1.94c582p+1f, LIBC_NAMESPACE::shared::static_rounding::exp10f(
+                                   0.5f, FE_DOWNWARD));
+  EXPECT_FP_EQ(0x1.94c582p+1f, LIBC_NAMESPACE::shared::static_rounding::exp10f(
+                                   0.5f, FE_TOWARDZERO));
+
+  int rounding_modes[] = {FE_TONEAREST, FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO};
+  for (int rm : rounding_modes) {
+    EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::shared::static_rounding::expf(0.0f, rm));
+    EXPECT_FP_EQ(1.0f,
+                 LIBC_NAMESPACE::shared::static_rounding::expf(-0.0f, rm));
+    EXPECT_FP_EQ(1.0f,
+                 LIBC_NAMESPACE::shared::static_rounding::exp2f(0.0f, rm));
+    EXPECT_FP_EQ(1.0f,
+                 LIBC_NAMESPACE::shared::static_rounding::exp2f(-0.0f, rm));
+    EXPECT_FP_EQ(1.0f,
+                 LIBC_NAMESPACE::shared::static_rounding::exp10f(0.0f, rm));
+    EXPECT_FP_EQ(1.0f,
+                 LIBC_NAMESPACE::shared::static_rounding::exp10f(-0.0f, rm));
+
+    EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::static_rounding::expf(
+                           FPBits::quiet_nan().get_val(), rm))
+                    .is_nan());
+    EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::static_rounding::exp2f(
+                           FPBits::quiet_nan().get_val(), rm))
+                    .is_nan());
+    EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::static_rounding::exp10f(
+                           FPBits::quiet_nan().get_val(), rm))
+                    .is_nan());
+
+    EXPECT_FP_EQ(FPBits::inf(Sign::POS).get_val(),
+                 LIBC_NAMESPACE::shared::static_rounding::expf(
+                     FPBits::inf(Sign::POS).get_val(), rm));
+    EXPECT_FP_EQ(FPBits::inf(Sign::POS).get_val(),
+                 LIBC_NAMESPACE::shared::static_rounding::exp2f(
+                     FPBits::inf(Sign::POS).get_val(), rm));
+    EXPECT_FP_EQ(FPBits::inf(Sign::POS).get_val(),
+                 LIBC_NAMESPACE::shared::static_rounding::exp10f(
+                     FPBits::inf(Sign::POS).get_val(), rm));
+
+    EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::static_rounding::expf(
+                           FPBits::inf(Sign::NEG).get_val(), rm));
+    EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::static_rounding::exp2f(
+                           FPBits::inf(Sign::NEG).get_val(), rm));
+    EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::static_rounding::exp10f(
+                           FPBits::inf(Sign::NEG).get_val(), rm));
+  }
 }

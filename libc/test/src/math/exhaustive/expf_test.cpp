@@ -59,7 +59,7 @@ TEST_F(LlvmLibcExpfFloatExhaustiveTest, NegativeRange) {
 using LlvmLibcExpfStaticRoundingExhaustiveTest =
     LlvmLibcStaticallyRoundedUnaryOpExhaustiveMathTest<
         float, LIBC_NAMESPACE::math::double_eval::expf,
-        LIBC_NAMESPACE::shared::math::static_rounding::expf>;
+        LIBC_NAMESPACE::math::static_rounding::expf>;
 
 TEST_F(LlvmLibcExpfStaticRoundingExhaustiveTest, PositiveRange) {
   test_full_range_all_roundings(POS_START, POS_STOP);
