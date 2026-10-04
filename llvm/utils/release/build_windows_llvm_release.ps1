@@ -1877,6 +1877,34 @@ function Build-Stage {
     }
 }
 
+function Test-TarballConfigurationApplied {
+    param(
+        [Parameter(Mandatory)][string]$BuildDirectory,
+        [Parameter(Mandatory)][string]$TarballInstallDirectory
+    )
+
+    # The marker covers interrupted tarball steps. Check the cache as well so
+    # builds made by earlier script versions can still be resumed.
+    $marker = Join-Path $BuildDirectory '.llvm_release_tarball_configured'
+    if (Test-Path -LiteralPath $marker -PathType Leaf) {
+        return $true
+    }
+
+    $cache = Join-Path $BuildDirectory 'CMakeCache.txt'
+    if (-not (Test-Path -LiteralPath $cache -PathType Leaf)) {
+        return $false
+    }
+
+    $installPrefix = ConvertTo-ForwardSlashPath $TarballInstallDirectory
+    $prefixPattern = '^CMAKE_INSTALL_PREFIX:[^=]+=' + [regex]::Escape($installPrefix) + '$'
+    $hasTarballInstallPrefix = Select-String -LiteralPath $cache -Pattern $prefixPattern -Quiet
+    $hasToolchainOnlyDisabled = Select-String -LiteralPath $cache `
+        -Pattern '^LLVM_INSTALL_TOOLCHAIN_ONLY:[^=]+=OFF$' -Quiet
+    $hasTestsDisabled = Select-String -LiteralPath $cache `
+        -Pattern '^LLVM_INCLUDE_TESTS:[^=]+=OFF$' -Quiet
+    return ($hasTarballInstallPrefix -and $hasToolchainOnlyDisabled -and $hasTestsDisabled)
+}
+
 function Build-Architecture {
     <#
     .SYNOPSIS
@@ -2147,6 +2175,10 @@ function Build-Architecture {
         Assert-PathExists -Path (Join-Path $BuildDir $stage2Name) -Description 'stage 2 build directory'
     }
 
+    $tripleArch = if ($Arch -eq 'amd64') { 'x86_64' } else { 'aarch64' }
+    $filename = "clang+llvm-${PackageVersion}-${tripleArch}-pc-windows-msvc"
+    $tarballInstallDirectory = Join-Path $BuildDir $filename
+
     #-------------------------------------------------------------------
     # Step: package (WiX MSI installer)
     #-------------------------------------------------------------------
@@ -2154,16 +2186,21 @@ function Build-Architecture {
         Write-Step "Creating WiX MSI installer package"
         Push-Location $stage2Name
         try {
-            # The tarball step reconfigures this shared build directory with
-            # LLVM_INSTALL_TOOLCHAIN_ONLY=OFF. Pin the stage 2 settings again
-            # so a resumed package step still produces the MSI payload.
-            $packageFlags = $stage2Flags + $stage2Extra
-            $cache = Write-CMakeCacheFile -Flags $packageFlags -FileName 'package_cache.cmake'
-            $otherFlags = $cache.OtherFlags
-            Invoke-NativeCommand cmake -GNinja -C $cache.CacheFile @otherFlags "$LlvmSrc/llvm"
+            $tarballConfigMarker = Join-Path $PWD '.llvm_release_tarball_configured'
+            if (Test-TarballConfigurationApplied -BuildDirectory $PWD.Path `
+                    -TarballInstallDirectory $tarballInstallDirectory) {
+                Write-SubStep 'The stage2 cache has tarball settings; restoring the MSI build configuration.'
+                $packageFlags = $stage2Flags + $stage2Extra
+                $cache = Write-CMakeCacheFile -Flags $packageFlags -FileName 'package_cache.cmake'
+                $otherFlags = $cache.OtherFlags
+                Invoke-NativeCommand cmake -GNinja -C $cache.CacheFile @otherFlags "$LlvmSrc/llvm"
+                Remove-Item -LiteralPath $tarballConfigMarker -Force -ErrorAction SilentlyContinue
+            } else {
+                Write-SubStep 'Stage2 is already configured for packaging; skipping CMake reconfigure.'
+            }
 
             # CPack does not remove stale files from its staging tree, so
-            # clean it after reconfiguring from a possible tarball build.
+            # clean it in case a previous package attempt left staged files.
             Remove-StepDirectory (Join-Path $PWD '_CPack_Packages')
 
             Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs package
@@ -2186,9 +2223,6 @@ function Build-Architecture {
     #-------------------------------------------------------------------
     # Step: tarball
     #-------------------------------------------------------------------
-    $tripleArch = if ($Arch -eq 'amd64') { 'x86_64' } else { 'aarch64' }
-    $filename = "clang+llvm-${PackageVersion}-${tripleArch}-pc-windows-msvc"
-
     if (Test-ShouldRun 'tarball') {
         Remove-StepDirectory (Join-Path $BuildDir $filename)
         Remove-StepDirectory (Join-Path $BuildDir "$filename.tar")
@@ -2203,6 +2237,10 @@ function Build-Architecture {
             )
             $cache = Write-CMakeCacheFile -Flags $tarballFlags -FileName 'tarball_cache.cmake'
             $otherFlags = $cache.OtherFlags
+            # Leave a durable marker so a later -StartAt package invocation
+            # restores the stage2 settings before invoking CPack.
+            Set-Content -LiteralPath '.llvm_release_tarball_configured' `
+                -Value 'LLVM_INSTALL_TOOLCHAIN_ONLY=OFF' -Encoding ASCII
             Invoke-NativeCommand cmake -GNinja -C $cache.CacheFile @otherFlags "$LlvmSrc/llvm"
             Invoke-NativeCommand $script:NinjaCommand @script:NinjaExtraArgs install
 
