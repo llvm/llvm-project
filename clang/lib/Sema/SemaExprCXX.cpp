@@ -1646,7 +1646,8 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
         cast<InitListExpr>(Exprs[0])->getNumInits() == 0) {
       return CXXFunctionalCastExpr::CreateListInitializer(
           Context, Ty.getUnqualifiedType(), VK_PRValue, TInfo, CK_ToVoid,
-          Exprs[0], /*Path=*/nullptr, CurFPFeatureOverrides());
+          Exprs[0], /*Path=*/nullptr, CurFPFeatureOverrides(),
+          Exprs[0]->getEndLoc());
     }
   } else if (RequireCompleteType(TyBeginLoc, ElemTy,
                                  diag::err_invalid_incomplete_type_use,
@@ -1689,7 +1690,8 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
     if (IsListInit)
       Result = CXXFunctionalCastExpr::CreateListInitializer(
           Context, ResultType, Expr::getValueKindForType(Ty), TInfo, CK_NoOp,
-          Result.get(), /*Path=*/nullptr, CurFPFeatureOverrides());
+          Result.get(), /*Path=*/nullptr, CurFPFeatureOverrides(),
+          RParenOrBraceLoc);
     else
       Result = CXXFunctionalCastExpr::Create(
           Context, ResultType, Expr::getValueKindForType(Ty), TInfo, CK_NoOp,

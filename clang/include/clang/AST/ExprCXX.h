@@ -1873,7 +1873,8 @@ public:
   static CXXFunctionalCastExpr *
   CreateListInitializer(const ASTContext &Context, QualType T, ExprValueKind VK,
                         TypeSourceInfo *Written, CastKind Kind, Expr *Op,
-                        const CXXCastPath *Path, FPOptionsOverride FPO);
+                        const CXXCastPath *Path, FPOptionsOverride FPO,
+                        SourceLocation R);
 
   SourceLocation getLParenLoc() const { return LParenLoc; }
   void setLParenLoc(SourceLocation L) { LParenLoc = L; }
