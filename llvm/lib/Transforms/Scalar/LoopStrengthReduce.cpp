@@ -825,6 +825,10 @@ static bool isMulSExtable(const SCEVMulExpr *M, ScalarEvolution &SE) {
 static const SCEV *getExactSDiv(const SCEV *LHS, const SCEV *RHS,
                                 ScalarEvolution &SE,
                                 bool IgnoreSignificantBits = false) {
+  // A stride can fold to zero once the callers sign-extend it.
+  if (RHS->isZero())
+    return nullptr;
+
   // Handle the trivial case, which works for any SCEV type.
   if (LHS == RHS)
     return SE.getConstant(LHS->getType(), 1);
