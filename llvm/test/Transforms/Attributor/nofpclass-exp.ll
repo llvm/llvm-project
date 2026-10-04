@@ -4,7 +4,6 @@
 declare float @llvm.exp.f32(float)
 declare float @llvm.exp2.f32(float)
 declare float @llvm.exp10.f32(float)
-declare float @llvm.sqrt.f32(float)
 
 define float @ret_exp(float %arg0) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_exp
@@ -473,37 +472,47 @@ define float @ret_exp_positive_subnormal(float nofpclass(inf zero norm nsub) %ar
   ret float %call
 }
 
-; Exercise exp after 1.0 / sqrt(x). For non-poison inputs, the division is
-; -Inf, +zero, positive normal, or +Inf.
-define float @ret_exp_one_over_sqrt(float %arg) {
-; CHECK-LABEL: define nofpclass(nan ninf nzero sub nnorm) float @ret_exp_one_over_sqrt
-; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[ARG]]) #[[ATTR2]]
-; CHECK-NEXT:    [[ONE_OVER_SQRT:%.*]] = fdiv nnan float 1.000000e+00, [[SQRT]]
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero sub nnorm) float @llvm.exp.f32(float [[ONE_OVER_SQRT]]) #[[ATTR2]]
+; Only a negative normal can produce a subnormal result.
+define float @ret_exp_no_nnorm(float nofpclass(nnorm) %arg) {
+; CHECK-LABEL: define nofpclass(ninf nzero sub nnorm) float @ret_exp_no_nnorm
+; CHECK-SAME: (float nofpclass(nnorm) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero sub nnorm) float @llvm.exp.f32(float nofpclass(nnorm) [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
-  %sqrt = call nnan float @llvm.sqrt.f32(float %arg)
-  %one.over.sqrt = fdiv nnan float 1.000000e+00, %sqrt
-  %call = call float @llvm.exp.f32(float %one.over.sqrt)
+  %call = call float @llvm.exp.f32(float %arg)
   ret float %call
 }
 
-; Exercise exp after -1.0 / sqrt(x). For non-poison inputs, the result is
-; -Inf, negative normal, -zero, or +Inf.
-define float @ret_exp_neg_one_over_sqrt(float %arg) {
-; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_exp_neg_one_over_sqrt
-; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[ARG]]) #[[ATTR2]]
-; CHECK-NEXT:    [[ONE_OVER_SQRT:%.*]] = fdiv nnan float 1.000000e+00, [[SQRT]]
-; CHECK-NEXT:    [[NEG_ONE_OVER_SQRT:%.*]] = fneg float [[ONE_OVER_SQRT]]
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp.f32(float [[NEG_ONE_OVER_SQRT]]) #[[ATTR2]]
+; Only a negative normal or negative infinity can produce zero.
+define float @ret_exp_no_ninf_nnorm(float nofpclass(ninf nnorm) %arg) {
+; CHECK-LABEL: define nofpclass(ninf zero sub nnorm) float @ret_exp_no_ninf_nnorm
+; CHECK-SAME: (float nofpclass(ninf nnorm) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf zero sub nnorm) float @llvm.exp.f32(float nofpclass(ninf nnorm) [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
-  %sqrt = call nnan float @llvm.sqrt.f32(float %arg)
-  %one.over.sqrt = fdiv nnan float 1.000000e+00, %sqrt
-  %neg.one.over.sqrt = fneg float %one.over.sqrt
-  %call = call float @llvm.exp.f32(float %neg.one.over.sqrt)
+  %call = call float @llvm.exp.f32(float %arg)
+  ret float %call
+}
+
+; Only a positive normal or positive infinity can produce infinity.
+define float @ret_exp_no_pinf_pnorm(float nofpclass(pinf pnorm) %arg) {
+; CHECK-LABEL: define nofpclass(inf nzero nsub nnorm) float @ret_exp_no_pinf_pnorm
+; CHECK-SAME: (float nofpclass(pinf pnorm) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf nzero nsub nnorm) float @llvm.exp.f32(float nofpclass(pinf pnorm) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.exp.f32(float %arg)
+  ret float %call
+}
+
+; Positive infinity can still produce positive infinity.
+define float @ret_exp_no_pnorm(float nofpclass(pnorm) %arg) {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_exp_no_pnorm
+; CHECK-SAME: (float nofpclass(pnorm) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.exp.f32(float nofpclass(pnorm) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.exp.f32(float %arg)
   ret float %call
 }
 
