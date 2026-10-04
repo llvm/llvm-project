@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -385,6 +386,42 @@ void TailDuplicator::processPHI(
 
 /// Duplicate a TailBB instruction to PredBB and update
 /// the source operands due to earlier PHI translation.
+/// The IR values in the memory operands of an instruction in \p TailBB
+/// describe addresses as seen in the IR block of \p TailBB. When the
+/// instruction is duplicated into a predecessor, a value defined in that IR
+/// block (e.g. an address computed from one of its PHIs) denotes the value
+/// the block would compute next, not a value of the predecessor. Alias
+/// analysis would relate it to the values used in the predecessor as if both
+/// belonged to the same execution of the block and could wrongly answer
+/// NoAlias (e.g. a store to "p + 40" and a load from "p" where, after the
+/// back edge, p is the old p + 40). Drop such IR values from the memory
+/// operands of the copy, so that it is treated conservatively.
+static void dropTailLocalMemOperandValues(MachineInstr &MI,
+                                          const MachineBasicBlock *TailBB) {
+  const BasicBlock *BB = TailBB->getBasicBlock();
+  if (!BB || MI.memoperands_empty())
+    return;
+  MachineFunction &MF = *MI.getMF();
+  SmallVector<MachineMemOperand *, 2> NewMMOs;
+  bool Changed = false;
+  for (MachineMemOperand *MMO : MI.memoperands()) {
+    const auto *I = dyn_cast_or_null<Instruction>(MMO->getValue());
+    if (I && I->getParent() == BB) {
+      NewMMOs.push_back(MF.getMachineMemOperand(
+          MachinePointerInfo(MMO->getAddrSpace()), MMO->getFlags(),
+          MMO->getSize(), MMO->getBaseAlign(),
+          MMOMetadata(AAMDNodes(), MMO->getRanges(), MMO->getMemCacheHint()),
+          MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
+          MMO->getFailureOrdering()));
+      Changed = true;
+    } else {
+      NewMMOs.push_back(MMO);
+    }
+  }
+  if (Changed)
+    MI.setMemRefs(MF, NewMMOs);
+}
+
 void TailDuplicator::duplicateInstruction(
     MachineInstr *MI, MachineBasicBlock *TailBB, MachineBasicBlock *PredBB,
     DenseMap<Register, RegSubRegPair> &LocalVRMap,
@@ -398,6 +435,7 @@ void TailDuplicator::duplicateInstruction(
     return;
   }
   MachineInstr &NewMI = TII->duplicate(*PredBB, PredBB->end(), *MI);
+  dropTailLocalMemOperandValues(NewMI, TailBB);
   if (!PreRegAlloc)
     return;
   for (unsigned i = 0, e = NewMI.getNumOperands(); i != e; ++i) {
