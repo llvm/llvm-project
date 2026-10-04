@@ -9,6 +9,7 @@
 #include "clang/ScalableStaticAnalysis/SourceTransformation/Transformations/CppBoundedBuffers.h"
 #include "../../Analyses/SSAFAnalysesCommon.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -35,12 +36,14 @@
 #include "clang/Tooling/Refactoring/AtomicChange.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
+#include <functional>
 #include <map>
 #include <optional>
 #include <string>
@@ -593,6 +596,13 @@ private:
   bool appendAsBoundedCallToArg(const PointerFlowPair &Pair,
                                 tooling::AtomicChange &AC) const;
 
+  /// Provided that \c Pair LHS is transformed, wrap RHS in `{...}`, if it is a
+  /// list-initializer of array type and LHS is transformed to bounded_array.
+  /// \return true iff RHS needs edit and \c addEditToAtomicChange is called on
+  /// AC.
+  bool wrapBoundedArrayInitWithBraces(const PointerFlowPair &Pair,
+                                      tooling::AtomicChange &AC) const;
+
   /// If \c E has the form `new T[n]` and it needs to have a bounded type, edit
   /// it to `bounded_ptr<T>::_new(n)`
   /// \return true iff E needs edit and \c addEditToAtomicChange is called on
@@ -607,6 +617,19 @@ private:
   bool replaceMallocCallWithBounded(const Expr *E,
                                     tooling::AtomicChange &AC) const;
 
+  /// If \c E has the form '&var', where 'var' is a DRE or MemberExpr, edit it
+  /// to 'addr_of(var)'.
+  /// \return true iff E needs edit and \c addEditToAtomicChange is called on
+  /// AC.
+  bool wrapAddrOfVariableOrMember(const Expr *E,
+                                  tooling::AtomicChange &AC) const;
+
+  /// If \c E is a \c CXXThisExpr and it needs to have a bounded type, edit it
+  /// to 'make_single(this)'.
+  /// \return true iff E needs edit and \c addEditToAtomicChange is called on
+  /// AC.
+  bool wrapThisWithMakeSingle(const Expr *E, tooling::AtomicChange &AC) const;
+
   /// Provided \c E is transformed, if it has the form '&e[i]' or '&*e',
   /// edit it to '(e + i)' or 'e', resp.
   /// \return true iff E needs edit and \c addEditToAtomicChange is called on
@@ -620,6 +643,25 @@ private:
   /// \return true iff E needs edit and \c addEditToAtomicChange is called on
   /// AC.
   bool rewritePointerCast(const Expr *E, tooling::AtomicChange &AC) const;
+
+  /// For each union decl who has members in \c TransformedDecls, if it has
+  /// neither a default initializer for any of its member nor an user-provided
+  /// constructor, add a default initializer `{}` to one of its transformed
+  /// members.
+  ///
+  /// Why this kind of edits are needed:
+  /// A union with a non-trivially-default-constructible member has its
+  /// implicitly-defined default constructor deleted — unless exactly one
+  /// variant member carries a default member initializer (= {}).
+  ///
+  /// Minimal edit conflict:
+  /// A field decl with an initializer will not be edited by this function.
+  /// The initializer shall have been edited, if needed, by \c adaptPointerFlow.
+  void addDefaultInitForTransformedUnionField() const;
+
+  /// Provided \c E has the form 'delete e', if 'e' \c isExprBaseTransformed,
+  /// append '.data()' to it.
+  void appendDataCallToDeleteStmt(const CXXDeleteExpr *E) const;
 
   ASTContext &Ctx;
   const SSAFOptions &Opts;
@@ -800,7 +842,10 @@ ExpressionRewriter::adaptPointerFlow(const PointerFlowPair &Pair) const {
   else if (IsLHSTransformed) {
     // Handle RHSes that are non-entity based and need to have bounded types:
     IsRHSTransformed = replaceNewExprWithBounded(Pair.RHS, AC) ||
-                       replaceMallocCallWithBounded(Pair.RHS, AC);
+                       replaceMallocCallWithBounded(Pair.RHS, AC) ||
+                       wrapAddrOfVariableOrMember(Pair.RHS, AC) ||
+                       wrapThisWithMakeSingle(Pair.RHS, AC) ||
+                       wrapBoundedArrayInitWithBraces(Pair, AC);
   }
   if (!IsLHSTransformed && IsRHSTransformed)
     appendDataCallToArg(Pair, AC);
@@ -875,6 +920,29 @@ bool ExpressionRewriter::appendAsBoundedCallToArg(
   addEditToAtomicChange(RHSRange,
                         (").as_bounded<" + LHSInnerSpelling + ">()").str(),
                         EditKind::InsertAtEnd, AC);
+  return true;
+}
+
+bool ExpressionRewriter::wrapBoundedArrayInitWithBraces(
+    const PointerFlowPair &Pair, tooling::AtomicChange &AC) const {
+  auto LHSClassifyResults = Pair.visitLHS(GetLHSClassifyResults{*this});
+
+  if (LHSClassifyResults.empty() ||
+      LHSClassifyResults.front()->NewType != BoundedType::Array)
+    return false;
+
+  const auto *ILE = dyn_cast<InitListExpr>(Pair.RHS->IgnoreParenImpCasts());
+
+  // An empty list ('{}') binds directly to bounded_array's default
+  // constructor and needs no extra braces.
+  if (!ILE || ILE->getNumInits() == 0)
+    return false;
+
+  CharSourceRange ILERange = Lexer::getAsCharRange(
+      ILE->getSourceRange(), Ctx.getSourceManager(), Ctx.getLangOpts());
+
+  addEditToAtomicChange(ILERange, "{", EditKind::InsertAtBegin, AC);
+  addEditToAtomicChange(ILERange, "}", EditKind::InsertAtEnd, AC);
   return true;
 }
 
@@ -1048,6 +1116,111 @@ bool ExpressionRewriter::replaceMallocCallWithBounded(
   return addEditToAtomicChange(CR, "_", EK, AC);
 }
 
+bool ExpressionRewriter::wrapAddrOfVariableOrMember(
+    const Expr *E, tooling::AtomicChange &AC) const {
+  const auto *UO = dyn_cast<UnaryOperator>(E->IgnoreParenImpCasts());
+  if (!UO || UO->getOpcode() != UO_AddrOf)
+    return false;
+
+  const Expr *SubExpr = UO->getSubExpr()->IgnoreParenImpCasts();
+
+  // FIXME: is there a unified approach for all AddrOf expressions?
+  if (!isa<DeclRefExpr, MemberExpr>(SubExpr))
+    return false;
+
+  const SourceManager &SM = Ctx.getSourceManager();
+  const LangOptions &LO = Ctx.getLangOpts();
+  CharSourceRange FullExprCR =
+      Lexer::getAsCharRange(UO->getSourceRange(), SM, LO);
+  CharSourceRange UOSubExprCR =
+      Lexer::getAsCharRange(UO->getSubExpr()->getSourceRange(), SM, LO);
+  CharSourceRange AmpCR = CharSourceRange::getCharRange(FullExprCR.getBegin(),
+                                                        UOSubExprCR.getBegin());
+
+  // For '&var',
+  // - replace '&' with 'addr_of(', and
+  // - append ')' to 'var'
+  addEditToAtomicChange(AmpCR, "addr_of(", EditKind::Replace, AC);
+  addEditToAtomicChange(UOSubExprCR, ")", EditKind::InsertAtEnd, AC);
+  return true;
+}
+
+bool ExpressionRewriter::wrapThisWithMakeSingle(
+    const Expr *E, tooling::AtomicChange &AC) const {
+  const auto *CTE = dyn_cast<CXXThisExpr>(E->IgnoreParenImpCasts());
+  if (!CTE)
+    return false;
+
+  CharSourceRange CR = Lexer::getAsCharRange(
+      CTE->getSourceRange(), Ctx.getSourceManager(), Ctx.getLangOpts());
+
+  addEditToAtomicChange(CR, "make_single(", EditKind::InsertAtBegin, AC);
+  addEditToAtomicChange(CR, ")", EditKind::InsertAtEnd, AC);
+  return true;
+}
+
+void ExpressionRewriter::addDefaultInitForTransformedUnionField() const {
+  llvm::SmallPtrSet<const RecordDecl *, 8> Seen;
+
+  for (const auto &Entry : TransformedDecls) {
+    const auto *FD = dyn_cast<FieldDecl>(Entry.first);
+    if (!FD)
+      continue;
+
+    const auto *RD = dyn_cast<CXXRecordDecl>(FD->getParent());
+    if (!RD || !RD->isUnion() || !Seen.insert(RD).second)
+      continue;
+
+    // Either already prevents the union's implicitly-defined default
+    // constructor from being deleted, so no edit is needed.
+    if (RD->hasInClassInitializer() || RD->hasUserDeclaredConstructor())
+      continue;
+
+    // Add '= {}' to the first transformed member.
+    auto FieldToEdit = llvm::find_if(RD->fields(), [this](const FieldDecl *FD) {
+      return TransformedDecls.count(FD) > 0;
+    });
+
+    const SourceManager &SM = Ctx.getSourceManager();
+    CharSourceRange FieldCR = Lexer::getAsCharRange(
+        FieldToEdit->getSourceRange(), SM, Ctx.getLangOpts());
+    tooling::AtomicChange AC("", "");
+
+    addEditToAtomicChange(FieldCR, " = {}", EditKind::InsertAtEnd, AC);
+
+    if (llvm::all_of(AC.getReplacements(),
+                     std::mem_fn(&tooling::Replacement::isApplicable)))
+      for (const tooling::Replacement &R : AC.getReplacements())
+        Edits.addReplacement(R);
+  }
+}
+
+void ExpressionRewriter::appendDataCallToDeleteStmt(
+    const CXXDeleteExpr *E) const {
+  const Expr *Operand = E->getArgument();
+
+  if (!isExprBaseTransformed(Operand))
+    return;
+
+  tooling::AtomicChange AC("", "");
+
+  rewriteExpression(Operand, AC);
+  // Operand may be edited, its source range should stay intact.
+
+  const SourceManager &SM = Ctx.getSourceManager();
+  CharSourceRange OperandCR =
+      Lexer::getAsCharRange(Operand->getSourceRange(), SM, Ctx.getLangOpts());
+
+  addEditToAtomicChange(OperandCR, "(", EditKind::InsertAtBegin, AC);
+  addEditToAtomicChange(OperandCR, ").data()", EditKind::InsertAtEnd, AC);
+
+  if (llvm::all_of(AC.getReplacements(),
+                   std::mem_fn(&tooling::Replacement::isApplicable))) {
+    for (auto R : AC.getReplacements())
+      Edits.addReplacement(R);
+  }
+}
+
 void ExpressionRewriter::rewriteExprInTU(const TranslationUnitDecl *TU) {
   llvm::DenseMap<const NamedDecl *, std::vector<const NamedDecl *>>
       ContributorGroups;
@@ -1055,25 +1228,36 @@ void ExpressionRewriter::rewriteExprInTU(const TranslationUnitDecl *TU) {
   findContributors(Ctx, Opts, ContributorGroups,
                    /*ExtractFromSystemHeaders=*/false);
 
-  llvm::SmallVector<PointerFlowPair> Pairs;
-  PointerFlowPairMatcher Matcher{Ctx};
-
   for (auto &[GrpCano, ContriGrp] : ContributorGroups)
     for (auto *ContriDecl : ContriGrp) {
-      auto PairsCollector = [&Pairs, &Matcher,
-                             &ContriDecl](const DynTypedNode &Node) {
+      auto PairsRewriter = [this, &ContriDecl](const DynTypedNode &Node) {
+        llvm::SmallVector<PointerFlowPair, 4> Pairs;
+        PointerFlowPairMatcher Matcher{Ctx};
+
         Matcher.matches(Node, ContriDecl, Pairs);
+        for (const PointerFlowPair &Pair : Pairs) {
+          if (auto AC = adaptPointerFlow(Pair);
+              AC &&
+              llvm::all_of(AC->getReplacements(),
+                           std::mem_fn(&tooling::Replacement::isApplicable)))
+            for (const tooling::Replacement &R : AC->getReplacements())
+              Edits.addReplacement(R);
+        }
       };
-      findMatchesIn(ContriDecl, PairsCollector);
+
+      findMatchesIn(ContriDecl, PairsRewriter);
+      findMatchesIn(ContriDecl, [this](const DynTypedNode &Node) {
+        const auto *DeleteStmt = Node.get<CXXDeleteExpr>();
+
+        if (DeleteStmt)
+          appendDataCallToDeleteStmt(DeleteStmt);
+      });
     }
 
-  for (const PointerFlowPair &Pair : Pairs) {
-    if (auto AC = adaptPointerFlow(Pair);
-        AC && llvm::all_of(AC->getReplacements(),
-                           std::mem_fn(&tooling::Replacement::isApplicable)))
-      for (const tooling::Replacement &R : AC->getReplacements())
-        Edits.addReplacement(R);
-  }
+  // A union with a non-trivially-default-constructible member has its
+  // implicitly-defined default constructor deleted — unless exactly one variant
+  // member carries a default member initializer (= {}).
+  addDefaultInitForTransformedUnionField();
 }
 
 bool ExpressionRewriter::isExprBaseTransformed(const Expr *E) const {
@@ -1137,7 +1321,7 @@ bool ExpressionRewriter::addEditToAtomicChange(
       return AC.replace(SM, FileRange, NewText);
     case InsertAtBegin:
       return AC.insert(SM, FileRange.getBegin(), NewText,
-                        /*InsertAfter=*/false);
+                       /*InsertAfter=*/false);
     case InsertAtEnd:
       return AC.insert(SM, FileRange.getEnd(), NewText, /*InsertAfter=*/true);
     }
