@@ -3430,6 +3430,8 @@ void OpEmitter::genFolderDecls() {
       op.getNumResults() == 1 && op.getNumVariableLengthResults() == 0;
   if (hasSingleResult) {
     retType = "::mlir::OpFoldResult";
+  } else if (op.getDialect().useOpFoldResults()) {
+    retType = "::mlir::OpFoldResults";
   } else {
     paramList.emplace_back("::llvm::SmallVectorImpl<::mlir::OpFoldResult> &",
                            "results");

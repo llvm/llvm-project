@@ -106,6 +106,10 @@ bool Dialect::isExtensible() const {
   return def->getValueAsBit("isExtensible");
 }
 
+bool Dialect::useOpFoldResults() const {
+  return def->getValueAsBit("useOpFoldResults");
+}
+
 const llvm::DagInit *Dialect::getDiscardableAttributes() const {
   return def->getValueAsDag("discardableAttrs");
 }
