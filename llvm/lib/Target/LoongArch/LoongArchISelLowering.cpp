@@ -8366,7 +8366,7 @@ static SDValue ExtendSrcToDst(SDNode *N, SelectionDAG &DAG, unsigned ExtendOp) {
     return SDValue();
 
   MVT WidenEltVT = MVT::getIntegerVT(DstEltBits);
-  MVT WidenSrcVT = MVT::getVectorVT(WidenEltVT, DstElts);
+  EVT WidenSrcVT = EVT::getVectorVT(*DAG.getContext(), WidenEltVT, DstElts);
 
   SDValue Extend = DAG.getNode(ExtendOp, DL, WidenSrcVT, Src);
   return DAG.getNode(N->getOpcode(), DL, VT, Extend);

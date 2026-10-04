@@ -604,14 +604,13 @@ val target_triple: llmodule -> string
     the string [triple]. See the method [llvm::Module::setTargetTriple]. *)
 val set_target_triple: string -> llmodule -> unit
 
-(** [data_layout m] is the data layout specifier for the module [m], something
-    like [e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-...-a0:0:64-f80:128:128]. See the
-    method [llvm::Module::getDataLayout]. *)
-val data_layout: llmodule -> string
+(** [data_layout m] is the data layout for the module [m].
+    See the method [llvm::Module::getDataLayout]. *)
+val data_layout: llmodule -> DataLayout.t
 
-(** [set_data_layout s m] changes the data layout specifier for the module [m]
-    to the string [s]. See the method [llvm::Module::setDataLayout]. *)
-val set_data_layout: string -> llmodule -> unit
+(** [set_data_layout dl m] changes the data layout specifier for the module [m]
+    to [dl]. See the method [llvm::Module::setDataLayout]. *)
+val set_data_layout: DataLayout.t -> llmodule -> unit
 
 (** [dump_module m] prints the .ll representation of the module [m] to standard
     error. See the method [llvm::Module::dump]. *)
