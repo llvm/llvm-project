@@ -55,6 +55,7 @@ Implemented Papers
 - P3450R1: Extend ``std::is_within_lifetime`` (`Github <https://llvm.org/PR189610>`__)
 - P3793R2: Better shifting (`Github <https://llvm.org/PR219389>`__) (no ``std::simd`` overloads)
 - P0040R3: Extending memory management tools (`Github <https://github.com/llvm/llvm-project/issues/103640>`__)
+- P2077R3: Heterogeneous erasure overloads for associative containers (`Github <https://llvm.org/PR105165>`__)
 
 Improvements and New Features
 -----------------------------
