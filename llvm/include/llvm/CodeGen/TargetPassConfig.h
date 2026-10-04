@@ -127,6 +127,8 @@ protected:
   // Targets provide a default setting, user flags override.
   bool DisableVerify = false;
 
+  MachineVerifierMode VerifyMode = MachineVerifierMode::End;
+
   /// Default setting for -enable-tail-merge on this target.
   bool EnableTailMerge = true;
 
@@ -193,6 +195,9 @@ public:
   getStartStopInfo(PassInstrumentationCallbacks &PIC);
 
   void setDisableVerify(bool Disable) { setOpt(DisableVerify, Disable); }
+
+  /// Return where the machine verifier runs in the pipeline.
+  MachineVerifierMode getMachineVerifierMode() const { return VerifyMode; }
 
   bool getEnableTailMerge() const { return EnableTailMerge; }
   void setEnableTailMerge(bool Enable) { setOpt(EnableTailMerge, Enable); }

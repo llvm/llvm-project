@@ -826,6 +826,8 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
           return 1;
       }
       TPC.setInitialized();
+      if (TPC.getMachineVerifierMode() == MachineVerifierMode::End)
+        PM.add(createMachineVerifierPass("At end of pipeline"));
       PM.add(createPrintMIRPass(*OS));
 
       // Add MIR2Vec vocabulary printer if requested

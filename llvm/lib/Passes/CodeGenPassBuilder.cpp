@@ -270,8 +270,9 @@ Error CodeGenPassBuilder::buildPipeline(
   if (auto Err = addMachinePasses(PMW))
     return Err;
 
-  if (!Opt.DisableVerify && TM.Options.EnableDefaultMachineVerifier)
-    addMachineFunctionPass(MachineVerifierPass(), PMW);
+  if (PrintAsm ? !Opt.DisableVerify && TM.Options.EnableDefaultMachineVerifier
+               : Opt.VerifyMachineCode == MachineVerifierMode::End)
+    addMachineFunctionPass(MachineVerifierPass(), PMW, /*Force=*/!PrintAsm);
 
   // We add AsmPrinter regardless if we are emitting MIR or Assembly as the
   // final output so that -stop-before=<target>-asm-printer works. When printing
