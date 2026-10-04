@@ -1777,6 +1777,14 @@ public:
                   OperandValueInfo OpdInfo = {OK_AnyValue, OP_None},
                   const Instruction *I = nullptr) const;
 
+  /// \return The cost the backend saves on \p NumLoads consecutive loads of
+  /// \p LoadTy from address space \p AddrSpace by coalescing them into one
+  /// wider access, \p Alignment being the best alignment known among them.
+  /// Zero when the loads stay separate.
+  LLVM_ABI InstructionCost
+  getLoadCoalescingSaving(Type *LoadTy, unsigned NumLoads, Align Alignment,
+                          unsigned AddrSpace, TargetCostKind CostKind) const;
+
   /// \return The cost of the interleaved memory operation.
   /// \p Opcode is the memory operation code
   /// \p VecTy is the vector type of the interleaved access.
@@ -1971,13 +1979,6 @@ public:
   /// \returns The bitwidth of the largest vector type that should be used to
   /// load/store in the given address space.
   LLVM_ABI unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const;
-
-  /// \returns True if the backend coalesces \p NumElts consecutive scalar
-  /// loads of \p ElemTy in the given address space into one wider access,
-  /// \p Alignment being the best alignment known among the loads.
-  LLVM_ABI bool consecutiveLoadsCoalesce(Type *ElemTy, unsigned NumElts,
-                                         Align Alignment,
-                                         unsigned AddrSpace) const;
 
   /// \returns True if the load instruction is legal to vectorize.
   LLVM_ABI bool isLegalToVectorizeLoad(LoadInst *LI) const;

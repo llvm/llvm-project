@@ -2093,6 +2093,26 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                 OpInfo, I);
 }
 
+InstructionCost
+GCNTTIImpl::getLoadCoalescingSaving(Type *LoadTy, unsigned NumLoads,
+                                    Align Alignment, unsigned AddrSpace,
+                                    TTI::TargetCostKind CostKind) const {
+  if (!consecutiveLoadsCoalesce(LoadTy, NumLoads, Alignment, AddrSpace))
+    return 0;
+  unsigned NumElts = NumLoads;
+  if (auto *LoadVecTy = dyn_cast<FixedVectorType>(LoadTy))
+    NumElts *= LoadVecTy->getNumElements();
+  InstructionCost ScalarCost =
+      NumLoads * getMemoryOpCost(Instruction::Load, LoadTy, Alignment,
+                                 AddrSpace, CostKind);
+  InstructionCost VecCost = getMemoryOpCost(
+      Instruction::Load, FixedVectorType::get(LoadTy->getScalarType(), NumElts),
+      Alignment, AddrSpace, CostKind);
+  if (VecCost >= ScalarCost)
+    return 0;
+  return ScalarCost - VecCost;
+}
+
 unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
   if (VectorType *VecTy = dyn_cast<VectorType>(Tp)) {
     if (VecTy->getElementType()->isIntegerTy(8)) {
