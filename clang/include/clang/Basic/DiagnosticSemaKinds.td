@@ -6770,7 +6770,7 @@ def err_typecheck_invalid_restrict_invalid_pointee : Error<
 def ext_typecheck_zero_array_size : Extension<
   "zero size arrays are an extension">, InGroup<ZeroLengthArray>;
 def err_typecheck_zero_array_size : Error<
-  "zero-length arrays are not permitted in %select{C++|SYCL device code|HIP device code|OpenCL}0">;
+  "zero-length arrays are not permitted in %select{C++|SYCL device code|OpenCL}0">;
 def err_array_size_non_int : Error<"size of array has non-integer type %0">;
 def err_init_element_not_constant : Error<
   "initializer element is not a compile-time constant">;
@@ -9828,6 +9828,10 @@ def err_cuda_vla : Error<
     "cannot use variable-length arrays in "
     "%select{__device__|__global__|__host__|__host__ __device__}0 functions">;
 def err_cuda_extern_shared : Error<"__shared__ variable %0 cannot be 'extern'">;
+def warn_cuda_zero_length_shared_array : Warning<
+    "zero-length __shared__ array %0 has no storage; did you mean "
+    "'extern __shared__' with an unspecified size for dynamic shared memory?">,
+    InGroup<DiagGroup<"zero-length-shared-array">>;
 def err_cuda_host_shared : Error<
     "__shared__ local variables not allowed in "
     "%select{__device__|__global__|__host__|__host__ __device__}0 functions">;

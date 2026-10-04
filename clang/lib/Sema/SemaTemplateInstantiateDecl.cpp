@@ -6492,6 +6492,9 @@ void Sema::BuildVariableInstantiation(
   }
   CheckVariableDeclaration(NewVar, Previous);
 
+  if (!Context.getAsConstantArrayType(OldVar->getType()))
+    CUDA().checkZeroLengthSharedArray(NewVar);
+
   if (!InstantiatingVarTemplate) {
     NewVar->getLexicalDeclContext()->addHiddenDecl(NewVar);
     if (!NewVar->isLocalExternDecl() || !NewVar->getPreviousDecl())

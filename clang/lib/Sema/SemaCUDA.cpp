@@ -837,6 +837,16 @@ void SemaCUDA::checkAllowedInitializer(VarDecl *VD) {
   }
 }
 
+void SemaCUDA::checkZeroLengthSharedArray(const VarDecl *VD) {
+  if (!getLangOpts().CUDAIsDevice || VD->isInvalidDecl() ||
+      !VD->hasAttr<CUDASharedAttr>())
+    return;
+  if (const ConstantArrayType *ArrayT =
+          getASTContext().getAsConstantArrayType(VD->getType());
+      ArrayT && ArrayT->isZeroSize())
+    Diag(VD->getLocation(), diag::warn_cuda_zero_length_shared_array) << VD;
+}
+
 void SemaCUDA::RecordImplicitHostDeviceFuncUsedByDevice(
     const FunctionDecl *Callee) {
   FunctionDecl *Caller = SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
