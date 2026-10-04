@@ -141,7 +141,15 @@ def AArch64ldff1s_gather_imm_z         : SDNode<"AArch64ISD::GLDFF1S_IMM_MERGE_Z
 def AArch64ldnt1_gather_z  : SDNode<"AArch64ISD::GLDNT1_MERGE_ZERO",  SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
 def AArch64ldnt1s_gather_z : SDNode<"AArch64ISD::GLDNT1S_MERGE_ZERO", SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
 // Gather vector base +  scalar offset
-def AArch64ld1q_gather_z: SDNode<"AArch64ISD::GLD1Q_MERGE_ZERO", SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
+// Quadword gathers/scatters use a single predicate bit per 128-bit quadword,
+// i.e. always nxv1i1, regardless of the element count of the data being
+// loaded/stored.
+def SDT_AArch64_GATHER_VS_128 : SDTypeProfile<1, 4, [
+  SDTCisVec<0>, SDTCisVT<1, nxv1i1>, SDTCisVec<2>, SDTCisInt<3>,
+  SDTCisVT<4, OtherVT>
+]>;
+
+def AArch64ld1q_gather_z: SDNode<"AArch64ISD::GLD1Q_MERGE_ZERO", SDT_AArch64_GATHER_VS_128, [SDNPHasChain, SDNPMayLoad]>;
 
 // Contiguous stores - node definitions
 //
@@ -178,7 +186,15 @@ def AArch64st1_scatter_imm         : SDNode<"AArch64ISD::SST1_IMM_PRED",        
 def AArch64stnt1_scatter : SDNode<"AArch64ISD::SSTNT1_PRED", SDT_AArch64_SCATTER_VS, [SDNPHasChain, SDNPMayStore]>;
 
 // Scatter vector base + scalar offset
-def AArch64st1q_scatter : SDNode<"AArch64ISD::SST1Q_PRED", SDT_AArch64_SCATTER_VS, [SDNPHasChain, SDNPMayStore]>;
+// Quadword gathers/scatters use a single predicate bit per 128-bit quadword,
+// i.e. always nxv1i1, regardless of the element count of the data being
+// loaded/stored.
+def SDT_AArch64_SCATTER_VS_128 : SDTypeProfile<0, 5, [
+  SDTCisVec<0>, SDTCisVT<1, nxv1i1>, SDTCisVec<2>, SDTCisInt<3>,
+  SDTCisVT<4, OtherVT>
+]>;
+
+def AArch64st1q_scatter : SDNode<"AArch64ISD::SST1Q_PRED", SDT_AArch64_SCATTER_VS_128, [SDNPHasChain, SDNPMayStore]>;
 
 // AArch64 SVE/SVE2 - the remaining node definitions
 //
