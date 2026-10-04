@@ -22,30 +22,24 @@ class OptionsStruct<string namespace = "llvm", string prefix = ""> {
   string MemberPrefix = prefix;
 }
 
-// The member a row sets, the member's type and default value, and the value a
-// Flag assigns. Other kinds parse their argument.
+// The member an option sets, and the member's type and default value.
 class Field<string name, string type, code default> {
   string FieldName = name;
   string FieldType = type;
   code FieldDefault = default;
 }
-class FieldValue<code value> { code FieldValue = value; }
 
 // A bool member set by -<name> or -<name>=<true|false|1|0>.
 multiclass BoolField<string name, code default, string help> {
-  def NAME : Flag<["-", "--"], name>, Field<NAME, "bool", default>,
-    FieldValue<"true">, HelpText<help>;
-  def NAME#_EQ : Joined<["-", "--"], name#"=">, Field<NAME, "bool", default>;
+  def NAME : FlagOrEq<["-", "--"], name>, Field<NAME, "bool", default>,
+    HelpText<help>;
 }
 
 // A std::optional<bool> member, std::nullopt unless -<name> or
 // -<name>=<true|false|1|0> is given.
 multiclass OptionalBoolField<string name, string help> {
-  def NAME : Flag<["-", "--"], name>,
-    Field<NAME, "std::optional<bool>", "std::nullopt">, FieldValue<"true">,
-    HelpText<help>;
-  def NAME#_EQ : Joined<["-", "--"], name#"=">,
-    Field<NAME, "std::optional<bool>", "std::nullopt">;
+  def NAME : FlagOrEq<["-", "--"], name>,
+    Field<NAME, "std::optional<bool>", "std::nullopt">, HelpText<help>;
 }
 
 // A member of the enumeration <type> set by -<name>=<value> or -<name> <value>,
@@ -53,10 +47,9 @@ multiclass OptionalBoolField<string name, string help> {
 // the C++ <enumerators>.
 multiclass EnumField<string name, string type, code default, string values,
                      list<code> enumerators, string help> {
-  def NAME#_EQ : Joined<["-", "--"], name#"=">, Field<NAME, type, default>,
+  def NAME : SeparateOrEq<["-", "--"], name>, Field<NAME, type, default>,
     Values<values>, NormalizedValues<enumerators>,
     MetaVarName<"<"#!subst(",", "|", values)#">">, HelpText<help>;
-  def NAME : Separate<["-", "--"], name>, Alias<!cast<Option>(NAME#"_EQ")>;
 }
 
 // A std::optional<bool> member, std::nullopt unless -<name>=Enable or
@@ -68,7 +61,6 @@ multiclass DefaultOnOffField<string name, string help> {
 
 // A member of the C++ type <type> set by -<name>=<value> or -<name> <value>.
 multiclass ValueField<string name, string type, code default, string help> {
-  def NAME#_EQ : Joined<["-", "--"], name#"=">, Field<NAME, type, default>,
+  def NAME : SeparateOrEq<["-", "--"], name>, Field<NAME, type, default>,
     HelpText<help>;
-  def NAME : Separate<["-", "--"], name>, Alias<!cast<Option>(NAME#"_EQ")>;
 }
