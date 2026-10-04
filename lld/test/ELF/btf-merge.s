@@ -61,7 +61,13 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 comdat1.s -o comdat1.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 comdat2.s -o comdat2.o
 # RUN: ld.lld --btf-merge a.o comdat1.o comdat2.o -o comdat
-# RUN: llvm-readelf -x .BTF comdat | FileCheck %s --check-prefix=BTF-HEX
+# RUN: llvm-readelf -x .BTF comdat | FileCheck %s --check-prefix=COMDAT
+
+## Only the live INT "int" remains: type_len and str_off are 16 bytes and
+## str_len is 5 bytes ("\0int\0"). Including the discarded INT "long" would
+## still produce valid BTF magic, but would change these header lengths.
+# COMDAT:      0x00000000 9feb0100 18000000 00000000 10000000
+# COMDAT-NEXT: 0x00000010 10000000 05000000
 
 # NO-MERGE: .BTF
 # MERGED:     .BTF PROGBITS
