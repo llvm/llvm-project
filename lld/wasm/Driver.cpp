@@ -606,6 +606,15 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.initialHeap = args::getInteger(args, OPT_initial_heap, 0);
   ctx.arg.initialMemory = args::getInteger(args, OPT_initial_memory, 0);
   ctx.arg.maxMemory = args::getInteger(args, OPT_max_memory, 0);
+  // The JS API limits the size of a function body, including its locals
+  // declarations, to 7,654,321 bytes:
+  // https://www.w3.org/TR/wasm-js-api-2/#limits
+  constexpr uint64_t wasmMaxFunctionBodySize = 7654321;
+  int64_t maxFunctionBodySize = args::getInteger(
+      args, OPT_max_function_body_size, wasmMaxFunctionBodySize);
+  if (maxFunctionBodySize <= 0)
+    error("--max-function-body-size=N must be greater than 0");
+  ctx.arg.maxFunctionBodySize = maxFunctionBodySize;
   ctx.arg.noGrowableMemory = args.hasArg(OPT_no_growable_memory);
   ctx.arg.zStackSize =
       args::getZOptionValue(args, OPT_z, "stack-size", WasmDefaultPageSize);

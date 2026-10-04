@@ -97,6 +97,10 @@ struct Config {
   uint64_t initialHeap;
   uint64_t initialMemory;
   uint64_t maxMemory;
+  // Size above which the relocation code the linker synthesizes is split
+  // across several functions.  Defaults to the limit set by the JS API; the
+  // option that lowers it exists for testing.
+  uint64_t maxFunctionBodySize;
   bool noGrowableMemory;
   // The table offset at which to place function addresses.  We reserve zero
   // for the null function pointer.  This gets set to 1 for executables and 0
