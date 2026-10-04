@@ -1,0 +1,135 @@
+# REQUIRES: system-linux
+
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/binary.yaml -o %t/spe-perfdata.exe
+# RUN: touch %t/perf.data
+# RUN: chmod +x %t/success/perf
+# RUN: chmod +x %t/no-record/perf
+# RUN: env PATH="%t/success%{pathsep}%{PATH}" \
+# RUN:   llvm-profgen --binary=%t/spe-perfdata.exe \
+# RUN:   --perfdata=%t/perf.data --spe-branch-profile --skip-symbolization \
+# RUN:   --use-offset=0 --format=text --output=%t/profile
+# RUN: FileCheck %s --input-file=%t/profile
+# RUN: env PATH="%t/no-record%{pathsep}%{PATH}" \
+# RUN:   not llvm-profgen --binary=%t/spe-perfdata.exe \
+# RUN:   --perfdata=%t/perf.data --spe-branch-profile --skip-symbolization \
+# RUN:   --output=/dev/null 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=NO-RECORD
+
+## The mock validates both perf invocations, including the decoding of branch
+## events into a branch stack of one entry and the field list required for Arm
+## SPE. The profile checks that the second invocation's output is consumed.
+# CHECK:      1
+# CHECK-NEXT: 1000-1008:1
+# CHECK-NEXT: 1
+# CHECK-NEXT: 1008->1000:1
+
+## A recording that holds no Arm SPE branch event yields a trace of mmap
+## events alone. The perf command that printed it is one this tool ran, so
+## name what has to be recorded rather than what has to be printed.
+# NO-RECORD: error: --spe-branch-profile found no Arm SPE branch record in the perf data; record one with arm_spe/branch_filter=1,event_filter=2/ using perf 6.15 or later
+
+#--- success/perf
+#!/bin/sh
+
+if [ "$1" != "script" ]; then
+  echo "unexpected perf arguments: $*" >&2
+  exit 2
+fi
+
+if [ "$2" = "--show-mmap-events" ]; then
+  if [ "$3" != "-F" ] || [ "$4" != "comm,pid" ] || [ "$5" != "-i" ] || \
+     [ ! -f "$6" ] || [ "$#" -ne 6 ]; then
+    echo "unexpected mmap arguments: $*" >&2
+    exit 2
+  fi
+  printf '%s\n' 'PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/spe-perfdata.exe'
+elif [ "$2" = "--itrace=bl1" ]; then
+  if [ "$3" != "--show-mmap-events" ] || [ "$4" != "-F" ] || \
+     [ "$5" != "ip,brstack" ] || [ "$6" != "-i" ] || [ ! -f "$7" ] || \
+     [ "$8" != "--pid" ] || [ "$9" != "1" ] || [ "$#" -ne 9 ]; then
+    echo "unexpected sample arguments: $*" >&2
+    exit 2
+  fi
+  printf '%s\n' 'PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/spe-perfdata.exe'
+  printf '%s\n' '700000001008 0x700000001008/0x700000001000/P/-/-/10/UNCOND/-'
+else
+  echo "unexpected perf arguments: $*" >&2
+  exit 2
+fi
+
+#--- no-record/perf
+#!/bin/sh
+
+## A recording without Arm SPE branch events: the mmap events are printed by
+## both invocations and no branch record by either.
+printf '%s\n' 'PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/spe-perfdata.exe'
+
+#--- binary.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+  Entry:   0x1000
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    Offset:       0x1000
+    AddressAlign: 0x4
+    ## nop
+    ## nop
+    ## b 0x1000
+    Content:      1F2003D51F2003D5FEFFFF17
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    Offset:   0
+    VAddr:    0
+    FileSize: 0x100C
+    MemSize:  0x100C
+    Align:    0x10000
+Symbols:
+  - Name:    foo
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x1000
+    Size:    0xC
+DWARF:
+  debug_abbrev:
+    - ID: 0
+      Table:
+        - Code:     1
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_yes
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+        - Code:     2
+          Tag:      DW_TAG_subprogram
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_addr
+            - Attribute: DW_AT_high_pc
+              Form:      DW_FORM_data8
+  debug_info:
+    - Version:       4
+      AbbrevTableID: 0
+      AddrSize:      8
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: spe-perfdata.c
+        - AbbrCode: 2
+          Values:
+            - CStr:  foo
+            - Value: 0x1000
+            - Value: 0xC
+        - AbbrCode: 0
