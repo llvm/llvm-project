@@ -19,7 +19,7 @@
 ///
 /// NOTES ON IMPLEMENTATION
 /// 1. @matmul is only lowered via `-test-lower-to-llvm`, no tiling or
-///    vectorization -- it's a reference check, not a lowering path under
+///    vectorization - it's a reference check, not a lowering path under
 ///    test.
 ///
 /// 2. FEAT_I8MM's `smmla` consumes the whole K reduction in one instruction,
@@ -27,8 +27,7 @@
 ///    of 8, with no further splitting of the reduction needed.
 ///
 /// 3. `linalg.mmt4d`'s RHS is already N-major (that's the "t" in "mmt4d"),
-///    exactly what `LowerContractionToNeonI8MMPattern` expects -- no
-///    transpose_matmul step needed here, unlike a plain `linalg.matmul`.
+///    exactly what `LowerContractionToNeonI8MMPattern` expects.
 ///
 /// 4. Packing gives the inner tiles a statically-known shape, so the
 ///    vectorized `vector.contract` never needs masking.
@@ -303,7 +302,7 @@ module @transforms attributes { transform.with_named_sequence } {
     //==========================================================================
     // LOWER CONTRACT TO I8MM
     //==========================================================================
-    // Target FEAT_I8MM directly -- by this point the data is packed and
+    // Target FEAT_I8MM directly - by this point the data is packed and
     // statically shaped, so no masking survives to block the pattern.
     transform.apply_patterns to %contract_func {
       transform.apply_patterns.arm_neon.vector_contract_to_i8mm
