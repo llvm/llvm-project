@@ -267,7 +267,13 @@ static bool isCompatible(Ctx &ctx, InputFile *file) {
   if (!file->isElf() && !isa<BitcodeFile>(file))
     return true;
 
-  if (file->ekind == ctx.arg.ekind && file->emachine == ctx.arg.emachine) {
+  // An EM_SPARC32PLUS object holds V9 instructions in the 32-bit SPARC ABI, so
+  // it links with plain EM_SPARC objects. The output machine is EM_SPARC until
+  // the header is written.
+  uint16_t emachine =
+      file->emachine == EM_SPARC32PLUS ? EM_SPARC : file->emachine;
+
+  if (file->ekind == ctx.arg.ekind && emachine == ctx.arg.emachine) {
     if (ctx.arg.emachine != EM_MIPS)
       return true;
     if (isMipsN32Abi(ctx, *file) == ctx.arg.mipsN32Abi)
@@ -1787,6 +1793,9 @@ static uint16_t getBitcodeMachineKind(Ctx &ctx, StringRef path,
   case Triple::riscv32:
   case Triple::riscv64:
     return EM_RISCV;
+  case Triple::sparc:
+  case Triple::sparcel:
+    return EM_SPARC;
   case Triple::sparcv9:
     return EM_SPARCV9;
   case Triple::systemz:

@@ -173,6 +173,7 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(Ctx &ctx,
           .Cases({"elf_amd64", "elf_x86_64"}, {ELF64LEKind, EM_X86_64})
           .Case("elf_i386", {ELF32LEKind, EM_386})
           .Case("elf_iamcu", {ELF32LEKind, EM_IAMCU})
+          .Case("elf32_sparc", {ELF32BEKind, EM_SPARC})
           .Case("elf64_sparc", {ELF64BEKind, EM_SPARCV9})
           .Case("msp430elf", {ELF32LEKind, EM_MSP430})
           .Case("elf64_amdgpu", {ELF64LEKind, EM_AMDGPU})
@@ -1345,10 +1346,10 @@ static SmallVector<StringRef, 0> getSymbolOrderingFile(Ctx &ctx,
 
 static bool getIsRela(Ctx &ctx, opt::InputArgList &args) {
   // The psABI specifies the default relocation entry format.
-  bool rela =
-      is_contained({EM_AARCH64, EM_AMDGPU, EM_HEXAGON, EM_LOONGARCH, EM_PPC,
-                    EM_PPC64, EM_RISCV, EM_S390, EM_SPARCV9, EM_X86_64},
-                   ctx.arg.emachine);
+  bool rela = is_contained({EM_AARCH64, EM_AMDGPU, EM_HEXAGON, EM_LOONGARCH,
+                            EM_PPC, EM_PPC64, EM_RISCV, EM_S390, EM_SPARC,
+                            EM_SPARCV9, EM_X86_64},
+                           ctx.arg.emachine);
   // If -z rel or -z rela is specified, use the last option.
   for (auto *arg : args.filtered(OPT_z)) {
     StringRef s(arg->getValue());
@@ -2361,9 +2362,19 @@ void LinkerDriver::inferMachineType() {
     if (f->ekind == ELFNoneKind)
       continue;
     if (!inferred) {
+      // EM_SPARC and EM_SPARC32PLUS name the 32-bit big-endian ABI, so an
+      // object claiming either with another class or byte order is malformed.
+      // A later object is caught by the ELF kind check in isCompatible.
+      if ((f->emachine == EM_SPARC || f->emachine == EM_SPARC32PLUS) &&
+          f->ekind != ELF32BEKind) {
+        Err(ctx) << f.get() << " is incompatible";
+        return;
+      }
       inferred = true;
       ctx.arg.ekind = f->ekind;
-      ctx.arg.emachine = f->emachine;
+      // EM_SPARC32PLUS is the 32-bit SPARC ABI, and is promoted back on
+      // output when an input needs it.
+      ctx.arg.emachine = f->emachine == EM_SPARC32PLUS ? EM_SPARC : f->emachine;
       ctx.arg.mipsN32Abi = ctx.arg.emachine == EM_MIPS && isMipsN32Abi(ctx, *f);
     }
     ctx.arg.osabi = f->osabi;
