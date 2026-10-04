@@ -53935,16 +53935,6 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
     // Do not flip "e > c", where "c" is a constant, because Cmp instruction
     // cannot take an immediate as its first operand.
     //
-    // If EFLAGS is from a CMP that compares the same operands as the earlier
-    // SUB producing X (i.e. CMP X, Y), we can directly use the carry flag with
-    // SBB/ADC without creating a flipped SUB.
-    if (EFLAGS.getOpcode() == X86ISD::CMP &&
-        EFLAGS.getValueType().isInteger() && X == EFLAGS.getOperand(0)) {
-      return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL,
-                         DAG.getVTList(VT, MVT::i32), X,
-                         DAG.getConstant(0, DL, VT), EFLAGS);
-    }
-
     if (EFLAGS.getOpcode() == X86ISD::SUB &&
         EFLAGS.getValueType().isInteger() &&
         !isa<ConstantSDNode>(EFLAGS.getOperand(1))) {
