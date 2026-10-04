@@ -175,7 +175,7 @@ const uint32_t *GCNRewritePartialRegUsesImpl::getSuperRegClassMask(
   const auto [I, Inserted] =
       SuperRegMasks.try_emplace({RC, SubRegIdx}, nullptr);
   if (Inserted) {
-    for (SuperRegClassIterator RCI(RC, TRI); RCI.isValid(); ++RCI) {
+    for (SuperRegClassIterator RCI(RC); RCI.isValid(); ++RCI) {
       if (RCI.getSubReg() == SubRegIdx) {
         I->second = RCI.getMask();
         break;
