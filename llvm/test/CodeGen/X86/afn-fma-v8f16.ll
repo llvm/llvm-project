@@ -5,11 +5,10 @@
 
 ; Check v8f16 FMA lowering with approximate, exact, and native FP16 paths.
 
-define <8 x half> @afn_fma(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
+define <8 x half> @afn_fma(<8 x half> %a, <8 x half> %b, <8 x half> %c) nounwind {
 ; NOFMA-LABEL: afn_fma:
 ; NOFMA:       # %bb.0:
 ; NOFMA-NEXT:    subq $120, %rsp
-; NOFMA-NEXT:    .cfi_def_cfa_offset 128
 ; NOFMA-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NOFMA-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NOFMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -193,7 +192,6 @@ define <8 x half> @afn_fma(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 ; NOFMA-NEXT:    # xmm1 = xmm1[0],mem[0]
 ; NOFMA-NEXT:    movdqa %xmm1, %xmm0
 ; NOFMA-NEXT:    addq $120, %rsp
-; NOFMA-NEXT:    .cfi_def_cfa_offset 8
 ; NOFMA-NEXT:    retq
 ;
 ; FMA-LABEL: afn_fma:
@@ -214,11 +212,10 @@ define <8 x half> @afn_fma(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
   ret <8 x half> %r
 }
 
-define <8 x half> @exact_fma(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
+define <8 x half> @exact_fma(<8 x half> %a, <8 x half> %b, <8 x half> %c) nounwind {
 ; NOFMA-LABEL: exact_fma:
 ; NOFMA:       # %bb.0:
 ; NOFMA-NEXT:    subq $120, %rsp
-; NOFMA-NEXT:    .cfi_def_cfa_offset 128
 ; NOFMA-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NOFMA-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NOFMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -402,13 +399,11 @@ define <8 x half> @exact_fma(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 ; NOFMA-NEXT:    # xmm1 = xmm1[0],mem[0]
 ; NOFMA-NEXT:    movdqa %xmm1, %xmm0
 ; NOFMA-NEXT:    addq $120, %rsp
-; NOFMA-NEXT:    .cfi_def_cfa_offset 8
 ; NOFMA-NEXT:    retq
 ;
 ; FMA-LABEL: exact_fma:
 ; FMA:       # %bb.0:
 ; FMA-NEXT:    subq $88, %rsp
-; FMA-NEXT:    .cfi_def_cfa_offset 96
 ; FMA-NEXT:    vmovdqa %xmm2, (%rsp) # 16-byte Spill
 ; FMA-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm2[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; FMA-NEXT:    vcvtph2ps %xmm3, %xmm2
@@ -537,7 +532,6 @@ define <8 x half> @exact_fma(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 ; FMA-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
 ; FMA-NEXT:    addq $88, %rsp
-; FMA-NEXT:    .cfi_def_cfa_offset 8
 ; FMA-NEXT:    retq
 ;
 ; FP16-LABEL: exact_fma:
@@ -548,11 +542,10 @@ define <8 x half> @exact_fma(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
   ret <8 x half> %r
 }
 
-define <8 x half> @contract_fma(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
+define <8 x half> @contract_fma(<8 x half> %a, <8 x half> %b, <8 x half> %c) nounwind {
 ; NOFMA-LABEL: contract_fma:
 ; NOFMA:       # %bb.0:
 ; NOFMA-NEXT:    subq $120, %rsp
-; NOFMA-NEXT:    .cfi_def_cfa_offset 128
 ; NOFMA-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NOFMA-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NOFMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -736,13 +729,11 @@ define <8 x half> @contract_fma(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 ; NOFMA-NEXT:    # xmm1 = xmm1[0],mem[0]
 ; NOFMA-NEXT:    movdqa %xmm1, %xmm0
 ; NOFMA-NEXT:    addq $120, %rsp
-; NOFMA-NEXT:    .cfi_def_cfa_offset 8
 ; NOFMA-NEXT:    retq
 ;
 ; FMA-LABEL: contract_fma:
 ; FMA:       # %bb.0:
 ; FMA-NEXT:    subq $88, %rsp
-; FMA-NEXT:    .cfi_def_cfa_offset 96
 ; FMA-NEXT:    vmovdqa %xmm2, (%rsp) # 16-byte Spill
 ; FMA-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm2[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; FMA-NEXT:    vcvtph2ps %xmm3, %xmm2
@@ -871,7 +862,6 @@ define <8 x half> @contract_fma(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 ; FMA-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
 ; FMA-NEXT:    addq $88, %rsp
-; FMA-NEXT:    .cfi_def_cfa_offset 8
 ; FMA-NEXT:    retq
 ;
 ; FP16-LABEL: contract_fma:
@@ -882,11 +872,10 @@ define <8 x half> @contract_fma(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
   ret <8 x half> %r
 }
 
-define <8 x half> @fast_fma(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
+define <8 x half> @fast_fma(<8 x half> %a, <8 x half> %b, <8 x half> %c) nounwind {
 ; NOFMA-LABEL: fast_fma:
 ; NOFMA:       # %bb.0:
 ; NOFMA-NEXT:    subq $104, %rsp
-; NOFMA-NEXT:    .cfi_def_cfa_offset 112
 ; NOFMA-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NOFMA-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; NOFMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -1038,7 +1027,6 @@ define <8 x half> @fast_fma(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 ; NOFMA-NEXT:    # xmm1 = xmm1[0],mem[0]
 ; NOFMA-NEXT:    movdqa %xmm1, %xmm0
 ; NOFMA-NEXT:    addq $104, %rsp
-; NOFMA-NEXT:    .cfi_def_cfa_offset 8
 ; NOFMA-NEXT:    retq
 ;
 ; FMA-LABEL: fast_fma:
