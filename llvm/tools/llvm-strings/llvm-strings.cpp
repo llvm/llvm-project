@@ -29,7 +29,7 @@
 #include "llvm/Support/Unicode.h"
 #include "llvm/Support/WithColor.h"
 #include <cctype>
-#include <locale>
+#include <cwctype>
 #include <string>
 
 using namespace llvm;
@@ -90,6 +90,118 @@ static void parseIntArg(const opt::InputArgList &Args, int ID, T &Value) {
   }
 }
 
+// Tries to read one character from the bytes P...E and store it in Ch.
+// Returns true if a (possibly invalid) character was read, false otherwise.
+//
+// If P...E starts with a valid complete character, P and MBState are updated
+// and true is returned.
+// If P...E is empty, or holds an incomplete character and AtEOF is false, P
+// and MBState are unchanged, Ch is set to 0, and false is returned. This is
+// intended to allow more bytes to be read and Read to be called again.
+// If P...E holds an incomplete character and AtEOF is true, or if P...E
+// starts with an invalid character, the first bytes are skipped and MBState is
+// reset to allow continuing from the next point, Ch is set to 0, and true is
+// returned.
+//
+// The number of skipped bytes for invalid characters follows the Unicode
+// definition of the maximal subpart of an ill-formed subsequence, applied to
+// arbitrary locales: it is the longest subsequence that could start a valid
+// multibyte character, or if the initial byte cannot start a valid multibyte
+// character, the initial byte. This allows consistent error recovery.
+static bool readChar(const char *&P, const char *E, std::mbstate_t &MBState,
+                     bool AtEOF, UTF32 &Ch) {
+  if (P == E)
+    return false;
+
+  switch (Encoding) {
+  case Encoding::Ascii:
+    Ch = *P++;
+    return true;
+
+  case Encoding::Locale: {
+    std::mbstate_t SaveMBState = MBState;
+    wchar_t WCh;
+    const size_t BytesRead = mbrtowc(&WCh, P, E - P, &MBState);
+    switch (BytesRead) {
+    default:
+      P += BytesRead;
+      Ch = WCh;
+      return true;
+    case 0:
+    case (size_t)-1: {
+      // We encountered a (possibly null) byte that cannot be part of a valid
+      // character from the previous state. Recover by retrying one byte at a
+      // time, processing as many bytes as possible. If this gives us a
+      // partial character, treat this partial character as a single invalid
+      // character, otherwise treat the first byte as a single invalid
+      // character.
+      const bool PartialChar = mbrtowc(&WCh, P, 1, &SaveMBState) == (size_t)-2;
+      do {
+        ++P;
+        assert(!PartialChar || P != E);
+      } while (PartialChar && mbrtowc(&WCh, P, 1, &SaveMBState) == (size_t)-2);
+      Ch = 0;
+      MBState = {};
+      return true;
+    }
+    case (size_t)-2:
+      MBState = SaveMBState;
+      return false;
+    }
+  }
+
+  case Encoding::Utf8: {
+    const UTF8 *UP = reinterpret_cast<const UTF8 *>(P);
+    const UTF8 *UE = reinterpret_cast<const UTF8 *>(E);
+    UTF32 *Next = &Ch;
+    const auto Res =
+        ConvertUTF8toUTF32(&UP, UE, &Next, &Ch + 1, strictConversion);
+    if (UP != reinterpret_cast<const UTF8 *>(P)) {
+      assert(Next != &Ch);
+    } else if (Res == sourceExhausted && !AtEOF) {
+      return false;
+    } else {
+      assert(Next == &Ch);
+      UP += findMaximalSubpartOfIllFormedUTF8Sequence(UP, UE);
+      *Next++ = 0;
+    }
+    P = reinterpret_cast<const char *>(UP);
+    return true;
+  }
+  }
+
+  llvm_unreachable("unhandled encoding");
+}
+
+static bool isStringChar(UTF32 Ch) {
+  if (Ch == '\t')
+    return true;
+
+  switch (Encoding) {
+  case Encoding::Ascii:
+    return isPrint(Ch);
+
+  case Encoding::Locale:
+    return iswprint(Ch);
+
+  case Encoding::Utf8:
+    return sys::unicode::isPrintable(Ch);
+  }
+
+  llvm_unreachable("unhandled encoding");
+}
+
+static void endString(raw_ostream &OS, std::mbstate_t &MBState) {
+  if (Encoding == Encoding::Locale) {
+    char Buf[MB_LEN_MAX];
+    // Note: This is only required for stateful encodings such as the
+    // ISO-2022 ones.
+    const size_t BytesWritten = wcrtomb(Buf, L'\0', &MBState);
+    OS << StringRef(Buf, BytesWritten - 1);
+  };
+  OS << '\n';
+}
+
 static void strings(raw_ostream &OS, StringRef FileName,
                     sys::fs::file_t Handle) {
   SmallString<sys::fs::DefaultReadChunkSize> Buffer;
@@ -109,127 +221,6 @@ static void strings(raw_ostream &OS, StringRef FileName,
       OS << format("%7u ", StringStart);
       break;
     }
-  };
-
-  std::locale Loc("");
-  auto &Cvt = std::use_facet<std::codecvt<wchar_t, char, std::mbstate_t>>(Loc);
-  auto &Ctype = std::use_facet<std::ctype<wchar_t>>(Loc);
-
-  auto IsStringChar = [&Ctype](UTF32 Ch) {
-    if (Ch == '\t')
-      return true;
-
-    switch (Encoding) {
-    case Encoding::Ascii:
-      return isPrint(Ch);
-
-    case Encoding::Locale:
-      return Ctype.is(std::ctype_base::print, Ch);
-
-    case Encoding::Utf8:
-      return sys::unicode::isPrintable(Ch);
-    }
-
-    llvm_unreachable("unhandled encoding");
-  };
-
-  // Tries to read one character from the bytes P...E and store it in Ch.
-  // Returns true if a (possibly invalid) character was read, false otherwise.
-  //
-  // If P...E starts with a valid complete character, P and MBState are updated
-  // and true is returned.
-  // If P...E is empty, or holds an incomplete character and AtEOF is false, P
-  // and MBState are unchanged, Ch is set to 0, and false is returned. This is
-  // intended to allow more bytes to be read and Read to be called again.
-  // If P...E holds an incomplete character and AtEOF is true, or if P...E
-  // starts with an invalid character, the first byte is skipped and MBState is
-  // reset to allow continuing from the next point, Ch is set to 0, and true is
-  // returned.
-  auto Read = [&Cvt](const char *&P, const char *E, std::mbstate_t &MBState,
-                     bool AtEOF, UTF32 &Ch) -> bool {
-    if (P == E)
-      return false;
-
-    switch (Encoding) {
-    case Encoding::Ascii:
-      Ch = *P++;
-      return true;
-
-    case Encoding::Locale: {
-      const char *N;
-      wchar_t WCh;
-      wchar_t *WNext;
-      std::mbstate_t SaveMBState = MBState;
-      const auto Res = Cvt.in(MBState, P, E, N, &WCh, &WCh + 1, WNext);
-      assert(Res != std::codecvt_base::noconv);
-
-      if (WNext != &WCh) {
-        // Only treat a non-null character as a successful conversion, as a
-        // null character may be the result of an incomplete multibyte
-        // character followed by a null byte.
-        if (WCh) {
-          // Note: this assumes wchar_t is UCS2 or UTF32.
-          Ch = WCh;
-          P = N;
-          return true;
-        }
-        // Otherwise treat it as an error. A null byte is safe to treat as an
-        // error, as a null byte is never printable in any locale.
-      } else if ((Res == std::codecvt_base::ok ||
-                  Res == std::codecvt_base::partial) &&
-                 !AtEOF) {
-        // If we got a partial result but no character was written, we have an
-        // incomplete multibyte character.  Do not treat this as an error,
-        // instead reset the conversion state so that we can try again if/when
-        // we have more characters, unless we know there are no more characters.
-        Ch = 0;
-        MBState = SaveMBState;
-        return false;
-      }
-      // If there was any error, reset the state to allow the next byte to
-      // start a character.
-      Ch = 0;
-      MBState = {};
-      ++P;
-      return true;
-    }
-
-    case Encoding::Utf8: {
-      const UTF8 *UP = reinterpret_cast<const UTF8 *>(P);
-      const UTF8 *UE = reinterpret_cast<const UTF8 *>(E);
-      UTF32 *Next = &Ch;
-      const auto Res =
-          ConvertUTF8toUTF32Partial(&UP, UE, &Next, &Ch + 1, strictConversion);
-      if (Next != &Ch) {
-        if (Ch) {
-          P = reinterpret_cast<const char *>(UP);
-          return true;
-        }
-      } else if (Res == sourceExhausted && !AtEOF) {
-        Ch = 0;
-        return false;
-      }
-      Ch = 0;
-      ++P;
-      return true;
-    }
-    }
-
-    llvm_unreachable("unhandled encoding");
-  };
-
-  auto EndString = [&OS, &Cvt](std::mbstate_t &MBState) {
-    if (Encoding == Encoding::Locale) {
-      char Buf[MB_LEN_MAX];
-      char *End;
-      auto Res = Cvt.unshift(MBState, Buf, &Buf[MB_LEN_MAX], End);
-      if (Res == std::codecvt_base::ok) {
-        // Note: This is only required for stateful encodings such as the
-        // ISO-2022 ones.
-        OS << StringRef(Buf, End - Buf);
-      }
-    };
-    OS << '\n';
   };
 
   // To handle very large files without consuming excessive memory, we read the
@@ -297,8 +288,8 @@ static void strings(raw_ostream &OS, StringRef FileName,
       for (;;) {
         StringEnd = Cur;
         PrevMBState = MBState;
-        EndOfChunk = !Read(Cur, End, MBState, AtEOF, Ch);
-        if (EndOfChunk || !IsStringChar(Ch))
+        EndOfChunk = !readChar(Cur, End, MBState, AtEOF, Ch);
+        if (EndOfChunk || !isStringChar(Ch))
           break;
         ++Len;
       }
@@ -333,7 +324,7 @@ static void strings(raw_ostream &OS, StringRef FileName,
         CandidateLength = 0;
       }
 
-      if (EndOfChunk || Cur == End) {
+      if (EndOfChunk) {
         // Finish handling the current chunk and update ChunkOffset.
         ChunkOffset += Cur - Begin;
         Buffer.erase(Buffer.begin(), Cur);
@@ -342,8 +333,8 @@ static void strings(raw_ostream &OS, StringRef FileName,
 
       if (InString) {
         // We haven't reached the end of the chunk, which means the string is
-        // terminated. Add a '\n' to start printing a new string.
-        EndString(PrevMBState);
+        // terminated.
+        endString(OS, PrevMBState);
         InString = false;
       }
     }
@@ -355,9 +346,9 @@ static void strings(raw_ostream &OS, StringRef FileName,
     for (;;) {
       const char *Prev = Cur;
       std::mbstate_t PrevMBState = MBState;
-      if (!Read(Cur, End, MBState, AtEOF, Ch))
+      if (!readChar(Cur, End, MBState, AtEOF, Ch))
         break;
-      if (IsStringChar(Ch)) {
+      if (isStringChar(Ch)) {
         // Find the start of the next string.
         if (!StrHead)
           StrHead = Prev;
@@ -368,7 +359,7 @@ static void strings(raw_ostream &OS, StringRef FileName,
         if (Len >= Min) {
           PrintHeader(ChunkOffset + (StrHead - Begin));
           OS << StringRef(StrHead, Prev - StrHead);
-          EndString(PrevMBState);
+          endString(OS, PrevMBState);
         }
         StrHead = nullptr;
         Len = 0;
@@ -398,10 +389,12 @@ static void strings(raw_ostream &OS, StringRef FileName,
   }
 
   if (InString)
-    EndString(MBState);
+    endString(OS, MBState);
 }
 
 int main(int argc, char **argv) {
+  setlocale(LC_ALL, "");
+
   InitLLVM X(argc, argv);
   BumpPtrAllocator A;
   StringSaver Saver(A);
