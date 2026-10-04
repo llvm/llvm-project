@@ -1461,6 +1461,7 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
 
   SmallPtrSet<Value *, 4> UniqueSrc;
   Value *OnePhi = nullptr;
+  bool HasMultiplePHIs = false;
   for (Value *PV1 : PN->incoming_values()) {
     // Skip the phi itself being the incoming value.
     if (PV1 == PN)
@@ -1473,7 +1474,8 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
         // that we handle the single phi case as that lets us handle LCSSA
         // phi nodes and (combined with the recursive phi handling) simple
         // pointer induction variable patterns.
-        return AliasResult::MayAlias;
+        HasMultiplePHIs = true;
+        break;
       }
       OnePhi = PV1;
     }
@@ -1485,10 +1487,18 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
       V1Srcs.push_back(PV1);
   }
 
-  if (OnePhi && UniqueSrc.size() > 1)
-    // Out of an abundance of caution, allow only the trivial lcssa and
-    // recursive phi cases.
+  if (HasMultiplePHIs || (OnePhi && UniqueSrc.size() > 1)) {
+    // Avoid recursively comparing complex PHIs. A bounded object lookup may
+    // still prove NoAlias if all incoming values share an identified object.
+    const Value *OtherObject = getUnderlyingObject(V2);
+    if (!EnableRecPhiAnalysis || !isIdentifiedObject(OtherObject))
+      return AliasResult::MayAlias;
+    const Value *Object =
+        getUnderlyingObjectAggressive(PN, /*MustPreserveProvenance=*/true);
+    if (Object != OtherObject && isIdentifiedObject(Object))
+      return AliasResult::NoAlias;
     return AliasResult::MayAlias;
+  }
 
   // If V1Srcs is empty then that means that the phi has no underlying non-phi
   // value. This should only be possible in blocks unreachable from the entry
