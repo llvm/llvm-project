@@ -1,5 +1,5 @@
 ## Show that llvm-objdump can dump dynamic relocations.
-## Specifically, we are checking that the tags DT_RELA, DT_REL and DT_JMPREL
+## Specifically, we are checking that DT_RELA, DT_REL, DT_RELR and DT_JMPREL
 ## properly identify relocation tables.
 
 # RUN: yaml2obj --docnum=1 %s -o %t.empty
@@ -14,20 +14,30 @@ FileHeader:
   Type:    ET_DYN
 
 # RUN: yaml2obj --docnum=2 -DTYPE=ET_EXEC %s -o %t1
-# RUN: llvm-objdump --dynamic-reloc %t1 | FileCheck %s --strict-whitespace --match-full-lines
+# RUN: llvm-objdump --dynamic-reloc %t1 | FileCheck %s --strict-whitespace --match-full-lines --check-prefixes=CHECK,RELR
 
 ## e_type doesn't matter at all.
 # RUN: yaml2obj --docnum=2 -DTYPE=0x1234 %s -o %t2
-# RUN: llvm-objdump -R %t2 | FileCheck %s --strict-whitespace --match-full-lines
+# RUN: llvm-objdump -R %t2 | FileCheck %s --strict-whitespace --match-full-lines --check-prefixes=CHECK,RELR
 
 #      CHECK:{{.*}}file format elf64-x86-64
 #CHECK-EMPTY:
 # CHECK-NEXT:DYNAMIC RELOCATION RECORDS
 # CHECK-NEXT:OFFSET           TYPE                     VALUE
+# RELR-NEXT:0000000000100000 R_X86_64_RELATIVE        -
+# RELR-NEXT:0000000000100008 R_X86_64_RELATIVE        -
 # CHECK-NEXT:0000000000000000 R_X86_64_RELATIVE        *ABS*
 # CHECK-NEXT:0000000000000000 R_X86_64_JUMP_SLOT       bar
 # CHECK-NEXT:0000000000000008 R_X86_64_NONE            foo
 #CHECK-EMPTY:
+
+## A malformed RELR table produces a warning without suppressing the RELA
+## and REL tables that follow it.
+# RUN: yaml2obj --docnum=2 -DTYPE=ET_EXEC -DRELR_ENTSIZE=1 %s -o %t.bad
+# RUN: llvm-objdump -R %t.bad 2>%t.err | FileCheck %s --strict-whitespace --match-full-lines
+# RUN: FileCheck %s --check-prefix=WARN < %t.err
+# WARN: warning: '{{.*}}': section [index 3] has invalid sh_entsize: expected 8, but got 1
+# WARN-NOT: {{.}}
 
 ## -r ignores dynamic relocations.
 # RUN: llvm-objdump -r %t2 | FileCheck %s --check-prefix=STATIC-RELOC
@@ -52,6 +62,12 @@ Sections:
     Flags:        [SHF_WRITE, SHF_ALLOC]
     Address:      0x100100
     AddressAlign: 0x1000
+  - Name:         .relr.dyn
+    Type:         SHT_RELR
+    Address:      0x100480
+    Flags:        [SHF_ALLOC]
+    EntSize:      [[RELR_ENTSIZE=<none>]]
+    Entries:      [0x100000, 3]
   - Name:         .rela.dyn
     Type:         SHT_RELA
     Address:      0x100200
@@ -110,6 +126,12 @@ Sections:
         Value: 16
       - Tag: DT_RELENT
         Value: 16
+      - Tag: DT_RELR
+        Value: 0x100480
+      - Tag: DT_RELRSZ
+        Value: 16
+      - Tag: DT_RELRENT
+        Value: 8
       - Tag: DT_NULL
         Value: 0
 ProgramHeaders:
