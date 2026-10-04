@@ -268,9 +268,11 @@ public:
   std::vector<Range> getAffectedRanges() const;
 
   // Returns the new offset in the code after replacements being applied.
-  // Note that if there is an insertion at Offset in the current replacements,
-  // \p Offset will be shifted to Offset + Length in inserted text.
-  unsigned getShiftedCodePosition(unsigned Position) const;
+  // If \p includeInsAtPos is true and there is an insertion at Offset in the
+  // current replacements, \p Offset will be shifted to Offset + Length in
+  // inserted text. Otherwise, the insertion at Offset will not be counted in.
+  unsigned getShiftedCodePosition(unsigned Position,
+                                  bool includeInsAtPos = true) const;
 
   unsigned size() const { return Replaces.size(); }
 
