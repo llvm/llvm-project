@@ -552,6 +552,9 @@ features cannot lower the translation-unit ABI level;
 
 - Improve Clang diagnoses when unary `__imag` operator with non-complex type operand is used as lvalue. (#GH222383)
 
+- Added `-Wabi-tag-redeclaration` to diagnose when a forward namespace
+  declaration prevents applying `abi_tag` later on namespace reopening.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping

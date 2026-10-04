@@ -12109,6 +12109,31 @@ Decl *Sema::ActOnStartNamespaceDef(Scope *NamespcScope,
   // FIXME: Should we be merging attributes?
   if (const VisibilityAttr *Attr = Namespc->getAttr<VisibilityAttr>())
     PushNamespaceVisibilityAttr(Attr, Loc);
+  if (Decl *PrevTagD = Namespc->getCanonicalDecl(); PrevTagD != Namespc) {
+    auto PrintableTags = [](ArrayRef<StringRef> Tags) {
+      return llvm::join(Tags, R"(", ")");
+    };
+    if (const auto *NewAbiTagAttr = Namespc->getAttr<AbiTagAttr>()) {
+      if (const auto *OldAbiTagAttr = PrevTagD->getAttr<AbiTagAttr>()) {
+        SmallVector<StringRef, 4> ExtraTags;
+        llvm::copy_if(NewAbiTagAttr->tags(), std::back_inserter(ExtraTags),
+                      [OldAbiTagAttr](StringRef NewTag) {
+                        return !llvm::is_contained(OldAbiTagAttr->tags(),
+                                                   NewTag);
+                      });
+        if (!ExtraTags.empty()) {
+          Diag(OldAbiTagAttr->getLocation(), diag::warn_abi_tag_ignored)
+              << true << PrintableTags(OldAbiTagAttr->tags())
+              << PrintableTags(ExtraTags);
+          Diag(NewAbiTagAttr->getLocation(), diag::note_declared_at);
+        }
+      } else {
+        Diag(PrevTagD->getLocation(), diag::warn_abi_tag_ignored)
+            << false << "" << PrintableTags(NewAbiTagAttr->tags());
+        Diag(NewAbiTagAttr->getLocation(), diag::note_declared_at);
+      }
+    }
+  }
 
   if (IsStd)
     StdNamespace = Namespc;
