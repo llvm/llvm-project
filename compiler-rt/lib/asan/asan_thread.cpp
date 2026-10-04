@@ -118,10 +118,9 @@ void AsanThread::GetStartData(void *out, uptr out_size) const {
 void AsanThread::TSDDtor(void *tsd) {
   AsanThreadContext *context = (AsanThreadContext *)tsd;
   VReport(1, "T%d TSDDtor\n", context->tid);
-  if (context->thread) {
-    ClearDlerror();
+  ClearDlerror();
+  if (context->thread)
     context->thread->Destroy();
-  }
 }
 
 void AsanThread::Destroy() {
