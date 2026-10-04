@@ -8,7 +8,6 @@
 //
 // UNSUPPORTED: no-threads
 // XFAIL: libcpp-has-no-experimental-rcu
-// XFAIL: availability-rcu-missing
 // REQUIRES: std-at-least-c++26
 
 // rcu_domain(const rcu_domain&) = delete;
