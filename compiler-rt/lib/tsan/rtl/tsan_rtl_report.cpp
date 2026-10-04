@@ -173,9 +173,7 @@ ScopedReport::ScopedReport(ReportType typ, uptr tag) {
 ScopedReport::~ScopedReport() { DestroyAndFree(rep_); }
 
 void ScopedReport::AddStack(StackTrace stack, bool suppressable) {
-  ReportStack **rs = rep_->stacks.PushBack();
-  *rs = SymbolizeStack(stack);
-  (*rs)->suppressable = suppressable;
+  rep_->added_stacks.PushBack({stack, suppressable});
 }
 
 void ScopedReport::AddMemoryAccess(uptr addr, uptr external_tag, Shadow s,
@@ -202,6 +200,15 @@ void ScopedReport::AddMemoryAccess(uptr addr, uptr external_tag, Shadow s,
 }
 
 void ScopedReport::SymbolizeStackElems() {
+  // symbolize stacks
+  for (usize i = 0, size = rep_->added_stacks.Size(); i < size; i++) {
+    AddedStack& as = rep_->added_stacks[i];
+    ReportStack* rs = SymbolizeStack(as.stack_trace);
+    if (rs)
+      rs->suppressable = as.suppressable;
+    rep_->stacks.PushBack(rs);
+  }
+
   // symbolize memory ops
   for (usize i = 0, size = rep_->mops.Size(); i < size; i++) {
     ReportMop *mop = rep_->mops[i];
@@ -249,6 +256,10 @@ void ScopedReport::SymbolizeStackElems() {
     ReportMutex *rm = rep_->mutexes[i];
     rm->stack = SymbolizeStackId(rm->stack_id);
   }
+
+#if !SANITIZER_GO
+  rep_->sleep = SymbolizeStackId(rep_->sleep_stack_id);
+#endif
 }
 
 void ScopedReport::AddUniqueTid(Tid unique_tid) {
@@ -381,7 +392,7 @@ void ScopedReport::AddLocation(uptr addr, uptr size) {
 
 #if !SANITIZER_GO
 void ScopedReport::AddSleep(StackID stack_id) {
-  rep_->sleep = SymbolizeStackId(stack_id);
+  rep_->sleep_stack_id = stack_id;
 }
 #endif
 
