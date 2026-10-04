@@ -90,7 +90,7 @@ Register AVRInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex) const {
   switch (MI.getOpcode()) {
   case AVR::LDDRdPtrQ:
-  case AVR::LDDWRdYQ: { //: FIXME: remove this once PR13375 gets fixed
+  case AVR::LDDWRdYQ: { // FIXME: Remove this once PR13375 gets fixed.
     if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
         MI.getOperand(2).getImm() == 0) {
       FrameIndex = MI.getOperand(1).getIndex();
@@ -175,7 +175,7 @@ void AVRInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     Opcode = AVR::LDDRdPtrQ;
   } else if (TRI.isTypeLegalForClass(*RC, MVT::i16)) {
     // Opcode = AVR::LDDWRdPtrQ;
-    //: FIXME: remove this once PR13375 gets fixed
+    // FIXME: Remove this once PR13375 gets fixed.
     Opcode = AVR::LDDWRdYQ;
   } else {
     llvm_unreachable("Cannot load this register from a stack slot!");
@@ -285,7 +285,7 @@ bool AVRInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     }
 
     // Handle unconditional branches.
-    //: TODO: add here jmp
+    // TODO: Add here jmp.
     if (I->getOpcode() == AVR::RJMPk) {
       UnCondBrIter = I;
 
@@ -443,8 +443,8 @@ unsigned AVRInstrInfo::removeBranch(MachineBasicBlock &MBB,
     if (I->isDebugInstr()) {
       continue;
     }
-    //: TODO: add here the missing jmp instructions once they are implemented
-    // like jmp, {e}ijmp, and other cond branches, ...
+    // TODO: Add here the missing jmp instructions once they are implemented
+    //       like jmp, {e}ijmp, and other cond branches, ...
     if (I->getOpcode() != AVR::RJMPk &&
         getCondFromBranchOpc(I->getOpcode()) == AVRCC::COND_INVALID) {
       break;

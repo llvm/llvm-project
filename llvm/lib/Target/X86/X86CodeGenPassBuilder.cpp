@@ -237,6 +237,9 @@ void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   }
   addMachineFunctionPass(X86CompressEVEXPass(), PMW);
   addMachineFunctionPass(X86InsertX87WaitPass(), PMW);
+
+  if (TM.getTargetTriple().isLFI())
+    addMachineFunctionPass(X86LFIRewritePass(), PMW);
 }
 
 void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
@@ -287,8 +290,18 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
 
   // KCFI indirect call checks are lowered to a bundle, and on Darwin platforms,
   // also CALL_RVMARKER.
-  // TODO(boomanaiden154): Add UnpackMachineBundlesPass here once it has been
-  // ported.
+  addMachineFunctionPass(
+      UnpackMachineBundlesPass([&TT](const MachineFunction &MF) {
+        // Only run bundle expansion if the module uses kcfi, or there are
+        // relevant ObjC runtime functions present in the module.
+        const Function &F = MF.getFunction();
+        const Module *M = F.getParent();
+        return M->getModuleFlag("kcfi") ||
+               (TT.isOSDarwin() &&
+                (M->getFunction("objc_retainAutoreleasedReturnValue") ||
+                 M->getFunction("objc_unsafeClaimAutoreleasedReturnValue")));
+      }),
+      PMW);
 
   // Analyzes and emits pseudos to support Win x64 Unwind V2. This pass must run
   // after all real instructions have been added to the epilog.

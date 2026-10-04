@@ -128,6 +128,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.feof
     libc.src.stdio.ferror
     libc.src.stdio.fflush
+    libc.src.stdio.fclose
     libc.src.stdio.fgetc
     libc.src.stdio.fgets
     libc.src.stdio.fprintf
@@ -136,6 +137,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.fread
     libc.src.stdio.fscanf
     libc.src.stdio.fwrite
+    libc.src.stdio.fseek
+    libc.src.stdio.fseeko
+    libc.src.stdio.ftell
+    libc.src.stdio.ftello
     libc.src.stdio.getc
     libc.src.stdio.getchar
     libc.src.stdio.printf
@@ -984,6 +989,14 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.diviulr
     libc.src.stdfix.diviuk
     libc.src.stdfix.diviulk
+    libc.src.stdfix.rdivi
+    libc.src.stdfix.lrdivi
+    libc.src.stdfix.kdivi
+    libc.src.stdfix.lkdivi
+    libc.src.stdfix.urdivi
+    libc.src.stdfix.ulrdivi
+    libc.src.stdfix.ukdivi
+    libc.src.stdfix.ulkdivi
   )
 endif()
 

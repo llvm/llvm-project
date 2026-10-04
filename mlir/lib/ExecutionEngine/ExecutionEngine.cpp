@@ -130,7 +130,7 @@ void ExecutionEngine::registerSymbols(
 
 void ExecutionEngine::setupTargetTripleAndDataLayout(Module *llvmModule,
                                                      llvm::TargetMachine *tm) {
-  llvmModule->setDataLayout(tm->createDataLayout());
+  llvmModule->setDataLayout(tm->getTargetTriple().computeDataLayout());
   llvmModule->setTargetTriple(tm->getTargetTriple());
 }
 

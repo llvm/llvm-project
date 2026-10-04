@@ -351,7 +351,7 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
 
   std::string Program = DocInfo->getValueAsString("Program").lower();
   if (SphinxWorkaroundSuffix)
-    OS << "```{program} " << Program << SphinxWorkaroundSuffix << "\n```\n\n";
+    OS << ":::{program} " << Program << SphinxWorkaroundSuffix << "\n:::\n\n";
 
   // Emit the names of the option.
   OS << ":::{option} ";
@@ -424,7 +424,7 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
     OS << Description << "\n\n";
 
   if (SphinxWorkaroundSuffix)
-    OS << "```{program} " << Program << "\n```\n\n";
+    OS << ":::{program} " << Program << "\n:::\n\n";
 }
 
 void emitDocumentation(int Depth, const Documentation &Doc,
@@ -464,8 +464,8 @@ void clang::EmitClangOptDocs(const RecordKeeper &Records, raw_ostream &OS) {
     return;
   }
   OS << DocInfo->getValueAsString("Intro") << "\n";
-  OS << "```{program} " << DocInfo->getValueAsString("Program").lower()
-     << "\n```\n\n";
+  OS << ":::{program} " << DocInfo->getValueAsString("Program").lower()
+     << "\n:::\n\n";
 
   emitDocumentation(0, extractDocumentation(Records, DocInfo), DocInfo, OS);
 }

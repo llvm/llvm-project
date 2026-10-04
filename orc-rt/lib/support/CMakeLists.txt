@@ -28,7 +28,11 @@ endif()
 add_library(orc-rt-support-objects OBJECT ${ORC_RT_SUPPORT_SOURCES})
 
 set_target_properties(orc-rt-support-objects PROPERTIES
-  POSITION_INDEPENDENT_CODE ${ORC_RT_ENABLE_PIC})
+  POSITION_INDEPENDENT_CODE ${ORC_RT_ENABLE_PIC}
+  C_VISIBILITY_PRESET hidden
+  CXX_VISIBILITY_PRESET hidden
+  VISIBILITY_INLINES_HIDDEN ON
+)
 
 target_link_libraries(orc-rt-support-objects PUBLIC orc-rt-headers)
 

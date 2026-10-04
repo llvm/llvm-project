@@ -1,13 +1,12 @@
+#include "ompdDLService.h"
+
 #include <Python.h>
-#include <dlfcn.h>
 #include <errno.h>
 #include <omp-tools.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-extern void *ompd_library;
 
 struct _ompd_aspace_cont {
   int id;
@@ -810,7 +809,11 @@ PyObject *test_ompd_initialize(PyObject *self, PyObject *noargs) {
 
   printf("Test: With Correct Arguments.\n");
   ompd_rc_t (*my_ompd_init)(ompd_word_t version, ompd_callbacks_t *) =
-      dlsym(ompd_library, "ompd_initialize");
+      ompd_get_symbol("ompd_initialize");
+  if (!my_ompd_init) {
+    printf("Failed to look up ompd_initialize.\n");
+    return Py_None;
+  }
   rc = my_ompd_init(version, &table);
   if (rc != ompd_rc_ok) {
     printf("Failed, with return code = %d\n", rc);

@@ -283,13 +283,12 @@ ModuleFileName HeaderSearch::getCachedModuleFileNameImpl(
     // in the hash are safe (because any translation unit can only import one
     // module with each name), but result in a loss of caching.
     //
-    // To avoid false-negatives, we form as canonical a path as we can, and map
-    // to lower-case in case we're on a case-insensitive file system.
+    // To avoid false-negatives, we form as canonical a path as we can.
     SmallString<128> CanonicalPath(ModuleMapPath);
     if (getModuleMap().canonicalizeModuleMapPath(CanonicalPath))
       return {};
 
-    auto Hash = llvm::xxh3_64bits(CanonicalPath.str().lower());
+    auto Hash = llvm::xxh3_64bits(CanonicalPath);
 
     SmallString<128> HashStr;
     llvm::APInt(64, Hash).toStringUnsigned(HashStr, /*Radix*/36);

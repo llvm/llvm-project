@@ -41,6 +41,46 @@ public:
   bool IsN64() const { return ThisABI == ABI::N64; }
   ABI GetEnumValue() const { return ThisABI; }
 
+  /// Register naming convention for this ABI.
+  unsigned getRegAltNameIndex() const;
+
+  /// Integer argument registers in calling-convention order.
+  ArrayRef<MCPhysReg> getArgRegs(bool Is64Bit) const;
+
+  /// ABI register accessors default to the ABI's GPR width. Use the *RegPtr
+  /// variants for pointer-sized values; N32 has 32-bit pointers and 64-bit
+  /// GPRs.
+  MCRegister getArgReg(unsigned I, bool Is64Bit) const;
+  MCRegister getArgReg(unsigned I) const {
+    return getArgReg(I, AreGprs64bit());
+  }
+  MCRegister getArgRegPtr(unsigned I) const {
+    return getArgReg(I, ArePtrs64bit());
+  }
+  /// I is the suffix in tI (NABI has t0-t3 and t8-t9).
+  MCRegister getTempReg(unsigned I, bool Is64Bit) const;
+  MCRegister getTempReg(unsigned I) const {
+    return getTempReg(I, AreGprs64bit());
+  }
+  MCRegister getTempRegPtr(unsigned I) const {
+    return getTempReg(I, ArePtrs64bit());
+  }
+  MCRegister getSavedReg(unsigned I, bool Is64Bit) const;
+  MCRegister getSavedReg(unsigned I) const {
+    return getSavedReg(I, AreGprs64bit());
+  }
+  MCRegister getSavedRegPtr(unsigned I) const {
+    return getSavedReg(I, ArePtrs64bit());
+  }
+  /// Integer return-value registers.
+  MCRegister getReturnReg(unsigned I, bool Is64Bit) const;
+  MCRegister getReturnReg(unsigned I) const {
+    return getReturnReg(I, AreGprs64bit());
+  }
+  MCRegister getReturnRegPtr(unsigned I) const {
+    return getReturnReg(I, ArePtrs64bit());
+  }
+
   /// The registers to use for byval arguments.
   ArrayRef<MCPhysReg> GetByValArgRegs() const;
 

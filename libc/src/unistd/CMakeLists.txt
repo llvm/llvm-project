@@ -120,6 +120,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fchownat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.fchownat
+)
+
+add_entrypoint_object(
+  fdatasync
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.fdatasync
+)
+
+add_entrypoint_object(
   fork
   ALIAS
   DEPENDS
@@ -131,6 +145,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.fpathconf
+)
+
+add_entrypoint_object(
+  execl
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.execl
 )
 
 add_entrypoint_object(
@@ -292,6 +313,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.pathconf
+)
+
+add_entrypoint_object(
+  pause
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pause
 )
 
 add_entrypoint_object(
