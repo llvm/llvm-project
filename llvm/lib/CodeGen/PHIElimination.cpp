@@ -100,9 +100,6 @@ class PHIEliminationImpl {
   bool SplitPHIEdges(MachineFunction &MF, MachineBasicBlock &MBB,
                      MachineLoopInfo *MLI, MachineDomTreeUpdater &MDTU);
 
-  bool isLiveIn(Register Reg, const MachineBasicBlock *MBB);
-  bool isLiveOutPastPHIs(Register Reg, const MachineBasicBlock *MBB);
-
   using BBVRegPair = std::pair<unsigned, Register>;
   using VRegPHIUse = DenseMap<BBVRegPair, unsigned>;
 
@@ -480,10 +477,9 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
       assert(DestVNI && "PHI destination should be live at its definition.");
       DestVNI->def = NewStart;
     }
-  }
 
-  // Adjust the VRegPHIUseCount map to account for the removal of this PHI node.
-  if (LIS) {
+    // Adjust the VRegPHIUseCount map to account for the removal of this PHI
+    // node.
     for (unsigned i = 1; i != MPhi->getNumOperands(); i += 2) {
       if (!MPhi->getOperand(i).isUndef()) {
         --VRegPHIUseCount[BBVRegPair(
@@ -661,6 +657,16 @@ void PHIEliminationImpl::analyzePHINodes(const MachineFunction &MF) {
   }
 }
 
+static bool isLiveOutPastPHIs(const LiveIntervals &LIS, const LiveInterval &LI,
+                              const MachineBasicBlock &MBB) {
+  // LiveIntervals considers uses in PHIs to be on the edge rather than in the
+  // predecessor basic block, so that a register used only in a PHI is live out
+  // of the block.
+  return any_of(MBB.successors(), [&](const MachineBasicBlock *Succ) {
+    return LIS.isLiveInToMBB(LI, Succ);
+  });
+}
+
 bool PHIEliminationImpl::SplitPHIEdges(MachineFunction &MF,
                                        MachineBasicBlock &MBB,
                                        MachineLoopInfo *MLI,
@@ -695,7 +701,8 @@ bool PHIEliminationImpl::SplitPHIEdges(MachineFunction &MF,
       // be coalesced away.
       //
       // If the copy would be a kill, there is no need to split the edge.
-      bool ShouldSplit = isLiveOutPastPHIs(Reg, PreMBB);
+      const LiveInterval &LI = LIS->getInterval(Reg);
+      bool ShouldSplit = isLiveOutPastPHIs(*LIS, LI, *PreMBB);
       if (!ShouldSplit && !NoPhiElimLiveOutEarlyExit)
         continue;
       if (ShouldSplit) {
@@ -712,7 +719,7 @@ bool PHIEliminationImpl::SplitPHIEdges(MachineFunction &MF,
       // is likely to be left after coalescing. If we are looking at a loop
       // exiting edge, split it so we won't insert code in the loop, otherwise
       // don't bother.
-      ShouldSplit = ShouldSplit && !isLiveIn(Reg, &MBB);
+      ShouldSplit = ShouldSplit && !LIS->isLiveInToMBB(LI, &MBB);
 
       // Check for a loop exiting edge.
       if (!ShouldSplit && CurLoop != PreLoop) {
@@ -752,22 +759,4 @@ bool PHIEliminationImpl::SplitPHIEdges(MachineFunction &MF,
     }
   }
   return Changed;
-}
-
-bool PHIEliminationImpl::isLiveIn(Register Reg, const MachineBasicBlock *MBB) {
-  assert(LIS && "isLiveIn() requires LiveIntervals");
-  return LIS->isLiveInToMBB(LIS->getInterval(Reg), MBB);
-}
-
-bool PHIEliminationImpl::isLiveOutPastPHIs(Register Reg,
-                                           const MachineBasicBlock *MBB) {
-  assert(LIS && "isLiveOutPastPHIs() requires LiveIntervals");
-  // LiveIntervals considers uses in PHIs to be on the edge rather than in the
-  // predecessor basic block, so that a register used only in a PHI is live out
-  // of the block.
-  const LiveInterval &LI = LIS->getInterval(Reg);
-  for (const MachineBasicBlock *SI : MBB->successors())
-    if (LI.liveAt(LIS->getMBBStartIdx(SI)))
-      return true;
-  return false;
 }
