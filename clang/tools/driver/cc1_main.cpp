@@ -253,7 +253,8 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   if (!Clang->getFrontendOpts().TimeTracePath.empty()) {
     llvm::timeTraceProfilerInitialize(
         Clang->getFrontendOpts().TimeTraceGranularity, Argv0,
-        Clang->getFrontendOpts().TimeTraceVerbose);
+        Clang->getFrontendOpts().TimeTraceVerbose,
+        Clang->getFrontendOpts().TimeTraceCompress);
   }
   // --print-supported-cpus takes priority over the actual compilation.
   if (Clang->getFrontendOpts().PrintSupportedCPUs)
@@ -312,8 +313,10 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   }
 
   if (llvm::timeTraceProfilerEnabled()) {
+    bool Binary = Clang->getFrontendOpts().TimeTraceCompress !=
+                  llvm::DebugCompressionType::None;
     if (auto profilerOutput = Clang->createOutputFile(
-            Clang->getFrontendOpts().TimeTracePath, /*Binary=*/false,
+            Clang->getFrontendOpts().TimeTracePath, Binary,
             /*RemoveFileOnSignal=*/false,
             /*useTemporary=*/false)) {
       llvm::timeTraceProfilerWrite(*profilerOutput);
