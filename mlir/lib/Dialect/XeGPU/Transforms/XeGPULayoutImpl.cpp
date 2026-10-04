@@ -2784,7 +2784,7 @@ xegpu::DistributeLayoutAttr
 xegpu::setupShapeCastResultLayout(xegpu::LayoutKind layoutKind,
                                   VectorType srcVecTy, VectorType resVecTy,
                                   DistributeLayoutAttr consumerLayout) {
-  // TODO: work out the subgroup-level rule; leave such layouts alone for now.
+  // TODO: work out the subgroup level rule; leave such layouts alone for now.
   if (!consumerLayout || layoutKind == xegpu::LayoutKind::Subgroup)
     return consumerLayout;
 
