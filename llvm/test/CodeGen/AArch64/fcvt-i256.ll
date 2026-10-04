@@ -7,7 +7,7 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for s256_to_f64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for u256_to_f64
 
-define float @s256_to_f32(i256 %val) {
+define float @s256_to_f32(i256 %val) nounwind {
 ; CHECK-LABEL: s256_to_f32:
 ; CHECK:       // %bb.0: // %itofp-entry
 ; CHECK-NEXT:    orr x8, x1, x3
@@ -16,7 +16,6 @@ define float @s256_to_f32(i256 %val) {
 ; CHECK-NEXT:    cbz x8, .LBB0_9
 ; CHECK-NEXT:  // %bb.1: // %itofp-if-end
 ; CHECK-NEXT:    sub sp, sp, #192
-; CHECK-NEXT:    .cfi_def_cfa_offset 192
 ; CHECK-NEXT:    asr x8, x3, #63
 ; CHECK-NEXT:    eor x9, x0, x8
 ; CHECK-NEXT:    eor x11, x1, x8
@@ -151,7 +150,7 @@ define float @s256_to_f32(i256 %val) {
   ret float %result
 }
 
-define float @u256_to_f32(i256 %val) {
+define float @u256_to_f32(i256 %val) nounwind {
 ; CHECK-LABEL: u256_to_f32:
 ; CHECK:       // %bb.0: // %itofp-entry
 ; CHECK-NEXT:    orr x8, x1, x3
@@ -160,7 +159,6 @@ define float @u256_to_f32(i256 %val) {
 ; CHECK-NEXT:    cbz x8, .LBB1_9
 ; CHECK-NEXT:  // %bb.1: // %itofp-if-end
 ; CHECK-NEXT:    sub sp, sp, #192
-; CHECK-NEXT:    .cfi_def_cfa_offset 192
 ; CHECK-NEXT:    clz x8, x2
 ; CHECK-NEXT:    clz x9, x3
 ; CHECK-NEXT:    cmp x3, #0
@@ -280,7 +278,7 @@ define float @u256_to_f32(i256 %val) {
   ret float %result
 }
 
-define double @s256_to_f64(i256 %val) {
+define double @s256_to_f64(i256 %val) nounwind {
 ; CHECK-LABEL: s256_to_f64:
 ; CHECK:       // %bb.0: // %itofp-entry
 ; CHECK-NEXT:    orr x8, x1, x3
@@ -289,7 +287,6 @@ define double @s256_to_f64(i256 %val) {
 ; CHECK-NEXT:    cbz x8, .LBB2_7
 ; CHECK-NEXT:  // %bb.1: // %itofp-if-end
 ; CHECK-NEXT:    sub sp, sp, #192
-; CHECK-NEXT:    .cfi_def_cfa_offset 192
 ; CHECK-NEXT:    asr x8, x3, #63
 ; CHECK-NEXT:    eor x9, x0, x8
 ; CHECK-NEXT:    eor x10, x1, x8
@@ -425,7 +422,7 @@ define double @s256_to_f64(i256 %val) {
   ret double %result
 }
 
-define double @u256_to_f64(i256 %val) {
+define double @u256_to_f64(i256 %val) nounwind {
 ; CHECK-LABEL: u256_to_f64:
 ; CHECK:       // %bb.0: // %itofp-entry
 ; CHECK-NEXT:    orr x8, x1, x3
@@ -434,7 +431,6 @@ define double @u256_to_f64(i256 %val) {
 ; CHECK-NEXT:    cbz x8, .LBB3_8
 ; CHECK-NEXT:  // %bb.1: // %itofp-if-end
 ; CHECK-NEXT:    sub sp, sp, #192
-; CHECK-NEXT:    .cfi_def_cfa_offset 192
 ; CHECK-NEXT:    clz x8, x2
 ; CHECK-NEXT:    clz x9, x3
 ; CHECK-NEXT:    cmp x3, #0
@@ -562,7 +558,7 @@ define double @u256_to_f64(i256 %val) {
   ret double %result
 }
 
-define i256 @f32_to_s256(float %val) {
+define i256 @f32_to_s256(float %val) nounwind {
 ; CHECK-SD-LABEL: f32_to_s256:
 ; CHECK-SD:       // %bb.0: // %fp-to-i-entry
 ; CHECK-SD-NEXT:    fmov w8, s0
@@ -599,7 +595,6 @@ define i256 @f32_to_s256(float %val) {
 ; CHECK-SD-NEXT:    ret
 ; CHECK-SD-NEXT:  .LBB4_4: // %fp-to-i-if-exp.large
 ; CHECK-SD-NEXT:    sub sp, sp, #64
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    sub w10, w10, #150
 ; CHECK-SD-NEXT:    str x11, [sp, #32]
@@ -791,7 +786,7 @@ define i256 @f32_to_s256(float %val) {
   ret i256 %result
 }
 
-define i256 @f32_to_u256(float %val) {
+define i256 @f32_to_u256(float %val) nounwind {
 ; CHECK-SD-LABEL: f32_to_u256:
 ; CHECK-SD:       // %bb.0: // %fp-to-i-entry
 ; CHECK-SD-NEXT:    fmov w10, s0
@@ -819,7 +814,6 @@ define i256 @f32_to_u256(float %val) {
 ; CHECK-SD-NEXT:    ret
 ; CHECK-SD-NEXT:  .LBB5_4: // %fp-to-i-if-exp.large
 ; CHECK-SD-NEXT:    sub sp, sp, #64
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    sub w9, w9, #150
 ; CHECK-SD-NEXT:    str x8, [sp, #32]
@@ -917,7 +911,7 @@ define i256 @f32_to_u256(float %val) {
   ret i256 %result
 }
 
-define i256 @f64_to_s256(double %val) {
+define i256 @f64_to_s256(double %val) nounwind {
 ; CHECK-SD-LABEL: f64_to_s256:
 ; CHECK-SD:       // %bb.0: // %fp-to-i-entry
 ; CHECK-SD-NEXT:    fmov x8, d0
@@ -953,7 +947,6 @@ define i256 @f64_to_s256(double %val) {
 ; CHECK-SD-NEXT:    ret
 ; CHECK-SD-NEXT:  .LBB6_4: // %fp-to-i-if-exp.large
 ; CHECK-SD-NEXT:    sub sp, sp, #64
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    sub x10, x10, #1075
 ; CHECK-SD-NEXT:    str x11, [sp, #32]
@@ -1143,7 +1136,7 @@ define i256 @f64_to_s256(double %val) {
   ret i256 %result
 }
 
-define i256 @f64_to_u256(double %val) {
+define i256 @f64_to_u256(double %val) nounwind {
 ; CHECK-SD-LABEL: f64_to_u256:
 ; CHECK-SD:       // %bb.0: // %fp-to-i-entry
 ; CHECK-SD-NEXT:    fmov x10, d0
@@ -1171,7 +1164,6 @@ define i256 @f64_to_u256(double %val) {
 ; CHECK-SD-NEXT:    ret
 ; CHECK-SD-NEXT:  .LBB7_4: // %fp-to-i-if-exp.large
 ; CHECK-SD-NEXT:    sub sp, sp, #64
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    sub x8, x8, #1075
 ; CHECK-SD-NEXT:    str x9, [sp, #32]
@@ -1268,7 +1260,7 @@ define i256 @f64_to_u256(double %val) {
   ret i256 %result
 }
 
-define i256 @f32_to_s256_sat(float %val) {
+define i256 @f32_to_s256_sat(float %val) nounwind {
 ; CHECK-SD-LABEL: f32_to_s256_sat:
 ; CHECK-SD:       // %bb.0: // %fp-to-i-entry
 ; CHECK-SD-NEXT:    fmov w8, s0
@@ -1314,7 +1306,6 @@ define i256 @f32_to_s256_sat(float %val) {
 ; CHECK-SD-NEXT:    ret
 ; CHECK-SD-NEXT:  .LBB8_6: // %fp-to-i-if-exp.large
 ; CHECK-SD-NEXT:    sub sp, sp, #64
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    sub w10, w10, #150
 ; CHECK-SD-NEXT:    str x11, [sp, #32]
@@ -1534,7 +1525,7 @@ define i256 @f32_to_s256_sat(float %val) {
   ret i256 %result
 }
 
-define i256 @f32_to_u256_sat(float %val) {
+define i256 @f32_to_u256_sat(float %val) nounwind {
 ; CHECK-SD-LABEL: f32_to_u256_sat:
 ; CHECK-SD:       // %bb.0: // %fp-to-i-entry
 ; CHECK-SD-NEXT:    fmov w10, s0
@@ -1568,7 +1559,6 @@ define i256 @f32_to_u256_sat(float %val) {
 ; CHECK-SD-NEXT:    ret
 ; CHECK-SD-NEXT:  .LBB9_5: // %fp-to-i-if-exp.large
 ; CHECK-SD-NEXT:    sub sp, sp, #64
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    sub w8, w8, #150
 ; CHECK-SD-NEXT:    str x9, [sp, #32]
@@ -1691,7 +1681,7 @@ define i256 @f32_to_u256_sat(float %val) {
   ret i256 %result
 }
 
-define i256 @f64_to_s256_sat(double %val) {
+define i256 @f64_to_s256_sat(double %val) nounwind {
 ; CHECK-SD-LABEL: f64_to_s256_sat:
 ; CHECK-SD:       // %bb.0: // %fp-to-i-entry
 ; CHECK-SD-NEXT:    fmov x9, d0
@@ -1736,7 +1726,6 @@ define i256 @f64_to_s256_sat(double %val) {
 ; CHECK-SD-NEXT:    ret
 ; CHECK-SD-NEXT:  .LBB10_6: // %fp-to-i-if-exp.large
 ; CHECK-SD-NEXT:    sub sp, sp, #64
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    sub x10, x10, #1075
 ; CHECK-SD-NEXT:    str x11, [sp, #32]
@@ -1952,7 +1941,7 @@ define i256 @f64_to_s256_sat(double %val) {
   ret i256 %result
 }
 
-define i256 @f64_to_u256_sat(double %val) {
+define i256 @f64_to_u256_sat(double %val) nounwind {
 ; CHECK-SD-LABEL: f64_to_u256_sat:
 ; CHECK-SD:       // %bb.0: // %fp-to-i-entry
 ; CHECK-SD-NEXT:    fmov x10, d0
@@ -1986,7 +1975,6 @@ define i256 @f64_to_u256_sat(double %val) {
 ; CHECK-SD-NEXT:    ret
 ; CHECK-SD-NEXT:  .LBB11_5: // %fp-to-i-if-exp.large
 ; CHECK-SD-NEXT:    sub sp, sp, #64
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    sub x8, x8, #1075
 ; CHECK-SD-NEXT:    str x9, [sp, #32]
