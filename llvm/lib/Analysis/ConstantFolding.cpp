@@ -2247,6 +2247,7 @@ Constant *GetConstantFoldFPValue128(float128 V, Type *Ty) {
 /// Clear the floating-point exception state.
 inline void llvm_fenv_clearexcept() {
 #if defined(FE_ALL_EXCEPT)
+  LLVM_FENV_ACCESS_ON
   feclearexcept(FE_ALL_EXCEPT);
 #endif
   errno = 0;
@@ -2254,6 +2255,7 @@ inline void llvm_fenv_clearexcept() {
 
 /// Test if a floating-point exception was raised.
 inline bool llvm_fenv_testexcept() {
+  LLVM_FENV_ACCESS_ON
   int errno_val = errno;
   if (errno_val == ERANGE || errno_val == EDOM)
     return true;
