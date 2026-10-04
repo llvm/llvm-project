@@ -1238,9 +1238,8 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
 bool AArch64InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
                                        ArrayRef<MachineOperand> Cond,
                                        Register DstReg, Register TrueReg,
-                                       Register FalseReg, int &CondCycles,
-                                       int &TrueCycles,
-                                       int &FalseCycles) const {
+                                       Register FalseReg,
+                                       SelectExpansion &Exp) const {
   // Check register classes.
   const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   const TargetRegisterClass *RC =
@@ -1254,20 +1253,24 @@ bool AArch64InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
   if (!RI.getCommonSubClass(RC, MRI.getRegClass(DstReg)))
     return false;
 
-  // Expanding cbz/tbz requires an extra cycle of latency on the condition.
+  // Expanding cbz/tbz requires a flag setting instruction in addition to the
+  // select, adding an extra cycle of latency on the condition.
   unsigned ExtraCondLat = Cond.size() != 1;
+  Exp.NumInsts = 1 + ExtraCondLat;
+  if (ExtraCondLat)
+    Exp.ClobberedPhysRegs.push_back(AArch64::NZCV);
 
   // GPRs are handled by csel.
   // FIXME: Fold in x+1, -x, and ~x when applicable.
   if (AArch64::GPR64allRegClass.hasSubClassEq(RC) ||
       AArch64::GPR32allRegClass.hasSubClassEq(RC)) {
     // Single-cycle csel, csinc, csinv, and csneg.
-    CondCycles = 1 + ExtraCondLat;
-    TrueCycles = FalseCycles = 1;
+    Exp.CondCycles = 1 + ExtraCondLat;
+    Exp.TrueCycles = Exp.FalseCycles = 1;
     if (canFoldIntoCSel(MRI, TrueReg))
-      TrueCycles = 0;
+      Exp.TrueCycles = 0;
     else if (canFoldIntoCSel(MRI, FalseReg))
-      FalseCycles = 0;
+      Exp.FalseCycles = 0;
     return true;
   }
 
@@ -1275,8 +1278,8 @@ bool AArch64InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
   // FIXME: Form fabs, fmin, and fmax when applicable.
   if (AArch64::FPR64RegClass.hasSubClassEq(RC) ||
       AArch64::FPR32RegClass.hasSubClassEq(RC)) {
-    CondCycles = 5 + ExtraCondLat;
-    TrueCycles = FalseCycles = 2;
+    Exp.CondCycles = 5 + ExtraCondLat;
+    Exp.TrueCycles = Exp.FalseCycles = 2;
     return true;
   }
 
@@ -1285,8 +1288,9 @@ bool AArch64InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
   if (AArch64::FPR128RegClass.hasSubClassEq(RC) &&
       Subtarget.isNeonAvailable() &&
       !MBB.getParent()->getFunction().hasMinSize()) {
-    CondCycles = 8 + ExtraCondLat;
-    TrueCycles = FalseCycles = 2;
+    Exp.CondCycles = 8 + ExtraCondLat;
+    Exp.TrueCycles = Exp.FalseCycles = 2;
+    Exp.NumInsts = 3 + ExtraCondLat;
     return true;
   }
 
