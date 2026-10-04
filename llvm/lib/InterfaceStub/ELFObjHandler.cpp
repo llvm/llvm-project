@@ -17,6 +17,7 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <map>
 #include <optional>
 
 using llvm::object::ELFObjectFile;
@@ -368,6 +369,7 @@ public:
     if (HasVersion) {
       VerSymIndex = DynTab.Content.addAddr(DT_VERSYM, 0);
       VerDefIndex = DynTab.Content.addAddr(DT_VERDEF, 0);
+      DynTab.Content.addValue(DT_VERDEFNUM, Vdndx - 1);
     }
     DynTab.Size = DynTab.Content.getSize();
     // Calculate sections' addresses and offsets.
@@ -391,7 +393,7 @@ public:
     fillStrTabShdr(ShStrTab);
     if (HasVersion) {
       fillVerSymShdr(VerSym);
-      fillVerDefShdr(VerDef, Vdndx);
+      fillVerDefShdr(VerDef, Vdndx - 1);
     }
 
     // Finish initializing the ELF header.
@@ -503,16 +505,16 @@ private:
 
   void fillVerDefShdr(
       ContentSection<ELFVersionDefinitionBuilder<ELFT>, ELFT> &VerDef,
-      size_t Size) const {
+      size_t VerDefNum) const {
     VerDef.Shdr.sh_type = SHT_GNU_verdef;
     VerDef.Shdr.sh_flags = SHF_ALLOC;
     VerDef.Shdr.sh_addr = VerDef.Addr;
     VerDef.Shdr.sh_offset = VerDef.Offset;
-    VerDef.Shdr.sh_info = Size;
+    VerDef.Shdr.sh_info = VerDefNum;
     VerDef.Shdr.sh_size = VerDef.Size;
     VerDef.Shdr.sh_name = this->ShStrTab.Content.getOffset(VerDef.Name);
     VerDef.Shdr.sh_addralign = VerDef.Align;
-    VerDef.Shdr.sh_entsize = sizeof(Elf_Dyn);
+    VerDef.Shdr.sh_entsize = 0;
     VerDef.Shdr.sh_link = this->DynStr.Index;
   }
 

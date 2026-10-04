@@ -453,6 +453,14 @@ int llvm_ifs_main(int argc, char **argv, const llvm::ToolContext &) {
 
         return -1;
       }
+      if (Symbol.Default != SI->second.Default) {
+        WithColor::error() << "Interface Stub: Default Mismatch for "
+                           << Symbol.Name << ".\nFilename: " << InputFilePath
+                           << "\nDefault Values: " << SI->second.Default << " "
+                           << Symbol.Default << "\n";
+
+        return -1;
+      }
       if (Symbol.Weak != SI->second.Weak) {
         Symbol.Weak = false;
         continue;
