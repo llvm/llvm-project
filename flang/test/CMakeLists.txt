@@ -138,6 +138,7 @@ if (LLVM_INCLUDE_EXAMPLES)
     flangPrintFunctionNames
     flangOmpReport
     flangFeatureList
+    flangHLFIRPipelinePlugin
     )
 endif ()
 
