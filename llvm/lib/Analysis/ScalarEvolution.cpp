@@ -2687,15 +2687,20 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
 
     // Try to push the constant operand into a ZExt: A + zext (-A + B) -> zext
     // (B), if trunc (A) + -A + B  does not unsigned-wrap.
+    // This undoes the zext(C + X) -> zext(D) + zext((C - D) + X) split in
+    // getZeroExtendExprImpl, so propagate Depth to bound the mutual recursion
+    // when (C - D) + X is not folded (e.g. created past the depth limit).
     const SCEVAddExpr *InnerAdd;
     if (match(B, m_scev_ZExt(m_scev_Add(InnerAdd)))) {
-      const SCEV *NarrowA = getTruncateExpr(A, InnerAdd->getType());
+      const SCEV *NarrowA = getTruncateExpr(A, InnerAdd->getType(), Depth + 1);
       if (NarrowA == getNegativeSCEV(InnerAdd->getOperand(0)) &&
-          getZeroExtendExpr(NarrowA, B->getType()) == A &&
+          getZeroExtendExpr(NarrowA, B->getType(), Depth + 1) == A &&
           hasFlags(StrengthenNoWrapFlags(this, scAddExpr, {NarrowA, InnerAdd},
                                          SCEV::FlagNone),
                    SCEV::FlagNUW)) {
-        return getZeroExtendExpr(getAddExpr(NarrowA, InnerAdd), B->getType());
+        return getZeroExtendExpr(
+            getAddExpr(NarrowA, InnerAdd, SCEV::FlagNone, Depth + 1),
+            B->getType(), Depth + 1);
       }
     }
   }
