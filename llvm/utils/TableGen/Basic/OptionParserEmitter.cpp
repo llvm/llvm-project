@@ -229,10 +229,10 @@ static MarshallingInfo createMarshallingInfo(const Record &R) {
   return Ret;
 }
 
-// -foo-bar and -foo-bar= become foo_bar, or bar if Prefix is "foo-".
+// -foo-bar becomes foo_bar, or bar if Prefix is "foo-".
 static std::string getSpellingIdentifier(const Record &R,
                                          StringRef Prefix = "") {
-  StringRef Spelling = R.getValueAsString("Name").rtrim('=');
+  StringRef Spelling = R.getValueAsString("Name");
   Spelling.consume_front(Prefix);
   std::string ID = Spelling.str();
   llvm::replace(ID, '-', '_');
@@ -252,14 +252,11 @@ static std::string getMemberName(const Record &R, StringRef Prefix) {
 }
 
 // The OPT_ name of an option of an OptionsStruct. `defm :` rows are named
-// after the spelling: -foo-bar= is OPT_foo_bar_EQ.
+// after the spelling: -foo-bar is OPT_foo_bar.
 static std::string getStructOptionID(const Record &R) {
   if (!R.getName().starts_with("anonymous_"))
     return getOptionName(R);
-  std::string ID = getSpellingIdentifier(R);
-  if (R.getValueAsString("Name").ends_with('='))
-    ID += "_EQ";
-  return ID;
+  return getSpellingIdentifier(R);
 }
 
 // Emits the struct an OptionsStruct def declares: its declaration under
@@ -282,11 +279,12 @@ static void emitOptionsStruct(const Record &Struct,
                                      "declared with BoolField or ValueField");
       continue;
     }
-    bool HasValue = R->getValue("FieldValue");
-    if ((Kind == "Flag") != HasValue ||
-        (Kind != "Flag" && Kind != "Joined" && Kind != "Separate"))
-      PrintFatalError(R->getLoc(), "a member is set by a Flag with a "
-                                   "FieldValue, or by a Joined or Separate");
+    if (Kind != "FlagOrEq" && Kind != "SeparateOrEq")
+      PrintFatalError(R->getLoc(),
+                      "a member is set by a FlagOrEq or SeparateOrEq");
+    StringRef Type = R->getValueAsString("FieldType");
+    if (Kind == "FlagOrEq" && Type != "bool" && Type != "std::optional<bool>")
+      PrintFatalError(R->getLoc(), "a FlagOrEq sets a bool member");
     Fields.push_back(R);
   }
   // Members in declaration order.
@@ -296,21 +294,15 @@ static void emitOptionsStruct(const Record &Struct,
   });
   StringRef Prefix = Struct.getValueAsString("MemberPrefix");
   std::vector<Member> Members;
-  StringMap<unsigned> MemberIndex;
+  StringMap<StringRef> MemberSpelling;
   for (const Record *R : ByID) {
     Member M{getMemberName(*R, Prefix), R->getValueAsString("FieldType"),
-             R->getValueAsString("FieldDefault"),
-             R->getValueAsString("Name").rtrim('=')};
-    auto [It, Inserted] = MemberIndex.try_emplace(M.Name, Members.size());
-    if (Inserted) {
-      Members.push_back(M);
-      continue;
-    }
-    // The rows of one BoolField or ValueField share the member.
-    Member &Prev = Members[It->second];
-    if (Prev.Spelling != M.Spelling)
-      PrintFatalError(R->getLoc(), "member '" + M.Name + "' is also set by -" +
-                                       Prev.Spelling);
+             R->getValueAsString("FieldDefault"), R->getValueAsString("Name")};
+    auto [It, Inserted] = MemberSpelling.try_emplace(M.Name, M.Spelling);
+    if (!Inserted)
+      PrintFatalError(R->getLoc(),
+                      "member '" + M.Name + "' is also set by -" + It->second);
+    Members.push_back(M);
   }
 
   StringRef Name = Struct.getName();
@@ -364,12 +356,13 @@ static void emitOptionsStruct(const Record &Struct,
         OS << "      if (V == \"" << Value << "\") {\n        " << Member
            << " = " << Enumerator << ";\n        return true;\n      }\n";
       OS << "      return false;\n    }\n";
-    } else if (!R->getValue("FieldValue"))
-      OS << "    return llvm::opt::parseArgValue(A.getValue(), " << Member
-         << ");\n";
-    else
-      OS << "    " << Member << " = " << R->getValueAsString("FieldValue")
-         << ";\n    return true;\n";
+      continue;
+    }
+    if (R->getValueAsDef("Kind")->getValueAsString("Name") == "FlagOrEq")
+      OS << "    if (!A.getNumValues()) {\n      " << Member
+         << " = true;\n      return true;\n    }\n";
+    OS << "    return llvm::opt::parseArgValue(A.getValue(), " << Member
+       << ");\n";
   }
   OS << "  }\n  llvm_unreachable(\"option without a member\");\n}\n";
   OS << "#endif // OPTIONS_STRUCT_DEFS\n";
