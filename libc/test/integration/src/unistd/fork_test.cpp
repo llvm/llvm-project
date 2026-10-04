@@ -12,6 +12,7 @@
 #include "src/stdlib/exit.h"
 #include "src/sys/wait/wait.h"
 #include "src/sys/wait/wait4.h"
+#include "src/sys/wait/waitid.h"
 #include "src/sys/wait/waitpid.h"
 #include "src/unistd/fork.h"
 #include "src/unistd/gettid.h"
@@ -55,6 +56,22 @@ void fork_and_wait4_normal_exit() {
   ASSERT_TRUE(WIFEXITED(status));
 }
 
+void fork_and_waitid_normal_exit() {
+  pid_t pid = LIBC_NAMESPACE::fork();
+  if (pid == 0)
+    return; // Just end without any thing special.
+  ASSERT_TRUE(pid > 0);
+  siginfo_t info;
+  info.si_pid = 0;
+  info.si_status = 0;
+  int ret =
+      LIBC_NAMESPACE::waitid(P_PID, static_cast<id_t>(pid), &info, WEXITED);
+  ASSERT_EQ(ret, 0);
+  ASSERT_EQ(info.si_pid, pid);
+  ASSERT_EQ(info.si_code, CLD_EXITED);
+  ASSERT_EQ(info.si_status, 0);
+}
+
 void fork_and_waitpid_normal_exit() {
   pid_t pid = LIBC_NAMESPACE::fork();
   if (pid == 0)
@@ -94,6 +111,22 @@ void fork_and_wait4_signal_exit() {
   ASSERT_EQ(cpid, pid);
   ASSERT_FALSE(WIFEXITED(status));
   ASSERT_TRUE(WTERMSIG(status) == SIGUSR1);
+}
+
+void fork_and_waitid_signal_exit() {
+  pid_t pid = LIBC_NAMESPACE::fork();
+  if (pid == 0)
+    LIBC_NAMESPACE::raise(SIGUSR1);
+  ASSERT_TRUE(pid > 0);
+  siginfo_t info;
+  info.si_pid = 0;
+  info.si_status = 0;
+  int ret =
+      LIBC_NAMESPACE::waitid(P_PID, static_cast<id_t>(pid), &info, WEXITED);
+  ASSERT_EQ(ret, 0);
+  ASSERT_EQ(info.si_pid, pid);
+  ASSERT_EQ(info.si_code, CLD_KILLED);
+  ASSERT_EQ(info.si_status, SIGUSR1);
 }
 
 void fork_and_waitpid_signal_exit() {
@@ -164,9 +197,11 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
   gettid_test();
   fork_and_wait_normal_exit();
   fork_and_wait4_normal_exit();
+  fork_and_waitid_normal_exit();
   fork_and_waitpid_normal_exit();
   fork_and_wait_signal_exit();
   fork_and_wait4_signal_exit();
+  fork_and_waitid_signal_exit();
   fork_and_waitpid_signal_exit();
   fork_with_atfork_callbacks();
   return 0;
