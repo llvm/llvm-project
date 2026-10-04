@@ -13,17 +13,21 @@
 //   !DIR$ EXAMPLE CALLBACK([proc,] HANDLER=proc [, PRIORITY=n] [, TAG=str])
 //   !DIR$ EXAMPLE WATCH(var [, BY=var])
 //   !DIR$ EXAMPLE NOTE([proc-or-var,] TEXT=str)
+//   !DIR$ EXAMPLE CONVERGE(var [, var]... [, TOL=real]) [MAX_ITERS(n)]
 //
 // which may also be spelled with the plugin's own comment sentinel, e.g.
 // `!$EXAMPLE NOTE(TEXT="...")`, a comment for other compilers.
 //
-// Each one becomes an entry of the `fir.directives` attribute of the
-// func.func or fir.global of its subject, for a pass of the plugin to act on;
+// Each one but CONVERGE becomes an entry of the `fir.directives` attribute of
+// the func.func or fir.global of its subject. CONVERGE applies to the DO or
+// DO WHILE loop that follows it: its variables are passed to a marker call
+// at the start of the loop body. A pass of the plugin would act on them;
 // this one defines no pass.
 //
 //===----------------------------------------------------------------------===//
 
 #include "flang/Support/PluginDirectives.h"
+#include <utility>
 
 using namespace Fortran::common;
 
@@ -44,6 +48,13 @@ namespace {
   // A remark on a procedure or a variable.
   registerPluginDirective({"example", "note", PluginDirectiveSubject::Any,
       {{"text", PluginDirectiveArgKind::String, /*required=*/true}}});
+  // The loop that follows iterates the variables until they converge.
+  PluginDirectiveSpec converge{"example", "converge",
+      PluginDirectiveSubject::Loop,
+      {{"tol", PluginDirectiveArgKind::Real},
+          {"max_iters", PluginDirectiveArgKind::Integer}}};
+  converge.minPositional = 1;
+  registerPluginDirective(std::move(converge));
   // !$example ... is !DIR$ example ...
   registerPluginDirectiveSentinel("example");
   return true;
