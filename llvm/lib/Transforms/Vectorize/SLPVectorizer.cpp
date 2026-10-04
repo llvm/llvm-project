@@ -17575,9 +17575,22 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       unsigned OpIdx = isa<UnaryOperator>(VL0) ? 0 : 1;
       TTI::OperandValueInfo Op1Info = getOperandInfo(E->getOperand(0));
       TTI::OperandValueInfo Op2Info = getOperandInfo(E->getOperand(OpIdx));
+      // A target may price an fmul by the fadd or fsub user of its context.
+      // The vector fmul keeps that user when this tree vectorizes the user
+      // too or when the target emits the fmul lane by lane. The lanes of a
+      // root are extracted otherwise and their scalar users stay as they are.
+      // Every other operation keeps its context, targets read the fast math
+      // flags and the function attributes from it.
+      const TreeEntry *UserTE = E->UserTreeIndex.UserTE;
+      bool KeepsContext =
+          ShuffleOrOp != Instruction::FMul ||
+          (UserTE && !UserTE->isGather() && !DeletedNodes.contains(UserTE) &&
+           !TransformedToGatherNodes.contains(UserTE)) ||
+          TTI->getMaximumVF(DL->getTypeSizeInBits(ScalarTy), ShuffleOrOp) == 1;
+      Instruction *CxtI =
+          VL0->getOpcode() == ShuffleOrOp && KeepsContext ? VL0 : nullptr;
       InstructionCost Cost = TTI->getArithmeticInstrCost(
-          ShuffleOrOp, VecTy, CostKind, Op1Info, Op2Info, {},
-          VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr, TLI);
+          ShuffleOrOp, VecTy, CostKind, Op1Info, Op2Info, {}, CxtI, TLI);
       // N columns need N-1 vector combines; price extra columns
       // conservatively, skipping identity-only columns (not combined by
       // codegen).
@@ -17592,8 +17605,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           // static properties to model.
           Cost += TTI->getArithmeticInstrCost(
               ShuffleOrOp, VecTy, CostKind, {},
-              getOperandInfo(E->getOperand(Idx)), {},
-              VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr, TLI);
+              getOperandInfo(E->getOperand(Idx)), {}, CxtI, TLI);
         }
       }
       return Cost + CommonCost;
