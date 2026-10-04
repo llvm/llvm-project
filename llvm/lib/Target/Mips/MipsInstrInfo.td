@@ -1827,50 +1827,34 @@ class InsBase<string opstr, RegisterOperand RO, Operand PosOpnd,
   let Constraints = "$src = $rt";
 }
 
-// Atomic instructions with 2 source operands (ATOMIC_SWAP & ATOMIC_LOAD_*).
-class Atomic2Ops<PatFrag Op, RegisterClass DRC> :
-  PseudoSE<(outs DRC:$dst), (ins PtrRC:$ptr, DRC:$incr),
-           [(set DRC:$dst, (Op iPTR:$ptr, DRC:$incr))]> {
-  let hasNoSchedulingInfo = 1;
-}
-
-class Atomic2OpsPostRA<RegisterClass RC> :
-  PseudoSE<(outs RC:$dst), (ins PtrRC:$ptr, RC:$incr), []> {
+class PseudoAtomic<dag outs, dag ins, string constraints> :
+  PseudoSE<outs, ins, []> {
+  let Constraints = constraints;
   let mayLoad = 1;
   let mayStore = 1;
+  let hasSideEffects = 0;
   let Predicates = [NotR5900];
 }
 
-class Atomic2OpsSubwordPostRA<RegisterClass RC>
-    : PseudoSE<
-          (outs RC:$dst),
-          (ins PtrRC:$ptr, RC:$incr, RC:$mask, RC:$mask2, RC:$shiftamnt), []> {
-  let Predicates = [NotR5900];
-}
+class PseudoAtomicRMW<RegisterClass RC, bit IsMinMax = 0> :
+  PseudoAtomic<!if(IsMinMax, (outs RC:$dst, RC:$scratch, RC:$cmp),
+                            (outs RC:$dst, RC:$scratch)),
+               (ins PtrRC:$ptr, RC:$incr),
+               !if(IsMinMax,
+                   "@earlyclobber $dst,@earlyclobber $scratch,@earlyclobber $cmp",
+                   "@earlyclobber $dst,@earlyclobber $scratch")>;
 
-// Atomic Compare & Swap.
-// Atomic compare and swap is lowered into two stages. The first stage happens
-// during ISelLowering, which produces the PostRA version of this instruction.
-class AtomicCmpSwap<PatFrag Op, RegisterClass DRC> :
-  PseudoSE<(outs DRC:$dst), (ins PtrRC:$ptr, DRC:$cmp, DRC:$swap),
-           [(set DRC:$dst, (Op iPTR:$ptr, DRC:$cmp, DRC:$swap))]> {
-  let hasNoSchedulingInfo = 1;
-}
+class PseudoAtomicCmpSwap<RegisterClass RC> :
+  PseudoAtomic<(outs RC:$dst, RC:$scratch),
+               (ins PtrRC:$ptr, RC:$cmp, RC:$new),
+               "@earlyclobber $dst,@earlyclobber $scratch">;
 
-class AtomicCmpSwapPostRA<RegisterClass RC> :
-  PseudoSE<(outs RC:$dst), (ins PtrRC:$ptr, RC:$cmp, RC:$swap), []> {
-  let mayLoad = 1;
-  let mayStore = 1;
-  let Predicates = [NotR5900];
-}
+class PseudoAtomicRMWPat<PatFrag Op, Instruction Inst, RegisterClass RC> :
+  Pat<(Op iPTR:$ptr, RC:$incr), (Inst iPTR:$ptr, RC:$incr)>;
 
-class AtomicCmpSwapSubwordPostRA<RegisterClass RC> :
-  PseudoSE<(outs RC:$dst), (ins PtrRC:$ptr, RC:$mask, RC:$ShiftCmpVal,
-                                RC:$mask2, RC:$ShiftNewVal, RC:$ShiftAmt), []> {
-  let mayLoad = 1;
-  let mayStore = 1;
-  let Predicates = [NotR5900];
-}
+class PseudoAtomicCmpSwapPat<PatFrag Op, Instruction Inst, RegisterClass RC> :
+  Pat<(Op iPTR:$ptr, RC:$cmp, RC:$new),
+      (Inst iPTR:$ptr, RC:$cmp, RC:$new)>;
 
 class LLBase<string opstr, RegisterOperand RO, DAGOperand MO = mem> :
   InstSE<(outs RO:$rt), (ins MO:$addr), !strconcat(opstr, "\t$rt, $addr"),
@@ -1929,87 +1913,81 @@ def ADJCALLSTACKUP   : MipsPseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                                   [(callseq_end timm:$amt1, timm:$amt2)]>;
 }
 
-let usesCustomInserter = 1 in {
-  def ATOMIC_LOAD_ADD_I8   : Atomic2Ops<atomic_load_add_i8, GPR32>;
-  def ATOMIC_LOAD_ADD_I16  : Atomic2Ops<atomic_load_add_i16, GPR32>;
-  def ATOMIC_LOAD_ADD_I32  : Atomic2Ops<atomic_load_add_i32, GPR32>;
-  def ATOMIC_LOAD_SUB_I8   : Atomic2Ops<atomic_load_sub_i8, GPR32>;
-  def ATOMIC_LOAD_SUB_I16  : Atomic2Ops<atomic_load_sub_i16, GPR32>;
-  def ATOMIC_LOAD_SUB_I32  : Atomic2Ops<atomic_load_sub_i32, GPR32>;
-  def ATOMIC_LOAD_AND_I8   : Atomic2Ops<atomic_load_and_i8, GPR32>;
-  def ATOMIC_LOAD_AND_I16  : Atomic2Ops<atomic_load_and_i16, GPR32>;
-  def ATOMIC_LOAD_AND_I32  : Atomic2Ops<atomic_load_and_i32, GPR32>;
-  def ATOMIC_LOAD_OR_I8    : Atomic2Ops<atomic_load_or_i8, GPR32>;
-  def ATOMIC_LOAD_OR_I16   : Atomic2Ops<atomic_load_or_i16, GPR32>;
-  def ATOMIC_LOAD_OR_I32   : Atomic2Ops<atomic_load_or_i32, GPR32>;
-  def ATOMIC_LOAD_XOR_I8   : Atomic2Ops<atomic_load_xor_i8, GPR32>;
-  def ATOMIC_LOAD_XOR_I16  : Atomic2Ops<atomic_load_xor_i16, GPR32>;
-  def ATOMIC_LOAD_XOR_I32  : Atomic2Ops<atomic_load_xor_i32, GPR32>;
-  def ATOMIC_LOAD_NAND_I8  : Atomic2Ops<atomic_load_nand_i8, GPR32>;
-  def ATOMIC_LOAD_NAND_I16 : Atomic2Ops<atomic_load_nand_i16, GPR32>;
-  def ATOMIC_LOAD_NAND_I32 : Atomic2Ops<atomic_load_nand_i32, GPR32>;
+def ATOMIC_LOAD_ADD_I32 : PseudoAtomicRMW<GPR32>;
+def ATOMIC_LOAD_SUB_I32 : PseudoAtomicRMW<GPR32>;
+def ATOMIC_LOAD_AND_I32 : PseudoAtomicRMW<GPR32>;
+def ATOMIC_LOAD_OR_I32 : PseudoAtomicRMW<GPR32>;
+def ATOMIC_LOAD_XOR_I32 : PseudoAtomicRMW<GPR32>;
+def ATOMIC_LOAD_NAND_I32 : PseudoAtomicRMW<GPR32>;
+def ATOMIC_LOAD_MIN_I32 : PseudoAtomicRMW<GPR32, 1>;
+def ATOMIC_LOAD_MAX_I32 : PseudoAtomicRMW<GPR32, 1>;
+def ATOMIC_LOAD_UMIN_I32 : PseudoAtomicRMW<GPR32, 1>;
+def ATOMIC_LOAD_UMAX_I32 : PseudoAtomicRMW<GPR32, 1>;
+def ATOMIC_SWAP_I32 : PseudoAtomicRMW<GPR32>;
+def ATOMIC_CMP_SWAP_I32 : PseudoAtomicCmpSwap<GPR32>;
 
-  def ATOMIC_SWAP_I8       : Atomic2Ops<atomic_swap_i8, GPR32>;
-  def ATOMIC_SWAP_I16      : Atomic2Ops<atomic_swap_i16, GPR32>;
-  def ATOMIC_SWAP_I32      : Atomic2Ops<atomic_swap_i32, GPR32>;
-
-  def ATOMIC_CMP_SWAP_I8   : AtomicCmpSwap<atomic_cmp_swap_i8, GPR32>;
-  def ATOMIC_CMP_SWAP_I16  : AtomicCmpSwap<atomic_cmp_swap_i16, GPR32>;
-  def ATOMIC_CMP_SWAP_I32  : AtomicCmpSwap<atomic_cmp_swap_i32, GPR32>;
-
-  def ATOMIC_LOAD_MIN_I8   : Atomic2Ops<atomic_load_min_i8, GPR32>;
-  def ATOMIC_LOAD_MIN_I16  : Atomic2Ops<atomic_load_min_i16, GPR32>;
-  def ATOMIC_LOAD_MIN_I32  : Atomic2Ops<atomic_load_min_i32, GPR32>;
-  def ATOMIC_LOAD_MAX_I8   : Atomic2Ops<atomic_load_max_i8, GPR32>;
-  def ATOMIC_LOAD_MAX_I16  : Atomic2Ops<atomic_load_max_i16, GPR32>;
-  def ATOMIC_LOAD_MAX_I32  : Atomic2Ops<atomic_load_max_i32, GPR32>;
-  def ATOMIC_LOAD_UMIN_I8  : Atomic2Ops<atomic_load_umin_i8, GPR32>;
-  def ATOMIC_LOAD_UMIN_I16 : Atomic2Ops<atomic_load_umin_i16, GPR32>;
-  def ATOMIC_LOAD_UMIN_I32 : Atomic2Ops<atomic_load_umin_i32, GPR32>;
-  def ATOMIC_LOAD_UMAX_I8  : Atomic2Ops<atomic_load_umax_i8, GPR32>;
-  def ATOMIC_LOAD_UMAX_I16 : Atomic2Ops<atomic_load_umax_i16, GPR32>;
-  def ATOMIC_LOAD_UMAX_I32 : Atomic2Ops<atomic_load_umax_i32, GPR32>;
+let Predicates = [NotInMips16Mode, NotR5900] in {
+def : PseudoAtomicRMWPat<atomic_load_add_i32, ATOMIC_LOAD_ADD_I32, GPR32>;
+def : PseudoAtomicRMWPat<atomic_load_sub_i32, ATOMIC_LOAD_SUB_I32, GPR32>;
+def : PseudoAtomicRMWPat<atomic_load_and_i32, ATOMIC_LOAD_AND_I32, GPR32>;
+def : PseudoAtomicRMWPat<atomic_load_or_i32, ATOMIC_LOAD_OR_I32, GPR32>;
+def : PseudoAtomicRMWPat<atomic_load_xor_i32, ATOMIC_LOAD_XOR_I32, GPR32>;
+def : PseudoAtomicRMWPat<atomic_load_nand_i32, ATOMIC_LOAD_NAND_I32, GPR32>;
+def : PseudoAtomicRMWPat<atomic_load_min_i32, ATOMIC_LOAD_MIN_I32, GPR32>;
+def : PseudoAtomicRMWPat<atomic_load_max_i32, ATOMIC_LOAD_MAX_I32, GPR32>;
+def : PseudoAtomicRMWPat<atomic_load_umin_i32, ATOMIC_LOAD_UMIN_I32, GPR32>;
+def : PseudoAtomicRMWPat<atomic_load_umax_i32, ATOMIC_LOAD_UMAX_I32, GPR32>;
+def : PseudoAtomicRMWPat<atomic_swap_i32, ATOMIC_SWAP_I32, GPR32>;
+def : PseudoAtomicCmpSwapPat<atomic_cmp_swap_i32, ATOMIC_CMP_SWAP_I32, GPR32>;
 }
 
-def ATOMIC_LOAD_ADD_I8_POSTRA   : Atomic2OpsSubwordPostRA<GPR32>;
-def ATOMIC_LOAD_ADD_I16_POSTRA  : Atomic2OpsSubwordPostRA<GPR32>;
-def ATOMIC_LOAD_ADD_I32_POSTRA  : Atomic2OpsPostRA<GPR32>;
-def ATOMIC_LOAD_SUB_I8_POSTRA   : Atomic2OpsSubwordPostRA<GPR32>;
-def ATOMIC_LOAD_SUB_I16_POSTRA  : Atomic2OpsSubwordPostRA<GPR32>;
-def ATOMIC_LOAD_SUB_I32_POSTRA  : Atomic2OpsPostRA<GPR32>;
-def ATOMIC_LOAD_AND_I8_POSTRA   : Atomic2OpsSubwordPostRA<GPR32>;
-def ATOMIC_LOAD_AND_I16_POSTRA  : Atomic2OpsSubwordPostRA<GPR32>;
-def ATOMIC_LOAD_AND_I32_POSTRA  : Atomic2OpsPostRA<GPR32>;
-def ATOMIC_LOAD_OR_I8_POSTRA    : Atomic2OpsSubwordPostRA<GPR32>;
-def ATOMIC_LOAD_OR_I16_POSTRA   : Atomic2OpsSubwordPostRA<GPR32>;
-def ATOMIC_LOAD_OR_I32_POSTRA   : Atomic2OpsPostRA<GPR32>;
-def ATOMIC_LOAD_XOR_I8_POSTRA   : Atomic2OpsSubwordPostRA<GPR32>;
-def ATOMIC_LOAD_XOR_I16_POSTRA  : Atomic2OpsSubwordPostRA<GPR32>;
-def ATOMIC_LOAD_XOR_I32_POSTRA  : Atomic2OpsPostRA<GPR32>;
-def ATOMIC_LOAD_NAND_I8_POSTRA  : Atomic2OpsSubwordPostRA<GPR32>;
-def ATOMIC_LOAD_NAND_I16_POSTRA : Atomic2OpsSubwordPostRA<GPR32>;
-def ATOMIC_LOAD_NAND_I32_POSTRA : Atomic2OpsPostRA<GPR32>;
+class PseudoMaskedRMW :
+  PseudoAtomic<(outs GPR32:$dst, GPR32:$scratch),
+                     (ins PtrRC:$ptr, GPR32:$incr, GPR32:$mask),
+                     "@earlyclobber $dst,@earlyclobber $scratch">;
 
-def ATOMIC_SWAP_I8_POSTRA  : Atomic2OpsSubwordPostRA<GPR32>;
-def ATOMIC_SWAP_I16_POSTRA : Atomic2OpsSubwordPostRA<GPR32>;
-def ATOMIC_SWAP_I32_POSTRA : Atomic2OpsPostRA<GPR32>;
+class PseudoMaskedMinMax<dag ins = (ins PtrRC:$ptr, GPR32:$incr, GPR32:$mask)> :
+  PseudoAtomic<(outs GPR32:$dst, GPR32:$scratch, GPR32:$cmp), ins,
+                     "@earlyclobber $dst,@earlyclobber $scratch,"
+                     "@earlyclobber $cmp">;
 
-def ATOMIC_CMP_SWAP_I8_POSTRA : AtomicCmpSwapSubwordPostRA<GPR32>;
-def ATOMIC_CMP_SWAP_I16_POSTRA : AtomicCmpSwapSubwordPostRA<GPR32>;
-def ATOMIC_CMP_SWAP_I32_POSTRA : AtomicCmpSwapPostRA<GPR32>;
+class PseudoMaskedRMWPat<Intrinsic Op, Instruction Inst> :
+  Pat<(Op iPTR:$ptr, GPR32:$incr, GPR32:$mask),
+      (Inst iPTR:$ptr, GPR32:$incr, GPR32:$mask)>;
 
-def ATOMIC_LOAD_MIN_I8_POSTRA   : Atomic2OpsSubwordPostRA<GPR32>;
-def ATOMIC_LOAD_MIN_I16_POSTRA  : Atomic2OpsSubwordPostRA<GPR32>;
-def ATOMIC_LOAD_MIN_I32_POSTRA  : Atomic2OpsPostRA<GPR32>;
-def ATOMIC_LOAD_MAX_I8_POSTRA   : Atomic2OpsSubwordPostRA<GPR32>;
-def ATOMIC_LOAD_MAX_I16_POSTRA  : Atomic2OpsSubwordPostRA<GPR32>;
-def ATOMIC_LOAD_MAX_I32_POSTRA  : Atomic2OpsPostRA<GPR32>;
-def ATOMIC_LOAD_UMIN_I8_POSTRA  : Atomic2OpsSubwordPostRA<GPR32>;
-def ATOMIC_LOAD_UMIN_I16_POSTRA : Atomic2OpsSubwordPostRA<GPR32>;
-def ATOMIC_LOAD_UMIN_I32_POSTRA : Atomic2OpsPostRA<GPR32>;
-def ATOMIC_LOAD_UMAX_I8_POSTRA  : Atomic2OpsSubwordPostRA<GPR32>;
-def ATOMIC_LOAD_UMAX_I16_POSTRA : Atomic2OpsSubwordPostRA<GPR32>;
-def ATOMIC_LOAD_UMAX_I32_POSTRA : Atomic2OpsPostRA<GPR32>;
+class PseudoMaskedMinMaxPat<Intrinsic Op, Instruction Inst> :
+  Pat<(Op iPTR:$ptr, GPR32:$incr, GPR32:$mask, GPR32:$sextshift),
+      (Inst iPTR:$ptr, GPR32:$incr, GPR32:$mask, GPR32:$sextshift)>;
+
+def ATOMIC_SWAP_MASKED : PseudoMaskedRMW;
+def ATOMIC_LOAD_ADD_MASKED : PseudoMaskedRMW;
+def ATOMIC_LOAD_SUB_MASKED : PseudoMaskedRMW;
+def ATOMIC_LOAD_NAND_MASKED : PseudoMaskedRMW;
+
+def ATOMIC_LOAD_UMIN_MASKED : PseudoMaskedMinMax<>;
+def ATOMIC_LOAD_UMAX_MASKED : PseudoMaskedMinMax<>;
+def ATOMIC_LOAD_MIN_MASKED :
+  PseudoMaskedMinMax<(ins PtrRC:$ptr, GPR32:$incr, GPR32:$mask, GPR32:$sextshift)>;
+def ATOMIC_LOAD_MAX_MASKED :
+  PseudoMaskedMinMax<(ins PtrRC:$ptr, GPR32:$incr, GPR32:$mask, GPR32:$sextshift)>;
+
+def ATOMIC_CMP_SWAP_MASKED :
+  PseudoAtomic<(outs GPR32:$dst, GPR32:$scratch),
+                     (ins PtrRC:$ptr, GPR32:$cmp, GPR32:$new, GPR32:$mask),
+                     "@earlyclobber $dst,@earlyclobber $scratch">;
+
+let Predicates = [NotInMips16Mode, NotR5900] in {
+def : PseudoMaskedRMWPat<int_mips_masked_atomicrmw_xchg, ATOMIC_SWAP_MASKED>;
+def : PseudoMaskedRMWPat<int_mips_masked_atomicrmw_add, ATOMIC_LOAD_ADD_MASKED>;
+def : PseudoMaskedRMWPat<int_mips_masked_atomicrmw_sub, ATOMIC_LOAD_SUB_MASKED>;
+def : PseudoMaskedRMWPat<int_mips_masked_atomicrmw_nand, ATOMIC_LOAD_NAND_MASKED>;
+def : PseudoMaskedRMWPat<int_mips_masked_atomicrmw_umin, ATOMIC_LOAD_UMIN_MASKED>;
+def : PseudoMaskedRMWPat<int_mips_masked_atomicrmw_umax, ATOMIC_LOAD_UMAX_MASKED>;
+def : PseudoMaskedMinMaxPat<int_mips_masked_atomicrmw_min, ATOMIC_LOAD_MIN_MASKED>;
+def : PseudoMaskedMinMaxPat<int_mips_masked_atomicrmw_max, ATOMIC_LOAD_MAX_MASKED>;
+def : Pat<(int_mips_masked_cmpxchg iPTR:$ptr, GPR32:$cmp, GPR32:$new, GPR32:$mask),
+          (ATOMIC_CMP_SWAP_MASKED iPTR:$ptr, GPR32:$cmp, GPR32:$new, GPR32:$mask)>;
+}
 
 /// Pseudo instructions for loading and storing accumulator registers.
 let isPseudo = 1, isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in {
