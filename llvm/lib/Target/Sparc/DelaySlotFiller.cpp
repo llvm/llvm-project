@@ -386,6 +386,15 @@ static bool combineRestoreADD(MachineBasicBlock &MBB,
       AddMI->readsRegister(SP::O7, TRI))
     return false;
 
+  // An indirect tail call jumps through the register in its first operand. If
+  // this ADD computes that address, folding it into the RESTORE leaves the jump
+  // reading only the ADD's first operand, silently calling base instead of
+  // base + offset. A direct call names its callee here instead, and the folded
+  // sum is an outgoing argument.
+  if (IsCall && LastInst->getOperand(0).isReg() &&
+      LastInst->getOperand(0).getReg() == reg)
+    return false;
+
   // Erase RESTORE.
   RestoreMI->eraseFromParent();
 
