@@ -2639,7 +2639,7 @@ bool GVNPass::findReachingValuesForLoad(LoadInst *L,
   // Phase 1. First off, look for a local dependency to avoid having to
   // disambiguate between before the load and after the load of the starting
   // block (as the load may be visited from a backedge).
-  do {
+  for (;;) {
     // Scan users of the clobbering memory access.
     if (auto RMV = scanMemoryAccessesUsers(
             Loc, IsInvariantLoad, StartBlock,
@@ -2664,7 +2664,7 @@ bool GVNPass::findReachingValuesForLoad(LoadInst *L,
     // It may happen that the clobbering memory access does not actually
     // clobber our load location, transition to its defining memory access.
     ClobberMA = cast<MemoryUseOrDef>(ClobberMA)->getDefiningAccess();
-  } while (ClobberMA->getBlock() == StartBlock);
+  }
 
   // Non-local speculations are not allowed under ASan.
   if (L->getFunction()->hasFnAttribute(Attribute::SanitizeAddress) ||
