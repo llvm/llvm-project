@@ -15,37 +15,37 @@ defm : BoolField<"bbsections-guided-section-prefix", "true",
   "Use the basic-block-sections profile to determine the text section prefix for hot functions. "
   "Functions with basic-block-sections profile will be placed in `.text.hot` regardless of their FDO profile info. "
   "Other functions won't be impacted, i.e., their prefixes will be decided by FDO/sampleFDO profiles">;
-defm : BoolField<"addr-sink-combine-base-gv", "true",
+defm : BoolField<"cgp-addr-sink-combine-base-gv", "true",
   "Allow combining of BaseGV field in Address sinking">;
-defm : BoolField<"addr-sink-combine-base-offs", "true",
+defm : BoolField<"cgp-addr-sink-combine-base-offs", "true",
   "Allow combining of BaseOffs field in Address sinking">;
-defm : BoolField<"addr-sink-combine-base-reg", "true",
+defm : BoolField<"cgp-addr-sink-combine-base-reg", "true",
   "Allow combining of BaseReg field in Address sinking">;
-defm : BoolField<"addr-sink-combine-scaled-reg", "true",
+defm : BoolField<"cgp-addr-sink-combine-scaled-reg", "true",
   "Allow combining of ScaledReg field in Address sinking">;
-defm : BoolField<"addr-sink-new-phis", "false",
+defm : BoolField<"cgp-addr-sink-new-phis", "false",
   "Allow creation of Phis in Address sinking">;
-defm : BoolField<"addr-sink-new-select", "true",
+defm : BoolField<"cgp-addr-sink-new-select", "true",
   "Allow creation of selects in Address sinking">;
-defm : OptionalBoolField<"addr-sink-using-gep",
+defm : OptionalBoolField<"cgp-addr-sink-using-gep",
   "Address sinking in CGP using GEPs">;
-defm : BoolField<"enable-andcmp-sinking", "true",
+defm : BoolField<"cgp-andcmp-sinking", "true",
   "Enable sinking and/cmp into branches">;
-defm : BoolField<"disable-cgp-branch-opts", "false",
-  "Disable branch optimizations in CodeGenPrepare">;
-defm : BoolField<"disable-complex-addr-modes", "false",
-  "Disables combining addressing modes with different parts in optimizeMemoryInst">;
-defm : BoolField<"disable-cgp-delete-phis", "false",
-  "Disable elimination of dead PHI nodes">;
-defm : BoolField<"disable-cgp-ext-ld-promotion", "false",
-  "Disable ext(promotable(ld)) -> promoted(ext(ld)) optimization in CodeGenPrepare">;
-defm : BoolField<"force-split-store", "false",
+defm : BoolField<"cgp-branch-opts", "true",
+  "Enable branch optimizations in CodeGenPrepare">;
+defm : BoolField<"cgp-complex-addr-modes", "true",
+  "Enable combining addressing modes with different parts in optimizeMemoryInst">;
+defm : BoolField<"cgp-delete-phis", "true",
+  "Enable elimination of dead PHI nodes">;
+defm : BoolField<"cgp-ext-ld-promotion", "true",
+  "Enable ext(promotable(ld)) -> promoted(ext(ld)) optimization in CodeGenPrepare">;
+defm : BoolField<"cgp-force-split-store", "false",
   "Force store splitting no matter what the target query says">;
 defm : ValueField<"cgp-freq-ratio-to-skip-merge", "uint64_t", "2",
   "Skip merging empty blocks if (frequency of empty block) / (frequency of destination block) is greater than this ratio">;
-defm : BoolField<"disable-cgp-gc-opts", "false",
-  "Disable GC optimizations in CodeGenPrepare">;
-defm : ValueField<"cgpp-huge-func", "unsigned", "10000",
+defm : BoolField<"cgp-gc-opts", "true",
+  "Enable GC optimizations in CodeGenPrepare">;
+defm : ValueField<"cgp-huge-func", "unsigned", "10000",
   "Least BB number of huge function">;
 defm : BoolField<"cgp-icmp-eq2icmp-st", "false",
   "Enable ICMP_EQ to ICMP_S(L|G)T conversion">;
@@ -53,17 +53,17 @@ defm : ValueField<"cgp-max-address-users-to-scan", "unsigned", "100",
   "Max number of address users to look at">;
 defm : BoolField<"cgp-optimize-phi-types", "true",
   "Enable converting phi types in CodeGenPrepare">;
-defm : BoolField<"disable-preheader-prot", "false",
-  "Disable protection against removing loop preheaders">;
-defm : BoolField<"disable-cgp-select2branch", "false",
-  "Disable select to branch conversion">;
+defm : BoolField<"cgp-preheader-prot", "true",
+  "Protect loop preheaders from removal">;
+defm : BoolField<"cgp-select2branch", "true",
+  "Enable select to branch conversion">;
 defm : BoolField<"cgp-split-large-offset-gep", "true",
   "Enable splitting large offset of GEP">;
-defm : BoolField<"disable-cgp-store-extract", "false",
-  "Disable store(extract) optimizations in CodeGenPrepare">;
-defm : BoolField<"stress-cgp-ext-ld-promotion", "false",
+defm : BoolField<"cgp-store-extract", "true",
+  "Enable store(extract) optimizations in CodeGenPrepare">;
+defm : BoolField<"cgp-stress-ext-ld-promotion", "false",
   "Stress test ext(promotable(ld)) -> promoted(ext(ld)) optimization in CodeGenPrepare">;
-defm : BoolField<"stress-cgp-store-extract", "false",
+defm : BoolField<"cgp-stress-store-extract", "false",
   "Stress test store(extract) optimizations in CodeGenPrepare">;
 defm : BoolField<"cgp-type-promotion-merge", "true",
   "Enable merging of redundant sexts when one is dominating the other">;
