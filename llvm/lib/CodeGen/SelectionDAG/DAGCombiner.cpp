@@ -25054,16 +25054,28 @@ SDValue DAGCombiner::splitMergedValStore(StoreSDNode *ST) {
       Hi.getOperand(0).getValueSizeInBits() > HalfValBitSize)
     return SDValue();
 
-  // Use the EVT of low and high parts before bitcast as the input
-  // of target query.
-  EVT LowTy = (Lo.getOperand(0).getOpcode() == ISD::BITCAST)
-                  ? Lo.getOperand(0).getValueType()
-                  : Lo.getValueType();
-  EVT HighTy = (Hi.getOperand(0).getOpcode() == ISD::BITCAST)
-                   ? Hi.getOperand(0).getValueType()
-                   : Hi.getValueType();
+  // Use the EVT of low and high parts before zext and bitcast as the input
+  // of target query, matching the CodeGenPrepare version of this transform.
+  auto GetPartTy = [](SDValue Part) {
+    SDValue V = Part.getOperand(0);
+    return V.getOpcode() == ISD::BITCAST ? V.getOperand(0).getValueType()
+                                         : V.getValueType();
+  };
+  EVT LowTy = GetPartTy(Lo);
+  EVT HighTy = GetPartTy(Hi);
   if (!TLI.isMultiStoresCheaperThanBitsMerge(LowTy, HighTy))
     return SDValue();
+
+  // If both halves are loaded from adjacent memory, leave the value for load
+  // combining to turn into a single wide load.
+  auto *LoLd = dyn_cast<LoadSDNode>(Lo.getOperand(0));
+  auto *HiLd = dyn_cast<LoadSDNode>(Hi.getOperand(0));
+  if (LoLd && HiLd) {
+    bool IsLE = DAG.getDataLayout().isLittleEndian();
+    if (DAG.areNonVolatileConsecutiveLoads(
+            IsLE ? HiLd : LoLd, IsLE ? LoLd : HiLd, HalfValBitSize / 8, 1))
+      return SDValue();
+  }
 
   // Start to split store.
   MachineMemOperand::Flags MMOFlags = ST->getMemOperand()->getFlags();
@@ -25073,6 +25085,9 @@ SDValue DAGCombiner::splitMergedValStore(StoreSDNode *ST) {
   EVT VT = EVT::getIntegerVT(*DAG.getContext(), HalfValBitSize);
   Lo = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Lo.getOperand(0));
   Hi = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Hi.getOperand(0));
+  // On big-endian targets the high part goes at the lower address.
+  if (DAG.getDataLayout().isBigEndian())
+    std::swap(Lo, Hi);
 
   SDValue Chain = ST->getChain();
   SDValue Ptr = ST->getBasePtr();

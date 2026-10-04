@@ -8635,6 +8635,22 @@ static bool splitMergedValStore(StoreInst &SI, const DataLayout &DL,
   if (!ForceSplitStore && !TLI.isMultiStoresCheaperThanBitsMerge(LowTy, HighTy))
     return false;
 
+  // If both halves are loaded from adjacent memory, the merged value is really
+  // a single wide load, which may also pair with a neighboring load.
+  auto *LLoad = dyn_cast<LoadInst>(LValue);
+  auto *HLoad = dyn_cast<LoadInst>(HValue);
+  if (!ForceSplitStore && LLoad && HLoad && LLoad->isSimple() &&
+      HLoad->isSimple() && LLoad->getParent() == HLoad->getParent() &&
+      DL.getTypeStoreSizeInBits(LLoad->getType()) == HalfValBitSize &&
+      DL.getTypeStoreSizeInBits(HLoad->getType()) == HalfValBitSize) {
+    int64_t HalfBytes = HalfValBitSize / 8;
+    std::optional<int64_t> Offset =
+        HLoad->getPointerOperand()->getPointerOffsetFrom(
+            LLoad->getPointerOperand(), DL);
+    if (Offset && *Offset == (DL.isLittleEndian() ? HalfBytes : -HalfBytes))
+      return false;
+  }
+
   // Start to split store.
   IRBuilder<> Builder(&SI);
 
