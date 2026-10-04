@@ -615,6 +615,9 @@ public:
   /// the operation in place, and as a failure otherwise.
   ///
   /// Note: This function does not erase the operation on a successful fold.
+  LLVM_DEPRECATED("use the overload that returns OpFoldResults and "
+                  "materializeFoldResults; they also apply partial folds",
+                  "")
   LogicalResult
   tryFold(Operation *op, SmallVectorImpl<Value> &results,
           SmallVectorImpl<Operation *> *materializedConstants = nullptr);
