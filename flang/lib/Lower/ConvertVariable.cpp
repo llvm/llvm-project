@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/ConvertVariable.h"
+#include "OpenMP/Utils.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/BoxAnalyzer.h"
@@ -48,6 +49,7 @@
 #include "flang/Semantics/type.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenMP/Utils/Utils.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
@@ -3377,7 +3379,24 @@ void Fortran::lower::createRuntimeTypeInfoGlobal(
   std::string globalName = converter.mangleName(typeInfoSym);
   auto var = Fortran::lower::pft::Variable(typeInfoSym, /*global=*/true);
   fir::LinkageAttr linkage = getLinkageAttribute(converter, var);
-  defineGlobal(converter, var, globalName, linkage);
+  fir::GlobalOp global = defineGlobal(converter, var, globalName, linkage);
+
+  // For OpenMP we make the compiler generated RTTI objects declare-target
+  // globals so that we do not have to transfer the RTTI to device on each map
+  // of a RTTI dependent type and all RTTI remains consistent on device, in
+  // particular the polymorphic function dispatch table, the RTTI and the
+  // dispatch functions are lowered to device and have device consistent
+  // addresses through declare target, and we simply have to then redirect any
+  // mapped polymorphic types descriptor to point at this global type
+  // information to access the device side dispatch table for the type and any
+  // other RTTI that's required for things like SELECT statements, dynamic
+  // variable access and polymorphic intrinsic functions.
+  if (converter.getFoldingContext().languageFeatures().IsEnabled(
+          Fortran::common::LanguageFeature::OpenMP) &&
+      mlir::omp::getOpenMPVersionAttribute(converter.getModuleOp(),
+                                           /*fallback=*/0) >= 61)
+    Fortran::lower::omp::markDeclareTarget(global.getOperation(),
+                                           /*implicit=*/false);
 }
 
 mlir::Type Fortran::lower::getCrayPointeeBoxType(mlir::Type fortranType) {
