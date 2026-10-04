@@ -929,6 +929,53 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
       UndefValue::get(GlobalType), GV->getName() + ".body", nullptr,
       GV->getThreadLocalMode());
 
+  // Alignment of the return value of the allocator call.
+  Align GVAlign = CI->getPointerAlignment(DL);
+
+  // The allocation is in local `CI` and also stored in global `GV`.
+  // `GV` is set once with the allocation, checked by
+  // `valueIsOnlyUsedLocallyOrStoredToOneGlobal`.
+  // The global's alignment should be at least as large as to support the
+  // largest alignment of `CI`s loads and stores, and `GV`s loads' users.
+  SmallVector<Value *, 4> Guses;
+  allUsesOfLoadAndStores(GV, Guses);
+
+  {
+    SmallPtrSet<const Value *, 4> Visited;
+    SmallVector<const Value *, 4> Worklist;
+    Worklist.push_back(CI);
+
+    for (Value *Guse : Guses)
+      if (isa<LoadInst>(Guse))
+        Worklist.push_back(Guse);
+
+    while (!Worklist.empty()) {
+      const Value *V = Worklist.pop_back_val();
+      if (!Visited.insert(V).second)
+        continue;
+
+      for (const Use &VUse : V->uses()) {
+        const User *U = VUse.getUser();
+        if (auto *LI = dyn_cast<LoadInst>(U)) {
+          GVAlign = std::max(GVAlign, LI->getAlign());
+        } else if (auto *SI = dyn_cast<StoreInst>(U)) {
+          // Skip the store that stores the allocation into GV.
+          if (SI->getPointerOperand()->stripPointerCasts() != GV)
+            GVAlign = std::max(GVAlign, SI->getAlign());
+        } else if (auto *GEPI = dyn_cast<GetElementPtrInst>(U)) {
+          Worklist.push_back(GEPI);
+          continue;
+        }
+      }
+    }
+  }
+
+  // Only specify the global alignment if it increases the preferred alignment.
+  // Otherwise leave it unset to allow other optimizations to increase it.
+  if (GVAlign > DL.getPreferredAlign(NewGV)) {
+    NewGV->setAlignment(GVAlign);
+  }
+
   // Initialize the global at the point of the original call.  Note that this
   // is a different point from the initialization referred to below for the
   // nullability handling.  Sublety: We have not proven the original global was
@@ -936,8 +983,7 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
   // of the new global as may need to re-init the storage multiple times.
   if (!isa<UndefValue>(InitVal)) {
     IRBuilder<> Builder(CI->getNextNode());
-    // TODO: Use alignment above if align!=1
-    Builder.CreateMemSet(NewGV, InitVal, AllocSize, std::nullopt);
+    Builder.CreateMemSet(NewGV, InitVal, AllocSize, NewGV->getAlign());
   }
 
   // Update users of the allocation to use the new global instead.
@@ -952,8 +998,6 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
   bool InitBoolUsed = false;
 
   // Loop over all instruction uses of GV, processing them in turn.
-  SmallVector<Value *, 4> Guses;
-  allUsesOfLoadAndStores(GV, Guses);
   for (auto *U : Guses) {
     if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
       // The global is initialized when the store to it occurs. If the stored
