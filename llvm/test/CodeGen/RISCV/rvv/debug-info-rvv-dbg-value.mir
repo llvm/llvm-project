@@ -33,10 +33,10 @@
 # CHECK5-PLUS: : DW_OP_breg2 X2+32)
 # CHECK5-PLUS: DW_AT_type {{.*}}vbool1_t
 
-# CHECK0-MINUS: : DW_OP_breg8 X8-40)
+# CHECK0-MINUS: : DW_OP_breg8 X8-48)
 # CHECK0-MINUS: DW_AT_type {{.*}}int32_t
 #
-# CHECK1-MINUS: : DW_OP_breg8 X8-48)
+# CHECK1-MINUS: : DW_OP_breg8 X8-40)
 # CHECK1-MINUS: DW_AT_type {{.*}}int32_t
 #
 # CHECK2-MINUS: : DW_OP_breg8 X8-48, DW_OP_lit1, DW_OP_bregx VLENB+0, DW_OP_mul, DW_OP_minus)
