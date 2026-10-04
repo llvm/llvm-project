@@ -644,5 +644,18 @@ EnumStrings<uint16_t> getAssociationKindNames() {
   return AssociationKindNames;
 }
 
+EnumStrings<uint16_t> getCoroutineKindNames() {
+  constexpr EnumStringDef<uint16_t> CoroutineKindNameDefs[] = {
+      CV_ENUM_CLASS_ENT(CoroutineKind, None),
+      CV_ENUM_CLASS_ENT(CoroutineKind, Primary),
+      CV_ENUM_CLASS_ENT(CoroutineKind, Init),
+      CV_ENUM_CLASS_ENT(CoroutineKind, Resume),
+      CV_ENUM_CLASS_ENT(CoroutineKind, Destroy),
+  };
+  static constexpr auto CoroutineKindNames =
+      BUILD_ENUM_STRINGS(CoroutineKindNameDefs);
+  return CoroutineKindNames;
+}
+
 } // end namespace codeview
 } // end namespace llvm
