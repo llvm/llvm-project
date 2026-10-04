@@ -40,6 +40,18 @@ config_setting(
     },
 )
 
+# Use LLVM libunwind's per-FDE registration API. This does not link libunwind.
+# Usage: --@llvm-project//llvm:use_libunwind_for_eh_frame_registration=true
+bool_flag(
+    name = "use_libunwind_for_eh_frame_registration",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "libunwind_eh_frame_registration_enabled",
+    flag_values = {":use_libunwind_for_eh_frame_registration": "true"},
+)
+
 exports_files([
     "LICENSE.TXT",
     "cmake/modules/llvm-driver-template.cpp.in",
@@ -381,26 +393,40 @@ config_setting(
     flag_values = {"@rules_cc//cc/compiler:compiler": "clang-cl"},
 )
 
+config_setting(
+    name = "is_x86_64_windows_msvc",
+    constraint_values = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:windows",
+    ],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "msvc-cl"},
+)
+
 BLAKE3_x86_64_ASM_SOURCE_PATTERNS = [
-    "lib/Support/BLAKE3/blake3_avx2_x86-64_%s.S",
-    "lib/Support/BLAKE3/blake3_avx512_x86-64_%s.S",
-    "lib/Support/BLAKE3/blake3_sse2_x86-64_%s.S",
-    "lib/Support/BLAKE3/blake3_sse41_x86-64_%s.S",
+    "lib/Support/BLAKE3/blake3_avx2_x86-64_%s",
+    "lib/Support/BLAKE3/blake3_avx512_x86-64_%s",
+    "lib/Support/BLAKE3/blake3_sse2_x86-64_%s",
+    "lib/Support/BLAKE3/blake3_sse41_x86-64_%s",
 ]
 
 filegroup(
     name = "blake3_x86_64_asm",
     srcs = select({
         ":is_x86_64_windows_clang_mingw": [
-            pattern % "windows_gnu"
+            pattern % "windows_gnu.S"
             for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
         ],
         ":is_x86_64_windows_clang_cl": [
-            pattern % "windows_gnu"
+            pattern % "windows_gnu.S"
+            for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
+        ],
+        # cl.exe cannot consume GAS syntax; ml64 assembles the MASM variants.
+        ":is_x86_64_windows_msvc": [
+            pattern % "windows_msvc.asm"
             for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
         ],
         "//conditions:default": [
-            pattern % "unix"
+            pattern % "unix.S"
             for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
         ],
     }),
@@ -797,7 +823,7 @@ gentbl_cc_library(
     name = "MCCLOptionsTableGen",
     strip_include_prefix = "lib/MC",
     tbl_outs = {"lib/MC/MCCLOptions.inc": ["-gen-opt-parser-defs"]},
-    tblgen = ":llvm-tblgen",
+    tblgen = ":llvm-min-tblgen",
     td_file = "lib/MC/MCCLOptions.td",
     deps = [":OptParserTdFiles"],
 )
@@ -935,6 +961,8 @@ cc_binary(
         "utils/TableGen/Basic/CodeGenIntrinsics.cpp",
         "utils/TableGen/Basic/DirectiveEmitter.cpp",
         "utils/TableGen/Basic/IntrinsicEmitter.cpp",
+        "utils/TableGen/Basic/OptEmitter.cpp",
+        "utils/TableGen/Basic/OptionParserEmitter.cpp",
         "utils/TableGen/Basic/PredicateExpanderDag.cpp",
         "utils/TableGen/Basic/RISCVTargetDefEmitter.cpp",
         "utils/TableGen/Basic/RuntimeLibcalls.cpp",
@@ -1829,7 +1857,7 @@ gentbl_cc_library(
     tbl_outs = {
         "lib/Transforms/InstCombine/InstCombineCLOptions.inc": ["-gen-opt-parser-defs"],
     },
-    tblgen = ":llvm-tblgen",
+    tblgen = ":llvm-min-tblgen",
     td_file = "lib/Transforms/InstCombine/InstCombineCLOptions.td",
     deps = [":OptParserTdFiles"],
 )
@@ -2397,7 +2425,7 @@ gentbl_cc_library(
     name = "CGDataOptionsTableGen",
     strip_include_prefix = "lib/CGData",
     tbl_outs = {"lib/CGData/CGDataOptions.inc": ["-gen-opt-parser-defs"]},
-    tblgen = ":llvm-tblgen",
+    tblgen = ":llvm-min-tblgen",
     td_file = "lib/CGData/CGDataOptions.td",
     deps = [":OptParserTdFiles"],
 )
@@ -4427,6 +4455,10 @@ cc_library(
     ) + ["include/llvm-c/ExecutionEngine.h"],
     copts = llvm_copts,
     features = ["-parse_headers"],
+    local_defines = select({
+        ":libunwind_eh_frame_registration_enabled": ["HAVE_UNW_ADD_DYNAMIC_FDE=1"],
+        "//conditions:default": [],
+    }),
     deps = [
         ":BinaryFormat",
         ":CodeGen",
@@ -4645,6 +4677,10 @@ cc_library(
         "//conditions:default": [
             "-lrt",
         ],
+    }),
+    local_defines = select({
+        ":libunwind_eh_frame_registration_enabled": ["HAVE_UNW_ADD_DYNAMIC_FDE=1"],
+        "//conditions:default": [],
     }),
     deps = [
         ":BinaryFormat",
