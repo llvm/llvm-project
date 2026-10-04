@@ -7391,6 +7391,19 @@ bool CodeGenPrepare::optimizeExtUses(Instruction *I) {
       continue;
 
     // Both src and def are live in this block. Rewrite the use.
+    // Reuse a zero extension directly when a wider zero extension is free.
+    // Going through a truncation instead can hide an extending-load
+    // opportunity.
+    if (isa<ZExtInst>(I) && isa<ZExtInst>(User) &&
+        User->getType()->getScalarSizeInBits() >
+            I->getType()->getScalarSizeInBits() &&
+        TLI->isZExtFree(I->getType(), User->getType())) {
+      U = I;
+      ++NumExtUses;
+      MadeChange = true;
+      continue;
+    }
+
     Instruction *&InsertedTrunc = InsertedTruncs[UserBB];
 
     if (!InsertedTrunc) {
