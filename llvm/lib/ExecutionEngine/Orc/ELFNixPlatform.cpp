@@ -12,6 +12,7 @@
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/loongarch.h"
 #include "llvm/ExecutionEngine/JITLink/mips.h"
+#include "llvm/ExecutionEngine/JITLink/ppc32.h"
 #include "llvm/ExecutionEngine/JITLink/ppc64.h"
 #include "llvm/ExecutionEngine/JITLink/systemz.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
@@ -164,6 +165,10 @@ public:
       break;
     case Triple::ppc64:
       EdgeKind = jitlink::ppc64::Pointer64;
+      break;
+    case Triple::ppc:
+    case Triple::ppcle:
+      EdgeKind = jitlink::ppc32::Pointer32;
       break;
     case Triple::ppc64le:
       EdgeKind = jitlink::ppc64::Pointer64;
@@ -397,6 +402,8 @@ bool ELFNixPlatform::supportedTarget(const Triple &TT) {
   switch (TT.getArch()) {
   case Triple::x86_64:
   case Triple::aarch64:
+  case Triple::ppc:
+  case Triple::ppcle:
   // FIXME: jitlink for ppc64 hasn't been well tested, leave it unsupported
   // right now.
   case Triple::ppc64le:
