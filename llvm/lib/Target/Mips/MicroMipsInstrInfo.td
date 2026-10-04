@@ -938,6 +938,11 @@ let DecoderNamespace = "MicroMips" in {
   def JALR_MM : JumpLinkReg<"jalr", GPR32Opnd>, JALR_FM_MM<0x03c>,
                 ISA_MICROMIPS32_NOT_MIPS32R6;
 
+  def JR_HB_MM : MMRel, JR_HB_DESC<GPR32Opnd>, JR_FM_MM<0x7c>,
+                 ISA_MICROMIPS32_NOT_MIPS32R6;
+  def JALR_HB_MM : MMRel, JALR_HB_DESC<GPR32Opnd>, JALR_FM_MM<0x07c>, MMArch,
+                   ISA_MICROMIPS32_NOT_MIPS32R6;
+
   /// Jump Instructions - Short Delay Slot
   def JALS_MM   : JumpLinkMM<"jals", calltarget_mm>, J_FM_MM<0x1d>,
                   ISA_MICROMIPS32_NOT_MIPS32R6;
@@ -1391,6 +1396,9 @@ let EncodingPredicates = [InMicroMips] in {
   def : MipsInstAlias<"break $imm", (BREAK_MM uimm10:$imm, 0), 1>,
         ISA_MICROMIPS;
   def : MipsInstAlias<"bal $offset", (BGEZAL_MM ZERO, brtarget_mm:$offset), 1>,
+        ISA_MICROMIPS32_NOT_MIPS32R6;
+
+  def : MipsInstAlias<"jalr.hb $rs", (JALR_HB_MM RA, GPR32Opnd:$rs), 0>,
         ISA_MICROMIPS32_NOT_MIPS32R6;
 
   def : MipsInstAlias<"j $rs", (JR_MM GPR32Opnd:$rs), 0>,

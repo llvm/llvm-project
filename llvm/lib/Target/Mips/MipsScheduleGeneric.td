@@ -285,7 +285,7 @@ def GenericWriteJumpAndLink : SchedWriteRes<[GenericIssueCTISTD]> {
 // jalr, jr.hb, jr, jalr.hb, jarlc, jialc
 def : InstRW<[GenericWriteJump], (instrs B, BAL, BAL_BR, BEQ, BNE, BGTZ, BGEZ,
                                   BLEZ, BLTZ, BLTZAL, J, JALX, JR, JR_HB, ERET,
-                                  ERet, ERETNC, DERET, NAL)>;
+                                  ERet, ERETNC, DERET, NAL, JR_HB_MM)>;
 
 def : InstRW<[GenericWriteJump], (instrs BEQL, BNEL, BGEZL, BGTZL, BLEZL,
                                   BLTZL)>;
@@ -296,7 +296,7 @@ def : InstRW<[GenericWriteJump], (instrs TAILCALL, TAILCALLREG,
                                   RetRA)>;
 
 def : InstRW<[GenericWriteJumpAndLink], (instrs BGEZAL, JAL, JALR, JALR_HB,
-                                         JALRHBPseudo, JALRPseudo)>;
+                                         JALRHBPseudo, JALRPseudo, JALR_HB_MM)>;
 
 def : InstRW<[GenericWriteJumpAndLink], (instrs BGEZALL, BLTZALL)>;
 
