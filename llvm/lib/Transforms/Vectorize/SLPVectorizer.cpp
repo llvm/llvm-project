@@ -32679,6 +32679,11 @@ public:
     for (unsigned I = 0, E = ReducedVals.size(); I < E; ++I) {
       ArrayRef<Value *> OrigReducedVals = ReducedVals[I];
       InstructionsState S = States[I];
+      // The main operation of a state with copyable elements may be deleted
+      // during previous vectorization attempts, the state is not usable then.
+      if (S && S.areInstructionsWithCopyableElements() &&
+          V.isDeleted(S.getMainOp()))
+        S = InstructionsState::invalid();
       SmallVector<Value *> Candidates;
       Candidates.reserve(2 * OrigReducedVals.size());
       SmallVector<Value *> TrackedToOrig;
