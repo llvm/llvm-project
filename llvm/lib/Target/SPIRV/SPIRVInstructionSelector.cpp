@@ -1969,10 +1969,10 @@ bool SPIRVInstructionSelector::selectBitcast(Register ResVReg,
   return selectUnOp(ResVReg, ResType, I, SPIRV::OpBitcast);
 }
 
-static void addMemoryOperands(MachineMemOperand *MemOp,
-                              MachineInstrBuilder &MIB,
-                              MachineIRBuilder &MIRBuilder,
-                              SPIRVGlobalRegistry &GR) {
+static void
+addMemoryOperands(const MachineMemOperand *MemOp, MachineInstrBuilder &MIB,
+                  MachineIRBuilder &MIRBuilder, SPIRVGlobalRegistry &GR,
+                  std::optional<Align> AlignOverride = std::nullopt) {
   const SPIRVSubtarget *ST =
       static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
   uint32_t SpvMemOp = static_cast<uint32_t>(SPIRV::MemoryOperand::None);
@@ -2004,12 +2004,49 @@ static void addMemoryOperands(MachineMemOperand *MemOp,
   if (SpvMemOp != static_cast<uint32_t>(SPIRV::MemoryOperand::None)) {
     MIB.addImm(SpvMemOp);
     if (SpvMemOp & static_cast<uint32_t>(SPIRV::MemoryOperand::Aligned))
-      MIB.addImm(MemOp->getAlign().value());
+      MIB.addImm(AlignOverride.value_or(MemOp->getAlign()).value());
     if (AliasList)
       MIB.addUse(AliasList->getOperand(0).getReg());
     if (NoAliasList)
       MIB.addUse(NoAliasList->getOperand(0).getReg());
   }
+}
+
+// Appends the Memory Operands for OpCopyMemory / OpCopyMemorySized.
+// G_MEMCPY, G_MEMCPY_INLINE, and G_MEMMOVE carry two MachineMemOperands
+// (destination store followed by source load), whereas G_MEMSET and
+// G_MEMSET_INLINE carry only the destination store operand.
+//
+// In SPIR-V, a single Memory Operands mask on OpCopyMemory / OpCopyMemorySized
+// applies to both Target and Source. Starting with SPIR-V 1.4, two masks may be
+// provided (Target followed by Source); prior to SPIR-V 1.4 only one mask is
+// permitted, so its alignment must be the minimum of the destination and source
+// alignments.
+static void addCopyMemoryOperands(MachineInstr &I, MachineInstrBuilder &MIB,
+                                  SPIRVGlobalRegistry &GR) {
+  if (!I.getNumMemOperands())
+    return;
+  MachineIRBuilder MIRBuilder(I);
+  const MachineMemOperand *DstMemOp = *I.memoperands_begin();
+  const SPIRVSubtarget &ST = I.getMF()->getSubtarget<SPIRVSubtarget>();
+  if (I.getNumMemOperands() == 1 || ST.isShader()) {
+    addMemoryOperands(DstMemOp, MIB, MIRBuilder, GR);
+    return;
+  }
+
+  const MachineMemOperand *SrcMemOp = *std::next(I.memoperands_begin());
+  const Align DstAlign = DstMemOp->getAlign();
+  const Align SrcAlign = SrcMemOp->getAlign();
+  if (DstAlign != SrcAlign && ST.isAtLeastSPIRVVer(VersionTuple(1, 4))) {
+    // Keep the existing flags and metadata on both accesses, changing only
+    // the source alignment. Both masks contain Aligned, so neither is omitted.
+    addMemoryOperands(DstMemOp, MIB, MIRBuilder, GR);
+    addMemoryOperands(DstMemOp, MIB, MIRBuilder, GR, SrcAlign);
+    return;
+  }
+
+  addMemoryOperands(DstMemOp, MIB, MIRBuilder, GR,
+                    std::min(DstAlign, SrcAlign));
 }
 
 static void addMemoryOperands(uint64_t Flags, MachineInstrBuilder &MIB) {
@@ -2553,10 +2590,7 @@ bool SPIRVInstructionSelector::selectCopyMemory(MachineInstr &I,
   auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCopyMemory))
                  .addUse(DstReg)
                  .addUse(SrcReg);
-  if (I.getNumMemOperands()) {
-    MachineIRBuilder MIRBuilder(I);
-    addMemoryOperands(*I.memoperands_begin(), MIB, MIRBuilder, GR);
-  }
+  addCopyMemoryOperands(I, MIB, GR);
   MIB.constrainAllUses(TII, TRI, RBI);
   return true;
 }
@@ -2568,10 +2602,7 @@ bool SPIRVInstructionSelector::selectCopyMemorySized(MachineInstr &I,
                  .addUse(I.getOperand(0).getReg())
                  .addUse(SrcReg)
                  .addUse(I.getOperand(2).getReg());
-  if (I.getNumMemOperands()) {
-    MachineIRBuilder MIRBuilder(I);
-    addMemoryOperands(*I.memoperands_begin(), MIB, MIRBuilder, GR);
-  }
+  addCopyMemoryOperands(I, MIB, GR);
   MIB.constrainAllUses(TII, TRI, RBI);
   return true;
 }
