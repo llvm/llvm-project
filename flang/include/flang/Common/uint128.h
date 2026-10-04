@@ -348,17 +348,19 @@ public:
 };
 
 #if defined(__SIZEOF_INT128__)
-// Handle discrepancy of support bit 128 bit integers by compiler and standard
-// library. The compiler may treat __int128 as a builtin type, but the standard
-// library does not define std::numeric_limits for it. Two cases are known:
+// Handle discrepancy of support of bit 128 bit integers by compiler and
+// standard library. The compiler may treat __int128 as a builtin type, but the
+// standard library does not define std::numeric_limits for it. Two cases are
+// known:
 //
 // 1. clang-cl supports __int128, but MSVC, and therefore its STL used by
 //    clang-cl, does not.
 //
-// 2. libstdc++ in strict mode (-std=c++NN) intentionally removes any use of
-//    __int128, even though gcc does not make such a distinction.
+// 2. Some versions of libstdc++ in strict mode (-std=c++NN)
+//    intentionally removes any use of __int128, even though gcc does not make
+//    such a distinction.
 //
-// Note: Using __int128_t/__uint128_t typedefs; spelling out the __int128
+// Using __int128_t/__uint128_t typedefs; spelling out the __int128
 // keyword is a warning "ISO C++ does not support ‘__int128’ for ‘type name’"
 // under -Wpedantic
 
@@ -398,11 +400,14 @@ public:
 /// std::numeric_limits is allowed to be extended for user-defined types such as
 /// UnsignedInt128/SignedInt128 (C++ [namespace.std]), it is not for the
 /// __int128/__uint128 workaround above.
+///
+/// Only defining the members actually used in Flang/Flang-RT. Feel free to add
+/// more members as needed.
 template <typename T>
-using numeric_limits =
-    std::conditional_t<detail::numeric_limits<T>::is_specialized &&
-            !std::numeric_limits<T>::is_specialized,
-        detail::numeric_limits<T>, std::numeric_limits<T>>;
+using numeric_limits = std::conditional_t<
+    detail::numeric_limits<std::decay_t<T>>::is_specialized &&
+        !std::numeric_limits<T>::is_specialized,
+    detail::numeric_limits<std::decay_t<T>>, std::numeric_limits<T>>;
 
 } // namespace Fortran::common
 #endif
