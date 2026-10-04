@@ -967,21 +967,27 @@ using TripleSet = std::multiset<llvm::Triple>;
 // requested offloading kind and architectures.
 static TripleSet inferOffloadToolchains(Compilation &C,
                                         Action::OffloadKind Kind) {
+  // An Intel GPU has several accepted spellings, so key it by its canonical
+  // name, or --no-offload-arch with another spelling would not remove it.
+  auto Canonical = [](StringRef Arch) {
+    OffloadArch ID = StringToOffloadArch(Arch);
+    return ID.isIntelGPU() ? std::string(OffloadArchToString(ID)) : Arch.str();
+  };
   std::set<std::string> Archs;
   for (Arg *A : C.getInputArgs()) {
     for (StringRef Arch : A->getValues()) {
       if (A->getOption().matches(options::OPT_offload_arch_EQ)) {
         if (Arch == "native") {
           for (StringRef Str : getSystemOffloadArchs(C, Kind))
-            Archs.insert(Str.str());
+            Archs.insert(Canonical(Str));
         } else {
-          Archs.insert(Arch.str());
+          Archs.insert(Canonical(Arch));
         }
       } else if (A->getOption().matches(options::OPT_no_offload_arch_EQ)) {
         if (Arch == "all")
           Archs.clear();
         else
-          Archs.erase(Arch.str());
+          Archs.erase(Canonical(Arch));
       }
     }
   }
@@ -3898,16 +3904,21 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   Args.ClaimAllArgs(options::OPT_cl_ignored_Group);
 }
 
-/// Returns the canonical name for the offloading architecture when using a HIP
-/// or CUDA architecture.
+/// Returns the canonical name for the offloading architecture when using a HIP,
+/// CUDA or Intel GPU architecture.
 static StringRef getCanonicalArchString(Compilation &C,
                                         const llvm::opt::DerivedArgList &Args,
                                         StringRef ArchStr,
-                                        const llvm::Triple &Triple) {
+                                        const llvm::Triple &Triple,
+                                        Action::OffloadKind Kind) {
   // Lookup the CUDA / HIP architecture string. Only report an error if we were
   // expecting the triple to be only NVPTX / AMDGPU.
   OffloadArch Arch =
       StringToOffloadArch(getProcessorFromTargetID(Triple, ArchStr));
+  // An Intel name takes no target features, so it must parse in full; otherwise
+  // "xe-pvc:garbage" would silently become "xe-pvc".
+  if (Arch.isIntel() && !StringToOffloadArch(ArchStr).isIntel())
+    Arch = OffloadArch::getUnknown();
   if (Triple.isNVPTX() && (Arch.isUnknown() || !Arch.isNVPTX())) {
     C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
         << "CUDA" << ArchStr;
@@ -3928,9 +3939,21 @@ static StringRef getCanonicalArchString(Compilation &C,
         return StringRef();
       }
     }
+  } else if (Kind == Action::OFK_SYCL && Triple.isSPIRV() &&
+             Triple.getVendor() == llvm::Triple::UnknownVendor &&
+             !ArchStr.empty() && ArchStr != "generic" && !Arch.isIntel()) {
+    // A SYCL device on a plain SPIR-V target is an Intel GPU or CPU, or
+    // "generic" for none in particular; reject anything else here, as for CUDA
+    // and HIP, rather than build for a device that does not exist.
+    C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
+        << "SYCL" << ArchStr;
+    return StringRef();
   }
 
-  if (Arch.isNVPTX())
+  // An Intel GPU has several accepted spellings, e.g. an alias or a numeric
+  // name, so canonicalize it for the same reason as an NVPTX one: two spellings
+  // of one device must be one architecture.
+  if (Arch.isNVPTX() || Arch.isIntelGPU())
     return Args.MakeArgStringRef(OffloadArchToString(Arch));
 
   if (Arch.isAMDGPU() || Arch.isAMDGCNSPIRV()) {
@@ -3991,7 +4014,7 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
 
           for (auto ArchStr : *GPUsOrErr) {
             StringRef CanonicalStr = getCanonicalArchString(
-                C, Args, Args.MakeArgString(ArchStr), TC.getTriple());
+                C, Args, Args.MakeArgString(ArchStr), TC.getTriple(), Kind);
             if (!CanonicalStr.empty())
               Archs.insert(CanonicalStr);
             else
@@ -3999,7 +4022,7 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
           }
         } else {
           StringRef CanonicalStr =
-              getCanonicalArchString(C, Args, Arch, TC.getTriple());
+              getCanonicalArchString(C, Args, Arch, TC.getTriple(), Kind);
           if (!CanonicalStr.empty())
             Archs.insert(CanonicalStr);
           else
@@ -4012,7 +4035,7 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
           Archs.clear();
         } else {
           StringRef ArchStr =
-              getCanonicalArchString(C, Args, Arch, TC.getTriple());
+              getCanonicalArchString(C, Args, Arch, TC.getTriple(), Kind);
           Archs.erase(ArchStr);
         }
       }
@@ -4068,7 +4091,7 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
                                   ? ""
                                   : OffloadArchToString(TripleOffloadArch);
     StringRef CanonicalStr =
-        getCanonicalArchString(C, Args, ArchStr, TC.getTriple());
+        getCanonicalArchString(C, Args, ArchStr, TC.getTriple(), Kind);
     if (!CanonicalStr.empty())
       Archs.insert(CanonicalStr);
   }

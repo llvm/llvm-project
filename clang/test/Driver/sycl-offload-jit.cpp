@@ -90,10 +90,69 @@
 // RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl -fno-gpu-rdc \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=generic --offload-arch=bmg_g21 \
 // RUN:   -c %s 2>&1 | FileCheck -check-prefixes=CHK-PHASES-NORDC-ARCHS %s
-// CHK-PHASES-NORDC-ARCHS: 7: offload, "device-sycl (spirv64-unknown-unknown:bmg_g21)" {6}, ir
-// CHK-PHASES-NORDC-ARCHS: 12: offload, "device-sycl (spirv64-unknown-unknown:generic)" {11}, ir
+// CHK-PHASES-NORDC-ARCHS: 7: offload, "device-sycl (spirv64-unknown-unknown:generic)" {6}, ir
+// CHK-PHASES-NORDC-ARCHS: 12: offload, "device-sycl (spirv64-unknown-unknown:xe-bmg-g21)" {11}, ir
 // CHK-PHASES-NORDC-ARCHS-NEXT: 13: llvm-offload-binary, {7, 12}, image, (device-sycl)
 // CHK-PHASES-NORDC-ARCHS-NEXT: 14: clang-linker-wrapper, {13}, sycl-fatbin, (device-sycl)
+
+/// Every spelling of an Intel GPU names one architecture, spelled canonically,
+/// so several spellings of one device build it once, and removing any spelling
+/// removes the device.
+// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=bmg_g21 \
+// RUN:   --offload-arch=xe-bmg-g21 --offload-arch=xe_20.1.0 -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-INTEL-SPELLINGS %s
+// CHK-INTEL-SPELLINGS: offload, "device-sycl (spirv64-unknown-unknown:xe-bmg-g21)"
+// CHK-INTEL-SPELLINGS-NOT: offload, "device-sycl (spirv64-unknown-unknown:
+// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=bmg_g21 \
+// RUN:   --offload-arch=generic --no-offload-arch=xe-bmg-g21 -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-INTEL-NO-ARCH %s
+// CHK-INTEL-NO-ARCH: offload, "device-sycl (spirv64-unknown-unknown:generic)"
+// CHK-INTEL-NO-ARCH-NOT: bmg_g21
+// CHK-INTEL-NO-ARCH-NOT: xe-bmg-g21
+
+/// An Intel GPU name alone picks the SPIR-V target.
+// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=xe-pvc --offload-arch=bmg_g21 -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-INTEL-NO-TARGETS %s
+// CHK-INTEL-NO-TARGETS-DAG: offload, "device-sycl (spirv64-unknown-unknown:xe-bmg-g21)"
+// CHK-INTEL-NO-TARGETS-DAG: offload, "device-sycl (spirv64-unknown-unknown:xe-pvc)"
+// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=bmg_g21 --offload-arch=xe-pvc --no-offload-arch=xe-bmg-g21 \
+// RUN:   -c %s 2>&1 | FileCheck -check-prefixes=CHK-INTEL-NO-TARGETS-NO-ARCH %s
+// CHK-INTEL-NO-TARGETS-NO-ARCH-NOT: bmg
+// CHK-INTEL-NO-TARGETS-NO-ARCH: offload, "device-sycl (spirv64-unknown-unknown:xe-pvc)"
+// CHK-INTEL-NO-TARGETS-NO-ARCH-NOT: bmg
+
+/// On a SPIR-V target, a SYCL device must be an Intel GPU or "generic".
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-pcv -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-INTEL-BAD-ARCH %s
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe_12.60. -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-INTEL-BAD-ARCH-NUM %s
+// CHK-INTEL-BAD-ARCH: error: unsupported SYCL gpu architecture: xe-pcv
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-pvc:garbage -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-INTEL-BAD-ARCH-SUFFIX %s
+// CHK-INTEL-BAD-ARCH-SUFFIX: error: unsupported SYCL gpu architecture: xe-pvc:garbage
+
+/// -Xarch_ may name an Intel GPU by any of its spellings.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=bmg_g21 \
+// RUN:   -Xarch_bmg_g21 -DBMG -Xarch_xe-pvc -DPVC -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-INTEL-XARCH %s
+// CHK-INTEL-XARCH: "-fsycl-is-device"
+// CHK-INTEL-XARCH-SAME: "-D" "BMG"
+// CHK-INTEL-XARCH-NOT: "PVC"
+
+/// An Intel CPU is a SYCL device on a SPIR-V target too.
+// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=graniterapids -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-INTEL-CPU %s
+// CHK-INTEL-CPU: offload, "device-sycl (spirv64-unknown-unknown:graniterapids)"
+// CHK-INTEL-BAD-ARCH-NUM: error: unsupported SYCL gpu architecture: xe_12.60.
 
 /// Multiple device triples are not supported today in non-RDC mode.
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fno-gpu-rdc \
