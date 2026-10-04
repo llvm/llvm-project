@@ -462,15 +462,16 @@ void AsmWriterEmitter::EmitGetMnemonic(
   BitsOS << "  uint" << ((BitsLeft < (OpcodeInfoBits - 32)) ? 64 : 32)
          << "_t Bits = 0;\n";
   while (BytesNeeded != 0) {
-    // Figure out how big this table section needs to be, but no bigger than 4.
-    unsigned TableSize = std::min(llvm::bit_floor(BytesNeeded), 4u);
+    // Figure out how big this table section needs to be.
+    unsigned TableSize = llvm::bit_floor(BytesNeeded);
     BytesNeeded -= TableSize;
     TableSize *= 8; // Convert to bits;
-    uint64_t Mask = (1ULL << TableSize) - 1;
+    uint64_t Mask = maskTrailingOnes<uint64_t>(TableSize);
     O << "  static const uint" << TableSize << "_t OpInfo" << Table
       << "[] = {\n";
+    StringRef Suffix = TableSize == 64 ? "ULL" : "U";
     for (unsigned i = 0, e = NumberedInstructions.size(); i != e; ++i) {
-      O << "    " << ((OpcodeInfo[i] >> Shift) & Mask) << "U,\t// "
+      O << "    " << ((OpcodeInfo[i] >> Shift) & Mask) << Suffix << ",\t// "
         << NumberedInstructions[i]->getName() << '\n';
     }
     O << "  };\n\n";

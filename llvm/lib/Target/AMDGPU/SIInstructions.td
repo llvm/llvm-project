@@ -656,13 +656,13 @@ def SI_EARLY_TERMINATE_SCC0 : SPseudoInstSI <(outs), (ins)> {
 
 let Uses = [EXEC] in {
 
-multiclass PseudoInstKill <dag ins> {
+multiclass PseudoInstKill <dag ins, list<Register> extraDefs = []> {
   // Even though this pseudo can usually be expanded without an SCC def, we
   // conservatively assume that it has an SCC def, both because it is sometimes
   // required in degenerate cases (when V_CMPX cannot be used due to constant
   // bus limitations) and because it allows us to avoid having to track SCC
   // liveness across basic blocks.
-  let isConvergent = 1, Defs = [EXEC,SCC] in {
+  let isConvergent = 1, Defs = !listconcat([EXEC, SCC], extraDefs) in {
     def _PSEUDO : PseudoInstSI <(outs), ins> {
       let usesCustomInserter = 1;
     }
@@ -673,15 +673,14 @@ multiclass PseudoInstKill <dag ins> {
 }
 
 defm SI_KILL_I1 : PseudoInstKill <(ins SCSrc_i1:$src, i1imm:$killvalue)>;
-let Defs = [VCC] in
-defm SI_KILL_F32_COND_IMM : PseudoInstKill <(ins VSrc_b32:$src0, i32imm:$src1, i32imm:$cond)>;
+defm SI_KILL_F32_COND_IMM : PseudoInstKill <(ins VSrc_b32:$src0, i32imm:$src1, i32imm:$cond), [VCC]>;
 
 let Defs = [EXEC,VCC] in
 def SI_ILLEGAL_COPY : SPseudoInstSI <
   (outs unknown:$dst), (ins unknown:$src),
   [], " ; illegal copy $src to $dst">;
 
-} // End Uses = [EXEC], Defs = [EXEC,VCC]
+} // End Uses = [EXEC]
 
 // Branch on undef scc. Used to avoid intermediate copy from
 // IMPLICIT_DEF to SCC.
