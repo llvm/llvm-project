@@ -13696,10 +13696,16 @@ TTI::OperandValueInfo BoUpSLP::getOperandInfo(ArrayRef<Value *> Ops) const {
       return CI->getValue().isNegatedPowerOf2();
     return false;
   });
+  const bool IsIdentity = all_of(enumerate(Ops), [&](const auto &Data) {
+    auto *CI = llvm::dyn_cast<llvm::ConstantInt>(Data.value());
+    return CI && CI->getLimitedValue() == Data.index();
+  });
 
   TTI::OperandValueKind VK = TTI::OK_AnyValue;
   if (IsConstant && IsUniform)
     VK = TTI::OK_UniformConstantValue;
+  else if (IsIdentity)
+    VK = TTI::OK_IdentityConstantValue;
   else if (IsConstant)
     VK = TTI::OK_NonUniformConstantValue;
   else if (IsUniform)
