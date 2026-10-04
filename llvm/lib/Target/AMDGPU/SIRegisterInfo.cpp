@@ -4272,6 +4272,56 @@ const int *SIRegisterInfo::getRegUnitPressureSets(MCRegUnit RegUnit) const {
   return AMDGPUGenRegisterInfo::getRegUnitPressureSets(RegUnit);
 }
 
+// An MFMA whose destination may overlap its accumulator has no tied form, so
+// the allocator may move an accumulator chain to a new register at every step,
+// which costs copies and spills under register pressure. Prefer the
+// accumulator register for the destination and vice versa.
+static void addMFMAAccumulatorHints(const SIRegisterInfo &TRI, Register VirtReg,
+                                    ArrayRef<MCPhysReg> Order,
+                                    SmallVectorImpl<MCPhysReg> &Hints,
+                                    const MachineRegisterInfo &MRI,
+                                    const VirtRegMap &VRM) {
+  const TargetRegisterClass *RC = MRI.getRegClass(VirtReg);
+
+  auto GetPairedPhys = [&](const MachineOperand &Paired,
+                           const MachineOperand &Self) -> MCRegister {
+    Register PairedReg = Paired.getReg();
+    if (!PairedReg.isVirtual() || !VRM.hasPhys(PairedReg))
+      return MCRegister();
+    MCRegister Phys = VRM.getPhys(PairedReg);
+    if (unsigned SubIdx = Paired.getSubReg())
+      Phys = TRI.getSubReg(Phys, SubIdx);
+    if (unsigned SubIdx = Self.getSubReg())
+      Phys = TRI.getMatchingSuperReg(Phys, SubIdx, RC);
+    return Phys;
+  };
+
+  for (const MachineInstr &MI : MRI.reg_nodbg_instructions(VirtReg)) {
+    if (!SIInstrInfo::isMFMA(MI))
+      continue;
+    int DstIdx =
+        AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vdst);
+    int Src2Idx =
+        AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src2);
+    if (DstIdx < 0 || Src2Idx < 0)
+      continue;
+    const MachineOperand &Dst = MI.getOperand(DstIdx);
+    const MachineOperand &Src2 = MI.getOperand(Src2Idx);
+    if (Dst.isEarlyClobber() || !Src2.isReg() || Src2.isUndef() ||
+        Dst.getReg() == Src2.getReg())
+      continue;
+
+    MCRegister Phys;
+    if (Dst.getReg() == VirtReg)
+      Phys = GetPairedPhys(Src2, Dst);
+    else if (Src2.getReg() == VirtReg)
+      Phys = GetPairedPhys(Dst, Src2);
+    if (Phys && !MRI.isReserved(Phys) && is_contained(Order, Phys) &&
+        !is_contained(Hints, Phys))
+      Hints.push_back(Phys);
+  }
+}
+
 bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
                                            ArrayRef<MCPhysReg> Order,
                                            SmallSetVector<MCPhysReg, 16> &Hints,
@@ -4334,8 +4384,10 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
     return false;
   }
   default:
-    return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
-                                                     VRM);
+    TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF, VRM);
+    if (VRM && ST.hasMAIInsts() && hasVectorRegisters(MRI.getRegClass(VirtReg)))
+      addMFMAAccumulatorHints(*this, VirtReg, Order, Hints, MRI, *VRM);
+    return false;
   }
 }
 
