@@ -94,8 +94,10 @@ struct TrackCopyMove {
 };
 
 struct StaticallyCallable {
-  static inline int static_call_count = 0;
-  static int operator()() noexcept { static_call_count++; return 42; }
+  static int operator()(int& out) noexcept {
+    out = 42;
+    return 42;
+  }
 };
 
 void test_default() {
@@ -201,12 +203,12 @@ void test_default() {
     f(TrackCopyMove{});
   }
   {
-    // Non-void static operator() can bind to function_ref<void()>
+    // Non-void static operator() can bind to function_ref<void(int&)>
+    int expect_42 = 0;
     StaticallyCallable sc;
-    std::function_ref<void()> f = sc;
-    StaticallyCallable::static_call_count = 0;
-    f();
-    assert(StaticallyCallable::static_call_count == 1);
+    std::function_ref<void(int&)> f = sc;
+    f(expect_42);
+    assert(expect_42 == 42);
   }
 }
 
@@ -313,12 +315,12 @@ void test_const() {
     f(TrackCopyMove{});
   }
   {
-    // Non-void static operator() can bind to function_ref<void()>
+    // Non-void static operator() can bind to function_ref<void(int&) const>
+    int expect_42 = 0;
     StaticallyCallable sc;
-    std::function_ref<void() const> f = sc;
-    StaticallyCallable::static_call_count = 0;
-    f();
-    assert(StaticallyCallable::static_call_count == 1);
+    std::function_ref<void(int&) const> f = sc;
+    f(expect_42);
+    assert(expect_42 == 42);
   }
 }
 
@@ -426,12 +428,12 @@ void test_noexcept() {
     f(TrackCopyMove{});
   }
   {
-    // Non-void static operator() can bind to function_ref<void()>
+    // Non-void static operator() can bind to function_ref<void(int&) noexcept>
+    int expect_42 = 0;
     StaticallyCallable sc;
-    std::function_ref<void() noexcept> f = sc;
-    StaticallyCallable::static_call_count = 0;
-    f();
-    assert(StaticallyCallable::static_call_count == 1);
+    std::function_ref<void(int&) noexcept> f = sc;
+    f(expect_42);
+    assert(expect_42 == 42);
   }
 }
 
@@ -539,12 +541,12 @@ void test_const_noexcept() {
     f(TrackCopyMove{});
   }
   {
-    // Non-void static operator() can bind to function_ref<void()>
+    // Non-void static operator() can bind to function_ref<void(int&) const noexcept>
+    int expect_42 = 0;
     StaticallyCallable sc;
-    std::function_ref<void() const noexcept> f = sc;
-    StaticallyCallable::static_call_count = 0;
-    f();
-    assert(StaticallyCallable::static_call_count == 1);
+    std::function_ref<void(int&) const noexcept> f = sc;
+    f(expect_42);
+    assert(expect_42 == 42);
   }
 }
 
