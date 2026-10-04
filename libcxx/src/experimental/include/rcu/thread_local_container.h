@@ -11,9 +11,9 @@
 #define _LIBCPP___RCU_THREAD_LOCAL_CONTAINER_H
 
 #include <__config>
-#include <__functional/function_ref.h>
 #include <__rcu/rcu_domain.h>
 
+#include <functional>
 #include <mutex>
 #include <optional>
 #include <vector>
