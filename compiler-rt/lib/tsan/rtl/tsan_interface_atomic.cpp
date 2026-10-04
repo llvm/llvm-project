@@ -931,9 +931,14 @@ void __tsan_go_atomic64_load(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
 }
 
 #  if __TSAN_HAS_INT128
+// Go's args buffer is only 8-byte aligned; ALIGNED(8) relaxes the alignment
+// of accesses through this type.
+using a128_u64 ALIGNED(8) = a128;
+
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic128_load(ThreadState* thr, uptr cpc, uptr pc, u8* a) {
-  *(a128*)(a + 8) = AtomicGoRet<OpLoad>(thr, cpc, pc, mo_acquire, *(a128**)a);
+  *(a128_u64*)(a + 8) =
+      AtomicGoRet<OpLoad>(thr, cpc, pc, mo_acquire, *(a128**)a);
 }
 #  endif
 
@@ -950,7 +955,8 @@ void __tsan_go_atomic64_store(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic128_store(ThreadState* thr, uptr cpc, uptr pc, u8* a) {
-  AtomicGo<OpStore>(thr, cpc, pc, mo_release, *(a128**)a, *(a128*)(a + 8));
+  AtomicGo<OpStore>(thr, cpc, pc, mo_release, *(a128**)a,
+                    *(a128_u64*)(a + 8));
 }
 #  endif
 
@@ -1024,9 +1030,9 @@ void __tsan_go_atomic64_compare_exchange(ThreadState *thr, uptr cpc, uptr pc,
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic128_compare_exchange(ThreadState* thr, uptr cpc, uptr pc,
                                           u8* a) {
-  a128 cmp = *(a128*)(a + 8);
+  a128 cmp = *(a128_u64*)(a + 8);
   a128 cur = AtomicGoRet<OpCAS>(thr, cpc, pc, mo_acq_rel, mo_acquire,
-                                *(a128**)a, cmp, *(a128*)(a + 24));
+                                *(a128**)a, cmp, *(a128_u64*)(a + 24));
   *(bool*)(a + 40) = (cur == cmp);
 }
 #  endif
