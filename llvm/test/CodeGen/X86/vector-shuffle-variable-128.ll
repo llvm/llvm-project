@@ -118,7 +118,7 @@ define <4 x float> @var_shuffle_v4f32_v4f32_xxxx_i32(<4 x float> %x, i32 %i0, i3
 ; SSE41-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    andl $3, %ecx
 ; SSE41-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],zero,zero
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; SSE41-NEXT:    retq
@@ -135,7 +135,7 @@ define <4 x float> @var_shuffle_v4f32_v4f32_xxxx_i32(<4 x float> %x, i32 %i0, i3
 ; AVX-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    andl $3, %ecx
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],zero,zero
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; AVX-NEXT:    retq
