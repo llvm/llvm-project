@@ -109,7 +109,7 @@ void PerTargetMIParsingState::initNames2Regs() {
 
   for (unsigned I = 0, E = TRI->getNumRegs(); I < E; ++I) {
     bool WasInserted =
-        Names2Regs.insert(std::make_pair(StringRef(TRI->getName(I)).lower(), I))
+        Names2Regs.insert(std::make_pair(TRI->getMIRRegName(I).lower(), I))
             .second;
     (void)WasInserted;
     assert(WasInserted && "Expected registers to be unique case-insensitively");
@@ -1350,7 +1350,7 @@ static const char *printImplicitRegisterFlag(const MachineOperand &MO) {
 static std::string getRegisterName(const TargetRegisterInfo *TRI,
                                    Register Reg) {
   assert(Reg.isPhysical() && "expected phys reg");
-  return StringRef(TRI->getName(Reg)).lower();
+  return TRI->getMIRRegName(Reg).lower();
 }
 
 /// Return true if the parsed machine operands contain a given machine operand.

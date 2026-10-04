@@ -81,7 +81,7 @@ liveins:
   - { reg: '$a1_64', virtual-reg: '' }
   - { reg: '$a2_64', virtual-reg: '' }
   - { reg: '$a3_64', virtual-reg: '' }
-  - { reg: '$t0_64', virtual-reg: '' }
+  - { reg: '$a4_64', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -131,7 +131,7 @@ stack:
 constants:
 body:             |
   bb.0.entry:
-    liveins: $a0_64, $a1_64, $a2_64, $a3_64, $t0_64
+    liveins: $a0_64, $a1_64, $a2_64, $a3_64, $a4_64
 
     SD killed $a0_64, %stack.1.a, 0 :: (store (s64) into %ir.1, align 16)
     SD killed $a1_64, %stack.1.a, 8 :: (store (s64) into %ir.2)
@@ -141,7 +141,7 @@ body:             |
     $w1 = LD_B %stack.2.b, 0 :: (dereferenceable load (s128) from %ir.b)
     ST_B killed $w0, %stack.3.a.addr, 0 :: (store (s128) into %ir.a.addr)
     ST_B killed $w1, %stack.4.b.addr, 0 :: (store (s128) into %ir.b.addr)
-    SW $t0, %stack.5.c.addr, 0, implicit killed $t0_64 :: (store (s32) into %ir.c.addr)
+    SW $a4, %stack.5.c.addr, 0, implicit killed $a4_64 :: (store (s32) into %ir.c.addr)
     $at_64 = LEA_ADDiu64 %stack.8, 0
     SD killed $at_64, %stack.6.g, 0 :: (store (s64) into %ir.g)
     $a1_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
@@ -156,14 +156,14 @@ body:             |
     $a1_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
     $a2_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
     $a3_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $a4_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $a5_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $a6_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $a7_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
     $t0_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
     $t1_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
     $t2_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
     $t3_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
-    $t4_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
-    $t5_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
-    $t6_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
-    $t7_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
     $s0_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
     $s1_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
     $s2_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
@@ -183,14 +183,14 @@ body:             |
     SD $a1_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
     SD $a2_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
     SD $a3_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $a4_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $a5_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $a6_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $a7_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
     SD $t0_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
     SD $t1_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
     SD $t2_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
     SD $t3_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
-    SD $t4_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
-    SD $t5_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
-    SD $t6_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
-    SD $t7_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
     SD $s0_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
     SD $s1_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
     SD $s2_64, %stack.7.d, 0 :: (store (s64) into %ir.d)

@@ -121,7 +121,7 @@ Printable llvm::printReg(Register Reg, const TargetRegisterInfo *TRI,
       OS << '$' << "physreg" << Reg.id();
     else if (Reg < TRI->getNumRegs()) {
       OS << '$';
-      printLowerCase(TRI->getName(Reg), OS);
+      printLowerCase(TRI->getMIRRegName(Reg), OS);
     } else
       llvm_unreachable("Register kind is unsupported.");
 

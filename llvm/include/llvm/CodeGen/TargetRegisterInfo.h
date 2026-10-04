@@ -1045,6 +1045,10 @@ public:
     return StringRef(getName(Reg));
   }
 
+  /// Return the name used to serialize a physical register in MIR. Targets
+  /// with ABI-dependent register names may override this for each subtarget.
+  virtual StringRef getMIRRegName(MCRegister Reg) const { return getName(Reg); }
+
   //===--------------------------------------------------------------------===//
   /// Subtarget Hooks
 
