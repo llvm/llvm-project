@@ -16,7 +16,6 @@
 #include "ARMInstPrinter.h"
 #include "ARMMCAsmInfo.h"
 #include "TargetInfo/ARMTargetInfo.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"

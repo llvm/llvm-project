@@ -16,7 +16,6 @@
 #include "M68kMCAsmInfo.h"
 #include "TargetInfo/M68kTargetInfo.h"
 
-#include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrInfo.h"
