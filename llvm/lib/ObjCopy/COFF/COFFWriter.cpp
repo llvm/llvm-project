@@ -9,6 +9,7 @@
 #include "COFFWriter.h"
 #include "COFFObject.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
@@ -25,6 +26,52 @@ namespace coff {
 
 using namespace object;
 using namespace COFF;
+
+Error BinaryWriter::write() {
+  SmallVector<const Section *> Sections;
+  uint64_t MinAddr = UINT64_MAX;
+  uint64_t MaxAddr = 0;
+  for (const Section &Sec : Obj.getSections()) {
+    uint32_t Flags = Sec.Header.Characteristics;
+    if (Sec.getContents().empty())
+      continue;
+    if (!(Flags & IMAGE_SCN_CNT_CODE)) {
+      // COFF debug sections can have the initialized-data flag, too.
+      if (!(Flags & IMAGE_SCN_CNT_INITIALIZED_DATA) ||
+          Sec.Name.starts_with(".debug") || Sec.Name.starts_with(".zdebug") ||
+          Sec.Name.starts_with(".stab") ||
+          Sec.Name.starts_with(".gnu.linkonce.wi.") ||
+          Sec.Name.starts_with(".gnu.linkonce.wt.") ||
+          Sec.Name.starts_with(".gnu_debuglink") ||
+          Sec.Name.starts_with(".gnu_debugaltlink"))
+        continue;
+    }
+    uint64_t Addr = Sec.Header.VirtualAddress;
+    MinAddr = std::min(MinAddr, Addr);
+    MaxAddr = std::max(MaxAddr, Addr + Sec.getContents().size());
+    Sections.push_back(&Sec);
+  }
+  if (Sections.empty())
+    return Error::success();
+
+  uint64_t FileSize = MaxAddr - MinAddr;
+  if (FileSize > SIZE_MAX)
+    return createStringError(errc::file_too_large,
+                             "binary output is too large");
+  auto Buf = WritableMemoryBuffer::getNewMemBuffer(FileSize);
+  if (!Buf)
+    return createStringError(errc::not_enough_memory,
+                             "failed to allocate memory buffer of " +
+                                 Twine(FileSize) + " bytes");
+
+  // Preserve address gaps, but not PE headers or file-alignment padding.
+  // For overlapping sections, later sections overwrite earlier ones.
+  for (const Section *Sec : Sections)
+    llvm::copy(Sec->getContents(),
+               Buf->getBufferStart() + (Sec->Header.VirtualAddress - MinAddr));
+  Out.write(Buf->getBufferStart(), Buf->getBufferSize());
+  return Error::success();
+}
 
 Error COFFWriter::finalizeRelocTargets() {
   for (Section &Sec : Obj.getMutableSections()) {
