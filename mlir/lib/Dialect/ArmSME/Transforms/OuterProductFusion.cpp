@@ -219,22 +219,29 @@ private:
     auto nxv4i16 = VectorType::get({4}, rewriter.getI16Type(), true);
     auto nxv4f16 = VectorType::get({4}, rewriter.getF16Type(), true);
     auto nxv4bf16 = VectorType::get({4}, rewriter.getBF16Type(), true);
-    if ((failed(
-             isCompatible<arith::ExtFOp>(rewriter, op1, nxnxv4f32, nxv4f16)) ||
-         failed(
-             isCompatible<arith::ExtFOp>(rewriter, op2, nxnxv4f32, nxv4f16))) &&
-        (failed(
-             isCompatible<arith::ExtFOp>(rewriter, op1, nxnxv4f32, nxv4bf16)) ||
-         failed(isCompatible<arith::ExtFOp>(rewriter, op2, nxnxv4f32,
-                                            nxv4bf16))) &&
-        (failed(
-             isCompatible<arith::ExtSIOp>(rewriter, op1, nxnxv4i32, nxv4i16)) ||
-         failed(isCompatible<arith::ExtSIOp>(rewriter, op2, nxnxv4i32,
-                                             nxv4i16))) &&
-        (failed(
-             isCompatible<arith::ExtUIOp>(rewriter, op1, nxnxv4i32, nxv4i16)) ||
-         failed(
-             isCompatible<arith::ExtUIOp>(rewriter, op2, nxnxv4i32, nxv4i16))))
+    const bool isF16Compatible =
+        succeeded(
+            isCompatible<arith::ExtFOp>(rewriter, op1, nxnxv4f32, nxv4f16)) &&
+        succeeded(
+            isCompatible<arith::ExtFOp>(rewriter, op2, nxnxv4f32, nxv4f16));
+    const bool isBF16Compatible =
+        succeeded(
+            isCompatible<arith::ExtFOp>(rewriter, op1, nxnxv4f32, nxv4bf16)) &&
+        succeeded(
+            isCompatible<arith::ExtFOp>(rewriter, op2, nxnxv4f32, nxv4bf16));
+    const bool isI16Compatible =
+        succeeded(
+            isCompatible<arith::ExtSIOp>(rewriter, op1, nxnxv4i32, nxv4i16)) &&
+        succeeded(
+            isCompatible<arith::ExtSIOp>(rewriter, op2, nxnxv4i32, nxv4i16));
+    const bool isUI16Compatible =
+        succeeded(
+            isCompatible<arith::ExtUIOp>(rewriter, op1, nxnxv4i32, nxv4i16)) &&
+        succeeded(
+            isCompatible<arith::ExtUIOp>(rewriter, op2, nxnxv4i32, nxv4i16));
+
+    if (!isF16Compatible && !isBF16Compatible && !isI16Compatible &&
+        !isUI16Compatible)
       return failure();
 
     return success();
