@@ -2924,11 +2924,22 @@ MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
       WSA);
 }
 
+bool TargetLoweringObjectFileGOFF::isReadOnlyInCodeSection(
+    const GlobalObject *GO) {
+  if (!GO->hasLocalLinkage())
+    return false;
+  if (const auto *GVar = dyn_cast<GlobalVariable>(GO))
+    if (GVar->hasInitializer() && GVar->getInitializer()->needsRelocation())
+      return false;
+  return true;
+}
+
 MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   auto *Symbol = TM.getSymbol(GO);
 
-  if (Kind.isBSS() || Kind.isData() || Kind.isReadOnlyWithRel()) {
+  if (Kind.isBSS() || Kind.isData() || Kind.isReadOnlyWithRel() ||
+      (Kind.isReadOnly() && !isReadOnlyInCodeSection(GO))) {
     GOFF::ESDBindingScope PRBindingScope =
         GO->hasExternalLinkage()
             ? (GO->hasDefaultVisibility() ? GOFF::ESD_BSC_ImportExport
