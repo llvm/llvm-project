@@ -1113,8 +1113,7 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
       VPValue *Cmp = Builder.createICmp(
           MinMaxIntrinsic::getPredicate(IntrinsicID), Result, Op, DL);
       Result = Builder.createSelect(Cmp, Result, Op, DL);
-      Function &F =
-          *Builder.getPlan().getScalarHeader()->getIRBasicBlock()->getParent();
+      Function &F = *Builder.getPlan().getIRFunction();
       if (MDNode *MD =
               getExplicitlyUnknownBranchWeightsIfProfiled(F, "scev-expander"))
         cast<VPInstruction>(Result)->setMetadata(LLVMContext::MD_prof, MD);
