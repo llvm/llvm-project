@@ -30,16 +30,6 @@ namespace detail {
 template <typename T> class numeric_limits;
 }
 
-/// Same as std::numeric_limits, but also defined for
-/// UnsignedInt128/SignedInt128.
-/// While std::numeric_limits is allowed to be extended for user-defined types
-/// (C++ [namespace.std]), it is not for the MSVC STL __int128/__uint128
-/// workaround below.
-template <typename T>
-using numeric_limits =
-    std::conditional_t<std::numeric_limits<T>::is_specialized,
-        std::numeric_limits<T>, detail::numeric_limits<T>>;
-
 template <bool IS_SIGNED = false> class Int128 {
   friend class detail::numeric_limits<Int128>;
 
@@ -319,6 +309,11 @@ using HostSignedIntType = typename HostSignedIntTypeHelper<BITS>::type;
 
 namespace detail {
 
+template <typename T> class numeric_limits {
+public:
+  static constexpr bool is_specialized{false};
+};
+
 template <> class numeric_limits<Fortran::common::UnsignedInt128> {
 public:
   using T = Fortran::common::UnsignedInt128;
@@ -395,5 +390,16 @@ public:
 };
 #endif
 } // namespace detail
+
+/// Same as std::numeric_limits, but also defined for 128 bit integers. While
+/// std::numeric_limits is allowed to be extended for user-defined types such as
+/// UnsignedInt128/SignedInt128 (C++ [namespace.std]), it is not for the
+/// __int128/__uint128 workaround above.
+template <typename T>
+using numeric_limits =
+    std::conditional_t<detail::numeric_limits<T>::is_specialized &&
+            !std::numeric_limits<T>::is_specialized,
+        detail::numeric_limits<T>, std::numeric_limits<T>>;
+
 } // namespace Fortran::common
 #endif
