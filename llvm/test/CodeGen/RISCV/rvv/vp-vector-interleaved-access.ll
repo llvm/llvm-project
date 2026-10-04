@@ -62,12 +62,11 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>} @load_factor3_no_extract(ptr %pt
 ; CHECK-NEXT:  # %bb.1: # %bb0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vlseg3e32.v v7, (a0)
-; CHECK-NEXT:    j .LBB3_3
+; CHECK-NEXT:    vmv1r.v v8, v7
+; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB3_2: # %bb1
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vlseg3e32.v v7, (a0)
-; CHECK-NEXT:  .LBB3_3: # %merge
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    ret
   %p = icmp ne i32 %evl, 12
