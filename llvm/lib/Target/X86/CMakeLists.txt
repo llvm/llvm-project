@@ -27,6 +27,10 @@ tablegen(LLVM X86GenPostLegalizeGICombiner.inc -gen-global-isel-combiner
 
 set(LLVM_TARGET_DEFINITIONS X86Options.td)
 tablegen(LLVM X86Options.inc -gen-opt-parser-defs)
+
+set(LLVM_TARGET_DEFINITIONS MCTargetDesc/X86MCOptions.td)
+tablegen(LLVM X86MCOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(X86CommonTableGen)
 
 set(sources
