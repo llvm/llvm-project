@@ -29,7 +29,7 @@ module attributes {gpu.container_module} {
       acc.compute_region launch(%arg0 = %0) ins(%arg10 = %1) : (!acc.private_type<memref<10xi32>>) {
         %2 = acc.private_local %arg10 : (!acc.private_type<memref<10xi32>>) -> memref<10xi32>
         acc.yield
-      } {origin = "acc.routine"}
+      } <{origin = "acc.routine"}>
       gpu.return
     }
 

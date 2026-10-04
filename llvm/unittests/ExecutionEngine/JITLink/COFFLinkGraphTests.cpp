@@ -18,7 +18,7 @@ using namespace llvm::jitlink;
 
 TEST(COFFLinkGraphTest, GetImageBaseSymbolReturnsNullWhenMissing) {
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-pc-windows-msvc"), SubtargetFeatures(),
+              Triple("x86_64-pc-windows-msvc"), 8, SubtargetFeatures(),
               getGenericEdgeKindName);
 
   GetImageBaseSymbol GetIB;
@@ -27,7 +27,7 @@ TEST(COFFLinkGraphTest, GetImageBaseSymbolReturnsNullWhenMissing) {
 
 TEST(COFFLinkGraphTest, GetImageBaseSymbolFindsExternal) {
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-pc-windows-msvc"), SubtargetFeatures(),
+              Triple("x86_64-pc-windows-msvc"), 8, SubtargetFeatures(),
               getGenericEdgeKindName);
 
   auto &ExtSym = G.addExternalSymbol(G.intern("__ImageBase"), 0, false);
@@ -37,7 +37,7 @@ TEST(COFFLinkGraphTest, GetImageBaseSymbolFindsExternal) {
 
 TEST(COFFLinkGraphTest, GetImageBaseSymbolFindsAbsolute) {
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-pc-windows-msvc"), SubtargetFeatures(),
+              Triple("x86_64-pc-windows-msvc"), 8, SubtargetFeatures(),
               getGenericEdgeKindName);
 
   auto &AbsSym =
@@ -49,7 +49,7 @@ TEST(COFFLinkGraphTest, GetImageBaseSymbolFindsAbsolute) {
 
 TEST(COFFLinkGraphTest, GetImageBaseSymbolFindsDefined) {
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-pc-windows-msvc"), SubtargetFeatures(),
+              Triple("x86_64-pc-windows-msvc"), 8, SubtargetFeatures(),
               getGenericEdgeKindName);
 
   auto &Sec =
@@ -65,7 +65,7 @@ TEST(COFFLinkGraphTest, GetImageBaseSymbolFindsDefined) {
 
 TEST(COFFLinkGraphTest, GetImageBaseSymbolCachesResult) {
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-pc-windows-msvc"), SubtargetFeatures(),
+              Triple("x86_64-pc-windows-msvc"), 8, SubtargetFeatures(),
               getGenericEdgeKindName);
 
   auto &ExtSym = G.addExternalSymbol(G.intern("__ImageBase"), 0, false);
@@ -79,7 +79,7 @@ TEST(COFFLinkGraphTest, GetImageBaseSymbolCachesResult) {
 
 TEST(COFFLinkGraphTest, GetImageBaseSymbolReset) {
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-pc-windows-msvc"), SubtargetFeatures(),
+              Triple("x86_64-pc-windows-msvc"), 8, SubtargetFeatures(),
               getGenericEdgeKindName);
 
   GetImageBaseSymbol GetIB;
@@ -98,7 +98,7 @@ TEST(COFFLinkGraphTest, GetImageBaseSymbolReset) {
 
 TEST(COFFLinkGraphTest, GetImageBaseSymbolCustomName) {
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-pc-windows-msvc"), SubtargetFeatures(),
+              Triple("x86_64-pc-windows-msvc"), 8, SubtargetFeatures(),
               getGenericEdgeKindName);
 
   G.addExternalSymbol(G.intern("__ImageBase"), 0, false);

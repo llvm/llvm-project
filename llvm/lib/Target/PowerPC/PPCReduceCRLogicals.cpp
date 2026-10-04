@@ -655,7 +655,7 @@ bool PPCReduceCRLogicals::splitBlockOnBinaryCROp(CRLogicalOpInfo &CRI) {
 
   // Get the branch instruction.
   MachineInstr *Branch =
-    MRI->use_nodbg_begin(CRI.MI->getOperand(0).getReg())->getParent();
+      &*MRI->use_instr_nodbg_begin(CRI.MI->getOperand(0).getReg());
 
   // We want the new block to have no code in it other than the definition
   // of the input to the CR logical and the CR logical itself. So we move

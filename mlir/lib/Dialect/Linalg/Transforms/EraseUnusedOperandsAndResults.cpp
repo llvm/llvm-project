@@ -271,9 +271,9 @@ mlir::linalg::deduplicateOperandsAndRemoveDeadResults(
       });
   // Copy over unknown attributes. They might be load bearing for some flow.
   ArrayRef<StringRef> odsAttrs = genericOp.getAttributeNames();
-  for (NamedAttribute kv : genericOp->getAttrs())
+  for (NamedAttribute kv : genericOp->getDiscardableAttrDictionary())
     if (!llvm::is_contained(odsAttrs, kv.getName().getValue()))
-      newOp->setAttr(kv.getName(), kv.getValue());
+      newOp->setDiscardableAttr(kv.getName(), kv.getValue());
 
   // Fix up the payload of the canonicalized operation.
   populateOpPayload(genericOp, newOp, origInsToNewInsPos, origOutsToNewOutsPos,

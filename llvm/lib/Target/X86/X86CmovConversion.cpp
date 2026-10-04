@@ -315,7 +315,7 @@ bool X86CmovConversionImpl::collectCmovCandidates(
       // unpredictable, skip it and do not convert it to branch.
       if (CC != X86::COND_INVALID &&
           !I.getFlag(MachineInstr::MIFlag::Unpredictable) &&
-          (IncludeLoads || !I.mayLoad())) {
+          (IncludeLoads || !I.mayLoad()) && !I.hasOrderedMemoryRef()) {
         if (Group.empty()) {
           // We found first CMOV in the range, reset flags.
           FirstCC = CC;

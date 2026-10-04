@@ -85,7 +85,8 @@ def Shape_BroadcastOp : Shape_Op<"broadcast", [Commutative, Pure]> {
   let builders = [OpBuilder<(ins "Value":$shape)>];
 
   let assemblyFormat = [{
-    $shapes attr-dict `:` type($shapes) `->` type($result)
+    $shapes (`error` `=` $error^)? attr-dict `:` type($shapes) `->`
+    type($result)
   }];
 
   let builders = [OpBuilder<(ins "::mlir::Type":$result,
@@ -978,7 +979,8 @@ def Shape_CstrRequireOp : Shape_Op<"cstr_require", []> {
 //===----------------------------------------------------------------------===//
 
 def Shape_FunctionLibraryOp : Shape_Op<"function_library",
-    [AffineScope, IsolatedFromAbove, NoRegionArguments, SymbolTable, Symbol,
+    [AffineScope, IsolatedFromAbove, NoRegionArguments, SymbolTable, SymbolName,
+     SymbolVisibility, Symbol,
      NoTerminator, OpAsmOpInterface, SingleBlock]> {
   let summary = "Represents shape functions and corresponding ops";
   let description = [{
@@ -1024,7 +1026,8 @@ def Shape_FunctionLibraryOp : Shape_Op<"function_library",
 
 def Shape_FuncOp : Shape_Op<"func",
     [AffineScope, AutomaticAllocationScope,
-     FunctionOpInterface, IsolatedFromAbove, OpAsmOpInterface]> {
+     SymbolName, SymbolVisibility, FunctionOpInterface, IsolatedFromAbove,
+     OpAsmOpInterface]> {
   let summary = "Shape function";
   let description = [{
     An operation with a name containing a single `SSACFG` region which

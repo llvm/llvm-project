@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/PGOOptions.h"
-#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace llvm;
 

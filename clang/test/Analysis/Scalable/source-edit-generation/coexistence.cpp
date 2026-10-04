@@ -15,6 +15,7 @@
 // RUN:   --ssaf-src-edit-file=%t/edits.yaml \
 // RUN:   --ssaf-transformation-report-file=%t/report.sarif \
 // RUN:   --ssaf-compilation-unit-id=cu \
+// RUN:   --ssaf-link-unit-id=lu \
 // RUN:   -emit-obj -o %t/test.o %s
 
 // All four artifacts must be present.

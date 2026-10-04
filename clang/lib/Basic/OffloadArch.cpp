@@ -33,7 +33,7 @@ const char *OffloadArchToString(OffloadArch A) {
     return llvm::NVPTX::getArchName(A.nvptxKind()).data();
   case OffloadArch::TargetArch::AMDGPU:
     return llvm::AMDGPU::getArchNameAMDGCN(A.amdgpuKind()).data();
-  case OffloadArch::TargetArch::SPIRV:
+  case OffloadArch::TargetArch::AMDGCNSPIRV:
     return "amdgcnspirv";
   case OffloadArch::TargetArch::IntelCPU:
     return "graniterapids";
@@ -50,7 +50,7 @@ const char *OffloadArchToVirtualArchString(OffloadArch A) {
   case OffloadArch::TargetArch::NVPTX:
     return llvm::NVPTX::getVirtualArch(A.nvptxKind()).data();
   case OffloadArch::TargetArch::AMDGPU:
-  case OffloadArch::TargetArch::SPIRV:
+  case OffloadArch::TargetArch::AMDGCNSPIRV:
     return "compute_amdgcn";
   case OffloadArch::TargetArch::Unknown:
     return "unknown";
@@ -70,7 +70,7 @@ OffloadArch StringToOffloadArch(llvm::StringRef S) {
 
   // Non-GPU-table pseudo/sentinel architectures.
   if (S == "amdgcnspirv")
-    return OffloadArch::getSPIRV();
+    return OffloadArch::getAMDGCNSPIRV();
   if (S == "generic")
     return OffloadArch::getGeneric();
   if (S == "graniterapids")
@@ -110,7 +110,7 @@ llvm::Triple::SubArchType getOffloadArchSubArch(OffloadArch ID) {
 
 llvm::Triple OffloadArchToTriple(const llvm::Triple &DefaultToolchainTriple,
                                  OffloadArch ID) {
-  if (ID.isSPIRV())
+  if (ID.isAMDGCNSPIRV())
     return llvm::Triple(llvm::Triple::spirv64, llvm::Triple::NoSubArch,
                         llvm::Triple::AMD, llvm::Triple::AMDHSA);
 

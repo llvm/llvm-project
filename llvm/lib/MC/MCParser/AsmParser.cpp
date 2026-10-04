@@ -1090,9 +1090,9 @@ void AsmParser::eatToEndOfStatement() {
   while (Lexer.isNot(AsmToken::EndOfStatement) && Lexer.isNot(AsmToken::Eof))
     Lexer.Lex();
 
-  // Eat EOL.
+  // Eat EOL and skip the comments that follow.
   if (Lexer.is(AsmToken::EndOfStatement))
-    Lexer.Lex();
+    Lex();
 }
 
 StringRef AsmParser::parseStringToEndOfStatement() {
@@ -2459,13 +2459,12 @@ void AsmParser::DiagHandler(const SMDiagnostic &Diag, void *Context) {
     Parser->getContext().diagnose(NewDiag);
 }
 
-// FIXME: This is mostly duplicated from the function in AsmLexer.cpp. The
-// difference being that that function accepts '@' as part of identifiers and
-// we can't do that. AsmLexer.cpp should probably be changed to handle
-// '@' as a special case when needed.
-static bool isIdentifierChar(char c) {
-  return isalnum(static_cast<unsigned char>(c)) || c == '_' || c == '$' ||
-         c == '.';
+// A macro argument name ends at '@', '#' and '?', which may be identifier
+// characters.
+static bool isMacroArgChar(char C) {
+  return AsmLexer::isIdentifierChar(C, /*AllowAt=*/false,
+                                    /*AllowHash=*/false) &&
+         C != '?';
 }
 
 bool AsmParser::expandMacro(raw_svector_ostream &OS, MCAsmMacro &Macro,
@@ -2519,13 +2518,13 @@ bool AsmParser::expandMacro(raw_svector_ostream &OS, MCAsmMacro &Macro,
         I += 2;
         continue;
       }
-      if (Body[I + 1] == '(' && Body[I + 2] == ')') {
+      if (Body[I + 1] == '(' && I + 2 != End && Body[I + 2] == ')') {
         I += 3;
         continue;
       }
 
       size_t Pos = ++I;
-      while (I != End && isIdentifierChar(Body[I]))
+      while (I != End && isMacroArgChar(Body[I]))
         ++I;
       StringRef Argument(Body.data() + Pos, I - Pos);
       if (AltMacroMode && I != End && Body[I] == '&')
@@ -2571,13 +2570,13 @@ bool AsmParser::expandMacro(raw_svector_ostream &OS, MCAsmMacro &Macro,
       }
     }
 
-    if (!isIdentifierChar(Body[I]) || IsDarwin) {
+    if (!isMacroArgChar(Body[I]) || IsDarwin) {
       OS << Body[I++];
       continue;
     }
 
     const size_t Start = I;
-    while (++I && isIdentifierChar(Body[I])) {
+    while (++I != End && isMacroArgChar(Body[I])) {
     }
     StringRef Token(Body.data() + Start, I - Start);
     if (AltMacroMode) {
@@ -4902,8 +4901,8 @@ void AsmParser::checkForBadMacro(SMLoc DirectiveLoc, StringRef Name,
       }
       Pos += 2;
     } else {
-      unsigned I = Pos + 1;
-      while (isIdentifierChar(Body[I]) && I + 1 != End)
+      size_t I = Pos + 1;
+      while (I != End && isMacroArgChar(Body[I]))
         ++I;
 
       const char *Begin = Body.data() + Pos + 1;
@@ -4914,7 +4913,7 @@ void AsmParser::checkForBadMacro(SMLoc DirectiveLoc, StringRef Name,
           break;
 
       if (Index == NParameters) {
-        if (Body[Pos + 1] == '(' && Body[Pos + 2] == ')')
+        if (Body[Pos + 1] == '(' && Pos + 2 != End && Body[Pos + 2] == ')')
           Pos += 3;
         else {
           Pos = I;

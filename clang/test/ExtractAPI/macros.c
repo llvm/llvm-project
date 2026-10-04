@@ -354,5 +354,13 @@
 // FUNGNU-NEXT:   "FUNGNU"
 // FUNGNU-NEXT: ]
 
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix ORDER
+// ORDER: "!testLabel": "c:@macro@FUN"
+// ORDER: "!testLabel": "c:@macro@FUNC99"
+// ORDER: "!testLabel": "c:@macro@FUNGNU"
+// ORDER: "!testLabel": "c:@macro@HELLO"
+// ORDER: "!testLabel": "c:@macro@MACRO_FUN"
+// ORDER: "!testLabel": "c:@macro@WORLD"
+
 // expected-no-diagnostics
 

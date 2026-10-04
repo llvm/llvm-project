@@ -3,8 +3,8 @@ include(CompilerRTCompile)
 include_directories(..)
 
 # Unit tests target.
-add_custom_target(OrcRTUnitTests)
-set_target_properties(OrcRTUnitTests PROPERTIES FOLDER "compiler-rt/Tests")
+add_custom_target(CompilerRTOrcRTUnitTests)
+set_target_properties(CompilerRTOrcRTUnitTests PROPERTIES FOLDER "compiler-rt/Tests")
 
 # Testing tools target.
 add_custom_target(OrcRTTools)
@@ -69,7 +69,7 @@ macro(add_orc_unittest testname)
       get_orc_lib_for_arch(${arch} ORC_RUNTIME_LIBS)
       if(ORC_RUNTIME_LIBS)
         generate_compiler_rt_tests(TEST_OBJECTS
-          OrcRTUnitTests "${testname}-${arch}-Test" "${arch}"
+          CompilerRTOrcRTUnitTests "${testname}-${arch}-Test" "${arch}"
           SOURCES ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
           RUNTIME "${ORC_RUNTIME_LIBS}"
           COMPILE_DEPS ${TEST_HEADERS} ${ORC_HEADERS}

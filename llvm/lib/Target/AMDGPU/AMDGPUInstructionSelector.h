@@ -113,7 +113,6 @@ private:
   bool selectInterpP1F16(MachineInstr &MI) const;
   bool selectWritelane(MachineInstr &MI) const;
   bool selectDivScale(MachineInstr &MI) const;
-  bool selectIntrinsicCmp(MachineInstr &MI) const;
   bool selectBallot(MachineInstr &I) const;
   bool selectRelocConstant(MachineInstr &I) const;
   bool selectGroupStaticSize(MachineInstr &I) const;
@@ -168,6 +167,8 @@ private:
   Register copyToVGPRIfSrcFolded(Register Src, unsigned Mods,
                                  MachineOperand Root, MachineInstr *InsertPt,
                                  bool ForceVGPR = false) const;
+
+  Register widenSrcIfVGPR16(Register Src, MachineInstr *InsertPt) const;
 
   InstructionSelector::ComplexRendererFns
   selectVCSRC(MachineOperand &Root) const;

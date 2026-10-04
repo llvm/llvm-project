@@ -341,7 +341,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({{i32, i32}, {i64, i32}})
       .clampScalar(0, s32, s64)
       .clampScalar(1, s32, s64)
-      .widenScalarToNextPow2(0);
+      .widenScalarToNextPow2(0)
+      .lower();
 
   getActionDefinitionsBuilder({G_FSHL, G_FSHR})
       .customFor({{i32, i32}, {i32, i64}, {i64, i64}})
@@ -860,6 +861,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_TRUNC_SSAT_S, G_TRUNC_SSAT_U, G_TRUNC_USAT_U})
       .legalFor({{v8i8, v8i16}, {v4i16, v4i32}, {v2i32, v2i64}})
+      .clampNumElements(0, v8s8, v8s8)
+      .clampNumElements(0, v4s16, v4s16)
       .clampNumElements(0, v2s32, v2s32)
       .lower();
 
@@ -1965,14 +1968,6 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
     return true;
   }
-  case Intrinsic::aarch64_neon_smax:
-    return LowerBinOp(TargetOpcode::G_SMAX);
-  case Intrinsic::aarch64_neon_smin:
-    return LowerBinOp(TargetOpcode::G_SMIN);
-  case Intrinsic::aarch64_neon_umax:
-    return LowerBinOp(TargetOpcode::G_UMAX);
-  case Intrinsic::aarch64_neon_umin:
-    return LowerBinOp(TargetOpcode::G_UMIN);
   case Intrinsic::aarch64_neon_fmax:
     return LowerBinOp(TargetOpcode::G_FMAXIMUM);
   case Intrinsic::aarch64_neon_fmin:

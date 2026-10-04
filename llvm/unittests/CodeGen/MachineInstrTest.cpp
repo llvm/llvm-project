@@ -593,7 +593,7 @@ TEST(MachineInstrTest, SpliceOperands) {
 
   // test tied operands
   MCRegisterClass RC{
-      0, 0, 0,  0, 0, 0, 0, 0, /*Allocatable=*/true, /*BaseClass=*/true,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, /*Allocatable=*/true, /*BaseClass=*/true,
       0, 0, {}, 0, 0, 0, 0, 0, 0, 0, 0};
   // MachineRegisterInfo will be very upset if these registers aren't
   // allocatable.

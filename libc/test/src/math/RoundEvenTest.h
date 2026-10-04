@@ -87,11 +87,11 @@ public:
   }
 };
 
-#define LIST_ROUNDEVEN_TESTS(T, func)                                          \
-  using LlvmLibcRoundEvenTest = RoundEvenTest<T>;                              \
-  TEST_F(LlvmLibcRoundEvenTest, SpecialNumbers) { testSpecialNumbers(&func); } \
-  TEST_F(LlvmLibcRoundEvenTest, RoundedNubmers) { testRoundedNumbers(&func); } \
-  TEST_F(LlvmLibcRoundEvenTest, Fractions) { testFractions(&func); }           \
-  TEST_F(LlvmLibcRoundEvenTest, Range) { testRange(&func); }
+#define LIST_ROUNDEVEN_TESTS(Name, T, func)                                    \
+  using LlvmLibc##Name##Test = RoundEvenTest<T>;                               \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, RoundedNumbers) { testRoundedNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, Fractions) { testFractions(&func); }            \
+  TEST_F(LlvmLibc##Name##Test, Range) { testRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_ROUNDEVENTEST_H

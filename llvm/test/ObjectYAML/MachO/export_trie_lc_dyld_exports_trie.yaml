@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s -o=%t
+# RUN: yaml2obj %s -o %t
 # RUN: obj2yaml %t | FileCheck %s
 # RUN: llvm-objdump --macho --exports-trie %t | FileCheck %s --check-prefix=OBJDUMP-VERIFY
 

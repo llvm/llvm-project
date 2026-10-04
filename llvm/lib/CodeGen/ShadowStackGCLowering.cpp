@@ -41,7 +41,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include <cassert>
 #include <optional>
@@ -136,8 +135,6 @@ INITIALIZE_PASS_DEPENDENCY(GCModuleInfo)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(ShadowStackGCLowering, DEBUG_TYPE,
                     "Shadow Stack GC Lowering", false, false)
-
-FunctionPass *llvm::createShadowStackGCLoweringPass() { return new ShadowStackGCLowering(); }
 
 ShadowStackGCLowering::ShadowStackGCLowering() : FunctionPass(ID) {}
 
@@ -392,7 +389,7 @@ bool ShadowStackGCLoweringImpl::runOnFunction(Function &F,
   // shadow stack.
   while (isa<StoreInst>(IP))
     ++IP;
-  AtEntry.SetInsertPoint(IP->getParent(), IP);
+  AtEntry.SetInsertPoint(IP);
 
   // Push the entry onto the shadow stack.
   // Next pointer is at offset 0, so it's just the frame pointer

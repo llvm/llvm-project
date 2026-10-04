@@ -5,7 +5,7 @@
 ; RUN: opt %s -o %t.o
 
 ; RUN: rm -f %t3
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=thinlto-index-only=%t3 \
 ; RUN:    -o %t5 \

@@ -51,8 +51,8 @@ struct AnnotateFunctionPass
     auto &ga = getAnalysis<GenericAnalysis>();
     auto &sa = getAnalysis<OpSpecificAnalysis>();
 
-    op->setAttr("isFunc", builder.getBoolAttr(ga.isFunc));
-    op->setAttr("isSecret", builder.getBoolAttr(sa.isSecret));
+    op->setDiscardableAttr("isFunc", builder.getBoolAttr(ga.isFunc));
+    op->setDiscardableAttr("isSecret", builder.getBoolAttr(sa.isSecret));
   }
 };
 
@@ -96,11 +96,11 @@ struct AddAttrFunctionPass
   void runOnOperation() override {
     func::FuncOp op = getOperation();
     Builder builder(op->getParentOfType<ModuleOp>());
-    if (op->hasAttr("didProcess"))
-      op->setAttr("didProcessAgain", builder.getUnitAttr());
+    if (op->hasDiscardableAttr("didProcess"))
+      op->setDiscardableAttr("didProcessAgain", builder.getUnitAttr());
 
     // We always want to set this one.
-    op->setAttr("didProcess", builder.getUnitAttr());
+    op->setDiscardableAttr("didProcess", builder.getUnitAttr());
   }
 };
 
@@ -114,7 +114,7 @@ struct AddSecondAttrFunctionPass
   void runOnOperation() override {
     func::FuncOp op = getOperation();
     Builder builder(op->getParentOfType<ModuleOp>());
-    op->setAttr("didProcess2", builder.getUnitAttr());
+    op->setDiscardableAttr("didProcess2", builder.getUnitAttr());
   }
 };
 

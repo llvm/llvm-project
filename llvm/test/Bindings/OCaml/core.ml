@@ -83,8 +83,8 @@ let test_target () =
 
   begin group "layout";
     let layout = "e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:128-f64:32:64-f80:128-n8:16:32-S128" in
-    set_data_layout layout m;
-    insist (layout = data_layout m)
+    set_data_layout (DataLayout.of_string layout) m;
+    insist (layout = DataLayout.as_string (data_layout m))
   end
   (* CHECK: target datalayout = "e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:128-f64:32:64-f80:128-n8:16:32-S128"
    * CHECK: target triple = "i686-apple-darwin8"
@@ -305,13 +305,11 @@ let test_constants () =
   ignore (define_global "const_bitcast" (const_bitcast foldbomb double_type) m);
 
   group "misc constants";
-  (* CHECK: const_size_of{{.*}}getelementptr{{.*}}null
-   * CHECK: const_gep{{.*}}getelementptr
+  (* CHECK: const_gep{{.*}}getelementptr
    * CHECK: const_extractelement{{.*}}extractelement
    * CHECK: const_insertelement{{.*}}insertelement
    * CHECK: const_shufflevector = global <4 x i32> <i32 0, i32 1, i32 1, i32 0>
    *)
-  ignore (define_global "const_size_of" (size_of (pointer_type context)) m);
   ignore (define_global "const_gep" (const_gep i8_type foldbomb_gv [| five |])
           m);
   let zero = const_int i32_type 0 in
@@ -1255,7 +1253,7 @@ let test_builder () =
   end;
 
   group "malloc/free"; begin
-      (* CHECK: call{{.*}}@malloc(i32 ptrtoint
+      (* CHECK: call{{.*}}@malloc(i32 4
        * CHECK: call{{.*}}@free(ptr
        * CHECK: call{{.*}}@malloc(i32 %
        *)

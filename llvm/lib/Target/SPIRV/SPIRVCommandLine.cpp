@@ -17,11 +17,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/TargetParser/Triple.h"
 
-#include <functional>
-#include <iterator>
 #include <string>
-#include <utility>
-#include <vector>
 
 #define DEBUG_TYPE "spirv-commandline"
 
@@ -181,7 +177,8 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
     {"SPV_KHR_poison_freeze",
      SPIRV::Extension::Extension::SPV_KHR_poison_freeze},
     {"SPV_KHR_untyped_pointers",
-     SPIRV::Extension::Extension::SPV_KHR_untyped_pointers}};
+     SPIRV::Extension::Extension::SPV_KHR_untyped_pointers},
+    {"SPV_EXT_long_vector", SPIRV::Extension::Extension::SPV_EXT_long_vector}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue, ExtensionSet &Vals) {

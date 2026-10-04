@@ -2,7 +2,7 @@
 
 #map = affine_map<(d0, d1) -> (d0, d1)>
 module {
-  shard.grid @grid(shape = 1) {sym_visibility = "private"}
+  shard.grid "private" @grid(shape = 1)
   func.func @test_forward() -> tensor<6x6xi32> {
     %c1_i32 = arith.constant 1 : i32
     // CHECK: tensor.empty()

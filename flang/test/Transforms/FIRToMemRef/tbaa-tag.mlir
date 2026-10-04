@@ -21,9 +21,9 @@ func.func @tbaa() {
   %c10 = arith.constant 10 : index
   %0 = fir.address_of(@_QFEarray) : !fir.ref<!fir.array<10xf32>>
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
-  %1 = fir.declare %0(%shape) {uniq_name = "_QFEarray"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+  %1 = fir.declare %0(%shape) uniq_name("_QFEarray") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
   %2 = fir.alloca f32 {bindc_name = "scalar", uniq_name = "_QFEscalar"}
-  %3 = fir.declare %2 {uniq_name = "_QFEscalar"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %3 = fir.declare %2 uniq_name("_QFEscalar") : (!fir.ref<f32>) -> !fir.ref<f32>
   %c1_0 = arith.constant 1 : index
   %4 = arith.addi %c10, %c1_0 : index
   scf.for %arg0 = %c1 to %4 step %c1 {

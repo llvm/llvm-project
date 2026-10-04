@@ -32,6 +32,7 @@
 #include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
 #include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/compiler.h"
+#include "src/__support/macros/properties/cpu_features.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT64
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/utils.h"
@@ -40,34 +41,43 @@ static_assert((UINTPTR_MAX == 4294967295U) ||
                   (UINTPTR_MAX == 18446744073709551615UL),
               "We currently only support 32- or 64-bit platforms");
 
-#ifdef LIBC_COMPILER_IS_MSVC
-#ifdef LIBC_TARGET_ARCH_IS_X86
 namespace LIBC_NAMESPACE_DECL {
+
+// Compiler types using the GNU vector attributes.  Clang and GCC support
+// these, but MSVC does not.  However, on x86 MSVC does support the __m*i types
+// instead.  When the compiler does support the types, it's not OK to actually
+// use the ones that correspond to CPU features that are not enabled at compile
+// time by the particular combination of compiler switches used--not even in
+// templates and inlines that are ultimately never used because of other
+// conditionals on when to use which generic_v* types.  For each vector type
+// that is not available either because the target doesn't have them at all, or
+// because the CPU features configured exclude that particular size, is
+// replaced with an aligned byte array.
+
+#if defined(LIBC_COMPILER_IS_MSVC) && defined(LIBC_TARGET_ARCH_IS_X86)
 using generic_v128 = __m128i;
-using generic_v256 = __m256i;
-using generic_v512 = __m512i;
-} // namespace LIBC_NAMESPACE_DECL
+#elif LIBC_TARGET_CPU_GENERIC_VECTOR_SIZE_MAX >= 128
+using generic_v128 = uint8_t __attribute__((__vector_size__(16)));
 #else
-// Special handling when target does not have real vector types.
-// We can potentially use uint8x16_t etc. However, MSVC does not provide
-// subscript operation.
-namespace LIBC_NAMESPACE_DECL {
 struct alignas(16) generic_v128 : public cpp::array<uint8_t, 16> {};
-struct alignas(32) generic_v256 : public cpp::array<uint8_t, 32> {};
-struct alignas(64) generic_v512 : public cpp::array<uint8_t, 64> {};
-} // namespace LIBC_NAMESPACE_DECL
 #endif
 
-#else
-namespace LIBC_NAMESPACE_DECL {
-// Compiler types using the vector attributes.
-using generic_v128 = uint8_t __attribute__((__vector_size__(16)));
+#if defined(LIBC_COMPILER_IS_MSVC) && defined(LIBC_TARGET_ARCH_IS_X86)
+using generic_v256 = __m256i;
+#elif LIBC_TARGET_CPU_GENERIC_VECTOR_SIZE_MAX >= 256
 using generic_v256 = uint8_t __attribute__((__vector_size__(32)));
-using generic_v512 = uint8_t __attribute__((__vector_size__(64)));
-} // namespace LIBC_NAMESPACE_DECL
-#endif // LIBC_COMPILER_IS_MSVC
+#else
+struct alignas(32) generic_v256 : public cpp::array<uint8_t, 32> {};
+#endif
 
-namespace LIBC_NAMESPACE_DECL {
+#if defined(LIBC_COMPILER_IS_MSVC) && defined(LIBC_TARGET_ARCH_IS_X86)
+using generic_v512 = __m512i;
+#elif LIBC_TARGET_CPU_GENERIC_VECTOR_SIZE_MAX >= 512
+using generic_v512 = uint8_t __attribute__((__vector_size__(64)));
+#else
+struct alignas(64) generic_v512 : public cpp::array<uint8_t, 64> {};
+#endif
+
 namespace generic {
 
 // We accept three types of values as elements for generic operations:

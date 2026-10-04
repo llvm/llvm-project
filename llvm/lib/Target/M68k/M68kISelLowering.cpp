@@ -2100,26 +2100,6 @@ SDValue M68kTargetLowering::EmitTest(SDValue Op, unsigned M68kCC,
   return SDValue(New.getNode(), 1);
 }
 
-/// \brief Return true if the condition is an unsigned comparison operation.
-static bool isM68kCCUnsigned(unsigned M68kCC) {
-  switch (M68kCC) {
-  default:
-    llvm_unreachable("Invalid integer condition!");
-  case M68k::COND_EQ:
-  case M68k::COND_NE:
-  case M68k::COND_CS:
-  case M68k::COND_HI:
-  case M68k::COND_LS:
-  case M68k::COND_CC:
-    return true;
-  case M68k::COND_GT:
-  case M68k::COND_GE:
-  case M68k::COND_LT:
-  case M68k::COND_LE:
-    return false;
-  }
-}
-
 SDValue M68kTargetLowering::EmitCmp(SDValue Op0, SDValue Op1, unsigned M68kCC,
                                     const SDLoc &DL, SelectionDAG &DAG) const {
   if (isNullConstant(Op1))
@@ -2128,24 +2108,7 @@ SDValue M68kTargetLowering::EmitCmp(SDValue Op0, SDValue Op1, unsigned M68kCC,
   assert(!(isa<ConstantSDNode>(Op1) && Op0.getValueType() == MVT::i1) &&
          "Unexpected comparison operation for MVT::i1 operands");
 
-  if ((Op0.getValueType() == MVT::i8 || Op0.getValueType() == MVT::i16 ||
-       Op0.getValueType() == MVT::i32 || Op0.getValueType() == MVT::i64)) {
-    // Only promote the compare up to I32 if it is a 16 bit operation
-    // with an immediate.  16 bit immediates are to be avoided.
-    if ((Op0.getValueType() == MVT::i16 &&
-         (isa<ConstantSDNode>(Op0) || isa<ConstantSDNode>(Op1))) &&
-        !DAG.getMachineFunction().getFunction().hasMinSize()) {
-      unsigned ExtendOp =
-          isM68kCCUnsigned(M68kCC) ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND;
-      Op0 = DAG.getNode(ExtendOp, DL, MVT::i32, Op0);
-      Op1 = DAG.getNode(ExtendOp, DL, MVT::i32, Op1);
-    }
-    // Use SUB instead of CMP to enable CSE between SUB and CMP.
-    SDVTList VTs = DAG.getVTList(Op0.getValueType(), MVT::i8);
-    SDValue Sub = DAG.getNode(M68kISD::SUB, DL, VTs, Op0, Op1);
-    return SDValue(Sub.getNode(), 1);
-  }
-  return DAG.getNode(M68kISD::CMP, DL, MVT::i8, Op0, Op1);
+  return DAG.getNode(M68kISD::CMP, DL, MVT::i8, Op1, Op0);
 }
 
 /// Result of 'and' or 'trunc to i1' is compared against zero.
