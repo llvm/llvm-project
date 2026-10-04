@@ -166,8 +166,17 @@ bool mlir::affine::isLoopMemoryParallel(AffineForOp forOp) {
   if (walkResult.wasInterrupted())
     return false;
 
-  // Dep check depth would be number of enclosing loops + 1.
-  unsigned depth = getNestingDepth(forOp) + 1;
+  // Match the dimensions collected by getOpIndexSet: loops outside the
+  // surrounding affine scope do not contribute to the access domain.
+  SmallVector<Operation *> enclosingOps;
+  getEnclosingAffineOps(*forOp, &enclosingOps);
+  unsigned depth = 1;
+  for (Operation *op : enclosingOps) {
+    if (isa<AffineForOp>(op))
+      ++depth;
+    else if (auto parallelOp = dyn_cast<AffineParallelOp>(op))
+      depth += parallelOp.getNumDims();
+  }
 
   // Check dependences between all pairs of ops in 'loadAndStoreOps'.
   for (auto *srcOp : loadAndStoreOps) {
