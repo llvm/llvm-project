@@ -248,11 +248,20 @@ define double @exp10_test2(float %f)   {
 }
 
 define float @log_test1(float %f)   {
-; CHECK-LABEL: @log_test1(
-; LINUX-NEXT:    [[LOGF:%.*]] = call fast float @llvm.log.f32(float [[F:%.*]])
+; LINUX-LABEL: define float @log_test1(
+; LINUX-SAME: float [[F:%.*]]) {
+; LINUX-NEXT:    [[LOGF:%.*]] = call fast float @llvm.log.f32(float [[F]])
 ; LINUX-NEXT:    ret float [[LOGF]]
-; MS32:          [[LOGF:%.*]] = call fast double @llvm.log.f64(double [[F:%.*]])
-; MS64-NEXT:     [[LOGF:%.*]] = call fast float @llvm.log.f32(float [[F:%.*]])
+;
+; MS64-LABEL: define float @log_test1(
+; MS64-SAME: float [[F:%.*]]) {
+; MS64-NEXT:    [[LOGF:%.*]] = call fast float @llvm.log.f32(float [[F]])
+; MS64-NEXT:    ret float [[LOGF]]
+;
+; MS32-LABEL: define float @log_test1(
+; MS32-SAME: float [[F:%.*]]) {
+; MS32-NEXT:    [[TMP1:%.*]] = call fast float @llvm.log.f32(float [[F]])
+; MS32-NEXT:    ret float [[TMP1]]
 ;
   %conv = fpext float %f to double
   %call = call fast double @log(double %conv)
@@ -272,11 +281,20 @@ define double @log_test2(float %f)   {
 }
 
 define float @log10_test1(float %f)   {
-; CHECK-LABEL: @log10_test1(
-; LINUX-NEXT:    [[LOG10F:%.*]] = call fast float @llvm.log10.f32(float [[F:%.*]])
+; LINUX-LABEL: define float @log10_test1(
+; LINUX-SAME: float [[F:%.*]]) {
+; LINUX-NEXT:    [[LOG10F:%.*]] = call fast float @llvm.log10.f32(float [[F]])
 ; LINUX-NEXT:    ret float [[LOG10F]]
-; MS32:          [[LOG10F:%.*]] = call fast double @llvm.log10.f64(double [[F:%.*]])
-; MS64-NEXT:     [[LOG10F:%.*]] = call fast float @llvm.log10.f32(float [[F:%.*]])
+;
+; MS64-LABEL: define float @log10_test1(
+; MS64-SAME: float [[F:%.*]]) {
+; MS64-NEXT:    [[LOG10F:%.*]] = call fast float @llvm.log10.f32(float [[F]])
+; MS64-NEXT:    ret float [[LOG10F]]
+;
+; MS32-LABEL: define float @log10_test1(
+; MS32-SAME: float [[F:%.*]]) {
+; MS32-NEXT:    [[TMP1:%.*]] = call fast float @llvm.log10.f32(float [[F]])
+; MS32-NEXT:    ret float [[TMP1]]
 ;
   %conv = fpext float %f to double
   %call = call fast double @log10(double %conv)
