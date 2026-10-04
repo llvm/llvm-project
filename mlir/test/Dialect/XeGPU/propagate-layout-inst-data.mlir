@@ -702,6 +702,42 @@ gpu.module @test {
 }
 
 // -----
+gpu.module @test {
+// CHECK-LABEL: func.func @shape_cast_split_fills_strided_inner_dim(
+// CHECK: %[[CAST:.*]] = vector.shape_cast %{{.*}} {layout_result_0 = #xegpu.layout<inst_data = [1, 2, 32], lane_layout = [1, 2, 8], lane_data = [1, 1, 4]>} : vector<16x1024xbf16> to vector<16x32x32xbf16>
+func.func @shape_cast_split_fills_strided_inner_dim(%arg0: memref<16x1024xbf16>) {
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<16x1024xbf16> -> !xegpu.tensor_desc<16x1024xbf16>
+  %1 = xegpu.load_nd %0[0, 0] : !xegpu.tensor_desc<16x1024xbf16> -> vector<16x1024xbf16>
+  %2 = vector.shape_cast %1 : vector<16x1024xbf16> to vector<16x32x32xbf16>
+  %3 = xegpu.convert_layout %2
+     <{target_layout = #xegpu.layout<inst_data = [1, 2, 8], lane_layout = [1, 2, 8], lane_data = [1, 1, 1]>}>
+     : vector<16x32x32xbf16>
+  return
+}
+}
+
+// -----
+// A group of three dims: the lanes cover dim 1 and dim 2 exactly once (2 and 8
+// lanes) and are not distributed over dim 3, so the fill hands dim 3 to each
+// lane whole - lane_data = [1, 1, 1, 16], one contiguous run of 16 per lane,
+// which collapses to inst_data = [1, 256], lane_layout = [1, 16],
+// lane_data = [1, 16] on the 16x256 source. Dim 2 is already covered exactly
+// once, so the fill leaves it as it is.
+gpu.module @test {
+// CHECK-LABEL: func.func @shape_cast_split_fills_undistributed_inner_dim(
+// CHECK: %[[CAST:.*]] = vector.shape_cast %{{.*}} {layout_result_0 = #xegpu.layout<inst_data = [1, 2, 8, 16], lane_layout = [1, 2, 8, 1], lane_data = [1, 1, 1, 16]>} : vector<16x256xbf16> to vector<16x2x8x16xbf16>
+func.func @shape_cast_split_fills_undistributed_inner_dim(%arg0: memref<16x256xbf16>) {
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<16x256xbf16> -> !xegpu.tensor_desc<16x256xbf16>
+  %1 = xegpu.load_nd %0[0, 0] : !xegpu.tensor_desc<16x256xbf16> -> vector<16x256xbf16>
+  %2 = vector.shape_cast %1 : vector<16x256xbf16> to vector<16x2x8x16xbf16>
+  %3 = xegpu.convert_layout %2
+     <{target_layout = #xegpu.layout<inst_data = [1, 2, 8, 1], lane_layout = [1, 2, 8, 1], lane_data = [1, 1, 1, 1]>}>
+     : vector<16x2x8x16xbf16>
+  return
+}
+}
+
+// -----
 // A 32-bit block load cannot pack along the innermost dim, so the load_nd
 // anchor insists on unit lane_data even though its multi_reduction consumer
 // asks to pack 16 elements per lane into lane_data.
@@ -718,6 +754,21 @@ func.func @f32_reduction_from_load_nd(%arg0: memref<16x16xf32>, %arg1: memref<25
   %v = xegpu.load_nd %t[0, 0] : !xegpu.tensor_desc<16x16xf32> -> vector<16x16xf32>
   %0 = vector.multi_reduction <add>, %v, %cst [1] : vector<16x16xf32> to vector<16xf32>
   xegpu.store %0, %arg1[%offset], %mask : vector<16xf32>, memref<256xf32>, vector<16xindex>, vector<16xi1>
+  return
+}
+}
+
+// -----
+gpu.module @test {
+// CHECK-LABEL: func.func @shape_cast_split_fills_strided_inner_dim(
+// CHECK: %[[CAST:.*]] = vector.shape_cast %{{.*}} {layout_result_0 = #xegpu.layout<inst_data = [1, 2, 32], lane_layout = [1, 2, 8], lane_data = [1, 1, 4]>} : vector<16x1024xbf16> to vector<16x32x32xbf16>
+func.func @shape_cast_split_fills_strided_inner_dim(%arg0: memref<16x1024xbf16>) {
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<16x1024xbf16> -> !xegpu.tensor_desc<16x1024xbf16>
+  %1 = xegpu.load_nd %0[0, 0] : !xegpu.tensor_desc<16x1024xbf16> -> vector<16x1024xbf16>
+  %2 = vector.shape_cast %1 : vector<16x1024xbf16> to vector<16x32x32xbf16>
+  %3 = xegpu.convert_layout %2
+     <{target_layout = #xegpu.layout<inst_data = [1, 2, 8], lane_layout = [1, 2, 8], lane_data = [1, 1, 1]>}>
+     : vector<16x32x32xbf16>
   return
 }
 }

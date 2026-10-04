@@ -779,6 +779,10 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
     if (body && isa_and_nonnull<CoroutineBodyStmt>(body))
       llvm::append_range(fnArgs, funcDecl->parameters());
 
+    if (checkIfFunctionMustProgress())
+      fn->setAttr(cir::CIRDialect::getMustProgressAttrName(),
+                  mlir::UnitAttr::get(&getMLIRContext()));
+
     if (shouldEmitLifetimeMarkers)
       fnHasBypassStmt = functionMightHaveBypass(body);
 
@@ -1301,8 +1305,7 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
                                "emitLValue: MatrixElementExpr");
     return LValue();
   case Expr::CXXThisExprClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: CXXThisExpr");
-    return LValue();
+    return makeAddrLValue(loadCXXThisAddress(), e->getType());
   case Expr::MemberExprClass:
     return emitMemberExpr(cast<MemberExpr>(e));
   case Expr::CompoundLiteralExprClass:
