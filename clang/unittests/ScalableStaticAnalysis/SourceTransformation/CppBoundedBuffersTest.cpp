@@ -932,4 +932,153 @@ TEST_F(CppBoundedBuffersTest, RHSNoChangeRHSNotHardened) {
   EXPECT_TRUE(C.Reports.empty());
 }
 
+TEST_F(CppBoundedBuffersTest, RHSNewArrayRewritten) {
+  StringRef Code = R"cpp(
+    void g(int n) { int *p = new int[n]; }
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void g(int n) { bounded_ptr<int> p = bounded_ptr<int>::_new(n); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, RHSNewArrayPreservesSizeExprVerbatim) {
+  StringRef Code = R"cpp(
+    void g(int n) { int *p = new int[n + /* pad */ 1]; }
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void g(int n) { bounded_ptr<int> p = bounded_ptr<int>::_new(n + /* pad */ 1); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, RHSNewArrayMacroSizeExprRewritten) {
+  // The size expression begins with a macro-expanded token, so the edit
+  // boundary immediately before it (SizeCR.getBegin()) is a macro-ID
+  // location. addEditToAtomicChange must resolve this via
+  // Lexer::makeFileCharRange rather than dropping the edit outright, or the
+  // rewrite would land only the closing ')' without ever inserting the
+  // 'bounded_ptr<int>::_new(' prefix.
+  StringRef Code = "#define HALF 9\n"
+                    "void g() { int *p = new int[HALF + 1]; }\n";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, "#define HALF 9\n"
+                          "void g() { bounded_ptr<int> p = "
+                          "bounded_ptr<int>::_new(HALF + 1); }\n");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, RHSNewArrayRewrittenAsArg) {
+  StringRef Code = R"cpp(
+    void f(int *p);
+    void g(int n) { f(new int[n]); }
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return paramEntity("f", 0, Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void f(bounded_ptr<int> p);
+    void g(int n) { f(bounded_ptr<int>::_new(n)); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, RHSNewArrayRewrittenAsArgAsBounded) {
+  StringRef Code = R"cpp(
+    void f(const int *p);
+    void g(int n) { f(new int[n]); }
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return paramEntity("f", 0, Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void f(bounded_ptr<const int> p);
+    void g(int n) { f((bounded_ptr<int>::_new(n)).as_bounded<const int>()); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, RHSNewArrayWithInitializerNotRewritten) {
+  // A new-array with an initializer is not yet handled, so the RHS is left
+  // as-is even though the LHS is transformed.
+  StringRef Code = R"cpp(
+    void g() { int *p = new int[3]{1, 2, 3}; }
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void g() { bounded_ptr<int> p = new int[3]{1, 2, 3}; }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, RHSNewArrayNoChangeWhenLHSNotTransformed) {
+  StringRef Code = R"cpp(
+    void g(int n) { int *p = new int[n]; }
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {});
+  EXPECT_EQ(C.Rewritten, Code);
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, RHSNewArrayDoNotFollowLHSInnerType) {
+  StringRef Code = R"cpp(
+    void g(int n) { void *p = new int[n]; }
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void g(int n) { bounded_ptr<char> p = bounded_ptr<int>::_new(n); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, RHSMallocCallRewritten) {
+  // 'malloc(n)' is likewise rewritten based on the LHS being transformed.
+  StringRef Code = R"cpp(
+    extern "C" void *malloc(decltype(sizeof(0)) n);
+    void g(int n) { void *p = malloc(n); }
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    extern "C" void *malloc(decltype(sizeof(0)) n);
+    void g(int n) { bounded_ptr<char> p = _malloc(n); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, RHSCastMallocCallRewritten) {
+  // 'malloc(n)' is likewise rewritten based on the LHS being transformed.
+  StringRef Code = R"cpp(
+    extern "C" void *malloc(decltype(sizeof(0)) n);
+    void g(int n) { int *p = (int *)malloc(n); }
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    extern "C" void *malloc(decltype(sizeof(0)) n);
+    void g(int n) { bounded_ptr<int> p = (int *)_malloc(n); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, RHSQualifiedMallocCallRewritten) {
+  StringRef Code = R"cpp(
+    extern "C" void *malloc(decltype(sizeof(0)) n);
+    void g(int n) { void *p = ::malloc(n); }
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    extern "C" void *malloc(decltype(sizeof(0)) n);
+    void g(int n) { bounded_ptr<char> p = ::_malloc(n); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
 } // namespace
