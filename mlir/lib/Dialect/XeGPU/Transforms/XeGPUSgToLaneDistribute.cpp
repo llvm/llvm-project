@@ -1977,8 +1977,8 @@ static LaneFragmentPiece getLaneFragmentPiece(int64_t unit,
 /// dimension. The subgroup count comes from the kernel's `known_block_size`.
 ///
 /// A lane's fragment is one `lane_data`-sized piece per distribution unit, so
-/// the transfer is one `store_matrix`/`load_matrix` per unit; layouts with a
-/// single unit, which is the common case, give a single pair.
+/// the transfer is one `store_matrix`/`load_matrix` per unit; layouts with
+/// a single unit, which is the common case, give a single pair.
 struct SgToLaneConvertLayoutViaSLM
     : public OpConversionPattern<xegpu::ConvertLayoutOp> {
   using OpConversionPattern<xegpu::ConvertLayoutOp>::OpConversionPattern;
