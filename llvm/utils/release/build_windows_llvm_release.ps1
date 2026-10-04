@@ -293,6 +293,25 @@ function Assert-PathExists {
     }
 }
 
+function Remove-ItemWithoutProgress {
+    param(
+        [Parameter(Mandatory)][string]$LiteralPath,
+        [switch]$Recurse,
+        [switch]$Force
+    )
+
+    # Recursive Remove-Item reports progress in PowerShell 7. In classic
+    # conhost (including cmd.exe), that progress display can leave cursor
+    # artifacts behind after deletion completes.
+    $savedProgressPreference = $ProgressPreference
+    try {
+        $ProgressPreference = 'SilentlyContinue'
+        Remove-Item -LiteralPath $LiteralPath -Recurse:$Recurse -Force:$Force
+    } finally {
+        $ProgressPreference = $savedProgressPreference
+    }
+}
+
 function Remove-StepDirectory {
     <#
     .SYNOPSIS
@@ -302,7 +321,7 @@ function Remove-StepDirectory {
     param([Parameter(Mandatory)][string]$Path)
     if (Test-Path $Path) {
         Write-SubStep "Cleaning: $Path"
-        Remove-Item -Recurse -Force $Path
+        Remove-ItemWithoutProgress -LiteralPath $Path -Recurse -Force
     }
 }
 
@@ -322,7 +341,7 @@ if ($env:LLVM_NINJA_OVERRIDE) {
 }
 
 # Filter out tests that are known to fail.
-$env:LIT_FILTER_OUT = "gh110231.cpp|crt_initializers.cpp|init-order-atexit.cpp|use_after_return_linkage.cpp|initialization-bug.cpp|initialization-bug-no-global.cpp|trace-malloc-unbalanced.test|trace-malloc-2.test|TraceMallocTest|TestLockFileExclusive"
+# $env:LIT_FILTER_OUT = "gh110231.cpp|crt_initializers.cpp|init-order-atexit.cpp|use_after_return_linkage.cpp|initialization-bug.cpp|initialization-bug-no-global.cpp|trace-malloc-unbalanced.test|trace-malloc-2.test|TraceMallocTest|TestLockFileExclusive"
 
 #===============================================================================
 # Utility functions
@@ -2011,7 +2030,9 @@ function Build-Architecture {
         if (Test-Path $stage1Dir) {
             Write-SubStep "Cleaning stage 1 bootstrap build artifacts (preserving dependency installs)..."
             Get-ChildItem -Path $stage1Dir -Exclude 'libxmlbuild', 'zlibbuild', 'zstdbuild' |
-                Remove-Item -Recurse -Force
+                ForEach-Object {
+                    Remove-ItemWithoutProgress -LiteralPath $_.FullName -Recurse -Force
+                }
         }
 
         # Stage 2 needs these tools even when the fast build skips the rest
@@ -2307,20 +2328,12 @@ if ($StartAt) {
             Write-Host "Aborted."
             exit 1
         }
-        Remove-Item -Recurse -Force $buildDir
+        Remove-ItemWithoutProgress -LiteralPath $buildDir -Recurse -Force
     }
 }
 
 New-Item -ItemType Directory -Path $buildDir -Force | Out-Null
 Push-Location $buildDir
-
-# Ninja's single-line progress display overprints cmake's output and garbles
-# the console on some hosts (notably conhost). TERM=dumb makes ninja print one
-# plain line per step, which also keeps CI logs readable. Windows Terminal
-# (identified by WT_SESSION) renders the progress line correctly, and an
-# explicit TERM set by the caller is respected, so neither is overridden.
-$script:SavedTerm = $env:TERM
-if (-not $env:TERM -and -not $env:WT_SESSION) { $env:TERM = 'dumb' }
 
 try {
     # Download source if requested (skip when resuming with -StartAt)
@@ -2460,7 +2473,6 @@ try {
 
 } finally {
     Pop-Location
-    $env:TERM = $script:SavedTerm
     # Restore the console mode that was saved at script start.
     if ($null -ne $script:SavedConsoleMode) {
         try { [ConsoleMode]::Set($script:SavedConsoleMode) } catch {}
