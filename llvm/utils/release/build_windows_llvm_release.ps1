@@ -1713,6 +1713,18 @@ function Invoke-Tests {
     }
 }
 
+function Release-MsiComObject {
+    param([object]$ComObject)
+
+    if ($null -ne $ComObject -and [Runtime.InteropServices.Marshal]::IsComObject($ComObject)) {
+        try {
+            [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($ComObject)
+        } catch {
+            Write-Warning "Could not release a Windows Installer COM object: $($_.Exception.Message)"
+        }
+    }
+}
+
 function Assert-MsiUpgradeCode {
     param([Parameter(Mandatory)][string]$BuildDirectory)
 
@@ -1724,19 +1736,33 @@ function Assert-MsiUpgradeCode {
     }
 
     # Query Windows Installer directly; dark.exe is absent from newer WiX.
-    $installer = New-Object -ComObject WindowsInstaller.Installer
-    $database = $installer.OpenDatabase($msiFiles[0].FullName, 0)
-    $view = $database.OpenView("SELECT Value FROM Property WHERE Property='UpgradeCode'")
-    $view.Execute()
-    $record = $view.Fetch()
-    if (-not $record) {
-        throw "Could not read the UpgradeCode from $($msiFiles[0].FullName)."
+    # Close and release every COM object so this process does not keep the MSI
+    # open when the workflow moves it after the build script returns.
+    $installer = $null
+    $database = $null
+    $view = $null
+    $record = $null
+    try {
+        $installer = New-Object -ComObject WindowsInstaller.Installer
+        $database = $installer.OpenDatabase($msiFiles[0].FullName, 0)
+        $view = $database.OpenView("SELECT Value FROM Property WHERE Property='UpgradeCode'")
+        $view.Execute()
+        $record = $view.Fetch()
+        if (-not $record) {
+            throw "Could not read the UpgradeCode from $($msiFiles[0].FullName)."
+        }
+        $actual = $record.StringData(1).Trim([char[]]'{}')
+        if ($actual -ine $expected) {
+            throw "Unexpected MSI UpgradeCode $actual in $($msiFiles[0].FullName); expected $expected."
+        }
+        Write-SubStep "Verified MSI UpgradeCode: $expected"
+    } finally {
+        Release-MsiComObject $record
+        if ($view) { try { $view.Close() } catch { } }
+        Release-MsiComObject $view
+        Release-MsiComObject $database
+        Release-MsiComObject $installer
     }
-    $actual = $record.StringData(1).Trim([char[]]'{}')
-    if ($actual -ine $expected) {
-        throw "Unexpected MSI UpgradeCode $actual in $($msiFiles[0].FullName); expected $expected."
-    }
-    Write-SubStep "Verified MSI UpgradeCode: $expected"
 }
 
 function Assert-MsiFileDeduplication {
@@ -1747,24 +1773,42 @@ function Assert-MsiFileDeduplication {
         throw "Expected one MSI in $BuildDirectory, found $($msiFiles.Count)."
     }
 
-    $installer = New-Object -ComObject WindowsInstaller.Installer
-    $database = $installer.OpenDatabase($msiFiles[0].FullName, 0)
-    $view = $database.OpenView('SELECT DestName FROM DuplicateFile')
-    $view.Execute()
     $copies = @()
-    while ($record = $view.Fetch()) {
-        $copies += $record.StringData(1)
-    }
-    $view.Close()
-
-    # Clang and LLD create these aliases through llvm_install_symlink. The
-    # release MSI must create them from one payload instead of storing copies.
-    foreach ($alias in @('clang-cl.exe', 'lld-link.exe')) {
-        if ($alias -notin $copies) {
-            throw "MSI is missing the DuplicateFile entry for $alias."
+    $installer = $null
+    $database = $null
+    $view = $null
+    $record = $null
+    try {
+        $installer = New-Object -ComObject WindowsInstaller.Installer
+        $database = $installer.OpenDatabase($msiFiles[0].FullName, 0)
+        $view = $database.OpenView('SELECT DestName FROM DuplicateFile')
+        $view.Execute()
+        while ($true) {
+            $record = $view.Fetch()
+            if (-not $record) { break }
+            try {
+                $copies += $record.StringData(1)
+            } finally {
+                Release-MsiComObject $record
+                $record = $null
+            }
         }
+
+        # Clang and LLD create these aliases through llvm_install_symlink. The
+        # release MSI must create them from one payload instead of storing copies.
+        foreach ($alias in @('clang-cl.exe', 'lld-link.exe')) {
+            if ($alias -notin $copies) {
+                throw "MSI is missing the DuplicateFile entry for $alias."
+            }
+        }
+        Write-SubStep "Verified MSI file deduplication: $($copies.Count) copied filenames"
+    } finally {
+        Release-MsiComObject $record
+        if ($view) { try { $view.Close() } catch { } }
+        Release-MsiComObject $view
+        Release-MsiComObject $database
+        Release-MsiComObject $installer
     }
-    Write-SubStep "Verified MSI file deduplication: $($copies.Count) copied filenames"
 }
 
 #===============================================================================
