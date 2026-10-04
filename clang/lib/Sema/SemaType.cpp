@@ -7431,6 +7431,11 @@ static void HandleSwiftAttr(TypeProcessingState &State, TypeAttrLocation TAL,
     }
   }
 
+  if (!PAttr.checkExactlyNumArgs(S, 1)) {
+    PAttr.setInvalid();
+    return;
+  }
+
   StringRef Str;
   if (!S.checkStringLiteralArgumentAttr(PAttr, 0, Str)) {
     PAttr.setInvalid();
