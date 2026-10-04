@@ -499,12 +499,13 @@ bool AMDGPUInstructionSelector::selectG_ADD_SUB(MachineInstr &I) const {
       .add(Lo1)
       .add(Lo2)
       .addImm(0);
-    MachineInstr *Addc = BuildMI(*BB, &I, DL, TII.get(AMDGPU::V_ADDC_U32_e64), DstHi)
-      .addDef(MRI->createVirtualRegister(CarryRC), RegState::Dead)
-      .add(Hi1)
-      .add(Hi2)
-      .addReg(CarryReg, RegState::Kill)
-      .addImm(0);
+    MachineInstr *Addc =
+        BuildMI(*BB, &I, DL, TII.get(AMDGPU::V_ADDC_U32_e64), DstHi)
+            .addDef(MRI->createVirtualRegister(CarryRC), RegState::Dead)
+            .add(Hi1)
+            .add(Hi2)
+            .addReg(CarryReg)
+            .addImm(0);
 
     constrainSelectedInstRegOperands(*Addc, TII, TRI, RBI);
   }
@@ -2297,7 +2298,7 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
       MIB.addDef(TmpReg);
       if (!MRI->use_empty(VDataOut)) {
         BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::COPY), VDataOut)
-            .addReg(TmpReg, RegState::Kill, SubReg);
+            .addReg(TmpReg, {}, SubReg);
       }
 
     } else {
