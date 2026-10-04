@@ -642,7 +642,7 @@ define i32 @add_adc_multi_use(i32 %0, i32 %1, i32 %2) nounwind {
 }
 
 ; Don't fold add(x,x) -> X86ISD::VSHLI(x,1) for elements wider than 64 bits.
-; https://github.com/llvm/llvm-project/issues/228829
+; PR228829
 define <1 x i128> @combine_vec_add_self_v1i128(<1 x i128> %a) {
 ; CHECK-LABEL: combine_vec_add_self_v1i128:
 ; CHECK:       # %bb.0:
