@@ -17,6 +17,7 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -1504,6 +1505,41 @@ Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
       Mask);
   NumInsts += 3;
   return Builder.CreateBitCast(Packed, IntTy);
+}
+
+void redirectDbgValues(Instruction &Scalar, Value &Ex) {
+  SmallVector<DbgVariableRecord *, 2> DVRs;
+  findDbgValues(&Scalar, DVRs);
+  auto *ExI = dyn_cast<Instruction>(&Ex);
+  for (DbgVariableRecord *DVR : DVRs) {
+    if (!DVR->isDbgValue())
+      continue;
+    Instruction *MarkedI = DVR->getInstruction();
+    if (ExI && MarkedI->getParent() != ExI->getParent())
+      continue;
+    if (!ExI || ExI->comesBefore(MarkedI)) {
+      DVR->replaceVariableLocationOp(&Scalar, &Ex);
+      continue;
+    }
+    DebugVariableAggregate Var(DVR);
+    auto HasSameVar = [&](auto Records) {
+      return any_of(filterDbgVars(Records),
+                    [&](const DbgVariableRecord &Other) {
+                      return DebugVariableAggregate(&Other) == Var;
+                    });
+    };
+    if (HasSameVar(make_range(std::next(DVR->getIterator()),
+                              MarkedI->getDbgRecordRange().end())) ||
+        any_of(make_range(std::next(MarkedI->getIterator()),
+                          std::next(ExI->getIterator())),
+               [&](const Instruction &I) {
+                 return HasSameVar(I.getDbgRecordRange());
+               }))
+      continue;
+    DbgVariableRecord *NewDVR = DVR->clone();
+    NewDVR->replaceVariableLocationOp(&Scalar, &Ex);
+    ExI->getParent()->insertDbgRecordAfter(NewDVR, ExI);
+  }
 }
 
 } // namespace llvm::slpvectorizer
