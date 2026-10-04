@@ -158,10 +158,10 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
                            SectionKind::getReadOnlyWithRel());
 
   if (ArchTy == Triple::ppc || ArchTy == Triple::ppc64) {
-    TextCoalSection
-      = Ctx->getMachOSection("__TEXT", "__textcoal_nt",
+    TextCoalSection =
+        Ctx->getMachOSection("__TEXT", "__textcoal_nt",
                              llvm::to_underlying(MachO::S_COALESCED) |
-                             MachO::S_ATTR_PURE_INSTRUCTIONS,
+                                 MachO::S_ATTR_PURE_INSTRUCTIONS,
                              SectionKind::getText());
     ConstTextCoalSection
       = Ctx->getMachOSection("__TEXT", "__const_coal",

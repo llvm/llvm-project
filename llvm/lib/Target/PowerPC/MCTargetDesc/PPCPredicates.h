@@ -72,9 +72,7 @@ namespace PPC {
     return llvm::to_underlying(P) & llvm::to_underlying(B);
   }
 
-  inline unsigned operator&(BranchHintBit B, Predicate P) {
-    return P & B;
-  }
+  inline unsigned operator&(BranchHintBit B, Predicate P) { return P & B; }
 
   /// Invert the specified predicate.  != -> ==, < -> >=.
   Predicate InvertPredicate(Predicate Opcode);

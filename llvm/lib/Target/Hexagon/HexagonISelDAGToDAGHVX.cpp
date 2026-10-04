@@ -628,7 +628,9 @@ struct OpRef {
     assert(!R.isValue());
     return OpRef(R.OpN & (Undef | Index | HiHalf));
   }
-  static OpRef undef(MVT Ty) { return OpRef(Undef | llvm::to_underlying(Ty.SimpleTy)); }
+  static OpRef undef(MVT Ty) {
+    return OpRef(Undef | llvm::to_underlying(Ty.SimpleTy));
+  }
 
   // Direct value.
   SDValue OpV = SDValue();

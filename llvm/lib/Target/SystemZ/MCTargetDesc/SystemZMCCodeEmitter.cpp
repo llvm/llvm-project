@@ -171,8 +171,9 @@ uint64_t SystemZMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNum,
   if (MO.isExpr()) {
     unsigned MIBitSize = MCII.get(MI.getOpcode()).getSize() * 8;
     uint32_t RawBitOffset = getOperandBitOffset(MI, OpNum, STI);
-    unsigned OpBitSize =
-        SystemZ::MCFixupKindInfos[llvm::to_underlying(Kind) - FirstTargetFixupKind].TargetSize;
+    unsigned OpBitSize = SystemZ::MCFixupKindInfos[llvm::to_underlying(Kind) -
+                                                   FirstTargetFixupKind]
+                             .TargetSize;
     uint32_t BitOffset = MIBitSize - RawBitOffset - OpBitSize;
     addFixup(Fixups, BitOffset >> 3, MO.getExpr(), Kind);
     return 0;

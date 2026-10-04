@@ -349,8 +349,9 @@ bool RISCVAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
 
   Size = F.getAlignment().value() - MinNopLen;
   auto *Expr = MCConstantExpr::create(Size, getContext());
-  MCFixup Fixup =
-      MCFixup::create(0, Expr, FirstLiteralRelocationKind + llvm::to_underlying(ELF::R_RISCV_ALIGN));
+  MCFixup Fixup = MCFixup::create(0, Expr,
+                                  FirstLiteralRelocationKind +
+                                      llvm::to_underlying(ELF::R_RISCV_ALIGN));
   F.setVarFixups({Fixup});
   F.setLinkerRelaxable();
   return true;
