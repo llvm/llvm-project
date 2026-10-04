@@ -63,8 +63,8 @@ static void ReportMutexMisuse(ThreadState *thr, uptr pc, ReportType typ,
   // Release locks before symbolizing and outputting the report to avoid
   // deadlocks.
   {
-    ThreadRegistryLock l(&ctx->thread_registry);
     new (rep) ScopedReport(typ);
+    ThreadRegistryLock l(&ctx->thread_registry);
     rep->AddMutex(addr, creation_stack_id);
     rep->AddStack(trace, true);
     rep->AddLocation(addr, 1);
@@ -544,8 +544,8 @@ void ReportDeadlock(ThreadState *thr, uptr pc, DDReport *r) {
   // Release locks before symbolizing and outputting the report to avoid
   // deadlocks.
   {
-    ThreadRegistryLock l(&ctx->thread_registry);
     new (rep) ScopedReport(ReportTypeDeadlock);
+    ThreadRegistryLock l(&ctx->thread_registry);
     for (int i = 0; i < r->n; i++) {
       rep->AddMutex(r->loop[i].mtx_ctx0, r->loop[i].stk[0]);
       rep->AddUniqueTid((int)r->loop[i].thr_ctx);
@@ -598,8 +598,8 @@ void ReportDestroyLocked(ThreadState *thr, uptr pc, uptr addr,
   // Release locks before symbolizing and outputting the report to avoid
   // deadlocks.
   {
-    ThreadRegistryLock l0(&ctx->thread_registry);
     new (rep) ScopedReport(ReportTypeMutexDestroyLocked);
+    ThreadRegistryLock l0(&ctx->thread_registry);
     rep->AddMutex(addr, creation_stack_id);
     rep->AddStack(trace, true);
     rep->AddStack(last_lock_stack, true);
