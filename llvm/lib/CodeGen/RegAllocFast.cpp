@@ -61,10 +61,6 @@ STATISTIC(NumStores, "Number of stores added");
 STATISTIC(NumLoads, "Number of loads added");
 STATISTIC(NumCoalesced, "Number of copies coalesced");
 
-// FIXME: Remove this switch when all testcases are fixed!
-static cl::opt<bool> IgnoreMissingDefs("rafast-ignore-missing-defs",
-                                       cl::Hidden);
-
 static RegisterRegAlloc fastRegAlloc("fast", "fast register allocator",
                                      createFastRegisterAllocator);
 
@@ -732,7 +728,7 @@ void RegAllocFastImpl::reloadAtBegin(MachineBasicBlock &MBB) {
     if (getRegUnitState(FirstUnit) == regLiveIn)
       continue;
 
-    assert((&MBB != &MBB.getParent()->front() || IgnoreMissingDefs) &&
+    assert(&MBB != &MBB.getParent()->front() &&
            "no reload in start block. Missing vreg def?");
 
     if (PrologLiveIns.count(PhysReg)) {
