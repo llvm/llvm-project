@@ -676,6 +676,62 @@ TEST_P(CoverageMappingTest, handle_sandwiched_zero_length_region) {
   EXPECT_EQ(CoverageSegment(4, 17, false), Segments[9]);
 }
 
+TEST_P(CoverageMappingTest, handle_trailing_zero_length_region_with_parent) {
+  ProfileWriter.addRecord({"func", 0x1234, {7, 3}}, Err);
+  startFunction("func", 0x1234);
+
+  addCMR(Counter::getCounter(0), "file1", 1, 1, 5, 5);
+  addCMR(Counter::getCounter(1), "file1", 3, 5, 3, 5);
+
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
+  CoverageData Data = LoadedCoverage->getCoverageForFile("file1");
+  std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
+
+  // The final region in source order is empty, but the enclosing region
+  // still covers its location. Use the enclosing count instead of marking
+  // the line as skipped or using the empty region's count.
+  ASSERT_EQ(3U, Segments.size());
+  EXPECT_EQ(CoverageSegment(1, 1, 7, true), Segments[0]);
+  EXPECT_EQ(CoverageSegment(3, 5, 7, true), Segments[1]);
+  EXPECT_EQ(CoverageSegment(5, 5, false), Segments[2]);
+
+  for (const auto &LCS : getLineCoverageStats(Data)) {
+    EXPECT_TRUE(LCS.isMapped());
+    EXPECT_EQ(7U, LCS.getExecutionCount());
+  }
+}
+
+TEST_P(CoverageMappingTest,
+       handle_trailing_zero_length_region_with_zero_parent) {
+  ProfileWriter.addRecord({"func", 0x1234, {0, 3}}, Err);
+  startFunction("func", 0x1234);
+
+  addCMR(Counter::getCounter(0), "file1", 1, 1, 5, 5);
+  addCMR(Counter::getCounter(1), "file1", 3, 5, 3, 5);
+
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
+  CoverageData Data = LoadedCoverage->getCoverageForFile("file1");
+  for (const auto &LCS : getLineCoverageStats(Data)) {
+    EXPECT_TRUE(LCS.isMapped());
+    EXPECT_EQ(0U, LCS.getExecutionCount());
+  }
+}
+
+TEST_P(CoverageMappingTest, handle_trailing_zero_length_skipped_region) {
+  ProfileWriter.addRecord({"func", 0x1234, {7}}, Err);
+  startFunction("func", 0x1234);
+
+  addCMR(Counter::getCounter(0), "file1", 1, 1, 5, 5);
+  addSkipped("file1", 3, 5, 3, 5);
+
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
+  CoverageData Data = LoadedCoverage->getCoverageForFile("file1");
+  for (const auto &LCS : getLineCoverageStats(Data)) {
+    EXPECT_EQ(LCS.getLine() != 3, LCS.isMapped());
+    EXPECT_EQ(LCS.getLine() == 3 ? 0U : 7U, LCS.getExecutionCount());
+  }
+}
+
 TEST_P(CoverageMappingTest, handle_last_completed_region) {
   ProfileWriter.addRecord({"func1", 0x1234, {1, 2, 3, 4}}, Err);
   startFunction("func1", 0x1234);
