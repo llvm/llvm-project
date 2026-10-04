@@ -1217,6 +1217,14 @@ public:
         Metadata.emplace_back(LLVMContext::MD_prof, BW);
   }
 
+  /// Adds the metadata that can be preserved when combining all of \p VL into
+  /// a single instruction represented by \p Repr.
+  VPIRMetadata(const Instruction &Repr, ArrayRef<Value *> VL) {
+    getMetadataToPropagate(&Repr, VL, Metadata);
+    // Drop the kinds the bundle does not agree on, which come back as null.
+    erase_if(Metadata, [](const auto &P) { return !P.second; });
+  }
+
   /// Copy constructor for cloning.
   VPIRMetadata(const VPIRMetadata &Other) = default;
 
@@ -4899,11 +4907,13 @@ public:
   VPlan(Loop *L, Type *IdxTy);
 
   /// Construct a VPlan with a new VPBasicBlock as entry, a VPIRBasicBlock
-  /// wrapping \p ScalarHeaderBB and vector loop index of type \p IdxTy.
+  /// wrapping \p ScalarHeaderBB and vector loop index of type \p IdxTy. The
+  /// scalar header is left empty; callers that need recipes for the
+  /// instructions in \p ScalarHeaderBB must create them themselves.
   VPlan(BasicBlock *ScalarHeaderBB, Type *IdxTy)
       : VectorTripCount(IdxTy), VF(IdxTy), UF(IdxTy), VFxUF(IdxTy) {
     setEntry(createVPBasicBlock("preheader"));
-    ScalarHeader = createVPIRBasicBlock(ScalarHeaderBB);
+    ScalarHeader = createEmptyVPIRBasicBlock(ScalarHeaderBB);
   }
 
   LLVM_ABI_FOR_TEST ~VPlan();
