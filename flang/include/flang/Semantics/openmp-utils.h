@@ -261,6 +261,15 @@ private:
   std::string features_;
 };
 
+/// Append the construct context contributed by \p directive.
+///
+/// Combined and composite directives contribute their leaf constructs in
+/// source order. Informational directives do not contribute. Entering a TARGET
+/// construct discards the outer context, as required by the OpenMP
+/// construct-set definition.
+void AppendDirectiveContextTraits(llvm::omp::Directive directive,
+    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits);
+
 struct MetadirectiveCandidate {
   MetadirectiveCandidate(const parser::OmpDirectiveSpecification *spec,
       llvm::omp::VariantMatchInfo vmi, bool isExplicit,
@@ -279,6 +288,9 @@ struct MetadirectiveCandidate {
 
 struct MetadirectiveCandidateSet {
   llvm::SmallVector<MetadirectiveCandidate, 4> candidates;
+  /// Candidate indices in selection order, including global subset scores.
+  /// Filtering this list must preserve its order without recomputing scores.
+  llvm::SmallVector<unsigned, 4> order;
   /// Null represents either an explicit NOTHING fallback or no fallback.
   const parser::OmpDirectiveSpecification *fallback{nullptr};
 };
@@ -291,11 +303,6 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
     const parser::OmpClauseList &clauses, SemanticsContext &context,
     const OmpVariantMatchContext &matchContext);
 
-std::optional<unsigned> SelectBestMetadirectiveCandidate(
-    llvm::ArrayRef<unsigned> candidateIndices,
-    llvm::ArrayRef<MetadirectiveCandidate> candidates,
-    const OmpVariantMatchContext &matchContext);
-
 /// Return true when repeated evaluation of \p condition cannot call a
 /// procedure or observe asynchronously changing state.
 bool IsRepeatableMetadirectiveCondition(
@@ -305,18 +312,19 @@ bool IsRepeatableMetadirectiveCondition(
 bool AreSameRepeatableMetadirectiveCondition(const parser::ScalarExpr &left,
     const parser::ScalarExpr &right, SemanticsContext &context);
 
-/// Return candidates reachable after \p selectedIndex fails. Equal repeatable
-/// guards are pruned until a non-repeatable guard is encountered.
+/// Return candidates reachable after the first candidate fails. The nonempty
+/// \p candidateIndices list must be in selection order. Equal repeatable guards
+/// are pruned until an unguarded or non-repeatable candidate is encountered.
 llvm::SmallVector<unsigned, 4> GetMetadirectiveElsePathCandidates(
-    unsigned selectedIndex, llvm::ArrayRef<unsigned> candidateIndices,
+    llvm::ArrayRef<unsigned> candidateIndices,
     llvm::ArrayRef<MetadirectiveCandidate> candidates,
-    const OmpVariantMatchContext &matchContext, SemanticsContext &context);
+    SemanticsContext &context);
 
 /// Return every replacement that can be selected, retaining lower-ranked
 /// candidates after a dynamic condition. Null represents NOTHING.
 llvm::SmallVector<const parser::OmpDirectiveSpecification *, 4>
-GetReachableMetadirectiveVariants(const MetadirectiveCandidateSet &candidateSet,
-    const OmpVariantMatchContext &matchContext, SemanticsContext &context);
+GetReachableMetadirectiveVariants(
+    const MetadirectiveCandidateSet &candidateSet, SemanticsContext &context);
 
 /// True if a variant guarded by \p selector may be selected in the current
 /// compilation context.

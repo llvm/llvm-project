@@ -1150,6 +1150,7 @@ void Parser::parseOMPContextSelector(
     if (!Condition.isUsable())
       return FinishSelector();
     TISelector.ScoreOrCondition = Condition.get();
+    TISelector.OriginalCondition = Condition.get();
     TISelector.Properties.push_back(
         {TraitProperty::user_condition_unknown, "<condition>"});
     return;

@@ -1166,6 +1166,8 @@ public:
 
   void genEval(Fortran::lower::pft::Evaluation &eval,
                bool unstructuredContext) override final {
+    Fortran::lower::pft::Evaluation *previousEval{evalPtr};
+    llvm::scope_exit restoreEval([&]() { evalPtr = previousEval; });
     genFIR(eval, unstructuredContext);
   }
 
@@ -1274,6 +1276,10 @@ public:
 
   const Fortran::semantics::Scope &getCurrentScope() override final {
     return bridge.getSemanticsContext().FindScope(currentPosition);
+  }
+
+  Fortran::lower::pft::Evaluation *getCurrentEvaluation() override final {
+    return evalPtr;
   }
 
   fir::FirOpBuilder &getFirOpBuilder() override final {
@@ -6458,6 +6464,8 @@ private:
   /// Start translation of a function.
   void startNewFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
     assert(!builder && "expected nullptr");
+    // Specification expressions have no current executable evaluation.
+    evalPtr = nullptr;
     bridge.fctCtx().pushScope();
     bridge.cudaCleanupCtx().pushScope();
     bridge.openAccCtx().pushScope();

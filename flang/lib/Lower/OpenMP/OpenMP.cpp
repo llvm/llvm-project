@@ -1896,6 +1896,13 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
     return {};
   }();
 
+  // A loop body uses the collapsed DO evaluation, but its context belongs to
+  // the owning directive. This also covers intervening code between loops.
+  auto &contextEval =
+      info.outerCollapseEval ? *info.outerCollapseEval : info.eval;
+  mlir::SaveStateStack<OpenMPContextFrame> context{
+      info.converter.getStateStack(), contextEval, info.dir};
+
   // Mark the earliest insertion point.
   mlir::Operation *marker = insertMarker(firOpBuilder);
 
@@ -2046,6 +2053,8 @@ static void genBodyOfTargetDataOp(
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   genEntryBlock(firOpBuilder, args.asEntryBlockArgs(), dataOp.getRegion());
+  mlir::SaveStateStack<OpenMPContextFrame> context{
+      converter.getStateStack(), eval, llvm::omp::Directive::OMPD_target_data};
   bindEntryBlockArgs(converter, dataOp, args);
   auto argIface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*dataOp);
   llvm::SmallVector<const semantics::Symbol *> sourceUseDeviceAddrSyms{
@@ -2132,6 +2141,8 @@ static void genBodyOfTargetOp(
 
   mlir::Region &region = targetOp.getRegion();
   genEntryBlock(firOpBuilder, args.asEntryBlockArgs(), region);
+  mlir::SaveStateStack<OpenMPContextFrame> context{
+      converter.getStateStack(), eval, llvm::omp::Directive::OMPD_target};
   bindEntryBlockArgs(converter, targetOp, args);
   if (HostEvalInfo *hostEvalInfo = getHostEvalInfoStackTop(converter))
     hostEvalInfo->bindOperands(argIface.getHostEvalBlockArgs());
@@ -5239,6 +5250,14 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
   ConstructQueue::const_iterator parallelItem = std::next(distributeItem);
   ConstructQueue::const_iterator doItem = std::next(parallelItem);
 
+  // Clause expressions follow source nesting even though the composite
+  // operations place PARALLEL outside DISTRIBUTE.
+  mlir::omp::DistributeOperands distributeClauseOps;
+  genDistributeClauses(converter, semaCtx, stmtCtx, distributeItem->clauses,
+                       loc, distributeClauseOps);
+  mlir::SaveStateStack<OpenMPContextFrame> distributeContext{
+      converter.getStateStack(), eval, llvm::omp::Directive::OMPD_distribute};
+
   // Create parent omp.parallel first.
   mlir::omp::ParallelOperands parallelClauseOps;
   llvm::SmallVector<Object> parallelReductionObjects;
@@ -5258,12 +5277,10 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
   parallelArgs.reduction.vars = parallelClauseOps.reductionVars;
   genParallelOp(converter, symTable, semaCtx, eval, loc, queue, parallelItem,
                 parallelClauseOps, parallelArgs, &dsp, /*isComposite=*/true);
+  mlir::SaveStateStack<OpenMPContextFrame> context{
+      converter.getStateStack(), eval, llvm::omp::Directive::OMPD_parallel};
 
   // Clause processing.
-  mlir::omp::DistributeOperands distributeClauseOps;
-  genDistributeClauses(converter, semaCtx, stmtCtx, distributeItem->clauses,
-                       loc, distributeClauseOps);
-
   mlir::omp::WsloopOperands wsloopClauseOps;
   llvm::SmallVector<Object> wsloopReductionObjects;
   genWsloopClauses(converter, semaCtx, stmtCtx, doItem->clauses, loc,
@@ -5307,6 +5324,14 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
   ConstructQueue::const_iterator doItem = std::next(parallelItem);
   ConstructQueue::const_iterator simdItem = std::next(doItem);
 
+  // Evaluate DISTRIBUTE clauses before entering its source context and then
+  // PARALLEL, as in the explicit nesting.
+  mlir::omp::DistributeOperands distributeClauseOps;
+  genDistributeClauses(converter, semaCtx, stmtCtx, distributeItem->clauses,
+                       loc, distributeClauseOps);
+  mlir::SaveStateStack<OpenMPContextFrame> distributeContext{
+      converter.getStateStack(), eval, llvm::omp::Directive::OMPD_distribute};
+
   // Create parent omp.parallel first.
   mlir::omp::ParallelOperands parallelClauseOps;
   llvm::SmallVector<Object> parallelReductionObjects;
@@ -5328,15 +5353,13 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
   genParallelOp(converter, symTable, semaCtx, eval, loc, queue, parallelItem,
                 parallelClauseOps, parallelArgs, &parallelItemDSP,
                 /*isComposite=*/true);
+  mlir::SaveStateStack<OpenMPContextFrame> context{
+      converter.getStateStack(), eval, llvm::omp::Directive::OMPD_parallel};
 
   // Clause processing.
   // Use a shared cache so that both wsloop and simd produce the same SSA
   // values for array/box reduction variables. See genCompositeDoSimd.
   llvm::DenseMap<const semantics::Symbol *, mlir::Value> reductionVarCache;
-
-  mlir::omp::DistributeOperands distributeClauseOps;
-  genDistributeClauses(converter, semaCtx, stmtCtx, distributeItem->clauses,
-                       loc, distributeClauseOps);
 
   mlir::omp::WsloopOperands wsloopClauseOps;
   llvm::SmallVector<Object> wsloopReductionObjects;
@@ -5345,8 +5368,14 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
 
   mlir::omp::SimdOperands simdClauseOps;
   llvm::SmallVector<Object> simdReductionObjects;
-  genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
-                 simdReductionObjects, &reductionVarCache);
+  {
+    // SIMD clause expressions are inside DO, but loop control remains outside
+    // the loop constructs.
+    mlir::SaveStateStack<OpenMPContextFrame> doContext{
+        converter.getStateStack(), eval, llvm::omp::Directive::OMPD_do};
+    genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
+                   simdReductionObjects, &reductionVarCache);
+  }
 
   // Same as genCompositeDoSimd.
   if (!simdClauseOps.linearVars.empty()) {
@@ -5421,8 +5450,13 @@ static mlir::omp::DistributeOp genCompositeDistributeSimd(
 
   mlir::omp::SimdOperands simdClauseOps;
   llvm::SmallVector<Object> simdReductionObjects;
-  genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
-                 simdReductionObjects);
+  {
+    // SIMD clauses see DISTRIBUTE, but loop bounds are evaluated before it.
+    mlir::SaveStateStack<OpenMPContextFrame> distributeContext{
+        converter.getStateStack(), eval, llvm::omp::Directive::OMPD_distribute};
+    genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
+                   simdReductionObjects);
+  }
 
   DataSharingProcessor distributeItemDSP(
       converter, semaCtx, distributeItem->clauses, eval,
@@ -5493,8 +5527,14 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
 
   mlir::omp::SimdOperands simdClauseOps;
   llvm::SmallVector<Object> simdReductionObjects;
-  genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
-                 simdReductionObjects, &reductionVarCache);
+  {
+    // SIMD clause expressions are inside DO, but loop control remains outside
+    // the loop constructs.
+    mlir::SaveStateStack<OpenMPContextFrame> doContext{
+        converter.getStateStack(), eval, llvm::omp::Directive::OMPD_do};
+    genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
+                   simdReductionObjects, &reductionVarCache);
+  }
 
   // omp.simd writes back linear vars unconditionally, causing a race when
   // inside a parallel region. Move them to wsloop which has proper last-iter
@@ -7049,8 +7089,8 @@ struct SplicedAssociatedEvaluations {
   void suppressEntryBlock(lower::pft::Evaluation &evaluation) {
     assert(!entryEvaluation && evaluation.isNewBlock && evaluation.block &&
            "invalid associated entry evaluation");
-    // Do not let either cloned loop arm enter a function-region block. The
-    // metadirective selection will be placed in this block for an active ENTRY.
+    // Keep selected bodies out of function-region blocks. Place the
+    // metadirective selection in this block for an active ENTRY.
     entryEvaluation = &evaluation;
     entryBlock = evaluation.block;
     evaluation.isNewBlock = false;
@@ -7112,25 +7152,24 @@ isUnsupportedMetadirectiveLoopAssociationEval(lower::pft::Evaluation &eval) {
          (eval.isDirective() && !eval.isExecutableDirective());
 }
 
-/// A loop-associated metadirective is lowered like a real loop construct, but
-/// the PFT leaves its associated loop nest as the following sibling instead of
-/// nesting it underneath. Splice that sibling into the metadirective's own
-/// nested evaluations so the shared loop-lowering path can find it. Return
-/// nullptr if no associated DO loop follows.
-static lower::pft::Evaluation *spliceAssociatedDoEval(
+// The PFT leaves associated DO and BLOCK constructs as siblings. Attach them
+// while lowering the selected replacement and restore them afterwards.
+template <typename Construct>
+static lower::pft::Evaluation *spliceAssociatedEval(
     lower::pft::Evaluation &eval,
     SplicedAssociatedEvaluations *splicedEvaluations = nullptr,
     lower::pft::Evaluation **unsupportedInterveningEval = nullptr) {
+  constexpr bool isLoop = std::is_same_v<Construct, parser::DoConstruct>;
   if (unsupportedInterveningEval)
     *unsupportedInterveningEval = nullptr;
 
-  if (eval.hasNestedEvaluations()) {
+  if (isLoop && eval.hasNestedEvaluations()) {
     auto nestedIt =
         llvm::find_if(eval.getNestedEvaluations(), [](auto &nested) {
           return !isIgnorableMetadirectiveLoopAssociationEval(nested);
         });
     if (nestedIt != eval.getNestedEvaluations().end()) {
-      if (nestedIt->getIf<parser::DoConstruct>())
+      if (nestedIt->template getIf<Construct>())
         return &*nestedIt;
       if (unsupportedInterveningEval &&
           isUnsupportedMetadirectiveLoopAssociationEval(*nestedIt))
@@ -7140,7 +7179,7 @@ static lower::pft::Evaluation *spliceAssociatedDoEval(
   }
 
   // A delimited metadirective owns only its nested evaluations. An empty body
-  // must not capture a following sibling loop as its associated DO.
+  // must not capture a following sibling construct.
   if (const auto *omp = eval.getIf<parser::OpenMPConstruct>();
       omp && std::holds_alternative<parser::OmpDelimitedMetadirectiveDirective>(
                  omp->u))
@@ -7160,41 +7199,41 @@ static lower::pft::Evaluation *spliceAssociatedDoEval(
          "metadirective eval not found in parent list");
 
   auto firstAssociatedIt = std::next(metaIt);
-  auto loopIt = firstAssociatedIt;
-  while (loopIt != parentList->end() &&
-         isIgnorableMetadirectiveLoopAssociationEval(*loopIt))
-    ++loopIt;
+  auto associatedIt = firstAssociatedIt;
+  while (isLoop && associatedIt != parentList->end() &&
+         isIgnorableMetadirectiveLoopAssociationEval(*associatedIt))
+    ++associatedIt;
 
-  if (loopIt == parentList->end())
+  if (associatedIt == parentList->end())
     return nullptr;
-  if (!loopIt->getIf<parser::DoConstruct>()) {
+  if (!associatedIt->template getIf<Construct>()) {
     if (unsupportedInterveningEval &&
-        isUnsupportedMetadirectiveLoopAssociationEval(*loopIt))
-      *unsupportedInterveningEval = &*loopIt;
+        isUnsupportedMetadirectiveLoopAssociationEval(*associatedIt))
+      *unsupportedInterveningEval = &*associatedIt;
     return nullptr;
   }
 
   if (splicedEvaluations) {
     auto entryIt =
-        llvm::find_if(llvm::make_range(firstAssociatedIt, loopIt),
+        llvm::find_if(llvm::make_range(firstAssociatedIt, associatedIt),
                       [](lower::pft::Evaluation &candidate) {
                         return candidate.isNewBlock && candidate.block;
                       });
-    if (entryIt != loopIt) {
+    if (entryIt != associatedIt) {
       splicedEvaluations->suppressEntryBlock(*entryIt);
     } else {
-      lower::pft::Evaluation &doStmt = loopIt->getFirstNestedEvaluation();
-      if (doStmt.isNewBlock && doStmt.block)
-        splicedEvaluations->suppressEntryBlock(doStmt);
+      auto &stmt = associatedIt->getFirstNestedEvaluation();
+      if (stmt.isNewBlock && stmt.block)
+        splicedEvaluations->suppressEntryBlock(stmt);
     }
   }
 
   // Compiler directives between the metadirective and its associated loop
   // must be processed before the loop is lowered. Move them with the loop so
   // they are not visited later as siblings of the metadirective.
-  for (auto it = firstAssociatedIt; it != loopIt;) {
+  for (auto it = firstAssociatedIt; it != associatedIt;) {
     auto current = it++;
-    if (current->getIf<parser::CompilerDirective>()) {
+    if (current->template getIf<parser::CompilerDirective>()) {
       if (splicedEvaluations)
         splicedEvaluations->record(*parentList, current);
       eval.evaluationList->splice(eval.evaluationList->end(), *parentList,
@@ -7202,8 +7241,12 @@ static lower::pft::Evaluation *spliceAssociatedDoEval(
     }
   }
   if (splicedEvaluations)
-    splicedEvaluations->record(*parentList, loopIt);
-  eval.evaluationList->splice(eval.evaluationList->end(), *parentList, loopIt);
+    splicedEvaluations->record(*parentList, associatedIt);
+  // BLOCK bodies need source ancestry for nested construct selectors.
+  if constexpr (!isLoop)
+    associatedIt->parentConstruct = &eval;
+  eval.evaluationList->splice(eval.evaluationList->end(), *parentList,
+                              associatedIt);
   return &eval.getNestedEvaluations().back();
 }
 
@@ -7424,8 +7467,7 @@ static void genMetadirective(lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   llvm::SmallVector<llvm::omp::TraitProperty, 8> constructTraits;
-  collectEnclosingConstructTraits(builder.getInsertionBlock()->getParentOp(),
-                                  constructTraits);
+  collectEnclosingConstructTraits(converter, &eval, constructTraits);
   semantics::omp::OmpVariantMatchContext ompCtx =
       makeVariantMatchContext(builder.getModule(), constructTraits);
 
@@ -7462,14 +7504,9 @@ static void genMetadirective(lower::AbstractConverter &converter,
   auto &candidates = candidateSet->candidates;
   const parser::OmpDirectiveSpecification *fallback = candidateSet->fallback;
 
-  llvm::SmallVector<unsigned, 4> allCandidateIndices;
-  allCandidateIndices.reserve(candidates.size());
-  for (unsigned idx = 0, end = candidates.size(); idx < end; ++idx)
-    allCandidateIndices.push_back(idx);
-
   llvm::SmallVector<const parser::OmpDirectiveSpecification *, 4>
       reachableVariantSpecs = semantics::omp::GetReachableMetadirectiveVariants(
-          *candidateSet, ompCtx, semaCtx);
+          *candidateSet, semaCtx);
 
   bool hasLoopAssociatedCandidate =
       llvm::any_of(reachableVariantSpecs, [](const auto *spec) {
@@ -7478,14 +7515,19 @@ static void genMetadirective(lower::AbstractConverter &converter,
       });
   SplicedAssociatedEvaluations splicedAssociatedEvaluations;
   lower::pft::Evaluation *associatedLoopEval = nullptr;
+  lower::pft::Evaluation *associatedBlockEval = nullptr;
   llvm::scope_exit restoreEvaluationOwnership([&]() {
+    if (associatedBlockEval)
+      associatedBlockEval->parentConstruct = eval.parentConstruct;
     if (eval.hasNestedEvaluations())
       splicedAssociatedEvaluations.restore(eval.getNestedEvaluations());
   });
   if (hasLoopAssociatedCandidate) {
     lower::pft::Evaluation *unsupportedInterveningEval = nullptr;
-    if (lower::pft::Evaluation *loopEval = spliceAssociatedDoEval(
-            eval, &splicedAssociatedEvaluations, &unsupportedInterveningEval)) {
+    if (lower::pft::Evaluation *loopEval =
+            spliceAssociatedEval<parser::DoConstruct>(
+                eval, &splicedAssociatedEvaluations,
+                &unsupportedInterveningEval)) {
       associatedLoopEval = loopEval;
       if (lower::pft::FunctionLikeUnit *owningProc =
               eval.getOwningProcedure()) {
@@ -7555,6 +7597,18 @@ static void genMetadirective(lower::AbstractConverter &converter,
     }
   }
 
+  if (!hasLoopAssociatedCandidate &&
+      llvm::any_of(reachableVariantSpecs, [](const auto *spec) {
+        return spec && hasDirectiveAssociation(spec->DirId(),
+                                               llvm::omp::Association::Block);
+      }))
+    associatedBlockEval = spliceAssociatedEval<parser::BlockConstruct>(
+        eval, &splicedAssociatedEvaluations);
+
+  if (associatedBlockEval && splicedAssociatedEvaluations.getEntryBlock())
+    builder.setInsertionPointToStart(
+        splicedAssociatedEvaluations.getEntryBlock());
+
   auto genMetadirectiveBody = [&]() {
     for (lower::pft::Evaluation &nested : eval.getNestedEvaluations())
       if (!hasLoopAssociatedCandidate ||
@@ -7617,7 +7671,8 @@ static void genMetadirective(lower::AbstractConverter &converter,
       if (!enableDelayedPrivatization)
         TODO(variantLoc,
              "loop-associated METADIRECTIVE with eager privatization");
-      lower::pft::Evaluation *loopEval = spliceAssociatedDoEval(eval);
+      lower::pft::Evaluation *loopEval =
+          spliceAssociatedEval<parser::DoConstruct>(eval);
       if (!loopEval)
         TODO(variantLoc, "loop-associated METADIRECTIVE without associated DO");
       if (hasContentFollowingAssociatedDo(eval, *loopEval))
@@ -7652,6 +7707,9 @@ static void genMetadirective(lower::AbstractConverter &converter,
       if (marking == MetadirectiveLoopIVMarking::ThreadprivateIV)
         TODO(variantLoc, "THREADPRIVATE loop iteration variable in "
                          "loop-associated METADIRECTIVE variant");
+      mlir::SaveStateStack<OpenMPContextFrame> context{
+          converter.getStateStack(), eval, spec->DirId(),
+          /*isReplacement=*/true};
       genOMPDispatch(converter, symTable, semaCtx, eval, variantLoc, queue,
                      queue.begin(), dsaGuard.getMarkedSymbols());
       return;
@@ -7665,15 +7723,26 @@ static void genMetadirective(lower::AbstractConverter &converter,
       TODO(variantLoc,
            "METADIRECTIVE with both block- and loop-associated variants");
 
-    genOMPDispatch(converter, symTable, semaCtx, eval, variantLoc, queue,
-                   queue.begin());
+    if (consumesBody) {
+      if (associatedBlockEval && associatedBlockEval->lowerAsUnstructured())
+        TODO(variantLoc,
+             "unstructured associated BLOCK in METADIRECTIVE variant");
+      mlir::SaveStateStack<OpenMPContextFrame> context{
+          converter.getStateStack(), eval, spec->DirId(),
+          /*isReplacement=*/true};
+      genOMPDispatch(converter, symTable, semaCtx, eval, variantLoc, queue,
+                     queue.begin());
+    } else {
+      genOMPDispatch(converter, symTable, semaCtx, eval, variantLoc, queue,
+                     queue.begin());
+    }
     // A standalone variant (Association::None, e.g. barrier/taskwait/nothing)
     // does not consume the metadirective's nested block, so lower it here.
     if (!consumesBody && eval.hasNestedEvaluations())
       genMetadirectiveBody();
   };
 
-  llvm::SmallVector<unsigned, 4> remainingCandidates{allCandidateIndices};
+  llvm::SmallVector<unsigned, 4> remainingCandidates{candidateSet->order};
 
   lower::StatementContext stmtCtx;
 
@@ -7693,24 +7762,16 @@ static void genMetadirective(lower::AbstractConverter &converter,
   // If the else path selects the same unguarded directive, lower it directly.
   // Stop when selection reaches an unguarded candidate or the fallback.
   while (!remainingCandidates.empty()) {
-    std::optional<unsigned> selected =
-        semantics::omp::SelectBestMetadirectiveCandidate(remainingCandidates,
-                                                         candidates, ompCtx);
-    if (!selected) {
-      genVariant(fallback);
-      return;
-    }
-
     const semantics::omp::MetadirectiveCandidate &candidate =
-        candidates[*selected];
+        candidates[remainingCandidates.front()];
     if (!candidate.dynamicCondition) {
       genVariant(candidate.spec);
       return;
     }
 
     llvm::SmallVector<unsigned, 4> elsePathCandidates =
-        semantics::omp::GetMetadirectiveElsePathCandidates(
-            *selected, remainingCandidates, candidates, ompCtx, semaCtx);
+        semantics::omp::GetMetadirectiveElsePathCandidates(remainingCandidates,
+                                                           candidates, semaCtx);
 
     // match_any may create a guarded condition-true candidate and an unguarded
     // static candidate for the same directive. If the else path picks the
@@ -7718,11 +7779,9 @@ static void genMetadirective(lower::AbstractConverter &converter,
     //
     //   if (flag) barrier    into just    barrier
     //   else barrier
-    if (std::optional<unsigned> selectedInElse =
-            semantics::omp::SelectBestMetadirectiveCandidate(
-                elsePathCandidates, candidates, ompCtx)) {
+    if (!elsePathCandidates.empty()) {
       const semantics::omp::MetadirectiveCandidate &candidateInElse =
-          candidates[*selectedInElse];
+          candidates[elsePathCandidates.front()];
       if (!candidateInElse.dynamicCondition &&
           candidateInElse.spec == candidate.spec) {
         genVariant(candidate.spec);
@@ -7737,6 +7796,10 @@ static void genMetadirective(lower::AbstractConverter &converter,
       TODO(converter.genLocation(candidate.dynamicCondition->source),
            "unstructured associated DO in loop-associated METADIRECTIVE "
            "variant");
+
+    if (associatedBlockEval && associatedBlockEval->lowerAsUnstructured())
+      TODO(converter.genLocation(candidate.dynamicCondition->source),
+           "unstructured associated BLOCK in METADIRECTIVE variant");
 
     mlir::Location condLoc =
         converter.genLocation(candidate.dynamicCondition->source);
