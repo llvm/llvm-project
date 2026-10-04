@@ -73,10 +73,10 @@ define void @scalable_covers_fixed_reverse(ptr %a, ptr %b) {
 ; CHECK-NEXT:          (Low: %b High: (241 + %b))
 ; CHECK-NEXT:            Member: {%b,+,16}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %a High: (240 + (16 * vscale) + %a))
+; CHECK-NEXT:          (Low: %a High: (248 + %a))
 ; CHECK-NEXT:            Member: {%a,+,16}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP2:
-; CHECK-NEXT:          (Low: %a High: (248 + %a))
+; CHECK-NEXT:          (Low: %a High: (240 + (16 * vscale) + %a))
 ; CHECK-NEXT:            Member: {%a,+,16}<nuw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -175,10 +175,10 @@ define void @equal_minimum_reverse(ptr %a, ptr %b) {
 ; CHECK-NEXT:          (Low: %b High: (241 + %b))
 ; CHECK-NEXT:            Member: {%b,+,16}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %a High: (240 + (16 * vscale) + %a))
+; CHECK-NEXT:          (Low: %a High: (256 + %a))
 ; CHECK-NEXT:            Member: {%a,+,16}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP2:
-; CHECK-NEXT:          (Low: %a High: (256 + %a))
+; CHECK-NEXT:          (Low: %a High: (240 + (16 * vscale) + %a))
 ; CHECK-NEXT:            Member: {%a,+,16}<nuw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -277,10 +277,10 @@ define void @incomparable_reverse(ptr %a, ptr %b) {
 ; CHECK-NEXT:          (Low: %b High: (241 + %b))
 ; CHECK-NEXT:            Member: {%b,+,16}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %a High: (240 + (8 * vscale) + %a))
+; CHECK-NEXT:          (Low: %a High: (256 + %a))
 ; CHECK-NEXT:            Member: {%a,+,16}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP2:
-; CHECK-NEXT:          (Low: %a High: (256 + %a))
+; CHECK-NEXT:          (Low: %a High: (240 + (8 * vscale) + %a))
 ; CHECK-NEXT:            Member: {%a,+,16}<nuw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -323,11 +323,6 @@ define void @cover_after_incomparable(ptr %a, ptr %b) {
 ; CHECK-NEXT:          %q = getelementptr inbounds i8, ptr %b, i64 %off
 ; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %p = getelementptr inbounds i8, ptr %a, i64 %off
-; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %q = getelementptr inbounds i8, ptr %b, i64 %off
-; CHECK-NEXT:        Against group GRP3:
-; CHECK-NEXT:          %p = getelementptr inbounds i8, ptr %a, i64 %off
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %b High: (241 + %b))
@@ -336,9 +331,6 @@ define void @cover_after_incomparable(ptr %a, ptr %b) {
 ; CHECK-NEXT:          (Low: %a High: (256 + %a))
 ; CHECK-NEXT:            Member: {%a,+,16}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP2:
-; CHECK-NEXT:          (Low: %a High: (240 + (8 * vscale) + %a))
-; CHECK-NEXT:            Member: {%a,+,16}<nuw><%loop>
-; CHECK-NEXT:        Group GRP3:
 ; CHECK-NEXT:          (Low: %a High: (240 + (16 * vscale) + %a))
 ; CHECK-NEXT:            Member: {%a,+,16}<nuw><%loop>
 ; CHECK-EMPTY:
