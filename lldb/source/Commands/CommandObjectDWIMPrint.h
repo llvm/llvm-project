@@ -14,6 +14,7 @@
 #include "lldb/Interpreter/OptionGroupFormat.h"
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
 #include "lldb/Interpreter/OptionValueFormat.h"
+#include "llvm/Support/Error.h"
 
 namespace lldb_private {
 
@@ -54,11 +55,12 @@ private:
   /// asked for the property's backing storage name, and the lookup retried
   /// with that name.
   ///
-  /// \return The rewritten path, or an empty string if nothing needed
-  /// rewriting (including if \a expr could not be fully resolved at all).
-  std::string RewritePathForBackingStorage(llvm::StringRef expr,
-                                           StackFrame &frame,
-                                           lldb::DynamicValueType use_dynamic);
+  /// \return The rewritten path, or an error describing why \a expr could
+  /// not be rewritten (e.g. it could not be resolved, or nothing needed
+  /// rewriting).
+  llvm::Expected<std::string>
+  RewritePathForBackingStorage(llvm::StringRef expr, StackFrame &frame,
+                               lldb::DynamicValueType use_dynamic);
 
   OptionGroupOptions m_option_group;
   OptionGroupFormat m_format_options = lldb::eFormatDefault;

@@ -18,12 +18,15 @@
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 
 #include <regex>
 
@@ -52,13 +55,12 @@ CommandObjectDWIMPrint::CommandObjectDWIMPrint(CommandInterpreter &interpreter)
 
 Options *CommandObjectDWIMPrint::GetOptions() { return &m_option_group; }
 
-std::string CommandObjectDWIMPrint::RewritePathForBackingStorage(
+llvm::Expected<std::string>
+CommandObjectDWIMPrint::RewritePathForBackingStorage(
     llvm::StringRef expr, StackFrame &frame,
     lldb::DynamicValueType use_dynamic) {
   llvm::SmallVector<llvm::StringRef, 4> components;
   expr.split(components, '.');
-  if (components.empty())
-    return {};
 
   VariableSP var_sp;
   Status status;
@@ -68,7 +70,8 @@ std::string CommandObjectDWIMPrint::RewritePathForBackingStorage(
           StackFrame::eExpressionPathOptionsDisallowGlobals,
       var_sp, status, lldb::eDILModeSimple);
   if (!valobj_sp || !status.Success() || valobj_sp->GetError().Fail())
-    return {};
+    return llvm::createStringError("could not resolve '" + components[0] +
+                                   "' as a variable in the current frame");
 
   std::string rewritten_path = components[0].str();
   bool did_rewrite = false;
@@ -80,10 +83,14 @@ std::string CommandObjectDWIMPrint::RewritePathForBackingStorage(
       llvm::StringRef backing_name =
           valobj_sp->GetCompilerType().GetPropertyBackingStorageName(component);
       if (backing_name.empty())
-        return {};
+        return llvm::createStringError(
+            "'" + component + "' is neither a member of '" + rewritten_path +
+            "' nor a property with known backing storage");
       child_sp = valobj_sp->GetChildMemberWithName(backing_name);
       if (!child_sp)
-        return {};
+        return llvm::createStringError(
+            "backing storage '" + backing_name + "' of property '" + component +
+            "' is not a member of '" + rewritten_path + "'");
       name_used = backing_name;
       did_rewrite = true;
     }
@@ -93,7 +100,9 @@ std::string CommandObjectDWIMPrint::RewritePathForBackingStorage(
   }
 
   if (!did_rewrite)
-    return {};
+    return llvm::createStringError("no component of '" + expr +
+                                   "' is a property backed by a differently "
+                                   "named member");
 
   return rewritten_path;
 }
@@ -230,12 +239,15 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
 
     std::string rewritten_path;
     if (!valobj_sp) {
-      rewritten_path = RewritePathForBackingStorage(
-          expr, *frame, eval_options.GetUseDynamic());
-      if (!rewritten_path.empty()) {
+      if (llvm::Expected<std::string> rewritten = RewritePathForBackingStorage(
+              expr, *frame, eval_options.GetUseDynamic())) {
+        rewritten_path = std::move(*rewritten);
         valobj_sp = try_variable_expr(rewritten_path);
         if (valobj_sp)
           used_path = rewritten_path;
+      } else {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Commands), rewritten.takeError(),
+                       "dwim-print: not rewriting '{1}': {0}", expr);
       }
     }
 

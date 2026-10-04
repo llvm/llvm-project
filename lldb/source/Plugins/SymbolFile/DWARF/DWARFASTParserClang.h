@@ -138,8 +138,6 @@ protected:
   class DelayedAddObjCClassProperty;
   typedef std::vector<DelayedAddObjCClassProperty> DelayedPropertyList;
 
-  typedef llvm::StringMap<llvm::StringRef> PropertyBackingStorageNames;
-
   typedef llvm::DenseMap<
       const lldb_private::plugin::dwarf::DWARFDebugInfoEntry *,
       clang::DeclContext *>
@@ -211,7 +209,7 @@ protected:
   /// DW_TAG_property_getter with a DW_AT_property_forward attribute, and
   /// returns a map from each such property's name to the name of the member
   /// it forwards to (its backing storage).
-  PropertyBackingStorageNames ParsePropertyBackingStorageNames(
+  llvm::StringMap<llvm::StringRef> ParsePropertyBackingStorageNames(
       const lldb_private::plugin::dwarf::DWARFDIE &parent_die);
 
   void ParseChildParameters(
@@ -413,12 +411,12 @@ private:
   /// name, as produced by ParsePropertyBackingStorageNames.
   /// \param delayed_properties The list of delayed properties that the result
   /// will be appended to.
-  void
-  ParseObjCProperty(const lldb_private::plugin::dwarf::DWARFDIE &die,
-                    const lldb_private::plugin::dwarf::DWARFDIE &parent_die,
-                    const lldb_private::CompilerType &class_clang_type,
-                    const PropertyBackingStorageNames &property_backing_names,
-                    DelayedPropertyList &delayed_properties);
+  void ParseObjCProperty(
+      const lldb_private::plugin::dwarf::DWARFDIE &die,
+      const lldb_private::plugin::dwarf::DWARFDIE &parent_die,
+      const lldb_private::CompilerType &class_clang_type,
+      const llvm::StringMap<llvm::StringRef> &property_backing_names,
+      DelayedPropertyList &delayed_properties);
 
   void
   ParseSingleMember(const lldb_private::plugin::dwarf::DWARFDIE &die,

@@ -2853,10 +2853,10 @@ PropertyAttributes::PropertyAttributes(const DWARFDIE &die) {
   }
 }
 
-DWARFASTParserClang::PropertyBackingStorageNames
+llvm::StringMap<llvm::StringRef>
 DWARFASTParserClang::ParsePropertyBackingStorageNames(
     const DWARFDIE &parent_die) {
-  PropertyBackingStorageNames property_backing_names;
+  llvm::StringMap<llvm::StringRef> property_backing_names;
 
   for (DWARFDIE die : parent_die.children()) {
     if (die.Tag() != DW_TAG_property)
@@ -2885,7 +2885,7 @@ DWARFASTParserClang::ParsePropertyBackingStorageNames(
 void DWARFASTParserClang::ParseObjCProperty(
     const DWARFDIE &die, const DWARFDIE &parent_die,
     const lldb_private::CompilerType &class_clang_type,
-    const PropertyBackingStorageNames &property_backing_names,
+    const llvm::StringMap<llvm::StringRef> &property_backing_names,
     DelayedPropertyList &delayed_properties) {
   // This function can only parse DW_TAG_APPLE_property.
   assert(die.Tag() == DW_TAG_APPLE_property);
@@ -3198,7 +3198,7 @@ bool DWARFASTParserClang::ParseChildMembers(
   if (ast == nullptr)
     return false;
 
-  const PropertyBackingStorageNames property_backing_names =
+  const llvm::StringMap<llvm::StringRef> property_backing_names =
       ParsePropertyBackingStorageNames(parent_die);
 
   for (DWARFDIE die : parent_die.children()) {
