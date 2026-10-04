@@ -2752,6 +2752,101 @@ xegpu::DistributeLayoutAttr xegpu::setupInterleaveResultLayout(
                                            resShape[innerMostDim], uArch);
 }
 
+/// Checks that the tiles a split group is cut into walk the collapsed source
+/// dim with one constant stride, which is what `collapseDims` assumes when it
+/// multiplies a layout field across the group.
+///
+/// Along each dim the group is cut into `counts[dim]` tiles of `tileShape[dim]`
+/// elements (empty for single-element tiles) taken from `shape[dim]`, which
+/// gives the row-major strides. Walking from the innermost dim out, a dim cut
+/// into several tiles steps by `tileShape[dim] * stride(dim)` and has to pick
+/// up where the inner dims left off, `expectedStride`; a dim cut into one tile
+/// does not step at all, so it only contributes its size.
+static bool isContiguousTiling(ArrayRef<int64_t> dimGroup,
+                               ArrayRef<int64_t> shape,
+                               ArrayRef<int64_t> counts,
+                               ArrayRef<int64_t> tileShape,
+                               int64_t expectedStride) {
+  int64_t stride = 1;
+  for (int64_t dim : llvm::reverse(dimGroup)) {
+    int64_t tileSize = tileShape.empty() ? 1 : tileShape[dim];
+    if (counts[dim] != 1) {
+      if (stride * tileSize != expectedStride)
+        return false;
+      expectedStride = stride * tileSize * counts[dim];
+    }
+    stride *= shape[dim];
+  }
+  return true;
+}
+
+xegpu::DistributeLayoutAttr
+xegpu::setupShapeCastResultLayout(xegpu::LayoutKind layoutKind,
+                                  VectorType srcVecTy, VectorType resVecTy,
+                                  DistributeLayoutAttr consumerLayout) {
+  // TODO: work out the subgroup level rule; leave such layouts alone for now.
+  if (!consumerLayout || layoutKind == xegpu::LayoutKind::Subgroup)
+    return consumerLayout;
+
+  ArrayRef<int64_t> resShape = resVecTy.getShape();
+  SmallVector<SmallVector<int64_t>> splitDimGroups;
+  if (!xegpu::matchSplitDimExpansion(srcVecTy.getShape(), resShape,
+                                     splitDimGroups))
+    return consumerLayout;
+
+  SmallVector<int64_t> laneLayout =
+      consumerLayout.getEffectiveLaneLayoutAsInt();
+  SmallVector<int64_t> instData = consumerLayout.getEffectiveInstDataAsInt();
+
+  xegpu::DistributeLayoutAttr resLayout = [&]() -> DistributeLayoutAttr {
+    DistributeLayoutAttr layout = consumerLayout;
+    for (const SmallVector<int64_t> &dimGroup : splitDimGroups) {
+      size_t i = 0;
+      while (i < dimGroup.size() && laneLayout[dimGroup[i]] == 1)
+        ++i;
+
+      for (++i; i < dimGroup.size(); ++i) {
+        int64_t dim = dimGroup[i];
+        int64_t dimSize = resShape[dim];
+        int64_t lanes = laneLayout[dim];
+        if (lanes <= 0 || dimSize % lanes != 0)
+          return consumerLayout;
+        layout =
+            layout.setDimData(dim, /*sgData=*/-1,
+                              instData.empty() ? -1 : dimSize, dimSize / lanes);
+      }
+    }
+    return layout;
+  }();
+
+  // Stretching does not make every layout collapsible; reject the rest.
+  SmallVector<int64_t> resInstData = resLayout.getEffectiveInstDataAsInt();
+  SmallVector<int64_t> resLaneLayout = resLayout.getEffectiveLaneLayoutAsInt();
+  SmallVector<int64_t> resLaneData = resLayout.getEffectiveLaneDataAsInt();
+
+  for (const SmallVector<int64_t> &dimGroup : splitDimGroups) {
+    // One lane's elements must be a single contiguous run of the collapsed dim.
+    if (!isContiguousTiling(dimGroup, resShape, resLaneData, /*tileShape=*/{},
+                            /*expectedStride=*/1))
+      return nullptr;
+
+    // Consecutive lanes must be exactly one such run apart.
+    int64_t collapsedLaneData = 1;
+    for (int64_t dim : dimGroup)
+      collapsedLaneData *= resLaneData[dim];
+    if (!isContiguousTiling(dimGroup, resShape, resLaneLayout, resLaneData,
+                            /*expectedStride=*/collapsedLaneData))
+      return nullptr;
+
+    // The inst tile must walk the result shape the same way.
+    if (!resInstData.empty() &&
+        !isContiguousTiling(dimGroup, resShape, resInstData, /*tileShape=*/{},
+                            /*expectedStride=*/1))
+      return nullptr;
+  }
+  return resLayout;
+}
+
 /// Sets up the result layout for an insert strided slice operation.
 /// Creates a result layout based on the specified layout kind (InstData or
 /// Lane).

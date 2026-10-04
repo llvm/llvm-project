@@ -623,7 +623,7 @@ public:
     assert(index < recordTy.getMembers().size() &&
            "member index out of bounds");
     mlir::Type memberTy = recordTy.getMembers()[index];
-    mlir::Type memberPtrTy = getPointerTo(memberTy);
+    mlir::Type memberPtrTy = getPointerTo(memberTy, base.getAddressSpace());
 
     auto moduleOp =
         getInsertionBlock()->getParentOp()->getParentOfType<mlir::ModuleOp>();
@@ -823,6 +823,23 @@ public:
     cir::ConstantOp poison =
         getConstant(loc, cir::PoisonAttr::get(vec1.getType()));
     return createVecShuffle(loc, vec1, poison, mask);
+  }
+
+  cir::MatrixColumnMajorLoadOp createMatrixColumnMajorLoad(mlir::Location loc,
+                                                           mlir::Type resultTy,
+                                                           mlir::Value value,
+                                                           mlir::Value stride,
+                                                           bool isVolatile) {
+    return cir::MatrixColumnMajorLoadOp::create(*this, loc, resultTy, value,
+                                                stride, isVolatile);
+  }
+
+  cir::MatrixTransposeOp createMatrixTranspose(mlir::Location loc,
+                                               mlir::Value matrix) {
+    auto inputTy = mlir::cast<cir::MatrixType>(matrix.getType());
+    auto resultTy = cir::MatrixType::get(
+        inputTy.getElementType(), inputTy.getColumnNum(), inputTy.getRowNum());
+    return cir::MatrixTransposeOp::create(*this, loc, resultTy, matrix);
   }
 
   template <typename... Operands>

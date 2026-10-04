@@ -837,8 +837,10 @@ bool LoopIdiomRecognize::processLoopMemCpy(MemCpyInst *MCI,
   if (MCI->isVolatile() || !isa<ConstantInt>(MCI->getLength()))
     return false;
 
-  // If we're not allowed to hack on memcpy, we fail.
-  if ((!HasMemcpy && !MCI->isForceInlined()) || DisableLIRP::Memcpy)
+  // If we're not allowed to hack on memcpy, we fail. We don't mess with the
+  // inlined version as generating a larger inline mempcy could affect code
+  // size.
+  if (!HasMemcpy || MCI->isForceInlined() || DisableLIRP::Memcpy)
     return false;
 
   Value *Dest = MCI->getDest();
@@ -900,8 +902,9 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
   if (MSI->isVolatile())
     return false;
 
-  // If we're not allowed to hack on memset, we fail.
-  if (!HasMemset || DisableLIRP::Memset)
+  // If we're not allowed to hack on memset, we fail. We don't mess with the
+  // inlined version as generating a larger memset could affect code size.
+  if (!HasMemset || MSI->isForceInlined() || DisableLIRP::Memset)
     return false;
 
   Value *Pointer = MSI->getDest();
@@ -1096,6 +1099,13 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     Value *StoredVal, Instruction *TheStore,
     SmallPtrSetImpl<Instruction *> &Stores, const SCEVAddRecExpr *Ev,
     const SCEV *BECount, bool IsNegStride, bool IsLoopMemset) {
+  // We currently don't convert inline intrinsics into larger ones, to avoid
+  // code size increase. `processLoopMemSet` checks that the intrinsic is not
+  // inline before calling this function.
+  assert((isa<StoreInst>(TheStore) ||
+          !cast<MemIntrinsic>(TheStore)->isForceInlined()) &&
+         "inline mem intrinsics should be filtered out by callers");
+
   Module *M = TheStore->getModule();
 
   // The trip count of the loop and the base pointer of the addrec SCEV is
@@ -1352,12 +1362,12 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
     MaybeAlign StoreAlign, MaybeAlign LoadAlign, Instruction *TheStore,
     Instruction *TheLoad, const SCEVAddRecExpr *StoreEv,
     const SCEVAddRecExpr *LoadEv, const SCEV *BECount) {
-
-  // FIXME: until llvm.memcpy.inline supports dynamic sizes, we need to
-  // conservatively bail here, since otherwise we may have to transform
-  // llvm.memcpy.inline into llvm.memcpy which is illegal.
-  if (auto *MCI = dyn_cast<MemCpyInst>(TheStore); MCI && MCI->isForceInlined())
-    return false;
+  // We currently don't convert inline intrinsics into larger ones, to avoid
+  // code size increase. `processLoopMemCpy` checks that the intrinsic is not
+  // inline before calling this function.
+  assert((isa<StoreInst>(TheStore) ||
+          !cast<MemIntrinsic>(TheStore)->isForceInlined()) &&
+         "inline mem intrinsics should be filtered out by callers");
 
   // The trip count of the loop and the base pointer of the addrec SCEV is
   // guaranteed to be loop invariant, which means that it should dominate the
@@ -3482,7 +3492,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   // Step 4: Rewrite the loop into a countable form, with canonical IV.
 
   // The new canonical induction variable.
-  Builder.SetInsertPoint(LoopHeaderBB, LoopHeaderBB->begin());
+  Builder.SetInsertPoint(LoopHeaderBB->begin());
   auto *IV = Builder.CreatePHI(Ty, 2, CurLoop->getName() + ".iv");
 
   // The induction itself.
@@ -3817,11 +3827,11 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
   // Step 3: Rewrite the loop into a countable form, with canonical IV.
 
   // The new canonical induction variable.
-  Builder.SetInsertPoint(LoopHeaderBB, LoopHeaderBB->begin());
+  Builder.SetInsertPoint(LoopHeaderBB->begin());
   auto *CIV = Builder.CreatePHI(Ty, 2, CurLoop->getName() + ".iv");
 
   // The induction itself.
-  Builder.SetInsertPoint(LoopHeaderBB, LoopHeaderBB->getFirstNonPHIIt());
+  Builder.SetInsertPoint(LoopHeaderBB->getFirstNonPHIIt());
   auto *CIVNext =
       Builder.CreateAdd(CIV, ConstantInt::get(Ty, 1), CIV->getName() + ".next",
                         /*HasNUW=*/true, /*HasNSW=*/Bitwidth != 2);

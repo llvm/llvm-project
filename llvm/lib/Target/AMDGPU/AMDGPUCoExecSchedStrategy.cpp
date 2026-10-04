@@ -1083,8 +1083,8 @@ void AMDGPUCoExecSchedStrategy::initPolicy(MachineBasicBlock::iterator Begin,
                                            MachineBasicBlock::iterator End,
                                            unsigned NumRegionInstrs) {
   GCNSchedStrategy::initPolicy(Begin, End, NumRegionInstrs);
-  if (PreRADirection == MISched::BottomUp ||
-      PreRADirection == MISched::Bidirectional)
+  if (getPreRADirection() == MISched::BottomUp ||
+      getPreRADirection() == MISched::Bidirectional)
     report_fatal_error("CoExecSchedStrategy only support TopDown scheduling.");
   RegionPolicy.OnlyTopDown = true;
   RegionPolicy.OnlyBottomUp = false;
