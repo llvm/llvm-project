@@ -1746,6 +1746,7 @@ unsigned DIExpression::ExprOperand::getSize() const {
   case dwarf::DW_OP_constu:
   case dwarf::DW_OP_consts:
   case dwarf::DW_OP_deref_size:
+  case dwarf::DW_OP_xderef_size:
   case dwarf::DW_OP_plus_uconst:
   case dwarf::DW_OP_LLVM_tag_offset:
   case dwarf::DW_OP_LLVM_entry_value:
@@ -1798,6 +1799,10 @@ bool DIExpression::PlusUconstOp::classof(const ExprOperand *Op) {
   return Op->is(dwarf::DW_OP_plus_uconst);
 }
 
+bool DIExpression::isLitOp(uint64_t Op) {
+  return Op >= dwarf::DW_OP_lit0 && Op <= dwarf::DW_OP_lit31;
+}
+
 bool DIExpression::isValid() const {
   for (auto I = expr_op_begin(), E = expr_op_end(); I != E; ++I) {
     // Check that there's space for the operand.
@@ -1806,7 +1811,7 @@ bool DIExpression::isValid() const {
 
     uint64_t Op = I->getOp();
     if ((Op >= dwarf::DW_OP_reg0 && Op <= dwarf::DW_OP_reg31) ||
-        (Op >= dwarf::DW_OP_breg0 && Op <= dwarf::DW_OP_breg31))
+        (Op >= dwarf::DW_OP_breg0 && Op <= dwarf::DW_OP_breg31) || isLitOp(Op))
       continue;
 
     // Check that the operand is valid.
@@ -1851,6 +1856,12 @@ bool DIExpression::isValid() const {
         return false;
       break;
     }
+    case dwarf::DW_OP_deref_size:
+    case dwarf::DW_OP_xderef_size:
+      // The size operand is encoded as a single byte.
+      if (!isUInt<8>(I->getArg(0)))
+        return false;
+      break;
     case dwarf::DW_OP_LLVM_implicit_pointer:
     case dwarf::DW_OP_LLVM_convert:
     case dwarf::DW_OP_LLVM_arg:
@@ -1871,9 +1882,7 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_shr:
     case dwarf::DW_OP_shra:
     case dwarf::DW_OP_deref:
-    case dwarf::DW_OP_deref_size:
     case dwarf::DW_OP_xderef:
-    case dwarf::DW_OP_lit0:
     case dwarf::DW_OP_not:
     case dwarf::DW_OP_dup:
     case dwarf::DW_OP_regx:
@@ -2202,27 +2211,38 @@ bool DIExpression::hasAllLocationOps(unsigned N) const {
 
 const DIExpression *DIExpression::extractAddressClass(const DIExpression *Expr,
                                                       unsigned &AddrClass) {
-  // FIXME: This seems fragile. Nothing that verifies that these elements
-  // actually map to ops and not operands.
+  if (!Expr->isValid())
+    return Expr;
   auto SingleLocEltsOpt = Expr->getSingleLocationExpressionElements();
   if (!SingleLocEltsOpt)
+    return Expr;
+  ArrayRef<uint64_t> SingleLocElts = *SingleLocEltsOpt;
+
+  // Walk the operations, rather than the raw elements, so that operands are
+  // never mistaken for opcodes.
+  SmallVector<ExprOperand, 8> Ops(expr_op_iterator(SingleLocElts.begin()),
+                                  expr_op_iterator(SingleLocElts.end()));
+  if (Ops.size() < 3)
+    return Expr;
+  const ExprOperand &AddrSpaceOp = Ops[Ops.size() - 3];
+  const ExprOperand &SwapOp = Ops[Ops.size() - 2];
+  const ExprOperand &XDerefOp = Ops[Ops.size() - 1];
+  if (!SwapOp.is(dwarf::DW_OP_swap) || !(XDerefOp.is(dwarf::DW_OP_xderef) ||
+                                         XDerefOp.is(dwarf::DW_OP_xderef_size)))
+    return Expr;
+
+  uint64_t Op = AddrSpaceOp.getOp();
+  if (Op == dwarf::DW_OP_constu)
+    AddrClass = AddrSpaceOp.getArg(0);
+  else if (isLitOp(Op))
+    AddrClass = Op - dwarf::DW_OP_lit0;
+  else
+    return Expr;
+
+  if (AddrSpaceOp.get() == SingleLocElts.begin())
     return nullptr;
-  auto SingleLocElts = *SingleLocEltsOpt;
-
-  const unsigned PatternSize = 4;
-  if (SingleLocElts.size() >= PatternSize &&
-      SingleLocElts[PatternSize - 4] == dwarf::DW_OP_constu &&
-      SingleLocElts[PatternSize - 2] == dwarf::DW_OP_swap &&
-      SingleLocElts[PatternSize - 1] == dwarf::DW_OP_xderef) {
-    AddrClass = SingleLocElts[PatternSize - 3];
-
-    if (SingleLocElts.size() == PatternSize)
-      return nullptr;
-    return DIExpression::get(
-        Expr->getContext(),
-        ArrayRef(&*SingleLocElts.begin(), SingleLocElts.size() - PatternSize));
-  }
-  return Expr;
+  return DIExpression::get(Expr->getContext(),
+                           ArrayRef(SingleLocElts.begin(), AddrSpaceOp.get()));
 }
 
 DIExpression *DIExpression::prepend(const DIExpression *Expr, uint8_t Flags,
@@ -2612,24 +2632,44 @@ DIExpression::isConstant() const {
   // An signed constants can be represented as DW_OP_consts C DW_OP_stack_value
   // (DW_OP_LLVM_fragment of Len).
   // An unsigned constant can be represented as
-  // DW_OP_constu C DW_OP_stack_value (DW_OP_LLVM_fragment of Len).
+  // DW_OP_constu C DW_OP_stack_value (DW_OP_LLVM_fragment of Len), or as
+  // DW_OP_lit<C> DW_OP_stack_value (DW_OP_LLVM_fragment of Len).
 
-  if ((getNumElements() != 2 && getNumElements() != 3 &&
-       getNumElements() != 6) ||
-      (getElement(0) != dwarf::DW_OP_consts &&
-       getElement(0) != dwarf::DW_OP_constu))
+  if (getNumElements() == 0)
+    return std::nullopt;
+  uint64_t Op = getElement(0);
+  if (Op != dwarf::DW_OP_consts && Op != dwarf::DW_OP_constu && !isLitOp(Op))
     return std::nullopt;
 
-  if (getNumElements() == 2 && getElement(0) == dwarf::DW_OP_consts)
+  // The number of elements used by the constant: DW_OP_lit<C> encodes its
+  // value in the opcode, while DW_OP_constu/DW_OP_consts take an operand.
+  unsigned ConstSize = expr_op_begin()->getSize();
+  unsigned NumElements = getNumElements();
+  // The constant may be followed by DW_OP_stack_value (1 element), and then
+  // by DW_OP_LLVM_fragment, offset, size (3 more elements).
+  if (NumElements != ConstSize && NumElements != ConstSize + 1 &&
+      NumElements != ConstSize + 4)
+    return std::nullopt;
+
+  if (NumElements == ConstSize && Op == dwarf::DW_OP_consts)
     return SignedOrUnsignedConstant::SignedConstant;
 
-  if ((getNumElements() == 3 && getElement(2) != dwarf::DW_OP_stack_value) ||
-      (getNumElements() == 6 && (getElement(2) != dwarf::DW_OP_stack_value ||
-                                 getElement(3) != dwarf::DW_OP_LLVM_fragment)))
+  if ((NumElements == ConstSize + 1 &&
+       getElement(ConstSize) != dwarf::DW_OP_stack_value) ||
+      (NumElements == ConstSize + 4 &&
+       (getElement(ConstSize) != dwarf::DW_OP_stack_value ||
+        getElement(ConstSize + 1) != dwarf::DW_OP_LLVM_fragment)))
     return std::nullopt;
-  return getElement(0) == dwarf::DW_OP_constu
-             ? SignedOrUnsignedConstant::UnsignedConstant
-             : SignedOrUnsignedConstant::SignedConstant;
+  return Op == dwarf::DW_OP_consts ? SignedOrUnsignedConstant::SignedConstant
+                                   : SignedOrUnsignedConstant::UnsignedConstant;
+}
+
+uint64_t DIExpression::getConstantValue() const {
+  assert(isConstant() && "Expression is not a constant");
+  uint64_t Op = getElement(0);
+  if (isLitOp(Op))
+    return Op - dwarf::DW_OP_lit0;
+  return getElement(1);
 }
 
 DIExpression::ExtOps DIExpression::getExtOps(unsigned FromSize, unsigned ToSize,
