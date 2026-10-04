@@ -19,6 +19,7 @@
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/CustomIntrinsicCall.h"
 #include "flang/Lower/HlfirIntrinsics.h"
+#include "flang/Lower/OpenMP.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
@@ -38,6 +39,7 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Semantics/tools.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/IRMapping.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
@@ -515,6 +517,8 @@ Fortran::lower::genCallOpAndResult(
   // arguments which can happen in legal program if it was passed as a dummy
   // procedure argument earlier with no further type information.
   mlir::SymbolRefAttr funcSymbolAttr;
+  mlir::FunctionType funcType = callSiteType;
+  bool mustCastFunc = false;
   bool addHostAssociations = false;
   if (!funcPointer) {
     mlir::FunctionType funcOpType = caller.getFuncOp().getFunctionType();
@@ -535,12 +539,11 @@ Fortran::lower::genCallOpAndResult(
     // mismatch due to the extra argument, but the interface is otherwise
     // explicit and safe), handle interface mismatch due to F77 implicit
     // interface "abuse" with a function address cast if needed.
-    if (!addHostAssociations &&
-        mustCastFuncOpToCopeWithImplicitInterfaceMismatch(
-            loc, converter, callSiteType, funcOpType))
-      funcPointer = fir::AddrOfOp::create(builder, loc, funcOpType, symbolAttr);
-    else
-      funcSymbolAttr = symbolAttr;
+    mustCastFunc = !addHostAssociations &&
+                   mustCastFuncOpToCopeWithImplicitInterfaceMismatch(
+                       loc, converter, callSiteType, funcOpType);
+    funcType = mustCastFunc ? callSiteType : funcOpType;
+    funcSymbolAttr = symbolAttr;
 
     // Issue a warning if the procedure name conflicts with
     // a runtime function name a call to which has been already
@@ -556,30 +559,78 @@ Fortran::lower::genCallOpAndResult(
                           "Flang - this may lead to undefined behavior")));
   }
 
-  mlir::FunctionType funcType =
-      funcPointer ? callSiteType : caller.getFuncOp().getFunctionType();
-
   // If we have any ignore_tkr(c) dummy args, adjust the function type to
   // have these args match the caller.
   if (auto modifiedFuncType =
           getTypeWithIgnoreTkrC(funcType, caller, builder.getContext())) {
-    // Note: funcPointer would only be non-null here, if we are already
-    // processing indirect function call. In such case we can re-use the same
-    // funcPointer and we'll cast it below the the modified funcType.
-    if (!funcPointer) {
-      // We want to cast the function to a different type, in order to avoid
-      // changing/casting some of the args. The cast will generate a new
-      // function pointer, so that we would make a function call not through
-      // the original function symbol, but through the new function pointer
-      // (an indirect function call).
-      mlir::SymbolRefAttr symbolAttr =
-          builder.getSymbolRefAttr(caller.getMangledName());
-      // Create pointer to original function. This pointer will be cast later.
-      funcPointer = fir::AddrOfOp::create(builder, loc, funcType, symbolAttr);
-      funcSymbolAttr = {}; // This marks it as indirect call
-    }
     funcType = *modifiedFuncType;
+    mustCastFunc = true;
   }
+
+  // OpenMP dispatch `novariants`/`nocontext`: at runtime pick the right target
+  // via an indirect call, evaluating arguments once. All candidate procedures
+  // share one signature; revisit if declare-variant `adjust_args`/`append_args`
+  // land.
+  if (funcSymbolAttr && Fortran::lower::omp::isDispatchTargetCall(
+                            caller.getCallDescription(), converter)) {
+    mlir::Value novariantsCond =
+        Fortran::lower::omp::getEnclosingDispatchNovariants(builder);
+    mlir::Value nocontextCond =
+        Fortran::lower::omp::getEnclosingDispatchNocontext(builder);
+    const Fortran::semantics::Symbol *baseSym =
+        caller.getCallDescription().proc().GetSymbol();
+    const Fortran::semantics::Symbol *selectedSym = caller.getProcedureSymbol();
+    // A runtime choice is only needed when a variant was actually selected for
+    // the enclosing dispatch context (otherwise the base is already the call
+    // target and dropping the dispatch construct cannot introduce a variant).
+    if ((novariantsCond || nocontextCond) && baseSym && selectedSym &&
+        &baseSym->GetUltimate() != &selectedSym->GetUltimate()) {
+      const Fortran::semantics::Symbol &baseUlt = baseSym->GetUltimate();
+      const Fortran::semantics::Symbol &selectedUlt =
+          selectedSym->GetUltimate();
+
+      auto addrOfSym =
+          [&](const Fortran::semantics::Symbol &sym) -> mlir::Value {
+        mlir::func::FuncOp func = Fortran::lower::getOrDeclareFunction(
+            Fortran::evaluate::ProcedureDesignator{sym}, converter);
+        mlir::Value address =
+            fir::AddrOfOp::create(builder, loc, func.getFunctionType(),
+                                  builder.getSymbolRefAttr(func.getSymName()));
+        return builder.createConvert(loc, funcType, address);
+      };
+
+      // Start from the variant selected with the dispatch construct in context.
+      mlir::Value target = addrOfSym(selectedUlt);
+
+      // `nocontext(true)`: re-select the variant with the dispatch construct
+      // removed from the OpenMP context. That may resolve to a different
+      // variant (e.g. one matching `device={kind(host)}`) or to the base
+      // procedure.
+      if (nocontextCond) {
+        const Fortran::semantics::Symbol *nocontextSym =
+            Fortran::lower::omp::resolveDeclareVariantCallee(
+                baseUlt, converter, /*excludeDispatchContext=*/true);
+        const Fortran::semantics::Symbol &nocontextUlt =
+            nocontextSym ? nocontextSym->GetUltimate() : baseUlt;
+        if (&nocontextUlt != &selectedUlt)
+          target = mlir::arith::SelectOp::create(
+              builder, loc, nocontextCond, addrOfSym(nocontextUlt), target);
+      }
+
+      // `novariants(true)` takes final precedence: always call the base.
+      if (novariantsCond)
+        target = mlir::arith::SelectOp::create(builder, loc, novariantsCond,
+                                               addrOfSym(baseUlt), target);
+
+      funcPointer = target;
+    }
+  }
+
+  if (!funcPointer && mustCastFunc)
+    funcPointer = fir::AddrOfOp::create(
+        builder, loc, caller.getFuncOp().getFunctionType(), funcSymbolAttr);
+  if (funcPointer)
+    funcSymbolAttr = {};
 
   llvm::SmallVector<mlir::Value> operands;
   // First operand of indirect call is the function pointer. Cast it to
