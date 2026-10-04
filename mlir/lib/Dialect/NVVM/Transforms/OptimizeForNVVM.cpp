@@ -55,22 +55,25 @@ LogicalResult ExpandDivF16::matchAndRewrite(LLVM::FDivOp op,
     return rewriter.notifyMatchFailure(op, "not f16");
   Location loc = op.getLoc();
 
+  LLVM::FastmathFlags fmf = op.getFastmathFlags();
+
   Type f32Type = rewriter.getF32Type();
   Type i32Type = rewriter.getI32Type();
 
   // Extend lhs and rhs to fp32.
-  Value lhs = LLVM::FPExtOp::create(rewriter, loc, f32Type, op.getLhs());
-  Value rhs = LLVM::FPExtOp::create(rewriter, loc, f32Type, op.getRhs());
+  Value lhs = LLVM::FPExtOp::create(rewriter, loc, f32Type, op.getLhs(), fmf);
+  Value rhs = LLVM::FPExtOp::create(rewriter, loc, f32Type, op.getRhs(), fmf);
 
   // float rcp = rcp.approx.ftz.f32(rhs), approx = lhs * rcp.
   Value rcp = NVVM::RcpApproxFtzF32Op::create(rewriter, loc, f32Type, rhs);
-  Value approx = LLVM::FMulOp::create(rewriter, loc, lhs, rcp);
+  Value approx = LLVM::FMulOp::create(rewriter, loc, lhs, rcp, fmf);
 
   // Refine the approximation with one Newton iteration:
   // float refined = approx + (lhs - approx * rhs) * rcp;
-  Value err = LLVM::FMAOp::create(
-      rewriter, loc, approx, LLVM::FNegOp::create(rewriter, loc, rhs), lhs);
-  Value refined = LLVM::FMAOp::create(rewriter, loc, err, rcp, approx);
+  Value err = LLVM::FMAOp::create(rewriter, loc, approx,
+                                  LLVM::FNegOp::create(rewriter, loc, rhs, fmf),
+                                  lhs, fmf);
+  Value refined = LLVM::FMAOp::create(rewriter, loc, err, rcp, approx, fmf);
 
   // Use refined value if approx is normal (exponent neither all 0 or all 1).
   Value mask = LLVM::ConstantOp::create(rewriter, loc, i32Type,
@@ -87,7 +90,7 @@ LogicalResult ExpandDivF16::matchAndRewrite(LLVM::FDivOp op,
       LLVM::SelectOp::create(rewriter, loc, f32Type, pred, approx, refined);
 
   // Replace with trucation back to fp16.
-  rewriter.replaceOpWithNewOp<LLVM::FPTruncOp>(op, op.getType(), result);
+  rewriter.replaceOpWithNewOp<LLVM::FPTruncOp>(op, op.getType(), result, fmf);
 
   return success();
 }
