@@ -3997,13 +3997,6 @@ define void @store_undef_mask_factor4_intrinsic(ptr %ptr, <4 x i32> %v0, <4 x i3
 define <4 x float> @deinterleave3_poison() {
 ; NEON-LABEL: deinterleave3_poison:
 ; NEON:       // %bb.0: // %entry
-; NEON-NEXT:    sub sp, sp, #48
-; NEON-NEXT:    .cfi_def_cfa_offset 48
-; NEON-NEXT:    mov x8, sp
-; NEON-NEXT:    ld3 { v0.4s, v1.4s, v2.4s }, [x8]
-; NEON-NEXT:    fmul v3.4s, v2.4s, v1.4s
-; NEON-NEXT:    fmul v0.4s, v3.4s, v0.4s
-; NEON-NEXT:    add sp, sp, #48
 ; NEON-NEXT:    ret
 ;
 ; NO_NEON-LABEL: deinterleave3_poison:
@@ -4012,13 +4005,6 @@ define <4 x float> @deinterleave3_poison() {
 ;
 ; CHECK-GI-LABEL: deinterleave3_poison:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sub sp, sp, #48
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-GI-NEXT:    mov x8, sp
-; CHECK-GI-NEXT:    ld3 { v0.4s, v1.4s, v2.4s }, [x8]
-; CHECK-GI-NEXT:    fmul v3.4s, v2.4s, v1.4s
-; CHECK-GI-NEXT:    fmul v0.4s, v3.4s, v0.4s
-; CHECK-GI-NEXT:    add sp, sp, #48
 ; CHECK-GI-NEXT:    ret
 entry:
   %ldN = call { <4 x float>, <4 x float>, <4 x float> } @llvm.vector.deinterleave3.v12f32(<12 x float> poison)
@@ -4038,9 +4024,6 @@ define <12 x i32> @interleave3_poison() {
 ;
 ; NO_NEON-LABEL: interleave3_poison:
 ; NO_NEON:       // %bb.0: // %entry
-; NO_NEON-NEXT:    stp xzr, xzr, [x8, #32]
-; NO_NEON-NEXT:    stp xzr, xzr, [x8, #16]
-; NO_NEON-NEXT:    stp xzr, xzr, [x8]
 ; NO_NEON-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: interleave3_poison:
