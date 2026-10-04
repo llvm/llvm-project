@@ -181,11 +181,6 @@ static void BM_RCU(benchmark::State& state) {
 
 } // namespace
 
-BENCHMARK(BM_RCU)
-    ->Args({4, 4})
-    ->Args({4, 1})
-    ->ArgNames({"readers", "writers"})
-    ->Iterations(1)
-    ->UseRealTime();
+BENCHMARK(BM_RCU)->Args({4, 4})->Args({4, 1})->ArgNames({"readers", "writers"})->Iterations(1)->UseRealTime();
 
 BENCHMARK_MAIN();
