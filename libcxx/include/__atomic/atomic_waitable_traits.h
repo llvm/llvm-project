@@ -44,14 +44,6 @@ struct __atomic_waitable_traits {
   static void __atomic_contention_address(_AtomicWaitable&&) = delete;
 };
 
-#  if _LIBCPP_STD_VER >= 20
-template <class _Tp>
-concept __atomic_waitable = requires(const _Tp __t, memory_order __order) {
-  typename __atomic_waitable_traits<__decay_t<_Tp> >::__value_type;
-  { __atomic_waitable_traits<__decay_t<_Tp> >::__atomic_load(__t, __order) };
-  { __atomic_waitable_traits<__decay_t<_Tp> >::__atomic_contention_address(__t) };
-};
-#  else
 template <class _Tp, class = void>
 constexpr inline bool __atomic_waitable = false;
 template <class _Tp>
@@ -62,7 +54,6 @@ constexpr inline bool __atomic_waitable<
                  std::declval<const _Tp&>(), std::declval<memory_order>())),
              decltype(__atomic_waitable_traits<__decay_t<_Tp> >::__atomic_contention_address(
                  std::declval<const _Tp&>())) > > = true;
-#  endif // _LIBCPP_STD_VER >= 20
 
 #  ifdef __linux__
 #    define _LIBCPP_NATIVE_PLATFORM_WAIT_SIZES(_APPLY) _APPLY(4)
@@ -97,27 +88,15 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __has_native_atomic_wait_impl() {
   };
 }
 
-#    if _LIBCPP_STD_VER >= 20
-template <class _Tp>
-concept __has_native_atomic_wait =
-    has_unique_object_representations_v<_Tp> && is_trivially_copyable_v<_Tp> &&
-    std::__has_native_atomic_wait_impl<_Tp>();
-#    else
 template <class _Tp>
 constexpr inline bool __has_native_atomic_wait =
     has_unique_object_representations_v<_Tp> && is_trivially_copyable_v<_Tp> &&
     std::__has_native_atomic_wait_impl<_Tp>();
-#    endif // _LIBCPP_STD_VER >= 20
 
 #  else // _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE
 
-#    if _LIBCPP_STD_VER >= 20
-template <class _Tp>
-concept __has_native_atomic_wait = is_same_v<_Tp, __cxx_contention_t>;
-#    else
 template <class _Tp>
 constexpr inline bool __has_native_atomic_wait = is_same_v<_Tp, __cxx_contention_t>;
-#    endif // _LIBCPP_STD_VER >= 20
 
 #  endif // _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE
 
