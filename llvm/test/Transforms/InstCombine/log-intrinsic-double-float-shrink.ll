@@ -5,9 +5,7 @@
 define float @log_shrink(float %x) {
 ; CHECK-LABEL: define float @log_shrink(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[X]] to double
-; CHECK-NEXT:    [[LOG:%.*]] = call fast double @llvm.log.f64(double [[EXT]])
-; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[LOG]] to float
+; CHECK-NEXT:    [[TRUNC:%.*]] = call fast float @llvm.log.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[TRUNC]]
 ;
   %ext = fpext float %x to double
@@ -19,9 +17,7 @@ define float @log_shrink(float %x) {
 define float @log2_shrink(float %x) {
 ; CHECK-LABEL: define float @log2_shrink(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[X]] to double
-; CHECK-NEXT:    [[LOG:%.*]] = call fast double @llvm.log2.f64(double [[EXT]])
-; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[LOG]] to float
+; CHECK-NEXT:    [[TRUNC:%.*]] = call fast float @llvm.log2.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[TRUNC]]
 ;
   %ext = fpext float %x to double
@@ -33,9 +29,7 @@ define float @log2_shrink(float %x) {
 define float @log10_shrink(float %x) {
 ; CHECK-LABEL: define float @log10_shrink(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[X]] to double
-; CHECK-NEXT:    [[LOG:%.*]] = call fast double @llvm.log10.f64(double [[EXT]])
-; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[LOG]] to float
+; CHECK-NEXT:    [[TRUNC:%.*]] = call fast float @llvm.log10.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[TRUNC]]
 ;
   %ext = fpext float %x to double
