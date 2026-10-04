@@ -3113,6 +3113,7 @@ public:
   /// yet been created.
   /// \pre `hasLabelTarget()`
   const Stmt *getNamedLoopOrSwitch() const;
+  const Stmt *getNamedLoopOrSwitch() const;
 
   // Iterators
   child_range children() {
