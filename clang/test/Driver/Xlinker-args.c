@@ -8,6 +8,10 @@
 
 /// Linux/GNU forwarding lives in linux-ld-args.c.
 
+/// Check that --no-demangle gets forwarded to the baremetal linker.
+// RUN: %clang -target armv6m-none-eabi --gcc-toolchain= -### \
+// RUN:   -Wl,--no-demangle %s 2>&1 | FileCheck -check-prefix=BAREMETAL %s
+
 /// Check that --no-demangle gets forwarded to the mingw linker
 // RUN: %clang -target x86_64-w64-mingw32 -### \
 // RUN:   -Wl,--no-demangle %s 2> %t
@@ -19,6 +23,7 @@
 
 // DARWIN-NOT: --no-demangle
 // DARWIN: "one" "two" "three" "four" "-z" "five" "-r"
+// BAREMETAL: "--no-demangle"
 // MINGW: "--no-demangle"
 // AIX: "-b" "one" "-b" "two"
 
