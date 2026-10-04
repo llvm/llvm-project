@@ -3116,6 +3116,7 @@ public:
   const Stmt *getNamedLoopOrSwitch() const;
   const Stmt *getNamedLoopOrSwitch() const;
   const Stmt *getNamedLoopOrSwitch() const;
+  const Stmt *getNamedLoopOrSwitch() const;
 
   // Iterators
   child_range children() {
