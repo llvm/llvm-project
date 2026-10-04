@@ -16,6 +16,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPUInstrInfo.h"
+#include "AMDGPUMachineInstrs.h"
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIInstrInfo.h"
@@ -432,6 +433,8 @@ static unsigned maxSizeForAddrSpace(const GCNSubtarget &ST, unsigned AS,
     // register bank/uniformity and if the memory is invariant or not written in a
     // kernel.
     return IsLoad ? 512 : 128;
+  case AMDGPUAS::VGPR:
+    return 1024;
   default:
     // FIXME: Flat addresses may contextually need to be split to 32-bit parts
     // if they may alias scratch depending on the subtarget.  This needs to be
@@ -454,6 +457,10 @@ static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
 
   // All of these need to be custom lowered to cast the pointer operand.
   if (AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
+    return false;
+
+  // Never plain-legal; custom-lowered to G_AMDGPU_REG_LOAD/STORE.
+  if (AS == AMDGPUAS::VGPR)
     return false;
 
   // Do not handle extending vector loads.
@@ -550,6 +557,12 @@ static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query)
   const LLT Ty = Query.Types[0];
   return isRegisterType(ST, Ty) && isLoadStoreSizeLegal(ST, Query) &&
          !hasBufferRsrcWorkaround(Ty) && !loadStoreBitcastWorkaround(Ty);
+}
+
+// Whole-dword accesses only, for now.
+static bool isVGPRLoadStoreSizeSupported(unsigned MemSize, unsigned ValSize) {
+  return MemSize == ValSize &&
+         AMDGPUMI::VLoadIdxInst::tryGetOpcodeForBitWidth(MemSize) != -1;
 }
 
 /// Return true if a load or store of the type should be lowered with a bitcast
@@ -703,6 +716,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   const LLT RegionPtr = LLT::pointer(AMDGPUAS::REGION_ADDRESS, 32);
   const LLT FlatPtr = LLT::pointer(AMDGPUAS::FLAT_ADDRESS, 64);
   const LLT PrivatePtr = LLT::pointer(AMDGPUAS::PRIVATE_ADDRESS, 32);
+  const LLT VGPRPtr = LLT::pointer(AMDGPUAS::VGPR, 32);
   const LLT BufferFatPtr = LLT::pointer(AMDGPUAS::BUFFER_FAT_POINTER, 160);
   const LLT RsrcPtr = LLT::pointer(AMDGPUAS::BUFFER_RESOURCE, 128);
   const LLT BufferStridedPtr =
@@ -1667,9 +1681,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     // Constant 32-bit is handled by addrspacecasting the 32-bit pointer to
     // 64-bits.
     //
+    // VGPR accesses are always custom, to be lowered or diagnosed.
+    //
     // TODO: Should generalize bitcast action into coerce, which will also cover
     // inserting addrspacecasts.
-    Actions.customIf(typeIs(1, Constant32Ptr));
+    Actions.customIf(typeInSet(1, {Constant32Ptr, VGPRPtr}));
 
     // Turn any illegal element vectors into something easier to deal
     // with. These will ultimately produce 32-bit scalar shifts to extract the
@@ -2587,7 +2603,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
 
   if (SrcAS == AMDGPUAS::FLAT_ADDRESS &&
       (DestAS == AMDGPUAS::LOCAL_ADDRESS || DestAS == AMDGPUAS::BARRIER ||
-       DestAS == AMDGPUAS::PRIVATE_ADDRESS)) {
+       DestAS == AMDGPUAS::PRIVATE_ADDRESS || DestAS == AMDGPUAS::VGPR)) {
     auto castFlatToLocalOrPrivate = [&](const DstOp &Dst) -> Register {
       if (DestAS == AMDGPUAS::PRIVATE_ADDRESS &&
           ST.hasGloballyAddressableScratch()) {
@@ -2630,7 +2646,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
 
   if (DestAS == AMDGPUAS::FLAT_ADDRESS &&
       (SrcAS == AMDGPUAS::LOCAL_ADDRESS || SrcAS == AMDGPUAS::BARRIER ||
-       SrcAS == AMDGPUAS::PRIVATE_ADDRESS)) {
+       SrcAS == AMDGPUAS::PRIVATE_ADDRESS || SrcAS == AMDGPUAS::VGPR)) {
     auto castLocalOrPrivateToFlat = [&](const DstOp &Dst) -> Register {
       // Coerce the type of the low half of the result so we can use
       // merge_values.
@@ -3471,6 +3487,69 @@ static LLT widenToNextPowerOf2(LLT Ty) {
   return Ty.changeElementSize(PowerOf2Ceil(Ty.getSizeInBits()));
 }
 
+/// Lower a whole-dword G_LOAD / G_STORE on AMDGPUAS::VGPR into
+/// G_AMDGPU_REG_LOAD / G_AMDGPU_REG_STORE. Parallels LowerLoadStoreVGPR.
+static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, GLoadStore &LdSt) {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *B.getMRI();
+  MachineMemOperand &MMO = LdSt.getMMO();
+
+  const bool IsStore = isa<GStore>(LdSt);
+  Register ValReg = LdSt.getReg(0);
+  Register PtrReg = LdSt.getPointerReg();
+
+  const LLT ValTy = MRI.getType(ValReg);
+  const unsigned ValSize = ValTy.getSizeInBits();
+  const LLT I32 = LLT::integer(32);
+
+  // The index is the pointer >> 2, so an under-aligned access would silently
+  // reach the containing dword.
+  if (!isVGPRLoadStoreSizeSupported(MMO.getMemoryType().getSizeInBits(),
+                                    ValSize) ||
+      LdSt.getAlign() < Align(4)) {
+    const Function &F = B.getMF().getFunction();
+    F.getContext().diagnose(DiagnosticInfoUnsupported(
+        F,
+        "unsupported access of VGPR 'as memory' address space (13); only "
+        "dword-aligned whole-dword loads and stores are implemented",
+        LdSt.getDebugLoc()));
+    if (!IsStore)
+      B.buildUndef(ValReg);
+    LdSt.eraseFromParent();
+    return true;
+  }
+
+  const MachineInstrBuilder PtrAsInt = B.buildPtrToInt(I32, PtrReg);
+  MachineInstrBuilder Two = B.buildConstant(I32, 2);
+  const MachineInstrBuilder Index = B.buildLShr(I32, PtrAsInt, Two);
+
+  // Normalize to i32 / <N x i32> so a selection pattern exists (e.g. v4i8).
+  LLT RegTy = ValTy;
+  if (ValTy.getScalarSizeInBits() != 32) {
+    unsigned NumDwords = ValSize / 32;
+    RegTy = NumDwords == 1 ? I32 : LLT::fixed_vector(NumDwords, I32);
+  }
+
+  if (IsStore) {
+    Register Value = ValReg;
+    if (RegTy != ValTy)
+      Value = B.buildBitcast(RegTy, Value).getReg(0);
+    B.buildInstr(AMDGPU::G_AMDGPU_REG_STORE, {}, {Value, Index.getReg(0)})
+        .addMemOperand(&MMO);
+  } else if (RegTy == ValTy) {
+    B.buildInstr(AMDGPU::G_AMDGPU_REG_LOAD, {ValReg}, {Index.getReg(0)})
+        .addMemOperand(&MMO);
+  } else {
+    const MachineInstrBuilder Result =
+        B.buildInstr(AMDGPU::G_AMDGPU_REG_LOAD, {RegTy}, {Index.getReg(0)})
+            .addMemOperand(&MMO);
+    B.buildBitcast(ValReg, Result);
+  }
+
+  LdSt.eraseFromParent();
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
                                        MachineInstr &MI) const {
   MachineIRBuilder &B = Helper.MIRBuilder;
@@ -3480,6 +3559,9 @@ bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
   Register PtrReg = MI.getOperand(1).getReg();
   LLT PtrTy = MRI.getType(PtrReg);
   unsigned AddrSpace = PtrTy.getAddressSpace();
+
+  if (AddrSpace == AMDGPUAS::VGPR && MI.getOpcode() == AMDGPU::G_LOAD)
+    return lowerLoadStoreVGPR(Helper, cast<GLoadStore>(MI));
 
   if (AddrSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
     LLT ConstPtr = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
@@ -3568,6 +3650,10 @@ bool AMDGPULegalizerInfo::legalizeStore(LegalizerHelper &Helper,
 
   Register DataReg = MI.getOperand(0).getReg();
   LLT DataTy = MRI.getType(DataReg);
+
+  if (MRI.getType(MI.getOperand(1).getReg()).getAddressSpace() ==
+      AMDGPUAS::VGPR)
+    return lowerLoadStoreVGPR(Helper, cast<GLoadStore>(MI));
 
   if (hasBufferRsrcWorkaround(DataTy)) {
     Observer.changingInstr(MI);
