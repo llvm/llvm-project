@@ -486,18 +486,10 @@ FailureOr<int64_t> LayoutInfoPropagation::getNumSgOrFail(
       return llvm::product_of(sgLayout);
   }
   // Otherwise fall back to the kernel's known_block_size.
-  if (auto gpuFunc = op->getParentOfType<gpu::GPUFuncOp>()) {
-    std::optional<ArrayRef<int32_t>> knownBlockSize =
-        gpuFunc.getKnownBlockSize();
-    if (knownBlockSize) {
-      bool isPowerOf2Block = llvm::all_of(*knownBlockSize, [](int32_t dim) {
-        return dim > 0 && llvm::isPowerOf2_32(dim);
-      });
-      int64_t numSg = llvm::product_of(*knownBlockSize) / sgSize;
-      if (isPowerOf2Block && numSg > 0)
-        return numSg;
-    }
-  }
+  if (FailureOr<int64_t> numSg =
+          xegpu::getNumSubgroupsFromBlockSize(op, sgSize);
+      succeeded(numSg))
+    return *numSg;
   // Only subgroup mode needs the count; elsewhere a missing one is benign.
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
     markFailure(op, "Unable to determine the number of subgroups for the "
