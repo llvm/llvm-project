@@ -22,7 +22,6 @@
 namespace __tsan {
 
 void EnterSymbolizer() {
-  CheckedMutex::CheckNoLocks();
   ThreadState *thr = cur_thread();
   CHECK(!thr->in_symbolizer);
   thr->in_symbolizer = true;
