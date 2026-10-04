@@ -5,8 +5,10 @@ See lit.pod for more information.
 """
 
 import itertools
+import json
 import os
 import platform
+import re
 import sys
 import time
 
@@ -18,6 +20,7 @@ import lit.reports
 import lit.run
 import lit.Test
 import lit.util
+from lit.BooleanExpression import BooleanExpression
 from lit.formats.googletest import GoogleTest
 from lit.TestTimes import record_test_times
 
@@ -54,6 +57,16 @@ def main(builtin_params={}):
     if not discovered_tests:
         sys.stderr.write("error: did not discover any tests for provided path(s)\n")
         sys.exit(2)
+
+    if opts.show_tests_json:
+        try:
+            inventory = build_test_inventory(discovered_tests)
+        except (ValueError, re.error, OSError) as e:
+            sys.stderr.write("error: unable to export test metadata: %s\n" % e)
+            sys.exit(2)
+        json.dump(inventory, sys.stdout, indent=2, sort_keys=True)
+        sys.stdout.write("\n")
+        sys.exit(0)
 
     if opts.show_suites or opts.show_tests:
         print_discovered(discovered_tests, opts.show_suites, opts.show_tests)
@@ -375,3 +388,57 @@ def print_summary(total_tests, tests_by_code, quiet, elapsed):
         label = label.ljust(max_label_len)
         count = str(count).rjust(max_count_len)
         print("  %s: %s (%.2f%%)" % (label, count, float(count) / total_tests * 100))
+
+
+def build_test_inventory(tests):
+    def sort_key(test):
+        suite = test.suite
+        return (
+            suite.config.name,
+            os.path.normcase(os.path.abspath(suite.source_root)),
+            os.path.normcase(os.path.abspath(suite.exec_root)),
+            suite.source_root,
+            suite.exec_root,
+            test.path_in_suite,
+        )
+
+    suites = []
+    suite_entries = {}
+    for test in sorted(tests, key=sort_key):
+        suite = test.suite
+        suite_key = (suite.config.name, suite.source_root, suite.exec_root)
+        if suite_key not in suite_entries:
+            suite_entries[suite_key] = {
+                "name": suite.config.name,
+                "source_root": suite.source_root,
+                "exec_root": suite.exec_root,
+                "tests": [],
+            }
+            suites.append(suite_entries[suite_key])
+        requirements_hook = getattr(
+            test.config.test_format, "getTestRequirements", None
+        )
+        try:
+            raw = requirements_hook(test) if requirements_hook else None
+            if raw is None:
+                requires = None
+            elif not raw:
+                requires = {}
+            else:
+                requires = BooleanExpression.combine(
+                    "and", [BooleanExpression.normalize(expr) for expr in raw]
+                )
+        except (ValueError, re.error, OSError, RecursionError) as e:
+            raise ValueError(
+                "%s (%s): %s" % (test.getFullName(), test.getSourcePath(), e)
+            ) from e
+
+        suite_entries[suite_key]["tests"].append(
+            {
+                "path_in_suite": (
+                    os.path.join(*test.path_in_suite) if test.path_in_suite else ""
+                ),
+                "requires": requires,
+            }
+        )
+    return {"schema_version": 1, "suites": suites}
