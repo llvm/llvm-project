@@ -8,8 +8,6 @@
 
 // <rcu>
 
-// Test hardening assertions for std::valarray.
-
 // REQUIRES: can-test-hardening-assertions-extensive
 
 #include <rcu>
