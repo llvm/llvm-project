@@ -1469,9 +1469,19 @@ getDstSelForwardingOperand(const MachineInstr &MI, const GCNSubtarget &ST) {
 
   AMDGPU::FPType IsFP4OrFP8ConvOpc = AMDGPU::getFPDstSelType(Opcode);
   if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::op_sel)) {
-    // Type 2: VOP3 which write the hi bits
-    if (TII->getNamedImmOperand(MI, AMDGPU::OpName::src0_modifiers) &
-        SISrcMods::DST_OP_SEL)
+    // Type 2: VOP3 which write the hi bits. DST_OP_SEL is a destination
+    // selector in the VOP3 layout; VOP3P uses this bit for source op_sel_hi.
+    if (SIInstrInfo::isVOP3(MI) && !SIInstrInfo::isVOP3P(MI) &&
+        (TII->getNamedImmOperand(MI, AMDGPU::OpName::src0_modifiers) &
+         SISrcMods::DST_OP_SEL))
+      return TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
+
+    // Type 2b: VOP3P mix instructions with a tied destination (MIXLO/MIXHI)
+    // write only one half of vdst and preserve the other half, so treat them
+    // like a VOP3 destination op_sel write regardless of their source
+    // op_sel_hi bits.
+    if (SIInstrInfo::isVOP3P(MI) &&
+        AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::vdst_in))
       return TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
 
     // Type 3: FP8DstSelInst with op_sel[3:2] != 0)
