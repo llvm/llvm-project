@@ -34,7 +34,9 @@
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TypeSize.h"
@@ -88,11 +90,6 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         continue;
 
       Instruction *Inst = cast<Instruction>(VPV->getUnderlyingValue());
-
-      // Atomic accesses and fences have ordering/atomicity semantics that
-      // cannot be preserved by lane-wise widening.
-      if (isa<AtomicRMWInst, AtomicCmpXchgInst, FenceInst>(Inst))
-        return false;
 
       VPRecipeBase *NewRecipe = nullptr;
       if (auto *PhiR = dyn_cast<VPPhi>(&Ingredient)) {
@@ -399,7 +396,8 @@ static bool sinkScalarOperands(VPlan &Plan) {
         Clone = VPBuilder::createSingleScalarOp(
             SinkCandidateRepR->getOpcode(), SinkCandidate->operands(),
             /*Mask=*/nullptr, *SinkCandidateRepR, *SinkCandidateRepR,
-            SinkCandidate->getDebugLoc(), SinkCandidate->getUnderlyingInstr());
+            SinkCandidate->getDebugLoc(), SinkCandidate->getScalarType(),
+            SinkCandidate->getUnderlyingInstr());
         // TODO: add ".cloned" suffix to name of Clone's VPValue.
       } else {
         Clone = SinkCandidate->clone();
@@ -813,7 +811,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       auto *Clone = VPBuilder::createSingleScalarOp(
           Def->getUnderlyingInstr()->getOpcode(), Def->operands(),
           /*Mask=*/nullptr, *Def, getMetadataOf(Def), DebugLoc::getUnknown(),
-          Def->getUnderlyingInstr());
+          Def->getScalarType(), Def->getUnderlyingInstr());
       Clone->insertAfter(Def);
       Def->replaceAllUsesWith(Clone);
       Def->eraseFromParent();
@@ -1171,15 +1169,7 @@ static void removeRedundantExpandSCEVRecipes(VPlan &Plan) {
 
 /// Try to simplify logical and bitwise recipes in \p Def.
 static VPValue *simplifyLogicalRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
-  // Simplify (X && Y) | (X && !Y) -> X.
-  // TODO: Split up into simpler, modular combines: (X && Y) | (X && Z) into X
-  // && (Y | Z) and (X | !X) into true. This requires queuing newly created
-  // recipes to be visited during simplification.
-  VPValue *X, *Y;
-  if (match(Def,
-            m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
-                         m_LogicalAnd(m_Deferred(X), m_Not(m_Deferred(Y))))))
-    return X;
+  VPValue *X;
 
   // X | AllOnes -> AllOnes
   if (match(Def, m_c_BinaryOr(m_VPValue(X), m_AllOnes())))
@@ -1222,6 +1212,21 @@ static VPValue *simplifyLogicalRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
     return X;
 
   return nullptr;
+}
+
+/// Swap the branch weights recorded for \p R, a select whose two selected
+/// operands are being swapped,
+static void swapSelectBranchWeights(VPRecipeBase &R, VPlan &Plan) {
+  auto *MD = dyn_cast<VPIRMetadata>(&R);
+  if (!MD)
+    return;
+  SmallVector<uint32_t, 2> Weights;
+  if (!extractBranchWeights(MD->getMetadata(LLVMContext::MD_prof), Weights))
+    return;
+  assert(Weights.size() == 2 && "unexpected branch weights");
+  MD->setMetadata(
+      LLVMContext::MD_prof,
+      MDBuilder(Plan.getContext()).createBranchWeights(Weights[1], Weights[0]));
 }
 
 /// Return an existing value or a live in for VPSingleDefRecipe \p Def if
@@ -1376,8 +1381,27 @@ static bool isAvailableAtEndOf(VPValue *V, const VPBasicBlock *VPBB) {
   return DefR ? DefR->getParent() == VPBB : isa<VPIRValue>(V);
 }
 
-/// Combine \p Def into a simpler recipe. May modify or create new recipes.
-static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
+namespace {
+/// Inserter for VPBuilderBase which appends all created VPSingleDefRecipes to a
+/// worklist, so they get combined as well.
+struct VPCombineInserter {
+  SmallVectorImpl<VPSingleDefRecipe *> &Worklist;
+
+  void insertHelper(VPRecipeBase *R, VPBasicBlock *VPBB,
+                    VPBasicBlock::iterator It) {
+    VPBB->insert(R, It);
+    if (auto *Def = dyn_cast<VPSingleDefRecipe>(R))
+      Worklist.push_back(Def);
+  }
+};
+
+using VPCombineBuilder = VPBuilderBase<VPCombineInserter>;
+} // namespace
+
+/// Combine \p Def into a simpler recipe. May modify or create new recipes via
+/// \p Builder.
+static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def,
+                                        VPCombineBuilder &Builder) {
   if (auto *V = simplifyRecipe(Plan, Def)) {
     Def->replaceAllUsesWith(V);
     return Def;
@@ -1395,11 +1419,9 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
         RepR->getUnderlyingInstr(), RepR->operandsWithoutMask(),
         RepR->isSingleScalar(), /*Mask=*/nullptr, *RepR, *RepR,
         RepR->getDebugLoc());
-    Unmasked->insertBefore(RepR);
+    Builder.insert(Unmasked);
     return Unmasked;
   }
-
-  VPBuilder Builder(Def);
 
   // Avoid replacing VPInstructions with underlying values with new
   // VPInstructions, as we would fail to create widen/replicate recpes from the
@@ -1448,6 +1470,7 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
     Def->setOperand(0, C);
     Def->setOperand(1, Y);
     Def->setOperand(2, X);
+    swapSelectBranchWeights(*Def, Plan);
     return Def;
   }
 
@@ -1538,6 +1561,14 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
         {X, Plan.getConstantInt(APC->getBitWidth(), APC->exactLogBase2())},
         *cast<VPRecipeWithIRFlags>(Def), Def->getDebugLoc());
 
+  // (X >> C) << C -> X & (-1 << C).
+  if (CanCreateNewRecipe &&
+      match(Def, m_Shl(m_LShr(m_VPValue(X), m_VPValue(Y, m_APInt(APC))),
+                       m_Deferred(Y))))
+    return Builder.createAnd(
+        X, Plan.getConstantInt(APInt::getAllOnes(APC->getBitWidth()) << *APC),
+        Def->getDebugLoc());
+
   if (match(Def, m_Not(m_VPValue(X)))) {
     // Try to fold Not into compares by adjusting the predicate in-place.
     CmpPredicate Pred;
@@ -1558,6 +1589,7 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
             // select (cmp pred), X, Y -> select (cmp inv_pred), Y, X
             R->setOperand(1, Y);
             R->setOperand(2, X);
+            swapSelectBranchWeights(*R, Plan);
           } else {
             // not (cmp pred) -> cmp inv_pred
             assert(match(R, m_Not(m_Specific(Cmp))) && "Unexpected user");
@@ -1716,18 +1748,19 @@ void VPlanTransforms::combineRecipes(VPlan &Plan) {
 
   [[maybe_unused]] unsigned InitWorklistSize = Worklist.size();
 
+  VPCombineBuilder Builder({Worklist});
   while (!Worklist.empty()) {
     assert(Worklist.size() < InitWorklistSize * 2 &&
            "Worklist is growing large, possible cycle?");
     VPSingleDefRecipe *Def = Worklist.pop_back_val();
-    VPSingleDefRecipe *New = combineRecipe(Plan, Def);
+    Builder.setInsertPoint(Def);
+    VPSingleDefRecipe *New = combineRecipe(Plan, Def, Builder);
     if (!New)
       continue;
     if (New != Def) {
       // Replace the recipe with a new one.
       Def->replaceAllUsesWith(New);
       Def->eraseFromParent();
-      Worklist.push_back(New);
       // TODO: Append users to the worklist (might need a setvector)
     } else if (vputils::isDeadRecipe(*Def)) {
       // Recipe was modified - it may be dead now.
@@ -1884,7 +1917,8 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       auto *Clone = VPBuilder::createSingleScalarOp(
           vputils::getOpcode(RepOrWidenR), RepOrWidenR->operands(),
           /*Mask=*/nullptr, *RepOrWidenR, getMetadataOf(RepOrWidenR),
-          DebugLoc::getUnknown(), RepOrWidenR->getUnderlyingInstr());
+          DebugLoc::getUnknown(), RepOrWidenR->getScalarType(),
+          RepOrWidenR->getUnderlyingInstr());
       Clone->insertBefore(RepOrWidenR);
       RepOrWidenR->replaceAllUsesWith(Clone);
       if (vputils::isDeadRecipe(*RepOrWidenR))
@@ -3003,6 +3037,122 @@ void VPlanTransforms::createInterleaveGroups(
   }
 }
 
+/// Matches an exit condition formed by comparing a value loaded from memory
+/// with a loop-invariant term. Binds the comparison for the condition.
+static auto m_Uncountable(VPValue *&Cond) {
+  return m_VPValue(
+      Cond,
+      m_c_Cmp(m_VPInstruction<Instruction::Load>(m_VPValue()), m_LiveIn()));
+}
+
+namespace {
+struct CountableConditionMatch {
+  VPValue *&Cmp;
+  PredicatedScalarEvolution &PSE;
+  Loop *L;
+
+  CountableConditionMatch(VPValue *&Cmp, PredicatedScalarEvolution &PSE,
+                          Loop *L)
+      : Cmp(Cmp), PSE(PSE), L(L) {}
+
+  template <typename ITy> bool match(ITy *V) const {
+    VPValue *Update;
+    if (!VPlanPatternMatch::match(
+            V, m_VPValue(Cmp, m_c_ICmp(m_VPValue(Update, m_Add(m_VPValue(),
+                                                               m_VPValue())),
+                                       m_LiveIn()))))
+      return false;
+
+    const SCEV *S = vputils::getSCEVExprForVPValue(Update, PSE, L);
+    return SCEVPatternMatch::match(
+        S, m_scev_AffineAddRec(m_SCEV(), m_scev_One(), m_SpecificLoop(L)));
+  }
+};
+} // end anonymous namespace
+
+/// Matches an exit condition formed by comparing the current value of a
+/// affine add recurrence in the given loop with a stride of 1 against a
+/// loop-invariant term. Binds the comparison for the condition.
+static auto m_Countable(VPValue *&Cmp, PredicatedScalarEvolution &PSE,
+                        Loop *L) {
+  return CountableConditionMatch(Cmp, PSE, L);
+}
+
+bool VPlanTransforms::splitCombinedExits(VPlan &Plan,
+                                         PredicatedScalarEvolution &PSE,
+                                         Loop *L) {
+  // Check for a single combined exit in the latch block.
+  // TODO: Generalize to other blocks besides the latch.
+  // If we don't find a combined condition in the latch, just return true
+  // to proceed with vectorization.
+  auto [_, LatchVPBB] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
+
+  // We're looking for a conditional branch...
+  auto *Term = dyn_cast<VPInstruction>(LatchVPBB->getTerminator());
+  if (!Term || Term->getOpcode() != VPInstruction::BranchOnCond)
+    return true;
+
+  // ...where the condition is a combination of both a countable and an
+  // uncountable comparison.
+  VPValue *Uncountable = nullptr;
+  VPValue *Countable = nullptr;
+  VPValue *Cond = Term->getOperand(0);
+  if (!match(Cond, m_OneUse(m_CombineOr(
+                       m_c_LogicalOr(m_Uncountable(Uncountable),
+                                     m_Countable(Countable, PSE, L)),
+                       m_c_BinaryOr(m_Uncountable(Uncountable),
+                                    m_Countable(Countable, PSE, L))))))
+    return true;
+
+  // If the conditions are combined with a logical or (select), then we'll
+  // need to freeze the individual terms when splitting.
+  bool NeedsFreeze = match(Cond, m_LogicalOr(m_VPValue(), m_VPValue()));
+
+  // If we do have a combined exit condition, bail out if there's more than
+  // one exit block.
+  // TODO: Support additional exits.
+  ArrayRef<VPIRBasicBlock *> ExitBlocks = Plan.getExitBlocks();
+  if (ExitBlocks.size() != 1)
+    return false;
+
+  // If there are any live-outs, bail out. The exit block is an existing IR
+  // block, and if we split the exiting block then the incoming blocks and
+  // values won't be correct.
+  // TODO: Support live-outs with combined exits.
+  if (!ExitBlocks.front()->phis().empty())
+    return false;
+
+  // Split the latch block just before the terminator.
+  VPBasicBlock *NewLatch = LatchVPBB->splitAt(Term->getIterator());
+
+  // Create new terminator for uncountable condition.
+  VPBuilder EEBuilder(LatchVPBB);
+  if (NeedsFreeze)
+    Uncountable = EEBuilder.createFreeze(Uncountable);
+  EEBuilder.createNaryOp(VPInstruction::BranchOnCond, {Uncountable});
+
+  // We need to connect the uncountable exit to the sole exit block. The
+  // latch is expected to connect to the middle block instead.
+  // In canonical form, the backedge is the last successor for the latch. So
+  // the first successor (true path) should be the exit for both conditions.
+  LatchVPBB->clearSuccessors();
+  NewLatch->clearPredecessors();
+  VPBlockUtils::connectBlocks(LatchVPBB, ExitBlocks.front());
+  VPBlockUtils::connectBlocks(LatchVPBB, NewLatch);
+
+  // Set condition for latch block to countable condition.
+  if (NeedsFreeze) {
+    VPBuilder NewLatchBuilder(Term);
+    Countable = NewLatchBuilder.createFreeze(Countable);
+  }
+  Term->setOperand(0, Countable);
+
+  // Remove the combining or.
+  cast<VPInstruction>(Cond)->eraseFromParent();
+
+  return true;
+}
+
 /// Returns the VPValue representing the uncountable exit comparison used by
 /// AnyOf if the recipes it depends on can be traced back to live-ins and
 /// the addresses (in GEP/PtrAdd form) of any (non-masked) load used in
@@ -3100,12 +3250,13 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
         return nullptr;
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
       Recipes.push_back(cast<VPInstruction>(GepR));
-    } else if (match(V, m_Freeze(m_VPValue(
-                            Op1, m_VPInstruction<VPInstruction::MaskedCond>(
-                                     m_VPValue(Op2)))))) {
-      Worklist.push_back(Op2);
+    } else if (match(V, m_Freeze(m_VPValue(Op1)))) {
+      Worklist.push_back(Op1);
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
-      Recipes.push_back(cast<VPInstruction>(Op1->getDefiningRecipe()));
+    } else if (match(V, m_VPInstruction<VPInstruction::MaskedCond>(
+                            m_VPValue(Op1)))) {
+      Worklist.push_back(Op1);
+      Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
     } else
       return nullptr;
   }
@@ -3425,6 +3576,7 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   VPValue *Combined = Exits[0].CondToExit;
   for (const EarlyExitInfo &Info : drop_begin(Exits))
     Combined = LatchBuilder.createLogicalOr(Combined, Info.CondToExit);
+  Combined = LatchBuilder.createFreeze(Combined);
 
   // Even though the logical or prevents posion propagation, we need to freeze
   // Combined to prevent poisoning the entire AnyOf result:
@@ -3432,9 +3584,10 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   // Exits[0].CondToExit = [0,1,0,0]
   // Exits[1].CondToExit = [0,0,p,p]
   //            Combined = [0,1,p,p]
+  //    freeze(Combined) = [0,1,?,?]
   //               AnyOf = 1
-  VPValue *IsAnyExitTaken = LatchBuilder.createNaryOp(
-      VPInstruction::AnyOf, LatchBuilder.createFreeze(Combined));
+  VPValue *IsAnyExitTaken =
+      LatchBuilder.createNaryOp(VPInstruction::AnyOf, Combined);
 
   // Create a comparison for the latch exit condition and replace the
   // BranchOnCond with a BranchOnTwoConds. The original BranchOnCond's condition
@@ -3551,10 +3704,11 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   // latch:
   //   ...
   //   EMIT vp<%combined> = logical-or vp<%cond.0>, vp<%cond.1>, vp<%cond.2>
+  //   EMIT vp<%combined.freeze> = freeze vp<%combined>
   //   ...
   //
   // vector.early.exit.check:
-  //   EMIT vp<%first.lane> = first-active-lane vp<%combined>
+  //   EMIT vp<%first.lane> = first-active-lane vp<%combined.freeze>
   //   EMIT vp<%at.cond.0> = extract-lane vp<%first.lane>, vp<%cond.0>
   //   EMIT branch-on-cond vp<%at.cond.0>
   // Successor(s): vector.early.exit.0, vector.early.exit.check.0
@@ -5752,7 +5906,7 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
 
       auto *Recipe = VPBuilder::createSingleScalarOp(
           VPI.getOpcode(), VPI.operandsWithoutMask(), /*Mask=*/nullptr, VPI,
-          VPI, VPI.getDebugLoc(), I);
+          VPI, VPI.getDebugLoc(), VPI.getScalarType(), I);
       Recipe->insertBefore(&VPI);
       VPI.replaceAllUsesWith(Recipe);
       VPI.eraseFromParent();

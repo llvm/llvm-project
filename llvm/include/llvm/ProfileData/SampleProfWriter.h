@@ -331,7 +331,9 @@ public:
 
   void setProfileSymbolList(ProfileSymbolList *PSL) override {
     ProfSymList = PSL;
-  };
+    if (ProfSymList && ProfSymList->isMD5())
+      setUseMD5ProfileSymbolList();
+  }
 
   void setUseCtxSplitLayout() override {
     resetSecLayout(SectionLayout::CtxSplitLayout);

@@ -241,8 +241,9 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   if (hasXNACKOnOffModes())
     TargetID.setXnackSetting(XnackSetting);
 
-  // Apply the module flag's sramecc setting if the target supports it.
-  if (supportsSRAMECC())
+  // Apply the module flag's sramecc setting if the target supports on/off
+  // modes. Targets with sramecc hardwired on ignore module flags.
+  if (hasSRAMECCOnOffModes())
     TargetID.setSramEccSetting(SramEccSetting);
 
   LLVM_DEBUG(dbgs() << "xnack setting for subtarget: "
@@ -636,9 +637,18 @@ unsigned GCNSubtarget::getBaseMaxNumVGPRs(
 unsigned GCNSubtarget::getMaxNumVGPRs(const Function &F) const {
   unsigned DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
   std::pair<unsigned, unsigned> Waves = getWavesPerEU(F);
-  return getBaseMaxNumVGPRs(
+
+  unsigned MaxNumVGPRs = getBaseMaxNumVGPRs(
       F, {getMinNumVGPRs(Waves.second, DynamicVGPRBlockSize),
           getMaxNumVGPRs(Waves.first, DynamicVGPRBlockSize)});
+
+  // In DVGPR mode, a wave launches with a single VGPR block allocated. Applied
+  // after getBaseMaxNumVGPRs so "amdgpu-num-vgpr" cannot raise it back up.
+  if (DynamicVGPRBlockSize != 0 &&
+      AMDGPU::isEntryFunctionCC(F.getCallingConv()))
+    MaxNumVGPRs = std::min(MaxNumVGPRs, DynamicVGPRBlockSize);
+
+  return MaxNumVGPRs;
 }
 
 unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {

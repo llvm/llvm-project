@@ -27,6 +27,7 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/DXILABI.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -36,8 +37,9 @@
 
 using namespace llvm;
 
-static void diagnoseNonUniqueResourceAccess(Instruction *I,
-                                            ArrayRef<IntrinsicInst *> Handles) {
+[[noreturn]] static void
+diagnoseNonUniqueResourceAccess(Instruction *I,
+                                ArrayRef<IntrinsicInst *> Handles) {
   LLVMContext &Context = I->getContext();
   std::string InstStr;
   raw_string_ostream InstOS(InstStr);
@@ -52,8 +54,9 @@ static void diagnoseNonUniqueResourceAccess(Instruction *I,
     Context.diagnose(DiagnosticInfoGeneric(
         "Uses resource handle:" + Twine(HandleStr), DS_Note));
   }
-  Context.diagnose(DiagnosticInfoGeneric(
-      "Resource access is not guaranteed to map to a unique global resource"));
+  report_fatal_error(
+      "Resource access is not guaranteed to map to a unique global resource",
+      /*gen_crash_diag=*/false);
 }
 
 static Value *traverseGEPOffsets(const DataLayout &DL, IRBuilder<> &Builder,
@@ -383,17 +386,31 @@ static void emitAtomicBinOp(IRBuilder<> &Builder, AtomicRMWInst *AI,
     return;
   }
 
+  // DXIL has no floating-point atomic op. A float exchange only moves the bit
+  // pattern, so cast the value to an integer of the same width, exchange, and
+  // cast the result back. This matches what DXC emits.
+  Value *Val = AI->getValOperand();
+  Type *ValTy = Val->getType();
+  Type *OpTy = ValTy;
+  if (ValTy->isFloatingPointTy()) {
+    OpTy = Builder.getIntNTy(ValTy->getPrimitiveSizeInBits());
+    Val = Builder.CreateBitCast(Val, OpTy);
+  }
+
   SmallVector<Value *, 6> Args{
       Handle, Builder.getInt32(static_cast<uint32_t>(*BinOpCode))};
   append_range(Args, Coords);
   Args.append(3 - Coords.size(), PoisonValue::get(Builder.getInt32Ty()));
-  Args.push_back(AI->getValOperand());
+  Args.push_back(Val);
 
   // Emit the target-independent intrinsic; DXILOpLowering lowers it to the
   // DXIL `AtomicBinOp` op and handles the target-ext-typed handle cast via
   // its `createTmpHandleCast` bookkeeping.
-  Value *Result = Builder.CreateIntrinsic(
-      AI->getType(), Intrinsic::dx_resource_atomic_binop, Args);
+  Value *Result =
+      Builder.CreateIntrinsic(OpTy, Intrinsic::dx_resource_atomic_binop, Args);
+
+  if (OpTy != ValTy)
+    Result = Builder.CreateBitCast(Result, ValTy);
 
   AI->replaceAllUsesWith(Result);
 }
@@ -410,10 +427,13 @@ static void createBufferAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
 
 static void createTextureAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
                                      dxil::ResourceTypeInfo &RTI) {
+  // A texture atomic operates on a whole texel, so a multi-component texel has
+  // no single addressable component. A scalar float texel is allowed, because
+  // emitAtomicBinOp exchanges its bit pattern as an integer.
   Type *ContainedType = RTI.getHandleTy()->getTypeParameter(0);
-  if (!ContainedType->isIntegerTy()) {
+  if (!ContainedType->isIntegerTy() && !ContainedType->isFloatingPointTy()) {
     reportFatalUsageError("DXIL atomicrmw requires a texture resource with a "
-                          "scalar integer element type");
+                          "scalar element type");
     return;
   }
 
@@ -1115,10 +1135,8 @@ static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
           SameGlobalBinding &=
               (B == getHandleIntrinsicBinding(Handles[Idx], DRTM));
 
-        if (!SameGlobalBinding) {
+        if (!SameGlobalBinding)
           diagnoseNonUniqueResourceAccess(&I, Handles);
-          continue;
-        }
 
         replaceHandleWithIndices(HandleOp, Handles[0], DeadInsts, VisitedPhis);
       }

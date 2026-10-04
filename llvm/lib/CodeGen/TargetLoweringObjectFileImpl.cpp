@@ -76,6 +76,8 @@
 using namespace llvm;
 using namespace dwarf;
 
+extern cl::opt<bool> PreserveHotDataSectionPrefix;
+
 static cl::opt<bool> JumpTableInFunctionSection(
     "jumptable-in-function-section", cl::Hidden, cl::init(false),
     cl::desc("Putting Jump Table in function section"));
@@ -666,26 +668,44 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
   }
 
   bool HasPrefix = false;
+  SmallString<32> SectionPrefix;
   if (const auto *F = dyn_cast<Function>(GO)) {
     // Jump table hotness takes precedence over its enclosing function's hotness
     // if it's known. The function's section prefix is used if jump table entry
     // hotness is unknown.
     if (JTE && JTE->Hotness != MachineFunctionDataHotness::Unknown) {
-      if (JTE->Hotness == MachineFunctionDataHotness::Hot) {
-        raw_svector_ostream(Name) << ".hot";
-      } else {
-        assert(JTE->Hotness == MachineFunctionDataHotness::Cold &&
-               "Hotness must be cold");
-        raw_svector_ostream(Name) << ".unlikely";
+      switch (JTE->Hotness) {
+      case MachineFunctionDataHotness::Cold:
+        raw_svector_ostream(SectionPrefix) << ".unlikely";
+        break;
+      case MachineFunctionDataHotness::Hot: {
+        if (PreserveHotDataSectionPrefix)
+          raw_svector_ostream(SectionPrefix) << ".hot";
+        break;
       }
-      HasPrefix = true;
-    } else if (std::optional<StringRef> Prefix = F->getSectionPrefix()) {
-      raw_svector_ostream(Name) << '.' << *Prefix;
-      HasPrefix = true;
-    }
+      default:
+        llvm_unreachable("Unknown jump table hotness");
+        break;
+      }
+    } else if (std::optional<StringRef> Prefix = F->getSectionPrefix())
+      raw_svector_ostream(SectionPrefix) << "." << *Prefix;
   } else if (const auto *GV = dyn_cast<GlobalVariable>(GO)) {
     if (std::optional<StringRef> Prefix = GV->getSectionPrefix()) {
-      raw_svector_ostream(Name) << '.' << *Prefix;
+      raw_svector_ostream(SectionPrefix) << "." << *Prefix;
+    }
+  }
+
+  if (!SectionPrefix.empty()) {
+    bool AddSectionPrefix = true;
+    if (Kind.isReadOnly() || Kind.isReadOnlyWithRel() || Kind.isData() ||
+        Kind.isBSS()) {
+      AddSectionPrefix =
+          TM.getEnableStaticDataPartitioning() &&
+          (!SectionPrefix.starts_with(".hot") || PreserveHotDataSectionPrefix);
+    }
+
+    if (AddSectionPrefix) {
+      Name += SectionPrefix;
       HasPrefix = true;
     }
   }
@@ -2023,7 +2043,6 @@ void TargetLoweringObjectFileCOFF::emitLinkerDirectives(
 void TargetLoweringObjectFileCOFF::Initialize(MCContext &Ctx,
                                               const TargetMachine &TM) {
   TargetLoweringObjectFile::Initialize(Ctx, TM);
-  this->TM = &TM;
   const Triple &T = TM.getTargetTriple();
   if (T.isWindowsMSVCEnvironment() || T.isWindowsItaniumEnvironment()) {
     StaticCtorSection =
@@ -2886,20 +2905,23 @@ MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
 
 MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
     const Function &F, const MCSymbol &FnSym, const TargetMachine &TM) const {
-  std::string Name = ".gcc_exception_table." + F.getName().str();
+  std::string Name = "GCC_except." + F.getName().str();
 
+  MCSectionGOFF *SD = getContext().getGOFFSection(
+      SectionKind::getMetadata(), Name,
+      GOFF::SDAttr{GOFF::ESD_TA_Unspecified, GOFF::ESD_BSC_Section});
   MCSectionGOFF *WSA = getContext().getGOFFSection(
       SectionKind::getMetadata(), GOFF::CLASS_WSA,
       GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
                    GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
-                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0, 0},
-      static_cast<MCSectionGOFF *>(TextSection)->getParent());
-  WSA->setAlignment(Align(4)); // Fullword
-  return getContext().getGOFFSection(SectionKind::getData(), Name,
-                                     GOFF::PRAttr{true, GOFF::ESD_EXE_DATA,
-                                                  GOFF::ESD_LT_XPLink,
-                                                  GOFF::ESD_BSC_Section, 0},
-                                     WSA);
+                   GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_0, 0},
+      SD);
+  WSA->setAlignment(Align(8));
+  return getContext().getGOFFSection(
+      SectionKind::getData(), Name,
+      GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
+                   GOFF::ESD_LT_XPLink, GOFF::ESD_BSC_Section, 0},
+      WSA);
 }
 
 MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
@@ -2932,8 +2954,8 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
     ED->setAlignment(Alignment.value_or(llvm::Align(8)));
     MCSectionGOFF *PR = getContext().getGOFFSection(
         Kind, Symbol->getName(),
-        GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_LT_XPLink,
-                     PRBindingScope, 0},
+        GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
+                     GOFF::ESD_LT_XPLink, PRBindingScope, 0},
         ED);
     // The binder rejects zero-length PR sections. Mark the PR so the writer
     // inflates it to a valid length if needed.
@@ -2969,8 +2991,8 @@ TargetLoweringObjectFileGOFF::getStaticXtorSection(unsigned Priority) const {
 
   MCSectionGOFF *Xtor = Ctx.getGOFFSection(
       SectionKind::getData(), Name,
-      GOFF::PRAttr{true, GOFF::ESD_EXE_DATA, GOFF::ESD_LT_XPLink,
-                   GOFF::ESD_BSC_Section, Prio},
+      GOFF::PRAttr{true, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
+                   GOFF::ESD_LT_XPLink, GOFF::ESD_BSC_Section, Prio},
       SInit);
   return Xtor;
 }

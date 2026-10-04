@@ -21,6 +21,7 @@ class CXXBaseSpecifier;
 class CXXMethodDecl;
 class CXXRecordDecl;
 class Decl;
+class FieldDecl;
 class FunctionDecl;
 class NamedDecl;
 class QualType;
@@ -72,6 +73,13 @@ clang::QualType borrowedType(clang::QualType T);
 
 /// \returns true if a value of type \p T is a pointer/reference/view.
 bool isView(const clang::QualType T);
+
+/// \returns true if \p Class declares reference semantics structurally: it is
+/// annotated [[gsl::Pointer]] (explicitly, or by Sema's inference for
+/// standard types), derives from std::ranges::view_interface, is a standard
+/// iterator adaptor, or is nested inside such a class, as the iterators of
+/// standard views are.
+bool isStdView(const clang::CXXRecordDecl *Class);
 
 /// \returns true if \p Class is ref-counted, false if not.
 bool isRefCounted(const clang::CXXRecordDecl *Class);
@@ -214,6 +222,12 @@ public:
   bool hasTrivialDtor(const VarDecl *VD) const {
     return hasTrivialDtorImpl(VD, TheCache);
   }
+  const FieldDecl *fieldWithNonTrivialCtor(const CXXRecordDecl *RD) const {
+    return fieldWithNonTrivialCtorImpl(RD, TheCache);
+  }
+  const FieldDecl *fieldWithNonTrivialDtor(const CXXRecordDecl *RD) const {
+    return fieldWithNonTrivialDtorImpl(RD, TheCache);
+  }
 
 private:
   friend class TrivialFunctionAnalysisVisitor;
@@ -225,6 +239,10 @@ private:
   static bool isTrivialImpl(const Decl *D, CacheTy &Cache, const Stmt **);
   static bool isTrivialImpl(const Stmt *S, CacheTy &Cache, const Stmt **);
   static bool hasTrivialDtorImpl(const VarDecl *VD, CacheTy &Cache);
+  static const FieldDecl *fieldWithNonTrivialCtorImpl(const CXXRecordDecl *RD,
+                                                      CacheTy &Cache);
+  static const FieldDecl *fieldWithNonTrivialDtorImpl(const CXXRecordDecl *RD,
+                                                      CacheTy &Cache);
 };
 
 } // namespace clang

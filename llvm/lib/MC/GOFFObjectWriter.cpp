@@ -265,6 +265,7 @@ public:
         SymbolType(GOFF::ESD_ST_PartReference), NameSpace(EDAttr.NameSpace) {
     SymbolFlags.setRenameable(Attr.IsRenamable);
     BehavAttrs.setExecutable(Attr.Executable);
+    BehavAttrs.setBindingStrength(Attr.BindingStrength);
     BehavAttrs.setLinkageType(Attr.Linkage);
     BehavAttrs.setBindingScope(Attr.BindingScope);
     BehavAttrs.setAlignment(Alignment);
@@ -401,8 +402,8 @@ void GOFFWriter::defineExtern(const MCSymbolGOFF &Symbol) {
     GOFFSymbol PR(Symbol.getExternalName(), Symbol.getIndex(), ED->getOrdinal(),
                   ED->getEDAttributes(), ED->getEDAlignment(),
                   GOFF::PRAttr{/*IsRenamable*/ false, Symbol.getCodeData(),
-                               Symbol.getLinkage(), Symbol.getBindingScope(),
-                               0});
+                               Symbol.getBindingStrength(), Symbol.getLinkage(),
+                               Symbol.getBindingScope(), 0});
     writeSymbol(PR);
   } else {
     GOFFSymbol ER(Symbol.getExternalName(), Symbol.getIndex(),
@@ -599,9 +600,7 @@ void GOFFWriter::writeRelocations() {
   for (auto &RelocEntry : Relocations) {
     auto GetRptr = [](const MCSymbolGOFF *Sym) -> uint32_t {
       if (Sym->isTemporary())
-        return static_cast<MCSectionGOFF &>(Sym->getSection())
-            .getBeginSymbol()
-            ->getIndex();
+        return static_cast<MCSectionGOFF &>(Sym->getSection()).getOrdinal();
       return Sym->getIndex();
     };
 

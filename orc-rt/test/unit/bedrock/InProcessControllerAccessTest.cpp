@@ -175,7 +175,7 @@ TEST(InProcessControllerAccessTest, OnConnectFailureIsReportedAndDetaches) {
   cantFail(std::move(Reported)); // force checked state
 
   Session S(mockExecutorProcessInfo(), noDispatch,
-            [&](Error E) noexcept { Reported = std::move(E); });
+            [&](Session &, Error E) noexcept { Reported = std::move(E); });
 
   S.attach<InProcessControllerAccess>(
       BootstrapInfo(S),
@@ -332,7 +332,9 @@ TEST(InProcessControllerAccessTest, BootstrapValuesExposeSubtargetFeatures) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   std::optional<std::string> Features;
   std::unique_ptr<MockIPEPC> Mock;
-  attachWithMock(S, Mock, cantFail(BootstrapInfo::CreateDefault(S)),
+  auto BI = BootstrapInfo::CreateDefault(S);
+  ASSERT_THAT_EXPECTED(BI, Succeeded());
+  attachWithMock(S, Mock, std::move(*BI),
                  [&](InProcessControllerAccess::BootstrapInfoAccess *BIA) {
                    const char *Name = nullptr;
                    const char *Bytes = nullptr;
