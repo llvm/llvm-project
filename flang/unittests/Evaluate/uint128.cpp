@@ -119,8 +119,8 @@ template <typename T> static void TestNumericLimitsEquivalence() {
   using Detail = Fortran::common::detail::numeric_limits<T>;
   using Common = Fortran::common::numeric_limits<T>;
 
-  // Our implementation in Detail must be equivalent to Std (if Std supports
-  // __int128).
+  // Our implementation in Detail must be equivalent to Std
+  // (if Std supports __int128).
   if constexpr (Std::is_specialized) {
     TEST(Detail::is_specialized == Std::is_specialized);
     TEST(Detail::is_signed == Std::is_signed);

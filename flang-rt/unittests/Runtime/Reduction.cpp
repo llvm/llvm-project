@@ -638,6 +638,40 @@ TEST(Reductions, ExtremaReal16) {
 }
 #endif // HAS_LDBL128 || HAS_FLOAT128
 
+#ifdef __SIZEOF_INT128__
+TEST(Reductions, ExtremaInteger16) {
+  // The identity value for Minval for INTEGER(16) was mistakenly
+  // set to -1 instead of HUGE(0_16).
+  using ElemType = CppTypeFor<TypeCategory::Integer, 16>;
+  const ElemType huge{
+      static_cast<ElemType>(~Fortran::common::uint128_t{0} >> 1)};
+  const ElemType lowest{-huge - 1};
+
+  // Zero-sized array
+  auto emptyArray{MakeArray<TypeCategory::Integer, 16>(
+      std::vector<int>{0}, std::vector<ElemType>{})};
+  EXPECT_TRUE(RTNAME(MinvalInteger16)(*emptyArray, __FILE__, __LINE__) == huge);
+  EXPECT_TRUE(
+      RTNAME(MaxvalInteger16)(*emptyArray, __FILE__, __LINE__) == lowest);
+
+  // All elements masked out
+  std::vector<int> shape{3};
+  //   1  2  3
+  auto array{MakeArray<TypeCategory::Integer, 16>(
+      shape, std::vector<ElemType>{1, 2, 3})};
+  auto falseMask{MakeArray<TypeCategory::Logical, 4>(
+      shape, std::vector<std::int32_t>{0, 0, 0})};
+  EXPECT_TRUE(RTNAME(MinvalInteger16)(
+                  *array, __FILE__, __LINE__, /*DIM=*/0, &*falseMask) == huge);
+  EXPECT_TRUE(RTNAME(MaxvalInteger16)(*array, __FILE__, __LINE__, /*DIM=*/0,
+                  &*falseMask) == lowest);
+
+  // Non-empty
+  EXPECT_TRUE(RTNAME(MinvalInteger16)(*array, __FILE__, __LINE__) == 1);
+  EXPECT_TRUE(RTNAME(MaxvalInteger16)(*array, __FILE__, __LINE__) == 3);
+}
+#endif // __SIZEOF_INT128__
+
 static std::int32_t IAdd(const std::int32_t *x, const std::int32_t *y) {
   return *x + *y;
 }

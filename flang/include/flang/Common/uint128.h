@@ -27,11 +27,11 @@
 
 namespace Fortran::common {
 namespace detail {
-template <typename T> class numeric_limits;
+template <typename T> class numeric_limits_impl;
 }
 
 template <bool IS_SIGNED = false> class Int128 {
-  friend class detail::numeric_limits<Int128>;
+  friend class detail::numeric_limits_impl<Int128>;
 
 public:
   constexpr Int128() {}
@@ -312,12 +312,12 @@ using HostSignedIntType = typename HostSignedIntTypeHelper<BITS>::type;
 
 namespace detail {
 
-template <typename T> class numeric_limits {
+template <typename T> class numeric_limits_impl {
 public:
   static constexpr bool is_specialized{false};
 };
 
-template <> class numeric_limits<Fortran::common::UnsignedInt128> {
+template <> class numeric_limits_impl<Fortran::common::UnsignedInt128> {
 public:
   using T = Fortran::common::UnsignedInt128;
 
@@ -330,7 +330,7 @@ public:
   static constexpr T lowest() { return min(); }
 };
 
-template <> class numeric_limits<Fortran::common::SignedInt128> {
+template <> class numeric_limits_impl<Fortran::common::SignedInt128> {
 public:
   using T = Fortran::common::SignedInt128;
 
@@ -364,7 +364,7 @@ public:
 // keyword is a warning "ISO C++ does not support ‘__int128’ for ‘type name’"
 // under -Wpedantic
 
-template <> class numeric_limits<__uint128_t> {
+template <> class numeric_limits_impl<__uint128_t> {
 public:
   using T = __uint128_t;
 
@@ -377,7 +377,7 @@ public:
   static constexpr T lowest() { return min(); }
 };
 
-template <> class numeric_limits<__int128_t> {
+template <> class numeric_limits_impl<__int128_t> {
 public:
   using T = __int128_t;
 
@@ -394,6 +394,10 @@ public:
   static constexpr T lowest() { return min(); }
 };
 #endif
+
+template <typename T>
+using numeric_limits = numeric_limits_impl<std::remove_cv_t<T>>;
+
 } // namespace detail
 
 /// Same as std::numeric_limits, but also defined for 128 bit integers. While
@@ -404,10 +408,10 @@ public:
 /// Only defining the members actually used in Flang/Flang-RT. Feel free to add
 /// more members as needed.
 template <typename T>
-using numeric_limits = std::conditional_t<
-    detail::numeric_limits<std::decay_t<T>>::is_specialized &&
-        !std::numeric_limits<T>::is_specialized,
-    detail::numeric_limits<std::decay_t<T>>, std::numeric_limits<T>>;
+using numeric_limits =
+    std::conditional_t<detail::numeric_limits<T>::is_specialized &&
+            !std::numeric_limits<T>::is_specialized,
+        detail::numeric_limits<T>, std::numeric_limits<T>>;
 
 } // namespace Fortran::common
 #endif
