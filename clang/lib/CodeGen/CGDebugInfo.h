@@ -783,6 +783,10 @@ private:
   /// location.
   llvm::DIFile *getOrCreateFile(SourceLocation Loc);
 
+  /// Same as above, for a Loc whose presumed location \p PLoc the caller has
+  /// already computed.
+  llvm::DIFile *getOrCreateFile(SourceLocation Loc, const PresumedLoc &PLoc);
+
   /// Create a file debug info descriptor for a source file.
   llvm::DIFile *
   createFile(StringRef FileName,

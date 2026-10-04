@@ -360,7 +360,7 @@ void CGDebugInfo::setLocation(SourceLocation Loc) {
     CurLocLine = PCLoc.getLine();
     if (CGM.getCodeGenOpts().DebugColumnInfo)
       CurLocColumn = PCLoc.getColumn();
-    CurLocFile = getOrCreateFile(CurLoc);
+    CurLocFile = getOrCreateFile(CurLoc, PCLoc);
   }
 
   // If we've changed files in the middle of a lexical scope go ahead
@@ -577,6 +577,17 @@ std::optional<StringRef> CGDebugInfo::getSource(const SourceManager &SM,
 }
 
 llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
+  if (Loc.isInvalid())
+    return getOrCreateFile(Loc, PresumedLoc());
+
+  if (Loc == CurLoc && CurLocFile)
+    return CurLocFile;
+  return getOrCreateFile(
+      Loc, CGM.getContext().getSourceManager().getPresumedLoc(Loc));
+}
+
+llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc,
+                                           const PresumedLoc &PLoc) {
   SourceManager &SM = CGM.getContext().getSourceManager();
   StringRef FileName;
   FileID FID;
@@ -589,10 +600,6 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
     FileName = TheCU->getFile()->getFilename();
     CSInfo = TheCU->getFile()->getChecksum();
   } else {
-    if (Loc == CurLoc && CurLocFile)
-      return CurLocFile;
-
-    PresumedLoc PLoc = SM.getPresumedLoc(Loc);
     FileName = PLoc.getFilename();
 
     if (FileName.empty()) {
