@@ -1050,8 +1050,8 @@ bool VPlanTransforms::finalizeSCEVPredicates(VPlan &Plan,
       auto *BinOp = IndDesc.getInductionBinOp();
       auto *PHI = WideIV.getPHINode();
       bool AllUsesNarrow = BinOp && all_of(BinOp->users(), [&](User *U) {
-        return U == PHI || isa<TruncInst>(U);
-      });
+                             return U == PHI || isa<TruncInst>(U);
+                           });
       // Verify the PHI has no uses outside the loop. A live-out of the wide
       // PHI would expose the diverged wide value after narrow-type wrap.
       if (AllUsesNarrow) {
