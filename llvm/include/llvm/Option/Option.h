@@ -59,19 +59,22 @@ public:
     InputClass,
     UnknownClass,
     FlagClass,
+    FlagOrEqClass,
     JoinedClass,
     ValuesClass,
     SeparateClass,
+    SeparateOrEqClass,
     RemainingArgsClass,
     RemainingArgsJoinedClass,
     CommaJoinedClass,
     MultiArgClass,
     JoinedOrSeparateClass,
-    JoinedAndSeparateClass
+    JoinedAndSeparateClass,
   };
 
   enum RenderStyleKind {
     RenderCommaJoinedStyle,
+    RenderEqStyle,
     RenderJoinedStyle,
     RenderSeparateStyle,
     RenderValuesStyle
@@ -153,6 +156,9 @@ public:
     case JoinedClass:
     case JoinedAndSeparateClass:
       return RenderJoinedStyle;
+    case FlagOrEqClass:
+    case SeparateOrEqClass:
+      return RenderEqStyle;
     case CommaJoinedClass:
       return RenderCommaJoinedStyle;
     case FlagClass:
