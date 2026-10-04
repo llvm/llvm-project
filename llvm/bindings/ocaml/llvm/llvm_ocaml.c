@@ -328,14 +328,14 @@ value llvm_set_target_triple(value Trip, value M) {
   return Val_unit;
 }
 
-/* llmodule -> string */
+/* llmodule -> DataLayout.t */
 value llvm_data_layout(value M) {
-  return caml_copy_string(LLVMGetDataLayout(Module_val(M)));
+  return llvm_alloc_data_layout(LLVMGetModuleDataLayout(Module_val(M)));
 }
 
-/* string -> llmodule -> unit */
+/* DataLayout.t -> llmodule -> unit */
 value llvm_set_data_layout(value Layout, value M) {
-  LLVMSetDataLayout(Module_val(M), String_val(Layout));
+  LLVMSetModuleDataLayout(Module_val(M), DataLayout_val(Layout));
   return Val_unit;
 }
 
@@ -2779,8 +2779,6 @@ value llvm_memorybuffer_dispose(value MemBuf) {
 }
 
 /*===---- Data Layout -----------------------------------------------------===*/
-
-#define DataLayout_val(v) (*(LLVMTargetDataRef *)(Data_custom_val(v)))
 
 static void llvm_finalize_data_layout(value DataLayout) {
   LLVMDisposeTargetData(DataLayout_val(DataLayout));
