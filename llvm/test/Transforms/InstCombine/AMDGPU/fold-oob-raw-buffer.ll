@@ -12,9 +12,7 @@
 define i32 @gfx9_stride_zero_soffset_subtracted_fold(ptr %p) {
 ; GFX9-LABEL: define i32 @gfx9_stride_zero_soffset_subtracted_fold(
 ; GFX9-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
-; GFX9-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 0)
-; GFX9-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 8, i32 8, i32 0)
-; GFX9-NEXT:    ret i32 [[V]]
+; GFX9-NEXT:    ret i32 0
 ;
 ; GFX10-LABEL: define i32 @gfx9_stride_zero_soffset_subtracted_fold(
 ; GFX10-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -36,15 +34,11 @@ define i32 @gfx9_stride_zero_soffset_subtracted_fold(ptr %p) {
 ;
 ; GFX1250-LABEL: define i32 @gfx9_stride_zero_soffset_subtracted_fold(
 ; GFX1250-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
-; GFX1250-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 0)
-; GFX1250-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 8, i32 8, i32 0)
-; GFX1250-NEXT:    ret i32 [[V]]
+; GFX1250-NEXT:    ret i32 0
 ;
 ; GFX13-LABEL: define i32 @gfx9_stride_zero_soffset_subtracted_fold(
 ; GFX13-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
-; GFX13-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 0)
-; GFX13-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 8, i32 8, i32 0)
-; GFX13-NEXT:    ret i32 [[V]]
+; GFX13-NEXT:    ret i32 0
 ;
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr %p, i16 0, i64 16, i32 0)
   %v = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) %rsrc, i32 8, i32 8, i32 0)
@@ -55,9 +49,7 @@ define i32 @gfx9_stride_zero_soffset_subtracted_fold(ptr %p) {
 define i32 @gfx9_stride_nonzero_soffset_ignored_fold(ptr %p) {
 ; GFX9-LABEL: define i32 @gfx9_stride_nonzero_soffset_ignored_fold(
 ; GFX9-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX9-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 4, i64 16, i32 0)
-; GFX9-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 16, i32 100, i32 0)
-; GFX9-NEXT:    ret i32 [[V]]
+; GFX9-NEXT:    ret i32 0
 ;
 ; GFX10-LABEL: define i32 @gfx9_stride_nonzero_soffset_ignored_fold(
 ; GFX10-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
@@ -79,15 +71,11 @@ define i32 @gfx9_stride_nonzero_soffset_ignored_fold(ptr %p) {
 ;
 ; GFX1250-LABEL: define i32 @gfx9_stride_nonzero_soffset_ignored_fold(
 ; GFX1250-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX1250-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 4, i64 16, i32 0)
-; GFX1250-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 16, i32 100, i32 0)
-; GFX1250-NEXT:    ret i32 [[V]]
+; GFX1250-NEXT:    ret i32 0
 ;
 ; GFX13-LABEL: define i32 @gfx9_stride_nonzero_soffset_ignored_fold(
 ; GFX13-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX13-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 4, i64 16, i32 0)
-; GFX13-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 16, i32 100, i32 0)
-; GFX13-NEXT:    ret i32 [[V]]
+; GFX13-NEXT:    ret i32 0
 ;
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr %p, i16 4, i64 16, i32 0)
   %v = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) %rsrc, i32 16, i32 100, i32 0)
@@ -122,15 +110,11 @@ define i32 @gfx9_addtid_no_fold(ptr %p) {
 ;
 ; GFX1250-LABEL: define i32 @gfx9_addtid_no_fold(
 ; GFX1250-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX1250-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 8388608)
-; GFX1250-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX1250-NEXT:    ret i32 [[V]]
+; GFX1250-NEXT:    ret i32 0
 ;
 ; GFX13-LABEL: define i32 @gfx9_addtid_no_fold(
 ; GFX13-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX13-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 8388608)
-; GFX13-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX13-NEXT:    ret i32 [[V]]
+; GFX13-NEXT:    ret i32 0
 ;
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr %p, i16 0, i64 16, i32 8388608)
   %v = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) %rsrc, i32 32, i32 0, i32 0)
@@ -227,9 +211,7 @@ define i32 @gfx9_volatile_no_fold(ptr %p) {
 define i32 @gfx9_boundary_offset_equals_bound_fold(ptr %p) {
 ; GFX9-LABEL: define i32 @gfx9_boundary_offset_equals_bound_fold(
 ; GFX9-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX9-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 64, i32 0)
-; GFX9-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 64, i32 0, i32 0)
-; GFX9-NEXT:    ret i32 [[V]]
+; GFX9-NEXT:    ret i32 0
 ;
 ; GFX10-LABEL: define i32 @gfx9_boundary_offset_equals_bound_fold(
 ; GFX10-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
@@ -251,15 +233,11 @@ define i32 @gfx9_boundary_offset_equals_bound_fold(ptr %p) {
 ;
 ; GFX1250-LABEL: define i32 @gfx9_boundary_offset_equals_bound_fold(
 ; GFX1250-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX1250-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 64, i32 0)
-; GFX1250-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 64, i32 0, i32 0)
-; GFX1250-NEXT:    ret i32 [[V]]
+; GFX1250-NEXT:    ret i32 0
 ;
 ; GFX13-LABEL: define i32 @gfx9_boundary_offset_equals_bound_fold(
 ; GFX13-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX13-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 64, i32 0)
-; GFX13-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 64, i32 0, i32 0)
-; GFX13-NEXT:    ret i32 [[V]]
+; GFX13-NEXT:    ret i32 0
 ;
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr %p, i16 0, i64 64, i32 0)
   %v = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) %rsrc, i32 64, i32 0, i32 0)
@@ -315,39 +293,27 @@ define i32 @gfx9_boundary_offset_below_bound_no_fold(ptr %p) {
 define i32 @gfx10_oobselect3_fold(ptr %p) {
 ; GFX9-LABEL: define i32 @gfx10_oobselect3_fold(
 ; GFX9-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX9-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX9-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX9-NEXT:    ret i32 [[V]]
+; GFX9-NEXT:    ret i32 0
 ;
 ; GFX10-LABEL: define i32 @gfx10_oobselect3_fold(
 ; GFX10-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX10-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX10-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX10-NEXT:    ret i32 [[V]]
+; GFX10-NEXT:    ret i32 0
 ;
 ; GFX11-LABEL: define i32 @gfx10_oobselect3_fold(
 ; GFX11-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX11-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX11-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX11-NEXT:    ret i32 [[V]]
+; GFX11-NEXT:    ret i32 0
 ;
 ; GFX12-LABEL: define i32 @gfx10_oobselect3_fold(
 ; GFX12-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX12-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX12-NEXT:    ret i32 [[V]]
+; GFX12-NEXT:    ret i32 0
 ;
 ; GFX1250-LABEL: define i32 @gfx10_oobselect3_fold(
 ; GFX1250-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX1250-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX1250-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX1250-NEXT:    ret i32 [[V]]
+; GFX1250-NEXT:    ret i32 0
 ;
 ; GFX13-LABEL: define i32 @gfx10_oobselect3_fold(
 ; GFX13-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX13-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX13-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX13-NEXT:    ret i32 [[V]]
+; GFX13-NEXT:    ret i32 0
 ;
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr %p, i16 0, i64 16, i32 805306368)
   %v = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) %rsrc, i32 32, i32 0, i32 0)
@@ -358,9 +324,7 @@ define i32 @gfx10_oobselect3_fold(ptr %p) {
 define i32 @gfx10_oobselect0_no_fold(ptr %p) {
 ; GFX9-LABEL: define i32 @gfx10_oobselect0_no_fold(
 ; GFX9-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX9-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 0)
-; GFX9-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX9-NEXT:    ret i32 [[V]]
+; GFX9-NEXT:    ret i32 0
 ;
 ; GFX10-LABEL: define i32 @gfx10_oobselect0_no_fold(
 ; GFX10-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
@@ -382,15 +346,11 @@ define i32 @gfx10_oobselect0_no_fold(ptr %p) {
 ;
 ; GFX1250-LABEL: define i32 @gfx10_oobselect0_no_fold(
 ; GFX1250-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX1250-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 0)
-; GFX1250-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX1250-NEXT:    ret i32 [[V]]
+; GFX1250-NEXT:    ret i32 0
 ;
 ; GFX13-LABEL: define i32 @gfx10_oobselect0_no_fold(
 ; GFX13-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX13-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 0)
-; GFX13-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX13-NEXT:    ret i32 [[V]]
+; GFX13-NEXT:    ret i32 0
 ;
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr %p, i16 0, i64 16, i32 0)
   %v = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) %rsrc, i32 32, i32 0, i32 0)
@@ -425,15 +385,11 @@ define i32 @gfx10_addtid_no_fold(ptr %p) {
 ;
 ; GFX1250-LABEL: define i32 @gfx10_addtid_no_fold(
 ; GFX1250-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX1250-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 813694976)
-; GFX1250-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX1250-NEXT:    ret i32 [[V]]
+; GFX1250-NEXT:    ret i32 0
 ;
 ; GFX13-LABEL: define i32 @gfx10_addtid_no_fold(
 ; GFX13-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX13-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 813694976)
-; GFX13-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX13-NEXT:    ret i32 [[V]]
+; GFX13-NEXT:    ret i32 0
 ;
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr %p, i16 0, i64 16, i32 813694976)
   %v = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) %rsrc, i32 32, i32 0, i32 0)
@@ -444,39 +400,27 @@ define i32 @gfx10_addtid_no_fold(ptr %p) {
 define i32 @gfx12_swizzle_disabled_fold(ptr %p) {
 ; GFX9-LABEL: define i32 @gfx12_swizzle_disabled_fold(
 ; GFX9-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX9-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX9-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX9-NEXT:    ret i32 [[V]]
+; GFX9-NEXT:    ret i32 0
 ;
 ; GFX10-LABEL: define i32 @gfx12_swizzle_disabled_fold(
 ; GFX10-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX10-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX10-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX10-NEXT:    ret i32 [[V]]
+; GFX10-NEXT:    ret i32 0
 ;
 ; GFX11-LABEL: define i32 @gfx12_swizzle_disabled_fold(
 ; GFX11-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX11-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX11-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX11-NEXT:    ret i32 [[V]]
+; GFX11-NEXT:    ret i32 0
 ;
 ; GFX12-LABEL: define i32 @gfx12_swizzle_disabled_fold(
 ; GFX12-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX12-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX12-NEXT:    ret i32 [[V]]
+; GFX12-NEXT:    ret i32 0
 ;
 ; GFX1250-LABEL: define i32 @gfx12_swizzle_disabled_fold(
 ; GFX1250-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX1250-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX1250-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX1250-NEXT:    ret i32 [[V]]
+; GFX1250-NEXT:    ret i32 0
 ;
 ; GFX13-LABEL: define i32 @gfx12_swizzle_disabled_fold(
 ; GFX13-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX13-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX13-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX13-NEXT:    ret i32 [[V]]
+; GFX13-NEXT:    ret i32 0
 ;
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr %p, i16 0, i64 16, i32 805306368)
   %v = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) %rsrc, i32 32, i32 0, i32 0)
@@ -489,9 +433,7 @@ define i32 @gfx12_swizzle_disabled_fold(ptr %p) {
 define i32 @gfx1250_nonbuffer_type_no_fold(ptr %p) {
 ; GFX9-LABEL: define i32 @gfx1250_nonbuffer_type_no_fold(
 ; GFX9-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX9-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 4)
-; GFX9-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX9-NEXT:    ret i32 [[V]]
+; GFX9-NEXT:    ret i32 0
 ;
 ; GFX10-LABEL: define i32 @gfx1250_nonbuffer_type_no_fold(
 ; GFX10-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
@@ -533,9 +475,7 @@ define i32 @gfx1250_nonbuffer_type_no_fold(ptr %p) {
 define i32 @gfx1250_stride_scaled_no_fold(ptr %p) {
 ; GFX9-LABEL: define i32 @gfx1250_stride_scaled_no_fold(
 ; GFX9-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX9-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 16384, i64 1000000, i32 0)
-; GFX9-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 2000000000, i32 0, i32 0)
-; GFX9-NEXT:    ret i32 [[V]]
+; GFX9-NEXT:    ret i32 0
 ;
 ; GFX10-LABEL: define i32 @gfx1250_stride_scaled_no_fold(
 ; GFX10-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
@@ -576,9 +516,7 @@ define i32 @gfx1250_stride_scaled_no_fold(ptr %p) {
 define i32 @gfx1250_numrecords_zero_no_fold(ptr %p) {
 ; GFX9-LABEL: define i32 @gfx1250_numrecords_zero_no_fold(
 ; GFX9-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX9-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 0, i32 0)
-; GFX9-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 100, i32 0, i32 0)
-; GFX9-NEXT:    ret i32 [[V]]
+; GFX9-NEXT:    ret i32 0
 ;
 ; GFX10-LABEL: define i32 @gfx1250_numrecords_zero_no_fold(
 ; GFX10-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
@@ -620,9 +558,7 @@ define i32 @gfx1250_numrecords_zero_no_fold(ptr %p) {
 define i32 @gfx1250_numrecords_allones_no_fold(ptr %p) {
 ; GFX9-LABEL: define i32 @gfx1250_numrecords_allones_no_fold(
 ; GFX9-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX9-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 35184372088831, i32 0)
-; GFX9-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 -1, i32 0, i32 0)
-; GFX9-NEXT:    ret i32 [[V]]
+; GFX9-NEXT:    ret i32 0
 ;
 ; GFX10-LABEL: define i32 @gfx1250_numrecords_allones_no_fold(
 ; GFX10-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
@@ -663,9 +599,7 @@ define i32 @gfx1250_numrecords_allones_no_fold(ptr %p) {
 define i32 @gfx1250_oobselect0_fold(ptr %p) {
 ; GFX9-LABEL: define i32 @gfx1250_oobselect0_fold(
 ; GFX9-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX9-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 0)
-; GFX9-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX9-NEXT:    ret i32 [[V]]
+; GFX9-NEXT:    ret i32 0
 ;
 ; GFX10-LABEL: define i32 @gfx1250_oobselect0_fold(
 ; GFX10-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
@@ -687,15 +621,11 @@ define i32 @gfx1250_oobselect0_fold(ptr %p) {
 ;
 ; GFX1250-LABEL: define i32 @gfx1250_oobselect0_fold(
 ; GFX1250-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX1250-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 0)
-; GFX1250-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX1250-NEXT:    ret i32 [[V]]
+; GFX1250-NEXT:    ret i32 0
 ;
 ; GFX13-LABEL: define i32 @gfx1250_oobselect0_fold(
 ; GFX13-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX13-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 0)
-; GFX13-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX13-NEXT:    ret i32 [[V]]
+; GFX13-NEXT:    ret i32 0
 ;
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr %p, i16 0, i64 16, i32 0)
   %v = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) %rsrc, i32 32, i32 0, i32 0)
@@ -730,15 +660,11 @@ define i32 @gfx1250_oobselect1_stride0_always_oob(ptr %p) {
 ;
 ; GFX1250-LABEL: define i32 @gfx1250_oobselect1_stride0_always_oob(
 ; GFX1250-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX1250-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 1000000, i32 2)
-; GFX1250-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 0, i32 0, i32 0)
-; GFX1250-NEXT:    ret i32 [[V]]
+; GFX1250-NEXT:    ret i32 0
 ;
 ; GFX13-LABEL: define i32 @gfx1250_oobselect1_stride0_always_oob(
 ; GFX13-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX13-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 1000000, i32 2)
-; GFX13-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 0, i32 0, i32 0)
-; GFX13-NEXT:    ret i32 [[V]]
+; GFX13-NEXT:    ret i32 0
 ;
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr %p, i16 0, i64 1000000, i32 2)
   %v = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
@@ -750,9 +676,7 @@ define i32 @gfx1250_oobselect1_stride0_always_oob(ptr %p) {
 define i32 @gfx1250_soffset_alone_sufficient_fold(ptr %p) {
 ; GFX9-LABEL: define i32 @gfx1250_soffset_alone_sufficient_fold(
 ; GFX9-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX9-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 0)
-; GFX9-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 0, i32 32, i32 0)
-; GFX9-NEXT:    ret i32 [[V]]
+; GFX9-NEXT:    ret i32 0
 ;
 ; GFX10-LABEL: define i32 @gfx1250_soffset_alone_sufficient_fold(
 ; GFX10-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
@@ -774,15 +698,11 @@ define i32 @gfx1250_soffset_alone_sufficient_fold(ptr %p) {
 ;
 ; GFX1250-LABEL: define i32 @gfx1250_soffset_alone_sufficient_fold(
 ; GFX1250-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX1250-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 0)
-; GFX1250-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 0, i32 32, i32 0)
-; GFX1250-NEXT:    ret i32 [[V]]
+; GFX1250-NEXT:    ret i32 0
 ;
 ; GFX13-LABEL: define i32 @gfx1250_soffset_alone_sufficient_fold(
 ; GFX13-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX13-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 0)
-; GFX13-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 0, i32 32, i32 0)
-; GFX13-NEXT:    ret i32 [[V]]
+; GFX13-NEXT:    ret i32 0
 ;
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr %p, i16 0, i64 16, i32 0)
   %v = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) %rsrc, i32 0, i32 32, i32 0)
@@ -795,45 +715,27 @@ define i32 @gfx1250_soffset_alone_sufficient_fold(ptr %p) {
 define i32 @known_bits_offset_provable_fold(ptr %p, i32 %x) {
 ; GFX9-LABEL: define i32 @known_bits_offset_provable_fold(
 ; GFX9-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
-; GFX9-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX9-NEXT:    [[OFF:%.*]] = or i32 [[X]], 2048
-; GFX9-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 [[OFF]], i32 0, i32 0)
-; GFX9-NEXT:    ret i32 [[V]]
+; GFX9-NEXT:    ret i32 0
 ;
 ; GFX10-LABEL: define i32 @known_bits_offset_provable_fold(
 ; GFX10-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
-; GFX10-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX10-NEXT:    [[OFF:%.*]] = or i32 [[X]], 2048
-; GFX10-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 [[OFF]], i32 0, i32 0)
-; GFX10-NEXT:    ret i32 [[V]]
+; GFX10-NEXT:    ret i32 0
 ;
 ; GFX11-LABEL: define i32 @known_bits_offset_provable_fold(
 ; GFX11-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
-; GFX11-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX11-NEXT:    [[OFF:%.*]] = or i32 [[X]], 2048
-; GFX11-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 [[OFF]], i32 0, i32 0)
-; GFX11-NEXT:    ret i32 [[V]]
+; GFX11-NEXT:    ret i32 0
 ;
 ; GFX12-LABEL: define i32 @known_bits_offset_provable_fold(
 ; GFX12-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX12-NEXT:    [[OFF:%.*]] = or i32 [[X]], 2048
-; GFX12-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 [[OFF]], i32 0, i32 0)
-; GFX12-NEXT:    ret i32 [[V]]
+; GFX12-NEXT:    ret i32 0
 ;
 ; GFX1250-LABEL: define i32 @known_bits_offset_provable_fold(
 ; GFX1250-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
-; GFX1250-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX1250-NEXT:    [[OFF:%.*]] = or i32 [[X]], 2048
-; GFX1250-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 [[OFF]], i32 0, i32 0)
-; GFX1250-NEXT:    ret i32 [[V]]
+; GFX1250-NEXT:    ret i32 0
 ;
 ; GFX13-LABEL: define i32 @known_bits_offset_provable_fold(
 ; GFX13-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
-; GFX13-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX13-NEXT:    [[OFF:%.*]] = or i32 [[X]], 2048
-; GFX13-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) [[RSRC]], i32 [[OFF]], i32 0, i32 0)
-; GFX13-NEXT:    ret i32 [[V]]
+; GFX13-NEXT:    ret i32 0
 ;
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr %p, i16 0, i64 16, i32 805306368)
   %off = or i32 %x, 2048
@@ -940,39 +842,27 @@ define i32 @known_bits_neither_sufficient_no_fold(ptr %p, i32 %x, i32 %y) {
 define <4 x i32> @wide_vector_load_fold(ptr %p) {
 ; GFX9-LABEL: define <4 x i32> @wide_vector_load_fold(
 ; GFX9-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX9-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX9-NEXT:    [[V:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX9-NEXT:    ret <4 x i32> [[V]]
+; GFX9-NEXT:    ret <4 x i32> zeroinitializer
 ;
 ; GFX10-LABEL: define <4 x i32> @wide_vector_load_fold(
 ; GFX10-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX10-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX10-NEXT:    [[V:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX10-NEXT:    ret <4 x i32> [[V]]
+; GFX10-NEXT:    ret <4 x i32> zeroinitializer
 ;
 ; GFX11-LABEL: define <4 x i32> @wide_vector_load_fold(
 ; GFX11-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX11-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX11-NEXT:    [[V:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX11-NEXT:    ret <4 x i32> [[V]]
+; GFX11-NEXT:    ret <4 x i32> zeroinitializer
 ;
 ; GFX12-LABEL: define <4 x i32> @wide_vector_load_fold(
 ; GFX12-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX12-NEXT:    [[V:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX12-NEXT:    ret <4 x i32> [[V]]
+; GFX12-NEXT:    ret <4 x i32> zeroinitializer
 ;
 ; GFX1250-LABEL: define <4 x i32> @wide_vector_load_fold(
 ; GFX1250-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX1250-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX1250-NEXT:    [[V:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX1250-NEXT:    ret <4 x i32> [[V]]
+; GFX1250-NEXT:    ret <4 x i32> zeroinitializer
 ;
 ; GFX13-LABEL: define <4 x i32> @wide_vector_load_fold(
 ; GFX13-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX13-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX13-NEXT:    [[V:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX13-NEXT:    ret <4 x i32> [[V]]
+; GFX13-NEXT:    ret <4 x i32> zeroinitializer
 ;
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr %p, i16 0, i64 16, i32 805306368)
   %v = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) %rsrc, i32 32, i32 0, i32 0)
@@ -983,39 +873,27 @@ define <4 x i32> @wide_vector_load_fold(ptr %p) {
 define i64 @wide_i64_load_fold(ptr %p) {
 ; GFX9-LABEL: define i64 @wide_i64_load_fold(
 ; GFX9-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX9-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX9-NEXT:    [[V:%.*]] = call i64 @llvm.amdgcn.raw.ptr.buffer.load.i64(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX9-NEXT:    ret i64 [[V]]
+; GFX9-NEXT:    ret i64 0
 ;
 ; GFX10-LABEL: define i64 @wide_i64_load_fold(
 ; GFX10-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX10-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX10-NEXT:    [[V:%.*]] = call i64 @llvm.amdgcn.raw.ptr.buffer.load.i64(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX10-NEXT:    ret i64 [[V]]
+; GFX10-NEXT:    ret i64 0
 ;
 ; GFX11-LABEL: define i64 @wide_i64_load_fold(
 ; GFX11-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX11-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX11-NEXT:    [[V:%.*]] = call i64 @llvm.amdgcn.raw.ptr.buffer.load.i64(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX11-NEXT:    ret i64 [[V]]
+; GFX11-NEXT:    ret i64 0
 ;
 ; GFX12-LABEL: define i64 @wide_i64_load_fold(
 ; GFX12-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX12-NEXT:    [[V:%.*]] = call i64 @llvm.amdgcn.raw.ptr.buffer.load.i64(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX12-NEXT:    ret i64 [[V]]
+; GFX12-NEXT:    ret i64 0
 ;
 ; GFX1250-LABEL: define i64 @wide_i64_load_fold(
 ; GFX1250-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX1250-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX1250-NEXT:    [[V:%.*]] = call i64 @llvm.amdgcn.raw.ptr.buffer.load.i64(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX1250-NEXT:    ret i64 [[V]]
+; GFX1250-NEXT:    ret i64 0
 ;
 ; GFX13-LABEL: define i64 @wide_i64_load_fold(
 ; GFX13-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; GFX13-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX13-NEXT:    [[V:%.*]] = call i64 @llvm.amdgcn.raw.ptr.buffer.load.i64(ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
-; GFX13-NEXT:    ret i64 [[V]]
+; GFX13-NEXT:    ret i64 0
 ;
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr %p, i16 0, i64 16, i32 805306368)
   %v = call i64 @llvm.amdgcn.raw.ptr.buffer.load.i64(ptr addrspace(8) %rsrc, i32 32, i32 0, i32 0)
@@ -1026,38 +904,26 @@ define i64 @wide_i64_load_fold(ptr %p) {
 define void @wide_vector_store_erased(ptr %p, <4 x i32> %val) {
 ; GFX9-LABEL: define void @wide_vector_store_erased(
 ; GFX9-SAME: ptr [[P:%.*]], <4 x i32> [[VAL:%.*]]) #[[ATTR0]] {
-; GFX9-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX9-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[VAL]], ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @wide_vector_store_erased(
 ; GFX10-SAME: ptr [[P:%.*]], <4 x i32> [[VAL:%.*]]) #[[ATTR0]] {
-; GFX10-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX10-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[VAL]], ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
 ; GFX10-NEXT:    ret void
 ;
 ; GFX11-LABEL: define void @wide_vector_store_erased(
 ; GFX11-SAME: ptr [[P:%.*]], <4 x i32> [[VAL:%.*]]) #[[ATTR0]] {
-; GFX11-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX11-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[VAL]], ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
 ; GFX11-NEXT:    ret void
 ;
 ; GFX12-LABEL: define void @wide_vector_store_erased(
 ; GFX12-SAME: ptr [[P:%.*]], <4 x i32> [[VAL:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX12-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[VAL]], ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
 ; GFX12-NEXT:    ret void
 ;
 ; GFX1250-LABEL: define void @wide_vector_store_erased(
 ; GFX1250-SAME: ptr [[P:%.*]], <4 x i32> [[VAL:%.*]]) #[[ATTR0]] {
-; GFX1250-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX1250-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[VAL]], ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
 ; GFX1250-NEXT:    ret void
 ;
 ; GFX13-LABEL: define void @wide_vector_store_erased(
 ; GFX13-SAME: ptr [[P:%.*]], <4 x i32> [[VAL:%.*]]) #[[ATTR0]] {
-; GFX13-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 16, i32 805306368)
-; GFX13-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[VAL]], ptr addrspace(8) [[RSRC]], i32 32, i32 0, i32 0)
 ; GFX13-NEXT:    ret void
 ;
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr %p, i16 0, i64 16, i32 805306368)

@@ -59,6 +59,12 @@ public:
     LLVMAMDHSADebugTrap = 0x03,
   };
 
+  enum class AMDGPUBufferOOBModel {
+    Gfx9 = 1,
+    Gfx10 = 2,
+    Gfx1250 = 3,
+  };
+
 private:
   /// SelectionDAGISel related APIs.
   std::unique_ptr<const SelectionDAGTargetInfo> TSInfo;
@@ -87,6 +93,9 @@ protected:
   /// The width, in bits, of the num_records field of a buffer resource (V#),
   /// set from tablegen subtarget features, 0 is unknown.
   unsigned BufferResourceNumRecordsWidth = 0;
+
+  /// OOB range-check model, set from tablegen subtarget features. 0 is unknown.
+  unsigned BufferOOBModel = 0;
 
   // Dynamically set bits that enable features.
   bool ScalarizeGlobal = false;
@@ -355,6 +364,14 @@ public:
     if (BufferResourceNumRecordsWidth == 0)
       return std::nullopt;
     return BufferResourceNumRecordsWidth;
+  }
+
+  /// Return the OOB range-check model this hardware implements or nullopt if
+  /// unknown.
+  std::optional<AMDGPUBufferOOBModel> getBufferOOBModel() const {
+    if (BufferOOBModel == 0)
+      return std::nullopt;
+    return static_cast<AMDGPUBufferOOBModel>(BufferOOBModel);
   }
 
   bool isCuModeEnabled() const { return EnableCuMode; }
