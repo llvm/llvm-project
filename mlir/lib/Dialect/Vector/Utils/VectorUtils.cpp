@@ -613,7 +613,8 @@ Operation *vector::createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
         builder.createOrFold<arith::SubIOp>(loc, size, writeIndices[dim]));
   }
 
-  // isMaskTriviallyFoldable does not take a permutation map.
+  // TODO: isMaskTriviallyFoldable checks the trailing dims against the leading
+  // indices. Make it use the dims that the map selects and their indices.
   if (!permutationMap && isMaskTriviallyFoldable(maskSizes, writeIndices,
                                                  destShape, vecToStoreShape))
     return write;

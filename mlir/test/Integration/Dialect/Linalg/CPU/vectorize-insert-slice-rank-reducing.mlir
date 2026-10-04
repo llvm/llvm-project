@@ -1,20 +1,19 @@
 // DEFINE: %{entry_point} = main
-// DEFINE: %{lower} = -one-shot-bufferize=bufferize-function-boundaries \
-// DEFINE:   -buffer-deallocation-pipeline -convert-linalg-to-loops \
-// DEFINE:   -convert-vector-to-scf -lower-affine
+
+// DEFINE: %{vectorize} = mlir-opt -transform-interpreter
+// DEFINE: %{lower} = mlir-opt -one-shot-bufferize=bufferize-function-boundaries \
+// DEFINE:   -test-lower-to-llvm -test-transform-dialect-erase-schedule
 // DEFINE: %{run} = mlir-runner -e %{entry_point} -entry-point-result=void \
 // DEFINE:    -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
 
 /// End-to-end test for vectorizing a rank-reducing tensor.insert_slice. Both
 /// runs use the same lowering and must print the same thing.
 
-/// Reference: the schedule is erased, so the insert_slice is not vectorized.
-// RUN: mlir-opt %s -test-transform-dialect-erase-schedule %{lower} \
-// RUN:   | mlir-opt -test-lower-to-llvm | %{run} | FileCheck %s
+/// _Without_ vectorization (reference)
+// RUN: %{lower} %s | %{run} | FileCheck %s
 
-/// Vectorized.
-// RUN: mlir-opt %s -transform-interpreter -test-transform-dialect-erase-schedule %{lower} \
-// RUN:   | mlir-opt -test-lower-to-llvm | %{run} | FileCheck %s
+/// _With_ vectorization
+// RUN: %{vectorize} %s | %{lower} | %{run} | FileCheck %s
 
 func.func @main() {
   %pad = arith.constant 0 : i32
@@ -23,8 +22,7 @@ func.func @main() {
   %init = linalg.fill ins(%pad : i32) outs(%empty : tensor<5x3xi32>) -> tensor<5x3xi32>
 
   /// Dim 1 of the slice is dropped, so the source's only dim corresponds to
-  /// dim 0 of the result. Writing along dim 1 instead keeps just the first
-  /// element.
+  /// dim 0 of the result.
   %res = tensor.insert_slice %src into %init[0, 2] [5, 1] [1, 1]
     : tensor<5xi32> into tensor<5x3xi32>
 
