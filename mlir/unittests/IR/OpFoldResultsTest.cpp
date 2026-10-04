@@ -138,6 +138,17 @@ struct FoldTestDialect : public Dialect {
     addOperations<PartialFoldOp, TraitFoldOp, ConstantOp>();
     addInterfaces<TestFoldInterface>();
   }
+
+  /// A unit attribute does not materialize.
+  Operation *materializeConstant(OpBuilder &builder, Attribute value, Type type,
+                                 Location loc) final {
+    if (isa<UnitAttr>(value))
+      return nullptr;
+    OperationState state(loc, ConstantOp::getOperationName());
+    state.addAttribute("value", value);
+    state.addTypes(type);
+    return builder.create(state);
+  }
 };
 
 /// An op with two results, no fold, and no fold traits.
@@ -1262,6 +1273,150 @@ TEST_F(OpFoldResultsTest, FoldComputesConstantOperands) {
   ASSERT_EQ(foldState->seenOperands.size(), 2u);
   EXPECT_EQ(foldState->seenOperands[0], attr);
   EXPECT_FALSE(foldState->seenOperands[1]);
+}
+
+TEST_F(OpFoldResultsTest, OpBuilderTryFoldCreatesNoConstant) {
+  Block block;
+  OpBuilder b(&context);
+  b.setInsertionPointToEnd(&block);
+  Operation *op = b.create(
+      b.getUnknownLoc(), b.getStringAttr("fold_test.partial"), {}, {i32, i32});
+  Attribute attr = b.getI32IntegerAttr(1);
+  foldState->opFoldFn = [&](Operation *) -> OpFoldResults {
+    return {attr, nullptr};
+  };
+  OpFoldResults result = b.tryFold(op);
+  EXPECT_TRUE(result.replacesAny());
+  EXPECT_FALSE(result.replacesAll());
+  EXPECT_FALSE(result.modifiedInPlace());
+  EXPECT_EQ(result[0], OpFoldResult(attr));
+  EXPECT_EQ(block.getOperations().size(), 1u);
+}
+
+TEST_F(OpFoldResultsTest, OpBuilderTryFoldRepeatsInPlaceFolds) {
+  Block block;
+  OpBuilder b(&context);
+  b.setInsertionPointToEnd(&block);
+  Operation *op = b.create(
+      b.getUnknownLoc(), b.getStringAttr("fold_test.partial"), {}, {i32, i32});
+  Attribute attr = b.getI32IntegerAttr(1);
+  unsigned calls = 0;
+
+  // The result of the second fold keeps the in-place bit of the first fold.
+  foldState->opFoldFn = [&](Operation *) -> OpFoldResults {
+    if (calls++ == 0)
+      return success();
+    return {attr, attr};
+  };
+  OpFoldResults result = b.tryFold(op);
+  EXPECT_EQ(calls, 2u);
+  EXPECT_TRUE(result.replacesAll());
+  EXPECT_TRUE(result.modifiedInPlace());
+
+  // A failure after an in-place fold gives an in-place fold.
+  calls = 0;
+  foldState->opFoldFn = [&](Operation *) -> OpFoldResults {
+    return success(calls++ == 0);
+  };
+  result = b.tryFold(op);
+  EXPECT_EQ(calls, 2u);
+  EXPECT_TRUE(result.modifiedInPlace());
+  EXPECT_FALSE(result.replacesAny());
+
+  // A fold that always changes the op in place stops with a failure.
+  foldState->opFoldFn = [](Operation *) -> OpFoldResults { return success(); };
+  EXPECT_TRUE(b.tryFold(op).failed());
+}
+
+TEST_F(OpFoldResultsTest, OpBuilderTryFoldSkipsConstants) {
+  Operation *constant = createOp({i32}, "fold_test.constant");
+  constant->setAttr("value", builder.getI32IntegerAttr(7));
+  OpBuilder b(&context);
+  EXPECT_TRUE(b.tryFold(constant).failed());
+}
+
+TEST_F(OpFoldResultsTest, OpBuilderMaterializeFoldResults) {
+  Block block;
+  OpBuilder b(&context);
+  b.setInsertionPointToEnd(&block);
+  Location loc = b.getUnknownLoc();
+  Value producer =
+      b.create(loc, b.getStringAttr("foo.producer"), {}, {i32})->getResult(0);
+  Operation *op =
+      b.create(loc, b.getStringAttr("fold_test.partial"), {}, {i32, i32});
+  Attribute attr = b.getI32IntegerAttr(1);
+
+  // An attribute becomes a new constant. A value is used directly.
+  FailureOr<SmallVector<Value>> replacements =
+      b.materializeFoldResults(op, {attr, producer}, /*liveOnly=*/false);
+  ASSERT_TRUE(succeeded(replacements));
+  auto constant = (*replacements)[0].getDefiningOp<ConstantOp>();
+  ASSERT_TRUE(constant);
+  EXPECT_EQ(constant->getAttr("value"), attr);
+  EXPECT_EQ(constant->getBlock(), &block);
+  EXPECT_EQ((*replacements)[1], producer);
+
+  // A kept result gets null.
+  replacements =
+      b.materializeFoldResults(op, {nullptr, producer}, /*liveOnly=*/false);
+  ASSERT_TRUE(succeeded(replacements));
+  EXPECT_FALSE((*replacements)[0]);
+  EXPECT_EQ((*replacements)[1], producer);
+
+  // With `liveOnly`, a replaced result without uses gets null and no constant.
+  b.create(loc, b.getStringAttr("foo.user"), op->getResult(1));
+  size_t numOps = block.getOperations().size();
+  replacements = b.materializeFoldResults(op, {attr, attr}, /*liveOnly=*/true);
+  ASSERT_TRUE(succeeded(replacements));
+  EXPECT_FALSE((*replacements)[0]);
+  EXPECT_TRUE((*replacements)[1].getDefiningOp<ConstantOp>());
+  EXPECT_EQ(block.getOperations().size(), numOps + 1);
+
+  // If a constant fails to materialize, no constant is inserted.
+  EXPECT_TRUE(failed(b.materializeFoldResults(op, {attr, b.getUnitAttr()},
+                                              /*liveOnly=*/false)));
+  EXPECT_EQ(block.getOperations().size(), numOps + 1);
+}
+
+TEST_F(OpFoldResultsTest, OpBuilderLegacyTryFold) {
+  Block block;
+  OpBuilder b(&context);
+  b.setInsertionPointToEnd(&block);
+  Location loc = b.getUnknownLoc();
+  Value producer =
+      b.create(loc, b.getStringAttr("foo.producer"), {}, {i32})->getResult(0);
+  Operation *op =
+      b.create(loc, b.getStringAttr("fold_test.partial"), {}, {i32, i32});
+  Attribute attr = b.getI32IntegerAttr(1);
+  SmallVector<Value> results;
+  SmallVector<Operation *> constants;
+
+  // A partial fold counts only for its in-place change, and no fold follows
+  // it.
+  unsigned calls = 0;
+  bool inPlace = false;
+  foldState->opFoldFn = [&](Operation *) {
+    ++calls;
+    OpFoldResults result{attr, nullptr};
+    result.setModifiedInPlace(inPlace);
+    return result;
+  };
+  EXPECT_TRUE(failed(b.tryFold(op, results, &constants)));
+  inPlace = true;
+  EXPECT_TRUE(succeeded(b.tryFold(op, results, &constants)));
+  EXPECT_EQ(calls, 2u);
+  EXPECT_TRUE(results.empty());
+  EXPECT_TRUE(constants.empty());
+
+  // A full fold materializes its constants.
+  foldState->opFoldFn = [&](Operation *) -> OpFoldResults {
+    return {attr, producer};
+  };
+  ASSERT_TRUE(succeeded(b.tryFold(op, results, &constants)));
+  ASSERT_EQ(results.size(), 2u);
+  ASSERT_EQ(constants.size(), 1u);
+  EXPECT_EQ(results[0], constants[0]->getResult(0));
+  EXPECT_EQ(results[1], producer);
 }
 
 #ifdef GTEST_HAS_DEATH_TEST

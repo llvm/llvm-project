@@ -572,10 +572,34 @@ public:
     return op;
   }
 
+  /// Try to fold `op`. A fold that only changes `op` in place repeats until a
+  /// fold replaces a result or fails. Return one of:
+  ///  - failure if `op` is a constant or does not fold;
+  ///  - success() if the folds only changed `op` in place;
+  ///  - the replacements of the last fold, with the in-place bit set if a fold
+  ///    changed `op` in place.
+  /// This function creates no constant and replaces no result; see
+  /// materializeFoldResults.
+  OpFoldResults tryFold(Operation *op);
+
+  /// Materialize the replacements in `foldResults`, a fold result of `op`. On
+  /// success, return one value per result of `op`:
+  ///  - a replaced result gets its replacement. An attribute becomes a new
+  ///    constant at the insertion point, and the value is its result;
+  ///  - a kept result gets null;
+  ///  - if `liveOnly` is set, a replaced result without uses also gets null and
+  ///    no constant.
+  /// If a constant fails to materialize, insert no constant and return failure.
+  FailureOr<SmallVector<Value>>
+  materializeFoldResults(Operation *op, const OpFoldResults &foldResults,
+                         bool liveOnly);
+
   /// Attempts to fold the given operation and places new results within
   /// `results`. Returns success if the operation was folded, failure otherwise.
   /// If the fold was in-place, `results` will not be filled. Optionally, newly
-  /// materialized constant operations can be returned to the caller.
+  /// materialized constant operations can be returned to the caller. A fold
+  /// that replaces only some results counts as an in-place fold if it changed
+  /// the operation in place, and as a failure otherwise.
   ///
   /// Note: This function does not erase the operation on a successful fold.
   LogicalResult
