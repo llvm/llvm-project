@@ -56,9 +56,6 @@ TEST_F(ExtractFunctionTest, FunctionTest) {
   EXPECT_THAT(
       apply("#define RETURN_IF_ERROR(x) if (x) return\nRETU^RN_IF_ERROR(4);"),
       StartsWith("unavailable"));
-
-  FileName = "a.c";
-  EXPECT_THAT(apply(" for([[int i = 0;]];);"), HasSubstr("unavailable"));
 }
 
 TEST_F(ExtractFunctionTest, FileTest) {
@@ -1042,6 +1039,43 @@ TEST_F(ExtractFunctionTest, VolatileScalar) {
       ]]
     })cpp"),
               HasSubstr("extracted(const volatile int &V)"));
+}
+
+TEST_F(ExtractFunctionTest, CFileAllowUnmodifiedScalar) {
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      int i;
+      void foo() {
+         int j = 0;
+         [[i = j;]]
+    })cpp"),
+              HasSubstr("extracted(int j)"));
+}
+
+TEST_F(ExtractFunctionTest, CFileRejectModifiedScalar) {
+  FileName = "a.c";
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      void foo() {
+         int j;
+         [[j = 0;]]
+    })cpp"),
+            "fail: Too complex to extract.");
+}
+
+TEST_F(ExtractFunctionTest, CFileRejectUnmodifiedStruct) {
+  FileName = "a.c";
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      struct pair { int v1; int v2; };
+      int i;
+      void foo() {
+         struct pair p;
+         p.v1 = 0;
+         [[i = p.v1;]]
+    })cpp"),
+            "fail: Too complex to extract.");
 }
 
 } // namespace

@@ -993,7 +993,7 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
 // FIXME: Check if the declaration has a local/anonymous type
 bool createParameters(NewFunction &ExtractedFunc,
                       const CapturedZoneInfo &CapturedInfo,
-                      const ASTContext &Context) {
+                      const ASTContext &Context, const LangOptions &LangOpts) {
   for (const auto &KeyVal : CapturedInfo.DeclInfoMap) {
     const auto &DeclInfo = KeyVal.second;
     // If a Decl was Declared in zone and referenced in post zone, it
@@ -1035,6 +1035,11 @@ bool createParameters(NewFunction &ExtractedFunc,
         TypeInfo.addConst();
       }
     }
+
+    // Cannot extract in a C file if we'd have to pass by reference.
+    if (IsPassedByReference && !LangOpts.CPlusPlus)
+      return false;
+
     // We use the index of declaration as the ordering priority for parameters.
     ExtractedFunc.Parameters.push_back({std::string(VD->getName()), TypeInfo,
                                         IsPassedByReference,
@@ -1134,7 +1139,7 @@ llvm::Expected<NewFunction> getExtractedFunction(ExtractionZone &ExtZone,
 
   ExtractedFunc.CallerReturnsValue = CapturedInfo.AlwaysReturns;
   if (!createParameters(ExtractedFunc, CapturedInfo,
-                        ExtZone.EnclosingFunction->getASTContext()) ||
+                        ExtZone.EnclosingFunction->getASTContext(), LangOpts) ||
       !generateReturnProperties(ExtractedFunc, *ExtZone.EnclosingFunction,
                                 CapturedInfo))
     return error("Too complex to extract.");
@@ -1209,8 +1214,6 @@ bool hasReturnStmt(const ExtractionZone &ExtZone) {
 
 bool ExtractFunction::prepare(const Selection &Inputs) {
   const LangOptions &LangOpts = Inputs.AST->getLangOpts();
-  if (!LangOpts.CPlusPlus)
-    return false;
   const Node *CommonAnc = Inputs.ASTSelection.commonAncestor();
   const SourceManager &SM = Inputs.AST->getSourceManager();
   auto MaybeExtZone = findExtractionZone(CommonAnc, SM, LangOpts);
