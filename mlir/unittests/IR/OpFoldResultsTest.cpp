@@ -28,14 +28,19 @@ namespace op_fold_results_test {
 using LegacyFoldFn =
     std::function<LogicalResult(Operation *, SmallVectorImpl<OpFoldResult> &)>;
 
-/// Per-test behavior of the ops, the trait, and the dialect interface below.
+/// Per-test behavior of the ops, traits, and dialect interfaces below.
 struct FoldState {
   std::function<OpFoldResults(Operation *)> opFoldFn;
   LegacyFoldFn traitFoldFn;
+  std::function<OpFoldResults(Operation *)> resultsTraitFoldFn;
   LegacyFoldFn dialectFoldFn;
+  std::function<OpFoldResults(Operation *)> resultsDialectFoldFn;
   SmallVector<Attribute> seenOperands;
   unsigned traitCalls = 0;
+  unsigned resultsTraitCalls = 0;
   unsigned dialectCalls = 0;
+  unsigned resultsDialectCalls = 0;
+  unsigned resultsDialectLegacyCalls = 0;
 };
 
 /// The state of the running test. The test fixture owns it.
@@ -49,6 +54,16 @@ struct LegacyFoldTrait
     ++foldState->traitCalls;
     return foldState->traitFoldFn ? foldState->traitFoldFn(op, results)
                                   : failure();
+  }
+};
+
+template <typename ConcreteType>
+struct ResultsFoldTrait
+    : public OpTrait::TraitBase<ConcreteType, ResultsFoldTrait> {
+  static OpFoldResults foldTrait(Operation *op, ArrayRef<Attribute>) {
+    ++foldState->resultsTraitCalls;
+    return foldState->resultsTraitFoldFn ? foldState->resultsTraitFoldFn(op)
+                                         : failure();
   }
 };
 
@@ -74,6 +89,22 @@ struct PartialFoldOp : public Op<PartialFoldOp, OpTrait::NResults<2>::Impl,
                                : failure();
   }
 };
+
+/// An op with two results and no fold of its own. ResultsFoldTrait comes
+/// first, so LegacyFoldTrait runs only if ResultsFoldTrait fails.
+struct TraitFoldOp
+    : public Op<TraitFoldOp, OpTrait::NResults<2>::Impl,
+                OpTrait::VariadicOperands, ResultsFoldTrait, LegacyFoldTrait> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TraitFoldOp)
+  using Op::Op;
+  static ArrayRef<StringRef> getAttributeNames() { return {}; }
+  static StringRef getOperationName() { return "fold_test.trait_fold"; }
+};
+
+static_assert(op_definition_impl::detect_has_fold_results_trait<
+              ResultsFoldTrait<TraitFoldOp>>::value);
+static_assert(!op_definition_impl::detect_has_single_result_fold_trait<
+              ResultsFoldTrait<TraitFoldOp>>::value);
 
 struct ConstantOp : public Op<ConstantOp, OpTrait::OneResult,
                               OpTrait::ZeroOperands, OpTrait::ConstantLike> {
@@ -104,8 +135,47 @@ struct FoldTestDialect : public Dialect {
   explicit FoldTestDialect(MLIRContext *context)
       : Dialect(getDialectNamespace(), context,
                 TypeID::get<FoldTestDialect>()) {
-    addOperations<PartialFoldOp, ConstantOp>();
+    addOperations<PartialFoldOp, TraitFoldOp, ConstantOp>();
     addInterfaces<TestFoldInterface>();
+  }
+};
+
+/// An op with two results, no fold, and no fold traits.
+struct ResultsFallbackOp
+    : public Op<ResultsFallbackOp, OpTrait::NResults<2>::Impl,
+                OpTrait::ZeroOperands> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ResultsFallbackOp)
+  using Op::Op;
+  static ArrayRef<StringRef> getAttributeNames() { return {}; }
+  static StringRef getOperationName() { return "results_fold_test.op"; }
+};
+
+/// Overrides the OpFoldResults form of the fallback. The legacy method reports
+/// an in-place fold, so a call to it changes the fold result.
+struct TestResultsFoldInterface : public DialectFoldInterface {
+  using DialectFoldInterface::DialectFoldInterface;
+  OpFoldResults fold(Operation *op, ArrayRef<Attribute>) const final {
+    ++foldState->resultsDialectCalls;
+    return foldState->resultsDialectFoldFn ? foldState->resultsDialectFoldFn(op)
+                                           : failure();
+  }
+  LogicalResult fold(Operation *, ArrayRef<Attribute>,
+                     SmallVectorImpl<OpFoldResult> &) const final {
+    ++foldState->resultsDialectLegacyCalls;
+    return success();
+  }
+};
+
+struct ResultsFoldTestDialect : public Dialect {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ResultsFoldTestDialect)
+  static constexpr StringLiteral getDialectNamespace() {
+    return "results_fold_test";
+  }
+  explicit ResultsFoldTestDialect(MLIRContext *context)
+      : Dialect(getDialectNamespace(), context,
+                TypeID::get<ResultsFoldTestDialect>()) {
+    addOperations<ResultsFallbackOp>();
+    addInterfaces<TestResultsFoldInterface>();
   }
 };
 } // namespace op_fold_results_test
@@ -117,7 +187,7 @@ class OpFoldResultsTest : public ::testing::Test {
 protected:
   OpFoldResultsTest() : builder(&context) {
     context.allowUnregisteredDialects();
-    context.loadDialect<FoldTestDialect>();
+    context.loadDialect<FoldTestDialect, ResultsFoldTestDialect>();
     i32 = builder.getI32Type();
     f32 = builder.getF32Type();
     foldState = &state;
@@ -921,6 +991,154 @@ TEST_F(OpFoldResultsTest, OwnResultsNormalizeToFailureSoTraitsRun) {
   EXPECT_EQ(foldState->traitCalls, 2u);
 }
 
+TEST_F(OpFoldResultsTest, ResultsTraitPartialFoldSkipsLaterTraits) {
+  Operation *op = createOp({i32, i32}, "fold_test.trait_fold");
+  Attribute attr = builder.getI32IntegerAttr(1);
+  foldState->resultsTraitFoldFn = [&](Operation *foldedOp) {
+    OpFoldResults result(foldedOp);
+    result.replace(1u, attr);
+    return result;
+  };
+  foldState->traitFoldFn = [](Operation *, SmallVectorImpl<OpFoldResult> &) {
+    return success();
+  };
+
+  OpFoldResults result = op->fold();
+  EXPECT_TRUE(result.succeeded());
+  EXPECT_FALSE(result.modifiedInPlace());
+  EXPECT_FALSE(result.replacesAll());
+  ASSERT_EQ(result.size(), 2u);
+  EXPECT_FALSE(result[0]);
+  EXPECT_EQ(result[1], OpFoldResult(attr));
+  EXPECT_EQ(foldState->resultsTraitCalls, 1u);
+
+  SmallVector<OpFoldResult> results;
+  EXPECT_TRUE(failed(op->fold(results)));
+  EXPECT_TRUE(results.empty());
+  EXPECT_EQ(foldState->resultsTraitCalls, 2u);
+  EXPECT_EQ(foldState->traitCalls, 0u);
+  EXPECT_EQ(foldState->dialectCalls, 0u);
+}
+
+TEST_F(OpFoldResultsTest, ResultsTraitInPlaceSkipsLaterTraits) {
+  Operation *op = createOp({i32, i32}, "fold_test.trait_fold");
+  Attribute attr = builder.getI32IntegerAttr(1);
+  foldState->resultsTraitFoldFn = [](Operation *) -> OpFoldResults {
+    return success();
+  };
+  foldState->traitFoldFn = [&](Operation *,
+                               SmallVectorImpl<OpFoldResult> &results) {
+    results.append(2, attr);
+    return success();
+  };
+
+  OpFoldResults result = op->fold();
+  EXPECT_TRUE(result.modifiedInPlace());
+  EXPECT_FALSE(result.replacesAny());
+  EXPECT_EQ(foldState->resultsTraitCalls, 1u);
+
+  SmallVector<OpFoldResult> results;
+  EXPECT_TRUE(succeeded(op->fold(results)));
+  EXPECT_TRUE(results.empty());
+
+  // A partial fold keeps the in-place bit of the trait.
+  foldState->resultsTraitFoldFn = [&](Operation *foldedOp) {
+    OpFoldResults partial(foldedOp);
+    partial.replace(0u, attr);
+    partial.setModifiedInPlace();
+    return partial;
+  };
+  result = op->fold();
+  EXPECT_TRUE(result.modifiedInPlace());
+  EXPECT_FALSE(result.replacesAll());
+  ASSERT_EQ(result.size(), 2u);
+  EXPECT_EQ(result[0], OpFoldResult(attr));
+  EXPECT_FALSE(result[1]);
+  EXPECT_TRUE(succeeded(op->fold(results)));
+  EXPECT_TRUE(results.empty());
+  EXPECT_EQ(foldState->traitCalls, 0u);
+}
+
+TEST_F(OpFoldResultsTest, ResultsTraitOwnResultsNormalizeToFailure) {
+  Operation *op = createOp({i32, i32}, "fold_test.trait_fold");
+  Attribute attr = builder.getI32IntegerAttr(1);
+  foldState->resultsTraitFoldFn = [](Operation *foldedOp) -> OpFoldResults {
+    return foldedOp->getResults();
+  };
+  foldState->traitFoldFn = [&](Operation *,
+                               SmallVectorImpl<OpFoldResult> &results) {
+    results.append(2, attr);
+    return success();
+  };
+
+  OpFoldResults result = op->fold();
+  EXPECT_FALSE(result.modifiedInPlace());
+  EXPECT_TRUE(result.replacesAll());
+  ASSERT_EQ(result.size(), 2u);
+  EXPECT_EQ(result[0], OpFoldResult(attr));
+  EXPECT_EQ(result[1], OpFoldResult(attr));
+  EXPECT_EQ(foldState->resultsTraitCalls, 1u);
+  EXPECT_EQ(foldState->traitCalls, 1u);
+
+  SmallVector<OpFoldResult> results;
+  EXPECT_TRUE(succeeded(op->fold(results)));
+  ASSERT_EQ(results.size(), 2u);
+  EXPECT_EQ(results[0], OpFoldResult(attr));
+  EXPECT_EQ(results[1], OpFoldResult(attr));
+  EXPECT_EQ(foldState->traitCalls, 2u);
+}
+
+TEST_F(OpFoldResultsTest, ResultsTraitFailureThenLegacyTrait) {
+  Operation *op = createOp({i32, i32}, "fold_test.trait_fold");
+  foldState->resultsTraitFoldFn = [](Operation *) -> OpFoldResults {
+    return failure();
+  };
+
+  // Both traits fail, so the fold falls back on the dialect.
+  EXPECT_TRUE(op->fold().failed());
+  EXPECT_EQ(foldState->resultsTraitCalls, 1u);
+  EXPECT_EQ(foldState->traitCalls, 1u);
+  EXPECT_EQ(foldState->dialectCalls, 1u);
+
+  foldState->traitFoldFn = [](Operation *, SmallVectorImpl<OpFoldResult> &) {
+    return success();
+  };
+  OpFoldResults result = op->fold();
+  EXPECT_TRUE(result.modifiedInPlace());
+  EXPECT_FALSE(result.replacesAny());
+  EXPECT_EQ(foldState->resultsTraitCalls, 2u);
+  EXPECT_EQ(foldState->traitCalls, 2u);
+
+  SmallVector<OpFoldResult> results;
+  EXPECT_TRUE(succeeded(op->fold(results)));
+  EXPECT_TRUE(results.empty());
+  EXPECT_EQ(foldState->dialectCalls, 1u);
+}
+
+TEST_F(OpFoldResultsTest, ResultsTraitMayForwardAnotherResult) {
+  Operation *op = createOp({i32, i32}, "fold_test.trait_fold");
+  Attribute attr = builder.getI32IntegerAttr(1);
+  // Replacement 0 is result 1, which the fold also replaces. A cast in a graph
+  // region can return such a chain, so the replaced-result check does not
+  // apply to trait folds.
+  foldState->resultsTraitFoldFn = [&](Operation *foldedOp) -> OpFoldResults {
+    return {foldedOp->getResult(1), attr};
+  };
+
+  OpFoldResults result = op->fold();
+  EXPECT_TRUE(result.replacesAll());
+  ASSERT_EQ(result.size(), 2u);
+  EXPECT_EQ(result[0], OpFoldResult(op->getResult(1)));
+  EXPECT_EQ(result[1], OpFoldResult(attr));
+
+  SmallVector<OpFoldResult> results;
+  EXPECT_TRUE(succeeded(op->fold(results)));
+  ASSERT_EQ(results.size(), 2u);
+  EXPECT_EQ(results[0], OpFoldResult(op->getResult(1)));
+  EXPECT_EQ(results[1], OpFoldResult(attr));
+  EXPECT_EQ(foldState->traitCalls, 0u);
+}
+
 TEST_F(OpFoldResultsTest, DialectFoldInterfaceFallback) {
   Operation *op = createOp({i32, i32}, "fold_test.partial");
   Attribute attr = builder.getI32IntegerAttr(1);
@@ -969,6 +1187,66 @@ TEST_F(OpFoldResultsTest, DialectFoldInterfaceFallback) {
   };
   EXPECT_TRUE(op->fold().failed());
   EXPECT_EQ(foldState->dialectCalls, 1u);
+}
+
+TEST_F(OpFoldResultsTest, ResultsDialectFoldInterfacePartialFold) {
+  Operation *op = createOp({i32, i32}, "results_fold_test.op");
+  Attribute attr = builder.getI32IntegerAttr(1);
+  foldState->resultsDialectFoldFn = [&](Operation *foldedOp) {
+    OpFoldResults partial(foldedOp);
+    partial.replace(0u, attr);
+    return partial;
+  };
+
+  OpFoldResults result = op->fold();
+  EXPECT_TRUE(result.succeeded());
+  EXPECT_FALSE(result.modifiedInPlace());
+  EXPECT_FALSE(result.replacesAll());
+  ASSERT_EQ(result.size(), 2u);
+  EXPECT_EQ(result[0], OpFoldResult(attr));
+  EXPECT_FALSE(result[1]);
+  EXPECT_EQ(foldState->resultsDialectCalls, 1u);
+
+  SmallVector<OpFoldResult> results;
+  EXPECT_TRUE(failed(op->fold(results)));
+  EXPECT_TRUE(results.empty());
+  EXPECT_EQ(foldState->resultsDialectCalls, 2u);
+  EXPECT_EQ(foldState->resultsDialectLegacyCalls, 0u);
+}
+
+TEST_F(OpFoldResultsTest, ResultsDialectFoldInterfaceInPlace) {
+  Operation *op = createOp({i32, i32}, "results_fold_test.op");
+  foldState->resultsDialectFoldFn = [](Operation *) -> OpFoldResults {
+    return success();
+  };
+
+  OpFoldResults result = op->fold();
+  EXPECT_TRUE(result.modifiedInPlace());
+  EXPECT_FALSE(result.replacesAny());
+  EXPECT_EQ(foldState->resultsDialectCalls, 1u);
+
+  SmallVector<OpFoldResult> results;
+  EXPECT_TRUE(succeeded(op->fold(results)));
+  EXPECT_TRUE(results.empty());
+  EXPECT_EQ(foldState->resultsDialectLegacyCalls, 0u);
+}
+
+TEST_F(OpFoldResultsTest, ResultsDialectFoldInterfaceSkipsLegacyMethod) {
+  Operation *op = createOp({i32, i32}, "results_fold_test.op");
+
+  EXPECT_TRUE(op->fold().failed());
+  SmallVector<OpFoldResult> results;
+  EXPECT_TRUE(failed(op->fold(results)));
+  EXPECT_TRUE(results.empty());
+  EXPECT_EQ(foldState->resultsDialectCalls, 2u);
+
+  // The fallback result is normalized.
+  foldState->resultsDialectFoldFn = [](Operation *foldedOp) -> OpFoldResults {
+    return foldedOp->getResults();
+  };
+  EXPECT_TRUE(op->fold().failed());
+  EXPECT_EQ(foldState->resultsDialectCalls, 3u);
+  EXPECT_EQ(foldState->resultsDialectLegacyCalls, 0u);
 }
 
 TEST_F(OpFoldResultsTest, FoldComputesConstantOperands) {
