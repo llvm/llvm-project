@@ -196,8 +196,9 @@ AffineParallelOp getAffineParallelInductionVarOwner(Value val);
 void extractForInductionVars(ArrayRef<AffineForOp> forInsts,
                              SmallVectorImpl<Value> *ivs);
 
-/// Extracts the induction variables from a list of either AffineForOp or
-/// AffineParallelOp and places them in the output argument `ivs`.
+/// Appends the induction variables of the AffineForOp and AffineParallelOp
+/// operations in `affineOps` to `ivs`, preserving their order. Other operations
+/// are ignored.
 void extractInductionVars(ArrayRef<Operation *> affineOps,
                           SmallVectorImpl<Value> &ivs);
 
