@@ -10,6 +10,9 @@
 
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Watomic-alignment")
+// This is to silence the warning
+// the access size (A bytes) exceeds the max lock-free size (B bytes)
+// We use 16 bytes CAS as a design decision
 #include <atomic>
 _LIBCPP_DIAGNOSTIC_POP
 
@@ -19,10 +22,6 @@ _LIBCPP_DIAGNOSTIC_POP
 
 #include "include/rcu/rcu_list.h"
 #include "include/rcu/thread_local_container.h"
-
-// todo: remove debug print
-#include <cstdio>
-//
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
@@ -72,8 +71,6 @@ struct reader_states {
     auto old_state = state_.fetch_sub(1, memory_order_relaxed);
     return get_reader_nest_level(old_state);
   }
-
-  state_type debug_get_state() const noexcept { return state_.load(); }
 
   static void on_thread_exit(const reader_states& states) {
     _LIBCPP_ASSERT_UNCATEGORIZED(
@@ -127,8 +124,6 @@ class rcu_domain_impl {
 
     // Flip the global phase
     auto old_phase = global_reader_phase_.fetch_xor(reader_states::grace_period_phase_mask, std::memory_order_relaxed);
-    // auto new_phase = old_phase ^ reader_states::grace_period_phase_mask;
-    // std::printf("rcu_domain::update_phase_and_wait() new phase: 0x%04x\n", new_phase);
 
     std::atomic_signal_fence(std::memory_order_seq_cst);
 
@@ -213,11 +208,6 @@ public:
     }
   }
 
-  void __debug_print_all_reader_states_in_hex() {
-    per_thread_states::for_each([](reader_states& state) {
-      std::printf("Reader state: 0x%04x\n", state.debug_get_state());
-    });
-  }
 };
 } // namespace
 
@@ -230,8 +220,6 @@ rcu_domain& rcu_domain::__rcu_default_domain() noexcept {
 
 rcu_domain::rcu_domain() : __pimpl_(std::make_unique<__impl>()) {}
 rcu_domain::~rcu_domain() = default;
-
-void rcu_domain::__debug_print_all_reader_states_in_hex() { __pimpl_->__debug_print_all_reader_states_in_hex(); }
 
 void rcu_domain::lock() noexcept { __pimpl_->lock(); }
 

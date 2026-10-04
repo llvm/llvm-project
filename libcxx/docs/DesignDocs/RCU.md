@@ -152,8 +152,6 @@ It only contains `static` member variables and functions.
 It uses `mutex` to protect the list of all object pointers. Since the list is only modified when a thread first calls `get_current_thread_instance` to register itself, and when a thread exits, 
 the contention on the `mutex` should be low.
 
-TODO: We need to replace `mutex` as all non allocating APIs in `rcu` are designed to be `noexcept` and `mutex` can throw.
-
 #### `struct reader_states`
 
 It defines the state of each reader thread. The state is essentially a pair of `(phase, lock_nested_level)` merged into a single `uint16_t` . 
