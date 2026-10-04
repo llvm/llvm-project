@@ -35,9 +35,9 @@ TEST(LibraryOptionsTest, Apply) {
   EXPECT_EQ(O.count, 3u);
   EXPECT_EQ(O.limit, std::nullopt);
   EXPECT_EQ(O.mode, test::Mode::A);
-  EXPECT_EQ(O.override, std::nullopt);
+  EXPECT_EQ(O.override, BoolOrDefault::Default);
   EXPECT_EQ(O.ratio, 0.5);
-  EXPECT_EQ(O.tristate, std::nullopt);
+  EXPECT_EQ(O.tristate, BoolOrDefault::Default);
   EXPECT_EQ(O.Path, "p");
 
   auto Apply = [&](std::initializer_list<const char *> Argv) {
@@ -57,9 +57,9 @@ TEST(LibraryOptionsTest, Apply) {
   EXPECT_EQ(O.count, 7u);
   EXPECT_EQ(O.limit, 0u);
   EXPECT_EQ(O.mode, test::Mode::B);
-  EXPECT_EQ(O.override, true);
+  EXPECT_EQ(O.override, BoolOrDefault::True);
   EXPECT_EQ(O.ratio, 0.25);
-  EXPECT_EQ(O.tristate, false);
+  EXPECT_EQ(O.tristate, BoolOrDefault::False);
   EXPECT_EQ(O.Path, "a=b");
   EXPECT_THAT(Apply({"-lib-enable=false"}), testing::Each(true));
   EXPECT_FALSE(O.enable);
@@ -67,10 +67,10 @@ TEST(LibraryOptionsTest, Apply) {
       Apply({"-lib-enable=1", "-lib-override=false", "-lib-tristate=Enable"}),
       testing::Each(true));
   EXPECT_TRUE(O.enable);
-  EXPECT_EQ(O.override, false);
-  EXPECT_EQ(O.tristate, true);
+  EXPECT_EQ(O.override, BoolOrDefault::False);
+  EXPECT_EQ(O.tristate, BoolOrDefault::True);
   EXPECT_THAT(Apply({"-lib-tristate=Default"}), testing::Each(true));
-  EXPECT_EQ(O.tristate, std::nullopt);
+  EXPECT_EQ(O.tristate, BoolOrDefault::Default);
 
   // A rejected value leaves the member unchanged.
   EXPECT_THAT(Apply({"-lib-enable=2", "-lib-count=-1", "-lib-limit=x",
@@ -80,8 +80,15 @@ TEST(LibraryOptionsTest, Apply) {
   EXPECT_EQ(O.count, 7u);
   EXPECT_EQ(O.limit, 0u);
   EXPECT_EQ(O.mode, test::Mode::B);
-  EXPECT_EQ(O.override, false);
+  EXPECT_EQ(O.override, BoolOrDefault::False);
   EXPECT_EQ(O.ratio, 0.25);
+}
+
+TEST(LibraryOptionsTest, BoolOrDefault) {
+  EXPECT_TRUE(valueOr(BoolOrDefault::Default, true));
+  EXPECT_FALSE(valueOr(BoolOrDefault::Default, false));
+  EXPECT_TRUE(valueOr(BoolOrDefault::True, false));
+  EXPECT_FALSE(valueOr(BoolOrDefault::False, true));
 }
 
 // What cl:: sees of the struct, without cl::.
