@@ -3178,7 +3178,8 @@ bool LLParser::parseType(Type *&Result, const Twine &Msg, bool AllowVoid) {
   SMLoc TypeLoc = Lex.getLoc();
   switch (Lex.getKind()) {
   default:
-    if (InConstantVector && Lex.getKind() == lltok::APSInt)
+    if (InConstantVector &&
+        (Lex.getKind() == lltok::APSInt || Lex.getKind() == lltok::APFloat))
       return error(Lex.getLoc(),
                    "constant vector elements must begin with a type");
     return tokError(Msg);
