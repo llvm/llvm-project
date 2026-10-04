@@ -101,8 +101,8 @@ void ThreadFinalize(ThreadState *thr) {
     // Release locks before symbolizing and outputting the report to avoid
     // deadlocks.
     {
-      ThreadRegistryLock l(&ctx->thread_registry);
       new (rep) ScopedReport(ReportTypeThreadLeak);
+      ThreadRegistryLock l(&ctx->thread_registry);
       rep->AddThread(leaks[i].tctx, true);
       rep->SetCount(leaks[i].count);
     }
