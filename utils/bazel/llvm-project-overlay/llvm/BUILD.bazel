@@ -3778,6 +3778,9 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/X86/X86GenMnemonicTables.inc",
             ),
         ],
+        "tbl_deps": [
+            ":X86OptionsTableGen",
+        ],
     },
     {
         "name": "XCore",
@@ -3997,6 +4000,15 @@ gentbl_cc_library(
     tbl_outs = {"lib/Target/Sparc/SparcOptions.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/Sparc/SparcOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "X86OptionsTableGen",
+    strip_include_prefix = "lib/Target/X86",
+    tbl_outs = {"lib/Target/X86/X86Options.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/X86/X86Options.td",
     deps = [":OptParserTdFiles"],
 )
 
