@@ -282,6 +282,11 @@ CIRGenFunction::emitCoroDestroyBuiltinCall(const CallExpr *e) {
                                     emitScalarExpr(e->getArg(0)));
 }
 
+cir::CoroNoopOp CIRGenFunction::emitCoroNoopBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  return cir::CoroNoopOp::create(cgm.getBuilder(), loc);
+}
+
 static mlir::LogicalResult
 coroutineBodyExceptionHelper(CIRGenFunction &cgf, const CoroutineBodyStmt &s) {
 
