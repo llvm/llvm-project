@@ -1549,6 +1549,8 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
                                       const Value *V2, LocationSize V2Size,
                                       AAQueryInfo &AAQI,
                                       const Instruction *CtxI) {
+  constexpr unsigned MaxAliasRecursionDepth = 512;
+
   // If either of the memory references is empty, it doesn't matter what the
   // pointer values are.
   if (V1Size.isZero() || V2Size.isZero())
@@ -1571,6 +1573,27 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   // reach the value.
   if (isValueEqualInPotentialCycles(V1, V2, AAQI))
     return AliasResult::MustAlias;
+
+  // Reuse definitive recursive results before repeating object and capture
+  // analysis. Keep assumption accounting on the existing cache path below.
+  if (AAQI.Depth < MaxAliasRecursionDepth) {
+    LocationSize CacheSize1 = V1Size, CacheSize2 = V2Size;
+    if (CacheSize1.mayBeBeforePointer() || CacheSize2.mayBeBeforePointer()) {
+      CacheSize1 = LocationSize::afterPointer();
+      CacheSize2 = LocationSize::afterPointer();
+    }
+    AAQueryInfo::LocPair Locs({V1, CacheSize1, AAQI.MayBeCrossIteration},
+                              {V2, CacheSize2, AAQI.MayBeCrossIteration});
+    const bool Swapped = V1 > V2;
+    if (Swapped)
+      std::swap(Locs.first, Locs.second);
+    const auto It = AAQI.AliasCache.find(Locs);
+    if (It != AAQI.AliasCache.end() && It->second.isDefinitive()) {
+      AliasResult Result = It->second.Result;
+      Result.swap(Swapped);
+      return Result;
+    }
+  }
 
   // Figure out what objects these things are pointing to if we can.
   const Value *O1 = getUnderlyingObject(V1, MaxLookupSearchDepth);
@@ -1683,7 +1706,7 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   // for recursive queries. For this reason, this limit is chosen to be large
   // enough to be very rarely hit, while still being small enough to avoid
   // stack overflows.
-  if (AAQI.Depth >= 512)
+  if (AAQI.Depth >= MaxAliasRecursionDepth)
     return AliasResult::MayAlias;
 
   // Check the cache before climbing up use-def chains. This also terminates
