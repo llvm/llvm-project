@@ -17597,9 +17597,7 @@ in their handling of {ref}`NaN values <floatnan>`:
 Additionally, each of these intrinsics supports two behaviors for signed zeros.
 By default, -0.0 is considered smaller than +0.0. If the `nsz` flag is
 specified, the order is non-deterministic: If the two inputs are zeros with
-opposite sign, either input may be returned. Contrary to normal `nsz`
-semantics, if both operands have the same sign, the result must also have the
-same sign.
+opposite sign, either input may be returned.
 
 The mapping between the LLVM intrinsics, C functions and IEEE 754 functions is
 as follows (up to divergences permitted by the usual
