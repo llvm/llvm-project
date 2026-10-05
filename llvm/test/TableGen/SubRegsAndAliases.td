@@ -36,8 +36,8 @@ def C : Register<""> {
 def TestRC : RegisterClass<"Test", [i64], 0, (add A, B)>;
 
 // CHECK-LABEL: Register A:
-// CHECK: SubReg hi = Ahi
 // CHECK: SubReg lo = Alo
+// CHECK: SubReg hi = Ahi
 // CHECK: RegUnit 0
 // CHECK: RegUnit 1
 
@@ -48,8 +48,8 @@ def TestRC : RegisterClass<"Test", [i64], 0, (add A, B)>;
 // CHECK: RegUnit 0
 
 // CHECK-LABEL: Register B:
-// CHECK: SubReg hi = Bhi
 // CHECK: SubReg lo = Blo
+// CHECK: SubReg hi = Bhi
 // CHECK: RegUnit 2
 // CHECK: RegUnit 3
 // CHECK: RegUnit 4
@@ -63,8 +63,8 @@ def TestRC : RegisterClass<"Test", [i64], 0, (add A, B)>;
 // CHECK: RegUnit 3
 
 // CHECK-LABEL: Register C:
-// CHECK: SubReg hi = Chi
 // CHECK: SubReg lo = Clo
+// CHECK: SubReg hi = Chi
 // CHECK: RegUnit 5
 // CHECK: RegUnit 6
 // CHECK: RegUnit 7

@@ -89,12 +89,12 @@ def TestTarget : Target;
 // CHECK: Regs: D0 D1 D2 D3 D4 D5 D6 D7 S1_S2 S3_S4 S5_S6 S7_S8 S9_S10 S11_S12 S13_S14
 // CHECK-LABEL: RegisterClass DRegs:
 
-// CHECK-LABEL: SubRegIndex ssub1:
-// CHECK:        Offset: 16
-// CHECK:        Size: 16
 // CHECK-LABEL: SubRegIndex sub0:
 // CHECK-LABEL: SubRegIndex sub1:
 // CHECK-LABEL: SubRegIndex sub2:
+// CHECK-LABEL: SubRegIndex ssub1:
+// CHECK:        Offset: 16
+// CHECK:        Size: 16
 // Check inferred indexes:
 // CHECK-LABEL: SubRegIndex ssub1_ssub2:
 // CHECK:         Offset: 16
@@ -113,26 +113,26 @@ def TestTarget : Target;
 
 // CHECK-LABEL: Register S9_S10_S11_S12_S13:
 // CHECK: HasDisjunctSubRegs: 1
+// CHECK-NEXT: SubReg sub0 = S9_S10
+// CHECK-NEXT: SubReg sub1 = S11_S12
 // CHECK-NEXT: SubReg ssub0 = S9
 // CHECK-NEXT: SubReg ssub1 = S10
 // CHECK-NEXT: SubReg ssub2 = S11
 // CHECK-NEXT: SubReg ssub3 = S12
 // CHECK-NEXT: SubReg ssub4 = S13
-// CHECK-NEXT: SubReg sub0 = S9_S10
-// CHECK-NEXT: SubReg sub1 = S11_S12
 // CHECK-NEXT: SubReg ssub1_ssub2 = D5
 // CHECK-NEXT: SubReg ssub3_ssub4 = D6
 // CHECK-NEXT: SubReg ssub1_ssub2_ssub3_ssub4 = D5_D6
 
 // CHECK-LABEL: Register S10_S11_S12_S13_S14:
 // CHECK: HasDisjunctSubRegs: 1
+// CHECK-NEXT: SubReg sub0 = D5
+// CHECK-NEXT: SubReg sub1 = D6
 // CHECK-NEXT: SubReg ssub0 = S10
 // CHECK-NEXT: SubReg ssub1 = S11
 // CHECK-NEXT: SubReg ssub2 = S12
 // CHECK-NEXT: SubReg ssub3 = S13
 // CHECK-NEXT: SubReg ssub4 = S14
-// CHECK-NEXT: SubReg sub0 = D5
-// CHECK-NEXT: SubReg sub1 = D6
 // CHECK-NEXT: SubReg ssub1_ssub2 = S11_S12
 // CHECK-NEXT: SubReg ssub3_ssub4 = S13_S14
 // CHECK-NEXT: SubReg ssub0_ssub1_ssub2_ssub3 = D5_D6

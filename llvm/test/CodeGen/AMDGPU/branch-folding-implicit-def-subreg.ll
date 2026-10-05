@@ -42,7 +42,7 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.2:
   ; GFX90A-NEXT:   successors: %bb.3(0x80000000)
-  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $sgpr17, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8, $sgpr9, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr28_sgpr29, $sgpr34_sgpr35, $sgpr40_sgpr41, $sgpr56, $sgpr57, $sgpr20_sgpr21_sgpr22, $sgpr22_sgpr23, $sgpr24_sgpr25_sgpr26, $sgpr26_sgpr27, $vgpr2, $vgpr3
+  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $sgpr17, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8, $sgpr9, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr28_sgpr29, $sgpr34_sgpr35, $sgpr40_sgpr41, $sgpr56, $sgpr57, $sgpr22_sgpr23, $sgpr20_sgpr21_sgpr22, $sgpr26_sgpr27, $sgpr24_sgpr25_sgpr26, $vgpr2, $vgpr3
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $vgpr11 = IMPLICIT_DEF implicit-def $vgpr10
   ; GFX90A-NEXT:   renamable $vgpr5 = IMPLICIT_DEF implicit-def $vgpr4
@@ -573,7 +573,7 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.44:
   ; GFX90A-NEXT:   successors: %bb.45(0x80000000)
-  ; GFX90A-NEXT:   liveins: $sgpr14, $vgpr59, $sgpr16, $sgpr17, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8, $sgpr9, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr46_sgpr47, $sgpr48_sgpr49, $vgpr41, $vgpr42, $sgpr52_sgpr53, $sgpr54_sgpr55, $sgpr58_sgpr59, $sgpr20_sgpr21_sgpr22, $sgpr24_sgpr25_sgpr26, $sgpr26_sgpr27, $vgpr57, $vgpr58, $vgpr2, $vgpr3, $vgpr4, $vgpr47, $vgpr56, $vgpr43, $vgpr44, $vgpr60, $vgpr61, $vgpr62, $vgpr63, $vgpr45, $vgpr46, $vgpr40
+  ; GFX90A-NEXT:   liveins: $sgpr14, $vgpr59, $sgpr16, $sgpr17, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8, $sgpr9, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr46_sgpr47, $sgpr48_sgpr49, $vgpr41, $vgpr42, $sgpr52_sgpr53, $sgpr54_sgpr55, $sgpr58_sgpr59, $sgpr20_sgpr21_sgpr22, $sgpr26_sgpr27, $sgpr24_sgpr25_sgpr26, $vgpr57, $vgpr58, $vgpr2, $vgpr3, $vgpr4, $vgpr47, $vgpr56, $vgpr43, $vgpr44, $vgpr60, $vgpr61, $vgpr62, $vgpr63, $vgpr45, $vgpr46, $vgpr40
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $sgpr50_sgpr51 = COPY renamable $sgpr30_sgpr31
   ; GFX90A-NEXT:   renamable $vgpr8_vgpr9 = IMPLICIT_DEF
@@ -583,7 +583,7 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.45.Flow22:
   ; GFX90A-NEXT:   successors: %bb.46(0x80000000)
-  ; GFX90A-NEXT:   liveins: $sgpr14, $vgpr59, $sgpr16, $sgpr17, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8, $sgpr9, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr46_sgpr47, $sgpr48_sgpr49, $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr54_sgpr55, $sgpr58_sgpr59, $sgpr20_sgpr21_sgpr22, $sgpr24_sgpr25_sgpr26, $sgpr26_sgpr27, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr60, $vgpr61, $vgpr62, $vgpr63, $vgpr32, $vgpr33, $vgpr40, $vgpr41, $vgpr42, $vgpr43, $vgpr44, $vgpr45, $vgpr46, $vgpr47, $vgpr56, $vgpr57, $vgpr58
+  ; GFX90A-NEXT:   liveins: $sgpr14, $vgpr59, $sgpr16, $sgpr17, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8, $sgpr9, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr46_sgpr47, $sgpr48_sgpr49, $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr54_sgpr55, $sgpr58_sgpr59, $sgpr20_sgpr21_sgpr22, $sgpr26_sgpr27, $sgpr24_sgpr25_sgpr26, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr60, $vgpr61, $vgpr62, $vgpr63, $vgpr32, $vgpr33, $vgpr40, $vgpr41, $vgpr42, $vgpr43, $vgpr44, $vgpr45, $vgpr46, $vgpr47, $vgpr56, $vgpr57, $vgpr58
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $sgpr15 = IMPLICIT_DEF
   ; GFX90A-NEXT:   renamable $vgpr12 = IMPLICIT_DEF

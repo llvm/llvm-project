@@ -1199,8 +1199,8 @@ define void @store_general_mask_factor4(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1
 ; NEON-IAENABLED:       // %bb.0:
 ; NEON-IAENABLED-NEXT:    // kill: def $q4 killed $q4 def $q3_q4_q5_q6
 ; NEON-IAENABLED-NEXT:    mov v6.16b, v2.16b
-; NEON-IAENABLED-NEXT:    mov v3.16b, v1.16b
 ; NEON-IAENABLED-NEXT:    ldr d5, [sp]
+; NEON-IAENABLED-NEXT:    fmov d3, d1
 ; NEON-IAENABLED-NEXT:    st4 { v3.2s, v4.2s, v5.2s, v6.2s }, [x0]
 ; NEON-IAENABLED-NEXT:    ret
 ;
@@ -1258,8 +1258,8 @@ define void @store_general_mask_factor4_undefbeg(ptr %ptr, <32 x i32> %v0, <32 x
 ; NEON-IAENABLED:       // %bb.0:
 ; NEON-IAENABLED-NEXT:    // kill: def $q4 killed $q4 def $q3_q4_q5_q6
 ; NEON-IAENABLED-NEXT:    mov v6.16b, v2.16b
-; NEON-IAENABLED-NEXT:    mov v3.16b, v1.16b
 ; NEON-IAENABLED-NEXT:    ldr d5, [sp]
+; NEON-IAENABLED-NEXT:    fmov d3, d1
 ; NEON-IAENABLED-NEXT:    st4 { v3.2s, v4.2s, v5.2s, v6.2s }, [x0]
 ; NEON-IAENABLED-NEXT:    ret
 ;
@@ -1319,8 +1319,8 @@ define void @store_general_mask_factor4_undefend(ptr %ptr, <32 x i32> %v0, <32 x
 ; NEON-IAENABLED:       // %bb.0:
 ; NEON-IAENABLED-NEXT:    // kill: def $q4 killed $q4 def $q3_q4_q5_q6
 ; NEON-IAENABLED-NEXT:    mov v6.16b, v2.16b
-; NEON-IAENABLED-NEXT:    mov v3.16b, v1.16b
 ; NEON-IAENABLED-NEXT:    ldr d5, [sp]
+; NEON-IAENABLED-NEXT:    fmov d3, d1
 ; NEON-IAENABLED-NEXT:    st4 { v3.2s, v4.2s, v5.2s, v6.2s }, [x0]
 ; NEON-IAENABLED-NEXT:    ret
 ;
@@ -1376,8 +1376,8 @@ define void @store_general_mask_factor4_undefmid(ptr %ptr, <32 x i32> %v0, <32 x
 ; NEON-IAENABLED:       // %bb.0:
 ; NEON-IAENABLED-NEXT:    // kill: def $q4 killed $q4 def $q3_q4_q5_q6
 ; NEON-IAENABLED-NEXT:    mov v6.16b, v2.16b
-; NEON-IAENABLED-NEXT:    mov v3.16b, v1.16b
 ; NEON-IAENABLED-NEXT:    ldr d5, [sp]
+; NEON-IAENABLED-NEXT:    fmov d3, d1
 ; NEON-IAENABLED-NEXT:    st4 { v3.2s, v4.2s, v5.2s, v6.2s }, [x0]
 ; NEON-IAENABLED-NEXT:    ret
 ;
@@ -1428,11 +1428,12 @@ define void @store_general_mask_factor4_undefmid(ptr %ptr, <32 x i32> %v0, <32 x
 define void @store_general_mask_factor4_undefmulti(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1) {
 ; NEON-IAENABLED-LABEL: store_general_mask_factor4_undefmulti:
 ; NEON-IAENABLED:       // %bb.0:
-; NEON-IAENABLED-NEXT:    mov v5.16b, v2.16b
-; NEON-IAENABLED-NEXT:    mov v2.16b, v1.16b
-; NEON-IAENABLED-NEXT:    mov v3.16b, v0.16b
-; NEON-IAENABLED-NEXT:    fmov d4, d3
-; NEON-IAENABLED-NEXT:    st4 { v2.2s, v3.2s, v4.2s, v5.2s }, [x0]
+; NEON-IAENABLED-NEXT:    // kill: def $q2 killed $q2 killed $q31_q0_q1_q2 def $q31_q0_q1_q2
+; NEON-IAENABLED-NEXT:    mov v3.16b, v1.16b
+; NEON-IAENABLED-NEXT:    // kill: def $q0 killed $q0 killed $q31_q0_q1_q2 def $q31_q0_q1_q2
+; NEON-IAENABLED-NEXT:    fmov d31, d3
+; NEON-IAENABLED-NEXT:    fmov d1, d0
+; NEON-IAENABLED-NEXT:    st4 { v31.2s, v0.2s, v1.2s, v2.2s }, [x0]
 ; NEON-IAENABLED-NEXT:    ret
 ;
 ; NEON-IADISABLED-LABEL: store_general_mask_factor4_undefmulti:
@@ -3551,8 +3552,8 @@ define void @store_general_mask_factor4_intrinsic(ptr %ptr, <32 x i32> %v0, <32 
 ; NEON:       // %bb.0:
 ; NEON-NEXT:    // kill: def $q4 killed $q4 def $q3_q4_q5_q6
 ; NEON-NEXT:    mov v6.16b, v2.16b
-; NEON-NEXT:    mov v3.16b, v1.16b
 ; NEON-NEXT:    ldr d5, [sp]
+; NEON-NEXT:    fmov d3, d1
 ; NEON-NEXT:    st4 { v3.2s, v4.2s, v5.2s, v6.2s }, [x0]
 ; NEON-NEXT:    ret
 ;
@@ -3579,8 +3580,8 @@ define void @store_general_mask_factor4_intrinsic(ptr %ptr, <32 x i32> %v0, <32 
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    // kill: def $q4 killed $q4 def $q3_q4_q5_q6
 ; CHECK-GI-NEXT:    mov v6.16b, v2.16b
-; CHECK-GI-NEXT:    mov v3.16b, v1.16b
 ; CHECK-GI-NEXT:    ldr d5, [sp]
+; CHECK-GI-NEXT:    fmov d3, d1
 ; CHECK-GI-NEXT:    st4 { v3.2s, v4.2s, v5.2s, v6.2s }, [x0]
 ; CHECK-GI-NEXT:    ret
   %1 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 4, i32 5>
@@ -3597,8 +3598,8 @@ define void @store_general_mask_factor4_undefbeg_intrinsic(ptr %ptr, <32 x i32> 
 ; NEON:       // %bb.0:
 ; NEON-NEXT:    // kill: def $q4 killed $q4 def $q3_q4_q5_q6
 ; NEON-NEXT:    mov v6.16b, v2.16b
-; NEON-NEXT:    mov v3.16b, v1.16b
 ; NEON-NEXT:    ldr d5, [sp]
+; NEON-NEXT:    fmov d3, d1
 ; NEON-NEXT:    st4 { v3.2s, v4.2s, v5.2s, v6.2s }, [x0]
 ; NEON-NEXT:    ret
 ;
@@ -3625,8 +3626,8 @@ define void @store_general_mask_factor4_undefbeg_intrinsic(ptr %ptr, <32 x i32> 
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    // kill: def $q4 killed $q4 def $q3_q4_q5_q6
 ; CHECK-GI-NEXT:    mov v6.16b, v2.16b
-; CHECK-GI-NEXT:    mov v3.16b, v1.16b
 ; CHECK-GI-NEXT:    ldr d5, [sp]
+; CHECK-GI-NEXT:    fmov d3, d1
 ; CHECK-GI-NEXT:    st4 { v3.2s, v4.2s, v5.2s, v6.2s }, [x0]
 ; CHECK-GI-NEXT:    ret
   %1 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 4, i32 5>
@@ -3643,8 +3644,8 @@ define void @store_general_mask_factor4_undefend_intrinsic(ptr %ptr, <32 x i32> 
 ; NEON:       // %bb.0:
 ; NEON-NEXT:    // kill: def $q4 killed $q4 def $q3_q4_q5_q6
 ; NEON-NEXT:    mov v6.16b, v2.16b
-; NEON-NEXT:    mov v3.16b, v1.16b
 ; NEON-NEXT:    ldr d5, [sp]
+; NEON-NEXT:    fmov d3, d1
 ; NEON-NEXT:    st4 { v3.2s, v4.2s, v5.2s, v6.2s }, [x0]
 ; NEON-NEXT:    ret
 ;
@@ -3671,8 +3672,8 @@ define void @store_general_mask_factor4_undefend_intrinsic(ptr %ptr, <32 x i32> 
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    // kill: def $q4 killed $q4 def $q3_q4_q5_q6
 ; CHECK-GI-NEXT:    mov v6.16b, v2.16b
-; CHECK-GI-NEXT:    mov v3.16b, v1.16b
 ; CHECK-GI-NEXT:    ldr d5, [sp]
+; CHECK-GI-NEXT:    fmov d3, d1
 ; CHECK-GI-NEXT:    st4 { v3.2s, v4.2s, v5.2s, v6.2s }, [x0]
 ; CHECK-GI-NEXT:    ret
   %1 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 4, i32 5>
@@ -3689,8 +3690,8 @@ define void @store_general_mask_factor4_undefmid_intrinsic(ptr %ptr, <32 x i32> 
 ; NEON:       // %bb.0:
 ; NEON-NEXT:    // kill: def $q4 killed $q4 def $q3_q4_q5_q6
 ; NEON-NEXT:    mov v6.16b, v2.16b
-; NEON-NEXT:    mov v3.16b, v1.16b
 ; NEON-NEXT:    ldr d5, [sp]
+; NEON-NEXT:    fmov d3, d1
 ; NEON-NEXT:    st4 { v3.2s, v4.2s, v5.2s, v6.2s }, [x0]
 ; NEON-NEXT:    ret
 ;
@@ -3717,8 +3718,8 @@ define void @store_general_mask_factor4_undefmid_intrinsic(ptr %ptr, <32 x i32> 
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    // kill: def $q4 killed $q4 def $q3_q4_q5_q6
 ; CHECK-GI-NEXT:    mov v6.16b, v2.16b
-; CHECK-GI-NEXT:    mov v3.16b, v1.16b
 ; CHECK-GI-NEXT:    ldr d5, [sp]
+; CHECK-GI-NEXT:    fmov d3, d1
 ; CHECK-GI-NEXT:    st4 { v3.2s, v4.2s, v5.2s, v6.2s }, [x0]
 ; CHECK-GI-NEXT:    ret
   %1 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 4, i32 5>
@@ -3733,11 +3734,12 @@ define void @store_general_mask_factor4_undefmid_intrinsic(ptr %ptr, <32 x i32> 
 define void @store_general_mask_factor4_undefmulti_intrinsic(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1) {
 ; NEON-LABEL: store_general_mask_factor4_undefmulti_intrinsic:
 ; NEON:       // %bb.0:
-; NEON-NEXT:    mov v5.16b, v2.16b
-; NEON-NEXT:    mov v2.16b, v1.16b
-; NEON-NEXT:    mov v3.16b, v0.16b
-; NEON-NEXT:    fmov d4, d3
-; NEON-NEXT:    st4 { v2.2s, v3.2s, v4.2s, v5.2s }, [x0]
+; NEON-NEXT:    // kill: def $q2 killed $q2 killed $q31_q0_q1_q2 def $q31_q0_q1_q2
+; NEON-NEXT:    mov v3.16b, v1.16b
+; NEON-NEXT:    // kill: def $q0 killed $q0 killed $q31_q0_q1_q2 def $q31_q0_q1_q2
+; NEON-NEXT:    fmov d31, d3
+; NEON-NEXT:    fmov d1, d0
+; NEON-NEXT:    st4 { v31.2s, v0.2s, v1.2s, v2.2s }, [x0]
 ; NEON-NEXT:    ret
 ;
 ; NO_NEON-LABEL: store_general_mask_factor4_undefmulti_intrinsic:
@@ -3756,11 +3758,12 @@ define void @store_general_mask_factor4_undefmulti_intrinsic(ptr %ptr, <32 x i32
 ;
 ; CHECK-GI-LABEL: store_general_mask_factor4_undefmulti_intrinsic:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov v5.16b, v2.16b
-; CHECK-GI-NEXT:    mov v2.16b, v1.16b
-; CHECK-GI-NEXT:    mov v3.16b, v0.16b
-; CHECK-GI-NEXT:    fmov d4, d3
-; CHECK-GI-NEXT:    st4 { v2.2s, v3.2s, v4.2s, v5.2s }, [x0]
+; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q31_q0_q1_q2 def $q31_q0_q1_q2
+; CHECK-GI-NEXT:    mov v3.16b, v1.16b
+; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q31_q0_q1_q2 def $q31_q0_q1_q2
+; CHECK-GI-NEXT:    fmov d31, d3
+; CHECK-GI-NEXT:    fmov d1, d0
+; CHECK-GI-NEXT:    st4 { v31.2s, v0.2s, v1.2s, v2.2s }, [x0]
 ; CHECK-GI-NEXT:    ret
   %1 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 4, i32 5>
   %2 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 0, i32 1>
