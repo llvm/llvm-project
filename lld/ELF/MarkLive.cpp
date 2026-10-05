@@ -194,12 +194,12 @@ void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
 // The last kind of relocation cannot keep the referred section alive, or they
 // would keep everything alive in a common object file. In fact, each FDE is
 // alive if the section it refers to is alive.
-// To keep things simple, in here we just ignore the last relocation kind. The
-// other two keep the referred section alive.
 //
-// A possible improvement would be to fully process .eh_frame in the middle of
-// the gc pass. With that we would be able to also gc some sections holding
-// LSDAs and personality functions if we found that they were unused.
+// A non-group, non-SHF_LINK_ORDER LSDA is not a GC root either. Record it as a
+// dependent of the function the FDE describes, and retain it only when that
+// function is retained. Relocations inside the LSDA, such as the
+// R_RISCV_{SET,SUB}_ULEB128 pairs GCC emits under -mrelax, are then not
+// followed for a function nothing else references.
 template <class ELFT, bool TrackWhyLive>
 void MarkLive<ELFT, TrackWhyLive>::scanEhFrameSection(EhInputSection &eh) {
   if (TrackWhyLive)
@@ -214,9 +214,47 @@ void MarkLive<ELFT, TrackWhyLive>::scanEhFrameSection(EhInputSection &eh) {
     if (firstRelI == (unsigned)-1)
       continue;
     uint64_t pieceEnd = fde.inputOff + fde.size;
-    for (size_t j = firstRelI, end2 = rels.size();
-         j < end2 && rels[j].offset < pieceEnd; ++j)
-      resolveReloc(eh, rels[j], true);
+    auto forEachRel = [&](auto fn) {
+      for (size_t j = firstRelI, end2 = rels.size();
+           j < end2 && rels[j].offset < pieceEnd; ++j)
+        fn(rels[j]);
+    };
+
+    // The described function is the executable section an FDE relocation
+    // points at. There is normally one, and it is the first relocation.
+    InputSection *func = nullptr;
+    forEachRel([&](const Relocation &rel) {
+      if (func)
+        return;
+      if (auto *d = dyn_cast<Defined>(rel.sym))
+        if (auto *sec = dyn_cast_or_null<InputSection>(d->section))
+          if (sec->flags & SHF_EXECINSTR)
+            func = sec;
+    });
+
+    // No described function, for example an FDE left behind by ld.gold -r.
+    // Keep the historical behavior and retain the LSDA from the FDE.
+    if (!func) {
+      forEachRel([&](const Relocation &rel) { resolveReloc(eh, rel, true); });
+      continue;
+    }
+
+    forEachRel([&](const Relocation &rel) {
+      auto *d = dyn_cast<Defined>(rel.sym);
+      auto *sec = d ? dyn_cast_or_null<InputSection>(d->section) : nullptr;
+      if (sec && ((sec->flags & (SHF_EXECINSTR | SHF_LINK_ORDER)) ||
+                  sec->nextInSectionGroup)) {
+        rel.sym->setFlags(USED);
+        return;
+      }
+      if (sec) {
+        rel.sym->setFlags(USED);
+        if (!is_contained(func->dependentSections, sec))
+          func->dependentSections.push_back(sec);
+        return;
+      }
+      resolveReloc(eh, rel, true);
+    });
   }
 }
 
@@ -397,10 +435,10 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
     markSymbol(ctx.symtab->cmseSymMap[symName].acleSeSym, "ARM CMSE symbol");
   }
 
-  // Mark .eh_frame sections as live because there are usually no relocations
-  // that point to .eh_frames. Otherwise, the garbage collector would drop
-  // all of them. We also want to preserve personality routines and LSDA
-  // referenced by .eh_frame sections, so we scan them for that here.
+  // There are usually no relocations pointing to .eh_frame. Scan CIEs for
+  // personality routines, and attach each FDE's LSDA to the function it
+  // describes. FDEs of discarded functions are dropped when the output
+  // .eh_frame is built.
   for (EhInputSection *eh : ctx.ehInputSections)
     scanEhFrameSection(*eh);
   // See markUsedSymbols.

@@ -78,11 +78,14 @@
 # PREEMPTABLE: error: relocation R_RISCV_SUB_ULEB128 cannot be used against symbol 'w1'; recompile with -fPIC
 
 #--- a.s
+.section .text.w,"axR"
+## This FDE must describe .text.w. .text.w is SHF_GNU_RETAIN, so its
+## .gcc_except_table stays live under --gc-sections. A .cfi_startproc
+## before this section would describe an empty .text instead, and that
+## table would be discarded with it.
 .cfi_startproc
 .cfi_lsda 0x1b,.LLSDA0
 .cfi_endproc
-
-.section .text.w,"axR"
 w1:
   call foo    # 4 bytes after relaxation
 w2:

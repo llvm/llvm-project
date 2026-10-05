@@ -12,13 +12,19 @@
 # CHECK-NEXT: removing unused section {{.*}}.o:(.gcc_except_table._Z6comdatv)
 # CHECK-NEXT: removing unused section {{.*}}.o:(.gcc_except_table._Z9linkorderv)
 
-## An unused non-group non-SHF_LINK_ORDER .gcc_except_table is not discarded.
+## An unused non-group non-SHF_LINK_ORDER .gcc_except_table is discarded with
+## its function. The FDE describes the function; it does not keep either live.
 
 # RUN: ld.lld --gc-sections --print-gc-sections -u _Z6comdatv -u _Z9linkorderv %t.o -o /dev/null | \
-# RUN:   FileCheck /dev/null --implicit-check-not=.gcc_except_table
+# RUN:   FileCheck %s --check-prefix=PLAIN
+
+# PLAIN:     removing unused section {{.*}}.o:(.text._Z3foov)
+# PLAIN:     removing unused section {{.*}}.o:(.gcc_except_table._Z3foov)
+# PLAIN-NOT: .gcc_except_table._Z6comdatv
+# PLAIN-NOT: .gcc_except_table._Z9linkorderv
 
 ## If the text sections are live, the .gcc_except_table sections are retained as
-## well because they are referenced by .eh_frame pieces.
+## well.
 
 # RUN: ld.lld --gc-sections --print-gc-sections -u _Z3foov -u _Z6comdatv -u _Z9linkorderv %t.o -o /dev/null | \
 # RUN:   FileCheck %s --check-prefix=KEEP
