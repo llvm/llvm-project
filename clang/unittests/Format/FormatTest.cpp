@@ -24837,7 +24837,7 @@ TEST_F(FormatTest, StatementAttributeLikeMacros) {
 
 TEST_F(FormatTest, IndentAccessModifiers) {
   FormatStyle Style = getLLVMStyle();
-  Style.IndentAccessModifiers = true;
+  Style.IndentAccessModifiers = FormatStyle::IAMS_Always;
   // Members are *two* levels below the record;
   // Style.IndentWidth == 2, thus yielding a 4 spaces wide indentation.
   verifyFormat("class C {\n"
@@ -24915,6 +24915,106 @@ TEST_F(FormatTest, IndentAccessModifiers) {
                "   FOO public:\n"
                "      int i;\n"
                "};",
+               Style);
+}
+
+TEST_F(FormatTest, IndentAccessModifiersAfterFirst) {
+  FormatStyle Style = getLLVMStyle();
+  verifyFormat("struct S {\n"
+               "  int before;\n"
+               "\n"
+               "public:\n"
+               "  int after;\n"
+               "};",
+               Style);
+
+  Style.IndentAccessModifiers = FormatStyle::IAMS_Always;
+  verifyFormat("struct S {\n"
+               "    int before;\n"
+               "\n"
+               "  public:\n"
+               "    int after;\n"
+               "};",
+               Style);
+  Style.IndentAccessModifiers = FormatStyle::IAMS_AfterFirstAccessModifier;
+  verifyFormat("struct S {\n"
+               "  int member;\n"
+               "};",
+               Style);
+  verifyFormat("struct S {\n"
+               "  int before;\n"
+               "\n"
+               "  public:\n"
+               "    int after;\n"
+               "};",
+               Style);
+  verifyFormat("struct S {\n"
+               "  int before;\n"
+               "\n"
+               "  public:\n"
+               "    int after;\n"
+               "\n"
+               "  private:\n"
+               "    int last;\n"
+               "};",
+               Style);
+}
+
+TEST_F(FormatTest, IndentAccessModifiersAfterFirstAllman) {
+  FormatStyle Style = getLLVMStyle();
+  Style.IndentAccessModifiers = FormatStyle::IAMS_AfterFirstAccessModifier;
+  Style.IndentWidth = 4;
+  Style.EmptyLineBeforeAccessModifier = FormatStyle::ELBAMS_Never;
+  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
+
+  verifyFormat("class Outer\n"
+               "{\n"
+               "    public:\n"
+               "        struct Inner\n"
+               "        {\n"
+               "            bool first;\n"
+               "            bool second;\n"
+               "        };\n"
+               "};",
+               Style);
+  verifyFormat("struct S\n"
+               "{\n"
+               "    int before;\n"
+               "    private:\n"
+               "        int after;\n"
+               "};",
+               Style);
+  verifyFormat("union U\n"
+               "{\n"
+               "    int first;\n"
+               "    class Inner\n"
+               "    {\n"
+               "        public:\n"
+               "            int member;\n"
+               "    };\n"
+               "    int last;\n"
+               "};",
+               Style);
+  verifyFormat("class QtObject\n"
+               "{\n"
+               "    signals:\n"
+               "        void changed();\n"
+               "};",
+               Style);
+}
+
+TEST_F(FormatTest, IndentAccessModifiersAfterFirstWhitesmiths) {
+  FormatStyle Style = getLLVMStyle();
+  Style.IndentAccessModifiers = FormatStyle::IAMS_AfterFirstAccessModifier;
+  Style.IndentWidth = 4;
+  Style.EmptyLineBeforeAccessModifier = FormatStyle::ELBAMS_Never;
+  Style.BreakBeforeBraces = FormatStyle::BS_Whitesmiths;
+  verifyFormat("struct S\n"
+               "    {\n"
+               "    int before;\n"
+               "    public:\n"
+               "        int after;\n"
+               "    };",
                Style);
 }
 

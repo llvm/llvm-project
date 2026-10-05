@@ -2327,7 +2327,7 @@ void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
 static bool replaceOverflowUses(WithOverflowInst *II,
                                 SmallVectorImpl<Instruction *> &ToRemove) {
   bool Changed = false;
-  IRBuilder<> Builder(II->getParent(), II->getIterator());
+  IRBuilder<> Builder(II->getIterator());
   Value *Res = nullptr;
   for (User *U : make_early_inc_range(II->users())) {
     if (match(U, m_ExtractValue<0>(m_Value()))) {
