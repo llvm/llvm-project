@@ -445,8 +445,7 @@ struct LinearExpression {
 static LinearExpression GetLinearExpression(const CastedValue &Val,
                                             const DataLayout &DL,
                                             unsigned Depth, AssumptionCache *AC,
-                                            DominatorTree *DT,
-                                            bool LookThroughTrunc = false) {
+                                            DominatorTree *DT) {
   // Limit our recursion depth.
   if (Depth == 6)
     return Val;
@@ -487,7 +486,7 @@ static LinearExpression GetLinearExpression(const CastedValue &Val,
         [[fallthrough]];
       case Instruction::Add: {
         E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
-                                Depth + 1, AC, DT, LookThroughTrunc);
+                                Depth + 1, AC, DT);
         E.Offset += RHS;
         E.IsNUW &= NUW;
         E.IsNSW &= NSW;
@@ -495,7 +494,7 @@ static LinearExpression GetLinearExpression(const CastedValue &Val,
       }
       case Instruction::Sub: {
         E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
-                                Depth + 1, AC, DT, LookThroughTrunc);
+                                Depth + 1, AC, DT);
         E.Offset -= RHS;
         E.IsNUW = false; // sub nuw x, y is not add nuw x, -y.
         E.IsNSW &= NSW;
@@ -503,7 +502,7 @@ static LinearExpression GetLinearExpression(const CastedValue &Val,
       }
       case Instruction::Mul:
         E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
-                                Depth + 1, AC, DT, LookThroughTrunc)
+                                Depth + 1, AC, DT)
                 .mul(RHS, NUW, NSW);
         break;
       case Instruction::Shl:
@@ -516,7 +515,7 @@ static LinearExpression GetLinearExpression(const CastedValue &Val,
           return Val;
 
         E = GetLinearExpression(Val.withValue(BOp->getOperand(0), NSW), DL,
-                                Depth + 1, AC, DT, LookThroughTrunc);
+                                Depth + 1, AC, DT);
         E.Offset <<= RHS.getLimitedValue();
         E.Scale <<= RHS.getLimitedValue();
         E.IsNUW &= NUW;
@@ -528,27 +527,41 @@ static LinearExpression GetLinearExpression(const CastedValue &Val,
   }
 
   if (const auto *Trunc = dyn_cast<TruncInst>(Val.V)) {
-    LinearExpression E =
-        GetLinearExpression(Val.withTruncOfValue(Trunc->getOperand(0)), DL,
-                            Depth + 1, AC, DT, LookThroughTrunc);
-    // Preserve the truncation boundary unless it cancels an extension, so
-    // inequality proofs can still compare the truncated values.
-    if (LookThroughTrunc || E.Val.TruncBits == 0)
-      return E;
-    return Val;
+    LinearExpression E = GetLinearExpression(
+        Val.withTruncOfValue(Trunc->getOperand(0)), DL, Depth + 1, AC, DT);
+    // Do not introduce a residual truncation into the expression. Inequality
+    // proofs need to compare values at the original width. If the expression
+    // is already truncated, further truncations can be composed as usual.
+    if (!Val.TruncBits && E.Val.TruncBits)
+      return Val;
+    return E;
   }
 
   if (const auto *ZExt = dyn_cast<ZExtInst>(Val.V))
     return GetLinearExpression(
         Val.withZExtOfValue(ZExt->getOperand(0), ZExt->hasNonNeg()), DL,
-        Depth + 1, AC, DT, LookThroughTrunc);
+        Depth + 1, AC, DT);
 
   if (isa<SExtInst>(Val.V))
     return GetLinearExpression(
         Val.withSExtOfValue(cast<CastInst>(Val.V)->getOperand(0)), DL,
-        Depth + 1, AC, DT, LookThroughTrunc);
+        Depth + 1, AC, DT);
 
   return Val;
+}
+
+/// Decompose V at its own width, including an explicit truncation.
+static LinearExpression GetLinearExpressionForOffset(const Value *V,
+                                                     const DataLayout &DL,
+                                                     AssumptionCache *AC,
+                                                     DominatorTree *DT) {
+  CastedValue Val(V);
+  unsigned Depth = 0;
+  if (const auto *Trunc = dyn_cast<TruncInst>(V)) {
+    Val = Val.withTruncOfValue(Trunc->getOperand(0));
+    ++Depth;
+  }
+  return GetLinearExpression(Val, DL, Depth, AC, DT);
 }
 
 namespace {
@@ -2130,15 +2143,10 @@ bool BasicAAResult::computeConstantOffsetHeuristic(const DecomposedGEP &GEP,
   // We'll strip off the Extensions of Var0 and Var1 and do another round
   // of GetLinearExpression decomposition. In the example above, if Var0
   // is zext(%x + 1) we should get V1 == %x and V1Offset == 1.
-  // Allow residual truncations here. The initial GEP decomposition preserves
-  // them so inequality proofs can still compare the truncated values.
-
-  LinearExpression E0 =
-      GetLinearExpression(CastedValue(Var0.Val.V), DL, 0, AC, DT,
-                          /*LookThroughTrunc=*/true);
-  LinearExpression E1 =
-      GetLinearExpression(CastedValue(Var1.Val.V), DL, 0, AC, DT,
-                          /*LookThroughTrunc=*/true);
+  // Analyze the difference at the truncated width without changing the values
+  // used by the initial GEP decomposition.
+  LinearExpression E0 = GetLinearExpressionForOffset(Var0.Val.V, DL, AC, DT);
+  LinearExpression E1 = GetLinearExpressionForOffset(Var1.Val.V, DL, AC, DT);
   if (E0.Scale != E1.Scale || !E0.Val.hasSameCastsAs(E1.Val) ||
       !isValueEqualInPotentialCycles(E0.Val.V, E1.Val.V, AAQI))
     return false;
