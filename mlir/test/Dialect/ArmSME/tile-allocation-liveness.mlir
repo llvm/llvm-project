@@ -241,11 +241,15 @@ func.func @non_overlapping_branches(%cond: i1) {
 // -----
 
 // Here %vecA and %vecB are not merged into the same live range (as they are unknown values).
-// This means that %vecA and %vecB are both allocated to different tiles (which is not legal).
+// This means that %vecA and %vecB are both allocated to different tiles. As `arm_sme.get_tile`
+// is trivially cloneable this is resolved by cloning it, rather than an error.
 
-// expected-note@below {{tile operand is: <block argument> of type 'vector<[4]x[4]xf32>'}}
-func.func @overlapping_branches(%cond: i1, %vecA: vector<[4]x[4]xf32>, %vecB: vector<[4]x[4]xf32>) {
-  // expected-error@below {{op tile operand allocated to different SME virtial tile (move required)}}
+// CHECK-LABEL: @overlapping_branches
+// CHECK: arm_sme.get_tile {tile_id = [[ID:.*]] : i32} : vector<[4]x[4]xf32>
+// CHECK: arm_sme.get_tile {tile_id = [[ID]] : i32} : vector<[4]x[4]xf32>
+func.func @overlapping_branches(%cond: i1) {
+  %vecA = arm_sme.get_tile : vector<[4]x[4]xf32>
+  %vecB = arm_sme.get_tile : vector<[4]x[4]xf32>
   %tile = scf.if %cond -> vector<[4]x[4]xf32> {
     scf.yield %vecA : vector<[4]x[4]xf32>
   } else {

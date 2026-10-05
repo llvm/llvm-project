@@ -2089,6 +2089,15 @@ class RVPBinaryIntrinsic
   def int_riscv_pwsll : RVPWideningShiftIntrinsic;
   def int_riscv_pwsla : RVPWideningShiftIntrinsic;
 
+  // Packed Narrowing Shifts.
+  class RVPNarrowingShiftIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [llvm_anyvector_ty, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pnsrl  : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnsra  : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnsrar : RVPNarrowingShiftIntrinsic;
+
   // Packed Saturation.
   class RVPSaturationIntrinsic
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
@@ -2216,6 +2225,14 @@ class RVPBinaryIntrinsic
   def int_riscv_pmulh_h1   : RVPMulHighPartsIntrinsic;
   def int_riscv_pmulhsu_h0 : RVPMulHighPartsIntrinsic;
   def int_riscv_pmulhsu_h1 : RVPMulHighPartsIntrinsic;
+
+  // Packed "Q-format" Multiply with Widening Accumulate.
+  class RVPQFormatWideningAccIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_v2i32_ty],
+                              [llvm_v2i32_ty, llvm_v2i16_ty, llvm_v2i16_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pmqwacc_i32x2  : RVPQFormatWideningAccIntrinsic;
+  def int_riscv_pmqrwacc_i32x2 : RVPQFormatWideningAccIntrinsic;
 
   // The scalar forms keep a single product of the full-width rs1 and one
   // halfword of rs2: <2 x i16> pairs with i32.
