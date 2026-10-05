@@ -488,7 +488,7 @@ static void setInsertionPoint(IRBuilder<> &Builder, Value *V,
                               bool Before = true) {
   if (auto *PHI = dyn_cast<PHINode>(V)) {
     BasicBlock *Parent = PHI->getParent();
-    Builder.SetInsertPoint(Parent, Parent->getFirstInsertionPt());
+    Builder.SetInsertPoint(Parent->getFirstInsertionPt());
     return;
   }
   if (auto *I = dyn_cast<Instruction>(V)) {
@@ -500,7 +500,7 @@ static void setInsertionPoint(IRBuilder<> &Builder, Value *V,
   if (auto *A = dyn_cast<Argument>(V)) {
     // Set the insertion point in the entry block.
     BasicBlock &Entry = A->getParent()->getEntryBlock();
-    Builder.SetInsertPoint(&Entry, Entry.getFirstInsertionPt());
+    Builder.SetInsertPoint(Entry.getFirstInsertionPt());
     return;
   }
   // Otherwise, this is a constant and we don't need to set a new
@@ -3575,6 +3575,22 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
         }
       }
     }
+  }
+
+  // Fold the canonicalized form of vector_reduce_or if the arg is
+  // get_active_lane mask.
+  // icmp ne (bitcast <N x i1> to iN (get_active_lane_mask(l, h))), 0 ->
+  //            icmp ult l, h
+  // icmp eq (bitcast <N x i1> to iN (get_active_lane_mask(l, h))), 0 ->
+  //            icmp uge l, h
+  Value *Upper, *Lower;
+  if (match(BCSrcOp, m_Intrinsic<Intrinsic::get_active_lane_mask>(
+                         m_Value(Lower), m_Value(Upper))) &&
+      match(Op1, m_Zero()) && DstType->isIntegerTy()) {
+    if (Pred == ICmpInst::ICMP_NE)
+      return new ICmpInst(ICmpInst::ICMP_ULT, Lower, Upper);
+    if (Pred == ICmpInst::ICMP_EQ)
+      return new ICmpInst(ICmpInst::ICMP_UGE, Lower, Upper);
   }
 
   const APInt *C;

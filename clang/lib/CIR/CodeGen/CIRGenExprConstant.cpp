@@ -968,9 +968,17 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
           mlir::isa<cir::PointerType>(destTy)
               ? mlir::cast<cir::PointerType>(destTy)
               : cir::PointerType::get(fop.getFunctionType());
+      mlir::StringAttr symName = fop.getSymNameAttr();
+      // On the HIP host, the address of a kernel is the address of its kernel
+      // handle, not of its device stub. CUDA uses the device stub itself as
+      // the kernel handle.
+      if (cgm.getLangOpts().HIP && !cgm.getLangOpts().CUDAIsDevice &&
+          fd->hasAttr<CUDAGlobalAttr>())
+        symName = mlir::cast<cir::GlobalOp>(
+                      cgm.getCUDARuntime().getKernelHandle(fop, fd))
+                      .getSymNameAttr();
       return cir::GlobalViewAttr::get(
-          ptrTy,
-          mlir::FlatSymbolRefAttr::get(mlirContext, fop.getSymNameAttr()));
+          ptrTy, mlir::FlatSymbolRefAttr::get(mlirContext, symName));
     }
 
     if (auto *vd = dyn_cast<VarDecl>(d)) {

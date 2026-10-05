@@ -539,7 +539,8 @@ public:
     if (destType == addr.getElementType())
       return addr;
 
-    auto ptrTy = getPointerTo(destType);
+    auto srcPtrTy = mlir::cast<cir::PointerType>(addr.getPointer().getType());
+    auto ptrTy = getPointerTo(destType, srcPtrTy.getAddrSpace());
     return Address(createBitcast(loc, addr.getPointer(), ptrTy), destType,
                    addr.getAlignment());
   }
@@ -823,6 +824,15 @@ public:
     cir::ConstantOp poison =
         getConstant(loc, cir::PoisonAttr::get(vec1.getType()));
     return createVecShuffle(loc, vec1, poison, mask);
+  }
+
+  cir::MatrixColumnMajorLoadOp createMatrixColumnMajorLoad(mlir::Location loc,
+                                                           mlir::Type resultTy,
+                                                           mlir::Value value,
+                                                           mlir::Value stride,
+                                                           bool isVolatile) {
+    return cir::MatrixColumnMajorLoadOp::create(*this, loc, resultTy, value,
+                                                stride, isVolatile);
   }
 
   cir::MatrixTransposeOp createMatrixTranspose(mlir::Location loc,
