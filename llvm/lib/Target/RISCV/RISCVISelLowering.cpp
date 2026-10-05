@@ -27262,7 +27262,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
       MI.getOperand(1).isReg() && MI.getOperand(2).isReg() &&
       Next != BB->end() && Next->getOpcode() == MI.getOpcode() &&
       Next->getOperand(5).getReg() == MI.getOperand(0).getReg() &&
-      Next->getOperand(5).isKill())
+      BB->getParent()->getRegInfo().hasOneNonDBGUse(MI.getOperand(0).getReg()))
     return EmitLoweredCascadedSelect(MI, *Next, BB, Subtarget);
 
   Register LHS = MI.getOperand(1).getReg();
