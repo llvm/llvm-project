@@ -956,7 +956,7 @@ static void createStoreIntoFrame(IRBuilder<> &Builder, Value *Def,
 
   // For byval arguments, copy the pointed-to value to the frame.
   if (ByValTy) {
-    auto &DL = Builder.GetInsertBlock()->getDataLayout();
+    auto &DL = Builder.getDataLayout();
     auto Size = DL.getTypeStoreSize(ByValTy);
     // Def is a pointer to the byval argument
     Builder.CreateMemCpy(G, SpillAlignment, Def, SpillAlignment, Size);
@@ -1678,8 +1678,7 @@ static void eliminateSwiftErrorAlloca(Function &F, AllocaInst *Alloca,
 static void eliminateSwiftErrorArgument(Function &F, Argument &Arg,
                                         coro::Shape &Shape,
                              SmallVectorImpl<AllocaInst*> &AllocasToPromote) {
-  IRBuilder<> Builder(&F.getEntryBlock(),
-                      F.getEntryBlock().getFirstNonPHIOrDbg());
+  IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrDbg());
 
   auto ArgTy = cast<PointerType>(Arg.getType());
   auto ValueTy = PointerType::getUnqual(F.getContext());

@@ -679,11 +679,11 @@ Value *llvm::lowerObjectSizeCall(
 
     if (SizeOffsetPair != ObjectSizeOffsetEvaluator::unknown()) {
       IRBuilder<TargetFolder, IRBuilderCallbackInserter> Builder(
-          Ctx, TargetFolder(DL), IRBuilderCallbackInserter([&](Instruction *I) {
+          ObjectSize->getIterator(), TargetFolder(DL),
+          IRBuilderCallbackInserter([&](Instruction *I) {
             if (InsertedInstructions)
               InsertedInstructions->push_back(I);
           }));
-      Builder.SetInsertPoint(ObjectSize);
 
       Value *Size = SizeOffsetPair.Size;
       Value *Offset = SizeOffsetPair.Offset;
