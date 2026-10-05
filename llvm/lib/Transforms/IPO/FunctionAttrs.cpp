@@ -761,7 +761,7 @@ ArgumentAccessInfo getArgumentAccessInfo(const Instruction *I,
 
 // Collect the uses of argument "A" in "F".
 ArgumentUsesSummary collectArgumentUsesPerBlock(Argument &A, Function &F) {
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
   unsigned PointerSize =
       DL.getIndexSizeInBits(A.getType()->getPointerAddressSpace());
   ArgumentUsesSummary Result;

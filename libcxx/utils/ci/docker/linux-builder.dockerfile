@@ -141,3 +141,10 @@ RUN <<EOF
     sudo bash /tmp/install-cmake.sh --prefix=/usr --exclude-subdir --skip-license
     rm /tmp/install-cmake.sh
 EOF
+
+# Setup the user
+RUN useradd gha -u 1001 -m -s /bin/bash
+RUN adduser gha sudo
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+WORKDIR /home/gha
+USER gha

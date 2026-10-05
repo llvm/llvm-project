@@ -619,7 +619,6 @@ struct EpilogueLoopVectorizationInfo {
   ElementCount MainLoopVF = ElementCount::getFixed(0);
   unsigned MainLoopUF = 0;
   ElementCount EpilogueVF = ElementCount::getFixed(0);
-  Value *VectorTripCount = nullptr;
 
   EpilogueLoopVectorizationInfo(ElementCount MVF, unsigned MUF,
                                 ElementCount EVF)
@@ -5280,6 +5279,7 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
              isa<UncondBrInst>(&I);
     });
   };
+  SmallPtrSet<Instruction *, 16> ProcessedDeadOps;
   for (unsigned I = 0; I != DeadOps.size(); ++I) {
     auto *Op = dyn_cast<Instruction>(DeadOps[I]);
 
@@ -5316,12 +5316,17 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
     // If all of Op's users are in ValuesToIgnore, add it to ValuesToIgnore
     // which applies for both scalar and vector versions. Otherwise it is only
     // dead in vector versions, so only add it to VecValuesToIgnore.
+    bool BecameScalarDead = false;
     if (all_of(Op->users(),
                [this](User *U) { return ValuesToIgnore.contains(U); }))
-      ValuesToIgnore.insert(Op);
+      BecameScalarDead = ValuesToIgnore.insert(Op).second;
 
     VecValuesToIgnore.insert(Op);
-    append_range(DeadOps, Op->operands());
+    // Shared operands may be queued more than once. Propagate deadness once,
+    // and again if an instruction previously dead only in the vector loop
+    // becomes dead in the scalar loop too.
+    if (ProcessedDeadOps.insert(Op).second || BecameScalarDead)
+      append_range(DeadOps, Op->operands());
   }
 
   // Ignore type-promoting instructions we identified during reduction
@@ -7004,12 +7009,8 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
                   "(e.g., adding 'restrict').";
       });
     }
-    // VPSCEVExpander expands AddRecs in the plan's entry, not the check block,
-    // and does not support pointer-typed min/max yet.
-    auto IsUnsupported = [](const SCEV *S) {
-      return isa<SCEVAddRecExpr>(S) ||
-             (isa<SCEVMinMaxExpr>(S) && S->getType()->isPointerTy());
-    };
+    // VPSCEVExpander expands AddRecs in the plan's entry, not the check block.
+    auto IsUnsupported = IsaPred<SCEVAddRecExpr>;
     // Diff checks are not modelled in VPlan yet, and the VPlan expander cannot
     // hoist bounds out of an enclosing loop.
     const auto &RtPtrChecking = *Legal->getRuntimePointerChecking();
@@ -7281,10 +7282,17 @@ LoopVectorizePass::LoopVectorizePass(LoopVectorizeOptions Opts)
       VectorizeOnlyWhenForced(Opts.VectorizeOnlyWhenForced ||
                               !EnableLoopVectorization) {}
 
+/// ResumeForEpilogue markers in the main plan, used by the epilogue plan.
+struct MainPlanResumeMarkers {
+  VPInstruction *CanIVResume;
+  VPInstruction *VectorTC;
+  SmallVector<VPInstruction *> ResumeValues;
+};
+
 /// Prepare \p MainPlan for vectorizing the main vector loop during epilogue
 /// vectorization.
-static SmallVector<VPInstruction *>
-preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
+static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan,
+                                                          VPlan &EpiPlan) {
   using namespace VPlanPatternMatch;
   // When vectorizing the epilogue, FindFirstIV & FindLastIV reductions can
   // introduce multiple uses of undef/poison. If the reduction start value may
@@ -7319,6 +7327,12 @@ preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
       match(Term, m_BranchOnCount(m_VPValue(), m_VPValue(VectorTC)));
   assert(MatchedTC && "must match vector trip count");
 
+  VPBasicBlock *MiddleVPBB = MainPlan.getMiddleBlock();
+  VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+  VPInstruction *VectorTCMarker = MiddleBuilder.createNaryOp(
+      VPInstruction::ResumeForEpilogue,
+      {VectorTC, MainPlan.getZero(VectorTC->getScalarType())});
+
   // If there is a suitable resume value for the canonical induction in the
   // scalar (which will become vector) epilogue loop, use it and move it to the
   // beginning of the scalar preheader. Otherwise create it below.
@@ -7346,14 +7360,14 @@ preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   // Create a ResumeForEpilogue for the canonical IV resume and its bypass value
   // as the first non-phi, to keep them alive for the epilogue.
   VPBuilder ResumeBuilder(MainScalarPH);
-  ResumeBuilder.createNaryOp(VPInstruction::ResumeForEpilogue,
-                             {ResumePhi, ResumePhi->getOperand(1)});
+  VPInstruction *CanIVResume = ResumeBuilder.createNaryOp(
+      VPInstruction::ResumeForEpilogue, {ResumePhi, ResumePhi->getOperand(1)});
 
   // Create ResumeForEpilogue instructions for the resume phis of the
   // VPIRPhis and their bypass values in the scalar header of the main plan and
   // return them so they can be used as resume values when vectorizing the
   // epilogue.
-  return to_vector(
+  auto ResumeValues = to_vector(
       map_range(MainPlan.getScalarHeader()->phis(), [&](VPRecipeBase &R) {
         assert(isa<VPIRPhi>(R) &&
                "only VPIRPhis expected in the scalar header");
@@ -7362,6 +7376,7 @@ preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
         return ResumeBuilder.createNaryOp(VPInstruction::ResumeForEpilogue,
                                           {MainResumePhi, Bypass});
       }));
+  return {CanIVResume, VectorTCMarker, std::move(ResumeValues)};
 }
 
 /// Prepare \p Plan for vectorizing the epilogue loop. That is, re-use expanded
@@ -7370,13 +7385,13 @@ static void preparePlanForEpilogueVectorLoop(
     VPlan &MainPlan, VPlan &Plan, Loop *L, const SCEV2ValueTy &ExpandedSCEVs,
     EpilogueLoopVectorizationInfo &EPI, LoopVectorizationPlanner &LVP,
     VFSelectionContext &Config, ScalarEvolution &SE,
-    ArrayRef<VPInstruction *> ResumeValues) {
+    const MainPlanResumeMarkers &Markers) {
   // Build a map from the scalar-header PHI to the ResumeForEpilogue markers
   // from the main plan.
   // TODO: Replace the IR PHI key.
   DenseMap<PHINode *, VPInstruction *> IRPhiToResumeForEpi;
   for (auto [HeaderPhi, ResumeForEpi] :
-       zip_equal(MainPlan.getScalarHeader()->phis(), ResumeValues))
+       zip_equal(MainPlan.getScalarHeader()->phis(), Markers.ResumeValues))
     IRPhiToResumeForEpi[&cast<VPIRPhi>(HeaderPhi).getIRPhi()] = ResumeForEpi;
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = VectorLoop->getEntryBasicBlock();
@@ -7387,30 +7402,7 @@ static void preparePlanForEpilogueVectorLoop(
   // at the resume value from the main vector loop. Find the resume value
   // created during execution of the main VPlan. Add this resume value as an
   // offset to the canonical IV of the epilogue loop.
-  using namespace llvm::PatternMatch;
-  VPInstruction *ResumeForEpilogue =
-      cast<VPInstruction>(&*MainPlan.getScalarPreheader()->getFirstNonPhi());
-  Value *EPResumeVal = ResumeForEpilogue->getUnderlyingValue();
-  if (auto *ResumePhi = dyn_cast<PHINode>(EPResumeVal)) {
-    for (Value *Inc : ResumePhi->incoming_values()) {
-      if (match(Inc, m_SpecificInt(0)))
-        continue;
-      assert(!EPI.VectorTripCount &&
-             "Must only have a single non-zero incoming value");
-      EPI.VectorTripCount = Inc;
-    }
-    // If we didn't find a non-zero vector trip count, all incoming values
-    // must be zero, which also means the vector trip count is zero.
-    if (!EPI.VectorTripCount) {
-      assert(ResumePhi->getNumIncomingValues() > 0 &&
-             all_of(ResumePhi->incoming_values(), match_fn(m_SpecificInt(0))) &&
-             "all incoming values must be 0");
-      EPI.VectorTripCount = ResumePhi->getIncomingValue(0);
-    }
-  } else {
-    EPI.VectorTripCount = EPResumeVal;
-  }
-  VPValue *VPV = Plan.getOrAddLiveIn(EPResumeVal);
+  VPValue *VPV = Plan.getOrAddLiveIn(Markers.CanIVResume->getUnderlyingValue());
   assert(all_of(IV->users(),
                 [](const VPUser *U) {
                   if (isa<VPScalarIVStepsRecipe, VPDerivedIVRecipe>(U))
@@ -7585,8 +7577,9 @@ static void preparePlanForEpilogueVectorLoop(
       estimateElementCount(EPI.MainLoopVF * EPI.MainLoopUF, VScale);
   unsigned EpilogueLoopStep = estimateElementCount(EPI.EpilogueVF, VScale);
   RUN_VPLAN_PASS(VPlanTransforms::addMinimumVectorEpilogueIterationCheck, Plan,
-                 EPI.VectorTripCount, Plan.requiresScalarEpilogue(),
-                 EPI.EpilogueVF, MainLoopStep, EpilogueLoopStep, SE);
+                 Plan.getOrAddLiveIn(Markers.VectorTC->getUnderlyingValue()),
+                 Plan.requiresScalarEpilogue(), EPI.EpilogueVF, MainLoopStep,
+                 EpilogueLoopStep, SE);
 }
 
 static void
@@ -8104,7 +8097,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // factor) again shortly afterwards.
     BestEpiPlan.getMiddleBlock()->setName("vec.epilog.middle.block");
     BestEpiPlan.getVectorPreheader()->setName("vec.epilog.ph");
-    SmallVector<VPInstruction *> ResumeValues =
+    MainPlanResumeMarkers Markers =
         preparePlanForMainVectorLoop(BestMainPlan, BestEpiPlan);
     EpilogueLoopVectorizationInfo EPI(VF.Width, IC, EpilogueVF);
 
@@ -8147,7 +8140,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                              Checks, BestEpiPlan, BestMainPlan);
     preparePlanForEpilogueVectorLoop(BestMainPlan, BestEpiPlan, L,
                                      ExpandedSCEVs, EPI, LVP, Config,
-                                     *PSE.getSE(), ResumeValues);
+                                     *PSE.getSE(), Markers);
     RUN_VPLAN_PASS(VPlanTransforms::simplifyLiveInsWithSCEV, BestEpiPlan, PSE);
     LLVM_DEBUG({
       dbgs() << "Create Skeleton for epilogue vectorized loop (second pass)\n"
@@ -8162,7 +8155,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     });
     connectEpilogueVectorLoop(BestEpiPlan, DT,
                               EpilogILV.VecEpilogueIterationCountCheck,
-                              ResumeValues);
+                              Markers.ResumeValues);
     ++LoopsEpilogueVectorized;
   } else {
     InnerLoopVectorizer LB(L, PSE, LI, DT, TTI, AC, VF.Width, IC, Checks,
