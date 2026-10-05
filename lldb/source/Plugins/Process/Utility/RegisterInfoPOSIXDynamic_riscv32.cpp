@@ -151,7 +151,6 @@ void RegisterInfoPOSIXDynamic_riscv32::ConfigureCSRegInfos(
   static const llvm::StringMap<llvm::ArrayRef<lldb_private::RegisterInfo>>
       g_register_infos_riscv32_csr_patches = {
           {"default", llvm::ArrayRef(g_register_infos_riscv32_csr_patch)},
-          {"xqci", llvm::ArrayRef(g_register_infos_riscv32_csr_xqci_patch)},
           {"xqciint",
            llvm::ArrayRef(g_register_infos_riscv32_csr_xqciint_patch)}};
 
