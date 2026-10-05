@@ -1806,7 +1806,7 @@ bool DIExpression::isLitOp(uint64_t Op) {
 bool DIExpression::isValid() const {
   for (auto I = expr_op_begin(), E = expr_op_end(); I != E; ++I) {
     // Check that there's space for the operand.
-    if (I->get() + I->getSize() > E->get())
+    if (I->getSize() > static_cast<uint64_t>(E->get() - I->get()))
       return false;
 
     uint64_t Op = I->getOp();
