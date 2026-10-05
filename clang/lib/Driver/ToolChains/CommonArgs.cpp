@@ -1472,15 +1472,38 @@ void tools::addOpenMPRuntimeLibraryPath(const ToolChain &TC,
   CmdArgs.push_back(Args.MakeArgString("-L" + DefaultLibPath));
 }
 
-void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
-                                 ArgStringList &CmdArgs) {
+/// Whether -frtlib-add-rpath (or its absence) and the target's linker allow
+/// an -rpath entry to be added at all
+static bool wantsRTLibRPath(const ToolChain &TC, const ArgList &Args) {
   if (!Args.hasFlag(options::OPT_frtlib_add_rpath,
                     options::OPT_fno_rtlib_add_rpath, false))
-    return;
+    return false;
 
   // Using -rpath is a host ELF/Mach-O linker option.
   const llvm::Triple &Triple = TC.getTriple();
-  if ((!Triple.isOSBinFormatELF() && !Triple.isOSBinFormatMachO()))
+  return Triple.isOSBinFormatELF() || Triple.isOSBinFormatMachO();
+}
+
+static bool hasRPathEntry(const ArgStringList &CmdArgs, StringRef Path) {
+  for (size_t I = 1, E = CmdArgs.size(); I != E; ++I)
+    if (StringRef(CmdArgs[I - 1]) == "-rpath" && StringRef(CmdArgs[I]) == Path)
+      return true;
+  return false;
+}
+
+/// Add Path to -rpath, unless it's empty, doesn't exist, or is already
+/// present in CmdArgs
+static void addRPathIfNew(const ToolChain &TC, const ArgList &Args,
+                          ArgStringList &CmdArgs, StringRef Path) {
+  if (Path.empty() || !TC.getVFS().exists(Path) || hasRPathEntry(CmdArgs, Path))
+    return;
+  CmdArgs.push_back("-rpath");
+  CmdArgs.push_back(Args.MakeArgString(Path));
+}
+
+void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
+                                 ArgStringList &CmdArgs) {
+  if (!wantsRTLibRPath(TC, Args))
     return;
 
   SmallVector<std::string> CandidateRPaths(TC.getArchSpecificLibPaths());
@@ -1494,12 +1517,8 @@ void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
     }
     CandidateRPaths.emplace_back(*StdlibPath);
   }
-  for (const auto &CandidateRPath : CandidateRPaths) {
-    if (TC.getVFS().exists(CandidateRPath)) {
-      CmdArgs.push_back("-rpath");
-      CmdArgs.push_back(Args.MakeArgString(CandidateRPath));
-    }
-  }
+  for (const auto &CandidateRPath : CandidateRPaths)
+    addRPathIfNew(TC, Args, CmdArgs, CandidateRPath);
 }
 
 bool tools::addLLVMOffloadingRuntime(const Compilation &C,
@@ -1583,13 +1602,6 @@ void tools::addOpenMPHostOffloadingArgs(const Compilation &C,
       Args.MakeArgString(Twine(Targets) + llvm::join(Triples, ",")));
 }
 
-static bool hasRPathEntry(const ArgStringList &CmdArgs, StringRef Path) {
-  for (size_t I = 1, E = CmdArgs.size(); I != E; ++I)
-    if (StringRef(CmdArgs[I - 1]) == "-rpath" && StringRef(CmdArgs[I]) == Path)
-      return true;
-  return false;
-}
-
 /// Add an RPATH entry for the directory holding the selected shared sanitizer
 /// runtime.
 ///
@@ -1599,20 +1611,11 @@ static bool hasRPathEntry(const ArgStringList &CmdArgs, StringRef Path) {
 static void addSanitizerRuntimeRPath(const ToolChain &TC, const ArgList &Args,
                                      ArgStringList &CmdArgs,
                                      StringRef Sanitizer) {
-  if (!Args.hasFlag(options::OPT_frtlib_add_rpath,
-                    options::OPT_fno_rtlib_add_rpath, false))
-    return;
-
-  if (TC.getTriple().isOSAIX()) // TODO: AIX doesn't support -rpath option.
+  if (!wantsRTLibRPath(TC, Args))
     return;
 
   std::string RT = TC.getCompilerRT(Args, Sanitizer, ToolChain::FT_Shared);
-  StringRef Dir = llvm::sys::path::parent_path(RT);
-  if (Dir.empty() || !TC.getVFS().exists(Dir) || hasRPathEntry(CmdArgs, Dir))
-    return;
-
-  CmdArgs.push_back("-rpath");
-  CmdArgs.push_back(Args.MakeArgString(Dir));
+  addRPathIfNew(TC, Args, CmdArgs, llvm::sys::path::parent_path(RT));
 }
 
 static void addSanitizerRuntime(const ToolChain &TC, const ArgList &Args,
