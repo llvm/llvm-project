@@ -193,3 +193,64 @@ TEST(YAMLRemarks, SerializerRemarkStringRefOOBRead) {
                   "    DebugLoc:        { File: argpath, Line: 6, Column: 7 }\n"
                   "...\n");
 }
+
+TEST(YAMLRemarks, SerializerRemarkMultiLineArg) {
+  remarks::Remark R;
+  R.RemarkType = remarks::Type::Missed;
+  R.PassName = "pass";
+  R.RemarkName = "name";
+  R.FunctionName = "func";
+  R.Args.emplace_back();
+  R.Args.back().Key = "block";
+  R.Args.back().Val = "abc\ndef\nghi";
+  // A literal block scalar cannot hold control characters, so this has to be
+  // escaped in a double-quoted scalar instead.
+  R.Args.emplace_back();
+  R.Args.back().Key = "control";
+  R.Args.back().Val = "abc\ndef\n\x01ghi";
+  checkStandalone(remarks::Format::YAML, R,
+                  "--- !Missed\n"
+                  "Pass:            pass\n"
+                  "Name:            name\n"
+                  "Function:        func\n"
+                  "Args:\n"
+                  "  - block:            |\n"
+                  "      abc\n"
+                  "      def\n"
+                  "      ghi\n"
+                  "  - control:         \"abc\\ndef\\n\\x01ghi\"\n"
+                  "...\n");
+}
+
+TEST(YAMLRemarks, SerializerRemarkRoundTrip) {
+  // Values that the literal block form cannot hold must survive a round trip.
+  StringRef Vals[] = {"abc\ndef\n\x01ghi", "abc\r\ndef\r\nghi",
+                      StringRef("abc\ndef\n\0ghi", 12), "  abc\ndef\nghi",
+                      "abc\ndef\nghi\n"};
+  remarks::Remark R;
+  R.RemarkType = remarks::Type::Missed;
+  R.PassName = "pass";
+  R.RemarkName = "name";
+  R.FunctionName = "func";
+  for (StringRef Val : Vals) {
+    R.Args.emplace_back();
+    R.Args.back().Key = "key";
+    R.Args.back().Val = Val;
+  }
+
+  std::string Buf;
+  raw_string_ostream OS(Buf);
+  Expected<std::unique_ptr<remarks::RemarkSerializer>> MaybeS =
+      createRemarkSerializer(remarks::Format::YAML, OS);
+  ASSERT_FALSE(errorToBool(MaybeS.takeError()));
+  (*MaybeS)->emit(R);
+  (*MaybeS)->finalize();
+
+  Expected<std::unique_ptr<remarks::RemarkParser>> MaybeParser =
+      remarks::createRemarkParser(remarks::Format::YAML, Buf);
+  ASSERT_FALSE(errorToBool(MaybeParser.takeError()));
+  Expected<std::unique_ptr<remarks::Remark>> MaybeRemark =
+      (*MaybeParser)->next();
+  ASSERT_FALSE(errorToBool(MaybeRemark.takeError()));
+  EXPECT_EQ(**MaybeRemark, R);
+}

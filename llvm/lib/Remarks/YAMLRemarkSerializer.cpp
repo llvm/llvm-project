@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Remarks/YAMLRemarkSerializer.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Support/FileSystem.h"
 #include <optional>
@@ -109,6 +111,18 @@ template <typename T> struct SequenceTraits<ArrayRef<T>> {
   }
 };
 
+/// A literal block scalar has no escapes, so it cannot hold control characters
+/// other than tab and line feed. UTF-8 is written as-is. Readers take the
+/// indentation from the first non-empty line, so that line cannot start with a
+/// space.
+static bool canUseBlockScalar(StringRef S) {
+  if (S.ltrim('\n').starts_with(' '))
+    return false;
+  return all_of(S, [](unsigned char C) {
+    return isPrint(C) || C == '\t' || C == '\n' || C >= 0x80;
+  });
+}
+
 /// Implement this as a mapping for now to get proper quotation for the value.
 template <> struct MappingTraits<Argument> {
   static void mapping(IO &io, Argument &A) {
@@ -116,7 +130,7 @@ template <> struct MappingTraits<Argument> {
 
     // NB: A.Key.data() is not necessarily null-terminated, as the StringRef may
     // be a span into the middle of a string.
-    if (StringRef(A.Val).count('\n') > 1) {
+    if (StringRef(A.Val).count('\n') > 1 && canUseBlockScalar(A.Val)) {
       StringBlockVal S(A.Val);
       io.mapRequired(A.Key, S);
     } else {
