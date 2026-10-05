@@ -14,13 +14,22 @@
 
 #include "InterpreterTestFixture.h"
 
+#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/Interpreter.h"
 
+#include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Linker/Linker.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Testing/Support/Error.h"
 
@@ -99,6 +108,59 @@ TEST_F(DeviceOffloadTest, EmptyDeviceModule) {
       Fatbin, /*FileSize=*/-1, /*RequiresNullTerminator=*/false);
   ASSERT_TRUE(static_cast<bool>(Buf)) << Buf.getError().message();
   EXPECT_TRUE((*Buf)->getBuffer().contains(".target"));
+}
+
+TEST_F(DeviceOffloadTest, BuiltinBitcodeLinkedIntoEveryModule) {
+  // A bitcode library with one function stands in for libdevice.
+  llvm::SmallString<128> LibPath;
+  int LibFD;
+  ASSERT_FALSE(llvm::sys::fs::createTemporaryFile("lib", "bc", LibFD, LibPath));
+  llvm::FileRemover LibRemover(LibPath);
+  {
+    llvm::LLVMContext Ctx;
+    llvm::Module Lib("lib", Ctx);
+    Lib.setTargetTriple(llvm::Triple("nvptx64-nvidia-cuda"));
+    Lib.setDataLayout(Lib.getTargetTriple().computeDataLayout());
+    llvm::Type *FloatTy = llvm::Type::getFloatTy(Ctx);
+    llvm::Function *Twice = llvm::Function::Create(
+        llvm::FunctionType::get(FloatTy, {FloatTy}, /*isVarArg=*/false),
+        llvm::GlobalValue::ExternalLinkage, "twice", Lib);
+    llvm::IRBuilder<> Builder(llvm::BasicBlock::Create(Ctx, "", Twice));
+    Builder.CreateRet(Builder.CreateFAdd(Twice->getArg(0), Twice->getArg(0)));
+    llvm::raw_fd_ostream OS(LibFD, /*shouldClose=*/true);
+    llvm::WriteBitcodeToFile(Lib, OS);
+  }
+
+  IncrementalCompilerBuilder CB;
+  CB.SetCompilerArgs({"-nocudainc", "-nocudalib"});
+  auto DeviceCI = CB.CreateCudaDevice();
+  ASSERT_THAT_EXPECTED(DeviceCI, llvm::Succeeded());
+  // The entry the driver adds for libdevice with -mlink-builtin-bitcode.
+  (*DeviceCI)->getCodeGenOpts().LinkBitcodeFiles.push_back(
+      {std::string(LibPath), /*PropagateAttrs=*/true, /*Internalize=*/true,
+       llvm::Linker::Flags::LinkOnlyNeeded});
+  auto HostCI = CB.CreateCudaHost();
+  ASSERT_THAT_EXPECTED(HostCI, llvm::Succeeded());
+  auto Interp =
+      Interpreter::createWithCUDA(std::move(*HostCI), std::move(*DeviceCI));
+  ASSERT_THAT_EXPECTED(Interp, llvm::Succeeded());
+
+  // Every device module that calls twice() must define it.
+  for (const char *Code :
+       {"extern \"C\" __attribute__((device)) float twice(float);"
+        "__attribute__((device)) float f(float x) { return twice(x); }",
+        "__attribute__((device)) float g(float x) { return twice(x); }"}) {
+    auto PTU = (*Interp)->Parse(Code);
+    ASSERT_THAT_EXPECTED(PTU, llvm::Succeeded());
+    const CompilerInstance *CI = (*Interp)->getCompilerInstance();
+    auto Buf = CI->getVirtualFileSystem().getBufferForFile(
+        CI->getCodeGenOpts().OffloadBinaryToEmbedFile, /*FileSize=*/-1,
+        /*RequiresNullTerminator=*/false);
+    ASSERT_TRUE(static_cast<bool>(Buf)) << Buf.getError().message();
+    llvm::StringRef PTX = (*Buf)->getBuffer();
+    EXPECT_FALSE(PTX.contains(".extern")) << PTX;
+    EXPECT_TRUE(PTX.contains("twice")) << PTX;
+  }
 }
 
 } // end anonymous namespace
