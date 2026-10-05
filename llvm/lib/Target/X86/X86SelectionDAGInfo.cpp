@@ -76,7 +76,6 @@ void X86SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
     // invalid number of operands; expected 3, got 4
   case X86ISD::CVTTP2SI_SAE:
   case X86ISD::CVTTP2UI_SAE:
-  case X86ISD::CVTTP2IBS_SAE:
     // invalid number of operands; expected 1, got 2
   case X86ISD::CMPMM_SAE:
     // invalid number of operands; expected 4, got 5
