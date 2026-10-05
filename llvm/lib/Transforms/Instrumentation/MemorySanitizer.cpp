@@ -4630,6 +4630,37 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, Origin);
   }
 
+  // e.g., <4 x i32> @llvm.masked.udiv.v4i32(<4 x i32> %dividend,
+  //                                         <4 x i32> %divisor,
+  //                                         <4 x i1>  %mask)
+  //
+  // As handleIntegerDiv(), but per-lane: strict on the divisor and propagating
+  // the dividend, both only on the enabled lanes. Disabled lanes cannot cause
+  // undefined behaviour, and their result is poison.
+  void handleMaskedIntegerDivRem(IntrinsicInst &I) {
+    assert(I.arg_size() == 3);
+    IRBuilder<> IRB(&I);
+    Value *Dividend = I.getArgOperand(0);
+    Value *Divisor = I.getArgOperand(1);
+    Value *Mask = I.getArgOperand(2);
+
+    insertCheckShadowOf(Mask, &I);
+
+    Value *MaskedDivisorShadow = IRB.CreateSelect(
+        Mask, getShadow(Divisor), getCleanShadow(Divisor), "_msmaskeddivisor");
+    insertCheckShadow(MaskedDivisorShadow, getOrigin(Divisor), &I);
+
+    if (!PropagateShadow) {
+      setShadow(&I, getCleanShadow(&I));
+      setOrigin(&I, getCleanOrigin());
+      return;
+    }
+
+    setShadow(&I, IRB.CreateSelect(Mask, getShadow(Dividend),
+                                   getPoisonedShadow(&I), "_msmaskeddiv"));
+    setOrigin(&I, getOrigin(Dividend));
+  }
+
   // e.g., void @llvm.x86.avx.maskstore.ps.256(ptr, <8 x i32>, <8 x float>)
   //                                           dst  mask       src
   //
@@ -5935,6 +5966,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     case Intrinsic::masked_load:
       handleMaskedLoad(I);
+      break;
+    case Intrinsic::masked_udiv:
+    case Intrinsic::masked_sdiv:
+    case Intrinsic::masked_urem:
+    case Intrinsic::masked_srem:
+      handleMaskedIntegerDivRem(I);
       break;
     case Intrinsic::vector_reduce_and:
       handleVectorReduceAndIntrinsic(I);
@@ -7458,6 +7495,34 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //               (<4 x float> %acc, <8 x bfloat> %a, <8 x bfloat> %b)
     case Intrinsic::aarch64_neon_bfdot:
       handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
+                                      /*ZeroPurifies=*/false,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
+      break;
+
+    // <4 x half > @llvm.aarch64.neon.fp8.fdot2
+    //               (<4 x half >, < 8 x i8>, < 8 x i8>)
+    // <8 x half > @llvm.aarch64.neon.fp8.fdot2
+    //               (<8 x half >, <16 x i8>, <16 x i8>)
+    //
+    // N.B. although the multiplicands are i8, they are actually fp8, thus
+    //      ZeroPurifies is not applicable.
+    case Intrinsic::aarch64_neon_fp8_fdot2:
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
+                                      /*ZeroPurifies=*/false,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
+      break;
+
+    // <2 x float> @llvm.aarch64.neon.fp8.fdot4
+    //               (<2 x float>, < 8 x i8>, < 8 x i8>)
+    // <4 x float> @llvm.aarch64.neon.fp8.fdot4
+    //               (<4 x float>, <16 x i8>, <16 x i8>)
+    //
+    // N.B. although the multiplicands are i8, they are actually fp8, thus
+    //      ZeroPurifies is not applicable.
+    case Intrinsic::aarch64_neon_fp8_fdot4:
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/4,
                                       /*ZeroPurifies=*/false,
                                       /*EltSizeInBits=*/0,
                                       /*Lanes=*/kBothLanes);

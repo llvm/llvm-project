@@ -358,11 +358,11 @@ public:
   /// Return the cost of the block.
   virtual InstructionCost cost(ElementCount VF, VPCostContext &Ctx) = 0;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printAsOperand(raw_ostream &OS, bool PrintType = false) const {
     OS << getName();
   }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print plain-text dump of this VPBlockBase to \p O, prefixing all lines
   /// with \p Indent. \p SlotTracker is used to print unnamed VPValue's using
   /// consequtive numbers.
@@ -1210,8 +1210,9 @@ public:
   VPIRMetadata(Instruction &I) {
     getMetadataToPropagate(&I, Metadata);
     // Retain the branch weights of terminators. They are used to compute the
-    // frequencies with which the blocks of the original loop execute.
-    if (I.isTerminator())
+    // frequencies with which the blocks of the original loop execute. Also
+    // retain !prof on selects.
+    if (I.isTerminator() || isa<SelectInst>(&I))
       if (MDNode *BW = I.getMetadata(LLVMContext::MD_prof))
         Metadata.emplace_back(LLVMContext::MD_prof, BW);
   }
@@ -1235,6 +1236,11 @@ public:
       It->second = Node;
     else
       Metadata.emplace_back(Kind, Node);
+  }
+
+  /// Remove the metadata of kind \p Kind, if present.
+  void eraseMetadata(unsigned Kind) {
+    erase_if(Metadata, [Kind](const auto &P) { return P.first == Kind; });
   }
 
   /// Intersect this VPIRMetadata object with \p MD, keeping only metadata
@@ -1392,8 +1398,8 @@ public:
     /// The lane specifies an index into a vector formed by combining all vector
     /// operands (all operands after the first one).
     ExtractLane,
-    /// Explicit user for the resume phi of the canonical induction in the main
-    /// VPlan, used by the epilogue vector loop.
+    /// Explicit user for values in the main VPlan, used by the epilogue vector
+    /// loop.
     ResumeForEpilogue,
     /// Extracts the last active lane from a set of vectors. The first operand
     /// is the default value if no lanes in the masks are active. Conceptually,
@@ -1434,12 +1440,12 @@ private:
 
   /// Returns true if we can generate a scalar for the first lane only if
   /// needed.
-  bool canGenerateScalarForFirstLane() const;
+  bool doesGenerateSingleScalar() const;
 
-  /// Utility methods serving execute(): generates a single vector instance of
-  /// the modeled instruction. \returns the generated value. . In some cases an
-  /// existing value is returned rather than a generated one.
-  Value *generate(VPTransformState &State);
+  /// Utility method serving execute: Generates either a single-scalar or vector
+  /// value. \p GenerateSingleScalar determines whether to generate a
+  /// single-scalar value.
+  Value *generate(VPTransformState &State, bool GenerateSingleScalar);
 
   /// Returns true if the VPInstruction does not need masking.
   bool alwaysUnmasked() const {
@@ -1615,7 +1621,8 @@ public:
   const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
 
   /// Returns the incoming value for \p VPBB. \p VPBB must be an incoming block.
-  VPValue *getIncomingValueForBlock(const VPBasicBlock *VPBB) const;
+  LLVM_ABI_FOR_TEST VPValue *
+  getIncomingValueForBlock(const VPBasicBlock *VPBB) const;
 
   /// Sets the incoming value for \p VPBB to \p V. \p VPBB must be an incoming
   /// block.
@@ -5032,6 +5039,10 @@ public:
 
   const DataLayout &getDataLayout() const {
     return getScalarHeader()->getIRBasicBlock()->getDataLayout();
+  }
+
+  Function *getIRFunction() const {
+    return getScalarHeader()->getIRBasicBlock()->getParent();
   }
 
   void addVF(ElementCount VF) { VFs.insert(VF); }

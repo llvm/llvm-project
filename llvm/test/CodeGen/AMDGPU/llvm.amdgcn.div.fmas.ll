@@ -255,11 +255,10 @@ define amdgpu_kernel void @test_div_fmas_f32_i1_phi_vcc(ptr addrspace(1) %out, p
 ; GCN-NEXT:    buffer_load_dword v0, off, s[4:7], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GCN-NEXT:    s_and_b64 vcc, vcc, exec
 ; GCN-NEXT:  .LBB9_2: ; %exit
 ; GCN-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    s_nop 0
+; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    v_div_fmas_f32 v0, v1, v2, v3
 ; GCN-NEXT:    s_mov_b32 s10, -1
 ; GCN-NEXT:    s_mov_b32 s11, s3
