@@ -562,8 +562,6 @@ static Constant *getKnownConstant(Value *Val, ConstantPreference Preference) {
 ///   BB: L = phi [A, PredBB], ...   ; L -> A on the PredBB edge
 ///       R = phi [B, PredBB], ...   ; R -> B on the PredBB edge
 ///       br (icmp <pred> L, R)      ; == C, false => thread past it
-///
-/// Threading the edge duplicates BB, so give up if BB contains a call.
 static std::optional<bool> isImpliedByEdgeBranch(BasicBlock *PredBB,
                                                  BasicBlock *BB,
                                                  CmpInst::Predicate Pred,
@@ -575,11 +573,32 @@ static std::optional<bool> isImpliedByEdgeBranch(BasicBlock *PredBB,
   };
   if (DefinedInBB(LHS) || DefinedInBB(RHS))
     return std::nullopt;
+  return isImpliedByEdgeCondition(PredBB, BB, Pred, LHS, RHS, DL);
+}
+
+/// Returns false if threading the edge PredBB->BB on an edge-implied compare is
+/// not profitable.
+static bool shouldThreadImpliedEdge(BasicBlock *PredBB, BasicBlock *BB) {
+  // Threading the edge duplicates BB; do not duplicate calls.
   if (any_of(*BB, [](const Instruction &I) {
         return isa<CallBase>(I) && !isAssumeLikeIntrinsic(&I);
       }))
-    return std::nullopt;
-  return isImpliedByEdgeCondition(PredBB, BB, Pred, LHS, RHS, DL);
+    return false;
+  // Don't prevent if-conversion by threading:
+  //
+  //   PP:     br %c1, PredBB, BB     ; PP and PredBB both reach BB, so
+  //   PredBB: br %c2, BB, Other      ; SimplifyCFG merges them into one
+  //                                  ; branch on a combined %c1/%c2.
+  //
+  // Threading PredBB->BB retargets PredBB past BB, so PP and PredBB no longer
+  // share a successor and the two branches are not merged.
+  if (BasicBlock *PP = PredBB->getSinglePredecessor())
+    if (auto *PPBr = dyn_cast<CondBrInst>(PP->getTerminator()))
+      if (any_of(PPBr->successors(), [&](BasicBlock *S) {
+            return S == BB || S->getSingleSuccessor() == BB;
+          }))
+        return false;
+  return true;
 }
 
 /// computeValueKnownInPredecessors - Given a basic block BB and a value V, see
@@ -803,7 +822,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
 
         // If it doesn't fold, the compare may still be known on this edge when
         // PredBB's branch condition implies it (see isImpliedByEdgeBranch).
-        if (!Res && isa<ICmpInst>(Cmp))
+        if (!Res && isa<ICmpInst>(Cmp) && shouldThreadImpliedEdge(PredBB, BB))
           if (std::optional<bool> Implied =
                   isImpliedByEdgeBranch(PredBB, BB, Pred, LHS, RHS, DL))
             Res = ConstantInt::getBool(CmpType, *Implied);

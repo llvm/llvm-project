@@ -48,8 +48,6 @@ if.ne:
   ret i32 0
 }
 
-; Negative: %c compares %a/%b, but the join re-tests %a2/%b2 -- different
-; operands, so %c does not imply it; %entry is not threaded.
 define i32 @no_thread_operands_differ(i64 %a, i64 %b, i64 %a2, i64 %b2) {
 ; CHECK-LABEL: define i32 @no_thread_operands_differ(
 ; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]], i64 [[A2:%.*]], i64 [[B2:%.*]]) {
@@ -92,8 +90,6 @@ if.ne:
   ret i32 0
 }
 
-; Negative: same operands, but %c is unsigned (ult) while the join re-tests
-; signed (slt) -- ult does not imply slt; %entry is not threaded.
 define i32 @no_thread_predicate_differs(i64 %a, i64 %b) {
 ; CHECK-LABEL: define i32 @no_thread_predicate_differs(
 ; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
@@ -138,8 +134,6 @@ if.ne:
 
 declare void @use(i64)
 
-; Negative: as @thread_cmp_of_phis, but %join contains a call. Threading the
-; %entry edge would duplicate the call, so the branch is kept.
 define i32 @no_thread_call_in_block(i64 %a, i64 %b) {
 ; CHECK-LABEL: define i32 @no_thread_call_in_block(
 ; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
@@ -182,4 +176,123 @@ if.eq:
 
 if.ne:
   ret i32 0
+}
+
+declare void @use.i32(i32)
+
+define void @no_thread_pred_shares_succ(ptr %p, i32 %n, i1 %c) {
+; CHECK-LABEL: define void @no_thread_pred_shares_succ(
+; CHECK-SAME: ptr [[P:%.*]], i32 [[N:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 [[C]], label %[[LAND:.*]], label %[[ENTRY_CRIT:.*]]
+; CHECK:       [[ENTRY_CRIT]]:
+; CHECK-NEXT:    [[X_PRE:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    br label %[[ELSE:.*]]
+; CHECK:       [[LAND]]:
+; CHECK-NEXT:    [[X0:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[GT0:%.*]] = icmp sgt i32 [[N]], [[X0]]
+; CHECK-NEXT:    br i1 [[GT0]], label %[[ELSE]], label %[[THEN:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    call void @use.i32(i32 0)
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[X_PRE]], %[[ENTRY_CRIT]] ], [ [[X0]], %[[LAND]] ]
+; CHECK-NEXT:    [[GT:%.*]] = icmp sgt i32 [[N]], [[X]]
+; CHECK-NEXT:    br i1 [[GT]], label %[[ELSE_THEN:.*]], label %[[EXIT]]
+; CHECK:       [[ELSE_THEN]]:
+; CHECK-NEXT:    [[V:%.*]] = xor i32 [[X]], 1
+; CHECK-NEXT:    call void @use.i32(i32 [[V]])
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %land, label %entry.crit
+
+entry.crit:
+  %x.pre = load i32, ptr %p, align 4
+  br label %else
+
+land:
+  %x0 = load i32, ptr %p, align 4
+  %gt0 = icmp sgt i32 %n, %x0
+  br i1 %gt0, label %else, label %then
+
+then:
+  call void @use.i32(i32 0)
+  br label %exit
+
+else:
+  %x = phi i32 [ %x.pre, %entry.crit ], [ %x0, %land ]
+  %gt = icmp sgt i32 %n, %x
+  br i1 %gt, label %else.then, label %exit
+
+else.then:
+  %v = xor i32 %x, 1
+  call void @use.i32(i32 %v)
+  br label %exit
+
+exit:
+  ret void
+}
+
+declare i32 @get()
+declare void @use.void()
+
+define void @no_thread_loop_exits_share_succ(i32 %n) {
+; CHECK-LABEL: define void @no_thread_loop_exits_share_succ(
+; CHECK-SAME: i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[N]], 0
+; CHECK-NEXT:    br i1 [[CMP1]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]
+; CHECK:       [[FOR_BODY_PREHEADER]]:
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_COND:.*]]:
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[N]], 1
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[FOR_END]], label %[[FOR_BODY]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[V:%.*]] = tail call i32 @get()
+; CHECK-NEXT:    [[BRK:%.*]] = icmp sgt i32 [[V]], 0
+; CHECK-NEXT:    br i1 [[BRK]], label %[[FOR_END]], label %[[FOR_COND]]
+; CHECK:       [[FOR_END]]:
+; CHECK-NEXT:    [[C:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ 1, %[[FOR_COND]] ], [ 0, %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[GT:%.*]] = icmp sgt i32 [[C]], [[N]]
+; CHECK-NEXT:    br i1 [[GT]], label %[[EXIT:.*]], label %[[IF_END:.*]]
+; CHECK:       [[IF_END]]:
+; CHECK-NEXT:    call void @use.void()
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp1 = icmp sgt i32 %n, 0
+  br i1 %cmp1, label %for.body.preheader, label %for.end
+
+for.body.preheader:
+  br label %for.body
+
+for.cond:
+  %cmp.not = icmp eq i32 %n, 1
+  br i1 %cmp.not, label %for.end.loopexit, label %for.body
+
+for.body:
+  %v = tail call i32 @get()
+  %brk = icmp sgt i32 %v, 0
+  br i1 %brk, label %for.end.loopexit, label %for.cond
+
+for.end.loopexit:
+  %c.ph = phi i32 [ 1, %for.cond ], [ 0, %for.body ]
+  br label %for.end
+
+for.end:
+  %c = phi i32 [ 0, %entry ], [ %c.ph, %for.end.loopexit ]
+  %gt = icmp sgt i32 %c, %n
+  br i1 %gt, label %exit, label %if.end
+
+if.end:
+  call void @use.void()
+  br label %exit
+
+exit:
+  ret void
 }
