@@ -11,7 +11,7 @@
 
 ; CHECK: .extern .global .align 4 .u32 decl_g;
 @decl_g = external addrspace(1) global i32, align 4
-; CHECK: .extern .global .attribute(.managed) .align 8 .b64 managed_decl_g;
+; CHECK: .extern .global .attribute(.managed) .align 8 .u64 managed_decl_g;
 @managed_decl_g = external addrspace(1) global ptr, align 8
 
 ; A cyclic managed definition needs an exactly matching managed declaration.

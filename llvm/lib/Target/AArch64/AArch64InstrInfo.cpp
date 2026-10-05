@@ -8052,7 +8052,7 @@ unsigned AArch64InstrInfo::getAccumulationStartOpcode(
   case AArch64::SABAv16i8:
     return AArch64::SABDv16i8;
   case AArch64::SABAv2i32:
-    return AArch64::SABAv2i32;
+    return AArch64::SABDv2i32;
   case AArch64::SABAv4i16:
     return AArch64::SABDv4i16;
   case AArch64::SABAv4i32:
@@ -10412,7 +10412,7 @@ enum MachineOutlinerMBBFlags {
 /// gets the small FRAME encoding, and costs one extra instruction.
 static bool isCompactUnwindFrameRecordEnabled(const MachineFunction &MF) {
   return UseCompactUnwindFrameRecordForOutlinedFunctions &&
-         MF.getTarget().getTargetTriple().isOSBinFormatMachO();
+         MF.getFunction().getParent()->getTargetTriple().isOSBinFormatMachO();
 }
 
 /// Return true if the outlined function in \p MBB should save FP and LR as a

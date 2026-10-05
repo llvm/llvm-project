@@ -507,6 +507,9 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
   if (llvm::Error E = ExecuteIncrementalAction(*DCI, *Interp->DeviceAct))
     return std::move(E);
 
+  // Set the finalized initial device module aside, as the host path does.
+  Interp->DeviceAct->CacheCodeGenModule();
+
   Interp->DeviceCI = std::move(DCI);
 
   auto DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
