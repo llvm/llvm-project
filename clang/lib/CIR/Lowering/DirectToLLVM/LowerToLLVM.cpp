@@ -321,9 +321,10 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::LogicalResult CIRToLLVMMemCpyOpLowering::matchAndRewrite(
-    cir::MemCpyOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
+template <typename CIROp, typename LLVMOp>
+static mlir::LogicalResult
+lowerMemTransferOp(CIROp op, typename CIROp::Adaptor adaptor,
+                   mlir::ConversionPatternRewriter &rewriter) {
   mlir::ArrayAttr argAttrs;
   if (op.getDstAlignment() || op.getSrcAlignment()) {
     mlir::NamedAttribute dstAlignAttr = rewriter.getNamedAttr(
@@ -337,7 +338,7 @@ mlir::LogicalResult CIRToLLVMMemCpyOpLowering::matchAndRewrite(
         /*src_attrs=*/rewriter.getDictionaryAttr({srcAlignAttr}),
     });
   }
-  rewriter.replaceOpWithNewOp<mlir::LLVM::MemcpyOp>(
+  rewriter.replaceOpWithNewOp<LLVMOp>(
       op, adaptor.getDst(), adaptor.getSrc(), adaptor.getLen(),
       /*isVolatile=*/false,
       /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
@@ -346,28 +347,18 @@ mlir::LogicalResult CIRToLLVMMemCpyOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMMemCpyOpLowering::matchAndRewrite(
+    cir::MemCpyOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return lowerMemTransferOp<cir::MemCpyOp, mlir::LLVM::MemcpyOp>(op, adaptor,
+                                                                 rewriter);
+}
+
 mlir::LogicalResult CIRToLLVMMemMoveOpLowering::matchAndRewrite(
     cir::MemMoveOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::ArrayAttr argAttrs;
-  if (op.getDstAlignment() || op.getSrcAlignment()) {
-    mlir::NamedAttribute dstAlignAttr = rewriter.getNamedAttr(
-        mlir::LLVM::LLVMDialect::getAlignAttrName(),
-        rewriter.getI64IntegerAttr(op.getDstAlignment().value_or(1)));
-    mlir::NamedAttribute srcAlignAttr = rewriter.getNamedAttr(
-        mlir::LLVM::LLVMDialect::getAlignAttrName(),
-        rewriter.getI64IntegerAttr(op.getSrcAlignment().value_or(1)));
-    argAttrs = rewriter.getArrayAttr({
-        /*dst_attrs=*/rewriter.getDictionaryAttr({dstAlignAttr}),
-        /*src_attrs=*/rewriter.getDictionaryAttr({srcAlignAttr}),
-    });
-  }
-  rewriter.replaceOpWithNewOp<mlir::LLVM::MemmoveOp>(
-      op, adaptor.getDst(), adaptor.getSrc(), adaptor.getLen(),
-      /*isVolatile=*/false, /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
-      /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr, /*arg_attrs=*/argAttrs,
-      /*res_attrs=*/nullptr);
-  return mlir::success();
+  return lowerMemTransferOp<cir::MemMoveOp, mlir::LLVM::MemmoveOp>(op, adaptor,
+                                                                   rewriter);
 }
 
 mlir::LogicalResult CIRToLLVMMemSetOpLowering::matchAndRewrite(
