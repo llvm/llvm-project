@@ -1319,13 +1319,13 @@ let Predicates = [HasSVE_or_SME] in {
   defm LD1RQ_D      : sve_mem_ldqr_ss<0b11, "ld1rqd", Z_d, ZPR64, GPR64NoXZRshifted64>;
 
   multiclass sve_ld1rq_duplane_pat<ValueType vt1, ValueType vt2, SDPatternOperator op, Instruction load_instr_imm, Instruction ptrue, Instruction load_instr_scalar, ComplexPattern AddrCP> {
-    def : Pat<(vt1 (op (vt1 (vector_insert_subvec (vt1 undef), (vt2 (load GPR64sp:$Xn)), (i64 0))), (i64 0))),
+    def : Pat<(vt1 (op (vt1 (insert_subvector (vt1 undef), (vt2 (load GPR64sp:$Xn)), (i64 0))), (i64 0))),
           (load_instr_imm (ptrue 31), GPR64sp:$Xn, 0)>;
     let AddedComplexity = 2 in {
-      def : Pat<(vt1 (op (vt1 (vector_insert_subvec (vt1 undef), (vt2 (load (add GPR64sp:$Xn, simm4s16:$imm))), (i64 0))), (i64 0))),
+      def : Pat<(vt1 (op (vt1 (insert_subvector (vt1 undef), (vt2 (load (add GPR64sp:$Xn, simm4s16:$imm))), (i64 0))), (i64 0))),
             (load_instr_imm (ptrue 31), GPR64sp:$Xn, simm4s16:$imm)>;
     }
-    def : Pat<(vt1 (op (vt1 (vector_insert_subvec (vt1 undef), (vt2 (load (AddrCP GPR64sp:$Xn, GPR64sp:$idx))), (i64 0))), (i64 0))),
+    def : Pat<(vt1 (op (vt1 (insert_subvector (vt1 undef), (vt2 (load (AddrCP GPR64sp:$Xn, GPR64sp:$idx))), (i64 0))), (i64 0))),
           (load_instr_scalar (ptrue 31), GPR64sp:$Xn, $idx)>;
   }
   defm : sve_ld1rq_duplane_pat<nxv16i8, v16i8, AArch64duplane128, LD1RQ_B_IMM, PTRUE_B, LD1RQ_B, am_sve_regreg_lsl0>;
@@ -2269,32 +2269,32 @@ let Predicates = [HasSVE_or_SME] in {
   // Insert subvectors into FP SVE vectors.
   foreach VT = [nxv4f16, nxv4f32, nxv4bf16] in
     foreach idx = [0, 2] in
-      def : Pat<(VT (vector_insert_subvec undef, SVEType<VT>.HalfLength:$src, (i64 idx))),
+      def : Pat<(VT (insert_subvector undef, SVEType<VT>.HalfLength:$src, (i64 idx))),
                 (UZP1_ZZZ_S $src, $src)>;
 
   foreach VT = [nxv8f16, nxv8bf16] in {
     foreach  idx = [0, 4] in
-      def : Pat<(VT (vector_insert_subvec undef, SVEType<VT>.HalfLength:$src, (i64 idx))),
+      def : Pat<(VT (insert_subvector undef, SVEType<VT>.HalfLength:$src, (i64 idx))),
                 (UZP1_ZZZ_H $src, $src)>;
 
     foreach idx = [0, 2, 4, 6] in
-      def : Pat<(VT (vector_insert_subvec undef, SVEType<VT>.QuarterLength:$src, (i64 idx))),
+      def : Pat<(VT (insert_subvector undef, SVEType<VT>.QuarterLength:$src, (i64 idx))),
                 (UZP1_ZZZ_H (UZP1_ZZZ_H $src, $src), (UZP1_ZZZ_H $src, $src))>;
   }
 
   // extract/insert 64-bit fixed length vector from/into a scalable vector
   foreach VT = [v8i8, v4i16, v2i32, v1i64, v4f16, v2f32, v1f64, v4bf16] in {
-    def : Pat<(VT (vector_extract_subvec NEONType<VT>.SVEContainer:$Zs, (i64 0))),
+    def : Pat<(VT (extract_subvector NEONType<VT>.SVEContainer:$Zs, (i64 0))),
               (EXTRACT_SUBREG ZPR:$Zs, dsub)>;
-    def : Pat<(NEONType<VT>.SVEContainer (vector_insert_subvec undef, (VT V64:$src), (i64 0))),
+    def : Pat<(NEONType<VT>.SVEContainer (insert_subvector undef, (VT V64:$src), (i64 0))),
               (INSERT_SUBREG (IMPLICIT_DEF), $src, dsub)>;
   }
 
   // extract/insert 128-bit fixed length vector from/into a scalable vector
   foreach VT = [v16i8, v8i16, v4i32, v2i64, v8f16, v4f32, v2f64, v8bf16] in {
-    def : Pat<(VT (vector_extract_subvec NEONType<VT>.SVEContainer:$Zs, (i64 0))),
+    def : Pat<(VT (extract_subvector NEONType<VT>.SVEContainer:$Zs, (i64 0))),
               (EXTRACT_SUBREG ZPR:$Zs, zsub)>;
-    def : Pat<(NEONType<VT>.SVEContainer (vector_insert_subvec undef, (VT V128:$src), (i64 0))),
+    def : Pat<(NEONType<VT>.SVEContainer (insert_subvector undef, (VT V128:$src), (i64 0))),
               (INSERT_SUBREG (IMPLICIT_DEF), $src, zsub)>;
   }
 
