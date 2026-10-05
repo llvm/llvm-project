@@ -1409,9 +1409,9 @@ struct AAAMDGPUNoAsync : public StateWrapper<BooleanState, AbstractAttribute> {
   /// Create an abstract attribute view for the position \p IRP.
   static AAAMDGPUNoAsync &createForPosition(const IRPosition &IRP,
                                             Attributor &A) {
-    if (IRP.getPositionKind() == IRPosition::IRP_FUNCTION)
-      return *new (A.Allocator) AAAMDGPUNoAsync(IRP, A);
-    llvm_unreachable("AAAMDGPUNoAsync is only valid for function position");
+    assert(IRP.getPositionKind() == IRPosition::IRP_FUNCTION &&
+           "AAAMDGPUNoAsync is only valid for function position");
+    return *new (A.Allocator) AAAMDGPUNoAsync(IRP, A);
   }
 
   void initialize(Attributor &A) override {
