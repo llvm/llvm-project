@@ -3435,6 +3435,15 @@ bool SPIRVInstructionSelector::selectOpIsFinite(Register ResVReg,
   Register TypeID = GR.getSPIRVTypeID(ResType);
   const DebugLoc &DL = I.getDebugLoc();
 
+  if (!STI.isShader()) {
+    BuildMI(BB, I, DL, TII.get(SPIRV::OpIsFinite))
+        .addDef(ResVReg)
+        .addUse(TypeID)
+        .addUse(Src)
+        .constrainAllUses(TII, TRI, RBI);
+    return true;
+  }
+
   Register IsInfReg = MRI->createVirtualRegister(&SPIRV::IDRegClass);
   BuildMI(BB, I, DL, TII.get(SPIRV::OpIsInf))
       .addDef(IsInfReg)
