@@ -103,8 +103,7 @@ static bool needsDwarfCFI(const MachineFunction &MF) {
   return MF.needsFrameMoves();
 }
 
-// For now we use x3, a.k.a gp, as pointer to shadow call stack.
-// User should not use x3 in their asm.
+// Handle the shadow call stack prologue expand
 static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI,
                             const DebugLoc &DL) {
@@ -123,6 +122,7 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
           CSI, [&](CalleeSavedInfo &CSR) { return CSR.getReg() == RAReg; }))
     return;
 
+  // If we have support for hardware shadow stack (zicfiss) then use that
   const RISCVInstrInfo *TII = STI.getInstrInfo();
   if (SSK == RISCVMachineFunctionInfo::ShadowStackKind::Hardware) {
     BuildMI(MBB, MI, DL, TII->get(RISCV::SSPUSH))
@@ -134,22 +134,84 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
   assert(SSK == RISCVMachineFunctionInfo::ShadowStackKind::Software &&
          "Unexpected Shadow Stack Kind");
 
+  // Otherwise defer to the software shadow call stack
+  // The top of shadow stack is stored in the gp (x3) register
+  // User should not use x3 in their asm
   Register SCSPReg = RISCVABI::getSCSPReg();
 
   bool IsRV64 = STI.is64Bit();
   int64_t SlotSize = STI.getXLen() / 8;
-  // Store return address to shadow call stack
-  // addi    gp, gp, [4|8]
-  // s[w|d]  ra, -[4|8](gp)
-  BuildMI(MBB, MI, DL, TII->get(RISCV::ADDI), SCSPReg)
-      .addReg(SCSPReg)
-      .addImm(SlotSize)
-      .setMIFlag(MachineInstr::FrameSetup);
-  BuildMI(MBB, MI, DL, TII->get(IsRV64 ? RISCV::SD : RISCV::SW))
-      .addReg(RAReg)
-      .addReg(SCSPReg)
-      .addImm(-SlotSize)
-      .setMIFlag(MachineInstr::FrameSetup);
+
+  if (/* inline = */ !MF.getFunction().hasOptSize()) {
+    // emit the shadow stack modifications inline in the prologue
+
+    // we'll be splitting the original basic block as follows
+    // [InitialMBB] (new block)
+    //     ld t1, __shadow_stack_top
+    //     addi gp, gp, [4|8]
+    //     bgeu t1, gp, label   (buffer overflow)--->  [AbortMBB] (new block) call abort
+    //        |
+    //        | (no buffer overflow)
+    //        v
+    // [MBB] (original block)
+    //     s[w|d]  ra, -[4|8](gp)
+
+    Register T1 = RISCV::X6; // t1
+    MachineBasicBlock *InitialMBB = MF.CreateMachineBasicBlock(MBB.getBasicBlock());
+    MachineBasicBlock *AbortMBB = MF.CreateMachineBasicBlock(MBB.getBasicBlock());
+
+    MF.insert(MBB.getIterator(), InitialMBB);
+    MF.insert(MBB.getIterator(), AbortMBB);
+
+    InitialMBB->addSuccessor(AbortMBB, BranchProbability(0, 1));
+    InitialMBB->addSuccessor(&MBB, BranchProbability(1, 1));
+
+    for (auto &Pred : MBB.predecessors())
+      Pred->replaceSuccessor(&MBB, InitialMBB);
+
+    // l[d|w] t1, __shadow_stack_top
+    BuildMI(*InitialMBB, InitialMBB->end(), DL, TII->get(RISCV::LUI), T1)
+        .addExternalSymbol("__shadow_stack_top", RISCVII::MO_HI);
+    BuildMI(*InitialMBB, InitialMBB->end(), DL, TII->get(RISCV::ADDI), T1)
+        .addReg(T1)
+        .addExternalSymbol("__shadow_stack_top", RISCVII::MO_LO);
+
+    // addi gp, gp, [4|8]
+    BuildMI(*InitialMBB, InitialMBB->end(), DL, TII->get(RISCV::ADDI), SCSPReg)
+        .addReg(SCSPReg)
+        .addImm(SlotSize)
+        .setMIFlag(MachineInstr::FrameSetup);
+
+    // bgeu t1, gp, label (if gp <= __shadow_stack_top, continue, otherwise abort)
+    BuildMI(*InitialMBB, InitialMBB->end(), DL, TII->get(RISCV::BGEU))
+        .addReg(T1)
+        .addReg(SCSPReg)
+        .addMBB(&MBB);
+
+    BuildMI(*AbortMBB, AbortMBB->end(), DL, TII->get(RISCV::PseudoCALL))
+        .addExternalSymbol("abort", RISCVII::MO_CALL);
+
+    // s[w|d]  ra, -[4|8](gp)
+    BuildMI(MBB, MI, DL, TII->get(IsRV64 ? RISCV::SD : RISCV::SW))
+        .addReg(RAReg)
+        .addReg(SCSPReg)
+        .addImm(-SlotSize)
+        .setMIFlag(MachineInstr::FrameSetup);
+
+  } else {
+    // call a library function __shadow_stack_save 
+    // for the shadow stack modifications in the prologue
+
+    Register T0 = RISCV::X5;
+
+    // call t0, __shadow_stack_save
+    BuildMI(MBB, MI, DL, TII->get(RISCV::PseudoCALLReg), T0)
+        .addExternalSymbol("__shadow_stack_save", RISCVII::MO_CALL)
+        .addReg(RAReg, RegState::Implicit)
+        .setMIFlag(MachineInstr::FrameSetup);
+
+    MBB.addLiveIn(RAReg);
+  }
 
   if (!needsDwarfCFI(MF))
     return;
@@ -210,21 +272,111 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
 
   bool IsRV64 = STI.is64Bit();
   int64_t SlotSize = STI.getXLen() / 8;
-  // Load return address from shadow call stack
-  // l[w|d]  ra, -[4|8](gp)
-  // addi    gp, gp, -[4|8]
-  BuildMI(MBB, MI, DL, TII->get(IsRV64 ? RISCV::LD : RISCV::LW), RAReg)
-      .addReg(SCSPReg)
-      .addImm(-SlotSize)
-      .setMIFlag(MachineInstr::FrameDestroy);
-  BuildMI(MBB, MI, DL, TII->get(RISCV::ADDI), SCSPReg)
-      .addReg(SCSPReg)
-      .addImm(-SlotSize)
-      .setMIFlag(MachineInstr::FrameDestroy);
-  if (needsDwarfCFI(MF)) {
-    // Restore the SCS pointer
-    CFIInstBuilder(MBB, MI, MachineInstr::FrameDestroy).buildRestore(SCSPReg);
+
+  if (/* inline = */ !MF.getFunction().hasOptSize()) {
+    // emit the shadow stack modifications inline in the epilogue
+
+    // we'll be splitting the original basic block as follows
+    // the return from MBB is shifted to OkMBB
+    //
+    // [MBB] (original block)
+    //     l[d|w] t1, -SlotSize(gp)
+    //     xor t0, ra, t1
+    //     beq t0, x0, [label]   (integrity check fail)--->  [AbortMBB] (new block) call abort
+    //        |
+    //        | (integrity check pass)
+    //        v
+    // [OkMBB] (new block)
+    //     addi gp, gp, -SlotSize
+    //     mv ra, t1 
+    //     ret
+
+    Register T0 = RISCV::X5;
+    Register T1 = RISCV::X6;
+
+    MachineBasicBlock *OkMBB = MF.CreateMachineBasicBlock(MBB.getBasicBlock());
+    MachineBasicBlock *AbortMBB = MF.CreateMachineBasicBlock(MBB.getBasicBlock());
+
+    MachineFunction::iterator MBBIt = std::next(MBB.getIterator());
+    MF.insert(MBBIt, AbortMBB);
+    MF.insert(MBBIt, OkMBB);
+
+    MBB.addSuccessor(OkMBB, BranchProbability(1, 1));
+    MBB.addSuccessor(AbortMBB, BranchProbability(0, 1));
+
+    // l[d|w] t1, -SlotSize(gp)
+    BuildMI(MBB, MI, DL, TII->get(IsRV64 ? RISCV::LD : RISCV::LW), RAReg)
+        .addReg(SCSPReg)
+        .addImm(-SlotSize)
+        .setMIFlag(MachineInstr::FrameDestroy);
+
+    // xor t0, ra, t1
+    BuildMI(MBB, MI, DL, TII->get(RISCV::XOR), T0)
+        .addReg(RAReg)
+        .addReg(T1)
+        .setMIFlag(MachineInstr::FrameDestroy);
+
+    // beq t0, x0, OkMBB
+    BuildMI(MBB, MI, DL, TII->get(RISCV::BEQ))
+        .addReg(T0)
+        .addReg(RISCV::X0)
+        .addMBB(OkMBB);
+
+    OkMBB->splice(OkMBB->end(), &MBB, MI, MBB.end());
+    OkMBB->transferSuccessorsAndUpdatePHIs(&MBB);
+
+    BuildMI(*AbortMBB, AbortMBB->end(), DL, TII->get(RISCV::PseudoCALL))
+        .addExternalSymbol("abort", RISCVII::MO_CALL);
+
+    // Now emit the remaining instructions at the start of OkMBB
+    MachineBasicBlock::iterator OkMI = OkMBB->begin();
+
+    // addi gp, gp, -SlotSize
+    BuildMI(*OkMBB, OkMI, DL, TII->get(RISCV::ADDI), SCSPReg)
+        .addReg(SCSPReg)
+        .addImm(-SlotSize)
+        .setMIFlag(MachineInstr::FrameDestroy);
+
+    // mv ra, t1
+    BuildMI(*OkMBB, OkMI, DL, TII->get(RISCV::ADDI), RAReg)
+        .addReg(T1)
+        .addImm(0)
+        .setMIFlag(MachineInstr::FrameDestroy);
+
+    if (needsDwarfCFI(MF)) {
+      // Restore the SCS pointer
+      CFIInstBuilder(*OkMBB, OkMI, MachineInstr::FrameDestroy).buildRestore(SCSPReg);
+    }
+
+  } else {
+    // tail call a library function __shadow_stack_restore 
+    // for the shadow stack modifications in the epilogue
+
+    Register T0 = RISCV::X5;
+
+    // ra already holds the regular-stack return address
+    // __shadow_stack_return expects the return address to be in t0 
+    // mv t0, ra
+    BuildMI(MBB, MI, DL, TII->get(RISCV::ADDI), T0)
+        .addReg(RAReg)
+        .addImm(0)
+        .setMIFlag(MachineInstr::FrameDestroy);
+
+    // tail __shadow_stack_restore
+    BuildMI(MBB, MI, DL, TII->get(RISCV::PseudoTAIL))
+        .addExternalSymbol("__shadow_stack_restore", RISCVII::MO_CALL)
+        .addReg(T0, RegState::Implicit)
+        .setMIFlag(MachineInstr::FrameDestroy);
+
+    if (needsDwarfCFI(MF)) {
+      // Restore the SCS pointer
+      CFIInstBuilder(MBB, MI, MachineInstr::FrameDestroy).buildRestore(SCSPReg);
+    }
+
+    // Remove the original PseudoRET since we're tail-calling instead
+    MI->eraseFromParent();
   }
+
 }
 
 // Insert instruction to swap mscratchsw with sp
