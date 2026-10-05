@@ -8247,9 +8247,17 @@ static bool isGuaranteedNotToBeUndefOrPoison(
     return true;
 
   // CtxI may be null or a cloned instruction.
-  if (!CtxI || !CtxI->getParent() || !DT)
+  if (!CtxI || !CtxI->getParent())
     return false;
 
+  // Recall that `zext` only returns poison if the argument is a negative number
+  // or poison.
+  Value *X;
+  if (match(V, m_NNegZExt(m_Value(X))))
+    return isKnownNonNegative(X, SimplifyQuery({}, DT, AC, CtxI));
+
+  if (!DT)
+    return false;
   auto *DNode = DT->getNode(CtxI->getParent());
   if (!DNode)
     // Unreachable block

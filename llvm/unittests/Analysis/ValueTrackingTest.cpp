@@ -1198,6 +1198,59 @@ TEST_F(ValueTrackingTest, isGuaranteedNotToBePoison_phi) {
   }
 }
 
+TEST_F(ValueTrackingTest, isGuaranteedNotToBePoison_ZExt_NNeg) {
+  {
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+
+  define i64 @test(i32 %X, i32 %Y) {
+    %res = icmp sge i32 %X, 0
+    call void @llvm.assume(i1 %res)
+
+    %ExtendX = zext nneg i32 %X to i64
+    %ExtendY = zext nneg i32 %Y to i64
+    ret i64 %ExtendY
+  })");
+    auto *F = M->getFunction("test");
+    auto *ExtendX = &findInstructionByName(F, "ExtendX");
+    auto *ExtendY = &findInstructionByName(F, "ExtendY");
+    AssumptionCache AC(*F);
+    SimplifyQuery SQ(M->getDataLayout(), /*DT=*/nullptr, &AC, /*CtxI=*/ExtendY);
+
+    EXPECT_TRUE(isGuaranteedNotToBePoison(ExtendX, SQ.AC, SQ.CtxI, SQ.DT));
+    EXPECT_FALSE(isGuaranteedNotToBePoison(ExtendY, SQ.AC, SQ.CtxI, SQ.DT));
+  }
+}
+
+TEST_F(ValueTrackingTest, isGuaranteedNotToBePoison_ZExt_NNeg_Vector) {
+  {
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+
+  define <2 x i64> @test(<2 x i32> %X, <2 x i32> %Y, <2 x i32> %Z) {
+    %resX = icmp sge <2 x i32> %X, <i32 0, i32 0>
+    %resY = icmp sge <2 x i32> %Y, <i32 0, i32 -4>
+    call void @llvm.assume(<2 x i1> %resX)
+    call void @llvm.assume(<2 x i1> %resY)
+
+    %ExtendX = zext nneg <2 x i32> %X to <2 x i64>
+    %ExtendY = zext nneg <2 x i32> %Y to <2 x i64>
+    %ExtendZ = zext nneg <2 x i32> %Z to <2 x i64>
+    ret <2 x i64> %ExtendY
+  })");
+    auto *F = M->getFunction("test");
+    auto *ExtendX = &findInstructionByName(F, "ExtendX");
+    auto *ExtendY = &findInstructionByName(F, "ExtendY");
+    auto *ExtendZ = &findInstructionByName(F, "ExtendZ");
+    AssumptionCache AC(*F);
+    SimplifyQuery SQ(M->getDataLayout(), /*DT=*/nullptr, &AC, /*CtxI=*/ExtendY);
+
+    EXPECT_TRUE(isGuaranteedNotToBePoison(ExtendX, SQ.AC, SQ.CtxI, SQ.DT));
+    EXPECT_FALSE(isGuaranteedNotToBePoison(ExtendY, SQ.AC, SQ.CtxI, SQ.DT));
+    EXPECT_FALSE(isGuaranteedNotToBePoison(ExtendZ, SQ.AC, SQ.CtxI, SQ.DT));
+  }
+}
+
 TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison) {
   parseAssembly("declare void @f(i32 noundef)"
                 "define void @test(i32 %x) {\n"
