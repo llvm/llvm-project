@@ -736,7 +736,7 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
     pending.insert(mapInfo);
   for (bool progress = true; progress;) {
     progress = false;
-    for (auto [idx, mapInfo] : llvm::enumerate(mapInfos)) {
+    for (auto mapInfo : mapInfos) {
       if (!pending.contains(mapInfo))
         continue;
       // Defer until every member also being split has been cloned.
@@ -764,7 +764,6 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
           cast<omp::MapInfoOp>(rewriter.clone(*mapInfo, outerToInner));
       innerMapInfo.setMapTypeAttr(
           rewriter.getAttr<omp::ClauseMapFlagsAttr>(newMapType));
-      innerMapInfos[idx] = innerMapInfo.getResult();
       pending.erase(mapInfo);
       progress = true;
     }
@@ -772,6 +771,10 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
   // Loop stalls with maps still pending only if their members form a cycle.
   assert(pending.empty() &&
          "cyclic mapinfo members: cannot topologically order clones");
+
+  // map_entries may repeat a map result, resolve every index to its clone.
+  for (auto [idx, mapInfo] : llvm::enumerate(mapInfos))
+    innerMapInfos[idx] = outerToInner.lookup(mapInfo.getResult());
 
   rewriter.setInsertionPoint(targetOp);
   auto device = targetOp.getDevice();
