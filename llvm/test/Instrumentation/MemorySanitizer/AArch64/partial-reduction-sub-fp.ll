@@ -20,8 +20,11 @@ define <vscale x 4 x float> @fmlslbt_bf16_f32(<vscale x 4 x float> %acc, <vscale
 ; CHECK-NEXT:    [[B_FPEXT:%.*]] = fpext <vscale x 8 x bfloat> [[B]] to <vscale x 8 x float>
 ; CHECK-NEXT:    [[B_FPEXT_NEG:%.*]] = fneg <vscale x 8 x float> [[B_FPEXT]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast <vscale x 8 x float> [[A_FPEXT]], [[B_FPEXT_NEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i16> @llvm.vector.partial.reduce.add.nxv4i16.nxv8i16(<vscale x 4 x i16> zeroinitializer, <vscale x 8 x i16> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 4 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 4 x i1> [[TMP2]] to <vscale x 4 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call fast <vscale x 4 x float> @llvm.vector.partial.reduce.fadd.nxv4f32.nxv8f32(<vscale x 4 x float> [[ACC]], <vscale x 8 x float> [[MUL]])
-; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 4 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[RES]]
 ;
   %a.fpext = fpext <vscale x 8 x bfloat> %a to <vscale x 8 x float>
@@ -40,8 +43,11 @@ define <vscale x 4 x float> @fmlslbt_f16_f32(<vscale x 4 x float> %acc, <vscale 
 ; CHECK-NEXT:    [[B_FPEXT:%.*]] = fpext <vscale x 8 x half> [[B]] to <vscale x 8 x float>
 ; CHECK-NEXT:    [[B_FPEXT_NEG:%.*]] = fneg <vscale x 8 x float> [[B_FPEXT]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast <vscale x 8 x float> [[A_FPEXT]], [[B_FPEXT_NEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i16> @llvm.vector.partial.reduce.add.nxv4i16.nxv8i16(<vscale x 4 x i16> zeroinitializer, <vscale x 8 x i16> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 4 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 4 x i1> [[TMP2]] to <vscale x 4 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call fast <vscale x 4 x float> @llvm.vector.partial.reduce.fadd.nxv4f32.nxv8f32(<vscale x 4 x float> [[ACC]], <vscale x 8 x float> [[MUL]])
-; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 4 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[RES]]
 ;
   %a.fpext = fpext <vscale x 8 x half> %a to <vscale x 8 x float>
@@ -58,8 +64,11 @@ define <vscale x 4 x float> @fmlslbt_f16_f32_extended_fadd(<vscale x 4 x float> 
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[A_FPEXT:%.*]] = fpext <vscale x 8 x half> [[A]] to <vscale x 8 x float>
 ; CHECK-NEXT:    [[NEG:%.*]] = fneg <vscale x 8 x float> [[A_FPEXT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i16> @llvm.vector.partial.reduce.add.nxv4i16.nxv8i16(<vscale x 4 x i16> zeroinitializer, <vscale x 8 x i16> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 4 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 4 x i1> [[TMP2]] to <vscale x 4 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call fast <vscale x 4 x float> @llvm.vector.partial.reduce.fadd.nxv4f32.nxv8f32(<vscale x 4 x float> [[ACC]], <vscale x 8 x float> [[NEG]])
-; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 4 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[RES]]
 ;
   %a.fpext = fpext <vscale x 8 x half> %a to <vscale x 8 x float>
@@ -85,18 +94,15 @@ define <4 x float> @fixed_fmlslbt_bf16_f32(<4 x float> %acc, <8 x bfloat> %a, <8
 ; CHECK-NEXT:    [[B_FPEXT_NEG:%.*]] = fneg <8 x float> [[B_FPEXT]]
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i32> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast <8 x float> [[A_FPEXT]], [[B_FPEXT_NEG]]
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP8]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <8 x i32> [[_MSPROP]] to i256
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP9]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB10:.*]], label %[[BB11:.*]], !prof [[PROF1:![0-9]+]]
-; CHECK:       [[BB10]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4:[0-9]+]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB11]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <4 x i32> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne <8 x i32> [[_MSPROP]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = zext <4 x i1> [[TMP8]] to <4 x i16>
+; CHECK-NEXT:    [[TMP11:%.*]] = zext <8 x i1> [[TMP9]] to <8 x i16>
+; CHECK-NEXT:    [[TMP12:%.*]] = call <4 x i16> @llvm.vector.partial.reduce.add.v4i16.v8i16(<4 x i16> [[TMP10]], <8 x i16> [[TMP11]])
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne <4 x i16> [[TMP12]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = sext <4 x i1> [[TMP13]] to <4 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call fast <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v8f32(<4 x float> [[ACC]], <8 x float> [[MUL]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i16> [[TMP14]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
 ;
   %a.fpext = fpext <8 x bfloat> %a to <8 x float>
@@ -123,18 +129,15 @@ define <4 x float> @fixed_fmlslbt_f16_f32(<4 x float> %acc, <8 x half> %a, <8 x 
 ; CHECK-NEXT:    [[B_FPEXT_NEG:%.*]] = fneg <8 x float> [[B_FPEXT]]
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i32> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast <8 x float> [[A_FPEXT]], [[B_FPEXT_NEG]]
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP8]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <8 x i32> [[_MSPROP]] to i256
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP9]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB10:.*]], label %[[BB11:.*]], !prof [[PROF1]]
-; CHECK:       [[BB10]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB11]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <4 x i32> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne <8 x i32> [[_MSPROP]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = zext <4 x i1> [[TMP8]] to <4 x i16>
+; CHECK-NEXT:    [[TMP11:%.*]] = zext <8 x i1> [[TMP9]] to <8 x i16>
+; CHECK-NEXT:    [[TMP12:%.*]] = call <4 x i16> @llvm.vector.partial.reduce.add.v4i16.v8i16(<4 x i16> [[TMP10]], <8 x i16> [[TMP11]])
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne <4 x i16> [[TMP12]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = sext <4 x i1> [[TMP13]] to <4 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call fast <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v8f32(<4 x float> [[ACC]], <8 x float> [[MUL]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i16> [[TMP14]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
 ;
   %a.fpext = fpext <8 x half> %a to <8 x float>
@@ -146,6 +149,3 @@ define <4 x float> @fixed_fmlslbt_f16_f32(<4 x float> %acc, <8 x half> %a, <8 x 
 }
 
 attributes #0 = { "target-features"="+sve2" }
-;.
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
-;.
