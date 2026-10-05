@@ -16,6 +16,7 @@
 #include "VESubtarget.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
@@ -1074,6 +1075,10 @@ bool VEInstrInfo::expandExtendStackPseudo(MachineInstr &MI) const {
       .addImm(0);
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
+
+  LivePhysRegs LiveRegs;
+  computeAndAddLiveIns(LiveRegs, *sinkMBB);
+  computeAndAddLiveIns(LiveRegs, *syscallMBB);
   return true;
 }
 
