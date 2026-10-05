@@ -969,6 +969,7 @@ func.func @no_hoist_from_zero_trip_count_loop(%x: i32) -> i32 {
 // this loop never executes either.
 
 // CHECK-LABEL: func @no_hoist_from_zero_trip_count_loop_nonconstant_bounds
+// CHECK-SAME:    (%[[X:.*]]: i32,
 func.func @no_hoist_from_zero_trip_count_loop_nonconstant_bounds(%x: i32, %n: index) -> i32 {
   %alloc = memref.alloc() : memref<1xi32>
   %c42 = arith.constant 42 : i32
@@ -976,9 +977,11 @@ func.func @no_hoist_from_zero_trip_count_loop_nonconstant_bounds(%x: i32, %n: in
   affine.for %i = affine_map<(d0) -> (d0)>(%n) to affine_map<(d0) -> (d0 - 2)>(%n) {
     affine.store %x, %alloc[0] : memref<1xi32>
   }
-  // CHECK:      affine.store %c42{{.*}}, %alloc[0]
+  // CHECK:      %[[ALLOC:.*]] = memref.alloc()
+  // CHECK:      %[[C42:.*]] = arith.constant 42 : i32
+  // CHECK:      affine.store %[[C42]], %[[ALLOC]][0]
   // CHECK:      affine.for
-  // CHECK-NEXT:   affine.store %arg0, %alloc[0]
+  // CHECK-NEXT:   affine.store %[[X]], %[[ALLOC]][0]
   // CHECK-NEXT: }
   %r = affine.load %alloc[0] : memref<1xi32>
   return %r : i32
