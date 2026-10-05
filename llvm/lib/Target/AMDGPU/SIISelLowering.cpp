@@ -5151,7 +5151,7 @@ Register SITargetLowering::getRegisterByName(const char *RegName, LLT VT,
       TRI->regsOverlap(Reg, AMDGPU::FLAT_SCR))
     return Register();
 
-  if (!Subtarget->hasGloballyAddressableScratch() &&
+  if (!Subtarget->hasGloballyAddressableScratchSupport() &&
       TRI->regsOverlap(Reg, AMDGPU::SRC_FLAT_SCRATCH_BASE))
     return Register();
 
