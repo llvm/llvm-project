@@ -59,6 +59,122 @@ areAllOpsInTheBlockListInvariant(Region &blockList, AffineForOp loop,
                                  SmallPtrSetImpl<Operation *> &opsWithUsers,
                                  SmallPtrSetImpl<Operation *> &opsToHoist);
 
+using IndexRange = std::pair<int64_t, int64_t>;
+/// Computes a conservative inclusive index range for each dimension of an
+/// affine memory access. Returns an empty vector if `op` does not implement
+/// AffineReadOpInterface or AffineWriteOpInterface. If the range of a
+/// dimension cannot be computed statically, the corresponding entry is
+/// failure().
+static SmallVector<FailureOr<IndexRange>>
+computeMemoryAccessRange(Operation *op) {
+
+  // Collect the bounds of all enclosing induction variables when available.
+  llvm::SmallDenseMap<Value, IndexRange, 8> ivBounds;
+  SmallVector<AffineForOp, 8> enclosingLoops;
+  getAffineForIVs(*op, &enclosingLoops);
+  for (auto affineFor : enclosingLoops)
+    if (affineFor.hasConstantBounds())
+      ivBounds.insert({affineFor.getInductionVar(),
+                       {affineFor.getConstantLowerBound(),
+                        affineFor.getConstantUpperBound()}});
+
+  AffineMap affineMap;
+  SmallVector<Value> mapOperands;
+  if (auto readOp = dyn_cast<AffineReadOpInterface>(op)) {
+    affineMap = readOp.getAffineMap();
+    llvm::append_range(mapOperands, readOp.getMapOperands());
+  } else if (auto writeOp = dyn_cast<AffineWriteOpInterface>(op)) {
+    affineMap = writeOp.getAffineMap();
+    llvm::append_range(mapOperands, writeOp.getMapOperands());
+  }
+  // An empty vector also represents a rank-0 access. We do not
+  // distinguish that case from an unsupported access because neither can prove
+  // two accesses to the same memref disjoint based on index ranges.
+  else
+    return SmallVector<FailureOr<IndexRange>>{};
+
+  SmallVector<FailureOr<IndexRange>> accessRanges;
+  for (size_t resultIdx = 0; resultIdx < affineMap.getNumResults();
+       ++resultIdx) {
+    SmallVector<int64_t> flatExpr;
+    if (failed(getFlattenedAffineExpr(affineMap.getResult(resultIdx),
+                                      affineMap.getNumDims(),
+                                      affineMap.getNumSymbols(), &flatExpr))) {
+      accessRanges.push_back(failure());
+      continue;
+    }
+
+    // Give up on this dimension if flattening introduces additional local
+    // variables beyond the map operands.
+    if (flatExpr.size() != mapOperands.size() + 1) {
+      accessRanges.push_back(failure());
+      continue;
+    }
+
+    int64_t lb = 0;
+    int64_t ub = 0;
+    bool computable = true;
+    for (auto [i, mapOperand] : llvm::enumerate(mapOperands)) {
+      // A map operand with a zero coefficient does not contribute to the final
+      // index, so its range does not need to be computable for this dimension.
+      if (flatExpr[i] == 0)
+        continue;
+
+      int64_t operandLowerBound = 0;
+      int64_t operandUpperBound = 0;
+      if (auto it = ivBounds.find(mapOperand); it != ivBounds.end()) {
+        auto [lower, upperExclusive] = it->second;
+        operandLowerBound = lower;
+        if (llvm::SubOverflow(upperExclusive, int64_t{1}, operandUpperBound)) {
+          computable = false;
+          break;
+        }
+      } else {
+        auto constantValue = getConstantIntValue(mapOperand);
+        if (!constantValue) {
+          computable = false;
+          break;
+        }
+        operandLowerBound = *constantValue;
+        operandUpperBound = operandLowerBound;
+      }
+
+      int64_t v0, v1;
+      if (llvm::MulOverflow(operandLowerBound, flatExpr[i], v0) ||
+          llvm::MulOverflow(operandUpperBound, flatExpr[i], v1)) {
+        computable = false;
+        break;
+      }
+
+      // Account for negative coefficients, which may reverse the interval
+      // bounds.
+      int64_t newLb, newUb;
+      if (llvm::AddOverflow(lb, std::min(v0, v1), newLb) ||
+          llvm::AddOverflow(ub, std::max(v0, v1), newUb)) {
+        computable = false;
+        break;
+      }
+      lb = newLb;
+      ub = newUb;
+    }
+
+    if (!computable) {
+      accessRanges.push_back(failure());
+      continue;
+    }
+
+    int64_t finalLb, finalUb;
+    if (llvm::AddOverflow(lb, flatExpr.back(), finalLb) ||
+        llvm::AddOverflow(ub, flatExpr.back(), finalUb)) {
+      accessRanges.push_back(failure());
+      continue;
+    }
+    accessRanges.push_back(IndexRange{finalLb, finalUb});
+  }
+
+  return accessRanges;
+}
+
 /// Returns true if `op` is invariant on `loop`.
 static bool isOpLoopInvariant(Operation &op, AffineForOp loop,
                               SmallPtrSetImpl<Operation *> &opsWithUsers,
@@ -88,10 +204,13 @@ static bool isOpLoopInvariant(Operation &op, AffineForOp loop,
     auto read = dyn_cast<AffineReadOpInterface>(op);
     Value memref =
         read ? read.getMemRef() : cast<AffineWriteOpInterface>(op).getMemRef();
+
+    auto opRange = computeMemoryAccessRange(&op);
     for (auto *user : memref.getUsers()) {
       // If the memref used by the load/store is used in a store elsewhere in
-      // the loop nest, we do not hoist. Similarly, if the memref used in a
-      // load is also being stored too, we do not hoist the load.
+      // the loop nest, we do not hoist unless their affine access ranges can be
+      // proven disjoint. Similarly, if the memref used in a load is also being
+      // stored too, we do not hoist the load.
       // FIXME: This is missing checking aliases.
       if (&op == user)
         continue;
@@ -101,8 +220,29 @@ static bool isOpLoopInvariant(Operation &op, AffineForOp loop,
         userIVs.clear();
         getAffineForIVs(*user, &userIVs);
         // Check that userIVs don't contain the for loop around the op.
-        if (llvm::is_contained(userIVs, loop))
-          return false;
+        if (llvm::is_contained(userIVs, loop)) {
+          // Do not use range-based disjointness for vector accesses.
+          if (!isa<AffineLoadOp, AffineStoreOp>(op) ||
+              !isa<AffineLoadOp, AffineStoreOp>(user))
+            return false;
+          bool provenDisjoint = false;
+          auto range = computeMemoryAccessRange(user);
+          if (opRange.empty() || range.empty() ||
+              opRange.size() != range.size())
+            return false;
+          for (size_t i = 0; i < opRange.size(); ++i)
+            if (succeeded(opRange[i]) && succeeded(range[i]))
+              if (range[i]->second < opRange[i]->first ||
+                  range[i]->first > opRange[i]->second) {
+                provenDisjoint = true;
+                break;
+              }
+
+          // If the access ranges cannot be proven disjoint, conservatively
+          // assume that they may overlap.
+          if (!provenDisjoint)
+            return false;
+        }
       }
     }
   }
