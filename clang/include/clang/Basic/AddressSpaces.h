@@ -181,6 +181,10 @@ inline unsigned encode(LangAS AS) {
     return Local;
   case LangAS::sycl_private:
     return Private;
+  case LangAS::sycl_generic:
+    return Generic;
+  case LangAS::sycl_constant:
+    return Constant;
   case LangAS::ptr32_sptr:
     return Ptr32Sptr;
   case LangAS::ptr32_uptr:
