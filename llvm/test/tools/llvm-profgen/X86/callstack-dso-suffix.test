@@ -1,0 +1,36 @@
+;; The test fails on Windows. Fix it before removing the following requirement.
+; REQUIRES: x86_64-linux
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/callstack-dso-suffix.perfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t --skip-symbolization --profile-summary-cold-count=0
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-UNWINDER
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%t --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t1 --profile-summary-cold-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
+; RUN: FileCheck %s --input-file %t1
+
+; CHECK-UNWINDER:      [main:1 @ foo]
+; CHECK-UNWINDER-NEXT:   3
+; CHECK-UNWINDER-NEXT:   5ff-62f:3
+; CHECK-UNWINDER-NEXT:   634-637:3
+; CHECK-UNWINDER-NEXT:   645-645:3
+; CHECK-UNWINDER-NEXT:   3
+; CHECK-UNWINDER-NEXT:   62f->5b0:3
+; CHECK-UNWINDER-NEXT:   637->645:3
+; CHECK-UNWINDER-NEXT:   645->5ff:3
+; CHECK-UNWINDER-NEXT: [main:1 @ foo:3 @ bar]
+; CHECK-UNWINDER-NEXT:   4
+; CHECK-UNWINDER-NEXT:   5b0-5c8:1
+; CHECK-UNWINDER-NEXT:   5b0-5d7:2
+; CHECK-UNWINDER-NEXT:   5dc-5e9:1
+; CHECK-UNWINDER-NEXT:   5e5-5e9:2
+; CHECK-UNWINDER-NEXT:   3
+; CHECK-UNWINDER-NEXT:   5c8->5dc:2
+; CHECK-UNWINDER-NEXT:   5d7->5e5:2
+; CHECK-UNWINDER-NEXT:   5e9->634:3
+
+; CHECK:[main:1 @ foo]:54:0
+; CHECK: 2: 3
+; CHECK: 3: 3 bar:3
+; CHECK:[main:1 @ foo:3 @ bar]:50:3
+; CHECK: 0: 3
+; CHECK: 1: 3
+; CHECK: 2: 2
+; CHECK: 4: 1
+; CHECK: 5: 3
