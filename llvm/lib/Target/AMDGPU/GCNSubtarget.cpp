@@ -181,10 +181,12 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (FlatOffsetBitWidth == 0)
     FlatOffsetBitWidth = 13;
 
-  LocalMemorySize =
-      AMDGPU::getLocalMemorySize(getTargetID().getGPUKind(), isFullSIMDMode());
+  unsigned LDSLimit =
+      hasSupportsLocalMemorySizeLimit() ? LocalMemorySizeLimit : 0;
+  LocalMemorySize = AMDGPU::getLocalMemorySize(getTargetID().getGPUKind(),
+                                               isFullSIMDMode(), LDSLimit);
   AddressableLocalMemorySize = AMDGPU::getAddressableLocalMemorySize(
-      getTargetID().getGPUKind(), isFullSIMDMode());
+      getTargetID().getGPUKind(), isFullSIMDMode(), LDSLimit);
   // LDS allocation granularity is in bytes.
   LDSAllocationGranularity =
       AMDGPU::getLDSAllocGranule(getTargetID().getGPUKind());
@@ -210,6 +212,15 @@ void GCNSubtarget::checkSubtargetFeatures(const Function &F) const {
       hasFeature(AMDGPU::FeatureWavefrontSize64)) {
     Ctx.diagnose(DiagnosticInfoUnsupported(
         F, "must specify exactly one of wavefrontsize32 and wavefrontsize64"));
+  }
+  if (hasFeature(AMDGPU::FeatureLocalMemorySizeLimit65536) &&
+      hasFeature(AMDGPU::FeatureLocalMemorySizeLimit131072)) {
+    Ctx.diagnose(DiagnosticInfoUnsupported(
+        F, "only one local-memory-size-limit feature can be used"));
+  }
+  if (LocalMemorySizeLimit && !hasSupportsLocalMemorySizeLimit()) {
+    Ctx.diagnose(DiagnosticInfoUnsupported(
+        F, "local-memory-size-limit is not supported on this target"));
   }
 }
 

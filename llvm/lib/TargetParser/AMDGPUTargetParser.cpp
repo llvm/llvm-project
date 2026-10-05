@@ -478,9 +478,12 @@ AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::SubArchType SubArch) {
   return getMaxHWAddressableLocalMemorySize(getGPUKindFromSubArch(SubArch));
 }
 
-unsigned AMDGPU::getLocalMemorySize(GPUKind AK, bool FullSIMDMode) {
+unsigned AMDGPU::getLocalMemorySize(GPUKind AK, bool FullSIMDMode,
+                                    unsigned LimitBytes) {
   // gfx6 and gfx10/11/12 address half of the physical block.
   unsigned Size = getMaxHWAddressableLocalMemorySize(AK);
+  if (LimitBytes)
+    Size = std::min(Size, LimitBytes);
   if (getFeatureBitset(AK).test(FEAT_HALF_ADDRESSABLE_PHYSICAL_LOCAL_MEMORY))
     Size *= 2;
 
@@ -492,19 +495,25 @@ unsigned AMDGPU::getLocalMemorySize(GPUKind AK, bool FullSIMDMode) {
 }
 
 unsigned AMDGPU::getLocalMemorySize(Triple::SubArchType SubArch,
-                                    bool FullSIMDMode) {
-  return getLocalMemorySize(getGPUKindFromSubArch(SubArch), FullSIMDMode);
+                                    bool FullSIMDMode, unsigned LimitBytes) {
+  return getLocalMemorySize(getGPUKindFromSubArch(SubArch), FullSIMDMode,
+                            LimitBytes);
 }
 
-unsigned AMDGPU::getAddressableLocalMemorySize(GPUKind AK, bool FullSIMDMode) {
-  return std::min(getMaxHWAddressableLocalMemorySize(AK),
-                  getLocalMemorySize(AK, FullSIMDMode));
+unsigned AMDGPU::getAddressableLocalMemorySize(GPUKind AK, bool FullSIMDMode,
+                                               unsigned LimitBytes) {
+  unsigned MaxAddressable = getMaxHWAddressableLocalMemorySize(AK);
+  if (LimitBytes)
+    MaxAddressable = std::min(MaxAddressable, LimitBytes);
+  return std::min(MaxAddressable,
+                  getLocalMemorySize(AK, FullSIMDMode, LimitBytes));
 }
 
 unsigned AMDGPU::getAddressableLocalMemorySize(Triple::SubArchType SubArch,
-                                               bool FullSIMDMode) {
+                                               bool FullSIMDMode,
+                                               unsigned LimitBytes) {
   return getAddressableLocalMemorySize(getGPUKindFromSubArch(SubArch),
-                                       FullSIMDMode);
+                                       FullSIMDMode, LimitBytes);
 }
 
 unsigned AMDGPU::getLDSBankCount(GPUKind AK) {

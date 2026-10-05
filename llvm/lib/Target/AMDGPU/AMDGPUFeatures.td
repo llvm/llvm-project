@@ -46,6 +46,19 @@ def FeatureAddressableLocalMemorySize163840 : SubtargetFeatureAddressableLocalMe
 def FeatureAddressableLocalMemorySize196608 : SubtargetFeatureAddressableLocalMemorySize<196608>;
 def FeatureAddressableLocalMemorySize327680 : SubtargetFeatureAddressableLocalMemorySize<327680>;
 
+// Limit the LDS size below the hardware maximum. It is not enabled by default
+// for any processor. A frontend like LLPC can set it. Only one limit can be
+// used.
+class SubtargetFeatureLocalMemorySizeLimit <int Value> : SubtargetFeature<
+  "local-memory-size-limit-"#Value,
+  "LocalMemorySizeLimit",
+  !cast<string>(Value),
+  "Artificial limit on local memory (LDS), specified in bytes"
+>;
+
+def FeatureLocalMemorySizeLimit65536 : SubtargetFeatureLocalMemorySizeLimit<65536>;
+def FeatureLocalMemorySizeLimit131072 : SubtargetFeatureLocalMemorySizeLimit<131072>;
+
 // A generic target uses the largest allocation granularity of its covered GPUs.
 // Its feature must be present on at least one covered GPU.
 class SubtargetFeatureLDSAllocGranularity <int Granularity> : AMDGPUGenericAnyFeature <
