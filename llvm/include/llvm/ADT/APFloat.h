@@ -39,6 +39,7 @@ struct fltSemantics;
 class APSInt;
 class StringRef;
 class APFloat;
+class FloatRepr;
 class raw_ostream;
 
 template <typename T> class Expected;
@@ -143,7 +144,6 @@ namespace detail {
 class IEEEFloat;
 class DoubleAPFloat;
 } // namespace detail
-using FloatRepr = detail::IEEEFloat;
 
 // This is the common type definitions shared by APFloat and its internal
 // implementation classes. This struct should not define any non-static data
@@ -780,6 +780,8 @@ private:
 
   /// @}
 
+  static IEEEFloat &fromRepr(const FloatRepr &R);
+
   template<const fltSemantics& S>
   friend APInt bitcastForSemantics(const FloatRepr& R);
 
@@ -820,6 +822,7 @@ private:
   unsigned int sign : 1;
 
   friend class IEEEFloatUnitTestHelper;
+  friend class llvm::FloatRepr;
 };
 
 LLVM_ABI hash_code hash_value(const IEEEFloat &Arg);
@@ -989,6 +992,42 @@ enum class fltNanEncoding {
   NegativeZero,
 };
 
+/// Interface for fltSemantics callbacks to access the internal data of
+/// APFloat/IEEEFloat.
+///
+/// Used to let user provided callback functions in fltSemantics access the
+/// internals of APFloat without making them public and to hide the concrete
+/// class used in APFloat
+class FloatRepr {
+  detail::IEEEFloat *Repr;
+
+  friend class detail::IEEEFloat;
+  explicit FloatRepr(detail::IEEEFloat &F) : Repr(&F) {}
+
+public:
+  /// Set the semantics and allocate storage for the significand. Must be
+  /// called exactly once before any setter when initializing from bits.
+  LLVM_ABI void initialize(const fltSemantics &Sem);
+
+  LLVM_ABI const fltSemantics &getSemantics() const;
+
+  LLVM_ABI APFloatBase::fltCategory getCategory() const;
+  /// Exponent and significand are only meaningful for fcNormal and fcNaN.
+  LLVM_ABI void setCategory(APFloatBase::fltCategory Category);
+
+  LLVM_ABI bool isNegative() const;
+  LLVM_ABI void setNegative(bool Negative);
+
+  LLVM_ABI APFloatBase::ExponentType getExponent() const;
+  /// - The exponent is unbiased. Denormals use the semantics' minExponent and
+  ///   have the integer bit cleared.
+  LLVM_ABI void setExponent(APFloatBase::ExponentType Exponent);
+
+  LLVM_ABI APInt getSignificand() const;
+  /// The significand is precision bits wide and includes the integer bit.
+  LLVM_ABI void setSignificand(const APInt &Significand);
+};
+
 /* Represents floating point arithmetic semantics.  */
 struct fltSemantics {
   /* The largest E such that 2^E is representable; this matches the
@@ -1038,8 +1077,8 @@ struct fltSemantics {
      The first three are treated as NaNs, the last one as Normal */
   bool hasExplicitIntegerBit = false;
 
-  void (* initFromAPInt)(detail::IEEEFloat&, const APInt&) = nullptr;
-  APInt (* bitcastToAPInt)(const detail::IEEEFloat&) = nullptr;
+  void (*initFromAPInt)(FloatRepr &, const APInt &) = nullptr;
+  APInt (*bitcastToAPInt)(const FloatRepr &) = nullptr;
 };
 
 // This is a interface class that is currently forwarding functionalities from
