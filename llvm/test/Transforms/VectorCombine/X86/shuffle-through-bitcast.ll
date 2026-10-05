@@ -9,10 +9,9 @@
 define <8 x float> @compose_i8_i16(<32 x i8> %v) {
 ; CHECK-LABEL: define <8 x float> @compose_i8_i16(
 ; CHECK-SAME: <32 x i8> [[V:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[BYTES:%.*]] = shufflevector <32 x i8> [[V]], <32 x i8> poison, <32 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7, i32 16, i32 16, i32 17, i32 17, i32 18, i32 18, i32 19, i32 19, i32 20, i32 20, i32 21, i32 21, i32 22, i32 22, i32 23, i32 23>
+; CHECK-NEXT:    [[BYTES:%.*]] = shufflevector <32 x i8> [[V]], <32 x i8> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 16, i32 16, i32 16, i32 16, i32 17, i32 17, i32 17, i32 17, i32 18, i32 18, i32 18, i32 18, i32 19, i32 19, i32 19, i32 19>
 ; CHECK-NEXT:    [[WORDS:%.*]] = bitcast <32 x i8> [[BYTES]] to <16 x i16>
-; CHECK-NEXT:    [[WORDS1:%.*]] = shufflevector <16 x i16> [[WORDS]], <16 x i16> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 8, i32 8, i32 9, i32 9, i32 10, i32 10, i32 11, i32 11>
-; CHECK-NEXT:    [[DWORDS:%.*]] = bitcast <16 x i16> [[WORDS1]] to <8 x i32>
+; CHECK-NEXT:    [[DWORDS:%.*]] = bitcast <16 x i16> [[WORDS]] to <8 x i32>
 ; CHECK-NEXT:    [[SIGNED:%.*]] = ashr <8 x i32> [[DWORDS]], splat (i32 24)
 ; CHECK-NEXT:    [[RESULT:%.*]] = sitofp <8 x i32> [[SIGNED]] to <8 x float>
 ; CHECK-NEXT:    ret <8 x float> [[RESULT]]
@@ -30,10 +29,9 @@ define <8 x float> @compose_i8_i16(<32 x i8> %v) {
 define <4 x i16> @compose_small(<8 x i8> %v) {
 ; CHECK-LABEL: define <4 x i16> @compose_small(
 ; CHECK-SAME: <8 x i8> [[V:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> [[V]], <8 x i8> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 4, i32 4, i32 5, i32 5>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> [[V]], <8 x i8> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 4, i32 4, i32 4, i32 4>
 ; CHECK-NEXT:    [[WORDS:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
-; CHECK-NEXT:    [[WORDS1:%.*]] = shufflevector <4 x i16> [[WORDS]], <4 x i16> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
-; CHECK-NEXT:    ret <4 x i16> [[WORDS1]]
+; CHECK-NEXT:    ret <4 x i16> [[WORDS]]
 ;
   %bytes = shufflevector <8 x i8> %v, <8 x i8> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 4, i32 4, i32 5, i32 5>
   %half = bitcast <8 x i8> %bytes to <4 x i16>
@@ -45,10 +43,9 @@ define <4 x i16> @compose_small(<8 x i8> %v) {
 define <4 x i32> @compose_scale_four(<16 x i8> %v) {
 ; CHECK-LABEL: define <4 x i32> @compose_scale_four(
 ; CHECK-SAME: <16 x i8> [[V:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[V]], <16 x i8> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 8, i32 8, i32 8, i32 8, i32 9, i32 9, i32 9, i32 9>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[V]], <16 x i8> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>
 ; CHECK-NEXT:    [[RESULT:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
-; CHECK-NEXT:    [[RESULT1:%.*]] = shufflevector <4 x i32> [[RESULT]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
-; CHECK-NEXT:    ret <4 x i32> [[RESULT1]]
+; CHECK-NEXT:    ret <4 x i32> [[RESULT]]
 ;
   %bytes = shufflevector <16 x i8> %v, <16 x i8> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 8, i32 8, i32 8, i32 8, i32 9, i32 9, i32 9, i32 9>
   %words = bitcast <16 x i8> %bytes to <4 x i32>
@@ -61,10 +58,9 @@ define <4 x i32> @compose_scale_four(<16 x i8> %v) {
 define <4 x i16> @compose_inner_poison(<8 x i8> %v) {
 ; CHECK-LABEL: define <4 x i16> @compose_inner_poison(
 ; CHECK-SAME: <8 x i8> [[V:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> [[V]], <8 x i8> poison, <8 x i32> <i32 0, i32 0, i32 poison, i32 poison, i32 4, i32 4, i32 8, i32 8>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> [[V]], <8 x i8> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[WORDS:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
-; CHECK-NEXT:    [[WORDS1:%.*]] = shufflevector <4 x i16> [[WORDS]], <4 x i16> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 3>
-; CHECK-NEXT:    ret <4 x i16> [[WORDS1]]
+; CHECK-NEXT:    ret <4 x i16> [[WORDS]]
 ;
   %bytes = shufflevector <8 x i8> %v, <8 x i8> poison, <8 x i32> <i32 0, i32 0, i32 poison, i32 poison, i32 4, i32 4, i32 8, i32 8>
   %half = bitcast <8 x i8> %bytes to <4 x i16>
@@ -77,10 +73,9 @@ define <4 x i16> @compose_inner_poison(<8 x i8> %v) {
 define <4 x i16> @compose_outer_poison(<8 x i8> %v) {
 ; CHECK-LABEL: define <4 x i16> @compose_outer_poison(
 ; CHECK-SAME: <8 x i8> [[V:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> [[V]], <8 x i8> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 4, i32 4, i32 5, i32 5>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> [[V]], <8 x i8> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[WORDS:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
-; CHECK-NEXT:    [[WORDS1:%.*]] = shufflevector <4 x i16> [[WORDS]], <4 x i16> poison, <4 x i32> <i32 0, i32 0, i32 4, i32 poison>
-; CHECK-NEXT:    ret <4 x i16> [[WORDS1]]
+; CHECK-NEXT:    ret <4 x i16> [[WORDS]]
 ;
   %bytes = shufflevector <8 x i8> %v, <8 x i8> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 4, i32 4, i32 5, i32 5>
   %half = bitcast <8 x i8> %bytes to <4 x i16>
@@ -175,9 +170,8 @@ define <3 x i16> @nonintegral_scale(<8 x i6> %v) {
 define <6 x i16> @length_changing(<8 x i8> %v) {
 ; CHECK-LABEL: define <6 x i16> @length_changing(
 ; CHECK-SAME: <8 x i8> [[V:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[BYTES:%.*]] = shufflevector <8 x i8> [[V]], <8 x i8> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 4, i32 4, i32 5, i32 5>
-; CHECK-NEXT:    [[HALF:%.*]] = bitcast <8 x i8> [[BYTES]] to <4 x i16>
-; CHECK-NEXT:    [[WORDS:%.*]] = shufflevector <4 x i16> [[HALF]], <4 x i16> poison, <6 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> [[V]], <8 x i8> poison, <12 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 4, i32 4, i32 4, i32 4>
+; CHECK-NEXT:    [[WORDS:%.*]] = bitcast <12 x i8> [[TMP1]] to <6 x i16>
 ; CHECK-NEXT:    ret <6 x i16> [[WORDS]]
 ;
   %bytes = shufflevector <8 x i8> %v, <8 x i8> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 4, i32 4, i32 5, i32 5>
@@ -188,12 +182,18 @@ define <6 x i16> @length_changing(<8 x i8> %v) {
 
 ; A cross-lane permutation may not reduce the target's shuffle cost.
 define <16 x i16> @cost_gate(<32 x i8> %v) {
-; CHECK-LABEL: define <16 x i16> @cost_gate(
-; CHECK-SAME: <32 x i8> [[V:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[BYTES:%.*]] = shufflevector <32 x i8> [[V]], <32 x i8> poison, <32 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7, i32 16, i32 16, i32 17, i32 17, i32 18, i32 18, i32 19, i32 19, i32 20, i32 20, i32 21, i32 21, i32 22, i32 22, i32 23, i32 23>
-; CHECK-NEXT:    [[HALF:%.*]] = bitcast <32 x i8> [[BYTES]] to <16 x i16>
-; CHECK-NEXT:    [[WORDS:%.*]] = shufflevector <16 x i16> [[HALF]], <16 x i16> poison, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    ret <16 x i16> [[WORDS]]
+; HASWELL-LABEL: define <16 x i16> @cost_gate(
+; HASWELL-SAME: <32 x i8> [[V:%.*]]) #[[ATTR0]] {
+; HASWELL-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i8> [[V]], <32 x i8> poison, <32 x i32> <i32 16, i32 16, i32 17, i32 17, i32 18, i32 18, i32 19, i32 19, i32 20, i32 20, i32 21, i32 21, i32 22, i32 22, i32 23, i32 23, i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
+; HASWELL-NEXT:    [[WORDS:%.*]] = bitcast <32 x i8> [[TMP1]] to <16 x i16>
+; HASWELL-NEXT:    ret <16 x i16> [[WORDS]]
+;
+; V4-LABEL: define <16 x i16> @cost_gate(
+; V4-SAME: <32 x i8> [[V:%.*]]) #[[ATTR0]] {
+; V4-NEXT:    [[BYTES:%.*]] = shufflevector <32 x i8> [[V]], <32 x i8> poison, <32 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7, i32 16, i32 16, i32 17, i32 17, i32 18, i32 18, i32 19, i32 19, i32 20, i32 20, i32 21, i32 21, i32 22, i32 22, i32 23, i32 23>
+; V4-NEXT:    [[HALF:%.*]] = bitcast <32 x i8> [[BYTES]] to <16 x i16>
+; V4-NEXT:    [[WORDS:%.*]] = shufflevector <16 x i16> [[HALF]], <16 x i16> poison, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; V4-NEXT:    ret <16 x i16> [[WORDS]]
 ;
   %bytes = shufflevector <32 x i8> %v, <32 x i8> poison, <32 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7, i32 16, i32 16, i32 17, i32 17, i32 18, i32 18, i32 19, i32 19, i32 20, i32 20, i32 21, i32 21, i32 22, i32 22, i32 23, i32 23>
   %half = bitcast <32 x i8> %bytes to <16 x i16>
@@ -209,26 +209,26 @@ declare <8 x float> @llvm.fma.v8f32(<8 x float>, <8 x float>, <8 x float>)
 define <32 x float> @four_chains(<32 x i8> %v, <8 x float> %scale, <8 x float> %bias) {
 ; CHECK-LABEL: define <32 x float> @four_chains(
 ; CHECK-SAME: <32 x i8> [[V:%.*]], <8 x float> [[SCALE:%.*]], <8 x float> [[BIAS:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i8> [[V]], <32 x i8> poison, <32 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7, i32 16, i32 16, i32 17, i32 17, i32 18, i32 18, i32 19, i32 19, i32 20, i32 20, i32 21, i32 21, i32 22, i32 22, i32 23, i32 23>
-; CHECK-NEXT:    [[HI_BYTES:%.*]] = shufflevector <32 x i8> [[V]], <32 x i8> poison, <32 x i32> <i32 8, i32 8, i32 9, i32 9, i32 10, i32 10, i32 11, i32 11, i32 12, i32 12, i32 13, i32 13, i32 14, i32 14, i32 15, i32 15, i32 24, i32 24, i32 25, i32 25, i32 26, i32 26, i32 27, i32 27, i32 28, i32 28, i32 29, i32 29, i32 30, i32 30, i32 31, i32 31>
-; CHECK-NEXT:    [[LOLO_WORDS:%.*]] = bitcast <32 x i8> [[TMP1]] to <16 x i16>
+; CHECK-NEXT:    [[HI_BYTES:%.*]] = shufflevector <32 x i8> [[V]], <32 x i8> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 16, i32 16, i32 16, i32 16, i32 17, i32 17, i32 17, i32 17, i32 18, i32 18, i32 18, i32 18, i32 19, i32 19, i32 19, i32 19>
 ; CHECK-NEXT:    [[HI_HALF:%.*]] = bitcast <32 x i8> [[HI_BYTES]] to <16 x i16>
-; CHECK-NEXT:    [[LOLO_WORDS1:%.*]] = shufflevector <16 x i16> [[LOLO_WORDS]], <16 x i16> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 8, i32 8, i32 9, i32 9, i32 10, i32 10, i32 11, i32 11>
-; CHECK-NEXT:    [[LOLO_DWORDS:%.*]] = bitcast <16 x i16> [[LOLO_WORDS1]] to <8 x i32>
+; CHECK-NEXT:    [[LOLO_DWORDS:%.*]] = bitcast <16 x i16> [[HI_HALF]] to <8 x i32>
 ; CHECK-NEXT:    [[LOLO_SIGNED:%.*]] = ashr <8 x i32> [[LOLO_DWORDS]], splat (i32 24)
 ; CHECK-NEXT:    [[LOLO_FLOAT:%.*]] = sitofp <8 x i32> [[LOLO_SIGNED]] to <8 x float>
 ; CHECK-NEXT:    [[LOLO_FMA:%.*]] = call <8 x float> @llvm.fma.v8f32(<8 x float> [[LOLO_FLOAT]], <8 x float> [[SCALE]], <8 x float> [[BIAS]])
-; CHECK-NEXT:    [[LOHI_WORDS:%.*]] = shufflevector <16 x i16> [[LOLO_WORDS]], <16 x i16> poison, <16 x i32> <i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7, i32 12, i32 12, i32 13, i32 13, i32 14, i32 14, i32 15, i32 15>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <32 x i8> [[V]], <32 x i8> poison, <32 x i32> <i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 20, i32 20, i32 20, i32 20, i32 21, i32 21, i32 21, i32 21, i32 22, i32 22, i32 22, i32 22, i32 23, i32 23, i32 23, i32 23>
+; CHECK-NEXT:    [[LOHI_WORDS:%.*]] = bitcast <32 x i8> [[TMP2]] to <16 x i16>
 ; CHECK-NEXT:    [[LOHI_DWORDS:%.*]] = bitcast <16 x i16> [[LOHI_WORDS]] to <8 x i32>
 ; CHECK-NEXT:    [[LOHI_SIGNED:%.*]] = ashr <8 x i32> [[LOHI_DWORDS]], splat (i32 24)
 ; CHECK-NEXT:    [[LOHI_FLOAT:%.*]] = sitofp <8 x i32> [[LOHI_SIGNED]] to <8 x float>
 ; CHECK-NEXT:    [[LOHI_FMA:%.*]] = call <8 x float> @llvm.fma.v8f32(<8 x float> [[LOHI_FLOAT]], <8 x float> [[SCALE]], <8 x float> [[BIAS]])
-; CHECK-NEXT:    [[HILO_WORDS:%.*]] = shufflevector <16 x i16> [[HI_HALF]], <16 x i16> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 8, i32 8, i32 9, i32 9, i32 10, i32 10, i32 11, i32 11>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <32 x i8> [[V]], <32 x i8> poison, <32 x i32> <i32 8, i32 8, i32 8, i32 8, i32 9, i32 9, i32 9, i32 9, i32 10, i32 10, i32 10, i32 10, i32 11, i32 11, i32 11, i32 11, i32 24, i32 24, i32 24, i32 24, i32 25, i32 25, i32 25, i32 25, i32 26, i32 26, i32 26, i32 26, i32 27, i32 27, i32 27, i32 27>
+; CHECK-NEXT:    [[HILO_WORDS:%.*]] = bitcast <32 x i8> [[TMP3]] to <16 x i16>
 ; CHECK-NEXT:    [[HILO_DWORDS:%.*]] = bitcast <16 x i16> [[HILO_WORDS]] to <8 x i32>
 ; CHECK-NEXT:    [[HILO_SIGNED:%.*]] = ashr <8 x i32> [[HILO_DWORDS]], splat (i32 24)
 ; CHECK-NEXT:    [[HILO_FLOAT:%.*]] = sitofp <8 x i32> [[HILO_SIGNED]] to <8 x float>
 ; CHECK-NEXT:    [[HILO_FMA:%.*]] = call <8 x float> @llvm.fma.v8f32(<8 x float> [[HILO_FLOAT]], <8 x float> [[SCALE]], <8 x float> [[BIAS]])
-; CHECK-NEXT:    [[HIHI_WORDS:%.*]] = shufflevector <16 x i16> [[HI_HALF]], <16 x i16> poison, <16 x i32> <i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7, i32 12, i32 12, i32 13, i32 13, i32 14, i32 14, i32 15, i32 15>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <32 x i8> [[V]], <32 x i8> poison, <32 x i32> <i32 12, i32 12, i32 12, i32 12, i32 13, i32 13, i32 13, i32 13, i32 14, i32 14, i32 14, i32 14, i32 15, i32 15, i32 15, i32 15, i32 28, i32 28, i32 28, i32 28, i32 29, i32 29, i32 29, i32 29, i32 30, i32 30, i32 30, i32 30, i32 31, i32 31, i32 31, i32 31>
+; CHECK-NEXT:    [[HIHI_WORDS:%.*]] = bitcast <32 x i8> [[TMP4]] to <16 x i16>
 ; CHECK-NEXT:    [[HIHI_DWORDS:%.*]] = bitcast <16 x i16> [[HIHI_WORDS]] to <8 x i32>
 ; CHECK-NEXT:    [[HIHI_SIGNED:%.*]] = ashr <8 x i32> [[HIHI_DWORDS]], splat (i32 24)
 ; CHECK-NEXT:    [[HIHI_FLOAT:%.*]] = sitofp <8 x i32> [[HIHI_SIGNED]] to <8 x float>
@@ -272,11 +272,11 @@ define <32 x float> @four_chains(<32 x i8> %v, <8 x float> %scale, <8 x float> %
 define <4 x i16> @shared_adjacent(<8 x i8> %v) {
 ; CHECK-LABEL: define <4 x i16> @shared_adjacent(
 ; CHECK-SAME: <8 x i8> [[V:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i8> [[V]], <8 x i8> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 4, i32 4, i32 5, i32 5>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i8> [[V]], <8 x i8> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 4, i32 4, i32 4, i32 4>
 ; CHECK-NEXT:    [[HI:%.*]] = bitcast <8 x i8> [[TMP2]] to <4 x i16>
-; CHECK-NEXT:    [[LO:%.*]] = shufflevector <4 x i16> [[HI]], <4 x i16> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
-; CHECK-NEXT:    [[HI1:%.*]] = shufflevector <4 x i16> [[HI]], <4 x i16> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
-; CHECK-NEXT:    call void @use_halves(<4 x i16> [[LO]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i8> [[V]], <8 x i8> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 5, i32 5, i32 5, i32 5>
+; CHECK-NEXT:    [[HI1:%.*]] = bitcast <8 x i8> [[TMP3]] to <4 x i16>
+; CHECK-NEXT:    call void @use_halves(<4 x i16> [[HI]])
 ; CHECK-NEXT:    ret <4 x i16> [[HI1]]
 ;
   %bytes = shufflevector <8 x i8> %v, <8 x i8> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 4, i32 4, i32 5, i32 5>
@@ -312,14 +312,23 @@ declare void @use_words(<16 x i16>)
 
 ; A cross-lane sibling makes the group unprofitable on x86-64-v4.
 define <16 x i16> @shared_cost_gate(<32 x i8> %v) {
-; CHECK-LABEL: define <16 x i16> @shared_cost_gate(
-; CHECK-SAME: <32 x i8> [[V:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[BYTES:%.*]] = shufflevector <32 x i8> [[V]], <32 x i8> poison, <32 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7, i32 16, i32 16, i32 17, i32 17, i32 18, i32 18, i32 19, i32 19, i32 20, i32 20, i32 21, i32 21, i32 22, i32 22, i32 23, i32 23>
-; CHECK-NEXT:    [[HALF:%.*]] = bitcast <32 x i8> [[BYTES]] to <16 x i16>
-; CHECK-NEXT:    [[SWAP:%.*]] = shufflevector <16 x i16> [[HALF]], <16 x i16> poison, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[LO:%.*]] = shufflevector <16 x i16> [[HALF]], <16 x i16> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 8, i32 8, i32 9, i32 9, i32 10, i32 10, i32 11, i32 11>
-; CHECK-NEXT:    call void @use_words(<16 x i16> [[SWAP]])
-; CHECK-NEXT:    ret <16 x i16> [[LO]]
+; HASWELL-LABEL: define <16 x i16> @shared_cost_gate(
+; HASWELL-SAME: <32 x i8> [[V:%.*]]) #[[ATTR0]] {
+; HASWELL-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i8> [[V]], <32 x i8> poison, <32 x i32> <i32 16, i32 16, i32 17, i32 17, i32 18, i32 18, i32 19, i32 19, i32 20, i32 20, i32 21, i32 21, i32 22, i32 22, i32 23, i32 23, i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
+; HASWELL-NEXT:    [[SWAP:%.*]] = bitcast <32 x i8> [[TMP1]] to <16 x i16>
+; HASWELL-NEXT:    [[TMP2:%.*]] = shufflevector <32 x i8> [[V]], <32 x i8> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 16, i32 16, i32 16, i32 16, i32 17, i32 17, i32 17, i32 17, i32 18, i32 18, i32 18, i32 18, i32 19, i32 19, i32 19, i32 19>
+; HASWELL-NEXT:    [[LO:%.*]] = bitcast <32 x i8> [[TMP2]] to <16 x i16>
+; HASWELL-NEXT:    call void @use_words(<16 x i16> [[SWAP]])
+; HASWELL-NEXT:    ret <16 x i16> [[LO]]
+;
+; V4-LABEL: define <16 x i16> @shared_cost_gate(
+; V4-SAME: <32 x i8> [[V:%.*]]) #[[ATTR0]] {
+; V4-NEXT:    [[BYTES:%.*]] = shufflevector <32 x i8> [[V]], <32 x i8> poison, <32 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7, i32 16, i32 16, i32 17, i32 17, i32 18, i32 18, i32 19, i32 19, i32 20, i32 20, i32 21, i32 21, i32 22, i32 22, i32 23, i32 23>
+; V4-NEXT:    [[HALF:%.*]] = bitcast <32 x i8> [[BYTES]] to <16 x i16>
+; V4-NEXT:    [[SWAP:%.*]] = shufflevector <16 x i16> [[HALF]], <16 x i16> poison, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; V4-NEXT:    [[LO:%.*]] = shufflevector <16 x i16> [[HALF]], <16 x i16> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 8, i32 8, i32 9, i32 9, i32 10, i32 10, i32 11, i32 11>
+; V4-NEXT:    call void @use_words(<16 x i16> [[SWAP]])
+; V4-NEXT:    ret <16 x i16> [[LO]]
 ;
   %bytes = shufflevector <32 x i8> %v, <32 x i8> poison, <32 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7, i32 16, i32 16, i32 17, i32 17, i32 18, i32 18, i32 19, i32 19, i32 20, i32 20, i32 21, i32 21, i32 22, i32 22, i32 23, i32 23>
   %half = bitcast <32 x i8> %bytes to <16 x i16>
@@ -328,6 +337,3 @@ define <16 x i16> @shared_cost_gate(<32 x i8> %v) {
   call void @use_words(<16 x i16> %swap)
   ret <16 x i16> %lo
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; HASWELL: {{.*}}
-; V4: {{.*}}
