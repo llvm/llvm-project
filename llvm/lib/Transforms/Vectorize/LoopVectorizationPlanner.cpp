@@ -406,10 +406,15 @@ FixedScalableVFPair VFSelectionContext::computeFeasibleMaxVF(
   // It is computed by MaxVF * sizeOf(type) * 8, where type is taken from
   // the memory accesses that is most restrictive (involved in the smallest
   // dependence distance).
+  auto ClampToElementCountType = [](uint64_t NumElements) {
+    return std::min<uint64_t>(
+        NumElements, std::numeric_limits<ElementCount::ScalarTy>::max());
+  };
   unsigned MaxSafeElementsPowerOf2 =
-      llvm::bit_floor(Legal->getMaxSafeNumElements());
+      llvm::bit_floor(ClampToElementCountType(Legal->getMaxSafeNumElements()));
   if (!Legal->isSafeForAnyStoreLoadForwardDistances()) {
-    unsigned SLDist = Legal->getMaxStoreLoadForwardSafeNumElements();
+    unsigned SLDist =
+        ClampToElementCountType(Legal->getMaxStoreLoadForwardSafeNumElements());
     MaxSafeElementsPowerOf2 = std::min(MaxSafeElementsPowerOf2, SLDist);
   }
 

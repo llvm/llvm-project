@@ -228,7 +228,8 @@ public:
   /// Return true if the number of elements that are safe to operate on
   /// simultaneously is not bounded.
   bool isSafeForAnyVectorWidth() const {
-    return MaxSafeNumElements == UINT_MAX;
+    return MaxSafeNumElements ==
+           std::numeric_limits<decltype(MaxSafeNumElements)>::max();
   }
 
   /// Return the number of elements that are safe to operate on
@@ -237,7 +238,9 @@ public:
 
   /// Return true if there are no store-load forwarding dependencies.
   bool isSafeForAnyStoreLoadForwardDistances() const {
-    return MaxStoreLoadForwardSafeNumElements == UINT_MAX;
+    return MaxStoreLoadForwardSafeNumElements ==
+           std::numeric_limits<
+               decltype(MaxStoreLoadForwardSafeNumElements)>::max();
   }
 
   /// Returns true if a memory dependence at byte distance \p Distance between
@@ -379,11 +382,12 @@ private:
 
   /// Number of elements (from consecutive iterations) that are safe to operate
   /// on simultaneously.
-  uint64_t MaxSafeNumElements = -1U;
+  uint64_t MaxSafeNumElements = std::numeric_limits<uint64_t>::max();
 
   /// Maximum power-of-2 number of elements, which do not prevent store-load
   /// forwarding.
-  uint64_t MaxStoreLoadForwardSafeNumElements = -1U;
+  uint64_t MaxStoreLoadForwardSafeNumElements =
+      std::numeric_limits<uint64_t>::max();
 
   /// Whether we should try to vectorize the loop with runtime checks, if the
   /// dependencies are not safe.
