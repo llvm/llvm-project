@@ -489,6 +489,20 @@ body: |
 ...
 
 ---
+# A dst above v127 uses the e64 form, like the other merge patterns.
+name: merge_both_imm_high_vgpr
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: merge_both_imm_high_vgpr
+    ; CHECK: $vgpr200 = V_MOV_B32_e64 458757, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit $vgpr200
+    $vgpr200_lo16 = V_MOV_B16_t16_e64 0, 5, 0, implicit $exec
+    $vgpr200_hi16 = V_MOV_B16_t16_e64 0, 7, 0, implicit $exec
+    S_ENDPGM 0, implicit $vgpr200
+...
+
+---
 # Forwarding works across an unrelated instruction.
 name: merge_second_src_is_first_dst_across_unrelated
 tracksRegLiveness: true
