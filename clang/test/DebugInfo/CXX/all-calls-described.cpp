@@ -63,7 +63,7 @@
 
 // HAS-ATTR-DAG: DISubprogram(name: "declaration1", {{.*}}, flags: DIFlagPrototyped
 // HAS-ATTR-DAG: DISubprogram(name: "declaration2", {{.*}}, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition
-// HAS-ATTR-DAG: DISubprogram(name: "struct1", {{.*}}, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized)
+// HAS-ATTR-DAG: DISubprogram(name: "struct1", {{.*}}, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized | DISPFlagDefaultedNo)
 // HAS-ATTR-DAG: DISubprogram(name: "struct1", {{.*}}, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition
 // HAS-ATTR-DAG: DISubprogram(name: "method1", {{.*}}, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition
 // HAS-ATTR-DAG: DISubprogram(name: "force_irgen", {{.*}}, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition
