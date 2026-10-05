@@ -673,9 +673,32 @@ Error olIterateDevices_impl(ol_device_iterate_cb_t Callback, void *UserData) {
     if (!DevicesOrErr)
       return DevicesOrErr.takeError();
     for (auto &Device : *DevicesOrErr) {
-      if (!Callback(Device.get(), UserData)) {
+      if (!Callback(Device.get(), UserData))
         return Error::success();
-      }
+    }
+  }
+
+  return Error::success();
+}
+
+Error olIterateCompatibleDevices_impl(const void *ProgData, size_t ProgDataSize,
+                                      ol_device_iterate_cb_t Callback,
+                                      void *UserData) {
+  StringRef Buffer(reinterpret_cast<const char *>(ProgData), ProgDataSize);
+
+  for (auto &Platform : OffloadContext::get().Platforms) {
+    if (!Platform->Plugin || !Platform->Plugin->isPluginCompatible(Buffer))
+      continue;
+    auto DevicesOrErr = Platform->getDevices();
+    if (!DevicesOrErr)
+      return DevicesOrErr.takeError();
+    for (auto &Device : *DevicesOrErr) {
+      if (!Device->Platform.Plugin->isDeviceCompatible(Device->DeviceNum,
+                                                       Buffer))
+        continue;
+
+      if (!Callback(Device.get(), UserData))
+        return Error::success();
     }
   }
 
@@ -1297,6 +1320,7 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   LaunchArgs.UserNumBlocks[0] = LaunchSizeArgs->NumGroups.x;
   LaunchArgs.UserNumBlocks[1] = LaunchSizeArgs->NumGroups.y;
   LaunchArgs.UserNumBlocks[2] = LaunchSizeArgs->NumGroups.z;
+  LaunchArgs.KernelLaunchInfo.RequestedNumBlocks = LaunchSizeArgs->NumGroups.x;
   LaunchArgs.UserThreadLimit[0] = LaunchSizeArgs->GroupSize.x;
   LaunchArgs.UserThreadLimit[1] = LaunchSizeArgs->GroupSize.y;
   LaunchArgs.UserThreadLimit[2] = LaunchSizeArgs->GroupSize.z;

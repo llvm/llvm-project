@@ -358,11 +358,11 @@ public:
   /// Return the cost of the block.
   virtual InstructionCost cost(ElementCount VF, VPCostContext &Ctx) = 0;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printAsOperand(raw_ostream &OS, bool PrintType = false) const {
     OS << getName();
   }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print plain-text dump of this VPBlockBase to \p O, prefixing all lines
   /// with \p Indent. \p SlotTracker is used to print unnamed VPValue's using
   /// consequtive numbers.
@@ -1210,8 +1210,9 @@ public:
   VPIRMetadata(Instruction &I) {
     getMetadataToPropagate(&I, Metadata);
     // Retain the branch weights of terminators. They are used to compute the
-    // frequencies with which the blocks of the original loop execute.
-    if (I.isTerminator())
+    // frequencies with which the blocks of the original loop execute. Also
+    // retain !prof on selects.
+    if (I.isTerminator() || isa<SelectInst>(&I))
       if (MDNode *BW = I.getMetadata(LLVMContext::MD_prof))
         Metadata.emplace_back(LLVMContext::MD_prof, BW);
   }
@@ -1235,6 +1236,11 @@ public:
       It->second = Node;
     else
       Metadata.emplace_back(Kind, Node);
+  }
+
+  /// Remove the metadata of kind \p Kind, if present.
+  void eraseMetadata(unsigned Kind) {
+    erase_if(Metadata, [Kind](const auto &P) { return P.first == Kind; });
   }
 
   /// Intersect this VPIRMetadata object with \p MD, keeping only metadata
@@ -1392,8 +1398,8 @@ public:
     /// The lane specifies an index into a vector formed by combining all vector
     /// operands (all operands after the first one).
     ExtractLane,
-    /// Explicit user for the resume phi of the canonical induction in the main
-    /// VPlan, used by the epilogue vector loop.
+    /// Explicit user for values in the main VPlan, used by the epilogue vector
+    /// loop.
     ResumeForEpilogue,
     /// Extracts the last active lane from a set of vectors. The first operand
     /// is the default value if no lanes in the masks are active. Conceptually,
@@ -2866,6 +2872,15 @@ class VPReductionPHIRecipe : public VPHeaderPHIRecipe, public VPIRFlags {
   /// compare has multiple uses.
   bool HasUsesOutsideReductionChain;
 
+  /// Temporary flag indicating that the FindIV reduction expression has been
+  /// sunk. While this is true, epilogue vectorization is disabled to avoid
+  /// applying the sunk expression twice (once in the main vector loop and again
+  /// in the epilogue), which can produce incorrect results by applying the sunk
+  /// operation twice.
+  /// TODO: Remove this flag once epilogue vectorization properly supports
+  /// sunk FindIV expressions.
+  bool ExpressionSunk = false;
+
 public:
   /// Create a new VPReductionPHIRecipe for the reduction \p Phi.
   VPReductionPHIRecipe(PHINode *Phi, RecurKind Kind, VPValue &Start,
@@ -2882,9 +2897,11 @@ public:
 
   VPReductionPHIRecipe *cloneWithOperands(VPValue *Start,
                                           VPValue *BackedgeValue) {
-    return new VPReductionPHIRecipe(
+    auto *Clone = new VPReductionPHIRecipe(
         dyn_cast_or_null<PHINode>(getUnderlyingValue()), getRecurrenceKind(),
         *Start, *BackedgeValue, Style, *this, HasUsesOutsideReductionChain);
+    Clone->ExpressionSunk = ExpressionSunk;
+    return Clone;
   }
 
   VPReductionPHIRecipe *clone() override {
@@ -2926,6 +2943,10 @@ public:
   bool hasUsesOutsideReductionChain() const {
     return HasUsesOutsideReductionChain;
   }
+
+  void setExpressionSunk() { ExpressionSunk = true; }
+
+  bool isExpressionSunk() const { return ExpressionSunk; }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
@@ -5033,6 +5054,10 @@ public:
 
   const DataLayout &getDataLayout() const {
     return getScalarHeader()->getIRBasicBlock()->getDataLayout();
+  }
+
+  Function *getIRFunction() const {
+    return getScalarHeader()->getIRBasicBlock()->getParent();
   }
 
   void addVF(ElementCount VF) { VFs.insert(VF); }

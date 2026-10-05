@@ -7,10 +7,10 @@ program declare_pinned
 end program
 
 ! CHECK-LABEL: func.func @_QQmain()
-! CHECK: %[[A_ALLOC:.*]] = cuf.alloc !fir.box<!fir.heap<f32>> {{.*}}data_attr = #cuf.cuda<pinned>
+! CHECK: %[[A_ALLOC:.*]] = cuf.alloc !fir.box<!fir.heap<f32>> {{.*}}data_attr(pinned)
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %[[A_ALLOC]]
-! CHECK: cuf.allocate %[[A]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>> {acc.declare_action = #acc.declare_action<postAlloc = @{{.*}}_acc_declare_post_alloc>, data_attr = #cuf.cuda<pinned>} -> i32
-! CHECK: cuf.deallocate %[[A]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>> {acc.declare_action = #acc.declare_action<postDealloc = @{{.*}}_acc_declare_post_dealloc>, data_attr = #cuf.cuda<pinned>} -> i32
+! CHECK: cuf.allocate %[[A]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>> data_attr(pinned) {acc.declare_action = #acc.declare_action<postAlloc = @{{.*}}_acc_declare_post_alloc>} -> i32
+! CHECK: cuf.deallocate %[[A]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>> data_attr(pinned) {acc.declare_action = #acc.declare_action<postDealloc = @{{.*}}_acc_declare_post_dealloc>} -> i32
 
 ! CHECK-LABEL: func.func private @{{.*}}_acc_declare_post_alloc(
 ! CHECK-SAME: %[[POST_ALLOC_ARG:.*]]: !fir.ref<!fir.box<!fir.heap<f32>>>)

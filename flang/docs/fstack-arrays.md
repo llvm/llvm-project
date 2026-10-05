@@ -138,9 +138,42 @@ The attribute will be called `"fir.must_be_heap"` and will have a boolean value:
 meaning that stack arrays may move the allocation. Not specifying the attribute
 will be equivalent to setting it to `false`.
 
+### Device code
+`-fstack-arrays` is not honored in code that runs on an accelerator: CUDA
+Fortran `device` and `global` procedures, OpenACC compute constructs
+(`acc.parallel`, `acc.kernels`, `acc.serial`) and `cuf.kernel` loops. The
+device stack is far smaller than the host one
+(1 KB per thread by default on NVIDIA GPUs) and every thread of a launch pays
+for the storage, so a runtime-sized array that fits the host stack easily
+overflows it. In those contexts runtime-sized allocations stay on the heap. The
+size based part of the allocation policy still applies, so small constant size
+temporaries may still be placed on the device stack, and fixed size local arrays
+are unaffected.
+
+The rule is part of the allocation policy (`flang/Optimizer/Support/
+AllocationPolicy.h`), so every stack-or-heap decision applies it:
+- Lowering records a `fir.allocation_policy` attribute with `stack_arrays`
+  disabled on device procedures. `fir::getAllocationPolicy` honors the
+  innermost policy, so the function attribute narrows the module one.
+- `fir::shouldAllocateOnStack` ignores `stack_arrays` when the allocation's
+  context operation is nested in an offload region (`fir::isInOffloadRegion`).
+  The `allocation-placement` pass passes the allocation itself as the context;
+  the `stack-arrays` pass skips such candidates.
+
+An `acc routine` procedure is lowered once for both the host and the device,
+so it keeps the host policy. Keeping its device copy off the device stack is
+left to the device code generation, which sees the runtime-sized allocations
+once the routine has been specialized for the device. Host code, including the
+host copy of an `attributes(host,device)` procedure and of an `acc routine`, is
+unaffected.
+
 ## Testing Plan
 FileCheck tests will be written to check each of the above identified sources of
 heap allocated array temporaries are detected and converted by the new pass.
 
 Another test will check that `allocate` statements in source code will not be
 moved to the stack.
+
+Tests for device code check that allocations inside offload regions and in
+device procedures are left on the heap while the same allocation in host code
+is moved to the stack.

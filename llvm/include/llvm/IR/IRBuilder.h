@@ -117,6 +117,8 @@ class IRBuilderBase {
   DebugLoc StoredDL;
 
 protected:
+  // TODO: Remove this in favor of InsertPt.getNodeParent(), so they cannot
+  // go out of sync.
   BasicBlock *BB;
   BasicBlock::iterator InsertPt;
   LLVMContext &Context;
@@ -174,6 +176,13 @@ public:
   BasicBlock::iterator GetInsertPoint() const { return InsertPt; }
   LLVMContext &getContext() const { return Context; }
 
+  /// Get data layout. Requires that an insertion point is set and connected
+  /// to a module.
+  const DataLayout &getDataLayout() const {
+    assert(BB && "Must have insertion point to get data layout");
+    return BB->getDataLayout();
+  }
+
   /// This specifies that created instructions should be appended to the
   /// end of the specified block.
   void SetInsertPoint(BasicBlock *TheBB) {
@@ -192,19 +201,18 @@ public:
 
   /// This specifies that created instructions should be inserted at the
   /// specified point.
+  [[deprecated("Use the overload without BasicBlock argument instead")]]
   void SetInsertPoint(BasicBlock *TheBB, BasicBlock::iterator IP) {
-    BB = TheBB;
-    InsertPt = IP;
-    if (IP != TheBB->end())
-      SetCurrentDebugLocation(IP->getStableDebugLoc());
+    SetInsertPoint(IP);
   }
 
   /// This specifies that created instructions should be inserted at
-  /// the specified point, but also requires that \p IP is dereferencable.
+  /// the specified point.
   void SetInsertPoint(BasicBlock::iterator IP) {
-    BB = IP->getParent();
+    BB = IP.getNodeParent();
     InsertPt = IP;
-    SetCurrentDebugLocation(IP->getStableDebugLoc());
+    if (IP != BB->end())
+      SetCurrentDebugLocation(IP->getStableDebugLoc());
   }
 
   /// This specifies that created instructions should inserted at the beginning
@@ -241,41 +249,22 @@ public:
   LLVM_ABI Type *getCurrentFunctionReturnType() const;
 
   /// InsertPoint - A saved insertion point.
-  class InsertPoint {
-    BasicBlock *Block = nullptr;
-    BasicBlock::iterator Point;
-
-  public:
-    /// Creates a new insertion point which doesn't point to anything.
-    InsertPoint() = default;
-
-    /// Creates a new insertion point at the given location.
-    InsertPoint(BasicBlock *InsertBlock, BasicBlock::iterator InsertPoint)
-        : Block(InsertBlock), Point(InsertPoint) {}
-
-    /// Returns true if this insert point is set.
-    bool isSet() const { return (Block != nullptr); }
-
-    BasicBlock *getBlock() const { return Block; }
-    BasicBlock::iterator getPoint() const { return Point; }
-  };
+  using InsertPoint = BasicBlock::iterator;
 
   /// Returns the current insert point.
-  InsertPoint saveIP() const {
-    return InsertPoint(GetInsertBlock(), GetInsertPoint());
-  }
+  InsertPoint saveIP() const { return GetInsertPoint(); }
 
   /// Returns the current insert point, clearing it in the process.
   InsertPoint saveAndClearIP() {
-    InsertPoint IP(GetInsertBlock(), GetInsertPoint());
+    InsertPoint IP(GetInsertPoint());
     ClearInsertionPoint();
     return IP;
   }
 
   /// Sets the current insert point to a previously-saved location.
   void restoreIP(InsertPoint IP) {
-    if (IP.isSet())
-      SetInsertPoint(IP.getBlock(), IP.getPoint());
+    if (IP.isValid())
+      SetInsertPoint(IP);
     else
       ClearInsertionPoint();
   }
@@ -361,20 +350,19 @@ public:
   // when the object is destroyed. This includes the debug location.
   class InsertPointGuard {
     IRBuilderBase &Builder;
-    AssertingVH<BasicBlock> Block;
     BasicBlock::iterator Point;
     DebugLoc DbgLoc;
 
   public:
     InsertPointGuard(IRBuilderBase &B)
-        : Builder(B), Block(B.GetInsertBlock()), Point(B.GetInsertPoint()),
+        : Builder(B), Point(B.GetInsertPoint()),
           DbgLoc(B.getCurrentDebugLocation()) {}
 
     InsertPointGuard(const InsertPointGuard &) = delete;
     InsertPointGuard &operator=(const InsertPointGuard &) = delete;
 
     ~InsertPointGuard() {
-      Builder.restoreIP(InsertPoint(Block, Point));
+      Builder.restoreIP(Point);
       Builder.SetCurrentDebugLocation(DbgLoc);
     }
   };
@@ -1144,7 +1132,7 @@ public:
 
   /// Create a call to llvm.stacksave
   CallInst *CreateStackSave(const Twine &Name = "") {
-    const DataLayout &DL = BB->getDataLayout();
+    const DataLayout &DL = getDataLayout();
     return CreateIntrinsicWithoutFolding(Intrinsic::stacksave,
                                          {DL.getAllocaPtrType(Context)}, {},
                                          nullptr, Name);
@@ -1889,14 +1877,14 @@ public:
 
   AllocaInst *CreateAlloca(Type *Ty, unsigned AddrSpace,
                            Value *ArraySize = nullptr, const Twine &Name = "") {
-    const DataLayout &DL = BB->getDataLayout();
+    const DataLayout &DL = getDataLayout();
     Align AllocaAlign = DL.getPrefTypeAlign(Ty);
     return Insert(new AllocaInst(Ty, AddrSpace, ArraySize, AllocaAlign), Name);
   }
 
   AllocaInst *CreateAlloca(Type *Ty, Value *ArraySize = nullptr,
                            const Twine &Name = "") {
-    const DataLayout &DL = BB->getDataLayout();
+    const DataLayout &DL = getDataLayout();
     Align AllocaAlign = DL.getPrefTypeAlign(Ty);
     unsigned AddrSpace = DL.getAllocaAddrSpace();
     return Insert(new AllocaInst(Ty, AddrSpace, ArraySize, AllocaAlign), Name);
@@ -1917,7 +1905,6 @@ public:
   LoadInst *CreateLoad(Type *Ty, Value *Ptr, const char *Name) {
     return CreateAlignedLoad(Ty, Ptr, MaybeAlign(), Name);
   }
-
   LoadInst *CreateLoad(Type *Ty, Value *Ptr, const Twine &Name = "") {
     return CreateAlignedLoad(Ty, Ptr, MaybeAlign(), Name);
   }
@@ -1955,7 +1942,7 @@ public:
   LoadInst *CreateAlignedLoad(Type *Ty, Value *Ptr, MaybeAlign Align,
                               bool isVolatile, const Twine &Name = "") {
     if (!Align) {
-      const DataLayout &DL = BB->getDataLayout();
+      const DataLayout &DL = getDataLayout();
       Align = DL.getABITypeAlign(Ty);
     }
     return Insert(new LoadInst(Ty, Ptr, Twine(), isVolatile, *Align), Name);
@@ -1964,7 +1951,7 @@ public:
   StoreInst *CreateAlignedStore(Value *Val, Value *Ptr, MaybeAlign Align,
                                 bool isVolatile = false) {
     if (!Align) {
-      const DataLayout &DL = BB->getDataLayout();
+      const DataLayout &DL = getDataLayout();
       Align = DL.getABITypeAlign(Val->getType());
     }
     return Insert(new StoreInst(Val, Ptr, isVolatile, *Align));
@@ -1981,7 +1968,7 @@ public:
                       AtomicOrdering FailureOrdering,
                       SyncScope::ID SSID = SyncScope::System) {
     if (!Align) {
-      const DataLayout &DL = BB->getDataLayout();
+      const DataLayout &DL = getDataLayout();
       Align = llvm::Align(DL.getTypeStoreSize(New->getType()));
     }
 
@@ -1995,7 +1982,7 @@ public:
                                  SyncScope::ID SSID = SyncScope::System,
                                  bool Elementwise = false) {
     if (!Align) {
-      const DataLayout &DL = BB->getDataLayout();
+      const DataLayout &DL = getDataLayout();
       Align = llvm::Align(DL.getTypeStoreSize(Val->getType()));
     }
 
@@ -2022,7 +2009,7 @@ public:
   Value *CreateGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
                    const Twine &Name = "",
                    GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
-    if (auto *V = Folder.FoldGEP(BB->getDataLayout(), Ty, Ptr, IdxList, NW))
+    if (auto *V = Folder.FoldGEP(getDataLayout(), Ty, Ptr, IdxList, NW))
       return V;
     return Insert(GetElementPtrInst::Create(Ty, Ptr, IdxList, NW), Name);
   }
@@ -2239,7 +2226,7 @@ public:
   }
   Value *CreatePtrToAddr(Value *V, const Twine &Name = "") {
     return CreateCast(Instruction::PtrToAddr, V,
-                      BB->getDataLayout().getAddressType(V->getType()), Name);
+                      getDataLayout().getAddressType(V->getType()), Name);
   }
   Value *CreatePtrToInt(Value *V, Type *DestTy,
                         const Twine &Name = "") {
@@ -2949,15 +2936,37 @@ public:
     SetInsertPoint(IP);
   }
 
+  [[deprecated("Use the overload without BasicBlock argument instead")]]
   IRBuilder(BasicBlock *TheBB, BasicBlock::iterator IP, FolderTy Folder)
       : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter),
         Folder(Folder) {
-    SetInsertPoint(TheBB, IP);
+    SetInsertPoint(IP);
   }
 
+  [[deprecated("Use the overload without BasicBlock argument instead")]]
   IRBuilder(BasicBlock *TheBB, BasicBlock::iterator IP)
       : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter) {
-    SetInsertPoint(TheBB, IP);
+    SetInsertPoint(IP);
+  }
+
+  IRBuilder(BasicBlock::iterator IP, FolderTy Folder, InserterTy Inserter)
+      : IRBuilderBase(IP.getNodeParent()->getContext(), this->Folder,
+                      this->Inserter),
+        Folder(Folder), Inserter(Inserter) {
+    SetInsertPoint(IP);
+  }
+
+  IRBuilder(BasicBlock::iterator IP, FolderTy Folder)
+      : IRBuilderBase(IP.getNodeParent()->getContext(), this->Folder,
+                      this->Inserter),
+        Folder(Folder) {
+    SetInsertPoint(IP);
+  }
+
+  explicit IRBuilder(BasicBlock::iterator IP)
+      : IRBuilderBase(IP.getNodeParent()->getContext(), this->Folder,
+                      this->Inserter) {
+    SetInsertPoint(IP);
   }
 
   /// Avoid copying the full IRBuilder. Prefer using InsertPointGuard
@@ -2979,6 +2988,12 @@ IRBuilder(Instruction *) -> IRBuilder<>;
 template <typename FolderTy>
 IRBuilder(BasicBlock *, BasicBlock::iterator, FolderTy) -> IRBuilder<FolderTy>;
 IRBuilder(BasicBlock *, BasicBlock::iterator) -> IRBuilder<>;
+template <typename FolderTy, typename InserterTy>
+IRBuilder(BasicBlock::iterator, FolderTy, InserterTy)
+    -> IRBuilder<FolderTy, InserterTy>;
+template <typename FolderTy>
+IRBuilder(BasicBlock::iterator, FolderTy) -> IRBuilder<FolderTy>;
+IRBuilder(BasicBlock::iterator) -> IRBuilder<>;
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(IRBuilder<>, LLVMBuilderRef)

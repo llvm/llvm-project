@@ -8,8 +8,8 @@ define i32 @mul(i32 %a, i32 %b) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $a1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $a0
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY killed [[COPY1]]
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr32 = COPY killed [[COPY]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr32 = COPY [[COPY]]
   ; CHECK-NEXT:   [[MUL:%[0-9]+]]:gpr32 = MUL [[COPY2]], [[COPY3]], implicit-def dead $hi0, implicit-def dead $lo0
   ; CHECK-NEXT:   $v0 = COPY [[MUL]]
   ; CHECK-NEXT:   RetRA implicit $v0
