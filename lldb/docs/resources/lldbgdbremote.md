@@ -312,6 +312,9 @@ The fields are:
   through either the native or accelerator connection. If absent, this
   defaults to true.
 
+An accelerator GDB server can use `dyld_plugin_name` to select either LLDB's
+generic `accelerator-gdb-remote` loader or a vendor-specific loader.
+
 The settings object can be extended with more fields as needed.
 
 Example:
@@ -3040,8 +3043,7 @@ support. Not needed for non-hardware-accelerator debugging.
 
 Requests shared library information from an accelerator plugin. The client
 sends this packet when it needs to load or update the accelerator's shared
-library list. This packet requires the `accelerator-plugins+` feature from
-`qSupported`.
+library list.
 
 ```
 LLDB SENDS:    jAcceleratorPluginGetDynamicLoaderLibraryInfo:<json>
@@ -3052,7 +3054,7 @@ The request JSON has the following fields:
 
 | Key           | Type   | Description |
 |---------------|--------|-------------|
-| `plugin_name` | string | Name of the accelerator plugin to query. |
+| `plugin_name` | string | Name of the accelerator plugin to query when using the native connection. It is empty on an accelerator connection, where the connection identifies the plugin. |
 | `full`        | bool   | If true, return every library the plugin knows about. If false, return only what changed since the last query. |
 
 A plugin may track thousands of code objects, so `full` lets a client that is

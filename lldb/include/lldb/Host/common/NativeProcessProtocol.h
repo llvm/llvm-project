@@ -14,6 +14,7 @@
 #include "NativeWatchpointList.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/MainLoop.h"
+#include "lldb/Utility/AcceleratorGDBRemotePackets.h"
 #include "lldb/Utility/AddressSpace.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Iterable.h"
@@ -170,6 +171,14 @@ public:
                                    "Not implemented");
   }
 
+  /// Answers "jAcceleratorPluginGetDynamicLoaderLibraryInfo" on an accelerator
+  /// connection. std::nullopt if this process does not provide libraries.
+  virtual std::optional<AcceleratorDynamicLoaderResponse>
+  GetAcceleratorDynamicLoaderLibraryInfos(
+      const AcceleratorDynamicLoaderArgs &args) {
+    return std::nullopt;
+  }
+
   virtual bool HasPendingLibraryEvents() { return false; }
 
   virtual bool IsAlive() const;
@@ -208,6 +217,8 @@ public:
 
   // Accessors
   lldb::pid_t GetID() const { return m_pid; }
+
+  virtual bool GetProcessInfo(ProcessInstanceInfo &proc_info);
 
   lldb::StateType GetState() const;
 
