@@ -2940,7 +2940,7 @@ void CStringChecker::evalMemset(CheckerContext &C,
 
   // Avoid assertion failure in the corner case when we see a function named
   // 'memset' with a nonstandard declaration.
-  if (!SizeTy->isUnsignedIntegerType())
+  if (!SizeTy->isUnsignedIntegerType() || !Size.Expression->isPRValue())
     return;
 
   ProgramStateRef ZeroSize, NonZeroSize;
