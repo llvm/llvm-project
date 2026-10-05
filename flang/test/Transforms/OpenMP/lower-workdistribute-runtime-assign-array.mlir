@@ -1,7 +1,9 @@
 // RUN: fir-opt --lower-workdistribute %s | FileCheck %s
 
 // An array-to-array _FortranAAssign in target teams workdistribute must lower
-// to an element-wise fir.array_coor copy, not a flat omp_target_memcpy.
+// to an element-wise fir.array_coor copy, not a flat omp_target_memcpy. The
+// copy must address through the (strided) section descriptors. It goes
+// through a heap temporary in two kernels, src to tmp and then tmp to dest.
 
 // Example Fortran code:
 // !$omp target teams workdistribute
@@ -10,17 +12,27 @@
 
 // CHECK-LABEL:   func.func @array_assign(
 // CHECK:           omp.target_data
-// CHECK:           omp.target
-// CHECK:             omp.teams
-// CHECK:               omp.parallel
-// CHECK:                 omp.distribute
-// CHECK:                   omp.wsloop
-// CHECK:                     omp.loop_nest
-// CHECK:                       %[[SRC:.*]] = fir.array_coor {{.*}} : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
-// CHECK:                       %[[VAL:.*]] = fir.load %[[SRC]] : !fir.ref<f32>
-// CHECK:                       %[[DST:.*]] = fir.array_coor {{.*}} : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
-// CHECK:                       fir.store %[[VAL]] to %[[DST]] : !fir.ref<f32>
-// CHECK-NOT:         omp_target_memcpy
+// CHECK:           omp.target_allocmem
+
+// First kernel reads the strided src section into the temporary.
+// CHECK:           omp.target kernel_type
+// CHECK:           %[[SLICE:.*]] = fir.slice
+// CHECK:           %[[SRCBOX:.*]] = fir.embox {{.*}}[%[[SLICE]]]
+// CHECK:           omp.loop_nest
+// CHECK:           %[[SRC:.*]] = fir.array_coor %[[SRCBOX]] {{.*}} : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
+// CHECK:           %[[TMP:.*]] = fir.coordinate_of {{.*}} -> !fir.ref<f32>
+// CHECK:           %[[VAL:.*]] = fir.load %[[SRC]] : !fir.ref<f32>
+// CHECK:           fir.store %[[VAL]] to %[[TMP]] : !fir.ref<f32>
+
+// Second kernel writes the temporary into the strided dest section.
+// CHECK:           omp.target kernel_type
+// CHECK:           omp.loop_nest
+// CHECK:           %[[DST:.*]] = fir.array_coor {{.*}} : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
+// CHECK:           %[[TMP2:.*]] = fir.coordinate_of {{.*}} -> !fir.ref<f32>
+// CHECK:           %[[VAL2:.*]] = fir.load %[[TMP2]] : !fir.ref<f32>
+// CHECK:           fir.store %[[VAL2]] to %[[DST]] : !fir.ref<f32>
+// CHECK:           omp.target_freemem
+// CHECK-NOT:       omp_target_memcpy
 
 module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, omp.is_target_device = true} {
 func.func @array_assign(%a : !fir.ref<!fir.array<?x?xf32>>, %b : !fir.ref<!fir.array<?x?xf32>>) {
@@ -39,13 +51,18 @@ func.func @array_assign(%a : !fir.ref<!fir.array<?x?xf32>>, %b : !fir.ref<!fir.a
     %e0 = arith.constant 10 : index
     %e1 = arith.constant 20 : index
     %shape = fir.shape %e0, %e1 : (index, index) -> !fir.shape<2>
-    %da = fir.declare %arga(%shape) {uniq_name = "a"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.ref<!fir.array<?x?xf32>>
-    %db = fir.declare %argb(%shape) {uniq_name = "b"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.ref<!fir.array<?x?xf32>>
+    %da = fir.declare %arga(%shape) uniq_name("a") : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.ref<!fir.array<?x?xf32>>
+    %db = fir.declare %argb(%shape) uniq_name("b") : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.ref<!fir.array<?x?xf32>>
     omp.teams {
       %dtmp = fir.alloca !fir.box<!fir.array<?x?xf32>> {pinned}
       omp.workdistribute {
-        %srcbox = fir.embox %db(%shape) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf32>>
-        %dstbox = fir.embox %da(%shape) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf32>>
+        // Strided sections (stride 2 in dim 0): the descriptors carry the
+        // stride, so a correct lowering must address through them.
+        %lb = arith.constant 1 : index
+        %st = arith.constant 2 : index
+        %slice = fir.slice %lb, %e0, %st, %lb, %e1, %lb : (index, index, index, index, index, index) -> !fir.slice<2>
+        %srcbox = fir.embox %db(%shape) [%slice] : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<?x?xf32>>
+        %dstbox = fir.embox %da(%shape) [%slice] : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<?x?xf32>>
         fir.store %dstbox to %dtmp : !fir.ref<!fir.box<!fir.array<?x?xf32>>>
         %str = fir.address_of(@_QQcl) : !fir.ref<!fir.char<1,2>>
         %line = arith.constant 13 : i32
