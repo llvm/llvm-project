@@ -686,16 +686,16 @@ Value *AMDGPUSwLowerLDS::getTranslatedGlobalMemoryPtrOfLDS(Value *LoadMallocPtr,
 
 // A flat pointer to lowered LDS holds a global address inside the malloc
 // buffer, but LDS values in this pass are offsets into that buffer.
-// Rebase it as inttoptr(trunc(ptrtoint(flat) - ptrtoint(buf))).
+// Rebase it as inttoptr(trunc(ptrtoaddr(flat) - ptrtoaddr(buf))).
 Value *AMDGPUSwLowerLDS::getTranslatedLDSPtrOfFlat(Value *LoadMallocPtr,
                                                    Value *FlatPtr,
                                                    Type *LDSPtrTy) {
   const DataLayout &DL = M.getDataLayout();
-  Type *FlatIntTy = DL.getIntPtrType(FlatPtr->getType());
-  Value *Base = IRB.CreatePtrToInt(LoadMallocPtr, FlatIntTy->getScalarType());
-  if (auto *VecTy = dyn_cast<VectorType>(FlatIntTy))
+  Value *FlatAddr = IRB.CreatePtrToAddr(FlatPtr);
+  Value *Base = IRB.CreatePtrToAddr(LoadMallocPtr);
+  if (auto *VecTy = dyn_cast<VectorType>(FlatAddr->getType()))
     Base = IRB.CreateVectorSplat(VecTy->getElementCount(), Base);
-  Value *Diff = IRB.CreateSub(IRB.CreatePtrToInt(FlatPtr, FlatIntTy), Base);
+  Value *Diff = IRB.CreateSub(FlatAddr, Base);
   Value *Offset = IRB.CreateTrunc(Diff, DL.getIntPtrType(LDSPtrTy));
   return IRB.CreateIntToPtr(Offset, LDSPtrTy);
 }

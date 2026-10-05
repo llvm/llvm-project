@@ -27,8 +27,8 @@ define void @foo(ptr %p) sanitize_address {
 ; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr addrspace(3) [[TMP8]] to i32
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP4]], i32 [[TMP9]]
 ; CHECK-NEXT:    store i32 2, ptr addrspace(1) [[TMP10]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint ptr addrspace(1) [[TMP4]] to i64
-; CHECK-NEXT:    [[TMP12:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[TMP12:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoaddr ptr addrspace(1) [[TMP4]] to i64
 ; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP12]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i32
 ; CHECK-NEXT:    [[TMP15:%.*]] = inttoptr i32 [[TMP14]] to ptr addrspace(3)
