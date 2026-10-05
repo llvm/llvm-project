@@ -638,7 +638,7 @@ void AArch64AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
   auto &O = *OutStreamer;
   MCSymbol *CurSled = OutContext.createTempSymbol("xray_sled_", true);
   O.emitLabel(CurSled);
-  bool MachO = TM.getTargetTriple().isOSBinFormatMachO();
+  bool MachO = MMI->getModule()->getTargetTriple().isOSBinFormatMachO();
   auto *Sym = MCSymbolRefExpr::create(
       OutContext.getOrCreateSymbol(
           Twine(MachO ? "_" : "") +
