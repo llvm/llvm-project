@@ -1925,19 +1925,25 @@ bool TypeEvaluationHelper::canEvaluateSExtdPred(Value *V, Type *Ty) {
 }
 
 /// Fold
-///   sext (binop nsw (trunc nsw X to iN), C) to iM
+///   sext (binop nsw (trunc nsw X to iN), Y) to iM
 /// to
-///   binop nsw X, sext(C)
-/// when X already has type iM. trunc nsw means X fits in iN, and nsw on the
-/// narrow binop means the result also fits in iN, so the sign-extended value
-/// is that same operation on X and the sign-extended other operand. The wide
-/// binop is nsw because its result fits in iN.
+///   binop nsw X, sext(Y)
+/// when X already has type iM. Y may be a constant, another trunc nsw back to
+/// an iM value, or any other iN value. trunc nsw means X fits in iN, and nsw
+/// on the narrow binop means the result also fits in iN, so the sign-extended
+/// value is that same operation on X and the sign-extended other operand. The
+/// wide binop is nsw because its result fits in iN.
+///
+/// A constant Y is folded into sext(Y) immediately. A non-constant Y becomes
+/// an explicit sext, so a loop-invariant narrow operand stays an nsw
+/// recurrence.
 ///
 /// EvaluateInDifferentType rebuilds the binop without overflow flags. The
 /// sign-bit check then fails and visitSExt emits a shl/ashr pair, which SCEV
 /// cannot treat as a non-wrapping recurrence.
-static Instruction *foldSExtOfNSWBinOpOfTrunc(SExtInst &Sext,
-                                              const DataLayout &DL) {
+static Instruction *
+foldSExtOfNSWBinOpOfTrunc(SExtInst &Sext, const DataLayout &DL,
+                          InstCombiner::BuilderTy &Builder) {
   auto *BinOp = dyn_cast<OverflowingBinaryOperator>(Sext.getOperand(0));
   if (!BinOp || !BinOp->hasNoSignedWrap())
     return nullptr;
@@ -1947,22 +1953,41 @@ static Instruction *foldSExtOfNSWBinOpOfTrunc(SExtInst &Sext,
       Opc != Instruction::Mul)
     return nullptr;
 
+  // V is the widened operand. NeedsSExt means V still has the narrow type and
+  // must be sign-extended. FromWideTrunc means V is an existing iM value
+  // recovered from trunc nsw.
+  struct WideOp {
+    Value *V = nullptr;
+    bool NeedsSExt = false;
+    bool FromWideTrunc = false;
+  };
   Type *DestTy = Sext.getType();
-  auto widenOperand = [&](Value *V) -> Value * {
+  auto widenOperand = [&](Value *V) -> WideOp {
     Value *X;
     if (match(V, m_NSWTrunc(m_Value(X))) && X->getType() == DestTy)
-      return X;
+      return {X, false, true};
     if (auto *C = dyn_cast<Constant>(V))
-      return ConstantFoldIntegerCast(C, DestTy, /*IsSigned=*/true, DL);
-    return nullptr;
+      return {ConstantFoldIntegerCast(C, DestTy, /*IsSigned=*/true, DL), false,
+              false};
+    // Any other same-typed value sign-extends to its mathematical value.
+    // This is only used when the other operand recovers an existing iM value,
+    // so the fold does not widen arithmetic that was never connected to one.
+    if (V->getType() == BinOp->getType())
+      return {V, true, false};
+    return {};
   };
 
-  Value *LHS = widenOperand(BinOp->getOperand(0));
-  Value *RHS = widenOperand(BinOp->getOperand(1));
-  if (!LHS || !RHS)
+  WideOp LHS = widenOperand(BinOp->getOperand(0));
+  WideOp RHS = widenOperand(BinOp->getOperand(1));
+  if (!LHS.V || !RHS.V || !(LHS.FromWideTrunc || RHS.FromWideTrunc))
     return nullptr;
 
-  return BinaryOperator::CreateNSW(Opc, LHS, RHS);
+  auto materialize = [&](WideOp Op) -> Value * {
+    if (!Op.NeedsSExt)
+      return Op.V;
+    return Builder.CreateSExt(Op.V, DestTy);
+  };
+  return BinaryOperator::CreateNSW(Opc, materialize(LHS), materialize(RHS));
 }
 
 Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
@@ -1978,7 +2003,7 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
   // shl/ashr. Do not widen the arithmetic past a legal type.
   if (isa<VectorType>(Sext.getType()) ||
       shouldChangeType(Sext.getSrcTy(), Sext.getType()))
-    if (Instruction *I = foldSExtOfNSWBinOpOfTrunc(Sext, DL))
+    if (Instruction *I = foldSExtOfNSWBinOpOfTrunc(Sext, DL, Builder))
       return I;
 
   Value *Src = Sext.getOperand(0);
