@@ -3108,13 +3108,23 @@ bool AddressSanitizer::instrumentFunction(Function &F,
   if (maybeInsertAsanInitAtFunctionEntry(F))
     FunctionModified = true;
 
-  // Leave if the function doesn't need instrumentation.
-  if (!F.hasFnAttribute(Attribute::SanitizeAddress)) return FunctionModified;
+  // Leave if the function doesn't need instrumentation. Functions that are
+  // not instrumented as a whole are still instrumented inside
+  // llvm.sanitizer.instrumentation.begin()/end() regions. Only memory
+  // accesses are instrumented there: the stack frame of such a function is
+  // not laid out by ASan, so stack poisoning, use-after-return and the
+  // handling of noreturn calls (which unpoisons the stack) are left out.
+  bool RegionOnly = false;
+  if (!F.hasFnAttribute(Attribute::SanitizeAddress) ||
+      F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation)) {
+    if (!hasSanitizerInstrumentationRegions(F))
+      return FunctionModified;
+    RegionOnly = true;
+  }
 
-  if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
-    return FunctionModified;
-
-  LLVM_DEBUG(dbgs() << "ASAN instrumenting:\n" << F << "\n");
+  LLVM_DEBUG(dbgs() << "ASAN instrumenting" << (RegionOnly ? " regions" : "")
+                    << ":\n"
+                    << F << "\n");
 
   initializeCallbacks(TLI);
 
@@ -3130,6 +3140,10 @@ bool AddressSanitizer::instrumentFunction(Function &F,
 
   if (TargetTriple.isOSWindows())
     markCatchParametersAsUninteresting(F);
+
+  SmallPtrSet<const Instruction *, 16> InRegion;
+  if (RegionOnly)
+    computeSanitizerInstrumentationRegions(F, InRegion);
 
   // We want to instrument every address only once per basic block (unless there
   // are calls between uses).
@@ -3150,11 +3164,23 @@ bool AddressSanitizer::instrumentFunction(Function &F,
       // Skip instructions inserted by another instrumentation.
       if (Inst.hasMetadata(LLVMContext::MD_nosanitize))
         continue;
+      if (RegionOnly && !InRegion.contains(&Inst)) {
+        // A call between two regions can free memory like any other call.
+        if (isa<CallBase>(Inst))
+          TempsToInstrument.clear();
+        continue;
+      }
       SmallVector<InterestingMemoryOperand, 1> InterestingOperands;
       getInterestingMemoryOperands(&Inst, InterestingOperands, TTI);
 
       if (!InterestingOperands.empty()) {
         for (auto &Operand : InterestingOperands) {
+          // The locals of a function that is only instrumented in regions
+          // have no redzones, so checking them can only trip over stale
+          // stack poisoning.
+          if (RegionOnly &&
+              isa<AllocaInst>(getUnderlyingObject(Operand.getPtr())))
+            continue;
           if (ClOpt && ClOptSameTemp) {
             Value *Ptr = Operand.getPtr();
             // If we have a mask, skip instrumentation if we've already
@@ -3214,8 +3240,13 @@ bool AddressSanitizer::instrumentFunction(Function &F,
     FunctionModified = true;
   }
 
-  FunctionStackPoisoner FSP(F, *this, RTCI);
-  bool ChangedStack = FSP.runOnFunction();
+  bool ChangedStack = false;
+  if (!RegionOnly) {
+    FunctionStackPoisoner FSP(F, *this, RTCI);
+    ChangedStack = FSP.runOnFunction();
+  } else {
+    NoReturnCalls.clear();
+  }
 
   // We must unpoison the stack before NoReturn calls (throw, _exit, etc).
   // See e.g. https://github.com/google/sanitizers/issues/37

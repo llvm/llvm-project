@@ -243,6 +243,27 @@ AddressSanitizer also supports
 works similarly to `__attribute__((no_sanitize("address")))`, but it also
 prevents instrumentation performed by other sanitizers.
 
+### Re-enabling Instrumentation in Regions
+
+Inside a function that AddressSanitizer does not instrument, a region
+delimited by `__builtin_sanitizer_instrumentation_begin()` and
+`__builtin_sanitizer_instrumentation_end()` is instrumented again: memory
+accesses and memory intrinsics in it are checked. The function's stack frame
+is still not instrumented, and accesses to its own local variables are not
+checked. Regions nest, and code reachable without passing through a
+`__builtin_sanitizer_instrumentation_begin()` is not considered to be in a
+region.
+
+```c
+__attribute__((no_sanitize("address")))
+void mostly_uninstrumented(int *p) {
+  ... // not checked
+  __builtin_sanitizer_instrumentation_begin();
+  *p = 0; // checked
+  __builtin_sanitizer_instrumentation_end();
+}
+```
+
 ### Interaction of Inlining with Disabling Sanitizer Instrumentation
 
 - A `no_sanitize` function will not be inlined heuristically by the compiler into a sanitized function.

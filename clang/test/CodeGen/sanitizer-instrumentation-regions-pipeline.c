@@ -7,6 +7,9 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -O2 -debug-info-kind=line-tables-only \
 // RUN:     -fsanitize=kernel-memory -emit-llvm -o - %s \
 // RUN:     | FileCheck %s --check-prefixes=CHECK,KMSAN
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -O2 -debug-info-kind=line-tables-only \
+// RUN:     -fsanitize=kernel-address -emit-llvm -o - %s \
+// RUN:     | FileCheck %s --check-prefixes=CHECK,KASAN
 
 static inline __attribute__((always_inline)) void instrumentation_begin(void) {
   __builtin_sanitizer_instrumentation_begin();
@@ -33,6 +36,7 @@ void noinstr_function(int *p, int x) {
 // CHECK:         call void @llvm.sanitizer.instrumentation.begin()
 // KMSAN:         call ptr @__msan_get_context_state()
 // KMSAN:         call { ptr, ptr } @__msan_metadata_ptr_for_load_4(
+// KASAN:         call void @__asan_report_load4(
 // CHECK:         call void @instrumented_callee(
 // CHECK:         call void @llvm.sanitizer.instrumentation.end()
 // CHECK-NOT:     call {{.*}}@__{{msan|asan|tsan|sanitizer_cov}}
