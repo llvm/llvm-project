@@ -183,27 +183,6 @@ static cl::opt<bool> InlineAllViableCalls(
     "inline-all-viable-calls", cl::Hidden, cl::init(false),
     cl::desc("Inline all viable calls, even if they exceed the inlining "
              "threshold"));
-
-static cl::opt<bool> UseClangHints(
-    "inline-use-clang-hints", cl::Hidden, cl::init(false),
-    cl::desc("Use clang's lambda/main-file hints to raise thresholds"));
-
-static cl::opt<int> ClangHintsLambdaBonus(
-    "clang-hints-lambda-bonus", cl::Hidden, cl::init(500),
-    cl::desc("Threshold bonus for lambdas"));
-
-static cl::opt<int> ClangHintsMainFileTemplateBonus(
-    "clang-hints-main-file-template-bonus", cl::Hidden, cl::init(150),
-    cl::desc("Threshold bonus for main-file inline/template functions"));
-
-static cl::opt<int> ClangHintsLambdaMainFileBonus(
-    "clang-hints-lambda-main-file-bonus", cl::Hidden, cl::init(3000),
-    cl::desc("Threshold bonus for lambdas in the main file"));
-
-static cl::opt<bool> ClangHintsLocalLambdas(
-    "clang-hints-local-lambdas", cl::Hidden, cl::init(true),
-    cl::desc("Treat main-file linkonce_odr lambdas as local functions"));
-
 namespace llvm {
 std::optional<int> getStringFnAttrAsInt(const Attribute &Attr) {
   if (Attr.isValid()) {
@@ -1269,18 +1248,14 @@ public:
 
 // Return true if CB is the sole call to local function Callee.
 //
-// With UseClangHints and ClangHintsLocalLambdas, a linkonce_odr function
-// that's (1) a lambda, and (2) defined in the main source file, we count as
-// local too. Ignoring very unusual setups (#include-ing a .cpp file), no other
-// translation unit can reuse such lambda, so we expect inlining it turns the
-// original dead.
+// A linkonce_odr function marked "frontend-hint-likely-module-local" counts as
+// local too: no other module is expected to reference it, so we expect
+// inlining the sole call to turn the original dead.
 static bool isSoleCallToLocalFunction(const CallBase &CB,
                                       const Function &Callee) {
   bool Local = Callee.hasLocalLinkage() ||
-               (UseClangHints && ClangHintsLocalLambdas &&
-                Callee.hasLinkOnceODRLinkage() &&
-                Callee.hasFnAttribute("clang-lambda") &&
-                Callee.hasFnAttribute("clang-main-file"));
+               (Callee.hasLinkOnceODRLinkage() &&
+                Callee.hasFnAttribute("frontend-hint-likely-module-local"));
   return Local && Callee.hasOneLiveUse() && &Callee == CB.getCalledFunction();
 }
 
@@ -2135,14 +2110,12 @@ void InlineCostCallAnalyzer::updateThreshold(CallBase &Call, Function &Callee) {
   int SingleBBBonusPercent = 50;
   int VectorBonusPercent = TTI.getInlinerVectorBonusPercent();
   int LastCallToStaticBonus = TTI.getInliningLastCallToStaticBonus();
-  bool ClangHintBonusAllowed = true;
 
   // Lambda to set all the above bonus and bonus percentages to 0.
   auto DisallowAllBonuses = [&]() {
     SingleBBBonusPercent = 0;
     VectorBonusPercent = 0;
     LastCallToStaticBonus = 0;
-    ClangHintBonusAllowed = false;
   };
 
   // Use the OptMinSizeThreshold or OptSizeThreshold knob if they are available
@@ -2155,7 +2128,6 @@ void InlineCostCallAnalyzer::updateThreshold(CallBase &Call, Function &Callee) {
     // call/return instructions.
     SingleBBBonusPercent = 0;
     VectorBonusPercent = 0;
-    ClangHintBonusAllowed = false;
   } else if (Caller->hasOptSize())
     Threshold = MinIfValid(Threshold, Params.OptSizeThreshold);
 
@@ -2227,23 +2199,6 @@ void InlineCostCallAnalyzer::updateThreshold(CallBase &Call, Function &Callee) {
 
   SingleBBBonus = Threshold * SingleBBBonusPercent / 100;
   VectorBonus = Threshold * VectorBonusPercent / 100;
-
-  // A lambda is usually specific to its call sites, very often there's only
-  // one call site, and inlining is especially benefitial: Captured variables
-  // turn back into the caller's locals. A function defined in the main source
-  // file (very typically) isn't used in other translation unit, inlining it
-  // cannot multiply copies across them (that's what linkonce_odr tries to
-  // prevent). Boost those situations.
-  if (UseClangHints && ClangHintBonusAllowed) {
-    bool IsLambda = Callee.hasFnAttribute("clang-lambda");
-    Attribute MainFile = Callee.getFnAttribute("clang-main-file");
-    if (IsLambda && MainFile.isValid())
-      Threshold += ClangHintsLambdaMainFileBonus;
-    else if (IsLambda)
-      Threshold += ClangHintsLambdaBonus;
-    else if (MainFile.getValueAsString() == "inline-or-template")
-      Threshold += ClangHintsMainFileTemplateBonus;
-  }
 
   // If there is only one call of the function, and it has internal linkage,
   // the cost of inlining it drops dramatically. It may seem odd to update
