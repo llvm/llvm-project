@@ -201,3 +201,32 @@ TEST_F(BasicAATest, PartialAliasOffsetSelect) {
       MemoryLocation(Select, LocationSize::precise(1)), AAQI, nullptr);
   ASSERT_EQ(AR.getOffset(), 1);
 }
+
+// A cached MayAlias must not hide a separate_storage assumption that becomes
+// available at a later query context.
+TEST_F(BasicAATest, CachedMayAliasWithSeparateStorage) {
+  SMDiagnostic Err;
+  auto Mod = parseAssemblyString(R"(
+    declare void @llvm.assume(i1)
+    define void @f(ptr %p, ptr %q, i1 %c) {
+    entry:
+      br i1 %c, label %then, label %exit
+    then:
+      call void @llvm.assume(i1 true)
+          [ "separate_storage"(ptr %p, ptr %q) ]
+      ret void
+    exit:
+      ret void
+    }
+  )", Err, C);
+  ASSERT_TRUE(Mod);
+  F = Mod->getFunction("f");
+  auto &A = setupAnalyses();
+  MemoryLocation P(F->getArg(0), LocationSize::precise(1));
+  MemoryLocation Q(F->getArg(1), LocationSize::precise(1));
+  EXPECT_EQ(A.BAA.alias(P, Q, A.AAQI, F->getEntryBlock().getTerminator()),
+            AliasResult::MayAlias);
+  EXPECT_EQ(A.BAA.alias(P, Q, A.AAQI,
+                        F->getEntryBlock().getNextNode()->getTerminator()),
+            AliasResult::NoAlias);
+}

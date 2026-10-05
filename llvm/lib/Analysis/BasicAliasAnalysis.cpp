@@ -1574,8 +1574,8 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   if (isValueEqualInPotentialCycles(V1, V2, AAQI))
     return AliasResult::MustAlias;
 
-  // Reuse definitive recursive results before repeating object and capture
-  // analysis. Keep assumption accounting on the existing cache path below.
+  // Reuse definitive NoAlias results before repeating object and capture
+  // analysis. Other cached results may be improved by the early checks below.
   if (AAQI.Depth < MaxAliasRecursionDepth) {
     LocationSize CacheSize1 = V1Size, CacheSize2 = V2Size;
     if (CacheSize1.mayBeBeforePointer() || CacheSize2.mayBeBeforePointer()) {
@@ -1584,15 +1584,12 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     }
     AAQueryInfo::LocPair Locs({V1, CacheSize1, AAQI.MayBeCrossIteration},
                               {V2, CacheSize2, AAQI.MayBeCrossIteration});
-    const bool Swapped = V1 > V2;
-    if (Swapped)
+    if (V1 > V2)
       std::swap(Locs.first, Locs.second);
     const auto It = AAQI.AliasCache.find(Locs);
-    if (It != AAQI.AliasCache.end() && It->second.isDefinitive()) {
-      AliasResult Result = It->second.Result;
-      Result.swap(Swapped);
-      return Result;
-    }
+    if (It != AAQI.AliasCache.end() && It->second.isDefinitive() &&
+        It->second.Result == AliasResult::NoAlias)
+      return AliasResult::NoAlias;
   }
 
   // Figure out what objects these things are pointing to if we can.
