@@ -308,6 +308,8 @@ void MachineFunction::clear() {
   BasicBlockRecycler.clear(Allocator);
   CodeViewAnnotations.clear();
   VariableDbgInfos.clear();
+  CallSitesInfo.clear();
+  CalledGlobalsInfo.clear();
   if (RegInfo) {
     RegInfo->~MachineRegisterInfo();
     Allocator.Deallocate(RegInfo);
