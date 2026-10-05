@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -1101,9 +1102,22 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
       Ops.push_back(OpV);
     }
     VPValue *Result = Ops.front();
-    for (VPValue *Op : drop_begin(Ops))
-      Result = Builder.createScalarIntrinsic(IntrinsicID, {Result, Op},
-                                             ResultTy, DL);
+    for (VPValue *Op : drop_begin(Ops)) {
+      if (!ResultTy->isPointerTy()) {
+        Result = Builder.createScalarIntrinsic(IntrinsicID, {Result, Op},
+                                               ResultTy, DL);
+        continue;
+      }
+      // The min/max intrinsics don't support pointer operands, so expand
+      // pointer-typed min/max as cmp + select, matching SCEVExpander.
+      VPValue *Cmp = Builder.createICmp(
+          MinMaxIntrinsic::getPredicate(IntrinsicID), Result, Op, DL);
+      Result = Builder.createSelect(Cmp, Result, Op, DL);
+      Function &F = *Builder.getPlan().getIRFunction();
+      if (MDNode *MD =
+              getExplicitlyUnknownBranchWeightsIfProfiled(F, "scev-expander"))
+        cast<VPInstruction>(Result)->setMetadata(LLVMContext::MD_prof, MD);
+    }
     return Result;
   }
   case scAddRecExpr: {
@@ -1211,44 +1225,26 @@ static BranchProbability getBranchProbabilityKeepingPartial(uint64_t Num,
 }
 
 BranchProbability vputils::getExecutionProbability(BlockFrequency Freq) {
-  return getBranchProbabilityKeepingPartial(Freq.getFrequency(),
-                                            AlwaysExecutesFreq);
+  return getBranchProbabilityKeepingPartial(
+      Freq.getFrequency(),
+      BlockFrequencyInfoImplBase::BlockMass::getFull().getMass());
 }
 
-/// Returns the probability of reaching each unique successor of \p VPBB, taken
-/// from the branch weights recorded on its terminator, or unknown if not
-/// available. See llvm::getBranchProbability in
-/// llvm/Transforms/Utils/LoopUtils.h for the IR version.
-static SmallVector<std::pair<const VPBasicBlock *, BranchProbability>, 2>
+/// Returns the probability of each successor edge of \p VPBB, computed via
+/// BranchProbabilityInfo::getEdgeProbabilitiesFromWeights from the branch
+/// weights recorded on its terminator, or std::nullopt if not available.
+static std::optional<SmallVector<BranchProbability>>
 getSuccessorProbabilities(const VPBasicBlock *VPBB) {
-  ArrayRef<VPBlockBase *> Successors = VPBB->getSuccessors();
   // With a single successor the edge is always taken and needs no weights.
-  if (VPBlockBase *Succ = VPBB->getSingleSuccessor())
-    return {{cast<VPBasicBlock>(Succ), BranchProbability::getOne()}};
+  if (VPBB->getSingleSuccessor())
+    return SmallVector<BranchProbability>{BranchProbability::getOne()};
 
-  // Take the branch weights off the terminator. Without usable weights all
-  // successors have unknown probability; zero the weights, so the accumulation
-  // below still visits each of them.
   SmallVector<uint32_t> Weights;
   auto *Term = dyn_cast_if_present<VPInstruction>(VPBB->getTerminator());
   if (!Term || !extractBranchWeights(Term->getBranchWeights(), Weights) ||
-      Weights.size() != Successors.size())
-    Weights.assign(Successors.size(), 0);
-  uint64_t Total = sum_of(Weights, uint64_t(0));
-
-  // Sum the weights of parallel edges to the same successor, so that the
-  // division below rounds once per successor rather than once per edge.
-  SmallMapVector<const VPBasicBlock *, uint64_t, 2> WeightPerSuccessor;
-  for (const auto &[Succ, Weight] : zip_equal(Successors, Weights))
-    WeightPerSuccessor[cast<VPBasicBlock>(Succ)] += Weight;
-
-  return map_to_vector<2>(WeightPerSuccessor, [Total](const auto &SuccWeight) {
-    auto [Succ, Weight] = SuccWeight;
-    if (Total == 0)
-      return std::make_pair(Succ, BranchProbability::getUnknown());
-    return std::make_pair(Succ,
-                          getBranchProbabilityKeepingPartial(Weight, Total));
-  });
+      Weights.size() != VPBB->getNumSuccessors())
+    return std::nullopt;
+  return BranchProbabilityInfo::getEdgeProbabilitiesFromWeights(Weights);
 }
 
 DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
@@ -1267,29 +1263,28 @@ vputils::computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks) {
     BFI.Working.emplace_back(BFIBase::BlockNode(Idx)).Loop = &Loop;
   }
   BFI.Working.emplace_back(Outside);
-  BFI.Working[Header.Index].getMass() = BFIBase::BlockMass(AlwaysExecutesFreq);
+  BFI.Working[Header.Index].getMass() = BFIBase::BlockMass::getFull();
 
   // Keep track nodes reached via an edge without branch weighs or with
   // estimated ones
   SmallVector<bool> IsUnknown(Blocks.size()), IsEstimated(Blocks.size());
   for (auto [Idx, VPBB] : enumerate(Blocks)) {
     BFIBase::BlockNode Node(Idx);
+    auto Probs = getSuccessorProbabilities(VPBB);
     auto *Term = dyn_cast_if_present<VPInstruction>(VPBB->getTerminator());
     bool TermIsEstimated = Term && Term->hasEstimatedBranchWeights();
     BFIBase::Distribution Dist;
-    bool HasProbs = true;
-    for (const auto &[Succ, Prob] : getSuccessorProbabilities(VPBB)) {
+    for (auto [SuccIdx, Succ] : enumerate(VPBB->getSuccessors())) {
       BFIBase::BlockNode SuccNode = Nodes.lookup_or(Succ, Outside);
       if (SuccNode != Header && SuccNode != Outside) {
-        IsUnknown[SuccNode.Index] |= IsUnknown[Idx] || Prob.isUnknown();
+        IsUnknown[SuccNode.Index] |= IsUnknown[Idx] || !Probs;
         IsEstimated[SuccNode.Index] |= IsEstimated[Idx] || TermIsEstimated;
       }
-      HasProbs &= !Prob.isUnknown();
-      if (!Prob.isUnknown())
+      if (Probs)
         BFI.addToDist(Dist, &Loop, Node, SuccNode,
-                      getWeightFromBranchProb(Prob));
+                      getWeightFromBranchProb((*Probs)[SuccIdx]));
     }
-    if (HasProbs)
+    if (Probs)
       BFI.distributeMass(Node, &Loop, Dist);
   }
 
@@ -1360,19 +1355,49 @@ VPIRValue *vputils::tryToFoldLiveIns(VPSingleDefRecipe &R,
     case Instruction::GetElementPtr: {
       auto &RFlags = cast<VPRecipeWithIRFlags>(R);
       auto *GEP = cast<GetElementPtrInst>(RFlags.getUnderlyingInstr());
-      return Folder.FoldGEP(GEP->getSourceElementType(), Ops[0],
+      return Folder.FoldGEP(DL, GEP->getSourceElementType(), Ops[0],
                             drop_begin(Ops), RFlags.getGEPNoWrapFlags());
     }
     case VPInstruction::PtrAdd:
     case VPInstruction::WidePtrAdd:
-      return Folder.FoldGEP(IntegerType::getInt8Ty(Plan.getContext()), Ops[0],
-                            Ops[1],
+      return Folder.FoldGEP(DL, IntegerType::getInt8Ty(Plan.getContext()),
+                            Ops[0], Ops[1],
                             cast<VPRecipeWithIRFlags>(R).getGEPNoWrapFlags());
     // An extract of a live-in is an extract of a broadcast, so return the
     // broadcasted element.
     case Instruction::ExtractElement:
       assert(!Ops[0]->getType()->isVectorTy() && "Live-ins should be scalar");
       return Ops[0];
+    case VPInstruction::ActiveLaneMask:
+    case VPInstruction::WideActiveLaneMask: {
+      uint64_t Multiplier = 1;
+      if (Opcode == VPInstruction::WideActiveLaneMask) {
+        // Optimizing WideALM can only happen after the Plan is unrolled.
+        if (!Plan.isUnrolled())
+          return nullptr;
+        Multiplier = cast<ConstantInt>(Ops[2])->getZExtValue();
+        Ops.pop_back();
+      }
+
+      // We rely on the fact that different VPlans are created for the
+      // fixed-vector and scalable-vector cases.
+      ElementCount MaxVF =
+          *max_element(Plan.vectorFactors(), ElementCount::isKnownLT) *
+          Multiplier;
+
+      Type *I1Ty = IntegerType::getInt1Ty(Plan.getContext());
+      if (auto *C = dyn_cast_if_present<Constant>(Folder.FoldIntrinsic(
+              Intrinsic::get_active_lane_mask, Ops,
+              VectorType::get(I1Ty, MaxVF), {}, Plan.getIRFunction()))) {
+        // We cannot handle vector constants that are not all-true or all-false,
+        // because they would not be collapsable to a scalar constant, that
+        // would be necessary for live-in simplification.
+        if (C->isOneValue())
+          return ConstantInt::getTrue(I1Ty);
+        if (C->isNullValue())
+          return ConstantInt::getFalse(I1Ty);
+      }
+    }
     }
     return nullptr;
   };
@@ -1409,8 +1434,7 @@ void vputils::detail::pullOutPermutationsImpl(
 
       VPSingleDefRecipe *Res = BuildPerm(&Def);
       Res->insertAfter(&Def);
-      Def.replaceUsesWithIf(
-          Res, [&Res](VPUser &U, unsigned _) { return &U != Res; });
+      Def.replaceUsesWithIf(Res, [&Res](VPUser &U) { return &U != Res; });
     }
   }
 }

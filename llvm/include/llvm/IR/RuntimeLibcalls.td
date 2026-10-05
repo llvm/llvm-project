@@ -615,7 +615,7 @@ foreach MemSize = [1, 2, 4, 8, 16] in {
 def UNWIND_RESUME : RuntimeLibcall;
 def UNWIND_REGISTER : RuntimeLibcall;
 def UNWIND_UNREGISTER : RuntimeLibcall;
-def UNWIND_CALL_PERSONALITY : RuntimeLibcall;
+def UNWIND_GET_WASM_LPAD_CONTEXT : RuntimeLibcall;
 def CXA_END_CLEANUP : RuntimeLibcall;
 
 // Note: there are two sets of atomics libcalls; see
@@ -1885,6 +1885,9 @@ defset list<RuntimeLibcallImpl> SjLjExceptionHandlingLibcalls = {
   def _Unwind_SjLj_Register : RuntimeLibcallImpl<UNWIND_REGISTER>;
   def _Unwind_SjLj_Unregister : RuntimeLibcallImpl<UNWIND_UNREGISTER>;
 }
+
+// Only used on wasm
+def _Unwind_GetWasmLPadContext : RuntimeLibcallImpl<UNWIND_GET_WASM_LPAD_CONTEXT>;
 
 // Used on OpenBSD
 def __stack_smash_handler : RuntimeLibcallImpl<STACK_SMASH_HANDLER>;
@@ -3613,6 +3616,30 @@ defset list<RuntimeLibcallImpl> ZOSRuntimeLibcalls = {
   def zos___SCRT_B : RuntimeLibcallImpl<CBRT_F64, "@@SCRT@B">;
   def zos___FCBT_B : RuntimeLibcallImpl<CBRT_F32, "@@FCBT@B">;
   def zos___LCBT_B : RuntimeLibcallImpl<CBRT_F128, "@@LCBT@B">;
+  def zos___STAN_B : RuntimeLibcallImpl<TAN_F64, "@@STAN@B">;
+  def zos___FTAN_B : RuntimeLibcallImpl<TAN_F32, "@@FTAN@B">;
+  def zos___LTAN_B : RuntimeLibcallImpl<TAN_F128, "@@LTAN@B">;
+  def zos___WASN_B : RuntimeLibcallImpl<ASIN_F64, "@@WASN@B">;
+  def zos___FASN_B : RuntimeLibcallImpl<ASIN_F32, "@@FASN@B">;
+  def zos___LASN_B : RuntimeLibcallImpl<ASIN_F128, "@@LASN@B">;
+  def zos___WACS_B : RuntimeLibcallImpl<ACOS_F64, "@@WACS@B">;
+  def zos___FACS_B : RuntimeLibcallImpl<ACOS_F32, "@@FACS@B">;
+  def zos___LACS_B : RuntimeLibcallImpl<ACOS_F128, "@@LACS@B">;
+  def zos___SATN_B : RuntimeLibcallImpl<ATAN_F64, "@@SATN@B">;
+  def zos___FATN_B : RuntimeLibcallImpl<ATAN_F32, "@@FATN@B">;
+  def zos___LATN_B : RuntimeLibcallImpl<ATAN_F128, "@@LATN@B">;
+  def zos___WAT2_B : RuntimeLibcallImpl<ATAN2_F64, "@@WAT2@B">;
+  def zos___FAT2_B : RuntimeLibcallImpl<ATAN2_F32, "@@FAT2@B">;
+  def zos___LAT2_B : RuntimeLibcallImpl<ATAN2_F128, "@@LAT2@B">;
+  def zos___WSNH_B : RuntimeLibcallImpl<SINH_F64, "@@WSNH@B">;
+  def zos___FSNH_B : RuntimeLibcallImpl<SINH_F32, "@@FSNH@B">;
+  def zos___LSNH_B : RuntimeLibcallImpl<SINH_F128, "@@LSNH@B">;
+  def zos___WCSH_B : RuntimeLibcallImpl<COSH_F64, "@@WCSH@B">;
+  def zos___FCSH_B : RuntimeLibcallImpl<COSH_F32, "@@FCSH@B">;
+  def zos___LCSH_B : RuntimeLibcallImpl<COSH_F128, "@@LCSH@B">;
+  def zos___STNH_B : RuntimeLibcallImpl<TANH_F64, "@@STNH@B">;
+  def zos___FTNH_B : RuntimeLibcallImpl<TANH_F32, "@@FTNH@B">;
+  def zos___LTNH_B : RuntimeLibcallImpl<TANH_F128, "@@LTNH@B">;
 }
 
 def isSystemZZOS : RuntimeLibcallAvailability<(all_of IsSystemZ, IsOSzOS)>;
@@ -3642,6 +3669,7 @@ def WasmSystemLibrary
     : SystemRuntimeLibrary<isWasm,
       (add DefaultRuntimeLibcallImpls, Int128RTLibcalls,
            CompilerRTOnlyInt64Libcalls, CompilerRTOnlyInt128Libcalls,
+           _Unwind_GetWasmLPadContext,
            exp10f, exp10,
            emscripten_return_address,
            LibcallImpls<(add __small_printf,

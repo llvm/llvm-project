@@ -540,7 +540,14 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy,
   VPDominatorTree VPDT(Plan);
 
   auto *HeaderVPBB = cast<VPBasicBlock>(Plan.getEntry()->getSingleSuccessor());
-  canonicalHeaderAndLatch(HeaderVPBB, VPDT);
+  if (TheLoop->isInnermost()) {
+    canonicalHeaderAndLatch(HeaderVPBB, VPDT);
+  } else {
+    // When vectorizing outer loops, canonicalize all loops up front.
+    SmallVector<VPBlockBase *> Blocks(vp_depth_first_shallow(Plan.getEntry()));
+    for (VPBlockBase *VPB : Blocks)
+      canonicalHeaderAndLatch(VPB, VPDT);
+  }
   auto *LatchVPBB = cast<VPBasicBlock>(HeaderVPBB->getPredecessors()[1]);
 
   VPBasicBlock *VecPreheader = Plan.createVPBasicBlock("vector.ph");
@@ -927,9 +934,8 @@ static bool tryToSinkOrHoistRecurrenceUsers(VPBasicBlock *HeaderVPBB,
     auto *RecurSplice =
         LoopBuilder.createNaryOp(VPInstruction::FirstOrderRecurrenceSplice,
                                  {FOR, FOR->getBackedgeValue()});
-    FOR->replaceUsesWithIf(RecurSplice, [RecurSplice](VPUser &U, unsigned) {
-      return &U != RecurSplice;
-    });
+    FOR->replaceUsesWithIf(
+        RecurSplice, [RecurSplice](VPUser &U) { return &U != RecurSplice; });
   }
 
   return true;
@@ -1323,9 +1329,15 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan, DebugLoc DL) {
   VPDominatorTree VPDT(Plan);
   PostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> POT(
       Plan.getEntry());
-  for (VPBlockBase *HeaderVPB : POT)
-    if (canonicalHeaderAndLatch(HeaderVPB, VPDT))
-      createLoopRegion(Plan, HeaderVPB, DL);
+  // Headers and latches have been canonicalized by addInitialSkeleton.
+  for (VPBlockBase *HeaderVPB : POT) {
+    if (!VPBlockUtils::isHeader(HeaderVPB, VPDT))
+      continue;
+    assert(HeaderVPB->getPredecessors()[1]->getSuccessors().back() ==
+               HeaderVPB &&
+           "latch must have the header as last successor");
+    createLoopRegion(Plan, HeaderVPB, DL);
+  }
 
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   TopRegion->setName("vector loop");
@@ -1538,6 +1550,48 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
   attachVPCheckBlock(Plan, CondVPV, CheckBlockVPBB, AddBranchWeights);
 }
 
+void VPlanTransforms::attachMemoryChecks(VPlan &Plan,
+                                         ArrayRef<RuntimePointerCheck> Checks,
+                                         ScalarEvolution &SE, DebugLoc DL,
+                                         bool AddBranchWeights) {
+  assert(!Checks.empty() && "No checks to generate");
+
+  auto *MemCheckVPBB = Plan.createVPBasicBlock("vector.memcheck");
+  VPBuilder Builder(MemCheckVPBB);
+  VPSCEVExpander Expander(Builder, SE, DL);
+
+  // Expand each group's bounds once so all checks reuse the same frozen values.
+  SmallDenseMap<const RuntimeCheckingPtrGroup *,
+                std::pair<VPValue *, VPValue *>>
+      GroupToBounds;
+  for (const auto &[A, B] : Checks)
+    for (const RuntimeCheckingPtrGroup *CG : {A, B}) {
+      auto &[Start, End] = GroupToBounds[CG];
+      if (Start)
+        continue;
+      Start = Expander.expand(CG->Low);
+      End = Expander.expand(CG->High);
+      if (CG->NeedsFreeze) {
+        Start = Builder.createFreeze(Start, DL);
+        End = Builder.createFreeze(End, DL);
+      }
+    }
+
+  VPValue *Cond = Plan.getFalse();
+  for (const auto &[A, B] : Checks) {
+    auto [AStart, AEnd] = GroupToBounds[A];
+    auto [BStart, BEnd] = GroupToBounds[B];
+    VPValue *Bound0 =
+        Builder.createICmp(CmpInst::ICMP_ULT, AStart, BEnd, DL, "bound0");
+    VPValue *Bound1 =
+        Builder.createICmp(CmpInst::ICMP_ULT, BStart, AEnd, DL, "bound1");
+    VPValue *IsConflict =
+        Builder.createAnd(Bound0, Bound1, DL, "found.conflict");
+    Cond = Builder.createOr(Cond, IsConflict, DL, "conflict.rdx");
+  }
+  attachVPCheckBlock(Plan, Cond, MemCheckVPBB, AddBranchWeights);
+}
+
 void VPlanTransforms::addMinimumIterationCheck(
     VPlan &Plan, ElementCount VF, unsigned UF,
     ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
@@ -1616,16 +1670,15 @@ void VPlanTransforms::addIterationCountCheckBlock(
 }
 
 void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(
-    VPlan &Plan, Value *VectorTripCount, bool RequiresScalarEpilogue,
+    VPlan &Plan, VPValue *MainVectorTripCount, bool RequiresScalarEpilogue,
     ElementCount EpilogueVF, unsigned MainLoopStep, unsigned EpilogueLoopStep,
     ScalarEvolution &SE) {
   // Add the minimum iteration check for the epilogue vector loop.
   VPValue *TC = Plan.getTripCount();
-  Value *TripCount = TC->getLiveInIRValue();
   VPBuilder Builder(cast<VPBasicBlock>(Plan.getEntry()));
   VPValue *VFxUF = Builder.createExpandSCEV(
-      SE.getElementCount(TripCount->getType(), EpilogueVF, SCEV::FlagNUW));
-  VPValue *Count = Builder.createSub(TC, Plan.getOrAddLiveIn(VectorTripCount),
+      SE.getElementCount(TC->getScalarType(), EpilogueVF, SCEV::FlagNUW));
+  VPValue *Count = Builder.createSub(TC, MainVectorTripCount,
                                      DebugLoc::getUnknown(), "n.vec.remaining");
 
   // Generate code to check if the loop's trip count is less than VF * UF of
@@ -1941,9 +1994,8 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     if (HeaderMask)
       Cond = Builder.createLogicalAnd(HeaderMask, Cond);
 
-    VPValue *AnyOf =
-        Builder.createNaryOp(VPInstruction::AnyOf, Builder.createFreeze(Cond));
-    // FIXME: The Cond here needs to be frozen too.
+    Cond = Builder.createFreeze(Cond);
+    VPValue *AnyOf = Builder.createNaryOp(VPInstruction::AnyOf, Cond);
     VPValue *MaskSelect = Builder.createSelect(AnyOf, Cond, MaskPHI);
     MaskPHI->addIncoming(MaskSelect);
 
@@ -2349,7 +2401,6 @@ void VPlanTransforms::attachAliasMaskToHeaderMask(VPlan &Plan) {
 
   // Update all existing users of the header mask to "HeaderMask & AliasMask".
   auto *ClampedHeaderMask = Builder.createAnd(HeaderMask, AliasMask);
-  HeaderMask->replaceUsesWithIf(ClampedHeaderMask, [&](VPUser &U, unsigned) {
-    return &U != ClampedHeaderMask;
-  });
+  HeaderMask->replaceUsesWithIf(
+      ClampedHeaderMask, [&](VPUser &U) { return &U != ClampedHeaderMask; });
 }
