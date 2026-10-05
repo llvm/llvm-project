@@ -7350,8 +7350,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             Args.getLastArg(options::OPT_ftime_trace_compress_EQ)) {
       StringRef Value = CompressArg->getValue();
       if (Value == "none") {
-        // Explicit -ftime-trace-compress=none disables compression even if the
-        // filename has a .zst/.zstd extension.
+        // Explicit -ftime-trace-compress=none disables compression (for
+        // example, overriding an earlier -ftime-trace-compress flag or a
+        // .zst/.zstd filename extension); -cc1 defaults to uncompressed output.
       } else if (Value == "zstd") {
         if (llvm::compression::zstd::isAvailable())
           CmdArgs.push_back("-ftime-trace-compress=zstd");

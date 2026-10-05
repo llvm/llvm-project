@@ -65,6 +65,10 @@
 // UNUSED-NEXT: warning: argument unused during compilation: '-ftime-trace-compress=none'
 // UNUSED-NOT:  warning:
 
+// RUN: %clang -### -c -ftime-trace -ftime-trace-compress -ftime-trace-compress=none -fintegrated-as d/a.cpp -o e/a.o 2>&1 | FileCheck %s --check-prefix=COMPRESS-OVERRIDE-NONE
+// COMPRESS-OVERRIDE-NONE: -cc1{{.*}} "-ftime-trace=e/a.json"
+// COMPRESS-OVERRIDE-NONE-NOT: "-ftime-trace-compress
+
 // RUN: %clang -### -c -ftime-trace=foo.json.zst -ftime-trace-compress=none -fintegrated-as d/a.cpp -o e/a.o 2>&1 | FileCheck %s --check-prefix=COMPRESS-NONE
 // COMPRESS-NONE: -cc1{{.*}} "-ftime-trace=foo.json.zst"
 // COMPRESS-NONE-NOT: "-ftime-trace-compress

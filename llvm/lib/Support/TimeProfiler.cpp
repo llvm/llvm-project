@@ -470,19 +470,17 @@ Error llvm::timeTraceProfilerWrite(StringRef PreferredFileName,
   assert(TimeTraceProfilerInstance != nullptr &&
          "Profiler object can't be null");
 
+  DebugCompressionType CompressType =
+      TimeTraceProfilerInstance->TimeTraceCompress;
   std::string Path = PreferredFileName.str();
   if (Path.empty()) {
     Path = FallbackFileName == "-" ? "out" : FallbackFileName.str();
     Path += TimeTraceFileExtension;
-    if (TimeTraceProfilerInstance->TimeTraceCompress ==
-        DebugCompressionType::Zstd)
+    if (CompressType == DebugCompressionType::Zstd)
       Path += ".zst";
-  }
-
-  DebugCompressionType CompressType =
-      TimeTraceProfilerInstance->TimeTraceCompress;
-  if (CompressType == DebugCompressionType::None)
+  } else if (CompressType == DebugCompressionType::None) {
     CompressType = inferTimeTraceCompressionFromPath(Path);
+  }
 
   if (CompressType != DebugCompressionType::None) {
     if (const char *Reason = compression::getReasonIfUnsupported(
