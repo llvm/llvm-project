@@ -448,6 +448,214 @@ With only 16 GPRs available, register allocation is more constrained than standa
 3. **Avoid branches**: In-order execution makes branches expensive
 4. **Use fused compare-branch**: When available (PPE42 specific)
 
+## Code Generation Improvements
+
+This section tracks code-generation changes made to the LLVM PPE42 backend as
+part of ongoing firmware size optimisation work.  The baseline for comparisons
+is the GCC PPE42 toolchain (`powerpc-eabi-gcc`) used in previous firmware
+builds.
+
+---
+
+### [Done] Sibling-Call Optimisation (SCO) for 32-bit SVR4 / PPE42
+
+**Files**: `llvm/lib/Target/PowerPC/PPCISelLowering.cpp`
+**Functions**: `IsEligibleForTailCallOptimization`, `LowerCall_32SVR4`
+**Test**: `llvm/test/CodeGen/PowerPC/ppe42-tailcall-sco.ll`
+
+Two separate gaps in the 32-bit SVR4 lowering were fixed, both required to
+produce clean frameless SCO code matching GCC output.
+
+---
+
+#### Part 1 — SCO eligibility gate (`IsEligibleForTailCallOptimization`)
+
+**Problem**
+
+The 32-bit SVR4 code path returned `false` from
+`IsEligibleForTailCallOptimization` unless `-tailcallopt` /
+`GuaranteedTailCallOpt` was explicitly set.  This meant every tail call —
+including trivially optimisable wrapper functions like:
+
+```cpp
+sbeReturnCode* getCfamRegister(...) {
+    return sbeReturnCode::errorl(SBE_PRI_USER_ERROR,
+                                 SBE_SEC_FUNCTIONALITY_NOT_SUPPORTED);
+}
+```
+
+was compiled as a **full non-leaf call** with `mflr`/`stwu`/`bl`/`lwz`/
+`mtlr`/`blr`, adding 32 bytes per stub instead of the 4-byte `b` GCC emits.
+
+**Root cause**
+
+The 64-bit SVR4 path (`IsEligibleForTailCallOptimization_64SVR4`) has a full
+SCO implementation; the 32-bit path had none — a historical gap.  The
+TOC-sharing constraints that make 64-bit SCO complicated do not apply to PPE42
+(PPE42 has no TOC register).
+
+**Fix**
+
+Extended `IsEligibleForTailCallOptimization` to add an SCO path for the 32-bit
+SVR4 / PPE42 case:
+
+- Respects `-disable-ppc-sco` (existing flag, now shared with the 32-bit path).
+- Allows SCO for `CallingConv::C` and `CallingConv::Fast` when caller and callee
+  use the same CC.
+- Guards on: no varargs, no byval parameters, outgoing args that would require
+  a new stack slot (GPRsUsed > 8) block SCO.
+- Blocks SCO for indirect calls (function pointers) and unresolved external
+  symbols — see **Known limitation** below.
+- The existing `GuaranteedTailCallOpt` + `fastcc` path is preserved unchanged.
+- Added `isCalleeExternalSymbol` parameter (matching the 64-bit interface) and
+  threaded it through `isEligibleForTCO`.
+
+---
+
+#### Part 2 — Frameless emission (`LowerCall_32SVR4`)
+
+**Problem**
+
+Even after Part 1 allowed SCO, `LowerCall_32SVR4` still emitted a spurious
+stack frame for every SCO call:
+
+```asm
+stwu  1, -16(1)       ; ❌ unnecessary stack frame
+lwz   3, 20(1)        ; ❌ reload from caller's incoming stack slot
+li    4, 9
+li    5, -1
+stw   3, 28(1)        ; ❌ spill to outgoing arg stack slot
+li    3, 3
+addi  1, 1, 24        ; ❌ partial SP restore
+b     errorl          ; ✅ correct tail branch
+```
+
+**Root cause**
+
+`LowerCall_32SVR4` was missing the `IsSibCall` flag that `LowerCall_64SVR4`
+uses to bypass `CALLSEQ_START` for sibling calls.  Without it, the 8-byte SVR4
+linkage-area reservation always set `MFI.adjustsStack() = true`, preventing
+the zero-frame path and forcing `stwu` / `lwz` / `stw` / `addi`.  The ABI is
+correct — the bug was purely a missing code path in the 32-bit lowering.
+
+**Fix**
+
+Added `IsSibCall` to `LowerCall_32SVR4`, mirroring the 64-bit path:
+
+```cpp
+bool IsSibCall =
+    IsTailCall && !getTargetMachine().Options.GuaranteedTailCallOpt;
+
+int SPDiff = 0;
+if (!IsSibCall)
+    SPDiff = CalculateTailCallSPDiff(DAG, IsTailCall, NumBytes);
+
+if (!IsSibCall)
+    Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, dl);
+...
+if (IsTailCall && !IsSibCall)
+    PrepareTailCall(...);
+```
+
+With `IsSibCall = true`, `CALLSEQ_START` is never issued, `MFI.adjustsStack()`
+stays `false`, and the prologue/epilog pass produces a frameless function.
+For callers forwarding stack-spilled arguments, `SPDiff = 0` means
+`CalculateTailCallArgDest` places the `FixedObject` at the same incoming offset
+— no copy needed.  Callers that produce new values for stack-spilled args are
+correctly rejected by Part 1 (GPRsUsed > 8).
+
+---
+
+#### Known limitation — indirect tail calls not SCO'd
+
+PPE42 has PC-relative branch instructions (`b` / `bl`) but the 32-bit SVR4
+lowering path does not implement indirect tail calls via CTR (`bctr`).  The
+64-bit path supports indirect SCO by loading the function pointer into the
+Count Register and emitting `bctr`; that infrastructure does not exist in
+`LowerCall_32SVR4`.
+
+> **Note on terminology**: LLVM's `isUsingPCRelativeCalls()` predicate refers
+> specifically to the ELFv2 PC-relative GOT-free addressing mode (introduced
+> for POWER10, enabled with `-mpcrel`), **not** to the `b`/`bl` instructions
+> themselves.  PPE42's `b` and `bl` are PC-relative branches, but PPE42 does
+> not use the ELFv2 PCRel mode.
+
+As a result, tail calls through function pointers are not SCO'd and fall back
+to a normal `bl` + `blr` sequence.  This is correct and safe; it is a
+missed-optimisation rather than a correctness issue.  A future enhancement
+could implement CTR-based indirect tail calls for the 32-bit path.
+
+---
+
+#### Combined outcome
+
+`getCfamRegister` / `putCfamRegister` now compile to:
+
+```asm
+li  r3, 3
+li  r4, 9
+li  r5, -1
+b   errorl
+```
+
+No `stwu`, no `stw`/`lwz` spills, no `addi` SP restore — matching GCC exactly.
+Overall LLVM vs GCC `.text` size overhead improved from **+81.4% → +36.4%**
+across the SBE firmware object files.
+
+---
+
+### [TODO] Fix over-wide `.text` section alignment for PPE42
+
+**File**: `llvm/lib/Target/PowerPC/PPCAsmPrinter.cpp`
+**Function**: `PPCAsmPrinter::runOnMachineFunction`
+**Priority**: Low — padding exists only in `.o` files; no runtime impact
+
+#### Problem
+
+PPE42 `.text.*` function sections are emitted with `2**3` (8-byte) alignment.
+PPE42 is an in-order 32-bit core — there is no instruction-fetch alignment
+benefit beyond 4 bytes.  The extra alignment produces up to 4 bytes of
+`00 00 00 00` padding after the final instruction in short functions,
+visible in `objdump` output of `.o` files (e.g. `plat_hw_access.o`).
+
+> **Note — `.o` file only, not a runtime problem.**  The `00 00 00 00` word
+> is ELF section-alignment padding inserted by the object writer to satisfy
+> the section's `sh_addralign` field.  It is **not** a generated instruction
+> and is **not present in the final linked firmware image**: the linker strips
+> inter-section padding when it merges `.text.*` sections during final layout.
+> This issue has zero impact on runtime code size or behaviour.
+
+#### Root Cause
+
+`VDRC` (Virtual Doubleword Register class) is correctly defined with 64-bit
+register alignment in `PPCRegisterInfo.td` (a VDR is a 64-bit value spanning
+two 32-bit GPRs).  When any VDR spill slot is created, `MachineFrameInfo`
+calls `ensureMaxAlignment(Align(8))`, setting `MFI.MaxAlign = 8`.
+`AsmPrinter::emitFunctionHeader` then emits `.align 3` which bumps the ELF
+section `sh_addralign` to 8 — even for functions that never actually spill a
+VDR.  Changing the `VDRC` class alignment would be architecturally wrong.
+
+#### Fix needed
+
+In `PPCAsmPrinter::runOnMachineFunction`, cap `MF.setAlignment()` to
+`Align(4)` for PPE42 **before** the parent `AsmPrinter::runOnMachineFunction`
+runs `emitFunctionHeader`:
+
+```cpp
+if (Subtarget->isPPE42())
+  MF.setAlignment(std::min(MF.getAlignment(), Align(4)));
+```
+
+This caps only the `.align` directive emitted for the function entry; it does
+not affect actual VDR stack slot alignment, which remains 8-byte for
+correctness.
+
+**Expected outcome**: `sh_addralign` set to 4 on all PPE42 function sections;
+no trailing `00 00 00 00` padding in `.o` objdump output; minor reduction in
+`.o` file sizes.  No change to the final linked image.
+
+---
+
 ## Future Enhancements
 
 ### Potential Additions

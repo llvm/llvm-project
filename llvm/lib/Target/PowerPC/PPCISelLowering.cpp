@@ -5213,34 +5213,109 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
 /// IsEligibleForTailCallOptimization - Check whether the call is eligible
 /// for tail call optimization. Targets which want to do tail call
 /// optimization should implement this function.
+///
+/// This handles the 32-bit SVR4 ABI (including PPE42).  Unlike the 64-bit
+/// SVR4 path there is no TOC register, so none of the TOC-sharing constraints
+/// apply.  We support two modes:
+///
+///  1. GuaranteedTailCallOpt (fastcc-only, ABI-altering) – unchanged from
+///     the previous behaviour.
+///  2. Sibling-call optimisation (SCO, standard C/Fast CC) – new, mirrors
+///     the logic in IsEligibleForTailCallOptimization_64SVR4 but without the
+///     TOC checks.
 bool PPCTargetLowering::IsEligibleForTailCallOptimization(
     const GlobalValue *CalleeGV, CallingConv::ID CalleeCC,
     CallingConv::ID CallerCC, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins) const {
-  if (!getTargetMachine().Options.GuaranteedTailCallOpt)
+    const SmallVectorImpl<ISD::OutputArg> &Outs,
+    const SmallVectorImpl<ISD::InputArg> &Ins, const CallBase *CB,
+    const Function *CallerFunc, bool isCalleeExternalSymbol) const {
+  bool TailCallOpt = getTargetMachine().Options.GuaranteedTailCallOpt;
+
+  // If SCO is explicitly disabled, only allow the guaranteed (fastcc) path.
+  if (DisableSCO && !TailCallOpt)
+    return false;
+
+  // SCO on the 32-bit SVR4 / PPE42 path only supports direct calls to a known
+  // global function or an external symbol (e.g. a compiler-rt helper resolved
+  // at link time).  Both cases lower to a plain `b` instruction.
+  //
+  // Indirect calls through a function pointer would require loading the target
+  // address into CTR and emitting `bctr`.  That path is not implemented in
+  // LowerCall_32SVR4 (unlike the 64-bit path which has CTR-indirect tail
+  // calls).  Note: PPE42 does have PC-relative branch instructions (`b`/`bl`)
+  // but LLVM's isUsingPCRelativeCalls() refers specifically to the ELFv2
+  // PC-relative GOT-free addressing mode, which PPE42 does not support.
+  if (!isFunctionGlobalAddress(CalleeGV) && !isCalleeExternalSymbol)
     return false;
 
   // Variable argument functions are not supported.
   if (isVarArg)
     return false;
 
-  if (CalleeCC == CallingConv::Fast && CallerCC == CalleeCC) {
-    // Functions containing by val parameters are not supported.
-    if (any_of(Ins, [](const ISD::InputArg &IA) { return IA.Flags.isByVal(); }))
-      return false;
+  // Caller/callee must use compatible calling conventions.
+  auto isTailCallableCC = [](CallingConv::ID CC) {
+    return CC == CallingConv::C || CC == CallingConv::Fast;
+  };
+  if (!isTailCallableCC(CallerCC) || !isTailCallableCC(CalleeCC))
+    return false;
 
+  // Caller byval parameters are not supported.
+  if (any_of(Ins, [](const ISD::InputArg &IA) { return IA.Flags.isByVal(); }))
+    return false;
+
+  // Callee byval parameters are not supported.
+  if (any_of(Outs, [](const ISD::OutputArg &OA) { return OA.Flags.isByVal(); }))
+    return false;
+
+  // GuaranteedTailCallOpt path (fastcc, ABI-altering): allows callee to use a
+  // different stack layout, so no further argument-list checks are needed.
+  if (CalleeCC == CallingConv::Fast && TailCallOpt) {
     // Non-PIC/GOT tail calls are supported.
     if (getTargetMachine().getRelocationModel() != Reloc::PIC_)
       return true;
-
-    // At the moment we can only do local tail calls (in same module, hidden
-    // or protected) if we are generating PIC.
+    // In PIC mode restrict to local (hidden/protected) callees.
     if (CalleeGV)
       return CalleeGV->hasHiddenVisibility() ||
              CalleeGV->hasProtectedVisibility();
+    return false;
   }
 
-  return false;
+  // SCO path: caller and callee must use the same CC (we cannot adjust the
+  // stack layout), and either share the same argument list or pass everything
+  // in registers.  On 32-bit SVR4 / PPE42 there is no TOC, so no TOC-sharing
+  // constraint.
+  if (DisableSCO)
+    return false;
+
+  // Mixed C/Fast CC with different calling conventions is fine as long as no
+  // arguments need a stack slot.
+  // (needStackSlotPassParameters is 64-bit only; on 32-bit all integer args
+  //  up to r10 are register-passed for these CCs, so we accept the call.)
+  if (CallerCC != CalleeCC)
+    return false;
+
+  // If the callee uses the same argument list as the caller we can always SCO.
+  // If not, conservatively allow SCO only when there are no outgoing args that
+  // require stack slots (all fit in GPRs r3-r10).
+  if (CB && !hasSameArgumentList(CallerFunc, *CB)) {
+    // Count outgoing args that would need stack slots on 32-bit SVR4.
+    // GPRs r3-r10 (8 registers × 4 bytes = 32 bytes of arg space).
+    const unsigned NumGPRArgRegs = 8;
+    unsigned GPRsUsed = 0;
+    for (const ISD::OutputArg &Out : Outs) {
+      if (Out.Flags.isByVal())
+        return false;
+      // Each 32-bit slot consumes one GPR.
+      if (Out.VT.getSizeInBits() <= 32)
+        GPRsUsed += 1;
+      else // i64 / f64 consume two GPRs
+        GPRsUsed += 2;
+      if (GPRsUsed > NumGPRArgRegs)
+        return false;
+    }
+  }
+
+  return true;
 }
 
 /// isCallCompatibleAddress - Return the immediate to use if the specified
@@ -5965,7 +6040,9 @@ bool PPCTargetLowering::isEligibleForTCO(
         isCalleeExternalSymbol);
   else
     return IsEligibleForTailCallOptimization(CalleeGV, CalleeCC, CallerCC,
-                                             isVarArg, Ins);
+                                             isVarArg, Outs, Ins, CB,
+                                             CallerFunc,
+                                             isCalleeExternalSymbol);
 }
 
 SDValue
@@ -6060,6 +6137,15 @@ SDValue PPCTargetLowering::LowerCall_32SVR4(
   const bool IsVarArg = CFlags.IsVarArg;
   const bool IsTailCall = CFlags.IsTailCall;
 
+  // A sibling call (SCO) reuses the caller's stack frame: the callee is
+  // branched to directly and inherits the existing frame.  No new linkage
+  // area or parameter-save area needs to be reserved on the stack, so
+  // CALLSEQ_START/END and the SPDiff machinery must be bypassed — exactly
+  // as LowerCall_64SVR4 does for its IsSibCall path.
+  // GuaranteedTailCallOpt (fastcc) is ABI-altering and keeps its own path.
+  bool IsSibCall =
+      IsTailCall && !getTargetMachine().Options.GuaranteedTailCallOpt;
+
   assert((CallConv == CallingConv::C ||
           CallConv == CallingConv::Cold ||
           CallConv == CallingConv::Fast) && "Unknown calling convention!");
@@ -6139,12 +6225,17 @@ SDValue PPCTargetLowering::LowerCall_32SVR4(
   unsigned NumBytes = CCByValInfo.getStackSize();
 
   // Calculate by how many bytes the stack has to be adjusted in case of tail
-  // call optimization.
-  int SPDiff = CalculateTailCallSPDiff(DAG, IsTailCall, NumBytes);
+  // call optimization.  Sibling calls skip this: SPDiff stays 0 and no
+  // CALLSEQ_START is issued, so MFI.adjustsStack() remains false and the
+  // prolog/epilog pass can produce a frameless function.
+  int SPDiff = 0;
+  if (!IsSibCall)
+    SPDiff = CalculateTailCallSPDiff(DAG, IsTailCall, NumBytes);
 
   // Adjust the stack pointer for the new arguments...
   // These operations are automatically eliminated by the prolog/epilog pass
-  Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, dl);
+  if (!IsSibCall)
+    Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, dl);
   SDValue CallSeqStart = Chain;
 
   // Load the return address and frame pointer so it can be moved somewhere else
@@ -6274,7 +6365,7 @@ SDValue PPCTargetLowering::LowerCall_32SVR4(
     InGlue = Chain.getValue(1);
   }
 
-  if (IsTailCall)
+  if (IsTailCall && !IsSibCall)
     PrepareTailCall(DAG, InGlue, Chain, dl, SPDiff, NumBytes, LROp, FPOp,
                     TailCallArguments);
 
