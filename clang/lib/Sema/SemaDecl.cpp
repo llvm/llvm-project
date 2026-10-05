@@ -21537,6 +21537,14 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
 
     if (IsEmittedForExternalSymbol())
       return FunctionEmissionStatus::Emitted;
+
+    // CodeGen also emits a function regardless of its uses if it is forced to,
+    // so its deferred diagnostics must not wait for a use.
+    const FunctionDecl *Def = FD->getDefinition();
+    if (Def && !Def->hasSkippedBody() &&
+        (LangOpts.EmitAllDecls || Def->hasAttr<UsedAttr>() ||
+         Def->hasAttr<ConstructorAttr>() || Def->hasAttr<DestructorAttr>()))
+      return FunctionEmissionStatus::Emitted;
   }
 
   // Otherwise, the function is known-emitted if it's in our set of
