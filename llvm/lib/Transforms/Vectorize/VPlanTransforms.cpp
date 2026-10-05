@@ -32,6 +32,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
@@ -6003,6 +6004,13 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
       continue;
 
     Value *StrideVal = cast<SCEVUnknown>(ToMultiVersion)->getValue();
+
+    // SimplifyQuery can detect extra cases that SE doesn't. It, effective, is
+    // also used in combineRecipes, so doing this check here allows us not to
+    // optimize out entire vector loop later in the VPlan pipeline.
+    SimplifyQuery SQ(SE->getDataLayout());
+    if (isKnownNonEqual(StrideVal, cast<SCEVConstant>(MVConst)->getValue(), SQ))
+      continue;
 
     const SCEVPredicate *NewPred =
         SE->getComparePredicate(CmpInst::ICMP_EQ, ToMultiVersion, MVConst);

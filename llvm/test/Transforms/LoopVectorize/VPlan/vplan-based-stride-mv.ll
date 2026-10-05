@@ -3717,6 +3717,83 @@ exit:
   ret void
 }
 
+define void @predicate_simplification_unknown_to_scev(ptr noalias %out, ptr %p, ptr align 8 %ap, i64 %n) {
+; CHECK-LABEL: VPlan for loop in 'predicate_simplification_unknown_to_scev'
+; CHECK:  VPlan ' for UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    IR   %s = ptrtoint ptr %ap to i64
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT ir<%i> = mul nsw ir<%iv>, ir<%s>
+; CHECK-NEXT:      EMIT ir<%g> = getelementptr inbounds ir<%p>, ir<%i>
+; CHECK-NEXT:      EMIT-SCALAR ir<%v> = load ir<%g>
+; CHECK-NEXT:      EMIT ir<%go> = getelementptr inbounds ir<%out>, ir<%iv>
+; CHECK-NEXT:      EMIT store ir<%v>, ir<%go>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<%n>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP5]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:  Successor(s): ir-bb<loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop>:
+; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK-NEXT:    IR   %i = mul nsw i64 %iv, %s
+; CHECK-NEXT:    IR   %g = getelementptr inbounds i8, ptr %p, i64 %i
+; CHECK-NEXT:    IR   %v = load i8, ptr %g, align 1
+; CHECK-NEXT:    IR   %go = getelementptr inbounds i8, ptr %out, i64 %iv
+; CHECK-NEXT:    IR   store i8 %v, ptr %go, align 1
+; CHECK-NEXT:    IR   %iv.next = add nuw nsw i64 %iv, 1
+; CHECK-NEXT:    IR   %ec = icmp eq i64 %iv.next, %n
+; CHECK-NEXT:  No successors
+; CHECK-NEXT:  }
+;
+entry:
+  %s = ptrtoint ptr %ap to i64
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %i = mul nsw i64 %iv, %s
+  %g = getelementptr inbounds i8, ptr %p, i64 %i
+  %v = load i8, ptr %g, align 1
+  %go = getelementptr inbounds i8, ptr %out, i64 %iv
+  store i8 %v, ptr %go, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 !0 = !{i64 4, i64 8}
 
 ; Keep this in sync with the same under LoopVectorize/
