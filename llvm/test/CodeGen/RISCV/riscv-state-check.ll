@@ -1,5 +1,7 @@
 ; RUN: not llc -mtriple=riscv64 -mattr=+xsfmmbase,+save-restore -o /dev/null < %s 2>&1 \
 ; RUN:   | FileCheck %s --implicit-check-not=error:
+; RUN: not llc -global-isel -mtriple=riscv64 -mattr=+xsfmmbase,+save-restore -o /dev/null < %s 2>&1 \
+; RUN:   | FileCheck %s --implicit-check-not=error:
 
 ; CHECK: error: libgcc_call: cannot emit call to '__divdi3' from an RISC-V attributed function.
 ; CHECK-SAME: Only the following functions are allowed to be called: __riscv_save_0,{{.*}}__riscv_restore_12.

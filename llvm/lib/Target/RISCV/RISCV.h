@@ -135,8 +135,6 @@ void initializeRISCVVMV0EliminationPass(PassRegistry &);
 
 void initializeRISCVAsmPrinterPass(PassRegistry &);
 
-FunctionPass *createRISCVStateCheckPass();
-void initializeRISCVStateCheckPass(PassRegistry &);
 } // namespace llvm
 
 #endif

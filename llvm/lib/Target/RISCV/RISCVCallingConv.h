@@ -27,4 +27,7 @@ ArrayRef<MCPhysReg> getArgGPRs(const RISCVABI::ABI ABI);
 
 } // end namespace RISCV
 
+void checkRISCVStateCall(const Function &Caller, const GlobalValue *Callee);
+void checkRISCVStateCall(const Function &Caller, StringRef CalleeName);
+
 } // end namespace llvm

@@ -12,12 +12,51 @@
 
 #include "RISCVCallingConv.h"
 #include "RISCVMachineFunctionInfo.h"
+#include "RISCVStateAttributes.h"
 #include "RISCVSubtarget.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCRegister.h"
 
 using namespace llvm;
+
+static constexpr StringLiteral AllowedRISCVStateCallees[] = {
+    "__riscv_save_0",     "__riscv_save_1",    "__riscv_save_2",
+    "__riscv_save_3",     "__riscv_save_4",    "__riscv_save_5",
+    "__riscv_save_6",     "__riscv_save_7",    "__riscv_save_8",
+    "__riscv_save_9",     "__riscv_save_10",   "__riscv_save_11",
+    "__riscv_save_12",    "__riscv_restore_0", "__riscv_restore_1",
+    "__riscv_restore_2",  "__riscv_restore_3", "__riscv_restore_4",
+    "__riscv_restore_5",  "__riscv_restore_6", "__riscv_restore_7",
+    "__riscv_restore_8",  "__riscv_restore_9", "__riscv_restore_10",
+    "__riscv_restore_11", "__riscv_restore_12"};
+
+void llvm::checkRISCVStateCall(const Function &Caller,
+                               StringRef CalleeName) {
+  if (!RISCVState::hasAttribute(Caller) ||
+      is_contained(AllowedRISCVStateCallees, CalleeName))
+    return;
+
+  std::string Message =
+      (Caller.getName() + ": cannot emit call to '" + CalleeName +
+       "' from an RISC-V attributed function. Only the following functions "
+       "are allowed to be called: " +
+       join(std::begin(AllowedRISCVStateCallees),
+            std::end(AllowedRISCVStateCallees), ", ") +
+       ".")
+          .str();
+  Caller.getContext().diagnose(DiagnosticInfoGeneric(Message));
+}
+
+void llvm::checkRISCVStateCall(const Function &Caller,
+                               const GlobalValue *Callee) {
+  const auto *CalleeFn = dyn_cast_or_null<Function>(Callee);
+  if (CalleeFn && RISCVState::hasAttribute(*CalleeFn))
+    return;
+
+  if (Callee)
+    checkRISCVStateCall(Caller, Callee->getName());
+}
 
 // This does not have the regular `CCAssignFn` signature, it has an extra
 // `bool IsRet` parameter.
