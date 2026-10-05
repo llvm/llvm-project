@@ -54,6 +54,6 @@ program main
    deallocate(aad%buf(2)%data)
 end program main
 
-! CHECK:  PluginInterface device {{[0-9]+}} info: Launching kernel {{.*}}
-! CHECK:  PluginInterface device {{[0-9]+}} info: Launching kernel {{.*}}
+! CHECK:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}}
+! CHECK:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}}
 ! CHECK:  PASS

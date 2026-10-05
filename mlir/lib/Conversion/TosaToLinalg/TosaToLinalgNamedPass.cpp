@@ -60,6 +60,7 @@ public:
     target.addIllegalOp<tosa::MaxPool2dOp>();
     target.addIllegalOp<tosa::MaxPool2dAdaptiveOp>();
     target.addIllegalOp<tosa::AvgPool2dOp>();
+    target.addIllegalOp<tosa::AvgPool2dAdaptiveOp>();
     target.addIllegalOp<tosa::MatMulOp>();
     target.addIllegalOp<tosa::TransposeOp>();
 

@@ -7130,6 +7130,21 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
 
     break;
   }
+  case Intrinsic::umulh:
+  case Intrinsic::smulh:
+    // Multiply by one.
+    if (IID == Intrinsic::umulh || BitWidth == 1)
+      if (match(Op0, m_One()) || match(Op1, m_One()))
+        return Constant::getNullValue(ReturnType);
+    // Multiply by undef -> zero (NOT undef!) as other arg could still be
+    // zero.
+    if (Q.isUndefValue(Op0) || Q.isUndefValue(Op1))
+      return Constant::getNullValue(ReturnType);
+
+    // Multiply by zero.
+    if (match(Op0, m_Zero()) || match(Op1, m_Zero()))
+      return Constant::getNullValue(ReturnType);
+    break;
   case Intrinsic::usub_with_overflow:
   case Intrinsic::ssub_with_overflow:
     // X - X -> { 0, false }
