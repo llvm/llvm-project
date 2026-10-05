@@ -216,9 +216,8 @@ define void @store_low2_v8i16(ptr %p, <8 x i16> %a) vscale_range(2, 2) {
 define void @store_low2_nxv8i16(ptr %p, <vscale x 8 x i16> %a) {
 ; CHECK-LABEL: store_low2_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.h, z0.h[1]
-; CHECK-NEXT:    str h0, [x0]
-; CHECK-NEXT:    str h1, [x0, #2]
+; CHECK-NEXT:    mov v0.h[1], v0.h[1]
+; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
   %m = tail call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i32(i32 0, i32 2)
   tail call void @llvm.masked.store(<vscale x 8 x i16> %a, ptr align 1 %p, <vscale x 8 x i1> %m)

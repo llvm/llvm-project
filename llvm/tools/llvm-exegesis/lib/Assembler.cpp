@@ -225,16 +225,24 @@ ArrayRef<MCRegister> FunctionFiller::getRegistersSetUp() const {
 }
 
 static std::unique_ptr<Module>
-createModule(const std::unique_ptr<LLVMContext> &Context, const DataLayout &DL) {
+createModule(const std::unique_ptr<LLVMContext> &Context,
+             const TargetMachine &TM) {
   auto Mod = std::make_unique<Module>(ModuleID, *Context);
-  Mod->setDataLayout(DL);
+  const Triple &TT = TM.getTargetTriple();
+  Mod->setTargetTriple(TT);
+  StringRef ABIName = TM.Options.MCOptions.getABIName();
+  if (!ABIName.empty()) {
+    Mod->addModuleFlag(Module::Error, "target-abi",
+                       MDString::get(*Context, ABIName));
+  }
+
+  Mod->setDataLayout(DataLayout(TT.computeDataLayout(ABIName)));
   return Mod;
 }
 
 BitVector getFunctionReservedRegs(const TargetMachine &TM) {
   std::unique_ptr<LLVMContext> Context = std::make_unique<LLVMContext>();
-  std::unique_ptr<Module> Module = createModule(
-      Context, DataLayout(TM.getTargetTriple().computeDataLayout()));
+  std::unique_ptr<Module> Module = createModule(Context, TM);
   auto MMIWP = std::make_unique<MachineModuleInfoWrapperPass>(&TM);
   MachineFunction &MF = createVoidVoidPtrMachineFunction(
       FunctionID, Module.get(), &MMIWP->getMMI());
@@ -248,8 +256,7 @@ Error assembleToStream(const ExegesisTarget &ET,
                        raw_pwrite_stream &AsmStream, const BenchmarkKey &Key,
                        bool GenerateMemoryInstructions) {
   auto Context = std::make_unique<LLVMContext>();
-  std::unique_ptr<Module> Module = createModule(
-      Context, DataLayout(TM->getTargetTriple().computeDataLayout()));
+  std::unique_ptr<Module> Module = createModule(Context, *TM);
   auto MMIWP = std::make_unique<MachineModuleInfoWrapperPass>(TM.get());
   MachineFunction &MF = createVoidVoidPtrMachineFunction(
       FunctionID, Module.get(), &MMIWP.get()->getMMI());
@@ -384,7 +391,8 @@ Expected<ExecutableFunction> ExecutableFunction::create(
 
   auto EJITOrErr =
       orc::LLJITBuilder()
-          .setDataLayout(DataLayout(TM->getTargetTriple().computeDataLayout()))
+          .setDataLayout(DataLayout(TM->getTargetTriple().computeDataLayout(
+              TM->Options.MCOptions.getABIName())))
           .create();
   if (!EJITOrErr)
     return EJITOrErr.takeError();

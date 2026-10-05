@@ -37,6 +37,7 @@
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedHookInterface.h"
@@ -449,6 +450,10 @@ BreakpointSP Target::GetBreakpointByID(break_id_t break_id) {
 lldb::BreakpointSP
 lldb_private::Target::CreateBreakpointAtUserEntry(Status &error) {
   ModuleSP main_module_sp = GetExecutableModule();
+  if (!main_module_sp) {
+    error = Status::FromErrorString("target has no executable\n");
+    return lldb::BreakpointSP();
+  }
   FileSpecList shared_lib_filter;
   shared_lib_filter.Append(main_module_sp->GetFileSpec());
   llvm::SetVector<std::string, std::vector<std::string>,
@@ -1634,18 +1639,28 @@ ModuleSP Target::GetExecutableModule() {
       return module_sp;
   }
 
-  // If there is none, fall back return the first module loaded.
-  return m_images.GetModuleAtIndex(0);
+  // If there is none, fall back to the module marked as the executable.
+  ModuleSP executable_sp = m_executable_module_wp.lock();
+  if (executable_sp &&
+      m_images.GetIndexForModule(executable_sp.get()) != LLDB_INVALID_INDEX32)
+    return executable_sp;
+  return nullptr;
 }
 
 Module *Target::GetExecutableModulePointer() {
   return GetExecutableModule().get();
 }
 
+void Target::MarkExecutableModule(const ModuleSP &module_sp) {
+  std::lock_guard<std::recursive_mutex> lock(m_images.GetMutex());
+  m_executable_module_wp = module_sp;
+}
+
 void Target::ClearModules(bool delete_locations) {
   ModulesDidUnload(m_images, delete_locations);
   m_section_load_history.Clear();
   m_images.Clear();
+  MarkExecutableModule(nullptr);
   m_scratch_type_system_map.Clear();
 }
 
@@ -1655,8 +1670,8 @@ void Target::DidExec() {
   m_internal_breakpoint_list.RemoveInvalidLocations(m_arch.GetSpec());
 }
 
-void Target::SetExecutableModule(ModuleSP &executable_sp,
-                                 LoadDependentFiles load_dependent_files) {
+void Target::RebuildModuleListWithExecutable(
+    ModuleSP &executable_sp, LoadDependentFiles load_dependent_files) {
   telemetry::ScopedDispatcher<telemetry::ExecutableModuleInfo> helper(
       &m_debugger);
   Log *log = GetLog(LLDBLog::Target);
@@ -1682,10 +1697,14 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
     });
 
     ElapsedTime elapsed(m_stats.GetCreateTime());
-    LLDB_SCOPED_TIMERF("Target::SetExecutableModule (executable = '%s')",
-                       executable_sp->GetFileSpec().GetPath().c_str());
+    LLDB_SCOPED_TIMERF(
+        "Target::RebuildModuleListWithExecutable (executable = '%s')",
+        executable_sp->GetFileSpec().GetPath().c_str());
 
     const bool notify = true;
+    // Mark it before appending, because the append notifies observers that
+    // may ask for the executable.
+    MarkExecutableModule(executable_sp);
     m_images.Append(executable_sp,
                     notify); // The first image is our executable file
 
@@ -1694,7 +1713,8 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
     if (!m_arch.GetSpec().IsValid()) {
       m_arch = executable_sp->GetArchitecture();
       LLDB_LOG(log,
-               "Target::SetExecutableModule setting architecture to {0} ({1}) "
+               "Target::RebuildModuleListWithExecutable setting architecture "
+               "to {0} ({1}) "
                "based on executable file",
                m_arch.GetSpec().GetArchitectureName(),
                m_arch.GetSpec().GetTriple().getTriple());
@@ -1868,7 +1888,7 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform,
                                                nullptr, nullptr);
 
     if (!error.Fail() && executable_sp) {
-      SetExecutableModule(executable_sp, eLoadDependentsYes);
+      RebuildModuleListWithExecutable(executable_sp, eLoadDependentsYes);
       return true;
     }
   }
@@ -2708,7 +2728,7 @@ void Target::ImageSearchPathsChanged(const PathMappingList &path_list,
   Target *target = (Target *)baton;
   ModuleSP exe_module_sp(target->GetExecutableModule());
   if (exe_module_sp)
-    target->SetExecutableModule(exe_module_sp, eLoadDependentsYes);
+    target->RebuildModuleListWithExecutable(exe_module_sp, eLoadDependentsYes);
 }
 
 llvm::Expected<lldb::TypeSystemSP>
@@ -4354,23 +4374,17 @@ Status Target::StopHookScripted::SetScriptCallback(
   return {};
 }
 
-/// Report a failing scripted hook callback to the user, the way a
-/// command-based hook reports a failing command. \a what names the hook, e.g.
-/// "stop hook 1".
+/// Hook callbacks have no caller to return an error to, so report a failure
+/// as a debugger diagnostic. \a what names the hook, e.g. "stop hook 1".
 static void ReportScriptedHookError(llvm::Error error, llvm::StringRef what,
-                                    Debugger &debugger, StreamSP output_sp) {
+                                    Debugger &debugger) {
   if (!error)
     return;
 
-  // Stringify before logging: LLDB_LOG doesn't evaluate its arguments when the
-  // channel is disabled, which would leave the error unchecked.
-  std::string err_msg = llvm::toString(std::move(error));
-  LLDB_LOG(GetLog(LLDBLog::Target), "{0} failed: {1}", what, err_msg);
-
-  CommandReturnObject result(debugger.GetUseColor());
-  result.SetImmediateOutputStream(output_sp);
-  result.SetImmediateErrorStream(output_sp);
-  result.AppendErrorWithFormatv("{0} failed: {1}", what, err_msg);
+  Debugger::ReportError(
+      llvm::formatv("{0} failed: {1}", what, llvm::toString(std::move(error)))
+          .str(),
+      debugger.GetID());
 }
 
 Target::StopHook::StopHookResult
@@ -4389,7 +4403,7 @@ Target::StopHookScripted::HandleStop(ExecutionContext &exc_ctx,
   if (!should_stop_or_err) {
     ReportScriptedHookError(should_stop_or_err.takeError(),
                             llvm::formatv("stop hook {0}", GetID()).str(),
-                            exc_ctx.GetTargetPtr()->GetDebugger(), output_sp);
+                            exc_ctx.GetTargetPtr()->GetDebugger());
     return StopHookResult::KeepStopped;
   }
 
@@ -4708,7 +4722,7 @@ void Target::HookScripted::HandleModuleLoaded(StreamSP output_sp) {
   output_sp->PutCString(static_cast<StreamString *>(stream.get())->GetData());
   ReportScriptedHookError(std::move(error),
                           llvm::formatv("hook {0}", GetID()).str(),
-                          target_sp->GetDebugger(), output_sp);
+                          target_sp->GetDebugger());
 }
 
 void Target::HookScripted::HandleModuleUnloaded(StreamSP output_sp) {
@@ -4724,7 +4738,7 @@ void Target::HookScripted::HandleModuleUnloaded(StreamSP output_sp) {
   output_sp->PutCString(static_cast<StreamString *>(stream.get())->GetData());
   ReportScriptedHookError(std::move(error),
                           llvm::formatv("hook {0}", GetID()).str(),
-                          target_sp->GetDebugger(), output_sp);
+                          target_sp->GetDebugger());
 }
 
 Target::StopHook::StopHookResult
@@ -4742,7 +4756,7 @@ Target::HookScripted::HandleStop(ExecutionContext &exc_ctx,
   if (!should_stop_or_err) {
     ReportScriptedHookError(should_stop_or_err.takeError(),
                             llvm::formatv("hook {0}", GetID()).str(),
-                            exc_ctx.GetTargetPtr()->GetDebugger(), output_sp);
+                            exc_ctx.GetTargetPtr()->GetDebugger());
     return StopHook::StopHookResult::KeepStopped;
   }
 
@@ -5767,6 +5781,13 @@ bool TargetProperties::GetBreakpointsConsultPlatformAvoidList() {
   const uint32_t idx = ePropertyBreakpointUseAvoidList;
   return GetPropertyAtIndexAs<bool>(
       idx, g_target_properties[idx].default_uint_value != 0);
+}
+
+BreakpointConditionMode TargetProperties::GetBreakpointsConditionMode() const {
+  const uint32_t idx = ePropertyBreakpointsConditionMode;
+  return GetPropertyAtIndexAs<BreakpointConditionMode>(
+      idx, static_cast<BreakpointConditionMode>(
+               g_target_properties[idx].default_uint_value));
 }
 
 bool TargetProperties::GetUseHexImmediates() const {

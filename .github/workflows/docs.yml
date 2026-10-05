@@ -49,6 +49,7 @@ on:
       - 'flang/docs/**'
       - 'flang/include/flang/Optimizer/Dialect/FIROps.td'
       - '.github/workflows/docs.yml'
+      - 'utils/docs/**'
 
 jobs:
   check-docs-build:
@@ -57,7 +58,7 @@ jobs:
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 2
@@ -97,10 +98,11 @@ jobs:
             flang:
               - 'flang/docs/**'
               - 'flang/include/flang/Optimizer/Dialect/FIROps.td'
-            workflow:
+            common:
               - '.github/workflows/docs.yml'
+              - 'utils/docs/**'
       - name: Setup Python env
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.14'
           cache: 'pip'
@@ -117,7 +119,7 @@ jobs:
       - name: Build LLVM docs
         if: |
           steps.docs-changed-subprojects.outputs.llvm_any_changed == 'true' ||
-          steps.docs-changed-subprojects.outputs.workflow_any_changed == 'true'
+          steps.docs-changed-subprojects.outputs.common_any_changed == 'true'
         run: |
           cmake -B llvm-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_SPHINX=ON ./llvm
           TZ=UTC ninja -C llvm-build docs-llvm-html docs-llvm-man
@@ -126,7 +128,7 @@ jobs:
       - name: Build BOLT docs
         if: |
           steps.docs-changed-subprojects.outputs.bolt_any_changed == 'true' ||
-          steps.docs-changed-subprojects.outputs.workflow_any_changed == 'true'
+          steps.docs-changed-subprojects.outputs.common_any_changed == 'true'
         run: |
           cmake -B bolt-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="bolt" -DLLVM_ENABLE_SPHINX=ON ./llvm
           TZ=UTC ninja -C bolt-build docs-bolt-html
@@ -135,7 +137,7 @@ jobs:
       - name: Build Clang docs
         if: |
           steps.docs-changed-subprojects.outputs.clang_any_changed == 'true' ||
-          steps.docs-changed-subprojects.outputs.workflow_any_changed == 'true'
+          steps.docs-changed-subprojects.outputs.common_any_changed == 'true'
         run: |
           cmake -B clang-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_SPHINX=ON ./llvm
           TZ=UTC ninja -C clang-build docs-clang-html docs-clang-man
@@ -144,7 +146,7 @@ jobs:
       - name: Build clang-tools-extra docs
         if: |
           steps.docs-changed-subprojects.outputs.clang-tools-extra_any_changed == 'true' ||
-          steps.docs-changed-subprojects.outputs.workflow_any_changed == 'true'
+          steps.docs-changed-subprojects.outputs.common_any_changed == 'true'
         run: |
           cmake -B clang-tools-extra-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" -DLLVM_ENABLE_SPHINX=ON ./llvm
           TZ=UTC ninja -C clang-tools-extra-build docs-clang-tools-html docs-clang-tools-man
@@ -153,7 +155,7 @@ jobs:
       - name: Build LLDB docs
         if: |
           steps.docs-changed-subprojects.outputs.lldb_any_changed == 'true' ||
-          steps.docs-changed-subprojects.outputs.workflow_any_changed == 'true'
+          steps.docs-changed-subprojects.outputs.common_any_changed == 'true'
         run: |
           cmake -B lldb-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;lldb" -DLLVM_ENABLE_SPHINX=ON ./llvm
           TZ=UTC ninja -C lldb-build docs-lldb-html docs-lldb-man
@@ -162,7 +164,7 @@ jobs:
       - name: Build libunwind docs
         if: |
           steps.docs-changed-subprojects.outputs.libunwind_any_changed == 'true' ||
-          steps.docs-changed-subprojects.outputs.workflow_any_changed == 'true'
+          steps.docs-changed-subprojects.outputs.common_any_changed == 'true'
         run: |
           cmake -B libunwind-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="libunwind" -DLLVM_ENABLE_SPHINX=ON ./runtimes
           TZ=UTC ninja -C libunwind-build docs-libunwind-html
@@ -171,7 +173,7 @@ jobs:
       - name: Build libcxx docs
         if: |
           steps.docs-changed-subprojects.outputs.libcxx_any_changed == 'true' ||
-          steps.docs-changed-subprojects.outputs.workflow_any_changed == 'true'
+          steps.docs-changed-subprojects.outputs.common_any_changed == 'true'
         run: |
           cmake -B libcxx-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="libcxxabi;libcxx;libunwind" -DLLVM_ENABLE_SPHINX=ON ./runtimes
           TZ=UTC ninja -C libcxx-build docs-libcxx-html
@@ -180,7 +182,7 @@ jobs:
       - name: Build libc docs
         if: |
           steps.docs-changed-subprojects.outputs.libc_any_changed == 'true' ||
-          steps.docs-changed-subprojects.outputs.workflow_any_changed == 'true'
+          steps.docs-changed-subprojects.outputs.common_any_changed == 'true'
         run: |
           cmake -B libc-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="libc" -DLLVM_ENABLE_SPHINX=ON ./runtimes
           TZ=UTC ninja -C libc-build docs-libc-html
@@ -189,7 +191,7 @@ jobs:
       - name: Build LLD docs
         if: |
           steps.docs-changed-subprojects.outputs.lld_any_changed == 'true' ||
-          steps.docs-changed-subprojects.outputs.workflow_any_changed == 'true'
+          steps.docs-changed-subprojects.outputs.common_any_changed == 'true'
         run: |
           cmake -B lld-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="lld" -DLLVM_ENABLE_SPHINX=ON ./llvm
           TZ=UTC ninja -C lld-build docs-lld-html
@@ -198,7 +200,7 @@ jobs:
       - name: Build OpenMP docs
         if: |
           steps.docs-changed-subprojects.outputs.openmp_any_changed == 'true' ||
-          steps.docs-changed-subprojects.outputs.workflow_any_changed == 'true'
+          steps.docs-changed-subprojects.outputs.common_any_changed == 'true'
         run: |
           cmake -B openmp-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="openmp" -DLLVM_ENABLE_SPHINX=ON -DLLVM_INCLUDE_TESTS=OFF ./runtimes
           TZ=UTC ninja -C openmp-build docs-openmp-html
@@ -207,7 +209,7 @@ jobs:
       - name: Build Polly docs
         if: |
           steps.docs-changed-subprojects.outputs.polly_any_changed == 'true' ||
-          steps.docs-changed-subprojects.outputs.workflow_any_changed == 'true'
+          steps.docs-changed-subprojects.outputs.common_any_changed == 'true'
         run: |
           cmake -B polly-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="polly" -DLLVM_ENABLE_SPHINX=ON ./llvm
           TZ=UTC ninja -C polly-build docs-polly-html docs-polly-man
@@ -216,7 +218,7 @@ jobs:
       - name: Build Flang docs
         if: |
           steps.docs-changed-subprojects.outputs.flang_any_changed == 'true' ||
-          steps.docs-changed-subprojects.outputs.workflow_any_changed == 'true'
+          steps.docs-changed-subprojects.outputs.common_any_changed == 'true'
         run: |
           cmake -B flang-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;mlir;flang" -DLLVM_ENABLE_SPHINX=ON ./llvm
           TZ=UTC ninja -C flang-build docs-flang-html docs-flang-man

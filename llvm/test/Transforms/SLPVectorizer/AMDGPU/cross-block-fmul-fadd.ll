@@ -75,19 +75,22 @@ define void @cross_block_fmul_rhs(ptr addrspace(1) %p, ptr addrspace(1) %q, ptr 
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[I0:%.*]] = shl i32 [[TID]], 1
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[P]], i32 [[I0]]
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[P0]], i32 1
 ; CHECK-NEXT:    [[Q0:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[Q]], i32 [[I0]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr addrspace(1) [[P0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr addrspace(1) [[Q0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul contract <2 x float> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[Q1:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[Q0]], i32 1
+; CHECK-NEXT:    [[A0:%.*]] = load float, ptr addrspace(1) [[P0]], align 4
+; CHECK-NEXT:    [[A1:%.*]] = load float, ptr addrspace(1) [[P1]], align 4
+; CHECK-NEXT:    [[B0:%.*]] = load float, ptr addrspace(1) [[Q0]], align 4
+; CHECK-NEXT:    [[B1:%.*]] = load float, ptr addrspace(1) [[Q1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul contract float [[A0]], [[B0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul contract float [[A1]], [[B1]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[T:.*]], label %[[F:.*]]
 ; CHECK:       [[T]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i64 0
 ; CHECK-NEXT:    [[S0:%.*]] = fadd contract float [[X]], [[TMP3]]
 ; CHECK-NEXT:    [[RT:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[R]], i32 [[TID]]
 ; CHECK-NEXT:    store float [[S0]], ptr addrspace(1) [[RT]], align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[F]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[S1:%.*]] = fadd contract float [[Y]], [[TMP4]]
 ; CHECK-NEXT:    [[RF:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[R2]], i32 [[TID]]
 ; CHECK-NEXT:    store float [[S1]], ptr addrspace(1) [[RF]], align 4

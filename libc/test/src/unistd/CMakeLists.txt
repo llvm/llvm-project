@@ -205,6 +205,28 @@ add_libc_test(
 )
 
 add_libc_test(
+  fchownat_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    fchownat_test.cpp
+  DEPENDS
+    libc.hdr.sys_stat_macros
+    libc.hdr.fcntl_macros
+    libc.include.unistd
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.unistd.fchownat
+    libc.src.unistd.close
+    libc.src.unistd.unlink
+    libc.src.fcntl.open
+    libc.src.unistd.getuid
+    libc.src.unistd.getgid
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   fdatasync_test
   SUITE
     libc_unistd_unittests
@@ -852,6 +874,7 @@ add_libc_test(
     sysconf_test.cpp
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.limits_macros
     libc.hdr.unistd_macros
     libc.src.unistd.sysconf
     libc.test.UnitTest.ErrnoCheckingTest

@@ -677,7 +677,7 @@ void g() { f<long long, float>(); }
 namespace GH218548 {
 
 template <class T>
-concept same_as_impl = sizeof(T) == 2;
+concept same_as_impl = sizeof(T) == 2; // #GH218548_same_as_impl
 template <typename... P>
 void f() requires(same_as_impl<P...[sizeof(P)]> && ...) // #GH218548_f
 {}
@@ -687,8 +687,42 @@ void g() {
   f<char, int, short>();
   // expected-error@-1 {{no matching function}}
   // expected-note@#GH218548_f {{constraints not satisfied}}
-  // expected-note@#GH218548_f {{does not satisfy 'same_as_impl'}}
-  // expected-note@#GH218548_f {{invalid index}}
+  // expected-note@#GH218548_f {{because 'int' does not satisfy 'same_as_impl'}}
+  // expected-note@#GH218548_same_as_impl {{because 'sizeof(int) == 2' (4 == 2) evaluated to false}}
+}
+
+}
+
+namespace GH218548_cache {
+
+// The cached satisfaction of an element must depend on the whole pack that
+// P...[sizeof(P)] indexes: the first element's P...[sizeof(P)] is short in the
+// first call but int in the second.
+template <class T>
+concept two_bytes = sizeof(T) == 2; // #GH218548_cache_two_bytes
+template <typename... P>
+void f() requires(two_bytes<P...[sizeof(P)]> && ...) // #GH218548_cache_f
+{}
+template <class T>
+concept wrapped = two_bytes<T>; // #GH218548_cache_wrapped
+template <typename... P>
+void g() requires(wrapped<P...[sizeof(P)]> && ...) // #GH218548_cache_g
+{}
+void h() {
+  f<char, short, short>();
+  f<char, int, short, short, short>();
+  // expected-error@-1 {{no matching function}}
+  // expected-note@#GH218548_cache_f {{constraints not satisfied}}
+  // expected-note@#GH218548_cache_f {{because 'int' does not satisfy 'two_bytes'}}
+  // expected-note@#GH218548_cache_two_bytes {{because 'sizeof(int) == 2' (4 == 2) evaluated to false}}
+
+  g<char, short, short>();
+  g<char, int, short, short, short>();
+  // expected-error@-1 {{no matching function}}
+  // expected-note@#GH218548_cache_g {{constraints not satisfied}}
+  // expected-note@#GH218548_cache_g {{because 'int' does not satisfy 'wrapped'}}
+  // expected-note@#GH218548_cache_wrapped {{because 'int' does not satisfy 'two_bytes'}}
+  // expected-note@#GH218548_cache_two_bytes {{because 'sizeof(int) == 2' (4 == 2) evaluated to false}}
 }
 
 }
