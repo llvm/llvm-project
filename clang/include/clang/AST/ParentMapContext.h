@@ -66,14 +66,14 @@ public:
     // Fast path: Nothing is ignored in the default traversal mode TK_AsIs.
     if (Traversal == TK_AsIs)
       return N;
-    return traverseIgnoredSlow(N);
+    if (const auto *E = N.get<Expr>())
+      return DynTypedNode::create(*traverseIgnored(E));
+    return N;
   }
 
   class ParentMap;
 
 private:
-  DynTypedNode traverseIgnoredSlow(const DynTypedNode &N) const;
-
   ASTContext &ASTCtx;
   TraversalKind Traversal = TK_AsIs;
   std::unique_ptr<ParentMap> Parents;
