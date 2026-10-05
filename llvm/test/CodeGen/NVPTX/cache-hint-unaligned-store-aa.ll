@@ -110,7 +110,7 @@ define void @unaligned_i64_store(ptr addrspace(1) %p, i64 %v) {
   ret void
 }
 
-!0 = distinct !{!0}
+!0 = distinct !{!0, i1 false, !"domain"}
 !1 = distinct !{!1, !0, !"scope"}
 !2 = !{!1}
 !3 = distinct !{!3, !0, !"other scope"}
