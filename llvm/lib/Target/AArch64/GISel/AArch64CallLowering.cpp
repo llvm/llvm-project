@@ -1098,7 +1098,7 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
   // cannot rely on the linker replacing the tail call with a return.
   if (Info.Callee.isGlobal()) {
     const GlobalValue *GV = Info.Callee.getGlobal();
-    const Triple &TT = MF.getTarget().getTargetTriple();
+    const Triple &TT = GV->getParent()->getTargetTriple();
     if (GV->hasExternalWeakLinkage() &&
         (!TT.isOSWindows() || TT.isOSBinFormatELF() ||
          TT.isOSBinFormatMachO())) {
@@ -1542,6 +1542,9 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // Now we can add the actual call instruction to the correct basic block.
   MIRBuilder.insertInstr(MIB);
+
+  // Add dead flag to already inserted implicit-def.
+  MIB->addRegisterDead(AArch64::LR, TRI);
 
   uint64_t CalleePopBytes =
       doesCalleeRestoreStack(Info.CallConv,

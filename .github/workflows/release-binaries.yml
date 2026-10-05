@@ -224,15 +224,16 @@ jobs:
     # to do that we need to specify a specific python version.  It's also
     # good practice to do this on other OSes so the version of python doesn't
     # get changed unexpectedly.
-    - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+    - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
       with:
-        python-version: '3.14.6'
+        python-version: '3.14.8'
 
     # For some reason this is needed on Windows or else the build system can't find python3.lib.
     - name: Setup Python library path
       if: runner.os == 'Windows'
       run: |
-        echo "LIB=$env:LIB;C:\hostedtoolcache\windows\Python\3.14.6\$($env:RUNNER_ARCH.ToLower())\libs" >> $env:GITHUB_ENV
+        $python_version = (python -c "import platform; print(platform.python_version())").Trim()
+        echo "LIB=$env:LIB;C:\hostedtoolcache\windows\Python\$python_version\$($env:RUNNER_ARCH.ToLower())\libs" >> $env:GITHUB_ENV
 
     - name: Setup crlf
       if: runner.os == 'Windows'
@@ -240,7 +241,7 @@ jobs:
         git config --global core.autocrlf false
 
     - name: Checkout LLVM
-      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         persist-credentials: false
         ref: ${{ needs.prepare.outputs.ref }}
@@ -434,7 +435,7 @@ jobs:
       - build-release-package
     if: >-
       github.event_name != 'pull_request'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: write # For release uploads
       id-token: write     # For artifact attestations

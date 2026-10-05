@@ -71,12 +71,12 @@ bool tryToFindPtrOrigin(
         callback);
 
 /// For \p E referring to a ref-countable/-counted pointer/reference we return
-/// whether it's a safe call argument. Examples: function parameter or
-/// this-pointer. The logic relies on the set of recursive rules we enforce for
-/// WebKit codebase.
+/// whether the pointee outlives the current function call. Examples: function
+/// parameter or this-pointer. Outliving the call is not by itself sufficient
+/// evidence of safety for a model that checks for interior destruction.
 ///
-/// \returns Whether \p E is a safe call arugment.
-bool isASafeCallArg(const clang::Expr *E);
+/// \returns Whether the pointee of \p E outlives the current function call.
+bool originOutlivesCall(const clang::Expr *E);
 
 /// \returns true if E is nullptr or __null.
 bool isNullPtr(const clang::Expr *E);

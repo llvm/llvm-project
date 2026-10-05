@@ -2789,4 +2789,19 @@ def : Pat<(int_loongarch_lasx_xvstelm_d v4i64:$xd, GPR:$rj, timm:$imm, timm:$idx
           (XVSTELM_D v4i64:$xd, GPR:$rj, (to_valid_timm timm:$imm),
                     (to_valid_timm timm:$idx))>;
 
+
+// Whole-vector zero tests, see the LSX counterparts.
+foreach vt = [v32i8, v16i16, v8i32, v4i64] in {
+def : Pat<(GRLenVT (loongarch_vanynonzero (vt LASX256:$xj))),
+          (MOVCF2GR (XVSETNEZ_V LASX256:$xj))>;
+def : Pat<(GRLenVT (loongarch_vallzero (vt LASX256:$xj))),
+          (MOVCF2GR (XVSETEQZ_V LASX256:$xj))>;
+def : Pat<(loongarch_brcc (GRLenVT (loongarch_vanynonzero (vt LASX256:$xj))), 0,
+                          SETNE, bb:$imm21),
+          (BCNEZ (XVSETNEZ_V LASX256:$xj), bb:$imm21)>;
+def : Pat<(loongarch_brcc (GRLenVT (loongarch_vallzero (vt LASX256:$xj))), 0,
+                          SETNE, bb:$imm21),
+          (BCNEZ (XVSETEQZ_V LASX256:$xj), bb:$imm21)>;
+}
+
 } // Predicates = [HasExtLASX]

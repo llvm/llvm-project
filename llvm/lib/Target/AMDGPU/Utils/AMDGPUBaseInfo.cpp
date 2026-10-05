@@ -1530,6 +1530,9 @@ static bool isValidRegPrefix(char C) {
 }
 
 std::tuple<char, unsigned, unsigned> parseAsmPhysRegName(StringRef RegName) {
+  if (RegName.empty())
+    return {};
+
   char Kind = RegName.front();
   if (!isValidRegPrefix(Kind))
     return {};

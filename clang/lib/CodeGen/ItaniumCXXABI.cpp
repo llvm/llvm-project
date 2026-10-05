@@ -3545,31 +3545,6 @@ public:
   ItaniumRTTIBuilder(const ItaniumCXXABI &ABI)
       : CGM(ABI.CGM), VMContext(CGM.getModule().getContext()), CXXABI(ABI) {}
 
-  // Pointer type info flags.
-  enum {
-    /// PTI_Const - Type has const qualifier.
-    PTI_Const = 0x1,
-
-    /// PTI_Volatile - Type has volatile qualifier.
-    PTI_Volatile = 0x2,
-
-    /// PTI_Restrict - Type has restrict qualifier.
-    PTI_Restrict = 0x4,
-
-    /// PTI_Incomplete - Type is incomplete.
-    PTI_Incomplete = 0x8,
-
-    /// PTI_ContainingClassIncomplete - Containing class is incomplete.
-    /// (in pointer to member).
-    PTI_ContainingClassIncomplete = 0x10,
-
-    /// PTI_TransactionSafe - Pointee is transaction_safe function (C++ TM TS).
-    //PTI_TransactionSafe = 0x20,
-
-    /// PTI_Noexcept - Pointee is noexcept function (C++1z).
-    PTI_Noexcept = 0x40,
-  };
-
   // VMI type info flags.
   enum {
     /// VMI_NonDiamondRepeat - Class has non-diamond repeated inheritance.
@@ -3592,12 +3567,14 @@ public:
   /// link to an existing RTTI descriptor if one already exists.
   llvm::Constant *BuildTypeInfo(QualType Ty);
 
-  /// BuildTypeInfo - Build the RTTI type info struct for the given type.
+  /// BuildTypeInfo - Build the RTTI type info struct for the given type. The
+  /// TypeInfo* properties apply to the type info, the others to the type name.
   llvm::Constant *BuildTypeInfo(
-      QualType Ty,
-      llvm::GlobalVariable::LinkageTypes Linkage,
+      QualType Ty, llvm::GlobalVariable::LinkageTypes Linkage,
       llvm::GlobalValue::VisibilityTypes Visibility,
-      llvm::GlobalValue::DLLStorageClassTypes DLLStorageClass);
+      llvm::GlobalValue::DLLStorageClassTypes DLLStorageClass,
+      llvm::GlobalValue::VisibilityTypes TypeInfoVisibility,
+      llvm::GlobalValue::DLLStorageClassTypes TypeInfoDLLStorageClass);
 };
 }
 
@@ -3738,6 +3715,8 @@ static bool TypeInfoIsInStandardLibrary(const BuiltinType *Ty) {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/SPIRVTypes.def"
     case BuiltinType::ShortAccum:
@@ -3765,6 +3744,7 @@ static bool TypeInfoIsInStandardLibrary(const BuiltinType *Ty) {
     case BuiltinType::SatUFract:
     case BuiltinType::SatULongFract:
     case BuiltinType::BFloat16:
+    case BuiltinType::MetaInfo:
       return false;
 
     case BuiltinType::Dependent:
@@ -3855,43 +3835,6 @@ static bool ShouldUseExternalRTTIDescriptor(CodeGenModule &CGM,
     }
     if (IsDLLImport)
       return true;
-  }
-
-  return false;
-}
-
-/// IsIncompleteClassType - Returns whether the given record type is incomplete.
-static bool IsIncompleteClassType(const RecordType *RecordTy) {
-  return !RecordTy->getDecl()->getDefinitionOrSelf()->isCompleteDefinition();
-}
-
-/// ContainsIncompleteClassType - Returns whether the given type contains an
-/// incomplete class type. This is true if
-///
-///   * The given type is an incomplete class type.
-///   * The given type is a pointer type whose pointee type contains an
-///     incomplete class type.
-///   * The given type is a member pointer type whose class is an incomplete
-///     class type.
-///   * The given type is a member pointer type whoise pointee type contains an
-///     incomplete class type.
-/// is an indirect or direct pointer to an incomplete class type.
-static bool ContainsIncompleteClassType(QualType Ty) {
-  if (const RecordType *RecordTy = dyn_cast<RecordType>(Ty)) {
-    if (IsIncompleteClassType(RecordTy))
-      return true;
-  }
-
-  if (const PointerType *PointerTy = dyn_cast<PointerType>(Ty))
-    return ContainsIncompleteClassType(PointerTy->getPointeeType());
-
-  if (const MemberPointerType *MemberPointerTy =
-      dyn_cast<MemberPointerType>(Ty)) {
-    // Check if the class type is incomplete.
-    if (!MemberPointerTy->getMostRecentCXXRecordDecl()->hasDefinition())
-      return true;
-
-    return ContainsIncompleteClassType(MemberPointerTy->getPointeeType());
   }
 
   return false;
@@ -4098,7 +4041,7 @@ static llvm::GlobalVariable::LinkageTypes getTypeInfoLinkage(CodeGenModule &CGM,
   //   generated for the incomplete type that will not resolve to the final
   //   complete class RTTI (because the latter need not exist), possibly by
   //   making it a local static object.
-  if (ContainsIncompleteClassType(Ty))
+  if (CodeGenUtils::containsIncompleteClassType(Ty))
     return llvm::GlobalValue::InternalLinkage;
 
   switch (Ty->getLinkage()) {
@@ -4137,6 +4080,17 @@ static llvm::GlobalVariable::LinkageTypes getTypeInfoLinkage(CodeGenModule &CGM,
   }
 
   llvm_unreachable("Invalid linkage!");
+}
+
+/// A dllexported global must not be hidden, so dllexport takes precedence over
+/// the visibility implied by -fvisibility=hidden, as elsewhere in CodeGen.
+static llvm::GlobalValue::VisibilityTypes
+getRTTIVisibility(llvm::GlobalValue::VisibilityTypes Visibility,
+                  llvm::GlobalValue::DLLStorageClassTypes DLLStorageClass) {
+  if (DLLStorageClass == llvm::GlobalValue::DLLExportStorageClass &&
+      Visibility == llvm::GlobalValue::HiddenVisibility)
+    return llvm::GlobalValue::DefaultVisibility;
+  return Visibility;
 }
 
 llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty) {
@@ -4186,14 +4140,32 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty) {
          llvmVisibility == llvm::GlobalValue::DefaultVisibility))
       DLLStorageClass = llvm::GlobalValue::DLLExportStorageClass;
   }
-  return BuildTypeInfo(Ty, Linkage, llvmVisibility, DLLStorageClass);
+  llvmVisibility = getRTTIVisibility(llvmVisibility, DLLStorageClass);
+
+  // Export the typeinfo in the same circumstances as the vtable is exported.
+  llvm::GlobalValue::DLLStorageClassTypes TypeInfoDLLStorageClass =
+      DLLStorageClass;
+  if (CGM.getTarget().hasPS4DLLImportExport() &&
+      TypeInfoDLLStorageClass != llvm::GlobalValue::DLLExportStorageClass) {
+    if (auto RD = Ty->getAsCXXRecordDecl()) {
+      if (RD->hasAttr<DLLExportAttr>() ||
+          CXXRecordNonInlineHasAttr<DLLExportAttr>(RD))
+        TypeInfoDLLStorageClass = llvm::GlobalValue::DLLExportStorageClass;
+    }
+  }
+  llvm::GlobalValue::VisibilityTypes TypeInfoVisibility =
+      getRTTIVisibility(llvmVisibility, TypeInfoDLLStorageClass);
+
+  return BuildTypeInfo(Ty, Linkage, llvmVisibility, DLLStorageClass,
+                       TypeInfoVisibility, TypeInfoDLLStorageClass);
 }
 
 llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
-      QualType Ty,
-      llvm::GlobalVariable::LinkageTypes Linkage,
-      llvm::GlobalValue::VisibilityTypes Visibility,
-      llvm::GlobalValue::DLLStorageClassTypes DLLStorageClass) {
+    QualType Ty, llvm::GlobalVariable::LinkageTypes Linkage,
+    llvm::GlobalValue::VisibilityTypes Visibility,
+    llvm::GlobalValue::DLLStorageClassTypes DLLStorageClass,
+    llvm::GlobalValue::VisibilityTypes TypeInfoVisibility,
+    llvm::GlobalValue::DLLStorageClassTypes TypeInfoDLLStorageClass) {
   SmallString<256> Name;
   llvm::raw_svector_ostream Out(Name);
   CGM.getCXXABI().getMangleContext().mangleCXXRTTI(Ty, Out);
@@ -4329,19 +4301,6 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
 
   GV->replaceInitializer(llvm::ConstantStruct::getAnon(Fields));
 
-  // Export the typeinfo in the same circumstances as the vtable is exported.
-  auto GVDLLStorageClass = DLLStorageClass;
-  if (CGM.getTarget().hasPS4DLLImportExport() &&
-      GVDLLStorageClass != llvm::GlobalVariable::DLLExportStorageClass) {
-    if (const RecordType *RecordTy = dyn_cast<RecordType>(Ty)) {
-      const auto *RD =
-          cast<CXXRecordDecl>(RecordTy->getDecl())->getDefinitionOrSelf();
-      if (RD->hasAttr<DLLExportAttr>() ||
-          CXXRecordNonInlineHasAttr<DLLExportAttr>(RD))
-        GVDLLStorageClass = llvm::GlobalVariable::DLLExportStorageClass;
-    }
-  }
-
   // If there's already an old global variable, replace it with the new one.
   if (OldGV) {
     GV->takeName(OldGV);
@@ -4374,11 +4333,11 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
   TypeName->setVisibility(Visibility);
   CGM.setDSOLocal(TypeName);
 
-  GV->setVisibility(Visibility);
+  GV->setVisibility(TypeInfoVisibility);
   CGM.setDSOLocal(GV);
 
   TypeName->setDLLStorageClass(DLLStorageClass);
-  GV->setDLLStorageClass(GVDLLStorageClass);
+  GV->setDLLStorageClass(TypeInfoDLLStorageClass);
 
   TypeName->setPartition(CGM.getCodeGenOpts().SymbolPartition);
   GV->setPartition(CGM.getCodeGenOpts().SymbolPartition);
@@ -4566,42 +4525,13 @@ void ItaniumRTTIBuilder::BuildVMIClassTypeInfo(const CXXRecordDecl *RD) {
   }
 }
 
-/// Compute the flags for a __pbase_type_info, and remove the corresponding
-/// pieces from \p Type.
-static unsigned extractPBaseFlags(ASTContext &Ctx, QualType &Type) {
-  unsigned Flags = 0;
-
-  if (Type.isConstQualified())
-    Flags |= ItaniumRTTIBuilder::PTI_Const;
-  if (Type.isVolatileQualified())
-    Flags |= ItaniumRTTIBuilder::PTI_Volatile;
-  if (Type.isRestrictQualified())
-    Flags |= ItaniumRTTIBuilder::PTI_Restrict;
-  Type = Type.getUnqualifiedType();
-
-  // Itanium C++ ABI 2.9.5p7:
-  //   When the abi::__pbase_type_info is for a direct or indirect pointer to an
-  //   incomplete class type, the incomplete target type flag is set.
-  if (ContainsIncompleteClassType(Type))
-    Flags |= ItaniumRTTIBuilder::PTI_Incomplete;
-
-  if (auto *Proto = Type->getAs<FunctionProtoType>()) {
-    if (Proto->isNothrow()) {
-      Flags |= ItaniumRTTIBuilder::PTI_Noexcept;
-      Type = Ctx.getFunctionTypeWithExceptionSpec(Type, EST_None);
-    }
-  }
-
-  return Flags;
-}
-
 /// BuildPointerTypeInfo - Build an abi::__pointer_type_info struct,
 /// used for pointer types.
 void ItaniumRTTIBuilder::BuildPointerTypeInfo(QualType PointeeTy) {
   // Itanium C++ ABI 2.9.5p7:
   //   __flags is a flag word describing the cv-qualification and other
   //   attributes of the type pointed to
-  unsigned Flags = extractPBaseFlags(CGM.getContext(), PointeeTy);
+  unsigned Flags = CodeGenUtils::extractPBaseFlags(CGM.getContext(), PointeeTy);
 
   llvm::Type *UnsignedIntLTy =
     CGM.getTypes().ConvertType(CGM.getContext().UnsignedIntTy);
@@ -4624,11 +4554,11 @@ ItaniumRTTIBuilder::BuildPointerToMemberTypeInfo(const MemberPointerType *Ty) {
   // Itanium C++ ABI 2.9.5p7:
   //   __flags is a flag word describing the cv-qualification and other
   //   attributes of the type pointed to.
-  unsigned Flags = extractPBaseFlags(CGM.getContext(), PointeeTy);
+  unsigned Flags = CodeGenUtils::extractPBaseFlags(CGM.getContext(), PointeeTy);
 
   const auto *RD = Ty->getMostRecentCXXRecordDecl();
   if (!RD->hasDefinition())
-    Flags |= PTI_ContainingClassIncomplete;
+    Flags |= CodeGenUtils::PTI_ContainingClassIncomplete;
 
   llvm::Type *UnsignedIntLTy =
     CGM.getTypes().ConvertType(CGM.getContext().UnsignedIntTy);
@@ -4674,15 +4604,15 @@ void ItaniumCXXABI::EmitFundamentalRTTIDescriptors(const CXXRecordDecl *RD) {
       RD->hasAttr<DLLExportAttr>() || CGM.shouldMapVisibilityToDLLExport(RD)
           ? llvm::GlobalValue::DLLExportStorageClass
           : llvm::GlobalValue::DefaultStorageClass;
-  llvm::GlobalValue::VisibilityTypes Visibility =
-      CodeGenModule::GetLLVMVisibility(RD->getVisibility());
+  llvm::GlobalValue::VisibilityTypes Visibility = getRTTIVisibility(
+      CodeGenModule::GetLLVMVisibility(RD->getVisibility()), DLLStorageClass);
   for (const QualType &FundamentalType : FundamentalTypes) {
     QualType PointerType = getContext().getPointerType(FundamentalType);
     QualType PointerTypeConst = getContext().getPointerType(
         FundamentalType.withConst());
     for (QualType Type : {FundamentalType, PointerType, PointerTypeConst})
       ItaniumRTTIBuilder(*this).BuildTypeInfo(
-          Type, llvm::GlobalValue::ExternalLinkage,
+          Type, llvm::GlobalValue::ExternalLinkage, Visibility, DLLStorageClass,
           Visibility, DLLStorageClass);
   }
 }
@@ -4717,7 +4647,19 @@ ItaniumCXXABI::RTTIUniquenessKind ItaniumCXXABI::classifyRTTIUniqueness(
 // Find out how to codegen the complete destructor and constructor
 namespace {
 enum class StructorCodegen { Emit, RAUW, Alias, COMDAT };
+} // namespace
+
+// Returns true if the complete constructor/destructor variant must be retained
+// as a distinct symbol rather than being silently replaced in the IR (RAUW).
+static bool
+structorSymbolMustBeRetained(CodeGenModule &CGM, const CXXMethodDecl *MD,
+                             llvm::GlobalValue::LinkageTypes Linkage) {
+  if (MD->hasAttr<UsedAttr>())
+    return true;
+  return CGM.getCodeGenOpts().KeepInlineFunctions && MD->isInlined() &&
+         Linkage != llvm::GlobalValue::AvailableExternallyLinkage;
 }
+
 static StructorCodegen getCodegenToUse(CodeGenModule &CGM,
                                        const CXXMethodDecl *MD) {
   if (!CGM.getCodeGenOpts().CXXCtorDtorAliases)
@@ -4737,7 +4679,8 @@ static StructorCodegen getCodegenToUse(CodeGenModule &CGM,
   }
   llvm::GlobalValue::LinkageTypes Linkage = CGM.getFunctionLinkage(AliasDecl);
 
-  if (llvm::GlobalValue::isDiscardableIfUnused(Linkage))
+  if (llvm::GlobalValue::isDiscardableIfUnused(Linkage) &&
+      !structorSymbolMustBeRetained(CGM, MD, Linkage))
     return StructorCodegen::RAUW;
 
   // FIXME: Should we allow available_externally aliases?
@@ -5248,7 +5191,7 @@ WebAssemblyCXXABI::emitTerminateForUnexpectedException(CodeGenFunction &CGF,
   // and call __clang_call_terminate only in Emscripten EH.
   // TODO Consider code transformation that makes calling __clang_call_terminate
   // in Wasm EH possible.
-  if (Exn && !EHPersonality::get(CGF).isWasmPersonality()) {
+  if (Exn && !getEHPersonality(CGF).isWasmPersonality()) {
     assert(CGF.CGM.getLangOpts().CPlusPlus);
     return CGF.EmitNounwindRuntimeCall(getClangCallTerminateFn(CGF.CGM), Exn);
   }

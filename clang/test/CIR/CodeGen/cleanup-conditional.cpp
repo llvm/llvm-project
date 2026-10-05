@@ -17,10 +17,11 @@ void test_ternary_temporary(bool c, int x) {
 // CIR-LABEL: @_Z22test_ternary_temporarybi
 // CIR:   %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_S>
 // CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
-// The cleanup scope wraps the full expression so cleanups run on all exits.
+// CIR:   %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
+// The cleanup scope opens at the conditional and stays open to the end of the
+// full expression, so cleanups run on all exits.
 // CIR:   cir.cleanup.scope {
-// Load condition, then active flag false before the ternary (destructor guard).
-// CIR:     %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
+// Active flag false before the ternary (destructor guard).
 // CIR:     %[[FALSE:.*]] = cir.const #false
 // CIR:     cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:     %{{.*}} = cir.ternary(%[[COND]], true {
@@ -45,10 +46,10 @@ void test_ternary_temporary(bool c, int x) {
 // LLVMCIR:         %[[TMP:.*]] = alloca %struct.S
 // LLVMCIR:         %[[ACTIVE:.*]] = alloca i8
 // LLVMCIR:         %[[RESULT_TMP:.*]] = alloca i32
-// LLVMCIR:         br label %[[INIT:.*]]
-// LLVMCIR:       [[INIT]]:
 // LLVMCIR:         %[[COND_BYTE:.*]] = load i8, ptr %{{.*}}
 // LLVMCIR:         %[[COND_BOOL:.*]] = trunc i8 %[[COND_BYTE]] to i1
+// LLVMCIR:         br label %[[INIT:.*]]
+// LLVMCIR:       [[INIT]]:
 // LLVMCIR:         store i8 0, ptr %[[ACTIVE]]
 // LLVMCIR:         br i1 %[[COND_BOOL]], label %[[TRUE_BR:.*]], label %[[FALSE_BR:.*]]
 // LLVMCIR:       [[TRUE_BR]]:
@@ -121,9 +122,9 @@ void test_ternary_both_branches(bool c) {
 // CIR:   %[[ACTA:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   %[[TMPB:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_B>
 // CIR:   %[[ACTB:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:   cir.cleanup.scope {
 // Both active flags start false; each branch sets its own to true when it runs.
-// CIR:     %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:     %[[FALSE_A:.*]] = cir.const #false
 // CIR:     cir.store %[[FALSE_A]], %[[ACTA]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:     %[[FALSE_B:.*]] = cir.const #false
@@ -161,10 +162,10 @@ void test_ternary_both_branches(bool c) {
 // LLVMCIR:         %[[TMPB:.*]] = alloca %struct.B
 // LLVMCIR:         %[[ACTB:.*]] = alloca i8
 // LLVMCIR:         %[[RESULT_TMP:.*]] = alloca i32
-// LLVMCIR:         br label %[[INIT:.*]]
-// LLVMCIR:       [[INIT]]:
 // LLVMCIR:         %[[COND_BYTE:.*]] = load i8, ptr %{{.*}}
 // LLVMCIR:         %[[COND_BOOL:.*]] = trunc i8 %[[COND_BYTE]] to i1
+// LLVMCIR:         br label %[[INIT:.*]]
+// LLVMCIR:       [[INIT]]:
 // LLVMCIR:         store i8 0, ptr %[[ACTA]]
 // LLVMCIR:         store i8 0, ptr %[[ACTB]]
 // LLVMCIR:         br i1 %[[COND_BOOL]], label %[[CONSTRUCT_A:.*]], label %[[CONSTRUCT_B:.*]]
@@ -238,8 +239,8 @@ int test_return_ternary(bool c) {
 // CIR:   %[[ACTA:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   %[[TMPB:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_B>
 // CIR:   %[[ACTB:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:   cir.cleanup.scope {
-// CIR:     %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:     %[[FALSE_A:.*]] = cir.const #false
 // CIR:     cir.store %[[FALSE_A]], %[[ACTA]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:     %[[FALSE_B:.*]] = cir.const #false
@@ -282,10 +283,10 @@ int test_return_ternary(bool c) {
 // LLVMCIR:         %[[ACTA:.*]] = alloca i8
 // LLVMCIR:         %[[TMPB:.*]] = alloca %struct.B
 // LLVMCIR:         %[[ACTB:.*]] = alloca i8
-// LLVMCIR:         br label %[[INIT:.*]]
-// LLVMCIR:       [[INIT]]:
 // LLVMCIR:         %[[COND_BYTE:.*]] = load i8, ptr %{{.*}}
 // LLVMCIR:         %[[COND_BOOL:.*]] = trunc i8 %[[COND_BYTE]] to i1
+// LLVMCIR:         br label %[[INIT:.*]]
+// LLVMCIR:       [[INIT]]:
 // LLVMCIR:         store i8 0, ptr %[[ACTA]]
 // LLVMCIR:         store i8 0, ptr %[[ACTB]]
 // LLVMCIR:         br i1 %[[COND_BOOL]], label %[[CONSTRUCT_A:.*]], label %[[CONSTRUCT_B:.*]]
@@ -775,9 +776,10 @@ _Complex float test_complex_cond_cleanup(bool b, _Complex float x) {
 // CIR-LABEL: @_Z25test_complex_cond_cleanupbCf
 // CIR:   %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_CplxD>
 // CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
-// The full expression is wrapped in a single cleanup scope.
+// CIR:   %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
+// The conditional's cleanup scope stays open to the end of the full
+// expression.
 // CIR:   cir.cleanup.scope {
-// CIR:     %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
 // Active flag is initialized to false before the ternary so the dtor only runs
 // when the true branch was actually taken.
 // CIR:     %[[FALSE:.*]] = cir.const #false
@@ -911,10 +913,10 @@ void test_combined_cleanups(bool c) {
 // CIR:   %[[TMP_B:.*]] = cir.alloca "ref.tmp2" {{.*}} : !cir.ptr<!rec_B>
 // CIR:   %[[ACT_B:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   %[[SPILL:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} : !cir.ptr<!cir.ptr<!rec_LE>>
+// CIR:   cir.call @_ZN1SC1Ev(%[[TMP_S]])
 // CIR:   cir.cleanup.scope {
-// CIR:     cir.call @_ZN1SC1Ev(%[[TMP_S]])
+// CIR:     cir.call @_ZN1S3getEv(%[[TMP_S]])
 // CIR:     cir.cleanup.scope {
-// CIR:       cir.call @_ZN1S3getEv(%[[TMP_S]])
 // CIR:       cir.store {{.*}}, %[[ACT_B]]
 // CIR:       %{{.*}} = cir.ternary({{.*}}, true {
 // CIR:         cir.call @_ZN1BC1Ev(%[[TMP_B]])
@@ -925,16 +927,17 @@ void test_combined_cleanups(bool c) {
 // CIR:       cir.call @_ZN2LEC1Ei(%[[TMP_LE]], %{{.*}})
 // CIR:       cir.store {{.*}} %[[TMP_LE]], %[[SPILL]]
 // CIR:       cir.yield
+// B is constructed after S, so the conditional ~B runs before ~S.
 // CIR:     } cleanup normal {
-// CIR:       cir.call @_ZN1SD1Ev(%[[TMP_S]]) nothrow
+// CIR:       %[[FLAG:.*]] = cir.load {{.*}} %[[ACT_B]]
+// CIR:       cir.if %[[FLAG]] {
+// CIR:         cir.call @_ZN1BD1Ev(%[[TMP_B]]) nothrow
+// CIR:       }
 // CIR:       cir.yield
 // CIR:     }
 // CIR:     cir.yield
 // CIR:   } cleanup normal {
-// CIR:     %[[FLAG:.*]] = cir.load {{.*}} %[[ACT_B]]
-// CIR:     cir.if %[[FLAG]] {
-// CIR:       cir.call @_ZN1BD1Ev(%[[TMP_B]]) nothrow
-// CIR:     }
+// CIR:     cir.call @_ZN1SD1Ev(%[[TMP_S]]) nothrow
 // CIR:     cir.yield
 // CIR:   }
 // CIR:   cir.cleanup.scope {
@@ -966,13 +969,14 @@ void test_combined_cleanups(bool c) {
 // LLVMCIR:   phi i32 [ 0, %[[F]] ], [ %{{.*}}, %[[T]] ]
 // LLVMCIR:   call void @_ZN2LEC1Ei(ptr {{.*}} %[[TMP_LE]], i32 {{.*}})
 // LLVMCIR:   store ptr %[[TMP_LE]], ptr %[[SPILL]]
-// LLVMCIR:   call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP_S]])
+// B is constructed after S, so the conditional ~B runs before ~S.
 // LLVMCIR:   %[[FLAG_BYTE:.*]] = load i8, ptr %[[ACT_B]]
 // LLVMCIR:   %[[FLAG:.*]] = trunc i8 %[[FLAG_BYTE]] to i1
 // LLVMCIR:   br i1 %[[FLAG]], label %[[B_DTOR:.*]], label %[[B_DONE:.*]]
 // LLVMCIR: [[B_DTOR]]:
 // LLVMCIR:   call void @_ZN1BD1Ev(ptr {{.*}} %[[TMP_B]])
 // LLVMCIR: [[B_DONE]]:
+// LLVMCIR:   call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP_S]])
 // LLVMCIR:   %[[RELOAD:.*]] = load ptr, ptr %[[SPILL]]
 // LLVMCIR:   store ptr %[[RELOAD]], ptr %[[R]]
 // LLVMCIR:   call void @_ZN2LED1Ev(ptr {{.*}} %[[TMP_LE]])
@@ -1025,14 +1029,16 @@ void test_flag_cleared_before_cond_cleanup() {
 // CIR-LABEL: @_Z37test_flag_cleared_before_cond_cleanupv
 // CIR:   %[[REF_TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_Guard>
 // CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
-// CIR:   %[[AGG_TMP:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_Payload>
+// Guard is constructed before the conditional, so its cleanup scope encloses
+// the conditional's and the Payload temporary is destroyed first.
+// CIR:   cir.call @_ZN5GuardC1Ev(%[[REF_TMP]])
 // CIR:   cir.cleanup.scope {
-// The clear precedes both the Guard constructor and the nested cleanup scope.
-// CIR:     %[[FALSE:.*]] = cir.const #false
-// CIR:     cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
-// CIR:     cir.call @_ZN5GuardC1Ev(%[[REF_TMP]])
+// CIR:     %[[AGG_TMP:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_Payload>
+// CIR:     %[[COND:.*]] = cir.call @_ZN5GuardcvbEv(%[[REF_TMP]])
 // CIR:     cir.cleanup.scope {
-// CIR:       %[[COND:.*]] = cir.call @_ZN5GuardcvbEv(%[[REF_TMP]])
+// The clear precedes the conditional, so it runs whichever arm is taken.
+// CIR:       %[[FALSE:.*]] = cir.const #false
+// CIR:       cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:       cir.if %[[COND]] {
 // CIR:         cir.call @_ZN6HolderC1Ev(%{{.*}})
 // CIR:       } else {
@@ -1041,41 +1047,41 @@ void test_flag_cleared_before_cond_cleanup() {
 // CIR:         cir.call @_ZN6HolderC1E7Payload(%{{.*}}, %[[AGG_TMP]])
 // CIR:       }
 // CIR:     } cleanup normal {
-// CIR:       cir.call @_ZN5GuardD1Ev(%[[REF_TMP]])
+// CIR:       %[[IS_ACTIVE:.*]] = cir.load{{.*}} %[[ACTIVE]]
+// CIR:       cir.if %[[IS_ACTIVE]] {
+// CIR:         cir.call @_ZN7PayloadD1Ev(%[[AGG_TMP]])
+// CIR:       }
 // CIR:     }
 // CIR:   } cleanup normal {
-// CIR:     %[[IS_ACTIVE:.*]] = cir.load{{.*}} %[[ACTIVE]]
-// CIR:     cir.if %[[IS_ACTIVE]] {
-// CIR:       cir.call @_ZN7PayloadD1Ev(%[[AGG_TMP]])
-// CIR:     }
+// CIR:     cir.call @_ZN5GuardD1Ev(%[[REF_TMP]])
 // CIR:   }
 
 // LLVM-LABEL: define dso_local void @_Z37test_flag_cleared_before_cond_cleanupv(
-// LLVM:         %[[REF_TMP:.*]] = alloca %struct.Guard
+// LLVMCIR:      %[[AGG_TMP:.*]] = alloca %struct.Payload
+// LLVMCIR:      %[[REF_TMP:.*]] = alloca %struct.Guard
 // LLVMCIR:      %[[ACTIVE:.*]] = alloca i8
-// LLVM:         %[[AGG_TMP:.*]] = alloca %struct.Payload
+// OGCG:         %[[REF_TMP:.*]] = alloca %struct.Guard
+// OGCG:         %[[AGG_TMP:.*]] = alloca %struct.Payload
 // OGCG:         %[[ACTIVE:.*]] = alloca i1
-// LLVMCIR:      store i8 0, ptr %[[ACTIVE]]
 // LLVM:         call void @_ZN5GuardC1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:         %[[COND:.*]] = call {{.*}} i1 @_ZN5GuardcvbEv(ptr {{.*}} %[[REF_TMP]])
+// The clear dominates the branch, so the flag is initialized on both arms.
+// LLVMCIR:      store i8 0, ptr %[[ACTIVE]]
 // OGCG:         store i1 false, ptr %[[ACTIVE]]
 // LLVM:         br i1 %[[COND]], label %[[TRUE_BR:.*]], label %[[FALSE_BR:.*]]
 // LLVM:       [[FALSE_BR]]:
 // LLVMCIR:      store i8 1, ptr %[[ACTIVE]]
-// FIXME: CIR destroys Guard before Payload; reverse-of-construction order
-// requires ~Payload to run first, as OGCG below does. Tracked separately from
-// the active-flag placement this test covers.
-// LLVMCIR:      call void @_ZN5GuardD1Ev(ptr {{.*}} %[[REF_TMP]])
+// OGCG:         store i1 true, ptr %[[ACTIVE]]
+// Guard is constructed first, so the conditional ~Payload runs before ~Guard.
 // LLVMCIR:      %[[ACTIVE_BYTE:.*]] = load i8, ptr %[[ACTIVE]]
 // LLVMCIR:      %[[ACTIVE_BOOL:.*]] = trunc i8 %[[ACTIVE_BYTE]] to i1
-// LLVMCIR:      br i1 %[[ACTIVE_BOOL]], label %[[DTOR:.*]], label %[[SKIP:.*]]
-// OGCG:         store i1 true, ptr %[[ACTIVE]]
+// LLVMCIR:      br i1 %[[ACTIVE_BOOL]], label %[[DTOR:.*]], label %[[DONE:.*]]
 // OGCG:         %[[IS_ACTIVE:.*]] = load i1, ptr %[[ACTIVE]]
 // OGCG:         br i1 %[[IS_ACTIVE]], label %[[DTOR:.*]], label %[[DONE:.*]]
 // LLVM:       [[DTOR]]:
 // LLVM:         call void @_ZN7PayloadD1Ev(ptr {{.*}} %[[AGG_TMP]])
-// OGCG:       [[DONE]]:
-// OGCG:         call void @_ZN5GuardD1Ev(ptr {{.*}} %[[REF_TMP]])
+// LLVM:       [[DONE]]:
+// LLVM:         call void @_ZN5GuardD1Ev(ptr {{.*}} %[[REF_TMP]])
 
 struct Q { Q(); ~Q(); int get() const; };
 bool pred(int);
@@ -1096,8 +1102,8 @@ void test_short_circuit_cond_temp(bool always, bool c, int n) {
 // CIR:   %[[ACTIVE0:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   %[[REF_TMP1:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_Q>
 // CIR:   %[[ACTIVE1:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[ALWAYS:.*]] = cir.load{{.*}} %{{.*}}
 // CIR:   cir.cleanup.scope {
-// CIR:     %[[ALWAYS:.*]] = cir.load{{.*}} %{{.*}}
 // Both clears are emitted before the || ternary, not inside its false region.
 // CIR:     %[[FALSE0:.*]] = cir.const #false
 // CIR:     cir.store %[[FALSE0]], %[[ACTIVE0]] : !cir.bool, !cir.ptr<!cir.bool>

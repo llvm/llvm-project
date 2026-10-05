@@ -38,19 +38,21 @@ set(ORC_RT_BEDROCK_SOURCES
 # copy of them.
 
 set(ORC_RT_BEDROCK_POSIX_SOURCES
+  sys/posix/DWARFEHFrameRegistrar.cpp
   sys/posix/DynamicLibrary.cpp
   sys/posix/Memory.cpp
   sys/posix/PageSize.cpp
   sys/posix/SocketConnector.cpp
   sys/posix/SocketHandle.cpp
+  sys/posix/sps/DWARFEHFrameRegistrarSPSCI.cpp
   sys/posix/sps/SimpleRemoteCAOverSocket.cpp
 )
 
 set(ORC_RT_BEDROCK_DARWIN_SOURCES
   sys/darwin/CPUFeatures.cpp
+  sys/darwin/StandaloneMachOUnwindInfoRegistrar.cpp
   sys/darwin/TargetTriple.cpp
-  StandaloneMachOUnwindInfoRegistrar.cpp
-  sps/StandaloneMachOUnwindInfoRegistrarSPSCI.cpp
+  sys/darwin/sps/StandaloneMachOUnwindInfoRegistrarSPSCI.cpp
 )
 
 set(ORC_RT_BEDROCK_LINUX_SOURCES
@@ -63,15 +65,19 @@ set(ORC_RT_BEDROCK_WINDOWS_SOURCES
   sys/windows/Memory.cpp
   sys/windows/CPUFeatures.cpp
   sys/windows/PageSize.cpp
+  sys/windows/SocketConnector.cpp
+  sys/windows/SocketHandle.cpp
   sys/windows/TargetTriple.cpp
 )
 
+if (ORC_RT_TARGET_POSIX)
+  list(APPEND ORC_RT_BEDROCK_SOURCES ${ORC_RT_BEDROCK_POSIX_SOURCES})
+endif()
+
 if (APPLE)
-  list(APPEND ORC_RT_BEDROCK_SOURCES
-    ${ORC_RT_BEDROCK_POSIX_SOURCES} ${ORC_RT_BEDROCK_DARWIN_SOURCES})
+  list(APPEND ORC_RT_BEDROCK_SOURCES ${ORC_RT_BEDROCK_DARWIN_SOURCES})
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-  list(APPEND ORC_RT_BEDROCK_SOURCES
-    ${ORC_RT_BEDROCK_POSIX_SOURCES} ${ORC_RT_BEDROCK_LINUX_SOURCES})
+  list(APPEND ORC_RT_BEDROCK_SOURCES ${ORC_RT_BEDROCK_LINUX_SOURCES})
 elseif (WIN32)
   list(APPEND ORC_RT_BEDROCK_SOURCES ${ORC_RT_BEDROCK_WINDOWS_SOURCES})
 else()
