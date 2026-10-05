@@ -32,10 +32,11 @@ public:
   CharBlock(const char *begin) : llvm::StringRef(begin, 1) {}
 
   bool Contains(const CharBlock &that) const {
-    if (empty() || that.empty()) {
-      return !empty() || that.empty();
-    }
-    return begin() <= that.begin() && that.end() <= end();
+    uintptr_t thisBegin{reinterpret_cast<uintptr_t>(begin())};
+    uintptr_t thisEnd{reinterpret_cast<uintptr_t>(end())};
+    uintptr_t thatBegin{reinterpret_cast<uintptr_t>(that.begin())};
+    uintptr_t thatEnd{reinterpret_cast<uintptr_t>(that.end())};
+    return thisBegin <= thatBegin && thatEnd <= thisEnd;
   }
 
   void ExtendToCover(const CharBlock &that) {
