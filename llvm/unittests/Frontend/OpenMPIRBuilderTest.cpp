@@ -5496,23 +5496,37 @@ TEST_F(OpenMPIRBuilderTest, GPUTeamsReductionRuntimeCallHasDebugLoc) {
        /*AtomicReductionGen=*/nullptr, /*DataPtrPtrGen=*/nullptr}};
   bool IsByRef[] = {false};
 
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
   ASSERT_EXPECTED_INIT(
       InsertPointTy, AfterIP,
       OMPBuilder.createReductionsGPU(
-          Loc, AllocaIP, Builder.saveIP(), ReductionInfos, IsByRef,
+          {Builder.saveIP(), DL}, AllocaIP, Builder.saveIP(), ReductionInfos,
+          IsByRef,
           /*IsNoWait=*/false, /*IsTeamsReduction=*/true, /*IsSPMD=*/true,
           OpenMPIRBuilder::ReductionGenCBKind::Clang, omp::NVPTXGridValues));
   Builder.restoreIP(AfterIP);
+
+  ASSERT_EXPECTED_INIT(
+      InsertPointTy, AfterParallelReductionIP,
+      OMPBuilder.createReductionsGPU(
+          {Builder.saveIP(), DL}, AllocaIP, Builder.saveIP(), ReductionInfos,
+          IsByRef,
+          /*IsNoWait=*/false, /*IsTeamsReduction=*/false, /*IsSPMD=*/true,
+          OpenMPIRBuilder::ReductionGenCBKind::Clang, omp::NVPTXGridValues));
+  Builder.restoreIP(AfterParallelReductionIP);
+
   Builder.CreateRetVoid();
 
-  SmallVector<CallInst *> Calls;
-  findCalls(F, RuntimeFunction::OMPRTL___kmpc_gpu_xteam_reduce_nowait,
-            OMPBuilder, Calls);
-  ASSERT_EQ(Calls.size(), 1u);
-  ASSERT_TRUE(Calls.front()->getDebugLoc());
-  EXPECT_EQ(Calls.front()->getDebugLoc()->getScope()->getSubprogram(),
-            F->getSubprogram());
+  CallInst *Calls[] = {
+      findSingleCall(F, RuntimeFunction::OMPRTL___kmpc_gpu_xteam_reduce_nowait,
+                     OMPBuilder),
+      findSingleCall(
+          F, RuntimeFunction::OMPRTL___kmpc_nvptx_parallel_reduce_nowait_v2,
+          OMPBuilder)};
+  for (CallInst *Call : Calls) {
+    ASSERT_TRUE(Call->getDebugLoc());
+    EXPECT_EQ(Call->getDebugLoc()->getScope()->getSubprogram(),
+              F->getSubprogram());
+  }
 
   EXPECT_FALSE(verifyModule(*M));
 }

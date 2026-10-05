@@ -4864,14 +4864,15 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   Type *FuncPtrTy =
       Builder.getPtrTy(M.getDataLayout().getProgramAddressSpace());
   Type *RedArrayTy = ArrayType::get(PtrTy, Size);
-  Value *ReductionList = [&] {
+  Value *ReductionList;
+  {
     IRBuilder<>::InsertPointGuard IPG(Builder);
     Builder.restoreIP(AllocaIP);
     Value *ReductionListAlloca =
         Builder.CreateAlloca(RedArrayTy, nullptr, ".omp.reduction.red_list");
-    return Builder.CreatePointerBitCastOrAddrSpaceCast(
+    ReductionList = Builder.CreatePointerBitCastOrAddrSpaceCast(
         ReductionListAlloca, PtrTy, ReductionListAlloca->getName() + ".ascast");
-  }();
+  }
   Type *IndexTy = Builder.getIndexTy(
       M.getDataLayout(), M.getDataLayout().getDefaultGlobalsAddressSpace());
   for (auto En : enumerate(ReductionInfos)) {
@@ -4994,14 +4995,16 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
     Value *RuntimeRL = RL;
 
     if (!IsSPMD) {
-      Value *PerThreadScratch = [&] {
+      Value *PerThreadScratch;
+
+      {
         IRBuilder<>::InsertPointGuard IPG(Builder);
         Builder.restoreIP(AllocaIP);
         // Allocate thread-local buffer for the reduction variables.
         Value *PerThreadScratchAlloca =
             Builder.CreateAlloca(ReductionsBufferTy, /*ArraySize=*/nullptr,
                                  ".omp.reduction.scratch");
-        Value *PerThreadScratch = Builder.CreatePointerBitCastOrAddrSpaceCast(
+        PerThreadScratch = Builder.CreatePointerBitCastOrAddrSpaceCast(
             PerThreadScratchAlloca, PtrTy,
             PerThreadScratchAlloca->getName() + ".ascast");
         // Allocate thread-local buffer for the pointers to the reduction
@@ -5012,8 +5015,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
         RuntimeRL = Builder.CreatePointerBitCastOrAddrSpaceCast(
             PerThreadRedListAlloca, PtrTy,
             PerThreadRedListAlloca->getName() + ".ascast");
-        return PerThreadScratch;
-      }();
+      };
 
       // Iterate over the reduction variables and copy the team-local value to
       // the thread-local buffer.
