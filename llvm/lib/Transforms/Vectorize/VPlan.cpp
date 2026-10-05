@@ -279,10 +279,10 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   return Extract;
 }
 
-Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
+Value *VPTransformState::get(const VPValue *Def, bool NeedsSingleScalar) {
   assert(!isa<VPRegionValue>(Def) &&
          "VPRegionValue must be materialized before VPTransformState::get");
-  if (NeedsScalar) {
+  if (NeedsSingleScalar) {
     assert((VF.isScalar() || isa<VPIRValue, VPSymbolicValue>(Def) ||
             hasVectorValue(Def) || !vputils::onlyFirstLaneUsed(Def) ||
             (hasScalarValue(Def, VPLane(0)) &&
@@ -350,12 +350,12 @@ void VPTransformState::fixupHeaderPhis() {
 
     for (VPRecipeBase &R : Header->phis()) {
       auto *PhiR = cast<VPSingleDefRecipe>(&R);
-      bool NeedsScalar =
+      bool NeedsSingleScalar =
           isa<VPPhi>(PhiR) || (isa<VPReductionPHIRecipe>(PhiR) &&
                                cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
 
-      Value *Phi = get(PhiR, NeedsScalar);
-      Value *Val = get(PhiR->getOperand(1), NeedsScalar);
+      Value *Phi = get(PhiR, NeedsSingleScalar);
+      Value *Val = get(PhiR->getOperand(1), NeedsSingleScalar);
       cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
     }
   }
@@ -1462,14 +1462,13 @@ bool VPValue::isDefinedOutsideLoopRegions() const {
   return !isDefinedInsideLoopRegions(this);
 }
 void VPValue::replaceAllUsesWith(VPValue *New) {
-  replaceUsesWithIf(New, [](VPUser &, unsigned) { return true; });
+  replaceUsesWithIf(New, [](VPUser &) { return true; });
   if (auto *SV = dyn_cast<VPSymbolicValue>(this))
     SV->markMaterialized();
 }
 
 void VPValue::replaceUsesWithIf(
-    VPValue *New,
-    llvm::function_ref<bool(VPUser &U, unsigned Idx)> ShouldReplace) {
+    VPValue *New, llvm::function_ref<bool(VPUser &U)> ShouldReplace) {
   assertNotMaterialized();
   // Note that this early exit is required for correctness; the implementation
   // below relies on the number of users for this VPValue to decrease, which
@@ -1481,7 +1480,7 @@ void VPValue::replaceUsesWithIf(
     VPUser *User = Users[J];
     bool RemovedUser = false;
     for (unsigned I = 0, E = User->getNumOperands(); I < E; ++I) {
-      if (User->getOperand(I) != this || !ShouldReplace(*User, I))
+      if (User->getOperand(I) != this || !ShouldReplace(*User))
         continue;
 
       RemovedUser = true;
@@ -1607,6 +1606,10 @@ std::string VPSlotTracker::getName(const Value *V) {
   return Name;
 }
 
+void VPSlotTracker::printMetadataAsOperand(raw_ostream &O, const MDNode *N) {
+  N->printAsOperand(O, getOrCreateMST(), getModule());
+}
+
 std::string VPSlotTracker::getOrCreateName(const VPValue *V) const {
   std::string Name = VPValue2Name.lookup(V);
   if (!Name.empty())
@@ -1631,19 +1634,6 @@ std::string VPSlotTracker::getOrCreateName(const VPValue *V) const {
   return "<badref>";
 }
 
-VPInstruction *VPBuilder::createAnyOfReduction(VPValue *ChainOp,
-                                               VPValue *TrueVal,
-                                               VPValue *FalseVal, DebugLoc DL) {
-  assert(ChainOp->getScalarType()->isIntegerTy(1) &&
-         "ChainOp must be i1 for AnyOf reduction");
-  VPIRFlags Flags(RecurKind::Or, /*IsOrdered=*/false, /*IsInLoop=*/false,
-                  FastMathFlags());
-  auto *OrReduce =
-      createNaryOp(VPInstruction::ComputeReductionResult, {ChainOp}, Flags, DL);
-  auto *Freeze = createNaryOp(Instruction::Freeze, {OrReduce}, DL);
-  return createSelect(Freeze, TrueVal, FalseVal, DL, "rdx.select");
-}
-
 bool LoopVectorizationPlanner::getDecisionAndClampRange(
     const std::function<bool(ElementCount)> &Predicate, VFRange &Range) {
   assert(!Range.isEmpty() && "Trying to test an empty VF range.");
@@ -1656,27 +1646,6 @@ bool LoopVectorizationPlanner::getDecisionAndClampRange(
     }
 
   return PredicateAtRangeStart;
-}
-
-VPSingleDefRecipe *
-VPBuilder::createConsecutiveVectorPointer(VPValue *Ptr, Type *SourceElementTy,
-                                          bool Reverse, DebugLoc DL) {
-  VPlan &Plan = getPlan();
-  GEPNoWrapFlags Flags = vputils::getGEPFlagsForPtr(Ptr);
-  if (Reverse) {
-    // When folding the tail, we may compute an address that we don't in the
-    // original scalar loop: drop the GEP no-wrap flags in this case. Otherwise
-    // preserve existing flags without no-unsigned-wrap, as we will emit
-    // negative indices.
-    GEPNoWrapFlags ReverseFlags = Plan.hasTailFolded()
-                                      ? GEPNoWrapFlags::none()
-                                      : Flags.withoutNoUnsignedWrap();
-    return tryInsertInstruction(new VPVectorEndPointerRecipe(
-        Ptr, &Plan.getVF(), SourceElementTy, /*Stride=*/-1, ReverseFlags, DL));
-  }
-  Type *StrideTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
-  VPValue *StrideOne = Plan.getConstantInt(StrideTy, 1);
-  return createVectorPointer(Ptr, SourceElementTy, StrideOne, Flags, DL);
 }
 
 VPlan &LoopVectorizationPlanner::getPlanFor(ElementCount VF) const {

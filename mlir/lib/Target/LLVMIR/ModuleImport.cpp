@@ -577,9 +577,10 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
   // Helper that creates an alias scope domain attribute.
   auto createAliasScopeDomainOp = [&](const llvm::MDNode *aliasDomain) {
     StringAttr description = nullptr;
-    if (aliasDomain->getNumOperands() >= 2)
-      if (auto *operand = dyn_cast<llvm::MDString>(aliasDomain->getOperand(1)))
-        description = builder.getStringAttr(operand->getString());
+    StringRef descriptionStr =
+        llvm::AliasScopeDomainNode(aliasDomain).getDescription();
+    if (!descriptionStr.empty())
+      description = builder.getStringAttr(descriptionStr);
     Attribute idAttr = getIdAttr(aliasDomain);
     return builder.getAttr<AliasScopeDomainAttr>(idAttr, description);
   };
@@ -598,7 +599,7 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
           !verifyDescription(scope, 2))
         return emitError(loc) << "unsupported alias scope node: "
                               << diagMD(scope, llvmModule.get());
-      if (!verifySelfRefOrString(domain) || !verifyDescription(domain, 1))
+      if (!verifySelfRefOrString(domain) || !verifyDescription(domain, 2))
         return emitError(loc) << "unsupported alias domain node: "
                               << diagMD(domain, llvmModule.get());
 
@@ -1167,13 +1168,13 @@ LogicalResult ModuleImport::convertGlobals() {
         globalVar.getName() == getGlobalDtorsVarName()) {
       if (failed(convertGlobalCtorsAndDtors(&globalVar))) {
         return emitError(UnknownLoc::get(context))
-               << "unhandled global variable: " << diag(globalVar);
+               << "unhandled global variable: " << ::diag(globalVar);
       }
       continue;
     }
     if (failed(convertGlobal(&globalVar))) {
       return emitError(UnknownLoc::get(context))
-             << "unhandled global variable: " << diag(globalVar);
+             << "unhandled global variable: " << ::diag(globalVar);
     }
   }
   return success();
@@ -1183,7 +1184,7 @@ LogicalResult ModuleImport::convertAliases() {
   for (llvm::GlobalAlias &alias : llvmModule->aliases()) {
     if (failed(convertAlias(&alias))) {
       return emitError(UnknownLoc::get(context))
-             << "unhandled global alias: " << diag(alias);
+             << "unhandled global alias: " << ::diag(alias);
     }
   }
   return success();
@@ -1193,7 +1194,7 @@ LogicalResult ModuleImport::convertIFuncs() {
   for (llvm::GlobalIFunc &ifunc : llvmModule->ifuncs()) {
     if (failed(convertIFunc(&ifunc))) {
       return emitError(UnknownLoc::get(context))
-             << "unhandled global ifunc: " << diag(ifunc);
+             << "unhandled global ifunc: " << ::diag(ifunc);
     }
   }
   return success();
@@ -1255,7 +1256,7 @@ void ModuleImport::setNonDebugMetadataAttrs(llvm::Instruction *inst,
         Location loc = debugImporter->translateLoc(inst->getDebugLoc());
         emitWarning(loc) << "unhandled metadata: "
                          << diagMD(node, llvmModule.get()) << " on "
-                         << diag(*inst);
+                         << ::diag(*inst);
       }
     }
   }
@@ -1726,7 +1727,7 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
     if (!symbolRef) {
       emitWarning(globalOp.getLoc()) << "unhandled associated metadata: "
                                      << diagMD(associatedMD, llvmModule.get())
-                                     << " on " << diag(*globalVar);
+                                     << " on " << ::diag(*globalVar);
     } else {
       globalOp.setAssociatedAttr(symbolRef);
     }
@@ -1973,7 +1974,19 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     }));
     if (failed(processInstruction(inst)))
       return failure();
-    return lookupValue(inst);
+    Value result = lookupValue(inst);
+    // getAsInstruction() does not preserve GEP `inrange`, which exists only on
+    // constant expressions. Reattach it to the imported GEPOp.
+    if (constExpr->getOpcode() == llvm::Instruction::GetElementPtr) {
+      if (std::optional<llvm::ConstantRange> inRange =
+              llvm::cast<llvm::GEPOperator>(constExpr)->getInRange()) {
+        auto gepOp = result.getDefiningOp<GEPOp>();
+        assert(gepOp && "expected GEPOp for getelementptr constexpr");
+        gepOp.setInrangeAttr(LLVM::ConstantRangeAttr::get(
+            context, inRange->getLower(), inRange->getUpper()));
+      }
+    }
+    return result;
   }
 
   // Convert zero-initialized aggregates to ZeroOp.
@@ -2047,7 +2060,7 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
   if (isa<llvm::GlobalValue>(constant))
     error = " since global value is unsupported";
 
-  return emitError(loc) << "unhandled constant: " << diag(*constant) << error;
+  return emitError(loc) << "unhandled constant: " << ::diag(*constant) << error;
 }
 
 FailureOr<Value> ModuleImport::convertConstantExpr(llvm::Constant *constant) {
@@ -2113,7 +2126,7 @@ FailureOr<Value> ModuleImport::convertValue(llvm::Value *value) {
   Location loc = UnknownLoc::get(context);
   if (auto *inst = dyn_cast<llvm::Instruction>(value))
     loc = translateLoc(inst->getDebugLoc());
-  return emitError(loc) << "unhandled value: " << diag(*value);
+  return emitError(loc) << "unhandled value: " << ::diag(*value);
 }
 
 FailureOr<Value> ModuleImport::convertMetadataValue(llvm::Value *value) {
@@ -2419,7 +2432,7 @@ LogicalResult ModuleImport::convertIntrinsic(llvm::CallInst *inst) {
     return success();
 
   Location loc = translateLoc(inst->getDebugLoc());
-  return emitError(loc) << "unhandled intrinsic: " << diag(*inst);
+  return emitError(loc) << "unhandled intrinsic: " << ::diag(*inst);
 }
 
 ArrayAttr
@@ -2772,7 +2785,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
   if (succeeded(convertInstructionImpl(builder, inst, *this, iface)))
     return success();
 
-  return emitError(loc) << "unhandled instruction: " << diag(*inst);
+  return emitError(loc) << "unhandled instruction: " << ::diag(*inst);
 }
 
 LogicalResult ModuleImport::processInstruction(llvm::Instruction *inst) {
@@ -3405,7 +3418,7 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
         return;
       emitWarning(funcOp.getLoc())
           << "unhandled function metadata: "
-          << diagMD(metadataNode, llvmModule.get()) << " on " << diag(*func);
+          << diagMD(metadataNode, llvmModule.get()) << " on " << ::diag(*func);
     };
 
     if (iface.isConvertibleMetadata(kind)) {
@@ -3551,7 +3564,7 @@ ModuleImport::processDebugOpArgumentsAndInsertionPt(
     return {};
   FailureOr<Value> argOperand = convertArgOperandToValue();
   if (failed(argOperand)) {
-    emitError(loc) << "failed to convert a debug operand: " << diag(*address);
+    emitError(loc) << "failed to convert a debug operand: " << ::diag(*address);
     return {};
   }
 
@@ -3569,7 +3582,7 @@ ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
   Location loc = translateLoc(dbgIntr->getDebugLoc());
   auto emitUnsupportedWarning = [&]() {
     if (emitExpensiveWarnings)
-      emitWarning(loc) << "dropped intrinsic: " << diag(*dbgIntr);
+      emitWarning(loc) << "dropped intrinsic: " << ::diag(*dbgIntr);
     return success();
   };
 
@@ -3719,7 +3732,7 @@ LogicalResult ModuleImport::processBasicBlock(llvm::BasicBlock *bb,
     } else if (inst.getOpcode() != llvm::Instruction::PHI) {
       if (emitExpensiveWarnings) {
         Location loc = debugImporter->translateLoc(inst.getDebugLoc());
-        emitWarning(loc) << "dropped instruction: " << diag(inst);
+        emitWarning(loc) << "dropped instruction: " << ::diag(inst);
       }
     }
   }

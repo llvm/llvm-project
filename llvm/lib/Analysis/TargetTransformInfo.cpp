@@ -494,6 +494,11 @@ bool TargetTransformInfo::isLegalMaskedLoad(Type *DataType, Align Alignment,
                                     MaskKind);
 }
 
+bool TargetTransformInfo::isLegalSpeculativeLoad(Type *DataType,
+                                                 unsigned AddressSpace) const {
+  return TTIImpl->isLegalSpeculativeLoad(DataType, AddressSpace);
+}
+
 bool TargetTransformInfo::isLegalNTStore(Type *DataType,
                                          Align Alignment) const {
   return TTIImpl->isLegalNTStore(DataType, Alignment);
@@ -1015,6 +1020,48 @@ TargetTransformInfo::getOperandInfo(const Value *V) {
 }
 
 TargetTransformInfo::OperandValueInfo
+TargetTransformInfo::getOperandInfo(ArrayRef<Value *> Ops) {
+  assert(!Ops.empty());
+  const auto *Op0 = Ops.front();
+
+  const bool IsConstant = all_of(Ops, [](Value *V) {
+    // TODO: We should allow undef elements here
+    return isa<Constant>(V) && !isa<ConstantExpr, GlobalValue>(V) &&
+           !isa<UndefValue>(V);
+  });
+  const bool IsUniform = all_of(Ops, [=](Value *V) {
+    // TODO: We should allow undef elements here
+    return V == Op0;
+  });
+  const bool IsPowerOfTwo = all_of(Ops, [](Value *V) {
+    // TODO: We should allow undef elements here
+    if (auto *CI = dyn_cast<ConstantInt>(V))
+      return CI->getValue().isPowerOf2();
+    return false;
+  });
+  const bool IsNegatedPowerOfTwo = all_of(Ops, [](Value *V) {
+    // TODO: We should allow undef elements here
+    if (auto *CI = dyn_cast<ConstantInt>(V))
+      return CI->getValue().isNegatedPowerOf2();
+    return false;
+  });
+
+  TTI::OperandValueKind VK = TTI::OK_AnyValue;
+  if (IsConstant && IsUniform)
+    VK = TTI::OK_UniformConstantValue;
+  else if (IsConstant)
+    VK = TTI::OK_NonUniformConstantValue;
+  else if (IsUniform)
+    VK = TTI::OK_UniformValue;
+
+  TTI::OperandValueProperties VP = TTI::OP_None;
+  VP = IsPowerOfTwo ? TTI::OP_PowerOf2 : VP;
+  VP = IsNegatedPowerOfTwo ? TTI::OP_NegatedPowerOf2 : VP;
+
+  return {VK, VP};
+}
+
+TargetTransformInfo::OperandValueInfo
 TargetTransformInfo::commonOperandInfo(const Value *X, const Value *Y) {
   OperandValueInfo OpInfoX = getOperandInfo(X);
   if (X == Y)
@@ -1025,7 +1072,7 @@ TargetTransformInfo::commonOperandInfo(const Value *X, const Value *Y) {
 InstructionCost TargetTransformInfo::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     OperandValueInfo Op1Info, OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI,
+    ArrayRef<const Value *> Args, const Instruction *CtxI,
     const TargetLibraryInfo *TLibInfo) const {
 
   // Use call cost for frem intructions that have platform specific vector math
@@ -1041,7 +1088,7 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
   }
 
   InstructionCost Cost = TTIImpl->getArithmeticInstrCost(
-      Opcode, Ty, CostKind, Op1Info, Op2Info, Args, CxtI);
+      Opcode, Ty, CostKind, Op1Info, Op2Info, Args, CtxI);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -1058,7 +1105,7 @@ InstructionCost TargetTransformInfo::getAltInstrCost(
 InstructionCost TargetTransformInfo::getShuffleCost(
     ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
     TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
-    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CtxI,
     TTI::VectorInstrContext VIC) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
@@ -1066,7 +1113,7 @@ InstructionCost TargetTransformInfo::getShuffleCost(
   assert(SrcTy->getScalarType() == DstTy->getScalarType() &&
          "Expected the same scalar types");
   InstructionCost Cost = TTIImpl->getShuffleCost(
-      Kind, DstTy, SrcTy, CostKind, Mask, Index, SubTp, Args, CxtI, VIC);
+      Kind, DstTy, SrcTy, CostKind, Mask, Index, SubTp, Args, CtxI, VIC);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

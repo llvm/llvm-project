@@ -370,7 +370,7 @@ bool SPIRVLegalizeResourceBindingImpl::replaceHeapBindingCalls(Module &M) {
       auto It = ResourceDescriptorHeaps.find(ResType);
       if (It == ResourceDescriptorHeaps.end()) {
         HeapNameGV = createHeapNameString(M, "ResourceDescriptorHeap");
-        auto [InsertedIt, Inserted] =
+        [[maybe_unused]] auto [InsertedIt, Inserted] =
             ResourceDescriptorHeaps.try_emplace(ResType, HeapNameGV);
         assert(Inserted && "resource heap name already exists");
       } else {
@@ -393,7 +393,7 @@ bool SPIRVLegalizeResourceBindingImpl::replaceHeapBindingCalls(Module &M) {
     uint32_t Binding = getAndReserveFirstUnusedBinding(DescSet);
     // The Sampler handle type should be the same for all samplers
     // (target("spirv.Sampler")).
-    TargetExtType *SamplerHandleType =
+    [[maybe_unused]] TargetExtType *SamplerHandleType =
         cast<TargetExtType>(Samplers.front()->getReturnType());
 
     GlobalVariable *HeapNameGV =

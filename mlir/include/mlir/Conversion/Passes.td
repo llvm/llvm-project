@@ -909,6 +909,12 @@ def ConvertMathToXeVM : Pass<"convert-math-to-xevm"> {
     *   Every other op becomes a call to the precise OpenCL intrinsic from the
         `__spirv_ocl_` extended instruction set. Set the `convertToOCL` flag to
         `false` to leave these ops alone instead.
+
+    Algebraic simplifications run ahead of the lowering, so the cheaper form is
+    what reaches the intrinsics: `math.powf %x, 2.0` becomes a multiply instead
+    of a call to `__spirv_ocl_native_powr`, and `exp(a) / exp(b)` becomes a
+    single `exp(a - b)` when the division may be reassociated (`arcp` or
+    `reassoc`). Ops these simplifications cannot rewrite are left as they are.
   }];
   let options = [
     Option<"convertArith", "convert-arith", "bool", /*default=*/"true",
@@ -1420,7 +1426,14 @@ def TosaToLinalg
            "Disable tosa decompositions pass">,
     Option<"aggressiveReduceConstant", "aggressive-reduce-constant",
            "bool", /*default=*/"false",
-           "Always perform the reduce constant optimization">
+           "Always perform the reduce constant optimization">,
+    Option<"allowNonFinites", "allow-non-finites", "bool",
+           /*default=*/"false",
+           "When enabled, float min/max reductions are seeded with the "
+           "infinite identity mandated by the TOSA specification. When "
+           "disabled (default), the largest finite value is used instead. "
+           "This controls only compiler-generated identity values; NaN "
+           "results required by nan_mode are unaffected.">
   ];
 }
 

@@ -21,21 +21,14 @@
 #include "Utils/ELF.h"
 #include "omptarget.h"
 
-#ifdef OMPT_SUPPORT
-#include "OpenMP/OMPT/Callback.h"
-#include "omp-tools.h"
-#endif
-
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <cstdint>
-#include <limits>
 
 using namespace llvm;
 using namespace omp;
@@ -72,121 +65,15 @@ void AsyncInfoWrapperTy::finalize(Error &Err) {
 
 Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
                             DeviceImageTy &Image) {
-
   ImagePtr = &Image;
 
-  // Retrieve kernel environment object for the kernel.
-  std::string EnvironmentName = std::string(Name) + "_kernel_environment";
-  GenericGlobalHandlerTy &GHandler = GenericDevice.Plugin.getGlobalHandler();
-  if (GHandler.isSymbolInImage(GenericDevice, Image, EnvironmentName)) {
-    GlobalTy KernelEnv(EnvironmentName, sizeof(KernelEnvironment),
-                       &KernelEnvironment);
-    if (auto Err =
-            GHandler.readGlobalFromImage(GenericDevice, *ImagePtr, KernelEnv))
-      return Err;
-  } else {
-    KernelEnvironment = KernelEnvironmentTy{};
-    ODBG(OLDT_Kernel) << "Failed to read kernel environment for '" << getName()
-                      << "' Using default Bare (0) execution mode";
-  }
-
-  // Max = Config.Max > 0 ? min(Config.Max, Device.Max) : Device.Max;
-  MaxNumThreads = KernelEnvironment.Configuration.MaxThreads > 0
-                      ? std::min(KernelEnvironment.Configuration.MaxThreads,
-                                 int32_t(GenericDevice.getThreadLimit()))
-                      : GenericDevice.getThreadLimit();
-
-  // Pref = Config.Pref > 0 ? max(Config.Pref, Device.Pref) : Device.Pref;
-  PreferredNumThreads =
-      KernelEnvironment.Configuration.MinThreads > 0
-          ? std::max(KernelEnvironment.Configuration.MinThreads,
-                     int32_t(GenericDevice.getDefaultNumThreads()))
-          : GenericDevice.getDefaultNumThreads();
-
   return initImpl(GenericDevice, Image);
-}
-
-Expected<KernelLaunchEnvironmentTy *>
-GenericKernelTy::getKernelLaunchEnvironment(
-    GenericDeviceTy &GenericDevice, const KernelLaunchArgsTy &LaunchArgs,
-    const DynBlockMemConfTy &DynBlockMemConf,
-    AsyncInfoWrapperTy &AsyncInfoWrapper, uint32_t NumBlocks0) const {
-  // Ctor/Dtor have no arguments, replaying uses the original kernel launch
-  // environment, and launches with no reserved dyn_ptr slot (e.g. older
-  // compiler versions, or non-OpenMP launches) have nowhere to store one.
-  if ((GenericDevice.getRecordReplay() &&
-       GenericDevice.getRecordReplay()->isReplaying()) ||
-      !LaunchArgs.DynPtrSlot)
-    return nullptr;
-
-  const auto &RedCfg = KernelEnvironment.Configuration;
-  const bool NeedsReductionBuffer = RedCfg.ReductionDataSize != 0;
-  if (NeedsReductionBuffer && LaunchArgs.OmpABIVersion < OMP_KERNEL_ARG_VERSION)
-    return Plugin::error(ErrorCode::INVALID_BINARY,
-                         "kernel was built against an older OpenMP "
-                         "kernel-launch-environment ABI (v%u); current "
-                         "runtime requires v%u for cross-team reductions",
-                         LaunchArgs.OmpABIVersion, OMP_KERNEL_ARG_VERSION);
-  if (!NeedsReductionBuffer && !LaunchArgs.DynCGroupMem)
-    return reinterpret_cast<KernelLaunchEnvironmentTy *>(~0);
-
-  auto AllocOrErr = GenericDevice.dataAlloc(
-      sizeof(KernelLaunchEnvironmentTy),
-      /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE, /*Alignment=*/0);
-  if (!AllocOrErr)
-    return AllocOrErr.takeError();
-
-  // Remember to free the memory later.
-  AsyncInfoWrapper.freeAllocationAfterSynchronization(
-      *AllocOrErr, TargetAllocTy::TARGET_ALLOC_DEVICE);
-
-  /// Use the KLE in the __tgt_async_info to ensure a stable address for the
-  /// async data transfer.
-  auto &LocalKLE = (*AsyncInfoWrapper).KernelLaunchEnvironment;
-  LocalKLE = KernelLaunchEnvironment;
-
-  LocalKLE.DynCGroupMemSize = DynBlockMemConf.Size;
-  LocalKLE.DynCGroupMemFbPtr = DynBlockMemConf.FallbackPtr;
-  LocalKLE.DynCGroupMemFb = DynBlockMemConf.Fallback;
-  LocalKLE.ReductionBuffer = nullptr;
-
-  if (NeedsReductionBuffer) {
-    // Use number of teams many buffer elements.
-    auto AllocOrErr = GenericDevice.dataAlloc(
-        uint64_t(RedCfg.ReductionDataSize) * NumBlocks0,
-        /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE,
-        /*Alignment=*/0);
-    if (!AllocOrErr)
-      return AllocOrErr.takeError();
-    LocalKLE.ReductionBuffer = *AllocOrErr;
-    // Remember to free the memory later.
-    AsyncInfoWrapper.freeAllocationAfterSynchronization(
-        *AllocOrErr, TargetAllocTy::TARGET_ALLOC_DEVICE);
-  }
-
-  INFO(OMP_INFOTYPE_DATA_TRANSFER, GenericDevice.getDeviceId(),
-       "Copying data from host to device, HstPtr=" DPxMOD ", TgtPtr=" DPxMOD
-       ", Size=%" PRId64 ", Name=KernelLaunchEnv\n",
-       DPxPTR(&LocalKLE), DPxPTR(*AllocOrErr),
-       sizeof(KernelLaunchEnvironmentTy));
-
-  auto Err = GenericDevice.dataSubmit(*AllocOrErr, &LocalKLE,
-                                      sizeof(KernelLaunchEnvironmentTy),
-                                      AsyncInfoWrapper);
-  if (Err)
-    return Err;
-  return static_cast<KernelLaunchEnvironmentTy *>(*AllocOrErr);
 }
 
 Error GenericKernelTy::printLaunchInfo(GenericDeviceTy &GenericDevice,
                                        const KernelLaunchArgsTy &LaunchArgs,
                                        uint32_t NumThreads[3],
                                        uint32_t NumBlocks[3]) const {
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, GenericDevice.getDeviceId(),
-       "Launching kernel %s with [%u,%u,%u] blocks and [%u,%u,%u] threads in "
-       "%s mode\n",
-       getName(), NumBlocks[0], NumBlocks[1], NumBlocks[2], NumThreads[0],
-       NumThreads[1], NumThreads[2], getExecutionModeName());
   return printLaunchInfoDetails(GenericDevice, LaunchArgs, NumThreads,
                                 NumBlocks);
 }
@@ -195,53 +82,6 @@ Error GenericKernelTy::printLaunchInfoDetails(
     GenericDeviceTy &GenericDevice, const KernelLaunchArgsTy &LaunchArgs,
     uint32_t NumThreads[3], uint32_t NumBlocks[3]) const {
   return Plugin::success();
-}
-
-Expected<DynBlockMemConfTy>
-GenericKernelTy::prepareBlockMemory(GenericDeviceTy &GenericDevice,
-                                    const KernelLaunchArgsTy &LaunchArgs,
-                                    uint32_t NumBlocks) const {
-  uint32_t MaxBlockMemSize = GenericDevice.getMaxBlockSharedMemSize();
-  uint32_t DynBlockMemSize = LaunchArgs.DynCGroupMem;
-  uint32_t TotalBlockMemSize = StaticBlockMemSize + DynBlockMemSize;
-  uint32_t DynNativeBlockMemSize = DynBlockMemSize;
-  void *DynFallbackPtr = nullptr;
-
-  // No enough block memory to cover the static one. Cannot run the kernel.
-  if (StaticBlockMemSize > MaxBlockMemSize)
-    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                         "Static block memory size exceeds maximum");
-  // No enough block memory to cover dynamic one, and the fallback is aborting.
-  if (static_cast<DynCGroupMemFallbackType>(
-          LaunchArgs.Flags.DynCGroupMemFallback) ==
-          DynCGroupMemFallbackType::Abort &&
-      TotalBlockMemSize > MaxBlockMemSize)
-    return Plugin::error(
-        ErrorCode::INVALID_ARGUMENT,
-        "Requested block memory size (static + dynamic) exceeds maximum");
-
-  DynCGroupMemFallbackType DynFallback = DynCGroupMemFallbackType::None;
-  if (DynBlockMemSize && TotalBlockMemSize > MaxBlockMemSize) {
-    // Launch without native dynamic block memory.
-    DynNativeBlockMemSize = 0;
-    DynFallback = static_cast<DynCGroupMemFallbackType>(
-        LaunchArgs.Flags.DynCGroupMemFallback);
-    if (DynFallback != DynCGroupMemFallbackType::DefaultMem) {
-      // Do not provide any memory as fallback.
-      DynBlockMemSize = 0;
-    } else {
-      // Get global memory as fallback.
-      auto AllocOrErr = GenericDevice.dataAlloc(
-          NumBlocks * DynBlockMemSize,
-          /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE,
-          /*Alignment=*/0);
-      if (!AllocOrErr)
-        return AllocOrErr.takeError();
-      DynFallbackPtr = *AllocOrErr;
-    }
-  }
-  return DynBlockMemConfTy{DynBlockMemSize, DynNativeBlockMemSize, DynFallback,
-                           DynFallbackPtr};
 }
 
 Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
@@ -254,59 +94,21 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
                                     LaunchArgs.UserNumBlocks[1],
                                     LaunchArgs.UserNumBlocks[2]};
 
-  // Multidimensional is only supported with bare mode for now.
-  assert(isBareMode() ||
-         EffectiveNumThreads[1] == 1 && EffectiveNumThreads[2] == 1 &&
-             EffectiveNumBlocks[1] == 1 && EffectiveNumBlocks[2] == 1 &&
-             "Non-bare mode should only use the first thread and block "
-             "dimensions");
-
-  assert(!LaunchArgs.Flags.StrictBlocks ||
-         EffectiveNumBlocks[0] > 0 && EffectiveNumBlocks[1] > 0 &&
-             EffectiveNumBlocks[2] > 0 &&
-             "Strict requires number of blocks greater than zero");
-  assert(!LaunchArgs.Flags.StrictThreads ||
-         EffectiveNumThreads[0] > 0 && EffectiveNumThreads[1] > 0 &&
-             EffectiveNumThreads[2] > 0 &&
-             "Strict requires number of threads greater than zero");
-
-  // Calculate or adjust the effective number of threads and blocks if needed.
-  if (!LaunchArgs.Flags.StrictThreads)
-    EffectiveNumThreads[0] =
-        getEffectiveNumThreads(GenericDevice, EffectiveNumThreads[0]);
-
-  if (!LaunchArgs.Flags.StrictBlocks)
-    EffectiveNumBlocks[0] = getEffectiveNumBlocks(
-        GenericDevice, EffectiveNumBlocks[0], LaunchArgs.Tripcount,
-        EffectiveNumThreads[0], LaunchArgs.Flags.StrictThreads,
-        LaunchArgs.UserThreadLimit[0] > 0);
-
-  auto DynBlockMemConfOrErr = prepareBlockMemory(
-      GenericDevice, LaunchArgs,
-      EffectiveNumBlocks[0] * EffectiveNumBlocks[1] * EffectiveNumBlocks[2]);
-  if (!DynBlockMemConfOrErr)
-    return DynBlockMemConfOrErr.takeError();
-
-  DynBlockMemConfTy &DynBlockMemConf = *DynBlockMemConfOrErr;
-  if (DynBlockMemConf.FallbackPtr)
-    AsyncInfoWrapper.freeAllocationAfterSynchronization(
-        DynBlockMemConf.FallbackPtr, TargetAllocTy::TARGET_ALLOC_DEVICE);
-
-  auto KernelLaunchEnvOrErr =
-      getKernelLaunchEnvironment(GenericDevice, LaunchArgs, DynBlockMemConf,
-                                 AsyncInfoWrapper, EffectiveNumBlocks[0]);
-  if (!KernelLaunchEnvOrErr)
-    return KernelLaunchEnvOrErr.takeError();
-
-  // Fill in the kernel launch environment (dyn_ptr) if this launch has a
-  // reserved slot for it. When replaying, getKernelLaunchEnvironment()
-  // returns null so the recorded value already in the slot is preserved.
-  if (LaunchArgs.DynPtrSlot && *KernelLaunchEnvOrErr)
-    *LaunchArgs.DynPtrSlot = *KernelLaunchEnvOrErr;
-
   if (auto Err = printLaunchInfo(GenericDevice, LaunchArgs, EffectiveNumThreads,
                                  EffectiveNumBlocks))
     return Err;
+
+  uint32_t MaxBlockMemSize = GenericDevice.getMaxBlockSharedMemSize();
+  // No enough block memory to cover the static one. Cannot run the kernel.
+  if (StaticBlockMemSize > MaxBlockMemSize)
+    return error::createOffloadError(
+        error::ErrorCode::INVALID_ARGUMENT,
+        "Static block memory size exceeds maximum");
+  // No enough block memory to cover dynamic one
+  if (StaticBlockMemSize + LaunchArgs.DynCGroupMem > MaxBlockMemSize)
+    return error::createOffloadError(
+        error::ErrorCode::INVALID_ARGUMENT,
+        "Requested block memory size (static + dynamic) exceeds maximum");
 
   RecordReplayTy::HandleTy RRHandle;
   RecordReplayTy *RecordReplay = GenericDevice.getRecordReplay();
@@ -318,7 +120,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
     // Record the kernel prologue data before kernel launch.
     auto RRHandleOrErr = RecordReplay->recordPrologue(
         *this, LaunchArgs, EffectiveNumBlocks, EffectiveNumThreads,
-        DynBlockMemConf.NativeSize);
+        LaunchArgs.DynCGroupMem);
     if (!RRHandleOrErr)
       return RRHandleOrErr.takeError();
     RRHandle = *RRHandleOrErr;
@@ -326,7 +128,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
 
   if (auto Err =
           launchImpl(GenericDevice, EffectiveNumThreads, EffectiveNumBlocks,
-                     DynBlockMemConf.NativeSize, LaunchArgs, AsyncInfoWrapper))
+                     LaunchArgs.DynCGroupMem, LaunchArgs, AsyncInfoWrapper))
     return Err;
 
   if (RecordReplay) {
@@ -338,111 +140,6 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
     return RecordReplay->recordEpilogue(*this, RRHandle);
   }
   return Plugin::success();
-}
-
-uint32_t
-GenericKernelTy::getEffectiveNumThreads(GenericDeviceTy &GenericDevice,
-                                        uint32_t UserThreadLimit) const {
-  assert(!isBareMode() && "bare kernel should not call this function");
-
-  if (UserThreadLimit > 0 && isGenericMode())
-    UserThreadLimit += GenericDevice.getWarpSize();
-
-  return std::min(MaxNumThreads, (UserThreadLimit > 0) ? UserThreadLimit
-                                                       : PreferredNumThreads);
-}
-
-uint32_t GenericKernelTy::getEffectiveNumBlocks(
-    GenericDeviceTy &GenericDevice, uint32_t UserNumBlocks,
-    uint64_t LoopTripCount, uint32_t &EffectiveNumThreads,
-    bool IsNumThreadsStrict, bool IsNumThreadsFromUser) const {
-  assert(!isBareMode() && "bare kernel should not call this function");
-
-  // NOTE: This clamps the user-requested number of blocks to the device limit
-  // rather than honoring it exactly, which is non-standard behavior. Truly
-  // honoring an arbitrary value would require launching multiple kernels or
-  // reusing blocks until the requested count has been served.
-  if (UserNumBlocks > 0)
-    return std::min(UserNumBlocks,
-                    GenericDevice.getBlockLimit(EffectiveNumThreads));
-
-  // Return the number of blocks required to cover the loop iterations.
-  if (isNoLoopMode())
-    return LoopTripCount > 0 ? (((LoopTripCount - 1) / EffectiveNumThreads) + 1)
-                             : 1;
-
-  uint64_t DefaultNumBlocks = GenericDevice.getDefaultNumBlocks();
-  uint64_t TripCountNumBlocks = std::numeric_limits<uint64_t>::max();
-  if (LoopTripCount > 0) {
-    if (isSPMDMode()) {
-      // We have a combined construct, i.e. `target teams distribute
-      // parallel for [simd]`. We launch so many blocks so that each thread
-      // will execute one iteration of the loop; rounded up to the nearest
-      // integer. However, if that results in too few blocks, we artificially
-      // reduce the thread count per block to increase the outer parallelism.
-      auto MinThreads = GenericDevice.getMinThreadsForLowTripCountLoop();
-      MinThreads = std::min(MinThreads, EffectiveNumThreads);
-
-      // Honor the thread_limit clause; only lower the number of threads.
-      [[maybe_unused]] auto OldNumThreads = EffectiveNumThreads;
-      if (LoopTripCount >= DefaultNumBlocks * EffectiveNumThreads ||
-          IsNumThreadsFromUser || IsNumThreadsStrict) {
-        // Enough parallelism for blocks and threads.
-        TripCountNumBlocks = ((LoopTripCount - 1) / EffectiveNumThreads) + 1;
-        assert(IsNumThreadsFromUser ||
-               TripCountNumBlocks >= DefaultNumBlocks &&
-                   "Expected sufficient outer parallelism.");
-      } else if (LoopTripCount >= DefaultNumBlocks * MinThreads) {
-        // Enough parallelism for blocks, limit threads.
-
-        // This case is hard; for now, we force "full warps":
-        // First, compute a thread count assuming DefaultNumBlocks.
-        auto NumThreadsDefaultBlocks =
-            (LoopTripCount + DefaultNumBlocks - 1) / DefaultNumBlocks;
-        // Now get a power of two that is larger or equal.
-        auto NumThreadsDefaultBlocksP2 =
-            llvm::PowerOf2Ceil(NumThreadsDefaultBlocks);
-        // Do not increase a thread limit given be the user.
-        EffectiveNumThreads =
-            std::min(EffectiveNumThreads, uint32_t(NumThreadsDefaultBlocksP2));
-        assert(EffectiveNumThreads >= MinThreads &&
-               "Expected sufficient inner parallelism.");
-        TripCountNumBlocks = ((LoopTripCount - 1) / EffectiveNumThreads) + 1;
-      } else {
-        // Not enough parallelism for blocks and threads, limit both.
-        EffectiveNumThreads = std::min(EffectiveNumThreads, MinThreads);
-        TripCountNumBlocks = ((LoopTripCount - 1) / EffectiveNumThreads) + 1;
-      }
-
-      assert(EffectiveNumThreads * TripCountNumBlocks >= LoopTripCount &&
-             "Expected sufficient parallelism");
-      assert(OldNumThreads >= EffectiveNumThreads &&
-             "Number of threads cannot be increased!");
-    } else {
-      assert((isGenericMode() || isGenericSPMDMode()) &&
-             "Unexpected execution mode!");
-      // If we reach this point, then we have a non-combined construct, i.e.
-      // `teams distribute` with a nested `parallel for` and each block is
-      // assigned one iteration of the `distribute` loop. E.g.:
-      //
-      // #pragma omp target teams distribute
-      // for(...loop_tripcount...) {
-      //   #pragma omp parallel for
-      //   for(...) {}
-      // }
-      //
-      // Threads within a block will execute the iterations of the `parallel`
-      // loop.
-      TripCountNumBlocks = LoopTripCount;
-    }
-  }
-
-  uint32_t PreferredNumBlocks = TripCountNumBlocks;
-  // If the loops are long running we rather reuse blocks than spawn too many.
-  if (GenericDevice.getReuseBlocksForHighTripCount())
-    PreferredNumBlocks = std::min(TripCountNumBlocks, DefaultNumBlocks);
-  return std::min(PreferredNumBlocks,
-                  GenericDevice.getBlockLimit(EffectiveNumThreads));
 }
 
 GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
@@ -465,22 +162,6 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
   // Conservative fall-back to the plugin's device uid for the case that no real
   // vendor (u)uid will become available later.
   setDeviceUidFromVendorUid(std::to_string(static_cast<uint64_t>(DeviceId)));
-
-#ifdef OMPT_SUPPORT
-  OmptInitialized.store(false);
-  // Bind the callbacks to this device's member functions
-#define bindOmptCallback(Name, Type, Code)                                     \
-  if (ompt::Initialized && ompt::lookupCallbackByCode) {                       \
-    ompt::lookupCallbackByCode((ompt_callbacks_t)(Code),                       \
-                               ((ompt_callback_t *)&(Name##_fn)));             \
-    ODBG(OLDT_Tool) << "OMPT: class bound " << #Name << "="                    \
-                    << ((void *)(uint64_t)Name##_fn);                          \
-  }
-
-  FOREACH_OMPT_DEVICE_EVENT(bindOmptCallback);
-#undef bindOmptCallback
-
-#endif
 
   // Envar that indicates whether mapped host buffers should be locked
   // automatically. The possible values are boolean (on/off) and a special:
@@ -512,18 +193,6 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
 Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
   if (auto Err = initImpl(Plugin))
     return Err;
-
-#ifdef OMPT_SUPPORT
-  if (ompt::Initialized) {
-    bool ExpectedStatus = false;
-    if (OmptInitialized.compare_exchange_strong(ExpectedStatus, true))
-      performOmptCallback(device_initialize, Plugin.getUserId(DeviceId),
-                          /*type=*/getComputeUnitKind().c_str(),
-                          /*device=*/reinterpret_cast<ompt_device_t *>(this),
-                          /*lookup=*/ompt::lookupCallbackByName,
-                          /*documentation=*/nullptr);
-  }
-#endif
 
   // Read and reinitialize the envars that depend on the device initialization.
   // Notice these two envars may change the stack size and heap size of the
@@ -604,14 +273,6 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     RecordReplay = nullptr;
   }
 
-#ifdef OMPT_SUPPORT
-  if (ompt::Initialized) {
-    bool ExpectedStatus = true;
-    if (OmptInitialized.compare_exchange_strong(ExpectedStatus, false))
-      performOmptCallback(device_finalize, Plugin.getUserId(DeviceId));
-  }
-#endif
-
   return deinitImpl();
 }
 Expected<DeviceImageTy *>
@@ -658,18 +319,6 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin, StringRef InputTgtImage,
 
   if (auto Err = setupRPCServer(Plugin, *Image))
     return std::move(Err);
-
-#ifdef OMPT_SUPPORT
-  if (ompt::Initialized) {
-    size_t Bytes = InputTgtImage.size();
-    performOmptCallback(
-        device_load, Plugin.getUserId(DeviceId),
-        /*FileName=*/nullptr, /*FileOffset=*/0, /*VmaInFile=*/nullptr,
-        /*ImgSize=*/Bytes,
-        /*HostAddr=*/const_cast<unsigned char *>(InputTgtImage.bytes_begin()),
-        /*DeviceAddr=*/nullptr, /* FIXME: ModuleId */ 0);
-  }
-#endif
 
   // Call any global constructors present on the device.
   if (auto Err = callGlobalConstructors(Plugin, *Image))
@@ -1000,13 +649,6 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
     return Plugin::error(ErrorCode::UNSUPPORTED,
                          "device allocator returned a misaligned pointer");
   }
-
-  // Report error if the memory manager or the device allocator did not return
-  // any memory buffer.
-  if (!Alloc)
-    return Plugin::error(ErrorCode::UNIMPLEMENTED,
-                         "invalid target data allocation kind or requested "
-                         "allocator not implemented yet");
 
   // Keep track of the allocation stack if we track allocation traces.
   if (OMPX_TrackAllocationTraces) {
@@ -1916,13 +1558,6 @@ int32_t GenericPluginTy::destroy_event(int32_t DeviceId, void *EventPtr) {
 void GenericPluginTy::set_info_flag(uint32_t NewInfoLevel) {
   std::atomic<uint32_t> &InfoLevel = getInfoLevelInternal();
   InfoLevel.store(NewInfoLevel);
-}
-
-int32_t GenericPluginTy::set_device_identifier(int32_t UserId,
-                                               int32_t DeviceId) {
-  UserDeviceIds[DeviceId] = UserId;
-
-  return OFFLOAD_SUCCESS;
 }
 
 int32_t GenericPluginTy::use_auto_zero_copy(int32_t DeviceId) {

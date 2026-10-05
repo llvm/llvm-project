@@ -41,6 +41,7 @@ private:
   bool visitBarrier(IntrinsicInst &I);
   bool visitPtrSBufferLoad(IntrinsicInst &I);
   bool visitMonitorSleep(IntrinsicInst &I);
+  bool visitCvtScale(IntrinsicInst &I);
 };
 
 class AMDGPULowerIntrinsicsLegacy : public ModulePass {
@@ -86,6 +87,23 @@ bool AMDGPULowerIntrinsicsImpl::run() {
     case Intrinsic::amdgcn_s_monitor_sleep:
       forEachCall(
           F, [&](IntrinsicInst *II) { Changed |= visitMonitorSleep(*II); });
+      break;
+    case Intrinsic::amdgcn_cvt_scale_pk8_f16_fp8:
+    case Intrinsic::amdgcn_cvt_scale_pk8_bf16_fp8:
+    case Intrinsic::amdgcn_cvt_scale_pk8_f16_bf8:
+    case Intrinsic::amdgcn_cvt_scale_pk8_bf16_bf8:
+    case Intrinsic::amdgcn_cvt_scale_pk8_f16_fp4:
+    case Intrinsic::amdgcn_cvt_scale_pk8_bf16_fp4:
+    case Intrinsic::amdgcn_cvt_scale_pk8_f32_fp8:
+    case Intrinsic::amdgcn_cvt_scale_pk8_f32_bf8:
+    case Intrinsic::amdgcn_cvt_scale_pk8_f32_fp4:
+    case Intrinsic::amdgcn_cvt_scale_pk16_f16_bf6:
+    case Intrinsic::amdgcn_cvt_scale_pk16_bf16_bf6:
+    case Intrinsic::amdgcn_cvt_scale_pk16_f16_fp6:
+    case Intrinsic::amdgcn_cvt_scale_pk16_bf16_fp6:
+    case Intrinsic::amdgcn_cvt_scale_pk16_f32_fp6:
+    case Intrinsic::amdgcn_cvt_scale_pk16_f32_bf6:
+      forEachCall(F, [&](IntrinsicInst *II) { Changed |= visitCvtScale(*II); });
       break;
     }
   }
@@ -239,6 +257,49 @@ bool AMDGPULowerIntrinsicsImpl::visitMonitorSleep(IntrinsicInst &I) {
   I.setArgOperand(0, NewSleep);
 
   return true;
+}
+
+bool AMDGPULowerIntrinsicsImpl::visitCvtScale(IntrinsicInst &I) {
+  int MaxSel = 0;
+  switch (I.getIntrinsicID()) {
+  default:
+    llvm_unreachable("expected cvt_scale_* intrinsic");
+  case Intrinsic::amdgcn_cvt_scale_pk8_f16_fp8:
+  case Intrinsic::amdgcn_cvt_scale_pk8_bf16_fp8:
+  case Intrinsic::amdgcn_cvt_scale_pk8_f16_bf8:
+  case Intrinsic::amdgcn_cvt_scale_pk8_bf16_bf8:
+  case Intrinsic::amdgcn_cvt_scale_pk8_f32_fp8:
+  case Intrinsic::amdgcn_cvt_scale_pk8_f32_bf8:
+    MaxSel = 8;
+    break;
+  case Intrinsic::amdgcn_cvt_scale_pk8_f16_fp4:
+  case Intrinsic::amdgcn_cvt_scale_pk8_bf16_fp4:
+  case Intrinsic::amdgcn_cvt_scale_pk8_f32_fp4:
+  case Intrinsic::amdgcn_cvt_scale_pk16_f16_bf6:
+  case Intrinsic::amdgcn_cvt_scale_pk16_bf16_bf6:
+  case Intrinsic::amdgcn_cvt_scale_pk16_f16_fp6:
+  case Intrinsic::amdgcn_cvt_scale_pk16_bf16_fp6:
+  case Intrinsic::amdgcn_cvt_scale_pk16_f32_fp6:
+  case Intrinsic::amdgcn_cvt_scale_pk16_f32_bf6:
+    MaxSel = 4;
+    break;
+  }
+
+  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*I.getFunction());
+  if (ST.hasBlock16ConversionScaleInsts())
+    MaxSel *= 2;
+
+  int ScaleSel = cast<ConstantInt>(I.getArgOperand(2))->getSExtValue();
+  if (ScaleSel < MaxSel)
+    return false;
+
+  I.getContext().diagnose(DiagnosticInfoUnsupported(
+      *I.getFunction(),
+      I.getCalledFunction()->getName() +
+          Twine(" scale_sel maximum supported value is ") + Twine(MaxSel - 1),
+      I.getDebugLoc()));
+
+  return false;
 }
 
 PreservedAnalyses AMDGPULowerIntrinsicsPass::run(Module &M,

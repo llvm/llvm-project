@@ -33,15 +33,20 @@ jobs:
     if: github.repository_owner == 'llvm'
     runs-on: llvm-premerge-linux-32-runners
     container:
-      image: ghcr.io/llvm/libcxx-linux-builder:6d3cf7f436a01f4622fb660e413a4020209777b8
+      image: ghcr.io/llvm/libcxx-linux-builder:d79f222aea61926e7c81fa8908b12f52ea70111f
     env:
       CC: clang-23
       CXX: clang++-23
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 0 # some tools need full git history
+        # TODO(#226230): Remove this once we have resolved the underlying issue
+        # causing actions/checkout to be prematurely killed.
+        env:
+          GIT_TRACE: "true"
+          GIT_CURL_VERBOSE: "true"
 
       - name: Set up Python dependencies
         shell: bash

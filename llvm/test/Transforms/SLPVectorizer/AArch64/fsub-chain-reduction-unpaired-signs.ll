@@ -18,23 +18,21 @@ define double @unpaired_negated_group(ptr %in, double %scale) {
 ; CHECK-NEXT:    [[X5:%.*]] = extractelement <2 x double> [[V2]], i64 0
 ; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[IN]], i64 48
 ; CHECK-NEXT:    [[V3:%.*]] = load <2 x double>, ptr [[P3]], align 8
-; CHECK-NEXT:    [[X7:%.*]] = extractelement <2 x double> [[V3]], i64 1
-; CHECK-NEXT:    [[X6:%.*]] = extractelement <2 x double> [[V3]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x double> [[V3]], <2 x double> [[V0]], <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nsz double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP0]])
 ; CHECK-NEXT:    [[X2:%.*]] = extractelement <2 x double> [[V1]], i64 0
 ; CHECK-NEXT:    [[S1_1:%.*]] = fadd double [[X2]], [[X5]]
-; CHECK-NEXT:    [[X3:%.*]] = extractelement <2 x double> [[V1]], i64 1
-; CHECK-NEXT:    [[S1_2:%.*]] = fsub double [[S1_1]], [[X3]]
-; CHECK-NEXT:    [[X0:%.*]] = extractelement <2 x double> [[V0]], i64 0
-; CHECK-NEXT:    [[S1_3:%.*]] = fadd double [[S1_2]], [[X0]]
-; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x double> [[V2]], <2 x double> [[V0]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nsz double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP0]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd reassoc nsz double [[TMP1]], [[X7]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = fsub reassoc nsz double [[OP_RDX]], [[X6]]
-; CHECK-NEXT:    [[D0:%.*]] = fdiv double [[OP_RDX1]], [[SCALE]]
-; CHECK-NEXT:    [[Q0:%.*]] = fmul contract double [[D0]], [[D0]]
-; CHECK-NEXT:    [[D1:%.*]] = fdiv double [[S1_3]], [[X2]]
-; CHECK-NEXT:    [[Q1:%.*]] = fmul double [[D1]], [[D1]]
-; CHECK-NEXT:    [[TMP12:%.*]] = fadd reassoc contract double [[Q0]], [[Q1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[S1_1]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[V3]], <2 x double> [[V1]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = fsub <2 x double> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[V2]], <2 x double> [[V0]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[V1]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> [[TMP8]], double [[SCALE]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = fdiv <2 x double> [[TMP7]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul <2 x double> [[TMP10]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = call reassoc contract double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[TMP11]])
 ; CHECK-NEXT:    ret double [[TMP12]]
 ;
 entry:

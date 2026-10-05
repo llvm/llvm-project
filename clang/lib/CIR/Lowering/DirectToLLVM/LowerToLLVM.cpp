@@ -20,6 +20,7 @@
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -288,6 +289,22 @@ static mlir::LLVM::CConv convertCallingConv(cir::CallingConv callingConv) {
   llvm_unreachable("Unknown calling convention");
 }
 
+static mlir::LLVM::uwtable::UWTableKind
+convertUWTableKind(cir::UnwindTableKind kind) {
+  using CIR = cir::UnwindTableKind;
+  using LLVM = mlir::LLVM::uwtable::UWTableKind;
+
+  switch (kind) {
+  case CIR::None:
+    return LLVM::None;
+  case CIR::Sync:
+    return LLVM::Sync;
+  case CIR::Async:
+    return LLVM::Async;
+  }
+  llvm_unreachable("Unknown CIR unwind table kind");
+}
+
 mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
     cir::CopyOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -324,9 +341,25 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMMemCpyOpLowering::matchAndRewrite(
     cir::MemCpyOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::ArrayAttr argAttrs;
+  if (op.getDstAlignment() || op.getSrcAlignment()) {
+    mlir::NamedAttribute dstAlignAttr = rewriter.getNamedAttr(
+        mlir::LLVM::LLVMDialect::getAlignAttrName(),
+        rewriter.getI64IntegerAttr(op.getDstAlignment().value_or(1)));
+    mlir::NamedAttribute srcAlignAttr = rewriter.getNamedAttr(
+        mlir::LLVM::LLVMDialect::getAlignAttrName(),
+        rewriter.getI64IntegerAttr(op.getSrcAlignment().value_or(1)));
+    argAttrs = rewriter.getArrayAttr({
+        /*dst_attrs=*/rewriter.getDictionaryAttr({dstAlignAttr}),
+        /*src_attrs=*/rewriter.getDictionaryAttr({srcAlignAttr}),
+    });
+  }
   rewriter.replaceOpWithNewOp<mlir::LLVM::MemcpyOp>(
       op, adaptor.getDst(), adaptor.getSrc(), adaptor.getLen(),
-      /*isVolatile=*/false);
+      /*isVolatile=*/false,
+      /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
+      /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr, /*arg_attrs=*/argAttrs,
+      /*res_attrs=*/nullptr);
   return mlir::success();
 }
 
@@ -582,6 +615,27 @@ mlir::LogicalResult lowerConstrainableFPOp(
                                        constrainedMnemonic, hasRoundingMode);
 }
 
+static mlir::LLVM::FastmathFlags
+convertFastMathFlags(cir::FastMathFlags cirFlags) {
+  mlir::LLVM::FastmathFlags llvmFlags{};
+  const std::pair<cir::FastMathFlags, mlir::LLVM::FastmathFlags> flags[] = {
+      {cir::FastMathFlags::nnan, mlir::LLVM::FastmathFlags::nnan},
+      {cir::FastMathFlags::ninf, mlir::LLVM::FastmathFlags::ninf},
+      {cir::FastMathFlags::nsz, mlir::LLVM::FastmathFlags::nsz},
+      {cir::FastMathFlags::arcp, mlir::LLVM::FastmathFlags::arcp},
+      {cir::FastMathFlags::contract, mlir::LLVM::FastmathFlags::contract},
+      {cir::FastMathFlags::afn, mlir::LLVM::FastmathFlags::afn},
+      {cir::FastMathFlags::reassoc, mlir::LLVM::FastmathFlags::reassoc},
+  };
+
+  for (auto [cirFlag, llvmFlag] : flags) {
+    if (bitEnumContainsAny(cirFlags, cirFlag))
+      llvmFlags = llvmFlags | llvmFlag;
+  }
+
+  return llvmFlags;
+}
+
 mlir::LogicalResult CIRToLLVMLLVMIntrinsicCallOpLowering::matchAndRewrite(
     cir::LLVMIntrinsicCallOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -594,6 +648,9 @@ mlir::LogicalResult CIRToLLVMLLVMIntrinsicCallOpLowering::matchAndRewrite(
       return op.emitError("expected LLVM result type");
   }
   StringRef name = op.getIntrinsicName();
+  mlir::LLVM::FastmathFlags fastmathFlags = {};
+  if (std::optional<cir::FastMathFlags> fastmath = op.getFastmathFlags())
+    fastmathFlags = convertFastMathFlags(*fastmath);
 
   // Some LLVM intrinsics require ElementType attribute to be attached to
   // the argument of pointer type. That prevents us from generating LLVM IR
@@ -606,7 +663,7 @@ mlir::LogicalResult CIRToLLVMLLVMIntrinsicCallOpLowering::matchAndRewrite(
   // to set LLVM IR attribute.
   assert(!cir::MissingFeatures::intrinsicElementTypeSupport());
   replaceOpWithCallLLVMIntrinsicOp(rewriter, op, "llvm." + name, llvmResTy,
-                                   adaptor.getOperands());
+                                   adaptor.getOperands(), fastmathFlags);
   return mlir::success();
 }
 
@@ -1985,14 +2042,14 @@ mlir::LogicalResult CIRToLLVMBaseClassAddrOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   const mlir::Type resultType =
       getTypeConverter()->convertType(baseClassOp.getType());
-  mlir::Value derivedAddr = adaptor.getDerivedAddr();
+  mlir::Value derivedAddr = adaptor.getSrcAddr();
   llvm::SmallVector<mlir::LLVM::GEPArg, 1> offset = {
       adaptor.getOffset().getZExtValue()};
   mlir::Type byteType = mlir::IntegerType::get(resultType.getContext(), 8,
                                                mlir::IntegerType::Signless);
   if (adaptor.getOffset().getZExtValue() == 0) {
-    rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(
-        baseClassOp, resultType, adaptor.getDerivedAddr());
+    rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(baseClassOp, resultType,
+                                                       adaptor.getSrcAddr());
     return mlir::success();
   }
 
@@ -2017,12 +2074,12 @@ mlir::LogicalResult CIRToLLVMDerivedClassAddrOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   const mlir::Type resultType =
       getTypeConverter()->convertType(derivedClassOp.getType());
-  mlir::Value baseAddr = adaptor.getBaseAddr();
+  mlir::Value baseAddr = adaptor.getSrcAddr();
   // The offset is set in the operation as an unsigned value, but it must be
   // applied as a negative offset.
   int64_t offsetVal = -(adaptor.getOffset().getZExtValue());
   if (offsetVal == 0) {
-    // If the offset is zero, we can just return the base address,
+    // If the offset is zero, we can just return the source address.
     rewriter.replaceOp(derivedClassOp, baseAddr);
     return mlir::success();
   }
@@ -2715,7 +2772,9 @@ static bool isHandledDiscardableFuncAttr(mlir::NamedAttribute attr) {
          attr.getName() == CIRDialect::getNoRecurseAttrName() ||
          attr.getName() == CIRDialect::getMustProgressAttrName() ||
          attr.getName() == CIRDialect::getNoBuiltinAttrName() ||
-         attr.getName() == CIRDialect::getSYCLModuleIdAttrName();
+         attr.getName() == CIRDialect::getSYCLModuleIdAttrName() ||
+         attr.getName() == CIRDialect::getDontCallErrorAttrName() ||
+         attr.getName() == CIRDialect::getDontCallWarnAttrName();
 }
 
 /// Lower `cir.func` attributes for an `LLVMFuncOp` or `LLVM::AliasOp`.
@@ -2849,6 +2908,10 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   if (op->hasAttr(CIRDialect::getNoReturnAttrName()))
     fn.setNoreturn(true);
 
+  if (std::optional<cir::UnwindTableKind> uwtableKind = op.getUwtable())
+    fn.setUwtableKindAttr(mlir::LLVM::UWTableKindAttr::get(
+        fn.getContext(), convertUWTableKind(*uwtableKind)));
+
   // Function attributes with no dedicated field on the LLVM dialect's
   // LLVMFuncOp are routed through the `passthrough` array. The MLIR LLVM IR
   // translator forwards `passthrough` entries to LLVM IR as function
@@ -2866,6 +2929,12 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
     passthrough.push_back(rewriter.getArrayAttr(
         {rewriter.getStringAttr(CIRDialect::getSYCLModuleIdAttrName()),
          moduleId}));
+
+  for (llvm::StringRef dontCallAttr : {CIRDialect::getDontCallErrorAttrName(),
+                                       CIRDialect::getDontCallWarnAttrName()})
+    if (auto diagnostic = op->getAttrOfType<mlir::StringAttr>(dontCallAttr))
+      passthrough.push_back(rewriter.getArrayAttr(
+          {rewriter.getStringAttr(dontCallAttr), diagnostic}));
 
   if (!passthrough.empty())
     fn.setPassthroughAttr(rewriter.getArrayAttr(passthrough));
@@ -3167,10 +3236,10 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-static mlir::SymbolRefAttr getComdatAttrHelper(mlir::ModuleOp modOp,
-                                               mlir::OpBuilder &builder,
-                                               StringRef symName,
-                                               mlir::LLVM::ComdatOp &comdatOp) {
+static mlir::SymbolRefAttr
+getComdatAttrHelper(mlir::ModuleOp modOp, mlir::OpBuilder &builder,
+                    StringRef symName, mlir::LLVM::ComdatOp &comdatOp,
+                    mlir::SymbolTableCollection &symbolTables) {
   mlir::OpBuilder::InsertionGuard guard(builder);
   StringRef comdatName = "__llvm_comdat";
   if (!comdatOp) {
@@ -3187,8 +3256,11 @@ static mlir::SymbolRefAttr getComdatAttrHelper(mlir::ModuleOp modOp,
         mlir::LLVM::ComdatOp::create(builder, modOp.getLoc(), comdatName);
   }
 
+  // Cached, and shared by both patterns: a linear scan of the comdat region
+  // per symbol is quadratic in the number of comdats.
+  mlir::SymbolTable &selectors = symbolTables.getSymbolTable(comdatOp);
   if (auto comdatSelector =
-          comdatOp.lookupSymbol<mlir::LLVM::ComdatSelectorOp>(symName)) {
+          selectors.lookup<mlir::LLVM::ComdatSelectorOp>(symName)) {
     return mlir::SymbolRefAttr::get(
         builder.getContext(), comdatName,
         mlir::FlatSymbolRefAttr::get(comdatSelector.getSymNameAttr()));
@@ -3198,6 +3270,7 @@ static mlir::SymbolRefAttr getComdatAttrHelper(mlir::ModuleOp modOp,
   auto selectorOp = mlir::LLVM::ComdatSelectorOp::create(
       builder, comdatOp.getLoc(), symName, mlir::LLVM::comdat::Comdat::Any,
       /*sym_visibility=*/nullptr);
+  selectors.insert(selectorOp);
   return mlir::SymbolRefAttr::get(
       builder.getContext(), comdatName,
       mlir::FlatSymbolRefAttr::get(selectorOp.getSymNameAttr()));
@@ -3206,19 +3279,23 @@ static mlir::SymbolRefAttr getComdatAttrHelper(mlir::ModuleOp modOp,
 mlir::SymbolRefAttr
 CIRToLLVMGlobalOpLowering::getComdatAttr(cir::GlobalOp &op,
                                          mlir::OpBuilder &builder) const {
-  if (!op.getComdat())
+  std::optional<llvm::StringRef> comdat = op.getComdat();
+  if (!comdat)
     return mlir::SymbolRefAttr{};
+  llvm::StringRef comdatKey = comdat->empty() ? op.getSymName() : *comdat;
   return getComdatAttrHelper(op->getParentOfType<mlir::ModuleOp>(), builder,
-                             op.getSymName(), comdatOp);
+                             comdatKey, comdatOp, symbolTables);
 }
 
 mlir::SymbolRefAttr
 CIRToLLVMFuncOpLowering::getComdatAttr(cir::FuncOp &op,
                                        mlir::OpBuilder &builder) const {
-  if (!op.getComdat())
+  std::optional<llvm::StringRef> comdat = op.getComdat();
+  if (!comdat)
     return mlir::SymbolRefAttr{};
+  llvm::StringRef comdatKey = comdat->empty() ? op.getSymName() : *comdat;
   return getComdatAttrHelper(op->getParentOfType<mlir::ModuleOp>(), builder,
-                             op.getSymName(), comdatOp);
+                             comdatKey, comdatOp, symbolTables);
 }
 
 mlir::LogicalResult CIRToLLVMSwitchFlatOpLowering::matchAndRewrite(
@@ -3263,8 +3340,9 @@ lowerIncDecOp(CIROp op, typename CIROp::Adaptor adaptor,
   auto maybeNSW = nswFlag(op.getNoSignedWrap());
   mlir::LLVM::ConstantOp one;
   if (mlir::isa<cir::VectorType>(op.getType())) {
-    mlir::DenseIntElementsAttr oneVec = mlir::DenseIntElementsAttr::get(
-        mlir::cast<mlir::ShapedType>(llvmType), 1);
+    mlir::ShapedType shapedTy = mlir::cast<mlir::ShapedType>(llvmType);
+    mlir::APInt oneAP(shapedTy.getElementTypeBitWidth(), 1);
+    auto oneVec = mlir::DenseElementsAttr::get(shapedTy, {oneAP});
     one = mlir::LLVM::ConstantOp::create(rewriter, loc, llvmType, oneVec);
   } else {
     one = mlir::LLVM::ConstantOp::create(rewriter, loc, llvmType, 1);
@@ -3964,6 +4042,11 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
       return {};
     const mlir::Type ty = converter.convertType(type.getElementType());
     return mlir::VectorType::get(type.getSize(), ty, {type.getIsScalable()});
+  });
+  converter.addConversion([&](cir::MatrixType type) -> mlir::Type {
+    const uint64_t size = type.getRowNum() * type.getColumnNum();
+    const mlir::Type elemTy = converter.convertType(type.getElementType());
+    return mlir::VectorType::get(size, elemTy);
   });
   converter.addConversion([&](cir::BoolType type) -> mlir::Type {
     return mlir::IntegerType::get(type.getContext(), 1,
@@ -5177,6 +5260,30 @@ mlir::LogicalResult CIRToLLVMVecTernaryOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMMatrixColumnMajorLoadOpLowering::matchAndRewrite(
+    cir::MatrixColumnMajorLoadOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  cir::MatrixType resultMatrixTy = op.getResult().getType();
+  mlir::Type resultTy = typeConverter->convertType(resultMatrixTy);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::MatrixColumnMajorLoadOp>(
+      op, resultTy, adaptor.getValue(), adaptor.getStride(),
+      rewriter.getBoolAttr(op.getIsVolatile()),
+      rewriter.getI32IntegerAttr(resultMatrixTy.getRowNum()),
+      rewriter.getI32IntegerAttr(resultMatrixTy.getColumnNum()));
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMMatrixTransposeOpLowering::matchAndRewrite(
+    cir::MatrixTransposeOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  cir::MatrixType resultMatrixTy = op.getValue().getType();
+  mlir::Type resultTy = typeConverter->convertType(resultMatrixTy);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::MatrixTransposeOp>(
+      op, resultTy, adaptor.getValue(), resultMatrixTy.getRowNum(),
+      resultMatrixTy.getColumnNum());
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMComplexAddOpLowering::matchAndRewrite(
     cir::ComplexAddOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -5908,8 +6015,11 @@ void populateCIRToLLVMPasses(mlir::OpPassManager &pm, bool enableOpenMP) {
   if (enableOpenMP)
     pm.addPass(mlir::omp::createMarkDeclareTargetPass());
   pm.addPass(createConvertCIRToLLVMPass());
-  if (enableOpenMP)
+  if (enableOpenMP) {
     pm.addPass(mlir::omp::createHostOpFilteringPass());
+    pm.nest<mlir::LLVM::LLVMFuncOp>().addPass(
+        mlir::omp::createStackToSharedPass());
+  }
 }
 
 std::unique_ptr<llvm::Module>

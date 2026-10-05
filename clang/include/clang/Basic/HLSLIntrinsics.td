@@ -65,6 +65,8 @@ def IntTy    : HLSLType<"int">;
 def UIntTy   : HLSLType<"uint">;
 def Int64Ty  : HLSLType<"int64_t">;
 def UInt64Ty : HLSLType<"uint64_t">;
+def Int8PackedTy : HLSLType<"int8_t4_packed">;
+def UInt8PackedTy : HLSLType<"uint8_t4_packed">;
 
 //===----------------------------------------------------------------------===//
 // Element type groups
@@ -326,7 +328,6 @@ def hlsl_abs : HLSLOneArgBuiltin<"abs", "__builtin_elementwise_abs"> {
 }];
   let VaryingTypes = SignedTypes;
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Unsigned abs is a constexpr identity - unsigned values are already non-negative.
@@ -344,7 +345,6 @@ function returns its input unchanged.
   let IsConstexpr = 1;
   let VaryingTypes = UnsignedIntTypes;
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Returns the arccosine of the input value, Val.
@@ -1912,4 +1912,18 @@ the specified wave.
   let IsConvergent = 1;
   let Availability = SM6_0;
   let VaryingMatDims = [];
+}
+
+// Reads the value from the first active lane in the wave.
+def hlsl_wave_read_lane_first :
+    HLSLOneArgBuiltin<"WaveReadLaneFirst",
+                      "__builtin_hlsl_wave_read_lane_first"> {
+  let Doc = [{
+\brief Returns the value from the active lane with the smallest index.
+\param Val The value to read.
+}];
+  let VaryingTypes = AllTypesWithBool;
+let VaryingLongVector = 1;
+let IsConvergent = 1;
+let Availability = SM6_0;
 }

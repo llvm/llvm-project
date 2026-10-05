@@ -3285,7 +3285,6 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Node->getOperand(0));
     break;
   case ISD::EH_RETURN:
-  case ISD::EH_LABEL:
   case ISD::PREFETCH:
   case ISD::VAEND:
   case ISD::EH_SJLJ_LONGJMP:
@@ -5351,21 +5350,21 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     SDValue Ptr = DAG.getAllOnesConstant(dl, PtrTy);
     SDValue Chain = Node->getOperand(0);
     Results.push_back(
-        DAG.makeStateFunctionCall(RTLIB::FESETENV, Ptr, Chain, dl));
+        DAG.makeStateFunctionCall(RTLIB::FESETENV, Ptr, Chain, Node));
     break;
   }
   case ISD::GET_FPENV_MEM: {
     SDValue Chain = Node->getOperand(0);
     SDValue EnvPtr = Node->getOperand(1);
     Results.push_back(
-        DAG.makeStateFunctionCall(RTLIB::FEGETENV, EnvPtr, Chain, dl));
+        DAG.makeStateFunctionCall(RTLIB::FEGETENV, EnvPtr, Chain, Node));
     break;
   }
   case ISD::SET_FPENV_MEM: {
     SDValue Chain = Node->getOperand(0);
     SDValue EnvPtr = Node->getOperand(1);
     Results.push_back(
-        DAG.makeStateFunctionCall(RTLIB::FESETENV, EnvPtr, Chain, dl));
+        DAG.makeStateFunctionCall(RTLIB::FESETENV, EnvPtr, Chain, Node));
     break;
   }
   case ISD::GET_FPMODE: {
@@ -5375,7 +5374,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     SDValue StackPtr = DAG.CreateStackTemporary(ModeVT);
     int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
     SDValue Chain = DAG.makeStateFunctionCall(RTLIB::FEGETMODE, StackPtr,
-                                              Node->getOperand(0), dl);
+                                              Node->getOperand(0), Node);
     SDValue LdInst = DAG.getLoad(
         ModeVT, dl, Chain, StackPtr,
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI));
@@ -5394,7 +5393,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
         Node->getOperand(0), dl, Mode, StackPtr,
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI));
     Results.push_back(
-        DAG.makeStateFunctionCall(RTLIB::FESETMODE, StackPtr, StInst, dl));
+        DAG.makeStateFunctionCall(RTLIB::FESETMODE, StackPtr, StInst, Node));
     break;
   }
   case ISD::RESET_FPMODE: {
@@ -5405,7 +5404,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     EVT PtrTy = TLI.getPointerTy(DL);
     SDValue Mode = DAG.getAllOnesConstant(dl, PtrTy);
     Results.push_back(DAG.makeStateFunctionCall(RTLIB::FESETMODE, Mode,
-                                                Node->getOperand(0), dl));
+                                                Node->getOperand(0), Node));
     break;
   }
   }

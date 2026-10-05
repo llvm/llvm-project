@@ -69,7 +69,7 @@ struct {
 
 static const FlagDescription FlagDescriptions [] {
 #define FUZZER_DEPRECATED_FLAG(Name)                                           \
-  {#Name, "Deprecated; don't use", 0, nullptr, nullptr, nullptr},
+  {#Name, "Deprecated; don't use.", 0, nullptr, nullptr, nullptr},
 #define FUZZER_FLAG_INT(Name, Default, Description)                            \
   {#Name, Description, Default, &Flags.Name, nullptr, nullptr},
 #define FUZZER_FLAG_UNSIGNED(Name, Default, Description)                       \
