@@ -31,7 +31,13 @@ static constexpr auto nativeShapeAttrName = "x86_vcmlu_native_shape";
 namespace {
 // Shared state for the pattern match and IR transformation.
 struct MLUCandidate {
+  // The CPU feature flag to target with the transformation, in the spelling
+  // used by llvm/include/llvm/TargetParser/X86TargetParser.def, e.g.
+  // "amx-bf16". Determines native shapes and supported data types for operands
+  // and the accumulator.
   StringRef target;
+
+  // Anchor operation.
   vector::ContractionOp contract;
   bool isInVnniLayout = false;
 
@@ -316,9 +322,9 @@ static LogicalResult checkShapesAndTypes(MLUCandidate &candidate,
   int64_t nativeM, nativeN, nativeK, vnni;
 
   if (target.starts_with("amx")) {
-    if (!((target == "amx_bf16" && inpElemType.isBF16() &&
+    if (!((target == "amx-bf16" && inpElemType.isBF16() &&
            accElemType.isF32()) ||
-          (target == "amx_int8" && inpElemType.isInteger(8) &&
+          (target == "amx-int8" && inpElemType.isInteger(8) &&
            accElemType.isInteger(32))))
       return rewriter.notifyMatchFailure(
           contract, "unsupported combination of input and accumulator types");

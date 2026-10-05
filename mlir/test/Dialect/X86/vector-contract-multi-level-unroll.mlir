@@ -76,7 +76,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
     } : !transform.any_op
     transform.yield
   }
@@ -84,7 +84,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_nano(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
       transform.apply_patterns.x86.vector_contract_to_amx_dot_product
     } : !transform.any_op
     transform.yield
@@ -151,7 +151,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
     } : !transform.any_op
     transform.yield
   }
@@ -159,7 +159,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_nano(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
       transform.apply_patterns.x86.vector_contract_to_amx_dot_product
     } : !transform.any_op
     transform.yield
@@ -224,7 +224,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
     } : !transform.any_op
     transform.yield
   }
@@ -232,7 +232,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_nano(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
       transform.apply_patterns.x86.vector_contract_to_amx_dot_product
     } : !transform.any_op
     transform.yield
@@ -298,7 +298,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
     } : !transform.any_op
     transform.yield
   }
@@ -306,7 +306,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_nano(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
       transform.apply_patterns.x86.vector_contract_to_amx_dot_product
     } : !transform.any_op
     transform.yield
@@ -372,7 +372,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
     } : !transform.any_op
     transform.yield
   }
@@ -380,7 +380,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_nano(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
       transform.apply_patterns.x86.vector_contract_to_amx_dot_product
     } : !transform.any_op
     transform.yield
@@ -453,7 +453,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_int8"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-int8"
     } : !transform.any_op
     transform.yield
   }
@@ -461,7 +461,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_nano(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_int8"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-int8"
       transform.apply_patterns.x86.vector_contract_to_amx_dot_product
     } : !transform.any_op
     transform.yield
@@ -539,7 +539,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
     } : !transform.any_op
     transform.yield
   }
@@ -547,7 +547,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_nano(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
       transform.apply_patterns.x86.vector_contract_to_amx_dot_product
     } : !transform.any_op
     transform.yield
@@ -625,7 +625,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_int8"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-int8"
     } : !transform.any_op
     transform.yield
   }
@@ -633,7 +633,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_nano(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_int8"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-int8"
       transform.apply_patterns.x86.vector_contract_to_amx_dot_product
     } : !transform.any_op
     transform.yield
@@ -711,7 +711,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
     } : !transform.any_op
     transform.yield
   }
@@ -719,7 +719,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_nano(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
       transform.apply_patterns.x86.vector_contract_to_amx_dot_product
     } : !transform.any_op
     transform.yield
@@ -795,7 +795,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
     } : !transform.any_op
     transform.yield
   }
@@ -803,7 +803,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_nano(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
       transform.apply_patterns.x86.vector_contract_to_amx_dot_product
     } : !transform.any_op
     transform.yield
@@ -877,7 +877,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
     } : !transform.any_op
     transform.yield
   }
@@ -885,7 +885,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_nano(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
       transform.apply_patterns.x86.vector_contract_to_amx_dot_product
     } : !transform.any_op
     transform.yield
@@ -957,7 +957,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
     } : !transform.any_op
     transform.yield
   }
@@ -965,7 +965,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_nano(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
       transform.apply_patterns.x86.vector_contract_to_amx_dot_product
     } : !transform.any_op
     transform.yield
@@ -1012,7 +1012,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
     } : !transform.any_op
     transform.yield
   }
@@ -1020,7 +1020,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_nano(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
       transform.apply_patterns.x86.vector_contract_to_amx_dot_product
     } : !transform.any_op
     transform.yield
@@ -1063,7 +1063,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
     } : !transform.any_op
     transform.yield
   }
@@ -1071,7 +1071,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_nano(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
       transform.apply_patterns.x86.vector_contract_to_amx_dot_product
     } : !transform.any_op
     transform.yield
@@ -1114,7 +1114,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_int8"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-int8"
     } : !transform.any_op
     transform.yield
   }
@@ -1122,7 +1122,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_nano(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_int8"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-int8"
       transform.apply_patterns.x86.vector_contract_to_amx_dot_product
     } : !transform.any_op
     transform.yield
@@ -1167,7 +1167,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
     } : !transform.any_op
     transform.yield
   }
@@ -1175,7 +1175,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_nano(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
       transform.apply_patterns.x86.vector_contract_to_amx_dot_product
     } : !transform.any_op
     transform.yield
@@ -1223,7 +1223,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
     } : !transform.any_op
     transform.yield
   }
@@ -1231,7 +1231,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_nano(%arg1: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx_bf16"
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
       transform.apply_patterns.x86.vector_contract_to_amx_dot_product
     } : !transform.any_op
     transform.yield
