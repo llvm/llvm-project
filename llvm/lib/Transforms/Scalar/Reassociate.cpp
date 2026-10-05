@@ -2035,6 +2035,7 @@ Value *ReassociatePass::OptimizeExpression(BinaryOperator *I,
   const DataLayout &DL = I->getDataLayout();
   Constant *Cst = nullptr;
   unsigned Opcode = I->getOpcode();
+  auto DM = getDenormMode(I);
   while (!Ops.empty()) {
     if (auto *C = dyn_cast<Constant>(Ops.back().Op)) {
       if (!Cst) {
@@ -2042,7 +2043,8 @@ Value *ReassociatePass::OptimizeExpression(BinaryOperator *I,
         Cst = C;
         continue;
       }
-      if (Constant *Res = ConstantFoldBinaryOpOperands(Opcode, C, Cst, DL)) {
+      if (Constant *Res =
+              ConstantFoldBinaryOpOperands(Opcode, C, Cst, DL, DM)) {
         Ops.pop_back();
         Cst = Res;
         continue;

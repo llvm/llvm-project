@@ -23,13 +23,27 @@
 
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/FPFold.h"
 #include <optional>
 
 namespace llvm {
 template <typename T> class ArrayRef;
 class Value;
 class Constant;
+class ConstantFP;
 class Type;
+
+/// Try to fold a floating-point operation to a constant, or return null.
+LLVM_ABI ConstantFP *
+tryFoldFPConst(Type *Ty, FPOp Opcode, ArrayRef<APFloat> Args,
+               DenormalMode Denorms,
+               bool AvoidFoldingToNaN = shouldAvoidFoldingToNaN());
+
+/// Try to fold a floating-point operation with an explicit rounding mode.
+LLVM_ABI ConstantFP *
+tryFoldFPConstWithRM(Type *Ty, FPOp Opcode, ArrayRef<APFloat> Args,
+                     RoundingMode RM, DenormalMode Denorms,
+                     bool AvoidFoldingToNaN = shouldAvoidFoldingToNaN());
 
 // Constant fold various types of instruction...
 LLVM_ABI Constant *
@@ -78,10 +92,13 @@ LLVM_ABI Constant *ConstantFoldInsertValueInstruction(Constant *Agg,
                                                       Constant *Val,
                                                       ArrayRef<unsigned> Idxs);
 LLVM_ABI Constant *ConstantFoldUnaryInstruction(unsigned Opcode, Constant *V);
-LLVM_ABI Constant *ConstantFoldBinaryInstruction(unsigned Opcode, Constant *V1,
-                                                 Constant *V2);
-LLVM_ABI Constant *ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
-                                                  Constant *C1, Constant *C2);
+LLVM_ABI Constant *ConstantFoldBinaryInstruction(
+    unsigned Opcode, Constant *C1, Constant *C2,
+    DenormalMode Denormals = DenormalMode::getDynamic(),
+    bool AvoidFoldingToNaN = shouldAvoidFoldingToNaN());
+LLVM_ABI Constant *ConstantFoldCompareInstruction(
+    CmpInst::Predicate Predicate, Constant *C1, Constant *C2,
+    DenormalMode Denormals = DenormalMode::getDynamic());
 LLVM_ABI Constant *
 ConstantFoldGetElementPtr(Type *Ty, Constant *C,
                           std::optional<ConstantRange> InRange,
