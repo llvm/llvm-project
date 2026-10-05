@@ -1,0 +1,97 @@
+# RUN: llc -mtriple=amdgpu9.08 -amdgpu-mfma-padding-ratio=100 -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefix=PAD100 %s
+
+# The padding a neighbor asks for scales its own pipeline latency, so the wide
+# 32x32 asks for 16 and the narrow 4x4 for 2. Both are one slot away, so the
+# wide one decides: 16 - 1 = 15 wait states, encoded as S_NOP 14, whichever
+# path the layout puts first.
+
+# PAD100-LABEL: name: mfma_padding_narrow_predecessor_first
+# PAD100:      bb.3:
+# PAD100-NEXT: S_NOP 14
+
+# PAD100-LABEL: name: mfma_padding_wide_predecessor_first
+# PAD100:      bb.3:
+# PAD100-NEXT: S_NOP 14
+---
+name: mfma_padding_narrow_predecessor_first
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.2
+
+  bb.1:
+    successors: %bb.3
+    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.3:
+    $agpr20_agpr21_agpr22_agpr23 = V_MFMA_F32_4X4X1F32_e64 $vgpr3, $vgpr2, $agpr20_agpr21_agpr22_agpr23, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...
+---
+name: mfma_padding_wide_predecessor_first
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.2
+
+  bb.1:
+    successors: %bb.3
+    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.3:
+    $agpr20_agpr21_agpr22_agpr23 = V_MFMA_F32_4X4X1F32_e64 $vgpr3, $vgpr2, $agpr20_agpr21_agpr22_agpr23, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...
+
+# Unequal windows at unequal distances: the wide 32x32 asks for 16 and sits ten
+# slots away, the narrow 4x4 asks for 2 and sits one away, so the wide one
+# still decides at 16 - 10 = 6 wait states, encoded as S_NOP 5.
+
+# PAD100-LABEL: name: mfma_padding_far_wide_near_narrow
+# PAD100:      bb.3:
+# PAD100-NEXT: S_NOP 5
+---
+name: mfma_padding_far_wide_near_narrow
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.2
+
+  bb.1:
+    successors: %bb.3
+    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    $sgpr4 = S_MOV_B32 0
+    $sgpr4 = S_MOV_B32 1
+    $sgpr4 = S_MOV_B32 2
+    $sgpr4 = S_MOV_B32 3
+    $sgpr4 = S_MOV_B32 4
+    $sgpr4 = S_MOV_B32 5
+    $sgpr4 = S_MOV_B32 6
+    $sgpr4 = S_MOV_B32 7
+    $sgpr4 = S_MOV_B32 8
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.3:
+    $agpr20_agpr21_agpr22_agpr23 = V_MFMA_F32_4X4X1F32_e64 $vgpr3, $vgpr2, $agpr20_agpr21_agpr22_agpr23, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...

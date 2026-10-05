@@ -472,3 +472,81 @@ body:             |
     $vgpr4 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
 ...
 ---
+# An accvgpr read needs 18 wait states after a 16-pass producer and 4 after a 2-pass one, so a
+# window taken from one producer and a distance from another belongs to neither. Here the 16-pass
+# producer is 9 wait states away and the 2-pass one 1, making 9 the answer; taking the largest
+# window with the shortest distance gives 17.
+
+# GCN-LABEL: name: accvgpr_read_mixed_shapes
+# GCN:      bb.3:
+# GCN-NEXT: S_NOP 8
+# GCN-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64
+name:            accvgpr_read_mixed_shapes
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3
+    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    $sgpr0 = S_MOV_B32 0
+    $sgpr1 = S_MOV_B32 0
+    $sgpr2 = S_MOV_B32 0
+    $sgpr3 = S_MOV_B32 0
+    $sgpr4 = S_MOV_B32 0
+    $sgpr5 = S_MOV_B32 0
+    $sgpr6 = S_MOV_B32 0
+    $sgpr7 = S_MOV_B32 0
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.3:
+    $vgpr2 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec
+    S_ENDPGM 0
+...
+# An accvgpr write must wait 5 wait states after a 16x16 read the register as srcC and 13 after a
+# 32x32. The nearer 32x32 here reads agpr[40:55] and so overlaps nothing, leaving the answer to the
+# 16x16 one instruction further back: 5 - 1 = 4. Accumulating the largest latency seen asked for 12.
+
+# GCN-LABEL: name: accvgpr_write_srcc_decoy
+# GCN:      V_MFMA_F32_32X32X2F32
+# GCN-NEXT: S_NOP 3
+# GCN-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32
+name:            accvgpr_write_srcc_decoy
+body:             |
+  bb.0:
+    $agpr64_agpr65_agpr66_agpr67_agpr68_agpr69_agpr70_agpr71_agpr72_agpr73_agpr74_agpr75_agpr76_agpr77_agpr78_agpr79 = V_MFMA_F32_16X16X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr80_agpr81_agpr82_agpr83_agpr84_agpr85_agpr86_agpr87_agpr88_agpr89_agpr90_agpr91_agpr92_agpr93_agpr94_agpr95 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr40_agpr41_agpr42_agpr43_agpr44_agpr45_agpr46_agpr47_agpr48_agpr49_agpr50_agpr51_agpr52_agpr53_agpr54_agpr55, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr1 = V_ACCVGPR_WRITE_B32_e64 1, implicit $exec
+    S_ENDPGM 0
+...
+# An accvgpr write needs 15 wait states after a 32x32 wrote the register. The edge to bb.2 leaves
+# the S_BRANCH after the taken branch unexecuted, so 13 have passed and 2 remain.
+
+# GCN-LABEL: name: accvgpr_write_after_unexecuted_branch
+# GCN:      bb.2:
+# GCN-NEXT: S_NOP 1
+# GCN-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32
+name:            accvgpr_write_after_unexecuted_branch
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr0, $vgpr1, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    S_NOP 7
+    S_NOP 3
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_ENDPGM 0
+
+  bb.2:
+    $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec
+    S_ENDPGM 0
+...
