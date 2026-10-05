@@ -157,6 +157,17 @@ public:
   bool linkCXXRuntimes() const { return LinkCXXRuntimes; }
   bool hasCrossDsoCfi() const { return CfiCrossDso; }
   bool hasAnySanitizer() const { return !Sanitizers.empty(); }
+
+  /// If an enabled sanitizer cannot be combined with \p Wanted, describe the
+  /// argument that enabled it (e.g. "-fsanitize=thread"); otherwise return an
+  /// empty string.
+  ///
+  /// \p Wanted need not be enabled here. This answers whether it *could* be,
+  /// which is what a toolchain needs when something other than '-fsanitize='
+  /// pulls a sanitizer runtime into the link.
+  std::string getConflictingSanitizerArg(const ToolChain &TC,
+                                         const llvm::opt::ArgList &Args,
+                                         SanitizerMask Wanted) const;
   void addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                llvm::opt::ArgStringList &CmdArgs, types::ID InputType) const;
 };

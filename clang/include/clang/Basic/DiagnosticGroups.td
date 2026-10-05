@@ -1847,6 +1847,9 @@ def HIPOnly : DiagGroup<"hip-only">;
 // Warning about mixed HIP and OpenMP compilation / target offloading.
 def HIPOpenMPOffloading: DiagGroup<"hip-omp-target-directives">;
 
+// Warnings about sanitizer runtimes required by the HIP runtime itself.
+def HIPRuntimeSanitizer : DiagGroup<"hip-runtime-sanitizer">;
+
 // Warning about multiple GPUs are detected.
 def MultiGPU: DiagGroup<"multi-gpu">;
 

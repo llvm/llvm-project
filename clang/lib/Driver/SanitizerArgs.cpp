@@ -88,6 +88,63 @@ static const SanitizerMask CompatibleWithMinimalRuntime =
     SanitizerKind::MemtagHeap | SanitizerKind::MemtagGlobals |
     SanitizerKind::KCFI | SanitizerKind::AllocToken;
 
+/// Pairs of sanitizer groups that cannot be used together. The relation is
+/// symmetric: a pair means neither member of the first group may be combined
+/// with any member of the second, whichever one the user asked for first.
+static SmallVector<std::pair<SanitizerMask, SanitizerMask>>
+getIncompatibleGroups(const ToolChain &TC) {
+  return {
+      std::make_pair(SanitizerKind::Address,
+                     SanitizerKind::Thread | SanitizerKind::Memory),
+      std::make_pair(SanitizerKind::Type,
+                     SanitizerKind::Address | SanitizerKind::KernelAddress |
+                         SanitizerKind::Memory | SanitizerKind::Leak |
+                         SanitizerKind::Thread),
+      std::make_pair(SanitizerKind::Thread, SanitizerKind::Memory),
+      std::make_pair(SanitizerKind::Leak,
+                     SanitizerKind::Thread | SanitizerKind::Memory),
+      std::make_pair(SanitizerKind::KernelAddress,
+                     SanitizerKind::Address | SanitizerKind::Leak |
+                         SanitizerKind::Thread | SanitizerKind::Memory),
+      std::make_pair(SanitizerKind::HWAddress,
+                     SanitizerKind::Address | SanitizerKind::Thread |
+                         SanitizerKind::Memory | SanitizerKind::KernelAddress),
+      std::make_pair(SanitizerKind::Scudo,
+                     SanitizerKind::Address | SanitizerKind::HWAddress |
+                         SanitizerKind::Leak | SanitizerKind::Thread |
+                         SanitizerKind::Memory | SanitizerKind::KernelAddress),
+      std::make_pair(SanitizerKind::SafeStack,
+                     (TC.getTriple().isOSFuchsia() ? SanitizerMask()
+                                                   : SanitizerKind::Leak) |
+                         SanitizerKind::Address | SanitizerKind::HWAddress |
+                         SanitizerKind::Thread | SanitizerKind::Memory |
+                         SanitizerKind::KernelAddress),
+      std::make_pair(SanitizerKind::KernelHWAddress,
+                     SanitizerKind::Address | SanitizerKind::HWAddress |
+                         SanitizerKind::Leak | SanitizerKind::Thread |
+                         SanitizerKind::Memory | SanitizerKind::KernelAddress |
+                         SanitizerKind::SafeStack),
+      std::make_pair(SanitizerKind::KernelMemory,
+                     SanitizerKind::Address | SanitizerKind::HWAddress |
+                         SanitizerKind::Leak | SanitizerKind::Thread |
+                         SanitizerKind::Memory | SanitizerKind::KernelAddress |
+                         SanitizerKind::Scudo | SanitizerKind::SafeStack),
+      std::make_pair(SanitizerKind::MemTag, SanitizerKind::Address |
+                                                SanitizerKind::KernelAddress |
+                                                SanitizerKind::HWAddress |
+                                                SanitizerKind::KernelHWAddress),
+      std::make_pair(SanitizerKind::KCFI, SanitizerKind::Function),
+      std::make_pair(SanitizerKind::Realtime,
+                     SanitizerKind::Address | SanitizerKind::Thread |
+                         SanitizerKind::Undefined | SanitizerKind::Memory |
+                         SanitizerKind::Type),
+      std::make_pair(SanitizerKind::AllocToken,
+                     SanitizerKind::Address | SanitizerKind::HWAddress |
+                         SanitizerKind::KernelAddress |
+                         SanitizerKind::KernelHWAddress |
+                         SanitizerKind::Memory)};
+}
+
 enum CoverageFeature {
   CoverageFunc = 1 << 0,
   CoverageBB = 1 << 1,
@@ -428,6 +485,24 @@ bool SanitizerArgs::needsLTO() const {
   return static_cast<bool>(Sanitizers.Mask & NeedsLTO);
 }
 
+std::string
+SanitizerArgs::getConflictingSanitizerArg(const ToolChain &TC,
+                                          const llvm::opt::ArgList &Args,
+                                          SanitizerMask Wanted) const {
+  // The table lists each incompatibility once, so check both directions.
+  SanitizerMask Conflicting;
+  for (auto G : getIncompatibleGroups(TC)) {
+    if (Wanted & G.first)
+      Conflicting |= Sanitizers.Mask & G.second;
+    if (Wanted & G.second)
+      Conflicting |= Sanitizers.Mask & G.first;
+  }
+
+  if (!Conflicting)
+    return {};
+  return lastArgumentForMask(TC.getDriver(), Args, Conflicting);
+}
+
 SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                              const llvm::opt::ArgList &Args,
                              bool DiagnoseErrors, bool DiagnoseBoundArchErrors,
@@ -731,56 +806,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     }
   }
 
-  std::pair<SanitizerMask, SanitizerMask> IncompatibleGroups[] = {
-      std::make_pair(SanitizerKind::Address,
-                     SanitizerKind::Thread | SanitizerKind::Memory),
-      std::make_pair(SanitizerKind::Type,
-                     SanitizerKind::Address | SanitizerKind::KernelAddress |
-                         SanitizerKind::Memory | SanitizerKind::Leak |
-                         SanitizerKind::Thread),
-      std::make_pair(SanitizerKind::Thread, SanitizerKind::Memory),
-      std::make_pair(SanitizerKind::Leak,
-                     SanitizerKind::Thread | SanitizerKind::Memory),
-      std::make_pair(SanitizerKind::KernelAddress,
-                     SanitizerKind::Address | SanitizerKind::Leak |
-                         SanitizerKind::Thread | SanitizerKind::Memory),
-      std::make_pair(SanitizerKind::HWAddress,
-                     SanitizerKind::Address | SanitizerKind::Thread |
-                         SanitizerKind::Memory | SanitizerKind::KernelAddress),
-      std::make_pair(SanitizerKind::Scudo,
-                     SanitizerKind::Address | SanitizerKind::HWAddress |
-                         SanitizerKind::Leak | SanitizerKind::Thread |
-                         SanitizerKind::Memory | SanitizerKind::KernelAddress),
-      std::make_pair(SanitizerKind::SafeStack,
-                     (TC.getTriple().isOSFuchsia() ? SanitizerMask()
-                                                   : SanitizerKind::Leak) |
-                         SanitizerKind::Address | SanitizerKind::HWAddress |
-                         SanitizerKind::Thread | SanitizerKind::Memory |
-                         SanitizerKind::KernelAddress),
-      std::make_pair(SanitizerKind::KernelHWAddress,
-                     SanitizerKind::Address | SanitizerKind::HWAddress |
-                         SanitizerKind::Leak | SanitizerKind::Thread |
-                         SanitizerKind::Memory | SanitizerKind::KernelAddress |
-                         SanitizerKind::SafeStack),
-      std::make_pair(SanitizerKind::KernelMemory,
-                     SanitizerKind::Address | SanitizerKind::HWAddress |
-                         SanitizerKind::Leak | SanitizerKind::Thread |
-                         SanitizerKind::Memory | SanitizerKind::KernelAddress |
-                         SanitizerKind::Scudo | SanitizerKind::SafeStack),
-      std::make_pair(SanitizerKind::MemTag, SanitizerKind::Address |
-                                                SanitizerKind::KernelAddress |
-                                                SanitizerKind::HWAddress |
-                                                SanitizerKind::KernelHWAddress),
-      std::make_pair(SanitizerKind::KCFI, SanitizerKind::Function),
-      std::make_pair(SanitizerKind::Realtime,
-                     SanitizerKind::Address | SanitizerKind::Thread |
-                         SanitizerKind::Undefined | SanitizerKind::Memory |
-                         SanitizerKind::Type),
-      std::make_pair(SanitizerKind::AllocToken,
-                     SanitizerKind::Address | SanitizerKind::HWAddress |
-                         SanitizerKind::KernelAddress |
-                         SanitizerKind::KernelHWAddress |
-                         SanitizerKind::Memory)};
+  auto IncompatibleGroups = getIncompatibleGroups(TC);
 
   // Enable toolchain specific default sanitizers if not explicitly disabled.
   SanitizerMask Default = TC.getDefaultSanitizers() & ~AllRemove;

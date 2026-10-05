@@ -1954,6 +1954,17 @@ bool tools::addHIPRuntimeSanitizerRuntimes(const ToolChain &TC,
     return false;
 
   const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
+  // A sanitizer that cannot share a process with ASan cannot be used against an
+  // ASan-instrumented HIP runtime either, no matter how the ASan runtime got
+  // into the link. '-no-hip-rt' or '--no-offloadlib' leaves the runtime out.
+  if (std::string Conflicting =
+          SanArgs.getConflictingSanitizerArg(TC, Args, SanitizerKind::Address);
+      !Conflicting.empty()) {
+    TC.getDriver().Diag(diag::err_drv_hip_runtime_asan_incompatible_sanitizer)
+        << Conflicting;
+    return false;
+  }
+
   // The user asked to handle sanitizer runtime linking themselves.
   if (!SanArgs.linkRuntimes())
     return false;

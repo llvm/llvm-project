@@ -67,6 +67,38 @@
 // EXPLICIT:     "{{.*}}libclang_rt.asan{{[^"]*}}.so"
 // EXPLICIT-NOT: "{{.*}}libclang_rt.asan{{[^"]*}}.so"
 
+// A sanitizer that cannot share a process with ASan is an error, even though
+// the ASan here comes from the HIP runtime rather than from '-fsanitize='.
+// RUN: not %clang -### --hip-link --target=x86_64-linux-gnu \
+// RUN:   --rocm-path=%t/rocm-asan -fsanitize=thread %t/in.o 2>&1 \
+// RUN:   | FileCheck -check-prefix=CONFLICT %s
+
+// CONFLICT: error: '-fsanitize=thread' is not allowed with the HIP runtime, which is built with the address sanitizer
+
+// RUN: not %clang -### --hip-link --target=x86_64-linux-gnu \
+// RUN:   --rocm-path=%t/rocm-asan -fsanitize=memory %t/in.o 2>&1 \
+// RUN:   | FileCheck -check-prefix=CONFLICT-MSAN %s
+
+// CONFLICT-MSAN: error: '-fsanitize=memory' is not allowed with the HIP runtime, which is built with the address sanitizer
+
+// The conflict is reported even when the user links the runtimes themselves,
+// since it is the instrumentation that cannot coexist, not the libraries.
+// RUN: not %clang -### --hip-link --target=x86_64-linux-gnu \
+// RUN:   --rocm-path=%t/rocm-asan -fsanitize=thread -fno-sanitize-link-runtime \
+// RUN:   %t/in.o 2>&1 | FileCheck -check-prefix=CONFLICT %s
+
+// Dropping the HIP runtime from the link removes the conflict.
+// RUN: %clang -### --hip-link --target=x86_64-linux-gnu \
+// RUN:   --rocm-path=%t/rocm-asan -fsanitize=thread -no-hip-rt %t/in.o 2>&1 \
+// RUN:   | FileCheck -check-prefix=NOCONFLICT %s
+
+// NOCONFLICT-NOT: error:
+
+// A sanitizer that is compatible with ASan is not affected.
+// RUN: %clang -### --hip-link --target=x86_64-linux-gnu \
+// RUN:   --rocm-path=%t/rocm-asan -fsanitize=undefined %t/in.o 2>&1 \
+// RUN:   | FileCheck -check-prefix=NOCONFLICT %s
+
 // The HIP runtime is a shared library, so an explicit request for the static
 // ASan runtime cannot be honored and is diagnosed.
 // RUN: %clang -### --hip-link --target=x86_64-linux-gnu \
