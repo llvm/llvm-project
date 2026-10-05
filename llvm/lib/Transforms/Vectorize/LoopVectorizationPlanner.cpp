@@ -907,7 +907,7 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
       Legal->hasUncountableEarlyExit())
     return false;
 
-  // Not implemented yet.
+  // TODO: Not implemented yet.
   if (EnableVPlanBasedStrideMV)
     return false;
 

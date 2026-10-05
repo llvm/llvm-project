@@ -5946,8 +5946,8 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
     if (VPI->getMask()) {
       Instruction *I = VPI->getUnderlyingInstr();
       // Don't speculate unit-strideness if it won't result in any unit-strided
-      // loads, as we'd pay the price of not taking vector loop if the runtime
-      // condition is false for no benefits.
+      // accesses, as we'd pay the price of not taking vector loop if the
+      // runtime condition is false for no benefits.
       if (!CostCtx.Config.isLegalMaskedLoadOrStore(IsLoad, ScalarTy,
                                                    getLoadStoreAlignment(I),
                                                    getLoadStoreAddressSpace(I)))
