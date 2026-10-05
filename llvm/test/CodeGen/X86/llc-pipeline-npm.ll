@@ -142,6 +142,7 @@
 ; O2-NEXT:     dead-mi-elimination
 ; O2-NEXT:     LiveRangeShrinkPass
 ; O2-NEXT:     x86-fixup-setcc
+; O2-NEXT:     x86-optimize-leas
 ; O2-NEXT:     x86-cf-opt
 ; O2-NEXT:     x86-avoid-sfb
 ; O2-NEXT:     x86-suppress-apx-for-relocation
@@ -348,6 +349,7 @@
 ; O3-WINDOWS-NEXT:     dead-mi-elimination
 ; O3-WINDOWS-NEXT:     LiveRangeShrinkPass
 ; O3-WINDOWS-NEXT:     x86-fixup-setcc
+; O3-WINDOWS-NEXT:     x86-optimize-leas
 ; O3-WINDOWS-NEXT:     x86-cf-opt
 ; O3-WINDOWS-NEXT:     x86-avoid-sfb
 ; O3-WINDOWS-NEXT:     x86-suppress-apx-for-relocation
