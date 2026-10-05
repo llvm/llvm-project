@@ -70,7 +70,7 @@ struct ConstIncompatibleView : IntBufferView {
 };
 
 constexpr bool test() {
-  int buffer[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+  int buffer[] = {0, 1, 2, 3, 85};
   {
     // simple-view: const and non-const have the same iterator/sentinel type
     using View = std::ranges::enumerate_view<SimpleNonCommon>;
@@ -85,7 +85,7 @@ constexpr bool test() {
     assert(ev.begin() + 1 != ev.end());
     assert(ev.begin() + 2 != ev.end());
     assert(ev.begin() + 3 != ev.end());
-    assert(ev.begin() + 10 == ev.end());
+    assert(ev.begin() + 5 == ev.end());
   }
 
   {
@@ -110,15 +110,15 @@ constexpr bool test() {
     View ev{NonSimpleNonCommon(buffer)};
 
     assert(ev.begin() != ev.end());
-    assert(ev.begin() + 10 == ev.end());
+    assert(ev.begin() + 5 == ev.end());
 
     assert(ev.begin() != std::as_const(ev).end());
-    assert(ev.begin() + 10 == std::as_const(ev).end());
+    assert(ev.begin() + 5 == std::as_const(ev).end());
     // the above works because
     static_assert(std::convertible_to<Iter, ConstIter>);
 
     assert(std::as_const(ev).begin() != std::as_const(ev).end());
-    assert(std::as_const(ev).begin() + 10 == std::as_const(ev).end());
+    assert(std::as_const(ev).begin() + 5 == std::as_const(ev).end());
   }
 
   {
@@ -143,18 +143,18 @@ constexpr bool test() {
     View ev{ComparableView(buffer)};
 
     assert(ev.begin() != ev.end());
-    assert(ev.begin() + 10 == ev.end());
+    assert(ev.begin() + 5 == ev.end());
 
     static_assert(!std::convertible_to<Iter, ConstIter>);
 
     assert(ev.begin() != std::as_const(ev).end());
-    assert(ev.begin() + 10 == std::as_const(ev).end());
+    assert(ev.begin() + 5 == std::as_const(ev).end());
 
     assert(std::as_const(ev).begin() != ev.end());
-    assert(std::as_const(ev).begin() + 10 == ev.end());
+    assert(std::as_const(ev).begin() + 5 == ev.end());
 
     assert(std::as_const(ev).begin() != std::as_const(ev).end());
-    assert(std::as_const(ev).begin() + 10 == std::as_const(ev).end());
+    assert(std::as_const(ev).begin() + 5 == std::as_const(ev).end());
   }
 
   {
@@ -179,10 +179,10 @@ constexpr bool test() {
     View ev{ComparableView(buffer)};
 
     assert(ev.begin() != ev.end());
-    assert(ev.begin() + 10 == ev.end());
+    assert(ev.begin() + 5 == ev.end());
 
     assert(std::as_const(ev).begin() != std::as_const(ev).end());
-    assert(std::as_const(ev).begin() + 10 == std::as_const(ev).end());
+    assert(std::as_const(ev).begin() + 5 == std::as_const(ev).end());
   }
 
   {
@@ -192,7 +192,7 @@ constexpr bool test() {
     using View          = MinimalView<InputIterator, Sentinel>;
     static_assert(simple_view<View>);
 
-    View mv{InputIterator(buffer), Sentinel(InputIterator(buffer + 10))};
+    View mv{InputIterator(buffer), Sentinel(InputIterator(buffer + 5))};
     std::ranges::enumerate_view ev(std::move(mv));
 
     auto it = ev.begin();
@@ -201,8 +201,7 @@ constexpr bool test() {
 
     // enumerate_view iterator only has operator+ when the underlying range is random-access.
     // for input_iterator we increment it explicitly.
-    for (int i = 0; i != 10; ++i)
-      ++it;
+    std::ranges::advance(it, 5);
 
     assert(it == ev.end());
     assert(ev.end() == it);
