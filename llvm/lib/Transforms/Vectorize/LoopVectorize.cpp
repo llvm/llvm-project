@@ -5279,6 +5279,7 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
              isa<UncondBrInst>(&I);
     });
   };
+  SmallPtrSet<Instruction *, 16> ProcessedDeadOps;
   for (unsigned I = 0; I != DeadOps.size(); ++I) {
     auto *Op = dyn_cast<Instruction>(DeadOps[I]);
 
@@ -5315,12 +5316,17 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
     // If all of Op's users are in ValuesToIgnore, add it to ValuesToIgnore
     // which applies for both scalar and vector versions. Otherwise it is only
     // dead in vector versions, so only add it to VecValuesToIgnore.
+    bool BecameScalarDead = false;
     if (all_of(Op->users(),
                [this](User *U) { return ValuesToIgnore.contains(U); }))
-      ValuesToIgnore.insert(Op);
+      BecameScalarDead = ValuesToIgnore.insert(Op).second;
 
     VecValuesToIgnore.insert(Op);
-    append_range(DeadOps, Op->operands());
+    // Shared operands may be queued more than once. Propagate deadness once,
+    // and again if an instruction previously dead only in the vector loop
+    // becomes dead in the scalar loop too.
+    if (ProcessedDeadOps.insert(Op).second || BecameScalarDead)
+      append_range(DeadOps, Op->operands());
   }
 
   // Ignore type-promoting instructions we identified during reduction

@@ -321,6 +321,7 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   if (Opts.enable_ipra != BoolOrDefault::Default)
     Opt.EnableIPRA = Opts.enable_ipra == BoolOrDefault::True;
   Opt.EnableFastISelOption = toBoolOrDefault(Opts.fast_isel);
+  Opt.EnableRegAllocFastTied = toBoolOrDefault(Opts.regalloc_fast_tied);
   Opt.EnableGlobalISelOption = toBoolOrDefault(Opts.global_isel);
   Opt.VerifyMachineCode = toBoolOrDefault(Opts.verify_machineinstrs);
   Opt.DisableAtExitBasedGlobalDtorLowering =
@@ -441,6 +442,10 @@ TargetPassConfig::TargetPassConfig(TargetMachine &TM, PassManagerBase &PM)
 
   if (TM.Options.EnableIPRA)
     setRequiresCodeGenSCCOrder();
+
+  if (Opts.regalloc_fast_tied != BoolOrDefault::Default)
+    TM.setEnableTiedFastRegAlloc(Opts.regalloc_fast_tied ==
+                                 BoolOrDefault::True);
 
   if (Opts.global_isel_abort)
     TM.Options.GlobalISelAbort = *Opts.global_isel_abort;
@@ -1301,7 +1306,8 @@ bool TargetPassConfig::usingDefaultRegAlloc() const {
 /// register allocation. No coalescing or scheduling.
 void TargetPassConfig::addFastRegAlloc() {
   addPass(&PHIEliminationID);
-  addPass(&TwoAddressInstructionPassID);
+  if (!TM->enableTiedFastRegAlloc())
+    addPass(&TwoAddressInstructionPassID);
 
   addRegAssignAndRewriteFast();
 }
