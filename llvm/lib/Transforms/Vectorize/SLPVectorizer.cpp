@@ -25939,7 +25939,7 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
   // loop-defined bases to poison in predecessor-less blocks. Expand at the
   // first insertion point, where no body instruction dominates, so the check
   // cannot reuse scalars that are moved into the vector block and deleted.
-  IRBuilder<> ChkBuilder(BB, BB->getFirstInsertionPt());
+  IRBuilder<> ChkBuilder(BB->getFirstInsertionPt());
   ChkBuilder.SetCurrentDebugLocation(Term->getDebugLoc());
   SCEVExpander Exp(*SE, "slp.rtcheck");
   Value *Cond = emitRuntimeAliasCheck(ChkBuilder, Exp);
@@ -26447,6 +26447,8 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
           auto *I = dyn_cast<Instruction>(Ex);
           ScalarToEEs[Key].try_emplace(I ? I->getParent() : &F->getEntryBlock(),
                                        std::make_pair(Ex, ExV));
+          if (Inst && ExV != Inst && ExV->getType() == Inst->getType())
+            redirectDbgValues(*Inst, *ExV);
         }
         // The then branch of the previous if may produce constants, since 0
         // operand might be a constant.
@@ -30633,7 +30635,16 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
     auto *VecTy = getWidenedType(ScalarTy, VF);
     if (R.getNumberOfParts(VecTy, ScalarTy) == VF)
       continue;
+    // The window revisiting the dependent seeds skipped by the last vectorized
+    // window, 0 if there is none.
+    unsigned RevisitI = 0;
     for (unsigned I = NextInst; I < MaxInst; ++I) {
+      // The skipped seeds are revisited, continue as if they were not skipped.
+      if (RevisitI && I > RevisitI) {
+        I = NextInst - 1;
+        RevisitI = 0;
+        continue;
+      }
       unsigned ActualVF = std::min(MaxInst - I, VF);
 
       if (!hasFullVectorsOrPowerOf2(*TTI, ScalarTy, ActualVF, SLPReVec) &&
@@ -30729,9 +30740,10 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
 
         R.vectorizeTree();
         // Move to the next bundle. The skipped dependent seeds are fed by the
-        // vectorized lanes now, the next bundle starts from the first of them.
-        I = FirstSkipped ? *FirstSkipped - 1 : I + VF - 1;
-        NextInst = I + 1;
+        // vectorized lanes now, revisit them first.
+        NextInst = I + VF;
+        RevisitI = FirstSkipped.value_or(0);
+        I = FirstSkipped.value_or(NextInst) - 1;
         Changed = true;
       } else {
         R.analyzedBundle(Ops);
@@ -32419,9 +32431,8 @@ public:
       return nullptr;
     }
 
-    IRBuilder<TargetFolder> Builder(ReductionRoot->getContext(),
-                                    TargetFolder(DL));
-    Builder.SetInsertPoint(cast<Instruction>(ReductionRoot));
+    IRBuilder<TargetFolder> Builder(
+        cast<Instruction>(ReductionRoot)->getIterator(), TargetFolder(DL));
     // The scalar parts (scaled reused values, their combines) are emitted right
     // before the root; the instruction preceding them is remembered to drop
     // them, if the sign-aware reduction is abandoned.
@@ -33564,10 +33575,9 @@ public:
     assert(NegatedReducedVals.empty() &&
            "Unexpected negated reduced values in the ordered reduction");
 
-    IRBuilder<TargetFolder> Builder(ReductionRoot->getContext(),
-                                    TargetFolder(DL));
     Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
-    Builder.SetInsertPoint(RdxRootInst);
+    IRBuilder<TargetFolder> Builder(RdxRootInst->getIterator(),
+                                    TargetFolder(DL));
 
     // Track the reduced values in case if they are replaced by extractelement
     // because of the vectorization.

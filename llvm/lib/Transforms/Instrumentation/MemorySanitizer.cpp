@@ -1267,7 +1267,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     MS.initializeCallbacks(*F.getParent(), TLI);
     FnPrologueEnd =
-        IRBuilder<>(&F.getEntryBlock(), F.getEntryBlock().getFirstNonPHIIt())
+        IRBuilder<>(F.getEntryBlock().getFirstNonPHIIt())
             .CreateIntrinsicWithoutFolding(Intrinsic::donothing, {});
 
     if (MS.CompileKernel) {
