@@ -417,7 +417,8 @@ public:
 
   virtual bool isLegalAltInstr(VectorType *VecTy, unsigned Opcode0,
                                unsigned Opcode1,
-                               const SmallBitVector &OpcodeMask) const {
+                               const SmallBitVector &OpcodeMask,
+                               ArrayRef<const Value *> Scalars) const {
     return false;
   }
 
@@ -775,10 +776,11 @@ public:
     return 1;
   }
 
-  virtual InstructionCost getAltInstrCost(VectorType *VecTy, unsigned Opcode0,
-                                          unsigned Opcode1,
-                                          const SmallBitVector &OpcodeMask,
-                                          TTI::TargetCostKind CostKind) const {
+  virtual InstructionCost
+  getAltInstrCost(VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
+                  const SmallBitVector &OpcodeMask,
+                  TTI::TargetCostKind CostKind,
+                  ArrayRef<const Value *> Scalars) const {
     return InstructionCost::getInvalid();
   }
 
