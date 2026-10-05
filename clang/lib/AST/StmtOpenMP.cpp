@@ -193,6 +193,13 @@ bool OMPLoopBasedDirective::doForAllLoops(
       if (!Dir)
         break;
 
+      // tile/stripe regenerate intermediate loop bodies and drop the helper
+      // statements reverse injects into the body of the loop it transforms;
+      // compose only when the reversed loop is the innermost one.
+      if (RelaxNestForPeeledTransformation &&
+          isa<OMPReverseDirective>(Dir->getDirective()) &&
+          Cnt + 1 < NumLoops)
+        break;
       OnTransformationCallback(Dir);
 
       Stmt *TransformedStmt = Dir->getTransformedStmt();
