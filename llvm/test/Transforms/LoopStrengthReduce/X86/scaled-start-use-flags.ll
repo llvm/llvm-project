@@ -11,7 +11,7 @@ define i32 @scaled_nuw(ptr %dst, i32 %a, i32 %b, i32 %n, i1 %enter) {
 ; CHECK-NEXT:    br i1 [[ENTER]], label %[[PH:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[PH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[N]], [[A]]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[B]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i32 [[B]], [[A]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[B]] to i64
@@ -66,7 +66,7 @@ define i32 @scaled_nuw_bypass_first(ptr %dst, i32 %a, i32 %b, i32 %n, i1 %enter)
 ; CHECK-NEXT:    ret i32 [[BARE]]
 ; CHECK:       [[PH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[N]], [[A]]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[B]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i32 [[B]], [[A]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[B]] to i64
@@ -163,7 +163,7 @@ define i32 @scaled_nuw_shared_product(ptr %dst, i32 %a, i32 %b, i32 %n, i1 %ente
 ; CHECK-NEXT:    br i1 [[ENTER]], label %[[PH:.*]], label %[[BYPASS:.*]]
 ; CHECK:       [[PH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[N]], [[A]]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[B]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i32 [[B]], [[A]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[B]] to i64
@@ -210,7 +210,7 @@ define void @scaled_nuw_variable_step(ptr %dst, i32 %a, i32 %b, i32 %step, i32 %
 ; CHECK-SAME: ptr [[DST:%.*]], i32 [[A:%.*]], i32 [[B:%.*]], i32 [[STEP:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[A]], [[N]]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[B]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i32 [[B]], [[A]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[STEP]], [[B]]
@@ -291,7 +291,7 @@ define i32 @scaled_nuw_nested(ptr %dst, i32 %a, i32 %b, i32 %outer_n, i32 %inner
 ; CHECK-LABEL: define i32 @scaled_nuw_nested(
 ; CHECK-SAME: ptr [[DST:%.*]], i32 [[A:%.*]], i32 [[B:%.*]], i32 [[OUTER_N:%.*]], i32 [[INNER_N:%.*]], i1 [[ENTER:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[B]], [[A]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw i32 [[B]], [[A]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[B]] to i64
