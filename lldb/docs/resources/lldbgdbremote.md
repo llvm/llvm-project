@@ -284,6 +284,38 @@ the modules will be interesting to the client.
 will be used, which may be slower if the target contains a large number of modules
 and the communication link has a non-negligible latency.
 
+## jLLDBSettings
+
+This packet requests LLDB-specific settings for the process on the current
+GDB-remote connection. It requires the `lldb-settings+` feature from
+`qSupported`.
+
+```
+LLDB SENDS:    jLLDBSettings
+STUB REPLIES:  {"dyld_plugin_name":<string>,"gpu_plugin_name":<string>,"send_dyld_packet_to_gpu":<boolean>}
+```
+
+The fields are:
+
+- `dyld_plugin_name`: The name of the dynamic-loader plugin LLDB should use. If
+  absent or empty LLDB will select the dynamic loader based on the target
+  triple automatically.
+- `gpu_plugin_name`: identifies the server-side GPU plugin. This setting is
+  only needed when `send_dyld_packet_to_gpu` is false.
+- `send_dyld_packet_to_gpu`: if true, LLDB sends the dynamic-loader packet on
+  this GPU connection. If false, LLDB sends it on the native process's
+  connection, which forwards it to `gpu_plugin_name`. If absent, this defaults
+  to true.
+
+The settings object can be extended with more fields as needed.
+
+Example:
+
+```
+LLDB SENDS:    jLLDBSettings
+STUB REPLIES:  {"dyld_plugin_name":"accelerator-gdb-remote","gpu_plugin_name":"mock","send_dyld_packet_to_gpu":true}
+```
+
 ## jLLDBTraceGetBinaryData
 
 Get binary data given a trace technology and a data identifier.

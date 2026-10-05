@@ -148,6 +148,28 @@ TEST(AcceleratorGDBRemotePacketsTest, AcceleratorActionsEmpty) {
   EXPECT_TRUE(deserialized->breakpoints.empty());
 }
 
+TEST(AcceleratorGDBRemotePacketsTest, LLDBSettings) {
+  LLDBSettings settings;
+  settings.dyld_plugin_name = "accelerator-gdb-remote";
+  settings.gpu_plugin_name = "mock";
+  settings.send_dyld_packet_to_gpu = false;
+
+  Expected<LLDBSettings> deserialized = roundtripJSON(settings);
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  EXPECT_EQ("accelerator-gdb-remote", deserialized->dyld_plugin_name);
+  EXPECT_EQ("mock", deserialized->gpu_plugin_name);
+  EXPECT_FALSE(deserialized->send_dyld_packet_to_gpu);
+}
+
+TEST(AcceleratorGDBRemotePacketsTest, LLDBSettingsDefaults) {
+  Expected<LLDBSettings> deserialized =
+      json::parse<LLDBSettings>("{}", "LLDBSettings");
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  EXPECT_TRUE(deserialized->dyld_plugin_name.empty());
+  EXPECT_TRUE(deserialized->gpu_plugin_name.empty());
+  EXPECT_TRUE(deserialized->send_dyld_packet_to_gpu);
+}
+
 TEST(AcceleratorGDBRemotePacketsTest,
      AcceleratorBreakpointHitResponseNoActions) {
   AcceleratorBreakpointHitResponse response;

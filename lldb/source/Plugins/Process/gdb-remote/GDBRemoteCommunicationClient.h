@@ -380,6 +380,12 @@ public:
   llvm::Expected<std::vector<AcceleratorActions>>
   GetAcceleratorInitializeActions();
 
+  /// Return LLDB-specific settings for this GDB-remote process.
+  ///
+  /// Only sent when the server advertises "lldb-settings+" in response to the
+  /// "qSupported" packet.
+  std::optional<LLDBSettings> GetLLDBSettings();
+
   /// Send the "jAcceleratorPluginBreakpointHit" packet to notify the
   /// accelerator plugin that one of its requested breakpoints was hit, and
   /// return the plugin's response. This is only used when the lldb-server
@@ -627,6 +633,7 @@ protected:
   LazyBool m_supports_multi_mem_read = eLazyBoolCalculate;
   LazyBool m_supports_multi_breakpoint = eLazyBoolCalculate;
   LazyBool m_supports_accelerator_plugins = eLazyBoolCalculate;
+  LazyBool m_supports_lldb_settings = eLazyBoolCalculate;
   LazyBool m_supports_wasm_instance = eLazyBoolCalculate;
 
   bool m_supports_qProcessInfoPID : 1, m_supports_qfProcessInfo : 1,
@@ -664,6 +671,7 @@ protected:
   std::vector<lldb::addr_t> m_binary_addresses;
   llvm::VersionTuple m_os_version;
   llvm::VersionTuple m_maccatalyst_version;
+  std::optional<LLDBSettings> m_lldb_settings;
   std::string m_os_build;
   std::string m_os_kernel;
   std::string m_hostname;
