@@ -15,12 +15,14 @@
 #ifndef LLVM_OPTION_LIBRARYOPTIONS_H
 #define LLVM_OPTION_LIBRARYOPTIONS_H
 
+#include "llvm/ADT/BoolOrDefault.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include <optional>
 #include <type_traits>
 
 namespace llvm {
@@ -37,6 +39,14 @@ inline bool parseArgValue(StringRef S, bool &V) {
   return true;
 }
 
+inline bool parseArgValue(StringRef S, BoolOrDefault &V) {
+  bool B;
+  if (!parseArgValue(S, B))
+    return false;
+  V = B ? BoolOrDefault::True : BoolOrDefault::False;
+  return true;
+}
+
 inline bool parseArgValue(StringRef S, StringRef &V) {
   V = S;
   return true;
@@ -49,6 +59,15 @@ parseArgValue(StringRef S, T &V) {
     return to_float(S, V);
   else
     return to_integer(S, V);
+}
+
+// A std::optional member is set only when its option is given.
+template <typename T> bool parseArgValue(StringRef S, std::optional<T> &V) {
+  T X{};
+  if (!parseArgValue(S, X))
+    return false;
+  V = X;
+  return true;
 }
 
 /// An OptTable with a public constructor, shared by every options struct.

@@ -137,7 +137,7 @@ for.end:
 ; CHECK: [[META3]] = !{!"llvm.loop.isdistributed", i32 1}
 ; CHECK: [[META4]] = !{[[META5:![0-9]+]]}
 ; CHECK: [[META5]] = distinct !{[[META5]], [[META6:![0-9]+]]}
-; CHECK: [[META6]] = distinct !{[[META6]], !"LVerDomain"}
+; CHECK: [[META6]] = distinct !{[[META6]], i1 false, !"LVerDomain"}
 ; CHECK: [[META7]] = !{[[META8:![0-9]+]], [[META9:![0-9]+]], [[META10:![0-9]+]]}
 ; CHECK: [[META8]] = distinct !{[[META8]], [[META6]]}
 ; CHECK: [[META9]] = distinct !{[[META9]], [[META6]]}
