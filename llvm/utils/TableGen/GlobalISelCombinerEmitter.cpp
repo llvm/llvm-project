@@ -1037,6 +1037,15 @@ bool CombineRuleBuilder::addApplyPattern(std::unique_ptr<Pattern> Pat) {
     return false;
   }
 
+  // GIHasOneUse is a match-only predicate and cannot appear in 'apply'.
+  if (const auto *BP = dyn_cast<BuiltinPattern>(Pat.get())) {
+    if (BP->getBuiltinKind() == BI_HasOneUse) {
+      PrintError("'" + BP->getInstName() +
+                 "' cannot be used in a 'apply' pattern");
+      return false;
+    }
+  }
+
   if (auto *CXXPat = dyn_cast<CXXPattern>(Pat.get()))
     CXXPat->setIsApply();
 
