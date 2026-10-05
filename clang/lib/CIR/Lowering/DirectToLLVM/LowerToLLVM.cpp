@@ -4677,9 +4677,8 @@ mlir::LogicalResult CIRToLLVMInsertMemberOpLowering::matchAndRewrite(
 void createLLVMFuncOpIfNotExist(mlir::ConversionPatternRewriter &rewriter,
                                 mlir::SymbolTableCollection &symbolTables,
                                 mlir::Operation *srcOp, llvm::StringRef fnName,
-                                mlir::Type fnTy,
-                                mlir::ArrayAttr argAttrs = nullptr,
-                                mlir::ArrayAttr resAttrs = nullptr) {
+                                mlir::Type fnTy, mlir::ArrayAttr argAttrs,
+                                mlir::ArrayAttr resAttrs) {
   mlir::ModuleOp modOp = srcOp->getParentOfType<mlir::ModuleOp>();
   mlir::Operation *sourceSymbol = symbolTables.lookupSymbolIn(
       modOp, mlir::StringAttr::get(fnTy.getContext(), fnName));

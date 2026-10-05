@@ -9785,6 +9785,53 @@ def CIR_MemChrOp : CIR_Op<"libc.memchr",
 }
 
 //===----------------------------------------------------------------------===//
+// OffloadPrintfOp
+//===----------------------------------------------------------------------===//
+
+def CIR_OffloadPrintfOp : CIR_Op<"offload.printf"> {
+  let summary = "Device-side printf";
+  let description = [{
+    Represents a call to `printf` in device code. The target is responsible for
+    the appropriate lowering.
+
+    `format` is the format string and `args` are the remaining arguments,
+    after the language's default argument promotions. `result` is the value
+    `printf` returns on the target, which follows the target's conventions
+    rather than C's.
+
+    Like the GPU dialect's `gpu.printf`, the op represents a device printf
+    independently of the target, and each target expands it when lowering.
+    Unlike `gpu.printf`, it must represent any call to C `printf`, so:
+
+    - `format` is a value rather than an attribute, as the format string need
+      not be a constant.
+    - `args` may also be pointers, such as strings printed with `%s`,
+      pointers to data members, and vectors.
+    - The op returns the result of `printf`.
+    - The op has no memory effect annotations, as printing may read memory
+      through `format` and `args`.
+
+    Example:
+
+    ```
+    %r = cir.offload.printf(%fmt, %v) : (!cir.ptr<!s8i>, !s32i) -> !s32i
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_PtrToChar8Type:$format,
+    Variadic<AnyTypeOf<[CIR_AnyIntType, CIR_AnyFloatType, CIR_AnyPtrType,
+                        CIR_AnyDataMemberType, CIR_AnyVectorType]>>:$args
+  );
+
+  let results = (outs CIR_SInt32:$result);
+
+  let assemblyFormat = [{
+    `(` $format (`,` $args^)? `)` attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // LaunderOp
 //===----------------------------------------------------------------------===//
 

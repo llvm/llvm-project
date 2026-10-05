@@ -3167,7 +3167,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         (getTarget().getTriple().isSPIRV() &&
          getTarget().getTriple().getVendor() == llvm::Triple::AMD)) {
       if (getTarget().getTriple().isNVPTX())
-        return RValue::get(emitNVPTXDevicePrintfCallExpr(e));
+        return RValue::get(emitDevicePrintfCallExpr(e));
       if ((getTarget().getTriple().isAMDGCN() ||
            getTarget().getTriple().isSPIRV()) &&
           getLangOpts().HIP)
@@ -3572,4 +3572,46 @@ mlir::Value CIRGenFunction::evaluateOrEmitBuiltinObjectSize(
     return builder.getConstInt(getLoc(e->getSourceRange()), resType,
                                *objectSize);
   return emitBuiltinObjectSize(e, type, resType, emittedE, isDynamic);
+}
+
+// Emit a device printf as a cir.offload.printf. Unlike classic codegen, which
+// emits each target's printf runtime interface here, CIR leaves that to the
+// target-specific lowering of the op.
+mlir::Value CIRGenFunction::emitDevicePrintfCallExpr(const CallExpr *expr) {
+  assert(cgm.getTriple().isNVPTX() || cgm.getTriple().isAMDGCN() ||
+         (cgm.getTriple().isSPIRV() &&
+          cgm.getTriple().getVendor() == llvm::Triple::AMD));
+  assert(expr->getBuiltinCallee() == Builtin::BIprintf ||
+         expr->getBuiltinCallee() == Builtin::BI__builtin_printf);
+  assert(expr->getNumArgs() >= 1); // printf always has at least one arg.
+  CallArgList args;
+  emitCallArgs(args,
+               expr->getDirectCallee()->getType()->getAs<FunctionProtoType>(),
+               expr->arguments(), expr->getDirectCallee());
+
+  mlir::Location loc = getLoc(expr->getBeginLoc());
+
+  // We don't know how to emit non-scalar varargs, nor scalars that
+  // cir.offload.printf does not accept.
+  bool hasNonScalar =
+      llvm::any_of(llvm::drop_begin(args), [&](const CallArg &a) {
+        if (a.hasLValue() || !a.getKnownRValue().isScalar())
+          return true;
+        mlir::Type ty = a.getKnownRValue().getValue().getType();
+        return !mlir::isa<cir::IntType, cir::PointerType, cir::DataMemberType,
+                          cir::VectorType>(ty) &&
+               !cir::isAnyFloatingPointType(ty);
+      });
+  if (hasNonScalar) {
+    cgm.errorUnsupported(expr, "non-scalar args to printf");
+    return builder.getConstInt(loc, builder.getSInt32Ty(), 0);
+  }
+
+  llvm::SmallVector<mlir::Value, 8> callArgs;
+  for (const CallArg &a : args)
+    callArgs.push_back(a.getKnownRValue().getValue());
+
+  return cir::OffloadPrintfOp::create(builder, loc, builder.getSInt32Ty(),
+                                      callArgs.front(),
+                                      llvm::drop_begin(callArgs));
 }
