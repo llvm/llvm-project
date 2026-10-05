@@ -254,10 +254,13 @@
 #define LLVM_ATTRIBUTE_RETAIN
 #endif
 
+// For deprecations that are not a simple rename, use [[deprecated(MSG)]]
+// instead.
 #if defined(__clang__)
-#define LLVM_DEPRECATED(MSG, FIX) __attribute__((deprecated(MSG, FIX)))
+#define LLVM_DEPRECATED_WITH_FIXIT(MSG, FIX)                                   \
+  __attribute__((deprecated(MSG, FIX)))
 #else
-#define LLVM_DEPRECATED(MSG, FIX) [[deprecated(MSG)]]
+#define LLVM_DEPRECATED_WITH_FIXIT(MSG, FIX) [[deprecated(MSG)]]
 #endif
 
 // clang-format off
@@ -309,6 +312,11 @@
 // FIXME: Provide this for PE/COFF targets.
 #if __has_attribute(weak) && !defined(__MINGW32__) && !defined(__CYGWIN__) &&  \
     !defined(_WIN32)
+#define LLVM_HAS_ATTRIBUTE_WEAK 1
+#else
+#define LLVM_HAS_ATTRIBUTE_WEAK 0
+#endif
+#if LLVM_HAS_ATTRIBUTE_WEAK
 #define LLVM_ATTRIBUTE_WEAK __attribute__((__weak__))
 #else
 #define LLVM_ATTRIBUTE_WEAK

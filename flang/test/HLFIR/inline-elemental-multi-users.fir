@@ -310,7 +310,7 @@ func.func @test_scalar_apply_inlining_safe(%b: !fir.ref<!fir.array<10xf32>>, %c1
 func.func @_QPreproducer(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"}) {
   %c0 = arith.constant 0 : index
   %f1 = arith.constant 1.0 : f32
-  %0:2 = hlfir.declare %arg0 {uniq_name = "_QFreproducerEa"} : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("_QFreproducerEa") : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   %1:3 = fir.box_dims %0#0, %c0 : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
   %2 = fir.shape %1#1 : (index) -> !fir.shape<1>
 
@@ -705,7 +705,7 @@ func.func @test_nested_declare_results(%arg0: !fir.shape<1>, %cond: i1) -> f32 {
   %res = fir.if %cond -> f32 {
     // Metadata ops present in the region.
     %mem = fir.alloca !hlfir.expr<1xf32>
-    %v:2 = hlfir.declare %mem {uniq_name = "test_var"} : (!fir.ref<!hlfir.expr<1xf32>>) -> (!fir.ref<!hlfir.expr<1xf32>>, !fir.ref<!hlfir.expr<1xf32>>)
+    %v:2 = hlfir.declare %mem uniq_name("test_var") : (!fir.ref<!hlfir.expr<1xf32>>) -> (!fir.ref<!hlfir.expr<1xf32>>, !fir.ref<!hlfir.expr<1xf32>>)
 
     // The apply using the elemental.
     %apply = hlfir.apply %el, %c1 : (!hlfir.expr<1xf32>, index) -> f32

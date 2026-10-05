@@ -43,7 +43,7 @@ define i128 @test2(i128 %x) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $144, %esp
+; X86-NEXT:    addl $-128, %esp
 ; X86-NEXT:    movl 32(%ebp), %edi
 ; X86-NEXT:    movl 36(%ebp), %ebx
 ; X86-NEXT:    movl 28(%ebp), %eax
@@ -360,7 +360,7 @@ define i128 @test3(i128 %x) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $160, %esp
+; X86-NEXT:    subl $144, %esp
 ; X86-NEXT:    movl 32(%ebp), %edi
 ; X86-NEXT:    movl 36(%ebp), %eax
 ; X86-NEXT:    movl 28(%ebp), %ecx
@@ -692,7 +692,7 @@ define i128 @div_by_7(i128 %x) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $160, %esp
+; X86-NEXT:    subl $144, %esp
 ; X86-NEXT:    movl 32(%ebp), %ebx
 ; X86-NEXT:    movl 36(%ebp), %edx
 ; X86-NEXT:    movl 28(%ebp), %ecx
@@ -1025,7 +1025,7 @@ define i128 @div_by_11(i128 %x) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $160, %esp
+; X86-NEXT:    subl $144, %esp
 ; X86-NEXT:    movl 32(%ebp), %ebx
 ; X86-NEXT:    movl 36(%ebp), %edx
 ; X86-NEXT:    movl 28(%ebp), %ecx
@@ -1356,7 +1356,7 @@ define i128 @div_by_22(i128 %x) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $160, %esp
+; X86-NEXT:    subl $144, %esp
 ; X86-NEXT:    movl 32(%ebp), %ebx
 ; X86-NEXT:    movl 36(%ebp), %edx
 ; X86-NEXT:    movl 28(%ebp), %ecx
@@ -1689,7 +1689,7 @@ define i128 @div_by_56(i128 %x) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $160, %esp
+; X86-NEXT:    subl $144, %esp
 ; X86-NEXT:    movl 32(%ebp), %ebx
 ; X86-NEXT:    movl 36(%ebp), %edx
 ; X86-NEXT:    movl 28(%ebp), %ecx
@@ -2022,7 +2022,7 @@ define i128 @rem_by_7(i128 %x) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $160, %esp
+; X86-NEXT:    subl $144, %esp
 ; X86-NEXT:    movl 32(%ebp), %edx
 ; X86-NEXT:    movl 36(%ebp), %ebx
 ; X86-NEXT:    movl 28(%ebp), %ecx
@@ -2351,7 +2351,7 @@ define i128 @rem_by_14(i128 %x) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $160, %esp
+; X86-NEXT:    subl $144, %esp
 ; X86-NEXT:    movl 32(%ebp), %edx
 ; X86-NEXT:    movl 36(%ebp), %ebx
 ; X86-NEXT:    movl 28(%ebp), %ecx
@@ -2683,7 +2683,7 @@ define i128 @div_by_67(i128 %x) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $160, %esp
+; X86-NEXT:    subl $144, %esp
 ; X86-NEXT:    movl 32(%ebp), %ebx
 ; X86-NEXT:    movl 36(%ebp), %edx
 ; X86-NEXT:    movl 28(%ebp), %ecx
