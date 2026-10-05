@@ -25,7 +25,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __locale {
 
 struct __locale_guard {
-  _LIBCPP_HIDE_FROM_ABI __locale_guard(locale_t& __loc) : __old_loc_(::uselocale(__loc)) {}
+  _LIBCPP_HIDE_FROM_ABI __locale_guard(locale_t __loc) : __old_loc_(::uselocale(__loc)) {}
 
   _LIBCPP_HIDE_FROM_ABI ~__locale_guard() {
     if (__old_loc_)

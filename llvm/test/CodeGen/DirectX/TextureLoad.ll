@@ -266,7 +266,7 @@ define void @load_rwtexture2d_float4_explicit_lod(<2 x i32> %coords) {
 define void @load_rwtexture2darray_float4(<3 x i32> %coords) {
   %texture = call target("dx.Texture", <4 x float>, 1, 0, 0, 7)
       @llvm.dx.resource.handlefrombinding.tdx.Texture_v4f32_1_0_0_7t(
-          i32 0, i32 0, i32 1, i32 0, ptr null)
+          i32 0, i32 1, i32 1, i32 0, ptr null)
 
   ; CHECK: %[[COORD0:.*]] = extractelement <3 x i32> %coords, i32 0
   ; CHECK: %[[COORD1:.*]] = extractelement <3 x i32> %coords, i32 1
@@ -287,7 +287,7 @@ define void @load_rwtexture2darray_float4(<3 x i32> %coords) {
 define void @load_rwtexture2darray_scalarized_coords(i32 %x, i32 %y, i32 %z) {
   %texture = call target("dx.Texture", float, 1, 0, 0, 7)
       @llvm.dx.resource.handlefrombinding.tdx.Texture_f32_1_0_0_7t(
-          i32 0, i32 0, i32 1, i32 0, ptr null)
+          i32 0, i32 2, i32 1, i32 0, ptr null)
 
   %coords.0 = insertelement <3 x i32> poison, i32 %x, i32 0
   %coords.1 = insertelement <3 x i32> %coords.0, i32 %y, i32 1
