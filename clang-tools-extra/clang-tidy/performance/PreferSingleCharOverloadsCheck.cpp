@@ -11,6 +11,7 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <optional>
 
 using namespace clang::ast_matchers;
@@ -106,7 +107,8 @@ void PreferSingleCharOverloadsCheck::check(
                          "a single character; consider using the more "
                          "efficient overload accepting a character")
                     << FindFunc;
-  if (!Literal->getBeginLoc().isMacroID() && !Literal->getEndLoc().isMacroID())
+  if (std::none_of(Literal->tokloc_begin(), Literal->tokloc_end(),
+                   [](SourceLocation Loc) { return Loc.isMacroID(); }))
     Diag << FixItHint::CreateReplacement(Literal->getSourceRange(),
                                          *Replacement);
 }
