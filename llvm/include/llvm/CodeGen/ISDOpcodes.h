@@ -18,6 +18,8 @@
 
 namespace llvm {
 
+class StringRef;
+
 /// ISD namespace - This namespace contains an enum which represents all of the
 /// SelectionDAG node types and value types.
 ///
@@ -636,6 +638,11 @@ enum NodeType {
   /// Interleaved[I] = VEC(I % N)[I / N]
   /// Result[J] = EXTRACT_SUBVECTOR(Interleaved, J * getVectorMinNumElements())
   VECTOR_INTERLEAVE,
+
+  /// VECTOR_REPEAT(FIXED_LENGTH_VECTOR)
+  /// Repeatedly copies the elements of the source fixed-length vector to fill a
+  /// scalable vector with the same minimum element count.
+  VECTOR_REPEAT,
 
   /// VECTOR_REVERSE(VECTOR) - Returns a vector, of the same type as VECTOR,
   /// whose elements are shuffled using the following algorithm:
@@ -1887,6 +1894,9 @@ inline unsigned getUnorderedFlavor(CondCode Cond) {
 /// Return the operation corresponding to !(X op Y), where 'op' is a valid
 /// SetCC operation.
 LLVM_ABI CondCode getSetCCInverse(CondCode Operation, EVT Type);
+
+/// Return the name of the given condition code, e.g. "setoeq".
+LLVM_ABI StringRef getCondCodeName(CondCode Operation);
 
 inline bool isExtOpcode(unsigned Opcode) {
   return Opcode == ISD::ANY_EXTEND || Opcode == ISD::ZERO_EXTEND ||

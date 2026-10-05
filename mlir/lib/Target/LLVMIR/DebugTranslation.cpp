@@ -245,6 +245,7 @@ DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
   case llvm::dwarf::DW_TAG_enumeration_type:
   case llvm::dwarf::DW_TAG_structure_type:
   case llvm::dwarf::DW_TAG_union_type:
+  case llvm::dwarf::DW_TAG_variant_part:
     isDistinct = true;
   }
 

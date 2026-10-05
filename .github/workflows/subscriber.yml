@@ -23,7 +23,7 @@ jobs:
       name: main-branch-only
       deployment: false
     if: github.repository == 'llvm/llvm-project'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     container:
       image: "ghcr.io/llvm/amd64/ci-ubuntu-26.04-github-automation:latest@sha256:a8499c90a5890da942693c3e6a28113c2b851037c5facbb102a271f690439472"
 

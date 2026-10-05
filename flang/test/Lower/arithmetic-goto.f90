@@ -4,7 +4,7 @@
 ! CHECK-SAME: %[[ARG0:[^:]+]]: !fir.ref<i32>
 function kagi(index)
   ! CHECK:   %[[ARG0_D:.*]]:2 = hlfir.declare %[[ARG0]]
-  ! CHECK:   %[[V_0_RAW:.*]] = fir.alloca i32 {bindc_name = "kagi"
+  ! CHECK:   %[[V_0_RAW:.*]] = fir.alloca i32 <{bindc_name = "kagi"
   ! CHECK:   %[[V_0:.*]]:2 = hlfir.declare %[[V_0_RAW]]
   ! CHECK:   %[[V_1:.*]] = fir.load %[[ARG0_D]]#0 : !fir.ref<i32>
   ! CHECK:   %[[V_2:.*]] = arith.cmpi slt, %[[V_1]], %c0{{.*}} : i32
@@ -35,7 +35,7 @@ end
 ! CHECK-SAME: %[[ARG0:[^:]+]]: !fir.ref<f32>
 function kagf(findex)
   ! CHECK:   %[[ARG0_D:.*]]:2 = hlfir.declare %[[ARG0]]
-  ! CHECK:   %[[V_0_RAW:.*]] = fir.alloca i32 {bindc_name = "kagf"
+  ! CHECK:   %[[V_0_RAW:.*]] = fir.alloca i32 <{bindc_name = "kagf"
   ! CHECK:   %[[V_0:.*]]:2 = hlfir.declare %[[V_0_RAW]]
   ! CHECK:   %[[V_1:.*]] = fir.load %[[ARG0_D]]#0 : !fir.ref<f32>
   ! CHECK:   %[[V_3:.*]] = arith.addf {{.*}}, {{.*}} {{.*}} : f32

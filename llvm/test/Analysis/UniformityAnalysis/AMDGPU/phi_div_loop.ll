@@ -1,4 +1,4 @@
-; RUN: opt -mtriple amdgcn-- -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple amdgpu7.00-- -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
 ;
 ; This is to test a divergent phi involving loops
 ; (https://github.com/llvm/llvm-project/issues/137277).
@@ -24,7 +24,7 @@
 ; CHECK: %uni_a = phi i32 [ %a1, %B2 ], [ %a, %Entry ]
 ; CHECK-LABEL: BLOCK B5
 ; CHECK: %uni.a3 = phi i32 [ %a2, %B4 ], [ %uni_a3, %B5 ]
-; CHECK-LABEL BLOCK B6
+; CHECK-LABEL: BLOCK B6
 ; CHECK: DIVERGENT:   %div_a = phi i32 [ %uni_a, %B3 ], [ %uni_a3, %B5 ]
 ;
 
