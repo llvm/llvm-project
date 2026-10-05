@@ -177,14 +177,28 @@ private:
   void runOnInstruction(MachineInstr *MI);
 
   /// Wait states required after \p MI, or nullopt if \p MI is not waited for.
-  /// Must return nullopt for terminators.
   using WindowForFn = function_ref<std::optional<int>(const MachineInstr &)>;
+
+  /// Whether the traversal keeps asking after a match. Nearest prunes the path
+  /// a match was found on, which is only sound when every window is the same.
+  /// It reduces the calls a predicate sees but does not bound them: another
+  /// path may still be scanned past the answer.
+  enum class MatchScope { All, Nearest };
 
   /// Returns the largest WindowFor(I) - distance(I) over the instructions
   /// preceding the one being checked within \p MaxWindow, which must bound
   /// every window WindowFor can return, and zero if it accepts none. Each
   /// window is paired with the distance to the instruction that supplied it.
-  int getMaxWindowDeficit(int MaxWindow, WindowForFn WindowFor) const;
+  int getMaxWindowDeficit(int MaxWindow, WindowForFn WindowFor,
+                          MatchScope Scope = MatchScope::All) const;
+
+  /// Returns the distance in wait states to the closest preceding instruction
+  /// \p IsHazard accepts, or nullopt if it accepts none within \p MaxWindow,
+  /// which must be positive. \p IsHazard must be free of side effects: it is
+  /// called on instructions the answer does not come from, in an order this
+  /// function does not promise.
+  std::optional<int> getNearestMatchDistance(int MaxWindow,
+                                             IsHazardFn IsHazard) const;
 
   int getWaitStatesSince(IsHazardFn IsHazard, int Limit,
                          GetNumWaitStatesFn GetNumWaitStates) const;
