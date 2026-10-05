@@ -7710,7 +7710,12 @@ tryAgain:
       bool IsFirst = true;
       StringLiteralCheckType CommonResult;
       for (const auto *FA : ND->specific_attrs<FormatArgAttr>()) {
-        const Expr *Arg = CE->getArg(FA->getFormatIdx().getASTIndex());
+        // An implicitly added attribute may refer to a missing argument.
+        // https://github.com/llvm/llvm-project/issues/225034
+        unsigned ArgIndex = FA->getFormatIdx().getASTIndex();
+        if (ArgIndex >= CE->getNumArgs())
+          return SLCT_NotALiteral;
+        const Expr *Arg = CE->getArg(ArgIndex);
         StringLiteralCheckType Result = checkFormatStringExpr(
             S, ReferenceFormatString, Arg, Args, APK, format_idx, firstDataArg,
             Type, CallType, InFunctionCall, CheckedVarArgs, UncoveredArg,
