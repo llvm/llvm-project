@@ -4679,6 +4679,8 @@ const char *Lexer::convertDependencyDirectiveToken(
 bool Lexer::LexDependencyDirectiveToken(Token &Result) {
   assert(isDependencyDirectivesLexer());
 
+  Result.startToken();
+
   using namespace dependency_directives_scan;
 
   if (BufferPtr == BufferEnd)
