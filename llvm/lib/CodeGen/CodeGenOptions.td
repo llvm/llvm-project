@@ -184,6 +184,8 @@ defm : BoolField<"print-isel-input", "false",
   "Print LLVM IR input to isel pass">;
 defm : BoolField<"print-regusage", "false",
   "Print register usage details collected for IPRA">;
+defm : OptionalBoolField<"regalloc-fast-tied",
+  "Have the fast register allocator lower tied operands itself instead of running TwoAddressInstructionPass (overrides the target's default)">;
 defm : BoolField<"split-static-data", "false",
   "Split static data sections into hot and cold sections using profile information">;
 let MetaVarName = "<pass-name>" in
