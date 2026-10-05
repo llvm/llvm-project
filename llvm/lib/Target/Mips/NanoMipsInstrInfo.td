@@ -400,7 +400,7 @@ let isReMaterializable = 1 in {
 }
 
 class LoadAddressGPRel_Desc<string opstr, RegisterOperand RO, DAGOperand MO>
-  : InstNM<(outs RO:$rt), (ins RO:$rs, MO:$addr),
+  : InstNM<(outs RO:$rt), (ins GPRNMGPOpnd:$rs, MO:$addr),
            !strconcat(opstr, "\t$rt, $rs, $addr")>;
 
 def ADDIUGP48_NM : LoadAddressGPRel_Desc<"addiu.b32", GPRNM48Opnd,
