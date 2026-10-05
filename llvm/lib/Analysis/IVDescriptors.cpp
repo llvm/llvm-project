@@ -1178,8 +1178,11 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
     return false;
 
   // Handle recurrences with a loop-invariant latch value.
-  if (!TheLoop->contains(Previous))
-    return DT->dominates(Previous, Phi);
+  if (!TheLoop->contains(Previous)) {
+    assert(DT->dominates(Previous, Phi) &&
+           "loop-invariant latch value must dominate the header phi");
+    return true;
+  }
 
   // Ensure every user of the phi node (recursively) is dominated by the
   // previous value. The dominance requirement ensures the loop vectorizer will
