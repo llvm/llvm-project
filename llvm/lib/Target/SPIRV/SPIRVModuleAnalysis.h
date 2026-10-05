@@ -222,12 +222,13 @@ struct ModuleAnalysisInfo {
 using InstrSignature = SmallVector<size_t>;
 using InstrTraces = std::set<InstrSignature>;
 using InstrGRegsMap = std::map<SmallVector<size_t>, unsigned>;
+using MachineFunctionGetter = function_ref<MachineFunction *(const Function &)>;
 
 class SPIRVModuleAnalysisImpl {
 public:
-  SPIRVModuleAnalysisImpl(
-      const SPIRVSubtarget &ST, SPIRV::ModuleAnalysisInfo &MAI,
-      function_ref<MachineFunction *(const Function &)> GetMF);
+  SPIRVModuleAnalysisImpl(const SPIRVSubtarget &ST,
+                          SPIRV::ModuleAnalysisInfo &MAI,
+                          MachineFunctionGetter GetMF);
 
   void run(const Module &M);
 
@@ -260,7 +261,7 @@ private:
   SPIRVGlobalRegistry *GR;
   const SPIRVInstrInfo *TII;
   SPIRV::ModuleAnalysisInfo &MAI;
-  function_ref<MachineFunction *(const Function &)> GetMF;
+  MachineFunctionGetter GetMF;
 };
 
 struct SPIRVModuleAnalysisWrapperPass : public ModulePass {

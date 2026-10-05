@@ -2680,8 +2680,7 @@ void addInstrRequirements(const MachineInstr &MI,
 }
 
 static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
-                        function_ref<MachineFunction *(const Function &)> GetMF,
-                        const SPIRVSubtarget &ST) {
+                        MachineFunctionGetter GetMF, const SPIRVSubtarget &ST) {
   // Collect requirements for existing instructions.
   for (const Function &F : M) {
     MachineFunction *MF = GetMF(F);
@@ -2947,11 +2946,11 @@ static void handleMIFlagDecoration(
 }
 
 // Walk all functions and add decorations related to MI flags.
-static void
-addDecorations(const Module &M, const SPIRVInstrInfo &TII,
-               function_ref<MachineFunction *(const Function &)> GetMF,
-               const SPIRVSubtarget &ST, SPIRV::ModuleAnalysisInfo &MAI,
-               const SPIRVGlobalRegistry *GR) {
+static void addDecorations(const Module &M, const SPIRVInstrInfo &TII,
+                           MachineFunctionGetter GetMF,
+                           const SPIRVSubtarget &ST,
+                           SPIRV::ModuleAnalysisInfo &MAI,
+                           const SPIRVGlobalRegistry *GR) {
   for (const Function &F : M) {
     MachineFunction *MF = GetMF(F);
     if (!MF)
@@ -2965,8 +2964,7 @@ addDecorations(const Module &M, const SPIRVInstrInfo &TII,
 }
 
 static void addMBBNames(const Module &M, const SPIRVInstrInfo &TII,
-                        function_ref<MachineFunction *(const Function &)> GetMF,
-                        const SPIRVSubtarget &ST,
+                        MachineFunctionGetter GetMF, const SPIRVSubtarget &ST,
                         SPIRV::ModuleAnalysisInfo &MAI) {
   for (const Function &F : M) {
     MachineFunction *MF = GetMF(F);
@@ -2992,8 +2990,7 @@ static void addMBBNames(const Module &M, const SPIRVInstrInfo &TII,
 
 // patching Instruction::PHI to SPIRV::OpPhi
 static void patchPhis(const Module &M, SPIRVGlobalRegistry *GR,
-                      const SPIRVInstrInfo &TII,
-                      function_ref<MachineFunction *(const Function &)> GetMF) {
+                      const SPIRVInstrInfo &TII, MachineFunctionGetter GetMF) {
   for (const Function &F : M) {
     MachineFunction *MF = GetMF(F);
     if (!MF)
@@ -3117,9 +3114,9 @@ static void collectFPFastMathDefaults(const Module &M,
   }
 }
 
-SPIRVModuleAnalysisImpl::SPIRVModuleAnalysisImpl(
-    const SPIRVSubtarget &ST, SPIRV::ModuleAnalysisInfo &MAI,
-    function_ref<MachineFunction *(const Function &)> GetMF)
+SPIRVModuleAnalysisImpl::SPIRVModuleAnalysisImpl(const SPIRVSubtarget &ST,
+                                                 SPIRV::ModuleAnalysisInfo &MAI,
+                                                 MachineFunctionGetter GetMF)
     : ST(&ST), GR(ST.getSPIRVGlobalRegistry()), TII(ST.getInstrInfo()),
       MAI(MAI), GetMF(GetMF) {}
 
