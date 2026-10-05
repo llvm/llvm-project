@@ -5,11 +5,13 @@
 ; CHECK:      --- !GOFF
 ; CHECK-NEXT: FileHeader: {}
 ; CHECK-NEXT: ESDRecords:
+; SD: top-level section definition for the compilation unit.
 ; CHECK-NEXT:   - SymbolType:      ESD_ST_SectionDefinition
 ; CHECK-NEXT:     ESDID:           1
 ; CHECK-NEXT:     TaskingBehavior: ESD_TA_Rent
 ; CHECK-NEXT:     BindingScope:    ESD_BSC_Section
 ; CHECK-NEXT:     Name:            'esd-basic#C'
+; ED: read-only 64-bit code section (C_CODE64).
 ; CHECK-NEXT:   - SymbolType:      ESD_ST_ElementDefinition
 ; CHECK-NEXT:     ESDID:           2
 ; CHECK-NEXT:     ParentESDID:     1
@@ -20,6 +22,7 @@
 ; CHECK-NEXT:     Alignment:       ESD_ALIGN_Quadword
 ; CHECK-NEXT:     FillByteValue:   0
 ; CHECK-NEXT:     Name:            C_CODE64
+; ED: Program Properties Area 2 (PPA2), Parts namespace, merge binding.
 ; CHECK-NEXT:   - SymbolType:      ESD_ST_ElementDefinition
 ; CHECK-NEXT:     ESDID:           3
 ; CHECK-NEXT:     ParentESDID:     1
@@ -30,6 +33,7 @@
 ; CHECK-NEXT:     Alignment:       ESD_ALIGN_Doubleword
 ; CHECK-NEXT:     FillByteValue:   0
 ; CHECK-NEXT:     Name:            'C_@@QPPA2'
+; PR: PPA2 data part inside C_@@QPPA2.
 ; CHECK-NEXT:   - SymbolType:      ESD_ST_PartReference
 ; CHECK-NEXT:     ESDID:           4
 ; CHECK-NEXT:     ParentESDID:     3
@@ -39,6 +43,7 @@
 ; CHECK-NEXT:     BindingScope:    ESD_BSC_Section
 ; CHECK-NEXT:     Alignment:       ESD_ALIGN_Doubleword
 ; CHECK-NEXT:     Name:            '.&ppa2'
+; ED: 64-bit Writable Static Area (WSA), deferred loading, merge binding.
 ; CHECK-NEXT:   - SymbolType:      ESD_ST_ElementDefinition
 ; CHECK-NEXT:     ESDID:           5
 ; CHECK-NEXT:     ParentESDID:     1
@@ -49,6 +54,7 @@
 ; CHECK-NEXT:     Alignment:       ESD_ALIGN_Quadword
 ; CHECK-NEXT:     FillByteValue:   0
 ; CHECK-NEXT:     Name:            C_WSA64
+; PR: static area part inside C_WSA64, with XPLink linkage.
 ; CHECK-NEXT:   - SymbolType:      ESD_ST_PartReference
 ; CHECK-NEXT:     ESDID:           6
 ; CHECK-NEXT:     ParentESDID:     5
@@ -59,6 +65,7 @@
 ; CHECK-NEXT:     LinkageType:     ESD_LT_XPLink
 ; CHECK-NEXT:     Alignment:       ESD_ALIGN_Quadword
 ; CHECK-NEXT:     Name:            'esd-basic#S'
+; ED: Identification Record Library (IDRL), structured text, NoLoad.
 ; CHECK-NEXT:   - SymbolType:      ESD_ST_ElementDefinition
 ; CHECK-NEXT:     ESDID:           7
 ; CHECK-NEXT:     ParentESDID:     1
@@ -71,6 +78,7 @@
 ; CHECK-NEXT:     Alignment:       ESD_ALIGN_Doubleword
 ; CHECK-NEXT:     FillByteValue:   0
 ; CHECK-NEXT:     Name:            B_IDRL
+; LD: module entry-point label, XPLink, with associated data area (ADAESDID).
 ; CHECK-NEXT:   - SymbolType:      ESD_ST_LabelDefinition
 ; CHECK-NEXT:     ESDID:           8
 ; CHECK-NEXT:     ParentESDID:     2
@@ -81,6 +89,7 @@
 ; CHECK-NEXT:     LinkageType:     ESD_LT_XPLink
 ; CHECK-NEXT:     ADAESDID:        6
 ; CHECK-NEXT:     Name:            'esd-basic#C'
+; ER: external reference to the XPLink runtime entry point CELQSTRT.
 ; CHECK-NEXT:   - SymbolType:      ESD_ST_ExternalReference
 ; CHECK-NEXT:     ESDID:           9
 ; CHECK-NEXT:     ParentESDID:     1
@@ -88,6 +97,7 @@
 ; CHECK-NEXT:     Amode:           ESD_AMODE_64
 ; CHECK-NEXT:     BindingScope:    ESD_BSC_ImportExport
 ; CHECK-NEXT:     Name:            CELQSTRT
+; LD: exported function label at a non-zero offset within its parent ED.
 ; CHECK-NEXT:   - SymbolType:      ESD_ST_LabelDefinition
 ; CHECK-NEXT:     ESDID:           10
 ; CHECK-NEXT:     ParentESDID:     2
