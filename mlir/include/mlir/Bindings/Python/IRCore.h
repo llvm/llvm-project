@@ -26,6 +26,7 @@
 #include "mlir-c/ExtensibleDialect.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/IntegerSet.h"
+#include "mlir-c/Remarks.h"
 #include "mlir-c/Support.h"
 #include "mlir-c/Transforms.h"
 #include "mlir/Bindings/Python/Nanobind.h"
@@ -253,6 +254,28 @@ public:
   /// registration object (internally a PyDiagnosticHandler).
   nanobind::object attachDiagnosticHandler(nanobind::object callback);
 
+  /// Enables the optimization remark engine of the context. `policy` is
+  /// "all" or "final"; `format` is "emit" (remarks become MLIR remark
+  /// diagnostics, or go to `callback` when one is given), "yaml" or
+  /// "bitstream" (remarks are streamed to `outputFile`). Raises ValueError on
+  /// invalid options or when an engine is already enabled.
+  void enableRemarks(const std::string &policy, const std::string &format,
+                     const std::string &outputFile,
+                     const std::string &allFilter,
+                     const std::string &passedFilter,
+                     const std::string &missedFilter,
+                     const std::string &analysisFilter,
+                     const std::string &failedFilter, nanobind::object callback,
+                     nanobind::object printAsEmitRemarks);
+  /// Finalizes and removes the remark engine; no-op when none is enabled.
+  void finalizeRemarks();
+  /// Whether a remark engine is enabled on the context.
+  bool getRemarksEnabled();
+  /// Whether `context` still has a live Python wrapper. False while the
+  /// wrapper is being destroyed, which is when a remark engine finalizing
+  /// with the context must not call back into Python.
+  static bool isLiveContext(MlirContext context);
+
   /// Controls whether error diagnostics should be propagated to diagnostic
   /// handlers, instead of being captured by `ErrorCapture`.
   void setEmitErrorDiagnostics(bool value) { emitErrorDiagnostics = value; }
@@ -353,6 +376,14 @@ enum class PyDiagnosticSeverity : std::underlying_type_t<
   Remark = MlirDiagnosticRemark
 };
 
+enum class PyRemarkKind : std::underlying_type_t<MlirRemarkKind> {
+  Unknown = MlirRemarkKindUnknown,
+  Passed = MlirRemarkKindPassed,
+  Missed = MlirRemarkKindMissed,
+  Failure = MlirRemarkKindFailure,
+  Analysis = MlirRemarkKindAnalysis
+};
+
 enum class PyWalkResult : std::underlying_type_t<MlirWalkResult> {
   Advance = MlirWalkResultAdvance,
   Interrupt = MlirWalkResultInterrupt,
@@ -407,6 +438,30 @@ private:
   /// be populated with the corresponding objects (all castable to
   /// PyDiagnostic).
   std::optional<nanobind::tuple> materializedNotes;
+  bool valid = true;
+};
+
+/// Wrapper around an MlirRemark as delivered to a remark callback. Like a
+/// PyDiagnostic it is only valid for the duration of the callback; accessing
+/// an invalidated remark raises ValueError.
+class MLIR_PYTHON_API_EXPORTED PyRemark {
+public:
+  PyRemark(MlirRemark remark) : remark(remark) {}
+  void invalidate() { valid = false; }
+  bool isValid() { return valid; }
+  PyRemarkKind getKind();
+  nanobind::str getRemarkName();
+  nanobind::str getCategoryName();
+  nanobind::str getFullCategoryName();
+  nanobind::str getFunctionName();
+  nanobind::typed<nanobind::object, PyLocation> getLocation();
+  uint64_t getId();
+  nanobind::list getArgs();
+  nanobind::str getMessage();
+
+private:
+  void checkValid();
+  MlirRemark remark;
   bool valid = true;
 };
 

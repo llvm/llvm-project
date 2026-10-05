@@ -17,6 +17,7 @@
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/ExtensibleDialect.h"
 #include "mlir-c/IR.h"
+#include "mlir-c/Remarks.h"
 #include "mlir-c/Support.h"
 
 #include <array>
@@ -713,6 +714,217 @@ void PyThreadContextEntry::popLocation(PyLocation &location) {
 //------------------------------------------------------------------------------
 // PyDiagnostic*
 //------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// PyRemark and the remark engine of a context.
+//------------------------------------------------------------------------------
+
+namespace {
+/// User data of the remark callback streamer: the Python callable and the
+/// context it was installed on.
+struct PyRemarkCallbackData {
+  MlirContext context;
+  nb::object callback;
+};
+} // namespace
+
+static nb::str remarkStr(MlirStringRef ref) {
+  return nb::str(ref.data, ref.length);
+}
+
+static void pyRemarkCallback(MlirRemark remark, void *userData) {
+  auto *data = static_cast<PyRemarkCallbackData *>(userData);
+  // Since this can be called from arbitrary C++ contexts, always get the gil.
+  nb::gil_scoped_acquire gil;
+  // Postponed remarks are reported when the engine is destroyed. When that
+  // happens because the context itself is being destroyed, its Python wrapper
+  // is already gone and the remark cannot be delivered.
+  if (!PyMlirContext::isLiveContext(data->context))
+    return;
+  PyRemark *pyRemark = new PyRemark(remark);
+  nb::object pyRemarkObject = nb::cast(pyRemark, nb::rv_policy::take_ownership);
+  try {
+    data->callback(pyRemarkObject);
+  } catch (std::exception &e) {
+    fprintf(stderr, "MLIR Python remark callback raised exception: %s\n",
+            e.what());
+  }
+  pyRemark->invalidate();
+}
+
+static void pyRemarkCallbackDelete(void *userData) {
+  nb::gil_scoped_acquire gil;
+  delete static_cast<PyRemarkCallbackData *>(userData);
+}
+
+bool PyMlirContext::isLiveContext(MlirContext context) {
+  nb::ft_lock_guard lock(live_contexts_mutex);
+  return getLiveContexts().count(context.ptr) != 0;
+}
+
+void PyMlirContext::enableRemarks(
+    const std::string &policy, const std::string &format,
+    const std::string &outputFile, const std::string &allFilter,
+    const std::string &passedFilter, const std::string &missedFilter,
+    const std::string &analysisFilter, const std::string &failedFilter,
+    nb::object callback, nb::object printAsEmitRemarks) {
+  MlirRemarkPolicy remarkPolicy;
+  if (policy == "all") {
+    remarkPolicy = MlirRemarkPolicyAll;
+  } else if (policy == "final") {
+    remarkPolicy = MlirRemarkPolicyFinal;
+  } else {
+    throw nb::value_error(
+        ("unknown remark policy '" + policy + "'; expected 'all' or 'final'")
+            .c_str());
+  }
+  bool toFile = false;
+  MlirRemarkFileFormat fileFormat = MlirRemarkFileFormatYAML;
+  if (format == "yaml") {
+    toFile = true;
+  } else if (format == "bitstream") {
+    toFile = true;
+    fileFormat = MlirRemarkFileFormatBitstream;
+  } else if (format != "emit") {
+    throw nb::value_error(("unknown remark format '" + format +
+                           "'; expected 'emit', 'yaml' or 'bitstream'")
+                              .c_str());
+  }
+  bool hasCallback = !callback.is_none();
+  if (toFile && hasCallback)
+    throw nb::value_error(
+        ("a remark callback cannot be combined with format='" + format +
+         "'; use format='emit'")
+            .c_str());
+  if (mlirContextHasRemarkEngine(get()))
+    throw nb::value_error("remarks are already enabled on this context; call "
+                          "finalize_remarks() first");
+
+  MlirRemarkCategories categories{
+      toMlirStringRef(allFilter), toMlirStringRef(passedFilter),
+      toMlirStringRef(missedFilter), toMlirStringRef(analysisFilter),
+      toMlirStringRef(failedFilter)};
+  // Without a sink of its own, the engine prints as MLIR remark diagnostics.
+  bool emit = printAsEmitRemarks.is_none() ? (!toFile && !hasCallback)
+                                           : nb::cast<bool>(printAsEmitRemarks);
+
+  MlirLogicalResult result;
+  if (toFile) {
+    std::string path = outputFile;
+    if (path.empty())
+      path = fileFormat == MlirRemarkFileFormatYAML ? "mlir-remarks.yaml"
+                                                    : "mlir-remarks.bitstream";
+    result = mlirContextEnableOptimizationRemarksToFile(
+        get(), categories, remarkPolicy, fileFormat, toMlirStringRef(path),
+        emit);
+    if (mlirLogicalResultIsFailure(result))
+      throw nb::value_error(
+          ("failed to enable remarks: cannot write '" + path + "'").c_str());
+  } else if (hasCallback) {
+    auto *data = new PyRemarkCallbackData{get(), std::move(callback)};
+    result = mlirContextEnableOptimizationRemarksWithCallback(
+        get(), categories, remarkPolicy, pyRemarkCallback, data,
+        pyRemarkCallbackDelete, emit);
+  } else {
+    result = mlirContextEnableOptimizationRemarks(get(), categories,
+                                                  remarkPolicy, emit);
+  }
+  if (mlirLogicalResultIsFailure(result))
+    throw nb::value_error("failed to enable remarks");
+}
+
+void PyMlirContext::finalizeRemarks() {
+  mlirContextFinalizeOptimizationRemarks(get());
+}
+
+bool PyMlirContext::getRemarksEnabled() {
+  return mlirContextHasRemarkEngine(get());
+}
+
+void PyRemark::checkValid() {
+  if (!valid)
+    throw std::invalid_argument("Remark is invalid (used outside of callback)");
+}
+
+PyRemarkKind PyRemark::getKind() {
+  checkValid();
+  return static_cast<PyRemarkKind>(mlirRemarkGetKind(remark));
+}
+
+nb::str PyRemark::getRemarkName() {
+  checkValid();
+  return remarkStr(mlirRemarkGetRemarkName(remark));
+}
+
+nb::str PyRemark::getCategoryName() {
+  checkValid();
+  return remarkStr(mlirRemarkGetCategoryName(remark));
+}
+
+nb::str PyRemark::getFullCategoryName() {
+  checkValid();
+  return remarkStr(mlirRemarkGetFullCategoryName(remark));
+}
+
+nb::str PyRemark::getFunctionName() {
+  checkValid();
+  return remarkStr(mlirRemarkGetFunctionName(remark));
+}
+
+nb::typed<nb::object, PyLocation> PyRemark::getLocation() {
+  checkValid();
+  MlirLocation loc = mlirRemarkGetLocation(remark);
+  MlirContext context = mlirLocationGetContext(loc);
+  return PyLocation(PyMlirContext::forContext(context), loc).maybeDownCast();
+}
+
+uint64_t PyRemark::getId() {
+  checkValid();
+  return mlirRemarkGetId(remark);
+}
+
+nb::list PyRemark::getArgs() {
+  checkValid();
+  nb::list args;
+  intptr_t numArgs = mlirRemarkGetNumArgs(remark);
+  for (intptr_t i = 0; i < numArgs; ++i)
+    args.append(nb::make_tuple(remarkStr(mlirRemarkGetArgKey(remark, i)),
+                               remarkStr(mlirRemarkGetArgValue(remark, i))));
+  return args;
+}
+
+nb::str PyRemark::getMessage() {
+  checkValid();
+  std::string message;
+  auto callback = +[](MlirStringRef ref, void *userData) {
+    static_cast<std::string *>(userData)->append(ref.data, ref.length);
+  };
+  mlirRemarkPrint(remark, /*printLocation=*/false, callback, &message);
+  return nb::str(message.c_str(), message.size());
+}
+
+/// Converts the `kind` argument of `Location.emit_remark`, a RemarkKind or one
+/// of the strings "passed", "missed", "failure"/"failed" and "analysis".
+static MlirRemarkKind parseRemarkKind(nb::handle kind) {
+  if (nb::isinstance<PyRemarkKind>(kind))
+    return static_cast<MlirRemarkKind>(nb::cast<PyRemarkKind>(kind));
+  std::string name;
+  if (nb::try_cast<std::string>(kind, name)) {
+    if (name == "passed")
+      return MlirRemarkKindPassed;
+    if (name == "missed")
+      return MlirRemarkKindMissed;
+    if (name == "failure" || name == "failed")
+      return MlirRemarkKindFailure;
+    if (name == "analysis")
+      return MlirRemarkKindAnalysis;
+    throw nb::value_error(("unknown remark kind '" + name +
+                           "'; expected 'passed', 'missed', 'failure' or "
+                           "'analysis'")
+                              .c_str());
+  }
+  throw nb::type_error("remark kind must be a RemarkKind or a string");
+}
 
 void PyDiagnostic::invalidate() {
   valid = false;
@@ -3326,6 +3538,13 @@ void populateIRCore(nb::module_ &m) {
       .value("NOTE", PyDiagnosticSeverity::Note)
       .value("REMARK", PyDiagnosticSeverity::Remark);
 
+  nb::enum_<PyRemarkKind>(m, "RemarkKind")
+      .value("UNKNOWN", PyRemarkKind::Unknown)
+      .value("PASSED", PyRemarkKind::Passed)
+      .value("MISSED", PyRemarkKind::Missed)
+      .value("FAILURE", PyRemarkKind::Failure)
+      .value("ANALYSIS", PyRemarkKind::Analysis);
+
   nb::enum_<PyWalkOrder>(m, "WalkOrder")
       .value("PRE_ORDER", PyWalkOrder::PreOrder)
       .value("POST_ORDER", PyWalkOrder::PostOrder);
@@ -3400,6 +3619,37 @@ void populateIRCore(nb::module_ &m) {
       .def("__exit__", &PyDiagnosticHandler::contextExit, "exc_type"_a.none(),
            "exc_value"_a.none(), "traceback"_a.none(),
            "Exits the diagnostic handler context manager.");
+
+  nb::class_<PyRemark>(m, "Remark")
+      .def_prop_ro("kind", &PyRemark::getKind,
+                   "Returns the kind of the remark.")
+      .def_prop_ro("remark_name", &PyRemark::getRemarkName,
+                   "Returns the name identifying the remark.")
+      .def_prop_ro("category_name", &PyRemark::getCategoryName,
+                   "Returns the category of the remark (what the filters "
+                   "match).")
+      .def_prop_ro("full_category_name", &PyRemark::getFullCategoryName,
+                   "Returns the combined `category:subcategory` name.")
+      .def_prop_ro("function_name", &PyRemark::getFunctionName,
+                   "Returns the name of the function the remark refers to.")
+      .def_prop_ro("location", &PyRemark::getLocation,
+                   "Returns the location associated with the remark.")
+      .def_prop_ro("remark_id", &PyRemark::getId,
+                   "Returns the id of the remark within its engine (0 when "
+                   "unset).")
+      .def_prop_ro("args", &PyRemark::getArgs,
+                   "Returns the key/value arguments as a list of tuples.")
+      .def_prop_ro("message", &PyRemark::getMessage,
+                   "Returns the textual form of the remark, `[Kind] name | "
+                   "Category:... | key=value, ...`.")
+      .def(
+          "__str__",
+          [](PyRemark &self) -> nb::str {
+            if (!self.isValid())
+              return nb::str("<Invalid Remark>");
+            return self.getMessage();
+          },
+          "Returns the remark message as a string.");
 
   // Expose DefaultThreadPool to python
   nb::class_<PyThreadPool>(m, "ThreadPool")
@@ -3499,6 +3749,55 @@ void populateIRCore(nb::module_ &m) {
       .def("attach_diagnostic_handler", &PyMlirContext::attachDiagnosticHandler,
            "callback"_a,
            "Attaches a diagnostic handler that will receive callbacks.")
+      .def("enable_remarks", &PyMlirContext::enableRemarks, nb::kw_only(),
+           "policy"_a = "all", "format"_a = "emit", "output_file"_a = "",
+           "all_filter"_a = "", "passed_filter"_a = "", "missed_filter"_a = "",
+           "analysis_filter"_a = "", "failed_filter"_a = "",
+           "callback"_a.none() = nb::none(),
+           "print_as_emit_remarks"_a.none() = nb::none(),
+           R"(
+            Enables the optimization remark engine on this context.
+
+            Remarks are reported by passes (and by `Location.emit_remark`) and
+            selected by the category filters, regular expressions anchored by
+            the engine: `all_filter` applies to every kind, the other filters to
+            one kind each; a kind without a matching filter is not reported.
+
+            Args:
+              policy: "all" reports remarks as they are emitted; "final"
+                postpones them until `finalize_remarks()` and reports the final
+                set, grouping related remarks under their parents.
+              format: "emit" delivers remarks as MLIR remark diagnostics, or to
+                `callback` when one is given; "yaml" and "bitstream" stream
+                them to `output_file`, written on `finalize_remarks()`.
+              output_file: The output path for the file formats; defaults to
+                "mlir-remarks.yaml" / "mlir-remarks.bitstream".
+              all_filter: Category regex applied to every remark kind.
+              passed_filter: Category regex for passed remarks.
+              missed_filter: Category regex for missed remarks.
+              analysis_filter: Category regex for analysis remarks.
+              failed_filter: Category regex for failed remarks.
+              callback: A callable receiving one `Remark` per reported remark;
+                the remark is only valid during the call. Requires
+                format="emit".
+              print_as_emit_remarks: Also emit every remark as an MLIR remark
+                diagnostic; defaults to True only for format="emit" without a
+                callback.
+
+            Raises:
+              ValueError: On an unknown policy, format or kind combination,
+                when remarks are already enabled, or when the output file
+                cannot be written.)")
+      .def("finalize_remarks", &PyMlirContext::finalizeRemarks,
+           R"(
+            Finalizes and removes the remark engine of this context.
+
+            Postponed remarks (policy "final") are reported, the output file is
+            written and the callback is released. Does nothing when no engine
+            is enabled; `enable_remarks` may be called again afterwards.)")
+      .def_prop_ro(
+          "remarks_enabled", &PyMlirContext::getRemarksEnabled,
+          "Returns True if a remark engine is enabled on this context.")
       .def(
           "enable_multithreading",
           [](PyMlirContext &self, bool enable) {
@@ -3853,6 +4152,47 @@ void populateIRCore(nb::module_ &m) {
 
             Args:
               message: The error message to emit.)")
+      .def(
+          "emit_remark",
+          [](PyLocation &self, nb::object kind, const std::string &remarkName,
+             const std::string &category, const std::string &subCategory,
+             const std::string &functionName, const std::string &message,
+             const std::vector<std::pair<std::string, std::string>> &args)
+              -> bool {
+            MlirRemarkKind remarkKind = parseRemarkKind(kind);
+            std::vector<MlirStringRef> keys, values;
+            keys.reserve(args.size());
+            values.reserve(args.size());
+            for (const auto &[key, value] : args) {
+              keys.push_back(toMlirStringRef(key));
+              values.push_back(toMlirStringRef(value));
+            }
+            return mlirEmitOptimizationRemark(
+                self, remarkKind, toMlirStringRef(remarkName),
+                toMlirStringRef(category), toMlirStringRef(subCategory),
+                toMlirStringRef(functionName), toMlirStringRef(message),
+                static_cast<intptr_t>(keys.size()), keys.data(), values.data());
+          },
+          "kind"_a, "remark_name"_a, nb::kw_only(), "category"_a = "",
+          "sub_category"_a = "", "function_name"_a = "", "message"_a = "",
+          "args"_a = std::vector<std::pair<std::string, std::string>>(),
+          R"(
+            Emits an optimization remark at this location through the remark
+            engine of the context (see `Context.enable_remarks`).
+
+            Args:
+              kind: A `RemarkKind`, or one of "passed", "missed", "failure"
+                and "analysis".
+              remark_name: The name identifying the remark.
+              category: The category the filters are matched against.
+              sub_category: An optional sub-category.
+              function_name: The function the remark refers to.
+              message: Free text attached to the remark.
+              args: Key/value pairs attached to the remark.
+
+            Returns:
+              True if the remark was reported; False when no remark engine is
+              enabled or the category is filtered out.)")
       .def(
           "__str__",
           [](PyLocation &self) {
