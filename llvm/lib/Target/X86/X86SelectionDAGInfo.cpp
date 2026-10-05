@@ -72,8 +72,6 @@ void X86SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
     break;
   case X86ISD::VP2INTERSECT:
     // invalid number of results; expected 1, got 2
-  case X86ISD::CVTTP2SI_SAE:
-  case X86ISD::CVTTP2UI_SAE:
   case X86ISD::CVTTP2IBS_SAE:
     // invalid number of operands; expected 1, got 2
   case X86ISD::CALL:
