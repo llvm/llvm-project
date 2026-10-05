@@ -25939,7 +25939,7 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
   // loop-defined bases to poison in predecessor-less blocks. Expand at the
   // first insertion point, where no body instruction dominates, so the check
   // cannot reuse scalars that are moved into the vector block and deleted.
-  IRBuilder<> ChkBuilder(BB, BB->getFirstInsertionPt());
+  IRBuilder<> ChkBuilder(BB->getFirstInsertionPt());
   ChkBuilder.SetCurrentDebugLocation(Term->getDebugLoc());
   SCEVExpander Exp(*SE, "slp.rtcheck");
   Value *Cond = emitRuntimeAliasCheck(ChkBuilder, Exp);
