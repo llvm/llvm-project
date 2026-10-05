@@ -48,6 +48,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <cassert>
+#include <cstdint>
 #include <utility>
 #include <vector>
 
@@ -203,7 +204,8 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
   unsigned NumMemInstr = MemInstr.size();
   LLVM_DEBUG(dbgs() << "Found " << NumMemInstr
                     << " Loads and Stores to analyze\n");
-  if (MaxMemInstrRatio * NumInsts < NumMemInstr * NumMemInstr) {
+  if (static_cast<uint64_t>(MaxMemInstrRatio) * NumInsts <
+      static_cast<uint64_t>(NumMemInstr) * NumMemInstr) {
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLoop",
                                       L->getStartLoc(), L->getHeader())
@@ -2203,7 +2205,7 @@ void LoopInterchangeTransform::reduction2Memory() {
 
   LoopInterchangeLegality::InnerReduction SR = InnerReductions[0];
   BasicBlock *InnerLoopHeader = InnerLoop->getHeader();
-  IRBuilder<> Builder(InnerLoopHeader, InnerLoopHeader->getFirstNonPHIIt());
+  IRBuilder<> Builder(InnerLoopHeader->getFirstNonPHIIt());
 
   // Check if it's the first iteration.
   LLVMContext &Context = InnerLoopHeader->getContext();

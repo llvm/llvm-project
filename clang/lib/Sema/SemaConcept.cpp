@@ -404,6 +404,15 @@ public:
     return inherited::TraverseType(TT->desugar());
   }
 
+  bool TraversePackIndexingType(PackIndexingType *T, bool TraverseQualifier) {
+    {
+      Sema::ArgPackSubstIndexRAII _(SemaRef, std::nullopt);
+      if (!TraverseType(T->getPattern()))
+        return false;
+    }
+    return TraverseStmt(T->getIndexExpr());
+  }
+
   bool TraverseDecl(Decl *D) {
     if (auto *VD = dyn_cast<ValueDecl>(D)) {
       if (auto *Var = dyn_cast<VarDecl>(VD))
@@ -549,7 +558,9 @@ public:
     }
   }
 };
+} // namespace
 
+namespace clang {
 class ConstraintSatisfactionChecker {
   Sema &S;
   const NamedDecl *Template;
@@ -652,10 +663,6 @@ private:
   EvaluateAtomicConstraint(const Expr *AtomicExpr,
                            const MultiLevelTemplateArgumentList &MLTAL);
 
-  UnsignedOrNone EvaluateFoldExpandedConstraintSize(
-      const FoldExpandedConstraint &FE,
-      const MultiLevelTemplateArgumentList &MLTAL);
-
   // XXX: It is SLOW! Use it very carefully.
   std::optional<MultiLevelTemplateArgumentList> SubstitutionInTemplateArguments(
       const NormalizedConstraintWithParamMapping &Constraint,
@@ -700,7 +707,7 @@ public:
                       const MultiLevelTemplateArgumentList &MLTAL);
 };
 
-} // namespace
+} // namespace clang
 
 ExprResult ConstraintSatisfactionChecker::EvaluateAtomicConstraint(
     const Expr *AtomicExpr, const MultiLevelTemplateArgumentList &MLTAL) {
@@ -948,31 +955,6 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   return PMCache.cache(EvaluateSlow(Constraint, MLTAL));
 }
 
-UnsignedOrNone
-ConstraintSatisfactionChecker::EvaluateFoldExpandedConstraintSize(
-    const FoldExpandedConstraint &FE,
-    const MultiLevelTemplateArgumentList &MLTAL) {
-
-  Expr *Pattern = const_cast<Expr *>(FE.getPattern());
-
-  SmallVector<UnexpandedParameterPack, 2> Unexpanded;
-  S.collectUnexpandedParameterPacks(Pattern, Unexpanded);
-  assert(!Unexpanded.empty() && "Pack expansion without parameter packs?");
-  bool Expand = true;
-  bool RetainExpansion = false;
-  UnsignedOrNone NumExpansions(std::nullopt);
-  if (S.CheckParameterPacksForExpansion(
-          Pattern->getExprLoc(), Pattern->getSourceRange(), Unexpanded, MLTAL,
-          /*FailOnPackProducingTemplates=*/false, Expand, RetainExpansion,
-          NumExpansions, /*Diagnose=*/false) ||
-      !Expand || RetainExpansion)
-    return std::nullopt;
-
-  if (NumExpansions && S.getLangOpts().BracketDepth < *NumExpansions)
-    return std::nullopt;
-  return NumExpansions;
-}
-
 ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     const FoldExpandedConstraint &Constraint,
     const MultiLevelTemplateArgumentList &MLTAL) {
@@ -993,9 +975,15 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     return ExprError();
   }
 
-  ExprResult Out;
-  UnsignedOrNone NumExpansions =
-      EvaluateFoldExpandedConstraintSize(Constraint, *SubstitutedArgs);
+  UnsignedOrNone NumExpansions(std::nullopt);
+  {
+    Sema::InstantiatingTemplate InstTemplate(
+        S, TemplateNameLoc,
+        Sema::InstantiatingTemplate::ConstraintSubstitution{},
+        const_cast<NamedDecl *>(Template), Constraint.getSourceRange());
+    NumExpansions = S.EvaluateFoldExpandedConstraintSize(
+        Constraint.getPattern(), *SubstitutedArgs);
+  }
   if (!NumExpansions)
     return ExprEmpty();
 
@@ -1004,6 +992,7 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     return ExprEmpty();
   }
 
+  ExprResult Out;
   for (unsigned I = 0; I < *NumExpansions; I++) {
     Sema::ArgPackSubstIndexRAII SubstIndex(S, I);
     Satisfaction.IsSatisfied = false;
@@ -1315,7 +1304,7 @@ bool Sema::CheckConstraintSatisfaction(
     OutSatisfaction.IsSatisfied = true;
     return false;
   }
-  const auto *Template = Entity.dyn_cast<const NamedDecl *>();
+  const auto *Template = dyn_cast_if_present<const NamedDecl *>(Entity);
   if (!Template) {
     return ::CheckConstraintSatisfaction(
         *this, nullptr, AssociatedConstraints, TemplateArgsLists,
@@ -2029,9 +2018,7 @@ static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
 static void diagnoseUnsatisfiedConstraintExpr(
     Sema &S, const UnsatisfiedConstraintRecord &Record, SourceLocation Loc,
     bool First, concepts::NestedRequirement *Req) {
-  if (auto *Diag =
-          Record
-              .template dyn_cast<const ConstraintSubstitutionDiagnostic *>()) {
+  if (auto *Diag = dyn_cast<const ConstraintSubstitutionDiagnostic *>(Record)) {
     if (Req)
       S.Diag(Diag->first, diag::note_nested_requirement_substitution_error)
           << (int)First << Req->getInvalidConstraintEntity() << Diag->second;
@@ -2087,7 +2074,7 @@ void Sema::DiagnoseUnsatisfiedConstraint(
                                   ConstraintExpr->getBeginLoc(), First);
 }
 
-namespace {
+namespace clang {
 
 class SubstituteParameterMappings {
   Sema &SemaRef;
@@ -2124,6 +2111,8 @@ public:
 
   bool substitute(NormalizedConstraint &N);
 };
+
+} // namespace clang
 
 void SubstituteParameterMappings::buildParameterMapping(
     NormalizedConstraintWithParamMapping &N) {
@@ -2418,8 +2407,6 @@ bool SubstituteParameterMappings::substitute(NormalizedConstraint &N) {
   llvm_unreachable("Unknown ConstraintKind enum");
 }
 
-} // namespace
-
 NormalizedConstraint *NormalizedConstraint::fromAssociatedConstraints(
     Sema &S, const NamedDecl *D, ArrayRef<AssociatedConstraint> ACs) {
   assert(ACs.size() != 0);
@@ -2549,25 +2536,35 @@ const NormalizedConstraint *Sema::getNormalizedAssociatedConstraints(
   }
 
   // FIXME: ConstrainedDeclOrNestedReq is never a NestedRequirement!
-  const NamedDecl *ND =
-      ConstrainedDeclOrNestedReq.dyn_cast<const NamedDecl *>();
-  auto CacheEntry = NormalizationCache.find(ConstrainedDeclOrNestedReq);
-  if (CacheEntry == NormalizationCache.end()) {
-    auto *Normalized = NormalizedConstraint::fromAssociatedConstraints(
-        *this, ND, AssociatedConstraints);
-    if (!Normalized) {
-      NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, nullptr);
-      return nullptr;
+  const NamedDecl *ND = dyn_cast<const NamedDecl *>(ConstrainedDeclOrNestedReq);
+  // The normal form only depends on the constraint expressions, and the
+  // members of all specializations of a class template share the
+  // (uninstantiated) constraint expressions of the member they were
+  // instantiated from. Cache the normal form of each expression to not
+  // normalize the same expression once per class template specialization.
+  NormalizedConstraint *Normalized = nullptr;
+  for (const AssociatedConstraint &AC : AssociatedConstraints) {
+    std::pair<const Expr *, unsigned> Key(
+        AC.ConstraintExpr, AC.ArgPackSubstIndex.toInternalRepresentation());
+    NormalizedConstraint *Next;
+    if (auto It = NormalizedConstraintExprCache.find(Key);
+        It != NormalizedConstraintExprCache.end()) {
+      Next = It->second;
+    } else {
+      Next = NormalizedConstraint::fromAssociatedConstraints(*this, ND, AC);
+      // substitute() can invalidate iterators of NormalizedConstraintExprCache.
+      if (Next && SubstituteParameterMappings(*this).substitute(*Next))
+        Next = nullptr;
+      NormalizedConstraintExprCache.try_emplace(Key, Next);
     }
-    // substitute() can invalidate iterators of NormalizationCache.
-    bool Failed = SubstituteParameterMappings(*this).substitute(*Normalized);
-    CacheEntry =
-        NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, Normalized)
-            .first;
-    if (Failed)
+    if (!Next)
       return nullptr;
+    Normalized =
+        Normalized
+            ? CompoundConstraint::CreateConjunction(Context, Normalized, Next)
+            : Next;
   }
-  return CacheEntry->second;
+  return Normalized;
 }
 
 bool FoldExpandedConstraint::AreCompatibleForSubsumption(

@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -25,8 +26,11 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Intrinsics.h"
 
+#include <cstdint>
+#include <limits>
 #include <optional>
 #include <string>
+#include <tuple>
 
 namespace llvm {
 class AssumptionCache;
@@ -334,6 +338,39 @@ bool isSelectedBaseLoad(Type *ScalarTy, ArrayRef<Value *> PointerOps,
                         Value *&FalseBase,
                         SmallVectorImpl<Value *> &Conditions);
 
+/// Returns the common type for the indices of the single-index GEP lanes of
+/// a GEP node with the main op \p VL0, or nullptr if no such type exists.
+/// \p IsGEPLane tells which lanes of \p VL are matching GEPs, whose index is
+/// used as is; all other lanes (copyable, poison, non-GEP pointers) are
+/// modeled as gep V, 0 and just take a zero index of the common type.
+/// The common type is the index type of \p VL0 if all matching lanes share
+/// it. Otherwise the constant indices are cast: to the pointer index type if
+/// there are no non-constant indices (or the index type of \p VL0 already is
+/// the pointer index type), or to the index type of \p VL0 if all the
+/// non-constant indices have that type and all the constants are
+/// representable in it (GEP indices are sign-extended to the pointer index
+/// width, so the value must fit as a signed number). A non-constant index of
+/// a different type cannot be cast without a new instruction, so no common
+/// type exists.
+Type *getCommonGEPIndexType(ArrayRef<Value *> VL, Instruction *VL0,
+                            function_ref<bool(Value *)> IsGEPLane,
+                            const DataLayout &DL);
+
+/// Checks if the pointers \p PointerOps of the gathered loads, which are not
+/// compatible in the usual sense (some of them are constant-offset pointers,
+/// some have runtime indices), still form a cheap address vector as a
+/// copyable GEP node: a splat of the common base and a vector of indices.
+/// The constant-offset lanes are the base itself or single-index GEPs of the
+/// base with a constant index (modeled as gep V, 0 or as matching lanes with
+/// constant indices), the other lanes are single-index GEPs of the base of
+/// the same shape, whose indices are affine in a single runtime value (the
+/// stride): optionally cast (all with the same cast opcode) values, each of
+/// which is the stride itself or a binary operation of the stride and a
+/// constant, like b[i * S] or b[S + i]. Duplicate lanes are not accepted:
+/// the node would be a shuffled non-full vector, gathering the loads is
+/// cheaper then.
+bool isCopyableGEPAddressVector(ArrayRef<Value *> PointerOps);
+
 /// Shuffles \p Mask in accordance with the given \p SubMask.
 /// \param ExtendingManyInputs Supports reshuffling of the mask with not only
 /// one but two input vectors.
@@ -410,6 +447,60 @@ void collectNarrowedLeaves(Value *V, unsigned RdxOpcode, unsigned WideBW,
                            SmallVectorImpl<Instruction *> &ChainInsts);
 
 TargetTransformInfo::TargetCostKind getSLPCostKind(const Function *F);
+
+/// Returns a saturating unsigned upper bound of the scalar V. The numeric
+/// bound keeps precision on arithmetic carries, where bit-wise analysis
+/// loses it.
+APInt getScalarMaxValue(const Value *V, unsigned Depth = 0);
+
+/// Checks if the values in \p VL are zero-extended sub-fields of the same
+/// wider integer scalar. Returns the source scalar, the field width and the
+/// field permutation mask. The extraction dual of the lane-packing layout.
+/// The field-to-lane mapping of the bitcast to the field vector is defined
+/// for little-endian targets only.
+std::optional<std::tuple<Value *, unsigned, SmallVector<int>>>
+matchGatheredExtractedFields(ArrayRef<Value *> VL, const DataLayout &DL);
+
+/// Description of a bitfield packing of vector lanes into a scalar value:
+/// every lane contributes a disjoint contiguous byte field of the result.
+struct BitPackInfo {
+  static constexpr unsigned NoLane = std::numeric_limits<unsigned>::max();
+  unsigned FieldWidth = 0;
+  /// Lane covering each field, NoLane if the field is always zero.
+  SmallVector<unsigned, 8> LaneOfField;
+  /// Per-lane right-shift amounts bringing the field content to the low bits.
+  SmallVector<uint64_t, 8> LShrAmts;
+
+  /// True if any lane needs a right shift to align its field content.
+  bool needsShift() const {
+    return any_of(LShrAmts, [](uint64_t A) { return A != 0; });
+  }
+};
+
+/// Computes the bitfield packing layout from the per-lane possibly set bits
+/// of the source values, the per-lane left-shift amounts and the per-lane
+/// masks (all-ones for unmasked lanes).
+std::optional<BitPackInfo> computeBitPackInfo(unsigned BitWidth,
+                                              ArrayRef<APInt> PossibleBits,
+                                              ArrayRef<uint64_t> ShlAmts,
+                                              ArrayRef<APInt> Masks);
+
+/// Returns the byte shuffle mask packing the per-lane fields of the shifted
+/// lanes (BytesPerLane bytes each) into the packed scalar of NumBytes bytes.
+SmallVector<int> getBitPackMask(const BitPackInfo &Info, unsigned NumBytes,
+                                unsigned NumElts, unsigned BytesPerLane);
+
+/// Builds the bitfield packing of X per the layout and the shift width.
+/// \p NumInsts returns the number of emitted instructions.
+Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
+                    unsigned ShiftWidth, unsigned &NumInsts);
+
+/// The debug values of the erased \p From are kept on its replacement \p To.
+/// A record placed before \p To is cloned right after it, while the original
+/// one is killed together with the scalar, so the variable is undefined up to
+/// \p To. The clone is skipped if it would pass a record of the same variable,
+/// otherwise the variable would show a stale value.
+void redirectDbgValues(Instruction &From, Value &To);
 
 } // namespace llvm::slpvectorizer
 

@@ -8,13 +8,13 @@ module {
 
     func.func @test()  {
     %0 = fir.address_of(@_QFEx) : !fir.ref<!fir.class<!fir.heap<!fir.type<_QTtest_type{a:i32,b:!fir.box<!fir.heap<!fir.array<?x?xf32>>>}>>>>
-    %1 = fircg.ext_declare %0 {uniq_name = "_QFEx"} : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QTtest_type{a:i32,b:!fir.box<!fir.heap<!fir.array<?x?xf32>>>}>>>>) -> !fir.ref<!fir.class<!fir.heap<!fir.type<_QTtest_type{a:i32,b:!fir.box<!fir.heap<!fir.array<?x?xf32>>>}>>>> loc(#loc3)
+    %1 = fircg.ext_declare %0 uniq_name("_QFEx") : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QTtest_type{a:i32,b:!fir.box<!fir.heap<!fir.array<?x?xf32>>>}>>>>) -> !fir.ref<!fir.class<!fir.heap<!fir.type<_QTtest_type{a:i32,b:!fir.box<!fir.heap<!fir.array<?x?xf32>>>}>>>> loc(#loc3)
     %2 = fir.address_of(@_QFEy) : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QTtest_type{a:i32,b:!fir.box<!fir.heap<!fir.array<?x?xf32>>>}>>>>
-    %3 = fircg.ext_declare %2 {uniq_name = "_QFEy"} : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QTtest_type{a:i32,b:!fir.box<!fir.heap<!fir.array<?x?xf32>>>}>>>>) -> !fir.ref<!fir.class<!fir.ptr<!fir.type<_QTtest_type{a:i32,b:!fir.box<!fir.heap<!fir.array<?x?xf32>>>}>>>> loc(#loc4)
+    %3 = fircg.ext_declare %2 uniq_name("_QFEy") : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QTtest_type{a:i32,b:!fir.box<!fir.heap<!fir.array<?x?xf32>>>}>>>>) -> !fir.ref<!fir.class<!fir.ptr<!fir.type<_QTtest_type{a:i32,b:!fir.box<!fir.heap<!fir.array<?x?xf32>>>}>>>> loc(#loc4)
     %4 = fir.address_of(@_QFEz) : !fir.ref<!fir.class<none>>
-    %5 = fircg.ext_declare %4 {uniq_name = "_QFEz"} : (!fir.ref<!fir.class<none>>) -> !fir.ref<!fir.class<none>> loc(#loc4)
+    %5 = fircg.ext_declare %4 uniq_name("_QFEz") : (!fir.ref<!fir.class<none>>) -> !fir.ref<!fir.class<none>> loc(#loc4)
     %6 = fir.address_of(@_QFEt) : !fir.ref<!fir.class<!fir.ptr<none>>>
-    %7 = fircg.ext_declare %6 {uniq_name = "_QFEt"} : (!fir.ref<!fir.class<!fir.ptr<none>>>) -> !fir.ref<!fir.class<!fir.ptr<none>>> loc(#loc4)
+    %7 = fircg.ext_declare %6 uniq_name("_QFEt") : (!fir.ref<!fir.class<!fir.ptr<none>>>) -> !fir.ref<!fir.class<!fir.ptr<none>>> loc(#loc4)
     return
   } loc(#loc2)
 }

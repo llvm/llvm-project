@@ -374,11 +374,11 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
           .createScalarZExtOrTrunc(&EVL, Plan.getVF().getScalarType(),
                                    DebugLoc::getUnknown());
 
-  Plan.getVF().replaceUsesWithIf(EVLAsIdx, [](VPUser &U, unsigned Idx) {
+  Plan.getVF().replaceUsesWithIf(EVLAsIdx, [](VPUser &U) {
     return isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe>(U);
   });
 
-  Plan.getVFxUF().replaceUsesWithIf(EVLAsIdx, [](VPUser &U, unsigned Idx) {
+  Plan.getVFxUF().replaceUsesWithIf(EVLAsIdx, [](VPUser &U) {
     // Only replace uses in VPWidenPointerInductionRecipe; The increment of the
     // canonical induction must not be updated.
     return isa<VPWidenPointerInductionRecipe>(U);
@@ -553,10 +553,9 @@ void VPlanTransforms::addExplicitVectorLength(
 
   // Replace all uses of the canonical IV with VPCurrentIterationPHIRecipe
   // except for the canonical IV increment.
-  CanonicalIV->replaceUsesWithIf(CurrentIteration,
-                                 [CanonicalIVIncrement](VPUser &U, unsigned) {
-                                   return &U != CanonicalIVIncrement;
-                                 });
+  CanonicalIV->replaceUsesWithIf(
+      CurrentIteration,
+      [CanonicalIVIncrement](VPUser &U) { return &U != CanonicalIVIncrement; });
   // TODO: support unroll factor > 1.
   Plan.setUF(1);
 }
@@ -568,12 +567,12 @@ void VPlanTransforms::convertToVariableLengthStep(VPlan &Plan) {
 
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksAs<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry())))
-    for (VPRecipeBase &R : VPBB->phis())
-      if (auto *PhiR = dyn_cast<VPCurrentIterationPHIRecipe>(&R)) {
-        assert(!CurrentIteration &&
-               "Found multiple CurrentIteration. Only one expected");
-        CurrentIteration = PhiR;
-      }
+    for (VPCurrentIterationPHIRecipe &PhiR :
+         make_isa_range<VPCurrentIterationPHIRecipe>(VPBB->phis())) {
+      assert(!CurrentIteration &&
+             "Found multiple CurrentIteration. Only one expected");
+      CurrentIteration = &PhiR;
+    }
 
   // Early return if it is not variable-length stepping.
   if (!CurrentIteration)

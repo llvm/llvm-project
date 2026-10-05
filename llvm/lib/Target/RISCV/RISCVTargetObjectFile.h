@@ -48,6 +48,9 @@ public:
 
   bool isInSmallSection(uint64_t Size) const;
 
+  bool shouldPutJumpTableInFunctionSection(bool UsesLabelDifference,
+                                           const Function &F) const override;
+
   const MCExpr *getIndirectSymViaGOTPCRel(const GlobalValue *GV,
                                           const MCSymbol *Sym,
                                           const MCValue &MV, int64_t Offset,

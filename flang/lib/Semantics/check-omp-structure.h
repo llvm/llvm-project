@@ -318,6 +318,8 @@ private:
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
   void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
   void CheckScanModifier(const parser::OmpClause::Reduction &x);
+  void CheckDoacross(
+      const parser::OmpDoacross &doa, llvm::omp::Clause clauseId);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
   void CheckUnrollFullTripCount(const parser::OpenMPLoopConstruct &x);
 
@@ -365,9 +367,9 @@ private:
       const AppliedModifierInfo &info);
   bool VerifyModifierUltimate(parser::omp::WithSource<llvm::omp::Clause> clause,
       const AppliedModifierInfo &info);
-  bool VerifyModifiers(parser::omp::WithSource<llvm::omp::Clause> clause,
+  bool VerifyModifierSyntax(parser::omp::WithSource<llvm::omp::Clause> clause,
       const AppliedModifierInfo &info);
-  void VerifyModifiers(const parser::OmpClause &x);
+  void VerifyModifierSyntax(const parser::OmpClause &x);
 
   // check-omp-structure.cpp
   using ClauseIterator =
@@ -375,6 +377,8 @@ private:
   bool IsAllowedClause(llvm::omp::Clause clauseId);
   bool CheckAllowedClause(llvm::omp::Clause clauseId,
       parser::CharBlock clauseSource, llvm::omp::Directive dirId);
+  void SetAllowedClauseOverride(llvm::omp::Clause clauseId,
+      llvm::omp::Directive dirId, llvm::omp::Version since);
   void CheckArgumentObjectKind(const parser::OmpClause &x);
   void CheckDirectiveSpelling(
       parser::CharBlock spelling, llvm::omp::Directive id);
@@ -419,6 +423,7 @@ private:
   bool HasRequires(llvm::omp::Clause req);
   void CheckAllowedMapTypes(
       parser::OmpMapType::Value, llvm::ArrayRef<parser::OmpMapType::Value>);
+  void CheckCloseModifierOnMapMembers();
 
   llvm::StringRef getClauseName(llvm::omp::Clause clause) override;
   llvm::StringRef getDirectiveName(llvm::omp::Directive directive) override;
@@ -429,8 +434,6 @@ private:
   std::optional<IterTy> FindDuplicate(RangeTy &&);
 
   void CheckDependList(const parser::DataRef &);
-  void CheckDoacross(
-      const parser::OmpDoacross &doa, llvm::omp::Clause clauseId);
   void CheckDimsModifier(parser::CharBlock source, size_t numValues,
       const parser::OmpDimsModifier &x);
   void CheckTypeParamInquiry(const parser::CharBlock &source,

@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DbgVariableFragmentInfo.h"
@@ -320,6 +321,13 @@ public:
 class DIAssignID : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
+  friend class Instruction;
+  friend class DebugValueUser;
+
+  /// The instructions this ID is attached to and the dbg_assign records that
+  /// refer to it, maintained by Instruction and DebugValueUser.
+  TinyPtrVector<Instruction *> Instrs;
+  TinyPtrVector<DbgVariableRecord *> Records;
 
   DIAssignID(LLVMContext &C, StorageType Storage)
       : MDNode(C, DIAssignIDKind, Storage, {}) {}
@@ -335,9 +343,8 @@ public:
   // This node has no operands to replace.
   void replaceOperandWith(unsigned I, Metadata *New) = delete;
 
-  SmallVector<DbgVariableRecord *> getAllDbgVariableRecordUsers() {
-    return Context.getReplaceableUses()->getAllDbgVariableRecordUsers();
-  }
+  ArrayRef<Instruction *> getInstructions() const { return Instrs; }
+  ArrayRef<DbgVariableRecord *> getRecords() const { return Records; }
 
   static DIAssignID *getDistinct(LLVMContext &Context) {
     return getImpl(Context, Distinct);

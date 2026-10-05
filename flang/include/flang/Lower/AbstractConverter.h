@@ -283,6 +283,13 @@ public:
   virtual const Fortran::lower::pft::FunctionLikeUnit *
   getCurrentFunctionUnit() const = 0;
 
+  /// Returns true if \p sym is the target of a Cray pointer association that
+  /// is visible in the procedure being lowered. Such symbols are given the
+  /// TARGET attribute in FIR so that the aliasing between the Cray pointee and
+  /// the target is visible to all FIR passes.
+  virtual bool
+  isVisibleCrayPointerTarget(const Fortran::semantics::Symbol &sym) const = 0;
+
   /// Check support of Multi-image features if -fcoarray is provided
   virtual void checkCoarrayEnabled() = 0;
 
@@ -376,6 +383,14 @@ public:
   /// Generate IR for Evaluation \p eval.
   virtual void genEval(pft::Evaluation &eval,
                        bool unstructuredContext = true) = 0;
+
+  /// Emit \p loopEval's evaluations, folding the body into an
+  /// scf.execute_region when the loop's branching is confined to that body.
+  /// The loop control statements are emitted outside any wrap, exactly as they
+  /// are for a structured loop. Used by directive lowering, which consumes the
+  /// DO itself and so never reaches genFIR(DoConstruct), where a plain loop's
+  /// body is wrapped.
+  virtual void genLoopBodyEvaluations(pft::Evaluation &loopEval) = 0;
 
   /// Return options controlling lowering behavior.
   const Fortran::lower::LoweringOptions &getLoweringOptions() const {

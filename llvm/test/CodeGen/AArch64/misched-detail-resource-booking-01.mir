@@ -477,6 +477,7 @@ body:             |
 # CHECK-NEXT:     selecting CortexA55UnitALU[1] available @3c
 # CHECK-NEXT: Queue BotQ.P: 10
 # CHECK-NEXT: Queue BotQ.A: 11
+# CHECK-NEXT: Pick Bot Cand SU(11) ONLY1      [pre-RA]
 # CHECK-NEXT: Scheduling SU(11) $q0 = COPY %10:fpr128
 # CHECK-NEXT:   Ready @3c
 # CHECK-NEXT:   CortexA55UnitALU +1x1u
@@ -667,6 +668,7 @@ body:             |
 # CHECK-NEXT:     selecting CortexA55UnitFPALU[1] available @8c
 # CHECK-NEXT: Queue BotQ.P: 9 3
 # CHECK-NEXT: Queue BotQ.A: 8
+# CHECK-NEXT: Pick Bot Cand SU(8) ONLY1      [pre-RA]
 # CHECK-NEXT: Scheduling SU(8) %10:fpr128 = UMULLv4i16_v4i32 %0.dsub:fpr128, %9:fpr64
 # CHECK-NEXT:   Ready @8c
 # CHECK-NEXT:   CortexA55UnitFPALU +2x1u
@@ -769,6 +771,7 @@ body:             |
 # CHECK-NEXT:     selecting CortexA55UnitFPALU[0] available @9c
 # CHECK-NEXT: Queue BotQ.P: 7 3
 # CHECK-NEXT: Queue BotQ.A: 9
+# CHECK-NEXT: Pick Bot Cand SU(9) ONLY1      [pre-RA]
 # CHECK-NEXT: Scheduling SU(9) %11:fpr64 = XTNv4i16 %7:fpr128
 # CHECK-NEXT:   Ready @9c
 # CHECK-NEXT:   CortexA55UnitFPALU +1x1u
@@ -948,6 +951,7 @@ body:             |
 # CHECK-NEXT:     selecting CortexA55UnitFPALU[1] available @10c
 # CHECK-NEXT: Queue BotQ.P: 3 6
 # CHECK-NEXT: Queue BotQ.A: 5
+# CHECK-NEXT: Pick Bot Cand SU(5) ONLY1      [pre-RA]
 # CHECK-NEXT: Scheduling SU(5) %7:fpr128 = ANDv16i8 %2:fpr128, %6:fpr128
 # CHECK-NEXT:   Ready @10c
 # CHECK-NEXT:   CortexA55UnitFPALU +2x1u
@@ -1302,6 +1306,7 @@ body:             |
 # CHECK-NEXT:     selecting CortexA55UnitALU[0] available @14c
 # CHECK-NEXT: Queue BotQ.P: 1 4 2
 # CHECK-NEXT: Queue BotQ.A: 0
+# CHECK-NEXT: Pick Bot Cand SU(0) ONLY1      [pre-RA]
 # CHECK-NEXT: Scheduling SU(0) %2:fpr128 = COPY $q2
 # CHECK-NEXT:   Ready @14c
 # CHECK-NEXT:   CortexA55UnitALU +1x1u
@@ -1385,6 +1390,7 @@ body:             |
 # CHECK-NEXT:   hazard: SU(4) ReadyCycle = 16 is later than CurrCycle = 15 on an unbuffered resource
 # CHECK-NEXT: Queue BotQ.P: 2 4
 # CHECK-NEXT: Queue BotQ.A: 1
+# CHECK-NEXT: Pick Bot Cand SU(1) ONLY1      [pre-RA]
 # CHECK-NEXT: Scheduling SU(1) %1:fpr128 = COPY $q1
 # CHECK-NEXT:   Ready @15c
 # CHECK-NEXT:   CortexA55UnitALU +1x1u
@@ -1563,6 +1569,7 @@ body:             |
 # CHECK-NEXT:     selecting CortexA55UnitALU[0] available @17c
 # CHECK-NEXT: Queue BotQ.P:
 # CHECK-NEXT: Queue BotQ.A: 2
+# CHECK-NEXT: Pick Bot Cand SU(2) ONLY1      [pre-RA]
 # CHECK-NEXT: Scheduling SU(2) %0:fpr128 = COPY $q0
 # CHECK-NEXT:   Ready @17c
 # CHECK-NEXT:   CortexA55UnitALU +1x1u
