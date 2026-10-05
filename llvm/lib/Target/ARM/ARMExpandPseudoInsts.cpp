@@ -173,15 +173,15 @@ namespace {
     }
   };
 
-  constexpr Register CalleeSavedFPRegs[] = {
+  constexpr MCPhysReg CalleeSavedFPRegs[] = {
       ARM::S16, ARM::S17, ARM::S18, ARM::S19, ARM::S20, ARM::S21,
       ARM::S22, ARM::S23, ARM::S24, ARM::S25, ARM::S26, ARM::S27,
       ARM::S28, ARM::S29, ARM::S30, ARM::S31};
 
-  constexpr Register CalleeSavedRegs[] = {ARM::R4, ARM::R5, ARM::R6,  ARM::R7,
-                                          ARM::R8, ARM::R9, ARM::R10, ARM::R11};
-  constexpr ArrayRef<Register> CalleeSavedLoRegs{CalleeSavedRegs, 4};
-  constexpr ArrayRef<Register> CalleeSavedHiRegs{CalleeSavedRegs + 4, 4};
+  constexpr MCPhysReg CalleeSavedRegs[] = {
+      ARM::R4, ARM::R5, ARM::R6, ARM::R7, ARM::R8, ARM::R9, ARM::R10, ARM::R11};
+  constexpr ArrayRef<MCPhysReg> CalleeSavedLoRegs{CalleeSavedRegs, 4};
+  constexpr ArrayRef<MCPhysReg> CalleeSavedHiRegs{CalleeSavedRegs + 4, 4};
 }
 
 static const NEONLdStTableEntry NEONLdStTable[] = {
