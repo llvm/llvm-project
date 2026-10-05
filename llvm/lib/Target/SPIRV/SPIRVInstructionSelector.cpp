@@ -4732,10 +4732,29 @@ bool SPIRVInstructionSelector::selectSelect(Register ResVReg,
   bool IsPtrTy =
       GR.isScalarOrVectorOfType(SelectFirstArg, SPIRV::OpTypePointer);
 
-  bool IsScalarBool =
-      GR.isScalarOfType(I.getOperand(1).getReg(), SPIRV::OpTypeBool);
+  Register CondReg = I.getOperand(1).getReg();
+  bool IsScalarBool = GR.isScalarOfType(CondReg, SPIRV::OpTypeBool);
   unsigned Opcode;
   if (isVectorType(GR.getSPIRVTypeForVReg(SelectFirstArg))) {
+    // Before SPIR-V 1.4, the condition of an OpSelect with a vector result
+    // must be a vector of Booleans with the same number of components, while
+    // LLVM IR also allows a scalar i1 condition. Splat it in that case.
+    if (IsScalarBool && !STI.isAtLeastSPIRVVer(VersionTuple(1, 4))) {
+      unsigned NumElts = GR.getScalarOrVectorComponentCount(ResType);
+      SPIRVTypeInst CondVecType = GR.getOrCreateSPIRVVectorType(
+          GR.getSPIRVTypeForVReg(CondReg), NumElts, I, TII);
+      Register SplatReg =
+          createVirtualRegister(CondVecType, &GR, MRI, MRI->getMF());
+      auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                         TII.get(SPIRV::OpCompositeConstruct))
+                     .addDef(SplatReg)
+                     .addUse(GR.getSPIRVTypeID(CondVecType));
+      for (unsigned J = 0; J < NumElts; ++J)
+        MIB.addUse(CondReg);
+      MIB.constrainAllUses(TII, TRI, RBI);
+      CondReg = SplatReg;
+      IsScalarBool = false;
+    }
     if (IsFloatTy) {
       Opcode = IsScalarBool ? SPIRV::OpSelectVFSCond : SPIRV::OpSelectVFVCond;
     } else if (IsPtrTy) {
@@ -4757,7 +4776,7 @@ bool SPIRVInstructionSelector::selectSelect(Register ResVReg,
   BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(I.getOperand(1).getReg())
+      .addUse(CondReg)
       .addUse(SelectFirstArg)
       .addUse(SelectSecondArg)
       .constrainAllUses(TII, TRI, RBI);
