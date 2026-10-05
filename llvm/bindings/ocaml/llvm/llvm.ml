@@ -483,9 +483,9 @@ external target_triple: llmodule -> string
                       = "llvm_target_triple"
 external set_target_triple: string -> llmodule -> unit
                           = "llvm_set_target_triple"
-external data_layout: llmodule -> string
+external data_layout: llmodule -> DataLayout.t
                     = "llvm_data_layout"
-external set_data_layout: string -> llmodule -> unit
+external set_data_layout: DataLayout.t -> llmodule -> unit
                         = "llvm_set_data_layout"
 external dump_module : llmodule -> unit = "llvm_dump_module"
 external print_module : string -> llmodule -> unit = "llvm_print_module"

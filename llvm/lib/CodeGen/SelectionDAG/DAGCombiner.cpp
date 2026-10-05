@@ -17970,7 +17970,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
 
   // fold (truncate (load x)) -> (smaller load x)
   // fold (truncate (srl (load x), c)) -> (smaller load (x+c/evtbits))
-  if (!LegalTypes || TLI.isTypeDesirableForOp(N0.getOpcode(), VT)) {
+  if (!LegalTypes || TLI.isTypeDesirableForOp(N0.getNode(), VT)) {
     if (SDValue Reduced = reduceLoadWidth(N))
       return Reduced;
 
@@ -18557,7 +18557,8 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
 
   // int_vt (bitcast (vec_vt (scalar_to_vector elt_vt:x)))
   //   => int_vt (any_extend elt_vt:x)
-  if (N0.getOpcode() == ISD::SCALAR_TO_VECTOR && VT.isScalarInteger()) {
+  if (DAG.getDataLayout().isLittleEndian() &&
+      N0.getOpcode() == ISD::SCALAR_TO_VECTOR && VT.isScalarInteger()) {
     SDValue SrcScalar = N0.getOperand(0);
     EVT SrcVT = SrcScalar.getValueType();
     if (SrcVT.isScalarInteger() && VT.bitsGT(SrcVT))
