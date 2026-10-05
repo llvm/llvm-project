@@ -295,7 +295,7 @@ file(GLOB root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-*.h)
 file(GLOB root_private_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-private*.h)
 list(REMOVE_ITEM root_public_headers ${root_private_headers})
 
-file(MAKE_DIRECTORY ${liblldb_header_staging_dir})
+file(MAKE_DIRECTORY ${lldb_header_staging_dir})
 
 find_program(unifdef_EXECUTABLE unifdef)
 
