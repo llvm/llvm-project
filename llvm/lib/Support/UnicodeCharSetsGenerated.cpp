@@ -16,6 +16,8 @@
 using llvm::sys::UnicodeCharRange;
 using CharRanges = llvm::sys::UnicodeCharSet::CharRanges;
 
+namespace llvm::sys::unicode {
+
 // General_Category=L|M|N|P|S|Zs
 static constexpr UnicodeCharRange GeneratedPrintableRangesData[] = {
     {0x0020, 0x007E},   {0x00A0, 0x00AC},   {0x00AE, 0x0377},
@@ -266,8 +268,7 @@ static constexpr UnicodeCharRange GeneratedPrintableRangesData[] = {
     {0x2F800, 0x2FA1D}, {0x30000, 0x3134A}, {0x31350, 0x33479},
     {0x3D000, 0x3FC3F}, {0xE0100, 0xE01EF},
 };
-extern const CharRanges llvm::sys::unicode::GeneratedPrintableRanges =
-    GeneratedPrintableRangesData;
+extern const CharRanges GeneratedPrintableRanges = GeneratedPrintableRangesData;
 
 // General_Category=Cf
 static constexpr UnicodeCharRange GeneratedFormatCharacterRangesData[] = {
@@ -279,7 +280,7 @@ static constexpr UnicodeCharRange GeneratedFormatCharacterRangesData[] = {
     {0x110CD, 0x110CD}, {0x13430, 0x1343F}, {0x1BCA0, 0x1BCA3},
     {0x1D173, 0x1D17A}, {0xE0001, 0xE0001}, {0xE0020, 0xE007F},
 };
-extern const CharRanges llvm::sys::unicode::GeneratedFormatCharacterRanges =
+extern const CharRanges GeneratedFormatCharacterRanges =
     GeneratedFormatCharacterRangesData;
 
 // General_Category=Mn|Me
@@ -407,7 +408,7 @@ static constexpr UnicodeCharRange GeneratedCombiningCharacterRangesData[] = {
     {0x1E6EE, 0x1E6EF}, {0x1E6F5, 0x1E6F5}, {0x1E8D0, 0x1E8D6},
     {0x1E944, 0x1E94A}, {0xE0100, 0xE01EF},
 };
-extern const CharRanges llvm::sys::unicode::GeneratedCombiningCharacterRanges =
+extern const CharRanges GeneratedCombiningCharacterRanges =
     GeneratedCombiningCharacterRangesData;
 
 // East_Asian_Width=F|W
@@ -455,6 +456,7 @@ static constexpr UnicodeCharRange GeneratedDoubleWidthCharacterRangesData[] = {
     {0x1FAC8, 0x1FAC8}, {0x1FACC, 0x1FADD}, {0x1FADF, 0x1FAEB},
     {0x1FAEF, 0x1FAFA}, {0x20000, 0x2FFFD}, {0x30000, 0x3FFFD},
 };
-extern const CharRanges
-    llvm::sys::unicode::GeneratedDoubleWidthCharacterRanges =
-        GeneratedDoubleWidthCharacterRangesData;
+extern const CharRanges GeneratedDoubleWidthCharacterRanges =
+    GeneratedDoubleWidthCharacterRangesData;
+
+} // namespace llvm::sys::unicode

@@ -56,6 +56,8 @@ static constexpr StringLiteral FileHeader = R"(
 
 using llvm::sys::UnicodeCharRange;
 using CharRanges = llvm::sys::UnicodeCharSet::CharRanges;
+
+namespace {1} {{
 )";
 
 [[noreturn]] static void error(const Twine &Message) {
@@ -179,9 +181,8 @@ static CharacterDatabase loadDatabase(StringRef Path) {
 }
 
 template <typename Predicate>
-static void emitTable(raw_ostream &OS, StringRef Namespace, StringRef Name,
-                      StringRef Description, ArrayRef<Properties> Chars,
-                      Predicate Pred) {
+static void emitTable(raw_ostream &OS, StringRef Name, StringRef Description,
+                      ArrayRef<Properties> Chars, Predicate Pred) {
   SmallVector<sys::UnicodeCharRange> Ranges;
   for (unsigned CodePoint = 0, E = Chars.size(); CodePoint != E; ++CodePoint) {
     if (!Pred(Chars[CodePoint]))
@@ -196,19 +197,19 @@ static void emitTable(raw_ostream &OS, StringRef Namespace, StringRef Name,
      << "Data[] = {\n";
   for (sys::UnicodeCharRange Range : Ranges)
     OS << formatv("    {{{0:X4}, {1:X4}},\n", Range.Lower, Range.Upper);
-  OS << "};\nextern const CharRanges " << Namespace << "::" << Name << " = "
-     << Name << "Data;\n";
+  OS << "};\nextern const CharRanges " << Name << " = " << Name << "Data;\n";
 }
 
-static void writeFile(StringRef Path, StringRef Version,
+static void writeFile(StringRef Path, StringRef Namespace, StringRef Version,
                       function_ref<void(raw_ostream &)> EmitTables) {
   std::error_code EC;
   ToolOutputFile Out(Path, EC, sys::fs::OF_Text);
   if (EC)
     error(Path + ": " + EC.message());
 
-  Out.os() << formatv(FileHeader.drop_front().data(), Version);
+  Out.os() << formatv(FileHeader.drop_front().data(), Version, Namespace);
   EmitTables(Out.os());
+  Out.os() << "\n} // namespace " << Namespace << '\n';
   Out.keep();
 }
 
@@ -226,32 +227,31 @@ int main(int argc, char **argv) {
   CharacterDatabase UCD = loadDatabase(UCDFile);
   ArrayRef<Properties> Chars = UCD.Chars;
 
-  writeFile(ClangOutput, UCD.Version, [&](raw_ostream &OS) {
-    emitTable(OS, "clang", "GeneratedXIDStartRanges", "XID_Start", Chars,
+  writeFile(ClangOutput, "clang", UCD.Version, [&](raw_ostream &OS) {
+    emitTable(OS, "GeneratedXIDStartRanges", "XID_Start", Chars,
               [](Properties P) { return P.XIDStart; });
-    emitTable(OS, "clang", "GeneratedXIDContinueRanges",
+    emitTable(OS, "GeneratedXIDContinueRanges",
               "XID_Continue, excluding XID_Start", Chars,
               [](Properties P) { return P.XIDContinue && !P.XIDStart; });
-    emitTable(OS, "clang", "GeneratedMathematicalNotationProfileIDStartRanges",
+    emitTable(OS, "GeneratedMathematicalNotationProfileIDStartRanges",
               "ID_Compat_Math_Start", Chars,
               [](Properties P) { return P.MathStart; });
-    emitTable(OS, "clang",
-              "GeneratedMathematicalNotationProfileIDContinueRanges",
+    emitTable(OS, "GeneratedMathematicalNotationProfileIDContinueRanges",
               "ID_Compat_Math_Continue, excluding ID_Compat_Math_Start", Chars,
               [](Properties P) { return P.MathContinue && !P.MathStart; });
   });
-  writeFile(LLVMOutput, UCD.Version, [&](raw_ostream &OS) {
-    emitTable(OS, "llvm::sys::unicode", "GeneratedPrintableRanges",
-              "General_Category=L|M|N|P|S|Zs", Chars,
-              [](Properties P) { return P.Printable; });
-    emitTable(OS, "llvm::sys::unicode", "GeneratedFormatCharacterRanges",
-              "General_Category=Cf", Chars,
-              [](Properties P) { return P.Format; });
-    emitTable(OS, "llvm::sys::unicode", "GeneratedCombiningCharacterRanges",
-              "General_Category=Mn|Me", Chars,
-              [](Properties P) { return P.Combining; });
-    emitTable(OS, "llvm::sys::unicode", "GeneratedDoubleWidthCharacterRanges",
-              "East_Asian_Width=F|W", Chars,
-              [](Properties P) { return P.DoubleWidth; });
-  });
+  writeFile(
+      LLVMOutput, "llvm::sys::unicode", UCD.Version, [&](raw_ostream &OS) {
+        emitTable(OS, "GeneratedPrintableRanges",
+                  "General_Category=L|M|N|P|S|Zs", Chars,
+                  [](Properties P) { return P.Printable; });
+        emitTable(OS, "GeneratedFormatCharacterRanges", "General_Category=Cf",
+                  Chars, [](Properties P) { return P.Format; });
+        emitTable(OS, "GeneratedCombiningCharacterRanges",
+                  "General_Category=Mn|Me", Chars,
+                  [](Properties P) { return P.Combining; });
+        emitTable(OS, "GeneratedDoubleWidthCharacterRanges",
+                  "East_Asian_Width=F|W", Chars,
+                  [](Properties P) { return P.DoubleWidth; });
+      });
 }
