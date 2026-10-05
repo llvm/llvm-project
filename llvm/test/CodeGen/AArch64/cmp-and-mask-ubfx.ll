@@ -10,9 +10,8 @@
 define i1 @surrogate_eq(i32 %c) {
 ; CHECK-LABEL: surrogate_eq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #55296 // =0xd800
-; CHECK-NEXT:    and w9, w0, #0xfc00
-; CHECK-NEXT:    cmp w9, w8
+; CHECK-NEXT:    ubfx w8, w0, #10, #6
+; CHECK-NEXT:    cmp w8, #54
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %m = and i32 %c, 64512
@@ -23,9 +22,8 @@ define i1 @surrogate_eq(i32 %c) {
 define i1 @surrogate_ne(i32 %c) {
 ; CHECK-LABEL: surrogate_ne:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #55296 // =0xd800
-; CHECK-NEXT:    and w9, w0, #0xfc00
-; CHECK-NEXT:    cmp w9, w8
+; CHECK-NEXT:    ubfx w8, w0, #10, #6
+; CHECK-NEXT:    cmp w8, #54
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %m = and i32 %c, 64512
@@ -36,9 +34,8 @@ define i1 @surrogate_ne(i32 %c) {
 define i1 @mask_i64(i64 %x) {
 ; CHECK-LABEL: mask_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and x8, x0, #0x3fc00
-; CHECK-NEXT:    sub x8, x8, #54, lsl #12 // =221184
-; CHECK-NEXT:    cmp x8, #1024
+; CHECK-NEXT:    ubfx x8, x0, #10, #8
+; CHECK-NEXT:    cmp x8, #217
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %m = and i64 %x, 261120
@@ -50,9 +47,8 @@ define i1 @mask_i64(i64 %x) {
 define i1 @shifted_imm12(i64 %x) {
 ; CHECK-LABEL: shifted_imm12:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #4398046511104 // =0x40000000000
-; CHECK-NEXT:    and x9, x0, #0xfffffffff000000
-; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    ubfx x8, x0, #24, #36
+; CHECK-NEXT:    cmp x8, #64, lsl #12 // =262144
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %m = and i64 %x, 1152921504590069760
@@ -63,9 +59,8 @@ define i1 @shifted_imm12(i64 %x) {
 define i32 @branch(i32 %c, i32 %a, i32 %b) {
 ; CHECK-LABEL: branch:
 ; CHECK:       // %bb.0: // %common.ret
-; CHECK-NEXT:    and w8, w0, #0xfc00
-; CHECK-NEXT:    mov w9, #55296 // =0xd800
-; CHECK-NEXT:    cmp w8, w9
+; CHECK-NEXT:    ubfx w8, w0, #10, #6
+; CHECK-NEXT:    cmp w8, #54
 ; CHECK-NEXT:    csel w0, w1, w2, eq
 ; CHECK-NEXT:    ret
   %m = and i32 %c, 64512
