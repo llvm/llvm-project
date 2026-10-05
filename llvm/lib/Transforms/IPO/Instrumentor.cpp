@@ -729,8 +729,7 @@ Value *InstrumentationOpportunity::forceCast(Value &V, Type &Ty,
                                              InstrumentorIRBuilderTy &IIRB) {
   if (V.getType()->isVoidTy())
     return Ty.isVoidTy() ? &V : Constant::getNullValue(&Ty);
-  return tryToCast(IIRB.IRB, &V, &Ty,
-                   IIRB.IRB.GetInsertBlock()->getDataLayout());
+  return tryToCast(IIRB.IRB, &V, &Ty, IIRB.IRB.getDataLayout());
 }
 
 Value *InstrumentationOpportunity::replaceValue(Value &V, Value &NewV,

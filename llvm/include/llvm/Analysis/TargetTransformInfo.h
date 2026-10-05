@@ -1558,6 +1558,10 @@ public:
   /// Collect properties of V used in cost analysis, e.g. OP_PowerOf2.
   LLVM_ABI static OperandValueInfo getOperandInfo(const Value *V);
 
+  /// Return information about the vector formed for the specified index
+  /// of a vector of (the same) instruction.
+  LLVM_ABI static OperandValueInfo getOperandInfo(ArrayRef<Value *> Ops);
+
   /// Collect common data between two OperandValueInfo inputs
   LLVM_ABI static OperandValueInfo commonOperandInfo(const Value *X,
                                                      const Value *Y);
