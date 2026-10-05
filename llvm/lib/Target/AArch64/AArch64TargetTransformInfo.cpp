@@ -7475,8 +7475,8 @@ bool AArch64TTIImpl::isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
       uint64_t MemNumBytes = MemVT.getStoreSize().getKnownMinValue();
 
       // Check the vector has simply been split (no type promotion inbetween).
-      if (LegalVT.getVectorElementType() == MemVT.getVectorElementType() &&
-          MemNumBytes % LegalNumBytes == 0) {
+      if (LegalVT.getVectorElementType() == MemVT.getVectorElementType()) {
+        assert(MemNumBytes % LegalNumBytes == 0 && "expected vector split");
         // Don't prefer scaled access if the type may need splitting. Only the
         // first access can use the scaled offset. Later accesses need to
         // materialize a new base + mul vl offset.
