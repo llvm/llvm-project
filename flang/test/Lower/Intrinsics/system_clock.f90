@@ -5,11 +5,11 @@ subroutine system_clock_test()
   integer(4) :: c
   integer(8) :: m
   real :: r
-  ! CHECK-DAG: %[[c_addr:.*]] = fir.alloca i32 {bindc_name = "c"
+  ! CHECK-DAG: %[[c_addr:.*]] = fir.alloca i32 <{bindc_name = "c"
   ! CHECK-DAG: %[[c:.*]]:2 = hlfir.declare %[[c_addr]]
-  ! CHECK-DAG: %[[m_addr:.*]] = fir.alloca i64 {bindc_name = "m"
+  ! CHECK-DAG: %[[m_addr:.*]] = fir.alloca i64 <{bindc_name = "m"
   ! CHECK-DAG: %[[m:.*]]:2 = hlfir.declare %[[m_addr]]
-  ! CHECK-DAG: %[[r_addr:.*]] = fir.alloca f32 {bindc_name = "r"
+  ! CHECK-DAG: %[[r_addr:.*]] = fir.alloca f32 <{bindc_name = "r"
   ! CHECK-DAG: %[[r:.*]]:2 = hlfir.declare %[[r_addr]]
   ! CHECK: %[[c4:.*]] = arith.constant 4 : i32
   ! CHECK: %[[Count:.*]] = fir.call @_FortranASystemClockCount(%[[c4]]) {{.*}}: (i32) -> i64
@@ -37,11 +37,11 @@ end subroutine
 ! CHECK-SAME: %[[arg0:.*]]: !fir.ref<i64> {fir.bindc_name = "count", fir.optional})
 subroutine ss(count)
   ! CHECK: %[[count:.*]]:2 = hlfir.declare %[[arg0]]
-  ! CHECK: %[[count_max_box:.*]] = fir.alloca !fir.box<!fir.heap<i64>> {bindc_name = "count_max"
+  ! CHECK: %[[count_max_box:.*]] = fir.alloca !fir.box<!fir.heap<i64>> <{bindc_name = "count_max"
   ! CHECK: %[[count_max:.*]]:2 = hlfir.declare %[[count_max_box]]
-  ! CHECK: %[[count_rate_box:.*]] = fir.alloca !fir.box<!fir.ptr<i64>> {bindc_name = "count_rate"
+  ! CHECK: %[[count_rate_box:.*]] = fir.alloca !fir.box<!fir.ptr<i64>> <{bindc_name = "count_rate"
   ! CHECK: %[[count_rate:.*]]:2 = hlfir.declare %[[count_rate_box]]
-  ! CHECK: %[[count_rate_base:.*]] = fir.alloca i64 {bindc_name = "count_rate_", fir.target
+  ! CHECK: %[[count_rate_base:.*]] = fir.alloca i64 <{bindc_name = "count_rate_"{{.*}}> {fir.target
   ! CHECK: %[[count_rate_base_decl:.*]]:2 = hlfir.declare %[[count_rate_base]]
   ! CHECK: %[[embox:.*]] = fir.embox %[[count_rate_base_decl]]#0 : (!fir.ref<i64>) -> !fir.box<!fir.ptr<i64>>
   ! CHECK: fir.store %[[embox]] to %[[count_rate]]#0 : !fir.ref<!fir.box<!fir.ptr<i64>>>

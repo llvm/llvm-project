@@ -553,8 +553,6 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::Pointer: {
     const PointerType *ptrTy = cast<PointerType>(ty);
     QualType elemTy = ptrTy->getPointeeType();
-    assert(!elemTy->isConstantMatrixType() && "not implemented");
-
     mlir::Type pointeeType = convertType(elemTy);
 
     resultType =
@@ -605,6 +603,14 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     const VectorType *vec = cast<VectorType>(ty);
     const mlir::Type elemTy = convertType(vec->getElementType());
     resultType = cir::VectorType::get(elemTy, vec->getNumElements());
+    break;
+  }
+
+  case Type::ConstantMatrix: {
+    const ConstantMatrixType *mt = cast<ConstantMatrixType>(ty);
+    const mlir::Type elemTy = convertType(mt->getElementType());
+    resultType =
+        cir::MatrixType::get(elemTy, mt->getNumRows(), mt->getNumColumns());
     break;
   }
 
@@ -691,9 +697,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
 mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
                                           bool forBitField) {
-  if (qualType->isConstantMatrixType()) {
-    cgm.errorNYI("Matrix type conversion");
-    return cgm.sInt32Ty;
+  if (astContext.getLangOpts().HLSL && qualType->isConstantMatrixType()) {
+    cgm.errorNYI("convertTypeForMem: HLSL & ConstantMatrixType");
   }
 
   mlir::Type convertedType = convertType(qualType);
