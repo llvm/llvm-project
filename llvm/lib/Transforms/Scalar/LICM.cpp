@@ -933,7 +933,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
           // May-throw calls can only be hoisted if there are no memory
           // writes before them in the loop. Otherwise hoisting would skip
           // side effects that must happen before the potential throw.
-          (!I.mayThrow() || SafetyInfo->doesNotWriteMemoryBefore(I, CurLoop))) {
+          (!I.mayThrow() || SafetyInfo->doesNotWriteMemoryBefore(I))) {
         hoist(I, DT, CurLoop, CFH.getOrCreateHoistedBlock(BB), SafetyInfo,
               MSSAU, SE, ORE);
         HoistedInstructions.push_back(&I);
