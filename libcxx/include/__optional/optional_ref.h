@@ -286,7 +286,7 @@ public:
   {
     using __pointer _LIBCPP_NODEBUG = add_pointer_t<_Tp>;
 #  ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
-    return std::__make_bounded_iter<__pointer>(__value_, __value_, __value_ + this->has_value() ? 1 : 0);
+    return std::__make_bounded_iter<__pointer>(__value_, __value_, __value_ + (this->has_value() ? 1 : 0));
 #  else
     if constexpr (std::__range_fits_in_alignment(alignof(_Tp&), 1)) {
       return std::__make_static_packed_bounded_iter<__pointer, 1>(__value_, 0);
