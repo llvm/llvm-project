@@ -178,7 +178,7 @@ private:
 
   /// Wait states required after \p MI, or nullopt if \p MI is not waited for.
   /// Must return nullopt for terminators.
-  typedef function_ref<std::optional<int>(const MachineInstr &)> WindowForFn;
+  using WindowForFn = function_ref<std::optional<int>(const MachineInstr &)>;
 
   /// Returns the largest WindowFor(I) - distance(I) over the instructions
   /// preceding the one being checked within \p MaxWindow, which must bound
