@@ -3693,9 +3693,10 @@ bool IRTranslatorImpl::handleUnsupportedIntrinsic(
   F.getContext().diagnose(
       DiagnosticInfoUnsupportedTargetIntrinsic(F, ID, CB.getDebugLoc()));
 
-  if (!CB.getType()->isVoidTy())
+  if (!CB.getType()->isVoidTy()) {
     for (Register Reg : getOrCreateVRegs(CB))
       MIRBuilder.buildUndef(Reg);
+  }
 
   return true;
 }
