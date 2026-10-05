@@ -64,11 +64,10 @@ classes (for example aspects) are prefixed with `ext_<vendor>_`.
 
 The vendor string tells users who defines the behavior of the feature.
 
-| Origin of the extension                                         | Vendor string                                  |
-| --------------------------------------------------------------- | ---------------------------------------------- |
-| Defined by the LLVM community                                   | `llvm`                                         |
-| Defined by another vendor and implemented as specified          | The original vendor's (e.g. `oneapi`, `intel`) |
-| Defined by another vendor, but `libsycl` intentionally deviates | `llvm`, only after the deviation is justified  |
+| Origin of the extension                                | Vendor string                                  |
+| ------------------------------------------------------ | ---------------------------------------------- |
+| Defined by the LLVM community                          | `llvm`                                         |
+| Defined by another vendor and implemented as specified | The original vendor's (e.g. `oneapi`, `intel`) |
 
 ##### Community Extensions
 
@@ -100,20 +99,12 @@ feature:
 - When the vendor publishes a new revision of the specification, `libsycl` is
   updated to conform to it.
 
-##### Deviating From Another Vendor's Extension
-
-A deviation is any intentional change to the specified behavior: a different API
-shape, different semantics, or a reduced or extended scope. Before deviating,
-question why and whether it is a good idea. Two features with nearly the same
-name but different behavior confuse users and force them to write more `#if`
-blocks to use the feature portably. Proposing the change to the owning vendor is
-preferred.
-
-If the deviation is still justified, the extension is spelled with the `llvm`
-vendor string, e.g. `sycl::ext::llvm::<name>`, to signal that it is different
-from, for example, `sycl::ext::oneapi::<name>`. It is then a community
-extension with its own specification. The original vendor's spelling must not
-be used for the deviating extension, including as an alias.
+If the community does not agree with some part of a vendor's extension
+specification, it works with the vendor to come to an agreement. If an
+agreement cannot be reached, the community is free to draft a new extension
+specification with different behavior. However, this extension uses the `llvm`
+vendor string. `libsycl` never intentionally implements an extension from
+another vendor in a way that deviates from that vendor's specification.
 
 #### Rationale
 
