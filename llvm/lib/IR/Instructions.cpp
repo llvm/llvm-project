@@ -3170,8 +3170,10 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
       // bitcast, bitcast -> bitcast, if neither SrcTy nor DstTy is a pointer,
       //                              both are pointers in the same addrspace,
       //                              or one is a pointer and the other a byte
-      // bitcast, bitcast -> ptrtoaddr, if a pointer goes through a byte to an
-      //                                integer of the address width
+      // bitcast, bitcast -> ptrtoint, if a pointer goes through a byte to an
+      //                               integer of the pointer width
+      // bitcast, bitcast -> inttoptr, if an integer of the pointer width goes
+      //                               through a byte to a pointer
       // A pair of bitcasts through a byte must stay separate otherwise.
       if (!SrcTy->isPtrOrPtrVectorTy() && !DstTy->isPtrOrPtrVectorTy())
         return Instruction::BitCast;
@@ -3180,12 +3182,13 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
         return Instruction::BitCast;
       if (SrcTy->isByteOrByteVectorTy() || DstTy->isByteOrByteVectorTy())
         return Instruction::BitCast;
-      if (SrcTy->isPtrOrPtrVectorTy() && DstTy->isIntOrIntVectorTy() &&
-          SrcTy->isVectorTy() == DstTy->isVectorTy() && DL) {
-        unsigned AddrSize = DL->getAddressSizeInBits(SrcTy);
-        if (AddrSize == DL->getPointerTypeSizeInBits(SrcTy) &&
-            AddrSize == DstTy->getScalarSizeInBits())
-          return Instruction::PtrToAddr;
+      if (SrcTy->isVectorTy() == DstTy->isVectorTy() && DL) {
+        if (SrcTy->isPtrOrPtrVectorTy() && DstTy->isIntOrIntVectorTy() &&
+            DL->getPointerTypeSizeInBits(SrcTy) == DstTy->getScalarSizeInBits())
+          return Instruction::PtrToInt;
+        if (SrcTy->isIntOrIntVectorTy() && DstTy->isPtrOrPtrVectorTy() &&
+            SrcTy->getScalarSizeInBits() == DL->getPointerTypeSizeInBits(DstTy))
+          return Instruction::IntToPtr;
       }
       return 0;
     case 99:

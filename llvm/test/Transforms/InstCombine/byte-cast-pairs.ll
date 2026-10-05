@@ -6,7 +6,7 @@ target datalayout = "p1:128:128:128:64"
 define i64 @ptr_to_byte_to_int(ptr %p) {
 ; CHECK-LABEL: define i64 @ptr_to_byte_to_int(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[X:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    [[X:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    ret i64 [[X]]
 ;
   %b = bitcast ptr %p to b64
@@ -14,11 +14,10 @@ define i64 @ptr_to_byte_to_int(ptr %p) {
   ret i64 %x
 }
 
-define ptr @neg_int_to_byte_to_ptr(i64 %i) {
-; CHECK-LABEL: define ptr @neg_int_to_byte_to_ptr(
+define ptr @int_to_byte_to_ptr(i64 %i) {
+; CHECK-LABEL: define ptr @int_to_byte_to_ptr(
 ; CHECK-SAME: i64 [[I:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast i64 [[I]] to b64
-; CHECK-NEXT:    [[X:%.*]] = bitcast b64 [[B]] to ptr
+; CHECK-NEXT:    [[X:%.*]] = inttoptr i64 [[I]] to ptr
 ; CHECK-NEXT:    ret ptr [[X]]
 ;
   %b = bitcast i64 %i to b64
@@ -26,10 +25,21 @@ define ptr @neg_int_to_byte_to_ptr(i64 %i) {
   ret ptr %x
 }
 
+define <2 x ptr> @int_to_byte_to_ptr_vec(<2 x i64> %i) {
+; CHECK-LABEL: define <2 x ptr> @int_to_byte_to_ptr_vec(
+; CHECK-SAME: <2 x i64> [[I:%.*]]) {
+; CHECK-NEXT:    [[X:%.*]] = inttoptr <2 x i64> [[I]] to <2 x ptr>
+; CHECK-NEXT:    ret <2 x ptr> [[X]]
+;
+  %b = bitcast <2 x i64> %i to <2 x b64>
+  %x = bitcast <2 x b64> %b to <2 x ptr>
+  ret <2 x ptr> %x
+}
+
 define <2 x i64> @ptr_to_byte_to_int_vec(<2 x ptr> %p) {
 ; CHECK-LABEL: define <2 x i64> @ptr_to_byte_to_int_vec(
 ; CHECK-SAME: <2 x ptr> [[P:%.*]]) {
-; CHECK-NEXT:    [[X:%.*]] = ptrtoaddr <2 x ptr> [[P]] to <2 x i64>
+; CHECK-NEXT:    [[X:%.*]] = ptrtoint <2 x ptr> [[P]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[X]]
 ;
   %b = bitcast <2 x ptr> %p to <2 x b64>
@@ -40,7 +50,7 @@ define <2 x i64> @ptr_to_byte_to_int_vec(<2 x ptr> %p) {
 define i64 @ptr_to_byte_vec_to_int(ptr %p) {
 ; CHECK-LABEL: define i64 @ptr_to_byte_vec_to_int(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[X:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    [[X:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    ret i64 [[X]]
 ;
   %b = bitcast ptr %p to <2 x b32>
@@ -48,7 +58,7 @@ define i64 @ptr_to_byte_vec_to_int(ptr %p) {
   ret i64 %x
 }
 
-; ptrtoaddr can't cast a scalar pointer to a vector.
+; ptrtoint can't cast a scalar pointer to a vector.
 define <1 x i64> @neg_ptr_to_byte_to_int_vec1(ptr %p) {
 ; CHECK-LABEL: define <1 x i64> @neg_ptr_to_byte_to_int_vec1(
 ; CHECK-SAME: ptr [[P:%.*]]) {
@@ -73,12 +83,11 @@ define double @neg_ptr_to_byte_to_fp(ptr %p) {
   ret double %x
 }
 
-; Address width (64) != pointer width (128).
-define i128 @neg_ptr_to_byte_to_int_narrow_addr(ptr addrspace(1) %p) {
-; CHECK-LABEL: define i128 @neg_ptr_to_byte_to_int_narrow_addr(
+; ptrtoint yields the whole pointer, not just the address.
+define i128 @ptr_to_byte_to_int_narrow_addr(ptr addrspace(1) %p) {
+; CHECK-LABEL: define i128 @ptr_to_byte_to_int_narrow_addr(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast ptr addrspace(1) [[P]] to b128
-; CHECK-NEXT:    [[X:%.*]] = bitcast b128 [[B]] to i128
+; CHECK-NEXT:    [[X:%.*]] = ptrtoint ptr addrspace(1) [[P]] to i128
 ; CHECK-NEXT:    ret i128 [[X]]
 ;
   %b = bitcast ptr addrspace(1) %p to b128
