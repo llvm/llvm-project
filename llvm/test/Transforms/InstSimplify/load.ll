@@ -174,8 +174,7 @@ define b8 @load_b8_from_null_ptr() {
 
 define b32 @load_b32_from_b64() {
 ; CHECK-LABEL: @load_b32_from_b64(
-; CHECK-NEXT:    [[LOAD:%.*]] = load b32, ptr @b64, align 4
-; CHECK-NEXT:    ret b32 [[LOAD]]
+; CHECK-NEXT:    ret b32 1432778632
 ;
   %load = load b32, ptr @b64
   ret b32 %load
@@ -183,8 +182,7 @@ define b32 @load_b32_from_b64() {
 
 define b32 @load_b32_from_b64_offset() {
 ; CHECK-LABEL: @load_b32_from_b64_offset(
-; CHECK-NEXT:    [[LOAD:%.*]] = load b32, ptr getelementptr inbounds nuw (i8, ptr @b64, i64 4), align 4
-; CHECK-NEXT:    ret b32 [[LOAD]]
+; CHECK-NEXT:    ret b32 287454020
 ;
   %gep = getelementptr i8, ptr @b64, i64 4
   %load = load b32, ptr %gep
@@ -193,8 +191,7 @@ define b32 @load_b32_from_b64_offset() {
 
 define i32 @load_i32_from_b64() {
 ; CHECK-LABEL: @load_i32_from_b64(
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr @b64, align 4
-; CHECK-NEXT:    ret i32 [[LOAD]]
+; CHECK-NEXT:    ret i32 1432778632
 ;
   %load = load i32, ptr @b64
   ret i32 %load
@@ -202,8 +199,7 @@ define i32 @load_i32_from_b64() {
 
 define i32 @load_i32_from_b64_offset() {
 ; CHECK-LABEL: @load_i32_from_b64_offset(
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @b64, i64 4), align 4
-; CHECK-NEXT:    ret i32 [[LOAD]]
+; CHECK-NEXT:    ret i32 287454020
 ;
   %gep = getelementptr i8, ptr @b64, i64 4
   %load = load i32, ptr %gep
@@ -212,8 +208,7 @@ define i32 @load_i32_from_b64_offset() {
 
 define b32 @load_b32_from_vb32() {
 ; CHECK-LABEL: @load_b32_from_vb32(
-; CHECK-NEXT:    [[LOAD:%.*]] = load b32, ptr getelementptr inbounds nuw (i8, ptr @vb32, i64 4), align 4
-; CHECK-NEXT:    ret b32 [[LOAD]]
+; CHECK-NEXT:    ret b32 1432778632
 ;
   %gep = getelementptr i8, ptr @vb32, i64 4
   %load = load b32, ptr %gep
@@ -222,8 +217,7 @@ define b32 @load_b32_from_vb32() {
 
 define b16 @load_b16_from_ab8() {
 ; CHECK-LABEL: @load_b16_from_ab8(
-; CHECK-NEXT:    [[LOAD:%.*]] = load b16, ptr getelementptr inbounds nuw (i8, ptr @ab8, i64 1), align 2
-; CHECK-NEXT:    ret b16 [[LOAD]]
+; CHECK-NEXT:    ret b16 13090
 ;
   %gep = getelementptr i8, ptr @ab8, i64 1
   %load = load b16, ptr %gep
@@ -232,8 +226,7 @@ define b16 @load_b16_from_ab8() {
 
 define float @load_float_from_b64_float() {
 ; CHECK-LABEL: @load_float_from_b64_float(
-; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr getelementptr inbounds nuw (i8, ptr @b64_float, i64 4), align 4
-; CHECK-NEXT:    ret float [[LOAD]]
+; CHECK-NEXT:    ret float 1.000000e+00
 ;
   %gep = getelementptr i8, ptr @b64_float, i64 4
   %load = load float, ptr %gep
@@ -242,8 +235,7 @@ define float @load_float_from_b64_float() {
 
 define b64 @load_b64_from_ab32_poison() {
 ; CHECK-LABEL: @load_b64_from_ab32_poison(
-; CHECK-NEXT:    [[LOAD:%.*]] = load b64, ptr @ab32_poison, align 4
-; CHECK-NEXT:    ret b64 [[LOAD]]
+; CHECK-NEXT:    ret b64 1
 ;
   %load = load b64, ptr @ab32_poison
   ret b64 %load
@@ -251,8 +243,7 @@ define b64 @load_b64_from_ab32_poison() {
 
 define b16 @load_b16_from_struct_b32() {
 ; CHECK-LABEL: @load_b16_from_struct_b32(
-; CHECK-NEXT:    [[LOAD:%.*]] = load b16, ptr getelementptr inbounds nuw (i8, ptr @struct_b32, i64 2), align 2
-; CHECK-NEXT:    ret b16 [[LOAD]]
+; CHECK-NEXT:    ret b16 4386
 ;
   %gep = getelementptr i8, ptr @struct_b32, i64 2
   %load = load b16, ptr %gep
@@ -261,8 +252,7 @@ define b16 @load_b16_from_struct_b32() {
 
 define b32 @load_b32_from_vb32_splat() {
 ; CHECK-LABEL: @load_b32_from_vb32_splat(
-; CHECK-NEXT:    [[LOAD:%.*]] = load b32, ptr getelementptr inbounds nuw (i8, ptr @vb32_splat, i64 2), align 4
-; CHECK-NEXT:    ret b32 [[LOAD]]
+; CHECK-NEXT:    ret b32 860098850
 ;
   %gep = getelementptr i8, ptr @vb32_splat, i64 2
   %load = load b32, ptr %gep
