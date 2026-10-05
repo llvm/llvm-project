@@ -16071,6 +16071,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
       return false;
     // Look for a simple single block loop.
     const BasicBlock *Block = DAG.getBasicBlock();
+    assert(Block && "Expected a valid block!");
     return is_contained(successors(Block), Block);
   };
 
