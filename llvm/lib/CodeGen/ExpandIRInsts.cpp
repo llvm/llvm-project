@@ -1359,8 +1359,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     case Instruction::FRem: {
       auto SQ = [&]() -> std::optional<SimplifyQuery> {
         if (AC) {
-          auto Res = std::make_optional<SimplifyQuery>(
-              I->getModule()->getDataLayout(), I);
+          auto Res = std::make_optional<SimplifyQuery>(I->getDataLayout(), I);
           Res->AC = AC;
           return Res;
         }
