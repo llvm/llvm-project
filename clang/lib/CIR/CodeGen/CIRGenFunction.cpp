@@ -518,7 +518,7 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   curFuncDecl = (d ? d->getNonClosureContext() : nullptr);
 
   // Recursion is disallowed for C++ main, OpenCL, HLSL, SYCL device code and
-  // CUDA kernels.
+  // CUDA/HIP kernels.
   if (fd &&
       ((getLangOpts().CPlusPlus && fd->isMain()) || getLangOpts().OpenCL ||
        getLangOpts().HLSL || getLangOpts().SYCLIsDevice ||
