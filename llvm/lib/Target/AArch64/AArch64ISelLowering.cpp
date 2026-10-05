@@ -22539,6 +22539,8 @@ performLastTrueTestVectorCombine(SDNode *N,
 static SDValue
 performExtractLastActiveCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const AArch64Subtarget *Subtarget) {
+  if (!Subtarget->isSVEorStreamingSVEAvailable())
+    return SDValue();
   assert(N->getOpcode() == ISD::EXTRACT_VECTOR_ELT);
   SelectionDAG &DAG = DCI.DAG;
   SDValue Vec = N->getOperand(0);
@@ -22555,8 +22557,19 @@ performExtractLastActiveCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return SDValue();
 
   SDValue Mask = Idx.getOperand(0);
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!TLI.isOperationLegal(ISD::VECTOR_FIND_LAST_ACTIVE, Mask.getValueType()))
+  if (Mask.getValueType().isFixedLengthVector()) {
+    EVT VecVT = Vec.getValueType();
+    EVT ContainerVT = getContainerForFixedLengthVector(DAG, VecVT);
+    // Match the promoted mask's element width to the data's SVE lane width.
+    EVT MaskVT = VecVT.changeTypeToInteger();
+    if (Mask.getValueType() != MaskVT)
+      Mask = DAG.getNode(ISD::SIGN_EXTEND, SDLoc(Mask), MaskVT, Mask);
+    Vec = convertToScalableVector(DAG, ContainerVT, Vec);
+    Mask = convertFixedMaskToScalableVector(Mask, DAG);
+  }
+
+  if (!DAG.getTargetLoweringInfo().isOperationLegal(
+          ISD::VECTOR_FIND_LAST_ACTIVE, Mask.getValueType()))
     return SDValue();
 
   return DAG.getNode(AArch64ISD::LASTB, SDLoc(N), N->getValueType(0), Mask,
