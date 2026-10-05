@@ -43,13 +43,22 @@ export void test_uint_3arg(uint v, out uint orig) {
   InterlockedAdd(gs_u32, v, orig);
 }
 
-// CHECK-LABEL: define {{(dso_local |hidden |internal |protected |spir_func )*}}void @{{.*}}test_int_3arg_uint_orig
-// DXCHECK:  %[[R:.*]] = atomicrmw add ptr addrspace(3) {{.*}}@gs_i32{{.*}}, i32 %{{.*}} syncscope("workgroup") monotonic
-// SPVCHECK: %[[R:.*]] = atomicrmw add ptr addrspace(3) {{.*}}@gs_i32{{.*}}, i32 %{{.*}} syncscope("workgroup") monotonic
+// CHECK-LABEL: define {{.*}}void @{{.*}}test_int_3arg_uint_orig
+// CHECK:  %[[R:.*]] = atomicrmw add ptr addrspace(3) {{.*}}@gs_i32{{.*}}, i32 %{{.*}} syncscope("workgroup") monotonic
 // CHECK:    store i32 %[[R]], ptr [[TMP:%.*]]
 // CHECK-NEXT: [[RESULT:%.*]] = load i32, ptr [[TMP]]
 // CHECK-NEXT: store i32 [[RESULT]], ptr %{{.*}}
 export void test_int_3arg_uint_orig(int v, out uint orig) {
+  InterlockedAdd(gs_i32, v, orig);
+}
+
+// CHECK-LABEL: define {{.*}}void @{{.*}}test_int_3arg_float_orig
+// CHECK:  %[[R:.*]] = atomicrmw add ptr addrspace(3) {{.*}}@gs_i32{{.*}}, i32 %{{.*}} syncscope("workgroup") monotonic
+// CHECK:    store i32 %[[R]], ptr [[TMP:%.*]]
+// CHECK-NEXT: [[RESULT:%.*]] = load i32, ptr [[TMP]]
+// CHECK-NEXT: [[CONV:%.*]] = sitofp {{.*}}i32 [[RESULT]] to float
+// CHECK-NEXT: store float [[CONV]], ptr %{{.*}}
+export void test_int_3arg_float_orig(int v, out float orig) {
   InterlockedAdd(gs_i32, v, orig);
 }
 

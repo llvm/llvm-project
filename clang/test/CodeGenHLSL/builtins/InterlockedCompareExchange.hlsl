@@ -6,6 +6,10 @@
 // RUN:   spirv-pc-vulkan-library %s -emit-llvm -disable-llvm-passes -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,SPVCHECK
 
+// RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -triple \
+// RUN:   dxil-pc-shadermodel6.6-library %s -emit-llvm -O3 -o - | \
+// RUN:   FileCheck %s --check-prefix=OPTCHECK
+
 // Test basic lowering of HLSL InterlockedCompareExchange to `cmpxchg
 // monotonic`. The operation reports the value that was in the destination
 // before the operation, so the first element of the `cmpxchg` result goes to
@@ -73,4 +77,13 @@ RWBuffer<uint> Buf : register(u0);
 export void test_device(uint cmp, uint v) {
   uint orig;
   InterlockedCompareExchange(Buf[0], cmp, v, orig);
+}
+
+// OPTCHECK-LABEL: define {{.*}}void @{{.*}}test_int_out
+// OPTCHECK: [[PAIR:%.*]] = cmpxchg ptr addrspace(3) {{.*}}@gs_i32{{.*}}, i32 %{{.*}}, i32 %{{.*}} syncscope("workgroup") monotonic monotonic
+// OPTCHECK-NEXT: [[OLD:%.*]] = extractvalue { i32, i1 } [[PAIR]], 0
+// OPTCHECK-NEXT: store i32 [[OLD]], ptr {{.*}}%orig
+// OPTCHECK-NEXT: ret void
+export void test_int_out(int cmp, int v, out int orig) {
+  InterlockedCompareExchange(gs_i32, cmp, v, orig);
 }
