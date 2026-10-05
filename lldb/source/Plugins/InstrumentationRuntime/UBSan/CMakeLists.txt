@@ -11,4 +11,5 @@ add_lldb_library(lldbPluginInstrumentationRuntimeUBSan PLUGIN
     lldbSymbol
     lldbTarget
     lldbValueObject
+    lldbPluginProcessUtility
   )

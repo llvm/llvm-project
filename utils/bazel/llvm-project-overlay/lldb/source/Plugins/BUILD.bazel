@@ -1742,7 +1742,6 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginInstrumentationRuntimeUtility",
-        ":PluginProcessUtility",
         "//clang:codegen",
         "//lldb:Breakpoint",
         "//lldb:Core",

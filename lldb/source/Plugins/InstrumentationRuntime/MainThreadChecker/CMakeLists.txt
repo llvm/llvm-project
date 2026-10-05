@@ -10,4 +10,5 @@ add_lldb_library(lldbPluginInstrumentationRuntimeMainThreadChecker PLUGIN
     lldbInterpreter
     lldbSymbol
     lldbTarget
+    lldbPluginProcessUtility
   )
