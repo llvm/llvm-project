@@ -254,10 +254,13 @@
 #define LLVM_ATTRIBUTE_RETAIN
 #endif
 
+// For deprecations that are not a simple rename, use [[deprecated(MSG)]]
+// instead.
 #if defined(__clang__)
-#define LLVM_DEPRECATED(MSG, FIX) __attribute__((deprecated(MSG, FIX)))
+#define LLVM_DEPRECATED_WITH_FIXIT(MSG, FIX)                                   \
+  __attribute__((deprecated(MSG, FIX)))
 #else
-#define LLVM_DEPRECATED(MSG, FIX) [[deprecated(MSG)]]
+#define LLVM_DEPRECATED_WITH_FIXIT(MSG, FIX) [[deprecated(MSG)]]
 #endif
 
 // clang-format off
