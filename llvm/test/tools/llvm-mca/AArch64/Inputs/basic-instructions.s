@@ -37,6 +37,8 @@ mov      x10, #-63432
 add      wsp, wsp, w10
 add      x25, x9, w25, uxtb
 add      w3, w5, w7
+add      w5, w3, w4, uxtb
+add      w5, w3, w4, uxtw
 add      wzr, w3, w5
 add      w20, wzr, w4
 add      w4, w6, wzr
@@ -90,6 +92,9 @@ adds     x27, x28, x29, lsr #63
 adds     x2, x3, x4, asr #0
 adds     x5, x6, x7, asr #21
 adds     x8, x9, x10, asr #63
+adds     w5, w3, w4, uxtb
+adds     w5, w3, w4, uxtw
+adds     x5, x3, x4, uxtx
 sub      w3, w5, w7
 sub      wzr, w3, w5
 sub      w4, w6, wzr
@@ -115,6 +120,8 @@ sub      x2, x3, x4, asr #0
 sub      x5, x6, x7, asr #21
 sub      x8, x9, x10, asr #63
 sub      w13, wsp, w10
+sub      w5, w3, w4, uxtb
+sub      w5, w3, w4, uxtw
 sub      x16, x2, w19, uxtb
 subs     x13, x15, x14, sxtx #1
 subs     w3, w5, w7
@@ -129,6 +136,9 @@ subs     w27, w28, w29, lsr #31
 subs     w2, w3, w4, asr #0
 subs     w5, w6, w7, asr #21
 subs     w8, w9, w10, asr #31
+subs     w5, w3, w4, uxtb
+subs     w5, w3, w4, uxtw
+subs     x5, x3, w4, uxtb
 subs     x3, x5, x7
 cmp      x3, x5
 subs     x4, x6, xzr
@@ -1377,6 +1387,9 @@ orn      x3, x5, x7, asr #2
 orn      w2, w5, w29
 ands     w7, wzr, w9, lsl #1
 ands     x3, x5, x20, ror #63
+ands     w5, w3, w4, lsr #0
+ands     w5, w3, w4, asr #0
+ands     x5, x3, x4, ror #0
 bics     w3, w5, w7
 bics     x3, xzr, x3, lsl #1
 tst      w3, w7, lsl #31

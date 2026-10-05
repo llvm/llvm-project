@@ -40,6 +40,8 @@
 # CHECK-NEXT:  1      1     0.25                        add	wsp, wsp, w10
 # CHECK-NEXT:  1      2     0.50                        add	x25, x9, w25, uxtb
 # CHECK-NEXT:  1      1     0.25                        add	w3, w5, w7
+# CHECK-NEXT:  1      2     0.50                        add	w5, w3, w4, uxtb
+# CHECK-NEXT:  1      1     0.25                        add	w5, w3, w4, uxtw
 # CHECK-NEXT:  1      1     0.25                        add	wzr, w3, w5
 # CHECK-NEXT:  1      1     0.25                        add	w20, wzr, w4
 # CHECK-NEXT:  1      1     0.25                        add	w4, w6, wzr
@@ -93,6 +95,9 @@
 # CHECK-NEXT:  1      1     0.33                        adds	x2, x3, x4, asr #0
 # CHECK-NEXT:  1      2     0.50                        adds	x5, x6, x7, asr #21
 # CHECK-NEXT:  1      2     0.50                        adds	x8, x9, x10, asr #63
+# CHECK-NEXT:  1      2     0.50                        adds	w5, w3, w4, uxtb
+# CHECK-NEXT:  1      1     0.33                        adds	w5, w3, w4, uxtw
+# CHECK-NEXT:  1      1     0.33                        adds	x5, x3, x4, uxtx
 # CHECK-NEXT:  1      1     0.25                        sub	w3, w5, w7
 # CHECK-NEXT:  1      1     0.25                        sub	wzr, w3, w5
 # CHECK-NEXT:  1      1     0.25                        sub	w4, w6, wzr
@@ -118,6 +123,8 @@
 # CHECK-NEXT:  1      2     0.50                        sub	x5, x6, x7, asr #21
 # CHECK-NEXT:  1      2     0.50                        sub	x8, x9, x10, asr #63
 # CHECK-NEXT:  1      1     0.25                        sub	w13, wsp, w10
+# CHECK-NEXT:  1      2     0.50                        sub	w5, w3, w4, uxtb
+# CHECK-NEXT:  1      1     0.25                        sub	w5, w3, w4, uxtw
 # CHECK-NEXT:  1      2     0.50                        sub	x16, x2, w19, uxtb
 # CHECK-NEXT:  1      1     0.33                        subs	x13, x15, x14, sxtx #1
 # CHECK-NEXT:  1      1     0.33                        subs	w3, w5, w7
@@ -132,6 +139,9 @@
 # CHECK-NEXT:  1      1     0.33                        subs	w2, w3, w4, asr #0
 # CHECK-NEXT:  1      2     0.50                        subs	w5, w6, w7, asr #21
 # CHECK-NEXT:  1      2     0.50                        subs	w8, w9, w10, asr #31
+# CHECK-NEXT:  1      2     0.50                        subs	w5, w3, w4, uxtb
+# CHECK-NEXT:  1      1     0.33                        subs	w5, w3, w4, uxtw
+# CHECK-NEXT:  1      2     0.50                        subs	x5, x3, w4, uxtb
 # CHECK-NEXT:  1      1     0.33                        subs	x3, x5, x7
 # CHECK-NEXT:  1      1     0.33                        cmp	x3, x5
 # CHECK-NEXT:  1      1     0.33                        subs	x4, x6, xzr
@@ -610,42 +620,42 @@
 # CHECK-NEXT:  1      4     0.25                        fnmsub	s3, s5, s6, s31
 # CHECK-NEXT:  1      4     0.25                        fnmsub	d3, d13, d0, d23
 # CHECK-NEXT:  1      4     0.25                        fnmsub	h3, h29, h24, h17
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	w3, h5, #1
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	wzr, h20, #13
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	w19, h0, #32
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	x3, h5, #1
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	x12, h30, #45
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	x19, h0, #64
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	w3, s5, #1
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	wzr, s20, #13
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	w19, s0, #32
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	x3, s5, #1
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	x12, s30, #45
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	x19, s0, #64
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	w3, d5, #1
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	wzr, d20, #13
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	w19, d0, #32
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	x3, d5, #1
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	x12, d30, #45
-# CHECK-NEXT:  1      3     0.50                        fcvtzs	x19, d0, #64
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	w3, h5, #1
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	wzr, h20, #13
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	w19, h0, #32
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	x3, h5, #1
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	x12, h30, #45
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	x19, h0, #64
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	w3, s5, #1
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	wzr, s20, #13
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	w19, s0, #32
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	x3, s5, #1
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	x12, s30, #45
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	x19, s0, #64
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	w3, d5, #1
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	wzr, d20, #13
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	w19, d0, #32
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	x3, d5, #1
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	x12, d30, #45
-# CHECK-NEXT:  1      3     0.50                        fcvtzu	x19, d0, #64
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	w3, h5, #1
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	wzr, h20, #13
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	w19, h0, #32
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	x3, h5, #1
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	x12, h30, #45
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	x19, h0, #64
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	w3, s5, #1
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	wzr, s20, #13
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	w19, s0, #32
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	x3, s5, #1
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	x12, s30, #45
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	x19, s0, #64
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	w3, d5, #1
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	wzr, d20, #13
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	w19, d0, #32
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	x3, d5, #1
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	x12, d30, #45
+# CHECK-NEXT:  1      3     1.00                        fcvtzs	x19, d0, #64
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	w3, h5, #1
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	wzr, h20, #13
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	w19, h0, #32
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	x3, h5, #1
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	x12, h30, #45
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	x19, h0, #64
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	w3, s5, #1
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	wzr, s20, #13
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	w19, s0, #32
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	x3, s5, #1
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	x12, s30, #45
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	x19, s0, #64
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	w3, d5, #1
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	wzr, d20, #13
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	w19, d0, #32
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	x3, d5, #1
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	x12, d30, #45
+# CHECK-NEXT:  1      3     1.00                        fcvtzu	x19, d0, #64
 # CHECK-NEXT:  1      3     1.00                        scvtf	h23, w19, #1
 # CHECK-NEXT:  1      3     1.00                        scvtf	h31, wzr, #20
 # CHECK-NEXT:  1      3     1.00                        scvtf	h14, w0, #32
@@ -804,15 +814,15 @@
 # CHECK-NEXT:  3      5     0.67    *      *      U     stlxp	wzr, x6, x7, [x1]
 # CHECK-NEXT:  2      4     0.67    *      *      U     ldaxp	w5, w18, [sp]
 # CHECK-NEXT:  2      4     0.67    *      *      U     ldaxp	x6, x19, [x22]
-# CHECK-NEXT:  2      1     0.50           *      U     stlrb	w24, [sp]
-# CHECK-NEXT:  2      1     0.50           *      U     stlrh	w25, [x30]
-# CHECK-NEXT:  2      1     0.50           *      U     stlr	w26, [x29]
-# CHECK-NEXT:  2      1     0.50           *      U     stlr	x27, [x28]
-# CHECK-NEXT:  1      4     0.33    *             U     ldarb	w16, [x21]
-# CHECK-NEXT:  1      4     0.33    *             U     ldarb	w23, [sp]
-# CHECK-NEXT:  1      4     0.33    *             U     ldarh	w22, [x30]
-# CHECK-NEXT:  1      4     0.33    *             U     ldar	wzr, [x29]
-# CHECK-NEXT:  1      4     0.33    *             U     ldar	x21, [x28]
+# CHECK-NEXT:  2      1     0.50           *            stlrb	w24, [sp]
+# CHECK-NEXT:  2      1     0.50           *            stlrh	w25, [x30]
+# CHECK-NEXT:  2      1     0.50           *            stlr	w26, [x29]
+# CHECK-NEXT:  2      1     0.50           *            stlr	x27, [x28]
+# CHECK-NEXT:  1      4     0.33    *                   ldarb	w16, [x21]
+# CHECK-NEXT:  1      4     0.33    *                   ldarb	w23, [sp]
+# CHECK-NEXT:  1      4     0.33    *                   ldarh	w22, [x30]
+# CHECK-NEXT:  1      4     0.33    *                   ldar	wzr, [x29]
+# CHECK-NEXT:  1      4     0.33    *                   ldar	x21, [x28]
 # CHECK-NEXT:  2      1     0.50           *            sturb	w9, [sp]
 # CHECK-NEXT:  2      1     0.50           *            sturh	wzr, [x12, #255]
 # CHECK-NEXT:  2      1     0.50           *            stur	w16, [x0, #-256]
@@ -1036,16 +1046,16 @@
 # CHECK-NEXT:  1      4     0.33    *                   ldrsb	x18, [x22, w10, sxtw]
 # CHECK-NEXT:  1      4     0.33    *                   ldrsh	w3, [sp, x5]
 # CHECK-NEXT:  1      4     0.33    *                   ldrsh	w9, [x27, x6]
-# CHECK-NEXT:  1      4     0.33    *                   ldrh	w10, [x30, x7, lsl #1]
+# CHECK-NEXT:  2      5     0.33    *                   ldrh	w10, [x30, x7, lsl #1]
 # CHECK-NEXT:  2      1     0.50           *            strh	w11, [x29, x3, sxtx]
 # CHECK-NEXT:  1      4     0.33    *                   ldrh	w12, [x28, xzr, sxtx]
-# CHECK-NEXT:  1      4     0.33    *                   ldrsh	x13, [x27, x5, sxtx #1]
+# CHECK-NEXT:  2      5     0.33    *                   ldrsh	x13, [x27, x5, sxtx #1]
 # CHECK-NEXT:  1      4     0.33    *                   ldrh	w14, [x26, w6, uxtw]
 # CHECK-NEXT:  1      4     0.33    *                   ldrh	w15, [x25, w7, uxtw]
-# CHECK-NEXT:  1      4     0.33    *                   ldrsh	w16, [x24, w8, uxtw #1]
+# CHECK-NEXT:  2      5     0.33    *                   ldrsh	w16, [x24, w8, uxtw #1]
 # CHECK-NEXT:  1      4     0.33    *                   ldrh	w17, [x23, w9, sxtw]
 # CHECK-NEXT:  1      4     0.33    *                   ldrh	w18, [x22, w10, sxtw]
-# CHECK-NEXT:  2      1     0.50           *            strh	w19, [x21, wzr, sxtw #1]
+# CHECK-NEXT:  3      1     0.50           *            strh	w19, [x21, wzr, sxtw #1]
 # CHECK-NEXT:  1      6     0.33    *                   ldr	b25, [x21, w8, uxtw]
 # CHECK-NEXT:  1      6     0.33    *                   ldr	b8, [x30, x10]
 # CHECK-NEXT:  2      2     0.50           *            str	b14, [x13, x25]
@@ -1210,6 +1220,9 @@
 # CHECK-NEXT:  1      1     0.25                        orn	w2, w5, w29
 # CHECK-NEXT:  1      2     0.50                        ands	w7, wzr, w9, lsl #1
 # CHECK-NEXT:  1      2     0.50                        ands	x3, x5, x20, ror #63
+# CHECK-NEXT:  1      1     0.33                        ands	w5, w3, w4, lsr #0
+# CHECK-NEXT:  1      1     0.33                        ands	w5, w3, w4, asr #0
+# CHECK-NEXT:  1      1     0.33                        ands	x5, x3, x4, ror #0
 # CHECK-NEXT:  1      1     0.33                        bics	w3, w5, w7
 # CHECK-NEXT:  1      2     0.50                        bics	x3, xzr, x3, lsl #1
 # CHECK-NEXT:  1      2     0.50                        tst	w3, w7, lsl #31
@@ -1273,7 +1286,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]
-# CHECK-NEXT: 13.00  13.00  34.00  34.00  48.00  48.00  48.00  98.67  171.67 171.67 316.50 203.50 150.00 150.00 190.00 56.50  65.50  13.00
+# CHECK-NEXT: 13.00  13.00  34.00  34.00  51.00  51.00  51.00  98.67  171.67 171.67 322.00 209.00 153.00 153.00 208.00 56.50  47.50  13.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]   Instructions:
@@ -1307,6 +1320,8 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     add	wsp, wsp, w10
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     add	x25, x9, w25, uxtb
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     add	w3, w5, w7
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     add	w5, w3, w4, uxtb
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     add	w5, w3, w4, uxtw
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     add	wzr, w3, w5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     add	w20, wzr, w4
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     add	w4, w6, wzr
@@ -1360,6 +1375,9 @@
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     adds	x2, x3, x4, asr #0
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.50   0.50    -      -      -      -      -      -     adds	x5, x6, x7, asr #21
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.50   0.50    -      -      -      -      -      -     adds	x8, x9, x10, asr #63
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.50   0.50    -      -      -      -      -      -     adds	w5, w3, w4, uxtb
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     adds	w5, w3, w4, uxtw
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     adds	x5, x3, x4, uxtx
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     sub	w3, w5, w7
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     sub	wzr, w3, w5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     sub	w4, w6, wzr
@@ -1385,6 +1403,8 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     sub	x5, x6, x7, asr #21
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     sub	x8, x9, x10, asr #63
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     sub	w13, wsp, w10
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     sub	w5, w3, w4, uxtb
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     sub	w5, w3, w4, uxtw
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     sub	x16, x2, w19, uxtb
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     subs	x13, x15, x14, sxtx #1
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     subs	w3, w5, w7
@@ -1399,6 +1419,9 @@
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     subs	w2, w3, w4, asr #0
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.50   0.50    -      -      -      -      -      -     subs	w5, w6, w7, asr #21
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.50   0.50    -      -      -      -      -      -     subs	w8, w9, w10, asr #31
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.50   0.50    -      -      -      -      -      -     subs	w5, w3, w4, uxtb
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     subs	w5, w3, w4, uxtw
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.50   0.50    -      -      -      -      -      -     subs	x5, x3, w4, uxtb
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     subs	x3, x5, x7
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     cmp	x3, x5
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     subs	x4, x6, xzr
@@ -1877,42 +1900,42 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fnmsub	s3, s5, s6, s31
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fnmsub	d3, d13, d0, d23
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fnmsub	h3, h29, h24, h17
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzs	w3, h5, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzs	wzr, h20, #13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzs	w19, h0, #32
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzs	x3, h5, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzs	x12, h30, #45
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzs	x19, h0, #64
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzs	w3, s5, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzs	wzr, s20, #13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzs	w19, s0, #32
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzs	x3, s5, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzs	x12, s30, #45
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzs	x19, s0, #64
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzs	w3, d5, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzs	wzr, d20, #13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzs	w19, d0, #32
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzs	x3, d5, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzs	x12, d30, #45
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzs	x19, d0, #64
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzu	w3, h5, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzu	wzr, h20, #13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzu	w19, h0, #32
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzu	x3, h5, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzu	x12, h30, #45
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzu	x19, h0, #64
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzu	w3, s5, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzu	wzr, s20, #13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzu	w19, s0, #32
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzu	x3, s5, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzu	x12, s30, #45
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzu	x19, s0, #64
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzu	w3, d5, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzu	wzr, d20, #13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzu	w19, d0, #32
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzu	x3, d5, #1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzu	x12, d30, #45
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     fcvtzu	x19, d0, #64
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzs	w3, h5, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzs	wzr, h20, #13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzs	w19, h0, #32
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzs	x3, h5, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzs	x12, h30, #45
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzs	x19, h0, #64
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzs	w3, s5, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzs	wzr, s20, #13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzs	w19, s0, #32
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzs	x3, s5, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzs	x12, s30, #45
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzs	x19, s0, #64
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzs	w3, d5, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzs	wzr, d20, #13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzs	w19, d0, #32
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzs	x3, d5, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzs	x12, d30, #45
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzs	x19, d0, #64
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzu	w3, h5, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzu	wzr, h20, #13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzu	w19, h0, #32
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzu	x3, h5, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzu	x12, h30, #45
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzu	x19, h0, #64
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzu	w3, s5, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzu	wzr, s20, #13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzu	w19, s0, #32
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzu	x3, s5, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzu	x12, s30, #45
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzu	x19, s0, #64
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzu	w3, d5, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzu	wzr, d20, #13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzu	w19, d0, #32
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzu	x3, d5, #1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzu	x12, d30, #45
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     fcvtzu	x19, d0, #64
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     scvtf	h23, w19, #1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     scvtf	h31, wzr, #20
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     scvtf	h14, w0, #32
@@ -2303,16 +2326,16 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldrsb	x18, [x22, w10, sxtw]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldrsh	w3, [sp, x5]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldrsh	w9, [x27, x6]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldrh	w10, [x30, x7, lsl #1]
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -      -      -     ldrh	w10, [x30, x7, lsl #1]
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     strh	w11, [x29, x3, sxtx]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldrh	w12, [x28, xzr, sxtx]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldrsh	x13, [x27, x5, sxtx #1]
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -      -      -     ldrsh	x13, [x27, x5, sxtx #1]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldrh	w14, [x26, w6, uxtw]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldrh	w15, [x25, w7, uxtw]
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldrsh	w16, [x24, w8, uxtw #1]
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -      -      -     ldrsh	w16, [x24, w8, uxtw #1]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldrh	w17, [x23, w9, sxtw]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldrh	w18, [x22, w10, sxtw]
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     strh	w19, [x21, wzr, sxtw #1]
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50   0.25   0.25   0.25   0.25    -      -      -      -     strh	w19, [x21, wzr, sxtw #1]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldr	b25, [x21, w8, uxtw]
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldr	b8, [x30, x10]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -     str	b14, [x13, x25]
@@ -2477,6 +2500,9 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     orn	w2, w5, w29
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.50   0.50    -      -      -      -      -      -     ands	w7, wzr, w9, lsl #1
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.50   0.50    -      -      -      -      -      -     ands	x3, x5, x20, ror #63
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     ands	w5, w3, w4, lsr #0
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     ands	w5, w3, w4, asr #0
+# CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     ands	x5, x3, x4, ror #0
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     bics	w3, w5, w7
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.50   0.50    -      -      -      -      -      -     bics	x3, xzr, x3, lsl #1
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.50   0.50    -      -      -      -      -      -     tst	w3, w7, lsl #31

@@ -1,6 +1,6 @@
 ; RUN: opt %loadNPMPolly '-passes=polly-custom<delicm>' -disable-output < %s
-; RUN: opt %loadNPMPolly '-passes=polly-custom<delicm>' -polly-print-delicm -disable-output < %s | FileCheck %s
-; RUN: opt %loadNPMPolly '-passes=polly-custom<delicm>' -polly-print-delicm -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<delicm>' -plugin-arg=Polly,-polly-print-delicm -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<delicm>' -plugin-arg=Polly,-polly-print-delicm -disable-output < %s | FileCheck %s
 ;
 ; Simple test for the existence of the DeLICM pass.
 ;

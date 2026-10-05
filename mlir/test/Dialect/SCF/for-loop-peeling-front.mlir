@@ -85,14 +85,17 @@ func.func @static_two_iterations_ub_used_in_loop(%arg0: memref<1xi32>) -> i32 {
 // CHECK-SAME:     %[[UB:.*]]: index, %[[MEMREF:.*]]: memref<i32>
 //  CHECK-DAG:   %[[C4:.*]] = arith.constant 4 : index
 //  CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
-//      CHECK:   scf.for %[[IV:.*]] = %[[C0]] to %[[C4]] step %[[C4]] {
+//  The peeled first iteration is bounded by %ub as well as by %lb + %step, so
+//  it stays empty when the source loop has no iterations.
+//      CHECK:   %[[SPLIT:.*]] = affine.min {{.*}}[%[[C0]], %[[C4]], %[[UB]]]
+//      CHECK:   scf.for %[[IV:.*]] = %[[C0]] to %[[SPLIT]] step %[[C4]] {
 //      CHECK:     %[[MIN:.*]] = affine.min #[[MAP]](%[[UB]], %[[IV]])[%[[C4]]]
 //      CHECK:     %[[LOAD:.*]] = memref.load %[[MEMREF]][]
 //      CHECK:     %[[CAST:.*]] = arith.index_cast %[[MIN]]
 //      CHECK:     %[[ADD:.*]] = arith.addi %[[LOAD]], %[[CAST]] : i32
 //      CHECK:     memref.store %[[ADD]], %[[MEMREF]]
 //      CHECK:   }
-//      CHECK:   scf.for %[[IV2:.*]] = %[[C4]] to %[[UB]] step %[[C4]] {
+//      CHECK:   scf.for %[[IV2:.*]] = %[[SPLIT]] to %[[UB]] step %[[C4]] {
 //      CHECK:     %[[REM:.*]] = affine.min #[[MAP]](%[[UB]], %[[IV2]])[%[[C4]]]
 //      CHECK:     %[[LOAD2:.*]] = memref.load %[[MEMREF]][]
 //      CHECK:     %[[CAST2:.*]] = arith.index_cast %[[REM]]
@@ -117,12 +120,12 @@ func.func @no_loop_results(%ub : index, %d : memref<i32>) {
 
 // -----
 
-//  CHECK-DAG: #[[MAP0:.*]] = affine_map<()[s0, s1] -> (s0 + s1)>
+//  CHECK-DAG: #[[MAP0:.*]] = affine_map<()[s0, s1, s2] -> (s0 + s1, s2)>
 //  CHECK-DAG: #[[MAP1:.*]] = affine_map<(d0, d1)[s0] -> (s0, d0 - d1)>
 //      CHECK: func @fully_dynamic_bounds(
 // CHECK-SAME:     %[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index
 //      CHECK:   %[[C0_I32:.*]] = arith.constant 0 : i32
-//      CHECK:   %[[NEW_UB:.*]] = affine.apply #[[MAP0]]()[%[[LB]], %[[STEP]]]
+//      CHECK:   %[[NEW_UB:.*]] = affine.min #[[MAP0]]()[%[[LB]], %[[STEP]], %[[UB]]]
 //      CHECK:   %[[FIRST:.*]] = scf.for %[[IV:.*]] = %[[LB]] to %[[NEW_UB]]
 // CHECK-SAME:       step %[[STEP]] iter_args(%[[ACC:.*]] = %[[C0_I32]]) -> (i32) {
 //      CHECK:     %[[MIN:.*]] = affine.min #[[MAP1]](%[[UB]], %[[IV]])[%[[STEP]]]

@@ -23,7 +23,6 @@
 
 #include "GlobalHandler.h"
 #include "OffloadAPI.h"
-#include "OpenMP/OMPT/Callback.h"
 #include "PluginInterface.h"
 #include "omptarget.h"
 
@@ -78,12 +77,6 @@ struct GenELF64KernelTy : public GenericKernelTy {
     // Save the function pointer.
     Func = reinterpret_cast<KernelTy *>(Global.getPtr());
 
-    KernelEnvironment.Configuration.ExecMode = OMP_TGT_EXEC_MODE_GENERIC;
-    KernelEnvironment.Configuration.MayUseNestedParallelism = /*Unknown=*/2;
-    KernelEnvironment.Configuration.UseGenericStateMachine = /*Unknown=*/2;
-
-    // Set the maximum number of threads to a single.
-    MaxNumThreads = 1;
     return Plugin::success();
   }
 
@@ -492,8 +485,10 @@ struct GenELF64PluginContextTy final : public PluginContextTy {
   }
 
   Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
-                            TargetAllocTy Kind, size_t Alignment) override {
-    auto PtrOrErr = PluginContextTy::allocate(Device, Size, Kind, Alignment);
+                            void *HostPtr, TargetAllocTy Kind,
+                            size_t Alignment) override {
+    auto PtrOrErr =
+        PluginContextTy::allocate(Device, Size, HostPtr, Kind, Alignment);
     if (!PtrOrErr)
       return PtrOrErr.takeError();
     void *Ptr = *PtrOrErr;

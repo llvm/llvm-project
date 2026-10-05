@@ -239,6 +239,7 @@ public:
 
   /// Return true for post-incremented instructions.
   bool isPostIncrement(const MachineInstr &MI) const override;
+  bool isPostIncWithImmOffset(const MachineInstr &MI) const;
 
   /// Convert the instruction into a predicated instruction.
   /// It returns true if the operation was successful.

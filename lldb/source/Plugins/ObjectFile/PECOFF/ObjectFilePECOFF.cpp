@@ -128,7 +128,10 @@ static bool GetDebugLinkContents(const llvm::object::COFFObjectFile &coff_obj,
           content->data(), content->size(),
           coff_obj.isLittleEndian() ? eByteOrderLittle : eByteOrderBig, 4);
       lldb::offset_t gnu_debuglink_offset = 0;
-      gnu_debuglink_file = data.GetCStr(&gnu_debuglink_offset);
+      const char *file = data.GetCStr(&gnu_debuglink_offset);
+      if (!file)
+        return false;
+      gnu_debuglink_file = file;
       // Align to the next 4-byte offset
       gnu_debuglink_offset = llvm::alignTo(gnu_debuglink_offset, 4);
       data.GetU32(&gnu_debuglink_offset, &gnu_debuglink_crc, 1);
@@ -947,6 +950,7 @@ std::unique_ptr<CallFrameInfo> ObjectFilePECOFF::CreateCallFrameInfo() {
   if (!data_dir_exception.vmaddr)
     return {};
 
+  // TODO: decode ARM64 .pdata/.xdata so optimized frameless code unwinds.
   if (m_coff_header.machine != llvm::COFF::IMAGE_FILE_MACHINE_AMD64)
     return {};
 
@@ -1160,12 +1164,11 @@ uint32_t ObjectFilePECOFF::ParseDependentModules() {
     // At this moment we only have the base name of the DLL. The full path can
     // only be seen after the dynamic loading.  Our best guess is Try to get it
     // with the help of the object file's directory.
-    llvm::SmallString<128> dll_fullpath;
     FileSpec dll_specs(dll_name);
     dll_specs.SetDirectory(m_file.GetDirectory());
 
-    if (!llvm::sys::fs::real_path(dll_specs.GetPath(), dll_fullpath))
-      m_deps_filespec->EmplaceBack(dll_fullpath);
+    if (FileSystem::Instance().Exists(dll_specs))
+      m_deps_filespec->Append(dll_specs);
     else {
       // Known DLLs or DLL not found in the object file directory.
       m_deps_filespec->EmplaceBack(dll_name);
