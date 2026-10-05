@@ -2089,9 +2089,17 @@ public:
       return false;
     if (StepSize != OpWidth / 8)
       return false;
-    if (OpWidth >= 16)
+    if (OpWidth >= 16) {
       if (OpWidth != WcharSize * 8)
         return false;
+
+      // Don't call `wcslen` if the pointer isn't aligned.
+      const DataLayout &DL = LoopLoad->getDataLayout();
+      Align WcharAlign = DL.getABITypeAlign(OperandType);
+      if (LoopLoad->getAlign() < WcharAlign &&
+          getKnownAlignment(IncPtr, DL, LoopLoad) < WcharAlign)
+        return false;
+    }
 
     // Scan every instruction in the loop to ensure there are no side effects.
     for (Instruction &I : *LoopBody)
