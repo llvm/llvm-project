@@ -494,6 +494,53 @@ exit:
   ret i64 %res
 }
 
+; Unsupported: reduction backedge value has more than one use in the loop.
+define i64 @smax_i32_idx_backedge_multi_use_bad(ptr %src, i64 %n) {
+; CHECK-LABEL: define i64 @smax_i32_idx_backedge_multi_use_bad(
+; CHECK-SAME: ptr [[SRC:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAX_IDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MAX_IDX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAX_VAL:%.*]] = phi i32 [ -2147483648, %[[ENTRY]] ], [ [[MAX_VAL_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[MAX_VAL]], [[L]]
+; CHECK-NEXT:    [[MAX_IDX_NEXT]] = select i1 [[CMP]], i64 [[IV]], i64 [[MAX_IDX]]
+; CHECK-NEXT:    [[MAX_VAL_NEXT]] = call i32 @llvm.smax.i32(i32 [[MAX_VAL]], i32 [[L]])
+; CHECK-NEXT:    [[KEEP_LIVE:%.*]] = add i32 [[MAX_VAL_NEXT]], 0
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[KEEP_LIVE]], 0
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND1]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MAX_IDX_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %max.idx = phi i64 [ 0, %entry ], [ %max.idx.next, %loop ]
+  %max.val = phi i32 [ -2147483648, %entry ], [ %max.val.next, %loop ]
+  %gep = getelementptr i32, ptr %src, i64 %iv
+  %l = load i32, ptr %gep, align 4
+  %cmp = icmp slt i32 %max.val, %l
+  %max.idx.next = select i1 %cmp, i64 %iv, i64 %max.idx
+  %max.val.next = call i32 @llvm.smax.i32(i32 %max.val, i32 %l)
+  %keep.live = add i32 %max.val.next, 0
+  %exitcond.extra = icmp eq i32 %keep.live, 0
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  %res = phi i64 [ %max.idx.next, %loop ]
+  ret i64 %res
+}
+
 ; Currently scalarized: FP multi-use argmax reaches VPlan but is not costed profitable.
 define void @fmax_f32_val_and_idx(ptr readonly %src, i32 %n, ptr %out.val, ptr %out.idx) {
 ; CHECK-LABEL: define void @fmax_f32_val_and_idx(
@@ -737,5 +784,4 @@ for.body:
   %exitcond = icmp eq i64 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
-
 
