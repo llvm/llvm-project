@@ -1,9 +1,13 @@
 #include <gpuintrin.h>
 #include <stdint.h>
 
+#ifndef __SPIRV
 extern __gpu_local uint32_t shared_mem[];
-
 extern "C" __gpu_kernel void localmem_reduction(uint32_t *out) {
+#else
+extern "C" __gpu_kernel void
+localmem_reduction(uint32_t *out, __gpu_local uint32_t *shared_mem) {
+#endif
   shared_mem[__gpu_thread_id(0)] = 2;
 
   __gpu_sync_threads();

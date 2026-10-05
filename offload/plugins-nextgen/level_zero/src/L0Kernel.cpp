@@ -129,10 +129,6 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                              uint32_t DynBlockMemSize,
                              KernelLaunchArgsTy &LaunchArgs,
                              AsyncInfoWrapperTy &AsyncInfoWrapper) const {
-  if (DynBlockMemSize > 0)
-    return Plugin::error(ErrorCode::UNSUPPORTED,
-                         "dynamic shared memory is unsupported in L0 plugin");
-
   auto &L0Device = L0DeviceTy::makeL0Device(GenericDevice);
   __tgt_async_info *AsyncInfo = AsyncInfoWrapper;
   assert(AsyncInfo && "AsyncInfo must be provided for L0 kernel launch");
@@ -188,14 +184,25 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                       << " groups (max: " << MaxCooperativeGroupCount << ")";
   }
 
-  // With pointer-array arguments, zeCommandListAppendLaunchKernelWithArguments
-  // folds group-size, per-argument set, and launch into a single call.
-  if (LaunchArgs.NumArgs != KernelPR.NumKernelArgs)
-    return Plugin::error(
-        ErrorCode::INVALID_ARGUMENT,
-        "Number of arguments (%u) does not match the number of arguments "
-        "expected by the kernel (%u)",
-        LaunchArgs.NumArgs, KernelPR.NumKernelArgs);
+  if(LaunchArgs.DynCGroupMem == 0) {
+    if (LaunchArgs.NumArgs != KernelPR.NumKernelArgs)
+      return Plugin::error(
+          ErrorCode::INVALID_ARGUMENT,
+          "Number of arguments (%u) does not match the number of arguments "
+          "expected by the kernel (%u)",
+          LaunchArgs.NumArgs, KernelPR.NumKernelArgs);
+  } else {
+    // User requested DynSharedMem
+    if (LaunchArgs.NumArgs != KernelPR.NumKernelArgs - 1)
+      return Plugin::error(
+          ErrorCode::INVALID_ARGUMENT,
+          "Number of arguments (%u) does not match the number of arguments "
+          "expected by the kernel (%u). Level Zero plugin requires that kernels using "
+          "shared local memory, have last argument in `__local` address space and "
+          "the argument is ommited in kernel submission, because Level Zero plugin "
+          "will append it based on `DynSharedMemory` property.", // We should reference manpage here
+          LaunchArgs.NumArgs, KernelPR.NumKernelArgs - 1);
+  }
 
   assert(Queue->getUserCtx() && "Queue must belong to a plugin context");
   if (auto Err = setIndirectFlags(L0Device, *Queue->getUserCtx(), KEnv))
