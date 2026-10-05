@@ -88,9 +88,9 @@ struct LoopUnrollOptions {
   bool PrepareForLTO = false;
 
   LoopUnrollOptions(int OptLevel = 2, bool OnlyWhenForced = false,
-                    bool ForgetSCEV = false)
+                    bool ForgetSCEV = false, bool PrepareForLTO = false)
       : OptLevel(OptLevel), OnlyWhenForced(OnlyWhenForced),
-        ForgetSCEV(ForgetSCEV) {}
+        ForgetSCEV(ForgetSCEV), PrepareForLTO(PrepareForLTO) {}
 
   /// Enables or disables partial unrolling. When disabled only full unrolling
   /// is allowed.
