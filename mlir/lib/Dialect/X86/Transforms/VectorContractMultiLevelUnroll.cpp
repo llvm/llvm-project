@@ -396,7 +396,7 @@ static LogicalResult checkShapesAndTypes(MLUCandidate &candidate,
 //
 // For the operand reads, we require that they have a minor identity permutation
 // map, impose no bounds checks and don't carry a mask. In addition, they shall
-// use the induction variable as exactly on of their indices. This covers plain
+// use the induction variable as exactly one of their indices. This covers plain
 // 2D memrefs as well as block-based layouts.
 //
 // Example:
