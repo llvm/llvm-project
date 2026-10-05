@@ -4,13 +4,13 @@
   func.func @_QQmain() {
     %0 = fir.dummy_scope : !fir.dscope
     %1 = fir.alloca i32 {bindc_name = "image_status", uniq_name = "_QFEimage_status"}
-    %2:2 = hlfir.declare %1 {uniq_name = "_QFEimage_status"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %2:2 = hlfir.declare %1 uniq_name("_QFEimage_status") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %3 = fir.alloca i32 {bindc_name = "new_team", uniq_name = "_QFEnew_team"}
-    %4:2 = hlfir.declare %3 {uniq_name = "_QFEnew_team"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %4:2 = hlfir.declare %3 uniq_name("_QFEnew_team") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %5 = fir.address_of(@_QMiso_fortran_envECstat_failed_image) : !fir.ref<i32>
-    %6:2 = hlfir.declare %5 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QMiso_fortran_envECstat_failed_image"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %6:2 = hlfir.declare %5 uniq_name("_QMiso_fortran_envECstat_failed_image") fortran_attrs<parameter> : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %7 = fir.address_of(@_QFEteam) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.info:!fir.box<!fir.ptr<!fir.type<_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type{_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type.__placeholder:i64}>>>}>>
-    %8:2 = hlfir.declare %7 {uniq_name = "_QFEteam"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.info:!fir.box<!fir.ptr<!fir.type<_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type{_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type.__placeholder:i64}>>>}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.info:!fir.box<!fir.ptr<!fir.type<_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type{_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type.__placeholder:i64}>>>}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.info:!fir.box<!fir.ptr<!fir.type<_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type{_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type.__placeholder:i64}>>>}>>)
+    %8:2 = hlfir.declare %7 uniq_name("_QFEteam") : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.info:!fir.box<!fir.ptr<!fir.type<_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type{_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type.__placeholder:i64}>>>}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.info:!fir.box<!fir.ptr<!fir.type<_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type{_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type.__placeholder:i64}>>>}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.info:!fir.box<!fir.ptr<!fir.type<_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type{_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type.__placeholder:i64}>>>}>>)
     %9 = mif.this_image : () -> i32
     %c2_i32 = arith.constant 2 : i32
     %10 = arith.remsi %9, %c2_i32 : i32
@@ -71,13 +71,13 @@
 // CHECK:   %[[VAL_2:.*]] = fir.alloca i32
 // CHECK:   %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:   %[[VAL_4:.*]] = fir.alloca i32 <{bindc_name = "image_status", uniq_name = "_QFEimage_status"}>
-// CHECK:   %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFEimage_status"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:   %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] uniq_name("_QFEimage_status") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:   %[[VAL_6:.*]] = fir.alloca i32 <{bindc_name = "new_team", uniq_name = "_QFEnew_team"}>
-// CHECK:   %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFEnew_team"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:   %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] uniq_name("_QFEnew_team") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:   %[[VAL_8:.*]] = fir.address_of(@_QMiso_fortran_envECstat_failed_image) : !fir.ref<i32>
-// CHECK:   %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QMiso_fortran_envECstat_failed_image"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:   %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] uniq_name("_QMiso_fortran_envECstat_failed_image") fortran_attrs<parameter> : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:   %[[VAL_10:.*]] = fir.address_of(@_QFEteam) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.info:!fir.box<!fir.ptr<!fir.type<_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type{_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type.__placeholder:i64}>>>}>>
-// CHECK:   %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] {uniq_name = "_QFEteam"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.info:!fir.box<!fir.ptr<!fir.type<_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type{_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type.__placeholder:i64}>>>}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.info:!fir.box<!fir.ptr<!fir.type<_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type{_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type.__placeholder:i64}>>>}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.info:!fir.box<!fir.ptr<!fir.type<_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type{_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type.__placeholder:i64}>>>}>>)
+// CHECK:   %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] uniq_name("_QFEteam") : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.info:!fir.box<!fir.ptr<!fir.type<_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type{_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type.__placeholder:i64}>>>}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.info:!fir.box<!fir.ptr<!fir.type<_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type{_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type.__placeholder:i64}>>>}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.info:!fir.box<!fir.ptr<!fir.type<_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type{_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type.__placeholder:i64}>>>}>>)
 // CHECK:   %[[VAL_12:.*]] = fir.absent !fir.ref<none>
 // CHECK:   fir.call @_QMprifPprif_this_image_no_coarray(%[[VAL_12]], %[[VAL_2]]) : (!fir.ref<none>, !fir.ref<i32>) -> ()
 // CHECK:   %[[VAL_13:.*]] = fir.load %[[VAL_2]] : !fir.ref<i32>

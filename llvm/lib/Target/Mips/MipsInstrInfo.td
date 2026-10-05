@@ -2516,7 +2516,8 @@ class JALR_HB_DESC_BASE<string instr_asm, RegisterOperand GPROpnd> {
 }
 
 class JR_HB_DESC<RegisterOperand RO> :
-  InstSE<(outs), (ins), "", [], FrmJ>, JR_HB_DESC_BASE<"jr.hb", RO> {
+  InstSE<(outs), (ins), "", [], FrmJ, "jr.hb">,
+  JR_HB_DESC_BASE<"jr.hb", RO> {
   let isBranch=1;
   let isIndirectBranch=1;
   let hasDelaySlot=1;
@@ -2526,8 +2527,8 @@ class JR_HB_DESC<RegisterOperand RO> :
 }
 
 class JALR_HB_DESC<RegisterOperand RO> :
-  InstSE<(outs), (ins), "", [], FrmJ>, JALR_HB_DESC_BASE<"jalr.hb",
-                                                                     RO> {
+  InstSE<(outs), (ins), "", [], FrmJ, "jalr.hb">,
+  JALR_HB_DESC_BASE<"jalr.hb", RO> {
   let isIndirectBranch=1;
   let hasDelaySlot=1;
   bit isCTI = 1;
@@ -2536,8 +2537,9 @@ class JALR_HB_DESC<RegisterOperand RO> :
 class JR_HB_ENC : JR_HB_FM<8>;
 class JALR_HB_ENC : JALR_HB_FM<9>;
 
-def JR_HB : JR_HB_DESC<GPR32Opnd>, JR_HB_ENC, ISA_MIPS32R2_NOT_32R6_64R6;
-def JALR_HB : JALR_HB_DESC<GPR32Opnd>, JALR_HB_ENC, ISA_MIPS32;
+def JR_HB : MMRel, JR_HB_DESC<GPR32Opnd>, JR_HB_ENC,
+            ISA_MIPS32R2_NOT_32R6_64R6;
+def JALR_HB : MMRel, JALR_HB_DESC<GPR32Opnd>, JALR_HB_ENC, ISA_MIPS32;
 
 let AdditionalPredicates = [NotInMicroMips, UseIndirectJumpsHazard] in
   def JALRHBPseudo : JumpLinkRegPseudo<GPR32Opnd, JALR_HB, RA>;
