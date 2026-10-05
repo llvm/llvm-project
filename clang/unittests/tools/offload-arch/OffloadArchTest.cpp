@@ -8,7 +8,6 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -21,21 +20,19 @@
 #include <optional>
 #include <string>
 
-// Defined in AMDGPUArchByHIP.cpp (non-static, compiled into this test).
+// Defined in AMDGPUArchByHIP.cpp (non-static, linked via clangOffloadArch).
 #ifdef _WIN32
 bool compareVersions(llvm::StringRef A, llvm::StringRef B);
 llvm::SmallVector<std::string, 8> getCandidateBinPaths(llvm::StringRef ExeDir);
 #endif
 
-// Defined in AMDGPUArchByKFD.cpp (non-static, compiled into this test).
+// Defined in AMDGPUArchByKFD.cpp (non-static, linked via clangOffloadArch).
 int printGPUsByKFD(llvm::StringRef NodePath);
 
 // Defined in LevelZeroArch.cpp.
 std::string getIntelGPUArchName(uint32_t IPVersion);
 
 using namespace llvm;
-
-cl::opt<bool> Verbose("offload-arch-test-verbose", cl::Hidden, cl::init(false));
 
 #ifdef _WIN32
 
