@@ -1089,6 +1089,8 @@ SystemZInstrInfo::convertToThreeAddress(MachineInstr &MI,
   // Try to convert an AND into an RISBG-type instruction.
   // TODO: It might be beneficial to select RISBG and shorten to AND instead.
   if (LogicOp And = interpretAndImmediate(MI.getOpcode())) {
+    if (!MI.registerDefIsDead(SystemZ::CC, /*TRI=*/nullptr))
+      return nullptr;
     uint64_t Imm = MI.getOperand(2).getImm() << And.ImmLSB;
     // AND IMMEDIATE leaves the other bits of the register unchanged.
     Imm |= allOnes(And.RegSize) & ~(allOnes(And.ImmSize) << And.ImmLSB);
