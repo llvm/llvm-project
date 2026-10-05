@@ -3008,7 +3008,7 @@ static void buildKernelInvokeOperands(
 static bool buildKernelQuery(const SPIRV::IncomingCall *Call, unsigned Opcode,
                              MachineIRBuilder &MIRBuilder,
                              SPIRVGlobalRegistry *GR) {
-  bool HasNDRange = Call->Arguments.size() == 3;
+  bool HasNDRange = Call->Builtin->name().contains("_ndrange_impl");
   unsigned InvokeIdx = HasNDRange ? 1 : 0;
   Register InvokeReg, ParamReg, ParamSizeReg, ParamAlignReg;
   buildKernelInvokeOperands(Call, InvokeIdx, InvokeIdx + 1, MIRBuilder, GR,
