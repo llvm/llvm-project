@@ -1,6 +1,7 @@
 add_lldb_unittest(TargetTests
   ABITest.cpp
   DynamicRegisterInfoTest.cpp
+  ExecutableModuleTest.cpp
   ExecutionContextTest.cpp
   LanguageTest.cpp
   LocateModuleCallbackTest.cpp
@@ -10,6 +11,7 @@ add_lldb_unittest(TargetTests
   ModuleCacheTest.cpp
   PathMappingListTest.cpp
   ProcessPropertiesTest.cpp
+  ReExportedSymbolTest.cpp
   RegisterTypeBuilderClangTest.cpp
   RemoteAwarePlatformTest.cpp
   ScratchTypeSystemTest.cpp
@@ -20,6 +22,7 @@ add_lldb_unittest(TargetTests
   FindFileTest.cpp
 
   LINK_COMPONENTS
+      Option
       Support
   LINK_LIBS
       lldbCore

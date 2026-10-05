@@ -8,6 +8,7 @@
 
 #include "check-namelist.h"
 #include "flang/Semantics/tools.h"
+#include <algorithm>
 
 namespace Fortran::semantics {
 
@@ -35,6 +36,33 @@ void NamelistChecker::Leave(const parser::NamelistStmt &nmlStmt) {
                 nmlObjName.source,
                 "A namelist group object '%s' should not be a PARAMETER"_port_en_US,
                 nmlObjSymbol->name());
+          }
+          if (const DeclTypeSpec *type{nmlObjSymbol->GetType()}) {
+            if (const DerivedTypeSpec *derived{type->AsDerived()}) {
+              // F2023 C8109: a namelist-group-object shall not be of
+              // enumeration type, nor have a direct component of enumeration
+              // type.  This is a declaration-time constraint, enforced
+              // regardless of whether the namelist is used in I/O.
+              if (IsEnumerationType(*derived)) {
+                context_.Say(nmlObjName.source,
+                    "Enumeration type '%s' may not be a namelist group object"_err_en_US,
+                    derived->name());
+              } else {
+                DirectComponentIterator directs{*derived};
+                auto bad{std::find_if(
+                    directs.begin(), directs.end(), [](const Symbol &comp) {
+                      const DeclTypeSpec *compType{comp.GetType()};
+                      const DerivedTypeSpec *compDerived{
+                          compType ? compType->AsDerived() : nullptr};
+                      return compDerived && IsEnumerationType(*compDerived);
+                    })};
+                if (bad != directs.end()) {
+                  context_.Say(nmlObjName.source,
+                      "Namelist group object '%s' may not have a direct component '%s' of enumeration type"_err_en_US,
+                      nmlObjSymbol->name(), bad.BuildResultDesignatorName());
+                }
+              }
+            }
           }
         }
       }

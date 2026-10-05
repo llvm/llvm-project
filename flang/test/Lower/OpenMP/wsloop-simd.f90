@@ -89,7 +89,7 @@ end subroutine do_simd_array_reduction
 ! CHECK-LABEL: func.func @_QPdo_simd_private(
 subroutine do_simd_private()
   integer, allocatable :: tmp
-  ! CHECK:      %[[I_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFdo_simd_privateEi"}
+  ! CHECK:      %[[I_DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFdo_simd_privateEi")
   ! CHECK:      omp.wsloop
   ! CHECK-NEXT: omp.simd
   ! CHECK-SAME: private(@[[PRIV_BOX_SYM:.*]] %{{.*}} -> %[[PRIV_BOX:.*]] : !fir.ref<!fir.box<!fir.heap<i32>>>)

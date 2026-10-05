@@ -7,6 +7,7 @@
 import argparse
 import json
 import os
+import shlex
 import subprocess
 import sys
 from collections import defaultdict
@@ -32,6 +33,10 @@ Usage as a git pre-commit hook:
 Environment variables `IDT_PATH` and `COMPILE_COMMANDS_PATH` may be used in
 place of the matching command-line arguments.
 """
+
+
+# Root of the llvm-project checkout, derived from this script's own location.
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 # Symbols that are ignored by the idt check.
@@ -207,6 +212,45 @@ EXTRA_ARGS_COMMON = [
 ]
 
 
+def compiler_from_cdb_entry(entry: dict) -> Optional[str]:
+    """Return the compiler executable from a compile_commands.json entry,
+    which may use either the `arguments` or the `command` schema."""
+    arguments = entry.get("arguments")
+    if arguments:
+        return arguments[0]
+    command = entry.get("command")
+    if command:
+        parts = shlex.split(command, posix=os.name != "nt")
+        if parts:
+            return parts[0]
+    return None
+
+
+def query_resource_dir(compiler: str) -> Optional[str]:
+    """Return `compiler`'s resource directory, or None if it can't be queried.
+
+    compile_commands.json records the driver command line, which never carries
+    `-resource-dir`: the driver adds the builtin header search path itself, at a
+    later stage.
+    Replaying those flags through libTooling drops it, so idt falls back to
+    deducing the directory from its own binary location. Ask the compiler
+    directly instead, so that headers resolve wherever idt happens to be
+    installed.
+    """
+    try:
+        result = subprocess.run(
+            [compiler, "-print-resource-dir"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip() or None
+
+
 def categorize_header(path: str) -> Optional[str]:
     """Return the category name (LLVM/LLVM-C/Demangle) for a header, or None
     if the path doesn't fall under any known category."""
@@ -250,12 +294,12 @@ def find_source_for_header(header: str) -> Optional[str]:
     sub_remapped = f"{remap}/{rest}" if remap and rest else sub
     for ext in (".cpp", ".cc"):
         candidate = Path("llvm/lib") / Path(sub_remapped).with_suffix(ext)
-        if candidate.exists():
-            return str(candidate)
+        if (REPO_ROOT / candidate).exists():
+            return candidate.as_posix()
 
     # 3. Same-subdirectory grep fallback.
     lib_subdir = f"llvm/lib/{INCLUDE_TO_LIB_SUBDIR.get(first_part, first_part)}"
-    if not Path(lib_subdir).is_dir():
+    if not (REPO_ROOT / lib_subdir).is_dir():
         return None
 
     inc = header.removeprefix("llvm/include/")
@@ -265,6 +309,7 @@ def find_source_for_header(header: str) -> Optional[str]:
             capture_output=True,
             text=True,
             timeout=15,
+            cwd=REPO_ROOT,
         )
     except subprocess.TimeoutExpired:
         return None
@@ -284,6 +329,7 @@ class IdsCheckArgs:
     changed_files: List[str] = []
     idt_path: str = ""
     compile_commands: str = ""
+    resource_dir: str = ""
     repo: str = ""
     token: str = ""
     issue_number: int = 0
@@ -295,6 +341,7 @@ class IdsCheckArgs:
         self.changed_files = args.changed_files
         self.idt_path = args.idt_path
         self.compile_commands = args.compile_commands
+        self.resource_dir = getattr(args, "resource_dir", "")
         self.repo = getattr(args, "repo", "")
         self.token = getattr(args, "token", "")
         self.issue_number = getattr(args, "issue_number", 0)
@@ -413,6 +460,15 @@ View the diff from {self.name} here.
 
         cdb_dir = os.path.dirname(compile_commands) or "."
 
+        # Query the resource directory from the compiler.
+        resource_dir = args.resource_dir
+        if not resource_dir and cdb_entries:
+            compiler = compiler_from_cdb_entry(cdb_entries[0])
+            if compiler:
+                resource_dir = query_resource_dir(compiler) or ""
+        if args.verbose and resource_dir:
+            print(f"Using resource directory {resource_dir}", file=sys.stderr)
+
         for i, (header, source) in enumerate(header_source_pairs, start=1):
             if args.verbose:
                 print(
@@ -443,8 +499,10 @@ View the diff from {self.name} here.
             ]
             for extra in EXTRA_ARGS_COMMON:
                 cmd.append(f"--extra-arg={extra}")
+            if resource_dir:
+                cmd.append(f"--extra-arg=-resource-dir={fwd(resource_dir)}")
             cmd.append(fwd(header))
-            proc = subprocess.run(cmd)
+            proc = subprocess.run(cmd, cwd=REPO_ROOT)
             if proc.returncode != 0 and proc.returncode != 1:
                 print(
                     f"  WARN: idt exited with rc={proc.returncode} on "
@@ -461,7 +519,9 @@ View the diff from {self.name} here.
         if args.verbose:
             print(f"Running: {' '.join(cmd)}", file=sys.stderr)
 
-        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc = subprocess.run(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=REPO_ROOT
+        )
         if proc.returncode != 0:
             print("Error: Failed to get changed files", file=sys.stderr)
             sys.stderr.write(proc.stderr.decode("utf-8"))
@@ -473,7 +533,9 @@ View the diff from {self.name} here.
     def check_for_diff(self) -> Optional[str]:
         """Check if there are any uncommitted changes after running idt."""
         cmd = ["git", "diff"]
-        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc = subprocess.run(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=REPO_ROOT
+        )
 
         diff = proc.stdout.decode("utf-8")
         if diff:
@@ -490,10 +552,10 @@ View the diff from {self.name} here.
                 file=sys.stderr,
             )
             return 1
-
         if not os.path.exists(idt_path):
             print(f"Error: idt tool not found at {idt_path}", file=sys.stderr)
             return 1
+        idt_path = os.path.abspath(idt_path)
 
         # Resolve compile_commands path: prefer command line arg, then env var
         compile_commands = args.compile_commands or os.environ.get(
@@ -505,13 +567,13 @@ View the diff from {self.name} here.
                 file=sys.stderr,
             )
             return 1
-
         if not os.path.exists(compile_commands):
             print(
                 f"Error: compile_commands.json not found at {compile_commands}",
                 file=sys.stderr,
             )
             return 1
+        compile_commands = os.path.abspath(compile_commands)
 
         # Get changed files
         changed_files = self.get_changed_files(args)
@@ -538,7 +600,6 @@ View the diff from {self.name} here.
                     print(f"  Skipping {path}: no matching source", file=sys.stderr)
                 continue
             per_category[category].append((path, source))
-
         if not per_category:
             if args.verbose:
                 print(
@@ -546,14 +607,12 @@ View the diff from {self.name} here.
                     file=sys.stderr,
                 )
             return 0
-
         for category, pairs in per_category.items():
             self.run_idt_for_category(category, pairs, args, idt_path, compile_commands)
 
         # Check for differences
         diff = self.check_for_diff()
         should_update_gh = args.token is not None and args.repo is not None
-
         if diff:
             if should_update_gh:
                 comment_text = self.pr_comment_text_for_diff(diff)
@@ -622,6 +681,13 @@ if __name__ == "__main__":
         "--compile-commands",
         type=str,
         help="Path to compile_commands.json (can also be set via COMPILE_COMMANDS_PATH environment variable)",
+    )
+    parser.add_argument(
+        "--resource-dir",
+        type=str,
+        help="Clang resource directory to parse with. Defaults to querying the "
+        "compiler named in compile_commands.json. Override this when idt's "
+        "embedded clang differs from the one that built LLVM.",
     )
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
 

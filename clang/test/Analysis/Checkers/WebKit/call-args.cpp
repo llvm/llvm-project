@@ -500,59 +500,6 @@ namespace call_with_adopt_ref {
   }
 }
 
-namespace call_on_member {
-
-  class SomeObj {
-  public:
-    static Ref<SomeObj> create() { return adoptRef(*new SomeObj); }
-
-    void ref() const;
-    void deref() const;
-
-    void doWork() {
-      m_obj->method();
-      // expected-warning@-1{{Function argument 'this->m_obj' (parameter 'this' to 'RefCountable::method') is a raw pointer to RefPtr-capable type 'RefCountable'}}
-      m_obj.get()->method();
-      // expected-warning@-1{{Function argument 'this->m_obj.get()' (parameter 'this' to 'RefCountable::method') is a raw pointer to RefPtr-capable type 'RefCountable'}}
-      m_constObj->method();
-    }
-
-    void localWork() {
-      RefPtr obj = provide();
-      obj->method();
-      obj.get()->method();
-    }
-
-    void argWork(RefPtr<RefCountable> arg) {
-      arg->method();
-      arg.get()->method();
-    }
-
-    void temporaryWork() {
-      RefPtr { provide() }->method();
-      RefPtr { provide() }.get()->method();
-    }
-
-    void work();
-
-    RefCountable& constObj() const { return *m_constObj; }
-
-  private:
-    RefPtr<RefCountable> m_obj;
-    const RefPtr<RefCountable> m_constObj;
-  };
-
-  SomeObj* provide();
-
-  void foo() {
-    provide()->constObj().method();
-    // expected-warning@-1{{Function argument 'provide()->constObj()' (parameter 'this' to 'RefCountable::method') is a raw pointer to RefPtr-capable type 'RefCountable'}}
-    Ref { provide()->constObj() }->method();
-    RefPtr { provide() }->constObj().method();
-  }
-
-}
-
 namespace call_with_weak_ptr {
 
   class RefCountableWithWeakPtr : public RefCountable, public CanMakeWeakPtr<RefCountableWithWeakPtr> {

@@ -10,6 +10,7 @@
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
 #include "mlir/Analysis/DataFlow/Utils.h"
 #include "mlir/Analysis/DataFlowFramework.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -206,12 +207,17 @@ private:
   xegpu::LayoutKind layoutKind;
   unsigned indexBitWidth;
 
+  // The op this analysis runs on; program order is numbered within this scope
+  // only (not the enclosing module, which may be mutated concurrently by the
+  // parallel pass manager running this pass on sibling gpu.modules).
+  Operation *scopeRoot = nullptr;
+
   // Program-order index of every op, built lazily on first use via a pre-order
-  // walk of the top-level module/function (matching printed-IR order). Used to
-  // tell which consumer of a value is nearer to its producer.
+  // walk of `scopeRoot` (matching printed-IR order). Used to tell which
+  // consumer of a value is nearer to its producer.
   DenseMap<Operation *, int64_t> programOrder;
   // Returns the program-order index of `op`, populating `programOrder` from
-  // `op`'s top-level ancestor on first call.
+  // `scopeRoot` on first call.
   int64_t getProgramOrder(Operation *op);
 
   int64_t currentProgramOrder = std::numeric_limits<int64_t>::max();
@@ -322,9 +328,11 @@ public:
 
   LayoutInfoPropagation(DataFlowSolver &solver,
                         SymbolTableCollection &symbolTable,
-                        xegpu::LayoutKind layoutKind, unsigned indexBitWidth)
+                        xegpu::LayoutKind layoutKind, unsigned indexBitWidth,
+                        Operation *scopeRoot)
       : SparseBackwardDataFlowAnalysis(solver, symbolTable),
-        layoutKind(layoutKind), indexBitWidth(indexBitWidth) {}
+        layoutKind(layoutKind), indexBitWidth(indexBitWidth),
+        scopeRoot(scopeRoot) {}
   using SparseBackwardDataFlowAnalysis::SparseBackwardDataFlowAnalysis;
 
   LogicalResult
@@ -354,15 +362,14 @@ int64_t LayoutInfoPropagation::getProgramOrder(Operation *op) {
   auto it = programOrder.find(op);
   if (it != programOrder.end())
     return it->second;
-  // First time we see this op's tree: number every op under its top-level
-  // ancestor in pre-order (i.e. printed-IR order). Nested ops (e.g. inside an
-  // scf.for body) get an index between their parent and the parent's next
-  // sibling, so a use inside a loop is "nearer" than a use after it.
-  Operation *root = op;
-  while (root->getParentOp())
-    root = root->getParentOp();
+  // First time we number the tree: number every op under the analysis scope in
+  // pre-order (i.e. printed-IR order). Nested ops (e.g. inside an scf.for body)
+  // get an index between their parent and the parent's next sibling, so a use
+  // inside a loop is "nearer" than a use after it. Numbering is confined to
+  // `scopeRoot` (the op this pass runs on) rather than the enclosing module,
+  // which may be mutated concurrently by the parallel pass manager.
   int64_t counter = 0;
-  root->walk<WalkOrder::PreOrder>(
+  scopeRoot->walk<WalkOrder::PreOrder>(
       [&](Operation *o) { programOrder[o] = counter++; });
   return programOrder.lookup(op);
 }
@@ -479,18 +486,10 @@ FailureOr<int64_t> LayoutInfoPropagation::getNumSgOrFail(
       return llvm::product_of(sgLayout);
   }
   // Otherwise fall back to the kernel's known_block_size.
-  if (auto gpuFunc = op->getParentOfType<gpu::GPUFuncOp>()) {
-    std::optional<ArrayRef<int32_t>> knownBlockSize =
-        gpuFunc.getKnownBlockSize();
-    if (knownBlockSize) {
-      bool isPowerOf2Block = llvm::all_of(*knownBlockSize, [](int32_t dim) {
-        return dim > 0 && llvm::isPowerOf2_32(dim);
-      });
-      int64_t numSg = llvm::product_of(*knownBlockSize) / sgSize;
-      if (isPowerOf2Block && numSg > 0)
-        return numSg;
-    }
-  }
+  if (FailureOr<int64_t> numSg =
+          xegpu::getNumSubgroupsFromBlockSize(op, sgSize);
+      succeeded(numSg))
+    return *numSg;
   // Only subgroup mode needs the count; elsewhere a missing one is benign.
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
     markFailure(op, "Unable to determine the number of subgroups for the "
@@ -665,8 +664,23 @@ void LayoutInfoPropagation::visitShapeCastOp(
   auto resultLayoutAttr =
       dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
 
-  xegpu::DistributeLayoutAttr srcLayoutAttr =
-      xegpu::inferShapeCastSourceLayout(resultLayoutAttr, resShape, srcShape);
+  auto requiredResLayoutAttr = xegpu::setupShapeCastResultLayout(
+      layoutKind, shapeCast.getSourceVectorType(),
+      shapeCast.getResultVectorType(), resultLayoutAttr);
+  // The consumer layout cannot be expressed on the source: no lane_data makes
+  // each lane's data a contiguous run of the collapsed source dim. shape_cast
+  // is not an anchor op, so warn and leave the value un-laid-out instead of
+  // propagating a layout that would move data between lanes.
+  if (!requiredResLayoutAttr) {
+    shapeCast.emitWarning("Failed to infer source layout for shape_cast; the "
+                          "result layout required by its consumers cannot be "
+                          "collapsed onto the source shape.");
+    return;
+  }
+  xegpu::setTemporaryLayout(shapeCast->getResult(0), requiredResLayoutAttr);
+
+  xegpu::DistributeLayoutAttr srcLayoutAttr = xegpu::inferShapeCastSourceLayout(
+      requiredResLayoutAttr, resShape, srcShape);
   // shape_cast is not an anchor op: another consumer of the source value may
   // still supply a valid layout, so warn instead of stopping the propagation.
   if (!srcLayoutAttr) {
@@ -1234,7 +1248,9 @@ void LayoutInfoPropagation::visitLoadGatherOp(
   if (!uArch)
     return;
   VectorType resVecTy = load.getValueType();
-  int chunkSize = load.getChunkSize().value_or(1);
+  // `contiguity` says how many neighbouring elements one lane may take in a
+  // single access. Absent, only one element per lane is safe.
+  int contigChunkSize = load.getContiguity().value_or(1);
 
   LayoutInfo resLayoutInfo = results[0]->getValue();
   if (!resLayoutInfo.isAssigned())
@@ -1268,14 +1284,12 @@ void LayoutInfoPropagation::visitLoadGatherOp(
       return;
     }
     requiredAnchorLayoutAttr = xegpu::setupLoadGatherAnchorLayout(
-        layoutKind, resVecTy, chunkSize, consumerLayoutAttr, uArch);
+        layoutKind, resVecTy, contigChunkSize, consumerLayoutAttr, uArch);
     load.setLayoutAttr(requiredAnchorLayoutAttr);
   }
 
-  assert((chunkSize <= 1) || (layoutKind != xegpu::LayoutKind::Subgroup));
-  auto maskLayoutAttr = xegpu::inferMaskOffsetLayoutForScatterIO(
-      requiredAnchorLayoutAttr, chunkSize);
-  LayoutInfo maskLayoutInfo = makeLayoutInfo(maskLayoutAttr);
+  // The mask and offset operands share the value's anchor layout.
+  LayoutInfo maskLayoutInfo = makeLayoutInfo(requiredAnchorLayoutAttr);
   auto loadLayoutInfo = makeLayoutInfo(requiredAnchorLayoutAttr);
 
   // Propagate the new layout to the tensor descriptor operand.
@@ -1299,7 +1313,9 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   if (!uArch)
     return;
   VectorType srcVecTy = storeScatter.getValueType();
-  int chunkSize = storeScatter.getChunkSize().value_or(1);
+  // `contiguity` says how many neighbouring elements one lane may write in a
+  // single access. Absent, only one element per lane is safe.
+  int contigChunkSize = storeScatter.getContiguity().value_or(1);
 
   if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
     requiredAnchorLayoutAttr = anchorLayoutAttr;
@@ -1331,7 +1347,7 @@ void LayoutInfoPropagation::visitStoreScatterOp(
     if (failed(numSgOrErr))
       return;
     requiredAnchorLayoutAttr = xegpu::setupStoreScatterAnchorLayout(
-        layoutKind, srcVecTy, chunkSize, numSgOrErr.value_or(0), uArch);
+        layoutKind, srcVecTy, contigChunkSize, numSgOrErr.value_or(0), uArch);
     if (!requiredAnchorLayoutAttr) {
       markFailure(storeScatter,
                   "Failed to determine required layout for store scatter.");
@@ -1341,10 +1357,8 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   }
 
   LayoutInfo srcLayoutInfo = makeLayoutInfo(requiredAnchorLayoutAttr);
-  assert((chunkSize <= 1) || (layoutKind != xegpu::LayoutKind::Subgroup));
-  auto maskLayoutAttr = xegpu::inferMaskOffsetLayoutForScatterIO(
-      requiredAnchorLayoutAttr, chunkSize);
-  LayoutInfo maskLayoutInfo = makeLayoutInfo(maskLayoutAttr);
+  // The mask and offset operands share the value's anchor layout.
+  LayoutInfo maskLayoutInfo = makeLayoutInfo(requiredAnchorLayoutAttr);
 
   // Propagate the payload operand layout
   propagateIfChanged(operands[0], operands[0]->meet(srcLayoutInfo));
@@ -1453,7 +1467,7 @@ public:
     SymbolTableCollection symbolTable;
     loadBaselineAnalyses(solver);
     analysis = solver.load<LayoutInfoPropagation>(symbolTable, layoutKind,
-                                                  indexBitWidth);
+                                                  indexBitWidth, op);
     (void)solver.initializeAndRun(op);
   }
 
@@ -1663,11 +1677,7 @@ ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
   // silently trusted to region forwarding.
   auto consumerLayout = xegpu::getConsumerLayoutAt(operand);
   if (!consumerLayout) {
-    // TODO: handle scf.while's "after" region arguments. They are tied to no
-    // init operand, so nothing records the layout they require, and the
-    // conflict on the scf.condition operand feeding them is left unresolved
-    // rather than converted.
-    if (isa<RegionBranchTerminatorOpInterface>(consumerOp))
+    if (isa<func::ReturnOp>(consumerOp) || isa<gpu::ReturnOp>(consumerOp))
       return success();
     return consumerOp->emitError(
         "No consumer layout found for vector operand.");
@@ -1755,10 +1765,11 @@ ResolveLayoutConflicts::resolveTensorDescConsumer(OpOperand &operand) {
         conflictingCreateNdOp.getContext(), currTDescType.getShape(),
         currTDescType.getElementType(), currTDescType.getEncoding(),
         expectedLayout);
-    xegpu::CreateNdDescOp newOp = xegpu::CreateNdDescOp::create(
-        builder, consumerOp->getLoc(), newTensorDescType,
+    auto newOp = xegpu::CreateNdDescOp::create(
+        builder, consumerOp->getLoc(), TypeRange{newTensorDescType},
         conflictingCreateNdOp->getOperands(),
-        conflictingCreateNdOp->getAttrs());
+        conflictingCreateNdOp.getProperties(),
+        conflictingCreateNdOp->getDiscardableAttrDictionary().getValue());
     // Replace the tensor descriptor operand in the consumer op with the new
     // tensor descriptor.
     consumerOp->replaceUsesOfWith(tdescValue, newOp.getResult());

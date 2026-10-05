@@ -16,10 +16,11 @@ define void @gep_alloca_const_offset_1() {
   ret void
 }
 
+; AliasResult for gep1,gep2 could be MustAlias,
+; but vscale GEPs are non-canonical.
 ; CHECK-LABEL: gep_alloca_const_offset_2
 ; CHECK-DAG:  MayAlias:     <vscale x 4 x i32>* %alloc, <vscale x 4 x i32>* %gep1
 ; CHECK-DAG:  MayAlias:     <vscale x 4 x i32>* %alloc, <vscale x 4 x i32>* %gep2
-; TODO: AliasResult for gep1,gep2 can be improved as MustAlias
 ; CHECK-DAG:  MayAlias:     <vscale x 4 x i32>* %gep1, <vscale x 4 x i32>* %gep2
 define void @gep_alloca_const_offset_2() {
   %alloc = alloca <vscale x 4 x i32>
@@ -73,10 +74,11 @@ define void @gep_alloca_symbolic_offset(i64 %idx1, i64 %idx2) {
   ret void
 }
 
+; AliasResult for gep1,gep2 could be NoAlias,
+; but vscale GEPs are non-canonical.
 ; CHECK-LABEL: gep_same_base_const_offset
 ; CHECK-DAG:  MayAlias:     i32* %gep1, <vscale x 4 x i32>* %p
 ; CHECK-DAG:  MayAlias:     i32* %gep2, <vscale x 4 x i32>* %p
-; TODO: AliasResult for gep1,gep2 can be improved as NoAlias
 ; CHECK-DAG:  MayAlias:     i32* %gep1, i32* %gep2
 define void @gep_same_base_const_offset(ptr %p) {
   %gep1 = getelementptr <vscale x 4 x i32>, ptr %p, i64 1, i64 0

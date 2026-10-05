@@ -27,12 +27,12 @@ define void @a(i1 zeroext %cond) presplitcoroutine {
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    call void @consume(ptr nonnull [[A_RELOAD_ADDR]])
 ; CHECK-NEXT:    [[INDEX_ADDR4:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 17
-; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR4]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[INDEX_ADDR4]], align 1
 ; CHECK-NEXT:    br label %[[AFTERCOROEND:.*]]
 ; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    call void @consume.2(ptr nonnull [[A_RELOAD_ADDR]])
 ; CHECK-NEXT:    [[INDEX_ADDR5:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 17
-; CHECK-NEXT:    store i1 true, ptr [[INDEX_ADDR5]], align 1
+; CHECK-NEXT:    store i8 1, ptr [[INDEX_ADDR5]], align 1
 ; CHECK-NEXT:    br label %[[AFTERCOROEND]]
 ; CHECK:       [[AFTERCOROEND]]:
 ; CHECK-NEXT:    ret void

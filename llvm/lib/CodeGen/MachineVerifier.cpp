@@ -800,10 +800,9 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
     report("MBB has more than one landing pad successor", MBB);
 
   // Call analyzeBranch. If it succeeds, there several more conditions to check.
-  MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+  const MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
   SmallVector<MachineOperand, 4> Cond;
-  if (!TII->analyzeBranch(*const_cast<MachineBasicBlock *>(MBB), TBB, FBB,
-                          Cond)) {
+  if (!TII->analyzeBranch(*MBB, TBB, FBB, Cond)) {
     // Ok, analyzeBranch thinks it knows what's going on with this block. Let's
     // check whether its answers match up with reality.
     if (!TBB && !FBB) {
@@ -2650,7 +2649,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
       if (MO->isReg()) {
         if (MCOI.OperandType == MCOI::OPERAND_IMMEDIATE ||
             (MCOI.OperandType == MCOI::OPERAND_PCREL &&
-             !TII->isPCRelRegisterOperandLegal(*MO)))
+             !TII->isPCRelRegisterOperandLegal(*MI, MONum)))
           report("Expected a non-register operand.", MO, MONum);
       }
     }
@@ -2718,6 +2717,17 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
         report("Missing tie flags on tied operand", MO, MONum);
       if (MI->findTiedOperandIdx(OtherIdx) != MONum)
         report("Inconsistent tie links", MO, MONum);
+
+      // See IsUndef in MachineOperand.h.
+      if (MO->isUse() && MO->isUndef() && Reg.isVirtual() &&
+          OtherMO.getReg() != Reg &&
+          any_of(MI->all_uses(), [&](const MachineOperand &Other) {
+            return &Other != MO && Other.isUndef() && Other.getReg() == Reg &&
+                   Other.getSubReg() == MO->getSubReg();
+          }))
+        report("Tied undef use shares a virtual register with another read", MO,
+               MONum);
+
       if (MONum < MCID.getNumDefs()) {
         if (OtherIdx < MCID.getNumOperands()) {
           if (-1 == MCID.getOperandConstraint(OtherIdx, MCOI::TIED_TO))

@@ -12,9 +12,9 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-using LlvmLibcErffTest = LIBC_NAMESPACE::testing::FPTest<float16>;
+using LlvmLibcErff16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
-TEST_F(LlvmLibcErffTest, SpecialNumbers) {
+TEST_F(LlvmLibcErff16Test, SpecialNumbers) {
   EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::erff16(sNaN), FE_INVALID);
   EXPECT_MATH_ERRNO(0);
 
@@ -29,19 +29,19 @@ TEST_F(LlvmLibcErffTest, SpecialNumbers) {
 
 using namespace LIBC_NAMESPACE::testing;
 
-TEST_F(LlvmLibcErffTest, FTZMode) {
+TEST_F(LlvmLibcErff16Test, FTZMode) {
   ModifyMXCSR mxcsr(FTZ);
   EXPECT_FP_EQ(0x1p-24f16, LIBC_NAMESPACE::erff16(min_denormal));
   EXPECT_FP_EQ(0x1.208p-14f16, LIBC_NAMESPACE::erff16(max_denormal));
 }
 
-TEST_F(LlvmLibcErffTest, DAZMode) {
+TEST_F(LlvmLibcErff16Test, DAZMode) {
   ModifyMXCSR mxcsr(DAZ);
   EXPECT_FP_EQ(0x1p-24f16, LIBC_NAMESPACE::erff16(min_denormal));
   EXPECT_FP_EQ(0x1.208p-14f16, LIBC_NAMESPACE::erff16(max_denormal));
 }
 
-TEST_F(LlvmLibcErffTest, FTZDAZMode) {
+TEST_F(LlvmLibcErff16Test, FTZDAZMode) {
   ModifyMXCSR mxcsr(FTZ | DAZ);
 
   EXPECT_FP_EQ(0x1p-24f16, LIBC_NAMESPACE::erff16(min_denormal));

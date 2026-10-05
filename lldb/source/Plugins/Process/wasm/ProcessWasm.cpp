@@ -48,8 +48,6 @@ void ProcessWasm::DebuggerInitialize(Debugger &debugger) {
 
 llvm::StringRef ProcessWasm::GetPluginName() { return GetPluginNameStatic(); }
 
-llvm::StringRef ProcessWasm::GetPluginNameStatic() { return "wasm"; }
-
 llvm::StringRef ProcessWasm::GetPluginDescriptionStatic() {
   return "GDB Remote protocol based WebAssembly debugging plug-in.";
 }

@@ -627,3 +627,52 @@ loop:
 exit:
   ret void
 }
+
+; Same shape as @bitset_udiv64_symbolic_tc, but the offset's start value is
+; symbolic, so SCEV cannot prove the start bound is <=u the end bound, even
+; though the offset is monotonic.
+define void @bitset_udiv64_symbolic_start_and_tc(ptr %words, ptr %out, i64 %N, i64 %start) {
+; CHECK-LABEL: 'bitset_udiv64_symbolic_start_and_tc'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.out = getelementptr inbounds i8, ptr %out, i64 %iv
+; CHECK-NEXT:          %gep.out = getelementptr inbounds i8, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.words = getelementptr inbounds i8, ptr %words, i64 %div
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: (%start + %out) High: (%N + %out))
+; CHECK-NEXT:            Member: {(%start + %out),+,1}<nw><%loop>
+; CHECK-NEXT:            Member: {(%start + %out),+,1}<nw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: ((%start /u 64) + %words) High: (1 + ((-1 + %N) /u 64) + %words))
+; CHECK-NEXT:            Member: (({%start,+,1}<nuw><nsw><%loop> /u 64) + %words)<nuw>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+  %div = lshr i64 %iv, 6
+  %gep.words = getelementptr inbounds i8, ptr %words, i64 %div
+  %w = load i8, ptr %gep.words, align 1
+  %gep.out = getelementptr inbounds i8, ptr %out, i64 %iv
+  %v = load i8, ptr %gep.out, align 1
+  %inc = add i8 %v, %w
+  store i8 %inc, ptr %gep.out, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}

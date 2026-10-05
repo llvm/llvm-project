@@ -27,14 +27,14 @@ namespace strftime_core {
 
 /// Converts a format section and writes it to the writer.
 ///
-/// \tparam write_mode The write mode for the writer.
+/// \tparam overflow_mode The write overflow mode for the writer.
 /// \param writer The writer to write the output to.
 /// \param to_conv The format section to convert.
 /// \param timeptr Pointer to the tm structure.
 /// \return Number of characters written on success, or a negative error code on
 /// failure.
-template <printf_core::WriteMode write_mode>
-int convert(printf_core::Writer<write_mode> *writer,
+template <printf_core::OverflowMode overflow_mode>
+int convert(printf_core::Writer<overflow_mode> *writer,
             const FormatSection &to_conv, const tm *timeptr) {
   // TODO: Implement the locale support.
   // Currently locale flags are ignored, as described by the posix standard for

@@ -255,6 +255,35 @@ def combine_or_s64_s32 : GICombineRule<
          (G_OR $or, $x_lo, $y),
          (G_MERGE_VALUES $dst, $or, $x_hi))>;
 
+// (trunc (lshr i32:$src, 16)) -> (unmerge_hi i16:$src)
+// Reads the high half in place instead of shifting it down into a fresh
+// 32-bit register; with true16 the unmerge is just a hi16 subregister.
+class trunc_lshr16_unmerge<ValueType ty, dag applyPat> : GICombineRule<
+  (defs root:$dst),
+  (match (G_CONSTANT i32:$c16, 16),
+         (G_LSHR i32:$shr, $src, $c16),
+         (G_TRUNC ty:$dst, $shr),
+         [{ return MRI.hasOneNonDBGUse(${shr}.getReg()) &&
+                   Helper.isLegalOrBeforeLegalizer(
+                {TargetOpcode::G_UNMERGE_VALUES,
+                 {LLT::integer(16), LLT::integer(32)}}); }]),
+  applyPat>;
+
+defvar hi_int = (apply (G_UNMERGE_VALUES i16:$lo, $dst, $src));
+
+// Float halves are unmerged in the integer domain and bitcast back.
+defvar hi_float = (apply (G_UNMERGE_VALUES i16:$lo, i16:$hi, $src),
+                         (G_BITCAST $dst, $hi));
+
+def trunc_lshr16_unmerge_i16  : trunc_lshr16_unmerge<i16,  hi_int>;
+def trunc_lshr16_unmerge_f16  : trunc_lshr16_unmerge<f16,  hi_float>;
+def trunc_lshr16_unmerge_bf16 : trunc_lshr16_unmerge<bf16, hi_float>;
+
+def trunc_lshr16_to_unmerge : GICombineGroup<[
+  trunc_lshr16_unmerge_i16, trunc_lshr16_unmerge_f16,
+  trunc_lshr16_unmerge_bf16
+]>;
+
 let Predicates = [Has16BitInsts, NotHasMed3_16] in {
 // For gfx8, expand f16-fmed3-as-f32 into a min/max f16 sequence. This
 // saves one instruction compared to the promotion.
@@ -285,7 +314,7 @@ def AMDGPUPreLegalizerCombiner: GICombiner<
   "AMDGPUPreLegalizerCombinerImpl",
   [all_combines, combine_fmul_with_select_to_fldexp, clamp_i64_to_i16,
    foldable_fneg, fold_fabs_fptrunc, combine_shuffle_vector,
-   combine_shuffle_vector_to_build_vector,
+   combine_shuffle_vector_to_build_vector, trunc_lshr16_to_unmerge,
    binop_s64_with_s32_mask_combines, combine_or_s64_s32]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
@@ -295,7 +324,7 @@ def AMDGPUPostLegalizerCombiner: GICombiner<
   [all_combines, gfx6gfx7_combines, gfx8_combines, combine_fmul_with_select_to_fldexp,
    uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg,
    fold_fabs_fptrunc, rcp_sqrt_to_rsq, fdiv_by_sqrt_to_rsq_f16,
-   sign_extension_in_reg, smulu64,
+   sign_extension_in_reg, smulu64, trunc_lshr16_to_unmerge,
    binop_s64_with_s32_mask_combines, combine_or_s64_s32]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
