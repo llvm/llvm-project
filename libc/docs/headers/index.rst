@@ -52,6 +52,7 @@ Implementation Status
    sys/uio
    sys/utsname
    sys/wait
+   syslog
    termios
    threads
    time

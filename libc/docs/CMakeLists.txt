@@ -56,6 +56,7 @@ if(LLVM_ENABLE_SPHINX)
         sys/uio
         sys/utsname
         sys/wait
+        syslog
         termios
         threads
         time
