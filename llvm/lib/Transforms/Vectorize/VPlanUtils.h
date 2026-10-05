@@ -10,6 +10,8 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Compiler.h"
@@ -25,13 +27,17 @@ class PredicatedScalarEvolution;
 namespace llvm {
 
 namespace vputils {
-/// Returns true if only the first lane of \p Def is used.
+/// Returns true if only the first lane of \p Def is used by all of \p Users
+/// recursively.
+bool usesFirstLaneOnly(ArrayRef<const VPUser *> Users, const VPValue *Def);
+
+/// Returns true if only the first lane of \p Def is used by all its users.
 bool onlyFirstLaneUsed(const VPValue *Def);
 
 /// Returns true if only the first part of \p Def is used.
 bool onlyFirstPartUsed(const VPValue *Def);
 
-/// Returns true if only scalar values of \p Def are used by all users.
+/// Returns true if only scalar values of \p Def are used by all its users.
 bool onlyScalarValuesUsed(const VPValue *Def);
 
 /// Get or create a VPValue that corresponds to the expansion of \p Expr. If \p

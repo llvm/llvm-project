@@ -12,9 +12,7 @@
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
@@ -32,9 +30,32 @@ using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
 using namespace llvm::SCEVPatternMatch;
 
+bool vputils::usesFirstLaneOnly(ArrayRef<const VPUser *> Users,
+                                const VPValue *Def) {
+  SmallSetVector<const VPValue *, 16> Worklist;
+  Worklist.insert(Def);
+  for (unsigned I = 0; I < Worklist.size(); ++I) {
+    const VPValue *WorklistDef = Worklist[I];
+    for (const VPUser *U : WorklistDef == Def ? Users : WorklistDef->users()) {
+      if (auto *DU = dyn_cast<VPSingleDefRecipe>(U))
+        if (Worklist.contains(DU))
+          continue;
+      VPRecurseResult Res = U->usesFirstLaneOnly(WorklistDef);
+      if (Res == VPRecurseResult::True)
+        continue;
+      if (Res != VPRecurseResult::Recurse)
+        return false;
+
+      // We rely on the fact that the current implementations of
+      // usesFirstLaneOnly do not require recursion for non-SingleDefs.
+      Worklist.insert(cast<VPSingleDefRecipe>(U));
+    }
+  }
+  return true;
+}
+
 bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
-  return all_of(Def->users(),
-                [Def](const VPUser *U) { return U->usesFirstLaneOnly(Def); });
+  return usesFirstLaneOnly(Def->users(), Def);
 }
 
 bool vputils::onlyFirstPartUsed(const VPValue *Def) {
