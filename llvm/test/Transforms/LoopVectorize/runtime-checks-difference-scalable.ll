@@ -40,15 +40,15 @@ header:
 
   %gep0.ld = getelementptr inbounds i64, ptr %p0, i64 %idx
   %gep0.st = getelementptr inbounds i64, ptr %p0.out, i64 %idx
-  %ld0 = load i64, ptr %gep0.ld, align 4, !alias.scope !3, !noalias !4
+  %ld0 = load i64, ptr %gep0.ld, align 4, !alias.scope !3
   %add0 = add i64 %ld0, 1
-  store i64 %add0, ptr %gep0.st, align 4, !alias.scope !3, !noalias !4
+  store i64 %add0, ptr %gep0.st, align 4, !alias.scope !3
 
   %gep1.ld = getelementptr inbounds i64, ptr %p1, i64 %idx
   %gep1.st = getelementptr inbounds i64, ptr %p1.out, i64 %idx
-  %ld1 = load i64, ptr %gep1.ld, align 4, !alias.scope !4, !noalias !3
+  %ld1 = load i64, ptr %gep1.ld, align 4, !alias.scope !4
   %add1 = add i64 %ld1, 1
-  store i64 %add1, ptr %gep1.st, align 4, !alias.scope !4, !noalias !3
+  store i64 %add1, ptr %gep1.st, align 4, !alias.scope !4
 
   %exitcond = icmp slt i64 %iv.next, 128
   br i1 %exitcond, label %header, label %exit
@@ -96,16 +96,16 @@ header:
 
   %gep0.ld = getelementptr inbounds i64, ptr %p0, i64 %idx
   %gep0.st = getelementptr inbounds i64, ptr %p0.out, i64 %idx
-  %ld0 = load i64, ptr %gep0.ld, align 4, !alias.scope !3, !noalias !4
+  %ld0 = load i64, ptr %gep0.ld, align 4, !alias.scope !3
   %add0 = add i64 %ld0, 1
-  store i64 %add0, ptr %gep0.st, align 4, !alias.scope !3, !noalias !4
+  store i64 %add0, ptr %gep0.st, align 4, !alias.scope !3
 
   ; geps are intentionally i64 to keep byte stride same as group 0 above.
   %gep1.ld = getelementptr inbounds i64, ptr %p1, i64 %idx
   %gep1.st = getelementptr inbounds i64, ptr %p1.out, i64 %idx
-  %ld1 = load i32, ptr %gep1.ld, align 4, !alias.scope !4, !noalias !3
+  %ld1 = load i32, ptr %gep1.ld, align 4, !alias.scope !4
   %add1 = add i32 %ld1, 1
-  store i32 %add1, ptr %gep1.st, align 4, !alias.scope !4, !noalias !3
+  store i32 %add1, ptr %gep1.st, align 4, !alias.scope !4
 
   %exitcond = icmp slt i64 %iv.next, 128
   br i1 %exitcond, label %header, label %exit
@@ -113,10 +113,10 @@ header:
 exit:
   ret void
 }
-; Alias scope domain.
-!0 = !{!0}
+; Alias scope domain with disjoing scopes.
+!0 = !{!0, i1 true}
 
-; Two alias scopes.
+; Two disjoint alias scopes.
 !1 = !{!1, !0}
 !2 = !{!2, !0}
 
