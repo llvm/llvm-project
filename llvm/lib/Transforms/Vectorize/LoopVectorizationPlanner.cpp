@@ -692,15 +692,8 @@ void VFSelectionContext::collectInLoopReductions() {
         RdxDesc.getReductionOpChain(Phi, const_cast<Loop *>(TheLoop));
     bool InLoop = !ReductionOperations.empty();
 
-    if (InLoop) {
+    if (InLoop)
       InLoopReductions.insert(Phi);
-      // Add the elements to InLoopReductionImmediateChains for cost modelling.
-      Instruction *LastChain = Phi;
-      for (auto *I : ReductionOperations) {
-        InLoopReductionImmediateChains[I] = LastChain;
-        LastChain = I;
-      }
-    }
     LLVM_DEBUG(dbgs() << "LV: Using " << (InLoop ? "inloop" : "out of loop")
                       << " reduction for phi: " << *Phi << "\n");
   }
@@ -888,13 +881,8 @@ static bool hasUnsupportedHeaderPhiRecipe(VPlan &Plan) {
           // mul(ReducedIV, 3)), but the epilogue tracks raw IV values. A sunk
           // expression is identified by a non-VPInstruction user of
           // ComputeReductionResult.
-          if (RecurrenceDescriptor::isFindIVRecurrenceKind(Kind)) {
-            auto *RdxResult = vputils::findComputeReductionResult(RedPhi);
-            assert(RdxResult &&
-                   "FindIV reduction must have ComputeReductionResult");
-            return any_of(RdxResult->users(),
-                          std::not_fn(IsaPred<VPInstruction>));
-          }
+          if (RecurrenceDescriptor::isFindIVRecurrenceKind(Kind))
+            return RedPhi->isExpressionSunk();
           return false;
         }
         default:
@@ -914,7 +902,8 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
   // non-latch exits properly.  It may be fine, but it needs auditted and
   // tested.
   // TODO: Add support for loops with an early exit.
-  if (OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch())
+  if (OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch() ||
+      Legal->hasUncountableEarlyExit())
     return false;
 
   return true;

@@ -16,6 +16,7 @@
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/Support/AArch64MemoryHints.h"
 #include "llvm/Support/TypeSize.h"
 #include <optional>
 

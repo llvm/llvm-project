@@ -945,7 +945,7 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
       // If the target adjusted the expression to an optimizable form, we may
       // end up needing the GOT if we can't optimize everything.
       if (expr == R_RELAX_GOT_PC || expr == R_RELAX_GOT_PC_NOPIC)
-        ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
+        ctx.in.got->hasDeferredEntries.store(true, std::memory_order_relaxed);
     }
   }
 

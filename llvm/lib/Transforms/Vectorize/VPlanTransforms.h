@@ -35,7 +35,6 @@ class ScalarEvolution;
 class PredicatedScalarEvolution;
 class TargetLibraryInfo;
 class TargetTransformInfo;
-class VPBuilder;
 class VPRecipeBuilder;
 struct VFRange;
 
@@ -171,7 +170,7 @@ struct VPlanTransforms {
   /// recurrences, also creates FirstOrderRecurrenceSplice instructions and
   /// sinks/hoists users as needed. Returns false if any fixed-order
   /// recurrence cannot be handled.
-  static bool createHeaderPhiRecipes(
+  LLVM_ABI_FOR_TEST static bool createHeaderPhiRecipes(
       VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &OrigLoop,
       const VPDominatorTree &VPDT,
       const MapVector<PHINode *, InductionDescriptor> &Inductions,
@@ -217,9 +216,9 @@ struct VPlanTransforms {
   /// Add a check to \p Plan to see if the epilogue vector loop should be
   /// executed.
   static void addMinimumVectorEpilogueIterationCheck(
-      VPlan &Plan, Value *VectorTripCount, bool RequiresScalarEpilogue,
-      ElementCount EpilogueVF, unsigned EpilogueUF, unsigned MainLoopStep,
-      unsigned EpilogueLoopStep, ScalarEvolution &SE);
+      VPlan &Plan, VPValue *MainVectorTripCount, bool RequiresScalarEpilogue,
+      ElementCount EpilogueVF, unsigned MainLoopStep, unsigned EpilogueLoopStep,
+      ScalarEvolution &SE);
 
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
   /// flat CFG into a hierarchical CFG. For the outermost loop, also create the
@@ -227,14 +226,18 @@ struct VPlanTransforms {
   /// BranchOnCond with BranchOnCount, using \p DL for the canonical IV.
   LLVM_ABI_FOR_TEST static void createLoopRegions(VPlan &Plan, DebugLoc DL);
 
-  /// Wrap runtime check block \p CheckBlock in a VPIRBB and \p Cond in a
-  /// VPValue and connect the block to \p Plan, using the VPValue as branch
-  /// condition.
+  /// Connect \p CheckBlock to \p Plan, branching on \p Cond.
   static void attachVPCheckBlock(VPlan &Plan, VPValue *Cond,
                                  VPBasicBlock *CheckBlock,
                                  bool AddBranchWeights);
   static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
                                bool AddBranchWeights);
+
+  /// Generate \p Checks as recipes and attach the check block to \p Plan.
+  static void attachMemoryChecks(VPlan &Plan,
+                                 ArrayRef<RuntimePointerCheck> Checks,
+                                 ScalarEvolution &SE, DebugLoc DL,
+                                 bool AddBranchWeights);
 
   /// Model the blocks the executed \p MainPlan generated for the main vector
   /// loop in \p EpiPlan during epilogue vectorization, wrapping each in a
@@ -390,14 +393,21 @@ struct VPlanTransforms {
                                          DominatorTree &DT,
                                          AssumptionCache *AC);
 
+  /// If a single exit has multiple conditions combined together, split them
+  /// and create new exiting blocks. Currently limited to a single exit in the
+  /// latch block.
+  static bool splitCombinedExits(VPlan &Plan, PredicatedScalarEvolution &PSE,
+                                 Loop *TheLoop);
+
   /// Update \p Plan to account for uncountable early exits by introducing
   /// appropriate branching logic in the latch that handles early exits and the
   /// latch exit condition. Multiple exits are handled with a dispatch block
   /// that determines which exit to take based on lane-by-lane semantics.
   LLVM_ABI_FOR_TEST static bool
-  handleUncountableEarlyExits(VPlan &Plan, Loop *TheLoop,
-                              PredicatedScalarEvolution &PSE, DominatorTree &DT,
-                              AssumptionCache *AC, UncountableExitStyle Style);
+  handleUncountableEarlyExits(VPlan &Plan, OptimizationRemarkEmitter *ORE,
+                              Loop *TheLoop, PredicatedScalarEvolution &PSE,
+                              DominatorTree &DT, AssumptionCache *AC,
+                              UncountableExitStyle Style);
 
   /// Disconnect countable early exits from the loop.
   LLVM_ABI_FOR_TEST static void handleCountableEarlyExits(VPlan &Plan);

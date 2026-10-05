@@ -16,6 +16,7 @@ define <2 x half> @v_mac_f16_fpdp_rounding(<2 x half> %a, <2 x half> %c, <2 x ha
 ; CHECK-NEXT:    v_or_b32_e32 v0, v1, v6
 ; CHECK-NEXT:    flat_store_short v[4:5], v3
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %round.x = call half @llvm.fptrunc.round.f16.f32(float %x, metadata !"round.upward")
   %mul = fmul <2 x half> %a, %b

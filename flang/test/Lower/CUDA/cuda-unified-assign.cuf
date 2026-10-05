@@ -20,8 +20,8 @@ subroutine unified_device_assign()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPunified_device_assign()
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_device)
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_device)
 
 ! The host cannot access device memory, so sections are copied as well.
 subroutine unified_device_section_assign(i)
@@ -33,8 +33,8 @@ subroutine unified_device_section_assign(i)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPunified_device_section_assign
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_device)
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_device)
 
 subroutine unified_constant_assign()
   use cmod
@@ -60,10 +60,10 @@ subroutine unified_managed_assign(i)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPunified_managed_assign
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_device)
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_device)
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_device)
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_device)
 
 subroutine unified_from_managed_module()
   use cmod
@@ -72,7 +72,7 @@ subroutine unified_from_managed_module()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPunified_from_managed_module()
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_device)
 
 ! A device allocatable component of a unified object is still device data.
 subroutine unified_device_component()
@@ -85,7 +85,7 @@ subroutine unified_device_component()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPunified_device_component()
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_host>
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_host)
 
 ! Assignments done on the host.
 

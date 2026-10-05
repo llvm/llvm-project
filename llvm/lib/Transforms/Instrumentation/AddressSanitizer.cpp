@@ -20,7 +20,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -222,8 +221,7 @@ static cl::opt<bool> ClInstrumentWrites(
 
 static cl::opt<bool>
     ClUseStackSafety("asan-use-stack-safety", cl::Hidden, cl::init(true),
-                     cl::Hidden, cl::desc("Use Stack Safety analysis results"),
-                     cl::Optional);
+                     cl::Hidden, cl::desc("Use Stack Safety analysis results"));
 
 static cl::opt<bool> ClInstrumentAtomics(
     "asan-instrument-atomics",
@@ -444,13 +442,10 @@ static cl::opt<AsanDtorKind> ClOverrideDestructorKind(
                           "Use global destructors")),
     cl::init(AsanDtorKind::Invalid), cl::Hidden);
 
-static SmallSet<unsigned, 8> SrcAddrSpaces;
 static cl::list<unsigned> ClAddrSpaces(
     "asan-instrument-address-spaces",
     cl::desc("Only instrument variables in the specified address spaces."),
-    cl::Hidden, cl::CommaSeparated, cl::callback([](const unsigned &AddrSpace) {
-      SrcAddrSpaces.insert(AddrSpace);
-    }));
+    cl::Hidden, cl::CommaSeparated);
 
 // Debug flags.
 
@@ -1412,8 +1407,8 @@ static bool isSupportedAddrspace(const Triple &TargetTriple, Value *Addr) {
   Type *PtrTy = cast<PointerType>(Addr->getType()->getScalarType());
   unsigned int AddrSpace = PtrTy->getPointerAddressSpace();
 
-  if (!SrcAddrSpaces.empty())
-    return SrcAddrSpaces.count(AddrSpace);
+  if (!ClAddrSpaces.empty())
+    return is_contained(ClAddrSpaces, AddrSpace);
 
   if (TargetTriple.isAMDGPU())
     return !isUnsupportedAMDGPUAddrspace(Addr);
@@ -2120,8 +2115,7 @@ void AddressSanitizer::instrumentUnusualSizeOrAlignment(
 
 void ModuleAddressSanitizer::poisonOneInitializer(Function &GlobalInit) {
   // Set up the arguments to our poison/unpoison functions.
-  IRBuilder<> IRB(&GlobalInit.front(),
-                  GlobalInit.front().getFirstInsertionPt());
+  IRBuilder<> IRB(GlobalInit.front().getFirstInsertionPt());
 
   // Add a call to poison all external globals before the given function starts.
   Value *ModuleNameAddr =
@@ -3035,7 +3029,7 @@ bool AddressSanitizer::maybeInsertAsanInitAtFunctionEntry(Function &F) {
   if (F.getName().contains(" load]")) {
     FunctionCallee AsanInitFunction =
         declareSanitizerInitFunction(*F.getParent(), kAsanInitName, {});
-    IRBuilder<> IRB(&F.front(), F.front().begin());
+    IRBuilder<> IRB(F.front().begin());
     IRB.CreateCall(AsanInitFunction, {});
     return true;
   }

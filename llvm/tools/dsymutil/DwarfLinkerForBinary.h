@@ -273,12 +273,6 @@ private:
   /// \defgroup Helpers Various helper methods.
   ///
   /// @{
-  template <typename OutStreamer>
-  bool createStreamer(const Triple &TheTriple,
-                      typename OutStreamer::OutputFileType FileType,
-                      std::unique_ptr<OutStreamer> &Streamer,
-                      raw_fd_ostream &OutFile);
-
   /// Attempt to load a debug object from disk.
   ErrorOr<const object::ObjectFile &> loadObject(const DebugMapObject &Obj,
                                                  const Triple &triple);
