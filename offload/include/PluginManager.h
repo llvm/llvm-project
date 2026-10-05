@@ -179,6 +179,14 @@ private:
   std::list<llvm::SmallVector<__tgt_device_image, 0>> LegacyImages;
   llvm::DenseMap<__tgt_bin_desc *, __tgt_bin_desc> UpgradedDescriptors;
   __tgt_bin_desc *upgradeLegacyEntries(__tgt_bin_desc *Desc);
+
+  /// Register the image \p Img from \p Desc on the compatible device
+  /// \p DeviceHandle, unless the device is already in \p UsedDevices. Returns
+  /// true if the image was registered.
+  bool
+  registerImageOnDevice(ol_device_handle_t DeviceHandle, __tgt_bin_desc *Desc,
+                        __tgt_device_image *Img,
+                        llvm::SmallVectorImpl<ol_device_handle_t> &UsedDevices);
 };
 
 /// Initialize the plugin manager and OpenMP runtime.

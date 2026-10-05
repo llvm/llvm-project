@@ -198,6 +198,86 @@ __tgt_bin_desc *PluginManager::upgradeLegacyEntries(__tgt_bin_desc *Desc) {
   return &NewDesc;
 }
 
+bool PluginManager::registerImageOnDevice(
+    ol_device_handle_t DeviceHandle, __tgt_bin_desc *Desc,
+    __tgt_device_image *Img,
+    llvm::SmallVectorImpl<ol_device_handle_t> &UsedDevices) {
+
+  ol_platform_handle_t PlatformHandle;
+  if (auto Res = olGetDeviceInfo(DeviceHandle, OL_DEVICE_INFO_PLATFORM,
+                                 sizeof(PlatformHandle), &PlatformHandle);
+      Res != OL_SUCCESS) {
+    REPORT() << "Failed to get platform info for device " << DeviceHandle << ":"
+             << Res->Details;
+    PlatformHandle = nullptr;
+  }
+
+  llvm::SmallString<256> PlatformName("Unknown");
+  if (PlatformHandle) {
+    size_t PlatformNameSize = 0;
+    if (auto Res = olGetPlatformInfoSize(PlatformHandle, OL_PLATFORM_INFO_NAME,
+                                         &PlatformNameSize);
+        Res != OL_SUCCESS)
+      PlatformNameSize = 0;
+
+    PlatformName.resize(PlatformNameSize);
+    if (PlatformNameSize > 0) {
+      if (auto Res = olGetPlatformInfo(PlatformHandle, OL_PLATFORM_INFO_NAME,
+                                       PlatformNameSize, PlatformName.data());
+          Res != OL_SUCCESS)
+        PlatformName = "Unknown";
+    } else
+      PlatformName = "Unknown";
+  }
+
+  // We only want a single matching image to be registered for each binary
+  // descriptor. This prevents multiple of the same image from being registered
+  // for the same device in the case that they are mutually compatible, such as
+  // sm_80 and sm_89.
+  if (llvm::is_contained(UsedDevices, DeviceHandle)) {
+    ODBG(ODT_Init) << "Image " << Img->ImageStart
+                   << " is a duplicate, not loaded on RTL " << PlatformName
+                   << " on device " << DeviceHandle;
+    return false;
+  }
+
+  ODBG(ODT_Init) << "Image " << Img->ImageStart << " with RTL " << PlatformName
+                 << " on device " << DeviceHandle;
+
+  initializeDevice(DeviceHandle);
+
+  // Initialize (if necessary) translation table for this library.
+  std::lock_guard<std::mutex> LG(TrlTblMtx);
+  if (!HostEntriesBeginToTransTable.count(Desc->HostEntriesBegin)) {
+    HostEntriesBeginRegistrationOrder.push_back(Desc->HostEntriesBegin);
+    TranslationTable &TT = HostEntriesBeginToTransTable[Desc->HostEntriesBegin];
+    TT.HostTable.EntriesBegin = Desc->HostEntriesBegin;
+    TT.HostTable.EntriesEnd = Desc->HostEntriesEnd;
+  }
+
+  // Retrieve translation table for this library.
+  TranslationTable &TT = HostEntriesBeginToTransTable[Desc->HostEntriesBegin];
+
+  ODBG(ODT_Init) << "Registering image " << Img->ImageStart << " with RTL "
+                 << PlatformName;
+
+  auto UserId = DeviceIds[DeviceHandle];
+  if (TT.TargetsTable.size() < static_cast<size_t>(UserId + 1)) {
+    TT.DeviceTables.resize(UserId + 1, {});
+    TT.TargetsImages.resize(UserId + 1, nullptr);
+    TT.TargetsEntries.resize(UserId + 1, {});
+    TT.TargetsTable.resize(UserId + 1, nullptr);
+  }
+
+  // Register the image for this target type and invalidate the table.
+  TT.TargetsImages[UserId] = Img;
+  TT.TargetsTable[UserId] = nullptr;
+
+  UsedDevices.push_back(DeviceHandle);
+  UsedImages.insert(Img);
+  return true;
+}
+
 void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   PM->RTLsMtx.lock();
 
@@ -224,7 +304,7 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
     struct RegisterImageState {
       __tgt_bin_desc *Desc;
       __tgt_device_image *Img;
-      llvm::SmallVector<ol_device_handle_t> &UsedDevices;
+      llvm::SmallVectorImpl<ol_device_handle_t> &UsedDevices;
       bool FoundRTL = false;
     } State{Desc, Img, UsedDevices, false};
 
@@ -232,93 +312,9 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
             Img->ImageStart, utils::getPtrDiff(Img->ImageEnd, Img->ImageStart),
             [](ol_device_handle_t DeviceHandle, void *Data) {
               auto &State = *static_cast<RegisterImageState *>(Data);
-
-              ol_platform_handle_t PlatformHandle;
-              if (auto Res =
-                      olGetDeviceInfo(DeviceHandle, OL_DEVICE_INFO_PLATFORM,
-                                      sizeof(PlatformHandle), &PlatformHandle);
-                  Res != OL_SUCCESS) {
-                REPORT() << "Failed to get platform info for device "
-                         << DeviceHandle << ":" << Res->Details;
-                PlatformHandle = nullptr;
-              }
-
-              llvm::SmallString<256> PlatformName("Unknown");
-              if (PlatformHandle) {
-                size_t PlatformNameSize = 0;
-                if (auto Res = olGetPlatformInfoSize(PlatformHandle,
-                                                     OL_PLATFORM_INFO_NAME,
-                                                     &PlatformNameSize);
-                    Res != OL_SUCCESS)
-                  PlatformNameSize = 0;
-
-                PlatformName.resize(PlatformNameSize);
-                if (PlatformNameSize > 0) {
-                  if (auto Res = olGetPlatformInfo(
-                          PlatformHandle, OL_PLATFORM_INFO_NAME,
-                          PlatformNameSize, PlatformName.data());
-                      Res != OL_SUCCESS)
-                    PlatformName = "Unknown";
-                } else
-                  PlatformName = "Unknown";
-              }
-
-              // We only want a single matching image to be registered for each
-              // binary descriptor. This prevents multiple of the same image
-              // from being registered for the same device in the case that
-              // they are mutually compatible, such as sm_80 and sm_89.
-              if (llvm::is_contained(State.UsedDevices, DeviceHandle)) {
-                ODBG(ODT_Init) << "Image " << State.Img->ImageStart
-                               << " is a duplicate, not loaded on RTL "
-                               << PlatformName << " on device " << DeviceHandle;
-                return true;
-              }
-
-              ODBG(ODT_Init)
-                  << "Image " << State.Img->ImageStart << " with RTL "
-                  << PlatformName << " on device " << DeviceHandle;
-
-              PM->initializeDevice(DeviceHandle);
-
-              // Initialize (if necessary) translation table for this library.
-              PM->TrlTblMtx.lock();
-              if (!PM->HostEntriesBeginToTransTable.count(
-                      State.Desc->HostEntriesBegin)) {
-                PM->HostEntriesBeginRegistrationOrder.push_back(
-                    State.Desc->HostEntriesBegin);
-                TranslationTable &TT =
-                    (PM->HostEntriesBeginToTransTable)[State.Desc
-                                                           ->HostEntriesBegin];
-                TT.HostTable.EntriesBegin = State.Desc->HostEntriesBegin;
-                TT.HostTable.EntriesEnd = State.Desc->HostEntriesEnd;
-              }
-
-              // Retrieve translation table for this library.
-              TranslationTable &TT =
-                  (PM->HostEntriesBeginToTransTable)[State.Desc
-                                                         ->HostEntriesBegin];
-
-              ODBG(ODT_Init) << "Registering image " << State.Img->ImageStart
-                             << " with RTL " << PlatformName;
-
-              auto UserId = PM->DeviceIds[DeviceHandle];
-              if (TT.TargetsTable.size() < static_cast<size_t>(UserId + 1)) {
-                TT.DeviceTables.resize(UserId + 1, {});
-                TT.TargetsImages.resize(UserId + 1, nullptr);
-                TT.TargetsEntries.resize(UserId + 1, {});
-                TT.TargetsTable.resize(UserId + 1, nullptr);
-              }
-
-              // Register the image for this target type and invalidate the
-              // table.
-              TT.TargetsImages[UserId] = State.Img;
-              TT.TargetsTable[UserId] = nullptr;
-
-              State.UsedDevices.push_back(DeviceHandle);
-              PM->UsedImages.insert(State.Img);
-              State.FoundRTL = true;
-
-              PM->TrlTblMtx.unlock();
+              if (PM->registerImageOnDevice(DeviceHandle, State.Desc, State.Img,
+                                            State.UsedDevices))
+                State.FoundRTL = true;
               return true;
             },
             &State))
