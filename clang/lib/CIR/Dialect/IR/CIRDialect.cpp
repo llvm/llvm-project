@@ -2067,7 +2067,8 @@ LogicalResult cir::BrOp::canonicalize(BrOp op, PatternRewriter &rewriter) {
   if (isa<cir::LabelOp, cir::IndirectBrOp>(dst->front()))
     return failure();
 
-  auto operands = op.getDestOperands();
+  // Copy the operands out: erasing the branch frees its operand storage.
+  SmallVector<Value> operands(op.getDestOperands());
   rewriter.eraseOp(op);
   rewriter.mergeBlocks(dst, src, operands);
   return success();
