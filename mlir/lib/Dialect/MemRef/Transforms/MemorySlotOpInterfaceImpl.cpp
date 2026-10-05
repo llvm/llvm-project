@@ -5,6 +5,27 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This file implements Mem2Reg-related interfaces that let a statically-shaped
+// memref be promoted into a single SSA value, provided every access to
+// the buffer is a whole-buffer read or write (or a whole-sub-region access of
+// such a buffer via a subview). With these models, Mem2Reg replaces the memory
+// slot with a vector value (*), threading it as the reaching definition:
+//
+//   * a static, same-rank `memref.subview` is exposed as a promotable sub-slice
+//     alias of the buffer's slot (via `PromotableAliaserInterface`): a read of
+//     the subview projects out of the vector value with
+//     `vector.extract_strided_slice`, and a write into it composes back into
+//     the value with `vector.insert_strided_slice`. This lets a buffer that is
+//     only ever accessed through static subviews promote as well, with partial
+//     and overlapping sub-writes composing in program order.
+//
+// Accesses that are not whole-(sub-)buffer -- dynamic offsets, rank-reducing or
+// non-unit-stride subviews -- are left untouched, so the buffer is not
+// promoted.
+//
+// (*) Addging support for scalar values is left as a TODO.
+//===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/MemRef/Transforms/MemorySlotOpInterfaceImpl.h"
 

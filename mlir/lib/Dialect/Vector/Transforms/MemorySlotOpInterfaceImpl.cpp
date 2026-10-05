@@ -16,23 +16,14 @@
 //     vector value; `vector.transfer_write` of the whole buffer becomes a new
 //     definition of it (see the `PromotableMemOpInterface` models below).
 //
-//   * a static, same-rank `memref.subview` is exposed as a promotable sub-slice
-//     alias of the buffer's slot (via `PromotableAliaserInterface`): a read of
-//     the subview projects out of the vector value with
-//     `vector.extract_strided_slice`, and a write into it composes back into
-//     the value with `vector.insert_strided_slice`. This lets a buffer that is
-//     only ever accessed through static subviews promote as well, with partial
-//     and overlapping sub-writes composing in program order.
-//
-// Accesses that are not whole-(sub-)buffer -- dynamic offsets, rank-reducing or
-// non-unit-stride subviews, masked or partial transfers, non-zero transfer
-// indices -- are left untouched, so the buffer is not promoted.
+// Accesses that are not whole-(sub-)buffer -- masked or partial transfers,
+// non-zero transfer indices -- are left untouched, so the buffer is not
+// promoted.
 //
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Vector/Transforms/MemorySlotOpInterfaceImpl.h"
 
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinTypes.h"

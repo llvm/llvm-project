@@ -188,7 +188,7 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
   memref::registerBufferViewFlowOpInterfaceExternalModels(registry);
   memref::registerRuntimeVerifiableOpInterfaceExternalModels(registry);
   memref::registerValueBoundsOpInterfaceExternalModels(registry);
-  memref::registerDestructableTypeExternalModels(registry);
+  memref::registerDestructurableTypeExternalModels(registry);
   memref::registerMemorySlotOpInterfaceExternalModels(registry);
   ml_program::registerBufferizableOpInterfaceExternalModels(registry);
   nvgpu::registerMemoryAccessOpInterfacesExternalModels(registry);
