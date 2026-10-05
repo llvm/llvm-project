@@ -594,6 +594,16 @@ TEST_F(TargetDeclTest, ClassTemplate) {
                {"struct Test", Rel::TemplatePattern});
 
   Code = R"cpp(
+    // Deduced specialization of a template template parameter
+    template <template<typename> class X>
+    void foo() {
+      [[X]] a;
+    }
+  )cpp";
+  EXPECT_DECLS("DeducedTemplateSpecializationTypeLoc",
+               "template <typename> class X");
+
+  Code = R"cpp(
     // Deduction guide
     template <typename T>
     struct Test {
@@ -604,6 +614,18 @@ TEST_F(TargetDeclTest, ClassTemplate) {
     [[Test]](I, I) -> Test<typename I::type>;
   )cpp";
   EXPECT_DECLS("CXXDeductionGuideDecl", {"template <typename T> struct Test"});
+
+  Flags.push_back("-std=c++26"); // for pack indexing
+
+  Code = R"cpp(
+    // Deduced specialization of an indexed template template parameter pack
+    template <template <typename> class... X>
+    void foo() {
+      [[X]]...[0] a(1);
+    }
+  )cpp";
+  EXPECT_DECLS("DeducedTemplateSpecializationTypeLoc",
+               "template <typename> class ...X");
 }
 
 TEST_F(TargetDeclTest, Concept) {
@@ -841,6 +863,12 @@ TEST_F(TargetDeclTest, BuiltinTemplates) {
   Code = R"cpp(
     template <template <class...> class Templ, class... Types>
     using dedup_types = Templ<[[__builtin_dedup_pack]]<Types...>...>;
+  )cpp";
+  EXPECT_DECLS("TemplateSpecializationTypeLoc", );
+
+  Code = R"cpp(
+    template <template <class...> class Templ, class... Types>
+    using sort_types = Templ<[[__builtin_sort_pack]]<Types...>...>;
   )cpp";
   EXPECT_DECLS("TemplateSpecializationTypeLoc", );
 }

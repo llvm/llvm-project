@@ -1256,7 +1256,8 @@ bool Process::PruneThreadPlansForTID(lldb::tid_t tid) {
 }
 
 void Process::PruneThreadPlans() {
-  m_thread_plans.Update(GetThreadList(), true, false);
+  UpdateThreadListIfNeeded();
+  m_thread_plans.Update(m_thread_list, true, false);
 }
 
 bool Process::DumpThreadPlansForTID(Stream &strm, lldb::tid_t tid,
@@ -2757,27 +2758,9 @@ addr_t Process::CallocateMemory(size_t size, uint32_t permissions,
 bool Process::CanJIT() {
   if (m_can_jit == eCanJITDontKnow) {
     Log *log = GetLog(LLDBLog::Process);
-    Status err;
-
-    uint64_t allocated_memory = AllocateMemory(
-        8, ePermissionsReadable | ePermissionsWritable | ePermissionsExecutable,
-        err);
-
-    if (err.Success()) {
-      m_can_jit = eCanJITYes;
-      LLDB_LOGF(log,
-                "Process::%s pid %" PRIu64
-                " allocation test passed, CanJIT () is true",
-                __FUNCTION__, GetID());
-    } else {
-      m_can_jit = eCanJITNo;
-      LLDB_LOGF(log,
-                "Process::%s pid %" PRIu64
-                " allocation test failed, CanJIT () is false: %s",
-                __FUNCTION__, GetID(), err.AsCString());
-    }
-
-    DeallocateMemory(allocated_memory);
+    m_can_jit = DoCanAllocateMemory() ? eCanJITYes : eCanJITNo;
+    LLDB_LOGF(log, "Process::%s pid %" PRIu64 " CanJIT () is %s", __FUNCTION__,
+              GetID(), m_can_jit == eCanJITYes ? "true" : "false");
   }
 
   return m_can_jit == eCanJITYes;
@@ -3501,8 +3484,13 @@ void Process::CompleteAttach() {
     }
   }
   if (new_executable_module_sp) {
-    GetTarget().SetExecutableModule(new_executable_module_sp,
-                                    eLoadDependentsNo);
+    // Replacing an executable clears the images, which would drop the
+    // modules the loader already found.
+    if (GetTarget().GetExecutableModulePointer())
+      GetTarget().RebuildModuleListWithExecutable(new_executable_module_sp,
+                                                  eLoadDependentsNo);
+    else
+      GetTarget().MarkExecutableModule(new_executable_module_sp);
     if (log) {
       ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
       LLDB_LOGF(
@@ -6710,14 +6698,25 @@ Status Process::UpdateAutomaticSignalFiltering() {
   return Status();
 }
 
-UtilityFunction *Process::GetLoadImageUtilityFunction(
+llvm::Expected<UtilityFunction &> Process::GetLoadImageUtilityFunction(
     Platform *platform,
-    llvm::function_ref<std::unique_ptr<UtilityFunction>()> factory) {
+    llvm::function_ref<llvm::Expected<std::unique_ptr<UtilityFunction>>()>
+        factory) {
   if (platform != GetTarget().GetPlatform().get())
-    return nullptr;
-  llvm::call_once(m_dlopen_utility_func_flag_once,
-                  [&] { m_dlopen_utility_func_up = factory(); });
-  return m_dlopen_utility_func_up.get();
+    return llvm::createStringError(
+        "the platform requesting the load-image utility function is not "
+        "the target's platform");
+  llvm::call_once(m_dlopen_utility_func_flag_once, [&] {
+    llvm::Expected<std::unique_ptr<UtilityFunction>> factory_result = factory();
+    if (factory_result)
+      m_dlopen_utility_func_up = std::move(*factory_result);
+    else
+      m_dlopen_utility_func_error =
+          Status::FromError(factory_result.takeError());
+  });
+  if (m_dlopen_utility_func_up)
+    return *m_dlopen_utility_func_up;
+  return m_dlopen_utility_func_error.ToError();
 }
 
 llvm::Expected<TraceSupportedResponse> Process::TraceSupported() {
