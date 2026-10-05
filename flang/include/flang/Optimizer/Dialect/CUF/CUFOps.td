@@ -54,7 +54,11 @@ def cuf_AllocOp : cuf_Op<"alloc", [AttrSizedOperandSegments]> {
 
   let assemblyFormat = [{
     $in_type (`(` $typeparams^ `:` type($typeparams) `)`)?
-        (`,` $shape^ `:` type($shape) )?  attr-dict `->` qualified(type($ptr))
+        (`,` $shape^ `:` type($shape) )?
+        (`uniq_name` `(` $uniq_name^ `)`)?
+        (`bindc_name` `(` $bindc_name^ `)`)?
+        `data_attr` `(` enum($data_attr) `)`
+        attr-dict `->` qualified(type($ptr))
   }];
 
   let builders = [
@@ -82,7 +86,8 @@ def cuf_FreeOp : cuf_Op<"free", []> {
     cuf_DataAttributeAttr:$data_attr
   );
 
-  let assemblyFormat = "$devptr `:` qualified(type($devptr)) attr-dict";
+  let assemblyFormat = "$devptr `:` qualified(type($devptr)) "
+                       "`data_attr` `(` enum($data_attr) `)` attr-dict";
 
   let hasVerifier = 1;
 }
@@ -114,6 +119,11 @@ def cuf_AllocateOp : cuf_Op<"allocate", [AttrSizedOperandSegments,
     ( `errmsg` `(` $errmsg^ `:` type($errmsg) `)` )?
     ( `stream` `(` $stream^ `:` type($stream) `)` )?
     ( `pinned` `(` $pinned^ `:` type($pinned) `)` )?
+    (`data_attr` `(` enum($data_attr)^ `)`)?
+    (`hasStat` $hasStat^)?
+    (`hasDoubleDescriptor` $hasDoubleDescriptor^)?
+    (`pointer` $pointer^)?
+    (`device_source` $device_source^)?
     attr-dict `->` type($stat)
   }];
 
@@ -139,6 +149,10 @@ def cuf_DeallocateOp : cuf_Op<"deallocate",
   let assemblyFormat = [{
     $box `:` qualified(type($box))
     ( `errmsg` `(` $errmsg^ `:` type($errmsg) `)` )?
+    `data_attr` `(` enum($data_attr) `)`
+    (`hasStat` $hasStat^)?
+    (`hasDoubleDescriptor` $hasDoubleDescriptor^)?
+    (`pointer` $pointer^)?
     attr-dict `->` type($stat)
   }];
 
@@ -183,7 +197,10 @@ def cuf_DataTransferOp : cuf_Op<"data_transfer", []> {
       UnitAttr:$hasManagedOrUnifedSymbols);
 
   let assemblyFormat = [{
-    $src `to` $dst (`,` $shape^ `:` type($shape) )? attr-dict `:` type($src) `,` type($dst)
+    $src `to` $dst (`,` $shape^ `:` type($shape) )?
+    `transfer_kind` `(` enum($transfer_kind) `)`
+    (`hasManagedOrUnifedSymbols` $hasManagedOrUnifedSymbols^)?
+    attr-dict `:` type($src) `,` type($dst)
   }];
 
   let hasVerifier = 1;
@@ -213,7 +230,9 @@ def cuf_KernelLaunchOp : cuf_Op<"kernel_launch", [CallOpInterface,
     $callee `<` `<` `<` $grid_x `,` $grid_y `,` $grid_z `,`$block_x `,`
         $block_y `,` $block_z
         ( `,` $bytes^ ( `,` $stream^ `:` type($stream) )? )? `>` `>` `>`
-        `` `(` $args `)` ( `:` `(` type($args)^ `)` )? attr-dict
+        `` `(` $args `)` ( `:` `(` type($args)^ `)` )?
+        (`arg_attrs` `(` $arg_attrs^ `)`)?
+        (`res_attrs` `(` $res_attrs^ `)`)? attr-dict
   }];
 
   let extraClassDeclaration = [{
@@ -277,6 +296,7 @@ def cuf_KernelOp
         ( `reduce` `(` $reduceOperands^ `:` type($reduceOperands) `:` $reduceAttrs `)` )?
         custom<CUFKernelLoopControl>($region, $lowerbound, type($lowerbound),
             $upperbound, type($upperbound), $step, type($step))
+        (`n` `(` $n^ `)`)?
         attr-dict
   }];
 
@@ -351,7 +371,8 @@ def cuf_RegisterVariableStaticOp : cuf_Op<"register_variable_static", []> {
   );
 
   let assemblyFormat = [{
-    $global `(` $varName `,` $size `)` attr-dict
+    $global `(` $varName `,` $size `)`
+    (`deviceResident` $deviceResident^)? attr-dict
   }];
 }
 
@@ -386,7 +407,11 @@ def cuf_SharedMemoryOp
 
   let assemblyFormat = [{
       (`[` $offset^ `:` type($offset) `]`)? $in_type (`(` $typeparams^ `:` type($typeparams) `)`)?
-        (`,` $shape^ `:` type($shape) )?  (`align` $alignment^ )? attr-dict `->` qualified(type($ptr))
+        (`,` $shape^ `:` type($shape) )?  (`align` $alignment^ )?
+        (`uniq_name` `(` $uniq_name^ `)`)?
+        (`bindc_name` `(` $bindc_name^ `)`)?
+        (`static` $isStatic^)?
+        attr-dict `->` qualified(type($ptr))
   }];
 
   let builders = [OpBuilder<(ins "mlir::Type":$inType,

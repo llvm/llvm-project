@@ -114,10 +114,9 @@ public:
         EmulatedTLS(false), EnableTLSDESC(false), EnableIPRA(false),
         EmitStackSizeSection(false), EnableMachineOutliner(false),
         EnableMachineFunctionSplitter(false),
-        EnableStaticDataPartitioning(false), SupportsDefaultOutlining(false),
-        EnableDefaultMachineVerifier(true), EmitAddrsig(false),
-        BBAddrMap(false), EmitCallGraphSection(false), EmitCallSiteInfo(false),
-        SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
+        EnableStaticDataPartitioning(false), EnableDefaultMachineVerifier(true),
+        EmitAddrsig(false), BBAddrMap(false), EmitCallGraphSection(false),
+        EmitCallSiteInfo(false), EnableDebugEntryValues(false),
         ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
         XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
         JMCInstrument(false), EnableCFIFixup(false), MisExpect(false),
@@ -215,9 +214,6 @@ public:
   /// Enables the StaticDataSplitter pass.
   unsigned EnableStaticDataPartitioning : 1;
 
-  /// Set if the target supports default outlining behaviour.
-  unsigned SupportsDefaultOutlining : 1;
-
   /// Enable Machine verifier at the end of default codegen pipelines. (Only
   /// used with NPM)
   unsigned EnableDefaultMachineVerifier : 1;
@@ -243,16 +239,12 @@ public:
   /// info, and it is restricted only to optimized code. This can be used for
   /// something else, so that should be controlled in the frontend.
   unsigned EmitCallSiteInfo : 1;
-  /// Set if the target supports the debug entry values by default.
-  unsigned SupportsDebugEntryValues : 1;
   /// When set to true, the EnableDebugEntryValues option forces production
   /// of debug entry values even if the target does not officially support
   /// it. Useful for testing purposes only. This flag should never be checked
-  /// directly, always use \ref ShouldEmitDebugEntryValues instead.
+  /// directly, always use \ref TargetMachine::shouldEmitDebugEntryValues
+  /// instead.
   unsigned EnableDebugEntryValues : 1;
-  /// NOTE: There are targets that still do not support the debug entry values
-  /// production.
-  LLVM_ABI bool ShouldEmitDebugEntryValues() const;
 
   // When set to true, use experimental new debug variable location tracking,
   // which seeks to follow the values of variables rather than their location,

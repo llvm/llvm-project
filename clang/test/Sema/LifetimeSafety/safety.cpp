@@ -4083,6 +4083,7 @@ struct Item {
 
 struct Container {
   const Item* saved;
+  void size();
 };
 
 struct Helper {
@@ -4094,10 +4095,32 @@ struct Helper {
       Item item;
       AddItem(item, c); // expected-warning {{local variable 'item' does not live long enough}}
     }                   // expected-note {{local variable 'item' is destroyed here}}
-    use(c);             // expected-note {{later used here}}
+    c.size();           // expected-note {{later used here}}
   }
 };
 } // namespace off_by_one_crash
+
+// FIXME(GH227246): Support capture_by_this on constructors without inference of lifetimebound.
+namespace constructor_test {
+struct Item {};
+
+struct Container {
+  const Item* saved;
+  Container() = default;
+  Container(const Item& item [[clang::lifetime_capture_by_this]]) {
+    saved = &item;
+  }
+};
+
+void test() {
+  Container c;
+  {
+    Item item;
+    c = Container(item); // tu-warning {{local variable 'item' does not live long enough}}
+  }                      // tu-note {{local variable 'item' is destroyed here}}
+  use(c);                // tu-note {{later used here}}
+}
+} // namespace constructor_test
 
 struct [[gsl::Pointer()]] PtrWithInt { int x; };
 PtrWithInt f() {
