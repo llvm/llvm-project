@@ -141,6 +141,30 @@
 // RUN:   | FileCheck -check-prefixes=CHK-INTEL-OPENMP %s
 // CHK-INTEL-OPENMP: error: invalid or unsupported offload target
 
+/// On a SPIR-V target, a SYCL device must be an Intel GPU or CPU, "generic", or
+/// the numeric name of a GPU the list does not know yet.
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-pcv -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-INTEL-BAD-ARCH %s
+// CHK-INTEL-BAD-ARCH: error: unsupported SYCL gpu architecture: xe-pcv
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe_12.60. -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-INTEL-BAD-ARCH-NUM %s
+// CHK-INTEL-BAD-ARCH-NUM: error: unsupported SYCL gpu architecture: xe_12.60.
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-pvc:garbage -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-INTEL-BAD-ARCH-SUFFIX %s
+// CHK-INTEL-BAD-ARCH-SUFFIX: error: unsupported SYCL gpu architecture: xe-pvc:garbage
+// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=graniterapids \
+// RUN:   --offload-arch=xe_40.11.0 -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-INTEL-GOOD-ARCH %s
+// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=graniterapids --offload-arch=xe_40.11.0 -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-INTEL-GOOD-ARCH %s
+// CHK-INTEL-GOOD-ARCH-DAG: offload, "device-sycl (spirv64-unknown-unknown:graniterapids)"
+// CHK-INTEL-GOOD-ARCH-DAG: offload, "device-sycl (spirv64-unknown-unknown:xe_40.11.0)"
+
 /// -Xarch_ may name an Intel GPU by any of its spellings.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=bmg_g21 \

@@ -128,6 +128,12 @@
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=xe-pvc %t/input1.bc -o %t/aot-gpu.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-PVC
 ; AOT-INTEL-PVC: "{{.*}}ocloc{{.*}}" {{.*}}-device pvc {{.*}}-output
+;
+; Test that a GPU the list does not know yet stays SPIR-V, compiled at run time.
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=xe_40.11.0 %t/input1.bc -o %t/jit-gpu.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=JIT-INTEL-UNLISTED
+; JIT-INTEL-UNLISTED-NOT: ocloc
+; JIT-INTEL-UNLISTED: sycl-bundle: image kind: spv, triple: spirv64, arch: xe_40.11.0
 
 ; Test that all --ocloc-options are passed to ocloc, even if they contain spaces or quotes.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=bmg_g21 %t/input1.bc -o %t/aot-gpu.out 2>&1 \

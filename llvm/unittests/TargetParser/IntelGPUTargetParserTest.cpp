@@ -135,6 +135,16 @@ TEST(IntelGPUTargetParserTest, ParseArch) {
   EXPECT_EQ(IntelGPU::parseArch("xe_12.60.99999999999"), IntelGPU::GK_NONE);
 }
 
+TEST(IntelGPUTargetParserTest, IsNumericArchName) {
+  EXPECT_TRUE(IntelGPU::isNumericArchName("xe_12.60.7"));
+  EXPECT_TRUE(IntelGPU::isNumericArchName("xe_12.60"));
+  // A device the table does not know yet is still well-formed.
+  EXPECT_TRUE(IntelGPU::isNumericArchName("xe_40.11.0"));
+  EXPECT_FALSE(IntelGPU::isNumericArchName("xe-pvc"));
+  EXPECT_FALSE(IntelGPU::isNumericArchName("xe_12.60."));
+  EXPECT_FALSE(IntelGPU::isNumericArchName("xe_12.60.64"));
+}
+
 TEST(IntelGPUTargetParserTest, EveryNameParses) {
   // Every name the table declares has to be an --offload-arch value, and has to
   // name the row it came from.
