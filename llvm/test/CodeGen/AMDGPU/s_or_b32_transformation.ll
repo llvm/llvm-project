@@ -38,22 +38,20 @@ define amdgpu_ps i32 @s_or_b32_disjoint_live_scc(i32 inreg %n) {
 ; CHECK-NEXT:    s_cselect_b32 s0, 0, 1
 ; CHECK-NEXT:    ; return to shader part epilog
 entry:
-  switch i32 0, label %tail [
-    i32 0, label %case
-  ]
+  br i1 true, label %tail, label %dead
 
-case:
+dead:
   br label %tail
 
 tail:
-  %phi = phi i32 [ 32, %case ], [ 0, %entry ]
+  %addend = phi i32 [ 32, %entry ], [ 0, %dead ]
   %ins0 = insertelement <2 x i32> poison, i32 %n, i32 0
-  %ins1 = insertelement <2 x i32> %ins0, i32 %phi, i32 1
+  %ins1 = insertelement <2 x i32> %ins0, i32 %addend, i32 1
   %mul = mul <2 x i32> %ins1, <i32 -2147483648, i32 64>
   %e0 = extractelement <2 x i32> %mul, i32 0
   %e1 = extractelement <2 x i32> %mul, i32 1
-  %s1 = add i32 %e0, %e1
-  %cmp = icmp eq i32 %s1, 0
+  %sum = add i32 %e0, %e1
+  %cmp = icmp eq i32 %sum, 0
   %sel = select i1 %cmp, i32 1, i32 0
   ret i32 %sel
 }
