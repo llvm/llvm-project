@@ -225,16 +225,15 @@ L0DeviceTy::loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
     return PGM;
   }
 
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, getDeviceId(),
-       "Device %" PRId32 ": Loading binary from " DPxMOD "\n", getDeviceId(),
-       DPxPTR(TgtImage->getBufferStart()));
+  ODBG(OLDT_Module) << "Device " << getDeviceId() << ": Loading binary from "
+                    << static_cast<const void *>(TgtImage->getBufferStart());
 
   const auto &Options = getPlugin().getOptions();
   std::string CompilationOptions(Options.CompilationOptions);
   CompilationOptions += " " + Options.UserCompilationOptions;
 
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, getDeviceId(),
-       "Base L0 module compilation options: %s\n", CompilationOptions.c_str());
+  ODBG(OLDT_Module) << "Base L0 module compilation options: "
+                    << CompilationOptions;
 
   CompilationOptions += " ";
   CompilationOptions += Options.InternalCompilationOptions;

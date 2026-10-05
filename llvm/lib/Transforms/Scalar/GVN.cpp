@@ -2991,7 +2991,7 @@ bool GVNPassImpl::findReachingValuesForLoad(
   // visited does get phi-translated.
   DependencyBlockSet Blocks;
   SmallVector<BasicBlock *, 16> InitialWorklist;
-  const DataLayout &DL = L->getModule()->getDataLayout();
+  const DataLayout &DL = L->getDataLayout();
   if (!collectPredecessors(StartBlock,
                            PHITransAddr(L->getPointerOperand(), DL, AC),
                            ClobberMA, Blocks, InitialWorklist))
