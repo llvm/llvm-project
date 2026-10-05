@@ -61,20 +61,35 @@
 // RUN:     -isysroot %S/Inputs/MacOSX15.1.sdk 2>&1 | FileCheck %s --check-prefix=ISYSROOT
 // ISYSROOT: "-syslibroot" "{{.*}}MacOSX15.1.sdk"
 
-// -L, -filelist are forwarded as is. -filelist doesn't get doubled up as an input file.
+// -L and -F are forwarded in joined format. -iframework is forwarded as -F.
 // -Xstatic-lib-tool passes through.
 // RUN: %clang -target i386-apple-darwin9 -### --emit-static-lib %t1.o %t2.o \
-// RUN:     -L/tmp/first -L/tmp/second -Xstatic-lib-tool -dependency_info -Xstatic-lib-tool deps.dat \
-// RUN:     -filelist objs.txt 2>&1 | FileCheck %s --check-prefix=PASSTHROUGH
+// RUN:     -L/tmp/first -L /tmp/second -F/tmp/fw1 -iframework /tmp/ifw -F /tmp/fw2 \
+// RUN:     -Xstatic-lib-tool -dependency_info -Xstatic-lib-tool deps.dat 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=PASSTHROUGH
 // PASSTHROUGH-DAG: "-L/tmp/first" "-L/tmp/second"
+// PASSTHROUGH-DAG: "-F/tmp/fw1" "-F/tmp/fw2" "-F/tmp/ifw"
 // PASSTHROUGH-DAG: "-dependency_info" "deps.dat"
-// PASSTHROUGH-DAG: "-filelist" "objs.txt"
 // PASSTHROUGH-DAG: "{{.*}}1.o" "{{.*}}2.o"
-// PASSTHROUGH-NOT: "-filelist"
 
-// Multiple -arch produces one libtool job per arch plus a lipo.
-// RUN: %clang -target x86_64-apple-macos14 -### --emit-static-lib %t1.o %t2.o \
-// RUN:     -arch x86_64 -arch arm64 -o libfoo.a 2>&1 | FileCheck %s --check-prefix=UNIVERSAL
-// UNIVERSAL: "{{.*}}libtool" "-static"
-// UNIVERSAL: "{{.*}}libtool" "-static"
-// UNIVERSAL: "{{.*}}lipo" "-create" "-output" "libfoo.a"
+// -filelist, -l, -framework are forwarded (-l in joined format).
+// RUN: %clang -target i386-apple-darwin9 -### --emit-static-lib %t1.o \
+// RUN:     -l foo -filelist first.txt -framework Foo %t2.o \
+// RUN:     -filelist second.txt -lBar 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=LINKER_INPUTS
+// LINKER_INPUTS: "-o" "a.out" "{{.*}}1.o" "-lfoo" "-filelist" "first.txt" "-framework" "Foo" "{{.*}}2.o" "-filelist" "second.txt" "-lBar"
+
+// Unsupported linker inputs warn instead of being silently dropped.
+// RUN: %clang -target i386-apple-darwin9 -### --emit-static-lib %t1.o \
+// RUN:     -weak_framework Bar -Xlinker -all_load \
+// RUN:     -rpath /tmp -e _main 2>&1 | FileCheck %s --check-prefix=UNSUPPORTED_INPUTS
+// UNSUPPORTED_INPUTS-DAG: warning: argument unused during compilation: '-weak_framework Bar'
+// UNSUPPORTED_INPUTS-DAG: warning: argument unused during compilation: '-Xlinker -all_load'
+// UNSUPPORTED_INPUTS-DAG: warning: argument unused during compilation: '-rpath /tmp'
+// UNSUPPORTED_INPUTS-DAG: warning: argument unused during compilation: '-e _main'
+// UNSUPPORTED_INPUTS:     "-static" "-D" "-no_warning_for_no_symbols" "-o" "a.out" "{{.*}}1.o"
+// UNSUPPORTED_INPUTS-NOT: "-weak_framework"
+// UNSUPPORTED_INPUTS-NOT: "Bar"
+// UNSUPPORTED_INPUTS-NOT: "-all_load"
+// UNSUPPORTED_INPUTS-NOT: "-rpath"
+

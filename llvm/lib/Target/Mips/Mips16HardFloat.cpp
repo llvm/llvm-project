@@ -477,20 +477,10 @@ static void createFPFnStub(Function *F, Module *M, FPParamVariant PV,
   new UnreachableInst(FStub->getContext(), BB);
 }
 
-// remove the use-soft-float attribute
-static void removeUseSoftFloat(Function &F) {
-  LLVM_DEBUG(errs() << "removing -use-soft-float\n");
-  F.removeFnAttr("use-soft-float");
-  if (F.hasFnAttribute("use-soft-float")) {
-    LLVM_DEBUG(errs() << "still has -use-soft-float\n");
-  }
-  F.addFnAttr("use-soft-float", "false");
-}
-
 // This pass only makes sense when the underlying chip has floating point but
 // we are compiling as mips16.
-// For all mips16 functions (that are not stubs we have already generated), or
-// declared via attributes as nomips16, we must:
+// For all mips16 hard-float functions (excluding stubs we have already
+// generated), we must:
 //    1) fixup all returns of float, double, single and double complex
 //       by calling a helper function before the actual return.
 //    2) generate helper functions (stubs) that can be called by mips32
@@ -509,13 +499,9 @@ bool Mips16HardFloat::runOnModule(Module &M) {
   LLVM_DEBUG(errs() << "Run on Module Mips16HardFloat\n");
   bool Modified = false;
   for (Module::iterator F = M.begin(), E = M.end(); F != E; ++F) {
-    if (F->hasFnAttribute("nomips16") &&
-        F->hasFnAttribute("use-soft-float")) {
-      removeUseSoftFloat(*F);
-      continue;
-    }
     if (F->isDeclaration() || F->hasFnAttribute("mips16_fp_stub") ||
-        F->hasFnAttribute("nomips16")) continue;
+        !TM.getSubtarget<MipsSubtarget>(*F).inMips16HardFloat())
+      continue;
     Modified |= fixupFPReturnAndCall(*F, &M, TM);
     FPParamVariant V = whichFPParamVariantNeeded(*F);
     if (V != NoSig) {

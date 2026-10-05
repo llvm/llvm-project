@@ -171,7 +171,7 @@ define i256 @shl_i256(i256 %a0, i256 %a1) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $112, %esp
+; X86-NEXT:    subl $96, %esp
 ; X86-NEXT:    movzbl 44(%ebp), %ecx
 ; X86-NEXT:    movl 12(%ebp), %eax
 ; X86-NEXT:    movl 16(%ebp), %edx
@@ -406,7 +406,7 @@ define i256 @lshr_i256(i256 %a0, i256 %a1) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $112, %esp
+; X86-NEXT:    subl $96, %esp
 ; X86-NEXT:    movzbl 44(%ebp), %ecx
 ; X86-NEXT:    movl 12(%ebp), %eax
 ; X86-NEXT:    movl 16(%ebp), %edx
@@ -644,7 +644,7 @@ define i256 @ashr_i256(i256 %a0, i256 %a1) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $112, %esp
+; X86-NEXT:    subl $96, %esp
 ; X86-NEXT:    movzbl 44(%ebp), %ecx
 ; X86-NEXT:    movl 12(%ebp), %eax
 ; X86-NEXT:    movl 16(%ebp), %edx
@@ -878,7 +878,7 @@ define i256 @shl_i256_load(ptr %p0, i256 %a1) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $112, %esp
+; X86-NEXT:    subl $96, %esp
 ; X86-NEXT:    movl 12(%ebp), %ecx
 ; X86-NEXT:    movl (%ecx), %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -1112,7 +1112,7 @@ define i256 @lshr_i256_load(ptr %p0, i256 %a1) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $112, %esp
+; X86-NEXT:    subl $96, %esp
 ; X86-NEXT:    movl 12(%ebp), %ecx
 ; X86-NEXT:    movl (%ecx), %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -1367,7 +1367,7 @@ define i256 @ashr_i256_load(ptr %p0, i256 %a1) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $112, %esp
+; X86-NEXT:    subl $96, %esp
 ; X86-NEXT:    movl 12(%ebp), %eax
 ; X86-NEXT:    movl (%eax), %ecx
 ; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -2041,7 +2041,7 @@ define i256 @shl_1_i256(i256 %a0) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $112, %esp
+; X86-NEXT:    subl $96, %esp
 ; X86-NEXT:    movzbl 12(%ebp), %ecx
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
@@ -2259,7 +2259,7 @@ define i256 @lshr_signbit_i256(i256 %a0) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $112, %esp
+; X86-NEXT:    subl $96, %esp
 ; X86-NEXT:    movzbl 12(%ebp), %ecx
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
@@ -2472,7 +2472,7 @@ define i256 @ashr_signbit_i256(i256 %a0) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $112, %esp
+; X86-NEXT:    subl $96, %esp
 ; X86-NEXT:    movzbl 12(%ebp), %ecx
 ; X86-NEXT:    movl $-1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $-1, {{[0-9]+}}(%esp)
@@ -2696,7 +2696,7 @@ define i256 @shl_allbits_i256(i256 %a0) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $112, %esp
+; X86-NEXT:    subl $96, %esp
 ; X86-NEXT:    movzbl 12(%ebp), %ecx
 ; X86-NEXT:    movl $-1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $-1, {{[0-9]+}}(%esp)
@@ -2915,7 +2915,7 @@ define i256 @lshr_allbits_i256(i256 %a0) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $112, %esp
+; X86-NEXT:    subl $96, %esp
 ; X86-NEXT:    movzbl 12(%ebp), %ecx
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
@@ -3292,7 +3292,7 @@ define i64 @lshr_extract_load_i256_i64(ptr %p0, i256 %a1) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $96, %esp
+; X86-NEXT:    subl $80, %esp
 ; X86-NEXT:    movl 8(%ebp), %ecx
 ; X86-NEXT:    movl (%ecx), %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -3422,7 +3422,7 @@ define i64 @ashr_extract_load_i256_i64(ptr %p0, i256 %a1) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $96, %esp
+; X86-NEXT:    subl $80, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl (%eax), %ecx
 ; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -3560,7 +3560,7 @@ define i64 @ashr_extract_idx_load_i256_i64(ptr %p0, i256 %a1) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $96, %esp
+; X86-NEXT:    subl $80, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl (%eax), %ecx
 ; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill

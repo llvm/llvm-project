@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -mtriple=ppc64le-unknown-linux %s -global-isel -stop-after=irtranslator -o - | FileCheck %s --check-prefix=LINUX
-; RUN: llc -verify-machineinstrs -mtriple=ppc64le-unknown-openbsd %s -global-isel -stop-after=irtranslator -o - | FileCheck %s --check-prefix=OPENBSD
+; RUN: llc -verify-machineinstrs -mtriple=ppc64le-unknown-linux %s -global-isel -stop-after=ir-translator -o - | FileCheck %s --check-prefix=LINUX
+; RUN: llc -verify-machineinstrs -mtriple=ppc64le-unknown-openbsd %s -global-isel -stop-after=ir-translator -o - | FileCheck %s --check-prefix=OPENBSD
 
 
 ; The stack guard on Linux

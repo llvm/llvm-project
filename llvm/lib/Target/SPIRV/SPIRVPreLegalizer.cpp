@@ -524,12 +524,15 @@ void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
 // Signed-vs-unsigned G_ICMP is distinguished by its predicate operand.
 //
 // TODO: follow-up PRs will add the remaining sign-sensitive opcodes
-// (e.g. G_SMIN/G_SMAX, G_SADDSAT/G_SSUBSAT, signed overflow ops).
+// (e.g. G_SADDSAT/G_SSUBSAT, signed overflow ops).
 static bool isSignSensitiveOp(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case TargetOpcode::G_ASHR:
   case TargetOpcode::G_SDIV:
   case TargetOpcode::G_SREM:
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_SMIN:
+  case TargetOpcode::G_SMAX:
     return true;
   case TargetOpcode::G_ICMP:
     return CmpInst::isSigned(
@@ -587,16 +590,14 @@ recordNarrowOperandWidths(MachineFunction &MF, const MachineRegisterInfo &MRI) {
       }
       if (!isSignSensitiveOp(MI))
         continue;
-      // Value operands are the trailing two, past any def or predicate.
-      unsigned N = MI.getNumOperands();
-      const MachineOperand &LHS = MI.getOperand(N - 2);
-      const MachineOperand &RHS = MI.getOperand(N - 1);
-      // Sign-sensitive opcodes carry register operands only.
-      assert(LHS.isReg() && RHS.isReg());
-      bool NeedsRewrite = RecordIfNarrow(LHS.getReg());
-      NeedsRewrite = RecordIfNarrow(RHS.getReg()) || NeedsRewrite;
-      if (NeedsRewrite)
+      bool NeedsRewrite = false;
+      for (const MachineOperand &MO : MI.all_uses())
+        NeedsRewrite = RecordIfNarrow(MO.getReg()) || NeedsRewrite;
+      if (NeedsRewrite) {
         Info.SignSensitiveWorklist.push_back(&MI);
+        // Record the result too so it gets masked.
+        RecordIfNarrow(MI.getOperand(0).getReg());
+      }
     }
   }
   return Info;
@@ -631,25 +632,38 @@ static void widenSignSensitiveOps(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     return SExted;
   };
 
+  // The wide op yields a sign-extended value, mask it back to OldW bits because
+  // later users assume the upper bits are zero.
+  auto MaskResult = [&](MachineInstr &MI, unsigned OldW) {
+    Register DstReg = MI.getOperand(0).getReg();
+    widenScalarType(DstReg, MRI);
+    MIB.setInstrAndDebugLoc(MI);
+    SPIRVTypeInst SpvTy =
+        GR->getOrCreateSPIRVIntegerType(widenBitWidthToNextPow2(OldW), MIB);
+    Register Result = createVirtualRegister(SpvTy, GR, MIB);
+    MI.getOperand(0).setReg(Result);
+    setInsertPtAfterDef(MIB, &MI);
+    MIB.buildZExtInReg(DstReg, Result, OldW);
+  };
+
   // TODO: when the same narrow vreg feeds multiple sign-sensitive ops (e.g.
   // sdiv %x, %y and srem %x, %y), emit one shared G_SEXT_INREG instead of one
   // per use.
+  const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
   for (MachineInstr *MI : Info.SignSensitiveWorklist) {
-    unsigned N = MI->getNumOperands();
-    MachineOperand &LHS = MI->getOperand(N - 2);
-    MachineOperand &RHS = MI->getOperand(N - 1);
-    Register LHSReg = LHS.getReg();
-    Register RHSReg = RHS.getReg();
-    if (auto It = Info.OrigWidth.find(LHSReg); It != Info.OrigWidth.end())
-      LHS.setReg(SignExtendReg(LHSReg, It->second, *MI));
-    // Same vreg on both sides (e.g. G_ICMP slt %x, %x): reuse the sext just
-    // emitted for LHS instead of emitting a second one.
-    if (RHSReg == LHSReg) {
-      RHS.setReg(LHS.getReg());
-      continue;
+    for (const MachineOperand &MO : MI->all_uses()) {
+      Register Reg = MO.getReg();
+      auto It = Info.OrigWidth.find(Reg);
+      if (It == Info.OrigWidth.end())
+        continue;
+      // substituteRegister fills every slot holding Reg at once: SignExtendReg
+      // retypes Reg in place, so a second sext would read the widened width.
+      MI->substituteRegister(Reg, SignExtendReg(Reg, It->second, *MI),
+                             /*SubIdx=*/0, TRI);
     }
-    if (auto It = Info.OrigWidth.find(RHSReg); It != Info.OrigWidth.end())
-      RHS.setReg(SignExtendReg(RHSReg, It->second, *MI));
+    Register Dst = MI->getOperand(0).getReg();
+    if (auto It = Info.OrigWidth.find(Dst); It != Info.OrigWidth.end())
+      MaskResult(*MI, It->second);
   }
 }
 
@@ -1221,6 +1235,42 @@ static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     invalidateAndEraseMI(GR, MI);
 }
 
+// Returns the value of the switch case operand in Reg. The case value stays a
+// G_CONSTANT until the module emits a SPIR-V constant for the same value, at
+// which point the case register is replaced with the one defining that
+// constant, which keeps its value in literal operands rather than in a CImm.
+static const ConstantInt *getSwitchCaseValue(Register Reg,
+                                             const MachineRegisterInfo &MRI,
+                                             LLVMContext &Ctx) {
+  APInt Val;
+  if (mi_match(Reg, MRI, m_ICst(Val)))
+    return ConstantInt::get(Ctx, Val);
+
+  const MachineInstr *Def = nullptr;
+  if (!mi_match(Reg, MRI, m_MInstr(Def)))
+    llvm_unreachable("Switch case operand has no definition");
+
+  LLT Ty = MRI.getType(Reg);
+  assert(Ty.isValid() && "Expected a typed switch case value");
+  Val = APInt(Ty.getScalarSizeInBits(), 0);
+
+  switch (Def->getOpcode()) {
+  case SPIRV::OpConstantNull:
+  case SPIRV::OpConstantI:
+    // The operands after the type are 32-bit literal words, least significant
+    // first, as written by addNumImm(). OpConstantNull carries none, so it
+    // decodes to zero without a case of its own.
+    for (unsigned I = 2, E = Def->getNumExplicitOperands(); I != E; ++I) {
+      uint32_t Word = static_cast<uint32_t>(Def->getOperand(I).getImm());
+      Val |= APInt(Val.getBitWidth(), Word).shl((I - 2) * 32);
+    }
+    break;
+  default:
+    llvm_unreachable("Unexpected definition of a switch case value");
+  }
+  return ConstantInt::get(Ctx, Val);
+}
+
 // LLVM allows the switches to use registers as cases, while SPIR-V required
 // those to be immediate values. This function replaces such operands with the
 // equivalent immediate constant.
@@ -1228,6 +1278,7 @@ static void processSwitchesConstants(MachineFunction &MF,
                                      SPIRVGlobalRegistry *GR,
                                      MachineIRBuilder MIB) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  LLVMContext &Ctx = MF.getFunction().getContext();
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       if (!isSpvIntrinsic(MI, Intrinsic::spv_switch))
@@ -1239,9 +1290,8 @@ static void processSwitchesConstants(MachineFunction &MF,
       NewOperands.push_back(MI.getOperand(2)); // Default
       for (unsigned i = 3; i < MI.getNumOperands(); i += 2) {
         Register Reg = MI.getOperand(i).getReg();
-        MachineInstr *ConstInstr = getDefInstrMaybeConstant(Reg, &MRI);
         NewOperands.push_back(
-            MachineOperand::CreateCImm(ConstInstr->getOperand(1).getCImm()));
+            MachineOperand::CreateCImm(getSwitchCaseValue(Reg, MRI, Ctx)));
 
         NewOperands.push_back(MI.getOperand(i + 1));
       }

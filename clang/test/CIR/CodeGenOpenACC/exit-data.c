@@ -132,3 +132,24 @@ void acc_data(int parmVar, int *ptrParmVar) {
   // CHECK-NEXT: acc.exit_data wait_devnum(%[[PARM_CAST]] : si32) wait(%[[ONE_CAST]], %[[TWO_CAST]] : si32, si32) dataOperands(%[[GDP]] : !cir.ptr<!s32i>)
   // CHECK-NEXT: acc.delete accPtr(%[[GDP]] : !cir.ptr<!s32i>) structured(false) name("parmVar")
 }
+
+void gh228290(int i) {
+  // CHECK: cir.func{{.*}}@gh228290(
+
+#pragma acc exit data copyout(i) wait wait
+// CHECK: acc.exit_data wait dataOperands({{.*}})
+
+#pragma acc exit data copyout(i) wait wait(1)
+// CHECK: acc.exit_data wait dataOperands({{.*}})
+
+#pragma acc exit data copyout(i) wait(1) wait
+// CHECK: acc.exit_data wait dataOperands({{.*}})
+
+#pragma acc exit data copyout(i) wait(1) wait(2)
+// CHECK: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
+// CHECK: %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
+// CHECK: %[[TWO_CAST:.*]] = cir.builtin_int_cast %[[TWO]] : !s32i -> si32
+// CHECK: acc.exit_data wait(%[[ONE_CAST]], %[[TWO_CAST]] : si32, si32) dataOperands({{.*}})
+}
+

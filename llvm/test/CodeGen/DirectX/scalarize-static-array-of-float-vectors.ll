@@ -7,12 +7,18 @@
 define internal void @main() #1 {
 ; CHECK-LABEL: define internal void @main() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[DOTI0:%.*]] = load float, ptr getelementptr inbounds ([24 x float], ptr @StaticArr.scalarized.1dim, i32 0, i32 3), align 16
-; CHECK-NEXT:    [[DOTI11:%.*]] = load float, ptr getelementptr (float, ptr getelementptr inbounds ([24 x float], ptr @StaticArr.scalarized.1dim, i32 0, i32 3), i32 1), align 4
-; CHECK-NEXT:    [[DOTI22:%.*]] = load float, ptr getelementptr (float, ptr getelementptr inbounds ([24 x float], ptr @StaticArr.scalarized.1dim, i32 0, i32 3), i32 2), align 8
-; CHECK-NEXT:    [[DOTI03:%.*]] = load float, ptr getelementptr inbounds ([24 x float], ptr @StaticArr.scalarized.1dim, i32 0, i32 6), align 16
-; CHECK-NEXT:    [[DOTI15:%.*]] = load float, ptr getelementptr (float, ptr getelementptr inbounds ([24 x float], ptr @StaticArr.scalarized.1dim, i32 0, i32 6), i32 1), align 4
-; CHECK-NEXT:    [[DOTI27:%.*]] = load float, ptr getelementptr (float, ptr getelementptr inbounds ([24 x float], ptr @StaticArr.scalarized.1dim, i32 0, i32 6), i32 2), align 8
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds [24 x float], ptr @StaticArr.scalarized.1dim, i32 0, i32 3
+; CHECK-NEXT:    [[DOTI0:%.*]] = load float, ptr [[GEP3]], align 16
+; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr float, ptr [[GEP3]], i32 1
+; CHECK-NEXT:    [[DOTI11:%.*]] = load float, ptr [[GEP4]], align 4
+; CHECK-NEXT:    [[GEP5:%.*]] = getelementptr float, ptr [[GEP3]], i32 2
+; CHECK-NEXT:    [[DOTI22:%.*]] = load float, ptr [[GEP5]], align 8
+; CHECK-NEXT:    [[GEP6:%.*]] = getelementptr inbounds [24 x float], ptr @StaticArr.scalarized.1dim, i32 0, i32 6
+; CHECK-NEXT:    [[DOTI03:%.*]] = load float, ptr [[GEP6]], align 16
+; CHECK-NEXT:    [[GEP7:%.*]] = getelementptr float, ptr [[GEP6]], i32 1
+; CHECK-NEXT:    [[DOTI15:%.*]] = load float, ptr [[GEP7]], align 4
+; CHECK-NEXT:    [[GEP8:%.*]] = getelementptr float, ptr [[GEP6]], i32 2
+; CHECK-NEXT:    [[DOTI27:%.*]] = load float, ptr [[GEP8]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

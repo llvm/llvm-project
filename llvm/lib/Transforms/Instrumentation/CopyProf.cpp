@@ -47,7 +47,7 @@ using namespace llvm;
 // Names for the module c'tor to initialize the runtime, and the runtime
 // initialization function itself.
 constexpr StringRef CopyProfModuleCtorName = "copyprof.module_ctor";
-constexpr StringRef CopyProfInitName = "__copyprof_init";
+constexpr StringRef CopyProfInitName = "__copyprof_init_once";
 
 // Runtime callback function names.
 constexpr StringRef CopyProfCtorEnterCallbackName =
@@ -271,7 +271,7 @@ bool CopyProfStores::instrumentFunction(Function &F) {
   // intrinsics, AtomicRMW, and AtomicCmpXchg).
   // TODO: Skip stores to alloca if only made of fundamental types, arrays
   // thereof and (possibly) class types that are trivial and aggregate.
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   SmallVector<StoreInst *, 16> ToInstrument;
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {

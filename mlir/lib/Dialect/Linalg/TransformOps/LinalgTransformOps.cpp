@@ -271,6 +271,11 @@ void transform::ApplySwapExtractSliceWithFillPatternsOp::populatePatterns(
   linalg::populateSwapExtractSliceWithFillPatterns(patterns);
 }
 
+void transform::ApplyEraseUnusedOperandsAndResultsPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateEraseUnusedOperandsAndResultsPatterns(patterns);
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
@@ -1549,6 +1554,11 @@ DiagnosedSilenceableFailure transform::LowerPackOp::applyToOne(
     transform::TransformRewriter &rewriter, linalg::PackOp target,
     transform::ApplyToEachResultList &transformResults,
     transform::TransformState &state) {
+  if (!target.hasPureTensorSemantics()) {
+    return mlir::emitSilenceableFailure(target->getLoc())
+           << "lower_pack only supports tensor semantics. The target has "
+              "memref operands";
+  }
   rewriter.setInsertionPoint(target);
   bool lowerPadLikeWithInsertSlice = getLowerPadLikeWithInsertSlice();
   FailureOr<LowerPackResult> res =
@@ -1571,6 +1581,13 @@ DiagnosedSilenceableFailure transform::LowerUnPackOp::applyToOne(
     transform::TransformRewriter &rewriter, linalg::UnPackOp target,
     transform::ApplyToEachResultList &transformResults,
     transform::TransformState &state) {
+  if (!target.hasPureTensorSemantics()) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError() << "lower_unpack only supports tensor "
+                                  "semantics. The target has memref operands";
+    diag.attachNote(target->getLoc()) << "target payload op";
+    return diag;
+  }
   rewriter.setInsertionPoint(target);
   bool lowerUnpadLikeWithExtractSlice = getLowerUnpadLikeWithExtractSlice();
   FailureOr<LowerUnPackOpResult> res =
@@ -1863,6 +1880,12 @@ transform::PackOp::apply(transform::TransformRewriter &rewriter,
            << "requires target to map to exactly 1 LinalgOp (got "
            << llvm::range_size(targetOps) << ")";
   }
+  // Fail on memref operands: pack only supports tensor semantics.
+  if (!linalgOp.hasPureTensorSemantics()) {
+    return emitSilenceableError()
+           << "structured.pack only supports tensor semantics. The target has "
+              "memref operands";
+  }
   // Fail on mismatched number of pack sizes.
   if (getMixedPackedSizes().size() != linalgOp.getNumLoops()) {
     return emitSilenceableError()
@@ -1925,10 +1948,8 @@ PackGreedilyOp::apply(transform::TransformRewriter &rewriter,
                       transform::TransformResults &transformResults,
                       transform::TransformState &state) {
   SmallVector<Operation *> results;
-  for (Operation *op : state.getPayloadOps(getTarget())) {
-    auto linalgOp = dyn_cast<LinalgOp>(op);
-    if (!linalgOp)
-      continue;
+  for (auto linalgOp :
+       llvm::make_isa_range<LinalgOp>(state.getPayloadOps(getTarget()))) {
     // linalgOp will be replaced and the insertion point may be invalidated if
     // we set it before -> set it after.
     rewriter.setInsertionPointAfter(linalgOp);
@@ -3729,6 +3750,15 @@ transform::TileUsingForOp::apply(transform::TransformRewriter &rewriter,
       diag.attachNote(op->getLoc()) << "target op";
       return diag;
     }
+    if (isa<linalg::RelayoutOpInterface>(op) &&
+        !cast<DestinationStyleOpInterface>(op).hasPureTensorSemantics()) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableError()
+          << "tiling only supports tensor semantics for linalg.pack / "
+             "linalg.unpack. The target has memref operands";
+      diag.attachNote(op->getLoc()) << "target op";
+      return diag;
+    }
 
     int64_t iterspaceRank = tilingInterface.getLoopIteratorTypes().size();
     if (tileInterchange.size() > static_cast<size_t>(iterspaceRank)) {
@@ -4045,6 +4075,15 @@ DiagnosedSilenceableFailure transform::tileToForallOpImpl(
     DiagnosedSilenceableFailure diag =
         transformOp.emitSilenceableError()
         << "only TilingInterface ops are supported";
+    diag.attachNote(target->getLoc()) << "target op";
+    return diag;
+  }
+  if (isa<linalg::RelayoutOpInterface>(target) &&
+      !cast<DestinationStyleOpInterface>(target).hasPureTensorSemantics()) {
+    DiagnosedSilenceableFailure diag =
+        transformOp.emitSilenceableError()
+        << "tiling only supports tensor semantics for linalg.pack / "
+           "linalg.unpack. The target has memref operands";
     diag.attachNote(target->getLoc()) << "target op";
     return diag;
   }
