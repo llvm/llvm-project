@@ -408,9 +408,9 @@ static bool sinkScalarOperands(VPlan &Plan) {
         make_filter_range(SinkCandidate->users(), [SinkTo](VPUser *U) {
           return cast<VPRecipeBase>(U)->getParent() != SinkTo;
         });
-    if (any_of(UsersOutsideSinkTo, [SinkCandidate](VPUser *U) {
-          return !U->usesFirstLaneOnly(SinkCandidate);
-        }))
+    if (any_of(
+            UsersOutsideSinkTo,
+            std::not_fn(bind_back<vputils::usesFirstLaneOnly>(SinkCandidate))))
       continue;
     bool NeedsDuplicating = !UsersOutsideSinkTo.empty();
 
@@ -903,7 +903,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       bool HasScalableVF = Plan.hasScalableVF();
       WideIV->replaceUsesWithIf(Steps, [WideIV, HasScalableVF](VPUser *U) {
         if (HasScalableVF)
-          return U->usesFirstLaneOnly(WideIV);
+          return vputils::usesFirstLaneOnly(U, WideIV);
         return U->usesScalars(WideIV);
       });
     }
@@ -1709,9 +1709,8 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def,
   // Replace uses of a BuildVector by users that only use its first lane with
   // its first operand directly.
   if (match(Def, m_BuildVector())) {
-    Def->replaceUsesWithIf(Def->getOperand(0), [Def](VPUser *U) {
-      return U->usesFirstLaneOnly(Def);
-    });
+    Def->replaceUsesWithIf(Def->getOperand(0),
+                           bind_back<vputils::usesFirstLaneOnly>(Def));
     return Def;
   }
 
