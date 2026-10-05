@@ -699,6 +699,7 @@ static bool mayLookThrough(Value *V) {
   case Instruction::Trunc:
   case Instruction::Or:
   case Instruction::Xor:
+  case Instruction::ExtractValue:
     return true;
   default:
     return false;
