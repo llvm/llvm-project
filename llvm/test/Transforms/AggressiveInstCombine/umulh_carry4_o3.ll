@@ -3,28 +3,13 @@
 
 ; HiHi + (A + (B + C))
 define i64 @umulh1_add_carry_to_low_accum_hi(i64 %x, i64 %y) {
-; CHECK-LABEL: define i64 @umulh1_add_carry_to_low_accum_hi(
+; CHECK-LABEL: define range(i64 0, -1) i64 @umulh1_add_carry_to_low_accum_hi(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[X_LO:%.*]] = and i64 [[X]], 4294967295
-; CHECK-NEXT:    [[Y_LO:%.*]] = and i64 [[Y]], 4294967295
-; CHECK-NEXT:    [[X_HI:%.*]] = lshr i64 [[X]], 32
-; CHECK-NEXT:    [[Y_HI:%.*]] = lshr i64 [[Y]], 32
-; CHECK-NEXT:    [[Y_LO_X_HI:%.*]] = mul nuw i64 [[Y_LO]], [[X_HI]]
-; CHECK-NEXT:    [[Y_HI_X_LO:%.*]] = mul nuw i64 [[Y_HI]], [[X_LO]]
-; CHECK-NEXT:    [[Y_LO_X_LO:%.*]] = mul nuw i64 [[Y_LO]], [[X_LO]]
-; CHECK-NEXT:    [[CROSS_SUM:%.*]] = add i64 [[Y_HI_X_LO]], [[Y_LO_X_HI]]
-; CHECK-NEXT:    [[CARRY_OUT:%.*]] = icmp ult i64 [[CROSS_SUM]], [[Y_LO_X_HI]]
-; CHECK-NEXT:    [[Y_LO_X_LO_HI:%.*]] = lshr i64 [[Y_LO_X_LO]], 32
-; CHECK-NEXT:    [[CROSS_SUM_LO:%.*]] = and i64 [[CROSS_SUM]], 4294967295
-; CHECK-NEXT:    [[LOW_ACCUM:%.*]] = add nuw nsw i64 [[CROSS_SUM_LO]], [[Y_LO_X_LO_HI]]
-; CHECK-NEXT:    [[Y_HI_X_HI:%.*]] = mul nuw i64 [[Y_HI]], [[X_HI]]
-; CHECK-NEXT:    [[CARRY:%.*]] = select i1 [[CARRY_OUT]], i64 4294967296, i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> poison, i64 [[CROSS_SUM]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> [[TMP1]], i64 [[LOW_ACCUM]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> [[TMP2]], i64 [[CARRY]], i64 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i64> [[TMP3]], i64 [[Y_HI_X_HI]], i64 3
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr <4 x i64> [[TMP4]], <i64 32, i64 32, i64 0, i64 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP5]])
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[X]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[Y]] to i128
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc nuw i128 [[TMP4]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP6]]
 ;
   ; Extract low and high 32 bits
@@ -66,28 +51,13 @@ define i64 @umulh1_add_carry_to_low_accum_hi(i64 %x, i64 %y) {
 
 ; A + (HiHi + (B + C))
 define i64 @umulh2_add_carry_to_low_accum_hi(i64 %x, i64 %y) {
-; CHECK-LABEL: define i64 @umulh2_add_carry_to_low_accum_hi(
+; CHECK-LABEL: define range(i64 0, -1) i64 @umulh2_add_carry_to_low_accum_hi(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:    [[X_LO:%.*]] = and i64 [[X]], 4294967295
-; CHECK-NEXT:    [[Y_LO:%.*]] = and i64 [[Y]], 4294967295
-; CHECK-NEXT:    [[X_HI:%.*]] = lshr i64 [[X]], 32
-; CHECK-NEXT:    [[Y_HI:%.*]] = lshr i64 [[Y]], 32
-; CHECK-NEXT:    [[Y_LO_X_HI:%.*]] = mul nuw i64 [[Y_LO]], [[X_HI]]
-; CHECK-NEXT:    [[Y_HI_X_LO:%.*]] = mul nuw i64 [[Y_HI]], [[X_LO]]
-; CHECK-NEXT:    [[Y_LO_X_LO:%.*]] = mul nuw i64 [[Y_LO]], [[X_LO]]
-; CHECK-NEXT:    [[CROSS_SUM:%.*]] = add i64 [[Y_HI_X_LO]], [[Y_LO_X_HI]]
-; CHECK-NEXT:    [[CARRY_OUT:%.*]] = icmp ult i64 [[CROSS_SUM]], [[Y_LO_X_HI]]
-; CHECK-NEXT:    [[Y_LO_X_LO_HI:%.*]] = lshr i64 [[Y_LO_X_LO]], 32
-; CHECK-NEXT:    [[CROSS_SUM_LO:%.*]] = and i64 [[CROSS_SUM]], 4294967295
-; CHECK-NEXT:    [[LOW_ACCUM:%.*]] = add nuw nsw i64 [[CROSS_SUM_LO]], [[Y_LO_X_LO_HI]]
-; CHECK-NEXT:    [[Y_HI_X_HI:%.*]] = mul nuw i64 [[Y_HI]], [[X_HI]]
-; CHECK-NEXT:    [[CARRY:%.*]] = select i1 [[CARRY_OUT]], i64 4294967296, i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> poison, i64 [[CROSS_SUM]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> [[TMP1]], i64 [[LOW_ACCUM]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> [[TMP2]], i64 [[CARRY]], i64 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i64> [[TMP3]], i64 [[Y_HI_X_HI]], i64 3
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr <4 x i64> [[TMP4]], <i64 32, i64 32, i64 0, i64 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP5]])
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[X]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[Y]] to i128
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc nuw i128 [[TMP4]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP6]]
 ;
   ; Extract low and high 32 bits
@@ -131,28 +101,13 @@ define i64 @umulh2_add_carry_to_low_accum_hi(i64 %x, i64 %y) {
 
 ; (HiHi + A) + (B + C)
 define i64 @umulh4_add_carry_to_low_accum_hi(i64 %x, i64 %y) {
-; CHECK-LABEL: define i64 @umulh4_add_carry_to_low_accum_hi(
+; CHECK-LABEL: define range(i64 0, -1) i64 @umulh4_add_carry_to_low_accum_hi(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:    [[X_LO:%.*]] = and i64 [[X]], 4294967295
-; CHECK-NEXT:    [[Y_LO:%.*]] = and i64 [[Y]], 4294967295
-; CHECK-NEXT:    [[X_HI:%.*]] = lshr i64 [[X]], 32
-; CHECK-NEXT:    [[Y_HI:%.*]] = lshr i64 [[Y]], 32
-; CHECK-NEXT:    [[Y_LO_X_HI:%.*]] = mul nuw i64 [[Y_LO]], [[X_HI]]
-; CHECK-NEXT:    [[Y_HI_X_LO:%.*]] = mul nuw i64 [[Y_HI]], [[X_LO]]
-; CHECK-NEXT:    [[Y_LO_X_LO:%.*]] = mul nuw i64 [[Y_LO]], [[X_LO]]
-; CHECK-NEXT:    [[CROSS_SUM:%.*]] = add i64 [[Y_HI_X_LO]], [[Y_LO_X_HI]]
-; CHECK-NEXT:    [[CARRY_OUT:%.*]] = icmp ult i64 [[CROSS_SUM]], [[Y_LO_X_HI]]
-; CHECK-NEXT:    [[Y_LO_X_LO_HI:%.*]] = lshr i64 [[Y_LO_X_LO]], 32
-; CHECK-NEXT:    [[CROSS_SUM_LO:%.*]] = and i64 [[CROSS_SUM]], 4294967295
-; CHECK-NEXT:    [[LOW_ACCUM:%.*]] = add nuw nsw i64 [[CROSS_SUM_LO]], [[Y_LO_X_LO_HI]]
-; CHECK-NEXT:    [[Y_HI_X_HI:%.*]] = mul nuw i64 [[Y_HI]], [[X_HI]]
-; CHECK-NEXT:    [[CARRY:%.*]] = select i1 [[CARRY_OUT]], i64 4294967296, i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> poison, i64 [[CROSS_SUM]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> [[TMP1]], i64 [[LOW_ACCUM]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> [[TMP2]], i64 [[CARRY]], i64 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i64> [[TMP3]], i64 [[Y_HI_X_HI]], i64 3
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr <4 x i64> [[TMP4]], <i64 32, i64 32, i64 0, i64 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP5]])
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[X]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[Y]] to i128
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc nuw i128 [[TMP4]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP6]]
 ;
   ; Extract low and high 32 bits
