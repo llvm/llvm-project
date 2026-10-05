@@ -4437,6 +4437,60 @@ func.func @andand3(%a : i32, %b : i32) -> i32 {
 
 // -----
 
+/// or(a, or(a, b)) -> or(a, b)
+
+// CHECK-LABEL: @oror0
+//  CHECK-SAME:   (%[[A:.*]]: i32, %[[B:.*]]: i32)
+//       CHECK:   %[[RES:.*]] = arith.ori %[[A]], %[[B]] : i32
+//       CHECK:   return %[[RES]]
+func.func @oror0(%a : i32, %b : i32) -> i32 {
+  %c = arith.ori %a, %b : i32
+  %res = arith.ori %a, %c : i32
+  return %res : i32
+}
+
+// CHECK-LABEL: @oror1
+//  CHECK-SAME:   (%[[A:.*]]: i32, %[[B:.*]]: i32)
+//       CHECK:   %[[RES:.*]] = arith.ori %[[A]], %[[B]] : i32
+//       CHECK:   return %[[RES]]
+func.func @oror1(%a : i32, %b : i32) -> i32 {
+  %c = arith.ori %a, %b : i32
+  %res = arith.ori %c, %a : i32
+  return %res : i32
+}
+
+// CHECK-LABEL: @oror2
+//  CHECK-SAME:   (%[[A:.*]]: i32, %[[B:.*]]: i32)
+//       CHECK:   %[[RES:.*]] = arith.ori %[[A]], %[[B]] : i32
+//       CHECK:   return %[[RES]]
+func.func @oror2(%a : i32, %b : i32) -> i32 {
+  %c = arith.ori %a, %b : i32
+  %res = arith.ori %b, %c : i32
+  return %res : i32
+}
+
+// CHECK-LABEL: @oror3
+//  CHECK-SAME:   (%[[A:.*]]: i32, %[[B:.*]]: i32)
+//       CHECK:   %[[RES:.*]] = arith.ori %[[A]], %[[B]] : i32
+//       CHECK:   return %[[RES]]
+func.func @oror3(%a : i32, %b : i32) -> i32 {
+  %c = arith.ori %a, %b : i32
+  %res = arith.ori %c, %b : i32
+  return %res : i32
+}
+
+// CHECK-LABEL: @oror_vector
+//  CHECK-SAME:   (%[[A:.*]]: vector<4xi32>, %[[B:.*]]: vector<4xi32>)
+//       CHECK:   %[[RES:.*]] = arith.ori %[[A]], %[[B]] : vector<4xi32>
+//       CHECK:   return %[[RES]]
+func.func @oror_vector(%a : vector<4xi32>, %b : vector<4xi32>) -> vector<4xi32> {
+  %c = arith.ori %a, %b : vector<4xi32>
+  %res = arith.ori %c, %a : vector<4xi32>
+  return %res : vector<4xi32>
+}
+
+// -----
+
 // CHECK-LABEL: @truncIShrSIToTrunciShrUI
 //  CHECK-SAME:   (%[[A:.+]]: i64)
 //  CHECK-NEXT:   %[[C32:.+]] = arith.constant 32 : i64

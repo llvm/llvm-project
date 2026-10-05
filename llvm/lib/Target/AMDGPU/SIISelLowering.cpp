@@ -8680,7 +8680,7 @@ unsigned SITargetLowering::isCFIntrinsic(const SDNode *Intr) const {
 }
 
 bool SITargetLowering::shouldEmitFixup(const GlobalValue *GV) const {
-  const Triple &TT = getTargetMachine().getTargetTriple();
+  const Triple &TT = GV->getParent()->getTargetTriple();
   return (GV->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
           GV->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
          AMDGPU::shouldEmitConstantsToTextSection(TT);
@@ -19376,6 +19376,18 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     SelectionDAG &DAG = DCI.DAG;
     EVT VT = N->getValueType(0);
 
+    // When bf16 inline constants live in the upper half of the expanded fp32
+    // constant, only a splat is encodable as an inline constant. The high lane
+    // is dead here, so splat it.
+    if (VT == MVT::v2bf16 && Subtarget->hasBF16InlineConstFromUpperFP32()) {
+      auto *C = dyn_cast<ConstantFPSDNode>(N->getOperand(0));
+      if (C && AMDGPU::isInlinableLiteralBF16(
+                   C->getValueAPF().bitcastToAPInt().getSExtValue(),
+                   Subtarget->hasInv2PiInlineImm()))
+        return DAG.getBuildVector(VT, SDLoc(N),
+                                  {N->getOperand(0), N->getOperand(0)});
+    }
+
     // v2i16 (scalar_to_vector i16:x) -> v2i16 (bitcast (any_extend i16:x))
     if (VT == MVT::v2i16 || VT == MVT::v2f16 || VT == MVT::v2bf16) {
       SDLoc SL(N);
@@ -20868,7 +20880,7 @@ static bool isAtomicRMWLegalXChgTy(const AtomicRMWInst *RMW) {
     return true;
 
   if (PointerType *PT = dyn_cast<PointerType>(Ty)) {
-    const DataLayout &DL = RMW->getFunction()->getParent()->getDataLayout();
+    const DataLayout &DL = RMW->getFunction()->getDataLayout();
     unsigned BW = DL.getPointerSizeInBits(PT->getAddressSpace());
     return BW == 32 || BW == 64;
   }

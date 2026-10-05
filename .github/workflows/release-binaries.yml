@@ -226,13 +226,14 @@ jobs:
     # get changed unexpectedly.
     - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
       with:
-        python-version: '3.14.6'
+        python-version: '3.14.8'
 
     # For some reason this is needed on Windows or else the build system can't find python3.lib.
     - name: Setup Python library path
       if: runner.os == 'Windows'
       run: |
-        echo "LIB=$env:LIB;C:\hostedtoolcache\windows\Python\3.14.6\$($env:RUNNER_ARCH.ToLower())\libs" >> $env:GITHUB_ENV
+        $python_version = (python -c "import platform; print(platform.python_version())").Trim()
+        echo "LIB=$env:LIB;C:\hostedtoolcache\windows\Python\$python_version\$($env:RUNNER_ARCH.ToLower())\libs" >> $env:GITHUB_ENV
 
     - name: Setup crlf
       if: runner.os == 'Windows'

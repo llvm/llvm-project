@@ -1410,7 +1410,7 @@ def : Pat<(X86tcret GR32:$dst, timm:$off),
 // FIXME: This is disabled for 32-bit PIC mode because the global base
 // register which is part of the address mode may be assigned a
 // callee-saved register.
-def : Pat<(X86tcret_enough_regs (load addr:$dst), timm:$off),
+def : Pat<(X86tcret_enough_regs (i32 (load addr:$dst)), timm:$off),
           (TCRETURNmi addr:$dst, timm:$off)>,
           Requires<[Not64BitMode, IsNotPIC, NotUseIndirectThunkCalls]>;
 
@@ -1436,11 +1436,11 @@ def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
 
 // Don't fold loads into X86tcret requiring too many regs.
 // There wouldn't be enough scratch registers for base+index.
-def : Pat<(X86tcret_enough_regs (load addr:$dst), timm:$off),
+def : Pat<(X86tcret_enough_regs (i64 (load addr:$dst)), timm:$off),
           (TCRETURNmi64 addr:$dst, timm:$off)>,
           Requires<[In64BitMode, IsNotWin64CCFunc, NotUseIndirectThunkCalls]>;
 
-def : Pat<(X86tcret_enough_regs (load addr:$dst), timm:$off),
+def : Pat<(X86tcret_enough_regs (i64 (load addr:$dst)), timm:$off),
           (TCRETURN_WINmi64 addr:$dst, timm:$off)>,
           Requires<[IsWin64CCFunc, NotUseIndirectThunkCalls]>;
 

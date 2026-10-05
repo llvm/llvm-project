@@ -65,24 +65,24 @@ public:
   /// Returns the value for the specified dimension.
   /// Results in undefined behavior if dimension is not in the range [0,
   /// Dimensions).
-  /// \param Dimension the dimension to return the value for.
+  /// \param dimension the dimension to return the value for.
   /// \return the value matching the requested dimension.
-  std::size_t get(int Dimension) const noexcept { return MArray[Dimension]; }
+  std::size_t get(int dimension) const noexcept { return MArray[dimension]; }
 
   /// Returns the value for the specified dimension.
   /// Results in undefined behavior if dimension is not in the range [0,
   /// Dimensions).
-  /// \param Dimension the dimension to return the value for.
+  /// \param dimension the dimension to return the value for.
   /// \return the value matching the requested dimension.
-  std::size_t &operator[](int Dimension) noexcept { return MArray[Dimension]; }
+  std::size_t &operator[](int dimension) noexcept { return MArray[dimension]; }
 
   /// Returns the value for the specified dimension.
   /// Results in undefined behavior if dimension is not in the range [0,
   /// Dimensions).
-  /// \param Dimension the dimension to return the value for.
+  /// \param dimension the dimension to return the value for.
   /// \return the value matching the requested dimension.
-  std::size_t operator[](int Dimension) const noexcept {
-    return MArray[Dimension];
+  std::size_t operator[](int dimension) const noexcept {
+    return MArray[dimension];
   }
 
   IndexSpaceBase(const IndexSpaceBase<Derived, Dimensions> &rhs) = default;
@@ -95,11 +95,9 @@ public:
 
   friend bool operator==(const IndexSpaceBase<Derived, Dimensions> &lhs,
                          const IndexSpaceBase<Derived, Dimensions> &rhs) {
-    for (int i = 0; i < Dimensions; ++i) {
-      if (lhs.MArray[i] != rhs.MArray[i]) {
+    for (int I = 0; I < Dimensions; ++I)
+      if (lhs.MArray[I] != rhs.MArray[I])
         return false;
-      }
-    }
     return true;
   }
 
@@ -111,31 +109,28 @@ public:
 #define _LIBSYCL_GEN_OPT(op)                                                   \
   friend Derived operator op(const Derived &lhs,                               \
                              const Derived &rhs) noexcept {                    \
-    Derived result;                                                            \
-    for (int i = 0; i < Dimensions; ++i) {                                     \
-      result.MArray[i] = lhs.MArray[i] op rhs.MArray[i];                       \
-    }                                                                          \
-    return result;                                                             \
+    Derived Result;                                                            \
+    for (int I = 0; I < Dimensions; ++I)                                       \
+      Result.MArray[I] = lhs.MArray[I] op rhs.MArray[I];                       \
+    return Result;                                                             \
   }                                                                            \
                                                                                \
   template <typename T>                                                        \
   friend IntegralType<T, Derived> operator op(const Derived &lhs,              \
                                               const T &rhs) noexcept {         \
-    Derived result;                                                            \
-    for (int i = 0; i < Dimensions; ++i) {                                     \
-      result.MArray[i] = lhs.MArray[i] op rhs;                                 \
-    }                                                                          \
-    return result;                                                             \
+    Derived Result;                                                            \
+    for (int I = 0; I < Dimensions; ++I)                                       \
+      Result.MArray[I] = lhs.MArray[I] op rhs;                                 \
+    return Result;                                                             \
   }                                                                            \
                                                                                \
   template <typename T>                                                        \
   friend IntegralType<T, Derived> operator op(const T &lhs,                    \
                                               const Derived &rhs) noexcept {   \
-    Derived result;                                                            \
-    for (int i = 0; i < Dimensions; ++i) {                                     \
-      result.MArray[i] = lhs op rhs.MArray[i];                                 \
-    }                                                                          \
-    return result;                                                             \
+    Derived Result;                                                            \
+    for (int I = 0; I < Dimensions; ++I)                                       \
+      Result.MArray[I] = lhs op rhs.MArray[I];                                 \
+    return Result;                                                             \
   }
 
   _LIBSYCL_GEN_OPT(+)
@@ -159,17 +154,15 @@ public:
 
 #define _LIBSYCL_GEN_OPT(op)                                                   \
   friend Derived &operator op(Derived &lhs, const Derived &rhs) noexcept {     \
-    for (int i = 0; i < Dimensions; ++i) {                                     \
-      lhs.MArray[i] op rhs[i];                                                 \
-    }                                                                          \
+    for (int I = 0; I < Dimensions; ++I)                                       \
+      lhs.MArray[I] op rhs[I];                                                 \
     return lhs;                                                                \
   }                                                                            \
   template <typename T>                                                        \
   friend IntegralType<T, Derived> &operator op(Derived &lhs,                   \
                                                const T &rhs) noexcept {        \
-    for (int i = 0; i < Dimensions; ++i) {                                     \
-      lhs.MArray[i] op rhs;                                                    \
-    }                                                                          \
+    for (int I = 0; I < Dimensions; ++I)                                       \
+      lhs.MArray[I] op rhs;                                                    \
     return lhs;                                                                \
   }
 
@@ -188,11 +181,10 @@ public:
 
 #define _LIBSYCL_GEN_OPT(op)                                                   \
   friend Derived operator op(const Derived &rhs) noexcept {                    \
-    Derived result;                                                            \
-    for (int i = 0; i < Dimensions; ++i) {                                     \
-      result.MArray[i] = (op rhs.MArray[i]);                                   \
-    }                                                                          \
-    return result;                                                             \
+    Derived Result;                                                            \
+    for (int I = 0; I < Dimensions; ++I)                                       \
+      Result.MArray[I] = (op rhs.MArray[I]);                                   \
+    return Result;                                                             \
   }
 
   _LIBSYCL_GEN_OPT(+)
@@ -202,17 +194,15 @@ public:
 
 #define _LIBSYCL_GEN_OPT(op)                                                   \
   friend Derived &operator op(Derived &rhs) noexcept {                         \
-    for (int i = 0; i < Dimensions; ++i) {                                     \
-      op rhs.MArray[i];                                                        \
-    }                                                                          \
+    for (int I = 0; I < Dimensions; ++I)                                       \
+      op rhs.MArray[I];                                                        \
     return rhs;                                                                \
   }                                                                            \
   friend Derived operator op(Derived &lhs, int) noexcept {                     \
-    Derived oldLhs(lhs);                                                       \
-    for (int i = 0; i < Dimensions; ++i) {                                     \
-      op lhs.MArray[i];                                                        \
-    }                                                                          \
-    return oldLhs;                                                             \
+    Derived OldLhs(lhs);                                                       \
+    for (int I = 0; I < Dimensions; ++I)                                       \
+      op lhs.MArray[I];                                                        \
+    return OldLhs;                                                             \
   }
 
   _LIBSYCL_GEN_OPT(++)
@@ -267,13 +257,12 @@ public:
       std::size_t operator[](int dimension) const noexcept;
   */
 
-  /// \return the size of the range computed as dimension0*…​*dimensionN.
+  /// \return the size of the range computed as dimension0*...*dimensionN.
   std::size_t size() const noexcept {
-    std::size_t size = 1;
-    for (int i = 0; i < Dimensions; ++i) {
-      size *= Base::MArray[i];
-    }
-    return size;
+    std::size_t Size = 1;
+    for (int I = 0; I < Dimensions; ++I)
+      Size *= Base::MArray[I];
+    return Size;
   }
 };
 
@@ -457,7 +446,7 @@ public:
     return !(lhs == rhs);
   }
 
-  /// \return the constituent id representing the work-item’s position in the
+  /// \return the constituent id representing the work-item's position in the
   /// iteration space.
   id<Dimensions> get_id() const noexcept { return MId; }
 
@@ -489,6 +478,7 @@ public:
   /// work-item, if this item represents a global range.
   template <bool HasOffset = WithOffset,
             std::enable_if_t<HasOffset == true, bool> = true>
+  __SYCL2020_DEPRECATED("offsets are deprecated in SYCL2020")
   id<Dimensions> get_offset() const noexcept {
     return MOffset;
   }
@@ -514,36 +504,34 @@ public:
   /// \return Return the id as a linear index value.
   std::size_t get_linear_id() const noexcept {
     if constexpr (WithOffset) {
-      if constexpr (1 == Dimensions) {
+      if constexpr (1 == Dimensions)
         return MId[0] - MOffset[0];
-      }
-      if constexpr (2 == Dimensions) {
+      else if constexpr (2 == Dimensions)
         return (MId[0] - MOffset[0]) * MRange[1] + MId[1] - MOffset[1];
-      }
-      return (MId[0] - MOffset[0]) * MRange[1] * MRange[2] +
-             (MId[1] - MOffset[1]) * MRange[2] + MId[2] - MOffset[2];
+      else
+        return (MId[0] - MOffset[0]) * MRange[1] * MRange[2] +
+               (MId[1] - MOffset[1]) * MRange[2] + MId[2] - MOffset[2];
     } else {
-      if constexpr (1 == Dimensions) {
+      if constexpr (1 == Dimensions)
         return MId[0];
-      }
-      if constexpr (2 == Dimensions) {
+      else if constexpr (2 == Dimensions)
         return MId[0] * MRange[1] + MId[1];
-      }
-      return MId[0] * MRange[1] * MRange[2] + MId[1] * MRange[2] + MId[2];
+      else
+        return MId[0] * MRange[1] * MRange[2] + MId[1] * MRange[2] + MId[2];
     }
   }
 
 protected:
   template <bool HasOffset = WithOffset,
             std::enable_if_t<HasOffset == true, bool> = true>
-  item(const sycl::range<Dimensions> &range, const sycl::id<Dimensions> &id,
-       const sycl::id<Dimensions> &offset)
-      : MRange(range), MId(id), MOffset(offset) {}
+  item(const sycl::range<Dimensions> &Range, const sycl::id<Dimensions> &Id,
+       const sycl::id<Dimensions> &Offset)
+      : MRange(Range), MId(Id), MOffset(Offset) {}
 
   template <bool HasOffset = WithOffset,
             std::enable_if_t<HasOffset == false, bool> = true>
-  item(const range<Dimensions> &range, const id<Dimensions> &id)
-      : MRange(range), MId(id), MOffset() {}
+  item(const range<Dimensions> &Range, const id<Dimensions> &Id)
+      : MRange(Range), MId(Id), MOffset() {}
 
 private:
   range<Dimensions> MRange;
