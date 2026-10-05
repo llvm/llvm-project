@@ -80,3 +80,5 @@ define i32 @1() {
 ; CHECK: define weak_odr void @WeakOdr() comdat {
 ; CHECK: define weak void @WeakComdat() comdat {
 ; CHECK: define void @NoIPA() #{{[0-9]+}} comdat {
+; CHECK: define private i32 @0() {
+; CHECK: define i32 @1() {
