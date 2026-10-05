@@ -980,8 +980,7 @@ static bool buildBarrierInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
     SPIRV::CLMemoryScope CLScope =
         static_cast<SPIRV::CLMemoryScope>(getIConstVal(ScopeArg, MRI));
     MemScope = getSPIRVScope(CLScope);
-    if (!(MemFlags & SPIRV::CLK_LOCAL_MEM_FENCE) ||
-        (Opcode == SPIRV::OpMemoryBarrier))
+    if (Opcode == SPIRV::OpMemoryBarrier)
       Scope = MemScope;
     if (CLScope == static_cast<unsigned>(Scope))
       ScopeReg = Call->Arguments[1];
