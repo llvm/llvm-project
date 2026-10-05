@@ -109,6 +109,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/IntelGPUTargetParser.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include <cstdlib> // ::getenv
 #include <map>
@@ -1023,7 +1024,15 @@ static TripleSet inferOffloadToolchains(Compilation &C,
           << Arch;
       return {};
     }
-    if (ID.isUnknown() || ID.isUnused()) {
+    // An Intel name or "generic" takes no target features.
+    if (Kind == Action::OFK_SYCL && (ID.isIntel() || ID.isGeneric()) &&
+        Arch.contains(':'))
+      ID = OffloadArch::getUnknown();
+    // The offload-arch utility prints a numeric name for an Intel GPU absent
+    // from the list, so SYCL accepts one; such a GPU is compiled at run time.
+    bool IsUnlistedIntelGPU = Kind == Action::OFK_SYCL && !ID.isIntelGPU() &&
+                              llvm::IntelGPU::isNumericArchName(Arch);
+    if ((ID.isUnknown() || ID.isUnused()) && !IsUnlistedIntelGPU) {
       C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
           << "offload" << Arch;
       return {};
@@ -1033,7 +1042,8 @@ static TripleSet inferOffloadToolchains(Compilation &C,
         OffloadArchToTriple(C.getDefaultToolChain().getTriple(), ID);
     // A SYCL Intel device, or a generic one, is SPIR-V of the host's width, the
     // same target SYCL picks when no architecture is given.
-    if (Kind == Action::OFK_SYCL && (ID.isIntel() || ID.isGeneric()))
+    if (Kind == Action::OFK_SYCL &&
+        (ID.isIntel() || ID.isGeneric() || IsUnlistedIntelGPU))
       Triple = llvm::Triple(C.getDefaultToolChain().getTriple().isArch64Bit()
                                 ? llvm::Triple::spirv64
                                 : llvm::Triple::spirv32);
@@ -3923,9 +3933,9 @@ static StringRef getCanonicalArchString(Compilation &C,
   // expecting the triple to be only NVPTX / AMDGPU.
   OffloadArch Arch =
       StringToOffloadArch(getProcessorFromTargetID(Triple, ArchStr));
-  // An Intel name takes no target features, so it must parse in full; otherwise
-  // "xe-pvc:garbage" would silently become "xe-pvc".
-  if (Arch.isIntel() && ArchStr.contains(':'))
+  // An Intel name or "generic" takes no target features, so it must parse in
+  // full; otherwise "xe-pvc:garbage" would silently become "xe-pvc".
+  if ((Arch.isIntel() || Arch.isGeneric()) && ArchStr.contains(':'))
     Arch = OffloadArch::getUnknown();
   if (Triple.isNVPTX() && (Arch.isUnknown() || !Arch.isNVPTX())) {
     C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
@@ -3947,6 +3957,17 @@ static StringRef getCanonicalArchString(Compilation &C,
         return StringRef();
       }
     }
+  } else if (Kind == Action::OFK_SYCL && Triple.isSPIRV() &&
+             Triple.getVendor() == llvm::Triple::UnknownVendor &&
+             !ArchStr.empty() && !Arch.isIntel() && !Arch.isGeneric() &&
+             !llvm::IntelGPU::isNumericArchName(ArchStr)) {
+    // A SYCL device on a plain SPIR-V target is an Intel GPU or CPU, "generic"
+    // for none in particular, or a numeric name for a GPU the list does not
+    // know yet; reject anything else, as for CUDA and HIP, rather than build
+    // for a device that does not exist.
+    C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
+        << "SYCL" << ArchStr;
+    return StringRef();
   }
 
   // A SYCL Intel GPU has several accepted spellings, e.g. an alias or a numeric

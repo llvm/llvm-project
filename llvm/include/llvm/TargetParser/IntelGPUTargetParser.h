@@ -64,6 +64,14 @@ LLVM_ABI StringRef getArchName(GPUKind Kind);
 /// device that is not in the table yields GK_NONE like any other unknown name.
 LLVM_ABI GPUKind parseArch(StringRef Name);
 
+/// \return true if \p Name is a well-formed numeric name, "xe_" followed by a
+/// major, a minor and an optional revision version separated by ".", each
+/// fitting its GPU IP version field, e.g. "xe_40.11.0", whether or not the
+/// table knows the device. The offload-arch utility prints
+/// one for a device that has no row yet, so that a newer device is usable with
+/// a compiler that predates it.
+LLVM_ABI bool isNumericArchName(StringRef Name);
+
 /// \return the IGCA target name to compile \p Kind for, e.g. "xe-pvc" ->
 /// "igca_20ca", or an empty string for GK_NONE. This is the spelling
 /// -target-cpu is invoked with.

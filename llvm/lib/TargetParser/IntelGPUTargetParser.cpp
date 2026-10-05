@@ -148,6 +148,11 @@ GPUKind llvm::IntelGPU::parseArch(StringRef Name) {
 #define IGCA_FEATURE_SETS_ComputeExact "ca"
 #define IGCA_FEATURE_SETS_RenderExact "ra"
 
+bool llvm::IntelGPU::isNumericArchName(StringRef Name) {
+  uint32_t GPUIPVersion;
+  return parseNumericArchName(Name, GPUIPVersion);
+}
+
 StringRef llvm::IntelGPU::getIGCAName(GPUKind Kind) {
   // Unlike the NVPTX virtual architecture name, this is not a column of its
   // own: the target and the feature sets already spell it, and a column would
