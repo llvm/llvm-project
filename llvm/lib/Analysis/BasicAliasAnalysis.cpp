@@ -442,9 +442,11 @@ struct LinearExpression {
 
 /// Analyzes the specified value as a linear expression: "A*V + B", where A and
 /// B are constant integers.
-static LinearExpression GetLinearExpression(
-    const CastedValue &Val,  const DataLayout &DL, unsigned Depth,
-    AssumptionCache *AC, DominatorTree *DT) {
+static LinearExpression GetLinearExpression(const CastedValue &Val,
+                                            const DataLayout &DL,
+                                            unsigned Depth, AssumptionCache *AC,
+                                            DominatorTree *DT,
+                                            bool LookThroughTrunc = false) {
   // Limit our recursion depth.
   if (Depth == 6)
     return Val;
@@ -485,7 +487,7 @@ static LinearExpression GetLinearExpression(
         [[fallthrough]];
       case Instruction::Add: {
         E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
-                                Depth + 1, AC, DT);
+                                Depth + 1, AC, DT, LookThroughTrunc);
         E.Offset += RHS;
         E.IsNUW &= NUW;
         E.IsNSW &= NSW;
@@ -493,7 +495,7 @@ static LinearExpression GetLinearExpression(
       }
       case Instruction::Sub: {
         E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
-                                Depth + 1, AC, DT);
+                                Depth + 1, AC, DT, LookThroughTrunc);
         E.Offset -= RHS;
         E.IsNUW = false; // sub nuw x, y is not add nuw x, -y.
         E.IsNSW &= NSW;
@@ -501,7 +503,7 @@ static LinearExpression GetLinearExpression(
       }
       case Instruction::Mul:
         E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
-                                Depth + 1, AC, DT)
+                                Depth + 1, AC, DT, LookThroughTrunc)
                 .mul(RHS, NUW, NSW);
         break;
       case Instruction::Shl:
@@ -514,7 +516,7 @@ static LinearExpression GetLinearExpression(
           return Val;
 
         E = GetLinearExpression(Val.withValue(BOp->getOperand(0), NSW), DL,
-                                Depth + 1, AC, DT);
+                                Depth + 1, AC, DT, LookThroughTrunc);
         E.Offset <<= RHS.getLimitedValue();
         E.Scale <<= RHS.getLimitedValue();
         E.IsNUW &= NUW;
@@ -525,19 +527,26 @@ static LinearExpression GetLinearExpression(
     }
   }
 
-  if (const auto *Trunc = dyn_cast<TruncInst>(Val.V))
-    return GetLinearExpression(Val.withTruncOfValue(Trunc->getOperand(0)), DL,
-                               Depth + 1, AC, DT);
+  if (const auto *Trunc = dyn_cast<TruncInst>(Val.V)) {
+    LinearExpression E =
+        GetLinearExpression(Val.withTruncOfValue(Trunc->getOperand(0)), DL,
+                            Depth + 1, AC, DT, LookThroughTrunc);
+    // Preserve the truncation boundary unless it cancels an extension, so
+    // inequality proofs can still compare the truncated values.
+    if (LookThroughTrunc || E.Val.TruncBits == 0)
+      return E;
+    return Val;
+  }
 
   if (const auto *ZExt = dyn_cast<ZExtInst>(Val.V))
     return GetLinearExpression(
         Val.withZExtOfValue(ZExt->getOperand(0), ZExt->hasNonNeg()), DL,
-        Depth + 1, AC, DT);
+        Depth + 1, AC, DT, LookThroughTrunc);
 
   if (isa<SExtInst>(Val.V))
     return GetLinearExpression(
-        Val.withSExtOfValue(cast<CastInst>(Val.V)->getOperand(0)),
-        DL, Depth + 1, AC, DT);
+        Val.withSExtOfValue(cast<CastInst>(Val.V)->getOperand(0)), DL,
+        Depth + 1, AC, DT, LookThroughTrunc);
 
   return Val;
 }
@@ -2121,11 +2130,15 @@ bool BasicAAResult::computeConstantOffsetHeuristic(const DecomposedGEP &GEP,
   // We'll strip off the Extensions of Var0 and Var1 and do another round
   // of GetLinearExpression decomposition. In the example above, if Var0
   // is zext(%x + 1) we should get V1 == %x and V1Offset == 1.
+  // Allow residual truncations here. The initial GEP decomposition preserves
+  // them so inequality proofs can still compare the truncated values.
 
   LinearExpression E0 =
-      GetLinearExpression(CastedValue(Var0.Val.V), DL, 0, AC, DT);
+      GetLinearExpression(CastedValue(Var0.Val.V), DL, 0, AC, DT,
+                          /*LookThroughTrunc=*/true);
   LinearExpression E1 =
-      GetLinearExpression(CastedValue(Var1.Val.V), DL, 0, AC, DT);
+      GetLinearExpression(CastedValue(Var1.Val.V), DL, 0, AC, DT,
+                          /*LookThroughTrunc=*/true);
   if (E0.Scale != E1.Scale || !E0.Val.hasSameCastsAs(E1.Val) ||
       !isValueEqualInPotentialCycles(E0.Val.V, E1.Val.V, AAQI))
     return false;
