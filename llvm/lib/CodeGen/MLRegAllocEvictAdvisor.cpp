@@ -38,7 +38,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 
-#include <array>
 #include <bitset>
 #include <memory>
 
@@ -776,8 +775,12 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
   // features at - in AllocationOrder order.
   size_t Pos = 0;
   SmallVector<LRStartEndInfo, MaxColumnsCapacityHint> LRPosInfo;
-  for (auto I = Order.begin(), E = Order.getOrderLimitEnd(OrderLimit);
-       I != E && Pos < CandidateVirtRegPos; ++I, ++Pos) {
+  for (auto I = Order.begin(), E = Order.getOrderLimitEnd(OrderLimit); I != E;
+       ++I, ++Pos) {
+    if (Pos == CandidateVirtRegPos)
+      reportFatalUsageError("Regalloc: the allocation order is longer than "
+                            "-mlregalloc-num-allocatable-regs=" +
+                            Twine(NumAllocatableRegs));
     MCRegister PhysReg = *I;
     assert(!Regs[Pos].second);
     assert(PhysReg);
@@ -1019,7 +1022,7 @@ int64_t DevelopmentModeEvictAdvisor::tryFindEvictionCandidatePosition(
       Ret = CandidateVirtRegPos;
     else
       for (auto I = Order.begin(), E = Order.getOrderLimitEnd(OrderLimit);
-           I != E && static_cast<size_t>(Ret) < CandidateVirtRegPos; ++I, ++Ret)
+           I != E; ++I, ++Ret)
         if (*I == PhysReg)
           break;
   }
