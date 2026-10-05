@@ -1358,6 +1358,22 @@ public:
             }
           });
     }
+    case Intrinsic::smulh:
+    case Intrinsic::umulh:
+      return visitIntBinOpWithResult(
+          RetTy, Args[0], Args[1],
+          [IID](const APInt &LHS, const APInt &RHS) -> AnyValue {
+            return IID == Intrinsic::smulh ? APIntOps::mulhs(LHS, RHS)
+                                           : APIntOps::mulhu(LHS, RHS);
+          });
+    case Intrinsic::pdep:
+    case Intrinsic::pext:
+      return visitIntBinOpWithResult(
+          RetTy, Args[0], Args[1],
+          [IID](const APInt &Val, const APInt &Mask) -> AnyValue {
+            return IID == Intrinsic::pdep ? APIntOps::pdep(Val, Mask)
+                                          : APIntOps::pext(Val, Mask);
+          });
     case Intrinsic::vector_reduce_add:
     case Intrinsic::vector_reduce_mul:
     case Intrinsic::vector_reduce_and:
