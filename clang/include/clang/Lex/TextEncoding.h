@@ -20,7 +20,7 @@ class TextEncodingConverter;
 namespace clang {
 enum ConversionAction {
   CA_NoConversion,
-  CA_ToSystemEncoding,
+  CA_ToLiteralEncodingForAsm, // IBM-1047 on z/OS, UTF-8 on other platforms
   CA_ToLiteralEncoding
 };
 

@@ -17,7 +17,7 @@ TextEncoding::getConverter(ConversionAction Action) const {
   switch (Action) {
   case CA_ToLiteralEncoding:
     return ToLiteralEncodingConverter.get();
-  case CA_ToSystemEncoding:
+  case CA_ToLiteralEncodingForAsm:
     // return null for non-z/OS targets
     return ToIBM1047Converter.get();
   default:
