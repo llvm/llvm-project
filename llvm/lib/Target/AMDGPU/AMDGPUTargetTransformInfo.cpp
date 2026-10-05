@@ -107,7 +107,7 @@ static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
 
 AMDGPUTTIImpl::AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
     : BaseT(TM, F.getDataLayout()),
-      TargetTriple(TM->getTargetTriple()),
+      TargetTriple(F.getParent()->getTargetTriple()),
       ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()) {}
 
@@ -1020,6 +1020,19 @@ InstructionCost GCNTTIImpl::getCFInstrCost(unsigned Opcode,
     return SCost ? 1 : 10;
   }
   return BaseT::getCFInstrCost(Opcode, CostKind, I);
+}
+
+InstructionCost GCNTTIImpl::getCmpSelInstrCost(
+    unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+    TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
+    TTI::OperandValueInfo Op2Info, const Instruction *I) const {
+  // For size and latency cost kinds, return a low cost independent of vector
+  // width to enable SimplifyCFG's speculativelyExecuteBB optimization.
+  if (CostKind == TTI::TCK_SizeAndLatency)
+    return 1;
+
+  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                   Op1Info, Op2Info, I);
 }
 
 // Measured packing cost of i1 for gfx9-12 is 4.0 to 4.8, up to 5.4 with
