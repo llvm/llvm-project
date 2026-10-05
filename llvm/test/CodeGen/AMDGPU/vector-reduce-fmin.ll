@@ -255,9 +255,7 @@ define half @test_vector_reduce_fmin_v3half(<3 x half> %v) {
 ; GFX9-SDAG-NEXT:    s_movk_i32 s0, 0x7e00
 ; GFX9-SDAG-NEXT:    v_pack_b32_f16 v1, v1, s0
 ; GFX9-SDAG-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX9-SDAG-NEXT:    s_nop 0
 ; GFX9-SDAG-NEXT:    v_pk_min_f16 v0, v0, v1
-; GFX9-SDAG-NEXT:    s_nop 0
 ; GFX9-SDAG-NEXT:    v_min_f16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -507,9 +505,7 @@ define half @test_vector_reduce_fmin_v4half(<4 x half> %v) {
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX9-SDAG-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX9-SDAG-NEXT:    s_nop 0
 ; GFX9-SDAG-NEXT:    v_pk_min_f16 v0, v0, v1
-; GFX9-SDAG-NEXT:    s_nop 0
 ; GFX9-SDAG-NEXT:    v_min_f16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -825,9 +821,7 @@ define half @test_vector_reduce_fmin_v8half(<8 x half> %v) {
 ; GFX9-SDAG-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX9-SDAG-NEXT:    v_pk_min_f16 v1, v1, v3
 ; GFX9-SDAG-NEXT:    v_pk_min_f16 v0, v0, v2
-; GFX9-SDAG-NEXT:    s_nop 0
 ; GFX9-SDAG-NEXT:    v_pk_min_f16 v0, v0, v1
-; GFX9-SDAG-NEXT:    s_nop 0
 ; GFX9-SDAG-NEXT:    v_min_f16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;

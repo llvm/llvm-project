@@ -350,7 +350,7 @@ static void processConstantStringArg(StringData *SD, IRBuilder<> &Builder,
 }
 
 static Value *processNonStringArg(Value *Arg, IRBuilder<> &Builder) {
-  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
+  const DataLayout &DL = Builder.getDataLayout();
   auto Ty = Arg->getType();
 
   if (auto IntTy = dyn_cast<IntegerType>(Ty)) {
