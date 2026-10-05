@@ -453,20 +453,19 @@ optMain(int argc, char **argv,
   initializeReplaceWithVeclibLegacyPass(Registry);
   initializeJMCInstrumenterPass(Registry);
 
-  SmallVector<PassPluginLibraryInfo, 0> Extensions;
-  PassPlugins.setCallback([&](const std::string &PluginPath) {
-    auto Plugin = PassPlugin::load(PluginPath);
-    if (!Plugin)
-      reportFatalUsageError(Plugin.takeError());
-    Extensions.push_back(Plugin->getInfo());
-  });
-
   // Register the Target and CPU printer for --version.
   cl::AddExtraVersionPrinter(sys::printDefaultTargetAndDetectedCPU);
 
   cl::ParseCommandLineOptions(
       argc, argv, "llvm .bc -> .bc modular optimizer and analysis printer\n");
 
+  SmallVector<PassPluginLibraryInfo, 0> Extensions;
+  for (const std::string &Path : PassPlugins) {
+    auto Plugin = PassPlugin::load(Path);
+    if (!Plugin)
+      reportFatalUsageError(Plugin.takeError());
+    Extensions.push_back(Plugin->getInfo());
+  }
 #define HANDLE_EXTENSION(Ext) Extensions.push_back(get##Ext##PluginInfo());
 #include "llvm/Support/Extension.def"
   if (Error E = passPluginArguments(Extensions, PluginArgs))

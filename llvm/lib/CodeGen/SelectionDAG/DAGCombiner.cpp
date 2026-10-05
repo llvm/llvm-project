@@ -3329,7 +3329,7 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
   // fold a+vscale(c1)+vscale(c2) -> a+vscale(c1+c2)
   if (N0.getOpcode() == ISD::ADD &&
       N0.getOperand(1).getOpcode() == ISD::VSCALE &&
-      N1.getOpcode() == ISD::VSCALE) {
+      N1.getOpcode() == ISD::VSCALE && TLI.isProfitableToFoldVScaleAdd(N0)) {
     const APInt &VS0 = N0.getOperand(1)->getConstantOperandAPInt(0);
     const APInt &VS1 = N1->getConstantOperandAPInt(0);
     SDValue VS = DAG.getVScale(DL, VT, VS0 + VS1);
@@ -18557,7 +18557,8 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
 
   // int_vt (bitcast (vec_vt (scalar_to_vector elt_vt:x)))
   //   => int_vt (any_extend elt_vt:x)
-  if (N0.getOpcode() == ISD::SCALAR_TO_VECTOR && VT.isScalarInteger()) {
+  if (DAG.getDataLayout().isLittleEndian() &&
+      N0.getOpcode() == ISD::SCALAR_TO_VECTOR && VT.isScalarInteger()) {
     SDValue SrcScalar = N0.getOperand(0);
     EVT SrcVT = SrcScalar.getValueType();
     if (SrcVT.isScalarInteger() && VT.bitsGT(SrcVT))

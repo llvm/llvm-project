@@ -685,6 +685,7 @@ def WasmSSA_ReturnOp : WasmSSA_Op<"return", [Terminator]> {
   let builders = [
     OpBuilder<(ins)>
   ];
+  let hasVerifier = 1;
 }
 
 def WasmSSA_SelectOp : WasmSSA_Op<"select", [
