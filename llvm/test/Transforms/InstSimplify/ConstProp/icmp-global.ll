@@ -69,6 +69,8 @@ define i1 @ult_constexpr_constexpr_one(ptr %x) {
 @g2 = global i32 0
 @g2_weak = extern_weak global i32
 @g3 = global i8 0
+@g4 = external global i32
+@g5 = external global i32
 
 define i1 @global_ne_null() {
 ; CHECK-LABEL: @global_ne_null(
@@ -323,5 +325,22 @@ define i1 @global_no_cfi_dso_local_equivalent() {
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = icmp eq ptr dso_local_equivalent @func, no_cfi @func
+  ret i1 %cmp
+}
+
+define i1 @different_global_decls() {
+; CHECK-LABEL: @different_global_decls(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr @g4, @g5
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp eq ptr @g4, @g5
+  ret i1 %cmp
+}
+
+define i1 @different_global_defs() {
+; CHECK-LABEL: @different_global_defs(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = icmp eq ptr @g, @g2
   ret i1 %cmp
 }
