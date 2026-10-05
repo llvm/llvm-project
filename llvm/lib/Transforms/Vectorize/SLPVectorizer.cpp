@@ -32431,9 +32431,8 @@ public:
       return nullptr;
     }
 
-    IRBuilder<TargetFolder> Builder(ReductionRoot->getContext(),
-                                    TargetFolder(DL));
-    Builder.SetInsertPoint(cast<Instruction>(ReductionRoot));
+    IRBuilder<TargetFolder> Builder(
+        cast<Instruction>(ReductionRoot)->getIterator(), TargetFolder(DL));
     // The scalar parts (scaled reused values, their combines) are emitted right
     // before the root; the instruction preceding them is remembered to drop
     // them, if the sign-aware reduction is abandoned.
@@ -33576,10 +33575,9 @@ public:
     assert(NegatedReducedVals.empty() &&
            "Unexpected negated reduced values in the ordered reduction");
 
-    IRBuilder<TargetFolder> Builder(ReductionRoot->getContext(),
-                                    TargetFolder(DL));
     Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
-    Builder.SetInsertPoint(RdxRootInst);
+    IRBuilder<TargetFolder> Builder(RdxRootInst->getIterator(),
+                                    TargetFolder(DL));
 
     // Track the reduced values in case if they are replaced by extractelement
     // because of the vectorization.

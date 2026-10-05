@@ -32919,10 +32919,10 @@ X86TargetLowering::shouldExpandLogicAtomicRMWInIR(
 void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
   LLVMContext &Ctx = AI->getContext();
   IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
-      Ctx, ConstantFolder{}, IRBuilderCallbackInserter([&AI](Instruction *I) {
+      AI->getIterator(), ConstantFolder{},
+      IRBuilderCallbackInserter([&AI](Instruction *I) {
         I->copyMetadata(*AI, LLVMContext::MD_pcsections);
       }));
-  Builder.SetInsertPoint(AI);
   Intrinsic::ID IID_C = Intrinsic::not_intrinsic;
   Intrinsic::ID IID_I = Intrinsic::not_intrinsic;
   switch (AI->getOperation()) {
@@ -33166,10 +33166,10 @@ void X86TargetLowering::emitCmpArithAtomicRMWIntrinsic(
     AtomicRMWInst *AI) const {
   LLVMContext &Ctx = AI->getContext();
   IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
-      Ctx, ConstantFolder{}, IRBuilderCallbackInserter([&AI](Instruction *I) {
+      AI->getIterator(), ConstantFolder{},
+      IRBuilderCallbackInserter([&AI](Instruction *I) {
         I->copyMetadata(*AI, LLVMContext::MD_pcsections);
       }));
-  Builder.SetInsertPoint(AI);
   Instruction *TempI = nullptr;
   ICmpInst *ICI = dyn_cast<ICmpInst>(AI->user_back());
   if (!ICI) {
@@ -33280,11 +33280,10 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
       return nullptr;
 
   IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
-      AI->getContext(), ConstantFolder{},
+      AI->getIterator(), ConstantFolder{},
       IRBuilderCallbackInserter([&AI](Instruction *I) {
         I->copyMetadata(*AI, LLVMContext::MD_pcsections);
       }));
-  Builder.SetInsertPoint(AI);
   auto SSID = AI->getSyncScopeID();
   // We must restrict the ordering to avoid generating loads with Release or
   // ReleaseAcquire orderings.
@@ -53947,17 +53946,18 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
     // Do not flip "e > c", where "c" is a constant, because Cmp instruction
     // cannot take an immediate as its first operand.
     //
-    if (EFLAGS.getOpcode() == X86ISD::SUB &&
+    if ((EFLAGS.getOpcode() == X86ISD::SUB ||
+         EFLAGS.getOpcode() == X86ISD::CMP) &&
         EFLAGS.getValueType().isInteger() &&
         !isa<ConstantSDNode>(EFLAGS.getOperand(1))) {
-      // Only create NewSub if we know one of the folds will succeed to avoid
-      // introducing a temporary node that may persist and affect one-use checks
-      // below.
+      // Only create a swapped node if we know one of the folds will succeed to
+      // avoid introducing a temporary node that may persist and affect one-use
+      // checks below.
       if (EFLAGS.getNode()->hasOneUse()) {
-        SDValue NewSub = DAG.getNode(
-            X86ISD::SUB, SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
+        SDValue Swapped = DAG.getNode(
+            EFLAGS.getOpcode(), SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
             EFLAGS.getOperand(1), EFLAGS.getOperand(0));
-        SDValue NewEFLAGS = NewSub.getValue(EFLAGS.getResNo());
+        SDValue NewEFLAGS = Swapped.getValue(EFLAGS.getResNo());
         return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL,
                            DAG.getVTList(VT, MVT::i32), X,
                            DAG.getConstant(0, DL, VT), NewEFLAGS);

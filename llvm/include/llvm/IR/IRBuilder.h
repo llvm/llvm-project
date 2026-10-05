@@ -2943,6 +2943,13 @@ public:
     SetInsertPoint(IP);
   }
 
+  IRBuilder(BasicBlock::iterator IP, FolderTy Folder, InserterTy Inserter)
+      : IRBuilderBase(IP.getNodeParent()->getContext(), this->Folder,
+                      this->Inserter),
+        Folder(Folder), Inserter(Inserter) {
+    SetInsertPoint(IP);
+  }
+
   IRBuilder(BasicBlock::iterator IP, FolderTy Folder)
       : IRBuilderBase(IP.getNodeParent()->getContext(), this->Folder,
                       this->Inserter),
@@ -2975,6 +2982,9 @@ IRBuilder(Instruction *) -> IRBuilder<>;
 template <typename FolderTy>
 IRBuilder(BasicBlock *, BasicBlock::iterator, FolderTy) -> IRBuilder<FolderTy>;
 IRBuilder(BasicBlock *, BasicBlock::iterator) -> IRBuilder<>;
+template <typename FolderTy, typename InserterTy>
+IRBuilder(BasicBlock::iterator, FolderTy, InserterTy)
+    -> IRBuilder<FolderTy, InserterTy>;
 template <typename FolderTy>
 IRBuilder(BasicBlock::iterator, FolderTy) -> IRBuilder<FolderTy>;
 IRBuilder(BasicBlock::iterator) -> IRBuilder<>;
