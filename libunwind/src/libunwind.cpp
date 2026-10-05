@@ -16,6 +16,11 @@
 
 #include <stdlib.h>
 
+#if defined(__FreeBSD__) && defined(__x86_64__) &&                             \
+    !defined(_LIBUNWIND_IS_BAREMETAL)
+#include <ucontext.h>
+#endif
+
 // Define the __has_feature extension for compilers that do not support it so
 // that we can later check for the presence of ASan in a compiler-neutral way.
 #if !defined(__has_feature)
@@ -31,6 +36,50 @@
 #include "UnwindCursor.hpp"
 
 using namespace libunwind;
+
+#if defined(__FreeBSD__) && defined(__x86_64__) &&                             \
+    !defined(_LIBUNWIND_IS_BAREMETAL)
+// Changing FS/GS selectors can clear their bases, while sysarch base setters
+// replace the selectors. Let sigreturn restore the complete state atomically.
+extern "C" _LIBUNWIND_HIDDEN void
+__libunwind_Registers_x86_64_jumpto(Registers_x86_64 *registers) {
+  ucontext_t context;
+  if (getcontext(&context) != 0)
+    _LIBUNWIND_ABORT("getcontext failed");
+  mcontext_t &mc = context.uc_mcontext;
+#define RESTORE(reg, field) mc.field = registers->getRegister(UNW_X86_64_##reg)
+  RESTORE(RAX, mc_rax);
+  RESTORE(RBX, mc_rbx);
+  RESTORE(RCX, mc_rcx);
+  RESTORE(RDX, mc_rdx);
+  RESTORE(RDI, mc_rdi);
+  RESTORE(RSI, mc_rsi);
+  RESTORE(RBP, mc_rbp);
+  RESTORE(RSP, mc_rsp);
+  RESTORE(R8, mc_r8);
+  RESTORE(R9, mc_r9);
+  RESTORE(R10, mc_r10);
+  RESTORE(R11, mc_r11);
+  RESTORE(R12, mc_r12);
+  RESTORE(R13, mc_r13);
+  RESTORE(R14, mc_r14);
+  RESTORE(R15, mc_r15);
+  RESTORE(RIP, mc_rip);
+  RESTORE(RFLAGS, mc_rflags);
+  RESTORE(CS, mc_cs);
+  RESTORE(SS, mc_ss);
+  RESTORE(DS, mc_ds);
+  RESTORE(ES, mc_es);
+  RESTORE(FS, mc_fs);
+  RESTORE(GS, mc_gs);
+  RESTORE(FS_BASE, mc_fsbase);
+  RESTORE(GS_BASE, mc_gsbase);
+#undef RESTORE
+  mc.mc_flags |= _MC_HASSEGS | _MC_HASBASES;
+  setcontext(&context);
+  _LIBUNWIND_ABORT("setcontext failed");
+}
+#endif
 
 /// internal object to represent this process's address space
 LocalAddressSpace LocalAddressSpace::sThisAddressSpace;
