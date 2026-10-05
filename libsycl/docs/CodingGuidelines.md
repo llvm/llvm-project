@@ -33,35 +33,57 @@ Coding Standards.
 
 ### Extension Naming Policy
 
-The SYCL 2020 specification gives every vendor extension a vendor string. The
-extension's APIs are declared in the `sycl::ext::<vendor>` namespace, its
-feature-test macro is `SYCL_EXT_<VENDOR>_<NAME>`, and any enumerators or members
-it adds to core SYCL classes (for example aspects) are prefixed with
-`ext_<vendor>_`.
+libsycl implements two kinds of SYCL extensions:
 
-The vendor string tells users who defines the behavior of the feature. libsycl
-picks it by that rule, not by who wrote the implementation.
+- **Khronos extensions** (KHR extensions) are ratified by the Khronos Group
+  and published alongside the SYCL specification.
+- **Vendor extensions** are defined by a single vendor, which may be the LLVM
+  community itself.
 
-| Origin of the extension                                       | Vendor string                                  |
-| ------------------------------------------------------------- | ---------------------------------------------- |
-| Not defined by any vendor: designed in the LLVM community     | `llvm`                                         |
-| Defined by another vendor and implemented as specified        | The original one (e.g. `oneapi`, `intel`)      |
-| Defined by another vendor, but libsycl intentionally deviates | `llvm`, only after the deviation is justified  |
-| Ratified by Khronos                                           | `khr`                                          |
+The two kinds follow different naming rules, described below.
 
-#### Community Extensions
+#### Khronos Extensions
+
+KHR extensions are defined only by the Khronos Group. Their APIs are declared
+in the `sycl::khr` namespace and their feature-test macros are named
+`SYCL_KHR_<NAME>`.
+
+If libsycl adopts a KHR extension, it is implemented according to the KHR
+extension specification, following the same rules as extensions adopted from
+another vendor (see below).
+
+#### Vendor Extensions
+
+libsycl follows the "Guidelines for portable extensions" described in
+[Chapter 6](https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#chapter.extensions)
+of the SYCL 2020 specification. These guidelines require each vendor extension
+to be named with a vendor string. For example, the extension's APIs are
+declared in the `sycl::ext::<vendor>` namespace, its feature-test macro is
+`SYCL_EXT_<VENDOR>_<NAME>`, and any enumerators or members it adds to core SYCL
+classes (for example aspects) are prefixed with `ext_<vendor>_`.
+
+The vendor string tells users who defines the behavior of the feature.
+
+| Origin of the extension                                       | Vendor string                                       |
+| ------------------------------------------------------------- | --------------------------------------------------- |
+| Defined by the LLVM community                                 | `llvm`                                              |
+| Defined by another vendor and implemented as specified        | The original vendor's (e.g. `oneapi`, `intel`)      |
+| Defined by another vendor, but libsycl intentionally deviates | `llvm`, only after the deviation is justified       |
+
+##### Community Extensions
 
 An extension that the LLVM community designs itself uses the `llvm` vendor
 string, for example `sycl::ext::llvm::<name>` with the feature-test macro
 `SYCL_EXT_LLVM_<NAME>`. The community determines what such a feature is, so its
-specification must be reviewed and committed together with the implementation.
+specification must be reviewed and committed before or together with the
+implementation.
 
-#### Extensions Adopted From Another Vendor
+##### Extensions Adopted From Another Vendor
 
 When libsycl implements an extension defined by another vendor with the intent
 to match it, the extension keeps its original name. For example, the
-`sycl_ext_oneapi_<name>` extension from intel/llvm is implemented as
-`sycl::ext::oneapi::<name>` with the feature-test macro
+`sycl_ext_oneapi_<name>` extension from the Intel DPC++ compiler is implemented
+as `sycl::ext::oneapi::<name>` with the feature-test macro
 `SYCL_EXT_ONEAPI_<NAME>`. The original vendor's specification defines the
 feature:
 
@@ -69,23 +91,16 @@ feature:
 - The implementation refers to the specification and to the revision of it that
   is implemented.
 - The feature-test macro is defined, with the value of the implemented revision,
-  only once that revision is fully implemented. Until then, the missing parts
-  are listed in `libsycl/docs/index.md`.
+  only once that revision is fully implemented.
 - Differences that the specification does not make observable, such as
   implementation details, unspecified behavior, or diagnostic wording, are not
   deviations.
 - If the specification appears to be wrong, the problem is raised with the
   vendor that owns it rather than fixed only in libsycl.
-- New revisions of the specification are followed. An incompatible revision is
-  implemented by updating to it and to its feature-test macro value.
+- When the vendor publishes a new revision of the specification, libsycl is
+  updated to conform to it.
 
-Both `oneapi` and `intel` extensions are defined by Intel in intel/llvm and
-follow this rule. `oneapi` extensions are designed to be device-agnostic, while
-`intel` extensions expose features of Intel hardware or backends. The vendor
-string of an `intel` extension stays `intel` even when libsycl implements it on
-other devices, because it names the owner of the definition, not the hardware.
-
-#### Deviating From Another Vendor's Extension
+##### Deviating From Another Vendor's Extension
 
 A deviation is any intentional change to the specified behavior: a different API
 shape, different semantics, or a reduced or extended scope. Before deviating,
@@ -95,18 +110,10 @@ blocks to use the feature portably. Proposing the change to the owning vendor is
 preferred.
 
 If the deviation is still justified, the extension is spelled with the `llvm`
-vendor string, e.g. `sycl::ext::llvm::<name>`, to signal that it is not
-`sycl::ext::oneapi::<name>`. It is then a community extension with its own
-specification. The original vendor's spelling must not be used for the deviating
-extension, including as an alias.
-
-#### Khronos Extensions
-
-Extensions ratified by Khronos use the `khr` vendor string and are implemented
-as specified, following the same rules as extensions adopted from another
-vendor. When a vendor extension that libsycl implements is promoted to a `khr`
-extension, libsycl implements the `khr` extension, and the vendor version is
-deprecated.
+vendor string, e.g. `sycl::ext::llvm::<name>`, to signal that it is different
+from, for example, `sycl::ext::oneapi::<name>`. It is then a community
+extension with its own specification. The original vendor's spelling must not
+be used for the deviating extension, including as an alias.
 
 #### Rationale
 
