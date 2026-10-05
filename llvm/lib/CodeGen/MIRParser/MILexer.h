@@ -134,6 +134,7 @@ struct MIToken {
     kw_inlineasm_br_indirect_target,
     kw_ehscope_entry,
     kw_ehfunclet_entry,
+    kw_cleanup_funclet_entry,
     kw_liveins,
     kw_successors,
     kw_floatpred,
