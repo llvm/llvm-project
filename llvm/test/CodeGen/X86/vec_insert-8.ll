@@ -10,7 +10,7 @@ define <4 x i32> @var_insert(<4 x i32> %x, i32 %val, i32 %idx) nounwind {
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $32, %esp
+; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movl 12(%ebp), %eax
 ; X86-NEXT:    andl $3, %eax
 ; X86-NEXT:    movl 8(%ebp), %ecx
@@ -40,7 +40,7 @@ define i32 @var_extract(<4 x i32> %x, i32 %idx) nounwind {
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $32, %esp
+; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    andl $3, %eax
 ; X86-NEXT:    movaps %xmm0, (%esp)
