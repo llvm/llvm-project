@@ -219,7 +219,6 @@ uint32_t llvm::object::getELFRelativeRelocationType(uint32_t Machine) {
   case ELF::EM_IAMCU:
     return ELF::R_386_RELATIVE;
   case ELF::EM_MIPS:
-  case ELF::EM_NANOMIPS:
     break;
   case ELF::EM_AARCH64:
     return ELF::R_AARCH64_RELATIVE;
@@ -256,6 +255,8 @@ uint32_t llvm::object::getELFRelativeRelocationType(uint32_t Machine) {
     break;
   case ELF::EM_LOONGARCH:
     return ELF::R_LARCH_RELATIVE;
+  case ELF::EM_NANOMIPS:
+    return ELF::R_NANOMIPS_RELATIVE;
   default:
     break;
   }
