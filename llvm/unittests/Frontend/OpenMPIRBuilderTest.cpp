@@ -5482,7 +5482,7 @@ TEST_F(OpenMPIRBuilderTest, GPUTeamsReductionRuntimeCallHasDebugLoc) {
 
   auto ReductionGen = [](InsertPointTy IP, unsigned, Value **LHSPtr,
                          Value **RHSPtr, Function *) {
-    IRBuilder<> Builder(IP.getNodeParent(), IP);
+    IRBuilder<> Builder(IP);
     *LHSPtr = Builder.CreateAlloca(Builder.getFloatTy());
     *RHSPtr = Builder.CreateAlloca(Builder.getFloatTy());
     Builder.CreateLoad(Builder.getFloatTy(), *LHSPtr);
