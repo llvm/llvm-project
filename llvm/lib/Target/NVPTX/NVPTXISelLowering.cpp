@@ -2435,8 +2435,8 @@ SDValue NVPTXTargetLowering::LowerFP_ROUND(SDValue Op,
   return Op;
 }
 
-SDValue NVPTXTargetLowering::LowerFPTRUNC_ROUND(SDValue Op,
-                                                SelectionDAG &DAG) const {
+static SDValue lowerFPTRUNC_ROUND(SDValue Op, SelectionDAG &DAG,
+                                  const NVPTXSubtarget &STI) {
   EVT SrcVT = Op.getOperand(0).getValueType();
   EVT DstVT = Op.getValueType();
   auto RM = static_cast<RoundingMode>(Op.getConstantOperandVal(1));
@@ -2451,26 +2451,20 @@ SDValue NVPTXTargetLowering::LowerFPTRUNC_ROUND(SDValue Op,
   bool RoundToInfinity =
       RM == RoundingMode::TowardNegative || RM == RoundingMode::TowardPositive;
 
-  StringRef Error;
-  if (RM != RoundingMode::TowardZero && !RoundToInfinity) {
-    Error = "is not supported on this target";
-  } else if (DstVT == MVT::bf16) {
-    if (SrcVT == MVT::f64 || RoundToInfinity) {
-      if (!STI.hasFeature(NVPTX::SM90))
-        Error = "requires sm_90 or higher";
-    } else if (!STI.hasFeature(NVPTX::SM80)) {
-      Error = "requires sm_80 or higher";
-    }
+  bool Supported = RM == RoundingMode::TowardZero || RoundToInfinity;
+  if (DstVT == MVT::bf16) {
+    if (SrcVT == MVT::f64 || RoundToInfinity)
+      Supported &= STI.hasFeature(NVPTX::SM90);
+    else
+      Supported &= STI.hasFeature(NVPTX::SM80);
   }
 
-  if (Error.empty())
+  if (Supported)
     return Op;
 
   DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
       DAG.getMachineFunction().getFunction(),
-      Twine("llvm.fptrunc.round from ") + SrcVT.getEVTString() + " to " +
-          DstVT.getEVTString() + " with rounding mode " +
-          *convertRoundingModeToStr(RM) + " " + Error,
+      "unsupported conversion or rounding mode for llvm.fptrunc.round",
       SDLoc(Op).getDebugLoc()));
   return DAG.getPOISON(DstVT);
 }
@@ -3559,7 +3553,7 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FP_ROUND:
     return LowerFP_ROUND(Op, DAG);
   case ISD::FPTRUNC_ROUND:
-    return LowerFPTRUNC_ROUND(Op, DAG);
+    return lowerFPTRUNC_ROUND(Op, DAG, STI);
   case ISD::FP_EXTEND:
     return LowerFP_EXTEND(Op, DAG);
   case ISD::VAARG:

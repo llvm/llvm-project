@@ -587,7 +587,7 @@ define bfloat @fptrunc_rn_bf16_f64(double %a) {
 ;--- sm80.ll
 
 define bfloat @cvt_rz_bf16_f16(half %a) {
-; SM70-ERR: error: {{.*}}in function cvt_rz_bf16_f16{{.*}}llvm.fptrunc.round from f32 to bf16 with rounding mode round.towardzero requires sm_80 or higher
+; SM70-ERR: error: {{.*}}in function cvt_rz_bf16_f16{{.*}}unsupported conversion or rounding mode for llvm.fptrunc.round
 ;
 ; SM80-LABEL:       cvt_rz_bf16_f16(
 ; SM80:             ld.param.b16 [[A:%rs[0-9]+]], [cvt_rz_bf16_f16_param_0];
@@ -608,7 +608,7 @@ define bfloat @cvt_rz_bf16_f16(half %a) {
 }
 
 define bfloat @fptrunc_rz_bf16_f32(float %a) {
-; SM70-ERR: error: {{.*}}in function fptrunc_rz_bf16_f32{{.*}}llvm.fptrunc.round from f32 to bf16 with rounding mode round.towardzero requires sm_80 or higher
+; SM70-ERR: error: {{.*}}in function fptrunc_rz_bf16_f32{{.*}}unsupported conversion or rounding mode for llvm.fptrunc.round
 ;
 ; SM80-LABEL: fptrunc_rz_bf16_f32(
 ; SM80:       ld.param.b32 [[A:%r[0-9]+]], [fptrunc_rz_bf16_f32_param_0];
@@ -627,8 +627,8 @@ define bfloat @fptrunc_rz_bf16_f32(float %a) {
 
 ;--- sm90.ll
 define bfloat @cvt_rm_bf16_f16(half %a) {
-; SM70-ERR: error: {{.*}}in function cvt_rm_bf16_f16{{.*}}llvm.fptrunc.round from f32 to bf16 with rounding mode round.downward requires sm_90 or higher
-; SM80-ERR: error: {{.*}}in function cvt_rm_bf16_f16{{.*}}llvm.fptrunc.round from f32 to bf16 with rounding mode round.downward requires sm_90 or higher
+; SM70-ERR: error: {{.*}}in function cvt_rm_bf16_f16{{.*}}unsupported conversion or rounding mode for llvm.fptrunc.round
+; SM80-ERR: error: {{.*}}in function cvt_rm_bf16_f16{{.*}}unsupported conversion or rounding mode for llvm.fptrunc.round
 ;
 ; SM90-LABEL: cvt_rm_bf16_f16(
 ; SM90:       ld.param.b16 [[A:%rs[0-9]+]], [cvt_rm_bf16_f16_param_0];
@@ -641,8 +641,8 @@ define bfloat @cvt_rm_bf16_f16(half %a) {
 }
 
 define bfloat @cvt_rp_bf16_f16(half %a) {
-; SM70-ERR: error: {{.*}}in function cvt_rp_bf16_f16{{.*}}llvm.fptrunc.round from f32 to bf16 with rounding mode round.upward requires sm_90 or higher
-; SM80-ERR: error: {{.*}}in function cvt_rp_bf16_f16{{.*}}llvm.fptrunc.round from f32 to bf16 with rounding mode round.upward requires sm_90 or higher
+; SM70-ERR: error: {{.*}}in function cvt_rp_bf16_f16{{.*}}unsupported conversion or rounding mode for llvm.fptrunc.round
+; SM80-ERR: error: {{.*}}in function cvt_rp_bf16_f16{{.*}}unsupported conversion or rounding mode for llvm.fptrunc.round
 ;
 ; SM90-LABEL: cvt_rp_bf16_f16(
 ; SM90:       ld.param.b16 [[A:%rs[0-9]+]], [cvt_rp_bf16_f16_param_0];
@@ -655,8 +655,8 @@ define bfloat @cvt_rp_bf16_f16(half %a) {
 }
 
 define bfloat @fptrunc_rm_bf16_f32(float %a) {
-; SM70-ERR: error: {{.*}}in function fptrunc_rm_bf16_f32{{.*}}llvm.fptrunc.round from f32 to bf16 with rounding mode round.downward requires sm_90 or higher
-; SM80-ERR: error: {{.*}}in function fptrunc_rm_bf16_f32{{.*}}llvm.fptrunc.round from f32 to bf16 with rounding mode round.downward requires sm_90 or higher
+; SM70-ERR: error: {{.*}}in function fptrunc_rm_bf16_f32{{.*}}unsupported conversion or rounding mode for llvm.fptrunc.round
+; SM80-ERR: error: {{.*}}in function fptrunc_rm_bf16_f32{{.*}}unsupported conversion or rounding mode for llvm.fptrunc.round
 ;
 ; SM90-LABEL: fptrunc_rm_bf16_f32(
 ; SM90:       ld.param.b32 [[A:%r[0-9]+]], [fptrunc_rm_bf16_f32_param_0];
@@ -668,8 +668,8 @@ define bfloat @fptrunc_rm_bf16_f32(float %a) {
 }
 
 define bfloat @fptrunc_rp_bf16_f32(float %a) {
-; SM70-ERR: error: {{.*}}in function fptrunc_rp_bf16_f32{{.*}}llvm.fptrunc.round from f32 to bf16 with rounding mode round.upward requires sm_90 or higher
-; SM80-ERR: error: {{.*}}in function fptrunc_rp_bf16_f32{{.*}}llvm.fptrunc.round from f32 to bf16 with rounding mode round.upward requires sm_90 or higher
+; SM70-ERR: error: {{.*}}in function fptrunc_rp_bf16_f32{{.*}}unsupported conversion or rounding mode for llvm.fptrunc.round
+; SM80-ERR: error: {{.*}}in function fptrunc_rp_bf16_f32{{.*}}unsupported conversion or rounding mode for llvm.fptrunc.round
 ;
 ; SM90-LABEL: fptrunc_rp_bf16_f32(
 ; SM90:       ld.param.b32 [[A:%r[0-9]+]], [fptrunc_rp_bf16_f32_param_0];
@@ -681,8 +681,8 @@ define bfloat @fptrunc_rp_bf16_f32(float %a) {
 }
 
 define bfloat @fptrunc_rz_bf16_f64(double %a) {
-; SM70-ERR: error: {{.*}}in function fptrunc_rz_bf16_f64{{.*}}llvm.fptrunc.round from f64 to bf16 with rounding mode round.towardzero requires sm_90 or higher
-; SM80-ERR: error: {{.*}}in function fptrunc_rz_bf16_f64{{.*}}llvm.fptrunc.round from f64 to bf16 with rounding mode round.towardzero requires sm_90 or higher
+; SM70-ERR: error: {{.*}}in function fptrunc_rz_bf16_f64{{.*}}unsupported conversion or rounding mode for llvm.fptrunc.round
+; SM80-ERR: error: {{.*}}in function fptrunc_rz_bf16_f64{{.*}}unsupported conversion or rounding mode for llvm.fptrunc.round
 ;
 ; SM90-LABEL: fptrunc_rz_bf16_f64(
 ; SM90:       ld.param.b64 [[A:%rd[0-9]+]], [fptrunc_rz_bf16_f64_param_0];
@@ -694,8 +694,8 @@ define bfloat @fptrunc_rz_bf16_f64(double %a) {
 }
 
 define bfloat @fptrunc_rm_bf16_f64(double %a) {
-; SM70-ERR: error: {{.*}}in function fptrunc_rm_bf16_f64{{.*}}llvm.fptrunc.round from f64 to bf16 with rounding mode round.downward requires sm_90 or higher
-; SM80-ERR: error: {{.*}}in function fptrunc_rm_bf16_f64{{.*}}llvm.fptrunc.round from f64 to bf16 with rounding mode round.downward requires sm_90 or higher
+; SM70-ERR: error: {{.*}}in function fptrunc_rm_bf16_f64{{.*}}unsupported conversion or rounding mode for llvm.fptrunc.round
+; SM80-ERR: error: {{.*}}in function fptrunc_rm_bf16_f64{{.*}}unsupported conversion or rounding mode for llvm.fptrunc.round
 ;
 ; SM90-LABEL: fptrunc_rm_bf16_f64(
 ; SM90:       ld.param.b64 [[A:%rd[0-9]+]], [fptrunc_rm_bf16_f64_param_0];
@@ -707,8 +707,8 @@ define bfloat @fptrunc_rm_bf16_f64(double %a) {
 }
 
 define bfloat @fptrunc_rp_bf16_f64(double %a) {
-; SM70-ERR: error: {{.*}}in function fptrunc_rp_bf16_f64{{.*}}llvm.fptrunc.round from f64 to bf16 with rounding mode round.upward requires sm_90 or higher
-; SM80-ERR: error: {{.*}}in function fptrunc_rp_bf16_f64{{.*}}llvm.fptrunc.round from f64 to bf16 with rounding mode round.upward requires sm_90 or higher
+; SM70-ERR: error: {{.*}}in function fptrunc_rp_bf16_f64{{.*}}unsupported conversion or rounding mode for llvm.fptrunc.round
+; SM80-ERR: error: {{.*}}in function fptrunc_rp_bf16_f64{{.*}}unsupported conversion or rounding mode for llvm.fptrunc.round
 ;
 ; SM90-LABEL: fptrunc_rp_bf16_f64(
 ; SM90:       ld.param.b64 [[A:%rd[0-9]+]], [fptrunc_rp_bf16_f64_param_0];
@@ -725,19 +725,19 @@ declare bfloat @llvm.fptrunc.round.bf16.f32(float, metadata)
 declare float @llvm.fptrunc.round.f32.f64(double, metadata)
 
 define half @fptrunc_rna_f16_f32(float %a) {
-; ROUND-ERR: error: {{.*}}in function fptrunc_rna_f16_f32{{.*}}llvm.fptrunc.round from f32 to f16 with rounding mode round.tonearestaway is not supported on this target
+; ROUND-ERR: error: {{.*}}in function fptrunc_rna_f16_f32{{.*}}unsupported conversion or rounding mode for llvm.fptrunc.round
   %res = call half @llvm.fptrunc.round.f16.f32(float %a, metadata !"round.tonearestaway")
   ret half %res
 }
 
 define bfloat @fptrunc_rna_bf16_f32(float %a) {
-; ROUND-ERR: error: {{.*}}in function fptrunc_rna_bf16_f32{{.*}}llvm.fptrunc.round from f32 to bf16 with rounding mode round.tonearestaway is not supported on this target
+; ROUND-ERR: error: {{.*}}in function fptrunc_rna_bf16_f32{{.*}}unsupported conversion or rounding mode for llvm.fptrunc.round
   %res = call bfloat @llvm.fptrunc.round.bf16.f32(float %a, metadata !"round.tonearestaway")
   ret bfloat %res
 }
 
 define float @fptrunc_rna_f32_f64(double %a) {
-; ROUND-ERR: error: {{.*}}in function fptrunc_rna_f32_f64{{.*}}llvm.fptrunc.round from f64 to f32 with rounding mode round.tonearestaway is not supported on this target
+; ROUND-ERR: error: {{.*}}in function fptrunc_rna_f32_f64{{.*}}unsupported conversion or rounding mode for llvm.fptrunc.round
   %res = call float @llvm.fptrunc.round.f32.f64(double %a, metadata !"round.tonearestaway")
   ret float %res
 }
