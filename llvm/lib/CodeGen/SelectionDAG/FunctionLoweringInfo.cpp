@@ -587,8 +587,8 @@ FunctionLoweringInfo::getValueFromVirtualReg(Register Vreg) {
       for (EVT VT : ValueVTs) {
         unsigned NumRegisters = TLI->getNumRegisters(Fn->getContext(), VT);
         for (unsigned i = 0, e = NumRegisters; i != e; ++i) {
-          Reg.incrementVirtRegIndex(1u);
           VirtReg2Value[Reg] = P.first;
+          Reg.incrementVirtRegIndex(1u);
         }
       }
     }
