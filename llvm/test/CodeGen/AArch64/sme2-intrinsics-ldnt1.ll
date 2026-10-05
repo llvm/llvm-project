@@ -57,13 +57,13 @@ define <vscale x 32 x i8> @ldnt1_x2_i8_z0_z8(<vscale x 16 x i8> %unused, <vscale
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-2
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
 ; CONTIGUOUS-NEXT:    ldnt1b { z0.b, z1.b }, pn8/z, [x0]
-; CONTIGUOUS-NEXT:    str z0, [sp]
-; CONTIGUOUS-NEXT:    str z1, [sp, #1, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    st1b { z0.b, z1.b }, pn8, [sp]
 ; CONTIGUOUS-NEXT:    //APP
 ; CONTIGUOUS-NEXT:    nop
 ; CONTIGUOUS-NEXT:    //NO_APP
-; CONTIGUOUS-NEXT:    ldr z0, [sp]
-; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    ld1b { z0.b, z1.b }, pn8/z, [sp]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #2
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
@@ -141,13 +141,13 @@ define <vscale x 32 x i8> @ldnt1_x2_i8_z0_z8_scalar(<vscale x 16 x i8> %unused, 
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-2
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
 ; CONTIGUOUS-NEXT:    ldnt1b { z0.b, z1.b }, pn8/z, [x0, x1]
-; CONTIGUOUS-NEXT:    str z0, [sp]
-; CONTIGUOUS-NEXT:    str z1, [sp, #1, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    st1b { z0.b, z1.b }, pn8, [sp]
 ; CONTIGUOUS-NEXT:    //APP
 ; CONTIGUOUS-NEXT:    nop
 ; CONTIGUOUS-NEXT:    //NO_APP
-; CONTIGUOUS-NEXT:    ldr z0, [sp]
-; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    ld1b { z0.b, z1.b }, pn8/z, [sp]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #2
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
@@ -226,13 +226,13 @@ define <vscale x 16 x i16> @ldnt1_x2_i16_z0_z8(<vscale x 8 x i16> %unused, <vsca
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-2
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
 ; CONTIGUOUS-NEXT:    ldnt1h { z0.h, z1.h }, pn8/z, [x0]
-; CONTIGUOUS-NEXT:    str z0, [sp]
-; CONTIGUOUS-NEXT:    str z1, [sp, #1, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    st1b { z0.b, z1.b }, pn8, [sp]
 ; CONTIGUOUS-NEXT:    //APP
 ; CONTIGUOUS-NEXT:    nop
 ; CONTIGUOUS-NEXT:    //NO_APP
-; CONTIGUOUS-NEXT:    ldr z0, [sp]
-; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    ld1b { z0.b, z1.b }, pn8/z, [sp]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #2
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
@@ -310,13 +310,13 @@ define <vscale x 16 x i16> @ldnt1_x2_i16_z0_z8_scalar(<vscale x 8 x i16> %unused
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-2
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
 ; CONTIGUOUS-NEXT:    ldnt1h { z0.h, z1.h }, pn8/z, [x0, x1, lsl #1]
-; CONTIGUOUS-NEXT:    str z0, [sp]
-; CONTIGUOUS-NEXT:    str z1, [sp, #1, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    st1b { z0.b, z1.b }, pn8, [sp]
 ; CONTIGUOUS-NEXT:    //APP
 ; CONTIGUOUS-NEXT:    nop
 ; CONTIGUOUS-NEXT:    //NO_APP
-; CONTIGUOUS-NEXT:    ldr z0, [sp]
-; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    ld1b { z0.b, z1.b }, pn8/z, [sp]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #2
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
@@ -395,13 +395,13 @@ define <vscale x 8 x i32> @ldnt1_x2_i32_z0_z8(<vscale x 4 x i32> %unused, <vscal
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-2
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
 ; CONTIGUOUS-NEXT:    ldnt1w { z0.s, z1.s }, pn8/z, [x0]
-; CONTIGUOUS-NEXT:    str z0, [sp]
-; CONTIGUOUS-NEXT:    str z1, [sp, #1, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    st1b { z0.b, z1.b }, pn8, [sp]
 ; CONTIGUOUS-NEXT:    //APP
 ; CONTIGUOUS-NEXT:    nop
 ; CONTIGUOUS-NEXT:    //NO_APP
-; CONTIGUOUS-NEXT:    ldr z0, [sp]
-; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    ld1b { z0.b, z1.b }, pn8/z, [sp]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #2
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
@@ -479,13 +479,13 @@ define <vscale x 8 x i32> @ldnt1_x2_i32_z0_z8_scalar(<vscale x 4 x i32> %unused,
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-2
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
 ; CONTIGUOUS-NEXT:    ldnt1w { z0.s, z1.s }, pn8/z, [x0, x1, lsl #2]
-; CONTIGUOUS-NEXT:    str z0, [sp]
-; CONTIGUOUS-NEXT:    str z1, [sp, #1, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    st1b { z0.b, z1.b }, pn8, [sp]
 ; CONTIGUOUS-NEXT:    //APP
 ; CONTIGUOUS-NEXT:    nop
 ; CONTIGUOUS-NEXT:    //NO_APP
-; CONTIGUOUS-NEXT:    ldr z0, [sp]
-; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    ld1b { z0.b, z1.b }, pn8/z, [sp]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #2
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
@@ -564,13 +564,13 @@ define <vscale x 4 x i64> @ldnt1_x2_i64_z0_z8(<vscale x 2 x i64> %unused, <vscal
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-2
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
 ; CONTIGUOUS-NEXT:    ldnt1d { z0.d, z1.d }, pn8/z, [x0]
-; CONTIGUOUS-NEXT:    str z0, [sp]
-; CONTIGUOUS-NEXT:    str z1, [sp, #1, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    st1b { z0.b, z1.b }, pn8, [sp]
 ; CONTIGUOUS-NEXT:    //APP
 ; CONTIGUOUS-NEXT:    nop
 ; CONTIGUOUS-NEXT:    //NO_APP
-; CONTIGUOUS-NEXT:    ldr z0, [sp]
-; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    ld1b { z0.b, z1.b }, pn8/z, [sp]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #2
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
@@ -648,13 +648,13 @@ define <vscale x 4 x i64> @ldnt1_x2_i64_z0_z8_scalar(<vscale x 2 x i64> %unused,
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-2
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
 ; CONTIGUOUS-NEXT:    ldnt1d { z0.d, z1.d }, pn8/z, [x0, x1, lsl #3]
-; CONTIGUOUS-NEXT:    str z0, [sp]
-; CONTIGUOUS-NEXT:    str z1, [sp, #1, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    st1b { z0.b, z1.b }, pn8, [sp]
 ; CONTIGUOUS-NEXT:    //APP
 ; CONTIGUOUS-NEXT:    nop
 ; CONTIGUOUS-NEXT:    //NO_APP
-; CONTIGUOUS-NEXT:    ldr z0, [sp]
-; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    ld1b { z0.b, z1.b }, pn8/z, [sp]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #2
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
@@ -735,17 +735,13 @@ define <vscale x 64 x i8> @ldnt1_x4_i8_z0_z4_z8_z12(<vscale x 16 x i8> %unused, 
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-4
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
 ; CONTIGUOUS-NEXT:    ldnt1b { z0.b - z3.b }, pn8/z, [x0]
-; CONTIGUOUS-NEXT:    str z0, [sp]
-; CONTIGUOUS-NEXT:    str z1, [sp, #1, mul vl]
-; CONTIGUOUS-NEXT:    str z2, [sp, #2, mul vl]
-; CONTIGUOUS-NEXT:    str z3, [sp, #3, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    st1b { z0.b - z3.b }, pn8, [sp]
 ; CONTIGUOUS-NEXT:    //APP
 ; CONTIGUOUS-NEXT:    nop
 ; CONTIGUOUS-NEXT:    //NO_APP
-; CONTIGUOUS-NEXT:    ldr z0, [sp]
-; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
-; CONTIGUOUS-NEXT:    ldr z2, [sp, #2, mul vl]
-; CONTIGUOUS-NEXT:    ldr z3, [sp, #3, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    ld1b { z0.b - z3.b }, pn8/z, [sp]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #4
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
 ; CONTIGUOUS-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
@@ -829,17 +825,13 @@ define <vscale x 64 x i8> @ldnt1_x4_i8_z0_z4_z8_z12_scalar(<vscale x 16 x i8> %u
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-4
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
 ; CONTIGUOUS-NEXT:    ldnt1b { z0.b - z3.b }, pn8/z, [x0, x1]
-; CONTIGUOUS-NEXT:    str z0, [sp]
-; CONTIGUOUS-NEXT:    str z1, [sp, #1, mul vl]
-; CONTIGUOUS-NEXT:    str z2, [sp, #2, mul vl]
-; CONTIGUOUS-NEXT:    str z3, [sp, #3, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    st1b { z0.b - z3.b }, pn8, [sp]
 ; CONTIGUOUS-NEXT:    //APP
 ; CONTIGUOUS-NEXT:    nop
 ; CONTIGUOUS-NEXT:    //NO_APP
-; CONTIGUOUS-NEXT:    ldr z0, [sp]
-; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
-; CONTIGUOUS-NEXT:    ldr z2, [sp, #2, mul vl]
-; CONTIGUOUS-NEXT:    ldr z3, [sp, #3, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    ld1b { z0.b - z3.b }, pn8/z, [sp]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #4
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
 ; CONTIGUOUS-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
@@ -924,17 +916,13 @@ define <vscale x 32 x i16> @ldnt1_x4_i16_z0_z4_z8_z12(<vscale x 8 x i16> %unused
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-4
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
 ; CONTIGUOUS-NEXT:    ldnt1h { z0.h - z3.h }, pn8/z, [x0]
-; CONTIGUOUS-NEXT:    str z0, [sp]
-; CONTIGUOUS-NEXT:    str z1, [sp, #1, mul vl]
-; CONTIGUOUS-NEXT:    str z2, [sp, #2, mul vl]
-; CONTIGUOUS-NEXT:    str z3, [sp, #3, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    st1b { z0.b - z3.b }, pn8, [sp]
 ; CONTIGUOUS-NEXT:    //APP
 ; CONTIGUOUS-NEXT:    nop
 ; CONTIGUOUS-NEXT:    //NO_APP
-; CONTIGUOUS-NEXT:    ldr z0, [sp]
-; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
-; CONTIGUOUS-NEXT:    ldr z2, [sp, #2, mul vl]
-; CONTIGUOUS-NEXT:    ldr z3, [sp, #3, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    ld1b { z0.b - z3.b }, pn8/z, [sp]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #4
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
 ; CONTIGUOUS-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
@@ -1018,17 +1006,13 @@ define <vscale x 32 x i16> @ldnt1_x4_i16_z0_z4_z8_z12_scalar(<vscale x 8 x i16> 
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-4
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
 ; CONTIGUOUS-NEXT:    ldnt1h { z0.h - z3.h }, pn8/z, [x0, x1, lsl #1]
-; CONTIGUOUS-NEXT:    str z0, [sp]
-; CONTIGUOUS-NEXT:    str z1, [sp, #1, mul vl]
-; CONTIGUOUS-NEXT:    str z2, [sp, #2, mul vl]
-; CONTIGUOUS-NEXT:    str z3, [sp, #3, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    st1b { z0.b - z3.b }, pn8, [sp]
 ; CONTIGUOUS-NEXT:    //APP
 ; CONTIGUOUS-NEXT:    nop
 ; CONTIGUOUS-NEXT:    //NO_APP
-; CONTIGUOUS-NEXT:    ldr z0, [sp]
-; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
-; CONTIGUOUS-NEXT:    ldr z2, [sp, #2, mul vl]
-; CONTIGUOUS-NEXT:    ldr z3, [sp, #3, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    ld1b { z0.b - z3.b }, pn8/z, [sp]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #4
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
 ; CONTIGUOUS-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
@@ -1113,17 +1097,13 @@ define <vscale x 16 x i32> @ldnt1_x4_i32_z0_z4_z8_z12(<vscale x 4 x i32> %unused
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-4
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
 ; CONTIGUOUS-NEXT:    ldnt1w { z0.s - z3.s }, pn8/z, [x0]
-; CONTIGUOUS-NEXT:    str z0, [sp]
-; CONTIGUOUS-NEXT:    str z1, [sp, #1, mul vl]
-; CONTIGUOUS-NEXT:    str z2, [sp, #2, mul vl]
-; CONTIGUOUS-NEXT:    str z3, [sp, #3, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    st1b { z0.b - z3.b }, pn8, [sp]
 ; CONTIGUOUS-NEXT:    //APP
 ; CONTIGUOUS-NEXT:    nop
 ; CONTIGUOUS-NEXT:    //NO_APP
-; CONTIGUOUS-NEXT:    ldr z0, [sp]
-; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
-; CONTIGUOUS-NEXT:    ldr z2, [sp, #2, mul vl]
-; CONTIGUOUS-NEXT:    ldr z3, [sp, #3, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    ld1b { z0.b - z3.b }, pn8/z, [sp]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #4
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
 ; CONTIGUOUS-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
@@ -1207,17 +1187,13 @@ define <vscale x 16 x i32> @ldnt1_x4_i32_z0_z4_z8_z12_scalar(<vscale x 4 x i32> 
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-4
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
 ; CONTIGUOUS-NEXT:    ldnt1w { z0.s - z3.s }, pn8/z, [x0, x1, lsl #2]
-; CONTIGUOUS-NEXT:    str z0, [sp]
-; CONTIGUOUS-NEXT:    str z1, [sp, #1, mul vl]
-; CONTIGUOUS-NEXT:    str z2, [sp, #2, mul vl]
-; CONTIGUOUS-NEXT:    str z3, [sp, #3, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    st1b { z0.b - z3.b }, pn8, [sp]
 ; CONTIGUOUS-NEXT:    //APP
 ; CONTIGUOUS-NEXT:    nop
 ; CONTIGUOUS-NEXT:    //NO_APP
-; CONTIGUOUS-NEXT:    ldr z0, [sp]
-; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
-; CONTIGUOUS-NEXT:    ldr z2, [sp, #2, mul vl]
-; CONTIGUOUS-NEXT:    ldr z3, [sp, #3, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    ld1b { z0.b - z3.b }, pn8/z, [sp]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #4
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
 ; CONTIGUOUS-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
@@ -1302,17 +1278,13 @@ define <vscale x 8 x i64> @ldnt1_x4_i64_z0_z4_z8_z12(<vscale x 2 x i64> %unused,
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-4
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
 ; CONTIGUOUS-NEXT:    ldnt1d { z0.d - z3.d }, pn8/z, [x0]
-; CONTIGUOUS-NEXT:    str z0, [sp]
-; CONTIGUOUS-NEXT:    str z1, [sp, #1, mul vl]
-; CONTIGUOUS-NEXT:    str z2, [sp, #2, mul vl]
-; CONTIGUOUS-NEXT:    str z3, [sp, #3, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    st1b { z0.b - z3.b }, pn8, [sp]
 ; CONTIGUOUS-NEXT:    //APP
 ; CONTIGUOUS-NEXT:    nop
 ; CONTIGUOUS-NEXT:    //NO_APP
-; CONTIGUOUS-NEXT:    ldr z0, [sp]
-; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
-; CONTIGUOUS-NEXT:    ldr z2, [sp, #2, mul vl]
-; CONTIGUOUS-NEXT:    ldr z3, [sp, #3, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    ld1b { z0.b - z3.b }, pn8/z, [sp]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #4
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
 ; CONTIGUOUS-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
@@ -1396,17 +1368,13 @@ define <vscale x 8 x i64> @ldnt1_x4_i64_z0_z4_z8_z12_scalar(<vscale x 2 x i64> %
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-4
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
 ; CONTIGUOUS-NEXT:    ldnt1d { z0.d - z3.d }, pn8/z, [x0, x1, lsl #3]
-; CONTIGUOUS-NEXT:    str z0, [sp]
-; CONTIGUOUS-NEXT:    str z1, [sp, #1, mul vl]
-; CONTIGUOUS-NEXT:    str z2, [sp, #2, mul vl]
-; CONTIGUOUS-NEXT:    str z3, [sp, #3, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    st1b { z0.b - z3.b }, pn8, [sp]
 ; CONTIGUOUS-NEXT:    //APP
 ; CONTIGUOUS-NEXT:    nop
 ; CONTIGUOUS-NEXT:    //NO_APP
-; CONTIGUOUS-NEXT:    ldr z0, [sp]
-; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
-; CONTIGUOUS-NEXT:    ldr z2, [sp, #2, mul vl]
-; CONTIGUOUS-NEXT:    ldr z3, [sp, #3, mul vl]
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    ld1b { z0.b - z3.b }, pn8/z, [sp]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #4
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
 ; CONTIGUOUS-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
