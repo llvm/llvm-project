@@ -171,6 +171,10 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Added the `bitinsert` and `bitextract` instructions for bit-range
   manipulation on byte type values.
+* Added the `llvm.sanitizer.instrumentation.begin` and
+  `llvm.sanitizer.instrumentation.end` intrinsics, which delimit regions of an
+  otherwise uninstrumented function in which sanitizer instrumentation is
+  enabled again.
 
 ### Changes to LLVM infrastructure
 

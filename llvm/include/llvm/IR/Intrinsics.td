@@ -2554,6 +2554,24 @@ def int_load_relative: DefaultAttrsIntrinsic<[llvm_ptr_ty],
 def int_asan_check_memaccess :
   Intrinsic<[],[llvm_ptr_ty, llvm_i32_ty], [ImmArg<ArgIndex<1>>]>;
 
+// Sanitizer instrumentation regions in functions that are otherwise not
+// instrumented.
+//
+// These are markers consumed by sanitizer passes, but they deliberately
+// keep the default (read/write any memory) effects and so act as memory
+// barriers. Relaxing them, e.g. to IntrInaccessibleMemOnly, lets the optimizer
+// move memory operations across a region boundary: a load can be CSEd with an
+// identical load from before begin() and lose its shadow check, and a store can
+// sink past end() and leave a stale shadow behind. Both defeat the purpose of
+// the region. What the explicit attribute list buys us is the rest of the
+// modelling - these calls do not throw, do not free, do not call back into the
+// module and always return - plus IntrNoMerge, which stops identical markers in
+// sibling blocks from being merged and thereby moving code out of a region.
+def int_sanitizer_instrumentation_begin
+    : DefaultAttrsIntrinsic<[], [], [IntrNoMerge]>;
+def int_sanitizer_instrumentation_end
+    : DefaultAttrsIntrinsic<[], [], [IntrNoMerge]>;
+
 // Spin in an infinite loop (using instructions specified by the target) iff the
 // argument is true. Used to implement efficient conditional traps.
 def int_cond_loop : Intrinsic<[], [llvm_i1_ty],
