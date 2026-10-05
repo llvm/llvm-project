@@ -6000,32 +6000,59 @@ X86TTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
   case Intrinsic::masked_load:
   case Intrinsic::masked_store:
     return getMaskedMemoryOpCost(MICA, CostKind);
+  case Intrinsic::masked_compressstore:
+    // Fallback to scalarization for slow compressstore targets (e.g. znver4).
+    if (ST->isVecCompressStoreSlow())
+      return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
+    break;
   }
 
   static const CostKindTblEntry AVX512VBMI2CostTable[] = {
-    { Intrinsic::masked_expandload,  MVT::v16i8,  { 2, 7, 1, 3 } },
-    { Intrinsic::masked_expandload,  MVT::v32i8,  { 2, 8, 1, 3 } },
-    { Intrinsic::masked_expandload,  MVT::v64i8,  { 2, 9, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v16i8,  { 2, 7, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v32i8,  { 2, 8, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v64i8,  { 2, 9, 1, 3 } },
 
-    { Intrinsic::masked_expandload,  MVT::v8i16,  { 2, 7, 1, 3 } },
-    { Intrinsic::masked_expandload,  MVT::v16i16, { 2, 8, 1, 3 } },
-    { Intrinsic::masked_expandload,  MVT::v32i16, { 2, 9, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v8i16,  { 2, 7, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v16i16, { 2, 8, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v32i16, { 2, 9, 1, 3 } },
+
+    { Intrinsic::masked_compressstore, MVT::v16i8,  { 3,10, 1, 7 } },
+    { Intrinsic::masked_compressstore, MVT::v32i8,  { 3,11, 1, 7 } },
+    { Intrinsic::masked_compressstore, MVT::v64i8,  { 3,12, 1, 8 } },
+
+    { Intrinsic::masked_compressstore, MVT::v8i16,  { 3,10, 1, 7 } },
+    { Intrinsic::masked_compressstore, MVT::v16i16, { 3,11, 1, 7 } },
+    { Intrinsic::masked_compressstore, MVT::v32i16, { 3,12, 1, 8 } },
   };
 
   static const CostKindTblEntry AVX512CostTable[] = {
-    { Intrinsic::masked_expandload,  MVT::v4i32,  { 2, 7, 1, 3 } },
-    { Intrinsic::masked_expandload,  MVT::v4f32,  { 2, 7, 1, 3 } },
-    { Intrinsic::masked_expandload,  MVT::v8i32,  { 2, 8, 1, 3 } },
-    { Intrinsic::masked_expandload,  MVT::v8f32,  { 2, 8, 1, 3 } },
-    { Intrinsic::masked_expandload,  MVT::v16i32, { 2, 9, 1, 3 } },
-    { Intrinsic::masked_expandload,  MVT::v16f32, { 2, 9, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v4i32,  { 2, 7, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v4f32,  { 2, 7, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v8i32,  { 2, 8, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v8f32,  { 2, 8, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v16i32, { 2, 9, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v16f32, { 2, 9, 1, 3 } },
 
-    { Intrinsic::masked_expandload,  MVT::v2i64,  { 2, 7, 1, 3 } },
-    { Intrinsic::masked_expandload,  MVT::v2f64,  { 2, 7, 1, 3 } },
-    { Intrinsic::masked_expandload,  MVT::v4i64,  { 2, 8, 1, 3 } },
-    { Intrinsic::masked_expandload,  MVT::v4f64,  { 2, 8, 1, 3 } },
-    { Intrinsic::masked_expandload,  MVT::v8i64,  { 2, 9, 1, 3 } },
-    { Intrinsic::masked_expandload,  MVT::v8f64,  { 2, 9, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v2i64,  { 2, 7, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v2f64,  { 2, 7, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v4i64,  { 2, 8, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v4f64,  { 2, 8, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v8i64,  { 2, 9, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v8f64,  { 2, 9, 1, 3 } },
+
+    { Intrinsic::masked_compressstore, MVT::v4i32,  { 3,10, 1, 7 } },
+    { Intrinsic::masked_compressstore, MVT::v4f32,  { 3,10, 1, 7 } },
+    { Intrinsic::masked_compressstore, MVT::v8i32,  { 3,11, 1, 7 } },
+    { Intrinsic::masked_compressstore, MVT::v8f32,  { 3,11, 1, 7 } },
+    { Intrinsic::masked_compressstore, MVT::v16i32, { 3,12, 1, 8 } },
+    { Intrinsic::masked_compressstore, MVT::v16f32, { 3,12, 1, 8 } },
+
+    { Intrinsic::masked_compressstore, MVT::v2i64,  { 3,10, 1, 7 } },
+    { Intrinsic::masked_compressstore, MVT::v2f64,  { 3,10, 1, 7 } },
+    { Intrinsic::masked_compressstore, MVT::v4i64,  { 3,11, 1, 7 } },
+    { Intrinsic::masked_compressstore, MVT::v4f64,  { 3,11, 1, 7 } },
+    { Intrinsic::masked_compressstore, MVT::v8i64,  { 3,12, 1, 8 } },
+    { Intrinsic::masked_compressstore, MVT::v8f64,  { 3,12, 1, 8 } },
   };
 
   std::pair<InstructionCost, MVT> LT =
