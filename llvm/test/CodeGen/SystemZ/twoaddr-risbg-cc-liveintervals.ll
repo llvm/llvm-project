@@ -5,7 +5,7 @@
 ; live range
 
 define i16 @and_to_risbmux_issue229045(ptr %out, ptr %in, i8 %c) {
-; CHECK-LABEL: and_to_risbmux:
+; CHECK-LABEL: and_to_risbmux_issue229045:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tmll %r4, 255
 ; CHECK-NEXT:    lghi %r0, 0
