@@ -4,8 +4,7 @@
 define i8 @bitextract_out_of_range(b32 %x) {
 ; CHECK-LABEL: define i8 @bitextract_out_of_range(
 ; CHECK-SAME: b32 [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = bitextract i8, b32 [[X]], i32 25
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 poison
 ;
   %r = bitextract i8, b32 %x, i32 25
   ret i8 %r
@@ -25,8 +24,7 @@ define i8 @neg_bitextract_in_range(b32 %x) {
 define ptr @bitextract_ptr_out_of_range(b64 %x) {
 ; CHECK-LABEL: define ptr @bitextract_ptr_out_of_range(
 ; CHECK-SAME: b64 [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = bitextract ptr, b64 [[X]], i32 8
-; CHECK-NEXT:    ret ptr [[R]]
+; CHECK-NEXT:    ret ptr poison
 ;
   %r = bitextract ptr, b64 %x, i32 8
   ret ptr %r
@@ -34,8 +32,7 @@ define ptr @bitextract_ptr_out_of_range(b64 %x) {
 
 define ptr @bitextract_ptr_constant_out_of_range() {
 ; CHECK-LABEL: define ptr @bitextract_ptr_constant_out_of_range() {
-; CHECK-NEXT:    [[R:%.*]] = bitextract ptr, b64 1234605616436508552, i32 8
-; CHECK-NEXT:    ret ptr [[R]]
+; CHECK-NEXT:    ret ptr poison
 ;
   %r = bitextract ptr, b64 1234605616436508552, i32 8
   ret ptr %r
@@ -44,8 +41,7 @@ define ptr @bitextract_ptr_constant_out_of_range() {
 define b32 @bitinsert_out_of_range(b32 %x, i8 %y) {
 ; CHECK-LABEL: define b32 @bitinsert_out_of_range(
 ; CHECK-SAME: b32 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = bitinsert b32 [[X]], i8 [[Y]], i32 25
-; CHECK-NEXT:    ret b32 [[R]]
+; CHECK-NEXT:    ret b32 poison
 ;
   %r = bitinsert b32 %x, i8 %y, i32 25
   ret b32 %r
@@ -65,8 +61,7 @@ define b32 @neg_bitinsert_in_range(b32 %x, i8 %y) {
 define b64 @bitinsert_ptr_out_of_range(b64 %x, ptr %p) {
 ; CHECK-LABEL: define b64 @bitinsert_ptr_out_of_range(
 ; CHECK-SAME: b64 [[X:%.*]], ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = bitinsert b64 [[X]], ptr [[P]], i32 8
-; CHECK-NEXT:    ret b64 [[R]]
+; CHECK-NEXT:    ret b64 poison
 ;
   %r = bitinsert b64 %x, ptr %p, i32 8
   ret b64 %r
@@ -75,8 +70,7 @@ define b64 @bitinsert_ptr_out_of_range(b64 %x, ptr %p) {
 define i8 @bitextract_poison_offset(b32 %x) {
 ; CHECK-LABEL: define i8 @bitextract_poison_offset(
 ; CHECK-SAME: b32 [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = bitextract i8, b32 [[X]], i32 poison
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 poison
 ;
   %r = bitextract i8, b32 %x, i32 poison
   ret i8 %r
@@ -85,8 +79,7 @@ define i8 @bitextract_poison_offset(b32 %x) {
 define i8 @bitextract_undef_offset(b32 %x) {
 ; CHECK-LABEL: define i8 @bitextract_undef_offset(
 ; CHECK-SAME: b32 [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = bitextract i8, b32 [[X]], i32 undef
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 poison
 ;
   %r = bitextract i8, b32 %x, i32 undef
   ret i8 %r
@@ -95,8 +88,7 @@ define i8 @bitextract_undef_offset(b32 %x) {
 define b32 @bitinsert_poison_offset(b32 %x, i8 %y) {
 ; CHECK-LABEL: define b32 @bitinsert_poison_offset(
 ; CHECK-SAME: b32 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = bitinsert b32 [[X]], i8 [[Y]], i32 poison
-; CHECK-NEXT:    ret b32 [[R]]
+; CHECK-NEXT:    ret b32 poison
 ;
   %r = bitinsert b32 %x, i8 %y, i32 poison
   ret b32 %r
@@ -105,8 +97,7 @@ define b32 @bitinsert_poison_offset(b32 %x, i8 %y) {
 define b32 @bitinsert_undef_offset(b32 %x, i8 %y) {
 ; CHECK-LABEL: define b32 @bitinsert_undef_offset(
 ; CHECK-SAME: b32 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = bitinsert b32 [[X]], i8 [[Y]], i32 undef
-; CHECK-NEXT:    ret b32 [[R]]
+; CHECK-NEXT:    ret b32 poison
 ;
   %r = bitinsert b32 %x, i8 %y, i32 undef
   ret b32 %r
@@ -115,8 +106,7 @@ define b32 @bitinsert_undef_offset(b32 %x, i8 %y) {
 define b32 @bitextract_full_width(b32 %x) {
 ; CHECK-LABEL: define b32 @bitextract_full_width(
 ; CHECK-SAME: b32 [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = bitextract b32, b32 [[X]], i32 0
-; CHECK-NEXT:    ret b32 [[R]]
+; CHECK-NEXT:    ret b32 [[X]]
 ;
   %r = bitextract b32, b32 %x, i32 0
   ret b32 %r
@@ -136,8 +126,7 @@ define i32 @neg_bitextract_full_width_i32(b32 %x) {
 define b32 @bitinsert_full_width(b32 %x, b32 %y) {
 ; CHECK-LABEL: define b32 @bitinsert_full_width(
 ; CHECK-SAME: b32 [[X:%.*]], b32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = bitinsert b32 [[X]], b32 [[Y]], i32 0
-; CHECK-NEXT:    ret b32 [[R]]
+; CHECK-NEXT:    ret b32 [[Y]]
 ;
   %r = bitinsert b32 %x, b32 %y, i32 0
   ret b32 %r
@@ -157,9 +146,7 @@ define b32 @neg_bitinsert_full_width_i32(b32 %x, i32 %y) {
 define i8 @bitextract_bitinsert_i8(b32 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @bitextract_bitinsert_i8(
 ; CHECK-SAME: b32 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[I:%.*]] = bitinsert b32 [[X]], i8 [[Y]], i32 8
-; CHECK-NEXT:    [[R:%.*]] = bitextract i8, b32 [[I]], i32 8
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[Y]]
 ;
   %i = bitinsert b32 %x, i8 %y, i32 8
   %r = bitextract i8, b32 %i, i32 8
@@ -169,9 +156,7 @@ define i8 @bitextract_bitinsert_i8(b32 %x, i8 %y) {
 define b8 @bitextract_bitinsert_b8(b32 %x, b8 %y) {
 ; CHECK-LABEL: define b8 @bitextract_bitinsert_b8(
 ; CHECK-SAME: b32 [[X:%.*]], b8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[I:%.*]] = bitinsert b32 [[X]], b8 [[Y]], i32 8
-; CHECK-NEXT:    [[R:%.*]] = bitextract b8, b32 [[I]], i32 8
-; CHECK-NEXT:    ret b8 [[R]]
+; CHECK-NEXT:    ret b8 [[Y]]
 ;
   %i = bitinsert b32 %x, b8 %y, i32 8
   %r = bitextract b8, b32 %i, i32 8
@@ -181,9 +166,7 @@ define b8 @bitextract_bitinsert_b8(b32 %x, b8 %y) {
 define float @bitextract_bitinsert_float(b64 %x, float %y) {
 ; CHECK-LABEL: define float @bitextract_bitinsert_float(
 ; CHECK-SAME: b64 [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[I:%.*]] = bitinsert b64 [[X]], float [[Y]], i32 32
-; CHECK-NEXT:    [[R:%.*]] = bitextract float, b64 [[I]], i32 32
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    ret float [[Y]]
 ;
   %i = bitinsert b64 %x, float %y, i32 32
   %r = bitextract float, b64 %i, i32 32
@@ -193,9 +176,7 @@ define float @bitextract_bitinsert_float(b64 %x, float %y) {
 define ptr @bitextract_bitinsert_ptr(b128 %x, ptr %y) {
 ; CHECK-LABEL: define ptr @bitextract_bitinsert_ptr(
 ; CHECK-SAME: b128 [[X:%.*]], ptr [[Y:%.*]]) {
-; CHECK-NEXT:    [[I:%.*]] = bitinsert b128 [[X]], ptr [[Y]], i32 64
-; CHECK-NEXT:    [[R:%.*]] = bitextract ptr, b128 [[I]], i32 64
-; CHECK-NEXT:    ret ptr [[R]]
+; CHECK-NEXT:    ret ptr [[Y]]
 ;
   %i = bitinsert b128 %x, ptr %y, i32 64
   %r = bitextract ptr, b128 %i, i32 64
@@ -205,9 +186,7 @@ define ptr @bitextract_bitinsert_ptr(b128 %x, ptr %y) {
 define i8 @bitextract_bitinsert_variable_offset(b32 %x, i8 %y, i32 %n) {
 ; CHECK-LABEL: define i8 @bitextract_bitinsert_variable_offset(
 ; CHECK-SAME: b32 [[X:%.*]], i8 [[Y:%.*]], i32 [[N:%.*]]) {
-; CHECK-NEXT:    [[I:%.*]] = bitinsert b32 [[X]], i8 [[Y]], i32 [[N]]
-; CHECK-NEXT:    [[R:%.*]] = bitextract i8, b32 [[I]], i32 [[N]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[Y]]
 ;
   %i = bitinsert b32 %x, i8 %y, i32 %n
   %r = bitextract i8, b32 %i, i32 %n
@@ -243,9 +222,7 @@ define b8 @neg_bitextract_bitinsert_other_type(b32 %x, i8 %y) {
 define b32 @bitinsert_bitextract_b8(b32 %x) {
 ; CHECK-LABEL: define b32 @bitinsert_bitextract_b8(
 ; CHECK-SAME: b32 [[X:%.*]]) {
-; CHECK-NEXT:    [[E:%.*]] = bitextract b8, b32 [[X]], i32 8
-; CHECK-NEXT:    [[R:%.*]] = bitinsert b32 [[X]], b8 [[E]], i32 8
-; CHECK-NEXT:    ret b32 [[R]]
+; CHECK-NEXT:    ret b32 [[X]]
 ;
   %e = bitextract b8, b32 %x, i32 8
   %r = bitinsert b32 %x, b8 %e, i32 8
@@ -255,9 +232,7 @@ define b32 @bitinsert_bitextract_b8(b32 %x) {
 define b32 @bitinsert_bitextract_variable_offset(b32 %x, i32 %n) {
 ; CHECK-LABEL: define b32 @bitinsert_bitextract_variable_offset(
 ; CHECK-SAME: b32 [[X:%.*]], i32 [[N:%.*]]) {
-; CHECK-NEXT:    [[E:%.*]] = bitextract b8, b32 [[X]], i32 [[N]]
-; CHECK-NEXT:    [[R:%.*]] = bitinsert b32 [[X]], b8 [[E]], i32 [[N]]
-; CHECK-NEXT:    ret b32 [[R]]
+; CHECK-NEXT:    ret b32 [[X]]
 ;
   %e = bitextract b8, b32 %x, i32 %n
   %r = bitinsert b32 %x, b8 %e, i32 %n

@@ -5616,6 +5616,89 @@ Value *llvm::simplifyExtractElementInst(Value *Vec, Value *Idx,
   return ::simplifyExtractElementInst(Vec, Idx, Q, RecursionLimit);
 }
 
+/// Return true if accessing the bit range of type Ty at Offset in a value of
+/// type SrcTy is poison.
+static bool isPoisonBitRange(Value *Offset, Type *Ty, Type *SrcTy,
+                             const SimplifyQuery &Q) {
+  // A poison offset makes the result poison. An undef offset can be chosen to
+  // be out of range, which also makes the result poison.
+  if (isa<PoisonValue>(Offset) || Q.isUndefValue(Offset))
+    return true;
+
+  // Accessing bits past the end of the value is poison.
+  const APInt *Off;
+  return match(Offset, m_APInt(Off)) &&
+         Off->getZExtValue() + Q.DL.getTypeSizeInBits(Ty).getFixedValue() >
+             Q.DL.getTypeSizeInBits(SrcTy).getFixedValue();
+}
+
+/// Given operands for a BitInsertInst, see if we can fold the result.
+/// If not, this returns null.
+static Value *simplifyBitInsertInst(Value *Base, Value *Val, Value *Offset,
+                                    const SimplifyQuery &Q, unsigned) {
+  auto *CBase = dyn_cast<Constant>(Base);
+  auto *CVal = dyn_cast<Constant>(Val);
+  auto *COffset = dyn_cast<Constant>(Offset);
+  if (CBase && CVal && COffset)
+    if (Constant *C = ConstantFoldBitInsertInstruction(CBase, CVal, COffset))
+      return C;
+
+  // bitinsert x, y, poison/undef/out_of_range -> poison
+  if (isPoisonBitRange(Offset, Val->getType(), Base->getType(), Q))
+    return PoisonValue::get(Base->getType());
+
+  // bitinsert x, (bN y), n -> y, since any n != 0 is poison
+  if (Val->getType() == Base->getType())
+    return Val;
+
+  // bitinsert x, (bitextract bM, x, n), n -> x
+  // Only fold byte extracts, which keep every bit as is. Other extracts can
+  // drop provenance, or make the whole value poison if any bit is poison, so
+  // reinserting them doesn't always give back the original value.
+  if (Val->getType()->isByteTy() &&
+      match(Val, m_BitExtract(m_Specific(Base), m_Specific(Offset))))
+    return Base;
+
+  return nullptr;
+}
+
+Value *llvm::simplifyBitInsertInst(Value *Base, Value *Val, Value *Offset,
+                                   const SimplifyQuery &Q) {
+  return ::simplifyBitInsertInst(Base, Val, Offset, Q, RecursionLimit);
+}
+
+/// Given operands for a BitExtractInst, see if we can fold the result.
+/// If not, this returns null.
+static Value *simplifyBitExtractInst(Type *Ty, Value *Src, Value *Offset,
+                                     const SimplifyQuery &Q, unsigned) {
+  auto *CSrc = dyn_cast<Constant>(Src);
+  auto *COffset = dyn_cast<Constant>(Offset);
+  if (CSrc && COffset)
+    if (Constant *C = ConstantFoldBitExtractInstruction(Ty, CSrc, COffset))
+      return C;
+
+  // bitextract ty, x, poison/undef/out_of_range -> poison
+  if (isPoisonBitRange(Offset, Ty, Src->getType(), Q))
+    return PoisonValue::get(Ty);
+
+  // bitextract bN, (bN x), n -> x, since any n != 0 is poison
+  if (Src->getType() == Ty)
+    return Src;
+
+  // bitextract ty, (bitinsert x, (ty y), n), n -> y
+  Value *Val;
+  if (match(Src, m_BitInsert(m_Value(), m_Value(Val), m_Specific(Offset))) &&
+      Val->getType() == Ty)
+    return Val;
+
+  return nullptr;
+}
+
+Value *llvm::simplifyBitExtractInst(Type *Ty, Value *Src, Value *Offset,
+                                    const SimplifyQuery &Q) {
+  return ::simplifyBitExtractInst(Ty, Src, Offset, Q, RecursionLimit);
+}
+
 /// See if we can fold the given phi. If not, returns null.
 static Value *simplifyPHINode(PHINode *PN, ArrayRef<Value *> IncomingValues,
                               const SimplifyQuery &Q) {
@@ -7866,6 +7949,12 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
   }
   case Instruction::ExtractElement:
     return simplifyExtractElementInst(NewOps[0], NewOps[1], Q, MaxRecurse);
+  case Instruction::BitInsert:
+    return simplifyBitInsertInst(NewOps[0], NewOps[1], NewOps[2], Q,
+                                 MaxRecurse);
+  case Instruction::BitExtract:
+    return simplifyBitExtractInst(I->getType(), NewOps[0], NewOps[1], Q,
+                                  MaxRecurse);
   case Instruction::ShuffleVector: {
     auto *SVI = cast<ShuffleVectorInst>(I);
     return simplifyShuffleVectorInst(NewOps[0], NewOps[1],
