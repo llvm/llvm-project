@@ -12,6 +12,9 @@ struct A {
   struct B b;
 } a;
 
+// Not the standard 'memset' -- there third parameter would be a 'size_t'.
 void *memset(void *s, int c, const int &cond);
 
-void foo() { memset(&a.b, 0, sizeof(b)); }
+void foo() {
+  memset(&a.b, 0, sizeof(b)); // no-crash
+}
