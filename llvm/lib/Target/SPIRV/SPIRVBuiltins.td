@@ -686,6 +686,7 @@ defm : DemangledNativeBuiltin<"__sub_group_commit_write_pipe", OpenCL_std, Pipe,
 // Barrier builtin records:
 defm : DemangledNativeBuiltin<"barrier", OpenCL_std, Barrier, 1, 3, OpControlBarrier>;
 defm : DemangledNativeBuiltin<"work_group_barrier", OpenCL_std, Barrier, 1, 3, OpControlBarrier>;
+defm : DemangledNativeBuiltin<"sub_group_barrier", OpenCL_std, Barrier, 1, 2, OpControlBarrier>;
 defm : DemangledNativeBuiltin<"__spirv_ControlBarrier", OpenCL_std, Barrier, 3, 3, OpControlBarrier>;
 
 // ICarryBorrow builtin record:

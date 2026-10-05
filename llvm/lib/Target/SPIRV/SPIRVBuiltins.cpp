@@ -940,6 +940,17 @@ static bool buildBarrierInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
     return buildOpFromWrapper(MIRBuilder, Opcode, Call, Register(0));
 
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  bool IsSubgroupBarrier = Builtin->name() == "sub_group_barrier";
+  if (IsSubgroupBarrier) {
+    // TODO: Support runtime flags and scopes for OpenCL barriers.
+    for (Register Arg : Call->Arguments) {
+      const MachineInstr *MI = getDefInstrMaybeConstant(Arg, MRI);
+      if (!MI || MI->getOpcode() != TargetOpcode::G_CONSTANT)
+        report_fatal_error(
+            "sub_group_barrier with non-constant arguments is not supported",
+            false);
+    }
+  }
   unsigned MemFlags = getIConstVal(Call->Arguments[0], MRI);
   unsigned MemSemantics = SPIRV::MemorySemantics::None;
 
@@ -968,7 +979,8 @@ static bool buildBarrierInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
           ? Call->Arguments[0]
           : buildConstantIntReg32(MemSemantics, MIRBuilder, GR);
   Register ScopeReg;
-  SPIRV::Scope::Scope Scope = SPIRV::Scope::Workgroup;
+  SPIRV::Scope::Scope Scope =
+      IsSubgroupBarrier ? SPIRV::Scope::Subgroup : SPIRV::Scope::Workgroup;
   SPIRV::Scope::Scope MemScope = Scope;
   if (Call->Arguments.size() >= 2) {
     assert(
