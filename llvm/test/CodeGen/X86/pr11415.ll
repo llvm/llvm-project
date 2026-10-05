@@ -14,7 +14,8 @@
 ; CHECK-NEXT:	movq	-8(%rsp), %rax
 ; CHECK-NEXT:	ret
 
-; The asm reads the value twice, so the early-clobber tie needs a copy.
+;; Each asm operand reads its own copy of %0, so the tied use takes over the
+;; early-clobber def's %rcx while the other operand stays in %rdx.
 ; O0: 	#APP
 ; O0-NEXT:	#NO_APP
 ; O0-NEXT:	movq	%rcx, %rdx

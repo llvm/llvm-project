@@ -3785,12 +3785,6 @@ public:
 
   RTLIB::LibcallImpl getMemcpyImpl() const { return Libcalls.getMemcpyImpl(); }
 
-  /// Check if this is valid libcall for the current module, otherwise
-  /// RTLIB::Unsupported.
-  RTLIB::LibcallImpl getSupportedLibcallImpl(StringRef FuncName) const {
-    return RuntimeLibcallInfo.getSupportedLibcallImpl(FuncName);
-  }
-
   /// Get the CallingConv that should be used for the specified libcall
   /// implementation.
   CallingConv::ID getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {

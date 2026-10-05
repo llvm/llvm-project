@@ -134,10 +134,8 @@ body: |
     RET64 implicit $eax
 ...
 ---
-# A tied use reading a subregister is a truncation, so it cannot take over the
-# def's register: the copy performs the truncation and the operand reads the
-# def's register whole, as TwoAddressInstructionPass does. %0 is read again
-# afterwards, so it keeps its own register.
+# A tied use reading a subregister cannot take over the def's register even
+# though it dies: the copy performs the truncation.
 name: tied_use_subreg
 tracksRegLiveness: true
 body: |
@@ -146,16 +144,14 @@ body: |
     ; CHECK-LABEL: name: tied_use_subreg
     ; CHECK: liveins: $edi, $esi
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: renamable $ecx = COPY killed $edi
-    ; CHECK-NEXT: $ax = COPY $cx
-    ; CHECK-NEXT: renamable $ax = ADD16rr renamable $ax, killed renamable $si, implicit-def dead $eflags
-    ; CHECK-NEXT: RET64 implicit killed $ax, implicit killed $ecx
+    ; CHECK-NEXT: $ax = COPY $di
+    ; CHECK-NEXT: renamable $ax = ADD16rr killed renamable $ax, killed renamable $si, implicit-def dead $eflags
+    ; CHECK-NEXT: RET64 implicit killed $ax
     %0:gr32 = COPY $edi
     %1:gr16 = COPY $si
     %2:gr16 = ADD16rr %0.sub_16bit, %1, implicit-def dead $eflags
-    $ecx = COPY %0
     $ax = COPY %2
-    RET64 implicit $ax, implicit $ecx
+    RET64 implicit $ax
 ...
 ---
 # The high-byte read forces GR32_ABCD on %0, which does not contain the $esi

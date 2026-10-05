@@ -1236,19 +1236,19 @@ def __builtin_amdgcn_wmma_i32_16x16x64_iu8 : AMDGPUBuiltin<"_ExtVector<8, int>(_
   let Documentation = [DocWMMA_i32_16x16x64_iu8_GFX1250];
   let ArgNames = ["a_sign", "a", "b_sign", "b", "c", "matrix_a_reuse", "matrix_b_reuse"];
 }
-def __builtin_amdgcn_wmma_f16_16x16x128_fp8_fp8 : AMDGPUBuiltin<"_ExtVector<8, _Float16>(_ExtVector<16, int>, _ExtVector<16, int>, _Constant short, _ExtVector<8, _Float16>, _Constant bool, _Constant bool)", [Const], "wmma-16x16x128fp8-insts,wavefrontsize32"> {
+def __builtin_amdgcn_wmma_f16_16x16x128_fp8_fp8 : AMDGPUBuiltin<"_ExtVector<8, _Float16>(_ExtVector<16, int>, _ExtVector<16, int>, _Constant short, _ExtVector<8, _Float16>, _Constant bool, _Constant bool)", [Const], "wmma-n16-insts,wavefrontsize32"> {
   let Documentation = [DocWMMA_fp8_16x16x128_GFX1250];
   let ArgNames = ["a", "b", "c_mod", "c", "matrix_a_reuse", "matrix_b_reuse"];
 }
-def __builtin_amdgcn_wmma_f16_16x16x128_fp8_bf8 : AMDGPUBuiltin<"_ExtVector<8, _Float16>(_ExtVector<16, int>, _ExtVector<16, int>, _Constant short, _ExtVector<8, _Float16>, _Constant bool, _Constant bool)", [Const], "wmma-16x16x128fp8-insts,wavefrontsize32"> {
+def __builtin_amdgcn_wmma_f16_16x16x128_fp8_bf8 : AMDGPUBuiltin<"_ExtVector<8, _Float16>(_ExtVector<16, int>, _ExtVector<16, int>, _Constant short, _ExtVector<8, _Float16>, _Constant bool, _Constant bool)", [Const], "wmma-n16-insts,wavefrontsize32"> {
   let Documentation = [DocWMMA_fp8_16x16x128_GFX1250];
   let ArgNames = ["a", "b", "c_mod", "c", "matrix_a_reuse", "matrix_b_reuse"];
 }
-def __builtin_amdgcn_wmma_f16_16x16x128_bf8_fp8 : AMDGPUBuiltin<"_ExtVector<8, _Float16>(_ExtVector<16, int>, _ExtVector<16, int>, _Constant short, _ExtVector<8, _Float16>, _Constant bool, _Constant bool)", [Const], "wmma-16x16x128fp8-insts,wavefrontsize32"> {
+def __builtin_amdgcn_wmma_f16_16x16x128_bf8_fp8 : AMDGPUBuiltin<"_ExtVector<8, _Float16>(_ExtVector<16, int>, _ExtVector<16, int>, _Constant short, _ExtVector<8, _Float16>, _Constant bool, _Constant bool)", [Const], "wmma-n16-insts,wavefrontsize32"> {
   let Documentation = [DocWMMA_fp8_16x16x128_GFX1250];
   let ArgNames = ["a", "b", "c_mod", "c", "matrix_a_reuse", "matrix_b_reuse"];
 }
-def __builtin_amdgcn_wmma_f16_16x16x128_bf8_bf8 : AMDGPUBuiltin<"_ExtVector<8, _Float16>(_ExtVector<16, int>, _ExtVector<16, int>, _Constant short, _ExtVector<8, _Float16>, _Constant bool, _Constant bool)", [Const], "wmma-16x16x128fp8-insts,wavefrontsize32"> {
+def __builtin_amdgcn_wmma_f16_16x16x128_bf8_bf8 : AMDGPUBuiltin<"_ExtVector<8, _Float16>(_ExtVector<16, int>, _ExtVector<16, int>, _Constant short, _ExtVector<8, _Float16>, _Constant bool, _Constant bool)", [Const], "wmma-n16-insts,wavefrontsize32"> {
   let Documentation = [DocWMMA_fp8_16x16x128_GFX1250];
   let ArgNames = ["a", "b", "c_mod", "c", "matrix_a_reuse", "matrix_b_reuse"];
 }
@@ -1256,19 +1256,19 @@ def __builtin_amdgcn_wmma_f32_16x16x128_f8f6f4 : AMDGPUBuiltin<"_ExtVector<8, fl
   let Documentation = [DocWMMA_f8f6f4_GFX1250];
   let ArgNames = ["matrix_a_fmt", "a", "matrix_b_fmt", "b", "c_mod", "c"];
 }
-def __builtin_amdgcn_wmma_f32_16x16x128_fp8_fp8 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<16, int>, _ExtVector<16, int>, _Constant short, _ExtVector<8, float>, _Constant bool, _Constant bool)", [Const], "wmma-16x16x128fp8-insts,wavefrontsize32"> {
+def __builtin_amdgcn_wmma_f32_16x16x128_fp8_fp8 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<16, int>, _ExtVector<16, int>, _Constant short, _ExtVector<8, float>, _Constant bool, _Constant bool)", [Const], "wmma-n16-insts,wavefrontsize32"> {
   let Documentation = [DocWMMA_fp8_16x16x128_GFX1250];
   let ArgNames = ["a", "b", "c_mod", "c", "matrix_a_reuse", "matrix_b_reuse"];
 }
-def __builtin_amdgcn_wmma_f32_16x16x128_fp8_bf8 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<16, int>, _ExtVector<16, int>, _Constant short, _ExtVector<8, float>, _Constant bool, _Constant bool)", [Const], "wmma-16x16x128fp8-insts,wavefrontsize32"> {
+def __builtin_amdgcn_wmma_f32_16x16x128_fp8_bf8 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<16, int>, _ExtVector<16, int>, _Constant short, _ExtVector<8, float>, _Constant bool, _Constant bool)", [Const], "wmma-n16-insts,wavefrontsize32"> {
   let Documentation = [DocWMMA_fp8_16x16x128_GFX1250];
   let ArgNames = ["a", "b", "c_mod", "c", "matrix_a_reuse", "matrix_b_reuse"];
 }
-def __builtin_amdgcn_wmma_f32_16x16x128_bf8_fp8 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<16, int>, _ExtVector<16, int>, _Constant short, _ExtVector<8, float>, _Constant bool, _Constant bool)", [Const], "wmma-16x16x128fp8-insts,wavefrontsize32"> {
+def __builtin_amdgcn_wmma_f32_16x16x128_bf8_fp8 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<16, int>, _ExtVector<16, int>, _Constant short, _ExtVector<8, float>, _Constant bool, _Constant bool)", [Const], "wmma-n16-insts,wavefrontsize32"> {
   let Documentation = [DocWMMA_fp8_16x16x128_GFX1250];
   let ArgNames = ["a", "b", "c_mod", "c", "matrix_a_reuse", "matrix_b_reuse"];
 }
-def __builtin_amdgcn_wmma_f32_16x16x128_bf8_bf8 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<16, int>, _ExtVector<16, int>, _Constant short, _ExtVector<8, float>, _Constant bool, _Constant bool)", [Const], "wmma-16x16x128fp8-insts,wavefrontsize32"> {
+def __builtin_amdgcn_wmma_f32_16x16x128_bf8_bf8 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<16, int>, _ExtVector<16, int>, _Constant short, _ExtVector<8, float>, _Constant bool, _Constant bool)", [Const], "wmma-n16-insts,wavefrontsize32"> {
   let Documentation = [DocWMMA_fp8_16x16x128_GFX1250];
   let ArgNames = ["a", "b", "c_mod", "c", "matrix_a_reuse", "matrix_b_reuse"];
 }
