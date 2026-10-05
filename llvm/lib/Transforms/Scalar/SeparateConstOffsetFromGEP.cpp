@@ -640,14 +640,12 @@ bool ConstantOffsetExtractor::canTraceInto(bool SignExtended, bool ZeroExtended,
   // In addition, tracing into BO requires that its surrounding sext/zext/trunc
   // (if any) is distributable to both operands.
   //
-  // Suppose BO = A op B.
-  //  SignExtended | ZeroExtended | Distributable?
-  // --------------+--------------+----------------------------------
-  //       0       |      0       | true because no s/zext exists
-  //       0       |      1       | zext(BO) == zext(A) op zext(B)
-  //       1       |      0       | sext(BO) == sext(A) op sext(B)
-  //       1       |      1       | zext(sext(BO)) ==
-  //               |              |     zext(sext(A)) op zext(sext(B))
+  // sext (add/sub nsw A, B) == add/sub nsw (sext A), (sext B)
+  // zext (add/sub nuw A, B) == add/sub nuw (zext A), (zext B)
+  if ((!SignExtended || BO->hasNoSignedWrap()) &&
+      (!ZeroExtended || BO->hasNoUnsignedWrap()))
+    return true;
+
   if (BO->getOpcode() == Instruction::Add && !ZeroExtended && Idx) {
     const auto *GEP = cast<GetElementPtrInst>(Idx->getUser());
     // For a sext(add nuw), allow tracing through when the enclosing GEP is both
@@ -664,14 +662,7 @@ bool ConstantOffsetExtractor::canTraceInto(bool SignExtended, bool ZeroExtended,
       return true;
   }
 
-  // sext (add/sub nsw A, B) == add/sub nsw (sext A), (sext B)
-  // zext (add/sub nuw A, B) == add/sub nuw (zext A), (zext B)
-  if (SignExtended && !BO->hasNoSignedWrap())
-    return false;
-  if (ZeroExtended && !BO->hasNoUnsignedWrap())
-    return false;
-
-  return true;
+  return false;
 }
 
 std::optional<APInt> ConstantOffsetExtractor::findInEitherOperand(
