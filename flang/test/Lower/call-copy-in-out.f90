@@ -111,7 +111,7 @@ subroutine test_forwarded_intent_in(x)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_forwarded_without_intent(
-! CHECK-SAME: %{{.*}}: !fir.ref<!fir.array<4xf32>> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_in>}) {
+! CHECK-SAME: %{{.*}}: !fir.ref<!fir.array<4xf32>> {fir.bindc_name = "x"}) {
 subroutine test_forwarded_without_intent(x)
   real :: x(4)
 ! CHECK: hlfir.copy_in

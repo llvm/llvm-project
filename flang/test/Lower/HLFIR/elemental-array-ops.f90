@@ -208,7 +208,7 @@ subroutine polymorphic_parenthesis(x, y)
   x = (y)
 end subroutine polymorphic_parenthesis
 ! CHECK-LABEL:   func.func @_QPpolymorphic_parenthesis(
-! CHECK-SAME:        %[[VAL_0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>>> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_in>},
+! CHECK-SAME:        %[[VAL_0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>>> {fir.bindc_name = "x"},
 ! CHECK-SAME:        %[[VAL_1:.*]]: !fir.class<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>> {fir.bindc_name = "y", fir.fortran_attrs = #fir.var_attrs<intent_in>}) {
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFpolymorphic_parenthesisEx") fortran_attrs<allocatable> : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>>>)
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFpolymorphic_parenthesisEy") fortran_attrs<intent_in> : (!fir.class<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>, !fir.dscope) -> (!fir.class<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>, !fir.class<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>)
@@ -232,7 +232,7 @@ subroutine unlimited_polymorphic_parenthesis(x, y)
   x = (y)
 end subroutine unlimited_polymorphic_parenthesis
 ! CHECK-LABEL:   func.func @_QPunlimited_polymorphic_parenthesis(
-! CHECK-SAME:        %[[VAL_0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_in>},
+! CHECK-SAME:        %[[VAL_0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>> {fir.bindc_name = "x"},
 ! CHECK-SAME:        %[[VAL_1:.*]]: !fir.class<!fir.array<?xnone>> {fir.bindc_name = "y", fir.fortran_attrs = #fir.var_attrs<intent_in>}) {
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFunlimited_polymorphic_parenthesisEx") fortran_attrs<allocatable> : (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>)
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFunlimited_polymorphic_parenthesisEy") fortran_attrs<intent_in> : (!fir.class<!fir.array<?xnone>>, !fir.dscope) -> (!fir.class<!fir.array<?xnone>>, !fir.class<!fir.array<?xnone>>)

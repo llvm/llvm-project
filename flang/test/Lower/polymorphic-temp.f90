@@ -208,7 +208,7 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMpoly_tmpPtest_merge_intrinsic2(
-! CHECK-SAME: %[[A:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpoly_tmpTp1{a:i32}>>>> {fir.bindc_name = "a", fir.fortran_attrs = #fir.var_attrs<intent_in>, fir.read_only}, %[[B:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.type<_QMpoly_tmpTp1{a:i32}>>>> {fir.bindc_name = "b", fir.fortran_attrs = #fir.var_attrs<intent_in>}, %[[I:.*]]: !fir.ref<i32> {fir.bindc_name = "i", fir.fortran_attrs = #fir.var_attrs<intent_in>, fir.read_only}) {
+! CHECK-SAME: %[[A:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpoly_tmpTp1{a:i32}>>>> {fir.bindc_name = "a", fir.fortran_attrs = #fir.var_attrs<intent_in>, fir.read_only}, %[[B:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.type<_QMpoly_tmpTp1{a:i32}>>>> {fir.bindc_name = "b"}, %[[I:.*]]: !fir.ref<i32> {fir.bindc_name = "i", fir.fortran_attrs = #fir.var_attrs<intent_in>, fir.read_only}) {
 ! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]]
 ! CHECK: %[[B_DECL:.*]]:2 = hlfir.declare %[[B]]
 ! CHECK: %[[I_DECL:.*]]:2 = hlfir.declare %[[I]]

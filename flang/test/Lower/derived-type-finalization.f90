@@ -116,7 +116,7 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMderived_type_finalizationPtest_end_finalization2(
-! CHECK-SAME: %[[A:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "a", fir.fortran_attrs = #fir.var_attrs<intent_inout>}) {
+! CHECK-SAME: %[[A:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "a"}) {
 ! CHECK:   %[[A_DECL:.*]]:2 = hlfir.declare %[[A]]
 ! CHECK:   %[[T:.*]] = fir.alloca !fir.type<_QMderived_type_finalizationTt1{a:i32}> <{bindc_name = "t", uniq_name = "_QMderived_type_finalizationFtest_end_finalization2Et"}>
 ! CHECK:   %[[T_DECL:.*]]:2 = hlfir.declare %[[T]]

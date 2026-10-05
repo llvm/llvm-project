@@ -50,7 +50,7 @@ subroutine test_assumed_length_alloc(x)
 end subroutine
 
 ! CHECK-LABEL:   func.func @_QMassumed_rank_testsPtest_intrinsic(
-! CHECK-SAME:                                                    %[[VAL_0:.*]]: !fir.box<!fir.array<*:f32>> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_out>}) {
+! CHECK-SAME:                                                    %[[VAL_0:.*]]: !fir.box<!fir.array<*:f32>> {fir.bindc_name = "x"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} uniq_name("_QMassumed_rank_testsFtest_intrinsicEx") : (!fir.box<!fir.array<*:f32>>, !fir.dscope) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
 ! CHECK:           fir.call @_QPtakes_real(%[[VAL_2]]#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
@@ -58,7 +58,7 @@ end subroutine
 ! CHECK:         }
 
 ! CHECK-LABEL:   func.func @_QMassumed_rank_testsPtest_character_explicit_len(
-! CHECK-SAME:                                                                 %[[VAL_0:.*]]: !fir.box<!fir.array<*:!fir.char<1,?>>> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_out>},
+! CHECK-SAME:                                                                 %[[VAL_0:.*]]: !fir.box<!fir.array<*:!fir.char<1,?>>> {fir.bindc_name = "x"},
 ! CHECK-SAME:                                                                 %[[VAL_1:.*]]: !fir.ref<i64> {fir.bindc_name = "n"}) {
 ! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[VAL_2]] arg {{[0-9]+}} uniq_name("_QMassumed_rank_testsFtest_character_explicit_lenEn") : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
@@ -72,7 +72,7 @@ end subroutine
 ! CHECK:         }
 
 ! CHECK-LABEL:   func.func @_QMassumed_rank_testsPtest_character_assumed_len(
-! CHECK-SAME:                                                                %[[VAL_0:.*]]: !fir.box<!fir.array<*:!fir.char<1,?>>> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_out>}) {
+! CHECK-SAME:                                                                %[[VAL_0:.*]]: !fir.box<!fir.array<*:!fir.char<1,?>>> {fir.bindc_name = "x"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} uniq_name("_QMassumed_rank_testsFtest_character_assumed_lenEx") : (!fir.box<!fir.array<*:!fir.char<1,?>>>, !fir.dscope) -> (!fir.box<!fir.array<*:!fir.char<1,?>>>, !fir.box<!fir.array<*:!fir.char<1,?>>>)
 ! CHECK:           fir.call @_QPtakes_char(%[[VAL_2]]#0) fastmath<contract> : (!fir.box<!fir.array<*:!fir.char<1,?>>>) -> ()
@@ -86,14 +86,14 @@ end subroutine
 ! CHECK:           fir.call @_QPtakes_real(%[[VAL_2]]#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
 
 ! CHECK-LABEL:   func.func @_QMassumed_rank_testsPtest_simple_allocatable(
-! CHECK-SAME:                                                             %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_out>}) {
+! CHECK-SAME:                                                             %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>> {fir.bindc_name = "x"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} uniq_name("_QMassumed_rank_testsFtest_simple_allocatableEx") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>)
 ! CHECK:           return
 ! CHECK:         }
 
 ! CHECK-LABEL:   func.func @_QMassumed_rank_testsPtest_simple_pointer(
-! CHECK-SAME:                                                         %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_out>}) {
+! CHECK-SAME:                                                         %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>> {fir.bindc_name = "x"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} uniq_name("_QMassumed_rank_testsFtest_simple_pointerEx") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>)
 ! CHECK:           return
@@ -118,7 +118,7 @@ end subroutine
 ! CHECK:         }
 
 ! CHECK-LABEL:   func.func @_QMassumed_rank_testsPtest_assumed_length_alloc(
-! CHECK-SAME:                                                               %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_out>}) {
+! CHECK-SAME:                                                               %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>> {fir.bindc_name = "x"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>
 ! CHECK:           %[[VAL_3:.*]] = fir.box_elesize %[[VAL_2]] : (!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>) -> index
