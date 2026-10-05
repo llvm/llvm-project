@@ -745,28 +745,25 @@ static_assert(f(c1, c2) == 5);
 // TODO: This entire example should work without issuing any diagnostics once
 // we have full support for references to constexpr variables (P2686).
 consteval int f() {
-  constexpr Array<int, 3> arr {1, 2, 3}; // expected-note{{add 'static' to give it a constant address}} \
-                                            new-interp-note 5 {{add 'static' to give it a constant address}}
+  constexpr Array<int, 3> arr {1, 2, 3}; // expected-note{{add 'static' to give it a constant address}}
 
   int result = 0;
 
   // expected-error@#invalid-ref {{constexpr variable '__range1' must be initialized by a constant expression}}
   // expected-error@#invalid-ref {{constexpr variable '__begin1' must be initialized by a constant expression}}
   // expected-error@#invalid-ref {{constexpr variable '__end1' must be initialized by a constant expression}}
+  // expected-error@#invalid-ref {{expansion statement size is not a constant expression}}
   // expected-note@#invalid-ref {{reference to 'arr' is not a constant expression}}
-  // old-interp-error@#invalid-ref {{expansion statement size is not a constant expression}}
+  // expected-note@#invalid-ref 3 {{declared here}}
   // old-interp-note@#invalid-ref {{in call to}}
   // old-interp-note@#invalid-ref 3 {{member call on variable '__range1' whose value is not known}}
-  // old-interp-note@#invalid-ref 3 {{declared here}}
-  // new-interp-error@#invalid-ref 3 {{constexpr variable '__iter1' must be initialized by a constant expression}}
-  // new-interp-note@#invalid-ref 5 {{pointer to subobject of 'arr' is not a constant expression}}
-  // new-interp-note@#invalid-ref 3 {{in instantiation of expansion statement}}
+  // new-interp-note@#invalid-ref 3 {{initializer of '__range1' is not a constant expression}}
   template for (constexpr int s : arr) { // #invalid-ref                // OK, iterating expansion statement
     result += sizeof(char[s]);
   }
   return result;
 }
-static_assert(f() == 6); // old-interp-error {{static assertion failed due to requirement 'f() == 6'}} old-interp-note {{expression evaluates to '0 == 6'}}
+static_assert(f() == 6); // expected-error {{static assertion failed due to requirement 'f() == 6'}} expected-note {{expression evaluates to '0 == 6'}}
 
 struct S {
   int i;
