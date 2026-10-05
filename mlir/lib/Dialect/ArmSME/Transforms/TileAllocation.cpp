@@ -812,7 +812,7 @@ LogicalResult mlir::arm_sme::allocateSMETiles(FunctionOpInterface function,
   // Bail out early if the function has no ArmSME tile ops: there is nothing
   // to allocate (a value not produced/consumed by such an op never gets a
   // tile ID), so this avoids the (non-trivial) preprocessing and liveness
-  // analysis below for functions that have nothing to allocate.
+  // analysis.
   if (!hasArmSMETileOps(function))
     return success();
 
