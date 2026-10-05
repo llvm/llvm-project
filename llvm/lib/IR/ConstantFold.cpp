@@ -576,6 +576,89 @@ Constant *llvm::ConstantFoldInsertValueInstruction(Constant *Agg,
   return ConstantArray::get(cast<ArrayType>(Agg->getType()), Result);
 }
 
+Constant *llvm::ConstantFoldBitInsertInstruction(Constant *Base, Constant *Val,
+                                                 Constant *Offset) {
+  // bitinsert C, C, undef -> poison
+  if (isa<UndefValue>(Offset))
+    return PoisonValue::get(Base->getType());
+
+  auto *COffset = dyn_cast<ConstantInt>(Offset);
+  if (!COffset)
+    return nullptr;
+
+  // The width of a pointer depends on the data layout.
+  if (Val->getType()->isPointerTy())
+    return nullptr;
+
+  // bitinsert C, C, out_of_range -> poison
+  unsigned BaseBits = Base->getType()->getPrimitiveSizeInBits();
+  unsigned Bits = Val->getType()->getPrimitiveSizeInBits();
+  uint64_t Off = COffset->getZExtValue();
+  if (Off + Bits > BaseBits)
+    return PoisonValue::get(Base->getType());
+
+  // Overwriting every bit of the base is a bitcast of the value.
+  if (Bits == BaseBits)
+    return ConstantExpr::getBitCast(Val, Base->getType());
+
+  // bitinsert poison, poison, C -> poison
+  if (isa<PoisonValue>(Base) && isa<PoisonValue>(Val))
+    return Base;
+
+  // bitinsert undef, undef, C -> undef
+  if (isa<UndefValue>(Base) && !isa<PoisonValue>(Base) &&
+      isa<UndefValue>(Val) && !isa<PoisonValue>(Val))
+    return Base;
+
+  // A byte constant can't mix poison or undef bits with other bits.
+  auto *CB = dyn_cast<ConstantByte>(Base);
+  // The value bits are unknown.
+  if (!CB || isa<ConstantExpr>(Val))
+    return nullptr;
+
+  auto *CI = dyn_cast_or_null<ConstantInt>(ConstantFoldCastInstruction(
+      Instruction::BitCast, Val, IntegerType::get(Base->getContext(), Bits)));
+  if (!CI)
+    return nullptr;
+
+  APInt Res = CB->getValue();
+  Res.insertBits(CI->getValue(), Off);
+  return ConstantByte::get(Base->getType(), Res);
+}
+
+Constant *llvm::ConstantFoldBitExtractInstruction(Type *Ty, Constant *Src,
+                                                  Constant *Offset) {
+  // bitextract poison, C -> poison
+  // bitextract C, undef -> poison
+  if (isa<PoisonValue>(Src) || isa<UndefValue>(Offset))
+    return PoisonValue::get(Ty);
+
+  auto *COffset = dyn_cast<ConstantInt>(Offset);
+  if (!COffset)
+    return nullptr;
+
+  // The width of a pointer depends on the data layout.
+  if (Ty->isPointerTy())
+    return nullptr;
+
+  // bitextract C, out_of_range -> poison
+  unsigned Bits = Ty->getPrimitiveSizeInBits();
+  uint64_t Off = COffset->getZExtValue();
+  if (Off + Bits > Src->getType()->getPrimitiveSizeInBits())
+    return PoisonValue::get(Ty);
+
+  // bitextract undef, C -> undef
+  if (isa<UndefValue>(Src))
+    return UndefValue::get(Ty);
+
+  auto *CB = dyn_cast<ConstantByte>(Src);
+  if (!CB)
+    return nullptr;
+
+  APInt Res = CB->getValue().extractBits(Bits, Off);
+  return ConstantExpr::getBitCast(ConstantInt::get(Src->getContext(), Res), Ty);
+}
+
 Constant *llvm::ConstantFoldUnaryInstruction(unsigned Opcode, Constant *C) {
   assert(Instruction::isUnaryOp(Opcode) && "Non-unary instruction detected");
 

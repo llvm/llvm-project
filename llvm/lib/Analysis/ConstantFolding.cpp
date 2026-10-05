@@ -1210,6 +1210,11 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
   case Instruction::ShuffleVector:
     return ConstantExpr::getShuffleVector(
         Ops[0], Ops[1], cast<ShuffleVectorInst>(InstOrCE)->getShuffleMask());
+  case Instruction::BitInsert:
+    return ConstantFoldBitInsertInstruction(Ops[0], Ops[1], Ops[2]);
+  case Instruction::BitExtract:
+    return ConstantFoldBitExtractInstruction(InstOrCE->getType(), Ops[0],
+                                             Ops[1]);
   case Instruction::Load: {
     const auto *LI = dyn_cast<LoadInst>(InstOrCE);
     if (LI->isVolatile())
