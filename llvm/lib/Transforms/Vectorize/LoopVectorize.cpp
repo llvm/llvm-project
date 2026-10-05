@@ -7313,8 +7313,7 @@ static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan,
       VPInstruction *Freeze = Builder.createFreeze(OrigStart, {}, "fr");
       VPI.setOperand(2, Freeze);
       if (UpdateResumePhis)
-        OrigStart->replaceUsesWithIf(
-            Freeze, [](VPUser &U, unsigned) { return isa<VPPhi>(&U); });
+        OrigStart->replaceUsesWithIf(Freeze, IsaPred<VPPhi>);
     }
   };
   AddFreezeForFindLastIVReductions(MainPlan, true);
@@ -7418,7 +7417,7 @@ static void preparePlanForEpilogueVectorLoop(
   // version, except for the Add itself and the canonical IV increment.
   auto *Increment = vputils::findCanonicalIVIncrement(Plan);
   assert(Increment && "Must have a canonical IV increment at this point");
-  IV->replaceUsesWithIf(Add, [Add, Increment](VPUser &U, unsigned) {
+  IV->replaceUsesWithIf(Add, [Add, Increment](VPUser &U) {
     return &U != Add && &U != Increment;
   });
   VPInstruction *OffsetIVInc =
