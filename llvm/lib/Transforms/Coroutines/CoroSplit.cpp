@@ -2365,8 +2365,7 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
 
       // Query BFI to get the actual estimated execution profile count of the
       // basic block where this suspension point resides.
-      std::optional<uint64_t> Count =
-          BFI.getBlockProfileCount(BB, /*AllowSynthetic=*/true);
+      std::optional<uint64_t> Count = BFI.getBlockProfileCount(BB);
       if (Count.has_value()) {
         if (!Shape.ResumeEntryCount.has_value()) {
           // For the first suspend point visited, initialize the total sum.
