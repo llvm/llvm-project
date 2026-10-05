@@ -355,13 +355,13 @@ void SarifDocumentWriter::createRun(StringRef ShortToolName,
       InformationUri.empty() ? "https://clang.llvm.org/docs/UsersManual.html"
                              : InformationUri;
 
-  json::Object Tool{{"driver", json::Object{{"name", ShortToolName},
-                                            {"fullName", LongToolName},
-                                            {"language", "en-US"},
-                                            {"version", ToolVersion},
-                                            {"informationUri",
-                                             EffectiveInformationUri},
-                                            {"rules", json::Array{}}}}};
+  json::Object Tool{
+      {"driver", json::Object{{"name", ShortToolName},
+                              {"fullName", LongToolName},
+                              {"language", "en-US"},
+                              {"version", ToolVersion},
+                              {"informationUri", EffectiveInformationUri},
+                              {"rules", json::Array{}}}}};
   json::Object TheRun{{"tool", std::move(Tool)},
                       {"results", {}},
                       {"artifacts", {}},
