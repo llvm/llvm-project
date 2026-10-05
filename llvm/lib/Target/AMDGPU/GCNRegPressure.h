@@ -407,6 +407,11 @@ class GCNDownwardRPTracker : public GCNRPTracker {
 
   MachineBasicBlock::const_iterator MBBEnd;
 
+  /// Drop the lanes of \p Reg that are no longer live at \p SI, decreasing
+  /// CurPressure accordingly. \p Reg must be a virtual register that is
+  /// currently tracked as live.
+  void retireVirtReg(Register Reg, SlotIndex SI);
+
 public:
   GCNDownwardRPTracker(const LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
 
