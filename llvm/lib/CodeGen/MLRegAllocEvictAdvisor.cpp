@@ -286,10 +286,10 @@ struct LIFeatureComponents {
 };
 
 // Inline capacity hint only, the real width comes from NumAllocatableRegs.
-static constexpr unsigned ExpectedMaxColumns = 40;
+static constexpr unsigned MaxColumnsCapacityHint = 40;
 
 using CandidateRegList =
-    SmallVector<std::pair<MCRegister, bool>, ExpectedMaxColumns>;
+    SmallVector<std::pair<MCRegister, bool>, MaxColumnsCapacityHint>;
 using FeaturesListNormalizer =
     llvm::SmallVector<float, FeatureIDs::FeatureCount>;
 
@@ -635,9 +635,9 @@ MLEvictAdvisor::MLEvictAdvisor(const MachineFunction &MF, const RAGreedy &RA,
                                const MachineBlockFrequencyInfo &MBFI,
                                const MachineLoopInfo &Loops)
     : RegAllocEvictionAdvisor(MF, RA), InputFeatures(InputFeatures),
-      NumColumns(InputFeatures[FeatureIDs::mask].shape()[1]),
-      DefaultAdvisor(MF, RA), Runner(std::move(Runner)), MBFI(MBFI),
-      Loops(Loops), InitialQSize(MLEvictAdvisor::getInitialQueueSize(MF)) {
+      NumColumns(NumAllocatableRegs + 1), DefaultAdvisor(MF, RA),
+      Runner(std::move(Runner)), MBFI(MBFI), Loops(Loops),
+      InitialQSize(MLEvictAdvisor::getInitialQueueSize(MF)) {
   assert(this->Runner);
   Runner->switchContext(MF.getName());
   DoNotNormalize.set(FeatureIDs::mask);
@@ -676,7 +676,8 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
   // The cascade tracking is the same as in the default advisor
   unsigned Cascade = RA.getExtraInfo().getCascadeOrCurrentNext(VirtReg.reg());
 
-  SmallVector<const LiveInterval *, 32> InterferingIntervals;
+  SmallVector<const LiveInterval *, MaxColumnsCapacityHint>
+      InterferingIntervals;
   for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
     LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, Unit);
     // Different from the default heuristic, we don't make any assumptions
@@ -774,7 +775,7 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
   // reset all the features to 0) Use Pos to capture the column we load
   // features at - in AllocationOrder order.
   size_t Pos = 0;
-  SmallVector<LRStartEndInfo, ExpectedMaxColumns> LRPosInfo;
+  SmallVector<LRStartEndInfo, MaxColumnsCapacityHint> LRPosInfo;
   for (auto I = Order.begin(), E = Order.getOrderLimitEnd(OrderLimit);
        I != E && Pos < CandidateVirtRegPos; ++I, ++Pos) {
     MCRegister PhysReg = *I;

@@ -252,7 +252,6 @@ MLInlineAdvisor::MLInlineAdvisor(
   ModelRunner = GetModelRunner(getFeatureMap());
   if (!ModelRunner) {
     M.getContext().emitError("Could not create model runner");
-    ForceStop = true;
     return;
   }
   ModelRunner->switchContext("");
