@@ -283,6 +283,11 @@ features cannot lower the translation-unit ABI level;
   unit to be emitted into the object file, even when they are inlined into all
   callers or are otherwise unused.
 
+- Added a new `-ast-dump-filter-path` option to filter AST dump output
+  based on the source file path of declarations. The filter uses glob-style
+  matching on the presumed source location (accounting for macro expansions
+  and `#line` directives). (#GH194210)
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
@@ -595,6 +600,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed crashes on an OpenMP `target` region inside a lambda or block at namespace scope, including when the region used a global reference. (#GH223397)
 - Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
+- Fixed a C23 rejects-valid where `auto T x;` (with `T` a typedef-name) was rejected as a missing initializer. (#GH164930)
 - Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
 - Fixed an assertion failure when a constant statement expression that declares a variable is used as a bound of an OpenMP loop. A statement expression in a bound of a non-rectangular loop is now diagnosed. (#GH153987)
 - Fixed a bug where a bit-field accessed as the result of a statement expression
@@ -603,7 +609,6 @@ features cannot lower the translation-unit ABI level;
 - No longer crashing due to follow-on diagnostics when there is an invalid operand in a logical operator involving a vector operand. (#GH227588)
 - Fixed assertion failures caused by stale linkage information when an extern variable or function declaration is merged with a preceding static declaration. (#GH204759, #GH204754)
 - Fixed a crash due to typo correction mishandling custom keywords `_virtual_inheritance` and `_multiple_inheritance` in `-fms-compatibility` mode. (#GH228003)
-  
 #### Bug Fixes to Compiler Builtins
 
 - Fixed a crash when classifying a call to a builtin with dependent arguments,
