@@ -5474,15 +5474,14 @@ public:
     /// The ValueType for the operand value.
     MVT ConstraintVT = MVT::Other;
 
-    /// True if this operand's constraint codes are exactly {"r", "m"} (the
-    /// "rm" constraint). Note that the tied input half of a "+rm" pair does
-    /// not get this set: its own constraint codes are just the matching
-    /// digit (e.g. "0"), not {"r", "m"}, so it is never itself a candidate
-    /// for the preference below -- the output side it's tied to is.
-    /// getConstraintPreferences() uses this to opt for 'r' while still
-    /// allowing the register allocator to fall back to 'm' under register
-    /// pressure, instead of picking 'm' unconditionally as it would for a
-    /// generic multi-alternative constraint.
+    /// True if this "rm" operand should prefer a register, leaving the
+    /// register allocator to fold it to a stack slot if it runs out of
+    /// registers. ParseConstraints() sets this for a direct operand whose
+    /// value fits in one register, on a target that can fold it.
+    /// getConstraintPreferences() then picks 'r', and instruction selection
+    /// marks the register operand foldable (see
+    /// InlineAsm::Flag::setRegMayBeFolded()). The tied input of a "+rm"
+    /// operand has its own constraint ("0"), so only the output gets this.
     bool MayFoldRegister = false;
 
     /// Copy constructor for copying from a ConstraintInfo.
@@ -5529,20 +5528,12 @@ public:
   /// Given a constraint, return the type of constraint it is for this target.
   virtual ConstraintType getConstraintType(StringRef Constraint) const;
 
-  /// Returns true if this target can fold a register operand of an inline
-  /// asm instruction back to a memory operand (see
-  /// TargetInstrInfo::getFrameIndexOperands(), which a target must override
-  /// with its own addressing-mode encoding for this to work -- the base
-  /// TargetInstrInfo implementation is unreachable()). ParseConstraints()
-  /// only sets MayFoldRegister -- and so only ever prefers 'r' over 'm' for
-  /// an exact "rm"/"+rm" constraint -- when this returns true, so that
-  /// register-pressure fallback (RegAllocFast's inline asm folding, or
-  /// InlineSpiller for the greedy allocator) has an actual implementation to
-  /// fall back to instead of crashing. Defaults to false: without this,
-  /// preferring 'r' for "rm" and then genuinely running out of registers
-  /// would attempt to fold to memory and hit that unreachable() instead of
-  /// RegAllocFast's or InlineSpiller's normal "ran out of registers"
-  /// diagnostic.
+  /// Return true if the register allocator can fold an inline asm register
+  /// operand to a stack slot on this target, which needs an override of
+  /// TargetInstrInfo::getFrameIndexOperands(). Only then may an "rm" operand
+  /// prefer a register (see AsmOperandInfo::MayFoldRegister): that choice
+  /// relies on the allocator falling back to memory when it runs out of
+  /// registers.
   virtual bool supportsRegMemInlineAsmFolding() const { return false; }
 
   /// The diagnostic to report when a direct (non-indirect) inline asm

@@ -6228,6 +6228,42 @@ unsigned TargetLowering::AsmOperandInfo::getMatchedOperand() const {
   return atoi(ConstraintCode.c_str());
 }
 
+/// Return true if \p OpInfo is an "rm" operand that should prefer a register,
+/// leaving the register allocator to fold it to a stack slot if it runs out of
+/// registers (see AsmOperandInfo::MayFoldRegister).
+static bool
+shouldPreferFoldableRegister(const TargetLowering &TLI,
+                             const TargetRegisterInfo *TRI,
+                             const TargetLowering::AsmOperandInfo &OpInfo) {
+  // Codes stays empty for a constraint with alternatives ("r|m") until one is
+  // selected, so this only ever matches a plain "rm".
+  if (OpInfo.Codes.size() != 2 || !is_contained(OpInfo.Codes, "r") ||
+      !is_contained(OpInfo.Codes, "m"))
+    return false;
+
+  // Without a fold to fall back on, 'm' is the only choice that can't run out
+  // of registers. Above -O0 only, which leaves -O0 code as it was.
+  if (!TLI.supportsRegMemInlineAsmFolding() ||
+      TLI.getTargetMachine().getOptLevel() == CodeGenOptLevel::None)
+    return false;
+
+  // An indirect operand is already in memory: a register would only add a
+  // load or store around the asm, and isn't supported for an indirect input.
+  if (OpInfo.isIndirect)
+    return false;
+
+  // The register allocator folds one register operand, so the value must fit
+  // in a single register, and some types (e.g. x87 and vector types) can't go
+  // in an 'r' register at all.
+  MVT VT = OpInfo.ConstraintVT;
+  if (VT == MVT::Other || VT.isScalableVector())
+    return false;
+
+  const TargetRegisterClass *RC =
+      TLI.getRegForInlineAsmConstraint(TRI, "r", VT).second;
+  return RC && VT.getFixedSizeInBits() <= TRI->getRegSizeInBits(*RC);
+}
+
 /// Split up the constraint string from the inline assembly value into the
 /// specific constraints and their prefixes, and also tie in the associated
 /// operand values.
@@ -6257,30 +6293,6 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
       maCount = OpInfo.multipleAlternatives.size();
 
     OpInfo.ConstraintVT = MVT::Other;
-
-    // Special treatment for all platforms that can fold a register into a
-    // spill. This is used for the "rm" constraint, where we would vastly
-    // prefer to use 'r' over 'm'. The non-fast register allocators are able to
-    // handle the 'r' default by folding. The fast register allocator needs
-    // special handling to convert the instruction to use 'm' instead.
-    //
-    // This also applies to read-write "+rm" constraints (which generate a
-    // direct "=rm" output with a matching tied input). The register allocator
-    // can fold both the output and its tied input to the same memory slot when
-    // under pressure.
-    //
-    // Gated on supportsRegMemInlineAsmFolding(): preferring 'r' here commits
-    // to a register allocator being able to fold back to memory if 'r'
-    // doesn't pan out, and that fold has no generic implementation -- it
-    // needs a target-specific TargetInstrInfo::getFrameIndexOperands()
-    // override, which today only X86 has. Without this guard, any other
-    // target would prefer 'r', then hit an unreachable() the moment a
-    // register genuinely wasn't available, instead of the register
-    // allocator's normal, clean "ran out of registers" diagnostic.
-    if (OpInfo.Codes.size() == 2 && llvm::is_contained(OpInfo.Codes, "r") &&
-        llvm::is_contained(OpInfo.Codes, "m") &&
-        supportsRegMemInlineAsmFolding())
-      OpInfo.MayFoldRegister = true;
 
     // Compute the value type for each operand.
     switch (OpInfo.Type) {
@@ -6350,6 +6362,8 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
       OpInfo.ConstraintVT = VT.isSimple() ? VT.getSimpleVT() : MVT::Other;
       ArgNo++;
     }
+
+    OpInfo.MayFoldRegister = shouldPreferFoldableRegister(*this, TRI, OpInfo);
   }
 
   // If we have multiple alternative constraints, select the best alternative.
@@ -6448,7 +6462,8 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
 /// preferrable (when they can be emitted). A higher return value means a
 /// stronger preference for one constraint type relative to another.
 /// FIXME: We should prefer registers over memory but doing so may lead to
-/// unrecoverable register exhaustion later.
+/// unrecoverable register exhaustion later, unless the register allocator can
+/// fold the register to memory (see AsmOperandInfo::MayFoldRegister).
 /// https://github.com/llvm/llvm-project/issues/20571
 static unsigned getConstraintPiority(TargetLowering::ConstraintType CT) {
   switch (CT) {
@@ -6562,13 +6577,9 @@ TargetLowering::ConstraintWeight
 ///  1) If there is an 'other' constraint, and if the operand is valid for
 ///     that constraint, use it.  This makes us take advantage of 'i'
 ///     constraints when available.
-///  2) Special processing is done for the "rm" constraint. If specified, we
-///     opt for the 'r' constraint, but mark the operand as being "foldable."
-///     In the face of register exhaustion, the register allocator is free to
-///     choose to use a stack slot: InlineSpiller does this on demand for the
-///     greedy allocator, and RegAllocFast::foldFoldableInlineAsmOperands()
-///     does the equivalent for the fast allocator, which has no on-demand
-///     spilling machinery of its own to fall back on otherwise.
+///  2) For an "rm" operand that the register allocator can fold to a stack
+///     slot (see AsmOperandInfo::MayFoldRegister), pick 'r': the allocator
+///     still falls back to memory if it runs out of registers.
 ///  3) Otherwise, pick the most general constraint present.  This prefers
 ///     'm' over 'r', for example.
 ///
@@ -6578,12 +6589,9 @@ TargetLowering::ConstraintGroup TargetLowering::getConstraintPreferences(
 
   Ret.reserve(OpInfo.Codes.size());
 
-  // If we can fold the register (i.e. it has an "rm" constraint), opt for the
-  // 'r' constraint, and allow the register allocator to spill if need be.
-  const TargetMachine &TM = getTargetMachine();
-  if (TM.getOptLevel() != CodeGenOptLevel::None && OpInfo.MayFoldRegister) {
-    Ret.emplace_back(ConstraintPair("r", getConstraintType("r")));
-    Ret.emplace_back(ConstraintPair("m", getConstraintType("m")));
+  if (OpInfo.MayFoldRegister) {
+    Ret.emplace_back("r", getConstraintType("r"));
+    Ret.emplace_back("m", getConstraintType("m"));
     return Ret;
   }
 

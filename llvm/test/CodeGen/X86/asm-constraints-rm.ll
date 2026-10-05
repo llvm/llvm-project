@@ -3,27 +3,26 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu --regalloc=fast < %s | FileCheck --check-prefix=FAST_RA %s
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -O0 < %s | FileCheck --check-prefix=O0 %s
 
-; TargetLowering::getConstraintPreferences() now prefers 'r' over 'm' for a
-; bare "rm" constraint (see TargetLowering::ParseConstraints setting
-; MayFoldRegister, and ComputeConstraintToUse's -O0 opt-out). With no real
-; register pressure here, both allocators should just keep the value in a
-; register end to end, unlike the historical "always pick m" default.
-define i64 @test_rm_output_no_pressure(i64 %a) {
-; GREEDY_RA-LABEL: test_rm_output_no_pressure:
+; Above -O0, an "rm" input picks a register that the register allocator may
+; fold to a stack slot (see AsmOperandInfo::MayFoldRegister), instead of
+; always picking memory. With no register pressure, both allocators keep the
+; value in a register. -O0 still picks memory.
+define i64 @test_rm_input_no_pressure(i64 %a) {
+; GREEDY_RA-LABEL: test_rm_input_no_pressure:
 ; GREEDY_RA:       # %bb.0: # %entry
 ; GREEDY_RA-NEXT:    #APP
 ; GREEDY_RA-NEXT:    bsfq %rdi, %rax
 ; GREEDY_RA-NEXT:    #NO_APP
 ; GREEDY_RA-NEXT:    retq
 ;
-; FAST_RA-LABEL: test_rm_output_no_pressure:
+; FAST_RA-LABEL: test_rm_input_no_pressure:
 ; FAST_RA:       # %bb.0: # %entry
 ; FAST_RA-NEXT:    #APP
 ; FAST_RA-NEXT:    bsfq %rdi, %rax
 ; FAST_RA-NEXT:    #NO_APP
 ; FAST_RA-NEXT:    retq
 ;
-; O0-LABEL: test_rm_output_no_pressure:
+; O0-LABEL: test_rm_input_no_pressure:
 ; O0:       # %bb.0: # %entry
 ; O0-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; O0-NEXT:    #APP

@@ -414,9 +414,8 @@ namespace llvm {
 
     ConstraintType getConstraintType(StringRef Constraint) const override;
 
-    // X86InstrInfo::getFrameIndexOperands() implements the addressing-mode
-    // encoding this needs; see TargetLowering's declaration for why other
-    // targets default to false here.
+    // X86InstrInfo::getFrameIndexOperands() lets the register allocator fold
+    // an inline asm register operand to a stack slot.
     bool supportsRegMemInlineAsmFolding() const override { return true; }
 
     /// Examine constraint string and operand type and determine a weight value.
