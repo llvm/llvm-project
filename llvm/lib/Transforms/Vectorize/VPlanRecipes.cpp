@@ -1049,6 +1049,13 @@ Value *VPInstruction::generate(VPTransformState &State,
 
     Value *OwnVec = State.get(getOperand(0), IsInLoop);
     Value *PartnerVec = State.get(getOperand(1), IsInLoop);
+    Value *ReVec = IsRealPart ? OwnVec : PartnerVec;
+    Value *ImVec = IsRealPart ? PartnerVec : OwnVec;
+
+    auto Key = std::make_pair(ReVec, ImVec);
+    auto Cached = State.Data.ComplexReductionResults.find(Key);
+    if (Cached != State.Data.ComplexReductionResults.end())
+      return IsRealPart ? Cached->second.first : Cached->second.second;
 
     IRBuilderBase::FastMathFlagGuard FMFG(Builder);
     if (hasFastMathFlags())
@@ -1060,28 +1067,30 @@ Value *VPInstruction::generate(VPTransformState &State,
       Value *OwnPart = State.get(getOperand(I), IsInLoop);
       Value *PartnerPart = State.get(getOperand(I + 1), IsInLoop);
 
-      Value *Re1 = IsRealPart ? OwnVec : PartnerVec;
-      Value *Im1 = IsRealPart ? PartnerVec : OwnVec;
-      Value *Re2 = IsRealPart ? OwnPart : PartnerPart;
-      Value *Im2 = IsRealPart ? PartnerPart : OwnPart;
+      Value *ReNext = IsRealPart ? OwnPart : PartnerPart;
+      Value *ImNext = IsRealPart ? PartnerPart : OwnPart;
 
-      // (Re1 + i*Im1) * (Re2 + i*Im2)
-      Value *NewRe = Builder.CreateFSub(Builder.CreateFMul(Re1, Re2),
-                                        Builder.CreateFMul(Im1, Im2), "rdx.re");
-      Value *NewIm = Builder.CreateFAdd(Builder.CreateFMul(Re1, Im2),
-                                        Builder.CreateFMul(Im1, Re2), "rdx.im");
+      // (ReVec + i*ImVec) * (ReNext + i*ImNext)
+      // is ReVec * ReNext - InVec * ImNext
+      //    + i * (ReVec * ImNext + ImVec * ReNext)
+      Value *NewRe =
+          Builder.CreateFSub(Builder.CreateFMul(ReVec, ReNext),
+                             Builder.CreateFMul(ImVec, ImNext), "rdx.re");
+      Value *NewIm =
+          Builder.CreateFAdd(Builder.CreateFMul(ReVec, ImNext),
+                             Builder.CreateFMul(ImVec, ReNext), "rdx.im");
 
-      OwnVec = IsRealPart ? NewRe : NewIm;
-      PartnerVec = IsRealPart ? NewIm : NewRe;
+      ReVec = NewRe;
+      ImVec = NewIm;
     }
 
     if (State.VF.isVector() && !IsInLoop) {
-      Value *ReVec = IsRealPart ? OwnVec : PartnerVec;
-      Value *ImVec = IsRealPart ? PartnerVec : OwnVec;
       auto [ScalarRe, ScalarIm] = createComplexReduction(Builder, ReVec, ImVec);
+      State.Data.ComplexReductionResults[Key] = {ScalarRe, ScalarIm};
       return IsRealPart ? ScalarRe : ScalarIm;
     }
-    return OwnVec;
+    State.Data.ComplexReductionResults[Key] = {ReVec, ImVec};
+    return IsRealPart ? ReVec : ImVec;
   }
   case VPInstruction::ExtractLastLane:
   case VPInstruction::ExtractPenultimateElement: {

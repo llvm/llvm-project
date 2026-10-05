@@ -6691,7 +6691,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   // bring the VPlan to its final state.
   // ---------------------------------------------------------------------------
 
-  addReductionResultComputation(Plan, Range.Start);
+  if (!addReductionResultComputation(Plan, Range.Start))
+    return nullptr;
 
   // Optimize FindIV reductions to use sentinel-based approach when possible.
   RUN_VPLAN_PASS(VPlanTransforms::optimizeFindIVReductions, *Plan, PSE,
@@ -6751,7 +6752,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   return Plan;
 }
 
-void LoopVectorizationPlanner::addReductionResultComputation(
+bool LoopVectorizationPlanner::addReductionResultComputation(
     VPlanPtr &Plan, ElementCount MinVF) {
   using namespace VPlanPatternMatch;
   VPRegionBlock *VectorLoopRegion = Plan->getVectorLoopRegion();
@@ -6774,6 +6775,10 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     }
 
     RecurKind RecurrenceKind = PhiR->getRecurrenceKind();
+    if (RecurrenceDescriptor::isComplexRecurrenceKind(RecurrenceKind) &&
+        MinVF.isScalable())
+      return false;
+
     const RecurrenceDescriptor &RdxDesc = Legal->getRecurrenceDescriptor(
         cast<PHINode>(PhiR->getUnderlyingInstr()));
     Type *PhiTy = PhiR->getScalarType();
@@ -7000,6 +7005,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
   }
 
   RUN_VPLAN_PASS(VPlanTransforms::clearReductionWrapFlags, *Plan);
+  return true;
 }
 
 void LoopVectorizationPlanner::attachRuntimeChecks(

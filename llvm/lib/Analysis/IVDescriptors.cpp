@@ -1437,6 +1437,9 @@ bool RecurrenceDescriptor::isComplexMultiplyReduction(
   } else
     return false;
 
+  if (!NextRe->hasAllowReassoc() || !NextIm->hasAllowReassoc())
+    return false;
+
   Value *NthReForRe, *NthImForRe, *NthReForIm, *NthImForIm;
   if (!match(NextRe->getOperand(0),
              m_AllowReassoc(m_c_FMul(m_Value(NthReForRe), m_Specific(PhiRe)))))
@@ -1450,6 +1453,31 @@ bool RecurrenceDescriptor::isComplexMultiplyReduction(
                                                       m_Specific(PhiIm))))))
     return false;
   if (NthImForRe != NthImForIm || NthReForRe != NthReForIm)
+    return false;
+
+  // Make sure there are no other uses of the operands to NextRe or NextIm
+  // other than the matches above.
+  if (!NextRe->getOperand(0)->hasOneUse() ||
+      !NextRe->getOperand(1)->hasOneUse() ||
+      !NextIm->getOperand(0)->hasOneUse() ||
+      !NextIm->getOperand(1)->hasOneUse())
+    return false;
+
+  // Make sure there are no other uses of the Phis other than the matches above.
+  if (!PhiRe->hasNUses(2) || !PhiIm->hasNUses(2))
+    return false;
+
+  // Make sure there are no other uses in the loop of NextRe or NextIm other
+  // than the corresponding Phis.
+  auto OnlyLoopUseIsPhi = [&](Instruction *Next, PHINode *Phi) {
+    for (User *U : Next->users()) {
+      auto *UI = cast<Instruction>(U);
+      if (UI != Phi && TheLoop->contains(UI))
+        return false;
+    }
+    return true;
+  };
+  if (!OnlyLoopUseIsPhi(NextRe, PhiRe) || !OnlyLoopUseIsPhi(NextIm, PhiIm))
     return false;
 
   Type *Ty = PhiRe->getType();
