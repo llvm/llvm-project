@@ -141,3 +141,121 @@ struct Fix {
   virtual D *init(B *b) { return dynamic_cast<D *>(b); }
 };
 __device__ void use_fix() { Fix f; f.run(); }
+
+// Outside a function, the initializer of a device variable is device code.
+__device__ const std::type_info *device_var = &typeid(int);
+// expected-error@-1 {{cannot use 'typeid' in the initializer of a device variable as RTTI is not available in device code}}
+__constant__ const std::type_info *constant_var = &typeid(int);
+// expected-error@-1 {{cannot use 'typeid' in the initializer of a device variable as RTTI is not available in device code}}
+const std::type_info *host_var = &typeid(int);
+
+// A default member initializer is checked where it is used.
+struct MemberInit {
+  const std::type_info *t = &typeid(int);
+};
+// expected-error@#member_init {{cannot use 'typeid' in __device__ function as RTTI is not available in device code}}
+// dev-error@#member_init {{cannot use 'typeid' in __host__ __device__ function as RTTI is not available in device code}}
+// dev-note@#member_init_struct {{default member initializer used here}}
+
+__device__ void member_init_ctor() {
+  MemberInit m;
+  // dev-note@-1 {{called by 'member_init_ctor'}}
+  (void)m;
+}
+__device__ void member_init_aggregate() {
+  MemberInit m{};
+  // expected-note@-1 {{default member initializer used here}}
+  (void)m;
+}
+void member_init_host() {
+  MemberInit m;
+  MemberInit n{};
+  (void)m;
+  (void)n;
+}
+
+struct MemberInitDeviceCtor {
+  B *b = nullptr;
+  D *d = dynamic_cast<D *>(b);
+  // expected-error@-1 {{cannot use 'dynamic_cast' in __device__ function as RTTI is not available in device code}}
+  __device__ MemberInitDeviceCtor() {}
+  // expected-note@-1 {{default member initializer used here}}
+};
+
+// No error, the constructor is never used on device.
+struct MemberInitHDCtor {
+  const std::type_info *t = &typeid(int);
+  __host__ __device__ MemberInitHDCtor() {}
+};
+void member_init_hd_ctor_host() { MemberInitHDCtor m; }
+
+template <class T> struct MemberInitTmpl { // #member_init_tmpl
+  const std::type_info *t = &typeid(T);
+  // dev-error@-1 {{cannot use 'typeid' in __host__ __device__ function as RTTI is not available in device code}}
+};
+// dev-note@#member_init_tmpl {{default member initializer used here}}
+__device__ void member_init_tmpl() {
+  MemberInitTmpl<int> m;
+  // dev-note@-1 {{called by 'member_init_tmpl'}}
+  (void)m;
+}
+
+// A default argument is checked where it is used.
+__device__ void default_arg(const std::type_info *t = &typeid(int)); // #default_arg
+// expected-error@-1 {{cannot use 'typeid' in __device__ function as RTTI is not available in device code}}
+__device__ void use_default_arg() {
+  default_arg();
+  // expected-note@-1 {{default argument used here}}
+}
+
+inline __host__ __device__ void hd_default_arg(const std::type_info *t = &typeid(int)) {}
+// expected-error@-1 {{cannot use 'typeid' in __device__ function as RTTI is not available in device code}}
+void use_hd_default_arg_host() { hd_default_arg(); }
+__device__ void use_hd_default_arg_device() {
+  hd_default_arg();
+  // expected-note@-1 {{default argument used here}}
+}
+
+// Diagnosed once, at the use, although the default argument is parsed in a
+// __device__ function.
+__device__ void local_default_arg() {
+  __device__ void local(const std::type_info *t = &typeid(int));
+  // expected-error@-1 {{cannot use 'typeid' in __device__ function as RTTI is not available in device code}}
+  local();
+  // expected-note@-1 {{default argument used here}}
+}
+
+// A default argument used in a default member initializer.
+struct NestedDefaultArg { // #nested_struct
+  const std::type_info *t = (default_arg(), nullptr);
+};
+// dev-error@#default_arg {{cannot use 'typeid' in __host__ __device__ function as RTTI is not available in device code}}
+// dev-note@#nested_struct {{default member initializer used here}}
+__device__ void nested_default_arg() {
+  NestedDefaultArg n;
+  // dev-note@-1 {{called by 'nested_default_arg'}}
+  (void)n;
+}
+
+// A lambda body is checked as a function of its own, while the initializer of
+// a capture is part of the default member initializer.
+struct LambdaBody {
+  const std::type_info *t = [] { return &typeid(int); }(); // #lambda_body
+};
+// dev-error@#lambda_body {{cannot use 'typeid' in __host__ __device__ function as RTTI is not available in device code}}
+// dev-note@#lambda_body {{called by 'lambda_body'}}
+__device__ void lambda_body() {
+  LambdaBody l;
+  (void)l;
+}
+
+struct LambdaCapture { // #lambda_capture_struct
+  const std::type_info *t = [p = &typeid(int)] { return p; }();
+  // dev-error@-1 {{cannot use 'typeid' in __host__ __device__ function as RTTI is not available in device code}}
+};
+// dev-note@#lambda_capture_struct {{default member initializer used here}}
+__device__ void lambda_capture() {
+  LambdaCapture l;
+  // dev-note@-1 {{called by 'lambda_capture'}}
+  (void)l;
+}

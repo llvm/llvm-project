@@ -991,8 +991,7 @@ void CastOperation::CheckDynamicCast() {
   // Similarly, dynamic_cast is not available in CUDA device code, except for
   // dynamic_cast to void*.
   if (Self.getLangOpts().CUDA && !DestPointee->isVoidType())
-    Self.CUDA().DiagIfDeviceCode(OpRange.getBegin(), diag::err_cuda_device_rtti)
-        << "dynamic_cast" << Self.CUDA().CurrentTarget();
+    Self.CUDA().checkRTTIUse(OpRange.getBegin(), "dynamic_cast");
 
   // Warns when dynamic_cast is used with RTTI data disabled.
   if (!Self.getLangOpts().RTTIData) {

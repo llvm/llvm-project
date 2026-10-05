@@ -542,8 +542,7 @@ bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
 static void diagnoseCUDADeviceTypeid(Sema &S, SourceLocation TypeidLoc,
                                      bool IsDependent) {
   if (S.getLangOpts().CUDA && !IsDependent)
-    S.CUDA().DiagIfDeviceCode(TypeidLoc, diag::err_cuda_device_rtti)
-        << "typeid" << S.CUDA().CurrentTarget();
+    S.CUDA().checkRTTIUse(TypeidLoc, "typeid");
 }
 
 ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
