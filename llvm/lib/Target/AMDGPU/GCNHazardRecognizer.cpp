@@ -1042,8 +1042,7 @@ static int getMaxWindowDeficit(
 
     for (const MachineBasicBlock *Pred : A.MBB->predecessors()) {
       auto Start = Pred->instr_rbegin(), End = Pred->instr_rend();
-      for (unsigned N = countUnexecutedTerminators(*Pred, A.MBB); N; --N)
-        ++Start;
+      std::advance(Start, countUnexecutedTerminators(*Pred, A.MBB));
 
       int Executed = 0;
       for (; Start != End && Start->isTerminator(); ++Start) {
