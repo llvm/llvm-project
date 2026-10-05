@@ -675,8 +675,7 @@ static void removeRedundantInductionCasts(VPlan &Plan) {
   for (VPWidenIntOrFpInductionRecipe &IV :
        make_isa_range<VPWidenIntOrFpInductionRecipe>(
            Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())) {
-    if (any_of(IV.operands(),
-               [](VPValue *V) { return match(V, m_Trunc(m_VPValue())); }))
+    if (IV.isTruncated())
       continue;
 
     // A sequence of IR Casts has potentially been recorded for IV, which
@@ -880,10 +879,8 @@ getOptimizableIVOf(VPValue *VPV, PredicatedScalarEvolution &PSE) {
   if (WideIV) {
     // VPV itself is a wide induction, separately compute the end value for exit
     // users if it is not a truncated IV.
-    if (any_of(WideIV->operands(),
-               [](VPValue *V) { return match(V, m_Trunc(m_VPValue())); }))
-      return nullptr;
-    return WideIV;
+    auto *IntOrFpIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
+    return (IntOrFpIV && IntOrFpIV->isTruncated()) ? nullptr : WideIV;
   }
 
   // Check if VPV is an optimizable induction increment.
@@ -986,9 +983,7 @@ static VPValue *tryToComputeEndValueForInduction(VPWidenInductionRecipe *WideIV,
   auto *WideIntOrFp = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
   // Truncated wide inductions resume from the last lane of their vector value
   // in the last vector iteration which is handled elsewhere.
-  if (WideIntOrFp && any_of(WideIntOrFp->operands(), [](VPValue *V) {
-        return match(V, m_Trunc(m_VPValue()));
-      }))
+  if (WideIntOrFp && WideIntOrFp->isTruncated())
     return nullptr;
 
   VPValue *Start = WideIV->getStartValue();
@@ -6242,7 +6237,8 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       auto *NarrowIV = new VPWidenIntOrFpInductionRecipe(
           WideIV->getPHINode(), NewStart, NewStep, NewVF,
           WideIV->getInductionDescriptor(),
-          VPIRFlags::WrapFlagsTy(false, false), VPI.getDebugLoc());
+          VPIRFlags::WrapFlagsTy(false, false), VPI.getDebugLoc(),
+          /*IsTruncated*/ true);
       NarrowIV->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
       VPI.replaceAllUsesWith(NarrowIV);
       VPI.eraseFromParent();

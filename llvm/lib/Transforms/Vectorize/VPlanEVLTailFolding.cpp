@@ -391,7 +391,7 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
       auto *WidenIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R);
       if (!WidenIV)
         continue;
-      if (!match(WidenIV->getOperand(2), m_Trunc(m_Specific(&Plan.getVF()))))
+      if (!WidenIV->isTruncated())
         continue;
       VPValue *TruncEVL =
           VPBuilder::getToInsertAfter(EVL.getDefiningRecipe())

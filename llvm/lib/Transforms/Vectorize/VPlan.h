@@ -2625,13 +2625,17 @@ class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe,
   // If this recipe is unrolled it will have 2 additional operands.
   bool isUnrolled() const { return getNumOperands() == 5; }
 
+  // If this recipe contains narrower type than scalar IV.
+  bool IsTruncated;
+
 public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 VPValue *VF, const InductionDescriptor &IndDesc,
-                                const VPIRFlags &Flags, DebugLoc DL)
+                                const VPIRFlags &Flags, DebugLoc DL,
+                                bool IsTruncated = false)
       : VPWidenInductionRecipe(VPRecipeBase::VPWidenIntOrFpInductionSC, IV,
                                Start, Step, IndDesc, DL),
-        VPIRFlags(Flags) {
+        VPIRFlags(Flags), IsTruncated(IsTruncated) {
     addOperand(VF);
   }
 
@@ -2640,7 +2644,7 @@ public:
   VPWidenIntOrFpInductionRecipe *clone() override {
     return new VPWidenIntOrFpInductionRecipe(
         getPHINode(), getStartValue(), getStepValue(), getVFValue(),
-        getInductionDescriptor(), *this, getDebugLoc());
+        getInductionDescriptor(), *this, getDebugLoc(), isTruncated());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenIntOrFpInductionSC)
@@ -2669,6 +2673,10 @@ public:
   /// incremented by UF * VF (= the original IV is incremented by 1) and has the
   /// same type as the canonical induction.
   bool isCanonical() const;
+
+  /// Returns trus if the type of the induction recipe is narrower than scalar
+  /// induction.
+  bool isTruncated() const { return IsTruncated; }
 
   /// Returns the VPValue representing the value of this induction at
   /// the last unrolled part, if it exists. Returns itself if unrolling did not
