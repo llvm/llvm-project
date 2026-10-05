@@ -606,6 +606,21 @@ void CodeGenFunction::EmitCXXTryStmt(const CXXTryStmt &S) {
 }
 
 void CodeGenFunction::EnterCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
+  // HIPStdPar device compilation emits unannotated host functions and removes
+  // the ones that are not reachable from an accelerator kernel in the middle
+  // end. Device code generation otherwise drops the EH representation of
+  // a try statement, so preserving an unsupported-operation marker for the
+  // accelerator code selection pass to diagnose if this function is reachable.
+  if (CGM.getLangOpts().HIPStdPar && CGM.getLangOpts().CUDAIsDevice) {
+    constexpr llvm::StringLiteral MarkerName =
+        "__CXX_EXCEPTION__hipstdpar_unsupported";
+    llvm::FunctionType *MarkerTy =
+        llvm::FunctionType::get(VoidTy, /*isVarArg=*/false);
+    llvm::FunctionCallee Marker =
+        CGM.getModule().getOrInsertFunction(MarkerName, MarkerTy);
+    Builder.CreateCall(Marker);
+  }
+
   unsigned NumHandlers = S.getNumHandlers();
   EHCatchScope *CatchScope = EHStack.pushCatch(NumHandlers);
 
@@ -1815,7 +1830,7 @@ Address CodeGenFunction::recoverAddrOfEscapedLocal(CodeGenFunction &ParentCGF,
   if (!ParentAlloca) {
     if (ParentArg) {
       llvm::BasicBlock &EntryBB = ParentCGF.CurFn->getEntryBlock();
-      llvm::IRBuilder<> ParentEntryBuilder(&EntryBB, EntryBB.begin());
+      llvm::IRBuilder<> ParentEntryBuilder(EntryBB.begin());
       ParentAlloca = ParentEntryBuilder.CreateAlloca(
           ParentArg->getType(), nullptr, ParentArg->getName() + ".spill");
       ParentEntryBuilder.CreateStore(ParentArg, ParentAlloca);

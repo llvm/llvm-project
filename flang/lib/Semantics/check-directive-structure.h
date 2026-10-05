@@ -699,8 +699,7 @@ void DirectiveStructureChecker<D, C, PC,
       context_.Say(GetContext().clauseSource,
           "The %s of the %s clause must be "
           "a positive integer expression"_err_en_US,
-          paramName.str(),
-          parser::ToUpperCaseLetters(getClauseName(clause).str()));
+          paramName, parser::ToUpperCaseLetters(getClauseName(clause).str()));
     }
   }
 }

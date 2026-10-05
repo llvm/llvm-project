@@ -176,7 +176,7 @@ STATISTIC(NumNodeOrderPostRA,
 STATISTIC(NumFirstValidPostRA,
           "Number of scheduling units chosen for FirstValid heuristic post-RA");
 
-cl::opt<MISched::Direction> llvm::PreRADirection(
+static cl::opt<MISched::Direction> PreRADirection(
     "misched-prera-direction", cl::Hidden,
     cl::desc("Pre reg-alloc list scheduling direction"),
     cl::init(MISched::Unspecified),
@@ -204,9 +204,12 @@ static cl::opt<bool>
     DumpCriticalPathLength("misched-dcpl", cl::Hidden,
                            cl::desc("Print critical path length to stdout"));
 
-cl::opt<bool> llvm::VerifyScheduling(
+static cl::opt<bool> VerifyScheduling(
     "verify-misched", cl::Hidden,
     cl::desc("Verify machine instrs before and after machine scheduling"));
+
+MISched::Direction llvm::getPreRADirection() { return PreRADirection; }
+bool llvm::shouldVerifyScheduling() { return VerifyScheduling; }
 
 #ifndef NDEBUG
 cl::opt<bool> llvm::ViewMISchedDAGs(

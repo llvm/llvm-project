@@ -1524,9 +1524,6 @@ public:
   /// the specified basic block.
   LLVM_ABI bool properlyDominates(const SCEV *S, const BasicBlock *BB);
 
-  /// Test whether the given SCEV has Op as a direct or indirect operand.
-  LLVM_ABI bool hasOperand(const SCEV *S, const SCEV *Op) const;
-
   /// Return the size of an element read or written by Inst.
   LLVM_ABI const SCEV *getElementSize(Instruction *Inst);
 
