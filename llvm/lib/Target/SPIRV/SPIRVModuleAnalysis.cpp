@@ -603,7 +603,9 @@ void SPIRVModuleAnalysis::collectDeclarations(const Module &M) {
           if (DefMO.isReg() && isDeclSection(MRI, MI) &&
               !MAI.hasRegisterAlias(MF, DefMO.getReg()))
             visitDecl(MRI, SignatureToGReg, GlobalToGReg, MF, MI);
-          // Resolve a function-pointer placeholder Invoke operand.
+          // Device enqueue instructions are not decls, but their Invoke
+          // operand may be a function-pointer placeholder OpUndef. Resolve it
+          // to the OpFunction's global <id> via visitFunPtrUse.
           if (unsigned InvokeIdx = getInvokeOperandIdx(Opcode)) {
             const MachineOperand &InvokeMO = MI.getOperand(InvokeIdx);
             if (InvokeMO.isReg()) {
