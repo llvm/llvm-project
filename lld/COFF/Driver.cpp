@@ -212,6 +212,8 @@ perTargetRuntimeDirForMachineType(MachineTypes mt) {
     return {"aarch64-pc-windows-msvc"};
   case ARM64EC:
     return {"arm64ec-pc-windows-msvc"};
+  case ARMNT:
+    return {"armv7-pc-windows-msvc"};
   case AMD64:
     return {"x86_64-pc-windows-msvc"};
   case I386:
