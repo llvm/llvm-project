@@ -6236,7 +6236,7 @@ static Value *getCommonSplatValue(ArrayRef<Value *> Values) {
 
 /// Return the common deinterleave intrinsic if \p Members are its extracts in
 /// field order.
-static IntrinsicInst *getDeinterleaveForMembers(ArrayRef<Value *> Members) {
+static IntrinsicInst *getCommonDeinterleavedSource(ArrayRef<Value *> Members) {
   IntrinsicInst *Deinterleave = nullptr;
   for (const auto &[Index, Member] : enumerate(Members)) {
     auto *Extract = dyn_cast<ExtractValueInst>(Member);
@@ -6259,8 +6259,8 @@ static IntrinsicInst *getDeinterleaveForMembers(ArrayRef<Value *> Members) {
 }
 
 /// Return the operand at \p OperandIndex of each \p Members.
-static SmallVector<Value *, 8>
-getDeinterleavedOperands(ArrayRef<Value *> Members, unsigned OperandIndex) {
+static SmallVector<Value *, 8> getInstrOperandsAtIdx(ArrayRef<Value *> Members,
+                                                     unsigned OperandIndex) {
   SmallVector<Value *, 8> Operands;
   for (Value *Member : Members)
     Operands.push_back(cast<Instruction>(Member)->getOperand(OperandIndex));
@@ -6272,7 +6272,7 @@ getDeinterleavedOperands(ArrayRef<Value *> Members, unsigned OperandIndex) {
 static bool canWidenDeinterleavedOperations(ArrayRef<Value *> Members,
                                             unsigned &NumScanned) {
   unsigned Factor = Members.size();
-  if (getDeinterleaveForMembers(Members))
+  if (getCommonDeinterleavedSource(Members))
     return true;
   if (NumScanned + Factor > MaxInstrsToScan)
     return false;
@@ -6293,7 +6293,7 @@ static bool canWidenDeinterleavedOperations(ArrayRef<Value *> Members,
   // Scalars operands should be equal among all members.
   // Vector operands should be a common splat value or can be widened.
   for (unsigned Op = 0, E = getNumDataOperands(FirstInst); Op != E; ++Op) {
-    SmallVector<Value *, 8> Operands = getDeinterleavedOperands(Members, Op);
+    SmallVector<Value *, 8> Operands = getInstrOperandsAtIdx(Members, Op);
     if (!getCommonSplatValue(Operands) &&
         !canWidenDeinterleavedOperations(Operands, NumScanned))
       return false;
@@ -6327,7 +6327,7 @@ static Value *createWideInstruction(Instruction *NarrowInst,
 static Value *
 widenDeinterleavedOperations(ArrayRef<Value *> Members, ElementCount WideEC,
                              IRBuilder<InstSimplifyFolder> &Builder) {
-  if (auto *Deinterleave = getDeinterleaveForMembers(Members)) {
+  if (auto *Deinterleave = getCommonDeinterleavedSource(Members)) {
     Value *Source = Deinterleave->getArgOperand(0);
     assert(cast<VectorType>(Source->getType())->getElementCount() == WideEC &&
            "deinterleave source must have the interleaved element count");
@@ -6339,7 +6339,7 @@ widenDeinterleavedOperations(ArrayRef<Value *> Members, ElementCount WideEC,
   SmallVector<Value *, 4> NewOperands;
   NewOperands.reserve(NumOperands);
   for (unsigned Op = 0; Op != NumOperands; ++Op) {
-    SmallVector<Value *, 8> Operands = getDeinterleavedOperands(Members, Op);
+    SmallVector<Value *, 8> Operands = getInstrOperandsAtIdx(Members, Op);
     Value *NewOperand = nullptr;
     if ((NewOperand = getCommonSplatValue(Operands))) {
       if (isa<VectorType>(Operands.front()->getType())) {

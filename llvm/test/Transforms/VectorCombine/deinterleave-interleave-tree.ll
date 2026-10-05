@@ -132,6 +132,62 @@ define <8 x i32> @three_deinterleave2_tree_with_splats(<8 x i32> %a, <8 x i32> %
   ret <8 x i32> %r
 }
 
+define <8 x i32> @deinterleave4_only_2_extracts_used(<16 x i32> %a) {
+; CHECK-LABEL: define <8 x i32> @deinterleave4_only_2_extracts_used(
+; CHECK-SAME: <16 x i32> [[A:%.*]]) {
+; CHECK-NEXT:    [[DA:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave4.v16i32(<16 x i32> [[A]])
+; CHECK-NEXT:    [[A0:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[DA]], 0
+; CHECK-NEXT:    [[A1:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[DA]], 1
+; CHECK-NEXT:    [[M0:%.*]] = mul <4 x i32> [[A0]], [[A0]]
+; CHECK-NEXT:    [[M1:%.*]] = mul <4 x i32> [[A1]], [[A1]]
+; CHECK-NEXT:    [[R:%.*]] = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> [[M0]], <4 x i32> [[M1]])
+; CHECK-NEXT:    ret <8 x i32> [[R]]
+;
+  %da = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave4(<16 x i32> %a)
+  %a0 = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } %da, 0
+  %a1 = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } %da, 1
+  %m0 = mul <4 x i32> %a0, %a0
+  %m1 = mul <4 x i32> %a1, %a1
+  %r = call <8 x i32> @llvm.vector.interleave2(<4 x i32> %m0, <4 x i32> %m1)
+  ret <8 x i32> %r
+}
+
+define <20 x i32> @interleave__extracts_of_different_deinterleave(<12 x i32> %a, <8 x i32> %b) {
+; CHECK-LABEL: define <20 x i32> @interleave__extracts_of_different_deinterleave(
+; CHECK-SAME: <12 x i32> [[A:%.*]], <8 x i32> [[B:%.*]]) {
+; CHECK-NEXT:    [[DA:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave3.v12i32(<12 x i32> [[A]])
+; CHECK-NEXT:    [[A0:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[DA]], 0
+; CHECK-NEXT:    [[A1:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[DA]], 1
+; CHECK-NEXT:    [[A2:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[DA]], 2
+; CHECK-NEXT:    [[DB:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[B]])
+; CHECK-NEXT:    [[B0:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[DB]], 0
+; CHECK-NEXT:    [[B1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[DB]], 1
+; CHECK-NEXT:    [[M0:%.*]] = mul <4 x i32> [[A0]], [[A0]]
+; CHECK-NEXT:    [[M1:%.*]] = mul <4 x i32> [[A1]], [[A1]]
+; CHECK-NEXT:    [[M2:%.*]] = mul <4 x i32> [[A2]], [[A2]]
+; CHECK-NEXT:    [[M3:%.*]] = mul <4 x i32> [[B0]], [[B0]]
+; CHECK-NEXT:    [[M4:%.*]] = mul <4 x i32> [[B1]], [[B1]]
+; CHECK-NEXT:    [[R:%.*]] = call <20 x i32> @llvm.vector.interleave5.v20i32(<4 x i32> [[M0]], <4 x i32> [[M1]], <4 x i32> [[M2]], <4 x i32> [[M3]], <4 x i32> [[M4]])
+; CHECK-NEXT:    ret <20 x i32> [[R]]
+;
+  %da = call { <4 x i32>, <4 x i32>, <4 x i32>} @llvm.vector.deinterleave3(<12 x i32> %a)
+  %a0 = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>} %da, 0
+  %a1 = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } %da, 1
+  %a2 = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } %da, 2
+
+  %db = call { <4 x i32>, <4 x i32>} @llvm.vector.deinterleave2(<8 x i32> %b)
+  %b0 = extractvalue { <4 x i32>, <4 x i32>} %db, 0
+  %b1 = extractvalue { <4 x i32>, <4 x i32>} %db, 1
+
+  %m0 = mul <4 x i32> %a0, %a0
+  %m1 = mul <4 x i32> %a1, %a1
+  %m2 = mul <4 x i32> %a2, %a2
+  %m3 = mul <4 x i32> %b0, %b0
+  %m4 = mul <4 x i32> %b1, %b1
+  %r = call <20 x i32> @llvm.vector.interleave5(<4 x i32> %m0, <4 x i32> %m1, <4 x i32> %m2, <4 x i32> %m3, <4 x i32> %m4)
+  ret <20 x i32> %r
+}
+
 define <4 x i32> @deinterleave2_extract_used_twice_in_member(<4 x i32> %a) {
 ; CHECK-LABEL: define <4 x i32> @deinterleave2_extract_used_twice_in_member(
 ; CHECK-SAME: <4 x i32> [[A:%.*]]) {
