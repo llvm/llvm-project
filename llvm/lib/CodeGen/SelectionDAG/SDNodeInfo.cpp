@@ -225,8 +225,21 @@ void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
       break;
     case SDTCisOpSmallerThanOp:
       break;
-    case SDTCisEltOfVec:
+    case SDTCisEltOfVec: {
+      SDNodeValue VecVal = GetConstraintValue(C.ConstrainingValIdx);
+      EVT VecVT = VecVal.getValueType();
+
+      if (!VecVT.isVector()) {
+        SS << VecVal << " must have vector type, but has type " << VecVT;
+        reportNodeError(DAG, N, SS.str());
+      }
+      if (!VecVT.isVectorOf(VT)) {
+        SS << Val << " must have " << VecVT.getVectorElementType()
+           << " type (element type of " << VecVal << "), but has type " << VT;
+        reportNodeError(DAG, N, SS.str());
+      }
       break;
+    }
     case SDTCisSubVecOfVec:
       break;
     case SDTCVecEltisVT: {
