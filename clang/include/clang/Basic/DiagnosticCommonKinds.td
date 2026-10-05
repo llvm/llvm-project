@@ -231,7 +231,7 @@ def err_size_t_literal_too_large: Error<
 def ext_cxx_bitint_suffix : Extension<
   "'_BitInt' suffix for literals is a Clang extension">,
   InGroup<BitIntExtension>;
-def ext_c23_bitint_suffix : ExtWarn<
+def ext_c23_bitint_suffix : Extension<
   "'_BitInt' suffix for literals is a C23 extension">,
   InGroup<C23>;
 def warn_c23_compat_bitint_suffix : Warning<

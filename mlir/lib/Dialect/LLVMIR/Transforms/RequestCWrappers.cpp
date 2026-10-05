@@ -25,8 +25,9 @@ class RequestCWrappersPass
     : public LLVM::impl::LLVMRequestCWrappersPassBase<RequestCWrappersPass> {
 public:
   void runOnOperation() override {
-    getOperation()->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
-                            UnitAttr::get(&getContext()));
+    getOperation()->setDiscardableAttr(
+        LLVM::LLVMDialect::getEmitCWrapperAttrName(),
+        UnitAttr::get(&getContext()));
   }
 };
 } // namespace

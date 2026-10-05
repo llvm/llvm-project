@@ -27,11 +27,13 @@ The virtual machine has two stacks, a data and a control stack. The control stac
 All objects on the data stack must have one of the following data types. These data types are "host" data types, in LLDB parlance.
 
 - *String* (UTF-8)
-- *Int* (64 bit)
-- *UInt* (64 bit)
+- *Integer* (arbitrary precision, always signed)
+- *Int* (64 bit) (deprecated: use *Integer*)
+- *UInt* (64 bit) (deprecated: use *Integer*)
 - *Object* (Basically an `SBValue`)
 - *Type* (Basically an `SBType`)
 - *Selector* (One of the predefine functions)
+- *Dictionary* (A mutable mapping from `String` keys to values of any data type)
 
 *Object* and *Type* are opaque, they can only be used as a parameters of `call`.
 
@@ -56,7 +58,7 @@ These instructions manipulate the data stack directly.
 
 ### Control flow
 
-These manipulate the control stack and program counter. Both `if` and `ifelse` expect a `UInt` at the top of the data stack to represent the condition.
+These manipulate the control stack and program counter. Both `if` and `ifelse` expect an `Integer` or `UInt` at the top of the data stack to represent the condition.
 
 ```{eval-rst}
 ========  ============  ============================================================
@@ -64,9 +66,9 @@ These manipulate the control stack and program counter. Both `if` and `ifelse` e
 --------  ------------  ------------------------------------------------------------
  0x10      ``{``        push a code block address onto the control stack
   --       ``}``        (technically not an opcode) syntax for end of code block
- 0x11      ``if``       ``(UInt -> )`` pop a block from the control stack,
+ 0x11      ``if``       ``(Integer|UInt -> )`` pop a block from the control stack,
                         if the top of the data stack is nonzero, execute it
- 0x12      ``ifelse``   ``(UInt -> )`` pop two blocks from the control stack, if
+ 0x12      ``ifelse``   ``(Integer|UInt -> )`` pop two blocks from the control stack, if
                         the top of the data stack is nonzero, execute the first,
                         otherwise the second.
  0x13      ``return``   pop the entire control stack and return
@@ -79,11 +81,12 @@ These manipulate the control stack and program counter. Both `if` and `ifelse` e
 ========  =============  ============================================================
  Opcode    Mnemonic      Description
 --------  -------------  ------------------------------------------------------------
- 0x20      ``123u``       ``( -> UInt)`` push an unsigned 64-bit host integer
- 0x21      ``123``        ``( -> Int)`` push a signed 64-bit host integer
+ 0x20      ``123u``       ``( -> UInt)`` push an unsigned 64-bit host integer (deprecated: use ``lit_integer``)
+ 0x21      ``123``        ``( -> Int)`` push a signed 64-bit host integer (deprecated: use ``lit_integer``)
  0x22      ``"abc"``      ``( -> String)`` push a UTF-8 host string
  0x23      ``@strlen``    ``( -> Selector)`` push one of the predefined function
                           selectors. See ``call``.
+ 0x24      ``123``        ``( -> Integer)`` push an arbitrary precision signed integer
 ========  =============  ============================================================
 ```
 
@@ -93,15 +96,17 @@ These manipulate the control stack and program counter. Both `if` and `ifelse` e
 ========  =============  ================================================================
  Opcode    Mnemonic      Description
 --------  -------------  ----------------------------------------------------------------
- 0x2a      ``as_int``     ``( UInt -> Int)`` reinterpret a UInt as an Int
- 0x2b      ``as_uint``    ``( Int -> UInt)`` reinterpret an Int as a UInt
+ 0x2a      ``as_int``     ``( UInt -> Int)`` reinterpret a UInt as an Int (deprecated)
+ 0x2b      ``as_uint``    ``( Int -> UInt)`` reinterpret an Int as a UInt (deprecated)
  0x2c      ``is_null``    ``( Object -> UInt )`` check an object for null ``(object ? 0 : 1)``
 ========  =============  ================================================================
 ```
 
 ### Arithmetic, logic, and comparison operations
 
-All of these operations are only defined for `Int` and `UInt` and both operands need to be of the same type. The `>>` operator is an arithmetic shift if the parameters are of type `Int`, otherwise it's a logical shift to the right.
+Every `Integer` value on the data stack is signed. `+`, `-`, `*`, `/`, `%`, `=`, `!=`, `<`, `>`, `=<`, `>=` are defined for `Integer` (and deprecated `Int`/`UInt`) and operate on the operands' mathematical values.
+
+`<<`, `>>`, `&`, `|`, `^`, `~` are bitwise operations and operate on an `Integer`'s underlying two's complement bit pattern rather than its mathematical value. Because a bitwise operation never treats its operands as having a sign, `>>` is always a logical (zero-filling) shift, not an arithmetic shift, and a negative operand is not an error.
 
 ```{eval-rst}
 ========  ==========  ===========================
@@ -174,6 +179,27 @@ Sel.  Mnemonic                         Stack Effect                             
 ====  ===============================  ======================================================  ======================================
 ```
 
+### Dictionary objects
+
+ `Dictionary` objects are key-value containers, with `String` value keys, and values of any data type. `Dictionary` is a reference type, mutating it through one reference is visible through any other reference to the same dictionary (e.g. one obtained earlier with `dup`). Empty `Dictionary` objects are created  with `dict`. `Dictionary` objects are populated with `dict_set`. Values are retrieved with `dict_get`. When `dict_get` is called with a key that is not present in the dictionary, an error is emitted. Use `dict_has` first to check for a key's existence. Dictionary operations consumes the `Dictionary` argument, so `dup` it first if the `Dictionary` is needed afterward. For example, to set multiple keys in a row:
+
+```
+dict dup "a" 1 dict_set dup "b" 2 dict_set
+```
+
+A `Dictionary` may be stored as a value in another `Dictionary`, but `dict_set` emits an error if doing so would make a dictionary contain itself, directly or through nested dictionaries.
+
+```{eval-rst}
+========  =============  ============================================================
+ Opcode    Mnemonic      Stack effect
+--------  -------------  ------------------------------------------------------------
+ 0x70      ``dict``       ``( -> Dictionary)`` create an empty dictionary
+ 0x71      ``dict_set``   ``(Dictionary String x -> )`` set a key to a value
+ 0x72      ``dict_get``   ``(Dictionary String -> x)`` look up the value for a key
+ 0x73      ``dict_has``   ``(Dictionary String -> Integer)`` check whether a key is present
+========  =============  ============================================================
+```
+
 ### Byte Code
 
 Most instructions are just a single byte opcode. The only exceptions are the literals:
@@ -181,6 +207,7 @@ Most instructions are just a single byte opcode. The only exceptions are the lit
 - *String*: Length in bytes encoded as ULEB128, followed length bytes
 - *Int*: LEB128
 - *UInt*: ULEB128
+- *Integer*: LEB128, sign-extended to a signed value of at least 64 bits
 - *Selector*: ULEB128
 
 ### Embedding

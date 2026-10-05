@@ -1,11 +1,5 @@
 # Clang-Reorder-Fields
 
-```{contents}
-```
-
-```{toctree}
-:maxdepth: 1
-```
 
 {program}`clang-reorder-fields` is a refactoring tool to reorder fields in
 C/C++ structs and classes. This tool automatically updates:
@@ -403,4 +397,3 @@ by type, or by access pattern).
 ### Field grouping
 
 Group related fields together for better code organization and readability.
-

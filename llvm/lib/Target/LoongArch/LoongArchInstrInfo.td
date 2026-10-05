@@ -456,8 +456,10 @@ def simm16_lsl2 : Operand<GRLenVT>,
 
 def simm16_lsl2_br : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<16, "lsl2">;
+  let PrintMethod = "printBranchOperand";
   let EncoderMethod = "getImmOpValueAsr<2>";
   let DecoderMethod = "decodeSImmOperand<16, 2, true>";
+  let OperandType = "OPERAND_PCREL";
 }
 
 class SImm20Operand : Operand<GRLenVT> {
@@ -501,8 +503,10 @@ def simm21_lsl2 : Operand<OtherVT> {
 
 def simm21_lsl2_br : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<21, "lsl2">;
+  let PrintMethod = "printBranchOperand";
   let EncoderMethod = "getImmOpValueAsr<2>";
   let DecoderMethod = "decodeSImmOperand<21, 2, true>";
+  let OperandType = "OPERAND_PCREL";
 }
 
 def SImm26OperandB: AsmOperandClass {
@@ -516,8 +520,10 @@ def SImm26OperandB: AsmOperandClass {
 // A symbol or an imm used in B/PseudoBR.
 def simm26_b : Operand<OtherVT> {
   let ParserMatchClass = SImm26OperandB;
+  let PrintMethod = "printBranchOperand";
   let EncoderMethod = "getImmOpValueAsr<2>";
   let DecoderMethod = "decodeSImmOperand<26, 2, true>";
+  let OperandType = "OPERAND_PCREL";
 }
 
 def SImm26OperandBL: AsmOperandClass {
@@ -531,8 +537,10 @@ def SImm26OperandBL: AsmOperandClass {
 // A symbol or an imm used in BL/PseudoCALL_SMALL/PseudoTAIL_SMALL.
 def simm26_symbol : Operand<GRLenVT> {
   let ParserMatchClass = SImm26OperandBL;
+  let PrintMethod = "printBranchOperand";
   let EncoderMethod = "getImmOpValueAsr<2>";
   let DecoderMethod = "decodeSImmOperand<26, 2, true>";
+  let OperandType = "OPERAND_PCREL";
 }
 
 // A 32-bit signed immediate with the lowest 16 bits zeroed, suitable for
@@ -1897,6 +1905,13 @@ def : InstAlias<"la.local $dst, $src",
 def : InstAlias<"la.local $dst, $tmp, $src",
                 (PseudoLA_ABS_LARGE GPR:$dst, GPR:$tmp, bare_symbol:$src)>;
 } // Predicates = [HasLaLocalWithAbs]
+
+// Materializes "$base + (imm << 12)" as a single pseudo so that
+// MachineLateInstrsCleanup can CSE identical upper-immediate additions.
+// Expanded to LU12I_W + ADD by LoongArchExpandPseudo.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8 in
+def PseudoAddUpperImm
+    : Pseudo<(outs GPR:$dst), (ins GPR:$base, simm20_lu12iw:$hi), []>;
 
 /// BSTRINS and BSTRPICK
 

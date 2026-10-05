@@ -11,7 +11,7 @@
 # CHECK-NEXT:     Name: .text (2E 74 65 78 74 00 00 00)
 # CHECK-NEXT:     VirtualSize: 0x0
 # CHECK-NEXT:     VirtualAddress: 0x0
-# CHECK-NEXT:     RawDataSize: 22
+# CHECK-NEXT:     RawDataSize: 0x16
 # CHECK-NEXT:     PointerToRawData: 0x64
 # CHECK-NEXT:     PointerToRelocations: 0x7A
 # CHECK-NEXT:     PointerToLineNumbers: 0x0

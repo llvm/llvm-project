@@ -1,5 +1,4 @@
-//===- ACCDeclareGPUModuleInsertion.cpp
-//------------------------------------===//
+//===- ACCDeclareGPUModuleInsertion.cpp -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -116,7 +115,8 @@ public:
           cudaUnified &&
           declareAttr.getDataClause().getValue() !=
               acc::DataClause::acc_declare_device_resident &&
-          (!globalVar || !globalVar.isConstant());
+          (!globalVar || !globalVar.isConstant() ||
+           globalVar.isCompilerGenerated());
       if (makeUnifiedDeclaration)
         makeDeviceGlobalDeclaration(*deviceGlobal);
 

@@ -112,7 +112,10 @@ T func_cas(volatile T *v, T cmp, T xch) {
 // Atomic ops are executed under tsan internal mutex,
 // here we assume that the atomic variables are not accessed
 // from non-instrumented code.
-#if !defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_16) && __TSAN_HAS_INT128
+// For SANITIZER_GO builds we always use the mutex-based path regardless of
+// __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16 to avoid a libatomic dependency.
+#if __TSAN_HAS_INT128 && \
+    (!defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_16) || SANITIZER_GO)
 a128 func_xchg(volatile a128 *v, a128 op) {
   SpinMutexLock lock(&mutex128);
   a128 cmp = *v;

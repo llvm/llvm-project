@@ -170,10 +170,17 @@ public:
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr) const override;
+      const Instruction *CtxI = nullptr) const override;
 
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                                  const Instruction *I = nullptr) const override;
+
+  InstructionCost getCmpSelInstrCost(
+      unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+      TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
+      TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
+      const Instruction *I = nullptr) const override;
 
   bool isInlineAsmSourceOfDivergence(const CallInst *CI,
                                      ArrayRef<unsigned> Indices = {}) const;
@@ -249,7 +256,9 @@ public:
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
                  TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr) const override;
+                 const Instruction *CtxI = nullptr,
+                 TTI::VectorInstrContext VIC =
+                     TTI::VectorInstrContext::None) const override;
 
   bool isProfitableToSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const override;
@@ -266,6 +275,11 @@ public:
   int getInlinerVectorBonusPercent() const override {
     return InlinerVectorBonusPercent;
   }
+
+  InstructionCost
+  getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                   TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,
+                   const Instruction *I = nullptr) const override;
 
   InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,

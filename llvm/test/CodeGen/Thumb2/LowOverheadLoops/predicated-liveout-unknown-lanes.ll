@@ -22,7 +22,7 @@ entry:
 
 do.body:                                          ; preds = %do.body, %entry
   %blockSize.addr.0 = phi i32 [ %blockSize, %entry ], [ %sub, %do.body ]
-  %curExtremValVec.0 = phi <4 x float> [ <float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000>, %entry ], [ %3, %do.body ]
+  %curExtremValVec.0 = phi <4 x float> [ <float -inf, float -inf, float -inf, float -inf>, %entry ], [ %3, %do.body ]
   %pSrc.addr.0 = phi ptr [ %pSrc, %entry ], [ %add.ptr, %do.body ]
   %0 = tail call <4 x i1> @llvm.arm.mve.vctp32(i32 %blockSize.addr.0)
   %1 = bitcast ptr %pSrc.addr.0 to ptr

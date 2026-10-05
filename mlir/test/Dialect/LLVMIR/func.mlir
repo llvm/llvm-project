@@ -408,6 +408,12 @@ module {
     llvm.return
   }
 
+  llvm.func @uniform_work_group_size() attributes { uniform_work_group_size } {
+    // CHECK: @uniform_work_group_size
+    // CHECK-SAME: attributes {uniform_work_group_size}
+    llvm.return
+  }
+
   llvm.func @zero_call_used_regs() attributes { zero_call_used_regs="used-gpr-arg"} {
     // CHECK: @zero_call_used_regs
     // CHECK-SAME: attributes {zero_call_used_regs = "used-gpr-arg"}

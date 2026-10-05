@@ -142,8 +142,10 @@ template <typename T> OmpDirectiveName GetOmpDirectiveName(const T &x) {
   return detail::DirectiveNameScope::GetOmpDirectiveName(x);
 }
 
-std::string GetUpperName(llvm::omp::Clause id, llvm::omp::Version version);
-std::string GetUpperName(llvm::omp::Directive id, llvm::omp::Version version);
+std::string GetUpperName(
+    llvm::omp::Clause id, llvm::omp::Version version, bool annotate = true);
+std::string GetUpperName(
+    llvm::omp::Directive id, llvm::omp::Version version, bool annotate = true);
 
 const OpenMPDeclarativeConstruct *GetOmp(const DeclarationConstruct &x);
 const OpenMPConstruct *GetOmp(const ExecutionPartConstruct &x);
@@ -218,6 +220,18 @@ struct OmpAllocateInfo {
 };
 
 OmpAllocateInfo SplitOmpAllocate(const OmpAllocateDirective &x);
+
+namespace detail {
+template <typename ClauseTy, typename VoidTy = void> struct HasModifierImpl {
+  static constexpr bool value{false};
+};
+template <typename ClauseTy>
+struct HasModifierImpl<ClauseTy, std::void_t<typename ClauseTy::Modifier>> {
+  static constexpr bool value{true};
+};
+} // namespace detail
+template <typename ClauseTy>
+static constexpr bool HasModifier = detail::HasModifierImpl<ClauseTy>::value;
 
 template <typename R, typename = void, typename = void> struct is_range {
   static constexpr bool value{false};

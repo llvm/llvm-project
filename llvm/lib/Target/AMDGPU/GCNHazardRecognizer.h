@@ -231,6 +231,7 @@ private:
   bool isCoexecutionHazardFor(const MachineInstr &I,
                               const MachineInstr &MI) const;
   bool fixShift64HighRegBug(MachineInstr *MI);
+  bool fixVPermPk16Hazard(MachineInstr *MI);
   bool fixVALUMaskWriteHazard(MachineInstr *MI);
   bool fixRequiredExportPriority(MachineInstr *MI);
   bool fixGetRegWaitIdle(MachineInstr *MI);
@@ -239,9 +240,20 @@ private:
   bool fixSetRegMode(MachineInstr *MI);
   bool fixTDM(MachineInstr *MI);
 
+  /// Wait states before \p Consumer may read \p Reg, holding \p Producer's
+  /// result, as srcC if \p IsSrcC or as srcA/srcB otherwise.
+  int getMFMAReadWaitStates(const MachineInstr &Consumer,
+                            const MachineInstr &Producer, Register Reg,
+                            bool IsSrcC) const;
+
   int checkMAIHazards(MachineInstr *MI) const;
   int checkMAIHazards908(MachineInstr *MI) const;
   int checkMAIHazards90A(MachineInstr *MI) const;
+  /// Wait states needed when MFMA \p Reader reads as src2/C a register that the
+  /// earlier MFMA \p Writer wrote, taken from the wait state tables for
+  /// overlapping register tuples.
+  int getMFMAOverlappedSrcCWaitStates(const MachineInstr *Reader,
+                                      const MachineInstr *Writer) const;
   /// Pad the latency between neighboring MFMA instructions with s_nops. The
   /// percentage of wait states to fill with s_nops is specified by the command
   /// line option '-amdgpu-mfma-padding-ratio'.

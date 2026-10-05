@@ -20,7 +20,7 @@
 func.func @test_scalar() {
   %0 = fir.alloca f32 {test.var = "scalar"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -42,7 +42,7 @@ func.func @test_scalar() {
 func.func @test_int() {
   %0 = fir.alloca i32 {test.var = "int"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -64,7 +64,7 @@ func.func @test_int() {
 func.func @test_logical() {
   %0 = fir.alloca !fir.logical<4> {test.var = "logical"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -86,7 +86,7 @@ func.func @test_logical() {
 func.func @test_complex() {
   %0 = fir.alloca complex<f32> {test.var = "complex"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -107,7 +107,7 @@ func.func @test_complex() {
 func.func @test_array_1d() {
   %0 = fir.alloca !fir.array<100xf32> {test.var = "array_1d"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -128,7 +128,7 @@ func.func @test_array_1d() {
 func.func @test_array_2d() {
   %0 = fir.alloca !fir.array<10x20xi32> {test.var = "array_2d"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -149,7 +149,7 @@ func.func @test_array_2d() {
 func.func @test_derived() {
   %0 = fir.alloca !fir.type<_QTpoint{x:f32,y:f32,z:f32}> {test.var = "derived"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
 
@@ -174,6 +174,32 @@ func.func @test_from_clause() {
   %host = fir.alloca i32
   %fp = acc.firstprivate varPtr(%host : !fir.ref<i32>) name("x") -> !fir.ref<i32> {test.var = "from_clause"}
   %var = fir.alloca f32
-  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}
+
+// -----
+
+// Bare !fir.ptr values (e.g. a null POINTER address firstprivatized into a
+// region) allocate !fir.ref storage. Convert it back to the recipe type so
+// fir.result in the optional-present branch matches fir.if.
+// CHECK: acc.firstprivate.recipe @firstprivate_optional_ptr_f64 : !fir.ptr<f64> init {
+// CHECK: ^bb0(%[[ARG:.*]]: !fir.ptr<f64>):
+// CHECK:   %[[ALLOC:.*]] = fir.alloca f64
+// CHECK:   %[[PRESENT:.*]] = fir.is_present %[[ARG]] : (!fir.ptr<f64>) -> i1
+// CHECK:   %[[RES:.*]] = fir.if %[[PRESENT]] -> (!fir.ptr<f64>) {
+// CHECK:     %[[CVT:.*]] = fir.convert %[[ALLOC]] : (!fir.ref<f64>) -> !fir.ptr<f64>
+// CHECK:     fir.result %[[CVT]] : !fir.ptr<f64>
+// CHECK:   } else {
+// CHECK:     %[[ABSENT:.*]] = fir.absent !fir.ptr<f64>
+// CHECK:     fir.result %[[ABSENT]] : !fir.ptr<f64>
+// CHECK:   }
+// CHECK:   acc.yield %[[RES]] : !fir.ptr<f64>
+// CHECK: }
+
+func.func @test_optional_ptr_f64() {
+  %0 = fir.zero_bits !fir.ptr<f64> {test.var = "optional_ptr_f64"}
+  %var = fir.alloca f32
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
