@@ -1772,6 +1772,23 @@ OpFoldResult ArgMaxOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+OpFoldResult ArgMinOp::fold(FoldAdaptor adaptor) {
+  auto inputTy = llvm::dyn_cast<RankedTensorType>(getInput().getType());
+  auto outputTy = llvm::dyn_cast<RankedTensorType>(getType());
+  if (!inputTy || !outputTy || !inputTy.hasStaticShape() ||
+      !outputTy.hasStaticShape())
+    return {};
+
+  const Type outputElementTy = getElementTypeOrSelf(outputTy);
+  if (inputTy.getDimSize(getAxis()) == 1 && outputElementTy.isInteger()) {
+    const auto outputElemIntTy = cast<IntegerType>(outputElementTy);
+    const APInt zero = APInt::getZero(outputElemIntTy.getWidth());
+    return DenseElementsAttr::get(outputTy, zero);
+  }
+
+  return {};
+}
+
 OpFoldResult IntDivOp::fold(FoldAdaptor adaptor) {
   auto lhsTy = llvm::dyn_cast<RankedTensorType>(getInput1().getType());
   auto rhsTy = llvm::dyn_cast<RankedTensorType>(getInput2().getType());
@@ -2216,7 +2233,9 @@ OpFoldResult ReverseOp::fold(FoldAdaptor adaptor) {
   auto operandTy = llvm::cast<ShapedType>(operand.getType());
   auto axis = getAxis();
   // If the dim-length is 1, or reversing axis is unit-dim, also a no-op.
+  // A splat of block-scaled values may still have different scales per block.
   const bool isSplatInput =
+      !isa<BlockScaledType>(operandTy.getElementType()) &&
       llvm::isa_and_nonnull<SplatElementsAttr>(adaptor.getInput1());
   if (!operandTy.hasRank() ||
       (!isSplatInput && operandTy.getDimSize(axis) != 1))

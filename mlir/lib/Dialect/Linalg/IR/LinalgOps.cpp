@@ -5081,24 +5081,12 @@ Speculation::Speculatability BatchMatmulOp::getSpeculatability() {
 //===----------------------------------------------------------------------===//
 //
 namespace {
-struct ArityGroupAndKind {
-  // The enum class {Unary, Binary, Ternary, ..}
-  ElementwiseArityGroup arityGroup;
-
-  // The kind (e.g. `exp` or `add`) belonging to the arity group.
-  union Kind {
-    UnaryFn unaryFn;
-    BinaryFn binaryFn;
-    TernaryFn ternaryFn;
-  } kind;
-};
-
 unsigned getArityGroupAsUInt(ElementwiseArityGroup arityGroup) {
   return static_cast<unsigned>(arityGroup);
 }
 } // namespace
 
-static ArityGroupAndKind getArityGroupAndKind(ElementwiseKind kind) {
+ArityGroupAndKind getArityGroupAndKind(ElementwiseKind kind) {
   constexpr int lastUnary = static_cast<int>(ElementwiseCaseLimits::LastUnary);
   constexpr int lastBinary =
       static_cast<int>(ElementwiseCaseLimits::LastBinary);
@@ -5139,24 +5127,14 @@ ElementwiseOp::getDefaultIndexingMaps(unsigned numMaps, unsigned numDims,
 }
 
 ParseResult ElementwiseOp::parse(OpAsmParser &parser, OperationState &result) {
-  // Expect e.g. `kind = #linalg.elemwise_kind<add>`
-  Attribute attr;
+  // Expect e.g. `<add>` (also accepts the full
+  // `#linalg.elementwise_kind<add>`).
+  ElementwiseKindAttr kindAttr;
   mlir::linalg::ElementwiseKind elemwiseKindVal;
-  if (parser.parseKeyword("kind") || parser.parseEqual())
+  if (parser.parseCustomAttributeWithFallback(kindAttr))
     return failure();
-
-  if (succeeded(parser.parseAttribute(attr))) {
-    auto elemwiseKindAttr = dyn_cast<ElementwiseKindAttr>(attr);
-    if (!elemwiseKindAttr)
-      return parser.emitError(parser.getCurrentLocation(),
-                              "expected ElementwiseKind attribute");
-    elemwiseKindVal = elemwiseKindAttr.getValue();
-  } else {
-    return parser.emitError(parser.getCurrentLocation(),
-                            "expected operation 'kind' attribute");
-  }
-  result.addAttribute(
-      "kind", ElementwiseKindAttr::get(parser.getContext(), elemwiseKindVal));
+  elemwiseKindVal = kindAttr.getValue();
+  result.addAttribute("kind", kindAttr);
 
   // Parse optional `indexing_maps`
   SmallVector<Attribute, 3> indexingMapsAttr;
@@ -5212,8 +5190,8 @@ ParseResult ElementwiseOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void ElementwiseOp::print(OpAsmPrinter &p) {
-  p << " kind=";
-  p.printAttribute(getKindAttr());
+  p << " ";
+  p.printStrippedAttrOrType(getKindAttr());
   SmallVector<StringRef, 3> elidedAttrs = {"operandSegmentSizes", "kind",
                                            "indexing_maps"};
   unsigned arity =
@@ -5239,7 +5217,7 @@ void ElementwiseOp::regionBuilder(
     function_ref<InFlightDiagnostic()> emitError) {
   std::optional<ElementwiseKind> elemwiseKind;
   for (auto attr : attrs) {
-    if (attr.getName() == b.getStringAttr("kind")) {
+    if (attr.getName() == "kind") {
       auto kindAttr = dyn_cast<ElementwiseKindAttr>(attr.getValue());
       if (!kindAttr) {
         if (emitError)
@@ -6190,7 +6168,9 @@ static bool inferStaticShape(PackOp packOp, SmallVectorImpl<int64_t> &srcShape,
 }
 
 LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
-  // TODO: Support Memref PackOp. Temporarily return failure.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!packOp.hasPureTensorSemantics())
     return failure();
 
@@ -6290,6 +6270,9 @@ bool PackOp::isLikePad() {
 ::mlir::LogicalResult
 PackOp::fold(FoldAdaptor adaptor,
              ::llvm::SmallVectorImpl<OpFoldResult> &results) {
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!hasPureTensorSemantics())
     return failure();
   std::optional<Attribute> paddingValue;
@@ -6323,7 +6306,9 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
 
   LogicalResult matchAndRewrite(PackOp op,
                                 PatternRewriter &rewriter) const override {
-    // TODO: Support Memref PackOp. Temporarily return failure.
+    // Pack/unpack memref transformations are unsupported. The memref forms
+    // are mainly for bufferization and scalar lowering. Other uses are not
+    // recommended, see #225650 for details.
     if (!op.hasPureTensorSemantics())
       return failure();
 
@@ -6656,7 +6641,9 @@ static bool inferStaticShape(UnPackOp op, SmallVectorImpl<int64_t> &srcShape,
 
 LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
                                      PatternRewriter &rewriter) {
-  // TODO: Support Memref UnPackOp. Temporarily return failure.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!unPackOp.hasPureTensorSemantics())
     return failure();
 
@@ -6773,7 +6760,9 @@ bool UnPackOp::isLikeUnPad() {
 ::mlir::LogicalResult
 UnPackOp::fold(FoldAdaptor adaptor,
                ::llvm::SmallVectorImpl<OpFoldResult> &results) {
-  // TODO: Support Memref UnPackOp. Temporarily return failure.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!hasPureTensorSemantics())
     return failure();
 
@@ -6805,7 +6794,9 @@ struct FoldTensorCastUnPackOp : public OpRewritePattern<UnPackOp> {
 
   LogicalResult matchAndRewrite(UnPackOp op,
                                 PatternRewriter &rewriter) const override {
-    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    // Pack/unpack memref transformations are unsupported. The memref forms
+    // are mainly for bufferization and scalar lowering. Other uses are not
+    // recommended, see #225650 for details.
     if (!op.hasPureTensorSemantics())
       return failure();
 

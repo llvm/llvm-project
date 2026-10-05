@@ -116,7 +116,7 @@ static void createRetPHINode(Instruction *OrigInst, Instruction *NewInst,
   if (OrigInst->getType()->isVoidTy() || OrigInst->use_empty())
     return;
 
-  Builder.SetInsertPoint(MergeBlock, MergeBlock->begin());
+  Builder.SetInsertPoint(MergeBlock->begin());
   PHINode *Phi = Builder.CreatePHI(OrigInst->getType(), 0);
   SmallVector<User *, 16> UsersToUpdate(OrigInst->users());
   for (User *U : UsersToUpdate)
@@ -476,7 +476,7 @@ bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
   for (; I < NumArgs; I++) {
     // Vararg functions can have more arguments than parameters.
     assert(Callee->isVarArg());
-    if (CB.hasABIParamAttr(I, Attribute::StructRet)) {
+    if (CB.paramHasAttr(I, Attribute::StructRet)) {
       if (FailureReason)
         *FailureReason = "SRet arg to vararg function";
       return false;

@@ -51,14 +51,6 @@ LLVM_ABI Expected<std::unique_ptr<MemoryBuffer>>
 checkMachORelocatableObject(std::unique_ptr<MemoryBuffer> Obj, const Triple &TT,
                             bool ObjIsSlice);
 
-/// Load a relocatable object compatible with TT from Path.
-/// If Path is a universal binary, this function will return a buffer for the
-/// slice compatible with Triple (if one is present).
-LLVM_ABI Expected<std::pair<std::unique_ptr<MemoryBuffer>, LinkableFileKind>>
-loadMachOLinkableFile(
-    StringRef Path, const Triple &TT, LoadArchives LA,
-    std::optional<StringRef> IdentifierOverride = std::nullopt);
-
 /// Load a compatible relocatable object (if available) from a MachO universal
 /// binary.
 /// Path is only used for error reporting. Identifier will be used to name the

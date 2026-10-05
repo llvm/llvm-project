@@ -190,10 +190,10 @@ public:
       return Candidates;
 
     // Find store->load dependences (consequently true dep).  Both lexically
-    // forward and backward dependences qualify.  Disqualify loads that have
-    // other unknown dependences.
+    // forward and backward dependences qualify.
+    // Disqualify loads that have other unsafe dependences.
 
-    SmallPtrSet<Instruction *, 4> LoadsWithUnknownDependence;
+    SmallPtrSet<Instruction *, 4> LoadsWithUnsafeDependence;
 
     for (const auto &Dep : *Deps) {
       Instruction *Source = Dep.getSource(DepChecker);
@@ -203,9 +203,9 @@ public:
           Dep.Type == MemoryDepChecker::Dependence::IndirectUnsafe ||
           Dep.Type == MemoryDepChecker::Dependence::InvariantUnsafe) {
         if (isa<LoadInst>(Source))
-          LoadsWithUnknownDependence.insert(Source);
+          LoadsWithUnsafeDependence.insert(Source);
         if (isa<LoadInst>(Destination))
-          LoadsWithUnknownDependence.insert(Destination);
+          LoadsWithUnsafeDependence.insert(Destination);
         continue;
       }
 
@@ -225,17 +225,21 @@ public:
         continue;
 
       // Only propagate if the stored values are bit/pointer castable.
-      if (!CastInst::isBitOrNoopPointerCastable(
-              getLoadStoreType(Store), getLoadStoreType(Load),
-              Store->getDataLayout()))
+      if (!CastInst::isBitOrNoopPointerCastable(getLoadStoreType(Store),
+                                                getLoadStoreType(Load),
+                                                Store->getDataLayout())) {
+        // This store may partially clobber the value from another forwarding
+        // candidate.
+        LoadsWithUnsafeDependence.insert(Load);
         continue;
+      }
 
       Candidates.emplace_front(Load, Store);
     }
 
-    if (!LoadsWithUnknownDependence.empty())
+    if (!LoadsWithUnsafeDependence.empty())
       Candidates.remove_if([&](const StoreToLoadForwardingCandidate &C) {
-        return LoadsWithUnknownDependence.count(C.Load);
+        return LoadsWithUnsafeDependence.count(C.Load);
       });
 
     return Candidates;

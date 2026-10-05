@@ -921,9 +921,9 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
 
     unsigned Reg;
 
-    if (Call->hasABIParamAttr(I, Attribute::SExt))
+    if (Call->paramHasAttr(I, Attribute::SExt))
       Reg = getRegForSignedValue(V);
-    else if (Call->hasABIParamAttr(I, Attribute::ZExt))
+    else if (Call->paramHasAttr(I, Attribute::ZExt))
       Reg = getRegForUnsignedValue(V);
     else
       Reg = getRegForValue(V);
@@ -1322,7 +1322,7 @@ bool WebAssemblyFastISel::selectBitCast(const Instruction *I) {
   MachineBasicBlock::iterator Iter = FuncInfo.InsertPt;
   --Iter;
   assert(Iter->isBitcast());
-  Iter->setPhysRegsDeadExcept(ArrayRef<Register>(), TRI);
+  Iter->setImplicitPhysRegDefsDead();
   updateValueMap(I, Reg);
   return true;
 }

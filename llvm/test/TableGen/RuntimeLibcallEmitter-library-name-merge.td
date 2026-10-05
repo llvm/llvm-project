@@ -42,7 +42,7 @@ def DarwinLibm : LibcallLibrary<"libm", (add sqrt)> { let Pred = isDarwin; }
 // The shared core (memcpy, memset) is emitted once and unguarded; each variant's
 // guarded block carries only its own extras (bzero for Darwin, stpcpy for GNU).
 
-// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libc(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, EABI EABIVersion, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libc(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
 // CHECK-NEXT:   static const RTLIB::LibcallImpl LibraryCalls[] = {
 // CHECK-NEXT:       RTLIB::impl_memcpy, // memcpy
 // CHECK-NEXT:       RTLIB::impl_memset, // memset
@@ -77,7 +77,7 @@ def DarwinLibm : LibcallLibrary<"libm", (add sqrt)> { let Pred = isDarwin; }
 // sqrt differs in calling convention between the two libm variants, so it stays
 // per-variant: no shared-core hoist, and the GNU variant keeps its ARM_AAPCS.
 
-// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libm(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, EABI EABIVersion, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libm(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
 // CHECK-NEXT:   if (TT.isOSDarwin()) {
 // CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
 // CHECK-NEXT:         RTLIB::impl_sqrt, // sqrt

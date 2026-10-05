@@ -140,6 +140,7 @@ private:
 
   void createCUDARuntime();
   void createOpenMPRuntime();
+  void setOpenCLVersionAttr(llvm::StringRef attrName, unsigned version);
 
   /// A helper for constructAttributeList that handles return attributes.
   void constructFunctionReturnAttributes(const CIRGenFunctionInfo &info,
@@ -338,6 +339,10 @@ public:
   getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty = {},
                      ForDefinition_t isForDefinition = NotForDefinition);
 
+  /// Cast \p addr, the address of the global \p vd, to the address space of
+  /// the declared type of \p vd if they differ.
+  mlir::Value castGlobalToDeclAddrSpace(mlir::Value addr, const VarDecl &vd);
+
   /// Get or create a thunk function with the given name and type.
   cir::FuncOp getAddrOfThunk(StringRef name, mlir::Type fnTy, GlobalDecl gd);
 
@@ -365,8 +370,6 @@ public:
   /// contribute to the function attributes and calling convention.
   /// \param attrs [out] - On return, the attribute list to use.
   /// \param callingConv [out] - On return, the calling convention to use.
-  /// \param sideEffect [out] - On return, the side effect type of the
-  /// attributes.
   /// \param attrOnCallSite - Whether or not the attributes are on a call site.
   /// \param isThunk - Whether the function is a thunk.
   void constructAttributeList(
@@ -374,7 +377,7 @@ public:
       CIRGenCalleeInfo calleeInfo, mlir::NamedAttrList &attrs,
       llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs,
       mlir::NamedAttrList &retAttrs, cir::CallingConv &callingConv,
-      cir::SideEffect &sideEffect, bool attrOnCallSite, bool isThunk);
+      bool attrOnCallSite, bool isThunk);
   /// Helper function for constructAttributeList/others.  Builds a set of
   /// function attributes to add to a function based on language opts, codegen
   /// opts, and some small properties.
@@ -460,6 +463,13 @@ public:
   cir::GlobalViewAttr
   getAddrOfConstantStringFromLiteral(const StringLiteral *s,
                                      llvm::StringRef name = ".str");
+
+  /// Wrapper around CodeGenUtils::getGlobalConstantAddressSpace, currently
+  /// needed to enforce failure on SYCL modules, for which CIR does not yet
+  /// support the global constant address space.
+  /// TODO: Remove this wrapper once CIR supports the global constant address
+  /// space for SYCL.
+  LangAS getGlobalConstantAddressSpace() const;
 
   /// Returns the address space for temporary allocations in the language. This
   /// ensures that the allocated variable's address space matches the
@@ -667,6 +677,8 @@ public:
   /// function declared with the sycl_kernel_entry_point attribute.
   void emitSYCLKernelCaller(const clang::FunctionDecl *kernelEntryPointFn,
                             clang::ASTContext &ctx);
+
+  void addSYCLModuleIdAttr(cir::FuncOp fn);
   void emitGlobalVarDefinition(const clang::VarDecl *vd,
                                bool isTentative = false);
 
