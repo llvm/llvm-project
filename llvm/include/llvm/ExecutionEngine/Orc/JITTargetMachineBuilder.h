@@ -65,10 +65,7 @@ public:
   ///
   /// Note: This is reasonably expensive. It is only suitable for use during
   /// JIT setup.
-  Expected<DataLayout> getDefaultDataLayoutForTarget() const {
-    return DataLayout::parse(
-        TT.computeDataLayout(Options.MCOptions.getABIName()));
-  }
+  LLVM_ABI Expected<DataLayout> getDefaultDataLayoutForTarget() const;
 
   /// Set the CPU string.
   JITTargetMachineBuilder &setCPU(std::string CPU) {

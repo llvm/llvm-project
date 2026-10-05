@@ -593,7 +593,7 @@ bool TypeSanitizer::sanitizeFunction(Function &F,
     Res = true;
   }
 
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   bool SanitizeFunction = F.hasFnAttribute(Attribute::SanitizeType);
   bool NeedsInstrumentation =
       MemTypeResetInsts.empty() && MemoryAccesses.empty();

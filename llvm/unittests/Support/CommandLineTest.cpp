@@ -1741,11 +1741,6 @@ TEST(CommandLineTest, LongOptions) {
   const char *args2[] = {"prog", "-a", "--ab", "val1"};
   const char *args3[] = {"prog", "-ab", "--ab", "val1"};
 
-  //
-  // The following tests treat `-` and `--` the same, and always match the
-  // longest string.
-  //
-
   EXPECT_TRUE(
       cl::ParseCommandLineOptions(4, args1, StringRef(), &OS));
   EXPECT_TRUE(OptA);
@@ -1765,33 +1760,7 @@ TEST(CommandLineTest, LongOptions) {
   // Fails because `val1` is unexpected.
   EXPECT_FALSE(
       cl::ParseCommandLineOptions(4, args3, StringRef(), &OS));
-  outs()<< Errs << "\n";
   EXPECT_FALSE(Errs.empty()); Errs.clear();
-  cl::ResetAllOptionOccurrences();
-
-  //
-  // The following tests treat `-` and `--` differently, with `-` for short, and
-  // `--` for long options.
-  //
-
-  // Fails because `-ab` is neither a short option nor `--ab`, and `val1` is
-  // unexpected.
-  EXPECT_FALSE(cl::ParseCommandLineOptions(4, args1, StringRef(), &OS, nullptr,
-                                           nullptr, true));
-  EXPECT_FALSE(Errs.empty()); Errs.clear();
-  cl::ResetAllOptionOccurrences();
-
-  // Works because `-a` is treated differently than `--ab`.
-  EXPECT_TRUE(cl::ParseCommandLineOptions(4, args2, StringRef(), &OS, nullptr,
-                                          nullptr, true));
-  EXPECT_TRUE(Errs.empty()); Errs.clear();
-  cl::ResetAllOptionOccurrences();
-
-  // Fails because `-ab` is not `--ab`.
-  EXPECT_FALSE(cl::ParseCommandLineOptions(4, args3, StringRef(), &OS, nullptr,
-                                           nullptr, true));
-  EXPECT_FALSE(Errs.empty());
-  Errs.clear();
   cl::ResetAllOptionOccurrences();
 }
 
@@ -1925,13 +1894,6 @@ TEST(CommandLineTest, Callback) {
 
   cl::ResetAllOptionOccurrences();
 }
-
-enum Enum { Val1, Val2 };
-static cl::bits<Enum> ExampleBits(
-    cl::desc("An example cl::bits to ensure it compiles"),
-    cl::values(
-      clEnumValN(Val1, "bits-val1", "The Val1 value"),
-      clEnumValN(Val1, "bits-val2", "The Val2 value")));
 
 TEST(CommandLineTest, ConsumeAfterOnePositional) {
   cl::ResetCommandLineParser();
@@ -2083,7 +2045,7 @@ TEST(CommandLineTest, ResetAllOptionOccurrences) {
   StackOption<bool> Option("option");
   StackOption<std::string> Str("str");
   enum Vals { ValA, ValB, ValC };
-  StackOption<Vals, cl::bits<Vals>> Bits(
+  StackOption<Vals, cl::list<Vals>> List(
       cl::values(clEnumValN(ValA, "enableA", "Enable A"),
                  clEnumValN(ValB, "enableB", "Enable B"),
                  clEnumValN(ValC, "enableC", "Enable C")));
@@ -2100,7 +2062,9 @@ TEST(CommandLineTest, ResetAllOptionOccurrences) {
 
   EXPECT_TRUE(Option);
   EXPECT_EQ("STR", Str);
-  EXPECT_EQ((1u << ValA) | (1u << ValC), Bits.getBits());
+  ASSERT_EQ(2u, List.size());
+  EXPECT_EQ(ValA, List[0]);
+  EXPECT_EQ(ValC, List[1]);
   EXPECT_EQ("input", Input);
   EXPECT_EQ(1u, ExtraArgs.size());
   EXPECT_EQ("-arg", ExtraArgs[0]);
@@ -2108,7 +2072,7 @@ TEST(CommandLineTest, ResetAllOptionOccurrences) {
   cl::ResetAllOptionOccurrences();
   EXPECT_FALSE(Option);
   EXPECT_EQ("", Str);
-  EXPECT_EQ(0u, Bits.getBits());
+  EXPECT_TRUE(List.empty());
   EXPECT_EQ(0, Input.getNumOccurrences());
   EXPECT_EQ(0u, ExtraArgs.size());
 }
@@ -2286,5 +2250,146 @@ TEST(CommandLineTest, HelpWithEmptyCategory) {
 
   cl::ResetCommandLineParser();
 }
+
+// Records the arguments it is handed. -library-int takes a separate value and
+// rejects "bad".
+struct TestLibrary final : cl::LibraryOptions {
+  std::vector<std::string> Args;
+  void forEachOption(
+      function_ref<void(StringRef, StringRef, StringRef)> Fn) const override {
+    Fn("library-flag", "", "A flag");
+    Fn("library-int", " <int>", "");
+  }
+  Error parse(ArrayRef<const char *> Argv, unsigned &Consumed) override {
+    Consumed = 1;
+    Args.push_back(Argv[0]);
+    if (StringRef(Argv[0]).ltrim('-') != "library-int")
+      return Error::success();
+    if (Argv.size() < 2)
+      return createStringError("missing value");
+    Consumed = 2;
+    Args.push_back(Argv[1]);
+    if (Args.back() == "bad")
+      return createStringError("bad value");
+    return Error::success();
+  }
+  void reset() override { Args.clear(); }
+};
+
+TEST(CommandLineTest, LibraryOptions) {
+  cl::ResetCommandLineParser();
+  TestLibrary L;
+  cl::addLibraryOptions(L);
+
+  // A library's options suffice to parse.
+  const char *Only[] = {"prog", "-library-flag"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(Only), Only, StringRef(),
+                                          &llvm::nulls()));
+  EXPECT_THAT(L.Args, testing::ElementsAre("-library-flag"));
+  cl::ResetAllOptionOccurrences();
+  EXPECT_TRUE(L.Args.empty());
+
+  StackOption<int> Local("local");
+  const char *Args[] = {"prog", "--library-int", "4", "-local=3",
+                        "-library-flag"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(Args), Args, StringRef(),
+                                          &llvm::nulls()));
+  EXPECT_EQ(Local, 3);
+  EXPECT_THAT(L.Args,
+              testing::ElementsAre("--library-int", "4", "-library-flag"));
+  cl::ResetAllOptionOccurrences();
+
+  // A rejected value is still consumed.
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+  const char *Bad[] = {"prog", "-library-int", "bad", "-local=1",
+                       "-library-int"};
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(std::size(Bad), Bad, StringRef(), &OS));
+  EXPECT_EQ(Local, 1);
+  EXPECT_EQ(Errs, "prog: bad value\nprog: missing value\n");
+  cl::ResetCommandLineParser();
+}
+
+TEST(CommandLineTest, LibraryOptionsHelp) {
+  cl::ResetCommandLineParser();
+  TestLibrary L;
+  cl::addLibraryOptions(L);
+  StackOption<int> Local("local", cl::desc("A cl::opt"));
+  const char *Args[] = {"prog"};
+  cl::ParseCommandLineOptions(std::size(Args), Args, StringRef(),
+                              &llvm::nulls());
+
+  // Library options are aligned with cl::'s. Options without help text are not
+  // listed.
+  std::string Hidden = interceptStdout(
+      [] { cl::PrintHelpMessage(/*Hidden=*/true, /*Categorized=*/false); });
+  auto HelpColumn = [&](StringRef Line) {
+    size_t Begin = Hidden.find(("\n" + Line).str());
+    return Begin == std::string::npos ? Begin
+                                      : Hidden.find(" - ", Begin) - Begin;
+  };
+  EXPECT_NE(std::string::npos,
+            Hidden.find("\nLibrary options:\n\n  --library-flag "))
+      << Hidden;
+  EXPECT_NE(std::string::npos, HelpColumn("  --local="));
+  EXPECT_EQ(HelpColumn("  --local="), HelpColumn("  --library-flag "));
+  EXPECT_EQ(std::string::npos, Hidden.find("library-int"));
+  std::string Visible = interceptStdout(
+      [] { cl::PrintHelpMessage(/*Hidden=*/false, /*Categorized=*/false); });
+  EXPECT_EQ(std::string::npos, Visible.find("Library options")) << Visible;
+  cl::ResetCommandLineParser();
+}
+
+// A library registered while parsing, as a plugin that an argument loads
+// does, serves the arguments after it.
+TEST(CommandLineTest, LibraryOptionsRegisteredWhileParsing) {
+  cl::ResetCommandLineParser();
+  TestLibrary L;
+  StackOption<std::string> Load("load", cl::callback([&](const std::string &) {
+                                  cl::addLibraryOptions(L);
+                                }));
+
+  const char *Args[] = {"prog", "-load=plugin", "-library-flag"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(Args), Args, StringRef(),
+                                          &llvm::nulls()));
+  EXPECT_THAT(L.Args, testing::ElementsAre("-library-flag"));
+  cl::ResetCommandLineParser();
+}
+
+// An unregistered subcommand, as MLIR's PassOptions is, may reuse a library
+// option's name.
+TEST(CommandLineTest, LibraryOptionsUnregisteredSubCommand) {
+  cl::ResetCommandLineParser();
+  TestLibrary L;
+  cl::addLibraryOptions(L);
+  const char *Args[] = {"prog"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(Args), Args, StringRef(),
+                                          &llvm::nulls()));
+  cl::SubCommand Unregistered;
+  StackOption<int> Opt("library-flag", cl::sub(Unregistered));
+  cl::ResetCommandLineParser();
+}
+
+#if GTEST_HAS_DEATH_TEST
+TEST(CommandLineTest, LibraryOptionsConflict) {
+  cl::ResetCommandLineParser();
+  TestLibrary L;
+  cl::addLibraryOptions(L);
+  const char *Args[] = {"prog"};
+  // A cl::opt registered before the library is indexed.
+  EXPECT_DEATH(
+      {
+        StackOption<int> Clash("library-int");
+        cl::ParseCommandLineOptions(std::size(Args), Args);
+      },
+      "Option 'library-int' registered more than once");
+  // A cl::opt registered after.
+  cl::ParseCommandLineOptions(std::size(Args), Args);
+  EXPECT_DEATH(StackOption<int>("library-flag"),
+               "Option 'library-flag' registered more than once");
+  cl::ResetCommandLineParser();
+}
+#endif
 
 } // anonymous namespace

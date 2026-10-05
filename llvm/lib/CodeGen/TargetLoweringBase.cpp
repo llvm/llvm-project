@@ -1067,9 +1067,10 @@ bool TargetLoweringBase::canOpTrap(unsigned Op, EVT VT) const {
   }
 }
 
-bool TargetLoweringBase::isFreeAddrSpaceCast(unsigned SrcAS,
+bool TargetLoweringBase::isFreeAddrSpaceCast(const DataLayout &DL,
+                                             unsigned SrcAS,
                                              unsigned DestAS) const {
-  return TM.isNoopAddrSpaceCast(SrcAS, DestAS);
+  return TM.isNoopAddrSpaceCast(DL, SrcAS, DestAS);
 }
 
 unsigned TargetLoweringBase::getBitWidthForCttzElements(
@@ -1950,6 +1951,7 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
 #define LAST_OTHER_INST(NUM) InstructionOpcodesCount = NUM
 #include "llvm/IR/Instruction.def"
   };
+  // clang-format off
   switch (static_cast<InstructionOpcodes>(Opcode)) {
   case Ret:            return 0;
   case UncondBr:       return 0;
@@ -2020,8 +2022,10 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
   case InsertValue:    return ISD::MERGE_VALUES;
   case LandingPad:     return 0;
   case Freeze:         return ISD::FREEZE;
+  case BitInsert:      return 0;
+  case BitExtract:     return 0;
   }
-
+  // clang-format on
   llvm_unreachable("Unknown instruction type encountered!");
 }
 
@@ -2217,10 +2221,10 @@ void TargetLoweringBase::insertSSPDeclarations(
 
         // FreeBSD has "__stack_chk_guard" defined externally on libc.so
         if (M.getDirectAccessExternalData() &&
-            !TM.getTargetTriple().isOSCygMing() &&
-            !(TM.getTargetTriple().isPPC64() &&
-              TM.getTargetTriple().isOSFreeBSD()) &&
-            (!TM.getTargetTriple().isOSDarwin() ||
+            !M.getTargetTriple().isOSCygMing() &&
+            !(M.getTargetTriple().isPPC64() &&
+              M.getTargetTriple().isOSFreeBSD()) &&
+            (!M.getTargetTriple().isOSDarwin() ||
              TM.getRelocationModel() == Reloc::Static))
           GV->setDSOLocal(true);
 
@@ -2281,7 +2285,8 @@ void TargetLoweringBase::setMinimumBitTestCmps(unsigned Val) {
   MinimumBitTestCmps = Val;
 }
 
-Align TargetLoweringBase::getPrefLoopAlignment(MachineLoop *ML) const {
+Align TargetLoweringBase::getPrefLoopAlignment(
+    MachineLoop *ML, const MachineBasicBlock *BlockToAlign) const {
   if (TM.Options.LoopAlignment)
     return Align(TM.Options.LoopAlignment);
   return PrefLoopAlignment;

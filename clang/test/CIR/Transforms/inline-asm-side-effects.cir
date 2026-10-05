@@ -1,0 +1,28 @@
+// RUN: cir-opt %s -canonicalize -o - | FileCheck %s
+
+module {
+
+// CHECK-LABEL: @dead_pure_asm_is_removed
+// CHECK-NOT:     cir.asm
+cir.func @dead_pure_asm_is_removed() {
+  cir.asm(x86_att,
+    out = [],
+    in = [],
+    in_out = [],
+    {"nop" "~{dirflag},~{fpsr},~{flags}"})
+  cir.return
+}
+
+// CHECK-LABEL: @dead_side_effects_asm_is_not_removed
+// CHECK:         cir.asm
+// CHECK:         side_effects
+cir.func @dead_side_effects_asm_is_not_removed() {
+  cir.asm(x86_att,
+    out = [],
+    in = [],
+    in_out = [],
+    {"nop" "~{dirflag},~{fpsr},~{flags}"}) side_effects
+  cir.return
+}
+
+}

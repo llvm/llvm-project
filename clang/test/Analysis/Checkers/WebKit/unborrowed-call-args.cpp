@@ -192,6 +192,7 @@ namespace known_gaps {
 void unannotated_intermediate() {
   Vector<char> vec;
   takeSpan(makeSpanUnannotated(vec));
+  // expected-warning@-1{{Function argument 'makeSpanUnannotated(vec)' (to 'takeSpan') is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedCallArgsChecker]}}
 }
 
 inline void trivialSink(char &c) {}

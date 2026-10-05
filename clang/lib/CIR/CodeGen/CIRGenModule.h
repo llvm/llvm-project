@@ -339,6 +339,10 @@ public:
   getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty = {},
                      ForDefinition_t isForDefinition = NotForDefinition);
 
+  /// Cast \p addr, the address of the global \p vd, to the address space of
+  /// the declared type of \p vd if they differ.
+  mlir::Value castGlobalToDeclAddrSpace(mlir::Value addr, const VarDecl &vd);
+
   /// Get or create a thunk function with the given name and type.
   cir::FuncOp getAddrOfThunk(StringRef name, mlir::Type fnTy, GlobalDecl gd);
 
@@ -459,6 +463,13 @@ public:
   cir::GlobalViewAttr
   getAddrOfConstantStringFromLiteral(const StringLiteral *s,
                                      llvm::StringRef name = ".str");
+
+  /// Wrapper around CodeGenUtils::getGlobalConstantAddressSpace, currently
+  /// needed to enforce failure on SYCL modules, for which CIR does not yet
+  /// support the global constant address space.
+  /// TODO: Remove this wrapper once CIR supports the global constant address
+  /// space for SYCL.
+  LangAS getGlobalConstantAddressSpace() const;
 
   /// Returns the address space for temporary allocations in the language. This
   /// ensures that the allocated variable's address space matches the
