@@ -979,7 +979,11 @@ static unsigned countUnexecutedTerminators(const MachineBasicBlock &Pred,
 // documents what it returns. Can only be run in a hazard recognizer mode.
 static int getMaxWindowDeficit(
     function_ref<std::optional<int>(const MachineInstr &)> WindowFor,
-    const MachineInstr *MI, int MaxWindow) {
+    const MachineInstr *MI, int MaxWindow, bool StopAtMatch) {
+  // Stopping at a match prunes this path only: arrivals are swept in
+  // nondecreasing distance, so nothing later in this block, or behind it, is
+  // closer, but arrivals queued at a smaller distance are still scanned and a
+  // predicate may still be asked about instructions past the answer.
   int Deficit = 0;
 
   // Arrivals are swept in nondecreasing distance, so the first one at a block
@@ -1017,8 +1021,9 @@ static int getMaxWindowDeficit(
 
   // Taken by value: Arrive can grow the bucket this arrival is stored in.
   auto Scan = [&](Arrival A) {
-    // A closer arrival has superseded this one.
-    if (Best.lookup(A.MBB) < A.Distance)
+    // A closer arrival has superseded this one, or the answer already holds
+    // more than anything this far back can ask for.
+    if (Best.lookup(A.MBB) < A.Distance || MaxWindow - A.Distance <= Deficit)
       return;
 
     int Distance = A.Distance;
@@ -1029,6 +1034,8 @@ static int getMaxWindowDeficit(
       if (std::optional<int> Window = WindowFor(*I)) {
         assert(*Window >= 0 && *Window <= MaxWindow && "window out of bounds");
         Deficit = std::max(Deficit, *Window - Distance);
+        if (StopAtMatch)
+          return;
       }
 
       if (I->isInlineAsm())
@@ -1044,13 +1051,28 @@ static int getMaxWindowDeficit(
       auto Start = Pred->instr_rbegin(), End = Pred->instr_rend();
       std::advance(Start, countUnexecutedTerminators(*Pred, A.MBB));
 
+      // The terminators this edge executes precede the block, so they are
+      // asked here rather than by the loop above, each at its own distance.
       int Executed = 0;
+      bool Matched = false;
       for (; Start != End && Start->isTerminator(); ++Start) {
-        assert(!WindowFor(*Start) && "terminators must not ask for a window");
+        if (Distance + Executed >= MaxWindow)
+          break;
+
+        if (std::optional<int> Window = WindowFor(*Start)) {
+          assert(*Window >= 0 && *Window <= MaxWindow &&
+                 "window out of bounds");
+          Deficit = std::max(Deficit, *Window - (Distance + Executed));
+          if (StopAtMatch) {
+            Matched = true;
+            break;
+          }
+        }
         Executed += SIInstrInfo::getNumWaitStates(*Start);
       }
 
-      Arrive(Pred, Start, Distance + Executed);
+      if (!Matched)
+        Arrive(Pred, Start, Distance + Executed);
     }
   };
 
@@ -1124,9 +1146,11 @@ getWaitStatesSince(GCNHazardRecognizer::IsHazardFn IsHazard,
 }
 
 int GCNHazardRecognizer::getMaxWindowDeficit(int MaxWindow,
-                                             WindowForFn WindowFor) const {
+                                             WindowForFn WindowFor,
+                                             MatchScope Scope) const {
   if (isHazardRecognizerMode())
-    return ::getMaxWindowDeficit(WindowFor, CurrCycleInstr, MaxWindow);
+    return ::getMaxWindowDeficit(WindowFor, CurrCycleInstr, MaxWindow,
+                                 Scope == MatchScope::Nearest);
 
   // EmittedInstrs is capped and can be shorter than the widest window, which
   // costs scheduling quality only: the standalone pass still pads.
@@ -1136,6 +1160,8 @@ int GCNHazardRecognizer::getMaxWindowDeficit(int MaxWindow,
       if (std::optional<int> Window = WindowFor(*MI)) {
         assert(*Window >= 0 && *Window <= MaxWindow && "window out of bounds");
         Deficit = std::max(Deficit, *Window - Distance);
+        if (Scope == MatchScope::Nearest)
+          break;
       }
 
       if (MI->isInlineAsm())
@@ -1177,9 +1203,31 @@ int GCNHazardRecognizer::getWaitStatesSince(
   return std::numeric_limits<int>::max();
 }
 
+std::optional<int>
+GCNHazardRecognizer::getNearestMatchDistance(int MaxWindow,
+                                             IsHazardFn IsHazard) const {
+  assert(MaxWindow > 0 && "a window of zero cannot hold a match");
+  if (MaxWindow <= 0)
+    return std::nullopt;
+
+  // Asking every match for the same window makes the deficit MaxWindow minus
+  // the distance to the closest one, and a deficit of zero means none was
+  // close enough to matter.
+  int Deficit = getMaxWindowDeficit(
+      MaxWindow,
+      [&IsHazard, MaxWindow](const MachineInstr &MI) -> std::optional<int> {
+        return IsHazard(MI) ? std::optional<int>(MaxWindow) : std::nullopt;
+      },
+      MatchScope::Nearest);
+  if (!Deficit)
+    return std::nullopt;
+  return MaxWindow - Deficit;
+}
+
 int GCNHazardRecognizer::getWaitStatesSince(IsHazardFn IsHazard,
                                             int Limit) const {
-  return getWaitStatesSince(IsHazard, Limit, SIInstrInfo::getNumWaitStates);
+  return getNearestMatchDistance(Limit, IsHazard)
+      .value_or(std::numeric_limits<int>::max());
 }
 
 int GCNHazardRecognizer::getWaitStatesSinceVALU(IsHazardFn IsHazard,
