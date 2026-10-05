@@ -1558,7 +1558,7 @@ ExprResult Parser::ParseAsmStringLiteral(bool ForAsmLabel) {
   if (isTokenStringLiteral()) {
     AsmString = ParseStringLiteralExpression(/*AllowUserDefinedLiteral=*/false,
                                              /*Unevaluated=*/false,
-                                             CA_ToSystemEncoding);
+                                             CA_ToLiteralEncodingForAsm);
     if (AsmString.isInvalid())
       return AsmString;
 
