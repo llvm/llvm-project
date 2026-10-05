@@ -8,7 +8,7 @@
 !===============================================================================
 
 !CHECK-LABEL: func @_QPomp_single
-!CHECK-SAME: (%[[X:.*]]: !fir.ref<i32> {fir.bindc_name = "x"})
+!CHECK-SAME: (%[[X:.*]]: !fir.ref<i32> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_inout>})
 subroutine omp_single(x)
   integer, intent(inout) :: x
   !CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFomp_singleEx") fortran_attrs<intent_inout> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -31,7 +31,7 @@ end subroutine omp_single
 !===============================================================================
 
 !CHECK-LABEL: func @_QPomp_single_nowait
-!CHECK-SAME: (%[[X:.*]]: !fir.ref<i32> {fir.bindc_name = "x"})
+!CHECK-SAME: (%[[X:.*]]: !fir.ref<i32> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_inout>})
 subroutine omp_single_nowait(x)
   integer, intent(inout) :: x
   !CHECK:   %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFomp_single_nowaitEx") fortran_attrs<intent_inout> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -74,7 +74,7 @@ end subroutine single_allocate
 !===============================================================================
 
 ! CHECK-LABEL: func.func @_QPsingle_privatization(
-! CHECK-SAME:                                     %[[X:.*]]: !fir.ref<f32> {fir.bindc_name = "x"},
+! CHECK-SAME:                                     %[[X:.*]]: !fir.ref<f32> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_inout>},
 ! CHECK-SAME:                                     %[[Y:.*]]: !fir.ref<f64> {fir.bindc_name = "y"}) {
 ! CHECK:           %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFsingle_privatizationEx") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFsingle_privatizationEy") : (!fir.ref<f64>, !fir.dscope) -> (!fir.ref<f64>, !fir.ref<f64>)
@@ -101,7 +101,7 @@ subroutine single_privatization(x, y)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPsingle_privatization2(
-! CHECK-SAME:                                      %[[X:.*]]: !fir.ref<f32> {fir.bindc_name = "x"},
+! CHECK-SAME:                                      %[[X:.*]]: !fir.ref<f32> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_inout>},
 ! CHECK-SAME:                                      %[[Y:.*]]: !fir.ref<f64> {fir.bindc_name = "y"}) {
 ! CHECK:         %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFsingle_privatization2Ex") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:         %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFsingle_privatization2Ey") : (!fir.ref<f64>, !fir.dscope) -> (!fir.ref<f64>, !fir.ref<f64>)
