@@ -828,7 +828,7 @@ void GCNHazardRecognizer::AdvanceCycle() {
   EmittedInstrs.push_front(CurrCycleInstr);
 
   bool IsVALUOrWMMA =
-      SIInstrInfo::isVALU(*CurrCycleInstr, /*AllowLDSDMA=*/true) ||
+      SIInstrInfo::isVALU(*CurrCycleInstr, /*AllowLDSDMA=*/false) ||
       SIInstrInfo::isWMMA(*CurrCycleInstr) ||
       SIInstrInfo::isSWMMAC(*CurrCycleInstr);
   if (IsVALUOrWMMA) {
@@ -1154,7 +1154,9 @@ int GCNHazardRecognizer::getMaxWindowDeficit(int MaxWindow,
   auto Weight = [VALUsOnly](const MachineInstr &MI) -> unsigned {
     if (!VALUsOnly)
       return SIInstrInfo::getNumWaitStates(MI);
-    return SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true) ? 1 : 0;
+    // Only co-executable VALU instructions close the window, the same set the
+    // hazard treats as victims; LDSDMA is VALU-tagged but not among them.
+    return SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false) ? 1 : 0;
   };
 
   if (isHazardRecognizerMode())

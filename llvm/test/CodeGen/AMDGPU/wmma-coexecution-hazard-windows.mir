@@ -158,3 +158,23 @@ body: |
     $vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
+
+# LDSDMA is VALU-tagged but not a co-executable VALU instruction for this
+# hazard, neither as a victim nor as progress towards the window.
+
+# CHECK-LABEL: name: wmma_ldsdma_is_not_coexecution_progress
+# CHECK:      GLOBAL_LOAD_LDS_DWORD_SADDR
+# GFX1250-COUNT-4: V_NOP
+# GFX1251-COUNT-8: V_NOP
+# CHECK-NEXT: $vgpr48 = V_MOV_B32_e32
+name: wmma_ldsdma_is_not_coexecution_progress
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $sgpr0_sgpr1, $vgpr30
+    $m0 = IMPLICIT_DEF
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    GLOBAL_LOAD_LDS_DWORD_SADDR $sgpr0_sgpr1, $vgpr30, 0, 0, 0, implicit $m0, implicit $exec
+    $vgpr48 = V_MOV_B32_e32 $vgpr16, implicit $exec
+    S_ENDPGM 0
+...
