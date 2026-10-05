@@ -32919,10 +32919,10 @@ X86TargetLowering::shouldExpandLogicAtomicRMWInIR(
 void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
   LLVMContext &Ctx = AI->getContext();
   IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
-      Ctx, ConstantFolder{}, IRBuilderCallbackInserter([&AI](Instruction *I) {
+      AI->getIterator(), ConstantFolder{},
+      IRBuilderCallbackInserter([&AI](Instruction *I) {
         I->copyMetadata(*AI, LLVMContext::MD_pcsections);
       }));
-  Builder.SetInsertPoint(AI);
   Intrinsic::ID IID_C = Intrinsic::not_intrinsic;
   Intrinsic::ID IID_I = Intrinsic::not_intrinsic;
   switch (AI->getOperation()) {
@@ -33166,10 +33166,10 @@ void X86TargetLowering::emitCmpArithAtomicRMWIntrinsic(
     AtomicRMWInst *AI) const {
   LLVMContext &Ctx = AI->getContext();
   IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
-      Ctx, ConstantFolder{}, IRBuilderCallbackInserter([&AI](Instruction *I) {
+      AI->getIterator(), ConstantFolder{},
+      IRBuilderCallbackInserter([&AI](Instruction *I) {
         I->copyMetadata(*AI, LLVMContext::MD_pcsections);
       }));
-  Builder.SetInsertPoint(AI);
   Instruction *TempI = nullptr;
   ICmpInst *ICI = dyn_cast<ICmpInst>(AI->user_back());
   if (!ICI) {
@@ -33280,11 +33280,10 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
       return nullptr;
 
   IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
-      AI->getContext(), ConstantFolder{},
+      AI->getIterator(), ConstantFolder{},
       IRBuilderCallbackInserter([&AI](Instruction *I) {
         I->copyMetadata(*AI, LLVMContext::MD_pcsections);
       }));
-  Builder.SetInsertPoint(AI);
   auto SSID = AI->getSyncScopeID();
   // We must restrict the ordering to avoid generating loads with Release or
   // ReleaseAcquire orderings.
