@@ -13914,20 +13914,20 @@ def err_cast_from_randomized_struct : Error<
   "casting from randomized structure pointer type %0 to %1">;
 
 // Unsafe buffer usage diagnostics.
-def warn_unsafe_buffer_variable_in_main_args : Warning<
+def warn_unsafe_buffer_variable_main_argv : Warning<
   "%0 is an %select{unsafe pointer used for buffer access|unsafe buffer that "
   "does not perform bounds checks}1">,
-  InGroup<UnsafeBufferUsageInMainArgs>, DefaultIgnore;
+  InGroup<UnsafeBufferUsageMainArgv>, DefaultIgnore;
 
 def warn_unsafe_buffer_variable : Warning<
   "%0 is an %select{unsafe pointer used for buffer access|unsafe buffer that "
   "does not perform bounds checks}1">,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
-def warn_unsafe_buffer_usage_in_main_args : Warning<
+def warn_unsafe_buffer_usage_main_argv : Warning<
   "%select{unsafe pointer operation|unsafe pointer arithmetic|"
   "unsafe buffer access|function introduces unsafe buffer manipulation|unsafe invocation of %1|"
   "field %1 prone to unsafe buffer manipulation}0">,
-  InGroup<UnsafeBufferUsageInMainArgs>, DefaultIgnore;
+  InGroup<UnsafeBufferUsageMainArgv>, DefaultIgnore;
 
 def warn_unsafe_buffer_operation : Warning<
   "%select{unsafe pointer operation|unsafe pointer arithmetic|"
