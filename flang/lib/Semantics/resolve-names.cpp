@@ -4367,8 +4367,8 @@ static bool MatchesCublasBlas(
     SemanticsContext &context, const Symbol &generic, const Symbol &other) {
   // Exclude CUBLAS-prefixed API names from the legacy BLAS compatibility rule.
   const SourceName &genericName{generic.GetUltimate().name()};
-  if (llvm::StringRef{genericName.begin(), genericName.size()}.starts_with(
-          "cublas")) {
+  const llvm::StringRef genericNameRef{genericName.begin(), genericName.size()};
+  if (genericNameRef.starts_with("cublas")) {
     return false;
   }
   const auto &details{generic.get<GenericDetails>()};
