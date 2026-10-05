@@ -104,6 +104,12 @@ Value *IRBuilderBase::CreateAggregateCast(Value *V, Type *DestTy) {
   return CreateBitOrPointerCast(V, DestTy);
 }
 
+/// Is exactly one of \p A and \p B a byte type and the other a pointer type?
+[[maybe_unused]] static bool crossesBytePointerBoundary(Type *A, Type *B) {
+  return (A->isByteOrByteVectorTy() && B->isPtrOrPtrVectorTy()) ||
+         (A->isPtrOrPtrVectorTy() && B->isByteOrByteVectorTy());
+}
+
 Value *IRBuilderBase::CreateBitPreservingCastChain(const DataLayout &DL,
                                                    Value *V, Type *NewTy) {
   Type *OldTy = V->getType();
@@ -140,9 +146,7 @@ Value *IRBuilderBase::CreateBitPreservingCastChain(const DataLayout &DL,
   };
 
   // See if we need inttoptr for this type pair. May require additional bitcast.
-  bool OldIsIntLike =
-      OldTy->isIntOrIntVectorTy() || OldTy->isByteOrByteVectorTy();
-  if (OldIsIntLike && NewTy->isPtrOrPtrVectorTy()) {
+  if (OldTy->isIntOrIntVectorTy() && NewTy->isPtrOrPtrVectorTy()) {
     // Expand <2 x i32> to i8* --> <2 x i32> to i64 to i8*
     // Expand i128 to <2 x i8*> --> i128 to <2 x i64> to <2 x i8*>
     // Expand <4 x i32> to <2 x i8*> --> <4 x i32> to <2 x i64> to <2 x i8*>
@@ -151,9 +155,7 @@ Value *IRBuilderBase::CreateBitPreservingCastChain(const DataLayout &DL,
   }
 
   // See if we need ptrtoint for this type pair. May require additional bitcast.
-  bool NewIsIntLike =
-      NewTy->isIntOrIntVectorTy() || NewTy->isByteOrByteVectorTy();
-  if (OldTy->isPtrOrPtrVectorTy() && NewIsIntLike) {
+  if (OldTy->isPtrOrPtrVectorTy() && NewTy->isIntOrIntVectorTy()) {
     // Expand <2 x i8*> to i128 --> <2 x i8*> to <2 x i64> to i128
     // Expand i8* to <2 x i32> --> i8* to i64 to <2 x i32>
     // Expand <2 x i8*> to <4 x i32> --> <2 x i8*> to <2 x i64> to <4 x i32>
@@ -177,6 +179,14 @@ Value *IRBuilderBase::CreateBitPreservingCastChain(const DataLayout &DL,
           NewTy);
     }
   }
+
+  // Byte types convert to and from pointers with a plain bitcast, which keeps
+  // the provenance a byte value carries. CastInst::castIsValid exempts that
+  // pair from its size check because it cannot size a pointer without a
+  // DataLayout, so check the widths here instead.
+  assert((!crossesBytePointerBoundary(OldTy, NewTy) ||
+          DL.getTypeSizeInBits(OldTy) == DL.getTypeSizeInBits(NewTy)) &&
+         "Byte/pointer conversion must preserve the total bit width.");
 
   return CreateBitCastLike(V, NewTy);
 }
