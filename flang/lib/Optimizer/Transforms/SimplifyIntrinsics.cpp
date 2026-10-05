@@ -418,8 +418,8 @@ static void genRuntimeMaxvalBody(fir::FirOpBuilder &builder,
           loc, elementType, llvm::APFloat::getLargest(sem, /*Negative=*/true));
     }
     unsigned bits = elementType.getIntOrFloatBitWidth();
-    int64_t minInt = llvm::APInt::getSignedMinValue(bits).getSExtValue();
-    return builder.createIntegerConstant(loc, elementType, minInt);
+    return builder.createIntegerConstant(loc, elementType,
+                                         llvm::APInt::getSignedMinValue(bits));
   };
 
   auto genBodyOp = [](fir::FirOpBuilder builder, mlir::Location loc,
@@ -667,9 +667,8 @@ static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
       return builder.createRealConstant(loc, elementType, limit);
     }
     unsigned bits = elementType.getIntOrFloatBitWidth();
-    int64_t initValue = (isMax ? llvm::APInt::getSignedMinValue(bits)
-                               : llvm::APInt::getSignedMaxValue(bits))
-                            .getSExtValue();
+    llvm::APInt initValue = isMax ? llvm::APInt::getSignedMinValue(bits)
+                                  : llvm::APInt::getSignedMaxValue(bits);
     return builder.createIntegerConstant(loc, elementType, initValue);
   };
 
@@ -1057,6 +1056,12 @@ void SimplifyIntrinsicsPass::simplifyIntOrFloatReduction(
 
   auto argType = getArgElementType(args[0]);
   if (!argType)
+    return;
+  // Unsigned reductions (e.g. MaxvalUnsigned/SumUnsigned) lower to runtime
+  // calls whose signless result type intentionally differs from the unsigned
+  // element type, and the inline reduction generated below would use a signed
+  // identity/comparison. Leave the correct runtime call in place.
+  if (argType->isUnsignedInteger())
     return;
   assert(*argType == resultType &&
          "Argument/result types mismatch in reduction");

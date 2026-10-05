@@ -29,6 +29,7 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <utility>
 
 using namespace mlir;
 
@@ -1525,8 +1526,9 @@ spirv::Deserializer::processStructType(ArrayRef<uint32_t> operands) {
 
     if (!unresolvedMemberTypes.empty())
       deferredStructTypesInfos.push_back(
-          {structTy, unresolvedMemberTypes, memberTypes, offsetInfo,
-           memberDecorationsInfo, structDecorationsInfo});
+          {structTy, std::move(unresolvedMemberTypes), std::move(memberTypes),
+           std::move(offsetInfo), std::move(memberDecorationsInfo),
+           std::move(structDecorationsInfo)});
     else if (failed(structTy.trySetBody(memberTypes, offsetInfo,
                                         memberDecorationsInfo,
                                         structDecorationsInfo)))

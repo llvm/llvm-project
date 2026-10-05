@@ -7,9 +7,8 @@ define i64 @bswap_i24(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i8>, ptr [[P]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <3 x i8>, ptr [[P1]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <3 x i8> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <3 x i8> [[TMP3]] to <3 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = shl <3 x i32> [[TMP4]], <i32 16, i32 8, i32 0>
-; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.or.v3i32(<3 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <3 x i8> [[TMP3]], <3 x i8> zeroinitializer, <4 x i32> <i32 2, i32 1, i32 0, i32 3>
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i8> [[TMP6]] to i32
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP9]]
 ;

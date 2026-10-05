@@ -132,8 +132,6 @@
 ; CHECK-NEXT:       Peephole Optimizations
 ; CHECK-NEXT:       Remove dead machine instructions
 ; CHECK-NEXT:       PowerPC Reduce CR logical Operation
-; CHECK-NEXT:       Remove unreachable machine basic blocks
-; CHECK-NEXT:       Live Variable Analysis
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       MachinePostDominator Tree Construction
 ; CHECK-NEXT:       Machine Cycle Info Analysis
@@ -161,9 +159,9 @@
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Machine Natural Loop Construction
 ; CHECK-NEXT:       Eliminate PHI nodes for register allocation
-; CHECK-NEXT:       Two-Address instruction pass
 ; CHECK-NEXT:       Slot index numbering
 ; CHECK-NEXT:       Live Interval Analysis
+; CHECK-NEXT:       Two-Address instruction pass
 ; CHECK-NEXT:       Register Coalescer
 ; CHECK-NEXT:       Rename Disconnected Subregister Components
 ; CHECK-NEXT:       Machine Cycle Info Analysis

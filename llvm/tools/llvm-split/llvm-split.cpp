@@ -87,7 +87,7 @@ static cl::opt<SplitByCategoryType> SplitByCategory(
     "split-by-category",
     cl::desc("Split by category. If present, splitting by category is used "
              "with the specified categorization type."),
-    cl::Optional, cl::init(SplitByCategoryType::SBCT_None),
+    cl::init(SplitByCategoryType::SBCT_None),
     cl::values(clEnumValN(SplitByCategoryType::SBCT_ByAttribute, "attribute",
                           "one output module per unique value of the function "
                           "attribute named by --category-attribute"),

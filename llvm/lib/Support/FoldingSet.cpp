@@ -115,7 +115,8 @@ FoldingSetBase::FoldingSetBase(unsigned Log2InitSize) {
   assert(5 < Log2InitSize && Log2InitSize < 32 &&
          "Initial hash table size out of range");
   NumBuckets = 1 << Log2InitSize;
-  Buckets = static_cast<void **>(safe_calloc(NumBuckets, sizeof(void *)));
+  Buckets = static_cast<FoldingSetNode **>(
+      safe_calloc(NumBuckets, sizeof(FoldingSetNode *)));
 }
 
 FoldingSetBase::FoldingSetBase(FoldingSetBase &&Arg)
@@ -144,11 +145,11 @@ void FoldingSetBase::clear() {
   incrementEpoch();
   // Stale hashes are unreachable, so only the occupancy needs resetting.
   if (NumBuckets)
-    memset(Buckets, 0, NumBuckets * sizeof(void *));
+    memset(Buckets, 0, NumBuckets * sizeof(FoldingSetNode *));
   NumNodes = 0;
 }
 
-void FoldingSetBase::placeNode(Node *N, uint32_t Hash) {
+void FoldingSetBase::placeNode(FoldingSetNode *N, uint32_t Hash) {
   unsigned Mask = NumBuckets - 1;
   unsigned I = Hash & Mask;
   while (Buckets[I]) {
@@ -166,9 +167,8 @@ void FoldingSetBase::grow(unsigned MinNumBuckets) {
 
   FoldingSetBase Tmp(llvm::Log2_32(NewBucketCount));
   for (unsigned I = 0; I != NumBuckets; ++I)
-    if (void *N = Buckets[I])
-      Tmp.placeNode(static_cast<Node *>(N),
-                    static_cast<Node *>(N)->getFoldingSetHash());
+    if (FoldingSetNode *N = Buckets[I])
+      Tmp.placeNode(N, N->getFoldingSetHash());
 
   *this = std::move(Tmp);
 }
@@ -180,7 +180,7 @@ void FoldingSetBase::reserve(unsigned N) {
   grow(N + (N + 2) / 3);
 }
 
-void FoldingSetBase::insert(Node *N, FoldingSetInsertToken Token) {
+void FoldingSetBase::insert(FoldingSetNode *N, FoldingSetInsertToken Token) {
   assert(N && "Cannot insert a null node");
   assert(Token && "Invalid token!");
   incrementEpoch();
@@ -191,7 +191,7 @@ void FoldingSetBase::insert(Node *N, FoldingSetInsertToken Token) {
   N->setFoldingSetHash(Hash);
 }
 
-bool FoldingSetBase::erase(Node *N) {
+bool FoldingSetBase::erase(FoldingSetNode *N) {
   uint32_t Hash = N->getFoldingSetHash();
   if (Hash == FoldingSetNodeIDRef::NotAHash)
     return false; // Never inserted.
@@ -209,7 +209,7 @@ bool FoldingSetBase::erase(Node *N) {
   // Knuth TAOCP 6.4 Algorithm R: walk forward sliding each following entry
   // whose probe path crosses the hole.
   for (unsigned J = (I + 1) & Mask; Buckets[J]; J = (J + 1) & Mask) {
-    unsigned Ideal = static_cast<Node *>(Buckets[J])->getFoldingSetHash();
+    unsigned Ideal = Buckets[J]->getFoldingSetHash();
     if (((I - Ideal) & Mask) < ((J - Ideal) & Mask)) {
       Buckets[I] = Buckets[J];
       I = J;

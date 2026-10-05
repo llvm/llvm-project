@@ -41,6 +41,7 @@ class Module;
 class Function;
 class MachineFunction;
 class PassInstrumentationCallbacks;
+struct ExtendedIRContext;
 
 /// Instrumentation to print IR before/after passes.
 ///
@@ -50,7 +51,8 @@ class PrintIRInstrumentation {
 public:
   LLVM_ABI ~PrintIRInstrumentation();
 
-  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
+  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC,
+                                  ExtendedIRContext *IRContext = nullptr);
 
 private:
   struct PassRunDescriptor {
@@ -102,15 +104,18 @@ private:
 
   /// Used for print-at-pass-number
   unsigned CurrentPassNumber = 0;
+  ExtendedIRContext *IRContext = nullptr;
 };
 
 class OptNoneInstrumentation {
 public:
   OptNoneInstrumentation(bool DebugLogging) : DebugLogging(DebugLogging) {}
-  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
+  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC,
+                                  ExtendedIRContext *IRContext = nullptr);
 
 private:
   bool DebugLogging;
+  ExtendedIRContext *IRContext = nullptr;
   bool shouldRun(StringRef PassID, IRUnitRef IR);
 };
 
@@ -120,7 +125,11 @@ class OptPassGateInstrumentation {
 public:
   OptPassGateInstrumentation(LLVMContext &Context) : Context(Context) {}
   LLVM_ABI bool shouldRun(StringRef PassName, IRUnitRef IR);
-  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
+  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC,
+                                  ExtendedIRContext *IRContext = nullptr);
+
+private:
+  ExtendedIRContext *IRContext = nullptr;
 };
 
 struct PrintPassOptions {
@@ -139,10 +148,12 @@ class PrintPassInstrumentation {
 public:
   PrintPassInstrumentation(bool Enabled, PrintPassOptions Opts)
       : Enabled(Enabled), Opts(Opts) {}
-  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
+  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC,
+                                  ExtendedIRContext *IRContext = nullptr);
 
 private:
   bool Enabled;
+  ExtendedIRContext *IRContext = nullptr;
   PrintPassOptions Opts;
   int Indent = 0;
 };
@@ -196,6 +207,36 @@ public:
                                   ModuleAnalysisManager &MAM);
 };
 
+class ExtendedIRTraits {
+public:
+  ExtendedIRTraits() = default;
+  ExtendedIRTraits(const ExtendedIRTraits &) = delete;
+  ExtendedIRTraits &operator=(const ExtendedIRTraits &) = delete;
+
+  ExtendedIRTraits(ExtendedIRTraits &&) = delete;
+  ExtendedIRTraits &operator=(ExtendedIRTraits &&) = delete;
+
+  virtual ~ExtendedIRTraits() = default;
+  virtual std::optional<std::string> getIRName(IRUnitRef IR) const = 0;
+};
+
+// Stores custom IR-name traits used to specialize instrumentation output for
+// non-standard IR representations.
+struct ExtendedIRContext {
+  ExtendedIRContext() = default;
+  ExtendedIRContext(const ExtendedIRContext &) = delete;
+  ExtendedIRContext &operator=(const ExtendedIRContext &) = delete;
+
+  ExtendedIRContext(ExtendedIRContext &&) = delete;
+  ExtendedIRContext &operator=(ExtendedIRContext &&) = delete;
+
+  llvm::SmallVector<std::unique_ptr<ExtendedIRTraits>> traits;
+  // Register an ExtendedIRTraits implementation for this IR context.
+  void addTrait(std::unique_ptr<ExtendedIRTraits> trait) {
+    traits.push_back(std::move(trait));
+  }
+};
+
 // Base class for classes that report changes to the IR.
 // It presents an interface for such classes and provides calls
 // on various events as the new pass manager transforms the IR.
@@ -214,6 +255,7 @@ public:
 template <typename IRUnitT> class LLVM_ABI ChangeReporter {
 protected:
   ChangeReporter(bool RunInVerboseMode) : VerboseMode(RunInVerboseMode) {}
+  void setContext(ExtendedIRContext *Context) { context = Context; }
 
 public:
   virtual ~ChangeReporter();
@@ -248,13 +290,20 @@ protected:
   // Called when an ignored pass is encountered.
   virtual void handleIgnored(StringRef PassID, std::string &Name) = 0;
 
-  // Stack of IRs before passes.
-  std::vector<IRUnitT> BeforeStack;
+  struct BeforeIR {
+    IRUnitT Data;
+    bool IsInteresting = false;
+  };
+
+  // Stack of IRs before passes and whether they matched the filters.
+  std::vector<BeforeIR> BeforeStack;
   // Is this the first IR seen?
   bool InitialIR = true;
 
   // Run in verbose mode, printing everything?
   const bool VerboseMode;
+
+  ExtendedIRContext *context = nullptr;
 };
 
 // An abstract template base class that handles printing banners and
@@ -493,12 +542,15 @@ public:
   TimeProfilingPassesHandler(const TimeProfilingPassesHandler &) = delete;
   void operator=(const TimeProfilingPassesHandler &) = delete;
 
-  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
+  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC,
+                                  ExtendedIRContext *IRContext = nullptr);
 
 private:
   // Implementation of pass instrumentation callbacks.
   void runBeforePass(StringRef PassID, IRUnitRef IR);
   void runAfterPass();
+
+  ExtendedIRContext *IRContext = nullptr;
 };
 
 // Class that holds transitions between basic blocks.  The transitions
@@ -626,7 +678,8 @@ public:
   // Register all the standard instrumentation callbacks. If \p FAM is nullptr
   // then PreservedCFGChecker is not enabled.
   LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC,
-                                  ModuleAnalysisManager *MAM = nullptr);
+                                  ModuleAnalysisManager *MAM = nullptr,
+                                  ExtendedIRContext *IRContext = nullptr);
 
   TimePassesHandler &getTimePasses() { return TimePasses; }
 };
