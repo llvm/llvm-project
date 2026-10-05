@@ -243,6 +243,8 @@ bool mlir::vector::checkSameValueRAW(vector::TransferWriteOp defWrite,
   // read may not see the written vector as a whole. This conservatively
   // includes all-true masks. MaskOp::fold removes them during canonicalization,
   // so this only matters when a caller such as transferOpflowOpt runs first.
+  // TODO: Account for compatible region masks instead of conservatively
+  // rejecting all region-masked operations.
   if (defWrite.isMasked() || read.isMasked())
     return false;
   return !defWrite.hasOutOfBoundsDim() &&
@@ -260,6 +262,8 @@ bool mlir::vector::checkSameValueWAW(vector::TransferWriteOp write,
   // MaskOp::fold removes during canonicalization. Only the later write needs
   // checking: a region-masked prior write is still dead if the later write
   // fully overwrites it.
+  // TODO: Handle a region-masked later write when it is known to fully
+  // overwrite the prior write.
   if (write.isMasked())
     return false;
   return priorWrite.getIndices() == write.getIndices() &&
@@ -5647,6 +5651,8 @@ struct TransferReadAfterWriteToBroadcast
       return failure();
     // Bail in the masked case (too complex atm and needed to properly account
     // for padding). This includes an enclosing vector.mask.
+    // TODO: Support mask operands and reads nested in vector.mask while
+    // properly accounting for padding.
     if (readOp.getMask() || defWrite.getMask() || readOp.isMasked())
       return failure();
     // If indices are not the same a shift may be required, bail.
