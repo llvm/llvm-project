@@ -1516,6 +1516,11 @@ bool isGFX13Plus(const MCSubtargetInfo &STI);
 bool isFullSIMDMode(const MCSubtargetInfo &STI);
 
 bool supportsWGP(const MCSubtargetInfo &STI);
+
+/// \returns true if both wave32 and wave64 are supported, i.e. the kernel
+/// descriptor's ENABLE_WAVEFRONT_SIZE32 is not reserved.
+bool hasSelectableWaveSize(const MCSubtargetInfo &STI);
+
 bool isNotGFX12Plus(const MCSubtargetInfo &STI);
 bool isNotGFX11Plus(const MCSubtargetInfo &STI);
 bool isGCN3Encoding(const MCSubtargetInfo &STI);

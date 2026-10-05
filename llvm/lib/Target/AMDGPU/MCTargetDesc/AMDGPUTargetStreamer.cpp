@@ -484,7 +484,7 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
       amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE_SHIFT,
       amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE,
       ".amdhsa_user_sgpr_private_segment_size");
-  if (IVersion.Major >= 10)
+  if (AMDGPU::hasSelectableWaveSize(STI))
     PrintField(KD.kernel_code_properties,
                amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32_SHIFT,
                amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,

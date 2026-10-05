@@ -832,7 +832,8 @@ const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE;
   }
-  if (MF.getSubtarget<GCNSubtarget>().isWave32()) {
+  const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
+  if (STM.isWave32() && hasSelectableWaveSize(STM)) {
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
   }

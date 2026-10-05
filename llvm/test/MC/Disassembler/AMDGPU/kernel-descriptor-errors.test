@@ -23,6 +23,11 @@
 # WF32: ; error decoding test.kd: kernel descriptor reserved bit (458) set, must be zero on gfx9
 # WF32-NEXT: ; decoding failed region as bytes
 
+# RUN: yaml2obj %s -DGPU=GFX1250 -DKD=00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000 \
+# RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=WF32_W32ONLY
+# WF32_W32ONLY: ; error decoding test.kd: kernel descriptor reserved bit (458) set, must be zero on wave32-only targets
+# WF32_W32ONLY-NEXT: ; decoding failed region as bytes
+
 # RUN: yaml2obj %s -DGPU=GFX1100 -DKD=0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000300AC60800000000024000000000000 \
 # RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=RES_463
 # RES_463: ; error decoding test.kd: kernel descriptor reserved bits in range (463:460) set

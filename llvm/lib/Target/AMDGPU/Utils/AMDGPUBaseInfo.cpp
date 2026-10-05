@@ -2554,6 +2554,11 @@ bool supportsWGP(const MCSubtargetInfo &STI) {
   return isGFX10Plus(STI);
 }
 
+bool hasSelectableWaveSize(const MCSubtargetInfo &STI) {
+  return STI.hasFeature(FeatureSupportsWave32) &&
+         STI.hasFeature(FeatureSupportsWave64);
+}
+
 bool isNotGFX11Plus(const MCSubtargetInfo &STI) { return !isGFX11Plus(STI); }
 
 bool isNotGFX10Plus(const MCSubtargetInfo &STI) {
