@@ -783,6 +783,24 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "hdr_poll_overlay",
+    hdrs = ["hdr/poll_overlay.h"],
+    target_compatible_with = select({
+        ":full_build": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "hdr_sys_socket_overlay",
+    hdrs = ["hdr/sys_socket_overlay.h"],
+    target_compatible_with = select({
+        ":full_build": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
     name = "hdr_netinet_in_macros",
     hdrs = ["hdr/netinet_in_macros.h"],
 )
@@ -849,9 +867,12 @@ libc_support_library(
 libc_support_library(
     name = "hdr_sys_socket_macros",
     hdrs = ["hdr/sys_socket_macros.h"],
-    deps = [
-        ":llvm_libc_macros_sys_socket_macros",
-    ],
+    deps = select({
+        ":full_build": [
+            ":llvm_libc_macros_sys_socket_macros",
+        ],
+        "//conditions:default": [":hdr_sys_socket_overlay"],
+    }),
 )
 
 libc_support_library(
@@ -1233,7 +1254,7 @@ libc_support_library(
     hdrs = ["hdr/types/nfds_t.h"],
     deps = select({
         ":full_build": [":llvm_libc_types_nfds_t"],
-        "//conditions:default": [],
+        "//conditions:default": [":hdr_poll_overlay"],
     }),
 )
 
@@ -1242,7 +1263,7 @@ libc_support_library(
     hdrs = ["hdr/types/struct_pollfd.h"],
     deps = select({
         ":full_build": [":llvm_libc_types_struct_pollfd"],
-        "//conditions:default": [],
+        "//conditions:default": [":hdr_poll_overlay"],
     }),
 )
 
@@ -1388,11 +1409,19 @@ libc_support_library(
 libc_support_library(
     name = "types_sa_family_t",
     hdrs = ["hdr/types/sa_family_t.h"],
+    deps = select({
+        ":full_build": [],
+        "//conditions:default": [":hdr_sys_socket_overlay"],
+    }),
 )
 
 libc_support_library(
     name = "types_socklen_t",
     hdrs = ["hdr/types/socklen_t.h"],
+    deps = select({
+        ":full_build": [],
+        "//conditions:default": [":hdr_sys_socket_overlay"],
+    }),
 )
 
 libc_support_library(
@@ -1413,6 +1442,10 @@ libc_support_library(
 libc_support_library(
     name = "types_struct_sockaddr",
     hdrs = ["hdr/types/struct_sockaddr.h"],
+    deps = select({
+        ":full_build": [],
+        "//conditions:default": [":hdr_sys_socket_overlay"],
+    }),
 )
 
 libc_support_library(
@@ -1428,6 +1461,10 @@ libc_support_library(
 libc_support_library(
     name = "types_struct_sockaddr_storage",
     hdrs = ["hdr/types/struct_sockaddr_storage.h"],
+    deps = select({
+        ":full_build": [],
+        "//conditions:default": [":hdr_sys_socket_overlay"],
+    }),
 )
 
 libc_support_library(
@@ -1438,6 +1475,10 @@ libc_support_library(
 libc_support_library(
     name = "types_struct_linger",
     hdrs = ["hdr/types/struct_linger.h"],
+    deps = select({
+        ":full_build": [],
+        "//conditions:default": [":hdr_sys_socket_overlay"],
+    }),
 )
 
 libc_support_library(
@@ -1448,17 +1489,28 @@ libc_support_library(
 libc_support_library(
     name = "types_struct_mmsghdr",
     hdrs = ["hdr/types/struct_mmsghdr.h"],
+    deps = select({
+        ":full_build": [],
+        "//conditions:default": [":hdr_sys_socket_overlay"],
+    }),
 )
 
 libc_support_library(
     name = "types_struct_msghdr",
     hdrs = ["hdr/types/struct_msghdr.h"],
+    deps = select({
+        ":full_build": [],
+        "//conditions:default": [":hdr_sys_socket_overlay"],
+    }),
 )
 
 libc_support_library(
     name = "types_struct_cmsghdr",
     hdrs = ["hdr/types/struct_cmsghdr.h"],
-    deps = [":llvm_libc_types_struct_cmsghdr"],
+    deps = select({
+        ":full_build": [":llvm_libc_types_struct_cmsghdr"],
+        "//conditions:default": [":hdr_sys_socket_overlay"],
+    }),
 )
 
 libc_support_library(
@@ -18220,6 +18272,25 @@ libc_function(
         ":__support_osutil_linux_syscall_wrappers_getrandom",
         ":types_size_t",
         ":types_ssize_t",
+    ],
+)
+
+############################## sys/prctl targets ##############################
+
+libc_function(
+    name = "prctl",
+    srcs = ["src/sys/prctl/linux/prctl.cpp"],
+    hdrs = ["src/sys/prctl/prctl.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":errno",
     ],
 )
 
