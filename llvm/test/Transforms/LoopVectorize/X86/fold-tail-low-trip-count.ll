@@ -51,21 +51,21 @@ define ptr @low_trip_count_via_profile_info_with_iv_live_out(ptr align 16 %start
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP1]]
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 0, i64 [[TMP1]])
-; CHECK-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[TMP1]], i64 16)
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <64 x i1> @llvm.get.active.lane.mask.v64i1.i64(i64 0, i64 [[TMP1]])
+; CHECK-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[TMP1]], i64 64)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <64 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP4]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[TMP5]], <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
-; CHECK-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[WIDE_MASKED_LOAD]], ptr align 1 [[NEXT_GEP]], <16 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <64 x i8> @llvm.masked.load.v64i8.p0(ptr align 1 [[TMP5]], <64 x i1> [[ACTIVE_LANE_MASK]], <64 x i8> poison)
+; CHECK-NEXT:    call void @llvm.masked.store.v64i8.p0(<64 x i8> [[WIDE_MASKED_LOAD]], ptr align 1 [[NEXT_GEP]], <64 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <64 x i1> @llvm.get.active.lane.mask.v64i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <64 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = xor i1 [[TMP9]], true
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 64
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF1:![0-9]+]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
@@ -100,21 +100,21 @@ define void @low_trip_count_via_profile_info(ptr align 16 %start, ptr align 16 %
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP7]], [[TMP6]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 0, i64 [[TMP1]])
-; CHECK-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[TMP1]], i64 16)
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <64 x i1> @llvm.get.active.lane.mask.v64i1.i64(i64 0, i64 [[TMP1]])
+; CHECK-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[TMP1]], i64 64)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <64 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP3]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[TMP4]], <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
-; CHECK-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[WIDE_MASKED_LOAD]], ptr align 1 [[NEXT_GEP]], <16 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <64 x i8> @llvm.masked.load.v64i8.p0(ptr align 1 [[TMP4]], <64 x i1> [[ACTIVE_LANE_MASK]], <64 x i8> poison)
+; CHECK-NEXT:    call void @llvm.masked.store.v64i8.p0(<64 x i8> [[WIDE_MASKED_LOAD]], ptr align 1 [[NEXT_GEP]], <64 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <64 x i1> @llvm.get.active.lane.mask.v64i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <64 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor i1 [[TMP8]], true
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 64
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF1]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]

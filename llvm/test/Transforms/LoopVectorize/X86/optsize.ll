@@ -42,15 +42,15 @@ define i32 @foo_optsize() #0 {
 ; AUTOVF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AUTOVF:       [[VECTOR_BODY]]:
 ; AUTOVF-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; AUTOVF-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <16 x i1> [ splat (i1 true), %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; AUTOVF-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <32 x i1> [ splat (i1 true), %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; AUTOVF-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[INDEX]]
-; AUTOVF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[TMP2]], <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
-; AUTOVF-NEXT:    [[TMP1:%.*]] = icmp eq <16 x i8> [[WIDE_MASKED_LOAD]], zeroinitializer
-; AUTOVF-NEXT:    [[TMP4:%.*]] = select <16 x i1> [[TMP1]], <16 x i8> splat (i8 2), <16 x i8> splat (i8 1)
-; AUTOVF-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[TMP4]], ptr align 1 [[TMP2]], <16 x i1> [[ACTIVE_LANE_MASK]])
-; AUTOVF-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
-; AUTOVF-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 [[INDEX_NEXT]], i32 203)
-; AUTOVF-NEXT:    [[TMP3:%.*]] = extractelement <16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
+; AUTOVF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <32 x i8> @llvm.masked.load.v32i8.p0(ptr align 1 [[TMP2]], <32 x i1> [[ACTIVE_LANE_MASK]], <32 x i8> poison)
+; AUTOVF-NEXT:    [[TMP1:%.*]] = icmp eq <32 x i8> [[WIDE_MASKED_LOAD]], zeroinitializer
+; AUTOVF-NEXT:    [[TMP4:%.*]] = select <32 x i1> [[TMP1]], <32 x i8> splat (i8 2), <32 x i8> splat (i8 1)
+; AUTOVF-NEXT:    call void @llvm.masked.store.v32i8.p0(<32 x i8> [[TMP4]], ptr align 1 [[TMP2]], <32 x i1> [[ACTIVE_LANE_MASK]])
+; AUTOVF-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 32
+; AUTOVF-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i32(i32 [[INDEX_NEXT]], i32 203)
+; AUTOVF-NEXT:    [[TMP3:%.*]] = extractelement <32 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; AUTOVF-NEXT:    [[TMP6:%.*]] = xor i1 [[TMP3]], true
 ; AUTOVF-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; AUTOVF:       [[MIDDLE_BLOCK]]:
