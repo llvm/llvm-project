@@ -21,7 +21,6 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -38,7 +37,6 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -52,39 +50,6 @@ using namespace llvm;
 
 #define GET_INSTRINFO_CTOR_DTOR
 #include "X86GenInstrInfo.inc"
-
-extern cl::opt<bool> X86EnableAPXForRelocation;
-
-static cl::opt<bool>
-    NoFusing("disable-spill-fusing",
-             cl::desc("Disable fusing of spill code into instructions"),
-             cl::Hidden);
-static cl::opt<bool>
-    PrintFailedFusing("print-failed-fuse-candidates",
-                      cl::desc("Print instructions that the allocator wants to"
-                               " fuse, but the X86 backend currently can't"),
-                      cl::Hidden);
-static cl::opt<bool>
-    ReMatPICStubLoad("remat-pic-stub-load",
-                     cl::desc("Re-materialize load from stub in PIC mode"),
-                     cl::init(false), cl::Hidden);
-static cl::opt<unsigned>
-    PartialRegUpdateClearance("partial-reg-update-clearance",
-                              cl::desc("Clearance between two register writes "
-                                       "for inserting XOR to avoid partial "
-                                       "register update"),
-                              cl::init(64), cl::Hidden);
-static cl::opt<unsigned> UndefRegClearance(
-    "undef-reg-clearance",
-    cl::desc("How many idle instructions we would like before "
-             "certain undef register reads"),
-    cl::init(128), cl::Hidden);
-
-static cl::opt<unsigned> MaxNFConversions(
-    "x86-max-nf-conversions-for-cmp-reuse",
-    cl::desc("Maximum number of NF conversions allowed to reuse EFLAGS from a "
-             "producer dominating a multi-predecessor block"),
-    cl::init(6), cl::Hidden);
 
 // Pin the vtable to this file.
 void X86InstrInfo::anchor() {}
@@ -937,7 +902,8 @@ bool X86InstrInfo::isReMaterializableImpl(
       if (BaseReg == 0 || BaseReg == X86::RIP)
         return true;
       // Allow re-materialization of PIC load.
-      if (!(!ReMatPICStubLoad && MI.getOperand(1 + X86::AddrDisp).isGlobal())) {
+      if (!(!Subtarget.getCLOpts().remat_pic_stub_load &&
+            MI.getOperand(1 + X86::AddrDisp).isGlobal())) {
         const MachineFunction &MF = *MI.getParent()->getParent();
         const MachineRegisterInfo &MRI = MF.getRegInfo();
         if (regIsPICBase(BaseReg, MRI))
@@ -1157,7 +1123,7 @@ findRedundantFlagInstr(MachineInstr &CmpInstr, MachineInstr &CmpValDefInstr,
 bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
                                   unsigned Opc, bool AllowSP, Register &NewSrc,
                                   unsigned &NewSrcSubReg, bool &isKill,
-                                  MachineOperand &ImplicitOp, LiveVariables *LV,
+                                  MachineOperand &ImplicitOp,
                                   LiveIntervals *LIS) const {
   MachineFunction &MF = *MI.getParent()->getParent();
   const TargetRegisterClass *RC;
@@ -1208,9 +1174,6 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
     // Which is obviously going to be dead after we're done with it.
     isKill = true;
 
-    if (LV)
-      LV->replaceKillInstruction(SrcReg, MI, *Copy);
-
     if (LIS) {
       SlotIndex CopyIdx = LIS->InsertMachineInstrInMaps(*Copy);
       SlotIndex Idx = LIS->getInstructionIndex(MI);
@@ -1227,7 +1190,6 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
 
 MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
                                                          MachineInstr &MI,
-                                                         LiveVariables *LV,
                                                          LiveIntervals *LIS,
                                                          bool Is8BitOp) const {
   // We handle 8-bit adds and various 16-bit opcodes in the switch below.
@@ -1339,8 +1301,6 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
       addRegReg(MIB, InRegLEA, true, X86::NoSubRegister, InRegLEA2, true,
                 X86::NoSubRegister);
     }
-    if (LV && IsKill2 && InsMI2)
-      LV->replaceKillInstruction(Src2, MI, *InsMI2);
     break;
   }
   }
@@ -1350,18 +1310,6 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
       BuildMI(MBB, MBBI, MI.getDebugLoc(), get(TargetOpcode::COPY))
           .addReg(Dest, RegState::Define | getDeadRegState(IsDead))
           .addReg(OutRegLEA, RegState::Kill, SubReg);
-
-  if (LV) {
-    // Update live variables.
-    LV->getVarInfo(InRegLEA).Kills.push_back(NewMI);
-    if (InRegLEA2)
-      LV->getVarInfo(InRegLEA2).Kills.push_back(NewMI);
-    LV->getVarInfo(OutRegLEA).Kills.push_back(ExtMI);
-    if (IsKill)
-      LV->replaceKillInstruction(Src, MI, *InsMI);
-    if (IsDead)
-      LV->replaceKillInstruction(Dest, MI, *ExtMI);
-  }
 
   if (LIS) {
     LIS->InsertMachineInstrInMaps(*ImpDef);
@@ -1420,7 +1368,6 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
 /// performed, otherwise it returns the new instruction.
 ///
 MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
-                                                  LiveVariables *LV,
                                                   LiveIntervals *LIS) const {
   // The following opcodes also sets the condition code register(s). Only
   // convert them to equivalent lea if the condition code register def's
@@ -1449,7 +1396,6 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
   bool Is64Bit = Subtarget.is64Bit();
 
   bool Is8BitOp = false;
-  unsigned NumRegOperands = 2;
   unsigned MIOpc = MI.getOpcode();
   switch (MIOpc) {
   default:
@@ -1486,7 +1432,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     bool isKill;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
     if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/false, SrcReg, SrcSubReg,
-                        isKill, ImplicitOp, LV, LIS))
+                        isKill, ImplicitOp, LIS))
       return nullptr;
 
     MachineInstrBuilder MIB =
@@ -1501,9 +1447,6 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
       MIB.add(ImplicitOp);
     NewMI = MIB;
 
-    // Add kills if classifyLEAReg created a new register.
-    if (LV && SrcReg != Src.getReg())
-      LV->getVarInfo(SrcReg).Kills.push_back(NewMI);
     break;
   }
   CASE_NF(SHL8ri)
@@ -1514,7 +1457,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     unsigned ShAmt = getTruncatedShiftCount(MI, 2);
     if (!isTruncatedShiftCountForLEA(ShAmt))
       return nullptr;
-    return convertToThreeAddressWithLEA(MIOpc, MI, LV, LIS, Is8BitOp);
+    return convertToThreeAddressWithLEA(MIOpc, MI, LIS, Is8BitOp);
   }
   CASE_NF(INC64r)
   CASE_NF(INC32r) {
@@ -1525,7 +1468,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     bool isKill;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
     if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/false, SrcReg, SrcSubReg,
-                        isKill, ImplicitOp, LV, LIS))
+                        isKill, ImplicitOp, LIS))
       return nullptr;
 
     MachineInstrBuilder MIB = BuildMI(MF, MI.getDebugLoc(), get(Opc))
@@ -1536,9 +1479,6 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
 
     NewMI = addOffset(MIB, 1);
 
-    // Add kills if classifyLEAReg created a new register.
-    if (LV && SrcReg != Src.getReg())
-      LV->getVarInfo(SrcReg).Kills.push_back(NewMI);
     break;
   }
   CASE_NF(DEC64r)
@@ -1551,7 +1491,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     bool isKill;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
     if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/false, SrcReg, SrcSubReg,
-                        isKill, ImplicitOp, LV, LIS))
+                        isKill, ImplicitOp, LIS))
       return nullptr;
 
     MachineInstrBuilder MIB = BuildMI(MF, MI.getDebugLoc(), get(Opc))
@@ -1562,9 +1502,6 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
 
     NewMI = addOffset(MIB, -1);
 
-    // Add kills if classifyLEAReg created a new register.
-    if (LV && SrcReg != Src.getReg())
-      LV->getVarInfo(SrcReg).Kills.push_back(NewMI);
     break;
   }
   CASE_NF(DEC8r)
@@ -1573,7 +1510,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     [[fallthrough]];
   CASE_NF(DEC16r)
   CASE_NF(INC16r)
-    return convertToThreeAddressWithLEA(MIOpc, MI, LV, LIS, Is8BitOp);
+    return convertToThreeAddressWithLEA(MIOpc, MI, LIS, Is8BitOp);
   CASE_NF(ADD64rr)
   CASE_NF(ADD32rr)
   case X86::ADD64rr_DB:
@@ -1590,7 +1527,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     bool isKill2;
     MachineOperand ImplicitOp2 = MachineOperand::CreateReg(0, false);
     if (!classifyLEAReg(MI, Src2, Opc, /*AllowSP=*/false, SrcReg2, SrcSubReg2,
-                        isKill2, ImplicitOp2, LV, LIS))
+                        isKill2, ImplicitOp2, LIS))
       return nullptr;
 
     bool isKill;
@@ -1603,7 +1540,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
       SrcSubReg = SrcSubReg2;
     } else {
       if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/true, SrcReg, SrcSubReg,
-                          isKill, ImplicitOp, LV, LIS))
+                          isKill, ImplicitOp, LIS))
         return nullptr;
     }
 
@@ -1616,14 +1553,6 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     NewMI =
         addRegReg(MIB, SrcReg, isKill, SrcSubReg, SrcReg2, isKill2, SrcSubReg2);
 
-    // Add kills if classifyLEAReg created a new register.
-    if (LV) {
-      if (SrcReg2 != Src2.getReg())
-        LV->getVarInfo(SrcReg2).Kills.push_back(NewMI);
-      if (SrcReg != SrcReg2 && SrcReg != Src.getReg())
-        LV->getVarInfo(SrcReg).Kills.push_back(NewMI);
-    }
-    NumRegOperands = 3;
     break;
   }
   CASE_NF(ADD8rr)
@@ -1632,7 +1561,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     [[fallthrough]];
   CASE_NF(ADD16rr)
   case X86::ADD16rr_DB:
-    return convertToThreeAddressWithLEA(MIOpc, MI, LV, LIS, Is8BitOp);
+    return convertToThreeAddressWithLEA(MIOpc, MI, LIS, Is8BitOp);
   CASE_NF(ADD64ri32)
   case X86::ADD64ri32_DB:
     assert(MI.getNumOperands() >= 3 && "Unknown add instruction!");
@@ -1648,7 +1577,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     bool isKill;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
     if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/true, SrcReg, SrcSubReg,
-                        isKill, ImplicitOp, LV, LIS))
+                        isKill, ImplicitOp, LIS))
       return nullptr;
 
     MachineInstrBuilder MIB =
@@ -1660,9 +1589,6 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
 
     NewMI = addOffset(MIB, MI.getOperand(2));
 
-    // Add kills if classifyLEAReg created a new register.
-    if (LV && SrcReg != Src.getReg())
-      LV->getVarInfo(SrcReg).Kills.push_back(NewMI);
     break;
   }
   CASE_NF(ADD8ri)
@@ -1671,7 +1597,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     [[fallthrough]];
   CASE_NF(ADD16ri)
   case X86::ADD16ri_DB:
-    return convertToThreeAddressWithLEA(MIOpc, MI, LV, LIS, Is8BitOp);
+    return convertToThreeAddressWithLEA(MIOpc, MI, LIS, Is8BitOp);
   CASE_NF(SUB8ri)
   CASE_NF(SUB16ri)
     /// FIXME: Support these similar to ADD8ri/ADD16ri*.
@@ -1689,7 +1615,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     bool isKill;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
     if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/true, SrcReg, SrcSubReg,
-                        isKill, ImplicitOp, LV, LIS))
+                        isKill, ImplicitOp, LIS))
       return nullptr;
 
     MachineInstrBuilder MIB =
@@ -1701,9 +1627,6 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
 
     NewMI = addOffset(MIB, -Imm);
 
-    // Add kills if classifyLEAReg created a new register.
-    if (LV && SrcReg != Src.getReg())
-      LV->getVarInfo(SrcReg).Kills.push_back(NewMI);
     break;
   }
 
@@ -1901,7 +1824,6 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
                 .add(MI.getOperand(5))
                 .add(MI.getOperand(6))
                 .add(MI.getOperand(7));
-    NumRegOperands = 4;
     break;
   }
 
@@ -2036,7 +1958,6 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
                 .add(MI.getOperand(2))
                 .add(Src)
                 .add(MI.getOperand(3));
-    NumRegOperands = 4;
     break;
   }
   }
@@ -2044,14 +1965,6 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
 
   if (!NewMI)
     return nullptr;
-
-  if (LV) { // Update live variables
-    for (unsigned I = 0; I < NumRegOperands; ++I) {
-      MachineOperand &Op = MI.getOperand(I);
-      if (Op.isReg() && (Op.isDead() || Op.isKill()))
-        LV->replaceKillInstruction(Op.getReg(), MI, *NewMI);
-    }
-  }
 
   MachineBasicBlock &MBB = *MI.getParent();
   MBB.insert(MI.getIterator(), NewMI); // Insert the new inst
@@ -3318,7 +3231,9 @@ unsigned X86::getNFVariantIfClobberRemovable(const MachineInstr &MI,
   // optimization for replacing non-NF with NF. This is to keep backward
   // compatiblity with old version of linkers without APX relocation type
   // support on Linux OS.
-  if (!X86EnableAPXForRelocation && isAddMemInstrWithRelocation(MI))
+  const X86Subtarget &ST = MI.getMF()->getSubtarget<X86Subtarget>();
+  if (!ST.getCLOpts().enable_apx_for_relocation &&
+      isAddMemInstrWithRelocation(MI))
     return 0;
   return X86::getNFVariant(MI.getOpcode());
 }
@@ -5350,6 +5265,8 @@ MachineInstr *X86InstrInfo::findDominatingRedundantFlagInstr(
     SmallVectorImpl<std::pair<MachineInstr *, unsigned>> &InstsToUpdate) const {
   assert(Subtarget.hasNF() && "NF feature required");
   const TargetRegisterInfo *TRI = &getRegisterInfo();
+  const unsigned MaxNFConversions =
+      Subtarget.getCLOpts().max_nf_conversions_for_cmp_reuse;
 
   // The caller already scanned MultiPredMBB without finding the producer, so it
   // must live in a block that strictly dominates MultiPredMBB. Walk
@@ -7091,7 +7008,7 @@ unsigned X86InstrInfo::getPartialRegUpdateClearance(
   // If any instructions in the clearance range are reading Reg, insert a
   // dependency breaking instruction, which is inexpensive and is likely to
   // be hidden in other instruction's cycles.
-  return PartialRegUpdateClearance;
+  return Subtarget.getCLOpts().partial_reg_update_clearance;
 }
 
 // Return true for any instruction the copies the high bits of the first source
@@ -7445,7 +7362,7 @@ X86InstrInfo::getUndefRegClearance(const MachineInstr &MI, unsigned OpNum,
                                    const TargetRegisterInfo *TRI) const {
   const MachineOperand &MO = MI.getOperand(OpNum);
   if (MO.getReg().isPhysical() && hasUndefRegUpdate(MI.getOpcode(), OpNum))
-    return UndefRegClearance;
+    return Subtarget.getCLOpts().undef_reg_clearance;
 
   return 0;
 }
@@ -7766,7 +7683,8 @@ unsigned X86InstrInfo::commuteOperandsForFold(MachineInstr &MI,
 }
 
 static void printFailMsgforFold(const MachineInstr &MI, unsigned Idx) {
-  if (PrintFailedFusing && !MI.isCopy())
+  const X86Subtarget &ST = MI.getMF()->getSubtarget<X86Subtarget>();
+  if (ST.getCLOpts().print_failed_fuse_candidates && !MI.isCopy())
     dbgs() << "We failed to fuse operand " << Idx << " in " << MI;
 }
 
@@ -7957,7 +7875,7 @@ X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
                                     VirtRegMap *VRM) const {
   MachineBasicBlock::iterator InsertPt = MI;
   // Check switch flag
-  if (NoFusing)
+  if (Subtarget.getCLOpts().disable_spill_fusing)
     return nullptr;
 
   // Avoid partial and undef register update stalls unless optimizing for size.
@@ -8528,7 +8446,7 @@ X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
   }
 
   // Check switch flag
-  if (NoFusing)
+  if (Subtarget.getCLOpts().disable_spill_fusing)
     return nullptr;
 
   // Avoid partial and undef register update stalls unless optimizing for size.
@@ -8541,8 +8459,8 @@ X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
   // avoid emit APX relocation when the flag is disabled for backward
   // compatibility.
   uint64_t TSFlags = MI.getDesc().TSFlags;
-  if (!X86EnableAPXForRelocation && isMemInstrWithGOTPCREL(LoadMI) &&
-      X86II::hasNewDataDest(TSFlags))
+  if (!Subtarget.getCLOpts().enable_apx_for_relocation &&
+      isMemInstrWithGOTPCREL(LoadMI) && X86II::hasNewDataDest(TSFlags))
     return nullptr;
 
   // Determine the alignment of the load.
