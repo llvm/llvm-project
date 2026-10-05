@@ -6,7 +6,7 @@
 @a = global [6 x i32] [i32 0, i32 1, i32 2, i32 3, i32 4, i32 5]
 
 ; Returns the number of bytes from %p to %end, clamped to 16.
-define i64 @oracle(ptr %p, ptr %end) memory(none) nounwind nosync willreturn {
+define internal i64 @oracle(ptr %p, ptr %end) memory(none) nounwind nosync willreturn "speculative-load-oracle" {
   %p.int = ptrtoaddr ptr %p to i64
   %end.int = ptrtoaddr ptr %end to i64
   %diff = sub i64 %end.int, %p.int
