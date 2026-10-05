@@ -274,14 +274,14 @@ define void @fhalf(<vscale x 8 x half> %v) #1{
 ; PAIR-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Spill
 ; PAIR-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Spill
 ; PAIR-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Spill
-; PAIR-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
-; PAIR-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
+; PAIR-NEXT:    str z8, [sp, #16, mul vl] // 16-byte Folded Spill
+; PAIR-NEXT:    str z9, [sp, #17, mul vl] // 16-byte Folded Spill
 ; PAIR-NEXT:    smstop sm
 ; PAIR-NEXT:    bl my_func
 ; PAIR-NEXT:    smstart sm
 ; PAIR-NEXT:    ptrue pn8.b
-; PAIR-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
-; PAIR-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
+; PAIR-NEXT:    ldr z8, [sp, #16, mul vl] // 16-byte Folded Reload
+; PAIR-NEXT:    ldr z9, [sp, #17, mul vl] // 16-byte Folded Reload
 ; PAIR-NEXT:    ld1b { z22.b, z23.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
 ; PAIR-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
 ; PAIR-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload

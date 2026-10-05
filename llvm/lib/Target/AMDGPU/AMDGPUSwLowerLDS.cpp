@@ -322,7 +322,7 @@ static void addLDSSizeAttribute(Function *Func, uint32_t Offset,
 
 static void markUsedByKernel(Function *Func, GlobalVariable *SGV) {
   BasicBlock *Entry = &Func->getEntryBlock();
-  IRBuilder<> Builder(Entry, Entry->getFirstNonPHIIt());
+  IRBuilder<> Builder(Entry->getFirstNonPHIIt());
 
   Function *Decl = Intrinsic::getOrInsertDeclaration(Func->getParent(),
                                                      Intrinsic::donothing, {});
