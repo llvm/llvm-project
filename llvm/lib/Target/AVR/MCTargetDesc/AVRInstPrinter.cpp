@@ -22,8 +22,6 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 
-#include <cstring>
-
 #define DEBUG_TYPE "asm-printer"
 
 namespace llvm {

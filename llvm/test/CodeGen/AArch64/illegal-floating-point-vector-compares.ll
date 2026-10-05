@@ -64,8 +64,6 @@ define i1 @unordered_floating_point_compare_on_v32f32(<32 x float> %a_vec) {
 ; CHECK-NEXT:    uzp1 v1.16b, v3.16b, v1.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-NEXT:    orn v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    shl v0.16b, v0.16b, #7
-; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    umaxv b0, v0.16b
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    bic w0, w9, w8

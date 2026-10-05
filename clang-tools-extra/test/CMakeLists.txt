@@ -33,7 +33,6 @@ set(CLANG_TOOLS_TEST_DEPS
   clang-move
   clang-query
   clang-reorder-fields
-  clang-ssaf-src-edit-merge
   find-all-symbols
   modularize
   pp-trace

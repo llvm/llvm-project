@@ -8,13 +8,10 @@
 
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/ADT/FloatingPointMode.h"
-#include "llvm/ADT/StringTable.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/SystemLibraries.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/xxhash.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 
 #define DEBUG_TYPE "runtime-libcalls-info"
@@ -32,16 +29,14 @@ using namespace RTLIB;
 RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
                                          ExceptionHandling ExceptionModel,
                                          FloatABI::ABIType FloatABI,
-                                         EABI EABIVersion, StringRef ABIName,
+                                         StringRef ABIName,
                                          VectorLibrary VecLib) {
-  // FIXME: The ExceptionModel parameter is to handle the field in
-  // TargetOptions. This interface fails to distinguish the forced disable
-  // case for targets which support exceptions by default. This should
-  // probably be a module flag and removed from TargetOptions.
-  if (ExceptionModel == ExceptionHandling::None)
+  // Only an unspecified model resolves to the triple default; None is left as
+  // an explicit disable.
+  if (ExceptionModel == ExceptionHandling::Default)
     ExceptionModel = TT.getDefaultExceptionHandling();
 
-  initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion, ABIName,
+  initLibcalls(TT, ExceptionModel, FloatABI, ABIName,
                TT.getDefaultLongDoubleFormat());
 
   // TODO: Tablegen should generate these sets
@@ -106,22 +101,26 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
 }
 
 // TODO: Consider the remaining module flags.
-RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M,
-                                         ExceptionHandling ExceptionModel,
-                                         EABI EABIVersion, StringRef ABIName,
+RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M, StringRef ABIName,
                                          VectorLibrary VecLib)
-    : RuntimeLibcallsInfo(M.getTargetTriple(), ExceptionModel, M.getFloatABI(),
-                          EABIVersion, ABIName, VecLib) {}
+    : RuntimeLibcallsInfo(M.getTargetTriple(), M.getExceptionModel(),
+                          M.getFloatABI(), ABIName, VecLib) {}
+
+bool RuntimeLibcallsInfo::isLibraryAvailable(StringRef LibraryName) const {
+  // TODO: Drive this from module-level state (e.g. the linked runtime). For now
+  // every named library is reported as available.
+  return true;
+}
 
 /// Set default libcall names. If a target wants to opt-out of a libcall it
 /// should be placed here.
 void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
                                        ExceptionHandling ExceptionModel,
                                        FloatABI::ABIType FloatABI,
-                                       EABI EABIVersion, StringRef ABIName,
+                                       StringRef ABIName,
                                        LongDoubleFormat LongDoubleFormat) {
-  setTargetRuntimeLibcallSets(TT, ExceptionModel, FloatABI, EABIVersion,
-                              ABIName, LongDoubleFormat);
+  setTargetRuntimeLibcallSets(TT, ExceptionModel, FloatABI, ABIName,
+                              LongDoubleFormat);
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE
@@ -274,6 +273,64 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
     return {FunctionType::get(Type::getVoidTy(Ctx), {PointerType::get(Ctx, 0)},
                               false),
             Attrs};
+  }
+  case RTLIB::impl___aeabi_idivmod:
+  case RTLIB::impl___aeabi_uidivmod:
+  case RTLIB::impl___aeabi_ldivmod:
+  case RTLIB::impl___aeabi_uldivmod:
+  case RTLIB::impl___rt_sdiv:
+  case RTLIB::impl___rt_udiv:
+  case RTLIB::impl___rt_sdiv64:
+  case RTLIB::impl___rt_udiv64: {
+    // The ARM AEABI (__aeabi_*divmod) and Windows (__rt_*div*) divmod functions
+    // return both values modeled as an inreg { iN, iN } struct (quotient,
+    // remainder). The __rt_*div* cases pass the arguments in opposite order,
+    // though this doesn't affect the declaration.
+    bool IsSigned;
+    unsigned Bits;
+    switch (LibcallImpl) {
+    case RTLIB::impl___aeabi_idivmod:
+    case RTLIB::impl___rt_sdiv:
+      IsSigned = true;
+      Bits = 32;
+      break;
+    case RTLIB::impl___aeabi_uidivmod:
+    case RTLIB::impl___rt_udiv:
+      IsSigned = false;
+      Bits = 32;
+      break;
+    case RTLIB::impl___aeabi_ldivmod:
+    case RTLIB::impl___rt_sdiv64:
+      IsSigned = true;
+      Bits = 64;
+      break;
+    case RTLIB::impl___aeabi_uldivmod:
+    case RTLIB::impl___rt_udiv64:
+      IsSigned = false;
+      Bits = 64;
+      break;
+    default:
+      llvm_unreachable("unexpected divmod libcall");
+    }
+
+    Type *IntTy = IntegerType::get(Ctx, Bits);
+    StructType *RetTy = StructType::get(IntTy, IntTy);
+    FunctionType *FuncTy = FunctionType::get(RetTy, {IntTy, IntTy}, false);
+
+    AttrBuilder FuncAttrBuilder(Ctx);
+    for (Attribute::AttrKind Attr : CommonFnAttrs)
+      FuncAttrBuilder.addAttribute(Attr);
+    FuncAttrBuilder.addMemoryAttr(MemoryEffects::none());
+
+    AttributeList Attrs;
+    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
+
+    Attribute::AttrKind ExtKind = IsSigned ? Attribute::SExt : Attribute::ZExt;
+    Attrs = Attrs.addRetAttribute(Ctx, Attribute::InReg);
+    Attrs = Attrs.addParamAttribute(Ctx, 0, ExtKind);
+    Attrs = Attrs.addParamAttribute(Ctx, 1, ExtKind);
+
+    return {FuncTy, Attrs};
   }
   case RTLIB::impl_sqrtf:
   case RTLIB::impl_sqrt: {

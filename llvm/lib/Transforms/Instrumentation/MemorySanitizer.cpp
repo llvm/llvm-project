@@ -2609,6 +2609,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getOrigin(&I, 0));
   }
 
+  void visitPtrToAddrInst(PtrToAddrInst &I) {
+    IRBuilder<> IRB(&I);
+    setShadow(&I, IRB.CreateIntCast(getShadow(&I, 0), getShadowTy(&I), false,
+                                    "_msprop_ptrtoaddr"));
+    setOrigin(&I, getOrigin(&I, 0));
+  }
+
   void visitIntToPtrInst(IntToPtrInst &I) {
     IRBuilder<> IRB(&I);
     setShadow(&I, IRB.CreateIntCast(getShadow(&I, 0), getShadowTy(&I), false,
@@ -4623,6 +4630,37 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, Origin);
   }
 
+  // e.g., <4 x i32> @llvm.masked.udiv.v4i32(<4 x i32> %dividend,
+  //                                         <4 x i32> %divisor,
+  //                                         <4 x i1>  %mask)
+  //
+  // As handleIntegerDiv(), but per-lane: strict on the divisor and propagating
+  // the dividend, both only on the enabled lanes. Disabled lanes cannot cause
+  // undefined behaviour, and their result is poison.
+  void handleMaskedIntegerDivRem(IntrinsicInst &I) {
+    assert(I.arg_size() == 3);
+    IRBuilder<> IRB(&I);
+    Value *Dividend = I.getArgOperand(0);
+    Value *Divisor = I.getArgOperand(1);
+    Value *Mask = I.getArgOperand(2);
+
+    insertCheckShadowOf(Mask, &I);
+
+    Value *MaskedDivisorShadow = IRB.CreateSelect(
+        Mask, getShadow(Divisor), getCleanShadow(Divisor), "_msmaskeddivisor");
+    insertCheckShadow(MaskedDivisorShadow, getOrigin(Divisor), &I);
+
+    if (!PropagateShadow) {
+      setShadow(&I, getCleanShadow(&I));
+      setOrigin(&I, getCleanOrigin());
+      return;
+    }
+
+    setShadow(&I, IRB.CreateSelect(Mask, getShadow(Dividend),
+                                   getPoisonedShadow(&I), "_msmaskeddiv"));
+    setOrigin(&I, getOrigin(Dividend));
+  }
+
   // e.g., void @llvm.x86.avx.maskstore.ps.256(ptr, <8 x i32>, <8 x float>)
   //                                           dst  mask       src
   //
@@ -5086,6 +5124,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     setShadow(&I, Shadow);
     setOriginForNaryOp(I);
+  }
+
+  void handleModfOrSincos(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *ArgShadow = getShadow(&I, 0);
+    Value *Shadow = PoisonValue::get(getShadowTy(&I));
+    Shadow = IRB.CreateInsertValue(Shadow, ArgShadow, 0);
+    Shadow = IRB.CreateInsertValue(Shadow, ArgShadow, 1);
+    setShadow(&I, Shadow);
+    setOrigin(&I, getOrigin(&I, 0));
   }
 
   Value *extractLowerShadow(IRBuilder<> &IRB, Value *V) {
@@ -5872,6 +5920,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::smul_with_overflow:
       handleArithmeticWithOverflow(I);
       break;
+    case Intrinsic::modf:
+    case Intrinsic::sincos:
+    case Intrinsic::sincospi:
+      handleModfOrSincos(I);
+      break;
     case Intrinsic::abs:
       handleAbsIntrinsic(I);
       break;
@@ -5887,7 +5940,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleLifetimeStart(I);
       break;
     case Intrinsic::launder_invariant_group:
-    case Intrinsic::strip_invariant_group:
       handleInvariantGroup(I);
       break;
     case Intrinsic::bswap:
@@ -5914,6 +5966,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     case Intrinsic::masked_load:
       handleMaskedLoad(I);
+      break;
+    case Intrinsic::masked_udiv:
+    case Intrinsic::masked_sdiv:
+    case Intrinsic::masked_urem:
+    case Intrinsic::masked_srem:
+      handleMaskedIntegerDivRem(I);
       break;
     case Intrinsic::vector_reduce_and:
       handleVectorReduceAndIntrinsic(I);
@@ -7442,6 +7500,34 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                       /*Lanes=*/kBothLanes);
       break;
 
+    // <4 x half > @llvm.aarch64.neon.fp8.fdot2
+    //               (<4 x half >, < 8 x i8>, < 8 x i8>)
+    // <8 x half > @llvm.aarch64.neon.fp8.fdot2
+    //               (<8 x half >, <16 x i8>, <16 x i8>)
+    //
+    // N.B. although the multiplicands are i8, they are actually fp8, thus
+    //      ZeroPurifies is not applicable.
+    case Intrinsic::aarch64_neon_fp8_fdot2:
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
+                                      /*ZeroPurifies=*/false,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
+      break;
+
+    // <2 x float> @llvm.aarch64.neon.fp8.fdot4
+    //               (<2 x float>, < 8 x i8>, < 8 x i8>)
+    // <4 x float> @llvm.aarch64.neon.fp8.fdot4
+    //               (<4 x float>, <16 x i8>, <16 x i8>)
+    //
+    // N.B. although the multiplicands are i8, they are actually fp8, thus
+    //      ZeroPurifies is not applicable.
+    case Intrinsic::aarch64_neon_fp8_fdot4:
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/4,
+                                      /*ZeroPurifies=*/false,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
+      break;
+
     // Floating-Point Absolute Compare Greater Than/Equal
     case Intrinsic::aarch64_neon_facge:
     case Intrinsic::aarch64_neon_facgt:
@@ -7605,7 +7691,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       unsigned Size = 0;
       const DataLayout &DL = F.getDataLayout();
 
-      bool ByVal = CB.paramHasAttr(i, Attribute::ByVal);
+      bool ByVal = CB.isByValArgument(i);
       bool NoUndef = CB.paramHasAttr(i, Attribute::NoUndef);
       bool EagerCheck = MayCheckCall && !ByVal && NoUndef;
 
@@ -8293,7 +8379,7 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
 
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
-      bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
+      bool IsByVal = CB.isByValArgument(ArgNo);
       if (IsByVal) {
         // ByVal arguments always go to the overflow area.
         // Fixed arguments passed through the overflow area will be stepped
@@ -8722,7 +8808,7 @@ struct VarArgPowerPC64Helper : public VarArgHelperBase {
     const DataLayout &DL = F.getDataLayout();
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
-      bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
+      bool IsByVal = CB.isByValArgument(ArgNo);
       if (IsByVal) {
         assert(A->getType()->isPointerTy());
         Type *RealTy = CB.getParamByValType(ArgNo);
@@ -8852,7 +8938,7 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
     unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
-      bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
+      bool IsByVal = CB.isByValArgument(ArgNo);
       if (IsByVal) {
         assert(A->getType()->isPointerTy());
         Type *RealTy = CB.getParamByValType(ArgNo);
@@ -9098,7 +9184,7 @@ struct VarArgSystemZHelper : public VarArgHelperBase {
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
       // SystemZABIInfo does not produce ByVal parameters.
-      assert(!CB.paramHasAttr(ArgNo, Attribute::ByVal));
+      assert(!CB.isByValArgument(ArgNo));
       Type *T = A->getType();
       ArgKind AK = classifyArgument(T);
       if (AK == ArgKind::Indirect) {
@@ -9315,7 +9401,7 @@ struct VarArgI386Helper : public VarArgHelperBase {
     unsigned VAArgOffset = 0;
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
-      bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
+      bool IsByVal = CB.isByValArgument(ArgNo);
       if (IsByVal) {
         assert(A->getType()->isPointerTy());
         Type *RealTy = CB.getParamByValType(ArgNo);

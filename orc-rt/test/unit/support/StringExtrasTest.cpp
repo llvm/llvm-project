@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/support/StringExtras.h"
+#include "orc-rt-internal/support/StringExtras.h"
 #include "gtest/gtest.h"
 
 #include <cstdint>

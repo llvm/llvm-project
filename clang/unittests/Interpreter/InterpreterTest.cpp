@@ -285,7 +285,7 @@ TEST_F(InterpreterTest, FindMangledNameSymbol) {
 
   // FIXME: Re-enable when we investigate the way we handle dllimports on Win.
 #ifndef _WIN32
-  EXPECT_EQ((uintptr_t)&printf, Addr->getValue());
+  EXPECT_EQ(llvm::orc::ExecutorAddr::fromPtr(&printf), *Addr);
 #endif // _WIN32
 }
 
@@ -467,6 +467,21 @@ TEST_F(InterpreterTest, Value) {
   llvm::raw_string_ostream OSPrint(prettyPrint);
   V10.print(OSPrint);
   EXPECT_STREQ(prettyPrint.c_str(), "(D) (One) : unsigned int 1\n");
+}
+
+TEST_F(InterpreterTest, ValueOfVoidCallExecutesTheCall) {
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+
+  llvm::cantFail(
+      Interp->ParseAndExecute("int calls = 0; void bump() { ++calls; }"));
+  Value V;
+  llvm::cantFail(Interp->ParseAndExecute("bump()", &V));
+  EXPECT_TRUE(V.isValid());
+  EXPECT_EQ(V.getKind(), Value::K_Void);
+
+  Value Calls;
+  llvm::cantFail(Interp->ParseAndExecute("calls", &Calls));
+  EXPECT_EQ(Calls.getInt(), 1);
 }
 
 // Regression: Value::setRawBits's NBytes parameter must be interpreted as a

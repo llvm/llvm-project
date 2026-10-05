@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/support/Endian.h"
+#include "orc-rt-internal/support/Endian.h"
 #include "orc-rt/support/bit.h"
 #include "gtest/gtest.h"
 

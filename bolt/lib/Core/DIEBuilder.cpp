@@ -701,8 +701,12 @@ void DIEBuilder::cloneDieOffsetReferenceAttribute(
     return;
   }
 
-  Die.addValue(getState().DIEAlloc, AttrSpec.Attr, AttrSpec.Form,
-               DIEEntry(*NewRefDie));
+  // The size of a DW_FORM_ref_udata depends on the referenced DIE's offset,
+  // which is not final yet for forward references. Use a fixed-size form.
+  const dwarf::Form Form = AttrSpec.Form == dwarf::DW_FORM_ref_udata
+                               ? dwarf::DW_FORM_ref4
+                               : AttrSpec.Form;
+  Die.addValue(getState().DIEAlloc, AttrSpec.Attr, Form, DIEEntry(*NewRefDie));
 }
 
 void DIEBuilder::cloneStringAttribute(
@@ -989,8 +993,8 @@ void DIEBuilder::assignAbbrev(DIEAbbrev &Abbrev) {
   // Check the set for priors.
   FoldingSetNodeID ID;
   Abbrev.Profile(ID);
-  void *InsertToken;
-  DIEAbbrev *InSet = AbbreviationsSet.FindNodeOrInsertPos(ID, InsertToken);
+  FoldingSetInsertToken Token;
+  DIEAbbrev *InSet = AbbreviationsSet.lookup(ID, Token);
 
   // If it's newly added.
   if (InSet) {
@@ -1002,7 +1006,7 @@ void DIEBuilder::assignAbbrev(DIEAbbrev &Abbrev) {
         std::make_unique<DIEAbbrev>(Abbrev.getTag(), Abbrev.hasChildren()));
     for (const auto &Attr : Abbrev.getData())
       Abbreviations.back()->AddAttribute(Attr);
-    AbbreviationsSet.InsertNode(Abbreviations.back().get(), InsertToken);
+    AbbreviationsSet.insert(Abbreviations.back().get(), Token);
     // Assign the unique abbreviation number.
     Abbrev.setNumber(Abbreviations.size());
     Abbreviations.back()->setNumber(Abbreviations.size());

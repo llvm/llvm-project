@@ -226,10 +226,26 @@ getParallelDimensions(LoopOp loopOp, const ACCToGPUMappingPolicy &policy,
       insertParDim(parDims, policy.gangDim(ctx, gangLevel));
     }
   } else if (loopOp.hasGang(deviceType) ||
-             loopOp.getGangValue(GangArgType::Num, deviceType)) {
+             loopOp.getGangValue(GangArgType::Num, deviceType) ||
+             loopOp.getGangValue(GangArgType::Static, deviceType)) {
     insertParDim(parDims, policy.gangDim(ctx, ParLevel::gang_dim1));
   }
   return parDims;
+}
+
+/// If \p loopOp has a `gang(static:)` value, return the corresponding
+/// `acc.chunk_size` attribute. A constant size is stored directly; a
+/// non-constant size is recorded as -1, the same encoding as `static:*`.
+/// Returns a null attribute when the clause is absent.
+static ChunkSizeAttr getChunkSizeFromStatic(LoopOp loopOp,
+                                            DeviceType deviceType) {
+  DeviceType loopDeviceType = getGangWorkerVectorDeviceType(loopOp, deviceType);
+  Value gangStatic = loopOp.getGangValue(GangArgType::Static, loopDeviceType);
+  if (!gangStatic)
+    return {};
+  std::optional<int64_t> chunkSize = getConstantIntValue(gangStatic);
+  // Non-constant static is treated like `static:*` (implementation-chosen).
+  return ChunkSizeAttr::get(loopOp->getContext(), chunkSize.value_or(-1));
 }
 
 /// Build `acc.compute_region` launch operands: one sequential `acc.par_width`
@@ -355,6 +371,9 @@ public:
         auto parDimsAttr =
             GPUParallelDimsAttr::get(loopOp->getContext(), parDims);
         setParDimsAttr(forOp, parDimsAttr);
+        if (ChunkSizeAttr chunkSize =
+                getChunkSizeFromStatic(loopOp, deviceType))
+          setChunkSizeAttr(forOp, chunkSize);
       }
       rewriter.replaceOp(loopOp, forOp);
     } else if (!isOpInComputeRegion(loopOp) &&
@@ -380,8 +399,10 @@ public:
         auto parDimsAttr =
             GPUParallelDimsAttr::get(loopOp->getContext(), parDims);
         setParDimsAttr(parallelOp, parDimsAttr);
+        if (ChunkSizeAttr chunkSize =
+                getChunkSizeFromStatic(loopOp, deviceType))
+          setChunkSizeAttr(parallelOp, chunkSize);
       }
-
       rewriter.replaceOp(loopOp, parallelOp);
     }
     return success();

@@ -15,7 +15,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
       %7 = llvm.load %6 : !llvm.ptr -> !llvm.ptr
       %8 = llvm.getelementptr %7[%one_i] : (!llvm.ptr, i64) -> !llvm.ptr, i8
       %9 = llvm.load %8 : !llvm.ptr -> f64
-      %10 = llvm.fmul %9, %two_f {fastmathFlags = #llvm.fastmath<contract>} : f64
+      %10 = llvm.fmul %9, %two_f fastmath<contract> : f64
       llvm.store %10, %8 : f64, !llvm.ptr
       omp.terminator
     }
@@ -40,7 +40,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK: %[[SIZES_GEP:.*]] = getelementptr inbounds [5 x i64], ptr %[[SIZES]], i32 0, i32 0
 
 // CHECK: %[[GL_THRD_NUM:.*]] = call i32 @__kmpc_global_thread_num
-// CHECK: %[[TASK_DESC:.*]] = call ptr @__kmpc_omp_target_task_alloc(ptr @4, i32 {{.*}}, i32 0, i64 160, i64 16, ptr [[TGT_TSK_PRXY_FNC:.*]], i64 -1)
+// CHECK: %[[TASK_DESC:.*]] = call ptr @__kmpc_omp_target_task_alloc(ptr @6, i32 {{.*}}, i32 0, i64 160, i64 16, ptr [[TGT_TSK_PRXY_FNC:.*]], i64 -1)
 // CHECK: %[[TSK_PTR:.*]] = getelementptr inbounds nuw %struct.[[TSK_WTH_PRVTS]], ptr %[[TASK_DESC]], i32 0, i32 0
 // CHECK: %[[SHAREDS:.*]] = getelementptr inbounds nuw %struct.kmp_task_ompbuilder_t, ptr %[[TSK_PTR]], i32 0, i32 0
 // CHECK: %[[SHAREDS_PTR:.*]] = load ptr, ptr %[[SHAREDS]], align 8
@@ -52,7 +52,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[VAL_53]], ptr align 1 %[[PTRS_GEP]], i64 40, i1 false)
 // CHECK: %[[VAL_54:.*]] = getelementptr inbounds nuw %struct.[[PRVTS]], ptr %[[VAL_50]], i32 0, i32 2
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[VAL_54]], ptr align 1 %[[SIZES_GEP]], i64 40, i1 false)
-// CHECK: %[[VAL_55:.*]] = call i32 @__kmpc_omp_task(ptr @4, i32 %[[GL_THRD_NUM]], ptr %[[TASK_DESC]])
+// CHECK: %[[VAL_55:.*]] = call i32 @__kmpc_omp_task(ptr @6, i32 %[[GL_THRD_NUM]], ptr %[[TASK_DESC]])
 
 // CHECK: define internal void @[[WORKER:.*]](i32 {{.*}}, ptr {{.*}}, ptr {{.*}}, ptr {{.*}}, ptr {{.*}}) {
 

@@ -130,6 +130,14 @@ static constexpr llvm::StringRef getHostSymbolAttrName() {
   return "fir.host_symbol";
 }
 
+/// Attribute naming the submodule that defines a separate module procedure.
+/// Such a procedure is mangled with the module that declares its interface, so
+/// this is the only record of where it is really defined. It is only set when
+/// full debug information is requested.
+static constexpr llvm::StringRef getDefiningSubmoduleAttrName() {
+  return "fir.defining_submodule";
+}
+
 /// Attribute containing the original name of a function from before the
 /// ExternalNameConverision pass runs
 static constexpr llvm::StringRef getInternalFuncNameAttrName() {
@@ -146,6 +154,12 @@ static constexpr llvm::StringRef getHasLifetimeMarkerAttrName() {
 static constexpr llvm::StringRef getAccessGroupsAttrName() {
   return "access_groups";
 }
+
+/// Attribute holding the unique name of the Fortran entity an allocation
+/// belongs to. It is an inherent attribute of the FIR allocation operations,
+/// and may also be carried by allocation operations of other dialects that
+/// FIR allocations were rewritten into.
+static constexpr llvm::StringRef getUniqNameAttrName() { return "uniq_name"; }
 
 /// Attribute to mark coarray Fortran entities with the CORANK attribute.
 constexpr llvm::StringRef getCorankAttrName() { return "fir.corank"; }
@@ -225,6 +239,37 @@ inline mlir::NamedAttribute getAdaptToByRefAttr(Builder &builder) {
 }
 
 bool isDummyArgument(mlir::Value v);
+
+/// Intent of dummy argument `argIdx` when `callee`'s body declares it.
+/// Empty when the body is missing or the dummy has no intent attribute.
+enum class FortranDummyIntent { In, Out, InOut };
+
+inline std::optional<FortranDummyIntent>
+getFortranDummyIntent(mlir::func::FuncOp callee, unsigned argIdx) {
+  if (!callee || argIdx >= callee.getNumArguments())
+    return std::nullopt;
+  // The dummy's fir.declare uses the block argument as its memref.
+  mlir::Value arg = callee.getArgument(argIdx);
+  for (mlir::Operation *user : arg.getUsers()) {
+    auto decl = mlir::dyn_cast<fir::DeclareOp>(user);
+    if (!decl || decl.getMemref() != arg)
+      continue;
+    auto attrs = decl.getFortranAttrs();
+    if (!attrs)
+      continue;
+    using F = FortranVariableFlagsEnum;
+    if (bitEnumContainsAny(*attrs, F::intent_inout) ||
+        (bitEnumContainsAny(*attrs, F::intent_in) &&
+         bitEnumContainsAny(*attrs, F::intent_out)))
+      return FortranDummyIntent::InOut;
+    if (bitEnumContainsAny(*attrs, F::intent_out))
+      return FortranDummyIntent::Out;
+    if (bitEnumContainsAny(*attrs, F::intent_in))
+      return FortranDummyIntent::In;
+    return std::nullopt;
+  }
+  return std::nullopt;
+}
 
 template <fir::FortranProcedureFlagsEnum Flag>
 inline bool hasProcedureAttr(fir::FortranProcedureFlagsEnumAttr flags) {

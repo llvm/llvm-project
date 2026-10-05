@@ -28,6 +28,17 @@ protected:
   }
 };
 
+TEST_F(FormatTestJava, IndentAccessModifiersAfterFirstDoesNotAffectJava) {
+  FormatStyle Style = getDefaultStyle();
+  Style.IndentWidth = 4;
+  Style.IndentAccessModifiers = FormatStyle::IAMS_AfterFirstAccessModifier;
+  verifyFormat("class C {\n"
+               "        int before;\n"
+               "        public int after;\n"
+               "}",
+               Style);
+}
+
 TEST_F(FormatTestJava, NoAlternativeOperatorNames) {
   verifyFormat("someObject.and();");
 }
@@ -867,6 +878,13 @@ TEST_F(FormatTestJava, BreakAfterRecord) {
                "{\n"
                "}",
                "public record Foo(int i) {}", Style);
+}
+
+TEST_F(FormatTestJava, EmptyRecordBodyOnASingleLine) {
+  auto Style = getGoogleStyle(FormatStyle::LK_Java);
+  verifyFormat("public interface Marker {}", Style);
+  verifyFormat("public record Marker() {}", Style);
+  verifyFormat("public class Marker {}", Style);
 }
 
 } // namespace

@@ -248,7 +248,7 @@ feature_test_macros = [
             "name": "__cpp_lib_bitops",
             "values": {
                 "c++20": 201907,
-                # "c++29": 202606,  # P3793R2 Better shifting
+                "c++29": 202606,  # P3793R2 Better shifting
                 # "c++29": 202607,  # P3104R6 Bit permutations
             },
             "headers": ["bit"],
@@ -567,7 +567,7 @@ feature_test_macros = [
             "name": "__cpp_lib_expected",
             "values": {
                 "c++23": 202211,
-                # "c++29": 202606 # P3798R1 The unexpected in std::expected
+                "c++29": 202606,
             },
             "headers": ["expected"],
         },
@@ -897,11 +897,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_is_within_lifetime",
-            # Note this name was changed from "__cpp_lib_within_lifetime" when the paper was adopted
-            # https://github.com/cplusplus/draft/commit/0facada4cadd97e1ba15bfaea76a804f1dc5c309
-            "values": {
-                "c++26": 202306  # P2641R4 Checking if a union alternative is active
-            },
+            "values": {"c++26": 202603},
             "headers": ["type_traits"],
             "test_suite_guard": "__has_builtin(__builtin_is_within_lifetime)",
             "libcxx_guard": "__has_builtin(__builtin_is_within_lifetime)",
@@ -1561,6 +1557,13 @@ feature_test_macros = [
             "headers": ["type_traits"],
         },
         {
+            "name": "__cpp_lib_type_order",
+            "values": {"c++26": 202506},
+            "headers": ["compare"],
+            "test_suite_guard": "__has_builtin(__builtin_type_order)",
+            "libcxx_guard": "__has_builtin(__builtin_type_order)",
+        },
+        {
             "name": "__cpp_lib_type_trait_variable_templates",
             "values": {"c++17": 201510},
             "headers": ["type_traits"],
@@ -1605,7 +1608,6 @@ feature_test_macros = [
                 "c++29": 202606,  # P3052R2 view_interface::at()
             },
             "headers": ["ranges"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_void_t",

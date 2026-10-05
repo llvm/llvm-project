@@ -26,6 +26,9 @@ TEST(ScalableVectorMVTsTest, IntegerMVTs) {
     ASSERT_TRUE(VecTy.getScalarType().isValid());
 
     ASSERT_FALSE(VecTy.isFloatingPoint());
+    ASSERT_EQ(MVT::getVectorVT(VecTy.getVectorElementType(),
+                               VecTy.getVectorElementCount()),
+              VecTy);
   }
 }
 
@@ -38,6 +41,9 @@ TEST(ScalableVectorMVTsTest, FloatMVTs) {
     ASSERT_TRUE(VecTy.getScalarType().isValid());
 
     ASSERT_FALSE(VecTy.isInteger());
+    ASSERT_EQ(MVT::getVectorVT(VecTy.getVectorElementType(),
+                               VecTy.getVectorElementCount()),
+              VecTy);
   }
 }
 

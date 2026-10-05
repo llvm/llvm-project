@@ -93,6 +93,10 @@ dropSgLayoutAndDataOnAttrs(ArrayRef<NamedAttribute> attrs);
 /// any DistributeLayoutAttr found.
 SmallVector<NamedAttribute> dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs);
 
+/// Drops inst-data information from DistributeLayoutAttrs stored as inherent
+/// attributes on the operation.
+void dropInstDataOnInherentAttrs(Operation *op);
+
 //===----------------------------------------------------------------------===//
 // Backward layout inference (result layout -> source layout)
 //===----------------------------------------------------------------------===//
@@ -165,12 +169,6 @@ DistributeLayoutAttr inferInsertSourceLayout(DistributeLayoutAttr resLayout,
 DistributeLayoutAttr inferExtractSourceLayout(DistributeLayoutAttr resLayout,
                                               ArrayRef<int64_t> resShape,
                                               ArrayRef<int64_t> srcShape);
-
-/// Infers the layout attribute for mask and offset operand for Chunked load
-/// and store, given the anchor layout attribute for the value being load/store.
-DistributeLayoutAttr
-inferMaskOffsetLayoutForScatterIO(DistributeLayoutAttr payloadLayout,
-                                  int chunkSize);
 
 /// Infers the source layout attribute for an operand using result layout
 /// attribute
@@ -269,6 +267,46 @@ DistributeLayoutAttr setupInterleaveResultLayout(
     LayoutKind layoutKind, VectorType srcVectorTy, VectorType resVectorTy,
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
+/// Sets up the result layout for a shape cast that splits one source dim into
+/// several consecutive result dims, so that the source layout can be safely
+/// derived by collapsing each split group.
+///
+/// Within a group, the leading dims the lanes do not split and the first dim
+/// they do split may stay partial. Every dim after that is stretched to full:
+/// lane_data becomes dim_size / lane_layout, and inst_data the dim size.
+///
+/// Example:
+///   shape_cast: vector<16x1024xf32> -> vector<16x32x32xf32>
+///   Consumer layout: inst_data = [1, 2, 8], lane_layout = [1, 2, 8],
+///                    lane_data = [1, 1, 1]
+///   Adjusted:        inst_data = [1, 2, 32], lane_layout = [1, 2, 8],
+///                    lane_data = [1, 1, 4]
+///   The adjusted layout collapses to inst_data = [1, 64],
+///   lane_layout = [1, 16], lane_data = [1, 4] on the source, whereas the
+///   unadjusted one would have collapsed to a strided inst_data = [1, 16].
+///
+/// Stretching does not guarantee the result layout is collapsible: collapsing
+/// also requires each lane to own one contiguous run of the source dim, which
+/// the consumer's lane_layout can rule out. This function checks that
+/// restriction on the stretched layout and returns nullptr when it does not
+/// hold, rejecting the consumer layout.
+///
+/// Example of a rejected layout:
+///   shape_cast: vector<16x128xf32> -> vector<16x2x4x16xf32>
+///   Consumer layout: inst_data = [1, 2, 2, 4], lane_layout = [1, 2, 2, 4],
+///                    lane_data = [1, 1, 1, 1]
+///   Adjusted:        inst_data = [1, 2, 4, 16], lane_layout = [1, 2, 2, 4],
+///                    lane_data = [1, 1, 2, 4]
+///   Each lane owns two runs of 4 elements, 16 apart, instead of the 8
+///   contiguous source elements the collapsed lane_data = [1, 8] claims.
+///
+/// Only the inst_data and lane phases are handled; a subgroup-level layout is
+/// returned unchanged.
+DistributeLayoutAttr
+setupShapeCastResultLayout(LayoutKind layoutKind, VectorType srcVectorTy,
+                           VectorType resVectorTy,
+                           DistributeLayoutAttr consumerLayout);
+
 /// Sets up the result layout for an insert strided slice operation.
 /// Creates a result layout based on the specified layout kind (InstData or
 /// Lane).
@@ -277,6 +315,8 @@ DistributeLayoutAttr setupInsertStridedSliceResultLayout(
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for a load gather operation.
+/// `contigChunkSize` is the per-lane contiguous run the offsets allow, from
+/// the op's `contiguity` attribute (1 when it is absent).
 DistributeLayoutAttr setupLoadGatherAnchorLayout(
     LayoutKind layoutKind, VectorType vectorTy, int contigChunkSize,
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
@@ -287,6 +327,8 @@ DistributeLayoutAttr setupLoadMatrixAnchorLayout(
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for a store scatter operation.
+/// `contigChunkSize` is the per-lane contiguous run the offsets allow, from
+/// the op's `contiguity` attribute (1 when it is absent).
 /// `numSg` is only used for Subgroup-kind layouts.
 DistributeLayoutAttr setupStoreScatterAnchorLayout(LayoutKind layoutKind,
                                                    VectorType vectorTy,

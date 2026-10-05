@@ -901,8 +901,6 @@ define <2 x i64> @freeze_vselect_knownbits(<8 x i32> %csrc, <4 x i32> %a, <4 x i
 ; X86-NEXT:    vpsubd %xmm3, %xmm0, %xmm0
 ; X86-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; X86-NEXT:    vpcmpgtd %xmm4, %xmm0, %xmm0
-; X86-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
-; X86-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; X86-NEXT:    vpaddd %xmm3, %xmm1, %xmm1
 ; X86-NEXT:    vpsrld $28, %xmm2, %xmm2
 ; X86-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
@@ -919,8 +917,6 @@ define <2 x i64> @freeze_vselect_knownbits(<8 x i32> %csrc, <4 x i32> %a, <4 x i
 ; X64-NEXT:    vpsubd %xmm3, %xmm0, %xmm0
 ; X64-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; X64-NEXT:    vpcmpgtd %xmm4, %xmm0, %xmm0
-; X64-NEXT:    vpackssdw %xmm4, %xmm0, %xmm0
-; X64-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; X64-NEXT:    vpaddd %xmm3, %xmm1, %xmm1
 ; X64-NEXT:    vpsrld $28, %xmm2, %xmm2
 ; X64-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1

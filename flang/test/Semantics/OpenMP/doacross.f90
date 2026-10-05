@@ -14,6 +14,8 @@ subroutine f00(x)
 !ERROR: The number of variables in the SINK iteration vector does not match the parameter specified in ORDERED clause
 !ERROR: 'dependence-type' modifier cannot occur multiple times
       !$omp ordered doacross(sink, sink: i)
+!Trailing colon is ok.
+      !$omp ordered doacross(source:)
       x(i, j) = 0
     enddo
   enddo
