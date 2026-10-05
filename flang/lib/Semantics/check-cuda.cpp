@@ -111,8 +111,7 @@ struct DeviceExprChecker
     : public evaluate::AnyTraverse<DeviceExprChecker, MaybeMsg> {
   using Result = MaybeMsg;
   using Base = evaluate::AnyTraverse<DeviceExprChecker, Result>;
-  explicit DeviceExprChecker(
-      SemanticsContext &c, CallContext callContext = CallContext::Device)
+  explicit DeviceExprChecker(SemanticsContext &c, CallContext callContext)
       : Base(*this), context_{c}, callContext_{callContext} {}
   using Base::operator();
   Result operator()(const evaluate::ProcedureDesignator &x) const {
@@ -181,7 +180,7 @@ struct DeviceExprChecker
   }
 
   SemanticsContext &context_;
-  CallContext callContext_{CallContext::Device};
+  CallContext callContext_;
 
 private:
   static Result CallError(
