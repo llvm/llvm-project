@@ -12,7 +12,7 @@ struct A {
   struct B b;
 } a;
 
-// Not the standard 'memset' -- there third parameter would be a 'size_t'.
+// Not the standard 'memset' -- there the third parameter would be a 'size_t'.
 void *memset(void *s, int c, const int &cond);
 
 void foo() {
