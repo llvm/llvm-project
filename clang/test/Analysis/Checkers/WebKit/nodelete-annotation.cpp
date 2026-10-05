@@ -2,10 +2,16 @@
 
 #include "mock-types.h"
 
-// Each warning also points at the root cause of the destruction. Anything held
-// in a Ref/RefPtr bottoms out in RefCountable::deref, which lives in the shared
-// header, so that note has to be expected by file and line.
-// expected-note@mock-types.h:437 + {{'deref' could destruct an object}}
+// Each warning is followed by notes that walk the call stack down to the code
+// that destructs an object. Anything held in a Ref/RefPtr bottoms out in
+// RefCountable::deref, and the frames above it live in the shared header, so
+// those notes have to be expected by file and line.
+// expected-note@mock-types.h:37 + {{'exchange<RefPtr<SomeObject>>' calls '~RefPtr'}}
+// expected-note@mock-types.h:299 + {{'derefIfNotNull' calls 'deref'}}
+// expected-note@mock-types.h:313 + {{'~Ref' calls 'derefIfNotNull'}}
+// expected-note@mock-types.h:380 + {{'~RefPtr' calls 'deref'}}
+// expected-note@mock-types.h:399 + {{'operator=' calls '~RefPtr'}}
+// expected-note@mock-types.h:440 + {{'deref' could destruct an object}}
 
 void *memcpy(void *dst, const void *src, unsigned int size);
 void *malloc(unsigned int size);
@@ -16,7 +22,7 @@ namespace WTF {
   template <typename T>
   class Vector {
   public:
-    ~Vector() { destory(); }
+    ~Vector() { destory(); } // expected-note + {{'~Vector' calls 'destory'}}
 
     void append(const T& v)
     {
@@ -32,7 +38,7 @@ namespace WTF {
       unsigned currentSize = m_size;
       while (currentSize > newSize) {
         --currentSize;
-        m_buffer[currentSize].~T();
+        m_buffer[currentSize].~T(); // expected-note + {{'shrink' calls '~ObjectWithNonTrivialDestructor'}}
       }
       m_size = currentSize;
     }
@@ -50,7 +56,7 @@ namespace WTF {
       if (!m_buffer)
         return;
       for (unsigned i = 0; i < m_size; ++i)
-        m_buffer[i].~T();
+        m_buffer[i].~T(); // expected-note + {{'destory' calls '~Ref'}}
       free(m_buffer);
       m_buffer = nullptr;
     }
@@ -342,10 +348,10 @@ struct Data {
     ++refCount;
   }
 
-  void deref() { // expected-note + {{'deref' could destruct an object}}
+  void deref() {
     --refCount;
     if (!refCount)
-      delete this;
+      delete this; // expected-note + {{'deref' could destruct an object}}
   }
 
   virtual void doSomething() { }
@@ -419,10 +425,10 @@ struct ObjectWithNonTrivialDestructor {
 struct Container {
   Ref<Container> create() { return adoptRef(*new Container); }
   void ref() const { refCount++; }
-  void deref() const { // expected-note + {{'deref' could destruct an object}}
+  void deref() const {
     refCount--;
     if (!refCount)
-      delete this;
+      delete this; // expected-note + {{'deref' could destruct an object}}
   }
 
   ObjectWithNonTrivialDestructor obj;
@@ -443,10 +449,10 @@ struct OtherContainerBase {
 struct OtherContainer : public OtherContainerBase {
   Ref<OtherContainer> create() { return adoptRef(*new OtherContainer); }
   void ref() const { refCount++; }
-  void deref() const { // expected-note {{'deref' could destruct an object}}
+  void deref() const {
     refCount--;
     if (!refCount)
-      delete this;
+      delete this; // expected-note + {{'deref' could destruct an object}}
   }
 
 private:
@@ -587,19 +593,32 @@ namespace blame_the_root_cause {
 // The reported statement must be the innermost expression that is actually
 // unsafe, not the whole enclosing statement. Blaming the statement makes the
 // first call in it look guilty -- for `min(9, offset + opaque())` that is
-// 'min', which is entirely innocent. The note then names the function at the
-// bottom of the chain, which is where the fix belongs.
+// 'min', which is entirely innocent. The notes then walk the call stack down to
+// the function at the bottom of the chain, which is where the fix belongs.
 
 template <typename T>
 T [[clang::annotate_type("webkit.nodelete")]] min(const T& a, const T& b) {
   return b < a ? b : a;
 }
 
-unsigned opaqueHelper(); // expected-note {{'opaqueHelper' has no visible definition here, so it is assumed to destruct an object}}
+unsigned opaqueHelper(); // expected-note + {{'opaqueHelper' has no visible definition here, so it is assumed to destruct an object}}
 
 unsigned safeHelper() { return 1; }
 
-unsigned wrapsOpaqueHelper() { return opaqueHelper(); }
+unsigned wrapsOpaqueHelper() { return opaqueHelper(); } // expected-note + {{'wrapsOpaqueHelper' calls 'opaqueHelper'}}
+
+unsigned wrapsWrapper() {
+  return 1 + wrapsOpaqueHelper(); // expected-note {{'wrapsWrapper' calls 'wrapsOpaqueHelper'}}
+}
+
+struct Deleter {
+  void destroy(int* p) {
+    delete p; // expected-note {{'destroy' could destruct an object}}
+  }
+  void forward(int* p) {
+    destroy(p); // expected-note {{'forward' calls 'destroy'}}
+  }
+};
 
 void [[clang::annotate_type("webkit.nodelete")]] callsMinWithSafeArgs(unsigned offset) {
   offset = min<unsigned>(9, offset + safeHelper());
@@ -610,6 +629,17 @@ void [[clang::annotate_type("webkit.nodelete")]] callsMinWithUnsafeArg(unsigned 
   offset = min<unsigned>(9, offset + wrapsOpaqueHelper());
   // expected-warning@-1{{A function 'callsMinWithUnsafeArg' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
   (void)offset;
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] callsThreeLevelsDeep(unsigned offset) {
+  offset = min<unsigned>(9, offset + wrapsWrapper());
+  // expected-warning@-1{{A function 'callsThreeLevelsDeep' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  (void)offset;
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] callsDeleteTwoLevelsDeep(Deleter& d, int* p) {
+  d.forward(p);
+  // expected-warning@-1{{A function 'callsDeleteTwoLevelsDeep' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
 }
 
 } // namespace blame_the_root_cause
@@ -802,7 +832,7 @@ namespace create_with_default_constructor {
     ObjectWithOpaqueCtor(); // expected-note {{'ObjectWithOpaqueCtor' has no visible definition here, so it is assumed to destruct an object}}
   };
 
-  struct ObjectWithDefaultConstructorWithOpaqueCtorMemberVariables {
+  struct ObjectWithDefaultConstructorWithOpaqueCtorMemberVariables { // expected-note + {{'ObjectWithDefaultConstructorWithOpaqueCtorMemberVariables' calls 'ObjectWithOpaqueCtor'}}
     void ref() const;
     void deref() const;
 

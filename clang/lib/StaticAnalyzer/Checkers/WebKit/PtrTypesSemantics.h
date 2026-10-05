@@ -13,6 +13,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/SmallVector.h"
 #include <optional>
 #include <string>
 
@@ -218,10 +219,24 @@ struct NonTrivialityReason {
   /// `x = std::min(a, unsafe())`.
   const Stmt *OffendingStmt = nullptr;
 
-  /// The deepest callee that could not be proven free of destruction. Null when
-  /// the offending statement destructs an object by itself, e.g. a delete
-  /// expression or a local variable with a non-trivial destructor.
-  const FunctionDecl *RootCause = nullptr;
+  /// One function in the chain of calls that leads from OffendingStmt to the
+  /// code that could destruct an object.
+  struct Frame {
+    const FunctionDecl *Callee = nullptr;
+    /// The innermost non-trivial statement inside Callee's body. Null when
+    /// Callee has no visible definition, or is rejected without looking at its
+    /// body, e.g. because it is virtual or takes a parameter by value that
+    /// could destruct an object.
+    const Stmt *OffendingStmt = nullptr;
+  };
+
+  /// The callees that could not be proven free of destruction, outermost
+  /// first: the first frame is called from OffendingStmt, each subsequent frame
+  /// is called from the previous frame's OffendingStmt, and the last frame is
+  /// where the destruction actually happens or a function without a visible
+  /// definition. Empty when OffendingStmt destructs an object by itself, e.g.
+  /// a delete expression or a local variable with a non-trivial destructor.
+  llvm::SmallVector<Frame> CallStack;
 };
 
 /// An inter-procedural analysis facility that detects functions with "trivial"

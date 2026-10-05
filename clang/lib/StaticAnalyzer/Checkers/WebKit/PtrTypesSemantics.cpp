@@ -692,10 +692,14 @@ class TrivialFunctionAnalysisVisitor
     return true;
   }
 
+  bool canUseCachedResult(bool CachedResult) const {
+    return CachedResult || !CallStack;
+  }
+
   template <typename StmtOrDecl, typename CheckFunction>
   bool WithCachedResult(const StmtOrDecl *S, CheckFunction Function) {
     auto CacheIt = Cache.find(S);
-    if (CacheIt != Cache.end() && !OffendingStmt)
+    if (CacheIt != Cache.end() && canUseCachedResult(CacheIt->second))
       return CacheIt->second;
 
     // Treat a recursive statement to be trivial until proven otherwise.
@@ -846,7 +850,7 @@ public:
   TrivialFunctionAnalysisVisitor(CacheTy &Cache,
                                  NonTrivialityReason *Reason = nullptr)
       : Cache(Cache), OffendingStmt(Reason ? &Reason->OffendingStmt : nullptr),
-        RootCause(Reason ? &Reason->RootCause : nullptr) {}
+        CallStack(Reason ? &Reason->CallStack : nullptr) {}
 
   // Hides ConstStmtVisitor::Visit so that every recursive step in this class
   // funnels through here. Recursion unwinds innermost-first, so the first
@@ -863,11 +867,41 @@ public:
   }
 
   bool IsFunctionTrivial(const Decl *D) {
-    // Blame stays within the function being analyzed: a statement in a callee
-    // is not a useful location for the primary diagnostic. The root cause is
-    // tracked separately and does cross function boundaries.
-    const Stmt **SavedOffendingStmt = std::exchange(OffendingStmt, nullptr);
-    auto Result = WithCachedResult(D, [&]() {
+    if (!CallStack)
+      return IsFunctionTrivialImpl(D);
+
+    const auto *FnDecl = dyn_cast<FunctionDecl>(D);
+    if (!FnDecl)
+      return IsFunctionTrivialImpl(D);
+
+    // CallStack[0, ActiveDepth) mirrors the functions currently being
+    // analyzed. Anything past that was left by a callee whose failure was
+    // tolerated, e.g. one of several candidate default constructors, and is
+    // not part of the chain that explains this call.
+    CallStack->truncate(ActiveDepth);
+    size_t Index = ActiveDepth++;
+    CallStack->push_back({FnDecl, nullptr});
+
+    // Blame is recorded separately for each function, so that every frame
+    // can point at the code within it that leads further down the chain.
+    const Stmt *CalleeOffendingStmt = nullptr;
+    const Stmt **SavedOffendingStmt =
+        std::exchange(OffendingStmt, &CalleeOffendingStmt);
+    bool Result = IsFunctionTrivialImpl(D);
+    OffendingStmt = SavedOffendingStmt;
+
+    --ActiveDepth;
+    // On failure, keep this frame along with the frames its body left behind:
+    // together they are the chain from here down to the root cause.
+    if (Result)
+      CallStack->truncate(Index);
+    else
+      (*CallStack)[Index].OffendingStmt = CalleeOffendingStmt;
+    return Result;
+  }
+
+  bool IsFunctionTrivialImpl(const Decl *D) {
+    return WithCachedResult(D, [&]() {
       auto *FnDecl = dyn_cast<FunctionDecl>(D);
       auto *MethodDecl = dyn_cast<CXXMethodDecl>(D);
       auto *CtorDecl = dyn_cast<CXXConstructorDecl>(D);
@@ -913,14 +947,6 @@ public:
         return false;
       return Visit(Body);
     });
-    OffendingStmt = SavedOffendingStmt;
-    // Unwinding innermost-first means the deepest callee in the chain claims
-    // the root cause, which is the one the user has to do something about.
-    if (!Result && RootCause && !*RootCause) {
-      if (const auto *FnDecl = dyn_cast<FunctionDecl>(D))
-        *RootCause = FnDecl;
-    }
-    return Result;
   }
 
   bool HasTrivialDestructor(const VarDecl *VD) {
@@ -945,10 +971,8 @@ public:
   }
 
   bool IsStatementTrivial(const Stmt *S) {
-    // Skip the cache while diagnosing: a cache hit would report failure without
-    // recording which statement is to blame.
     auto CacheIt = Cache.find(S);
-    if (CacheIt != Cache.end() && !OffendingStmt)
+    if (CacheIt != Cache.end() && canUseCachedResult(CacheIt->second))
       return CacheIt->second;
     bool Result = Visit(S);
     Cache[S] = Result;
@@ -1330,7 +1354,8 @@ private:
   CacheTy FieldDtorCache;
   CacheTy RecursiveFn;
   const Stmt **OffendingStmt;
-  const FunctionDecl **RootCause;
+  SmallVectorImpl<NonTrivialityReason::Frame> *CallStack;
+  unsigned ActiveDepth = 0;
 };
 
 bool TrivialFunctionAnalysis::isTrivialImpl(
@@ -1350,7 +1375,7 @@ NonTrivialityReason TrivialFunctionAnalysis::computeReason(const Stmt *S) {
   CacheTy Cache;
   TrivialFunctionAnalysisVisitor V(Cache, &Reason);
   [[maybe_unused]] bool Trivial = V.IsStatementTrivial(S);
-  assert(!Trivial && "explainNonTriviality called on a trivial statement");
+  assert(!Trivial && "computeReason called on a trivial statement");
   return Reason;
 }
 

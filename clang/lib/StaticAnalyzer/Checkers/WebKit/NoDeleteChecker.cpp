@@ -155,7 +155,7 @@ public:
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
     Report->addRange(Range);
     Report->setDeclWithIssue(FD);
-    addRootCauseNote(*Report, Reason);
+    addCallStackNotes(*Report, Reason);
     BR->emitReport(std::move(Report));
   }
 
@@ -168,35 +168,52 @@ public:
   }
 
   // The offending statement is often just the nearest call to a function that
-  // is itself unsafe several levels down. Point at the function at the bottom
-  // of that chain, since that is where the fix belongs.
-  void addRootCauseNote(BasicBugReport &Report,
-                        const NonTrivialityReason &Reason) const {
-    const FunctionDecl *RootCause = Reason.RootCause;
-    // Implicit special members have nothing worth pointing at.
-    if (!RootCause || !RootCause->getLocation().isValid())
+  // is itself unsafe several levels down. Walk the whole chain of calls, one
+  // note per function, down to the code that destructs an object or the
+  // function without a visible definition, since that is where the fix belongs.
+  void addCallStackNotes(BasicBugReport &Report,
+                         const NonTrivialityReason &Reason) const {
+    ArrayRef<NonTrivialityReason::Frame> CallStack = Reason.CallStack;
+    if (CallStack.empty())
       return;
 
-    // Nothing to add when the offending statement is the call to the root
-    // cause; the primary diagnostic already points right at it.
+    // Nothing to add when the offending statement is the call to a function
+    // that is opaque or rejected outright; a note would only point back at its
+    // declaration, which the primary diagnostic already names.
+    const auto &First = CallStack.front();
     const FunctionDecl *Callee = getDirectCallee(Reason.OffendingStmt);
-    if (Callee && Callee->getCanonicalDecl() == RootCause->getCanonicalDecl())
+    if (CallStack.size() == 1 && !First.OffendingStmt && Callee &&
+        Callee->getCanonicalDecl() == First.Callee->getCanonicalDecl())
       return;
 
-    SmallString<100> Buf;
-    llvm::raw_svector_ostream Os(Buf);
-    printQuotedName(Os, RootCause);
-    if (RootCause->doesThisDeclarationHaveABody()) {
-      Os << " could destruct an object.";
-    } else {
-      Os << " has no visible definition here, so it is assumed to destruct an "
-            "object. Annotate it with "
-            "[[clang::annotate_type(\"webkit.nodelete\")]] if it does not.";
-    }
+    for (size_t I = 0; I < CallStack.size(); ++I) {
+      const FunctionDecl *Fn = CallStack[I].Callee;
+      const Stmt *Offender = CallStack[I].OffendingStmt;
+      // Implicit special members have nothing worth pointing at.
+      if (!Offender && !Fn->getLocation().isValid())
+        continue;
 
-    PathDiagnosticLocation Loc(RootCause->getLocation(),
-                               BR->getSourceManager());
-    Report.addNote(Os.str(), Loc, RootCause->getSourceRange());
+      SmallString<100> Buf;
+      llvm::raw_svector_ostream Os(Buf);
+      printQuotedName(Os, Fn);
+      if (I + 1 < CallStack.size()) {
+        Os << " calls ";
+        printQuotedName(Os, CallStack[I + 1].Callee);
+      } else if (Fn->doesThisDeclarationHaveABody()) {
+        Os << " could destruct an object.";
+      } else {
+        Os << " has no visible definition here, so it is assumed to destruct "
+              "an object. Annotate it with "
+              "[[clang::annotate_type(\"webkit.nodelete\")]] if it does not.";
+      }
+
+      SourceLocation Loc =
+          Offender ? Offender->getBeginLoc() : Fn->getLocation();
+      SourceRange Range =
+          Offender ? Offender->getSourceRange() : Fn->getSourceRange();
+      Report.addNote(
+          Os.str(), PathDiagnosticLocation(Loc, BR->getSourceManager()), Range);
+    }
   }
 };
 

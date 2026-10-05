@@ -2,6 +2,9 @@
 
 #include "mock-types.h"
 
+// expected-note@mock-types.h:299 + {{'derefIfNotNull' calls 'deref'}}
+// expected-note@mock-types.h:313 + {{'~Ref' calls 'derefIfNotNull'}}
+
 void crash();
 
 template<typename T, typename U>
