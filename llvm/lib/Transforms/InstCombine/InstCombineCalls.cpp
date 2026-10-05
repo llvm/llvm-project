@@ -2895,7 +2895,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     unsigned BitWidth = II->getType()->getScalarSizeInBits();
 
     // Multiply by one.
-    if (match(Arg1, m_One()))
+    if (BitWidth > 1 && match(Arg1, m_One()))
       return replaceInstUsesWith(CI, Builder.CreateAShr(Arg0, BitWidth - 1));
     break;
   }
