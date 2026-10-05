@@ -16,6 +16,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -67,20 +68,8 @@ mlir::Value
 CommonSPIRTargetCIRGenInfo::getNullPointer(CIRGenModule &cgm,
                                            cir::PointerType ptrTy, QualType qt,
                                            mlir::Location loc) const {
-  LangAS as = qt->getUnqualifiedDesugaredType()->isNullPtrType()
-                  ? LangAS::Default
-                  : qt->getPointeeType().getAddressSpace();
-  unsigned asAsInt = static_cast<unsigned>(as);
-  unsigned firstTargetASAsInt =
-      static_cast<unsigned>(LangAS::FirstTargetAddressSpace);
-  unsigned codeSectionINTELAS = firstTargetASAsInt + 9;
-  // As per SPV_INTEL_function_pointers, it is illegal to addrspacecast
-  // function pointers to/from the generic AS.
-  bool isFunctionPtrAS =
-      cgm.getTriple().isSPIRV() && asAsInt == codeSectionINTELAS;
   CIRGenBuilderTy &builder = cgm.getBuilder();
-  if (as == LangAS::Default || as == LangAS::opencl_generic ||
-      as == LangAS::opencl_constant || isFunctionPtrAS)
+  if (!CodeGenUtils::spirNullPointerNeedsGenericCast(qt, cgm.getTriple()))
     return builder.getNullPtr(ptrTy, loc);
 
   cir::PointerType genericPtrTy =

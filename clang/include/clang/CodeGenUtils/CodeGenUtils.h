@@ -54,6 +54,11 @@ LangAS getGlobalConstantAddressSpace(const LangOptions &LangOpts,
 
 bool isInitializerOfDynamicClass(const CXXCtorInitializer *BaseInit);
 
+/// Return true if a SPIR(-V) null pointer of type \p QT must be materialized
+/// as an addrspacecast from a generic null pointer, as the null bit pattern in
+/// non-generic address spaces is unspecified.
+bool spirNullPointerNeedsGenericCast(QualType QT, const llvm::Triple &Triple);
+
 /// Check that a call to a target-specific builtin has the required target
 /// features enabled in the caller, emitting an error diagnostic if not.
 /// \p caller is the FunctionDecl of the enclosing function (may be null).
