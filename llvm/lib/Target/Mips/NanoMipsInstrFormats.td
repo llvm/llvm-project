@@ -269,7 +269,6 @@ class _Pool_PP_SR<bits<2> isel> : _Pool_P_U12<0b0011> {
 class Arith4x4_Enc<bits<2> isel> :  _Pool_P16_4X4<isel> {
   bits<5> dst;
   bits<5> rs;
-  bits<5> rt;
 
   let Inst{9} = dst{4};
   let Inst{7-5} = dst{2-0};

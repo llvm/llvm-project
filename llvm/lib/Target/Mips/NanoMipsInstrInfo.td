@@ -88,7 +88,7 @@ def sym32_nm : Operand<pAny>;
 // P16_4X4
 class Arith4x4_Desc<string opstr, RegisterOperand RO>
   : InstNM<(outs RO:$dst), (ins RO:$rt, RO:$rs),
-           !strconcat(opstr, "\t$dst, $rt, $rs")>;
+           !strconcat(opstr, "\t$dst, $rt, $rs")>, RegConstraint<"$rt = $dst">;
 
 // 32-bit arithmetic and logical instructions with 3 register operands.
 class ArithLogicR32_Desc<string opstr, RegisterOperand RO>
@@ -99,7 +99,7 @@ class ArithLogicR32_Desc<string opstr, RegisterOperand RO>
 // POOL16C_0
 class ArithLogicR16_Desc<string opstr, RegisterOperand RO>
   : InstNM<(outs RO:$rd), (ins RO:$rs, RO:$rt),
-           !strconcat(opstr, "\t$rd, $rs, $rt")>;
+           !strconcat(opstr, "\t$rd, $rs, $rt")>, RegConstraint<"$rt = $rd">;
 
 class ArithLogicR16U_Desc<string opstr, RegisterOperand RO>
   : InstNM<(outs RO:$rd), (ins RO:$rs),
@@ -187,7 +187,7 @@ class LoadAddressAbs_Desc<string opstr, RegisterOperand RO, DAGOperand MO>
 // 16-bit register operations
 def NOT16_NM : ArithLogicR16U_Desc<"not", GPRNM16R3Opnd>,
                ArithLogicR16_Enc<0b00>;
-let isCommutable = 1, TwoOperandAliasConstraint = "$rt = $rd" in {
+let isCommutable = 1 in {
   def XOR16_NM : ArithLogicR16_Desc<"xor", GPRNM16R3Opnd>,
                  ArithLogicR16_Enc<0b01>;
   def AND16_NM : ArithLogicR16_Desc<"and", GPRNM16R3Opnd>,
