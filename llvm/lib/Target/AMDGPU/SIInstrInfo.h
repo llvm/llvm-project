@@ -216,6 +216,9 @@ private:
   bool verifyCopy(const MachineInstr &MI, const MachineRegisterInfo &MRI,
                   StringRef &ErrInfo) const;
 
+  bool verifyCopySize(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                  StringRef &ErrInfo) const;
+
   bool verifyRegsequence(const MachineInstr &MI, const MachineRegisterInfo &MRI,
                          StringRef &ErrInfo) const;
 

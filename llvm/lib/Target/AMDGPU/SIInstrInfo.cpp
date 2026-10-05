@@ -5442,6 +5442,7 @@ static bool isSubRegOf(const SIRegisterInfo &TRI,
 bool SIInstrInfo::verifyCopy(const MachineInstr &MI,
                              const MachineRegisterInfo &MRI,
                              StringRef &ErrInfo) const {
+
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
   // This is a check for copy from vector register to SGPR
@@ -5449,36 +5450,54 @@ bool SIInstrInfo::verifyCopy(const MachineInstr &MI,
     ErrInfo = "illegal copy from vector register to SGPR";
     return false;
   }
+  return true;
+}
+
+bool SIInstrInfo::verifyCopySize(const MachineInstr &MI,
+                             const MachineRegisterInfo &MRI,
+                             StringRef &ErrInfo) const {
+  if (getCGPassBuilderOption().EnableGlobalISelOption == cl::boolOrDefault::BOU_TRUE)
+	  return true;
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
   // check for sreg32/vgpr3/vgpr16 mismatch
   unsigned DstSubReg = MI.getOperand(0).getSubReg();
   unsigned SrcSubReg = MI.getOperand(1).getSubReg();
   auto *TRI = MRI.getTargetRegisterInfo();
+  if (!DstReg.isVirtual() || !SrcReg.isVirtual())
+    return true;
+
+  auto *DstRC = MRI.getRegClassOrNull(DstReg);
+  auto *SrcRC = MRI.getRegClassOrNull(SrcReg);
+
+  if (!DstRC || !SrcRC)
+	return true;
 
   if (RI.isAGPR(MRI, DstReg) || RI.isAGPR(MRI, SrcReg))
     return true;
 
-  if (!DstReg.isVirtual() || !SrcReg.isVirtual())
-    return true;
-
-  auto *DstRC = getOpRegClass(MI, 0);
   if (DstSubReg != AMDGPU::NoSubRegister)
     DstRC = TRI->getSubRegisterClass(DstRC, DstSubReg);
 
-  auto *SrcRC = getOpRegClass(MI, 1);
   if (SrcSubReg != AMDGPU::NoSubRegister)
     SrcRC = TRI->getSubRegisterClass(SrcRC, SrcSubReg);
 
   DstRC = RI.getEquivalentVGPRClass(DstRC);
   SrcRC = RI.getEquivalentVGPRClass(SrcRC);
+  /*
   if (RI.getMatchingSuperRegClass(SrcRC, DstRC, AMDGPU::lo16) ||
       RI.getMatchingSuperRegClass(DstRC, SrcRC, AMDGPU::lo16)) {
+  */
+  //dbgs() << "DstRC size:" << RI.getRegSizeInBits(*DstRC) << "\n";
+  //dbgs() << "SrcRC size:" << RI.getRegSizeInBits(*SrcRC) << "\n";
+  if (RI.getRegSizeInBits(*DstRC) != RI.getRegSizeInBits(*SrcRC)) {
     ErrInfo = "illegal copy with different size src/dst reg";
     return false;
   }
 
   return true;
 }
-
 bool SIInstrInfo::verifyRegsequence(const MachineInstr &MI,
                                     const MachineRegisterInfo &MRI,
                                     StringRef &ErrInfo) const {
@@ -5538,6 +5557,9 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       return verifyCopy(MI, MRI, ErrInfo);
     if (MI.isRegSequence())
       return verifyRegsequence(MI, MRI, ErrInfo);
+  } else {
+	if (MI.isCopy())
+	  return verifyCopySize(MI, MRI, ErrInfo);
   }
 
   // check for illegal sreg subreg
