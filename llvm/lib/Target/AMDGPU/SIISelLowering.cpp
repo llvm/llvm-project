@@ -2505,6 +2505,47 @@ bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
   return TargetLowering::isTypeDesirableForOp(Op, VT);
 }
 
+bool SITargetLowering::isTypeDesirableForOp(SDNode *N, EVT VT) const {
+  // Do not convert uniform i32 loads to 16-bit.
+  // Uniform 16-bit loads are legalized to i16 = trunc (zextload i16->i32)
+  // to match subword load patterns.  Allowing conversion back to a 16-bit
+  // load would create an infinite loop.
+  if (Subtarget->hasScalarSubwordLoads() && N->getOpcode() == ISD::LOAD &&
+      !VT.isVector() && VT.getSizeInBits() == 16) {
+    auto *Load = dyn_cast<LoadSDNode>(N);
+    if (Load && Load->getValueType(0) == MVT::i32 && !Load->isDivergent() &&
+        AMDGPU::isUniformMMO(Load->getMemOperand())) {
+      return false;
+    }
+  }
+
+  return isTypeDesirableForOp(N->getOpcode(), VT);
+}
+
+bool SITargetLowering::isUniformLoad(const LoadSDNode *Load) const {
+  const MachineMemOperand *MMO = Load->getMemOperand();
+
+  // FIXME: We ought to able able to take the direct isDivergent result. We
+  // cannot rely on the MMO for a uniformity check, and should stop using
+  // it. This is a hack for 2 ways that the IR divergence analysis is superior
+  // to the DAG divergence: Recognizing shift-of-workitem-id as always
+  // uniform, and isSingleLaneExecution. These should be handled in the DAG
+  // version, and then this can be dropped.
+  if (Load->isDivergent() && !AMDGPU::isUniformMMO(MMO))
+    return false;
+
+  return MMO->getSize().hasValue() &&
+         Load->getAlign() >=
+             Align(std::min(MMO->getSize().getValue().getKnownMinValue(),
+                            uint64_t(4))) &&
+         (MMO->isInvariant() ||
+          (Load->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
+           Load->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) ||
+          (Load->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS &&
+           Load->isSimple() && Subtarget->getScalarizeGlobalBehavior() &&
+           isMemOpHasNoClobberedMemOperand(Load)));
+}
+
 MachinePointerInfo
 SITargetLowering::getKernargSegmentPtrInfo(MachineFunction &MF) const {
   // This isn't really a constant pool but close enough.
@@ -8680,7 +8721,7 @@ unsigned SITargetLowering::isCFIntrinsic(const SDNode *Intr) const {
 }
 
 bool SITargetLowering::shouldEmitFixup(const GlobalValue *GV) const {
-  const Triple &TT = getTargetMachine().getTargetTriple();
+  const Triple &TT = GV->getParent()->getTargetTriple();
   return (GV->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
           GV->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
          AMDGPU::shouldEmitConstantsToTextSection(TT);
@@ -13605,6 +13646,31 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   MachineMemOperand *MMO = Load->getMemOperand();
 
   if (ExtType == ISD::NON_EXTLOAD && MemVT.getSizeInBits() < 32) {
+    // Legalize uniform 16-bit loads to i16 = trunc (zextload i16->i32)
+    // to match subword load patterns.
+    // Only do this for loads that can use scalar subword load instructions.
+    if (!MemVT.isVector() && MemVT.getSizeInBits() == 16 &&
+        isTypeLegal(MemVT) && Subtarget->hasScalarSubwordLoads() &&
+        isUniformLoad(Load)) {
+      SDValue Chain = Load->getChain();
+      SDValue BasePtr = Load->getBasePtr();
+
+      // Load as i16 and zero-extend to i32 (matches S_LOAD_U16 behavior)
+      SDValue NewLD = DAG.getExtLoad(ISD::ZEXTLOAD, DL, MVT::i32, Chain,
+                                     BasePtr, MVT::i16, MMO);
+
+      // Truncate back to i16
+      SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, NewLD);
+
+      // For f16/bf16, bitcast from i16 to the original fp type
+      SDValue Result = (MemVT == MVT::i16)
+                           ? Trunc
+                           : DAG.getNode(ISD::BITCAST, DL, MemVT, Trunc);
+
+      SDValue Ops[] = {Result, NewLD.getValue(1)};
+      return DAG.getMergeValues(Ops, DL);
+    }
+
     if (MemVT == MVT::i16 && isTypeLegal(MVT::i16))
       return SDValue();
 
@@ -19376,6 +19442,18 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     SelectionDAG &DAG = DCI.DAG;
     EVT VT = N->getValueType(0);
 
+    // When bf16 inline constants live in the upper half of the expanded fp32
+    // constant, only a splat is encodable as an inline constant. The high lane
+    // is dead here, so splat it.
+    if (VT == MVT::v2bf16 && Subtarget->hasBF16InlineConstFromUpperFP32()) {
+      auto *C = dyn_cast<ConstantFPSDNode>(N->getOperand(0));
+      if (C && AMDGPU::isInlinableLiteralBF16(
+                   C->getValueAPF().bitcastToAPInt().getSExtValue(),
+                   Subtarget->hasInv2PiInlineImm()))
+        return DAG.getBuildVector(VT, SDLoc(N),
+                                  {N->getOperand(0), N->getOperand(0)});
+    }
+
     // v2i16 (scalar_to_vector i16:x) -> v2i16 (bitcast (any_extend i16:x))
     if (VT == MVT::v2i16 || VT == MVT::v2f16 || VT == MVT::v2bf16) {
       SDLoc SL(N);
@@ -20570,21 +20648,26 @@ Align SITargetLowering::computeKnownAlignForTargetInstr(
   return Align(1);
 }
 
-Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
+Align SITargetLowering::getPrefLoopAlignment(
+    MachineLoop *ML, const MachineBasicBlock *BlockToAlign) const {
   const Align PrefAlign = TargetLowering::getPrefLoopAlignment(ML);
   const Align CacheLineAlign = Align(64);
 
-  // GFX950: Prevent an 8-byte instruction at loop header from being split by
-  // the 32-byte instruction fetch window boundary. This avoids a significant
-  // fetch delay after backward branch. We use 32-byte alignment with max
-  // padding of 4 bytes (one s_nop), see getMaxPermittedBytesForAlignment().
+  // GFX950: Prevent an 8-byte instruction at the block being aligned from being
+  // split by the 32-byte instruction fetch window boundary. This avoids a
+  // significant fetch delay after a backward branch. We use 32-byte alignment
+  // with max padding of 4 bytes (one s_nop), see
+  // getMaxPermittedBytesForAlignment().
   if (ML && !DisableLoopAlignment &&
       getSubtarget()->hasLoopHeadInstSplitSensitivity()) {
-    const MachineBasicBlock *Header = ML->getHeader();
+    // Loop rotation can make the backedge destination a block other than the
+    // LoopInfo header, so prefer the block the caller is actually aligning.
+    if (!BlockToAlign)
+      BlockToAlign = ML->getHeader();
     // Respect user-specified or previously set alignment.
-    if (Header->getAlignment() != PrefAlign)
-      return Header->getAlignment();
-    if (needsFetchWindowAlignment(*Header))
+    if (BlockToAlign->getAlignment() != PrefAlign)
+      return BlockToAlign->getAlignment();
+    if (needsFetchWindowAlignment(*BlockToAlign))
       return Align(32);
   }
 
@@ -20863,7 +20946,7 @@ static bool isAtomicRMWLegalXChgTy(const AtomicRMWInst *RMW) {
     return true;
 
   if (PointerType *PT = dyn_cast<PointerType>(Ty)) {
-    const DataLayout &DL = RMW->getFunction()->getParent()->getDataLayout();
+    const DataLayout &DL = RMW->getFunction()->getDataLayout();
     unsigned BW = DL.getPointerSizeInBits(PT->getAddressSpace());
     return BW == 32 || BW == 64;
   }

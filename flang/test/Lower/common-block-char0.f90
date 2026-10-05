@@ -27,10 +27,10 @@ end subroutine
 
 ! ii1 at offset 0
 ! CHECK: %[[BASE:.*]] = fir.address_of(@blk_) : !fir.ref<!fir.array<16xi8>>
-! CHECK: hlfir.declare {{.*}} storage(%[[BASE]][0]) {uniq_name = "_QFchar0_commonEii1"}
+! CHECK: hlfir.declare {{.*}} storage(%[[BASE]][0]) uniq_name("_QFchar0_commonEii1")
 
 ! ll1 at offset 8
-! CHECK: hlfir.declare {{.*}} storage(%[[BASE]][8]) {uniq_name = "_QFchar0_commonEll1"}
+! CHECK: hlfir.declare {{.*}} storage(%[[BASE]][8]) uniq_name("_QFchar0_commonEll1")
 
 ! zc0 at offset 8 (not 0) -- key assertion
-! CHECK: hlfir.declare {{.*}} storage(%[[BASE]][8]) {uniq_name = "_QFchar0_commonEzc0"}
+! CHECK: hlfir.declare {{.*}} storage(%[[BASE]][8]) uniq_name("_QFchar0_commonEzc0")
