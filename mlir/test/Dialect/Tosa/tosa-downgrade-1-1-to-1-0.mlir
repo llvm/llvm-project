@@ -160,3 +160,47 @@ func.func @test_preserve_matmul_t_block_scaled(%arg0: tensor<1x14x32x!tosa.block
   %0 = tosa.matmul_t %arg0, %arg1, %arg2, %arg3 : (tensor<1x14x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>, tensor<1x28x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x14x28xf32>
   return %0 : tensor<1x14x28xf32>
 }
+
+// -----
+
+// CHECK-LABEL: @test_preserve_matmul_t_rank2
+// CHECK-NOT: tosa.transpose
+// CHECK: %[[MATMUL_T:.+]] = tosa.matmul_t %arg0, %arg1, %arg2, %arg3
+// CHECK: return %[[MATMUL_T]]
+func.func @test_preserve_matmul_t_rank2(%arg0: tensor<4x7xf32>, %arg1: tensor<5x7xf32>, %arg2: tensor<1xf32>, %arg3: tensor<1xf32>) -> tensor<4x5xf32> {
+  %0 = tosa.matmul_t %arg0, %arg1, %arg2, %arg3 : (tensor<4x7xf32>, tensor<5x7xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<4x5xf32>
+  return %0 : tensor<4x5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @test_preserve_matmul_t_rank4
+// CHECK-NOT: tosa.transpose
+// CHECK: %[[MATMUL_T:.+]] = tosa.matmul_t %arg0, %arg1, %arg2, %arg3
+// CHECK: return %[[MATMUL_T]]
+func.func @test_preserve_matmul_t_rank4(%arg0: tensor<2x1x4x7xf32>, %arg1: tensor<1x3x5x7xf32>, %arg2: tensor<1xf32>, %arg3: tensor<1xf32>) -> tensor<2x3x4x5xf32> {
+  %0 = tosa.matmul_t %arg0, %arg1, %arg2, %arg3 : (tensor<2x1x4x7xf32>, tensor<1x3x5x7xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x3x4x5xf32>
+  return %0 : tensor<2x3x4x5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @test_preserve_matmul_t_broadcast_a
+// CHECK-NOT: tosa.transpose
+// CHECK: %[[MATMUL_T:.+]] = tosa.matmul_t %arg0, %arg1, %arg2, %arg3
+// CHECK: return %[[MATMUL_T]]
+func.func @test_preserve_matmul_t_broadcast_a(%arg0: tensor<1x4x7xf32>, %arg1: tensor<3x5x7xf32>, %arg2: tensor<1xf32>, %arg3: tensor<1xf32>) -> tensor<3x4x5xf32> {
+  %0 = tosa.matmul_t %arg0, %arg1, %arg2, %arg3 : (tensor<1x4x7xf32>, tensor<3x5x7xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<3x4x5xf32>
+  return %0 : tensor<3x4x5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @test_preserve_matmul_t_dynamic_broadcast_a
+// CHECK-NOT: tosa.transpose
+// CHECK: %[[MATMUL_T:.+]] = tosa.matmul_t %arg0, %arg1, %arg2, %arg3
+// CHECK: return %[[MATMUL_T]]
+func.func @test_preserve_matmul_t_dynamic_broadcast_a(%arg0: tensor<?x4x7xf32>, %arg1: tensor<3x5x7xf32>, %arg2: tensor<1xf32>, %arg3: tensor<1xf32>) -> tensor<3x4x5xf32> {
+  %0 = tosa.matmul_t %arg0, %arg1, %arg2, %arg3 : (tensor<?x4x7xf32>, tensor<3x5x7xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<3x4x5xf32>
+  return %0 : tensor<3x4x5xf32>
+}
