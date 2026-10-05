@@ -1952,10 +1952,12 @@ LLVMValueRef LLVMConstPtrAdd(LLVMValueRef ConstantVal,
                                       mapFromLLVMGEPNoWrapFlags(NoWrapFlags)));
 }
 
-LLVM_C_ABI LLVMValueRef LLVMConstPtrAddFromIndices(
-    LLVMTargetDataRef DataLayout, LLVMTypeRef Ty, LLVMValueRef ConstantVal,
-    LLVMValueRef *ConstantIndices, unsigned NumIndices,
-    LLVMGEPNoWrapFlags NoWrapFlags) {
+LLVMValueRef LLVMConstPtrAddFromIndices(LLVMTargetDataRef DataLayout,
+                                        LLVMTypeRef Ty,
+                                        LLVMValueRef ConstantVal,
+                                        LLVMValueRef *ConstantIndices,
+                                        unsigned NumIndices,
+                                        LLVMGEPNoWrapFlags NoWrapFlags) {
   ArrayRef<Constant *> IdxList(unwrap<Constant>(ConstantIndices, NumIndices),
                                NumIndices);
   return wrap(ConstantExpr::getGetElementPtr(

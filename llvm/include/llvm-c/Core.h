@@ -18,8 +18,8 @@
 #include "llvm-c/Deprecated.h"
 #include "llvm-c/ErrorHandling.h"
 #include "llvm-c/ExternC.h"
-#include "llvm-c/Visibility.h"
 #include "llvm-c/Types.h"
+#include "llvm-c/Visibility.h"
 
 LLVM_C_EXTERN_C_BEGIN
 
