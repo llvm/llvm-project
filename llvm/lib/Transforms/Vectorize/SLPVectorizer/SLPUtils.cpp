@@ -1507,10 +1507,10 @@ Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
   return Builder.CreateBitCast(Packed, IntTy);
 }
 
-void redirectDbgValues(Instruction &Scalar, Value &Ex) {
+void redirectDbgValues(Instruction &From, Value &To) {
   SmallVector<DbgVariableRecord *, 2> DVRs;
-  findDbgValues(&Scalar, DVRs);
-  auto *ExI = dyn_cast<Instruction>(&Ex);
+  findDbgValues(&From, DVRs);
+  auto *ExI = dyn_cast<Instruction>(&To);
   for (DbgVariableRecord *DVR : DVRs) {
     if (!DVR->isDbgValue())
       continue;
@@ -1518,7 +1518,7 @@ void redirectDbgValues(Instruction &Scalar, Value &Ex) {
     if (ExI && MarkedI->getParent() != ExI->getParent())
       continue;
     if (!ExI || ExI->comesBefore(MarkedI)) {
-      DVR->replaceVariableLocationOp(&Scalar, &Ex);
+      DVR->replaceVariableLocationOp(&From, &To);
       continue;
     }
     DebugVariableAggregate Var(DVR);
@@ -1537,7 +1537,7 @@ void redirectDbgValues(Instruction &Scalar, Value &Ex) {
                }))
       continue;
     DbgVariableRecord *NewDVR = DVR->clone();
-    NewDVR->replaceVariableLocationOp(&Scalar, &Ex);
+    NewDVR->replaceVariableLocationOp(&From, &To);
     ExI->getParent()->insertDbgRecordAfter(NewDVR, ExI);
   }
 }

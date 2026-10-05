@@ -495,12 +495,12 @@ SmallVector<int> getBitPackMask(const BitPackInfo &Info, unsigned NumBytes,
 Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
                     unsigned ShiftWidth, unsigned &NumInsts);
 
-/// The debug values of the erased \p Scalar are kept on its replacement \p Ex.
-/// A record placed before \p Ex is cloned right after it, while the original
+/// The debug values of the erased \p From are kept on its replacement \p To.
+/// A record placed before \p To is cloned right after it, while the original
 /// one is killed together with the scalar, so the variable is undefined up to
-/// \p Ex. The clone is skipped if it would pass a record of the same variable,
+/// \p To. The clone is skipped if it would pass a record of the same variable,
 /// otherwise the variable would show a stale value.
-void redirectDbgValues(Instruction &Scalar, Value &Ex);
+void redirectDbgValues(Instruction &From, Value &To);
 
 } // namespace llvm::slpvectorizer
 

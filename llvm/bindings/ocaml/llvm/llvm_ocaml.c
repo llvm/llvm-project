@@ -1195,24 +1195,26 @@ value llvm_const_xor(value LHS, value RHS) {
   return to_val(Value);
 }
 
-/* lltype -> llvalue -> llvalue array -> llvalue */
-value llvm_const_gep(value Ty, value ConstantVal, value Indices) {
-  mlsize_t Length = Wosize_val(Indices);
-  LLVMValueRef *Temp = from_val_array(Indices);
-  LLVMValueRef Value =
-      LLVMConstGEP2(Type_val(Ty), Value_val(ConstantVal), Temp, Length);
-  free(Temp);
+/* llvalue -> llvalue -> int -> llvalue */
+value llvm_const_ptradd(value ConstantVal, value ConstantOffset,
+                        value NoWrapFlags) {
+  LLVMValueRef Value = LLVMConstPtrAdd(
+      Value_val(ConstantVal), Value_val(ConstantOffset), Int_val(NoWrapFlags));
   return to_val(Value);
 }
 
-/* lltype -> llvalue -> llvalue array -> llvalue */
-value llvm_const_in_bounds_gep(value Ty, value ConstantVal, value Indices) {
+/* DataLayout.t -> lltype -> llvalue -> llvalue array -> int ->
+ * llvalue option */
+value llvm_const_ptradd_from_indices(value DataLayout, value Ty,
+                                     value ConstantVal, value Indices,
+                                     value NoWrapFlags) {
   mlsize_t Length = Wosize_val(Indices);
   LLVMValueRef *Temp = from_val_array(Indices);
-  LLVMValueRef Value =
-      LLVMConstInBoundsGEP2(Type_val(Ty), Value_val(ConstantVal), Temp, Length);
+  LLVMValueRef Value = LLVMConstPtrAddFromIndices(
+      DataLayout_val(DataLayout), Type_val(Ty), Value_val(ConstantVal), Temp,
+      Length, Int_val(NoWrapFlags));
   free(Temp);
-  return to_val(Value);
+  return ptr_to_option(Value);
 }
 
 /* llvalue -> lltype -> llvalue */
