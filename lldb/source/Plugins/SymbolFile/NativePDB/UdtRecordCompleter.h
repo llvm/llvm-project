@@ -50,20 +50,14 @@ class UdtRecordCompleter : public llvm::codeview::TypeVisitorCallbacks {
   std::vector<IndexedBase> m_bases;
   ClangASTImporter::LayoutInfo m_layout;
   llvm::DenseMap<clang::Decl *, DeclStatus> &m_decl_to_status;
-  llvm::DenseMap<lldb::opaque_compiler_type_t,
-                 llvm::SmallSet<std::pair<llvm::StringRef, CompilerType>, 8>>
-      &m_cxx_record_map;
   /// Index of the current member.
   uint32_t m_member_index = 0;
 
 public:
-  UdtRecordCompleter(
-      PdbTypeSymId id, CompilerType &derived_ct, clang::TagDecl &tag_decl,
-      PdbAstBuilderClang &ast_builder, PdbIndex &index,
-      llvm::DenseMap<clang::Decl *, DeclStatus> &decl_to_status,
-      llvm::DenseMap<lldb::opaque_compiler_type_t,
-                     llvm::SmallSet<std::pair<llvm::StringRef, CompilerType>,
-                                    8>> &cxx_record_map);
+  UdtRecordCompleter(PdbTypeSymId id, CompilerType &derived_ct,
+                     clang::TagDecl &tag_decl, PdbAstBuilderClang &ast_builder,
+                     PdbIndex &index,
+                     llvm::DenseMap<clang::Decl *, DeclStatus> &decl_to_status);
 
   llvm::Error visitMemberEnd(llvm::codeview::CVMemberRecord &Record) override;
 
