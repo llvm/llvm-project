@@ -437,7 +437,7 @@ private:
     void clear(bool Soft) {
       // Just clear the cache when in soft mode.
       Files.clear();
-      LastLookupFile = nullptr;
+      LastLookupFileID = FileID::getSentinel();
       if (!Soft) {
         FirstDiagState = CurDiagState = nullptr;
         CurDiagStateLoc = SourceLocation();
@@ -498,7 +498,7 @@ private:
 
     /// One-entry cache for getFile(): Files gets large, and most
     /// lookups are for the same FileID as the previous one.
-    mutable FileID LastLookupFileID;
+    mutable FileID LastLookupFileID = FileID::getSentinel();
     mutable File *LastLookupFile = nullptr;
 
     /// The initial diagnostic state.

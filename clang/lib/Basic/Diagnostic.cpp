@@ -218,7 +218,8 @@ DiagnosticsEngine::DiagStateMap::File::lookup(unsigned Offset) const {
 DiagnosticsEngine::DiagStateMap::File *
 DiagnosticsEngine::DiagStateMap::getFile(SourceManager &SrcMgr,
                                          FileID ID) const {
-  if (!LastLookupFile || LastLookupFileID != ID) {
+  assert(ID != FileID::getSentinel());
+  if (LastLookupFileID != ID) {
     // getFileUncached() can recurse into getFile(), so update the cache after.
     LastLookupFile = getFileUncached(SrcMgr, ID);
     LastLookupFileID = ID;
