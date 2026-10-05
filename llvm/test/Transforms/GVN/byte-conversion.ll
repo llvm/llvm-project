@@ -9,21 +9,15 @@ define b8 @b32_store_to_b8_load(ptr %p, b32 %x) {
 ; LE-SAME: ptr [[P:%.*]], b32 [[X:%.*]]) {
 ; LE-NEXT:    store b32 [[X]], ptr [[P]], align 4
 ; LE-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P]], i64 1
-; LE-NEXT:    [[TMP1:%.*]] = bitcast b32 [[X]] to i32
-; LE-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 8
-; LE-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
-; LE-NEXT:    [[TMP4:%.*]] = bitcast i8 [[TMP3]] to b8
-; LE-NEXT:    ret b8 [[TMP4]]
+; LE-NEXT:    [[TMP1:%.*]] = bitextract b8, b32 [[X]], i32 8
+; LE-NEXT:    ret b8 [[TMP1]]
 ;
 ; BE-LABEL: define b8 @b32_store_to_b8_load(
 ; BE-SAME: ptr [[P:%.*]], b32 [[X:%.*]]) {
 ; BE-NEXT:    store b32 [[X]], ptr [[P]], align 4
 ; BE-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P]], i64 1
-; BE-NEXT:    [[TMP1:%.*]] = bitcast b32 [[X]] to i32
-; BE-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 16
-; BE-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
-; BE-NEXT:    [[TMP4:%.*]] = bitcast i8 [[TMP3]] to b8
-; BE-NEXT:    ret b8 [[TMP4]]
+; BE-NEXT:    [[TMP1:%.*]] = bitextract b8, b32 [[X]], i32 16
+; BE-NEXT:    ret b8 [[TMP1]]
 ;
   store b32 %x, ptr %p, align 4
   %q = getelementptr i8, ptr %p, i64 1
@@ -35,17 +29,14 @@ define i16 @b32_store_to_i16_load(ptr %p, b32 %x) {
 ; LE-LABEL: define i16 @b32_store_to_i16_load(
 ; LE-SAME: ptr [[P:%.*]], b32 [[X:%.*]]) {
 ; LE-NEXT:    store b32 [[X]], ptr [[P]], align 4
-; LE-NEXT:    [[TMP1:%.*]] = bitcast b32 [[X]] to i32
-; LE-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
-; LE-NEXT:    ret i16 [[TMP2]]
+; LE-NEXT:    [[TMP1:%.*]] = bitextract i16, b32 [[X]], i32 0
+; LE-NEXT:    ret i16 [[TMP1]]
 ;
 ; BE-LABEL: define i16 @b32_store_to_i16_load(
 ; BE-SAME: ptr [[P:%.*]], b32 [[X:%.*]]) {
 ; BE-NEXT:    store b32 [[X]], ptr [[P]], align 4
-; BE-NEXT:    [[TMP1:%.*]] = bitcast b32 [[X]] to i32
-; BE-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 16
-; BE-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i16
-; BE-NEXT:    ret i16 [[TMP3]]
+; BE-NEXT:    [[TMP1:%.*]] = bitextract i16, b32 [[X]], i32 16
+; BE-NEXT:    ret i16 [[TMP1]]
 ;
   store b32 %x, ptr %p, align 4
   %v = load i16, ptr %p, align 2
@@ -56,21 +47,14 @@ define b3 @b32_store_to_b3_load(ptr %p, b32 %x) {
 ; LE-LABEL: define b3 @b32_store_to_b3_load(
 ; LE-SAME: ptr [[P:%.*]], b32 [[X:%.*]]) {
 ; LE-NEXT:    store b32 [[X]], ptr [[P]], align 4
-; LE-NEXT:    [[TMP1:%.*]] = bitcast b32 [[X]] to i32
-; LE-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i8
-; LE-NEXT:    [[TMP3:%.*]] = trunc i8 [[TMP2]] to i3
-; LE-NEXT:    [[TMP4:%.*]] = bitcast i3 [[TMP3]] to b3
-; LE-NEXT:    ret b3 [[TMP4]]
+; LE-NEXT:    [[TMP1:%.*]] = bitextract b3, b32 [[X]], i32 0
+; LE-NEXT:    ret b3 [[TMP1]]
 ;
 ; BE-LABEL: define b3 @b32_store_to_b3_load(
 ; BE-SAME: ptr [[P:%.*]], b32 [[X:%.*]]) {
 ; BE-NEXT:    store b32 [[X]], ptr [[P]], align 4
-; BE-NEXT:    [[TMP1:%.*]] = bitcast b32 [[X]] to i32
-; BE-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 24
-; BE-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
-; BE-NEXT:    [[TMP4:%.*]] = trunc i8 [[TMP3]] to i3
-; BE-NEXT:    [[TMP5:%.*]] = bitcast i3 [[TMP4]] to b3
-; BE-NEXT:    ret b3 [[TMP5]]
+; BE-NEXT:    [[TMP1:%.*]] = bitextract b3, b32 [[X]], i32 24
+; BE-NEXT:    ret b3 [[TMP1]]
 ;
   store b32 %x, ptr %p, align 4
   %v = load b3, ptr %p, align 1
@@ -81,9 +65,8 @@ define ptr @b64_store_to_ptr_load(ptr %p, b64 %x) {
 ; CHECK-LABEL: define ptr @b64_store_to_ptr_load(
 ; CHECK-SAME: ptr [[P:%.*]], b64 [[X:%.*]]) {
 ; CHECK-NEXT:    store b64 [[X]], ptr [[P]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b64 [[X]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr
-; CHECK-NEXT:    ret ptr [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b64 [[X]] to ptr
+; CHECK-NEXT:    ret ptr [[TMP1]]
 ;
   store b64 %x, ptr %p, align 8
   %v = load ptr, ptr %p, align 8
@@ -95,20 +78,15 @@ define ptr @b128_store_to_ptr_load(ptr %p, b128 %x) {
 ; LE-SAME: ptr [[P:%.*]], b128 [[X:%.*]]) {
 ; LE-NEXT:    store b128 [[X]], ptr [[P]], align 8
 ; LE-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P]], i64 8
-; LE-NEXT:    [[TMP1:%.*]] = bitcast b128 [[X]] to i128
-; LE-NEXT:    [[TMP2:%.*]] = lshr i128 [[TMP1]], 64
-; LE-NEXT:    [[TMP3:%.*]] = trunc i128 [[TMP2]] to i64
-; LE-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
-; LE-NEXT:    ret ptr [[TMP4]]
+; LE-NEXT:    [[TMP1:%.*]] = bitextract ptr, b128 [[X]], i32 64
+; LE-NEXT:    ret ptr [[TMP1]]
 ;
 ; BE-LABEL: define ptr @b128_store_to_ptr_load(
 ; BE-SAME: ptr [[P:%.*]], b128 [[X:%.*]]) {
 ; BE-NEXT:    store b128 [[X]], ptr [[P]], align 8
 ; BE-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P]], i64 8
-; BE-NEXT:    [[TMP1:%.*]] = bitcast b128 [[X]] to i128
-; BE-NEXT:    [[TMP2:%.*]] = trunc i128 [[TMP1]] to i64
-; BE-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
-; BE-NEXT:    ret ptr [[TMP3]]
+; BE-NEXT:    [[TMP1:%.*]] = bitextract ptr, b128 [[X]], i32 0
+; BE-NEXT:    ret ptr [[TMP1]]
 ;
   store b128 %x, ptr %p, align 8
   %q = getelementptr i8, ptr %p, i64 8
@@ -121,20 +99,17 @@ define <2 x b8> @b32_store_to_v2b8_load(ptr %p, b32 %x) {
 ; LE-SAME: ptr [[P:%.*]], b32 [[X:%.*]]) {
 ; LE-NEXT:    store b32 [[X]], ptr [[P]], align 4
 ; LE-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P]], i64 2
-; LE-NEXT:    [[TMP1:%.*]] = bitcast b32 [[X]] to i32
-; LE-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 16
-; LE-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i16
-; LE-NEXT:    [[TMP4:%.*]] = bitcast i16 [[TMP3]] to <2 x b8>
-; LE-NEXT:    ret <2 x b8> [[TMP4]]
+; LE-NEXT:    [[TMP1:%.*]] = bitextract b16, b32 [[X]], i32 16
+; LE-NEXT:    [[TMP2:%.*]] = bitcast b16 [[TMP1]] to <2 x b8>
+; LE-NEXT:    ret <2 x b8> [[TMP2]]
 ;
 ; BE-LABEL: define <2 x b8> @b32_store_to_v2b8_load(
 ; BE-SAME: ptr [[P:%.*]], b32 [[X:%.*]]) {
 ; BE-NEXT:    store b32 [[X]], ptr [[P]], align 4
 ; BE-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P]], i64 2
-; BE-NEXT:    [[TMP1:%.*]] = bitcast b32 [[X]] to i32
-; BE-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
-; BE-NEXT:    [[TMP3:%.*]] = bitcast i16 [[TMP2]] to <2 x b8>
-; BE-NEXT:    ret <2 x b8> [[TMP3]]
+; BE-NEXT:    [[TMP1:%.*]] = bitextract b16, b32 [[X]], i32 0
+; BE-NEXT:    [[TMP2:%.*]] = bitcast b16 [[TMP1]] to <2 x b8>
+; BE-NEXT:    ret <2 x b8> [[TMP2]]
 ;
   store b32 %x, ptr %p, align 4
   %q = getelementptr i8, ptr %p, i64 2
@@ -147,20 +122,15 @@ define b8 @b24_store_to_b8_load(ptr %p, b24 %x) {
 ; LE-SAME: ptr [[P:%.*]], b24 [[X:%.*]]) {
 ; LE-NEXT:    store b24 [[X]], ptr [[P]], align 4
 ; LE-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P]], i64 2
-; LE-NEXT:    [[TMP1:%.*]] = bitcast b24 [[X]] to i24
-; LE-NEXT:    [[TMP2:%.*]] = lshr i24 [[TMP1]], 16
-; LE-NEXT:    [[TMP3:%.*]] = trunc i24 [[TMP2]] to i8
-; LE-NEXT:    [[TMP4:%.*]] = bitcast i8 [[TMP3]] to b8
-; LE-NEXT:    ret b8 [[TMP4]]
+; LE-NEXT:    [[TMP1:%.*]] = bitextract b8, b24 [[X]], i32 16
+; LE-NEXT:    ret b8 [[TMP1]]
 ;
 ; BE-LABEL: define b8 @b24_store_to_b8_load(
 ; BE-SAME: ptr [[P:%.*]], b24 [[X:%.*]]) {
 ; BE-NEXT:    store b24 [[X]], ptr [[P]], align 4
 ; BE-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P]], i64 2
-; BE-NEXT:    [[TMP1:%.*]] = bitcast b24 [[X]] to i24
-; BE-NEXT:    [[TMP2:%.*]] = trunc i24 [[TMP1]] to i8
-; BE-NEXT:    [[TMP3:%.*]] = bitcast i8 [[TMP2]] to b8
-; BE-NEXT:    ret b8 [[TMP3]]
+; BE-NEXT:    [[TMP1:%.*]] = bitextract b8, b24 [[X]], i32 0
+; BE-NEXT:    ret b8 [[TMP1]]
 ;
   store b24 %x, ptr %p, align 4
   %q = getelementptr i8, ptr %p, i64 2
@@ -174,22 +144,16 @@ define b8 @b32_load_to_b8_load(ptr %p) {
 ; LE-NEXT:    [[A:%.*]] = load b32, ptr [[P]], align 4
 ; LE-NEXT:    call void @use(b32 [[A]])
 ; LE-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P]], i64 1
-; LE-NEXT:    [[TMP1:%.*]] = bitcast b32 [[A]] to i32
-; LE-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 8
-; LE-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
-; LE-NEXT:    [[TMP4:%.*]] = bitcast i8 [[TMP3]] to b8
-; LE-NEXT:    ret b8 [[TMP4]]
+; LE-NEXT:    [[TMP1:%.*]] = bitextract b8, b32 [[A]], i32 8
+; LE-NEXT:    ret b8 [[TMP1]]
 ;
 ; BE-LABEL: define b8 @b32_load_to_b8_load(
 ; BE-SAME: ptr [[P:%.*]]) {
 ; BE-NEXT:    [[A:%.*]] = load b32, ptr [[P]], align 4
 ; BE-NEXT:    call void @use(b32 [[A]])
 ; BE-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P]], i64 1
-; BE-NEXT:    [[TMP1:%.*]] = bitcast b32 [[A]] to i32
-; BE-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 16
-; BE-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
-; BE-NEXT:    [[TMP4:%.*]] = bitcast i8 [[TMP3]] to b8
-; BE-NEXT:    ret b8 [[TMP4]]
+; BE-NEXT:    [[TMP1:%.*]] = bitextract b8, b32 [[A]], i32 16
+; BE-NEXT:    ret b8 [[TMP1]]
 ;
   %a = load b32, ptr %p, align 4
   call void @use(b32 %a)
@@ -203,21 +167,17 @@ define b8 @v4b8_store_to_b8_load(ptr %p, <4 x b8> %x) {
 ; LE-SAME: ptr [[P:%.*]], <4 x b8> [[X:%.*]]) {
 ; LE-NEXT:    store <4 x b8> [[X]], ptr [[P]], align 4
 ; LE-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P]], i64 1
-; LE-NEXT:    [[TMP1:%.*]] = bitcast <4 x b8> [[X]] to i32
-; LE-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 8
-; LE-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
-; LE-NEXT:    [[TMP4:%.*]] = bitcast i8 [[TMP3]] to b8
-; LE-NEXT:    ret b8 [[TMP4]]
+; LE-NEXT:    [[TMP1:%.*]] = bitcast <4 x b8> [[X]] to b32
+; LE-NEXT:    [[TMP2:%.*]] = bitextract b8, b32 [[TMP1]], i32 8
+; LE-NEXT:    ret b8 [[TMP2]]
 ;
 ; BE-LABEL: define b8 @v4b8_store_to_b8_load(
 ; BE-SAME: ptr [[P:%.*]], <4 x b8> [[X:%.*]]) {
 ; BE-NEXT:    store <4 x b8> [[X]], ptr [[P]], align 4
 ; BE-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P]], i64 1
-; BE-NEXT:    [[TMP1:%.*]] = bitcast <4 x b8> [[X]] to i32
-; BE-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 16
-; BE-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
-; BE-NEXT:    [[TMP4:%.*]] = bitcast i8 [[TMP3]] to b8
-; BE-NEXT:    ret b8 [[TMP4]]
+; BE-NEXT:    [[TMP1:%.*]] = bitcast <4 x b8> [[X]] to b32
+; BE-NEXT:    [[TMP2:%.*]] = bitextract b8, b32 [[TMP1]], i32 16
+; BE-NEXT:    ret b8 [[TMP2]]
 ;
   store <4 x b8> %x, ptr %p, align 4
   %q = getelementptr i8, ptr %p, i64 1
@@ -230,20 +190,17 @@ define b32 @ptr_store_to_b32_load(ptr %p, ptr %x) {
 ; LE-SAME: ptr [[P:%.*]], ptr [[X:%.*]]) {
 ; LE-NEXT:    store ptr [[X]], ptr [[P]], align 8
 ; LE-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P]], i64 4
-; LE-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[X]] to i64
-; LE-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 32
-; LE-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
-; LE-NEXT:    [[TMP4:%.*]] = bitcast i32 [[TMP3]] to b32
-; LE-NEXT:    ret b32 [[TMP4]]
+; LE-NEXT:    [[TMP1:%.*]] = bitcast ptr [[X]] to b64
+; LE-NEXT:    [[TMP2:%.*]] = bitextract b32, b64 [[TMP1]], i32 32
+; LE-NEXT:    ret b32 [[TMP2]]
 ;
 ; BE-LABEL: define b32 @ptr_store_to_b32_load(
 ; BE-SAME: ptr [[P:%.*]], ptr [[X:%.*]]) {
 ; BE-NEXT:    store ptr [[X]], ptr [[P]], align 8
 ; BE-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P]], i64 4
-; BE-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[X]] to i64
-; BE-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
-; BE-NEXT:    [[TMP3:%.*]] = bitcast i32 [[TMP2]] to b32
-; BE-NEXT:    ret b32 [[TMP3]]
+; BE-NEXT:    [[TMP1:%.*]] = bitcast ptr [[X]] to b64
+; BE-NEXT:    [[TMP2:%.*]] = bitextract b32, b64 [[TMP1]], i32 0
+; BE-NEXT:    ret b32 [[TMP2]]
 ;
   store ptr %x, ptr %p, align 8
   %q = getelementptr i8, ptr %p, i64 4
@@ -255,9 +212,8 @@ define b64 @ptr_store_to_b64_load(ptr %p, ptr %x) {
 ; CHECK-LABEL: define b64 @ptr_store_to_b64_load(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[X:%.*]]) {
 ; CHECK-NEXT:    store ptr [[X]], ptr [[P]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[X]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64 [[TMP1]] to b64
-; CHECK-NEXT:    ret b64 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast ptr [[X]] to b64
+; CHECK-NEXT:    ret b64 [[TMP1]]
 ;
   store ptr %x, ptr %p, align 8
   %v = load b64, ptr %p, align 8
