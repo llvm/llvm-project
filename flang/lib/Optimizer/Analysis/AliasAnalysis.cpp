@@ -1135,7 +1135,9 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
   // declared intent is a read, a write, or both. intent(out) is a write for
   // a trivial non-pointer, non-allocatable dummy, and a read and a write
   // otherwise. An argument with no visible intent stays ModAndRef. The
-  // callee is resolved through the cached symbol table.
+  // callee is resolved through the cached symbol table. Intent is a
+  // signature attribute, so a declaration is enough and the callee body is
+  // not inspected.
   mlir::func::FuncOp callee;
   if (std::optional<mlir::SymbolRefAttr> calleeAttr = call.getCallee()) {
     if (const mlir::SymbolTable *symTab = getNearestSymbolTable(call))
@@ -1143,8 +1145,8 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
           symTab->lookup<mlir::func::FuncOp>(calleeAttr->getLeafReference());
   }
   auto args = call.getArgs();
-  const bool intentsAvailable = callee && !callee.isDeclaration() &&
-                                args.size() == callee.getNumArguments();
+  const bool intentsAvailable =
+      callee && args.size() == callee.getNumArguments();
   ModRefResult modRef = ModRefResult::getNoModRef();
   for (auto [idx, arg] : llvm::enumerate(args)) {
     if (!fir::conformsWithPassByRef(arg.getType()) || alias(arg, var).isNo())
