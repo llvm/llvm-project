@@ -1,7 +1,7 @@
 # RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -run-pass=peephole-opt \
 # RUN:   -verify-machineinstrs %s -o - | FileCheck %s
 #
-# optimizeCompareInstr must not convert the RLWINM into a record-form andi.
+# optimizeCompareInstr must not convert the RLWINM into a record-form `andi.`
 # while CR0, set by the earlier ANDI_rec, is still read by the later
 # COPY $cr0gt. Doing so swaps the condition bits of the two flag tests.
 
