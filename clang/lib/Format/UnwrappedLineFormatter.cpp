@@ -136,8 +136,9 @@ private:
       // The AccessModifierOffset may be overridden by IndentAccessModifiers,
       // in which case we take a negative value of the IndentWidth to simulate
       // the upper indent level.
-      return Style.IndentAccessModifiers ? -Style.IndentWidth
-                                         : Style.AccessModifierOffset;
+      return Style.IndentAccessModifiers != FormatStyle::IAMS_Never
+                 ? -Style.IndentWidth
+                 : Style.AccessModifierOffset;
     }
     return 0;
   }

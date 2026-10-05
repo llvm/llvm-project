@@ -5363,6 +5363,8 @@ add_fp_unittest(
     powf_test.cpp
   DEPENDS
     libc.src.math.powf
+    libc.src.__support.math.powf_double_eval
+    libc.src.__support.math.powf_float_eval
     libc.src.__support.FPUtil.fp_bits
 )
 

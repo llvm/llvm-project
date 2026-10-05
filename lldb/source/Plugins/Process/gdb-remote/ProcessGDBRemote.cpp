@@ -3404,6 +3404,27 @@ size_t ProcessGDBRemote::DoWriteMemory(addr_t addr, const void *buf,
   return 0;
 }
 
+bool ProcessGDBRemote::DoCanAllocateMemory() {
+  // Probe the _M packet. Falling back to mmap() only needs its symbol.
+  if (m_gdb_comm.SupportsAllocDeallocMemory() == eLazyBoolCalculate) {
+    addr_t addr = m_gdb_comm.AllocateMemory(8, ePermissionsReadable |
+                                                   ePermissionsWritable |
+                                                   ePermissionsExecutable);
+    if (addr != LLDB_INVALID_ADDRESS)
+      m_gdb_comm.DeallocateMemory(addr);
+  }
+  if (m_gdb_comm.SupportsAllocDeallocMemory() == eLazyBoolYes)
+    return true;
+
+  ModuleFunctionSearchOptions options;
+  options.include_symbols = true;
+  options.include_inlines = false;
+  SymbolContextList sc_list;
+  GetTarget().GetImages().FindFunctions(
+      ConstString("mmap"), eFunctionNameTypeFull, options, sc_list);
+  return !sc_list.IsEmpty();
+}
+
 lldb::addr_t ProcessGDBRemote::DoAllocateMemory(size_t size,
                                                 uint32_t permissions,
                                                 Status &error) {
