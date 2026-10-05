@@ -27,7 +27,7 @@ define void @compress_store(ptr writeonly noalias %dst, ptr readonly %src, i32 %
 ; CHECK-NEXT:      WIDEN ir<%cmp> = icmp slt ir<%load.src>, ir<%c>
 ; CHECK-NEXT:      CLONE ir<%dst.ptr> = getelementptr inbounds ir<%dst>, ir<%idx>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%dst.ptr>, ir<1>
-; CHECK-NEXT:      WIDEN-INTRINSIC vp<[[VP7:%[0-9]+]]> = call llvm.masked.compressstore(ir<%load.src>, vp<[[VP6]]>, ir<%cmp>) (!vplan.execution.frequency 4611686018427387904 (50%, estimated))
+; CHECK-NEXT:      WIDEN-INTRINSIC vp<[[VP7:%[0-9]+]]> = call llvm.masked.compressstore(ir<%load.src>, vp<[[VP6]]>, ir<%cmp>) (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
 ; CHECK-NEXT:      EMIT vp<%handled.lanes> = num-active-lanes ir<%cmp>
 ; CHECK-NEXT:      EMIT vp<%conditional.step> = add ir<%idx>, vp<%handled.lanes>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -101,9 +101,9 @@ define void @expand_load(ptr noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
 ; CHECK-NEXT:      WIDEN ir<%cmp> = icmp slt ir<%load.dst>, ir<%c>
 ; CHECK-NEXT:      CLONE ir<%src.ptr> = getelementptr inbounds ir<%src>, ir<%idx>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%src.ptr>, ir<1>
-; CHECK-NEXT:      WIDEN-INTRINSIC vp<[[VP7:%[0-9]+]]> = call llvm.masked.expandload(vp<[[VP6]]>, ir<%cmp>, ir<poison>) (!vplan.execution.frequency 4611686018427387904 (50%, estimated))
+; CHECK-NEXT:      WIDEN-INTRINSIC vp<[[VP7:%[0-9]+]]> = call llvm.masked.expandload(vp<[[VP6]]>, ir<%cmp>, ir<poison>) (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer i32, ir<%dst.ptr>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, vp<[[VP7]]>, ir<%cmp> (!vplan.execution.frequency 4611686018427387904 (50%, estimated))
+; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, vp<[[VP7]]>, ir<%cmp> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
 ; CHECK-NEXT:      EMIT vp<%handled.lanes> = num-active-lanes ir<%cmp>
 ; CHECK-NEXT:      EMIT vp<%conditional.step> = add ir<%idx>, vp<%handled.lanes>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
