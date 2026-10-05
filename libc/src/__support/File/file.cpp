@@ -76,7 +76,11 @@ FileIOResult File::write_unlocked_impl(const void *data, size_t len) {
     return {0, EBADF};
   }
 
-  prev_op = FileOp::WRITE;
+  if (prev_op != FileOp::WRITE) {
+    pos = 0;
+    read_limit = 0;
+    prev_op = FileOp::WRITE;
+  }
 
   if (bufmode == _IONBF) { // unbuffered.
     size_t ret_val =
@@ -388,6 +392,7 @@ int File::ungetc_unlocked(int c) {
     bufref[pos] = static_cast<unsigned char>(c);
   }
 
+  prev_op = FileOp::READ;
   eof = false; // There is atleast one character that can be read now.
   err = false; // This operation was a success.
   return c;
@@ -434,10 +439,10 @@ ErrorOr<off_t> File::tell_unlocked() {
   if (result.value() < 0)
     return Error(EOVERFLOW);
   const off_t platform_offset = result.value();
-  if (prev_op == FileOp::READ || read_limit > pos)
-    return platform_offset - (read_limit - pos);
   if (prev_op == FileOp::WRITE)
-    return platform_offset + pos;
+    return platform_offset + static_cast<off_t>(pos);
+  if (prev_op == FileOp::READ)
+    return platform_offset - static_cast<off_t>(read_limit - pos);
   return platform_offset;
 }
 
@@ -724,6 +729,7 @@ ErrorOr<wint_t> File::ungetwc_unlocked(wint_t wc) {
     for (size_t i = 0; i < n; ++i)
       buf[pos + i] = static_cast<uint8_t>(mb_buf[i]);
   }
+  prev_op = FileOp::READ;
   eof = false;
   err = false;
   return wc;

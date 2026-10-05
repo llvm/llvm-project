@@ -223,13 +223,9 @@ TEST_F(LlvmLibcFgetposTest, AtEOF) {
 
   ASSERT_THAT(LIBC_NAMESPACE::fseek(file, 0, SEEK_SET), Succeeds(0));
 
+  // Reading past end in one call sets EOF indicator with non-zero read_limit
   char buf[DATA_SIZE + 1];
-  ASSERT_THAT(LIBC_NAMESPACE::fread(buf, 1, DATA_SIZE, file),
-              Succeeds(DATA_SIZE));
-
-  // Reading past end sets EOF indicator
-  char extra;
-  ASSERT_EQ(LIBC_NAMESPACE::fread(&extra, 1, 1, file), size_t(0));
+  ASSERT_EQ(LIBC_NAMESPACE::fread(buf, 1, DATA_SIZE + 1, file), DATA_SIZE);
   ASSERT_NE(LIBC_NAMESPACE::feof(file), 0);
 
   // fgetpos at EOF must succeed, report file size, and preserve EOF indicator
@@ -237,6 +233,15 @@ TEST_F(LlvmLibcFgetposTest, AtEOF) {
   ASSERT_THAT(LIBC_NAMESPACE::fgetpos(file, &pos), Succeeds(0));
   ASSERT_EQ(pos.pos, off_t(DATA_SIZE));
   ASSERT_NE(LIBC_NAMESPACE::feof(file), 0);
+
+  // ISO C allows switching from input to output without an intervening seek
+  // if the input operation encountered end-of-file.
+  constexpr char EXTRA[] = "!";
+  constexpr size_t EXTRA_SIZE = sizeof(EXTRA) - 1;
+  ASSERT_THAT(LIBC_NAMESPACE::fwrite(EXTRA, 1, EXTRA_SIZE, file),
+              Succeeds(EXTRA_SIZE));
+  ASSERT_THAT(LIBC_NAMESPACE::fgetpos(file, &pos), Succeeds(0));
+  ASSERT_EQ(pos.pos, off_t(DATA_SIZE + EXTRA_SIZE));
 }
 
 TEST_F(LlvmLibcFgetposTest, AppendMode) {
