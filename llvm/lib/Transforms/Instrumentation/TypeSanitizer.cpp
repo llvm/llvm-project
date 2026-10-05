@@ -358,8 +358,16 @@ bool TypeSanitizer::generateBaseTypeDescriptor(
       Member = TypeDescriptors[MemberNode];
     }
 
-    uint64_t Offset =
-        mdconst::extract<ConstantInt>(MD->getOperand(i + 1))->getZExtValue();
+    uint64_t Offset;
+    if ((unsigned)i + 1 < MD->getNumOperands()) {
+      Offset =
+          mdconst::extract<ConstantInt>(MD->getOperand(i + 1))->getZExtValue();
+    } else {
+      assert(i == 1 && MD->getNumOperands() == 2 && "Malformed TBAA MD.");
+      // The third operand for a scalar tag is actually optional, its absence
+      // indicating an offset of zero.
+      Offset = 0;
+    }
 
     Members.push_back(std::make_pair(Member, Offset));
   }
@@ -593,7 +601,7 @@ bool TypeSanitizer::sanitizeFunction(Function &F,
     Res = true;
   }
 
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   bool SanitizeFunction = F.hasFnAttribute(Attribute::SanitizeType);
   bool NeedsInstrumentation =
       MemTypeResetInsts.empty() && MemoryAccesses.empty();

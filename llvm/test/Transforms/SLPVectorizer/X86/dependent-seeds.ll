@@ -34,12 +34,11 @@ define double @second_level_seeds(ptr noalias %x, ptr noalias %y, ptr noalias %m
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[Y]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[X]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd fast double [[TMP4]], 1.000000e+00
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <2 x double> [[TMP3]], splat (double 1.000000e+00)
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i64 0
 ; CHECK-NEXT:    store double [[TMP5]], ptr [[M]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
-; CHECK-NEXT:    [[TMP6:%.*]] = fadd fast double [[TMP7]], 1.000000e+00
 ; CHECK-NEXT:    [[L:%.*]] = load double, ptr [[M]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i64 1
 ; CHECK-NEXT:    [[R:%.*]] = fadd double [[TMP6]], [[L]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
