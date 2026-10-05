@@ -6,16 +6,16 @@
 
 # CHECK:      callSites:
 # CHECK-NEXT:   - { bb: 1, offset: 0, fwdArgRegs:
-# CHECK-NEXT:       - { arg: 0, reg: '$esi' } }
-# CHECK-NEXT:   - { bb: 2, offset: 0, fwdArgRegs:
 # CHECK-NEXT:       - { arg: 0, reg: '$edi' } }
+# CHECK-NEXT:   - { bb: 2, offset: 0, fwdArgRegs:
+# CHECK-NEXT:       - { arg: 0, reg: '$esi' } }
 # CHECK:      calledGlobals:
 # CHECK-NEXT:   - bb: 1
 # CHECK-NEXT:     offset: 0
-# CHECK-NEXT:     callee: bar
+# CHECK-NEXT:     callee: foo
 # CHECK:        - bb: 2
 # CHECK-NEXT:     offset: 0
-# CHECK-NEXT:     callee: foo
+# CHECK-NEXT:     callee: bar
 
 --- |
   declare void @foo()
