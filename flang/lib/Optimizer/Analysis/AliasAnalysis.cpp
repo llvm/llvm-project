@@ -1165,7 +1165,9 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
       // A pure write only for a non-pointer, non-allocatable dummy whose
       // element type is trivial. An allocatable is read on entry so it can
       // be deallocated, and finalization of a derived type may read it.
-      mlir::Type ty = callee.getArgument(idx).getType();
+      // Use the function type: a declaration has no entry block, so
+      // getArgument() is not available.
+      mlir::Type ty = callee.getFunctionType().getInput(idx);
       if (fir::isPointerType(ty) || fir::isAllocatableType(ty) ||
           !fir::isa_trivial(fir::getFortranElementType(ty)))
         return ModRefResult::getModAndRef();
