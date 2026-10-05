@@ -11363,7 +11363,7 @@ OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
     // target does not support `atomicrmw` of the size of the struct
     LoadInst *OldVal = Builder.CreateLoad(XElemTy, X.Var, "omp.atomic.read");
     OldVal->setAtomic(AO);
-    const DataLayout &DL = OldVal->getModule()->getDataLayout();
+    const DataLayout &DL = OldVal->getDataLayout();
     unsigned LoadSize = DL.getTypeStoreSize(XElemTy);
     OpenMPIRBuilder::AtomicInfo atomicInfo(
         &Builder, XElemTy, LoadSize * 8, LoadSize * 8, OldVal->getAlign(),
@@ -11408,7 +11408,7 @@ OpenMPIRBuilder::createAtomicWrite(const LocationDescription &Loc,
     XSt->setAtomic(AO);
   } else if (XElemTy->isStructTy()) {
     LoadInst *OldVal = Builder.CreateLoad(XElemTy, X.Var, "omp.atomic.read");
-    const DataLayout &DL = OldVal->getModule()->getDataLayout();
+    const DataLayout &DL = OldVal->getDataLayout();
     unsigned LoadSize = DL.getTypeStoreSize(XElemTy);
     OpenMPIRBuilder::AtomicInfo atomicInfo(
         &Builder, XElemTy, LoadSize * 8, LoadSize * 8, OldVal->getAlign(),
@@ -11566,7 +11566,7 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
         Builder.CreateLoad(XElemTy, X, X->getName() + ".atomic.load");
     AtomicOrdering LoadAO = TransformReleaseAcquireRelease(AO);
     OldVal->setAtomic(LoadAO);
-    const DataLayout &LoadDL = OldVal->getModule()->getDataLayout();
+    const DataLayout &LoadDL = OldVal->getDataLayout();
     unsigned LoadSize = LoadDL.getTypeStoreSize(XElemTy);
 
     OpenMPIRBuilder::AtomicInfo atomicInfo(

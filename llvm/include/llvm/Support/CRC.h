@@ -15,6 +15,7 @@
 
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
+#include <cassert>
 
 namespace llvm {
 template <typename T> class ArrayRef;
@@ -33,6 +34,9 @@ LLVM_ABI uint32_t crc32(uint32_t CRC, ArrayRef<uint8_t> Data);
 constexpr inline uint32_t calculateReflectedCRC32(uint32_t Crc, uint64_t Data,
                                                   unsigned DataBytes,
                                                   uint32_t Poly) {
+  assert(
+      (DataBytes == 1 || DataBytes == 2 || DataBytes == 4 || DataBytes == 8) &&
+      "Data Bytes out of range.");
   uint32_t Result = Crc;
   // Process each byte
   for (unsigned I = 0; I != DataBytes; ++I) {
