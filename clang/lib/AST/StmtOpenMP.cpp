@@ -197,8 +197,7 @@ bool OMPLoopBasedDirective::doForAllLoops(
       // statements reverse injects into the body of the loop it transforms;
       // compose only when the reversed loop is the innermost one.
       if (RelaxNestForPeeledTransformation &&
-          isa<OMPReverseDirective>(Dir->getDirective()) &&
-          Cnt + 1 < NumLoops)
+          isa<OMPReverseDirective>(Dir->getDirective()) && Cnt + 1 < NumLoops)
         break;
       OnTransformationCallback(Dir);
 
