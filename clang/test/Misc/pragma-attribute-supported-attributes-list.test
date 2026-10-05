@@ -15,6 +15,8 @@
 // CHECK-NEXT: AlignValue (SubjectMatchRule_variable, SubjectMatchRule_type_alias)
 // CHECK-NEXT: AlwaysDestroy (SubjectMatchRule_variable)
 // CHECK-NEXT: AlwaysInline (SubjectMatchRule_function)
+// CHECK-NEXT: AnalyzeAsClass (SubjectMatchRule_record)
+// CHECK-NEXT: AnalyzeAsMethod (SubjectMatchRule_function_is_member)
 // CHECK-NEXT: Annotate ()
 // CHECK-NEXT: AnyX86NoCfCheck (SubjectMatchRule_hasType_functionType)
 // CHECK-NEXT: ArcWeakrefUnavailable (SubjectMatchRule_objc_interface)
