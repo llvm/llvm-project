@@ -1213,9 +1213,7 @@ define i16 @test_vector_reduce_add_v2i16(<2 x i16> %v) {
 ; GFX11-SDAG-TRUE16-LABEL: test_vector_reduce_add_v2i16:
 ; GFX11-SDAG-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, v1.l
+; GFX11-SDAG-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-FAKE16-LABEL: test_vector_reduce_add_v2i16:
@@ -1249,9 +1247,7 @@ define i16 @test_vector_reduce_add_v2i16(<2 x i16> %v) {
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-SDAG-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, v1.l
+; GFX12-SDAG-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
 ; GFX12-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-FAKE16-LABEL: test_vector_reduce_add_v2i16:
@@ -1323,7 +1319,6 @@ define i16 @test_vector_reduce_add_v3i16(<3 x i16> %v) {
 ; GFX9-SDAG:       ; %bb.0: ; %entry
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_pk_add_u16 v1, v0, v1
-; GFX9-SDAG-NEXT:    s_nop 0
 ; GFX9-SDAG-NEXT:    v_add_u16_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1353,10 +1348,9 @@ define i16 @test_vector_reduce_add_v3i16(<3 x i16> %v) {
 ; GFX11-SDAG-TRUE16-LABEL: test_vector_reduce_add_v3i16:
 ; GFX11-SDAG-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX11-SDAG-TRUE16-NEXT:    v_pk_add_u16 v0, v0, v1
+; GFX11-SDAG-TRUE16-NEXT:    v_pk_add_u16 v1, v0, v1
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, v2.l
+; GFX11-SDAG-TRUE16-NEXT:    v_add_nc_u16 v0.l, v1.l, v0.h
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-FAKE16-LABEL: test_vector_reduce_add_v3i16:
@@ -1392,10 +1386,9 @@ define i16 @test_vector_reduce_add_v3i16(<3 x i16> %v) {
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX12-SDAG-TRUE16-NEXT:    v_pk_add_u16 v0, v0, v1
+; GFX12-SDAG-TRUE16-NEXT:    v_pk_add_u16 v1, v0, v1
 ; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-SDAG-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, v2.l
+; GFX12-SDAG-TRUE16-NEXT:    v_add_nc_u16 v0.l, v1.l, v0.h
 ; GFX12-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-FAKE16-LABEL: test_vector_reduce_add_v3i16:
@@ -1489,7 +1482,6 @@ define i16 @test_vector_reduce_add_v4i16(<4 x i16> %v) {
 ; GFX9-SDAG:       ; %bb.0: ; %entry
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_pk_add_u16 v0, v0, v1
-; GFX9-SDAG-NEXT:    s_nop 0
 ; GFX9-SDAG-NEXT:    v_add_u16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1497,7 +1489,6 @@ define i16 @test_vector_reduce_add_v4i16(<4 x i16> %v) {
 ; GFX9-GISEL:       ; %bb.0: ; %entry
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_pk_add_u16 v0, v0, v1
-; GFX9-GISEL-NEXT:    s_nop 0
 ; GFX9-GISEL-NEXT:    v_alignbit_b32 v1, s0, v0, 16
 ; GFX9-GISEL-NEXT:    v_pk_add_u16 v0, v0, v1
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -1522,9 +1513,8 @@ define i16 @test_vector_reduce_add_v4i16(<4 x i16> %v) {
 ; GFX11-SDAG-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_pk_add_u16 v0, v0, v1
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-SDAG-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, v1.l
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-FAKE16-LABEL: test_vector_reduce_add_v4i16:
@@ -1562,9 +1552,8 @@ define i16 @test_vector_reduce_add_v4i16(<4 x i16> %v) {
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    v_pk_add_u16 v0, v0, v1
-; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX12-SDAG-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, v1.l
+; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
 ; GFX12-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-FAKE16-LABEL: test_vector_reduce_add_v4i16:
@@ -1680,9 +1669,7 @@ define i16 @test_vector_reduce_add_v8i16(<8 x i16> %v) {
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_pk_add_u16 v1, v1, v3
 ; GFX9-SDAG-NEXT:    v_pk_add_u16 v0, v0, v2
-; GFX9-SDAG-NEXT:    s_nop 0
 ; GFX9-SDAG-NEXT:    v_pk_add_u16 v0, v0, v1
-; GFX9-SDAG-NEXT:    s_nop 0
 ; GFX9-SDAG-NEXT:    v_add_u16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1691,9 +1678,7 @@ define i16 @test_vector_reduce_add_v8i16(<8 x i16> %v) {
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_pk_add_u16 v0, v0, v2
 ; GFX9-GISEL-NEXT:    v_pk_add_u16 v1, v1, v3
-; GFX9-GISEL-NEXT:    s_nop 0
 ; GFX9-GISEL-NEXT:    v_pk_add_u16 v0, v0, v1
-; GFX9-GISEL-NEXT:    s_nop 0
 ; GFX9-GISEL-NEXT:    v_alignbit_b32 v1, s0, v0, 16
 ; GFX9-GISEL-NEXT:    v_pk_add_u16 v0, v0, v1
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -1725,9 +1710,7 @@ define i16 @test_vector_reduce_add_v8i16(<8 x i16> %v) {
 ; GFX11-SDAG-TRUE16-NEXT:    v_pk_add_u16 v0, v0, v2
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_pk_add_u16 v0, v0, v1
-; GFX11-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, v1.l
+; GFX11-SDAG-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-FAKE16-LABEL: test_vector_reduce_add_v8i16:
@@ -1777,9 +1760,7 @@ define i16 @test_vector_reduce_add_v8i16(<8 x i16> %v) {
 ; GFX12-SDAG-TRUE16-NEXT:    v_pk_add_u16 v0, v0, v2
 ; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-SDAG-TRUE16-NEXT:    v_pk_add_u16 v0, v0, v1
-; GFX12-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-SDAG-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, v1.l
+; GFX12-SDAG-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
 ; GFX12-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-FAKE16-LABEL: test_vector_reduce_add_v8i16:
@@ -1946,11 +1927,9 @@ define i16 @test_vector_reduce_add_v16i16(<16 x i16> %v) {
 ; GFX9-SDAG-NEXT:    v_pk_add_u16 v0, v0, v4
 ; GFX9-SDAG-NEXT:    v_pk_add_u16 v3, v3, v7
 ; GFX9-SDAG-NEXT:    v_pk_add_u16 v1, v1, v5
-; GFX9-SDAG-NEXT:    v_pk_add_u16 v0, v0, v2
 ; GFX9-SDAG-NEXT:    v_pk_add_u16 v1, v1, v3
-; GFX9-SDAG-NEXT:    s_nop 0
+; GFX9-SDAG-NEXT:    v_pk_add_u16 v0, v0, v2
 ; GFX9-SDAG-NEXT:    v_pk_add_u16 v0, v0, v1
-; GFX9-SDAG-NEXT:    s_nop 0
 ; GFX9-SDAG-NEXT:    v_add_u16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1963,9 +1942,7 @@ define i16 @test_vector_reduce_add_v16i16(<16 x i16> %v) {
 ; GFX9-GISEL-NEXT:    v_pk_add_u16 v3, v3, v7
 ; GFX9-GISEL-NEXT:    v_pk_add_u16 v0, v0, v2
 ; GFX9-GISEL-NEXT:    v_pk_add_u16 v1, v1, v3
-; GFX9-GISEL-NEXT:    s_nop 0
 ; GFX9-GISEL-NEXT:    v_pk_add_u16 v0, v0, v1
-; GFX9-GISEL-NEXT:    s_nop 0
 ; GFX9-GISEL-NEXT:    v_alignbit_b32 v1, s0, v0, 16
 ; GFX9-GISEL-NEXT:    v_pk_add_u16 v0, v0, v1
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -2010,9 +1987,7 @@ define i16 @test_vector_reduce_add_v16i16(<16 x i16> %v) {
 ; GFX11-SDAG-TRUE16-NEXT:    v_pk_add_u16 v0, v0, v2
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_pk_add_u16 v0, v0, v1
-; GFX11-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, v1.l
+; GFX11-SDAG-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-FAKE16-LABEL: test_vector_reduce_add_v16i16:
@@ -2082,9 +2057,7 @@ define i16 @test_vector_reduce_add_v16i16(<16 x i16> %v) {
 ; GFX12-SDAG-TRUE16-NEXT:    v_pk_add_u16 v0, v0, v2
 ; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-SDAG-TRUE16-NEXT:    v_pk_add_u16 v0, v0, v1
-; GFX12-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-SDAG-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, v1.l
+; GFX12-SDAG-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
 ; GFX12-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-FAKE16-LABEL: test_vector_reduce_add_v16i16:

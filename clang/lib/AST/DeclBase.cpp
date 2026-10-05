@@ -2096,6 +2096,14 @@ DeclContext *DeclContext::getEnclosingNonExpansionStatementContext() {
   return DC;
 }
 
+FunctionDecl *DeclContext::getEnclosingFunction() {
+  return dyn_cast<FunctionDecl>(getEnclosingNonExpansionStatementContext());
+}
+
+FunctionDecl *DeclContext::castEnclosingFunction() {
+  return cast<FunctionDecl>(getEnclosingNonExpansionStatementContext());
+}
+
 bool DeclContext::InEnclosingNamespaceSetOf(const DeclContext *O) const {
   // For non-file contexts, this is equivalent to Equals.
   if (!isFileContext())

@@ -52,6 +52,11 @@ public:
 
   const HexagonRegisterInfo &getRegisterInfo() const { return RegInfo; }
 
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &Hexagon::IntRegsRegClass;
+  }
+
   bool isMIBefore(const MachineInstr *A, const MachineInstr *B) const;
   bool hasQFPInstrs(const MachineFunction &MF) const;
 
@@ -234,6 +239,7 @@ public:
 
   /// Return true for post-incremented instructions.
   bool isPostIncrement(const MachineInstr &MI) const override;
+  bool isPostIncWithImmOffset(const MachineInstr &MI) const;
 
   /// Convert the instruction into a predicated instruction.
   /// It returns true if the operation was successful.

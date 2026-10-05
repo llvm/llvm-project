@@ -203,14 +203,14 @@ static cl::opt<unsigned> SwpMaxNumStores(
     cl::init(200));
 
 // A command line option to enable the CopyToPhi DAG mutation.
-cl::opt<bool>
-    llvm::SwpEnableCopyToPhi("pipeliner-enable-copytophi", cl::ReallyHidden,
-                             cl::init(true),
-                             cl::desc("Enable CopyToPhi DAG Mutation"));
+static cl::opt<bool>
+    SwpEnableCopyToPhi("pipeliner-enable-copytophi", cl::ReallyHidden,
+                       cl::init(true),
+                       cl::desc("Enable CopyToPhi DAG Mutation"));
 
 /// A command line argument to force pipeliner to use specified issue
 /// width.
-cl::opt<int> llvm::SwpForceIssueWidth(
+static cl::opt<int> SwpForceIssueWidth(
     "pipeliner-force-issue-width",
     cl::desc("Force pipeliner to use specified issue width."), cl::Hidden,
     cl::init(-1));
@@ -865,6 +865,23 @@ void SwingSchedulerDAG::setMAX_II() {
     MAX_II = II_setByPragma;
   else
     MAX_II = MII + SwpIISearchRange;
+}
+
+SwingSchedulerDAG::SwingSchedulerDAG(MachineFunction &MF,
+                                     const MachineLoopInfo *MLI,
+                                     MachineOptimizationRemarkEmitter *ORE,
+                                     MachineLoop &L, LiveIntervals &lis,
+                                     const RegisterClassInfo &rci, unsigned II,
+                                     TargetInstrInfo::PipelinerLoopInfo *PLI,
+                                     AliasAnalysis *AA)
+    : ScheduleDAGInstrs(MF, MLI, false), ORE(ORE), Loop(L), LIS(lis),
+      RegClassInfo(rci), II_setByPragma(II), LoopPipelinerInfo(PLI),
+      Topo(SUnits, &ExitSU), AA(AA), BAA(*AA) {
+  initPolicy();
+  MF.getSubtarget().getSMSMutations(Mutations);
+  if (SwpEnableCopyToPhi)
+    Mutations.push_back(std::make_unique<CopyToPhiMutation>());
+  BAA.enableCrossIterationMode();
 }
 
 /// We override the schedule function in ScheduleDAGInstrs to implement the
@@ -1702,7 +1719,7 @@ class HighRegisterPressureDetector {
 
   DenseMap<MachineInstr *, RegisterOperands> ROMap;
 
-  using Instr2LastUsesTy = DenseMap<MachineInstr *, SmallDenseSet<Register, 4>>;
+  using Instr2LastUsesTy = DenseMap<MachineInstr *, SmallSet<VirtRegOrUnit, 4>>;
 
 public:
   using OrderedInstsTy = std::vector<MachineInstr *>;
@@ -1722,12 +1739,8 @@ private:
     }
   }
 
-  void dumpPSet(Register Reg) const {
-    dbgs() << "Reg=" << printReg(Reg, TRI, 0, &MRI) << " PSet=";
-    // FIXME: The static_cast is a bug compensating bugs in the callers.
-    VirtRegOrUnit VRegOrUnit =
-        Reg.isVirtual() ? VirtRegOrUnit(Reg)
-                        : VirtRegOrUnit(static_cast<MCRegUnit>(Reg.id()));
+  void dumpPSet(VirtRegOrUnit VRegOrUnit) const {
+    dbgs() << "Reg=" << printVRegOrUnit(VRegOrUnit, TRI) << " PSet=";
     for (auto PSetIter = MRI.getPressureSets(VRegOrUnit); PSetIter.isValid();
          ++PSetIter) {
       dbgs() << *PSetIter << ' ';
@@ -1736,11 +1749,7 @@ private:
   }
 
   void increaseRegisterPressure(std::vector<unsigned> &Pressure,
-                                Register Reg) const {
-    // FIXME: The static_cast is a bug compensating bugs in the callers.
-    VirtRegOrUnit VRegOrUnit =
-        Reg.isVirtual() ? VirtRegOrUnit(Reg)
-                        : VirtRegOrUnit(static_cast<MCRegUnit>(Reg.id()));
+                                VirtRegOrUnit VRegOrUnit) const {
     auto PSetIter = MRI.getPressureSets(VRegOrUnit);
     unsigned Weight = PSetIter.getWeight();
     for (; PSetIter.isValid(); ++PSetIter)
@@ -1748,8 +1757,8 @@ private:
   }
 
   void decreaseRegisterPressure(std::vector<unsigned> &Pressure,
-                                Register Reg) const {
-    auto PSetIter = MRI.getPressureSets(VirtRegOrUnit(Reg));
+                                VirtRegOrUnit VRegOrUnit) const {
+    auto PSetIter = MRI.getPressureSets(VRegOrUnit);
     unsigned Weight = PSetIter.getWeight();
     for (; PSetIter.isValid(); ++PSetIter) {
       auto &P = Pressure[*PSetIter];
@@ -1759,13 +1768,15 @@ private:
     }
   }
 
-  // Return true if Reg is reserved one, for example, stack pointer
-  bool isReservedRegister(Register Reg) const {
-    return Reg.isPhysical() && MRI.isReserved(Reg.asMCReg());
+  /// Return true if \p VRegOrUnit is reserved one, for example, stack pointer
+  bool isReservedRegUnit(VirtRegOrUnit VRegOrUnit) const {
+    return !VRegOrUnit.isVirtualReg() &&
+           MRI.isReservedRegUnit(VRegOrUnit.asMCRegUnit());
   }
 
-  bool isDefinedInThisLoop(Register Reg) const {
-    return Reg.isVirtual() && MRI.getDefBlock(Reg) == OrigMBB;
+  bool isDefinedInThisLoop(VirtRegOrUnit VRegOrUnit) const {
+    return VRegOrUnit.isVirtualReg() &&
+           MRI.getDefBlock(VRegOrUnit.asVirtualReg()) == OrigMBB;
   }
 
   // Search for live-in variables. They are factored into the register pressure
@@ -1777,21 +1788,18 @@ private:
   //     a[i] += b[i] + c;
   // \endcode
   void computeLiveIn() {
-    DenseSet<Register> Used;
+    SmallSet<VirtRegOrUnit, 8> Used;
     for (auto &MI : *OrigMBB) {
       if (MI.isDebugInstr())
         continue;
       for (auto &Use : ROMap[&MI].Uses) {
-        // FIXME: The static_cast is a bug.
-        Register Reg =
-            Use.VRegOrUnit.isVirtualReg()
-                ? Use.VRegOrUnit.asVirtualReg()
-                : Register(static_cast<unsigned>(Use.VRegOrUnit.asMCRegUnit()));
+        VirtRegOrUnit Reg = Use.VRegOrUnit;
         // Ignore the variable that appears only on one side of phi instruction
         // because it's used only at the first iteration.
-        if (MI.isPHI() && Reg != getLoopPhiReg(MI, OrigMBB))
+        if (MI.isPHI() && Reg.isVirtualReg() &&
+            Reg.asVirtualReg() != getLoopPhiReg(MI, OrigMBB))
           continue;
-        if (isReservedRegister(Reg))
+        if (isReservedRegUnit(Reg))
           continue;
         if (isDefinedInThisLoop(Reg))
           continue;
@@ -1826,24 +1834,18 @@ private:
     // Following virtual register will be ignored
     //   - live-in one
     //   - defined but not used in the loop (potentially live-out)
-    DenseSet<Register> TargetRegs;
-    const auto UpdateTargetRegs = [this, &TargetRegs](Register Reg) {
+    SmallSet<VirtRegOrUnit, 8> TargetRegs;
+    const auto UpdateTargetRegs = [this, &TargetRegs](VirtRegOrUnit Reg) {
       if (isDefinedInThisLoop(Reg))
         TargetRegs.insert(Reg);
     };
     for (MachineInstr *MI : OrderedInsts) {
       if (MI->isPHI()) {
         Register Reg = getLoopPhiReg(*MI, OrigMBB);
-        UpdateTargetRegs(Reg);
+        UpdateTargetRegs(VirtRegOrUnit(Reg));
       } else {
-        for (auto &Use : ROMap.find(MI)->getSecond().Uses) {
-          // FIXME: The static_cast is a bug.
-          Register Reg = Use.VRegOrUnit.isVirtualReg()
-                             ? Use.VRegOrUnit.asVirtualReg()
-                             : Register(static_cast<unsigned>(
-                                   Use.VRegOrUnit.asMCRegUnit()));
-          UpdateTargetRegs(Reg);
-        }
+        for (auto &Use : ROMap.find(MI)->getSecond().Uses)
+          UpdateTargetRegs(Use.VRegOrUnit);
       }
     }
 
@@ -1851,14 +1853,10 @@ private:
       return Stages[MI] + MI->isPHI();
     };
 
-    DenseMap<Register, MachineInstr *> LastUseMI;
+    std::map<VirtRegOrUnit, MachineInstr *> LastUseMI;
     for (MachineInstr *MI : llvm::reverse(OrderedInsts)) {
       for (auto &Use : ROMap.find(MI)->getSecond().Uses) {
-        // FIXME: The static_cast is a bug.
-        Register Reg =
-            Use.VRegOrUnit.isVirtualReg()
-                ? Use.VRegOrUnit.asVirtualReg()
-                : Register(static_cast<unsigned>(Use.VRegOrUnit.asMCRegUnit()));
+        VirtRegOrUnit Reg = Use.VRegOrUnit;
         if (!TargetRegs.contains(Reg))
           continue;
         auto [Ite, Inserted] = LastUseMI.try_emplace(Reg, MI);
@@ -1893,7 +1891,7 @@ private:
   computeMaxSetPressure(const OrderedInstsTy &OrderedInsts,
                         Instr2StageTy &Stages,
                         const unsigned StageCount) const {
-    using RegSetTy = SmallDenseSet<Register, 16>;
+    using RegSetTy = SmallSet<VirtRegOrUnit, 16>;
 
     // Indexed by #Iter. To treat "local" variables of each stage separately, we
     // manage the liveness of the registers independently by iterations.
@@ -1912,34 +1910,29 @@ private:
     });
 
     const auto InsertReg = [this, &CurSetPressure](RegSetTy &RegSet,
-                                                   VirtRegOrUnit VRegOrUnit) {
-      // FIXME: The static_cast is a bug.
-      Register Reg =
-          VRegOrUnit.isVirtualReg()
-              ? VRegOrUnit.asVirtualReg()
-              : Register(static_cast<unsigned>(VRegOrUnit.asMCRegUnit()));
-      if (!Reg.isValid() || isReservedRegister(Reg))
+                                                   VirtRegOrUnit Reg) {
+      if (isReservedRegUnit(Reg))
         return;
 
       bool Inserted = RegSet.insert(Reg).second;
       if (!Inserted)
         return;
 
-      LLVM_DEBUG(dbgs() << "insert " << printReg(Reg, TRI, 0, &MRI) << "\n");
+      LLVM_DEBUG(dbgs() << "insert " << printVRegOrUnit(Reg, TRI) << "\n");
       increaseRegisterPressure(CurSetPressure, Reg);
       LLVM_DEBUG(dumpPSet(Reg));
     };
 
     const auto EraseReg = [this, &CurSetPressure](RegSetTy &RegSet,
-                                                  Register Reg) {
-      if (!Reg.isValid() || isReservedRegister(Reg))
+                                                  VirtRegOrUnit Reg) {
+      if (isReservedRegUnit(Reg))
         return;
 
       // live-in register
       if (!RegSet.contains(Reg))
         return;
 
-      LLVM_DEBUG(dbgs() << "erase " << printReg(Reg, TRI, 0, &MRI) << "\n");
+      LLVM_DEBUG(dbgs() << "erase " << printVRegOrUnit(Reg, TRI) << "\n");
       RegSet.erase(Reg);
       decreaseRegisterPressure(CurSetPressure, Reg);
       LLVM_DEBUG(dumpPSet(Reg));
@@ -2537,7 +2530,7 @@ void SwingSchedulerDAG::registerPressureFilter(NodeSetType &NodeSets) {
                                              RecRegPressure.MaxSetPressure);
       if (RPDelta.Excess.isValid()) {
         LLVM_DEBUG(
-            dbgs() << "Excess register pressure: SU(" << SU->NodeNum << ") "
+            dbgs() << "Excess register pressure: " << *SU << " "
                    << TRI->getRegPressureSetName(RPDelta.Excess.getPSet())
                    << ":" << RPDelta.Excess.getUnitInc() << "\n");
         NS.setExceedPressure(SU);
@@ -3705,9 +3698,9 @@ bool SMSchedule::normalizeNonPipelinedInstructions(
       auto &OldS = getInstructions(OldCycle);
       llvm::erase(OldS, &SU);
       getInstructions(NewCycle).emplace_back(&SU);
-      LLVM_DEBUG(dbgs() << "SU(" << SU.NodeNum
-                        << ") is not pipelined; moving from cycle " << OldCycle
-                        << " to " << NewCycle << " Instr:" << *SU.getInstr());
+      LLVM_DEBUG(dbgs() << SU << " is not pipelined; moving from cycle "
+                        << OldCycle << " to " << NewCycle
+                        << " Instr:" << *SU.getInstr());
     }
 
     // We traverse the SUs in the order of the original basic block. Computing
@@ -3975,7 +3968,7 @@ void NodeSet::print(raw_ostream &os) const {
   os << "Num nodes " << size() << " rec " << RecMII << " mov " << MaxMOV
      << " depth " << MaxDepth << " col " << Colocate << "\n";
   for (const auto &I : Nodes)
-    os << "   SU(" << I->NodeNum << ") " << *(I->getInstr());
+    os << "   " << *I << " " << *(I->getInstr());
   os << "\n";
 }
 
@@ -4020,6 +4013,20 @@ void ResourceManager::dumpMRT() const {
   });
 }
 #endif
+
+ResourceManager::ResourceManager(const TargetSubtargetInfo *ST,
+                                 ScheduleDAGInstrs *DAG)
+    : STI(ST), SM(ST->getSchedModel()), ST(ST), TII(ST->getInstrInfo()),
+      DAG(DAG), UseDFA(ST->useDFAforSMS()),
+      ProcResourceMasks(SM.getNumProcResourceKinds(), 0),
+      IssueWidth(SM.IssueWidth) {
+  initProcResourceVectors(SM, ProcResourceMasks);
+  if (IssueWidth <= 0)
+    // If IssueWidth is not specified, set a sufficiently large value
+    IssueWidth = 100;
+  if (SwpForceIssueWidth > 0)
+    IssueWidth = SwpForceIssueWidth;
+}
 
 void ResourceManager::initProcResourceVectors(
     const MCSchedModel &SM, SmallVectorImpl<uint64_t> &Masks) {
@@ -4504,9 +4511,10 @@ void LoopCarriedEdges::dump(SUnit *SU, const TargetRegisterInfo *TRI,
     return;
 
   const auto DumpSU = [](const SUnit *SU) {
-    std::ostringstream OSS;
-    OSS << "SU(" << SU->NodeNum << ")";
-    return OSS.str();
+    std::string S;
+    raw_string_ostream OS(S);
+    OS << *SU;
+    return S;
   };
 
   dbgs() << "  Loop carried edges from " << DumpSU(SU) << "\n"

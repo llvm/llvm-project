@@ -461,84 +461,81 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[244:247], s[0:1] offset:2016
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[248:251], s[0:1] offset:2000
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    global_store_dwordx4 v0, v[252:255], s[0:1] offset:1984
 ; CHECK-NEXT:    v_accvgpr_read_b32 v243, a3
+; CHECK-NEXT:    v_mov_b32_e32 v248, 0
 ; CHECK-NEXT:    v_accvgpr_read_b32 v242, a2
 ; CHECK-NEXT:    v_accvgpr_read_b32 v241, a1
 ; CHECK-NEXT:    v_accvgpr_read_b32 v240, a0
-; CHECK-NEXT:    global_store_dwordx4 v0, v[252:255], s[0:1] offset:1984
+; CHECK-NEXT:    global_store_dwordx4 v248, v[236:239], s[0:1] offset:1968
 ; CHECK-NEXT:    .loc 1 20 1 ; test:20:1
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[244:247], a[4:7], a[8:11], v[240:243]
-; CHECK-NEXT:    s_nop 7
-; CHECK-NEXT:    v_mov_b32_e32 v245, 0
-; CHECK-NEXT:    global_store_dwordx4 v245, v[236:239], s[0:1] offset:1968
 ; CHECK-NEXT:    .loc 1 30 1 ; test:30:1
-; CHECK-NEXT:    s_nop 1
 ; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[236:239], a[8:11], a[4:7], v[240:243]
 ; CHECK-NEXT:    s_nop 7
 ; CHECK-NEXT:    v_add_f32_e32 v238, 1.0, v244
 ; CHECK-NEXT:    v_add_f32_e32 v239, 2.0, v236
-; CHECK-NEXT:    global_store_dwordx2 v245, v[238:239], s[0:1]
-; CHECK-NEXT:    global_store_dwordx4 v245, v[232:235], s[0:1] offset:1952
-; CHECK-NEXT:    global_store_dwordx4 v245, v[228:231], s[0:1] offset:1936
-; CHECK-NEXT:    global_store_dwordx4 v245, v[224:227], s[0:1] offset:1920
-; CHECK-NEXT:    global_store_dwordx4 v245, v[220:223], s[0:1] offset:368
-; CHECK-NEXT:    global_store_dwordx4 v245, v[216:219], s[0:1] offset:352
-; CHECK-NEXT:    global_store_dwordx4 v245, v[212:215], s[0:1] offset:336
-; CHECK-NEXT:    global_store_dwordx4 v245, v[208:211], s[0:1] offset:320
-; CHECK-NEXT:    global_store_dwordx4 v245, v[204:207], s[0:1] offset:304
-; CHECK-NEXT:    global_store_dwordx4 v245, v[200:203], s[0:1] offset:288
-; CHECK-NEXT:    global_store_dwordx4 v245, v[196:199], s[0:1] offset:272
-; CHECK-NEXT:    global_store_dwordx4 v245, v[192:195], s[0:1] offset:256
-; CHECK-NEXT:    global_store_dwordx4 v245, v[188:191], s[0:1] offset:496
-; CHECK-NEXT:    global_store_dwordx4 v245, v[184:187], s[0:1] offset:480
-; CHECK-NEXT:    global_store_dwordx4 v245, v[180:183], s[0:1] offset:464
-; CHECK-NEXT:    global_store_dwordx4 v245, v[176:179], s[0:1] offset:448
-; CHECK-NEXT:    global_store_dwordx4 v245, v[172:175], s[0:1] offset:432
-; CHECK-NEXT:    global_store_dwordx4 v245, v[168:171], s[0:1] offset:416
-; CHECK-NEXT:    global_store_dwordx4 v245, v[164:167], s[0:1] offset:400
-; CHECK-NEXT:    global_store_dwordx4 v245, v[160:163], s[0:1] offset:384
-; CHECK-NEXT:    global_store_dwordx4 v245, v[156:159], s[0:1] offset:624
-; CHECK-NEXT:    global_store_dwordx4 v245, v[152:155], s[0:1] offset:608
-; CHECK-NEXT:    global_store_dwordx4 v245, v[148:151], s[0:1] offset:592
-; CHECK-NEXT:    global_store_dwordx4 v245, v[144:147], s[0:1] offset:576
-; CHECK-NEXT:    global_store_dwordx4 v245, v[140:143], s[0:1] offset:560
-; CHECK-NEXT:    global_store_dwordx4 v245, v[136:139], s[0:1] offset:544
-; CHECK-NEXT:    global_store_dwordx4 v245, v[132:135], s[0:1] offset:528
-; CHECK-NEXT:    global_store_dwordx4 v245, v[128:131], s[0:1] offset:512
-; CHECK-NEXT:    global_store_dwordx4 v245, v[124:127], s[0:1] offset:752
-; CHECK-NEXT:    global_store_dwordx4 v245, v[120:123], s[0:1] offset:736
-; CHECK-NEXT:    global_store_dwordx4 v245, v[116:119], s[0:1] offset:720
-; CHECK-NEXT:    global_store_dwordx4 v245, v[112:115], s[0:1] offset:704
-; CHECK-NEXT:    global_store_dwordx4 v245, v[108:111], s[0:1] offset:688
-; CHECK-NEXT:    global_store_dwordx4 v245, v[104:107], s[0:1] offset:672
-; CHECK-NEXT:    global_store_dwordx4 v245, v[100:103], s[0:1] offset:656
-; CHECK-NEXT:    global_store_dwordx4 v245, v[96:99], s[0:1] offset:640
-; CHECK-NEXT:    global_store_dwordx4 v245, v[92:95], s[0:1] offset:880
-; CHECK-NEXT:    global_store_dwordx4 v245, v[88:91], s[0:1] offset:864
-; CHECK-NEXT:    global_store_dwordx4 v245, v[84:87], s[0:1] offset:848
-; CHECK-NEXT:    global_store_dwordx4 v245, v[80:83], s[0:1] offset:832
-; CHECK-NEXT:    global_store_dwordx4 v245, v[76:79], s[0:1] offset:816
-; CHECK-NEXT:    global_store_dwordx4 v245, v[72:75], s[0:1] offset:800
-; CHECK-NEXT:    global_store_dwordx4 v245, v[68:71], s[0:1] offset:784
-; CHECK-NEXT:    global_store_dwordx4 v245, v[64:67], s[0:1] offset:768
-; CHECK-NEXT:    global_store_dwordx4 v245, v[60:63], s[0:1] offset:1008
-; CHECK-NEXT:    global_store_dwordx4 v245, v[56:59], s[0:1] offset:992
-; CHECK-NEXT:    global_store_dwordx4 v245, v[52:55], s[0:1] offset:976
-; CHECK-NEXT:    global_store_dwordx4 v245, v[48:51], s[0:1] offset:960
-; CHECK-NEXT:    global_store_dwordx4 v245, v[44:47], s[0:1] offset:944
-; CHECK-NEXT:    global_store_dwordx4 v245, v[40:43], s[0:1] offset:928
-; CHECK-NEXT:    global_store_dwordx4 v245, v[36:39], s[0:1] offset:912
-; CHECK-NEXT:    global_store_dwordx4 v245, v[32:35], s[0:1] offset:896
-; CHECK-NEXT:    global_store_dwordx4 v245, v[28:31], s[0:1] offset:1136
-; CHECK-NEXT:    global_store_dwordx4 v245, v[24:27], s[0:1] offset:1120
-; CHECK-NEXT:    global_store_dwordx4 v245, v[20:23], s[0:1] offset:1104
-; CHECK-NEXT:    global_store_dwordx4 v245, v[16:19], s[0:1] offset:1088
-; CHECK-NEXT:    global_store_dwordx4 v245, v[12:15], s[0:1] offset:1072
-; CHECK-NEXT:    global_store_dwordx4 v245, v[8:11], s[0:1] offset:1056
-; CHECK-NEXT:    global_store_dwordx4 v245, v[4:7], s[0:1] offset:1040
-; CHECK-NEXT:    global_store_dwordx4 v245, a[12:15], s[0:1] offset:1024
+; CHECK-NEXT:    global_store_dwordx2 v248, v[238:239], s[0:1]
+; CHECK-NEXT:    global_store_dwordx4 v248, v[232:235], s[0:1] offset:1952
+; CHECK-NEXT:    global_store_dwordx4 v248, v[228:231], s[0:1] offset:1936
+; CHECK-NEXT:    global_store_dwordx4 v248, v[224:227], s[0:1] offset:1920
+; CHECK-NEXT:    global_store_dwordx4 v248, v[220:223], s[0:1] offset:368
+; CHECK-NEXT:    global_store_dwordx4 v248, v[216:219], s[0:1] offset:352
+; CHECK-NEXT:    global_store_dwordx4 v248, v[212:215], s[0:1] offset:336
+; CHECK-NEXT:    global_store_dwordx4 v248, v[208:211], s[0:1] offset:320
+; CHECK-NEXT:    global_store_dwordx4 v248, v[204:207], s[0:1] offset:304
+; CHECK-NEXT:    global_store_dwordx4 v248, v[200:203], s[0:1] offset:288
+; CHECK-NEXT:    global_store_dwordx4 v248, v[196:199], s[0:1] offset:272
+; CHECK-NEXT:    global_store_dwordx4 v248, v[192:195], s[0:1] offset:256
+; CHECK-NEXT:    global_store_dwordx4 v248, v[188:191], s[0:1] offset:496
+; CHECK-NEXT:    global_store_dwordx4 v248, v[184:187], s[0:1] offset:480
+; CHECK-NEXT:    global_store_dwordx4 v248, v[180:183], s[0:1] offset:464
+; CHECK-NEXT:    global_store_dwordx4 v248, v[176:179], s[0:1] offset:448
+; CHECK-NEXT:    global_store_dwordx4 v248, v[172:175], s[0:1] offset:432
+; CHECK-NEXT:    global_store_dwordx4 v248, v[168:171], s[0:1] offset:416
+; CHECK-NEXT:    global_store_dwordx4 v248, v[164:167], s[0:1] offset:400
+; CHECK-NEXT:    global_store_dwordx4 v248, v[160:163], s[0:1] offset:384
+; CHECK-NEXT:    global_store_dwordx4 v248, v[156:159], s[0:1] offset:624
+; CHECK-NEXT:    global_store_dwordx4 v248, v[152:155], s[0:1] offset:608
+; CHECK-NEXT:    global_store_dwordx4 v248, v[148:151], s[0:1] offset:592
+; CHECK-NEXT:    global_store_dwordx4 v248, v[144:147], s[0:1] offset:576
+; CHECK-NEXT:    global_store_dwordx4 v248, v[140:143], s[0:1] offset:560
+; CHECK-NEXT:    global_store_dwordx4 v248, v[136:139], s[0:1] offset:544
+; CHECK-NEXT:    global_store_dwordx4 v248, v[132:135], s[0:1] offset:528
+; CHECK-NEXT:    global_store_dwordx4 v248, v[128:131], s[0:1] offset:512
+; CHECK-NEXT:    global_store_dwordx4 v248, v[124:127], s[0:1] offset:752
+; CHECK-NEXT:    global_store_dwordx4 v248, v[120:123], s[0:1] offset:736
+; CHECK-NEXT:    global_store_dwordx4 v248, v[116:119], s[0:1] offset:720
+; CHECK-NEXT:    global_store_dwordx4 v248, v[112:115], s[0:1] offset:704
+; CHECK-NEXT:    global_store_dwordx4 v248, v[108:111], s[0:1] offset:688
+; CHECK-NEXT:    global_store_dwordx4 v248, v[104:107], s[0:1] offset:672
+; CHECK-NEXT:    global_store_dwordx4 v248, v[100:103], s[0:1] offset:656
+; CHECK-NEXT:    global_store_dwordx4 v248, v[96:99], s[0:1] offset:640
+; CHECK-NEXT:    global_store_dwordx4 v248, v[92:95], s[0:1] offset:880
+; CHECK-NEXT:    global_store_dwordx4 v248, v[88:91], s[0:1] offset:864
+; CHECK-NEXT:    global_store_dwordx4 v248, v[84:87], s[0:1] offset:848
+; CHECK-NEXT:    global_store_dwordx4 v248, v[80:83], s[0:1] offset:832
+; CHECK-NEXT:    global_store_dwordx4 v248, v[76:79], s[0:1] offset:816
+; CHECK-NEXT:    global_store_dwordx4 v248, v[72:75], s[0:1] offset:800
+; CHECK-NEXT:    global_store_dwordx4 v248, v[68:71], s[0:1] offset:784
+; CHECK-NEXT:    global_store_dwordx4 v248, v[64:67], s[0:1] offset:768
+; CHECK-NEXT:    global_store_dwordx4 v248, v[60:63], s[0:1] offset:1008
+; CHECK-NEXT:    global_store_dwordx4 v248, v[56:59], s[0:1] offset:992
+; CHECK-NEXT:    global_store_dwordx4 v248, v[52:55], s[0:1] offset:976
+; CHECK-NEXT:    global_store_dwordx4 v248, v[48:51], s[0:1] offset:960
+; CHECK-NEXT:    global_store_dwordx4 v248, v[44:47], s[0:1] offset:944
+; CHECK-NEXT:    global_store_dwordx4 v248, v[40:43], s[0:1] offset:928
+; CHECK-NEXT:    global_store_dwordx4 v248, v[36:39], s[0:1] offset:912
+; CHECK-NEXT:    global_store_dwordx4 v248, v[32:35], s[0:1] offset:896
+; CHECK-NEXT:    global_store_dwordx4 v248, v[28:31], s[0:1] offset:1136
+; CHECK-NEXT:    global_store_dwordx4 v248, v[24:27], s[0:1] offset:1120
+; CHECK-NEXT:    global_store_dwordx4 v248, v[20:23], s[0:1] offset:1104
+; CHECK-NEXT:    global_store_dwordx4 v248, v[16:19], s[0:1] offset:1088
+; CHECK-NEXT:    global_store_dwordx4 v248, v[12:15], s[0:1] offset:1072
+; CHECK-NEXT:    global_store_dwordx4 v248, v[8:11], s[0:1] offset:1056
+; CHECK-NEXT:    global_store_dwordx4 v248, v[4:7], s[0:1] offset:1040
+; CHECK-NEXT:    global_store_dwordx4 v248, a[12:15], s[0:1] offset:1024
 ; CHECK-NEXT:    s_endpgm
 ; CHECK-NEXT:  .Ltmp2:
 ; Loop body: MFMAs in AGPR form.

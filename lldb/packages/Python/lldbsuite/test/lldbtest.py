@@ -840,9 +840,19 @@ class Base(unittest.TestCase):
 
     def getBuildDirBasename(self):
         if self.SHARED_BUILD_TESTCASE:
-            return self.__class__.__module__
+            return self.__class__.__module__ + self._getVariantSuffix()
         else:
             return self.__class__.__module__ + "." + self.testMethodName
+
+    def _getVariantSuffix(self) -> str:
+        """Return a suffix identifying the active build variants."""
+        parts = []
+        if debug_info := self.getDebugInfo():
+            parts.append(debug_info)
+        for variant in _test_variants:
+            if value := self.getVariant(variant.name):
+                parts.append(value)
+        return "." + "_".join(parts) if parts else ""
 
     def getBuildDir(self):
         """Return the full path to the current test."""
@@ -893,6 +903,9 @@ class Base(unittest.TestCase):
             # LLDB-internal utility expressions can take very long when the
             # host is under heavy load.
             "settings set target.process.utility-expression-timeout 600",
+            # Same for the shell expansion of launch arguments: disable the
+            # timeout so a loaded host doesn't cause flaky failures.
+            "settings set platform.shell-expand-timeout 0",
             'settings set symbols.clang-modules-cache-path "{}"'.format(
                 configuration.lldb_module_cache_dir
             ),
@@ -1425,17 +1438,18 @@ class Base(unittest.TestCase):
             for src in self.log_files:
                 if os.path.isfile(src):
                     dst = src.replace(src_log_basename, dst_log_basename)
-                    if os.name == "nt" and os.path.isfile(dst):
+                    long_dst = lldbutil.get_extended_windows_path(dst)
+                    if os.name == "nt" and os.path.isfile(long_dst):
                         # On Windows, renaming a -> b will throw an exception if
                         # b exists.  On non-Windows platforms it silently
                         # replaces the destination.  Ultimately this means that
                         # atomic renames are not guaranteed to be possible on
                         # Windows, but we need this to work anyway, so just
                         # remove the destination first if it already exists.
-                        remove_file(dst)
+                        remove_file(long_dst)
 
                     lldbutil.mkdir_p(os.path.dirname(dst))
-                    os.rename(src, dst)
+                    os.rename(lldbutil.get_extended_windows_path(src), long_dst)
                     files.append(dst)
             if files:
                 print(
@@ -1759,18 +1773,20 @@ class Base(unittest.TestCase):
                 % (self.lib_lldb, self.framework_dir, lib_dir),
             }
         elif sys.platform.startswith("win"):
+            crt = "dll_dbg" if configuration.cmake_build_type == "debug" else "dll"
             d = {
                 "CXX_SOURCES": sources,
                 "EXE": exe_name,
-                "CFLAGS_EXTRAS": "%s %s -I%s -I%s %s"
+                "CFLAGS_EXTRAS": "%s %s -fms-runtime-lib=%s -I%s -I%s %s"
                 % (
                     stdflag,
                     stdlibflag,
+                    crt,
                     os.path.join(os.environ["LLDB_SRC"], "include"),
                     os.path.join(configuration.lldb_obj_root, "include"),
                     defines,
                 ),
-                "LD_EXTRAS": "-L%s -lliblldb" % lib_dir,
+                "LD_EXTRAS": "-L%s -lliblldb -Xlinker -nodefaultlib:libcmt" % lib_dir,
             }
         else:
             d = {
@@ -1872,7 +1888,7 @@ class Base(unittest.TestCase):
         yaml2obj_bin = configuration.get_yaml2obj_path()
         if not yaml2obj_bin:
             self.assertTrue(False, "No valid yaml2obj executable specified")
-        command = [yaml2obj_bin, "-o=%s" % obj_path, yaml_path]
+        command = [yaml2obj_bin, "-o", obj_path, yaml_path]
         if max_size is not None:
             command += ["--max-size=%d" % max_size]
         self.runBuildCommand(command)
@@ -2173,10 +2189,10 @@ class LLDBTestCaseFactory(type):
                             if enabled
                         ]
 
-                    # PDB is off by default, because it has a lot of failures right now.
-                    # See llvm.org/pr149498
-                    if original_testcase.TEST_WITH_PDB_DEBUG_INFO:
-                        dbginfo_categories.append("pdb")
+                        # PDB is off by default, because it has a lot of failures
+                        # right now. See llvm.org/pr149498.
+                        if original_testcase.TEST_WITH_PDB_DEBUG_INFO:
+                            dbginfo_categories.append("pdb")
 
                     xfail_fns = getattr(attrvalue, "__variant_xfail__", {})
                     skip_fns = getattr(attrvalue, "__variant_skip__", {})
@@ -2230,9 +2246,6 @@ class LLDBTestCaseFactory(type):
 
             else:
                 newattrs[attrname] = attrvalue
-
-        if original_testcase.TEST_WITH_PDB_DEBUG_INFO:
-            newattrs["SHARED_BUILD_TESTCASE"] = False
 
         return super(LLDBTestCaseFactory, cls).__new__(cls, name, bases, newattrs)
 
@@ -2522,6 +2535,20 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
             if matched:
                 self.runCmd("thread select %s" % matched.group(1))
 
+    def _assert_command_failed(self, command, res):
+        fail_msg = "Command '" + command + "' is expected to fail!"
+        output = res.GetOutput()
+        error = res.GetError()
+        if output:
+            fail_msg += "\nOutput: " + output
+        if error:
+            # If output is very long, add a dividing marker before printing the
+            # error message.
+            if output and len(output.splitlines()) > 10:
+                fail_msg += "\n" + "-" * 80
+            fail_msg += "\nError: " + error
+        self.assertFalse(res.Succeeded(), fail_msg)
+
     def match(
         self, str, patterns, msg=None, trace=False, error=False, matching=True, exe=True
     ):
@@ -2543,9 +2570,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
 
             # If error is True, the API client expects the command to fail!
             if error:
-                self.assertFalse(
-                    self.res.Succeeded(), "Command '" + str + "' is expected to fail!"
-                )
+                self._assert_command_failed(str, self.res)
         else:
             # No execution required, just compare str against the golden input.
             output = str
@@ -2880,10 +2905,7 @@ FileCheck output:
 
             # If error is True, the API client expects the command to fail!
             if error:
-                self.assertFalse(
-                    self.res.Succeeded(),
-                    "Command '" + string + "' is expected to fail!",
-                )
+                self._assert_command_failed(string, self.res)
         else:
             # No execution required, just compare string against the golden input.
             if isinstance(string, lldb.SBCommandReturnObject):

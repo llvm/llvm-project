@@ -18,3 +18,7 @@ qc.outw x5, 2048(x10)
 # CHECK-INST: qc.inw    s7, 16380(a7)
 # CHECK-ENC: encoding: [0x8b,0xdb,0xf8,0xff]
 qc.inw x23, 16380(x17)
+
+# CHECK-INST: qc.inw    zero, 16380(a7)
+# CHECK-ENC: encoding: [0x0b,0xd0,0xf8,0xff]
+qc.inw x0, 16380(x17)

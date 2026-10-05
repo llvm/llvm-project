@@ -11,17 +11,18 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL___IMPL_DETAIL_KERNEL_ARG_HELPERS
-#define _LIBSYCL___IMPL_DETAIL_KERNEL_ARG_HELPERS
+#ifndef _LIBSYCL___IMPL_DETAIL_KERNEL_ARG_HELPERS_HPP
+#define _LIBSYCL___IMPL_DETAIL_KERNEL_ARG_HELPERS_HPP
 
 #include <sycl/__impl/index_space_classes.hpp>
 #include <sycl/__impl/nd_item.hpp>
 
 #include <sycl/__impl/detail/config.hpp>
 
-#include <sycl/__spirv/spirv_vars.hpp>
+#include <sycl/__spirv/vars.hpp>
 
 #include <type_traits>
+#include <utility>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -76,21 +77,21 @@ public:
 /// \name  Helpers to extract types of lambda arguments.
 /// @{
 template <typename RetType, typename Func, typename Arg>
-static Arg member_ptr_helper(RetType (Func::*)(Arg) const);
+[[maybe_unused]] static Arg memberPtrHelper(RetType (Func::*)(Arg) const);
 
 // Non-const version of the above template to match functors whose
 // 'operator()' is declared w/o the 'const' qualifier.
 template <typename RetType, typename Func, typename Arg>
-static Arg member_ptr_helper(RetType (Func::*)(Arg));
+[[maybe_unused]] static Arg memberPtrHelper(RetType (Func::*)(Arg));
 
 template <typename F, typename SuggestedArgType>
-decltype(member_ptr_helper(&F::operator())) argument_helper(int);
+decltype(memberPtrHelper(&F::operator())) argumentHelper(int);
 
 template <typename F, typename SuggestedArgType>
-SuggestedArgType argument_helper(...);
+SuggestedArgType argumentHelper(...);
 
 template <typename F, typename SuggestedArgType>
-using lambda_arg_type = decltype(argument_helper<F, SuggestedArgType>(0));
+using lambda_arg_type = decltype(argumentHelper<F, SuggestedArgType>(0));
 
 #if __has_builtin(__type_pack_element)
 template <int N, typename... Ts>
@@ -111,8 +112,7 @@ using nth_type_t = typename nth_type<N, Ts...>::type;
 
 template <typename T> T *declptr() { return static_cast<T *>(nullptr); }
 
-template <int N>
-static inline constexpr bool isValidDimensions = (N > 0) && (N < 4);
+template <int N> inline constexpr bool isValidDimensions = (N > 0) && (N < 4);
 
 /// Class provides helper functions for iteration space coordinates in kernel
 /// invocation on device.
@@ -136,7 +136,7 @@ public:
   /// Constructs item with the given data.
   /// \param Extent a range representing the dimensions of the range of possible
   /// values of the item.
-  /// \param Index a constituent id representing the work-item’s position in the
+  /// \param Index a constituent id representing the work-item's position in the
   /// iteration space.
   /// \param Offset an id representing the n-dimensional offset that should be
   /// added to the global-ID of each work-item, if this item represents a global
@@ -151,7 +151,7 @@ public:
   /// Constructs item with the given data.
   /// \param Extent a range representing the dimensions of the range of possible
   /// values of the item.
-  /// \param Index a constituent id representing the work-item’s position in the
+  /// \param Index a constituent id representing the work-item's position in the
   /// iteration space.
   template <int Dims, bool WithOffset>
   static std::enable_if_t<!WithOffset, item<Dims, WithOffset>>
@@ -192,4 +192,4 @@ public:
 
 _LIBSYCL_END_NAMESPACE_SYCL
 
-#endif // _LIBSYCL___IMPL_DETAIL_KERNEL_ARG_HELPERS
+#endif // _LIBSYCL___IMPL_DETAIL_KERNEL_ARG_HELPERS_HPP
