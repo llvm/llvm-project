@@ -376,11 +376,12 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                            flat          - *pal-amdpal*  - Radeon HD 8770
                                                                            scratch                       - R7 260
                                                                                                          - R7 260X
-     ``gfx705``                  ``amdgpu7.05``   APU                    - Offset        - *pal-amdhsa*  *TBA*
+                                                                                                         - R9 260 OEM
+                                                                                                         - FirePro W4300
+                                                                                                         - FirePro W5100
+     ``gfx705``                  ``amdgpu7.05``   APU                    - Offset        - *pal-amdhsa*
                                                                            flat          - *pal-amdpal*
-                                                                           scratch                       .. TODO::
-                                                                                                           Add product
-                                                                                                           names.
+                                                                           scratch
 
      **GCN GFX8 (Volcanic Islands (VI))** [AMD-GCN-GFX8]_
      --------------------------------------------------------------------------------------------------------------------------
@@ -422,11 +423,14 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                            scratch       - *pal-amdpal*  - FirePro W7100
                                                                                                          - Mobile FirePro
                                                                                                            M7170
-     ``gfx810``  - ``stoney``    ``amdgpu8.10``   APU   - xnack          - Offset        - *rocm-amdhsa* *TBA*
-                                                                           flat          - *pal-amdhsa*
-                                                                           scratch       - *pal-amdpal*  .. TODO::
-                                                                                                           Add product
-                                                                                                           names.
+     ``gfx810``  - ``stoney``    ``amdgpu8.10``   APU   - xnack          - Offset        - *rocm-amdhsa* - Radeon R1E Mobile Graphics
+                                                                           flat          - *pal-amdhsa*  - Radeon R2 Mobile Graphics
+                                                                           scratch       - *pal-amdpal*  - Radeon R2E Mobile Graphics
+                                                                                                         - Radeon R3 Mobile Graphics
+                                                                                                         - Radeon R4 Mobile Graphics                                                                                     
+                                                                                                         - Radeon R4E Mobile Graphics
+                                                                                                         - Radeon R5 Mobile Graphics
+                                                                                                         - Radeon R5E Mobile Graphics
 
      **GCN GFX9 (Vega)** [AMD-GCN-GFX900-GFX904-VEGA]_ [AMD-GCN-GFX906-VEGA7NM]_ [AMD-GCN-GFX908-CDNA1]_ [AMD-GCN-GFX90A-CDNA2]_ [AMD-GCN-GFX942-CDNA3]_
      --------------------------------------------------------------------------------------------------------------------------
@@ -440,12 +444,9 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
      ``gfx902``                  ``amdgpu9.02``   APU   - xnack          - Absolute      - *rocm-amdhsa* - Ryzen 3 2200G
                                                                            flat          - *pal-amdhsa*  - Ryzen 5 2400G
                                                                            scratch       - *pal-amdpal*
-     ``gfx904``                  ``amdgpu9.05``   dGPU  - xnack                          - *rocm-amdhsa* *TBA*
-                                                                                         - *pal-amdhsa*
-                                                                                         - *pal-amdpal*  .. TODO::
-                                                                                                           Add product
-                                                                                                           names.
-
+     ``gfx904``                  ``amdgpu9.05``   dGPU  - xnack                          - *rocm-amdhsa* - Radeon Pro Vega 16
+                                                                                         - *pal-amdhsa*  - Radeon Pro Vega 20
+                                                                                         - *pal-amdpal*
      ``gfx906``                  ``amdgpu9.06``   dGPU  - sramecc        - Absolute      - *rocm-amdhsa* - Radeon Instinct MI50
                                                         - xnack            flat          - *pal-amdhsa*  - Radeon Instinct MI60
                                                                            scratch       - *pal-amdpal*  - Radeon VII
@@ -454,13 +455,9 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                         - xnack          - Absolute
                                                                            flat
                                                                            scratch
-     ``gfx909``                  ``amdgpu9.09``   APU   - xnack          - Absolute      - *pal-amdpal*  *TBA*
+     ``gfx909``                  ``amdgpu9.09``   APU   - xnack          - Absolute      - *pal-amdpal*  - Ryzen R1606G
                                                                            flat
-                                                                           scratch                       .. TODO::
-
-                                                                                                          Add product
-                                                                                                          names.
-
+                                                                           scratch
      ``gfx90a``                  ``amdgpu9.0a``   dGPU  - sramecc        - Absolute      - *rocm-amdhsa* - AMD Instinct MI210 Accelerator
                                                         - tgsplit          flat          - *rocm-amdhsa* - AMD Instinct MI250 Accelerator
                                                         - xnack            scratch       - *rocm-amdhsa* - AMD Instinct MI250X Accelerator
@@ -491,12 +488,12 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                           preload          work-item
                                                                            IDs
 
-     ``gfx950``                  ``amdgpu9.50``   dGPU  - sramecc        - Architected                   *TBA*
-                                                        - tgsplit          flat
-                                                        - xnack            scratch                       .. TODO::
+     ``gfx950``                  ``amdgpu9.50``   dGPU  - sramecc        - Architected                   - AMD Instinct MI350X
+                                                        - tgsplit          flat                          - AMD Instinct MI350P
+                                                        - xnack            scratch
                                                         - kernarg        - Packed
-                                                          preload          work-item                       Add product
-                                                                           IDs                             names.
+                                                          preload          work-item
+                                                                           IDs
 
      **GCN GFX10.1 (RDNA 1)** [AMD-GCN-GFX10-RDNA1]_
      --------------------------------------------------------------------------------------------------------------------------
@@ -511,12 +508,9 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
      ``gfx1012``                 ``amdgpu10.12`` dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 5500
                                                        - wavefrontsize64   flat          - *pal-amdhsa*  - Radeon RX 5500 XT
                                                        - xnack             scratch       - *pal-amdpal*
-     ``gfx1013``                 ``amdgpu10.13`` APU   - cumode          - Absolute      - *rocm-amdhsa* *TBA*
+     ``gfx1013``                 ``amdgpu10.13`` APU   - cumode          - Absolute      - *rocm-amdhsa* - AMD Oberon
                                                        - wavefrontsize64   flat          - *pal-amdhsa*
-                                                       - xnack             scratch       - *pal-amdpal*  . TODO::
-
-                                                                                                          Add product
-                                                                                                          names.
+                                                       - xnack             scratch       - *pal-amdpal*
 
      **GCN GFX10.3 (RDNA 2)** [AMD-GCN-GFX10-RDNA2]_
      --------------------------------------------------------------------------------------------------------------------------
@@ -525,42 +519,47 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                            scratch       - *pal-amdpal*  - Radeon RX 6900 XT
                                                                                                          - Radeon PRO W6800
                                                                                                          - Radeon PRO V620
-     ``gfx1031``                 ``amdgpu10.31`` dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 6700 XT
-                                                       - wavefrontsize64   flat          - *pal-amdhsa*
-                                                                           scratch       - *pal-amdpal*
-     ``gfx1032``                 ``amdgpu10.32`` dGPU  - cumode          - Absolute      - *rocm-amdhsa*  *TBA*
-                                                       - wavefrontsize64   flat          - *pal-amdhsa*
-                                                                           scratch       - *pal-amdpal*   .. TODO::
-
-                                                                                                           Add product
-                                                                                                           names.
-
-     ``gfx1033``                 ``amdgpu10.33`` APU   - cumode          - Absolute      - *pal-amdpal*   *TBA*
+     ``gfx1031``                 ``amdgpu10.31`` dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 6700
+                                                       - wavefrontsize64   flat          - *pal-amdhsa*  - Radeon RX 6700 XT
+                                                                           scratch       - *pal-amdpal*  - Radeon RX 6700M
+                                                                                                         - Radeon RX 6750 GRE
+                                                                                                         - Radeon RX 6750 XT
+                                                                                                         - Radeon RX 6800M
+                                                                                                         - Radeon RX 6850M XT
+     ``gfx1032``                 ``amdgpu10.32`` dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon PRO W6600
+                                                       - wavefrontsize64   flat          - *pal-amdhsa*  - Radeon Pro W6600M
+                                                                           scratch       - *pal-amdpal*  - Radeon RX 6600
+                                                                                                         - Radeon RX 6600 LE
+                                                                                                         - Radeon RX 6600M
+                                                                                                         - Radeon RX 6600S
+                                                                                                         - Radeon RX 6650M
+                                                                                                         - Radeon RX 6700S
+                                                                                                         - Radeon Pro W6600X
+                                                                                                         - Radeon RX 6600 XT
+                                                                                                         - Radeon RX 6650 XT
+                                                                                                         - Radeon RX 6650M XT
+                                                                                                         - Radeon RX 6800S
+     ``gfx1033``                 ``amdgpu10.33`` APU   - cumode          - Absolute      - *pal-amdpal*  - AMD Van Gogh
                                                        - wavefrontsize64   flat
-                                                                           scratch                       . TODO::
-
-                                                                                                           Add product
-                                                                                                           names.
-     ``gfx1034``                 ``amdgpu10.34`` dGPU  - cumode          - Absolute      - *pal-amdpal*  *TBA*
+                                                                           scratch
+     ``gfx1034``                 ``amdgpu10.34`` dGPU  - cumode          - Absolute      - *pal-amdpal*  - Radeon PRO W6300
+                                                       - wavefrontsize64   flat                          - Radeon Pro W6300M
+                                                                           scratch                       - Radeon PRO W6400
+                                                                                                         - Radeon RX 6300 OEM
+                                                                                                         - Radeon RX 6300M
+                                                                                                         - Radeon RX 6400
+                                                                                                         - Radeon RX 6450M
+                                                                                                         - Radeon Pro W6500M
+                                                                                                         - Radeon RX 6500 XT
+                                                                                                         - Radeon RX 6500M
+                                                                                                         - Radeon RX 6550M
+                                                                                                         - Radeon RX 6550S
+     ``gfx1035``                 ``amdgpu10.35`` APU   - cumode          - Absolute      - *pal-amdpal*  - Radeon 660M
+                                                       - wavefrontsize64   flat                          - Radeon 680M
+                                                                           scratch
+     ``gfx1036``                 ``amdgpu10.36`` APU   - cumode          - Absolute      - *pal-amdpal*  - Radeon Graphics 128SP
                                                        - wavefrontsize64   flat
-                                                                           scratch                       .. TODO::
-
-                                                                                                           Add product
-                                                                                                           names.
-
-     ``gfx1035``                 ``amdgpu10.35`` APU   - cumode          - Absolute      - *pal-amdpal*   *TBA*
-                                                       - wavefrontsize64   flat
-                                                                           scratch                       .. TODO::
-                                                                                                           Add product
-                                                                                                           names.
-
-     ``gfx1036``                 ``amdgpu10.36`` APU   - cumode          - Absolute      - *pal-amdpal*  *TBA*
-                                                       - wavefrontsize64   flat
-                                                                           scratch                       .. TODO::
-
-                                                                                                           Add product
-                                                                                                           names.
-
+                                                                           scratch
      **GCN GFX11 (RDNA 3)** [AMD-GCN-GFX11-RDNA3]_
      --------------------------------------------------------------------------------------------------------------------------
      ``gfx1100``                 ``amdgpu11.00`` dGPU  - cumode          - Architected   - *pal-amdpal*  - Radeon PRO W7900 Dual Slot
@@ -584,42 +583,42 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                            work-item
                                                                            IDs
 
-     ``gfx1103``                 ``amdgpu11.03`` APU   - cumode          - Architected                   *TBA*
-                                                       - wavefrontsize64   flat
-                                                                           scratch                        .. TODO::
-                                                                         - Packed
-                                                                           work-item                        Add product
-                                                                           IDs                              names.
+     ``gfx1103``                 ``amdgpu11.03`` APU   - cumode          - Architected                   - Radeon 740M
+                                                       - wavefrontsize64   flat                          - Radeon 760M
+                                                                           scratch                       - Radeon 780M
+                                                                         - Packed                        - Ryzen Z1 GPU
+                                                                           work-item                     - Ryzen Z1 Extreme GPU
+                                                                           IDs
 
      **GCN GFX11.5 (RDNA 3.5)** [AMD-GCN-GFX11-RDNA3.5]_
      --------------------------------------------------------------------------------------------------------------------------
-     ``gfx1150``                 ``amdgpu11.50``  APU  - cumode          - Architected                   Radeon 890M
-                                                       - wavefrontsize64   flat
-                                                                           scratch                        .. TODO::
-                                                                         - Packed
-                                                                           work-item                        Add product
-                                                                           IDs                              names.
+     ``gfx1150``                 ``amdgpu11.50``  APU  - cumode          - Architected                   - Radeon 880M
+                                                       - wavefrontsize64   flat                          - Radeon 890M
+                                                                           scratch                       - Ryzen Z2 Extreme GPU
+                                                                         - Packed                        - Ryzen AI Z2 Extreme GPU
+                                                                           work-item
+                                                                           IDs
 
-     ``gfx1151``                 ``amdgpu11.51``  APU  - cumode          - Architected                   Radeon 8060S
-                                                       - wavefrontsize64   flat
-                                                                           scratch                       .. TODO::
+     ``gfx1151``                 ``amdgpu11.51``  APU  - cumode          - Architected                   - Radeon 8040S
+                                                       - wavefrontsize64   flat                          - Radeon 8050S
+                                                                           scratch                       - Radeon 8060S
                                                                          - Packed
-                                                                           work-item                       Add product
-                                                                           IDs                             names.
+                                                                           work-item
+                                                                           IDs
 
      ``gfx1152``                 ``amdgpu11.52``  APU  - cumode          - Architected                   Radeon 860M
                                                        - wavefrontsize64   flat
-                                                                           scratch                       .. TODO::
+                                                                           scratch
                                                                          - Packed
-                                                                           work-item                       Add product
-                                                                           IDs                             names.
+                                                                           work-item
+                                                                           IDs
 
-     ``gfx1153``                 ``amdgpu11.53`` APU   - cumode          - Architected                   *TBA*
+     ``gfx1153``                 ``amdgpu11.53`` APU   - cumode          - Architected                   Radeon 840M
                                                        - wavefrontsize64   flat
-                                                                           scratch                       .. TODO::
+                                                                           scratch
                                                                          - Packed
-                                                                           work-item                       Add product
-                                                                           IDs                             names.
+                                                                           work-item
+                                                                           IDs
 
      ``gfx1154``                 ``amdgpu11.54`` APU   - cumode          - Architected                   *TBA*
                                                        - wavefrontsize64   flat
