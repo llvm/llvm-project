@@ -10,6 +10,7 @@
 #include "clc/float/definitions.h"
 #include "clc/internal/clc.h"
 #include "clc/math/clc_fabs.h"
+#include "clc/math/clc_fma.h"
 #include "clc/math/clc_fmax.h"
 #include "clc/math/clc_frexp_exp.h"
 #include "clc/math/clc_ldexp.h"
