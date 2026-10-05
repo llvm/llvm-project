@@ -92,7 +92,36 @@ define ptr @nonnegative_rhs(ptr %base, i8 %x) {
   ret ptr %p
 }
 
-; Recursing through sexts must still check the sign of an add operand.
+; Both operands and the sum are negative, but the sum is in [-96, -65], so
+; value tracking can prove that the addition cannot have signed overflow.
+define ptr @negative_sum_no_overflow(ptr %base, i8 %x) {
+; SPLIT-LABEL: define ptr @negative_sum_no_overflow(
+; SPLIT-SAME: ptr [[BASE:%.*]], i8 [[X:%.*]]) {
+; SPLIT-NEXT:    [[MASKED:%.*]] = and i8 [[X]], 31
+; SPLIT-NEXT:    [[NEGATIVE:%.*]] = or i8 [[MASKED]], -64
+; SPLIT-NEXT:    [[TMP1:%.*]] = sext i8 [[NEGATIVE]] to i64
+; SPLIT-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP1]]
+; SPLIT-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[TMP2]], i64 -32
+; SPLIT-NEXT:    ret ptr [[P2]]
+;
+; LOWER-LABEL: define ptr @negative_sum_no_overflow(
+; LOWER-SAME: ptr [[BASE:%.*]], i8 [[X:%.*]]) {
+; LOWER-NEXT:    [[MASKED:%.*]] = and i8 [[X]], 31
+; LOWER-NEXT:    [[NEGATIVE:%.*]] = or i8 [[MASKED]], -64
+; LOWER-NEXT:    [[TMP1:%.*]] = sext i8 [[NEGATIVE]] to i64
+; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP1]]
+; LOWER-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 -32
+; LOWER-NEXT:    ret ptr [[UGLYGEP2]]
+;
+  %masked = and i8 %x, 31
+  %negative = or i8 %masked, -64
+  %sum = add i8 %negative, -32
+  %index = sext i8 %sum to i64
+  %p = getelementptr i8, ptr %base, i64 %index
+  ret ptr %p
+}
+
+; Recursing through sexts must still rule out signed overflow.
 define ptr @negative_operands_sext_chain(ptr %base, i8 %x) {
 ; CHECK-LABEL: define ptr @negative_operands_sext_chain(
 ; CHECK-SAME: ptr [[BASE:%.*]], i8 [[X:%.*]]) {

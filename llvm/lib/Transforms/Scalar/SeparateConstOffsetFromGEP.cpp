@@ -507,8 +507,8 @@ FunctionPass *llvm::createSeparateConstOffsetFromGEPPass(bool LowerGEP) {
 // Checks if it is safe to reorder an add/sext result used in a GEP.
 //
 // An inbounds GEP does not guarantee that the index is non-negative.
-// This helper checks first if the index and at least one add operand are known
-// non-negative. If so, the transform is safe.
+// This helper first checks whether value tracking proves that the add cannot
+// have signed overflow. If so, the transform is safe.
 // Second, it checks whether the GEP is inbounds and directly based on a global
 // or an alloca, which are required to prove futher transform validity.
 // If the GEP:
@@ -536,9 +536,8 @@ FunctionPass *llvm::createSeparateConstOffsetFromGEPPass(bool LowerGEP) {
 //   on the offset, since it would need to be extremely large.
 static bool canReorderAddSextToGEP(const Use *Idx, const BinaryOperator *Add,
                                    const DataLayout &DL) {
-  if (isKnownNonNegative(Idx->get(), DL) &&
-      (isKnownNonNegative(Add->getOperand(0), DL) ||
-       isKnownNonNegative(Add->getOperand(1), DL)))
+  if (computeOverflowForSignedAdd(cast<AddOperator>(Add), DL) ==
+      OverflowResult::NeverOverflows)
     return true;
 
   const auto *GEP = cast<GetElementPtrInst>(Idx->getUser());
@@ -560,9 +559,8 @@ static bool canReorderAddSextToGEP(const Use *Idx, const BinaryOperator *Add,
   // Calculate the threshold
   APInt Threshold;
   unsigned N = Add->getType()->getIntegerBitWidth();
-  auto GTI = gep_type_begin(GEP);
   // Track the use: the same value may index different types in this GEP.
-  std::advance(GTI, Idx->getOperandNo() - 1);
+  auto GTI = std::next(gep_type_begin(GEP), Idx->getOperandNo() - 1);
   TypeSize ElemSize = GTI.getSequentialElementStride(DL);
   if (ElemSize.isScalable())
     return false;
@@ -581,7 +579,7 @@ static bool canReorderAddSextToGEP(const Use *Idx, const BinaryOperator *Add,
 
   // Only the first index is relative to Ptr. Earlier indices may move the
   // pointer within the object, so later indices must use the object-size proof.
-  if (GTI == gep_type_begin(GEP) && Base &&
+  if (Idx->getOperandNo() == 1 && Base &&
       (isa<AllocaInst>(Base) || isa<GlobalObject>(Base)) && !CI->isNegative()) {
     // If the offset is zero from an alloca or global, inbounds is sufficient to
     // prove non-negativity if one add operand is non-negative
@@ -658,12 +656,8 @@ bool ConstantOffsetExtractor::canTraceInto(bool SignExtended, bool ZeroExtended,
         GEP->hasNoUnsignedWrap())
       return true;
 
-    // If a + b >= 0 and (a >= 0 or b >= 0), then
-    //   sext(a + b) = sext(a) + sext(b)
-    // even if the addition is not marked nsw.
-    //
-    // Leveraging this invariant, we can trace into an sext'ed inbound GEP
-    // index under certain conditions (see canReorderAddSextToGEP).
+    // Trace through sext when value tracking or the GEP's bounds prove that
+    // the addition cannot have signed overflow.
     //
     // Verified in @sext_add in split-gep.ll.
     if (canReorderAddSextToGEP(Idx, BO, DL))
