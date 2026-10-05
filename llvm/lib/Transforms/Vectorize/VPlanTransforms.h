@@ -216,7 +216,7 @@ struct VPlanTransforms {
   /// Add a check to \p Plan to see if the epilogue vector loop should be
   /// executed.
   static void addMinimumVectorEpilogueIterationCheck(
-      VPlan &Plan, Value *VectorTripCount, bool RequiresScalarEpilogue,
+      VPlan &Plan, VPValue *MainVectorTripCount, bool RequiresScalarEpilogue,
       ElementCount EpilogueVF, unsigned MainLoopStep, unsigned EpilogueLoopStep,
       ScalarEvolution &SE);
 
@@ -392,6 +392,12 @@ struct VPlanTransforms {
                                          PredicatedScalarEvolution &PSE,
                                          DominatorTree &DT,
                                          AssumptionCache *AC);
+
+  /// If a single exit has multiple conditions combined together, split them
+  /// and create new exiting blocks. Currently limited to a single exit in the
+  /// latch block.
+  static bool splitCombinedExits(VPlan &Plan, PredicatedScalarEvolution &PSE,
+                                 Loop *TheLoop);
 
   /// Update \p Plan to account for uncountable early exits by introducing
   /// appropriate branching logic in the latch that handles early exits and the

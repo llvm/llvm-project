@@ -171,6 +171,49 @@ bool cir::CopyOp::canUsesBeRemoved(
 }
 
 //===----------------------------------------------------------------------===//
+// Interfaces for MatrixColumnMajorLoadOp
+//===----------------------------------------------------------------------===//
+
+bool cir::MatrixColumnMajorLoadOp::loadsFrom(const MemorySlot &slot) {
+  return getValue() == slot.ptr;
+}
+
+bool cir::MatrixColumnMajorLoadOp::storesTo(const MemorySlot &slot) {
+  return false;
+}
+
+Value cir::MatrixColumnMajorLoadOp::getStored(const MemorySlot &slot,
+                                              OpBuilder &builder,
+                                              Value reachingDef,
+                                              const DataLayout &dataLayout) {
+  llvm_unreachable("getStored should not be called on MatrixColumnMajorLoadOp");
+}
+
+bool cir::MatrixColumnMajorLoadOp::canUsesBeRemoved(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  if (blockingUses.size() != 1)
+    return false;
+
+  // Volatile load should not be removed.
+  if (getIsVolatile())
+    return false;
+
+  Value blockingUse = (*blockingUses.begin())->get();
+  return blockingUse == slot.ptr && getValue() == slot.ptr &&
+         getType() == slot.elemType;
+}
+
+DeletionKind cir::MatrixColumnMajorLoadOp::removeBlockingUses(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    OpBuilder &builder, Value reachingDefinition,
+    const DataLayout &dataLayout) {
+  getResult().replaceAllUsesWith(reachingDefinition);
+  return DeletionKind::Delete;
+}
+
+//===----------------------------------------------------------------------===//
 // Interfaces for CastOp
 //===----------------------------------------------------------------------===//
 
