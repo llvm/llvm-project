@@ -1513,6 +1513,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
 
     setTruncStoreAction(MVT::v4i16, MVT::v4i8, Custom);
+    setTruncStoreAction(MVT::v2i32, MVT::v2i16, Custom);
 
     setOperationAction(ISD::BITCAST, MVT::i2, Custom);
     setOperationAction(ISD::BITCAST, MVT::i4, Custom);
@@ -1677,6 +1678,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
 
     setOperationAction(ISD::GET_ACTIVE_LANE_MASK, MVT::nxv1i1, Custom);
+    setOperationAction(ISD::VECTOR_REVERSE, MVT::nxv1i1, Custom);
 
     if (Subtarget->isSVEorStreamingSVEAvailable() &&
         (Subtarget->hasSVE2p1() || Subtarget->hasSME2()))
@@ -7785,7 +7787,8 @@ static SDValue LowerTruncateVectorStore(SDLoc DL, StoreSDNode *ST,
                                         EVT VT, EVT MemVT,
                                         SelectionDAG &DAG) {
   assert(VT.isVector() && "VT should be a vector type");
-  assert(MemVT == MVT::v4i8 && VT == MVT::v4i16);
+  assert((MemVT == MVT::v4i8 && VT == MVT::v4i16) ||
+         (MemVT == MVT::v2i16 && VT == MVT::v2i32));
 
   SDValue Value = ST->getValue();
 
@@ -7796,19 +7799,18 @@ static SDValue LowerTruncateVectorStore(SDLoc DL, StoreSDNode *ST,
   //   xtn  v0.8b, v0.8h
   //   str  s0, [x0]
 
-  SDValue Poison = DAG.getPOISON(MVT::i16);
-  SDValue PoisonVec =
-      DAG.getBuildVector(MVT::v4i16, DL, {Poison, Poison, Poison, Poison});
-
+  SDValue PoisonVec = DAG.getPOISON(VT);
+  EVT DblVT = VT.getDoubleNumVectorElementsVT(*DAG.getContext());
+  EVT DblMemVT = MemVT.getDoubleNumVectorElementsVT(*DAG.getContext());
   SDValue TruncExt =
-      DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i16, Value, PoisonVec);
-  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::v8i8, TruncExt);
+      DAG.getNode(ISD::CONCAT_VECTORS, DL, DblVT, Value, PoisonVec);
+  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, DblMemVT, TruncExt);
 
   Trunc = DAG.getNode(ISD::BITCAST, DL, MVT::v2i32, Trunc);
   SDValue ExtractTrunc = DAG.getExtractVectorElt(DL, MVT::i32, Trunc, 0);
 
-  return DAG.getStore(ST->getChain(), DL, ExtractTrunc,
-                      ST->getBasePtr(), ST->getMemOperand());
+  return DAG.getStore(ST->getChain(), DL, ExtractTrunc, ST->getBasePtr(),
+                      ST->getMemOperand());
 }
 
 static SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) {
@@ -7822,8 +7824,8 @@ static SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) {
   unsigned DestAS = N->getDestAddressSpace();
   assert(SrcAS != DestAS &&
          "addrspacecast must be between different address spaces");
-  assert(TLI.getTargetMachine().getPointerSize(SrcAS) !=
-             TLI.getTargetMachine().getPointerSize(DestAS) &&
+  assert(DAG.getDataLayout().getPointerSize(SrcAS) !=
+             DAG.getDataLayout().getPointerSize(DestAS) &&
          "addrspacecast must be between different ptr sizes");
   (void)TLI;
 
@@ -8073,8 +8075,9 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
       return scalarizeVectorStore(StoreNode, DAG);
     }
 
-    if (StoreNode->isTruncatingStore() && VT == MVT::v4i16 &&
-        MemVT == MVT::v4i8) {
+    if (StoreNode->isTruncatingStore() &&
+        ((VT == MVT::v4i16 && MemVT == MVT::v4i8) ||
+         (VT == MVT::v2i32 && MemVT == MVT::v2i16))) {
       return LowerTruncateVectorStore(Dl, StoreNode, VT, MemVT, DAG);
     }
   } else if (MemVT == MVT::i128 && StoreNode->isVolatile()) {
@@ -8887,6 +8890,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerVECTOR_REPEAT(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return LowerVECTOR_SHUFFLE(Op, DAG);
+  case ISD::VECTOR_REVERSE:
+    return LowerVECTOR_REVERSE(Op, DAG);
   case ISD::SPLAT_VECTOR:
     return LowerSPLAT_VECTOR(Op, DAG);
   case ISD::EXTRACT_SUBVECTOR:
@@ -10222,7 +10227,7 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   // cannot rely on the linker replacing the tail call with a return.
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
     const GlobalValue *GV = G->getGlobal();
-    const Triple &TT = getTargetMachine().getTargetTriple();
+    const Triple &TT = GV->getParent()->getTargetTriple();
     if (GV->hasExternalWeakLinkage() &&
         (!TT.isOSWindows() || TT.isOSBinFormatELF() || TT.isOSBinFormatMachO()))
       return false;
@@ -10598,6 +10603,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Determine whether we need any streaming mode changes.
   SMECallAttrs CallAttrs =
       getSMECallAttrs(MF.getFunction(), getRuntimeLibcallsInfo(), CLI);
+  if (CallAttrs.requiresNonLazySaveZA())
+    reportFatalUsageError(
+        "Calls that require saving ZA non-lazily is not yet implemented");
 
   std::optional<unsigned> ZAMarkerNode = getZAMarkerForCall(CallAttrs);
 
@@ -13423,6 +13431,18 @@ SDValue AArch64TargetLowering::LowerVECTOR_SPLICE(SDValue Op,
     return Op;
 
   return SDValue();
+}
+
+SDValue AArch64TargetLowering::LowerVECTOR_REVERSE(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  assert(Op.getValueType() == MVT::nxv1i1 && "Unexpected vector type!");
+
+  SDLoc DL(Op);
+  // Select nxv1i1 vector_reverse by widening to nxv2i1.
+  SDValue Widened = DAG.getInsertSubvector(DL, DAG.getPOISON(MVT::nxv2i1),
+                                           Op.getOperand(0), 0);
+  SDValue Reversed = DAG.getNode(ISD::VECTOR_REVERSE, DL, MVT::nxv2i1, Widened);
+  return DAG.getExtractSubvector(DL, MVT::nxv1i1, Reversed, 1);
 }
 
 SDValue AArch64TargetLowering::LowerSELECT_CC(SDValue Op,
@@ -19912,7 +19932,7 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
 
   VectorType *VTy = getDeinterleavedVectorType(DI);
 
-  const DataLayout &DL = LI->getModule()->getDataLayout();
+  const DataLayout &DL = LI->getDataLayout();
   bool UseScalable;
   if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
     return false;
@@ -19990,7 +20010,7 @@ bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
   assert(!Mask && "Unexpected mask on plain store");
 
   VectorType *VTy = cast<VectorType>(InterleavedValues[0]->getType());
-  const DataLayout &DL = SI->getModule()->getDataLayout();
+  const DataLayout &DL = SI->getDataLayout();
 
   bool UseScalable;
   if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
@@ -23998,6 +24018,12 @@ static SDValue performTruncateCombine(SDNode *N, SelectionDAG &DAG,
     Op = DAG.getNode(AArch64ISD::NVCAST, DL, CastVT, Op);
     return DAG.getExtractVectorElt(DL, VT, Op, ExtractIndex * 2);
   }
+
+  // truncate(buildvector) -> buildvector if we have it late in the pipeline. We
+  // do not truncate the operand types as the buildvector implicitly truncates.
+  if (!DCI.isBeforeLegalizeOps() && N0.getOpcode() == ISD::BUILD_VECTOR &&
+      N0.hasOneUse() && (VT == MVT::v8i8 || VT == MVT::v4i16))
+    return DAG.getBuildVector(VT, DL, N0->ops());
 
   return SDValue();
 }
@@ -30105,8 +30131,8 @@ static SDValue foldMaskedShiftToUSHL(SelectionDAG &DAG,
     return SDValue();
 
   unsigned EltSize = VT.getScalarSizeInBits();
-  if (!sd_match(Cond, m_SetCC(m_Specific(Amt), m_SpecificInt(EltSize),
-                              m_SpecificCondCode(RequiredCC))))
+  if (!sd_match(Cond, m_SpecificSetCC(RequiredCC, m_Specific(Amt),
+                                      m_SpecificInt(EltSize))))
     return SDValue();
 
   SDLoc DL(N);
@@ -31684,7 +31710,7 @@ static SDValue performCTPOPCombine(SDNode *N,
 
   EVT CmpVT;
   // Use the same VT as the SETcc if -CTPOP would not overflow.
-  if (sd_match(Mask, m_SetCC(m_VT(CmpVT), m_Value(), m_Value()))) {
+  if (sd_match(Mask, m_SetCC(m_VT(CmpVT), m_Value()))) {
     CmpVT = CmpVT.changeVectorElementTypeToInteger();
     if (Log2_64_Ceil(MaskVT.getSizeInBits()) <= CmpVT.getScalarSizeInBits() - 1)
       ReduceInVT = CmpVT;

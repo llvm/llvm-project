@@ -657,7 +657,7 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
     // Mask from the operands?)
     New = VPBuilder::createSingleScalarOp(
         RepR->getOpcode(), NewOps, /*Mask=*/nullptr, *RepR, *RepR,
-        RepR->getDebugLoc(), RepR->getUnderlyingInstr());
+        RepR->getDebugLoc(), RepR->getScalarType(), RepR->getUnderlyingInstr());
   } else {
     New = DefR->clone();
     for (const auto &[Idx, Op] : enumerate(NewOps)) {
@@ -736,7 +736,8 @@ static void convertRecipesInRegionBlocksToSingleScalar(VPlan &Plan, Type *IdxTy,
       if (auto *RepR = dyn_cast<VPReplicateRecipe>(&OldR)) {
         auto *NewR = VPBuilder::createSingleScalarOp(
             RepR->getOpcode(), to_vector(RepR->operands()), /*Mask=*/nullptr,
-            *RepR, *RepR, OldDL, RepR->getUnderlyingInstr());
+            *RepR, *RepR, OldDL, RepR->getScalarType(),
+            RepR->getUnderlyingInstr());
         NewR->insertBefore(RepR);
         RepR->replaceAllUsesWith(NewR);
         RepR->eraseFromParent();
@@ -990,7 +991,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       Def2LaneDefs[DefR] = LaneDefs;
       /// Users that only demand the first lane can use the definition for lane
       /// 0.
-      DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser &U, unsigned) {
+      DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser &U) {
         if (U.usesFirstLaneOnly(DefR))
           return true;
         auto *VPI = dyn_cast<VPInstruction>(&U);

@@ -3,19 +3,19 @@
 // Test 1: Basic delay — cuf.alloc of box type is moved to just before
 // the first use (AllocatableSetBounds).
 func.func @_QPbasic() {
-  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFbasicEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFbasicEa") bindc_name("a") data_attr(device) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
   %c0 = arith.constant 0 : index
   %2 = fir.shape %c0 : (index) -> !fir.shape<1>
-  %3 = fir.embox %1(%2) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  %3 = fir.embox %1(%2) allocator_idx(2) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
   fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  %4 = fir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFbasicEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 uniq_name("_QFbasicEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %c10 = arith.constant 10 : index
   %c1 = arith.constant 1 : index
   %5 = fir.convert %c1 : (index) -> i32
   %6 = fir.convert %c10 : (index) -> i64
   fir.call @_FortranAAllocatableSetBounds(%4, %5, %6, %6) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, i32, i64, i64) -> ()
-  %7 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
+  %7 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device) -> i32
   return
 }
 func.func private @_FortranAAllocatableSetBounds(!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, i32, i64, i64)
@@ -38,10 +38,10 @@ func.func private @_FortranAAllocatableSetBounds(!fir.ref<!fir.box<!fir.heap<!fi
 
 // Test 2: Non-box cuf.alloc (fixed-size device array) should NOT be moved.
 func.func @_QPfixed_array() {
-  %0 = cuf.alloc !fir.array<10xf32> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFfixed_arrayEa"} -> !fir.ref<!fir.array<10xf32>>
+  %0 = cuf.alloc !fir.array<10xf32> uniq_name("_QFfixed_arrayEa") bindc_name("a") data_attr(device) -> !fir.ref<!fir.array<10xf32>>
   %c10 = arith.constant 10 : index
   %1 = fir.shape %c10 : (index) -> !fir.shape<1>
-  %2 = fir.declare %0(%1) {data_attr = #cuf.cuda<device>, uniq_name = "_QFfixed_arrayEa"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+  %2 = fir.declare %0(%1) uniq_name("_QFfixed_arrayEa") data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
   %c42 = arith.constant 42 : index
   return
 }
@@ -58,18 +58,18 @@ func.func @_QPfixed_array() {
 // Test 3: First use inside fir.if — cuf.alloc should be moved before the
 // fir.if, not inside it.
 func.func @_QPuse_in_if(%arg0: !fir.ref<!fir.logical<4>>) {
-  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFuse_in_ifEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFuse_in_ifEa") bindc_name("a") data_attr(device) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
   %c0 = arith.constant 0 : index
   %2 = fir.shape %c0 : (index) -> !fir.shape<1>
-  %3 = fir.embox %1(%2) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  %3 = fir.embox %1(%2) allocator_idx(2) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
   fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  %4 = fir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFuse_in_ifEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 uniq_name("_QFuse_in_ifEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %c42 = arith.constant 42 : index
   %5 = fir.load %arg0 : !fir.ref<!fir.logical<4>>
   %6 = fir.convert %5 : (!fir.logical<4>) -> i1
   fir.if %6 {
-    %7 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
+    %7 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device) -> i32
   }
   return
 }
@@ -91,20 +91,20 @@ func.func @_QPuse_in_if(%arg0: !fir.ref<!fir.logical<4>>) {
 
 // Test 4: cuf.free stays at function end after the alloc is delayed.
 func.func @_QPwith_free() {
-  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFwith_freeEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFwith_freeEa") bindc_name("a") data_attr(device) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
   %c0 = arith.constant 0 : index
   %2 = fir.shape %c0 : (index) -> !fir.shape<1>
-  %3 = fir.embox %1(%2) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  %3 = fir.embox %1(%2) allocator_idx(2) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
   fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  %4 = fir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFwith_freeEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 uniq_name("_QFwith_freeEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %c10 = arith.constant 10 : index
   %c1 = arith.constant 1 : index
   %5 = fir.convert %c1 : (index) -> i32
   %6 = fir.convert %c10 : (index) -> i64
   fir.call @_FortranAAllocatableSetBounds(%4, %5, %6, %6) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, i32, i64, i64) -> ()
-  %7 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
-  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+  %7 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device) -> i32
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device)
   return
 }
 func.func private @_FortranAAllocatableSetBounds(!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, i32, i64, i64)
@@ -124,25 +124,25 @@ func.func private @_FortranAAllocatableSetBounds(!fir.ref<!fir.box<!fir.heap<!fi
 
 // Test 5: Multiple allocatable descriptors are delayed independently.
 func.func @_QPmultiple() {
-  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFmultipleEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFmultipleEa") bindc_name("a") data_attr(device) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
   %c0 = arith.constant 0 : index
   %2 = fir.shape %c0 : (index) -> !fir.shape<1>
-  %3 = fir.embox %1(%2) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  %3 = fir.embox %1(%2) allocator_idx(2) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
   fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  %4 = fir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFmultipleEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  %10 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf64>>> {bindc_name = "b", data_attr = #cuf.cuda<device>, uniq_name = "_QFmultipleEb"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
+  %4 = fir.declare %0 uniq_name("_QFmultipleEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %10 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf64>>> uniq_name("_QFmultipleEb") bindc_name("b") data_attr(device) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
   %11 = fir.zero_bits !fir.heap<!fir.array<?xf64>>
   %12 = fir.shape %c0 : (index) -> !fir.shape<1>
-  %13 = fir.embox %11(%12) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf64>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf64>>>
+  %13 = fir.embox %11(%12) allocator_idx(2) : (!fir.heap<!fir.array<?xf64>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf64>>>
   fir.store %13 to %10 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
-  %14 = fir.declare %10 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFmultipleEb"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
+  %14 = fir.declare %10 uniq_name("_QFmultipleEb") fortran_attrs<allocatable> data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
   %c42 = arith.constant 42 : index
-  %20 = cuf.allocate %14 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>> {data_attr = #cuf.cuda<device>} -> i32
+  %20 = cuf.allocate %14 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>> data_attr(device) -> i32
   %c99 = arith.constant 99 : index
-  %21 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
-  cuf.free %14 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>> {data_attr = #cuf.cuda<device>}
-  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+  %21 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device) -> i32
+  cuf.free %14 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>> data_attr(device)
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device)
   return
 }
 
@@ -154,14 +154,14 @@ func.func @_QPmultiple() {
 // CHECK:         fir.zero_bits
 // CHECK:         fir.embox
 // CHECK:         arith.constant 42
-// CHECK:         cuf.alloc {{.*}}uniq_name = "_QFmultipleEb"
+// CHECK:         cuf.alloc {{.*}}uniq_name("_QFmultipleEb")
 // CHECK:         fir.store
-// CHECK:         fir.declare {{.*}}uniq_name = "_QFmultipleEb"
+// CHECK:         fir.declare {{.*}}uniq_name("_QFmultipleEb")
 // CHECK:         cuf.allocate
 // CHECK:         arith.constant 99
-// CHECK:         cuf.alloc {{.*}}uniq_name = "_QFmultipleEa"
+// CHECK:         cuf.alloc {{.*}}uniq_name("_QFmultipleEa")
 // CHECK:         fir.store
-// CHECK:         fir.declare {{.*}}uniq_name = "_QFmultipleEa"
+// CHECK:         fir.declare {{.*}}uniq_name("_QFmultipleEa")
 // CHECK:         cuf.allocate
 // CHECK:         cuf.free
 // CHECK:         cuf.free
@@ -172,15 +172,15 @@ func.func @_QPmultiple() {
 // Test 6: Dead descriptor (declare with only cuf.free user) — still moves
 // to just before the free.
 func.func @_QPdead_var() {
-  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFdead_varEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFdead_varEa") bindc_name("a") data_attr(device) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
   %c0 = arith.constant 0 : index
   %2 = fir.shape %c0 : (index) -> !fir.shape<1>
-  %3 = fir.embox %1(%2) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  %3 = fir.embox %1(%2) allocator_idx(2) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
   fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  %4 = fir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFdead_varEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 uniq_name("_QFdead_varEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %c42 = arith.constant 42 : index
-  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device)
   return
 }
 
@@ -198,20 +198,20 @@ func.func @_QPdead_var() {
 
 // Test 7: First use inside fir.do_loop — cuf.alloc moves before the loop.
 func.func @_QPuse_in_loop() {
-  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFuse_in_loopEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFuse_in_loopEa") bindc_name("a") data_attr(device) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
   %c0 = arith.constant 0 : index
   %2 = fir.shape %c0 : (index) -> !fir.shape<1>
-  %3 = fir.embox %1(%2) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  %3 = fir.embox %1(%2) allocator_idx(2) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
   fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  %4 = fir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFuse_in_loopEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 uniq_name("_QFuse_in_loopEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %c99 = arith.constant 99 : index
   %c1 = arith.constant 1 : index
   %c10 = arith.constant 10 : index
   fir.do_loop %i = %c1 to %c10 step %c1 {
     %5 = fir.load %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   }
-  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device)
   return
 }
 
@@ -235,13 +235,13 @@ func.func @_QPuse_in_loop() {
 // stop-in-if). The cuf.alloc should move into that block before the
 // first use so it still dominates the successor.
 func.func @_QPuse_in_successor(%arg0: !fir.ref<i32>) {
-  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFuse_in_successorEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFuse_in_successorEa") bindc_name("a") data_attr(device) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
   %c0 = arith.constant 0 : index
   %2 = fir.shape %c0 : (index) -> !fir.shape<1>
-  %3 = fir.embox %1(%2) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  %3 = fir.embox %1(%2) allocator_idx(2) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
   fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  %4 = fir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFuse_in_successorEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 uniq_name("_QFuse_in_successorEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %c42 = arith.constant 42 : index
   %5 = fir.load %arg0 : !fir.ref<i32>
   %c0_i32 = arith.constant 0 : i32
@@ -251,8 +251,8 @@ func.func @_QPuse_in_successor(%arg0: !fir.ref<i32>) {
   fir.call @_FortranAStopStatementText(%c0_i32, %c0_i32) : (i32, i32) -> none
   fir.unreachable
 ^bb2:
-  %7 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
-  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+  %7 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device) -> i32
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device)
   return
 }
 func.func private @_FortranAStopStatementText(i32, i32) -> none
@@ -282,13 +282,13 @@ func.func private @_FortranAAllocatableSetBounds(!fir.ref<!fir.box<!fir.heap<!fi
 // Test 9: Uses in multiple successor blocks — cuf.alloc moves to just
 // before the entry block's terminator (the branch) so it dominates both.
 func.func @_QPuse_in_multi_successor(%arg0: !fir.ref<i32>) {
-  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFuse_in_multi_successorEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFuse_in_multi_successorEa") bindc_name("a") data_attr(device) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
   %c0 = arith.constant 0 : index
   %2 = fir.shape %c0 : (index) -> !fir.shape<1>
-  %3 = fir.embox %1(%2) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  %3 = fir.embox %1(%2) allocator_idx(2) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
   fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  %4 = fir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFuse_in_multi_successorEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 uniq_name("_QFuse_in_multi_successorEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %c42 = arith.constant 42 : index
   %5 = fir.load %arg0 : !fir.ref<i32>
   %c0_i32 = arith.constant 0 : i32
@@ -296,11 +296,11 @@ func.func @_QPuse_in_multi_successor(%arg0: !fir.ref<i32>) {
   cf.cond_br %6, ^bb1, ^bb2
 ^bb1:
   %7 = fir.load %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device)
   return
 ^bb2:
-  %8 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
-  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+  %8 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device) -> i32
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device)
   return
 }
 
@@ -332,18 +332,18 @@ func.func @_QPhost_assoc() {
   %tuple = fir.alloca tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
   %c0_i32 = arith.constant 0 : i32
   %slot = fir.coordinate_of %tuple, %c0_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
-  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFhost_assocEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFhost_assocEa") bindc_name("a") data_attr(device) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
   %c0 = arith.constant 0 : index
   %2 = fir.shape %c0 : (index) -> !fir.shape<1>
-  %3 = fir.embox %1(%2) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  %3 = fir.embox %1(%2) allocator_idx(2) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
   fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  %4 = fir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFhost_assocEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 uniq_name("_QFhost_assocEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   fir.store %4 to %slot : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
   %c99 = arith.constant 99 : index
-  %5 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
+  %5 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device) -> i32
   fir.call @_QFPcontained(%tuple) : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>) -> ()
-  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device)
   return
 }
 func.func private @_QFPcontained(!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>)
@@ -371,16 +371,16 @@ func.func @_QPhost_assoc_call() {
   %tuple = fir.alloca tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
   %c0_i32 = arith.constant 0 : i32
   %slot = fir.coordinate_of %tuple, %c0_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
-  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<managed>, uniq_name = "_QFhost_assoc_callEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFhost_assoc_callEa") bindc_name("a") data_attr(managed) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
   %c0 = arith.constant 0 : index
   %2 = fir.shape %c0 : (index) -> !fir.shape<1>
-  %3 = fir.embox %1(%2) {allocator_idx = 3 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  %3 = fir.embox %1(%2) allocator_idx(3) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
   fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  %4 = fir.declare %0 {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFhost_assoc_callEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 uniq_name("_QFhost_assoc_callEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<managed>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   fir.store %4 to %slot : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
   fir.call @_QFPgo(%tuple) : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>) -> ()
-  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<managed>}
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(managed)
   return
 }
 func.func private @_QFPgo(!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>)
@@ -402,20 +402,20 @@ func.func @_QPhost_assoc_late_slot() {
   %tuple = fir.alloca tuple<!fir.ref<i32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
   %c0_i32 = arith.constant 0 : i32
   %c1_i32 = arith.constant 1 : i32
-  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<managed>, uniq_name = "_QFhost_assoc_late_slotEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFhost_assoc_late_slotEa") bindc_name("a") data_attr(managed) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
   %c0 = arith.constant 0 : index
   %2 = fir.shape %c0 : (index) -> !fir.shape<1>
-  %3 = fir.embox %1(%2) {allocator_idx = 3 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  %3 = fir.embox %1(%2) allocator_idx(3) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
   fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  %4 = fir.declare %0 {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFhost_assoc_late_slotEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 uniq_name("_QFhost_assoc_late_slotEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<managed>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %slot0 = fir.coordinate_of %tuple, %c0_i32 : (!fir.ref<tuple<!fir.ref<i32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<i32>>
   %scalar = fir.alloca i32
   fir.store %scalar to %slot0 : !fir.llvm_ptr<!fir.ref<i32>>
   %slot1 = fir.coordinate_of %tuple, %c1_i32 : (!fir.ref<tuple<!fir.ref<i32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
   fir.store %4 to %slot1 : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
   fir.call @_QFPgo2(%tuple) : (!fir.ref<tuple<!fir.ref<i32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>) -> ()
-  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<managed>}
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(managed)
   return
 }
 func.func private @_QFPgo2(!fir.ref<tuple<!fir.ref<i32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>)
@@ -440,18 +440,18 @@ func.func @_QPhost_assoc_prologue() {
   %tuple = fir.alloca tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
   %c0_i32 = arith.constant 0 : i32
   %slot = fir.coordinate_of %tuple, %c0_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
-  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFhost_assoc_prologueEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFhost_assoc_prologueEa") bindc_name("a") data_attr(device) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
   %c0 = arith.constant 0 : index
   %2 = fir.shape %c0 : (index) -> !fir.shape<1>
-  %3 = fir.embox %1(%2) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  %3 = fir.embox %1(%2) allocator_idx(2) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
   fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  %4 = fir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFhost_assoc_prologueEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 uniq_name("_QFhost_assoc_prologueEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   fir.store %4 to %slot : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
   fir.call @_QPsetup() : () -> ()
-  %5 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
+  %5 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device) -> i32
   fir.call @_QFPcontained2(%tuple) : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>) -> ()
-  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device)
   return
 }
 func.func private @_QPsetup()
@@ -476,13 +476,13 @@ func.func private @_QFPcontained2(!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fi
 // Test 14: Uses span several successor blocks, but ^bb2 dominates them all, so
 // the group sinks into ^bb2 instead of stopping at the entry terminator.
 func.func @_QPuse_in_dominating_successor(%arg0: !fir.ref<i32>) {
-  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFuse_in_dominating_successorEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFuse_in_dominating_successorEa") bindc_name("a") data_attr(device) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
   %c0 = arith.constant 0 : index
   %2 = fir.shape %c0 : (index) -> !fir.shape<1>
-  %3 = fir.embox %1(%2) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  %3 = fir.embox %1(%2) allocator_idx(2) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
   fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  %4 = fir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFuse_in_dominating_successorEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 uniq_name("_QFuse_in_dominating_successorEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %c0_i32 = arith.constant 0 : i32
   %5 = fir.load %arg0 : !fir.ref<i32>
   %6 = arith.cmpi slt, %5, %c0_i32 : i32
@@ -492,15 +492,15 @@ func.func @_QPuse_in_dominating_successor(%arg0: !fir.ref<i32>) {
   fir.unreachable
 ^bb2:
   fir.call @_QPinit_runtime() : () -> ()
-  %7 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
+  %7 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device) -> i32
   %8 = fir.load %arg0 : !fir.ref<i32>
   %9 = arith.cmpi slt, %8, %c0_i32 : i32
   cf.cond_br %9, ^bb3, ^bb4
 ^bb3:
-  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device)
   return
 ^bb4:
-  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device)
   return
 }
 func.func private @_FortranAStopStatementText(i32, i32) -> none
@@ -523,17 +523,17 @@ func.func private @_QPinit_runtime()
 // Test 15: A store into an !fir.llvm_ptr that is not a tuple slot goes to an
 // unknown destination, so it is an ordinary use and pins the group.
 func.func @_QPllvm_ptr_not_tuple(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) {
-  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFllvm_ptr_not_tupleEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFllvm_ptr_not_tupleEa") bindc_name("a") data_attr(device) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
   %c0 = arith.constant 0 : index
   %2 = fir.shape %c0 : (index) -> !fir.shape<1>
-  %3 = fir.embox %1(%2) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  %3 = fir.embox %1(%2) allocator_idx(2) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
   fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  %4 = fir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFllvm_ptr_not_tupleEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 uniq_name("_QFllvm_ptr_not_tupleEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %opaque = fir.convert %arg0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
   fir.store %4 to %opaque : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
   fir.call @_QPsetup3() : () -> ()
-  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device)
   return
 }
 func.func private @_QPsetup3()
@@ -556,19 +556,19 @@ func.func @_QPtuple_slot_read() {
   %tuple = fir.alloca tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
   %c0_i32 = arith.constant 0 : i32
   %slot = fir.coordinate_of %tuple, %c0_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
-  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFtuple_slot_readEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFtuple_slot_readEa") bindc_name("a") data_attr(device) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
   %c0 = arith.constant 0 : index
   %2 = fir.shape %c0 : (index) -> !fir.shape<1>
-  %3 = fir.embox %1(%2) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  %3 = fir.embox %1(%2) allocator_idx(2) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
   fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  %4 = fir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtuple_slot_readEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 uniq_name("_QFtuple_slot_readEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   fir.store %4 to %slot : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
   fir.call @_QPsetup4() : () -> ()
   %reread = fir.coordinate_of %tuple, %c0_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
   %5 = fir.load %reread : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
-  %6 = cuf.allocate %5 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
-  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+  %6 = cuf.allocate %5 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device) -> i32
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device)
   return
 }
 func.func private @_QPsetup4()
@@ -594,18 +594,18 @@ func.func @_QPshared_slot_addr() {
   %tuple = fir.alloca tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
   %c0_i32 = arith.constant 0 : i32
   %slot = fir.coordinate_of %tuple, %c0_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
-  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFshared_slot_addrEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFshared_slot_addrEa") bindc_name("a") data_attr(device) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
   %c0 = arith.constant 0 : index
   %2 = fir.shape %c0 : (index) -> !fir.shape<1>
-  %3 = fir.embox %1(%2) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  %3 = fir.embox %1(%2) allocator_idx(2) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
   fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  %4 = fir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFshared_slot_addrEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 uniq_name("_QFshared_slot_addrEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   fir.store %4 to %slot : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
   fir.call @_QPsetup5() : () -> ()
   %5 = fir.load %slot : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
-  %6 = cuf.allocate %5 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
-  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+  %6 = cuf.allocate %5 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device) -> i32
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device)
   return
 }
 func.func private @_QPsetup5()
