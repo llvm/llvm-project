@@ -240,6 +240,12 @@ private:
   bool fixSetRegMode(MachineInstr *MI);
   bool fixTDM(MachineInstr *MI);
 
+  /// Wait states before \p Consumer may read \p Reg, holding \p Producer's
+  /// result, as srcC if \p IsSrcC or as srcA/srcB otherwise.
+  int getMFMAReadWaitStates(const MachineInstr &Consumer,
+                            const MachineInstr &Producer, Register Reg,
+                            bool IsSrcC) const;
+
   int checkMAIHazards(MachineInstr *MI) const;
   int checkMAIHazards908(MachineInstr *MI) const;
   int checkMAIHazards90A(MachineInstr *MI) const;
