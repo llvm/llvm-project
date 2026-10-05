@@ -245,7 +245,7 @@ bool cir::MatrixColumnMajorStoreOp::canUsesBeRemoved(
 
   Value blockingUse = (*blockingUses.begin())->get();
   return blockingUse == slot.ptr && getValue() == slot.ptr &&
-         getValue() != slot.ptr && slot.elemType == getValue().getType();
+         getValue() != slot.ptr && slot.valueType == getValue().getType();
 }
 
 DeletionKind cir::MatrixColumnMajorStoreOp::removeBlockingUses(
