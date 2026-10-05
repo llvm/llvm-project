@@ -363,12 +363,16 @@ class FeatureExpressionParser {
   StringRef Expr;
   const FeatureBitset &FeatureBits;
   ArrayRef<SubtargetFeatureKV> ProcFeatures;
+  function_ref<std::optional<bool>(StringRef)> ResolveCustomTerm;
   size_t Pos = 0;
 
 public:
-  FeatureExpressionParser(StringRef Expr, const FeatureBitset &FeatureBits,
-                          ArrayRef<SubtargetFeatureKV> ProcFeatures)
-      : Expr(Expr), FeatureBits(FeatureBits), ProcFeatures(ProcFeatures) {}
+  FeatureExpressionParser(
+      StringRef Expr, const FeatureBitset &FeatureBits,
+      ArrayRef<SubtargetFeatureKV> ProcFeatures,
+      function_ref<std::optional<bool>(StringRef)> ResolveCustomTerm)
+      : Expr(Expr), FeatureBits(FeatureBits), ProcFeatures(ProcFeatures),
+        ResolveCustomTerm(ResolveCustomTerm) {}
 
   bool parse() {
     bool Result = parseOr();
@@ -419,19 +423,26 @@ private:
     if (Start == Pos)
       reportFatalInternalError("malformed target feature expression");
 
-    return hasFeature(Expr.slice(Start, Pos), FeatureBits, ProcFeatures);
+    StringRef Term = Expr.slice(Start, Pos);
+    if (ResolveCustomTerm)
+      if (std::optional<bool> Result = ResolveCustomTerm(Term))
+        return *Result;
+    return hasFeature(Term, FeatureBits, ProcFeatures);
   }
 };
 } // namespace
 
-bool MCSubtargetInfo::checkFeatureExpression(StringRef FeatureExpr) const {
+bool MCSubtargetInfo::checkFeatureExpression(
+    StringRef FeatureExpr,
+    function_ref<std::optional<bool>(StringRef)> ResolveCustomTerm) const {
   if (FeatureExpr.empty())
     return true;
   if (FeatureExpr.contains(' ')) {
     reportFatalInternalError(
         "spaces are not allowed in target feature expressions");
   }
-  FeatureExpressionParser Parser(FeatureExpr, FeatureBits, ProcFeatures);
+  FeatureExpressionParser Parser(FeatureExpr, FeatureBits, ProcFeatures,
+                                 ResolveCustomTerm);
   return Parser.parse();
 }
 
