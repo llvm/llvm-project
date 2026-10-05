@@ -7277,6 +7277,27 @@ X86TTIImpl::getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
     const Value *Ptrs = GEP->getPointerOperand();
     if (Ptrs->getType()->isVectorTy() && !getSplatValue(Ptrs))
       return IndexSize;
+
+    // combineGatherScatter narrows through three routes: folding a constant,
+    // shortening an extension from at most 32 bits, and truncating where that
+    // removes an illegal type. Only the last depends on the subtarget --
+    // sixteen qword indices are illegal everywhere, but the dword form they
+    // narrow to is legal only once a 512-bit register is available -- so the
+    // same gather keeps qword indices on AVX2 and narrows to dwords on AVX-512.
+    LLVMContext &Ctx = SrcVTy->getContext();
+    auto NarrowsOnItsOwn = [](const Value *V) {
+      if (V->getType()->getScalarSizeInBits() <= 32 || isa<Constant>(V))
+        return true;
+      const auto *Ext = dyn_cast<CastInst>(V);
+      return Ext &&
+             (Ext->getOpcode() == Instruction::SExt ||
+              Ext->getOpcode() == Instruction::ZExt) &&
+             Ext->getSrcTy()->getScalarSizeInBits() <= 32;
+    };
+    auto TruncationRemovesIllegalType = [&]() {
+      return !TLI->isTypeLegal(EVT::getVectorVT(Ctx, MVT::i64, VF)) &&
+             TLI->isTypeLegal(EVT::getVectorVT(Ctx, MVT::i32, VF));
+    };
     for (gep_type_iterator GTI = gep_type_begin(GEP), GTE = gep_type_end(GEP);
          GTI != GTE; ++GTI) {
       const Value *Operand = GTI.getOperand();
@@ -7319,30 +7340,19 @@ X86TTIImpl::getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
       uint64_t Stride = EltSize.getFixedValue();
 
       // A stride the scale field encodes -- 1, 2, 4 or 8 -- is applied by the
-      // addressing mode, so the index reaches the combine as the extension it
-      // was written as, and narrowing follows from its range alone.
-      if (isPowerOf2_64(Stride) && Stride <= 8)
-        continue;
+      // addressing mode, so the index reaches the combine as it was written.
+      if (isPowerOf2_64(Stride) && Stride <= 8) {
+        if (NarrowsOnItsOwn(Operand) || TruncationRemovesIllegalType())
+          continue;
+        return IndexSize;
+      }
 
       // Any other stride is multiplied into the index first, and the product
-      // is what the combine sees. It has to fit a signed dword with the
-      // stride included, and it is no longer an extension node, which is the
-      // route the combine normally narrows through.
+      // is what the combine sees. It has to fit a signed dword with the stride
+      // included, and it is no longer an extension node.
       if (IndexBits + Log2_64_Ceil(Stride) > 32)
         return IndexSize;
-
-      // Two routes remain for that product. A constant index narrows by being
-      // folded to its truncated form. Otherwise the combine narrows only
-      // where doing so removes an illegal type, which depends on the widest
-      // vector the subtarget has: sixteen qword indices are illegal
-      // everywhere, but the dword form they would narrow to is itself legal
-      // only once a 512-bit register is available. The same gather therefore
-      // keeps qword indices on AVX2 and narrows to dwords on AVX-512.
-      if (isa<Constant>(Operand))
-        continue;
-      LLVMContext &Ctx = SrcVTy->getContext();
-      if (TLI->isTypeLegal(EVT::getVectorVT(Ctx, MVT::i64, VF)) ||
-          !TLI->isTypeLegal(EVT::getVectorVT(Ctx, MVT::i32, VF)))
+      if (!isa<Constant>(Operand) && !TruncationRemovesIllegalType())
         return IndexSize;
     }
 

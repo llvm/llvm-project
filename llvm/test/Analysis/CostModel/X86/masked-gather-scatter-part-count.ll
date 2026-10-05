@@ -464,6 +464,8 @@ define <16 x i32> @gather_v16i32_struct_stride(ptr %base, <16 x i32> %idx, <16 x
 ; KNL-COST: cost of 1 for instruction: {{.*}}masked.gather
 ; KNL-ASM-LABEL: gather_v16i32_struct_stride_narrow_index:
 ; KNL-ASM-COUNT-1: vpgatherdd
+; KNL-ASM-NOT: vpgather
+; KNL-ASM: retq
 define <16 x i32> @gather_v16i32_struct_stride_narrow_index(ptr %base, <16 x i16> %idx, <16 x i1> %mask) {
   %sext = sext <16 x i16> %idx to <16 x i64>
   %ptrs = getelementptr inbounds {i32, i32, i32}, ptr %base, <16 x i64> %sext, i32 0
@@ -486,6 +488,33 @@ define <16 x i32> @gather_v16i32_struct_stride_narrow_index(ptr %base, <16 x i16
 define <16 x i32> @gather_v16i32_scaled_stride(ptr %base, <16 x i32> %idx, <16 x i1> %mask) {
   %sext = sext <16 x i32> %idx to <16 x i64>
   %ptrs = getelementptr inbounds i32, ptr %base, <16 x i64> %sext
+  %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> %ptrs, i32 4, <16 x i1> %mask, <16 x i32> poison)
+  ret <16 x i32> %v
+}
+
+; An index that is neither a constant nor an extension has only the truncation
+; route, which the combine takes only where it removes an illegal type. Sixteen
+; qword indices are illegal everywhere, but the dword form they narrow to needs
+; a 512-bit register, so the same gather keeps qword indices on AVX2.
+; SKX-COST-LABEL: 'gather_v16i32_masked_index'
+; SKX-COST: cost of 1 for instruction: {{.*}}masked.gather
+; SKX-ASM-LABEL: gather_v16i32_masked_index:
+; SKX-ASM-COUNT-1: vpgatherdd
+; SKX-ASM-NOT: vpgather
+; AVX2-COST-LABEL: 'gather_v16i32_masked_index'
+; AVX2-COST: cost of 4 for instruction: {{.*}}masked.gather
+; AVX2-ASM-LABEL: gather_v16i32_masked_index:
+; AVX2-ASM-COUNT-4: vpgatherqd
+; AVX2-ASM-NOT: vpgather
+; KNL-COST-LABEL: 'gather_v16i32_masked_index'
+; KNL-COST: cost of 1 for instruction: {{.*}}masked.gather
+; KNL-ASM-LABEL: gather_v16i32_masked_index:
+; KNL-ASM-COUNT-1: vpgatherdd
+; KNL-ASM-NOT: vpgather
+; KNL-ASM: retq
+define <16 x i32> @gather_v16i32_masked_index(ptr %base, <16 x i64> %x, <16 x i1> %mask) {
+  %idx = and <16 x i64> %x, splat (i64 255)
+  %ptrs = getelementptr inbounds i32, ptr %base, <16 x i64> %idx
   %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> %ptrs, i32 4, <16 x i1> %mask, <16 x i32> poison)
   ret <16 x i32> %v
 }
