@@ -13,7 +13,6 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Value.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
@@ -273,28 +272,19 @@ struct LoweringPreparePass
       // group as the associated data object." In practice, this doesn't work
       // for non-ELF and non-Wasm object formats, so only do it for ELF and
       // Wasm.
-      bool hasComdat = globalOp.getComdat();
+      std::optional<llvm::StringRef> comdat = globalOp.getComdat();
       const llvm::Triple &triple = getTargetInfo().getTriple();
-      // TODO(cir): for now, we're just setting comdat to true, but it should
-      // contain a comdat reference name here instead.
-      if (!isLocalVarDecl && hasComdat &&
+      if (!isLocalVarDecl && comdat.has_value() &&
           (triple.isOSBinFormatELF() || triple.isOSBinFormatWasm())) {
-        // This should be a comdat for the variable.
-        guard.setComdat(true);
-      } else if (hasComdat && globalOp.isWeakForLinker()) {
-        guard.setComdat(true);
+        guard.setComdat(comdat->empty() ? globalOp.getSymName() : *comdat);
+      } else if (comdat.has_value() && globalOp.isWeakForLinker()) {
+        guard.setSelfComdat();
       }
 
       setStaticLocalDeclGuardAddress(globalSymName, guard);
     }
     return guard;
   }
-
-  ///
-  /// AST related
-  /// -----------
-
-  clang::ASTContext *astCtx = nullptr;
 
   /// Target/ABI facts sourced from the module's own attributes.
   std::unique_ptr<cir::LowerModule> lowerModule;
@@ -578,8 +568,6 @@ struct LoweringPreparePass
 
     builder.createYield(loc); // Outermost IfOp
   }
-
-  void setASTContext(clang::ASTContext *c) { astCtx = c; }
 };
 
 } // namespace
@@ -1611,10 +1599,8 @@ LoweringPreparePass::getOrCreateThreadLocalWrapper(CIRBaseBuilderTy &builder,
   func.setLinkageAttr(
       cir::GlobalLinkageKindAttr::get(&getContext(), linkageKind));
 
-  // TODO(cir): This is supposed to refer to the comdat of the global symbol,
-  // but that isn't in CIR yet.
   if (getTargetInfo().getTriple().supportsCOMDAT() && func.isWeakForLinker())
-    func.setComdat(true);
+    func.setSelfComdat();
 
   mlir::SymbolTable::setSymbolVisibility(
       func, mlir::SymbolTable::Visibility::Private);
@@ -3110,11 +3096,4 @@ void LoweringPreparePass::runOnOperation() {
 
 std::unique_ptr<Pass> mlir::createLoweringPreparePass() {
   return std::make_unique<LoweringPreparePass>();
-}
-
-std::unique_ptr<Pass>
-mlir::createLoweringPreparePass(clang::ASTContext *astCtx) {
-  auto pass = std::make_unique<LoweringPreparePass>();
-  pass->setASTContext(astCtx);
-  return std::move(pass);
 }

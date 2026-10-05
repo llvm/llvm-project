@@ -1898,6 +1898,7 @@ private:
   bool validateMonitorSleep(const MCInst &Inst, const OperandVector &Operands);
   bool validateClusterBarrierIsFirst(const MCInst &Inst,
                                      const OperandVector &Operands);
+  bool validateScaleSel(const MCInst &Inst, const OperandVector &Operands);
   unsigned getConstantBusLimit(unsigned Opcode) const;
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
   bool isInlineConstant(const MCInst &Inst, unsigned OpIdx) const;
@@ -5748,6 +5749,49 @@ bool AMDGPUAsmParser::validateClusterBarrierIsFirst(
   return false;
 }
 
+bool AMDGPUAsmParser::validateScaleSel(const MCInst &Inst,
+                                       const OperandVector &Operands) {
+  unsigned Opc = Inst.getOpcode();
+  int ScaleSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::scale_sel);
+  if (ScaleSelIdx == -1)
+    return true;
+  int MaxSel = 0;
+  switch (Opc) {
+  case AMDGPU::V_CVT_SCALE_PK16_F16_FP6_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK16_BF16_FP6_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK16_F16_BF6_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK16_BF16_BF6_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK16_F32_FP6_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK16_F32_BF6_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK8_F16_FP4_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK8_BF16_FP4_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK8_F32_FP4_e64_gfx1250:
+    MaxSel = 4;
+    break;
+  case AMDGPU::V_CVT_SCALE_PK8_F16_FP8_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK8_BF16_FP8_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK8_F16_BF8_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK8_BF16_BF8_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK8_F32_FP8_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK8_F32_BF8_e64_gfx1250:
+    MaxSel = 8;
+    break;
+  default:
+    return true;
+  }
+
+  if (getSTI().hasFeature(AMDGPU::FeatureBlock16ConversionScaleInsts))
+    MaxSel *= 2;
+
+  int ScaleSel = Inst.getOperand(ScaleSelIdx).getImm();
+  if (ScaleSel < MaxSel)
+    return true;
+
+  Error(getOperandLoc(Operands, ScaleSelIdx),
+        "scale_sel maximum supported value is " + Twine(MaxSel - 1));
+  return false;
+}
+
 bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst, SMLoc IDLoc,
                                           const OperandVector &Operands) {
   if (!validateLdsDirect(Inst, Operands))
@@ -5886,6 +5930,9 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst, SMLoc IDLoc,
     return false;
   }
   if (!validateClusterBarrierIsFirst(Inst, Operands)) {
+    return false;
+  }
+  if (!validateScaleSel(Inst, Operands)) {
     return false;
   }
 

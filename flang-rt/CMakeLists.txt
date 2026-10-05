@@ -315,7 +315,10 @@ endif()
 ###################
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-  add_llvm_install_targets(install-flang-rt-headers COMPONENT flang-rt-headers)
+  add_custom_target(flang-rt-headers)
+  add_llvm_install_targets(install-flang-rt-headers
+                           DEPENDS flang-rt-headers
+                           COMPONENT flang-rt-headers)
 
   install(DIRECTORY include/flang-rt/runtime
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang-rt"
