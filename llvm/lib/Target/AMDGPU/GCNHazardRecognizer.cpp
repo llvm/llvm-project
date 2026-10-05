@@ -3177,51 +3177,50 @@ int GCNHazardRecognizer::checkMAIHazards908(MachineInstr *MI) const {
     const int MFMA32x32WritesAGPRAccVgprWriteWaitStates = 15;
     const int MaxWaitStates = 18;
     Register Reg = Op.getReg();
-    unsigned HazardDefLatency = 0;
+    int SrcCIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
+    int OpNo = Op.getOperandNo();
 
-    auto IsOverlappedMFMAFn = [Reg, &HazardDefLatency,
-                               this](const MachineInstr &MI) {
+    // A producer whose destination is exactly this register is not a hazard.
+    auto IsOverlappedMFMAFn = [Reg, this](const MachineInstr &MI) {
       if (!SIInstrInfo::isMFMA(MI))
         return false;
       Register DstReg = MI.getOperand(0).getReg();
-      if (DstReg == Reg)
-        return false;
-      HazardDefLatency =
-          std::max(HazardDefLatency, TSchedModel.computeInstrLatency(&MI));
-      return TRI.regsOverlap(DstReg, Reg);
+      return DstReg != Reg && TRI.regsOverlap(DstReg, Reg);
     };
 
-    int WaitStatesSinceDef = getWaitStatesSinceDef(Reg, IsOverlappedMFMAFn,
-                                                   MaxWaitStates);
-    int NeedWaitStates = MFMAWritesAGPROverlappedSrcABWaitStates;
-    int SrcCIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
-    int OpNo = Op.getOperandNo();
-    if (OpNo == SrcCIdx) {
-      NeedWaitStates = MFMAWritesAGPROverlappedSrcCWaitStates;
-    } else if (Opc == AMDGPU::V_ACCVGPR_READ_B32_e64) {
-      switch (HazardDefLatency) {
-      case 2:  NeedWaitStates = MFMA4x4WritesAGPRAccVgprReadWaitStates;
-               break;
-      case 8:  NeedWaitStates = MFMA16x16WritesAGPRAccVgprReadWaitStates;
-               break;
-      case 16: [[fallthrough]];
-      default: NeedWaitStates = MFMA32x32WritesAGPRAccVgprReadWaitStates;
-               break;
-      }
-    } else if (Opc == AMDGPU::V_ACCVGPR_WRITE_B32_e64) {
-      switch (HazardDefLatency) {
-      case 2:  NeedWaitStates = MFMA4x4WritesAGPRAccVgprWriteWaitStates;
-               break;
-      case 8:  NeedWaitStates = MFMA16x16WritesAGPRAccVgprWriteWaitStates;
-               break;
-      case 16: [[fallthrough]];
-      default: NeedWaitStates = MFMA32x32WritesAGPRAccVgprWriteWaitStates;
-               break;
-      }
-    }
+    // Wait states required before this operand may use \p Producer's result.
+    // Only the accvgpr forms depend on the producer's shape.
+    auto MFMAWindow = [&](const MachineInstr &Producer) {
+      if (OpNo == SrcCIdx)
+        return MFMAWritesAGPROverlappedSrcCWaitStates;
+      if (Opc != AMDGPU::V_ACCVGPR_READ_B32_e64 &&
+          Opc != AMDGPU::V_ACCVGPR_WRITE_B32_e64)
+        return MFMAWritesAGPROverlappedSrcABWaitStates;
 
-    int WaitStatesNeededForUse = NeedWaitStates - WaitStatesSinceDef;
-    WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForUse);
+      bool IsRead = Opc == AMDGPU::V_ACCVGPR_READ_B32_e64;
+      switch (TSchedModel.computeInstrLatency(&Producer)) {
+      case 2:
+        return IsRead ? MFMA4x4WritesAGPRAccVgprReadWaitStates
+                      : MFMA4x4WritesAGPRAccVgprWriteWaitStates;
+      case 8:
+        return IsRead ? MFMA16x16WritesAGPRAccVgprReadWaitStates
+                      : MFMA16x16WritesAGPRAccVgprWriteWaitStates;
+      case 16:
+        [[fallthrough]];
+      default:
+        return IsRead ? MFMA32x32WritesAGPRAccVgprReadWaitStates
+                      : MFMA32x32WritesAGPRAccVgprWriteWaitStates;
+      }
+    };
+
+    WaitStatesNeeded = std::max(
+        WaitStatesNeeded,
+        getMaxWindowDeficit(MaxWaitStates,
+                            [&](const MachineInstr &P) -> std::optional<int> {
+                              if (!IsOverlappedMFMAFn(P))
+                                return std::nullopt;
+                              return MFMAWindow(P);
+                            }));
 
     if (WaitStatesNeeded == MaxWaitStates)
       return WaitStatesNeeded; // Early exit.
@@ -3236,14 +3235,15 @@ int GCNHazardRecognizer::checkMAIHazards908(MachineInstr *MI) const {
     const int AccVGPRWriteMFMAReadSrcCWaitStates = 1;
     const int AccVGPRWriteMFMAReadSrcABWaitStates = 3;
     const int AccVGPRWriteAccVgprReadWaitStates = 3;
-    NeedWaitStates = AccVGPRWriteMFMAReadSrcABWaitStates;
+    int NeedWaitStates = AccVGPRWriteMFMAReadSrcABWaitStates;
     if (OpNo == SrcCIdx)
       NeedWaitStates = AccVGPRWriteMFMAReadSrcCWaitStates;
     else if (Opc == AMDGPU::V_ACCVGPR_READ_B32_e64)
       NeedWaitStates = AccVGPRWriteAccVgprReadWaitStates;
 
-    WaitStatesNeededForUse = NeedWaitStates -
-      getWaitStatesSinceDef(Reg, IsAccVgprWriteFn, MaxWaitStates);
+    int WaitStatesNeededForUse =
+        NeedWaitStates -
+        getWaitStatesSinceDef(Reg, IsAccVgprWriteFn, MaxWaitStates);
     WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForUse);
 
     if (WaitStatesNeeded == MaxWaitStates)
@@ -3256,32 +3256,37 @@ int GCNHazardRecognizer::checkMAIHazards908(MachineInstr *MI) const {
     const int MFMA32x32ReadSrcCAccVgprWriteWaitStates = 13;
     const int MaxWaitStates = 13;
     Register DstReg = MI->getOperand(0).getReg();
-    unsigned HazardDefLatency = 0;
 
-    auto IsSrcCMFMAFn = [DstReg, &HazardDefLatency,
-                         this](const MachineInstr &MI) {
+    auto IsSrcCMFMAFn = [DstReg, this](const MachineInstr &MI) {
       if (!SIInstrInfo::isMFMA(MI))
         return false;
       Register Reg = TII.getNamedOperand(MI, AMDGPU::OpName::src2)->getReg();
-      HazardDefLatency =
-          std::max(HazardDefLatency, TSchedModel.computeInstrLatency(&MI));
       return TRI.regsOverlap(Reg, DstReg);
     };
 
-    int WaitStatesSince = getWaitStatesSince(IsSrcCMFMAFn, MaxWaitStates);
-    int NeedWaitStates;
-    switch (HazardDefLatency) {
-    case 2:  NeedWaitStates = MFMA4x4ReadSrcCAccVgprWriteWaitStates;
-             break;
-    case 8:  NeedWaitStates = MFMA16x16ReadSrcCAccVgprWriteWaitStates;
-             break;
-    case 16: [[fallthrough]];
-    default: NeedWaitStates = MFMA32x32ReadSrcCAccVgprWriteWaitStates;
-             break;
-    }
+    // Wait states required before this write, given which shape read the
+    // register as srcC.
+    auto SrcCWindow = [&](const MachineInstr &Reader) {
+      switch (TSchedModel.computeInstrLatency(&Reader)) {
+      case 2:
+        return MFMA4x4ReadSrcCAccVgprWriteWaitStates;
+      case 8:
+        return MFMA16x16ReadSrcCAccVgprWriteWaitStates;
+      case 16:
+        [[fallthrough]];
+      default:
+        return MFMA32x32ReadSrcCAccVgprWriteWaitStates;
+      }
+    };
 
-    int WaitStatesNeededForUse = NeedWaitStates - WaitStatesSince;
-    WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForUse);
+    WaitStatesNeeded = std::max(
+        WaitStatesNeeded,
+        getMaxWindowDeficit(MaxWaitStates,
+                            [&](const MachineInstr &R) -> std::optional<int> {
+                              if (!IsSrcCMFMAFn(R))
+                                return std::nullopt;
+                              return SrcCWindow(R);
+                            }));
   }
 
   // Pad neighboring MFMA with noops for better inter-wave performance.
