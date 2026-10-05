@@ -218,7 +218,8 @@ TEST_F(BasicAATest, CachedMayAliasWithSeparateStorage) {
     exit:
       ret void
     }
-  )", Err, C);
+  )",
+                                 Err, C);
   ASSERT_TRUE(Mod);
   F = Mod->getFunction("f");
   auto &A = setupAnalyses();
