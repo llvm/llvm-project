@@ -2,8 +2,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu13.10 < %s | FileCheck -check-prefixes=GFX13-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu13.10 < %s | FileCheck -check-prefixes=GFX13-GISEL %s
 
-; amdgpu_ps: <32 x float> args exceed the default CC argument registers.
-
 define amdgpu_ps void @test_cvt_scalef32_pk32_bf6_f32_v(<32 x float> %src, float inreg %scale, ptr addrspace(1) %out) {
 ; GFX13-SDAG-LABEL: test_cvt_scalef32_pk32_bf6_f32_v:
 ; GFX13-SDAG:       ; %bb.0:

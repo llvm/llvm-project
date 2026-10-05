@@ -4,123 +4,117 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu8.03 < %s | FileCheck -check-prefixes=VI,VI-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu8.03 < %s | FileCheck -check-prefixes=VI,VI-GISEL %s
 
-define i32 @v_cvt_pk_u8_f32_idx_0(float inreg %src, i32 inreg %reg) {
+define amdgpu_ps float @v_cvt_pk_u8_f32_idx_0(float inreg %src, i32 inreg %reg) {
 ; SI-LABEL: v_cvt_pk_u8_f32_idx_0:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v0, s17
-; SI-NEXT:    v_cvt_pk_u8_f32 v0, s16, 0, v0
-; SI-NEXT:    s_setpc_b64 s[30:31]
+; SI-NEXT:    v_mov_b32_e32 v0, s1
+; SI-NEXT:    v_cvt_pk_u8_f32 v0, s0, 0, v0
+; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: v_cvt_pk_u8_f32_idx_0:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s17
-; VI-NEXT:    v_cvt_pk_u8_f32 v0, s16, 0, v0
-; VI-NEXT:    s_setpc_b64 s[30:31]
+; VI-NEXT:    v_mov_b32_e32 v0, s1
+; VI-NEXT:    v_cvt_pk_u8_f32 v0, s0, 0, v0
+; VI-NEXT:    ; return to shader part epilog
   %result = call i32 @llvm.amdgcn.cvt.pk.u8.f32(float %src, i32 0, i32 %reg) #0
-  ret i32 %result
+  %r = bitcast i32 %result to float
+  ret float %r
 }
 
-define i32 @v_cvt_pk_u8_f32_idx_1(float inreg %src, i32 inreg %reg) {
+define amdgpu_ps float @v_cvt_pk_u8_f32_idx_1(float inreg %src, i32 inreg %reg) {
 ; SI-LABEL: v_cvt_pk_u8_f32_idx_1:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v0, s17
-; SI-NEXT:    v_cvt_pk_u8_f32 v0, s16, 1, v0
-; SI-NEXT:    s_setpc_b64 s[30:31]
+; SI-NEXT:    v_mov_b32_e32 v0, s1
+; SI-NEXT:    v_cvt_pk_u8_f32 v0, s0, 1, v0
+; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: v_cvt_pk_u8_f32_idx_1:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s17
-; VI-NEXT:    v_cvt_pk_u8_f32 v0, s16, 1, v0
-; VI-NEXT:    s_setpc_b64 s[30:31]
+; VI-NEXT:    v_mov_b32_e32 v0, s1
+; VI-NEXT:    v_cvt_pk_u8_f32 v0, s0, 1, v0
+; VI-NEXT:    ; return to shader part epilog
   %result = call i32 @llvm.amdgcn.cvt.pk.u8.f32(float %src, i32 1, i32 %reg) #0
-  ret i32 %result
+  %r = bitcast i32 %result to float
+  ret float %r
 }
 
-define i32 @v_cvt_pk_u8_f32_idx_2(float inreg %src, i32 inreg %reg) {
+define amdgpu_ps float @v_cvt_pk_u8_f32_idx_2(float inreg %src, i32 inreg %reg) {
 ; SI-LABEL: v_cvt_pk_u8_f32_idx_2:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v0, s17
-; SI-NEXT:    v_cvt_pk_u8_f32 v0, s16, 2, v0
-; SI-NEXT:    s_setpc_b64 s[30:31]
+; SI-NEXT:    v_mov_b32_e32 v0, s1
+; SI-NEXT:    v_cvt_pk_u8_f32 v0, s0, 2, v0
+; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: v_cvt_pk_u8_f32_idx_2:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s17
-; VI-NEXT:    v_cvt_pk_u8_f32 v0, s16, 2, v0
-; VI-NEXT:    s_setpc_b64 s[30:31]
+; VI-NEXT:    v_mov_b32_e32 v0, s1
+; VI-NEXT:    v_cvt_pk_u8_f32 v0, s0, 2, v0
+; VI-NEXT:    ; return to shader part epilog
   %result = call i32 @llvm.amdgcn.cvt.pk.u8.f32(float %src, i32 2, i32 %reg) #0
-  ret i32 %result
+  %r = bitcast i32 %result to float
+  ret float %r
 }
 
-define i32 @v_cvt_pk_u8_f32_idx_3(float inreg %src, i32 inreg %reg) {
+define amdgpu_ps float @v_cvt_pk_u8_f32_idx_3(float inreg %src, i32 inreg %reg) {
 ; SI-LABEL: v_cvt_pk_u8_f32_idx_3:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v0, s17
-; SI-NEXT:    v_cvt_pk_u8_f32 v0, s16, 3, v0
-; SI-NEXT:    s_setpc_b64 s[30:31]
+; SI-NEXT:    v_mov_b32_e32 v0, s1
+; SI-NEXT:    v_cvt_pk_u8_f32 v0, s0, 3, v0
+; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: v_cvt_pk_u8_f32_idx_3:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s17
-; VI-NEXT:    v_cvt_pk_u8_f32 v0, s16, 3, v0
-; VI-NEXT:    s_setpc_b64 s[30:31]
+; VI-NEXT:    v_mov_b32_e32 v0, s1
+; VI-NEXT:    v_cvt_pk_u8_f32 v0, s0, 3, v0
+; VI-NEXT:    ; return to shader part epilog
   %result = call i32 @llvm.amdgcn.cvt.pk.u8.f32(float %src, i32 3, i32 %reg) #0
-  ret i32 %result
+  %r = bitcast i32 %result to float
+  ret float %r
 }
 
-define i32 @v_cvt_pk_u8_f32_combine(float inreg %src, i32 inreg %reg) {
+define amdgpu_ps float @v_cvt_pk_u8_f32_combine(float inreg %src, i32 inreg %reg) {
 ; SI-LABEL: v_cvt_pk_u8_f32_combine:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v0, s17
-; SI-NEXT:    v_cvt_pk_u8_f32 v0, s16, 0, v0
-; SI-NEXT:    v_cvt_pk_u8_f32 v0, s16, 1, v0
-; SI-NEXT:    v_cvt_pk_u8_f32 v0, s16, 2, v0
-; SI-NEXT:    v_cvt_pk_u8_f32 v0, s16, 3, v0
-; SI-NEXT:    s_setpc_b64 s[30:31]
+; SI-NEXT:    v_mov_b32_e32 v0, s1
+; SI-NEXT:    v_cvt_pk_u8_f32 v0, s0, 0, v0
+; SI-NEXT:    v_cvt_pk_u8_f32 v0, s0, 1, v0
+; SI-NEXT:    v_cvt_pk_u8_f32 v0, s0, 2, v0
+; SI-NEXT:    v_cvt_pk_u8_f32 v0, s0, 3, v0
+; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: v_cvt_pk_u8_f32_combine:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s17
-; VI-NEXT:    v_cvt_pk_u8_f32 v0, s16, 0, v0
-; VI-NEXT:    v_cvt_pk_u8_f32 v0, s16, 1, v0
-; VI-NEXT:    v_cvt_pk_u8_f32 v0, s16, 2, v0
-; VI-NEXT:    v_cvt_pk_u8_f32 v0, s16, 3, v0
-; VI-NEXT:    s_setpc_b64 s[30:31]
+; VI-NEXT:    v_mov_b32_e32 v0, s1
+; VI-NEXT:    v_cvt_pk_u8_f32 v0, s0, 0, v0
+; VI-NEXT:    v_cvt_pk_u8_f32 v0, s0, 1, v0
+; VI-NEXT:    v_cvt_pk_u8_f32 v0, s0, 2, v0
+; VI-NEXT:    v_cvt_pk_u8_f32 v0, s0, 3, v0
+; VI-NEXT:    ; return to shader part epilog
   %result0 = call i32 @llvm.amdgcn.cvt.pk.u8.f32(float %src, i32 0, i32 %reg) #0
   %result1 = call i32 @llvm.amdgcn.cvt.pk.u8.f32(float %src, i32 1, i32 %result0) #0
   %result2 = call i32 @llvm.amdgcn.cvt.pk.u8.f32(float %src, i32 2, i32 %result1) #0
   %result3 = call i32 @llvm.amdgcn.cvt.pk.u8.f32(float %src, i32 3, i32 %result2) #0
-  ret i32 %result3
+  %r = bitcast i32 %result3 to float
+  ret float %r
 }
 
-define i32 @v_cvt_pk_u8_f32_idx(float inreg %src, i32 inreg %idx, i32 inreg %reg) {
+define amdgpu_ps float @v_cvt_pk_u8_f32_idx(float inreg %src, i32 inreg %idx, i32 inreg %reg) {
 ; SI-LABEL: v_cvt_pk_u8_f32_idx:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v0, s17
-; SI-NEXT:    v_mov_b32_e32 v1, s18
-; SI-NEXT:    v_cvt_pk_u8_f32 v0, s16, v0, v1
-; SI-NEXT:    s_setpc_b64 s[30:31]
+; SI-NEXT:    v_mov_b32_e32 v0, s1
+; SI-NEXT:    v_mov_b32_e32 v1, s2
+; SI-NEXT:    v_cvt_pk_u8_f32 v0, s0, v0, v1
+; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: v_cvt_pk_u8_f32_idx:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s17
-; VI-NEXT:    v_mov_b32_e32 v1, s18
-; VI-NEXT:    v_cvt_pk_u8_f32 v0, s16, v0, v1
-; VI-NEXT:    s_setpc_b64 s[30:31]
+; VI-NEXT:    v_mov_b32_e32 v0, s1
+; VI-NEXT:    v_mov_b32_e32 v1, s2
+; VI-NEXT:    v_cvt_pk_u8_f32 v0, s0, v0, v1
+; VI-NEXT:    ; return to shader part epilog
   %result = call i32 @llvm.amdgcn.cvt.pk.u8.f32(float %src, i32 %idx, i32 %reg) #0
-  ret i32 %result
+  %r = bitcast i32 %result to float
+  ret float %r
 }
 
 attributes #0 = { nounwind readnone }

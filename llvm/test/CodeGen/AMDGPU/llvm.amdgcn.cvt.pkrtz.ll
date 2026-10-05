@@ -10,559 +10,479 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu11.00 < %s | FileCheck %s -enable-var-scope -check-prefixes=GFX11,GFX11-SDAG
 ; RUN: llc -global-isel=1 -mtriple=amdgpu11.00 < %s | FileCheck %s -enable-var-scope -check-prefixes=GFX11,GFX11-GISEL
 
-define <2 x half> @s_cvt_pkrtz_v2f16_f32(float inreg %x, float inreg %y) #0 {
+define amdgpu_ps <2 x half> @s_cvt_pkrtz_v2f16_f32(float inreg %x, float inreg %y) #0 {
 ; SI-SDAG-LABEL: s_cvt_pkrtz_v2f16_f32:
 ; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    v_mov_b32_e32 v0, s17
-; SI-SDAG-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, s16, v0
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-SDAG-NEXT:    v_mov_b32_e32 v0, s1
+; SI-SDAG-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, s0, v0
+; SI-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; SI-GISEL-LABEL: s_cvt_pkrtz_v2f16_f32:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s17
-; SI-GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, s16, v0
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s1
+; SI-GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, s0, v0
+; SI-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: s_cvt_pkrtz_v2f16_f32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s17
-; VI-NEXT:    v_cvt_pkrtz_f16_f32 v0, s16, v0
-; VI-NEXT:    s_setpc_b64 s[30:31]
+; VI-NEXT:    v_mov_b32_e32 v0, s1
+; VI-NEXT:    v_cvt_pkrtz_f16_f32 v0, s0, v0
+; VI-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_cvt_pkrtz_v2f16_f32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s17
-; GFX9-NEXT:    v_cvt_pkrtz_f16_f32 v0, s16, v0
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-NEXT:    v_mov_b32_e32 v0, s1
+; GFX9-NEXT:    v_cvt_pkrtz_f16_f32 v0, s0, v0
+; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: s_cvt_pkrtz_v2f16_f32:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, s16, s17
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, s0, s1
+; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: s_cvt_pkrtz_v2f16_f32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cvt_pk_rtz_f16_f32_e64 v0, s0, s1
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-NEXT:    ; return to shader part epilog
   %result = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %x, float %y)
   ret <2 x half> %result
 }
 
-define <2 x half> @s_cvt_pkrtz_samereg_v2f16_f32(float inreg %x) #0 {
+define amdgpu_ps <2 x half> @s_cvt_pkrtz_samereg_v2f16_f32(float inreg %x) #0 {
 ; SI-SDAG-LABEL: s_cvt_pkrtz_samereg_v2f16_f32:
 ; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, s16, s16
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-SDAG-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, s0, s0
+; SI-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; SI-GISEL-LABEL: s_cvt_pkrtz_samereg_v2f16_f32:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, s16, s16
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; SI-GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, s0, s0
+; SI-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: s_cvt_pkrtz_samereg_v2f16_f32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_cvt_pkrtz_f16_f32 v0, s16, s16
-; VI-NEXT:    s_setpc_b64 s[30:31]
+; VI-NEXT:    v_cvt_pkrtz_f16_f32 v0, s0, s0
+; VI-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_cvt_pkrtz_samereg_v2f16_f32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cvt_pkrtz_f16_f32 v0, s16, s16
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-NEXT:    v_cvt_pkrtz_f16_f32 v0, s0, s0
+; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: s_cvt_pkrtz_samereg_v2f16_f32:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, s16, s16
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, s0, s0
+; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: s_cvt_pkrtz_samereg_v2f16_f32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cvt_pk_rtz_f16_f32_e64 v0, s0, s0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-NEXT:    ; return to shader part epilog
   %result = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %x, float %x)
   ret <2 x half> %result
 }
 
-define <2 x half> @s_cvt_pkrtz_undef_undef() #0 {
+define amdgpu_ps <2 x half> @s_cvt_pkrtz_undef_undef() #0 {
 ; SI-SDAG-LABEL: s_cvt_pkrtz_undef_undef:
 ; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; SI-GISEL-LABEL: s_cvt_pkrtz_undef_undef:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, s4, s4
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; SI-GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, s0, s0
+; SI-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; VI-SDAG-LABEL: s_cvt_pkrtz_undef_undef:
 ; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; VI-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; VI-GISEL-LABEL: s_cvt_pkrtz_undef_undef:
 ; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-GISEL-NEXT:    v_cvt_pkrtz_f16_f32 v0, s4, s4
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; VI-GISEL-NEXT:    v_cvt_pkrtz_f16_f32 v0, s0, s0
+; VI-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-SDAG-LABEL: s_cvt_pkrtz_undef_undef:
 ; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-GISEL-LABEL: s_cvt_pkrtz_undef_undef:
 ; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_cvt_pkrtz_f16_f32 v0, s4, s4
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-NEXT:    v_cvt_pkrtz_f16_f32 v0, s0, s0
+; GFX9-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-SDAG-LABEL: s_cvt_pkrtz_undef_undef:
 ; GFX10-SDAG:       ; %bb.0:
-; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-GISEL-LABEL: s_cvt_pkrtz_undef_undef:
 ; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, s4, s4
-; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, s0, s0
+; GFX10-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-SDAG-LABEL: s_cvt_pkrtz_undef_undef:
 ; GFX11-SDAG:       ; %bb.0:
-; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-GISEL-LABEL: s_cvt_pkrtz_undef_undef:
 ; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_cvt_pk_rtz_f16_f32_e64 v0, s0, s0
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-GISEL-NEXT:    ; return to shader part epilog
   %result = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float poison, float poison)
   ret <2 x half> %result
 }
 
-define <2 x half> @v_cvt_pkrtz_v2f16_f32(float %a, float %b) #0 {
+define amdgpu_ps <2 x half> @v_cvt_pkrtz_v2f16_f32(float %a, float %b) #0 {
 ; SI-SDAG-LABEL: v_cvt_pkrtz_v2f16_f32:
 ; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-SDAG-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, v0, v1
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; SI-GISEL-LABEL: v_cvt_pkrtz_v2f16_f32:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; SI-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: v_cvt_pkrtz_v2f16_f32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_cvt_pkrtz_f16_f32 v0, v0, v1
-; VI-NEXT:    s_setpc_b64 s[30:31]
+; VI-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: v_cvt_pkrtz_v2f16_f32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_cvt_pkrtz_f16_f32 v0, v0, v1
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: v_cvt_pkrtz_v2f16_f32:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, v0, v1
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: v_cvt_pkrtz_v2f16_f32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cvt_pk_rtz_f16_f32_e32 v0, v0, v1
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-NEXT:    ; return to shader part epilog
   %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %a, float %b)
   ret <2 x half> %cvt
 }
 
-define <2 x half> @v_cvt_pkrtz_v2f16_f32_reg_imm(float %a) #0 {
+define amdgpu_ps <2 x half> @v_cvt_pkrtz_v2f16_f32_reg_imm(float %a) #0 {
 ; SI-SDAG-LABEL: v_cvt_pkrtz_v2f16_f32_reg_imm:
 ; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-SDAG-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, v0, 1.0
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; SI-GISEL-LABEL: v_cvt_pkrtz_v2f16_f32_reg_imm:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, v0, 1.0
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; SI-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: v_cvt_pkrtz_v2f16_f32_reg_imm:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_cvt_pkrtz_f16_f32 v0, v0, 1.0
-; VI-NEXT:    s_setpc_b64 s[30:31]
+; VI-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: v_cvt_pkrtz_v2f16_f32_reg_imm:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_cvt_pkrtz_f16_f32 v0, v0, 1.0
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: v_cvt_pkrtz_v2f16_f32_reg_imm:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, v0, 1.0
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: v_cvt_pkrtz_v2f16_f32_reg_imm:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cvt_pk_rtz_f16_f32_e64 v0, v0, 1.0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-NEXT:    ; return to shader part epilog
   %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %a, float 1.0)
   ret <2 x half> %cvt
 }
 
-define <2 x half> @v_cvt_pkrtz_v2f16_f32_imm_reg(float %a) #0 {
+define amdgpu_ps <2 x half> @v_cvt_pkrtz_v2f16_f32_imm_reg(float %a) #0 {
 ; SI-SDAG-LABEL: v_cvt_pkrtz_v2f16_f32_imm_reg:
 ; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-SDAG-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, 1.0, v0
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; SI-GISEL-LABEL: v_cvt_pkrtz_v2f16_f32_imm_reg:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, 1.0, v0
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; SI-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: v_cvt_pkrtz_v2f16_f32_imm_reg:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_cvt_pkrtz_f16_f32 v0, 1.0, v0
-; VI-NEXT:    s_setpc_b64 s[30:31]
+; VI-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: v_cvt_pkrtz_v2f16_f32_imm_reg:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_cvt_pkrtz_f16_f32 v0, 1.0, v0
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: v_cvt_pkrtz_v2f16_f32_imm_reg:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, 1.0, v0
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: v_cvt_pkrtz_v2f16_f32_imm_reg:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cvt_pk_rtz_f16_f32_e32 v0, 1.0, v0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-NEXT:    ; return to shader part epilog
   %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float 1.0, float %a)
   ret <2 x half> %cvt
 }
 
-define <2 x half> @v_cvt_pkrtz_v2f16_f32_fneg_lo(float %a, float %b) #0 {
+define amdgpu_ps <2 x half> @v_cvt_pkrtz_v2f16_f32_fneg_lo(float %a, float %b) #0 {
 ; SI-SDAG-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_lo:
 ; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-SDAG-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, -v0, v1
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; SI-GISEL-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_lo:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-GISEL-NEXT:    v_mul_f32_e32 v0, -1.0, v0
 ; SI-GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; SI-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; VI-SDAG-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_lo:
 ; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-SDAG-NEXT:    v_cvt_pkrtz_f16_f32 v0, -v0, v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; VI-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; VI-GISEL-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_lo:
 ; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-GISEL-NEXT:    v_mul_f32_e32 v0, -1.0, v0
 ; VI-GISEL-NEXT:    v_cvt_pkrtz_f16_f32 v0, v0, v1
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; VI-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-SDAG-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_lo:
 ; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_cvt_pkrtz_f16_f32 v0, -v0, v1
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-GISEL-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_lo:
 ; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_max_f32_e64 v0, -v0, -v0
 ; GFX9-GISEL-NEXT:    v_cvt_pkrtz_f16_f32 v0, v0, v1
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-SDAG-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_lo:
 ; GFX10-SDAG:       ; %bb.0:
-; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-SDAG-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, -v0, v1
-; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-GISEL-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_lo:
 ; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    v_max_f32_e64 v0, -v0, -v0
 ; GFX10-GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, v0, v1
-; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-SDAG-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_lo:
 ; GFX11-SDAG:       ; %bb.0:
-; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_cvt_pk_rtz_f16_f32_e64 v0, -v0, v1
-; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-GISEL-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_lo:
 ; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_max_f32_e64 v0, -v0, -v0
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_cvt_pk_rtz_f16_f32_e32 v0, v0, v1
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-GISEL-NEXT:    ; return to shader part epilog
   %neg.a = fsub float -0.0, %a
   %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %neg.a, float %b)
   ret <2 x half> %cvt
 }
 
-define <2 x half> @v_cvt_pkrtz_v2f16_f32_fneg_hi(float %a, float %b) #0 {
+define amdgpu_ps <2 x half> @v_cvt_pkrtz_v2f16_f32_fneg_hi(float %a, float %b) #0 {
 ; SI-SDAG-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_hi:
 ; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-SDAG-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, v0, -v1
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; SI-GISEL-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_hi:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-GISEL-NEXT:    v_mul_f32_e32 v1, -1.0, v1
 ; SI-GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; SI-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; VI-SDAG-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_hi:
 ; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-SDAG-NEXT:    v_cvt_pkrtz_f16_f32 v0, v0, -v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; VI-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; VI-GISEL-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_hi:
 ; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-GISEL-NEXT:    v_mul_f32_e32 v1, -1.0, v1
 ; VI-GISEL-NEXT:    v_cvt_pkrtz_f16_f32 v0, v0, v1
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; VI-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-SDAG-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_hi:
 ; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_cvt_pkrtz_f16_f32 v0, v0, -v1
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-GISEL-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_hi:
 ; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_max_f32_e64 v1, -v1, -v1
 ; GFX9-GISEL-NEXT:    v_cvt_pkrtz_f16_f32 v0, v0, v1
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-SDAG-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_hi:
 ; GFX10-SDAG:       ; %bb.0:
-; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-SDAG-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, v0, -v1
-; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-GISEL-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_hi:
 ; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    v_max_f32_e64 v1, -v1, -v1
 ; GFX10-GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, v0, v1
-; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-SDAG-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_hi:
 ; GFX11-SDAG:       ; %bb.0:
-; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_cvt_pk_rtz_f16_f32_e64 v0, v0, -v1
-; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-GISEL-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_hi:
 ; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_max_f32_e64 v1, -v1, -v1
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_cvt_pk_rtz_f16_f32_e32 v0, v0, v1
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-GISEL-NEXT:    ; return to shader part epilog
   %neg.b = fsub float -0.0, %b
   %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %a, float %neg.b)
   ret <2 x half> %cvt
 }
 
-define <2 x half> @v_cvt_pkrtz_v2f16_f32_fneg_lo_hi(float %a, float %b) #0 {
+define amdgpu_ps <2 x half> @v_cvt_pkrtz_v2f16_f32_fneg_lo_hi(float %a, float %b) #0 {
 ; SI-SDAG-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_lo_hi:
 ; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-SDAG-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, -v0, -v1
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; SI-GISEL-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_lo_hi:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-GISEL-NEXT:    v_mul_f32_e32 v0, -1.0, v0
 ; SI-GISEL-NEXT:    v_mul_f32_e32 v1, -1.0, v1
 ; SI-GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; SI-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; VI-SDAG-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_lo_hi:
 ; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-SDAG-NEXT:    v_cvt_pkrtz_f16_f32 v0, -v0, -v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; VI-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; VI-GISEL-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_lo_hi:
 ; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-GISEL-NEXT:    v_mul_f32_e32 v0, -1.0, v0
 ; VI-GISEL-NEXT:    v_mul_f32_e32 v1, -1.0, v1
 ; VI-GISEL-NEXT:    v_cvt_pkrtz_f16_f32 v0, v0, v1
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; VI-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-SDAG-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_lo_hi:
 ; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_cvt_pkrtz_f16_f32 v0, -v0, -v1
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-GISEL-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_lo_hi:
 ; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_max_f32_e64 v0, -v0, -v0
 ; GFX9-GISEL-NEXT:    v_max_f32_e64 v1, -v1, -v1
 ; GFX9-GISEL-NEXT:    v_cvt_pkrtz_f16_f32 v0, v0, v1
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-SDAG-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_lo_hi:
 ; GFX10-SDAG:       ; %bb.0:
-; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-SDAG-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, -v0, -v1
-; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-GISEL-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_lo_hi:
 ; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    v_max_f32_e64 v0, -v0, -v0
 ; GFX10-GISEL-NEXT:    v_max_f32_e64 v1, -v1, -v1
 ; GFX10-GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, v0, v1
-; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-SDAG-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_lo_hi:
 ; GFX11-SDAG:       ; %bb.0:
-; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_cvt_pk_rtz_f16_f32_e64 v0, -v0, -v1
-; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-GISEL-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_lo_hi:
 ; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_max_f32_e64 v0, -v0, -v0
 ; GFX11-GISEL-NEXT:    v_max_f32_e64 v1, -v1, -v1
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_cvt_pk_rtz_f16_f32_e32 v0, v0, v1
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-GISEL-NEXT:    ; return to shader part epilog
   %neg.a = fsub float -0.0, %a
   %neg.b = fsub float -0.0, %b
   %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %neg.a, float %neg.b)
   ret <2 x half> %cvt
 }
 
-define <2 x half> @v_cvt_pkrtz_v2f16_f32_fneg_fabs_lo_fneg_hi(float %a, float %b) #0 {
+define amdgpu_ps <2 x half> @v_cvt_pkrtz_v2f16_f32_fneg_fabs_lo_fneg_hi(float %a, float %b) #0 {
 ; SI-SDAG-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_fabs_lo_fneg_hi:
 ; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-SDAG-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, -|v0|, -v1
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; SI-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; SI-GISEL-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_fabs_lo_fneg_hi:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-GISEL-NEXT:    v_mul_f32_e64 v0, -1.0, |v0|
 ; SI-GISEL-NEXT:    v_mul_f32_e32 v1, -1.0, v1
 ; SI-GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, v0, v1
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; SI-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; VI-SDAG-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_fabs_lo_fneg_hi:
 ; VI-SDAG:       ; %bb.0:
-; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-SDAG-NEXT:    v_cvt_pkrtz_f16_f32 v0, -|v0|, -v1
-; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; VI-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; VI-GISEL-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_fabs_lo_fneg_hi:
 ; VI-GISEL:       ; %bb.0:
-; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-GISEL-NEXT:    v_mul_f32_e64 v0, -1.0, |v0|
 ; VI-GISEL-NEXT:    v_mul_f32_e32 v1, -1.0, v1
 ; VI-GISEL-NEXT:    v_cvt_pkrtz_f16_f32 v0, v0, v1
-; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; VI-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-SDAG-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_fabs_lo_fneg_hi:
 ; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_cvt_pkrtz_f16_f32 v0, -|v0|, -v1
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-GISEL-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_fabs_lo_fneg_hi:
 ; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_max_f32_e64 v0, -|v0|, -|v0|
 ; GFX9-GISEL-NEXT:    v_max_f32_e64 v1, -v1, -v1
 ; GFX9-GISEL-NEXT:    v_cvt_pkrtz_f16_f32 v0, v0, v1
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-SDAG-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_fabs_lo_fneg_hi:
 ; GFX10-SDAG:       ; %bb.0:
-; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-SDAG-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, -|v0|, -v1
-; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-GISEL-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_fabs_lo_fneg_hi:
 ; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    v_max_f32_e64 v0, -|v0|, -|v0|
 ; GFX10-GISEL-NEXT:    v_max_f32_e64 v1, -v1, -v1
 ; GFX10-GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, v0, v1
-; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-SDAG-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_fabs_lo_fneg_hi:
 ; GFX11-SDAG:       ; %bb.0:
-; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_cvt_pk_rtz_f16_f32_e64 v0, -|v0|, -v1
-; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-GISEL-LABEL: v_cvt_pkrtz_v2f16_f32_fneg_fabs_lo_fneg_hi:
 ; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_max_f32_e64 v0, -|v0|, -|v0|
 ; GFX11-GISEL-NEXT:    v_max_f32_e64 v1, -v1, -v1
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_cvt_pk_rtz_f16_f32_e32 v0, v0, v1
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-GISEL-NEXT:    ; return to shader part epilog
   %fabs.a = call float @llvm.fabs.f32(float %a)
   %neg.fabs.a = fsub float -0.0, %fabs.a
   %neg.b = fsub float -0.0, %b
