@@ -152,6 +152,8 @@ static bool isSupportedCombiningKind(CombiningKind combiningKind,
   case CombiningKind::MAXNUMF:
   case CombiningKind::MINIMUMF:
   case CombiningKind::MAXIMUMF:
+  case CombiningKind::MINIMUMNUMF:
+  case CombiningKind::MAXIMUMNUMF:
     return llvm::isa<FloatType>(elementType);
   }
   return false;
@@ -4386,6 +4388,15 @@ ParseResult OuterProductOp::parse(OpAsmParser &parser, OperationState &result) {
   if (!vLHS)
     return parser.emitError(parser.getNameLoc(),
                             "expected vector type for operand #1");
+  // The result type is built below from dimension 0 of the operands, which a
+  // 0-d vector does not have. Only that case has to be caught here; a higher
+  // rank still reaches the verifier, which rejects it with the same wording.
+  if (vLHS.getRank() == 0)
+    return parser.emitError(parser.getNameLoc(),
+                            "expected 1-d vector for operand #1");
+  if (vRHS && vRHS.getRank() == 0)
+    return parser.emitError(parser.getNameLoc(),
+                            "expected 1-d vector for operand #2");
 
   VectorType resType;
   if (vRHS) {
@@ -8363,6 +8374,11 @@ Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,
            "expected float values");
     result = b.createOrFold<arith::MaxNumFOp>(loc, v1, acc, fastmath);
     break;
+  case CombiningKind::MAXIMUMNUMF:
+    assert(llvm::isa<FloatType>(t1) && llvm::isa<FloatType>(tAcc) &&
+           "expected float values");
+    result = b.createOrFold<arith::MaximumNumFOp>(loc, v1, acc, fastmath);
+    break;
   case CombiningKind::MAXIMUMF:
     assert(llvm::isa<FloatType>(t1) && llvm::isa<FloatType>(tAcc) &&
            "expected float values");
@@ -8372,6 +8388,11 @@ Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,
     assert(llvm::isa<FloatType>(t1) && llvm::isa<FloatType>(tAcc) &&
            "expected float values");
     result = b.createOrFold<arith::MinNumFOp>(loc, v1, acc, fastmath);
+    break;
+  case CombiningKind::MINIMUMNUMF:
+    assert(llvm::isa<FloatType>(t1) && llvm::isa<FloatType>(tAcc) &&
+           "expected float values");
+    result = b.createOrFold<arith::MinimumNumFOp>(loc, v1, acc, fastmath);
     break;
   case CombiningKind::MINIMUMF:
     assert(llvm::isa<FloatType>(t1) && llvm::isa<FloatType>(tAcc) &&

@@ -11,7 +11,7 @@
 
 # CHECK:      Fat headers
 # CHECK-NEXT: fat_magic FAT_MAGIC
-# CHECK-NEXT: nfat_arch 3
+# CHECK-NEXT: nfat_arch 4
 # CHECK-NEXT: architecture arm64
 # CHECK-NEXT:     cputype CPU_TYPE_ARM64
 # CHECK-NEXT:     cpusubtype CPU_SUBTYPE_ARM64_ALL
@@ -33,11 +33,18 @@
 # CHECK-NEXT:     offset 28672
 # CHECK-NEXT:     size 384
 # CHECK-NEXT:     align 2^12 (4096)
+# CHECK-NEXT: architecture arm64e.x1
+# CHECK-NEXT:     cputype CPU_TYPE_ARM64
+# CHECK-NEXT:     cpusubtype CPU_SUBTYPE_ARM64E_X1
+# CHECK-NEXT:     capabilities 0x0
+# CHECK-NEXT:     offset 32768
+# CHECK-NEXT:     size 384
+# CHECK-NEXT:     align 2^12 (4096)
 # CHECK-NOT:{{.}}
 
 # NONVERBOSE:      Fat headers
 # NONVERBOSE-NEXT: fat_magic 0xcafebabe
-# NONVERBOSE-NEXT: nfat_arch 3
+# NONVERBOSE-NEXT: nfat_arch 4
 # NONVERBOSE-NEXT: architecture 0
 # NONVERBOSE-NEXT:     cputype 16777228
 # NONVERBOSE-NEXT:     cpusubtype 0
@@ -59,13 +66,20 @@
 # NONVERBOSE-NEXT:     offset 28672
 # NONVERBOSE-NEXT:     size 384
 # NONVERBOSE-NEXT:     align 2^12 (4096)
+# NONVERBOSE-NEXT: architecture 3
+# NONVERBOSE-NEXT:     cputype 16777228
+# NONVERBOSE-NEXT:     cpusubtype 12
+# NONVERBOSE-NEXT:     capabilities 0x0
+# NONVERBOSE-NEXT:     offset 32768
+# NONVERBOSE-NEXT:     size 384
+# NONVERBOSE-NEXT:     align 2^12 (4096)
 # NONVERBOSE-NOT:{{.}}
 
 
 --- !fat-mach-o
 FatHeader:
   magic:           0xCAFEBABE
-  nfat_arch:       3
+  nfat_arch:       4
 FatArchs:
   - cputype:         0x0100000C
     cpusubtype:      0x00000000
@@ -80,6 +94,11 @@ FatArchs:
   - cputype:         0x0100000C
     cpusubtype:      0x00000002
     offset:          0x0000000000007000
+    size:            384
+    align:           12
+  - cputype:         0x0100000C
+    cpusubtype:      0x0000000C
+    offset:          0x0000000000008000
     size:            384
     align:           12
 Slices:
@@ -108,6 +127,16 @@ Slices:
       magic:           0xFEEDFACF
       cputype:         0x0100000C
       cpusubtype:      0x00000002
+      filetype:        0x00000001
+      ncmds:           0
+      sizeofcmds:      0
+      flags:           0x00000000
+      reserved:        0x00000000
+  - !mach-o
+    FileHeader:
+      magic:           0xFEEDFACF
+      cputype:         0x0100000C
+      cpusubtype:      0x0000000C
       filetype:        0x00000001
       ncmds:           0
       sizeofcmds:      0

@@ -457,8 +457,7 @@ bool AMDGPULibCalls::canIncreasePrecisionOfConstantFold(
 }
 
 AMDGPULibCalls::AMDGPULibCalls(Function &F, FunctionAnalysisManager &FAM)
-    : SQ(F.getParent()->getDataLayout(),
-         &FAM.getResult<TargetLibraryAnalysis>(F),
+    : SQ(F.getDataLayout(), &FAM.getResult<TargetLibraryAnalysis>(F),
          FAM.getCachedResult<DominatorTreeAnalysis>(F),
          &FAM.getResult<AssumptionAnalysis>(F)) {}
 

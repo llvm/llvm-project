@@ -3773,6 +3773,14 @@ def TLSDESCCALL : Pseudo<(outs), (ins i64imm:$sym), []>, Sched<[]> {
   let AsmString = ".tlsdesccall $sym";
 }
 
+// This is a directive-like pseudo-instruction. The purpose is to insert an
+// R_AARCH64_AUTH_TLSDESC_CALL relocation at the offset of the following instruction
+// (which in the usual case is a BLRAA).
+let hasSideEffects = 1 in
+def TLSAUTHDESCCALL : Pseudo<(outs), (ins i64imm:$sym), []>, Sched<[]> {
+  let AsmString = ".tlsauthdesccall $sym";
+}
+
 // Pseudo instruction to tell the streamer to emit a 'B' character into the
 // augmentation string.
 def EMITBKEY : Pseudo<(outs), (ins), []>, Sched<[]> {}
@@ -7172,6 +7180,13 @@ def fixedpoint_xform : SDNodeXForm<timm, [{
 }]>;
 def gi_fixedpoint_xform : GICustomOperandRenderer<"renderFixedPointXForm">,
                               GISDNodeXFormEquiv<fixedpoint_xform>;
+def fixedpoint_recip_xform : SDNodeXForm<timm, [{
+  (void)N;
+  return V;
+}]>;
+def gi_fixedpoint_recip_xform
+    : GICustomOperandRenderer<"renderFixedPointRecipXForm">,
+      GISDNodeXFormEquiv<fixedpoint_recip_xform>;
 
 def gi_fixedpoint_f16_i32 : GIComplexOperandMatcher<s32, "selectCVTFixedPoint<32>">,
                             GIComplexPatternEquiv<fixedpoint_f16_i32>;
@@ -7185,6 +7200,13 @@ def gi_fixedpoint_f64_i32 : GIComplexOperandMatcher<s64, "selectCVTFixedPoint<32
                             GIComplexPatternEquiv<fixedpoint_f64_i32>;
 def gi_fixedpoint_f64_i64 : GIComplexOperandMatcher<s64, "selectCVTFixedPoint<64>">,
                             GIComplexPatternEquiv<fixedpoint_f64_i64>;
+
+def gi_fixedpoint_recip_f32_i32
+    : GIComplexOperandMatcher<s32, "selectCVTFixedPosRecipOperand<32>">,
+      GIComplexPatternEquiv<fixedpoint_recip_f32_i32>;
+def gi_fixedpoint_recip_f64_i64
+    : GIComplexOperandMatcher<s64, "selectCVTFixedPosRecipOperand<64>">,
+      GIComplexPatternEquiv<fixedpoint_recip_f64_i64>;
 
 multiclass FPToIntegerFmulPats<SDPatternOperator round, string INST> { 
   let Predicates = [HasFullFP16] in {
@@ -7930,6 +7952,29 @@ defm : AddSubHNPatterns<ADDHNv4i32_v4i16, ADDHNv4i32_v8i16,
 defm : AddSubHNPatterns<ADDHNv2i64_v2i32, ADDHNv2i64_v4i32,
                         SUBHNv2i64_v2i32, SUBHNv2i64_v4i32,
                         v2i32, v2i64, 32>;
+
+def : Pat<(v8i8 (trunc (AArch64vlshr (v8i16 V128:$Rn), (i32 7)))),
+          (ADDHNv8i16_v8i8 V128:$Rn, V128:$Rn)>;
+def : Pat<(v4i16 (trunc (AArch64vlshr (v4i32 V128:$Rn), (i32 15)))),
+          (ADDHNv4i32_v4i16 V128:$Rn, V128:$Rn)>;
+def : Pat<(v2i32 (trunc (AArch64vlshr (v2i64 V128:$Rn), (i32 31)))),
+          (ADDHNv2i64_v2i32 V128:$Rn, V128:$Rn)>;
+
+def : Pat<(v16i8 (concat_vectors (v8i8 V64:$Rd),
+                                 (trunc (AArch64vlshr (v8i16 V128:$Rn),
+                                                      (i32 7))))),
+          (ADDHNv8i16_v16i8 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub),
+                           V128:$Rn, V128:$Rn)>;
+def : Pat<(v8i16 (concat_vectors (v4i16 V64:$Rd),
+                                 (trunc (AArch64vlshr (v4i32 V128:$Rn),
+                                                      (i32 15))))),
+          (ADDHNv4i32_v8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub),
+                           V128:$Rn, V128:$Rn)>;
+def : Pat<(v4i32 (concat_vectors (v2i32 V64:$Rd),
+                                 (trunc (AArch64vlshr (v2i64 V128:$Rn),
+                                                      (i32 31))))),
+          (ADDHNv2i64_v4i32 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub),
+                           V128:$Rn, V128:$Rn)>;
 
 //----------------------------------------------------------------------------
 // AdvSIMD bitwise extract from vector instruction.
@@ -9718,12 +9763,10 @@ multiclass IntegerToFPScalarPats<SDPatternOperator OpNode, string INST> {
   // Expect the integer operand to be in FPR register. The AdvSIMD scalar
   // shifted conversion forms are same-width, so only i32->f32 and i64->f64
   // can use them for generic integer-to-fp fixed-point conversions.
-  let GISelShouldIgnore = 1 in {
   def : Pat<(f32 (fmul (f32 (OpNode (i32 (bitconvert (f32 FPR32:$Rn))))), fixedpoint_recip_f32_i32:$scale)),
-            (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_xform fixedpoint_recip_f32_i32:$scale))>;
+            (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_recip_xform fixedpoint_recip_f32_i32:$scale))>;
   def : Pat<(f64 (fmul (f64 (OpNode (i64 (bitconvert (f64 FPR64:$Rn))))), fixedpoint_recip_f64_i64:$scale)),
-            (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_xform fixedpoint_recip_f64_i64:$scale))>;
-  }
+            (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_recip_xform fixedpoint_recip_f64_i64:$scale))>;
 
   def : Pat<(f32 (fdiv (f32 (OpNode (i32 (bitconvert (f32 FPR32:$Rn))))), fixedpoint_f32_i32:$scale)),
             (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_xform fixedpoint_f32_i32:$scale))>;
@@ -9800,6 +9843,39 @@ def : Pat<(f64 (int_aarch64_neon_vcvtfxs2fp GPR64:$Rn, vecshiftR64:$imm)),
           (SCVTFSXDri GPR64:$Rn, (fixedpoint_scalar_xform vecshiftR64:$imm))>;
 def : Pat<(f64 (int_aarch64_neon_vcvtfxu2fp GPR64:$Rn, vecshiftR64:$imm)),
           (UCVTFSXDri GPR64:$Rn, (fixedpoint_scalar_xform vecshiftR64:$imm))>;
+
+def : Pat<(int_aarch64_neon_vcvtfxu2fp FPR32:$Rn, vecshiftR32:$imm),
+          (UCVTFs FPR32:$Rn, vecshiftR32:$imm)>;
+def : Pat<(f64 (int_aarch64_neon_vcvtfxu2fp (i64 FPR64:$Rn),
+                                                vecshiftR64:$imm)),
+          (UCVTFd FPR64:$Rn, vecshiftR64:$imm)>;
+def : Pat<(f64 (int_aarch64_neon_vcvtfxs2fp (i64 FPR64:$Rn),
+                                                vecshiftR64:$imm)),
+          (SCVTFd FPR64:$Rn, vecshiftR64:$imm)>;
+def : Pat<(int_aarch64_neon_vcvtfxs2fp FPR32:$Rn, vecshiftR32:$imm),
+          (SCVTFs FPR32:$Rn, vecshiftR32:$imm)>;
+
+multiclass GIIntegerToFPScalarPats<SDPatternOperator OpNode, string INST> {
+  def : Pat<(f32 (fmul (f32 (OpNode (i32 FPR32:$Rn))),
+                         fixedpoint_recip_f32_i32:$scale)),
+            (!cast<Instruction>(INST # "s") FPR32:$Rn,
+              (fixedpoint_recip_xform fixedpoint_recip_f32_i32:$scale))>;
+  def : Pat<(f64 (fmul (f64 (OpNode (i64 FPR64:$Rn))),
+                         fixedpoint_recip_f64_i64:$scale)),
+            (!cast<Instruction>(INST # "d") FPR64:$Rn,
+              (fixedpoint_recip_xform fixedpoint_recip_f64_i64:$scale))>;
+  def : Pat<(f32 (fdiv (f32 (OpNode (i32 FPR32:$Rn))),
+                         fixedpoint_f32_i32:$scale)),
+            (!cast<Instruction>(INST # "s") FPR32:$Rn,
+              (fixedpoint_xform fixedpoint_f32_i32:$scale))>;
+  def : Pat<(f64 (fdiv (f64 (OpNode (i64 FPR64:$Rn))),
+                         fixedpoint_f64_i64:$scale)),
+            (!cast<Instruction>(INST # "d") FPR64:$Rn,
+              (fixedpoint_xform fixedpoint_f64_i64:$scale))>;
+}
+
+defm : GIIntegerToFPScalarPats<any_sint_to_fp, "SCVTF">;
+defm : GIIntegerToFPScalarPats<any_uint_to_fp, "UCVTF">;
 
 // Patterns for FP16 Intrinsics - requires reg copy to/from as i16s not supported.
 
@@ -10906,6 +10982,21 @@ def : Pat<(shl (i64 (zext GPR32:$Rn)), (i64 imm0_63:$imm)),
                    (i64 (i64shift_a        imm0_63:$imm)),
                    (i64 (i64shift_sext_i32 imm0_63:$imm)))>;
 
+def : Pat<(i64 (sext (shl GPR32:$Rn, (i64 imm0_31:$imm)))),
+          (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
+                   (i64 (i64shift_a imm0_31:$imm)),
+                   (i64 (i32shift_b imm0_31:$imm)))>;
+
+def : Pat<(i64 (sext (shl (sext_inreg GPR32:$Rn, i8), (i64 imm0_31:$imm)))),
+          (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
+                   (i64 (i64shift_a imm0_31:$imm)),
+                   (i64 (i32shift_sext_i8 imm0_31:$imm)))>;
+
+def : Pat<(i64 (sext (shl (sext_inreg GPR32:$Rn, i16), (i64 imm0_31:$imm)))),
+          (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
+                   (i64 (i64shift_a imm0_31:$imm)),
+                   (i64 (i32shift_sext_i16 imm0_31:$imm)))>;
+
 // sra patterns have an AddedComplexity of 10, so make sure we have a higher
 // AddedComplexity for the following patterns since we want to match sext + sra
 // patterns before we attempt to match a single sra node.
@@ -10927,6 +11018,18 @@ def : Pat<(sra (i64 (sext GPR32:$Rn)), (i64 imm0_31:$imm)),
           (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
                    (i64 imm0_31:$imm), 31)>;
 } // AddedComplexity = 20
+
+def : Pat<(i64 (sext (sra GPR32:$Rn, (i64 imm0_31:$imm)))),
+          (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
+                   (i64 imm0_31:$imm), 31)>;
+
+def : Pat<(i64 (sext (sra (sext_inreg GPR32:$Rn, i8), (i64 imm0_31:$imm)))),
+          (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
+                   (i64 imm0_31:$imm), 7)>;
+
+def : Pat<(i64 (sext (sra (sext_inreg GPR32:$Rn, i16), (i64 imm0_31:$imm)))),
+          (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
+                   (i64 imm0_31:$imm), 15)>;
 
 // To truncate, we can simply extract from a subregister.
 def : Pat<(i32 (trunc GPR64sp:$src)),

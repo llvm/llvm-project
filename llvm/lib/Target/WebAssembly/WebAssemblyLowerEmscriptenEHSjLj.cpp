@@ -361,8 +361,7 @@ public:
   WebAssemblyLowerEmscriptenEHSjLjImpl(
       bool EnableEmEH,
       std::function<DominatorTree &(Function &F)> GetDominatorTree)
-      : EnableEmEH(EnableEmEH || WebAssembly::WasmEnableEmEH),
-        EnableEmSjLj(WebAssembly::WasmEnableEmSjLj),
+      : EnableEmEH(EnableEmEH), EnableEmSjLj(WebAssembly::WasmEnableEmSjLj),
         EnableWasmSjLj(WebAssembly::WasmEnableSjLj),
         GetDominatorTree(GetDominatorTree) {
     assert(!(EnableEmSjLj && EnableWasmSjLj) &&
@@ -537,8 +536,7 @@ Value *WebAssemblyLowerEmscriptenEHSjLjImpl::wrapInvoke(CallBase *CI) {
   Module *M = CI->getModule();
   LLVMContext &C = M->getContext();
 
-  IRBuilder<> IRB(C);
-  IRB.SetInsertPoint(CI);
+  IRBuilder<> IRB(CI);
 
   // Pre-invoke
   // __THREW__ = 0;
@@ -731,11 +729,10 @@ void WebAssemblyLowerEmscriptenEHSjLjImpl::wrapTestSetjmp(
   Function *F = BB->getParent();
   Module *M = F->getParent();
   LLVMContext &C = M->getContext();
-  IRBuilder<> IRB(C);
+  IRBuilder<> IRB(BB);
   IRB.SetCurrentDebugLocation(DL);
 
   // if (%__THREW__.val != 0 & %__threwValue.val != 0)
-  IRB.SetInsertPoint(BB);
   BasicBlock *ThenBB1 = BasicBlock::Create(C, "if.then1", F);
   BasicBlock *ElseBB1 = BasicBlock::Create(C, "if.else1", F);
   BasicBlock *EndBB1 = BasicBlock::Create(C, "if.end", F);
@@ -1380,7 +1377,7 @@ bool WebAssemblyLowerEmscriptenEHSjLjImpl::runSjLjOnFunction(Function &F) {
     // Add a phi to the tail, which will be the output of setjmp, which
     // indicates if this is the first call or a longjmp back. The phi directly
     // uses the right value based on where we arrive from
-    IRB.SetInsertPoint(Tail, Tail->getFirstNonPHIIt());
+    IRB.SetInsertPoint(Tail->getFirstNonPHIIt());
     PHINode *SetjmpRet = IRB.CreatePHI(IRB.getInt32Ty(), 2, "setjmp.ret");
 
     // setjmp initial call returns 0

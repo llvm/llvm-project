@@ -1394,6 +1394,12 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
 
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case DeclSpec::TST_##Name:                                                   \
+    Result = Context.SingletonId;                                              \
+    break;
+#include "clang/Basic/HLSLPackedTypes.def"
+
   case DeclSpec::TST_error:
     Result = Context.IntTy;
     declarator.setInvalidType(true);
@@ -2374,6 +2380,12 @@ static bool CheckBitIntElementType(Sema &S, SourceLocation AttrLoc,
   return false;
 }
 
+// A bool vector is stored as an integer with one bit per element and can be
+// formed from any vector (e.g. by the conditional operator); the size bound
+// keeps the natural alignment within TypeInfo::Align.
+static constexpr uint64_t MaxVectorElements = llvm::IntegerType::MAX_INT_BITS;
+static constexpr uint64_t MaxVectorSizeInBits = 1ULL << 31;
+
 QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
                                SourceLocation AttrLoc) {
   // The base type must be integer (not Boolean or enumeration) or float, and
@@ -2414,8 +2426,7 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
                                           VectorKind::Generic);
 
   // vecSize is specified in bytes - convert to bits.
-  if (!VecSize->isIntN(61)) {
-    // Bit size will overflow uint64.
+  if (VecSize->ugt(MaxVectorSizeInBits / 8)) {
     Diag(AttrLoc, diag::err_attribute_size_too_large)
         << SizeExpr->getSourceRange() << "vector";
     return QualType();
@@ -2435,7 +2446,7 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
     return QualType();
   }
 
-  if (VectorSizeBits / TypeSize > std::numeric_limits<uint32_t>::max()) {
+  if (VectorSizeBits / TypeSize > MaxVectorElements) {
     Diag(AttrLoc, diag::err_attribute_size_too_large)
         << SizeExpr->getSourceRange() << "vector";
     return QualType();
@@ -2483,17 +2494,24 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *SizeExpr,
       return QualType();
     }
 
-    if (!VecSize->isIntN(32)) {
+    // Unlike gcc's vector_size attribute, the size is specified as the
+    // number of elements, not the number of bytes.
+    if (VecSize->ugt(MaxVectorElements)) {
       Diag(AttrLoc, diag::err_attribute_size_too_large)
           << SizeExpr->getSourceRange() << "vector";
       return QualType();
     }
-    // Unlike gcc's vector_size attribute, the size is specified as the
-    // number of elements, not the number of bytes.
     unsigned VectorSize = static_cast<unsigned>(VecSize->getZExtValue());
 
     if (VectorSize == 0) {
       Diag(AttrLoc, diag::err_attribute_zero_size)
+          << SizeExpr->getSourceRange() << "vector";
+      return QualType();
+    }
+
+    if (!T->isDependentType() &&
+        VectorSize * Context.getTypeSize(T) > MaxVectorSizeInBits) {
+      Diag(AttrLoc, diag::err_attribute_size_too_large)
           << SizeExpr->getSourceRange() << "vector";
       return QualType();
     }
@@ -6703,8 +6721,10 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
       Attr.setInvalid();
   } else {
     // The keyword-based type attributes imply which address space to use.
-    ASIdx = S.getLangOpts().SYCLIsDevice ? Attr.asSYCLLangAS()
-                                         : Attr.asOpenCLLangAS();
+    // The SYCL address space attributes are available in both SYCL host and
+    // device compilation.
+    ASIdx =
+        S.getLangOpts().isSYCL() ? Attr.asSYCLLangAS() : Attr.asOpenCLLangAS();
     if (S.getLangOpts().HLSL)
       ASIdx = Attr.asHLSLLangAS();
 
@@ -9141,6 +9161,11 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_OpenCLConstantAddressSpace:
     case ParsedAttr::AT_OpenCLGenericAddressSpace:
     case ParsedAttr::AT_AddressSpace:
+    case ParsedAttr::AT_SYCLPrivateAddressSpace:
+    case ParsedAttr::AT_SYCLGlobalAddressSpace:
+    case ParsedAttr::AT_SYCLLocalAddressSpace:
+    case ParsedAttr::AT_SYCLConstantAddressSpace:
+    case ParsedAttr::AT_SYCLGenericAddressSpace:
       HandleAddressSpaceTypeAttribute(type, attr, state);
       attr.setUsedAsTypeAttr();
       break;
@@ -9161,8 +9186,15 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_HLSLRowMajor:
     case ParsedAttr::AT_HLSLColumnMajor:
       if (Attr *A =
-              state.getSema().HLSL().buildMatrixLayoutTypeAttr(type, attr))
-        type = state.getAttributedType(A, type, type);
+              state.getSema().HLSL().buildMatrixLayoutTypeAttr(type, attr)) {
+        MatrixType::LayoutKind Layout =
+            attr.getKind() == ParsedAttr::AT_HLSLRowMajor
+                ? MatrixType::LayoutKind::RowMajor
+                : MatrixType::LayoutKind::ColumnMajor;
+        QualType Equivalent =
+            state.getSema().Context.getMatrixTypeWithLayout(type, Layout);
+        type = state.getAttributedType(A, type, Equivalent);
+      }
       attr.setUsedAsTypeAttr();
       break;
     OBJC_POINTER_TYPE_ATTRS_CASELIST:
@@ -9999,6 +10031,40 @@ BuildTypeCoupledDecls(Expr *E,
   // Currently, 'counted_by' only allows direct DeclRefExpr to FieldDecl.
   auto *CountDecl = cast<DeclRefExpr>(E)->getDecl();
   Decls.push_back(TypeCoupledDeclRefInfo(CountDecl, /*IsDref*/ false));
+}
+
+bool Sema::ActOnLateParsedTypeAttrArgument(BoundsAttributedType *BATy,
+                                           FieldDecl *FD, Expr *Arg) {
+  assert(Arg);
+
+  // Only the counted_by family exists so far.
+  auto *CATy = cast<CountAttributedType>(BATy);
+
+  auto Reject = [&]() -> bool {
+    // Guarded so shared declarators (`IP __counted_by(n) a, b;`) only complete
+    // the node once.
+    if (!CATy->getCountExpr())
+      Context.completeCountAttributedType(CATy, Arg, {});
+    FD->setInvalidDecl();
+    return false;
+  };
+
+  if (Arg->containsErrors())
+    return Reject();
+
+  if (CheckCountedByAttrOnField(FD, Arg, CATy->isCountInBytes(),
+                                CATy->isOrNull()))
+    return Reject();
+
+  llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
+  BuildTypeCoupledDecls(Arg, Decls);
+  // Several declarators can share one node when the attribute was written in
+  // declaration-specifier position (`IP __counted_by(n) a, b;`), so this runs
+  // once per field
+  if (!CATy->getCountExpr())
+    Context.completeCountAttributedType(CATy, Arg, Decls);
+
+  return true;
 }
 
 QualType Sema::BuildCountAttributedArrayOrPointerType(QualType WrappedTy,

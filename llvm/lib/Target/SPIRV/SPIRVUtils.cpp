@@ -422,6 +422,10 @@ getMemSemanticsForStorageClass(SPIRV::StorageClass::StorageClass SC) {
     return SPIRV::MemorySemantics::WorkgroupMemory;
   case SPIRV::StorageClass::CrossWorkgroup:
     return SPIRV::MemorySemantics::CrossWorkgroupMemory;
+  case SPIRV::StorageClass::Generic:
+    return SPIRV::MemorySemantics::MemorySemantics(
+        SPIRV::MemorySemantics::WorkgroupMemory |
+        SPIRV::MemorySemantics::CrossWorkgroupMemory);
   case SPIRV::StorageClass::AtomicCounter:
     return SPIRV::MemorySemantics::AtomicCounterMemory;
   case SPIRV::StorageClass::Image:
