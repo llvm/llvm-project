@@ -375,8 +375,7 @@ private:
   const X86TargetMachine *TM;
 
 public:
-  explicit X86FenceNonTemporalStoresPass(
-      const X86TargetMachine *TM = nullptr)
+  explicit X86FenceNonTemporalStoresPass(const X86TargetMachine *TM = nullptr)
       : TM(TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
