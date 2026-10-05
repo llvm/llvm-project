@@ -4301,6 +4301,14 @@ static bool CheckCompatibleDistinctUltimates(SemanticsContext &context,
   return true; // don't try to merge generics (or whatever)
 }
 
+// Check whether two symbols identify the same procedure. Otherwise, require
+// matching names and procedure kinds: intrinsic procedures must both be
+// intrinsic, module procedures must identify the same module symbol, and
+// external procedures must have explicit interfaces with equal characteristics.
+// For intrinsic-module compatibility rules, a future, separate check could
+// compare the basic shapes of host and CUDA specifics, including dummy argument
+// and result types and ranks, while ignoring CUDA-specific attributes.
+// That shape comparison is not performed here.
 static bool AreSameProcedureForUseAssociation(
     SemanticsContext &context, const Symbol &p1, const Symbol &p2) {
   const Symbol &ultimate1{p1.GetUltimate()};
@@ -4357,7 +4365,10 @@ struct IntrinsicModuleUseAssociationRule {
 
 static bool MatchesCublasBlas(
     SemanticsContext &context, const Symbol &generic, const Symbol &other) {
-  if (generic.GetUltimate().name().ToString().rfind("cublas", 0) == 0) {
+  // Exclude CUBLAS-prefixed API names from the legacy BLAS compatibility rule.
+  const SourceName &genericName{generic.GetUltimate().name()};
+  if (llvm::StringRef{genericName.begin(), genericName.size()}.starts_with(
+          "cublas")) {
     return false;
   }
   const auto &details{generic.get<GenericDetails>()};
@@ -4372,9 +4383,6 @@ static bool MatchesCublasBlas(
     containsSpecific |= &candidate.GetUltimate() == &specific->GetUltimate();
     hasCUDAOverload |= HasCUDADummyDataAttribute(candidate);
   }
-  // If a CUBLAS generic is found whose CUDA specifics are not compatible
-  // enough with its homonymous host specific, also consider checking their
-  // basic procedure shapes here while ignoring CUDA-specific attributes.
   return containsSpecific && hasCUDAOverload;
 }
 
@@ -4385,6 +4393,7 @@ FindIntrinsicModuleUseAssociationRule(
   // over an equivalent external interface during USE association.
   static const IntrinsicModuleUseAssociationRule rules[]{
       {"cublas", MatchesCublasBlas},
+      {"cublas_v2", MatchesCublasBlas},
   };
   const Scope &owner{generic.GetUltimate().owner()};
   if (!owner.IsModule() || !owner.parent().IsIntrinsicModules() ||
