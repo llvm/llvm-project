@@ -257,6 +257,8 @@ features cannot lower the translation-unit ABI level;
 - Added `__builtin_sort_pack` to sort a pack of types using the same
   order as `__builtin_type_order`.
 
+- Updates Unicode Names data to Unicode 18.0 (from Unicode 18.0 Beta).
+
 ### New Compiler Flags
 
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics
