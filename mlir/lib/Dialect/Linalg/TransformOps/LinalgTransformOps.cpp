@@ -54,32 +54,6 @@ using namespace mlir::transform;
 
 #define DEBUG_TYPE "linalg-transforms"
 
-/// Attempts to apply the pattern specified as template argument to the given
-/// operation. The pattern is expected to have a `returningMatchAndRewrite`
-/// function that returns the "main" result or failure. Returns failure if the
-/// pattern failed to apply. Extra arguments are forwarded to the pattern
-/// constructor.
-template <typename PatternTy, typename... Args>
-static FailureOr<LinalgOp> tryApply(Operation *operation, Args &&...args) {
-  // Check if the given operation has the type expected by the pattern.
-  using OpTy = typename llvm::function_traits<
-      decltype(&PatternTy::returningMatchAndRewrite)>::template arg_t<0>;
-  auto op = dyn_cast<OpTy>(operation);
-  if (!op)
-    return failure();
-
-  // Apply the pattern directly to the op.
-  PatternTy pattern(operation->getContext(), std::forward<Args>(args)...);
-  // We want to discourage direct use of PatternRewriter in APIs but In this
-  // very specific case, an IRRewriter is not enough.
-  PatternRewriter rewriter(operation->getContext());
-  rewriter.setInsertionPoint(operation);
-  auto result = pattern.returningMatchAndRewrite(op, rewriter);
-  if (failed(result))
-    return failure();
-  return cast<LinalgOp>(result->getOperation());
-}
-
 /// Assuming that `ofr` is an index attr or a param of index type
 /// or a transform dialect handle mapped to exactly one op
 /// with one index result, return that value.
@@ -295,6 +269,11 @@ void transform::ApplyExtractSliceSinkingPatternsOp::populatePatterns(
 void transform::ApplySwapExtractSliceWithFillPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   linalg::populateSwapExtractSliceWithFillPatterns(patterns);
+}
+
+void transform::ApplyEraseUnusedOperandsAndResultsPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateEraseUnusedOperandsAndResultsPatterns(patterns);
 }
 
 //===----------------------------------------------------------------------===//
@@ -532,8 +511,8 @@ DiagnosedSilenceableFailure transform::DecomposeInterfaceOp::applyToOne(
     transform::TransformState &state) {
   auto decomposableOp = dyn_cast<AggregatedOpInterface>(target);
   if (!decomposableOp) {
-    failed(rewriter.notifyMatchFailure(target,
-                                       "payload is not a decomposable op"));
+    (void)rewriter.notifyMatchFailure(target,
+                                      "payload is not a decomposable op");
     return emitDefaultSilenceableFailure(target);
   }
 
@@ -755,14 +734,14 @@ transform::FuseOp::apply(transform::TransformRewriter &rewriter,
     return status;
 
   scf::SCFTilingOptions tilingOptions;
-  tilingOptions.interchangeVector = tileInterchange;
+  tilingOptions.interchangeVector = std::move(tileInterchange);
   bool useForall = getUseForall();
   tilingOptions.setLoopType(useForall
                                 ? scf::SCFTilingOptions::LoopType::ForallOp
                                 : scf::SCFTilingOptions::LoopType::ForOp);
-  tilingOptions = tilingOptions.setTileSizes(mixedTileSizes);
+  tilingOptions.setTileSizes(mixedTileSizes);
   scf::SCFTileAndFuseOptions tileAndFuseOptions;
-  tileAndFuseOptions.tilingOptions = tilingOptions;
+  tileAndFuseOptions.tilingOptions = std::move(tilingOptions);
   // Optional caller-asserted pack/unpack inner-tile alignment (see
   // InnerTileAlignment).
   tileAndFuseOptions.tilingOptions.setInnerTileAlignments(
@@ -1449,10 +1428,8 @@ transform::SpecializeOp::applyToOne(transform::TransformRewriter &rewriter,
     return DiagnosedSilenceableFailure::success();
   }
   rewriter.setInsertionPoint(target);
-  GenericOpSpecializationOptions opts;
-  opts.emitCategoryOps = getEmitCategory();
   FailureOr<LinalgOp> named =
-      specializeGenericOp(rewriter, cast<GenericOp>(target), opts);
+      specializeGenericOp(rewriter, cast<GenericOp>(target), getEmitCategory());
   if (succeeded(named)) {
     results.push_back(named->getOperation());
     return DiagnosedSilenceableFailure::success();
@@ -1577,6 +1554,11 @@ DiagnosedSilenceableFailure transform::LowerPackOp::applyToOne(
     transform::TransformRewriter &rewriter, linalg::PackOp target,
     transform::ApplyToEachResultList &transformResults,
     transform::TransformState &state) {
+  if (!target.hasPureTensorSemantics()) {
+    return mlir::emitSilenceableFailure(target->getLoc())
+           << "lower_pack only supports tensor semantics. The target has "
+              "memref operands";
+  }
   rewriter.setInsertionPoint(target);
   bool lowerPadLikeWithInsertSlice = getLowerPadLikeWithInsertSlice();
   FailureOr<LowerPackResult> res =
@@ -1599,6 +1581,13 @@ DiagnosedSilenceableFailure transform::LowerUnPackOp::applyToOne(
     transform::TransformRewriter &rewriter, linalg::UnPackOp target,
     transform::ApplyToEachResultList &transformResults,
     transform::TransformState &state) {
+  if (!target.hasPureTensorSemantics()) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError() << "lower_unpack only supports tensor "
+                                  "semantics. The target has memref operands";
+    diag.attachNote(target->getLoc()) << "target payload op";
+    return diag;
+  }
   rewriter.setInsertionPoint(target);
   bool lowerUnpadLikeWithExtractSlice = getLowerUnpadLikeWithExtractSlice();
   FailureOr<LowerUnPackOpResult> res =
@@ -1891,6 +1880,12 @@ transform::PackOp::apply(transform::TransformRewriter &rewriter,
            << "requires target to map to exactly 1 LinalgOp (got "
            << llvm::range_size(targetOps) << ")";
   }
+  // Fail on memref operands: pack only supports tensor semantics.
+  if (!linalgOp.hasPureTensorSemantics()) {
+    return emitSilenceableError()
+           << "structured.pack only supports tensor semantics. The target has "
+              "memref operands";
+  }
   // Fail on mismatched number of pack sizes.
   if (getMixedPackedSizes().size() != linalgOp.getNumLoops()) {
     return emitSilenceableError()
@@ -1953,10 +1948,8 @@ PackGreedilyOp::apply(transform::TransformRewriter &rewriter,
                       transform::TransformResults &transformResults,
                       transform::TransformState &state) {
   SmallVector<Operation *> results;
-  for (Operation *op : state.getPayloadOps(getTarget())) {
-    auto linalgOp = dyn_cast<LinalgOp>(op);
-    if (!linalgOp)
-      continue;
+  for (auto linalgOp :
+       llvm::make_isa_range<LinalgOp>(state.getPayloadOps(getTarget()))) {
     // linalgOp will be replaced and the insertion point may be invalidated if
     // we set it before -> set it after.
     rewriter.setInsertionPointAfter(linalgOp);
@@ -2295,9 +2288,9 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
       padToMultipleOf =
           SmallVector<int64_t>(options.paddingDimensions.size(), 1);
 
-    options.padToMultipleOf = padToMultipleOf;
-    options.paddingValues = paddingValues;
-    options.nofoldFlags = nofoldFlags;
+    options.padToMultipleOf = std::move(padToMultipleOf);
+    options.paddingValues = std::move(paddingValues);
+    options.nofoldFlags = std::move(nofoldFlags);
     if (getCopyBackOp() ==
         bufferization::MaterializeInDestinationOp::getOperationName()) {
       options.copyBackOp = LinalgPaddingOptions::CopyBackOp::
@@ -2528,14 +2521,15 @@ transform::PadTilingInterfaceOp::apply(transform::TransformRewriter &rewriter,
 
     // Set options.
     PadTilingInterfaceOptions options;
-    options.setPaddingValues(paddingValues)
-        .setPaddingSizes(getMixedPaddingSizes())
+    options.paddingValues = std::move(paddingValues);
+    options.setPaddingSizes(getMixedPaddingSizes())
         .setPadToMultipleOf(getPadToMultipleOf());
 
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPointAfter(targetOp);
     auto maybePadOps = rewriteAsPaddedOp(
-        rewriter, cast<TilingInterface>(targetOp.getOperation()), options);
+        rewriter, cast<TilingInterface>(targetOp.getOperation()),
+        std::move(options));
     if (failed(maybePadOps)) {
       auto diag = emitSilenceableError() << "failed to pad op";
       diag.attachNote(target->getLoc()) << "target op";
@@ -3756,6 +3750,15 @@ transform::TileUsingForOp::apply(transform::TransformRewriter &rewriter,
       diag.attachNote(op->getLoc()) << "target op";
       return diag;
     }
+    if (isa<linalg::RelayoutOpInterface>(op) &&
+        !cast<DestinationStyleOpInterface>(op).hasPureTensorSemantics()) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableError()
+          << "tiling only supports tensor semantics for linalg.pack / "
+             "linalg.unpack. The target has memref operands";
+      diag.attachNote(op->getLoc()) << "target op";
+      return diag;
+    }
 
     int64_t iterspaceRank = tilingInterface.getLoopIteratorTypes().size();
     if (tileInterchange.size() > static_cast<size_t>(iterspaceRank)) {
@@ -4072,6 +4075,15 @@ DiagnosedSilenceableFailure transform::tileToForallOpImpl(
     DiagnosedSilenceableFailure diag =
         transformOp.emitSilenceableError()
         << "only TilingInterface ops are supported";
+    diag.attachNote(target->getLoc()) << "target op";
+    return diag;
+  }
+  if (isa<linalg::RelayoutOpInterface>(target) &&
+      !cast<DestinationStyleOpInterface>(target).hasPureTensorSemantics()) {
+    DiagnosedSilenceableFailure diag =
+        transformOp.emitSilenceableError()
+        << "tiling only supports tensor semantics for linalg.pack / "
+           "linalg.unpack. The target has memref operands";
     diag.attachNote(target->getLoc()) << "target op";
     return diag;
   }

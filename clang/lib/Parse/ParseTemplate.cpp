@@ -1454,17 +1454,25 @@ void Parser::ParseLateTemplatedFuncDef(LateParsedTemplate &LPT) {
   // Track template parameter depth.
   TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
 
-  // To restore the context after late parsing.
-  Sema::ContextRAII GlobalSavedContext(
-      Actions, Actions.Context.getTranslationUnitDecl());
-
   MultiParseScope Scopes(*this);
 
   // Get the list of DeclContexts to reenter.
   SmallVector<DeclContext*, 4> DeclContextsToReenter;
-  for (DeclContext *DC = FunD; DC && !DC->isTranslationUnit();
-       DC = DC->getLexicalParent())
+  DeclContext *LexicalTU = nullptr;
+  for (DeclContext *DC = FunD; DC; DC = DC->getLexicalParent()) {
+    if (DC->isTranslationUnit()) {
+      LexicalTU = DC;
+      break;
+    }
     DeclContextsToReenter.push_back(DC);
+  }
+
+  if (!LexicalTU) {
+    LexicalTU = Actions.Context.getTranslationUnitDecl();
+  }
+
+  // To restore the context after late parsing.
+  Sema::ContextRAII GlobalSavedContext(Actions, LexicalTU);
 
   // Reenter scopes from outermost to innermost.
   for (DeclContext *DC : reverse(DeclContextsToReenter)) {
@@ -1503,26 +1511,15 @@ void Parser::ParseLateTemplatedFuncDef(LateParsedTemplate &LPT) {
 
   Actions.ActOnStartOfFunctionDef(getCurScope(), FunD);
 
-  if (Tok.is(tok::kw_try)) {
-    ParseFunctionTryBlock(LPT.D, FnScope);
-  } else {
-    if (Tok.is(tok::colon))
-      ParseConstructorInitializer(LPT.D);
-    else
-      Actions.ActOnDefaultCtorInitializers(LPT.D);
+  assert(
+      (!isa<FunctionTemplateDecl>(LPT.D) ||
+       cast<FunctionTemplateDecl>(LPT.D)->getTemplateParameters()->getDepth() ==
+           TemplateParameterDepth - 1) &&
+      "TemplateParameterDepth should be greater than the depth of "
+      "current template being instantiated!");
 
-    if (Tok.is(tok::l_brace)) {
-      assert((!isa<FunctionTemplateDecl>(LPT.D) ||
-              cast<FunctionTemplateDecl>(LPT.D)
-                      ->getTemplateParameters()
-                      ->getDepth() == TemplateParameterDepth - 1) &&
-             "TemplateParameterDepth should be greater than the depth of "
-             "current template being instantiated!");
-      ParseFunctionStatementBody(LPT.D, FnScope);
-      Actions.UnmarkAsLateParsedTemplate(FunD);
-    } else
-      Actions.ActOnFinishFunctionBody(LPT.D, nullptr);
-  }
+  ParseFunctionBody(LPT.D, FnScope);
+  Actions.UnmarkAsLateParsedTemplate(FunD);
 }
 
 void Parser::LexTemplateFunctionForLateParsing(CachedTokens &Toks) {

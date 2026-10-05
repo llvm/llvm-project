@@ -27,10 +27,12 @@
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/FIRToMemRefTypeConverter.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
@@ -99,6 +101,11 @@ std::optional<llvm::TypeSize> OpenACCMappableModel<Ty>::getSizeInBytes(
   // If the type enclosed is a mappable type, then have it provide the size.
   if (auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(eleTy))
     return mappableTy.getSizeInBytes(var, accBounds, dataLayout);
+
+  // Procedure pointers map as a single address-sized slot.
+  if (mlir::isa<mlir::FunctionType>(eleTy))
+    return llvm::TypeSize::getFixed(dataLayout.getTypeSize(
+        mlir::LLVM::LLVMPointerType::get(type.getContext())));
 
   // Dynamic extents or unknown ranks generally do not have compile-time
   // computable dimensions.
@@ -990,6 +997,11 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     } else {
       retVal = box;
     }
+  } else if (retVal.getType() != type) {
+    // createTemporary / createHeapTemporary produce !fir.ref storage. Bare
+    // !fir.ptr / !fir.heap recipe types need a convert so fir.result and
+    // acc.yield match the parent recipe type.
+    retVal = builder.createConvert(loc, type, retVal);
   }
 
   if (mayBeOptional) {
@@ -1744,8 +1756,11 @@ template mlir::Value OpenACCPointerLikeModel<fir::LLVMPointerType>::genCast(
     mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::Value value, mlir::Type resultType) const;
 
-/// Check CUDA attributes on a function argument.
-static bool hasCUDADeviceAttrOnFuncArg(mlir::BlockArgument blockArg) {
+/// Check CUDA attributes on a function argument, testing the attribute
+/// with the provided predicate (e.g. device-data vs device-resident).
+static bool
+hasCUDADataAttrOnFuncArg(mlir::BlockArgument blockArg,
+                         llvm::function_ref<bool(cuf::DataAttribute)> matches) {
   auto *owner = blockArg.getOwner();
   if (!owner)
     return false;
@@ -1759,89 +1774,142 @@ static bool hasCUDADeviceAttrOnFuncArg(mlir::BlockArgument blockArg) {
     if (argIndex < funcLike.getNumArguments())
       if (auto attr = funcLike.getArgAttr(argIndex, cuf::getDataAttrName()))
         if (auto cudaAttr = mlir::dyn_cast<cuf::DataAttributeAttr>(attr))
-          return cuf::isDeviceDataAttribute(cudaAttr.getValue());
+          return matches(cudaAttr.getValue());
   }
   return false;
 }
 
-/// Shared implementation for checking if a value represents device data.
-static bool isDeviceDataImpl(mlir::Value var) {
+/// Shared walk that returns true if `var` (after stripping casts/views and
+/// following partial-entity access and address-of edges to the underlying
+/// storage) is ultimately backed by storage whose CUDA data attribute
+/// satisfies `matches`. The predicate selects the storage property of
+/// interest, e.g.:
+///   - device accessibility: cuf::isDeviceDataAttribute
+///   - device memory (physically resident): device-data minus managed/unified
+static bool underlyingStorageHasDataAttr(
+    mlir::Value var, llvm::function_ref<bool(cuf::DataAttribute)> matches) {
   // Strip casts to find the underlying value.
   mlir::Value currentVal =
       fir::acc::getOriginalDef(var, /*stripDeclare=*/false);
 
+  // Dummy arguments carry their attribute on the enclosing function.
   if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(currentVal))
-    return hasCUDADeviceAttrOnFuncArg(blockArg);
+    return hasCUDADataAttrOnFuncArg(blockArg, matches);
 
   mlir::Operation *defOp = currentVal.getDefiningOp();
   assert(defOp && "expected defining op for non-block-argument value");
 
-  // Check for CUDA attributes on the defining operation.
-  if (cuf::hasDeviceDataAttr(defOp))
-    return true;
+  // Check for a matching CUDA data attribute on the defining operation.
+  if (auto dataAttr = cuf::getDataAttr(defOp))
+    if (matches(dataAttr.getValue()))
+      return true;
 
-  // Handle operations that access a partial entity - check if the base entity
-  // is device data.
+  // Handle operations that access a partial entity - check the base entity.
   if (auto partialAccess =
           mlir::dyn_cast<mlir::acc::PartialEntityAccessOpInterface>(defOp))
     if (mlir::Value base = partialAccess.getBaseEntity())
-      return isDeviceDataImpl(base);
+      return underlyingStorageHasDataAttr(base, matches);
 
   // Handle fir.embox, fir.rebox, and similar ops via
-  // FortranObjectViewOpInterface to check if the underlying source is device
-  // data.
+  // FortranObjectViewOpInterface to check the underlying source.
   if (auto viewOp = mlir::dyn_cast<fir::FortranObjectViewOpInterface>(defOp))
     if (mlir::Value source = viewOp.getViewSource(defOp->getResult(0)))
-      return isDeviceDataImpl(source);
+      return underlyingStorageHasDataAttr(source, matches);
 
-  // Handle address_of - check the referenced global.
+  // Handle address_of - check the referenced global's data attribute.
   if (auto addrOfIface =
           mlir::dyn_cast<mlir::acc::AddressOfGlobalOpInterface>(defOp)) {
     auto symbol = addrOfIface.getSymbol();
     if (auto global = mlir::SymbolTable::lookupNearestSymbolFrom<
             mlir::acc::GlobalVariableOpInterface>(defOp, symbol))
-      return global.isDeviceData();
+      if (auto dataAttr = cuf::getDataAttr(global.getOperation()))
+        return matches(dataAttr.getValue());
     return false;
   }
 
   return false;
 }
 
-template <typename Ty>
-bool OpenACCPointerLikeModel<Ty>::isDeviceData(mlir::Type pointer,
-                                               mlir::Value var) const {
-  return isDeviceDataImpl(var);
+/// Device accessibility: storage the current device can reach, regardless of
+/// where it physically resides.
+static bool isDeviceAccessibleImpl(mlir::Value var) {
+  return underlyingStorageHasDataAttr(var, cuf::isDeviceDataAttribute);
 }
 
-template bool OpenACCPointerLikeModel<fir::ReferenceType>::isDeviceData(
+/// Device memory: storage that is physically connected to (resident in) the
+/// device. This is device-accessible storage minus host-shared storage that
+/// may migrate on demand (managed/unified).
+static bool isInDeviceMemoryImpl(mlir::Value var) {
+  return underlyingStorageHasDataAttr(var, [](cuf::DataAttribute attr) {
+    return cuf::isDeviceDataAttribute(attr) &&
+           !cuf::isManagedOrUnifiedDataAttribute(attr);
+  });
+}
+
+template <typename Ty>
+bool OpenACCPointerLikeModel<Ty>::isDeviceAccessible(mlir::Type pointer,
+                                                     mlir::Value var) const {
+  return isDeviceAccessibleImpl(var);
+}
+
+template bool OpenACCPointerLikeModel<fir::ReferenceType>::isDeviceAccessible(
+    mlir::Type, mlir::Value) const;
+template bool OpenACCPointerLikeModel<fir::PointerType>::isDeviceAccessible(
+    mlir::Type, mlir::Value) const;
+template bool OpenACCPointerLikeModel<fir::HeapType>::isDeviceAccessible(
+    mlir::Type, mlir::Value) const;
+template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::isDeviceAccessible(
+    mlir::Type, mlir::Value) const;
+
+template <typename Ty>
+bool OpenACCMappableModel<Ty>::isDeviceAccessible(mlir::Type type,
+                                                  mlir::Value var) const {
+  return isDeviceAccessibleImpl(var);
+}
+
+template bool OpenACCMappableModel<fir::BaseBoxType>::isDeviceAccessible(
+    mlir::Type, mlir::Value) const;
+template bool OpenACCMappableModel<fir::ReferenceType>::isDeviceAccessible(
     mlir::Type, mlir::Value) const;
 template bool
-    OpenACCPointerLikeModel<fir::PointerType>::isDeviceData(mlir::Type,
+    OpenACCMappableModel<fir::HeapType>::isDeviceAccessible(mlir::Type,
                                                             mlir::Value) const;
-template bool
-    OpenACCPointerLikeModel<fir::HeapType>::isDeviceData(mlir::Type,
-                                                         mlir::Value) const;
-template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::isDeviceData(
+template bool OpenACCMappableModel<fir::PointerType>::isDeviceAccessible(
     mlir::Type, mlir::Value) const;
 
 template <typename Ty>
-bool OpenACCMappableModel<Ty>::isDeviceData(mlir::Type type,
-                                            mlir::Value var) const {
-  return isDeviceDataImpl(var);
+bool OpenACCPointerLikeModel<Ty>::isInDeviceMemory(mlir::Type pointer,
+                                                   mlir::Value var) const {
+  return isInDeviceMemoryImpl(var);
+}
+
+template bool OpenACCPointerLikeModel<fir::ReferenceType>::isInDeviceMemory(
+    mlir::Type, mlir::Value) const;
+template bool OpenACCPointerLikeModel<fir::PointerType>::isInDeviceMemory(
+    mlir::Type, mlir::Value) const;
+template bool
+    OpenACCPointerLikeModel<fir::HeapType>::isInDeviceMemory(mlir::Type,
+                                                             mlir::Value) const;
+template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::isInDeviceMemory(
+    mlir::Type, mlir::Value) const;
+
+template <typename Ty>
+bool OpenACCMappableModel<Ty>::isInDeviceMemory(mlir::Type type,
+                                                mlir::Value var) const {
+  return isInDeviceMemoryImpl(var);
 }
 
 template bool
-    OpenACCMappableModel<fir::BaseBoxType>::isDeviceData(mlir::Type,
-                                                         mlir::Value) const;
+    OpenACCMappableModel<fir::BaseBoxType>::isInDeviceMemory(mlir::Type,
+                                                             mlir::Value) const;
+template bool OpenACCMappableModel<fir::ReferenceType>::isInDeviceMemory(
+    mlir::Type, mlir::Value) const;
 template bool
-    OpenACCMappableModel<fir::ReferenceType>::isDeviceData(mlir::Type,
-                                                           mlir::Value) const;
+    OpenACCMappableModel<fir::HeapType>::isInDeviceMemory(mlir::Type,
+                                                          mlir::Value) const;
 template bool
-    OpenACCMappableModel<fir::HeapType>::isDeviceData(mlir::Type,
-                                                      mlir::Value) const;
-template bool
-    OpenACCMappableModel<fir::PointerType>::isDeviceData(mlir::Type,
-                                                         mlir::Value) const;
+    OpenACCMappableModel<fir::PointerType>::isInDeviceMemory(mlir::Type,
+                                                             mlir::Value) const;
 
 std::optional<mlir::arith::AtomicRMWKind>
 OpenACCReducibleLogicalModel::getAtomicRMWKind(

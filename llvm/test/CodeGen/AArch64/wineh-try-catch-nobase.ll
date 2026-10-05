@@ -13,7 +13,7 @@
 ; CHECK-NEXT:        mov     x1, xzr
 ; CHECK-NEXT:        bl      "?bb@@YAXPEAHH@Z"
 ; CHECK-NEXT:        adrp    x0, .LBB0_1
-; CHECK-NEXT:        add     x0, x0, .LBB0_1
+; CHECK-NEXT:        add     x0, x0, :lo12:.LBB0_1
 ; CHECK-NEXT:        .seh_startepilogue
 ; CHECK-NEXT:        ldp     x29, x30, [sp], #16     // 16-byte Folded Reload
 ; CHECK-NEXT:        .seh_save_fplr_x 16

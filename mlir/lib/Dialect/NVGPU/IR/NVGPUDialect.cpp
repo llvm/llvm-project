@@ -272,7 +272,7 @@ LogicalResult MmaSyncOp::verify() {
 
   return verifyMmaSyncOp(this->getOperation(), getMatrixA(), getMatrixB(),
                          getMatrixC(), getMmaShapeAsArray(),
-                         getOperation()->hasAttr(getTf32EnabledAttrName()));
+                         getTf32Enabled().value_or(false));
 }
 
 //===----------------------------------------------------------------------===//
@@ -296,8 +296,7 @@ LogicalResult MmaSparseSyncOp::verify() {
 
   return verifyMmaSyncOp(this->getOperation(), getMatrixA(), getMatrixB(),
                          getMatrixC(), getMmaShapeAsArray(),
-                         getOperation()->hasAttr(getTf32EnabledAttrName()),
-                         true);
+                         getTf32Enabled().value_or(false), true);
 }
 
 //===----------------------------------------------------------------------===//
@@ -540,7 +539,7 @@ LogicalResult isAllowedWGMMADataType(Type typeD, Type typeA, Type typeB) {
   if (typeA.isTF32() && typeD.isF32() && typeB.isTF32())
     return success();
   // s32 += i8 + i8
-  if (typeA.isInteger(16) && typeB.isInteger(16) && typeD.isInteger(32))
+  if (typeA.isInteger(8) && typeB.isInteger(8) && typeD.isInteger(32))
     return success();
   // s32 += i1 + i1
   if (typeA.isInteger(1) && typeB.isInteger(1) && typeD.isInteger(32))

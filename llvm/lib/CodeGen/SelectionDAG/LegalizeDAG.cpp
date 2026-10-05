@@ -1272,6 +1272,11 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
     break;
+  case ISD::VECTOR_INTERLEAVE:
+  case ISD::VECTOR_DEINTERLEAVE:
+    Action = TLI.getVectorInterleaveAction(
+        Node->getOpcode(), Node->getNumOperands(), Node->getValueType(0));
+    break;
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     Action = TLI.getOperationAction(
         Node->getOpcode(),
@@ -1842,10 +1847,6 @@ void SelectionDAGLegalize::ExpandDYNAMIC_STACKALLOC(SDNode* Node,
   Results.push_back(Tmp2);
 }
 
-/// Emit a store/load combination to the stack.  This stores
-/// SrcOp to a stack slot of type SlotVT, truncating it if needed.  It then does
-/// a load from the stack slot to DestVT, extending it if needed.
-/// The resultant code need not be legal.
 SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
                                                EVT DestVT, const SDLoc &dl) {
   return EmitStackConvert(SrcOp, SlotVT, DestVT, dl, DAG.getEntryNode());
@@ -1857,10 +1858,9 @@ SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
   EVT SrcVT = SrcOp.getValueType();
   Type *DestType = DestVT.getTypeForEVT(*DAG.getContext());
   Align DestAlign = DAG.getDataLayout().getPrefTypeAlign(DestType);
-
   // Don't convert with stack if the load/store is expensive.
   if ((SrcVT.bitsGT(SlotVT) && !TLI.isTruncStoreLegalOrCustom(
-                                   SrcOp.getValueType(), SlotVT, DestAlign,
+                                   SrcVT, SlotVT, DestAlign,
                                    DAG.getDataLayout().getAllocaAddrSpace())) ||
       (SlotVT.bitsLT(DestVT) &&
        !TLI.isLoadLegalOrCustom(DestVT, SlotVT, DestAlign,
@@ -1868,35 +1868,7 @@ SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
                                 ISD::EXTLOAD, false)))
     return SDValue();
 
-  // Create the stack frame object.
-  Align SrcAlign = DAG.getDataLayout().getPrefTypeAlign(
-      SrcOp.getValueType().getTypeForEVT(*DAG.getContext()));
-  SDValue FIPtr = DAG.CreateStackTemporary(SlotVT.getStoreSize(), SrcAlign);
-
-  FrameIndexSDNode *StackPtrFI = cast<FrameIndexSDNode>(FIPtr);
-  int SPFI = StackPtrFI->getIndex();
-  MachinePointerInfo PtrInfo =
-      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI);
-
-  // Emit a store to the stack slot.  Use a truncstore if the input value is
-  // later than DestVT.
-  SDValue Store;
-
-  if (SrcVT.bitsGT(SlotVT))
-    Store = DAG.getTruncStore(Chain, dl, SrcOp, FIPtr, PtrInfo,
-                              SlotVT, SrcAlign);
-  else {
-    assert(SrcVT.bitsEq(SlotVT) && "Invalid store");
-    Store = DAG.getStore(Chain, dl, SrcOp, FIPtr, PtrInfo, SrcAlign);
-  }
-
-  // Result is a load from the stack slot.
-  if (SlotVT.bitsEq(DestVT))
-    return DAG.getLoad(DestVT, dl, Store, FIPtr, PtrInfo, DestAlign);
-
-  assert(SlotVT.bitsLT(DestVT) && "Unknown extension!");
-  return DAG.getExtLoad(ISD::EXTLOAD, dl, DestVT, Store, FIPtr, PtrInfo, SlotVT,
-                        DestAlign);
+  return DAG.emitStackConvert(SrcOp, SlotVT, DestVT, dl, Chain);
 }
 
 SDValue SelectionDAGLegalize::ExpandSCALAR_TO_VECTOR(SDNode *Node) {
@@ -3313,7 +3285,6 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Node->getOperand(0));
     break;
   case ISD::EH_RETURN:
-  case ISD::EH_LABEL:
   case ISD::PREFETCH:
   case ISD::VAEND:
   case ISD::EH_SJLJ_LONGJMP:
@@ -3413,6 +3384,18 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     SDValue NewRHS =
         DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), RHS);
     SDValue Res = DAG.getAtomic(ISD::ATOMIC_LOAD_ADD, DL, AN->getMemoryVT(),
+                                Node->getOperand(0), Node->getOperand(1),
+                                NewRHS, AN->getMemOperand());
+    Results.push_back(Res);
+    Results.push_back(Res.getValue(1));
+    break;
+  }
+  case ISD::ATOMIC_LOAD_FSUB: {
+    SDLoc DL(Node);
+    EVT VT = Node->getValueType(0);
+    AtomicSDNode *AN = cast<AtomicSDNode>(Node);
+    SDValue NewRHS = DAG.getNode(ISD::FNEG, DL, VT, Node->getOperand(2));
+    SDValue Res = DAG.getAtomic(ISD::ATOMIC_LOAD_FADD, DL, AN->getMemoryVT(),
                                 Node->getOperand(0), Node->getOperand(1),
                                 NewRHS, AN->getMemOperand());
     Results.push_back(Res);
@@ -4125,8 +4108,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     SDValue LHS = Node->getOperand(0);
     SDValue RHS = Node->getOperand(1);
     EVT VT = LHS.getValueType();
-    unsigned MULHOpcode =
-        Node->getOpcode() == ISD::UMUL_LOHI ? ISD::MULHU : ISD::MULHS;
+    bool IsSigned = Node->getOpcode() == ISD::SMUL_LOHI;
+    unsigned MULHOpcode = IsSigned ? ISD::MULHS : ISD::MULHU;
 
     if (TLI.isOperationLegalOrCustom(MULHOpcode, VT)) {
       Results.push_back(DAG.getNode(ISD::MUL, dl, VT, LHS, RHS));
@@ -4136,8 +4119,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
 
     SmallVector<SDValue, 4> Halves;
     EVT HalfType = VT.getHalfSizedIntegerVT(*DAG.getContext());
-    assert(TLI.isTypeLegal(HalfType));
-    if (TLI.expandMUL_LOHI(Node->getOpcode(), VT, dl, LHS, RHS, Halves,
+    if (TLI.isTypeLegal(HalfType) &&
+        TLI.expandMUL_LOHI(Node->getOpcode(), VT, dl, LHS, RHS, Halves,
                            HalfType, DAG,
                            TargetLowering::MulExpansionKind::Always)) {
       for (unsigned i = 0; i < 2; ++i) {
@@ -4150,6 +4133,11 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       }
       break;
     }
+
+    SDValue Lo, Hi;
+    TLI.forceExpandWideMUL(DAG, dl, IsSigned, LHS, RHS, Lo, Hi);
+    Results.push_back(Lo);
+    Results.push_back(Hi);
     break;
   }
   case ISD::MUL: {
@@ -5362,21 +5350,21 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     SDValue Ptr = DAG.getAllOnesConstant(dl, PtrTy);
     SDValue Chain = Node->getOperand(0);
     Results.push_back(
-        DAG.makeStateFunctionCall(RTLIB::FESETENV, Ptr, Chain, dl));
+        DAG.makeStateFunctionCall(RTLIB::FESETENV, Ptr, Chain, Node));
     break;
   }
   case ISD::GET_FPENV_MEM: {
     SDValue Chain = Node->getOperand(0);
     SDValue EnvPtr = Node->getOperand(1);
     Results.push_back(
-        DAG.makeStateFunctionCall(RTLIB::FEGETENV, EnvPtr, Chain, dl));
+        DAG.makeStateFunctionCall(RTLIB::FEGETENV, EnvPtr, Chain, Node));
     break;
   }
   case ISD::SET_FPENV_MEM: {
     SDValue Chain = Node->getOperand(0);
     SDValue EnvPtr = Node->getOperand(1);
     Results.push_back(
-        DAG.makeStateFunctionCall(RTLIB::FESETENV, EnvPtr, Chain, dl));
+        DAG.makeStateFunctionCall(RTLIB::FESETENV, EnvPtr, Chain, Node));
     break;
   }
   case ISD::GET_FPMODE: {
@@ -5386,7 +5374,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     SDValue StackPtr = DAG.CreateStackTemporary(ModeVT);
     int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
     SDValue Chain = DAG.makeStateFunctionCall(RTLIB::FEGETMODE, StackPtr,
-                                              Node->getOperand(0), dl);
+                                              Node->getOperand(0), Node);
     SDValue LdInst = DAG.getLoad(
         ModeVT, dl, Chain, StackPtr,
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI));
@@ -5405,7 +5393,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
         Node->getOperand(0), dl, Mode, StackPtr,
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI));
     Results.push_back(
-        DAG.makeStateFunctionCall(RTLIB::FESETMODE, StackPtr, StInst, dl));
+        DAG.makeStateFunctionCall(RTLIB::FESETMODE, StackPtr, StInst, Node));
     break;
   }
   case ISD::RESET_FPMODE: {
@@ -5416,7 +5404,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     EVT PtrTy = TLI.getPointerTy(DL);
     SDValue Mode = DAG.getAllOnesConstant(dl, PtrTy);
     Results.push_back(DAG.makeStateFunctionCall(RTLIB::FESETMODE, Mode,
-                                                Node->getOperand(0), dl));
+                                                Node->getOperand(0), Node));
     break;
   }
   }

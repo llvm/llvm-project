@@ -145,9 +145,7 @@ def fir_FortranProcedureFlagsEnum
 }
 
 def fir_FortranProcedureFlagsAttr :
-    EnumAttr<FIROpsDialect, fir_FortranProcedureFlagsEnum, "proc_attrs"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    EnumAttr<FIROpsDialect, fir_FortranProcedureFlagsEnum, "proc_attrs">;
 
 def fir_BoxFieldAttr : I32EnumAttr<
     "BoxFieldAttr", "",
@@ -233,9 +231,7 @@ def fir_PackArrayHeuristics
 
 def fir_PackArrayHeuristicsAttr
     : EnumAttr<FIROpsDialect, fir_PackArrayHeuristics,
-               "pack_array_heuristics"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+               "pack_array_heuristics">;
 
 def fir_OpenACCSafeTempArrayCopyAttr : fir_Attr<"OpenACCSafeTempArrayCopy"> {
   let mnemonic = "acc_safe_temp_array_copy";
@@ -274,9 +270,7 @@ def LocalitySpecifierType : I32EnumAttr<
 }
 
 def LocalitySpecifierTypeAttr : EnumAttr<FIROpsDialect, LocalitySpecifierType,
-                                                "locality_specifier_type"> {
-  let assemblyFormat = "`{` `type` `=` $value `}`";
-}
+                                                "locality_specifier_type">;
 
 /// Fortran inline attribute
 def FIRinlineNone : I32BitEnumAttrCaseNone<"none">;
@@ -295,9 +289,7 @@ def fir_FortranInlineEnum
 }
 
 def fir_FortranInlineAttr
-    : EnumAttr<FIROpsDialect, fir_FortranInlineEnum, "inline_attrs"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    : EnumAttr<FIROpsDialect, fir_FortranInlineEnum, "inline_attrs">;
 
 // USE statement rename mapping: local_name => use_name
 def fir_UseRenameAttr : fir_Attr<"UseRename"> {
@@ -314,6 +306,46 @@ def fir_UseRenameAttr : fir_Attr<"UseRename"> {
 
   let assemblyFormat = "`<` $local_name `,` $symbol `>`";
 }
+
+//===----------------------------------------------------------------------===//
+// Allocation policy
+//===----------------------------------------------------------------------===//
+
+// Module attribute recording where array allocations should be placed. It is
+// set by lowering and read back with fir::getAllocationPolicy, so that
+// policy-aware passes make consistent placement decisions and dumped IR
+// replays with the policy it was compiled with.
+//
+// fir::AllocationPolicy.
+def fir_AllocationPolicyAttr : fir_Attr<"AllocationPolicy"> {
+  let mnemonic = "allocation_policy";
+  let summary = "Records the module-level array allocation policy";
+  let description = [{
+    Records the policy used by policy-aware passes to choose between stack
+    (`fir.alloca`) and heap (`fir.allocmem`) storage for array allocations.
+    Lowering sets this attribute from the compiler options. Passes that create
+    allocations can consult it when selecting the allocation operation, and
+    allocation-placement uses it when reconsidering existing allocations.
+
+    Fields:
+      - stack_arrays: place all arrays on the stack when possible
+        (`-fstack-arrays`).
+      - small_array_threshold: maximum size in bytes of a "small" constant-size
+        array temporary.
+      - total_stack_limit: per-function budget in bytes for small arrays placed
+        on the stack.
+  }];
+  let parameters = (ins
+    "bool":$stack_arrays,
+    "uint64_t":$small_array_threshold,
+    "uint64_t":$total_stack_limit
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// OpenACC
+//===----------------------------------------------------------------------===//
 
 // Fortran-specific variable information for OpenACC.
 // Carries metadata that cannot be recovered from the FIR type system alone

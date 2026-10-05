@@ -1578,7 +1578,7 @@ define <16 x i8> @var_shuffle_v16i8_from_v32i8_v16i8(<32 x i8> %v, <16 x i8> %in
 ; SSE3-NEXT:    movaps %xmm1, 400(%rsp)
 ; SSE3-NEXT:    movaps %xmm0, 384(%rsp)
 ; SSE3-NEXT:    movzbl -128(%rsp), %eax
-; SSE3-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE3-NEXT:    movq %rax, -104(%rsp) # 8-byte Spill
 ; SSE3-NEXT:    movaps %xmm1, 368(%rsp)
 ; SSE3-NEXT:    movaps %xmm0, 352(%rsp)
 ; SSE3-NEXT:    movzbl -127(%rsp), %ecx
@@ -1669,7 +1669,7 @@ define <16 x i8> @var_shuffle_v16i8_from_v32i8_v16i8(<32 x i8> %v, <16 x i8> %in
 ; SSE3-NEXT:    andl $31, %ecx
 ; SSE3-NEXT:    movzbl 352(%rsp,%rcx), %eax
 ; SSE3-NEXT:    movd %eax, %xmm15
-; SSE3-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; SSE3-NEXT:    movq -104(%rsp), %rax # 8-byte Reload
 ; SSE3-NEXT:    andl $31, %eax
 ; SSE3-NEXT:    movzbl 384(%rsp,%rax), %eax
 ; SSE3-NEXT:    movd %eax, %xmm0
@@ -1710,7 +1710,7 @@ define <16 x i8> @var_shuffle_v16i8_from_v32i8_v16i8(<32 x i8> %v, <16 x i8> %in
 ; SSSE3-NEXT:    movaps %xmm1, 400(%rsp)
 ; SSSE3-NEXT:    movaps %xmm0, 384(%rsp)
 ; SSSE3-NEXT:    movzbl -128(%rsp), %eax
-; SSSE3-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSSE3-NEXT:    movq %rax, -104(%rsp) # 8-byte Spill
 ; SSSE3-NEXT:    movaps %xmm1, 368(%rsp)
 ; SSSE3-NEXT:    movaps %xmm0, 352(%rsp)
 ; SSSE3-NEXT:    movzbl -127(%rsp), %ecx
@@ -1801,7 +1801,7 @@ define <16 x i8> @var_shuffle_v16i8_from_v32i8_v16i8(<32 x i8> %v, <16 x i8> %in
 ; SSSE3-NEXT:    andl $31, %ecx
 ; SSSE3-NEXT:    movzbl 352(%rsp,%rcx), %eax
 ; SSSE3-NEXT:    movd %eax, %xmm15
-; SSSE3-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; SSSE3-NEXT:    movq -104(%rsp), %rax # 8-byte Reload
 ; SSSE3-NEXT:    andl $31, %eax
 ; SSSE3-NEXT:    movzbl 384(%rsp,%rax), %eax
 ; SSSE3-NEXT:    movd %eax, %xmm0

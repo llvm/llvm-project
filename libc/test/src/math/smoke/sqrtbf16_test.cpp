@@ -11,4 +11,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/sqrtbf16.h"
 
-LIST_SQRT_TESTS(bfloat16, LIBC_NAMESPACE::sqrtbf16);
+LIST_SQRT_TESTS(Sqrtbf16, bfloat16, LIBC_NAMESPACE::sqrtbf16);

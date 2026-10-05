@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
+#include "mlir/Dialect/SCF/IR/SCFDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/RegionKindInterface.h"
@@ -32,8 +33,6 @@ namespace scf {
 void buildTerminatedBody(OpBuilder &builder, Location loc);
 } // namespace scf
 } // namespace mlir
-
-#include "mlir/Dialect/SCF/IR/SCFOpsDialect.h.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/SCF/IR/SCFOps.h.inc"

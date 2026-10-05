@@ -1,7 +1,6 @@
 include(MLIRCheckHardwareFeatures)
 
 add_subdirectory(CAPI)
-add_subdirectory(lib)
 
 if (MLIR_ENABLE_BINDINGS_PYTHON)
   add_subdirectory(python)
@@ -170,8 +169,13 @@ set(MLIR_TEST_DEPENDS ${MLIR_TEST_DEPENDS}
 # useless binaries.
 if(LLVM_ENABLE_PIC AND TARGET ${LLVM_NATIVE_ARCH})
   list(APPEND MLIR_TEST_DEPENDS
-    mlir-runner
     llc
+  )
+endif()
+# The native target may be available but the execution engine may not.
+if(LLVM_ENABLE_PIC AND MLIR_ENABLE_EXECUTION_ENGINE)
+  list(APPEND MLIR_TEST_DEPENDS
+    mlir-runner
     mlir_async_runtime
     mlir-capi-execution-engine-test
     mlir-capi-global-constructors-test

@@ -23,6 +23,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
 #include "llvm/Frontend/OpenMP/OMPVersion.h"
@@ -53,6 +54,24 @@ template <typename T, typename U = std::remove_const_t<T>> U AsRvalue(T &t) {
 }
 
 template <typename T> T &&AsRvalue(T &&t) { return std::move(t); }
+
+struct SemanticOverrides {
+  // Map of clauses and which directives they are considered to be allowed on
+  // for the purpose of this compilation despite not being allowed by strict
+  // interpretation of the selected spec version.
+  // This is to record cases where we allow a clause because a past/future
+  // spec allows it. This is needed for consistent treatment of clauses as
+  // allowed/disallowed.
+  llvm::DenseMap<llvm::omp::Clause, llvm::omp::Directives> allowedClauses;
+};
+
+bool IsClauseAllowedOnDirective(llvm::omp::Clause clauseId,
+    llvm::omp::Directive dirId, llvm::omp::Version ver,
+    SemanticOverrides *overrides);
+
+bool IsClauseAllowedOnDirective(llvm::omp::Clause clauseId,
+    llvm::omp::Directive dirId, llvm::omp::Version version,
+    SemanticsContext *semaCtx);
 
 const Scope &GetScopingUnit(const Scope &scope);
 const Scope &GetProgramUnit(const Scope &scope);
@@ -242,6 +261,63 @@ private:
   std::string features_;
 };
 
+struct MetadirectiveCandidate {
+  MetadirectiveCandidate(const parser::OmpDirectiveSpecification *spec,
+      llvm::omp::VariantMatchInfo vmi, bool isExplicit,
+      std::optional<DynamicUserCondition> dynamicCondition = std::nullopt,
+      bool conditionShouldBeTrue = true)
+      : spec{spec}, vmi{std::move(vmi)}, isExplicit{isExplicit},
+        dynamicCondition{dynamicCondition},
+        conditionShouldBeTrue{conditionShouldBeTrue} {}
+
+  const parser::OmpDirectiveSpecification *spec{nullptr};
+  llvm::omp::VariantMatchInfo vmi;
+  bool isExplicit{false};
+  std::optional<DynamicUserCondition> dynamicCondition;
+  bool conditionShouldBeTrue{true};
+};
+
+struct MetadirectiveCandidateSet {
+  llvm::SmallVector<MetadirectiveCandidate, 4> candidates;
+  /// Null represents either an explicit NOTHING fallback or no fallback.
+  const parser::OmpDirectiveSpecification *fallback{nullptr};
+};
+
+/// Build the statically applicable candidates for a METADIRECTIVE.
+///
+/// Returns std::nullopt when a selector is malformed or uses a feature that
+/// variant matching cannot yet model.
+std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
+    const parser::OmpClauseList &clauses, SemanticsContext &context,
+    const OmpVariantMatchContext &matchContext);
+
+std::optional<unsigned> SelectBestMetadirectiveCandidate(
+    llvm::ArrayRef<unsigned> candidateIndices,
+    llvm::ArrayRef<MetadirectiveCandidate> candidates,
+    const OmpVariantMatchContext &matchContext);
+
+/// Return true when repeated evaluation of \p condition cannot call a
+/// procedure or observe asynchronously changing state.
+bool IsRepeatableMetadirectiveCondition(
+    const parser::ScalarExpr &condition, SemanticsContext &context);
+
+/// Return true when two repeatable conditions normalize to the same expression.
+bool AreSameRepeatableMetadirectiveCondition(const parser::ScalarExpr &left,
+    const parser::ScalarExpr &right, SemanticsContext &context);
+
+/// Return candidates reachable after \p selectedIndex fails. Equal repeatable
+/// guards are pruned until a non-repeatable guard is encountered.
+llvm::SmallVector<unsigned, 4> GetMetadirectiveElsePathCandidates(
+    unsigned selectedIndex, llvm::ArrayRef<unsigned> candidateIndices,
+    llvm::ArrayRef<MetadirectiveCandidate> candidates,
+    const OmpVariantMatchContext &matchContext, SemanticsContext &context);
+
+/// Return every replacement that can be selected, retaining lower-ranked
+/// candidates after a dynamic condition. Null represents NOTHING.
+llvm::SmallVector<const parser::OmpDirectiveSpecification *, 4>
+GetReachableMetadirectiveVariants(const MetadirectiveCandidateSet &candidateSet,
+    const OmpVariantMatchContext &matchContext, SemanticsContext &context);
+
 /// True if a variant guarded by \p selector may be selected in the current
 /// compilation context.
 ///
@@ -296,6 +372,8 @@ struct OmpErrorArgs {
 
 /// Scan the clause list of an `!$omp error` directive for its AT, SEVERITY, and
 /// MESSAGE clause values.
+OmpErrorArgs GetErrorDirectiveArgs(
+    const parser::OmpDirectiveSpecification &spec);
 OmpErrorArgs GetErrorDirectiveArgs(const parser::OmpErrorDirective &errDir);
 
 inline bool IsDoConcurrentLegal(llvm::omp::Version version) {

@@ -43,8 +43,30 @@ INTERCEPT_LIBRARY_FUNCTION_ASAN(memchr);
 INTERCEPT_LIBRARY_FUNCTION_ASAN(memcmp);
 INTERCEPT_LIBRARY_FUNCTION_ASAN(memcpy);
 #  ifndef _WIN64
-// memmove and memcpy share an implementation on amd64
 INTERCEPT_LIBRARY_FUNCTION_ASAN(memmove);
+#  else
+// So far the x64 static CRT provides memmove and memcpy as two symbols for a
+// single implementation (both are defined in memcpy.obj), so intercepting
+// memcpy above also covers memmove. In newer CRT *DLLs* (vcruntime140.dll
+// 14.38 and later) they are already distinct functions. If a future static
+// CRT splits them the same way, intercept memmove explicitly; should that
+// patch ever fail, __sanitizer_override_function() reports the failure and
+// aborts, so a CRT shape that we cannot handle fails loudly instead of silently
+// losing memmove reports.
+extern "C" void memmove();
+static int intercept_memmove_if_distinct() {
+  // Use volatile to force a runtime comparison.
+  volatile __sanitizer::uptr memmove_address =
+      reinterpret_cast<__sanitizer::uptr>(&memmove);
+  volatile __sanitizer::uptr memcpy_address =
+      reinterpret_cast<__sanitizer::uptr>(&memcpy);
+  if (memmove_address == memcpy_address)
+    return 0;  // Aliased; the memcpy interception above covers memmove.
+  return __sanitizer::override_function("__asan_wrap_memmove", memmove_address);
+}
+__pragma(section(".INTR$M", long, read)) IN_SECTION(".INTR$M") int (
+    *__sanitizer_static_thunk_memmove_if_distinct)() =
+    intercept_memmove_if_distinct;
 #  endif
 INTERCEPT_LIBRARY_FUNCTION_ASAN(memset);
 INTERCEPT_LIBRARY_FUNCTION_ASAN(strcat);

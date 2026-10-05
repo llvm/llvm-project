@@ -21,11 +21,12 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
+#include "clang/CodeGenUtils/ClassUtils.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -512,30 +513,7 @@ struct CallBaseDtor final : EHScopeStack::Cleanup {
   }
 };
 
-/// A visitor which checks whether an initializer uses 'this' in a
-/// way which requires the vtable to be properly set.
-struct DynamicThisUseChecker
-    : ConstEvaluatedExprVisitor<DynamicThisUseChecker> {
-  typedef ConstEvaluatedExprVisitor<DynamicThisUseChecker> super;
-
-  bool UsesThis;
-
-  DynamicThisUseChecker(const ASTContext &C) : super(C), UsesThis(false) {}
-
-  // Black-list all explicit and implicit references to 'this'.
-  //
-  // Do we need to worry about external references to 'this' derived
-  // from arbitrary code?  If so, then anything which runs arbitrary
-  // external code might potentially access the vtable.
-  void VisitCXXThisExpr(const CXXThisExpr *E) { UsesThis = true; }
-};
 } // end anonymous namespace
-
-static bool BaseInitializerUsesThis(ASTContext &C, const Expr *Init) {
-  DynamicThisUseChecker Checker(C);
-  Checker.Visit(Init);
-  return Checker.UsesThis;
-}
 
 static void EmitBaseInitializer(CodeGenFunction &CGF,
                                 const CXXRecordDecl *ClassDecl,
@@ -551,7 +529,8 @@ static void EmitBaseInitializer(CodeGenFunction &CGF,
   // If the initializer for the base (other than the constructor
   // itself) accesses 'this' in any way, we need to initialize the
   // vtables.
-  if (BaseInitializerUsesThis(CGF.getContext(), BaseInit->getInit()))
+  if (CodeGenUtils::baseInitializerUsesThis(CGF.getContext(),
+                                            BaseInit->getInit()))
     CGF.InitializeVTablePointers(ClassDecl);
 
   // We can pretend to be a complete class because it only matters for
@@ -1228,11 +1207,6 @@ public:
 
 } // end anonymous namespace
 
-static bool isInitializerOfDynamicClass(const CXXCtorInitializer *BaseInit) {
-  const Type *BaseType = BaseInit->getBaseClass();
-  return BaseType->castAsCXXRecordDecl()->isDynamicClass();
-}
-
 /// EmitCtorPrologue - This routine generates necessary code to initialize
 /// base classes and non-static data members belonging to this constructor.
 void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
@@ -1291,7 +1265,7 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
       SaveAndRestore ThisRAII(CXXThisValue);
       if (CGM.getCodeGenOpts().StrictVTablePointers &&
           CGM.getCodeGenOpts().OptimizationLevel > 0 &&
-          isInitializerOfDynamicClass(Initializer))
+          CodeGenUtils::isInitializerOfDynamicClass(Initializer))
         CXXThisValue = Builder.CreateLaunderInvariantGroup(LoadCXXThis());
       EmitBaseInitializer(*this, ClassDecl, Initializer);
     }
@@ -1309,7 +1283,7 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
     SaveAndRestore ThisRAII(CXXThisValue);
     if (CGM.getCodeGenOpts().StrictVTablePointers &&
         CGM.getCodeGenOpts().OptimizationLevel > 0 &&
-        isInitializerOfDynamicClass(Initializer))
+        CodeGenUtils::isInitializerOfDynamicClass(Initializer))
       CXXThisValue = Builder.CreateLaunderInvariantGroup(LoadCXXThis());
     EmitBaseInitializer(*this, ClassDecl, Initializer);
   }
@@ -1327,87 +1301,6 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
   }
 
   CM.finish();
-}
-
-static bool FieldHasTrivialDestructorBody(ASTContext &Context,
-                                          const FieldDecl *Field);
-
-static bool
-HasTrivialDestructorBody(ASTContext &Context,
-                         const CXXRecordDecl *BaseClassDecl,
-                         const CXXRecordDecl *MostDerivedClassDecl) {
-  // If the destructor is trivial we don't have to check anything else.
-  if (BaseClassDecl->hasTrivialDestructor())
-    return true;
-
-  if (!BaseClassDecl->getDestructor()->hasTrivialBody())
-    return false;
-
-  // Check fields.
-  for (const auto *Field : BaseClassDecl->fields())
-    if (!FieldHasTrivialDestructorBody(Context, Field))
-      return false;
-
-  // Check non-virtual bases.
-  for (const auto &I : BaseClassDecl->bases()) {
-    if (I.isVirtual())
-      continue;
-
-    const auto *NonVirtualBase = I.getType()->castAsCXXRecordDecl();
-    if (!HasTrivialDestructorBody(Context, NonVirtualBase,
-                                  MostDerivedClassDecl))
-      return false;
-  }
-
-  if (BaseClassDecl == MostDerivedClassDecl) {
-    // Check virtual bases.
-    for (const auto &I : BaseClassDecl->vbases()) {
-      const auto *VirtualBase = I.getType()->castAsCXXRecordDecl();
-      if (!HasTrivialDestructorBody(Context, VirtualBase, MostDerivedClassDecl))
-        return false;
-    }
-  }
-
-  return true;
-}
-
-static bool FieldHasTrivialDestructorBody(ASTContext &Context,
-                                          const FieldDecl *Field) {
-  QualType FieldBaseElementType = Context.getBaseElementType(Field->getType());
-
-  auto *FieldClassDecl = FieldBaseElementType->getAsCXXRecordDecl();
-  if (!FieldClassDecl)
-    return true;
-
-  // The destructor for an implicit anonymous union member is never invoked.
-  if (FieldClassDecl->isUnion() && FieldClassDecl->isAnonymousStructOrUnion())
-    return true;
-
-  return HasTrivialDestructorBody(Context, FieldClassDecl, FieldClassDecl);
-}
-
-/// CanSkipVTablePointerInitialization - Check whether we need to initialize
-/// any vtable pointers before calling this destructor.
-static bool CanSkipVTablePointerInitialization(CodeGenFunction &CGF,
-                                               const CXXDestructorDecl *Dtor) {
-  const CXXRecordDecl *ClassDecl = Dtor->getParent();
-  if (!ClassDecl->isDynamicClass())
-    return true;
-
-  // For a final class, the vtable pointer is known to already point to the
-  // class's vtable.
-  if (ClassDecl->isEffectivelyFinal())
-    return true;
-
-  if (!Dtor->hasTrivialBody())
-    return false;
-
-  // Check the fields.
-  for (const auto *Field : ClassDecl->fields())
-    if (!FieldHasTrivialDestructorBody(CGF.getContext(), Field))
-      return false;
-
-  return true;
 }
 
 static void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,
@@ -1509,11 +1402,7 @@ static void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,
     }
   } else {
     // No operators delete[] were found, so emit a trap.
-    llvm::CallInst *TrapCall = CGF.EmitTrapCall(llvm::Intrinsic::trap);
-    TrapCall->setDoesNotReturn();
-    TrapCall->setDoesNotThrow();
-    CGF.Builder.CreateUnreachable();
-    CGF.Builder.ClearInsertionPoint();
+    CGF.EmitTrapCallAndMakeUnreachable();
   }
 
   CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
@@ -1531,11 +1420,7 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
   // in fact emit references to them from other compilations, so emit them
   // as functions containing a trap instruction.
   if (DtorType != Dtor_Base && Dtor->getParent()->isAbstract()) {
-    llvm::CallInst *TrapCall = EmitTrapCall(llvm::Intrinsic::trap);
-    TrapCall->setDoesNotReturn();
-    TrapCall->setDoesNotThrow();
-    Builder.CreateUnreachable();
-    Builder.ClearInsertionPoint();
+    EmitTrapCallAndMakeUnreachable();
     return;
   }
 
@@ -1611,7 +1496,7 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
     EnterDtorCleanups(Dtor, Dtor_Base);
 
     // Initialize the vtable pointers before entering the body.
-    if (!CanSkipVTablePointerInitialization(*this, Dtor)) {
+    if (!CodeGenUtils::canSkipVTablePointerInitialization(getContext(), Dtor)) {
       // Insert the llvm.launder.invariant.group intrinsic before initializing
       // the vptrs to cancel any previous assumptions we might have made.
       if (CGM.getCodeGenOpts().StrictVTablePointers &&
@@ -1981,7 +1866,7 @@ public:
     if (isEmptyFieldForLayout(Context, Field))
       return;
     unsigned FieldIndex = Field->getFieldIndex();
-    if (FieldHasTrivialDestructorBody(Context, Field)) {
+    if (CodeGenUtils::fieldHasTrivialDestructorBody(Context, Field)) {
       if (!StartIndex)
         StartIndex = FieldIndex;
     } else if (StartIndex) {

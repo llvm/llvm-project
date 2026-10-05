@@ -315,3 +315,40 @@ if.then2:
   store i8 %v, ptr %a1
   ret i32 0
 }
+
+@g = global [8 x i8] zeroinitializer, align 8
+
+; A variant of the above one, reading from a source region starting at offset zero.
+define i8 @out_of_bounds_offset_2(i64 %idx) {
+; CHECK-LABEL: define i8 @out_of_bounds_offset_2
+; CHECK-SAME: (i64 [[IDX:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca [1 x i8], align 1
+; CHECK-NEXT:    [[B:%.*]] = alloca [2 x i8], align 1
+; CHECK-NEXT:    store i8 0, ptr [[A]], align 1
+; CHECK-NEXT:    br i1 false, label [[IF_THEN2:%.*]], label [[IF_THEN1:%.*]]
+; CHECK:       if.then1:
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[B]], ptr align 8 @g, i64 1, i1 false)
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr [[A]], i64 [[IDX]]
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[PTR]], align 1
+; CHECK-NEXT:    ret i8 [[V]]
+; CHECK:       if.then2:
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[B]], ptr align 1 [[A]], i64 2, i1 false)
+; CHECK-NEXT:    ret i8 0
+;
+entry:
+  %a = alloca [1 x i8], align 1
+  %b = alloca [2 x i8], align 1
+  store i8 0, ptr %a, align 1
+  br i1 false, label %if.then2, label %if.then1
+
+if.then1:
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %b, ptr align 8 @g, i64 1, i1 false)
+  %ptr = getelementptr i8, ptr %a, i64 %idx
+  %v = load i8, ptr %ptr, align 1
+  ret i8 %v
+
+if.then2:
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %b, ptr align 1 %a, i64 2, i1 false)
+  ret i8 0
+}

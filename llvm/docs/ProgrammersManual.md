@@ -1375,8 +1375,9 @@ but when it is done, it will print the result like: `Minimal Chunks = 0:1:5:11-1
 
 Several of the important data structures in LLVM are graphs: for example CFGs
 made out of LLVM {ref}`BasicBlocks <BasicBlock>`, CFGs made out of LLVM
-[MachineBasicBlocks](https://llvm.org/docs/CodeGenerator.html#machinebasicblock), and [Instruction Selection
-DAGs](https://llvm.org/docs/CodeGenerator.html#selectiondag).  In many cases, while debugging various parts of the
+[MachineBasicBlocks](CodeGenerator.md#the-machinebasicblock-class), and
+[Instruction Selection DAGs](CodeGenerator.md#introduction-to-selectiondags).
+In many cases, while debugging various parts of the
 compiler, it is nice to instantly visualize these graphs.
 
 LLVM provides several callbacks that are available in a debug build to do
@@ -2095,7 +2096,8 @@ supplies its key through `getKey()`; a lookup builds the same key from what it
 already holds and hashes it inline with `DenseMapInfo`, and `lookup` returns the
 matching node or an insertion token for `insert`.  Growth and removal use the
 hash cached in each node and never call `getKey`.  An `Info` template argument
-can override the key type or the hash.
+can override the key type (`getKey`), the hash (`getHashValue`), or the
+comparison (`isEqual`).
 
 ```cpp
 std::tuple<unsigned, const Value *, const Value *> FooNode::getKey() const {
@@ -2109,11 +2111,12 @@ if (FooNode *N = Pool.lookup({Opcode, LHS, RHS}, Token))
 Pool.insert(new (Allocator) FooNode(Opcode, LHS, RHS), Token);
 ```
 
-Prefer `UniquingSet` when a key can be read out of a node in O(1) and the lookup
-key is built next to `getKey`.  Keep `FoldingSet` for keys that are wide,
-polymorphic, or assembled at many call sites: one `Profile` helper then keeps
-both sides consistent, whereas `getKey` and a lookup site can silently disagree.
-`insert` asserts that a node hashes as its lookup did.
+Prefer `UniquingSet` when a node can yield its key in O(1), or when a key can
+cheaply alias storage owned by the node (such as an `ArrayRef` or `StringRef`).
+Keep `FoldingSet` when nodes are polymorphic, or when keys must be assembled
+from recursive data structures.  `getKey` and a lookup site are two
+hand-maintained sides that can disagree, though `insert` asserts that a node
+hashes as its lookup did.
 
 (dss_set)=
 
@@ -3923,7 +3926,7 @@ runtime).
   the resultant global variable will have internal linkage.  AppendingLinkage
   concatenates together all instances (in different translation units) of the
   variable into a single variable but is only applicable to arrays.  See the
-  [LLVM Language Reference](https://llvm.org/docs/LangRef.html#modulestructure) for further details
+  [LLVM Language Reference](LangRef.md#module-structure) for further details
   on linkage types.  Optionally an initializer, a name, and the module to put
   the variable into may be specified for the global variable as well.
 

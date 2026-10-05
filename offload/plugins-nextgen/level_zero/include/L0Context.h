@@ -17,23 +17,12 @@
 #include "L0Compat.h"
 #include "L0Event.h"
 #include "L0Memory.h"
-#include "PerThreadTable.h"
 #include "level_zero/ze_api.h"
 
 namespace llvm::omp::target::plugin {
 
 class LevelZeroPluginTy;
 class LevelZeroPluginContextTy;
-
-class L0ContextTLSTy {
-  StagingBufferTy StagingBuffer;
-
-public:
-  StagingBufferTy &getStagingBuffer() { return StagingBuffer; }
-  const StagingBufferTy &getStagingBuffer() const { return StagingBuffer; }
-
-  Error deinit() { return StagingBuffer.clear(); }
-};
 
 // Helper for managing Level Zero APIs.
 // It provides two interfaces - by default it tries to call the function
@@ -90,15 +79,6 @@ private:
   decltype(Fn) FuncPtr = nullptr;
 };
 
-struct L0ContextTLSTableTy
-    : public PerThreadContainer<
-          std::unordered_map<ze_context_handle_t, L0ContextTLSTy>> {
-  Error deinit() {
-    return PerThreadTable::deinit(
-        [](L0ContextTLSTy &Entry) -> auto { return Entry.deinit(); });
-  }
-};
-
 /// Driver and context-specific resources. We assume a single context per
 /// driver.
 class L0ContextTy {
@@ -108,11 +88,18 @@ class L0ContextTy {
   /// Level Zero Driver handle.
   ze_driver_handle_t zeDriver = nullptr;
 
+  uint32_t DriverId;
+
   /// Common Level Zero context.
   ze_context_handle_t zeContext = nullptr;
 
   /// API version supported by the Level Zero driver.
   ze_api_version_t APIVersion = ZE_API_VERSION_CURRENT;
+
+  /// Version of the Level Zero driver.
+  std::string DriverVersion;
+
+  Expected<std::string> tryGetIntelDriverVersion();
 
   /// Imported external pointers. Track this only for user-directed
   /// imports/releases.
@@ -150,8 +137,6 @@ public:
 
   LevelZeroPluginTy &getPlugin() const { return Plugin; }
 
-  StagingBufferTy &getStagingBuffer();
-
   /// Add imported external pointer region.
   void addImported(void *Ptr, size_t Size) {
     (void)ImportedPtrs.try_emplace(reinterpret_cast<uintptr_t>(Ptr), Size);
@@ -180,6 +165,8 @@ public:
 
   ze_driver_handle_t getZeDriver() const { return zeDriver; }
 
+  uint32_t getDriverId() const { return DriverId; }
+
   /// Return context associated with the driver.
   ze_context_handle_t getZeContext() const { return zeContext; }
 
@@ -190,6 +177,9 @@ public:
 
   /// Return driver API version.
   ze_api_version_t getDriverAPIVersion() const { return APIVersion; }
+
+  /// Return driver version.
+  const std::string &getDriverVersion() const { return DriverVersion; }
 
   /// Return the event pool of this driver.
   EventPoolTy &getEventPool() { return EventPool; }
@@ -210,6 +200,7 @@ public:
   ZeDispatcher<zexKernelGetArgumentSize> KernelGetArgumentSize;
   ZeDispatcher<zeCommandListAppendHostFunction> CommandListAppendHostFunction;
   ZeDispatcher<zeDriverGetDefaultContext, nullptr> DriverGetDefaultContext;
+  ZeDispatcher<zeIntelGetDriverVersionString> IntelGetDriverVersionString;
 };
 
 } // namespace llvm::omp::target::plugin
