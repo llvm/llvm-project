@@ -6,6 +6,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.arpa.inet.inet_aton
     libc.src.arpa.inet.inet_ntoa
     libc.src.arpa.inet.inet_ntop
+    libc.src.arpa.inet.inet_pton
     libc.src.arpa.inet.ntohl
     libc.src.arpa.inet.ntohs
 
@@ -65,7 +66,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.grp.getgrouplist
     libc.src.grp.getgrnam
     libc.src.grp.getgrnam_r
+    libc.src.grp.initgroups
     libc.src.grp.setgrent
+    libc.src.grp.setgroups
 
     # net/if.h entrypoints
     libc.src.net.if_indextoname
@@ -268,6 +271,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.srand
     libc.src.stdlib.strfromd
     libc.src.stdlib.strfromf
+    libc.src.stdlib.strfromf128
     libc.src.stdlib.strfroml
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
@@ -355,6 +359,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/random.h entrypoints
     libc.src.sys.random.getrandom
+    libc.src.sys.random.getentropy
 
     # sys/resource.h entrypoints
     libc.src.sys.resource.getpriority
@@ -469,6 +474,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.faccessat
     libc.src.unistd.fchdir
     libc.src.unistd.fchown
+    libc.src.unistd.fchownat
     libc.src.unistd.fdatasync
     libc.src.unistd.fpathconf
     libc.src.unistd.fsync
@@ -1323,10 +1329,12 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.compiler.__stack_chk_fail
 
     # dirent.h entrypoints
+    libc.src.dirent.alphasort
     libc.src.dirent.closedir
     libc.src.dirent.dirfd
     libc.src.dirent.opendir
     libc.src.dirent.readdir
+    libc.src.dirent.scandir
     libc.src.dirent.fdopendir
 
     # pthread.h entrypoints
@@ -1672,9 +1680,6 @@ endif()
 if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND TARGET_LIBC_ENTRYPOINTS
-      # arpa/inet.h entrypoints
-      libc.src.arpa.inet.inet_pton
-
       # fnmatch.h entrypoints
       libc.src.fnmatch.fnmatch
 
