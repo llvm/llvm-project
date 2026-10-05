@@ -2533,6 +2533,11 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::experimental_noalias_scope_decl:
   case Intrinsic::var_annotation:
   case Intrinsic::sideeffect:
+  // The sanitizer markers are consumed by the sanitizer passes. They can still
+  // reach codegen when no such pass runs (or it does not look at a given
+  // function), in which case they have no effect.
+  case Intrinsic::sanitizer_instrumentation_begin:
+  case Intrinsic::sanitizer_instrumentation_end:
     // Discard annotate attributes, assumptions, and artificial side-effects.
     return true;
   case Intrinsic::read_volatile_register:

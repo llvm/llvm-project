@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/Instrumentation.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -120,4 +122,102 @@ void llvm::setGlobalVariableLargeSection(const Triple &TargetTriple,
   if (!CM || (*CM != CodeModel::Medium && *CM != CodeModel::Large))
     return;
   GV.setCodeModel(CodeModel::Large);
+}
+
+static bool isSanitizerInstrumentationBegin(const Instruction &I) {
+  const auto *II = dyn_cast<IntrinsicInst>(&I);
+  return II &&
+         II->getIntrinsicID() == Intrinsic::sanitizer_instrumentation_begin;
+}
+
+static bool isSanitizerInstrumentationEnd(const Instruction &I) {
+  const auto *II = dyn_cast<IntrinsicInst>(&I);
+  return II && II->getIntrinsicID() == Intrinsic::sanitizer_instrumentation_end;
+}
+
+bool llvm::hasSanitizerInstrumentationRegions(const Function &F) {
+  // Most modules never use the markers, so avoid scanning their functions.
+  const Module *M = F.getParent();
+  auto IsUsed = [M](Intrinsic::ID ID) {
+    const Function *Decl = Intrinsic::getDeclarationIfExists(M, ID);
+    return Decl && !Decl->use_empty();
+  };
+  if (!IsUsed(Intrinsic::sanitizer_instrumentation_begin) &&
+      !IsUsed(Intrinsic::sanitizer_instrumentation_end))
+    return false;
+
+  for (const BasicBlock &BB : F)
+    for (const Instruction &I : BB)
+      if (isSanitizerInstrumentationBegin(I) ||
+          isSanitizerInstrumentationEnd(I))
+        return true;
+  return false;
+}
+
+// Lattice top of the region analysis: this block has not been reached yet, so
+// it does not constrain the depth of its successors.
+static constexpr unsigned UnreachedDepth = ~0U;
+
+/// Return the region nesting depth after \p I, given the depth before it.
+static unsigned regionDepthAfter(const Instruction &I, unsigned Depth) {
+  if (isSanitizerInstrumentationBegin(I))
+    return Depth + 1;
+  // Saturate at zero: an unbalanced end() is malformed input, and wrapping
+  // around would spuriously instrument the rest of the function.
+  if (isSanitizerInstrumentationEnd(I) && Depth)
+    return Depth - 1;
+  return Depth;
+}
+
+void llvm::computeSanitizerInstrumentationRegions(
+    const Function &F, SmallPtrSetImpl<const Instruction *> &InRegion) {
+  DenseMap<const BasicBlock *, unsigned> DepthIn;
+  DenseMap<const BasicBlock *, unsigned> DepthOut;
+  const BasicBlock *Entry = &F.getEntryBlock();
+  for (const BasicBlock &BB : F) {
+    DepthIn[&BB] = UnreachedDepth;
+    DepthOut[&BB] = UnreachedDepth;
+  }
+  DepthIn[Entry] = 0;
+
+  // Both maps only ever decrease and are bounded below by zero, so this
+  // fixed-point iteration terminates. A block is only rescanned when its input
+  // depth decreased, or when it has not been scanned yet.
+  bool Changed = true;
+  while (Changed) {
+    Changed = false;
+    for (const BasicBlock &BB : F) {
+      bool Rescan = DepthOut[&BB] == UnreachedDepth;
+      if (&BB != Entry) {
+        unsigned In = UnreachedDepth;
+        for (const BasicBlock *Pred : predecessors(&BB))
+          In = std::min(In, DepthOut[Pred]);
+        if (In < DepthIn[&BB]) {
+          DepthIn[&BB] = In;
+          Rescan = true;
+        }
+      }
+
+      unsigned Depth = DepthIn[&BB];
+      if (!Rescan || Depth == UnreachedDepth)
+        continue;
+      for (const Instruction &I : BB)
+        Depth = regionDepthAfter(I, Depth);
+      if (Depth < DepthOut[&BB]) {
+        DepthOut[&BB] = Depth;
+        Changed = true;
+      }
+    }
+  }
+
+  for (const BasicBlock &BB : F) {
+    unsigned Depth = DepthIn[&BB];
+    if (Depth == UnreachedDepth)
+      continue;
+    for (const Instruction &I : BB) {
+      Depth = regionDepthAfter(I, Depth);
+      if (Depth > 0)
+        InRegion.insert(&I);
+    }
+  }
 }

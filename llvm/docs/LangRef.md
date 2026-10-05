@@ -30489,3 +30489,24 @@ taken. A late optimization pass will convert this intrinsic to either
 `llvm.cond.loop(true)` or `llvm.cond.loop(pred)`, where `pred`
 is a predicate for a conditional branch leading to the intrinsic call,
 if possible.
+
+#### '`llvm.sanitizer.instrumentation.begin`' and '`llvm.sanitizer.instrumentation.end`' Intrinsics
+
+##### Syntax:
+
+```llvm
+declare void @llvm.sanitizer.instrumentation.begin()
+declare void @llvm.sanitizer.instrumentation.end()
+```
+
+##### Overview:
+
+The '`llvm.sanitizer.instrumentation.begin`' and '`llvm.sanitizer.instrumentation.end`' intrinsics delimit a region of a function that a sanitizer does not otherwise instrument, in which that sanitizer's instrumentation is enabled again.
+
+##### Semantics:
+
+Inside a region, a sanitizer instruments the code as if the function were instrumented, to the extent it supports instrumenting part of a function; code outside regions stays uninstrumented. Sanitizers that do not support regions ignore the intrinsics, as do all sanitizers in functions that they instrument anyway. Which functions count as uninstrumented, and what is instrumented inside regions, depends on the sanitizer.
+
+Regions nest: `llvm.sanitizer.instrumentation.begin` increments a region nesting depth and `llvm.sanitizer.instrumentation.end` decrements it, so an inner `end` does not terminate an enclosing region. An unmatched `end` is ignored rather than making the depth negative.
+
+An instruction is considered to be inside a region only if *every* path from the function entry to it is inside a region, i.e. region membership is an intersection over predecessors. This makes an in-region instruction always dominated by a `llvm.sanitizer.instrumentation.begin`, so any per-function sanitizer state set up there is available. A region that is entered on some paths but not others is therefore instrumented only where it is unambiguous.

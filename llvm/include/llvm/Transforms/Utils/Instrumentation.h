@@ -13,6 +13,7 @@
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_H
 
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -59,6 +60,24 @@ LLVM_ABI Comdat *getOrCreateFunctionComdat(Function &F, Triple &T);
 // aren't directly accessed by code, which has no performance impact.
 LLVM_ABI void setGlobalVariableLargeSection(const Triple &TargetTriple,
                                             GlobalVariable &GV);
+
+/// Returns true if \p F calls llvm.sanitizer.instrumentation.begin or
+/// llvm.sanitizer.instrumentation.end.
+LLVM_ABI bool hasSanitizerInstrumentationRegions(const Function &F);
+
+/// Compute the instructions of \p F that lie inside an
+/// llvm.sanitizer.instrumentation.begin()/end() region, and add them to
+/// \p InRegion.
+///
+/// This is a *must* dataflow problem: an instruction is in a region only if
+/// *every* path from the function entry to it entered a region and did not
+/// leave it again, so an in-region instruction is always dominated by a
+/// begin(). Unbalanced regions are under-approximated, which agrees with
+/// objtool requiring them to be balanced on all paths. The lattice value is
+/// the nesting depth rather than a flag, so that in begin; begin; end; X; end
+/// the instruction X is still in a region.
+LLVM_ABI void computeSanitizerInstrumentationRegions(
+    const Function &F, SmallPtrSetImpl<const Instruction *> &InRegion);
 
 // Insert GCOV profiling instrumentation
 struct GCOVOptions {
