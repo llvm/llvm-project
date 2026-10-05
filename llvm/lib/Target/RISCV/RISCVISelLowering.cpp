@@ -2161,6 +2161,10 @@ MVT RISCVTargetLowering::getVPExplicitVectorLengthTy() const {
   return Subtarget.getXLenVT();
 }
 
+bool RISCVTargetLowering::isProfitableToFoldVScaleAdd(SDValue N) const {
+  return N.hasOneUse();
+}
+
 // Return false if we can lower get_vector_length to a vsetvli intrinsic.
 bool RISCVTargetLowering::shouldExpandGetVectorLength(EVT TripCountVT,
                                                       unsigned VF,
