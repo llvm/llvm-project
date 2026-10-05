@@ -263,13 +263,12 @@ getFortranDummyIntent(mlir::func::FuncOp callee, unsigned argIdx) {
       argIdx, getFortranAttrsAttrName());
   if (!attrs)
     return std::nullopt;
-  using F = FortranVariableFlagsEnum;
-  switch (attrs.getFlags() & (F::intent_in | F::intent_out | F::intent_inout)) {
-  case F::intent_in:
+  switch (attrs.getFlags()) {
+  case FortranVariableFlagsEnum::intent_in:
     return FortranDummyIntent::In;
-  case F::intent_out:
+  case FortranVariableFlagsEnum::intent_out:
     return FortranDummyIntent::Out;
-  case F::intent_inout:
+  case FortranVariableFlagsEnum::intent_inout:
     return FortranDummyIntent::InOut;
   default:
     return std::nullopt;
