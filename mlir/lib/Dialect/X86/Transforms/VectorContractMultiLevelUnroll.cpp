@@ -236,7 +236,7 @@ static void setNativeShapeAttr(Operation *op, VectorType nativeType) {
 //   } %lhs, %rhs, %acc : !lhsType, !rhsType into !accType
 static LogicalResult checkCanonicalMatmul(MLUCandidate &candidate,
                                           PatternRewriter &rewriter) {
-  auto &contract = candidate.contract;
+  vector::ContractionOp contract = candidate.contract;
   if (contract.getKind() != vector::CombiningKind::ADD)
     return rewriter.notifyMatchFailure(contract,
                                        "not using ADD combining kind");
@@ -298,8 +298,8 @@ static LogicalResult checkCanonicalMatmul(MLUCandidate &candidate,
 // to determine a suitable tiling strategy for it.
 static LogicalResult checkShapesAndTypes(MLUCandidate &candidate,
                                          PatternRewriter &rewriter) {
-  auto &contract = candidate.contract;
-  auto target = candidate.target;
+  vector::ContractionOp contract = candidate.contract;
+  StringRef target = candidate.target;
 
   Type accElemType = candidate.accType.getElementType();
   Type inpElemType = candidate.lhsType.getElementType();
@@ -353,8 +353,9 @@ static LogicalResult checkShapesAndTypes(MLUCandidate &candidate,
       if (origK != nativeK)
         return rewriter.notifyMatchFailure(contract, "K dimension mismatch");
     }
-  } else
+  } else {
     return rewriter.notifyMatchFailure(contract, "unsupported target");
+  }
 
   candidate.accRegTileType = VectorType::get({regTileM, regTileN}, accElemType);
   candidate.accNativeType = VectorType::get({nativeM, nativeN}, accElemType);
