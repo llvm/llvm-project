@@ -203,8 +203,18 @@ void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
       }
       break;
     }
-    case SDTCisPtrTy:
+    case SDTCisPtrTy: {
+      unsigned AS = 0;
+      if (const auto *MemSD = dyn_cast<MemSDNode>(N))
+        AS = MemSD->getAddressSpace();
+      EVT PtrVT = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout(), AS);
+      if (VT != PtrVT) {
+        SS << Val << " must have pointer type " << PtrVT << ", but has type "
+           << VT;
+        reportNodeError(DAG, N, SS.str());
+      }
       break;
+    }
     case SDTCisInt:
       if (!VT.isInteger()) {
         SS << Val << " must have integer type, but has type " << VT;
