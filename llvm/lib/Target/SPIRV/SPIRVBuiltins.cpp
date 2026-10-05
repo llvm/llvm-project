@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include <regex>
 #include <string>
@@ -919,6 +920,12 @@ static bool buildAtomicFlagInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
+static void reportUnsupported(MachineIRBuilder &MIRBuilder, const Twine &Msg) {
+  const Function &F = MIRBuilder.getMF().getFunction();
+  F.getContext().diagnose(
+      DiagnosticInfoUnsupported(F, Msg, MIRBuilder.getDebugLoc()));
+}
+
 /// Helper function for building barriers, i.e., memory/control ordering
 /// operations.
 static bool buildBarrierInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
@@ -940,6 +947,19 @@ static bool buildBarrierInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
     return buildOpFromWrapper(MIRBuilder, Opcode, Call, Register(0));
 
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  bool IsSubgroupBarrier = Builtin->name() == "sub_group_barrier";
+  if (IsSubgroupBarrier) {
+    // TODO: Support runtime flags and scopes for OpenCL barriers.
+    for (Register Arg : Call->Arguments) {
+      const MachineInstr *MI = getDefInstrMaybeConstant(Arg, MRI);
+      if (!MI || MI->getOpcode() != TargetOpcode::G_CONSTANT) {
+        reportUnsupported(
+            MIRBuilder,
+            "sub_group_barrier with non-constant arguments is not supported");
+        return false;
+      }
+    }
+  }
   unsigned MemFlags = getIConstVal(Call->Arguments[0], MRI);
   unsigned MemSemantics = SPIRV::MemorySemantics::None;
 
@@ -968,7 +988,8 @@ static bool buildBarrierInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
           ? Call->Arguments[0]
           : buildConstantIntReg32(MemSemantics, MIRBuilder, GR);
   Register ScopeReg;
-  SPIRV::Scope::Scope Scope = SPIRV::Scope::Workgroup;
+  SPIRV::Scope::Scope Scope =
+      IsSubgroupBarrier ? SPIRV::Scope::Subgroup : SPIRV::Scope::Workgroup;
   SPIRV::Scope::Scope MemScope = Scope;
   if (Call->Arguments.size() >= 2) {
     assert(
