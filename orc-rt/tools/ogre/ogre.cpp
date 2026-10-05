@@ -30,13 +30,15 @@
 
 using namespace orc_rt;
 
+/// Command-line options for ogre.
 struct Options {
   ConnectionSpec ConnSpec;
   bool Verbose = false;
 };
 
 /// Parse and handle options. Return the parsed options struct on success, or an
-/// int error code to return from main otherwise.
+/// int error code to return from main otherwise. The single positional argument
+/// is a ConnectionSpec describing how to reach the controller.
 static std::variant<Options, int> parseArgs(int argc, char *argv[]) noexcept {
   Options O;
   bool ShowHelp = false;
@@ -78,6 +80,8 @@ static std::variant<Options, int> parseArgs(int argc, char *argv[]) noexcept {
   return O;
 }
 
+/// The Session's error reporter: receives errors that have no caller to be
+/// returned to (e.g. failures in asynchronous work), and logs them.
 static void reportError(Session &S, Error Err) noexcept {
 #if ORC_RT_LOG_ENABLED(Error)
   Session::logErrors(S, std::move(Err));
@@ -87,22 +91,33 @@ static void reportError(Session &S, Error Err) noexcept {
 #endif // ORC_RT_LOG_ENABLED(Error)
 }
 
+/// Creates the Session's dispatcher, which runs incoming calls from the
+/// controller (and other Session tasks) on a thread pool. An executor without
+/// threads could run each task inline instead.
 static Expected<Session::DispatchFn> makeDispatcher() noexcept {
   return [R = std::make_unique<ThreadPoolRunner>(4)](Session::Task T) {
     (*R)(std::move(T));
   };
 }
 
-/// Adds the services a host executor provides, publishing their entry points
-/// in BI for the controller.
+/// Adds the services a host executor provides (JIT memory management and dylib
+/// loading), publishing their entry points in BI for the controller.
 static Error addHostServices(Session &S, BootstrapInfo &BI) noexcept {
+
+  // Add controller interfaces for calling functions, reading/writing memory,
+  // registering metadata, etc.
   if (auto Err = sps_ci::addAll(BI.symbols()))
     return Err;
 
+  // Add SimpleNativeMemoryMap service to manage JIT'd memory. Acting as a
+  // service means that SimpleNativeMemoryMap is notified when the Session
+  // disconnects and is shut down, so it can free allocated resources.
   if (auto Err = S.tryCreateService<SimpleNativeMemoryMap>(S, BI.symbols())
                      .takeError())
     return Err;
 
+  // Adds NativeDylibManager, through which the controller can load and search
+  // dylibs.
   if (auto Err =
           S.tryCreateService<NativeDylibManager>(S, BI.symbols()).takeError())
     return Err;
@@ -110,8 +125,12 @@ static Error addHostServices(Session &S, BootstrapInfo &BI) noexcept {
   return Error::success();
 }
 
+/// Creates a Session for this process, adds the host services to it, and
+/// connects it to the controller described by Opts.ConnSpec.
 static Expected<std::unique_ptr<Session>>
 makeSession(const Options &Opts) noexcept {
+  // ExecutorProcessInfo describes the executing process: target triple, page
+  // size, CPU features, etc.
   auto EPI = ExecutorProcessInfo::Detect();
   if (!EPI)
     return EPI.takeError();
@@ -124,35 +143,55 @@ makeSession(const Options &Opts) noexcept {
             EPI->targetCPUFeatures().c_str());
   }
 
+  // The dispatcher runs incoming calls from the controller.
   auto D = makeDispatcher();
   if (!D)
     return D.takeError();
 
+  // The Session is the root of the JIT'd program: it owns the program's memory
+  // and lifecycle, as well as the executor's services and the connection to the
+  // controller. Errors with nowhere else to go are passed to reportError.
   auto S =
       std::make_unique<Session>(std::move(*EPI), std::move(*D), reportError);
 
+  // The BootstrapInfo struct defines the data sent over to the controller when
+  // it connects: the executor process info, bootstrap symbols (entry points the
+  // controller can call), and the bootstrap value map. CreateDefault adds the
+  // Session's own symbol, the SPS controller-interface functions, and the
+  // CPU-features value.
   auto BI = BootstrapInfo::CreateDefault(*S);
   if (!BI)
     return BI.takeError();
 
+  // Services add their entry points to the bootstrap symbols, so they must be
+  // created before connecting.
   if (auto Err = addHostServices(*S, *BI))
     return Err;
 
+  // Connectors establish the connection to the controller for a particular
+  // transport. Registering only the socket connector means ogre can only be
+  // reached over a socket.
   ConnectorRegistry Connectors;
   if (auto Err = registerSocketConnector(Connectors))
     return Err;
 
+  // Connect to the controller described by the ConnectionSpec, handing over the
+  // bootstrap info. From here on the controller can call into this process.
   if (auto Err = Connectors.connect(Opts.ConnSpec, *S, std::move(*BI)))
     return Err;
 
   return S;
 }
 
+/// Runs ogre: creates and connects a Session, then waits for the controller to
+/// detach before exiting.
 static Expected<int> runOgre(const Options &Opts) noexcept {
+  // Create the Session and connect it to the controller.
   auto S = makeSession(Opts);
   if (!S)
     return S.takeError();
 
+  // Arrange to be notified when the Session detaches from the controller.
   // makeSession has already connected, so the Session may have detached by
   // now. That's fine: addOnDetach runs the callback immediately if so, so the
   // wait below cannot miss the detach.
@@ -161,11 +200,13 @@ static Expected<int> runOgre(const Options &Opts) noexcept {
   (*S)->addOnDetach(
       [StopP = std::move(StopP)]() mutable noexcept { StopP.set_value(); });
 
-  // Wait for detach.
+  // Wait for detach. The main thread has nothing else to do: the dispatcher
+  // runs the controller's calls. Returning destroys the Session.
   StopF.get();
   return 0;
 }
 
+/// Parses the options, then runs ogre, reporting any error.
 int main(int argc, char *argv[]) {
   auto OptsOrResult = parseArgs(argc, argv);
 
