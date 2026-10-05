@@ -689,3 +689,66 @@ entry:
    store i128 %7, ptr %8
    ret void
 }
+
+;; The i64 adds are expanded into ADDC/ADDE pairs on 32-bit SPARC.
+;; foldSelectOfBinops must not fold the select of the two ADDE nodes into a
+;; single ADDE, since that would drop the carry inputs.
+define i64 @select_add_i64(i64 %a, i64 %b, i1 %c) nounwind {
+; V8-LABEL: select_add_i64:
+; V8:       ! %bb.0: ! %entry
+; V8-NEXT:    and %o4, 1, %o5
+; V8-NEXT:    addcc %o1, 1, %o4
+; V8-NEXT:    addxcc %o0, 0, %g2
+; V8-NEXT:    addcc %o3, 2, %o1
+; V8-NEXT:    addxcc %o2, 0, %o0
+; V8-NEXT:    cmp %o5, 0
+; V8-NEXT:    be .LBB9_3
+; V8-NEXT:    nop
+; V8-NEXT:  ! %bb.1: ! %entry
+; V8-NEXT:    cmp %o5, 0
+; V8-NEXT:    be .LBB9_4
+; V8-NEXT:    nop
+; V8-NEXT:  .LBB9_2: ! %entry
+; V8-NEXT:    retl
+; V8-NEXT:    nop
+; V8-NEXT:  .LBB9_3: ! %entry
+; V8-NEXT:    cmp %o5, 0
+; V8-NEXT:    bne .LBB9_2
+; V8-NEXT:    mov %g2, %o0
+; V8-NEXT:  .LBB9_4: ! %entry
+; V8-NEXT:    retl
+; V8-NEXT:    mov %o4, %o1
+;
+; V9-LABEL: select_add_i64:
+; V9:       ! %bb.0: ! %entry
+; V9-NEXT:    and %o4, 1, %o4
+; V9-NEXT:    addcc %o1, 1, %o1
+; V9-NEXT:    addxcc %o0, 0, %o0
+; V9-NEXT:    addcc %o3, 2, %o3
+; V9-NEXT:    addxcc %o2, 0, %o2
+; V9-NEXT:    cmp %o4, 0
+; V9-NEXT:    movne %icc, %o2, %o0
+; V9-NEXT:    retl
+; V9-NEXT:    movne %icc, %o3, %o1
+;
+; SPARC64-LABEL: select_add_i64:
+; SPARC64:       ! %bb.0: ! %entry
+; SPARC64-NEXT:    andcc %o2, 1, %g0
+; SPARC64-NEXT:    add %o0, 1, %o0
+; SPARC64-NEXT:    add %o1, 2, %o1
+; SPARC64-NEXT:    retl
+; SPARC64-NEXT:    movne %icc, %o1, %o0
+;
+; SPARC64-VIS3-LABEL: select_add_i64:
+; SPARC64-VIS3:       ! %bb.0: ! %entry
+; SPARC64-VIS3-NEXT:    andcc %o2, 1, %g0
+; SPARC64-VIS3-NEXT:    add %o0, 1, %o0
+; SPARC64-VIS3-NEXT:    add %o1, 2, %o1
+; SPARC64-VIS3-NEXT:    retl
+; SPARC64-VIS3-NEXT:    movne %icc, %o1, %o0
+entry:
+  %add.a = add i64 %a, 1
+  %add.b = add i64 %b, 2
+  %sel = select i1 %c, i64 %add.b, i64 %add.a
+  ret i64 %sel
+}
