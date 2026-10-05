@@ -437,3 +437,327 @@ define i64 @load_sext_i64(ptr addrspace(13) inreg %p) {
   %s = sext i32 %v to i64
   ret i64 %s
 }
+
+; Pointers of each width, and vectors of them. GlobalISel moves them through
+; integers, since a scalar pointer cannot be bitcast.
+
+define ptr @load_p0(ptr addrspace(13) inreg %p) {
+; GFX12-LABEL: load_p0:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-NEXT:    v_movrels_b32_e32 v1, v1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %v = load ptr, ptr addrspace(13) %p
+  ret ptr %v
+}
+
+define void @store_p0(ptr addrspace(13) inreg %p, ptr %x) {
+; GFX12-LABEL: store_p0:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movreld_b32_e32 v0, v0
+; GFX12-NEXT:    v_movreld_b32_e32 v1, v1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  store ptr %x, ptr addrspace(13) %p
+  ret void
+}
+
+define ptr addrspace(1) @load_p1(ptr addrspace(13) inreg %p) {
+; GFX12-LABEL: load_p1:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-NEXT:    v_movrels_b32_e32 v1, v1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %v = load ptr addrspace(1), ptr addrspace(13) %p
+  ret ptr addrspace(1) %v
+}
+
+define void @store_p1(ptr addrspace(13) inreg %p, ptr addrspace(1) %x) {
+; GFX12-LABEL: store_p1:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movreld_b32_e32 v0, v0
+; GFX12-NEXT:    v_movreld_b32_e32 v1, v1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  store ptr addrspace(1) %x, ptr addrspace(13) %p
+  ret void
+}
+
+define ptr addrspace(3) @load_p3(ptr addrspace(13) inreg %p) {
+; GFX12-LABEL: load_p3:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %v = load ptr addrspace(3), ptr addrspace(13) %p
+  ret ptr addrspace(3) %v
+}
+
+define void @store_p3(ptr addrspace(13) inreg %p, ptr addrspace(3) %x) {
+; GFX12-LABEL: store_p3:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movreld_b32_e32 v0, v0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  store ptr addrspace(3) %x, ptr addrspace(13) %p
+  ret void
+}
+
+define ptr addrspace(5) @load_p5(ptr addrspace(13) inreg %p) {
+; GFX12-LABEL: load_p5:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %v = load ptr addrspace(5), ptr addrspace(13) %p
+  ret ptr addrspace(5) %v
+}
+
+define void @store_p5(ptr addrspace(13) inreg %p, ptr addrspace(5) %x) {
+; GFX12-LABEL: store_p5:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movreld_b32_e32 v0, v0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  store ptr addrspace(5) %x, ptr addrspace(13) %p
+  ret void
+}
+
+define ptr addrspace(7) @load_p7(ptr addrspace(13) inreg %p) {
+; GFX12-LABEL: load_p7:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movrels_b32_e32 v4, v0
+; GFX12-NEXT:    v_movrels_b32_e32 v5, v1
+; GFX12-NEXT:    v_movrels_b32_e32 v6, v2
+; GFX12-NEXT:    v_movrels_b32_e32 v7, v3
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX12-NEXT:    v_movrels_b32_e32 v8, v4
+; GFX12-NEXT:    v_dual_mov_b32 v0, v5 :: v_dual_mov_b32 v1, v6
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_dual_mov_b32 v2, v7 :: v_dual_mov_b32 v3, v8
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %v = load ptr addrspace(7), ptr addrspace(13) %p
+  ret ptr addrspace(7) %v
+}
+
+define void @store_p7(ptr addrspace(13) inreg %p, ptr addrspace(7) %x) {
+; GFX12-SDAG-LABEL: store_p7:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v7, v2
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v5, v0
+; GFX12-SDAG-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v0, v4
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v1, v5
+; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v2, v6
+; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v3, v7
+; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v4, v8
+; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-LABEL: store_p7:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v6, v1
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v7, v2 :: v_dual_mov_b32 v8, v3
+; GFX12-GISEL-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-GISEL-NEXT:    v_movreld_b32_e32 v0, v4
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX12-GISEL-NEXT:    v_movreld_b32_e32 v1, v5
+; GFX12-GISEL-NEXT:    v_movreld_b32_e32 v2, v6
+; GFX12-GISEL-NEXT:    v_movreld_b32_e32 v3, v7
+; GFX12-GISEL-NEXT:    v_movreld_b32_e32 v4, v8
+; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  store ptr addrspace(7) %x, ptr addrspace(13) %p
+  ret void
+}
+
+define ptr addrspace(8) @load_p8(ptr addrspace(13) inreg %p) {
+; GFX12-LABEL: load_p8:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-NEXT:    v_movrels_b32_e32 v1, v1
+; GFX12-NEXT:    v_movrels_b32_e32 v2, v2
+; GFX12-NEXT:    v_movrels_b32_e32 v3, v3
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %v = load ptr addrspace(8), ptr addrspace(13) %p
+  ret ptr addrspace(8) %v
+}
+
+define void @store_p8(ptr addrspace(13) inreg %p, ptr addrspace(8) %x) {
+; GFX12-LABEL: store_p8:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movreld_b32_e32 v0, v0
+; GFX12-NEXT:    v_movreld_b32_e32 v1, v1
+; GFX12-NEXT:    v_movreld_b32_e32 v2, v2
+; GFX12-NEXT:    v_movreld_b32_e32 v3, v3
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  store ptr addrspace(8) %x, ptr addrspace(13) %p
+  ret void
+}
+
+define ptr addrspace(13) @load_p13(ptr addrspace(13) inreg %p) {
+; GFX12-LABEL: load_p13:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %v = load ptr addrspace(13), ptr addrspace(13) %p
+  ret ptr addrspace(13) %v
+}
+
+define void @store_p13(ptr addrspace(13) inreg %p, ptr addrspace(13) %x) {
+; GFX12-LABEL: store_p13:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movreld_b32_e32 v0, v0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  store ptr addrspace(13) %x, ptr addrspace(13) %p
+  ret void
+}
+
+define <2 x ptr> @load_v2p0(ptr addrspace(13) inreg %p) {
+; GFX12-LABEL: load_v2p0:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-NEXT:    v_movrels_b32_e32 v1, v1
+; GFX12-NEXT:    v_movrels_b32_e32 v2, v2
+; GFX12-NEXT:    v_movrels_b32_e32 v3, v3
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %v = load <2 x ptr>, ptr addrspace(13) %p
+  ret <2 x ptr> %v
+}
+
+define void @store_v2p0(ptr addrspace(13) inreg %p, <2 x ptr> %x) {
+; GFX12-LABEL: store_v2p0:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movreld_b32_e32 v0, v0
+; GFX12-NEXT:    v_movreld_b32_e32 v1, v1
+; GFX12-NEXT:    v_movreld_b32_e32 v2, v2
+; GFX12-NEXT:    v_movreld_b32_e32 v3, v3
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  store <2 x ptr> %x, ptr addrspace(13) %p
+  ret void
+}
+
+define <2 x ptr addrspace(3)> @load_v2p3(ptr addrspace(13) inreg %p) {
+; GFX12-LABEL: load_v2p3:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-NEXT:    v_movrels_b32_e32 v1, v1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %v = load <2 x ptr addrspace(3)>, ptr addrspace(13) %p
+  ret <2 x ptr addrspace(3)> %v
+}
+
+define void @store_v2p3(ptr addrspace(13) inreg %p, <2 x ptr addrspace(3)> %x) {
+; GFX12-LABEL: store_v2p3:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movreld_b32_e32 v0, v0
+; GFX12-NEXT:    v_movreld_b32_e32 v1, v1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  store <2 x ptr addrspace(3)> %x, ptr addrspace(13) %p
+  ret void
+}
