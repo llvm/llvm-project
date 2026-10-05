@@ -6162,6 +6162,7 @@ AMDGPU:
 - `C`: A 32-bit unsigned integer constant or an integer inline constant in the range from -16 to 64.
 - `DA`: A 64-bit constant that can be split into two "A" constants.
 - `DB`: A 64-bit constant that can be split into two "B" constants.
+- `RF`: A flat memory address operand, for use with `flat_*` instructions.
 
 All ARM modes:
 
