@@ -1884,7 +1884,7 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU,
                           UsePhi->getIterator());
         WidePhi->addIncoming(DU.WideDef, UsePhi->getIncomingBlock(0));
         BasicBlock *WidePhiBB = WidePhi->getParent();
-        IRBuilder<> Builder(WidePhiBB, WidePhiBB->getFirstInsertionPt());
+        IRBuilder<> Builder(WidePhiBB->getFirstInsertionPt());
         Value *Trunc = Builder.CreateTrunc(WidePhi, DU.NarrowDef->getType(), "",
                                            CanWidenByZExt, CanWidenBySExt);
         UsePhi->replaceAllUsesWith(Trunc);
