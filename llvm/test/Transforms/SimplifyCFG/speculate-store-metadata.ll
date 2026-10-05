@@ -90,20 +90,20 @@ exit:
 !0 = !{!"Simple C/C++ TBAA"}
 !1 = !{!"int", !0}
 !2 = !{!1, !1, i64 0}
-!3 = distinct !{!3}
+!3 = distinct !{!3, i1 false}
 !4 = distinct !{!4, !3, !"scope.a"}
 !5 = !{!4}
-!6 = distinct !{!6}
+!6 = distinct !{!6, i1 false}
 !7 = distinct !{!7, !6, !"noalias.a"}
 !8 = !{!7}
 
 !10 = !{!"Other TBAA"}
 !11 = !{!"other", !10}
 !12 = !{!11, !11, i64 0}
-!13 = distinct !{!13}
+!13 = distinct !{!13, i1 false}
 !14 = distinct !{!14, !13, !"scope.b"}
 !15 = !{!14}
-!16 = distinct !{!16}
+!16 = distinct !{!16, i1 false}
 !17 = distinct !{!17, !16, !"noalias.b"}
 !18 = !{!17}
 ;.
@@ -112,9 +112,9 @@ exit:
 ; CHECK: [[META2]] = !{!"Simple C/C++ TBAA"}
 ; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
 ; CHECK: [[META4]] = distinct !{[[META4]], [[META5:![0-9]+]], !"scope.a"}
-; CHECK: [[META5]] = distinct !{[[META5]]}
+; CHECK: [[META5]] = distinct !{[[META5]], i1 false}
 ; CHECK: [[META6]] = !{[[META7:![0-9]+]]}
 ; CHECK: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]], !"noalias.a"}
-; CHECK: [[META8]] = distinct !{[[META8]]}
+; CHECK: [[META8]] = distinct !{[[META8]], i1 false}
 ; CHECK: [[META9]] = !{}
 ;.
