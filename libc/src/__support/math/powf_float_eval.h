@@ -20,12 +20,10 @@
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
-#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/cpu_features.h"
-#include "src/__support/math/common_constants.h"
 #include "src/__support/math/exp2f_float_utils.h"
 #include "src/__support/math/powf_utils.h"
 

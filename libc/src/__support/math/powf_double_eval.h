@@ -15,26 +15,24 @@
 #define LLVM_LIBC_SRC___SUPPORT_MATH_POWF_DOUBLE_EVAL_H
 
 #include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/optional.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
-#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/cpu_features.h"
 #include "src/__support/math/common_constants.h"
 #include "src/__support/math/exp_constants.h"
-#include "src/__support/math/pow_utils.h"
 #include "src/__support/math/powf_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 namespace double_eval {
 
-namespace pow_internal = LIBC_NAMESPACE::math::pow_internal;
 namespace powf_internal = LIBC_NAMESPACE::math::powf_internal;
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
