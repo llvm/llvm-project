@@ -306,6 +306,30 @@ func.func @test_dynamic_argmax(%arg0 : tensor<2x?xi32>) -> () {
 
 // -----
 
+// CHECK-LABEL: @test_static_argmin
+func.func @test_static_argmin(%arg0 : tensor<2x3xi32>) -> () {
+  // CHECK: tosa.argmin %arg0 axis(0) : (tensor<2x3xi32>) -> tensor<3xi32>
+  %0 = tosa.argmin %arg0 axis(0) : (tensor<2x3xi32>) -> tensor<?xi32>
+
+  // CHECK: tosa.argmin %arg0 axis(1) : (tensor<2x3xi32>) -> tensor<2xi32>
+  %1 = tosa.argmin %arg0 axis(1) : (tensor<2x3xi32>) -> tensor<?xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_dynamic_argmin
+func.func @test_dynamic_argmin(%arg0 : tensor<2x?xi32>) -> () {
+  // CHECK: tosa.argmin %arg0 axis(0) : (tensor<2x?xi32>) -> tensor<?xi32>
+  %0 = tosa.argmin %arg0 axis(0) : (tensor<2x?xi32>) -> tensor<?xi32>
+
+  // CHECK: tosa.argmin %arg0 axis(1) : (tensor<2x?xi32>) -> tensor<2xi32>
+  %1 = tosa.argmin %arg0 axis(1) : (tensor<2x?xi32>) -> tensor<?xi32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @test_static_matmul
 func.func @test_static_matmul(%arg0 : tensor<2x3x4xi32>, %arg1 : tensor<2x4x5xi32>) -> () {
   // CHECK tosa.matmul %arg0, %arg1, %0, %1 : (tensor<2x3x4xi32>, tensor<2x4x5xi32>, tensor<1xi32>, tensor<1xi32>)  -> tensor<2x3x5xi32>
