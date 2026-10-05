@@ -134,6 +134,46 @@
 // RUN:   | FileCheck -check-prefixes=CHK-INTEL-SUFFIX %s
 // CHK-INTEL-SUFFIX: offload, "device-sycl (spirv64-unknown-unknown:xe-pvc:foo)"
 
+/// Without --offload-targets, an Intel device or "generic" picks SPIR-V of the
+/// host's width, and removing any spelling still removes the device.
+// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=xe-pvc --offload-arch=bmg_g21 --offload-arch=graniterapids \
+// RUN:   --offload-arch=generic -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-INTEL-NO-TARGETS %s
+// CHK-INTEL-NO-TARGETS-DAG: offload, "device-sycl (spirv64-unknown-unknown:generic)"
+// CHK-INTEL-NO-TARGETS-DAG: offload, "device-sycl (spirv64-unknown-unknown:graniterapids)"
+// CHK-INTEL-NO-TARGETS-DAG: offload, "device-sycl (spirv64-unknown-unknown:xe-bmg-g21)"
+// CHK-INTEL-NO-TARGETS-DAG: offload, "device-sycl (spirv64-unknown-unknown:xe-pvc)"
+// RUN: %clang -ccc-print-phases --target=i386-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=xe-pvc -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-INTEL-NO-TARGETS-32 %s
+// CHK-INTEL-NO-TARGETS-32: offload, "device-sycl (spirv32-unknown-unknown:xe-pvc)"
+// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=xe-pvc --offload-arch=xe_12.60.7 -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-INTEL-NO-TARGETS-ONE %s
+// CHK-INTEL-NO-TARGETS-ONE-NOT: offload, "device-sycl
+// CHK-INTEL-NO-TARGETS-ONE: offload, "device-sycl (spirv64-unknown-unknown:xe-pvc)"
+// CHK-INTEL-NO-TARGETS-ONE-NOT: offload, "device-sycl
+// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=bmg_g21 --offload-arch=xe-pvc --no-offload-arch=xe-bmg-g21 \
+// RUN:   -c %s 2>&1 | FileCheck -check-prefixes=CHK-INTEL-NO-TARGETS-NO-ARCH %s
+// CHK-INTEL-NO-TARGETS-NO-ARCH-NOT: bmg
+// CHK-INTEL-NO-TARGETS-NO-ARCH: offload, "device-sycl (spirv64-unknown-unknown:xe-pvc)"
+// CHK-INTEL-NO-TARGETS-NO-ARCH-NOT: bmg
+
+/// As for CUDA and HIP, -foffload-via-llvm gives the inferred target the LLVM
+/// environment.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -foffload-via-llvm \
+// RUN:   --offload-arch=xe-pvc -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-INTEL-VIA-LLVM %s
+// CHK-INTEL-VIA-LLVM: "-cc1" "-triple" "spirv64-unknown-unknown-llvm"
+
+/// Only SYCL infers a target from an Intel name.
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -x cuda -nocudainc \
+// RUN:   -nocudalib --offload-arch=xe-pvc -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-INTEL-CUDA %s
+// CHK-INTEL-CUDA: error: unsupported CUDA gpu architecture: xe-pvc
+
 /// -Xarch_ may name an Intel GPU by any of its spellings.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=bmg_g21 \
