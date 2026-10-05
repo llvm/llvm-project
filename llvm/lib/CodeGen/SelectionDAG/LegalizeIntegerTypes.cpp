@@ -543,7 +543,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITCAST(SDNode *N) {
                          BitConvertToInteger(GetScalarizedVector(InOp)));
     break;
   case TargetLowering::TypeScalarizeScalableVector:
-    report_fatal_error("Scalarization of scalable vectors is not supported.");
+    report_fatal_error("scalarization of scalable vectors is not supported");
   case TargetLowering::TypeSplitVector: {
     if (!NOutVT.isVector()) {
       // For example, i32 = BITCAST v2i16 on alpha.  Convert the split
@@ -3058,7 +3058,7 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
     dbgs() << "ExpandIntegerResult #" << ResNo << ": ";
     N->dump(&DAG); dbgs() << "\n";
 #endif
-    report_fatal_error("Do not know how to expand the result of this "
+    report_fatal_error("do not know how to expand the result of this "
                        "operator!");
 
   case ISD::ARITH_FENCE:  SplitRes_ARITH_FENCE(N, Lo, Hi); break;
@@ -5658,7 +5658,7 @@ bool DAGTypeLegalizer::ExpandIntegerOperand(SDNode *N, unsigned OpNo) {
     dbgs() << "ExpandIntegerOperand Op #" << OpNo << ": ";
     N->dump(&DAG); dbgs() << "\n";
   #endif
-    report_fatal_error("Do not know how to expand this operator's operand!");
+    report_fatal_error("do not know how to expand this operator's operand!");
 
   case ISD::BITCAST:           Res = ExpandOp_BITCAST(N); break;
   case ISD::BR_CC:             Res = ExpandIntOp_BR_CC(N); break;
