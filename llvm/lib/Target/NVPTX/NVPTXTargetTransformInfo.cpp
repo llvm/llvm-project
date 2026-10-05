@@ -498,28 +498,24 @@ NVPTXTTIImpl::getInstructionCost(const User *U,
   return BaseT::getInstructionCost(U, Operands, CostKind);
 }
 
-static bool isV2F32Ty(Type *Ty) {
-  // PTX has native packed arithmetic for pairs of f32 values.
+static bool isNativeV2F32(Type *Ty, const NVPTXSubtarget &ST) {
   auto *VTy = dyn_cast<FixedVectorType>(Ty);
-  return VTy && VTy->getNumElements() == 2 &&
+  return ST.hasF32x2Instructions() && VTy && VTy->getNumElements() == 2 &&
          VTy->getElementType()->isFloatTy();
 }
 
-static bool isDemandedSplat(ArrayRef<Value *> VL, const APInt &DemandedElts) {
+static bool isSplat(ArrayRef<Value *> VL, const APInt &DemandedElts) {
   // Packed f32x2 arithmetic can consume scalar f32 operands as broadcasts, so
-  // splat buildvectors are free when the demanded lanes are identical.
-  if (VL.empty() || DemandedElts.getBitWidth() != VL.size())
+  // a buildvector is free when every lane is the same value.
+  if (VL.empty() || DemandedElts.getBitWidth() != VL.size() ||
+      !DemandedElts.isAllOnes())
     return false;
 
-  Value *Splat = nullptr;
-  for (unsigned Idx = 0, E = VL.size(); Idx != E; ++Idx) {
-    if (!DemandedElts[Idx] || isa<UndefValue>(VL[Idx]))
+  Value *Splat = VL[0];
+  for (Value *V : VL) {
+    if (isa<UndefValue>(V))
       continue;
-    if (!Splat) {
-      Splat = VL[Idx];
-      continue;
-    }
-    if (VL[Idx] != Splat)
+    if (V != Splat)
       return false;
   }
   return Splat != nullptr;
@@ -530,7 +526,7 @@ NVPTXTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
                              VectorType *SrcTy, TTI::TargetCostKind CostKind,
                              ArrayRef<int> Mask, int Index, VectorType *SubTp,
                              ArrayRef<const Value *> Args,
-                             const Instruction *CxtI) const {
+                             const Instruction *CxtI, TTI::VectorInstrContext VIC) const {
   InstructionCost Cost = BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind,
                                                Mask, Index, SubTp, Args, CxtI);
 
@@ -539,7 +535,7 @@ NVPTXTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
 
   // A scalar f32 broadcast feeding f32x2 arithmetic can use the scalar operand
   // form of the packed PTX instruction, so do not charge a shuffle for it.
-  if (isV2F32Ty(DstTy) &&
+  if (isNativeV2F32(DstTy, *ST) &&
       (Kind == TTI::SK_Broadcast ||
        (Kind == TTI::SK_PermuteSingleSrc &&
         ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size())))) {
@@ -595,7 +591,7 @@ InstructionCost NVPTXTTIImpl::getScalarizationOverhead(
     if (AllConstant) {
       Cost += TTI::TCC_Free;
       Insert = false;
-    } else if (isV2F32Ty(InTy) && isDemandedSplat(VL, DemandedElts)) {
+    } else if (isNativeV2F32(InTy, *ST) && isSplat(VL, DemandedElts)) {
       // A splat buildvector can be represented by a scalar broadcast operand of
       // the packed f32 instruction.
       Cost += TTI::TCC_Free;
