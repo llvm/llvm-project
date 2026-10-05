@@ -477,9 +477,8 @@ operator new(size_t Size,
              llvm::BumpPtrAllocatorImpl<AllocatorT, SlabSize, SizeThreshold,
                                         GrowthDelay, MinAlign> &Allocator) {
   // alignof(T) is unknown but Size%alignof(T)==0, so the lowest set bit of Size
-  // bounds it. If it's greater than the default new alignment, the other
-  // overload (operator new(size_t, align_val_t, ...)) will be called, so cap
-  // our guess there.
+  // bounds it. Types with alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__ use the
+  // align_val_t overload below.
   auto S = Size | __STDCPP_DEFAULT_NEW_ALIGNMENT__;
   return Allocator.Allocate(Size, llvm::Align(S & -S));
 }
@@ -487,10 +486,10 @@ operator new(size_t Size,
 template <typename AllocatorT, size_t SlabSize, size_t SizeThreshold,
           size_t GrowthDelay, size_t MinAlign>
 void *
-operator new(size_t Size, std::align_val_t Align,
+operator new(size_t Size, std::align_val_t Alignment,
              llvm::BumpPtrAllocatorImpl<AllocatorT, SlabSize, SizeThreshold,
                                         GrowthDelay, MinAlign> &Allocator) {
-  return Allocator.Allocate(Size, (size_t)Align);
+  return Allocator.Allocate(Size, llvm::Align(static_cast<size_t>(Alignment)));
 }
 
 template <typename AllocatorT, size_t SlabSize, size_t SizeThreshold,
