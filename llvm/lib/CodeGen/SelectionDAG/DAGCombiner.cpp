@@ -3329,7 +3329,7 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
   // fold a+vscale(c1)+vscale(c2) -> a+vscale(c1+c2)
   if (N0.getOpcode() == ISD::ADD &&
       N0.getOperand(1).getOpcode() == ISD::VSCALE &&
-      N1.getOpcode() == ISD::VSCALE) {
+      N1.getOpcode() == ISD::VSCALE && TLI.isProfitableToFoldVScaleAdd(N0)) {
     const APInt &VS0 = N0.getOperand(1)->getConstantOperandAPInt(0);
     const APInt &VS1 = N1->getConstantOperandAPInt(0);
     SDValue VS = DAG.getVScale(DL, VT, VS0 + VS1);
@@ -17970,7 +17970,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
 
   // fold (truncate (load x)) -> (smaller load x)
   // fold (truncate (srl (load x), c)) -> (smaller load (x+c/evtbits))
-  if (!LegalTypes || TLI.isTypeDesirableForOp(N0.getNode(), VT)) {
+  if (!LegalTypes || TLI.isTypeDesirableForOp(N0.getOpcode(), VT)) {
     if (SDValue Reduced = reduceLoadWidth(N))
       return Reduced;
 
