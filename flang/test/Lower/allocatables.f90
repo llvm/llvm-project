@@ -9,7 +9,7 @@ subroutine fooscalar()
   ! CHECK: %[[nullAddr:.*]] = fir.zero_bits !fir.heap<f32>
   ! CHECK: %[[box:.*]] = fir.embox %[[nullAddr]] : (!fir.heap<f32>) -> !fir.box<!fir.heap<f32>>
   ! CHECK: fir.store %[[box]] to %[[xAddrVar]] : !fir.ref<!fir.box<!fir.heap<f32>>>
-  ! CHECK: %[[decl:.*]]:2 = hlfir.declare %[[xAddrVar]] {{{.*}}uniq_name = "_QFfooscalarEx"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+  ! CHECK: %[[decl:.*]]:2 = hlfir.declare %[[xAddrVar]] {{.*}}uniq_name("_QFfooscalarEx"){{.*}} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
 
   ! Test allocation of local allocatables
   allocate(x)

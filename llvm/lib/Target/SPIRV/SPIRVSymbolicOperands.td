@@ -1406,7 +1406,7 @@ defm LinkageAttributes : DecorationOperand<41, 0, 0, [], [Linkage]>;
 defm NoContraction : DecorationOperand<42, 0, 0, [], [Shader]>;
 defm InputAttachmentIndex : DecorationOperand<43, 0, 0, [], [InputAttachment]>;
 defm Alignment : DecorationOperand<44, 0, 0, [], [Kernel]>;
-defm MaxByteOffset : DecorationOperand<45, 0, 0, [], [Addresses]>;
+defm MaxByteOffset : DecorationOperand<45, 0x10100, 0, [], [Addresses]>;
 defm AlignmentId : DecorationOperand<46, 0, 0, [], [Kernel]>;
 defm MaxByteOffsetId : DecorationOperand<47, 0, 0, [], [Addresses]>;
 defm NoSignedWrap : DecorationOperand<4469, 0x10400, 0, [SPV_KHR_no_integer_wrap_decoration], []>;

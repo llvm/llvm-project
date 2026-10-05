@@ -7953,6 +7953,29 @@ defm : AddSubHNPatterns<ADDHNv2i64_v2i32, ADDHNv2i64_v4i32,
                         SUBHNv2i64_v2i32, SUBHNv2i64_v4i32,
                         v2i32, v2i64, 32>;
 
+def : Pat<(v8i8 (trunc (AArch64vlshr (v8i16 V128:$Rn), (i32 7)))),
+          (ADDHNv8i16_v8i8 V128:$Rn, V128:$Rn)>;
+def : Pat<(v4i16 (trunc (AArch64vlshr (v4i32 V128:$Rn), (i32 15)))),
+          (ADDHNv4i32_v4i16 V128:$Rn, V128:$Rn)>;
+def : Pat<(v2i32 (trunc (AArch64vlshr (v2i64 V128:$Rn), (i32 31)))),
+          (ADDHNv2i64_v2i32 V128:$Rn, V128:$Rn)>;
+
+def : Pat<(v16i8 (concat_vectors (v8i8 V64:$Rd),
+                                 (trunc (AArch64vlshr (v8i16 V128:$Rn),
+                                                      (i32 7))))),
+          (ADDHNv8i16_v16i8 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub),
+                           V128:$Rn, V128:$Rn)>;
+def : Pat<(v8i16 (concat_vectors (v4i16 V64:$Rd),
+                                 (trunc (AArch64vlshr (v4i32 V128:$Rn),
+                                                      (i32 15))))),
+          (ADDHNv4i32_v8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub),
+                           V128:$Rn, V128:$Rn)>;
+def : Pat<(v4i32 (concat_vectors (v2i32 V64:$Rd),
+                                 (trunc (AArch64vlshr (v2i64 V128:$Rn),
+                                                      (i32 31))))),
+          (ADDHNv2i64_v4i32 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub),
+                           V128:$Rn, V128:$Rn)>;
+
 //----------------------------------------------------------------------------
 // AdvSIMD bitwise extract from vector instruction.
 //----------------------------------------------------------------------------
@@ -10959,6 +10982,21 @@ def : Pat<(shl (i64 (zext GPR32:$Rn)), (i64 imm0_63:$imm)),
                    (i64 (i64shift_a        imm0_63:$imm)),
                    (i64 (i64shift_sext_i32 imm0_63:$imm)))>;
 
+def : Pat<(i64 (sext (shl GPR32:$Rn, (i64 imm0_31:$imm)))),
+          (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
+                   (i64 (i64shift_a imm0_31:$imm)),
+                   (i64 (i32shift_b imm0_31:$imm)))>;
+
+def : Pat<(i64 (sext (shl (sext_inreg GPR32:$Rn, i8), (i64 imm0_31:$imm)))),
+          (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
+                   (i64 (i64shift_a imm0_31:$imm)),
+                   (i64 (i32shift_sext_i8 imm0_31:$imm)))>;
+
+def : Pat<(i64 (sext (shl (sext_inreg GPR32:$Rn, i16), (i64 imm0_31:$imm)))),
+          (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
+                   (i64 (i64shift_a imm0_31:$imm)),
+                   (i64 (i32shift_sext_i16 imm0_31:$imm)))>;
+
 // sra patterns have an AddedComplexity of 10, so make sure we have a higher
 // AddedComplexity for the following patterns since we want to match sext + sra
 // patterns before we attempt to match a single sra node.
@@ -10980,6 +11018,18 @@ def : Pat<(sra (i64 (sext GPR32:$Rn)), (i64 imm0_31:$imm)),
           (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
                    (i64 imm0_31:$imm), 31)>;
 } // AddedComplexity = 20
+
+def : Pat<(i64 (sext (sra GPR32:$Rn, (i64 imm0_31:$imm)))),
+          (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
+                   (i64 imm0_31:$imm), 31)>;
+
+def : Pat<(i64 (sext (sra (sext_inreg GPR32:$Rn, i8), (i64 imm0_31:$imm)))),
+          (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
+                   (i64 imm0_31:$imm), 7)>;
+
+def : Pat<(i64 (sext (sra (sext_inreg GPR32:$Rn, i16), (i64 imm0_31:$imm)))),
+          (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
+                   (i64 imm0_31:$imm), 15)>;
 
 // To truncate, we can simply extract from a subregister.
 def : Pat<(i32 (trunc GPR64sp:$src)),

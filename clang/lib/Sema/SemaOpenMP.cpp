@@ -685,6 +685,10 @@ public:
   /// Add requires decl to internal vector
   void addRequiresDecl(OMPRequiresDecl *RD) { RequiresDecls.push_back(RD); }
 
+  ArrayRef<const OMPRequiresDecl *> getRequiresDecls() const {
+    return RequiresDecls;
+  }
+
   /// Checks if the defined 'requires' directive has specified type of clause.
   template <typename ClauseType> bool hasRequiresDeclWithClause() const {
     return llvm::any_of(RequiresDecls, [](const OMPRequiresDecl *D) {
@@ -2080,6 +2084,14 @@ void SemaOpenMP::InitDataSharingAttributesStack() {
 
 #define DSAStack static_cast<DSAStackTy *>(VarDataSharingAttributesStack)
 
+void SemaOpenMP::addRequiresDecl(OMPRequiresDecl *D) {
+  DSAStack->addRequiresDecl(D);
+}
+
+ArrayRef<const OMPRequiresDecl *> SemaOpenMP::getRequiresDecls() const {
+  return DSAStack->getRequiresDecls();
+}
+
 void SemaOpenMP::pushOpenMPFunctionRegion() { DSAStack->pushFunction(); }
 
 void SemaOpenMP::popOpenMPFunctionRegion(const FunctionScopeInfo *OldFSI) {
@@ -2488,7 +2500,9 @@ VarDecl *SemaOpenMP::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
             break;
           }
       }
-      assert(CSI && "Failed to find CapturedRegionScopeInfo");
+      // Lambdas and blocks at namespace scope have no enclosing function scope.
+      if (!CSI)
+        return nullptr;
       SmallVector<OpenMPDirectiveKind, 4> Regions;
       getOpenMPCaptureRegions(Regions,
                               DSAStack->getDirective(CSI->OpenMPLevel));
@@ -11357,7 +11371,7 @@ static bool checkSimdlenSafelenSpecified(Sema &S,
     // If both simdlen and safelen clauses are specified, the value of the
     // simdlen parameter must be less than or equal to the value of the safelen
     // parameter.
-    if (SimdlenRes > SafelenRes) {
+    if (llvm::APSInt::compareValues(SimdlenRes, SafelenRes) > 0) {
       S.Diag(SimdlenLength->getExprLoc(),
              diag::err_omp_wrong_simdlen_safelen_values)
           << SimdlenLength->getSourceRange() << SafelenLength->getSourceRange();
@@ -23282,11 +23296,16 @@ OMPClause *SemaOpenMP::ActOnOpenMPCopyprivateClause(ArrayRef<Expr *> VarList,
       //  threadprivate or private in the enclosing context.
       if (DVar.CKind == OMPC_unknown) {
         DVar = DSAStack->getImplicitDSA(D, false);
-        if (DVar.CKind == OMPC_shared) {
+        // A data member is private only if an enclosing construct captured it.
+        const bool IsShared = DVar.CKind == OMPC_shared;
+        if (IsShared ||
+            (isa<FieldDecl>(D) && !SemaRef.CurContext->isDependentContext() &&
+             !isOpenMPCapturedDecl(D))) {
           Diag(ELoc, diag::err_omp_required_access)
               << getOpenMPClauseNameForDiag(OMPC_copyprivate)
               << "threadprivate or private in the enclosing context";
-          reportOriginalDsa(SemaRef, DSAStack, D, DVar);
+          if (IsShared)
+            reportOriginalDsa(SemaRef, DSAStack, D, DVar);
           continue;
         }
       }
@@ -23333,10 +23352,13 @@ OMPClause *SemaOpenMP::ActOnOpenMPCopyprivateClause(ArrayRef<Expr *> VarList,
 
     // No need to mark vars as copyprivate, they are already threadprivate or
     // implicitly private.
-    assert(VD || isOpenMPCapturedDecl(D));
+    const bool IsBindingDecl = isa<BindingDecl>(D);
+    assert(VD || IsBindingDecl || SemaRef.CurContext->isDependentContext() ||
+           isOpenMPCapturedDecl(D));
     Vars.push_back(
-        VD ? RefExpr->IgnoreParens()
-           : buildCapture(SemaRef, D, SimpleRefExpr, /*WithInit=*/false));
+        (VD || IsBindingDecl || SemaRef.CurContext->isDependentContext())
+            ? RefExpr->IgnoreParens()
+            : buildCapture(SemaRef, D, SimpleRefExpr, /*WithInit=*/false));
     SrcExprs.push_back(PseudoSrcExpr);
     DstExprs.push_back(PseudoDstExpr);
     AssignmentOps.push_back(AssignmentOp.get());
