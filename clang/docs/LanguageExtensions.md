@@ -6602,10 +6602,10 @@ Valid variable types:
 A variable named in the list must meet all of these conditions to be
 preserved:
 
-- It must be defined at file or namespace scope; `inline`, `constexpr`, and
-  `constinit` variables are supported. A name-matched function-local `static`
-  variable, static data member, or variable template specialization is not
-  supported and is diagnosed.
+- It must be defined at file or namespace scope; `constexpr` and `constinit`
+  variables are supported. A name-matched function-local `static` variable,
+  static data member, `inline` variable, or variable template specialization
+  is not supported and is diagnosed.
 - Its type must be a character pointer (`char *`, `const char *`) or a
   character array (`char[]`, `const char[]`). The character type must be plain
   `char`: variables of `signed char`, `unsigned char`, and the wide and
@@ -6626,17 +6626,17 @@ preserved:
 
 A variable that is named in the list but is `volatile`-qualified, does not
 have static storage duration (for example, a `thread_local` variable), is
-dynamically initialized, or is a pointer not bound to a string literal, is
-diagnosed with a warning and is not preserved. The same applies to name-matched
-variables of unsupported kinds: function-local `static` variables, static data
-members, and variable template specializations (an explicit specialization is
-diagnosed at its definition, an implicit one in each translation unit that
-instantiates it). A name-matched variable of any other type -- for example, an
-`int` or a `struct` -- is likewise diagnosed. These diagnostics are in the
-`-Wloadtime-comment-var` group. A definition without an initializer is
-silently skipped. Names that match no variable defined in the translation unit
-are also silently ignored, since the option is typically given to every
-compilation of a build.
+dynamically initialized, is an `inline` variable, or is a pointer not bound to
+a string literal, is diagnosed with a warning and is not preserved. The same
+applies to name-matched variables of unsupported kinds: function-local
+`static` variables, static data members, and variable template
+specializations (an explicit specialization is diagnosed at its definition, an
+implicit one in each translation unit that instantiates it). A name-matched
+variable of any other type -- for example, an `int` or a `struct` -- is
+likewise diagnosed. These diagnostics are in the `-Wloadtime-comment-var`
+group. A definition without an initializer is silently skipped. Names that
+match no variable defined in the translation unit are also silently ignored,
+since the option is typically given to every compilation of a build.
 
 For C++20 modules, a named variable defined in a module unit is processed
 using the option as specified when the module unit itself is compiled -- in a
@@ -6644,12 +6644,11 @@ two-phase build, when the module interface file is produced. Giving the option
 to an importing translation unit has no effect on variables owned by the
 module. Retention of a variable to load time depends on the linker retaining
 function definitions from the translation unit that was compiled to preserve
-it, since those functions carry the references that keep the string alive. An
-`inline` variable is preserved in the object files for the module unit and for
-every importing translation unit that re-emits it. A variable attached to a
-named module is matched by its module-attached mangled name (for example,
-`export char ver[];` in module `M` is `_ZW1M3ver`). The same applies to a
-precompiled header: the option must be present when the PCH is built.
+it, since those functions carry the references that keep the string alive. A
+variable attached to a named module is matched by its module-attached mangled
+name (for example, `export char ver[];` in module `M` is `_ZW1M3ver`). The
+same applies to a precompiled header: the option must be present when the PCH
+is built.
 
 Example:
 

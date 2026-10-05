@@ -15532,6 +15532,12 @@ static void processForLoadTimeCommentVar(Sema &S, VarDecl *VD) {
     Reason = diag::LoadTimeCommentVarReason::TemplateSpecialization;
   else if (VD->isStaticDataMember())
     Reason = diag::LoadTimeCommentVarReason::StaticDataMember;
+  else if (VD->isInline())
+    // An inline variable is defined in every translation unit that sees it,
+    // and a module importer re-emits it using the decision made when the
+    // module was built, so the result would depend on option consistency
+    // across compilations.
+    Reason = diag::LoadTimeCommentVarReason::Inline;
   else if (Pointee.isNull() ||
            !S.Context.hasSameUnqualifiedType(Pointee, S.Context.CharTy))
     // Only plain `char` pointers/arrays are supported. A name match on a

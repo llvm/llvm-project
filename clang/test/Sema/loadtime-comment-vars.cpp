@@ -15,8 +15,9 @@
 //             literal), are diagnosed. (-std=c++20 for consteval.)
 //   kinds   — unsupported declaration kinds: name-matched static data
 //             members (out-of-line, in-class inline, instantiated from a
-//             class template) and variable template specializations
-//             (explicit and implicit) are diagnosed.
+//             class template), variable template specializations
+//             (explicit and implicit), and namespace-scope inline variables
+//             are diagnosed.
 
 // RUN: %clang_cc1 -std=c++20 -triple powerpc64-ibm-aix \
 // RUN:   -mloadtime-comment-vars=keep,_ZN1N2tlE,_ZL3stl,_ZN1A2tmE,_ZZ1fvE2fn,_ZL4wstr \
@@ -27,7 +28,7 @@
 // RUN:   -fsyntax-only -verify=init %s
 
 // RUN: %clang_cc1 -std=c++20 -triple powerpc64-ibm-aix \
-// RUN:   -mloadtime-comment-vars=_ZN2B23sidE,_ZN2B34isidE,_Z2vtIcE,_Z2vtIiE,_ZN2SCIiE1mE \
+// RUN:   -mloadtime-comment-vars=_ZN2B23sidE,_ZN2B34isidE,_Z2vtIcE,_Z2vtIiE,_ZN2SCIiE1mE,_ZN1M2ivE \
 // RUN:   -fsyntax-only -verify=kinds %s
 
 // ---- storage: storage-duration cases ----------------------------------------
@@ -100,6 +101,11 @@ struct B2 {
   static const char *sid;
 };
 const char *B2::sid = "@(#) b2"; // kinds-warning {{'sid' named in '-mloadtime-comment-vars=' is a static data member and will not be preserved}}
+
+// A namespace-scope inline variable is diagnosed.
+namespace M {
+inline const char *iv = "@(#) inline var"; // kinds-warning {{'iv' named in '-mloadtime-comment-vars=' is an inline variable and will not be preserved}}
+} // namespace M
 
 // An in-class inline static data member (C++17) is diagnosed as well.
 struct B3 {
