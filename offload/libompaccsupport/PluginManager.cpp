@@ -18,6 +18,7 @@
 #include "Shared/Profile.h"
 #include "device.h"
 
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
@@ -475,19 +476,20 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
             // Read this kernel's launch-geometry properties once, from its
             // "<name>_kernel_environment" global, and cache them on the device
             // for use at launch time.
+            SmallString<128> EnvName(Entry.SymbolName);
+            EnvName += "_kernel_environment";
             llvm::omp::target::plugin::GenericDeviceTy &GenericDevice =
                 Device.RTL->getDevice(Device.RTLDeviceID);
             KernelEnvironmentTy KernelEnv{};
             llvm::omp::target::plugin::GlobalTy KernelEnvGlobal(
-                std::string(Entry.SymbolName) + "_kernel_environment",
-                sizeof(KernelEnv), &KernelEnv);
+                EnvName, sizeof(KernelEnv), &KernelEnv);
             auto &Image =
                 *reinterpret_cast<llvm::omp::target::plugin::DeviceImageTy *>(
                     Binary.handle);
             if (auto Err =
                     GenericDevice.Plugin.getGlobalHandler().readGlobalFromImage(
                         GenericDevice, Image, KernelEnvGlobal)) {
-              [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
+              std::string ErrStr = toString(std::move(Err));
               KernelEnv = KernelEnvironmentTy{};
               KernelEnv.Configuration.ExecMode =
                   llvm::omp::OMP_TGT_EXEC_MODE_BARE;
