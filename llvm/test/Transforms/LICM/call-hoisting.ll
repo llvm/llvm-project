@@ -655,6 +655,38 @@ exit:
   ret void
 }
 
+; The call is guaranteed to execute, but a preceding loop-varying store must
+; remain in the loop and execute before the potential throw.
+define void @no_hoist_readnone_maythrow_after_store(i32 %n, ptr %sink) {
+; CHECK-LABEL: define void @no_hoist_readnone_maythrow_after_store(
+; CHECK-SAME: i32 [[N:%.*]], ptr [[SINK:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    store i32 [[IV]], ptr [[SINK]], align 4
+; CHECK-NEXT:    [[RET:%.*]] = call i32 @readnone_maythrow(i32 [[N]])
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %loop]
+  store i32 %iv, ptr %sink, align 4
+  %ret = call i32 @readnone_maythrow(i32 %n)
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv, 200
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 declare i32 @readonly_maythrow(ptr %p) memory(argmem: read)
 
 ; A readonly call that may throw cannot be hoisted if not guaranteed to execute

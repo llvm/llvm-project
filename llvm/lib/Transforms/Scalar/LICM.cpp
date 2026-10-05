@@ -638,8 +638,7 @@ bool llvm::hoistRegion(DomTreeNode *N, const LICMDependencies &Deps,
           // May-throw calls can only be hoisted if there are no memory
           // writes before them in the loop. Otherwise hoisting would skip
           // side effects that must happen before the potential throw.
-          (!I.mayThrow() ||
-           Deps.SafetyInfo.doesNotWriteMemoryBefore(I, CurLoop))) {
+          (!I.mayThrow() || Deps.SafetyInfo.doesNotWriteMemoryBefore(I))) {
         hoist(I, &Deps.DT, CurLoop, Preheader, &Deps.SafetyInfo, Deps.MSSAU,
               Deps.SE, Deps.ORE);
         Changed = true;
