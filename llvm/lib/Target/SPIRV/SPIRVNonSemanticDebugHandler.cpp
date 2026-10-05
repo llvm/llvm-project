@@ -651,8 +651,7 @@ SPIRVNonSemanticDebugHandler::emitDebugTypeFunctionForSubroutineType(
 std::optional<MCRegister> SPIRVNonSemanticDebugHandler::resolveScope(
     const DIScope *Scope, const DICompileUnit *FallbackCU) const {
 
-  // DILexicalBlockFile carries file/discriminator info. Its SPIR-V counterpart
-  // (DebugLexicalBlockDiscriminator) cannot be used as a scope, so unwrap it.
+  // DebugLexicalBlockDiscriminator cannot be used as a scope, so unwrap it.
   while (const auto *DLBF = dyn_cast_or_null<DILexicalBlockFile>(Scope))
     Scope = DLBF->getScope();
 

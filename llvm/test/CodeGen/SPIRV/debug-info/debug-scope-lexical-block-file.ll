@@ -39,7 +39,6 @@ entry:
 !6 = !{!7, !7}
 !7 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 
-;; DILexicalBlockFile wrapping the DISubprogram — the scope that triggered the bug.
 !8 = !DIFile(filename: "test-other.c", directory: "/src")
 !9 = !DILexicalBlockFile(scope: !5, file: !8, discriminator: 0)
 !10 = !DILocation(line: 3, column: 10, scope: !9)
