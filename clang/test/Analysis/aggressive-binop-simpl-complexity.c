@@ -13,6 +13,9 @@ int foo(int x, int y) {
   a += b; b -= a; // complexity: 5, 8
   a += b; b -= a; // complexity: 13, 21
   a += b; b -= a; // complexity: 34, would be 55
+ 
+  // We assume concrete values for 'x' and 'y' only after the calculations, to
+  // ensure that the calculations were performed symbolically.
   if (x == 0 && y == 0) {
     // The symbolic expression for 'a' has complexity 34, which is not above
     // the threshold (35), so the analyzer can remember the connection between
