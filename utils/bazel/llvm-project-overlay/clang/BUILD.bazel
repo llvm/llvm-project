@@ -3070,7 +3070,10 @@ cc_library(
 
 cc_library(
     name = "cir_dialect",
-    srcs = glob(["lib/CIR/Dialect/IR/*.cpp"]),
+    srcs = glob(
+        ["lib/CIR/Dialect/IR/*.cpp"],
+        exclude = ["lib/CIR/Dialect/IR/CIRMemorySlot.cpp"],
+    ),
     hdrs = glob([
         "include/clang/CIR/Dialect/IR/*.h",
         "include/clang/CIR/Dialect/Builder/*.h",
