@@ -23,6 +23,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
+#include <array>
 #include <optional>
 using namespace llvm;
 
@@ -552,15 +553,34 @@ void NVPTXTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
+namespace {
+template <unsigned... AS>
+constexpr std::array<unsigned, sizeof...(AS)> AddressSpaceList = {AS...};
+
+struct IntrinsicAddressSpaceInfo {
+  Intrinsic::ID GenericID;
+  Intrinsic::ID SpecificID;
+  ArrayRef<unsigned> AddressSpaces;
+  bool TrapOnInvalidAS;
+  unsigned PointerOperand;
+};
+
+#define GET_IntrinsicAddressSpaceTable_IMPL
+#include "NVPTXGenIntrinsicInfo.inc"
+} // namespace
+
 bool NVPTXTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                               Intrinsic::ID IID) const {
+  if (const auto *Info = getIntrinsicAddressSpaceInfo(IID)) {
+    OpIndexes.push_back(Info->PointerOperand);
+    return true;
+  }
   switch (IID) {
   case Intrinsic::nvvm_isspacep_const:
   case Intrinsic::nvvm_isspacep_global:
   case Intrinsic::nvvm_isspacep_local:
   case Intrinsic::nvvm_isspacep_shared:
-  case Intrinsic::nvvm_isspacep_shared_cluster:
-  case Intrinsic::nvvm_prefetch_tensormap: {
+  case Intrinsic::nvvm_isspacep_shared_cluster: {
     OpIndexes.push_back(0);
     return true;
   }
@@ -572,6 +592,38 @@ Value *NVPTXTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
                                                       Value *OldV,
                                                       Value *NewV) const {
   const Intrinsic::ID IID = II->getIntrinsicID();
+  if (const auto *Info = getIntrinsicAddressSpaceInfo(IID)) {
+    if (II->getArgOperand(Info->PointerOperand) != OldV)
+      return nullptr;
+
+    unsigned NewAS = NewV->getType()->getPointerAddressSpace();
+    if (!llvm::is_contained(Info->AddressSpaces, NewAS)) {
+      // A missing rewrite is not necessarily invalid. Trap only when the
+      // address is provably outside every allowed space and the entry permits
+      // it.
+      if (!Info->TrapOnInvalidAS ||
+          !llvm::all_of(Info->AddressSpaces, [NewAS](unsigned AS) {
+            return isInAddressSpace(NewAS, AS) == false;
+          }))
+        return nullptr;
+      // InferAddressSpaces preserves the CFG. Emit a trap here and leave
+      // truncating the block at the noreturn call to SimplifyCFG.
+      Value *Trap = IRBuilder<>(II).CreateIntrinsic(Intrinsic::trap, {});
+      return II->getType()->isVoidTy() ? Trap : PoisonValue::get(II->getType());
+    }
+
+    SmallVector<Type *, 8> ArgTypes(II->getFunctionType()->params());
+    ArgTypes[Info->PointerOperand] = NewV->getType();
+    FunctionType *FT = FunctionType::get(II->getType(), ArgTypes, false);
+    SmallVector<Type *, 4> OverloadTypes;
+    if (!Intrinsic::isSignatureValid(Info->SpecificID, FT, OverloadTypes))
+      return nullptr;
+    Function *Decl = Intrinsic::getOrInsertDeclaration(
+        II->getModule(), Info->SpecificID, OverloadTypes);
+    II->setArgOperand(Info->PointerOperand, NewV);
+    II->setCalledFunction(Decl);
+    return II;
+  }
   switch (IID) {
   case Intrinsic::nvvm_isspacep_const:
   case Intrinsic::nvvm_isspacep_global:
@@ -581,15 +633,6 @@ Value *NVPTXTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
     const unsigned NewAS = NewV->getType()->getPointerAddressSpace();
     if (const auto R = evaluateIsSpace(IID, NewAS))
       return ConstantInt::get(II->getType(), *R);
-    return nullptr;
-  }
-  case Intrinsic::nvvm_prefetch_tensormap: {
-    IRBuilder<> Builder(II);
-    const unsigned NewAS = NewV->getType()->getPointerAddressSpace();
-    if (NewAS == NVPTXAS::ADDRESS_SPACE_CONST ||
-        NewAS == NVPTXAS::ADDRESS_SPACE_ENTRY_PARAM)
-      return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_prefetch_tensormap,
-                                          NewV);
     return nullptr;
   }
   }

@@ -7,9 +7,7 @@ declare void @llvm.nvvm.prefetch.tensormap.p0(ptr)
 define void @constant(ptr addrspace(4) %map) {
 ; CHECK-LABEL: define void @constant(
 ; CHECK-SAME: ptr addrspace(4) [[MAP:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(4) [[MAP]] to ptr
 ; CHECK-NEXT:    call void @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4) [[MAP]])
-; CHECK-NEXT:    call void @llvm.nvvm.prefetch.tensormap.p0(ptr [[GENERIC]])
 ; CHECK-NEXT:    ret void
 ;
   %generic = addrspacecast ptr addrspace(4) %map to ptr
@@ -20,9 +18,7 @@ define void @constant(ptr addrspace(4) %map) {
 define void @parameter(ptr addrspace(101) %map) {
 ; CHECK-LABEL: define void @parameter(
 ; CHECK-SAME: ptr addrspace(101) [[MAP:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(101) [[MAP]] to ptr
 ; CHECK-NEXT:    call void @llvm.nvvm.prefetch.tensormap.p101(ptr addrspace(101) [[MAP]])
-; CHECK-NEXT:    call void @llvm.nvvm.prefetch.tensormap.p0(ptr [[GENERIC]])
 ; CHECK-NEXT:    ret void
 ;
   %generic = addrspacecast ptr addrspace(101) %map to ptr
@@ -69,9 +65,7 @@ define void @generic(ptr %map) {
 define void @call_properties(ptr addrspace(4) %map) {
 ; CHECK-LABEL: define void @call_properties(
 ; CHECK-SAME: ptr addrspace(4) [[MAP:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(4) [[MAP]] to ptr
-; CHECK-NEXT:    call void @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4) [[MAP]])
-; CHECK-NEXT:    call void @llvm.nvvm.prefetch.tensormap.p0(ptr nonnull align 64 [[GENERIC]]) #[[ATTR1:[0-9]+]] [ "test"(i32 42) ]
+; CHECK-NEXT:    call void @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4) nonnull align 64 [[MAP]]) #[[ATTR1:[0-9]+]] [ "test"(i32 42) ]
 ; CHECK-NEXT:    ret void
 ;
   %generic = addrspacecast ptr addrspace(4) %map to ptr

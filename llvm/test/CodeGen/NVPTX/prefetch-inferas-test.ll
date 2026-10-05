@@ -13,20 +13,14 @@ target triple = "nvptx64-unknown-unknown"
 define void @test_infer_const_from_cast() {
 ; INFER-LABEL: define void @test_infer_const_from_cast() {
 ; INFER-NEXT:  [[ENTRY:.*:]]
-; INFER-NEXT:    [[CASTED:%.*]] = addrspacecast ptr addrspace(4) @constant_tensormap to ptr
 ; INFER-NEXT:    call void @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4) @constant_tensormap)
-; INFER-NEXT:    call void @llvm.nvvm.prefetch.tensormap.p0(ptr [[CASTED]])
 ; INFER-NEXT:    ret void
 ;
 ; PTX-LABEL: test_infer_const_from_cast(
 ; PTX:       {
-; PTX-NEXT:    .reg .b64 %rd<3>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    prefetch.const.tensormap [constant_tensormap];
-; PTX-NEXT:    mov.b64 %rd1, constant_tensormap;
-; PTX-NEXT:    cvta.const.u64 %rd2, %rd1;
-; PTX-NEXT:    prefetch.tensormap [%rd2];
 ; PTX-NEXT:    ret;
 entry:
   %casted = addrspacecast ptr addrspace(4) @constant_tensormap to ptr
@@ -39,20 +33,16 @@ define void @test_const_to_generic_cast(ptr addrspace(4) %const_ptr) {
 ; INFER-LABEL: define void @test_const_to_generic_cast(
 ; INFER-SAME: ptr addrspace(4) [[CONST_PTR:%.*]]) {
 ; INFER-NEXT:  [[ENTRY:.*:]]
-; INFER-NEXT:    [[CAST:%.*]] = addrspacecast ptr addrspace(4) [[CONST_PTR]] to ptr
 ; INFER-NEXT:    call void @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4) [[CONST_PTR]])
-; INFER-NEXT:    call void @llvm.nvvm.prefetch.tensormap.p0(ptr [[CAST]])
 ; INFER-NEXT:    ret void
 ;
 ; PTX-LABEL: test_const_to_generic_cast(
 ; PTX:       {
-; PTX-NEXT:    .reg .b64 %rd<3>;
+; PTX-NEXT:    .reg .b64 %rd<2>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    ld.param.b64 %rd1, [test_const_to_generic_cast_param_0];
-; PTX-NEXT:    cvta.const.u64 %rd2, %rd1;
 ; PTX-NEXT:    prefetch.const.tensormap [%rd1];
-; PTX-NEXT:    prefetch.tensormap [%rd2];
 ; PTX-NEXT:    ret;
 entry:
   %cast = addrspacecast ptr addrspace(4) %const_ptr to ptr
@@ -86,20 +76,16 @@ define void @test_param_to_generic_cast(ptr addrspace(101) %param_ptr) {
 ; INFER-LABEL: define void @test_param_to_generic_cast(
 ; INFER-SAME: ptr addrspace(101) [[PARAM_PTR:%.*]]) {
 ; INFER-NEXT:  [[ENTRY:.*:]]
-; INFER-NEXT:    [[CAST:%.*]] = addrspacecast ptr addrspace(101) [[PARAM_PTR]] to ptr
 ; INFER-NEXT:    call void @llvm.nvvm.prefetch.tensormap.p101(ptr addrspace(101) [[PARAM_PTR]])
-; INFER-NEXT:    call void @llvm.nvvm.prefetch.tensormap.p0(ptr [[CAST]])
 ; INFER-NEXT:    ret void
 ;
 ; PTX-LABEL: test_param_to_generic_cast(
 ; PTX:       {
-; PTX-NEXT:    .reg .b64 %rd<3>;
+; PTX-NEXT:    .reg .b64 %rd<2>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    ld.param.b64 %rd1, [test_param_to_generic_cast_param_0];
-; PTX-NEXT:    cvta.param.u64 %rd2, %rd1;
 ; PTX-NEXT:    prefetch.param.tensormap [%rd1];
-; PTX-NEXT:    prefetch.tensormap [%rd2];
 ; PTX-NEXT:    ret;
 entry:
   %cast = addrspacecast ptr addrspace(101) %param_ptr to ptr
@@ -111,20 +97,14 @@ entry:
 define void @test_infer_through_multiple_casts() {
 ; INFER-LABEL: define void @test_infer_through_multiple_casts() {
 ; INFER-NEXT:  [[ENTRY:.*:]]
-; INFER-NEXT:    [[CAST3:%.*]] = addrspacecast ptr addrspace(4) @constant_tensormap to ptr
 ; INFER-NEXT:    call void @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4) @constant_tensormap)
-; INFER-NEXT:    call void @llvm.nvvm.prefetch.tensormap.p0(ptr [[CAST3]])
 ; INFER-NEXT:    ret void
 ;
 ; PTX-LABEL: test_infer_through_multiple_casts(
 ; PTX:       {
-; PTX-NEXT:    .reg .b64 %rd<3>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    prefetch.const.tensormap [constant_tensormap];
-; PTX-NEXT:    mov.b64 %rd1, constant_tensormap;
-; PTX-NEXT:    cvta.const.u64 %rd2, %rd1;
-; PTX-NEXT:    prefetch.tensormap [%rd2];
 ; PTX-NEXT:    ret;
 entry:
   %cast1 = addrspacecast ptr addrspace(4) @constant_tensormap to ptr
@@ -140,20 +120,16 @@ define ptx_kernel void @test_param_to_generic_cast_kernel(ptr addrspace(101) %pa
 ; INFER-LABEL: define ptx_kernel void @test_param_to_generic_cast_kernel(
 ; INFER-SAME: ptr addrspace(101) [[PARAM_PTR:%.*]]) {
 ; INFER-NEXT:  [[ENTRY:.*:]]
-; INFER-NEXT:    [[CAST:%.*]] = addrspacecast ptr addrspace(101) [[PARAM_PTR]] to ptr
 ; INFER-NEXT:    call void @llvm.nvvm.prefetch.tensormap.p101(ptr addrspace(101) [[PARAM_PTR]])
-; INFER-NEXT:    call void @llvm.nvvm.prefetch.tensormap.p0(ptr [[CAST]])
 ; INFER-NEXT:    ret void
 ;
 ; PTX-LABEL: test_param_to_generic_cast_kernel(
 ; PTX:       {
-; PTX-NEXT:    .reg .b64 %rd<3>;
+; PTX-NEXT:    .reg .b64 %rd<2>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    ld.param.b64 %rd1, [test_param_to_generic_cast_kernel_param_0];
-; PTX-NEXT:    cvta.param.u64 %rd2, %rd1;
 ; PTX-NEXT:    prefetch.param.tensormap [%rd1];
-; PTX-NEXT:    prefetch.tensormap [%rd2];
 ; PTX-NEXT:    ret;
 entry:
   %cast = addrspacecast ptr addrspace(101) %param_ptr to ptr
@@ -166,20 +142,14 @@ entry:
 define ptx_kernel void @test_infer_through_multiple_casts_kernel() {
 ; INFER-LABEL: define ptx_kernel void @test_infer_through_multiple_casts_kernel() {
 ; INFER-NEXT:  [[ENTRY:.*:]]
-; INFER-NEXT:    [[CAST3:%.*]] = addrspacecast ptr addrspace(4) @constant_tensormap to ptr
 ; INFER-NEXT:    call void @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4) @constant_tensormap)
-; INFER-NEXT:    call void @llvm.nvvm.prefetch.tensormap.p0(ptr [[CAST3]])
 ; INFER-NEXT:    ret void
 ;
 ; PTX-LABEL: test_infer_through_multiple_casts_kernel(
 ; PTX:       {
-; PTX-NEXT:    .reg .b64 %rd<3>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    prefetch.const.tensormap [constant_tensormap];
-; PTX-NEXT:    mov.b64 %rd1, constant_tensormap;
-; PTX-NEXT:    cvta.const.u64 %rd2, %rd1;
-; PTX-NEXT:    prefetch.tensormap [%rd2];
 ; PTX-NEXT:    ret;
 entry:
   %cast1 = addrspacecast ptr addrspace(4) @constant_tensormap to ptr

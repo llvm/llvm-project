@@ -16,8 +16,7 @@ declare void @llvm.nvvm.cp.async.mbarrier.arrive.noinc(ptr)
 define void @shared_init(ptr addrspace(3) %bar, i32 %count, i64 %state) {
 ; CHECK-LABEL: define void @shared_init(
 ; CHECK-SAME: ptr addrspace(3) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(3) [[BAR]] to ptr
-; CHECK-NEXT:    call void @llvm.nvvm.mbarrier.init.p0(ptr [[GENERIC]], i32 [[COUNT]], /* layout=v0 */ i32 0)
+; CHECK-NEXT:    call void @llvm.nvvm.mbarrier.init.p3(ptr addrspace(3) [[BAR]], i32 [[COUNT]], /* layout=v0 */ i32 0)
 ; CHECK-NEXT:    ret void
 ;
   %generic = addrspacecast ptr addrspace(3) %bar to ptr
@@ -28,8 +27,7 @@ define void @shared_init(ptr addrspace(3) %bar, i32 %count, i64 %state) {
 define void @shared_init_layout(ptr addrspace(3) %bar, i32 %count, i64 %state) {
 ; CHECK-LABEL: define void @shared_init_layout(
 ; CHECK-SAME: ptr addrspace(3) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(3) [[BAR]] to ptr
-; CHECK-NEXT:    call void @llvm.nvvm.mbarrier.init.p0(ptr [[GENERIC]], i32 [[COUNT]], /* layout=v1 */ i32 1)
+; CHECK-NEXT:    call void @llvm.nvvm.mbarrier.init.p3(ptr addrspace(3) [[BAR]], i32 [[COUNT]], /* layout=v1 */ i32 1)
 ; CHECK-NEXT:    ret void
 ;
   %generic = addrspacecast ptr addrspace(3) %bar to ptr
@@ -40,8 +38,7 @@ define void @shared_init_layout(ptr addrspace(3) %bar, i32 %count, i64 %state) {
 define void @shared_inval(ptr addrspace(3) %bar, i32 %count, i64 %state) {
 ; CHECK-LABEL: define void @shared_inval(
 ; CHECK-SAME: ptr addrspace(3) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(3) [[BAR]] to ptr
-; CHECK-NEXT:    call void @llvm.nvvm.mbarrier.inval(ptr [[GENERIC]])
+; CHECK-NEXT:    call void @llvm.nvvm.mbarrier.inval.shared(ptr addrspace(3) [[BAR]])
 ; CHECK-NEXT:    ret void
 ;
   %generic = addrspacecast ptr addrspace(3) %bar to ptr
@@ -52,8 +49,7 @@ define void @shared_inval(ptr addrspace(3) %bar, i32 %count, i64 %state) {
 define i1 @shared_check_layout(ptr addrspace(3) %bar, i32 %count, i64 %state) {
 ; CHECK-LABEL: define i1 @shared_check_layout(
 ; CHECK-SAME: ptr addrspace(3) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(3) [[BAR]] to ptr
-; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.nvvm.mbarrier.check_layout.p0(ptr [[GENERIC]], /* layout=v1 */ i32 1)
+; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.nvvm.mbarrier.check_layout.p3(ptr addrspace(3) [[BAR]], /* layout=v1 */ i32 1)
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %generic = addrspacecast ptr addrspace(3) %bar to ptr
@@ -64,8 +60,7 @@ define i1 @shared_check_layout(ptr addrspace(3) %bar, i32 %count, i64 %state) {
 define i64 @shared_arrive(ptr addrspace(3) %bar, i32 %count, i64 %state) {
 ; CHECK-LABEL: define i64 @shared_arrive(
 ; CHECK-SAME: ptr addrspace(3) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(3) [[BAR]] to ptr
-; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.nvvm.mbarrier.arrive(ptr [[GENERIC]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.nvvm.mbarrier.arrive.shared(ptr addrspace(3) [[BAR]])
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
   %generic = addrspacecast ptr addrspace(3) %bar to ptr
@@ -76,8 +71,7 @@ define i64 @shared_arrive(ptr addrspace(3) %bar, i32 %count, i64 %state) {
 define i64 @shared_arrive_no_complete(ptr addrspace(3) %bar, i32 %count, i64 %state) {
 ; CHECK-LABEL: define i64 @shared_arrive_no_complete(
 ; CHECK-SAME: ptr addrspace(3) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(3) [[BAR]] to ptr
-; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.nvvm.mbarrier.arrive.noComplete(ptr [[GENERIC]], i32 [[COUNT]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.nvvm.mbarrier.arrive.noComplete.shared(ptr addrspace(3) [[BAR]], i32 [[COUNT]])
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
   %generic = addrspacecast ptr addrspace(3) %bar to ptr
@@ -88,8 +82,7 @@ define i64 @shared_arrive_no_complete(ptr addrspace(3) %bar, i32 %count, i64 %st
 define i64 @shared_arrive_drop(ptr addrspace(3) %bar, i32 %count, i64 %state) {
 ; CHECK-LABEL: define i64 @shared_arrive_drop(
 ; CHECK-SAME: ptr addrspace(3) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(3) [[BAR]] to ptr
-; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.nvvm.mbarrier.arrive.drop(ptr [[GENERIC]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.nvvm.mbarrier.arrive.drop.shared(ptr addrspace(3) [[BAR]])
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
   %generic = addrspacecast ptr addrspace(3) %bar to ptr
@@ -100,8 +93,7 @@ define i64 @shared_arrive_drop(ptr addrspace(3) %bar, i32 %count, i64 %state) {
 define i64 @shared_arrive_drop_no_complete(ptr addrspace(3) %bar, i32 %count, i64 %state) {
 ; CHECK-LABEL: define i64 @shared_arrive_drop_no_complete(
 ; CHECK-SAME: ptr addrspace(3) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(3) [[BAR]] to ptr
-; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.nvvm.mbarrier.arrive.drop.noComplete(ptr [[GENERIC]], i32 [[COUNT]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.nvvm.mbarrier.arrive.drop.noComplete.shared(ptr addrspace(3) [[BAR]], i32 [[COUNT]])
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
   %generic = addrspacecast ptr addrspace(3) %bar to ptr
@@ -112,8 +104,7 @@ define i64 @shared_arrive_drop_no_complete(ptr addrspace(3) %bar, i32 %count, i6
 define i1 @shared_test_wait(ptr addrspace(3) %bar, i32 %count, i64 %state) {
 ; CHECK-LABEL: define i1 @shared_test_wait(
 ; CHECK-SAME: ptr addrspace(3) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(3) [[BAR]] to ptr
-; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.nvvm.mbarrier.test.wait(ptr [[GENERIC]], i64 [[STATE]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.nvvm.mbarrier.test.wait.shared(ptr addrspace(3) [[BAR]], i64 [[STATE]])
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %generic = addrspacecast ptr addrspace(3) %bar to ptr
@@ -124,8 +115,7 @@ define i1 @shared_test_wait(ptr addrspace(3) %bar, i32 %count, i64 %state) {
 define void @shared_cp_async_arrive(ptr addrspace(3) %bar, i32 %count, i64 %state) {
 ; CHECK-LABEL: define void @shared_cp_async_arrive(
 ; CHECK-SAME: ptr addrspace(3) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(3) [[BAR]] to ptr
-; CHECK-NEXT:    call void @llvm.nvvm.cp.async.mbarrier.arrive(ptr [[GENERIC]])
+; CHECK-NEXT:    call void @llvm.nvvm.cp.async.mbarrier.arrive.shared(ptr addrspace(3) [[BAR]])
 ; CHECK-NEXT:    ret void
 ;
   %generic = addrspacecast ptr addrspace(3) %bar to ptr
@@ -136,8 +126,7 @@ define void @shared_cp_async_arrive(ptr addrspace(3) %bar, i32 %count, i64 %stat
 define void @shared_cp_async_arrive_noinc(ptr addrspace(3) %bar, i32 %count, i64 %state) {
 ; CHECK-LABEL: define void @shared_cp_async_arrive_noinc(
 ; CHECK-SAME: ptr addrspace(3) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(3) [[BAR]] to ptr
-; CHECK-NEXT:    call void @llvm.nvvm.cp.async.mbarrier.arrive.noinc(ptr [[GENERIC]])
+; CHECK-NEXT:    call void @llvm.nvvm.cp.async.mbarrier.arrive.noinc.shared(ptr addrspace(3) [[BAR]])
 ; CHECK-NEXT:    ret void
 ;
   %generic = addrspacecast ptr addrspace(3) %bar to ptr
@@ -286,8 +275,7 @@ define i64 @param_arrive(ptr addrspace(101) %bar, i32 %count, i64 %state) {
 define void @call_properties(ptr addrspace(3) %bar, i32 %count) {
 ; CHECK-LABEL: define void @call_properties(
 ; CHECK-SAME: ptr addrspace(3) [[BAR:%.*]], i32 [[COUNT:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(3) [[BAR]] to ptr
-; CHECK-NEXT:    call void @llvm.nvvm.mbarrier.init.p0(ptr nonnull align 8 [[GENERIC]], i32 [[COUNT]], /* layout=v0 */ i32 0) #[[ATTR5:[0-9]+]] [ "test"(i32 42) ]
+; CHECK-NEXT:    call void @llvm.nvvm.mbarrier.init.p3(ptr addrspace(3) nonnull align 8 [[BAR]], i32 [[COUNT]], /* layout=v0 */ i32 0) #[[ATTR5:[0-9]+]] [ "test"(i32 42) ]
 ; CHECK-NEXT:    ret void
 ;
   %generic = addrspacecast ptr addrspace(3) %bar to ptr
@@ -299,9 +287,8 @@ define void @call_properties(ptr addrspace(3) %bar, i32 %count) {
 define void @multiple_users(ptr addrspace(3) %bar, i32 %count) {
 ; CHECK-LABEL: define void @multiple_users(
 ; CHECK-SAME: ptr addrspace(3) [[BAR:%.*]], i32 [[COUNT:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(3) [[BAR]] to ptr
-; CHECK-NEXT:    call void @llvm.nvvm.mbarrier.init.p0(ptr [[GENERIC]], i32 [[COUNT]], /* layout=v0 */ i32 0)
-; CHECK-NEXT:    call void @llvm.nvvm.mbarrier.inval(ptr [[GENERIC]])
+; CHECK-NEXT:    call void @llvm.nvvm.mbarrier.init.p3(ptr addrspace(3) [[BAR]], i32 [[COUNT]], /* layout=v0 */ i32 0)
+; CHECK-NEXT:    call void @llvm.nvvm.mbarrier.inval.shared(ptr addrspace(3) [[BAR]])
 ; CHECK-NEXT:    ret void
 ;
   %generic = addrspacecast ptr addrspace(3) %bar to ptr
@@ -314,9 +301,8 @@ define void @multiple_users(ptr addrspace(3) %bar, i32 %count) {
 define void @shared_gep(ptr addrspace(3) %bar, i64 %index, i32 %count) {
 ; CHECK-LABEL: define void @shared_gep(
 ; CHECK-SAME: ptr addrspace(3) [[BAR:%.*]], i64 [[INDEX:%.*]], i32 [[COUNT:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(3) [[BAR]] to ptr
-; CHECK-NEXT:    [[ELEMENT:%.*]] = getelementptr i64, ptr [[GENERIC]], i64 [[INDEX]]
-; CHECK-NEXT:    call void @llvm.nvvm.mbarrier.init.p0(ptr [[ELEMENT]], i32 [[COUNT]], /* layout=v0 */ i32 0)
+; CHECK-NEXT:    [[ELEMENT:%.*]] = getelementptr i64, ptr addrspace(3) [[BAR]], i64 [[INDEX]]
+; CHECK-NEXT:    call void @llvm.nvvm.mbarrier.init.p3(ptr addrspace(3) [[ELEMENT]], i32 [[COUNT]], /* layout=v0 */ i32 0)
 ; CHECK-NEXT:    ret void
 ;
   %generic = addrspacecast ptr addrspace(3) %bar to ptr
@@ -330,7 +316,7 @@ define void @shared_gep(ptr addrspace(3) %bar, i64 %index, i32 %count) {
 define void @shared_constant(i32 %count) {
 ; CHECK-LABEL: define void @shared_constant(
 ; CHECK-SAME: i32 [[COUNT:%.*]]) {
-; CHECK-NEXT:    call void @llvm.nvvm.mbarrier.init.p0(ptr addrspacecast (ptr addrspace(3) @barrier to ptr), i32 [[COUNT]], /* layout=v0 */ i32 0)
+; CHECK-NEXT:    call void @llvm.nvvm.mbarrier.init.p3(ptr addrspace(3) @barrier, i32 [[COUNT]], /* layout=v0 */ i32 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.nvvm.mbarrier.init.p0(ptr addrspacecast (ptr addrspace(3) @barrier to ptr), i32 %count, i32 0)

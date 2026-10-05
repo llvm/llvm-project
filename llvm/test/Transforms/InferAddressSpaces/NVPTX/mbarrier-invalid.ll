@@ -18,15 +18,13 @@ declare void @llvm.nvvm.cp.async.mbarrier.arrive.noinc(ptr)
 define void @invalid_init(ptr addrspace(1) %bar, i32 %count, i64 %state) {
 ; CHECK-LABEL: define void @invalid_init(
 ; CHECK-SAME: ptr addrspace(1) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(1) [[BAR]] to ptr
-; CHECK-NEXT:    call void @llvm.nvvm.mbarrier.init.p0(ptr [[GENERIC]], i32 [[COUNT]], /* layout=v0 */ i32 0)
+; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    ret void
 ;
 ; SIMPLIFY-LABEL: define void @invalid_init(
 ; SIMPLIFY-SAME: ptr addrspace(1) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; SIMPLIFY-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(1) [[BAR]] to ptr
-; SIMPLIFY-NEXT:    call void @llvm.nvvm.mbarrier.init.p0(ptr [[GENERIC]], i32 [[COUNT]], /* layout=v0 */ i32 0)
-; SIMPLIFY-NEXT:    ret void
+; SIMPLIFY-NEXT:    call void @llvm.trap()
+; SIMPLIFY-NEXT:    unreachable
 ;
   %generic = addrspacecast ptr addrspace(1) %bar to ptr
   call void @llvm.nvvm.mbarrier.init.p0(ptr %generic, i32 %count, i32 0)
@@ -36,15 +34,13 @@ define void @invalid_init(ptr addrspace(1) %bar, i32 %count, i64 %state) {
 define void @invalid_init_layout(ptr addrspace(4) %bar, i32 %count, i64 %state) {
 ; CHECK-LABEL: define void @invalid_init_layout(
 ; CHECK-SAME: ptr addrspace(4) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(4) [[BAR]] to ptr
-; CHECK-NEXT:    call void @llvm.nvvm.mbarrier.init.p0(ptr [[GENERIC]], i32 [[COUNT]], /* layout=v1 */ i32 1)
+; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    ret void
 ;
 ; SIMPLIFY-LABEL: define void @invalid_init_layout(
 ; SIMPLIFY-SAME: ptr addrspace(4) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; SIMPLIFY-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(4) [[BAR]] to ptr
-; SIMPLIFY-NEXT:    call void @llvm.nvvm.mbarrier.init.p0(ptr [[GENERIC]], i32 [[COUNT]], /* layout=v1 */ i32 1)
-; SIMPLIFY-NEXT:    ret void
+; SIMPLIFY-NEXT:    call void @llvm.trap()
+; SIMPLIFY-NEXT:    unreachable
 ;
   %generic = addrspacecast ptr addrspace(4) %bar to ptr
   call void @llvm.nvvm.mbarrier.init.p0(ptr %generic, i32 %count, i32 1)
@@ -54,15 +50,13 @@ define void @invalid_init_layout(ptr addrspace(4) %bar, i32 %count, i64 %state) 
 define void @invalid_inval(ptr addrspace(5) %bar, i32 %count, i64 %state) {
 ; CHECK-LABEL: define void @invalid_inval(
 ; CHECK-SAME: ptr addrspace(5) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[BAR]] to ptr
-; CHECK-NEXT:    call void @llvm.nvvm.mbarrier.inval(ptr [[GENERIC]])
+; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    ret void
 ;
 ; SIMPLIFY-LABEL: define void @invalid_inval(
 ; SIMPLIFY-SAME: ptr addrspace(5) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; SIMPLIFY-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[BAR]] to ptr
-; SIMPLIFY-NEXT:    call void @llvm.nvvm.mbarrier.inval(ptr [[GENERIC]])
-; SIMPLIFY-NEXT:    ret void
+; SIMPLIFY-NEXT:    call void @llvm.trap()
+; SIMPLIFY-NEXT:    unreachable
 ;
   %generic = addrspacecast ptr addrspace(5) %bar to ptr
   call void @llvm.nvvm.mbarrier.inval(ptr %generic)
@@ -72,15 +66,13 @@ define void @invalid_inval(ptr addrspace(5) %bar, i32 %count, i64 %state) {
 define i1 @invalid_check_layout(ptr addrspace(1) %bar, i32 %count, i64 %state) {
 ; CHECK-LABEL: define i1 @invalid_check_layout(
 ; CHECK-SAME: ptr addrspace(1) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(1) [[BAR]] to ptr
-; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.nvvm.mbarrier.check_layout.p0(ptr [[GENERIC]], /* layout=v1 */ i32 1)
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    ret i1 poison
 ;
 ; SIMPLIFY-LABEL: define i1 @invalid_check_layout(
 ; SIMPLIFY-SAME: ptr addrspace(1) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; SIMPLIFY-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(1) [[BAR]] to ptr
-; SIMPLIFY-NEXT:    [[RESULT:%.*]] = call i1 @llvm.nvvm.mbarrier.check_layout.p0(ptr [[GENERIC]], /* layout=v1 */ i32 1)
-; SIMPLIFY-NEXT:    ret i1 [[RESULT]]
+; SIMPLIFY-NEXT:    call void @llvm.trap()
+; SIMPLIFY-NEXT:    unreachable
 ;
   %generic = addrspacecast ptr addrspace(1) %bar to ptr
   %result = call i1 @llvm.nvvm.mbarrier.check_layout.p0(ptr %generic, i32 1)
@@ -90,15 +82,13 @@ define i1 @invalid_check_layout(ptr addrspace(1) %bar, i32 %count, i64 %state) {
 define i64 @invalid_arrive(ptr addrspace(4) %bar, i32 %count, i64 %state) {
 ; CHECK-LABEL: define i64 @invalid_arrive(
 ; CHECK-SAME: ptr addrspace(4) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(4) [[BAR]] to ptr
-; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.nvvm.mbarrier.arrive(ptr [[GENERIC]])
-; CHECK-NEXT:    ret i64 [[RESULT]]
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    ret i64 poison
 ;
 ; SIMPLIFY-LABEL: define i64 @invalid_arrive(
 ; SIMPLIFY-SAME: ptr addrspace(4) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; SIMPLIFY-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(4) [[BAR]] to ptr
-; SIMPLIFY-NEXT:    [[RESULT:%.*]] = call i64 @llvm.nvvm.mbarrier.arrive(ptr [[GENERIC]])
-; SIMPLIFY-NEXT:    ret i64 [[RESULT]]
+; SIMPLIFY-NEXT:    call void @llvm.trap()
+; SIMPLIFY-NEXT:    unreachable
 ;
   %generic = addrspacecast ptr addrspace(4) %bar to ptr
   %result = call i64 @llvm.nvvm.mbarrier.arrive(ptr %generic)
@@ -108,15 +98,13 @@ define i64 @invalid_arrive(ptr addrspace(4) %bar, i32 %count, i64 %state) {
 define i64 @invalid_arrive_no_complete(ptr addrspace(5) %bar, i32 %count, i64 %state) {
 ; CHECK-LABEL: define i64 @invalid_arrive_no_complete(
 ; CHECK-SAME: ptr addrspace(5) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[BAR]] to ptr
-; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.nvvm.mbarrier.arrive.noComplete(ptr [[GENERIC]], i32 [[COUNT]])
-; CHECK-NEXT:    ret i64 [[RESULT]]
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    ret i64 poison
 ;
 ; SIMPLIFY-LABEL: define i64 @invalid_arrive_no_complete(
 ; SIMPLIFY-SAME: ptr addrspace(5) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; SIMPLIFY-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[BAR]] to ptr
-; SIMPLIFY-NEXT:    [[RESULT:%.*]] = call i64 @llvm.nvvm.mbarrier.arrive.noComplete(ptr [[GENERIC]], i32 [[COUNT]])
-; SIMPLIFY-NEXT:    ret i64 [[RESULT]]
+; SIMPLIFY-NEXT:    call void @llvm.trap()
+; SIMPLIFY-NEXT:    unreachable
 ;
   %generic = addrspacecast ptr addrspace(5) %bar to ptr
   %result = call i64 @llvm.nvvm.mbarrier.arrive.noComplete(ptr %generic, i32 %count)
@@ -126,15 +114,13 @@ define i64 @invalid_arrive_no_complete(ptr addrspace(5) %bar, i32 %count, i64 %s
 define i64 @invalid_arrive_drop(ptr addrspace(1) %bar, i32 %count, i64 %state) {
 ; CHECK-LABEL: define i64 @invalid_arrive_drop(
 ; CHECK-SAME: ptr addrspace(1) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(1) [[BAR]] to ptr
-; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.nvvm.mbarrier.arrive.drop(ptr [[GENERIC]])
-; CHECK-NEXT:    ret i64 [[RESULT]]
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    ret i64 poison
 ;
 ; SIMPLIFY-LABEL: define i64 @invalid_arrive_drop(
 ; SIMPLIFY-SAME: ptr addrspace(1) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; SIMPLIFY-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(1) [[BAR]] to ptr
-; SIMPLIFY-NEXT:    [[RESULT:%.*]] = call i64 @llvm.nvvm.mbarrier.arrive.drop(ptr [[GENERIC]])
-; SIMPLIFY-NEXT:    ret i64 [[RESULT]]
+; SIMPLIFY-NEXT:    call void @llvm.trap()
+; SIMPLIFY-NEXT:    unreachable
 ;
   %generic = addrspacecast ptr addrspace(1) %bar to ptr
   %result = call i64 @llvm.nvvm.mbarrier.arrive.drop(ptr %generic)
@@ -144,15 +130,13 @@ define i64 @invalid_arrive_drop(ptr addrspace(1) %bar, i32 %count, i64 %state) {
 define i64 @invalid_arrive_drop_no_complete(ptr addrspace(4) %bar, i32 %count, i64 %state) {
 ; CHECK-LABEL: define i64 @invalid_arrive_drop_no_complete(
 ; CHECK-SAME: ptr addrspace(4) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(4) [[BAR]] to ptr
-; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.nvvm.mbarrier.arrive.drop.noComplete(ptr [[GENERIC]], i32 [[COUNT]])
-; CHECK-NEXT:    ret i64 [[RESULT]]
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    ret i64 poison
 ;
 ; SIMPLIFY-LABEL: define i64 @invalid_arrive_drop_no_complete(
 ; SIMPLIFY-SAME: ptr addrspace(4) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; SIMPLIFY-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(4) [[BAR]] to ptr
-; SIMPLIFY-NEXT:    [[RESULT:%.*]] = call i64 @llvm.nvvm.mbarrier.arrive.drop.noComplete(ptr [[GENERIC]], i32 [[COUNT]])
-; SIMPLIFY-NEXT:    ret i64 [[RESULT]]
+; SIMPLIFY-NEXT:    call void @llvm.trap()
+; SIMPLIFY-NEXT:    unreachable
 ;
   %generic = addrspacecast ptr addrspace(4) %bar to ptr
   %result = call i64 @llvm.nvvm.mbarrier.arrive.drop.noComplete(ptr %generic, i32 %count)
@@ -162,15 +146,13 @@ define i64 @invalid_arrive_drop_no_complete(ptr addrspace(4) %bar, i32 %count, i
 define i1 @invalid_test_wait(ptr addrspace(5) %bar, i32 %count, i64 %state) {
 ; CHECK-LABEL: define i1 @invalid_test_wait(
 ; CHECK-SAME: ptr addrspace(5) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[BAR]] to ptr
-; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.nvvm.mbarrier.test.wait(ptr [[GENERIC]], i64 [[STATE]])
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    ret i1 poison
 ;
 ; SIMPLIFY-LABEL: define i1 @invalid_test_wait(
 ; SIMPLIFY-SAME: ptr addrspace(5) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; SIMPLIFY-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[BAR]] to ptr
-; SIMPLIFY-NEXT:    [[RESULT:%.*]] = call i1 @llvm.nvvm.mbarrier.test.wait(ptr [[GENERIC]], i64 [[STATE]])
-; SIMPLIFY-NEXT:    ret i1 [[RESULT]]
+; SIMPLIFY-NEXT:    call void @llvm.trap()
+; SIMPLIFY-NEXT:    unreachable
 ;
   %generic = addrspacecast ptr addrspace(5) %bar to ptr
   %result = call i1 @llvm.nvvm.mbarrier.test.wait(ptr %generic, i64 %state)
@@ -180,15 +162,13 @@ define i1 @invalid_test_wait(ptr addrspace(5) %bar, i32 %count, i64 %state) {
 define void @invalid_cp_async_arrive(ptr addrspace(1) %bar, i32 %count, i64 %state) {
 ; CHECK-LABEL: define void @invalid_cp_async_arrive(
 ; CHECK-SAME: ptr addrspace(1) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(1) [[BAR]] to ptr
-; CHECK-NEXT:    call void @llvm.nvvm.cp.async.mbarrier.arrive(ptr [[GENERIC]])
+; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    ret void
 ;
 ; SIMPLIFY-LABEL: define void @invalid_cp_async_arrive(
 ; SIMPLIFY-SAME: ptr addrspace(1) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; SIMPLIFY-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(1) [[BAR]] to ptr
-; SIMPLIFY-NEXT:    call void @llvm.nvvm.cp.async.mbarrier.arrive(ptr [[GENERIC]])
-; SIMPLIFY-NEXT:    ret void
+; SIMPLIFY-NEXT:    call void @llvm.trap()
+; SIMPLIFY-NEXT:    unreachable
 ;
   %generic = addrspacecast ptr addrspace(1) %bar to ptr
   call void @llvm.nvvm.cp.async.mbarrier.arrive(ptr %generic)
@@ -198,15 +178,13 @@ define void @invalid_cp_async_arrive(ptr addrspace(1) %bar, i32 %count, i64 %sta
 define void @invalid_cp_async_arrive_noinc(ptr addrspace(4) %bar, i32 %count, i64 %state) {
 ; CHECK-LABEL: define void @invalid_cp_async_arrive_noinc(
 ; CHECK-SAME: ptr addrspace(4) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(4) [[BAR]] to ptr
-; CHECK-NEXT:    call void @llvm.nvvm.cp.async.mbarrier.arrive.noinc(ptr [[GENERIC]])
+; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    ret void
 ;
 ; SIMPLIFY-LABEL: define void @invalid_cp_async_arrive_noinc(
 ; SIMPLIFY-SAME: ptr addrspace(4) [[BAR:%.*]], i32 [[COUNT:%.*]], i64 [[STATE:%.*]]) {
-; SIMPLIFY-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(4) [[BAR]] to ptr
-; SIMPLIFY-NEXT:    call void @llvm.nvvm.cp.async.mbarrier.arrive.noinc(ptr [[GENERIC]])
-; SIMPLIFY-NEXT:    ret void
+; SIMPLIFY-NEXT:    call void @llvm.trap()
+; SIMPLIFY-NEXT:    unreachable
 ;
   %generic = addrspacecast ptr addrspace(4) %bar to ptr
   call void @llvm.nvvm.cp.async.mbarrier.arrive.noinc(ptr %generic)
@@ -219,28 +197,25 @@ define i64 @conditional_invalid(i1 %cond, ptr addrspace(1) %bar) {
 ; CHECK-LABEL: define i64 @conditional_invalid(
 ; CHECK-SAME: i1 [[COND:%.*]], ptr addrspace(1) [[BAR:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(1) [[BAR]] to ptr
 ; CHECK-NEXT:    br i1 [[COND]], label %[[INVALID:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[INVALID]]:
 ; CHECK-NEXT:    call void @side_effect()
-; CHECK-NEXT:    [[STATE:%.*]] = call i64 @llvm.nvvm.mbarrier.arrive(ptr [[GENERIC]])
+; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RESULT:%.*]] = phi i64 [ [[STATE]], %[[INVALID]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[RESULT:%.*]] = phi i64 [ poison, %[[INVALID]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
 ; SIMPLIFY-LABEL: define i64 @conditional_invalid(
 ; SIMPLIFY-SAME: i1 [[COND:%.*]], ptr addrspace(1) [[BAR:%.*]]) {
-; SIMPLIFY-NEXT:  [[ENTRY:.*]]:
-; SIMPLIFY-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(1) [[BAR]] to ptr
+; SIMPLIFY-NEXT:  [[ENTRY:.*:]]
 ; SIMPLIFY-NEXT:    br i1 [[COND]], label %[[INVALID:.*]], label %[[EXIT:.*]]
 ; SIMPLIFY:       [[INVALID]]:
 ; SIMPLIFY-NEXT:    call void @side_effect()
-; SIMPLIFY-NEXT:    [[STATE:%.*]] = call i64 @llvm.nvvm.mbarrier.arrive(ptr [[GENERIC]])
-; SIMPLIFY-NEXT:    br label %[[EXIT]]
+; SIMPLIFY-NEXT:    call void @llvm.trap()
+; SIMPLIFY-NEXT:    unreachable
 ; SIMPLIFY:       [[EXIT]]:
-; SIMPLIFY-NEXT:    [[RESULT:%.*]] = phi i64 [ [[STATE]], %[[INVALID]] ], [ 0, %[[ENTRY]] ]
-; SIMPLIFY-NEXT:    ret i64 [[RESULT]]
+; SIMPLIFY-NEXT:    ret i64 0
 ;
 entry:
   %generic = addrspacecast ptr addrspace(1) %bar to ptr
@@ -258,17 +233,14 @@ exit:
 define void @multiple_invalid_users(ptr addrspace(1) %bar, i32 %count) {
 ; CHECK-LABEL: define void @multiple_invalid_users(
 ; CHECK-SAME: ptr addrspace(1) [[BAR:%.*]], i32 [[COUNT:%.*]]) {
-; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(1) [[BAR]] to ptr
-; CHECK-NEXT:    call void @llvm.nvvm.mbarrier.init.p0(ptr [[GENERIC]], i32 [[COUNT]], /* layout=v0 */ i32 0)
-; CHECK-NEXT:    call void @llvm.nvvm.mbarrier.inval(ptr [[GENERIC]])
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    ret void
 ;
 ; SIMPLIFY-LABEL: define void @multiple_invalid_users(
 ; SIMPLIFY-SAME: ptr addrspace(1) [[BAR:%.*]], i32 [[COUNT:%.*]]) {
-; SIMPLIFY-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(1) [[BAR]] to ptr
-; SIMPLIFY-NEXT:    call void @llvm.nvvm.mbarrier.init.p0(ptr [[GENERIC]], i32 [[COUNT]], /* layout=v0 */ i32 0)
-; SIMPLIFY-NEXT:    call void @llvm.nvvm.mbarrier.inval(ptr [[GENERIC]])
-; SIMPLIFY-NEXT:    ret void
+; SIMPLIFY-NEXT:    call void @llvm.trap()
+; SIMPLIFY-NEXT:    unreachable
 ;
   %generic = addrspacecast ptr addrspace(1) %bar to ptr
   call void @llvm.nvvm.mbarrier.init.p0(ptr %generic, i32 %count, i32 0)
