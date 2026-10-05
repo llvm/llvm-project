@@ -2654,7 +2654,7 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   // if CR0 is dead at that point. CR0 may still be live from an earlier
   // record-form instruction whose reader is scheduled after MI: expanding the
   // ANDI_rec_1_{EQ,GT}_BIT pseudos produces COPYs of CR0 subregisters, and
-  // nothing keeps those adjacent to their andi. once other instructions are
+  // nothing keeps those adjacent to their `andi.` once other instructions are
   // scheduled in between. The backward scan above only covers the range
   // between MI and CmpInstr, so it cannot see such a reader. Query CR0's
   // liveness right after MI, scanning to the end of the block like the other
