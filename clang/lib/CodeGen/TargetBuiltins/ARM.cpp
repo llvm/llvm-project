@@ -7416,13 +7416,12 @@ CodeGenFunction::EmitAArch64CpuSupports(ArrayRef<StringRef> FeaturesStrs) {
       llvm::BasicBlock *LowerBlock = Builder.GetInsertBlock();
       llvm::BasicBlock *ExtensionBlock =
           createBasicBlock("cpu_supports.extension", CurFn);
-      llvm::BasicBlock *EndBlock =
-          createBasicBlock("cpu_supports.end", CurFn);
+      llvm::BasicBlock *EndBlock = createBasicBlock("cpu_supports.end", CurFn);
       Builder.CreateCondBr(Result, ExtensionBlock, EndBlock);
 
       Builder.SetInsertPoint(ExtensionBlock);
-      Value *ExtendedFeatures = Builder.CreateGEP(
-          Int8Ty, AArch64CPUFeatures, ConstantInt::get(Int64Ty, 8));
+      Value *ExtendedFeatures = Builder.CreateGEP(Int8Ty, AArch64CPUFeatures,
+                                                  ConstantInt::get(Int64Ty, 8));
       Features = Builder.CreateAlignedLoad(Int64Ty, ExtendedFeatures,
                                            CharUnits::fromQuantity(8));
       Mask = Builder.getInt(UpperMask);
