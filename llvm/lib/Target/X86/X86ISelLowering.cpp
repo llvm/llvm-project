@@ -53844,14 +53844,10 @@ static SDValue combineOrCmpEqZeroToCtlzSrl(SDNode *N, SelectionDAG &DAG,
 /// This is used to detect patterns where both (and D, 1) and (srl D, 1)
 /// are computed, allowing us to use the carry flag from SHR for both.
 static SDNode *findSrlBy1User(SDValue D) {
-  for (SDNode *User : D.getNode()->users()) {
-    if (User->getOpcode() == ISD::SRL && User->getOperand(0) == D) {
-      if (auto *ShAmtC = dyn_cast<ConstantSDNode>(User->getOperand(1))) {
-        if (ShAmtC->getZExtValue() == 1)
-          return User;
-      }
-    }
-  }
+  using namespace SDPatternMatch;
+  for (SDNode *User : D.getNode()->users())
+    if (sd_match(User, m_Srl(m_Specific(D), m_One())))
+      return User;
   return nullptr;
 }
 
