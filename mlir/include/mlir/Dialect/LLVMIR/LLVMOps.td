@@ -459,21 +459,20 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
   string mlirBuilder = [{
     auto *loadInst = cast<llvm::LoadInst>(inst);
     unsigned alignment = loadInst->getAlign().value();
-    auto loadOp = LLVM::LoadOp::create($_builder, $_location, $_resultType,
-        $addr, alignment, loadInst->isVolatile(),
+    $res = LLVM::LoadOp::create($_builder, $_location, $_resultType, $addr,
+        alignment, loadInst->isVolatile(),
         loadInst->hasMetadata(llvm::LLVMContext::MD_nontemporal),
         loadInst->hasMetadata(llvm::LLVMContext::MD_invariant_load),
         loadInst->hasMetadata(llvm::LLVMContext::MD_invariant_group),
+        loadInst->hasMetadata(llvm::LLVMContext::MD_noundef),
         convertAtomicOrderingFromLLVM(loadInst->getOrdering()),
         getLLVMSyncScope(loadInst));
-    loadOp.setNoundef(loadInst->hasMetadata(llvm::LLVMContext::MD_noundef));
-    $res = loadOp;
   }];
   let builders = [
     OpBuilder<(ins "Type":$type, "Value":$addr,
       CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
       CArg<"bool", "false">:$isNonTemporal, CArg<"bool", "false">:$isInvariant,
-      CArg<"bool", "false">:$isInvariantGroup,
+      CArg<"bool", "false">:$isInvariantGroup, CArg<"bool", "false">:$isNoundef,
       CArg<"AtomicOrdering", "AtomicOrdering::not_atomic">:$ordering,
       CArg<"StringRef", "StringRef()">:$syncscope)>
   ];
