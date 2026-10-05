@@ -250,7 +250,6 @@ define <1 x half> @scalarize_v1f16(ptr %p, <1 x i1> %mask, <1 x half> %passthru)
   ret <1 x half> %ret
 }
 
-declare <1 x half> @llvm.masked.load.v1f16.p0(ptr, i32, <1 x i1>, <1 x half>)
 declare <2 x i24> @llvm.masked.load.v2i24.p0(ptr, i32, <2 x i1>, <2 x i24>)
 declare <2 x i48> @llvm.masked.load.v2i48.p0(ptr, i32, <2 x i1>, <2 x i48>)
 declare <2 x i64> @llvm.masked.load.v2i64.p0(ptr, i32, <2 x i1>, <2 x i64>)

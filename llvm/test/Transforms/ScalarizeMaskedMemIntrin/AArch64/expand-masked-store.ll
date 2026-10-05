@@ -147,5 +147,4 @@ define void @scalarize_v1f16(ptr %p, <1 x i1> %mask, <1 x half> %data) vscale_ra
   ret void
 }
 
-declare void @llvm.masked.store.v1f16.p0(<1 x half>, ptr, i32, <1 x i1>)
 declare void @llvm.masked.store.v2i64.p0(<2 x i64>, ptr, i32, <2 x i1>)
