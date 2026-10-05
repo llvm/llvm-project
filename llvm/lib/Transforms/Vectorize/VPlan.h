@@ -1438,13 +1438,14 @@ private:
   /// An optional name that can be used for the generated IR instruction.
   std::string Name;
 
-  /// Whether this VPInstruction produces a single scalar value, for opcodes
-  /// where it cannot be derived from the opcode.
-  const bool IsSingleScalar;
+  /// Whether this VPInstruction produces a single scalar value.
+  const bool GeneratesSingleScalar;
 
-  /// Returns true if we can generate a scalar for the first lane only if
-  /// needed.
-  bool doesGenerateSingleScalar() const;
+  /// Returns true if we can generate scalar either because the recipe is known
+  /// to generate one or because only its first lane is used.
+  /// TODO: Replace remaining inferred cases with inferGeneratesSingleScalar
+  /// lookup.
+  bool inferGeneratesSingleScalar() const;
 
   /// Utility method serving execute: Generates either a single-scalar or vector
   /// value. \p GenerateSingleScalar determines whether to generate a
@@ -1469,7 +1470,8 @@ public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                 const VPIRFlags &Flags = {}, const VPIRMetadata &MD = {},
                 DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "",
-                Type *ResultTy = nullptr, bool IsSingleScalar = false);
+                Type *ResultTy = nullptr,
+                std::optional<bool> GeneratesSingleScalar = std::nullopt);
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPInstructionSC)
 
@@ -1481,7 +1483,7 @@ public:
                                    Type *ResultTy = nullptr) {
     auto *New =
         new VPInstruction(Opcode, NewOperands, *this, *this, getDebugLoc(),
-                          Name, ResultTy, IsSingleScalar);
+                          Name, ResultTy, GeneratesSingleScalar);
     if (getUnderlyingValue())
       New->setUnderlyingValue(getUnderlyingInstr());
     return New;
@@ -1580,7 +1582,7 @@ public:
 
   /// Returns true if the recipe only uses scalars of operand \p Op.
   bool usesScalars(const VPValue *Op) const override {
-    return isSingleScalar() || usesFirstLaneOnly(Op);
+    return doesGenerateSingleScalar() || usesFirstLaneOnly(Op);
   }
 
   /// Returns true if the recipe only uses the first part of operand \p Op.
@@ -1591,7 +1593,7 @@ public:
   bool isVectorToScalar() const;
 
   /// Returns true if the recipe produces a single scalar value.
-  bool isSingleScalar() const;
+  bool doesGenerateSingleScalar() const { return GeneratesSingleScalar; }
 
   /// Returns the symbolic name assigned to the VPInstruction.
   StringRef getName() const { return Name; }
