@@ -53,6 +53,7 @@ define i32 @findiv_mul_pow2_sunk(ptr %a, i32 %n) {
 ;
 entry:
   br label %loop
+
 loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %rdx = phi i32 [ -1, %entry ], [ %sel, %loop ]
@@ -64,6 +65,7 @@ loop:
   %iv.next = add nuw nsw i32 %iv, 1
   %ec = icmp eq i32 %iv.next, %n
   br i1 %ec, label %done, label %loop
+
 done:
   ret i32 %sel
 }
