@@ -50,6 +50,12 @@ struct ol_platform_impl_t {
     return llvm::ArrayRef(Devices);
   }
 
+  /// Whether the platform has been initialized and has at least one device.
+  /// Does not trigger initialization.
+  bool isActive() const {
+    return Plugin && Plugin->is_initialized() && Plugin->getNumDevices() > 0;
+  }
+
   /// Direct access to the plugin, may be uninitialized if accessed here.
   std::unique_ptr<GenericPluginTy> Plugin;
 
@@ -492,6 +498,18 @@ Error olPlatformRegisterRPCCallback_impl(ol_platform_handle_t Platform,
 Error olIteratePlatforms_impl(ol_platform_iterate_cb_t Callback,
                               void *UserData) {
   for (auto &Platform : OffloadContext::get().Platforms) {
+    if (!Callback(Platform.get(), UserData))
+      return Error::success();
+  }
+
+  return Error::success();
+}
+
+Error olIterateActivePlatforms_impl(ol_platform_iterate_cb_t Callback,
+                                    void *UserData) {
+  for (auto &Platform : OffloadContext::get().Platforms) {
+    if (!Platform->isActive())
+      continue;
     if (!Callback(Platform.get(), UserData))
       return Error::success();
   }

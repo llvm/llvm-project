@@ -120,3 +120,19 @@ def olIteratePlatforms : Function {
     Return<"OL_ERRC_INVALID_PLATFORM">
   ];
 }
+
+def olIterateActivePlatforms : Function {
+  let desc = "Iterates over all active platforms, calling the callback for each platform.";
+  let details = [
+    "A platform is active if it has already been initialized and has at least one device.",
+    "This function does not initialize any platform.",
+    "If the user-provided callback returns `false`, the iteration is stopped."
+  ];
+  let params = [
+    Param<"ol_platform_iterate_cb_t", "Callback", "User-provided function called for each active platform", PARAM_IN>,
+    Param<"void*", "UserData", "Optional user data to pass to the callback", PARAM_IN_OPTIONAL>
+  ];
+  let returns = [
+    Return<"OL_ERRC_INVALID_PLATFORM">
+  ];
+}
