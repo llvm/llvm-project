@@ -2272,9 +2272,6 @@ bool CombineRuleBuilder::emitCodeGenInstructionMatchPattern(
   IM.addPredicate<InstructionOpcodeMatcher>(&P.getInst());
   declareInstExpansion(CE, IM, P.getName());
 
-  if (P.hasOneUse())
-    IM.addPredicate<OneUsePredicateMatcher>();
-
   // If this is an intrinsic, check the intrinsic ID.
   if (P.isIntrinsic()) {
     // The IntrinsicID's operand is the first operand after the defs.

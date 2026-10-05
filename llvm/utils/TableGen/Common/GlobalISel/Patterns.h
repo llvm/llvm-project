@@ -476,9 +476,6 @@ public:
   MIFlagsInfo &getOrCreateMIFlagsInfo();
   const MIFlagsInfo *getMIFlagsInfo() const { return FI.get(); }
 
-  void setHasOneUse(bool V = true) { HasOneUse = V; }
-  bool hasOneUse() const { return HasOneUse; }
-
   const CodeGenInstruction &getInst() const { return I; }
   StringRef getInstName() const override;
 
@@ -488,7 +485,6 @@ private:
   const CodeGenInstruction &I;
   const CodeGenIntrinsic *IntrinInfo = nullptr;
   std::unique_ptr<MIFlagsInfo> FI;
-  bool HasOneUse = false;
 };
 
 //===- OperandTypeChecker -------------------------------------------------===//

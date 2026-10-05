@@ -8,7 +8,7 @@ include "llvm/Target/GlobalISel/Combine.td"
 def MyTargetISA : InstrInfo;
 def MyTarget : Target { let InstructionSet = MyTargetISA; }
 
-// CHECK: GIHasOneUse expects exactly one instruction argument
+// CHECK: 'GIHasOneUse' expected 1 operands, got 0
 def test_error_noarg: GICombineRule<
   (defs root:$d),
   (match (GIHasOneUse),
