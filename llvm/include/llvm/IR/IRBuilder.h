@@ -178,7 +178,7 @@ public:
 
   /// Get data layout. Requires that an insertion point is set and connected
   /// to a module.
-  const DataLayout &getDataLayout() {
+  const DataLayout &getDataLayout() const {
     assert(BB && "Must have insertion point to get data layout");
     return BB->getDataLayout();
   }
