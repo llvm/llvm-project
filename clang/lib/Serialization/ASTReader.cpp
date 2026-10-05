@@ -26,6 +26,7 @@
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
@@ -81,6 +82,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/Weak.h"
 #include "clang/Serialization/ASTBitCodes.h"
@@ -1895,6 +1897,23 @@ int ASTReader::getSLocEntryID(SourceLocation::UIntTy SLocOffset) {
   return F->SLocEntryBaseID + *std::prev(It);
 }
 
+std::pair<SourceLocation::UIntTy, SourceLocationEncoding::Chain>
+ASTReader::ReadSourceLocationOffset(const RecordDataImpl &Record, unsigned Idx,
+                                    SourceLocation::UIntTy InitialDelta) {
+  SourceLocation::UIntTy Offset = Record[Idx];
+  return {Offset, SourceLocationEncoding::Chain(Offset + InitialDelta)};
+}
+
+std::pair<SourceLocation::UIntTy, SourceLocationEncoding::Chain>
+ASTReader::ReadEntryOffset(const RecordDataImpl &Record) {
+  // Anchor the chain at the entry's own local offset, deriving it exactly as
+  // the writer does -- see ASTWriter::EmitEntryOffset. The field has the dummy
+  // entry subtracted out, so add it back. The anchor stays in the writing
+  // module's local space, which is the space the deltas are differences in;
+  // deltaDecode therefore runs before the locations are translated into ours.
+  return ReadSourceLocationOffset(Record, 0, 2);
+}
+
 bool ASTReader::ReadSLocEntry(int ID) {
   if (ID == 0)
     return false;
@@ -2054,12 +2073,15 @@ bool ASTReader::ReadSLocEntry(int ID) {
   }
 
   case SM_SLOC_EXPANSION_ENTRY: {
-    SourceLocation SpellingLoc = ReadSourceLocation(*F, Record[1]);
-    SourceLocation ExpansionBegin = ReadSourceLocation(*F, Record[2]);
-    SourceLocation ExpansionEnd = ReadSourceLocation(*F, Record[3]);
+    auto [EntryOffset, Chain] = ReadEntryOffset(Record);
+    // The chain is stateful: decode in the same order the writer emitted, each
+    // in its own statement. See CreateSLocExpansionAbbrev for the field order.
+    SourceLocation ExpansionEnd = ReadSourceLocation(*F, Record[1], Chain);
+    SourceLocation ExpansionBegin = ReadSourceLocation(*F, Record[2], Chain);
+    SourceLocation SpellingLoc = ReadSourceLocation(*F, Record[3], Chain);
     SourceMgr.createExpansionLoc(SpellingLoc, ExpansionBegin, ExpansionEnd,
                                  Record[5], Record[4], ID,
-                                 BaseOffset + Record[0]);
+                                 BaseOffset + EntryOffset);
     break;
   }
   }
@@ -3054,6 +3076,10 @@ ASTReader::ResolveImportedPath(SmallString<0> &Buf, StringRef Path,
   if (Prefix.empty() || Path.empty() || llvm::sys::path::is_absolute(Path) ||
       Path == "<built-in>" || Path == "<command line>")
     return {Path, Buf};
+
+  // The writer makes the base directory itself relative as ".".
+  if (Path == ".")
+    return {Prefix, Buf};
 
   Buf.clear();
   llvm::sys::path::append(Buf, Prefix, Path);
@@ -4468,6 +4494,11 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
     case DECLS_WITH_EFFECTS_TO_VERIFY:
       for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
         DeclsWithEffectsToVerify.push_back(ReadDeclID(F, Record, I));
+      break;
+
+    case OMP_REQUIRES_DECLS:
+      for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
+        OpenMPRequiresDecls.push_back(ReadDeclID(F, Record, I));
       break;
 
     case OPENCL_EXTENSIONS:
@@ -8064,6 +8095,9 @@ QualType ASTReader::GetType(TypeID ID) {
     case PREDEF_TYPE_NULLPTR_ID:
       T = Context.NullPtrTy;
       break;
+    case PREDEF_TYPE_META_INFO_ID:
+      T = Context.MetaInfoTy;
+      break;
     case PREDEF_TYPE_CHAR8_ID:
       T = Context.Char8Ty;
       break;
@@ -9287,6 +9321,12 @@ void ASTReader::InitializeSema(Sema &S) {
 
 void ASTReader::UpdateSema() {
   assert(SemaObj && "no Sema to update");
+
+  // UpdateSema() runs after each AST file is loaded, not only the first, so a
+  // 'requires' directive from a module is registered too.
+  for (GlobalDeclID ID : OpenMPRequiresDecls)
+    SemaObj->OpenMP().addRequiresDecl(cast<OMPRequiresDecl>(GetDecl(ID)));
+  OpenMPRequiresDecls.clear();
 
   // Load the offsets of the declarations that Sema references.
   // They will be lazily deserialized when needed.
