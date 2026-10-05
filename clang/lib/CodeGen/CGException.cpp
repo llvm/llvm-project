@@ -1830,7 +1830,7 @@ Address CodeGenFunction::recoverAddrOfEscapedLocal(CodeGenFunction &ParentCGF,
   if (!ParentAlloca) {
     if (ParentArg) {
       llvm::BasicBlock &EntryBB = ParentCGF.CurFn->getEntryBlock();
-      llvm::IRBuilder<> ParentEntryBuilder(&EntryBB, EntryBB.begin());
+      llvm::IRBuilder<> ParentEntryBuilder(EntryBB.begin());
       ParentAlloca = ParentEntryBuilder.CreateAlloca(
           ParentArg->getType(), nullptr, ParentArg->getName() + ".spill");
       ParentEntryBuilder.CreateStore(ParentArg, ParentAlloca);

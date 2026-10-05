@@ -246,6 +246,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/Support/CommandLine.h"
@@ -631,8 +632,7 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
 
 /// Should the Frame Pointer be reserved for the current function?
 bool AArch64FrameLowering::isFPReserved(const MachineFunction &MF) const {
-  const TargetMachine &TM = MF.getTarget();
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = MF.getFunction().getParent()->getTargetTriple();
 
   // These OSes require the frame chain is valid, even if the current frame does
   // not use a frame pointer.
@@ -1644,6 +1644,22 @@ static bool invalidateRegisterPairing(bool SpillExtendedVolatile,
   return false;
 }
 
+// Returns true if Offset (in bytes) is aligned to the instruction's scale and
+// the scaled immediate is within the instruction's valid range.
+static bool isValidMemOpOffset(const AArch64InstrInfo *TII, unsigned Opcode,
+                               int Offset) {
+  int64_t MinOff, MaxOff;
+  TypeSize ScaleValue(0U, false), Width(0U, false);
+  if (!TII->getMemOpInfo(Opcode, ScaleValue, Width, MinOff, MaxOff))
+    return false;
+
+  if (Offset % ScaleValue.getKnownMinValue() != 0)
+    return false;
+
+  Offset /= ScaleValue.getKnownMinValue();
+  return Offset >= MinOff && Offset <= MaxOff;
+}
+
 namespace {
 
 struct RegPairInfo {
@@ -1701,6 +1717,8 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
   if (CSI.empty())
     return;
 
+  const AArch64InstrInfo *TII =
+      MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
   bool IsWindows = isTargetWindows(MF);
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   unsigned StackHazardSize = getStackHazardSize(MF);
@@ -1837,12 +1855,21 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
       case RegPairInfo::PPR:
         break;
       case RegPairInfo::ZPR:
-        if (!NeedsWinCFI && AFI->getPredicateRegForFillSpill() != 0 &&
-            ((RPI.Reg1 - AArch64::Z0) & 1) == 0 && (NextReg == RPI.Reg1 + 1)) {
-          // Calculate offset of register pair to see if pair instruction can be
-          // used.
-          int Offset = (ScalableByteOffset + StackFillDir * 2 * Scale) / Scale;
-          if ((-16 <= Offset && Offset <= 14) && (Offset % 2 == 0))
+        // Windows support is possible but the order requirement is reversed.
+        // Also, WinCFI has no support for group ZPR loads/stores yet.
+        if (isTargetWindows(MF) || AFI->getPredicateRegForFillSpill() == 0)
+          break;
+        // We expect to see pairs in decending order (e.g. [z9, z8]).
+        // We ensure this in `orderZPRCalleeSavesForPairs()`. This is required
+        // as (for Linux) StackFillDir is negative (so we start at higher
+        // addresses) and we need to ensure the lower register in the pair has
+        // the lower address to store the registers in the correct order.
+        if (((NextReg - AArch64::Z0) % 2 == 0) && (NextReg + 1 == RPI.Reg1)) {
+          const int NumRegs = 2;
+          int Offset = (ScalableByteOffset + StackFillDir * NumRegs * Scale);
+
+          // Note: ST1B has the same offset constraints.
+          if (isValidMemOpOffset(TII, AArch64::LD1B_2Z_IMM, Offset))
             RPI.Reg2 = NextReg;
         }
         break;
@@ -2109,17 +2136,12 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     assert((!isTargetWindows(MF) ||
             !(Reg1 == AArch64::LR && Reg2 == AArch64::FP)) &&
            "Windows unwdinding requires a consecutive (FP,LR) pair");
-    // Windows unwind codes require consecutive registers if registers are
-    // paired.  Make the switch here, so that the code below will save (x,x+1)
-    // and not (x+1,x).
     unsigned FrameIdxReg1 = RPI.FrameIdx;
     unsigned FrameIdxReg2 = RPI.FrameIdx + 1;
-    if (isTargetWindows(MF) && RPI.isPaired()) {
-      std::swap(Reg1, Reg2);
-      std::swap(FrameIdxReg1, FrameIdxReg2);
-    }
 
     if (RPI.isPaired() && RPI.isScalable()) {
+      assert(!isTargetWindows(MF) &&
+             "Scalable register groups are not supported by Windows WinCFI");
       [[maybe_unused]] const AArch64Subtarget &Subtarget =
                               MF.getSubtarget<AArch64Subtarget>();
       AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
@@ -2128,7 +2150,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
              "Expects SVE2.1 or SME2 target and a predicate register");
 #ifdef EXPENSIVE_CHECKS
       auto IsPPR = [](const RegPairInfo &c) {
-        return c.Reg1 == RegPairInfo::PPR;
+        return c.Type == RegPairInfo::PPR;
       };
       auto PPRBegin = std::find_if(RegPairs.begin(), RegPairs.end(), IsPPR);
       auto IsZPR = [](const RegPairInfo &c) {
@@ -2148,7 +2170,8 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
         MBB.addLiveIn(Reg1);
       if (!MRI.isReserved(Reg2))
         MBB.addLiveIn(Reg2);
-      MIB.addReg(/*PairRegs*/ AArch64::Z0_Z1 + (RPI.Reg1 - AArch64::Z0));
+      assert(RPI.Reg2 + 1 == RPI.Reg1 && "Expected reversed ZPR pair");
+      MIB.addReg(/*PairRegs*/ AArch64::Z0_Z1 + (RPI.Reg2 - AArch64::Z0));
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg2),
           MachineMemOperand::MOStore, Size, Alignment));
@@ -2160,9 +2183,14 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
           MachineMemOperand::MOStore, Size, Alignment));
-      if (NeedsWinCFI)
-        insertSEH(MIB, TII, MachineInstr::FrameSetup);
     } else { // The code when the pair of ZReg is not present
+      // Windows unwind codes require consecutive registers if registers are
+      // paired.  Make the switch here, so that the code below will save (x,x+1)
+      // and not (x+1,x).
+      if (isTargetWindows(MF) && RPI.isPaired()) {
+        std::swap(Reg1, Reg2);
+        std::swap(FrameIdxReg1, FrameIdxReg2);
+      }
       MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII.get(StrOpc));
       if (!MRI.isReserved(Reg1))
         MBB.addLiveIn(Reg1);
@@ -2279,18 +2307,13 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       dbgs() << ")\n";
     });
 
-    // Windows unwind codes require consecutive registers if registers are
-    // paired.  Make the switch here, so that the code below will save (x,x+1)
-    // and not (x+1,x).
     unsigned FrameIdxReg1 = RPI.FrameIdx;
     unsigned FrameIdxReg2 = RPI.FrameIdx + 1;
-    if (isTargetWindows(MF) && RPI.isPaired()) {
-      std::swap(Reg1, Reg2);
-      std::swap(FrameIdxReg1, FrameIdxReg2);
-    }
 
     AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
     if (RPI.isPaired() && RPI.isScalable()) {
+      assert(!isTargetWindows(MF) &&
+             "Scalable register groups are not supported by Windows WinCFI");
       [[maybe_unused]] const AArch64Subtarget &Subtarget =
                               MF.getSubtarget<AArch64Subtarget>();
       unsigned PnReg = AFI->getPredicateRegForFillSpill();
@@ -2306,7 +2329,8 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
             .setMIFlags(MachineInstr::FrameDestroy);
       }
       MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII.get(LdrOpc));
-      MIB.addReg(/*PairRegs*/ AArch64::Z0_Z1 + (RPI.Reg1 - AArch64::Z0),
+      assert(RPI.Reg2 + 1 == RPI.Reg1 && "Expected reversed ZPR pair");
+      MIB.addReg(/*PairRegs*/ AArch64::Z0_Z1 + (RPI.Reg2 - AArch64::Z0),
                  getDefRegState(true));
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg2),
@@ -2319,9 +2343,14 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
           MachineMemOperand::MOLoad, Size, Alignment));
-      if (NeedsWinCFI)
-        insertSEH(MIB, TII, MachineInstr::FrameDestroy);
     } else {
+      // Windows unwind codes require consecutive registers if registers are
+      // paired.  Make the switch here, so that the code below will save (x,x+1)
+      // and not (x+1,x).
+      if (isTargetWindows(MF) && RPI.isPaired()) {
+        std::swap(Reg1, Reg2);
+        std::swap(FrameIdxReg1, FrameIdxReg2);
+      }
       MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII.get(LdrOpc));
       if (RPI.isPaired()) {
         MIB.addReg(Reg2, getDefRegState(true));
@@ -2882,8 +2911,8 @@ static void orderZPRCalleeSavesForPairs(MachineFunction &MF,
   llvm::append_range(ZPRSavesInCSIOrder, Singles);
 
   for (const auto &[Even, Odd] : Pairs) {
-    ZPRSavesInCSIOrder.push_back(Even);
     ZPRSavesInCSIOrder.push_back(Odd);
+    ZPRSavesInCSIOrder.push_back(Even);
   }
 
   if (AlignmentSingle)
