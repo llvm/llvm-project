@@ -6575,9 +6575,9 @@ Syntax:
 
 The option can be repeated; the names from all occurrences are combined.
 
-In C, variable names are not mangled, so the mangled name is identical to the source
-identifier (for example, `sccsid`). In C++, the mangled name follows the
-Itanium C++ ABI, so a namespace-scoped or internal-linkage variable (for
+In C, variable names are not mangled, so the mangled name is identical to the
+source identifier (for example, `sccsid`). In C++, the mangled name follows
+the Itanium C++ ABI, so a namespace-scoped or internal-linkage variable (for
 example, a file-scope `static`) must be named using its mangled form:
 
 ```c++
@@ -6624,31 +6624,26 @@ preserved:
   compiled from the defining translation unit itself, not merely in the final
   linked output.
 
-A variable that is named in the list but is `volatile`-qualified, does not
-have static storage duration (for example, a `thread_local` variable), is
-dynamically initialized, is an `inline` variable, or is a pointer not bound to
-a string literal, is diagnosed with a warning and is not preserved. The same
-applies to name-matched variables of unsupported kinds: function-local
-`static` variables, static data members, and variable template
-specializations (an explicit specialization is diagnosed at its definition, an
-implicit one in each translation unit that instantiates it). A name-matched
-variable of any other type -- for example, an `int` or a `struct` -- is
-likewise diagnosed. These diagnostics are in the `-Wloadtime-comment-var`
-group. A definition without an initializer is silently skipped. Names that
-match no variable defined in the translation unit are also silently ignored,
-since the option is typically given to every compilation of a build.
+A variable that is named in the list is diagnosed with a warning in the
+`-Wloadtime-comment-var` group, and is not preserved, if it:
 
-For C++20 modules, a named variable defined in a module unit is processed
-using the option as specified when the module unit itself is compiled -- in a
-two-phase build, when the module interface file is produced. Giving the option
-to an importing translation unit has no effect on variables owned by the
-module. Retention of a variable to load time depends on the linker retaining
-function definitions from the translation unit that was compiled to preserve
-it, since those functions carry the references that keep the string alive. A
-variable attached to a named module is matched by its module-attached mangled
-name (for example, `export char ver[];` in module `M` is `_ZW1M3ver`). The
-same applies to a precompiled header: the option must be present when the PCH
-is built.
+- is `volatile`-qualified;
+- does not have static storage duration (for example, a `thread_local`
+  variable);
+- is dynamically initialized;
+- is a pointer not bound to a string literal;
+- is an `inline` variable;
+- is defined as an alias with `__attribute__((alias("...")))` (the string
+  belongs to the aliased variable, which is the one to name instead);
+- is a function-local `static` variable, a static data member, or a variable
+  template specialization (an explicit specialization is diagnosed at its
+  definition, an implicit one in each translation unit that instantiates it);
+- has any type other than a plain `char` pointer or array -- for example, an
+  `int` or a `struct`.
+
+A definition without an initializer, other than an alias, is silently skipped.
+Names that match no variable defined in the translation unit are also silently
+ignored, since the option is typically given to every compilation of a build.
 
 Example:
 
@@ -6675,6 +6670,20 @@ source.o:
          MyApp Version 1.0
          Built 2026-05-24
 ```
+
+### Interaction with C++20 Modules and Precompiled Headers
+
+For C++20 modules, a named variable defined in a module unit is processed
+using the option as specified when the module unit itself is compiled -- in a
+two-phase build, when the module interface file is produced. Giving the option
+to an importing translation unit has no effect on variables owned by the
+module. Retention of a variable to load time depends on the linker retaining
+function definitions from the translation unit that was compiled to preserve
+it, since those functions carry the references that keep the string alive. A
+variable attached to a named module is matched by its module-attached mangled
+name (for example, `export char ver[];` in module `M` is `_ZW1M3ver`). The
+same applies to a precompiled header: the option must be present when the PCH
+is built.
 
 ### Interaction with `#pragma comment(copyright, ...)`
 
