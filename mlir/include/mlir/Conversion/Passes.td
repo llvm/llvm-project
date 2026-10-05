@@ -909,6 +909,12 @@ def ConvertMathToXeVM : Pass<"convert-math-to-xevm"> {
     *   Every other op becomes a call to the precise OpenCL intrinsic from the
         `__spirv_ocl_` extended instruction set. Set the `convertToOCL` flag to
         `false` to leave these ops alone instead.
+
+    Algebraic simplifications run ahead of the lowering, so the cheaper form is
+    what reaches the intrinsics: `math.powf %x, 2.0` becomes a multiply instead
+    of a call to `__spirv_ocl_native_powr`, and `exp(a) / exp(b)` becomes a
+    single `exp(a - b)` when the division may be reassociated (`arcp` or
+    `reassoc`). Ops these simplifications cannot rewrite are left as they are.
   }];
   let options = [
     Option<"convertArith", "convert-arith", "bool", /*default=*/"true",

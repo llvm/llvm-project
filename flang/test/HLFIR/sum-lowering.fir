@@ -3,9 +3,9 @@
 
 // simple one argument sum
 func.func @_QPsum1(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "s"}) {
-  %0:2 = hlfir.declare %arg0 {uniq_name = "_QFsum1Ea"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-  %1:2 = hlfir.declare %arg1 {uniq_name = "_QFsum1Es"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %2 = hlfir.sum %0#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>) -> i32
+  %0:2 = hlfir.declare %arg0 uniq_name("_QFsum1Ea") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %1:2 = hlfir.declare %arg1 uniq_name("_QFsum1Es") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %2 = hlfir.sum %0#0 fastmath(contract) : (!fir.box<!fir.array<?xi32>>) -> i32
   hlfir.assign %2 to %1#0 : i32, !fir.ref<i32>
   return
 }
@@ -24,11 +24,11 @@ func.func @_QPsum1(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %a
 
 // sum with a by-ref dimension of index type
 func.func @_QPsum2(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "s"}, %arg2: !fir.ref<index> {fir.bindc_name = "d"}) {
-  %0:2 = hlfir.declare %arg0 {uniq_name = "_QFsum2Ea"} : (!fir.box<!fir.array<?x?xi32>>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>)
-  %1:2 = hlfir.declare %arg2 {uniq_name = "_QFsum2Ed"} : (!fir.ref<index>) -> (!fir.ref<index>, !fir.ref<index>)
-  %2:2 = hlfir.declare %arg1 {uniq_name = "_QFsum2Es"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("_QFsum2Ea") : (!fir.box<!fir.array<?x?xi32>>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>)
+  %1:2 = hlfir.declare %arg2 uniq_name("_QFsum2Ed") : (!fir.ref<index>) -> (!fir.ref<index>, !fir.ref<index>)
+  %2:2 = hlfir.declare %arg1 uniq_name("_QFsum2Es") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
   %3 = fir.load %1#0 : !fir.ref<index>
-  %4 = hlfir.sum %0#0 dim %3#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?x?xi32>>, index) -> !hlfir.expr<?xi32>
+  %4 = hlfir.sum %0#0 dim %3#0 fastmath(contract) : (!fir.box<!fir.array<?x?xi32>>, index) -> !hlfir.expr<?xi32>
   hlfir.assign %4 to %2#0 : !hlfir.expr<?xi32>, !fir.box<!fir.array<?xi32>>
   hlfir.destroy %4 : !hlfir.expr<?xi32>
   return
@@ -63,7 +63,7 @@ func.func @_QPsum2(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"}, 
 // CHECK-NEXT:    %[[ADDR:.*]] = fir.box_addr %[[RET]]
 // CHECK-NEXT:    %[[SHIFT:.*]] = fir.shape_shift %[[BOX_DIMS]]#0, %[[BOX_DIMS]]#1
 // TODO: fix alias analysis in hlfir.assign bufferization
-// CHECK-NEXT:    %[[TMP:.*]]:2 = hlfir.declare %[[ADDR]](%[[SHIFT]]) {uniq_name = ".tmp.intrinsic_result"}
+// CHECK-NEXT:    %[[TMP:.*]]:2 = hlfir.declare %[[ADDR]](%[[SHIFT]]) uniq_name(".tmp.intrinsic_result")
 // CHECK:         %[[ASEXPR:.*]] = hlfir.as_expr %[[TMP]]#0 move %[[TRUE]] : (!fir.box<!fir.array<?xi32>>, i1) -> !hlfir.expr<?xi32>
 // CHECK:         hlfir.assign %[[ASEXPR]] to %[[RES]]#0
 // CHECK:         hlfir.destroy %[[ASEXPR]]
@@ -72,10 +72,10 @@ func.func @_QPsum2(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"}, 
 
 // sum with scalar mask
 func.func @_QPsum3(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "s"}, %arg2: !fir.ref<!fir.logical<4>> {fir.bindc_name = "m"}) {
-  %0:2 = hlfir.declare %arg0 {uniq_name = "_QFsum3Ea"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-  %1:2 = hlfir.declare %arg2 {uniq_name = "_QFsum3Em"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-  %2:2 = hlfir.declare %arg1 {uniq_name = "_QFsum3Es"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %3 = hlfir.sum %0#0 mask %1#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.logical<4>>) -> i32
+  %0:2 = hlfir.declare %arg0 uniq_name("_QFsum3Ea") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %1:2 = hlfir.declare %arg2 uniq_name("_QFsum3Em") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+  %2:2 = hlfir.declare %arg1 uniq_name("_QFsum3Es") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3 = hlfir.sum %0#0 mask %1#0 fastmath(contract) : (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.logical<4>>) -> i32
   hlfir.assign %3 to %2#0 : i32, !fir.ref<i32>
   return
 }
@@ -96,10 +96,10 @@ func.func @_QPsum3(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %a
 
 // sum with array mask
 func.func @_QPsum4(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "s"}, %arg2: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "m"}) {
-  %0:2 = hlfir.declare %arg0 {uniq_name = "_QFsum4Ea"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-  %1:2 = hlfir.declare %arg2 {uniq_name = "_QFsum4Em"} : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
-  %2:2 = hlfir.declare %arg1 {uniq_name = "_QFsum4Es"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %3 = hlfir.sum %0#0 mask %1#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?x!fir.logical<4>>>) -> i32
+  %0:2 = hlfir.declare %arg0 uniq_name("_QFsum4Ea") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %1:2 = hlfir.declare %arg2 uniq_name("_QFsum4Em") : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
+  %2:2 = hlfir.declare %arg1 uniq_name("_QFsum4Es") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3 = hlfir.sum %0#0 mask %1#0 fastmath(contract) : (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?x!fir.logical<4>>>) -> i32
   hlfir.assign %3 to %2#0 : i32, !fir.ref<i32>
   return
 }
@@ -138,13 +138,13 @@ func.func @_QPsum5(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_name = "s"}) {
   %c2 = arith.constant 2 : index
   %c2_0 = arith.constant 2 : index
   %1 = fir.shape %c2, %c2_0 : (index, index) -> !fir.shape<2>
-  %2:2 = hlfir.declare %0(%1) {uniq_name = "_QFsum5Ea"} : (!fir.ref<!fir.array<2x2xi32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<2x2xi32>>, !fir.ref<!fir.array<2x2xi32>>)
+  %2:2 = hlfir.declare %0(%1) uniq_name("_QFsum5Ea") : (!fir.ref<!fir.array<2x2xi32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<2x2xi32>>, !fir.ref<!fir.array<2x2xi32>>)
   %c2_1 = arith.constant 2 : index
   %3 = fir.shape %c2_1 : (index) -> !fir.shape<1>
-  %4:2 = hlfir.declare %arg0(%3) {uniq_name = "_QFsum5Es"} : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>)
+  %4:2 = hlfir.declare %arg0(%3) uniq_name("_QFsum5Es") : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>)
   %c1_i32 = arith.constant 1 : i32
   %true = arith.constant true
-  %5 = hlfir.sum %2#0 dim %c1_i32 mask %true {fastmath = #arith.fastmath<contract>} : (!fir.ref<!fir.array<2x2xi32>>, i32, i1) -> !hlfir.expr<2xi32>
+  %5 = hlfir.sum %2#0 dim %c1_i32 mask %true fastmath(contract) : (!fir.ref<!fir.array<2x2xi32>>, i32, i1) -> !hlfir.expr<2xi32>
   hlfir.assign %5 to %4#0 : !hlfir.expr<2xi32>, !fir.ref<!fir.array<2xi32>>
   hlfir.destroy %5 : !hlfir.expr<2xi32>
   return

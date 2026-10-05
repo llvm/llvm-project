@@ -3293,6 +3293,13 @@ bool Type::isLiteralType(const ASTContext &Ctx) const {
     return true;
   }
 
+  // C++26 [basic.types]p9:
+  // -- std::meta::info is a scalar type
+  // C++26 [basic.types]p10:
+  // -- a scalar type is a literal type
+  if (isMetaInfoType())
+    return true;
+
   // We treat _Atomic T as a literal type if T is a literal type.
   if (const auto *AT = BaseTy->getAs<AtomicType>())
     return AT->getValueType()->isLiteralType(Ctx);
@@ -3668,6 +3675,8 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
     return "unsigned _Accum";
   case ULongAccum:
     return "unsigned long _Accum";
+  case BuiltinType::MetaInfo:
+    return "std::meta::info";
   case BuiltinType::ShortFract:
     return "short _Fract";
   case BuiltinType::Fract:
@@ -3793,6 +3802,10 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   case Id:                                                                     \
     return #Name;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case Id:                                                                     \
+    return #Name;
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId)                                      \
   case Id:                                                                     \
     return Name;
@@ -5414,10 +5427,13 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/SPIRVTypes.def"
     case BuiltinType::BuiltinFn:
     case BuiltinType::NullPtr:
+    case BuiltinType::MetaInfo:
     case BuiltinType::IncompleteMatrixIdx:
     case BuiltinType::ArraySection:
     case BuiltinType::OMPArrayShaping:
