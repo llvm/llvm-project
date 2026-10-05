@@ -117,6 +117,8 @@ class IRBuilderBase {
   DebugLoc StoredDL;
 
 protected:
+  // TODO: Remove this in favor of InsertPt.getNodeParent(), so they cannot
+  // go out of sync.
   BasicBlock *BB;
   BasicBlock::iterator InsertPt;
   LLVMContext &Context;
@@ -192,11 +194,9 @@ public:
 
   /// This specifies that created instructions should be inserted at the
   /// specified point.
+  // TODO: Deprecate this method.
   void SetInsertPoint(BasicBlock *TheBB, BasicBlock::iterator IP) {
-    BB = TheBB;
-    InsertPt = IP;
-    if (IP != TheBB->end())
-      SetCurrentDebugLocation(IP->getStableDebugLoc());
+    SetInsertPoint(IP);
   }
 
   /// This specifies that created instructions should be inserted at
@@ -2930,15 +2930,30 @@ public:
     SetInsertPoint(IP);
   }
 
+  // TODO: Deprecate this method.
   IRBuilder(BasicBlock *TheBB, BasicBlock::iterator IP, FolderTy Folder)
       : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter),
         Folder(Folder) {
-    SetInsertPoint(TheBB, IP);
+    SetInsertPoint(IP);
   }
 
+  // TODO: Deprecate this method.
   IRBuilder(BasicBlock *TheBB, BasicBlock::iterator IP)
       : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter) {
-    SetInsertPoint(TheBB, IP);
+    SetInsertPoint(IP);
+  }
+
+  IRBuilder(BasicBlock::iterator IP, FolderTy Folder)
+      : IRBuilderBase(IP.getNodeParent()->getContext(), this->Folder,
+                      this->Inserter),
+        Folder(Folder) {
+    SetInsertPoint(IP);
+  }
+
+  explicit IRBuilder(BasicBlock::iterator IP)
+      : IRBuilderBase(IP.getNodeParent()->getContext(), this->Folder,
+                      this->Inserter) {
+    SetInsertPoint(IP);
   }
 
   /// Avoid copying the full IRBuilder. Prefer using InsertPointGuard
@@ -2960,6 +2975,9 @@ IRBuilder(Instruction *) -> IRBuilder<>;
 template <typename FolderTy>
 IRBuilder(BasicBlock *, BasicBlock::iterator, FolderTy) -> IRBuilder<FolderTy>;
 IRBuilder(BasicBlock *, BasicBlock::iterator) -> IRBuilder<>;
+template <typename FolderTy>
+IRBuilder(BasicBlock::iterator, FolderTy) -> IRBuilder<FolderTy>;
+IRBuilder(BasicBlock::iterator) -> IRBuilder<>;
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(IRBuilder<>, LLVMBuilderRef)
