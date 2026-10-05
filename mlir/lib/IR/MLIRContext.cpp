@@ -373,16 +373,6 @@ MLIRContext::~MLIRContext() {
   impl->remarkEngine.reset();
 }
 
-/// Copy the specified array of elements into memory managed by the provided
-/// bump pointer allocator.  This assumes the elements are all PODs.
-template <typename T>
-static ArrayRef<T> copyArrayRefInto(llvm::BumpPtrAllocator &allocator,
-                                    ArrayRef<T> elements) {
-  auto result = allocator.Allocate<T>(elements.size());
-  llvm::uninitialized_copy(elements, result);
-  return ArrayRef<T>(result, elements.size());
-}
-
 //===----------------------------------------------------------------------===//
 // Action Handling
 //===----------------------------------------------------------------------===//

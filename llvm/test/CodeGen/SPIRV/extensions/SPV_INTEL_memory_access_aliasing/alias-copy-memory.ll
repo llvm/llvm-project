@@ -22,4 +22,4 @@ declare void @llvm.memcpy.p1.p1.i64(ptr addrspace(1), ptr addrspace(1), i64, i1)
 
 !1 = !{!2}
 !2 = distinct !{!2, !3, !"copy_aliased: %this"}
-!3 = distinct !{!3, !"copy_aliased"}
+!3 = distinct !{!3, i1 false, !"copy_aliased"}

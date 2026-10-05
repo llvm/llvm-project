@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/windows/AutoHandle.h"
+#include "lldb/Host/windows/PathUtils.h"
 #include "lldb/Host/windows/windows.h"
 #include <cstdio>
 
@@ -77,7 +78,11 @@ static bool GetExecutableForProcess(const AutoHandle &handle,
   DWORD dwSize = buffer.size();
   if (!::QueryFullProcessImageNameW(handle.get(), 0, &buffer[0], &dwSize))
     return false;
-  return llvm::convertWideToUTF8(buffer.data(), path);
+  if (!llvm::convertWideToUTF8(buffer.data(), path))
+    return false;
+  // A process launched through an extended-length path has the "\\?\" prefix.
+  path = StripExtendedLengthPrefix(path);
+  return true;
 }
 
 static void GetProcessExecutableAndTriple(const AutoHandle &handle,
@@ -217,7 +222,8 @@ llvm::Expected<HostThread> Host::StartMonitoringChildProcess(
   return HostThread();
 }
 
-Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
+Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info,
+                                  const Timeout<std::micro> &timeout) {
   Status error;
   if (launch_info.GetFlags().Test(eLaunchFlagShellExpandArguments)) {
     FileSpec expand_tool_spec = HostInfo::GetSupportExeDir();
@@ -244,9 +250,9 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
     int status;
     std::string output;
     std::string command = expand_command.GetString().str();
-    Status e = RunShellCommand(
-        command.c_str(), launch_info.GetWorkingDirectory(), &status, nullptr,
-        &output, nullptr, std::chrono::seconds(10));
+    Status e =
+        RunShellCommand(command.c_str(), launch_info.GetWorkingDirectory(),
+                        &status, nullptr, &output, nullptr, timeout);
 
     if (e.Fail())
       return e;
@@ -300,7 +306,7 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
 
 Environment Host::GetEnvironment() {
   Environment env;
-  // The environment block on Windows is a contiguous buffer of NULL terminated
+  // The environment block on Windows is a contiguous buffer of null-terminated
   // strings, where the end of the environment block is indicated by two
   // consecutive NULLs.
   LPWCH environment_block = ::GetEnvironmentStringsW();

@@ -61,6 +61,8 @@ define_opcode(0x20, None, "lit_uint")
 define_opcode(0x21, None, "lit_int")
 define_opcode(0x22, None, "lit_string")
 define_opcode(0x23, None, "lit_selector")
+define_opcode(0x24, None, "lit_integer")
+define_opcode(0x25, "null", "lit_null")
 
 define_opcode(0x2A, "as_int", "as_int")
 define_opcode(0x2B, "as_uint", "as_uint")
@@ -87,6 +89,11 @@ define_opcode(0x54, "=<", "le")
 define_opcode(0x55, ">=", "ge")
 
 define_opcode(0x60, "call", "call")
+
+define_opcode(0x70, "dict", "dict")
+define_opcode(0x71, "dict_set", "dict_set")
+define_opcode(0x72, "dict_get", "dict_get")
+define_opcode(0x73, "dict_has", "dict_has")
 
 # Function signatures
 sig_summary = 0
@@ -215,7 +222,7 @@ class BytecodeSection:
         bin = bytearray()
         bin.extend(_to_uleb(len(self.type_name)))
         bin.extend(bytes(self.type_name, encoding="utf-8"))
-        bin.extend(_to_byte(self.flags))
+        bin.extend(_to_uleb(self.flags))
         for sig, bc in self.signatures:
             bin.extend(_to_byte(SIGNATURES[sig]))
             bin.extend(_to_uleb(len(bc)))
@@ -291,7 +298,7 @@ class BytecodeSection:
         builder.emit_uleb(size, "remaining record size")
         builder.emit_uleb(len(self.type_name), "type name size")
         builder.emit_string(self.type_name, "type name")
-        builder.emit_byte(self.flags, "flags")
+        builder.emit_uleb(self.flags, "flags")
         for sig, bc in self.signatures:
             builder.emit_byte(SIGNATURES[sig], f"sig_{sig}")
             builder.emit_uleb(len(bc), "program size")
@@ -398,7 +405,9 @@ def assemble_tokens(tokens: list[str]) -> bytes:
                 emit(op_lit_uint)
                 emit(int(tok[:-1]))  # FIXME
             else:
-                emit(op_lit_int)
+                # With the introduction of op_lit_integer, op_lit_int is no
+                # longer emitted by the assembler.
+                emit(op_lit_integer)
                 emit(int(tok))  # FIXME
         elif tok[0] == "@":
             emit(op_lit_selector)
@@ -432,7 +441,7 @@ def disassemble_file(input: BinaryIO, output: TextIO) -> None:
 
     name_size = _from_uleb(stream)
     _type_name = stream.read(name_size).decode()
-    _flags = stream.read(1)[0]
+    _flags = _from_uleb(stream)
 
     while True:
         sig_byte = stream.read(1)
@@ -472,6 +481,9 @@ def disassemble(bytecode: bytes) -> Tuple[str, list[int]]:
             asm += str(b)  # FIXME uleb
             asm += "u"
         elif b == op_lit_int:
+            b = next_byte()
+            asm += str(b)
+        elif b == op_lit_integer:
             b = next_byte()
             asm += str(b)
         elif b == op_lit_selector:
@@ -617,6 +629,9 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
         elif b == op_lit_int:
             b = next_byte()  # FIXME uleb
             data.append(int(b))
+        elif b == op_lit_integer:
+            b = next_byte()  # FIXME sleb
+            data.append(int(b))
         elif b == op_lit_selector:
             b = next_byte()
             data.append(b)
@@ -627,6 +642,8 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
                 s += chr(next_byte())
                 length -= 1
             data.append(s)
+        elif b == op_lit_null:
+            data.append(None)
 
         elif b == op_as_uint:
             pass
@@ -736,6 +753,24 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
             else:
                 print("not implemented: " + selector[sel])
                 assert False
+
+        # Dictionary operations.
+        elif b == op_dict:
+            data.append(dict())
+        elif b == op_dict_set:
+            value = data.pop()
+            key = data.pop()
+            d = data.pop()
+            d[key] = value
+            data.append(d)
+        elif b == op_dict_get:
+            key = data.pop()
+            d = data.pop()
+            data.append(d[key])
+        elif b == op_dict_has:
+            key = data.pop()
+            d = data.pop()
+            data.append(int(key in d))
     return data[-1]
 
 
@@ -768,7 +803,7 @@ _COMPS = {
     ast.Lt: "<",
     ast.LtE: "=<",
     ast.Gt: ">",
-    ast.GtE: "=>",
+    ast.GtE: ">=",
 }
 
 # Maps Python method names in a formatter class to their bytecode signatures.
@@ -972,6 +1007,8 @@ class Compiler(ast.NodeVisitor):
             self._output(f'"{node.value}"')
         elif isinstance(node.value, bool):
             self._output(int(node.value))
+        elif node.value is None:
+            self._output("null")
         else:
             self._output(node.value)
 
@@ -1066,13 +1103,13 @@ class Compiler(ast.NodeVisitor):
                 "unsupported attribute access (only self.attr is supported)", node
             )
         pick_idx = self._attr_index(node.attr, node)
-        self._output(f"{pick_idx}u pick")  # "# self.{node.attr}"
+        self._output(f"{pick_idx} pick")  # "# self.{node.attr}"
 
     def visit_Name(self, node: ast.Name) -> None:
         idx = self._local_index(node)
         if idx is None:
             raise CompilerError(f"unknown local variable: {node.id}", node)
-        self._output(f"{idx}u pick")  # "# {node.id}"
+        self._output(f"{idx} pick")  # "# {node.id}"
 
     def _visit_each(self, nodes: Sequence[ast.AST]) -> None:
         for child in nodes:
@@ -1251,7 +1288,7 @@ if __name__ == "__main__":
         def test_assemble(self):
             self.assertEqual(assemble("1u dup").hex(), "200101")
             self.assertEqual(assemble('"1u dup"').hex(), "2206317520647570")
-            self.assertEqual(assemble("16 < { dup } if").hex(), "21105210010111")
+            self.assertEqual(assemble("16 < { dup } if").hex(), "24105210010111")
             self.assertEqual(assemble('{ { " } " } }').hex(), "100710052203207d20")
 
             def roundtrip(asm):
@@ -1265,6 +1302,11 @@ if __name__ == "__main__":
             roundtrip('1u "2u 3u"')
             roundtrip('"a  b"')
             roundtrip('"a \\" b"')
+
+            # Null literal.
+            roundtrip("null")
+            self.assertEqual(interpret(assemble("null is_null"), [], []), 1)
+            self.assertIsNone(interpret(assemble("null"), [], []))
 
             self.assertEqual(interpret(assemble("1 1 +"), [], []), 2)
             self.assertEqual(interpret(assemble("2 1 1 + *"), [], []), 4)
@@ -1342,5 +1384,19 @@ if __name__ == "__main__":
             out2 = io.StringIO()
             BytecodeSection("std::vector<int>", 0, []).write_source(out2, language="c")
             self.assertIn("_std__vector_int__formatter[] =", out2.getvalue())
+
+            # Flags are ULEB128 encoded to allow values wider than 7 bits.
+            flags = 1 << 10
+            wide = BytecodeSection("T", flags, [("summary", bytes([0x13]))])
+            out3 = io.StringIO()
+            wide.write_source(out3, language="c")
+            expected = "".join(f"\\x{b:02x}" for b in _to_uleb(flags))
+            self.assertIn(f'"{expected}"', out3.getvalue())
+            binary = io.BytesIO()
+            wide.write_binary(binary)
+            binary.seek(0)
+            dis = io.StringIO()
+            disassemble_file(binary, dis)
+            self.assertEqual(dis.getvalue(), "@summary: return\n")
 
     unittest.main(argv=[__file__])

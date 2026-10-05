@@ -146,12 +146,19 @@ def err_fe_action_not_available : Error<
     "action %0 not compiled in">;
 def err_fe_cir_not_built : Error<"clang IR support not available, rebuild "
                                  "clang with -DCLANG_ENABLE_CIR=ON">;
+def err_fe_cir_input_unsupported : Error<
+    "support for ClangIR input is not yet implemented">;
+def err_invalid_cir : Error<"invalid ClangIR input">;
+def err_cir_input_missing_triple : Error<
+    "missing target triple in ClangIR input">;
+def err_cir_input_triple_mismatch : Error<
+    "target triple '%0' of ClangIR input does not match the target '%1'">;
 def err_fe_invalid_multiple_actions : Error<
     "'%0' action ignored; '%1' action specified previously">;
 def err_fe_invalid_alignment : Error<
     "invalid value '%1' in '%0'; alignment must be a power of 2">;
 def err_fe_invalid_exception_model
-   : Error<"invalid exception model '%select{none|sjlj|seh|dwarf|wasm}0' for target '%1'">;
+   : Error<"invalid exception model '%select{default|none|sjlj|seh|dwarf|wasm|emscripten}0' for target '%1'">;
 def err_fe_invalid_source_date_epoch : Error<
     "environment variable 'SOURCE_DATE_EPOCH' ('%0') must be a non-negative decimal integer <= %1">;
 
@@ -478,6 +485,10 @@ def warn_missing_symbol_graph_dir : Warning<
 
 def err_ast_action_on_llvm_ir : Error<
   "cannot apply AST actions to LLVM IR file '%0'">,
+  DefaultFatal;
+
+def err_ast_action_on_cir : Error<
+  "cannot apply AST actions to ClangIR file '%0'">,
   DefaultFatal;
 
 def err_invalid_llvm_ir : Error<"invalid LLVM IR input: %0">;
