@@ -230,7 +230,6 @@
 ; SPIRV-Opt-NEXT:      SPIRV Assembly Printer
 ; SPIRV-Opt-NEXT:      Free MachineFunction
 
-; SPIR-V NewPM skips RegBankSelect, so instruction selection must not require it.
 ; SPIRV-NPM:OpCapability Linkage
 ; SPIRV-NPM:OpName %[[#FN:]] "empty"
 ; SPIRV-NPM:%[[#VOID:]] = OpTypeVoid
