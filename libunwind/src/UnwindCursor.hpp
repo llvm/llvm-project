@@ -621,6 +621,7 @@ UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
   RtlCaptureContext(&_msContext);
   _msContext.ContextFlags = CONTEXT_CONTROL|CONTEXT_INTEGER|CONTEXT_FLOATING_POINT;
 #if defined(_LIBUNWIND_TARGET_X86_64)
+  _msContext.ContextFlags |= CONTEXT_SEGMENTS;
   _msContext.Rax = r.getRegister(UNW_X86_64_RAX);
   _msContext.Rcx = r.getRegister(UNW_X86_64_RCX);
   _msContext.Rdx = r.getRegister(UNW_X86_64_RDX);
@@ -638,6 +639,15 @@ UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
   _msContext.R14 = r.getRegister(UNW_X86_64_R14);
   _msContext.R15 = r.getRegister(UNW_X86_64_R15);
   _msContext.Rip = r.getRegister(UNW_REG_IP);
+#if !defined(__arm64ec__)
+  _msContext.EFlags = static_cast<DWORD>(r.getRegister(UNW_X86_64_RFLAGS));
+  _msContext.SegEs = static_cast<WORD>(r.getRegister(UNW_X86_64_ES));
+  _msContext.SegCs = static_cast<WORD>(r.getRegister(UNW_X86_64_CS));
+  _msContext.SegSs = static_cast<WORD>(r.getRegister(UNW_X86_64_SS));
+  _msContext.SegDs = static_cast<WORD>(r.getRegister(UNW_X86_64_DS));
+  _msContext.SegFs = static_cast<WORD>(r.getRegister(UNW_X86_64_FS));
+  _msContext.SegGs = static_cast<WORD>(r.getRegister(UNW_X86_64_GS));
+#endif
   union {
     v128 v;
     M128A m;
@@ -728,6 +738,7 @@ bool UnwindCursor<A, R>::validReg(int regNum) {
   if (regNum == UNW_REG_IP || regNum == UNW_REG_SP) return true;
 #if defined(_LIBUNWIND_TARGET_X86_64)
   if (regNum >= UNW_X86_64_RAX && regNum <= UNW_X86_64_RIP) return true;
+  if (regNum >= UNW_X86_64_RFLAGS && regNum <= UNW_X86_64_GS) return true;
 #elif defined(_LIBUNWIND_TARGET_ARM)
   if ((regNum >= UNW_ARM_R0 && regNum <= UNW_ARM_R15) ||
       regNum == UNW_ARM_RA_AUTH_CODE)
@@ -761,6 +772,13 @@ unw_word_t UnwindCursor<A, R>::getReg(int regNum) {
   case UNW_X86_64_R13: return _msContext.R13;
   case UNW_X86_64_R14: return _msContext.R14;
   case UNW_X86_64_R15: return _msContext.R15;
+  case UNW_X86_64_RFLAGS: return _msContext.EFlags;
+  case UNW_X86_64_ES: return _msContext.SegEs;
+  case UNW_X86_64_CS: return _msContext.SegCs;
+  case UNW_X86_64_SS: return _msContext.SegSs;
+  case UNW_X86_64_DS: return _msContext.SegDs;
+  case UNW_X86_64_FS: return _msContext.SegFs;
+  case UNW_X86_64_GS: return _msContext.SegGs;
 #elif defined(_LIBUNWIND_TARGET_ARM)
   case UNW_ARM_R0: return _msContext.R0;
   case UNW_ARM_R1: return _msContext.R1;
@@ -812,6 +830,13 @@ void UnwindCursor<A, R>::setReg(int regNum, unw_word_t value) {
   case UNW_X86_64_R13: _msContext.R13 = value; break;
   case UNW_X86_64_R14: _msContext.R14 = value; break;
   case UNW_X86_64_R15: _msContext.R15 = value; break;
+  case UNW_X86_64_RFLAGS: _msContext.EFlags = static_cast<DWORD>(value); break;
+  case UNW_X86_64_ES: _msContext.SegEs = static_cast<WORD>(value); break;
+  case UNW_X86_64_CS: _msContext.SegCs = static_cast<WORD>(value); break;
+  case UNW_X86_64_SS: _msContext.SegSs = static_cast<WORD>(value); break;
+  case UNW_X86_64_DS: _msContext.SegDs = static_cast<WORD>(value); break;
+  case UNW_X86_64_FS: _msContext.SegFs = static_cast<WORD>(value); break;
+  case UNW_X86_64_GS: _msContext.SegGs = static_cast<WORD>(value); break;
 #elif defined(_LIBUNWIND_TARGET_ARM)
   case UNW_ARM_R0: _msContext.R0 = value; break;
   case UNW_ARM_R1: _msContext.R1 = value; break;
