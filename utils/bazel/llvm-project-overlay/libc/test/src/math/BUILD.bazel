@@ -126,6 +126,50 @@ math_mpfr_test(
 math_mpfr_test(name = "cbrt")
 
 math_mpfr_test(
+    name = "bf16addl",
+    hdrs = ["AddTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
+math_mpfr_test(
+    name = "bf16divl",
+    hdrs = ["DivTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
+math_mpfr_test(
+    name = "bf16fmal",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "bf16mull",
+    hdrs = ["MulTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "bf16subl",
+    hdrs = ["SubTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
+math_mpfr_test(
     name = "cbrtbf16",
     deps = [
         "//libc:__support_fputil_bfloat16",
@@ -179,6 +223,11 @@ math_mpfr_test(
 )
 
 math_mpfr_test(name = "cos")
+
+math_mpfr_test(
+    name = "copysignl",
+    hdrs = ["CopySignTest.h"],
+)
 
 math_mpfr_test(
     name = "cosf",
@@ -393,6 +442,11 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "fdiml",
+    hdrs = ["FDimTest.h"],
+)
+
+math_mpfr_test(
     name = "fdiv",
     hdrs = ["DivTest.h"],
 )
@@ -514,7 +568,6 @@ math_mpfr_test(
         "//libc:srand",
     ],
 )
-
 
 math_mpfr_test(
     name = "f16mul",
@@ -693,7 +746,11 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+<<<<<<< HEAD
     name = "ilogbf",
+=======
+    name = "ilogbl",
+>>>>>>> 0fa4ee9fbf13 ([libc][bazel] Add missing MPFR test targets for long double and bf16 functions)
     hdrs = ["ILogbTest.h"],
 )
 
@@ -703,7 +760,11 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+<<<<<<< HEAD
     name = "ldexpf",
+=======
+    name = "ldexpl",
+>>>>>>> 0fa4ee9fbf13 ([libc][bazel] Add missing MPFR test targets for long double and bf16 functions)
     hdrs = ["LdExpTest.h"],
 )
 
@@ -761,6 +822,11 @@ math_mpfr_test(
 math_mpfr_test(
     name = "llroundl",
     hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_mpfr_test(
+    name = "logbl",
+    hdrs = ["LogbTest.h"],
 )
 
 math_mpfr_test(
@@ -875,11 +941,16 @@ math_mpfr_test(
 # TODO: Add nan tests.
 
 math_mpfr_test(
+<<<<<<< HEAD
     name = "modf",
+=======
+    name = "modfl",
+>>>>>>> 0fa4ee9fbf13 ([libc][bazel] Add missing MPFR test targets for long double and bf16 functions)
     hdrs = ["ModfTest.h"],
 )
 
 math_mpfr_test(
+<<<<<<< HEAD
     name = "modff",
     hdrs = ["ModfTest.h"],
 )
@@ -891,6 +962,8 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+=======
+>>>>>>> 0fa4ee9fbf13 ([libc][bazel] Add missing MPFR test targets for long double and bf16 functions)
     name = "nearbyint",
     hdrs = ["NearbyIntTest.h"],
     deps = [
@@ -942,6 +1015,11 @@ math_mpfr_test(
 )
 
 math_mpfr_test(name = "pow")
+
+math_mpfr_test(
+    name = "nextafterl",
+    hdrs = ["NextAfterTest.h"],
+)
 
 math_mpfr_test(
     name = "powf",
@@ -1080,9 +1158,16 @@ math_mpfr_test(
 math_mpfr_test(name = "sin")
 
 math_mpfr_test(
+<<<<<<< HEAD
     name = "sinbf16",
     deps = [
         "//libc:__support_fputil_bfloat16",
+=======
+    name = "scalbnl",
+    hdrs = [
+        "LdExpTest.h",
+        "ScalbnTest.h",
+>>>>>>> 0fa4ee9fbf13 ([libc][bazel] Add missing MPFR test targets for long double and bf16 functions)
     ],
 )
 
@@ -1325,3 +1410,4 @@ math_mpfr_test(name = "log10p1f16")
 math_mpfr_test(name = "lgammaf")
 
 math_mpfr_test(name = "lgammaf16")
+
