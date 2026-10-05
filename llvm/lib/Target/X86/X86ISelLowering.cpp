@@ -33438,6 +33438,12 @@ static SDValue LowerCMP_SWAP(SDValue Op, const X86Subtarget &Subtarget,
 
   SDValue cpOut =
     DAG.getCopyFromReg(Result.getValue(0), DL, Reg, T, Result.getValue(1));
+
+  if (!Op->hasAnyUseOfValue(1)) {
+    return DAG.getNode(ISD::MERGE_VALUES, DL, Op->getVTList(), cpOut,
+                       DAG.getPOISON(Op->getValueType(1)), cpOut.getValue(1));
+  }
+
   SDValue EFLAGS = DAG.getCopyFromReg(cpOut.getValue(1), DL, X86::EFLAGS,
                                       MVT::i32, cpOut.getValue(2));
   SDValue Success = getSETCC(X86::COND_E, EFLAGS, DL, DAG);
@@ -36416,13 +36422,19 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
                                         Regs64bit ? X86::RDX : X86::EDX,
                                         HalfT, cpOutL.getValue(2));
     SDValue OpsF[] = { cpOutL.getValue(0), cpOutH.getValue(0)};
+    Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, T, OpsF));
+
+    if (!N->hasAnyUseOfValue(1)) {
+      Results.push_back(DAG.getPOISON(N->getValueType(1)));
+      Results.push_back(cpOutH.getValue(1));
+      return;
+    }
 
     SDValue EFLAGS = DAG.getCopyFromReg(cpOutH.getValue(1), dl, X86::EFLAGS,
                                         MVT::i32, cpOutH.getValue(2));
     SDValue Success = getSETCC(X86::COND_E, EFLAGS, dl, DAG);
     Success = DAG.getZExtOrTrunc(Success, dl, N->getValueType(1));
 
-    Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, T, OpsF));
     Results.push_back(Success);
     Results.push_back(EFLAGS.getValue(1));
     return;
