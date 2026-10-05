@@ -37,6 +37,7 @@ define i64 @resume_values(ptr noalias %A, i64 %n) {
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue vp<%n.vec>, ir<0>
 ; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = compute-reduction-result (add) ir<%red.next>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<%n.vec>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
@@ -205,6 +206,7 @@ define i64 @bypass_blocks(ptr %A, ptr %B, i32 %n) {
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue vp<%n.vec>, ir<0>
 ; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = compute-reduction-result (add) ir<%red.next>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<%n.vec>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
@@ -382,6 +384,7 @@ define void @all_iterations_in_main_loop_with_memcheck(ptr %dst, ptr %src) {
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue ir<16>, ir<0>
 ; CHECK-NEXT:    EMIT branch-on-cond ir<true>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:
@@ -531,6 +534,7 @@ define void @all_iterations_in_main_loop_with_scevcheck(ptr %p, i32 %off) {
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue ir<16>, ir<0>
 ; CHECK-NEXT:    EMIT branch-on-cond ir<true>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:
@@ -672,6 +676,7 @@ define void @dead_main_vector_loop(ptr %dst, i64 %n) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue vp<%n.vec>, ir<0>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%clamped>, vp<%n.vec>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
@@ -806,6 +811,7 @@ define i32 @nested_loop(ptr noalias %p, ptr noalias %end, ptr noalias %dst, i64 
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue vp<%n.vec>, ir<0>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%3>, vp<%n.vec>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<inner.exit>, ir-bb<scalar.ph>
@@ -928,4 +934,68 @@ bail:
 
 done:
   ret i32 0
+}
+
+; AnyOf and FindIV reductions adjust the resume value of the main loop in the
+; preheader of the epilogue vector loop.
+define i32 @any_of_resume(ptr noalias %src, i64 %n) {
+; CHECK-LABEL: VPlan for loop in 'any_of_resume'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK:       vec.epilog.ph:
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = and ir<%n>, ir<3>
+; CHECK-NEXT:    EMIT vp<%n.vec> = sub ir<%n>, vp<[[VP3]]>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = icmp ne ir<%bc.merge.rdx>, ir<0>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = broadcast vp<[[VP4]]>
+; CHECK-NEXT:  Successor(s): vec.epilog.vector.body
+; CHECK-EMPTY:
+; CHECK-NEXT:  vec.epilog.vector.body:
+; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<%vec.epilog.resume.val>, vec.epilog.ph ], [ vp<%index.next>, vec.epilog.vector.body ]
+; CHECK-NEXT:    WIDEN-REDUCTION-PHI ir<%rdx> = phi (any-of) vp<[[VP5]]>, vp<{{.+}}>
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %rdx = phi i32 [ 0, %entry ], [ %sel, %loop ]
+  %gep = getelementptr inbounds i8, ptr %src, i64 %iv
+  %l = load i8, ptr %gep
+  %c = icmp eq i8 %l, 0
+  %sel = select i1 %c, i32 1, i32 %rdx
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 %sel
+}
+
+define i64 @find_iv_resume(ptr noalias %a, i64 %n) {
+; CHECK-LABEL: VPlan for loop in 'find_iv_resume'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK:       vec.epilog.ph:
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = and ir<%n>, ir<3>
+; CHECK-NEXT:    EMIT vp<%n.vec> = sub ir<%n>, vp<[[VP3]]>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = icmp eq ir<%bc.merge.rdx>, ir<3>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = select vp<[[VP4]]>, ir<-9223372036854775808>, ir<%bc.merge.rdx>
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = broadcast vp<[[VP5]]>
+; CHECK:       vec.epilog.vector.body:
+; CHECK:         WIDEN-REDUCTION-PHI ir<%rdx> = phi (find-iv) vp<[[VP6]]>, ir<%sel>
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %rdx = phi i64 [ 3, %entry ], [ %sel, %loop ]
+  %gep = getelementptr inbounds i64, ptr %a, i64 %iv
+  %l = load i64, ptr %gep
+  %c = icmp eq i64 %l, 3
+  %sel = select i1 %c, i64 %iv, i64 %rdx
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i64 %sel
 }

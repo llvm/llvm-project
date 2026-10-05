@@ -35,13 +35,13 @@
 
 ! CHECK-LABEL: @_QPmultiple_private_fix(
 ! CHECK-SAME:  %[[GAMA:.*]]: !fir.ref<i32> {fir.bindc_name = "gama"}
-! CHECK-DAG:         %[[GAMA_DECL:.*]]:2 = hlfir.declare %[[GAMA]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFmultiple_private_fixEgama"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK-DAG:         %[[GAMA_DECL:.*]]:2 = hlfir.declare %[[GAMA]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFmultiple_private_fixEgama") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK-DAG:         %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFmultiple_private_fixEi"}>
-! CHECK-DAG:         %[[I_DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFmultiple_private_fixEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK-DAG:         %[[I_DECL:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFmultiple_private_fixEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK-DAG:         %[[VAL_1:.*]] = fir.alloca i32 <{bindc_name = "j", uniq_name = "_QFmultiple_private_fixEj"}>
-! CHECK-DAG:         %[[J_DECL:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFmultiple_private_fixEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK-DAG:         %[[J_DECL:.*]]:2 = hlfir.declare %[[VAL_1]] uniq_name("_QFmultiple_private_fixEj") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK-DAG:         %[[VAL_2:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFmultiple_private_fixEx"}>
-! CHECK-DAG:         %[[X_DECL:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFmultiple_private_fixEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK-DAG:         %[[X_DECL:.*]]:2 = hlfir.declare %[[VAL_2]] uniq_name("_QFmultiple_private_fixEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:         omp.parallel {
 
 ! CHECK:           %[[ONE:.*]] = arith.constant 1 : i32
@@ -49,9 +49,9 @@
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 1 : i32
 ! CHECK:           omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[PRIV_J:.*]], @{{.*}} %{{.*}}#0 -> %[[PRIV_X:.*]], @{{.*}} %{{.*}}#0 -> %[[PRIV_I:.*]] : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>) {
 ! CHECK-NEXT:        omp.loop_nest (%[[VAL_6:.*]]) : i32 = (%[[ONE]]) to (%[[VAL_3]]) inclusive step (%[[VAL_5]]) {
-! CHECK-DAG:           %[[PRIV_I_DECL:.*]]:2 = hlfir.declare %[[PRIV_I]] {uniq_name = "_QFmultiple_private_fixEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK-DAG:           %[[PRIV_J_DECL:.*]]:2 = hlfir.declare %[[PRIV_J]] {uniq_name = "_QFmultiple_private_fixEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK-DAG:           %[[PRIV_X_DECL:.*]]:2 = hlfir.declare %[[PRIV_X]] {uniq_name = "_QFmultiple_private_fixEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK-DAG:           %[[PRIV_I_DECL:.*]]:2 = hlfir.declare %[[PRIV_I]] uniq_name("_QFmultiple_private_fixEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK-DAG:           %[[PRIV_J_DECL:.*]]:2 = hlfir.declare %[[PRIV_J]] uniq_name("_QFmultiple_private_fixEj") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK-DAG:           %[[PRIV_X_DECL:.*]]:2 = hlfir.declare %[[PRIV_X]] uniq_name("_QFmultiple_private_fixEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:               hlfir.assign %[[VAL_6]] to %[[PRIV_I_DECL]]#0 : i32, !fir.ref<i32>
 ! CHECK:               %[[VAL_8:.*]] = arith.constant 1 : i32
 ! CHECK:               %[[VAL_10:.*]] = fir.load %[[GAMA_DECL]]#0 : !fir.ref<i32>
@@ -95,11 +95,11 @@ end subroutine
 
 ! CHECK-LABEL: multiple_private_fix2
 ! CHECK:  %[[X1:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFmultiple_private_fix2Ex"}>
-! CHECK:  %[[X1_DECL:.*]]:2 = hlfir.declare %[[X1]] {uniq_name = "_QFmultiple_private_fix2Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:  %[[X1_DECL:.*]]:2 = hlfir.declare %[[X1]] uniq_name("_QFmultiple_private_fix2Ex") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:  omp.parallel private({{.*}} {{.*}}#0 -> %[[X2:.*]] : {{.*}}) {
-! CHECK:    %[[X2_DECL:.*]]:2 = hlfir.declare %[[X2]] {uniq_name = "_QFmultiple_private_fix2Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:    %[[X2_DECL:.*]]:2 = hlfir.declare %[[X2]] uniq_name("_QFmultiple_private_fix2Ex") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:    omp.parallel private({{.*}} {{.*}}#0 -> %[[X3:.*]] : {{.*}}) {
-! CHECK:      %[[X3_DECL:.*]]:2 = hlfir.declare %[[X3]] {uniq_name = "_QFmultiple_private_fix2Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:      %[[X3_DECL:.*]]:2 = hlfir.declare %[[X3]] uniq_name("_QFmultiple_private_fix2Ex") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:      %[[C3:.*]] = arith.constant 1 : i32
 ! CHECK:      hlfir.assign %[[C3]] to %[[X3_DECL]]#0 : i32, !fir.ref<i32>
 ! CHECK:      omp.terminator
@@ -127,7 +127,7 @@ end subroutine
 ! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>> {fir.bindc_name = "aaa"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 ! CHECK:           %[[VAL_2:.*]] = fir.box_elesize %[[VAL_1]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> index
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_2]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #{{.*}}<allocatable>, uniq_name = "_QFsub01Eaaa"} : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>, index, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_2]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFsub01Eaaa") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>, index, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>)
 ! CHECK:           omp.parallel private(@[[BOX_HEAP_CHAR_PRIVATIZER]] %[[VAL_3]]#0 -> %{{.*}} : {{.*}}) {
 ! CHECK:             omp.terminator
 ! CHECK:           }
@@ -142,9 +142,9 @@ end subroutine
 
 ! CHECK-LABEL:   func.func @_QPsub02(
 ! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>> {fir.bindc_name = "bbb"}) {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #{{.*}}<allocatable>, uniq_name = "_QFsub02Ebbb"} : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFsub02Ebbb") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>)
 ! CHECK:           omp.parallel private(@{{.*}} %[[VAL_1]]#0 -> %[[PRIV_ARG:.*]] : {{.*}}) {
-! CHECK:             %{{.*}}:2 = hlfir.declare %[[PRIV_ARG]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub02Ebbb"} : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>)
+! CHECK:             %{{.*}}:2 = hlfir.declare %[[PRIV_ARG]] uniq_name("_QFsub02Ebbb") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>)
 ! CHECK:             omp.terminator
 ! CHECK:           }
 ! CHECK:           return

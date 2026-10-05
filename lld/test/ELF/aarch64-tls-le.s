@@ -21,6 +21,11 @@
 # ERR: error: relocation R_AARCH64_TLSLE_ADD_TPREL_HI12 against v1 cannot be used with -shared
 # ERR: error: relocation R_AARCH64_TLSLE_ADD_TPREL_HI12 against v1 cannot be used with -shared
 # ERR: error: relocation R_AARCH64_TLSLE_ADD_TPREL_HI12 against v1 cannot be used with -shared
+# ERR: error: relocation R_AARCH64_TLSLE_LDST8_TPREL_LO12 against v1 cannot be used with -shared
+# ERR: error: relocation R_AARCH64_TLSLE_LDST16_TPREL_LO12 against v1 cannot be used with -shared
+# ERR: error: relocation R_AARCH64_TLSLE_LDST32_TPREL_LO12 against v1 cannot be used with -shared
+# ERR: error: relocation R_AARCH64_TLSLE_LDST64_TPREL_LO12 against v1 cannot be used with -shared
+# ERR: error: relocation R_AARCH64_TLSLE_LDST128_TPREL_LO12 against v1 cannot be used with -shared
 
 .globl _start
 _start:
@@ -35,8 +40,13 @@ _start:
  add x2, x1, :tprel_hi12:v1
  add w3, w3, :tprel_hi12:v1
  add sp, sp, :tprel_hi12:v1
+ ldrb w0, [x0, :tprel_lo12:v1]
+ ldrh w1, [x1, :tprel_lo12:v1]
+ ldr w2, [x2, :tprel_lo12:v1]
+ ldr x3, [x3, :tprel_lo12:v1]
+ ldr q4, [x4, :tprel_lo12:v1]
 
-# TCB size = 0x16 and foo is first element from TLS register.
+# TCB size = 0x10 and v1 is first element from TLS register.
 #CHECK: Disassembly of section .text:
 #CHECK:      <_start>:
 #CHECK-NEXT:   mrs     x0, TPIDR_EL0
@@ -52,6 +62,11 @@ _start:
 #CHECK-NEXT:   add     w3, w3, #0, lsl #12
 #RELAX-NEXT:   nop
 #NORELAX-NEXT:   add     sp, sp, #0, lsl #12
+#CHECK-NEXT:   ldrb    w0, [x0, #16]
+#CHECK-NEXT:   ldrh    w1, [x1, #16]
+#CHECK-NEXT:   ldr     w2, [x2, #16]
+#CHECK-NEXT:   ldr     x3, [x3, #16]
+#CHECK-NEXT:   ldr     q4, [x4, #16]
 
 .section        .tbss,"awT",@nobits
 

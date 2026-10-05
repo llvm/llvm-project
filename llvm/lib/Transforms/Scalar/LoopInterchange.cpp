@@ -2205,7 +2205,7 @@ void LoopInterchangeTransform::reduction2Memory() {
 
   LoopInterchangeLegality::InnerReduction SR = InnerReductions[0];
   BasicBlock *InnerLoopHeader = InnerLoop->getHeader();
-  IRBuilder<> Builder(InnerLoopHeader, InnerLoopHeader->getFirstNonPHIIt());
+  IRBuilder<> Builder(InnerLoopHeader->getFirstNonPHIIt());
 
   // Check if it's the first iteration.
   LLVMContext &Context = InnerLoopHeader->getContext();

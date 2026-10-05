@@ -10227,7 +10227,7 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   // cannot rely on the linker replacing the tail call with a return.
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
     const GlobalValue *GV = G->getGlobal();
-    const Triple &TT = getTargetMachine().getTargetTriple();
+    const Triple &TT = GV->getParent()->getTargetTriple();
     if (GV->hasExternalWeakLinkage() &&
         (!TT.isOSWindows() || TT.isOSBinFormatELF() || TT.isOSBinFormatMachO()))
       return false;
@@ -19932,7 +19932,7 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
 
   VectorType *VTy = getDeinterleavedVectorType(DI);
 
-  const DataLayout &DL = LI->getModule()->getDataLayout();
+  const DataLayout &DL = LI->getDataLayout();
   bool UseScalable;
   if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
     return false;
@@ -20010,7 +20010,7 @@ bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
   assert(!Mask && "Unexpected mask on plain store");
 
   VectorType *VTy = cast<VectorType>(InterleavedValues[0]->getType());
-  const DataLayout &DL = SI->getModule()->getDataLayout();
+  const DataLayout &DL = SI->getDataLayout();
 
   bool UseScalable;
   if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
