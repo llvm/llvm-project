@@ -7,8 +7,7 @@ target datalayout = "e-p:64:64:64:32"
 define ptr @add_lhs_zero(ptr %base, i32 %x) {
 ; CHECK-LABEL: define ptr @add_lhs_zero(
 ; CHECK-SAME: ptr [[BASE:%.*]], i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[INDEX2:%.*]] = add i32 0, [[X]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[BASE]], i32 [[INDEX2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[BASE]], i32 [[X]]
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[TMP1]], i32 5
 ; CHECK-NEXT:    ret ptr [[GEP3]]
 ;
@@ -23,8 +22,7 @@ define ptr @add_rhs_trunc_zero(ptr %base, i64 %x) {
 ; CHECK-LABEL: define ptr @add_rhs_trunc_zero(
 ; CHECK-SAME: ptr [[BASE:%.*]], i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X]] to i32
-; CHECK-NEXT:    [[SUM2:%.*]] = add i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE]], i32 [[SUM2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[TMP2]], i32 5
 ; CHECK-NEXT:    ret ptr [[GEP3]]
 ;
@@ -39,8 +37,7 @@ define ptr @add_rhs_trunc_zero(ptr %base, i64 %x) {
 define ptr @sub_rhs_zero(ptr %base, i32 %x) {
 ; CHECK-LABEL: define ptr @sub_rhs_zero(
 ; CHECK-SAME: ptr [[BASE:%.*]], i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[INDEX2:%.*]] = sub i32 [[X]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[BASE]], i32 [[INDEX2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[BASE]], i32 [[X]]
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[TMP1]], i32 5
 ; CHECK-NEXT:    ret ptr [[GEP3]]
 ;
