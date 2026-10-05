@@ -739,8 +739,7 @@ bool VPInstruction::inferGeneratesSingleScalar() const {
   case VPInstruction::Not:
     return vputils::onlyFirstLaneUsed(this);
   default:
-    return (Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode)) &&
-           vputils::onlyFirstLaneUsed(this);
+    return Instruction::isBinaryOp(Opcode) && vputils::onlyFirstLaneUsed(this);
   }
 }
 
