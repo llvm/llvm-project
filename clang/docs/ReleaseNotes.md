@@ -1316,6 +1316,13 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   modes for `-fsanitize=alloc-token`, selected with
   `-Xclang -falloc-token-mode=<mode>`. These modes derive token IDs from both
   the allocated type and the name of the function containing the allocation.
+- New builtins `__builtin_sanitizer_instrumentation_begin()` and
+  `__builtin_sanitizer_instrumentation_end()` delimit regions of an otherwise
+  uninstrumented function (e.g. a Linux kernel `noinstr` function) in which
+  sanitizer instrumentation is enabled again. AddressSanitizer,
+  KernelMemorySanitizer, ThreadSanitizer and SanitizerCoverage support them;
+  see [LanguageExtensions](LanguageExtensions.md) and the documentation of each
+  sanitizer.
 
 ### Python Binding Changes
 
