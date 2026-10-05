@@ -19,14 +19,7 @@
 #include "llvm/Support/Path.h"
 
 namespace llvm {
-class DWARFDie;
-
 namespace dwarf_linker {
-
-/// Test if the location of variable \p Die contains a global address
-/// but only uses to compute the variable's value, for example
-/// DW_OP_addr DW_OP_stack_value.
-LLVM_ABI bool hasImplicitAddressLocation(const DWARFDie &Die);
 
 /// Build a map from an input DW_AT_LLVM_stmt_sequence byte offset to
 /// the first-row index (in \p LT.Rows) of the corresponding line-table

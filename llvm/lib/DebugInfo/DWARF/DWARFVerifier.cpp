@@ -1925,7 +1925,6 @@ static bool isVariableIndexable(const DWARFDie &Die, DWARFContext &DCtx) {
     DWARFExpression Expression(Data, U->getAddressByteSize(),
                                U->getFormParams().Format);
     bool IsInteresting =
-        Expression.isMemoryLocation() &&
         any_of(Expression, [](const DWARFExpression::Operation &Op) {
           return !Op.isError() && (Op.getCode() == DW_OP_addr ||
                                    Op.getCode() == DW_OP_form_tls_address ||

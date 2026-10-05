@@ -165,9 +165,7 @@ void AcceleratorRecordsSaver::save(const DWARFDebugInfoEntry *InputDieEntry,
     // information of its own to warrant a name record; the output unit is
     // incidental and routed by the helpers.
 
-    if ((AttrInfo.HasLiveAddress || AttrInfo.HasRanges) &&
-        !(InputDieEntry->getTag() == dwarf::DW_TAG_variable &&
-          hasImplicitAddressLocation(InputDIE))) {
+    if (AttrInfo.HasLiveAddress || AttrInfo.HasRanges) {
       if (AttrInfo.Name)
         saveNameRecord(
             InputDieEntry, AttrInfo.Name, OutDIE, InputDieEntry->getTag(),

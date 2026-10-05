@@ -279,41 +279,4 @@ bool DWARFExpression::operator==(const DWARFExpression &RHS) const {
   return Data.getData() == RHS.Data.getData();
 }
 
-/// Test if a simple location description ending in \p LastOp, or empty if
-/// there is none, is a memory location description. Register and implicit
-/// location descriptions are each marked by their final operation.
-static bool isMemoryLocationEndingIn(std::optional<uint8_t> LastOp) {
-  if (!LastOp)
-    return false;
-  if (*LastOp >= dwarf::DW_OP_reg0 && *LastOp <= dwarf::DW_OP_reg31)
-    return false;
-  switch (*LastOp) {
-  case dwarf::DW_OP_regx:
-  case dwarf::DW_OP_stack_value:
-  case dwarf::DW_OP_implicit_value:
-  case dwarf::DW_OP_implicit_pointer:
-  case dwarf::DW_OP_GNU_implicit_pointer:
-    return false;
-  default:
-    return true;
-  }
-}
-
-bool DWARFExpression::isMemoryLocation() const {
-  std::optional<uint8_t> LastOp;
-  for (const Operation &Op : *this) {
-    if (Op.isError())
-      break;
-    if (Op.getCode() == dwarf::DW_OP_piece ||
-        Op.getCode() == dwarf::DW_OP_bit_piece) {
-      if (isMemoryLocationEndingIn(LastOp))
-        return true;
-      LastOp.reset();
-      continue;
-    }
-    LastOp = Op.getCode();
-  }
-  return isMemoryLocationEndingIn(LastOp);
-}
-
 } // namespace llvm

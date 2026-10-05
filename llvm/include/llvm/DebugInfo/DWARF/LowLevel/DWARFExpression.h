@@ -164,10 +164,6 @@ public:
 
   LLVM_ABI bool operator==(const DWARFExpression &RHS) const;
 
-  /// Test if this location description, or one of its pieces, is a
-  /// memory location description.
-  LLVM_ABI bool isMemoryLocation() const;
-
   StringRef getData() const { return Data.getData(); }
 
   friend class DWARFVerifier;
