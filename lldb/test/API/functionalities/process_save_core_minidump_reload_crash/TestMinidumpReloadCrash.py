@@ -9,6 +9,8 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class MinidumpReloadCrashTestCase(TestBase):
+    # The minidump writer only emits a thread context for x86_64 and arm64.
+    @skipIf(archs=no_match(["x86_64", "arm64", "arm64e", "aarch64"]))
     def test_reload_minidump_does_not_crash(self):
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_name_breakpoint(self, "main")
