@@ -1128,7 +1128,8 @@ private:
     std::memcpy(U, OtherU,
                 llvm::densemap::detail::usedWords(NumBuckets) * sizeof(UsedT));
     if constexpr (densemap::detail::isRelocatableBucket<BucketT>) {
-      memcpy(Buckets, OtherBuckets, NumBuckets * sizeof(BucketT));
+      memcpy(reinterpret_cast<void *>(Buckets), OtherBuckets,
+             NumBuckets * sizeof(BucketT));
     } else {
       llvm::densemap::detail::forEachUsed(U, NumBuckets, [&](unsigned I) {
         ::new (&Buckets[I].getFirst()) KeyT(OtherBuckets[I].getFirst());
