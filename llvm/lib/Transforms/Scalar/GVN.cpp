@@ -2314,9 +2314,29 @@ bool GVNPassImpl::performLoopLoadPRE(LoadInst *Load,
     if (LoopBlock)
       return false;
 
-    // Do not sink into inner loops. This may be non-profitable.
-    if (L != LI->getLoopFor(Blocker))
-      return false;
+    // A reload at the end of a nested blocker runs once per inner iteration,
+    // which is more often than the header. Put it on the exit of the inner
+    // loop that is directly inside L instead. That block is on every path
+    // from the blocker back to L's header, and it runs once each time that inner
+    // loop is left.
+    if (const Loop *Inner = LI->getLoopFor(Blocker); Inner != L) {
+      // The blocker is inside Inner, which may itself be nested further down.
+      // Walk parents until Inner is the loop directly inside L that contains
+      // it.
+      while (Inner->getParentLoop() != L)
+        Inner = Inner->getParentLoop();
+
+      BasicBlock *Exit = Inner->getExitBlock();
+
+      // The exit has to be in L. If it lands in another loop, such as a sibling
+      // of Inner, the reload runs once per iteration of that loop, which can
+      // be more often than L's header. getExitBlock() is null when Inner has
+      // more than one exit, and PRE is aborted in that case.
+      if (!Exit || LI->getLoopFor(Exit) != L)
+        return false;
+
+      Blocker = Exit;
+    }
 
     // Blocks that dominate the latch execute on every single iteration, maybe
     // except the last one. So PREing into these blocks doesn't make much sense
@@ -2338,7 +2358,13 @@ bool GVNPassImpl::performLoopLoadPRE(LoadInst *Load,
 
   // Make sure the memory at this pointer cannot be freed, therefore we can
   // safely reload from it after clobber.
-  if (LoadPtr->canBeFreed())
+  //
+  // The header load has already dereferenced LoadPtr on this iteration, so
+  // only a deallocation between that load and the reload in LoopBlock can make
+  // the same address unsafe to read again. Check every path between these two
+  // points for an instruction that may deallocate the memory.
+  if (LoadPtr->canBeFreed() &&
+      !willNotFreeBetween(Load, LoopBlock->getTerminator(), DT))
     return false;
 
   // TODO: Support critical edge splitting if blocker has more than 1 successor.
