@@ -65,6 +65,7 @@ AMDGPUAsyncOperations
 AMDGPUDMAOperations
 AMDGPUExecutionSynchronization
 AMDGPUMemoryModel
+AMDGPUTemporality
 SPIRVUsage
 DirectXUsage
 RISCVUsage
@@ -360,6 +361,12 @@ yaml2obj
   This document describes *AMDGPU Memory Model* which overrides the
   {ref}`LLVM memory model <memmodel>` when a program is compiled for the
   AMDGPU target.
+
+- {doc}`AMDGPUTemporality`
+
+  This document specifies the `amdgpu.temporality` cache hint, which describes
+  the expected reuse pattern of a memory access as a set of levels that may
+  vary by scope.
 
 - {doc}`AMDGPUDwarfExtensionsForHeterogeneousDebugging`
 
