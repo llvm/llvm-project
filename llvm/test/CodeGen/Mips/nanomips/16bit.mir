@@ -29,11 +29,11 @@ body: |
 ...
 ---
 # CHECK-LABEL: and16:
-# CHECK: and $a0, $a0, $a1 # encoding: [0x48,0x52]
+# CHECK: and $a0, $a1, $a0 # encoding: [0x58,0x52]
 name: and16
 body: |
   bb.0:
-    $a0_nm = AND16_NM $a0_nm, $a1_nm
+    $a0_nm = AND16_NM $a1_nm, $a0_nm
 ...
 ---
 # CHECK-LABEL: andi16:
@@ -77,11 +77,11 @@ body: |
 ...
 ---
 # CHECK-LABEL: or16:
-# CHECK: or $a0, $a0, $a1 # encoding: [0x4c,0x52]
+# CHECK: or $a0, $a1, $a0 # encoding: [0x5c,0x52]
 name: or16
 body: |
   bb.0:
-    $a0_nm = OR16_NM $a0_nm, $a1_nm
+    $a0_nm = OR16_NM $a1_nm, $a0_nm
 ...
 ---
 # CHECK-LABEL: sdbbp16:
@@ -117,11 +117,11 @@ body: |
 ...
 ---
 # CHECK-LABEL: xor16:
-# CHECK: xor $a0, $a0, $a1 # encoding: [0x44,0x52]
+# CHECK: xor $a0, $a1, $a0 # encoding: [0x54,0x52]
 name: xor16
 body: |
   bb.0:
-    $a0_nm = XOR16_NM $a0_nm, $a1_nm
+    $a0_nm = XOR16_NM $a1_nm, $a0_nm
 ...
 
 # --- arithmetic ---
