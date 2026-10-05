@@ -153,9 +153,8 @@ ArgInfo AMDGPUTargetInfo::classifyKernelArgumentType(const Type *Ty) const {
   // to global address space when using byref. This would require implementing a
   // new kind of coercion of the in-memory type when for indirect arguments.
   if (isAggregateTypeForABI(Ty))
-    return ArgInfo::getIndirectAliased(
-        Ty->getAlignment(),
-        /*AddrSpace=*/Opts.ConstantAddrSpace);
+    return ArgInfo::getIndirectAliased(Ty->getAlignment(),
+                                       /*AddrSpace=*/Opts.ConstantAddrSpace);
 
   // CanBeFlattened=false keeps the struct intact.
   return ArgInfo::getDirect(Ty, /*Offset=*/0, /*Align=*/std::nullopt,
