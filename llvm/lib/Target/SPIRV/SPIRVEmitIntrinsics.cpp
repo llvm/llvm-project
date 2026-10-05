@@ -2666,11 +2666,11 @@ Instruction *SPIRVEmitIntrinsicsImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
   unsigned AS = I.getPointerOperand()->getType()->getPointerAddressSpace();
 
   uint32_t Scope = static_cast<uint32_t>(
-      getMemScope(TM.getTargetTriple(), I.getContext(), I.getSyncScopeID()));
+      getMemScope(M->getTargetTriple(), I.getContext(), I.getSyncScopeID()));
   uint32_t ScSem = static_cast<uint32_t>(
       getMemSemanticsForStorageClass(addressSpaceToStorageClass(AS, ST)));
   uint32_t MemSem = getMemSemanticsWithStorageClass(
-      TM.getTargetTriple(),
+      M->getTargetTriple(),
       static_cast<uint32_t>(getMemSemantics(I.getOrdering())), ScSem);
 
   SmallString<64> FuncName(Op == AtomicRMWInst::UIncWrap
@@ -3795,7 +3795,7 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
     I->eraseFromParent();
   }
 
-  B.SetInsertPoint(&Func.getEntryBlock(), Func.getEntryBlock().begin());
+  B.SetInsertPoint(Func.getEntryBlock().begin());
   for (auto &GV : Func.getParent()->globals())
     processGlobalValue(GV, B);
 
