@@ -787,15 +787,19 @@ bool SemaARM::CheckSMEBuiltinFunctionCall(unsigned BuiltinID,
         checkArmStreamingBuiltin(SemaRef, TheCall, FD, *BuiltinType, BuiltinID))
       return true;
 
-    if ((getSMEState(BuiltinID) & ArmZAMask) && !hasArmZAState(FD))
+    if ((getSMEState(BuiltinID) & ArmZAMask) && !hasArmZAState(FD)) {
       Diag(TheCall->getBeginLoc(),
-           diag::warn_attribute_arm_za_builtin_no_za_state)
+           diag::err_attribute_arm_za_builtin_no_za_state)
           << TheCall->getSourceRange();
+      return true;
+    }
 
-    if ((getSMEState(BuiltinID) & ArmZT0Mask) && !hasArmZT0State(FD))
+    if ((getSMEState(BuiltinID) & ArmZT0Mask) && !hasArmZT0State(FD)) {
       Diag(TheCall->getBeginLoc(),
-           diag::warn_attribute_arm_zt0_builtin_no_zt0_state)
+           diag::err_attribute_arm_zt0_builtin_no_zt0_state)
           << TheCall->getSourceRange();
+      return true;
+    }
   }
 
   // Range check SME intrinsics that take immediate values.
