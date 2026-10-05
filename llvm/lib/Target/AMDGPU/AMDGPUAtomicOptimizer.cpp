@@ -247,6 +247,13 @@ void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
 
   const bool IsLDS = I.getPointerAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
 
+  // The iterative scan runs once per active lane and costs more than the
+  // hardware serialization of a native LDS atomic.
+  if (IsLDS && ValDivergent && ScanImpl == ScanOptions::Iterative &&
+      ST.getTargetLowering()->shouldExpandAtomicRMWInIR(&I) ==
+          TargetLowering::AtomicExpansionKind::None)
+    return;
+
   // If we get here, we can optimize the atomic using a single wavefront-wide
   // atomic operation to do the calculation for the entire wavefront, so
   // remember the instruction so we can come back to it.
