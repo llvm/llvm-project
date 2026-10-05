@@ -96,11 +96,13 @@ std::string Builtin::Context::getName(unsigned ID) const {
   return I.getName(Shard);
 }
 
-std::string Builtin::Context::getQuotedName(unsigned ID) const {
+SmallString<64> Builtin::Context::getQuotedName(unsigned ID) const {
   const auto &[Shard, I] = getShardAndInfo(ID);
-  return (Twine("'") + Shard.NamePrefix + (*Shard.Strings)[I.Offsets.Name] +
-          "'")
-      .str();
+  SmallString<64> Result("'");
+  Result += Shard.NamePrefix;
+  Result += (*Shard.Strings)[I.Offsets.Name];
+  Result += '\'';
+  return Result;
 }
 
 const char *Builtin::Context::getTypeString(unsigned ID) const {

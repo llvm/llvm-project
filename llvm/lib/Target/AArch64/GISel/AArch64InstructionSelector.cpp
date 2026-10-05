@@ -7339,6 +7339,44 @@ AArch64InstructionSelector::selectShiftMask(MachineOperand &Root) const {
       ShAmtReg = AndSrcReg;
   }
 
+  // If shifting by X+/-N where N == 0 mod ShiftWidth, then just shift by X
+  // to avoid the ADD/SUB. The low log2(ShiftWidth) bits are unchanged, so the
+  // shift can use X directly; the original ADD/SUB stays for any other users.
+  Register AddSrcReg;
+  int64_t AddImm;
+  if ((mi_match(ShAmtReg, MRI,
+                m_GAdd(m_Reg(AddSrcReg), m_ICstOrSplat(AddImm))) ||
+       mi_match(ShAmtReg, MRI,
+                m_GSub(m_Reg(AddSrcReg), m_ICstOrSplat(AddImm)))) &&
+      (AddImm % ShiftWidth == 0)) {
+    ShAmtReg = AddSrcReg;
+    return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(ShAmtReg); }}};
+  }
+
+  // If shifting by N-X where N == 0 mod ShiftWidth, then just shift by -X
+  // to generate a NEG instead of a SUB from a constant.
+  Register SubSrcReg;
+  int64_t SubImm;
+  if (MRI.hasOneUse(ShAmtReg) &&
+      mi_match(ShAmtReg, MRI, m_GSub(m_ICst(SubImm), m_Reg(SubSrcReg))) &&
+      SubImm != 0 && (SubImm % ShiftWidth == 0)) {
+    return {{[=](MachineInstrBuilder &MIB) {
+      MachineInstr *I = MIB.getInstr();
+      MachineRegisterInfo &MRI2 = I->getMF()->getRegInfo();
+      const TargetRegisterClass &RC =
+          ShiftWidth == 32 ? AArch64::GPR32RegClass : AArch64::GPR64RegClass;
+      unsigned SubOpc = ShiftWidth == 32 ? AArch64::SUBWrr : AArch64::SUBXrr;
+      Register ZeroReg = ShiftWidth == 32 ? AArch64::WZR : AArch64::XZR;
+      Register NegReg = MRI2.createVirtualRegister(&RC);
+      auto NegMI = BuildMI(*I->getParent(), *I, I->getDebugLoc(),
+                           TII.get(SubOpc), NegReg)
+                       .addReg(ZeroReg)
+                       .addReg(SubSrcReg);
+      constrainSelectedInstRegOperands(*NegMI, TII, TRI, RBI);
+      MIB.addReg(NegReg);
+    }}};
+  }
+
   // Only succeed if we changed the shift amount; otherwise let other
   // patterns (e.g. zext GPR32 -> SUBREG_TO_REG) match instead.
   if (ShAmtReg == Root.getReg())

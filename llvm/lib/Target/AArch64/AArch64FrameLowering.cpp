@@ -246,6 +246,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/Support/CommandLine.h"
@@ -631,8 +632,7 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
 
 /// Should the Frame Pointer be reserved for the current function?
 bool AArch64FrameLowering::isFPReserved(const MachineFunction &MF) const {
-  const TargetMachine &TM = MF.getTarget();
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = MF.getFunction().getParent()->getTargetTriple();
 
   // These OSes require the frame chain is valid, even if the current frame does
   // not use a frame pointer.
