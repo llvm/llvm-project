@@ -3158,14 +3158,14 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
     // Look for:
     //   add (add x, y), 1
     // And if the target does not like this form then turn into:
-    //   sub y, (xor x, -1)
+    //   sub x, (xor y, -1)
     if (!TLI.preferIncOfAddToSubOfNot(VT) && N0.getOpcode() == ISD::ADD &&
         N0.hasOneUse() &&
         // Limit this to after legalization if the add has wrap flags
         (Level >= AfterLegalizeDAG || (!N->getFlags().hasNoUnsignedWrap() &&
                                        !N->getFlags().hasNoSignedWrap()))) {
-      SDValue Not = DAG.getNOT(DL, N0.getOperand(0), VT);
-      return DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(1), Not);
+      SDValue Not = DAG.getNOT(DL, N0.getOperand(1), VT);
+      return DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(0), Not);
     }
   }
 
@@ -3329,7 +3329,7 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
   // fold a+vscale(c1)+vscale(c2) -> a+vscale(c1+c2)
   if (N0.getOpcode() == ISD::ADD &&
       N0.getOperand(1).getOpcode() == ISD::VSCALE &&
-      N1.getOpcode() == ISD::VSCALE) {
+      N1.getOpcode() == ISD::VSCALE && TLI.isProfitableToFoldVScaleAdd(N0)) {
     const APInt &VS0 = N0.getOperand(1)->getConstantOperandAPInt(0);
     const APInt &VS1 = N1->getConstantOperandAPInt(0);
     SDValue VS = DAG.getVScale(DL, VT, VS0 + VS1);
@@ -3494,14 +3494,14 @@ SDValue DAGCombiner::visitADDLikeCommutative(SDValue N0, SDValue N1,
   // Look for:
   //   add (add x, 1), y
   // And if the target does not like this form then turn into:
-  //   sub y, (xor x, -1)
+  //   sub x, (xor y, -1)
   if (!TLI.preferIncOfAddToSubOfNot(VT) && N0.getOpcode() == ISD::ADD &&
       N0.hasOneUse() && isOneOrOneSplat(N0.getOperand(1)) &&
       // Limit this to after legalization if the add has wrap flags
       (Level >= AfterLegalizeDAG || (!N0->getFlags().hasNoUnsignedWrap() &&
                                      !N0->getFlags().hasNoSignedWrap()))) {
-    SDValue Not = DAG.getNOT(DL, N0.getOperand(0), VT);
-    return DAG.getNode(ISD::SUB, DL, VT, N1, Not);
+    SDValue Not = DAG.getNOT(DL, N1, VT);
+    return DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(0), Not);
   }
 
   if (N0.getOpcode() == ISD::SUB && N0.hasOneUse()) {
@@ -18557,7 +18557,8 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
 
   // int_vt (bitcast (vec_vt (scalar_to_vector elt_vt:x)))
   //   => int_vt (any_extend elt_vt:x)
-  if (N0.getOpcode() == ISD::SCALAR_TO_VECTOR && VT.isScalarInteger()) {
+  if (DAG.getDataLayout().isLittleEndian() &&
+      N0.getOpcode() == ISD::SCALAR_TO_VECTOR && VT.isScalarInteger()) {
     SDValue SrcScalar = N0.getOperand(0);
     EVT SrcVT = SrcScalar.getValueType();
     if (SrcVT.isScalarInteger() && VT.bitsGT(SrcVT))
@@ -30576,6 +30577,12 @@ SDValue DAGCombiner::visitGET_FPENV_MEM(SDNode *N) {
   if (!StNode || !StNode->isSimple() || StNode->isIndexed() ||
       !StNode->getOffset().isUndef() || StNode->getMemoryVT() != MemVT ||
       !StNode->getChain().reachesChainWithoutSideEffects(SDValue(LdNode, 1)))
+    return SDValue();
+
+  // The new node replaces N, so the store address must not depend on N (for
+  // example through a CopyFromReg chained after the load), or the DAG would
+  // become cyclic.
+  if (StNode->getBasePtr()->hasPredecessor(N))
     return SDValue();
 
   // Create new node GET_FPENV_MEM, which uses the store address to write FP
