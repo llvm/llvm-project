@@ -122,7 +122,9 @@ struct FactOrCheck {
                    /// min/mix intrinsic.
     InstCheck,     /// An instruction to simplify (e.g. an overflow math
                    /// intrinsics) or whose flags may be strengthened.
-    UseCheck       /// An use of a compare instruction to simplify.
+    UseCheck,      /// An use of a compare instruction to simplify.
+    NoOverflowFact /// An overflow intrinsic that does not overflow on entry to
+                   /// a block.
   };
 
   union {
@@ -167,6 +169,10 @@ struct FactOrCheck {
 
   static FactOrCheck getInstFact(DomTreeNode *DTN, Instruction *Inst) {
     return FactOrCheck(EntryTy::InstFact, DTN, Inst);
+  }
+
+  static FactOrCheck getNoOverflowFact(DomTreeNode *DTN, WithOverflowInst *WO) {
+    return FactOrCheck(EntryTy::NoOverflowFact, DTN, WO);
   }
 
   static FactOrCheck getCheck(DomTreeNode *DTN, Use *U) {
@@ -257,11 +263,16 @@ struct StackEntry {
   /// Variables that can be removed from the system once the stack entry gets
   /// removed.
   SmallVector<Value *, 2> ValuesToRelease;
+  /// If set, the entry adds no constraint: it records that this overflow
+  /// intrinsic does not overflow while the entry is on the stack.
+  const WithOverflowInst *NoOverflow = nullptr;
 
   StackEntry(unsigned NumIn, unsigned NumOut, bool IsSigned,
              SmallVector<Value *, 2> ValuesToRelease)
       : NumIn(NumIn), NumOut(NumOut), IsSigned(IsSigned),
         ValuesToRelease(std::move(ValuesToRelease)) {}
+  StackEntry(unsigned NumIn, unsigned NumOut, const WithOverflowInst *WO)
+      : NumIn(NumIn), NumOut(NumOut), NoOverflow(WO) {}
 };
 
 struct ConstraintTy {
@@ -367,11 +378,14 @@ class ConstraintInfo {
   ConstraintSystem SignedCS;
 
   const DataLayout &DL;
-  const DominatorTree &DT;
 
   /// Decompositions computed against the current state of the systems. Must be
   /// cleared when the system changes.
   DenseMap<PointerIntPair<Value *, 1, bool>, Decomposition> DecomposeCache;
+
+  /// Overflow intrinsics known not to overflow at the current point, in the
+  /// order their stack entries were pushed.
+  SmallVector<const WithOverflowInst *> NoOverflow;
 
 public:
   DenseMap<PointerIntPair<Value *, 1, bool>, Decomposition> &
@@ -379,9 +393,8 @@ public:
     return DecomposeCache;
   }
 
-  ConstraintInfo(const DataLayout &DL, const DominatorTree &DT,
-                 ArrayRef<Value *> FunctionArgs)
-      : UnsignedCS(FunctionArgs), SignedCS(FunctionArgs), DL(DL), DT(DT) {
+  ConstraintInfo(const DataLayout &DL, ArrayRef<Value *> FunctionArgs)
+      : UnsignedCS(FunctionArgs), SignedCS(FunctionArgs), DL(DL) {
     auto &Value2Index = getValue2Index(false);
     // Add Arg > -1 constraints to unsigned system for all function arguments.
     for (Value *Arg : FunctionArgs)
@@ -396,7 +409,14 @@ public:
     return Signed ? SignedCS.getValue2Index() : UnsignedCS.getValue2Index();
   }
 
-  const DominatorTree &getDT() const { return DT; }
+  void pushNoOverflow(const WithOverflowInst *WO) {
+    NoOverflow.push_back(WO);
+    DecomposeCache.clear();
+  }
+  void popNoOverflow() { NoOverflow.pop_back(); }
+  bool isNoOverflow(const WithOverflowInst *WO) const {
+    return is_contained(NoOverflow, WO);
+  }
 
   ConstraintSystem &getCS(bool Signed) {
     return Signed ? SignedCS : UnsignedCS;
@@ -767,13 +787,13 @@ static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
       V = Trunc->getOperand(0);
   }
 
-  // The result of an add/sub.with.overflow whose uses are all guarded by the
-  // no-overflow branch equals the non-wrapping operation wherever it is used.
+  // The result of an add/sub.with.overflow known not to overflow at this point
+  // equals the non-wrapping operation.
   WithOverflowInst *WO;
   if (match(V, m_ExtractValue<0>(m_WithOverflowInst(WO))) &&
       (WO->getBinaryOp() == Instruction::Add ||
        WO->getBinaryOp() == Instruction::Sub)) {
-    if (!isOverflowIntrinsicNoWrap(WO, Info.getDT()) ||
+    if (!Info.isNoOverflow(WO) ||
         !isKnownNoWrap(WO->getBinaryOp(), WO->getLHS(), WO->getRHS(),
                        WO->getNoWrapKind(), Info, IsSigned))
       return V;
@@ -1675,6 +1695,14 @@ void State::addInfoFor(BasicBlock &BB) {
 
   Value *Cond = Br->getCondition();
 
+  // An overflow intrinsic does not overflow on the false successor of a branch
+  // on its overflow bit.
+  WithOverflowInst *WO;
+  if (match(Cond, m_ExtractValue<1>(m_WithOverflowInst(WO))) &&
+      canAddSuccessor(BB, Br->getSuccessor(1)))
+    WorkList.push_back(
+        FactOrCheck::getNoOverflowFact(DT.getNode(Br->getSuccessor(1)), WO));
+
   // If the condition is a chain of ORs/AND and the successor only has the
   // current block as predecessor, queue conditions for the successor.
   Value *Op0, *Op1;
@@ -2137,7 +2165,10 @@ removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
                      SmallVectorImpl<ReproducerEntry> &ReproducerCondStack,
                      SmallVectorImpl<StackEntry> &DFSInStack) {
   Info.getDecomposeCache().clear();
-  Info.popLastConstraint(E.IsSigned);
+  if (E.NoOverflow)
+    Info.popNoOverflow();
+  else
+    Info.popLastConstraint(E.IsSigned);
   // Remove variables in the system that went out of scope.
   auto &Mapping = Info.getValue2Index(E.IsSigned);
   for (Value *V : E.ValuesToRelease)
@@ -2387,7 +2418,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
   bool Changed = false;
   DT.updateDFSNumbers();
   SmallVector<Value *> FunctionArgs(llvm::make_pointer_range(F.args()));
-  ConstraintInfo Info(F.getDataLayout(), DT, FunctionArgs);
+  ConstraintInfo Info(F.getDataLayout(), FunctionArgs);
   State S(DT, LI, SE, TLI);
   std::unique_ptr<Module> ReproducerModule(
       DumpReproducers ? new Module(F.getName(), F.getContext()) : nullptr);
@@ -2417,6 +2448,12 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
     // If both entries have the same In numbers, conditional facts come first.
     // Otherwise use the relative order in the basic block.
     if (A.NumIn == B.NumIn) {
+      // No-overflow facts come first, so other entries in the block can use
+      // them.
+      bool NoOverflowA = A.Ty == FactOrCheck::EntryTy::NoOverflowFact;
+      bool NoOverflowB = B.Ty == FactOrCheck::EntryTy::NoOverflowFact;
+      if (NoOverflowA || NoOverflowB)
+        return NoOverflowA && !NoOverflowB;
       if (A.isConditionFact() && B.isConditionFact()) {
         bool NoConstOpA = HasNoConstOp(A);
         bool NoConstOpB = HasNoConstOp(B);
@@ -2451,12 +2488,25 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         break;
       LLVM_DEBUG({
         dbgs() << "Removing ";
-        dumpConstraint(Info.getCS(E.IsSigned).getLastConstraint(),
-                       Info.getValue2Index(E.IsSigned));
+        if (E.NoOverflow)
+          dbgs() << "no-overflow fact for " << *E.NoOverflow;
+        else
+          dumpConstraint(Info.getCS(E.IsSigned).getLastConstraint(),
+                         Info.getValue2Index(E.IsSigned));
         dbgs() << "\n";
       });
       removeEntryFromStack(E, Info, ReproducerModule.get(), ReproducerCondStack,
                            DFSInStack);
+    }
+
+    if (CB.Ty == FactOrCheck::EntryTy::NoOverflowFact) {
+      auto *WO = cast<WithOverflowInst>(CB.Inst);
+      Info.pushNoOverflow(WO);
+      DFSInStack.emplace_back(CB.NumIn, CB.NumOut, WO);
+      if (ReproducerModule)
+        ReproducerCondStack.emplace_back(ICmpInst::BAD_ICMP_PREDICATE, nullptr,
+                                         nullptr);
+      continue;
     }
 
     CmpPredicate Pred;
@@ -2704,8 +2754,10 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
 #ifndef NDEBUG
   unsigned SignedEntries =
       count_if(DFSInStack, [](const StackEntry &E) { return E.IsSigned; });
+  unsigned NoOverflowEntries =
+      count_if(DFSInStack, [](const StackEntry &E) { return E.NoOverflow; });
   assert(Info.getCS(false).size() - FunctionArgs.size() ==
-             DFSInStack.size() - SignedEntries &&
+             DFSInStack.size() - SignedEntries - NoOverflowEntries &&
          "updates to CS and DFSInStack are out of sync");
   assert(Info.getCS(true).size() == SignedEntries &&
          "updates to CS and DFSInStack are out of sync");

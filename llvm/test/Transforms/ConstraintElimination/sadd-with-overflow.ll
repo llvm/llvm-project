@@ -409,7 +409,7 @@ exit:
   ret i1 false
 }
 
-; Negative test: %s is also used on the overflow edge, where it may wrap.
+; %s is also used on the overflow edge; only the no-overflow use is simplified.
 define void @sadd_result_used_on_overflow(i8 %a, i8 %b) {
 ; CHECK-LABEL: define void @sadd_result_used_on_overflow(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
@@ -423,8 +423,7 @@ define void @sadd_result_used_on_overflow(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[WO]], 1
 ; CHECK-NEXT:    br i1 [[OV]], label %[[OVF:.*]], label %[[NO_OV:.*]]
 ; CHECK:       [[NO_OV]]:
-; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i8 [[S]], 0
-; CHECK-NEXT:    call void @use(i1 [[C_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[OVF]]:
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i8 [[S]], 0
@@ -482,6 +481,47 @@ no.ov:
   %c = icmp uge i8 %s, %a
   call void @use(i1 %c)
   ret void
+
+exit:
+  ret void
+}
+
+; The no-overflow successor is a loop header that also gets induction facts,
+; so %s >=s %a folds in the loop.
+define void @sadd_result_no_overflow_succ_loop_header(i8 %a, i8 %b, i8 %n) {
+; CHECK-LABEL: define void @sadd_result_no_overflow_succ_loop_header(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[B_NN:%.*]] = icmp sge i8 [[B]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[B_NN]])
+; CHECK-NEXT:    [[WO:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[A]], i8 [[B]])
+; CHECK-NEXT:    [[S:%.*]] = extractvalue { i8, i1 } [[WO]], 0
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[WO]], 1
+; CHECK-NEXT:    br i1 [[OV]], label %[[EXIT:.*]], label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
+; CHECK-NEXT:    [[CONT:%.*]] = icmp ult i8 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[CONT]], label %[[LOOP]], label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %b.nn = icmp sge i8 %b, 0
+  call void @llvm.assume(i1 %b.nn)
+  %wo = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %a, i8 %b)
+  %s = extractvalue { i8, i1 } %wo, 0
+  %ov = extractvalue { i8, i1 } %wo, 1
+  br i1 %ov, label %exit, label %loop
+
+loop:
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %c = icmp sge i8 %s, %a
+  call void @use(i1 %c)
+  %iv.next = add nuw nsw i8 %iv, 1
+  %cont = icmp ult i8 %iv.next, %n
+  br i1 %cont, label %loop, label %exit
 
 exit:
   ret void
