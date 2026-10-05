@@ -221,7 +221,8 @@ static void setNativeShapeAttr(Operation *op, VectorType nativeType) {
 //----------------------------------------------------------------------------//
 
 // Establish whether the candidate contraction is a canonical matrix
-// multiplication on flat or VNNI-packed vectors.
+// multiplication on flat or VNNI-packed vectors. If successful, the discovered
+// operand and accumulator types are recorded in the candidate struct.
 //
 // Example (flat):
 //   vector.contract {
@@ -240,7 +241,7 @@ static void setNativeShapeAttr(Operation *op, VectorType nativeType) {
 //       affine_map<(dm, dn, dk, dvnni) -> (dm, dn)>],
 //     iterator_types = ["parallel", "parallel", "reduction", "reduction"],
 //   } %lhs, %rhs, %acc : !lhsType, !rhsType into !accType
-static LogicalResult checkCanonicalMatmul(MLUCandidate &candidate,
+static LogicalResult matchCanonicalMatmul(MLUCandidate &candidate,
                                           PatternRewriter &rewriter) {
   vector::ContractionOp contract = candidate.contract;
   if (contract.getKind() != vector::CombiningKind::ADD)
@@ -301,8 +302,10 @@ static LogicalResult checkCanonicalMatmul(MLUCandidate &candidate,
 }
 
 // Check compatibility of datatypes with the given target ISA extension, and try
-// to determine a suitable tiling strategy for it.
-static LogicalResult checkShapesAndTypes(MLUCandidate &candidate,
+// to determine a suitable tiling strategy for it. If successful, the strategy
+// is encoded in the *RegTileType and *NativeType fields of the candidate
+// struct.
+static LogicalResult matchShapesAndTypes(MLUCandidate &candidate,
                                          PatternRewriter &rewriter) {
   vector::ContractionOp contract = candidate.contract;
   StringRef target = candidate.target;
@@ -399,6 +402,9 @@ static LogicalResult checkShapesAndTypes(MLUCandidate &candidate,
 // use the induction variable as exactly one of their indices. This covers plain
 // 2D memrefs as well as block-based layouts.
 //
+// If all these conditions are met, the loop op, initial value of the
+// accumulator and the operand reads are recorded in the candidate struct.
+//
 // Example:
 //   !accType = vector<64x128xf32>
 //   !lhsType = vector<64x32xbf16>
@@ -414,7 +420,7 @@ static LogicalResult checkShapesAndTypes(MLUCandidate &candidate,
 //            : !lhsType, !rhsType into !accType
 //     scf.yield %d : !accType
 //   }
-static LogicalResult checkAccumulationLoop(MLUCandidate &candidate,
+static LogicalResult matchAccumulationLoop(MLUCandidate &candidate,
                                            PatternRewriter &rewriter) {
   auto &contract = candidate.contract;
 
@@ -750,7 +756,7 @@ namespace {
 // dialect's unroll patterns to produce native-shaped operations that the
 // nanokernel patterns can match.
 //
-// Currently, the match is deliberately strict (see the check* helpers above):
+// Currently, the match is deliberately strict (see the helpers above):
 // The contraction must be a canonical matrix multiplication, have
 // target-compatible types and shapes that can be tiled and unrolled cleanly,
 // and be embedded in an accumulation loop containing only the operand reads and
@@ -773,9 +779,9 @@ struct VectorContractMultiLevelUnroll
     MLUCandidate candidate;
     candidate.target = target;
     candidate.contract = contract;
-    if (failed(checkCanonicalMatmul(candidate, rewriter)) ||
-        failed(checkShapesAndTypes(candidate, rewriter)) ||
-        failed(checkAccumulationLoop(candidate, rewriter)))
+    if (failed(matchCanonicalMatmul(candidate, rewriter)) ||
+        failed(matchShapesAndTypes(candidate, rewriter)) ||
+        failed(matchAccumulationLoop(candidate, rewriter)))
       return failure();
 
     makeAccInitializationBackedByMemory(candidate, rewriter);
