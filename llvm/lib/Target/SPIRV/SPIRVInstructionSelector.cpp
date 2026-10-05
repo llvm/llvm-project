@@ -1968,11 +1968,10 @@ bool SPIRVInstructionSelector::selectBitcast(Register ResVReg,
   return selectUnOp(ResVReg, ResType, I, SPIRV::OpBitcast);
 }
 
-static void addMemoryOperands(const MachineMemOperand *MemOp,
-                              MachineInstrBuilder &MIB,
-                              MachineIRBuilder &MIRBuilder,
-                              SPIRVGlobalRegistry &GR,
-                              std::optional<Align> Align = std::nullopt) {
+static void
+addMemoryOperands(const MachineMemOperand *MemOp, MachineInstrBuilder &MIB,
+                  MachineIRBuilder &MIRBuilder, SPIRVGlobalRegistry &GR,
+                  std::optional<Align> AlignOverride = std::nullopt) {
   const SPIRVSubtarget *ST =
       static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
   uint32_t SpvMemOp = static_cast<uint32_t>(SPIRV::MemoryOperand::None);
@@ -2004,7 +2003,7 @@ static void addMemoryOperands(const MachineMemOperand *MemOp,
   if (SpvMemOp != static_cast<uint32_t>(SPIRV::MemoryOperand::None)) {
     MIB.addImm(SpvMemOp);
     if (SpvMemOp & static_cast<uint32_t>(SPIRV::MemoryOperand::Aligned))
-      MIB.addImm(Align.value_or(MemOp->getAlign()).value());
+      MIB.addImm(AlignOverride.value_or(MemOp->getAlign()).value());
     if (AliasList)
       MIB.addUse(AliasList->getOperand(0).getReg());
     if (NoAliasList)
