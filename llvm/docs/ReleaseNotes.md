@@ -331,7 +331,8 @@ Makes programs 10x faster by doing Special New Thing.
 * Bindings operating on data layout (`LLVMTargetDataRef`) have been moved
   from `Target.h` (`Target` library) to `Core.h` (`IR` library).
 
-* `LLVMConstGEP2()` and `LLVMConstInBoundsGEP2()` have been deprecated.
+* `LLVMConstGEP2()`, `LLVMConstInBoundsGEP2()` and
+  `LLVMConstGEPWithNoWrapFlags()` have been deprecated.
   `LLVMConstPtrAdd()` and `LLVMConstPtrAddFromIndices()` can be used instead.
   Both create `getelementptr i8` constant expressions, the former using an
   integer offset, and the latter using a data layout, base type and index
