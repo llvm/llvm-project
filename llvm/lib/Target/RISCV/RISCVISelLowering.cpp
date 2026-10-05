@@ -12394,6 +12394,19 @@ static unsigned getRVPShiftOpcode(Intrinsic::ID IntNo) {
   }
 }
 
+static unsigned getRVPNarrowingShiftOpcode(Intrinsic::ID IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected RISC-V packed narrowing shift intrinsic");
+  case Intrinsic::riscv_pnsrl:
+    return RISCVISD::PNSRL;
+  case Intrinsic::riscv_pnsra:
+    return RISCVISD::PNSRA;
+  case Intrinsic::riscv_pnsrar:
+    return RISCVISD::PNSRAR;
+  }
+}
+
 static SDValue lowerPZExt(SDValue Src, const SDLoc &DL, SelectionDAG &DAG,
                           const RISCVSubtarget &Subtarget) {
   MVT VT = Src.getSimpleValueType();
@@ -13274,6 +13287,19 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     unsigned ExtOpc = IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
     SDValue Wide = DAG.getNode(ExtOpc, DL, VT, Src);
     return DAG.getNode(RISCVISD::PSLL, DL, VT, Wide, ShAmt);
+  }
+  case Intrinsic::riscv_pnsrl:
+  case Intrinsic::riscv_pnsra:
+  case Intrinsic::riscv_pnsrar: {
+    MVT VT = Op.getSimpleValueType();
+    MVT SrcVT = Op.getOperand(1).getSimpleValueType();
+    if (!((VT == MVT::v4i8 && SrcVT == MVT::v4i16) ||
+          (VT == MVT::v2i16 && SrcVT == MVT::v2i32)))
+      reportFatalUsageError("unsupported packed narrowing shift intrinsic");
+
+    SDValue ShAmt = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Op.getOperand(2));
+    return DAG.getNode(getRVPNarrowingShiftOpcode(IntNo), DL, VT,
+                       Op.getOperand(1), ShAmt);
   }
   case Intrinsic::riscv_psati:
   case Intrinsic::riscv_pusati: {
@@ -18061,6 +18087,48 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue Res =
           DAG.getNode(getRVPShiftOpcode(IntNo), DL, WideVT, Op0, ShAmt);
       Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
+      return;
+    }
+    case Intrinsic::riscv_pnsrl:
+    case Intrinsic::riscv_pnsra:
+    case Intrinsic::riscv_pnsrar: {
+      MVT VT = N->getSimpleValueType(0);
+      if (!Subtarget.is64Bit() || (VT != MVT::v4i8 && VT != MVT::v2i16))
+        return;
+
+      SDValue Src = N->getOperand(1);
+      MVT SrcVT = Src.getSimpleValueType();
+      if (!((VT == MVT::v4i8 && SrcVT == MVT::v4i16) ||
+            (VT == MVT::v2i16 && SrcVT == MVT::v2i32)))
+        reportFatalUsageError("unsupported packed narrowing shift intrinsic");
+
+      MVT XLenVT = Subtarget.getXLenVT();
+      SDValue ShAmt =
+          DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, N->getOperand(2));
+      unsigned Opc;
+      switch (IntNo) {
+      default:
+        llvm_unreachable("Unexpected packed narrowing shift intrinsic");
+      case Intrinsic::riscv_pnsrl:
+        Opc = RISCVISD::PSRL;
+        break;
+      case Intrinsic::riscv_pnsra:
+        Opc = RISCVISD::PSRA;
+        break;
+      case Intrinsic::riscv_pnsrar:
+        Opc = RISCVISD::PSSHAR;
+        ShAmt = DAG.getNode(ISD::AND, DL, XLenVT, ShAmt,
+                            DAG.getConstant(31, DL, XLenVT));
+        ShAmt = DAG.getNegative(ShAmt, DL, XLenVT);
+        break;
+      }
+
+      SDValue Shifted = DAG.getNode(Opc, DL, SrcVT, Src, ShAmt);
+      MVT UnzipVT = VT == MVT::v4i8 ? MVT::v8i8 : MVT::v4i16;
+      Shifted = DAG.getBitcast(UnzipVT, Shifted);
+      SDValue Unzip = DAG.getNode(RISCVISD::PUNZIPE, DL, UnzipVT, Shifted,
+                                  DAG.getUNDEF(UnzipVT));
+      Results.push_back(DAG.getExtractSubvector(DL, VT, Unzip, 0));
       return;
     }
     case Intrinsic::riscv_predsum:
