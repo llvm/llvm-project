@@ -230,13 +230,6 @@ static cl::opt<bool> EnableFixedwidthAutovecInStreamingMode(
 static cl::opt<bool> EnableScalableAutovecInStreamingMode(
     "enable-scalable-autovec-in-streaming-mode", cl::init(false), cl::Hidden);
 
-static bool isSMEABIRoutineCall(const CallInst &CI,
-                                const AArch64TargetLowering &TLI) {
-  const auto *F = CI.getCalledFunction();
-  return F &&
-         SMEAttrs(F->getName(), TLI.getRuntimeLibcallsInfo()).isSMEABIRoutine();
-}
-
 /// Returns true if \p I is an intrinsic that may not be compatible with a
 /// different streaming mode (because it depends on vscale).
 static bool isPossiblyIncompatibleIntrinsic(const Instruction *I) {
