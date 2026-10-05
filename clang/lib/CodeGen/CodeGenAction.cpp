@@ -28,6 +28,7 @@
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTWriter.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/DebugInfo.h"
@@ -173,6 +174,16 @@ void BackendConsumer::HandleInterestingDecl(DeclGroupRef D) {
 
 // Links each entry in LinkModules into our module. Returns true on error.
 bool BackendConsumer::LinkInModules(llvm::Module *M) {
+  // Builtin bitcode is internalized into the module that links it, so each
+  // PTU of an incremental session needs its own copy. Plain bitcode files are
+  // still linked once.
+  if (LangOpts.IncrementalExtensions && LinkModules.empty()) {
+    if (loadLinkModules(CI, M->getContext(), LinkModules))
+      return true;
+    llvm::erase_if(LinkModules,
+                   [](const LinkModule &LM) { return !LM.Internalize; });
+  }
+
   for (auto &LM : LinkModules) {
     assert(LM.Module && "LinkModule does not actually have a module");
 
