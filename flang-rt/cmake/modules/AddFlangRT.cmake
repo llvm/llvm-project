@@ -397,6 +397,7 @@ function (add_flangrt_library name)
         )
 
       install(TARGETS ${tgtname}
+          COMPONENT flang-rt
           ARCHIVE DESTINATION "${RUNTIMES_INSTALL_RESOURCE_LIB_PATH}"
           LIBRARY DESTINATION "${RUNTIMES_INSTALL_RESOURCE_LIB_PATH}"
         )
