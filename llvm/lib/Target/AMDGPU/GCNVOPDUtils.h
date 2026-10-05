@@ -15,6 +15,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_VOPDUTILS_H
 #define LLVM_LIB_TARGET_AMDGPU_VOPDUTILS_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include <optional>
 
@@ -22,11 +23,22 @@ namespace llvm {
 
 class MachineInstr;
 class SIInstrInfo;
+class MCRegisterClass;
 
-bool checkVOPDRegConstraints(const SIInstrInfo &TII,
-                             const MachineInstr &FirstMI,
-                             const MachineInstr &SecondMI, bool IsVOPD3,
-                             bool AllowSameVGPR);
+/// A 32-bit immediate which the VOPD encoding cannot hold. The pair only
+/// becomes legal after the operand is replaced by a scalar register holding
+/// \p Imm.
+struct VOPDLiteralFixup {
+  /// Component holding the immediate, AMDGPU::VOPD::X or AMDGPU::VOPD::Y.
+  unsigned CompIdx;
+  /// Index of the immediate operand within that component.
+  unsigned OpIdx;
+  /// Value which has to be placed in a register.
+  int32_t Imm;
+  /// Scalar registers the VOPD source slot can read. This is the slot class
+  /// narrowed to SGPR_32, so every register in it can be used.
+  const MCRegisterClass *SlotRC;
+};
 
 /// Describes a matched VOPD pair.
 struct VOPDMatchInfo {
@@ -35,15 +47,18 @@ struct VOPDMatchInfo {
   /// Which entry in \p InOrder is the X component.
   unsigned XIdx;
   bool IsVOPD3;
+  /// Immediates which have to be moved into scalar registers before the pair
+  /// can be built. They all have the same 32-bit value, so one register serves
+  /// the whole pair. Only a VOPD3 pair can need this.
+  SmallVector<VOPDLiteralFixup, 2> LiteralFixups;
 
   MachineInstr *getMIX() const { return InOrder[XIdx]; }
   MachineInstr *getMIY() const { return InOrder[1 - XIdx]; }
 };
 
-/// Check whether \p FirstMI and \p SecondMI, which are next to each other in
-/// program order, can be combined into a VOPD instruction. Returns the match
-/// info (program order, X/Y assignment, and encoding variant) on success, or
-/// std::nullopt if they cannot be paired.
+/// Check whether FirstMI and SecondMI can be
+/// combined into a VOPD instruction.  Returns the match info (X/Y assignment
+/// and encoding variant) on success, or std::nullopt if they cannot be paired.
 std::optional<VOPDMatchInfo> tryMatchVOPDPair(const SIInstrInfo &TII,
                                               MachineInstr &FirstMI,
                                               MachineInstr &SecondMI);

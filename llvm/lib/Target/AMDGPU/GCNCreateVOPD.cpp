@@ -7,12 +7,19 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Combine VALU pairs into VOPD instructions
-/// Only works on wave32
-/// Has register requirements, we reject creating VOPD if the requirements are
-/// not met.
-/// shouldCombineVOPD mutator in postRA machine scheduler puts candidate
-/// instructions for VOPD back-to-back
+/// Form VOPD instructions from adjacent VALU operations on wave32. The post-RA
+/// scheduler puts likely component pairs next to each other. This pass checks
+/// their final physical-register constraints and selects a non-overlapping set.
+///
+/// VOPD3 components cannot encode literal operands. When all non-inline
+/// immediates in a pair have the same 32-bit value, the pass can materialize
+/// that value in an SGPR which is free over the pair. The move and its register
+/// stay pair-local, so fusion adds at most one move and does not extend
+/// register pressure across pairs.
+///
+/// The pass considers every adjacent candidate. It first maximizes the number
+/// of pairs, then minimizes scalar moves among equal-size matchings. The
+/// earlier candidate wins an exact tie.
 ///
 //
 //===----------------------------------------------------------------------===//
@@ -22,23 +29,199 @@
 #include "GCNVOPDUtils.h"
 #include "SIInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "gcn-create-vopd"
 STATISTIC(NumVOPDCreated, "Number of VOPD Insts Created.");
+STATISTIC(NumLiteralsMaterialized,
+          "Number of immediates moved into a scalar register to allow VOPD3 "
+          "pairing.");
+STATISTIC(NumCandidateEdgesWithoutFreeSGPR,
+          "Number of VOPD3 candidate edges skipped because no scalar register "
+          "was free for their immediate.");
 
 using namespace llvm;
+
+namespace {
+
+struct VOPDCandidate {
+  VOPDMatchInfo Match;
+  /// The register for Match.LiteralFixups, or a null register if none is free.
+  Register MaterializationReg;
+
+  bool needsMaterialization() const { return !Match.LiteralFixups.empty(); }
+
+  bool isFeasible() const {
+    return !needsMaterialization() || MaterializationReg;
+  }
+};
+
+} // namespace
+
+/// Add everything the instructions in [\p Begin, \p RangeEnd] touch to
+/// \p Live, which already holds what is live after \p RangeEnd.
+static void addRangeUses(LiveRegUnits &Live, MachineBasicBlock::iterator Begin,
+                         MachineInstr &RangeEnd) {
+  MachineBasicBlock::iterator After =
+      std::next(MachineBasicBlock::iterator(&RangeEnd));
+  for (MachineInstr &MI : make_range(Begin, After)) {
+    if (!MI.isDebugInstr())
+      Live.accumulate(MI);
+  }
+}
+
+/// Return a scalar register which every fixup can read and which no value in
+/// \p Live occupies, or a null register. Low registers are preferred, because
+/// those are most likely in use already, so the function's register count does
+/// not grow.
+static Register takeFreeSGPR(const GCNSubtarget &ST,
+                             const MachineRegisterInfo &MRI,
+                             const LiveRegUnits &Live,
+                             ArrayRef<VOPDLiteralFixup> Fixups) {
+  assert(!Fixups.empty());
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  for (MCPhysReg Reg : AMDGPU::SGPR_32RegClass) {
+    // SGPR_32 also holds the halves of VCC. Writing those changes VCCZ,
+    // which is not modelled by \p Live, so a free half is not safe to use.
+    if (MRI.isReserved(Reg) || TRI->isSubRegisterEq(AMDGPU::VCC, Reg) ||
+        !Live.available(Reg))
+      continue;
+    if (!all_of(Fixups, [Reg](const VOPDLiteralFixup &Fixup) {
+          return Fixup.SlotRC->contains(Reg);
+        }))
+      continue;
+    return Reg;
+  }
+  return Register();
+}
 
 namespace {
 
 class GCNCreateVOPD {
 public:
   const GCNSubtarget *ST = nullptr;
+
+  void
+  assignMaterializationRegisters(MachineBasicBlock &MBB,
+                                 MutableArrayRef<VOPDCandidate> Candidates) {
+    auto Candidate = Candidates.rbegin();
+    auto SkipPlainCandidates = [&] {
+      while (Candidate != Candidates.rend() &&
+             !Candidate->needsMaterialization())
+        ++Candidate;
+    };
+    SkipPlainCandidates();
+    if (Candidate == Candidates.rend())
+      return;
+
+    const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+    LiveRegUnits Walk(*ST->getRegisterInfo());
+    Walk.addLiveOuts(MBB);
+
+    // Before stepping over an instruction, Walk holds what is live immediately
+    // after it. This answers every pair-local range in one backward walk.
+    for (MachineInstr &MI : reverse(MBB)) {
+      if (Candidate != Candidates.rend() &&
+          Candidate->Match.InOrder[1] == &MI) {
+        LiveRegUnits RangeLive = Walk;
+        addRangeUses(RangeLive, Candidate->Match.InOrder[0]->getIterator(),
+                     *Candidate->Match.InOrder[1]);
+        Candidate->MaterializationReg =
+            takeFreeSGPR(*ST, MRI, RangeLive, Candidate->Match.LiteralFixups);
+        ++Candidate;
+        SkipPlainCandidates();
+      }
+      if (!MI.isDebugInstr())
+        Walk.stepBackward(MI);
+    }
+    assert(Candidate == Candidates.rend() &&
+           "every candidate range must end in this block");
+  }
+
+  static SmallVector<VOPDCandidate *, 8>
+  selectCandidates(MutableArrayRef<VOPDCandidate> Candidates) {
+    struct Score {
+      unsigned NumPairs = 0;
+      unsigned NumMoves = 0;
+    };
+
+    const size_t NumCandidates = Candidates.size();
+    SmallVector<Score, 8> Best(NumCandidates + 1);
+    SmallBitVector Take(NumCandidates);
+    auto NextNonOverlapping = [&](size_t I) {
+      size_t Next = I + 1;
+      if (Next != NumCandidates &&
+          Candidates[Next].Match.InOrder[0] == Candidates[I].Match.InOrder[1])
+        ++Next;
+      return Next;
+    };
+
+    // Maximize the number of pairs, then minimize the moves they need. Taking
+    // the current edge on an exact tie preserves the old left-to-right choice.
+    for (size_t I = NumCandidates; I-- != 0;) {
+      Best[I] = Best[I + 1];
+      if (!Candidates[I].isFeasible()) {
+        ++NumCandidateEdgesWithoutFreeSGPR;
+        continue;
+      }
+
+      Score With = Best[NextNonOverlapping(I)];
+      ++With.NumPairs;
+      With.NumMoves += Candidates[I].needsMaterialization();
+      if (With.NumPairs > Best[I].NumPairs ||
+          (With.NumPairs == Best[I].NumPairs &&
+           With.NumMoves <= Best[I].NumMoves)) {
+        Best[I] = With;
+        Take.set(I);
+      }
+    }
+
+    SmallVector<VOPDCandidate *, 8> Selected;
+    for (size_t I = 0; I != NumCandidates;) {
+      if (!Take[I]) {
+        ++I;
+        continue;
+      }
+      Selected.push_back(&Candidates[I]);
+      I = NextNonOverlapping(I);
+    }
+    return Selected;
+  }
+
+  void materializeLiteral(const SIInstrInfo &TII, VOPDCandidate &Candidate) {
+    if (!Candidate.needsMaterialization())
+      return;
+
+    ArrayRef<VOPDLiteralFixup> Fixups = Candidate.Match.LiteralFixups;
+    assert(Candidate.MaterializationReg);
+    assert(all_of(Fixups,
+                  [Imm = Fixups.front().Imm](const VOPDLiteralFixup &Fixup) {
+                    return Fixup.Imm == Imm;
+                  }));
+
+    MachineInstr *InsertPt = Candidate.Match.InOrder[0];
+    BuildMI(*InsertPt->getParent(), InsertPt, DebugLoc(),
+            TII.get(AMDGPU::S_MOV_B32), Candidate.MaterializationReg)
+        .addImm(Fixups.front().Imm);
+    ++NumLiteralsMaterialized;
+
+    for (const VOPDLiteralFixup &Fixup : Fixups) {
+      MachineInstr *MI = Fixup.CompIdx == AMDGPU::VOPD::X
+                             ? Candidate.Match.getMIX()
+                             : Candidate.Match.getMIY();
+      MI->getOperand(Fixup.OpIdx)
+          .ChangeToRegister(Candidate.MaterializationReg, /*isDef=*/false);
+    }
+  }
 
   bool doReplace(const SIInstrInfo *SII, VOPDMatchInfo &Match) {
     MachineInstr *MIX = Match.getMIX();
@@ -123,38 +306,30 @@ public:
     const SIInstrInfo *SII = ST->getInstrInfo();
     bool Changed = false;
 
-    SmallVector<VOPDMatchInfo> ReplaceCandidates;
-
-    for (auto &MBB : MF) {
+    for (MachineBasicBlock &MBB : MF) {
+      SmallVector<VOPDCandidate, 8> Candidates;
       auto MII = MBB.begin(), E = MBB.end();
       while (MII != E) {
-        auto *FirstMI = &*MII;
+        MachineInstr *FirstMI = &*MII;
         MII = next_nodbg(MII, MBB.end());
         if (MII == MBB.end())
           break;
         if (FirstMI->isDebugInstr())
           continue;
-        auto *SecondMI = &*MII;
+        MachineInstr *SecondMI = &*MII;
 
         if (std::optional<VOPDMatchInfo> Match =
                 tryMatchVOPDPair(*SII, *FirstMI, *SecondMI))
-          ReplaceCandidates.push_back(std::move(*Match));
+          Candidates.push_back({std::move(*Match), Register()});
+      }
+
+      assignMaterializationRegisters(MBB, Candidates);
+      SmallVector<VOPDCandidate *, 8> Selected = selectCandidates(Candidates);
+      for (VOPDCandidate *Candidate : Selected) {
+        materializeLiteral(*SII, *Candidate);
+        Changed |= doReplace(SII, Candidate->Match);
       }
     }
-
-    SmallVector<VOPDMatchInfo *> Selected;
-    // An instruction can be the second MI of one candidate and the first MI of
-    // the next. Remember the second MI of the last selected candidate to reject
-    // that overlap.
-    MachineInstr *LastSelectedSecond = nullptr;
-    for (VOPDMatchInfo &Match : ReplaceCandidates) {
-      if (Match.InOrder[0] == LastSelectedSecond)
-        continue;
-      Selected.push_back(&Match);
-      LastSelectedSecond = Match.InOrder[1];
-    }
-    for (VOPDMatchInfo *Match : Selected)
-      Changed |= doReplace(SII, *Match);
 
     return Changed;
   }

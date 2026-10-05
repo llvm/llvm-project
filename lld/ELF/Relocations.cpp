@@ -762,6 +762,8 @@ static void addPltEntry(Ctx &ctx, PltSection &plt, GotPltSection &gotPlt,
     return;
   }
   gotPlt.addEntry(sym);
+  if (sym.isPreemptible && ctx.arg.zMarkPlt && type == ctx.target->pltRel)
+    expr = R_PLT;
   rel.addReloc(
       {type, &gotPlt, sym.getGotPltOffset(ctx), isPreemptible, sym, 0, expr});
 }
@@ -798,9 +800,11 @@ static void addGotAuthEntry(Ctx &ctx, Symbol &sym) {
     return;
   }
 
-  // Signed GOT requires dynamic relocation.
-  ctx.in.relaDyn->addReloc(
-      {R_AARCH64_AUTH_RELATIVE, ctx.in.got.get(), off, false, sym, 0, R_ABS});
+  // Signed GOT requires dynamic relocation unless the symbol is
+  // non-preemptible and undefined.
+  if (!sym.isUndefined())
+    ctx.in.relaDyn->addReloc(
+        {R_AARCH64_AUTH_RELATIVE, ctx.in.got.get(), off, false, sym, 0, R_ABS});
 }
 
 static void addTpOffsetGotEntry(Ctx &ctx, Symbol &sym) {
@@ -860,8 +864,12 @@ bool RelocScan::isStaticLinkTimeConstant(RelExpr e, RelType type,
   // only the low bits are used.
   if (e == R_GOT || e == R_PLT)
     return ctx.target->usesOnlyLowPageBits(type) || !ctx.arg.isPic;
-  // R_AARCH64_AUTH_ABS64 and iRelSymbolicRel require a dynamic relocation.
-  if (e == RE_AARCH64_AUTH || type == ctx.target->iRelSymbolicRel)
+  // R_AARCH64_AUTH_ABS64 requires a dynamic relocation unless the symbol is
+  // non-preemptible and undefined.
+  if (e == RE_AARCH64_AUTH && (!sym.isUndefined() || sym.isPreemptible))
+    return false;
+  // iRelSymbolicRel requires a dynamic relocation.
+  if (type == ctx.target->iRelSymbolicRel)
     return false;
 
   // The behavior of an undefined weak reference is implementation defined.
@@ -937,7 +945,7 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
       // If the target adjusted the expression to an optimizable form, we may
       // end up needing the GOT if we can't optimize everything.
       if (expr == R_RELAX_GOT_PC || expr == R_RELAX_GOT_PC_NOPIC)
-        ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
+        ctx.in.got->hasDeferredEntries.store(true, std::memory_order_relaxed);
     }
   }
 
@@ -1364,7 +1372,7 @@ void elf::postScanRelocations(Ctx &ctx) {
       got->addTlsDescEntry(sym);
       RelType tlsDescRel = ctx.target->tlsDescRel;
       if (flags & NEEDS_TLSDESC_AUTH) {
-        got->addTlsDescAuthEntry();
+        got->addTlsDescAuthEntry(sym);
         tlsDescRel = ELF::R_AARCH64_AUTH_TLSDESC;
       }
       ctx.in.relaDyn->addAddendOnlyRelocIfNonPreemptible(

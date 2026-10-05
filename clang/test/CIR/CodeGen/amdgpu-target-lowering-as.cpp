@@ -64,3 +64,13 @@ void get_globals() {
 // POST: cir.func {{.*}} @_Z11get_globalsv
 // POST:   cir.get_global @g_global   : !cir.ptr<!s32i, target_address_space(1)>
 // POST:   cir.get_global @g_constant : !cir.ptr<!s32i, target_address_space(4)>
+
+// ---- cir.const: null pointer constant type with lang AS -> target AS ----
+
+int [[clang::opencl_global]] *null_global() { return nullptr; }
+
+// PRE:  cir.func {{.*}} @_Z11null_globalv
+// PRE:    cir.const #cir.ptr<null> : !cir.ptr<!s32i, lang_address_space(offload_global)>
+
+// POST: cir.func {{.*}} @_Z11null_globalv
+// POST:   cir.const #cir.ptr<null> : !cir.ptr<!s32i, target_address_space(1)>
