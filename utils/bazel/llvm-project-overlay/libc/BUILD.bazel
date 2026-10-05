@@ -5048,6 +5048,24 @@ libc_function(
 )
 
 libc_function(
+    name = "inet_pton",
+    srcs = ["src/arpa/inet/inet_pton.cpp"],
+    hdrs = ["src/arpa/inet/inet_pton.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_macros_null_check",
+        ":__support_net_address",
+        ":hdr_errno_macros",
+        ":hdr_stdint_proxy",
+        ":hdr_sys_socket_macros",
+        ":types_struct_in6_addr",
+        ":types_struct_in_addr",
+    ],
+)
+
+libc_function(
     name = "ntohl",
     srcs = ["src/arpa/inet/ntohl.cpp"],
     hdrs = ["src/arpa/inet/ntohl.h"],
@@ -10338,29 +10356,81 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_math_powf",
-    hdrs = [
-        "src/__support/math/powf.h",
-        "src/__support/math/powf_small_tables.h",
-    ],
+    name = "__support_math_powf_utils",
+    hdrs = ["src/__support/math/powf_utils.h"],
     deps = [
         ":__support_common",
-        ":__support_cpp_algorithm",
+        ":__support_cpp_bit",
+        ":__support_cpp_optional",
+        ":__support_fputil_double_double",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_rounding_mode",
+        ":__support_fputil_sqrt",
+        ":__support_fputil_triple_double",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_math_common_constants",
+        ":__support_math_exp10f",
+        ":__support_math_exp2f",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_powf_double_eval",
+    hdrs = ["src/__support/math/powf_double_eval.h"],
+    deps = [
+        ":__support_common",
+        ":__support_cpp_bit",
+        ":__support_cpp_optional",
+        ":__support_fputil_double_double",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_math_common_constants",
+        ":__support_math_exp_constants",
+        ":__support_math_powf_utils",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_powf_float_eval",
+    hdrs = ["src/__support/math/powf_float_eval.h"],
+    deps = [
+        ":__support_common",
         ":__support_cpp_bit",
         ":__support_fputil_double_double",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
-        ":__support_fputil_polyeval",
-        ":__support_fputil_sqrt",
-        ":__support_fputil_triple_double",
         ":__support_macros_config",
         ":__support_macros_optimization",
-        ":__support_math_common_constants",
-        ":__support_math_exp10f",
-        ":__support_math_exp2f",
-        ":__support_math_exp_constants",
+        ":__support_macros_properties_cpu_features",
+        ":__support_math_exp2f_float_utils",
+        ":__support_math_powf_utils",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_powf",
+    hdrs = ["src/__support/math/powf.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_math_powf_double_eval",
+        ":__support_math_powf_float_eval",
     ],
 )
 
@@ -11602,6 +11672,7 @@ libc_support_library(
         ":__support_cpp_span",
         ":__support_cpp_string_view",
         ":__support_ctype_utils",
+        ":__support_fixedvector",
         ":__support_libc_assert",
         ":__support_macros_config",
         ":__support_str_to_integer",
