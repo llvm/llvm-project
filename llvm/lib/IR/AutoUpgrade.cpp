@@ -1538,7 +1538,7 @@ static constexpr Intrinsic::ID NVVMFMulIIDs[2][2] = {
     {Intrinsic::nvvm_fmul_ftz, Intrinsic::nvvm_fmul_ftz_sat}};
 
 static std::optional<std::pair<Intrinsic::ID, RoundingMode>>
-getNVVMFPArithUpgrade(StringRef Name, const Intrinsic::ID IIDs[2][2]) {
+getNVVMFPArithUpgrade(StringRef Name, const Intrinsic::ID (&IIDs)[2][2]) {
   auto [Modifiers, Type] = Name.rsplit('.');
   if (!is_contained({"f", "d", "f16", "v2f16"}, Type))
     return std::nullopt;
@@ -3268,7 +3268,7 @@ void llvm::UpgradeInlineAsmString(std::string *AsmStr) {
 
 static Value *upgradeNVVMFPArithCall(IRBuilder<> &Builder, CallBase *CI,
                                      StringRef Name,
-                                     const Intrinsic::ID IIDs[2][2]) {
+                                     const Intrinsic::ID (&IIDs)[2][2]) {
   auto Result = getNVVMFPArithUpgrade(Name, IIDs);
   assert(Result && "unsupported nvvm.add.*/nvvm.mul.* intrinsic");
   auto [IID, RoundingMode] = *Result;

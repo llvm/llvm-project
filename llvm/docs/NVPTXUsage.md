@@ -1485,10 +1485,10 @@ vectors is added to `%c` to produce the return.
 This is an overloaded intrinsic of the form:
 
 ```llvm
-declare <ty> @llvm.nvvm.fadd{.ftz}{.sat}.<sfx>(<ty> %a, <ty> %b, i32 immarg %flag_fp_rnd_mode)
+declare <ty> @llvm.nvvm.fadd{.ftz}{.sat}.<suffix>(<ty> %a, <ty> %b, i32 immarg %flag_fp_rnd_mode)
 ```
 
-where '`<sfx>`' is the mangled suffix of the overloaded type '`<ty>`' and the
+where '`<suffix>`' is the mangled suffix of the overloaded type '`<ty>`' and the
 '`.ftz`' and '`.sat`' modifiers are optional. The supported variants are:
 
 ```llvm
@@ -1551,10 +1551,10 @@ PTX instruction. The supported combinations are:
 This is an overloaded intrinsic of the form:
 
 ```llvm
-declare <ty> @llvm.nvvm.fmul{.ftz}{.sat}.<sfx>(<ty> %a, <ty> %b, i32 immarg %flag_fp_rnd_mode)
+declare <ty> @llvm.nvvm.fmul{.ftz}{.sat}.<suffix>(<ty> %a, <ty> %b, i32 immarg %flag_fp_rnd_mode)
 ```
 
-where '`<sfx>`' is the mangled suffix of the overloaded type '`<ty>`' and the
+where '`<suffix>`' is the mangled suffix of the overloaded type '`<ty>`' and the
 '`.ftz`' and '`.sat`' modifiers are optional. The supported variants are:
 
 ```llvm
