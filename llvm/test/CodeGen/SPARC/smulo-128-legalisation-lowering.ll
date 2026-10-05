@@ -149,68 +149,79 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) nounwind {
 ; SPARC64-NEXT:  ! %bb.0: ! %start
 ; SPARC64-NEXT:    save %sp, -176, %sp
 ; SPARC64-NEXT:    mov %i3, %i4
-; SPARC64-NEXT:    mov %i1, %i5
-; SPARC64-NEXT:    mov %i0, %l2
-; SPARC64-NEXT:    srax %i0, 63, %i3
-; SPARC64-NEXT:    mov %i3, %o0
+; SPARC64-NEXT:    mov %i1, %i3
+; SPARC64-NEXT:    mov %i0, %i5
+; SPARC64-NEXT:    srax %i0, 63, %i1
+; SPARC64-NEXT:    mov %i1, %o0
 ; SPARC64-NEXT:    mov %i0, %o1
 ; SPARC64-NEXT:    mov %g0, %o2
 ; SPARC64-NEXT:    call __multi3
 ; SPARC64-NEXT:    mov %i4, %o3
-; SPARC64-NEXT:    mov %o0, %l0
-; SPARC64-NEXT:    mov %o1, %l1
-; SPARC64-NEXT:    mov %g0, %o0
-; SPARC64-NEXT:    mov %i1, %o1
-; SPARC64-NEXT:    mov %g0, %o2
-; SPARC64-NEXT:    call __multi3
-; SPARC64-NEXT:    mov %i4, %o3
-; SPARC64-NEXT:    mov %o1, %i1
 ; SPARC64-NEXT:    mov %g0, %i0
-; SPARC64-NEXT:    add %l1, %o0, %l3
-; SPARC64-NEXT:    cmp %l3, %l1
+; SPARC64-NEXT:    srl %i4, 0, %g2
+; SPARC64-NEXT:    srlx %i3, 32, %g3
+; SPARC64-NEXT:    mulx %g3, %g2, %g4
+; SPARC64-NEXT:    srl %i3, 0, %g5
+; SPARC64-NEXT:    mulx %g5, %g2, %l0
+; SPARC64-NEXT:    srlx %l0, 32, %g2
+; SPARC64-NEXT:    add %g4, %g2, %g2
+; SPARC64-NEXT:    srlx %g2, 32, %g4
+; SPARC64-NEXT:    srl %g2, 0, %g2
+; SPARC64-NEXT:    srlx %i4, 32, %i4
+; SPARC64-NEXT:    mulx %g5, %i4, %g5
+; SPARC64-NEXT:    add %g5, %g2, %l1
+; SPARC64-NEXT:    srlx %l1, 32, %g2
+; SPARC64-NEXT:    add %g4, %g2, %g2
+; SPARC64-NEXT:    mulx %g3, %i4, %i4
+; SPARC64-NEXT:    add %i4, %g2, %i4
+; SPARC64-NEXT:    add %o1, %i4, %l2
+; SPARC64-NEXT:    cmp %l2, %o1
 ; SPARC64-NEXT:    movcs %xcc, 1, %i0
 ; SPARC64-NEXT:    srl %i0, 0, %i0
-; SPARC64-NEXT:    add %l0, %i0, %l0
-; SPARC64-NEXT:    srax %l0, 63, %l1
+; SPARC64-NEXT:    add %o0, %i0, %l3
+; SPARC64-NEXT:    srax %l3, 63, %l4
 ; SPARC64-NEXT:    srax %i2, 63, %i4
 ; SPARC64-NEXT:    mov %g0, %o0
+; SPARC64-NEXT:    mov %i3, %o1
+; SPARC64-NEXT:    mov %i4, %o2
+; SPARC64-NEXT:    call __multi3
+; SPARC64-NEXT:    mov %i2, %o3
+; SPARC64-NEXT:    mov %g0, %i3
+; SPARC64-NEXT:    mov %g0, %g2
+; SPARC64-NEXT:    add %o1, %l2, %i0
+; SPARC64-NEXT:    cmp %i0, %o1
+; SPARC64-NEXT:    movcs %xcc, 1, %i3
+; SPARC64-NEXT:    srl %i3, 0, %i3
+; SPARC64-NEXT:    add %o0, %i3, %i3
+; SPARC64-NEXT:    srax %i3, 63, %g3
+; SPARC64-NEXT:    add %l4, %g3, %g3
+; SPARC64-NEXT:    add %l3, %i3, %i3
+; SPARC64-NEXT:    cmp %i3, %l3
+; SPARC64-NEXT:    movcs %xcc, 1, %g2
+; SPARC64-NEXT:    srl %g2, 0, %g2
+; SPARC64-NEXT:    add %g3, %g2, %l2
+; SPARC64-NEXT:    mov %i1, %o0
 ; SPARC64-NEXT:    mov %i5, %o1
 ; SPARC64-NEXT:    mov %i4, %o2
 ; SPARC64-NEXT:    call __multi3
 ; SPARC64-NEXT:    mov %i2, %o3
-; SPARC64-NEXT:    mov %g0, %i5
-; SPARC64-NEXT:    mov %g0, %g2
-; SPARC64-NEXT:    add %o1, %l3, %i0
-; SPARC64-NEXT:    cmp %i0, %o1
-; SPARC64-NEXT:    movcs %xcc, 1, %i5
-; SPARC64-NEXT:    srl %i5, 0, %i5
-; SPARC64-NEXT:    add %o0, %i5, %i5
-; SPARC64-NEXT:    srax %i5, 63, %g3
-; SPARC64-NEXT:    add %l1, %g3, %g3
-; SPARC64-NEXT:    add %l0, %i5, %i5
-; SPARC64-NEXT:    cmp %i5, %l0
-; SPARC64-NEXT:    movcs %xcc, 1, %g2
-; SPARC64-NEXT:    srl %g2, 0, %g2
-; SPARC64-NEXT:    add %g3, %g2, %l0
-; SPARC64-NEXT:    mov %i3, %o0
-; SPARC64-NEXT:    mov %l2, %o1
-; SPARC64-NEXT:    mov %i4, %o2
-; SPARC64-NEXT:    call __multi3
-; SPARC64-NEXT:    mov %i2, %o3
+; SPARC64-NEXT:    mov %g0, %i1
 ; SPARC64-NEXT:    mov %g0, %i2
-; SPARC64-NEXT:    mov %g0, %i3
-; SPARC64-NEXT:    add %o0, %l0, %i4
-; SPARC64-NEXT:    add %o1, %i5, %i5
-; SPARC64-NEXT:    cmp %i5, %o1
-; SPARC64-NEXT:    movcs %xcc, 1, %i2
-; SPARC64-NEXT:    srl %i2, 0, %i2
-; SPARC64-NEXT:    add %i4, %i2, %i2
+; SPARC64-NEXT:    add %o0, %l2, %i4
+; SPARC64-NEXT:    add %o1, %i3, %i3
+; SPARC64-NEXT:    cmp %i3, %o1
+; SPARC64-NEXT:    movcs %xcc, 1, %i1
+; SPARC64-NEXT:    srl %i1, 0, %i1
+; SPARC64-NEXT:    add %i4, %i1, %i1
 ; SPARC64-NEXT:    srax %i0, 63, %i4
-; SPARC64-NEXT:    xor %i2, %i4, %i2
-; SPARC64-NEXT:    xor %i5, %i4, %i4
-; SPARC64-NEXT:    or %i4, %i2, %i2
-; SPARC64-NEXT:    movrnz %i2, 1, %i3
-; SPARC64-NEXT:    srl %i3, 0, %i2
+; SPARC64-NEXT:    xor %i1, %i4, %i1
+; SPARC64-NEXT:    xor %i3, %i4, %i3
+; SPARC64-NEXT:    or %i3, %i1, %i1
+; SPARC64-NEXT:    movrnz %i1, 1, %i2
+; SPARC64-NEXT:    sllx %l1, 32, %i1
+; SPARC64-NEXT:    srl %l0, 0, %i3
+; SPARC64-NEXT:    or %i3, %i1, %i1
+; SPARC64-NEXT:    srl %i2, 0, %i2
 ; SPARC64-NEXT:    ret
 ; SPARC64-NEXT:    restore
 ;
