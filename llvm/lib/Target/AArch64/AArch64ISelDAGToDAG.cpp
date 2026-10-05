@@ -90,6 +90,9 @@ public:
   bool SelectLogicalShiftedRegister(SDValue N, SDValue &Reg, SDValue &Shift) {
     return SelectShiftedRegister(N, true, Reg, Shift);
   }
+  template <unsigned ShiftWidth>
+  bool SelectShiftMask(SDValue N, SDValue &ShAmt);
+
   bool SelectAddrModeIndexed7S8(SDValue N, SDValue &Base, SDValue &OffImm) {
     return SelectAddrModeIndexed7S(N, 1, Base, OffImm);
   }
@@ -771,6 +774,57 @@ bool AArch64DAGToDAGISel::SelectInlineAsmMemoryOperand(
   return true;
 }
 
+template <unsigned ShiftWidth>
+bool AArch64DAGToDAGISel::SelectShiftMask(SDValue N, SDValue &ShAmt) {
+  // AArch64 shift instructions only use the low log2(ShiftWidth) bits of the
+  // shift amount. If the shift amount has a redundant AND mask that covers
+  // those bits, we can remove it. Return false if nothing was combined so
+  // other patterns (e.g. zext/sext GPR32 → SUBREG_TO_REG) can match.
+  if (N.getOpcode() == ISD::AND && isa<ConstantSDNode>(N.getOperand(1)) &&
+      N.getValueType() == (ShiftWidth == 32 ? MVT::i32 : MVT::i64)) {
+    uint64_t Mask = N.getConstantOperandVal(1);
+    // Remove AND if the mask covers at least the low log2(ShiftWidth) bits.
+    if ((unsigned)llvm::countr_one(Mask) >= Log2_32(ShiftWidth)) {
+      ShAmt = N.getOperand(0);
+      return true;
+    }
+  }
+  // If shifting by X+/-N where N == 0 mod ShiftWidth, then just shift by X
+  // to avoid the ADD/SUB. The low log2(ShiftWidth) bits are unchanged, so the
+  // shift can use X directly; the original ADD/SUB stays for any other users.
+  if ((N.getOpcode() == ISD::ADD || N.getOpcode() == ISD::SUB) &&
+      N.getValueType() == (ShiftWidth == 32 ? MVT::i32 : MVT::i64)) {
+    uint64_t Imm;
+    if (isIntImmediate(N.getOperand(1).getNode(), Imm) &&
+        (Imm % ShiftWidth == 0)) {
+      ShAmt = N.getOperand(0);
+      return true;
+    }
+  }
+
+  // If shifting by N-X where N == 0 mod ShiftWidth, then just shift by -X
+  // to generate a NEG instead of a SUB from a constant.
+  if (N.getOpcode() == ISD::SUB && N.hasOneUse() &&
+      N.getValueType() == (ShiftWidth == 32 ? MVT::i32 : MVT::i64)) {
+    uint64_t Imm;
+    if (isIntImmediate(N.getOperand(0).getNode(), Imm) && Imm != 0 &&
+        (Imm % ShiftWidth == 0)) {
+      SDLoc DL(N);
+      EVT VT = N.getValueType();
+      unsigned NegOpc = (ShiftWidth == 32) ? AArch64::SUBWrr : AArch64::SUBXrr;
+      unsigned ZeroReg = (ShiftWidth == 32) ? AArch64::WZR : AArch64::XZR;
+      SDValue Zero =
+          CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, ZeroReg, VT);
+      MachineSDNode *Neg =
+          CurDAG->getMachineNode(NegOpc, DL, VT, Zero, N.getOperand(1));
+      ShAmt = SDValue(Neg, 0);
+      return true;
+    }
+  }
+
+  return false;
+}
+
 /// SelectArithImmed - Select an immediate value that can be represented as
 /// a 12-bit value shifted left by either 0 or 12.  If so, return true with
 /// Val set to the 12-bit value and Shift set to the shifter operand.
@@ -1205,6 +1259,12 @@ bool AArch64DAGToDAGISel::SelectArithExtendedRegister(SDValue N, SDValue &Reg,
         isDef32(Reg))
       return false;
   }
+
+  // Don't match if the sext can be folded with an asr to form an SBFX.
+  if (Ext == AArch64_AM::SXTW && Reg.getOpcode() == ISD::SRA &&
+      Reg.getValueType() == MVT::i32 &&
+      isa<ConstantSDNode>(Reg.getOperand(1)) && Reg.hasOneUse())
+    return false;
 
   // AArch64 mandates that the RHS of the operation must use the smallest
   // register class that could contain the size being extended from.  Thus,
