@@ -151,7 +151,7 @@ define <16 x i16> @one_smulh_v16i16_commute(<16 x i16> %a0) {
 
 define i1 @one_smulh_i1(i1 %a0) {
 ; CHECK-LABEL: @one_smulh_i1(
-; CHECK-NEXT:    ret i1 [[A0:%.*]]
+; CHECK-NEXT:    ret i1 false
 ;
   %1 = call i1 @llvm.smulh.i1(i1 %a0, i1 1)
   ret i1 %1
@@ -159,7 +159,7 @@ define i1 @one_smulh_i1(i1 %a0) {
 
 define <2 x i1> @one_smulh_v2i1_commute(<2 x i1> %a0) {
 ; CHECK-LABEL: @one_smulh_v2i1_commute(
-; CHECK-NEXT:    ret <2 x i1> [[A0:%.*]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %1 = call <2 x i1> @llvm.smulh.v2i1(<2 x i1> splat (i1 1), <2 x i1> %a0)
   ret <2 x i1> %1
