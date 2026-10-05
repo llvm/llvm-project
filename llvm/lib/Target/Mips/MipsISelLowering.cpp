@@ -1969,9 +1969,9 @@ MipsTargetLowering::emitAtomicCmpSwap(MachineInstr &MI,
 
   BuildMI(*BB, II, DL, TII->get(AtomicOp))
       .addReg(Dest, RegState::Define | RegState::EarlyClobber)
-      .addReg(PtrCopy, RegState::Kill)
-      .addReg(OldValCopy, RegState::Kill)
-      .addReg(NewValCopy, RegState::Kill)
+      .addReg(PtrCopy)
+      .addReg(OldValCopy)
+      .addReg(NewValCopy)
       .addReg(Scratch, RegState::EarlyClobber | RegState::Define |
                            RegState::Dead | RegState::Implicit);
 

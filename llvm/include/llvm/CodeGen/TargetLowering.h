@@ -3785,12 +3785,6 @@ public:
 
   RTLIB::LibcallImpl getMemcpyImpl() const { return Libcalls.getMemcpyImpl(); }
 
-  /// Check if this is valid libcall for the current module, otherwise
-  /// RTLIB::Unsupported.
-  RTLIB::LibcallImpl getSupportedLibcallImpl(StringRef FuncName) const {
-    return RuntimeLibcallInfo.getSupportedLibcallImpl(FuncName);
-  }
-
   /// Get the CallingConv that should be used for the specified libcall
   /// implementation.
   CallingConv::ID getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
@@ -4786,6 +4780,13 @@ public:
     return true;
   }
 
+  /// fold (A + vscale(C1)) + vscale(C2) -> A + vscale(C1+C2)
+  /// If (A + vscale(C1)) is used multiple times, the fold results in a
+  /// redundant addition instruction on the RISC-V architecture, whereas it
+  /// does not have this effect on other architectures (e.g. AArch64).
+  /// By default, it returns true.
+  virtual bool isProfitableToFoldVScaleAdd(SDValue N) const { return true; }
+
   /// GlobalISel - return true if it is profitable to move this shift by a
   /// constant amount through its operand, adjusting any immediate operands as
   /// necessary to preserve semantics. This transformation may not be desirable
@@ -4843,11 +4844,6 @@ public:
   virtual bool isTypeDesirableForOp(unsigned /*Opc*/, EVT VT) const {
     // By default, assume all legal types are desirable.
     return isTypeLegal(VT);
-  }
-
-  /// Overload that takes the specific node being optimized.
-  virtual bool isTypeDesirableForOp(SDNode *N, EVT VT) const {
-    return isTypeDesirableForOp(N->getOpcode(), VT);
   }
 
   /// Return true if it is profitable for dag combiner to transform a floating
