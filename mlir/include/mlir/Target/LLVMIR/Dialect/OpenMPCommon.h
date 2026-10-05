@@ -38,7 +38,6 @@ llvm::Constant *createSourceLocStrFromLocation(Location loc,
 llvm::Constant *createMappingInformation(Location loc,
                                          llvm::OpenMPIRBuilder &builder,
                                          StringRef mapName = {});
-
 } // namespace LLVM
 } // namespace mlir
 
