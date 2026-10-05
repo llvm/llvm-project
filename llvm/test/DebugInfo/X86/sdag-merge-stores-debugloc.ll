@@ -1,7 +1,7 @@
 ; RUN: llc -O2 -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=finalize-isel -o - %s | FileCheck %s
 
-;; Consecutive stores combined into a single store must merge their locations,
-;; rather than attributing all effects to the lowest-addressed store's scope.
+;; By default, widened memory accesses must not inherit an inline frame that
+;; covers only part of the combined access. Preserve value nodes' locations.
 
 ; CHECK-DAG: ![[CALLER:[0-9]+]] = distinct !DISubprogram(name: "siblings",
 ; CHECK-DAG: ![[FIRST:[0-9]+]] = distinct !DISubprogram(name: "clear_first",
@@ -19,7 +19,12 @@
 ; CHECK-DAG: ![[STORE:[0-9]+]] = !DILocation(line: 7, column: 3, scope: ![[SECOND]], inlinedAt: ![[STORE_CALL]])
 ; CHECK-DAG: ![[COPY_PARTIAL_CALL:[0-9]+]] = !DILocation(line: 81, column: 3, scope: ![[#]])
 ; CHECK-DAG: ![[COPY_PARTIAL:[0-9]+]] = !DILocation(line: 4, column: 3, scope: ![[FIRST]], inlinedAt: ![[COPY_PARTIAL_CALL]])
+; CHECK-DAG: ![[ROTATE:[0-9]+]] = distinct !DISubprogram(name: "rotate_siblings",
+; CHECK-DAG: ![[ROTATE_CALL:[0-9]+]] = !DILocation(line: 91, column: 3, scope: ![[ROTATE]])
+; CHECK-DAG: ![[ROTATE_VALUE:[0-9]+]] = !DILocation(line: 4, column: 3, scope: ![[FIRST]], inlinedAt: ![[ROTATE_CALL]])
 
+;; The two 32-bit stores merge into one 64-bit store. Their locations come from
+;; sibling inline frames, so the new store has line 0 in their common caller.
 ; CHECK-LABEL: name: siblings
 ; CHECK: MOV64mi32 {{.*}}, debug-location !DILocation(line: 0, scope: ![[CALLER]]) :: (store (s64)
 define void @siblings(ptr %p) !dbg !10 {
@@ -29,7 +34,8 @@ define void @siblings(ptr %p) !dbg !10 {
   ret void
 }
 
-;; Identical locations retain their line and inline scope.
+;; The two 32-bit stores merge into a 64-bit store. Both input locations are
+;; identical, so the merged store keeps their line and inline scope.
 ; CHECK-LABEL: name: same_location
 ; CHECK: MOV64mi32 {{.*}}, debug-location ![[SAME]] :: (store (s64)
 define void @same_location(ptr %p) !dbg !20 {
@@ -39,7 +45,8 @@ define void @same_location(ptr %p) !dbg !20 {
   ret void
 }
 
-;; Do not retain one store's scope when the other's location is unknown.
+;; The two 32-bit stores merge into a 64-bit store without a debug location:
+;; one input store has no location, so the other's must not be reused.
 ; CHECK-LABEL: name: missing_location
 ; CHECK: MOV64mi32
 ; CHECK-NOT: debug-location
@@ -51,8 +58,9 @@ define void @missing_location(ptr %p) !dbg !30 {
   ret void
 }
 
-;; Only the first two candidates are merged. Do not include the third store's
-;; location when computing the wider store's location.
+;; The first two 32-bit stores merge into a 64-bit store and retain their
+;; shared debug location. The third store stays 32-bit and its different
+;; location must not affect the merged store.
 ; CHECK-LABEL: name: partial_merge
 ; CHECK-DAG: MOV64mi32 {{.*}}, debug-location ![[PARTIAL]] :: (store (s64)
 ; CHECK-DAG: MOV32mi
@@ -65,7 +73,9 @@ define void @partial_merge(ptr %p) !dbg !40 {
   ret void
 }
 
-;; Extracted elements use the same merged-location policy as constants.
+;; The four extracted-element stores merge into one 128-bit store. Their
+;; locations come from sibling inline frames, so the new store has line 0
+;; in their common caller.
 ; CHECK-LABEL: name: extract_siblings
 ; CHECK: debug-location !DILocation(line: 0, scope: ![[EXTRACT]]) :: (store (s128)
 define void @extract_siblings(ptr %p, <4 x i32> %v) !dbg !50 {
@@ -83,7 +93,9 @@ define void @extract_siblings(ptr %p, <4 x i32> %v) !dbg !50 {
   ret void
 }
 
-;; Both the widened load and store must account for all merged operations.
+;; The two 32-bit loads merge into one 64-bit load, and the two 32-bit stores
+;; into one 64-bit store. Each pair spans sibling inline frames, so both
+;; merged instructions have line 0 in their common caller.
 ; CHECK-LABEL: name: copy_siblings
 ; CHECK: MOV64rm {{.*}}, debug-location !DILocation(line: 0, scope: ![[COPY]]) :: (load (s64)
 ; CHECK: MOV64mr {{.*}}, debug-location !DILocation(line: 0, scope: ![[COPY]]) :: (store (s64)
@@ -97,7 +109,9 @@ define void @copy_siblings(ptr noalias %d, ptr noalias %s) !dbg !60 {
   ret void
 }
 
-;; Load and store locations must not be mixed together.
+;; Each pair of 32-bit loads/stores merges into one 64-bit operation. The
+;; loads share one location and the stores another; preserve each group's
+;; location instead of merging load and store locations together.
 ; CHECK-LABEL: name: copy_independent_locations
 ; CHECK: MOV64rm {{.*}}, debug-location ![[LOAD]] :: (load (s64)
 ; CHECK: MOV64mr {{.*}}, debug-location ![[STORE]] :: (store (s64)
@@ -111,7 +125,9 @@ define void @copy_independent_locations(ptr noalias %d, ptr noalias %s) !dbg !70
   ret void
 }
 
-;; The third copy is not merged and must not affect either widened operation.
+;; The first two 32-bit loads and stores merge into a 64-bit load and store,
+;; both retaining the shared location of those first two copies. The third
+;; copy stays 32-bit and its different location must not affect either merge.
 ; CHECK-LABEL: name: copy_partial_merge
 ; CHECK-DAG: MOV64rm {{.*}}, debug-location ![[COPY_PARTIAL]] :: (load (s64)
 ; CHECK-DAG: MOV64mr {{.*}}, debug-location ![[COPY_PARTIAL]] :: (store (s64)
@@ -128,6 +144,24 @@ define void @copy_partial_merge(ptr noalias %d, ptr noalias %s) !dbg !80 {
   store i32 %a, ptr %d, align 4, !dbg !83
   store i32 %b, ptr %d1, align 4, !dbg !83
   store i32 %c, ptr %d2, align 4, !dbg !84
+  ret void
+}
+
+;; Reversing the two 32-bit halves requires a rotate between the merged 64-bit
+;; load and store. Both memory operations have line 0 in the common caller.
+;; The location changes are limited to the widened load and store; keep the
+;; auxiliary rotate's existing location from the load at %s.
+; CHECK-LABEL: name: rotate_siblings
+; CHECK: MOV64rm {{.*}}, debug-location !DILocation(line: 0, scope: ![[ROTATE]]) :: (load (s64)
+; CHECK: {{(ROL|ROR)64ri}} {{.*}}, 32, {{.*}}debug-location ![[ROTATE_VALUE]]{{$}}
+; CHECK: MOV64mr {{.*}}, debug-location !DILocation(line: 0, scope: ![[ROTATE]]) :: (store (s64)
+define void @rotate_siblings(ptr noalias %d, ptr noalias %s) !dbg !90 {
+  %s1 = getelementptr i32, ptr %s, i64 1
+  %d1 = getelementptr i32, ptr %d, i64 1
+  %a = load i32, ptr %s, align 4, !dbg !93
+  %b = load i32, ptr %s1, align 4, !dbg !94
+  store i32 %b, ptr %d, align 4, !dbg !94
+  store i32 %a, ptr %d1, align 4, !dbg !93
   ret void
 }
 
@@ -176,3 +210,8 @@ define void @copy_partial_merge(ptr noalias %d, ptr noalias %s) !dbg !80 {
 !82 = !DILocation(line: 82, column: 3, scope: !80)
 !83 = !DILocation(line: 4, column: 3, scope: !5, inlinedAt: !81)
 !84 = !DILocation(line: 7, column: 3, scope: !6, inlinedAt: !82)
+!90 = distinct !DISubprogram(name: "rotate_siblings", scope: !1, file: !1, line: 90, type: !2, scopeLine: 90, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!91 = !DILocation(line: 91, column: 3, scope: !90)
+!92 = !DILocation(line: 92, column: 3, scope: !90)
+!93 = !DILocation(line: 4, column: 3, scope: !5, inlinedAt: !91)
+!94 = !DILocation(line: 7, column: 3, scope: !6, inlinedAt: !92)
