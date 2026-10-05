@@ -87,6 +87,7 @@ set(environ_internal_deps
   libc.src.__support.macros.attributes
   libc.src.__support.macros.config
   libc.src.string.memory_utils.inline_memcpy
+  libc.src.string.memory_utils.inline_strcmp
 )
 set(environ_internal_compile_options ${environ_internal_gcc12_workaround})
 
