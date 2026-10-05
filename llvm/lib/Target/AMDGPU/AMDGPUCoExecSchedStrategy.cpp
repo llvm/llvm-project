@@ -603,6 +603,8 @@ void CandidateHeuristics::initialize(ScheduleDAGMI *SchedDAG,
   SRI = static_cast<const SIRegisterInfo *>(TRI);
   SII = static_cast<const SIInstrInfo *>(DAG->TII);
 
+  MCI.compute(DAG->MF);
+
   HWUInfo.resize(static_cast<int>(InstructionFlavor::NUM_FLAVORS));
 
   for (unsigned I = 0; I < HWUInfo.size(); I++) {
@@ -715,10 +717,19 @@ void CandidateHeuristics::collectRegionSummary() {
   // or not a predecessor block will end up scheduling loads at the end. Here,
   // we inspect the dependency structure to define a rough heuristic: if we
   // must schedule  ds_loads after wmma, then we carry the latency of ds_loads
-  // to successor block fences.
+  // to successor block fences. Currently this only checks for the loop-carried
+  // case, as this will generally have the largest impact on performance.
   // TODO: 1. extend to different memory instructions, 2. teach carried
   // latencies about fence legalization.
   auto mustHaveDSAfter = [this]() {
+    if (!DAG->SUnits.size())
+      return false;
+
+    MachineBasicBlock *MBB = DAG->begin()->getParent();
+    CycleRef Cycle = MCI.getCycle(MBB);
+    if (!Cycle.isValid() || MCI.getNumBlocks(Cycle) != 1)
+      return false;
+
     SmallVector<SUnit *, 16> RegionWMMAs;
 
     for (auto &SU : DAG->SUnits) {

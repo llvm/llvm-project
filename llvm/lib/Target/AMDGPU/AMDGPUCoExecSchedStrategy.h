@@ -16,6 +16,7 @@
 
 #include "AMDGPUCoExecInfo.h"
 #include "GCNSchedStrategy.h"
+#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 
 namespace llvm {
@@ -230,6 +231,7 @@ protected:
   const SIRegisterInfo *SRI;
   const TargetSchedModel *SchedModel;
   SmallVector<HardwareUnitInfo, 8> HWUInfo;
+  MachineCycleInfo MCI;
 
   AMDGPU::CarriedLatency RegionCarriedLatency = AMDGPU::CarriedLatency::Off;
   DenseMap<MachineInstr *, unsigned> CarriedLatencies;

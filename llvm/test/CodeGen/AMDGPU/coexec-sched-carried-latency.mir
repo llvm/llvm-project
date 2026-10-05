@@ -22,11 +22,35 @@ body: |
   ; DEFAULT-NEXT: bb.1:
   ; DEFAULT-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; DEFAULT-NEXT: {{  $}}
-  ; DEFAULT-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sgpr_32 = S_ADD_I32 [[S_MOV_B32_]], 1, implicit-def $scc
-  ; DEFAULT-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = COPY [[S_ADD_I32_]]
-  ; DEFAULT-NEXT:   S_CMP_LT_U32 [[S_ADD_I32_]], [[COPY1]], implicit-def $scc
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
   ; DEFAULT-NEXT:   ATOMIC_FENCE 5, 2
   ; DEFAULT-NEXT:   S_BARRIER_SIGNAL_IMM -1
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sgpr_32 = S_ADD_I32 [[S_MOV_B32_]], 1, implicit-def $scc
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = COPY [[S_ADD_I32_]]
+  ; DEFAULT-NEXT:   S_CMP_LT_U32 [[S_ADD_I32_]], [[COPY1]], implicit-def $scc
   ; DEFAULT-NEXT:   S_BARRIER_WAIT -1
   ; DEFAULT-NEXT:   ATOMIC_FENCE 4, 2
   ; DEFAULT-NEXT:   TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
@@ -64,15 +88,39 @@ body: |
   ; FENCE-NEXT: {{  $}}
   ; FENCE-NEXT:   ATOMIC_FENCE 5, 2
   ; FENCE-NEXT:   S_BARRIER_SIGNAL_IMM -1
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
   ; FENCE-NEXT:   S_BARRIER_WAIT -1
   ; FENCE-NEXT:   ATOMIC_FENCE 4, 2
   ; FENCE-NEXT:   TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
   ; FENCE-NEXT:   ATOMIC_FENCE 5, 2
   ; FENCE-NEXT:   S_BARRIER_SIGNAL_IMM -1
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
   ; FENCE-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sgpr_32 = S_ADD_I32 [[S_MOV_B32_]], 1, implicit-def $scc
-  ; FENCE-NEXT:   S_BARRIER_WAIT -1
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
   ; FENCE-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = COPY [[S_ADD_I32_]]
   ; FENCE-NEXT:   S_CMP_LT_U32 [[S_ADD_I32_]], [[COPY1]], implicit-def $scc
+  ; FENCE-NEXT:   S_BARRIER_WAIT -1
   ; FENCE-NEXT:   ATOMIC_FENCE 4, 2
   ; FENCE-NEXT:   [[DS_READ_B128_gfx9_:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[COPY]], 0, 0, implicit $exec
   ; FENCE-NEXT:   [[DS_READ_B128_gfx9_1:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[COPY]], 16, 0, implicit $exec
@@ -85,45 +133,6 @@ body: |
   ; FENCE-NEXT: {{  $}}
   ; FENCE-NEXT: bb.2:
   ; FENCE-NEXT:   S_ENDPGM 0
-  ; CHECK-LABEL: name: same_iteration_loop
-  ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr0, $sgpr1
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   S_BRANCH %bb.1
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sgpr_32 = S_ADD_I32 [[S_MOV_B32_]], 1, implicit-def $scc
-  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = COPY [[S_ADD_I32_]]
-  ; CHECK-NEXT:   S_CMP_LT_U32 [[S_ADD_I32_]], [[COPY1]], implicit-def $scc
-  ; CHECK-NEXT:   ATOMIC_FENCE 5, 2
-  ; CHECK-NEXT:   S_BARRIER_SIGNAL_IMM -1
-  ; CHECK-NEXT:   S_BARRIER_WAIT -1
-  ; CHECK-NEXT:   ATOMIC_FENCE 4, 2
-  ; CHECK-NEXT:   TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-  ; CHECK-NEXT:   ATOMIC_FENCE 5, 2
-  ; CHECK-NEXT:   S_BARRIER_SIGNAL_IMM -1
-  ; CHECK-NEXT:   S_BARRIER_WAIT -1
-  ; CHECK-NEXT:   ATOMIC_FENCE 4, 2
-  ; CHECK-NEXT:   [[DS_READ_B128_gfx9_:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[COPY]], 0, 0, implicit $exec
-  ; CHECK-NEXT:   [[DS_READ_B128_gfx9_1:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[COPY]], 16, 0, implicit $exec
-  ; CHECK-NEXT:   [[DS_READ_B128_gfx9_2:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[COPY]], 32, 0, implicit $exec
-  ; CHECK-NEXT:   [[DS_READ_B128_gfx9_3:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[COPY]], 48, 0, implicit $exec
-  ; CHECK-NEXT:   early-clobber %10:vreg_256_align2 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, [[DS_READ_B128_gfx9_]], 8, [[DS_READ_B128_gfx9_2]], 8, [[DEF2]], 0, 0, implicit $exec
-  ; CHECK-NEXT:   early-clobber %11:vreg_256_align2 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, [[DS_READ_B128_gfx9_1]], 8, [[DS_READ_B128_gfx9_3]], 8, %10, 0, 0, implicit $exec
-  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:vreg_256_align2 = COPY %11
-  ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit $scc
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1
     liveins: $vgpr0, $sgpr0, $sgpr1
@@ -156,6 +165,30 @@ body: |
     %14:vreg_256_align2 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, %10, 8, %12, 8, %5, 0, 0, implicit $exec
     %15:vreg_256_align2 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, %11, 8, %13, 8, %14, 0, 0, implicit $exec
     %20:sgpr_32 = S_ADD_I32 %4, 1, implicit-def $scc
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
     S_CMP_LT_U32 %20, %3, implicit-def $scc
     %4:sgpr_32 = COPY %20
     %5:vreg_256_align2 = COPY %15
@@ -182,26 +215,50 @@ body: |
   ; DEFAULT-NEXT:   TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
   ; DEFAULT-NEXT:   ATOMIC_FENCE 5, 2
   ; DEFAULT-NEXT:   S_BARRIER_SIGNAL_IMM -1
+  ; DEFAULT-NEXT:   [[DEF2:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
   ; DEFAULT-NEXT:   S_BARRIER_WAIT -1
   ; DEFAULT-NEXT:   ATOMIC_FENCE 4, 2
   ; DEFAULT-NEXT:   [[DS_READ_B128_gfx9_:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[COPY]], 0, 0, implicit $exec
   ; DEFAULT-NEXT:   [[DS_READ_B128_gfx9_1:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[COPY]], 16, 0, implicit $exec
   ; DEFAULT-NEXT:   [[DS_READ_B128_gfx9_2:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[COPY]], 32, 0, implicit $exec
   ; DEFAULT-NEXT:   [[DS_READ_B128_gfx9_3:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[COPY]], 48, 0, implicit $exec
-  ; DEFAULT-NEXT:   [[DEF2:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
   ; DEFAULT-NEXT:   S_BRANCH %bb.1
   ; DEFAULT-NEXT: {{  $}}
   ; DEFAULT-NEXT: bb.1:
   ; DEFAULT-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; DEFAULT-NEXT: {{  $}}
   ; DEFAULT-NEXT:   early-clobber %10:vreg_256_align2 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, [[DS_READ_B128_gfx9_]], 8, [[DS_READ_B128_gfx9_2]], 8, [[DEF2]], 0, 0, implicit $exec
-  ; DEFAULT-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sgpr_32 = S_ADD_I32 [[S_MOV_B32_]], 1, implicit-def $scc
-  ; DEFAULT-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = COPY [[S_ADD_I32_]]
-  ; DEFAULT-NEXT:   S_CMP_LT_U32 [[S_ADD_I32_]], [[COPY1]], implicit-def $scc
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
   ; DEFAULT-NEXT:   early-clobber %11:vreg_256_align2 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, [[DS_READ_B128_gfx9_1]], 8, [[DS_READ_B128_gfx9_3]], 8, %10, 0, 0, implicit $exec
-  ; DEFAULT-NEXT:   [[DEF2:%[0-9]+]]:vreg_256_align2 = COPY %11
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
   ; DEFAULT-NEXT:   ATOMIC_FENCE 5, 2
   ; DEFAULT-NEXT:   S_BARRIER_SIGNAL_IMM -1
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sgpr_32 = S_ADD_I32 [[S_MOV_B32_]], 1, implicit-def $scc
+  ; DEFAULT-NEXT:   [[DEF2:%[0-9]+]]:vreg_256_align2 = COPY %11
+  ; DEFAULT-NEXT:   V_NOP_e32 implicit $exec
+  ; DEFAULT-NEXT:   S_CMP_LT_U32 [[S_ADD_I32_]], [[COPY1]], implicit-def $scc
+  ; DEFAULT-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = COPY [[S_ADD_I32_]]
   ; DEFAULT-NEXT:   S_BARRIER_WAIT -1
   ; DEFAULT-NEXT:   ATOMIC_FENCE 4, 2
   ; DEFAULT-NEXT:   TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
@@ -231,26 +288,50 @@ body: |
   ; FENCE-NEXT:   TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
   ; FENCE-NEXT:   ATOMIC_FENCE 5, 2
   ; FENCE-NEXT:   S_BARRIER_SIGNAL_IMM -1
+  ; FENCE-NEXT:   [[DEF2:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
   ; FENCE-NEXT:   S_BARRIER_WAIT -1
   ; FENCE-NEXT:   ATOMIC_FENCE 4, 2
   ; FENCE-NEXT:   [[DS_READ_B128_gfx9_:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[COPY]], 0, 0, implicit $exec
   ; FENCE-NEXT:   [[DS_READ_B128_gfx9_1:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[COPY]], 16, 0, implicit $exec
   ; FENCE-NEXT:   [[DS_READ_B128_gfx9_2:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[COPY]], 32, 0, implicit $exec
   ; FENCE-NEXT:   [[DS_READ_B128_gfx9_3:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[COPY]], 48, 0, implicit $exec
-  ; FENCE-NEXT:   [[DEF2:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
   ; FENCE-NEXT:   S_BRANCH %bb.1
   ; FENCE-NEXT: {{  $}}
   ; FENCE-NEXT: bb.1:
   ; FENCE-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; FENCE-NEXT: {{  $}}
   ; FENCE-NEXT:   early-clobber %10:vreg_256_align2 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, [[DS_READ_B128_gfx9_]], 8, [[DS_READ_B128_gfx9_2]], 8, [[DEF2]], 0, 0, implicit $exec
-  ; FENCE-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sgpr_32 = S_ADD_I32 [[S_MOV_B32_]], 1, implicit-def $scc
-  ; FENCE-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = COPY [[S_ADD_I32_]]
-  ; FENCE-NEXT:   S_CMP_LT_U32 [[S_ADD_I32_]], [[COPY1]], implicit-def $scc
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
   ; FENCE-NEXT:   early-clobber %11:vreg_256_align2 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, [[DS_READ_B128_gfx9_1]], 8, [[DS_READ_B128_gfx9_3]], 8, %10, 0, 0, implicit $exec
-  ; FENCE-NEXT:   [[DEF2:%[0-9]+]]:vreg_256_align2 = COPY %11
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
   ; FENCE-NEXT:   ATOMIC_FENCE 5, 2
   ; FENCE-NEXT:   S_BARRIER_SIGNAL_IMM -1
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sgpr_32 = S_ADD_I32 [[S_MOV_B32_]], 1, implicit-def $scc
+  ; FENCE-NEXT:   [[DEF2:%[0-9]+]]:vreg_256_align2 = COPY %11
+  ; FENCE-NEXT:   V_NOP_e32 implicit $exec
+  ; FENCE-NEXT:   S_CMP_LT_U32 [[S_ADD_I32_]], [[COPY1]], implicit-def $scc
+  ; FENCE-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = COPY [[S_ADD_I32_]]
   ; FENCE-NEXT:   S_BARRIER_WAIT -1
   ; FENCE-NEXT:   ATOMIC_FENCE 4, 2
   ; FENCE-NEXT:   TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
@@ -266,54 +347,6 @@ body: |
   ; FENCE-NEXT: {{  $}}
   ; FENCE-NEXT: bb.2:
   ; FENCE-NEXT:   S_ENDPGM 0
-  ; CHECK-LABEL: name: prefetch_loop
-  ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr0, $sgpr1
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
-  ; CHECK-NEXT:   TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-  ; CHECK-NEXT:   ATOMIC_FENCE 5, 2
-  ; CHECK-NEXT:   S_BARRIER_SIGNAL_IMM -1
-  ; CHECK-NEXT:   S_BARRIER_WAIT -1
-  ; CHECK-NEXT:   ATOMIC_FENCE 4, 2
-  ; CHECK-NEXT:   [[DS_READ_B128_gfx9_:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[COPY]], 0, 0, implicit $exec
-  ; CHECK-NEXT:   [[DS_READ_B128_gfx9_1:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[COPY]], 16, 0, implicit $exec
-  ; CHECK-NEXT:   [[DS_READ_B128_gfx9_2:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[COPY]], 32, 0, implicit $exec
-  ; CHECK-NEXT:   [[DS_READ_B128_gfx9_3:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[COPY]], 48, 0, implicit $exec
-  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   S_BRANCH %bb.1
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   early-clobber %10:vreg_256_align2 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, [[DS_READ_B128_gfx9_]], 8, [[DS_READ_B128_gfx9_2]], 8, [[DEF2]], 0, 0, implicit $exec
-  ; CHECK-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sgpr_32 = S_ADD_I32 [[S_MOV_B32_]], 1, implicit-def $scc
-  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = COPY [[S_ADD_I32_]]
-  ; CHECK-NEXT:   S_CMP_LT_U32 [[S_ADD_I32_]], [[COPY1]], implicit-def $scc
-  ; CHECK-NEXT:   early-clobber %11:vreg_256_align2 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, [[DS_READ_B128_gfx9_1]], 8, [[DS_READ_B128_gfx9_3]], 8, %10, 0, 0, implicit $exec
-  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:vreg_256_align2 = COPY %11
-  ; CHECK-NEXT:   ATOMIC_FENCE 5, 2
-  ; CHECK-NEXT:   S_BARRIER_SIGNAL_IMM -1
-  ; CHECK-NEXT:   S_BARRIER_WAIT -1
-  ; CHECK-NEXT:   ATOMIC_FENCE 4, 2
-  ; CHECK-NEXT:   TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-  ; CHECK-NEXT:   ATOMIC_FENCE 5, 2
-  ; CHECK-NEXT:   S_BARRIER_SIGNAL_IMM -1
-  ; CHECK-NEXT:   S_BARRIER_WAIT -1
-  ; CHECK-NEXT:   ATOMIC_FENCE 4, 2
-  ; CHECK-NEXT:   [[DS_READ_B128_gfx9_:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[COPY]], 0, 0, implicit $exec
-  ; CHECK-NEXT:   [[DS_READ_B128_gfx9_1:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[COPY]], 16, 0, implicit $exec
-  ; CHECK-NEXT:   [[DS_READ_B128_gfx9_2:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[COPY]], 32, 0, implicit $exec
-  ; CHECK-NEXT:   [[DS_READ_B128_gfx9_3:%[0-9]+]]:vreg_128_align2 = DS_READ_B128_gfx9 [[COPY]], 48, 0, implicit $exec
-  ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit $scc
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1
     liveins: $vgpr0, $sgpr0, $sgpr1
@@ -357,6 +390,30 @@ body: |
     %12:vreg_128_align2 = DS_READ_B128_gfx9 %2, 32, 0, implicit $exec
     %13:vreg_128_align2 = DS_READ_B128_gfx9 %2, 48, 0, implicit $exec
     %40:sgpr_32 = S_ADD_I32 %4, 1, implicit-def $scc
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
+    V_NOP_e32 implicit $exec
     S_CMP_LT_U32 %40, %3, implicit-def $scc
     %4:sgpr_32 = COPY %40
     %5:vreg_256_align2 = COPY %21
