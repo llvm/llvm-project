@@ -76,10 +76,10 @@ struct GPUToROCDLPipelineOptions
       *this, "arch",
       llvm::cl::desc(
           "AMDGPU target architecture, as in Clang, with optional target-ID "
-          "modifiers (e.g. gfx942, gfx90a:xnack+, "
-          "amdgpu9.0a-amd-amdhsa--gfx90a:xnack-). Required: AMDGCN binaries "
-          "are "
-          "not forward-compatible across chip families.")};
+          "modifiers (e.g. gfx942, gfx90a:xnack+, amdgpu9.42-amd-amdhsa, "
+          "amdgpu9.0a-amd-amdhsa--gfx90a:xnack-). Supersedes the separate "
+          "triple option this pipeline used to take. Required: AMDGCN "
+          "binaries are not forward-compatible across chip families.")};
   PassOptions::Option<std::string> chip{
       *this, "chip", llvm::cl::desc("Deprecated alias for 'arch'."),
       llvm::cl::init("")};

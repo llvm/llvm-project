@@ -34,9 +34,9 @@ default rules, `attr-dict` contains only discardable attributes. See
   modifiers (`gfx942`, `gfx942:xnack+`, `gfx9-4-generic`), a triple
   (`amdgpu9.42-amd-amdhsa`), or a full target ID
   (`amdgpu9.0a-amd-amdhsa--gfx90a:sramecc+:xnack-`, which is what `rocminfo`
-  prints for a device's ISA). `chipset` or `chip` remain as compatibility names.
-  The default arch is `invalid`, so a target must be passed
-  explicitly, removing the old "fallback" `gfx000` GPU.
+  prints for a device's ISA). `chipset` or `chip` remain as compatibility
+  names. The default arch is `invalid`, so a target must be passed explicitly,
+  removing the old "fallback" `gfx000` GPU.
 - Wavefront size is not a target-ID feature, so `convert-gpu-to-rocdl` takes it
   as a separate `wavesize` option (32, 64, or 0 for the architecture's
   default). The `wave64` flag on `gpu-lower-to-rocdl-pipeline` and on
@@ -51,6 +51,9 @@ default rules, `attr-dict` contains only discardable attributes. See
 - `rocdl-attach-target` gains `arch` alongside its existing `triple`, `chip` and
   `features`. When `arch` is given, it overrides `triple` and `chip`, and
   handles xnack/sramecc modifier migration.
+- `gpu-lower-to-rocdl-pipeline`, however, only supports `arch`/`chip` now, as
+  manually setting a triple/chipset/features combination is a low-level
+  operation that should require a manual `rocdl-attach-target` call.
 
 ## LLVM 21
 
