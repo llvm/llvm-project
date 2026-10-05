@@ -2550,11 +2550,23 @@ public:
              "Variables blamed for unsafe buffer usage without suggestions!");
       S.Diag(Loc, diag::note_unsafe_buffer_operation) << MsgParam << Range;
     } else {
+      bool IsMainArg = false;
+      if (const auto *PVD = dyn_cast_or_null<ParmVarDecl>(D)) {
+        if (const auto *FD = dyn_cast<FunctionDecl>(PVD->getDeclContext())) {
+          if (FD->isMain()) {
+            IsMainArg = true;
+          }
+        }
+      }
+      
+      unsigned DiagID = IsMainArg ? diag::warn_unsafe_buffer_usage_in_main_args
+                                  : diag::warn_unsafe_buffer_operation;
+                                  
       if (D) {
-        S.Diag(Loc, diag::warn_unsafe_buffer_operation)
+        S.Diag(Loc, DiagID)
             << MsgParam << D << Range;
       } else {
-        S.Diag(Loc, diag::warn_unsafe_buffer_operation) << MsgParam << Range;
+        S.Diag(Loc, DiagID) << MsgParam << Range;
       }
       if (SuggestSuggestions) {
         S.Diag(Loc, diag::note_safe_buffer_usage_suggestions_disabled);
@@ -2640,7 +2652,20 @@ public:
                                  const FixitStrategy &VarTargetTypes) override {
     assert(!SuggestSuggestions &&
            "Unsafe buffer usage fixits displayed without suggestions!");
-    S.Diag(Variable->getLocation(), diag::warn_unsafe_buffer_variable)
+           
+    bool IsMainArg = false;
+    if (const auto *PVD = dyn_cast<ParmVarDecl>(Variable)) {
+      if (const auto *FD = dyn_cast<FunctionDecl>(PVD->getDeclContext())) {
+        if (FD->isMain()) {
+          IsMainArg = true;
+        }
+      }
+    }
+    
+    unsigned DiagID = IsMainArg ? diag::warn_unsafe_buffer_variable_in_main_args
+                                : diag::warn_unsafe_buffer_variable;
+
+    S.Diag(Variable->getLocation(), DiagID)
         << Variable << (Variable->getType()->isPointerType() ? 0 : 1)
         << Variable->getSourceRange();
     if (!Fixes.empty()) {
