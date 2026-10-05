@@ -53,6 +53,11 @@
 // RUN:   --rocm-path=%t/rocm-asan %t/in.o 2>&1 \
 // RUN:   | FileCheck -check-prefix=NOASAN %s
 
+// Nor when the user asked to handle sanitizer runtime linking themselves.
+// RUN: %clang -### --hip-link --target=x86_64-linux-gnu \
+// RUN:   --rocm-path=%t/rocm-asan -fno-sanitize-link-runtime %t/in.o 2>&1 \
+// RUN:   | FileCheck -check-prefix=NOASAN %s
+
 // An explicit '-fsanitize=address -shared-libsan' already emits the runtime,
 // so it shouldn't be emitted a second time.
 // RUN: %clang -### --hip-link --target=x86_64-linux-gnu \

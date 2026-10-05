@@ -1954,6 +1954,10 @@ bool tools::addHIPRuntimeSanitizerRuntimes(const ToolChain &TC,
     return false;
 
   const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
+  // The user asked to handle sanitizer runtime linking themselves.
+  if (!SanArgs.linkRuntimes())
+    return false;
+
   // Already handled by addSanitizerRuntimes(), except that a static runtime
   // cannot serve the instrumented HIP runtime and there is nothing to fix up
   // at this point.
