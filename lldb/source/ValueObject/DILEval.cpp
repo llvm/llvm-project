@@ -46,13 +46,14 @@ static lldb::ValueObjectSP ArrayToPointerConversion(ValueObject &valobj,
       /* do_deref */ false);
 }
 
-static llvm::Expected<lldb::LanguageType>
-GetSourceLanguageFromCU(StackFrame &ctx) {
+static lldb::LanguageType GetSourceLanguageFromCU(StackFrame &ctx) {
   SymbolContext symbol_context =
       ctx.GetSymbolContext(lldb::eSymbolContextCompUnit);
-  if (!symbol_context.comp_unit)
-    return llvm::createStringErrorV("no compile unit for frame: {}",
-                                    ctx.GetFunctionName());
+  if (!symbol_context.comp_unit) {
+    // LLDB's default when the frame has no compile unit to ask, the same
+    // default the expression evaluator falls back to.
+    return lldb::eLanguageTypeC_plus_plus;
+  }
 
   return symbol_context.comp_unit->GetLanguage();
 }
@@ -61,8 +62,8 @@ static llvm::Expected<lldb::TypeSystemSP> GetTypeSystemFromCU(StackFrame &ctx) {
   SymbolContext symbol_context =
       ctx.GetSymbolContext(lldb::eSymbolContextCompUnit);
   if (!symbol_context.comp_unit)
-    return llvm::createStringErrorV("no compile unit for frame: {}",
-                                    ctx.GetFunctionName());
+    return ctx.CalculateTarget()->GetScratchTypeSystemForLanguage(
+        lldb::eLanguageTypeC_plus_plus);
 
   lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
   symbol_context = ctx.GetSymbolContext(lldb::eSymbolContextModule);
@@ -518,11 +519,9 @@ Interpreter::Visit(const IdentifierNode &node) {
     identifier = LookupEnumValue(node.GetName(), m_stack_frame);
 
   if (!identifier && node.GetName()[0] == '$') {
-    auto language = GetSourceLanguageFromCU(m_stack_frame);
-    if (!language)
-      return language.takeError();
+    lldb::LanguageType language = GetSourceLanguageFromCU(m_stack_frame);
     identifier = LookupPersistentIdentifier(node.GetName(), m_stack_frame,
-                                            m_target, language.get());
+                                            m_target, language);
   }
 
   if (!identifier && node.GetName() == "nullptr") {

@@ -237,10 +237,12 @@ CompilerType ValueObjectRegister::GetCompilerTypeImpl() {
   }
 
   auto *exe_module = target->GetExecutableModulePointer();
-  if (!exe_module)
-    return {};
-  auto type_system_or_err =
-      exe_module->GetTypeSystemForLanguage(eLanguageTypeC);
+  llvm::Expected<lldb::TypeSystemSP> type_system_or_err =
+      exe_module
+          ? exe_module->GetTypeSystemForLanguage(eLanguageTypeC)
+          // Fall back to the target's own C++ type system, the same default
+          // the expression evaluator falls back to.
+          : target->GetScratchTypeSystemForLanguage(eLanguageTypeC_plus_plus);
   if (auto err = type_system_or_err.takeError()) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Types), std::move(err),
                    "Unable to get CompilerType from TypeSystem: {0}");
