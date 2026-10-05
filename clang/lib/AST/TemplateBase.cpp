@@ -814,21 +814,6 @@ void ASTTemplateKWAndArgsInfo::initializeFrom(SourceLocation TemplateKWLoc) {
   NumTemplateArgs = 0;
 }
 
-void ASTTemplateKWAndArgsInfo::initializeFrom(
-    SourceLocation TemplateKWLoc, const TemplateArgumentListInfo &Info,
-    TemplateArgumentLoc *OutArgArray, TemplateArgumentDependence &Deps) {
-  this->TemplateKWLoc = TemplateKWLoc;
-  LAngleLoc = Info.getLAngleLoc();
-  RAngleLoc = Info.getRAngleLoc();
-  NumTemplateArgs = Info.size();
-
-  for (unsigned i = 0; i != NumTemplateArgs; ++i) {
-    Deps |= Info[i].getArgument().getDependence();
-
-    new (&OutArgArray[i]) TemplateArgumentLoc(Info[i]);
-  }
-}
-
 void ASTTemplateKWAndArgsInfo::copyInto(const TemplateArgumentLoc *ArgArray,
                                         TemplateArgumentListInfo &Info) const {
   Info.setLAngleLoc(LAngleLoc);

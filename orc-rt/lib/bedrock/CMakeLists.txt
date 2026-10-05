@@ -65,6 +65,8 @@ set(ORC_RT_BEDROCK_WINDOWS_SOURCES
   sys/windows/Memory.cpp
   sys/windows/CPUFeatures.cpp
   sys/windows/PageSize.cpp
+  sys/windows/SocketConnector.cpp
+  sys/windows/SocketHandle.cpp
   sys/windows/TargetTriple.cpp
 )
 
