@@ -72,14 +72,8 @@ void X86SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
     break;
   case X86ISD::VP2INTERSECT:
     // invalid number of results; expected 1, got 2
-  case X86ISD::FSETCCM_SAE:
-    // invalid number of operands; expected 3, got 4
-  case X86ISD::CVTTP2SI_SAE:
-  case X86ISD::CVTTP2UI_SAE:
   case X86ISD::CVTTP2IBS_SAE:
     // invalid number of operands; expected 1, got 2
-  case X86ISD::CMPMM_SAE:
-    // invalid number of operands; expected 4, got 5
   case X86ISD::CALL:
   case X86ISD::NT_BRIND:
     // operand #1 must have type i32 (iPTR), but has type i64
