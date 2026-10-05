@@ -162,7 +162,8 @@ struct SizedLevel {
 };
 using SizedLevelMap = DenseMap<Operation *, SmallVector<SizedLevel>>;
 
-/// Record a sized clause if `size` is a constant; NYI otherwise.
+/// Record a sized clause if `size` is a constant. A non-constant vector or
+/// worker clause is ignored. Other non-constant sizes are NYI.
 static LogicalResult tryAddSizedLevel(SizedLevelMap &sizedLevelMap,
                                       Operation *computeOp, LoopOp loopOp,
                                       ParLevel level, Value size,
@@ -171,6 +172,14 @@ static LogicalResult tryAddSizedLevel(SizedLevelMap &sizedLevelMap,
     return success();
   std::optional<int64_t> constSize = getConstantIntValue(size);
   if (!constSize) {
+    if (level == ParLevel::vector || level == ParLevel::worker) {
+      accSupport.emitRemark(loopOp,
+                            level == ParLevel::vector
+                                ? "ignoring non-constant vector clause"
+                                : "ignoring non-constant worker clause",
+                            DEBUG_TYPE);
+      return success();
+    }
     accSupport.emitNYI(loopOp.getLoc(),
                        "non-constant sized parallelism clause");
     return failure();

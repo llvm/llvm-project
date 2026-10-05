@@ -32,13 +32,14 @@ std::unique_ptr<ASTConsumer> CreateASTPrinter(std::unique_ptr<raw_ostream> OS,
 // stream, or stdout if OS is nullptr.
 std::unique_ptr<ASTConsumer>
 CreateASTDumper(std::unique_ptr<raw_ostream> OS, StringRef FilterString,
-                bool DumpDecls, bool Deserialize, bool DumpLookups,
-                bool DumpDeclTypes, ASTDumpOutputFormat Format);
+                StringRef FilterPath, bool DumpDecls, bool Deserialize,
+                bool DumpLookups, bool DumpDeclTypes,
+                ASTDumpOutputFormat Format);
 
 std::unique_ptr<ASTConsumer>
-CreateASTDumper(raw_ostream &OS, StringRef FilterString, bool DumpDecls,
-                bool Deserialize, bool DumpLookups, bool DumpDeclTypes,
-                ASTDumpOutputFormat Format);
+CreateASTDumper(raw_ostream &OS, StringRef FilterString, StringRef FilterPath,
+                bool DumpDecls, bool Deserialize, bool DumpLookups,
+                bool DumpDeclTypes, ASTDumpOutputFormat Format);
 
 // AST Decl node lister: prints qualified names of all filterable AST Decl
 // nodes.
