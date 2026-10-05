@@ -231,6 +231,7 @@ bool X86LoadValueInjectionLoadHardeningImpl::run(
   LLVM_DEBUG(dbgs() << "***** " << X86LVILHPassName << " : " << MF.getName()
                     << " *****\n");
   STI = &MF.getSubtarget<X86Subtarget>();
+  const X86Options &CLOpts = STI->getCLOpts();
 
   // FIXME: support 32-bit
   if (!STI->is64Bit())
@@ -245,12 +246,12 @@ bool X86LoadValueInjectionLoadHardeningImpl::run(
   if (Graph == nullptr)
     return false; // didn't find any gadgets
 
-  if (STI->getCLOpts().lvi_load_dot_verify) {
+  if (CLOpts.lvi_load_dot_verify) {
     writeGadgetGraph(outs(), MF, Graph.get());
     return false;
   }
 
-  if (STI->getCLOpts().lvi_load_dot || STI->getCLOpts().lvi_load_dot_only) {
+  if (CLOpts.lvi_load_dot || CLOpts.lvi_load_dot_only) {
     LLVM_DEBUG(dbgs() << "Emitting gadget graph...\n");
     std::error_code FileError;
     std::string FileName = "lvi.";
@@ -262,16 +263,16 @@ bool X86LoadValueInjectionLoadHardeningImpl::run(
     writeGadgetGraph(FileOut, MF, Graph.get());
     FileOut.close();
     LLVM_DEBUG(dbgs() << "Emitting gadget graph... Done\n");
-    if (STI->getCLOpts().lvi_load_dot_only)
+    if (CLOpts.lvi_load_dot_only)
       return false;
   }
 
   int FencesInserted;
-  if (!STI->getCLOpts().lvi_load_opt_plugin.empty()) {
+  if (!CLOpts.lvi_load_opt_plugin.empty()) {
     if (!OptimizeDL.isValid()) {
       std::string ErrorMsg;
       OptimizeDL = llvm::sys::DynamicLibrary::getPermanentLibrary(
-          STI->getCLOpts().lvi_load_opt_plugin.str().c_str(), &ErrorMsg);
+          CLOpts.lvi_load_opt_plugin.str().c_str(), &ErrorMsg);
       if (!ErrorMsg.empty())
         report_fatal_error(Twine("Failed to load opt plugin: \"") + ErrorMsg +
                            "\"");

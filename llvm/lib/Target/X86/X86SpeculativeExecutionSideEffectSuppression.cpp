@@ -67,11 +67,12 @@ runX86SpeculativeExecutionSideEffectSuppression(MachineFunction &MF) {
 
   const auto &OptLevel = MF.getTarget().getOptLevel();
   const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
+  const X86Options &CLOpts = Subtarget.getCLOpts();
 
   // Check whether SESES needs to run as the fallback for LVI at O0, whether the
   // user explicitly passed an SESES flag, or whether the SESES target feature
   // was set.
-  if (!Subtarget.getCLOpts().seses_enable_without_lvi_cfi &&
+  if (!CLOpts.seses_enable_without_lvi_cfi &&
       !(Subtarget.useLVILoadHardening() && OptLevel == CodeGenOptLevel::None) &&
       !Subtarget.useSpeculativeExecutionSideEffectSuppression())
     return false;
@@ -102,7 +103,7 @@ runX86SpeculativeExecutionSideEffectSuppression(MachineFunction &MF) {
           NumLFENCEsInserted++;
           Modified = true;
         }
-        if (Subtarget.getCLOpts().seses_one_lfence_per_bb)
+        if (CLOpts.seses_one_lfence_per_bb)
           break;
       }
       // The following section will be LFENCEing before groups of terminators
@@ -123,14 +124,13 @@ runX86SpeculativeExecutionSideEffectSuppression(MachineFunction &MF) {
 
       // Look for branch instructions that will require an LFENCE to be put
       // before this basic block's terminators.
-      if (!MI.isBranch() || Subtarget.getCLOpts().seses_omit_branch_lfences) {
+      if (!MI.isBranch() || CLOpts.seses_omit_branch_lfences) {
         // This isn't a branch or we're not putting LFENCEs before branches.
         PrevInstIsLFENCE = false;
         continue;
       }
 
-      if (Subtarget.getCLOpts().seses_only_lfence_non_const &&
-          hasConstantAddressingMode(MI)) {
+      if (CLOpts.seses_only_lfence_non_const && hasConstantAddressingMode(MI)) {
         // This is a branch, but it only has constant addressing mode and we're
         // not adding LFENCEs before such branches.
         PrevInstIsLFENCE = false;

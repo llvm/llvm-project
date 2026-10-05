@@ -139,7 +139,7 @@ INITIALIZE_PASS(X86CallFrameOptimizationLegacy, DEBUG_TYPE,
 // Also returns false in cases where it's potentially legal, but
 // we don't even want to try.
 bool X86CallFrameOptimizationImpl::isLegal(MachineFunction &MF) {
-  if (MF.getSubtarget<X86Subtarget>().getCLOpts().no_x86_call_frame_opt)
+  if (STI->getCLOpts().no_x86_call_frame_opt)
     return false;
 
   // We can't encode multiple DW_CFA_GNU_args_size or DW_CFA_def_cfa_offset

@@ -685,12 +685,13 @@ bool X86OptimizeLEAsImpl::runOnMachineFunction(
     MachineBlockFrequencyInfo *MBFI) {
   bool Changed = false;
 
-  if (MF.getSubtarget<X86Subtarget>().getCLOpts().disable_x86_lea_opt)
+  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  if (ST.getCLOpts().disable_x86_lea_opt)
     return false;
 
   MRI = &MF.getRegInfo();
-  TII = MF.getSubtarget<X86Subtarget>().getInstrInfo();
-  TRI = MF.getSubtarget<X86Subtarget>().getRegisterInfo();
+  TII = ST.getInstrInfo();
+  TRI = ST.getRegisterInfo();
 
   // Process all basic blocks.
   for (auto &MBB : MF) {

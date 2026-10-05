@@ -371,7 +371,8 @@ bool X86SpeculativeLoadHardeningImpl::run(MachineFunction &MF) {
   // Only run if this pass is forced enabled or we detect the relevant function
   // attribute requesting SLH.
   Subtarget = &MF.getSubtarget<X86Subtarget>();
-  if (!Subtarget->getCLOpts().speculative_load_hardening &&
+  const X86Options &CLOpts = Subtarget->getCLOpts();
+  if (!CLOpts.speculative_load_hardening &&
       !MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening))
     return false;
 
@@ -387,7 +388,7 @@ bool X86SpeculativeLoadHardeningImpl::run(MachineFunction &MF) {
     return false;
 
   // We support an alternative hardening technique based on a debug flag.
-  if (Subtarget->getCLOpts().slh_lfence) {
+  if (CLOpts.slh_lfence) {
     hardenEdgesWithLFENCE(MF);
     return true;
   }
@@ -419,7 +420,7 @@ bool X86SpeculativeLoadHardeningImpl::run(MachineFunction &MF) {
 
   // If we have loads being hardened and we've asked for call and ret edges to
   // get a full fence-based mitigation, inject that fence.
-  if (HasVulnerableLoad && Subtarget->getCLOpts().slh_fence_call_and_ret) {
+  if (HasVulnerableLoad && CLOpts.slh_fence_call_and_ret) {
     // We need to insert an LFENCE at the start of the function to suspend any
     // incoming misspeculation from the caller. This helps two-fold: the caller
     // may not have been protected as this code has been, and this code gets to
@@ -433,13 +434,12 @@ bool X86SpeculativeLoadHardeningImpl::run(MachineFunction &MF) {
 
   // If we guarded the entry with an LFENCE and have no conditionals to protect
   // in blocks, then we're done.
-  if (Subtarget->getCLOpts().slh_fence_call_and_ret && Infos.empty())
+  if (CLOpts.slh_fence_call_and_ret && Infos.empty())
     // We may have changed the function's code at this point to insert fences.
     return true;
 
   // For every basic block in the function which can b
-  if (Subtarget->getCLOpts().slh_ip &&
-      !Subtarget->getCLOpts().slh_fence_call_and_ret) {
+  if (CLOpts.slh_ip && !CLOpts.slh_fence_call_and_ret) {
     // Set up the predicate state by extracting it from the incoming stack
     // pointer so we pick up any misspeculation in our caller.
     PS->InitialReg = extractPredStateFromSP(Entry, EntryInsertPt, Loc);
@@ -482,7 +482,7 @@ bool X86SpeculativeLoadHardeningImpl::run(MachineFunction &MF) {
   // predicate state in the stack pointer, so extract fresh predicate state from
   // the stack pointer and make it available in SSA.
   // FIXME: Handle non-itanium ABI EH models.
-  if (Subtarget->getCLOpts().slh_ip) {
+  if (CLOpts.slh_ip) {
     for (MachineBasicBlock &MBB : MF) {
       assert(!MBB.isEHScopeEntry() && "Only Itanium ABI EH supported!");
       assert(!MBB.isEHFuncletEntry() && "Only Itanium ABI EH supported!");
@@ -495,7 +495,7 @@ bool X86SpeculativeLoadHardeningImpl::run(MachineFunction &MF) {
     }
   }
 
-  if (Subtarget->getCLOpts().slh_indirect) {
+  if (CLOpts.slh_indirect) {
     // If we are going to harden calls and jumps we need to unfold their memory
     // operands.
     unfoldCallAndJumpLoads(MF);
@@ -1229,6 +1229,7 @@ static bool isEFLAGSLive(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
 /// time to simplify reasoning about reachability and sequencing.
 void X86SpeculativeLoadHardeningImpl::tracePredStateThroughBlocksAndHarden(
     MachineFunction &MF) {
+  const X86Options &CLOpts = Subtarget->getCLOpts();
   SmallPtrSet<MachineInstr *, 16> HardenPostLoad;
   SmallPtrSet<MachineInstr *, 16> HardenLoadAddr;
 
@@ -1257,7 +1258,7 @@ void X86SpeculativeLoadHardeningImpl::tracePredStateThroughBlocksAndHarden(
     // be free (due to reuse).
     //
     // Note that we only need this pass if we are actually hardening loads.
-    if (Subtarget->getCLOpts().slh_loads)
+    if (CLOpts.slh_loads)
       for (MachineInstr &MI : MBB) {
         // We naively assume that all def'ed registers of an instruction have
         // a data dependency on all of their operands.
@@ -1324,9 +1325,9 @@ void X86SpeculativeLoadHardeningImpl::tracePredStateThroughBlocksAndHarden(
         // address registers, queue it up to be hardened post-load. Notably,
         // even once hardened this won't introduce a useful dependency that
         // could prune out subsequent loads.
-        if (Subtarget->getCLOpts().slh_post_load &&
-            X86InstrInfo::isDataInvariantLoad(MI) && !isEFLAGSDefLive(MI) &&
-            MI.getDesc().getNumDefs() == 1 && MI.getOperand(0).isReg() &&
+        if (CLOpts.slh_post_load && X86InstrInfo::isDataInvariantLoad(MI) &&
+            !isEFLAGSDefLive(MI) && MI.getDesc().getNumDefs() == 1 &&
+            MI.getOperand(0).isReg() &&
             canHardenRegister(MI.getOperand(0).getReg()) &&
             !HardenedAddrRegs.count(BaseReg) &&
             !HardenedAddrRegs.count(IndexReg)) {
@@ -1354,7 +1355,7 @@ void X86SpeculativeLoadHardeningImpl::tracePredStateThroughBlocksAndHarden(
     // which we will do post-load hardening and can defer it in certain
     // circumstances.
     for (MachineInstr &MI : MBB) {
-      if (Subtarget->getCLOpts().slh_loads) {
+      if (CLOpts.slh_loads) {
         // We cannot both require hardening the def of a load and its address.
         assert(!(HardenLoadAddr.count(&MI) && HardenPostLoad.count(&MI)) &&
                "Requested to harden both the address and def of a load!");
@@ -1413,14 +1414,13 @@ void X86SpeculativeLoadHardeningImpl::tracePredStateThroughBlocksAndHarden(
         // avoid hardening it for some reason. Note that here we cannot break
         // out afterward as we may still need to handle any call aspect of this
         // instruction.
-        if ((MI.isCall() || MI.isBranch()) &&
-            Subtarget->getCLOpts().slh_indirect)
+        if ((MI.isCall() || MI.isBranch()) && CLOpts.slh_indirect)
           hardenIndirectCallOrJumpInstr(MI, AddrRegToHardenedReg);
       }
 
       // After we finish hardening loads we handle interprocedural hardening if
       // enabled and relevant for this instruction.
-      if (!Subtarget->getCLOpts().slh_ip)
+      if (!CLOpts.slh_ip)
         continue;
       if (!MI.isCall() && !MI.isReturn())
         continue;

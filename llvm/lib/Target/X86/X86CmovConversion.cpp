@@ -153,7 +153,8 @@ void X86CmovConversionLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
 
 bool X86CmovConversionImpl::runOnMachineFunction(MachineFunction &MF) {
   STI = &MF.getSubtarget<X86Subtarget>();
-  if (!STI->getCLOpts().cmov_converter)
+  const X86Options &CLOpts = STI->getCLOpts();
+  if (!CLOpts.cmov_converter)
     return false;
 
   // If the SelectOptimize pass is enabled, cmovs have already been optimized.
@@ -175,7 +176,6 @@ bool X86CmovConversionImpl::runOnMachineFunction(MachineFunction &MF) {
   // (cmov_converter_force_mem_operand). The latter CMOV will risk a stall
   // waiting for the load to complete that speculative execution behind a branch
   // is better suited to handle on modern x86 chips.
-  const X86Options &CLOpts = STI->getCLOpts();
   if (CLOpts.cmov_converter_force_mem_operand ||
       CLOpts.cmov_converter_force_all) {
     CmovGroups AllCmovGroups;

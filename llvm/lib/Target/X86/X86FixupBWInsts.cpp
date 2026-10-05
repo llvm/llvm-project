@@ -157,11 +157,12 @@ FunctionPass *llvm::createX86FixupBWInstsLegacyPass() {
 }
 
 bool X86FixupBWInstImpl::runOnMachineFunction(MachineFunction &MF) {
-  if (!MF.getSubtarget<X86Subtarget>().getCLOpts().fixup_byte_word_insts)
+  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  if (!ST.getCLOpts().fixup_byte_word_insts)
     return false;
 
   this->MF = &MF;
-  TII = MF.getSubtarget<X86Subtarget>().getInstrInfo();
+  TII = ST.getInstrInfo();
   TRI = MF.getRegInfo().getTargetRegisterInfo();
   LiveUnits.init(TII->getRegisterInfo());
 

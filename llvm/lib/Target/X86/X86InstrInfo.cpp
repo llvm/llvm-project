@@ -5265,6 +5265,8 @@ MachineInstr *X86InstrInfo::findDominatingRedundantFlagInstr(
     SmallVectorImpl<std::pair<MachineInstr *, unsigned>> &InstsToUpdate) const {
   assert(Subtarget.hasNF() && "NF feature required");
   const TargetRegisterInfo *TRI = &getRegisterInfo();
+  const unsigned MaxNFConversions =
+      Subtarget.getCLOpts().max_nf_conversions_for_cmp_reuse;
 
   // The caller already scanned MultiPredMBB without finding the producer, so it
   // must live in a block that strictly dominates MultiPredMBB. Walk
@@ -5332,8 +5334,7 @@ MachineInstr *X86InstrInfo::findDominatingRedundantFlagInstr(
       unsigned NewOpc = X86::getNFVariantIfClobberRemovable(Inst, TRI);
       if (!NewOpc)
         return nullptr;
-      if (InstsToUpdate.size() + Pending.size() >=
-          Subtarget.getCLOpts().max_nf_conversions_for_cmp_reuse)
+      if (InstsToUpdate.size() + Pending.size() >= MaxNFConversions)
         return nullptr;
       Pending.push_back(std::make_pair(&Inst, NewOpc));
     }
@@ -5373,8 +5374,7 @@ MachineInstr *X86InstrInfo::findDominatingRedundantFlagInstr(
       unsigned NewOpc = X86::getNFVariantIfClobberRemovable(Inst, TRI);
       if (!NewOpc)
         return nullptr;
-      if (InstsToUpdate.size() + Pending.size() >=
-          Subtarget.getCLOpts().max_nf_conversions_for_cmp_reuse)
+      if (InstsToUpdate.size() + Pending.size() >= MaxNFConversions)
         return nullptr;
       Pending.push_back(std::make_pair(&Inst, NewOpc));
     }
