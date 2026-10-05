@@ -25739,7 +25739,10 @@ static bool canEmitConjunctionForCCMP(SelectionDAG &DAG, SDValue Val,
 ///   Negate:    true if this sub-tree should be negated by inverting the
 ///              conditions on its SETCC leaves
 ///   OutCC:     set to the condition code to test after the whole chain
-/// Returns the flags-producing node (CMP/SUB or CCMP).
+/// Returns the EFLAGS-producing node: for the leaf that starts the chain
+/// whatever EmitCmp picked as its flag source (a comparison, or an arithmetic
+/// or logic node it folded the comparison onto), and a CCMP/CTEST for every
+/// other leaf.
 static SDValue emitConjunctionForCCMPRec(SDValue Val, X86::CondCode &OutCC,
                                          bool Negate, SDValue CCOp,
                                          X86::CondCode Predicate,
@@ -25757,23 +25760,52 @@ static SDValue emitConjunctionForCCMPRec(SDValue Val, X86::CondCode &OutCC,
     assert(X86CC != X86::COND_INVALID);
     OutCC = X86CC;
 
-    SDValue Flags = EmitCmp(LHS, RHS, X86CC, DL, DAG, Subtarget);
-    // Produce a normal comparison if we are first in the chain.
+    // Produce a normal comparison if we are first in the chain. Only there may
+    // EmitCmp fold the comparison into the EFLAGS of an existing arithmetic or
+    // logic node: those flags are unconditional, which is exactly what the root
+    // of the chain needs.
     if (!CCOp)
-      return Flags;
+      return EmitCmp(LHS, RHS, X86CC, DL, DAG, Subtarget);
 
-    // Otherwise produce a CCMP. The CCMP executes (and updates EFLAGS) only
-    // when Predicate holds; when it is skipped it forces the default condition
+    // Otherwise produce a CCMP or CTEST. It executes (and updates EFLAGS)
+    // only when Predicate holds; when skipped it forces the default condition
     // flags, which must make OutCC evaluate to false. That default is encoded
     // from the opposite of X86CC.
-    SDNode *FlagsNode = Flags.getNode();
     X86::CondCode DCFCode = X86::GetOppositeBranchCondition(X86CC);
     SDValue CFlags = DAG.getTargetConstant(
         X86::getCCMPCondFlagsFromCondCode(DCFCode), DL, MVT::i8);
     SDValue SrcCC = DAG.getTargetConstant(Predicate, DL, MVT::i8);
+
+    // Compare the SETCC's own operands rather than asking EmitCmp for a flag
+    // source: CCMP is a conditional subtract, so it always reproduces the
+    // comparison, whereas a folded flag source computes something else and its
+    // operands cannot be reused. Comparing with zero is a TEST of the value,
+    // and an AND compared with zero is a TEST of the AND's operands, both of
+    // which CTEST performs conditionally.
+    if (isNullConstant(RHS)) {
+      SDValue Op0 = LHS, Op1 = LHS;
+      if (LHS.getOpcode() == ISD::AND) {
+        Op0 = LHS.getOperand(0);
+        Op1 = LHS.getOperand(1);
+      }
+      return DAG.getNode(X86ISD::CTEST, DL, MVT::i32,
+                         {Op0, Op1, CFlags, SrcCC, CCOp});
+    }
+    // An equality comparison is a test of the operands' XOR, so reuse one that
+    // is already being computed instead of keeping both operands live.
+    if (X86CC == X86::COND_E || X86CC == X86::COND_NE) {
+      SDVTList XorVTs = DAG.getVTList(LHS.getValueType());
+      SDNode *Xor = DAG.getNodeIfExists(ISD::XOR, XorVTs, {LHS, RHS});
+      if (!Xor)
+        Xor = DAG.getNodeIfExists(ISD::XOR, XorVTs, {RHS, LHS});
+      if (Xor && Xor->hasAnyUseOfValue(0)) {
+        SDValue XorVal(Xor, 0);
+        return DAG.getNode(X86ISD::CTEST, DL, MVT::i32,
+                           {XorVal, XorVal, CFlags, SrcCC, CCOp});
+      }
+    }
     return DAG.getNode(X86ISD::CCMP, DL, MVT::i32,
-                       {FlagsNode->getOperand(0), FlagsNode->getOperand(1),
-                        CFlags, SrcCC, CCOp});
+                       {LHS, RHS, CFlags, SrcCC, CCOp});
   }
   assert(Val.hasOneUse() && "Valid conjunction/disjunction tree");
 
@@ -26481,7 +26513,8 @@ static SDValue LowerStore(SDValue Op, const X86Subtarget &Subtarget,
   // split the op into halves anyway, so the concat is purely an extra op.
   MVT StoreVT = StoredVal.getSimpleValueType();
   if (StoreVT.is256BitVector() || StoreVT.is512BitVector()) {
-    if (StoredVal.hasOneUse() && isFreeToSplitVector(StoredVal, DAG))
+    if (StoredVal.hasOneUse() &&
+        isFreeToSplitVector(peekThroughOneUseBitcasts(StoredVal), DAG))
       return splitVectorStore(St, DAG);
     return SDValue();
   }
@@ -27480,7 +27513,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         SDValue Sae = Op.getOperand(5);
         if (isRoundModeSAE(Sae))
           return DAG.getNode(IntrData->Opc1, dl, MaskVT, Op.getOperand(1),
-                             Op.getOperand(2), CC, Mask, Sae);
+                             Op.getOperand(2), CC, Mask);
         if (!isRoundModeCurDirection(Sae))
           return SDValue();
       }
@@ -27499,7 +27532,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       if (IntrData->Opc1 != 0) {
         SDValue Sae = Op.getOperand(5);
         if (isRoundModeSAE(Sae))
-          Cmp = DAG.getNode(IntrData->Opc1, dl, MVT::v1i1, Src1, Src2, CC, Sae);
+          Cmp = DAG.getNode(IntrData->Opc1, dl, MVT::v1i1, Src1, Src2, CC);
         else if (!isRoundModeCurDirection(Sae))
           return SDValue();
       }
@@ -27586,7 +27619,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                            DAG.getTargetConstant(CondVal, dl, MVT::i8));
       else if (isRoundModeSAE(Sae))
         FCmp = DAG.getNode(X86ISD::FSETCCM_SAE, dl, MVT::v1i1, LHS, RHS,
-                           DAG.getTargetConstant(CondVal, dl, MVT::i8), Sae);
+                           DAG.getTargetConstant(CondVal, dl, MVT::i8));
       else
         return SDValue();
       // Need to fill with zeros to ensure the bitcast will produce zeroes
@@ -34792,14 +34825,15 @@ static SDValue LowerPARTIAL_REDUCE_MLA(SDValue Op,
   if (VT.is512BitVector() && !Has512)
     return splitVectorOp(Op, DAG, DL);
 
-  // The dot products take their i8/i16 elements packed in i32 lanes.
-  LHS = DAG.getBitcast(VT, LHS);
-  RHS = DAG.getBitcast(VT, RHS);
-
-  // Without VLX only the 512-bit EVEX form exists, so use that unless the VEX
-  // encoding is available.
-  if (!VT.is512BitVector() && !Subtarget.hasVLX() && !HasVEX)
-    return getAVX512Node(Opc, DL, VT, {Acc, LHS, RHS}, DAG, Subtarget);
+  // Without VLX only the 512-bit EVEX form exists, so widen to that and extract
+  // unless the VEX encoding is available.
+  if (!VT.is512BitVector() && !Subtarget.hasVLX() && !HasVEX) {
+    Acc = widenSubVector(Acc, false, Subtarget, DAG, DL, 512);
+    LHS = widenSubVector(LHS, false, Subtarget, DAG, DL, 512);
+    RHS = widenSubVector(RHS, false, Subtarget, DAG, DL, 512);
+    SDValue Res = DAG.getNode(Opc, DL, MVT::v16i32, Acc, LHS, RHS);
+    return extractSubVector(Res, 0, DAG, DL, VT.getSizeInBits());
+  }
 
   return DAG.getNode(Opc, DL, VT, Acc, LHS, RHS);
 }
@@ -39268,6 +39302,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::LCMPXCHG16B_NO_RBX: {
     const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();
     Register BasePtr = TRI->getBaseRegister();
+    bool DeadEFLAGS = MI.getOperand(8).isDead(); // implicit-def $eflags
     if (TRI->hasBasePointer(*MF) &&
         (BasePtr == X86::RBX || BasePtr == X86::EBX)) {
       if (!BB->isLiveIn(BasePtr))
@@ -39284,6 +39319,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         MIB.add(MI.getOperand(Idx));
       MIB.add(MI.getOperand(X86::AddrNumOperands));
       MIB.addReg(SaveRBX);
+      MIB->getOperand(11).setIsDead(DeadEFLAGS); // implicit-def $eflags
     } else {
       // Simple case, just copy the virtual register to RBX.
       BuildMI(*BB, MI, MIMD, TII->get(TargetOpcode::COPY), X86::RBX)
@@ -39292,6 +39328,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
           BuildMI(*BB, MI, MIMD, TII->get(X86::LCMPXCHG16B));
       for (unsigned Idx = 0; Idx < X86::AddrNumOperands; ++Idx)
         MIB.add(MI.getOperand(Idx));
+      MIB->getOperand(7).setIsDead(DeadEFLAGS); // implicit-def $eflags
     }
     MI.eraseFromParent();
     return BB;
@@ -49109,7 +49146,10 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       SDValue TruncSrc = LHS.getOperand(0);
       EVT TruncSrcVT = TruncSrc.getValueType();
       if (VT == MVT::v16i8 && TruncSrcVT == MVT::v8i64) {
-        return DAG.getNode(X86ISD::VMTRUNC, DL, VT, TruncSrc, RHS, Cond);
+        // VMTRUNC's mask operand must have the same number of elements as
+        // the truncation source (v8i64), not the (wider) v16i8 result.
+        SDValue MaskCond = DAG.getExtractSubvector(DL, MVT::v8i1, Cond, 0);
+        return DAG.getNode(X86ISD::VMTRUNC, DL, VT, TruncSrc, RHS, MaskCond);
       }
     }
   }
@@ -61211,16 +61251,18 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       // Attempt to peek through bitcasts and concat the original subvectors.
       EVT SubVT = peekThroughBitcasts(Subs[0]).getValueType();
       if (SubVT.isSimple() && SubVT.isVector()) {
-        MVT ConcatVT =
-            MVT::getVectorVT(SubVT.getSimpleVT().getScalarType(),
-                             SubVT.getVectorElementCount() * Subs.size());
-        for (SDValue &Sub : Subs)
-          Sub = DAG.getBitcast(SubVT, Sub);
-        if (SDValue ConcatSrc = combineConcatVectorOps(DL, ConcatVT, Subs, DAG,
-                                                       Subtarget, Depth + 1))
-          return DAG.getBitcast(VT, ConcatSrc);
-        return DAG.getBitcast(
-            VT, DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, Subs));
+        EVT ConcatVT = EVT::getVectorVT(
+            *DAG.getContext(), SubVT.getSimpleVT().getScalarType(),
+            SubVT.getVectorElementCount() * Subs.size());
+        if (ConcatVT.isSimple()) {
+          for (SDValue &Sub : Subs)
+            Sub = DAG.getBitcast(SubVT, Sub);
+          if (SDValue ConcatSrc = combineConcatVectorOps(
+                  DL, ConcatVT.getSimpleVT(), Subs, DAG, Subtarget, Depth + 1))
+            return DAG.getBitcast(VT, ConcatSrc);
+          return DAG.getBitcast(
+              VT, DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, Subs));
+        }
       }
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Subs);
     };
@@ -61468,12 +61510,13 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     case X86ISD::VPERMILPV:
       if (!IsSplat && (VT.is256BitVector() ||
                        (VT.is512BitVector() && Subtarget.useAVX512Regs()))) {
+        MVT IntVT = VT.changeVectorElementTypeToInteger();
         SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
-        SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
+        SDValue Concat1 = CombineSubOperand(IntVT, Ops, 1);
         if (Concat0 || Concat1)
-          return DAG.getNode(Opcode, DL, VT,
-                             Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0),
-                             Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1));
+          return DAG.getNode(
+              Opcode, DL, VT, Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0),
+              Concat1 ? Concat1 : ConcatSubOperand(IntVT, Ops, 1));
       }
       break;
     case X86ISD::PSHUFB:
@@ -64273,7 +64316,7 @@ SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc &dl,
     // Upon ISEL, the pattern will convert it to jmp with NoTrack prefix.
     SDValue Chain = Value;
     // Jump table debug info is only needed if CodeView is enabled.
-    if (DAG.getTarget().getTargetTriple().isOSBinFormatCOFF())
+    if (M->getTargetTriple().isOSBinFormatCOFF())
       Chain = DAG.getJumpTableDebugInfo(JTI, Chain, dl);
     return DAG.getNode(X86ISD::NT_BRIND, dl, MVT::Other, Chain, Addr);
   }
@@ -65602,7 +65645,8 @@ X86TargetLowering::getStackProbeSize(const MachineFunction &MF) const {
                                                         4096);
 }
 
-Align X86TargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
+Align X86TargetLowering::getPrefLoopAlignment(
+    MachineLoop *ML, const MachineBasicBlock *BlockToAlign) const {
   if (ML && ML->isInnermost() &&
       ExperimentalPrefInnermostLoopAlignment.getNumOccurrences())
     return Align(1ULL << ExperimentalPrefInnermostLoopAlignment);

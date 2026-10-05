@@ -297,7 +297,7 @@ llvm::SmallVector<mlir::MemorySlot> fir::AllocaOp::getPromotableSlots() {
 
 mlir::Value fir::AllocaOp::getDefaultValue(const mlir::MemorySlot &slot,
                                            mlir::OpBuilder &builder) {
-  return fir::UndefOp::create(builder, getLoc(), slot.elemType);
+  return fir::UndefOp::create(builder, getLoc(), slot.valueType);
 }
 
 void fir::AllocaOp::handleBlockArgument(const mlir::MemorySlot &slot,
