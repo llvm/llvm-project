@@ -150,8 +150,8 @@ __constant__ const std::type_info *constant_var = &typeid(int);
 const std::type_info *host_var = &typeid(int);
 
 // A default member initializer is checked where it is used.
-struct MemberInit {
-  const std::type_info *t = &typeid(int);
+struct MemberInit { // #member_init_struct
+  const std::type_info *t = &typeid(int); // #member_init
 };
 // expected-error@#member_init {{cannot use 'typeid' in __device__ function as RTTI is not available in device code}}
 // dev-error@#member_init {{cannot use 'typeid' in __host__ __device__ function as RTTI is not available in device code}}
