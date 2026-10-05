@@ -995,19 +995,28 @@ int mixed() {
 void gh107979() {
   int x = 0, v = 0;
 #pragma omp atomic
+  // expected-error@+2 {{the statement for 'atomic' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an lvalue expression with scalar type}}
+  // expected-note@+1 {{expected a valid expression}}
   0--; // expected-error {{expression is not assignable}}
 #pragma omp atomic
+  // expected-error@+2 {{the statement for 'atomic' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an lvalue expression with scalar type}}
+  // expected-note@+1 {{expected a valid expression}}
   --0; // expected-error {{expression is not assignable}}
 #pragma omp atomic
+  // expected-error@+2 {{the statement for 'atomic' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an lvalue expression with scalar type}}
+  // expected-note@+1 {{expected a valid expression}}
   0++; // expected-error {{expression is not assignable}}
 #pragma omp atomic update
+  // expected-error@+2 {{the statement for 'atomic update' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an lvalue expression with scalar type}}
+  // expected-note@+1 {{expected a valid expression}}
   0 += 1; // expected-error {{expression is not assignable}}
-#pragma omp atomic
-  x += 0--; // expected-error {{expression is not assignable}}
 #pragma omp atomic capture
+  // expected-error@+2 {{the statement for 'atomic capture' must be an expression statement of form 'v = ++x;', 'v = --x;', 'v = x++;', 'v = x--;', 'v = x binop= expr;', 'v = x = x binop expr' or 'v = x = expr binop x', where x and v are both lvalue expressions with scalar type}}
+  // expected-note@+1 {{expected a valid expression}}
   v = 0--; // expected-error {{expression is not assignable}}
+  int w = 0--; // expected-error {{expression is not assignable}}
 #pragma omp atomic capture
-  { v = x; x += 0--; } // expected-error {{expression is not assignable}}
+  { v = w; w++; }
 #pragma omp atomic
   x--;
 }
