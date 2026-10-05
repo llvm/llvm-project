@@ -179,6 +179,7 @@ tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: cse_ctaid_reads_locally
   ; CHECK-COUNT-1: INT_PTX_SREG_CTAID_x
+  ; CHECK-NOT: INT_PTX_SREG_CTAID_x
   bb.0:
     %0:b32 = INT_PTX_SREG_CTAID_x
     %1:b32 = INT_PTX_SREG_CTAID_x
