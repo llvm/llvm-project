@@ -308,7 +308,9 @@ void f25() {
 // CHECK: [[DBG_F3]] = !DILocation(line: 400,
 // CHECK: [[DBG_F4]] = !DILocation(line: 500,
 // CHECK: [[DBG_F5]] = !DILocation(line: 600,
-// CHECK: [[DBG_F6]] = !DILocation(line: 700,
+// CHECK: [[DBG_F6]] = !DILocation(line: 0, scope: [[DBG_F6_MEMCPY:![0-9]+]], inlinedAt: [[DBG_F6_INLINED_AT:![0-9]+]])
+// CHECK: [[DBG_F6_MEMCPY]] = distinct !DISubprogram(name: "memcpy",
+// CHECK: [[DBG_F6_INLINED_AT]] = !DILocation(line: 700,
 // CHECK: [[DBG_F7]] = !DILocation(line: 800,
 // CHECK: [[DBG_F8]] = !DILocation(line: 900,
 // CHECK: [[DBG_F9]] = !DILocation(line: 1000,

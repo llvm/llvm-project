@@ -2895,6 +2895,19 @@ void CGBuilderInserter::InsertHelper(
     CGF->InsertHelper(I, Name, InsertPt);
 }
 
+void CGBuilderTy::attachSyntheticInlineDebugLoc(llvm::CallInst *CI,
+                                                StringRef FuncName) {
+  // This can't be done from CGBuilderInserter::InsertHelper because IRBuilder
+  // sets the instruction's debug location after the inserter runs.
+  CodeGenFunction *CGF = getCGF();
+  CGDebugInfo *DI = CGF ? CGF->getDebugInfo() : nullptr;
+  if (!DI)
+    return;
+  if (llvm::DebugLoc DL = CI->getDebugLoc())
+    if (llvm::DILocation *SynthLoc = DI->CreateSyntheticInlineAt(DL, FuncName))
+      CI->setDebugLoc(SynthLoc);
+}
+
 // Emits an error if we don't have a valid set of target features for the
 // called function.
 void CodeGenFunction::checkTargetFeatures(const CallExpr *E,
