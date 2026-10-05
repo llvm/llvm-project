@@ -288,27 +288,23 @@ protected:
           expression.consume_front("$");
 
           RegisterArgument argument;
-          argument.reg_info = reg_ctx->GetRegisterInfoByName(expression);
-          if (!argument.reg_info) {
+          std::string variable_path = "$" + expression.str();
+          VariableSP variable_sp;
+          Status error;
+          argument.value_sp = frame->GetValueForVariableExpressionPath(
+              variable_path, eNoDynamicValues,
+              StackFrame::eExpressionPathOptionCheckPtrVsMember, variable_sp,
+              error, eDILModeLegacy);
+          if (error.Fail() || !argument.value_sp) {
             if (expression.find_first_of(".[") == llvm::StringRef::npos &&
-                !expression.contains("->")) {
+                !expression.contains("->"))
               argument.error =
                   "Invalid register name '" + expression.str() + "'";
-            } else {
-              std::string variable_path = "$" + expression.str();
-              VariableSP variable_sp;
-              Status error;
-              argument.value_sp = frame->GetValueForVariableExpressionPath(
-                  variable_path, eNoDynamicValues,
-                  StackFrame::eExpressionPathOptionCheckPtrVsMember,
-                  variable_sp, error, eDILModeLegacy);
-              if (error.Fail() || !argument.value_sp) {
-                argument.error = error.AsCString("invalid register path");
-              } else if (ValueObject *root = argument.value_sp->GetRoot()) {
-                argument.reg_info = reg_ctx->GetRegisterInfoByName(
-                    root->GetName().GetStringRef());
-              }
-            }
+            else
+              argument.error = error.AsCString("invalid register path");
+          } else if (ValueObject *root = argument.value_sp->GetRoot()) {
+            argument.reg_info =
+                reg_ctx->GetRegisterInfoByName(root->GetName().GetStringRef());
           }
 
           if (!argument.reg_info) {
@@ -317,15 +313,19 @@ protected:
                   "Invalid register name '" + expression.str() + "'";
           } else {
             if (argument.value_sp) {
-              StreamString expression_stream;
-              argument.value_sp->GetExpressionPath(expression_stream);
-              llvm::StringRef expression_path = expression_stream.GetString();
-              if (!expression_path.consume_front("$") ||
-                  !expression_path.consume_front(argument.reg_info->name)) {
-                argument.error = "unable to reconstruct register path '" +
-                                 expression.str() + "'";
+              if (argument.value_sp.get() == argument.value_sp->GetRoot()) {
+                argument.value_sp.reset();
               } else {
-                argument.expression_path = expression_path.str();
+                StreamString expression_stream;
+                argument.value_sp->GetExpressionPath(expression_stream);
+                llvm::StringRef expression_path = expression_stream.GetString();
+                if (!expression_path.consume_front("$") ||
+                    !expression_path.consume_front(argument.reg_info->name)) {
+                  argument.error = "unable to reconstruct register path '" +
+                                   expression.str() + "'";
+                } else {
+                  argument.expression_path = expression_path.str();
+                }
               }
             }
             reg_name_right_align_at =
