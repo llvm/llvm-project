@@ -341,13 +341,8 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
       assert(getLangOpts().Reflection);
       if (getLangOpts().Blocks) {
         OpToken.setKind(tok::caret);
-        Token Caret;
-        {
-          Caret.startToken();
-          Caret.setKind(tok::caret);
-          Caret.setLocation(OpToken.getLocation().getLocWithOffset(1));
-          Caret.setLength(1);
-        }
+        Token Caret = Token::Create(
+            tok::caret, OpToken.getLocation().getLocWithOffset(1), 1);
         UnconsumeToken(OpToken);
         PP.EnterToken(Caret, /*IsReinject=*/true);
         return ParseRHSOfBinaryExpression(LHS, MinPrec);
@@ -3202,15 +3197,10 @@ void Parser::injectEmbedTokens() {
                               Data->BinaryData.size() * 2 - 1);
   unsigned I = 0;
   for (auto &Byte : Data->BinaryData) {
-    Toks[I].startToken();
-    Toks[I].setKind(tok::binary_data);
-    Toks[I].setLocation(Tok.getLocation());
-    Toks[I].setLength(1);
+    Toks[I] = Token::Create(tok::binary_data, Tok.getLocation(), 1);
     Toks[I].setLiteralData(&Byte);
     if (I != ((Data->BinaryData.size() - 1) * 2)) {
-      Toks[I + 1].startToken();
-      Toks[I + 1].setKind(tok::comma);
-      Toks[I + 1].setLocation(Tok.getLocation());
+      Toks[I + 1] = Token::Create(tok::comma, Tok.getLocation());
     }
     I += 2;
   }

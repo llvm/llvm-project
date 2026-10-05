@@ -676,10 +676,8 @@ static bool GenerateNewArgTokens(Preprocessor &PP,
 
         // Add left paren
         if (FoundSeparatorToken) {
-          TempToken.startToken();
-          TempToken.setKind(tok::l_paren);
-          TempToken.setLocation(ArgStartIterator->getLocation());
-          TempToken.setLength(0);
+          TempToken =
+              Token::Create(tok::l_paren, ArgStartIterator->getLocation());
           NewTokens.push_back(TempToken);
         }
 
@@ -689,10 +687,7 @@ static bool GenerateNewArgTokens(Preprocessor &PP,
         // Add right paren and store the paren locations in ParenHints
         if (FoundSeparatorToken) {
           SourceLocation Loc = PP.getLocForEndOfToken((I - 1)->getLocation());
-          TempToken.startToken();
-          TempToken.setKind(tok::r_paren);
-          TempToken.setLocation(Loc);
-          TempToken.setLength(0);
+          TempToken = Token::Create(tok::r_paren, Loc);
           NewTokens.push_back(TempToken);
           ParenHints.push_back(SourceRange(ArgStartIterator->getLocation(),
                                            Loc));
@@ -856,11 +851,7 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
     }
 
     // Add a marker EOF token to the end of the token list for this argument.
-    Token EOFTok;
-    EOFTok.startToken();
-    EOFTok.setKind(tok::eof);
-    EOFTok.setLocation(Tok.getLocation());
-    EOFTok.setLength(0);
+    Token EOFTok = Token::CreateEof(Tok.getLocation());
     ArgTokens.push_back(EOFTok);
     ++NumActuals;
     if (!ContainsCodeCompletionTok && NumFixedArgsLeft != 0)
@@ -917,11 +908,7 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
 
   if (ContainsCodeCompletionTok) {
     // Recover from not-fully-formed macro invocation during code-completion.
-    Token EOFTok;
-    EOFTok.startToken();
-    EOFTok.setKind(tok::eof);
-    EOFTok.setLocation(Tok.getLocation());
-    EOFTok.setLength(0);
+    Token EOFTok = Token::CreateEof(Tok.getLocation());
     for (; NumActuals < MinArgsExpected; ++NumActuals)
       ArgTokens.push_back(EOFTok);
   }
@@ -980,10 +967,7 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
 
     // Add a marker EOF token to the end of the token list for this argument.
     SourceLocation EndLoc = Tok.getLocation();
-    Tok.startToken();
-    Tok.setKind(tok::eof);
-    Tok.setLocation(EndLoc);
-    Tok.setLength(0);
+    Tok = Token::CreateEof(EndLoc);
     ArgTokens.push_back(Tok);
 
     // If we expect two arguments, add both as empty.

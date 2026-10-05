@@ -254,11 +254,7 @@ void Parser::ParseCXXNonStaticMemberInitializer(Decl *VarD) {
 
   // Store an artificial EOF token to ensure that we don't run off the end of
   // the initializer when we come to parse it.
-  Token Eof;
-  Eof.startToken();
-  Eof.setKind(tok::eof);
-  Eof.setLocation(Tok.getLocation());
-  Eof.setEofData(VarD);
+  Token Eof = Token::CreateEof(Tok.getLocation(), VarD);
   Toks.push_back(Eof);
 }
 
@@ -402,11 +398,8 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
       // Mark the end of the default argument so that we know when to stop when
       // we parse it later on.
       Token LastDefaultArgToken = Toks->back();
-      Token DefArgEnd;
-      DefArgEnd.startToken();
-      DefArgEnd.setKind(tok::eof);
-      DefArgEnd.setLocation(LastDefaultArgToken.getEndLoc());
-      DefArgEnd.setEofData(Param);
+      Token DefArgEnd =
+          Token::CreateEof(LastDefaultArgToken.getEndLoc(), Param);
       Toks->push_back(DefArgEnd);
 
       // Parse the default argument from its saved token stream.
@@ -482,11 +475,8 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
 
     // Add the 'stop' token.
     Token LastExceptionSpecToken = Toks->back();
-    Token ExceptionSpecEnd;
-    ExceptionSpecEnd.startToken();
-    ExceptionSpecEnd.setKind(tok::eof);
-    ExceptionSpecEnd.setLocation(LastExceptionSpecToken.getEndLoc());
-    ExceptionSpecEnd.setEofData(LM.Method);
+    Token ExceptionSpecEnd =
+        Token::CreateEof(LastExceptionSpecToken.getEndLoc(), LM.Method);
     Toks->push_back(ExceptionSpecEnd);
 
     // Parse the default argument from its saved token stream.
@@ -580,11 +570,7 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
 
   assert(!LM.Toks.empty() && "Empty body!");
   Token LastBodyToken = LM.Toks.back();
-  Token BodyEnd;
-  BodyEnd.startToken();
-  BodyEnd.setKind(tok::eof);
-  BodyEnd.setLocation(LastBodyToken.getEndLoc());
-  BodyEnd.setEofData(LM.D);
+  Token BodyEnd = Token::CreateEof(LastBodyToken.getEndLoc(), LM.D);
   LM.Toks.push_back(BodyEnd);
   // Append the current token at the end of the new token stream so that it
   // doesn't get lost.

@@ -157,8 +157,7 @@ namespace clang {
         : VAOptDefinitionContext(PP), LeadingSpaceForStringifiedToken(false),
           StringifyBefore(false), CharifyBefore(false),
           BeginsWithPlaceholder(false), EndsWithPlaceholder(false) {
-      SyntheticEOFToken.startToken();
-      SyntheticEOFToken.setKind(tok::eof);
+      SyntheticEOFToken = Token::CreateEof();
     }
 
     void reset() {
