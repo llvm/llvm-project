@@ -140,12 +140,13 @@ define void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr noalias no
 ; DISABLED_MASKED_STRIDED-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[NUMPOINTS]] to i64
 ; DISABLED_MASKED_STRIDED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; DISABLED_MASKED_STRIDED:       [[VECTOR_BODY]]:
-; DISABLED_MASKED_STRIDED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 0, i64 [[WIDE_TRIP_COUNT]])
+; DISABLED_MASKED_STRIDED-NEXT:    [[N_RND_UP:%.*]] = add nuw nsw i64 [[WIDE_TRIP_COUNT]], 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], 4294967292
 ; DISABLED_MASKED_STRIDED-NEXT:    br label %[[VECTOR_BODY1:.*]]
 ; DISABLED_MASKED_STRIDED:       [[VECTOR_BODY1]]:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_BODY]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE15:.*]] ]
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = phi <4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_BODY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[PRED_STORE_CONTINUE15]] ]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_BODY]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE15]] ]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[INDEX]], i64 [[WIDE_TRIP_COUNT]])
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [2 x i8], ptr [[X]], i64 [[INDEX]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr align 2 [[TMP1]], <4 x i1> [[TMP0]], <4 x i16> poison)
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = shl nsw <4 x i64> [[VEC_IND]], splat (i64 2)
@@ -221,10 +222,9 @@ define void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr noalias no
 ; DISABLED_MASKED_STRIDED-NEXT:    br label %[[PRED_STORE_CONTINUE15]]
 ; DISABLED_MASKED_STRIDED:       [[PRED_STORE_CONTINUE15]]:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; DISABLED_MASKED_STRIDED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[INDEX_NEXT]], i64 [[WIDE_TRIP_COUNT]])
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP33:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP33]], label %[[VECTOR_BODY1]], label %[[MIDDLE_BLOCK:.*]], !llvm.loop [[LOOP3:![0-9]+]]
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP33:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP33]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY1]], !llvm.loop [[LOOP3:![0-9]+]]
 ; DISABLED_MASKED_STRIDED:       [[MIDDLE_BLOCK]]:
 ; DISABLED_MASKED_STRIDED-NEXT:    br label %[[FOR_END_LOOPEXIT:.*]]
 ; DISABLED_MASKED_STRIDED:       [[FOR_END_LOOPEXIT]]:
@@ -241,11 +241,12 @@ define void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr noalias no
 ; ENABLED_MASKED_STRIDED-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[NUMPOINTS]] to i64
 ; ENABLED_MASKED_STRIDED-NEXT:    br label %[[VECTOR_PH:.*]]
 ; ENABLED_MASKED_STRIDED:       [[VECTOR_PH]]:
-; ENABLED_MASKED_STRIDED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 0, i64 [[WIDE_TRIP_COUNT]])
+; ENABLED_MASKED_STRIDED-NEXT:    [[N_RND_UP:%.*]] = add nuw nsw i64 [[WIDE_TRIP_COUNT]], 3
+; ENABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], 4294967292
 ; ENABLED_MASKED_STRIDED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; ENABLED_MASKED_STRIDED:       [[VECTOR_BODY]]:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = phi <4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[INDEX]], i64 [[WIDE_TRIP_COUNT]])
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [2 x i8], ptr [[X]], i64 [[INDEX]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr align 2 [[TMP1]], <4 x i1> [[TMP0]], <4 x i16> poison)
 ; ENABLED_MASKED_STRIDED-NEXT:    [[DOTIDX:%.*]] = shl nsw i64 [[INDEX]], 3
@@ -257,9 +258,8 @@ define void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr noalias no
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP4:%.*]] = and <16 x i1> [[INTERLEAVED_MASK]], <i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false>
 ; ENABLED_MASKED_STRIDED-NEXT:    call void @llvm.masked.store.v16i16.p0(<16 x i16> [[INTERLEAVED_VEC]], ptr align 2 [[TMP2]], <16 x i1> [[TMP4]])
 ; ENABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; ENABLED_MASKED_STRIDED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[INDEX_NEXT]], i64 [[WIDE_TRIP_COUNT]])
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
-; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP5]], label %[[VECTOR_BODY]], label %[[MIDDLE_BLOCK:.*]], !llvm.loop [[LOOP3:![0-9]+]]
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; ENABLED_MASKED_STRIDED:       [[MIDDLE_BLOCK]]:
 ; ENABLED_MASKED_STRIDED-NEXT:    br label %[[FOR_END_LOOPEXIT:.*]]
 ; ENABLED_MASKED_STRIDED:       [[FOR_END_LOOPEXIT]]:
