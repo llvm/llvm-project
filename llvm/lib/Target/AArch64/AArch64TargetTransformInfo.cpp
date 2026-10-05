@@ -311,23 +311,19 @@ static bool hasPossibleIncompatibleOps(const Function *F,
       if (CB->isInlineAsm())
         return true;
 
-      if (auto *CI = dyn_cast<CallInst>(&I)) {
-        // If the callee has calls to streaming compatible functions, then those
-        // may have vl-dependent statements. Be cautious about inlining such
-        // calls, as the streaming-compatible calls would otherwise be executed
-        // in a different streaming mode.
-        if (ConsiderSM && CI->getCalledFunction()) {
-          SMEAttrs CalleeAttrs(*CI->getCalledFunction());
-          if (CalleeAttrs.hasStreamingCompatibleInterface())
-            return true;
-        }
+      SMECallAttrs CallAttrs(*CB, &TLI.getRuntimeLibcallsInfo());
+      // If the callee has calls to streaming compatible functions, then those
+      // may have vl-dependent statements. Be cautious about inlining such
+      // calls, as the streaming-compatible calls would otherwise be executed
+      // in a different streaming mode.
+      if (ConsiderSM && CallAttrs.callee().hasStreamingCompatibleInterface())
+        return true;
 
-        if (isSMEABIRoutineCall(*CI, TLI))
-          return true;
+      if (CallAttrs.callee().isSMEABIRoutine())
+        return true;
 
-        if (ConsiderSM && isPossiblyIncompatibleIntrinsic(&I))
-          return true;
-      }
+      if (ConsiderSM && isPossiblyIncompatibleIntrinsic(&I))
+        return true;
     }
   }
 

@@ -663,13 +663,49 @@ define void @nonstreaming_caller_single_streaming_compatible_callee_alwaysinline
 }
 
 ; Conseratively disallow inlining when forced; it is unclear what the user's intentions were.
-define void @streaming_caller_to_nonstreaming_callee_with_single_streamingcompatible_callee_inline() "aarch64_pstate_sm_enabled" {
-; CHECK-LABEL: define void @streaming_caller_to_nonstreaming_callee_with_single_streamingcompatible_callee_inline
+define void @streaming_caller_to_nonstreaming_alwaysinline_callee_with_single_streamingcompatible_callee_dont_inline() "aarch64_pstate_sm_enabled" {
+; CHECK-LABEL: define void @streaming_caller_to_nonstreaming_alwaysinline_callee_with_single_streamingcompatible_callee_dont_inline
 ; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:    call void @nonstreaming_caller_single_streaming_compatible_callee_alwaysinline()
 ; CHECK-NEXT:    ret void
 ;
   call void @nonstreaming_caller_single_streaming_compatible_callee_alwaysinline()
+  ret void
+}
+
+define void @invoke_opaque_fptr(ptr %fptr) alwaysinline personality ptr null {
+; CHECK-LABEL: define void @invoke_opaque_fptr
+; CHECK-SAME: (ptr [[FPTR:%.*]]) #[[ATTR6]] personality ptr null {
+; CHECK-NEXT:    invoke void [[FPTR]]() #[[ATTR12:[0-9]+]]
+; CHECK-NEXT:            to label [[NORMAL_RETURN:%.*]] unwind label [[UNWIND_CLEANUP:%.*]]
+; CHECK:       normal_return:
+; CHECK-NEXT:    ret void
+; CHECK:       unwind_cleanup:
+; CHECK-NEXT:    [[EH_INFO:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    resume { ptr, i32 } [[EH_INFO]]
+;
+  invoke void %fptr() "aarch64_pstate_sm_compatible"
+  to label %normal_return unwind label %unwind_cleanup
+
+normal_return:
+  ret void
+
+unwind_cleanup:
+  %eh_info = landingpad { ptr, i32 }
+  cleanup
+  resume { ptr, i32 } %eh_info
+}
+
+; Test that we don't inline '@invoke_opaque_fptr_callee' as it contains a streaming compatible callee,
+; but this time the callee is opaque pointer and called via 'invoke' rather than 'call'.
+define void @callee_has_streaming_compatible_invoke_call_dont_inline(ptr %fptr) "aarch64_pstate_sm_enabled" {
+; CHECK-LABEL: define void @callee_has_streaming_compatible_invoke_call_dont_inline
+; CHECK-SAME: (ptr [[FPTR:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    call void @invoke_opaque_fptr(ptr [[FPTR]])
+; CHECK-NEXT:    ret void
+;
+  call void @invoke_opaque_fptr(ptr %fptr)
   ret void
 }
 
