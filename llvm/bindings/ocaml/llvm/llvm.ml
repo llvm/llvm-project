@@ -356,6 +356,7 @@ module ModuleFlagBehavior = struct
 end
 
 module GEPNoWrapFlags = struct
+  let none = 0
   let inbounds = 1
   let nusw = 2
   let nuw = 4

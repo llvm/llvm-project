@@ -297,7 +297,8 @@ let test_constants () =
   ignore (define_global "const_trunc" (const_trunc (const_add foldbomb five)
                                                i8_type) m);
   ignore (define_global "const_ptrtoint" (const_ptrtoint
-    (const_ptradd (const_null (pointer_type context)) (const_int i32_type 1) 0)
+    (const_ptradd (const_null (pointer_type context)) (const_int i32_type 1)
+                   GEPNoWrapFlags.none)
     i32_type) m);
   ignore (define_global "const_inttoptr" (const_inttoptr (const_add foldbomb five)
                                                   void_ptr) m);
@@ -315,7 +316,8 @@ let test_constants () =
    * CHECK: const_insertelement{{.*}}insertelement
    * CHECK: const_shufflevector = global <4 x i32> <i32 0, i32 1, i32 1, i32 0>
    *)
-  ignore (define_global "const_ptradd" (const_ptradd foldbomb_gv five 0) m);
+  ignore (define_global "const_ptradd"
+          (const_ptradd foldbomb_gv five GEPNoWrapFlags.none) m);
   ignore (define_global "const_ptradd_inbounds"
           (const_ptradd foldbomb_gv five GEPNoWrapFlags.inbounds) m);
   ignore (define_global "const_ptradd_inbounds_nuw"
@@ -327,7 +329,8 @@ let test_constants () =
           m);
   assert (Option.is_none (const_ptradd_from_indices (data_layout m) i32_type
                           foldbomb_gv
-                          [| (const_ptrtoint foldbomb_gv i32_type) |] 0));
+                          [| (const_ptrtoint foldbomb_gv i32_type) |]
+                          GEPNoWrapFlags.none));
   let zero = const_int i32_type 0 in
   let one  = const_int i32_type 1 in
   ignore (define_global "const_extractelement" (const_extractelement

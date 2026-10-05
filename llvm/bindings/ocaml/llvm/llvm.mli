@@ -395,6 +395,7 @@ module ModuleFlagBehavior :sig
 end
 
 module GEPNoWrapFlags : sig
+  val none : int
   val inbounds : int
   val nusw : int
   val nuw : int
@@ -1206,16 +1207,16 @@ val const_xor : llvalue -> llvalue -> llvalue
 
 (** [const_ptradd pc offset flags] returns the constant ptradd
     (getelementptr i8) of [pc] with constant [offset] and the given
-    {!GEPNoWrapFlags} no-wrap flags (combined with [lor], or [0] for none).
+    {!GEPNoWrapFlags} no-wrap flags (combined with [lor]).
     See the method [llvm::ConstantExpr::getPtrAdd]. *)
 val const_ptradd : llvalue -> llvalue -> int -> llvalue
 
 (** [const_ptradd_from_indices dl srcty pc indices flags] returns the constant
     ptradd of [pc] with the offset derived from the data layout [dl], the
     source element type [srcty] and the constant integers indices from the
-    array [indices]. The flags are {!GEPNoWrapFlags} (combined with [lor], or
-    [0] for none). The result may be [None] if the indices cannot be converted
-    to ptradd representation.
+    array [indices]. The flags are {!GEPNoWrapFlags} (combined with [lor]).
+    The result may be [None] if the indices cannot be converted to ptradd
+    representation.
     See the method [llvm::ConstantExpr::getGetElementPtr]. *)
 val const_ptradd_from_indices : DataLayout.t -> lltype -> llvalue ->
                                 llvalue array -> int -> llvalue option
