@@ -873,7 +873,7 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
 
   Value *Dest, *Size, *Src = nullptr;
   bool NeedsMemMove = false;
-  IRBuilder<> IRB(BB, IP);
+  IRBuilder<> IRB(IP);
 
   if (auto *A = dyn_cast<Argument>(V)) {
     assert(A->hasByValAttr() && "Type reset for non-byval argument?");
