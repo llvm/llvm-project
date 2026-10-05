@@ -5,36 +5,38 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu9.00 < %s | FileCheck %s -check-prefixes=GFX89,GFX89-SDAG
 ; RUN: llc -global-isel=1 -mtriple=amdgpu9.00 < %s | FileCheck %s -check-prefixes=GFX89,GFX9-GISEL
 
-define amdgpu_ps float @s_cvt_pknorm_u16_f32(float inreg %x, float inreg %y) #0 {
+define amdgpu_ps <2 x i16> @s_cvt_pknorm_u16_f32(float inreg %x, float inreg %y) #0 {
 ; SI-LABEL: s_cvt_pknorm_u16_f32:
 ; SI:  ; %bb.0:
 ; SI:    v_mov_b32_e32 v0, s1
 ; SI:    v_cvt_pknorm_u16_f32_e32 v0, s0, v0
+; SI:    v_readfirstlane_b32 s0, v0
 ; SI:    ; return to shader part epilog
 ;
 ; GFX89-LABEL: s_cvt_pknorm_u16_f32:
 ; GFX89:  ; %bb.0:
 ; GFX89:    v_mov_b32_e32 v0, s1
 ; GFX89:    v_cvt_pknorm_u16_f32 v0, s0, v0
+; GFX89:    v_readfirstlane_b32 s0, v0
 ; GFX89:    ; return to shader part epilog
   %result = call <2 x i16> @llvm.amdgcn.cvt.pknorm.u16(float %x, float %y)
-  %r = bitcast <2 x i16> %result to float
-  ret float %r
+  ret <2 x i16> %result
 }
 
-define amdgpu_ps float @s_cvt_pknorm_u16_samereg_f32(float inreg %x) #0 {
+define amdgpu_ps <2 x i16> @s_cvt_pknorm_u16_samereg_f32(float inreg %x) #0 {
 ; SI-LABEL: s_cvt_pknorm_u16_samereg_f32:
 ; SI:  ; %bb.0:
 ; SI:    v_cvt_pknorm_u16_f32_e64 v0, s0, s0
+; SI:    v_readfirstlane_b32 s0, v0
 ; SI:    ; return to shader part epilog
 ;
 ; GFX89-LABEL: s_cvt_pknorm_u16_samereg_f32:
 ; GFX89:  ; %bb.0:
 ; GFX89:    v_cvt_pknorm_u16_f32 v0, s0, s0
+; GFX89:    v_readfirstlane_b32 s0, v0
 ; GFX89:    ; return to shader part epilog
   %result = call <2 x i16> @llvm.amdgcn.cvt.pknorm.u16(float %x, float %x)
-  %r = bitcast <2 x i16> %result to float
-  ret float %r
+  ret <2 x i16> %result
 }
 
 define amdgpu_ps float @v_cvt_pknorm_u16_f32(float %a, float %b) #0 {

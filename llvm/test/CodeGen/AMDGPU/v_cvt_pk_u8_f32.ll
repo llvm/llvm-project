@@ -4,51 +4,51 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu8.03 < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu8.03 < %s | FileCheck -check-prefix=GCN %s
 
-define amdgpu_ps float @v_cvt_pk_u8_f32_idx_0(float inreg %src, i32 inreg %reg) {
+define amdgpu_ps i32 @v_cvt_pk_u8_f32_idx_0(float inreg %src, i32 inreg %reg) {
 ; GCN-LABEL: v_cvt_pk_u8_f32_idx_0:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_mov_b32_e32 v0, s1
 ; GCN-NEXT:    v_cvt_pk_u8_f32 v0, s0, 0, v0
+; GCN-NEXT:    v_readfirstlane_b32 s0, v0
 ; GCN-NEXT:    ; return to shader part epilog
   %result = call i32 @llvm.amdgcn.cvt.pk.u8.f32(float %src, i32 0, i32 %reg) #0
-  %r = bitcast i32 %result to float
-  ret float %r
+  ret i32 %result
 }
 
-define amdgpu_ps float @v_cvt_pk_u8_f32_idx_1(float inreg %src, i32 inreg %reg) {
+define amdgpu_ps i32 @v_cvt_pk_u8_f32_idx_1(float inreg %src, i32 inreg %reg) {
 ; GCN-LABEL: v_cvt_pk_u8_f32_idx_1:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_mov_b32_e32 v0, s1
 ; GCN-NEXT:    v_cvt_pk_u8_f32 v0, s0, 1, v0
+; GCN-NEXT:    v_readfirstlane_b32 s0, v0
 ; GCN-NEXT:    ; return to shader part epilog
   %result = call i32 @llvm.amdgcn.cvt.pk.u8.f32(float %src, i32 1, i32 %reg) #0
-  %r = bitcast i32 %result to float
-  ret float %r
+  ret i32 %result
 }
 
-define amdgpu_ps float @v_cvt_pk_u8_f32_idx_2(float inreg %src, i32 inreg %reg) {
+define amdgpu_ps i32 @v_cvt_pk_u8_f32_idx_2(float inreg %src, i32 inreg %reg) {
 ; GCN-LABEL: v_cvt_pk_u8_f32_idx_2:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_mov_b32_e32 v0, s1
 ; GCN-NEXT:    v_cvt_pk_u8_f32 v0, s0, 2, v0
+; GCN-NEXT:    v_readfirstlane_b32 s0, v0
 ; GCN-NEXT:    ; return to shader part epilog
   %result = call i32 @llvm.amdgcn.cvt.pk.u8.f32(float %src, i32 2, i32 %reg) #0
-  %r = bitcast i32 %result to float
-  ret float %r
+  ret i32 %result
 }
 
-define amdgpu_ps float @v_cvt_pk_u8_f32_idx_3(float inreg %src, i32 inreg %reg) {
+define amdgpu_ps i32 @v_cvt_pk_u8_f32_idx_3(float inreg %src, i32 inreg %reg) {
 ; GCN-LABEL: v_cvt_pk_u8_f32_idx_3:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_mov_b32_e32 v0, s1
 ; GCN-NEXT:    v_cvt_pk_u8_f32 v0, s0, 3, v0
+; GCN-NEXT:    v_readfirstlane_b32 s0, v0
 ; GCN-NEXT:    ; return to shader part epilog
   %result = call i32 @llvm.amdgcn.cvt.pk.u8.f32(float %src, i32 3, i32 %reg) #0
-  %r = bitcast i32 %result to float
-  ret float %r
+  ret i32 %result
 }
 
-define amdgpu_ps float @v_cvt_pk_u8_f32_combine(float inreg %src, i32 inreg %reg) {
+define amdgpu_ps i32 @v_cvt_pk_u8_f32_combine(float inreg %src, i32 inreg %reg) {
 ; GCN-LABEL: v_cvt_pk_u8_f32_combine:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_mov_b32_e32 v0, s1
@@ -56,25 +56,25 @@ define amdgpu_ps float @v_cvt_pk_u8_f32_combine(float inreg %src, i32 inreg %reg
 ; GCN-NEXT:    v_cvt_pk_u8_f32 v0, s0, 1, v0
 ; GCN-NEXT:    v_cvt_pk_u8_f32 v0, s0, 2, v0
 ; GCN-NEXT:    v_cvt_pk_u8_f32 v0, s0, 3, v0
+; GCN-NEXT:    v_readfirstlane_b32 s0, v0
 ; GCN-NEXT:    ; return to shader part epilog
   %result0 = call i32 @llvm.amdgcn.cvt.pk.u8.f32(float %src, i32 0, i32 %reg) #0
   %result1 = call i32 @llvm.amdgcn.cvt.pk.u8.f32(float %src, i32 1, i32 %result0) #0
   %result2 = call i32 @llvm.amdgcn.cvt.pk.u8.f32(float %src, i32 2, i32 %result1) #0
   %result3 = call i32 @llvm.amdgcn.cvt.pk.u8.f32(float %src, i32 3, i32 %result2) #0
-  %r = bitcast i32 %result3 to float
-  ret float %r
+  ret i32 %result3
 }
 
-define amdgpu_ps float @v_cvt_pk_u8_f32_idx(float inreg %src, i32 inreg %idx, i32 inreg %reg) {
+define amdgpu_ps i32 @v_cvt_pk_u8_f32_idx(float inreg %src, i32 inreg %idx, i32 inreg %reg) {
 ; GCN-LABEL: v_cvt_pk_u8_f32_idx:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_mov_b32_e32 v0, s1
 ; GCN-NEXT:    v_mov_b32_e32 v1, s2
 ; GCN-NEXT:    v_cvt_pk_u8_f32 v0, s0, v0, v1
+; GCN-NEXT:    v_readfirstlane_b32 s0, v0
 ; GCN-NEXT:    ; return to shader part epilog
   %result = call i32 @llvm.amdgcn.cvt.pk.u8.f32(float %src, i32 %idx, i32 %reg) #0
-  %r = bitcast i32 %result to float
-  ret float %r
+  ret i32 %result
 }
 
 attributes #0 = { nounwind readnone }

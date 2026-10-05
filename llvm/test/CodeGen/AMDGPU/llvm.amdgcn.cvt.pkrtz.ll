@@ -10,57 +10,69 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu11.00 < %s | FileCheck %s -enable-var-scope -check-prefixes=GFX11,GFX11-SDAG
 ; RUN: llc -global-isel=1 -mtriple=amdgpu11.00 < %s | FileCheck %s -enable-var-scope -check-prefixes=GFX11,GFX11-GISEL
 
-define amdgpu_ps <2 x half> @s_cvt_pkrtz_v2f16_f32(float inreg %x, float inreg %y) #0 {
+define amdgpu_ps i32 @s_cvt_pkrtz_v2f16_f32(float inreg %x, float inreg %y) #0 {
 ; SI-LABEL: s_cvt_pkrtz_v2f16_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_mov_b32_e32 v0, s1
 ; SI-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, s0, v0
+; SI-NEXT:    v_readfirstlane_b32 s0, v0
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; GFX89-LABEL: s_cvt_pkrtz_v2f16_f32:
 ; GFX89:       ; %bb.0:
 ; GFX89-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX89-NEXT:    v_cvt_pkrtz_f16_f32 v0, s0, v0
+; GFX89-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX89-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: s_cvt_pkrtz_v2f16_f32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, s0, s1
+; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: s_cvt_pkrtz_v2f16_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_cvt_pk_rtz_f16_f32_e64 v0, s0, s1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
   %result = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %x, float %y)
-  ret <2 x half> %result
+  %r = bitcast <2 x half> %result to i32
+  ret i32 %r
 }
 
-define amdgpu_ps <2 x half> @s_cvt_pkrtz_samereg_v2f16_f32(float inreg %x) #0 {
+define amdgpu_ps i32 @s_cvt_pkrtz_samereg_v2f16_f32(float inreg %x) #0 {
 ; SI-LABEL: s_cvt_pkrtz_samereg_v2f16_f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, s0, s0
+; SI-NEXT:    v_readfirstlane_b32 s0, v0
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; GFX89-LABEL: s_cvt_pkrtz_samereg_v2f16_f32:
 ; GFX89:       ; %bb.0:
 ; GFX89-NEXT:    v_cvt_pkrtz_f16_f32 v0, s0, s0
+; GFX89-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX89-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: s_cvt_pkrtz_samereg_v2f16_f32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, s0, s0
+; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: s_cvt_pkrtz_samereg_v2f16_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_cvt_pk_rtz_f16_f32_e64 v0, s0, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
   %result = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %x, float %x)
-  ret <2 x half> %result
+  %r = bitcast <2 x half> %result to i32
+  ret i32 %r
 }
 
-define amdgpu_ps <2 x half> @s_cvt_pkrtz_undef_undef() #0 {
+define amdgpu_ps i32 @s_cvt_pkrtz_undef_undef() #0 {
 ; SI-SDAG-LABEL: s_cvt_pkrtz_undef_undef:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    ; return to shader part epilog
@@ -68,6 +80,7 @@ define amdgpu_ps <2 x half> @s_cvt_pkrtz_undef_undef() #0 {
 ; SI-GISEL-LABEL: s_cvt_pkrtz_undef_undef:
 ; SI-GISEL:       ; %bb.0:
 ; SI-GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, s0, s0
+; SI-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; SI-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX89-SDAG-LABEL: s_cvt_pkrtz_undef_undef:
@@ -77,11 +90,13 @@ define amdgpu_ps <2 x half> @s_cvt_pkrtz_undef_undef() #0 {
 ; VI-GISEL-LABEL: s_cvt_pkrtz_undef_undef:
 ; VI-GISEL:       ; %bb.0:
 ; VI-GISEL-NEXT:    v_cvt_pkrtz_f16_f32 v0, s0, s0
+; VI-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; VI-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-GISEL-LABEL: s_cvt_pkrtz_undef_undef:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    v_cvt_pkrtz_f16_f32 v0, s0, s0
+; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX9-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-SDAG-LABEL: s_cvt_pkrtz_undef_undef:
@@ -91,6 +106,7 @@ define amdgpu_ps <2 x half> @s_cvt_pkrtz_undef_undef() #0 {
 ; GFX10-GISEL-LABEL: s_cvt_pkrtz_undef_undef:
 ; GFX10-GISEL:       ; %bb.0:
 ; GFX10-GISEL-NEXT:    v_cvt_pkrtz_f16_f32_e64 v0, s0, s0
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-SDAG-LABEL: s_cvt_pkrtz_undef_undef:
@@ -100,9 +116,12 @@ define amdgpu_ps <2 x half> @s_cvt_pkrtz_undef_undef() #0 {
 ; GFX11-GISEL-LABEL: s_cvt_pkrtz_undef_undef:
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    v_cvt_pk_rtz_f16_f32_e64 v0, s0, s0
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-GISEL-NEXT:    ; return to shader part epilog
   %result = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float poison, float poison)
-  ret <2 x half> %result
+  %r = bitcast <2 x half> %result to i32
+  ret i32 %r
 }
 
 define amdgpu_ps <2 x half> @v_cvt_pkrtz_v2f16_f32(float %a, float %b) #0 {
