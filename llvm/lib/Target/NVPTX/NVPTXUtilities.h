@@ -16,6 +16,7 @@
 #include "NVPTX.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Value.h"
@@ -26,7 +27,6 @@
 
 namespace llvm {
 
-class DataLayout;
 class MemSDNode;
 
 Function *getMaybeBitcastedCallee(const CallBase *CB);
@@ -68,9 +68,9 @@ inline unsigned promoteScalarKernelArgumentSize(unsigned Size) {
   return PowerOf2Ceil(std::max(Size, 8U));
 }
 
-inline bool shouldPassAsArray(Type *Ty) {
-  return Ty->isAggregateType() || Ty->isVectorTy() ||
-         Ty->getScalarSizeInBits() >= 128 || Ty->isHalfTy() || Ty->isBFloatTy();
+inline bool shouldPassAsArray(Type *Ty, const DataLayout &DL) {
+  return Ty->isAggregateType() || Ty->isVectorTy() || Ty->isHalfTy() ||
+         Ty->isBFloatTy() || (Ty->isSized() && DL.getTypeSizeInBits(Ty) >= 128);
 }
 
 namespace NVPTX {
@@ -179,6 +179,8 @@ inline const char *addressSpaceToString(AddressSpace A,
     return UseParamSubqualifiers ? "param::func" : "param";
   case AddressSpace::Local:
     return "local";
+  case AddressSpace::FabricHandle:
+    return "fabric";
   }
   report_fatal_error(formatv("Unknown NVPTX::AddressSpace \"{}\".",
                              static_cast<AddressSpaceUnderlyingType>(A)));

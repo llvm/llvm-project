@@ -117,6 +117,8 @@ private:
   void Select(SDNode *N) override;
   bool tryIntrinsicChain(SDNode *N);
   bool tryIntrinsicVoid(SDNode *N);
+  /// Selects the machine instruction for fabric try put intrinsic.
+  void SelectFabricTryPut(SDNode *N, unsigned IID);
   bool tryLoad(SDNode *N);
   bool tryLoadVector(SDNode *N);
   bool tryLDU(SDNode *N);
@@ -636,6 +638,7 @@ NVPTX::AddressSpace NVPTXDAGToDAGISel::getAddrSpace(const MemSDNode *N) {
   case NVPTX::AddressSpace::Const:
   case NVPTX::AddressSpace::Local:
   case NVPTX::AddressSpace::SharedCluster:
+  case NVPTX::AddressSpace::FabricHandle:
   case NVPTX::AddressSpace::EntryParam:
   case NVPTX::AddressSpace::DeviceParam:
     return AS;
@@ -2351,7 +2354,74 @@ bool NVPTXDAGToDAGISel::tryIntrinsicVoid(SDNode *N) {
     SelectTcgen05St(N, /*  hasOffset */ true);
     return true;
   }
+  case Intrinsic::nvvm_fabric_try_put:
+  case Intrinsic::nvvm_fabric_try_put_counted_writes:
+    SelectFabricTryPut(N, IID);
+    return true;
   }
+}
+
+// After ISelLowering, operand layout is:
+//   try_put:
+//   [chain, IID, leId, offset, src, mbar, size, byte_mask, cache_hint,
+//    flag_cache_hint, flag_cp_mask, flag_multimem]
+//   try_put.counted_writes:
+//   [chain, IID, leId, offset_data, offset_counter, src, mbar, size,
+//    cache_hint, flag_cache_hint, flag_multimem]
+void NVPTXDAGToDAGISel::SelectFabricTryPut(SDNode *N, unsigned IID) {
+  if (Subtarget->getSmVersion() < 100 || Subtarget->getPTXVersion() < 93)
+    report_fatal_error(
+        "fabric.try_put requires sm_100 or higher and PTX 9.3 or higher");
+
+  const bool IsCounted = IID == Intrinsic::nvvm_fabric_try_put_counted_writes;
+  // The try_put carries one fabric handle (one offset after leId);
+  // counted_writes carries two (two offsets). src follows the leId/offset
+  // args in both layouts.
+  const unsigned SrcIdx = IsCounted ? 5 : 4;
+  const unsigned FlagCacheHintIdx = N->getNumOperands() - (IsCounted ? 2 : 3);
+  const unsigned FlagCpMaskIdx = N->getNumOperands() - 2; // try_put only
+
+  bool HasCacheHint = N->getConstantOperandVal(FlagCacheHintIdx);
+  if (HasCacheHint && Subtarget->getPTXVersion() < 94)
+    report_fatal_error("fabric.try_put with .L2::cache_hint requires PTX 9.4 "
+                       "or higher");
+
+  bool HasCpMask = !IsCounted && N->getConstantOperandVal(FlagCpMaskIdx);
+
+  unsigned Opcode;
+  switch (IID) {
+  default:
+    llvm_unreachable("Unexpected fabric.try_put intrinsic");
+  case Intrinsic::nvvm_fabric_try_put:
+    Opcode = HasCacheHint ? (HasCpMask ? NVPTX::FABRIC_TRY_PUT_ASYNC_S2F_MASK_CH
+                                       : NVPTX::FABRIC_TRY_PUT_ASYNC_S2F_CH)
+                          : (HasCpMask ? NVPTX::FABRIC_TRY_PUT_ASYNC_S2F_MASK
+                                       : NVPTX::FABRIC_TRY_PUT_ASYNC_S2F);
+    break;
+  case Intrinsic::nvvm_fabric_try_put_counted_writes:
+    Opcode = HasCacheHint ? NVPTX::FABRIC_TRY_PUT_ASYNC_S2F_COUNTED_WRITES_CH
+                          : NVPTX::FABRIC_TRY_PUT_ASYNC_S2F_COUNTED_WRITES;
+    break;
+  }
+
+  SDLoc DL(N);
+  SmallVector<SDValue, 12> Ops;
+  // Handle args (leId, offset [, offset_counter]).
+  Ops.append(N->op_begin() + 2, N->op_begin() + SrcIdx);
+  const auto [SrcBase, SrcOffset] = selectADDR(N->getOperand(SrcIdx), CurDAG);
+  const auto [MbarBase, MbarOffset] =
+      selectADDR(N->getOperand(SrcIdx + 1), CurDAG);
+  Ops.append({SrcBase, SrcOffset, MbarBase, MbarOffset});
+
+  Ops.push_back(N->getOperand(SrcIdx + 2));
+  if (HasCpMask)
+    Ops.push_back(N->getOperand(SrcIdx + 3));
+  if (HasCacheHint)
+    Ops.push_back(N->getOperand(IsCounted ? SrcIdx + 3 : SrcIdx + 4));
+  Ops.push_back(N->getOperand(N->getNumOperands() - 1));
+
+  Ops.push_back(N->getOperand(0)); // chain
+  ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
 }
 
 void NVPTXDAGToDAGISel::selectAtomicSwap128(SDNode *N) {

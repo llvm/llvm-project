@@ -182,7 +182,7 @@ static bool promoteParamAlign(Function &F) {
   for (Argument &Arg : F.args()) {
     const bool IsByVal = Arg.hasByValAttr();
     Type *ArgTy = IsByVal ? Arg.getParamByValType() : Arg.getType();
-    if (ArgTy->isEmptyTy() || (!IsByVal && !shouldPassAsArray(ArgTy)))
+    if (ArgTy->isEmptyTy() || (!IsByVal && !shouldPassAsArray(ArgTy, DL)))
       continue;
 
     // An explicit stackalign already wins at emission time, nothing to promote.
@@ -206,7 +206,7 @@ static bool promoteParamAlign(Function &F) {
 
   // Promote an aggregate return value.
   Type *RetTy = F.getReturnType();
-  if (shouldPassAsArray(RetTy) && !RetTy->isEmptyTy() &&
+  if (shouldPassAsArray(RetTy, DL) && !RetTy->isEmptyTy() &&
       !F.getAttributes().getRetStackAlignment()) {
     const MaybeAlign PromotedAlign =
         getPromotedParamAlign(getPTXParamTypeAlign(RetTy, DL));

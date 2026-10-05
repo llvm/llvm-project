@@ -119,6 +119,11 @@ The NVPTX back-end uses the following address space mapping:
 | 4             | Constant       |
 | 5             | Local          |
 | 7             | Shared Cluster |
+| 8             | Fabric Handle  |
+
+Pointers in address space 8 are opaque fabric handles; ordinary LLVM memory
+instructions may not dereference them. See
+[Fabric family of Intrinsics](#fabric-family-of-intrinsics).
 
 Every global variable and pointer type is assigned to one of these address
 spaces, with 0 being the default address space. Intrinsics are provided which
@@ -3205,6 +3210,90 @@ The `override.addr` operands are described in
 `%red_op` and the last boolean flag are as described for `reduce.tile` above.
 
 For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor).
+
+### Fabric family of Intrinsics
+
+#### Overview:
+
+The '`llvm.nvvm.fabric.*`' intrinsics correspond to the fabric operations of
+the PTX ISA.
+
+In LLVM IR, a fabric handle is an opaque `ptr addrspace(8)` value with a
+128-bit, non-integral representation and 16-byte ABI alignment. Address space 8
+represents resource handles, not a PTX state space. Handles may be passed through
+function arguments and returns, and through `phi` and `select` instructions.
+However, ordinary dereferences, pointer arithmetic, address-space casts, and
+integer conversions of handles are not supported.
+
+Memory accesses through fabric handles may alias accesses through global
+(`ptr addrspace(1)`) pointers.
+
+The trailing `%flag_*` arguments must be compile-time constants. Fabric
+operations require `sm_100` or higher and PTX ISA 9.3 or later; the
+`.L2::cache_hint` variants require PTX ISA 9.4 or later.
+
+For execution semantics, synchronization, resource alignment, and error-reporting
+requirements, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#fabric-instructions).
+
+#### '`llvm.nvvm.fabric.handle_pair`'
+
+##### Syntax:
+
+```llvm
+declare ptr addrspace(8) @llvm.nvvm.fabric.handle_pair(i32 %le_id, i64 %offset)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.fabric.handle_pair`' intrinsic constructs a fabric handle from
+the 32-bit logical-endpoint identifier `%le_id` and the 64-bit byte offset
+`%offset`. It has no dedicated PTX instruction.
+
+#### '`llvm.nvvm.fabric.try_put`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.fabric.try_put(ptr addrspace(8) %handle, ptr addrspace(3) %src, ptr addrspace(3) %mbar, i32 %size, i16 %byte_mask, i64 %cache_hint, i1 %flag_cache_hint, i1 %flag_cp_mask, i32 %flag_multimem)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.fabric.try_put`' intrinsic corresponds to the
+`fabric.try_put.async{.multimem}.*` family of PTX instructions. It copies
+`%size` bytes from shared memory at `%src` to the resource referenced by
+`%handle`, using `%mbar` as the completion barrier.
+
+- `i1 %flag_cache_hint`, when set, generates the `.L2::cache_hint` variant
+  with `%cache_hint` as the cache-policy operand; otherwise, `%cache_hint`
+  is ignored.
+- `i1 %flag_cp_mask`, when set, generates the `.cp_mask` variant with
+  `%byte_mask` as the mask operand; otherwise, `%byte_mask` is ignored.
+- `i32 %flag_multimem` accepts `0` (unicast) or `1` (`.multimem`).
+
+For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#fabric-instructions-try-put).
+
+#### '`llvm.nvvm.fabric.try_put.counted_writes`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.fabric.try_put.counted_writes(ptr addrspace(8) %data_handle, ptr addrspace(8) %counter_handle, ptr addrspace(3) %src, ptr addrspace(3) %mbar, i32 %size, i64 %cache_hint, i1 %flag_cache_hint, i32 %flag_multimem)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.fabric.try_put.counted_writes`' intrinsic corresponds to the
+`.counted::bytes` variants of `fabric.try_put.async{.multimem}.*`.
+`%data_handle` and `%counter_handle` specify the data and counter resource
+offsets. The remaining operands have the same meanings as for
+'`@llvm.nvvm.fabric.try_put`'.
+
+Both handles map to the single endpoint identifier and the two resource
+offsets of the PTX instruction. They must therefore have the same
+logical-endpoint identifier; otherwise, the behavior is undefined.
+
+For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#fabric-instructions-try-put).
 
 ### Warp Group Intrinsics
 

@@ -1423,7 +1423,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       if (IsVAArg)
         return VADeclareParam;
 
-      if (IsByVal || shouldPassAsArray(Arg.Ty))
+      if (IsByVal || shouldPassAsArray(Arg.Ty, DL))
         return MakeDeclareArrayParam(ParamSymbol, ArgAlign, TySize);
 
       assert(ArgOuts.size() == 1 && "We must pass only one value as non-array");
@@ -1558,7 +1558,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (!Ins.empty()) {
     const SDValue RetSymbol = getSymbolNode(DAG, "retval0", MVT::i32);
     const unsigned ResultSize = DL.getTypeAllocSize(RetTy);
-    if (shouldPassAsArray(RetTy)) {
+    if (shouldPassAsArray(RetTy, DL)) {
       const Align RetAlign =
           getPTXParamAlign(CB, RetTy, AttributeList::ReturnIndex, DL);
       MakeDeclareArrayParam(RetSymbol, RetAlign, ResultSize);
@@ -2871,6 +2871,41 @@ static SDValue lowerTensormapReplaceSwizzleMode(SDValue Op, SelectionDAG &DAG) {
   return Op;
 }
 
+// Each i128 fabric handle is split into i32 leId + i64 offset.
+static SDValue lowerFabricHandles(SDValue Op, SelectionDAG &DAG) {
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+  const unsigned IID = N->getConstantOperandVal(1);
+  const unsigned NumHandles =
+      IID == Intrinsic::nvvm_fabric_try_put_counted_writes ? 2 : 1;
+
+  const unsigned FirstHandleIdx = 2;
+  const unsigned HandleEnd = FirstHandleIdx + NumHandles;
+
+  // The custom hook fires every time the legalizer revisits this
+  // INTRINSIC_VOID. After we rewrite it once, operand FirstHandleIdx is the
+  // i32 leId we just emitted, not an i128 — bail out so we don't re-lower.
+  SDValue FirstHandle = N->getOperand(FirstHandleIdx);
+  if (FirstHandle.getValueType() != MVT::i128)
+    return Op;
+
+  SmallVector<SDValue, 8> Ops = {N->getOperand(0), N->getOperand(1)};
+
+  SDValue LeId = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, FirstHandle,
+                             DAG.getIntPtrConstant(0, DL));
+  Ops.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, LeId));
+
+  // Add each handle's offset.
+  for (unsigned I = FirstHandleIdx; I != HandleEnd; ++I) {
+    SDValue Handle = N->getOperand(I);
+    Ops.push_back(DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, Handle,
+                              DAG.getIntPtrConstant(1, DL)));
+  }
+
+  Ops.append(N->op_begin() + HandleEnd, N->op_end());
+  return DAG.getNode(ISD::INTRINSIC_VOID, DL, N->getVTList(), Ops);
+}
+
 static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   SDNode *N = Op.getNode();
   SDValue Intrin = N->getOperand(1);
@@ -2967,6 +3002,9 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
     return lowerTensormapReplaceElemtype(Op, DAG);
   case Intrinsic::nvvm_tensormap_replace_swizzle_mode:
     return lowerTensormapReplaceSwizzleMode(Op, DAG);
+  case Intrinsic::nvvm_fabric_try_put:
+  case Intrinsic::nvvm_fabric_try_put_counted_writes:
+    return lowerFabricHandles(Op, DAG);
   }
   return Op;
 }
@@ -7717,6 +7755,25 @@ static void replaceAtomicSwap128(SDNode *N, SelectionDAG &DAG,
   Results.push_back(Result.getValue(2));
 }
 
+// Replace fabric handle with two i64 operands (leId and offset).
+static void replaceFabricHandlePair(SDNode *N, SelectionDAG &DAG,
+                                    SmallVectorImpl<SDValue> &Results) {
+  SDLoc DL(N);
+  SDValue LeId = N->getOperand(1);   // i32
+  SDValue Offset = N->getOperand(2); // i64
+  SDValue LeIdExt = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, LeId);
+  Results.push_back(
+      DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i128, LeIdExt, Offset));
+}
+
+static void ReplaceINTRINSIC_WO_CHAIN(SDNode *N, SelectionDAG &DAG,
+                                      SmallVectorImpl<SDValue> &Results) {
+  unsigned IID = N->getConstantOperandVal(0);
+  if (IID != Intrinsic::nvvm_fabric_handle_pair)
+    return;
+  return replaceFabricHandlePair(N, DAG, Results);
+}
+
 void NVPTXTargetLowering::ReplaceNodeResults(
     SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
   switch (N->getOpcode()) {
@@ -7731,6 +7788,9 @@ void NVPTXTargetLowering::ReplaceNodeResults(
     return;
   case ISD::INTRINSIC_W_CHAIN:
     ReplaceINTRINSIC_W_CHAIN(N, DAG, Results);
+    return;
+  case ISD::INTRINSIC_WO_CHAIN:
+    ReplaceINTRINSIC_WO_CHAIN(N, DAG, Results);
     return;
   case ISD::CopyFromReg:
     ReplaceCopyFromReg_128(N, DAG, Results);

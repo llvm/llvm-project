@@ -680,7 +680,7 @@ static void printParam(const OwnerT *Owner, Type *Ty, unsigned AttrIdx,
                        const DataLayout &DL, raw_ostream &O) {
   O << ".param ";
 
-  if (IsByVal || shouldPassAsArray(Ty)) {
+  if (IsByVal || shouldPassAsArray(Ty, DL)) {
     const Align ParamAlign =
         IsByVal && !IsKernel ? getDeviceByValParamAlign(Owner, Ty, AttrIdx, DL)
                              : getPTXParamAlign(Owner, Ty, AttrIdx, DL);
@@ -1782,7 +1782,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
     // A byval param is passed as a copy of the pointee and an aggregate is
     // passed as a blob of bytes; both are declared as a byte array.
     const bool IsByVal = Arg.hasByValAttr();
-    const bool AsArray = IsByVal || shouldPassAsArray(Ty);
+    const bool AsArray = IsByVal || shouldPassAsArray(Ty, DL);
 
     // Kernels declare image/sampler handles and the address space of a
     // pointee. Both of those are scalar handles, so a byte-array param is

@@ -358,6 +358,8 @@ void NVPTXInstPrinter::printAtomicCode(const MCInst *MI, int OpNum,
     case NVPTX::AddressSpace::Local:
       O << "." << addressSpaceToString(A, hasParamSubqualifiers(STI));
       return;
+    case NVPTX::AddressSpace::FabricHandle:
+      break;
     }
     report_fatal_error(formatv(
         "NVPTX AtomicCode Printer does not support \"{}\" addsp modifier.",

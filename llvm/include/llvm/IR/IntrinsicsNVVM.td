@@ -150,6 +150,7 @@ def llvm_constant_ptr_ty: LLVMQualPointerType<4>;         // (const)ptr
 def llvm_local_ptr_ty   : LLVMQualPointerType<5>;         // (local)ptr
 def llvm_tmem_ptr_ty    : LLVMQualPointerType<6>;         // (tensor memory)ptr
 def llvm_shared_cluster_ptr_ty : LLVMQualPointerType<7>;  // (shared_cluster)ptr
+def llvm_fabric_handle_ptr_ty : LLVMQualPointerType<8>;  // (fabric_handle)ptr
 
 //
 // MISC
@@ -4267,5 +4268,46 @@ def int_nvvm_tensormap_replace_fill_mode :
      Range<ArgIndex<1>, 0, 2>,
      ArgInfo<ArgIndex<1>, [ArgName<"fill_mode">, 
                            ImmArgPrinter<"printTensormapFillMode">]>]>;
+
+// Create an opaque 128-bit fabric handle from a 32-bit logical-endpoint id and
+// a 64-bit offset.
+def int_nvvm_fabric_handle_pair
+  : NVVMPureIntrinsic<[llvm_fabric_handle_ptr_ty],
+                      [llvm_i32_ty, llvm_i64_ty], [],
+                      "llvm.nvvm.fabric.handle_pair">;
+
+def int_nvvm_fabric_try_put
+  : DefaultAttrsIntrinsicFlags<[],
+      [llvm_fabric_handle_ptr_ty,  // fabric handle
+       llvm_shared_ptr_ty,         // src_smem_ptr
+       llvm_shared_ptr_ty,         // mbarrier_ptr
+       llvm_i32_ty,                // size (bytes)
+       llvm_i16_ty,                // byte_mask (16-bit bytemask)
+       llvm_i64_ty],               // cache_hint
+      [llvm_i1_ty,                 // flag_cache_hint
+       llvm_i1_ty,                 // flag_cp_mask
+       llvm_i32_ty],               // flag_multimem (unitcast or multicast)
+      [IntrConvergent, IntrArgMemOnly, ReadOnly<ArgIndex<1>>,
+       NVVM_ARG_NAME_PROP<6, "flag_cache_hint">.Prop,
+       ArgInfo<ArgIndex<7>, [ArgName<"flag_cp_mask">]>,
+       Range<ArgIndex<8>, 0, 2>,
+       ArgInfo<ArgIndex<8>, [ArgName<"flag_multimem">]>],
+      "llvm.nvvm.fabric.try_put">;
+
+def int_nvvm_fabric_try_put_counted_writes
+  : DefaultAttrsIntrinsicFlags<[],
+      [llvm_fabric_handle_ptr_ty,  // fabric handle (data)
+       llvm_fabric_handle_ptr_ty,  // fabric handle (counter)
+       llvm_shared_ptr_ty,         // src_smem_ptr
+       llvm_shared_ptr_ty,         // mbarrier_ptr
+       llvm_i32_ty,                // size (bytes)
+       llvm_i64_ty],               // cache_hint
+      [llvm_i1_ty,                 // flag_cache_hint
+       llvm_i32_ty],               // flag_multimem (unitcast or multicast)
+      [IntrConvergent, IntrArgMemOnly, ReadOnly<ArgIndex<2>>,
+       NVVM_ARG_NAME_PROP<6, "flag_cache_hint">.Prop,
+       Range<ArgIndex<7>, 0, 2>,
+       ArgInfo<ArgIndex<7>, [ArgName<"flag_multimem">]>],
+      "llvm.nvvm.fabric.try_put.counted_writes">;
 
 } // let TargetPrefix = "nvvm"
