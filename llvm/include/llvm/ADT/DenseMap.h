@@ -316,36 +316,35 @@ template <typename BucketT, unsigned InlineBuckets> class SmallDenseMapStorage {
   union {
     InlineRep Inline;
     LargeRep Large;
-  } Storage;
+  } storage;
 
   const BucketT *getInlineBuckets() const {
     assert(Small);
     // Note that this cast does not violate aliasing rules as we assert that
     // the memory's dynamic type is the small, inline bucket buffer, and the
-    // 'Storage' is a POD containing a char buffer.
-    return reinterpret_cast<const BucketT *>(Storage.Inline.Buckets);
+    // 'storage' is a POD containing a char buffer.
+    return reinterpret_cast<const BucketT *>(storage.Inline.Buckets);
   }
 
   BucketT *getInlineBuckets() {
     assert(Small);
-    return reinterpret_cast<BucketT *>(Storage.Inline.Buckets);
+    return reinterpret_cast<BucketT *>(storage.Inline.Buckets);
   }
 
   const UsedT *getInlineUsed() const {
     assert(Small);
-    return Storage.Inline.Used;
+    return storage.Inline.Used;
   }
 
   UsedT *getInlineUsed() {
     assert(Small);
-    return Storage.Inline.Used;
+    return storage.Inline.Used;
   }
 
-  void setLarge(void *NewStorage, unsigned NumBuckets) {
+  void setLarge(void *Storage, unsigned NumBuckets) {
     Small = false;
-    Storage.Large = {static_cast<BucketT *>(NewStorage),
-                     usedFor(NewStorage, sizeof(BucketT), NumBuckets),
-                     NumBuckets};
+    storage.Large = {static_cast<BucketT *>(Storage),
+                     usedFor(Storage, sizeof(BucketT), NumBuckets), NumBuckets};
   }
 
 public:
@@ -358,7 +357,7 @@ public:
   }
 
   const BucketT *getBuckets() const {
-    return Small ? getInlineBuckets() : Storage.Large.Buckets;
+    return Small ? getInlineBuckets() : storage.Large.Buckets;
   }
 
   BucketT *getBuckets() {
@@ -367,7 +366,7 @@ public:
   }
 
   const UsedT *getUsed() const {
-    return Small ? getInlineUsed() : Storage.Large.Used;
+    return Small ? getInlineUsed() : storage.Large.Used;
   }
 
   UsedT *getUsed() {
@@ -376,14 +375,14 @@ public:
   }
 
   unsigned getNumBuckets() const {
-    return Small ? InlineBuckets : Storage.Large.NumBuckets;
+    return Small ? InlineBuckets : storage.Large.NumBuckets;
   }
 
   StorageRep<BucketT> getRep() const {
     if (Small)
       return {getInlineBuckets(), getInlineUsed(), InlineBuckets};
-    return {Storage.Large.Buckets, Storage.Large.Used,
-            Storage.Large.NumBuckets};
+    return {storage.Large.Buckets, storage.Large.Used,
+            storage.Large.NumBuckets};
   }
 
   void swap(SmallDenseMapStorage &RHS) {
@@ -418,7 +417,7 @@ public:
       return;
     }
     if (!Small && !RHS.Small) {
-      std::swap(Storage.Large, RHS.Storage.Large);
+      std::swap(storage.Large, RHS.storage.Large);
       return;
     }
 
@@ -428,7 +427,7 @@ public:
     // Stash the large rep, then move the small side's inline contents into the
     // large side (which becomes inline), and finally install the rep on the
     // small side (which becomes large).
-    LargeRep TmpRep = LargeSide.Storage.Large;
+    LargeRep TmpRep = LargeSide.storage.Large;
     LargeSide.Small = true;
     {
       UsedT *SU = SmallSide.getInlineUsed(), *LU = LargeSide.getInlineUsed();
@@ -441,32 +440,32 @@ public:
         LU[W] = SU[W];
     }
     SmallSide.Small = false;
-    SmallSide.Storage.Large = TmpRep;
+    SmallSide.storage.Large = TmpRep;
   }
 
   void grow(unsigned MinNumBuckets, BucketHasher Hasher) {
     unsigned NewNumBuckets = roundUpNumBuckets(MinNumBuckets);
     // remove_if asks for the count it already has: rehash in place.
     if (Small && NewNumBuckets <= InlineBuckets) {
-      InlineRep Old = Storage.Inline;
+      InlineRep Old = storage.Inline;
       clearUsed(getInlineUsed(), InlineBuckets);
       rehashRelocatable(getInlineBuckets(), getInlineUsed(), InlineBuckets,
                         Old.Buckets, Old.Used, InlineBuckets, sizeof(BucketT),
                         Hasher);
       return;
     }
-    void *NewStorage = growRelocatable(
+    void *Storage = growRelocatable(
         getBuckets(), getUsed(), getNumBuckets(), NewNumBuckets,
         sizeof(BucketT), allocAlign<BucketT>(), Hasher, /*FreeOld=*/!Small);
-    setLarge(NewStorage, NewNumBuckets);
+    setLarge(Storage, NewNumBuckets);
   }
 
   void deallocateBuckets() {
     if (Small)
       return;
 
-    deallocate_buffer(Storage.Large.Buckets,
-                      allocBytes<BucketT>(Storage.Large.NumBuckets),
+    deallocate_buffer(storage.Large.Buckets,
+                      allocBytes<BucketT>(storage.Large.NumBuckets),
                       allocAlign<BucketT>());
   }
 
@@ -497,7 +496,7 @@ public:
         NewNumBuckets = std::max(64u, NewNumBuckets);
     }
     bool Reuse = Small ? NewNumBuckets <= InlineBuckets
-                       : NewNumBuckets == Storage.Large.NumBuckets;
+                       : NewNumBuckets == storage.Large.NumBuckets;
     if (Reuse)
       return {false, 0};          // Reuse.
     return {true, NewNumBuckets}; // Reallocate.
@@ -509,7 +508,7 @@ public:
 
     Small = false;
     NumEntries = Other.NumEntries;
-    Storage.Large = Other.Storage.Large;
+    storage.Large = Other.storage.Large;
     return true;
   }
 };
@@ -621,9 +620,9 @@ public:
   }
   DenseMapIterator operator++(int) { // Postincrement
     assert(isHandleInSync() && "invalid iterator access!");
-    DenseMapIterator Tmp = *this;
+    DenseMapIterator tmp = *this;
     ++*this;
-    return Tmp;
+    return tmp;
   }
 
 private:
@@ -990,9 +989,9 @@ public:
         Storage, getMinBucketToReserveForEntries(NumElementsToReserve));
   }
 
-  DenseMapBase(const DenseMapBase &Other) : DenseMapBase() { copyFrom(Other); }
+  DenseMapBase(const DenseMapBase &other) : DenseMapBase() { copyFrom(other); }
 
-  DenseMapBase(DenseMapBase &&Other) : DenseMapBase() { swap(Other); }
+  DenseMapBase(DenseMapBase &&other) : DenseMapBase() { swap(other); }
 
   template <typename InputIt>
   DenseMapBase(const InputIt &I, const InputIt &E)
@@ -1012,17 +1011,17 @@ public:
     Storage.deallocateBuckets();
   }
 
-  DenseMapBase &operator=(const DenseMapBase &Other) {
-    if (&Other != this)
-      copyFrom(Other);
+  DenseMapBase &operator=(const DenseMapBase &other) {
+    if (&other != this)
+      copyFrom(other);
     return *this;
   }
 
-  DenseMapBase &operator=(DenseMapBase &&Other) {
+  DenseMapBase &operator=(DenseMapBase &&other) {
     destroyAll();
     Storage.deallocateBuckets();
     initWithExactBucketCount(Storage, 0);
-    swap(Other);
+    swap(other);
     return *this;
   }
 
@@ -1107,25 +1106,25 @@ private:
     Src.deallocateBuckets();
   }
 
-  LLVM_ATTRIBUTE_NOINLINE void copyFrom(const DenseMapBase &Other) {
+  LLVM_ATTRIBUTE_NOINLINE void copyFrom(const DenseMapBase &other) {
     destroyAll();
     Storage.deallocateBuckets();
     setNumEntries(0);
-    if (!Storage.allocateBuckets(Other.getNumBuckets())) {
+    if (!Storage.allocateBuckets(other.getNumBuckets())) {
       // The bucket list is empty.  No work to do.
       return;
     }
 
-    assert(&Other != this);
-    assert(getNumBuckets() == Other.getNumBuckets());
+    assert(&other != this);
+    assert(getNumBuckets() == other.getNumBuckets());
 
-    setNumEntries(Other.getNumEntries());
+    setNumEntries(other.getNumEntries());
 
     BucketT *Buckets = getBuckets();
-    const BucketT *OtherBuckets = Other.getBuckets();
+    const BucketT *OtherBuckets = other.getBuckets();
     const unsigned NumBuckets = getNumBuckets();
     UsedT *U = getUsed();
-    const UsedT *OtherU = Other.getUsed();
+    const UsedT *OtherU = other.getUsed();
     std::memcpy(U, OtherU,
                 llvm::densemap::detail::usedWords(NumBuckets) * sizeof(UsedT));
     if constexpr (densemap::detail::isRelocatableBucket<BucketT>) {
