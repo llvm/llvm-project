@@ -211,6 +211,9 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
       &GDBRemoteCommunicationServerLLGS::Handle_QPassSignals);
 
   RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_jLLDBSettings,
+      &GDBRemoteCommunicationServerLLGS::Handle_jLLDBSettings);
+  RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_jLLDBTraceSupported,
       &GDBRemoteCommunicationServerLLGS::Handle_jLLDBTraceSupported);
   RegisterMemberFunctionHandler(
@@ -1540,7 +1543,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qProcessInfo(
     return SendErrorResponse(1);
 
   ProcessInstanceInfo proc_info;
-  if (!Host::GetProcessInfo(pid, proc_info))
+  if (!m_current_process->GetProcessInfo(proc_info))
     return SendErrorResponse(1);
 
   StreamString response;
@@ -4568,6 +4571,8 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
   }
   if (!m_accelerator_plugins.empty())
     ret.push_back("accelerator-plugins+");
+  if (bool(plugin_features & Extension::lldb_settings))
+    ret.push_back("lldb-settings+");
 
   // check for client features
   m_extensions_supported = {};
@@ -4668,6 +4673,24 @@ void GDBRemoteCommunicationServerLLGS::InstallPlugin(
 }
 
 GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_jLLDBSettings(
+    StringExtractorGDBRemote &) {
+  if (!m_connection_accelerator_plugin)
+    return SendErrorResponse(
+        Status::FromErrorString("invalid accelerator plugin"));
+
+  std::optional<LLDBSettings> settings =
+      m_connection_accelerator_plugin->GetLLDBSettings();
+  if (!settings)
+    return SendErrorResponse(
+        Status::FromErrorString("no LLDB settings available"));
+
+  StreamGDBRemote response;
+  response.PutAsJSON(*settings, /*hex_ascii=*/false);
+  return SendPacketNoLock(response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_jAcceleratorPluginInitialize(
     StringExtractorGDBRemote &) {
   std::vector<AcceleratorActions> accelerator_actions;
@@ -4718,6 +4741,21 @@ GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
   if (!args)
     return SendErrorResponse(args.takeError());
 
+  // On the accelerator connection, ask the process directly.
+  if (m_connection_accelerator_plugin) {
+    if (!m_current_process)
+      return SendErrorResponse(Status::FromErrorString("no current process"));
+    std::optional<AcceleratorDynamicLoaderResponse> response =
+        m_current_process->GetAcceleratorDynamicLoaderLibraryInfos(*args);
+    if (!response)
+      return SendErrorResponse(
+          Status::FromErrorString("dynamic loader library info not supported"));
+    StreamGDBRemote stream;
+    stream.PutAsJSON(*response, /*hex_ascii=*/false);
+    return SendPacketNoLock(stream.GetString());
+  }
+
+  // On the native connection, forward to the named accelerator plugin.
   for (std::unique_ptr<lldb_server::LLDBServerAcceleratorPlugin> &plugin_up :
        m_accelerator_plugins) {
     if (plugin_up->GetPluginName() == args->plugin_name) {
