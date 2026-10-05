@@ -81,9 +81,10 @@ namespace {
 ///  assigned with the same layout.
 ///  3) The meet operator works as follows:
 ///     - If only one side is assigned, return that side.
-///     - If both sides are assigned, prefer the layout demanded by the user
-///       that is nearer to the producer in program order (smaller
-///       `programOrder`); on a tie keep lhs.
+///     - If both sides are assigned and exactly one is `derived`, return the
+///       other one. See `LayoutInfo::derived`.
+///     - Otherwise prefer the layout demanded by the user that is nearer to the
+///       producer in program order (smaller `programOrder`); on a tie keep lhs.
 ///
 /// The `programOrder` field records the program-order index of the consumer op
 /// that demanded the layout (stamped via
@@ -101,11 +102,27 @@ private:
   // Program-order index of the consumer op that demanded this layout. Smaller
   // means nearer to the producer. Unassigned/unknown demands sort last.
   int64_t programOrder = std::numeric_limits<int64_t>::max();
+  // True when the consumer worked this demand out for its own convenience
+  // rather than the hardware requiring it.
+  //
+  // A `dpas` operand layout is required: it is the shape the DPAS instruction
+  // takes. The inst-level source layout of a `vector.multi_reduction` is not.
+  // It pins inst_data to lane_layout * lane_data, the smallest legal value, on
+  // every dim - including the dims it does not reduce. Any multiple of that is
+  // just as legal, so the reduction can read the wider tile instead and pay one
+  // conversion.
+  //
+  // A derived demand loses every conflict against a required one, whatever the
+  // program order. Without this a reduction placed above its sibling `dpas`
+  // drags the shared elementwise chain down to inst_data = [1, 16], and the
+  // chain blocks to one instruction per row.
+  bool derived = false;
 
 public:
   LayoutInfo() = default;
-  LayoutInfo(const xegpu::DistributeLayoutAttr &layout, int64_t programOrder)
-      : storage(layout), programOrder(programOrder) {}
+  LayoutInfo(const xegpu::DistributeLayoutAttr &layout, int64_t programOrder,
+             bool derived = false)
+      : storage(layout), programOrder(programOrder), derived(derived) {}
 
   // Equality by assignment state and, when both assigned, by the layout:
   //  - one assigned, the other not -> not equal;
@@ -168,6 +185,11 @@ LayoutInfo LayoutInfo::meet(const LayoutInfo &lhs, const LayoutInfo &rhs) {
     return rhs;
   if (!rhs.isAssigned())
     return lhs;
+  // A demand the hardware mandates always beats one a consumer merely derived,
+  // regardless of program order. Otherwise the winner is decided by textual
+  // distance, which makes the generated code depend on statement order.
+  if (lhs.derived != rhs.derived)
+    return lhs.derived ? rhs : lhs;
   // Prefer the demand from the user nearer to the producer in program order.
   // Distinct users always have distinct indices, so this decides every
   // real conflict; on a tie (same op, or both unknown) keep lhs.
@@ -225,6 +247,12 @@ private:
   int64_t currentProgramOrder = std::numeric_limits<int64_t>::max();
   LayoutInfo makeLayoutInfo(const xegpu::DistributeLayoutAttr &layout) {
     return LayoutInfo(layout, currentProgramOrder);
+  }
+  // For demands the consumer derived for its own convenience; see
+  // LayoutInfo::derived.
+  LayoutInfo makeLayoutInfo(const xegpu::DistributeLayoutAttr &layout,
+                            bool derived) {
+    return LayoutInfo(layout, currentProgramOrder, derived);
   }
 
   void visitDpasOp(xegpu::DpasOp dpas, ArrayRef<LayoutInfoLattice *> operands,
@@ -593,12 +621,24 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
 
   xegpu::setTemporaryLayout(reduction->getResult(0), requiredResLayoutAttr);
 
-  // derive the source layout from the dominant layout and reduction dims
+  // derive the source layout from the dominant layout and reduction dims.
   auto srcLayoutAttr = xegpu::inferMultiReductionSourceLayout(
       requiredResLayoutAttr, reductionDims);
 
-  propagateIfChanged(operands[0],
-                     operands[0]->meet(makeLayoutInfo(srcLayoutAttr)));
+  // At the inst level this demand is *derived*, not mandated. The reduction
+  // pins inst_data to lane_layout * lane_data, the smallest legal value, on
+  // every dim including the ones it does not reduce. Any multiple of that is
+  // just as legal, so the demand must not outrank a mandated one (a dpas
+  // operand wants inst_data = [8, 16] with the same lane layout) merely because
+  // it sits closer in program order. See LayoutInfo::derived.
+  //
+  // Only at the inst level. At the subgroup level losing the conflict moves the
+  // whole tile through shared local memory, which costs 64 KB per 128x128 f32
+  // tile and can overflow the 128 KB budget.
+  bool srcIsDerived = layoutKind == xegpu::LayoutKind::InstData;
+  propagateIfChanged(
+      operands[0],
+      operands[0]->meet(makeLayoutInfo(srcLayoutAttr, srcIsDerived)));
   // Accumulator should have the same layout as the result.
   propagateIfChanged(operands[1],
                      operands[1]->meet(makeLayoutInfo(requiredResLayoutAttr)));
