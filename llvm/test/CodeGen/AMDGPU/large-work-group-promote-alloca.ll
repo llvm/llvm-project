@@ -69,6 +69,8 @@ entry:
   ret void
 }
 
+; 1024 work-items * 80 bytes = 81920 bytes exceeds the 64k LDS addressable
+; by one workgroup on GFX10+, so the alloca must not be promoted.
 ; ALL-LABEL: @promote_alloca_size_81920(
 ; ALL: alloca [20 x i32]
 define amdgpu_kernel void @promote_alloca_size_81920(ptr addrspace(1) nocapture %out, i32 %idx) #8 {
