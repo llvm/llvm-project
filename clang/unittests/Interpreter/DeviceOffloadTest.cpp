@@ -20,7 +20,9 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Testing/Support/Error.h"
 
 #include "gtest/gtest.h"
 
@@ -71,6 +73,32 @@ TEST_F(DeviceOffloadTest, FirstDeviceModuleVerifies) {
 #else
   GTEST_SKIP() << "no death tests on this platform";
 #endif
+}
+
+TEST_F(DeviceOffloadTest, EmptyDeviceModule) {
+  // Without the runtime headers and libdevice no CUDA toolkit is needed.
+  IncrementalCompilerBuilder CB;
+  CB.SetCompilerArgs({"-nocudainc", "-nocudalib"});
+  auto DeviceCI = CB.CreateDevice(OffloadType::CUDA);
+  ASSERT_THAT_EXPECTED(DeviceCI, llvm::Succeeded());
+  auto HostCI = CB.CreateHost(OffloadType::CUDA);
+  ASSERT_THAT_EXPECTED(HostCI, llvm::Succeeded());
+  auto Interp = Interpreter::createWithDevice(
+      OffloadType::CUDA, std::move(*HostCI), std::move(*DeviceCI));
+  ASSERT_THAT_EXPECTED(Interp, llvm::Succeeded());
+
+  // A host-only input leaves the device module without a function. Its PTX
+  // must still be emitted and handed to the host side.
+  auto PTU = (*Interp)->Parse("int i = 0;");
+  ASSERT_THAT_EXPECTED(PTU, llvm::Succeeded());
+
+  const CompilerInstance *CI = (*Interp)->getCompilerInstance();
+  llvm::StringRef Fatbin = CI->getCodeGenOpts().OffloadBinaryToEmbedFile;
+  ASSERT_FALSE(Fatbin.empty());
+  auto Buf = CI->getVirtualFileSystem().getBufferForFile(
+      Fatbin, /*FileSize=*/-1, /*RequiresNullTerminator=*/false);
+  ASSERT_TRUE(static_cast<bool>(Buf)) << Buf.getError().message();
+  EXPECT_TRUE((*Buf)->getBuffer().contains(".target"));
 }
 
 } // end anonymous namespace

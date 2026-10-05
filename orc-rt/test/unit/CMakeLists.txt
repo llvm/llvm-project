@@ -125,6 +125,7 @@ add_orc_rt_unittest(BedrockTests
   bedrock/SimpleSymbolTableTest.cpp
   bedrock/TaskGroupTest.cpp
   bedrock/ThreadPoolRunnerTest.cpp
+  bedrock/VettedPeerTest.cpp
 
   bedrock/sps/CallSPSCITest.cpp
   bedrock/sps/MemoryAccessSPSCITest.cpp
