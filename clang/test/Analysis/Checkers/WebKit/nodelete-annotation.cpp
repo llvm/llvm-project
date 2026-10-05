@@ -6,12 +6,12 @@
 // that destructs an object. Anything held in a Ref/RefPtr bottoms out in
 // RefCountable::deref, and the frames above it live in the shared header, so
 // those notes have to be expected by file and line.
-// expected-note@mock-types.h:37 + {{'exchange<RefPtr<SomeObject>>' calls '~RefPtr'}}
-// expected-note@mock-types.h:299 + {{'derefIfNotNull' calls 'deref'}}
-// expected-note@mock-types.h:313 + {{'~Ref' calls 'derefIfNotNull'}}
-// expected-note@mock-types.h:380 + {{'~RefPtr' calls 'deref'}}
-// expected-note@mock-types.h:399 + {{'operator=' calls '~RefPtr'}}
-// expected-note@mock-types.h:440 + {{'deref' could destruct an object}}
+// expected-note@mock-types.h:37 + {{Calling '~RefPtr'}}
+// expected-note@mock-types.h:299 + {{Calling 'deref'}}
+// expected-note@mock-types.h:313 + {{Calling 'derefIfNotNull'}}
+// expected-note@mock-types.h:380 + {{Calling 'deref'}}
+// expected-note@mock-types.h:399 + {{Calling '~RefPtr'}}
+// expected-note@mock-types.h:440 + {{Could destruct an object}}
 
 void *memcpy(void *dst, const void *src, unsigned int size);
 void *malloc(unsigned int size);
@@ -22,7 +22,7 @@ namespace WTF {
   template <typename T>
   class Vector {
   public:
-    ~Vector() { destory(); } // expected-note + {{'~Vector' calls 'destory'}}
+    ~Vector() { destory(); } // expected-note + {{Calling 'destory'}}
 
     void append(const T& v)
     {
@@ -38,7 +38,7 @@ namespace WTF {
       unsigned currentSize = m_size;
       while (currentSize > newSize) {
         --currentSize;
-        m_buffer[currentSize].~T(); // expected-note + {{'shrink' calls '~ObjectWithNonTrivialDestructor'}}
+        m_buffer[currentSize].~T(); // expected-note + {{Calling '~ObjectWithNonTrivialDestructor'}}
       }
       m_size = currentSize;
     }
@@ -56,7 +56,7 @@ namespace WTF {
       if (!m_buffer)
         return;
       for (unsigned i = 0; i < m_size; ++i)
-        m_buffer[i].~T(); // expected-note + {{'destory' calls '~Ref'}}
+        m_buffer[i].~T(); // expected-note + {{Calling '~Ref'}}
       free(m_buffer);
       m_buffer = nullptr;
     }
@@ -351,7 +351,7 @@ struct Data {
   void deref() {
     --refCount;
     if (!refCount)
-      delete this; // expected-note + {{'deref' could destruct an object}}
+      delete this; // expected-note + {{Could destruct an object}}
   }
 
   virtual void doSomething() { }
@@ -428,7 +428,7 @@ struct Container {
   void deref() const {
     refCount--;
     if (!refCount)
-      delete this; // expected-note + {{'deref' could destruct an object}}
+      delete this; // expected-note + {{Could destruct an object}}
   }
 
   ObjectWithNonTrivialDestructor obj;
@@ -452,7 +452,7 @@ struct OtherContainer : public OtherContainerBase {
   void deref() const {
     refCount--;
     if (!refCount)
-      delete this; // expected-note + {{'deref' could destruct an object}}
+      delete this; // expected-note + {{Could destruct an object}}
   }
 
 private:
@@ -605,18 +605,18 @@ unsigned opaqueHelper(); // expected-note + {{'opaqueHelper' has no visible defi
 
 unsigned safeHelper() { return 1; }
 
-unsigned wrapsOpaqueHelper() { return opaqueHelper(); } // expected-note + {{'wrapsOpaqueHelper' calls 'opaqueHelper'}}
+unsigned wrapsOpaqueHelper() { return opaqueHelper(); } // expected-note + {{Calling 'opaqueHelper'}}
 
 unsigned wrapsWrapper() {
-  return 1 + wrapsOpaqueHelper(); // expected-note {{'wrapsWrapper' calls 'wrapsOpaqueHelper'}}
+  return 1 + wrapsOpaqueHelper(); // expected-note {{Calling 'wrapsOpaqueHelper'}}
 }
 
 struct Deleter {
   void destroy(int* p) {
-    delete p; // expected-note {{'destroy' could destruct an object}}
+    delete p; // expected-note {{Could destruct an object}}
   }
   void forward(int* p) {
-    destroy(p); // expected-note {{'forward' calls 'destroy'}}
+    destroy(p); // expected-note {{Calling 'destroy'}}
   }
 };
 
@@ -832,7 +832,7 @@ namespace create_with_default_constructor {
     ObjectWithOpaqueCtor(); // expected-note {{'ObjectWithOpaqueCtor' has no visible definition here, so it is assumed to destruct an object}}
   };
 
-  struct ObjectWithDefaultConstructorWithOpaqueCtorMemberVariables { // expected-note + {{'ObjectWithDefaultConstructorWithOpaqueCtorMemberVariables' calls 'ObjectWithOpaqueCtor'}}
+  struct ObjectWithDefaultConstructorWithOpaqueCtorMemberVariables { // expected-note + {{Calling 'ObjectWithOpaqueCtor'}}
     void ref() const;
     void deref() const;
 

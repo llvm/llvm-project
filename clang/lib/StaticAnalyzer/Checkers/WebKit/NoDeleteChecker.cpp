@@ -195,13 +195,16 @@ public:
 
       SmallString<100> Buf;
       llvm::raw_svector_ostream Os(Buf);
-      printQuotedName(Os, Fn);
+      // Each note sits on the line it describes, which already spells out the
+      // enclosing function and the callee, so name only the callee: naming
+      // both would repeat every function in the chain twice.
       if (I + 1 < CallStack.size()) {
-        Os << " calls ";
+        Os << "Calling ";
         printQuotedName(Os, CallStack[I + 1].Callee);
       } else if (Fn->doesThisDeclarationHaveABody()) {
-        Os << " could destruct an object.";
+        Os << "Could destruct an object";
       } else {
+        printQuotedName(Os, Fn);
         Os << " has no visible definition here, so it is assumed to destruct "
               "an object. Annotate it with "
               "[[clang::annotate_type(\"webkit.nodelete\")]] if it does not.";
