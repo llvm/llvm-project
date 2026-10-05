@@ -1948,13 +1948,10 @@ static Instruction *foldSExtOfNSWBinOpOfTrunc(SExtInst &Sext,
     return nullptr;
 
   Type *DestTy = Sext.getType();
-  bool SawNSWTrunc = false;
   auto widenOperand = [&](Value *V) -> Value * {
     Value *X;
-    if (match(V, m_NSWTrunc(m_Value(X))) && X->getType() == DestTy) {
-      SawNSWTrunc = true;
+    if (match(V, m_NSWTrunc(m_Value(X))) && X->getType() == DestTy)
       return X;
-    }
     if (auto *C = dyn_cast<Constant>(V))
       return ConstantFoldIntegerCast(C, DestTy, /*IsSigned=*/true, DL);
     return nullptr;
@@ -1962,12 +1959,10 @@ static Instruction *foldSExtOfNSWBinOpOfTrunc(SExtInst &Sext,
 
   Value *LHS = widenOperand(BinOp->getOperand(0));
   Value *RHS = widenOperand(BinOp->getOperand(1));
-  if (!LHS || !RHS || !SawNSWTrunc)
+  if (!LHS || !RHS)
     return nullptr;
 
-  auto *Wide = BinaryOperator::Create(Opc, LHS, RHS);
-  Wide->setHasNoSignedWrap(true);
-  return Wide;
+  return BinaryOperator::CreateNSW(Opc, LHS, RHS);
 }
 
 Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
@@ -1980,9 +1975,11 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     return I;
 
   // Do this before EvaluateInDifferentType, which drops nsw and may emit
-  // shl/ashr.
-  if (Instruction *I = foldSExtOfNSWBinOpOfTrunc(Sext, DL))
-    return I;
+  // shl/ashr. Do not widen the arithmetic past a legal type.
+  if (isa<VectorType>(Sext.getType()) ||
+      shouldChangeType(Sext.getSrcTy(), Sext.getType()))
+    if (Instruction *I = foldSExtOfNSWBinOpOfTrunc(Sext, DL))
+      return I;
 
   Value *Src = Sext.getOperand(0);
   Type *SrcTy = Src->getType(), *DestTy = Sext.getType();

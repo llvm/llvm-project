@@ -4,6 +4,7 @@
 ; sext(binop nsw (trunc nsw X), C) is the same operation on X when X already
 ; has the destination type. Rebuilding that expression without nsw becomes a
 ; shl/ashr pair, which SCEV cannot treat as a non-wrapping recurrence.
+; https://alive2.llvm.org/ce/z/CUWfpR
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -145,4 +146,21 @@ define i64 @sext_add_nsw_trunc_nsw_wider_source(i128 %x) {
   %s = add nsw i32 %t, 1
   %e = sext i32 %s to i64
   ret i64 %e
+}
+
+; Negative: do not widen the arithmetic past a legal type. i128 is not a legal
+; integer for this data layout.
+
+define i128 @sext_add_nsw_past_legal_type(i128 %x) {
+; CHECK-LABEL: define i128 @sext_add_nsw_past_legal_type(
+; CHECK-SAME: i128 [[X:%.*]]) {
+; CHECK-NEXT:    [[T:%.*]] = trunc nsw i128 [[X]] to i64
+; CHECK-NEXT:    [[S:%.*]] = add nsw i64 [[T]], 1
+; CHECK-NEXT:    [[E:%.*]] = sext i64 [[S]] to i128
+; CHECK-NEXT:    ret i128 [[E]]
+;
+  %t = trunc nsw i128 %x to i64
+  %s = add nsw i64 %t, 1
+  %e = sext i64 %s to i128
+  ret i128 %e
 }
