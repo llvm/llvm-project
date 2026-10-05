@@ -533,7 +533,7 @@ defm : Zn4WriteResInt<WriteVecMaskedGatherWriteback, [], !add(Znver4Model.LoadLa
 // Three entries widen FP1/FP2 uops to FP1-3 to dodge an llvm-mca allocation
 // limitation rather than to describe the part; restore them once
 // https://github.com/llvm/llvm-project/issues/224248 is fixed. znver5 and
-// znver6 share this model and run 25-55% faster, so they are pessimistic here.
+// znver6 inherit these Zen 4 numbers unmeasured, and are likely conservative.
 
 // Each entry names its own resources, as FP eligibility differs per encoding.
 // Leading columns are addressing, memory and FP4/5 occupancy; middle ones the
@@ -650,10 +650,10 @@ def Zn4WriteVPSCATTERDDZ128 : Zn4GSRes<[Zn4AGU012, Zn4Store, Zn4FPSt, Zn4FP45,
                                        [4, 4, 4, 6, 2, 1, 33], 9, 27>;
 def : InstRW<[Zn4WriteVPSCATTERDDZ128],
              (instrs VPSCATTERDDZ128mr, VSCATTERDPSZ128mr)>;
-// Zen4 runs this four-lane form faster than the dword-indexed one above, 6.54
-// cyc against 8.33, which inverts the order every other index-width pair here
-// keeps. Both the throughput harness and the PMC counters measure it, so do
-// not level the two residuals.
+// Faster than the dword-indexed form above, 6.6 cyc against 8.3, inverting the
+// order every other index-width pair keeps. That gap belongs to the single mask
+// reload this table is calibrated on; add a second, redundant reload and the two
+// converge on 7.0. Do not level the residuals against some other sequence.
 def Zn4WriteVPSCATTERQDZ256 : Zn4GSRes<[Zn4AGU012, Zn4Store, Zn4FPSt, Zn4FP45,
                                         Zn4FPU123, Zn4FPU23, Zn4UcodeGS],
                                        [4, 4, 4, 6, 2, 1, 26], 9, 27>;
@@ -665,16 +665,14 @@ def Zn4WriteVPSCATTERDDZ256 : Zn4GSRes<[Zn4AGU012, Zn4Store, Zn4FPSt, Zn4FP45,
                                        [8, 8, 8, 10, 1, 3, 3, 49], 14, 48>;
 def : InstRW<[Zn4WriteVPSCATTERDDZ256],
              (instrs VPSCATTERDDZ256mr, VSCATTERDPSZ256mr)>;
-// Sixteen dword lanes go either as one VPSCATTERDDZ or two of these. At one
-// dword lane per cache line Znver4 puts the pair 3% above the single (21.66
-// against 21.05 cyc), so this entry is fitted to hold that order rather than
-// to its own throughput -- the only row here not fit to its own measurement,
-// and the only one whose numbers come from that pattern rather than unit
-// stride.
+// Sixteen dword lanes go as one VPSCATTERDDZ or two of these, and the pair is
+// 5-12% cheaper across sweeps. A loop at one dword lane per cache line reverses
+// that; fitting this row to the reversal costs it 11-16%, so it stays on its
+// own throughput and the lowering choice is priced in the cost model.
 def Zn4WriteVPSCATTERQDZ    : Zn4GSRes<[Zn4AGU012, Zn4Store, Zn4FPSt, Zn4FP45,
                                         Zn4FPU12, Zn4FPU123, Zn4FPU23,
                                         Zn4UcodeGS],
-                                       [8, 8, 8, 10, 2, 3, 3, 53], 14, 48>;
+                                       [8, 8, 8, 10, 2, 3, 3, 46], 14, 48>;
 def : InstRW<[Zn4WriteVPSCATTERQDZ],
              (instrs VPSCATTERQDZmr, VSCATTERQPSZmr)>;
 def Zn4WriteVPSCATTERDDZ    : Zn4GSRes<[Zn4AGU012, Zn4Store, Zn4FPSt, Zn4FP45,
