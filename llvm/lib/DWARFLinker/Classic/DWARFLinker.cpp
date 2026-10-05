@@ -1890,8 +1890,12 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
 
   if (Abbrev->getTag() == dwarf::DW_TAG_subprogram) {
     Flags |= TF_InFunctionScope;
-    if (!Info.InDebugMap && LLVM_LIKELY(!Update))
-      Flags |= TF_SkipPC;
+    if (LLVM_LIKELY(!Update)) {
+      if (Info.InDebugMap)
+        Flags &= ~TF_SkipPC;
+      else
+        Flags |= TF_SkipPC;
+    }
   } else if (Abbrev->getTag() == dwarf::DW_TAG_variable) {
     // Function-local globals could be in the debug map even when the function
     // is not, e.g., inlined functions.

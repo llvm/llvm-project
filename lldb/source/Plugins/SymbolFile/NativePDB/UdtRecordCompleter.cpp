@@ -107,9 +107,13 @@ void UdtRecordCompleter::AddMethod(llvm::StringRef name, TypeIndex type_idx,
 
   bool is_artificial = (options & MethodOptions::CompilerGenerated) ==
                        MethodOptions::CompilerGenerated;
+  auto *pdb = static_cast<SymbolFileNativePDB *>(
+      m_ast_builder.clang().GetSymbolFile()->GetBackingSymbolFile());
+  std::string asm_label = pdb->GetMethodCallLabel(
+      type_idx, (m_cv_tag_record.name() + "::" + name).str());
   m_ast_builder.clang().AddMethodToCXXRecordType(
-      derived_opaque_ty, name.data(), /*asm_label=*/{}, method_ct,
-      attrs.isVirtual(), attrs.isStatic(), false, false, false, is_artificial);
+      derived_opaque_ty, name.data(), asm_label, method_ct, attrs.isVirtual(),
+      attrs.isStatic(), false, false, false, is_artificial);
 
   m_cxx_record_map[derived_opaque_ty].insert({name, method_ct});
 }
