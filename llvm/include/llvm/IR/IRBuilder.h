@@ -194,7 +194,7 @@ public:
 
   /// This specifies that created instructions should be inserted at the
   /// specified point.
-  // TODO: Deprecate this method.
+  [[deprecated("Use the overload without BasicBlock argument instead")]]
   void SetInsertPoint(BasicBlock *TheBB, BasicBlock::iterator IP) {
     SetInsertPoint(IP);
   }
@@ -2930,14 +2930,14 @@ public:
     SetInsertPoint(IP);
   }
 
-  // TODO: Deprecate this method.
+  [[deprecated("Use the overload without BasicBlock argument instead")]]
   IRBuilder(BasicBlock *TheBB, BasicBlock::iterator IP, FolderTy Folder)
       : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter),
         Folder(Folder) {
     SetInsertPoint(IP);
   }
 
-  // TODO: Deprecate this method.
+  [[deprecated("Use the overload without BasicBlock argument instead")]]
   IRBuilder(BasicBlock *TheBB, BasicBlock::iterator IP)
       : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter) {
     SetInsertPoint(IP);
