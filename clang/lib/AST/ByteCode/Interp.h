@@ -29,6 +29,7 @@
 #include "MemberPointer.h"
 #include "PrimType.h"
 #include "Program.h"
+#include "Reflect.h"
 #include "State.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
@@ -79,9 +80,6 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
 bool diagnoseUninitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                            AccessKinds AK);
-bool diagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
-                           const Block *B, Lifetime LT = Lifetime::Started,
-                           AccessKinds AK = AK_Read);
 
 bool diagnoseArrayIndex(InterpState &S, CodePtr OpPC, const APSInt &Index,
                         std::optional<uint64_t> NumElems = std::nullopt,
@@ -93,7 +91,7 @@ bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B);
 
 /// Checks if a value can be stored in a block.
 bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                bool WillBeActivated = false);
+                AccessKinds AK = AK_Assign, bool WillBeActivated = false);
 
 /// Checks if a value can be initialized.
 bool CheckInit(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
@@ -109,9 +107,6 @@ bool CheckDynamicMemoryAllocation(InterpState &S, CodePtr OpPC);
 /// been heap allocated by us.
 bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
                        const Pointer &Ptr);
-
-bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                 AccessKinds AK, bool WillActivate = false);
 
 /// Sets the given integral value to the pointer, which is of
 /// a std::{weak,partial,strong}_ordering type.
@@ -290,41 +285,32 @@ PRESERVE_NONE bool Ret(InterpState &S) {
   const T &Ret = S.Stk.pop<T>();
 
   assert(S.Current);
-
 #ifndef NDEBUG
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
 #endif
 
-  InterpFrame *Caller = S.Current->Caller;
-
   // This only happens via Context::Run().
-  if (!Caller)
+  if (S.Current->isBottomFrame())
     return true;
 
   cleanupAfterFunctionCall(S, S.Current->getFunction());
-
   S.PC = S.Current->getRetPC();
-  InterpFrame::free(S.Current);
-  S.Current = Caller;
   S.Stk.push<T>(Ret);
   return true;
 }
 
 PRESERVE_NONE inline bool RetVoid(InterpState &S) {
+  assert(S.Current);
 #ifndef NDEBUG
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
 #endif
 
-  InterpFrame *Caller = S.Current->Caller;
   // This only happens via Context::Run().
-  if (!Caller)
+  if (S.Current->isBottomFrame())
     return true;
 
   cleanupAfterFunctionCall(S, S.Current->getFunction());
-
   S.PC = S.Current->getRetPC();
-  InterpFrame::free(S.Current);
-  S.Current = Caller;
   return true;
 }
 
@@ -1654,6 +1640,7 @@ bool PseudoDtor(InterpState &S, CodePtr OpPC);
 bool StartThisLifetime(InterpState &S);
 bool StartThisLifetime1(InterpState &S);
 bool MarkDestroyed(InterpState &S, CodePtr OpPC);
+bool DefaultInit(InterpState &S, CodePtr OpPC, const CXXConstructorDecl *Ctor);
 
 /// 1) Pops the value from the stack.
 /// 2) Writes the value to the local variable with the
@@ -1698,10 +1685,10 @@ bool GetField(InterpState &S, CodePtr OpPC, uint32_t I) {
   if (!Obj.getFieldDesc()->isRecord() && !Obj.isUnknownSizeArray())
     return false;
 
-  const Pointer &Field = Obj.atField(I);
-  if (!CheckLoad(S, OpPC, Field))
+  PtrView FieldPtr = Obj.view().atField(I);
+  if (!CheckLoad(S, OpPC, FieldPtr))
     return false;
-  S.Stk.push<T>(Field.deref<T>());
+  S.Stk.push<T>(FieldPtr.deref<T>());
   return true;
 }
 
@@ -1724,10 +1711,10 @@ bool GetFieldPop(InterpState &S, CodePtr OpPC, uint32_t I) {
   if (!Obj.getFieldDesc()->isRecord() && !Obj.isUnknownSizeArray())
     return false;
 
-  const Pointer &Field = Obj.atField(I);
-  if (!CheckLoad(S, OpPC, Field))
+  PtrView FieldPtr = Obj.view().atField(I);
+  if (!CheckLoad(S, OpPC, FieldPtr))
     return false;
-  S.Stk.push<T>(Field.deref<T>());
+  S.Stk.push<T>(FieldPtr.deref<T>());
   return true;
 }
 
@@ -1742,10 +1729,10 @@ bool GetThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
   if (!This.isBlockPointer())
     return false;
 
-  const Pointer &Field = This.atField(I);
-  if (!CheckLoad(S, OpPC, Field))
+  PtrView FieldPtr = This.view().atField(I);
+  if (!CheckLoad(S, OpPC, FieldPtr))
     return false;
-  S.Stk.push<T>(Field.deref<T>());
+  S.Stk.push<T>(FieldPtr.deref<T>());
   return true;
 }
 
@@ -2234,8 +2221,6 @@ bool Load(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr))
     return false;
-  if (!Ptr.isReadablePointerType())
-    return false;
   if (!Ptr.canDeref(Name))
     return false;
   S.Stk.push<T>(Ptr.load<T>());
@@ -2246,8 +2231,6 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool LoadPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr))
-    return false;
-  if (!Ptr.isReadablePointerType())
     return false;
   if (!Ptr.canDeref(Name))
     return false;
@@ -2347,7 +2330,7 @@ bool StoreActivate(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
-  if (!CheckStore(S, OpPC, Ptr, /*WillBeActivated=*/true))
+  if (!CheckStore(S, OpPC, Ptr, AK_Assign, /*WillBeActivated=*/true))
     return false;
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
@@ -2362,7 +2345,7 @@ bool StoreActivatePop(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (!CheckStore(S, OpPC, Ptr, /*WillBeActivated=*/true))
+  if (!CheckStore(S, OpPC, Ptr, AK_Assign, /*WillBeActivated=*/true))
     return false;
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
@@ -2408,7 +2391,7 @@ bool StoreBitFieldActivate(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
-  if (!CheckStore(S, OpPC, Ptr, /*WillBeActivated=*/true))
+  if (!CheckStore(S, OpPC, Ptr, AK_Assign, /*WillBeActivated=*/true))
     return false;
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
@@ -2426,7 +2409,7 @@ bool StoreBitFieldActivatePop(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (!CheckStore(S, OpPC, Ptr, /*WillBeActivated=*/true))
+  if (!CheckStore(S, OpPC, Ptr, AK_Assign, /*WillBeActivated=*/true))
     return false;
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
@@ -2537,18 +2520,6 @@ bool InitElemPop(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   return true;
 }
 
-inline bool Memcpy(InterpState &S, CodePtr OpPC) {
-  const Pointer &Src = S.Stk.pop<Pointer>();
-  Pointer &Dest = S.Stk.peek<Pointer>();
-
-  if (!Src.getRecord() || !Src.getRecord()->isAnonymousUnion()) {
-    if (!CheckLoad(S, OpPC, Src))
-      return false;
-  }
-
-  return DoMemcpy(S, OpPC, Src, Dest);
-}
-
 inline bool ToMemberPtr(InterpState &S) {
   const auto &Member = S.Stk.pop<MemberPointer>();
   const auto &Base = S.Stk.pop<Pointer>();
@@ -2566,6 +2537,10 @@ inline bool CastMemberPtrPtr(InterpState &S, CodePtr OpPC) {
   }
   return Invalid(S, OpPC);
 }
+
+bool Memcpy(InterpState &S, CodePtr OpPC);
+bool TrivialCopy(InterpState &S, CodePtr OpPC, bool Activate,
+                 const Function *Func);
 
 //===----------------------------------------------------------------------===//
 // AddOffset, SubOffset
@@ -2600,9 +2575,9 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
             : S.getASTContext().getTypeSizeInChars(ElemType).getQuantity();
     uint64_t O = static_cast<uint64_t>(Offset) * ElemSize;
     if constexpr (Op == ArithOp::Add) {
-      return Pointer(V + O, Ptr.asIntPointer().Ty);
+      return Pointer(V + O, Ptr.asIntPointer().getType());
     } else
-      return Pointer(V - O, Ptr.asIntPointer().Ty);
+      return Pointer(V - O, Ptr.asIntPointer().getType());
   } else if (Ptr.isFunctionPointer()) {
     uint64_t O = static_cast<uint64_t>(Offset);
     uint64_t N;
@@ -3221,7 +3196,20 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool Null(InterpState &S, uint64_t Value, const Type *Ty) {
   // FIXME(perf): This is a somewhat often-used function and the value of a
   // null pointer is almost always 0.
-  S.Stk.push<T>(Value, Ty);
+  if constexpr (std::is_same_v<T, Pointer>)
+    S.Stk.push<T>(Value, Ty, /*Offset=*/0, /*IsNull=*/true);
+  else
+    S.Stk.push<T>(Value, Ty);
+  return true;
+}
+
+inline bool CastAddressSpace(InterpState &S, CodePtr OpPC, uint64_t Value,
+                             const Type *Ty) {
+  const Pointer Ptr = S.Stk.pop<Pointer>();
+  if (Ptr.isZero())
+    S.Stk.push<Pointer>(Value, Ty);
+  else
+    S.Stk.push<Pointer>(Ptr);
   return true;
 }
 
@@ -3604,7 +3592,7 @@ inline bool CopyArray(InterpState &S, CodePtr OpPC, uint32_t SrcIndex,
     return false;
 
   for (uint32_t I = 0; I != Size; ++I) {
-    const Pointer &SP = SrcPtr.atIndex(SrcIndex + I);
+    PtrView SP = SrcPtr.view().atIndex(SrcIndex + I);
 
     if (!CheckLoad(S, OpPC, SP))
       return false;
@@ -3646,10 +3634,19 @@ inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
       return true;
     }
 
-    if (!Ptr.getType()->isArrayType()) {
+    const OpaquePointer &OP = Ptr.asOpaquePointer();
+    if (!OP.getFieldType()->isArrayType()) {
       S.Stk.push<Pointer>(Ptr);
       return true;
     }
+
+    if (OP.isUnknownSizeArray() && OP.PathLength != 0) {
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_unsupported_unsized_array);
+      S.Stk.push<Pointer>(Ptr);
+      return true;
+    }
+
     return arrayElemPtrOpaque(S, OpPC, Ptr,
                               APSInt(APInt::getZero(1), /*IsUnsigned=*/true),
                               /*AllowReplace=*/false);
@@ -3692,7 +3689,10 @@ inline bool GetIntPtr(InterpState &S, CodePtr OpPC, const Type *Ty) {
           S.P.getFunction((const FunctionDecl *)IntVal.getPtr());
       S.Stk.push<Pointer>(F, IntVal.getOffset());
     } else {
-      S.Stk.push<Pointer>(static_cast<uint64_t>(IntVal), Ty);
+      uint64_t NullValue =
+          S.getASTContext().getTargetNullPointerValue(QualType(Ty, 0));
+      S.Stk.push<Pointer>(static_cast<uint64_t>(IntVal), Ty, 0,
+                          static_cast<uint64_t>(IntVal) == NullValue);
     }
   } else {
     S.Stk.push<Pointer>(static_cast<uint64_t>(IntVal), Ty);
@@ -3754,6 +3754,12 @@ inline bool StartSpeculation(InterpState &S) {
 inline bool StartInit(InterpState &S) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   S.InitializingPtrs.push_back(Ptr.view());
+  return true;
+}
+
+inline bool StartFieldInit(InterpState &S, uint32_t FieldOffset) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  S.InitializingPtrs.push_back(Ptr.view().atField(FieldOffset));
   return true;
 }
 
@@ -3974,7 +3980,7 @@ inline bool AllocN(InterpState &S, CodePtr OpPC, PrimType T, const Expr *Source,
     return false;
 
   SizeT NumElements = S.Stk.pop<SizeT>();
-  if (!CheckArraySize(S, OpPC, &NumElements, primSize(T), IsNoThrow)) {
+  if (!CheckArraySize(S, OpPC, NumElements, primSize(T), IsNoThrow)) {
     if (!IsNoThrow)
       return false;
 
@@ -4016,13 +4022,14 @@ inline bool AllocCN(InterpState &S, CodePtr OpPC, const Descriptor *ElementDesc,
     return false;
 
   SizeT NumElements = S.Stk.pop<SizeT>();
-  if (!CheckArraySize(S, OpPC, &NumElements, ElementDesc->getSize(),
+  if (!CheckArraySize(S, OpPC, NumElements, ElementDesc->getSize(),
                       IsNoThrow)) {
     if (!IsNoThrow)
       return false;
 
     // If this failed and is nothrow, just return a null ptr.
-    S.Stk.push<Pointer>(0, ElementDesc->getType().getTypePtr());
+    S.Stk.push<Pointer>(0, ElementDesc->getType().getTypePtr(), 0,
+                        /*IsNull=*/true);
     return true;
   }
   if (NumElements.isNegative()) {
@@ -4073,6 +4080,7 @@ bool CheckNewTypeMismatchArray(InterpState &S, CodePtr OpPC, const Expr *E) {
   return CheckNewTypeMismatch(S, OpPC, E, static_cast<uint64_t>(Size));
 }
 bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E);
+bool CheckPlacementNew(InterpState &S, CodePtr OpPC, const Expr *E);
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool BitCastPrim(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
@@ -4177,6 +4185,12 @@ bool DiagTypeid(InterpState &S, CodePtr OpPC);
 inline bool CheckDestruction(InterpState &S, CodePtr OpPC) {
   const auto &Ptr = S.Stk.peek<Pointer>();
   return checkDestructor(S, OpPC, Ptr);
+}
+
+inline bool ReflectValue(InterpState &S, CodePtr OpPC, ReflectionKind Kind,
+                         const void *Operand) {
+  S.Stk.push<Reflect>(Kind, Operand);
+  return true;
 }
 
 inline bool IsBaseClass(InterpState &S) {

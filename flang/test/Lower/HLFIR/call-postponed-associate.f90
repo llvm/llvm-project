@@ -30,7 +30,7 @@ subroutine test2(x)
 end subroutine test2
 ! CHECK-LABEL:   func.func @_QPtest2(
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 1.000000e+00 : f32
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.copy_in %{{.*}} to %{{.*}} : (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.box<!fir.array<?xf32>>, i1)
+! CHECK:           %[[VAL_4:.*]]:3 = hlfir.copy_in %{{.*}} to %[[TMP_BOX:.*]] : (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.box<!fir.array<?xf32>>>) -> (!fir.box<!fir.array<?xf32>>, i1, i1)
 ! CHECK:           %[[VAL_5:.*]] = fir.box_addr %[[VAL_4]]#0 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
 ! CHECK:           %[[VAL_6:.*]]:3 = hlfir.associate %[[VAL_3]] {adapt.valuebyref} : (f32) -> (!fir.ref<f32>, !fir.ref<f32>, i1)
 ! CHECK:           %[[VAL_17:.*]] = hlfir.eval_in_mem shape %{{.*}} : (!fir.shape<1>) -> !hlfir.expr<10xf32> {
@@ -38,7 +38,7 @@ end subroutine test2
 ! CHECK:             %[[VAL_19:.*]] = fir.call @_QParray_func2(%[[VAL_5]], %[[VAL_6]]#0) fastmath<contract> : (!fir.ref<!fir.array<?xf32>>, !fir.ref<f32>) -> !fir.array<10xf32>
 ! CHECK:             fir.save_result %[[VAL_19]] to %[[VAL_18]](%{{.*}}) : !fir.array<10xf32>, !fir.ref<!fir.array<10xf32>>, !fir.shape<1>
 ! CHECK:           }
-! CHECK:           hlfir.copy_out %{{.*}}, %[[VAL_4]]#1 to %{{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, i1, !fir.box<!fir.array<?xf32>>) -> ()
+! CHECK:           hlfir.copy_out %[[TMP_BOX]], %[[VAL_4]]#1, %[[VAL_4]]#2 to %{{.*}} : (!fir.ref<!fir.box<!fir.array<?xf32>>>, i1, i1, !fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:           hlfir.assign %[[VAL_17]] to %{{.*}} : !hlfir.expr<10xf32>, !fir.box<!fir.array<?xf32>>
 ! CHECK:           hlfir.end_associate %[[VAL_6]]#1, %[[VAL_6]]#2 : !fir.ref<f32>, i1
 ! CHECK:           hlfir.destroy %[[VAL_17]] : !hlfir.expr<10xf32>

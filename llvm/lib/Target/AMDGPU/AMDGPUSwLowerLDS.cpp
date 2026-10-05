@@ -158,7 +158,7 @@ struct AsanInstrumentInfo {
 };
 
 struct FunctionsAndLDSAccess {
-  DenseMap<Function *, KernelLDSParameters> KernelToLDSParametersMap;
+  MapVector<Function *, KernelLDSParameters> KernelToLDSParametersMap;
   SetVector<Function *> KernelsWithIndirectLDSAccess;
   SetVector<Function *> NonKernelsWithLDSArgument;
   SetVector<GlobalVariable *> AllNonKernelLDSAccess;
@@ -322,7 +322,7 @@ static void addLDSSizeAttribute(Function *Func, uint32_t Offset,
 
 static void markUsedByKernel(Function *Func, GlobalVariable *SGV) {
   BasicBlock *Entry = &Func->getEntryBlock();
-  IRBuilder<> Builder(Entry, Entry->getFirstNonPHIIt());
+  IRBuilder<> Builder(Entry->getFirstNonPHIIt());
 
   Function *Decl = Intrinsic::getOrInsertDeclaration(Func->getParent(),
                                                      Intrinsic::donothing, {});
@@ -555,7 +555,8 @@ void AMDGPUSwLowerLDS::replaceKernelLDSAccesses(Function *Func) {
                             ConstantInt::get(Int32Ty, Indices[1]),
                             ConstantInt::get(Int32Ty, Indices[2])};
       Constant *GEP = ConstantExpr::getGetElementPtr(
-          SwLDSMetadataStructType, SwLDSMetadata, GEPIdx, true);
+          Func->getDataLayout(), SwLDSMetadataStructType, SwLDSMetadata, GEPIdx,
+          GEPNoWrapFlags::inBounds());
       Value *Offset = IRB.CreateLoad(Int32Ty, GEP);
       Value *BasePlusOffset =
           IRB.CreateInBoundsGEP(IRB.getInt8Ty(), SwLDS, {Offset});
@@ -835,7 +836,7 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
       if (isa<ConstantInt>(AI->getArraySize()))
         AI->moveBefore(*WIdBlock, WIdBlock->end());
 
-  IRB.SetInsertPoint(WIdBlock, WIdBlock->end());
+  IRB.SetInsertPoint(WIdBlock->end());
   DebugLoc FirstDL =
       getOrCreateDebugLoc(&*PrevEntryBlock->begin(), Func->getSubprogram());
   IRB.SetCurrentDebugLocation(FirstDL);
@@ -851,7 +852,7 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
   IRB.CreateCondBr(WIdzCond, MallocBlock, PrevEntryBlock);
 
   // Malloc block
-  IRB.SetInsertPoint(MallocBlock, MallocBlock->begin());
+  IRB.SetInsertPoint(MallocBlock->begin());
 
   // If Dynamic LDS globals are accessed by the kernel,
   // Get the size of dyn lds from hidden dyn_lds_size kernel arg.
@@ -940,7 +941,7 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
 
   // Create wave-group barrier at the starting of Previous entry block
   Type *Int1Ty = IRB.getInt1Ty();
-  IRB.SetInsertPoint(PrevEntryBlock, PrevEntryBlock->begin());
+  IRB.SetInsertPoint(PrevEntryBlock->begin());
   auto *XYZCondPhi = IRB.CreatePHI(Int1Ty, 2, "xyzCond");
   XYZCondPhi->addIncoming(IRB.getInt1(0), WIdBlock);
   XYZCondPhi->addIncoming(IRB.getInt1(1), MallocBlock);
@@ -966,19 +967,19 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
     if (!BB.empty()) {
       if (ReturnInst *RI = dyn_cast<ReturnInst>(&BB.back())) {
         RI->eraseFromParent();
-        IRB.SetInsertPoint(&BB, BB.end());
+        IRB.SetInsertPoint(BB.end());
         IRB.CreateBr(CondFreeBlock);
       }
     }
   }
 
   // Cond Free Block
-  IRB.SetInsertPoint(CondFreeBlock, CondFreeBlock->begin());
+  IRB.SetInsertPoint(CondFreeBlock->begin());
   IRB.CreateIntrinsic(Intrinsic::amdgcn_s_barrier, {});
   IRB.CreateCondBr(XYZCondPhi, FreeBlock, EndBlock);
 
   // Free Block
-  IRB.SetInsertPoint(FreeBlock, FreeBlock->begin());
+  IRB.SetInsertPoint(FreeBlock->begin());
 
   // Free the previously allocate device global memory.
   FunctionCallee AsanFreeFunc = M.getOrInsertFunction(
@@ -994,7 +995,7 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
   IRB.CreateBr(EndBlock);
 
   // End Block
-  IRB.SetInsertPoint(EndBlock, EndBlock->begin());
+  IRB.SetInsertPoint(EndBlock->begin());
   IRB.CreateRetVoid();
   // Update the DomTree with corresponding links to basic blocks.
   DTU.applyUpdates({{DominatorTree::Insert, WIdBlock, MallocBlock},
@@ -1027,8 +1028,9 @@ Constant *AMDGPUSwLowerLDS::getAddressesOfVariablesInKernel(
     Constant *GEPIdx[] = {ConstantInt::get(Int32Ty, Indices[0]),
                           ConstantInt::get(Int32Ty, Indices[1]),
                           ConstantInt::get(Int32Ty, Indices[2])};
-    Constant *GEP = ConstantExpr::getGetElementPtr(SwLDSMetadataStructType,
-                                                   SwLDSMetadata, GEPIdx, true);
+    Constant *GEP = ConstantExpr::getGetElementPtr(
+        Func->getDataLayout(), SwLDSMetadataStructType, SwLDSMetadata, GEPIdx,
+        GEPNoWrapFlags::inBounds());
     Elements.push_back(GEP);
   }
   return ConstantArray::get(KernelOffsetsType, Elements);
