@@ -260,6 +260,12 @@ namespace {
       if (Ctx->getTargetInfo().getCXXABI().isMicrosoft()) {
         for (Decl *Member : D->decls()) {
           if (VarDecl *VD = dyn_cast<VarDecl>(Member)) {
+            // Inline variables are already definitions, and are emitted in
+            // declaration order along with the rest of the class. Emitting
+            // them early here would run their dynamic initializers before
+            // those of the members that precede them.
+            if (VD->isInline())
+              continue;
             if (Ctx->isMSStaticDataMemberInlineDefinition(VD) &&
                 Ctx->DeclMustBeEmitted(VD)) {
               Builder->EmitGlobal(VD);
