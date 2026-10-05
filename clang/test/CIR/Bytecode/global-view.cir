@@ -1,0 +1,69 @@
+// RUN: cir-opt %s -verify-roundtrip | FileCheck %s
+// RUN: cir-opt %s --emit-bytecode | llvm-strings | FileCheck %s --check-prefix=NATIVE
+
+// The type-carrying attributes: a container nesting other attributes only pays
+// off once those are encoded too.
+//
+// Check the attributes are not string-encoded in the blob.
+// NATIVE-NOT: #cir.global_view<
+// NATIVE-NOT: #cir.method<
+// NATIVE-NOT: #cir.data_member<
+// NATIVE-NOT: #cir.dyn_cast_info<
+// NATIVE-NOT: #cir.typeinfo<
+// NATIVE-NOT: #cir.const_vector<
+// NATIVE-NOT: #cir.const_complex<
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!rec_Marker = !cir.struct<"Marker" {data !s32i}>
+!rec_TI = !cir.struct<"TI" {data !cir.ptr<!u8i>, data !s32i}>
+!rec_Other = !cir.struct<"Other" {data !s32i, data !s32i}>
+!method_Other = !cir.method<!cir.func<(!s32i)> in !rec_Other>
+!s64i = !cir.int<s, 64>
+!rec_Base = !cir.struct<"Base" {data !cir.vptr}>
+!rec_Derived = !cir.struct<"Derived" {data !rec_Base}>
+
+#info = #cir.dyn_cast_info<src_rtti = #cir.global_view<@_ZTI4Base> : !cir.ptr<!u8i>, dest_rtti = #cir.global_view<@_ZTI7Derived> : !cir.ptr<!u8i>, runtime_func = @__dynamic_cast, bad_cast_func = @__cxa_bad_cast, offset_hint = #cir.int<0> : !s64i>
+
+module {
+  cir.global external @plain = #cir.global_view<@some_sym> : !cir.ptr<!rec_Marker>
+  cir.global external @indexed = #cir.global_view<@some_sym, [3 : i32, 0 : i32]> : !cir.ptr<!rec_Marker>
+  cir.global external @g7 = #cir.global_view<@s7> : !cir.ptr<!rec_Marker>
+  cir.global external @info = #cir.typeinfo<{#cir.global_view<@_ZTS6Widget> : !cir.ptr<!u8i>, #cir.int<2> : !s32i}> : !rec_TI
+  cir.global external @vec = #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i]> : !cir.vector<2 x !s32i>
+  cir.global external @cpx = #cir.const_complex<#cir.fp<1.000000e+00> : !cir.double, #cir.fp<2.000000e+00> : !cir.double> : !cir.complex<!cir.double>
+  cir.global external @dm = #cir.data_member<[0]> : !cir.data_member<!s32i in !rec_Other>
+  cir.global external @dm_single = #cir.data_member<[1]> : !cir.data_member<!s32i in !rec_Other>
+  cir.global external @dm_null = #cir.data_member<null> : !cir.data_member<!s32i in !rec_Other>
+
+  // A symbol, no target at all, and a vtable slot. Collapsing null into
+  // vtable_offset = 0 would miscompile a null pointer-to-member into a call
+  // of the first virtual function, hence the explicit present-zero case.
+  cir.global external @m_sym = #cir.method<@f> : !method_Other
+  cir.global external @m_null = #cir.method<null> : !method_Other
+  cir.global external @m_virtual = #cir.method<vtable_offset = 8> : !method_Other
+  cir.global external @m_virtual0 = #cir.method<vtable_offset = 0> : !method_Other
+
+  cir.func private @__dynamic_cast(!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
+  cir.func private @__cxa_bad_cast()
+
+  cir.func @cast(%arg0: !cir.ptr<!rec_Base>) -> !cir.ptr<!rec_Derived> {
+    %0 = cir.dyn_cast ptr %arg0 : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived> #info
+    cir.return %0 : !cir.ptr<!rec_Derived>
+  }
+}
+
+// CHECK: cir.global external @plain = #cir.global_view<@some_sym> : !cir.ptr<!rec_Marker>
+// CHECK: cir.global external @indexed = #cir.global_view<@some_sym, [3 : i32, 0 : i32]> : !cir.ptr<!rec_Marker>
+// CHECK: cir.global external @g7 = #cir.global_view<@s7> : !cir.ptr<!rec_Marker>
+// CHECK: cir.global external @info = #cir.typeinfo<{#cir.global_view<@_ZTS6Widget> : !cir.ptr<!u8i>, #cir.int<2> : !s32i}> : !rec_TI
+// CHECK: cir.global external @vec = #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i]> : !cir.vector<2 x !s32i>
+// CHECK: cir.global external @cpx = #cir.const_complex<#cir.fp<1.000000e+00> : !cir.double, #cir.fp<2.000000e+00> : !cir.double> : !cir.complex<!cir.double>
+// CHECK: cir.global external @dm = #cir.data_member<[0]> : !cir.data_member<!s32i in !rec_Other>
+// CHECK: cir.global external @dm_single = #cir.data_member<[1]> : !cir.data_member<!s32i in !rec_Other>
+// CHECK: cir.global external @dm_null = #cir.data_member<null> : !cir.data_member<!s32i in !rec_Other>
+// CHECK: cir.global external @m_sym = #cir.method<@f> : !cir.method<!cir.func<(!s32i)> in !rec_Other>
+// CHECK: cir.global external @m_null = #cir.method<null> : !cir.method<!cir.func<(!s32i)> in !rec_Other>
+// CHECK: cir.global external @m_virtual = #cir.method<vtable_offset = 8> : !cir.method<!cir.func<(!s32i)> in !rec_Other>
+// CHECK: cir.global external @m_virtual0 = #cir.method<vtable_offset = 0> : !cir.method<!cir.func<(!s32i)> in !rec_Other>
+// CHECK: %0 = cir.dyn_cast ptr %arg0 : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived> #dyn_cast_info__ZTI4Base__ZTI7Derived
