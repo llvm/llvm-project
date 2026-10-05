@@ -26,15 +26,15 @@ subroutine acc_parallel_loop
   integer :: vectorNum = 128
   integer, parameter :: tileSize = 2
 
-! CHECK: %[[A:.*]] = fir.alloca !fir.array<10xf32> {{{.*}}uniq_name = "{{.*}}Ea"}
+! CHECK: %[[A:.*]] = fir.alloca !fir.array<10xf32> <{{{.*}}uniq_name = "{{.*}}Ea"}>
 ! CHECK: %[[DECLA:.*]]:2 = hlfir.declare %[[A]]
-! CHECK: %[[B:.*]] = fir.alloca !fir.array<10xf32> {{{.*}}uniq_name = "{{.*}}Eb"}
+! CHECK: %[[B:.*]] = fir.alloca !fir.array<10xf32> <{{{.*}}uniq_name = "{{.*}}Eb"}>
 ! CHECK: %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
-! CHECK: %[[C:.*]] = fir.alloca !fir.array<10xf32> {{{.*}}uniq_name = "{{.*}}Ec"}
+! CHECK: %[[C:.*]] = fir.alloca !fir.array<10xf32> <{{{.*}}uniq_name = "{{.*}}Ec"}>
 ! CHECK: %[[DECLC:.*]]:2 = hlfir.declare %[[C]]
-! CHECK: %[[F:.*]] = fir.alloca !fir.box<!fir.ptr<f32>> {bindc_name = "f", uniq_name = "{{.*}}Ef"}
+! CHECK: %[[F:.*]] = fir.alloca !fir.box<!fir.ptr<f32>> <{bindc_name = "f", uniq_name = "{{.*}}Ef"}>
 ! CHECK: %[[DECLF:.*]]:2 = hlfir.declare %[[F]]
-! CHECK: %[[G:.*]] = fir.alloca !fir.box<!fir.ptr<f32>> {bindc_name = "g", uniq_name = "{{.*}}Eg"}
+! CHECK: %[[G:.*]] = fir.alloca !fir.box<!fir.ptr<f32>> <{bindc_name = "g", uniq_name = "{{.*}}Eg"}>
 ! CHECK: %[[DECLG:.*]]:2 = hlfir.declare %[[G]]
 ! CHECK: %[[IFCONDITION:.*]] = fir.address_of(@{{.*}}ifcondition) : !fir.ref<!fir.logical<4>>
 ! CHECK: %[[DECLIFCONDITION:.*]]:2 = hlfir.declare %[[IFCONDITION]]
@@ -688,7 +688,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_scalar
 ! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe(@firstprivatization_ref_i32) name("v") -> !fir.ref<i32>
 ! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
-! CHECK: %[[DECL_V:.*]]:2 = hlfir.declare %[[FP_V]] {uniq_name = {{.*}}} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[DECL_V:.*]]:2 = hlfir.declare %[[FP_V]] uniq_name({{.*}}) : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr(%[[DECL_V]]#0 : !fir.ref<i32>) recipe(@firstprivatization_ref_i32) implicit(true) name("v") -> !fir.ref<i32>
 ! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<i32>)
 ! CHECK: } inclusiveUpperbound(array<i1: true>) independent

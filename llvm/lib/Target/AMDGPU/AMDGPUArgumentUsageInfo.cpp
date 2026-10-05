@@ -100,13 +100,13 @@ AMDGPUFunctionArgInfo::getPreloadedValue(
                       LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64));
   case AMDGPUFunctionArgInfo::WORKITEM_ID_X:
     return std::tuple(WorkItemIDX ? &WorkItemIDX : nullptr,
-                      &AMDGPU::VGPR_32RegClass, LLT::scalar(32));
+                      &AMDGPU::VGPR_32RegClass, LLT::integer(32));
   case AMDGPUFunctionArgInfo::WORKITEM_ID_Y:
     return std::tuple(WorkItemIDY ? &WorkItemIDY : nullptr,
-                      &AMDGPU::VGPR_32RegClass, LLT::scalar(32));
+                      &AMDGPU::VGPR_32RegClass, LLT::integer(32));
   case AMDGPUFunctionArgInfo::WORKITEM_ID_Z:
     return std::tuple(WorkItemIDZ ? &WorkItemIDZ : nullptr,
-                      &AMDGPU::VGPR_32RegClass, LLT::scalar(32));
+                      &AMDGPU::VGPR_32RegClass, LLT::integer(32));
   }
   llvm_unreachable("unexpected preloaded value type");
 }

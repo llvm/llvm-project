@@ -475,8 +475,22 @@ void ASTStmtWriter::VisitCoyieldExpr(CoyieldExpr *E) {
 }
 
 void ASTStmtWriter::VisitCXXReflectExpr(CXXReflectExpr *E) {
-  // TODO(Reflection): Implement this.
-  assert(false && "not implemented yet");
+  // TODO(Reflection): add support for TemplateReference, NamespaceReference and
+  // DeclRefExpr
+  VisitExpr(E);
+  Record.AddSourceLocation(E->getOperatorLoc());
+  Record.push_back(static_cast<uint64_t>(E->getKind()));
+  switch (E->getKind()) {
+  case ReflectionKind::Null:
+    assert(false && "null reflection can't be constructed from parsing a "
+                    "reflection operand");
+    break;
+  case ReflectionKind::Type:
+    Record.AddTypeSourceInfo(
+        const_cast<TypeSourceInfo *>(E->getTypeSourceInfo()));
+    break;
+  }
+  Code = serialization::EXPR_REFLECT;
 }
 
 void ASTStmtWriter::VisitDependentCoawaitExpr(DependentCoawaitExpr *E) {
@@ -2152,10 +2166,10 @@ void ASTStmtWriter::VisitExprWithCleanups(ExprWithCleanups *E) {
   VisitExpr(E);
   Record.push_back(E->getNumObjects());
   for (auto &Obj : E->getObjects()) {
-    if (auto *BD = Obj.dyn_cast<BlockDecl *>()) {
+    if (auto *BD = dyn_cast<BlockDecl *>(Obj)) {
       Record.push_back(serialization::COK_Block);
       Record.AddDeclRef(BD);
-    } else if (auto *CLE = Obj.dyn_cast<CompoundLiteralExpr *>()) {
+    } else if (auto *CLE = dyn_cast<CompoundLiteralExpr *>(Obj)) {
       Record.push_back(serialization::COK_CompoundLiteral);
       Record.AddStmt(CLE);
     }
@@ -2645,6 +2659,11 @@ void ASTStmtWriter::VisitOMPReverseDirective(OMPReverseDirective *D) {
 void ASTStmtWriter::VisitOMPInterchangeDirective(OMPInterchangeDirective *D) {
   VisitOMPCanonicalLoopNestTransformationDirective(D);
   Code = serialization::STMT_OMP_INTERCHANGE_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPFlattenDirective(OMPFlattenDirective *D) {
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
+  Code = serialization::STMT_OMP_FLATTEN_DIRECTIVE;
 }
 
 void ASTStmtWriter::VisitOMPSplitDirective(OMPSplitDirective *D) {

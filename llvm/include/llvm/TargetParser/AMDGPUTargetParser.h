@@ -241,6 +241,16 @@ LLVM_ABI unsigned getAddressableLocalMemorySize(Triple::SubArchType SubArch,
 LLVM_ABI unsigned getLDSBankCount(GPUKind AK);
 LLVM_ABI unsigned getLDSBankCount(Triple::SubArchType SubArch);
 
+/// \returns Hardware LDS allocation granularity in bytes, used for occupancy.
+LLVM_ABI unsigned getLDSAllocGranule(GPUKind AK);
+LLVM_ABI unsigned getLDSAllocGranule(Triple::SubArchType SubArch);
+
+/// \returns LDS size encoding granularity in bytes, used for program resource
+/// registers and metadata. This can differ from the allocation granularity.
+/// Returns zero if the target has no LDS encoding granularity feature.
+LLVM_ABI unsigned getLDSEncodingGranule(GPUKind AK);
+LLVM_ABI unsigned getLDSEncodingGranule(Triple::SubArchType SubArch);
+
 /// \returns Number of SIMDs a work-group's waves run on. All four SIMDs of the
 /// functional block in full-SIMD mode, half of them otherwise.
 constexpr unsigned getNumWorkGroupSIMDs(bool FullSIMDMode) {
@@ -399,7 +409,7 @@ public:
   /// \returns the canonical processor name followed by any explicit xnack and
   /// sramecc feature modifiers order (e.g.  "gfx908:sramecc-:xnack+"), without
   /// the triple prefix.
-  std::string getCanonicalTargetIDString() const;
+  std::string getCanonicalFeatureString() const;
 
   bool operator==(const TargetID &Other) const;
   bool operator!=(const TargetID &Other) const { return !(*this == Other); }

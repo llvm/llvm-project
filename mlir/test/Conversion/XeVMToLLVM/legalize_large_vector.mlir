@@ -177,3 +177,21 @@ module @test_nary_no_hoist_through_call {
     llvm.return %1 : vector<16xf32>
   }
 }
+
+// -----
+
+// A bitcast that widens the element count (8xi32 -> 16xbf16) feeding a
+// contiguous slice: the slice can only be expressed against the bitcast
+// source by rescaling the mask, which is the one path that rebuilds the mask
+// into a local buffer. Guards the lifetime of that buffer - reading it after
+// scope exit is a stack-use-after-scope that only sanitizer builds observe.
+module @test_bitcast_mask_rescale {
+  // CHECK-LABEL: llvm.func @test_bitcast_mask_rescale
+  // CHECK:         %[[S:.*]] = llvm.shufflevector %arg0, %arg0 [0, 1, 2, 3] : vector<8xi32>
+  // CHECK:         llvm.bitcast %[[S]] : vector<4xi32> to vector<8xbf16>
+  llvm.func @test_bitcast_mask_rescale(%a: vector<8xi32>) -> vector<8xbf16> {
+    %0 = llvm.bitcast %a : vector<8xi32> to vector<16xbf16>
+    %1 = llvm.shufflevector %0, %0 [0, 1, 2, 3, 4, 5, 6, 7] : vector<16xbf16>
+    llvm.return %1 : vector<8xbf16>
+  }
+}

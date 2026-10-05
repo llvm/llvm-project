@@ -8,7 +8,7 @@
 ; CHECK: str     x30, [sp, #-16]!
 ; CHECK: adrp    x8, q   
 ; CHECK: ldr     x8, [x8, :lo12:q]
-; CHECK: stp     xzr, xzr, [x8] 
+; CHECK: str     q0, [x8]
 ; CHECK: bl f
 
 @q = external dso_local unnamed_addr global ptr, align 8
