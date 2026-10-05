@@ -14,6 +14,12 @@
 #define MLIR_TOOLS_MLIR_TBLGEN_MLIRTBLGENMAIN_H
 
 namespace mlir {
+/// The action to take on a use of a deprecated construct.
+enum class DeprecatedAction { None, Warn, Error };
+
+/// Returns the action that the `-on-deprecated` option selects.
+DeprecatedAction getActionOnDeprecated();
+
 /// Main Program for tools like 'mlir-tblgen' with custom backends. To add
 /// a new backend, simply create a new 'mlir::GenRegistration' global variable.
 /// See its documentation for more info.
