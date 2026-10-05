@@ -595,12 +595,11 @@ define <2 x float> @fdiv2_vec(<2 x float> %x) {
   ret <2 x float> %div1
 }
 
-; "X/C1 / C2 => X * (1/(C2*C1))" is disabled (for now) is C2/C1 is a denormal
+; "X/C1 / C2 => X * (1/(C2*C1))" can use a subnormal reciprocal with IEEE handling.
 ;
 define float @fdiv3(float %x) {
 ; CHECK-LABEL: @fdiv3(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X:%.*]], f0x3EDE9BD4
-; CHECK-NEXT:    [[DIV1:%.*]] = fdiv fast float [[TMP1]], f0x7F7FFFFF
+; CHECK-NEXT:    [[DIV1:%.*]] = fmul fast float [[X:%.*]], f0x000DE9BD
 ; CHECK-NEXT:    ret float [[DIV1]]
 ;
   %div = fdiv fast float %x, 0x47EFFFFFE0000000

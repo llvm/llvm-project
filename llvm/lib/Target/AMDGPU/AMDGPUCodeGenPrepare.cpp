@@ -16,6 +16,7 @@
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIModeRegisterDefaults.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -476,15 +477,16 @@ bool AMDGPUCodeGenPrepareImpl::foldBinOpIntoSelect(BinaryOperator &BO) const {
 
   // TODO: Handle special 0/-1 cases DAG combine does, although we only really
   // need to handle divisions here.
+  auto DM = getDenormMode(BO);
   Constant *FoldedT =
-      SelOpNo ? ConstantFoldBinaryOpOperands(BO.getOpcode(), CBO, CT, DL)
-              : ConstantFoldBinaryOpOperands(BO.getOpcode(), CT, CBO, DL);
+      SelOpNo ? ConstantFoldBinaryOpOperands(BO.getOpcode(), CBO, CT, DL, DM)
+              : ConstantFoldBinaryOpOperands(BO.getOpcode(), CT, CBO, DL, DM);
   if (!FoldedT || isa<ConstantExpr>(FoldedT))
     return false;
 
   Constant *FoldedF =
-      SelOpNo ? ConstantFoldBinaryOpOperands(BO.getOpcode(), CBO, CF, DL)
-              : ConstantFoldBinaryOpOperands(BO.getOpcode(), CF, CBO, DL);
+      SelOpNo ? ConstantFoldBinaryOpOperands(BO.getOpcode(), CBO, CF, DL, DM)
+              : ConstantFoldBinaryOpOperands(BO.getOpcode(), CF, CBO, DL, DM);
   if (!FoldedF || isa<ConstantExpr>(FoldedF))
     return false;
 

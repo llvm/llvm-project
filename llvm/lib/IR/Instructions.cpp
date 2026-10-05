@@ -3968,7 +3968,10 @@ bool ICmpInst::compare(const APInt &LHS, const APInt &RHS,
 
 bool FCmpInst::compare(const APFloat &LHS, const APFloat &RHS,
                        FCmpInst::Predicate Pred) {
-  APFloat::cmpResult R = LHS.compare(RHS);
+  return compare(LHS.compare(RHS), Pred);
+}
+
+bool FCmpInst::compare(APFloat::cmpResult R, FCmpInst::Predicate Pred) {
   switch (Pred) {
   default:
     llvm_unreachable("Invalid FCmp Predicate");
