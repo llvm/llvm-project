@@ -1424,6 +1424,15 @@ void Sema::ActOnEndOfTranslationUnit() {
                      }),
       UnusedFileScopedDecls.end());
 
+  for (const auto &[ED, _] : FlagBitsCache) {
+    const EnumDecl *Definition = ED->getDefinition();
+    if (!Definition || Definition->isFromASTFile())
+      continue;
+    if (!Diags.isIgnored(diag::warn_flag_enum_operator,
+                         Definition->getLocation()))
+      DiagnoseInvalidFlagEnumOperators(*this, Definition);
+  }
+
   if (TUKind == TU_Prefix) {
     // Translation unit prefixes don't need any of the checking below.
     if (!PP.isIncrementalProcessingEnabled())
@@ -1789,10 +1798,6 @@ void Sema::ActOnEndOfTranslationUnit() {
       }
     }
   }
-
-  for (const auto &[ED, _] : FlagBitsCache)
-    if (!Diags.isIgnored(diag::warn_flag_enum_operator, ED->getLocation()))
-      DiagnoseInvalidFlagEnumOperators(*this, ED);
 
   AnalysisWarnings.IssueWarnings(Context.getTranslationUnitDecl());
 
