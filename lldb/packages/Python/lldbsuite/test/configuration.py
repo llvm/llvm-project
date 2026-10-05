@@ -22,6 +22,9 @@ import lldbsuite
 # The test suite.
 suite = unittest.TestSuite()
 
+# Stop at the first failure.
+failfast = False
+
 # The list of categories we said we care about
 categories_list = None
 # set to true if we are going to use categories for cherry-picking test cases
