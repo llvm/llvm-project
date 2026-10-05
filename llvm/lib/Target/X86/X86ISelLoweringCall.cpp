@@ -2027,10 +2027,11 @@ static SDValue EmitTailCallStoreRetAddr(SelectionDAG &DAG, MachineFunction &MF,
   // This is volatile to prevent re-ordering relative to the outgoing stack
   // argument stores, to avoid situations where the return address isn't on
   // the stack.
-  Chain = DAG.getStore(Chain, dl, RetAddrFrIdx, NewRetAddrFrIdx,
-                       MachinePointerInfo::getFixedStack(
-                           DAG.getMachineFunction(), NewReturnAddrFI),
-                       /*Alignment=*/MaybeAlign(), MachineMemOperand::MOVolatile);
+  Chain =
+      DAG.getStore(Chain, dl, RetAddrFrIdx, NewRetAddrFrIdx,
+                   MachinePointerInfo::getFixedStack(DAG.getMachineFunction(),
+                                                     NewReturnAddrFI),
+                   /*Alignment=*/MaybeAlign(), MachineMemOperand::MOVolatile);
   return Chain;
 }
 
@@ -2607,21 +2608,23 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
             // after the new return-address store.
             for (int64_t Pos = OvLo; Pos < OvHi;) {
               int64_t Remaining = OvHi - Pos;
-              unsigned PieceSize =
-                  Remaining >= 8 ? 8 : Remaining >= 4 ? 4 : Remaining >= 2 ? 2 : 1;
+              unsigned PieceSize = Remaining >= 8   ? 8
+                                   : Remaining >= 4 ? 4
+                                   : Remaining >= 2 ? 2
+                                                    : 1;
               MVT PieceVT = MVT::getIntegerVT(PieceSize * 8);
               Align A = commonAlignment(BaseAlign, Pos);
               SDValue Src = DAG.getMemBasePlusOffset(
                   ByValSrc, TypeSize::getFixed(Pos), dl);
-              SDValue Ld = DAG.getLoad(PieceVT, dl, Chain, Src,
-                                       MachinePointerInfo(), A);
+              SDValue Ld =
+                  DAG.getLoad(PieceVT, dl, Chain, Src, MachinePointerInfo(), A);
               auto [LdChain, Val] = KeepLive(Ld.getValue(1), Ld);
               SDValue Dst = DAG.getMemBasePlusOffset(
                   DstAddr, TypeSize::getFixed(Pos), dl);
-              MemOpChains2.push_back(DAG.getStore(
-                  LdChain, dl, Val, Dst,
-                  MachinePointerInfo::getFixedStack(MF, FI, Pos), A,
-                  MachineMemOperand::MOVolatile));
+              MemOpChains2.push_back(
+                  DAG.getStore(LdChain, dl, Val, Dst,
+                               MachinePointerInfo::getFixedStack(MF, FI, Pos),
+                               A, MachineMemOperand::MOVolatile));
               Pos += PieceSize;
             }
           }
@@ -2632,9 +2635,9 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         // If this slot overlaps the original return address, mark it as
         // volatile to prevent it being reordered ahead of the store to the
         // new return address slot.
-        bool OverlapsOldRetAddr =
-            FPDiff && (int64_t)Offset < 0 &&
-            (int64_t)Offset + (int64_t)OpSize > -(int64_t)RegInfo->getSlotSize();
+        bool OverlapsOldRetAddr = FPDiff && (int64_t)Offset < 0 &&
+                                  (int64_t)Offset + (int64_t)OpSize >
+                                      -(int64_t)RegInfo->getSlotSize();
         SDValue StoreChain = Chain;
         if (OverlapsOldRetAddr)
           std::tie(StoreChain, Arg) = KeepLive(Chain, Arg);

@@ -23,8 +23,10 @@ def main():
 
     words = [w.strip('"') for w in shlex.split(cc, posix=False)]
     name = os.path.basename(words[0]).lower()
-    cl_style = (name in ("cl", "cl.exe", "clang-cl", "clang-cl.exe") or
-                "--driver-mode=cl" in words)
+    cl_style = (
+        name in ("cl", "cl.exe", "clang-cl", "clang-cl.exe")
+        or "--driver-mode=cl" in words
+    )
 
     # The linker must not link incrementally: that makes function addresses the
     # addresses of jump thunks, which the harness compares with the addresses
@@ -39,9 +41,10 @@ def main():
         # Compile and link separately: clang-cl rejects /Fo with a file name
         # when the command line also has an object file.
         harness_obj = os.path.splitext(exe)[0] + ".harness.obj"
-        cmds = [words + ["/nologo", "/O1", "/EHa", "/c", "/Fo" + harness_obj,
-                         harness],
-                words + ["/nologo", harness_obj, obj, "/Fe" + exe]]
+        cmds = [
+            words + ["/nologo", "/O1", "/EHa", "/c", "/Fo" + harness_obj, harness],
+            words + ["/nologo", harness_obj, obj, "/Fe" + exe],
+        ]
     else:
         cmds = [words + ["-O1", "-fasync-exceptions", "-o", exe, harness, obj]]
 
