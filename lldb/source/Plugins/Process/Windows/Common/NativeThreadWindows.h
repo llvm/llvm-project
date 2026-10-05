@@ -48,6 +48,8 @@ public:
 
   Status RemoveHardwareBreakpoint(lldb::addr_t addr) override;
 
+  StructuredData::ObjectSP GetExtendedInfo() const override;
+
   void SetStopReason(ThreadStopInfo stop_info, std::string description);
 
   const HostThread &GetHostThread() { return m_host_thread; }

@@ -342,6 +342,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
       return eServerPacketType_jAcceleratorPluginBreakpointHit;
     if (PACKET_STARTS_WITH("jAcceleratorPluginGetDynamicLoaderLibraryInfo:"))
       return eServerPacketType_jAcceleratorPluginGetDynamicLoaderLibraryInfo;
+    if (PACKET_STARTS_WITH("jThreadExtendedInfo:"))
+      return eServerPacketType_jThreadExtendedInfo;
     break;
 
   case 'v':
