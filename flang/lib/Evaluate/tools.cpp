@@ -1327,8 +1327,12 @@ GetHostAndDeviceSymbols(const Expr<SomeType> &expr) {
 
 bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
   auto [hostSymbols, deviceSymbols] = GetHostAndDeviceSymbols(expr);
-  bool hasConstant{HasConstant(expr)};
-  return (hasConstant || (hostSymbols.size() > 0)) && deviceSymbols.size() > 0;
+  if (deviceSymbols.empty()) {
+    return false;
+  }
+  // Device data used in an operation, even one with no other operand such as
+  // a negation or a conversion, is copied to the host to evaluate it there.
+  return HasConstant(expr) || !hostSymbols.empty() || !IsVariable(expr);
 }
 
 bool HasOnlyCUDAConstntImplicitTransfer(const Expr<SomeType> &expr) {

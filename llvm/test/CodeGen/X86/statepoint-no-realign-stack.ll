@@ -20,7 +20,7 @@ define void @can_realign(ptr %p) {
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-32, %rsp
-; CHECK-NEXT:    subq $64, %rsp
+; CHECK-NEXT:    subq $32, %rsp
 ; CHECK-NEXT:    vmovaps (%rdi), %ymm0
 ; CHECK-NEXT:    vmovaps %ymm0, (%rsp)
 ; CHECK-NEXT:    vzeroupper
@@ -65,7 +65,7 @@ define <4 x ptr addrspace(1)> @spillfill_can_realign(<4 x ptr addrspace(1)> %obj
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-32, %rsp
-; CHECK-NEXT:    subq $64, %rsp
+; CHECK-NEXT:    subq $32, %rsp
 ; CHECK-NEXT:    vmovaps %ymm0, (%rsp)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq do_safepoint@PLT

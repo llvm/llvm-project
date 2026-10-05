@@ -412,6 +412,7 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
          && "Unsupported setcc type!");
 
   // Expand into one or more soft-fp libcall(s).
+  ISD::CondCode OrigCCCode = CCCode;
   RTLIB::Libcall LC1 = RTLIB::UNKNOWN_LIBCALL, LC2 = RTLIB::UNKNOWN_LIBCALL;
   ISD::CondCode CC1 = ISD::SETCC_INVALID, CC2 = ISD::SETCC_INVALID;
   bool ShouldInvertCC = false;
@@ -525,14 +526,27 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
   EVT OpsVT[2] = { OldLHS.getValueType(),
                    OldRHS.getValueType() };
   CallOptions.setTypeListBeforeSoften(OpsVT, RetVT);
-  auto Call = makeLibCall(DAG, LC1, RetVT, Ops, CallOptions, dl, Chain);
+
+  auto ReportNoLibcall = [&]() {
+    DAG.getContext()->emitError(
+        Twine("no libcall available to soften floating-point ") +
+        ISD::getCondCodeName(OrigCCCode) + " compare with type " +
+        VT.getEVTString());
+    NewLHS = DAG.getPOISON(RetVT);
+    NewRHS = DAG.getConstant(0, dl, RetVT);
+    CCCode = ISD::SETNE;
+  };
+
+  // Check availability before makeLibCall, which fatally errors otherwise.
+  RTLIB::LibcallImpl LC1Impl = DAG.getLibcalls().getLibcallImpl(LC1);
+  if (LC1Impl == RTLIB::Unsupported) {
+    ReportNoLibcall();
+    return;
+  }
+
+  auto Call = makeLibCall(DAG, LC1Impl, RetVT, Ops, CallOptions, dl, Chain);
   NewLHS = Call.first;
   NewRHS = DAG.getConstant(0, dl, RetVT);
-
-  if (DAG.getLibcalls().getLibcallImpl(LC1) == RTLIB::Unsupported) {
-    reportFatalUsageError(
-        "no libcall available to soften floating-point compare");
-  }
 
   CCCode = CC1;
   if (ShouldInvertCC) {
@@ -544,9 +558,10 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
     // Update Chain.
     Chain = Call.second;
   } else {
-    if (DAG.getLibcalls().getLibcallImpl(LC2) == RTLIB::Unsupported) {
-      reportFatalUsageError(
-          "no libcall available to soften floating-point compare");
+    RTLIB::LibcallImpl LC2Impl = DAG.getLibcalls().getLibcallImpl(LC2);
+    if (LC2Impl == RTLIB::Unsupported) {
+      ReportNoLibcall();
+      return;
     }
 
     assert(CCCode == (ShouldInvertCC ? ISD::SETEQ : ISD::SETNE) &&
@@ -560,7 +575,7 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
     }
 
     SDValue Tmp = DAG.getSetCC(dl, SetCCVT, NewLHS, NewRHS, CCCode);
-    auto Call2 = makeLibCall(DAG, LC2, RetVT, Ops, CallOptions, dl, Chain);
+    auto Call2 = makeLibCall(DAG, LC2Impl, RetVT, Ops, CallOptions, dl, Chain);
     CCCode = CC2;
     if (ShouldInvertCC)
       CCCode = getSetCCInverse(CCCode, RetVT);
@@ -12359,6 +12374,13 @@ TargetLowering::getVectorSubVecPointer(SelectionDAG &DAG, SDValue VecPtr,
          "Converting bits to bytes lost precision");
   assert(SubVecVT.getVectorElementType() == EltVT &&
          "Sub-vector must be a vector with matching element type");
+
+  // An out-of-range index only makes the vector operation return poison, but
+  // a load/store through the pointer computed below would be immediate UB, so
+  // freeze the index before clamping it into range.
+  if (!DAG.isGuaranteedNotToBePoison(Index))
+    Index = DAG.getFreeze(Index);
+
   Index = clampDynamicVectorIndex(DAG, Index, VecVT, dl,
                                   SubVecVT.getVectorElementCount());
 
