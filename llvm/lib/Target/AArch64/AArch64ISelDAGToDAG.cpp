@@ -445,7 +445,6 @@ public:
                            unsigned Scale);
 
   bool tryBitfieldExtractOp(SDNode *N);
-  bool tryBitfieldExtractOpFromSExt(SDNode *N);
   bool tryBitfieldInsertOp(SDNode *N);
   bool tryBitfieldInsertInZeroOp(SDNode *N);
   bool tryShiftAmountMod(SDNode *N);
@@ -521,8 +520,7 @@ private:
   bool SelectCMP_SWAP(SDNode *N);
 
   AArch64MemoryHint decodeMemoryHintFlags(MachineMemOperand *MMO) const;
-  bool isAtomicSTSHH_KEEP(SDNode *N) const;
-  bool isAtomicSTSHH_STRM(SDNode *N) const;
+  bool isAtomicMemoryHint(SDNode *N, AArch64MemoryHint Hint) const;
 
   bool SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift,
                           bool Negate);
@@ -3144,30 +3142,6 @@ static bool isBitfieldExtractOpFromShr(SDNode *N, unsigned &Opc, SDValue &Opd0,
   return true;
 }
 
-bool AArch64DAGToDAGISel::tryBitfieldExtractOpFromSExt(SDNode *N) {
-  assert(N->getOpcode() == ISD::SIGN_EXTEND);
-
-  EVT VT = N->getValueType(0);
-  EVT NarrowVT = N->getOperand(0)->getValueType(0);
-  if (VT != MVT::i64 || NarrowVT != MVT::i32)
-    return false;
-
-  uint64_t ShiftImm;
-  SDValue Op = N->getOperand(0);
-  if (!isOpcWithIntImmediate(Op.getNode(), ISD::SRA, ShiftImm))
-    return false;
-
-  SDLoc dl(N);
-  // Extend the incoming operand of the shift to 64-bits.
-  SDValue Opd0 = Widen(CurDAG, Op.getOperand(0));
-  unsigned Immr = ShiftImm;
-  unsigned Imms = NarrowVT.getSizeInBits() - 1;
-  SDValue Ops[] = {Opd0, CurDAG->getTargetConstant(Immr, dl, VT),
-                   CurDAG->getTargetConstant(Imms, dl, VT)};
-  CurDAG->SelectNodeTo(N, AArch64::SBFMXri, VT, Ops);
-  return true;
-}
-
 static bool isBitfieldExtractOp(SelectionDAG *CurDAG, SDNode *N, unsigned &Opc,
                                 SDValue &Opd0, unsigned &Immr, unsigned &Imms,
                                 unsigned NumberOfIgnoredLowBits = 0,
@@ -4697,14 +4671,9 @@ AArch64DAGToDAGISel::decodeMemoryHintFlags(MachineMemOperand *MMO) const {
   return toAArch64MemoryHint(MemoryHint);
 }
 
-bool AArch64DAGToDAGISel::isAtomicSTSHH_KEEP(SDNode *N) const {
-  return decodeMemoryHintFlags(cast<MemSDNode>(N)->getMemOperand()) ==
-         AArch64MemoryHint::STSHH_KEEP;
-}
-
-bool AArch64DAGToDAGISel::isAtomicSTSHH_STRM(SDNode *N) const {
-  return decodeMemoryHintFlags(cast<MemSDNode>(N)->getMemOperand()) ==
-         AArch64MemoryHint::STSHH_STRM;
+bool AArch64DAGToDAGISel::isAtomicMemoryHint(SDNode *N,
+                                             AArch64MemoryHint Hint) const {
+  return decodeMemoryHintFlags(cast<MemSDNode>(N)->getMemOperand()) == Hint;
 }
 
 bool AArch64DAGToDAGISel::SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm,
@@ -5303,11 +5272,6 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
   case ISD::ROTR:
   case ISD::SHL:
     if (tryShiftAmountMod(Node))
-      return;
-    break;
-
-  case ISD::SIGN_EXTEND:
-    if (tryBitfieldExtractOpFromSExt(Node))
       return;
     break;
 
