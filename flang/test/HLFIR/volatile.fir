@@ -5,11 +5,11 @@ func.func @foo() {
   %false = arith.constant false
   %0 = fir.alloca !fir.logical<4> {bindc_name = "a", uniq_name = "_QFEa"}
   %1 = fir.volatile_cast %0 : (!fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>, volatile>
-  %2:2 = hlfir.declare %1 {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFEa"} : (!fir.ref<!fir.logical<4>, volatile>) -> (!fir.ref<!fir.logical<4>, volatile>, !fir.ref<!fir.logical<4>, volatile>)
+  %2:2 = hlfir.declare %1 uniq_name("_QFEa") fortran_attrs<volatile> : (!fir.ref<!fir.logical<4>, volatile>) -> (!fir.ref<!fir.logical<4>, volatile>, !fir.ref<!fir.logical<4>, volatile>)
   %3 = fir.alloca !fir.logical<4> {bindc_name = "b", uniq_name = "_QFEb"}
-  %4:2 = hlfir.declare %3 {uniq_name = "_QFEb"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+  %4:2 = hlfir.declare %3 uniq_name("_QFEb") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
   %5 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
-  %6:2 = hlfir.declare %5 {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %6:2 = hlfir.declare %5 uniq_name("_QFEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %7 = fir.convert %false : (i1) -> !fir.logical<4>
   hlfir.assign %7 to %2#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>, volatile>
   %8 = fir.load %2#0 : !fir.ref<!fir.logical<4>, volatile>
@@ -23,11 +23,11 @@ func.func @foo() {
 // CHECK:           %[[VAL_1:.*]] = arith.constant false
 // CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "a", uniq_name = "_QFEa"}>
 // CHECK:           %[[VAL_3:.*]] = fir.volatile_cast %[[VAL_2]] : (!fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>, volatile>
-// CHECK:           %[[VAL_4:.*]] = fir.declare %[[VAL_3]] {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFEa"} : (!fir.ref<!fir.logical<4>, volatile>) -> !fir.ref<!fir.logical<4>, volatile>
+// CHECK:           %[[VAL_4:.*]] = fir.declare %[[VAL_3]] uniq_name("_QFEa") fortran_attrs<volatile> : (!fir.ref<!fir.logical<4>, volatile>) -> !fir.ref<!fir.logical<4>, volatile>
 // CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "b", uniq_name = "_QFEb"}>
-// CHECK:           %[[VAL_6:.*]] = fir.declare %[[VAL_5]] {uniq_name = "_QFEb"} : (!fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>>
+// CHECK:           %[[VAL_6:.*]] = fir.declare %[[VAL_5]] uniq_name("_QFEb") : (!fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>>
 // CHECK:           %[[VAL_7:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFEi"}>
-// CHECK:           %[[VAL_8:.*]] = fir.declare %[[VAL_7]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:           %[[VAL_8:.*]] = fir.declare %[[VAL_7]] uniq_name("_QFEi") : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_1]] : (i1) -> !fir.logical<4>
 // CHECK:           fir.store %[[VAL_9]] to %[[VAL_4]] : !fir.ref<!fir.logical<4>, volatile>
 // CHECK:           %[[VAL_10:.*]] = fir.load %[[VAL_4]] : !fir.ref<!fir.logical<4>, volatile>
@@ -46,9 +46,9 @@ func.func private @_QFPassign_different_length(%arg0: !fir.boxchar<1> {fir.bindc
     %1:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
     %2 = fir.convert %1#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,3>>
     %3 = fir.volatile_cast %2 : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<!fir.char<1,3>, volatile>
-    %4:2 = hlfir.declare %3 typeparams %c3 dummy_scope %0 {fortran_attrs = #fir.var_attrs<intent_inout, volatile>, uniq_name = "_QFFassign_different_lengthEstring"} : (!fir.ref<!fir.char<1,3>, volatile>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,3>, volatile>, !fir.ref<!fir.char<1,3>, volatile>)
+    %4:2 = hlfir.declare %3 typeparams %c3 dummy_scope %0 uniq_name("_QFFassign_different_lengthEstring") fortran_attrs<intent_inout, volatile> : (!fir.ref<!fir.char<1,3>, volatile>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,3>, volatile>, !fir.ref<!fir.char<1,3>, volatile>)
     %5 = fir.address_of(@_QQclX626F) : !fir.ref<!fir.char<1,2>>
-    %6:2 = hlfir.declare %5 typeparams %c2 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX626F"} : (!fir.ref<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>)
+    %6:2 = hlfir.declare %5 typeparams %c2 uniq_name("_QQclX626F") fortran_attrs<parameter> : (!fir.ref<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>)
     hlfir.assign %6#0 to %4#0 : !fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,3>, volatile>
     return
 }
@@ -60,9 +60,9 @@ func.func private @_QFPassign_different_length(%arg0: !fir.boxchar<1> {fir.bindc
 // CHECK:           %[[VAL_4:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_4]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,3>>
 // CHECK:           %[[VAL_6:.*]] = fir.volatile_cast %[[VAL_5]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<!fir.char<1,3>, volatile>
-// CHECK:           %[[VAL_7:.*]] = fir.declare %[[VAL_6]] typeparams %[[VAL_2]] dummy_scope %[[VAL_3]] {fortran_attrs = #fir.var_attrs<intent_inout, volatile>, uniq_name = "_QFFassign_different_lengthEstring"} : (!fir.ref<!fir.char<1,3>, volatile>, index, !fir.dscope) -> !fir.ref<!fir.char<1,3>, volatile>
+// CHECK:           %[[VAL_7:.*]] = fir.declare %[[VAL_6]] typeparams %[[VAL_2]] dummy_scope %[[VAL_3]] uniq_name("_QFFassign_different_lengthEstring") fortran_attrs<intent_inout, volatile> : (!fir.ref<!fir.char<1,3>, volatile>, index, !fir.dscope) -> !fir.ref<!fir.char<1,3>, volatile>
 // CHECK:           %[[VAL_8:.*]] = fir.address_of(@_QQclX626F) : !fir.ref<!fir.char<1,2>>
-// CHECK:           %[[VAL_9:.*]] = fir.declare %[[VAL_8]] typeparams %[[VAL_1]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX626F"} : (!fir.ref<!fir.char<1,2>>, index) -> !fir.ref<!fir.char<1,2>>
+// CHECK:           %[[VAL_9:.*]] = fir.declare %[[VAL_8]] typeparams %[[VAL_1]] uniq_name("_QQclX626F") fortran_attrs<parameter> : (!fir.ref<!fir.char<1,2>>, index) -> !fir.ref<!fir.char<1,2>>
 // CHECK:           %[[VAL_10:.*]] = arith.cmpi slt, %[[VAL_2]], %[[VAL_1]] : index
 // CHECK:           %[[VAL_11:.*]] = arith.select %[[VAL_10]], %[[VAL_2]], %[[VAL_1]] : index
 // CHECK:           %[[VAL_12:.*]] = arith.constant 1 : i64
