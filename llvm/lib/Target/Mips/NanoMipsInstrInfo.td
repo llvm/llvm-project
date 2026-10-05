@@ -138,16 +138,16 @@ class AddImmediate_Desc<string opstr, Operand Od,
 class CondLogicI32_Desc<string opstr, Operand Od, RegisterOperand RO>
   : ArithLogicINM_Desc<opstr, Od, RO>;
 
-let isMoveReg = 1 in {
-  class MoveBase_Desc
-    : InstNM<(outs GPRNM32NZOpnd:$rt), (ins GPRNM32Opnd:$rs),
-            "move\t$rt, $rs">;
-
-  class MovePBase_Desc<RegisterOperand SR1O, RegisterOperand SR2O,
-                       RegisterOperand DR1O, RegisterOperand DR2O>
-    : InstNM<(outs DR1O:$dst1, DR2O:$dst2), (ins SR1O:$src1, SR2O:$src2),
-            "movep\t$dst1, $dst2, $src1, $src2">;
+class MoveBase_Desc
+  : InstNM<(outs GPRNM32NZOpnd:$rt), (ins GPRNM32Opnd:$rs),
+           "move\t$rt, $rs"> {
+  let isMoveReg = 1;
 }
+
+class MovePBase_Desc<RegisterOperand SR1O, RegisterOperand SR2O,
+                     RegisterOperand DR1O, RegisterOperand DR2O>
+  : InstNM<(outs DR1O:$dst1, DR2O:$dst2), (ins SR1O:$src1, SR2O:$src2),
+           "movep\t$dst1, $dst2, $src1, $src2">;
 
 class Call_Desc<string opstr, DAGOperand calltarget>
   : InstNM<(outs), (ins calltarget:$addr), !strconcat(opstr, "\t$addr")> {
@@ -833,7 +833,7 @@ class CondMove_Desc<string opstr>
   : InstNM<(outs GPRNM32Opnd:$rd),
            (ins GPRNM32Opnd:$rs, GPRNM32Opnd:$rt, GPRNM32Opnd:$F),
            !strconcat(opstr, "\t$rd, $rs, $rt")>,
-    RegConstraint<"$F = $rd">, IsCommutable;
+    RegConstraint<"$F = $rd">;
 
 def MOVZ_NM : CondMove_Desc<"movz">, CondMove_Enc<0b0>;
 def MOVN_NM : CondMove_Desc<"movn">, CondMove_Enc<0b1>;
