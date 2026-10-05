@@ -3388,6 +3388,7 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureWMMAN16Insts, FeatureWMMAF4Insts, FeatureXF32Insts,
   FeatureWavefrontSize32, FeatureWavefrontSize64, FeatureSupportsWGP,
   FeatureSupportsWave32, FeatureFastFMAF32, FeatureFastDenormalF32,
+  FeatureSupportsWave64,
   FeatureSupportsXNACK, FeatureSupportsSRAMECC, FeatureXNACKOnOffModes,
   FeatureSRAMECCOnOffModes,
   FeatureSGPRInitBug, FeatureApertureRegs, FeatureGetDoorbellID,

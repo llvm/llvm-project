@@ -271,6 +271,11 @@ getBufferResourceNumRecordsWidth(Triple::SubArchType SubArch);
 LLVM_ABI unsigned getMaxWavesPerEU(GPUKind AK);
 LLVM_ABI unsigned getMaxWavesPerEU(Triple::SubArchType SubArch);
 
+/// \returns True if both wave32 and wave64 are supported, i.e. the kernel
+/// descriptor's ENABLE_WAVEFRONT_SIZE32 is not reserved.
+LLVM_ABI bool hasSelectableWaveSize(GPUKind AK);
+LLVM_ABI bool hasSelectableWaveSize(Triple::SubArchType SubArch);
+
 /// \returns Minimum flat work group size.
 constexpr unsigned getMinFlatWorkGroupSize() { return 1; }
 

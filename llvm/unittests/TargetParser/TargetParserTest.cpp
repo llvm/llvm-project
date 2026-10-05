@@ -2828,6 +2828,7 @@ TEST(TargetParserTest, testAMDGPUfillAMDGPUFeatureMap) {
   EXPECT_FALSE(HasFeature("gfx1030", "half-addressable-physical-local-memory"));
   EXPECT_FALSE(HasFeature("gfx906", "sramecc-on-off-modes"));
   EXPECT_FALSE(HasFeature("gfx1250", "sramecc-on-off-modes"));
+  EXPECT_FALSE(HasFeature("gfx1200", "supports-wave64"));
 
   // LDS allocation granularity is queried through the bitset only.
   EXPECT_FALSE(HasFeature("gfx600", "lds-alloc-granularity-256"));
@@ -3498,6 +3499,31 @@ TEST(TargetParserTest, testAMDGPUgetMaxWavesPerEU) {
   EXPECT_EQ(AMDGPU::getMaxWavesPerEU(AMDGPU::GK_GFX908), 10u);
   EXPECT_EQ(AMDGPU::getMaxWavesPerEU(AMDGPU::GK_GFX90A), 8u);
   EXPECT_EQ(AMDGPU::getMaxWavesPerEU(AMDGPU::GK_GFX1030), 16u);
+}
+
+TEST(TargetParserTest, testAMDGPUhasSelectableWaveSize) {
+  // Pre-gfx10 is wave64-only and gfx12.5 is wave32-only.
+  EXPECT_FALSE(AMDGPU::hasSelectableWaveSize(AMDGPU::GK_GFX900));
+  EXPECT_FALSE(AMDGPU::hasSelectableWaveSize(AMDGPU::GK_GFX950));
+  EXPECT_TRUE(AMDGPU::hasSelectableWaveSize(AMDGPU::GK_GFX1010));
+  EXPECT_TRUE(AMDGPU::hasSelectableWaveSize(AMDGPU::GK_GFX1100));
+  EXPECT_TRUE(AMDGPU::hasSelectableWaveSize(AMDGPU::GK_GFX1170));
+  EXPECT_TRUE(AMDGPU::hasSelectableWaveSize(AMDGPU::GK_GFX11_7_GENERIC));
+  EXPECT_TRUE(AMDGPU::hasSelectableWaveSize(AMDGPU::GK_GFX1200));
+  EXPECT_TRUE(AMDGPU::hasSelectableWaveSize(AMDGPU::GK_GFX12_GENERIC));
+  EXPECT_FALSE(AMDGPU::hasSelectableWaveSize(AMDGPU::GK_GFX1250));
+  EXPECT_FALSE(AMDGPU::hasSelectableWaveSize(AMDGPU::GK_GFX1250_STRICT));
+  EXPECT_FALSE(AMDGPU::hasSelectableWaveSize(AMDGPU::GK_GFX1251));
+  EXPECT_FALSE(AMDGPU::hasSelectableWaveSize(AMDGPU::GK_GFX12_5_GENERIC));
+  EXPECT_TRUE(AMDGPU::hasSelectableWaveSize(AMDGPU::GK_GFX1310));
+  EXPECT_TRUE(AMDGPU::hasSelectableWaveSize(AMDGPU::GK_GFX13_GENERIC));
+  EXPECT_FALSE(AMDGPU::hasSelectableWaveSize(AMDGPU::GK_NONE));
+
+  // The subarch overload resolves to the same values.
+  EXPECT_FALSE(AMDGPU::hasSelectableWaveSize(Triple::AMDGPUSubArch900));
+  EXPECT_TRUE(AMDGPU::hasSelectableWaveSize(Triple::AMDGPUSubArch1200));
+  EXPECT_FALSE(AMDGPU::hasSelectableWaveSize(Triple::AMDGPUSubArch12_5));
+  EXPECT_TRUE(AMDGPU::hasSelectableWaveSize(Triple::AMDGPUSubArch13));
 }
 
 TEST(TargetParserTest, testAMDGPUParseTargetIDString) {

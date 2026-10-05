@@ -585,6 +585,16 @@ unsigned AMDGPU::getMaxWavesPerEU(Triple::SubArchType SubArch) {
   return getMaxWavesPerEU(getGPUKindFromSubArch(SubArch));
 }
 
+bool AMDGPU::hasSelectableWaveSize(GPUKind AK) {
+  const AMDGPUFeatureBitset &Features = getFeatureBitset(AK);
+  return Features.test(FEAT_SUPPORTS_WAVE32) &&
+         Features.test(FEAT_SUPPORTS_WAVE64);
+}
+
+bool AMDGPU::hasSelectableWaveSize(Triple::SubArchType SubArch) {
+  return hasSelectableWaveSize(getGPUKindFromSubArch(SubArch));
+}
+
 StringRef AMDGPU::getCanonicalArchName(const Triple &T, StringRef Arch) {
   assert(T.isAMDGPU());
   auto ProcKind = T.isAMDGCN() ? parseArchAMDGCN(Arch) : parseArchR600(Arch);
@@ -603,6 +613,7 @@ static const AMDGPUFeatureBitset FrontendOnlyFeatures = {
     FEAT_FAST_FMAF,
     FEAT_FAST_DENORMAL_F32,
     FEAT_SUPPORTS_WAVE32,
+    FEAT_SUPPORTS_WAVE64,
     FEAT_SUPPORTS_WGP,
     FEAT_XNACK_SUPPORT,
     FEAT_SRAMECC_SUPPORT,
