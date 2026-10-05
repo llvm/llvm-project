@@ -850,6 +850,15 @@ void GCNSubtarget::adjustSchedDependency(
     return; // This is not a data dependency anymore.
   }
 
+  // Inline asm's variable explicit inputs are classified as pseudo uses by
+  // the generic physical-register DAG builder and receive zero latency.
+  // Restore the modeled producer latency for explicit inline-asm inputs.
+  if (UseI->getOpcode() == TargetOpcode::INLINEASM &&
+      !UseI->getOperand(UseOpIdx).isImplicit() &&
+      !DefI->getOperand(DefOpIdx).isImplicit())
+    Dep.setLatency(
+        SchedModel->computeOperandLatency(DefI, DefOpIdx, UseI, UseOpIdx));
+
   if (DefI->isBundle()) {
     const SIRegisterInfo *TRI = getRegisterInfo();
     auto Reg = Dep.getReg();

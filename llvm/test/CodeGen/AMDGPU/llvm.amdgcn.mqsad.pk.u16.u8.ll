@@ -19,11 +19,11 @@ define amdgpu_kernel void @v_mqsad_pk_u16_u8(ptr addrspace(1) %out, i64 %src) {
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v1, s3
 ; SI-SDAG-NEXT:    s_movk_i32 s0, 0x64
-; SI-SDAG-NEXT:    s_mov_b32 s5, s1
 ; SI-SDAG-NEXT:    ;;#ASMSTART
 ; SI-SDAG-NEXT:    v_lsrlrev_b64 v[4:5], v[0:1], 1
 ; SI-SDAG-NEXT:    ;;#ASMEND
 ; SI-SDAG-NEXT:    v_mqsad_pk_u16_u8 v[0:1], v[4:5], s0, v[2:3]
+; SI-SDAG-NEXT:    s_mov_b32 s5, s1
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v5, v1
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v4, v0
 ; SI-SDAG-NEXT:    ;;#ASMSTART
@@ -46,9 +46,9 @@ define amdgpu_kernel void @v_mqsad_pk_u16_u8(ptr addrspace(1) %out, i64 %src) {
 ; SI-GISEL-NEXT:    ;;#ASMEND
 ; SI-GISEL-NEXT:    v_mqsad_pk_u16_u8 v[0:1], v[4:5], v6, v[2:3]
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
-; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v5, v1
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v4, v0
+; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    ;;#ASMSTART
 ; SI-GISEL-NEXT:    ;; force constraint
 ; SI-GISEL-NEXT:    ;;#ASMEND
@@ -64,12 +64,12 @@ define amdgpu_kernel void @v_mqsad_pk_u16_u8(ptr addrspace(1) %out, i64 %src) {
 ; VI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v1, s3
-; VI-SDAG-NEXT:    v_mov_b32_e32 v2, s0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-SDAG-NEXT:    ;;#ASMSTART
 ; VI-SDAG-NEXT:    v_lsrlrev_b64 v[4:5], v[0:1], 1
 ; VI-SDAG-NEXT:    ;;#ASMEND
 ; VI-SDAG-NEXT:    v_mqsad_pk_u16_u8 v[0:1], v[4:5], s4, v[6:7]
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, s0
+; VI-SDAG-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v5, v1
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v4, v0
 ; VI-SDAG-NEXT:    ;;#ASMSTART
@@ -91,10 +91,10 @@ define amdgpu_kernel void @v_mqsad_pk_u16_u8(ptr addrspace(1) %out, i64 %src) {
 ; VI-GISEL-NEXT:    v_lsrlrev_b64 v[4:5], v[0:1], 1
 ; VI-GISEL-NEXT:    ;;#ASMEND
 ; VI-GISEL-NEXT:    v_mqsad_pk_u16_u8 v[0:1], v[4:5], v6, v[2:3]
-; VI-GISEL-NEXT:    v_mov_b32_e32 v3, s1
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v5, v1
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v4, v0
+; VI-GISEL-NEXT:    v_mov_b32_e32 v3, s1
+; VI-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-GISEL-NEXT:    ;;#ASMSTART
 ; VI-GISEL-NEXT:    ;; force constraint
 ; VI-GISEL-NEXT:    ;;#ASMEND
@@ -127,12 +127,12 @@ define amdgpu_kernel void @v_mqsad_pk_u16_u8_non_immediate(ptr addrspace(1) %out
 ; SI-SDAG-NEXT:    ;;#ASMEND
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v0, s8
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v1, s9
-; SI-SDAG-NEXT:    s_mov_b32 s4, s0
-; SI-SDAG-NEXT:    s_mov_b32 s5, s1
 ; SI-SDAG-NEXT:    ;;#ASMSTART
 ; SI-SDAG-NEXT:    v_lshlrev_b64 v[6:7], v[0:1], 1
 ; SI-SDAG-NEXT:    ;;#ASMEND
 ; SI-SDAG-NEXT:    v_mqsad_pk_u16_u8 v[0:1], v[2:3], v4, v[6:7]
+; SI-SDAG-NEXT:    s_mov_b32 s4, s0
+; SI-SDAG-NEXT:    s_mov_b32 s5, s1
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v3, v1
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v2, v0
 ; SI-SDAG-NEXT:    ;;#ASMSTART
@@ -162,10 +162,10 @@ define amdgpu_kernel void @v_mqsad_pk_u16_u8_non_immediate(ptr addrspace(1) %out
 ; SI-GISEL-NEXT:    v_lshlrev_b64 v[6:7], v[0:1], 1
 ; SI-GISEL-NEXT:    ;;#ASMEND
 ; SI-GISEL-NEXT:    v_mqsad_pk_u16_u8 v[0:1], v[2:3], v4, v[6:7]
-; SI-GISEL-NEXT:    s_mov_b32 s2, -1
-; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v3, v1
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v2, v0
+; SI-GISEL-NEXT:    s_mov_b32 s2, -1
+; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    ;;#ASMSTART
 ; SI-GISEL-NEXT:    ;; force constraint
 ; SI-GISEL-NEXT:    ;;#ASMEND
@@ -189,12 +189,12 @@ define amdgpu_kernel void @v_mqsad_pk_u16_u8_non_immediate(ptr addrspace(1) %out
 ; VI-SDAG-NEXT:    ;;#ASMEND
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v1, s5
-; VI-SDAG-NEXT:    v_mov_b32_e32 v8, s0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v9, s1
 ; VI-SDAG-NEXT:    ;;#ASMSTART
 ; VI-SDAG-NEXT:    v_lshlrev_b64 v[6:7], v[0:1], 1
 ; VI-SDAG-NEXT:    ;;#ASMEND
 ; VI-SDAG-NEXT:    v_mqsad_pk_u16_u8 v[0:1], v[2:3], v4, v[6:7]
+; VI-SDAG-NEXT:    v_mov_b32_e32 v8, s0
+; VI-SDAG-NEXT:    v_mov_b32_e32 v9, s1
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v3, v1
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v2, v0
 ; VI-SDAG-NEXT:    ;;#ASMSTART
