@@ -2,12 +2,8 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu --regalloc=greedy -verify-machineinstrs < %s | FileCheck --check-prefix=GREEDY_RA %s
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu --regalloc=fast -verify-machineinstrs < %s | FileCheck --check-prefix=FAST_RA %s
 
-; No -O0 RUN line here: -O0 codegen for "rm" is untouched by this patch (see
-; getConstraintPreferences()'s CodeGenOptLevel::None opt-out), and this
-; specific combination -- a register-exhausting "=&rm" output, at -O0 --
-; already hits a separate, pre-existing crash in computeConstraintToUse()
-; ("Can only indirectify direct input operands!") on unmodified upstream
-; main, unrelated to MayFoldRegister. Not this patch's to fix.
+; No -O0 RUN line: -O0 picks memory for "rm", which a direct output like the
+; ones below can't use (see inline-asm-direct-mem-output-error.ll).
 
 ; Exhaust all 14 usable x86 GPRs so the fast allocator has no register left
 ; for the "=&rm" output: 6 inputs consume rdi/rsi/rdx/rcx/r8/r9, and the asm

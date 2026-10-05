@@ -10560,27 +10560,12 @@ computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
     // need to provide an address for the memory input.
     if (OpInfo.ConstraintType == TargetLowering::C_Memory &&
         !OpInfo.isIndirect) {
+      // Only an input has a value to store to memory. A direct output, which
+      // Clang never emits with a memory constraint but other IR can, would
+      // need a stack slot to be reloaded after the asm.
       if (!OpInfo.isMultipleAlternative && OpInfo.Type != InlineAsm::isInput) {
-        // Indirectifying a direct operand this way -- taking the address of
-        // an existing value and switching the operand to reference it in
-        // memory -- only makes sense for an input: there's already a value
-        // to spill and reference by address. An output or clobber has no
-        // value yet (it's about to be produced), so there's nothing to
-        // spill; supporting that would mean synthesizing a stack slot,
-        // threading its address through as an out-parameter, and reloading
-        // the result afterward -- machinery this function doesn't have.
-        //
-        // In practice this is unreachable for Clang-generated IR: Clang only
-        // emits a direct (non-indirect) output for a constraint that
-        // doesn't allow memory at all (or, for an exact register-or-memory
-        // constraint like "rm", above -O0 -- see
-        // TargetLowering::MayFoldRegister and CGStmt.cpp's mirroring
-        // check), so a direct output constraint should never end up
-        // choosing C_Memory here. But hand-written or other-frontend IR can
-        // still construct this shape, so fail with a clean diagnostic
-        // rather than the assertion this used to be.
-        Info.ErrorMsg << TargetLowering::getRegMemInlineAsmUnsupportedDiag(
-            OpInfo.ConstraintCode);
+        Info.ErrorMsg << "cannot handle direct memory outputs yet for "
+                      << "constraint '" << OpInfo.ConstraintCode << "'";
         return true;
       }
 

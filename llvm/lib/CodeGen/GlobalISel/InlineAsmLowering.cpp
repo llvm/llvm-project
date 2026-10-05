@@ -337,24 +337,12 @@ bool InlineAsmLowering::lowerInlineAsm(
     switch (OpInfo.Type) {
     case InlineAsm::isOutput:
       if (OpInfo.ConstraintType == TargetLowering::C_Memory) {
-        // A direct (non-indirect) output has no CallOperandVal -- it's a
-        // return value, not a call argument, so there's nothing to
-        // reference in memory. This is only reachable for an output
-        // constraint whose alternatives include memory (e.g. "rm") if
-        // TargetLowering::supportsRegMemInlineAsmFolding() is false for
-        // this target: with it true, TargetLowering::ParseConstraints()
-        // never lets such a constraint prefer memory in the first place
-        // (see MayFoldRegister), and with it false, the frontend is
-        // expected to have already lowered this to an indirect (pointer
-        // argument) form itself -- see CGStmt.cpp's mirroring check. Fail
-        // with a clean diagnostic rather than dereferencing the null
-        // CallOperandVal below, for the same reason
-        // computeConstraintToUse() in SelectionDAGBuilder.cpp does for the
-        // equivalent SelectionDAG-path case.
+        // A direct output is the call's result, with no address to write to.
         if (!OpInfo.isIndirect) {
           emitInlineAsmError(MIRBuilder, Call,
-                             TargetLowering::getRegMemInlineAsmUnsupportedDiag(
-                                 OpInfo.ConstraintCode),
+                             "cannot handle direct memory outputs yet for "
+                             "constraint '" +
+                                 Twine(OpInfo.ConstraintCode) + "'",
                              GetOrCreateVRegs(Call));
           return true;
         }
