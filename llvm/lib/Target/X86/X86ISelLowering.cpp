@@ -58416,16 +58416,18 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
                           const X86Subtarget &Subtarget) {
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
-  if (N->getOpcode() == ISD::FMA && VT == MVT::v8f16 &&
-      DCI.isBeforeLegalizeOps() && N->getFlags().hasApproximateFuncs() &&
-      Subtarget.hasF16C() && Subtarget.hasAnyFMA() && !Subtarget.hasFP16()) {
+  if (N->getOpcode() == ISD::FMA && DCI.isBeforeLegalizeOps() &&
+      VT.isFixedLengthVector() && VT.getVectorElementType() == MVT::f16 &&
+      N->getFlags().hasApproximateFuncs() && Subtarget.hasF16C() &&
+      Subtarget.hasAnyFMA() && !Subtarget.hasFP16()) {
     // Promote approximate FMA as a whole to avoid the intermediate f16
     // rounding introduced when FMUL and FADD are promoted separately.
     // Exact half FMA must retain the existing legalization path.
-    SDValue A = DAG.getNode(ISD::FP_EXTEND, dl, MVT::v8f32, N->getOperand(0));
-    SDValue B = DAG.getNode(ISD::FP_EXTEND, dl, MVT::v8f32, N->getOperand(1));
-    SDValue C = DAG.getNode(ISD::FP_EXTEND, dl, MVT::v8f32, N->getOperand(2));
-    SDValue Res = DAG.getNode(ISD::FMA, dl, MVT::v8f32, A, B, C, N->getFlags());
+    EVT F32VT = VT.changeVectorElementType(*DAG.getContext(), MVT::f32);
+    SDValue A = DAG.getNode(ISD::FP_EXTEND, dl, F32VT, N->getOperand(0));
+    SDValue B = DAG.getNode(ISD::FP_EXTEND, dl, F32VT, N->getOperand(1));
+    SDValue C = DAG.getNode(ISD::FP_EXTEND, dl, F32VT, N->getOperand(2));
+    SDValue Res = DAG.getNode(ISD::FMA, dl, F32VT, A, B, C, N->getFlags());
     return DAG.getNode(ISD::FP_ROUND, dl, VT, Res,
                        DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
   }
