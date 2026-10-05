@@ -1921,6 +1921,29 @@ static bool generateCastToPtrInst(const SPIRV::IncomingCall *Call,
         .addUse(GR->getSPIRVTypeID(Call->ReturnType))
         .addUse(Call->Arguments[0])
         .addImm(ResSC);
+  } else if (Opcode == SPIRV::OpGenericPtrMemSemantics) {
+    if (GR->getPointerStorageClass(Call->Arguments[0]) !=
+        SPIRV::StorageClass::Generic)
+      return false;
+
+    // Shift the WorkgroupMemory/CrossWorkgroupMemory bits down to
+    // CLK_LOCAL/GLOBAL_MEM_FENCE.
+    MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+    SPIRVTypeInst RetTy = Call->ReturnType;
+    Register SemReg =
+        MRI->createGenericVirtualRegister(MRI->getType(Call->ReturnRegister));
+    MRI->setRegClass(SemReg, GR->getRegClass(RetTy));
+    GR->assignSPIRVTypeToVReg(RetTy, SemReg, MIRBuilder.getMF());
+    MIRBuilder.buildInstr(Opcode)
+        .addDef(SemReg)
+        .addUse(GR->getSPIRVTypeID(RetTy))
+        .addUse(Call->Arguments[0]);
+    Register ShiftReg =
+        GR->buildConstantInt(8, MIRBuilder, RetTy, /*EmitIR=*/true);
+    MIRBuilder.buildInstr(TargetOpcode::G_LSHR)
+        .addDef(Call->ReturnRegister)
+        .addUse(SemReg)
+        .addUse(ShiftReg);
   } else {
     MIRBuilder.buildInstr(TargetOpcode::G_ADDRSPACE_CAST)
         .addDef(Call->ReturnRegister)
