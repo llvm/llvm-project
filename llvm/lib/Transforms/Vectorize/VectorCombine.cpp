@@ -6924,12 +6924,10 @@ bool VectorCombine::foldShuffleOfAdjacentLoads(Instruction &I) {
   //         shuffle 0th operand = HighLoad
   //         shuffle 1st operand = LowLoad
   // Implication with this is shuffle mask for the wide load changes
-  auto RemapMask = [LowLoad, HighLoad, NumElts](ShuffleVectorInst *SV,
-                                                SmallVectorImpl<int> &NewMask) {
+  auto RemapMask = [&](ShuffleVectorInst *SV, SmallVectorImpl<int> &NewMask) {
     Value *SVOp0 = SV->getOperand(0);
-    Value *SVOp1 = SV->getOperand(1);
-    assert(((SVOp0 == LowLoad && SVOp1 == HighLoad) ||
-            (SVOp0 == HighLoad && SVOp1 == LowLoad)) &&
+    assert(((SVOp0 == LowLoad && SV->getOperand(1) == HighLoad) ||
+            (SVOp0 == HighLoad && SV->getOperand(1) == LowLoad)) &&
            "Shuffle operands must be exactly {LowLoad, HighLoad} or {HighLoad, "
            "LowLoad}");
     NewMask.assign(SV->getShuffleMask().begin(), SV->getShuffleMask().end());
