@@ -271,11 +271,13 @@ void ClangTidyContext::setCurrentFile(StringRef File) {
       DiagEngine)
     this->configurationDiag("Invalid implementation file extensions");
   if (const std::optional<std::string> Error =
-          getFilterRegexError(getOptions().HeaderFilterRegex))
+          getFilterRegexError(getOptions().HeaderFilterRegex);
+      Error && DiagEngine)
     this->configurationDiag("Invalid header filter regex '%0': %1")
         << *getOptions().HeaderFilterRegex << *Error;
   if (const std::optional<std::string> Error =
-          getFilterRegexError(getOptions().ExcludeHeaderFilterRegex))
+          getFilterRegexError(getOptions().ExcludeHeaderFilterRegex);
+      Error && DiagEngine)
     this->configurationDiag("Invalid exclude header filter regex '%0': %1")
         << *getOptions().ExcludeHeaderFilterRegex << *Error;
 }
