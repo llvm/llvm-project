@@ -1870,6 +1870,10 @@ enum class MissingAttributeSubjectRulesRecoveryPoint {
 
 MissingAttributeSubjectRulesRecoveryPoint
 getAttributeSubjectRulesRecoveryPointForToken(const Token &Tok) {
+  // Nested `_Pragma` annotations cannot name attribute subject rules.
+  // https://github.com/llvm/llvm-project/issues/225035
+  if (Tok.isAnnotation())
+    return MissingAttributeSubjectRulesRecoveryPoint::None;
   if (const auto *II = Tok.getIdentifierInfo()) {
     if (II->isStr("apply_to"))
       return MissingAttributeSubjectRulesRecoveryPoint::ApplyTo;
@@ -2038,7 +2042,9 @@ void Parser::HandlePragmaAttribute() {
     ParseMicrosoftDeclSpecs(Attrs);
   } else {
     Diag(Tok, diag::err_pragma_attribute_expected_attribute_syntax);
-    if (Tok.getIdentifierInfo()) {
+    // A nested `_Pragma` can produce an annotation token here.
+    // https://github.com/llvm/llvm-project/issues/225035
+    if (!Tok.isAnnotation() && Tok.getIdentifierInfo()) {
       // If we suspect that this is an attribute suggest the use of
       // '__attribute__'.
       if (ParsedAttr::getParsedKind(
