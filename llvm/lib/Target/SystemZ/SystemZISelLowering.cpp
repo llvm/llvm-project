@@ -495,6 +495,14 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       // it with VZERO+VSUM
       setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
 
+      // Custom-lower VECREDUCE_{SMIN,SMAX,UMIN,UMAX} to a halving tree of
+      // native VMN/VMX instructions, avoiding the generic expander's
+      // insert/extract subvector sequence on the illegal v2i32/v1i32 types.
+      setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_UMIN, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
+
       // Map SETCCs onto one of VCE, VCH or VCHL, swapping the operands
       // and inverting the result as necessary.
       setOperationAction(ISD::SETCC, VT, Custom);
@@ -7270,6 +7278,11 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerCTPOP(Op, DAG);
   case ISD::VECREDUCE_ADD:
     return lowerVECREDUCE_ADD(Op, DAG);
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_UMIN:
+  case ISD::VECREDUCE_UMAX:
+    return lowerVECREDUCE_MINMAX(Op, DAG);
   case ISD::ATOMIC_FENCE:
     return lowerATOMIC_FENCE(Op, DAG);
   case ISD::ATOMIC_SWAP:
@@ -11463,6 +11476,40 @@ SDValue SystemZTargetLowering::lowerVECREDUCE_ADD(SDValue Op,
   return DAG.getNode(
       ISD::EXTRACT_VECTOR_ELT, DL, VT, DAG.getBitcast(OpVT, Op),
       DAG.getConstant(OpVT.getVectorNumElements() - 1, DL, MVT::i32));
+}
+
+SDValue SystemZTargetLowering::lowerVECREDUCE_MINMAX(SDValue Op,
+                                                      SelectionDAG &DAG) const {
+  unsigned Opcode = Op.getOpcode();
+  EVT VT = Op.getValueType();
+  SDValue V = Op.getOperand(0);
+  EVT VecVT = V.getValueType();
+  SDLoc DL(Op);
+
+  unsigned EltOp;
+  switch (Opcode) {
+  case ISD::VECREDUCE_SMIN: EltOp = ISD::SMIN; break;
+  case ISD::VECREDUCE_SMAX: EltOp = ISD::SMAX; break;
+  case ISD::VECREDUCE_UMIN: EltOp = ISD::UMIN; break;
+  case ISD::VECREDUCE_UMAX: EltOp = ISD::UMAX; break;
+  default: llvm_unreachable("Unexpected opcode.");
+  }
+
+  unsigned EltBytes = VecVT.getScalarSizeInBits() / 8;
+  unsigned NumElts = VecVT.getVectorNumElements();
+
+  for (unsigned Step = NumElts / 2; Step >= 1; Step /= 2) {
+    unsigned ByteShift = Step * EltBytes;
+    SDValue V16i8 = DAG.getBitcast(MVT::v16i8, V);
+    SDValue Shifted16i8 = DAG.getNode(
+        SystemZISD::SHL_DOUBLE, DL, MVT::v16i8, V16i8, V16i8,
+        DAG.getTargetConstant(ByteShift, DL, MVT::i32));
+    SDValue Shifted = DAG.getBitcast(VecVT, Shifted16i8);
+    V = DAG.getNode(EltOp, DL, VecVT, V, Shifted);
+  }
+
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, V,
+                     DAG.getConstant(0, DL, MVT::i32));
 }
 
 static void printFunctionArgExts(const Function *F, raw_fd_ostream &OS) {

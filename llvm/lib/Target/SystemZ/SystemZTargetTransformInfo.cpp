@@ -1619,12 +1619,25 @@ bool SystemZTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   default:
     return true;
   // Do not expand vector.reduce.add...
-  case Intrinsic::vector_reduce_add:
+  case Intrinsic::vector_reduce_add: {
     auto *VType = cast<FixedVectorType>(II->getOperand(0)->getType());
     // ...unless the scalar size is i64 or larger,
     // or the operand vector is not full, since the
     // performance benefit is dubious in those cases.
     return VType->getScalarSizeInBits() >= 64 ||
            VType->getPrimitiveSizeInBits() < SystemZ::VectorBits;
+  }
+  // Do not expand vector.reduce.{smin,smax,umin,umax}, so they reach ISel
+  // and are custom-lowered by lowerVECREDUCE_MINMAX...
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_smax:
+  case Intrinsic::vector_reduce_umin:
+  case Intrinsic::vector_reduce_umax: {
+    auto *VType = cast<FixedVectorType>(II->getOperand(0)->getType());
+    // ...unless the scalar size is i64 (the generic expansion is already
+    // a single vmrlg + vmn/vmx), or the operand vector is not full.
+    return VType->getScalarSizeInBits() >= 64 ||
+           VType->getPrimitiveSizeInBits() < SystemZ::VectorBits;
+  }
   }
 }
