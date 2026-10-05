@@ -53,6 +53,7 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "llvm/ADT/IntervalMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -370,13 +371,15 @@ generateOperationNumbering(FunctionOpInterface function) {
   return operationToIndexMap;
 }
 
-/// Gather live ranges for SME tiles from the MLIR liveness analysis.
-DenseMap<Value, LiveRange>
+/// Gather live ranges for SME tiles from the MLIR liveness analysis. Uses a
+/// `MapVector` (rather than a `DenseMap`) so that iteration order is
+/// deterministic (insertion order).
+llvm::MapVector<Value, LiveRange>
 gatherTileLiveRanges(DenseMap<Operation *, unsigned> const &operationToIndexMap,
                      LiveRange::Allocator &liveRangeAllocator,
                      Liveness &liveness, FunctionOpInterface function) {
   assert(!operationToIndexMap.empty() && "expected operation numbering");
-  DenseMap<Value, LiveRange> liveRanges;
+  llvm::MapVector<Value, LiveRange> liveRanges;
   /// Defines or updates a live range for an SME tile value. Live-ins may update
   /// an existing live range (rather than define a new one). Note: If
   /// `liveAtBlockEntry` is true then `firstUseOrDef` is the first operation in
@@ -445,8 +448,8 @@ static void forEachPredecessorTileValue(BlockArgument blockArg,
 
 /// Coalesce live ranges where it would prevent unnecessary tile moves.
 SmallVector<LiveRange *>
-coalesceTileLiveRanges(DenseMap<Value, LiveRange> &initialLiveRanges) {
-  DenseMap<Value, LiveRange *> liveRanges;
+coalesceTileLiveRanges(llvm::MapVector<Value, LiveRange> &initialLiveRanges) {
+  llvm::MapVector<Value, LiveRange *> liveRanges;
   for (auto &[value, liveRange] : initialLiveRanges) {
     liveRanges.insert({value, &liveRange});
   }
