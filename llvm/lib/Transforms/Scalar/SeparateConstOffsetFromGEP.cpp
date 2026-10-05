@@ -316,14 +316,11 @@ private:
   ///
   /// \param XorInst The XOR binary operator to analyze
   /// \return Returns the disjoint bits (the extractable offset), or
-  /// std::nullopt if none exist. On success, stores NonDisjointBits in
-  /// NonDisjointXorConstantBits.
+  /// std::nullopt if none exist. On success, records NonDisjointBits as the
+  /// replacement constant.
   std::optional<APInt> extractDisjointBitsFromXor(BinaryOperator *XorInst);
 
-  /// The non-disjoint bits remaining after xor decomposition in
-  /// `extractDisjointBitsFromXor`, which are later used while replacing the
-  /// original xor constant operand.
-  ConstantInt *NonDisjointXorConstantBits = nullptr;
+  DenseMap<ConstantInt *, ConstantInt *> ConstantReplacement;
 
   /// The path from the constant offset to the old GEP index. e.g., if the GEP
   /// index is "a * b + (c + 5)". After running function find, UserChain[0] will
@@ -738,6 +735,8 @@ ConstantOffsetExtractor::find(Value *V, GetElementPtrInst *GEP, Value *Idx,
       return std::nullopt;
     // Hooray, we found it!
     ConstantOffset = CI->getValue();
+    ConstantReplacement[CI] =
+        cast<ConstantInt>(ConstantInt::get(CI->getType(), 0));
   } else if (BinaryOperator *BO = dyn_cast<BinaryOperator>(V)) {
     // Trace into subexpressions for more hoisting opportunities.
     if (canTraceInto(SignExtended, ZeroExtended, BO, GEP, Idx))
@@ -802,14 +801,7 @@ Value *ConstantOffsetExtractor::applyCasts(Value *V) {
 Value *ConstantOffsetExtractor::rebuildWithoutConstOffset() {
   distributeCastsAndCloneChain(UserChain.size() - 1);
   // Remove all nullptrs (used to be sext/zext/trunc) from UserChain.
-  unsigned NewSize = 0;
-  for (User *I : UserChain) {
-    if (I != nullptr) {
-      UserChain[NewSize] = I;
-      NewSize++;
-    }
-  }
-  UserChain.resize(NewSize);
+  erase_if(UserChain, [](User *I) { return I == nullptr; });
   return removeConstOffset(UserChain.size() - 1);
 }
 
@@ -819,7 +811,13 @@ ConstantOffsetExtractor::distributeCastsAndCloneChain(unsigned ChainIndex) {
   if (ChainIndex == 0) {
     assert(isa<ConstantInt>(U));
     // If U is a ConstantInt, applyCasts will return a ConstantInt as well.
-    return UserChain[ChainIndex] = cast<ConstantInt>(applyCasts(U));
+    auto *CI = cast<ConstantInt>(U);
+    auto *CastedCI = cast<ConstantInt>(applyCasts(CI));
+    auto It = ConstantReplacement.find(CI);
+    if (It != ConstantReplacement.end())
+      ConstantReplacement[CastedCI] =
+          cast<ConstantInt>(applyCasts(It->second));
+    return UserChain[ChainIndex] = CastedCI;
   }
 
   if (CastInst *Cast = dyn_cast<CastInst>(U)) {
@@ -852,7 +850,11 @@ ConstantOffsetExtractor::distributeCastsAndCloneChain(unsigned ChainIndex) {
 Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   if (ChainIndex == 0) {
     assert(isa<ConstantInt>(UserChain[ChainIndex]));
-    return ConstantInt::getNullValue(UserChain[ChainIndex]->getType());
+    auto *CI = cast<ConstantInt>(UserChain[ChainIndex]);
+    auto It = ConstantReplacement.find(CI);
+    if (It != ConstantReplacement.end())
+      return It->second;
+    return ConstantInt::getNullValue(CI->getType());
   }
 
   BinaryOperator *BO = cast<BinaryOperator>(UserChain[ChainIndex]);
@@ -865,19 +867,6 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   assert(BO->getOperand(OpNo) == UserChain[ChainIndex - 1]);
   Value *NextInChain = removeConstOffset(ChainIndex - 1);
   Value *TheOther = BO->getOperand(1 - OpNo);
-
-  // When rewriting xor(TheOther, NextInChain) expressions, the original
-  // constant operand is replaced with the non-disjoints bits, which are the
-  // non-extractable bits, i.e., those that must remain in the xor (the other
-  // bits have already compounded the GEP offset).
-  if (BO->getOpcode() == Instruction::Xor) {
-    // The non-disjoint bits are cached in NonDisjointXorConstantBits, which is
-    // always up-to-date.
-    assert(NonDisjointXorConstantBits &&
-           "XOR in UserChain without recorded non-disjoint bits");
-    // Only casts can happen to be distributed among the xor operands.
-    NextInChain = applyCasts(NonDisjointXorConstantBits);
-  }
 
   // If NextInChain is 0 and not the LHS of a sub, we can simplify the
   // sub-expression to be just TheOther.
@@ -943,14 +932,13 @@ ConstantOffsetExtractor::extractDisjointBitsFromXor(BinaryOperator *XorInst) {
   // Compute the remaining bits, i.e., the non-disjoint ones, which are those
   // that must be preserved in the xor.
   const APInt NonDisjointBits = ConstantValue & ~DisjointBits;
-  NonDisjointXorConstantBits =
+  ConstantReplacement[XorConstantOp] =
       ConstantInt::get(XorInst->getContext(), NonDisjointBits);
 
   // UserChain maintains a path from the constant up to the GEP index. Push the
   // xor constant operand, which is the constant leaf of the chain (which is
-  // also what `distributeCastsAndCloneChain` expects). Such a chained operand
-  // is the one to be replaced with the non-disjoint bits, while rebuilding the
-  // xor afterwards. The xor instruction itself is pushed upon returning.
+  // also what `distributeCastsAndCloneChain` expects). The xor instruction
+  // itself is pushed upon returning.
   UserChain.push_back(XorConstantOp);
 
   return DisjointBits;
