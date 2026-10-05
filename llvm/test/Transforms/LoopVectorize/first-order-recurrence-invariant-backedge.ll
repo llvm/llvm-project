@@ -8,10 +8,8 @@
 
 define void @invariant_backedge_phi(
 ; CHECK-LABEL: define void @invariant_backedge_phi(
-; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias readonly [[SRC:%.*]], ptr noalias readonly [[COEFFS:%.*]], i64 [[N:%.*]]) {
+; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias readonly [[SRC:%.*]], double [[INIT:%.*]], ptr noalias readonly [[NEXT_PTR:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[INIT:%.*]] = load double, ptr [[COEFFS]], align 8
-; CHECK-NEXT:    [[NEXT_PTR:%.*]] = getelementptr inbounds double, ptr [[COEFFS]], i64 1
 ; CHECK-NEXT:    [[NEXT:%.*]] = load double, ptr [[NEXT_PTR]], align 8
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
@@ -56,10 +54,8 @@ define void @invariant_backedge_phi(
 ; CHECK-NEXT:    ret void
 ;
   ptr noalias %dst, ptr noalias readonly %src,
-  ptr noalias readonly %coeffs, i64 %n) {
+  double %init, ptr noalias readonly %next.ptr, i64 %n) {
 entry:
-  %init = load double, ptr %coeffs, align 8
-  %next.ptr = getelementptr inbounds double, ptr %coeffs, i64 1
   %next = load double, ptr %next.ptr, align 8
   br label %loop
 
