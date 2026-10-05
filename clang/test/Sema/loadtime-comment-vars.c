@@ -9,6 +9,8 @@
 //   - thread-local variable (__thread, not static storage duration)
 //   - pointer not initialized directly with a string literal
 //   - name-matched variables of an unsupported type (int, unsigned char)
+//   - variables defined as an alias (array and pointer) are diagnosed, while
+//     naming the aliased variable is accepted without diagnostic
 //   - valid const char array — no diagnostic
 //   - a preserved variable counts as used: no -Wunused-const-variable for it,
 //     while an unlisted static const variable still warns
@@ -17,7 +19,7 @@
 // is rejected with an error.
 
 // RUN: %clang_cc1 -triple powerpc64-ibm-aix -Wunused-const-variable \
-// RUN:   -mloadtime-comment-vars=vol_ptr,vol_char,vol_arr,tls_ptr,ind_ptr,const_arr,lfn,kept,notchar,ustr \
+// RUN:   -mloadtime-comment-vars=vol_ptr,vol_char,vol_arr,tls_ptr,ind_ptr,const_arr,lfn,kept,notchar,ustr,alias_arr,alias_ptr,aliasee_arr \
 // RUN:   -fsyntax-only -verify %s
 
 // RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu \
@@ -62,3 +64,11 @@ static const char dropped[] = "@(#) dropped"; // expected-warning {{unused varia
 // it is diagnosed rather than silently ignored.
 static int notchar = 42; // expected-warning {{'notchar' named in '-mloadtime-comment-vars=' does not have a plain char pointer or array type and will not be preserved}}
 static unsigned char ustr[] = "@(#) u"; // expected-warning {{'ustr' named in '-mloadtime-comment-vars=' does not have a plain char pointer or array type and will not be preserved}}
+
+// A variable defined as an alias has no storage of its own and is diagnosed.
+// The aliased variable is the one to name: aliasee_arr is listed and accepted
+// without diagnostic.
+char aliasee_arr[] = "@(#) aliasee arr";
+extern char alias_arr[17] __attribute__((alias("aliasee_arr"))); // expected-warning {{'alias_arr' named in '-mloadtime-comment-vars=' is defined as an alias and will not be preserved}}
+const char *aliasee_ptr = "@(#) aliasee ptr";
+extern const char *alias_ptr __attribute__((alias("aliasee_ptr"))); // expected-warning {{'alias_ptr' named in '-mloadtime-comment-vars=' is defined as an alias and will not be preserved}}

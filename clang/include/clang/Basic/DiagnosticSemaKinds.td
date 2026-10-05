@@ -3873,6 +3873,7 @@ def warn_loadtime_comment_var_not_preserved
               "%StaticDataMember{is a static data member}|"
               "%TemplateSpecialization{is a variable template specialization}|"
               "%Inline{is an inline variable}|"
+              "%Alias{is defined as an alias}|"
               "%UnsupportedType{does not have a plain char pointer or array type}"
               "}1 and will not be preserved">,
       InGroup<LoadtimeCommentVar>;

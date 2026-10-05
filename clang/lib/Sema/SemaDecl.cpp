@@ -15482,8 +15482,10 @@ static void processForLoadTimeCommentVar(Sema &S, VarDecl *VD) {
     return;
 
   // A definition without an initializer carries no string and is silently
-  // skipped.
-  if (!VD->hasInit())
+  // skipped. An alias is the exception: it is a definition without an
+  // initializer, but a name match on it demonstrates intent, so it is
+  // diagnosed below.
+  if (!VD->hasInit() && !VD->hasAttr<AliasAttr>())
     return;
 
   // Extract the character type a pointer points to or an array holds; it is
@@ -15538,6 +15540,10 @@ static void processForLoadTimeCommentVar(Sema &S, VarDecl *VD) {
     // module was built, so the result would depend on option consistency
     // across compilations.
     Reason = diag::LoadTimeCommentVarReason::Inline;
+  else if (VD->hasAttr<AliasAttr>())
+    // An alias has no storage of its own; the string belongs to the
+    // aliasee, which is the variable that has to be named.
+    Reason = diag::LoadTimeCommentVarReason::Alias;
   else if (Pointee.isNull() ||
            !S.Context.hasSameUnqualifiedType(Pointee, S.Context.CharTy))
     // Only plain `char` pointers/arrays are supported. A name match on a
