@@ -829,13 +829,11 @@ define float @fadd_reduce_sqr_sum_varA_not_one_use1(float %a, float %b) {
 
 define float @fadd_reduce_sqr_sum_varA_not_one_use2(float %a, float %b) {
 ; CHECK-LABEL: @fadd_reduce_sqr_sum_varA_not_one_use2(
-; CHECK-NEXT:    [[A_SQ:%.*]] = fmul float [[A:%.*]], [[A]]
-; CHECK-NEXT:    [[TWO_A:%.*]] = fmul float [[A]], 2.000000e+00
-; CHECK-NEXT:    [[TWO_A_PLUS_B:%.*]] = fadd float [[TWO_A]], [[B:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TWO_A_PLUS_B]], [[B]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nsz float [[MUL]], [[A_SQ]]
-; CHECK-NEXT:    tail call void @fake_func(float [[A_SQ]])
-; CHECK-NEXT:    ret float [[ADD]]
+; CHECK-NEXT:    [[A_SQ:%.*]] = fmul float [[A:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[AB:%.*]] = fadd reassoc nsz float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[AB_SQ:%.*]] = fmul reassoc nsz float [[AB:%.*]], [[AB:%.*]]
+; CHECK-NEXT:    tail call void @fake_func(float [[A_SQ:%.*]])
+; CHECK-NEXT:    ret float [[AB_SQ:%.*]]
 ;
   %a_sq = fmul float %a, %a
   %two_a = fmul float %a, 2.0

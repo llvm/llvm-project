@@ -151,7 +151,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   uint64_t ArrayElementCount =
       divideCeil((GlobalSize.getFixedValue() - ConstOffset.getZExtValue()),
                  Stride.getZExtValue());
-  if (ArrayElementCount > MaxArraySizeForCombine)
+  if (ArrayElementCount > CLOpts.maxarray_size)
     return nullptr;
 
   enum { Overdefined = -3, Undefined = -2 };
@@ -488,7 +488,7 @@ static void setInsertionPoint(IRBuilder<> &Builder, Value *V,
                               bool Before = true) {
   if (auto *PHI = dyn_cast<PHINode>(V)) {
     BasicBlock *Parent = PHI->getParent();
-    Builder.SetInsertPoint(Parent, Parent->getFirstInsertionPt());
+    Builder.SetInsertPoint(Parent->getFirstInsertionPt());
     return;
   }
   if (auto *I = dyn_cast<Instruction>(V)) {
@@ -500,7 +500,7 @@ static void setInsertionPoint(IRBuilder<> &Builder, Value *V,
   if (auto *A = dyn_cast<Argument>(V)) {
     // Set the insertion point in the entry block.
     BasicBlock &Entry = A->getParent()->getEntryBlock();
-    Builder.SetInsertPoint(&Entry, Entry.getFirstInsertionPt());
+    Builder.SetInsertPoint(Entry.getFirstInsertionPt());
     return;
   }
   // Otherwise, this is a constant and we don't need to set a new
@@ -4553,6 +4553,32 @@ Instruction *InstCombinerImpl::foldSelectICmp(CmpPredicate Pred, SelectInst *SI,
     return SelectInst::Create(SI->getOperand(0), Op1, Op2, "", nullptr, SI);
   }
 
+  // Fold icmp eq/ne X, select(icmp pred X, P, C1, C2)
+  // When the select condition compares X with a constant P and the select
+  // arms are constants C1/C2, we can fold to a set membership test.
+  // Example: X == select(X >s 0, 2, 0) -> (X == 2) | (X == 0)
+  // This is valid when C1 satisfies the condition (C1 >s 0) and C2 does not.
+  if (ICmpInst::isEquality(Pred)) {
+    CmpPredicate CondPred;
+    const APInt *C1, *C2, *P;
+    if (match(SI,
+              m_OneUse(m_Select(m_ICmp(CondPred, m_Specific(RHS), m_APInt(P)),
+                                m_APInt(C1), m_APInt(C2))))) {
+      bool C1SatisfiesCond = ICmpInst::compare(*C1, *P, CondPred);
+      bool C2SatisfiesCond = ICmpInst::compare(*C2, *P, CondPred);
+
+      if (C1SatisfiesCond && !C2SatisfiesCond) {
+        // X == select(cond, C1, C2) -> (X == C1) | (X == C2)
+        // X != select(cond, C1, C2) -> (X != C1) & (X != C2)
+        Value *Cmp1 = Builder.CreateICmp(Pred, RHS, SI->getTrueValue());
+        Value *Cmp2 = Builder.CreateICmp(Pred, RHS, SI->getFalseValue());
+        if (Pred == ICmpInst::ICMP_EQ)
+          return BinaryOperator::CreateOr(Cmp1, Cmp2);
+        return BinaryOperator::CreateAnd(Cmp1, Cmp2);
+      }
+    }
+  }
+
   return nullptr;
 }
 
@@ -7870,6 +7896,20 @@ Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
       default:
         llvm_unreachable("Invalid predicate!");
       }
+    }
+  }
+
+  {
+    // For a nonzero constant C:
+    // usub.sat(X, C) == X  --> X == 0
+    // usub.sat(X, C) != X  --> X != 0
+    // usub.sat(X, C) <  X  --> X != 0
+    if (match(Op0, m_Intrinsic<Intrinsic::usub_sat>(m_Specific(Op1),
+                                                    m_NonZeroInt())) &&
+        (CmpInst::isEquality(Pred) || Pred == ICmpInst::ICMP_ULT)) {
+      ICmpInst::Predicate NewPred =
+          CmpInst::isEquality(Pred) ? Pred.dropSameSign() : ICmpInst::ICMP_NE;
+      return new ICmpInst(NewPred, Op1, Constant::getNullValue(Op1->getType()));
     }
   }
 
