@@ -7457,25 +7457,32 @@ bool AArch64TTIImpl::isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
                                            int64_t Scale, unsigned AddrSpace,
                                            Instruction *I,
                                            int64_t ScalableOffset) const {
+  LLVMContext &Ctx = Ty->getContext();
+  const AArch64TargetLowering *TLI = getTLI();
+
   // LSR can make an illegal scalable vector access easier to split and combine
   // by preferring a base+register+scalable-offset form. Note: This is an LSR
   // preference rather than a legal machine addressing mode.
   if (!BaseGV && !BaseOffset && HasBaseReg && isa<ScalableVectorType>(Ty)) {
-    EVT VT = getTLI()->getValueType(DL, Ty);
-    uint64_t AccessNumBytes = VT.getStoreSize().getKnownMinValue();
-    if (AccessNumBytes > 16 && getTLI()->getTypeAction(Ty->getContext(), VT) ==
-                                   TargetLowering::TypeSplitVector) {
-      EVT LegalVT = getTLI()->getLegalTypeToTransformTo(Ty->getContext(), VT);
-      uint64_t VecNumBytes = LegalVT.getStoreSize().getKnownMinValue();
-      if (LegalVT.getVectorElementType() == VT.getVectorElementType() &&
-          VecNumBytes <= 16 && AccessNumBytes % VecNumBytes == 0 &&
-          isPowerOf2_64(VecNumBytes)) {
+    EVT MemVT = TLI->getValueType(DL, Ty);
+    TargetLowering::LegalizeTypeAction Action = TLI->getTypeAction(Ctx, MemVT);
+
+    // Note: If MemVT cannot be legalized (e.g. no scalable vectors) then
+    // LegalVT could be MVT::Other (which would assert on getStoreSize()).
+    EVT LegalVT = TLI->getLegalTypeToTransformTo(Ctx, MemVT);
+    if (LegalVT.isScalableVT() && Action == TargetLowering::TypeSplitVector) {
+      uint64_t LegalNumBytes = LegalVT.getStoreSize().getKnownMinValue();
+      uint64_t MemNumBytes = MemVT.getStoreSize().getKnownMinValue();
+
+      // Check the vector has simply been split (no type promotion inbetween).
+      if (LegalVT.getVectorElementType() == MemVT.getVectorElementType() &&
+          MemNumBytes % LegalNumBytes == 0) {
         // Don't prefer scaled access if the type may need splitting. Only the
-        // first access can use the scaled offset. Latter accesses need to
+        // first access can use the scaled offset. Later accesses need to
         // materialize a new base + mul vl offset.
         if (Scale)
           return false;
-        if (ScalableOffset && ScalableOffset % VecNumBytes == 0)
+        if (ScalableOffset && ScalableOffset % LegalNumBytes == 0)
           return true;
       }
     }
