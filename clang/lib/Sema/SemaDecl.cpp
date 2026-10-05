@@ -15517,8 +15517,8 @@ static void processForLoadTimeCommentVar(Sema &S, VarDecl *VD) {
   if (!S.LoadTimeCommentVarNameGenerator)
     S.LoadTimeCommentVarNameGenerator =
         std::make_unique<ASTNameGenerator>(S.Context);
-  if (!S.getLangOpts().isLoadTimeCommentVar(
-          S.LoadTimeCommentVarNameGenerator->getName(VD)))
+  if (!llvm::is_contained(S.getLangOpts().LoadTimeCommentVars,
+                          S.LoadTimeCommentVarNameGenerator->getName(VD)))
     return;
 
   std::optional<unsigned> Reason;
