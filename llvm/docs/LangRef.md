@@ -28632,3 +28632,9 @@ whose address escapes, are unpoisoned at every
 `llvm.sanitizer.instrumentation.begin` they dominate. Calls to variadic
 functions inside regions publish the shadow of the variadic arguments;
 `va_start` and `va_copy` are not instrumented in such a function.
+
+AddressSanitizer supports regions in functions that lack the `sanitize_address`
+attribute or are marked with `disable_sanitizer_instrumentation`. Inside
+regions, memory accesses and memory intrinsics are instrumented. The stack frame
+of such a function is not instrumented, accesses to its own `alloca`s are not
+checked, and no `__asan_handle_no_return` calls are inserted.
