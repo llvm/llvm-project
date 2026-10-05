@@ -69,6 +69,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeCompressEVEXLegacyPass(PR);
   initializeFixupLEAsLegacyPass(PR);
   initializeX86FPStackifierLegacyPass(PR);
+  initializeX86FenceNonTemporalStoresLegacyPass(PR);
   initializeX86FixupSetCCLegacyPass(PR);
   initializeX86CallFrameOptimizationLegacyPass(PR);
   initializeX86CmovConversionLegacyPass(PR);
@@ -352,7 +353,7 @@ namespace {
 class X86PassConfig : public TargetPassConfig {
 public:
   X86PassConfig(X86TargetMachine &TM, PassManagerBase &PM)
-    : TargetPassConfig(TM, PM) {}
+      : TargetPassConfig(TM, PM) {}
 
   X86TargetMachine &getX86TargetMachine() const {
     return getTM<X86TargetMachine>();
@@ -393,10 +394,10 @@ char X86ExecutionDomainFix::ID;
 } // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(X86ExecutionDomainFix, "x86-execution-domain-fix",
-  "X86 Execution Domain Fix", false, false)
+                      "X86 Execution Domain Fix", false, false)
 INITIALIZE_PASS_DEPENDENCY(ReachingDefInfoWrapperPass)
 INITIALIZE_PASS_END(X86ExecutionDomainFix, "x86-execution-domain-fix",
-  "X86 Execution Domain Fix", false, false)
+                    "X86 Execution Domain Fix", false, false)
 
 TargetPassConfig *X86TargetMachine::createPassConfig(PassManagerBase &PM) {
   return new X86PassConfig(*this, PM);
@@ -437,6 +438,8 @@ void X86PassConfig::addIRPasses() {
 
   if (TM->Options.JMCInstrument)
     addPass(createJMCInstrumenterPass());
+
+  addPass(createX86FenceNonTemporalStoresLegacyPass());
 }
 
 bool X86PassConfig::addInstSelector() {

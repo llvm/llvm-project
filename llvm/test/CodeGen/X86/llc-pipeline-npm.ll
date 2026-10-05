@@ -30,6 +30,7 @@
 ; O0-NEXT:   scalarize-masked-mem-intrin
 ; O0-NEXT:   expand-reductions
 ; O0-NEXT:   indirectbr-expand
+; O0-NEXT:   x86-fence-nontemporal-stores
 ; O0-NEXT:   dwarf-eh-prepare
 ; O0-NEXT:   inline-asm-prepare
 ; O0-NEXT:   safe-stack
@@ -112,6 +113,7 @@
 ; O2-NEXT:   interleaved-access
 ; O2-NEXT:   x86-partial-reduction
 ; O2-NEXT:   indirectbr-expand
+; O2-NEXT:   x86-fence-nontemporal-stores
 ; O2-NEXT:   codegenprepare
 ; O2-NEXT:   dwarf-eh-prepare
 ; O2-NEXT:   inline-asm-prepare
@@ -233,6 +235,7 @@
 ; O0-WINDOWS-NEXT:   expand-reductions
 ; O0-WINDOWS-NEXT:   indirectbr-expand
 ; O0-WINDOWS-NEXT:   cfguard
+; O0-WINDOWS-NEXT:   x86-fence-nontemporal-stores
 ; O0-WINDOWS-NEXT:   win-eh-prepare
 ; O0-WINDOWS-NEXT:   dwarf-eh-prepare
 ; O0-WINDOWS-NEXT:   inline-asm-prepare
@@ -319,6 +322,7 @@
 ; O3-WINDOWS-NEXT:   x86-partial-reduction
 ; O3-WINDOWS-NEXT:   indirectbr-expand
 ; O3-WINDOWS-NEXT:   cfguard
+; O3-WINDOWS-NEXT:   x86-fence-nontemporal-stores
 ; O3-WINDOWS-NEXT:   codegenprepare
 ; O3-WINDOWS-NEXT:   win-eh-prepare
 ; O3-WINDOWS-NEXT:   dwarf-eh-prepare
