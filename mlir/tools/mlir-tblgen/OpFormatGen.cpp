@@ -2032,7 +2032,7 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
         }
       } else {
         for (FormatElement *el : pelement)
-          genElementParser(el, body, attrTypeCtx);
+          genElementParser(el, body, attrTypeCtx, GenContext::Optional);
       }
       body << "    } else ";
     }
