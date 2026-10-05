@@ -3529,16 +3529,24 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, GLoadStore &LdSt) {
   MachineInstrBuilder Two = B.buildConstant(I32, 2);
   const MachineInstrBuilder Index = B.buildLShr(I32, PtrAsInt, Two);
 
+  // Pointers go through integers: a scalar pointer cannot be bitcast, and not
+  // every pointer type has a selection pattern.
+  LLT IntTy = ValTy;
+  if (ValTy.isPointerOrPointerVector())
+    IntTy = ValTy.changeElementType(LLT::integer(ValTy.getScalarSizeInBits()));
+
   // Normalize to i32 / <N x i32> so a selection pattern exists (e.g. v4i8).
-  LLT RegTy = ValTy;
-  if (ValTy.getScalarSizeInBits() != 32) {
+  LLT RegTy = IntTy;
+  if (IntTy.getScalarSizeInBits() != 32) {
     unsigned NumDwords = ValSize / 32;
     RegTy = NumDwords == 1 ? I32 : LLT::fixed_vector(NumDwords, I32);
   }
 
   if (IsStore) {
     Register Value = ValReg;
-    if (RegTy != ValTy)
+    if (IntTy != ValTy)
+      Value = B.buildPtrToInt(IntTy, Value).getReg(0);
+    if (RegTy != IntTy)
       Value = B.buildBitcast(RegTy, Value).getReg(0);
     B.buildInstr(AMDGPU::G_AMDGPU_REG_STORE, {}, {Value, Index.getReg(0)})
         .addMemOperand(&MMO);
@@ -3546,10 +3554,17 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, GLoadStore &LdSt) {
     B.buildInstr(AMDGPU::G_AMDGPU_REG_LOAD, {ValReg}, {Index.getReg(0)})
         .addMemOperand(&MMO);
   } else {
-    const MachineInstrBuilder Result =
+    Register Result =
         B.buildInstr(AMDGPU::G_AMDGPU_REG_LOAD, {RegTy}, {Index.getReg(0)})
-            .addMemOperand(&MMO);
-    B.buildBitcast(ValReg, Result);
+            .addMemOperand(&MMO)
+            .getReg(0);
+    if (IntTy == ValTy) {
+      B.buildBitcast(ValReg, Result);
+    } else {
+      if (RegTy != IntTy)
+        Result = B.buildBitcast(IntTy, Result).getReg(0);
+      B.buildIntToPtr(ValReg, Result);
+    }
   }
 
   LdSt.eraseFromParent();
@@ -3565,9 +3580,6 @@ bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
   Register PtrReg = MI.getOperand(1).getReg();
   LLT PtrTy = MRI.getType(PtrReg);
   unsigned AddrSpace = PtrTy.getAddressSpace();
-
-  if (AddrSpace == AMDGPUAS::VGPR && MI.getOpcode() == AMDGPU::G_LOAD)
-    return lowerLoadStoreVGPR(Helper, cast<GLoadStore>(MI));
 
   if (AddrSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
     LLT ConstPtr = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
@@ -3590,6 +3602,9 @@ bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
     Observer.changedInstr(MI);
     return true;
   }
+
+  if (AddrSpace == AMDGPUAS::VGPR)
+    return lowerLoadStoreVGPR(Helper, cast<GLoadStore>(MI));
 
   MachineMemOperand *MMO = *MI.memoperands_begin();
   const unsigned ValSize = ValTy.getSizeInBits();
@@ -3657,16 +3672,16 @@ bool AMDGPULegalizerInfo::legalizeStore(LegalizerHelper &Helper,
   Register DataReg = MI.getOperand(0).getReg();
   LLT DataTy = MRI.getType(DataReg);
 
-  if (MRI.getType(MI.getOperand(1).getReg()).getAddressSpace() ==
-      AMDGPUAS::VGPR)
-    return lowerLoadStoreVGPR(Helper, cast<GLoadStore>(MI));
-
   if (hasBufferRsrcWorkaround(DataTy)) {
     Observer.changingInstr(MI);
     castBufferRsrcArgToV4I32(MI, B, 0);
     Observer.changedInstr(MI);
     return true;
   }
+
+  if (MRI.getType(MI.getOperand(1).getReg()).getAddressSpace() ==
+      AMDGPUAS::VGPR)
+    return lowerLoadStoreVGPR(Helper, cast<GLoadStore>(MI));
   return false;
 }
 
