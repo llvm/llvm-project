@@ -424,10 +424,15 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
   const llvm::Triple &T = getTriple();
 
   if (usesAMDGPUABI(T)) {
-    bool CoerceGenericPtrArgToGlobal =
+    llvm::abi::AMDGPUABIOptions Opts;
+    Opts.PrivateAddrSpace =
+        getContext().getTargetAddressSpace(LangAS::opencl_private);
+    Opts.ConstantAddrSpace =
+        getContext().getTargetAddressSpace(LangAS::opencl_constant);
+    Opts.GenericAddrSpace = getContext().getTargetAddressSpace(LangAS::Default);
+    Opts.CoerceGenericPtrArgToGlobal =
         T.isSPIRV() ? getLangOpts().isTargetDevice() : getLangOpts().HIP;
-    TheLLVMABITargetInfo =
-        llvm::abi::createAMDGPUTargetInfo(TB, CoerceGenericPtrArgToGlobal);
+    TheLLVMABITargetInfo = llvm::abi::createAMDGPUTargetInfo(TB, Opts);
     return *TheLLVMABITargetInfo;
   }
 
