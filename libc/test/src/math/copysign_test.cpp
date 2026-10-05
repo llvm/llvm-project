@@ -10,4 +10,4 @@
 
 #include "src/math/copysign.h"
 
-LIST_COPYSIGN_TESTS(double, LIBC_NAMESPACE::copysign)
+LIST_COPYSIGN_TESTS(Copysign, double, LIBC_NAMESPACE::copysign)

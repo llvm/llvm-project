@@ -1,11 +1,8 @@
-! REQUIRES: openmp_runtime
-
 ! RUN: %python %S/../test_errors.py %s %flang %openmp_flags
 ! OpenMP version 5.0.0
 ! 2.13.3 parallel sections Construct
 ! The restrictions for the parallel construct and the sections construct apply
 program OmpConstructSections01
-   use omp_lib
    integer :: section_count = 0
    integer, parameter :: NT = 4
    integer :: i, array(10)

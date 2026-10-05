@@ -10,4 +10,4 @@
 
 #include "src/math/fma.h"
 
-LIST_FMA_TESTS(double, LIBC_NAMESPACE::fma)
+LIST_FMA_TESTS(Fma, double, LIBC_NAMESPACE::fma)

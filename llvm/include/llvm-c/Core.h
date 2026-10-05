@@ -58,6 +58,7 @@ LLVM_C_EXTERN_C_BEGIN
 
 /// External users depend on the following values being stable. It is not safe
 /// to reorder them.
+// clang-format off
 typedef enum {
   /* Terminator Instructions */
   LLVMRet            = 1,
@@ -133,6 +134,8 @@ typedef enum {
   LLVMExtractValue   = 53,
   LLVMInsertValue    = 54,
   LLVMFreeze         = 68,
+  LLVMBitInsert      = 72,
+  LLVMBitExtract     = 73,
 
   /* Atomic operators */
   LLVMFence          = 55,
@@ -148,6 +151,7 @@ typedef enum {
   LLVMCleanupPad     = 64,
   LLVMCatchSwitch    = 65
 } LLVMOpcode;
+// clang-format on
 
 typedef enum {
   LLVMVoidTypeKind = 0,     /**< type with no size */
@@ -2747,8 +2751,12 @@ LLVM_C_ABI LLVMValueRef LLVMConstantPtrAuth(LLVMValueRef Ptr, LLVMValueRef Key,
  * @{
  */
 LLVM_C_ABI LLVMOpcode LLVMGetConstOpcode(LLVMValueRef ConstantVal);
-LLVM_C_ABI LLVMValueRef LLVMAlignOf(LLVMTypeRef Ty);
-LLVM_C_ABI LLVMValueRef LLVMSizeOf(LLVMTypeRef Ty);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMAlignOf(LLVMTypeRef Ty),
+    "Create a constant based on LLVMABIAlignmentOfType() instead");
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMSizeOf(LLVMTypeRef Ty),
+    "Create a constant based on LLVMABISizeOfType() instead");
 LLVM_C_ABI LLVMValueRef LLVMConstNeg(LLVMValueRef ConstantVal);
 LLVM_C_ABI LLVMValueRef LLVMConstNSWNeg(LLVMValueRef ConstantVal);
 LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
@@ -5141,6 +5149,14 @@ LLVM_C_ABI LLVMValueRef LLVMBuildInsertValue(LLVMBuilderRef,
                                              unsigned Index, const char *Name);
 LLVM_C_ABI LLVMValueRef LLVMBuildFreeze(LLVMBuilderRef, LLVMValueRef Val,
                                         const char *Name);
+LLVM_C_ABI LLVMValueRef LLVMBuildBitExtract(LLVMBuilderRef, LLVMTypeRef Type,
+                                            LLVMValueRef Src,
+                                            LLVMValueRef Offset,
+                                            const char *Name);
+LLVM_C_ABI LLVMValueRef LLVMBuildBitInsert(LLVMBuilderRef, LLVMValueRef Base,
+                                           LLVMValueRef Val,
+                                           LLVMValueRef Offset,
+                                           const char *Name);
 
 LLVM_C_ABI LLVMValueRef LLVMBuildIsNull(LLVMBuilderRef, LLVMValueRef Val,
                                         const char *Name);
@@ -5347,6 +5363,135 @@ LLVM_C_ABI void LLVMStopMultithreaded(void);
 /** Check whether LLVM is executing in thread-safe mode or not.
     @see llvm::llvm_is_multithreaded */
 LLVM_C_ABI LLVMBool LLVMIsMultithreaded(void);
+
+/**
+ * @}
+ */
+
+/**
+ * @defgroup LLVMCCoreDataLayout Data Layout
+ *
+ * @{
+ */
+
+enum LLVMByteOrdering { LLVMBigEndian, LLVMLittleEndian };
+
+typedef struct LLVMOpaqueTargetData *LLVMTargetDataRef;
+
+/**
+ * Obtain the data layout for a module.
+ *
+ * @see Module::getDataLayout()
+ */
+LLVM_C_ABI LLVMTargetDataRef LLVMGetModuleDataLayout(LLVMModuleRef M);
+
+/**
+ * Set the data layout for a module.
+ *
+ * @see Module::setDataLayout()
+ */
+LLVM_C_ABI void LLVMSetModuleDataLayout(LLVMModuleRef M, LLVMTargetDataRef DL);
+
+/** Creates target data from a target layout string.
+    See the constructor llvm::DataLayout::DataLayout. */
+LLVM_C_ABI LLVMTargetDataRef LLVMCreateTargetData(const char *StringRep);
+
+/** Deallocates a TargetData.
+    See the destructor llvm::DataLayout::~DataLayout. */
+LLVM_C_ABI void LLVMDisposeTargetData(LLVMTargetDataRef TD);
+
+/** Converts target data to a target layout string. The string must be disposed
+    with LLVMDisposeMessage.
+    See the constructor llvm::DataLayout::DataLayout. */
+LLVM_C_ABI char *LLVMCopyStringRepOfTargetData(LLVMTargetDataRef TD);
+
+/** Returns the byte order of a target, either LLVMBigEndian or
+    LLVMLittleEndian.
+    See the method llvm::DataLayout::isLittleEndian. */
+LLVM_C_ABI enum LLVMByteOrdering LLVMByteOrder(LLVMTargetDataRef TD);
+
+/** Returns the pointer size in bytes for a target.
+    See the method llvm::DataLayout::getPointerSize. */
+LLVM_C_ABI unsigned LLVMPointerSize(LLVMTargetDataRef TD);
+
+/** Returns the pointer size in bytes for a target for a specified
+    address space.
+    See the method llvm::DataLayout::getPointerSize. */
+LLVM_C_ABI unsigned LLVMPointerSizeForAS(LLVMTargetDataRef TD, unsigned AS);
+
+/** Returns the integer type that is the same size as a pointer on a target.
+    See the method llvm::DataLayout::getIntPtrType. */
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMIntPtrType(LLVMTargetDataRef TD),
+                            "Use of the global context is deprecated, use "
+                            "LLVMIntPtrTypeInContext instead");
+
+/** Returns the integer type that is the same size as a pointer on a target.
+    This version allows the address space to be specified.
+    See the method llvm::DataLayout::getIntPtrType. */
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMTypeRef LLVMIntPtrTypeForAS(LLVMTargetDataRef TD, unsigned AS),
+    "Use of the global context is deprecated, use LLVMIntPtrTypeForASInContext "
+    "instead");
+
+/** Returns the integer type that is the same size as a pointer on a target.
+    See the method llvm::DataLayout::getIntPtrType. */
+LLVM_C_ABI LLVMTypeRef LLVMIntPtrTypeInContext(LLVMContextRef C,
+                                               LLVMTargetDataRef TD);
+
+/** Returns the integer type that is the same size as a pointer on a target.
+    This version allows the address space to be specified.
+    See the method llvm::DataLayout::getIntPtrType. */
+LLVM_C_ABI LLVMTypeRef LLVMIntPtrTypeForASInContext(LLVMContextRef C,
+                                                    LLVMTargetDataRef TD,
+                                                    unsigned AS);
+
+/** Computes the size of a type in bits for a target.
+    See the method llvm::DataLayout::getTypeSizeInBits. */
+LLVM_C_ABI unsigned long long LLVMSizeOfTypeInBits(LLVMTargetDataRef TD,
+                                                   LLVMTypeRef Ty);
+
+/** Computes the storage size of a type in bytes for a target.
+    See the method llvm::DataLayout::getTypeStoreSize. */
+LLVM_C_ABI unsigned long long LLVMStoreSizeOfType(LLVMTargetDataRef TD,
+                                                  LLVMTypeRef Ty);
+
+/** Computes the ABI size of a type in bytes for a target.
+    See the method llvm::DataLayout::getTypeAllocSize. */
+LLVM_C_ABI unsigned long long LLVMABISizeOfType(LLVMTargetDataRef TD,
+                                                LLVMTypeRef Ty);
+
+/** Computes the ABI alignment of a type in bytes for a target.
+    See the method llvm::DataLayout::getTypeABISize. */
+LLVM_C_ABI unsigned LLVMABIAlignmentOfType(LLVMTargetDataRef TD,
+                                           LLVMTypeRef Ty);
+
+/** Computes the call frame alignment of a type in bytes for a target.
+    See the method llvm::DataLayout::getTypeABISize. */
+LLVM_C_ABI unsigned LLVMCallFrameAlignmentOfType(LLVMTargetDataRef TD,
+                                                 LLVMTypeRef Ty);
+
+/** Computes the preferred alignment of a type in bytes for a target.
+    See the method llvm::DataLayout::getTypeABISize. */
+LLVM_C_ABI unsigned LLVMPreferredAlignmentOfType(LLVMTargetDataRef TD,
+                                                 LLVMTypeRef Ty);
+
+/** Computes the preferred alignment of a global variable in bytes for a target.
+    See the method llvm::DataLayout::getPreferredAlignment. */
+LLVM_C_ABI unsigned LLVMPreferredAlignmentOfGlobal(LLVMTargetDataRef TD,
+                                                   LLVMValueRef GlobalVar);
+
+/** Computes the structure element that contains the byte offset for a target.
+    See the method llvm::StructLayout::getElementContainingOffset. */
+LLVM_C_ABI unsigned LLVMElementAtOffset(LLVMTargetDataRef TD,
+                                        LLVMTypeRef StructTy,
+                                        unsigned long long Offset);
+
+/** Computes the byte offset of the indexed struct element for a target.
+    See the method llvm::StructLayout::getElementContainingOffset. */
+LLVM_C_ABI unsigned long long LLVMOffsetOfElement(LLVMTargetDataRef TD,
+                                                  LLVMTypeRef StructTy,
+                                                  unsigned Element);
 
 /**
  * @}

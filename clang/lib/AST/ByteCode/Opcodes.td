@@ -31,6 +31,7 @@ def Float : Type;
 def Ptr : Type;
 def MemberPtr : Type;
 def FixedPoint : Type;
+def Reflect : Type;
 
 //===----------------------------------------------------------------------===//
 // Types transferred to the interpreter.
@@ -55,6 +56,7 @@ def ArgFixedPoint : ArgType { let Name = "FixedPoint"; let AsRef = true; }
 def ArgFunction : ArgType { let Name = "const Function *"; }
 def ArgFunctionDecl : ArgType { let Name = "const FunctionDecl *"; }
 def ArgRecordDecl : ArgType { let Name = "const RecordDecl *"; }
+def ArgCXXRecordDecl : ArgType { let Name = "const CXXRecordDecl *"; }
 def ArgRecordField : ArgType { let Name = "const Record::Field *"; }
 def ArgFltSemantics : ArgType { let Name = "const llvm::fltSemantics *"; }
 def ArgRoundingMode : ArgType { let Name = "llvm::RoundingMode"; }
@@ -71,6 +73,10 @@ def ArgDesc : ArgType { let Name = "const Descriptor *"; }
 def ArgPrimType : ArgType { let Name = "PrimType"; }
 def ArgEnumDecl : ArgType { let Name = "const EnumDecl *"; }
 def ArgTypePtr : ArgType { let Name = "const Type *"; }
+def ArgVoidPtr : ArgType { let Name = "const void *"; }
+def ArgReflectionKind : ArgType { let Name = "ReflectionKind"; }
+def ArgDeclOrExpr : ArgType { let Name = "DeclOrExpr"; }
+def ArgCtorDecl : ArgType { let Name = "const CXXConstructorDecl *"; }
 
 //===----------------------------------------------------------------------===//
 // Classes of types instructions operate on.
@@ -121,7 +127,7 @@ def NonPtrTypeClass : TypeClass {
 }
 
 def AllTypeClass : TypeClass {
-  let Types = !listconcat(AluTypeClass.Types, PtrTypeClass.Types, FloatTypeClass.Types);
+  let Types = !listconcat(AluTypeClass.Types, PtrTypeClass.Types, FloatTypeClass.Types, [Reflect]);
 }
 
 def ComparableTypeClass : TypeClass {
@@ -187,6 +193,9 @@ def PushIgnoreDiags : SuccessOpcode;
 def PopIgnoreDiags : SuccessOpcode;
 
 def StartInit : SuccessOpcode;
+def StartFieldInit : SuccessOpcode {
+  let Args = [ArgUint32];
+}
 def EndInit : SuccessOpcode;
 
 def StartSpeculation : SuccessOpcode;
@@ -321,12 +330,18 @@ def Null : SuccessOpcode {
   let HasGroup = 1;
 }
 
+def CastAddressSpace : Opcode {
+  let Args = [ArgUint64, ArgTypePtr];
+}
+
 //===----------------------------------------------------------------------===//
 // Pointer generation
 //===----------------------------------------------------------------------===//
 class OffsetOpcode : Opcode {
   let Args = [ArgUint32];
 }
+
+def AddrOf : Opcode;
 
 // [] -> [Pointer]
 def GetPtrLocal : OffsetOpcode {
@@ -368,6 +383,10 @@ def CastMemberPtrDerivedPop : Opcode {
   let NeedsOpPC = 0;
 }
 
+def ReflectValue : Opcode {
+  let Args = [ArgReflectionKind, ArgVoidPtr];
+}
+
 def FinishInitPop : SuccessOpcode;
 def FinishInit : SuccessOpcode;
 def FinishInitActivate : SuccessOpcode;
@@ -379,11 +398,11 @@ def GetPtrDerivedPop : Opcode { let Args = [ArgUint32, ArgBool, ArgTypePtr]; }
 // [Pointer] -> [Pointer]
 def GetPtrVirtBasePop : Opcode {
   // RecordDecl of base class.
-  let Args = [ArgRecordDecl];
+  let Args = [ArgCXXRecordDecl];
 }
 def GetPtrVirtBase : Opcode {
   // RecordDecl of base class.
-  let Args = [ArgRecordDecl];
+  let Args = [ArgCXXRecordDecl];
 }
 
 def IsBaseClass : SuccessOpcode;
@@ -397,7 +416,7 @@ def GetPtrThisBase : Opcode {
 // [] -> [Pointer]
 def GetPtrThisVirtBase : Opcode {
   // RecordDecl of base class.
-  let Args = [ArgRecordDecl];
+  let Args = [ArgCXXRecordDecl];
 }
 // [] -> [Pointer]
 def This : Opcode;
@@ -473,6 +492,10 @@ def StartThisLifetime : Opcode {
 }
 def StartThisLifetime1 : Opcode {
   let NeedsOpPC = 0;
+}
+
+def DefaultInit : Opcode {
+  let Args = [ArgCtorDecl];
 }
 
 def CheckDecl : Opcode {
@@ -615,7 +638,7 @@ def AddOffset : Opcode {
 }
 
 def GetOpaquePtr : SuccessOpcode {
-  let Args = [ArgValueDecl, ArgBool];
+  let Args = [ArgDeclOrExpr, ArgBool];
 }
 
 // [Pointer, Integral] -> [Pointer]
@@ -856,7 +879,7 @@ def ShiftFixedPoint : Opcode {
 }
 
 def PtrPtrCast : Opcode {
-  let Args = [ArgBool];
+  let Args = [ArgBool, ArgTypePtr];
 
 }
 
@@ -955,6 +978,9 @@ def CheckNonNullArg : Opcode {
 }
 
 def Memcpy : Opcode;
+def TrivialCopy : Opcode {
+  let Args = [ArgBool, ArgFunction];
+}
 
 def ToMemberPtr : SuccessOpcode;
 def CastMemberPtrPtr : Opcode;
@@ -1006,6 +1032,7 @@ def CheckNewTypeMismatchArray : Opcode {
   let HasGroup = 1;
 }
 def InvalidNewDeleteExpr : Opcode { let Args = [ArgExpr]; }
+def CheckPlacementNew : Opcode { let Args = [ArgExpr]; }
 
 def IsConstantContext: SuccessOpcode;
 def CheckAllocations : Opcode {

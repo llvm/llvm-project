@@ -22,6 +22,7 @@
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtSYCL.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/StmtUtils.h"
 #include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
@@ -141,7 +142,7 @@ CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
 
   SaveAndRestore save_musttail(mustTailCall, musttail);
 
-  return emitStmt(s.getSubStmt(), /*useCurrentScope=*/true, s.getAttrs());
+  return emitStmt(s.getSubStmt(), /*useCurrentScope=*/false, s.getAttrs());
 }
 
 mlir::LogicalResult CIRGenFunction::emitCompoundStmt(const CompoundStmt &s,
@@ -441,6 +442,8 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitOMPSplitDirective(cast<OMPSplitDirective>(*s));
   case Stmt::OMPInterchangeDirectiveClass:
     return emitOMPInterchangeDirective(cast<OMPInterchangeDirective>(*s));
+  case Stmt::OMPFlattenDirectiveClass:
+    return emitOMPFlattenDirective(cast<OMPFlattenDirective>(*s));
   case Stmt::OMPAssumeDirectiveClass:
     return emitOMPAssumeDirective(cast<OMPAssumeDirective>(*s));
   case Stmt::OMPMaskedDirectiveClass:
@@ -522,7 +525,7 @@ mlir::LogicalResult CIRGenFunction::emitLabelStmt(const clang::LabelStmt &s) {
   if (getContext().getLangOpts().EHAsynch && s.isSideEntry())
     getCIRGenModule().errorNYI(s.getSourceRange(), "IsEHa: not implemented.");
 
-  return emitStmt(s.getSubStmt(), /*useCurrentScope*/ true);
+  return emitStmt(s.getSubStmt(), /*useCurrentScope=*/false);
 }
 
 // Add a terminating yield on a body region if no other terminators are used.
@@ -1020,6 +1023,7 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
       if (emitStmt(s.getInit(), /*useCurrentScope=*/true).failed())
         return mlir::failure();
     assert(!cir::MissingFeatures::loopInfoStack());
+    checkIfLoopMustProgress(s.getCond(), CodeGenUtils::hasEmptyLoopBody(s));
 
     // A condition variable's lifetime is a single iteration, so capture its
     // destructor and lifetime-end cleanups and emit them into the loop's
@@ -1106,6 +1110,7 @@ mlir::LogicalResult CIRGenFunction::emitDoStmt(const DoStmt &s) {
   auto doStmtBuilder = [&]() -> mlir::LogicalResult {
     mlir::LogicalResult loopRes = mlir::success();
     assert(!cir::MissingFeatures::loopInfoStack());
+    checkIfLoopMustProgress(s.getCond(), CodeGenUtils::hasEmptyLoopBody(s));
 
     doWhileOp = builder.createDoWhile(
         getLoc(s.getSourceRange()),
@@ -1153,6 +1158,7 @@ mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &s) {
   auto whileStmtBuilder = [&]() -> mlir::LogicalResult {
     mlir::LogicalResult loopRes = mlir::success();
     assert(!cir::MissingFeatures::loopInfoStack());
+    checkIfLoopMustProgress(s.getCond(), CodeGenUtils::hasEmptyLoopBody(s));
 
     // A condition variable's lifetime is a single iteration, so capture its
     // destructor and lifetime-end cleanups and emit them into the loop's

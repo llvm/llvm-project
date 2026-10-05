@@ -59,7 +59,7 @@ module {
 // CHECK-NEXT:   br label %omp.private.init
 // CHECK-EMPTY:
 // CHECK-NEXT: omp.private.init:{{.*}}; preds = %entry
-// CHECK-NEXT:   %[[TASK_CONTEXT:.*]] = tail call ptr @malloc(i64 ptrtoint (ptr getelementptr ({ { ptr, i64 } }, ptr null, i32 1) to i64))
+// CHECK-NEXT:   %[[TASK_CONTEXT:.*]] = tail call ptr @malloc(i64 16)
 // CHECK-NEXT:   %[[TASK_CONTEXT_BOX:.*]] = getelementptr { { ptr, i64 } }, ptr %[[TASK_CONTEXT]], i32 0, i32 0
 // CHECK-NEXT:   %[[INIT_PTR:.*]] = extractvalue { ptr, i64 } %[[ORIG_BOX]], 0
 // CHECK-NEXT:   %[[INIT_LEN:.*]] = extractvalue { ptr, i64 } %[[ORIG_BOX]], 1
@@ -194,7 +194,7 @@ module {
 // CHECK-NEXT:   %[[SRC_TASK_DATA:.*]] = getelementptr { %struct.kmp_task_ompbuilder_t, { i64, i64, i64, ptr } }, ptr %[[SRC_TASK]], i32 0, i32 1
 // CHECK-NEXT:   %[[SRC_CONTEXT_ADDR:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[SRC_TASK_DATA]], i32 0, i32 3
 // CHECK-NEXT:   %[[SRC_CONTEXT:.*]] = load ptr, ptr %[[SRC_CONTEXT_ADDR]], align 8
-// CHECK-NEXT:   %[[DEST_CONTEXT:.*]] = tail call ptr @malloc(i64 ptrtoint (ptr getelementptr ({ { ptr, i64 } }, ptr null, i32 1) to i64))
+// CHECK-NEXT:   %[[DEST_CONTEXT:.*]] = tail call ptr @malloc(i64 16)
 // CHECK-NEXT:   store ptr %[[DEST_CONTEXT]], ptr %[[DEST_CONTEXT_ADDR]], align 8
 // CHECK-NEXT:   %[[SRC_BOX_ADDR:.*]] = getelementptr { { ptr, i64 } }, ptr %[[SRC_CONTEXT]], i32 0, i32 0
 // CHECK-NEXT:   %[[DEST_BOX_ADDR:.*]] = getelementptr { { ptr, i64 } }, ptr %[[DEST_CONTEXT]], i32 0, i32 0

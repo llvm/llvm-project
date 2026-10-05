@@ -12,7 +12,6 @@
 
 #include "orc-rt/bedrock/sps/CallSPSCI.h"
 #include "orc-rt/support/move_only_function.h"
-#include "orc-rt/support/sps/SPSWrapperFunction.h"
 
 #include <string>
 #include <vector>
@@ -26,8 +25,8 @@ void call_void_void(move_only_function<void()> Return, VoidVoidFn Fn) {
   Return();
 }
 
-ORC_RT_SPS_WRAPPER(orc_rt_ci_sps_call_void_void, void(SPSExecutorAddr),
-                   call_void_void);
+ORC_RT_SPS_WRAPPER_IMPL(orc_rt_ci_sps_call_void_void, void(SPSExecutorAddr),
+                        call_void_void)
 
 using MainFn = int(int argc, char *argv[]);
 
@@ -49,12 +48,13 @@ void call_main(move_only_function<void(int64_t)> Return, MainFn Main,
   Return(Main(Args.size(), ArgV.data()));
 }
 
-ORC_RT_SPS_WRAPPER(orc_rt_ci_sps_call_main,
-                   int64_t(SPSExecutorAddr, SPSSequence<SPSString>), call_main);
+ORC_RT_SPS_WRAPPER_IMPL(orc_rt_ci_sps_call_main,
+                        int64_t(SPSExecutorAddr, SPSSequence<SPSString>),
+                        call_main)
 
-static std::pair<const char *, const void *> orc_rt_ci_sps_call_interface[] = {
-    ORC_RT_SYMTAB_PAIR(orc_rt_ci_sps_call_void_void),
-    ORC_RT_SYMTAB_PAIR(orc_rt_ci_sps_call_main)};
+static std::pair<SymbolNameSpec, const void *> orc_rt_ci_sps_call_interface[] =
+    {ORC_RT_SYMTAB_C_PAIR(orc_rt_ci_sps_call_void_void),
+     ORC_RT_SYMTAB_C_PAIR(orc_rt_ci_sps_call_main)};
 
 Error addCall(SimpleSymbolTable &ST) {
   return ST.addUnique(orc_rt_ci_sps_call_interface);

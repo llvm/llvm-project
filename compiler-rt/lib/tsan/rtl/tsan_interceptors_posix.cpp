@@ -116,6 +116,7 @@ const int PTHREAD_MUTEX_RECURSIVE_NP = 2;
 #endif
 #if !SANITIZER_FREEBSD && !SANITIZER_APPLE && !SANITIZER_NETBSD
 const int EPOLL_CTL_ADD = 1;
+const int EPOLL_CTL_MOD = 3;
 #endif
 const int SIGILL = 4;
 const int SIGTRAP = 5;
@@ -2082,7 +2083,7 @@ TSAN_INTERCEPTOR(int, epoll_ctl, int epfd, int op, int fd, void *ev) {
     FdAccess(thr, pc, epfd);
   if (epfd >= 0 && fd >= 0)
     FdAccess(thr, pc, fd);
-  if (op == EPOLL_CTL_ADD && epfd >= 0) {
+  if ((op == EPOLL_CTL_ADD || op == EPOLL_CTL_MOD) && epfd >= 0) {
     FdPollAdd(thr, pc, epfd, fd);
     FdRelease(thr, pc, epfd);
   }
@@ -2178,8 +2179,8 @@ static void ReportErrnoSpoiling(ThreadState *thr, uptr pc, int sig) {
   // Use alloca, because malloc during signal handling deadlocks
   ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
   bool suppressed;
-  // Take a new scope as Apple platforms require the below locks released
-  // before symbolizing in order to avoid a deadlock
+  // Release locks before symbolizing and outputting the report to avoid
+  // deadlocks.
   {
     ThreadRegistryLock l(&ctx->thread_registry);
     new (rep) ScopedReport(ReportTypeErrnoInSignal);
@@ -2187,17 +2188,12 @@ static void ReportErrnoSpoiling(ThreadState *thr, uptr pc, int sig) {
     suppressed = IsFiredSuppression(ctx, ReportTypeErrnoInSignal, stack);
     if (!suppressed)
       rep->AddStack(stack, true);
-#if SANITIZER_APPLE
-  }  // Close this scope to release the locks before writing report
-#endif
-    if (!suppressed)
-      OutputReport(thr, *rep);
-
-    // Need to manually destroy this because we used placement new to allocate
-    rep->~ScopedReport();
-#if !SANITIZER_APPLE
   }
-#endif
+  if (!suppressed)
+    OutputReport(thr, *rep);
+
+  // Need to manually destroy this because we used placement new to allocate
+  rep->~ScopedReport();
 }
 
 static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,

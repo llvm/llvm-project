@@ -103,6 +103,28 @@ inline StringRef getTMAValidateDataPatternName(TMAValidateDataPattern Pattern) {
   llvm_unreachable("invalid TMA validate data pattern");
 }
 
+// Scope of the memory ordering semantics.
+enum class MemScope : uint8_t {
+  CTA = 0,
+  CLUSTER = 1,
+  GPU = 2,
+  SYS = 3,
+};
+
+inline StringRef getMemScopeName(MemScope Scope) {
+  switch (Scope) {
+  case MemScope::CTA:
+    return "cta";
+  case MemScope::CLUSTER:
+    return "cluster";
+  case MemScope::GPU:
+    return "gpu";
+  case MemScope::SYS:
+    return "sys";
+  }
+  llvm_unreachable("invalid memory scope");
+}
+
 // Eviction priorities applicable for prefetch and applypriority intrinsics.
 enum class EvictPolicyType : uint8_t {
   EVICT_NORMAL = 0, // default
@@ -186,7 +208,16 @@ enum class TensormapFillMode : uint8_t {
   OOB_NAN_FILL = 1,
 };
 
+// In-memory layout of an mbarrier object, as selected by the layout operand of
+// the llvm.nvvm.mbarrier.init and llvm.nvvm.mbarrier.check_layout intrinsics.
+enum class MBarrierLayout : uint8_t {
+  V0 = 0,
+  V1 = 1,
+};
+
 LLVM_ABI void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal);
+
+LLVM_ABI void printMBarrierLayout(raw_ostream &OS, const Constant *ImmArgVal);
 
 LLVM_ABI void printEvictPolicyType(raw_ostream &OS, const Constant *ImmArgVal);
 
@@ -194,6 +225,8 @@ LLVM_ABI void printTMAReductionOp(raw_ostream &OS, const Constant *ImmArgVal);
 
 LLVM_ABI void printTMAValidateDataPattern(raw_ostream &OS,
                                           const Constant *ImmArgVal);
+
+LLVM_ABI void printMemScope(raw_ostream &OS, const Constant *ImmArgVal);
 
 LLVM_ABI void printTcgen05CollectorUsageOp(raw_ostream &OS,
                                            const Constant *ImmArgVal);

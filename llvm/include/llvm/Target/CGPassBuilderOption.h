@@ -61,7 +61,6 @@ struct CGPassBuilderOption {
   /// Enable LoopTermFold immediately after LSR.
   bool EnableLoopTermFold = false;
   bool MISchedPostRA = false;
-  bool EarlyLiveIntervals = false;
   bool EnableGCEmptyBlocks = false;
 
   bool DisableLSR = false;
@@ -86,6 +85,7 @@ struct CGPassBuilderOption {
 
   cl::boolOrDefault VerifyMachineCode = cl::boolOrDefault::BOU_UNSET;
   cl::boolOrDefault EnableFastISelOption = cl::boolOrDefault::BOU_UNSET;
+  cl::boolOrDefault EnableRegAllocFastTied = cl::boolOrDefault::BOU_UNSET;
   cl::boolOrDefault EnableGlobalISelOption = cl::boolOrDefault::BOU_UNSET;
   cl::boolOrDefault DebugifyAndStripAll = cl::boolOrDefault::BOU_UNSET;
   cl::boolOrDefault DebugifyCheckAndStripAll = cl::boolOrDefault::BOU_UNSET;
