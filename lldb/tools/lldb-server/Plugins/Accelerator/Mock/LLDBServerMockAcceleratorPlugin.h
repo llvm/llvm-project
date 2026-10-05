@@ -15,6 +15,7 @@
 #include "lldb/Host/MainLoopBase.h"
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace lldb_private {
@@ -30,6 +31,7 @@ public:
   ~LLDBServerMockAcceleratorPlugin() override;
 
   llvm::StringRef GetPluginName() override;
+  std::optional<LLDBSettings> GetLLDBSettings() override;
   std::optional<AcceleratorActions> GetInitializeActions() override;
   llvm::Expected<AcceleratorBreakpointHitResponse>
   BreakpointWasHit(AcceleratorBreakpointHitArgs &args) override;
@@ -44,7 +46,8 @@ private:
   std::optional<AcceleratorConnectionInfo> CreateConnection();
 
   // Breakpoint set during initialization, by function name with no shared
-  // library. Requests the "compute" symbol value when hit.
+  // library. Requests the "compute" symbol value and, when configured, the
+  // native-memory image buffer's value when hit.
   static constexpr int64_t kBreakpointIDInitialize = 1;
   // Breakpoint set by address, using the "compute" symbol value delivered when
   // the initialize breakpoint was hit.
@@ -62,6 +65,7 @@ private:
   HostThread m_mock_main_loop_thread;
   std::unique_ptr<TCPSocket> m_listen_socket;
   std::vector<MainLoopBase::ReadHandleUP> m_read_handles;
+  std::optional<uint64_t> m_native_memory_address;
 };
 
 } // namespace lldb_server
