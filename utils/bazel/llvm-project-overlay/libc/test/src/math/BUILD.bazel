@@ -71,6 +71,50 @@ math_mpfr_test(name = "atanpif16")
 math_mpfr_test(name = "cbrt")
 
 math_mpfr_test(
+    name = "bf16addl",
+    hdrs = ["AddTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
+math_mpfr_test(
+    name = "bf16divl",
+    hdrs = ["DivTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
+math_mpfr_test(
+    name = "bf16fmal",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "bf16mull",
+    hdrs = ["MulTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "bf16subl",
+    hdrs = ["SubTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
+math_mpfr_test(
     name = "cbrtbf16",
     deps = [
         "//libc:__support_fputil_bfloat16",
@@ -119,6 +163,11 @@ math_mpfr_test(
 )
 
 math_mpfr_test(name = "cos")
+
+math_mpfr_test(
+    name = "copysignl",
+    hdrs = ["CopySignTest.h"],
+)
 
 math_mpfr_test(
     name = "cosf",
@@ -295,6 +344,11 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "fdiml",
+    hdrs = ["FDimTest.h"],
+)
+
+math_mpfr_test(
     name = "fdiv",
     hdrs = ["DivTest.h"],
 )
@@ -416,7 +470,6 @@ math_mpfr_test(
         "//libc:srand",
     ],
 )
-
 
 math_mpfr_test(
     name = "f16mul",
@@ -587,7 +640,17 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "ilogbl",
+    hdrs = ["ILogbTest.h"],
+)
+
+math_mpfr_test(
     name = "ldexp",
+    hdrs = ["LdExpTest.h"],
+)
+
+math_mpfr_test(
+    name = "ldexpl",
     hdrs = ["LdExpTest.h"],
 )
 
@@ -645,6 +708,11 @@ math_mpfr_test(
 math_mpfr_test(
     name = "llroundl",
     hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_mpfr_test(
+    name = "logbl",
+    hdrs = ["LogbTest.h"],
 )
 
 math_mpfr_test(
@@ -734,6 +802,11 @@ math_mpfr_test(
 # TODO: Add nan tests.
 
 math_mpfr_test(
+    name = "modfl",
+    hdrs = ["ModfTest.h"],
+)
+
+math_mpfr_test(
     name = "nearbyint",
     hdrs = ["NearbyIntTest.h"],
     deps = [
@@ -785,6 +858,11 @@ math_mpfr_test(
 )
 
 math_mpfr_test(name = "pow")
+
+math_mpfr_test(
+    name = "nextafterl",
+    hdrs = ["NextAfterTest.h"],
+)
 
 math_mpfr_test(
     name = "powf",
@@ -915,6 +993,14 @@ math_mpfr_test(
 )
 
 math_mpfr_test(name = "sin")
+
+math_mpfr_test(
+    name = "scalbnl",
+    hdrs = [
+        "LdExpTest.h",
+        "ScalbnTest.h",
+    ],
+)
 
 math_mpfr_test(
     name = "sinf",
@@ -1117,3 +1203,4 @@ math_mpfr_test(name = "log10f16")
 math_mpfr_test(name = "log10p1f16")
 
 math_mpfr_test(name = "lgammaf16")
+
