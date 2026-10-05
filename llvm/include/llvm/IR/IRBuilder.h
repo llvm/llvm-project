@@ -2950,7 +2950,7 @@ public:
     SetInsertPoint(IP);
   }
 
-  IRBuilder(BasicBlock::iterator IP)
+  explicit IRBuilder(BasicBlock::iterator IP)
       : IRBuilderBase(IP.getNodeParent()->getContext(), this->Folder,
                       this->Inserter) {
     SetInsertPoint(IP);
