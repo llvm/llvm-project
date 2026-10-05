@@ -28619,3 +28619,51 @@ intersection over predecessors. This makes an in-region instruction always
 dominated by a `llvm.sanitizer.instrumentation.begin`, so any per-function
 sanitizer state set up there is available. A region that is entered on some
 paths but not others is therefore instrumented only where it is unambiguous.
+
+Sanitizer passes that implement regions warn about unbalanced markers: a
+`llvm.sanitizer.instrumentation.end` without a matching
+`llvm.sanitizer.instrumentation.begin`, a region that is still open at a `ret`,
+and a point where paths with different region nesting depths merge. Regions that
+are still open where the function is left without returning, i.e. at an
+`unreachable` (e.g. after a call to a `noreturn` function) or when an exception
+unwinds out of it, are not diagnosed. Markers in functions that are instrumented
+as a whole are ignored and not checked. In Clang, the warning is controlled by
+`-Wsanitizer-instrumentation-region` and emitted at most once per function;
+`opt` reports a function once per sanitizer pass that analyzes it.
+
+MemorySanitizer supports regions in functions marked with
+`disable_sanitizer_instrumentation`, in both userspace and kernel mode. The
+function-level prologue is skipped (in kernel mode the MSan context state is
+fetched at `llvm.sanitizer.instrumentation.begin` instead), and shadow
+propagation and parameter shadow setup are only performed inside regions. Memory
+written outside a region
+keeps whatever shadow it had, and values computed outside a region are treated
+as fully initialized when they are used inside one. The function's own static
+`alloca`s are the exception: those that are referenced inside a region, or
+whose address escapes, are unpoisoned at every
+`llvm.sanitizer.instrumentation.begin` they dominate. Calls to variadic
+functions inside regions publish the shadow of the variadic arguments;
+`va_start` and `va_copy` are not instrumented in such a function.
+
+AddressSanitizer supports regions in functions that lack the `sanitize_address`
+attribute or are marked with `disable_sanitizer_instrumentation`. Inside
+regions, memory accesses and memory intrinsics are instrumented. The stack frame
+of such a function is not instrumented, accesses to its own `alloca`s are not
+checked, and no `__asan_handle_no_return` calls are inserted.
+
+SanitizerCoverage supports regions in functions marked with
+`nosanitize_coverage` or `disable_sanitizer_instrumentation`. Each basic block
+that enters a region gets a coverage point right after the point where it does
+(splitting the block if necessary), without pruning, and the requested tracing
+of comparisons, switches, divisions, GEPs, loads, stores and indirect calls is
+performed inside regions. Function entry/exit callbacks, stack depth tracing and
+control
+flow tables are not emitted for such functions.
+
+ThreadSanitizer supports regions in functions marked with
+`disable_sanitizer_instrumentation`, and in functions that lack the
+`sanitize_thread` attribute. In the former, plain and atomic memory accesses and
+memory intrinsics are instrumented only inside regions, and no function
+entry/exit hooks are inserted. In the latter, which already get their atomic
+accesses and function entry/exit instrumented, plain memory accesses and memory
+intrinsics inside regions are instrumented as well.
