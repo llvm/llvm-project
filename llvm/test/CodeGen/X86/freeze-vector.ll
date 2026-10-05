@@ -951,7 +951,7 @@ define void @freeze_dynamic_insertelement_wide_vector(ptr %vp, i32 %x, ptr %dst)
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-32, %esp
-; X86-NEXT:    subl $160, %esp
+; X86-NEXT:    addl $-128, %esp
 ; X86-NEXT:    movl 16(%ebp), %eax
 ; X86-NEXT:    movl 8(%ebp), %ecx
 ; X86-NEXT:    vmovaps (%ecx), %ymm0
@@ -984,7 +984,7 @@ define void @freeze_dynamic_insertelement_wide_vector(ptr %vp, i32 %x, ptr %dst)
 ; X64-NEXT:    pushq %rbp
 ; X64-NEXT:    movq %rsp, %rbp
 ; X64-NEXT:    andq $-32, %rsp
-; X64-NEXT:    subq $160, %rsp
+; X64-NEXT:    addq $-128, %rsp
 ; X64-NEXT:    vmovaps (%rdi), %ymm0
 ; X64-NEXT:    vmovaps 32(%rdi), %ymm1
 ; X64-NEXT:    vmovaps 64(%rdi), %ymm2
@@ -1045,7 +1045,7 @@ define void @freeze_dynamic_insertelement_chain_wide_vector(ptr %vp, i32 %x, i32
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-32, %esp
-; X86-NEXT:    subl $160, %esp
+; X86-NEXT:    addl $-128, %esp
 ; X86-NEXT:    movl 20(%ebp), %eax
 ; X86-NEXT:    movl 8(%ebp), %ecx
 ; X86-NEXT:    vmovaps (%ecx), %ymm0
@@ -1082,7 +1082,7 @@ define void @freeze_dynamic_insertelement_chain_wide_vector(ptr %vp, i32 %x, i32
 ; X64-NEXT:    pushq %rbp
 ; X64-NEXT:    movq %rsp, %rbp
 ; X64-NEXT:    andq $-32, %rsp
-; X64-NEXT:    subq $160, %rsp
+; X64-NEXT:    addq $-128, %rsp
 ; X64-NEXT:    vmovaps (%rdi), %ymm0
 ; X64-NEXT:    vmovaps 32(%rdi), %ymm1
 ; X64-NEXT:    vmovaps 64(%rdi), %ymm2
