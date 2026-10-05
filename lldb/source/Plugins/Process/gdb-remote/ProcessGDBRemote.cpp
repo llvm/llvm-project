@@ -4628,8 +4628,12 @@ bool ProcessGDBRemote::StopNoticingNewThreads() {
 }
 
 DynamicLoader *ProcessGDBRemote::GetDynamicLoader() {
-  if (m_dyld_up.get() == nullptr)
-    m_dyld_up.reset(DynamicLoader::FindPlugin(this, ""));
+  if (m_dyld_up.get() == nullptr) {
+    std::string plugin_name;
+    if (std::optional<LLDBSettings> settings = m_gdb_comm.GetLLDBSettings())
+      plugin_name = settings->dyld_plugin_name;
+    m_dyld_up.reset(DynamicLoader::FindPlugin(this, plugin_name));
+  }
   return m_dyld_up.get();
 }
 
